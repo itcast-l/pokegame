@@ -1,0 +1,25 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "source": "art/cards/item_cards/overtime/run-002/processed/clean.png",
+  "generated_from": "overtime/run-002 static card, deterministic sparkle-layer animation",
+  "frame_count": 4,
+  "frame_size": [
+    384,
+    384
+  ],
+  "duration_ms": 180,
+  "animated_elements": "small purple stars and sparkle marks only",
+  "fixed_elements": "card body, border, center overtime clock-plus icon, gold outline, main glow",
+  "selected_sparkle_components": 4,
+  "outputs": [
+    "frames/frame-001.png",
+    "frames/frame-002.png",
+    "frames/frame-003.png",
+    "frames/frame-004.png",
+    "sheet-transparent.png",
+    "strip-transparent.png",
+    "animation.gif",
+    "animation-magenta-preview.gif"
+  ]
+}

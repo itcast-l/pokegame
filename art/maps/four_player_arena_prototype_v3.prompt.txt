@@ -1,0 +1,37 @@
+Create one modern refined game UI prototype image for a top-down multiplayer card/strategy battle arena.
+
+Pipeline intent from generate2dmap:
+- map_mode: baked_scene_mode for visual review only
+- visual_model: baked_raster
+- runtime_object_model: none for this first review image
+- collision_model: none
+- engine_target: Godot project-native later, not connected in this version
+
+Canvas and composition:
+- 16:9 horizontal game screen, 1920x1080 feel.
+- Center: large clean rectangular arena, about 58% of screen width and 55% of screen height, empty and ready for gameplay.
+- Four directional player zones around the center: top, bottom, left, right.
+- Top and bottom player zones are horizontal compact panels. Left and right player zones are vertical compact panels.
+- The interface must support 2, 3, or 4 players. Show all four seats as available positions.
+- Each player zone includes simple placeholders for avatar frame, card slots, compact resource pips, and a turn/status control shape.
+- The center arena has a subtle pale tactical grid and clean corner markers, but no gameplay pieces.
+
+Style target:
+- Modern pixel art, anime-inspired but restrained, not retro.
+- Polished contemporary digital board-game UI, suitable for a modern indie strategy/card game.
+- Bright, clean, calm, slightly fantasy-tech, not childish and not old medieval.
+- Use smooth pixel-art surfaces with light stone, matte ceramic, frosted glass, pale fabric, and subtle luminous edge accents.
+- Keep outlines crisp but thinner; use clean geometry and restrained ornament.
+- Use four soft accent colors: cool blue, muted rose, fresh green, soft amber. Keep saturation moderate.
+- Background should be minimal and modern-fantasy: soft abstract courtyard floor or clean arena platform, very low detail, not a medieval garden.
+
+Avoid these styles:
+- Avoid retro board game, leather, brass, parchment, antique wood, medieval ornaments, old courtyard, Victorian trim, heavy filigree.
+- Avoid overly cartoony mobile-game style, candy colors, huge icons, toy-like glossy buttons, oversized hearts, chibi visuals.
+- Avoid dark gloomy colors, grunge, realism, photographic style, dense scenery, castles, waterfalls, large trees, flowers dominating the frame.
+
+Important constraints:
+- No readable text, no labels, no numbers, no letters, no watermarks, no logos.
+- Do not include player characters, monsters, enemies, or gameplay pieces yet.
+- Do not fill the center arena with props; keep it ready for gameplay.
+- Avoid tiny illegible UI clutter.

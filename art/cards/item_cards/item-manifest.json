@@ -1,0 +1,40 @@
+{
+  "cards": {
+    "question_mark": {
+      "image": "question_mark/run-003/processed/frames/frame-001.png",
+      "description": "随机获取一张道具"
+    },
+    "bomb": {
+      "image": "bomb/run-003/processed/frames/frame-001.png",
+      "description": "炸毁该牌以下的所有牌"
+    },
+    "magnet": {
+      "image": "magnet/run-003/processed/frames/frame-001.png",
+      "description": "额外吸取轨道上剩余牌中分值最高的一张"
+    },
+    "greed": {
+      "image": "greed/run-003/processed/frames/frame-001.png",
+      "description": "收割了超过 10 张牌，将额外获得上家牌库顶部的 3 张牌"
+    },
+    "lens": {
+      "image": "lens/run-003/processed/frames/frame-001.png",
+      "description": "看到轨道上最后 3 张背面牌的点数，打出后消失"
+    },
+    "double": {
+      "image": "double/run-003/processed/frames/frame-001.png",
+      "description": "本次收割到的所有普通牌在最终结算时，积分全部翻倍"
+    },
+    "overtime": {
+      "image": "overtime/run-003/processed/frames/frame-001.png",
+      "description": "本回合额外多一次出牌机会"
+    },
+    "draw_card": {
+      "image": "draw_card/run-003/processed/frames/frame-001.png",
+      "description": "抽一张牌"
+    },
+    "shuffle": {
+      "image": "shuffle/run-003/processed/frames/frame-001.png",
+      "description": "把牌桌上的牌打乱顺序"
+    }
+  }
+}

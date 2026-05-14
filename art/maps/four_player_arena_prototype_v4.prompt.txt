@@ -1,0 +1,35 @@
+Use the visible reference image above as the visual reference.
+
+Create a revised version of the same modern pixel-art multiplayer battle arena UI.
+
+Preserve:
+- Same overall camera angle, 16:9 horizontal composition, and clean modern fantasy-tech style.
+- Same central large rectangular arena with subtle pale tactical grid.
+- Same four directional player panels: top, bottom, left, right.
+- Same soft sci-fi/fantasy material feeling, pale arena floor, clean edge lighting, and restrained anime-inspired pixel art.
+- Keep the avatar portrait frame on every player panel.
+- Keep the panels visually available for 2, 3, or 4 players.
+
+Required changes:
+- Remove all star-shaped resource icons from every player panel.
+- Remove all small circles below the star-shaped resources from every player panel.
+- Remove the row of five or four rectangular card/block slots from every player panel.
+- Keep only a clean avatar frame and a simplified empty panel body area for each player.
+- The player panels should feel cleaner, calmer, and less busy.
+- Do not add replacement icons, card slots, stars, pips, counters, labels, letters, or numbers.
+
+Composition details:
+- Top and bottom panels may keep a long horizontal base shape, but without card slots or resource symbols.
+- Left and right panels may keep tall vertical base shapes, but without stacked rectangular slots or resource symbols.
+- The empty space inside each panel can use subtle material shading, low-detail decorative insets, or one simple status plate shape, but no repeated slot rows.
+- The center arena must remain empty and ready for gameplay.
+
+Style constraints:
+- Modern pixel art, anime-inspired but restrained, not retro and not overly cartoony.
+- Bright, clean, calm, slightly fantasy-tech.
+- Avoid medieval leather/brass/parchment, avoid candy mobile-game colors, avoid dark gloomy colors.
+
+Important constraints:
+- No readable text, no labels, no numbers, no letters, no watermarks, no logos.
+- Do not include player characters, monsters, enemies, or gameplay pieces.
+- Do not fill the center arena with props.

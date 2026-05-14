@@ -1,0 +1,3 @@
+Deterministic low-key animation derived from bomb/run-002/processed/clean.png.
+
+Keep the card body, border, center bomb icon, gold outline, and main glow fixed in every frame. Only the small purple sparkles near the fuse should twinkle and move by a few pixels. Avoid card wobble, scaling, rotation, icon changes, large new effects, or extra visual clutter. Output transparent game-ready frames.

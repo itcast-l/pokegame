@@ -1,0 +1,12 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Use the input image as the visual reference. Create a single special item card sprite in the same portrait playing-card proportions and pixel-art card style: front-facing, perfectly flat orthographic view, crisp white card face, thin black border, slightly rounded corners, clean readable silhouette. Replace all suit marks and corner rank markers with one centered black magnet icon only: a simple horseshoe magnet silhouette with two squared poles, minimal iconic pixel-art shape, no letters, no polarity marks, no sparks, no extra decoration. No suit symbols, no corner text, no numbers, no letters, no extra ornaments, no decorative frame, no perspective tilt, no hand, no table, no shadow outside the card. Keep the card fully inside the canvas with generous magenta margin around it. Background is solid flat magenta #FF00FF for transparent-background cleanup. Game-ready special item card, simple and iconic.",
+  "description": "额外吸取轨道上剩余牌中分值最高的一张",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/item_cards/magnet/run-001/source.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "single_size": 384
+}

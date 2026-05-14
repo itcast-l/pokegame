@@ -1,0 +1,5 @@
+Use the input image as the visual reference for the card proportions, front-facing flat orthographic view, warm ivory card face, thin black outer border, slightly rounded corners, and the decorative inner frame language. Redesign the center icon into a cleaner game-ready bomb card in the same style family as the reference.
+
+Keep the card simple and iconic: one bold black bomb silhouette with a short fuse, a crisp gold outline, and a very subtle blue-violet glow. Preserve the same readable card layout and restrained magical feel, but do not make it busy. A few tiny sparkles near the fuse are acceptable if they stay subtle and contained.
+
+No suit symbols, no corner rank markers, no numbers, no letters, no extra ornaments, no decorative clutter, no perspective tilt, no hand, no table, no shadow outside the card. Keep the card fully inside the canvas with generous magenta margin. Background must be solid flat magenta #FF00FF for transparent-background cleanup.

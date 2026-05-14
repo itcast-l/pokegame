@@ -1,0 +1,37 @@
+Create one refined game UI prototype image for a top-down multiplayer card/strategy battle arena.
+
+Pipeline intent from generate2dmap:
+- map_mode: baked_scene_mode for visual review only
+- visual_model: baked_raster
+- runtime_object_model: none for this first review image
+- collision_model: none
+- engine_target: Godot project-native later, not connected in this version
+
+Canvas and composition:
+- 16:9 horizontal game screen, 1920x1080 feel.
+- Center: large rectangular tabletop arena, about 58% of screen width and 55% of screen height, clean empty play surface for future gameplay.
+- Four directional player zones around the center: top, bottom, left, right.
+- Top and bottom player zones are horizontal compact panels. Left and right player zones are vertical compact panels.
+- The layout supports 2, 3, or 4 players. Show all four seats as available, but keep inactive-looking seats restrained.
+- Each player zone includes simple placeholders for an avatar frame, card slots, small resource counters, and a status/turn control shape.
+- Keep the center uncluttered, with subtle grid/cloth/stone patterning and refined corner ornaments.
+
+Style target:
+- Pixel art with mature anime-inspired game UI, restrained fantasy board-game mood.
+- Less cartoony than a mobile kids game; more like a polished tactical card battler prototype.
+- Bright enough and welcoming, but calmer and more grounded.
+- Use muted natural materials: warm parchment, light wood, carved stone, brushed brass, soft linen.
+- Use four subdued accent colors for seats: desaturated blue, muted red, sage green, ochre gold.
+- Thin crisp pixel outlines, moderate contrast, compact UI, balanced negative space.
+- Background can suggest a calm fantasy garden or academy courtyard, but it must stay secondary and not steal attention from the board.
+
+Reduce cartooniness:
+- No oversized hearts, no toy-like glossy buttons, no exaggerated gem icons, no big wing decorations.
+- Avoid candy colors, thick white outlines, plastic shine, chibi proportions, childish iconography, or loud saturation.
+- Avoid busy waterfalls, giant castles, dramatic fantasy scenery, heavy ornamentation, and cluttered edge decoration.
+
+Important constraints:
+- No readable text, no labels, no numbers, no letters, no watermarks, no logos.
+- Do not include player characters, monsters, enemies, or gameplay pieces yet.
+- Do not fill the center arena with props; keep it ready for gameplay.
+- Avoid tiny illegible UI clutter.

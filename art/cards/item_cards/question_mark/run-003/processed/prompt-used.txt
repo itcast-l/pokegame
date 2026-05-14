@@ -1,0 +1,3 @@
+Deterministic low-key animation derived from run-002/processed/clean.png.
+
+Keep the card body, border, center question mark, gold outline, and main glow fixed in every frame. Only the small purple star and sparkle marks around the question mark should twinkle and move by a few pixels. Avoid extra ornaments, large new effects, card wobble, scaling, rotation, or changes to the question mark. Output transparent game-ready frames.

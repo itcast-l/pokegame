@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Single pixel-art poker card back, navy field, white border, red gem compass emblem, solid magenta cleanup background.",
+  "role": "",
+  "input": "art/cards/card_back/run-001/source.png",
+  "threshold": 180,
+  "edge_threshold": 240,
+  "duration": 200,
+  "single_size": 128
+}

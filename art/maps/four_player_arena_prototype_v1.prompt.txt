@@ -1,0 +1,32 @@
+Create one polished game UI prototype image for a top-down card/monster-battle game arena.
+
+Pipeline intent from generate2dmap:
+- map_mode: baked_scene_mode for first visual prototype only
+- visual_model: baked_raster
+- runtime_object_model: none for this first review image
+- collision_model: none
+- engine_target: Godot project-native later, not connected in this version
+
+Canvas and composition:
+- 16:9 horizontal game screen, 1920x1080 feel.
+- Pixel art with anime influence, clean bright palette, not dark, not gloomy.
+- Center: large square-ish game arena area, about 58% of the screen, clear empty play surface for future gameplay.
+- Four directional player zones arranged around the center: top, bottom, left, right.
+- Minimum 2 players must still look natural, but the screen supports 3 or 4 players. Show all four seats as available positions.
+- Top and bottom player zones are horizontal panels. Left and right player zones are vertical panels.
+- Use four different but harmonious accent colors for the seats: sky blue, coral red, mint green, warm yellow.
+- Each player zone should include visual placeholders for an avatar portrait frame, small card slots, resource/health meter shapes, and a turn/status badge shape.
+- The center game area should have subtle pixel tile patterning, decorative corner marks, and a soft bright border, leaving the middle uncluttered.
+- Make the layout readable as a game screen prototype, not a marketing poster.
+
+Art direction:
+- Pixel style, anime game UI, playful and polished, bright daytime fantasy-tech mood.
+- Crisp silhouettes, readable large shapes, low visual noise.
+- Rounded panels are acceptable but keep the pixel-art edges and compact game UI feel.
+- Do not use heavy shadows, horror colors, dark gloomy lighting, grunge, realism, or photographic style.
+
+Important constraints:
+- No readable text, no labels, no numbers, no letters, no watermarks, no logos.
+- Do not include player characters, monsters, enemies, or gameplay pieces yet.
+- Do not fill the center arena with props; keep it ready for gameplay.
+- Avoid tiny illegible UI clutter.

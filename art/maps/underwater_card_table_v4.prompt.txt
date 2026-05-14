@@ -1,0 +1,45 @@
+Generate the final image now using the image generation tool. Do not write an explanation, do not write a prompt, and do not return text-only output.
+
+Use the input image as the visual reference for the underwater card table style, the four-player layout, and the player color differentiation. Create a production-ready top-down poker/card game table background for a Godot game, horizontal 16:9.
+
+Critical requirements:
+- Preserve clear player color separation.
+- Top player panel: blue / cyan accent.
+- Bottom player panel: warm gold / sand accent.
+- Left player panel: pink / purple accent.
+- Right player panel: green / teal accent.
+- Keep these accent colors visible in the player panels and avatar frames.
+
+Deck/draw-pile correction:
+- Do NOT draw any actual playing cards.
+- Do NOT draw card backs.
+- Do NOT draw patterned deck stacks.
+- Do NOT lock the personal deck/draw-pile area to a specific card design.
+- Each player's deck/draw-pile area should be an empty reserved pad, empty tray, recessed blank plate, or clean placeholder area only.
+- The reserved deck pad must show where runtime cards can be placed later, but it must not contain card artwork.
+
+Required layout:
+- Four player areas around the center: top, bottom, left, right.
+- Top and bottom player areas are horizontal panels.
+- Left and right player areas are vertical panels.
+- The center is a large empty shared play area for played cards.
+- Keep one empty avatar frame on every player panel.
+- Each player panel has one flexible hand-card lane for variable hand size.
+- The hand-card lane must look continuous and flexible, not like a fixed number of card slots.
+- Do not draw exactly 4 card slots.
+- Do not draw exactly 5 card slots.
+- Do not draw rows of separated fixed card rectangles.
+- Each player panel has a small empty personal deck/draw-pile reserved area on the right side or right end of that player's own table area.
+- The reserved deck area is visually separate from the flexible hand lane, but remains empty.
+
+Underwater style:
+- translucent teal glass
+- pearl white alloy trim
+- soft ocean-blue lighting
+- water caustic reflections
+- underwater glass-dome atmosphere around the edges
+- polished clean HD 2D game UI scene
+- crisp readable shapes
+- elegant beveled frame
+
+No characters, no monsters, no portraits inside avatar frames, no readable text, no labels, no letters, no numbers, no logos, no watermarks, no UI buttons, no pixel art.

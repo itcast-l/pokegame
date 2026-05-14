@@ -1,0 +1,12 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Use the input image as the visual reference. Create a single special item card sprite in the same portrait playing-card proportions and pixel-art card style: front-facing, perfectly flat orthographic view, crisp white card face, thin black border, slightly rounded corners, clean readable silhouette. Replace all suit marks and corner rank markers with one centered black bomb icon only: a simple round bomb body with a short fuse on top, minimal iconic pixel-art shape, no extra decoration. No suit symbols, no corner text, no numbers, no letters, no extra ornaments, no decorative frame, no perspective tilt, no hand, no table, no shadow outside the card. Keep the card fully inside the canvas with generous magenta margin around it. Background is solid flat magenta #FF00FF for transparent-background cleanup. Game-ready special item card, simple and iconic.",
+  "description": "炸毁该牌以下的所有牌",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/item_cards/bomb/run-001/source.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "single_size": 384
+}

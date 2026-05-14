@@ -1,0 +1,360 @@
+{
+  "target": "asset",
+  "mode": "deck_strip_component_extract",
+  "prompt": "Use the input image as the visual reference. Create a horizontal 1x13 pixel-art playing-card strip of the same style and card proportions as the reference, with 13 separate cards in equal cells. Suit is diamonds only. Order left to right: A, 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K. Each card must be the same size, front-facing, flat orthographic view, crisp white face, thin black border, slightly rounded corners, black pixel-art outline, and clean readable corner rank markers. Use red diamond symbols only. A should have a large centered diamond emblem like the reference. 2-10 should use standard readable pip layouts. J, Q, K should be simple pixel-art court cards in the same style, not modern illustrations. Keep every card fully inside its own cell with equal spacing and generous magenta margin. No tilt, no perspective, no hand, no table, no extra objects, no text except the rank markers. Background is solid flat magenta #FF00FF for transparent-background cleanup.",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/deck_strips/diamonds/run-001/source.png",
+  "threshold": 180,
+  "edge_threshold": 240,
+  "rows": 1,
+  "cols": 13,
+  "cell_size": 128,
+  "fit_scale": 0.92,
+  "component_mode": "connected_card_components",
+  "component_padding": 2,
+  "min_component_area": 5000,
+  "shared_scale": true,
+  "scale": 0.6470329670329671,
+  "frame_labels": [
+    "diamonds-1",
+    "diamonds-2",
+    "diamonds-3",
+    "diamonds-4",
+    "diamonds-5",
+    "diamonds-6",
+    "diamonds-7",
+    "diamonds-8",
+    "diamonds-9",
+    "diamonds-10",
+    "diamonds-11",
+    "diamonds-12",
+    "diamonds-13"
+  ],
+  "frames": [
+    {
+      "rank": "A",
+      "component_area": 17831,
+      "component_bbox": [
+        19,
+        455,
+        123,
+        631
+      ],
+      "crop_bbox": [
+        17,
+        453,
+        125,
+        633
+      ],
+      "edge_touch": false,
+      "output_size": [
+        70,
+        116
+      ],
+      "paste_position": [
+        29,
+        6
+      ]
+    },
+    {
+      "rank": "2",
+      "component_area": 16079,
+      "component_bbox": [
+        138,
+        455,
+        232,
+        630
+      ],
+      "crop_bbox": [
+        136,
+        453,
+        234,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        63,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    },
+    {
+      "rank": "3",
+      "component_area": 15398,
+      "component_bbox": [
+        249,
+        455,
+        338,
+        630
+      ],
+      "crop_bbox": [
+        247,
+        453,
+        340,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        60,
+        116
+      ],
+      "paste_position": [
+        34,
+        6
+      ]
+    },
+    {
+      "rank": "4",
+      "component_area": 16410,
+      "component_bbox": [
+        353,
+        455,
+        450,
+        630
+      ],
+      "crop_bbox": [
+        351,
+        453,
+        452,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        65,
+        116
+      ],
+      "paste_position": [
+        31,
+        6
+      ]
+    },
+    {
+      "rank": "5",
+      "component_area": 16313,
+      "component_bbox": [
+        462,
+        455,
+        557,
+        630
+      ],
+      "crop_bbox": [
+        460,
+        453,
+        559,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        64,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    },
+    {
+      "rank": "6",
+      "component_area": 15903,
+      "component_bbox": [
+        572,
+        455,
+        665,
+        630
+      ],
+      "crop_bbox": [
+        570,
+        453,
+        667,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        63,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    },
+    {
+      "rank": "7",
+      "component_area": 16380,
+      "component_bbox": [
+        677,
+        455,
+        772,
+        630
+      ],
+      "crop_bbox": [
+        675,
+        453,
+        774,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        64,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    },
+    {
+      "rank": "8",
+      "component_area": 15591,
+      "component_bbox": [
+        787,
+        455,
+        878,
+        633
+      ],
+      "crop_bbox": [
+        785,
+        453,
+        880,
+        635
+      ],
+      "edge_touch": false,
+      "output_size": [
+        61,
+        118
+      ],
+      "paste_position": [
+        33,
+        5
+      ]
+    },
+    {
+      "rank": "9",
+      "component_area": 16061,
+      "component_bbox": [
+        893,
+        455,
+        987,
+        631
+      ],
+      "crop_bbox": [
+        891,
+        453,
+        989,
+        633
+      ],
+      "edge_touch": false,
+      "output_size": [
+        63,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    },
+    {
+      "rank": "10",
+      "component_area": 14852,
+      "component_bbox": [
+        1004,
+        455,
+        1090,
+        631
+      ],
+      "crop_bbox": [
+        1002,
+        453,
+        1092,
+        633
+      ],
+      "edge_touch": false,
+      "output_size": [
+        58,
+        116
+      ],
+      "paste_position": [
+        35,
+        6
+      ]
+    },
+    {
+      "rank": "J",
+      "component_area": 15566,
+      "component_bbox": [
+        1105,
+        455,
+        1197,
+        630
+      ],
+      "crop_bbox": [
+        1103,
+        453,
+        1199,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        62,
+        116
+      ],
+      "paste_position": [
+        33,
+        6
+      ]
+    },
+    {
+      "rank": "Q",
+      "component_area": 16061,
+      "component_bbox": [
+        1209,
+        455,
+        1303,
+        631
+      ],
+      "crop_bbox": [
+        1207,
+        453,
+        1305,
+        633
+      ],
+      "edge_touch": false,
+      "output_size": [
+        63,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    },
+    {
+      "rank": "K",
+      "component_area": 15941,
+      "component_bbox": [
+        1317,
+        455,
+        1410,
+        630
+      ],
+      "crop_bbox": [
+        1315,
+        453,
+        1412,
+        632
+      ],
+      "edge_touch": false,
+      "output_size": [
+        63,
+        116
+      ],
+      "paste_position": [
+        32,
+        6
+      ]
+    }
+  ]
+}
