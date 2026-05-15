@@ -1,0 +1,30 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "source": "art/cards/item_cards/question_mark/run-004/processed/clean.png",
+  "generated_from": "run-004 static ocean card, deterministic water shimmer animation",
+  "frame_count": 4,
+  "frame_size": [
+    384,
+    384
+  ],
+  "duration_ms": 180,
+  "animated_elements": "subtle internal water rings, bubbles, sea-glass sparkles, slight shimmer",
+  "fixed_elements": "card silhouette, border, central icon identity, base composition",
+  "alpha_bbox": [
+    19,
+    35,
+    364,
+    349
+  ],
+  "outputs": [
+    "frames/frame-001.png",
+    "frames/frame-002.png",
+    "frames/frame-003.png",
+    "frames/frame-004.png",
+    "sheet-transparent.png",
+    "strip-transparent.png",
+    "raw-preview-sheet.png",
+    "animation-magenta-preview.gif"
+  ]
+}

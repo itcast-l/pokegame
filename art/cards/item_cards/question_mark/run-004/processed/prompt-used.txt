@@ -1,0 +1,7 @@
+Single static special item card artwork for a 2D Godot card game, clean HD hand-painted game asset style, not pixel art. Redesign the existing QuestionMark special card into an ocean theme while keeping it clearly recognizable as a question mark card.
+
+Canvas and background rules: one centered card asset only, transparent-ready sprite source on a 100% solid flat magenta #FF00FF background, no gradients in the background, no shadows outside the card, no UI, no labels, no readable text, no letters, no numbers.
+
+Card design: vertical rounded rectangle playing-card silhouette, elegant thin border, pearl-white and pale seafoam card surface, small gold and dark navy line accents, subtle coral corner ornaments, tiny shell and bubble motifs. The center symbol is one large stylized question mark made from deep ocean navy with turquoise inner glow, gold rim highlight, and pearl shine. Add restrained ocean magic details around the question mark: small bubbles, faint wave ring, sea-glass sparkles, a few tiny coral/starfish accents. Keep the composition clean and gameplay-readable at small size.
+
+Containment: the full card must fit fully inside the image with generous magenta margin on all four sides. No part of the card, ornament, glow, bubbles, sparkle, coral, shell, or wave effect may touch or cross the image edge. The card should occupy roughly 80% of the 384x384 frame height, centered, stable, crisp silhouette.

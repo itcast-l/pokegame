@@ -1,0 +1,43 @@
+Use the input image as the exact visual reference for layout, camera framing, four-player table geometry, center arena placement, avatar frames, hand lanes, and empty deck pads.
+
+Create a production-ready 1920x1080 horizontal 16:9 top-down poker/card game board background for a Godot game.
+
+This is a fixed UI/game-board base image. It should look like an underwater glass-dome card arena, but do not try to bake animation into the image. Leave the final shimmer, bubbles, and drifting water motion to runtime overlay layers.
+
+Preserve the functional layout:
+- Four player areas around the center: top, bottom, left, right.
+- Top and bottom player areas are horizontal panels.
+- Left and right player areas are vertical panels.
+- The center is a large empty shared play area for played cards.
+- Keep one empty avatar frame on every player panel.
+- Each player panel has one continuous flexible hand-card lane for variable hand size.
+- Each player panel has one empty personal deck/draw-pile reserved pad separated from the hand lane.
+
+Improve the outer perimeter:
+- Make the outer edges feel like a deep underwater glass-dome environment.
+- Add readable surrounding depth, soft dark teal water outside the table frame, distant coral silhouettes, faint sea plants, pearl alloy trim, subtle glass refraction, and room for animated bubbles around the border.
+- Keep the center and player lanes clean, readable, and not busy.
+- Use layered teal, cyan, pearl white, gold, purple, and green accents rather than one flat blue palette.
+
+Player accent colors:
+- Top player panel: blue / cyan accent.
+- Bottom player panel: warm gold / sand accent.
+- Left player panel: pink / purple accent.
+- Right player panel: green / teal accent.
+- Keep these accents visible in player panels and avatar frames.
+
+Strict card-zone requirements:
+- Do NOT draw actual playing cards.
+- Do NOT draw card backs.
+- Do NOT draw deck stacks.
+- Do NOT draw patterned card rectangles.
+- Do NOT draw fixed separated hand slots.
+- The reserved deck pads and hand lanes must be empty runtime placement zones only.
+
+Style:
+- Clean HD 2D game UI scene.
+- Polished underwater fantasy technology.
+- Translucent teal glass, pearl white alloy trim, soft ocean-blue lighting, subtle caustic reflections, elegant bevels, crisp readable shapes.
+- No pixel art, no noisy texture, no blurry painterly mush.
+
+No characters, no monsters, no portraits inside avatar frames, no readable text, no labels, no letters, no numbers, no logos, no watermarks, no UI buttons.

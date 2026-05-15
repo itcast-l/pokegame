@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/ocean_standard_deck/_runs/spades/2/source.png",
+  "threshold": 80,
+  "edge_threshold": 80,
+  "duration": 200,
+  "single_size": 128
+}

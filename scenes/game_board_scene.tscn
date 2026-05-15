@@ -1,0 +1,142 @@
+[gd_scene load_steps=5 format=3 uid="uid://dm510cyafsu8m"]
+
+[ext_resource type="Script" path="res://scripts/GameBoardScene.cs" id="1_game_board_scene"]
+[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_v5_1920x1080.png" id="2_board_texture"]
+[ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="3_water_caustic_shader"]
+[ext_resource type="Script" path="res://scripts/UnderwaterAmbientLayer.cs" id="4_underwater_ambient_layer"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water_caustic"]
+shader = ExtResource("3_water_caustic_shader")
+shader_parameter/shimmer_color = Color(0.52, 0.98, 1, 0.24)
+shader_parameter/shimmer_strength = 0.55
+shader_parameter/wave_scale = 26.0
+shader_parameter/wave_speed = 0.62
+shader_parameter/edge_boost = 0.95
+shader_parameter/center_glow = 0.22
+
+[node name="GameBoardScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_game_board_scene")
+
+[node name="BoardArt" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_board_texture")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WaterCausticOverlay" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_water_caustic")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="UnderwaterAmbientLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_underwater_ambient_layer")
+bubble_count = 30
+mote_count = 72
+seagrass_blade_count = 52
+motion_scale = 0.85
+
+[node name="LayoutAreas" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CenterArena" type="Control" parent="LayoutAreas"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.221875
+anchor_top = 0.223
+anchor_right = 0.817708
+anchor_bottom = 0.79
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="TopPlayerArea" type="Control" parent="LayoutAreas"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.242
+anchor_top = 0.052
+anchor_right = 0.758
+anchor_bottom = 0.205
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="TopAvatarAnchor" type="Marker2D" parent="LayoutAreas/TopPlayerArea"]
+position = Vector2(120, 78)
+
+[node name="BottomPlayerArea" type="Control" parent="LayoutAreas"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.242
+anchor_top = 0.785
+anchor_right = 0.758
+anchor_bottom = 0.96
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="BottomAvatarAnchor" type="Marker2D" parent="LayoutAreas/BottomPlayerArea"]
+position = Vector2(120, 78)
+
+[node name="LeftPlayerArea" type="Control" parent="LayoutAreas"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.08
+anchor_top = 0.18
+anchor_right = 0.19
+anchor_bottom = 0.81
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="LeftAvatarAnchor" type="Marker2D" parent="LayoutAreas/LeftPlayerArea"]
+position = Vector2(110, 82)
+
+[node name="RightPlayerArea" type="Control" parent="LayoutAreas"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.81
+anchor_top = 0.18
+anchor_right = 0.92
+anchor_bottom = 0.81
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="RightAvatarAnchor" type="Marker2D" parent="LayoutAreas/RightPlayerArea"]
+position = Vector2(110, 82)

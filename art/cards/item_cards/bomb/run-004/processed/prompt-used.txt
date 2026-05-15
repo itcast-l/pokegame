@@ -1,0 +1,9 @@
+Use the input image as the visual style reference for the accepted ocean QuestionMark special card: vertical rounded playing-card silhouette, pearl-white and pale seafoam face, elegant thin dark navy and gold border, coral corner ornaments, shell accents, bubbles, sea-glass sparkles, centered deep ocean navy icon with turquoise inner glow and gold rim highlight.
+
+Create one static special item card artwork for a 2D Godot card game in the same clean HD hand-painted game asset style, not pixel art. Keep the card front-facing and perfectly flat orthographic.
+
+Canvas and background rules: one centered card asset only, transparent-ready sprite source on a 100% solid flat magenta #FF00FF background, no gradients in the background, no shadows outside the card, no UI, no labels, no readable text, no Chinese characters, no English letters, no numbers.
+
+Shared card rules: keep the composition clean and gameplay-readable at small size. The full card must fit fully inside the image with generous magenta margin on all four sides. No card edge, ornament, glow, bubble, sparkle, coral, shell, or wave effect may touch or cross the image edge. The card should occupy roughly 80% of the 384x384 frame height, centered, with a crisp silhouette.
+
+Center symbol: one iconic ocean-themed bomb emblem, clearly readable as a bomb item. Use a deep ocean navy round bomb / sea-mine silhouette with a short curled fuse, small pearl spark at the fuse tip, turquoise inner glow, and a fine gold rim. It may borrow subtle nautical mine shape language, but keep it compact, friendly for a card game, and not realistic military hardware. Add restrained bubbles and a faint wave ring around the emblem. Do not add explosion flames, skulls, warning signs, text, numbers, or extra weapons.

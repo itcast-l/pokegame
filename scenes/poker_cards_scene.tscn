@@ -1,0 +1,342 @@
+[gd_scene format=3 uid="uid://bbqom4864gcwg"]
+
+[ext_resource type="Texture2D" uid="uid://cf5b5c7n47yaw" path="res://art/cards/standard_deck/spades/A.png" id="1_spades_a"]
+[ext_resource type="Texture2D" uid="uid://b81v0pc3ybaio" path="res://art/cards/standard_deck/spades/2.png" id="2_spades_2"]
+[ext_resource type="Texture2D" uid="uid://c8vra17h8wiux" path="res://art/cards/standard_deck/spades/3.png" id="3_spades_3"]
+[ext_resource type="Texture2D" uid="uid://b38xnmk85sqet" path="res://art/cards/standard_deck/spades/4.png" id="4_spades_4"]
+[ext_resource type="Texture2D" uid="uid://hjy4g51cah0o" path="res://art/cards/standard_deck/spades/5.png" id="5_spades_5"]
+[ext_resource type="Texture2D" uid="uid://cyyiqmjowpvv6" path="res://art/cards/standard_deck/spades/6.png" id="6_spades_6"]
+[ext_resource type="Texture2D" uid="uid://blc0kksa737f1" path="res://art/cards/standard_deck/spades/7.png" id="7_spades_7"]
+[ext_resource type="Texture2D" uid="uid://gl17n2qvqosp" path="res://art/cards/standard_deck/spades/8.png" id="8_spades_8"]
+[ext_resource type="Texture2D" uid="uid://bntdxwlp11jg8" path="res://art/cards/standard_deck/spades/9.png" id="9_spades_9"]
+[ext_resource type="Texture2D" uid="uid://bdpm0xxfb4hl0" path="res://art/cards/standard_deck/spades/10.png" id="10_spades_10"]
+[ext_resource type="Texture2D" uid="uid://yvnlb6t0jhru" path="res://art/cards/standard_deck/spades/J.png" id="11_spades_j"]
+[ext_resource type="Texture2D" uid="uid://cmbhgpdwtjx2u" path="res://art/cards/standard_deck/spades/Q.png" id="12_spades_q"]
+[ext_resource type="Texture2D" uid="uid://bdodd30adl33f" path="res://art/cards/standard_deck/spades/K.png" id="13_spades_k"]
+[ext_resource type="Texture2D" uid="uid://cuqmmcdjculln" path="res://art/cards/standard_deck/hearts/A.png" id="14_hearts_a"]
+[ext_resource type="Texture2D" uid="uid://c6yj238xyyeix" path="res://art/cards/standard_deck/hearts/2.png" id="15_hearts_2"]
+[ext_resource type="Texture2D" uid="uid://xkh1ifmnric1" path="res://art/cards/standard_deck/hearts/3.png" id="16_hearts_3"]
+[ext_resource type="Texture2D" uid="uid://7y8x8a8tcl27" path="res://art/cards/standard_deck/hearts/4.png" id="17_hearts_4"]
+[ext_resource type="Texture2D" uid="uid://c7rbnntsrd3g0" path="res://art/cards/standard_deck/hearts/5.png" id="18_hearts_5"]
+[ext_resource type="Texture2D" uid="uid://7pjsxy6ucag2" path="res://art/cards/standard_deck/hearts/6.png" id="19_hearts_6"]
+[ext_resource type="Texture2D" uid="uid://yjch646fqdp7" path="res://art/cards/standard_deck/hearts/7.png" id="20_hearts_7"]
+[ext_resource type="Texture2D" uid="uid://b6mfbwxxk13c1" path="res://art/cards/standard_deck/hearts/8.png" id="21_hearts_8"]
+[ext_resource type="Texture2D" uid="uid://crq0cshg548ty" path="res://art/cards/standard_deck/hearts/9.png" id="22_hearts_9"]
+[ext_resource type="Texture2D" uid="uid://cqoajhu8sxj0c" path="res://art/cards/standard_deck/hearts/10.png" id="23_hearts_10"]
+[ext_resource type="Texture2D" uid="uid://d1s17ig8jl8r6" path="res://art/cards/standard_deck/hearts/J.png" id="24_hearts_j"]
+[ext_resource type="Texture2D" uid="uid://ceg03f2jkmew" path="res://art/cards/standard_deck/hearts/Q.png" id="25_hearts_q"]
+[ext_resource type="Texture2D" uid="uid://dph4u4sxvlva" path="res://art/cards/standard_deck/hearts/K.png" id="26_hearts_k"]
+[ext_resource type="Texture2D" uid="uid://jssvjdh8epbh" path="res://art/cards/standard_deck/diamonds/A.png" id="27_diamonds_a"]
+[ext_resource type="Texture2D" uid="uid://dbylgmmfgyovi" path="res://art/cards/standard_deck/diamonds/2.png" id="28_diamonds_2"]
+[ext_resource type="Texture2D" uid="uid://dfj5o5b7nhhia" path="res://art/cards/standard_deck/diamonds/3.png" id="29_diamonds_3"]
+[ext_resource type="Texture2D" uid="uid://dnlww803fb3pn" path="res://art/cards/standard_deck/diamonds/4.png" id="30_diamonds_4"]
+[ext_resource type="Texture2D" uid="uid://pd40env6wxv5" path="res://art/cards/standard_deck/diamonds/5.png" id="31_diamonds_5"]
+[ext_resource type="Texture2D" uid="uid://dxpcj74wkea8n" path="res://art/cards/standard_deck/diamonds/6.png" id="32_diamonds_6"]
+[ext_resource type="Texture2D" uid="uid://4d0qkyc4q01d" path="res://art/cards/standard_deck/diamonds/7.png" id="33_diamonds_7"]
+[ext_resource type="Texture2D" uid="uid://bkotvpekredih" path="res://art/cards/standard_deck/diamonds/8.png" id="34_diamonds_8"]
+[ext_resource type="Texture2D" uid="uid://ditlarwu02pvu" path="res://art/cards/standard_deck/diamonds/9.png" id="35_diamonds_9"]
+[ext_resource type="Texture2D" uid="uid://dn4x5yfsiaxra" path="res://art/cards/standard_deck/diamonds/10.png" id="36_diamonds_10"]
+[ext_resource type="Texture2D" uid="uid://bppv0khen2qa2" path="res://art/cards/standard_deck/diamonds/J.png" id="37_diamonds_j"]
+[ext_resource type="Texture2D" uid="uid://ctssi216rdlq2" path="res://art/cards/standard_deck/diamonds/Q.png" id="38_diamonds_q"]
+[ext_resource type="Texture2D" uid="uid://beqr7o6q0un4g" path="res://art/cards/standard_deck/diamonds/K.png" id="39_diamonds_k"]
+[ext_resource type="Texture2D" uid="uid://dbbx05qtbo085" path="res://art/cards/standard_deck/clubs/A.png" id="40_clubs_a"]
+[ext_resource type="Texture2D" uid="uid://vprdyelxk27t" path="res://art/cards/standard_deck/clubs/2.png" id="41_clubs_2"]
+[ext_resource type="Texture2D" uid="uid://d237voyac4ma5" path="res://art/cards/standard_deck/clubs/3.png" id="42_clubs_3"]
+[ext_resource type="Texture2D" uid="uid://bwqbg5x8pm7q8" path="res://art/cards/standard_deck/clubs/4.png" id="43_clubs_4"]
+[ext_resource type="Texture2D" uid="uid://c2c70ypgl3ilf" path="res://art/cards/standard_deck/clubs/5.png" id="44_clubs_5"]
+[ext_resource type="Texture2D" uid="uid://6cvl6kpbkyd" path="res://art/cards/standard_deck/clubs/6.png" id="45_clubs_6"]
+[ext_resource type="Texture2D" uid="uid://buqnuamb3n0wr" path="res://art/cards/standard_deck/clubs/7.png" id="46_clubs_7"]
+[ext_resource type="Texture2D" uid="uid://dpjewww6hi66r" path="res://art/cards/standard_deck/clubs/8.png" id="47_clubs_8"]
+[ext_resource type="Texture2D" uid="uid://10r0p3ur6l5i" path="res://art/cards/standard_deck/clubs/9.png" id="48_clubs_9"]
+[ext_resource type="Texture2D" uid="uid://lejl7escnme2" path="res://art/cards/standard_deck/clubs/10.png" id="49_clubs_10"]
+[ext_resource type="Texture2D" uid="uid://b2t0rk2bleth6" path="res://art/cards/standard_deck/clubs/J.png" id="50_clubs_j"]
+[ext_resource type="Texture2D" uid="uid://c1mnoslti1ami" path="res://art/cards/standard_deck/clubs/Q.png" id="51_clubs_q"]
+[ext_resource type="Texture2D" uid="uid://3uta2gn55usg" path="res://art/cards/standard_deck/clubs/K.png" id="52_clubs_k"]
+[ext_resource type="Texture2D" uid="uid://uvb0ngfef3q3" path="res://art/cards/standard_deck/back.png" id="53_card_back"]
+
+[node name="PokerCardsScene" type="Node2D" unique_id=1780853255]
+texture_filter = 1
+
+[node name="Background" type="Polygon2D" parent="." unique_id=229353581]
+color = Color(0.055, 0.075, 0.065, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1498053735]
+position = Vector2(576, 324)
+
+[node name="StandardPokerCards" type="Node2D" parent="." unique_id=796061014]
+
+[node name="Spades" type="Node2D" parent="StandardPokerCards" unique_id=1103442348]
+
+[node name="Card_A" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1214086484]
+position = Vector2(80, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("1_spades_a")
+
+[node name="Card_2" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1050641328]
+position = Vector2(158, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_spades_2")
+
+[node name="Card_3" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=887556986]
+position = Vector2(236, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("3_spades_3")
+
+[node name="Card_4" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1471971942]
+position = Vector2(314, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("4_spades_4")
+
+[node name="Card_5" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1672604526]
+position = Vector2(392, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("5_spades_5")
+
+[node name="Card_6" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=484764168]
+position = Vector2(470, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("6_spades_6")
+
+[node name="Card_7" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1828409547]
+position = Vector2(548, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("7_spades_7")
+
+[node name="Card_8" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=2137979457]
+position = Vector2(626, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("8_spades_8")
+
+[node name="Card_9" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=511319392]
+position = Vector2(704, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("9_spades_9")
+
+[node name="Card_10" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1155702608]
+position = Vector2(782, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("10_spades_10")
+
+[node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=626345195]
+position = Vector2(860, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("11_spades_j")
+
+[node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1033471294]
+position = Vector2(938, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("12_spades_q")
+
+[node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1268895757]
+position = Vector2(1016, 84)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("13_spades_k")
+
+[node name="Hearts" type="Node2D" parent="StandardPokerCards" unique_id=1732545395]
+
+[node name="Card_A" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1019679547]
+position = Vector2(80, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("14_hearts_a")
+
+[node name="Card_2" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1950825829]
+position = Vector2(158, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("15_hearts_2")
+
+[node name="Card_3" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1645611693]
+position = Vector2(236, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("16_hearts_3")
+
+[node name="Card_4" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1718254083]
+position = Vector2(314, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("17_hearts_4")
+
+[node name="Card_5" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=2041618221]
+position = Vector2(392, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("18_hearts_5")
+
+[node name="Card_6" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1569503442]
+position = Vector2(470, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("19_hearts_6")
+
+[node name="Card_7" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1276730887]
+position = Vector2(548, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("20_hearts_7")
+
+[node name="Card_8" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=75267464]
+position = Vector2(626, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("21_hearts_8")
+
+[node name="Card_9" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1897406647]
+position = Vector2(704, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("22_hearts_9")
+
+[node name="Card_10" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=2122859036]
+position = Vector2(782, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("23_hearts_10")
+
+[node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1317441660]
+position = Vector2(860, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("24_hearts_j")
+
+[node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=554538711]
+position = Vector2(938, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("25_hearts_q")
+
+[node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1989229619]
+position = Vector2(1016, 204)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("26_hearts_k")
+
+[node name="Diamonds" type="Node2D" parent="StandardPokerCards" unique_id=1853455992]
+
+[node name="Card_A" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=2084131991]
+position = Vector2(80, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("27_diamonds_a")
+
+[node name="Card_2" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1657640288]
+position = Vector2(158, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("28_diamonds_2")
+
+[node name="Card_3" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=2031126896]
+position = Vector2(236, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("29_diamonds_3")
+
+[node name="Card_4" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1822468847]
+position = Vector2(314, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("30_diamonds_4")
+
+[node name="Card_5" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1084963869]
+position = Vector2(392, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("31_diamonds_5")
+
+[node name="Card_6" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=32895821]
+position = Vector2(470, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("32_diamonds_6")
+
+[node name="Card_7" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1348200851]
+position = Vector2(548, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("33_diamonds_7")
+
+[node name="Card_8" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1884532138]
+position = Vector2(626, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("34_diamonds_8")
+
+[node name="Card_9" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=820781990]
+position = Vector2(704, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("35_diamonds_9")
+
+[node name="Card_10" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1775245178]
+position = Vector2(782, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("36_diamonds_10")
+
+[node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1417530]
+position = Vector2(860, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("37_diamonds_j")
+
+[node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=610621068]
+position = Vector2(938, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("38_diamonds_q")
+
+[node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=865539263]
+position = Vector2(1016, 324)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("39_diamonds_k")
+
+[node name="Clubs" type="Node2D" parent="StandardPokerCards" unique_id=297291218]
+
+[node name="Card_A" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=1271041725]
+position = Vector2(80, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("40_clubs_a")
+
+[node name="Card_2" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=2003555870]
+position = Vector2(158, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("41_clubs_2")
+
+[node name="Card_3" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=1192304167]
+position = Vector2(236, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("42_clubs_3")
+
+[node name="Card_4" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=882096735]
+position = Vector2(314, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("43_clubs_4")
+
+[node name="Card_5" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=78638954]
+position = Vector2(392, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("44_clubs_5")
+
+[node name="Card_6" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=132480974]
+position = Vector2(470, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("45_clubs_6")
+
+[node name="Card_7" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=45649761]
+position = Vector2(548, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("46_clubs_7")
+
+[node name="Card_8" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=738927189]
+position = Vector2(626, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("47_clubs_8")
+
+[node name="Card_9" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=1466106363]
+position = Vector2(704, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("48_clubs_9")
+
+[node name="Card_10" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=1646760393]
+position = Vector2(782, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("49_clubs_10")
+
+[node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=1584809956]
+position = Vector2(860, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("50_clubs_j")
+
+[node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=543050527]
+position = Vector2(938, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("51_clubs_q")
+
+[node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Clubs" unique_id=921239477]
+position = Vector2(1016, 444)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("52_clubs_k")
+
+[node name="Back" type="Node2D" parent="StandardPokerCards" unique_id=626595972]
+
+[node name="Card_Back" type="Sprite2D" parent="StandardPokerCards/Back" unique_id=1803785206]
+position = Vector2(80, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("53_card_back")

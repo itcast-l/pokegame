@@ -1,0 +1,3 @@
+Derived from underwater_card_table_v5.png using deterministic resize to 1920x1080 for the Godot game board scene.
+
+Original generation prompt is stored in underwater_card_table_v5.prompt.txt.
