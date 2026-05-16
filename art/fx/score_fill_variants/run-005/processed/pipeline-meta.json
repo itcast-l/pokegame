@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "fx",
+  "prompt": "",
+  "role": "",
+  "input": "art/fx/score_fill_variants/run-005/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 100,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 512,
+  "fit_scale": 0.85,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "fx-1",
+    "fx-2",
+    "fx-3",
+    "fx-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 13,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        154,
+        282,
+        358,
+        393
+      ],
+      "edge_touch": false,
+      "output_size": [
+        269,
+        146
+      ],
+      "paste_position": [
+        121,
+        183
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 38,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        135,
+        115,
+        331,
+        403
+      ],
+      "edge_touch": false,
+      "output_size": [
+        259,
+        380
+      ],
+      "paste_position": [
+        126,
+        66
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "component_mode": "all",
+      "component_count": 50,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        134,
+        96,
+        416,
+        340
+      ],
+      "edge_touch": false,
+      "output_size": [
+        373,
+        322
+      ],
+      "paste_position": [
+        69,
+        95
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "component_mode": "all",
+      "component_count": 21,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        56,
+        251,
+        385,
+        378
+      ],
+      "edge_touch": false,
+      "output_size": [
+        435,
+        167
+      ],
+      "paste_position": [
+        38,
+        172
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

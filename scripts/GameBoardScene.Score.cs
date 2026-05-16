@@ -11,6 +11,13 @@ public partial class GameBoardScene
 		"Player3ScoreMeter",
 		"Player4ScoreMeter",
 	};
+	private static readonly string[] ScoreEffectTargetNodeNames =
+	{
+		"Player1ScoreEffectTarget",
+		"Player2ScoreEffectTarget",
+		"Player3ScoreEffectTarget",
+		"Player4ScoreEffectTarget",
+	};
 	private static readonly Color[] AvatarScoreFillColors =
 	{
 		new(1.0f, 0.86f, 0.52f, 0.46f),
@@ -28,6 +35,7 @@ public partial class GameBoardScene
 
 	private readonly int[] _playerScores = new int[MaxPlayers];
 	private readonly ScoreAvatarMeter?[] _playerScoreMeters = new ScoreAvatarMeter?[MaxPlayers];
+	private readonly ScoreEffectTarget?[] _playerScoreEffectTargets = new ScoreEffectTarget?[MaxPlayers];
 
 	private void BindPlayerScoreMeters()
 	{
@@ -44,6 +52,7 @@ public partial class GameBoardScene
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
 			meter.SetScore(0, WinningScore, false);
 			_playerScoreMeters[playerIndex] = meter;
+			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[playerIndex]}");
 		}
 	}
 

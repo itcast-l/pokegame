@@ -5,6 +5,7 @@
 [ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="3_water_caustic_shader"]
 [ext_resource type="Script" uid="uid://b82b6b0sb0p4n" path="res://scripts/UnderwaterAmbientLayer.cs" id="4_underwater_ambient_layer"]
 [ext_resource type="Script" uid="uid://kab5lotekms7" path="res://scripts/ScoreAvatarMeter.cs" id="5_score_avatar_meter"]
+[ext_resource type="Script" uid="uid://b3s43m2q8xefy" path="res://scripts/ScoreEffectTarget.cs" id="6_score_effect_target"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_water_caustic"]
 shader = ExtResource("3_water_caustic_shader")
@@ -323,6 +324,12 @@ pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
 
+[node name="Player2ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=2097461514]
+unique_name_in_owner = true
+z_index = 6
+position = Vector2(96.216, 11.304)
+script = ExtResource("6_score_effect_target")
+
 [node name="BottomPlayerArea" type="Control" parent="LayoutAreas" unique_id=634798856]
 unique_name_in_owner = true
 layout_mode = 1
@@ -349,6 +356,12 @@ offset_bottom = 64.31995
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
+
+[node name="Player1ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1708757218]
+unique_name_in_owner = true
+z_index = 6
+position = Vector2(16.216003, 36.319977)
+script = ExtResource("6_score_effect_target")
 
 [node name="LeftPlayerArea" type="Control" parent="LayoutAreas" unique_id=1085384917]
 unique_name_in_owner = true
@@ -377,6 +390,12 @@ pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
 
+[node name="Player3ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/LeftPlayerArea" unique_id=1214222107]
+unique_name_in_owner = true
+z_index = 6
+position = Vector2(56.839996, 68.359985)
+script = ExtResource("6_score_effect_target")
+
 [node name="RightPlayerArea" type="Control" parent="LayoutAreas" unique_id=513893596]
 unique_name_in_owner = true
 layout_mode = 1
@@ -403,3 +422,9 @@ offset_bottom = 92.359985
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
+
+[node name="Player4ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=369324978]
+unique_name_in_owner = true
+z_index = 6
+position = Vector2(63.880005, 68.359985)
+script = ExtResource("6_score_effect_target")

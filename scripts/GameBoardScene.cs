@@ -11,8 +11,8 @@ public partial class GameBoardScene : Control
 	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
 	private const int CardBackFrameCount = 4;
 	private const float CardBackAnimationFps = 6.0f;
-	private const string ScoreBubbleFramePattern = "res://art/fx/score_bubbles/run-001/processed/bubble-{0}.png";
-	private const int ScoreBubbleFrameCount = 4;
+	private const string ScoreFillEffectFramePattern = "res://art/fx/score_fill_orbs/run-001/processed/fx-{0}.png";
+	private const int ScoreFillEffectFrameCount = 4;
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string QuestionMarkItemCardId = "question_mark";
 	private const string JackItemCardId = "J";
@@ -79,8 +79,6 @@ public partial class GameBoardScene : Control
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
 	private static readonly Vector2 CardVisualSize = new(72, 96);
-	private static readonly Vector2 HandItemCardVisualSize = new(72, 72);
-	private static readonly Vector2 HandItemCardVisualOffset = (CardVisualSize - HandItemCardVisualSize) / 2.0f;
 	private static readonly Vector2 CardPileOffset = new(5, -4);
 	private static readonly Vector2 TableCardStartPosition = new(96, 16);
 	private const float FirstTableCardLift = 20.0f;
@@ -101,7 +99,7 @@ public partial class GameBoardScene : Control
 	private readonly List<Control> _playerHandAreas = new();
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
 	private readonly List<Texture2D> _cardBackFrames = new();
-	private readonly List<Texture2D> _scoreBubbleFrames = new();
+	private readonly List<Texture2D> _scoreFillEffectFrames = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
 	private float _cardBackAnimationTime;
@@ -147,7 +145,7 @@ public partial class GameBoardScene : Control
 	{
 		_rng.Randomize();
 		LoadCardBackTextures();
-		LoadScoreBubbleTextures();
+		LoadScoreFillEffectTextures();
 		LoadItemCardTextures();
 
 		_centerArena = GetNode<Control>("%CenterArena");
@@ -199,20 +197,20 @@ public partial class GameBoardScene : Control
 		}
 	}
 
-	private void LoadScoreBubbleTextures()
+	private void LoadScoreFillEffectTextures()
 	{
-		_scoreBubbleFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= ScoreBubbleFrameCount; frameIndex++)
+		_scoreFillEffectFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= ScoreFillEffectFrameCount; frameIndex++)
 		{
-			string path = string.Format(ScoreBubbleFramePattern, frameIndex);
+			string path = string.Format(ScoreFillEffectFramePattern, frameIndex);
 			Texture2D? texture = GD.Load<Texture2D>(path);
 			if (texture == null)
 			{
-				GD.PushWarning($"Missing score bubble frame: {path}");
+				GD.PushWarning($"Missing score fill effect frame: {path}");
 				continue;
 			}
 
-			_scoreBubbleFrames.Add(texture);
+			_scoreFillEffectFrames.Add(texture);
 		}
 	}
 

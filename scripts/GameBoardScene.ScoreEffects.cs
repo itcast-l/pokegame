@@ -5,18 +5,19 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private const float ScoreBubbleGatherSeconds = 0.18f;
-	private const float ScoreBubbleFlightSeconds = 0.42f;
-	private const float ScoreBubbleStaggerSeconds = 0.045f;
-	private const int MaxScoreBubbleFlights = 14;
+	private const float ScoreFillEffectFlightSeconds = 0.62f;
+	private const float ScoreFillEffectStaggerSeconds = 0.07f;
+	private const int MaxScoreFillEffectFlights = 12;
+	private const float ScoreFillEffectVisualSize = 64.0f;
+	private const float ScoreFillPulseVisualSize = 92.0f;
 
-	private async Task PlayScoreBubbleCollectionAsync(
+	private async Task PlayScoreFillCollectionAsync(
 		int playerIndex,
 		IReadOnlyList<CapturedTableCardVisual> capturedCardVisuals,
 		int turnSequenceGeneration,
 		Action? onArrival = null)
 	{
-		if (_scoreBubbleFrames.Count == 0 || capturedCardVisuals.Count == 0)
+		if (_scoreFillEffectFrames.Count == 0 || capturedCardVisuals.Count == 0)
 		{
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 			{
@@ -28,38 +29,55 @@ public partial class GameBoardScene
 
 		Vector2 targetCenter = GetScoreMeterGlobalCenter(playerIndex);
 		var flightTasks = new List<Task>();
-		int bubbleIndex = 0;
-		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && bubbleIndex < MaxScoreBubbleFlights; visualIndex++)
+		bool scoreAwarded = false;
+		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && flightTasks.Count < MaxScoreFillEffectFlights; visualIndex++)
 		{
 			Vector2 cardCenter = capturedCardVisuals[visualIndex].GlobalPosition + CardVisualSize / 2.0f;
-			int bubblesForCard = capturedCardVisuals.Count <= 4 ? 2 : 1;
-			for (int localIndex = 0; localIndex < bubblesForCard && bubbleIndex < MaxScoreBubbleFlights; localIndex++)
-			{
-				flightTasks.Add(PlayScoreBubbleFlightAsync(
-					cardCenter,
-					targetCenter,
-					bubbleIndex,
-					(visualIndex * ScoreBubbleStaggerSeconds) + localIndex * 0.025f));
-				bubbleIndex++;
-			}
+			flightTasks.Add(PlayScoreFillEffectFlightAsync(
+				cardCenter,
+				targetCenter,
+				flightTasks.Count,
+				visualIndex * ScoreFillEffectStaggerSeconds,
+				() =>
+				{
+					if (scoreAwarded || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return;
+					}
+
+					scoreAwarded = true;
+					onArrival?.Invoke();
+				}));
 		}
 
 		await Task.WhenAll(flightTasks);
 		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 		{
-			onArrival?.Invoke();
-			await PlayScoreBubbleSplashAsync(targetCenter);
+			if (!scoreAwarded)
+			{
+				onArrival?.Invoke();
+			}
+
+			await PlayScoreFillArrivalPulseAsync(targetCenter);
 		}
 	}
 
 	private Vector2 GetScoreMeterGlobalCenter(int playerIndex)
 	{
 		if (playerIndex >= 0
+			&& playerIndex < _playerScoreEffectTargets.Length
+			&& _playerScoreEffectTargets[playerIndex] is ScoreEffectTarget target
+			&& GodotObject.IsInstanceValid(target))
+		{
+			return target.MarkerGlobalPosition;
+		}
+
+		if (playerIndex >= 0
 			&& playerIndex < _playerScoreMeters.Length
 			&& _playerScoreMeters[playerIndex] is ScoreAvatarMeter meter
 			&& GodotObject.IsInstanceValid(meter))
 		{
-			return meter.GlobalPosition + meter.Size / 2.0f;
+			return meter.GetGlobalRect().GetCenter();
 		}
 
 		if (playerIndex >= 0 && playerIndex < _playerCardPiles.Count && GodotObject.IsInstanceValid(_playerCardPiles[playerIndex]))
@@ -70,36 +88,40 @@ public partial class GameBoardScene
 		return Size / 2.0f;
 	}
 
-	private async Task PlayScoreBubbleFlightAsync(Vector2 cardCenter, Vector2 targetCenter, int bubbleIndex, float startDelaySeconds)
+	private async Task PlayScoreFillEffectFlightAsync(
+		Vector2 cardCenter,
+		Vector2 targetCenter,
+		int effectIndex,
+		float startDelaySeconds,
+		Action onTouchTarget)
 	{
 		if (startDelaySeconds > 0.0f)
 		{
 			await ToSignal(GetTree().CreateTimer(startDelaySeconds), SceneTreeTimer.SignalName.Timeout);
 		}
 
-		Texture2D startTexture = _scoreBubbleFrames[Math.Min(bubbleIndex % _scoreBubbleFrames.Count, _scoreBubbleFrames.Count - 1)];
-		Texture2D arrivalTexture = _scoreBubbleFrames[^1];
-		float spriteSize = _rng.RandfRange(38.0f, 58.0f);
-		var bubble = new TextureRect
+		var effect = new Sprite2D
 		{
-			Name = "ScoreBubbleFlight",
-			Texture = startTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Name = "ScoreFillEffectFlight",
+			Texture = _scoreFillEffectFrames[0],
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = new Vector2(spriteSize, spriteSize),
-			PivotOffset = new Vector2(spriteSize, spriteSize) / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + 800 + bubbleIndex,
+			Centered = true,
+			ZIndex = PlayedCardFlightZIndex + 850 + effectIndex,
 			ZAsRelative = false,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
-		AddChild(bubble);
+		AddChild(effect);
 
-		Vector2 startCenter = cardCenter + RandomUnitVector() * _rng.RandfRange(22.0f, 44.0f);
-		Vector2 gatherCenter = cardCenter + RandomUnitVector() * _rng.RandfRange(4.0f, 12.0f);
-		float arcHeight = _rng.RandfRange(42.0f, 76.0f);
-		float sideDrift = _rng.RandfRange(-22.0f, 22.0f);
+		Vector2 startCenter = cardCenter + RandomUnitVector() * _rng.RandfRange(4.0f, 16.0f);
+		Vector2 travel = targetCenter - startCenter;
+		Vector2 side = travel.LengthSquared() > 0.001f
+			? new Vector2(-travel.Y, travel.X).Normalized()
+			: Vector2.Zero;
+		float arcHeight = _rng.RandfRange(58.0f, 96.0f);
+		float sideDrift = _rng.RandfRange(-34.0f, 34.0f);
+		Vector2 controlCenter = (startCenter + targetCenter) / 2.0f
+			+ new Vector2(0.0f, -arcHeight)
+			+ side * sideDrift;
 
 		try
 		{
@@ -107,54 +129,50 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateScoreBubbleFlight(
-					bubble,
-					startTexture,
-					arrivalTexture,
+				Callable.From<float>(progress => UpdateScoreFillEffectFlight(
+					effect,
+					_scoreFillEffectFrames,
 					startCenter,
-					gatherCenter,
+					controlCenter,
 					targetCenter,
-					arcHeight,
-					sideDrift,
 					progress)),
 				0.0f,
 				1.0f,
-				ScoreBubbleGatherSeconds + ScoreBubbleFlightSeconds);
+				ScoreFillEffectFlightSeconds);
 
 			await ToSignal(tween, Tween.SignalName.Finished);
+			onTouchTarget.Invoke();
 		}
 		finally
 		{
-			if (GodotObject.IsInstanceValid(bubble))
+			if (GodotObject.IsInstanceValid(effect))
 			{
-				bubble.QueueFree();
+				effect.QueueFree();
 			}
 		}
 	}
 
-	private async Task PlayScoreBubbleSplashAsync(Vector2 targetCenter)
+	private async Task PlayScoreFillArrivalPulseAsync(Vector2 targetCenter)
 	{
-		if (_scoreBubbleFrames.Count == 0)
+		if (_scoreFillEffectFrames.Count == 0)
 		{
 			return;
 		}
 
-		var splash = new TextureRect
+		var pulse = new Sprite2D
 		{
-			Name = "ScoreBubbleSplash",
-			Texture = _scoreBubbleFrames[^1],
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Name = "ScoreFillEffectArrivalPulse",
+			Texture = _scoreFillEffectFrames[^1],
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = new Vector2(70.0f, 70.0f),
-			PivotOffset = new Vector2(35.0f, 35.0f),
-			ZIndex = PlayedCardFlightZIndex + 900,
+			Centered = true,
+			ZIndex = PlayedCardFlightZIndex + 920,
 			ZAsRelative = false,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.82f),
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.72f),
 		};
-		AddChild(splash);
-		splash.GlobalPosition = targetCenter - splash.Size / 2.0f;
+		AddChild(pulse);
+		pulse.GlobalPosition = targetCenter;
+		Vector2 baseScale = GetSpriteScaleForVisualSize(_scoreFillEffectFrames[^1], ScoreFillPulseVisualSize);
+		pulse.Scale = baseScale;
 
 		try
 		{
@@ -162,66 +180,69 @@ public partial class GameBoardScene
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
-			tween.TweenProperty(splash, "scale", new Vector2(1.25f, 1.25f), 0.16f);
-			tween.TweenProperty(splash, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), 0.16f);
+			tween.TweenProperty(pulse, "scale", baseScale * 1.22f, 0.18f);
+			tween.TweenProperty(pulse, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), 0.18f);
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
 		finally
 		{
-			if (GodotObject.IsInstanceValid(splash))
+			if (GodotObject.IsInstanceValid(pulse))
 			{
-				splash.QueueFree();
+				pulse.QueueFree();
 			}
 		}
 	}
 
-	private static void UpdateScoreBubbleFlight(
-		TextureRect bubble,
-		Texture2D startTexture,
-		Texture2D arrivalTexture,
+	private static void UpdateScoreFillEffectFlight(
+		Sprite2D effect,
+		IReadOnlyList<Texture2D> frames,
 		Vector2 startCenter,
-		Vector2 gatherCenter,
+		Vector2 controlCenter,
 		Vector2 targetCenter,
-		float arcHeight,
-		float sideDrift,
 		float progress)
 	{
-		if (!GodotObject.IsInstanceValid(bubble))
+		if (!GodotObject.IsInstanceValid(effect) || frames.Count == 0)
 		{
 			return;
 		}
 
-		float gatherPortion = ScoreBubbleGatherSeconds / (ScoreBubbleGatherSeconds + ScoreBubbleFlightSeconds);
 		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
-		Vector2 center;
-		float scale;
-		float alpha;
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		Vector2 center = QuadraticBezier(startCenter, controlCenter, targetCenter, easedProgress);
+		Vector2 tangent = QuadraticBezierTangent(startCenter, controlCenter, targetCenter, easedProgress);
+		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * frames.Count), 0, frames.Count - 1);
+		float alpha = clampedProgress < 0.14f
+			? Mathf.Lerp(0.0f, 1.0f, clampedProgress / 0.14f)
+			: 1.0f;
+		float scale = Mathf.Lerp(0.92f, 0.48f, easedProgress);
 
-		if (clampedProgress < gatherPortion)
+		Texture2D texture = frames[frameIndex];
+		effect.Texture = texture;
+		effect.GlobalPosition = center;
+		effect.Scale = GetSpriteScaleForVisualSize(texture, ScoreFillEffectVisualSize) * scale;
+		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
+		if (tangent.LengthSquared() > 0.001f)
 		{
-			float localProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress / gatherPortion);
-			center = startCenter.Lerp(gatherCenter, localProgress);
-			scale = Mathf.Lerp(0.45f, 0.82f, localProgress);
-			alpha = Mathf.Lerp(0.0f, 0.95f, localProgress);
+			effect.Rotation = tangent.Angle();
 		}
-		else
-		{
-			float flightProgress = Mathf.SmoothStep(0.0f, 1.0f, (clampedProgress - gatherPortion) / (1.0f - gatherPortion));
-			Vector2 travel = targetCenter - gatherCenter;
-			Vector2 side = travel.LengthSquared() > 0.001f
-				? new Vector2(-travel.Y, travel.X).Normalized()
-				: Vector2.Zero;
-			center = gatherCenter.Lerp(targetCenter, flightProgress)
-				+ new Vector2(0.0f, -Mathf.Sin(flightProgress * Mathf.Pi) * arcHeight)
-				+ side * Mathf.Sin(flightProgress * Mathf.Pi) * sideDrift;
-			scale = Mathf.Lerp(0.82f, 0.32f, flightProgress);
-			alpha = flightProgress < 0.82f ? 0.95f : Mathf.Lerp(0.95f, 0.0f, (flightProgress - 0.82f) / 0.18f);
-			bubble.Texture = flightProgress > 0.78f ? arrivalTexture : startTexture;
-		}
+	}
 
-		bubble.GlobalPosition = center - bubble.Size / 2.0f;
-		bubble.Scale = new Vector2(scale, scale);
-		bubble.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
+	private static Vector2 QuadraticBezier(Vector2 start, Vector2 control, Vector2 end, float t)
+	{
+		float inverseT = 1.0f - t;
+		return inverseT * inverseT * start + 2.0f * inverseT * t * control + t * t * end;
+	}
+
+	private static Vector2 QuadraticBezierTangent(Vector2 start, Vector2 control, Vector2 end, float t)
+	{
+		return 2.0f * (1.0f - t) * (control - start) + 2.0f * t * (end - control);
+	}
+
+	private static Vector2 GetSpriteScaleForVisualSize(Texture2D texture, float visualSize)
+	{
+		float textureWidth = Math.Max(1.0f, texture.GetWidth());
+		float scale = visualSize / textureWidth;
+		return new Vector2(scale, scale);
 	}
 
 	private Vector2 RandomUnitVector()

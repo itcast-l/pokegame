@@ -218,7 +218,7 @@ public partial class GameBoardScene
 
 			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex);
 			int collectedPoints = GetCapturedTablePoints(captureStartIndex);
-			await PlayScoreBubbleCollectionAsync(
+			await PlayScoreFillCollectionAsync(
 				playerIndex,
 				capturedCardVisuals,
 				turnSequenceGeneration,

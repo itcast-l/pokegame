@@ -11,7 +11,7 @@ public partial class GameBoardScene
 			Control pile = _playerCardPiles[playerIndex];
 			foreach (Node child in pile.GetChildren())
 			{
-				child.QueueFree();
+				RemoveAndQueueFreeChild(pile, child);
 			}
 
 			pile.Visible = playerIndex < player_count;
@@ -79,7 +79,7 @@ public partial class GameBoardScene
 			{
 				if (child.HasMeta(HandCardSlotMeta))
 				{
-					child.QueueFree();
+					RemoveAndQueueFreeChild(handArea, child);
 				}
 			}
 
@@ -97,7 +97,13 @@ public partial class GameBoardScene
 			float cardRotation = GetCardRotationDegreesForPlayer(playerIndex);
 			bool canMainPlayerAct = CanMainPlayerAct();
 
-			void AddHandCard(Texture2D? texture, int displayIndex, bool isPlayable, int handIndex, int itemHandIndex, bool animateCardBack)
+			void AddHandCard(
+				Texture2D? texture,
+				int displayIndex,
+				bool isPlayable,
+				int handIndex,
+				int itemHandIndex,
+				bool animateCardBack)
 			{
 				if (texture == null)
 				{
@@ -105,9 +111,6 @@ public partial class GameBoardScene
 				}
 
 				Vector2 basePosition = firstCardPosition + displayIndex * cardOffset;
-				bool isItemCard = itemHandIndex >= 0;
-				Vector2 cardVisualSize = isItemCard ? HandItemCardVisualSize : CardVisualSize;
-				Vector2 cardVisualRestPosition = isItemCard ? HandItemCardVisualOffset : Vector2.Zero;
 				var cardSlot = new Control
 				{
 					Name = $"HandCard_{displayIndex}",
@@ -124,9 +127,9 @@ public partial class GameBoardScene
 					StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 					TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
 					MouseFilter = MouseFilterEnum.Ignore,
-					Position = cardVisualRestPosition,
-					Size = cardVisualSize,
-					PivotOffset = cardVisualSize / 2.0f,
+					Position = Vector2.Zero,
+					Size = CardVisualSize,
+					PivotOffset = CardVisualSize / 2.0f,
 					RotationDegrees = cardRotation,
 				};
 
@@ -142,9 +145,7 @@ public partial class GameBoardScene
 					{
 						hoverTween?.Kill();
 						cardVisual.ZIndex = hovered ? HoveredHandCardZIndexBoost : 0;
-						Vector2 targetPosition = hovered
-							? cardVisualRestPosition + new Vector2(0.0f, -HoveredHandCardLift)
-							: cardVisualRestPosition;
+						Vector2 targetPosition = hovered ? new Vector2(0.0f, -HoveredHandCardLift) : Vector2.Zero;
 						hoverTween = cardVisual.CreateTween();
 						hoverTween.SetTrans(Tween.TransitionType.Sine);
 						hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);
@@ -268,7 +269,7 @@ public partial class GameBoardScene
 	{
 		foreach (Node child in _centerArena.GetChildren())
 		{
-			child.QueueFree();
+			RemoveAndQueueFreeChild(_centerArena, child);
 		}
 
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
@@ -391,5 +392,11 @@ public partial class GameBoardScene
 			float y = anchorY + Mathf.Sin(Mathf.Pi * t) * turnDepth;
 			positions.Add(new Vector2(x, y));
 		}
+	}
+
+	private static void RemoveAndQueueFreeChild(Node parent, Node child)
+	{
+		parent.RemoveChild(child);
+		child.QueueFree();
 	}
 }

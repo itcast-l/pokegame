@@ -435,6 +435,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		RemoveChild(_selectionOverlay);
 		_selectionOverlay.QueueFree();
 		_selectionOverlay = null;
 	}
