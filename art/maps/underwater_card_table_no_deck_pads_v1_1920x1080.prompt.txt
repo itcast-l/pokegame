@@ -1,0 +1,1 @@
+Derived from underwater_card_table_no_deck_pads_v1.png using deterministic resize to 1920x1080 for the Godot game board scene.

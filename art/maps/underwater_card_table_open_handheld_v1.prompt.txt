@@ -1,0 +1,39 @@
+Generate a production-ready 16:9 top-down card-battle game board UI concept image.
+
+Use the input image as the visual reference for the existing underwater fantasy technology style, camera framing, four-player layout, pearl alloy trims, translucent teal glass, avatar frame language, and deck/draw-pile pad language. Preserve the overall underwater glass-dome mood, outer ocean depth, coral silhouettes, caustic light, and clean HD Godot game asset readability.
+
+Design intent:
+- This is a UI background concept for a four-player card game similar in feel to Dou Dizhu or Hearthstone.
+- Make the interface feel less rigid and less boxed in.
+- Remove the large strict rectangular center table / center arena panel.
+- The shared middle should become an open luminous water surface / soft magical play space with subtle caustic light and gentle implied card-flow paths, not a framed tabletop.
+- Keep the center visually usable for runtime played cards, but do not draw a hard rectangle, grid, label, border, or slot structure there.
+- Make the main bottom player hand area feel larger and closer to the viewer, like cards are held in the player's hand: a broad shallow fan-shaped crescent tray, warm gold/sand accent, generous horizontal room, subtle curved rim, soft glow, and relaxed spacing.
+- Top, left, and right player hand lanes should stay present but lighter and more compact than the bottom player's hand area.
+- Preserve one empty avatar frame for each player: top, bottom, left, right.
+- Preserve one empty deck/draw-pile pad for each player. The deck pads should be clear runtime placement areas, visually separated from the hand lanes, but not filled with cards.
+- Keep the left and right player areas vertical, with their avatar frames and deck pads intact.
+- Keep the top player area horizontal, with avatar frame and deck pad intact.
+
+Functional layout constraints:
+- No actual playing cards.
+- No card backs.
+- No deck stacks.
+- No fixed individual hand-card slots.
+- No UI text, labels, numbers, letters, logos, icons, button prompts, or watermark.
+- No characters, creatures, portraits, hands, arms, or player bodies.
+- Avatar frames must be empty circular/ornate frames only.
+- Deck/draw-pile pads must be empty placement pads only.
+- The middle open play space must remain clean enough for runtime cards to be readable.
+- Avoid a small central table. Avoid a bordered rectangle in the center.
+
+Art direction:
+- Clean HD 2D game UI scene, polished underwater fantasy technology.
+- Palette: layered teal, cyan, pearl white, sea-glass blue, warm gold for the main player, purple/pink for left player accents, green/teal for right player accents, blue/cyan for top player accents.
+- Elegant bevels, translucent glass, pearl alloy trim, subtle gold inlays, soft caustic reflections, readable silhouettes, low texture noise.
+- The composition should feel open, flowing, and card-game focused, with the bottom player's playable hand area visually dominant.
+- No pixel art, no blurry painterly mush, no dark cropped stock-photo look.
+
+Output should be a single flat PNG concept image, 16:9 landscape, suitable as a visual reference for the Godot board background.
+
+Runtime integration note: generated at 1536x864 with `$test-image`, then deterministically resized to 1920x1080 for the Godot board scene. The runtime caustic shader, bubbles, motes, and seagrass remain separate scene layers.

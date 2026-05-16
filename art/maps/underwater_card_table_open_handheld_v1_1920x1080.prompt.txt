@@ -1,0 +1,5 @@
+Derived from underwater_card_table_open_handheld_v1.png using deterministic resize to 1920x1080 for the Godot game board scene.
+
+Original generation prompt is stored in underwater_card_table_open_handheld_v1.prompt.txt.
+
+Runtime caustic shimmer, bubbles, motes, and seagrass are preserved as separate scene layers in scenes/game_board_scene.tscn.

@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://dm510cyafsu8m"]
 
 [ext_resource type="Script" path="res://scripts/GameBoardScene.cs" id="1_game_board_scene"]
-[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_v5_1920x1080.png" id="2_board_texture"]
+[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png" id="2_board_texture"]
 [ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="3_water_caustic_shader"]
 [ext_resource type="Script" path="res://scripts/UnderwaterAmbientLayer.cs" id="4_underwater_ambient_layer"]
 

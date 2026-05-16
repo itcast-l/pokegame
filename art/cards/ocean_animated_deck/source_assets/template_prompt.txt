@@ -1,0 +1,7 @@
+Generate a PNG image for a 2D Godot card game asset.
+
+Create exactly one centered blank poker card face, upright, fully visible, isolated on a 100% solid flat magenta #FF00FF background. No table, no hands, no scene, no UI, no labels, no letters, no numbers, no suit symbols.
+
+The card must match this style direction: clean HD 2D game asset, pearl white card face, thin coral-and-shell border, subtle seafoam teal wave patterns, tiny bubbles, faint sea-glass highlights, soft aqua shadows, crisp readable edges, elegant minimal detail. Keep the inner center area mostly open and bright so poker pips can be added later. Leave generous magenta margin around the card. The card should remain readable when downscaled to 128x128.
+
+Important constraints: one card only, no text, no symbols, no extra decorative objects outside the card, no gradient or texture in the magenta background.

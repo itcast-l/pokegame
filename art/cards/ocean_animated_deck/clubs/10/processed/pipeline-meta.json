@@ -1,0 +1,10 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "style": "ocean_animated_deck",
+  "source_template": "source_assets/card_template_raw.png",
+  "suit": "clubs",
+  "rank": "10",
+  "frames": 4,
+  "single_size": 128
+}

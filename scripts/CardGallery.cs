@@ -3,7 +3,7 @@ using Godot;
 public partial class CardGallery : Control
 {
 	private const string CardRoot = "res://art/cards/standard_deck";
-	private const string CardBackPath = $"{CardRoot}/back.png";
+	private const string CardBackPath = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png";
 	private const string CardGridPath = "Margin/Layout/Scroll/CardGrid";
 	private static readonly Vector2 CardSize = new(64, 84);
 	private static readonly string[] Suits = { "spades", "hearts", "diamonds", "clubs" };
