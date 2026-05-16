@@ -1,0 +1,1 @@
+Whole-card packet assembly from generated ocean card back. No AI redraw per frame; no split line; no half-card crop.

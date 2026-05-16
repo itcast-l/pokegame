@@ -1,0 +1,7 @@
+Use the input image only as an underwater UI style reference: luminous aqua water, pearl highlights, soft gold trim, clean polished 2D game UI readability. Do not copy the table, cards, panels, background, or layout.
+
+Create a 2x2 sprite sheet for a Godot 2D card game score-collection effect. Exact sheet shape: 2 rows by 2 columns, four equal square cells, no visible grid lines, no borders, no labels. Each cell contains one compact cluster of translucent score bubbles and tiny sea-glass sparkles on a solid flat #FF00FF magenta background.
+
+Frame progression: top-left has a few small pale aqua bubbles beginning to gather; top-right has more bubbles clustering inward; bottom-left has a brighter tight bubble cluster with a subtle comet-like direction cue; bottom-right has a small soft splash sparkle suitable for arriving at a circular score fill slot. Keep every cluster centered inside the central 60% safe area of its cell, consistent scale across all cells, and no bubble, sparkle, glow, trail, or highlight may touch or cross a cell edge.
+
+Art style: clean HD 2D game FX, underwater card table style, pale aqua, seafoam, pearl white, faint cyan glow, soft transparency illusion but still clearly visible after magenta cleanup. No cards, no hands, no UI text, no numbers, no arrows, no characters, no extra objects. Background must be exactly solid flat #FF00FF magenta.

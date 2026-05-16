@@ -27,6 +27,7 @@ public partial class GameBoardScene
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
 		_winnerPlayerIndex = -1;
+		ResetPlayerScores();
 		if (_winnerLabel != null)
 		{
 			_winnerLabel.Visible = false;

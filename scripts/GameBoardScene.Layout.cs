@@ -9,15 +9,15 @@ public partial class GameBoardScene
 
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			Control playerArea = GetPlayerArea(playerIndex);
+			Control pileArea = GetNode<Control>($"%Player{playerIndex + 1}CardPileArea");
 			var pile = new Control
 			{
 				Name = $"Player{playerIndex + 1}CardPile",
 				MouseFilter = MouseFilterEnum.Stop,
-				AnchorLeft = CardPileCenters[playerIndex].X,
-				AnchorTop = CardPileCenters[playerIndex].Y,
-				AnchorRight = CardPileCenters[playerIndex].X,
-				AnchorBottom = CardPileCenters[playerIndex].Y,
+				AnchorLeft = 0.5f,
+				AnchorTop = 0.5f,
+				AnchorRight = 0.5f,
+				AnchorBottom = 0.5f,
 				OffsetLeft = -CardPileSize.X / 2.0f,
 				OffsetTop = -CardPileSize.Y / 2.0f,
 				OffsetRight = CardPileSize.X / 2.0f,
@@ -26,7 +26,7 @@ public partial class GameBoardScene
 			pile.MouseEntered += () => SetCardPileCountVisible(pile, true);
 			pile.MouseExited += () => SetCardPileCountVisible(pile, false);
 
-			playerArea.AddChild(pile);
+			pileArea.AddChild(pile);
 			_playerCardPiles.Add(pile);
 		}
 	}
@@ -37,23 +37,7 @@ public partial class GameBoardScene
 
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			Control playerArea = GetPlayerArea(playerIndex);
-			Vector2 handSize = GetHandAreaSize(playerIndex);
-			var handArea = new Control
-			{
-				Name = $"Player{playerIndex + 1}Hand",
-				MouseFilter = MouseFilterEnum.Ignore,
-				AnchorLeft = HandCenters[playerIndex].X,
-				AnchorTop = HandCenters[playerIndex].Y,
-				AnchorRight = HandCenters[playerIndex].X,
-				AnchorBottom = HandCenters[playerIndex].Y,
-				OffsetLeft = -handSize.X / 2.0f,
-				OffsetTop = -handSize.Y / 2.0f,
-				OffsetRight = handSize.X / 2.0f,
-				OffsetBottom = handSize.Y / 2.0f,
-			};
-
-			playerArea.AddChild(handArea);
+			Control handArea = GetNode<Control>($"%Player{playerIndex + 1}HandArea");
 			_playerHandAreas.Add(handArea);
 		}
 	}
@@ -92,6 +76,52 @@ public partial class GameBoardScene
 	private static Vector2 GetHandCardOffset(int playerIndex)
 	{
 		return playerIndex < 2 ? HorizontalHandCardOffset : VerticalHandCardOffset;
+	}
+
+	private static Vector2 GetHandCardOffset(int playerIndex, int cardCount)
+	{
+		return GetHandCardOffset(playerIndex, cardCount, GetHandAreaSize(playerIndex));
+	}
+
+	private static Vector2 GetHandCardOffset(int playerIndex, int cardCount, Vector2 handAreaSize)
+	{
+		Vector2 baseOffset = GetHandCardOffset(playerIndex);
+		if (cardCount <= 1)
+		{
+			return baseOffset;
+		}
+
+		if (!Mathf.IsZeroApprox(baseOffset.X))
+		{
+			float spacing = Math.Min(Math.Abs(baseOffset.X), (handAreaSize.X - CardVisualSize.X) / (cardCount - 1));
+			return new Vector2(baseOffset.X < 0.0f ? -spacing : spacing, baseOffset.Y);
+		}
+
+		float verticalSpacing = Math.Min(Math.Abs(baseOffset.Y), (handAreaSize.Y - CardVisualSize.Y) / (cardCount - 1));
+		return new Vector2(baseOffset.X, baseOffset.Y < 0.0f ? -verticalSpacing : verticalSpacing);
+	}
+
+	private static Vector2 GetHandFirstCardPosition(int playerIndex, int cardCount, Vector2 handAreaSize, Vector2 cardOffset)
+	{
+		if (cardCount <= 0)
+		{
+			return Vector2.Zero;
+		}
+
+		Vector2 groupSize = new(
+			CardVisualSize.X + Math.Abs(cardOffset.X) * (cardCount - 1),
+			CardVisualSize.Y + Math.Abs(cardOffset.Y) * (cardCount - 1));
+		Vector2 startPosition = (handAreaSize - groupSize) / 2.0f;
+		if (cardOffset.X < 0.0f)
+		{
+			startPosition.X += groupSize.X - CardVisualSize.X;
+		}
+		if (cardOffset.Y < 0.0f)
+		{
+			startPosition.Y += groupSize.Y - CardVisualSize.Y;
+		}
+
+		return startPosition;
 	}
 
 	private void SetCardPileCountVisible(Control pile, bool visible)

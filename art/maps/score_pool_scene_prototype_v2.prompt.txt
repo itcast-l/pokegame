@@ -1,0 +1,7 @@
+Use the visible underwater card-table scene as the reference image. Keep the center playfield completely open for cards.
+
+Re-design the score system so it lives in the edge UI, not in the middle: place a compact glowing score pool inside the long top banner only, centered in the top ornamental strip, and connect it visually to four small player score capsules tucked into the existing player color stations on the left and right sides. The score pool should feel like a decorative underwater crystal reservoir or tide gauge, but it must be narrow and compact enough to never block card placement in the central arena.
+
+Preserve the current art style and composition: luminous blue underwater glass, ornate gold trim, coral accents, teal and purple highlights, polished fantasy UI. The center must remain a clean open table surface with no large object, no raised basin, no central platform, no obstruction. Leave room for table cards, captures, and future gameplay effects in the center.
+
+No characters, no hands, no cards, no labels, no arrows, no diagrams, no debug boxes. High quality 2D game UI concept art, readable at 1920x1080.

@@ -16,7 +16,9 @@ public partial class GameBoardScene
 		public Texture2D Texture { get; }
 	}
 
-	private readonly record struct PlayCardResult(bool Played, bool Captured);
+	private readonly record struct PlayCardResult(bool Played, bool Captured, bool DeckCollected = false);
+
+	private readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 
 	private enum PendingItemSelectionMode
 	{
@@ -48,6 +50,7 @@ public partial class GameBoardScene
 
 		public PlayingCard? Card { get; }
 		public bool IsFaceUp { get; set; }
+		public bool IsHiddenDuringCapture { get; set; }
 		public ItemCard? ItemOverlay { get; }
 	}
 }

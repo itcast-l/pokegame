@@ -1,0 +1,7 @@
+Use the visible underwater card-table reference image as the only style reference.
+
+Keep the center playfield completely open and unchanged for cards. Do not add any large object, bar, panel, basin, platform, or UI strip in the middle. The score system must live only inside the existing ornate frame and edge ornaments.
+
+Design a subtle in-world scoring feature that feels native to the board: a small pearl-and-crystal score pool jewel embedded in the top frame ornament, plus four tiny matching score sigils tucked into the existing player stations on the left, right, top, and bottom edges. These should look like carved sea-glass inlays or shell medallions, not futuristic HUD widgets. Match the current underwater fantasy style exactly: gold filigree, teal glass, pearl highlights, coral accents, soft caustic glow, and the same line thickness and ornament language already present.
+
+Make the score pool decorative and readable, but small enough that it never competes with the card area. No text, no numbers, no arrows, no diagrams, no labels, no characters, no cards. High-quality polished 2D game scene prototype.

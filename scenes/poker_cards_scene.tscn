@@ -1,59 +1,50 @@
 [gd_scene format=3 uid="uid://bbqom4864gcwg"]
 
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/A/processed/frames/frame-001.png" id="1_spades_a"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/2/processed/frames/frame-001.png" id="2_spades_2"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/3/processed/frames/frame-001.png" id="3_spades_3"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/4/processed/frames/frame-001.png" id="4_spades_4"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/5/processed/frames/frame-001.png" id="5_spades_5"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/6/processed/frames/frame-001.png" id="6_spades_6"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/7/processed/frames/frame-001.png" id="7_spades_7"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/8/processed/frames/frame-001.png" id="8_spades_8"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/9/processed/frames/frame-001.png" id="9_spades_9"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/spades/10/processed/frames/frame-001.png" id="10_spades_10"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png" id="11_spades_j"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-001.png" id="12_spades_q"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png" id="13_spades_k"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/A/processed/frames/frame-001.png" id="14_hearts_a"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/2/processed/frames/frame-001.png" id="15_hearts_2"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/3/processed/frames/frame-001.png" id="16_hearts_3"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/4/processed/frames/frame-001.png" id="17_hearts_4"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/5/processed/frames/frame-001.png" id="18_hearts_5"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/6/processed/frames/frame-001.png" id="19_hearts_6"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/7/processed/frames/frame-001.png" id="20_hearts_7"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/8/processed/frames/frame-001.png" id="21_hearts_8"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/9/processed/frames/frame-001.png" id="22_hearts_9"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/hearts/10/processed/frames/frame-001.png" id="23_hearts_10"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png" id="24_hearts_j"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-001.png" id="25_hearts_q"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png" id="26_hearts_k"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/A/processed/frames/frame-001.png" id="27_diamonds_a"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/2/processed/frames/frame-001.png" id="28_diamonds_2"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/3/processed/frames/frame-001.png" id="29_diamonds_3"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/4/processed/frames/frame-001.png" id="30_diamonds_4"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/5/processed/frames/frame-001.png" id="31_diamonds_5"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/6/processed/frames/frame-001.png" id="32_diamonds_6"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/7/processed/frames/frame-001.png" id="33_diamonds_7"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/8/processed/frames/frame-001.png" id="34_diamonds_8"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/9/processed/frames/frame-001.png" id="35_diamonds_9"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/diamonds/10/processed/frames/frame-001.png" id="36_diamonds_10"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png" id="37_diamonds_j"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-001.png" id="38_diamonds_q"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png" id="39_diamonds_k"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/A/processed/frames/frame-001.png" id="40_clubs_a"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/2/processed/frames/frame-001.png" id="41_clubs_2"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/3/processed/frames/frame-001.png" id="42_clubs_3"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/4/processed/frames/frame-001.png" id="43_clubs_4"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/5/processed/frames/frame-001.png" id="44_clubs_5"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/6/processed/frames/frame-001.png" id="45_clubs_6"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/7/processed/frames/frame-001.png" id="46_clubs_7"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/8/processed/frames/frame-001.png" id="47_clubs_8"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/9/processed/frames/frame-001.png" id="48_clubs_9"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/clubs/10/processed/frames/frame-001.png" id="49_clubs_10"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png" id="50_clubs_j"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-001.png" id="51_clubs_q"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png" id="52_clubs_k"]
-[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png" id="53_card_back"]
-[ext_resource type="Script" path="res://scripts/ocean_card_animator.gd" id="54_ocean_card_animator"]
+[ext_resource type="Texture2D" uid="uid://b62p73sxaexqa" path="res://art/cards/ocean_animated_deck/spades/A/processed/frames/frame-001.png" id="1_spades_a"]
+[ext_resource type="Texture2D" uid="uid://cmacjlfh0nov" path="res://art/cards/ocean_animated_deck/spades/2/processed/frames/frame-001.png" id="2_spades_2"]
+[ext_resource type="Texture2D" uid="uid://bxue7mk6xhbe3" path="res://art/cards/ocean_animated_deck/spades/3/processed/frames/frame-001.png" id="3_spades_3"]
+[ext_resource type="Texture2D" uid="uid://b8kk3x56ygj8g" path="res://art/cards/ocean_animated_deck/spades/4/processed/frames/frame-001.png" id="4_spades_4"]
+[ext_resource type="Texture2D" uid="uid://bs6v0entelg8n" path="res://art/cards/ocean_animated_deck/spades/5/processed/frames/frame-001.png" id="5_spades_5"]
+[ext_resource type="Texture2D" uid="uid://c6yx5vgbxufvn" path="res://art/cards/ocean_animated_deck/spades/6/processed/frames/frame-001.png" id="6_spades_6"]
+[ext_resource type="Texture2D" uid="uid://dmcy120su0vex" path="res://art/cards/ocean_animated_deck/spades/7/processed/frames/frame-001.png" id="7_spades_7"]
+[ext_resource type="Texture2D" uid="uid://xxe7x4rt6pi3" path="res://art/cards/ocean_animated_deck/spades/8/processed/frames/frame-001.png" id="8_spades_8"]
+[ext_resource type="Texture2D" uid="uid://c5eeyxg32cro8" path="res://art/cards/ocean_animated_deck/spades/9/processed/frames/frame-001.png" id="9_spades_9"]
+[ext_resource type="Texture2D" uid="uid://ooxuh2xi4u33" path="res://art/cards/ocean_animated_deck/spades/10/processed/frames/frame-001.png" id="10_spades_10"]
+[ext_resource type="Texture2D" uid="uid://bbghun8w5mlw7" path="res://art/cards/ocean_animated_deck/hearts/A/processed/frames/frame-001.png" id="14_hearts_a"]
+[ext_resource type="Texture2D" uid="uid://pilfjgki11fl" path="res://art/cards/ocean_animated_deck/hearts/2/processed/frames/frame-001.png" id="15_hearts_2"]
+[ext_resource type="Texture2D" uid="uid://bv7jdnibjflhx" path="res://art/cards/ocean_animated_deck/hearts/3/processed/frames/frame-001.png" id="16_hearts_3"]
+[ext_resource type="Texture2D" uid="uid://b0864wk6pmct4" path="res://art/cards/ocean_animated_deck/hearts/4/processed/frames/frame-001.png" id="17_hearts_4"]
+[ext_resource type="Texture2D" uid="uid://byc4mcp8l0is7" path="res://art/cards/ocean_animated_deck/hearts/5/processed/frames/frame-001.png" id="18_hearts_5"]
+[ext_resource type="Texture2D" uid="uid://b003qs4287045" path="res://art/cards/ocean_animated_deck/hearts/6/processed/frames/frame-001.png" id="19_hearts_6"]
+[ext_resource type="Texture2D" uid="uid://ck3vorlkopqcu" path="res://art/cards/ocean_animated_deck/hearts/7/processed/frames/frame-001.png" id="20_hearts_7"]
+[ext_resource type="Texture2D" uid="uid://ctcsoggmeao5m" path="res://art/cards/ocean_animated_deck/hearts/8/processed/frames/frame-001.png" id="21_hearts_8"]
+[ext_resource type="Texture2D" uid="uid://cstvuywgpquko" path="res://art/cards/ocean_animated_deck/hearts/9/processed/frames/frame-001.png" id="22_hearts_9"]
+[ext_resource type="Texture2D" uid="uid://cenftdi3dmufj" path="res://art/cards/ocean_animated_deck/hearts/10/processed/frames/frame-001.png" id="23_hearts_10"]
+[ext_resource type="Texture2D" uid="uid://bbancler5if3" path="res://art/cards/ocean_animated_deck/diamonds/A/processed/frames/frame-001.png" id="27_diamonds_a"]
+[ext_resource type="Texture2D" uid="uid://voctwtjksbmc" path="res://art/cards/ocean_animated_deck/diamonds/2/processed/frames/frame-001.png" id="28_diamonds_2"]
+[ext_resource type="Texture2D" uid="uid://nvalkivochev" path="res://art/cards/ocean_animated_deck/diamonds/3/processed/frames/frame-001.png" id="29_diamonds_3"]
+[ext_resource type="Texture2D" uid="uid://78m2h0pd5hlo" path="res://art/cards/ocean_animated_deck/diamonds/4/processed/frames/frame-001.png" id="30_diamonds_4"]
+[ext_resource type="Texture2D" uid="uid://cevbd78n4bv7w" path="res://art/cards/ocean_animated_deck/diamonds/5/processed/frames/frame-001.png" id="31_diamonds_5"]
+[ext_resource type="Texture2D" uid="uid://ckqb8w1ncynci" path="res://art/cards/ocean_animated_deck/diamonds/6/processed/frames/frame-001.png" id="32_diamonds_6"]
+[ext_resource type="Texture2D" uid="uid://bpmjd17ylpj30" path="res://art/cards/ocean_animated_deck/diamonds/7/processed/frames/frame-001.png" id="33_diamonds_7"]
+[ext_resource type="Texture2D" uid="uid://d3oicud1kv4m6" path="res://art/cards/ocean_animated_deck/diamonds/8/processed/frames/frame-001.png" id="34_diamonds_8"]
+[ext_resource type="Texture2D" uid="uid://bsvt77fnpitro" path="res://art/cards/ocean_animated_deck/diamonds/9/processed/frames/frame-001.png" id="35_diamonds_9"]
+[ext_resource type="Texture2D" uid="uid://36g2euak6lhq" path="res://art/cards/ocean_animated_deck/diamonds/10/processed/frames/frame-001.png" id="36_diamonds_10"]
+[ext_resource type="Texture2D" uid="uid://b83fhmnrt75bh" path="res://art/cards/ocean_animated_deck/clubs/A/processed/frames/frame-001.png" id="40_clubs_a"]
+[ext_resource type="Texture2D" uid="uid://bw4vg6byra4uv" path="res://art/cards/ocean_animated_deck/clubs/2/processed/frames/frame-001.png" id="41_clubs_2"]
+[ext_resource type="Texture2D" uid="uid://jf3yo1imyc08" path="res://art/cards/ocean_animated_deck/clubs/3/processed/frames/frame-001.png" id="42_clubs_3"]
+[ext_resource type="Texture2D" uid="uid://caonxa7qb815n" path="res://art/cards/ocean_animated_deck/clubs/4/processed/frames/frame-001.png" id="43_clubs_4"]
+[ext_resource type="Texture2D" uid="uid://is2x6lca6g47" path="res://art/cards/ocean_animated_deck/clubs/5/processed/frames/frame-001.png" id="44_clubs_5"]
+[ext_resource type="Texture2D" uid="uid://b508d07fof50s" path="res://art/cards/ocean_animated_deck/clubs/6/processed/frames/frame-001.png" id="45_clubs_6"]
+[ext_resource type="Texture2D" uid="uid://dfyfmgumbl7n6" path="res://art/cards/ocean_animated_deck/clubs/7/processed/frames/frame-001.png" id="46_clubs_7"]
+[ext_resource type="Texture2D" uid="uid://cjrcmv85xhwsi" path="res://art/cards/ocean_animated_deck/clubs/8/processed/frames/frame-001.png" id="47_clubs_8"]
+[ext_resource type="Texture2D" uid="uid://dgp55iw8j5w0k" path="res://art/cards/ocean_animated_deck/clubs/9/processed/frames/frame-001.png" id="48_clubs_9"]
+[ext_resource type="Texture2D" uid="uid://bav1skvpb827s" path="res://art/cards/ocean_animated_deck/clubs/10/processed/frames/frame-001.png" id="49_clubs_10"]
+[ext_resource type="Texture2D" uid="uid://coo300bgebheg" path="res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png" id="50_clubs_j"]
+[ext_resource type="Texture2D" uid="uid://bqlhwgbpqvf8r" path="res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-001.png" id="51_clubs_q"]
+[ext_resource type="Texture2D" uid="uid://bvop8noewe3h6" path="res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png" id="52_clubs_k"]
+[ext_resource type="Texture2D" uid="uid://by3firq8pecvs" path="res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png" id="53_card_back"]
+[ext_resource type="Script" uid="uid://yrp1t8wxdt1k" path="res://scripts/ocean_card_animator.gd" id="54_ocean_card_animator"]
 
 [node name="PokerCardsScene" type="Node2D" unique_id=1780853255]
 texture_filter = 1
@@ -132,19 +123,19 @@ script = ExtResource("54_ocean_card_animator")
 [node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=626345195]
 position = Vector2(860, 84)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("11_spades_j")
+texture = ExtResource("50_clubs_j")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1033471294]
 position = Vector2(938, 84)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("12_spades_q")
+texture = ExtResource("51_clubs_q")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Spades" unique_id=1268895757]
 position = Vector2(1016, 84)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("13_spades_k")
+texture = ExtResource("52_clubs_k")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Hearts" type="Node2D" parent="StandardPokerCards" unique_id=1732545395]
@@ -212,19 +203,19 @@ script = ExtResource("54_ocean_card_animator")
 [node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1317441660]
 position = Vector2(860, 204)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("24_hearts_j")
+texture = ExtResource("50_clubs_j")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=554538711]
 position = Vector2(938, 204)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("25_hearts_q")
+texture = ExtResource("51_clubs_q")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Hearts" unique_id=1989229619]
 position = Vector2(1016, 204)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("26_hearts_k")
+texture = ExtResource("52_clubs_k")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Diamonds" type="Node2D" parent="StandardPokerCards" unique_id=1853455992]
@@ -292,19 +283,19 @@ script = ExtResource("54_ocean_card_animator")
 [node name="Card_J" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=1417530]
 position = Vector2(860, 324)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("37_diamonds_j")
+texture = ExtResource("50_clubs_j")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Card_Q" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=610621068]
 position = Vector2(938, 324)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("38_diamonds_q")
+texture = ExtResource("51_clubs_q")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Card_K" type="Sprite2D" parent="StandardPokerCards/Diamonds" unique_id=865539263]
 position = Vector2(1016, 324)
 scale = Vector2(0.6, 0.6)
-texture = ExtResource("39_diamonds_k")
+texture = ExtResource("52_clubs_k")
 script = ExtResource("54_ocean_card_animator")
 
 [node name="Clubs" type="Node2D" parent="StandardPokerCards" unique_id=297291218]

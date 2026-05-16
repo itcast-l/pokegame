@@ -11,6 +11,8 @@ public partial class GameBoardScene : Control
 	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
 	private const int CardBackFrameCount = 4;
 	private const float CardBackAnimationFps = 6.0f;
+	private const string ScoreBubbleFramePattern = "res://art/fx/score_bubbles/run-001/processed/bubble-{0}.png";
+	private const int ScoreBubbleFrameCount = 4;
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string QuestionMarkItemCardId = "question_mark";
 	private const string JackItemCardId = "J";
@@ -18,8 +20,10 @@ public partial class GameBoardScene : Control
 	private const string KingItemCardId = "K";
 	private const string CardNamePrefix = "Card_";
 	private const string CardBackAnimatedMeta = "ocean_card_back_animated";
+	private const string HandCardSlotMeta = "ocean_hand_card_slot";
 	private const int VisiblePileCards = 4;
 	private const int StartingHandCards = 5;
+	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
 	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
@@ -64,11 +68,22 @@ public partial class GameBoardScene : Control
 	private const float HandCardHoverTweenTime = 0.12f;
 	private const float AiTurnDelaySeconds = 0.35f;
 	private const float TableCaptureDelaySeconds = 0.45f;
+	private const float TableCardRevealHalfFlipSeconds = 0.16f;
+	private const float TableCardRevealPauseSeconds = 0.07f;
+	private const float TableCardRevealMinScaleX = 0.08f;
+	private const float TableCaptureFlightDuration = 0.48f;
+	private const float TableCaptureFlightStaggerSeconds = 0.07f;
+	private const float TableCaptureFlightArcHeight = 42.0f;
+	private const float TableCaptureFlightEndScale = 0.82f;
+	private const int QuestionCardRefreshCooldownRounds = 2;
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
 	private static readonly Vector2 CardVisualSize = new(72, 96);
+	private static readonly Vector2 HandItemCardVisualSize = new(72, 72);
+	private static readonly Vector2 HandItemCardVisualOffset = (CardVisualSize - HandItemCardVisualSize) / 2.0f;
 	private static readonly Vector2 CardPileOffset = new(5, -4);
 	private static readonly Vector2 TableCardStartPosition = new(96, 16);
+	private const float FirstTableCardLift = 20.0f;
 	private static readonly float TableCardVerticalStep = CardVisualSize.Y / 2.0f;
 	private static readonly float TableCardColumnGap = CardVisualSize.X + 18.0f;
 	private const float TableCardBottomInset = 28.0f;
@@ -76,21 +91,6 @@ public partial class GameBoardScene : Control
 	private const int TableCardTurnSlots = 3;
 	private static readonly Vector2 HorizontalHandCardOffset = new(62, 0);
 	private static readonly Vector2 VerticalHandCardOffset = new(0, 50);
-	private static readonly Vector2[] CardPileCenters =
-	{
-		new(0.875f, 0.38f),
-		new(0.875f, 0.66f),
-		new(0.88f, 0.86f),
-		new(0.14f, 0.86f),
-	};
-	private static readonly Vector2[] HandCenters =
-	{
-		new(0.46f, 0.46f),
-		new(0.46f, 0.54f),
-		new(0.52f, 0.42f),
-		new(0.48f, 0.42f),
-	};
-
 	private int _playerCount = 2;
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<List<PlayingCard>> _playerDecks = new();
@@ -101,6 +101,7 @@ public partial class GameBoardScene : Control
 	private readonly List<Control> _playerHandAreas = new();
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
 	private readonly List<Texture2D> _cardBackFrames = new();
+	private readonly List<Texture2D> _scoreBubbleFrames = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
 	private float _cardBackAnimationTime;
@@ -146,6 +147,7 @@ public partial class GameBoardScene : Control
 	{
 		_rng.Randomize();
 		LoadCardBackTextures();
+		LoadScoreBubbleTextures();
 		LoadItemCardTextures();
 
 		_centerArena = GetNode<Control>("%CenterArena");
@@ -156,6 +158,7 @@ public partial class GameBoardScene : Control
 
 		CreatePlayerCardPiles();
 		CreatePlayerHandAreas();
+		BindPlayerScoreMeters();
 		CreateWinnerLabel();
 		UpdatePlayerVisibility();
 		DealCardsToPlayers();
@@ -193,6 +196,23 @@ public partial class GameBoardScene : Control
 		if (_cardBackTexture == null && _cardBackFrames.Count > 0)
 		{
 			_cardBackTexture = _cardBackFrames[0];
+		}
+	}
+
+	private void LoadScoreBubbleTextures()
+	{
+		_scoreBubbleFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= ScoreBubbleFrameCount; frameIndex++)
+		{
+			string path = string.Format(ScoreBubbleFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing score bubble frame: {path}");
+				continue;
+			}
+
+			_scoreBubbleFrames.Add(texture);
 		}
 	}
 

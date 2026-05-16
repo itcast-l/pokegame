@@ -22,6 +22,7 @@ public partial class GameBoardScene
 
 			int cardCount = _playerDecks[playerIndex].Count;
 			int visibleCards = Math.Min(cardCount, VisiblePileCards);
+			float cardRotation = GetCardRotationDegreesForPlayer(playerIndex);
 			float groupWidth = CardVisualSize.X + (visibleCards - 1) * CardPileOffset.X;
 			float groupHeight = CardVisualSize.Y - (visibleCards - 1) * CardPileOffset.Y;
 			var firstCardPosition = new Vector2(
@@ -39,6 +40,8 @@ public partial class GameBoardScene
 					MouseFilter = MouseFilterEnum.Ignore,
 					Position = firstCardPosition + cardIndex * CardPileOffset,
 					Size = CardVisualSize,
+					PivotOffset = CardVisualSize / 2.0f,
+					RotationDegrees = cardRotation,
 					ZIndex = cardIndex,
 				};
 
@@ -74,7 +77,10 @@ public partial class GameBoardScene
 			Control handArea = _playerHandAreas[playerIndex];
 			foreach (Node child in handArea.GetChildren())
 			{
-				child.QueueFree();
+				if (child.HasMeta(HandCardSlotMeta))
+				{
+					child.QueueFree();
+				}
 			}
 
 			handArea.Visible = playerIndex < player_count;
@@ -85,7 +91,10 @@ public partial class GameBoardScene
 
 			List<PlayingCard> hand = _playerHands[playerIndex];
 			List<ItemCard> itemHand = _playerItemHands[playerIndex];
-			Vector2 cardOffset = GetHandCardOffset(playerIndex);
+			int displayCardCount = hand.Count + itemHand.Count;
+			Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
+			Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
+			float cardRotation = GetCardRotationDegreesForPlayer(playerIndex);
 			bool canMainPlayerAct = CanMainPlayerAct();
 
 			void AddHandCard(Texture2D? texture, int displayIndex, bool isPlayable, int handIndex, int itemHandIndex, bool animateCardBack)
@@ -95,14 +104,19 @@ public partial class GameBoardScene
 					return;
 				}
 
-				Vector2 basePosition = displayIndex * cardOffset;
+				Vector2 basePosition = firstCardPosition + displayIndex * cardOffset;
+				bool isItemCard = itemHandIndex >= 0;
+				Vector2 cardVisualSize = isItemCard ? HandItemCardVisualSize : CardVisualSize;
+				Vector2 cardVisualRestPosition = isItemCard ? HandItemCardVisualOffset : Vector2.Zero;
 				var cardSlot = new Control
 				{
+					Name = $"HandCard_{displayIndex}",
 					MouseFilter = isPlayable ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore,
 					Position = basePosition,
 					Size = CardVisualSize,
 					ZIndex = displayIndex,
 				};
+				cardSlot.SetMeta(HandCardSlotMeta, true);
 				var cardVisual = new TextureRect
 				{
 					Texture = texture,
@@ -110,8 +124,10 @@ public partial class GameBoardScene
 					StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 					TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
 					MouseFilter = MouseFilterEnum.Ignore,
-					Position = Vector2.Zero,
-					Size = CardVisualSize,
+					Position = cardVisualRestPosition,
+					Size = cardVisualSize,
+					PivotOffset = cardVisualSize / 2.0f,
+					RotationDegrees = cardRotation,
 				};
 
 				if (animateCardBack)
@@ -126,7 +142,9 @@ public partial class GameBoardScene
 					{
 						hoverTween?.Kill();
 						cardVisual.ZIndex = hovered ? HoveredHandCardZIndexBoost : 0;
-						Vector2 targetPosition = hovered ? new Vector2(0.0f, -HoveredHandCardLift) : Vector2.Zero;
+						Vector2 targetPosition = hovered
+							? cardVisualRestPosition + new Vector2(0.0f, -HoveredHandCardLift)
+							: cardVisualRestPosition;
 						hoverTween = cardVisual.CreateTween();
 						hoverTween.SetTrans(Tween.TransitionType.Sine);
 						hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);
@@ -175,6 +193,34 @@ public partial class GameBoardScene
 		}
 	}
 
+	private static float GetCardRotationDegreesForPlayer(int playerIndex)
+	{
+		return playerIndex switch
+		{
+			2 => 90.0f,
+			3 => -90.0f,
+			_ => 0.0f,
+		};
+	}
+
+	private static TextureRect? FindHandCardVisual(Control? handCardSlot)
+	{
+		if (handCardSlot == null)
+		{
+			return null;
+		}
+
+		foreach (Node child in handCardSlot.GetChildren())
+		{
+			if (child is TextureRect textureRect)
+			{
+				return textureRect;
+			}
+		}
+
+		return null;
+	}
+
 	private void TryPlayMainPlayerCard(InputEvent inputEvent, int handIndex)
 	{
 		if (!CanMainPlayerAct())
@@ -187,7 +233,8 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, _turnSequenceGeneration);
+		Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(MainPlayerIndex, handIndex);
+		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, _turnSequenceGeneration, startGlobalPosition);
 	}
 
 	private void TryPlayMainPlayerItemCard(InputEvent inputEvent, int itemHandIndex)
@@ -205,6 +252,18 @@ public partial class GameBoardScene
 		_ = PlayMainPlayerItemCardAndAdvanceAsync(itemHandIndex, _turnSequenceGeneration);
 	}
 
+	private Vector2? TryGetHandCardStartGlobalPosition(int playerIndex, int handIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHandAreas.Count)
+		{
+			return null;
+		}
+
+		Control handArea = _playerHandAreas[playerIndex];
+		Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{handIndex}");
+		return FindHandCardVisual(sourceCardSlot)?.GlobalPosition;
+	}
+
 	private void RenderTableCards()
 	{
 		foreach (Node child in _centerArena.GetChildren())
@@ -216,6 +275,11 @@ public partial class GameBoardScene
 		for (int cardIndex = 0; cardIndex < _tableCards.Count; cardIndex++)
 		{
 			TableCard tableCardData = _tableCards[cardIndex];
+			if (tableCardData.IsHiddenDuringCapture)
+			{
+				continue;
+			}
+
 			int baseZIndex = cardIndex * 2;
 			Texture2D? tableCardTexture = null;
 			bool animateCardBack = false;
@@ -308,6 +372,11 @@ public partial class GameBoardScene
 
 			columnIndex++;
 			goingDown = !goingDown;
+		}
+
+		if (positions.Count > 0)
+		{
+			positions[0] += new Vector2(0.0f, -FirstTableCardLift);
 		}
 
 		return positions;

@@ -1,0 +1,1 @@
+Whole-packet vertical cut concept. Every visible packet is composed from complete ocean card backs; no masked half-card, no split line, no generated per-frame redraw.

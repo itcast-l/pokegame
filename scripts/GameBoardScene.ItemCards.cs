@@ -77,10 +77,14 @@ public partial class GameBoardScene
 		}
 
 		bool captured = _tableCards.Count > 0;
-		CaptureTableCards(ownerPlayerIndex, 0);
-		Shuffle(_playerDecks[ownerPlayerIndex]);
-		Cut(_playerDecks[ownerPlayerIndex]);
-		return new PlayCardResult(true, captured);
+		int collectedCardCount = CaptureTableCards(ownerPlayerIndex, 0);
+		if (!IsGameOver())
+		{
+			Shuffle(_playerDecks[ownerPlayerIndex]);
+			Cut(_playerDecks[ownerPlayerIndex]);
+		}
+
+		return new PlayCardResult(true, captured, collectedCardCount > 0);
 	}
 
 	private PlayCardResult ResolveQueenEffect(int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
@@ -110,6 +114,11 @@ public partial class GameBoardScene
 
 		int itemHandIndex = targetHandIndex - _playerHands[targetPlayerIndex].Count;
 		ItemCard stolenItemCard = _playerItemHands[targetPlayerIndex][itemHandIndex];
+		if (!HasRoomForItemCard(ownerPlayerIndex))
+		{
+			return new PlayCardResult(false, false);
+		}
+
 		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
 		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
 		return new PlayCardResult(true, false);
@@ -137,7 +146,7 @@ public partial class GameBoardScene
 
 		Shuffle(_playerDecks[ownerPlayerIndex]);
 		Shuffle(_playerDecks[targetPlayerIndex]);
-		return new PlayCardResult(true, false);
+		return new PlayCardResult(true, false, cardsToMove > 0);
 	}
 
 	private List<int> BuildItemTargetPlayerCandidates(string itemCardId, int ownerPlayerIndex)
@@ -285,7 +294,7 @@ public partial class GameBoardScene
 		_selectionOverlay = overlay;
 	}
 
-	private void CompletePendingItemSelection(int targetPlayerIndex, int targetHandIndex)
+	private async void CompletePendingItemSelection(int targetPlayerIndex, int targetHandIndex)
 	{
 		if (!IsPendingItemSelectionValid())
 		{
@@ -324,6 +333,11 @@ public partial class GameBoardScene
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
+		if (result.DeckCollected)
+		{
+			await PlayPhysicalDeckShuffleAsync(ownerPlayerIndex);
+		}
+
 		CheckForWinner();
 		_ = FinishPendingMainPlayerItemCardAsync(result, turnSequenceGeneration);
 	}
@@ -433,5 +447,15 @@ public partial class GameBoardScene
 		}
 
 		return _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count;
+	}
+
+	private bool HasRoomForItemCard(int playerIndex, int reservedHandCards = 0)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count)
+		{
+			return false;
+		}
+
+		return GetTotalHandCardCount(playerIndex) + reservedHandCards < MaxTotalHandCards;
 	}
 }
