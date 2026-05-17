@@ -236,14 +236,14 @@ border_width = 3.0
 unique_name_in_owner = true
 z_index = 9
 layout_mode = 1
-anchor_left = 0.1372
-anchor_top = 0.4446
-anchor_right = 0.1372
-anchor_bottom = 0.4446
-offset_left = -65.0544
-offset_top = -76.1008
-offset_right = 29.945602
-offset_bottom = 142.8992
+anchor_left = 0.088
+anchor_top = 0.626
+anchor_right = 0.088
+anchor_bottom = 0.626
+offset_left = -36.0
+offset_top = -52.0
+offset_right = 274.0
+offset_bottom = 52.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -263,14 +263,14 @@ border_width = 3.0
 unique_name_in_owner = true
 z_index = 9
 layout_mode = 1
-anchor_left = 0.8628
-anchor_top = 0.4446
-anchor_right = 0.8628
-anchor_bottom = 0.4446
+anchor_left = 0.668
+anchor_top = 0.626
+anchor_right = 0.668
+anchor_bottom = 0.626
 offset_left = -36.0
-offset_top = -81.1008
-offset_right = 69.05438
-offset_bottom = 144.8992
+offset_top = -52.0
+offset_right = 274.0
+offset_bottom = 52.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -297,6 +297,32 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[node name="TableCardLayoutArea" type="Control" parent="LayoutAreas" unique_id=943562731]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_left = 0.3125
+anchor_top = 0.292
+anchor_right = 0.716
+anchor_bottom = 0.504
+offset_left = -101.0
+offset_top = -31.216003
+offset_right = 66.16797
+offset_bottom = 80.40799
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/TableCardLayoutArea" unique_id=454487962]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+border_color = Color(0.24, 0.86, 1, 0.85)
+border_width = 3.0
+
 [node name="QuestionCardTransformArea" type="Panel" parent="LayoutAreas" unique_id=130327200]
 unique_name_in_owner = true
 z_index = 8
@@ -307,10 +333,10 @@ anchor_left = 0.56
 anchor_top = 0.45
 anchor_right = 0.56
 anchor_bottom = 0.45
-offset_left = -131.12
-offset_top = -92.600006
-offset_right = 6.880005
-offset_bottom = 75.399994
+offset_left = -138.12
+offset_top = -91.600006
+offset_right = -0.11999512
+offset_bottom = 76.399994
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -334,18 +360,19 @@ unique_name_in_owner = true
 z_index = 4
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 50.216003
-offset_top = -16.696
-offset_right = 142.216
-offset_bottom = 75.304
+offset_left = 51.216003
+offset_top = -17.696
+offset_right = 143.216
+offset_bottom = 74.304
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
+circle_diameter = 70.0
 
 [node name="Player2ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=2097461514]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(96.216, 11.304)
+position = Vector2(96.216, 48.304)
 script = ExtResource("6_score_effect_target")
 
 [node name="BottomPlayerArea" type="Control" parent="LayoutAreas" unique_id=634798856]
@@ -355,30 +382,35 @@ anchor_left = 0.242
 anchor_top = 0.785
 anchor_right = 0.758
 anchor_bottom = 0.96
+offset_left = 4.2160034
+offset_top = -1.6800232
+offset_right = 4.2160034
+offset_bottom = -1.6800537
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="BottomAvatarAnchor" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1423675064]
-position = Vector2(120, 78)
+position = Vector2(116.216, 78.31995)
 
 [node name="Player1ScoreMeter" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=521986776]
 unique_name_in_owner = true
 z_index = 4
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = -29.783997
-offset_top = -27.680054
-offset_right = 62.216003
-offset_bottom = 64.31995
+offset_left = -35.0
+offset_top = -25.0
+offset_right = 57.0
+offset_bottom = 67.0
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
+circle_diameter = 82.0
 
 [node name="Player1ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1708757218]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(16.216003, 36.319977)
+position = Vector2(12.216003, 41.319977)
 script = ExtResource("6_score_effect_target")
 
 [node name="LeftPlayerArea" type="Control" parent="LayoutAreas" unique_id=1085384917]
@@ -400,13 +432,14 @@ unique_name_in_owner = true
 z_index = 4
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 14.839996
-offset_top = 2.3599854
-offset_right = 106.84
-offset_bottom = 94.359985
+offset_left = 11.840004
+offset_top = 4.359993
+offset_right = 103.840004
+offset_bottom = 96.35999
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
+circle_diameter = 71.0
 
 [node name="Player3ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/LeftPlayerArea" unique_id=1214222107]
 unique_name_in_owner = true
@@ -433,16 +466,17 @@ unique_name_in_owner = true
 z_index = 4
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 21.880005
-offset_top = 0.35998535
-offset_right = 113.880005
-offset_bottom = 92.359985
+offset_left = 20.880005
+offset_top = 3.359993
+offset_right = 112.880005
+offset_bottom = 95.35999
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
+circle_diameter = 71.0
 
 [node name="Player4ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=369324978]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(63.880005, 68.359985)
+position = Vector2(66.880005, 69.359985)
 script = ExtResource("6_score_effect_target")

@@ -4,16 +4,28 @@ public partial class GameBoardScene
 {
 	private readonly struct PlayingCard
 	{
-		public PlayingCard(string suit, string rank, Texture2D texture)
+		public PlayingCard(string suit, string rank, Texture2D texture, bool hasMagnetEffect = false)
 		{
 			Suit = suit;
 			Rank = rank;
 			Texture = texture;
+			HasMagnetEffect = hasMagnetEffect;
 		}
 
 		public string Suit { get; }
 		public string Rank { get; }
 		public Texture2D Texture { get; }
+		public bool HasMagnetEffect { get; }
+
+		public PlayingCard WithMagnetEffect()
+		{
+			return HasMagnetEffect ? this : new PlayingCard(Suit, Rank, Texture, true);
+		}
+
+		public PlayingCard WithoutMagnetEffect()
+		{
+			return HasMagnetEffect ? new PlayingCard(Suit, Rank, Texture) : this;
+		}
 	}
 
 	private readonly record struct PlayCardResult(
@@ -24,15 +36,18 @@ public partial class GameBoardScene
 
 	private readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 
-	private readonly record struct QuestionCardRewardGrant(ItemCard ItemCard, int ItemHandIndex);
+	private readonly record struct TableSpecialCardTrigger(int TableCardIndex, Texture2D Texture, Vector2 GlobalPosition, int ZIndex);
 
-	private readonly record struct QuestionCardRewardAnimation(ItemCard ItemCard, int ItemHandIndex, Vector2 StartGlobalPosition);
+	private readonly record struct QuestionCardRewardGrant(ItemCard ItemCard, int ItemHandIndex, bool RequiresMagnetAttachment = false);
+
+	private readonly record struct QuestionCardRewardAnimation(ItemCard ItemCard, int ItemHandIndex, Vector2 StartGlobalPosition, bool RequiresMagnetAttachment = false);
 
 	private enum PendingItemSelectionMode
 	{
 		None,
 		TargetPlayer,
 		TargetHandCard,
+		MagnetHandCard,
 	}
 
 	private readonly struct ItemCard
@@ -49,16 +64,18 @@ public partial class GameBoardScene
 
 	private sealed class TableCard
 	{
-		public TableCard(PlayingCard? card, bool isFaceUp, ItemCard? itemOverlay = null)
+		public TableCard(PlayingCard? card, bool isFaceUp, ItemCard? itemOverlay = null, int itemOwnerPlayerIndex = -1)
 		{
 			Card = card;
 			IsFaceUp = isFaceUp;
 			ItemOverlay = itemOverlay;
+			ItemOwnerPlayerIndex = itemOwnerPlayerIndex;
 		}
 
 		public PlayingCard? Card { get; }
 		public bool IsFaceUp { get; set; }
 		public bool IsHiddenDuringCapture { get; set; }
 		public ItemCard? ItemOverlay { get; }
+		public int ItemOwnerPlayerIndex { get; }
 	}
 }

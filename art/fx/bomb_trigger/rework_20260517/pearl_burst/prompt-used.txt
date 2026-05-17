@@ -1,0 +1,13 @@
+Use input image 1 as a layout-only reference. Use it only to understand the exact 2 rows by 2 columns layout, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Use input image 2 as the bomb-card visual reference for palette and material language: deep ocean blue, pearl white, antique gold accents, clean crisp Godot-ready 2D card-game styling. Use input image 3 as the existing ocean bomb FX reference for aqua glow and pearl bubbles, but make this new variant more jewel-like and readable at small card-game size.
+
+Create exactly one 2x2 animation sprite sheet for an ocean-themed bomb-trigger FX in a top-down card table game. The four cells are one continuous non-looping sequence, read left to right on the top row, then left to right on the bottom row:
+1. a bright pearl bead flash with a tiny gold fuse spark at the exact center,
+2. pearl shell burst opens outward, small gold star sparks and aqua droplets form a compact circle,
+3. peak polished jewel explosion, white pearl core, teal glass shards of water, short gold star glints, bright but compact,
+4. fade into small floating pearls, soft teal droplets, and a thin dissolving gold sparkle ring.
+
+This must read as a precious pearl-and-sea-glass bomb pop, not a fire explosion. Use ocean visual cues: pearl white highlights, sea-glass turquoise droplets, tiny bubbles, gold ornamental sparkle accents, polished clean HD 2D game FX. Do not include orange flames, smoke clouds, dirty soot, rubble, debris chunks, playing cards, card backs, bomb object, icons, numbers, letters, text, UI, hands, table, or characters.
+
+Every frame must keep the FX centered in its cell with consistent scale and the same center point. The entire effect, including all pearls, droplets, glints, and glow, must stay inside the central 60 percent of each cell. Leave very wide solid magenta margin on all four sides of every cell. Nothing may touch or cross any cell edge. Detached pearls and sparks are allowed only close to the main burst. Background across the entire sheet, including the spaces between cells, must be 100% solid flat #FF00FF with no gradients, texture, shadows, grid lines, or borders.

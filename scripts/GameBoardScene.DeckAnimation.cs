@@ -13,9 +13,15 @@ public partial class GameBoardScene
 	private const float QuestionCardToTransformAreaFlightSeconds = 0.36f;
 	private const float QuestionCardTransformSeconds = 0.58f;
 	private const float QuestionCardRewardInsertSeconds = 0.22f;
+	private const float SpecialCardTriggerEffectSeconds = 0.72f;
+	private const float SpecialCardTriggerFxFrameSeconds = 0.14f;
+	private const float FullCircleRadians = 6.2831855f;
 	private const int PlayedCardFlightZIndex = 2000;
 	private static readonly Vector2 DeckShuffleVisualSize = new(96.0f, 192.0f);
 	private static readonly Vector2 QuestionCardTransformFxVisualSize = new(128.0f, 128.0f);
+	private static readonly Vector2 SpecialCardTriggerSparkSize = new(20.0f, 20.0f);
+	private static readonly Vector2 SpecialCardTriggerRingSize = new(188.0f, 188.0f);
+	private static readonly Vector2 SpecialCardTriggerFxVisualSize = new(256.0f, 256.0f);
 
 	private async Task PlayCardToTableAnimationAsync(
 		int playerIndex,
@@ -45,9 +51,127 @@ public partial class GameBoardScene
 		bool flipToCardBack = playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
 		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
-		var flightCard = new TextureRect
+		var flightCard = new Control
 		{
 			Name = "PlayedCardFlight",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			RotationDegrees = startRotationDegrees,
+			ZIndex = PlayedCardFlightZIndex,
+			ZAsRelative = false,
+		};
+		AddChild(flightCard);
+		flightCard.GlobalPosition = startGlobalPosition;
+		var cardVisual = new TextureRect
+		{
+			Name = "PlayedCardFlightVisual",
+			Texture = startTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			ZIndex = 0,
+		};
+		flightCard.AddChild(cardVisual);
+		TextureRect? magnetOverlay = null;
+		bool startShowsMagnetOverlay = playedCard.HasMagnetEffect
+			&& _magnetCardOverlayTexture != null
+			&& (playerIndex == MainPlayerIndex || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null);
+		if (startShowsMagnetOverlay)
+		{
+			magnetOverlay = new TextureRect
+			{
+				Name = "PlayedCardMagnetOverlay",
+				Texture = _magnetCardOverlayTexture,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+				MouseFilter = MouseFilterEnum.Ignore,
+				Size = CardVisualSize,
+				PivotOffset = CardVisualSize / 2.0f,
+				ZIndex = 1,
+			};
+			flightCard.AddChild(magnetOverlay);
+		}
+
+		try
+		{
+			UpdateCardToTableAnimation(
+				flightCard,
+				cardVisual,
+				magnetOverlay,
+				startTexture,
+				targetTexture,
+				startGlobalPosition,
+				targetGlobalPosition,
+				startRotationDegrees,
+				flipToCardBack,
+				0.0f);
+
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.InOut);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateCardToTableAnimation(
+					flightCard,
+					cardVisual,
+					magnetOverlay,
+					startTexture,
+					targetTexture,
+					startGlobalPosition,
+					targetGlobalPosition,
+					startRotationDegrees,
+					flipToCardBack,
+					progress)),
+				0.0f,
+				1.0f,
+				PlayedCardFlightDuration);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(flightCard))
+			{
+				flightCard.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayItemCardToTableAnimationAsync(
+		int playerIndex,
+		ItemCard itemCard,
+		Vector2 startGlobalPosition,
+		int tableCardIndex,
+		bool tableCardIsFaceUp)
+	{
+		if (!IsInsideTree() || tableCardIndex < 0)
+		{
+			return;
+		}
+
+		List<Vector2> tableCardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (tableCardIndex >= tableCardPositions.Count)
+		{
+			return;
+		}
+
+		bool flipToCardBack = playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
+		Texture2D? startTexture = flipToCardBack ? _cardBackTexture : GetVisibleHandItemCardTexture(playerIndex, itemCard);
+		if (startTexture == null)
+		{
+			return;
+		}
+
+		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPositions[tableCardIndex];
+		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
+		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
+		var flightCard = new TextureRect
+		{
+			Name = "PlayedItemCardFlight",
 			Texture = startTexture,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
@@ -64,7 +188,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			UpdateCardToTableAnimation(
+			UpdateItemCardToTableAnimation(
 				flightCard,
 				startTexture,
 				targetTexture,
@@ -78,7 +202,7 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateCardToTableAnimation(
+				Callable.From<float>(progress => UpdateItemCardToTableAnimation(
 					flightCard,
 					startTexture,
 					targetTexture,
@@ -112,7 +236,221 @@ public partial class GameBoardScene
 		return playedCard.Texture;
 	}
 
+	private Texture2D? GetVisibleHandItemCardTexture(int playerIndex, ItemCard itemCard)
+	{
+		if (playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
+		{
+			return _cardBackTexture;
+		}
+
+		return itemCard.Texture;
+	}
+
+	private async Task PlaySpecialCardTriggerEffectAsync(Texture2D cardTexture, Vector2 globalPosition, int zIndex, float rotationDegrees = 0.0f)
+	{
+		if (!IsInsideTree())
+		{
+			return;
+		}
+
+		var effectRoot = new Control
+		{
+			Name = "SpecialCardTriggerEffect",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			ZIndex = PlayedCardFlightZIndex + zIndex + 760,
+			ZAsRelative = false,
+			RotationDegrees = rotationDegrees,
+			Scale = Vector2.One,
+		};
+		AddChild(effectRoot);
+		effectRoot.GlobalPosition = globalPosition;
+
+		var ring = new SpecialCardTriggerRing
+		{
+			Name = "SpecialCardTriggerRing",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = (CardVisualSize - SpecialCardTriggerRingSize) / 2.0f,
+			Size = SpecialCardTriggerRingSize,
+			PivotOffset = SpecialCardTriggerRingSize / 2.0f,
+			ZIndex = 0,
+		};
+		effectRoot.AddChild(ring);
+
+		var card = new TextureRect
+		{
+			Name = "SpecialCardTriggerCard",
+			Texture = cardTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			ZIndex = 2,
+		};
+		effectRoot.AddChild(card);
+
+		var triggerFx = new TextureRect
+		{
+			Name = "SpecialCardTriggerFx",
+			Texture = _specialCardTriggerEffectFrames.Count > 0 ? _specialCardTriggerEffectFrames[0] : null,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = (CardVisualSize - SpecialCardTriggerFxVisualSize) / 2.0f,
+			Size = SpecialCardTriggerFxVisualSize,
+			PivotOffset = SpecialCardTriggerFxVisualSize / 2.0f,
+			ZIndex = 20,
+			Visible = _specialCardTriggerEffectFrames.Count > 0,
+		};
+		card.AddChild(triggerFx);
+
+		Vector2[] sparkPositions =
+		{
+			new(-36.0f, -34.0f),
+			new(CardVisualSize.X + 17.0f, -28.0f),
+			new(-30.0f, CardVisualSize.Y + 16.0f),
+			new(CardVisualSize.X + 20.0f, CardVisualSize.Y + 15.0f),
+		};
+		foreach (Vector2 sparkPosition in sparkPositions)
+		{
+			var spark = new ColorRect
+			{
+				Name = "SpecialCardTriggerSpark",
+				Color = new Color(1.0f, 0.96f, 0.56f, 0.95f),
+				MouseFilter = MouseFilterEnum.Ignore,
+				Position = sparkPosition,
+				Size = SpecialCardTriggerSparkSize,
+				PivotOffset = SpecialCardTriggerSparkSize / 2.0f,
+				RotationDegrees = 45.0f,
+				ZIndex = 4,
+				Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			};
+			effectRoot.AddChild(spark);
+		}
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Cubic);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.82f, SpecialCardTriggerEffectSeconds * 0.42f);
+			tween.TweenProperty(card, "scale", Vector2.One * 1.10f, SpecialCardTriggerEffectSeconds * 0.42f);
+			tween.TweenProperty(ring, "ring_progress", 0.58f, SpecialCardTriggerEffectSeconds * 0.42f);
+			tween.TweenProperty(ring, "ring_alpha", 1.0f, SpecialCardTriggerEffectSeconds * 0.18f);
+			tween.TweenProperty(triggerFx, "modulate", Colors.White, SpecialCardTriggerEffectSeconds * 0.12f);
+			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
+			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
+			{
+				if (effectRoot.GetChild(sparkIndex) is ColorRect spark)
+				{
+					tween.TweenProperty(spark, "modulate", Colors.White, SpecialCardTriggerEffectSeconds * 0.24f);
+					tween.TweenProperty(spark, "scale", Vector2.One * 2.35f, SpecialCardTriggerEffectSeconds * 0.42f);
+				}
+			}
+
+			tween.Chain().SetParallel(true);
+			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.16f, SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(card, "scale", Vector2.One, SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(ring, "ring_progress", 1.0f, SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(ring, "ring_alpha", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(triggerFx, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.34f, SpecialCardTriggerEffectSeconds * 0.58f);
+			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
+			{
+				if (effectRoot.GetChild(sparkIndex) is ColorRect spark)
+				{
+					tween.TweenProperty(spark, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), SpecialCardTriggerEffectSeconds * 0.58f);
+					tween.TweenProperty(spark, "scale", Vector2.One * 0.68f, SpecialCardTriggerEffectSeconds * 0.58f);
+				}
+			}
+
+			Task fxTask = PlaySpecialCardTriggerFxFramesAsync(triggerFx);
+			await ToSignal(tween, Tween.SignalName.Finished);
+			await fxTask;
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(effectRoot))
+			{
+				effectRoot.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlaySpecialCardTriggerFxFramesAsync(TextureRect fx)
+	{
+		if (_specialCardTriggerEffectFrames.Count == 0)
+		{
+			return;
+		}
+
+		foreach (Texture2D frame in _specialCardTriggerEffectFrames)
+		{
+			if (!GodotObject.IsInstanceValid(fx))
+			{
+				return;
+			}
+
+			fx.Texture = frame;
+			await ToSignal(GetTree().CreateTimer(SpecialCardTriggerFxFrameSeconds), SceneTreeTimer.SignalName.Timeout);
+		}
+	}
+
 	private static void UpdateCardToTableAnimation(
+		Control flightCard,
+		TextureRect cardVisual,
+		TextureRect? magnetOverlay,
+		Texture2D startTexture,
+		Texture2D targetTexture,
+		Vector2 startGlobalPosition,
+		Vector2 targetGlobalPosition,
+		float startRotationDegrees,
+		bool flipToCardBack,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(flightCard) || !GodotObject.IsInstanceValid(cardVisual))
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		flightCard.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, clampedProgress);
+		flightCard.RotationDegrees = Mathf.Lerp(startRotationDegrees, 0.0f, clampedProgress);
+
+		if (!flipToCardBack)
+		{
+			cardVisual.Texture = startTexture;
+			if (magnetOverlay != null)
+			{
+				magnetOverlay.Visible = true;
+			}
+
+			flightCard.Scale = Vector2.One;
+			return;
+		}
+
+		bool showingBack = clampedProgress >= 0.5f;
+		cardVisual.Texture = showingBack ? targetTexture : startTexture;
+		if (magnetOverlay != null)
+		{
+			magnetOverlay.Visible = !showingBack;
+		}
+
+		float halfProgress = showingBack
+			? (clampedProgress - 0.5f) * 2.0f
+			: clampedProgress * 2.0f;
+		float scaleX = showingBack
+			? Mathf.Lerp(PlayedCardFlipMinScaleX, 1.0f, halfProgress)
+			: Mathf.Lerp(1.0f, PlayedCardFlipMinScaleX, halfProgress);
+		flightCard.Scale = new Vector2(scaleX, 1.0f);
+	}
+
+	private static void UpdateItemCardToTableAnimation(
 		TextureRect flightCard,
 		Texture2D startTexture,
 		Texture2D targetTexture,
@@ -304,6 +642,11 @@ public partial class GameBoardScene
 		}
 
 		Control handArea = _playerHandAreas[playerIndex];
+		if (reward.RequiresMagnetAttachment)
+		{
+			return handArea.GlobalPosition + (handArea.Size - CardVisualSize) / 2.0f;
+		}
+
 		int displayCardCount = _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count;
 		int displayIndex = _playerHands[playerIndex].Count + reward.ItemHandIndex;
 		if (displayCardCount <= 0 || displayIndex < 0 || displayIndex >= displayCardCount)
@@ -542,4 +885,47 @@ public partial class GameBoardScene
 			}
 		}
 	}
+
+	private partial class SpecialCardTriggerRing : Control
+	{
+		private float _ringProgress;
+		private float _ringAlpha;
+
+		public float ring_progress
+		{
+			get => _ringProgress;
+			set
+			{
+				_ringProgress = Mathf.Clamp(value, 0.0f, 1.0f);
+				QueueRedraw();
+			}
+		}
+
+		public float ring_alpha
+		{
+			get => _ringAlpha;
+			set
+			{
+				_ringAlpha = Mathf.Clamp(value, 0.0f, 1.0f);
+				QueueRedraw();
+			}
+		}
+
+		public override void _Draw()
+		{
+			if (_ringAlpha <= 0.0f)
+			{
+				return;
+			}
+
+			Vector2 center = Size / 2.0f;
+			float radius = Mathf.Lerp(42.0f, 78.0f, _ringProgress);
+			float outerAlpha = 0.38f * _ringAlpha;
+			float innerAlpha = 0.95f * _ringAlpha;
+			DrawArc(center, radius + 8.0f, 0.0f, FullCircleRadians, 96, new Color(0.48f, 1.0f, 0.92f, outerAlpha), 14.0f, true);
+			DrawArc(center, radius, 0.0f, FullCircleRadians, 96, new Color(1.0f, 0.96f, 0.42f, innerAlpha), 6.0f, true);
+			DrawArc(center, radius - 7.0f, 0.0f, FullCircleRadians, 96, new Color(1.0f, 1.0f, 1.0f, 0.55f * _ringAlpha), 2.5f, true);
+		}
+	}
+
 }

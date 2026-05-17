@@ -22,8 +22,10 @@ public partial class GameBoardScene
 		_turnSequenceGeneration++;
 		_currentTurnPlayerIndex = MainPlayerIndex;
 		_completedTurnsSinceQuestionCardRefresh = 0;
+		_pendingMagnetAttachmentRewardPlayers.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
+		_isResolvingMagnetAttachmentSelection = false;
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
 		_winnerPlayerIndex = -1;
@@ -50,11 +52,12 @@ public partial class GameBoardScene
 		for (int cardIndex = 0; cardIndex < cardsToDeal; cardIndex++)
 		{
 			int playerIndex = cardIndex % player_count;
-			_playerDecks[playerIndex].Add(deck[cardIndex]);
+			AddCardToPlayerDeck(playerIndex, deck[cardIndex]);
 		}
 
 		DrawStartingHands();
 		ApplyDebugOpponentOneCardHand();
+		ApplyDebugMainPlayerBombCards();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -74,6 +77,26 @@ public partial class GameBoardScene
 		}
 	}
 
+	private void AddCardToPlayerDeck(int playerIndex, PlayingCard card)
+	{
+		_playerDecks[playerIndex].Add(PrepareCardForPlayerDeck(card));
+	}
+
+	private PlayingCard PrepareCardForPlayerDeck(PlayingCard card)
+	{
+		if (ShouldPreserveCardEffectsWhenEnteringDeck())
+		{
+			return card;
+		}
+
+		return card.WithoutMagnetEffect();
+	}
+
+	private bool ShouldPreserveCardEffectsWhenEnteringDeck()
+	{
+		return false;
+	}
+
 	private void ApplyDebugOpponentOneCardHand()
 	{
 		const int opponentPlayerIndex = 1;
@@ -86,6 +109,26 @@ public partial class GameBoardScene
 		_playerHands[opponentPlayerIndex].Clear();
 		_playerHands[opponentPlayerIndex].Add(onlyCard);
 		_playerDecks[opponentPlayerIndex].Clear();
+	}
+
+	private void ApplyDebugMainPlayerBombCards()
+	{
+		const int bombCardCount = 2;
+		if (!debug_main_player_starts_with_bomb)
+		{
+			return;
+		}
+
+		for (int cardIndex = 0; cardIndex < bombCardCount && HasRoomForItemCard(MainPlayerIndex); cardIndex++)
+		{
+			ItemCard? bombCard = CreateItemCard(BombItemCardId);
+			if (!bombCard.HasValue)
+			{
+				return;
+			}
+
+			_playerItemHands[MainPlayerIndex].Add(bombCard.Value);
+		}
 	}
 
 	private List<PlayingCard> LoadDeckWithoutFaceCards()

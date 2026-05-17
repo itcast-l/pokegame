@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "cast",
+  "prompt": "",
+  "role": "",
+  "input": "art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 120,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.9,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 18,
+  "min_component_area": 8,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "fx-1",
+    "fx-2",
+    "fx-3",
+    "fx-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        211,
+        195,
+        293,
+        298
+      ],
+      "edge_touch": false,
+      "output_size": [
+        23,
+        29
+      ],
+      "paste_position": [
+        52,
+        49
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 4,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        65,
+        103,
+        398,
+        420
+      ],
+      "edge_touch": false,
+      "output_size": [
+        95,
+        91
+      ],
+      "paste_position": [
+        16,
+        18
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "component_mode": "all",
+      "component_count": 41,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        55,
+        45,
+        456,
+        425
+      ],
+      "edge_touch": false,
+      "output_size": [
+        115,
+        109
+      ],
+      "paste_position": [
+        6,
+        9
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "component_mode": "all",
+      "component_count": 51,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        50,
+        51,
+        431,
+        431
+      ],
+      "edge_touch": false,
+      "output_size": [
+        109,
+        109
+      ],
+      "paste_position": [
+        9,
+        9
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

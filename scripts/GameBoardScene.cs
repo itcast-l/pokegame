@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 
 public partial class GameBoardScene : Control
@@ -15,8 +16,15 @@ public partial class GameBoardScene : Control
 	private const int ScoreFillEffectFrameCount = 4;
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
 	private const int QuestionCardTransformFrameCount = 6;
+	private const string SpecialCardTriggerEffectFramePattern = "res://art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/processed/fx-{0}.png";
+	private const int SpecialCardTriggerEffectFrameCount = 4;
+	private const string BombPairDestroyEffectFramePattern = "res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png";
+	private const int BombPairDestroyEffectFrameCount = 4;
+	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string QuestionMarkItemCardId = "question_mark";
+	private const string BombItemCardId = "bomb";
+	private const string MagnetItemCardId = "magnet";
 	private const string JackItemCardId = "J";
 	private const string QueenItemCardId = "Q";
 	private const string KingItemCardId = "K";
@@ -28,7 +36,7 @@ public partial class GameBoardScene : Control
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
+	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, JackItemCardId, QueenItemCardId, KingItemCardId };
 	private static readonly Dictionary<string, string> FaceCardItemTexturePaths = new()
 	{
 		[JackItemCardId] = "res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png",
@@ -38,8 +46,8 @@ public partial class GameBoardScene : Control
 	private static readonly string[] AllItemCardIds =
 	{
 		QuestionMarkItemCardId,
-		"bomb",
-		"magnet",
+		BombItemCardId,
+		MagnetItemCardId,
 		"greed",
 		"lens",
 		"double",
@@ -52,8 +60,8 @@ public partial class GameBoardScene : Control
 	};
 	private static readonly string[] QuestionRewardItemCardIds =
 	{
-		"bomb",
-		"magnet",
+		BombItemCardId,
+		MagnetItemCardId,
 		"greed",
 		"lens",
 		"double",
@@ -65,9 +73,11 @@ public partial class GameBoardScene : Control
 		KingItemCardId,
 	};
 	private static readonly int[] ClockwiseTurnOrder = { 0, 2, 1, 3 };
-	private const float HoveredHandCardLift = 14.0f;
+	private const float HoveredHandCardLift = 18.0f;
+	private const float HoveredHandCardScale = 1.06f;
 	private const int HoveredHandCardZIndexBoost = 100;
-	private const float HandCardHoverTweenTime = 0.12f;
+	private const float HandCardHoverInTweenTime = 0.16f;
+	private const float HandCardHoverOutTweenTime = 0.22f;
 	private const float AiTurnDelaySeconds = 0.35f;
 	private const float TableCaptureDelaySeconds = 0.45f;
 	private const float TableCardRevealHalfFlipSeconds = 0.16f;
@@ -77,25 +87,24 @@ public partial class GameBoardScene : Control
 	private const float TableCaptureFlightStaggerSeconds = 0.07f;
 	private const float TableCaptureFlightArcHeight = 42.0f;
 	private const float TableCaptureFlightEndScale = 0.82f;
+	private const float BombDestroyCardStaggerSeconds = 0.08f;
+	private const float BombPairDestroyFxFrameSeconds = 0.055f;
+	private const float BombPairDestroyFxVisualSize = 132.0f;
 	private const float TableCardPointPopupSeconds = 0.42f;
 	private const float TableCardPointPopupRise = 24.0f;
 	private const float TableCardPointPopupTopOffset = 26.0f;
 	private const int TableCardPointPopupFontSize = 22;
 	private const int TableCardPointPopupZIndex = 2800;
 	private const int QuestionCardRefreshCooldownRounds = 2;
+	private const double MagnetAttachmentSelectionSeconds = 5.0;
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
 	private static readonly Vector2 CardVisualSize = new(72, 96);
 	private static readonly Vector2 CardPileOffset = new(5, -4);
-	private static readonly Vector2 TableCardStartPosition = new(96, 16);
-	private const float FirstTableCardLift = 20.0f;
-	private static readonly float TableCardVerticalStep = CardVisualSize.Y / 2.0f;
-	private static readonly float TableCardColumnGap = CardVisualSize.X + 18.0f;
-	private const float TableCardBottomInset = 28.0f;
-	private const float TableCardTurnDepth = 24.0f;
-	private const int TableCardTurnSlots = 3;
+	private const int TableCardsPerRow = 7;
+	private static readonly float TableCardHorizontalStep = CardVisualSize.X + 18.0f;
+	private static readonly float TableCardRowGap = CardVisualSize.Y * 0.62f;
 	private static readonly Vector2 HorizontalHandCardOffset = new(62, 0);
-	private static readonly Vector2 VerticalHandCardOffset = new(0, 50);
 	private int _playerCount = 2;
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<List<PlayingCard>> _playerDecks = new();
@@ -108,8 +117,12 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _cardBackFrames = new();
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
+	private readonly List<Texture2D> _specialCardTriggerEffectFrames = new();
+	private readonly List<Texture2D> _bombPairDestroyEffectFrames = new();
+	private readonly Queue<int> _pendingMagnetAttachmentRewardPlayers = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
+	private Texture2D? _magnetCardOverlayTexture;
 	private float _cardBackAnimationTime;
 	private Label _winnerLabel = default!;
 	private int _currentTurnPlayerIndex = MainPlayerIndex;
@@ -121,6 +134,8 @@ public partial class GameBoardScene : Control
 	private int _pendingItemHandIndex = -1;
 	private int _pendingItemTurnSequenceGeneration = -1;
 	private string _pendingItemCardId = string.Empty;
+	private TaskCompletionSource<bool>? _pendingMagnetAttachmentCompletion;
+	private bool _isResolvingMagnetAttachmentSelection;
 	private bool _isResolvingTurnSequence;
 	private bool _isProcessingCardPlay;
 	private int _winnerPlayerIndex = -1;
@@ -143,7 +158,11 @@ public partial class GameBoardScene : Control
 	[Export]
 	public bool debug_opponent_has_one_card = false;
 
+	[Export]
+	public bool debug_main_player_starts_with_bomb = true;
+
 	private Control _centerArena = default!;
+	private Control _tableCardLayoutArea = default!;
 	private Control _topPlayerArea = default!;
 	private Control _bottomPlayerArea = default!;
 	private Control _leftPlayerArea = default!;
@@ -156,9 +175,13 @@ public partial class GameBoardScene : Control
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
 		LoadItemCardTextures();
+		LoadMagnetCardOverlayTexture();
 		LoadQuestionCardTransformTextures();
+		LoadSpecialCardTriggerEffectTextures();
+		LoadBombPairDestroyEffectTextures();
 
 		_centerArena = GetNode<Control>("%CenterArena");
+		_tableCardLayoutArea = GetNode<Control>("%TableCardLayoutArea");
 		_topPlayerArea = GetNode<Control>("%TopPlayerArea");
 		_bottomPlayerArea = GetNode<Control>("%BottomPlayerArea");
 		_leftPlayerArea = GetNode<Control>("%LeftPlayerArea");
@@ -239,6 +262,49 @@ public partial class GameBoardScene : Control
 			}
 
 			_questionCardTransformFrames.Add(texture);
+		}
+	}
+
+	private void LoadSpecialCardTriggerEffectTextures()
+	{
+		_specialCardTriggerEffectFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= SpecialCardTriggerEffectFrameCount; frameIndex++)
+		{
+			string path = string.Format(SpecialCardTriggerEffectFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing special card trigger effect frame: {path}");
+				continue;
+			}
+
+			_specialCardTriggerEffectFrames.Add(texture);
+		}
+	}
+
+	private void LoadBombPairDestroyEffectTextures()
+	{
+		_bombPairDestroyEffectFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= BombPairDestroyEffectFrameCount; frameIndex++)
+		{
+			string path = string.Format(BombPairDestroyEffectFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing bomb pair destroy effect frame: {path}");
+				continue;
+			}
+
+			_bombPairDestroyEffectFrames.Add(texture);
+		}
+	}
+
+	private void LoadMagnetCardOverlayTexture()
+	{
+		_magnetCardOverlayTexture = GD.Load<Texture2D>(MagnetCardOverlayPath);
+		if (_magnetCardOverlayTexture == null)
+		{
+			GD.PushWarning($"Missing magnet card overlay texture: {MagnetCardOverlayPath}");
 		}
 	}
 

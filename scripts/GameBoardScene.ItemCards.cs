@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 
 public partial class GameBoardScene
@@ -41,12 +42,208 @@ public partial class GameBoardScene
 
 	private void ClearPendingItemSelectionState()
 	{
+		_pendingMagnetAttachmentCompletion?.TrySetResult(true);
 		_pendingItemSelectionMode = PendingItemSelectionMode.None;
 		_pendingItemOwnerIndex = -1;
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = -1;
 		_pendingItemCardId = string.Empty;
 		_revealedPlayerHandIndex = -1;
+	}
+
+	private async Task ResolvePendingMagnetAttachmentsAsync(int turnSequenceGeneration)
+	{
+		while (_pendingMagnetAttachmentRewardPlayers.Count > 0)
+		{
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+
+			int playerIndex = _pendingMagnetAttachmentRewardPlayers.Dequeue();
+			if (!PlayerHasAttachableMagnetCard(playerIndex))
+			{
+				continue;
+			}
+
+			if (playerIndex == MainPlayerIndex)
+			{
+				await ResolveMainPlayerMagnetAttachmentAsync(turnSequenceGeneration);
+			}
+			else
+			{
+				AttachMagnetToRandomHandCard(playerIndex);
+			}
+
+			RenderPlayerHands();
+		}
+	}
+
+	private async Task ResolveMainPlayerMagnetAttachmentAsync(int turnSequenceGeneration)
+	{
+		if (_isResolvingMagnetAttachmentSelection || !PlayerHasAttachableMagnetCard(MainPlayerIndex))
+		{
+			return;
+		}
+
+		bool wasProcessingCardPlay = _isProcessingCardPlay;
+		_isResolvingMagnetAttachmentSelection = true;
+		_isProcessingCardPlay = true;
+		_pendingItemCardId = MagnetItemCardId;
+		_pendingItemOwnerIndex = MainPlayerIndex;
+		_pendingItemHandIndex = -1;
+		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
+		_pendingItemSelectionMode = PendingItemSelectionMode.MagnetHandCard;
+		_pendingMagnetAttachmentCompletion = new TaskCompletionSource<bool>();
+		RenderPlayerHands();
+		ShowMagnetHandSelection();
+
+		try
+		{
+			System.Threading.Tasks.Task timeoutTask = WaitForMagnetAttachmentTimeoutAsync();
+			await Task.WhenAny(_pendingMagnetAttachmentCompletion.Task, timeoutTask);
+			if (turnSequenceGeneration == _turnSequenceGeneration
+				&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+				&& _pendingItemOwnerIndex == MainPlayerIndex)
+			{
+				CompleteMagnetAttachmentSelection(PickRandomAttachableMagnetHandIndex(MainPlayerIndex));
+			}
+
+			while (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+				&& turnSequenceGeneration == _turnSequenceGeneration
+				&& !IsGameOver())
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			}
+		}
+		finally
+		{
+			if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+			{
+				ClearSelectionOverlay();
+				ClearPendingItemSelectionState();
+			}
+
+			_isResolvingMagnetAttachmentSelection = false;
+			_pendingMagnetAttachmentCompletion = null;
+			_isProcessingCardPlay = wasProcessingCardPlay;
+			RenderPlayerHands();
+		}
+	}
+
+	private async System.Threading.Tasks.Task WaitForMagnetAttachmentTimeoutAsync()
+	{
+		await ToSignal(GetTree().CreateTimer(MagnetAttachmentSelectionSeconds), SceneTreeTimer.SignalName.Timeout);
+	}
+
+	private void ShowMagnetHandSelection()
+	{
+		ClearSelectionOverlay();
+		if (!PlayerHasAttachableMagnetCard(MainPlayerIndex))
+		{
+			CompleteMagnetAttachmentSelection(-1);
+			return;
+		}
+
+		var overlay = CreateSelectionOverlay();
+		var panel = CreateSelectionPanel("选择附加磁力的基础牌");
+		for (int handIndex = 0; handIndex < _playerHands[MainPlayerIndex].Count; handIndex++)
+		{
+			PlayingCard card = _playerHands[MainPlayerIndex][handIndex];
+			if (card.HasMagnetEffect)
+			{
+				continue;
+			}
+
+			int selectedHandIndex = handIndex;
+			Button button = CreateSelectionButton($"{card.Suit} {card.Rank}");
+			button.Pressed += () => CompleteMagnetAttachmentSelection(selectedHandIndex);
+			panel.AddChild(button);
+		}
+
+		overlay.AddChild(panel);
+		AddChild(overlay);
+		_selectionOverlay = overlay;
+	}
+
+	private void CompleteMagnetAttachmentSelection(int handIndex)
+	{
+		if (_pendingItemSelectionMode != PendingItemSelectionMode.MagnetHandCard)
+		{
+			return;
+		}
+
+		int ownerPlayerIndex = _pendingItemOwnerIndex;
+		bool attached = AttachMagnetToHandCard(ownerPlayerIndex, handIndex);
+		if (!attached)
+		{
+			AttachMagnetToRandomHandCard(ownerPlayerIndex);
+		}
+
+		ClearSelectionOverlay();
+		ClearPendingItemSelectionState();
+		_pendingMagnetAttachmentCompletion?.TrySetResult(true);
+		RenderPlayerHands();
+	}
+
+	private bool PlayerHasAttachableMagnetCard(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		{
+			return false;
+		}
+
+		foreach (PlayingCard card in _playerHands[playerIndex])
+		{
+			if (!card.HasMagnetEffect)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private bool AttachMagnetToHandCard(int playerIndex, int handIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count || handIndex < 0 || handIndex >= _playerHands[playerIndex].Count)
+		{
+			return false;
+		}
+
+		PlayingCard card = _playerHands[playerIndex][handIndex];
+		if (card.HasMagnetEffect)
+		{
+			return false;
+		}
+
+		_playerHands[playerIndex][handIndex] = card.WithMagnetEffect();
+		return true;
+	}
+
+	private bool AttachMagnetToRandomHandCard(int playerIndex)
+	{
+		int handIndex = PickRandomAttachableMagnetHandIndex(playerIndex);
+		return AttachMagnetToHandCard(playerIndex, handIndex);
+	}
+
+	private int PickRandomAttachableMagnetHandIndex(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		{
+			return -1;
+		}
+
+		var candidates = new List<int>();
+		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+		{
+			if (!_playerHands[playerIndex][handIndex].HasMagnetEffect)
+			{
+				candidates.Add(handIndex);
+			}
+		}
+
+		return candidates.Count == 0 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
 	}
 
 	private PlayCardResult ResolveItemCardEffect(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
@@ -144,7 +341,7 @@ public partial class GameBoardScene
 		{
 			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
 			_playerDecks[targetPlayerIndex].RemoveAt(0);
-			_playerDecks[ownerPlayerIndex].Add(topCard);
+			AddCardToPlayerDeck(ownerPlayerIndex, topCard);
 		}
 
 		Shuffle(_playerDecks[ownerPlayerIndex]);
@@ -328,14 +525,37 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemHandIndex];
+		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(ownerPlayerIndex, itemHandIndex);
 		_playerItemHands[ownerPlayerIndex].RemoveAt(itemHandIndex);
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
+		RenderPlayerHands();
+
+		await PlaySpecialCardTriggerEffectAsync(
+			itemCard.Texture,
+			itemGlobalPosition ?? Vector2.Zero,
+			0,
+			GetCardRotationDegreesForPlayer(ownerPlayerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			_isProcessingCardPlay = false;
+			RenderPlayerHands();
+			return;
+		}
 
 		PlayCardResult result = ResolveItemCardEffect(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
 		RenderPlayerCardPiles();
 		RenderTableCards();
 		await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			_isProcessingCardPlay = false;
+			RenderPlayerHands();
+			return;
+		}
+
+		await ResolvePendingMagnetAttachmentsAsync(turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			_isProcessingCardPlay = false;

@@ -104,7 +104,8 @@ public partial class GameBoardScene
 				int handIndex,
 				int itemHandIndex,
 				bool animateCardBack,
-				float visualScale)
+				float visualScale,
+				bool showMagnetOverlay = false)
 			{
 				if (texture == null)
 				{
@@ -147,12 +148,29 @@ public partial class GameBoardScene
 					void AnimateHover(bool hovered)
 					{
 						hoverTween?.Kill();
-						cardVisual.ZIndex = hovered ? HoveredHandCardZIndexBoost : 0;
+						if (hovered)
+						{
+							cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
+							cardVisual.ZIndex = HoveredHandCardZIndexBoost;
+						}
+
 						Vector2 targetPosition = visualBasePosition + (hovered ? new Vector2(0.0f, -HoveredHandCardLift) : Vector2.Zero);
+						Vector2 targetScale = hovered ? Vector2.One * HoveredHandCardScale : Vector2.One;
+						float duration = hovered ? HandCardHoverInTweenTime : HandCardHoverOutTweenTime;
 						hoverTween = cardVisual.CreateTween();
-						hoverTween.SetTrans(Tween.TransitionType.Sine);
+						hoverTween.SetParallel(true);
+						hoverTween.SetTrans(hovered ? Tween.TransitionType.Cubic : Tween.TransitionType.Sine);
 						hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);
-						hoverTween.TweenProperty(cardVisual, "position", targetPosition, HandCardHoverTweenTime);
+						hoverTween.TweenProperty(cardVisual, "position", targetPosition, duration);
+						hoverTween.TweenProperty(cardVisual, "scale", targetScale, duration);
+						if (!hovered)
+						{
+							hoverTween.Finished += () =>
+							{
+								cardSlot.ZIndex = displayIndex;
+								cardVisual.ZIndex = 0;
+							};
+						}
 					}
 
 					cardSlot.MouseEntered += () => AnimateHover(true);
@@ -170,6 +188,11 @@ public partial class GameBoardScene
 					};
 				}
 
+				if (showMagnetOverlay)
+				{
+					AddMagnetOverlay(cardVisual, Vector2.Zero, visualSize, 0.0f, 1);
+				}
+
 				cardSlot.AddChild(cardVisual);
 				handArea.AddChild(cardSlot);
 			}
@@ -180,7 +203,7 @@ public partial class GameBoardScene
 				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
 				bool isPlayable = playerIndex == MainPlayerIndex && canMainPlayerAct;
-				AddHandCard(texture, cardIndex, isPlayable, cardIndex, -1, showCardBack, 1.0f);
+				AddHandCard(texture, cardIndex, isPlayable, cardIndex, -1, showCardBack, 1.0f, card.HasMagnetEffect && !showCardBack);
 			}
 
 			for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
@@ -198,9 +221,33 @@ public partial class GameBoardScene
 		}
 	}
 
+	private void AddMagnetOverlay(Node parent, Vector2 position, Vector2 size, float rotationDegrees = 0.0f, int zIndex = 1)
+	{
+		if (_magnetCardOverlayTexture == null)
+		{
+			return;
+		}
+
+		var overlay = new TextureRect
+		{
+			Name = "MagnetCardOverlay",
+			Texture = _magnetCardOverlayTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position,
+			Size = size,
+			PivotOffset = size / 2.0f,
+			RotationDegrees = rotationDegrees,
+			ZIndex = zIndex,
+		};
+		parent.AddChild(overlay);
+	}
+
 	private static float GetItemCardVisualScale(string itemCardId)
 	{
-		return FaceCardItemTexturePaths.ContainsKey(itemCardId) ? 1.06f : 1.24f;
+		return 1.0f;
 	}
 
 	private static Vector2 GetItemCardVisualSize(string itemCardId)
@@ -284,6 +331,33 @@ public partial class GameBoardScene
 		return FindHandCardVisual(sourceCardSlot)?.GlobalPosition;
 	}
 
+	private Vector2? GetHandItemCardGlobalPosition(int playerIndex, int itemHandIndex)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= _playerHandAreas.Count
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| itemHandIndex < 0
+			|| itemHandIndex >= _playerItemHands[playerIndex].Count)
+		{
+			return null;
+		}
+
+		int displayIndex = _playerHands[playerIndex].Count + itemHandIndex;
+		Control handArea = _playerHandAreas[playerIndex];
+		Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{displayIndex}");
+		TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
+		if (sourceCardVisual != null)
+		{
+			return sourceCardVisual.GlobalPosition;
+		}
+
+		int displayCardCount = _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count;
+		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
+		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
+		return handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
+	}
+
 	private void RenderTableCards()
 	{
 		foreach (Node child in _centerArena.GetChildren())
@@ -303,10 +377,17 @@ public partial class GameBoardScene
 			int baseZIndex = cardIndex * 2;
 			Texture2D? tableCardTexture = null;
 			bool animateCardBack = false;
+			bool hideItemOverlay = false;
 			if (tableCardData.Card.HasValue)
 			{
 				animateCardBack = !tableCardData.IsFaceUp && _cardBackTexture != null;
 				tableCardTexture = tableCardData.IsFaceUp ? tableCardData.Card.Value.Texture : _cardBackTexture;
+			}
+			else if (tableCardData.ItemOverlay.HasValue && !tableCardData.IsFaceUp && _cardBackTexture != null)
+			{
+				animateCardBack = true;
+				hideItemOverlay = true;
+				tableCardTexture = _cardBackTexture;
 			}
 
 			if (tableCardTexture != null)
@@ -329,9 +410,13 @@ public partial class GameBoardScene
 				}
 
 				_centerArena.AddChild(tableCard);
+				if (tableCardData.Card.HasValue && tableCardData.Card.Value.HasMagnetEffect && tableCardData.IsFaceUp)
+				{
+					AddMagnetOverlay(_centerArena, cardPositions[cardIndex], CardVisualSize, 0.0f, baseZIndex + 1);
+				}
 			}
 
-			if (!tableCardData.ItemOverlay.HasValue)
+			if (!tableCardData.ItemOverlay.HasValue || hideItemOverlay)
 			{
 				continue;
 			}
@@ -363,57 +448,28 @@ public partial class GameBoardScene
 			return positions;
 		}
 
-		float topY = TableCardStartPosition.Y + TableCardTurnDepth;
-		float safeBottomY = Math.Max(topY, _centerArena.Size.Y - CardVisualSize.Y - TableCardBottomInset);
-		float maxBottomTurnAnchorY = Math.Max(topY, safeBottomY - TableCardTurnDepth);
-		int verticalSlots = Math.Max(1, Mathf.FloorToInt((maxBottomTurnAnchorY - topY) / TableCardVerticalStep) + 1);
-		float bottomY = topY + (verticalSlots - 1) * TableCardVerticalStep;
+		Rect2 layoutRect = GetTableCardLayoutRect();
+		float rowGap = Math.Min(TableCardRowGap, Math.Max(0.0f, layoutRect.Size.Y - CardVisualSize.Y));
 
-		int columnIndex = 0;
-		bool goingDown = true;
-		while (positions.Count < cardCount)
+		for (int cardIndex = 0; cardIndex < cardCount; cardIndex++)
 		{
-			float x = TableCardStartPosition.X + columnIndex * TableCardColumnGap;
-			if (goingDown)
-			{
-				for (int slot = 0; slot < verticalSlots && positions.Count < cardCount; slot++)
-				{
-					positions.Add(new Vector2(x, topY + slot * TableCardVerticalStep));
-				}
-
-				AddTableTurnPositions(positions, cardCount, x, x + TableCardColumnGap, bottomY, TableCardTurnDepth);
-			}
-			else
-			{
-				for (int slot = 0; slot < verticalSlots && positions.Count < cardCount; slot++)
-				{
-					positions.Add(new Vector2(x, bottomY - slot * TableCardVerticalStep));
-				}
-
-				AddTableTurnPositions(positions, cardCount, x, x + TableCardColumnGap, topY, -TableCardTurnDepth);
-			}
-
-			columnIndex++;
-			goingDown = !goingDown;
-		}
-
-		if (positions.Count > 0)
-		{
-			positions[0] += new Vector2(0.0f, -FirstTableCardLift);
+			int rowIndex = cardIndex / TableCardsPerRow;
+			int columnIndex = cardIndex % TableCardsPerRow;
+			positions.Add(layoutRect.Position + new Vector2(columnIndex * TableCardHorizontalStep, rowIndex * rowGap));
 		}
 
 		return positions;
 	}
 
-	private static void AddTableTurnPositions(List<Vector2> positions, int cardCount, float fromX, float toX, float anchorY, float turnDepth)
+	private Rect2 GetTableCardLayoutRect()
 	{
-		for (int turnSlot = 1; turnSlot <= TableCardTurnSlots && positions.Count < cardCount; turnSlot++)
+		if (_tableCardLayoutArea == null || !GodotObject.IsInstanceValid(_tableCardLayoutArea))
 		{
-			float t = (float)turnSlot / (TableCardTurnSlots + 1);
-			float x = Mathf.Lerp(fromX, toX, t);
-			float y = anchorY + Mathf.Sin(Mathf.Pi * t) * turnDepth;
-			positions.Add(new Vector2(x, y));
+			return new Rect2(Vector2.Zero, _centerArena.Size);
 		}
+
+		Vector2 position = _tableCardLayoutArea.GlobalPosition - _centerArena.GlobalPosition;
+		return new Rect2(position, _tableCardLayoutArea.Size);
 	}
 
 	private static void RemoveAndQueueFreeChild(Node parent, Node child)

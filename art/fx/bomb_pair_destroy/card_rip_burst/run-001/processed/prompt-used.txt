@@ -1,0 +1,13 @@
+Use input image 1 as a layout-only reference. Use it only to understand the exact 2 rows by 2 columns layout, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Use input image 2 as the visual reference for the game's ocean playing-card material language only: pearl-white card stock, deep navy ink, teal sea-glass accents, thin shell-gold ornament lines, clean crisp Godot-ready 2D card-game styling. Do not copy the full bomb card or draw a complete card.
+
+Create exactly one 2x2 animation sprite sheet for a double-bomb card destruction FX in a top-down 2D card table game. The four cells are one continuous non-looping sequence, read left to right on the top row, then left to right on the bottom row:
+1. centered playing card begins to rupture: a tight jagged crack flash through pearl-white card stock, tiny teal and gold sparks, a few small paper corners lifting.
+2. the card tears open violently: white card-stock shards and navy printed fragments split outward in a compact burst, angular ripped edges, short teal sea-glass glints.
+3. peak destruction: many torn card fragments explode outward from the center with sharp paper silhouettes, bright white core, small gold flecks, no intact card remaining.
+4. fading debris: scattered curled paper scraps, tiny navy ink pieces, teal and gold spark remnants, fragments thinning and falling away.
+
+This must read as a playing card being torn and blown apart directly, not as a water shockwave and not as a fire explosion. Use paper/card visual cues: ripped card-stock pieces, jagged tear lines, curling paper shards, printed navy border fragments, pearl-white scraps, small teal sea-glass glints, shell-gold sparks. Do not include orange flames, smoke clouds, dirty soot, rubble, bomb object, complete playing card, hands, table, UI, icons, numbers, letters, labels, or text.
+
+Every frame must keep the FX centered in its cell with consistent scale and the same center point. The entire effect, including all paper shards, glints, sparks, and glow, must stay inside the central 65 percent of each cell. Leave wide solid magenta margin on all four sides of every cell. Nothing may touch or cross any cell edge. Detached shards and sparks are required but must remain grouped near the main burst. Background across the entire sheet, including the spaces between cells, must be 100% solid flat #FF00FF with no gradients, texture, shadows, grid lines, or borders.

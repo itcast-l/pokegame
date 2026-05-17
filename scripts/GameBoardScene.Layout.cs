@@ -102,7 +102,7 @@ public partial class GameBoardScene
 
 	private static Vector2 GetHandCardOffset(int playerIndex)
 	{
-		return playerIndex < 2 ? HorizontalHandCardOffset : VerticalHandCardOffset;
+		return HorizontalHandCardOffset;
 	}
 
 	private static Vector2 GetHandCardOffset(int playerIndex, int cardCount)

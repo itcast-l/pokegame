@@ -216,21 +216,40 @@ def pip_positions(rank: str, box: tuple[int, int, int, int]) -> list[tuple[int, 
     if rank == "7":
         return [(left, top, False), (right, top, False), (cx, upper, False), (left, mid, False), (right, mid, False), (left, bottom, True), (right, bottom, True)]
     if rank == "8":
-        return [(left, top, False), (right, top, False), (cx, upper, False), (left, mid, False), (right, mid, False), (cx, lower, True), (left, bottom, True), (right, bottom, True)]
+        return [
+            (left, y0 + 142, False),
+            (right, y0 + 142, False),
+            (left, y0 + 200, False),
+            (right, y0 + 200, False),
+            (left, y1 - 200, True),
+            (right, y1 - 200, True),
+            (left, y1 - 142, True),
+            (right, y1 - 142, True),
+        ]
     if rank == "9":
-        return [(left, top, False), (right, top, False), (cx, upper, False), (left, mid, False), (right, mid, False), (cx, mid, False), (cx, lower, True), (left, bottom, True), (right, bottom, True)]
+        return [
+            (left, top, False),
+            (right, top, False),
+            (left, upper, False),
+            (right, upper, False),
+            (cx, mid, False),
+            (left, lower, True),
+            (right, lower, True),
+            (left, bottom, True),
+            (right, bottom, True),
+        ]
     if rank == "10":
         return [
             (left, top, False),
             (right, top, False),
             (left, upper, False),
             (right, upper, False),
-            (left, mid, False),
-            (right, mid, False),
             (left, lower, True),
             (right, lower, True),
             (left, bottom, True),
             (right, bottom, True),
+            (cx, y0 + 178, False),
+            (cx, y1 - 178, True),
         ]
     raise ValueError(f"Unsupported rank: {rank}")
 
@@ -245,7 +264,7 @@ def compose_card(template: Image.Image, card_box: tuple[int, int, int, int], sui
     draw_corner(canvas, rank, suit, x0 + 18, y0 + 14, fill)
     draw_corner(canvas, rank, suit, x1 - 114, y1 - 146, fill, rotate=True)
 
-    pip_size = 168 if rank == "A" else 50
+    pip_size = 168 if rank == "A" else 44 if rank in {"8", "9", "10"} else 50
     for cx, cy, rotate in pip_positions(rank, card_box):
         draw_rotated_suit(canvas, suit, cx, cy, pip_size, fill, rotate)
 

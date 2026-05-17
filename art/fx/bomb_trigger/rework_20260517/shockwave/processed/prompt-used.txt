@@ -1,0 +1,13 @@
+Use input image 1 as a layout-only reference. Use it only to understand the exact 2 rows by 2 columns layout, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Use input image 2 as the existing ocean bomb FX reference for transparent aqua rings, pearl bubbles, sea-glass glow, and small shell-gold spark accents, but create a clearer new pure-water shockwave variant. Do not copy its exact shapes.
+
+Create exactly one 2x2 animation sprite sheet for an ocean-themed bomb-trigger FX in a top-down card table game. The four cells are one continuous non-looping sequence, read left to right on the top row, then left to right on the bottom row:
+1. tiny white-aqua pressure dot at the exact center, very small circular ripple, three close bubbles,
+2. expanding underwater pressure wave, a thin bright turquoise shock ring with bubbles pushed outward,
+3. peak radial water burst, bright white-aqua core with a clean circular pressure ring and short aqua spray ticks,
+4. fading broken aqua ring, transparent water fragments, a few drifting bubbles, almost no central core.
+
+This must read as a magical underwater pressure-wave explosion, not fire and not a physical item. Use ocean visual cues only: circular water pressure wave, translucent blue splash, pearl bubbles, sea-glass highlights, minimal tiny gold spark accents. Do not include orange flames, smoke clouds, dirty soot, rubble, debris chunks, shells, seashells, crystals, gems, pearls as large objects, fuse cords, bomb object, playing cards, card backs, icons, numbers, letters, text, UI, hands, table, or characters.
+
+Every frame must keep the FX centered in its cell with consistent scale and the same center point. The entire effect, including all bubbles, glints, spray, and glow, must stay inside the central 60 percent of each cell. Leave very wide solid magenta margin on all four sides of every cell. Nothing may touch or cross any cell edge. Detached bubbles and sparks are allowed only close to the main burst. Background across the entire sheet, including the spaces between cells, must be 100% solid flat #FF00FF with no gradients, texture, shadows, grid lines, or borders.
