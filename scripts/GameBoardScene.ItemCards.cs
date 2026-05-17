@@ -77,14 +77,17 @@ public partial class GameBoardScene
 		}
 
 		bool captured = _tableCards.Count > 0;
-		int collectedCardCount = CaptureTableCards(ownerPlayerIndex, 0);
+		int collectedCardCount = CaptureTableCards(
+			ownerPlayerIndex,
+			0,
+			out QuestionCardRewardAnimation? questionRewardAnimation);
 		if (!IsGameOver())
 		{
 			Shuffle(_playerDecks[ownerPlayerIndex]);
 			Cut(_playerDecks[ownerPlayerIndex]);
 		}
 
-		return new PlayCardResult(true, captured, collectedCardCount > 0);
+		return new PlayCardResult(true, captured, collectedCardCount > 0, questionRewardAnimation);
 	}
 
 	private PlayCardResult ResolveQueenEffect(int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
@@ -331,8 +334,16 @@ public partial class GameBoardScene
 
 		PlayCardResult result = ResolveItemCardEffect(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
 		RenderPlayerCardPiles();
-		RenderPlayerHands();
 		RenderTableCards();
+		await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			_isProcessingCardPlay = false;
+			RenderPlayerHands();
+			return;
+		}
+
+		RenderPlayerHands();
 		if (result.DeckCollected)
 		{
 			await PlayPhysicalDeckShuffleAsync(ownerPlayerIndex);

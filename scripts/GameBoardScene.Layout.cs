@@ -42,6 +42,33 @@ public partial class GameBoardScene
 		}
 	}
 
+	private void BindQuestionCardTransformArea()
+	{
+		_questionCardTransformArea = GetNode<Control>("%QuestionCardTransformArea");
+		_questionCardTransformArea.PivotOffset = _questionCardTransformArea.Size / 2.0f;
+		_questionCardTransformArea.Visible = false;
+
+		var styleBox = new StyleBoxFlat
+		{
+			BgColor = new Color(0.04f, 0.30f, 0.38f, 0.16f),
+			BorderColor = new Color(0.52f, 0.98f, 1.0f, 0.58f),
+			BorderWidthLeft = 2,
+			BorderWidthTop = 2,
+			BorderWidthRight = 2,
+			BorderWidthBottom = 2,
+			CornerRadiusTopLeft = 8,
+			CornerRadiusTopRight = 8,
+			CornerRadiusBottomRight = 8,
+			CornerRadiusBottomLeft = 8,
+			ShadowColor = new Color(0.0f, 0.78f, 0.92f, 0.18f),
+			ShadowSize = 10,
+		};
+		if (_questionCardTransformArea is Panel panel)
+		{
+			panel.AddThemeStyleboxOverride("panel", styleBox);
+		}
+	}
+
 	private void CreateWinnerLabel()
 	{
 		_winnerLabel = new Label

@@ -16,9 +16,17 @@ public partial class GameBoardScene
 		public Texture2D Texture { get; }
 	}
 
-	private readonly record struct PlayCardResult(bool Played, bool Captured, bool DeckCollected = false);
+	private readonly record struct PlayCardResult(
+		bool Played,
+		bool Captured,
+		bool DeckCollected = false,
+		QuestionCardRewardAnimation? QuestionRewardAnimation = null);
 
 	private readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
+
+	private readonly record struct QuestionCardRewardGrant(ItemCard ItemCard, int ItemHandIndex);
+
+	private readonly record struct QuestionCardRewardAnimation(ItemCard ItemCard, int ItemHandIndex, Vector2 StartGlobalPosition);
 
 	private enum PendingItemSelectionMode
 	{

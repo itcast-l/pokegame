@@ -13,6 +13,8 @@ public partial class GameBoardScene : Control
 	private const float CardBackAnimationFps = 6.0f;
 	private const string ScoreFillEffectFramePattern = "res://art/fx/score_fill_orbs/run-001/processed/fx-{0}.png";
 	private const int ScoreFillEffectFrameCount = 4;
+	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
+	private const int QuestionCardTransformFrameCount = 6;
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string QuestionMarkItemCardId = "question_mark";
 	private const string JackItemCardId = "J";
@@ -75,6 +77,11 @@ public partial class GameBoardScene : Control
 	private const float TableCaptureFlightStaggerSeconds = 0.07f;
 	private const float TableCaptureFlightArcHeight = 42.0f;
 	private const float TableCaptureFlightEndScale = 0.82f;
+	private const float TableCardPointPopupSeconds = 0.42f;
+	private const float TableCardPointPopupRise = 24.0f;
+	private const float TableCardPointPopupTopOffset = 26.0f;
+	private const int TableCardPointPopupFontSize = 22;
+	private const int TableCardPointPopupZIndex = 2800;
 	private const int QuestionCardRefreshCooldownRounds = 2;
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
@@ -100,6 +107,7 @@ public partial class GameBoardScene : Control
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
 	private readonly List<Texture2D> _cardBackFrames = new();
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
+	private readonly List<Texture2D> _questionCardTransformFrames = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
 	private float _cardBackAnimationTime;
@@ -140,6 +148,7 @@ public partial class GameBoardScene : Control
 	private Control _bottomPlayerArea = default!;
 	private Control _leftPlayerArea = default!;
 	private Control _rightPlayerArea = default!;
+	private Control _questionCardTransformArea = default!;
 
 	public override void _Ready()
 	{
@@ -147,6 +156,7 @@ public partial class GameBoardScene : Control
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
 		LoadItemCardTextures();
+		LoadQuestionCardTransformTextures();
 
 		_centerArena = GetNode<Control>("%CenterArena");
 		_topPlayerArea = GetNode<Control>("%TopPlayerArea");
@@ -156,6 +166,7 @@ public partial class GameBoardScene : Control
 
 		CreatePlayerCardPiles();
 		CreatePlayerHandAreas();
+		BindQuestionCardTransformArea();
 		BindPlayerScoreMeters();
 		CreateWinnerLabel();
 		UpdatePlayerVisibility();
@@ -211,6 +222,23 @@ public partial class GameBoardScene : Control
 			}
 
 			_scoreFillEffectFrames.Add(texture);
+		}
+	}
+
+	private void LoadQuestionCardTransformTextures()
+	{
+		_questionCardTransformFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= QuestionCardTransformFrameCount; frameIndex++)
+		{
+			string path = string.Format(QuestionCardTransformFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing question card transform frame: {path}");
+				continue;
+			}
+
+			_questionCardTransformFrames.Add(texture);
 		}
 	}
 

@@ -103,7 +103,8 @@ public partial class GameBoardScene
 				bool isPlayable,
 				int handIndex,
 				int itemHandIndex,
-				bool animateCardBack)
+				bool animateCardBack,
+				float visualScale)
 			{
 				if (texture == null)
 				{
@@ -111,6 +112,8 @@ public partial class GameBoardScene
 				}
 
 				Vector2 basePosition = firstCardPosition + displayIndex * cardOffset;
+				Vector2 visualSize = CardVisualSize * visualScale;
+				Vector2 visualBasePosition = (CardVisualSize - visualSize) / 2.0f;
 				var cardSlot = new Control
 				{
 					Name = $"HandCard_{displayIndex}",
@@ -127,9 +130,9 @@ public partial class GameBoardScene
 					StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 					TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
 					MouseFilter = MouseFilterEnum.Ignore,
-					Position = Vector2.Zero,
-					Size = CardVisualSize,
-					PivotOffset = CardVisualSize / 2.0f,
+					Position = visualBasePosition,
+					Size = visualSize,
+					PivotOffset = visualSize / 2.0f,
 					RotationDegrees = cardRotation,
 				};
 
@@ -145,7 +148,7 @@ public partial class GameBoardScene
 					{
 						hoverTween?.Kill();
 						cardVisual.ZIndex = hovered ? HoveredHandCardZIndexBoost : 0;
-						Vector2 targetPosition = hovered ? new Vector2(0.0f, -HoveredHandCardLift) : Vector2.Zero;
+						Vector2 targetPosition = visualBasePosition + (hovered ? new Vector2(0.0f, -HoveredHandCardLift) : Vector2.Zero);
 						hoverTween = cardVisual.CreateTween();
 						hoverTween.SetTrans(Tween.TransitionType.Sine);
 						hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);
@@ -177,7 +180,7 @@ public partial class GameBoardScene
 				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
 				bool isPlayable = playerIndex == MainPlayerIndex && canMainPlayerAct;
-				AddHandCard(texture, cardIndex, isPlayable, cardIndex, -1, showCardBack);
+				AddHandCard(texture, cardIndex, isPlayable, cardIndex, -1, showCardBack, 1.0f);
 			}
 
 			for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
@@ -185,13 +188,29 @@ public partial class GameBoardScene
 				ItemCard itemCard = itemHand[itemIndex];
 				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : itemCard.Texture;
+				float visualScale = showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id);
 				bool isPlayable = playerIndex == MainPlayerIndex
 					&& canMainPlayerAct
 					&& PlayableSpecialItemCardIds.Contains(itemCard.Id)
 					&& (!RequiresPlayerTarget(itemCard.Id) || HasPlayableTargetForItemCard(itemCard.Id, playerIndex));
-				AddHandCard(texture, hand.Count + itemIndex, isPlayable, -1, itemIndex, showCardBack);
+				AddHandCard(texture, hand.Count + itemIndex, isPlayable, -1, itemIndex, showCardBack, visualScale);
 			}
 		}
+	}
+
+	private static float GetItemCardVisualScale(string itemCardId)
+	{
+		return FaceCardItemTexturePaths.ContainsKey(itemCardId) ? 1.06f : 1.24f;
+	}
+
+	private static Vector2 GetItemCardVisualSize(string itemCardId)
+	{
+		return CardVisualSize * GetItemCardVisualScale(itemCardId);
+	}
+
+	private static Vector2 GetItemCardVisualPosition(string itemCardId)
+	{
+		return (CardVisualSize - GetItemCardVisualSize(itemCardId)) / 2.0f;
 	}
 
 	private static float GetCardRotationDegreesForPlayer(int playerIndex)
@@ -317,6 +336,8 @@ public partial class GameBoardScene
 				continue;
 			}
 
+			string itemCardId = tableCardData.ItemOverlay.Value.Id;
+			Vector2 itemVisualSize = GetItemCardVisualSize(itemCardId);
 			var itemOverlay = new TextureRect
 			{
 				Texture = tableCardData.ItemOverlay.Value.Texture,
@@ -324,8 +345,9 @@ public partial class GameBoardScene
 				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 				TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
 				MouseFilter = MouseFilterEnum.Ignore,
-				Position = cardPositions[cardIndex],
-				Size = CardVisualSize,
+				Position = cardPositions[cardIndex] + GetItemCardVisualPosition(itemCardId),
+				Size = itemVisualSize,
+				PivotOffset = itemVisualSize / 2.0f,
 				ZIndex = baseZIndex + 1,
 			};
 

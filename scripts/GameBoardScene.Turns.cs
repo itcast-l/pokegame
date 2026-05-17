@@ -216,16 +216,20 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex);
+			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false);
 			int collectedPoints = GetCapturedTablePoints(captureStartIndex);
-			await PlayScoreFillCollectionAsync(
-				playerIndex,
-				capturedCardVisuals,
-				turnSequenceGeneration,
-				() => AddPlayerScore(playerIndex, collectedPoints));
-			if (turnSequenceGeneration != _turnSequenceGeneration)
+			if (collectedPoints > 0)
 			{
-				return new PlayCardResult(false, false);
+				List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, true);
+				await PlayScoreFillCollectionAsync(
+					playerIndex,
+					scoringCardVisuals,
+					turnSequenceGeneration,
+					() => AddPlayerScore(playerIndex, collectedPoints));
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
 			}
 
 			await PlayCapturedCardsToDeckAnimationAsync(playerIndex, captureStartIndex, capturedCardVisuals, turnSequenceGeneration);
@@ -234,7 +238,12 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			int collectedCardCount = CaptureTableCards(playerIndex, captureStartIndex, true, false);
+			int collectedCardCount = CaptureTableCards(
+				playerIndex,
+				captureStartIndex,
+				true,
+				false,
+				out QuestionCardRewardAnimation? questionRewardAnimation);
 			if (IsGameOver())
 			{
 				return new PlayCardResult(true, true, collectedCardCount > 0);
@@ -244,8 +253,14 @@ public partial class GameBoardScene
 			Cut(_playerDecks[playerIndex]);
 			DrawReplacementCard(playerIndex);
 			RenderPlayerCardPiles();
-			RenderPlayerHands();
 			RenderTableCards();
+			await PlayQuestionCardRewardAnimationAsync(playerIndex, questionRewardAnimation, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return new PlayCardResult(false, false);
+			}
+
+			RenderPlayerHands();
 			if (collectedCardCount > 0)
 			{
 				await PlayPhysicalDeckShuffleAsync(playerIndex);
@@ -314,8 +329,14 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerCardPiles();
-		RenderPlayerHands();
 		RenderTableCards();
+		await PlayQuestionCardRewardAnimationAsync(playerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		RenderPlayerHands();
 		if (result.DeckCollected)
 		{
 			await PlayPhysicalDeckShuffleAsync(playerIndex);
@@ -359,8 +380,10 @@ public partial class GameBoardScene
 				return;
 			}
 
+			int revealedCardPoints = GetCardScoreValue(tableCard.Card.Value);
 			tableCard.IsFaceUp = true;
 			RenderTableCards();
+			_ = PlayTableCardPointPopupAsync(tableCardIndex, revealedCardPoints);
 			await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
@@ -427,7 +450,64 @@ public partial class GameBoardScene
 		}
 	}
 
-	private List<CapturedTableCardVisual> BuildCapturedTableCardVisuals(int captureStartIndex)
+	private async Task PlayTableCardPointPopupAsync(int tableCardIndex, int points)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (tableCardIndex >= cardPositions.Count)
+		{
+			return;
+		}
+
+		var pointLabel = new Label
+		{
+			Name = "TableCardPointPopup",
+			Text = $"+{points}",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = new Vector2(CardVisualSize.X, 28.0f),
+			ZIndex = TableCardPointPopupZIndex,
+		};
+		pointLabel.AddThemeFontSizeOverride("font_size", TableCardPointPopupFontSize);
+		pointLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.94f, 0.56f));
+		pointLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.82f));
+		pointLabel.AddThemeConstantOverride("shadow_offset_x", 2);
+		pointLabel.AddThemeConstantOverride("shadow_offset_y", 2);
+		AddChild(pointLabel);
+
+		pointLabel.GlobalPosition = _centerArena.GlobalPosition
+			+ cardPositions[tableCardIndex]
+			+ new Vector2(0.0f, -TableCardPointPopupTopOffset);
+		Vector2 endPosition = pointLabel.Position + new Vector2(0.0f, -TableCardPointPopupRise);
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(pointLabel, "position", endPosition, TableCardPointPopupSeconds);
+			tween.TweenProperty(pointLabel, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), TableCardPointPopupSeconds);
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(pointLabel))
+			{
+				pointLabel.QueueFree();
+			}
+		}
+	}
+
+	private List<CapturedTableCardVisual> BuildCapturedTableCardVisuals(
+		int captureStartIndex,
+		bool includeQuestionCard,
+		bool scoringCardsOnly = false)
 	{
 		var visuals = new List<CapturedTableCardVisual>();
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
@@ -439,6 +519,17 @@ public partial class GameBoardScene
 		for (int tableCardIndex = Math.Min(_tableCards.Count, cardPositions.Count) - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
+			if (scoringCardsOnly && !IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
+			{
+				continue;
+			}
+
+			bool isQuestionCard = tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId;
+			if (isQuestionCard && !includeQuestionCard && !tableCard.Card.HasValue)
+			{
+				continue;
+			}
+
 			Texture2D? startTexture = null;
 			if (tableCard.Card.HasValue)
 			{
@@ -456,7 +547,7 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			Texture2D? itemOverlayTexture = tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue
+			Texture2D? itemOverlayTexture = tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue && (includeQuestionCard || !isQuestionCard)
 				? tableCard.ItemOverlay.Value.Texture
 				: null;
 			visuals.Add(new CapturedTableCardVisual(
@@ -708,6 +799,11 @@ public partial class GameBoardScene
 		int collectedPoints = 0;
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
+			if (!IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
+			{
+				continue;
+			}
+
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.Card.HasValue)
 			{
@@ -718,8 +814,29 @@ public partial class GameBoardScene
 		return collectedPoints;
 	}
 
+	private bool IsCapturedTableCardScoringIndex(int tableCardIndex, int captureStartIndex)
+	{
+		return tableCardIndex > captureStartIndex && tableCardIndex < _tableCards.Count - 1;
+	}
+
 	private int CaptureTableCards(int playerIndex, int captureStartIndex, bool reserveReplacementCard = false, bool awardScore = true)
 	{
+		return CaptureTableCards(playerIndex, captureStartIndex, reserveReplacementCard, awardScore, out _);
+	}
+
+	private int CaptureTableCards(int playerIndex, int captureStartIndex, out QuestionCardRewardAnimation? questionRewardAnimation)
+	{
+		return CaptureTableCards(playerIndex, captureStartIndex, false, true, out questionRewardAnimation);
+	}
+
+	private int CaptureTableCards(
+		int playerIndex,
+		int captureStartIndex,
+		bool reserveReplacementCard,
+		bool awardScore,
+		out QuestionCardRewardAnimation? questionRewardAnimation)
+	{
+		questionRewardAnimation = null;
 		if (playerIndex < 0 || playerIndex >= _playerDecks.Count)
 		{
 			return 0;
@@ -732,8 +849,9 @@ public partial class GameBoardScene
 
 		int captureCount = _tableCards.Count - captureStartIndex;
 		int collectedCardCount = 0;
-		int collectedPoints = 0;
+		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex) : 0;
 		bool capturedSpecialCard = false;
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
@@ -741,12 +859,18 @@ public partial class GameBoardScene
 			{
 				_playerDecks[playerIndex].Add(tableCard.Card.Value);
 				collectedCardCount++;
-				collectedPoints += GetCardScoreValue(tableCard.Card.Value);
 			}
 
 			if (tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId)
 			{
-				GrantQuestionCardReward(playerIndex, reserveReplacementCard);
+				QuestionCardRewardGrant? rewardGrant = GrantQuestionCardReward(playerIndex, reserveReplacementCard);
+				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)
+				{
+					questionRewardAnimation = new QuestionCardRewardAnimation(
+						rewardGrant.Value.ItemCard,
+						rewardGrant.Value.ItemHandIndex,
+						_centerArena.GlobalPosition + cardPositions[tableCardIndex]);
+				}
 			}
 
 			if (tableCard.ItemOverlay.HasValue)
@@ -770,26 +894,28 @@ public partial class GameBoardScene
 		return collectedCardCount;
 	}
 
-	private void GrantQuestionCardReward(int playerIndex, bool reserveReplacementCard)
+	private QuestionCardRewardGrant? GrantQuestionCardReward(int playerIndex, bool reserveReplacementCard)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count || QuestionRewardItemCardIds.Length == 0)
 		{
-			return;
+			return null;
 		}
 
 		if (!HasRoomForItemCard(playerIndex, reserveReplacementCard ? 1 : 0))
 		{
-			return;
+			return null;
 		}
 
 		string itemCardId = QuestionRewardItemCardIds[_rng.RandiRange(0, QuestionRewardItemCardIds.Length - 1)];
 		ItemCard? itemCard = CreateItemCard(itemCardId);
 		if (!itemCard.HasValue)
 		{
-			return;
+			return null;
 		}
 
+		int itemHandIndex = _playerItemHands[playerIndex].Count;
 		_playerItemHands[playerIndex].Add(itemCard.Value);
+		return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
 	}
 
 	private void AdvanceTurnAfterPlayedResult(int playerIndex, PlayCardResult result)
