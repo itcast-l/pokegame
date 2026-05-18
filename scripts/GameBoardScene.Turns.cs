@@ -184,9 +184,25 @@ public partial class GameBoardScene
 		}
 
 		hand.RemoveAt(handIndex);
-		int captureStartIndex = AddPlayedCardToTable(playedCard);
+		int captureStartIndex = AddPlayedCardToTable(playedCard, out bool matchedTableCardFlipped);
 		int playedTableCardIndex = _tableCards.Count - 1;
 		bool playedTableCardIsFaceUp = _tableCards[playedTableCardIndex].IsFaceUp;
+		var pendingFaceUpMagnetTriggerIndexes = new HashSet<int>();
+		var resolvedMagnetTriggerIndexes = new HashSet<int>();
+		var magnetExtraCaptureIndexes = new HashSet<int>();
+		if (captureStartIndex >= 0)
+		{
+			TableCard matchedTableCard = _tableCards[captureStartIndex];
+			if (matchedTableCardFlipped && matchedTableCard.Card.HasValue && matchedTableCard.Card.Value.HasMagnetEffect)
+			{
+				pendingFaceUpMagnetTriggerIndexes.Add(captureStartIndex);
+			}
+
+			if (playedCard.HasMagnetEffect)
+			{
+				pendingFaceUpMagnetTriggerIndexes.Add(playedTableCardIndex);
+			}
+		}
 
 		await PlayCardToTableAnimationAsync(
 			playerIndex,
@@ -210,7 +226,12 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			await RevealCapturedBaseCardsFromBottomAsync(captureStartIndex, turnSequenceGeneration);
+			await RevealCapturedBaseCardsFromBottomAsync(
+				captureStartIndex,
+				turnSequenceGeneration,
+				pendingFaceUpMagnetTriggerIndexes,
+				resolvedMagnetTriggerIndexes,
+				magnetExtraCaptureIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return new PlayCardResult(false, false);
@@ -226,7 +247,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false);
+			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, false, magnetExtraCaptureIndexes);
 			int collectedPoints = GetCapturedTablePoints(captureStartIndex);
 			int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
 			if (collectedPoints > 0)
@@ -243,7 +264,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			await PlayCapturedCardsToDeckAnimationAsync(playerIndex, captureStartIndex, capturedCardVisuals, turnSequenceGeneration);
+			await PlayCapturedCardsToDeckAnimationAsync(playerIndex, captureStartIndex, capturedCardVisuals, turnSequenceGeneration, magnetExtraCaptureIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return new PlayCardResult(false, false);
@@ -254,7 +275,8 @@ public partial class GameBoardScene
 				captureStartIndex,
 				true,
 				false,
-				out QuestionCardRewardAnimation? questionRewardAnimation);
+				out QuestionCardRewardAnimation? questionRewardAnimation,
+				magnetExtraCaptureIndexes);
 			if (IsGameOver())
 			{
 				return new PlayCardResult(true, true, collectedCardCount > 0);
@@ -711,12 +733,14 @@ public partial class GameBoardScene
 		return tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == BombItemCardId;
 	}
 
-	private int AddPlayedCardToTable(PlayingCard playedCard)
+	private int AddPlayedCardToTable(PlayingCard playedCard, out bool matchedTableCardFlipped)
 	{
 		int matchingIndex = FindMatchingTableCardIndex(playedCard);
 		bool isFaceUp = matchingIndex >= 0;
+		matchedTableCardFlipped = false;
 		if (isFaceUp)
 		{
+			matchedTableCardFlipped = !_tableCards[matchingIndex].IsFaceUp;
 			_tableCards[matchingIndex].IsFaceUp = true;
 		}
 
@@ -730,7 +754,12 @@ public partial class GameBoardScene
 		return _tableCards.Count - 1;
 	}
 
-	private async Task RevealCapturedBaseCardsFromBottomAsync(int captureStartIndex, int turnSequenceGeneration)
+	private async Task RevealCapturedBaseCardsFromBottomAsync(
+		int captureStartIndex,
+		int turnSequenceGeneration,
+		HashSet<int> pendingFaceUpMagnetTriggerIndexes,
+		HashSet<int> resolvedMagnetTriggerIndexes,
+		HashSet<int> magnetExtraCaptureIndexes)
 	{
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
 		{
@@ -742,6 +771,20 @@ public partial class GameBoardScene
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.IsFaceUp)
 			{
+				if (pendingFaceUpMagnetTriggerIndexes.Contains(tableCardIndex))
+				{
+					await ResolveMagnetTableCardTriggerAsync(
+						tableCardIndex,
+						captureStartIndex,
+						turnSequenceGeneration,
+						resolvedMagnetTriggerIndexes,
+						magnetExtraCaptureIndexes);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return;
+					}
+				}
+
 				continue;
 			}
 
@@ -777,7 +820,12 @@ public partial class GameBoardScene
 
 			if (tableCard.Card.HasValue && tableCard.Card.Value.HasMagnetEffect)
 			{
-				await RevealRandomMagnetExtraTableCardAsync(captureStartIndex, turnSequenceGeneration);
+				await ResolveMagnetTableCardTriggerAsync(
+					tableCardIndex,
+					captureStartIndex,
+					turnSequenceGeneration,
+					resolvedMagnetTriggerIndexes,
+					magnetExtraCaptureIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return;
@@ -792,9 +840,77 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task RevealRandomMagnetExtraTableCardAsync(int captureStartIndex, int turnSequenceGeneration)
+	private async Task ResolveMagnetTableCardTriggerAsync(
+		int tableCardIndex,
+		int captureStartIndex,
+		int turnSequenceGeneration,
+		HashSet<int> resolvedMagnetTriggerIndexes,
+		HashSet<int> magnetExtraCaptureIndexes)
 	{
-		int tableCardIndex = PickRandomMagnetExtraRevealIndex(captureStartIndex);
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasMagnetEffect)
+		{
+			return;
+		}
+
+		if (!resolvedMagnetTriggerIndexes.Add(tableCardIndex))
+		{
+			return;
+		}
+
+		await PlayMagnetTableCardTriggerEffectAsync(tableCardIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return;
+		}
+
+		await RevealRandomMagnetExtraTableCardAsync(
+			captureStartIndex,
+			turnSequenceGeneration,
+			resolvedMagnetTriggerIndexes,
+			magnetExtraCaptureIndexes);
+	}
+
+	private async Task PlayMagnetTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (tableCardIndex >= cardPositions.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasMagnetEffect)
+		{
+			return;
+		}
+
+		Texture2D triggerTexture = _itemCardTextures.TryGetValue(MagnetItemCardId, out Texture2D? magnetTexture)
+			? magnetTexture
+			: tableCard.Card.Value.Texture;
+		await PlaySpecialCardTriggerEffectAsync(
+			triggerTexture,
+			_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+			tableCardIndex * 2 + 1);
+	}
+
+	private async Task RevealRandomMagnetExtraTableCardAsync(
+		int captureStartIndex,
+		int turnSequenceGeneration,
+		HashSet<int> resolvedMagnetTriggerIndexes,
+		HashSet<int> magnetExtraCaptureIndexes)
+	{
+		int tableCardIndex = PickRandomMagnetExtraRevealIndex(captureStartIndex, magnetExtraCaptureIndexes);
 		if (tableCardIndex < 0)
 		{
 			return;
@@ -815,17 +931,37 @@ public partial class GameBoardScene
 		}
 
 		tableCard.IsFaceUp = true;
+		magnetExtraCaptureIndexes.Add(tableCardIndex);
 		RenderTableCards();
 		_ = PlayTableCardPointPopupAsync(tableCardIndex, revealedCardPoints);
+		if (tableCard.Card.Value.HasMagnetEffect)
+		{
+			await ResolveMagnetTableCardTriggerAsync(
+				tableCardIndex,
+				captureStartIndex,
+				turnSequenceGeneration,
+				resolvedMagnetTriggerIndexes,
+				magnetExtraCaptureIndexes);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+
 		await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
 	}
 
-	private int PickRandomMagnetExtraRevealIndex(int captureStartIndex)
+	private int PickRandomMagnetExtraRevealIndex(int captureStartIndex, HashSet<int> magnetExtraCaptureIndexes)
 	{
 		var candidates = new List<int>();
 		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			if (tableCardIndex >= captureStartIndex)
+			{
+				continue;
+			}
+
+			if (magnetExtraCaptureIndexes.Contains(tableCardIndex))
 			{
 				continue;
 			}
@@ -955,7 +1091,8 @@ public partial class GameBoardScene
 	private List<CapturedTableCardVisual> BuildCapturedTableCardVisuals(
 		int captureStartIndex,
 		bool includeQuestionCard,
-		bool scoringCardsOnly = false)
+		bool scoringCardsOnly = false,
+		HashSet<int>? extraTableCardIndexes = null)
 	{
 		var visuals = new List<CapturedTableCardVisual>();
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
@@ -964,8 +1101,15 @@ public partial class GameBoardScene
 		}
 
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		for (int tableCardIndex = Math.Min(_tableCards.Count, cardPositions.Count) - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
+		for (int tableCardIndex = Math.Min(_tableCards.Count, cardPositions.Count) - 1; tableCardIndex >= 0; tableCardIndex--)
 		{
+			bool isBaseCapturedIndex = tableCardIndex >= captureStartIndex;
+			bool isExtraCapturedIndex = extraTableCardIndexes != null && extraTableCardIndexes.Contains(tableCardIndex);
+			if (!isBaseCapturedIndex && !isExtraCapturedIndex)
+			{
+				continue;
+			}
+
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (scoringCardsOnly && (!IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex) || !tableCard.Card.HasValue))
 			{
@@ -1026,7 +1170,8 @@ public partial class GameBoardScene
 		int playerIndex,
 		int captureStartIndex,
 		List<CapturedTableCardVisual> capturedCardVisuals,
-		int turnSequenceGeneration)
+		int turnSequenceGeneration,
+		HashSet<int>? extraTableCardIndexes = null)
 	{
 		if (_cardBackTexture == null
 			|| playerIndex < 0
@@ -1047,6 +1192,16 @@ public partial class GameBoardScene
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
+		}
+		if (extraTableCardIndexes != null)
+		{
+			foreach (int tableCardIndex in extraTableCardIndexes)
+			{
+				if (tableCardIndex >= 0 && tableCardIndex < _tableCards.Count)
+				{
+					_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
+				}
+			}
 		}
 		RenderTableCards();
 
@@ -1414,7 +1569,8 @@ public partial class GameBoardScene
 		int captureStartIndex,
 		bool reserveReplacementCard,
 		bool awardScore,
-		out QuestionCardRewardAnimation? questionRewardAnimation)
+		out QuestionCardRewardAnimation? questionRewardAnimation,
+		HashSet<int>? extraTableCardIndexes = null)
 	{
 		questionRewardAnimation = null;
 		if (playerIndex < 0 || playerIndex >= _playerDecks.Count)
@@ -1432,6 +1588,7 @@ public partial class GameBoardScene
 		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex) : 0;
 		int scorePlayerIndex = awardScore ? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex) : playerIndex;
 		bool capturedSpecialCard = false;
+		List<int> validExtraCaptureIndexes = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
@@ -1461,7 +1618,21 @@ public partial class GameBoardScene
 			}
 		}
 
+		foreach (int tableCardIndex in validExtraCaptureIndexes)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (tableCard.Card.HasValue)
+			{
+				AddCardToPlayerDeck(playerIndex, tableCard.Card.Value);
+				collectedCardCount++;
+			}
+		}
+
 		_tableCards.RemoveRange(captureStartIndex, captureCount);
+		for (int index = validExtraCaptureIndexes.Count - 1; index >= 0; index--)
+		{
+			_tableCards.RemoveAt(validExtraCaptureIndexes[index]);
+		}
 		if (capturedSpecialCard)
 		{
 			_completedTurnsSinceQuestionCardRefresh = 0;
@@ -1476,14 +1647,50 @@ public partial class GameBoardScene
 		return collectedCardCount;
 	}
 
+	private List<int> BuildValidExtraCaptureIndexes(int captureStartIndex, HashSet<int>? extraTableCardIndexes)
+	{
+		var validIndexes = new List<int>();
+		if (extraTableCardIndexes == null)
+		{
+			return validIndexes;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			if (tableCardIndex < 0 || tableCardIndex >= captureStartIndex || tableCardIndex >= _tableCards.Count)
+			{
+				continue;
+			}
+
+			if (!_tableCards[tableCardIndex].Card.HasValue)
+			{
+				continue;
+			}
+
+			validIndexes.Add(tableCardIndex);
+		}
+
+		validIndexes.Sort();
+		return validIndexes;
+	}
+
 	private QuestionCardRewardGrant? GrantQuestionCardReward(int playerIndex, bool reserveReplacementCard)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count || QuestionRewardItemCardIds.Length == 0)
+		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
 		{
 			return null;
 		}
 
-		string itemCardId = QuestionRewardItemCardIds[_rng.RandiRange(0, QuestionRewardItemCardIds.Length - 1)];
+		List<string> rewardItemCardIds = BuildEnabledQuestionRewardItemCardIds();
+		if (rewardItemCardIds.Count == 0)
+		{
+			return null;
+		}
+
+		string itemCardId = DebugQuestionCardRewardsMagnet && IsSpecialItemCardEnabled(MagnetItemCardId)
+			? MagnetItemCardId
+			: rewardItemCardIds[_rng.RandiRange(0, rewardItemCardIds.Count - 1)];
+
 		ItemCard? itemCard = CreateItemCard(itemCardId);
 		if (!itemCard.HasValue)
 		{
@@ -1504,6 +1711,20 @@ public partial class GameBoardScene
 		int itemHandIndex = _playerItemHands[playerIndex].Count;
 		_playerItemHands[playerIndex].Add(itemCard.Value);
 		return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
+	}
+
+	private List<string> BuildEnabledQuestionRewardItemCardIds()
+	{
+		var rewardItemCardIds = new List<string>();
+		foreach (string itemCardId in QuestionRewardItemCardIds)
+		{
+			if (IsSpecialItemCardEnabled(itemCardId))
+			{
+				rewardItemCardIds.Add(itemCardId);
+			}
+		}
+
+		return rewardItemCardIds;
 	}
 
 	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
@@ -1629,6 +1850,13 @@ public partial class GameBoardScene
 	private bool CanMainPlayerAct()
 	{
 		return !IsGameOver() && !HasPendingItemSelection() && !_isResolvingTurnSequence && !_isProcessingCardPlay && _currentTurnPlayerIndex == MainPlayerIndex;
+	}
+
+	private bool IsMainPlayerMagnetSelectionActive()
+	{
+		return !IsGameOver()
+			&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+			&& _pendingItemOwnerIndex == MainPlayerIndex;
 	}
 
 	private int GetNextTurnPlayerIndex(int currentPlayerIndex)

@@ -3,7 +3,7 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private const int WinningScore = 100;
+	private const int WinningScore = 200;
 	private static readonly string[] ScoreMeterNodeNames =
 	{
 		"Player1ScoreMeter",

@@ -5,21 +5,37 @@ public partial class ItemCardData : Node2D
 {
 	private const double ItemCardFrameTime = 0.18;
 
+	private static readonly Dictionary<string, string> ItemCardIdsBySpriteName = new()
+	{
+		["QuestionMark"] = "question_mark",
+		["Bomb"] = "bomb",
+		["Magnet"] = "magnet",
+		["Greed"] = "greed",
+		["Lens"] = "lens",
+		["Double"] = "double",
+		["Overtime"] = "overtime",
+		["DrawCard"] = "draw_card",
+		["Shuffle"] = "shuffle",
+	};
+
 	private static readonly Dictionary<string, Texture2D[]> ItemCardFrames = new()
 	{
-		["QuestionMark"] = LoadFrames("question_mark"),
-		["Bomb"] = LoadFrames("bomb"),
-		["Magnet"] = LoadFrames("magnet"),
-		["Greed"] = LoadFrames("greed"),
-		["Lens"] = LoadFrames("lens"),
-		["Double"] = LoadFrames("double"),
-		["Overtime"] = LoadFrames("overtime"),
-		["DrawCard"] = LoadFrames("draw_card"),
-		["Shuffle"] = LoadFrames("shuffle"),
+		["QuestionMark"] = LoadFrames(ItemCardIdsBySpriteName["QuestionMark"]),
+		["Bomb"] = LoadFrames(ItemCardIdsBySpriteName["Bomb"]),
+		["Magnet"] = LoadFrames(ItemCardIdsBySpriteName["Magnet"]),
+		["Greed"] = LoadFrames(ItemCardIdsBySpriteName["Greed"]),
+		["Lens"] = LoadFrames(ItemCardIdsBySpriteName["Lens"]),
+		["Double"] = LoadFrames(ItemCardIdsBySpriteName["Double"]),
+		["Overtime"] = LoadFrames(ItemCardIdsBySpriteName["Overtime"]),
+		["DrawCard"] = LoadFrames(ItemCardIdsBySpriteName["DrawCard"]),
+		["Shuffle"] = LoadFrames(ItemCardIdsBySpriteName["Shuffle"]),
 	};
 
 	[Export(PropertyHint.MultilineText)]
 	public string item_description = "";
+
+	[Export]
+	public bool enabled_in_game = true;
 
 	private Sprite2D? _animatedSprite;
 	private Texture2D[] _animationFrames = System.Array.Empty<Texture2D>();
@@ -50,6 +66,24 @@ public partial class ItemCardData : Node2D
 		_animationTimer.Timeout += AdvanceAnimationFrame;
 		AddChild(_animationTimer);
 		_animationTimer.Start();
+	}
+
+	public bool TryGetItemCardId(out string itemCardId)
+	{
+		itemCardId = "";
+		Sprite2D? sprite = FindAnimatedSprite();
+		if (sprite == null)
+		{
+			return false;
+		}
+
+		if (!ItemCardIdsBySpriteName.TryGetValue(sprite.Name.ToString(), out string? mappedItemCardId))
+		{
+			return false;
+		}
+
+		itemCardId = mappedItemCardId;
+		return true;
 	}
 
 	private static Texture2D[] LoadFrames(string folderName)

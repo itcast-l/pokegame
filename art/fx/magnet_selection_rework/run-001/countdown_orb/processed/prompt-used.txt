@@ -1,0 +1,9 @@
+Create exactly one clean HD 2D game FX sprite sheet for a Godot underwater playing-card game: a magnetic countdown ornament with no background panel.
+
+Use the input magnet card and magnet overlay images as style references for the ocean palette, pearly shell details, polished dark-blue magnet material, cyan water glow, small bubbles, and restrained gold trim. Use the layout guide image only as a layout-only reference for exactly 2 rows and 2 columns, equal invisible cell slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+The sheet must contain exactly 4 equal cells in a 2x2 grid. Each cell contains one centered circular countdown ring ornament only: a thin luminous aqua ring with small pearl ticks, shell-gold highlights, tiny bubbles, and subtle magnetic arcs. The center of the ring must stay open and transparent after processing so a game number can be drawn there later. Do not add a dark center disk. Do not add a rounded rectangle, panel, card, plaque, box, button, or any background shape. No number, no text, no UI label.
+
+Animation phases left-to-right then next row: frame 1 calm aqua ring, frame 2 ring glow gathers at the top, frame 3 pearl ticks brighten around the ring, frame 4 compact magnetic shimmer pulse. Keep the same circle size, same ring thickness, same silhouette, and same scale in all frames. The entire effect must fit fully inside each cell with generous magenta margin; no spark, bubble, glow, shell, or arc may cross a cell edge.
+
+Background must be 100% solid flat #FF00FF magenta in every cell, with no gradient, no texture, no shadows on the background, and no separators between cells. Clean HD 2D game asset style, crisp readable silhouette, transparent-friendly edges.

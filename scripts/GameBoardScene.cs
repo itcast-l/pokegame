@@ -7,7 +7,10 @@ public partial class GameBoardScene : Control
 	private const int MinPlayers = 2;
 	private const int MaxPlayers = 4;
 	private const string PokerCardsScenePath = "res://scenes/poker_cards_scene.tscn";
+	private const string ItemCardsScenePath = "res://scenes/item_cards_scene.tscn";
 	private const string StandardCardsRootPath = "StandardPokerCards";
+	private const string SuitedJqkBackupCardsNodeName = "SuitedJqkBackupCards";
+	private const string ItemCardsRootPath = "ItemCards";
 	private const string CardBackPath = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png";
 	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
 	private const int CardBackFrameCount = 4;
@@ -21,10 +24,18 @@ public partial class GameBoardScene : Control
 	private const string BombPairDestroyEffectFramePattern = "res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png";
 	private const int BombPairDestroyEffectFrameCount = 4;
 	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
+	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
+	private const int MagnetCountdownFrameCount = 4;
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string QuestionMarkItemCardId = "question_mark";
 	private const string BombItemCardId = "bomb";
 	private const string MagnetItemCardId = "magnet";
+	private const string GreedItemCardId = "greed";
+	private const string LensItemCardId = "lens";
+	private const string DoubleItemCardId = "double";
+	private const string OvertimeItemCardId = "overtime";
+	private const string DrawCardItemCardId = "draw_card";
+	private const string ShuffleItemCardId = "shuffle";
 	private const string JackItemCardId = "J";
 	private const string QueenItemCardId = "Q";
 	private const string KingItemCardId = "K";
@@ -35,42 +46,31 @@ public partial class GameBoardScene : Control
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
+	private const bool DebugQuestionCardRewardsMagnet = true;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly Dictionary<string, string> FaceCardItemTexturePaths = new()
-	{
-		[JackItemCardId] = "res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png",
-		[QueenItemCardId] = "res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-001.png",
-		[KingItemCardId] = "res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png",
-	};
+	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId };
 	private static readonly string[] AllItemCardIds =
 	{
 		QuestionMarkItemCardId,
 		BombItemCardId,
 		MagnetItemCardId,
-		"greed",
-		"lens",
-		"double",
-		"overtime",
-		"draw_card",
-		"shuffle",
-		JackItemCardId,
-		QueenItemCardId,
-		KingItemCardId,
+		GreedItemCardId,
+		LensItemCardId,
+		DoubleItemCardId,
+		OvertimeItemCardId,
+		DrawCardItemCardId,
+		ShuffleItemCardId,
 	};
 	private static readonly string[] QuestionRewardItemCardIds =
 	{
 		BombItemCardId,
 		MagnetItemCardId,
-		"greed",
-		"lens",
-		"double",
-		"overtime",
-		"draw_card",
-		"shuffle",
-		JackItemCardId,
-		QueenItemCardId,
-		KingItemCardId,
+		GreedItemCardId,
+		LensItemCardId,
+		DoubleItemCardId,
+		OvertimeItemCardId,
+		DrawCardItemCardId,
+		ShuffleItemCardId,
 	};
 	private static readonly int[] ClockwiseTurnOrder = { 0, 2, 1, 3 };
 	private const float HoveredHandCardLift = 18.0f;
@@ -119,6 +119,9 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
 	private readonly List<Texture2D> _specialCardTriggerEffectFrames = new();
 	private readonly List<Texture2D> _bombPairDestroyEffectFrames = new();
+	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
+	private readonly HashSet<string> _enabledSceneItemCardIds = new();
+	private readonly Dictionary<string, string> _itemCardDescriptions = new();
 	private readonly Queue<int> _pendingMagnetAttachmentRewardPlayers = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
@@ -135,7 +138,14 @@ public partial class GameBoardScene : Control
 	private int _pendingItemTurnSequenceGeneration = -1;
 	private string _pendingItemCardId = string.Empty;
 	private TaskCompletionSource<bool>? _pendingMagnetAttachmentCompletion;
+	private Control? _magnetAttachmentCountdownRoot;
+	private Label? _magnetAttachmentCountdownLabel;
+	private Label? _magnetAttachmentCountdownHintLabel;
+	private MagnetAttachmentCountdownRing? _magnetAttachmentCountdownRing;
+	private double _magnetAttachmentCountdownRemainingSeconds;
+	private double _magnetAttachmentCountdownPulseTime;
 	private bool _isResolvingMagnetAttachmentSelection;
+	private bool _isAnimatingMagnetAttachment;
 	private bool _isResolvingTurnSequence;
 	private bool _isProcessingCardPlay;
 	private int _winnerPlayerIndex = -1;
@@ -158,9 +168,6 @@ public partial class GameBoardScene : Control
 	[Export]
 	public bool debug_opponent_has_one_card = false;
 
-	[Export]
-	public bool debug_main_player_starts_with_bomb = true;
-
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
 	private Control _topPlayerArea = default!;
@@ -175,10 +182,12 @@ public partial class GameBoardScene : Control
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
 		LoadItemCardTextures();
+		LoadItemCardEnabledStates();
 		LoadMagnetCardOverlayTexture();
 		LoadQuestionCardTransformTextures();
 		LoadSpecialCardTriggerEffectTextures();
 		LoadBombPairDestroyEffectTextures();
+		LoadMagnetCountdownFxTextures();
 
 		_centerArena = GetNode<Control>("%CenterArena");
 		_tableCardLayoutArea = GetNode<Control>("%TableCardLayoutArea");
@@ -198,6 +207,8 @@ public partial class GameBoardScene : Control
 
 	public override void _Process(double delta)
 	{
+		UpdateMagnetAttachmentCountdown(delta);
+
 		if (_cardBackFrames.Count <= 1)
 		{
 			return;
@@ -308,6 +319,23 @@ public partial class GameBoardScene : Control
 		}
 	}
 
+	private void LoadMagnetCountdownFxTextures()
+	{
+		_magnetCountdownFrameTextures.Clear();
+		for (int frameIndex = 1; frameIndex <= MagnetCountdownFrameCount; frameIndex++)
+		{
+			string path = string.Format(MagnetCountdownFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing magnet countdown frame: {path}");
+				continue;
+			}
+
+			_magnetCountdownFrameTextures.Add(texture);
+		}
+	}
+
 	private void MarkAnimatedCardBack(TextureRect cardBack)
 	{
 		cardBack.SetMeta(CardBackAnimatedMeta, true);
@@ -326,14 +354,13 @@ public partial class GameBoardScene : Control
 		}
 	}
 
+
 	private void LoadItemCardTextures()
 	{
 		_itemCardTextures.Clear();
 		foreach (string itemCardId in AllItemCardIds)
 		{
-			string path = FaceCardItemTexturePaths.TryGetValue(itemCardId, out string? faceCardPath)
-				? faceCardPath
-				: $"{ItemCardRootPath}/{itemCardId}/run-004/processed/frames/frame-001.png";
+			string path = $"{ItemCardRootPath}/{itemCardId}/run-004/processed/frames/frame-001.png";
 			Texture2D? texture = GD.Load<Texture2D>(path);
 			if (texture == null)
 			{
@@ -347,6 +374,11 @@ public partial class GameBoardScene : Control
 
 	private ItemCard? CreateItemCard(string itemCardId)
 	{
+		if (!IsSpecialItemCardEnabled(itemCardId))
+		{
+			return null;
+		}
+
 		if (!_itemCardTextures.TryGetValue(itemCardId, out Texture2D? texture))
 		{
 			GD.PushWarning($"Missing loaded item card texture for {itemCardId}.");
@@ -354,6 +386,65 @@ public partial class GameBoardScene : Control
 		}
 
 		return new ItemCard(itemCardId, texture);
+	}
+
+	private bool IsSpecialItemCardEnabled(string itemCardId)
+	{
+		return itemCardId switch
+		{
+			JackItemCardId or QueenItemCardId or KingItemCardId => false,
+			_ => _enabledSceneItemCardIds.Contains(itemCardId),
+		};
+	}
+
+	private static bool IsExcludedDeckRank(string rank)
+	{
+		if (ExcludedDeckRanks.Contains(rank))
+		{
+			return true;
+		}
+
+		int suffixStartIndex = rank.LastIndexOf('_') + 1;
+		return suffixStartIndex > 0
+			&& suffixStartIndex < rank.Length
+			&& ExcludedDeckRanks.Contains(rank[suffixStartIndex..]);
+	}
+
+	private void LoadItemCardEnabledStates()
+	{
+		_enabledSceneItemCardIds.Clear();
+		_itemCardDescriptions.Clear();
+		PackedScene? itemCardsScene = GD.Load<PackedScene>(ItemCardsScenePath);
+		if (itemCardsScene == null)
+		{
+			GD.PushError($"Missing item cards scene: {ItemCardsScenePath}");
+			return;
+		}
+
+		Node itemCards = itemCardsScene.Instantiate();
+		Node? itemCardsRoot = itemCards.GetNodeOrNull<Node>(ItemCardsRootPath);
+		if (itemCardsRoot == null)
+		{
+			GD.PushError($"Missing {ItemCardsRootPath} in {ItemCardsScenePath}.");
+			itemCards.Free();
+			return;
+		}
+
+		foreach (Node itemCardNode in itemCardsRoot.GetChildren())
+		{
+			if (itemCardNode is not ItemCardData itemCardData || !itemCardData.enabled_in_game)
+			{
+				continue;
+			}
+
+			if (itemCardData.TryGetItemCardId(out string itemCardId))
+			{
+				_enabledSceneItemCardIds.Add(itemCardId);
+				_itemCardDescriptions[itemCardId] = itemCardData.item_description;
+			}
+		}
+
+		itemCards.Free();
 	}
 
 	public Control GetPlayerArea(int playerIndex)

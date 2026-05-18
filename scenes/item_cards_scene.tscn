@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://1jbasu6jw874" path="res://art/cards/item_cards/question_mark/run-004/processed/frames/frame-001.png" id="1_question_mark"]
 [ext_resource type="Texture2D" uid="uid://c8ncwnsd5nvn6" path="res://art/cards/item_cards/bomb/run-004/processed/frames/frame-001.png" id="2_bomb"]
-[ext_resource type="Script" path="res://scripts/ItemCardData.cs" id="3_item_card_data"]
+[ext_resource type="Script" uid="uid://dbcwwsqtbi2py" path="res://scripts/ItemCardData.cs" id="3_item_card_data"]
 [ext_resource type="Texture2D" uid="uid://d5uqwxkujwdy" path="res://art/cards/item_cards/magnet/run-004/processed/frames/frame-001.png" id="4_magnet"]
 [ext_resource type="Texture2D" uid="uid://c6oxrktk2x12n" path="res://art/cards/item_cards/greed/run-004/processed/frames/frame-001.png" id="5_greed"]
 [ext_resource type="Texture2D" uid="uid://q2uj30bj23dw" path="res://art/cards/item_cards/lens/run-004/processed/frames/frame-001.png" id="6_lens"]
@@ -43,7 +43,7 @@ texture = ExtResource("2_bomb")
 
 [node name="MagnetCardItem" type="Node2D" parent="ItemCards" unique_id=1252918191]
 script = ExtResource("3_item_card_data")
-item_description = "额外吸取分值最高的一张"
+item_description = "额外吸取一张牌"
 
 [node name="Magnet" type="Sprite2D" parent="ItemCards/MagnetCardItem" unique_id=897041690]
 position = Vector2(500, 180)
@@ -53,6 +53,7 @@ texture = ExtResource("4_magnet")
 [node name="GreedCardItem" type="Node2D" parent="ItemCards" unique_id=1089692596]
 script = ExtResource("3_item_card_data")
 item_description = "收取超过 10 张牌时，获得上家牌库的 3 张牌"
+enabled_in_game = false
 
 [node name="Greed" type="Sprite2D" parent="ItemCards/GreedCardItem" unique_id=2119866210]
 position = Vector2(660, 180)

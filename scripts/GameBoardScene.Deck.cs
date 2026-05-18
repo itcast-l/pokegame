@@ -49,7 +49,6 @@ public partial class GameBoardScene
 
 		DrawStartingHands();
 		ApplyDebugOpponentOneCardHand();
-		ApplyDebugMainPlayerBombCards();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -103,26 +102,6 @@ public partial class GameBoardScene
 		_playerDecks[opponentPlayerIndex].Clear();
 	}
 
-	private void ApplyDebugMainPlayerBombCards()
-	{
-		const int bombCardCount = 2;
-		if (!debug_main_player_starts_with_bomb)
-		{
-			return;
-		}
-
-		for (int cardIndex = 0; cardIndex < bombCardCount && HasRoomForItemCard(MainPlayerIndex); cardIndex++)
-		{
-			ItemCard? bombCard = CreateItemCard(BombItemCardId);
-			if (!bombCard.HasValue)
-			{
-				return;
-			}
-
-			_playerItemHands[MainPlayerIndex].Add(bombCard.Value);
-		}
-	}
-
 	private List<PlayingCard> LoadDeckWithoutFaceCards()
 	{
 		var deck = new List<PlayingCard>();
@@ -145,7 +124,7 @@ public partial class GameBoardScene
 		foreach (Node suitNode in standardCards.GetChildren())
 		{
 			string suit = suitNode.Name.ToString();
-			if (suit == "Back")
+			if (suit == "Back" || suit == SuitedJqkBackupCardsNodeName)
 			{
 				continue;
 			}
@@ -162,7 +141,7 @@ public partial class GameBoardScene
 					? cardName[CardNamePrefix.Length..]
 					: cardName;
 
-				if (ExcludedDeckRanks.Contains(rank))
+				if (IsExcludedDeckRank(rank))
 				{
 					continue;
 				}

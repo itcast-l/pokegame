@@ -261,6 +261,8 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		center.SetAnchorsPreset(LayoutPreset.FullRect);
+		center.OffsetTop = -28.0f;
+		center.OffsetBottom = -28.0f;
 		_settingsDialogRoot.AddChild(center);
 
 		_settingsDialogPanel = new Control

@@ -96,6 +96,7 @@ public partial class GameBoardScene
 			Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
 			float cardRotation = GetCardRotationDegreesForPlayer(playerIndex);
 			bool canMainPlayerAct = CanMainPlayerAct();
+			bool isMagnetSelectionActive = IsMainPlayerMagnetSelectionActive();
 
 			void AddHandCard(
 				Texture2D? texture,
@@ -105,7 +106,9 @@ public partial class GameBoardScene
 				int itemHandIndex,
 				bool animateCardBack,
 				float visualScale,
-				bool showMagnetOverlay = false)
+				bool showMagnetOverlay = false,
+				bool showMagnetSelectionHighlight = false,
+				string tooltipText = "")
 			{
 				if (texture == null)
 				{
@@ -118,7 +121,7 @@ public partial class GameBoardScene
 				var cardSlot = new Control
 				{
 					Name = $"HandCard_{displayIndex}",
-					MouseFilter = isPlayable ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore,
+					MouseFilter = isPlayable || !string.IsNullOrEmpty(tooltipText) ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore,
 					Position = basePosition,
 					Size = CardVisualSize,
 					ZIndex = displayIndex,
@@ -136,6 +139,12 @@ public partial class GameBoardScene
 					PivotOffset = visualSize / 2.0f,
 					RotationDegrees = cardRotation,
 				};
+
+				if (showMagnetSelectionHighlight)
+				{
+					AddMagnetSelectionPulse(cardSlot, visualBasePosition, visualSize, cardRotation);
+					StartMagnetSelectionBounce(cardSlot, basePosition);
+				}
 
 				if (animateCardBack)
 				{
@@ -178,6 +187,12 @@ public partial class GameBoardScene
 
 					cardSlot.GuiInput += inputEvent =>
 					{
+						if (showMagnetSelectionHighlight && handIndex >= 0)
+						{
+							TryCompleteMainPlayerMagnetAttachment(inputEvent, handIndex);
+							return;
+						}
+
 						if (itemHandIndex >= 0)
 						{
 							TryPlayMainPlayerItemCard(inputEvent, itemHandIndex);
@@ -185,6 +200,31 @@ public partial class GameBoardScene
 						}
 
 						TryPlayMainPlayerCard(inputEvent, handIndex);
+					};
+				}
+
+				if (!string.IsNullOrEmpty(tooltipText))
+				{
+					Label descriptionLabel = CreateCardDescriptionLabel(
+						tooltipText,
+						GetHandCardDescriptionPosition(playerIndex),
+						new Vector2(204.0f, 42.0f));
+					cardSlot.AddChild(descriptionLabel);
+					cardSlot.MouseEntered += () =>
+					{
+						descriptionLabel.Visible = true;
+						if (!isPlayable)
+						{
+							cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
+						}
+					};
+					cardSlot.MouseExited += () =>
+					{
+						descriptionLabel.Visible = false;
+						if (!isPlayable)
+						{
+							cardSlot.ZIndex = displayIndex;
+						}
 					};
 				}
 
@@ -202,8 +242,21 @@ public partial class GameBoardScene
 				PlayingCard card = hand[cardIndex];
 				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
-				bool isPlayable = playerIndex == MainPlayerIndex && canMainPlayerAct;
-				AddHandCard(texture, cardIndex, isPlayable, cardIndex, -1, showCardBack, 1.0f, card.HasMagnetEffect && !showCardBack);
+				bool showMagnetSelectionHighlight = isMagnetSelectionActive
+					&& playerIndex == MainPlayerIndex
+					&& IsAttachableMagnetCard(card);
+				bool isPlayable = showMagnetSelectionHighlight || (playerIndex == MainPlayerIndex && canMainPlayerAct);
+				AddHandCard(
+					texture,
+					cardIndex,
+					isPlayable,
+					cardIndex,
+					-1,
+					showCardBack,
+					1.0f,
+					card.HasMagnetEffect && !showCardBack,
+					showMagnetSelectionHighlight,
+					GetMagnetCardDescription(card, showCardBack));
 			}
 
 			for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
@@ -219,6 +272,125 @@ public partial class GameBoardScene
 				AddHandCard(texture, hand.Count + itemIndex, isPlayable, -1, itemIndex, showCardBack, visualScale);
 			}
 		}
+	}
+
+	private string GetMagnetCardDescription(PlayingCard card, bool showCardBack)
+	{
+		if (showCardBack || !card.HasMagnetEffect)
+		{
+			return string.Empty;
+		}
+
+		return _itemCardDescriptions.TryGetValue(MagnetItemCardId, out string? description)
+			? description
+			: string.Empty;
+	}
+
+	private static Label CreateCardDescriptionLabel(string text, Vector2 position, Vector2 size)
+	{
+		var label = new Label
+		{
+			Name = "CardDescriptionLabel",
+			Text = text,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position,
+			Size = size,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			Visible = false,
+			ZAsRelative = false,
+			ZIndex = TableCardPointPopupZIndex - 10,
+		};
+		label.AddThemeFontSizeOverride("font_size", 15);
+		label.AddThemeColorOverride("font_color", new Color(0.86f, 1.0f, 0.96f, 0.96f));
+		label.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.09f, 0.12f, 0.74f));
+		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.05f, 0.08f, 0.88f));
+		label.AddThemeConstantOverride("outline_size", 1);
+		label.AddThemeConstantOverride("shadow_offset_x", 0);
+		label.AddThemeConstantOverride("shadow_offset_y", 2);
+		return label;
+	}
+
+	private static Vector2 GetHandCardDescriptionPosition(int playerIndex)
+	{
+		var labelSize = new Vector2(204.0f, 42.0f);
+		float y = playerIndex == 1 ? CardVisualSize.Y + 4.0f : -labelSize.Y - 4.0f;
+		return new Vector2((CardVisualSize.X - labelSize.X) / 2.0f, y);
+	}
+
+	private Vector2 GetTableCardDescriptionPosition(Vector2 cardPosition, Vector2 labelSize)
+	{
+		float x = Mathf.Clamp(
+			cardPosition.X + (CardVisualSize.X - labelSize.X) / 2.0f,
+			0.0f,
+			Mathf.Max(0.0f, _centerArena.Size.X - labelSize.X));
+		float y = cardPosition.Y - labelSize.Y - 4.0f;
+		if (y < 0.0f)
+		{
+			y = cardPosition.Y + CardVisualSize.Y + 4.0f;
+		}
+
+		return new Vector2(x, y);
+	}
+
+	private static void AddMagnetSelectionPulse(Control parent, Vector2 position, Vector2 size, float rotationDegrees)
+	{
+		Vector2 glowInset = new(7.0f, 8.0f);
+		Vector2 glowSize = size + glowInset * 2.0f;
+		var glow = new Panel
+		{
+			Name = "MagnetSelectionPulse",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position - glowInset,
+			Size = glowSize,
+			PivotOffset = glowSize / 2.0f,
+			RotationDegrees = rotationDegrees,
+			ZIndex = -1,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.74f),
+			Scale = Vector2.One * 0.98f,
+		};
+		glow.AddThemeStyleboxOverride("panel", CreateMagnetSelectionPulseStyle());
+		parent.AddChild(glow);
+
+		Tween tween = glow.CreateTween();
+		tween.SetLoops();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.InOut);
+		tween.TweenProperty(glow, "modulate", new Color(1.0f, 1.0f, 1.0f, 1.0f), 0.48f);
+		tween.TweenProperty(glow, "scale", Vector2.One * 1.04f, 0.48f);
+		tween.Chain().TweenProperty(glow, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.68f), 0.48f);
+		tween.TweenProperty(glow, "scale", Vector2.One * 0.98f, 0.48f);
+	}
+
+	private static void StartMagnetSelectionBounce(Control cardSlot, Vector2 basePosition)
+	{
+		Tween tween = cardSlot.CreateTween();
+		tween.SetLoops();
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.InOut);
+		tween.TweenProperty(cardSlot, "position", basePosition + new Vector2(0.0f, -3.0f), 0.42f);
+		tween.TweenProperty(cardSlot, "position", basePosition, 0.42f);
+	}
+
+	private static StyleBoxFlat CreateMagnetSelectionPulseStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.0f, 0.0f, 0.0f, 0.0f),
+			BorderColor = new Color(0.68f, 1.0f, 0.96f, 0.62f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomRight = 6,
+			CornerRadiusBottomLeft = 6,
+			ShadowColor = new Color(0.34f, 1.0f, 0.96f, 0.24f),
+			ShadowSize = 16,
+		};
 	}
 
 	private void AddMagnetOverlay(Node parent, Vector2 position, Vector2 size, float rotationDegrees = 0.0f, int zIndex = 1)
@@ -302,6 +474,21 @@ public partial class GameBoardScene
 
 		Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(MainPlayerIndex, handIndex);
 		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, _turnSequenceGeneration, startGlobalPosition);
+	}
+
+	private void TryCompleteMainPlayerMagnetAttachment(InputEvent inputEvent, int handIndex)
+	{
+		if (!IsMainPlayerMagnetSelectionActive() || _isAnimatingMagnetAttachment)
+		{
+			return;
+		}
+
+		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+		{
+			return;
+		}
+
+		_ = CompleteMagnetAttachmentSelectionAsync(handIndex);
 	}
 
 	private void TryPlayMainPlayerItemCard(InputEvent inputEvent, int itemHandIndex)
@@ -392,6 +579,7 @@ public partial class GameBoardScene
 
 			if (tableCardTexture != null)
 			{
+				Label? descriptionLabel = null;
 				var tableCard = new TextureRect
 				{
 					Texture = tableCardTexture,
@@ -403,6 +591,21 @@ public partial class GameBoardScene
 					Size = CardVisualSize,
 					ZIndex = baseZIndex,
 				};
+				if (tableCardData.Card.HasValue)
+				{
+					string tooltipText = GetMagnetCardDescription(tableCardData.Card.Value, !tableCardData.IsFaceUp);
+					if (!string.IsNullOrEmpty(tooltipText))
+					{
+						tableCard.MouseFilter = MouseFilterEnum.Stop;
+						var labelSize = new Vector2(218.0f, 44.0f);
+						descriptionLabel = CreateCardDescriptionLabel(
+							tooltipText,
+							GetTableCardDescriptionPosition(cardPositions[cardIndex], labelSize),
+							labelSize);
+						tableCard.MouseEntered += () => descriptionLabel.Visible = true;
+						tableCard.MouseExited += () => descriptionLabel.Visible = false;
+					}
+				}
 
 				if (animateCardBack)
 				{
@@ -410,6 +613,10 @@ public partial class GameBoardScene
 				}
 
 				_centerArena.AddChild(tableCard);
+				if (descriptionLabel != null)
+				{
+					_centerArena.AddChild(descriptionLabel);
+				}
 				if (tableCardData.Card.HasValue && tableCardData.Card.Value.HasMagnetEffect && tableCardData.IsFaceUp)
 				{
 					AddMagnetOverlay(_centerArena, cardPositions[cardIndex], CardVisualSize, 0.0f, baseZIndex + 1);
