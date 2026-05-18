@@ -2,7 +2,7 @@
   "target": "asset",
   "mode": "idle",
   "source": "art/cards/item_cards/question_mark/run-004/processed/clean.png",
-  "generated_from": "run-004 static ocean card, deterministic water shimmer animation",
+  "generated_from": "koi carp themed random-item card, based on run-004 ocean item-card style",
   "frame_count": 4,
   "frame_size": [
     384,
@@ -10,12 +10,12 @@
   ],
   "duration_ms": 180,
   "animated_elements": "subtle internal water rings, bubbles, sea-glass sparkles, slight shimmer",
-  "fixed_elements": "card silhouette, border, central icon identity, base composition",
+  "fixed_elements": "card silhouette, border, central koi/carp emblem identity, base composition",
   "alpha_bbox": [
-    19,
-    35,
-    364,
-    349
+    66,
+    15,
+    318,
+    369
   ],
   "outputs": [
     "frames/frame-001.png",

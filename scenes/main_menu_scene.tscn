@@ -1,0 +1,348 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Texture2D" path="res://art/menu/main_menu_concept_10.png" id="1_menu_background"]
+[ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="2_water_caustic_shader"]
+[ext_resource type="Script" path="res://scripts/UnderwaterAmbientLayer.cs" id="3_underwater_ambient_layer"]
+[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="4_ocean_menu_button_frame"]
+[ext_resource type="Script" path="res://scripts/MainMenuScene.cs" id="5_main_menu_scene"]
+[ext_resource type="AudioStream" path="res://asset/audio/background.mp3" id="6_menu_music"]
+[ext_resource type="Script" path="res://scripts/MainMenuOceanDynamics.cs" id="7_main_menu_ocean_dynamics"]
+[ext_resource type="Shader" path="res://shaders/menu_left_depth_gradient.gdshader" id="8_left_depth_gradient_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_menu_caustic"]
+shader = ExtResource("2_water_caustic_shader")
+shader_parameter/shimmer_color = Color(0.52, 0.98, 1, 0.2)
+shader_parameter/shimmer_strength = 0.38
+shader_parameter/wave_scale = 22.0
+shader_parameter/wave_speed = 0.42
+shader_parameter/edge_boost = 0.74
+shader_parameter/center_glow = 0.12
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_left_depth_gradient"]
+shader = ExtResource("8_left_depth_gradient_shader")
+shader_parameter/depth_color = Color(0, 0.055, 0.09, 1)
+shader_parameter/left_alpha = 0.24
+shader_parameter/fade_start = 0.08
+shader_parameter/fade_end = 0.96
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu_panel"]
+bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.3)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.96, 0.34)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.025, 0.045, 0.34)
+shadow_size = 16
+shadow_offset = Vector2(0, 6)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_menu_button"]
+
+[node name="MainMenuScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_main_menu_scene")
+
+[node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_menu_music")
+autoplay = true
+
+[node name="BackgroundArt" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_menu_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="OceanDynamicsLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_main_menu_ocean_dynamics")
+bubble_count = 72
+glint_count = 46
+motion_scale = 1.25
+
+[node name="LeftDepthVignette" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_left_depth_gradient")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 0.58
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="WaterCausticOverlay" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_menu_caustic")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="UnderwaterAmbientLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_underwater_ambient_layer")
+bubble_count = 48
+mote_count = 126
+seagrass_blade_count = 42
+motion_scale = 1.0
+
+[node name="MenuSafeArea" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 58
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 58
+
+[node name="MenuPanel" type="PanelContainer" parent="MenuSafeArea"]
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
+
+[node name="PanelMargin" type="MarginContainer" parent="MenuSafeArea/MenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 30
+
+[node name="MenuLayout" type="VBoxContainer" parent="MenuSafeArea/MenuPanel/PanelMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Title" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.95)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 46
+text = "POKEGAME"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.58, 0.96, 0.92, 0.86)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "OCEAN TABLE"
+horizontal_alignment = 1
+
+[node name="TopSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="SinglePlayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(374, 78)
+layout_mode = 2
+script = ExtResource("4_ocean_menu_button_frame")
+AccentColor = Color(0.62, 1, 0.92, 1)
+
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 5.0
+offset_right = -28.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+flat = true
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
+text = "单人游戏"
+
+[node name="AdventureModeFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(374, 78)
+layout_mode = 2
+script = ExtResource("4_ocean_menu_button_frame")
+AccentColor = Color(0.95, 0.86, 0.52, 1)
+FlipOrnament = true
+
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureModeFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 34.0
+offset_top = 5.0
+offset_right = -2.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+flat = true
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
+text = "冒险模式"
+
+[node name="MultiplayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(374, 78)
+layout_mode = 2
+script = ExtResource("4_ocean_menu_button_frame")
+AccentColor = Color(0.58, 0.82, 1, 1)
+
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/MultiplayerFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 5.0
+offset_right = -36.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+flat = true
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
+text = "多人游戏"
+
+[node name="SettingsFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(374, 78)
+layout_mode = 2
+script = ExtResource("4_ocean_menu_button_frame")
+AccentColor = Color(0.78, 0.72, 1, 1)
+FlipOrnament = true
+
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = 5.0
+offset_right = -12.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+flat = true
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
+text = "设置"
+
+[node name="ExitFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(374, 78)
+layout_mode = 2
+script = ExtResource("4_ocean_menu_button_frame")
+AccentColor = Color(0.94, 0.68, 0.62, 1)
+
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 5.0
+offset_right = -22.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+flat = true
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
+text = "退出"
+
+[node name="BottomSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+
+[node name="Footer" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.96, 0.92, 0.7)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.7)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 15
+text = "v0.1"
+horizontal_alignment = 1

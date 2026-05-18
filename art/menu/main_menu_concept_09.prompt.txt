@@ -1,0 +1,21 @@
+Generate a production-ready ocean themed main menu background for a Godot 2D game, 16:9 landscape.
+
+Pipeline intent from generate2dmap:
+- map_mode: baked_scene_mode for title/menu screen art
+- visual_model: baked_raster
+- runtime_object_model: none
+- collision_model: none
+- engine_target: Godot project-native UI scene
+
+Composition:
+- Leave a clear vertical menu-safe area on the left third for five large runtime buttons.
+- Put the strongest visual landmark on the right two thirds.
+- Deep trench bioluminescent garden: glowing anemones, jellyfish-like light forms, rock silhouettes, distant blue abyss.
+- Left menu area should be dark but clean, with soft cyan particles and no busy foreground shapes.
+- Right side should contain the luminous garden and a safe path of light, adventurous but not scary.
+- No text, no letters, no numbers, no logos, no watermarks, no UI buttons, no characters, no monsters.
+
+Art direction:
+- Clean HD 2D game background, readable ocean fantasy, restrained bioluminescence.
+- Palette: deep teal, cobalt, cyan, aqua, magenta coral accents, pearl glow.
+- Low texture noise and clear composition for menu overlay.

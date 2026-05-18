@@ -1,0 +1,21 @@
+Generate a production-ready ocean themed main menu background for a Godot 2D game, 16:9 landscape.
+
+Pipeline intent from generate2dmap:
+- map_mode: baked_scene_mode for title/menu screen art
+- visual_model: baked_raster
+- runtime_object_model: none
+- collision_model: none
+- engine_target: Godot project-native UI scene
+
+Composition:
+- Leave a clear vertical menu-safe area on the left third for five large runtime buttons.
+- Put the strongest visual landmark on the right two thirds.
+- Split ocean vista: underwater foreground reef at bottom, shimmering sea surface and sunlight above, distant island silhouette seen through water, pearl bubbles.
+- Left menu area should be darker underwater gradient and quiet, optimized for button readability.
+- Right side should have bright surface rays, reef arch, and layered blue depth.
+- No text, no letters, no numbers, no logos, no watermarks, no UI buttons, no characters, no monsters.
+
+Art direction:
+- Clean HD hand-painted 2D game background, bright adventurous ocean menu.
+- Sea-glass blue, turquoise, sunlight gold, pearl white, coral peach, soft cyan caustics.
+- Premium game UI backdrop with clear empty overlay space.

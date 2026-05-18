@@ -1,0 +1,194 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "Abyssal Pearl Ray Queen",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/Q/processed/source-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.96,
+  "trim_border": 2,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 3000,
+  "edge_touch_margin": 6,
+  "frame_labels": [
+    "idle-1",
+    "idle-2",
+    "idle-3",
+    "idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 146069,
+      "selected_component_bbox": [
+        115,
+        33,
+        442,
+        481
+      ],
+      "crop_bbox": [
+        107,
+        25,
+        450,
+        489
+      ],
+      "edge_touch": false,
+      "output_size": [
+        90,
+        122
+      ],
+      "paste_position": [
+        19,
+        3
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 146076,
+      "selected_component_bbox": [
+        62,
+        33,
+        389,
+        481
+      ],
+      "crop_bbox": [
+        54,
+        25,
+        397,
+        489
+      ],
+      "edge_touch": false,
+      "output_size": [
+        90,
+        122
+      ],
+      "paste_position": [
+        19,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 146371,
+      "selected_component_bbox": [
+        115,
+        23,
+        442,
+        472
+      ],
+      "crop_bbox": [
+        107,
+        15,
+        450,
+        480
+      ],
+      "edge_touch": false,
+      "output_size": [
+        90,
+        122
+      ],
+      "paste_position": [
+        19,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 146375,
+      "selected_component_bbox": [
+        62,
+        23,
+        389,
+        472
+      ],
+      "crop_bbox": [
+        54,
+        15,
+        397,
+        480
+      ],
+      "edge_touch": false,
+      "output_size": [
+        90,
+        122
+      ],
+      "paste_position": [
+        19,
+        3
+      ]
+    }
+  ],
+  "edge_touch_frames": [],
+  "style": "ocean_suited_jqk_backup",
+  "backup_only": true,
+  "not_connected_to_game": true,
+  "suit": "diamonds",
+  "rank": "Q",
+  "frame_count": 4,
+  "single_size": 128,
+  "raw_source": "source-sheet.png",
+  "outputs": [
+    "clean.png",
+    "raw.png",
+    "frames/frame-001.png",
+    "frames/frame-002.png",
+    "frames/frame-003.png",
+    "frames/frame-004.png",
+    "sheet-transparent.png",
+    "strip-transparent.png",
+    "animation.gif"
+  ]
+}

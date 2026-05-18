@@ -1,7 +1,7 @@
-Single static special item card artwork for a 2D Godot card game, clean HD hand-painted game asset style, not pixel art. Redesign the existing QuestionMark special card into an ocean theme while keeping it clearly recognizable as a question mark card.
+Edit the existing ocean special item card into a koi carp themed random-item card.
 
-Canvas and background rules: one centered card asset only, transparent-ready sprite source on a 100% solid flat magenta #FF00FF background, no gradients in the background, no shadows outside the card, no UI, no labels, no readable text, no letters, no numbers.
+Keep the same vertical rounded playing-card silhouette, pearl-white and pale seafoam card face, coral-and-shell border ornaments, tiny bubbles, restrained gold trim, dark navy accents, sea-glass highlights, and clean HD hand-painted Godot item-card readability.
 
-Card design: vertical rounded rectangle playing-card silhouette, elegant thin border, pearl-white and pale seafoam card surface, small gold and dark navy line accents, subtle coral corner ornaments, tiny shell and bubble motifs. The center symbol is one large stylized question mark made from deep ocean navy with turquoise inner glow, gold rim highlight, and pearl shine. Add restrained ocean magic details around the question mark: small bubbles, faint wave ring, sea-glass sparkles, a few tiny coral/starfish accents. Keep the composition clean and gameplay-readable at small size.
+Replace the central question mark completely with one clear stylized koi carp / carp fish emblem in a graceful curled swim pose with flowing fins and tail. Use deep ocean navy outlines, teal and seafoam body accents, pearl highlights, and muted coral-gold touches.
 
-Containment: the full card must fit fully inside the image with generous magenta margin on all four sides. No part of the card, ornament, glow, bubbles, sparkle, coral, shell, or wave effect may touch or cross the image edge. The card should occupy roughly 80% of the 384x384 frame height, centered, stable, crisp silhouette.
+Strict content rules: no question mark symbol, no punctuation, no letters, no numbers, no readable text, no poker suit icons, no UI, no hands, no table, and no scene outside the card. Keep the full card and all effects safely inside the transparent-ready canvas.

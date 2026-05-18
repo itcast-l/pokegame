@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Use the input image only as visual style reference: ocean-table card game, luminous sea glass, cyan teal water, pearl highlights, coral accents. Create one standalone decorative pause menu backing plaque for a 2D game. Single centered object, clean hand-painted HD game asset style, rounded rectangular sea-glass panel with beveled shell and coral rim, subtle inner glow, empty center area for menu buttons, translucent teal material, small pearl ornaments and restrained coral details at the corners. Background is 100% solid flat magenta #FF00FF only, no gradients in the background. No text, no letters, no labels, no words, no buttons, no icons, no screenshot, no full scene background, no border around the canvas. The entire object fits fully inside the canvas with generous magenta margin on all four sides, no part touches the canvas edge, crisp silhouette, low texture noise.",
+  "role": "",
+  "input": "art/ui/pause_menu/run-001/raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "single_size": 768
+}

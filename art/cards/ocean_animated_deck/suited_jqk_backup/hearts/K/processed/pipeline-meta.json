@@ -1,0 +1,194 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "Coral-Crowned Dragon King",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/ocean_animated_deck/suited_jqk_backup/hearts/K/processed/source-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.96,
+  "trim_border": 2,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 3000,
+  "edge_touch_margin": 6,
+  "frame_labels": [
+    "idle-1",
+    "idle-2",
+    "idle-3",
+    "idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 206430,
+      "selected_component_bbox": [
+        160,
+        43,
+        544,
+        582
+      ],
+      "crop_bbox": [
+        152,
+        35,
+        552,
+        590
+      ],
+      "edge_touch": false,
+      "output_size": [
+        88,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 205951,
+      "selected_component_bbox": [
+        79,
+        43,
+        463,
+        582
+      ],
+      "crop_bbox": [
+        71,
+        35,
+        471,
+        590
+      ],
+      "edge_touch": false,
+      "output_size": [
+        88,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 206784,
+      "selected_component_bbox": [
+        160,
+        38,
+        544,
+        578
+      ],
+      "crop_bbox": [
+        152,
+        30,
+        552,
+        586
+      ],
+      "edge_touch": false,
+      "output_size": [
+        88,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 206313,
+      "selected_component_bbox": [
+        79,
+        38,
+        463,
+        578
+      ],
+      "crop_bbox": [
+        71,
+        30,
+        471,
+        586
+      ],
+      "edge_touch": false,
+      "output_size": [
+        88,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    }
+  ],
+  "edge_touch_frames": [],
+  "style": "ocean_suited_jqk_backup",
+  "backup_only": true,
+  "not_connected_to_game": true,
+  "suit": "hearts",
+  "rank": "K",
+  "frame_count": 4,
+  "single_size": 128,
+  "raw_source": "source-sheet.png",
+  "outputs": [
+    "clean.png",
+    "raw.png",
+    "frames/frame-001.png",
+    "frames/frame-002.png",
+    "frames/frame-003.png",
+    "frames/frame-004.png",
+    "sheet-transparent.png",
+    "strip-transparent.png",
+    "animation.gif"
+  ]
+}

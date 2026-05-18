@@ -1,0 +1,194 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "Tide Herald Sea Drake",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/ocean_animated_deck/suited_jqk_backup/spades/J/processed/source-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.96,
+  "trim_border": 2,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 3000,
+  "edge_touch_margin": 6,
+  "frame_labels": [
+    "idle-1",
+    "idle-2",
+    "idle-3",
+    "idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 152045,
+      "selected_component_bbox": [
+        122,
+        25,
+        450,
+        490
+      ],
+      "crop_bbox": [
+        114,
+        17,
+        458,
+        498
+      ],
+      "edge_touch": false,
+      "output_size": [
+        87,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 152041,
+      "selected_component_bbox": [
+        58,
+        25,
+        386,
+        490
+      ],
+      "crop_bbox": [
+        50,
+        17,
+        394,
+        498
+      ],
+      "edge_touch": false,
+      "output_size": [
+        87,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 152045,
+      "selected_component_bbox": [
+        122,
+        23,
+        450,
+        488
+      ],
+      "crop_bbox": [
+        114,
+        15,
+        458,
+        496
+      ],
+      "edge_touch": false,
+      "output_size": [
+        87,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 152039,
+      "selected_component_bbox": [
+        58,
+        23,
+        386,
+        488
+      ],
+      "crop_bbox": [
+        50,
+        15,
+        394,
+        496
+      ],
+      "edge_touch": false,
+      "output_size": [
+        87,
+        122
+      ],
+      "paste_position": [
+        20,
+        3
+      ]
+    }
+  ],
+  "edge_touch_frames": [],
+  "style": "ocean_suited_jqk_backup",
+  "backup_only": true,
+  "not_connected_to_game": true,
+  "suit": "spades",
+  "rank": "J",
+  "frame_count": 4,
+  "single_size": 128,
+  "raw_source": "source-sheet.png",
+  "outputs": [
+    "clean.png",
+    "raw.png",
+    "frames/frame-001.png",
+    "frames/frame-002.png",
+    "frames/frame-003.png",
+    "frames/frame-004.png",
+    "sheet-transparent.png",
+    "strip-transparent.png",
+    "animation.gif"
+  ]
+}

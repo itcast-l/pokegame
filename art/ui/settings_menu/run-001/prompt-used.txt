@@ -1,0 +1,7 @@
+Use the input image as the visual reference for the game's existing ocean menu frame style only. Preserve the same clean HD Godot-ready UI asset language: deep teal glassy material, pearl highlights, sea-glass cyan rim light, shell-gold thin ornaments, underwater caustic accents, soft carved shell geometry, crisp readable silhouette, and transparent-background-ready edges.
+
+Create one single centered decorative settings menu panel frame for a 2D ocean card game. The asset is a square game UI frame with a large empty transparent-feeling center area for real game controls to sit on top later. Make it look like a refined underwater control console frame: subtle shell gear motif at the top center, small pearl knobs at the corners, thin gold circuit-like shell filigree, and a cool teal glass rim. No labels, no words, no letters, no numbers, no icons that contain text, no buttons, no sliders, no complete UI controls inside the panel. Keep the center quiet and mostly open, with only very faint translucent teal surface texture.
+
+The whole frame must be centered, symmetrical, and fully inside the canvas with generous margin on all sides. Strong clean outline, no cropped corners, no edge touch. Background must be 100% solid flat #FF00FF magenta everywhere outside the frame and through any transparent openings, with no gradient, texture, shadow, grid, or border in the background. Do not make pixel art; use clean HD painted 2D game asset style matching the reference.
+
+Use a 1024 x 1024 square composition.

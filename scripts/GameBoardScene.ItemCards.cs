@@ -582,7 +582,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdvanceTurnAfterPlayedResult(MainPlayerIndex, result);
+		await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
 		if (!result.Captured)

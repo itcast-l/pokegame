@@ -1,0 +1,73 @@
+{
+  "pipeline": {
+    "map_mode": "baked_scene_mode",
+    "visual_model": "baked_raster",
+    "runtime_object_model": "none",
+    "collision_model": "none",
+    "engine_target": "Godot project-native UI scene"
+  },
+  "default_scene": "res://scenes/main_menu_scene.tscn",
+  "default_background": "res://art/menu/main_menu_concept_10.png",
+  "concepts": [
+    {
+      "id": "main_menu_concept_01",
+      "theme": "underwater coral palace",
+      "prompt": "res://art/menu/main_menu_concept_01.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_01.png"
+    },
+    {
+      "id": "main_menu_concept_02",
+      "theme": "deep sea ancient ruin",
+      "prompt": "res://art/menu/main_menu_concept_02.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_02.png"
+    },
+    {
+      "id": "main_menu_concept_03",
+      "theme": "crystal reef lagoon",
+      "prompt": "res://art/menu/main_menu_concept_03.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_03.png"
+    },
+    {
+      "id": "main_menu_concept_04",
+      "theme": "underwater nautical chart room",
+      "prompt": "res://art/menu/main_menu_concept_04.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_04.png"
+    },
+    {
+      "id": "main_menu_concept_05",
+      "theme": "underwater glass-dome observatory",
+      "prompt": "res://art/menu/main_menu_concept_05.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_05.png"
+    },
+    {
+      "id": "main_menu_concept_06",
+      "theme": "sunken treasure gallery",
+      "prompt": "res://art/menu/main_menu_concept_06.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_06.png"
+    },
+    {
+      "id": "main_menu_concept_07",
+      "theme": "moonlit shallow sea shrine",
+      "prompt": "res://art/menu/main_menu_concept_07.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_07.png"
+    },
+    {
+      "id": "main_menu_concept_08",
+      "theme": "tide temple main hall",
+      "prompt": "res://art/menu/main_menu_concept_08.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_08.png"
+    },
+    {
+      "id": "main_menu_concept_09",
+      "theme": "deep trench bioluminescent garden",
+      "prompt": "res://art/menu/main_menu_concept_09.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_09.png"
+    },
+    {
+      "id": "main_menu_concept_10",
+      "theme": "split ocean vista",
+      "prompt": "res://art/menu/main_menu_concept_10.prompt.txt",
+      "image": "res://art/menu/main_menu_concept_10.png"
+    }
+  ]
+}

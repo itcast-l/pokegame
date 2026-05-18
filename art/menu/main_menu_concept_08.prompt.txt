@@ -1,0 +1,21 @@
+Generate a production-ready ocean themed main menu background for a Godot 2D game, 16:9 landscape.
+
+Pipeline intent from generate2dmap:
+- map_mode: baked_scene_mode for title/menu screen art
+- visual_model: baked_raster
+- runtime_object_model: none
+- collision_model: none
+- engine_target: Godot project-native UI scene
+
+Composition:
+- Leave a clear vertical menu-safe area on the left third for five large runtime buttons.
+- Put the strongest visual landmark on the right two thirds.
+- Tide temple main hall: elegant shell columns, flowing water channels, glowing pearl core, soft cyan and gold caustic light.
+- Left menu area should have only smooth water depth and faint particles, with no high-contrast props.
+- Right side should feel like an entrance into adventure mode: ornate but not crowded.
+- No text, no letters, no numbers, no logos, no watermarks, no UI buttons, no characters, no monsters.
+
+Art direction:
+- Clean HD 2D game scene, ocean fantasy architecture, polished and premium.
+- Turquoise, teal, pearl white, sea-glass blue, muted gold, coral accents.
+- Clear negative space for runtime UI overlay.

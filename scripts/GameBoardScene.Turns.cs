@@ -41,7 +41,7 @@ public partial class GameBoardScene
 					return;
 				}
 
-				AdvanceTurnAfterPlayedResult(playerIndex, result);
+				await AdvanceTurnAfterPlayedResultAsync(playerIndex, result);
 			}
 		}
 		finally
@@ -75,7 +75,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			AdvanceTurnAfterPlayedResult(MainPlayerIndex, result);
+			await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
 
 			_isProcessingCardPlay = false;
 			if (!result.Captured)
@@ -115,7 +115,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			AdvanceTurnAfterPlayedResult(MainPlayerIndex, result);
+			await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
 			_isProcessingCardPlay = false;
 			if (!result.Captured)
 			{
@@ -1186,37 +1186,38 @@ public partial class GameBoardScene
 		flightCard.Scale = new Vector2(scaleX * scale, scale);
 	}
 
-	private void AdvanceQuestionCardRefreshTurnCounter()
+	private int AdvanceQuestionCardRefreshTurnCounter()
 	{
 		if (HasTableSpecialCard())
 		{
-			return;
+			return -1;
 		}
 
 		_completedTurnsSinceQuestionCardRefresh++;
 		if (_completedTurnsSinceQuestionCardRefresh < GetQuestionCardRefreshTurnCount())
 		{
-			return;
+			return -1;
 		}
 
 		_completedTurnsSinceQuestionCardRefresh = 0;
-		PlaceQuestionCardOnNextTableSlot();
+		return PlaceQuestionCardOnNextTableSlot();
 	}
 
-	private void PlaceQuestionCardOnNextTableSlot()
+	private int PlaceQuestionCardOnNextTableSlot()
 	{
 		if (HasTableSpecialCard())
 		{
-			return;
+			return -1;
 		}
 
 		ItemCard? itemOverlay = CreateItemCard(QuestionMarkItemCardId);
 		if (!itemOverlay.HasValue)
 		{
-			return;
+			return -1;
 		}
 
 		_tableCards.Add(new TableCard(null, true, itemOverlay));
+		return _tableCards.Count - 1;
 	}
 
 	private int GetQuestionCardRefreshTurnCount()
@@ -1505,13 +1506,24 @@ public partial class GameBoardScene
 		return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
 	}
 
-	private void AdvanceTurnAfterPlayedResult(int playerIndex, PlayCardResult result)
+	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
 	{
 		_currentTurnPlayerIndex = result.Captured ? playerIndex : GetNextTurnPlayerIndex(playerIndex);
 		if (!result.Captured)
 		{
-			AdvanceQuestionCardRefreshTurnCounter();
+			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter();
+			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
+			{
+				_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = true;
+			}
+
 			RenderTableCards();
+			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
+			{
+				_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = false;
+				await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
+				RenderTableCards();
+			}
 		}
 	}
 

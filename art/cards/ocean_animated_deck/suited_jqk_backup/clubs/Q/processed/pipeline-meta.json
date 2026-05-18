@@ -1,0 +1,194 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "Abyssal Pearl Ray Queen",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/cards/ocean_animated_deck/suited_jqk_backup/clubs/Q/processed/source-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.96,
+  "trim_border": 2,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 3000,
+  "edge_touch_margin": 6,
+  "frame_labels": [
+    "idle-1",
+    "idle-2",
+    "idle-3",
+    "idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 136658,
+      "selected_component_bbox": [
+        131,
+        53,
+        450,
+        484
+      ],
+      "crop_bbox": [
+        123,
+        45,
+        458,
+        492
+      ],
+      "edge_touch": false,
+      "output_size": [
+        91,
+        122
+      ],
+      "paste_position": [
+        18,
+        3
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 136171,
+      "selected_component_bbox": [
+        60,
+        53,
+        377,
+        484
+      ],
+      "crop_bbox": [
+        52,
+        45,
+        385,
+        492
+      ],
+      "edge_touch": false,
+      "output_size": [
+        91,
+        122
+      ],
+      "paste_position": [
+        18,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 137323,
+      "selected_component_bbox": [
+        131,
+        18,
+        450,
+        450
+      ],
+      "crop_bbox": [
+        123,
+        10,
+        458,
+        458
+      ],
+      "edge_touch": false,
+      "output_size": [
+        91,
+        122
+      ],
+      "paste_position": [
+        18,
+        3
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 137112,
+      "selected_component_bbox": [
+        59,
+        16,
+        378,
+        449
+      ],
+      "crop_bbox": [
+        51,
+        8,
+        386,
+        457
+      ],
+      "edge_touch": false,
+      "output_size": [
+        91,
+        122
+      ],
+      "paste_position": [
+        18,
+        3
+      ]
+    }
+  ],
+  "edge_touch_frames": [],
+  "style": "ocean_suited_jqk_backup",
+  "backup_only": true,
+  "not_connected_to_game": true,
+  "suit": "clubs",
+  "rank": "Q",
+  "frame_count": 4,
+  "single_size": 128,
+  "raw_source": "source-sheet.png",
+  "outputs": [
+    "clean.png",
+    "raw.png",
+    "frames/frame-001.png",
+    "frames/frame-002.png",
+    "frames/frame-003.png",
+    "frames/frame-004.png",
+    "sheet-transparent.png",
+    "strip-transparent.png",
+    "animation.gif"
+  ]
+}

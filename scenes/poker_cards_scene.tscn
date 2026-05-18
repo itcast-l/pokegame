@@ -45,6 +45,18 @@
 [ext_resource type="Texture2D" uid="uid://bvop8noewe3h6" path="res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-001.png" id="52_clubs_k"]
 [ext_resource type="Texture2D" uid="uid://by3firq8pecvs" path="res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png" id="53_card_back"]
 [ext_resource type="Script" uid="uid://yrp1t8wxdt1k" path="res://scripts/ocean_card_animator.gd" id="54_ocean_card_animator"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/J/processed/frames/frame-001.png" id="55_backup_spades_j"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/Q/processed/frames/frame-001.png" id="56_backup_spades_q"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/K/processed/frames/frame-001.png" id="57_backup_spades_k"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/J/processed/frames/frame-001.png" id="58_backup_hearts_j"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/Q/processed/frames/frame-001.png" id="59_backup_hearts_q"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/K/processed/frames/frame-001.png" id="60_backup_hearts_k"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/J/processed/frames/frame-001.png" id="61_backup_diamonds_j"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/Q/processed/frames/frame-001.png" id="62_backup_diamonds_q"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/K/processed/frames/frame-001.png" id="63_backup_diamonds_k"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/J/processed/frames/frame-001.png" id="64_backup_clubs_j"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/Q/processed/frames/frame-001.png" id="65_backup_clubs_q"]
+[ext_resource type="Texture2D" path="res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/K/processed/frames/frame-001.png" id="66_backup_clubs_k"]
 
 [node name="PokerCardsScene" type="Node2D" unique_id=1780853255]
 texture_filter = 1
@@ -384,4 +396,78 @@ script = ExtResource("54_ocean_card_animator")
 position = Vector2(80, 564)
 scale = Vector2(0.6, 0.6)
 texture = ExtResource("53_card_back")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="SuitedJqkBackupCards" type="Node2D" parent="StandardPokerCards"]
+
+[node name="Backup_Spades_J" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(158, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("55_backup_spades_j")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Spades_Q" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(236, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("56_backup_spades_q")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Spades_K" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(314, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("57_backup_spades_k")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Hearts_J" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(392, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("58_backup_hearts_j")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Hearts_Q" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(470, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("59_backup_hearts_q")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Hearts_K" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(548, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("60_backup_hearts_k")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Diamonds_J" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(626, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("61_backup_diamonds_j")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Diamonds_Q" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(704, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("62_backup_diamonds_q")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Diamonds_K" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(782, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("63_backup_diamonds_k")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Clubs_J" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(860, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("64_backup_clubs_j")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Clubs_Q" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(938, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("65_backup_clubs_q")
+script = ExtResource("54_ocean_card_animator")
+
+[node name="Backup_Clubs_K" type="Sprite2D" parent="StandardPokerCards/SuitedJqkBackupCards"]
+position = Vector2(1016, 564)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("66_backup_clubs_k")
 script = ExtResource("54_ocean_card_animator")

@@ -4,10 +4,13 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private const string QuestionCardRefreshFramePattern = "res://art/fx/question_card_refresh/run-001/processed/fx-{0}.png";
+	private const int QuestionCardRefreshFrameCount = 6;
+	private const float QuestionCardRefreshSeconds = 0.48f;
 	private const string DeckShuffleFramePattern = "res://art/cards/deck_shuffle/overhand_drop/game_frames/frame-{0:000}.png";
 	private const int DeckShuffleFrameCount = 6;
 	private const int DeckShuffleRepeatCount = 3;
-	private const float DeckShuffleFrameSeconds = 0.055f;
+	private const float DeckShuffleFrameSeconds = 0.065f;
 	private const float PlayedCardFlightDuration = 0.34f;
 	private const float PlayedCardFlipMinScaleX = 0.06f;
 	private const float QuestionCardToTransformAreaFlightSeconds = 0.36f;
@@ -18,6 +21,7 @@ public partial class GameBoardScene
 	private const float FullCircleRadians = 6.2831855f;
 	private const int PlayedCardFlightZIndex = 2000;
 	private static readonly Vector2 DeckShuffleVisualSize = new(96.0f, 192.0f);
+	private static readonly Vector2 QuestionCardRefreshFxVisualSize = new(160.0f, 160.0f);
 	private static readonly Vector2 QuestionCardTransformFxVisualSize = new(128.0f, 128.0f);
 	private static readonly Vector2 SpecialCardTriggerSparkSize = new(20.0f, 20.0f);
 	private static readonly Vector2 SpecialCardTriggerRingSize = new(188.0f, 188.0f);
@@ -756,6 +760,127 @@ public partial class GameBoardScene
 		fx.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
 	}
 
+	private async Task PlayQuestionCardRefreshAnimationAsync(int tableCardIndex)
+	{
+		if (!IsInsideTree() || tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.ItemOverlay.HasValue || tableCard.ItemOverlay.Value.Id != QuestionMarkItemCardId)
+		{
+			return;
+		}
+
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (tableCardIndex >= cardPositions.Count)
+		{
+			return;
+		}
+
+		List<Texture2D> refreshFrames = LoadQuestionCardRefreshFrames();
+		Texture2D questionTexture = tableCard.ItemOverlay.Value.Texture;
+		var animationRoot = new Control
+		{
+			Name = "QuestionCardRefreshAnimation",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = cardPositions[tableCardIndex],
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			ZIndex = tableCardIndex * 2 + 120,
+		};
+		var fx = new TextureRect
+		{
+			Name = "QuestionCardRefreshFx",
+			Texture = refreshFrames.Count > 0 ? refreshFrames[0] : null,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = (CardVisualSize - QuestionCardRefreshFxVisualSize) / 2.0f,
+			Size = QuestionCardRefreshFxVisualSize,
+			PivotOffset = QuestionCardRefreshFxVisualSize / 2.0f,
+			ZIndex = 0,
+			Visible = refreshFrames.Count > 0,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		var card = new TextureRect
+		{
+			Name = "QuestionCardRefreshCard",
+			Texture = questionTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = GetItemCardVisualPosition(QuestionMarkItemCardId),
+			Size = GetItemCardVisualSize(QuestionMarkItemCardId),
+			PivotOffset = GetItemCardVisualSize(QuestionMarkItemCardId) / 2.0f,
+			ZIndex = 1,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			Scale = Vector2.One * 0.82f,
+		};
+
+		animationRoot.AddChild(fx);
+		animationRoot.AddChild(card);
+		_centerArena.AddChild(animationRoot);
+
+		try
+		{
+			UpdateQuestionCardRefreshAnimation(animationRoot, card, fx, refreshFrames, 0.0f);
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Cubic);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateQuestionCardRefreshAnimation(animationRoot, card, fx, refreshFrames, progress)),
+				0.0f,
+				1.0f,
+				QuestionCardRefreshSeconds);
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(animationRoot))
+			{
+				animationRoot.QueueFree();
+			}
+		}
+	}
+
+	private static void UpdateQuestionCardRefreshAnimation(
+		Control animationRoot,
+		TextureRect card,
+		TextureRect fx,
+		IReadOnlyList<Texture2D> fxFrames,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(animationRoot) || !GodotObject.IsInstanceValid(card))
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		float cardAlpha = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.18f) / 0.52f, 0.0f, 1.0f));
+		float cardPop = Mathf.Sin(Mathf.Clamp(clampedProgress / 0.82f, 0.0f, 1.0f) * Mathf.Pi);
+		card.Modulate = new Color(1.0f, 1.0f, 1.0f, cardAlpha);
+		card.Scale = Vector2.One * (Mathf.Lerp(0.82f, 1.0f, easedProgress) + cardPop * 0.08f);
+		card.RotationDegrees = Mathf.Lerp(-5.0f, 0.0f, easedProgress);
+		animationRoot.Scale = Vector2.One * Mathf.Lerp(0.96f, 1.0f, easedProgress);
+
+		if (!GodotObject.IsInstanceValid(fx) || fxFrames.Count == 0)
+		{
+			return;
+		}
+
+		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * fxFrames.Count), 0, fxFrames.Count - 1);
+		float fxAlphaIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.2f, 0.0f, 1.0f));
+		float fxAlphaOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.68f) / 0.32f, 0.0f, 1.0f));
+		fx.Texture = fxFrames[frameIndex];
+		fx.Modulate = new Color(1.0f, 1.0f, 1.0f, fxAlphaIn * fxAlphaOut);
+		fx.Scale = Vector2.One * Mathf.Lerp(0.9f, 1.08f, Mathf.Sin(clampedProgress * Mathf.Pi));
+	}
+
 	private async Task PlayPhysicalDeckShuffleAsync(int playerIndex)
 	{
 		if (playerIndex < 0 || _playerCardPiles.Count <= playerIndex)
@@ -785,31 +910,34 @@ public partial class GameBoardScene
 		bool countLabelVisible = countLabel != null && countLabel.Visible;
 		SetOriginalPileVisualsVisible(originalCards, countLabel, false);
 
-		var shuffleSprite = new TextureRect
+		Vector2 shuffleBasePosition = (CardPileSize - DeckShuffleVisualSize) / 2.0f;
+		float shuffleBaseRotation = GetCardRotationDegreesForPlayer(playerIndex);
+		var shuffleRoot = new Control
 		{
 			Name = "DeckShuffleAnimation",
-			Texture = shuffleFrames[0],
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 			MouseFilter = MouseFilterEnum.Ignore,
-			Position = (CardPileSize - DeckShuffleVisualSize) / 2.0f,
+			Position = shuffleBasePosition,
 			Size = DeckShuffleVisualSize,
 			PivotOffset = DeckShuffleVisualSize / 2.0f,
-			RotationDegrees = GetCardRotationDegreesForPlayer(playerIndex),
+			RotationDegrees = shuffleBaseRotation,
 			ZIndex = VisiblePileCards + 20,
 		};
-		pile.AddChild(shuffleSprite);
+		TextureRect currentSprite = CreateDeckShuffleFrameSprite("DeckShuffleCurrentFrame", shuffleFrames[0], 0);
+		TextureRect nextSprite = CreateDeckShuffleFrameSprite("DeckShuffleNextFrame", shuffleFrames.Count > 1 ? shuffleFrames[1] : shuffleFrames[0], 1);
+		nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		shuffleRoot.AddChild(currentSprite);
+		shuffleRoot.AddChild(nextSprite);
+		pile.AddChild(shuffleRoot);
 
 		try
 		{
-			await PlayDeckShuffleFramesAsync(shuffleSprite, shuffleFrames);
+			await PlayDeckShuffleFramesAsync(shuffleRoot, currentSprite, nextSprite, shuffleFrames, shuffleBasePosition, shuffleBaseRotation);
 		}
 		finally
 		{
-			if (GodotObject.IsInstanceValid(shuffleSprite))
+			if (GodotObject.IsInstanceValid(shuffleRoot))
 			{
-				shuffleSprite.QueueFree();
+				shuffleRoot.QueueFree();
 			}
 
 			SetOriginalPileVisualsVisible(originalCards, countLabel, true);
@@ -818,6 +946,42 @@ public partial class GameBoardScene
 				countLabel.Visible = countLabelVisible;
 			}
 		}
+	}
+
+	private static TextureRect CreateDeckShuffleFrameSprite(string name, Texture2D texture, int zIndex)
+	{
+		return new TextureRect
+		{
+			Name = name,
+			Texture = texture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = Vector2.Zero,
+			Size = DeckShuffleVisualSize,
+			PivotOffset = DeckShuffleVisualSize / 2.0f,
+			ZIndex = zIndex,
+		};
+	}
+
+	private static List<Texture2D> LoadQuestionCardRefreshFrames()
+	{
+		var frames = new List<Texture2D>();
+		for (int frameIndex = 1; frameIndex <= QuestionCardRefreshFrameCount; frameIndex++)
+		{
+			string path = string.Format(QuestionCardRefreshFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing question card refresh frame: {path}");
+				continue;
+			}
+
+			frames.Add(texture);
+		}
+
+		return frames;
 	}
 
 	private static List<Texture2D> LoadDeckShuffleFrames()
@@ -869,22 +1033,89 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayDeckShuffleFramesAsync(TextureRect shuffleSprite, IReadOnlyList<Texture2D> shuffleFrames)
+	private async Task PlayDeckShuffleFramesAsync(
+		Control shuffleRoot,
+		TextureRect currentSprite,
+		TextureRect nextSprite,
+		IReadOnlyList<Texture2D> shuffleFrames,
+		Vector2 basePosition,
+		float baseRotationDegrees)
 	{
-		for (int repeatIndex = 0; repeatIndex < DeckShuffleRepeatCount; repeatIndex++)
+		if (shuffleFrames.Count == 0)
 		{
-			foreach (Texture2D frame in shuffleFrames)
-			{
-				if (!GodotObject.IsInstanceValid(shuffleSprite))
-				{
-					return;
-				}
-
-				shuffleSprite.Texture = frame;
-				await ToSignal(GetTree().CreateTimer(DeckShuffleFrameSeconds), SceneTreeTimer.SignalName.Timeout);
-			}
+			return;
 		}
+
+		float animationSeconds = DeckShuffleRepeatCount * shuffleFrames.Count * DeckShuffleFrameSeconds;
+		UpdateDeckShuffleAnimation(shuffleRoot, currentSprite, nextSprite, shuffleFrames, basePosition, baseRotationDegrees, 0.0f);
+		Tween tween = CreateTween();
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.InOut);
+		tween.TweenMethod(
+			Callable.From<float>(progress => UpdateDeckShuffleAnimation(
+				shuffleRoot,
+				currentSprite,
+				nextSprite,
+				shuffleFrames,
+				basePosition,
+				baseRotationDegrees,
+				progress)),
+			0.0f,
+			1.0f,
+			animationSeconds);
+		await ToSignal(tween, Tween.SignalName.Finished);
 	}
+
+	private static void UpdateDeckShuffleAnimation(
+		Control shuffleRoot,
+		TextureRect currentSprite,
+		TextureRect nextSprite,
+		IReadOnlyList<Texture2D> shuffleFrames,
+		Vector2 basePosition,
+		float baseRotationDegrees,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(shuffleRoot)
+			|| !GodotObject.IsInstanceValid(currentSprite)
+			|| !GodotObject.IsInstanceValid(nextSprite)
+			|| shuffleFrames.Count == 0)
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		if (clampedProgress >= 0.999f)
+		{
+			shuffleRoot.Position = basePosition;
+			shuffleRoot.RotationDegrees = baseRotationDegrees;
+			shuffleRoot.Scale = Vector2.One;
+			shuffleRoot.Modulate = Colors.White;
+			currentSprite.Texture = shuffleFrames[shuffleFrames.Count - 1];
+			currentSprite.Modulate = Colors.White;
+			nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+			return;
+		}
+
+		float totalSlots = DeckShuffleRepeatCount * shuffleFrames.Count;
+		float timeline = clampedProgress * totalSlots;
+		int slotIndex = Mathf.FloorToInt(timeline);
+			float slotProgress = timeline - slotIndex;
+			int currentFrameIndex = slotIndex % shuffleFrames.Count;
+			int nextFrameIndex = (currentFrameIndex + 1) % shuffleFrames.Count;
+			float blendAlpha = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((slotProgress - 0.18f) / 0.64f, 0.0f, 1.0f));
+			float fadeIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.12f, 0.0f, 1.0f));
+			float fadeOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.9f) / 0.1f, 0.0f, 1.0f));
+			float alpha = fadeIn * fadeOut;
+
+		currentSprite.Texture = shuffleFrames[currentFrameIndex];
+		nextSprite.Texture = shuffleFrames[nextFrameIndex];
+			currentSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha * (1.0f - blendAlpha));
+			nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha * blendAlpha);
+			shuffleRoot.Modulate = Colors.White;
+			shuffleRoot.Position = basePosition;
+			shuffleRoot.RotationDegrees = baseRotationDegrees;
+			shuffleRoot.Scale = Vector2.One;
+		}
 
 	private partial class SpecialCardTriggerRing : Control
 	{

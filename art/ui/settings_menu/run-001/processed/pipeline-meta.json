@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "",
+  "role": "",
+  "input": "art/ui/settings_menu/run-001/raw.png",
+  "threshold": 110,
+  "edge_threshold": 170,
+  "duration": 200,
+  "single_size": 768
+}

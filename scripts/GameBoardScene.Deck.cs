@@ -11,7 +11,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<PlayingCard> deck = LoadDeckWithoutFaceCards();
+		List<PlayingCard> deck = BuildDeckForPlayerCount(player_count);
 		Shuffle(deck);
 		Cut(deck);
 
@@ -41,15 +41,7 @@ public partial class GameBoardScene
 			_playerItemHands.Add(new List<ItemCard>());
 		}
 
-		int cardsPerPlayer = deck.Count / player_count;
-		int cardsToDeal = cardsPerPlayer * player_count;
-
-		if (deck.Count % player_count != 0)
-		{
-			GD.PushWarning($"Deck has {deck.Count} cards, which cannot be split evenly between {player_count} players.");
-		}
-
-		for (int cardIndex = 0; cardIndex < cardsToDeal; cardIndex++)
+		for (int cardIndex = 0; cardIndex < deck.Count; cardIndex++)
 		{
 			int playerIndex = cardIndex % player_count;
 			AddCardToPlayerDeck(playerIndex, deck[cardIndex]);
@@ -181,6 +173,20 @@ public partial class GameBoardScene
 
 		pokerCards.Free();
 		return deck;
+	}
+
+	private List<PlayingCard> BuildDeckForPlayerCount(int playerCount)
+	{
+		List<PlayingCard> baseDeck = LoadDeckWithoutFaceCards();
+		if (playerCount <= 2)
+		{
+			return baseDeck;
+		}
+
+		var doubledDeck = new List<PlayingCard>(baseDeck.Count * 2);
+		doubledDeck.AddRange(baseDeck);
+		doubledDeck.AddRange(baseDeck);
+		return doubledDeck;
 	}
 
 	private void Shuffle(List<PlayingCard> deck)
