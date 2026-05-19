@@ -54,37 +54,42 @@ public partial class GameBoardScene
 		magnetAttachmentCompletion?.TrySetResult(true);
 	}
 
+	private static bool IsAttachmentItemCard(string itemCardId)
+	{
+		return itemCardId == MagnetItemCardId || itemCardId == DoubleItemCardId;
+	}
+
 	private async Task ResolvePendingMagnetAttachmentsAsync(int turnSequenceGeneration)
 	{
-		while (_pendingMagnetAttachmentRewardPlayers.Count > 0)
+		while (_pendingItemAttachmentRewards.Count > 0)
 		{
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
 			}
 
-			int playerIndex = _pendingMagnetAttachmentRewardPlayers.Dequeue();
-			if (!PlayerHasAttachableMagnetCard(playerIndex))
+			PendingItemAttachmentReward reward = _pendingItemAttachmentRewards.Dequeue();
+			if (!PlayerHasAttachableMagnetCard(reward.PlayerIndex, reward.ItemCardId))
 			{
 				continue;
 			}
 
-			if (playerIndex == MainPlayerIndex)
+			if (reward.PlayerIndex == MainPlayerIndex)
 			{
-				await ResolveMainPlayerMagnetAttachmentAsync(turnSequenceGeneration);
+				await ResolveMainPlayerMagnetAttachmentAsync(reward.ItemCardId, turnSequenceGeneration);
 			}
 			else
 			{
-				AttachMagnetToRandomHandCard(playerIndex);
+				AttachMagnetToRandomHandCard(reward.PlayerIndex, reward.ItemCardId);
 			}
 
 			RenderPlayerHands();
 		}
 	}
 
-	private async Task ResolveMainPlayerMagnetAttachmentAsync(int turnSequenceGeneration)
+	private async Task ResolveMainPlayerMagnetAttachmentAsync(string itemCardId, int turnSequenceGeneration)
 	{
-		if (_isResolvingMagnetAttachmentSelection || !PlayerHasAttachableMagnetCard(MainPlayerIndex))
+		if (_isResolvingMagnetAttachmentSelection || !PlayerHasAttachableMagnetCard(MainPlayerIndex, itemCardId))
 		{
 			return;
 		}
@@ -92,7 +97,7 @@ public partial class GameBoardScene
 		bool wasProcessingCardPlay = _isProcessingCardPlay;
 		_isResolvingMagnetAttachmentSelection = true;
 		_isProcessingCardPlay = true;
-		_pendingItemCardId = MagnetItemCardId;
+		_pendingItemCardId = itemCardId;
 		_pendingItemOwnerIndex = MainPlayerIndex;
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
@@ -109,7 +114,7 @@ public partial class GameBoardScene
 				&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
 				&& _pendingItemOwnerIndex == MainPlayerIndex)
 			{
-				await CompleteMagnetAttachmentSelectionAsync(PickRandomAttachableMagnetHandIndex(MainPlayerIndex));
+				await CompleteMagnetAttachmentSelectionAsync(PickRandomAttachableMagnetHandIndex(MainPlayerIndex, itemCardId));
 			}
 
 			while (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
@@ -310,7 +315,7 @@ public partial class GameBoardScene
 	private void ShowMagnetHandSelection()
 	{
 		ClearSelectionOverlay();
-		if (!PlayerHasAttachableMagnetCard(MainPlayerIndex))
+		if (!PlayerHasAttachableMagnetCard(MainPlayerIndex, _pendingItemCardId))
 		{
 			_ = CompleteMagnetAttachmentSelectionAsync(-1);
 			return;
@@ -333,9 +338,10 @@ public partial class GameBoardScene
 		}
 
 		int ownerPlayerIndex = _pendingItemOwnerIndex;
-		int attachHandIndex = IsValidMagnetAttachmentHandIndex(ownerPlayerIndex, handIndex)
+		string itemCardId = _pendingItemCardId;
+		int attachHandIndex = IsValidMagnetAttachmentHandIndex(ownerPlayerIndex, handIndex, itemCardId)
 			? handIndex
-			: PickRandomAttachableMagnetHandIndex(ownerPlayerIndex);
+			: PickRandomAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
 		if (attachHandIndex < 0)
 		{
 			ClearSelectionOverlay();
@@ -346,11 +352,11 @@ public partial class GameBoardScene
 
 		_isAnimatingMagnetAttachment = true;
 		ClearMagnetAttachmentCountdown();
-		await PlayMagnetAttachmentToHandCardAnimationAsync(ownerPlayerIndex, attachHandIndex);
-		bool attached = AttachMagnetToHandCard(ownerPlayerIndex, attachHandIndex);
+		await PlayMagnetAttachmentToHandCardAnimationAsync(ownerPlayerIndex, attachHandIndex, itemCardId);
+		bool attached = AttachMagnetToHandCard(ownerPlayerIndex, attachHandIndex, itemCardId);
 		if (!attached)
 		{
-			AttachMagnetToRandomHandCard(ownerPlayerIndex);
+			AttachMagnetToRandomHandCard(ownerPlayerIndex, itemCardId);
 		}
 
 		ClearSelectionOverlay();
@@ -358,7 +364,7 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 	}
 
-	private bool PlayerHasAttachableMagnetCard(int playerIndex)
+	private bool PlayerHasAttachableMagnetCard(int playerIndex, string itemCardId)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
 		{
@@ -367,7 +373,7 @@ public partial class GameBoardScene
 
 		foreach (PlayingCard card in _playerHands[playerIndex])
 		{
-			if (IsAttachableMagnetCard(card))
+			if (IsAttachableMagnetCard(card, itemCardId))
 			{
 				return true;
 			}
@@ -376,25 +382,27 @@ public partial class GameBoardScene
 		return false;
 	}
 
-	private bool AttachMagnetToHandCard(int playerIndex, int handIndex)
+	private bool AttachMagnetToHandCard(int playerIndex, int handIndex, string itemCardId)
 	{
-		if (!IsValidMagnetAttachmentHandIndex(playerIndex, handIndex))
+		if (!IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))
 		{
 			return false;
 		}
 
 		PlayingCard card = _playerHands[playerIndex][handIndex];
-		_playerHands[playerIndex][handIndex] = card.WithMagnetEffect();
+		_playerHands[playerIndex][handIndex] = itemCardId == DoubleItemCardId
+			? card.WithDoubleEffect()
+			: card.WithMagnetEffect();
 		return true;
 	}
 
-	private bool AttachMagnetToRandomHandCard(int playerIndex)
+	private bool AttachMagnetToRandomHandCard(int playerIndex, string itemCardId)
 	{
-		int handIndex = PickRandomAttachableMagnetHandIndex(playerIndex);
-		return AttachMagnetToHandCard(playerIndex, handIndex);
+		int handIndex = PickRandomAttachableMagnetHandIndex(playerIndex, itemCardId);
+		return AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
 	}
 
-	private int PickRandomAttachableMagnetHandIndex(int playerIndex)
+	private int PickRandomAttachableMagnetHandIndex(int playerIndex, string itemCardId)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
 		{
@@ -404,7 +412,7 @@ public partial class GameBoardScene
 		var candidates = new List<int>();
 		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
 		{
-			if (IsAttachableMagnetCard(_playerHands[playerIndex][handIndex]))
+			if (IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId))
 			{
 				candidates.Add(handIndex);
 			}
@@ -413,18 +421,18 @@ public partial class GameBoardScene
 		return candidates.Count == 0 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
 	}
 
-	private bool IsValidMagnetAttachmentHandIndex(int playerIndex, int handIndex)
+	private bool IsValidMagnetAttachmentHandIndex(int playerIndex, int handIndex, string itemCardId)
 	{
 		return playerIndex >= 0
 			&& playerIndex < _playerHands.Count
 			&& handIndex >= 0
 			&& handIndex < _playerHands[playerIndex].Count
-			&& IsAttachableMagnetCard(_playerHands[playerIndex][handIndex]);
+			&& IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId);
 	}
 
-	private async Task PlayMagnetAttachmentToHandCardAnimationAsync(int playerIndex, int handIndex)
+	private async Task PlayMagnetAttachmentToHandCardAnimationAsync(int playerIndex, int handIndex, string itemCardId)
 	{
-		if (!IsInsideTree() || !IsValidMagnetAttachmentHandIndex(playerIndex, handIndex))
+		if (!IsInsideTree() || !IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))
 		{
 			return;
 		}
@@ -469,12 +477,13 @@ public partial class GameBoardScene
 		animationRoot.AddChild(cardVisual);
 
 		TextureRect? magnetOverlay = null;
-		if (_magnetCardOverlayTexture != null)
+		Texture2D? overlayTexture = GetItemAttachmentOverlayTexture(itemCardId);
+		if (overlayTexture != null)
 		{
 			magnetOverlay = new TextureRect
 			{
 				Name = "MagnetAttachmentOverlay",
-				Texture = _magnetCardOverlayTexture,
+				Texture = overlayTexture,
 				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
@@ -631,9 +640,21 @@ public partial class GameBoardScene
 		return GlobalPosition + (Size - CardVisualSize) / 2.0f + new Vector2(0.0f, -12.0f);
 	}
 
-	private static bool IsAttachableMagnetCard(PlayingCard card)
+	private Texture2D? GetItemAttachmentOverlayTexture(string itemCardId)
 	{
-		return !card.HasMagnetEffect && !IsExcludedDeckRank(card.Rank);
+		return itemCardId == DoubleItemCardId ? _doubleCardOverlayTexture : _magnetCardOverlayTexture;
+	}
+
+	private static bool IsAttachableMagnetCard(PlayingCard card, string itemCardId)
+	{
+		if (IsExcludedDeckRank(card.Rank))
+		{
+			return false;
+		}
+
+		return itemCardId == DoubleItemCardId
+			? !card.HasDoubleEffect
+			: !card.HasMagnetEffect;
 	}
 
 	private PlayCardResult ResolveItemCardEffect(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)

@@ -21,8 +21,8 @@
       "description": "看到轨道上最后 3 张背面牌的点数，打出后消失"
     },
     "double": {
-      "image": "double/run-003/processed/frames/frame-001.png",
-      "description": "本次收割到的所有普通牌在最终结算时，积分全部翻倍"
+      "image": "double/run-005/processed/frames/frame-001.png",
+      "description": "选择一张手牌进行双重附魔"
     },
     "overtime": {
       "image": "overtime/run-003/processed/frames/frame-001.png",

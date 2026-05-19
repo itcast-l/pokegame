@@ -25,7 +25,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
-debug_opponent_has_one_card = true
+debug_opponent_has_one_card = false
+debug_main_player_has_one_card = false
 
 [node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
 layout_mode = 1

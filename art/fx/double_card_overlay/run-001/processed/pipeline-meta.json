@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Double enchantment card overlay matching Lens-style oceanic refraction: paired lens medallions, aqua glass ribbons, shells, pearls, bubbles and sparkles framing a clear transparent card center; no text, no numbers, no x2 mark.",
+  "role": "",
+  "input": "art/fx/double_card_overlay/run-001/raw.png",
+  "threshold": 85,
+  "edge_threshold": 130,
+  "duration": 200,
+  "single_size": 768
+}

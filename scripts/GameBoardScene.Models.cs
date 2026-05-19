@@ -4,27 +4,34 @@ public partial class GameBoardScene
 {
 	private readonly struct PlayingCard
 	{
-		public PlayingCard(string suit, string rank, Texture2D texture, bool hasMagnetEffect = false)
+		public PlayingCard(string suit, string rank, Texture2D texture, bool hasMagnetEffect = false, bool hasDoubleEffect = false)
 		{
 			Suit = suit;
 			Rank = rank;
 			Texture = texture;
 			HasMagnetEffect = hasMagnetEffect;
+			HasDoubleEffect = hasDoubleEffect;
 		}
 
 		public string Suit { get; }
 		public string Rank { get; }
 		public Texture2D Texture { get; }
 		public bool HasMagnetEffect { get; }
+		public bool HasDoubleEffect { get; }
 
 		public PlayingCard WithMagnetEffect()
 		{
-			return HasMagnetEffect ? this : new PlayingCard(Suit, Rank, Texture, true);
+			return HasMagnetEffect ? this : new PlayingCard(Suit, Rank, Texture, true, HasDoubleEffect);
 		}
 
-		public PlayingCard WithoutMagnetEffect()
+		public PlayingCard WithDoubleEffect()
 		{
-			return HasMagnetEffect ? new PlayingCard(Suit, Rank, Texture) : this;
+			return HasDoubleEffect ? this : new PlayingCard(Suit, Rank, Texture, HasMagnetEffect, true);
+		}
+
+		public PlayingCard WithoutItemEffects()
+		{
+			return HasMagnetEffect || HasDoubleEffect ? new PlayingCard(Suit, Rank, Texture) : this;
 		}
 	}
 
@@ -38,6 +45,8 @@ public partial class GameBoardScene
 	private readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 
 	private readonly record struct TableSpecialCardTrigger(int TableCardIndex, Texture2D Texture, Vector2 GlobalPosition, int ZIndex);
+
+	private readonly record struct PendingItemAttachmentReward(int PlayerIndex, string ItemCardId);
 
 	private readonly record struct QuestionCardRewardGrant(ItemCard ItemCard, int ItemHandIndex, bool RequiresMagnetAttachment = false);
 

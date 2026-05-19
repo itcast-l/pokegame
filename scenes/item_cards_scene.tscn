@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://d5uqwxkujwdy" path="res://art/cards/item_cards/magnet/run-004/processed/frames/frame-001.png" id="4_magnet"]
 [ext_resource type="Texture2D" uid="uid://c6oxrktk2x12n" path="res://art/cards/item_cards/greed/run-004/processed/frames/frame-001.png" id="5_greed"]
 [ext_resource type="Texture2D" uid="uid://q2uj30bj23dw" path="res://art/cards/item_cards/lens/run-004/processed/frames/frame-001.png" id="6_lens"]
-[ext_resource type="Texture2D" uid="uid://7b3j0veehvdw" path="res://art/cards/item_cards/double/run-004/processed/frames/frame-001.png" id="7_double"]
+[ext_resource type="Texture2D" uid="uid://bvfmqxmvevq8k" path="res://art/cards/item_cards/double/run-005/processed/frames/frame-001.png" id="7_double"]
 [ext_resource type="Texture2D" uid="uid://h2gi3138hbra" path="res://art/cards/item_cards/overtime/run-004/processed/frames/frame-001.png" id="8_overtime"]
 [ext_resource type="Texture2D" uid="uid://dmh0h2213ukkr" path="res://art/cards/item_cards/draw_card/run-004/processed/frames/frame-001.png" id="9_draw_card"]
 [ext_resource type="Texture2D" uid="uid://chy7vfxvr6rnt" path="res://art/cards/item_cards/shuffle/run-004/processed/frames/frame-001.png" id="10_shuffle"]
@@ -71,7 +71,7 @@ texture = ExtResource("6_lens")
 
 [node name="DoubleCardItem" type="Node2D" parent="ItemCards" unique_id=1748694407]
 script = ExtResource("3_item_card_data")
-item_description = "本次积分翻倍"
+item_description = "本次获得翻倍分数"
 
 [node name="Double" type="Sprite2D" parent="ItemCards/DoubleCardItem" unique_id=1233789211]
 position = Vector2(980, 180)

@@ -13,7 +13,7 @@ public partial class MainMenuScene : Control
 	private const string AvatarEntryPath = "AvatarEntryLayer/MainMenuAvatarEntry";
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const string AvatarEditScenePath = "res://scenes/character_avatar_edit_scene.tscn";
-	private const string SettingsPanelTexturePath = "res://art/ui/settings_menu/run-001/processed/clean.png";
+	private const string SettingsPanelTexturePath = "res://art/ui/settings_menu/run-002/processed/clean.png";
 	private const string SettingsConfigPath = "user://settings.cfg";
 	private const float DialogFadeSeconds = 0.14f;
 	private const float DefaultMasterVolume = 0.82f;
@@ -273,7 +273,7 @@ public partial class MainMenuScene : Control
 		_settingsDialogPanel = new Control
 		{
 			Name = "SettingsDialogPanel",
-			CustomMinimumSize = new Vector2(720.0f, 700.0f),
+			CustomMinimumSize = new Vector2(560.0f, 500.0f),
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		center.AddChild(_settingsDialogPanel);
@@ -315,10 +315,10 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		margin.SetAnchorsPreset(LayoutPreset.FullRect);
-		margin.AddThemeConstantOverride("margin_left", 102);
-		margin.AddThemeConstantOverride("margin_top", 92);
-		margin.AddThemeConstantOverride("margin_right", 102);
-		margin.AddThemeConstantOverride("margin_bottom", 80);
+		margin.AddThemeConstantOverride("margin_left", 74);
+		margin.AddThemeConstantOverride("margin_top", 64);
+		margin.AddThemeConstantOverride("margin_right", 74);
+		margin.AddThemeConstantOverride("margin_bottom", 56);
 		_settingsDialogPanel.AddChild(margin);
 
 		var layout = new VBoxContainer

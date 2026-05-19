@@ -18,6 +18,11 @@ public partial class ItemCardData : Node2D
 		["Shuffle"] = "shuffle",
 	};
 
+	private static readonly Dictionary<string, string> ItemCardArtRunsById = new()
+	{
+		["double"] = "run-005",
+	};
+
 	private static readonly Dictionary<string, Texture2D[]> ItemCardFrames = new()
 	{
 		["QuestionMark"] = LoadFrames(ItemCardIdsBySpriteName["QuestionMark"]),
@@ -89,12 +94,13 @@ public partial class ItemCardData : Node2D
 	private static Texture2D[] LoadFrames(string folderName)
 	{
 		const string root = "res://art/cards/item_cards";
+		string runName = ItemCardArtRunsById.GetValueOrDefault(folderName, "run-004");
 		return new[]
 		{
-			GD.Load<Texture2D>($"{root}/{folderName}/run-004/processed/frames/frame-001.png"),
-			GD.Load<Texture2D>($"{root}/{folderName}/run-004/processed/frames/frame-002.png"),
-			GD.Load<Texture2D>($"{root}/{folderName}/run-004/processed/frames/frame-003.png"),
-			GD.Load<Texture2D>($"{root}/{folderName}/run-004/processed/frames/frame-004.png"),
+			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-001.png"),
+			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-002.png"),
+			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-003.png"),
+			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-004.png"),
 		};
 	}
 

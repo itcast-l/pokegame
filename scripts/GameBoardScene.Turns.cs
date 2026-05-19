@@ -200,6 +200,7 @@ public partial class GameBoardScene
 		var pendingFaceUpMagnetTriggerIndexes = new HashSet<int>();
 		var resolvedMagnetTriggerIndexes = new HashSet<int>();
 		var magnetExtraCaptureIndexes = new HashSet<int>();
+		var resolvedDoubleTriggerIndexes = new HashSet<int>();
 		if (captureStartIndex >= 0)
 		{
 			TableCard matchedTableCard = _tableCards[captureStartIndex];
@@ -241,7 +242,8 @@ public partial class GameBoardScene
 				turnSequenceGeneration,
 				pendingFaceUpMagnetTriggerIndexes,
 				resolvedMagnetTriggerIndexes,
-				magnetExtraCaptureIndexes);
+				magnetExtraCaptureIndexes,
+				resolvedDoubleTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return new PlayCardResult(false, false);
@@ -258,11 +260,11 @@ public partial class GameBoardScene
 			}
 
 			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, false, magnetExtraCaptureIndexes);
-			int collectedPoints = GetCapturedTablePoints(captureStartIndex);
+			int collectedPoints = GetCapturedTablePoints(captureStartIndex, magnetExtraCaptureIndexes);
 			int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
 			if (collectedPoints > 0)
 			{
-				List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, true);
+				List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, true, magnetExtraCaptureIndexes);
 				await PlayScoreFillCollectionAsync(
 					scorePlayerIndex,
 					scoringCardVisuals,
@@ -354,6 +356,11 @@ public partial class GameBoardScene
 		if (itemCard.Id == LensItemCardId)
 		{
 			return await PlayLensCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		}
+
+		if (IsAttachmentItemCard(itemCard.Id))
+		{
+			return await PlayAttachmentItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
 		}
 
 		if (playerIndex == MainPlayerIndex && RequiresPlayerTarget(itemCard.Id))
@@ -531,6 +538,54 @@ public partial class GameBoardScene
 
 		RenderTableCards();
 		CheckForWinner();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> PlayAttachmentItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| playerIndex >= _playerHandAreas.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		ItemCard itemCard = itemHand[itemHandIndex];
+		if (!IsAttachmentItemCard(itemCard.Id) || !PlayerHasAttachableMagnetCard(playerIndex, itemCard.Id))
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
+		itemHand.RemoveAt(itemHandIndex);
+		RenderPlayerHands();
+		await PlaySpecialCardTriggerEffectAsync(
+			itemCard.Texture,
+			itemGlobalPosition ?? Vector2.Zero,
+			0,
+			GetCardRotationDegreesForPlayer(playerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		if (playerIndex == MainPlayerIndex)
+		{
+			await ResolveMainPlayerMagnetAttachmentAsync(itemCard.Id, turnSequenceGeneration);
+		}
+		else
+		{
+			AttachMagnetToRandomHandCard(playerIndex, itemCard.Id);
+		}
+
+		RenderPlayerHands();
 		return new PlayCardResult(true, false, CompletesTurn: false);
 	}
 
@@ -958,7 +1013,8 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		HashSet<int> pendingFaceUpMagnetTriggerIndexes,
 		HashSet<int> resolvedMagnetTriggerIndexes,
-		HashSet<int> magnetExtraCaptureIndexes)
+		HashSet<int> magnetExtraCaptureIndexes,
+		HashSet<int> resolvedDoubleTriggerIndexes)
 	{
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
 		{
@@ -977,7 +1033,17 @@ public partial class GameBoardScene
 						captureStartIndex,
 						turnSequenceGeneration,
 						resolvedMagnetTriggerIndexes,
-						magnetExtraCaptureIndexes);
+						magnetExtraCaptureIndexes,
+						resolvedDoubleTriggerIndexes);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return;
+					}
+				}
+
+				if (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
+				{
+					await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
 					{
 						return;
@@ -1014,7 +1080,9 @@ public partial class GameBoardScene
 			RenderTableCards();
 			if (revealedCardPoints.HasValue)
 			{
-				_ = PlayTableCardPointPopupAsync(tableCardIndex, revealedCardPoints.Value);
+				bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
+				int popupPoints = hasDoubleEffect ? revealedCardPoints.Value * 2 : revealedCardPoints.Value;
+				_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
 			}
 
 			if (tableCard.Card.HasValue && tableCard.Card.Value.HasMagnetEffect)
@@ -1024,7 +1092,17 @@ public partial class GameBoardScene
 					captureStartIndex,
 					turnSequenceGeneration,
 					resolvedMagnetTriggerIndexes,
-					magnetExtraCaptureIndexes);
+					magnetExtraCaptureIndexes,
+					resolvedDoubleTriggerIndexes);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return;
+				}
+			}
+
+			if (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
+			{
+				await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return;
@@ -1044,7 +1122,8 @@ public partial class GameBoardScene
 		int captureStartIndex,
 		int turnSequenceGeneration,
 		HashSet<int> resolvedMagnetTriggerIndexes,
-		HashSet<int> magnetExtraCaptureIndexes)
+		HashSet<int> magnetExtraCaptureIndexes,
+		HashSet<int> resolvedDoubleTriggerIndexes)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -1072,7 +1151,8 @@ public partial class GameBoardScene
 			captureStartIndex,
 			turnSequenceGeneration,
 			resolvedMagnetTriggerIndexes,
-			magnetExtraCaptureIndexes);
+			magnetExtraCaptureIndexes,
+			resolvedDoubleTriggerIndexes);
 	}
 
 	private async Task PlayMagnetTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
@@ -1103,11 +1183,64 @@ public partial class GameBoardScene
 			tableCardIndex * 2 + 1);
 	}
 
+	private async Task ResolveDoubleTableCardTriggerAsync(
+		int tableCardIndex,
+		int turnSequenceGeneration,
+		HashSet<int> resolvedDoubleTriggerIndexes)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasDoubleEffect)
+		{
+			return;
+		}
+
+		if (!resolvedDoubleTriggerIndexes.Add(tableCardIndex))
+		{
+			return;
+		}
+
+		await PlayDoubleTableCardTriggerEffectAsync(tableCardIndex, turnSequenceGeneration);
+	}
+
+	private async Task PlayDoubleTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (tableCardIndex >= cardPositions.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasDoubleEffect)
+		{
+			return;
+		}
+
+		Texture2D triggerTexture = _itemCardTextures.TryGetValue(DoubleItemCardId, out Texture2D? doubleTexture)
+			? doubleTexture
+			: tableCard.Card.Value.Texture;
+		await PlaySpecialCardTriggerEffectAsync(
+			triggerTexture,
+			_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+			tableCardIndex * 2 + 1);
+	}
+
 	private async Task RevealRandomMagnetExtraTableCardAsync(
 		int captureStartIndex,
 		int turnSequenceGeneration,
 		HashSet<int> resolvedMagnetTriggerIndexes,
-		HashSet<int> magnetExtraCaptureIndexes)
+		HashSet<int> magnetExtraCaptureIndexes,
+		HashSet<int> resolvedDoubleTriggerIndexes)
 	{
 		int tableCardIndex = PickRandomMagnetExtraRevealIndex(captureStartIndex, magnetExtraCaptureIndexes);
 		if (tableCardIndex < 0)
@@ -1132,7 +1265,8 @@ public partial class GameBoardScene
 		tableCard.IsFaceUp = true;
 		magnetExtraCaptureIndexes.Add(tableCardIndex);
 		RenderTableCards();
-		_ = PlayTableCardPointPopupAsync(tableCardIndex, revealedCardPoints);
+		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
+		_ = PlayTableCardPointPopupAsync(tableCardIndex, hasDoubleEffect ? revealedCardPoints * 2 : revealedCardPoints, hasDoubleEffect);
 		if (tableCard.Card.Value.HasMagnetEffect)
 		{
 			await ResolveMagnetTableCardTriggerAsync(
@@ -1140,7 +1274,17 @@ public partial class GameBoardScene
 				captureStartIndex,
 				turnSequenceGeneration,
 				resolvedMagnetTriggerIndexes,
-				magnetExtraCaptureIndexes);
+				magnetExtraCaptureIndexes,
+				resolvedDoubleTriggerIndexes);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+
+		if (tableCard.Card.Value.HasDoubleEffect)
+		{
+			await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -1233,7 +1377,7 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayTableCardPointPopupAsync(int tableCardIndex, int points)
+	private async Task PlayTableCardPointPopupAsync(int tableCardIndex, int points, bool isDoubleScore = false)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -1253,10 +1397,10 @@ public partial class GameBoardScene
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
-			Size = new Vector2(CardVisualSize.X, 28.0f),
+			Size = new Vector2(CardVisualSize.X, isDoubleScore ? 34.0f : 28.0f),
 			ZIndex = TableCardPointPopupZIndex,
 		};
-		pointLabel.AddThemeFontSizeOverride("font_size", TableCardPointPopupFontSize);
+		pointLabel.AddThemeFontSizeOverride("font_size", isDoubleScore ? TableCardPointPopupDoubleFontSize : TableCardPointPopupFontSize);
 		pointLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.94f, 0.56f));
 		pointLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.82f));
 		pointLabel.AddThemeConstantOverride("shadow_offset_x", 2);
@@ -1310,7 +1454,8 @@ public partial class GameBoardScene
 			}
 
 			TableCard tableCard = _tableCards[tableCardIndex];
-			if (scoringCardsOnly && (!IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex) || !tableCard.Card.HasValue))
+			bool isScoringCardIndex = IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex) || isExtraCapturedIndex;
+			if (scoringCardsOnly && (!isScoringCardIndex || !tableCard.Card.HasValue))
 			{
 				continue;
 			}
@@ -1350,9 +1495,9 @@ public partial class GameBoardScene
 			{
 				itemOverlayTexture = tableCard.ItemOverlay.Value.Texture;
 			}
-			else if (tableCard.Card.HasValue && tableCard.Card.Value.HasMagnetEffect && tableCard.IsFaceUp)
+			else if (tableCard.Card.HasValue && tableCard.IsFaceUp)
 			{
-				itemOverlayTexture = _magnetCardOverlayTexture;
+				itemOverlayTexture = GetCardAttachmentOverlayTexture(tableCard.Card.Value);
 			}
 
 			visuals.Add(new CapturedTableCardVisual(
@@ -1630,7 +1775,7 @@ public partial class GameBoardScene
 		return -1;
 	}
 
-	private int GetCapturedTablePoints(int captureStartIndex)
+	private int GetCapturedTablePoints(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
 		{
@@ -1640,19 +1785,77 @@ public partial class GameBoardScene
 		int collectedPoints = 0;
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
+			TableCard tableCard = _tableCards[tableCardIndex];
 			if (!IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
 			{
 				continue;
 			}
 
-			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.Card.HasValue)
 			{
 				collectedPoints += GetCardScoreValue(tableCard.Card.Value);
 			}
 		}
 
-		return collectedPoints;
+		if (extraTableCardIndexes != null)
+		{
+			foreach (int tableCardIndex in extraTableCardIndexes)
+			{
+				if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+				{
+					continue;
+				}
+
+				TableCard tableCard = _tableCards[tableCardIndex];
+				if (tableCard.Card.HasValue)
+				{
+					collectedPoints += GetCardScoreValue(tableCard.Card.Value);
+				}
+			}
+		}
+
+		return HasCapturedDoubleScoreEffect(captureStartIndex, extraTableCardIndexes)
+			? collectedPoints * 2
+			: collectedPoints;
+	}
+
+	private bool HasCapturedDoubleScoreEffect(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
+	{
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			if (HasDoubleScoreEffect(_tableCards[tableCardIndex]))
+			{
+				return true;
+			}
+		}
+
+		if (extraTableCardIndexes == null)
+		{
+			return false;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			if (tableCardIndex >= 0
+				&& tableCardIndex < _tableCards.Count
+				&& HasDoubleScoreEffect(_tableCards[tableCardIndex]))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static bool HasDoubleScoreEffect(TableCard tableCard)
+	{
+		return (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
+			|| (tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == DoubleItemCardId);
 	}
 
 	private TableSpecialCardTrigger? GetCapturedSpecialCardTrigger(int captureStartIndex)
@@ -1808,7 +2011,7 @@ public partial class GameBoardScene
 
 		int captureCount = _tableCards.Count - captureStartIndex;
 		int collectedCardCount = 0;
-		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex) : 0;
+		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex, extraTableCardIndexes) : 0;
 		int scorePlayerIndex = awardScore ? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex) : playerIndex;
 		List<int> validExtraCaptureIndexes = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
@@ -1906,8 +2109,8 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		string itemCardId = DebugQuestionCardRewardsLens && IsSpecialItemCardEnabled(LensItemCardId)
-			? LensItemCardId
+		string itemCardId = DebugQuestionCardRewardsDouble && IsSpecialItemCardEnabled(DoubleItemCardId)
+			? DoubleItemCardId
 			: rewardItemCardIds[_rng.RandiRange(0, rewardItemCardIds.Count - 1)];
 
 		ItemCard? itemCard = CreateItemCard(itemCardId);
@@ -1916,9 +2119,9 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		if (itemCardId == MagnetItemCardId)
+		if (IsAttachmentItemCard(itemCardId))
 		{
-			_pendingMagnetAttachmentRewardPlayers.Enqueue(playerIndex);
+			_pendingItemAttachmentRewards.Enqueue(new PendingItemAttachmentReward(playerIndex, itemCardId));
 			return new QuestionCardRewardGrant(itemCard.Value, -1, true);
 		}
 
@@ -2023,6 +2226,11 @@ public partial class GameBoardScene
 		}
 
 		if (itemCardId == LensItemCardId && !HasLensRevealTargets(playerIndex))
+		{
+			return false;
+		}
+
+		if (IsAttachmentItemCard(itemCardId) && !PlayerHasAttachableMagnetCard(playerIndex, itemCardId))
 		{
 			return false;
 		}

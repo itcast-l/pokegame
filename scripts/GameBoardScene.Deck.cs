@@ -23,7 +23,7 @@ public partial class GameBoardScene
 		_currentTurnPlayerIndex = MainPlayerIndex;
 		_completedTurnsSinceQuestionCardRefresh = 0;
 		_questionCardRefreshAnchorPlayerIndex = -1;
-		_pendingMagnetAttachmentRewardPlayers.Clear();
+		_pendingItemAttachmentRewards.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		_isResolvingMagnetAttachmentSelection = false;
@@ -48,6 +48,7 @@ public partial class GameBoardScene
 		DealDeckToPlayerDecks(deck);
 
 		DrawStartingHands();
+		ApplyDebugMainPlayerOneCardHand();
 		ApplyDebugOpponentOneCardHand();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
@@ -158,7 +159,7 @@ public partial class GameBoardScene
 			return card;
 		}
 
-		return card.WithoutMagnetEffect();
+		return card.WithoutItemEffects();
 	}
 
 	private bool ShouldPreserveCardEffectsWhenEnteringDeck()
@@ -178,6 +179,19 @@ public partial class GameBoardScene
 		_playerHands[opponentPlayerIndex].Clear();
 		_playerHands[opponentPlayerIndex].Add(onlyCard);
 		_playerDecks[opponentPlayerIndex].Clear();
+	}
+
+	private void ApplyDebugMainPlayerOneCardHand()
+	{
+		if (!debug_main_player_has_one_card || player_count != 2 || _playerHands[MainPlayerIndex].Count == 0)
+		{
+			return;
+		}
+
+		PlayingCard onlyCard = _playerHands[MainPlayerIndex][0];
+		_playerHands[MainPlayerIndex].Clear();
+		_playerHands[MainPlayerIndex].Add(onlyCard);
+		_playerDecks[MainPlayerIndex].Clear();
 	}
 
 	private List<PlayingCard> LoadDeckWithoutFaceCards()

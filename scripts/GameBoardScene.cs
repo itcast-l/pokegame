@@ -27,6 +27,7 @@ public partial class GameBoardScene : Control
 	private const string LensRevealWispFramePattern = "res://art/fx/lens_reveal_sprites/run-001/processed/fx-{0}.png";
 	private const int LensRevealWispFrameCount = 4;
 	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
+	private const string DoubleCardOverlayPath = "res://art/fx/double_card_overlay/run-002/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
 	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
@@ -50,9 +51,13 @@ public partial class GameBoardScene : Control
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
-	private const bool DebugQuestionCardRewardsLens = true;
+	private const bool DebugQuestionCardRewardsDouble = true;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId };
+	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId, DoubleItemCardId };
+	private static readonly Dictionary<string, string> ItemCardArtRunsById = new()
+	{
+		[DoubleItemCardId] = "run-005",
+	};
 	private static readonly string[] AllItemCardIds =
 	{
 		QuestionMarkItemCardId,
@@ -99,6 +104,7 @@ public partial class GameBoardScene : Control
 	private const float TableCardPointPopupRise = 24.0f;
 	private const float TableCardPointPopupTopOffset = 26.0f;
 	private const int TableCardPointPopupFontSize = 22;
+	private const int TableCardPointPopupDoubleFontSize = 26;
 	private const int TableCardPointPopupZIndex = 2800;
 	private const int QuestionCardRefreshCyclesAfterCapture = 2;
 	private const double MagnetAttachmentSelectionSeconds = 5.0;
@@ -129,10 +135,11 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
-	private readonly Queue<int> _pendingMagnetAttachmentRewardPlayers = new();
+	private readonly Queue<PendingItemAttachmentReward> _pendingItemAttachmentRewards = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
 	private Texture2D? _magnetCardOverlayTexture;
+	private Texture2D? _doubleCardOverlayTexture;
 	private float _cardBackAnimationTime;
 	private Control? _winnerBannerRoot;
 	private Control? _winnerBannerPanel;
@@ -182,6 +189,9 @@ public partial class GameBoardScene : Control
 	[Export]
 	public bool debug_opponent_has_one_card = false;
 
+	[Export]
+	public bool debug_main_player_has_one_card = false;
+
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
 	private Control _topPlayerArea = default!;
@@ -197,7 +207,7 @@ public partial class GameBoardScene : Control
 		LoadScoreFillEffectTextures();
 		LoadItemCardTextures();
 		LoadItemCardEnabledStates();
-		LoadMagnetCardOverlayTexture();
+		LoadAttachmentCardOverlayTextures();
 		LoadQuestionCardTransformTextures();
 		LoadSpecialCardTriggerEffectTextures();
 		LoadBombPairDestroyEffectTextures();
@@ -344,12 +354,18 @@ public partial class GameBoardScene : Control
 		}
 	}
 
-	private void LoadMagnetCardOverlayTexture()
+	private void LoadAttachmentCardOverlayTextures()
 	{
 		_magnetCardOverlayTexture = GD.Load<Texture2D>(MagnetCardOverlayPath);
 		if (_magnetCardOverlayTexture == null)
 		{
 			GD.PushWarning($"Missing magnet card overlay texture: {MagnetCardOverlayPath}");
+		}
+
+		_doubleCardOverlayTexture = GD.Load<Texture2D>(DoubleCardOverlayPath);
+		if (_doubleCardOverlayTexture == null)
+		{
+			GD.PushWarning($"Missing double card overlay texture: {DoubleCardOverlayPath}");
 		}
 	}
 
@@ -394,7 +410,7 @@ public partial class GameBoardScene : Control
 		_itemCardTextures.Clear();
 		foreach (string itemCardId in AllItemCardIds)
 		{
-			string path = $"{ItemCardRootPath}/{itemCardId}/run-004/processed/frames/frame-001.png";
+			string path = $"{ItemCardRootPath}/{itemCardId}/{GetItemCardArtRunName(itemCardId)}/processed/frames/frame-001.png";
 			Texture2D? texture = GD.Load<Texture2D>(path);
 			if (texture == null)
 			{
@@ -404,6 +420,11 @@ public partial class GameBoardScene : Control
 
 			_itemCardTextures[itemCardId] = texture;
 		}
+	}
+
+	private static string GetItemCardArtRunName(string itemCardId)
+	{
+		return ItemCardArtRunsById.TryGetValue(itemCardId, out string? runName) ? runName : "run-004";
 	}
 
 	private ItemCard? CreateItemCard(string itemCardId)

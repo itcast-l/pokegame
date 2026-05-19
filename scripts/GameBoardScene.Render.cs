@@ -107,7 +107,7 @@ public partial class GameBoardScene
 				int itemHandIndex,
 				bool animateCardBack,
 				float visualScale,
-				bool showMagnetOverlay = false,
+				Texture2D? attachmentOverlayTexture = null,
 				bool showMagnetSelectionHighlight = false,
 				string tooltipText = "")
 			{
@@ -229,9 +229,9 @@ public partial class GameBoardScene
 					};
 				}
 
-				if (showMagnetOverlay)
+				if (attachmentOverlayTexture != null)
 				{
-					AddMagnetOverlay(cardVisual, Vector2.Zero, visualSize, 0.0f, 1);
+					AddCardAttachmentOverlay(cardVisual, attachmentOverlayTexture, Vector2.Zero, visualSize, 0.0f, 1);
 				}
 
 				cardSlot.AddChild(cardVisual);
@@ -245,7 +245,7 @@ public partial class GameBoardScene
 				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
 				bool showMagnetSelectionHighlight = isMagnetSelectionActive
 					&& playerIndex == MainPlayerIndex
-					&& IsAttachableMagnetCard(card);
+					&& IsAttachableMagnetCard(card, _pendingItemCardId);
 				bool isPlayable = showMagnetSelectionHighlight || (playerIndex == MainPlayerIndex && canMainPlayerAct);
 				AddHandCard(
 					texture,
@@ -255,9 +255,9 @@ public partial class GameBoardScene
 					-1,
 					showCardBack,
 					1.0f,
-					card.HasMagnetEffect && !showCardBack,
+					showCardBack ? null : GetCardAttachmentOverlayTexture(card),
 					showMagnetSelectionHighlight,
-					GetMagnetCardDescription(card, showCardBack));
+					GetAttachmentCardDescription(card, showCardBack));
 			}
 
 			for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
@@ -302,14 +302,22 @@ public partial class GameBoardScene
 		return Mathf.Clamp(_openingVisiblePileCardCounts[playerIndex], 0, pileCount);
 	}
 
-	private string GetMagnetCardDescription(PlayingCard card, bool showCardBack)
+	private string GetAttachmentCardDescription(PlayingCard card, bool showCardBack)
 	{
-		if (showCardBack || !card.HasMagnetEffect)
+		if (showCardBack)
 		{
 			return string.Empty;
 		}
 
-		return _itemCardDescriptions.TryGetValue(MagnetItemCardId, out string? description)
+		string itemCardId = card.HasDoubleEffect
+			? DoubleItemCardId
+			: card.HasMagnetEffect ? MagnetItemCardId : string.Empty;
+		if (string.IsNullOrEmpty(itemCardId))
+		{
+			return string.Empty;
+		}
+
+		return _itemCardDescriptions.TryGetValue(itemCardId, out string? description)
 			? description
 			: string.Empty;
 	}
@@ -421,17 +429,34 @@ public partial class GameBoardScene
 		};
 	}
 
-	private void AddMagnetOverlay(Node parent, Vector2 position, Vector2 size, float rotationDegrees = 0.0f, int zIndex = 1, float alpha = 1.0f)
+	private Texture2D? GetCardAttachmentOverlayTexture(PlayingCard card)
 	{
-		if (_magnetCardOverlayTexture == null)
+		if (card.HasDoubleEffect)
 		{
-			return;
+			return _doubleCardOverlayTexture;
 		}
 
+		if (card.HasMagnetEffect)
+		{
+			return _magnetCardOverlayTexture;
+		}
+
+		return null;
+	}
+
+	private static void AddCardAttachmentOverlay(
+		Node parent,
+		Texture2D overlayTexture,
+		Vector2 position,
+		Vector2 size,
+		float rotationDegrees = 0.0f,
+		int zIndex = 1,
+		float alpha = 1.0f)
+	{
 		var overlay = new TextureRect
 		{
-			Name = "MagnetCardOverlay",
-			Texture = _magnetCardOverlayTexture,
+			Name = "CardAttachmentOverlay",
+			Texture = overlayTexture,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
@@ -633,7 +658,7 @@ public partial class GameBoardScene
 				};
 				if (tableCardData.Card.HasValue)
 				{
-					string tooltipText = GetMagnetCardDescription(tableCardData.Card.Value, !tableCardData.IsFaceUp);
+					string tooltipText = GetAttachmentCardDescription(tableCardData.Card.Value, !tableCardData.IsFaceUp);
 					if (!string.IsNullOrEmpty(tooltipText))
 					{
 						tableCard.MouseFilter = MouseFilterEnum.Stop;
@@ -657,10 +682,14 @@ public partial class GameBoardScene
 				{
 					_centerArena.AddChild(descriptionLabel);
 				}
-				if (tableCardData.Card.HasValue && tableCardData.Card.Value.HasMagnetEffect && (tableCardData.IsFaceUp || showMainPlayerPreview))
+				Texture2D? attachmentOverlayTexture = tableCardData.Card.HasValue && (tableCardData.IsFaceUp || showMainPlayerPreview)
+					? GetCardAttachmentOverlayTexture(tableCardData.Card.Value)
+					: null;
+				if (attachmentOverlayTexture != null)
 				{
-					AddMagnetOverlay(
+					AddCardAttachmentOverlay(
 						_centerArena,
+						attachmentOverlayTexture,
 						cardPositions[cardIndex],
 						CardVisualSize,
 						0.0f,

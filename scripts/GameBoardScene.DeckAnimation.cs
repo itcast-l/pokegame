@@ -150,16 +150,16 @@ public partial class GameBoardScene
 			ZIndex = 0,
 		};
 		flightCard.AddChild(cardVisual);
-		TextureRect? magnetOverlay = null;
-		bool startShowsMagnetOverlay = playedCard.HasMagnetEffect
-			&& _magnetCardOverlayTexture != null
+		TextureRect? attachmentOverlay = null;
+		Texture2D? attachmentOverlayTexture = GetCardAttachmentOverlayTexture(playedCard);
+		bool startShowsAttachmentOverlay = attachmentOverlayTexture != null
 			&& (playerIndex == MainPlayerIndex || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null);
-		if (startShowsMagnetOverlay)
+		if (startShowsAttachmentOverlay)
 		{
-			magnetOverlay = new TextureRect
+			attachmentOverlay = new TextureRect
 			{
-				Name = "PlayedCardMagnetOverlay",
-				Texture = _magnetCardOverlayTexture,
+				Name = "PlayedCardAttachmentOverlay",
+				Texture = attachmentOverlayTexture,
 				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
@@ -168,7 +168,7 @@ public partial class GameBoardScene
 				PivotOffset = CardVisualSize / 2.0f,
 				ZIndex = 1,
 			};
-			flightCard.AddChild(magnetOverlay);
+			flightCard.AddChild(attachmentOverlay);
 		}
 
 		try
@@ -176,7 +176,7 @@ public partial class GameBoardScene
 			UpdateCardToTableAnimation(
 				flightCard,
 				cardVisual,
-				magnetOverlay,
+				attachmentOverlay,
 				startTexture,
 				targetTexture,
 				startGlobalPosition,
@@ -193,7 +193,7 @@ public partial class GameBoardScene
 				Callable.From<float>(progress => UpdateCardToTableAnimation(
 					flightCard,
 					cardVisual,
-					magnetOverlay,
+					attachmentOverlay,
 					startTexture,
 					targetTexture,
 					startGlobalPosition,
@@ -679,7 +679,7 @@ public partial class GameBoardScene
 	private static void UpdateCardToTableAnimation(
 		Control flightCard,
 		TextureRect cardVisual,
-		TextureRect? magnetOverlay,
+		TextureRect? attachmentOverlay,
 		Texture2D startTexture,
 		Texture2D targetTexture,
 		Vector2 startGlobalPosition,
@@ -703,10 +703,10 @@ public partial class GameBoardScene
 		{
 			cardVisual.Texture = startTexture;
 			cardVisual.Modulate = Colors.White.Lerp(targetModulate, clampedProgress);
-			if (magnetOverlay != null)
+			if (attachmentOverlay != null)
 			{
-				magnetOverlay.Visible = true;
-				magnetOverlay.Modulate = cardVisual.Modulate;
+				attachmentOverlay.Visible = true;
+				attachmentOverlay.Modulate = cardVisual.Modulate;
 			}
 
 			flightCard.Scale = Vector2.One;
@@ -716,10 +716,10 @@ public partial class GameBoardScene
 		bool showingBack = clampedProgress >= 0.5f;
 		cardVisual.Texture = showingBack ? targetTexture : startTexture;
 		cardVisual.Modulate = Colors.White;
-		if (magnetOverlay != null)
+		if (attachmentOverlay != null)
 		{
-			magnetOverlay.Visible = !showingBack;
-			magnetOverlay.Modulate = Colors.White;
+			attachmentOverlay.Visible = !showingBack;
+			attachmentOverlay.Modulate = Colors.White;
 		}
 
 		float halfProgress = showingBack
@@ -885,6 +885,10 @@ public partial class GameBoardScene
 			card.Position = GetItemCardVisualPosition(reward.ItemCard.Id);
 			card.Size = rewardVisualSize;
 			card.PivotOffset = rewardVisualSize / 2.0f;
+			if (reward.RequiresMagnetAttachment)
+			{
+				return;
+			}
 
 			Vector2 insertStartGlobalPosition = transformAreaGlobalPosition;
 			animationRoot.GlobalPosition = insertStartGlobalPosition;
