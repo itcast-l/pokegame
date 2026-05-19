@@ -1,0 +1,11 @@
+{
+  "target": "player",
+  "mode": "single",
+  "prompt": "Single static 2D game avatar portrait for the main playable character: cat head only, no body, clean HD pixel-inspired monster-taming RPG style, ginger and cream fur, teal eyes, teal scarf knot and gem charm, solid #FF00FF background for transparency.",
+  "role": "",
+  "input": "art/characters/player_cat_avatar/run-001/source.png",
+  "threshold": 125,
+  "edge_threshold": 210,
+  "duration": 200,
+  "single_size": 512
+}

@@ -1,0 +1,108 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarPreview.cs" id="1_character_avatar_preview"]
+[ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_character_avatar"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_controls"]
+bg_color = Color(0.0156863, 0.117647, 0.133333, 0.76)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.48, 1, 0.92, 0.32)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="CharacterAvatarPreview" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_character_avatar_preview")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.015, 0.075, 0.09, 1)
+
+[node name="PreviewArea" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -112.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="AvatarAnchor" type="Control" parent="PreviewArea"]
+custom_minimum_size = Vector2(220, 220)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CharacterAvatar" parent="PreviewArea/AvatarAnchor" instance=ExtResource("2_character_avatar")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Controls" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(0, 86)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -104.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_controls")
+
+[node name="ActionButtons" type="HBoxContainer" parent="Controls"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Idle" type="Button" parent="Controls/ActionButtons"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "待机"
+
+[node name="Score" type="Button" parent="Controls/ActionButtons"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "得分"
+
+[node name="Attack" type="Button" parent="Controls/ActionButtons"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "攻击"
+
+[node name="Hit" type="Button" parent="Controls/ActionButtons"]
+custom_minimum_size = Vector2(106, 44)
+layout_mode = 2
+text = "受到攻击"
+
+[node name="Victory" type="Button" parent="Controls/ActionButtons"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "胜利"
+
+[node name="Defeat" type="Button" parent="Controls/ActionButtons"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "失败"

@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://b82b6b0sb0p4n" path="res://scripts/UnderwaterAmbientLayer.cs" id="4_underwater_ambient_layer"]
 [ext_resource type="Script" uid="uid://kab5lotekms7" path="res://scripts/ScoreAvatarMeter.cs" id="5_score_avatar_meter"]
 [ext_resource type="Script" uid="uid://b3s43m2q8xefy" path="res://scripts/ScoreEffectTarget.cs" id="6_score_effect_target"]
+[ext_resource type="Script" uid="uid://cx5lmatxxhx6d" path="res://scripts/DraggableAvatarArea.cs" id="7_draggable_avatar_area"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_water_caustic"]
 shader = ExtResource("3_water_caustic_shader")
@@ -24,6 +25,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
+debug_opponent_has_one_card = true
 
 [node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
 layout_mode = 1
@@ -355,9 +357,22 @@ mouse_filter = 2
 [node name="TopAvatarAnchor" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=1786079014]
 position = Vector2(120.216, 78.304)
 
+[node name="Player2AvatarArea" type="Control" parent="LayoutAreas/TopPlayerArea" unique_id=490703162]
+unique_name_in_owner = true
+z_index = 3
+custom_minimum_size = Vector2(156, 156)
+anchors_preset = 0
+offset_left = 60.216003
+offset_top = -9.695999
+offset_right = 216.216
+offset_bottom = 146.304
+scale = Vector2(0.5, 0.5)
+mouse_default_cursor_shape = 13
+script = ExtResource("7_draggable_avatar_area")
+
 [node name="Player2ScoreMeter" type="Control" parent="LayoutAreas/TopPlayerArea" unique_id=2136433309]
 unique_name_in_owner = true
-z_index = 4
+z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
 offset_left = 51.216003
@@ -393,9 +408,22 @@ mouse_filter = 2
 [node name="BottomAvatarAnchor" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1423675064]
 position = Vector2(116.216, 78.31995)
 
+[node name="Player1AvatarArea" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=299262318]
+unique_name_in_owner = true
+z_index = 3
+custom_minimum_size = Vector2(156, 156)
+anchors_preset = 0
+offset_left = -28.0
+offset_top = -19.0
+offset_right = 128.0
+offset_bottom = 137.0
+scale = Vector2(0.5, 0.5)
+mouse_default_cursor_shape = 13
+script = ExtResource("7_draggable_avatar_area")
+
 [node name="Player1ScoreMeter" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=521986776]
 unique_name_in_owner = true
-z_index = 4
+z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
 offset_left = -35.0
@@ -427,9 +455,22 @@ mouse_filter = 2
 [node name="LeftAvatarAnchor" type="Marker2D" parent="LayoutAreas/LeftPlayerArea" unique_id=539701425]
 position = Vector2(110, 82)
 
+[node name="Player3AvatarArea" type="Control" parent="LayoutAreas/LeftPlayerArea" unique_id=1073955881]
+unique_name_in_owner = true
+z_index = 3
+custom_minimum_size = Vector2(156, 156)
+anchors_preset = 0
+offset_left = 18.840004
+offset_top = 8.359993
+offset_right = 174.84
+offset_bottom = 164.35999
+scale = Vector2(0.5, 0.5)
+mouse_default_cursor_shape = 13
+script = ExtResource("7_draggable_avatar_area")
+
 [node name="Player3ScoreMeter" type="Control" parent="LayoutAreas/LeftPlayerArea" unique_id=869053579]
 unique_name_in_owner = true
-z_index = 4
+z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
 offset_left = 11.840004
@@ -461,9 +502,22 @@ mouse_filter = 2
 [node name="RightAvatarAnchor" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=381356973]
 position = Vector2(110, 82)
 
+[node name="Player4AvatarArea" type="Control" parent="LayoutAreas/RightPlayerArea" unique_id=1459197906]
+unique_name_in_owner = true
+z_index = 3
+custom_minimum_size = Vector2(156, 156)
+anchors_preset = 0
+offset_left = 28.880005
+offset_top = 10.359993
+offset_right = 184.88
+offset_bottom = 166.35999
+scale = Vector2(0.5, 0.5)
+mouse_default_cursor_shape = 13
+script = ExtResource("7_draggable_avatar_area")
+
 [node name="Player4ScoreMeter" type="Control" parent="LayoutAreas/RightPlayerArea" unique_id=806861522]
 unique_name_in_owner = true
-z_index = 4
+z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
 offset_left = 20.880005

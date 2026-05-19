@@ -4,7 +4,7 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private void DealCardsToPlayers()
+	private void DealCardsToPlayers(bool playOpeningDealAnimation = false)
 	{
 		if (_playerCardPiles.Count != MaxPlayers || _playerHandAreas.Count != MaxPlayers)
 		{
@@ -12,13 +12,13 @@ public partial class GameBoardScene
 		}
 
 		List<PlayingCard> deck = BuildDeckForPlayerCount(player_count);
-		Shuffle(deck);
-		Cut(deck);
 
 		_playerDecks.Clear();
 		_playerHands.Clear();
 		_playerItemHands.Clear();
 		_tableCards.Clear();
+		_openingVisibleHandCardCounts.Clear();
+		_openingVisiblePileCardCounts.Clear();
 		_turnSequenceGeneration++;
 		_currentTurnPlayerIndex = MainPlayerIndex;
 		_completedTurnsSinceQuestionCardRefresh = 0;
@@ -29,30 +29,107 @@ public partial class GameBoardScene
 		_isResolvingMagnetAttachmentSelection = false;
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
+		_isOpeningDealAnimationPlaying = playOpeningDealAnimation;
 		_winnerPlayerIndex = -1;
 		ResetPlayerScores();
 		if (_winnerLabel != null)
 		{
-			_winnerLabel.Visible = false;
+			HideWinnerBanner();
 		}
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			_playerDecks.Add(new List<PlayingCard>());
 			_playerHands.Add(new List<PlayingCard>());
 			_playerItemHands.Add(new List<ItemCard>());
+			_openingVisibleHandCardCounts.Add(0);
+			_openingVisiblePileCardCounts.Add(0);
 		}
 
-		for (int cardIndex = 0; cardIndex < deck.Count; cardIndex++)
-		{
-			int playerIndex = cardIndex % player_count;
-			AddCardToPlayerDeck(playerIndex, deck[cardIndex]);
-		}
+		DealDeckToPlayerDecks(deck);
 
 		DrawStartingHands();
 		ApplyDebugOpponentOneCardHand();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
+		if (playOpeningDealAnimation)
+		{
+			_ = PlayOpeningDealAnimationAsync(_turnSequenceGeneration);
+		}
+	}
+
+	private void DealDeckToPlayerDecks(List<PlayingCard> deck)
+	{
+		if (TryDealEqualRankDecks(deck, player_count))
+		{
+			ShufflePlayerDecks();
+			return;
+		}
+
+		Shuffle(deck);
+		Cut(deck);
+		for (int cardIndex = 0; cardIndex < deck.Count; cardIndex++)
+		{
+			int playerIndex = cardIndex % player_count;
+			AddCardToPlayerDeck(playerIndex, deck[cardIndex]);
+		}
+	}
+
+	private bool TryDealEqualRankDecks(List<PlayingCard> deck, int playerCount)
+	{
+		if (playerCount <= 0)
+		{
+			return false;
+		}
+
+		var cardsByRank = new Dictionary<string, List<PlayingCard>>();
+		foreach (PlayingCard card in deck)
+		{
+			if (!cardsByRank.TryGetValue(card.Rank, out List<PlayingCard>? rankCards))
+			{
+				rankCards = new List<PlayingCard>();
+				cardsByRank[card.Rank] = rankCards;
+			}
+
+			rankCards.Add(card);
+		}
+
+		var remainingCards = new List<PlayingCard>();
+		foreach (List<PlayingCard> rankCards in cardsByRank.Values)
+		{
+			Shuffle(rankCards);
+			int cardsPerPlayer = rankCards.Count / playerCount;
+			for (int playerIndex = 0; playerIndex < playerCount; playerIndex++)
+			{
+				for (int cardOffset = 0; cardOffset < cardsPerPlayer; cardOffset++)
+				{
+					int rankCardIndex = playerIndex * cardsPerPlayer + cardOffset;
+					AddCardToPlayerDeck(playerIndex, rankCards[rankCardIndex]);
+				}
+			}
+
+			for (int rankCardIndex = cardsPerPlayer * playerCount; rankCardIndex < rankCards.Count; rankCardIndex++)
+			{
+				remainingCards.Add(rankCards[rankCardIndex]);
+			}
+		}
+
+		Shuffle(remainingCards);
+		foreach (PlayingCard card in remainingCards)
+		{
+			AddCardToPlayerDeck(_rng.RandiRange(0, playerCount - 1), card);
+		}
+
+		return true;
+	}
+
+	private void ShufflePlayerDecks()
+	{
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			Shuffle(_playerDecks[playerIndex]);
+			Cut(_playerDecks[playerIndex]);
+		}
 	}
 
 	private void DrawStartingHands()

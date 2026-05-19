@@ -32,7 +32,8 @@ public partial class GameBoardScene
 		bool Played,
 		bool Captured,
 		bool DeckCollected = false,
-		QuestionCardRewardAnimation? QuestionRewardAnimation = null);
+		QuestionCardRewardAnimation? QuestionRewardAnimation = null,
+		bool CompletesTurn = true);
 
 	private readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 

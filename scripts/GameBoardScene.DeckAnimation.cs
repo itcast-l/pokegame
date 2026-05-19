@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
@@ -7,6 +8,10 @@ public partial class GameBoardScene
 	private const string QuestionCardRefreshFramePattern = "res://art/fx/question_card_refresh/run-001/processed/fx-{0}.png";
 	private const int QuestionCardRefreshFrameCount = 6;
 	private const float QuestionCardRefreshSeconds = 0.48f;
+	private const float OpeningDealCardFlightSeconds = 0.18f;
+	private const float OpeningDealCardStaggerSeconds = 0.035f;
+	private const float OpeningDealPilesTotalSeconds = 2.0f;
+	private const float OpeningDealPileCardFlightSeconds = 0.18f;
 	private const string DeckShuffleFramePattern = "res://art/cards/deck_shuffle/overhand_drop/game_frames/frame-{0:000}.png";
 	private const int DeckShuffleFrameCount = 6;
 	private const int DeckShuffleRepeatCount = 3;
@@ -18,14 +23,77 @@ public partial class GameBoardScene
 	private const float QuestionCardRewardInsertSeconds = 0.22f;
 	private const float SpecialCardTriggerEffectSeconds = 0.72f;
 	private const float SpecialCardTriggerFxFrameSeconds = 0.14f;
+	private const float LensCardFlightSeconds = 0.34f;
+	private const float LensCardSplitSeconds = 0.18f;
+	private const float LensRevealWispFlightSeconds = 0.42f;
+	private const float LensRevealWispFrameSeconds = 0.07f;
+	private const float LensRevealWispStaggerSeconds = 0.09f;
+	private const float LensRevealWispArcHeight = 46.0f;
 	private const float FullCircleRadians = 6.2831855f;
 	private const int PlayedCardFlightZIndex = 2000;
+	private const int OpeningDealZIndex = 2400;
 	private static readonly Vector2 DeckShuffleVisualSize = new(96.0f, 192.0f);
 	private static readonly Vector2 QuestionCardRefreshFxVisualSize = new(160.0f, 160.0f);
 	private static readonly Vector2 QuestionCardTransformFxVisualSize = new(128.0f, 128.0f);
 	private static readonly Vector2 SpecialCardTriggerSparkSize = new(20.0f, 20.0f);
 	private static readonly Vector2 SpecialCardTriggerRingSize = new(188.0f, 188.0f);
 	private static readonly Vector2 SpecialCardTriggerFxVisualSize = new(256.0f, 256.0f);
+	private static readonly Vector2 LensRevealWispVisualSize = new(72.0f, 72.0f);
+
+	private async Task PlayOpeningDealAnimationAsync(int turnSequenceGeneration)
+	{
+		if (!IsInsideTree())
+		{
+			_isOpeningDealAnimationPlaying = false;
+			return;
+		}
+
+		try
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+
+			Vector2 dealStartGlobalPosition = GetOpeningDealStartGlobalPosition();
+			Control? centerDeck = CreateOpeningCenterDeckVisual(GetOpeningTotalCardCount());
+			try
+			{
+				await ToSignal(GetTree().CreateTimer(0.18f), SceneTreeTimer.SignalName.Timeout);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return;
+				}
+
+				await PlayOpeningDealCardsToHandsAsync(dealStartGlobalPosition, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return;
+				}
+
+				await PlayOpeningDealPilesAsync(dealStartGlobalPosition, turnSequenceGeneration);
+			}
+			finally
+			{
+				if (GodotObject.IsInstanceValid(centerDeck))
+				{
+					centerDeck.QueueFree();
+				}
+			}
+		}
+		finally
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				ShowAllOpeningHandCards();
+				ShowAllOpeningPileCards();
+				_isOpeningDealAnimationPlaying = false;
+				RenderPlayerCardPiles();
+				RenderPlayerHands();
+			}
+		}
+	}
 
 	private async Task PlayCardToTableAnimationAsync(
 		int playerIndex,
@@ -409,6 +477,205 @@ public partial class GameBoardScene
 		}
 	}
 
+	private async Task PlayLensCardSplitAnimationAsync(
+		Texture2D lensTexture,
+		Vector2 startGlobalPosition,
+		Vector2 splitGlobalCenter,
+		float startRotationDegrees)
+	{
+		if (!IsInsideTree())
+		{
+			return;
+		}
+
+		var flightCard = new TextureRect
+		{
+			Name = "LensCardFlight",
+			Texture = lensTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			RotationDegrees = startRotationDegrees,
+			ZIndex = PlayedCardFlightZIndex + 820,
+			ZAsRelative = false,
+		};
+		AddChild(flightCard);
+		flightCard.GlobalPosition = startGlobalPosition;
+
+		Vector2 splitGlobalPosition = splitGlobalCenter - CardVisualSize / 2.0f;
+		try
+		{
+			Tween flightTween = CreateTween();
+			flightTween.SetTrans(Tween.TransitionType.Sine);
+			flightTween.SetEase(Tween.EaseType.InOut);
+			flightTween.TweenMethod(
+				Callable.From<float>(progress => UpdateLensCardFlight(
+					flightCard,
+					startGlobalPosition,
+					splitGlobalPosition,
+					startRotationDegrees,
+					progress)),
+				0.0f,
+				1.0f,
+				LensCardFlightSeconds);
+			await ToSignal(flightTween, Tween.SignalName.Finished);
+
+			if (!GodotObject.IsInstanceValid(flightCard))
+			{
+				return;
+			}
+
+			Tween splitTween = CreateTween();
+			splitTween.SetParallel(true);
+			splitTween.SetTrans(Tween.TransitionType.Cubic);
+			splitTween.SetEase(Tween.EaseType.In);
+			splitTween.TweenProperty(flightCard, "scale", new Vector2(0.12f, 1.22f), LensCardSplitSeconds);
+			splitTween.TweenProperty(flightCard, "modulate", new Color(0.7f, 1.0f, 0.96f, 0.0f), LensCardSplitSeconds);
+			splitTween.TweenProperty(flightCard, "rotation_degrees", 0.0f, LensCardSplitSeconds);
+			await ToSignal(splitTween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(flightCard))
+			{
+				flightCard.QueueFree();
+			}
+		}
+	}
+
+	private static void UpdateLensCardFlight(
+		TextureRect flightCard,
+		Vector2 startGlobalPosition,
+		Vector2 splitGlobalPosition,
+		float startRotationDegrees,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(flightCard))
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * TableCaptureFlightArcHeight;
+		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
+		flightCard.GlobalPosition = startGlobalPosition.Lerp(splitGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
+		flightCard.RotationDegrees = Mathf.Lerp(startRotationDegrees, 0.0f, easedProgress) + pulse * 10.0f;
+		flightCard.Scale = Vector2.One * Mathf.Lerp(1.0f, 1.12f, pulse);
+		flightCard.Modulate = Colors.White;
+	}
+
+	private async Task PlayLensRevealWispFlightAsync(Vector2 startGlobalCenter, Vector2 targetGlobalCenter, int targetNumber, int tableCardIndex)
+	{
+		if (!IsInsideTree() || _lensRevealWispFrames.Count == 0)
+		{
+			return;
+		}
+
+		if (targetNumber > 0)
+		{
+			await ToSignal(GetTree().CreateTimer(LensRevealWispStaggerSeconds * targetNumber), SceneTreeTimer.SignalName.Timeout);
+		}
+
+		var wisp = new TextureRect
+		{
+			Name = "LensRevealWisp",
+			Texture = _lensRevealWispFrames[0],
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = LensRevealWispVisualSize,
+			PivotOffset = LensRevealWispVisualSize / 2.0f,
+			ZIndex = PlayedCardFlightZIndex + tableCardIndex * 2 + 720 + targetNumber,
+			ZAsRelative = false,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			Scale = Vector2.One * 0.72f,
+		};
+		AddChild(wisp);
+		wisp.GlobalPosition = startGlobalCenter - LensRevealWispVisualSize / 2.0f;
+
+		try
+		{
+			Task frameTask = PlayLensRevealWispFramesAsync(wisp);
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.InOut);
+			float sideOffset = targetNumber % 2 == 0 ? -18.0f : 18.0f;
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateLensRevealWispFlight(
+					wisp,
+					startGlobalCenter,
+					targetGlobalCenter,
+					sideOffset,
+					targetNumber,
+					progress)),
+				0.0f,
+				1.0f,
+				LensRevealWispFlightSeconds);
+			await ToSignal(tween, Tween.SignalName.Finished);
+			await frameTask;
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(wisp))
+			{
+				wisp.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayLensRevealWispFramesAsync(TextureRect wisp)
+	{
+		if (_lensRevealWispFrames.Count == 0)
+		{
+			return;
+		}
+
+		int totalFrameCount = Math.Max(_lensRevealWispFrames.Count, Mathf.CeilToInt(LensRevealWispFlightSeconds / LensRevealWispFrameSeconds));
+		for (int frameIndex = 0; frameIndex < totalFrameCount; frameIndex++)
+		{
+			if (!GodotObject.IsInstanceValid(wisp))
+			{
+				return;
+			}
+
+			wisp.Texture = _lensRevealWispFrames[frameIndex % _lensRevealWispFrames.Count];
+			await ToSignal(GetTree().CreateTimer(LensRevealWispFrameSeconds), SceneTreeTimer.SignalName.Timeout);
+		}
+	}
+
+	private static void UpdateLensRevealWispFlight(
+		TextureRect wisp,
+		Vector2 startGlobalCenter,
+		Vector2 targetGlobalCenter,
+		float sideOffset,
+		int targetNumber,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(wisp))
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		Vector2 baseCenter = startGlobalCenter.Lerp(targetGlobalCenter, easedProgress);
+		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * LensRevealWispArcHeight;
+		float swirl = Mathf.Sin(clampedProgress * Mathf.Pi * 2.0f + targetNumber * Mathf.Pi * 0.42f) * sideOffset;
+		float fadeIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.16f, 0.0f, 1.0f));
+		float fadeOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.78f) / 0.22f, 0.0f, 1.0f));
+		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
+
+		wisp.GlobalPosition = baseCenter + new Vector2(swirl, arcY) - LensRevealWispVisualSize / 2.0f;
+		wisp.Modulate = new Color(1.0f, 1.0f, 1.0f, fadeIn * Mathf.Max(0.24f, fadeOut));
+		wisp.Scale = Vector2.One * Mathf.Lerp(0.72f, 1.08f, pulse);
+		wisp.RotationDegrees = Mathf.Lerp(-22.0f, 32.0f, clampedProgress) * (targetNumber % 2 == 0 ? 1.0f : -1.0f);
+	}
+
 	private static void UpdateCardToTableAnimation(
 		Control flightCard,
 		TextureRect cardVisual,
@@ -619,7 +886,7 @@ public partial class GameBoardScene
 			card.Size = rewardVisualSize;
 			card.PivotOffset = rewardVisualSize / 2.0f;
 
-			Vector2 insertStartGlobalPosition = targetGlobalPosition + new Vector2(0.0f, -CardVisualSize.Y * 0.82f);
+			Vector2 insertStartGlobalPosition = transformAreaGlobalPosition;
 			animationRoot.GlobalPosition = insertStartGlobalPosition;
 			animationRoot.RotationDegrees = 0.0f;
 			Tween insertTween = CreateTween();
@@ -768,6 +1035,346 @@ public partial class GameBoardScene
 		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(progress * fxFrames.Count), 0, fxFrames.Count - 1);
 		fx.Texture = fxFrames[frameIndex];
 		fx.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
+	}
+
+	private Control? CreateOpeningCenterDeckVisual(int cardCount)
+	{
+		if (_cardBackTexture == null || !IsInsideTree() || cardCount <= 0)
+		{
+			return null;
+		}
+
+		var deckRoot = new Control
+		{
+			Name = "OpeningCenterDeck",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardPileSize,
+			PivotOffset = CardPileSize / 2.0f,
+			ZIndex = OpeningDealZIndex - 10,
+			ZAsRelative = false,
+		};
+		AddChild(deckRoot);
+		deckRoot.GlobalPosition = GetOpeningDealStartGlobalPosition() + CardVisualSize / 2.0f - CardPileSize / 2.0f;
+
+		var cardBack = new TextureRect
+		{
+			Name = "OpeningCenterDeckCard",
+			Texture = _cardBackTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = (CardPileSize - CardVisualSize) / 2.0f,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+		};
+		MarkAnimatedCardBack(cardBack);
+		deckRoot.AddChild(cardBack);
+
+		return deckRoot;
+	}
+
+	private async Task PlayOpeningDealCardsToHandsAsync(Vector2 startGlobalPosition, int turnSequenceGeneration)
+	{
+		if (_cardBackTexture == null)
+		{
+			return;
+		}
+
+		int maxHandCards = 0;
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			maxHandCards = Math.Max(maxHandCards, _playerHands[playerIndex].Count);
+		}
+
+		int dealNumber = 0;
+		for (int handIndex = 0; handIndex < maxHandCards; handIndex++)
+		{
+			for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+			{
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return;
+				}
+
+				if (handIndex >= _playerHands[playerIndex].Count)
+				{
+					continue;
+				}
+
+				Vector2 targetGlobalPosition = GetOpeningHandCardGlobalPosition(playerIndex, handIndex);
+				await PlayOpeningDealCardFlightAsync(startGlobalPosition, targetGlobalPosition, playerIndex, dealNumber);
+				ShowOpeningHandCard(playerIndex, handIndex + 1);
+				dealNumber++;
+			}
+		}
+	}
+
+	private async Task PlayOpeningDealPilesAsync(Vector2 startGlobalPosition, int turnSequenceGeneration)
+	{
+		if (_cardBackTexture == null)
+		{
+			return;
+		}
+
+		List<int> activePlayerIndexes = BuildOpeningPileDealPlayerIndexes();
+		if (activePlayerIndexes.Count == 0)
+		{
+			return;
+		}
+
+		int visualDealCount = Math.Max(activePlayerIndexes.Count, Mathf.CeilToInt(OpeningDealPilesTotalSeconds / OpeningDealPileCardFlightSeconds));
+		float dealIntervalSeconds = OpeningDealPilesTotalSeconds / visualDealCount;
+		float flightSeconds = Math.Min(OpeningDealPileCardFlightSeconds, dealIntervalSeconds);
+		int[] visiblePileDealCounts = new int[MaxPlayers];
+		for (int dealIndex = 0; dealIndex < visualDealCount; dealIndex++)
+		{
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+
+			int playerIndex = activePlayerIndexes[dealIndex % activePlayerIndexes.Count];
+			Vector2 targetGlobalPosition = GetOpeningPileGlobalPosition(playerIndex);
+			await PlayOpeningDealPileCardFlightAsync(startGlobalPosition, targetGlobalPosition, playerIndex, dealIndex, flightSeconds);
+			visiblePileDealCounts[playerIndex]++;
+			int targetVisibleCardCount = visiblePileDealCounts[playerIndex];
+			ShowOpeningPileCards(playerIndex, Math.Max(1, targetVisibleCardCount));
+			if (dealIndex < visualDealCount - 1 && dealIntervalSeconds > flightSeconds)
+			{
+				await ToSignal(GetTree().CreateTimer(dealIntervalSeconds - flightSeconds), SceneTreeTimer.SignalName.Timeout);
+			}
+		}
+
+		ShowAllOpeningPileCards();
+		RenderPlayerCardPiles();
+	}
+
+	private async Task PlayOpeningDealCardFlightAsync(
+		Vector2 startGlobalPosition,
+		Vector2 targetGlobalPosition,
+		int playerIndex,
+		int dealNumber)
+	{
+		if (_cardBackTexture == null || !IsInsideTree())
+		{
+			return;
+		}
+
+		var card = new TextureRect
+		{
+			Name = "OpeningDealCardFlight",
+			Texture = _cardBackTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			RotationDegrees = -8.0f + dealNumber % 5 * 4.0f,
+			ZIndex = OpeningDealZIndex + dealNumber,
+			ZAsRelative = false,
+			Scale = Vector2.One * 0.82f,
+		};
+		float startRotationDegrees = card.RotationDegrees;
+		MarkAnimatedCardBack(card);
+		AddChild(card);
+		card.GlobalPosition = startGlobalPosition;
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.InOut);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateOpeningDealCardFlight(
+					card,
+					startGlobalPosition,
+					targetGlobalPosition,
+					startRotationDegrees,
+					GetCardRotationDegreesForPlayer(playerIndex),
+					progress)),
+				0.0f,
+				1.0f,
+				OpeningDealCardFlightSeconds);
+			await ToSignal(tween, Tween.SignalName.Finished);
+			await ToSignal(GetTree().CreateTimer(OpeningDealCardStaggerSeconds), SceneTreeTimer.SignalName.Timeout);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(card))
+			{
+				card.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayOpeningDealPileCardFlightAsync(Vector2 startGlobalPosition, Vector2 targetGlobalPosition, int playerIndex, int dealIndex, float flightSeconds)
+	{
+		if (_cardBackTexture == null || !IsInsideTree())
+		{
+			return;
+		}
+
+		var card = new TextureRect
+		{
+			Name = "OpeningPileCardFlight",
+			Texture = _cardBackTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			RotationDegrees = -6.0f + dealIndex % 4 * 4.0f,
+			ZIndex = OpeningDealZIndex + 200 + dealIndex,
+			ZAsRelative = false,
+			Scale = Vector2.One * 0.82f,
+		};
+		float startRotationDegrees = card.RotationDegrees;
+		MarkAnimatedCardBack(card);
+		AddChild(card);
+		card.GlobalPosition = startGlobalPosition;
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.InOut);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateOpeningDealCardFlight(
+					card,
+					startGlobalPosition,
+					targetGlobalPosition,
+					startRotationDegrees,
+					GetCardPileRotationDegreesForPlayer(playerIndex),
+					progress)),
+				0.0f,
+				1.0f,
+				flightSeconds);
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(card))
+			{
+				card.QueueFree();
+			}
+		}
+	}
+
+	private static void UpdateOpeningDealCardFlight(
+		TextureRect card,
+		Vector2 startGlobalPosition,
+		Vector2 targetGlobalPosition,
+		float startRotationDegrees,
+		float targetRotationDegrees,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(card))
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * 34.0f;
+		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
+		card.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
+		card.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + pulse * 8.0f;
+		card.Scale = Vector2.One * Mathf.Lerp(0.82f, 1.0f, easedProgress);
+	}
+
+	private Vector2 GetOpeningDealStartGlobalPosition()
+	{
+		return _tableCardLayoutArea.GlobalPosition + (_tableCardLayoutArea.Size - CardVisualSize) / 2.0f;
+	}
+
+	private void ShowOpeningHandCard(int playerIndex, int visibleCardCount)
+	{
+		if (playerIndex < 0 || playerIndex >= _openingVisibleHandCardCounts.Count)
+		{
+			return;
+		}
+
+		_openingVisibleHandCardCounts[playerIndex] = Mathf.Clamp(visibleCardCount, 0, _playerHands[playerIndex].Count);
+		RenderPlayerHands();
+	}
+
+	private void ShowAllOpeningHandCards()
+	{
+		for (int playerIndex = 0; playerIndex < _openingVisibleHandCardCounts.Count && playerIndex < _playerHands.Count; playerIndex++)
+		{
+			_openingVisibleHandCardCounts[playerIndex] = _playerHands[playerIndex].Count;
+		}
+	}
+
+	private void ShowOpeningPileCards(int playerIndex, int visibleCardCount)
+	{
+		if (playerIndex < 0 || playerIndex >= _openingVisiblePileCardCounts.Count)
+		{
+			return;
+		}
+
+		_openingVisiblePileCardCounts[playerIndex] = Mathf.Clamp(visibleCardCount, 0, _playerDecks[playerIndex].Count);
+		RenderPlayerCardPiles();
+	}
+
+	private void ShowAllOpeningPileCards()
+	{
+		for (int playerIndex = 0; playerIndex < _openingVisiblePileCardCounts.Count && playerIndex < _playerDecks.Count; playerIndex++)
+		{
+			_openingVisiblePileCardCounts[playerIndex] = _playerDecks[playerIndex].Count;
+		}
+	}
+
+	private Vector2 GetOpeningHandCardGlobalPosition(int playerIndex, int handIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHandAreas.Count)
+		{
+			return GetOpeningDealStartGlobalPosition();
+		}
+
+		Control handArea = _playerHandAreas[playerIndex];
+		int displayCardCount = Math.Max(1, _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count);
+		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
+		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
+		return handArea.GlobalPosition + firstCardPosition + handIndex * cardOffset;
+	}
+
+	private Vector2 GetOpeningPileGlobalPosition(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerCardPiles.Count)
+		{
+			return GetOpeningDealStartGlobalPosition();
+		}
+
+		return _playerCardPiles[playerIndex].GlobalPosition;
+	}
+
+	private List<int> BuildOpeningPileDealPlayerIndexes()
+	{
+		var playerIndexes = new List<int>();
+		for (int playerIndex = 0; playerIndex < player_count && playerIndex < _playerDecks.Count; playerIndex++)
+		{
+			if (_playerDecks[playerIndex].Count > 0)
+			{
+				playerIndexes.Add(playerIndex);
+			}
+		}
+
+		return playerIndexes;
+	}
+
+	private int GetOpeningTotalCardCount()
+	{
+		int totalCount = 0;
+		for (int playerIndex = 0; playerIndex < player_count && playerIndex < _playerHands.Count && playerIndex < _playerDecks.Count; playerIndex++)
+		{
+			totalCount += _playerHands[playerIndex].Count + _playerDecks[playerIndex].Count;
+		}
+
+		return totalCount;
 	}
 
 	private async Task PlayQuestionCardRefreshAnimationAsync(int tableCardIndex)

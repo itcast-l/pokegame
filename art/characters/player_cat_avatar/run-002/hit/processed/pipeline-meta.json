@@ -1,0 +1,175 @@
+{
+  "target": "player",
+  "mode": "hit",
+  "prompt": "2x2 expressive cat avatar hit action sheet generated from project cat avatar reference; one coherent expression animation with stable identity and solid #FF00FF background.",
+  "role": "",
+  "input": "art/characters/player_cat_avatar/run-002/hit/raw-sheet.png",
+  "threshold": 125,
+  "edge_threshold": 210,
+  "duration": 130,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.92,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 3,
+  "frame_labels": [
+    "hit-1",
+    "hit-2",
+    "hit-3",
+    "hit-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 2,
+      "selected_component_area": 126206,
+      "selected_component_bbox": [
+        56,
+        120,
+        599,
+        564
+      ],
+      "crop_bbox": [
+        48,
+        112,
+        607,
+        572
+      ],
+      "edge_touch": false,
+      "output_size": [
+        117,
+        96
+      ],
+      "paste_position": [
+        5,
+        16
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 3,
+      "selected_component_area": 117863,
+      "selected_component_bbox": [
+        22,
+        134,
+        548,
+        566
+      ],
+      "crop_bbox": [
+        14,
+        126,
+        556,
+        574
+      ],
+      "edge_touch": false,
+      "output_size": [
+        114,
+        94
+      ],
+      "paste_position": [
+        7,
+        17
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 3,
+      "selected_component_area": 114939,
+      "selected_component_bbox": [
+        73,
+        80,
+        556,
+        512
+      ],
+      "crop_bbox": [
+        65,
+        72,
+        564,
+        520
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        94
+      ],
+      "paste_position": [
+        11,
+        17
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 4,
+      "selected_component_area": 116674,
+      "selected_component_bbox": [
+        33,
+        79,
+        521,
+        512
+      ],
+      "crop_bbox": [
+        25,
+        71,
+        529,
+        520
+      ],
+      "edge_touch": false,
+      "output_size": [
+        106,
+        94
+      ],
+      "paste_position": [
+        11,
+        17
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

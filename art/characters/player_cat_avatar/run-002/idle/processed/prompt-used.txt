@@ -1,0 +1,1 @@
+3x4 restrained twelve-frame idle cat avatar action sheet generated from project cat avatar reference; front-facing portrait, fixed ears, no head tilt, smooth blink only, stable identity and solid #FF00FF background.

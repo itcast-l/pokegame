@@ -20,9 +20,9 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			int cardCount = _playerDecks[playerIndex].Count;
+			int cardCount = GetVisiblePileCardCountForRender(playerIndex, _playerDecks[playerIndex].Count);
 			int visibleCards = Math.Min(cardCount, VisiblePileCards);
-			float cardRotation = GetCardRotationDegreesForPlayer(playerIndex);
+			float cardRotation = GetCardPileRotationDegreesForPlayer(playerIndex);
 			float groupWidth = CardVisualSize.X + (visibleCards - 1) * CardPileOffset.X;
 			float groupHeight = CardVisualSize.Y - (visibleCards - 1) * CardPileOffset.Y;
 			var firstCardPosition = new Vector2(
@@ -91,6 +91,7 @@ public partial class GameBoardScene
 
 			List<PlayingCard> hand = _playerHands[playerIndex];
 			List<ItemCard> itemHand = _playerItemHands[playerIndex];
+			int visibleHandCount = GetVisibleHandCardCountForRender(playerIndex, hand.Count);
 			int displayCardCount = hand.Count + itemHand.Count;
 			Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
 			Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
@@ -237,7 +238,7 @@ public partial class GameBoardScene
 				handArea.AddChild(cardSlot);
 			}
 
-			for (int cardIndex = 0; cardIndex < hand.Count; cardIndex++)
+			for (int cardIndex = 0; cardIndex < visibleHandCount; cardIndex++)
 			{
 				PlayingCard card = hand[cardIndex];
 				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
@@ -265,13 +266,40 @@ public partial class GameBoardScene
 				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : itemCard.Texture;
 				float visualScale = showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id);
-				bool isPlayable = playerIndex == MainPlayerIndex
-					&& canMainPlayerAct
-					&& PlayableSpecialItemCardIds.Contains(itemCard.Id)
-					&& (!RequiresPlayerTarget(itemCard.Id) || HasPlayableTargetForItemCard(itemCard.Id, playerIndex));
+				bool isPlayable = playerIndex == MainPlayerIndex && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id);
 				AddHandCard(texture, hand.Count + itemIndex, isPlayable, -1, itemIndex, showCardBack, visualScale);
 			}
 		}
+	}
+
+	private int GetVisibleHandCardCountForRender(int playerIndex, int handCount)
+	{
+		if (!_isOpeningDealAnimationPlaying)
+		{
+			return handCount;
+		}
+
+		if (playerIndex < 0 || playerIndex >= _openingVisibleHandCardCounts.Count)
+		{
+			return 0;
+		}
+
+		return Mathf.Clamp(_openingVisibleHandCardCounts[playerIndex], 0, handCount);
+	}
+
+	private int GetVisiblePileCardCountForRender(int playerIndex, int pileCount)
+	{
+		if (!_isOpeningDealAnimationPlaying)
+		{
+			return pileCount;
+		}
+
+		if (playerIndex < 0 || playerIndex >= _openingVisiblePileCardCounts.Count)
+		{
+			return 0;
+		}
+
+		return Mathf.Clamp(_openingVisiblePileCardCounts[playerIndex], 0, pileCount);
 	}
 
 	private string GetMagnetCardDescription(PlayingCard card, bool showCardBack)
@@ -441,6 +469,11 @@ public partial class GameBoardScene
 			3 => -90.0f,
 			_ => 0.0f,
 		};
+	}
+
+	private static float GetCardPileRotationDegreesForPlayer(int playerIndex)
+	{
+		return GetCardRotationDegreesForPlayer(playerIndex) * 0.22f;
 	}
 
 	private static TextureRect? FindHandCardVisual(Control? handCardSlot)

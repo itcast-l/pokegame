@@ -1,0 +1,80 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/MainMenuAvatarEntry.cs" id="1_avatar_entry"]
+[ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_character_avatar"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_frame"]
+bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.42)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.96, 0.48)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.025, 0.045, 0.36)
+shadow_size = 12
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
+
+[node name="MainMenuAvatarEntry" type="Control"]
+custom_minimum_size = Vector2(104, 104)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 104.0
+offset_bottom = 104.0
+script = ExtResource("1_avatar_entry")
+
+[node name="Frame" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_frame")
+
+[node name="Margin" type="MarginContainer" parent="Frame"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 9
+theme_override_constants/margin_top = 9
+theme_override_constants/margin_right = 9
+theme_override_constants/margin_bottom = 9
+
+[node name="AvatarAnchor" type="Control" parent="Frame/Margin"]
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CharacterAvatar" parent="Frame/Margin/AvatarAnchor" instance=ExtResource("2_character_avatar")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+focus_mode = 0
+tooltip_text = "修改头像"
+flat = true
+theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_avatar_button")

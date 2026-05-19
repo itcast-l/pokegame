@@ -74,6 +74,7 @@ public partial class GameBoardScene
 
 		_playerScores[playerIndex] += points;
 		UpdatePlayerScoreMeter(playerIndex, true);
+		PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
 	}
 
 	private void UpdatePlayerScoreMeter(int playerIndex, bool animate)

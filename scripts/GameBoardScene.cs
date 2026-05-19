@@ -8,6 +8,7 @@ public partial class GameBoardScene : Control
 	private const int MaxPlayers = 4;
 	private const string PokerCardsScenePath = "res://scenes/poker_cards_scene.tscn";
 	private const string ItemCardsScenePath = "res://scenes/item_cards_scene.tscn";
+	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
 	private const string StandardCardsRootPath = "StandardPokerCards";
 	private const string SuitedJqkBackupCardsNodeName = "SuitedJqkBackupCards";
 	private const string ItemCardsRootPath = "ItemCards";
@@ -23,9 +24,12 @@ public partial class GameBoardScene : Control
 	private const int SpecialCardTriggerEffectFrameCount = 4;
 	private const string BombPairDestroyEffectFramePattern = "res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png";
 	private const int BombPairDestroyEffectFrameCount = 4;
+	private const string LensRevealWispFramePattern = "res://art/fx/lens_reveal_sprites/run-001/processed/fx-{0}.png";
+	private const int LensRevealWispFrameCount = 4;
 	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
+	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string QuestionMarkItemCardId = "question_mark";
 	private const string BombItemCardId = "bomb";
@@ -46,9 +50,9 @@ public partial class GameBoardScene : Control
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
-	private const bool DebugQuestionCardRewardsMagnet = true;
+	private const bool DebugQuestionCardRewardsLens = true;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId };
+	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId };
 	private static readonly string[] AllItemCardIds =
 	{
 		QuestionMarkItemCardId,
@@ -98,10 +102,11 @@ public partial class GameBoardScene : Control
 	private const int TableCardPointPopupZIndex = 2800;
 	private const int QuestionCardRefreshCyclesAfterCapture = 2;
 	private const double MagnetAttachmentSelectionSeconds = 5.0;
+	private const int LensRevealMaxCards = 2;
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
 	private static readonly Vector2 CardVisualSize = new(72, 96);
-	private static readonly Vector2 CardPileOffset = new(5, -4);
+	private static readonly Vector2 CardPileOffset = new(3, -2);
 	private const int TableCardsPerRow = 7;
 	private static readonly float TableCardHorizontalStep = CardVisualSize.X + 18.0f;
 	private static readonly float TableCardRowGap = CardVisualSize.Y * 0.62f;
@@ -120,6 +125,7 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
 	private readonly List<Texture2D> _specialCardTriggerEffectFrames = new();
 	private readonly List<Texture2D> _bombPairDestroyEffectFrames = new();
+	private readonly List<Texture2D> _lensRevealWispFrames = new();
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
@@ -128,6 +134,9 @@ public partial class GameBoardScene : Control
 	private Texture2D? _cardBackTexture;
 	private Texture2D? _magnetCardOverlayTexture;
 	private float _cardBackAnimationTime;
+	private Control? _winnerBannerRoot;
+	private Control? _winnerBannerPanel;
+	private Button? _winnerReplayButton;
 	private Label _winnerLabel = default!;
 	private int _currentTurnPlayerIndex = MainPlayerIndex;
 	private int _turnSequenceGeneration;
@@ -150,6 +159,9 @@ public partial class GameBoardScene : Control
 	private bool _isAnimatingMagnetAttachment;
 	private bool _isResolvingTurnSequence;
 	private bool _isProcessingCardPlay;
+	private bool _isOpeningDealAnimationPlaying;
+	private readonly List<int> _openingVisibleHandCardCounts = new();
+	private readonly List<int> _openingVisiblePileCardCounts = new();
 	private int _winnerPlayerIndex = -1;
 
 	[Export(PropertyHint.Range, "2,4,1")]
@@ -162,7 +174,7 @@ public partial class GameBoardScene : Control
 			if (IsInsideTree())
 			{
 				UpdatePlayerVisibility();
-				DealCardsToPlayers();
+				DealCardsToPlayers(playOpeningDealAnimation: true);
 			}
 		}
 	}
@@ -189,6 +201,7 @@ public partial class GameBoardScene : Control
 		LoadQuestionCardTransformTextures();
 		LoadSpecialCardTriggerEffectTextures();
 		LoadBombPairDestroyEffectTextures();
+		LoadLensRevealWispTextures();
 		LoadMagnetCountdownFxTextures();
 
 		_centerArena = GetNode<Control>("%CenterArena");
@@ -200,11 +213,13 @@ public partial class GameBoardScene : Control
 
 		CreatePlayerCardPiles();
 		CreatePlayerHandAreas();
+		BindPlayerAvatarAreas();
+		CreatePlayerAvatars();
 		BindQuestionCardTransformArea();
 		BindPlayerScoreMeters();
 		CreateWinnerLabel();
 		UpdatePlayerVisibility();
-		DealCardsToPlayers();
+		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
 
 	public override void _Process(double delta)
@@ -309,6 +324,23 @@ public partial class GameBoardScene : Control
 			}
 
 			_bombPairDestroyEffectFrames.Add(texture);
+		}
+	}
+
+	private void LoadLensRevealWispTextures()
+	{
+		_lensRevealWispFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= LensRevealWispFrameCount; frameIndex++)
+		{
+			string path = string.Format(LensRevealWispFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing lens reveal wisp frame: {path}");
+				continue;
+			}
+
+			_lensRevealWispFrames.Add(texture);
 		}
 	}
 

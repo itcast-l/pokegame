@@ -10,6 +10,9 @@ public partial class GameBoardScene
 	private const int MaxScoreFillEffectFlights = 12;
 	private const float ScoreFillEffectVisualSize = 64.0f;
 	private const float ScoreFillPulseVisualSize = 92.0f;
+	private const int ScoreFillEffectTravelZIndex = PlayedCardFlightZIndex + 850;
+	private const int ScoreFillEffectBehindAvatarZIndex = 2;
+	private const float ScoreFillEffectBehindAvatarProgress = 0.72f;
 
 	private async Task PlayScoreFillCollectionAsync(
 		int playerIndex,
@@ -106,7 +109,7 @@ public partial class GameBoardScene
 			Texture = _scoreFillEffectFrames[0],
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 			Centered = true,
-			ZIndex = PlayedCardFlightZIndex + 850 + effectIndex,
+			ZIndex = ScoreFillEffectTravelZIndex + effectIndex,
 			ZAsRelative = false,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
@@ -135,6 +138,7 @@ public partial class GameBoardScene
 					startCenter,
 					controlCenter,
 					targetCenter,
+					ScoreFillEffectTravelZIndex + effectIndex,
 					progress)),
 				0.0f,
 				1.0f,
@@ -165,7 +169,7 @@ public partial class GameBoardScene
 			Texture = _scoreFillEffectFrames[^1],
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 			Centered = true,
-			ZIndex = PlayedCardFlightZIndex + 920,
+			ZIndex = ScoreFillEffectBehindAvatarZIndex,
 			ZAsRelative = false,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.72f),
 		};
@@ -199,6 +203,7 @@ public partial class GameBoardScene
 		Vector2 startCenter,
 		Vector2 controlCenter,
 		Vector2 targetCenter,
+		int travelZIndex,
 		float progress)
 	{
 		if (!GodotObject.IsInstanceValid(effect) || frames.Count == 0)
@@ -218,6 +223,9 @@ public partial class GameBoardScene
 
 		Texture2D texture = frames[frameIndex];
 		effect.Texture = texture;
+		effect.ZIndex = clampedProgress >= ScoreFillEffectBehindAvatarProgress
+			? ScoreFillEffectBehindAvatarZIndex
+			: travelZIndex;
 		effect.GlobalPosition = center;
 		effect.Scale = GetSpriteScaleForVisualSize(texture, ScoreFillEffectVisualSize) * scale;
 		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);

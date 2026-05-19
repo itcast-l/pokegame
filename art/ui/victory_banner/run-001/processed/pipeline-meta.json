@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Create one clean HD 2D game UI banner ornament asset for an underwater card game victory screen. Decorative background plate only, no words. Wide rounded horizontal victory banner plaque, translucent aqua sea glass, water caustic highlights, pearl bubbles, subtle gold filigree corner accents, shell-gold sparkle glints, calm darker center for game text, solid #FF00FF background outside asset, no text, no labels, no characters, no cards.",
+  "role": "",
+  "input": "art/ui/victory_banner/run-001/raw.png",
+  "threshold": 105,
+  "edge_threshold": 165,
+  "duration": 200,
+  "single_size": 1024
+}

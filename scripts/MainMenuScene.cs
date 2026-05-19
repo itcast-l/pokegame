@@ -10,7 +10,9 @@ public partial class MainMenuScene : Control
 	private const string SinglePlayerButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame/Button";
 	private const string SettingsButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame/Button";
 	private const string ExitButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame/Button";
+	private const string AvatarEntryPath = "AvatarEntryLayer/MainMenuAvatarEntry";
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
+	private const string AvatarEditScenePath = "res://scenes/character_avatar_edit_scene.tscn";
 	private const string SettingsPanelTexturePath = "res://art/ui/settings_menu/run-001/processed/clean.png";
 	private const string SettingsConfigPath = "user://settings.cfg";
 	private const float DialogFadeSeconds = 0.14f;
@@ -69,6 +71,9 @@ public partial class MainMenuScene : Control
 
 		Button exitButton = GetNode<Button>(ExitButtonPath);
 		exitButton.Pressed += ShowExitDialog;
+
+		MainMenuAvatarEntry avatarEntry = GetNode<MainMenuAvatarEntry>(AvatarEntryPath);
+		avatarEntry.AvatarPressed += OpenAvatarEditor;
 
 		BuildPlayerCountDialog();
 		BuildSettingsDialog();
@@ -1186,6 +1191,18 @@ public partial class MainMenuScene : Control
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;
 		QueueFree();
+	}
+
+	private void OpenAvatarEditor()
+	{
+		PackedScene? avatarEditScene = GD.Load<PackedScene>(AvatarEditScenePath);
+		if (avatarEditScene == null)
+		{
+			GD.PushError($"Missing avatar edit scene: {AvatarEditScenePath}");
+			return;
+		}
+
+		GetTree().ChangeSceneToPacked(avatarEditScene);
 	}
 
 	private void QuitGame()

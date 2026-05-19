@@ -1,0 +1,175 @@
+{
+  "target": "player",
+  "mode": "defeat",
+  "prompt": "2x2 expressive cat avatar defeat action sheet generated from project cat avatar reference; one coherent expression animation with stable identity and solid #FF00FF background.",
+  "role": "",
+  "input": "art/characters/player_cat_avatar/run-002/defeat/raw-sheet.png",
+  "threshold": 125,
+  "edge_threshold": 210,
+  "duration": 130,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.92,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 3,
+  "frame_labels": [
+    "defeat-1",
+    "defeat-2",
+    "defeat-3",
+    "defeat-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 3,
+      "selected_component_area": 139370,
+      "selected_component_bbox": [
+        73,
+        91,
+        595,
+        572
+      ],
+      "crop_bbox": [
+        65,
+        83,
+        603,
+        580
+      ],
+      "edge_touch": false,
+      "output_size": [
+        117,
+        108
+      ],
+      "paste_position": [
+        5,
+        10
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 138022,
+      "selected_component_bbox": [
+        29,
+        107,
+        532,
+        575
+      ],
+      "crop_bbox": [
+        21,
+        99,
+        540,
+        583
+      ],
+      "edge_touch": false,
+      "output_size": [
+        113,
+        105
+      ],
+      "paste_position": [
+        7,
+        11
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 3,
+      "selected_component_area": 131702,
+      "selected_component_bbox": [
+        98,
+        71,
+        594,
+        536
+      ],
+      "crop_bbox": [
+        90,
+        63,
+        602,
+        544
+      ],
+      "edge_touch": false,
+      "output_size": [
+        112,
+        105
+      ],
+      "paste_position": [
+        8,
+        11
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 5,
+      "selected_component_area": 140161,
+      "selected_component_bbox": [
+        68,
+        53,
+        504,
+        530
+      ],
+      "crop_bbox": [
+        60,
+        45,
+        512,
+        538
+      ],
+      "edge_touch": false,
+      "output_size": [
+        98,
+        107
+      ],
+      "paste_position": [
+        15,
+        10
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

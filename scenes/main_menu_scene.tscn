@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Texture2D" path="res://art/menu/main_menu_concept_10.png" id="1_menu_background"]
 [ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="2_water_caustic_shader"]
@@ -8,6 +8,7 @@
 [ext_resource type="AudioStream" path="res://asset/audio/background.mp3" id="6_menu_music"]
 [ext_resource type="Script" path="res://scripts/MainMenuOceanDynamics.cs" id="7_main_menu_ocean_dynamics"]
 [ext_resource type="Shader" path="res://shaders/menu_left_depth_gradient.gdshader" id="8_left_depth_gradient_shader"]
+[ext_resource type="PackedScene" path="res://scenes/main_menu_avatar_entry.tscn" id="9_avatar_entry"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_menu_caustic"]
 shader = ExtResource("2_water_caustic_shader")
@@ -114,6 +115,17 @@ bubble_count = 48
 mote_count = 126
 seagrass_blade_count = 42
 motion_scale = 1.0
+
+[node name="AvatarEntryLayer" type="CanvasLayer" parent="."]
+layer = 8
+
+[node name="MainMenuAvatarEntry" parent="AvatarEntryLayer" instance=ExtResource("9_avatar_entry")]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 26.0
+offset_top = 24.0
+offset_right = 130.0
+offset_bottom = 128.0
 
 [node name="MenuSafeArea" type="MarginContainer" parent="."]
 layout_mode = 1

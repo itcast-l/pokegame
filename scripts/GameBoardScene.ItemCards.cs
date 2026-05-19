@@ -699,6 +699,7 @@ public partial class GameBoardScene
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
 			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
 			_playerHands[ownerPlayerIndex].Add(stolenCard);
+			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 			return new PlayCardResult(true, false);
 		}
 
@@ -711,6 +712,7 @@ public partial class GameBoardScene
 
 		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
 		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
+		PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 		return new PlayCardResult(true, false);
 	}
 
@@ -736,6 +738,11 @@ public partial class GameBoardScene
 
 		Shuffle(_playerDecks[ownerPlayerIndex]);
 		Shuffle(_playerDecks[targetPlayerIndex]);
+		if (cardsToMove > 0)
+		{
+			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+		}
+
 		return new PlayCardResult(true, false, cardsToMove > 0);
 	}
 
@@ -934,7 +941,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayCardResult result = ResolveItemCardEffect(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
+		PlayCardResult result = ResolveItemCardEffect(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex) with { CompletesTurn = false };
 		RenderPlayerCardPiles();
 		RenderTableCards();
 		await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
@@ -972,10 +979,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
+		if (result.CompletesTurn)
+		{
+			await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
+		}
+
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
-		if (!result.Captured)
+		if (result.CompletesTurn && !result.Captured)
 		{
 			await ResolveOpponentTurnsAsync(turnSequenceGeneration);
 		}

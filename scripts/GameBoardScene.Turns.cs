@@ -41,7 +41,10 @@ public partial class GameBoardScene
 					return;
 				}
 
-				await AdvanceTurnAfterPlayedResultAsync(playerIndex, result);
+				if (result.CompletesTurn)
+				{
+					await AdvanceTurnAfterPlayedResultAsync(playerIndex, result);
+				}
 			}
 		}
 		finally
@@ -115,11 +118,18 @@ public partial class GameBoardScene
 				return;
 			}
 
-			await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
-			_isProcessingCardPlay = false;
-			if (!result.Captured)
+			if (result.CompletesTurn)
 			{
-				await ResolveOpponentTurnsAsync(turnSequenceGeneration);
+				await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
+				_isProcessingCardPlay = false;
+				if (!result.Captured)
+				{
+					await ResolveOpponentTurnsAsync(turnSequenceGeneration);
+				}
+			}
+			else
+			{
+				_isProcessingCardPlay = false;
 			}
 		}
 		finally
@@ -341,6 +351,11 @@ public partial class GameBoardScene
 			return await PlayBombCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
 		}
 
+		if (itemCard.Id == LensItemCardId)
+		{
+			return await PlayLensCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		}
+
 		if (playerIndex == MainPlayerIndex && RequiresPlayerTarget(itemCard.Id))
 		{
 			if (!HasPlayableTargetForItemCard(itemCard.Id, playerIndex))
@@ -349,7 +364,7 @@ public partial class GameBoardScene
 			}
 
 			StartPendingItemSelection(itemCard.Id, playerIndex, itemHandIndex, turnSequenceGeneration);
-			return new PlayCardResult(true, false);
+			return new PlayCardResult(true, false, CompletesTurn: false);
 		}
 
 		int targetPlayerIndex = -1;
@@ -373,7 +388,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		PlayCardResult result = ResolveItemCardEffect(itemCard.Id, playerIndex, targetPlayerIndex, targetHandIndex);
+		PlayCardResult result = ResolveItemCardEffect(itemCard.Id, playerIndex, targetPlayerIndex, targetHandIndex) with { CompletesTurn = false };
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -453,7 +468,191 @@ public partial class GameBoardScene
 
 		RenderTableCards();
 		CheckForWinner();
-		return new PlayCardResult(true, false);
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> PlayLensCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| playerIndex >= _playerHandAreas.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<int> targetIndexes = PickLensRevealTargetIndexes(playerIndex);
+		if (targetIndexes.Count == 0)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		ItemCard lensCard = itemHand[itemHandIndex];
+		int displayCardCount = _playerHands[playerIndex].Count + itemHand.Count;
+		int displayIndex = _playerHands[playerIndex].Count + itemHandIndex;
+		Control handArea = _playerHandAreas[playerIndex];
+		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
+		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
+		Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{displayIndex}");
+		TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
+		Vector2 startGlobalPosition = sourceCardVisual?.GlobalPosition
+			?? handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
+		if (sourceCardSlot != null)
+		{
+			sourceCardSlot.Visible = false;
+		}
+
+		Vector2 splitGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		Vector2 splitGlobalCenter = splitGlobalPosition + CardVisualSize / 2.0f;
+		itemHand.RemoveAt(itemHandIndex);
+		RenderPlayerHands();
+
+		await PlayLensCardSplitAnimationAsync(
+			lensCard.Texture,
+			startGlobalPosition,
+			splitGlobalCenter,
+			GetCardRotationDegreesForPlayer(playerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		await RevealLensTargetCardsAsync(targetIndexes, splitGlobalCenter, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		RenderTableCards();
+		CheckForWinner();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private bool HasLensRevealTargets(int ownerPlayerIndex)
+	{
+		return BuildLensRevealTargetCandidates(ownerPlayerIndex).Count > 0;
+	}
+
+	private List<int> PickLensRevealTargetIndexes(int ownerPlayerIndex)
+	{
+		List<int> candidates = BuildLensRevealTargetCandidates(ownerPlayerIndex);
+		ShuffleLensRevealTargetCandidates(candidates);
+		int targetCount = Math.Min(LensRevealMaxCards, candidates.Count);
+		return targetCount == candidates.Count ? candidates : candidates.GetRange(0, targetCount);
+	}
+
+	private void ShuffleLensRevealTargetCandidates(List<int> candidates)
+	{
+		for (int index = candidates.Count - 1; index > 0; index--)
+		{
+			int swapIndex = _rng.RandiRange(0, index);
+			(candidates[index], candidates[swapIndex]) = (candidates[swapIndex], candidates[index]);
+		}
+	}
+
+	private List<int> BuildLensRevealTargetCandidates(int ownerPlayerIndex)
+	{
+		var candidates = new List<int>();
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (tableCard.IsFaceUp || !tableCard.Card.HasValue)
+			{
+				continue;
+			}
+
+			if (tableCard.CardOwnerPlayerIndex == ownerPlayerIndex)
+			{
+				continue;
+			}
+
+			candidates.Add(tableCardIndex);
+		}
+
+		return candidates;
+	}
+
+	private async Task RevealLensTargetCardsAsync(
+		IReadOnlyList<int> targetIndexes,
+		Vector2 splitGlobalCenter,
+		int turnSequenceGeneration)
+	{
+		if (targetIndexes.Count == 0)
+		{
+			return;
+		}
+
+		var wispTasks = new List<Task>();
+		for (int targetNumber = 0; targetNumber < targetIndexes.Count; targetNumber++)
+		{
+			int tableCardIndex = targetIndexes[targetNumber];
+			Vector2? targetGlobalCenter = GetTableCardGlobalCenter(tableCardIndex);
+			if (!targetGlobalCenter.HasValue)
+			{
+				continue;
+			}
+
+			wispTasks.Add(PlayLensRevealWispFlightAsync(splitGlobalCenter, targetGlobalCenter.Value, targetNumber, tableCardIndex));
+		}
+
+		if (wispTasks.Count > 0)
+		{
+			await Task.WhenAll(wispTasks);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+
+		foreach (int tableCardIndex in targetIndexes)
+		{
+			await RevealSingleLensTargetCardAsync(tableCardIndex, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+	}
+
+	private Vector2 GetLensRevealFallbackGlobalCenter(int ownerPlayerIndex)
+	{
+		if (ownerPlayerIndex >= 0 && ownerPlayerIndex < _playerHandAreas.Count)
+		{
+			return _playerHandAreas[ownerPlayerIndex].GlobalPosition + _playerHandAreas[ownerPlayerIndex].Size / 2.0f;
+		}
+
+		return GlobalPosition + Size / 2.0f;
+	}
+
+	private async Task RevealSingleLensTargetCardAsync(int tableCardIndex, int turnSequenceGeneration)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (tableCard.IsFaceUp || !tableCard.Card.HasValue)
+		{
+			return;
+		}
+
+		await PlayTableCardRevealAnimationAsync(tableCardIndex, tableCard.Card.Value.Texture);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return;
+		}
+
+		tableCard.IsFaceUp = true;
+		RenderTableCards();
+		_ = PlayTableCardPointPopupAsync(tableCardIndex, GetCardScoreValue(tableCard.Card.Value));
+		await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
 	}
 
 	private async Task ResolveBombPairAsync(int turnSequenceGeneration)
@@ -1191,6 +1390,11 @@ public partial class GameBoardScene
 
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
+			if (IsQuestionOnlyTableCard(_tableCards[tableCardIndex]))
+			{
+				continue;
+			}
+
 			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 		}
 		if (extraTableCardIndexes != null)
@@ -1199,6 +1403,11 @@ public partial class GameBoardScene
 			{
 				if (tableCardIndex >= 0 && tableCardIndex < _tableCards.Count)
 				{
+					if (IsQuestionOnlyTableCard(_tableCards[tableCardIndex]))
+					{
+						continue;
+					}
+
 					_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 				}
 			}
@@ -1217,6 +1426,13 @@ public partial class GameBoardScene
 		}
 
 		await Task.WhenAll(flightTasks);
+	}
+
+	private static bool IsQuestionOnlyTableCard(TableCard tableCard)
+	{
+		return !tableCard.Card.HasValue
+			&& tableCard.ItemOverlay.HasValue
+			&& tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId;
 	}
 
 	private Vector2 GetCardPileCaptureTargetGlobalPosition(Control targetPile)
@@ -1690,8 +1906,8 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		string itemCardId = DebugQuestionCardRewardsMagnet && IsSpecialItemCardEnabled(MagnetItemCardId)
-			? MagnetItemCardId
+		string itemCardId = DebugQuestionCardRewardsLens && IsSpecialItemCardEnabled(LensItemCardId)
+			? LensItemCardId
 			: rewardItemCardIds[_rng.RandiRange(0, rewardItemCardIds.Count - 1)];
 
 		ItemCard? itemCard = CreateItemCard(itemCardId);
@@ -1732,6 +1948,11 @@ public partial class GameBoardScene
 
 	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
 	{
+		if (!result.CompletesTurn)
+		{
+			return;
+		}
+
 		if (_questionCardRefreshAnchorPlayerIndex < 0)
 		{
 			_completedTurnsSinceQuestionCardRefresh = 0;
@@ -1778,13 +1999,7 @@ public partial class GameBoardScene
 		List<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
-			string itemCardId = itemHand[itemIndex].Id;
-			if (!PlayableSpecialItemCardIds.Contains(itemCardId))
-			{
-				continue;
-			}
-
-			if (RequiresPlayerTarget(itemCardId) && !HasPlayableTargetForItemCard(itemCardId, playerIndex))
+			if (!CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
 			{
 				continue;
 			}
@@ -1793,6 +2008,26 @@ public partial class GameBoardScene
 		}
 
 		return itemIndexes;
+	}
+
+	private bool CanPlayItemCard(int playerIndex, string itemCardId)
+	{
+		if (!PlayableSpecialItemCardIds.Contains(itemCardId))
+		{
+			return false;
+		}
+
+		if (RequiresPlayerTarget(itemCardId) && !HasPlayableTargetForItemCard(itemCardId, playerIndex))
+		{
+			return false;
+		}
+
+		if (itemCardId == LensItemCardId && !HasLensRevealTargets(playerIndex))
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	private void CheckForWinner()
@@ -1844,8 +2079,14 @@ public partial class GameBoardScene
 		_isProcessingCardPlay = false;
 		_currentTurnPlayerIndex = playerIndex;
 
-		_winnerLabel.Text = $"玩家 {playerIndex + 1} 获胜";
-		_winnerLabel.Visible = true;
+		ShowWinnerBanner(playerIndex);
+		for (int avatarPlayerIndex = 0; avatarPlayerIndex < player_count; avatarPlayerIndex++)
+		{
+			PlayPlayerAvatarAction(
+				avatarPlayerIndex,
+				avatarPlayerIndex == playerIndex ? CharacterAvatar.AvatarAction.Victory : CharacterAvatar.AvatarAction.Defeat);
+		}
+
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -1858,7 +2099,12 @@ public partial class GameBoardScene
 
 	private bool CanMainPlayerAct()
 	{
-		return !IsGameOver() && !HasPendingItemSelection() && !_isResolvingTurnSequence && !_isProcessingCardPlay && _currentTurnPlayerIndex == MainPlayerIndex;
+		return !IsGameOver()
+			&& !HasPendingItemSelection()
+			&& !_isOpeningDealAnimationPlaying
+			&& !_isResolvingTurnSequence
+			&& !_isProcessingCardPlay
+			&& _currentTurnPlayerIndex == MainPlayerIndex;
 	}
 
 	private bool IsMainPlayerMagnetSelectionActive()
