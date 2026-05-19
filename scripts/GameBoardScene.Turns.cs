@@ -184,7 +184,7 @@ public partial class GameBoardScene
 		}
 
 		hand.RemoveAt(handIndex);
-		int captureStartIndex = AddPlayedCardToTable(playedCard, out bool matchedTableCardFlipped);
+		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped);
 		int playedTableCardIndex = _tableCards.Count - 1;
 		bool playedTableCardIsFaceUp = _tableCards[playedTableCardIndex].IsFaceUp;
 		var pendingFaceUpMagnetTriggerIndexes = new HashSet<int>();
@@ -733,7 +733,7 @@ public partial class GameBoardScene
 		return tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == BombItemCardId;
 	}
 
-	private int AddPlayedCardToTable(PlayingCard playedCard, out bool matchedTableCardFlipped)
+	private int AddPlayedCardToTable(int playerIndex, PlayingCard playedCard, out bool matchedTableCardFlipped)
 	{
 		int matchingIndex = FindMatchingTableCardIndex(playedCard);
 		bool isFaceUp = matchingIndex >= 0;
@@ -744,7 +744,7 @@ public partial class GameBoardScene
 			_tableCards[matchingIndex].IsFaceUp = true;
 		}
 
-		_tableCards.Add(new TableCard(playedCard, isFaceUp));
+		_tableCards.Add(new TableCard(playedCard, isFaceUp, cardOwnerPlayerIndex: playerIndex));
 		return matchingIndex;
 	}
 
@@ -1341,20 +1341,27 @@ public partial class GameBoardScene
 		flightCard.Scale = new Vector2(scaleX * scale, scale);
 	}
 
-	private int AdvanceQuestionCardRefreshTurnCounter()
+	private int AdvanceQuestionCardRefreshTurnCounter(int nextTurnPlayerIndex)
 	{
 		if (HasTableSpecialCard())
 		{
 			return -1;
 		}
 
+		if (_questionCardRefreshAnchorPlayerIndex < 0)
+		{
+			return -1;
+		}
+
 		_completedTurnsSinceQuestionCardRefresh++;
-		if (_completedTurnsSinceQuestionCardRefresh < GetQuestionCardRefreshTurnCount())
+		if (nextTurnPlayerIndex != _questionCardRefreshAnchorPlayerIndex
+			|| _completedTurnsSinceQuestionCardRefresh < GetQuestionCardRefreshTurnCount())
 		{
 			return -1;
 		}
 
 		_completedTurnsSinceQuestionCardRefresh = 0;
+		_questionCardRefreshAnchorPlayerIndex = -1;
 		return PlaceQuestionCardOnNextTableSlot();
 	}
 
@@ -1377,7 +1384,7 @@ public partial class GameBoardScene
 
 	private int GetQuestionCardRefreshTurnCount()
 	{
-		return Math.Max(1, player_count * QuestionCardRefreshCooldownRounds);
+		return Math.Max(1, player_count * QuestionCardRefreshCyclesAfterCapture);
 	}
 
 	private bool HasTableSpecialCard()
@@ -1587,7 +1594,6 @@ public partial class GameBoardScene
 		int collectedCardCount = 0;
 		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex) : 0;
 		int scorePlayerIndex = awardScore ? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex) : playerIndex;
-		bool capturedSpecialCard = false;
 		List<int> validExtraCaptureIndexes = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
@@ -1612,10 +1618,6 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (tableCard.ItemOverlay.HasValue)
-			{
-				capturedSpecialCard = true;
-			}
 		}
 
 		foreach (int tableCardIndex in validExtraCaptureIndexes)
@@ -1633,9 +1635,10 @@ public partial class GameBoardScene
 		{
 			_tableCards.RemoveAt(validExtraCaptureIndexes[index]);
 		}
-		if (capturedSpecialCard)
+		if (captureCount + validExtraCaptureIndexes.Count > 0)
 		{
 			_completedTurnsSinceQuestionCardRefresh = 0;
+			_questionCardRefreshAnchorPlayerIndex = playerIndex;
 		}
 
 		if (awardScore)
@@ -1729,10 +1732,16 @@ public partial class GameBoardScene
 
 	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
 	{
+		if (_questionCardRefreshAnchorPlayerIndex < 0)
+		{
+			_completedTurnsSinceQuestionCardRefresh = 0;
+			_questionCardRefreshAnchorPlayerIndex = playerIndex;
+		}
+
 		_currentTurnPlayerIndex = result.Captured ? playerIndex : GetNextTurnPlayerIndex(playerIndex);
 		if (!result.Captured)
 		{
-			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter();
+			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter(_currentTurnPlayerIndex);
 			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
 			{
 				_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = true;

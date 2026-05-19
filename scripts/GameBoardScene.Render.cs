@@ -393,7 +393,7 @@ public partial class GameBoardScene
 		};
 	}
 
-	private void AddMagnetOverlay(Node parent, Vector2 position, Vector2 size, float rotationDegrees = 0.0f, int zIndex = 1)
+	private void AddMagnetOverlay(Node parent, Vector2 position, Vector2 size, float rotationDegrees = 0.0f, int zIndex = 1, float alpha = 1.0f)
 	{
 		if (_magnetCardOverlayTexture == null)
 		{
@@ -413,6 +413,7 @@ public partial class GameBoardScene
 			PivotOffset = size / 2.0f,
 			RotationDegrees = rotationDegrees,
 			ZIndex = zIndex,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, alpha),
 		};
 		parent.AddChild(overlay);
 	}
@@ -565,10 +566,13 @@ public partial class GameBoardScene
 			Texture2D? tableCardTexture = null;
 			bool animateCardBack = false;
 			bool hideItemOverlay = false;
+			bool showMainPlayerPreview = ShouldShowMainPlayerTablePreview(tableCardData);
 			if (tableCardData.Card.HasValue)
 			{
-				animateCardBack = !tableCardData.IsFaceUp && _cardBackTexture != null;
-				tableCardTexture = tableCardData.IsFaceUp ? tableCardData.Card.Value.Texture : _cardBackTexture;
+				animateCardBack = !showMainPlayerPreview && !tableCardData.IsFaceUp && _cardBackTexture != null;
+				tableCardTexture = showMainPlayerPreview
+					? tableCardData.Card.Value.Texture
+					: tableCardData.IsFaceUp ? tableCardData.Card.Value.Texture : _cardBackTexture;
 			}
 			else if (tableCardData.ItemOverlay.HasValue && !tableCardData.IsFaceUp && _cardBackTexture != null)
 			{
@@ -590,6 +594,9 @@ public partial class GameBoardScene
 					Position = cardPositions[cardIndex],
 					Size = CardVisualSize,
 					ZIndex = baseZIndex,
+					Modulate = showMainPlayerPreview
+						? new Color(1.0f, 1.0f, 1.0f, MainPlayerTablePreviewAlpha)
+						: Colors.White,
 				};
 				if (tableCardData.Card.HasValue)
 				{
@@ -617,9 +624,15 @@ public partial class GameBoardScene
 				{
 					_centerArena.AddChild(descriptionLabel);
 				}
-				if (tableCardData.Card.HasValue && tableCardData.Card.Value.HasMagnetEffect && tableCardData.IsFaceUp)
+				if (tableCardData.Card.HasValue && tableCardData.Card.Value.HasMagnetEffect && (tableCardData.IsFaceUp || showMainPlayerPreview))
 				{
-					AddMagnetOverlay(_centerArena, cardPositions[cardIndex], CardVisualSize, 0.0f, baseZIndex + 1);
+					AddMagnetOverlay(
+						_centerArena,
+						cardPositions[cardIndex],
+						CardVisualSize,
+						0.0f,
+						baseZIndex + 1,
+						showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f);
 				}
 			}
 
@@ -645,6 +658,13 @@ public partial class GameBoardScene
 
 			_centerArena.AddChild(itemOverlay);
 		}
+	}
+
+	private static bool ShouldShowMainPlayerTablePreview(TableCard tableCard)
+	{
+		return tableCard.Card.HasValue
+			&& !tableCard.IsFaceUp
+			&& tableCard.CardOwnerPlayerIndex == MainPlayerIndex;
 	}
 
 	private List<Vector2> BuildTableCardPositions(int cardCount)

@@ -52,8 +52,10 @@ public partial class GameBoardScene
 		}
 
 		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPositions[tableCardIndex];
-		bool flipToCardBack = playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
+		bool showMainPlayerPreview = playerIndex == MainPlayerIndex && !tableCardIsFaceUp;
+		bool flipToCardBack = !showMainPlayerPreview && playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
+		float targetAlpha = showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f;
 		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
 		var flightCard = new Control
 		{
@@ -113,6 +115,7 @@ public partial class GameBoardScene
 				targetGlobalPosition,
 				startRotationDegrees,
 				flipToCardBack,
+				targetAlpha,
 				0.0f);
 
 			Tween tween = CreateTween();
@@ -129,6 +132,7 @@ public partial class GameBoardScene
 					targetGlobalPosition,
 					startRotationDegrees,
 					flipToCardBack,
+					targetAlpha,
 					progress)),
 				0.0f,
 				1.0f,
@@ -415,6 +419,7 @@ public partial class GameBoardScene
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees,
 		bool flipToCardBack,
+		float targetAlpha,
 		float progress)
 	{
 		if (!GodotObject.IsInstanceValid(flightCard) || !GodotObject.IsInstanceValid(cardVisual))
@@ -425,13 +430,16 @@ public partial class GameBoardScene
 		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
 		flightCard.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, clampedProgress);
 		flightCard.RotationDegrees = Mathf.Lerp(startRotationDegrees, 0.0f, clampedProgress);
+		Color targetModulate = new(1.0f, 1.0f, 1.0f, targetAlpha);
 
 		if (!flipToCardBack)
 		{
 			cardVisual.Texture = startTexture;
+			cardVisual.Modulate = Colors.White.Lerp(targetModulate, clampedProgress);
 			if (magnetOverlay != null)
 			{
 				magnetOverlay.Visible = true;
+				magnetOverlay.Modulate = cardVisual.Modulate;
 			}
 
 			flightCard.Scale = Vector2.One;
@@ -440,9 +448,11 @@ public partial class GameBoardScene
 
 		bool showingBack = clampedProgress >= 0.5f;
 		cardVisual.Texture = showingBack ? targetTexture : startTexture;
+		cardVisual.Modulate = Colors.White;
 		if (magnetOverlay != null)
 		{
 			magnetOverlay.Visible = !showingBack;
+			magnetOverlay.Modulate = Colors.White;
 		}
 
 		float halfProgress = showingBack

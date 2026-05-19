@@ -64,12 +64,18 @@ public partial class GameBoardScene
 
 	private sealed class TableCard
 	{
-		public TableCard(PlayingCard? card, bool isFaceUp, ItemCard? itemOverlay = null, int itemOwnerPlayerIndex = -1)
+		public TableCard(
+			PlayingCard? card,
+			bool isFaceUp,
+			ItemCard? itemOverlay = null,
+			int itemOwnerPlayerIndex = -1,
+			int cardOwnerPlayerIndex = -1)
 		{
 			Card = card;
 			IsFaceUp = isFaceUp;
 			ItemOverlay = itemOverlay;
 			ItemOwnerPlayerIndex = itemOwnerPlayerIndex;
+			CardOwnerPlayerIndex = cardOwnerPlayerIndex;
 		}
 
 		public PlayingCard? Card { get; }
@@ -77,5 +83,6 @@ public partial class GameBoardScene
 		public bool IsHiddenDuringCapture { get; set; }
 		public ItemCard? ItemOverlay { get; }
 		public int ItemOwnerPlayerIndex { get; }
+		public int CardOwnerPlayerIndex { get; }
 	}
 }

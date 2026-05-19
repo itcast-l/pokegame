@@ -78,6 +78,7 @@ public partial class GameBoardScene : Control
 	private const int HoveredHandCardZIndexBoost = 100;
 	private const float HandCardHoverInTweenTime = 0.16f;
 	private const float HandCardHoverOutTweenTime = 0.22f;
+	private const float MainPlayerTablePreviewAlpha = 0.72f;
 	private const float AiTurnDelaySeconds = 0.35f;
 	private const float TableCaptureDelaySeconds = 0.45f;
 	private const float TableCardRevealHalfFlipSeconds = 0.16f;
@@ -95,7 +96,7 @@ public partial class GameBoardScene : Control
 	private const float TableCardPointPopupTopOffset = 26.0f;
 	private const int TableCardPointPopupFontSize = 22;
 	private const int TableCardPointPopupZIndex = 2800;
-	private const int QuestionCardRefreshCooldownRounds = 2;
+	private const int QuestionCardRefreshCyclesAfterCapture = 2;
 	private const double MagnetAttachmentSelectionSeconds = 5.0;
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
@@ -131,6 +132,7 @@ public partial class GameBoardScene : Control
 	private int _currentTurnPlayerIndex = MainPlayerIndex;
 	private int _turnSequenceGeneration;
 	private int _completedTurnsSinceQuestionCardRefresh;
+	private int _questionCardRefreshAnchorPlayerIndex = -1;
 	private int _revealedPlayerHandIndex = -1;
 	private PendingItemSelectionMode _pendingItemSelectionMode = PendingItemSelectionMode.None;
 	private int _pendingItemOwnerIndex = -1;

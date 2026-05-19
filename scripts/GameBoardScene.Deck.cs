@@ -22,6 +22,7 @@ public partial class GameBoardScene
 		_turnSequenceGeneration++;
 		_currentTurnPlayerIndex = MainPlayerIndex;
 		_completedTurnsSinceQuestionCardRefresh = 0;
+		_questionCardRefreshAnchorPlayerIndex = -1;
 		_pendingMagnetAttachmentRewardPlayers.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();

@@ -34,7 +34,7 @@ texture = ExtResource("1_question_mark")
 
 [node name="DestroyCardsItem" type="Node2D" parent="ItemCards" unique_id=307299030]
 script = ExtResource("3_item_card_data")
-item_description = "销毁该牌以下的所有牌"
+item_description = "获得本次收取"
 
 [node name="Bomb" type="Sprite2D" parent="ItemCards/DestroyCardsItem" unique_id=2103763825]
 position = Vector2(340, 180)
@@ -62,7 +62,7 @@ texture = ExtResource("5_greed")
 
 [node name="LensCardItem" type="Node2D" parent="ItemCards" unique_id=1232941760]
 script = ExtResource("3_item_card_data")
-item_description = "随机显示3张牌的点数"
+item_description = "随机翻开2张牌"
 
 [node name="Lens" type="Sprite2D" parent="ItemCards/LensCardItem" unique_id=1958844153]
 position = Vector2(820, 180)
