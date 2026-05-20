@@ -25,7 +25,7 @@ position = Vector2(576, 324)
 
 [node name="RandomCardItem" type="Node2D" parent="ItemCards" unique_id=2133639028]
 script = ExtResource("3_item_card_data")
-item_description = "随机获取一张道具"
+item_description = "ITEM_DESC_QUESTION_MARK"
 
 [node name="QuestionMark" type="Sprite2D" parent="ItemCards/RandomCardItem" unique_id=1712025996]
 position = Vector2(180, 180)
@@ -34,7 +34,7 @@ texture = ExtResource("1_question_mark")
 
 [node name="DestroyCardsItem" type="Node2D" parent="ItemCards" unique_id=307299030]
 script = ExtResource("3_item_card_data")
-item_description = "获得本次收取"
+item_description = "ITEM_DESC_BOMB"
 
 [node name="Bomb" type="Sprite2D" parent="ItemCards/DestroyCardsItem" unique_id=2103763825]
 position = Vector2(340, 180)
@@ -43,7 +43,7 @@ texture = ExtResource("2_bomb")
 
 [node name="MagnetCardItem" type="Node2D" parent="ItemCards" unique_id=1252918191]
 script = ExtResource("3_item_card_data")
-item_description = "额外吸取一张牌"
+item_description = "ITEM_DESC_MAGNET"
 
 [node name="Magnet" type="Sprite2D" parent="ItemCards/MagnetCardItem" unique_id=897041690]
 position = Vector2(500, 180)
@@ -52,7 +52,7 @@ texture = ExtResource("4_magnet")
 
 [node name="GreedCardItem" type="Node2D" parent="ItemCards" unique_id=1089692596]
 script = ExtResource("3_item_card_data")
-item_description = "收取超过 10 张牌时，获得上家牌库的 3 张牌"
+item_description = "ITEM_DESC_GREED"
 enabled_in_game = false
 
 [node name="Greed" type="Sprite2D" parent="ItemCards/GreedCardItem" unique_id=2119866210]
@@ -62,7 +62,7 @@ texture = ExtResource("5_greed")
 
 [node name="LensCardItem" type="Node2D" parent="ItemCards" unique_id=1232941760]
 script = ExtResource("3_item_card_data")
-item_description = "随机翻开2张牌"
+item_description = "ITEM_DESC_LENS"
 
 [node name="Lens" type="Sprite2D" parent="ItemCards/LensCardItem" unique_id=1958844153]
 position = Vector2(820, 180)
@@ -71,7 +71,7 @@ texture = ExtResource("6_lens")
 
 [node name="DoubleCardItem" type="Node2D" parent="ItemCards" unique_id=1748694407]
 script = ExtResource("3_item_card_data")
-item_description = "本次获得翻倍分数"
+item_description = "ITEM_DESC_DOUBLE"
 
 [node name="Double" type="Sprite2D" parent="ItemCards/DoubleCardItem" unique_id=1233789211]
 position = Vector2(980, 180)
@@ -80,7 +80,7 @@ texture = ExtResource("7_double")
 
 [node name="OvertimeCardItem" type="Node2D" parent="ItemCards" unique_id=1603257696]
 script = ExtResource("3_item_card_data")
-item_description = "再出一张牌"
+item_description = "ITEM_DESC_OVERTIME"
 
 [node name="Overtime" type="Sprite2D" parent="ItemCards/OvertimeCardItem" unique_id=1228476608]
 position = Vector2(180, 500)
@@ -89,7 +89,7 @@ texture = ExtResource("8_overtime")
 
 [node name="DrawCardItem" type="Node2D" parent="ItemCards" unique_id=785303165]
 script = ExtResource("3_item_card_data")
-item_description = "抽一张牌"
+item_description = "ITEM_DESC_DRAW_CARD"
 
 [node name="DrawCard" type="Sprite2D" parent="ItemCards/DrawCardItem" unique_id=742945675]
 position = Vector2(340, 500)
@@ -98,7 +98,7 @@ texture = ExtResource("9_draw_card")
 
 [node name="ShuffleCardItem" type="Node2D" parent="ItemCards" unique_id=1564650625]
 script = ExtResource("3_item_card_data")
-item_description = "打乱牌桌顺序"
+item_description = "ITEM_DESC_SHUFFLE"
 
 [node name="Shuffle" type="Sprite2D" parent="ItemCards/ShuffleCardItem" unique_id=574691291]
 position = Vector2(500, 500)

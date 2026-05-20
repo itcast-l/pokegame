@@ -140,9 +140,9 @@ public partial class GameBoardScene
 		layout.AddThemeConstantOverride("separation", 14);
 		margin.AddChild(layout);
 
-		Control continueFrame = CreatePauseButton("ContinueGame", "继续游戏", new Color(0.58f, 1.0f, 0.92f), HidePauseMenu, false);
-		Control mainMenuFrame = CreatePauseButton("ReturnToMainMenu", "回到主菜单", new Color(0.78f, 0.9f, 1.0f), ReturnToMainMenu, false);
-		Control quitFrame = CreatePauseButton("QuitGame", "退出游戏", new Color(0.95f, 0.68f, 0.56f), QuitGameFromPauseMenu, false);
+		Control continueFrame = CreatePauseButton("ContinueGame", "GAME_CONTINUE", new Color(0.58f, 1.0f, 0.92f), HidePauseMenu, false);
+		Control mainMenuFrame = CreatePauseButton("ReturnToMainMenu", "GAME_RETURN_MAIN_MENU", new Color(0.78f, 0.9f, 1.0f), ReturnToMainMenu, false);
+		Control quitFrame = CreatePauseButton("QuitGame", "GAME_QUIT", new Color(0.95f, 0.68f, 0.56f), QuitGameFromPauseMenu, false);
 		layout.AddChild(continueFrame);
 		layout.AddChild(mainMenuFrame);
 		layout.AddChild(quitFrame);
@@ -168,7 +168,7 @@ public partial class GameBoardScene
 		return label;
 	}
 
-	private Control CreatePauseButton(string nodeName, string text, Color accentColor, Action pressedAction, bool flipOrnament)
+	private Control CreatePauseButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament)
 	{
 		var frame = new OceanMenuButtonFrame
 		{
@@ -182,7 +182,7 @@ public partial class GameBoardScene
 		var button = new Button
 		{
 			Name = "Button",
-			Text = text,
+			Text = Localize(textKey),
 			Flat = true,
 			FocusMode = FocusModeEnum.All,
 			MouseFilter = MouseFilterEnum.Stop,
@@ -212,6 +212,7 @@ public partial class GameBoardScene
 			_pauseContinueButton = button;
 		}
 
+		TrackLocalizedGameButton(button, textKey);
 		frame.AddChild(button);
 		return frame;
 	}

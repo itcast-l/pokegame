@@ -82,10 +82,10 @@ public partial class MainMenuScene : Control
 		pearl.Draw += () => DrawPearlDivider(pearl);
 		layout.AddChild(pearl);
 
-		var title = CreateDialogLabel("选择游戏人数", 30, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
+		var title = CreateLocalizedDialogLabel("PLAYER_COUNT_TITLE", 30, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
 		layout.AddChild(title);
 
-		var message = CreateDialogLabel("选择本局参与人数", 18, new Color(0.66f, 0.96f, 0.92f, 0.9f), HorizontalAlignment.Center);
+		var message = CreateLocalizedDialogLabel("PLAYER_COUNT_MESSAGE", 18, new Color(0.66f, 0.96f, 0.92f, 0.9f), HorizontalAlignment.Center);
 		layout.AddChild(message);
 
 		var spacer = new Control
@@ -102,12 +102,12 @@ public partial class MainMenuScene : Control
 		actions.AddThemeConstantOverride("separation", 16);
 		layout.AddChild(actions);
 
-		actions.AddChild(CreatePlayerCountOption(2, "双人对局", "40张牌", new Color(0.58f, 1.0f, 0.92f)));
-		actions.AddChild(CreatePlayerCountOption(3, "三人对局", "80张牌", new Color(0.95f, 0.86f, 0.52f)));
-		actions.AddChild(CreatePlayerCountOption(4, "四人对局", "80张牌", new Color(0.58f, 0.82f, 1.0f)));
+		actions.AddChild(CreatePlayerCountOption(2, "PLAYER_COUNT_2_TITLE", "PLAYER_COUNT_40_CARDS", new Color(0.58f, 1.0f, 0.92f)));
+		actions.AddChild(CreatePlayerCountOption(3, "PLAYER_COUNT_3_TITLE", "PLAYER_COUNT_80_CARDS", new Color(0.95f, 0.86f, 0.52f)));
+		actions.AddChild(CreatePlayerCountOption(4, "PLAYER_COUNT_4_TITLE", "PLAYER_COUNT_80_CARDS", new Color(0.58f, 0.82f, 1.0f)));
 	}
 
-	private Control CreatePlayerCountOption(int playerCount, string title, string deckText, Color accentColor)
+	private Control CreatePlayerCountOption(int playerCount, string titleKey, string deckTextKey, Color accentColor)
 	{
 		var card = new PanelContainer
 		{
@@ -136,7 +136,7 @@ public partial class MainMenuScene : Control
 		layout.AddThemeConstantOverride("separation", 8);
 		margin.AddChild(layout);
 
-		var titleLabel = CreateDialogLabel(title, 24, new Color(0.92f, 1.0f, 0.97f), HorizontalAlignment.Center);
+		var titleLabel = CreateLocalizedDialogLabel(titleKey, 24, new Color(0.92f, 1.0f, 0.97f), HorizontalAlignment.Center);
 		titleLabel.VerticalAlignment = VerticalAlignment.Center;
 		layout.AddChild(titleLabel);
 
@@ -158,7 +158,7 @@ public partial class MainMenuScene : Control
 		deckBadgeMargin.AddThemeConstantOverride("margin_bottom", 3);
 		deckBadge.AddChild(deckBadgeMargin);
 
-		var deckLabel = CreateDialogLabel(deckText, 15, new Color(0.88f, 1.0f, 0.96f, 0.95f), HorizontalAlignment.Center);
+		var deckLabel = CreateLocalizedDialogLabel(deckTextKey, 15, new Color(0.88f, 1.0f, 0.96f, 0.95f), HorizontalAlignment.Center);
 		deckBadgeMargin.AddChild(deckLabel);
 
 		var button = new Button

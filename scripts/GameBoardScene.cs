@@ -203,6 +203,8 @@ public partial class GameBoardScene : Control
 
 	public override void _Ready()
 	{
+		Localization.EnsureLoaded();
+		ApplySavedLanguagePreference();
 		_rng.Randomize();
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
@@ -502,7 +504,7 @@ public partial class GameBoardScene : Control
 			if (itemCardData.TryGetItemCardId(out string itemCardId))
 			{
 				_enabledSceneItemCardIds.Add(itemCardId);
-				_itemCardDescriptions[itemCardId] = itemCardData.item_description;
+				_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, itemCardData.item_description);
 			}
 		}
 

@@ -109,10 +109,10 @@ public partial class MainMenuScene : Control
 		layout.AddThemeConstantOverride("separation", 12);
 		margin.AddChild(layout);
 
-		var title = CreateDialogLabel("设置", 34, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
+		var title = CreateLocalizedDialogLabel("SETTINGS_TITLE", 34, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
 		layout.AddChild(title);
 
-		var message = CreateDialogLabel("基础游戏选项", 17, new Color(0.66f, 0.96f, 0.92f, 0.86f), HorizontalAlignment.Center);
+		var message = CreateLocalizedDialogLabel("SETTINGS_MESSAGE", 17, new Color(0.66f, 0.96f, 0.92f, 0.86f), HorizontalAlignment.Center);
 		layout.AddChild(message);
 
 		var settingsList = new VBoxContainer
@@ -125,7 +125,7 @@ public partial class MainMenuScene : Control
 
 		(_masterVolumeSlider, _masterVolumeValue) = CreateSettingsSlider(
 			settingsList,
-			"主音量",
+			"SETTINGS_MASTER_VOLUME",
 			value =>
 			{
 				_masterVolume = (float)value / 100.0f;
@@ -134,22 +134,23 @@ public partial class MainMenuScene : Control
 			hidden: true);
 		(_musicVolumeSlider, _musicVolumeValue) = CreateSettingsSlider(
 			settingsList,
-			"音乐音量",
+			"SETTINGS_MUSIC_VOLUME",
 			value =>
 			{
 				_musicVolume = (float)value / 100.0f;
 				OnSettingsChanged();
 			});
 
-		_muteAudioToggle = CreateSettingsToggle(settingsList, "静音", pressed =>
+		_muteAudioToggle = CreateSettingsToggle(settingsList, "SETTINGS_MUTE", pressed =>
 		{
 			_muteAudio = pressed;
 			OnSettingsChanged();
 		});
 
 		_windowModeOption = CreateWindowModeOption(settingsList);
+		_languageOption = CreateLanguageOption(settingsList);
 
-		_oceanMotionToggle = CreateSettingsToggle(settingsList, "海洋动态", pressed =>
+		_oceanMotionToggle = CreateSettingsToggle(settingsList, "SETTINGS_OCEAN_MOTION", pressed =>
 		{
 			_oceanMotion = pressed;
 			_motionScaleSlider.Editable = pressed;
@@ -158,7 +159,7 @@ public partial class MainMenuScene : Control
 
 		(_motionScaleSlider, _motionScaleValue) = CreateSettingsSlider(
 			settingsList,
-			"动态强度",
+			"SETTINGS_MOTION_SCALE",
 			value =>
 			{
 				_motionScale = (float)value / 100.0f;
@@ -177,8 +178,8 @@ public partial class MainMenuScene : Control
 		actions.AddThemeConstantOverride("separation", 18);
 		layout.AddChild(actions);
 
-		actions.AddChild(CreateDialogButton("恢复默认", new Color(0.78f, 0.9f, 1.0f), ResetSettingsToDefaults, false, 180.0f));
-		actions.AddChild(CreateDialogButton("完成", new Color(0.58f, 1.0f, 0.92f), HideSettingsDialog, true, 160.0f));
+		actions.AddChild(CreateLocalizedDialogButton("SETTINGS_RESET_DEFAULTS", new Color(0.78f, 0.9f, 1.0f), ResetSettingsToDefaults, false, 180.0f));
+		actions.AddChild(CreateLocalizedDialogButton("SETTINGS_DONE", new Color(0.58f, 1.0f, 0.92f), HideSettingsDialog, true, 160.0f));
 	}
 
 	private (HSlider Slider, Label ValueLabel) CreateSettingsSlider(
@@ -257,7 +258,7 @@ public partial class MainMenuScene : Control
 
 	private OptionButton CreateWindowModeOption(Container parent)
 	{
-		var row = CreateSettingsRow(parent, "窗口模式");
+		var row = CreateSettingsRow(parent, "SETTINGS_WINDOW_MODE");
 		var spacer = new Control
 		{
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
@@ -272,8 +273,8 @@ public partial class MainMenuScene : Control
 			FocusMode = FocusModeEnum.None,
 			MouseFilter = MouseFilterEnum.Stop,
 		};
-		option.AddItem("窗口", 0);
-		option.AddItem("全屏", 1);
+		option.AddItem(Localize("SETTINGS_WINDOWED"), 0);
+		option.AddItem(Localize("SETTINGS_FULLSCREEN"), 1);
 		option.AddThemeFontSizeOverride("font_size", 17);
 		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
 		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
@@ -290,6 +291,50 @@ public partial class MainMenuScene : Control
 			}
 
 			_fullscreen = index == 1;
+			OnSettingsChanged();
+		};
+		row.AddChild(option);
+		return option;
+	}
+
+	private OptionButton CreateLanguageOption(Container parent)
+	{
+		var row = CreateSettingsRow(parent, "SETTINGS_LANGUAGE");
+		var spacer = new Control
+		{
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		row.AddChild(spacer);
+
+		var option = new OptionButton
+		{
+			Name = "LanguageOption",
+			CustomMinimumSize = new Vector2(174.0f, 40.0f),
+			FocusMode = FocusModeEnum.None,
+			MouseFilter = MouseFilterEnum.Stop,
+		};
+		for (int index = 0; index < Localization.SupportedLanguages.Length; index++)
+		{
+			option.AddItem(Localize(Localization.SupportedLanguages[index].LabelKey), index);
+		}
+
+		option.AddThemeFontSizeOverride("font_size", 17);
+		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
+		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
+		option.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
+		option.AddThemeStyleboxOverride("normal", CreateOptionButtonStyle(false));
+		option.AddThemeStyleboxOverride("hover", CreateOptionButtonStyle(true));
+		option.AddThemeStyleboxOverride("pressed", CreateOptionButtonStyle(true));
+		option.AddThemeStyleboxOverride("focus", CreateOptionButtonStyle(true));
+		option.ItemSelected += index =>
+		{
+			if (_isSyncingSettingsControls)
+			{
+				return;
+			}
+
+			_languagePreference = Localization.SupportedLanguages[(int)index].Preference;
 			OnSettingsChanged();
 		};
 		row.AddChild(option);
@@ -326,7 +371,7 @@ public partial class MainMenuScene : Control
 		row.AddThemeConstantOverride("separation", 12);
 		margin.AddChild(row);
 
-		var label = CreateDialogLabel(labelText, 18, new Color(0.88f, 1.0f, 0.96f, 0.96f), HorizontalAlignment.Left);
+		var label = CreateLocalizedDialogLabel(labelText, 18, new Color(0.88f, 1.0f, 0.96f, 0.96f), HorizontalAlignment.Left);
 		label.CustomMinimumSize = new Vector2(104.0f, 38.0f);
 		label.VerticalAlignment = VerticalAlignment.Center;
 		row.AddChild(label);
@@ -349,6 +394,7 @@ public partial class MainMenuScene : Control
 		_fullscreen = config.GetValue("video", "fullscreen", DefaultFullscreen).AsBool();
 		_oceanMotion = config.GetValue("video", "ocean_motion", DefaultOceanMotion).AsBool();
 		_motionScale = Mathf.Clamp(config.GetValue("video", "motion_scale", DefaultMotionScale).AsSingle(), 0.5f, 1.5f);
+		_languagePreference = Localization.NormalizePreference(config.GetValue("general", "language", Localization.DefaultLanguagePreference).AsString());
 	}
 
 	private void SaveSettings()
@@ -360,6 +406,7 @@ public partial class MainMenuScene : Control
 		config.SetValue("video", "fullscreen", _fullscreen);
 		config.SetValue("video", "ocean_motion", _oceanMotion);
 		config.SetValue("video", "motion_scale", _motionScale);
+		config.SetValue("general", "language", _languagePreference);
 
 		Error saveResult = config.Save(SettingsConfigPath);
 		if (saveResult != Error.Ok)
@@ -373,6 +420,8 @@ public partial class MainMenuScene : Control
 		_masterVolume = Mathf.Clamp(_masterVolume, 0.0f, 1.0f);
 		_musicVolume = Mathf.Clamp(_musicVolume, 0.0f, 1.0f);
 		_motionScale = Mathf.Clamp(_motionScale, 0.5f, 1.5f);
+		_languagePreference = Localization.NormalizePreference(_languagePreference);
+		TranslationServer.SetLocale(Localization.ResolveLocale(this, _languagePreference));
 
 		AudioServer.SetBusVolumeDb(0, LinearVolumeToDb(_masterVolume));
 		AudioServer.SetBusMute(0, _muteAudio);
@@ -421,6 +470,7 @@ public partial class MainMenuScene : Control
 		_musicVolumeSlider.Value = Mathf.RoundToInt(_musicVolume * 100.0f);
 		_muteAudioToggle.ButtonPressed = _muteAudio;
 		_windowModeOption.Select(_fullscreen ? 1 : 0);
+		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
 		_oceanMotionToggle.ButtonPressed = _oceanMotion;
 		_motionScaleSlider.Value = Mathf.RoundToInt(_motionScale * 100.0f);
 		_motionScaleSlider.Editable = _oceanMotion;
@@ -446,6 +496,30 @@ public partial class MainMenuScene : Control
 		}
 	}
 
+	private void RefreshWindowModeOptions()
+	{
+		if (_windowModeOption == null)
+		{
+			return;
+		}
+
+		_windowModeOption.SetItemText(0, Localize("SETTINGS_WINDOWED"));
+		_windowModeOption.SetItemText(1, Localize("SETTINGS_FULLSCREEN"));
+	}
+
+	private void RefreshLanguageOptions()
+	{
+		if (_languageOption == null)
+		{
+			return;
+		}
+
+		for (int index = 0; index < Localization.SupportedLanguages.Length; index++)
+		{
+			_languageOption.SetItemText(index, Localize(Localization.SupportedLanguages[index].LabelKey));
+		}
+	}
+
 	private void OnSettingsChanged()
 	{
 		ApplySettings();
@@ -460,6 +534,7 @@ public partial class MainMenuScene : Control
 		_muteAudio = DefaultMuteAudio;
 		_fullscreen = DefaultFullscreen;
 		_oceanMotion = DefaultOceanMotion;
+		_languagePreference = Localization.DefaultLanguagePreference;
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();

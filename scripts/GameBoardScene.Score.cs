@@ -48,7 +48,7 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			meter.TooltipText = $"玩家 {playerIndex + 1}: 0/{WinningScore}";
+			meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
 			meter.SetScore(0, WinningScore, false);
 			_playerScoreMeters[playerIndex] = meter;
@@ -90,7 +90,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		meter.TooltipText = $"玩家 {playerIndex + 1}: {_playerScores[playerIndex]}/{WinningScore}";
+		meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
 		meter.SetScore(_playerScores[playerIndex], WinningScore, animate);
 	}
 

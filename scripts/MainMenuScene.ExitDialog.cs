@@ -74,13 +74,13 @@ public partial class MainMenuScene : Control
 		pearl.Draw += () => DrawPearlDivider(pearl);
 		layout.AddChild(pearl);
 
-		var title = CreateDialogLabel("退出游戏", 31, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
+		var title = CreateLocalizedDialogLabel("EXIT_TITLE", 31, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
 		layout.AddChild(title);
 
-		var message = CreateDialogLabel("是否要离开当前海域？", 21, new Color(0.66f, 0.96f, 0.92f, 0.9f), HorizontalAlignment.Center);
+		var message = CreateLocalizedDialogLabel("EXIT_MESSAGE", 21, new Color(0.66f, 0.96f, 0.92f, 0.9f), HorizontalAlignment.Center);
 		layout.AddChild(message);
 
-		var hint = CreateDialogLabel("未保存的对局进度可能会丢失", 16, new Color(0.95f, 0.84f, 0.58f, 0.76f), HorizontalAlignment.Center);
+		var hint = CreateLocalizedDialogLabel("EXIT_HINT", 16, new Color(0.95f, 0.84f, 0.58f, 0.76f), HorizontalAlignment.Center);
 		layout.AddChild(hint);
 
 		var spacer = new Control
@@ -97,8 +97,8 @@ public partial class MainMenuScene : Control
 		actions.AddThemeConstantOverride("separation", 18);
 		layout.AddChild(actions);
 
-		Control cancelFrame = CreateDialogButton("继续游戏", new Color(0.58f, 1.0f, 0.92f), HideExitDialog, false);
-		Control confirmFrame = CreateDialogButton("确认退出", new Color(0.95f, 0.68f, 0.56f), QuitGame, true);
+		Control cancelFrame = CreateLocalizedDialogButton("EXIT_CANCEL", new Color(0.58f, 1.0f, 0.92f), HideExitDialog, false);
+		Control confirmFrame = CreateLocalizedDialogButton("EXIT_CONFIRM", new Color(0.95f, 0.68f, 0.56f), QuitGame, true);
 		actions.AddChild(cancelFrame);
 		actions.AddChild(confirmFrame);
 	}

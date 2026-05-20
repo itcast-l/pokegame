@@ -3,6 +3,84 @@ using Godot;
 
 public partial class MainMenuScene : Control
 {
+	private string Localize(string key)
+	{
+		return Tr(key).ToString();
+	}
+
+	private Label CreateLocalizedDialogLabel(string key, int fontSize, Color color, HorizontalAlignment alignment)
+	{
+		var label = CreateDialogLabel(Localize(key), fontSize, color, alignment);
+		_localizedLabels.Add((label, key));
+		return label;
+	}
+
+	private Control CreateLocalizedDialogButton(string key, Color accentColor, Action pressedAction, bool flipOrnament, float width = 190.0f)
+	{
+		var frame = CreateDialogButton(Localize(key), accentColor, pressedAction, flipOrnament, width);
+		if (frame.GetNodeOrNull<Button>("Button") is Button button)
+		{
+			_localizedButtons.Add((button, key));
+		}
+
+		return frame;
+	}
+
+	private void RefreshLocalizedText()
+	{
+		if (_singlePlayerButton != null)
+		{
+			_singlePlayerButton.Text = Localize("MENU_SINGLE_PLAYER");
+		}
+
+		if (_adventureModeButton != null)
+		{
+			_adventureModeButton.Text = Localize("MENU_ADVENTURE_MODE");
+		}
+
+		if (_multiplayerButton != null)
+		{
+			_multiplayerButton.Text = Localize("MENU_MULTIPLAYER");
+		}
+
+		if (_settingsButton != null)
+		{
+			_settingsButton.Text = Localize("MENU_SETTINGS");
+		}
+
+		if (_exitButton != null)
+		{
+			_exitButton.Text = Localize("MENU_EXIT");
+		}
+
+		for (int index = _localizedLabels.Count - 1; index >= 0; index--)
+		{
+			(Label label, string key) = _localizedLabels[index];
+			if (!GodotObject.IsInstanceValid(label))
+			{
+				_localizedLabels.RemoveAt(index);
+				continue;
+			}
+
+			label.Text = Localize(key);
+		}
+
+		for (int index = _localizedButtons.Count - 1; index >= 0; index--)
+		{
+			(Button button, string key) = _localizedButtons[index];
+			if (!GodotObject.IsInstanceValid(button))
+			{
+				_localizedButtons.RemoveAt(index);
+				continue;
+			}
+
+			button.Text = Localize(key);
+		}
+
+		RefreshWindowModeOptions();
+		RefreshLanguageOptions();
+	}
+
 	private Label CreateDialogLabel(string text, int fontSize, Color color, HorizontalAlignment alignment)
 	{
 		var label = new Label

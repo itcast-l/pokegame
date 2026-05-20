@@ -179,12 +179,12 @@ public partial class GameBoardScene
 		}
 
 		var overlay = CreateSelectionOverlay();
-		var panel = CreateSelectionPanel("选择玩家");
+		var panel = CreateSelectionPanel(Localize("GAME_SELECT_PLAYER"));
 
 		foreach (int playerIndex in candidates)
 		{
 			int targetPlayerIndex = playerIndex;
-			Button button = CreateSelectionButton($"玩家 {playerIndex + 1}");
+			Button button = CreateSelectionButton(GetPlayerLabel(playerIndex));
 			button.Pressed += () => SelectPendingItemTargetPlayer(targetPlayerIndex);
 			panel.AddChild(button);
 		}
@@ -231,7 +231,7 @@ public partial class GameBoardScene
 		}
 
 		var overlay = CreateSelectionOverlay();
-		var panel = CreateSelectionPanel($"玩家 {targetPlayerIndex + 1} 手牌");
+		var panel = CreateSelectionPanel(LocalizeFormat("GAME_PLAYER_HAND", targetPlayerIndex + 1));
 
 		if (targetPlayerIndex >= 0 && targetPlayerIndex < _playerHands.Count)
 		{
@@ -248,7 +248,7 @@ public partial class GameBoardScene
 			{
 				ItemCard itemCard = _playerItemHands[targetPlayerIndex][itemIndex];
 				int selectedHandIndex = _playerHands[targetPlayerIndex].Count + itemIndex;
-				Button button = CreateSelectionButton($"特殊牌 {itemCard.Id}");
+				Button button = CreateSelectionButton(LocalizeFormat("GAME_SPECIAL_CARD", itemCard.Id));
 				button.Pressed += () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex);
 				panel.AddChild(button);
 			}
@@ -424,7 +424,7 @@ public partial class GameBoardScene
 
 	private Button CreateCancelButton()
 	{
-		Button button = CreateSelectionButton("取消");
+		Button button = CreateSelectionButton(Localize("GAME_CANCEL"));
 		button.Pressed += CancelPendingItemSelection;
 		return button;
 	}

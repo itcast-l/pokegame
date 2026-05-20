@@ -171,15 +171,15 @@ public partial class GameBoardScene
 		buttonRow.AddThemeConstantOverride("separation", 14);
 		_winnerBannerPanel.AddChild(buttonRow);
 
-		Control replayFrame = CreateWinnerButton("Replay", "再来一局", new Color(0.58f, 1.0f, 0.92f), RestartGameFromWinner, false);
-		Control mainMenuFrame = CreateWinnerButton("ReturnToMainMenu", "回到主菜单", new Color(1.0f, 0.86f, 0.54f), ReturnToMainMenu, true);
+		Control replayFrame = CreateWinnerButton("Replay", "GAME_REPLAY", new Color(0.58f, 1.0f, 0.92f), RestartGameFromWinner, false);
+		Control mainMenuFrame = CreateWinnerButton("ReturnToMainMenu", "GAME_RETURN_MAIN_MENU", new Color(1.0f, 0.86f, 0.54f), ReturnToMainMenu, true);
 		buttonRow.AddChild(replayFrame);
 		buttonRow.AddChild(mainMenuFrame);
 	}
 
 	private void ShowWinnerBanner(int playerIndex)
 	{
-		_winnerLabel.Text = $"玩家 {playerIndex + 1} 获胜";
+		_winnerLabel.Text = LocalizeFormat("GAME_WINNER", playerIndex + 1);
 		_winnerLabel.Visible = true;
 		if (_winnerBannerRoot == null)
 		{
@@ -227,7 +227,7 @@ public partial class GameBoardScene
 		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
 
-	private Control CreateWinnerButton(string nodeName, string text, Color accentColor, Action pressedAction, bool flipOrnament)
+	private Control CreateWinnerButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament)
 	{
 		var frame = new OceanMenuButtonFrame
 		{
@@ -240,7 +240,7 @@ public partial class GameBoardScene
 		var button = new Button
 		{
 			Name = "Button",
-			Text = text,
+			Text = Localize(textKey),
 			Flat = true,
 			FocusMode = FocusModeEnum.All,
 			MouseFilter = MouseFilterEnum.Stop,
@@ -269,6 +269,7 @@ public partial class GameBoardScene
 			_winnerReplayButton = button;
 		}
 
+		TrackLocalizedGameButton(button, textKey);
 		frame.AddChild(button);
 		return frame;
 	}

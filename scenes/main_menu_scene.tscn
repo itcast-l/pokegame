@@ -213,7 +213,7 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
-text = "单人游戏"
+text = "MENU_SINGLE_PLAYER"
 
 [node name="AdventureModeFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
 custom_minimum_size = Vector2(374, 78)
@@ -246,7 +246,7 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
-text = "冒险模式"
+text = "MENU_ADVENTURE_MODE"
 
 [node name="MultiplayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
 custom_minimum_size = Vector2(374, 78)
@@ -278,7 +278,7 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
-text = "多人游戏"
+text = "MENU_MULTIPLAYER"
 
 [node name="SettingsFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
 custom_minimum_size = Vector2(374, 78)
@@ -311,7 +311,7 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
-text = "设置"
+text = "MENU_SETTINGS"
 
 [node name="ExitFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
 custom_minimum_size = Vector2(374, 78)
@@ -343,7 +343,7 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
-text = "退出"
+text = "MENU_EXIT"
 
 [node name="BottomSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
 custom_minimum_size = Vector2(0, 16)

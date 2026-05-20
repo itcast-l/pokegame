@@ -8,6 +8,8 @@ public partial class MainMenuScene : Control
 	private const string UnderwaterAmbientLayerPath = "UnderwaterAmbientLayer";
 	private const string WaterCausticOverlayPath = "WaterCausticOverlay";
 	private const string SinglePlayerButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame/Button";
+	private const string AdventureModeButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureModeFrame/Button";
+	private const string MultiplayerButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/MultiplayerFrame/Button";
 	private const string SettingsButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame/Button";
 	private const string ExitButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame/Button";
 	private const string AvatarEntryPath = "AvatarEntryLayer/MainMenuAvatarEntry";
@@ -24,6 +26,11 @@ public partial class MainMenuScene : Control
 	private const bool DefaultFullscreen = false;
 	private const bool DefaultOceanMotion = true;
 
+	private Button _singlePlayerButton = default!;
+	private Button _adventureModeButton = default!;
+	private Button _multiplayerButton = default!;
+	private Button _settingsButton = default!;
+	private Button _exitButton = default!;
 	private AudioStreamPlayer _backgroundMusic = default!;
 	private MainMenuOceanDynamics? _oceanDynamicsLayer;
 	private UnderwaterAmbientLayer? _underwaterAmbientLayer;
@@ -45,6 +52,7 @@ public partial class MainMenuScene : Control
 	private CheckButton _muteAudioToggle = default!;
 	private CheckButton _oceanMotionToggle = default!;
 	private OptionButton _windowModeOption = default!;
+	private OptionButton _languageOption = default!;
 	private CanvasLayer _exitDialogLayer = default!;
 	private Control _exitDialogRoot = default!;
 	private PanelContainer _exitDialogPanel = default!;
@@ -56,23 +64,30 @@ public partial class MainMenuScene : Control
 	private bool _muteAudio = DefaultMuteAudio;
 	private bool _fullscreen = DefaultFullscreen;
 	private bool _oceanMotion = DefaultOceanMotion;
+	private string _languagePreference = Localization.DefaultLanguagePreference;
 	private bool _isSyncingSettingsControls;
+	private readonly System.Collections.Generic.List<(Label Label, string Key)> _localizedLabels = new();
+	private readonly System.Collections.Generic.List<(Button Button, string Key)> _localizedButtons = new();
 
 	public override void _Ready()
 	{
+		Localization.EnsureLoaded();
 		PrepareBackgroundMusic();
 		_oceanDynamicsLayer = GetNodeOrNull<MainMenuOceanDynamics>(OceanDynamicsLayerPath);
 		_underwaterAmbientLayer = GetNodeOrNull<UnderwaterAmbientLayer>(UnderwaterAmbientLayerPath);
 		_waterCausticOverlay = GetNodeOrNull<CanvasItem>(WaterCausticOverlayPath);
 
-		Button singlePlayerButton = GetNode<Button>(SinglePlayerButtonPath);
-		singlePlayerButton.Pressed += ShowPlayerCountDialog;
+		_singlePlayerButton = GetNode<Button>(SinglePlayerButtonPath);
+		_singlePlayerButton.Pressed += ShowPlayerCountDialog;
 
-		Button settingsButton = GetNode<Button>(SettingsButtonPath);
-		settingsButton.Pressed += ShowSettingsDialog;
+		_adventureModeButton = GetNode<Button>(AdventureModeButtonPath);
+		_multiplayerButton = GetNode<Button>(MultiplayerButtonPath);
 
-		Button exitButton = GetNode<Button>(ExitButtonPath);
-		exitButton.Pressed += ShowExitDialog;
+		_settingsButton = GetNode<Button>(SettingsButtonPath);
+		_settingsButton.Pressed += ShowSettingsDialog;
+
+		_exitButton = GetNode<Button>(ExitButtonPath);
+		_exitButton.Pressed += ShowExitDialog;
 
 		MainMenuAvatarEntry avatarEntry = GetNode<MainMenuAvatarEntry>(AvatarEntryPath);
 		avatarEntry.AvatarPressed += OpenAvatarEditor;
@@ -83,6 +98,14 @@ public partial class MainMenuScene : Control
 		LoadSettings();
 		SyncSettingsControls();
 		ApplySettings();
+	}
+
+	public override void _Notification(int what)
+	{
+		if (what == NotificationTranslationChanged && IsNodeReady())
+		{
+			RefreshLocalizedText();
+		}
 	}
 
 	private void PrepareBackgroundMusic()
