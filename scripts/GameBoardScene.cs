@@ -52,8 +52,6 @@ public partial class GameBoardScene : Control
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
-	private const bool DebugQuestionCardRewardsShuffle = true;
-	private const bool DebugQuestionCardRewardsDouble = false;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
 	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId, DoubleItemCardId, OvertimeItemCardId, DrawCardItemCardId, ShuffleItemCardId };
 	private static readonly Dictionary<string, string> ItemCardArtRunsById = new()
