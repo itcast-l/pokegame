@@ -28,6 +28,7 @@ public partial class GameBoardScene : Control
 	private const int LensRevealWispFrameCount = 4;
 	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
 	private const string DoubleCardOverlayPath = "res://art/fx/double_card_overlay/run-002/processed/card-aspect.png";
+	private const string OvertimeCardOverlayPath = "res://art/fx/overtime_card_overlay/run-001/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
 	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
@@ -51,9 +52,10 @@ public partial class GameBoardScene : Control
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
-	private const bool DebugQuestionCardRewardsDouble = true;
+	private const bool DebugQuestionCardRewardsShuffle = true;
+	private const bool DebugQuestionCardRewardsDouble = false;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId, DoubleItemCardId };
+	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId, DoubleItemCardId, OvertimeItemCardId, DrawCardItemCardId, ShuffleItemCardId };
 	private static readonly Dictionary<string, string> ItemCardArtRunsById = new()
 	{
 		[DoubleItemCardId] = "run-005",
@@ -140,6 +142,7 @@ public partial class GameBoardScene : Control
 	private Texture2D? _cardBackTexture;
 	private Texture2D? _magnetCardOverlayTexture;
 	private Texture2D? _doubleCardOverlayTexture;
+	private Texture2D? _overtimeCardOverlayTexture;
 	private float _cardBackAnimationTime;
 	private Control? _winnerBannerRoot;
 	private Control? _winnerBannerPanel;
@@ -366,6 +369,12 @@ public partial class GameBoardScene : Control
 		if (_doubleCardOverlayTexture == null)
 		{
 			GD.PushWarning($"Missing double card overlay texture: {DoubleCardOverlayPath}");
+		}
+
+		_overtimeCardOverlayTexture = GD.Load<Texture2D>(OvertimeCardOverlayPath);
+		if (_overtimeCardOverlayTexture == null)
+		{
+			GD.PushWarning($"Missing overtime card overlay texture: {OvertimeCardOverlayPath}");
 		}
 	}
 

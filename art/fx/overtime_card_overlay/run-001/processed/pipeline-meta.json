@@ -1,0 +1,33 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "generator": "built-in image_gen",
+  "raw_source": "art/fx/overtime_card_overlay/run-001/raw.png",
+  "references": [
+    "art/fx/overtime_card_overlay/run-001/references/magnet-card-overlay-reference.png",
+    "art/fx/overtime_card_overlay/run-001/references/double-card-overlay-reference.png",
+    "art/fx/overtime_card_overlay/run-001/references/overtime-card-icon-reference.png"
+  ],
+  "outputs": {
+    "card_aspect": "art/fx/overtime_card_overlay/run-001/processed/card-aspect.png",
+    "clean": "art/fx/overtime_card_overlay/run-001/processed/clean.png",
+    "preview_on_dark": "art/fx/overtime_card_overlay/run-001/processed/preview-on-dark.png"
+  },
+  "final_size": [
+    1152,
+    1536
+  ],
+  "alpha_bbox": [
+    127,
+    47,
+    1076,
+    1474
+  ],
+  "background_cleanup": "magenta chroma key from built-in image_gen raw; preserves overtime clock badge and ocean ribbon ornamentation",
+  "success_criteria": [
+    "same 3:4 output dimensions as magnet and double overlays",
+    "upper-right badge preserves overtime identity",
+    "center remains open for enchanted card underneath",
+    "no text, numbers, rank marks, or suit marks"
+  ]
+}

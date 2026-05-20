@@ -267,7 +267,10 @@ public partial class GameBoardScene
 				Texture2D? texture = showCardBack ? _cardBackTexture : itemCard.Texture;
 				float visualScale = showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id);
 				bool isPlayable = playerIndex == MainPlayerIndex && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id);
-				AddHandCard(texture, hand.Count + itemIndex, isPlayable, -1, itemIndex, showCardBack, visualScale);
+				string tooltipText = !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
+					? description
+					: string.Empty;
+				AddHandCard(texture, hand.Count + itemIndex, isPlayable, -1, itemIndex, showCardBack, visualScale, tooltipText: tooltipText);
 			}
 		}
 	}
@@ -311,7 +314,9 @@ public partial class GameBoardScene
 
 		string itemCardId = card.HasDoubleEffect
 			? DoubleItemCardId
-			: card.HasMagnetEffect ? MagnetItemCardId : string.Empty;
+			: card.HasMagnetEffect
+				? MagnetItemCardId
+				: card.HasOvertimeEffect ? OvertimeItemCardId : string.Empty;
 		if (string.IsNullOrEmpty(itemCardId))
 		{
 			return string.Empty;
@@ -439,6 +444,11 @@ public partial class GameBoardScene
 		if (card.HasMagnetEffect)
 		{
 			return _magnetCardOverlayTexture;
+		}
+
+		if (card.HasOvertimeEffect)
+		{
+			return _overtimeCardOverlayTexture;
 		}
 
 		return null;

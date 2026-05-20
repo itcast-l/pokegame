@@ -1,14 +1,28 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://dcu01x58lccop"]
 
-[ext_resource type="Script" path="res://scripts/CharacterAvatarEditScene.cs" id="1_avatar_edit_scene"]
-[ext_resource type="PackedScene" path="res://scenes/character_avatar_preview.tscn" id="2_avatar_preview"]
+[ext_resource type="Script" uid="uid://dgi8um8a80l70" path="res://scripts/CharacterAvatarEditScene.cs" id="1_avatar_edit_scene"]
+[ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_character_avatar"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
-bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.66)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog_panel"]
+bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.62, 1, 0.96, 0.28)
+border_color = Color(0.62, 1, 0.96, 0.42)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.025, 0.045, 0.42)
+shadow_size = 24
+shadow_offset = Vector2(0, 8)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_back_button"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
 bg_color = Color(0.0156863, 0.18, 0.22, 0.74)
 border_width_left = 1
 border_width_top = 1
@@ -19,12 +33,12 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 16
-content_margin_right = 16
-content_margin_top = 8
-content_margin_bottom = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_back_button_hover"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
 bg_color = Color(0.03, 0.28, 0.33, 0.86)
 border_width_left = 1
 border_width_top = 1
@@ -35,12 +49,22 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 16
-content_margin_right = 16
-content_margin_top = 8
-content_margin_bottom = 8
 
-[node name="CharacterAvatarEditScene" type="Control"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_option"]
+bg_color = Color(0.0156863, 0.117647, 0.133333, 0.76)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.58, 1, 0.92, 0.42)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
+
+[node name="CharacterAvatarEditScene" type="Control" unique_id=870966046]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -49,50 +73,69 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_avatar_edit_scene")
 
-[node name="Preview" parent="." instance=ExtResource("2_avatar_preview")]
+[node name="Scrim" type="ColorRect" parent="." unique_id=837704517]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+color = Color(0, 0.035, 0.07, 0.54)
 
-[node name="Header" type="PanelContainer" parent="."]
-custom_minimum_size = Vector2(0, 72)
+[node name="DialogCenter" type="CenterContainer" parent="." unique_id=708093156]
 layout_mode = 1
-anchors_preset = 10
+anchors_preset = 15
 anchor_right = 1.0
-offset_bottom = 72.0
+anchor_bottom = 1.0
 grow_horizontal = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="HeaderMargin" type="MarginContainer" parent="Header"]
+[node name="DialogPanel" type="PanelContainer" parent="DialogCenter" unique_id=554305713]
+custom_minimum_size = Vector2(720, 460)
 layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 13
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 13
+theme_override_styles/panel = SubResource("StyleBoxFlat_dialog_panel")
 
-[node name="HeaderLayout" type="HBoxContainer" parent="Header/HeaderMargin"]
+[node name="DialogMargin" type="MarginContainer" parent="DialogCenter/DialogPanel" unique_id=1887076904]
 layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 26
+
+[node name="DialogLayout" type="VBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin" unique_id=1837791019]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Header" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=47287533]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HeaderLayout" type="HBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header" unique_id=902239752]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 14
-alignment = 0
 
-[node name="BackButton" type="Button" parent="Header/HeaderMargin/HeaderLayout"]
+[node name="BackButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout" unique_id=821361251]
 custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
+theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
 text = "返回"
 
-[node name="Title" type="Label" parent="Header/HeaderMargin/HeaderLayout"]
+[node name="Title" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout" unique_id=1020255827]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 1)
@@ -100,5 +143,88 @@ theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 24
-text = "修改头像"
+text = "选择头像"
 vertical_alignment = 1
+
+[node name="GridScroll" type="ScrollContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=988066240]
+custom_minimum_size = Vector2(0, 310)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="AvatarGrid" type="GridContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll" unique_id=1323517439]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+columns = 4
+
+[node name="DefaultAvatarOption" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" unique_id=546400816]
+custom_minimum_size = Vector2(108, 128)
+layout_mode = 2
+
+[node name="OptionPanel" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption" unique_id=1171146699]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_option")
+
+[node name="OptionMargin" type="MarginContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel" unique_id=1717659241]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="OptionLayout" type="VBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin" unique_id=215607259]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="AvatarSlot" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin/OptionLayout" unique_id=172385602]
+custom_minimum_size = Vector2(78, 78)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CharacterAvatar" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin/OptionLayout/AvatarSlot" unique_id=1452233049 instance=ExtResource("2_character_avatar")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 1.0
+offset_right = 2.0
+offset_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+ShowFrame = false
+
+[node name="AvatarName" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin/OptionLayout" unique_id=38340691]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.95)
+theme_override_font_sizes/font_size = 14
+text = "默认头像"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption" unique_id=999547468]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+tooltip_text = "选择默认头像"
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_avatar_button")
+flat = true

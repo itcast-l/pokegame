@@ -78,12 +78,18 @@ public partial class GameBoardScene
 				return;
 			}
 
-			await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
-
-			_isProcessingCardPlay = false;
-			if (!result.Captured)
+			if (result.CompletesTurn)
 			{
-				await ResolveOpponentTurnsAsync(turnSequenceGeneration);
+				await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
+				_isProcessingCardPlay = false;
+				if (!result.Captured)
+				{
+					await ResolveOpponentTurnsAsync(turnSequenceGeneration);
+				}
+			}
+			else
+			{
+				_isProcessingCardPlay = false;
 			}
 		}
 		finally
@@ -201,6 +207,7 @@ public partial class GameBoardScene
 		var resolvedMagnetTriggerIndexes = new HashSet<int>();
 		var magnetExtraCaptureIndexes = new HashSet<int>();
 		var resolvedDoubleTriggerIndexes = new HashSet<int>();
+		var resolvedOvertimeTriggerIndexes = new HashSet<int>();
 		if (captureStartIndex >= 0)
 		{
 			TableCard matchedTableCard = _tableCards[captureStartIndex];
@@ -243,7 +250,8 @@ public partial class GameBoardScene
 				pendingFaceUpMagnetTriggerIndexes,
 				resolvedMagnetTriggerIndexes,
 				magnetExtraCaptureIndexes,
-				resolvedDoubleTriggerIndexes);
+				resolvedDoubleTriggerIndexes,
+				resolvedOvertimeTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return new PlayCardResult(false, false);
@@ -319,6 +327,15 @@ public partial class GameBoardScene
 		}
 		else
 		{
+			if (playedCard.HasOvertimeEffect)
+			{
+				await ResolveOvertimeTableCardTriggerAsync(playedTableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
+			}
+
 			DrawReplacementCard(playerIndex);
 			RenderPlayerCardPiles();
 			RenderPlayerHands();
@@ -326,7 +343,7 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		return new PlayCardResult(true, captureStartIndex >= 0, captureStartIndex >= 0);
+		return new PlayCardResult(true, captureStartIndex >= 0, captureStartIndex >= 0, CompletesTurn: resolvedOvertimeTriggerIndexes.Count == 0);
 	}
 
 	private async Task<PlayCardResult> PlayItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
@@ -356,6 +373,16 @@ public partial class GameBoardScene
 		if (itemCard.Id == LensItemCardId)
 		{
 			return await PlayLensCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		}
+
+		if (itemCard.Id == DrawCardItemCardId)
+		{
+			return await PlayDrawCardItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		}
+
+		if (itemCard.Id == ShuffleItemCardId)
+		{
+			return await PlayShuffleItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
 		}
 
 		if (IsAttachmentItemCard(itemCard.Id))
@@ -539,6 +566,193 @@ public partial class GameBoardScene
 		RenderTableCards();
 		CheckForWinner();
 		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> PlayDrawCardItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| playerIndex >= _playerHandAreas.Count
+			|| playerIndex >= _playerDecks.Count
+			|| _playerDecks[playerIndex].Count == 0)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		ItemCard drawCard = itemHand[itemHandIndex];
+		if (drawCard.Id != DrawCardItemCardId)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex)
+			?? _playerHandAreas[playerIndex].GlobalPosition + (_playerHandAreas[playerIndex].Size - CardVisualSize) / 2.0f;
+		Control? sourceCardSlot = _playerHandAreas[playerIndex].GetNodeOrNull<Control>($"HandCard_{_playerHands[playerIndex].Count + itemHandIndex}");
+		if (sourceCardSlot != null)
+		{
+			sourceCardSlot.Visible = false;
+		}
+
+		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		itemHand.RemoveAt(itemHandIndex);
+		RenderPlayerHands();
+
+		await PlayItemCardToTransformAreaAnimationAsync(
+			drawCard.Texture,
+			startGlobalPosition,
+			transformAreaGlobalPosition,
+			GetCardRotationDegreesForPlayer(playerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		await PlaySpecialCardTriggerEffectAsync(drawCard.Texture, transformAreaGlobalPosition, 0);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		DrawCardFromDeckToHand(playerIndex);
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		CheckForWinner();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> PlayShuffleItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| playerIndex >= _playerHandAreas.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		ItemCard shuffleCard = itemHand[itemHandIndex];
+		if (shuffleCard.Id != ShuffleItemCardId)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex)
+			?? _playerHandAreas[playerIndex].GlobalPosition + (_playerHandAreas[playerIndex].Size - CardVisualSize) / 2.0f;
+		Control? sourceCardSlot = _playerHandAreas[playerIndex].GetNodeOrNull<Control>($"HandCard_{_playerHands[playerIndex].Count + itemHandIndex}");
+		if (sourceCardSlot != null)
+		{
+			sourceCardSlot.Visible = false;
+		}
+
+		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		itemHand.RemoveAt(itemHandIndex);
+		RenderPlayerHands();
+
+		await PlayItemCardToTransformAreaAnimationAsync(
+			shuffleCard.Texture,
+			startGlobalPosition,
+			transformAreaGlobalPosition,
+			GetCardRotationDegreesForPlayer(playerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		await PlaySpecialCardTriggerEffectAsync(shuffleCard.Texture, transformAreaGlobalPosition, 0);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<TableCard> shuffledTableCards = BuildShuffledTableCards();
+		await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			RenderTableCards();
+			return new PlayCardResult(false, false);
+		}
+
+		ApplyShuffledTableCards(shuffledTableCards);
+		RenderTableCards();
+		CheckForWinner();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private List<TableCard> BuildShuffledTableCards()
+	{
+		var shuffledTableCards = new List<TableCard>(_tableCards);
+		var shuffleIndexes = new List<int>();
+		var movableCards = new List<TableCard>();
+		for (int index = 0; index < _tableCards.Count; index++)
+		{
+			if (IsFixedDuringTableShuffle(_tableCards[index]))
+			{
+				continue;
+			}
+
+			shuffleIndexes.Add(index);
+			movableCards.Add(_tableCards[index]);
+		}
+
+		for (int index = movableCards.Count - 1; index > 0; index--)
+		{
+			int swapIndex = _rng.RandiRange(0, index);
+			(movableCards[index], movableCards[swapIndex]) = (movableCards[swapIndex], movableCards[index]);
+		}
+
+		if (IsSameMovableTableCardOrder(shuffleIndexes, movableCards) && movableCards.Count > 1)
+		{
+			(movableCards[^1], movableCards[^2]) = (movableCards[^2], movableCards[^1]);
+		}
+
+		for (int index = 0; index < shuffleIndexes.Count; index++)
+		{
+			shuffledTableCards[shuffleIndexes[index]] = movableCards[index];
+		}
+
+		return shuffledTableCards;
+	}
+
+	private bool IsSameMovableTableCardOrder(IReadOnlyList<int> shuffleIndexes, IReadOnlyList<TableCard> movableCards)
+	{
+		if (shuffleIndexes.Count != movableCards.Count)
+		{
+			return false;
+		}
+
+		for (int index = 0; index < shuffleIndexes.Count; index++)
+		{
+			if (!ReferenceEquals(movableCards[index], _tableCards[shuffleIndexes[index]]))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private void ApplyShuffledTableCards(IReadOnlyList<TableCard> shuffledTableCards)
+	{
+		_tableCards.Clear();
+		_tableCards.AddRange(shuffledTableCards);
+	}
+
+	private static bool IsFixedDuringTableShuffle(TableCard tableCard)
+	{
+		return tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId;
 	}
 
 	private async Task<PlayCardResult> PlayAttachmentItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
@@ -1014,7 +1228,8 @@ public partial class GameBoardScene
 		HashSet<int> pendingFaceUpMagnetTriggerIndexes,
 		HashSet<int> resolvedMagnetTriggerIndexes,
 		HashSet<int> magnetExtraCaptureIndexes,
-		HashSet<int> resolvedDoubleTriggerIndexes)
+		HashSet<int> resolvedDoubleTriggerIndexes,
+		HashSet<int> resolvedOvertimeTriggerIndexes)
 	{
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
 		{
@@ -1034,7 +1249,8 @@ public partial class GameBoardScene
 						turnSequenceGeneration,
 						resolvedMagnetTriggerIndexes,
 						magnetExtraCaptureIndexes,
-						resolvedDoubleTriggerIndexes);
+						resolvedDoubleTriggerIndexes,
+						resolvedOvertimeTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
 					{
 						return;
@@ -1044,6 +1260,15 @@ public partial class GameBoardScene
 				if (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
 				{
 					await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return;
+					}
+				}
+
+				if (tableCard.Card.HasValue && tableCard.Card.Value.HasOvertimeEffect)
+				{
+					await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
 					{
 						return;
@@ -1093,7 +1318,8 @@ public partial class GameBoardScene
 					turnSequenceGeneration,
 					resolvedMagnetTriggerIndexes,
 					magnetExtraCaptureIndexes,
-					resolvedDoubleTriggerIndexes);
+					resolvedDoubleTriggerIndexes,
+					resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return;
@@ -1103,6 +1329,15 @@ public partial class GameBoardScene
 			if (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
 			{
 				await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return;
+				}
+			}
+
+			if (tableCard.Card.HasValue && tableCard.Card.Value.HasOvertimeEffect)
+			{
+				await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return;
@@ -1123,7 +1358,8 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		HashSet<int> resolvedMagnetTriggerIndexes,
 		HashSet<int> magnetExtraCaptureIndexes,
-		HashSet<int> resolvedDoubleTriggerIndexes)
+		HashSet<int> resolvedDoubleTriggerIndexes,
+		HashSet<int> resolvedOvertimeTriggerIndexes)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -1152,7 +1388,8 @@ public partial class GameBoardScene
 			turnSequenceGeneration,
 			resolvedMagnetTriggerIndexes,
 			magnetExtraCaptureIndexes,
-			resolvedDoubleTriggerIndexes);
+			resolvedDoubleTriggerIndexes,
+			resolvedOvertimeTriggerIndexes);
 	}
 
 	private async Task PlayMagnetTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
@@ -1235,12 +1472,72 @@ public partial class GameBoardScene
 			tableCardIndex * 2 + 1);
 	}
 
+	private async Task ResolveOvertimeTableCardTriggerAsync(
+		int tableCardIndex,
+		int turnSequenceGeneration,
+		HashSet<int> resolvedOvertimeTriggerIndexes)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasOvertimeEffect)
+		{
+			return;
+		}
+
+		if (!resolvedOvertimeTriggerIndexes.Add(tableCardIndex))
+		{
+			return;
+		}
+
+		await PlayOvertimeTableCardTriggerEffectAsync(tableCardIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return;
+		}
+
+		tableCard.ClearOvertimeEffect();
+		RenderTableCards();
+	}
+
+	private async Task PlayOvertimeTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (tableCardIndex >= cardPositions.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasOvertimeEffect)
+		{
+			return;
+		}
+
+		Texture2D triggerTexture = _itemCardTextures.TryGetValue(OvertimeItemCardId, out Texture2D? overtimeTexture)
+			? overtimeTexture
+			: tableCard.Card.Value.Texture;
+		await PlaySpecialCardTriggerEffectAsync(
+			triggerTexture,
+			_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+			tableCardIndex * 2 + 1);
+	}
+
 	private async Task RevealRandomMagnetExtraTableCardAsync(
 		int captureStartIndex,
 		int turnSequenceGeneration,
 		HashSet<int> resolvedMagnetTriggerIndexes,
 		HashSet<int> magnetExtraCaptureIndexes,
-		HashSet<int> resolvedDoubleTriggerIndexes)
+		HashSet<int> resolvedDoubleTriggerIndexes,
+		HashSet<int> resolvedOvertimeTriggerIndexes)
 	{
 		int tableCardIndex = PickRandomMagnetExtraRevealIndex(captureStartIndex, magnetExtraCaptureIndexes);
 		if (tableCardIndex < 0)
@@ -1275,7 +1572,8 @@ public partial class GameBoardScene
 				turnSequenceGeneration,
 				resolvedMagnetTriggerIndexes,
 				magnetExtraCaptureIndexes,
-				resolvedDoubleTriggerIndexes);
+				resolvedDoubleTriggerIndexes,
+				resolvedOvertimeTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -1285,6 +1583,15 @@ public partial class GameBoardScene
 		if (tableCard.Card.Value.HasDoubleEffect)
 		{
 			await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+
+		if (tableCard.Card.Value.HasOvertimeEffect)
+		{
+			await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -2109,9 +2416,7 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		string itemCardId = DebugQuestionCardRewardsDouble && IsSpecialItemCardEnabled(DoubleItemCardId)
-			? DoubleItemCardId
-			: rewardItemCardIds[_rng.RandiRange(0, rewardItemCardIds.Count - 1)];
+		string itemCardId = PickQuestionCardRewardItemCardId(rewardItemCardIds);
 
 		ItemCard? itemCard = CreateItemCard(itemCardId);
 		if (!itemCard.HasValue)
@@ -2133,6 +2438,21 @@ public partial class GameBoardScene
 		int itemHandIndex = _playerItemHands[playerIndex].Count;
 		_playerItemHands[playerIndex].Add(itemCard.Value);
 		return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
+	}
+
+	private string PickQuestionCardRewardItemCardId(List<string> rewardItemCardIds)
+	{
+		if (DebugQuestionCardRewardsShuffle && IsSpecialItemCardEnabled(ShuffleItemCardId))
+		{
+			return ShuffleItemCardId;
+		}
+
+		if (DebugQuestionCardRewardsDouble && IsSpecialItemCardEnabled(DoubleItemCardId))
+		{
+			return DoubleItemCardId;
+		}
+
+		return rewardItemCardIds[_rng.RandiRange(0, rewardItemCardIds.Count - 1)];
 	}
 
 	private List<string> BuildEnabledQuestionRewardItemCardIds()
@@ -2230,6 +2550,16 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (itemCardId == DrawCardItemCardId && (playerIndex < 0 || playerIndex >= _playerDecks.Count || _playerDecks[playerIndex].Count == 0))
+		{
+			return false;
+		}
+
+		if (itemCardId == ShuffleItemCardId && GetMovableTableShuffleCardCount() < 2)
+		{
+			return false;
+		}
+
 		if (IsAttachmentItemCard(itemCardId) && !PlayerHasAttachableMagnetCard(playerIndex, itemCardId))
 		{
 			return false;
@@ -2277,6 +2607,20 @@ public partial class GameBoardScene
 	private bool PlayerHasCards(int playerIndex)
 	{
 		return _playerHands[playerIndex].Count > 0 || _playerDecks[playerIndex].Count > 0 || BuildPlayableItemIndexes(playerIndex).Count > 0;
+	}
+
+	private int GetMovableTableShuffleCardCount()
+	{
+		int movableCardCount = 0;
+		foreach (TableCard tableCard in _tableCards)
+		{
+			if (!IsFixedDuringTableShuffle(tableCard))
+			{
+				movableCardCount++;
+			}
+		}
+
+		return movableCardCount;
 	}
 
 	private void DeclareWinner(int playerIndex)

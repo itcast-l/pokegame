@@ -29,6 +29,9 @@ public partial class CharacterAvatar : Control
 	[Export(PropertyHint.Range, "0.55,0.95,0.01")]
 	public float PortraitScale { get; set; } = 0.84f;
 
+	[Export]
+	public bool ShowFrame { get; set; } = true;
+
 	private const string GeneratedAvatarRoot = "res://art/characters/player_cat_avatar/run-002";
 
 	private Control _portraitPivot = default!;
@@ -96,9 +99,12 @@ public partial class CharacterAvatar : Control
 			return;
 		}
 
-		DrawCircle(center + new Vector2(0.0f, radius * 0.08f), radius, new Color(0.0f, 0.07f, 0.09f, 0.38f));
-		DrawCircle(center, radius * 0.92f, new Color(0.04f, 0.17f, 0.18f, 0.56f));
-		DrawArc(center, radius, 0.0f, Mathf.Tau, 96, new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.48f), 3.0f, true);
+		if (ShowFrame)
+		{
+			DrawCircle(center + new Vector2(0.0f, radius * 0.08f), radius, new Color(0.0f, 0.07f, 0.09f, 0.38f));
+			DrawCircle(center, radius * 0.92f, new Color(0.04f, 0.17f, 0.18f, 0.56f));
+			DrawArc(center, radius, 0.0f, Mathf.Tau, 96, new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.48f), 3.0f, true);
+		}
 
 		if (_scorePulse > 0.0f)
 		{

@@ -56,7 +56,7 @@ public partial class GameBoardScene
 
 	private static bool IsAttachmentItemCard(string itemCardId)
 	{
-		return itemCardId == MagnetItemCardId || itemCardId == DoubleItemCardId;
+		return itemCardId == MagnetItemCardId || itemCardId == DoubleItemCardId || itemCardId == OvertimeItemCardId;
 	}
 
 	private async Task ResolvePendingMagnetAttachmentsAsync(int turnSequenceGeneration)
@@ -390,9 +390,12 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard card = _playerHands[playerIndex][handIndex];
-		_playerHands[playerIndex][handIndex] = itemCardId == DoubleItemCardId
-			? card.WithDoubleEffect()
-			: card.WithMagnetEffect();
+		_playerHands[playerIndex][handIndex] = itemCardId switch
+		{
+			DoubleItemCardId => card.WithDoubleEffect(),
+			OvertimeItemCardId => card.WithOvertimeEffect(),
+			_ => card.WithMagnetEffect(),
+		};
 		return true;
 	}
 
@@ -642,7 +645,12 @@ public partial class GameBoardScene
 
 	private Texture2D? GetItemAttachmentOverlayTexture(string itemCardId)
 	{
-		return itemCardId == DoubleItemCardId ? _doubleCardOverlayTexture : _magnetCardOverlayTexture;
+		return itemCardId switch
+		{
+			DoubleItemCardId => _doubleCardOverlayTexture,
+			OvertimeItemCardId => _overtimeCardOverlayTexture,
+			_ => _magnetCardOverlayTexture,
+		};
 	}
 
 	private static bool IsAttachableMagnetCard(PlayingCard card, string itemCardId)
@@ -652,9 +660,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return itemCardId == DoubleItemCardId
-			? !card.HasDoubleEffect
-			: !card.HasMagnetEffect;
+		return itemCardId switch
+		{
+			DoubleItemCardId => !card.HasDoubleEffect,
+			OvertimeItemCardId => !card.HasOvertimeEffect,
+			_ => !card.HasMagnetEffect,
+		};
 	}
 
 	private PlayCardResult ResolveItemCardEffect(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)

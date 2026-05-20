@@ -284,17 +284,34 @@ public partial class GameBoardScene
 
 	private void DrawReplacementCard(int playerIndex)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerDecks.Count)
+		if (playerIndex < 0 || playerIndex >= _playerDecks.Count || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count)
 		{
 			return;
 		}
 
-		if (_playerDecks[playerIndex].Count == 0)
+		if (_playerDecks[playerIndex].Count == 0 || _playerHands[playerIndex].Count >= StartingHandCards)
 		{
 			return;
 		}
 
 		_playerHands[playerIndex].Add(_playerDecks[playerIndex][0]);
 		_playerDecks[playerIndex].RemoveAt(0);
+	}
+
+	private bool DrawCardFromDeckToHand(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerDecks.Count || playerIndex >= _playerHands.Count)
+		{
+			return false;
+		}
+
+		if (_playerDecks[playerIndex].Count == 0 || GetTotalHandCardCount(playerIndex) >= MaxTotalHandCards)
+		{
+			return false;
+		}
+
+		_playerHands[playerIndex].Add(_playerDecks[playerIndex][0]);
+		_playerDecks[playerIndex].RemoveAt(0);
+		return true;
 	}
 }

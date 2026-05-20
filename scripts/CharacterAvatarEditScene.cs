@@ -2,34 +2,32 @@ using Godot;
 
 public partial class CharacterAvatarEditScene : Control
 {
-	private const string MainMenuScenePath = "res://scenes/main_menu_scene.tscn";
+	[Signal]
+	public delegate void CloseRequestedEventHandler();
 
 	private Button _backButton = default!;
+	private Button _defaultAvatarButton = default!;
 
 	public override void _Ready()
 	{
-		_backButton = GetNode<Button>("Header/HeaderMargin/HeaderLayout/BackButton");
-		_backButton.Pressed += ReturnToMainMenu;
+		_backButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackButton");
+		_backButton.Pressed += RequestClose;
+
+		_defaultAvatarButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/SelectButton");
+		_defaultAvatarButton.Pressed += RequestClose;
 	}
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
 		if (inputEvent.IsActionPressed("ui_cancel"))
 		{
-			ReturnToMainMenu();
+			RequestClose();
 			GetViewport().SetInputAsHandled();
 		}
 	}
 
-	private void ReturnToMainMenu()
+	private void RequestClose()
 	{
-		PackedScene? mainMenuScene = GD.Load<PackedScene>(MainMenuScenePath);
-		if (mainMenuScene == null)
-		{
-			GD.PushError($"Missing main menu scene: {MainMenuScenePath}");
-			return;
-		}
-
-		GetTree().ChangeSceneToPacked(mainMenuScene);
+		EmitSignal(SignalName.CloseRequested);
 	}
 }
