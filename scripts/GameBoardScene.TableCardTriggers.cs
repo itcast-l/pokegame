@@ -20,7 +20,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasMagnetEffect)
+		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
 		{
 			return;
 		}
@@ -59,7 +59,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasMagnetEffect)
+		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
 		{
 			return;
 		}
@@ -84,7 +84,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasDoubleEffect)
+		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 		{
 			return;
 		}
@@ -111,7 +111,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasDoubleEffect)
+		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 		{
 			return;
 		}
@@ -136,7 +136,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasOvertimeEffect)
+		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 		{
 			return;
 		}
@@ -152,7 +152,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		tableCard.ClearOvertimeEffect();
+		if (tableCard.Card.HasValue
+			&& TryGetAttachedItemIdByModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime, out string itemCardId))
+		{
+			tableCard.ClearAttachedItemEffect(itemCardId);
+		}
 		RenderTableCards();
 	}
 
@@ -170,7 +174,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !tableCard.Card.Value.HasOvertimeEffect)
+		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 		{
 			return;
 		}
@@ -217,7 +221,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
 		_ = PlayTableCardPointPopupAsync(tableCardIndex, hasDoubleEffect ? revealedCardPoints * 2 : revealedCardPoints, hasDoubleEffect);
-		if (tableCard.Card.Value.HasMagnetEffect)
+		if (IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
 		{
 			await ResolveMagnetTableCardTriggerAsync(
 				tableCardIndex,
@@ -233,7 +237,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (tableCard.Card.Value.HasDoubleEffect)
+		if (IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 		{
 			await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -242,7 +246,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (tableCard.Card.Value.HasOvertimeEffect)
+		if (IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 		{
 			await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -279,40 +283,64 @@ public partial class GameBoardScene
 		return candidates.Count == 0 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
 	}
 
-	private TableSpecialCardTrigger? GetCapturedSpecialCardTrigger(int captureStartIndex)
+	private List<TableSpecialCardTrigger> GetCapturedSpecialCardTriggers(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
+		var triggers = new List<TableSpecialCardTrigger>();
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
 		{
-			return null;
+			return triggers;
 		}
 
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
 		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
-			if (tableCardIndex >= cardPositions.Count)
-			{
-				continue;
-			}
-
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!tableCard.ItemOverlay.HasValue)
-			{
-				continue;
-			}
-
-			if (tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId)
-			{
-				continue;
-			}
-
-			return new TableSpecialCardTrigger(
-				tableCardIndex,
-				tableCard.ItemOverlay.Value.Texture,
-				_centerArena.GlobalPosition + cardPositions[tableCardIndex] + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
-				tableCardIndex * 2 + 1);
+			AddCapturedSpecialCardTrigger(tableCardIndex, cardPositions, triggers);
 		}
 
-		return null;
+		if (extraTableCardIndexes != null)
+		{
+			foreach (int tableCardIndex in extraTableCardIndexes)
+			{
+				AddCapturedSpecialCardTrigger(tableCardIndex, cardPositions, triggers);
+			}
+		}
+
+		triggers.Sort((a, b) =>
+		{
+			int priorityComparison = GetTableTriggerPriority(b.TableCardIndex).CompareTo(GetTableTriggerPriority(a.TableCardIndex));
+			return priorityComparison != 0 ? priorityComparison : b.TableCardIndex.CompareTo(a.TableCardIndex);
+		});
+		return triggers;
+	}
+
+	private void AddCapturedSpecialCardTrigger(int tableCardIndex, IReadOnlyList<Vector2> cardPositions, List<TableSpecialCardTrigger> triggers)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count || tableCardIndex >= cardPositions.Count)
+		{
+			return;
+		}
+
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (!tableCard.ItemOverlay.HasValue)
+		{
+			return;
+		}
+
+		if (IsQuestionItemCard(tableCard.ItemOverlay.Value.Id))
+		{
+			return;
+		}
+
+		triggers.Add(new TableSpecialCardTrigger(
+			tableCardIndex,
+			tableCard.ItemOverlay.Value.Texture,
+			_centerArena.GlobalPosition + cardPositions[tableCardIndex] + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
+			tableCardIndex * 2 + 1));
+	}
+
+	private int GetTableTriggerPriority(int tableCardIndex)
+	{
+		return TryGetTableCardTriggerDefinition(tableCardIndex, out ItemCardDefinition definition) ? definition.Priority : 0;
 	}
 
 	private TableSpecialCardTrigger? GetTableSpecialCardTrigger(int tableCardIndex)
@@ -335,7 +363,7 @@ public partial class GameBoardScene
 		}
 
 		ItemCard itemOverlay = tableCard.ItemOverlay.Value;
-		if (itemOverlay.Id == QuestionMarkItemCardId)
+		if (IsQuestionItemCard(itemOverlay.Id))
 		{
 			return null;
 		}

@@ -146,7 +146,7 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			bool isQuestionCard = tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId;
+			bool isQuestionCard = IsQuestionTableCard(tableCard);
 			if (!tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue)
 			{
 				continue;
@@ -259,11 +259,10 @@ public partial class GameBoardScene
 		await Task.WhenAll(flightTasks);
 	}
 
-	private static bool IsQuestionOnlyTableCard(TableCard tableCard)
+	private bool IsQuestionOnlyTableCard(TableCard tableCard)
 	{
 		return !tableCard.Card.HasValue
-			&& tableCard.ItemOverlay.HasValue
-			&& tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId;
+			&& IsQuestionTableCard(tableCard);
 	}
 
 	private Vector2 GetCardPileCaptureTargetGlobalPosition(Control targetPile)

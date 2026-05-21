@@ -336,12 +336,7 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard card = _playerHands[playerIndex][handIndex];
-		_playerHands[playerIndex][handIndex] = itemCardId switch
-		{
-			DoubleItemCardId => card.WithDoubleEffect(),
-			OvertimeItemCardId => card.WithOvertimeEffect(),
-			_ => card.WithMagnetEffect(),
-		};
+		_playerHands[playerIndex][handIndex] = card.WithAttachedItemEffect(itemCardId);
 		return true;
 	}
 
@@ -591,27 +586,23 @@ public partial class GameBoardScene
 
 	private Texture2D? GetItemAttachmentOverlayTexture(string itemCardId)
 	{
-		return itemCardId switch
+		string modifier = GetAttachmentModifier(itemCardId);
+		return modifier switch
 		{
-			DoubleItemCardId => _doubleCardOverlayTexture,
-			OvertimeItemCardId => _overtimeCardOverlayTexture,
+			CardAttachmentModifiers.Double => _doubleCardOverlayTexture,
+			CardAttachmentModifiers.Overtime => _overtimeCardOverlayTexture,
 			_ => _magnetCardOverlayTexture,
 		};
 	}
 
-	private static bool IsAttachableMagnetCard(PlayingCard card, string itemCardId)
+	private bool IsAttachableMagnetCard(PlayingCard card, string itemCardId)
 	{
 		if (IsExcludedDeckRank(card.Rank))
 		{
 			return false;
 		}
 
-		return itemCardId switch
-		{
-			DoubleItemCardId => !card.HasDoubleEffect,
-			OvertimeItemCardId => !card.HasOvertimeEffect,
-			_ => !card.HasMagnetEffect,
-		};
+		return !card.HasAttachedItemEffect(itemCardId);
 	}
 
 	private partial class MagnetAttachmentCountdownRing : Control

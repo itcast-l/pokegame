@@ -7,11 +7,9 @@ public partial class GameBoardScene : Control
 	private const int MinPlayers = 2;
 	private const int MaxPlayers = 4;
 	private const string PokerCardsScenePath = "res://scenes/poker_cards_scene.tscn";
-	private const string ItemCardsScenePath = "res://scenes/item_cards_scene.tscn";
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
 	private const string StandardCardsRootPath = "StandardPokerCards";
 	private const string SuitedJqkBackupCardsNodeName = "SuitedJqkBackupCards";
-	private const string ItemCardsRootPath = "ItemCards";
 	private const string CardBackPath = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png";
 	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
 	private const int CardBackFrameCount = 4;
@@ -32,19 +30,18 @@ public partial class GameBoardScene : Control
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
 	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
-	private const string ItemCardRootPath = "res://art/cards/item_cards";
-	private const string QuestionMarkItemCardId = "question_mark";
-	private const string BombItemCardId = "bomb";
-	private const string MagnetItemCardId = "magnet";
-	private const string GreedItemCardId = "greed";
-	private const string LensItemCardId = "lens";
-	private const string DoubleItemCardId = "double";
-	private const string OvertimeItemCardId = "overtime";
-	private const string DrawCardItemCardId = "draw_card";
-	private const string ShuffleItemCardId = "shuffle";
-	private const string JackItemCardId = "J";
-	private const string QueenItemCardId = "Q";
-	private const string KingItemCardId = "K";
+	private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
+	private const string BombItemCardId = ItemCardCatalog.BombItemCardId;
+	private const string MagnetItemCardId = ItemCardCatalog.MagnetItemCardId;
+	private const string GreedItemCardId = ItemCardCatalog.GreedItemCardId;
+	private const string LensItemCardId = ItemCardCatalog.LensItemCardId;
+	private const string DoubleItemCardId = ItemCardCatalog.DoubleItemCardId;
+	private const string OvertimeItemCardId = ItemCardCatalog.OvertimeItemCardId;
+	private const string DrawCardItemCardId = ItemCardCatalog.DrawCardItemCardId;
+	private const string ShuffleItemCardId = ItemCardCatalog.ShuffleItemCardId;
+	private const string JackItemCardId = ItemCardCatalog.JackItemCardId;
+	private const string QueenItemCardId = ItemCardCatalog.QueenItemCardId;
+	private const string KingItemCardId = ItemCardCatalog.KingItemCardId;
 	private const string CardNamePrefix = "Card_";
 	private const string CardBackAnimatedMeta = "ocean_card_back_animated";
 	private const string HandCardSlotMeta = "ocean_hand_card_slot";
@@ -53,34 +50,6 @@ public partial class GameBoardScene : Control
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
 	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
-	private static readonly HashSet<string> PlayableSpecialItemCardIds = new() { BombItemCardId, LensItemCardId, DoubleItemCardId, OvertimeItemCardId, DrawCardItemCardId, ShuffleItemCardId };
-	private static readonly Dictionary<string, string> ItemCardArtRunsById = new()
-	{
-		[DoubleItemCardId] = "run-005",
-	};
-	private static readonly string[] AllItemCardIds =
-	{
-		QuestionMarkItemCardId,
-		BombItemCardId,
-		MagnetItemCardId,
-		GreedItemCardId,
-		LensItemCardId,
-		DoubleItemCardId,
-		OvertimeItemCardId,
-		DrawCardItemCardId,
-		ShuffleItemCardId,
-	};
-	private static readonly string[] QuestionRewardItemCardIds =
-	{
-		BombItemCardId,
-		MagnetItemCardId,
-		GreedItemCardId,
-		LensItemCardId,
-		DoubleItemCardId,
-		OvertimeItemCardId,
-		DrawCardItemCardId,
-		ShuffleItemCardId,
-	};
 	private static readonly int[] ClockwiseTurnOrder = { 0, 2, 1, 3 };
 	private const float HoveredHandCardLift = 18.0f;
 	private const float HoveredHandCardScale = 1.06f;
@@ -135,6 +104,9 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
+	private readonly CardEventBus _cardEventBus = new();
+	private SpecialCardEffectResolver _effectResolver = default!;
+	private ItemCardCatalog _itemCardCatalog = default!;
 	private readonly Queue<PendingItemAttachmentReward> _pendingItemAttachmentRewards = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
@@ -206,6 +178,8 @@ public partial class GameBoardScene : Control
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();
 		_rng.Randomize();
+		_itemCardCatalog = ItemCardCatalog.Load(this);
+		_effectResolver = new SpecialCardEffectResolver(this);
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
 		LoadItemCardTextures();
@@ -417,23 +391,16 @@ public partial class GameBoardScene : Control
 	private void LoadItemCardTextures()
 	{
 		_itemCardTextures.Clear();
-		foreach (string itemCardId in AllItemCardIds)
+		foreach (string itemCardId in _itemCardCatalog.AllIds)
 		{
-			string path = $"{ItemCardRootPath}/{itemCardId}/{GetItemCardArtRunName(itemCardId)}/processed/frames/frame-001.png";
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
+			if (!_itemCardCatalog.TryGetFirstFrameTexture(itemCardId, out Texture2D texture))
 			{
-				GD.PushWarning($"Missing item card texture: {path}");
+				GD.PushWarning($"Missing loaded item card texture for {itemCardId}.");
 				continue;
 			}
 
 			_itemCardTextures[itemCardId] = texture;
 		}
-	}
-
-	private static string GetItemCardArtRunName(string itemCardId)
-	{
-		return ItemCardArtRunsById.TryGetValue(itemCardId, out string? runName) ? runName : "run-004";
 	}
 
 	private ItemCard? CreateItemCard(string itemCardId)
@@ -457,7 +424,7 @@ public partial class GameBoardScene : Control
 		return itemCardId switch
 		{
 			JackItemCardId or QueenItemCardId or KingItemCardId => false,
-			_ => _enabledSceneItemCardIds.Contains(itemCardId),
+			_ => _itemCardCatalog.IsEnabled(itemCardId),
 		};
 	}
 
@@ -478,37 +445,16 @@ public partial class GameBoardScene : Control
 	{
 		_enabledSceneItemCardIds.Clear();
 		_itemCardDescriptions.Clear();
-		PackedScene? itemCardsScene = GD.Load<PackedScene>(ItemCardsScenePath);
-		if (itemCardsScene == null)
+		foreach (string itemCardId in _itemCardCatalog.AllIds)
 		{
-			GD.PushError($"Missing item cards scene: {ItemCardsScenePath}");
-			return;
-		}
-
-		Node itemCards = itemCardsScene.Instantiate();
-		Node? itemCardsRoot = itemCards.GetNodeOrNull<Node>(ItemCardsRootPath);
-		if (itemCardsRoot == null)
-		{
-			GD.PushError($"Missing {ItemCardsRootPath} in {ItemCardsScenePath}.");
-			itemCards.Free();
-			return;
-		}
-
-		foreach (Node itemCardNode in itemCardsRoot.GetChildren())
-		{
-			if (itemCardNode is not ItemCardData itemCardData || !itemCardData.enabled_in_game)
+			if (!_itemCardCatalog.IsEnabled(itemCardId))
 			{
 				continue;
 			}
 
-			if (itemCardData.TryGetItemCardId(out string itemCardId))
-			{
-				_enabledSceneItemCardIds.Add(itemCardId);
-				_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, itemCardData.item_description);
-			}
+			_enabledSceneItemCardIds.Add(itemCardId);
+			_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, _itemCardCatalog.GetDescriptionKey(itemCardId));
 		}
-
-		itemCards.Free();
 	}
 
 	public Control GetPlayerArea(int playerIndex)

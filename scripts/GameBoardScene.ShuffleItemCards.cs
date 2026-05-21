@@ -22,7 +22,7 @@ public partial class GameBoardScene
 		}
 
 		ItemCard shuffleCard = itemHand[itemHandIndex];
-		if (shuffleCard.Id != ShuffleItemCardId)
+		if (!IsItemEffectType(shuffleCard.Id, CardEffectTypes.ShuffleTable))
 		{
 			return new PlayCardResult(false, false);
 		}
@@ -55,18 +55,15 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<TableCard> shuffledTableCards = BuildShuffledTableCards();
-		await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
-		{
-			RenderTableCards();
-			return new PlayCardResult(false, false);
-		}
-
-		ApplyShuffledTableCards(shuffledTableCards);
-		RenderTableCards();
-		CheckForWinner();
-		return new PlayCardResult(true, false, CompletesTurn: false);
+		PlayCardResult result = await ResolveItemCardOnPlayAsync(
+			shuffleCard,
+			playerIndex,
+			itemHandIndex,
+			-1,
+			-1,
+			transformAreaGlobalPosition,
+			turnSequenceGeneration);
+		return result with { CompletesTurn = false };
 	}
 
 	private List<TableCard> BuildShuffledTableCards()
@@ -128,8 +125,8 @@ public partial class GameBoardScene
 		_tableCards.AddRange(shuffledTableCards);
 	}
 
-	private static bool IsFixedDuringTableShuffle(TableCard tableCard)
+	private bool IsFixedDuringTableShuffle(TableCard tableCard)
 	{
-		return tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId;
+		return IsFixedDuringTableShuffleByData(tableCard);
 	}
 }

@@ -1,0 +1,172 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Godot;
+
+public partial class GameBoardScene
+{
+	private async Task<PlayCardResult> ResolvePlaceTablePairDestroyAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		await ResolveBombPairAsync(turnSequenceGeneration);
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> ResolveDrawCardEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		int drawCount = Mathf.Max(1, request.Rule.EffectValues.GetInt(CardEffectValueKeys.Count, 1));
+		bool drewAny = false;
+		for (int drawIndex = 0; drawIndex < drawCount; drawIndex++)
+		{
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return new PlayCardResult(false, false);
+			}
+
+			drewAny |= DrawCardFromDeckToHand(request.Event.ActorPlayerIndex);
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		}
+
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		CheckForWinner();
+		return new PlayCardResult(drewAny, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> ResolveAttachModifierEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		string itemCardId = request.Definition.Id;
+		int playerIndex = request.Event.ActorPlayerIndex;
+		if (!PlayerHasAttachableMagnetCard(playerIndex, itemCardId))
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		if (playerIndex == MainPlayerIndex)
+		{
+			await ResolveMainPlayerMagnetAttachmentAsync(itemCardId, turnSequenceGeneration);
+		}
+		else
+		{
+			AttachMagnetToRandomHandCard(playerIndex, itemCardId);
+		}
+
+		RenderPlayerHands();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> ResolveRevealCardsEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		int ownerPlayerIndex = request.Event.ActorPlayerIndex;
+		List<int> targetIndexes = PickLensRevealTargetIndexes(ownerPlayerIndex, request.Rule.EffectValues);
+		if (targetIndexes.Count == 0)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		Vector2 splitGlobalCenter = request.Event.OriginGlobalCenter
+			?? GetLensRevealFallbackGlobalCenter(ownerPlayerIndex);
+		await RevealLensTargetCardsAsync(targetIndexes, splitGlobalCenter, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		RenderTableCards();
+		CheckForWinner();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> ResolveShuffleTableEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		List<TableCard> shuffledTableCards = BuildShuffledTableCards();
+		await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			RenderTableCards();
+			return new PlayCardResult(false, false);
+		}
+
+		ApplyShuffledTableCards(shuffledTableCards);
+		RenderTableCards();
+		CheckForWinner();
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private PlayCardResult ResolveCollectTableEffect(CardTriggerRequest request)
+	{
+		int ownerPlayerIndex = request.Event.ActorPlayerIndex;
+		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		bool captured = _tableCards.Count > 0;
+		int collectedCardCount = CaptureTableCards(
+			ownerPlayerIndex,
+			0,
+			out QuestionCardRewardAnimation? questionRewardAnimation);
+		if (!IsGameOver())
+		{
+			Shuffle(_playerDecks[ownerPlayerIndex]);
+			Cut(_playerDecks[ownerPlayerIndex]);
+		}
+
+		return new PlayCardResult(true, captured, collectedCardCount > 0, questionRewardAnimation);
+	}
+
+	private PlayCardResult ResolveStealCardEffect(CardTriggerRequest request)
+	{
+		return ResolveQueenEffect(
+			request.Event.ActorPlayerIndex,
+			request.Event.TargetPlayerIndex,
+			request.Event.TargetHandIndex);
+	}
+
+	private PlayCardResult ResolveStealDeckCardsEffect(CardTriggerRequest request)
+	{
+		int ownerPlayerIndex = request.Event.ActorPlayerIndex;
+		int targetPlayerIndex = request.Event.TargetPlayerIndex;
+		int cardsToMoveLimit = Mathf.Max(1, request.Rule.EffectValues.GetInt(CardEffectValueKeys.Count, 3));
+		return ResolveKingEffect(ownerPlayerIndex, targetPlayerIndex, cardsToMoveLimit);
+	}
+
+	private async Task<PlayCardResult> ResolveDoubleCollectEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		if (request.Event.SourceTableCardIndex >= 0)
+		{
+			await ResolveDoubleTableCardTriggerAsync(request.Event.SourceTableCardIndex, turnSequenceGeneration, new HashSet<int>());
+		}
+
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private async Task<PlayCardResult> ResolveExtraTurnEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		if (request.Event.SourceTableCardIndex >= 0)
+		{
+			await ResolveOvertimeTableCardTriggerAsync(request.Event.SourceTableCardIndex, turnSequenceGeneration, new HashSet<int>());
+		}
+
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private PlayCardResult ResolveGrantRewardEffect(CardTriggerRequest request)
+	{
+		return new PlayCardResult(true, false);
+	}
+
+	private async Task<PlayCardResult> ResolveDestroyCardsEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	{
+		await ResolveBombPairAsync(turnSequenceGeneration);
+		return new PlayCardResult(true, false, CompletesTurn: false);
+	}
+
+	private PlayCardResult ResolveReverseCollectEffect(CardTriggerRequest request)
+	{
+		return new PlayCardResult(true, false);
+	}
+
+	private PlayCardResult ResolveBlockMatchEffect(CardTriggerRequest request)
+	{
+		return new PlayCardResult(true, false);
+	}
+}

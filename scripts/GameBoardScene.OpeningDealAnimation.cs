@@ -25,7 +25,6 @@ public partial class GameBoardScene
 			Control? centerDeck = CreateOpeningCenterDeckVisual(GetOpeningTotalCardCount());
 			try
 			{
-				await ToSignal(GetTree().CreateTimer(0.18f), SceneTreeTimer.SignalName.Timeout);
 				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 				{
 					return;
@@ -197,7 +196,7 @@ public partial class GameBoardScene
 			RotationDegrees = -8.0f + dealNumber % 5 * 4.0f,
 			ZIndex = OpeningDealZIndex + dealNumber,
 			ZAsRelative = false,
-			Scale = Vector2.One * 0.82f,
+			Scale = Vector2.One,
 		};
 		float startRotationDegrees = card.RotationDegrees;
 		MarkAnimatedCardBack(card);
@@ -252,7 +251,7 @@ public partial class GameBoardScene
 			RotationDegrees = -6.0f + dealIndex % 4 * 4.0f,
 			ZIndex = OpeningDealZIndex + 200 + dealIndex,
 			ZAsRelative = false,
-			Scale = Vector2.One * 0.82f,
+			Scale = Vector2.One,
 		};
 		float startRotationDegrees = card.RotationDegrees;
 		MarkAnimatedCardBack(card);
@@ -305,7 +304,7 @@ public partial class GameBoardScene
 		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
 		card.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		card.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + pulse * 8.0f;
-		card.Scale = Vector2.One * Mathf.Lerp(0.82f, 1.0f, easedProgress);
+		card.Scale = Vector2.One;
 	}
 
 	private Vector2 GetOpeningDealStartGlobalPosition()

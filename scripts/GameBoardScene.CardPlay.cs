@@ -44,12 +44,12 @@ public partial class GameBoardScene
 		if (captureStartIndex >= 0)
 		{
 			TableCard matchedTableCard = _tableCards[captureStartIndex];
-			if (matchedTableCardFlipped && matchedTableCard.Card.HasValue && matchedTableCard.Card.Value.HasMagnetEffect)
+			if (matchedTableCardFlipped && matchedTableCard.Card.HasValue && IsAttachedModifier(matchedTableCard.Card.Value, CardAttachmentModifiers.Magnet))
 			{
 				pendingFaceUpMagnetTriggerIndexes.Add(captureStartIndex);
 			}
 
-			if (playedCard.HasMagnetEffect)
+			if (IsAttachedModifier(playedCard, CardAttachmentModifiers.Magnet))
 			{
 				pendingFaceUpMagnetTriggerIndexes.Add(playedTableCardIndex);
 			}
@@ -90,10 +90,23 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			TableSpecialCardTrigger? specialTrigger = GetCapturedSpecialCardTrigger(captureStartIndex);
-			if (specialTrigger.HasValue)
+			foreach (TableSpecialCardTrigger specialTrigger in GetCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes))
 			{
-				await PlayTableSpecialCardTriggerEffectAsync(specialTrigger.Value);
+				await PlayTableSpecialCardTriggerEffectAsync(specialTrigger);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
+
+				await PublishAndResolveCardEventAsync(
+					new CardGameEvent(
+						CardGameEvents.OnCollect,
+						playerIndex,
+						sourceTableCardIndex: specialTrigger.TableCardIndex,
+						captureStartIndex: captureStartIndex,
+						extraTableCardIndexes: magnetExtraCaptureIndexes,
+						originGlobalCenter: specialTrigger.GlobalPosition + CardVisualSize / 2.0f),
+					turnSequenceGeneration);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return new PlayCardResult(false, false);
@@ -160,7 +173,7 @@ public partial class GameBoardScene
 		}
 		else
 		{
-			if (playedCard.HasOvertimeEffect)
+			if (IsAttachedModifier(playedCard, CardAttachmentModifiers.Overtime))
 			{
 				await ResolveOvertimeTableCardTriggerAsync(playedTableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)

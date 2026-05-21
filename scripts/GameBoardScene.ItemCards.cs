@@ -7,7 +7,8 @@ public partial class GameBoardScene
 {
 	private bool RequiresPlayerTarget(string itemCardId)
 	{
-		return itemCardId == QueenItemCardId || itemCardId == KingItemCardId;
+		return IsItemEffectType(itemCardId, CardEffectTypes.StealCard)
+			|| IsItemEffectType(itemCardId, CardEffectTypes.StealDeckCards);
 	}
 
 	private bool HasPendingItemSelection()
@@ -54,9 +55,9 @@ public partial class GameBoardScene
 		magnetAttachmentCompletion?.TrySetResult(true);
 	}
 
-	private static bool IsAttachmentItemCard(string itemCardId)
+	private bool IsAttachmentItemCard(string itemCardId)
 	{
-		return itemCardId == MagnetItemCardId || itemCardId == DoubleItemCardId || itemCardId == OvertimeItemCardId;
+		return IsItemEffectType(itemCardId, CardEffectTypes.AttachModifier);
 	}
 
 	private int GetTotalHandCardCount(int playerIndex)

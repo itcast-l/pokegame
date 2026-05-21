@@ -244,7 +244,7 @@ public partial class GameBoardScene
 
 	private bool CanPlayItemCard(int playerIndex, string itemCardId)
 	{
-		if (!PlayableSpecialItemCardIds.Contains(itemCardId))
+		if (!_itemCardCatalog.IsPlayable(itemCardId))
 		{
 			return false;
 		}
@@ -254,17 +254,17 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (itemCardId == LensItemCardId && !HasLensRevealTargets(playerIndex))
+		if (IsItemEffectType(itemCardId, CardEffectTypes.RevealCards) && !HasLensRevealTargets(playerIndex))
 		{
 			return false;
 		}
 
-		if (itemCardId == DrawCardItemCardId && (playerIndex < 0 || playerIndex >= _playerDecks.Count || _playerDecks[playerIndex].Count == 0))
+		if (IsItemEffectType(itemCardId, CardEffectTypes.DrawCard) && (playerIndex < 0 || playerIndex >= _playerDecks.Count || _playerDecks[playerIndex].Count == 0))
 		{
 			return false;
 		}
 
-		if (itemCardId == ShuffleItemCardId && GetMovableTableShuffleCardCount() < 2)
+		if (IsItemEffectType(itemCardId, CardEffectTypes.ShuffleTable) && GetMovableTableShuffleCardCount() < 2)
 		{
 			return false;
 		}

@@ -21,7 +21,12 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<int> targetIndexes = PickLensRevealTargetIndexes(playerIndex);
+		if (!_itemCardCatalog.TryGetDefinition(itemHand[itemHandIndex].Id, out ItemCardDefinition definition))
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		List<int> targetIndexes = PickLensRevealTargetIndexes(playerIndex, definition.EffectValues);
 		if (targetIndexes.Count == 0)
 		{
 			return new PlayCardResult(false, false);
@@ -57,27 +62,27 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		await RevealLensTargetCardsAsync(targetIndexes, splitGlobalCenter, turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		RenderTableCards();
-		CheckForWinner();
-		return new PlayCardResult(true, false, CompletesTurn: false);
+		PlayCardResult result = await ResolveItemCardOnPlayAsync(
+			lensCard,
+			playerIndex,
+			itemHandIndex,
+			-1,
+			-1,
+			splitGlobalCenter,
+			turnSequenceGeneration);
+		return result with { CompletesTurn = false };
 	}
 
 	private bool HasLensRevealTargets(int ownerPlayerIndex)
 	{
-		return BuildLensRevealTargetCandidates(ownerPlayerIndex).Count > 0;
+		return BuildLensRevealTargetCandidates(ownerPlayerIndex, CardEffectValues.Empty).Count > 0;
 	}
 
-	private List<int> PickLensRevealTargetIndexes(int ownerPlayerIndex)
+	private List<int> PickLensRevealTargetIndexes(int ownerPlayerIndex, CardEffectValues effectValues)
 	{
-		List<int> candidates = BuildLensRevealTargetCandidates(ownerPlayerIndex);
+		List<int> candidates = BuildLensRevealTargetCandidates(ownerPlayerIndex, effectValues);
 		ShuffleLensRevealTargetCandidates(candidates);
-		int targetCount = Math.Min(LensRevealMaxCards, candidates.Count);
+		int targetCount = Math.Min(Mathf.Max(1, effectValues.GetInt(CardEffectValueKeys.Count, LensRevealMaxCards)), candidates.Count);
 		return targetCount == candidates.Count ? candidates : candidates.GetRange(0, targetCount);
 	}
 
@@ -90,8 +95,9 @@ public partial class GameBoardScene
 		}
 	}
 
-	private List<int> BuildLensRevealTargetCandidates(int ownerPlayerIndex)
+	private List<int> BuildLensRevealTargetCandidates(int ownerPlayerIndex, CardEffectValues effectValues)
 	{
+		string target = effectValues.GetString(CardEffectValueKeys.Target, "opponent_table_face_down");
 		var candidates = new List<int>();
 		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
@@ -101,7 +107,7 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			if (tableCard.CardOwnerPlayerIndex == ownerPlayerIndex)
+			if (target == "opponent_table_face_down" && tableCard.CardOwnerPlayerIndex == ownerPlayerIndex)
 			{
 				continue;
 			}

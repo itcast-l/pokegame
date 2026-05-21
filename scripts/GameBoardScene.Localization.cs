@@ -7,15 +7,15 @@ public partial class GameBoardScene
 
 	private static readonly Dictionary<string, string> ItemDescriptionKeysById = new()
 	{
-		[QuestionMarkItemCardId] = "ITEM_DESC_QUESTION_MARK",
-		[BombItemCardId] = "ITEM_DESC_BOMB",
-		[MagnetItemCardId] = "ITEM_DESC_MAGNET",
-		[GreedItemCardId] = "ITEM_DESC_GREED",
-		[LensItemCardId] = "ITEM_DESC_LENS",
-		[DoubleItemCardId] = "ITEM_DESC_DOUBLE",
-		[OvertimeItemCardId] = "ITEM_DESC_OVERTIME",
-		[DrawCardItemCardId] = "ITEM_DESC_DRAW_CARD",
-		[ShuffleItemCardId] = "ITEM_DESC_SHUFFLE",
+		[QuestionMarkItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(QuestionMarkItemCardId),
+		[BombItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(BombItemCardId),
+		[MagnetItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(MagnetItemCardId),
+		[GreedItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(GreedItemCardId),
+		[LensItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(LensItemCardId),
+		[DoubleItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(DoubleItemCardId),
+		[OvertimeItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(OvertimeItemCardId),
+		[DrawCardItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(DrawCardItemCardId),
+		[ShuffleItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(ShuffleItemCardId),
 	};
 
 	private readonly List<(Button Button, string Key)> _localizedGameButtons = new();
@@ -87,7 +87,7 @@ public partial class GameBoardScene
 	{
 		foreach (string itemCardId in _enabledSceneItemCardIds)
 		{
-			_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, itemCardId);
+			_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, _itemCardCatalog.GetDescriptionKey(itemCardId));
 		}
 	}
 

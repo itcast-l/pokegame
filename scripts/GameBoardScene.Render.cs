@@ -312,19 +312,15 @@ public partial class GameBoardScene
 			return string.Empty;
 		}
 
-		string itemCardId = card.HasDoubleEffect
-			? DoubleItemCardId
-			: card.HasMagnetEffect
-				? MagnetItemCardId
-				: card.HasOvertimeEffect ? OvertimeItemCardId : string.Empty;
-		if (string.IsNullOrEmpty(itemCardId))
+		foreach (string itemCardId in card.GetAttachedItemCardIds())
 		{
-			return string.Empty;
+			if (_itemCardDescriptions.TryGetValue(itemCardId, out string? description))
+			{
+				return description;
+			}
 		}
 
-		return _itemCardDescriptions.TryGetValue(itemCardId, out string? description)
-			? description
-			: string.Empty;
+		return string.Empty;
 	}
 
 	private static Label CreateCardDescriptionLabel(string text, Vector2 position, Vector2 size)
@@ -436,17 +432,17 @@ public partial class GameBoardScene
 
 	private Texture2D? GetCardAttachmentOverlayTexture(PlayingCard card)
 	{
-		if (card.HasDoubleEffect)
+		if (IsAttachedModifier(card, CardAttachmentModifiers.Double))
 		{
 			return _doubleCardOverlayTexture;
 		}
 
-		if (card.HasMagnetEffect)
+		if (IsAttachedModifier(card, CardAttachmentModifiers.Magnet))
 		{
 			return _magnetCardOverlayTexture;
 		}
 
-		if (card.HasOvertimeEffect)
+		if (IsAttachedModifier(card, CardAttachmentModifiers.Overtime))
 		{
 			return _overtimeCardOverlayTexture;
 		}

@@ -1,0 +1,330 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using Godot;
+
+public static class CardGameEvents
+{
+	public const string OnPlay = "on_play";
+	public const string OnMatch = "on_match";
+	public const string OnCollect = "on_collect";
+	public const string OnRoundStart = "on_round_start";
+	public const string OnRoundEnd = "on_round_end";
+	public const string OnDraw = "on_draw";
+	public const string OnShuffle = "on_shuffle";
+	public const string OnDiscard = "on_discard";
+	public const string OnEmptyDeck = "on_empty_deck";
+}
+
+public static class CardEffectTypes
+{
+	public const string None = "";
+	public const string PlaceTablePairDestroy = "place_table_pair_destroy";
+	public const string DrawCard = "draw_card";
+	public const string StealCard = "steal_card";
+	public const string StealDeckCards = "steal_deck_cards";
+	public const string CollectTable = "collect_table";
+	public const string GrantReward = "grant_reward";
+	public const string AttachModifier = "attach_modifier";
+	public const string RevealCards = "reveal_cards";
+	public const string ShuffleTable = "shuffle_table";
+	public const string DoubleCollect = "double_collect";
+	public const string ReverseCollect = "reverse_collect";
+	public const string DestroyCards = "destroy_cards";
+	public const string ExtraTurn = "extra_turn";
+	public const string BlockMatch = "block_match";
+}
+
+public static class CardEffectValueKeys
+{
+	public const string Modifier = "modifier";
+	public const string Target = "target";
+	public const string Count = "count";
+	public const string PairTag = "pair_tag";
+	public const string Multiplier = "multiplier";
+}
+
+public static class CardTags
+{
+	public const string Fixed = "fixed";
+	public const string Bomb = "bomb";
+	public const string Reward = "reward";
+	public const string Attachment = "attachment";
+}
+
+public static class CardAttachmentModifiers
+{
+	public const string Magnet = "magnet";
+	public const string Double = "double";
+	public const string Overtime = "overtime";
+}
+
+public sealed class CardEffectValues
+{
+	public static readonly CardEffectValues Empty = new(new Dictionary<string, string>(StringComparer.Ordinal));
+
+	private readonly Dictionary<string, string> _values;
+
+	private CardEffectValues(Dictionary<string, string> values)
+	{
+		_values = values;
+	}
+
+	public bool IsEmpty => _values.Count == 0;
+
+	public IReadOnlyDictionary<string, string> All => _values;
+
+	public static CardEffectValues Parse(string rawValue)
+	{
+		if (string.IsNullOrWhiteSpace(rawValue))
+		{
+			return Empty;
+		}
+
+		string raw = rawValue.Trim();
+		if (raw.StartsWith("{", StringComparison.Ordinal))
+		{
+			return ParseJsonObject(raw);
+		}
+
+		var values = new Dictionary<string, string>(StringComparer.Ordinal);
+		string[] pairs = raw.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		foreach (string pair in pairs)
+		{
+			int separatorIndex = pair.IndexOf('=');
+			if (separatorIndex <= 0 || separatorIndex >= pair.Length - 1)
+			{
+				continue;
+			}
+
+			values[pair[..separatorIndex].Trim()] = pair[(separatorIndex + 1)..].Trim();
+		}
+
+		return values.Count == 0 ? Empty : new CardEffectValues(values);
+	}
+
+	public string GetString(string key, string fallback = "")
+	{
+		return _values.TryGetValue(key, out string? value) && !string.IsNullOrWhiteSpace(value)
+			? value
+			: fallback;
+	}
+
+	public int GetInt(string key, int fallback = 0)
+	{
+		return _values.TryGetValue(key, out string? value) && int.TryParse(value, out int parsed)
+			? parsed
+			: fallback;
+	}
+
+	public bool GetBool(string key, bool fallback = false)
+	{
+		return _values.TryGetValue(key, out string? value) && bool.TryParse(value, out bool parsed)
+			? parsed
+			: fallback;
+	}
+
+	public CardEffectValues WithOverrides(CardEffectValues overrides)
+	{
+		if (overrides.IsEmpty)
+		{
+			return this;
+		}
+
+		var merged = new Dictionary<string, string>(_values, StringComparer.Ordinal);
+		foreach (KeyValuePair<string, string> pair in overrides._values)
+		{
+			merged[pair.Key] = pair.Value;
+		}
+
+		return new CardEffectValues(merged);
+	}
+
+	private static CardEffectValues ParseJsonObject(string raw)
+	{
+		try
+		{
+			using JsonDocument document = JsonDocument.Parse(raw);
+			if (document.RootElement.ValueKind != JsonValueKind.Object)
+			{
+				return Empty;
+			}
+
+			var values = new Dictionary<string, string>(StringComparer.Ordinal);
+			foreach (JsonProperty property in document.RootElement.EnumerateObject())
+			{
+				if (property.Value.ValueKind == JsonValueKind.Array || property.Value.ValueKind == JsonValueKind.Object)
+				{
+					continue;
+				}
+
+				values[property.Name] = property.Value.ValueKind == JsonValueKind.String
+					? property.Value.GetString() ?? string.Empty
+					: property.Value.ToString();
+			}
+
+			return values.Count == 0 ? Empty : new CardEffectValues(values);
+		}
+		catch (JsonException)
+		{
+			return Empty;
+		}
+	}
+}
+
+public readonly record struct ItemCardEffectRule(
+	string Trigger,
+	string EffectType,
+	CardEffectValues EffectValues,
+	int Priority);
+
+public sealed class CardGameEvent
+{
+	public CardGameEvent(
+		string trigger,
+		int actorPlayerIndex = -1,
+		string sourceCardId = "",
+		int sourceHandIndex = -1,
+		int sourceTableCardIndex = -1,
+		int targetPlayerIndex = -1,
+		int targetHandIndex = -1,
+		int captureStartIndex = -1,
+		IReadOnlyCollection<int>? extraTableCardIndexes = null,
+		Vector2? originGlobalCenter = null,
+		int depth = 0)
+	{
+		Trigger = trigger;
+		ActorPlayerIndex = actorPlayerIndex;
+		SourceCardId = sourceCardId;
+		SourceHandIndex = sourceHandIndex;
+		SourceTableCardIndex = sourceTableCardIndex;
+		TargetPlayerIndex = targetPlayerIndex;
+		TargetHandIndex = targetHandIndex;
+		CaptureStartIndex = captureStartIndex;
+		ExtraTableCardIndexes = extraTableCardIndexes ?? Array.Empty<int>();
+		OriginGlobalCenter = originGlobalCenter;
+		Depth = depth;
+	}
+
+	public string Trigger { get; }
+	public int ActorPlayerIndex { get; }
+	public string SourceCardId { get; }
+	public int SourceHandIndex { get; }
+	public int SourceTableCardIndex { get; }
+	public int TargetPlayerIndex { get; }
+	public int TargetHandIndex { get; }
+	public int CaptureStartIndex { get; }
+	public IReadOnlyCollection<int> ExtraTableCardIndexes { get; }
+	public Vector2? OriginGlobalCenter { get; }
+	public int Depth { get; }
+
+	public CardGameEvent CreateFollowUp(string trigger, string sourceCardId = "", int sourceTableCardIndex = -1)
+	{
+		return new CardGameEvent(
+			trigger,
+			ActorPlayerIndex,
+			sourceCardId,
+			SourceHandIndex,
+			sourceTableCardIndex,
+			TargetPlayerIndex,
+			TargetHandIndex,
+			CaptureStartIndex,
+			ExtraTableCardIndexes,
+			OriginGlobalCenter,
+			Depth + 1);
+	}
+}
+
+public readonly record struct CardTriggerRequest(
+	ItemCardDefinition Definition,
+	ItemCardEffectRule Rule,
+	CardGameEvent Event,
+	int Sequence);
+
+public interface ICardTriggerProvider
+{
+	IEnumerable<CardTriggerRequest> CollectCardTriggers(CardGameEvent gameEvent, int sequenceStart);
+}
+
+public sealed class CardEventBus
+{
+	private const int MaxQueuedTriggers = 128;
+	private const int MaxChainDepth = 16;
+	private const int MaxSameTriggerResolutions = 4;
+
+	private readonly List<CardTriggerRequest> _pending = new();
+	private readonly Dictionary<string, int> _resolvedCounts = new(StringComparer.Ordinal);
+	private int _nextSequence;
+
+	public int PendingCount => _pending.Count;
+
+	public void Clear()
+	{
+		_pending.Clear();
+		_resolvedCounts.Clear();
+		_nextSequence = 0;
+	}
+
+	public void Publish(CardGameEvent gameEvent, ICardTriggerProvider provider)
+	{
+		if (gameEvent.Depth > MaxChainDepth || _pending.Count >= MaxQueuedTriggers)
+		{
+			return;
+		}
+
+		List<CardTriggerRequest> requests = provider
+			.CollectCardTriggers(gameEvent, _nextSequence)
+			.Where(request => !string.IsNullOrWhiteSpace(request.Rule.Trigger)
+				&& !string.IsNullOrWhiteSpace(request.Rule.EffectType))
+			.ToList();
+		_nextSequence += requests.Count;
+
+		foreach (CardTriggerRequest request in requests)
+		{
+			if (_pending.Count >= MaxQueuedTriggers)
+			{
+				break;
+			}
+
+			_pending.Add(request);
+		}
+
+		SortPending();
+	}
+
+	public bool TryDequeue(out CardTriggerRequest request)
+	{
+		if (_pending.Count == 0)
+		{
+			request = default;
+			return false;
+		}
+
+		request = _pending[0];
+		_pending.RemoveAt(0);
+		string key = BuildTriggerKey(request);
+		_resolvedCounts.TryGetValue(key, out int resolvedCount);
+		if (resolvedCount >= MaxSameTriggerResolutions)
+		{
+			return TryDequeue(out request);
+		}
+
+		_resolvedCounts[key] = resolvedCount + 1;
+		return true;
+	}
+
+	private void SortPending()
+	{
+		_pending.Sort((a, b) =>
+		{
+			int priorityComparison = b.Rule.Priority.CompareTo(a.Rule.Priority);
+			return priorityComparison != 0 ? priorityComparison : a.Sequence.CompareTo(b.Sequence);
+		});
+	}
+
+	private static string BuildTriggerKey(CardTriggerRequest request)
+	{
+		return $"{request.Definition.Id}:{request.Rule.Trigger}:{request.Rule.EffectType}:{request.Event.SourceTableCardIndex}:{request.Event.Depth}";
+	}
+}

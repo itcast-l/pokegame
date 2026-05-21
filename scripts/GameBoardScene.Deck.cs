@@ -24,6 +24,7 @@ public partial class GameBoardScene
 		_completedTurnsSinceQuestionCardRefresh = 0;
 		_questionCardRefreshAnchorPlayerIndex = -1;
 		_pendingItemAttachmentRewards.Clear();
+		_cardEventBus.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		_isResolvingMagnetAttachmentSelection = false;

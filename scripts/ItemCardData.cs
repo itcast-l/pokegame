@@ -1,40 +1,8 @@
 using Godot;
-using System.Collections.Generic;
 
 public partial class ItemCardData : Node2D
 {
 	private const double ItemCardFrameTime = 0.18;
-
-	private static readonly Dictionary<string, string> ItemCardIdsBySpriteName = new()
-	{
-		["QuestionMark"] = "question_mark",
-		["Bomb"] = "bomb",
-		["Magnet"] = "magnet",
-		["Greed"] = "greed",
-		["Lens"] = "lens",
-		["Double"] = "double",
-		["Overtime"] = "overtime",
-		["DrawCard"] = "draw_card",
-		["Shuffle"] = "shuffle",
-	};
-
-	private static readonly Dictionary<string, string> ItemCardArtRunsById = new()
-	{
-		["double"] = "run-005",
-	};
-
-	private static readonly Dictionary<string, Texture2D[]> ItemCardFrames = new()
-	{
-		["QuestionMark"] = LoadFrames(ItemCardIdsBySpriteName["QuestionMark"]),
-		["Bomb"] = LoadFrames(ItemCardIdsBySpriteName["Bomb"]),
-		["Magnet"] = LoadFrames(ItemCardIdsBySpriteName["Magnet"]),
-		["Greed"] = LoadFrames(ItemCardIdsBySpriteName["Greed"]),
-		["Lens"] = LoadFrames(ItemCardIdsBySpriteName["Lens"]),
-		["Double"] = LoadFrames(ItemCardIdsBySpriteName["Double"]),
-		["Overtime"] = LoadFrames(ItemCardIdsBySpriteName["Overtime"]),
-		["DrawCard"] = LoadFrames(ItemCardIdsBySpriteName["DrawCard"]),
-		["Shuffle"] = LoadFrames(ItemCardIdsBySpriteName["Shuffle"]),
-	};
 
 	[Export(PropertyHint.MultilineText)]
 	public string item_description = "";
@@ -46,16 +14,18 @@ public partial class ItemCardData : Node2D
 	private Texture2D[] _animationFrames = System.Array.Empty<Texture2D>();
 	private int _animationFrame;
 	private Godot.Timer? _animationTimer;
+	private ItemCardCatalog _catalog = default!;
 
 	public override void _Ready()
 	{
+		_catalog = ItemCardCatalog.Load(this);
 		_animatedSprite = FindAnimatedSprite();
 		if (_animatedSprite == null)
 		{
 			return;
 		}
 
-		if (!ItemCardFrames.TryGetValue(_animatedSprite.Name.ToString(), out Texture2D[]? frames) || frames.Length == 0)
+		if (!TryGetItemCardId(out string itemCardId) || !_catalog.TryGetFrameTextures(itemCardId, out Texture2D[] frames) || frames.Length == 0)
 		{
 			return;
 		}
@@ -76,13 +46,14 @@ public partial class ItemCardData : Node2D
 	public bool TryGetItemCardId(out string itemCardId)
 	{
 		itemCardId = "";
+		_catalog ??= ItemCardCatalog.Load(this);
 		Sprite2D? sprite = FindAnimatedSprite();
 		if (sprite == null)
 		{
 			return false;
 		}
 
-		if (!ItemCardIdsBySpriteName.TryGetValue(sprite.Name.ToString(), out string? mappedItemCardId))
+		if (!_catalog.TryGetIdForSpriteName(sprite.Name.ToString(), out string mappedItemCardId))
 		{
 			return false;
 		}
@@ -91,24 +62,12 @@ public partial class ItemCardData : Node2D
 		return true;
 	}
 
-	private static Texture2D[] LoadFrames(string folderName)
-	{
-		const string root = "res://art/cards/item_cards";
-		string runName = ItemCardArtRunsById.GetValueOrDefault(folderName, "run-004");
-		return new[]
-		{
-			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-001.png"),
-			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-002.png"),
-			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-003.png"),
-			GD.Load<Texture2D>($"{root}/{folderName}/{runName}/processed/frames/frame-004.png"),
-		};
-	}
-
 	private Sprite2D? FindAnimatedSprite()
 	{
+		_catalog ??= ItemCardCatalog.Load(this);
 		foreach (Node child in GetChildren())
 		{
-			if (child is Sprite2D sprite && ItemCardFrames.ContainsKey(sprite.Name.ToString()))
+			if (child is Sprite2D sprite && _catalog.TryGetIdForSpriteName(sprite.Name.ToString(), out _))
 			{
 				return sprite;
 			}

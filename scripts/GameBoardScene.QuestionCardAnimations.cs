@@ -286,7 +286,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.ItemOverlay.HasValue || tableCard.ItemOverlay.Value.Id != QuestionMarkItemCardId)
+		if (!tableCard.ItemOverlay.HasValue || !IsQuestionTableCard(tableCard))
 		{
 			return;
 		}

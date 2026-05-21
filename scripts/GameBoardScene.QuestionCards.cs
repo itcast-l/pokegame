@@ -104,7 +104,7 @@ public partial class GameBoardScene
 	private List<string> BuildEnabledQuestionRewardItemCardIds()
 	{
 		var rewardItemCardIds = new List<string>();
-		foreach (string itemCardId in QuestionRewardItemCardIds)
+		foreach (string itemCardId in _itemCardCatalog.RewardIds)
 		{
 			if (IsSpecialItemCardEnabled(itemCardId))
 			{

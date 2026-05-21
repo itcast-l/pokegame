@@ -40,7 +40,7 @@ public partial class GameBoardScene
 					}
 				}
 
-				if (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
+				if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 				{
 					await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -49,7 +49,7 @@ public partial class GameBoardScene
 					}
 				}
 
-				if (tableCard.Card.HasValue && tableCard.Card.Value.HasOvertimeEffect)
+				if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 				{
 					await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -93,7 +93,7 @@ public partial class GameBoardScene
 				_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
 			}
 
-			if (tableCard.Card.HasValue && tableCard.Card.Value.HasMagnetEffect)
+			if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
 			{
 				await ResolveMagnetTableCardTriggerAsync(
 					tableCardIndex,
@@ -109,7 +109,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
+			if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 			{
 				await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -118,7 +118,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (tableCard.Card.HasValue && tableCard.Card.Value.HasOvertimeEffect)
+			if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 			{
 				await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -212,10 +212,10 @@ public partial class GameBoardScene
 		return false;
 	}
 
-	private static bool HasDoubleScoreEffect(TableCard tableCard)
+	private bool HasDoubleScoreEffect(TableCard tableCard)
 	{
-		return (tableCard.Card.HasValue && tableCard.Card.Value.HasDoubleEffect)
-			|| (tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == DoubleItemCardId);
+		return (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+			|| IsItemEffectType(tableCard, CardEffectTypes.DoubleCollect);
 	}
 
 	private int GetCapturedTableScorePlayerIndex(int captureStartIndex, int fallbackPlayerIndex)
@@ -228,7 +228,7 @@ public partial class GameBoardScene
 		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!tableCard.ItemOverlay.HasValue || tableCard.ItemOverlay.Value.Id != BombItemCardId)
+			if (!IsItemEffectType(tableCard, CardEffectTypes.PlaceTablePairDestroy))
 			{
 				continue;
 			}
@@ -291,7 +291,7 @@ public partial class GameBoardScene
 				collectedCardCount++;
 			}
 
-			if (tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == QuestionMarkItemCardId)
+			if (IsQuestionTableCard(tableCard))
 			{
 				QuestionCardRewardGrant? rewardGrant = GrantQuestionCardReward(playerIndex, reserveReplacementCard);
 				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)

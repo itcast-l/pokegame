@@ -1,49 +1,82 @@
+using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private readonly struct PlayingCard
 	{
-		public PlayingCard(string suit, string rank, Texture2D texture, bool hasMagnetEffect = false, bool hasDoubleEffect = false, bool hasOvertimeEffect = false)
+		public PlayingCard(string suit, string rank, Texture2D texture, string attachedItemCardIdsCsv = "")
 		{
 			Suit = suit;
 			Rank = rank;
 			Texture = texture;
-			HasMagnetEffect = hasMagnetEffect;
-			HasDoubleEffect = hasDoubleEffect;
-			HasOvertimeEffect = hasOvertimeEffect;
+			AttachedItemCardIdsCsv = attachedItemCardIdsCsv;
 		}
 
 		public string Suit { get; }
 		public string Rank { get; }
 		public Texture2D Texture { get; }
-		public bool HasMagnetEffect { get; }
-		public bool HasDoubleEffect { get; }
-		public bool HasOvertimeEffect { get; }
+		public string AttachedItemCardIdsCsv { get; }
+		public bool HasItemEffect => !string.IsNullOrEmpty(AttachedItemCardIdsCsv);
 
-		public PlayingCard WithMagnetEffect()
+		public PlayingCard WithAttachedItemEffect(string itemCardId)
 		{
-			return HasMagnetEffect ? this : new PlayingCard(Suit, Rank, Texture, true, HasDoubleEffect, HasOvertimeEffect);
+			if (string.IsNullOrWhiteSpace(itemCardId) || HasAttachedItemEffect(itemCardId))
+			{
+				return this;
+			}
+
+			string attachedItemCardIdsCsv = string.IsNullOrEmpty(AttachedItemCardIdsCsv)
+				? itemCardId
+				: $"{AttachedItemCardIdsCsv},{itemCardId}";
+			return new PlayingCard(Suit, Rank, Texture, attachedItemCardIdsCsv);
 		}
 
-		public PlayingCard WithDoubleEffect()
+		public PlayingCard WithoutAttachedItemEffect(string itemCardId)
 		{
-			return HasDoubleEffect ? this : new PlayingCard(Suit, Rank, Texture, HasMagnetEffect, true, HasOvertimeEffect);
+			if (string.IsNullOrWhiteSpace(itemCardId) || !HasAttachedItemEffect(itemCardId))
+			{
+				return this;
+			}
+
+			var remainingIds = new List<string>();
+			foreach (string attachedItemCardId in GetAttachedItemCardIds())
+			{
+				if (attachedItemCardId != itemCardId)
+				{
+					remainingIds.Add(attachedItemCardId);
+				}
+			}
+
+			return remainingIds.Count == 0
+				? new PlayingCard(Suit, Rank, Texture)
+				: new PlayingCard(Suit, Rank, Texture, string.Join(",", remainingIds));
 		}
 
-		public PlayingCard WithOvertimeEffect()
+		public bool HasAttachedItemEffect(string itemCardId)
 		{
-			return HasOvertimeEffect ? this : new PlayingCard(Suit, Rank, Texture, HasMagnetEffect, HasDoubleEffect, true);
+			foreach (string attachedItemCardId in GetAttachedItemCardIds())
+			{
+				if (attachedItemCardId == itemCardId)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
-		public PlayingCard WithoutOvertimeEffect()
+		public IReadOnlyList<string> GetAttachedItemCardIds()
 		{
-			return HasOvertimeEffect ? new PlayingCard(Suit, Rank, Texture, HasMagnetEffect, HasDoubleEffect) : this;
+			return string.IsNullOrWhiteSpace(AttachedItemCardIdsCsv)
+				? Array.Empty<string>()
+				: AttachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		}
 
 		public PlayingCard WithoutItemEffects()
 		{
-			return HasMagnetEffect || HasDoubleEffect || HasOvertimeEffect ? new PlayingCard(Suit, Rank, Texture) : this;
+			return HasItemEffect ? new PlayingCard(Suit, Rank, Texture) : this;
 		}
 	}
 
@@ -119,11 +152,11 @@ public partial class GameBoardScene
 		public int ItemOwnerPlayerIndex { get; }
 		public int CardOwnerPlayerIndex { get; }
 
-		public void ClearOvertimeEffect()
+		public void ClearAttachedItemEffect(string itemCardId)
 		{
 			if (Card.HasValue)
 			{
-				Card = Card.Value.WithoutOvertimeEffect();
+				Card = Card.Value.WithoutAttachedItemEffect(itemCardId);
 			}
 		}
 	}

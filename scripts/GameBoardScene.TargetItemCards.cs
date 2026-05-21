@@ -5,26 +5,6 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private PlayCardResult ResolveItemCardEffect(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
-	{
-		if (itemCardId == JackItemCardId)
-		{
-			return ResolveJackEffect(ownerPlayerIndex);
-		}
-
-		if (itemCardId == QueenItemCardId)
-		{
-			return ResolveQueenEffect(ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
-		}
-
-		if (itemCardId == KingItemCardId)
-		{
-			return ResolveKingEffect(ownerPlayerIndex, targetPlayerIndex);
-		}
-
-		return new PlayCardResult(false, false);
-	}
-
 	private PlayCardResult ResolveJackEffect(int ownerPlayerIndex)
 	{
 		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count)
@@ -87,6 +67,11 @@ public partial class GameBoardScene
 
 	private PlayCardResult ResolveKingEffect(int ownerPlayerIndex, int targetPlayerIndex)
 	{
+		return ResolveKingEffect(ownerPlayerIndex, targetPlayerIndex, 3);
+	}
+
+	private PlayCardResult ResolveKingEffect(int ownerPlayerIndex, int targetPlayerIndex, int cardsToMoveLimit)
+	{
 		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count || targetPlayerIndex < 0 || targetPlayerIndex >= _playerDecks.Count)
 		{
 			return new PlayCardResult(false, false);
@@ -97,7 +82,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		int cardsToMove = Math.Min(3, _playerDecks[targetPlayerIndex].Count);
+		int cardsToMove = Math.Min(cardsToMoveLimit, _playerDecks[targetPlayerIndex].Count);
 		for (int cardIndex = 0; cardIndex < cardsToMove; cardIndex++)
 		{
 			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
@@ -125,12 +110,12 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			if (itemCardId == QueenItemCardId && GetTotalHandCardCount(playerIndex) == 0)
+			if (IsItemEffectType(itemCardId, CardEffectTypes.StealCard) && GetTotalHandCardCount(playerIndex) == 0)
 			{
 				continue;
 			}
 
-			if (itemCardId == KingItemCardId && _playerDecks[playerIndex].Count == 0)
+			if (IsItemEffectType(itemCardId, CardEffectTypes.StealDeckCards) && _playerDecks[playerIndex].Count == 0)
 			{
 				continue;
 			}
@@ -209,7 +194,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (_pendingItemCardId == KingItemCardId)
+		if (IsItemEffectType(_pendingItemCardId, CardEffectTypes.StealDeckCards))
 		{
 			CompletePendingItemSelection(targetPlayerIndex, -1);
 			return;
@@ -274,12 +259,12 @@ public partial class GameBoardScene
 		int turnSequenceGeneration = _pendingItemTurnSequenceGeneration;
 		bool targetIsValid = itemCardId switch
 		{
-			QueenItemCardId => targetPlayerIndex >= 0
+			_ when IsItemEffectType(itemCardId, CardEffectTypes.StealCard) => targetPlayerIndex >= 0
 				&& targetPlayerIndex < _playerHands.Count
 				&& targetPlayerIndex != ownerPlayerIndex
 				&& targetHandIndex >= 0
 				&& targetHandIndex < GetTotalHandCardCount(targetPlayerIndex),
-			KingItemCardId => targetPlayerIndex >= 0
+			_ when IsItemEffectType(itemCardId, CardEffectTypes.StealDeckCards) => targetPlayerIndex >= 0
 				&& targetPlayerIndex < _playerDecks.Count
 				&& targetPlayerIndex != ownerPlayerIndex
 				&& _playerDecks[targetPlayerIndex].Count > 0,
@@ -310,7 +295,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayCardResult result = ResolveItemCardEffect(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex) with { CompletesTurn = false };
+		PlayCardResult result = (await ResolveItemCardOnPlayAsync(
+			itemCard,
+			ownerPlayerIndex,
+			itemHandIndex,
+			targetPlayerIndex,
+			targetHandIndex,
+			itemGlobalPosition ?? Vector2.Zero,
+			turnSequenceGeneration)) with { CompletesTurn = false };
 		RenderPlayerCardPiles();
 		RenderTableCards();
 		await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);

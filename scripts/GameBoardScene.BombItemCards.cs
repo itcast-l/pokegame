@@ -174,7 +174,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.ItemOverlay.HasValue || tableCard.ItemOverlay.Value.Id != BombItemCardId)
+		if (!tableCard.ItemOverlay.HasValue || !IsBombTableEffect(tableCard))
 		{
 			return;
 		}
@@ -329,8 +329,8 @@ public partial class GameBoardScene
 		return _centerArena.GlobalPosition + cardPositions[tableCardIndex] + CardVisualSize / 2.0f;
 	}
 
-	private static bool IsBombTableCard(TableCard tableCard)
+	private bool IsBombTableCard(TableCard tableCard)
 	{
-		return tableCard.ItemOverlay.HasValue && tableCard.ItemOverlay.Value.Id == BombItemCardId;
+		return IsBombTableEffect(tableCard);
 	}
 }
