@@ -1,0 +1,254 @@
+using Godot;
+
+public partial class GameBoardScene
+{
+	private int GetVisibleHandCardCountForRender(int playerIndex, int handCount)
+	{
+		if (!_isOpeningDealAnimationPlaying)
+		{
+			return handCount;
+		}
+
+		if (playerIndex < 0 || playerIndex >= _openingVisibleHandCardCounts.Count)
+		{
+			return 0;
+		}
+
+		return Mathf.Clamp(_openingVisibleHandCardCounts[playerIndex], 0, handCount);
+	}
+
+	private int GetVisiblePileCardCountForRender(int playerIndex, int pileCount)
+	{
+		if (!_isOpeningDealAnimationPlaying)
+		{
+			return pileCount;
+		}
+
+		if (playerIndex < 0 || playerIndex >= _openingVisiblePileCardCounts.Count)
+		{
+			return 0;
+		}
+
+		return Mathf.Clamp(_openingVisiblePileCardCounts[playerIndex], 0, pileCount);
+	}
+
+	private string GetAttachmentCardDescription(PlayingCard card, bool showCardBack)
+	{
+		if (showCardBack)
+		{
+			return string.Empty;
+		}
+
+		foreach (string itemCardId in card.GetAttachedItemCardIds())
+		{
+			if (_itemCardDescriptions.TryGetValue(itemCardId, out string? description))
+			{
+				return description;
+			}
+		}
+
+		return string.Empty;
+	}
+
+	private static Label CreateCardDescriptionLabel(string text, Vector2 position, Vector2 size)
+	{
+		var label = new Label
+		{
+			Name = "CardDescriptionLabel",
+			Text = text,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position,
+			Size = size,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			Visible = false,
+			ZAsRelative = false,
+			ZIndex = TableCardPointPopupZIndex - 10,
+		};
+		label.AddThemeFontSizeOverride("font_size", 15);
+		label.AddThemeColorOverride("font_color", new Color(0.86f, 1.0f, 0.96f, 0.96f));
+		label.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.09f, 0.12f, 0.74f));
+		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.05f, 0.08f, 0.88f));
+		label.AddThemeConstantOverride("outline_size", 1);
+		label.AddThemeConstantOverride("shadow_offset_x", 0);
+		label.AddThemeConstantOverride("shadow_offset_y", 2);
+		return label;
+	}
+
+	private static Vector2 GetHandCardDescriptionPosition(int playerIndex)
+	{
+		var labelSize = new Vector2(204.0f, 42.0f);
+		float y = playerIndex == 1 ? CardVisualSize.Y + 4.0f : -labelSize.Y - 4.0f;
+		return new Vector2((CardVisualSize.X - labelSize.X) / 2.0f, y);
+	}
+
+	private Vector2 GetTableCardDescriptionPosition(Vector2 cardPosition, Vector2 labelSize)
+	{
+		float x = Mathf.Clamp(
+			cardPosition.X + (CardVisualSize.X - labelSize.X) / 2.0f,
+			0.0f,
+			Mathf.Max(0.0f, _centerArena.Size.X - labelSize.X));
+		float y = cardPosition.Y - labelSize.Y - 4.0f;
+		if (y < 0.0f)
+		{
+			y = cardPosition.Y + CardVisualSize.Y + 4.0f;
+		}
+
+		return new Vector2(x, y);
+	}
+
+	private static void AddMagnetSelectionPulse(Control parent, Vector2 position, Vector2 size, float rotationDegrees)
+	{
+		Vector2 glowInset = new(7.0f, 8.0f);
+		Vector2 glowSize = size + glowInset * 2.0f;
+		var glow = new Panel
+		{
+			Name = "MagnetSelectionPulse",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position - glowInset,
+			Size = glowSize,
+			PivotOffset = glowSize / 2.0f,
+			RotationDegrees = rotationDegrees,
+			ZIndex = -1,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.74f),
+			Scale = Vector2.One * 0.98f,
+		};
+		glow.AddThemeStyleboxOverride("panel", CreateMagnetSelectionPulseStyle());
+		parent.AddChild(glow);
+
+		Tween tween = glow.CreateTween();
+		tween.SetLoops();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.InOut);
+		tween.TweenProperty(glow, "modulate", new Color(1.0f, 1.0f, 1.0f, 1.0f), 0.48f);
+		tween.TweenProperty(glow, "scale", Vector2.One * 1.04f, 0.48f);
+		tween.Chain().TweenProperty(glow, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.68f), 0.48f);
+		tween.TweenProperty(glow, "scale", Vector2.One * 0.98f, 0.48f);
+	}
+
+	private static void StartMagnetSelectionBounce(Control cardSlot, Vector2 basePosition)
+	{
+		Tween tween = cardSlot.CreateTween();
+		tween.SetLoops();
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.InOut);
+		tween.TweenProperty(cardSlot, "position", basePosition + new Vector2(0.0f, -3.0f), 0.42f);
+		tween.TweenProperty(cardSlot, "position", basePosition, 0.42f);
+	}
+
+	private static StyleBoxFlat CreateMagnetSelectionPulseStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.0f, 0.0f, 0.0f, 0.0f),
+			BorderColor = new Color(0.68f, 1.0f, 0.96f, 0.62f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomRight = 6,
+			CornerRadiusBottomLeft = 6,
+			ShadowColor = new Color(0.34f, 1.0f, 0.96f, 0.24f),
+			ShadowSize = 16,
+		};
+	}
+
+	private Texture2D? GetCardAttachmentOverlayTexture(PlayingCard card)
+	{
+		if (IsAttachedModifier(card, CardAttachmentModifiers.Double))
+		{
+			return _doubleCardOverlayTexture;
+		}
+
+		if (IsAttachedModifier(card, CardAttachmentModifiers.Magnet))
+		{
+			return _magnetCardOverlayTexture;
+		}
+
+		if (IsAttachedModifier(card, CardAttachmentModifiers.Overtime))
+		{
+			return _overtimeCardOverlayTexture;
+		}
+
+		return null;
+	}
+
+	private static void AddCardAttachmentOverlay(
+		Node parent,
+		Texture2D overlayTexture,
+		Vector2 position,
+		Vector2 size,
+		float rotationDegrees = 0.0f,
+		int zIndex = 1,
+		float alpha = 1.0f)
+	{
+		var overlay = new TextureRect
+		{
+			Name = "CardAttachmentOverlay",
+			Texture = overlayTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position,
+			Size = size,
+			PivotOffset = size / 2.0f,
+			RotationDegrees = rotationDegrees,
+			ZIndex = zIndex,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, alpha),
+		};
+		parent.AddChild(overlay);
+	}
+
+	private static float GetItemCardVisualScale(string itemCardId)
+	{
+		return 1.0f;
+	}
+
+	private static Vector2 GetItemCardVisualSize(string itemCardId)
+	{
+		return CardVisualSize * GetItemCardVisualScale(itemCardId);
+	}
+
+	private static Vector2 GetItemCardVisualPosition(string itemCardId)
+	{
+		return (CardVisualSize - GetItemCardVisualSize(itemCardId)) / 2.0f;
+	}
+
+	private static float GetCardRotationDegreesForPlayer(int playerIndex)
+	{
+		return playerIndex switch
+		{
+			2 => 90.0f,
+			3 => -90.0f,
+			_ => 0.0f,
+		};
+	}
+
+	private static float GetCardPileRotationDegreesForPlayer(int playerIndex)
+	{
+		return GetCardRotationDegreesForPlayer(playerIndex) * 0.22f;
+	}
+
+	private static TextureRect? FindHandCardVisual(Control? handCardSlot)
+	{
+		if (handCardSlot == null)
+		{
+			return null;
+		}
+
+		foreach (Node child in handCardSlot.GetChildren())
+		{
+			if (child is TextureRect textureRect)
+			{
+				return textureRect;
+			}
+		}
+
+		return null;
+	}
+}
