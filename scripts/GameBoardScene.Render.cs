@@ -126,6 +126,7 @@ public partial class GameBoardScene
 					Position = basePosition,
 					Size = CardVisualSize,
 					ZIndex = displayIndex,
+					Visible = !IsHandDisplaySlotHidden(playerIndex, displayIndex),
 				};
 				cardSlot.SetMeta(HandCardSlotMeta, true);
 				var cardVisual = new TextureRect

@@ -5,13 +5,6 @@ public partial class MainMenuScene : Control
 {
 	private void BuildSettingsDialog()
 	{
-		_settingsDialogLayer = new CanvasLayer
-		{
-			Name = "SettingsDialogLayer",
-			Layer = 38,
-		};
-		AddChild(_settingsDialogLayer);
-
 		_settingsDialogRoot = new Control
 		{
 			Name = "SettingsDialogRoot",
@@ -20,7 +13,7 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		_settingsDialogRoot.SetAnchorsPreset(LayoutPreset.FullRect);
-		_settingsDialogLayer.AddChild(_settingsDialogRoot);
+		AddChild(_settingsDialogRoot);
 
 		var scrim = new ColorRect
 		{
@@ -395,6 +388,7 @@ public partial class MainMenuScene : Control
 		_oceanMotion = config.GetValue("video", "ocean_motion", DefaultOceanMotion).AsBool();
 		_motionScale = Mathf.Clamp(config.GetValue("video", "motion_scale", DefaultMotionScale).AsSingle(), 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(config.GetValue("general", "language", Localization.DefaultLanguagePreference).AsString());
+		_selectedAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(config.GetValue("general", "avatar", CharacterAvatarCatalog.DefaultAvatarId).AsString());
 	}
 
 	private void SaveSettings()
@@ -407,6 +401,7 @@ public partial class MainMenuScene : Control
 		config.SetValue("video", "ocean_motion", _oceanMotion);
 		config.SetValue("video", "motion_scale", _motionScale);
 		config.SetValue("general", "language", _languagePreference);
+		config.SetValue("general", "avatar", _selectedAvatarId);
 
 		Error saveResult = config.Save(SettingsConfigPath);
 		if (saveResult != Error.Ok)
@@ -425,7 +420,7 @@ public partial class MainMenuScene : Control
 
 		AudioServer.SetBusVolumeDb(0, LinearVolumeToDb(_masterVolume));
 		AudioServer.SetBusMute(0, _muteAudio);
-		_backgroundMusic.VolumeDb = LinearVolumeToDb(_musicVolume);
+		ApplyMusicVolume();
 
 		DisplayServer.WindowSetMode(_fullscreen
 			? DisplayServer.WindowMode.Fullscreen
@@ -461,6 +456,24 @@ public partial class MainMenuScene : Control
 	private static float LinearVolumeToDb(float value)
 	{
 		return value <= 0.001f ? -80.0f : Mathf.LinearToDb(value);
+	}
+
+	private void ApplyMusicVolume()
+	{
+		Node? musicManager = GetMusicManager();
+		if (musicManager == null)
+		{
+			return;
+		}
+
+		float volumeDb = LinearVolumeToDb(_musicVolume);
+		if (!float.IsNaN(_appliedMusicVolumeDb) && Mathf.IsEqualApprox(_appliedMusicVolumeDb, volumeDb))
+		{
+			return;
+		}
+
+		musicManager.Call("set_volume", volumeDb);
+		_appliedMusicVolumeDb = volumeDb;
 	}
 
 	private void SyncSettingsControls()
@@ -535,17 +548,26 @@ public partial class MainMenuScene : Control
 		_fullscreen = DefaultFullscreen;
 		_oceanMotion = DefaultOceanMotion;
 		_languagePreference = Localization.DefaultLanguagePreference;
+		_selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
+		ApplySelectedAvatar();
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();
 	}
 
-	private void ShowSettingsDialog()
+	private async void ShowSettingsDialog()
 	{
+		if (!BeginMenuCameraPushIn(true))
+		{
+			return;
+		}
+
 		_settingsDialogTween?.Kill();
+		_avatarEntry.Visible = false;
 		_settingsDialogRoot.Visible = true;
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_settingsDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		UpdateSettingsDialogPosition();
 		_settingsDialogPanel.Scale = new Vector2(0.94f, 0.94f);
 		_settingsDialogPanel.PivotOffset = _settingsDialogPanel.Size * 0.5f;
 		SyncSettingsControls();
@@ -556,12 +578,15 @@ public partial class MainMenuScene : Control
 		_settingsDialogTween.TweenProperty(_settingsDialogPanel, "scale", Vector2.One, DialogFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
+		await CompleteMenuCameraPushIn();
 	}
 
 	private void HideSettingsDialog()
 	{
 		_settingsDialogTween?.Kill();
+		_avatarEntry.Visible = true;
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+		ResetMenuCamera();
 
 		_settingsDialogTween = CreateTween();
 		_settingsDialogTween.SetParallel(true);
@@ -570,5 +595,14 @@ public partial class MainMenuScene : Control
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
 		_settingsDialogTween.Finished += () => _settingsDialogRoot.Visible = false;
+	}
+
+	private void UpdateSettingsDialogPosition()
+	{
+		if (_settingsDialogRoot != null && _settingsDialogRoot.Visible)
+		{
+			_settingsDialogRoot.Position = GetSecondaryMenuDepthPosition();
+			_settingsDialogRoot.Scale = GetSecondaryMenuWorldScale();
+		}
 	}
 }

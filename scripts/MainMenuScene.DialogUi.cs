@@ -33,9 +33,9 @@ public partial class MainMenuScene : Control
 			_singlePlayerButton.Text = Localize("MENU_SINGLE_PLAYER");
 		}
 
-		if (_adventureModeButton != null)
+		if (_adventureButton != null)
 		{
-			_adventureModeButton.Text = Localize("MENU_ADVENTURE_MODE");
+			_adventureButton.Text = Localize("MENU_ADVENTURE");
 		}
 
 		if (_multiplayerButton != null)
@@ -79,6 +79,7 @@ public partial class MainMenuScene : Control
 
 		RefreshWindowModeOptions();
 		RefreshLanguageOptions();
+		RefreshPlayerCountDialogOptions();
 	}
 
 	private Label CreateDialogLabel(string text, int fontSize, Color color, HorizontalAlignment alignment)
@@ -251,28 +252,6 @@ public partial class MainMenuScene : Control
 			ContentMarginRight = 12,
 			ContentMarginTop = 7,
 			ContentMarginBottom = 7,
-		};
-	}
-
-	private static StyleBoxFlat CreatePlayerCountOptionStyle(Color accentColor, bool hovered)
-	{
-		return new StyleBoxFlat
-		{
-			BgColor = hovered
-				? new Color(0.035f, 0.24f, 0.29f, 0.88f)
-				: new Color(0.015f, 0.17f, 0.21f, 0.78f),
-			BorderColor = new Color(accentColor.R, accentColor.G, accentColor.B, hovered ? 0.86f : 0.54f),
-			BorderWidthLeft = 2,
-			BorderWidthTop = 2,
-			BorderWidthRight = 2,
-			BorderWidthBottom = 2,
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8,
-			ShadowColor = new Color(accentColor.R, accentColor.G, accentColor.B, hovered ? 0.22f : 0.12f),
-			ShadowSize = hovered ? 16 : 10,
-			ShadowOffset = new Vector2(0.0f, hovered ? 5.0f : 4.0f),
 		};
 	}
 

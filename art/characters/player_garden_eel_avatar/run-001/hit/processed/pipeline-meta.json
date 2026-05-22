@@ -1,0 +1,175 @@
+{
+  "target": "asset",
+  "mode": "hit",
+  "prompt": "Garden eel avatar hit animation, same blue cyan bioluminescent identity, 2x2 grid on solid magenta.",
+  "role": "",
+  "input": "art/characters/player_garden_eel_avatar/run-001/hit/source-raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 90,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 18,
+  "min_component_area": 64,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "hit-1",
+    "hit-2",
+    "hit-3",
+    "hit-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 71647,
+      "selected_component_bbox": [
+        228,
+        57,
+        535,
+        606
+      ],
+      "crop_bbox": [
+        210,
+        39,
+        553,
+        619
+      ],
+      "edge_touch": false,
+      "output_size": [
+        66,
+        112
+      ],
+      "paste_position": [
+        31,
+        8
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 4,
+      "selected_component_area": 71246,
+      "selected_component_bbox": [
+        83,
+        126,
+        433,
+        605
+      ],
+      "crop_bbox": [
+        65,
+        108,
+        451,
+        619
+      ],
+      "edge_touch": false,
+      "output_size": [
+        74,
+        99
+      ],
+      "paste_position": [
+        27,
+        14
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 66338,
+      "selected_component_bbox": [
+        230,
+        183,
+        561,
+        554
+      ],
+      "crop_bbox": [
+        212,
+        165,
+        579,
+        572
+      ],
+      "edge_touch": false,
+      "output_size": [
+        71,
+        79
+      ],
+      "paste_position": [
+        28,
+        24
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 68807,
+      "selected_component_bbox": [
+        123,
+        46,
+        432,
+        556
+      ],
+      "crop_bbox": [
+        105,
+        28,
+        450,
+        574
+      ],
+      "edge_touch": false,
+      "output_size": [
+        67,
+        106
+      ],
+      "paste_position": [
+        30,
+        11
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

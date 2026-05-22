@@ -24,6 +24,7 @@ public partial class GameBoardScene
 		_completedTurnsSinceQuestionCardRefresh = 0;
 		_questionCardRefreshAnchorPlayerIndex = -1;
 		_pendingItemAttachmentRewards.Clear();
+		_hiddenHandDisplaySlots.Clear();
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
@@ -195,7 +196,7 @@ public partial class GameBoardScene
 		_playerDecks[MainPlayerIndex].Clear();
 	}
 
-	private List<PlayingCard> LoadDeckWithoutFaceCards()
+	private List<PlayingCard> LoadDeckCards()
 	{
 		var deck = new List<PlayingCard>();
 		PackedScene? pokerCardsScene = GD.Load<PackedScene>(PokerCardsScenePath);
@@ -243,13 +244,61 @@ public partial class GameBoardScene
 			}
 		}
 
+		if (!item_mode)
+		{
+			AddSuitedJqkBackupCards(standardCards, deck);
+		}
+
 		pokerCards.Free();
 		return deck;
 	}
 
+	private static void AddSuitedJqkBackupCards(Node standardCards, List<PlayingCard> deck)
+	{
+		Node? suitedJqkBackupCards = standardCards.GetNodeOrNull<Node>(SuitedJqkBackupCardsNodeName);
+		if (suitedJqkBackupCards == null)
+		{
+			GD.PushWarning($"Missing {SuitedJqkBackupCardsNodeName} in {PokerCardsScenePath}.");
+			return;
+		}
+
+		foreach (Node cardNode in suitedJqkBackupCards.GetChildren())
+		{
+			if (cardNode is not Sprite2D cardSprite || cardSprite.Texture == null)
+			{
+				continue;
+			}
+
+			if (!TryParseSuitedJqkBackupCardName(cardSprite.Name.ToString(), out string suit, out string rank))
+			{
+				GD.PushWarning($"Invalid suited JQK backup card name: {cardSprite.Name}.");
+				continue;
+			}
+
+			deck.Add(new PlayingCard(suit, rank, cardSprite.Texture));
+		}
+	}
+
+	private static bool TryParseSuitedJqkBackupCardName(string cardName, out string suit, out string rank)
+	{
+		string[] nameParts = cardName.Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		if (nameParts.Length == 3
+			&& string.Equals(nameParts[0], "Backup", StringComparison.Ordinal)
+			&& ExcludedDeckRanks.Contains(nameParts[2]))
+		{
+			suit = nameParts[1];
+			rank = nameParts[2];
+			return true;
+		}
+
+		suit = string.Empty;
+		rank = string.Empty;
+		return false;
+	}
+
 	private List<PlayingCard> BuildDeckForPlayerCount(int playerCount)
 	{
-		List<PlayingCard> baseDeck = LoadDeckWithoutFaceCards();
+		List<PlayingCard> baseDeck = LoadDeckCards();
 		if (playerCount <= 2)
 		{
 			return baseDeck;
@@ -283,36 +332,41 @@ public partial class GameBoardScene
 		deck.AddRange(topCards);
 	}
 
-	private void DrawReplacementCard(int playerIndex)
+	private DrawnHandCard? DrawReplacementCard(int playerIndex)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerDecks.Count || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count)
 		{
-			return;
+			return null;
 		}
 
 		if (_playerDecks[playerIndex].Count == 0 || _playerHands[playerIndex].Count >= StartingHandCards)
 		{
-			return;
+			return null;
 		}
 
-		_playerHands[playerIndex].Add(_playerDecks[playerIndex][0]);
+		int handIndex = _playerHands[playerIndex].Count;
+		PlayingCard drawnCard = _playerDecks[playerIndex][0];
+		_playerHands[playerIndex].Add(drawnCard);
 		_playerDecks[playerIndex].RemoveAt(0);
+		return new DrawnHandCard(drawnCard, handIndex);
 	}
 
-	private bool DrawCardFromDeckToHand(int playerIndex)
+	private DrawnHandCard? DrawCardFromDeckToHand(int playerIndex)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerDecks.Count || playerIndex >= _playerHands.Count)
 		{
-			return false;
+			return null;
 		}
 
 		if (_playerDecks[playerIndex].Count == 0 || GetTotalHandCardCount(playerIndex) >= MaxTotalHandCards)
 		{
-			return false;
+			return null;
 		}
 
-		_playerHands[playerIndex].Add(_playerDecks[playerIndex][0]);
+		int handIndex = _playerHands[playerIndex].Count;
+		PlayingCard drawnCard = _playerDecks[playerIndex][0];
+		_playerHands[playerIndex].Add(drawnCard);
 		_playerDecks[playerIndex].RemoveAt(0);
-		return true;
+		return new DrawnHandCard(drawnCard, handIndex);
 	}
 }

@@ -8,6 +8,9 @@ public partial class OceanMenuButtonFrame : Control
 	[Export]
 	public bool FlipOrnament { get; set; }
 
+	[Export]
+	public bool Selected { get; set; }
+
 	private Button? _button;
 	private float _glow;
 
@@ -20,12 +23,12 @@ public partial class OceanMenuButtonFrame : Control
 
 	public override void _Process(double delta)
 	{
-		float target = 0.0f;
+		float target = Selected ? 0.56f : 0.0f;
 		if (_button != null)
 		{
 			Rect2 buttonRect = _button.GetGlobalRect();
 			bool hovered = buttonRect.HasPoint(GetGlobalMousePosition());
-			target = hovered ? 1.0f : 0.0f;
+			target = Mathf.Max(target, hovered ? 1.0f : 0.0f);
 			if (_button.ButtonPressed)
 			{
 				target = 0.62f;
@@ -49,6 +52,12 @@ public partial class OceanMenuButtonFrame : Control
 
 		float w = rect.Size.X;
 		float h = rect.Size.Y;
+		if (w < h * 2.05f || h < 28.0f)
+		{
+			DrawCompactFrame(rect);
+			return;
+		}
+
 		float bevel = h * 0.28f;
 		Vector2 origin = rect.Position;
 
@@ -79,12 +88,20 @@ public partial class OceanMenuButtonFrame : Control
 			shadowShape[i] = plaque[i] + new Vector2(0.0f, 5.0f);
 		}
 
-		Color outer = new(0.02f, 0.22f + _glow * 0.08f, 0.28f + _glow * 0.08f, 0.8f);
-		Color inner = new(0.04f, 0.42f + _glow * 0.15f, 0.46f + _glow * 0.13f, 0.66f);
+		float selectedBoost = Selected ? 0.08f : 0.0f;
+		Color outer = new(0.02f, 0.22f + _glow * 0.08f + selectedBoost, 0.28f + _glow * 0.08f + selectedBoost, 0.8f);
+		Color inner = new(0.04f, 0.42f + _glow * 0.15f + selectedBoost, 0.46f + _glow * 0.13f + selectedBoost, 0.66f);
 		Color rim = AccentColor.Lerp(Colors.White, 0.18f + _glow * 0.22f);
 		Color highlight = AccentColor.Lerp(new Color(1.0f, 0.94f, 0.66f), _glow * 0.45f);
 
 		DrawColoredPolygon(shadowShape, shadow);
+		if (Selected)
+		{
+			DrawStyleBox(
+				CreateSelectionGlowStyle(),
+				new Rect2(rect.Position - new Vector2(3.0f, 3.0f), rect.Size + new Vector2(6.0f, 6.0f)));
+		}
+
 		DrawColoredPolygon(plaque, outer);
 		DrawColoredPolygon(inset, inner);
 		DrawPolyline(Close(plaque), new Color(rim.R, rim.G, rim.B, 0.58f + _glow * 0.28f), 2.0f + _glow, true);
@@ -123,11 +140,36 @@ public partial class OceanMenuButtonFrame : Control
 		}
 	}
 
+	private void DrawCompactFrame(Rect2 rect)
+	{
+		StyleBoxFlat style = CreateSelectionGlowStyle();
+		style.BgColor = new Color(0.02f, 0.30f + _glow * 0.1f, 0.34f + _glow * 0.1f, 0.72f);
+		style.BorderColor = AccentColor.Lerp(Colors.White, 0.14f + _glow * 0.22f);
+		DrawStyleBox(style, rect);
+	}
+
 	private static Vector2[] Close(Vector2[] points)
 	{
 		Vector2[] closed = new Vector2[points.Length + 1];
 		points.CopyTo(closed, 0);
 		closed[^1] = points[0];
 		return closed;
+	}
+
+	private StyleBoxFlat CreateSelectionGlowStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.09f),
+			BorderColor = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.24f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 8,
+			CornerRadiusTopRight = 8,
+			CornerRadiusBottomLeft = 8,
+			CornerRadiusBottomRight = 8,
+		};
 	}
 }

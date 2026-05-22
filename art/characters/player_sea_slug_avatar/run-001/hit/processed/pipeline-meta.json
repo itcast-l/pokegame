@@ -1,0 +1,175 @@
+{
+  "target": "asset",
+  "mode": "hit",
+  "prompt": "2x2 sea slug avatar hit action sheet generated from sea slug reference; stable identity and solid #FF00FF background.",
+  "role": "",
+  "input": "art/characters/player_sea_slug_avatar/run-001/hit/source-raw.png",
+  "threshold": 125,
+  "edge_threshold": 210,
+  "duration": 130,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.92,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 3,
+  "frame_labels": [
+    "hit-1",
+    "hit-2",
+    "hit-3",
+    "hit-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 9,
+      "selected_component_area": 148780,
+      "selected_component_bbox": [
+        70,
+        120,
+        587,
+        550
+      ],
+      "crop_bbox": [
+        62,
+        112,
+        595,
+        558
+      ],
+      "edge_touch": false,
+      "output_size": [
+        117,
+        98
+      ],
+      "paste_position": [
+        5,
+        15
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 13,
+      "selected_component_area": 135151,
+      "selected_component_bbox": [
+        34,
+        160,
+        541,
+        550
+      ],
+      "crop_bbox": [
+        26,
+        152,
+        549,
+        558
+      ],
+      "edge_touch": false,
+      "output_size": [
+        115,
+        89
+      ],
+      "paste_position": [
+        6,
+        19
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 9,
+      "selected_component_area": 117845,
+      "selected_component_bbox": [
+        90,
+        59,
+        550,
+        452
+      ],
+      "crop_bbox": [
+        82,
+        51,
+        558,
+        460
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        90
+      ],
+      "paste_position": [
+        11,
+        19
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 14,
+      "selected_component_area": 140447,
+      "selected_component_bbox": [
+        27,
+        50,
+        530,
+        462
+      ],
+      "crop_bbox": [
+        19,
+        42,
+        538,
+        470
+      ],
+      "edge_touch": false,
+      "output_size": [
+        114,
+        94
+      ],
+      "paste_position": [
+        7,
+        17
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

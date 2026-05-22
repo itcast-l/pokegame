@@ -44,6 +44,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		CharacterAvatarDefinition playerAvatarDefinition = CharacterAvatarCatalog.LoadSelectedAvatar();
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			DraggableAvatarArea? area = _playerAvatarAreas[playerIndex];
@@ -52,7 +53,8 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			CharacterAvatar? avatar = InstantiateAvatar(avatarScene, playerIndex);
+			CharacterAvatarDefinition avatarDefinition = GetAvatarDefinitionForPlayer(playerIndex, playerAvatarDefinition);
+			CharacterAvatar? avatar = InstantiateAvatar(avatarScene, playerIndex, avatarDefinition);
 			if (avatar == null)
 			{
 				continue;
@@ -64,7 +66,41 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static CharacterAvatar? InstantiateAvatar(PackedScene avatarScene, int playerIndex)
+	private CharacterAvatarDefinition GetAvatarDefinitionForPlayer(int playerIndex, CharacterAvatarDefinition playerAvatarDefinition)
+	{
+		if (!adventure_mode)
+		{
+			return playerAvatarDefinition;
+		}
+
+		return playerIndex switch
+		{
+			0 => CharacterAvatarCatalog.Default,
+			1 => CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id),
+			_ => playerAvatarDefinition,
+		};
+	}
+
+	private static string NormalizeAdventureEnemyAvatarId(string avatarId)
+	{
+		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		if (normalized != CharacterAvatarCatalog.DefaultAvatarId)
+		{
+			return normalized;
+		}
+
+		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
+		{
+			if (avatarDefinition.Id != CharacterAvatarCatalog.DefaultAvatarId)
+			{
+				return avatarDefinition.Id;
+			}
+		}
+
+		return CharacterAvatarCatalog.DefaultAvatarId;
+	}
+
+	private static CharacterAvatar? InstantiateAvatar(PackedScene avatarScene, int playerIndex, CharacterAvatarDefinition avatarDefinition)
 	{
 		Node avatarNode = avatarScene.Instantiate();
 		if (avatarNode is not CharacterAvatar avatar)
@@ -76,8 +112,8 @@ public partial class GameBoardScene
 
 		avatar.Name = $"Player{playerIndex + 1}Avatar";
 		avatar.MouseFilter = MouseFilterEnum.Ignore;
+		avatar.AvatarRoot = avatarDefinition.RootPath;
 		avatar.AccentColor = PlayerAvatarAccentColors[playerIndex];
-		avatar.AttackDirection = GetAvatarAttackDirection(playerIndex);
 		return avatar;
 	}
 
@@ -88,18 +124,6 @@ public partial class GameBoardScene
 		avatar.OffsetTop = 0.0f;
 		avatar.OffsetRight = 0.0f;
 		avatar.OffsetBottom = 0.0f;
-	}
-
-	private static Vector2 GetAvatarAttackDirection(int playerIndex)
-	{
-		return playerIndex switch
-		{
-			0 => Vector2.Up,
-			1 => Vector2.Down,
-			2 => Vector2.Right,
-			3 => Vector2.Left,
-			_ => Vector2.Right,
-		};
 	}
 
 	private void PlayPlayerAvatarAction(int playerIndex, CharacterAvatar.AvatarAction action)

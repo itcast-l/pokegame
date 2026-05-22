@@ -3,15 +3,26 @@ using Godot;
 
 public partial class MainMenuScene : Control
 {
+	private const float PlayerCountDialogHideSeconds = 0.16f;
+	private const float PlayerCountDialogBlurLod = 2.8f;
+	private const string PlayerCountDialogScrimShaderCode = """
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
+uniform float blur_lod = 2.8;
+uniform vec4 tint_color : source_color = vec4(0.0, 0.035, 0.07, 0.48);
+
+void fragment() {
+	vec4 blurred = textureLod(screen_texture, SCREEN_UV, blur_lod);
+	vec3 tinted = mix(blurred.rgb, tint_color.rgb, tint_color.a);
+	COLOR = vec4(tinted, 1.0);
+}
+""";
+	private static readonly Color PlayerCountDialogScrimTint = new(0.0f, 0.035f, 0.07f, 0.48f);
+
 	private void BuildPlayerCountDialog()
 	{
-		_playerCountDialogLayer = new CanvasLayer
-		{
-			Name = "PlayerCountDialogLayer",
-			Layer = 35,
-		};
-		AddChild(_playerCountDialogLayer);
-
 		_playerCountDialogRoot = new Control
 		{
 			Name = "PlayerCountDialogRoot",
@@ -20,14 +31,9 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		_playerCountDialogRoot.SetAnchorsPreset(LayoutPreset.FullRect);
-		_playerCountDialogLayer.AddChild(_playerCountDialogRoot);
+		AddChild(_playerCountDialogRoot);
 
-		var scrim = new ColorRect
-		{
-			Name = "Scrim",
-			Color = new Color(0.0f, 0.035f, 0.07f, 0.54f),
-			MouseFilter = MouseFilterEnum.Stop,
-		};
+		var scrim = CreatePlayerCountDialogScrim();
 		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
 		scrim.GuiInput += inputEvent =>
 		{
@@ -39,18 +45,26 @@ public partial class MainMenuScene : Control
 		};
 		_playerCountDialogRoot.AddChild(scrim);
 
+		_playerCountDialogMotion = new Control
+		{
+			Name = "DialogMotion",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_playerCountDialogMotion.SetAnchorsPreset(LayoutPreset.FullRect);
+		_playerCountDialogRoot.AddChild(_playerCountDialogMotion);
+
 		var center = new CenterContainer
 		{
 			Name = "DialogCenter",
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		center.SetAnchorsPreset(LayoutPreset.FullRect);
-		_playerCountDialogRoot.AddChild(center);
+		_playerCountDialogMotion.AddChild(center);
 
 		_playerCountDialogPanel = new PanelContainer
 		{
 			Name = "PlayerCountDialogPanel",
-			CustomMinimumSize = new Vector2(660.0f, 360.0f),
+			CustomMinimumSize = new Vector2(560.0f, 430.0f),
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		_playerCountDialogPanel.AddThemeStyleboxOverride("panel", CreateDialogPanelStyle());
@@ -94,91 +108,163 @@ public partial class MainMenuScene : Control
 		};
 		layout.AddChild(spacer);
 
-		var actions = new HBoxContainer
+		var optionsList = new VBoxContainer
 		{
-			Name = "DialogActions",
-			Alignment = BoxContainer.AlignmentMode.Center,
+			Name = "DialogOptions",
+			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		actions.AddThemeConstantOverride("separation", 16);
-		layout.AddChild(actions);
+		optionsList.AddThemeConstantOverride("separation", 10);
+		layout.AddChild(optionsList);
 
-		actions.AddChild(CreatePlayerCountOption(2, "PLAYER_COUNT_2_TITLE", "PLAYER_COUNT_40_CARDS", new Color(0.58f, 1.0f, 0.92f)));
-		actions.AddChild(CreatePlayerCountOption(3, "PLAYER_COUNT_3_TITLE", "PLAYER_COUNT_80_CARDS", new Color(0.95f, 0.86f, 0.52f)));
-		actions.AddChild(CreatePlayerCountOption(4, "PLAYER_COUNT_4_TITLE", "PLAYER_COUNT_80_CARDS", new Color(0.58f, 0.82f, 1.0f)));
+		_playerCountOption = CreatePlayerCountDropdown(optionsList);
+		_itemModeOption = CreateItemModeDropdown(optionsList);
+
+		var actionSpacer = new Control
+		{
+			CustomMinimumSize = new Vector2(0.0f, 8.0f),
+		};
+		layout.AddChild(actionSpacer);
+
+		layout.AddChild(CreateLocalizedDialogButton("PLAYER_COUNT_START_GAME", new Color(0.58f, 1.0f, 0.92f), StartGameWithSelectedOptions, false, 230.0f));
 	}
 
-	private Control CreatePlayerCountOption(int playerCount, string titleKey, string deckTextKey, Color accentColor)
+	private static ColorRect CreatePlayerCountDialogScrim()
 	{
-		var card = new PanelContainer
+		var shader = new Shader
 		{
-			Name = $"{playerCount}PlayerOption",
-			CustomMinimumSize = new Vector2(178.0f, 104.0f),
+			Code = PlayerCountDialogScrimShaderCode,
+		};
+		var material = new ShaderMaterial
+		{
+			Shader = shader,
+		};
+		material.SetShaderParameter("blur_lod", PlayerCountDialogBlurLod);
+		material.SetShaderParameter("tint_color", PlayerCountDialogScrimTint);
+
+		return new ColorRect
+		{
+			Name = "Scrim",
+			Color = Colors.White,
+			Material = material,
 			MouseFilter = MouseFilterEnum.Stop,
 		};
-		card.AddThemeStyleboxOverride("panel", CreatePlayerCountOptionStyle(accentColor, false));
+	}
 
-		var margin = new MarginContainer
+	private OptionButton CreatePlayerCountDropdown(Container parent)
+	{
+		var option = CreatePlayerCountDialogOption(parent, "PLAYER_COUNT_PLAYERS");
+		option.Name = "PlayerCountOption";
+		for (int playerCount = MinMenuPlayers; playerCount <= MaxMenuPlayers; playerCount++)
 		{
-			Name = "OptionMargin",
-		};
-		margin.AddThemeConstantOverride("margin_left", 16);
-		margin.AddThemeConstantOverride("margin_top", 14);
-		margin.AddThemeConstantOverride("margin_right", 16);
-		margin.AddThemeConstantOverride("margin_bottom", 14);
-		card.AddChild(margin);
+			option.AddItem(GetPlayerCountOptionText(playerCount), playerCount);
+		}
 
-		var layout = new VBoxContainer
+		option.Select(0);
+		return option;
+	}
+
+	private OptionButton CreateItemModeDropdown(Container parent)
+	{
+		var option = CreatePlayerCountDialogOption(parent, "PLAYER_COUNT_ITEM_MODE");
+		option.Name = "ItemModeOption";
+		option.AddItem(Localize("PLAYER_COUNT_ITEM_MODE_ON"), 1);
+		option.AddItem(Localize("PLAYER_COUNT_ITEM_MODE_OFF"), 0);
+		option.Select(DefaultItemMode ? 0 : 1);
+		return option;
+	}
+
+	private OptionButton CreatePlayerCountDialogOption(Container parent, string labelKey)
+	{
+		var row = CreatePlayerCountDialogOptionRow(parent, labelKey);
+		var spacer = new Control
 		{
-			Name = "OptionLayout",
-			Alignment = BoxContainer.AlignmentMode.Center,
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		layout.AddThemeConstantOverride("separation", 8);
-		margin.AddChild(layout);
+		row.AddChild(spacer);
 
-		var titleLabel = CreateLocalizedDialogLabel(titleKey, 24, new Color(0.92f, 1.0f, 0.97f), HorizontalAlignment.Center);
-		titleLabel.VerticalAlignment = VerticalAlignment.Center;
-		layout.AddChild(titleLabel);
-
-		var deckBadge = new PanelContainer
+		var option = new OptionButton
 		{
-			Name = "DeckBadge",
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		deckBadge.AddThemeStyleboxOverride("panel", CreatePlayerCountBadgeStyle(accentColor));
-		layout.AddChild(deckBadge);
-
-		var deckBadgeMargin = new MarginContainer
-		{
-			Name = "DeckBadgeMargin",
-		};
-		deckBadgeMargin.AddThemeConstantOverride("margin_left", 14);
-		deckBadgeMargin.AddThemeConstantOverride("margin_top", 3);
-		deckBadgeMargin.AddThemeConstantOverride("margin_right", 14);
-		deckBadgeMargin.AddThemeConstantOverride("margin_bottom", 3);
-		deckBadge.AddChild(deckBadgeMargin);
-
-		var deckLabel = CreateLocalizedDialogLabel(deckTextKey, 15, new Color(0.88f, 1.0f, 0.96f, 0.95f), HorizontalAlignment.Center);
-		deckBadgeMargin.AddChild(deckLabel);
-
-		var button = new Button
-		{
-			Name = "Button",
-			Flat = true,
+			CustomMinimumSize = new Vector2(210.0f, 42.0f),
 			FocusMode = FocusModeEnum.None,
 			MouseFilter = MouseFilterEnum.Stop,
 		};
-		button.SetAnchorsPreset(LayoutPreset.FullRect);
-		button.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("hover", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("pressed", new StyleBoxEmpty());
-		button.MouseEntered += () => card.AddThemeStyleboxOverride("panel", CreatePlayerCountOptionStyle(accentColor, true));
-		button.MouseExited += () => card.AddThemeStyleboxOverride("panel", CreatePlayerCountOptionStyle(accentColor, false));
-		button.Pressed += () => StartGameWithPlayerCount(playerCount);
-		card.AddChild(button);
+		option.AddThemeFontSizeOverride("font_size", 17);
+		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
+		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
+		option.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
+		option.AddThemeStyleboxOverride("normal", CreateOptionButtonStyle(false));
+		option.AddThemeStyleboxOverride("hover", CreateOptionButtonStyle(true));
+		option.AddThemeStyleboxOverride("pressed", CreateOptionButtonStyle(true));
+		option.AddThemeStyleboxOverride("focus", CreateOptionButtonStyle(true));
+		row.AddChild(option);
+		return option;
+	}
 
-		return card;
+	private HBoxContainer CreatePlayerCountDialogOptionRow(Container parent, string labelKey)
+	{
+		var panel = new PanelContainer
+		{
+			Name = $"{labelKey}RowPanel",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		panel.AddThemeStyleboxOverride("panel", CreateSettingsRowStyle());
+		parent.AddChild(panel);
+
+		var margin = new MarginContainer
+		{
+			Name = "RowMargin",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		margin.AddThemeConstantOverride("margin_left", 16);
+		margin.AddThemeConstantOverride("margin_top", 8);
+		margin.AddThemeConstantOverride("margin_right", 16);
+		margin.AddThemeConstantOverride("margin_bottom", 8);
+		panel.AddChild(margin);
+
+		var row = new HBoxContainer
+		{
+			Name = "RowLayout",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		row.AddThemeConstantOverride("separation", 12);
+		margin.AddChild(row);
+
+		var label = CreateLocalizedDialogLabel(labelKey, 18, new Color(0.88f, 1.0f, 0.96f, 0.96f), HorizontalAlignment.Left);
+		label.CustomMinimumSize = new Vector2(116.0f, 40.0f);
+		label.VerticalAlignment = VerticalAlignment.Center;
+		row.AddChild(label);
+
+		return row;
+	}
+
+	private void RefreshPlayerCountDialogOptions()
+	{
+		if (_playerCountOption != null)
+		{
+			for (int index = 0; index < _playerCountOption.ItemCount; index++)
+			{
+				int playerCount = _playerCountOption.GetItemId(index);
+				_playerCountOption.SetItemText(index, GetPlayerCountOptionText(playerCount));
+			}
+		}
+
+		if (_itemModeOption != null)
+		{
+			_itemModeOption.SetItemText(0, Localize("PLAYER_COUNT_ITEM_MODE_ON"));
+			_itemModeOption.SetItemText(1, Localize("PLAYER_COUNT_ITEM_MODE_OFF"));
+		}
+	}
+
+	private string GetPlayerCountOptionText(int playerCount)
+	{
+		return playerCount switch
+		{
+			2 => Localize("PLAYER_COUNT_2_TITLE"),
+			3 => Localize("PLAYER_COUNT_3_TITLE"),
+			4 => Localize("PLAYER_COUNT_4_TITLE"),
+			_ => playerCount.ToString(),
+		};
 	}
 
 	private void ShowPlayerCountDialog()
@@ -186,33 +272,42 @@ public partial class MainMenuScene : Control
 		_playerCountDialogTween?.Kill();
 		_playerCountDialogRoot.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Stop;
-		_playerCountDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		_playerCountDialogPanel.Scale = new Vector2(0.94f, 0.94f);
+		_playerCountDialogRoot.Modulate = Colors.White;
+		UpdatePlayerCountDialogPanelPosition();
+		_playerCountDialogMotion.Position = Vector2.Zero;
+		_playerCountDialogMotion.Scale = Vector2.One;
 		_playerCountDialogPanel.PivotOffset = _playerCountDialogPanel.Size * 0.5f;
-
-		_playerCountDialogTween = CreateTween();
-		_playerCountDialogTween.SetParallel(true);
-		_playerCountDialogTween.TweenProperty(_playerCountDialogRoot, "modulate:a", 1.0f, DialogFadeSeconds);
-		_playerCountDialogTween.TweenProperty(_playerCountDialogPanel, "scale", Vector2.One, DialogFadeSeconds)
-			.SetTrans(Tween.TransitionType.Cubic)
-			.SetEase(Tween.EaseType.Out);
 	}
 
 	private void HidePlayerCountDialog()
 	{
 		_playerCountDialogTween?.Kill();
+		_avatarEntry.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+		ResetMenuCamera();
 
 		_playerCountDialogTween = CreateTween();
-		_playerCountDialogTween.SetParallel(true);
-		_playerCountDialogTween.TweenProperty(_playerCountDialogRoot, "modulate:a", 0.0f, DialogFadeSeconds);
-		_playerCountDialogTween.TweenProperty(_playerCountDialogPanel, "scale", new Vector2(0.96f, 0.96f), DialogFadeSeconds)
-			.SetTrans(Tween.TransitionType.Cubic)
-			.SetEase(Tween.EaseType.In);
+		_playerCountDialogTween.TweenProperty(_playerCountDialogRoot, "modulate:a", 0.0f, PlayerCountDialogHideSeconds);
 		_playerCountDialogTween.Finished += () => _playerCountDialogRoot.Visible = false;
 	}
 
-	private void StartGameWithPlayerCount(int playerCount)
+	private void UpdatePlayerCountDialogPanelPosition()
+	{
+		if (_playerCountDialogRoot != null && _playerCountDialogRoot.Visible)
+		{
+			_playerCountDialogRoot.Position = GetSecondaryMenuDepthPosition();
+			_playerCountDialogRoot.Scale = GetSecondaryMenuWorldScale();
+		}
+	}
+
+	private void StartGameWithSelectedOptions()
+	{
+		int playerCount = _playerCountOption.GetSelectedId();
+		bool itemMode = _itemModeOption.GetSelectedId() == 1;
+		StartGameWithOptions(playerCount, itemMode);
+	}
+
+	private void StartGameWithOptions(int playerCount, bool itemMode)
 	{
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
 		if (gameBoardScene == null)
@@ -223,6 +318,7 @@ public partial class MainMenuScene : Control
 
 		Node gameBoard = gameBoardScene.Instantiate();
 		gameBoard.Set("player_count", playerCount);
+		gameBoard.Set("item_mode", itemMode);
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;
 		QueueFree();

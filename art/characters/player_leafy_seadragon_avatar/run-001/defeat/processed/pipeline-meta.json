@@ -1,0 +1,175 @@
+{
+  "target": "asset",
+  "mode": "defeat",
+  "prompt": "Leafy sea dragon avatar defeat animation: worried, slump, defeated curl, tired recovery, same blue cyan ocean avatar identity, 2x2 grid on solid magenta.",
+  "role": "",
+  "input": "/Users/cakeju/.codex/generated_images/019e4994-9b9e-7bf3-8799-f0dc49752d9f/ig_026b5b3895a6511a016a0ec0a8266c81919561fac6ac12c64d.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 90,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 18,
+  "min_component_area": 64,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "defeat-1",
+    "defeat-2",
+    "defeat-3",
+    "defeat-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 174821,
+      "selected_component_bbox": [
+        94,
+        25,
+        566,
+        609
+      ],
+      "crop_bbox": [
+        76,
+        7,
+        584,
+        619
+      ],
+      "edge_touch": false,
+      "output_size": [
+        93,
+        112
+      ],
+      "paste_position": [
+        17,
+        8
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 177882,
+      "selected_component_bbox": [
+        48,
+        67,
+        544,
+        594
+      ],
+      "crop_bbox": [
+        30,
+        49,
+        562,
+        612
+      ],
+      "edge_touch": false,
+      "output_size": [
+        97,
+        103
+      ],
+      "paste_position": [
+        15,
+        12
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 154256,
+      "selected_component_bbox": [
+        84,
+        65,
+        551,
+        536
+      ],
+      "crop_bbox": [
+        66,
+        47,
+        569,
+        554
+      ],
+      "edge_touch": false,
+      "output_size": [
+        92,
+        93
+      ],
+      "paste_position": [
+        18,
+        17
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 168237,
+      "selected_component_bbox": [
+        36,
+        38,
+        521,
+        564
+      ],
+      "crop_bbox": [
+        18,
+        20,
+        539,
+        582
+      ],
+      "edge_touch": false,
+      "output_size": [
+        95,
+        103
+      ],
+      "paste_position": [
+        16,
+        12
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

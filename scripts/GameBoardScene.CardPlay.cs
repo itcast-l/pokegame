@@ -19,6 +19,7 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = hand[handIndex];
+		bool playedJackCollectsTable = ShouldJackCollectTable(playedCard) && _tableCards.Count > 0;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, hand.Count, handArea.Size, cardOffset);
@@ -35,6 +36,12 @@ public partial class GameBoardScene
 		hand.RemoveAt(handIndex);
 		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped);
 		int playedTableCardIndex = _tableCards.Count - 1;
+		if (playedJackCollectsTable)
+		{
+			captureStartIndex = 0;
+			_tableCards[playedTableCardIndex].IsFaceUp = true;
+		}
+
 		bool playedTableCardIsFaceUp = _tableCards[playedTableCardIndex].IsFaceUp;
 		var pendingFaceUpMagnetTriggerIndexes = new HashSet<int>();
 		var resolvedMagnetTriggerIndexes = new HashSet<int>();
@@ -150,9 +157,19 @@ public partial class GameBoardScene
 
 			Shuffle(_playerDecks[playerIndex]);
 			Cut(_playerDecks[playerIndex]);
-			DrawReplacementCard(playerIndex);
-			RenderPlayerCardPiles();
+			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			RenderTableCards();
+			if (questionRewardAnimation.HasValue && !questionRewardAnimation.Value.RequiresMagnetAttachment)
+			{
+				HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + questionRewardAnimation.Value.ItemHandIndex);
+			}
+
+			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return new PlayCardResult(false, false);
+			}
+
 			await PlayQuestionCardRewardAnimationAsync(playerIndex, questionRewardAnimation, turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
@@ -182,10 +199,13 @@ public partial class GameBoardScene
 				}
 			}
 
-			DrawReplacementCard(playerIndex);
-			RenderPlayerCardPiles();
-			RenderPlayerHands();
+			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			RenderTableCards();
+			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return new PlayCardResult(false, false);
+			}
 		}
 
 		CheckForWinner();
@@ -219,5 +239,10 @@ public partial class GameBoardScene
 		}
 
 		return -1;
+	}
+
+	private bool ShouldJackCollectTable(PlayingCard playedCard)
+	{
+		return !item_mode && playedCard.Rank == JackItemCardId;
 	}
 }

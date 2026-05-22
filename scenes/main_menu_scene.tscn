@@ -1,14 +1,35 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene format=3 uid="uid://c4f3r0g68r5cn"]
 
-[ext_resource type="Texture2D" path="res://art/menu/main_menu_concept_10.png" id="1_menu_background"]
-[ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="2_water_caustic_shader"]
-[ext_resource type="Script" path="res://scripts/UnderwaterAmbientLayer.cs" id="3_underwater_ambient_layer"]
-[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="4_ocean_menu_button_frame"]
-[ext_resource type="Script" path="res://scripts/MainMenuScene.cs" id="5_main_menu_scene"]
-[ext_resource type="AudioStream" path="res://asset/audio/background.mp3" id="6_menu_music"]
-[ext_resource type="Script" path="res://scripts/MainMenuOceanDynamics.cs" id="7_main_menu_ocean_dynamics"]
-[ext_resource type="Shader" path="res://shaders/menu_left_depth_gradient.gdshader" id="8_left_depth_gradient_shader"]
+[ext_resource type="Texture2D" uid="uid://d1okmldodfjwc" path="res://art/menu/main_menu_concept_10.png" id="1_menu_background"]
+[ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="2_water_caustic_shader"]
+[ext_resource type="Script" uid="uid://b82b6b0sb0p4n" path="res://scripts/UnderwaterAmbientLayer.cs" id="3_underwater_ambient_layer"]
+[ext_resource type="Script" uid="uid://c4x2qwrms1ysj" path="res://scripts/OceanMenuButtonFrame.cs" id="4_ocean_menu_button_frame"]
+[ext_resource type="Script" uid="uid://cojhio5kw5kpi" path="res://scripts/MainMenuScene.cs" id="5_main_menu_scene"]
+[ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="6_phantom_camera_host"]
+[ext_resource type="Script" uid="uid://ckc3u46a0io30" path="res://scripts/MainMenuOceanDynamics.cs" id="7_main_menu_ocean_dynamics"]
+[ext_resource type="Shader" uid="uid://cbdfaca7f7cye" path="res://shaders/menu_left_depth_gradient.gdshader" id="8_left_depth_gradient_shader"]
 [ext_resource type="PackedScene" path="res://scenes/main_menu_avatar_entry.tscn" id="9_avatar_entry"]
+[ext_resource type="Script" uid="uid://ctiqydcn7xvqq" path="res://scripts/MainMenuMusicBank.gd" id="10_main_menu_music_bank"]
+[ext_resource type="Script" uid="uid://bhexx6mj1xv3q" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="11_phantom_camera_2d"]
+[ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="12_phantom_camera_tween"]
+
+[sub_resource type="Resource" id="Resource_menu_camera_default_tween"]
+script = ExtResource("12_phantom_camera_tween")
+duration = 0.32
+transition = 1
+
+[sub_resource type="Resource" id="Resource_menu_camera_push_tween"]
+script = ExtResource("12_phantom_camera_tween")
+duration = 0.88
+transition = 5
+ease = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_left_depth_gradient"]
+shader = ExtResource("8_left_depth_gradient_shader")
+shader_parameter/depth_color = Color(0, 0.055, 0.09, 1)
+shader_parameter/left_alpha = 0.24
+shader_parameter/fade_start = 0.08
+shader_parameter/fade_end = 0.96
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_menu_caustic"]
 shader = ExtResource("2_water_caustic_shader")
@@ -18,13 +39,6 @@ shader_parameter/wave_scale = 22.0
 shader_parameter/wave_speed = 0.42
 shader_parameter/edge_boost = 0.74
 shader_parameter/center_glow = 0.12
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_left_depth_gradient"]
-shader = ExtResource("8_left_depth_gradient_shader")
-shader_parameter/depth_color = Color(0, 0.055, 0.09, 1)
-shader_parameter/left_alpha = 0.24
-shader_parameter/fade_start = 0.08
-shader_parameter/fade_end = 0.96
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu_panel"]
 bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.3)
@@ -43,7 +57,7 @@ shadow_offset = Vector2(0, 6)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_menu_button"]
 
-[node name="MainMenuScene" type="Control"]
+[node name="MainMenuScene" type="Control" unique_id=1772789378]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,11 +66,33 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("5_main_menu_scene")
 
-[node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("6_menu_music")
-autoplay = true
+[node name="MainMenuMusicBank" type="Node" parent="." unique_id=782640190]
+script = ExtResource("10_main_menu_music_bank")
 
-[node name="BackgroundArt" type="TextureRect" parent="."]
+[node name="MenuCamera2D" type="Camera2D" parent="." unique_id=1287748772]
+top_level = true
+position = Vector2(640, 360)
+
+[node name="PhantomCameraHost" type="Node" parent="MenuCamera2D" unique_id=1179211204]
+process_priority = 300
+process_physics_priority = 300
+script = ExtResource("6_phantom_camera_host")
+
+[node name="MenuCameraHome" type="Node2D" parent="." unique_id=1963500677]
+position = Vector2(640, 360)
+script = ExtResource("11_phantom_camera_2d")
+priority = 10
+tween_resource = SubResource("Resource_menu_camera_default_tween")
+tween_on_load = false
+
+[node name="MenuCameraPushIn" type="Node2D" parent="." unique_id=1297742726]
+position = Vector2(640, 360)
+script = ExtResource("11_phantom_camera_2d")
+zoom = Vector2(1.72, 1.72)
+tween_resource = SubResource("Resource_menu_camera_push_tween")
+tween_on_load = false
+
+[node name="BackgroundArt" type="TextureRect" parent="." unique_id=1474116337]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -68,7 +104,7 @@ texture = ExtResource("1_menu_background")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="OceanDynamicsLayer" type="Control" parent="."]
+[node name="OceanDynamicsLayer" type="Control" parent="." unique_id=596274516]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -81,18 +117,17 @@ bubble_count = 72
 glint_count = 46
 motion_scale = 1.25
 
-[node name="LeftDepthVignette" type="ColorRect" parent="."]
+[node name="LeftDepthVignette" type="ColorRect" parent="." unique_id=1865153471]
 material = SubResource("ShaderMaterial_left_depth_gradient")
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = -1
 anchor_right = 0.58
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(1, 1, 1, 1)
 
-[node name="WaterCausticOverlay" type="ColorRect" parent="."]
+[node name="WaterCausticOverlay" type="ColorRect" parent="." unique_id=2056577599]
 material = SubResource("ShaderMaterial_menu_caustic")
 layout_mode = 1
 anchors_preset = 15
@@ -102,7 +137,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="UnderwaterAmbientLayer" type="Control" parent="."]
+[node name="UnderwaterAmbientLayer" type="Control" parent="." unique_id=2021212239]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -114,20 +149,17 @@ script = ExtResource("3_underwater_ambient_layer")
 bubble_count = 48
 mote_count = 126
 seagrass_blade_count = 42
-motion_scale = 1.0
 
-[node name="AvatarEntryLayer" type="CanvasLayer" parent="."]
+[node name="AvatarEntryLayer" type="CanvasLayer" parent="." unique_id=2143607262]
 layer = 8
 
-[node name="MainMenuAvatarEntry" parent="AvatarEntryLayer" instance=ExtResource("9_avatar_entry")]
-layout_mode = 1
-anchors_preset = 0
+[node name="MainMenuAvatarEntry" parent="AvatarEntryLayer" unique_id=532999196 instance=ExtResource("9_avatar_entry")]
 offset_left = 26.0
 offset_top = 24.0
 offset_right = 130.0
 offset_bottom = 128.0
 
-[node name="MenuSafeArea" type="MarginContainer" parent="."]
+[node name="MenuSafeArea" type="MarginContainer" parent="." unique_id=423638652]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -139,27 +171,27 @@ theme_override_constants/margin_top = 58
 theme_override_constants/margin_right = 64
 theme_override_constants/margin_bottom = 58
 
-[node name="MenuPanel" type="PanelContainer" parent="MenuSafeArea"]
+[node name="MenuPanel" type="PanelContainer" parent="MenuSafeArea" unique_id=1915476212]
 custom_minimum_size = Vector2(430, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
 
-[node name="PanelMargin" type="MarginContainer" parent="MenuSafeArea/MenuPanel"]
+[node name="PanelMargin" type="MarginContainer" parent="MenuSafeArea/MenuPanel" unique_id=1597857359]
 layout_mode = 2
 theme_override_constants/margin_left = 28
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 28
 theme_override_constants/margin_bottom = 30
 
-[node name="MenuLayout" type="VBoxContainer" parent="MenuSafeArea/MenuPanel/PanelMargin"]
+[node name="MenuLayout" type="VBoxContainer" parent="MenuSafeArea/MenuPanel/PanelMargin" unique_id=1669611164]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 6
 alignment = 1
 
-[node name="Title" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+[node name="Title" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=2101111588]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.95)
@@ -169,7 +201,7 @@ theme_override_font_sizes/font_size = 46
 text = "POKEGAME"
 horizontal_alignment = 1
 
-[node name="Subtitle" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+[node name="Subtitle" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=1263440573]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.58, 0.96, 0.92, 0.86)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
@@ -179,17 +211,17 @@ theme_override_font_sizes/font_size = 18
 text = "OCEAN TABLE"
 horizontal_alignment = 1
 
-[node name="TopSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(0, 20)
+[node name="TopSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=26882160]
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
-[node name="SinglePlayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(374, 78)
+[node name="SinglePlayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=96846586]
+custom_minimum_size = Vector2(374, 64)
 layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 AccentColor = Color(0.62, 1, 0.92, 1)
 
-[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame"]
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame" unique_id=785935662]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -201,93 +233,83 @@ offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
-flat = true
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
 text = "MENU_SINGLE_PLAYER"
+flat = true
 
-[node name="AdventureModeFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(374, 78)
+[node name="AdventureFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=1454431656]
+custom_minimum_size = Vector2(374, 64)
 layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
-AccentColor = Color(0.95, 0.86, 0.52, 1)
+AccentColor = Color(0.9, 0.94, 0.56, 1)
 FlipOrnament = true
 
-[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureModeFrame"]
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureFrame" unique_id=1535096010]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 34.0
+offset_left = 24.0
 offset_top = 5.0
-offset_right = -2.0
+offset_right = -16.0
 offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
-flat = true
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
-text = "MENU_ADVENTURE_MODE"
+text = "MENU_ADVENTURE"
+flat = true
 
-[node name="MultiplayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(374, 78)
+[node name="MultiplayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=1856241523]
+custom_minimum_size = Vector2(374, 64)
 layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 AccentColor = Color(0.58, 0.82, 1, 1)
 
-[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/MultiplayerFrame"]
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/MultiplayerFrame" unique_id=125594722]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
 offset_top = 5.0
 offset_right = -36.0
 offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
-flat = true
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
 text = "MENU_MULTIPLAYER"
+flat = true
 
-[node name="SettingsFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(374, 78)
+[node name="SettingsFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=33184418]
+custom_minimum_size = Vector2(374, 64)
 layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 AccentColor = Color(0.78, 0.72, 1, 1)
 FlipOrnament = true
 
-[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame"]
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame" unique_id=1370048465]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -299,27 +321,24 @@ offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
-flat = true
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
 text = "MENU_SETTINGS"
+flat = true
 
-[node name="ExitFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(374, 78)
+[node name="ExitFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=717539707]
+custom_minimum_size = Vector2(374, 64)
 layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 AccentColor = Color(0.94, 0.68, 0.62, 1)
 
-[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame"]
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame" unique_id=2091202023]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -331,25 +350,22 @@ offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
-flat = true
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
 text = "MENU_EXIT"
+flat = true
 
-[node name="BottomSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
-custom_minimum_size = Vector2(0, 16)
+[node name="BottomSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=891852030]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 
-[node name="Footer" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"]
+[node name="Footer" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=271465619]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.96, 0.92, 0.7)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.7)

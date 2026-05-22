@@ -25,6 +25,9 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
+		avatarEditor.CurrentAvatarId = _selectedAvatarId;
+		avatarEditor.AvatarSelected += OnAvatarSelected;
+
 		_avatarEditDialogLayer = new CanvasLayer
 		{
 			Name = "AvatarEditDialogLayer",
@@ -46,5 +49,22 @@ public partial class MainMenuScene : Control
 
 		_avatarEditDialogLayer.QueueFree();
 		_avatarEditDialogLayer = null;
+	}
+
+	private void OnAvatarSelected(string avatarId)
+	{
+		_selectedAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		ApplySelectedAvatar();
+		SaveSettings();
+	}
+
+	private void ApplySelectedAvatar()
+	{
+		if (_avatarEntry == null || !GodotObject.IsInstanceValid(_avatarEntry))
+		{
+			return;
+		}
+
+		_avatarEntry.SetAvatar(CharacterAvatarCatalog.GetById(_selectedAvatarId));
 	}
 }

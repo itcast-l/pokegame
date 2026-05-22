@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "defeat",
+  "prompt": "Jellyfish avatar defeat animation: tired droop, deflated slump, exhausted flattened pose, defeated still pose; same cyan lavender jellyfish identity; 2x2 grid on solid #FF00FF background.",
+  "role": "",
+  "input": "art/characters/player_jellyfish_avatar/run-001/defeat/source-raw.png",
+  "threshold": 100,
+  "edge_threshold": 180,
+  "duration": 200,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 1,
+  "frame_labels": [
+    "defeat-1",
+    "defeat-2",
+    "defeat-3",
+    "defeat-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 23,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        149,
+        107,
+        505,
+        584
+      ],
+      "edge_touch": false,
+      "output_size": [
+        84,
+        112
+      ],
+      "paste_position": [
+        22,
+        8
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        32,
+        209,
+        487,
+        611
+      ],
+      "edge_touch": false,
+      "output_size": [
+        107,
+        94
+      ],
+      "paste_position": [
+        10,
+        17
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 51,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        88,
+        223,
+        552,
+        513
+      ],
+      "edge_touch": false,
+      "output_size": [
+        109,
+        68
+      ],
+      "paste_position": [
+        9,
+        30
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 16,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        55,
+        261,
+        496,
+        502
+      ],
+      "edge_touch": false,
+      "output_size": [
+        104,
+        56
+      ],
+      "paste_position": [
+        12,
+        36
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

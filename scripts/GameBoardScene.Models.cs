@@ -109,6 +109,8 @@ public partial class GameBoardScene
 
 	private readonly record struct QuestionCardRewardAnimation(ItemCard ItemCard, int ItemHandIndex, Vector2 StartGlobalPosition, bool RequiresMagnetAttachment = false);
 
+	private readonly record struct DrawnHandCard(PlayingCard Card, int HandIndex);
+
 	private enum PendingItemSelectionMode
 	{
 		None,

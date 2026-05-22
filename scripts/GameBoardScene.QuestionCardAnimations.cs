@@ -15,6 +15,11 @@ public partial class GameBoardScene
 			|| !IsInsideTree()
 			|| !_itemCardTextures.TryGetValue(QuestionMarkItemCardId, out Texture2D? questionTexture))
 		{
+			if (rewardAnimation.HasValue)
+			{
+				ShowQuestionCardRewardHandSlot(playerIndex, rewardAnimation.Value);
+			}
+
 			return;
 		}
 
@@ -149,11 +154,24 @@ public partial class GameBoardScene
 		}
 		finally
 		{
+			ShowQuestionCardRewardHandSlot(playerIndex, reward);
+
 			if (GodotObject.IsInstanceValid(animationRoot))
 			{
 				animationRoot.QueueFree();
 			}
 		}
+	}
+
+	private void ShowQuestionCardRewardHandSlot(int playerIndex, QuestionCardRewardAnimation reward)
+	{
+		if (reward.RequiresMagnetAttachment)
+		{
+			ClearHiddenHandDisplaySlots(playerIndex);
+			return;
+		}
+
+		ShowHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + reward.ItemHandIndex);
 	}
 
 	private Vector2 GetQuestionCardRewardTargetGlobalPosition(int playerIndex, QuestionCardRewardAnimation reward)

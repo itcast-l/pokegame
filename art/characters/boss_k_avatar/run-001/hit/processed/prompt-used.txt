@@ -1,0 +1,13 @@
+Use the boss-k-reference image just shown as the identity reference, and use the 3x4 layout guide image just shown as a layout-only reference. Use the layout guide only to understand three rows, four columns, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Create a 12-frame raw animation sheet for the same BOSS-level K avatar. Exact sheet shape: 3 rows x 4 columns, 12 equal invisible cells, read left to right then top to bottom. Each cell contains one centered creature bust/avatar portrait frame. The character identity must stay locked in every frame: non-human abyssal sea dragon king boss, powerful compact leviathan face, stern luminous cyan eyes, deep sapphire and midnight-blue scales, coral antler crown, gold-and-sea-glass royal forehead ornament, broad dark blue side fins, ornate teal shell shoulder armor, central pearl medallion, turquoise gem drops, muted gold filigree. No human face, no human body, no hands, no playing card, no card border, no K letter, no suit symbols.
+
+Action: hit reaction loop. Frames 1-12 show the boss taking a contained impact: alert pose, sudden recoil, eyes flash wider, head and shoulder armor pull slightly back, fin edges snap inward, pearl glow flickers, a few tiny star-like hit glints close to the armor, then the dragon regains a stern guarded expression. Keep it intimidating, not comedic. No gore, no skulls, no large detached effects.
+
+Style: polished clean HD 2D Godot avatar asset, crisp dark outline, saturated ocean-fantasy palette, deep ink shadows, cyan and teal highlights, pearl white glow, muted gold accents, controlled painterly lighting, readable at 128x128 avatar size. Not pixel art, not a splash scene.
+
+Strict output rules: solid flat #FF00FF magenta background only, continuous between cells, no gradients, no scenery, no card frame, no UI, no extra characters, no text, no letters, no numbers, no labels, no watermark. Same bounding box and same visual scale in every cell. Full creature bust contained inside each cell with at least 15% magenta padding on all sides. No crown branch, horn, side fin, shoulder armor, pearl, gem, bubble, glow, sparkle, or shadow may cross or touch a cell edge. Output one PNG sprite sheet, not separate frames.
+
+Rich boss-action revision: BOSS K hit reaction, 12 frames: impact flash, armored recoil, shake, red glints, stunned dim frame, stern recovery. Dramatic but contained, no gore.
+
+Rich boss-action revision v2: BOSS K richer hit reaction, 12-frame impact flash, armored recoil, shake, red glints, stunned dim frame, stern recovery. Kept inside avatar bounds.

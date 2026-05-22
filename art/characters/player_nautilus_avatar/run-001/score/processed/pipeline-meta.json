@@ -1,0 +1,175 @@
+{
+  "target": "asset",
+  "mode": "score",
+  "prompt": "2x2 nautilus avatar score action sheet; same identity, clear action poses, solid #FF00FF background.",
+  "role": "",
+  "input": "art/characters/player_nautilus_avatar/run-001/score/source-raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 130,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.92,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 3,
+  "frame_labels": [
+    "score-1",
+    "score-2",
+    "score-3",
+    "score-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 59279,
+      "selected_component_bbox": [
+        218,
+        221,
+        487,
+        530
+      ],
+      "crop_bbox": [
+        210,
+        213,
+        495,
+        538
+      ],
+      "edge_touch": false,
+      "output_size": [
+        84,
+        96
+      ],
+      "paste_position": [
+        22,
+        16
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 80318,
+      "selected_component_bbox": [
+        76,
+        163,
+        428,
+        540
+      ],
+      "crop_bbox": [
+        68,
+        155,
+        436,
+        548
+      ],
+      "edge_touch": false,
+      "output_size": [
+        109,
+        116
+      ],
+      "paste_position": [
+        9,
+        6
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 70217,
+      "selected_component_bbox": [
+        156,
+        62,
+        502,
+        442
+      ],
+      "crop_bbox": [
+        148,
+        54,
+        510,
+        450
+      ],
+      "edge_touch": false,
+      "output_size": [
+        107,
+        117
+      ],
+      "paste_position": [
+        10,
+        5
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 68755,
+      "selected_component_bbox": [
+        105,
+        116,
+        406,
+        438
+      ],
+      "crop_bbox": [
+        97,
+        108,
+        414,
+        446
+      ],
+      "edge_touch": false,
+      "output_size": [
+        94,
+        100
+      ],
+      "paste_position": [
+        17,
+        14
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

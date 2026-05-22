@@ -1,0 +1,1 @@
+2x2 lantern anglerfish avatar hit reaction; flinch, recoil, wobble, recovery; solid #FF00FF background.

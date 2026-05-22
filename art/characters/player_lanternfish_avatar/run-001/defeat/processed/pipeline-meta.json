@@ -1,0 +1,155 @@
+{
+  "target": "player",
+  "mode": "defeat",
+  "prompt": "2x2 lantern anglerfish avatar defeat slump; shock, sinking, slumped, weak recovery; solid #FF00FF background.",
+  "role": "",
+  "input": "art/characters/player_lanternfish_avatar/run-001/defeat/source-raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.86,
+  "trim_border": 4,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 1,
+  "frame_labels": [
+    "defeat-1",
+    "defeat-2",
+    "defeat-3",
+    "defeat-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        96,
+        124,
+        584,
+        565
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        95
+      ],
+      "paste_position": [
+        11,
+        16
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 8,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        21,
+        168,
+        529,
+        568
+      ],
+      "edge_touch": false,
+      "output_size": [
+        110,
+        86
+      ],
+      "paste_position": [
+        9,
+        21
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 5,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        79,
+        99,
+        585,
+        470
+      ],
+      "edge_touch": false,
+      "output_size": [
+        109,
+        80
+      ],
+      "paste_position": [
+        9,
+        24
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 8,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        32,
+        111,
+        519,
+        474
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        78
+      ],
+      "paste_position": [
+        11,
+        25
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

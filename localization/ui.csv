@@ -1,0 +1,91 @@
+key,zh_CN,zh_TW,en
+MENU_SINGLE_PLAYER,单人游戏,單人遊戲,Solo
+MENU_ADVENTURE,冒险模式,冒險模式,Adventure
+MENU_MULTIPLAYER,多人游戏,多人遊戲,Multi
+MENU_SETTINGS,设置,設定,Settings
+MENU_EXIT,退出,離開,Exit
+ADVENTURE_AVATAR_TITLE,选择敌人关卡,選擇敵人關卡,Pick Enemy
+ADVENTURE_START,开始冒险,開始冒險,Start
+ADVENTURE_BACK,返回,返回,Back
+PLAYER_COUNT_TITLE,选择游戏人数,選擇遊戲人數,Players
+PLAYER_COUNT_MESSAGE,选择本局参与人数,選擇本局參與人數,Pick player count
+PLAYER_COUNT_PLAYERS,游戏人数,遊戲人數,Players
+PLAYER_COUNT_2_TITLE,双人对局,雙人對局,2 Players
+PLAYER_COUNT_3_TITLE,三人对局,三人對局,3 Players
+PLAYER_COUNT_4_TITLE,四人对局,四人對局,4 Players
+PLAYER_COUNT_40_CARDS,40张牌,40 張牌,40 Cards
+PLAYER_COUNT_80_CARDS,80张牌,80 張牌,80 Cards
+PLAYER_COUNT_ITEM_MODE,道具模式,道具模式,Items
+PLAYER_COUNT_ITEM_MODE_ON,已开启,已開啟,On
+PLAYER_COUNT_ITEM_MODE_OFF,已关闭,已關閉,Off
+PLAYER_COUNT_START_GAME,开始游戏,開始遊戲,Start
+SETTINGS_TITLE,设置,設定,Settings
+SETTINGS_MESSAGE,基础游戏选项,基礎遊戲選項,Game options
+SETTINGS_MASTER_VOLUME,主音量,主音量,Master Vol
+SETTINGS_MUSIC_VOLUME,音乐音量,音樂音量,Music Vol
+SETTINGS_MUTE,静音,靜音,Mute
+SETTINGS_WINDOW_MODE,窗口模式,視窗模式,Window
+SETTINGS_WINDOWED,窗口,視窗,Windowed
+SETTINGS_FULLSCREEN,全屏,全螢幕,Full
+SETTINGS_LANGUAGE,语言,語言,Language
+SETTINGS_OCEAN_MOTION,海洋动态,海洋動態,Ocean FX
+SETTINGS_MOTION_SCALE,动态强度,動態強度,Motion
+SETTINGS_RESET_DEFAULTS,恢复默认,恢復預設,Reset
+SETTINGS_DONE,完成,完成,Done
+LANG_AUTO,自动,自動,Auto
+LANG_AR,العربية,العربية,العربية
+LANG_BG,Български,Български,Български
+LANG_ZH_CN,简体中文,简体中文,简体中文
+LANG_ZH_TW,繁體中文,繁體中文,繁體中文
+LANG_CS,Čeština,Čeština,Čeština
+LANG_DA,Dansk,Dansk,Dansk
+LANG_NL,Nederlands,Nederlands,Nederlands
+LANG_EN,English,English,English
+LANG_FI,Suomi,Suomi,Suomi
+LANG_FR,Français,Français,Français
+LANG_DE,Deutsch,Deutsch,Deutsch
+LANG_EL,Ελληνικά,Ελληνικά,Ελληνικά
+LANG_HU,Magyar,Magyar,Magyar
+LANG_ID,Bahasa Indonesia,Bahasa Indonesia,Bahasa Indonesia
+LANG_IT,Italiano,Italiano,Italiano
+LANG_JA,日本語,日本語,日本語
+LANG_KO,한국어,한국어,한국어
+LANG_NO,Norsk,Norsk,Norsk
+LANG_PL,Polski,Polski,Polski
+LANG_PT,Português,Português,Português
+LANG_PT_BR,Português do Brasil,Português do Brasil,Português do Brasil
+LANG_RO,Română,Română,Română
+LANG_RU,Русский,Русский,Русский
+LANG_ES,Español,Español,Español
+LANG_ES_419,Español Latinoamérica,Español Latinoamérica,Español Latinoamérica
+LANG_SV,Svenska,Svenska,Svenska
+LANG_TH,ไทย,ไทย,ไทย
+LANG_TR,Türkçe,Türkçe,Türkçe
+LANG_UK,Українська,Українська,Українська
+LANG_VI,Tiếng Việt,Tiếng Việt,Tiếng Việt
+EXIT_TITLE,退出游戏,離開遊戲,Exit
+EXIT_MESSAGE,是否要离开当前海域？,是否要離開目前海域？,Leave now?
+EXIT_HINT,未保存的对局进度可能会丢失,未儲存的對局進度可能會遺失,Progress may be lost
+EXIT_CANCEL,继续游戏,繼續遊戲,Keep
+EXIT_CONFIRM,确认退出,確認離開,Exit
+GAME_PLAYER,玩家 {0},玩家 {0},Player {0}
+GAME_PLAYER_SCORE,玩家 {0}: {1}/{2},玩家 {0}: {1}/{2},Player {0}: {1}/{2}
+GAME_WINNER,玩家 {0} 获胜,玩家 {0} 獲勝,Player {0} Wins
+GAME_REPLAY,再来一局,再來一局,Play Again
+GAME_RETURN_MAIN_MENU,回到主菜单,回到主選單,Main Menu
+GAME_CONTINUE,继续游戏,繼續遊戲,Continue
+GAME_QUIT,退出游戏,離開遊戲,Quit
+GAME_SELECT_PLAYER,选择玩家,選擇玩家,Pick Player
+GAME_PLAYER_HAND,玩家 {0} 手牌,玩家 {0} 手牌,P{0} Hand
+GAME_SPECIAL_CARD,特殊牌 {0},特殊牌 {0},Card {0}
+GAME_CANCEL,取消,取消,Cancel
+GAME_SELECT_BASE_CARD,选择基础牌,選擇基礎牌,Base Card
+ITEM_DESC_QUESTION_MARK,随机获取一张道具,隨機取得一張道具,Random item
+ITEM_DESC_BOMB,获得本次收取,獲得本次收取,Take capture
+ITEM_DESC_MAGNET,额外吸取一张牌,額外吸取一張牌,Pull 1 card
+ITEM_DESC_GREED,收取超过 10 张牌时，获得上家牌库的 3 张牌,收取超過 10 張牌時，獲得上家牌庫的 3 張牌,Over 10: steal 3
+ITEM_DESC_LENS,随机翻开2张牌,隨機翻開 2 張牌,Reveal 2
+ITEM_DESC_DOUBLE,本次获得翻倍分数,本次獲得雙倍分數,Double score
+ITEM_DESC_OVERTIME,再出一张牌,再出一張牌,Play 1 more
+ITEM_DESC_DRAW_CARD,抽一张牌,抽一張牌,Draw a card
+ITEM_DESC_SHUFFLE,打乱牌桌顺序,打亂牌桌順序,Shuffle table

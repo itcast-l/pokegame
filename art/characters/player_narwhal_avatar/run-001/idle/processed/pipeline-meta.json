@@ -1,0 +1,13 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "single narwhal avatar idle frame; same identity on transparent background processed from generated idle sheet frame 1.",
+  "input": "art/characters/player_narwhal_avatar/run-001/idle/source-raw.png",
+  "rows": 1,
+  "cols": 1,
+  "cell_size": 128,
+  "frame_labels": [
+    "idle-1"
+  ],
+  "edge_touch_frames": []
+}

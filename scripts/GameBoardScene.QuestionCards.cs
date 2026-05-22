@@ -7,6 +7,11 @@ public partial class GameBoardScene
 {
 	private int AdvanceQuestionCardRefreshTurnCounter(int nextTurnPlayerIndex)
 	{
+		if (!item_mode)
+		{
+			return -1;
+		}
+
 		if (HasTableSpecialCard())
 		{
 			return -1;
@@ -31,6 +36,11 @@ public partial class GameBoardScene
 
 	private int PlaceQuestionCardOnNextTableSlot()
 	{
+		if (!item_mode)
+		{
+			return -1;
+		}
+
 		if (HasTableSpecialCard())
 		{
 			return -1;
@@ -66,6 +76,11 @@ public partial class GameBoardScene
 
 	private QuestionCardRewardGrant? GrantQuestionCardReward(int playerIndex, bool reserveReplacementCard)
 	{
+		if (!item_mode)
+		{
+			return null;
+		}
+
 		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
 		{
 			return null;

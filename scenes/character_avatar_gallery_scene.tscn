@@ -1,0 +1,728 @@
+[gd_scene load_steps=22 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarGalleryScene.cs" id="1_avatar_gallery_scene"]
+[ext_resource type="Texture2D" path="res://art/characters/player_cat_avatar/run-002/idle/processed/idle-1.png" id="2_cat"]
+[ext_resource type="Texture2D" path="res://art/characters/player_fish_avatar/run-001/idle/processed/idle-1.png" id="3_fish"]
+[ext_resource type="Texture2D" path="res://art/characters/player_lanternfish_avatar/run-001/idle/processed/idle-1.png" id="4_lanternfish"]
+[ext_resource type="Texture2D" path="res://art/characters/player_shrimp_avatar/run-001/idle/processed/idle-1.png" id="5_shrimp"]
+[ext_resource type="Texture2D" path="res://art/characters/player_crab_avatar/run-001/idle/processed/idle-1.png" id="6_crab"]
+[ext_resource type="Texture2D" path="res://art/characters/player_jellyfish_avatar/run-001/idle/processed/idle-1.png" id="7_jellyfish"]
+[ext_resource type="Texture2D" path="res://art/characters/player_manta_ray_avatar/run-001/idle/processed/idle-1.png" id="8_manta_ray"]
+[ext_resource type="Texture2D" path="res://art/characters/player_garden_eel_avatar/run-001/idle/processed/idle-1.png" id="9_garden_eel"]
+[ext_resource type="Texture2D" path="res://art/characters/player_sea_slug_avatar/run-001/idle/processed/idle-1.png" id="10_sea_slug"]
+[ext_resource type="Texture2D" path="res://art/characters/player_nautilus_avatar/run-001/idle/processed/idle-1.png" id="11_nautilus"]
+[ext_resource type="Texture2D" path="res://art/characters/player_narwhal_avatar/run-001/idle/processed/idle-1.png" id="12_narwhal"]
+[ext_resource type="Texture2D" path="res://art/characters/player_leafy_seadragon_avatar/run-001/idle/processed/idle-1.png" id="13_leafy_seadragon"]
+[ext_resource type="Texture2D" path="res://art/characters/player_dragon_prince_avatar/run-001/idle/processed/idle-1.png" id="14_dragon_prince"]
+[ext_resource type="Texture2D" path="res://art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png" id="15_dragon_queen"]
+[ext_resource type="Texture2D" path="res://art/characters/boss_k_avatar/run-001/idle/processed/idle-1.png" id="16_boss"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.0156863, 0.117647, 0.133333, 0.76)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.58, 1, 0.92, 0.42)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
+bg_color = Color(0.04, 0.17, 0.18, 0.56)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.48, 1, 0.92, 0.28)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_selected"]
+bg_color = Color(0.08, 0.2, 0.18, 0.82)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.92, 0.42, 0.74)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot_selected"]
+bg_color = Color(0.13, 0.2, 0.13, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.92, 0.42, 0.55)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_boss"]
+bg_color = Color(0.16, 0.08, 0.12, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.38, 0.58, 0.58)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot_boss"]
+bg_color = Color(0.16, 0.07, 0.12, 0.64)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.38, 0.58, 0.42)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="CharacterAvatarGalleryScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_avatar_gallery_scene")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.015, 0.075, 0.09, 1)
+
+[node name="Content" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 32
+
+[node name="Layout" type="VBoxContainer" parent="Content"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Header" type="Control" parent="Content/Layout"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Title" type="Label" parent="Content/Layout/Header"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 28
+text = "头像一览"
+vertical_alignment = 1
+
+[node name="GridScroll" type="ScrollContainer" parent="Content/Layout"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="AvatarGrid" type="GridContainer" parent="Content/Layout/GridScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 16
+columns = 5
+
+[node name="CatAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_selected")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot_selected")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_cat")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.68, 0.98)
+theme_override_font_sizes/font_size = 15
+text = "莫莫"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="FishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_fish")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "阿布"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LanternfishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("4_lanternfish")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "米露"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ShrimpAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("5_shrimp")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "皮皮"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="CrabAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("6_crab")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "嘟嘟"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="JellyfishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("7_jellyfish")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "软糖"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="MantaRayAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("8_manta_ray")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "悠悠"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="GardenEelAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("9_garden_eel")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "阿豆"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="SeaSlugAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("10_sea_slug")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "糯米"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="NautilusAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("11_nautilus")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "罗米"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="NarwhalAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("12_narwhal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "诺亚"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LeafySeadragonAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("13_leafy_seadragon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "艾莉"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DragonPrinceAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("14_dragon_prince")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "杰伊 J"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DragonQueenAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("15_dragon_queen")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "奎娜 Q"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BossAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+custom_minimum_size = Vector2(150, 184)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_boss")
+
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(118, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot_boss")
+
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout/AvatarSlot"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("16_boss")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.9, 0.98)
+theme_override_font_sizes/font_size = 15
+text = "凯撒 K"
+horizontal_alignment = 1
+autowrap_mode = 2

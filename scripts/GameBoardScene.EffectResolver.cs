@@ -21,8 +21,9 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			drewAny |= DrawCardFromDeckToHand(request.Event.ActorPlayerIndex);
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			DrawnHandCard? drawnCard = DrawCardFromDeckToHand(request.Event.ActorPlayerIndex);
+			drewAny |= drawnCard.HasValue;
+			await PlayReplacementDrawAnimationAsync(request.Event.ActorPlayerIndex, drawnCard, turnSequenceGeneration);
 		}
 
 		RenderPlayerCardPiles();

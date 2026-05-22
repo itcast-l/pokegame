@@ -1,0 +1,175 @@
+{
+  "target": "player",
+  "mode": "attack",
+  "prompt": "2x2 restrained blue-gray anime fish avatar compact body-only attack animation based on accepted fish reference; solid #FF00FF background.",
+  "role": "",
+  "input": "/Users/cakeju/.codex/generated_images/019e4866-8fce-78b3-a429-814d9103836c/ig_0f28665fa4cc6f1e016a0e768edf2081918e99910289495556.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.86,
+  "trim_border": 4,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 6,
+  "min_component_area": 80,
+  "edge_touch_margin": 1,
+  "frame_labels": [
+    "attack-1",
+    "attack-2",
+    "attack-3",
+    "attack-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 57930,
+      "selected_component_bbox": [
+        185,
+        176,
+        489,
+        465
+      ],
+      "crop_bbox": [
+        179,
+        170,
+        495,
+        471
+      ],
+      "edge_touch": false,
+      "output_size": [
+        98,
+        94
+      ],
+      "paste_position": [
+        15,
+        17
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 52894,
+      "selected_component_bbox": [
+        78,
+        199,
+        418,
+        426
+      ],
+      "crop_bbox": [
+        72,
+        193,
+        424,
+        432
+      ],
+      "edge_touch": false,
+      "output_size": [
+        110,
+        74
+      ],
+      "paste_position": [
+        9,
+        27
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 52389,
+      "selected_component_bbox": [
+        169,
+        149,
+        494,
+        395
+      ],
+      "crop_bbox": [
+        163,
+        143,
+        500,
+        401
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        80
+      ],
+      "paste_position": [
+        11,
+        24
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 55550,
+      "selected_component_bbox": [
+        96,
+        144,
+        421,
+        421
+      ],
+      "crop_bbox": [
+        90,
+        138,
+        427,
+        427
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        90
+      ],
+      "paste_position": [
+        11,
+        19
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

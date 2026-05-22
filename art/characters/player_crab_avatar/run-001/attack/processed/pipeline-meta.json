@@ -1,0 +1,180 @@
+{
+  "target": "asset",
+  "mode": "attack",
+  "prompt": "Crab avatar attack animation: wind-up, claws open, pincer snap strike, recovery, same blue cyan crab identity, 2x2 grid on solid magenta.",
+  "role": "",
+  "input": "/Users/cakeju/.codex/generated_images/019e48c3-0c74-7631-a656-d8bf62ebb03a/ig_0d02de1bb4d374d9016a0e8b13639c81919993fe1bfcd21920.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 90,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 18,
+  "min_component_area": 64,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "attack-1",
+    "attack-2",
+    "attack-3",
+    "attack-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 89738,
+      "selected_component_bbox": [
+        94,
+        168,
+        525,
+        481
+      ],
+      "crop_bbox": [
+        76,
+        150,
+        543,
+        499
+      ],
+      "edge_touch": false,
+      "output_size": [
+        89,
+        67
+      ],
+      "paste_position": [
+        19,
+        30
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 93157,
+      "selected_component_bbox": [
+        0,
+        169,
+        567,
+        467
+      ],
+      "crop_bbox": [
+        0,
+        151,
+        585,
+        485
+      ],
+      "edge_touch": true,
+      "output_size": [
+        112,
+        64
+      ],
+      "paste_position": [
+        8,
+        32
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 97974,
+      "selected_component_bbox": [
+        48,
+        73,
+        597,
+        408
+      ],
+      "crop_bbox": [
+        30,
+        55,
+        615,
+        426
+      ],
+      "edge_touch": false,
+      "output_size": [
+        112,
+        71
+      ],
+      "paste_position": [
+        8,
+        28
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 88200,
+      "selected_component_bbox": [
+        67,
+        111,
+        495,
+        421
+      ],
+      "crop_bbox": [
+        49,
+        93,
+        513,
+        439
+      ],
+      "edge_touch": false,
+      "output_size": [
+        89,
+        66
+      ],
+      "paste_position": [
+        19,
+        31
+      ]
+    }
+  ],
+  "edge_touch_frames": [
+    [
+      0,
+      1
+    ]
+  ]
+}

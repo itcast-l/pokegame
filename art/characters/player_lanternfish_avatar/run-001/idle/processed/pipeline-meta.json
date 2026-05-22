@@ -1,0 +1,33 @@
+{
+  "target": "player",
+  "mode": "idle",
+  "prompt": "Single-frame lantern anglerfish idle avatar. No idle animation frames are used.",
+  "role": "",
+  "input": "art/characters/player_lanternfish_avatar/run-001/idle/processed/idle-1.png",
+  "duration": 160,
+  "rows": 1,
+  "cols": 1,
+  "cell_size": 128,
+  "frame_labels": [
+    "idle-1"
+  ],
+  "frames": [
+    {
+      "label": "idle-1",
+      "state": "single",
+      "output_size": [
+        128,
+        128
+      ],
+      "final_bbox": [
+        10,
+        15,
+        117,
+        112
+      ],
+      "edge_touch": false
+    }
+  ],
+  "edge_touch_frames": [],
+  "single_frame_idle": true
+}

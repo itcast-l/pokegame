@@ -1,0 +1,155 @@
+{
+  "target": "player",
+  "mode": "victory",
+  "prompt": "2x2 restrained blue-gray anime fish avatar victory animation based on accepted fish reference; solid #FF00FF background.",
+  "role": "",
+  "input": "/Users/cakeju/.codex/generated_images/019e4866-8fce-78b3-a429-814d9103836c/ig_0f28665fa4cc6f1e016a0e78a64e0481918e245ea326e7568f.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.86,
+  "trim_border": 4,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 1,
+  "frame_labels": [
+    "victory-1",
+    "victory-2",
+    "victory-3",
+    "victory-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        106,
+        186,
+        546,
+        529
+      ],
+      "edge_touch": false,
+      "output_size": [
+        107,
+        84
+      ],
+      "paste_position": [
+        10,
+        22
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        37,
+        138,
+        486,
+        518
+      ],
+      "edge_touch": false,
+      "output_size": [
+        110,
+        93
+      ],
+      "paste_position": [
+        9,
+        17
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        154,
+        65,
+        507,
+        456
+      ],
+      "edge_touch": false,
+      "output_size": [
+        86,
+        95
+      ],
+      "paste_position": [
+        21,
+        16
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        29,
+        101,
+        449,
+        458
+      ],
+      "edge_touch": false,
+      "output_size": [
+        102,
+        87
+      ],
+      "paste_position": [
+        13,
+        20
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

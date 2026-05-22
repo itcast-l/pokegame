@@ -1,0 +1,183 @@
+{
+  "target": "asset",
+  "mode": "attack",
+  "source_reference": "art/characters/boss_k_avatar/run-001/references/boss-k-reference.png",
+  "generation_method": "rich deterministic 12-frame boss avatar action pass v2 from approved AI-generated boss-k-reference; idle intentionally untouched",
+  "rows": 3,
+  "cols": 4,
+  "cell_size": 128,
+  "frame_count": 12,
+  "duration_ms": 80,
+  "frame_labels": [
+    "attack-1",
+    "attack-2",
+    "attack-3",
+    "attack-4",
+    "attack-5",
+    "attack-6",
+    "attack-7",
+    "attack-8",
+    "attack-9",
+    "attack-10",
+    "attack-11",
+    "attack-12"
+  ],
+  "frames": [
+    {
+      "label": "attack-1",
+      "bbox": [
+        25,
+        18,
+        102,
+        110
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-2",
+      "bbox": [
+        22,
+        18,
+        101,
+        113
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-3",
+      "bbox": [
+        18,
+        19,
+        97,
+        113
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-4",
+      "bbox": [
+        10,
+        20,
+        98,
+        112
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-5",
+      "bbox": [
+        11,
+        15,
+        102,
+        113
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-6",
+      "bbox": [
+        17,
+        10,
+        114,
+        115
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-7",
+      "bbox": [
+        19,
+        8,
+        116,
+        116
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-8",
+      "bbox": [
+        17,
+        10,
+        114,
+        115
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-9",
+      "bbox": [
+        15,
+        13,
+        109,
+        113
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-10",
+      "bbox": [
+        14,
+        17,
+        102,
+        112
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-11",
+      "bbox": [
+        25,
+        18,
+        102,
+        110
+      ],
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "label": "attack-12",
+      "bbox": [
+        25,
+        18,
+        102,
+        110
+      ],
+      "size": [
+        128,
+        128
+      ]
+    }
+  ]
+}

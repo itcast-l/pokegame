@@ -5,13 +5,6 @@ public partial class MainMenuScene : Control
 {
 	private void BuildExitDialog()
 	{
-		_exitDialogLayer = new CanvasLayer
-		{
-			Name = "ExitDialogLayer",
-			Layer = 40,
-		};
-		AddChild(_exitDialogLayer);
-
 		_exitDialogRoot = new Control
 		{
 			Name = "ExitDialogRoot",
@@ -20,7 +13,7 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		_exitDialogRoot.SetAnchorsPreset(LayoutPreset.FullRect);
-		_exitDialogLayer.AddChild(_exitDialogRoot);
+		AddChild(_exitDialogRoot);
 
 		var scrim = new ColorRect
 		{
@@ -29,6 +22,14 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
+		scrim.GuiInput += inputEvent =>
+		{
+			if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+			{
+				HideExitDialog();
+				GetViewport().SetInputAsHandled();
+			}
+		};
 		_exitDialogRoot.AddChild(scrim);
 
 		var center = new CenterContainer
@@ -103,12 +104,19 @@ public partial class MainMenuScene : Control
 		actions.AddChild(confirmFrame);
 	}
 
-	private void ShowExitDialog()
+	private async void ShowExitDialog()
 	{
+		if (!BeginMenuCameraPushIn(true))
+		{
+			return;
+		}
+
 		_exitDialogTween?.Kill();
+		_avatarEntry.Visible = false;
 		_exitDialogRoot.Visible = true;
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_exitDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		UpdateExitDialogPosition();
 		_exitDialogPanel.Scale = new Vector2(0.94f, 0.94f);
 		_exitDialogPanel.PivotOffset = _exitDialogPanel.Size * 0.5f;
 
@@ -118,12 +126,15 @@ public partial class MainMenuScene : Control
 		_exitDialogTween.TweenProperty(_exitDialogPanel, "scale", Vector2.One, DialogFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
+		await CompleteMenuCameraPushIn();
 	}
 
 	private void HideExitDialog()
 	{
 		_exitDialogTween?.Kill();
+		_avatarEntry.Visible = true;
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+		ResetMenuCamera();
 
 		_exitDialogTween = CreateTween();
 		_exitDialogTween.SetParallel(true);
@@ -132,6 +143,15 @@ public partial class MainMenuScene : Control
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
 		_exitDialogTween.Finished += () => _exitDialogRoot.Visible = false;
+	}
+
+	private void UpdateExitDialogPosition()
+	{
+		if (_exitDialogRoot != null && _exitDialogRoot.Visible)
+		{
+			_exitDialogRoot.Position = GetSecondaryMenuDepthPosition();
+			_exitDialogRoot.Scale = GetSecondaryMenuWorldScale();
+		}
 	}
 
 	private void QuitGame()

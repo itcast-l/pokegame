@@ -1,0 +1,9 @@
+Create one static BOSS-level K avatar portrait for a 2D Godot ocean-themed game. This is a character avatar only, not a playing card.
+
+Subject: a non-human abyssal sea dragon king boss, head-and-shoulders bust portrait, centered. Powerful compact leviathan face, stern royal expression, coral antler crown, deep sapphire and midnight-blue scales, pearl eye glints, small sea-glass and muted gold regalia around the neck and shoulders. It should read as the special K boss avatar: intimidating, regal, oceanic, clean, and instantly readable at small UI size.
+
+Style: clean HD hand-painted game asset, not pixel art, consistent with cute-polished Godot 2D character avatar assets but higher-threat boss tier. Strong silhouette, crisp edges, readable facial features, subtle teal rim light, restrained dark tide-blue inner shadows, a few tiny bubbles close to the character only. No card frame, no playing-card border, no corner rank letters, no suit symbols, no UI, no text, no numbers, no Chinese characters.
+
+Canvas/background: one centered avatar only on a 100% solid flat magenta #FF00FF background for transparency processing. No gradients or texture in the magenta background. No scenery, no card, no table, no extra props outside the bust.
+
+Containment: the whole bust, crown, horns, fins, shoulder ornaments, bubbles, and glow must fit fully inside the image with generous magenta margin on all four sides. The avatar should occupy roughly 78 to 86 percent of the image height, centered. Nothing may touch or cross the image edge. Square game avatar source image, crisp silhouette, transparent-ready.

@@ -1,0 +1,175 @@
+{
+  "target": "asset",
+  "mode": "score",
+  "prompt": "Shrimp avatar score animation: claws lift and wave, cheerful face, same blue cyan shrimp identity, 2x2 grid on solid magenta.",
+  "role": "",
+  "input": "/Users/cakeju/.codex/generated_images/019e48c3-0c74-7631-a656-d8bf62ebb03a/ig_0d02de1bb4d374d9016a0e88dd77008191aeeb62ccac9dd04f.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 90,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 18,
+  "min_component_area": 64,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "score-1",
+    "score-2",
+    "score-3",
+    "score-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 118132,
+      "selected_component_bbox": [
+        112,
+        81,
+        524,
+        544
+      ],
+      "crop_bbox": [
+        94,
+        63,
+        542,
+        562
+      ],
+      "edge_touch": false,
+      "output_size": [
+        92,
+        103
+      ],
+      "paste_position": [
+        18,
+        12
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 108345,
+      "selected_component_bbox": [
+        41,
+        99,
+        548,
+        519
+      ],
+      "crop_bbox": [
+        23,
+        81,
+        566,
+        537
+      ],
+      "edge_touch": false,
+      "output_size": [
+        112,
+        94
+      ],
+      "paste_position": [
+        8,
+        17
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 104952,
+      "selected_component_bbox": [
+        107,
+        50,
+        552,
+        489
+      ],
+      "crop_bbox": [
+        89,
+        32,
+        570,
+        507
+      ],
+      "edge_touch": false,
+      "output_size": [
+        99,
+        98
+      ],
+      "paste_position": [
+        14,
+        15
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 101418,
+      "selected_component_bbox": [
+        88,
+        71,
+        466,
+        514
+      ],
+      "crop_bbox": [
+        70,
+        53,
+        484,
+        532
+      ],
+      "edge_touch": false,
+      "output_size": [
+        85,
+        99
+      ],
+      "paste_position": [
+        21,
+        14
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

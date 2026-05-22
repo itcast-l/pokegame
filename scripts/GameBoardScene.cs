@@ -104,6 +104,7 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
+	private readonly HashSet<string> _hiddenHandDisplaySlots = new();
 	private readonly CardEventBus _cardEventBus = new();
 	private SpecialCardEffectResolver _effectResolver = default!;
 	private ItemCardCatalog _itemCardCatalog = default!;
@@ -140,6 +141,9 @@ public partial class GameBoardScene : Control
 	private bool _isResolvingTurnSequence;
 	private bool _isProcessingCardPlay;
 	private bool _isOpeningDealAnimationPlaying;
+	private bool _itemMode = true;
+	private bool _adventureMode;
+	private string _adventureEnemyAvatarId = "fish";
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
 	private int _winnerPlayerIndex = -1;
@@ -157,6 +161,35 @@ public partial class GameBoardScene : Control
 				DealCardsToPlayers(playOpeningDealAnimation: true);
 			}
 		}
+	}
+
+	[Export]
+	public bool item_mode
+	{
+		get => _itemMode;
+		set
+		{
+			_itemMode = value;
+			if (IsInsideTree())
+			{
+				LoadItemCardEnabledStates();
+				DealCardsToPlayers(playOpeningDealAnimation: true);
+			}
+		}
+	}
+
+	[Export]
+	public bool adventure_mode
+	{
+		get => _adventureMode;
+		set => _adventureMode = value;
+	}
+
+	[Export]
+	public string adventure_enemy_avatar_id
+	{
+		get => _adventureEnemyAvatarId;
+		set => _adventureEnemyAvatarId = NormalizeAdventureEnemyAvatarId(value);
 	}
 
 	[Export]
@@ -421,6 +454,11 @@ public partial class GameBoardScene : Control
 
 	private bool IsSpecialItemCardEnabled(string itemCardId)
 	{
+		if (!item_mode)
+		{
+			return false;
+		}
+
 		return itemCardId switch
 		{
 			JackItemCardId or QueenItemCardId or KingItemCardId => false,
@@ -445,6 +483,11 @@ public partial class GameBoardScene : Control
 	{
 		_enabledSceneItemCardIds.Clear();
 		_itemCardDescriptions.Clear();
+		if (!item_mode)
+		{
+			return;
+		}
+
 		foreach (string itemCardId in _itemCardCatalog.AllIds)
 		{
 			if (!_itemCardCatalog.IsEnabled(itemCardId))

@@ -12,6 +12,11 @@ public partial class GameBoardScene
 	private const float OpeningDealCardStaggerSeconds = 0.035f;
 	private const float OpeningDealPilesTotalSeconds = 2.0f;
 	private const float OpeningDealPileCardFlightSeconds = 0.18f;
+	private const float ReplacementDrawFlightSeconds = 0.30f;
+	private const float ReplacementDrawSettleSeconds = 0.12f;
+	private const float ReplacementDrawArcHeight = 38.0f;
+	private const float ReplacementDrawStartScale = 0.94f;
+	private const float ReplacementDrawPeakScale = 1.08f;
 	private const string DeckShuffleFramePattern = "res://art/cards/deck_shuffle/overhand_drop/game_frames/frame-{0:000}.png";
 	private const int DeckShuffleFrameCount = 6;
 	private const int DeckShuffleRepeatCount = 3;

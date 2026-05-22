@@ -1,0 +1,747 @@
+[gd_scene format=3 uid="uid://d4ab2wuiofysq"]
+
+[ext_resource type="Script" path="res://scripts/AdventureMapScene.cs" id="1_adventure_map_scene"]
+[ext_resource type="Texture2D" uid="uid://b1470g0lba6ew" path="res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png" id="2_adventure_map_base"]
+[ext_resource type="Script" path="res://scripts/AdventureMapRouteLayer.cs" id="3_adventure_map_route_layer"]
+[ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="4_water_caustic_shader"]
+[ext_resource type="Script" uid="uid://b82b6b0sb0p4n" path="res://scripts/UnderwaterAmbientLayer.cs" id="5_underwater_ambient_layer"]
+[ext_resource type="Script" path="res://scripts/AdventureMapDynamicLayer.cs" id="6_adventure_map_dynamic_layer"]
+[ext_resource type="Script" uid="uid://c4ayxvsj4os34" path="res://scripts/CharacterAvatar.cs" id="7_character_avatar_script"]
+[ext_resource type="Texture2D" uid="uid://bcpjhyjniyu2n" path="res://art/characters/player_fish_avatar/run-001/idle/processed/idle-1.png" id="8_fish_idle"]
+[ext_resource type="Texture2D" uid="uid://cuw1piolsnrje" path="res://art/characters/player_lanternfish_avatar/run-001/idle/processed/idle-1.png" id="9_lanternfish_idle"]
+[ext_resource type="Texture2D" uid="uid://76a5gey81qbx" path="res://art/characters/player_shrimp_avatar/run-001/idle/processed/idle-1.png" id="10_shrimp_idle"]
+[ext_resource type="Texture2D" uid="uid://c2phn0jbe8qxe" path="res://art/characters/player_crab_avatar/run-001/idle/processed/idle-1.png" id="11_crab_idle"]
+[ext_resource type="Texture2D" uid="uid://dtraqm632p0mb" path="res://art/characters/player_jellyfish_avatar/run-001/idle/processed/idle-1.png" id="12_jellyfish_idle"]
+[ext_resource type="Texture2D" uid="uid://bmantarayidl1" path="res://art/characters/player_manta_ray_avatar/run-001/idle/processed/idle-1.png" id="13_manta_ray_idle"]
+[ext_resource type="Texture2D" uid="uid://ddc2cirqn8ktm" path="res://art/characters/player_garden_eel_avatar/run-001/idle/processed/idle-1.png" id="14_garden_eel_idle"]
+[ext_resource type="Texture2D" uid="uid://c5fc3mdibx1di" path="res://art/characters/player_sea_slug_avatar/run-001/idle/processed/idle-1.png" id="15_sea_slug_idle"]
+[ext_resource type="Texture2D" uid="uid://b2557w63h4hkg" path="res://art/characters/player_nautilus_avatar/run-001/idle/processed/idle-1.png" id="16_nautilus_idle"]
+[ext_resource type="Texture2D" uid="uid://cbokatlynw0w3" path="res://art/characters/player_narwhal_avatar/run-001/idle/processed/idle-1.png" id="17_narwhal_idle"]
+[ext_resource type="Texture2D" uid="uid://8wo446w3wy5u" path="res://art/characters/player_leafy_seadragon_avatar/run-001/idle/processed/idle-1.png" id="18_leafy_seadragon_idle"]
+[ext_resource type="Texture2D" uid="uid://b3bca7eo5xcjm" path="res://art/characters/player_dragon_prince_avatar/run-001/idle/processed/idle-1.png" id="19_dragon_prince_idle"]
+[ext_resource type="Texture2D" uid="uid://d3cskagl32jga" path="res://art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png" id="20_dragon_queen_idle"]
+[ext_resource type="Texture2D" uid="uid://da5ly8uu4sl8c" path="res://art/characters/boss_k_avatar/run-001/idle/processed/idle-1.png" id="21_boss_k_idle"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_adventure_caustic"]
+shader = ExtResource("4_water_caustic_shader")
+shader_parameter/shimmer_color = Color(0.5, 0.98, 1, 0.18)
+shader_parameter/shimmer_strength = 0.46
+shader_parameter/wave_scale = 28.0
+shader_parameter/wave_speed = 0.36
+shader_parameter/edge_boost = 0.42
+shader_parameter/center_glow = 0.34
+
+[node name="AdventureMapScene" type="Control" unique_id=1801026305]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_adventure_map_scene")
+MapDataPath = null
+MapBaseTexturePath = "res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png"
+selected_avatar_id = null
+
+[node name="Background" type="ColorRect" parent="." unique_id=508095391]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.00392157, 0.0431373, 0.0705882, 1)
+
+[node name="MapViewport" type="Control" parent="." unique_id=121419900]
+layout_mode = 1
+anchors_preset = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="MapContent" type="Control" parent="MapViewport" unique_id=2088913934]
+custom_minimum_size = Vector2(3072, 1536)
+layout_mode = 1
+anchors_preset = 0
+mouse_filter = 2
+
+[node name="BackgroundArt" type="TextureRect" parent="MapViewport/MapContent" unique_id=798385605]
+layout_mode = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+mouse_filter = 2
+texture = ExtResource("2_adventure_map_base")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="MapCausticOverlay" type="ColorRect" parent="MapViewport/MapContent" unique_id=453660415]
+material = SubResource("ShaderMaterial_adventure_caustic")
+layout_mode = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+mouse_filter = 2
+
+[node name="MapDynamicLayer" type="Control" parent="MapViewport/MapContent" unique_id=1875127610]
+anchors_preset = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+mouse_filter = 2
+script = ExtResource("6_adventure_map_dynamic_layer")
+MotionScale = 0.82
+
+[node name="MapAmbientLayer" type="Control" parent="MapViewport/MapContent" unique_id=1876852781]
+anchors_preset = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+mouse_filter = 2
+script = ExtResource("5_underwater_ambient_layer")
+bubble_count = 72
+mote_count = 132
+seagrass_blade_count = 58
+motion_scale = 0.72
+
+[node name="RouteLayer" type="Control" parent="MapViewport/MapContent" unique_id=1636384289]
+anchors_preset = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+mouse_filter = 2
+script = ExtResource("3_adventure_map_route_layer")
+
+[node name="AvatarLayer" type="Control" parent="MapViewport/MapContent" unique_id=534351960]
+anchors_preset = 0
+offset_right = 3072.0
+offset_bottom = 1536.0
+mouse_filter = 2
+
+[node name="FishNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=850663119]
+anchors_preset = 0
+offset_left = 288.0
+offset_top = 1158.0
+offset_right = 432.0
+offset_bottom = 1302.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/FishNode" unique_id=1622194869]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("8_fish_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_fish_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/FishNode/CharacterAvatar" unique_id=1338150448]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/FishNode/CharacterAvatar/PortraitPivot" unique_id=1699139755]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("8_fish_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LanternfishNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=519863577]
+anchors_preset = 0
+offset_left = 488.0
+offset_top = 983.0
+offset_right = 632.0
+offset_bottom = 1127.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/LanternfishNode" unique_id=1206770719]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("9_lanternfish_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_lanternfish_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/LanternfishNode/CharacterAvatar" unique_id=1887193405]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/LanternfishNode/CharacterAvatar/PortraitPivot" unique_id=1350501299]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("9_lanternfish_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ShrimpNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=1089527340]
+anchors_preset = 0
+offset_left = 698.0
+offset_top = 798.0
+offset_right = 842.0
+offset_bottom = 942.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/ShrimpNode" unique_id=1718414948]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("10_shrimp_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_shrimp_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/ShrimpNode/CharacterAvatar" unique_id=1929512670]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/ShrimpNode/CharacterAvatar/PortraitPivot" unique_id=1054866043]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("10_shrimp_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CrabNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=738434456]
+anchors_preset = 0
+offset_left = 938.0
+offset_top = 638.0
+offset_right = 1082.0
+offset_bottom = 782.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/CrabNode" unique_id=1046031500]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("11_crab_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_crab_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/CrabNode/CharacterAvatar" unique_id=1205172606]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/CrabNode/CharacterAvatar/PortraitPivot" unique_id=1581936262]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("11_crab_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="JellyfishNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=595386882]
+anchors_preset = 0
+offset_left = 1173.0
+offset_top = 493.0
+offset_right = 1317.0
+offset_bottom = 637.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/JellyfishNode" unique_id=254327585]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("12_jellyfish_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_jellyfish_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/JellyfishNode/CharacterAvatar" unique_id=180814694]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/JellyfishNode/CharacterAvatar/PortraitPivot" unique_id=538174900]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("12_jellyfish_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MantaRayNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=1861927310]
+anchors_preset = 0
+offset_left = 1393.0
+offset_top = 378.0
+offset_right = 1537.0
+offset_bottom = 522.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/MantaRayNode" unique_id=1729529657]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("13_manta_ray_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_manta_ray_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/MantaRayNode/CharacterAvatar" unique_id=930501461]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/MantaRayNode/CharacterAvatar/PortraitPivot" unique_id=350175994]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("13_manta_ray_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GardenEelNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=1782008614]
+anchors_preset = 0
+offset_left = 1593.0
+offset_top = 473.0
+offset_right = 1737.0
+offset_bottom = 617.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/GardenEelNode" unique_id=531111810]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("14_garden_eel_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_garden_eel_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/GardenEelNode/CharacterAvatar" unique_id=439513224]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/GardenEelNode/CharacterAvatar/PortraitPivot" unique_id=1872545600]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("14_garden_eel_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SeaSlugNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=763369445]
+anchors_preset = 0
+offset_left = 1768.0
+offset_top = 648.0
+offset_right = 1912.0
+offset_bottom = 792.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/SeaSlugNode" unique_id=1103177864]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("15_sea_slug_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_sea_slug_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/SeaSlugNode/CharacterAvatar" unique_id=748875975]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/SeaSlugNode/CharacterAvatar/PortraitPivot" unique_id=1741240622]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("15_sea_slug_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NautilusNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=39098483]
+anchors_preset = 0
+offset_left = 1618.0
+offset_top = 828.0
+offset_right = 1762.0
+offset_bottom = 972.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/NautilusNode" unique_id=1646409694]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("16_nautilus_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_nautilus_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/NautilusNode/CharacterAvatar" unique_id=1568781201]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/NautilusNode/CharacterAvatar/PortraitPivot" unique_id=1879412289]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("16_nautilus_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NarwhalNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=484912398]
+anchors_preset = 0
+offset_left = 1873.0
+offset_top = 938.0
+offset_right = 2017.0
+offset_bottom = 1082.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/NarwhalNode" unique_id=1367809740]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("17_narwhal_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_narwhal_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/NarwhalNode/CharacterAvatar" unique_id=841001439]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/NarwhalNode/CharacterAvatar/PortraitPivot" unique_id=624599549]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("17_narwhal_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LeafySeadragonNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=1651519598]
+anchors_preset = 0
+offset_left = 2013.0
+offset_top = 698.0
+offset_right = 2157.0
+offset_bottom = 842.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/LeafySeadragonNode" unique_id=1827432027]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("18_leafy_seadragon_idle")
+AccentColor = Color(0.62, 1, 0.92, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_leafy_seadragon_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/LeafySeadragonNode/CharacterAvatar" unique_id=129089730]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/LeafySeadragonNode/CharacterAvatar/PortraitPivot" unique_id=791641846]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("18_leafy_seadragon_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DragonPrinceJNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=1065810612]
+anchors_preset = 0
+offset_left = 2238.0
+offset_top = 443.0
+offset_right = 2382.0
+offset_bottom = 587.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/DragonPrinceJNode" unique_id=785761621]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("19_dragon_prince_idle")
+AccentColor = Color(1, 0.86, 0.46, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_dragon_prince_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/DragonPrinceJNode/CharacterAvatar" unique_id=766999434]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/DragonPrinceJNode/CharacterAvatar/PortraitPivot" unique_id=84751512]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("19_dragon_prince_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NodeLabel" type="Label" parent="MapViewport/MapContent/AvatarLayer/DragonPrinceJNode" unique_id=800931011]
+layout_mode = 0
+offset_top = -30.0
+offset_right = 144.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.94)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 34
+text = "J"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DragonQueenQNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=403338167]
+anchors_preset = 0
+offset_left = 2629.0
+offset_top = 537.0
+offset_right = 2773.0
+offset_bottom = 681.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/DragonQueenQNode" unique_id=638821512]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("20_dragon_queen_idle")
+AccentColor = Color(1, 0.86, 0.46, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/player_dragon_queen_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/DragonQueenQNode/CharacterAvatar" unique_id=1515738680]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/DragonQueenQNode/CharacterAvatar/PortraitPivot" unique_id=990745271]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("20_dragon_queen_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NodeLabel" type="Label" parent="MapViewport/MapContent/AvatarLayer/DragonQueenQNode" unique_id=424170051]
+layout_mode = 0
+offset_top = -30.0
+offset_right = 144.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.94)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 34
+text = "Q"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BossKNode" type="Control" parent="MapViewport/MapContent/AvatarLayer" unique_id=28126952]
+anchors_preset = 0
+offset_left = 2500.0
+offset_top = 394.0
+offset_right = 2644.0
+offset_bottom = 538.0
+
+[node name="CharacterAvatar" type="Control" parent="MapViewport/MapContent/AvatarLayer/BossKNode" unique_id=1159117518]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_character_avatar_script")
+PortraitTexture = ExtResource("21_boss_k_idle")
+AccentColor = Color(0.24, 0.88, 1, 1)
+PortraitScale = 0.76
+AvatarRoot = "res://art/characters/boss_k_avatar/run-001"
+
+[node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/BossKNode/CharacterAvatar" unique_id=1495036054]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 132.0
+offset_bottom = 132.0
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="MapViewport/MapContent/AvatarLayer/BossKNode/CharacterAvatar/PortraitPivot" unique_id=1251952523]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("21_boss_k_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NodeLabel" type="Label" parent="MapViewport/MapContent/AvatarLayer/BossKNode" unique_id=2135912465]
+layout_mode = 0
+offset_top = -30.0
+offset_right = 144.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.94)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 34
+text = "K"
+horizontal_alignment = 1
+vertical_alignment = 1

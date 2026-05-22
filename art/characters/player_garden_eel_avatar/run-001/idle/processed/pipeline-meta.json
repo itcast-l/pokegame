@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "single cool deep-sea garden eel avatar portrait; teal navy cyan bioluminescent palette; generated image approved by user; solid #FF00FF background cleaned to transparent",
+  "role": "",
+  "input": "art/characters/player_garden_eel_avatar/run-001/idle/source-raw.png",
+  "threshold": 100,
+  "edge_threshold": 180,
+  "duration": 200,
+  "single_size": 128
+}

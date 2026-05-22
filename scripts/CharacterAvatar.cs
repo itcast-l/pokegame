@@ -23,19 +23,43 @@ public partial class CharacterAvatar : Control
 	[Export]
 	public Color AccentColor { get; set; } = new(0.18f, 0.86f, 0.82f, 1.0f);
 
-	[Export]
-	public Vector2 AttackDirection { get; set; } = Vector2.Right;
-
 	[Export(PropertyHint.Range, "0.55,0.95,0.01")]
 	public float PortraitScale { get; set; } = 0.84f;
 
 	[Export]
 	public bool ShowFrame { get; set; } = true;
 
-	private const string GeneratedAvatarRoot = "res://art/characters/player_cat_avatar/run-002";
+	[Export]
+	public bool LoadActionFrames { get; set; } = true;
+
+	private string _avatarRoot = CharacterAvatarCatalog.Default.RootPath;
+
+	[Export]
+	public string AvatarRoot
+	{
+		get => _avatarRoot;
+		set
+		{
+			string nextRoot = string.IsNullOrWhiteSpace(value)
+				? CharacterAvatarCatalog.Default.RootPath
+				: value.Trim();
+			if (_avatarRoot == nextRoot)
+			{
+				return;
+			}
+
+			_avatarRoot = nextRoot;
+			if (IsNodeReady())
+			{
+				LoadGeneratedActionFrames();
+				BeginActionFrames(_currentAction);
+			}
+		}
+	}
 
 	private Control _portraitPivot = default!;
 	private TextureRect _portrait = default!;
+	private Texture2D? _idleFallbackTexture;
 	private Tween? _actionTween;
 	private readonly Dictionary<AvatarAction, Texture2D[]> _actionFrames = new();
 	private AvatarAction _currentAction = AvatarAction.Idle;
@@ -45,7 +69,6 @@ public partial class CharacterAvatar : Control
 	private int _frameIndex;
 	private bool _frameLoops;
 	private float _scorePulse;
-	private float _attackPulse;
 	private float _hitPulse;
 	private float _victoryPulse;
 	private float _defeatShade;
@@ -83,7 +106,6 @@ public partial class CharacterAvatar : Control
 		AdvanceActionFrame(dt);
 
 		_scorePulse = Mathf.MoveToward(_scorePulse, 0.0f, dt * 2.8f);
-		_attackPulse = Mathf.MoveToward(_attackPulse, 0.0f, dt * 3.8f);
 		_hitPulse = Mathf.MoveToward(_hitPulse, 0.0f, dt * 4.5f);
 		_victoryPulse = Mathf.MoveToward(_victoryPulse, 0.0f, dt * 1.7f);
 		_defeatShade = Mathf.MoveToward(_defeatShade, _currentAction == AvatarAction.Defeat ? 1.0f : 0.0f, dt * 2.0f);
@@ -109,14 +131,6 @@ public partial class CharacterAvatar : Control
 		if (_scorePulse > 0.0f)
 		{
 			DrawArc(center, radius + 16.0f * (1.0f - _scorePulse), 0.0f, Mathf.Tau, 96, new Color(0.7f, 1.0f, 0.8f, 0.34f * _scorePulse), 5.0f, true);
-		}
-
-		if (_attackPulse > 0.0f)
-		{
-			Vector2 direction = GetAttackDirection();
-			Vector2 start = center + direction * radius * 0.58f;
-			Vector2 end = center + direction * radius * (1.18f + 0.12f * (1.0f - _attackPulse));
-			DrawLine(start, end, new Color(1.0f, 0.84f, 0.34f, 0.58f * _attackPulse), 5.0f, true);
 		}
 
 		if (_hitPulse > 0.0f)
@@ -199,15 +213,9 @@ public partial class CharacterAvatar : Control
 	public void PlayAttack()
 	{
 		StartAction(AvatarAction.Attack);
-		_attackPulse = 1.0f;
-		Vector2 lunge = GetAttackDirection() * 18.0f;
 
 		_actionTween = CreateTween();
-		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition - lunge * 0.28f, 0.06f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
-		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition + lunge, 0.09f).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-		_actionTween.Parallel().TweenProperty(_portraitPivot, "rotation", -0.08f * Mathf.Sign(GetAttackDirection().X == 0.0f ? 1.0f : GetAttackDirection().X), 0.09f);
-		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition, 0.14f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
-		_actionTween.Parallel().TweenProperty(_portraitPivot, "rotation", 0.0f, 0.14f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+		_actionTween.TweenInterval(GetActionFrameDuration(AvatarAction.Attack) * GetActionFrameCount(AvatarAction.Attack));
 		_actionTween.TweenCallback(Callable.From(() => FinishAndReturnToIdle(AvatarAction.Attack)));
 	}
 
@@ -256,7 +264,6 @@ public partial class CharacterAvatar : Control
 		_actionTween = null;
 		_currentAction = action;
 		_scorePulse = 0.0f;
-		_attackPulse = 0.0f;
 		_hitPulse = 0.0f;
 		_victoryPulse = 0.0f;
 		_defeatShade = 0.0f;
@@ -286,6 +293,13 @@ public partial class CharacterAvatar : Control
 
 	private void LoadGeneratedActionFrames()
 	{
+		_actionFrames.Clear();
+		_idleFallbackTexture = ResourceLoader.Load<Texture2D>($"{AvatarRoot}/idle/processed/idle-1.png");
+		if (!LoadActionFrames)
+		{
+			return;
+		}
+
 		foreach (AvatarAction action in Enum.GetValues<AvatarAction>())
 		{
 			string slug = GetActionSlug(action);
@@ -294,7 +308,7 @@ public partial class CharacterAvatar : Control
 
 			for (int index = 0; index < frames.Length; index++)
 			{
-				string path = $"{GeneratedAvatarRoot}/{slug}/processed/{slug}-{index + 1}.png";
+				string path = $"{AvatarRoot}/{slug}/processed/{slug}-{index + 1}.png";
 				Texture2D? texture = ResourceLoader.Load<Texture2D>(path);
 				if (texture == null)
 				{
@@ -360,6 +374,12 @@ public partial class CharacterAvatar : Control
 			return;
 		}
 
+		if (_idleFallbackTexture != null)
+		{
+			_portrait.Texture = _idleFallbackTexture;
+			return;
+		}
+
 		if (PortraitTexture != null)
 		{
 			_portrait.Texture = PortraitTexture;
@@ -382,16 +402,6 @@ public partial class CharacterAvatar : Control
 		{
 			_portraitPivot.Position = _basePivotPosition;
 		}
-	}
-
-	private Vector2 GetAttackDirection()
-	{
-		if (AttackDirection.LengthSquared() <= 0.0001f)
-		{
-			return Vector2.Right;
-		}
-
-		return AttackDirection.Normalized();
 	}
 
 	private static bool TryParseAction(string actionName, out AvatarAction action)
@@ -454,14 +464,16 @@ public partial class CharacterAvatar : Control
 	{
 		return action switch
 		{
-			AvatarAction.Idle => 0.08f,
+			AvatarAction.Idle => 0.16f,
 			AvatarAction.Defeat => 0.06f,
 			_ => 0.08f,
 		};
 	}
 
-	private static int GetActionFrameCount(AvatarAction action)
+	private int GetActionFrameCount(AvatarAction action)
 	{
-		return action == AvatarAction.Idle ? 12 : 4;
+		return action == AvatarAction.Idle
+			? CharacterAvatarCatalog.GetIdleFrameCount(AvatarRoot)
+			: CharacterAvatarCatalog.GetActionFrameCount(AvatarRoot);
 	}
 }
