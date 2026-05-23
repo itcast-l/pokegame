@@ -4,7 +4,7 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private void DealCardsToPlayers(bool playOpeningDealAnimation = false)
+	private void DealCardsToPlayers(bool playOpeningDealAnimation = false, bool playOpeningIntroAnimation = false)
 	{
 		if (_playerCardPiles.Count != MaxPlayers || _playerHandAreas.Count != MaxPlayers)
 		{
@@ -57,7 +57,14 @@ public partial class GameBoardScene
 		RenderTableCards();
 		if (playOpeningDealAnimation)
 		{
-			_ = PlayOpeningDealAnimationAsync(_turnSequenceGeneration);
+			if (playOpeningIntroAnimation)
+			{
+				_ = PlayOpeningIntroThenDealSequenceAsync(_turnSequenceGeneration);
+			}
+			else
+			{
+				_ = PlayOpeningDealAnimationAsync(_turnSequenceGeneration);
+			}
 		}
 	}
 

@@ -178,6 +178,26 @@ public partial class GameBoardScene : Control
 		}
 	}
 
+	[Export(PropertyHint.Range, "50,200,50")]
+	public int winning_score
+	{
+		get => _winningScore;
+		set
+		{
+			_winningScore = value switch
+			{
+				50 or 100 or 200 => value,
+				_ => DefaultWinningScore,
+			};
+
+			if (IsInsideTree())
+			{
+				RefreshScoreTooltips();
+				CheckForWinner();
+			}
+		}
+	}
+
 	[Export]
 	public bool adventure_mode
 	{
@@ -239,7 +259,7 @@ public partial class GameBoardScene : Control
 		BindPlayerScoreMeters();
 		CreateWinnerLabel();
 		UpdatePlayerVisibility();
-		DealCardsToPlayers(playOpeningDealAnimation: true);
+		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: true);
 	}
 
 	public override void _Process(double delta)

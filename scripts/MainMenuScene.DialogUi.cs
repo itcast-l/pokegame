@@ -8,6 +8,11 @@ public partial class MainMenuScene : Control
 		return Tr(key).ToString();
 	}
 
+	private string LocalizeFormat(string key, params object[] args)
+	{
+		return string.Format(Localize(key), args);
+	}
+
 	private Label CreateLocalizedDialogLabel(string key, int fontSize, Color color, HorizontalAlignment alignment)
 	{
 		var label = CreateDialogLabel(Localize(key), fontSize, color, alignment);

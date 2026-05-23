@@ -3,7 +3,7 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private const int WinningScore = 200;
+	private const int DefaultWinningScore = 100;
 	private static readonly string[] ScoreMeterNodeNames =
 	{
 		"Player1ScoreMeter",
@@ -36,6 +36,7 @@ public partial class GameBoardScene
 	private readonly int[] _playerScores = new int[MaxPlayers];
 	private readonly ScoreAvatarMeter?[] _playerScoreMeters = new ScoreAvatarMeter?[MaxPlayers];
 	private readonly ScoreEffectTarget?[] _playerScoreEffectTargets = new ScoreEffectTarget?[MaxPlayers];
+	private int _winningScore = DefaultWinningScore;
 
 	private void BindPlayerScoreMeters()
 	{
@@ -50,7 +51,7 @@ public partial class GameBoardScene
 
 			meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
-			meter.SetScore(0, WinningScore, false);
+			meter.SetScore(0, _winningScore, false);
 			_playerScoreMeters[playerIndex] = meter;
 			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[playerIndex]}");
 		}
@@ -91,14 +92,14 @@ public partial class GameBoardScene
 		}
 
 		meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
-		meter.SetScore(_playerScores[playerIndex], WinningScore, animate);
+		meter.SetScore(_playerScores[playerIndex], _winningScore, animate);
 	}
 
 	private int GetScoreWinnerPlayerIndex()
 	{
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			if (_playerScores[playerIndex] >= WinningScore)
+			if (_playerScores[playerIndex] >= _winningScore)
 			{
 				return playerIndex;
 			}

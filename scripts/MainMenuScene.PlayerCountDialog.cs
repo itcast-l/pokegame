@@ -5,6 +5,8 @@ public partial class MainMenuScene : Control
 {
 	private const float PlayerCountDialogHideSeconds = 0.16f;
 	private const float PlayerCountDialogBlurLod = 2.8f;
+	private const int DefaultMenuWinningScore = 100;
+	private static readonly int[] MenuWinningScoreOptions = { 50, 100, 200 };
 	private const string PlayerCountDialogScrimShaderCode = """
 shader_type canvas_item;
 render_mode unshaded;
@@ -64,7 +66,7 @@ void fragment() {
 		_playerCountDialogPanel = new PanelContainer
 		{
 			Name = "PlayerCountDialogPanel",
-			CustomMinimumSize = new Vector2(560.0f, 430.0f),
+			CustomMinimumSize = new Vector2(560.0f, 500.0f),
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		_playerCountDialogPanel.AddThemeStyleboxOverride("panel", CreateDialogPanelStyle());
@@ -118,6 +120,7 @@ void fragment() {
 
 		_playerCountOption = CreatePlayerCountDropdown(optionsList);
 		_itemModeOption = CreateItemModeDropdown(optionsList);
+		_winningScoreOption = CreateWinningScoreDropdown(optionsList);
 
 		var actionSpacer = new Control
 		{
@@ -170,6 +173,23 @@ void fragment() {
 		option.AddItem(Localize("PLAYER_COUNT_ITEM_MODE_ON"), 1);
 		option.AddItem(Localize("PLAYER_COUNT_ITEM_MODE_OFF"), 0);
 		option.Select(DefaultItemMode ? 0 : 1);
+		return option;
+	}
+
+	private OptionButton CreateWinningScoreDropdown(Container parent)
+	{
+		var option = CreatePlayerCountDialogOption(parent, "PLAYER_COUNT_WINNING_SCORE");
+		option.Name = "WinningScoreOption";
+		for (int index = 0; index < MenuWinningScoreOptions.Length; index++)
+		{
+			int winningScore = MenuWinningScoreOptions[index];
+			option.AddItem(GetWinningScoreOptionText(winningScore), winningScore);
+			if (winningScore == DefaultMenuWinningScore)
+			{
+				option.Select(index);
+			}
+		}
+
 		return option;
 	}
 
@@ -247,6 +267,15 @@ void fragment() {
 			_itemModeOption.SetItemText(0, Localize("PLAYER_COUNT_ITEM_MODE_ON"));
 			_itemModeOption.SetItemText(1, Localize("PLAYER_COUNT_ITEM_MODE_OFF"));
 		}
+
+		if (_winningScoreOption != null)
+		{
+			for (int index = 0; index < _winningScoreOption.ItemCount; index++)
+			{
+				int winningScore = _winningScoreOption.GetItemId(index);
+				_winningScoreOption.SetItemText(index, GetWinningScoreOptionText(winningScore));
+			}
+		}
 	}
 
 	private string GetPlayerCountOptionText(int playerCount)
@@ -258,6 +287,11 @@ void fragment() {
 			4 => Localize("PLAYER_COUNT_4_TITLE"),
 			_ => playerCount.ToString(),
 		};
+	}
+
+	private string GetWinningScoreOptionText(int winningScore)
+	{
+		return LocalizeFormat("PLAYER_COUNT_WINNING_SCORE_OPTION", winningScore);
 	}
 
 	private void ShowPlayerCountDialog()
@@ -297,10 +331,11 @@ void fragment() {
 	{
 		int playerCount = _playerCountOption.GetSelectedId();
 		bool itemMode = _itemModeOption.GetSelectedId() == 1;
-		StartGameWithOptions(playerCount, itemMode);
+		int winningScore = _winningScoreOption.GetSelectedId();
+		StartGameWithOptions(playerCount, itemMode, winningScore);
 	}
 
-	private void StartGameWithOptions(int playerCount, bool itemMode)
+	private void StartGameWithOptions(int playerCount, bool itemMode, int winningScore)
 	{
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
 		if (gameBoardScene == null)
@@ -312,6 +347,7 @@ void fragment() {
 		Node gameBoard = gameBoardScene.Instantiate();
 		gameBoard.Set("player_count", playerCount);
 		gameBoard.Set("item_mode", itemMode);
+		gameBoard.Set("winning_score", winningScore);
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;
 		QueueFree();
