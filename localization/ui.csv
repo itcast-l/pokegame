@@ -5,7 +5,7 @@ MENU_MULTIPLAYER,多人游戏,多人遊戲,Multi
 MENU_SETTINGS,设置,設定,Settings
 MENU_EXIT,退出,離開,Exit
 ADVENTURE_AVATAR_TITLE,选择敌人关卡,選擇敵人關卡,Pick Enemy
-ADVENTURE_START,开始冒险,開始冒險,Start
+ADVENTURE_START,开始游戏,開始遊戲,Start
 ADVENTURE_BACK,返回,返回,Back
 PLAYER_COUNT_TITLE,选择游戏人数,選擇遊戲人數,Players
 PLAYER_COUNT_MESSAGE,选择本局参与人数,選擇本局參與人數,Pick player count

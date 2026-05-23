@@ -268,14 +268,7 @@ public partial class MainMenuScene : Control
 		};
 		option.AddItem(Localize("SETTINGS_WINDOWED"), 0);
 		option.AddItem(Localize("SETTINGS_FULLSCREEN"), 1);
-		option.AddThemeFontSizeOverride("font_size", 17);
-		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
-		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
-		option.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
-		option.AddThemeStyleboxOverride("normal", CreateOptionButtonStyle(false));
-		option.AddThemeStyleboxOverride("hover", CreateOptionButtonStyle(true));
-		option.AddThemeStyleboxOverride("pressed", CreateOptionButtonStyle(true));
-		option.AddThemeStyleboxOverride("focus", CreateOptionButtonStyle(true));
+		StyleDropdownOptionButton(option);
 		option.ItemSelected += index =>
 		{
 			if (_isSyncingSettingsControls)
@@ -312,14 +305,7 @@ public partial class MainMenuScene : Control
 			option.AddItem(Localize(Localization.SupportedLanguages[index].LabelKey), index);
 		}
 
-		option.AddThemeFontSizeOverride("font_size", 17);
-		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
-		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
-		option.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
-		option.AddThemeStyleboxOverride("normal", CreateOptionButtonStyle(false));
-		option.AddThemeStyleboxOverride("hover", CreateOptionButtonStyle(true));
-		option.AddThemeStyleboxOverride("pressed", CreateOptionButtonStyle(true));
-		option.AddThemeStyleboxOverride("focus", CreateOptionButtonStyle(true));
+		StyleDropdownOptionButton(option);
 		option.ItemSelected += index =>
 		{
 			if (_isSyncingSettingsControls)

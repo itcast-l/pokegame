@@ -5,66 +5,64 @@ public partial class AdventureAvatarMenuScene
 {
 	private void BuildUi()
 	{
-		var background = new ColorRect
-		{
-			Name = "Background",
-			Color = new Color(0.0f, 0.04f, 0.07f, 1.0f),
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		background.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(background);
-
-		var topShade = new ColorRect
-		{
-			Name = "TopShade",
-			Color = new Color(0.0f, 0.02f, 0.035f, 0.34f),
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		topShade.AnchorRight = 1.0f;
-		topShade.OffsetBottom = 118.0f;
-		AddChild(topShade);
-
-		var ambient = new UnderwaterAmbientLayer
-		{
-			Name = "AmbientLayer",
-			bubble_count = 42,
-			mote_count = 92,
-			seagrass_blade_count = 28,
-			motion_scale = 0.64f,
-		};
-		ambient.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(ambient);
-
 		var margin = new MarginContainer
 		{
 			Name = "SafeArea",
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		margin.SetAnchorsPreset(LayoutPreset.FullRect);
-		margin.AddThemeConstantOverride("margin_left", 56);
-		margin.AddThemeConstantOverride("margin_top", 40);
-		margin.AddThemeConstantOverride("margin_right", 56);
-		margin.AddThemeConstantOverride("margin_bottom", 44);
+		margin.AddThemeConstantOverride("margin_left", 32);
+		margin.AddThemeConstantOverride("margin_top", 32);
+		margin.AddThemeConstantOverride("margin_right", 32);
+		margin.AddThemeConstantOverride("margin_bottom", 32);
 		AddChild(margin);
+
+		var center = new CenterContainer
+		{
+			Name = "MenuCenter",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		center.SetAnchorsPreset(LayoutPreset.FullRect);
+		margin.AddChild(center);
+
+		var menuPanel = new PanelContainer
+		{
+			Name = "AdventureMenuPanel",
+			CustomMinimumSize = GetCompactMenuPanelSize(),
+			MouseFilter = MouseFilterEnum.Stop,
+		};
+		menuPanel.AddThemeStyleboxOverride("panel", CreateMenuPanelStyle());
+		center.AddChild(menuPanel);
+
+		var panelMargin = new MarginContainer
+		{
+			Name = "AdventureMenuMargin",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		panelMargin.AddThemeConstantOverride("margin_left", 24);
+		panelMargin.AddThemeConstantOverride("margin_top", 22);
+		panelMargin.AddThemeConstantOverride("margin_right", 24);
+		panelMargin.AddThemeConstantOverride("margin_bottom", 22);
+		menuPanel.AddChild(panelMargin);
 
 		var layout = new VBoxContainer
 		{
 			Name = "Layout",
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		layout.AddThemeConstantOverride("separation", 24);
-		margin.AddChild(layout);
+		layout.AddThemeConstantOverride("separation", 18);
+		panelMargin.AddChild(layout);
 
 		var header = new HBoxContainer
 		{
 			Name = "Header",
-			CustomMinimumSize = new Vector2(0.0f, 68.0f),
+			CustomMinimumSize = new Vector2(0.0f, 58.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		header.AddThemeConstantOverride("separation", 18);
+		header.AddThemeConstantOverride("separation", 12);
 		layout.AddChild(header);
 
-		_backButton = CreateActionButton("ADVENTURE_BACK", new Color(0.72f, 0.88f, 1.0f), ReturnToMainMenu, false, 142.0f);
+		_backButton = CreateActionButton("ADVENTURE_BACK", new Color(0.72f, 0.88f, 1.0f), ReturnToMainMenu, false, 126.0f);
 		header.AddChild(_backButton.GetParent());
 
 		var titleWrap = new CenterContainer
@@ -79,7 +77,7 @@ public partial class AdventureAvatarMenuScene
 		header.AddChild(new Control
 		{
 			Name = "HeaderBalance",
-			CustomMinimumSize = new Vector2(142.0f, 1.0f),
+			CustomMinimumSize = new Vector2(126.0f, 1.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		});
 
@@ -89,11 +87,21 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		body.AddThemeConstantOverride("separation", 26);
+		body.AddThemeConstantOverride("separation", 18);
 		layout.AddChild(body);
 
 		body.AddChild(CreateLevelListPanel());
 		body.AddChild(CreateEnemyPreviewPanel());
+	}
+
+	private Vector2 GetCompactMenuPanelSize()
+	{
+		Vector2 viewportSize = GetViewportRect().Size;
+		float width = Mathf.Clamp(viewportSize.X * 0.82f, 880.0f, 1120.0f);
+		float height = Mathf.Clamp(viewportSize.Y * 0.78f, 560.0f, 690.0f);
+		width = Mathf.Min(width, Mathf.Max(360.0f, viewportSize.X - 64.0f));
+		height = Mathf.Min(height, Mathf.Max(420.0f, viewportSize.Y - 64.0f));
+		return new Vector2(width, height);
 	}
 
 	private Button CreateActionButton(string key, Color accentColor, Action pressedAction, bool flipOrnament, float width)
@@ -101,7 +109,7 @@ public partial class AdventureAvatarMenuScene
 		var frame = new OceanMenuButtonFrame
 		{
 			Name = $"{key}Frame",
-			CustomMinimumSize = new Vector2(width, 62.0f),
+			CustomMinimumSize = new Vector2(width, 56.0f),
 			AccentColor = accentColor,
 			FlipOrnament = flipOrnament,
 		};
@@ -118,7 +126,7 @@ public partial class AdventureAvatarMenuScene
 		button.OffsetTop = 5.0f;
 		button.OffsetRight = flipOrnament ? -4.0f : -22.0f;
 		button.OffsetBottom = -5.0f;
-		button.AddThemeFontSizeOverride("font_size", 20);
+		button.AddThemeFontSizeOverride("font_size", 19);
 		button.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
 		button.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
 		button.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
@@ -138,7 +146,7 @@ public partial class AdventureAvatarMenuScene
 		var stack = new VBoxContainer
 		{
 			Name = "TitleBlock",
-			CustomMinimumSize = new Vector2(420.0f, 66.0f),
+			CustomMinimumSize = new Vector2(360.0f, 54.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		stack.AddThemeConstantOverride("separation", 3);
@@ -152,7 +160,7 @@ public partial class AdventureAvatarMenuScene
 		var underline = new ColorRect
 		{
 			Name = "TitleUnderline",
-			CustomMinimumSize = new Vector2(210.0f, 2.0f),
+			CustomMinimumSize = new Vector2(184.0f, 2.0f),
 			Color = new Color(0.64f, 1.0f, 0.93f, 0.62f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
@@ -169,10 +177,10 @@ public partial class AdventureAvatarMenuScene
 			VerticalAlignment = VerticalAlignment.Center,
 			AutowrapMode = TextServer.AutowrapMode.Off,
 			ClipText = true,
-			CustomMinimumSize = new Vector2(420.0f, 52.0f),
+			CustomMinimumSize = new Vector2(360.0f, 44.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		label.AddThemeFontSizeOverride("font_size", 38);
+		label.AddThemeFontSizeOverride("font_size", 34);
 		label.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
 		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.9f));
 		label.AddThemeConstantOverride("shadow_offset_x", 1);

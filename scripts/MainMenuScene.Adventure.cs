@@ -38,8 +38,6 @@ public partial class MainMenuScene : Control
 		{
 			return;
 		}
-
-		PromoteAdventureTransition(adventureAvatarMenu);
 	}
 
 	private void PrepareAdventureAvatarMenuCache()
@@ -117,35 +115,58 @@ public partial class MainMenuScene : Control
 		_adventureTransitionRoot.Scale = GetSecondaryMenuWorldScale();
 		AddChild(_adventureTransitionRoot);
 
+		var scrim = CreatePlayerCountDialogScrim();
+		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
+		scrim.GuiInput += inputEvent =>
+		{
+			if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+			{
+				HideAdventureAvatarMenu(adventureAvatarMenu);
+				GetViewport().SetInputAsHandled();
+			}
+		};
+		_adventureTransitionRoot.AddChild(scrim);
+
 		_adventureTransitionMotion = adventureAvatarMenu;
+		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
 		_adventureTransitionRoot.AddChild(adventureAvatarMenu);
 		ApplyFixedAdventureTransitionLayout();
 		QueueAdventureTransitionLayout(_adventureTransitionRoot);
 		UpdateAdventureTransitionPosition();
-
-		var inputBlocker = new Control
-		{
-			Name = "TransitionInputBlocker",
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		inputBlocker.SetAnchorsPreset(LayoutPreset.FullRect);
-		_adventureTransitionRoot.AddChild(inputBlocker);
 	}
 
-	private void PromoteAdventureTransition(Control adventureAvatarMenu)
+	public void HideAdventureAvatarMenu(Control adventureAvatarMenu)
 	{
-		Node? parent = adventureAvatarMenu.GetParent();
-		parent?.RemoveChild(adventureAvatarMenu);
-		adventureAvatarMenu.Position = Vector2.Zero;
-		adventureAvatarMenu.Scale = Vector2.One;
+		if (_adventureTransitionRoot == null || !GodotObject.IsInstanceValid(_adventureTransitionRoot))
+		{
+			return;
+		}
 
-		GetTree().Root.AddChild(adventureAvatarMenu);
-		ApplyFinalAdventureLayout(adventureAvatarMenu);
-		GetTree().CurrentScene = adventureAvatarMenu;
-		_adventureTransitionRoot?.QueueFree();
-		_adventureTransitionRoot = null;
-		_adventureTransitionMotion = null;
-		QueueFree();
+		Control root = _adventureTransitionRoot;
+		root.MouseFilter = MouseFilterEnum.Ignore;
+		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
+		_avatarEntry.Visible = true;
+		ResetMenuCamera();
+		SetMainMenuButtonsDisabled(false);
+		_isMenuCameraTransitioning = false;
+
+		Tween hideTween = CreateTween();
+		hideTween.TweenProperty(root, "modulate:a", 0.0f, DialogFadeSeconds);
+		hideTween.Finished += () =>
+		{
+			if (GodotObject.IsInstanceValid(root))
+			{
+				root.QueueFree();
+			}
+
+			if (_adventureTransitionRoot == root)
+			{
+				_adventureTransitionRoot = null;
+				_adventureTransitionMotion = null;
+			}
+
+			PrepareAdventureAvatarMenuCache();
+		};
 	}
 
 	private void UpdateAdventureTransitionPosition()
@@ -184,15 +205,6 @@ public partial class MainMenuScene : Control
 		_adventureTransitionMotion.OffsetBottom = viewportSize.Y;
 		_adventureTransitionMotion.Position = Vector2.Zero;
 		_adventureTransitionMotion.Scale = Vector2.One;
-	}
-
-	private static void ApplyFinalAdventureLayout(Control adventureAvatarMenu)
-	{
-		adventureAvatarMenu.SetAnchorsPreset(LayoutPreset.FullRect);
-		adventureAvatarMenu.OffsetLeft = 0.0f;
-		adventureAvatarMenu.OffsetTop = 0.0f;
-		adventureAvatarMenu.OffsetRight = 0.0f;
-		adventureAvatarMenu.OffsetBottom = 0.0f;
 	}
 
 	private static void QueueAdventureTransitionLayout(Node node)

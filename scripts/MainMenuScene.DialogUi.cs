@@ -237,9 +237,11 @@ public partial class MainMenuScene : Control
 		return new StyleBoxFlat
 		{
 			BgColor = hovered
-				? new Color(0.03f, 0.28f, 0.33f, 0.86f)
+				? new Color(0.07f, 0.37f, 0.42f, 0.92f)
 				: new Color(0.015f, 0.18f, 0.23f, 0.78f),
-			BorderColor = new Color(0.62f, 1.0f, 0.94f, hovered ? 0.62f : 0.36f),
+			BorderColor = hovered
+				? new Color(0.82f, 1.0f, 0.98f, 0.82f)
+				: new Color(0.62f, 1.0f, 0.94f, 0.36f),
 			BorderWidthLeft = 1,
 			BorderWidthTop = 1,
 			BorderWidthRight = 1,
@@ -253,6 +255,128 @@ public partial class MainMenuScene : Control
 			ContentMarginTop = 7,
 			ContentMarginBottom = 7,
 		};
+	}
+
+	private static StyleBoxFlat CreateDropdownPopupPanelStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.006f, 0.105f, 0.135f, 0.96f),
+			BorderColor = new Color(0.62f, 1.0f, 0.94f, 0.48f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 7,
+			CornerRadiusTopRight = 7,
+			CornerRadiusBottomLeft = 7,
+			CornerRadiusBottomRight = 7,
+			ContentMarginLeft = 8,
+			ContentMarginRight = 8,
+			ContentMarginTop = 8,
+			ContentMarginBottom = 8,
+			ShadowColor = new Color(0.0f, 0.015f, 0.03f, 0.74f),
+			ShadowSize = 18,
+			ShadowOffset = new Vector2(0.0f, 8.0f),
+		};
+	}
+
+	private static StyleBoxFlat CreateDropdownPopupHoverStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.18f, 0.66f, 0.68f, 0.82f),
+			BorderColor = new Color(0.94f, 1.0f, 0.78f, 0.86f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 5,
+			CornerRadiusTopRight = 5,
+			CornerRadiusBottomLeft = 5,
+			CornerRadiusBottomRight = 5,
+			ContentMarginLeft = 6,
+			ContentMarginRight = 6,
+			ContentMarginTop = 5,
+			ContentMarginBottom = 5,
+			ExpandMarginLeft = 3.0f,
+			ExpandMarginRight = 3.0f,
+			ExpandMarginTop = 2.0f,
+			ExpandMarginBottom = 2.0f,
+		};
+	}
+
+	private static void StyleDropdownOptionButton(OptionButton option)
+	{
+		option.AddThemeFontSizeOverride("font_size", 17);
+		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
+		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
+		option.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
+		option.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.9f));
+		option.AddThemeColorOverride("icon_normal_color", new Color(0.7f, 1.0f, 0.92f, 0.78f));
+		option.AddThemeColorOverride("icon_hover_color", new Color(1.0f, 1.0f, 0.78f, 0.95f));
+		option.AddThemeColorOverride("icon_pressed_color", new Color(0.78f, 1.0f, 0.96f, 0.95f));
+		option.AddThemeConstantOverride("shadow_offset_x", 1);
+		option.AddThemeConstantOverride("shadow_offset_y", 2);
+		option.AddThemeConstantOverride("arrow_margin", 12);
+		option.AddThemeConstantOverride("modulate_arrow", 1);
+		option.AddThemeStyleboxOverride("normal", CreateOptionButtonStyle(false));
+		option.AddThemeStyleboxOverride("hover", CreateOptionButtonStyle(true));
+		option.AddThemeStyleboxOverride("pressed", CreateOptionButtonStyle(true));
+		option.AddThemeStyleboxOverride("focus", CreateOptionButtonStyle(true));
+
+		PopupMenu popup = option.GetPopup();
+		popup.PreferNativeMenu = false;
+		popup.ShrinkWidth = false;
+		popup.ShrinkHeight = true;
+		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
+		popup.AddThemeFontSizeOverride("font_size", 18);
+		popup.AddThemeColorOverride("font_color", new Color(0.9f, 1.0f, 0.96f));
+		popup.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
+		popup.AddThemeColorOverride("font_disabled_color", new Color(0.54f, 0.76f, 0.75f, 0.58f));
+		popup.AddThemeColorOverride("font_separator_color", new Color(0.62f, 1.0f, 0.94f, 0.54f));
+		popup.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.025f, 0.045f, 0.86f));
+		popup.AddThemeConstantOverride("outline_size", 2);
+		popup.AddThemeConstantOverride("h_separation", 8);
+		popup.AddThemeConstantOverride("v_separation", 8);
+		popup.AddThemeConstantOverride("item_start_padding", 14);
+		popup.AddThemeConstantOverride("item_end_padding", 16);
+		popup.AddThemeStyleboxOverride("panel", CreateDropdownPopupPanelStyle());
+		popup.AddThemeStyleboxOverride("hover", CreateDropdownPopupHoverStyle());
+		popup.WindowInput += inputEvent =>
+		{
+			if (inputEvent is InputEventMouseMotion)
+			{
+				FocusDropdownPopupItemAtMousePosition(popup, popup.GetMousePosition());
+			}
+		};
+	}
+
+	private static void FocusDropdownPopupItemAtMousePosition(PopupMenu popup, Vector2 mousePosition)
+	{
+		if (popup.ItemCount <= 0)
+		{
+			return;
+		}
+
+		const float panelVerticalMargin = 8.0f;
+		float listHeight = Mathf.Max(popup.Size.Y - panelVerticalMargin * 2.0f, 1.0f);
+		float itemHeight = listHeight / popup.ItemCount;
+		int itemIndex = Mathf.FloorToInt((mousePosition.Y - panelVerticalMargin) / itemHeight);
+		if (itemIndex < 0 || itemIndex >= popup.ItemCount)
+		{
+			return;
+		}
+
+		if (popup.IsItemDisabled(itemIndex) || popup.IsItemSeparator(itemIndex))
+		{
+			return;
+		}
+
+		if (popup.GetFocusedItem() != itemIndex)
+		{
+			popup.SetFocusedItem(itemIndex);
+		}
 	}
 
 	private static StyleBoxFlat CreatePlayerCountBadgeStyle(Color accentColor)

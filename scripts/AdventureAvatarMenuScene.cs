@@ -8,6 +8,8 @@ public partial class AdventureAvatarMenuScene : Control
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
 	private const double SmoothScrollTweenSeconds = 0.22;
 	private const int SmoothScrollWheelStep = 96;
+	private const float ReturnFadeSeconds = 0.18f;
+	private const float ReturnScale = 0.98f;
 
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
 	private readonly Dictionary<string, int> _stageNumbers = new();

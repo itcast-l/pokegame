@@ -16,8 +16,14 @@ public partial class AdventureAvatarMenuScene
 		gameBoard.Set("item_mode", true);
 		gameBoard.Set("adventure_mode", true);
 		gameBoard.Set("adventure_enemy_avatar_id", _selectedAvatarId);
+		Node? currentScene = GetTree().CurrentScene;
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;
+		if (currentScene != null && GodotObject.IsInstanceValid(currentScene) && currentScene != gameBoard)
+		{
+			currentScene.QueueFree();
+		}
+
 		QueueFree();
 	}
 
@@ -28,16 +34,30 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
+		_isReturningToMainMenu = true;
+		_backButton.Disabled = true;
+		_startButton.Disabled = true;
+		MouseFilter = MouseFilterEnum.Ignore;
+		ZIndex = 1000;
+
+		MainMenuScene? embeddedMainMenu = GetEmbeddedMainMenuParent();
+		if (embeddedMainMenu != null)
+		{
+			embeddedMainMenu.HideAdventureAvatarMenu(this);
+			return;
+		}
+
 		PackedScene? mainMenuScene = GD.Load<PackedScene>(MainMenuScenePath);
 		if (mainMenuScene == null)
 		{
 			GD.PushError($"Missing main menu scene: {MainMenuScenePath}");
+			_isReturningToMainMenu = false;
+			_backButton.Disabled = false;
+			_startButton.Disabled = false;
+			MouseFilter = MouseFilterEnum.Stop;
+			ZIndex = 0;
 			return;
 		}
-
-		_isReturningToMainMenu = true;
-		_backButton.Disabled = true;
-		_startButton.Disabled = true;
 
 		Node mainMenuNode = mainMenuScene.Instantiate();
 		if (mainMenuNode is not MainMenuScene mainMenu)
@@ -47,6 +67,8 @@ public partial class AdventureAvatarMenuScene
 			_isReturningToMainMenu = false;
 			_backButton.Disabled = false;
 			_startButton.Disabled = false;
+			MouseFilter = MouseFilterEnum.Stop;
+			ZIndex = 0;
 			return;
 		}
 
@@ -54,6 +76,32 @@ public partial class AdventureAvatarMenuScene
 		mainMenu.PrepareAdventureReturnTransition();
 		tree.Root.AddChild(mainMenu);
 		tree.CurrentScene = mainMenu;
-		QueueFree();
+
+		PivotOffset = Size * 0.5f;
+		Tween returnTween = CreateTween();
+		returnTween.SetParallel(true);
+		returnTween.TweenProperty(this, "modulate:a", 0.0f, ReturnFadeSeconds)
+			.SetTrans(Tween.TransitionType.Sine)
+			.SetEase(Tween.EaseType.Out);
+		returnTween.TweenProperty(this, "scale", new Vector2(ReturnScale, ReturnScale), ReturnFadeSeconds)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+		returnTween.Finished += () => QueueFree();
+	}
+
+	private MainMenuScene? GetEmbeddedMainMenuParent()
+	{
+		Node? parent = GetParent();
+		while (parent != null)
+		{
+			if (parent is MainMenuScene mainMenu)
+			{
+				return mainMenu;
+			}
+
+			parent = parent.GetParent();
+		}
+
+		return null;
 	}
 }

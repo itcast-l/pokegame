@@ -335,6 +335,11 @@ public partial class GameBoardScene
 	private void DeclareWinner(int playerIndex)
 	{
 		_winnerPlayerIndex = playerIndex;
+		if (adventure_mode && playerIndex == MainPlayerIndex)
+		{
+			CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);
+		}
+
 		_turnSequenceGeneration++;
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;

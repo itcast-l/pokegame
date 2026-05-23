@@ -189,14 +189,7 @@ void fragment() {
 			FocusMode = FocusModeEnum.None,
 			MouseFilter = MouseFilterEnum.Stop,
 		};
-		option.AddThemeFontSizeOverride("font_size", 17);
-		option.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
-		option.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
-		option.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
-		option.AddThemeStyleboxOverride("normal", CreateOptionButtonStyle(false));
-		option.AddThemeStyleboxOverride("hover", CreateOptionButtonStyle(true));
-		option.AddThemeStyleboxOverride("pressed", CreateOptionButtonStyle(true));
-		option.AddThemeStyleboxOverride("focus", CreateOptionButtonStyle(true));
+		StyleDropdownOptionButton(option);
 		row.AddChild(option);
 		return option;
 	}

@@ -7,7 +7,7 @@ public partial class AdventureAvatarMenuScene
 		var panel = new PanelContainer
 		{
 			Name = "EnemyPreviewPanel",
-			CustomMinimumSize = new Vector2(360.0f, 0.0f),
+			CustomMinimumSize = new Vector2(320.0f, 0.0f),
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
@@ -19,10 +19,10 @@ public partial class AdventureAvatarMenuScene
 			Name = "EnemyPreviewMargin",
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		margin.AddThemeConstantOverride("margin_left", 30);
-		margin.AddThemeConstantOverride("margin_top", 22);
-		margin.AddThemeConstantOverride("margin_right", 30);
-		margin.AddThemeConstantOverride("margin_bottom", 22);
+		margin.AddThemeConstantOverride("margin_left", 22);
+		margin.AddThemeConstantOverride("margin_top", 18);
+		margin.AddThemeConstantOverride("margin_right", 22);
+		margin.AddThemeConstantOverride("margin_bottom", 18);
 		panel.AddChild(margin);
 
 		var layout = new VBoxContainer
@@ -31,13 +31,13 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		layout.AddThemeConstantOverride("separation", 14);
+		layout.AddThemeConstantOverride("separation", 10);
 		margin.AddChild(layout);
 
 		var stageBadge = new PanelContainer
 		{
 			Name = "SelectedStageBadge",
-			CustomMinimumSize = new Vector2(118.0f, 54.0f),
+			CustomMinimumSize = new Vector2(104.0f, 46.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		stageBadge.AddThemeStyleboxOverride("panel", CreateBadgeStyle(new Color(0.9f, 0.94f, 0.56f)));
@@ -48,7 +48,7 @@ public partial class AdventureAvatarMenuScene
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		_previewStageLabel.AddThemeFontSizeOverride("font_size", 30);
+		_previewStageLabel.AddThemeFontSizeOverride("font_size", 26);
 		_previewStageLabel.AddThemeColorOverride("font_color", new Color(0.98f, 1.0f, 0.86f));
 		stageBadge.AddChild(_previewStageLabel);
 
@@ -64,7 +64,7 @@ public partial class AdventureAvatarMenuScene
 		{
 			Name = "PreviewFrame",
 			SizeFlagsVertical = SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0.0f, 228.0f),
+			CustomMinimumSize = new Vector2(0.0f, 200.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		previewFrame.AddThemeStyleboxOverride("panel", CreatePreviewFrameStyle());
@@ -75,7 +75,7 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		_previewAvatar = CreateAvatarView(CharacterAvatarCatalog.Default, 216.0f, 0.86f);
+		_previewAvatar = CreateAvatarView(CharacterAvatarCatalog.Default, 190.0f, 0.84f);
 		if (_previewAvatar != null)
 		{
 			_previewAvatar.Name = "PreviewAvatar";
@@ -92,14 +92,14 @@ public partial class AdventureAvatarMenuScene
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		_previewNameLabel.AddThemeFontSizeOverride("font_size", 34);
+		_previewNameLabel.AddThemeFontSizeOverride("font_size", 30);
 		_previewNameLabel.AddThemeColorOverride("font_color", new Color(0.98f, 1.0f, 0.93f));
 		_previewNameLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.92f));
 		_previewNameLabel.AddThemeConstantOverride("shadow_offset_x", 1);
 		_previewNameLabel.AddThemeConstantOverride("shadow_offset_y", 2);
 		layout.AddChild(_previewNameLabel);
 
-		_startButton = CreateActionButton("ADVENTURE_START", new Color(0.98f, 0.92f, 0.46f), StartAdventure, true, 244.0f);
+		_startButton = CreateActionButton("ADVENTURE_START", new Color(0.98f, 0.92f, 0.46f), StartAdventure, true, 224.0f);
 		var startWrap = new CenterContainer
 		{
 			Name = "StartWrap",

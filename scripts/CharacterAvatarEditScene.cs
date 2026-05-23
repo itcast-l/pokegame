@@ -22,7 +22,7 @@ public partial class CharacterAvatarEditScene : Control
 
 	public override void _Ready()
 	{
-		CurrentAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(CurrentAvatarId);
+		CurrentAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(CurrentAvatarId);
 
 		_backButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackButton");
 		_backButton.Pressed += RequestClose;
@@ -64,7 +64,7 @@ public partial class CharacterAvatarEditScene : Control
 		_avatarGrid.RemoveChild(template);
 		_optionPanels.Clear();
 
-		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
+		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.GetUnlockedAvatars())
 		{
 			Control option = (Control)template.Duplicate();
 			option.Name = $"{avatarDefinition.Id}AvatarOption";
@@ -97,7 +97,7 @@ public partial class CharacterAvatarEditScene : Control
 
 	private void SelectAvatar(string avatarId)
 	{
-		CurrentAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		CurrentAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(avatarId);
 		RefreshOptionSelection();
 		ApplyPreviewAvatar();
 	}

@@ -53,7 +53,7 @@ public partial class MainMenuScene : Control
 
 	private void OnAvatarSelected(string avatarId)
 	{
-		_selectedAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(avatarId);
 		ApplySelectedAvatar();
 		SaveSettings();
 	}

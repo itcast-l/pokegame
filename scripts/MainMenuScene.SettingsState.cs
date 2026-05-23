@@ -18,12 +18,13 @@ public partial class MainMenuScene
 		_oceanMotion = config.GetValue("video", "ocean_motion", DefaultOceanMotion).AsBool();
 		_motionScale = Mathf.Clamp(config.GetValue("video", "motion_scale", DefaultMotionScale).AsSingle(), 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(config.GetValue("general", "language", Localization.DefaultLanguagePreference).AsString());
-		_selectedAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(config.GetValue("general", "avatar", CharacterAvatarCatalog.DefaultAvatarId).AsString());
+		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(config.GetValue("general", "avatar", CharacterAvatarCatalog.DefaultAvatarId).AsString());
 	}
 
 	private void SaveSettings()
 	{
 		var config = new ConfigFile();
+		config.Load(SettingsConfigPath);
 		config.SetValue("audio", "master_volume", _masterVolume);
 		config.SetValue("audio", "music_volume", _musicVolume);
 		config.SetValue("audio", "mute", _muteAudio);

@@ -7,7 +7,7 @@ public partial class AdventureAvatarMenuScene
 		var panel = new PanelContainer
 		{
 			Name = "LevelListPanel",
-			CustomMinimumSize = new Vector2(480.0f, 0.0f),
+			CustomMinimumSize = new Vector2(410.0f, 0.0f),
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
@@ -18,10 +18,10 @@ public partial class AdventureAvatarMenuScene
 			Name = "LevelListMargin",
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		margin.AddThemeConstantOverride("margin_left", 18);
-		margin.AddThemeConstantOverride("margin_top", 18);
-		margin.AddThemeConstantOverride("margin_right", 18);
-		margin.AddThemeConstantOverride("margin_bottom", 18);
+		margin.AddThemeConstantOverride("margin_left", 14);
+		margin.AddThemeConstantOverride("margin_top", 14);
+		margin.AddThemeConstantOverride("margin_right", 14);
+		margin.AddThemeConstantOverride("margin_bottom", 14);
 		panel.AddChild(margin);
 
 		var scroll = new ScrollContainer
@@ -44,7 +44,7 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		levelList.AddThemeConstantOverride("separation", 10);
+		levelList.AddThemeConstantOverride("separation", 8);
 		scroll.AddChild(levelList);
 
 		_avatarFrames.Clear();
@@ -70,7 +70,7 @@ public partial class AdventureAvatarMenuScene
 		var frame = new OceanMenuButtonFrame
 		{
 			Name = $"{avatarDefinition.Id}LevelEntry",
-			CustomMinimumSize = new Vector2(0.0f, 76.0f),
+			CustomMinimumSize = new Vector2(0.0f, 68.0f),
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			AccentColor = accentColor,
 		};
@@ -83,10 +83,10 @@ public partial class AdventureAvatarMenuScene
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		contentMargin.SetAnchorsPreset(LayoutPreset.FullRect);
-		contentMargin.OffsetLeft = 22.0f;
-		contentMargin.OffsetTop = 8.0f;
-		contentMargin.OffsetRight = -22.0f;
-		contentMargin.OffsetBottom = -8.0f;
+		contentMargin.OffsetLeft = 18.0f;
+		contentMargin.OffsetTop = 6.0f;
+		contentMargin.OffsetRight = -18.0f;
+		contentMargin.OffsetBottom = -6.0f;
 		frame.AddChild(contentMargin);
 
 		var row = new HBoxContainer
@@ -94,13 +94,13 @@ public partial class AdventureAvatarMenuScene
 			Name = "EntryRow",
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		row.AddThemeConstantOverride("separation", 14);
+		row.AddThemeConstantOverride("separation", 10);
 		contentMargin.AddChild(row);
 
 		var badge = new PanelContainer
 		{
 			Name = "StageBadge",
-			CustomMinimumSize = new Vector2(54.0f, 54.0f),
+			CustomMinimumSize = new Vector2(48.0f, 48.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		badge.AddThemeStyleboxOverride("panel", CreateBadgeStyle(accentColor));
@@ -112,7 +112,7 @@ public partial class AdventureAvatarMenuScene
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		badgeLabel.AddThemeFontSizeOverride("font_size", 23);
+		badgeLabel.AddThemeFontSizeOverride("font_size", 21);
 		badgeLabel.AddThemeColorOverride("font_color", new Color(0.98f, 1.0f, 0.9f));
 		badge.AddChild(badgeLabel);
 		row.AddChild(badge);
@@ -120,10 +120,10 @@ public partial class AdventureAvatarMenuScene
 		var avatarAnchor = new CenterContainer
 		{
 			Name = "EntryAvatarAnchor",
-			CustomMinimumSize = new Vector2(58.0f, 58.0f),
+			CustomMinimumSize = new Vector2(50.0f, 50.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		CharacterAvatar? avatar = CreateAvatarView(avatarDefinition, 58.0f, 0.76f);
+		CharacterAvatar? avatar = CreateAvatarView(avatarDefinition, 50.0f, 0.74f);
 		if (avatar != null)
 		{
 			avatar.Name = "EntryAvatar";
@@ -141,7 +141,7 @@ public partial class AdventureAvatarMenuScene
 			ClipText = true,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		nameLabel.AddThemeFontSizeOverride("font_size", 26);
+		nameLabel.AddThemeFontSizeOverride("font_size", 24);
 		nameLabel.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
 		nameLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.92f));
 		nameLabel.AddThemeConstantOverride("shadow_offset_x", 1);
@@ -151,13 +151,13 @@ public partial class AdventureAvatarMenuScene
 		var arrowLabel = new Label
 		{
 			Name = "EntryArrow",
-			Text = ">>",
+			Text = ">",
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
-			CustomMinimumSize = new Vector2(34.0f, 0.0f),
+			CustomMinimumSize = new Vector2(26.0f, 0.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		arrowLabel.AddThemeFontSizeOverride("font_size", 23);
+		arrowLabel.AddThemeFontSizeOverride("font_size", 20);
 		arrowLabel.AddThemeColorOverride("font_color", new Color(accentColor.R, accentColor.G, accentColor.B, 0.82f));
 		row.AddChild(arrowLabel);
 

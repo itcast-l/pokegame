@@ -2,6 +2,26 @@ using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
+	private static StyleBoxFlat CreateMenuPanelStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.008f, 0.13f, 0.16f, 0.92f),
+			BorderColor = new Color(0.62f, 1.0f, 0.94f, 0.58f),
+			BorderWidthLeft = 2,
+			BorderWidthTop = 2,
+			BorderWidthRight = 2,
+			BorderWidthBottom = 2,
+			CornerRadiusTopLeft = 8,
+			CornerRadiusTopRight = 8,
+			CornerRadiusBottomLeft = 8,
+			CornerRadiusBottomRight = 8,
+			ShadowColor = new Color(0.0f, 0.02f, 0.04f, 0.72f),
+			ShadowSize = 22,
+			ShadowOffset = new Vector2(0.0f, 8.0f),
+		};
+	}
+
 	private static StyleBoxFlat CreatePanelStyle(float alpha)
 	{
 		return new StyleBoxFlat

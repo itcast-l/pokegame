@@ -24,6 +24,8 @@ public static class CharacterAvatarCatalog
 {
 	public const string SettingsConfigPath = "user://settings.cfg";
 	public const string DefaultAvatarId = "cat";
+	private const string AdventureProgressSection = "adventure";
+	private const string HighestCompletedStageKey = "highest_completed_stage";
 
 	private static readonly CharacterAvatarDefinition[] Avatars =
 	{
@@ -65,6 +67,96 @@ public static class CharacterAvatarCatalog
 		return GetById(avatarId).Id;
 	}
 
+	public static string NormalizeUnlockedAvatarId(string avatarId)
+	{
+		string normalized = NormalizeAvatarId(avatarId);
+		return IsAvatarUnlocked(normalized) ? normalized : DefaultAvatarId;
+	}
+
+	public static IReadOnlyList<CharacterAvatarDefinition> GetUnlockedAvatars()
+	{
+		var unlockedAvatars = new List<CharacterAvatarDefinition> { Default };
+		int highestCompletedStage = LoadHighestCompletedAdventureStage();
+		for (int avatarIndex = 1; avatarIndex < Avatars.Length; avatarIndex++)
+		{
+			if (avatarIndex <= highestCompletedStage)
+			{
+				unlockedAvatars.Add(Avatars[avatarIndex]);
+			}
+		}
+
+		return unlockedAvatars;
+	}
+
+	public static bool IsAvatarUnlocked(string avatarId)
+	{
+		string normalized = NormalizeAvatarId(avatarId);
+		if (normalized == DefaultAvatarId)
+		{
+			return true;
+		}
+
+		int stageNumber = GetAdventureStageNumber(normalized);
+		return stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage();
+	}
+
+	public static int GetAdventureStageNumber(string avatarId)
+	{
+		string normalized = NormalizeAvatarId(avatarId);
+		for (int avatarIndex = 1; avatarIndex < Avatars.Length; avatarIndex++)
+		{
+			if (string.Equals(Avatars[avatarIndex].Id, normalized, StringComparison.Ordinal))
+			{
+				return avatarIndex;
+			}
+		}
+
+		return 0;
+	}
+
+	public static int LoadHighestCompletedAdventureStage()
+	{
+		var config = new ConfigFile();
+		Error loadResult = config.Load(SettingsConfigPath);
+		if (loadResult != Error.Ok)
+		{
+			return 0;
+		}
+
+		int highestCompletedStage = config.GetValue(AdventureProgressSection, HighestCompletedStageKey, 0).AsInt32();
+		return Mathf.Clamp(highestCompletedStage, 0, Avatars.Length - 1);
+	}
+
+	public static void RecordAdventureVictory(string enemyAvatarId)
+	{
+		int stageNumber = GetAdventureStageNumber(enemyAvatarId);
+		if (stageNumber <= 0)
+		{
+			return;
+		}
+
+		var config = new ConfigFile();
+		Error loadResult = config.Load(SettingsConfigPath);
+		if (loadResult != Error.Ok && loadResult != Error.FileNotFound)
+		{
+			GD.PushWarning($"Failed to load settings for adventure progress: {loadResult}");
+			return;
+		}
+
+		int previousHighestStage = config.GetValue(AdventureProgressSection, HighestCompletedStageKey, 0).AsInt32();
+		if (stageNumber <= previousHighestStage)
+		{
+			return;
+		}
+
+		config.SetValue(AdventureProgressSection, HighestCompletedStageKey, stageNumber);
+		Error saveResult = config.Save(SettingsConfigPath);
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to save adventure progress: {saveResult}");
+		}
+	}
+
 	public static int GetIdleFrameCount(string avatarRoot)
 	{
 		foreach (CharacterAvatarDefinition avatar in Avatars)
@@ -101,7 +193,7 @@ public static class CharacterAvatarCatalog
 		}
 
 		string avatarId = config.GetValue("general", "avatar", DefaultAvatarId).AsString();
-		return GetById(avatarId);
+		return GetById(NormalizeUnlockedAvatarId(avatarId));
 	}
 
 }
