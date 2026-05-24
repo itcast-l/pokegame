@@ -63,7 +63,7 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayTableCardPointPopupAsync(int tableCardIndex, int points, bool isDoubleScore = false)
+	private async Task PlayTableCardPointPopupAsync(int tableCardIndex, int points, bool isDoubleScore = false, bool isDamage = false)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -79,7 +79,7 @@ public partial class GameBoardScene
 		var pointLabel = new Label
 		{
 			Name = "TableCardPointPopup",
-			Text = $"+{points}",
+			Text = points == 0 ? "0" : $"{(isDamage ? "-" : "+")}{points}",
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
@@ -87,7 +87,7 @@ public partial class GameBoardScene
 			ZIndex = TableCardPointPopupZIndex,
 		};
 		pointLabel.AddThemeFontSizeOverride("font_size", isDoubleScore ? TableCardPointPopupDoubleFontSize : TableCardPointPopupFontSize);
-		pointLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.94f, 0.56f));
+		pointLabel.AddThemeColorOverride("font_color", isDamage ? new Color(1.0f, 0.42f, 0.32f) : new Color(1.0f, 0.94f, 0.56f));
 		pointLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.82f));
 		pointLabel.AddThemeConstantOverride("shadow_offset_x", 2);
 		pointLabel.AddThemeConstantOverride("shadow_offset_y", 2);
@@ -140,6 +140,11 @@ public partial class GameBoardScene
 			}
 
 			TableCard tableCard = _tableCards[tableCardIndex];
+			if (tableCard.IsBuriedInSand)
+			{
+				continue;
+			}
+
 			bool isScoringCardIndex = IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex) || isExtraCapturedIndex;
 			if (scoringCardsOnly && (!isScoringCardIndex || !tableCard.Card.HasValue))
 			{
@@ -221,6 +226,11 @@ public partial class GameBoardScene
 
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
+			if (_tableCards[tableCardIndex].IsBuriedInSand)
+			{
+				continue;
+			}
+
 			if (IsQuestionOnlyTableCard(_tableCards[tableCardIndex]))
 			{
 				continue;
@@ -234,6 +244,11 @@ public partial class GameBoardScene
 			{
 				if (tableCardIndex >= 0 && tableCardIndex < _tableCards.Count)
 				{
+					if (_tableCards[tableCardIndex].IsBuriedInSand)
+					{
+						continue;
+					}
+
 					if (IsQuestionOnlyTableCard(_tableCards[tableCardIndex]))
 					{
 						continue;

@@ -1,3 +1,0 @@
-Deterministic low-key animation derived from draw_card/run-002/processed/clean.png.
-
-Keep the card body, border, center draw-card deck-and-rising-card icon, gold outline, and main glow fixed in every frame. Only the small purple sparkles around the icon twinkle and move by a few pixels. Avoid card wobble, scaling, rotation, icon changes, large new effects, or extra visual clutter. Output transparent game-ready frames.

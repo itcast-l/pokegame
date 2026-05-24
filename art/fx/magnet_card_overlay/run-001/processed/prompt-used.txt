@@ -1,1 +1,0 @@
-single transparent magnet overlay for attached basic playing card; generated with test-image from project magnet reference

@@ -61,7 +61,7 @@ public partial class GameBoardScene
 
 	private string GetPlayerScoreTooltip(int playerIndex)
 	{
-		return LocalizeFormat("GAME_PLAYER_SCORE", playerIndex + 1, _playerScores[playerIndex], _winningScore);
+		return LocalizeFormat("GAME_PLAYER_SCORE", playerIndex + 1, _playerScores[playerIndex], GetScoreLimit());
 	}
 
 	private static bool LooksLikeLocalizationKey(string value)

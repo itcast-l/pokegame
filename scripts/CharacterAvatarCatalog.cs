@@ -4,13 +4,22 @@ using Godot;
 
 public sealed class CharacterAvatarDefinition
 {
-	public CharacterAvatarDefinition(string id, string displayName, string rootPath, int idleFrameCount, int actionFrameCount = 4)
+	public CharacterAvatarDefinition(
+		string id,
+		string displayName,
+		string rootPath,
+		int idleFrameCount,
+		int actionFrameCount = 4,
+		string adventureAbilityNameKey = "ADVENTURE_ABILITY_NONE_NAME",
+		string adventureAbilityDescriptionKey = "ADVENTURE_ABILITY_NONE_DESC")
 	{
 		Id = id;
 		DisplayName = displayName;
 		RootPath = rootPath;
 		IdleFrameCount = idleFrameCount;
 		ActionFrameCount = actionFrameCount;
+		AdventureAbilityNameKey = adventureAbilityNameKey;
+		AdventureAbilityDescriptionKey = adventureAbilityDescriptionKey;
 	}
 
 	public string Id { get; }
@@ -18,6 +27,8 @@ public sealed class CharacterAvatarDefinition
 	public string RootPath { get; }
 	public int IdleFrameCount { get; }
 	public int ActionFrameCount { get; }
+	public string AdventureAbilityNameKey { get; }
+	public string AdventureAbilityDescriptionKey { get; }
 }
 
 public static class CharacterAvatarCatalog
@@ -34,17 +45,17 @@ public static class CharacterAvatarCatalog
 		new("fish", "阿布", "res://art/characters/player_fish_avatar/run-001", 1),
 		new("lanternfish", "米露", "res://art/characters/player_lanternfish_avatar/run-001", 1),
 		new("shrimp", "皮皮", "res://art/characters/player_shrimp_avatar/run-001", 1),
-		new("crab", "嘟嘟", "res://art/characters/player_crab_avatar/run-001", 1),
-		new("jellyfish", "软糖", "res://art/characters/player_jellyfish_avatar/run-001", 1),
-		new("manta_ray", "悠悠", "res://art/characters/player_manta_ray_avatar/run-001", 1),
-		new("garden_eel", "阿豆", "res://art/characters/player_garden_eel_avatar/run-001", 1),
-		new("sea_slug", "糯米", "res://art/characters/player_sea_slug_avatar/run-001", 1),
-		new("nautilus", "罗米", "res://art/characters/player_nautilus_avatar/run-001", 1),
-		new("narwhal", "诺亚", "res://art/characters/player_narwhal_avatar/run-001", 1),
-		new("leafy_seadragon", "艾莉", "res://art/characters/player_leafy_seadragon_avatar/run-001", 1),
-		new("dragon_prince_j", "杰伊 J", "res://art/characters/player_dragon_prince_avatar/run-001", 12, 12),
-		new("dragon_queen_q", "奎娜 Q", "res://art/characters/player_dragon_queen_avatar/run-001", 12, 12),
-		new("boss_k", "凯撒 K", "res://art/characters/boss_k_avatar/run-001", 12, 12),
+		new("crab", "嘟嘟", "res://art/characters/player_crab_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_TIDE_GUARD_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_TIDE_GUARD_DESC"),
+		new("jellyfish", "软糖", "res://art/characters/player_jellyfish_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_BUBBLE_COVER_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_BUBBLE_COVER_DESC"),
+		new("manta_ray", "悠悠", "res://art/characters/player_manta_ray_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_TIDE_SHIFT_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_TIDE_SHIFT_DESC"),
+		new("garden_eel", "阿豆", "res://art/characters/player_garden_eel_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_SAND_AMBUSH_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_SAND_AMBUSH_DESC"),
+		new("sea_slug", "糯米", "res://art/characters/player_sea_slug_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_COLOR_CURRENT_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_COLOR_CURRENT_DESC"),
+		new("nautilus", "罗米", "res://art/characters/player_nautilus_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_SPIRAL_SHELL_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_SPIRAL_SHELL_DESC"),
+		new("narwhal", "诺亚", "res://art/characters/player_narwhal_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_TUSK_BREAK_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_TUSK_BREAK_DESC"),
+		new("leafy_seadragon", "艾莉", "res://art/characters/player_leafy_seadragon_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_LEAFY_MIRAGE_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_LEAFY_MIRAGE_DESC"),
+		new("dragon_prince_j", "杰伊 J", "res://art/characters/player_dragon_prince_avatar/run-001", 12, 12, "ADVENTURE_ABILITY_DRAGON_J_NAME", "ADVENTURE_ABILITY_DRAGON_J_DESC"),
+		new("dragon_queen_q", "奎娜 Q", "res://art/characters/player_dragon_queen_avatar/run-001", 12, 12, "ADVENTURE_ABILITY_DRAGON_Q_NAME", "ADVENTURE_ABILITY_DRAGON_Q_DESC"),
+		new("boss_k", "凯撒 K", "res://art/characters/boss_k_avatar/run-001", 12, 12, "ADVENTURE_ABILITY_DRAGON_K_NAME", "ADVENTURE_ABILITY_DRAGON_K_DESC"),
 	};
 
 	public static IReadOnlyList<CharacterAvatarDefinition> All => Avatars;
@@ -54,7 +65,8 @@ public static class CharacterAvatarCatalog
 	{
 		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
-			if (string.Equals(avatar.Id, avatarId, StringComparison.Ordinal))
+			if (string.Equals(avatar.Id, avatarId, StringComparison.Ordinal)
+				|| string.Equals(avatar.DisplayName, avatarId, StringComparison.Ordinal))
 			{
 				return avatar;
 			}

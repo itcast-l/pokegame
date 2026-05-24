@@ -1,7 +1,0 @@
-Generate a PNG image now using the image_generation tool.
-
-Input image 1 is the exact layout reference for the card identity. Preserve this exact playing card identity: Eight of Spades. Keep the same rank corner labels, same suit family, and for number cards keep the same pip count and general pip arrangement as input image 1. Input image 2 is only the accepted ocean art style reference; use its pearl white card face, coral border, teal wave ornaments, bubble accents, deep ocean ink, and clean HD 2D Godot asset look. Do not copy input image 2's Ace rank unless this requested card is an Ace.
-
-Create exactly one centered ocean-themed Eight of Spades playing card for a Godot 2D card game. The card must remain upright, fully visible, isolated, and readable when scaled to 128x128. Use a pearly white card face, thin coral-and-shell border, subtle teal wave pattern, small bubbles, faint sea-glass highlights, and restrained underwater colors. The suit marks should be deep navy spade, subtly shaped like a manta ray or tidepool silhouette while still unmistakably a spade. Keep the card compact and square-framed like the layout reference.
-
-Production constraints: one card only, no sheet grid, no extra cards, no hand, no table, no background scene, no UI. Background must be solid flat magenta #FF00FF for chroma-key processing. No gradients or texture in the magenta background. No text beyond the required rank label 8 and suit symbols. No J, Q, or K letters. No wrong rank, no wrong suit, no duplicated side-by-side cards.

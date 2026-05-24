@@ -251,7 +251,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 
 	private bool IsFixedDuringTableShuffleByData(TableCard tableCard)
 	{
-		return IsItemTag(tableCard, CardTags.Fixed);
+		return tableCard.IsBuriedInSand || IsItemTag(tableCard, CardTags.Fixed);
 	}
 
 	private sealed class SpecialCardEffectResolver
@@ -272,7 +272,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 				CardEffectTypes.AttachModifier => await _runtime.ResolveAttachModifierEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.RevealCards => await _runtime.ResolveRevealCardsEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.ShuffleTable => await _runtime.ResolveShuffleTableEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.CollectTable => _runtime.ResolveCollectTableEffect(request),
+				CardEffectTypes.CollectTable => await _runtime.ResolveCollectTableEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.StealCard => _runtime.ResolveStealCardEffect(request),
 				CardEffectTypes.StealDeckCards => _runtime.ResolveStealDeckCardsEffect(request),
 				CardEffectTypes.DoubleCollect => await _runtime.ResolveDoubleCollectEffectAsync(request, turnSequenceGeneration),

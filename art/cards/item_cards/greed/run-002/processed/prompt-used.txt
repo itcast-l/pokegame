@@ -1,5 +1,0 @@
-Use the input image as the visual reference for the card proportions, front-facing flat orthographic view, warm ivory card face, thin black outer border, slightly rounded corners, decorative black-and-gold inner frame, and restrained magical accent style. Redesign the center icon into a clean game-ready greed item card in the same style family.
-
-Keep the card simple and iconic: one bold black tied money bag silhouette, rounded pouch body with a small tied neck, a crisp antique-gold outline, and a very subtle blue-violet glow contained on the card face. Add only a few tiny purple sparkles around the pouch mouth to support later twinkle animation.
-
-No dollar sign, no coin symbol, no suit symbols, no corner rank markers, no numbers, no words, no face, no hands, no extra ornaments, no decorative clutter, no perspective tilt, no hand, no table, no shadow outside the card. Keep the card fully inside the canvas with generous magenta margin. Background must be solid flat magenta #FF00FF for transparent-background cleanup.

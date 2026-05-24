@@ -1,5 +1,0 @@
-Use the input image as the visual reference for the card proportions, front-facing flat orthographic view, warm ivory card face, thin black outer border, slightly rounded corners, decorative black-and-gold inner frame, and restrained magical accent style. Redesign the center icon into a clean game-ready lens item card in the same style family.
-
-Keep the card simple and iconic: one bold black magnifying glass silhouette with a round lens and short diagonal handle, a crisp antique-gold outline, and a very subtle blue-violet glow contained on the card face. Add only a few tiny purple sparkles near the lens edge to support later twinkle animation.
-
-No suit symbols, no corner rank markers, no numbers, no letters, no words, no extra ornaments, no decorative clutter, no perspective tilt, no hand, no table, no shadow outside the card. Keep the card fully inside the canvas with generous magenta margin. Background must be solid flat magenta #FF00FF for transparent-background cleanup.

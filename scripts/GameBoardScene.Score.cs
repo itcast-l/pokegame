@@ -4,6 +4,7 @@ using Godot;
 public partial class GameBoardScene
 {
 	private const int DefaultWinningScore = 100;
+	private const int AdventureStartingHealth = 100;
 	private static readonly string[] ScoreMeterNodeNames =
 	{
 		"Player1ScoreMeter",
@@ -51,7 +52,7 @@ public partial class GameBoardScene
 
 			meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
-			meter.SetScore(0, _winningScore, false);
+			meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(), false);
 			_playerScoreMeters[playerIndex] = meter;
 			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[playerIndex]}");
 		}
@@ -59,9 +60,9 @@ public partial class GameBoardScene
 
 	private void ResetPlayerScores()
 	{
-		Array.Clear(_playerScores, 0, _playerScores.Length);
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
+			_playerScores[playerIndex] = GetStartingPlayerScore(playerIndex);
 			UpdatePlayerScoreMeter(playerIndex, false);
 		}
 	}
@@ -70,6 +71,24 @@ public partial class GameBoardScene
 	{
 		if (playerIndex < 0 || playerIndex >= _playerScores.Length || points <= 0)
 		{
+			return;
+		}
+
+		if (adventure_mode)
+		{
+			int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(playerIndex);
+			if (damageTargetPlayerIndex < 0 || damageTargetPlayerIndex >= _playerScores.Length)
+			{
+				return;
+			}
+
+			_playerScores[damageTargetPlayerIndex] = Math.Max(0, _playerScores[damageTargetPlayerIndex] - points);
+			UpdatePlayerScoreMeter(damageTargetPlayerIndex, true);
+			PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
+			if (damageTargetPlayerIndex != playerIndex)
+			{
+				PlayPlayerAvatarAction(damageTargetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+			}
 			return;
 		}
 
@@ -92,17 +111,58 @@ public partial class GameBoardScene
 		}
 
 		meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
-		meter.SetScore(_playerScores[playerIndex], _winningScore, animate);
+		meter.SetScore(_playerScores[playerIndex], GetScoreLimit(), animate);
 	}
 
 	private int GetScoreWinnerPlayerIndex()
 	{
+		if (adventure_mode)
+		{
+			return GetAdventureWinnerPlayerIndex();
+		}
+
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
 			if (_playerScores[playerIndex] >= _winningScore)
 			{
 				return playerIndex;
 			}
+		}
+
+		return -1;
+	}
+
+	private int GetStartingPlayerScore(int playerIndex)
+	{
+		return adventure_mode && playerIndex < player_count ? AdventureStartingHealth : 0;
+	}
+
+	private int GetScoreLimit()
+	{
+		return adventure_mode ? AdventureStartingHealth : _winningScore;
+	}
+
+	private int GetAdventureDamageTargetPlayerIndex(int sourcePlayerIndex)
+	{
+		if (sourcePlayerIndex < 0 || sourcePlayerIndex >= player_count || player_count <= 1)
+		{
+			return sourcePlayerIndex;
+		}
+
+		return GetNextTurnPlayerIndex(sourcePlayerIndex);
+	}
+
+	private int GetAdventureWinnerPlayerIndex()
+	{
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			if (_playerScores[playerIndex] > 0)
+			{
+				continue;
+			}
+
+			int winnerPlayerIndex = GetAdventureDamageTargetPlayerIndex(playerIndex);
+			return winnerPlayerIndex >= 0 && winnerPlayerIndex < player_count ? winnerPlayerIndex : -1;
 		}
 
 		return -1;
@@ -121,5 +181,28 @@ public partial class GameBoardScene
 			"J" or "Q" or "K" => 10,
 			_ => 0,
 		};
+	}
+
+	private int GetCapturedCardScoreValueForPlayer(PlayingCard card, int scorePlayerIndex, bool hasDoubleEffect)
+	{
+		int points = GetCardScoreValue(card);
+		if (hasDoubleEffect)
+		{
+			points *= 2;
+		}
+
+		if (ShouldApplyCrabScoreReduction(scorePlayerIndex))
+		{
+			points = Math.Max(0, points - CrabScoreReductionPerCard);
+		}
+
+		return points;
+	}
+
+	private bool ShouldApplyCrabScoreReduction(int scorePlayerIndex)
+	{
+		return adventure_mode
+			&& scorePlayerIndex == MainPlayerIndex
+			&& adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId;
 	}
 }

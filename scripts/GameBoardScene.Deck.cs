@@ -25,6 +25,17 @@ public partial class GameBoardScene
 		_questionCardRefreshAnchorPlayerIndex = -1;
 		_pendingItemAttachmentRewards.Clear();
 		_hiddenHandDisplaySlots.Clear();
+		_mantaRayTideShiftCheckedThisTurn = false;
+		_jellyfishBubbleTriggeredThisTurn = false;
+		_jellyfishHiddenMainPlayerHandSlotIndex = -1;
+		_gardenEelCaptureCountUntilSandAmbush = 0;
+		_gardenEelSandAmbushReady = false;
+		_gardenEelBuriedTableCardIndex = -1;
+		_nautilusMainPlayerCaptureCountUntilBomb = 0;
+		_narwhalCaptureCountUntilDouble = 0;
+		_narwhalDoubleReady = false;
+		_leafySeadragonBladeBreakCooldownTurns = 0;
+		_dragonPrinceJackUsed = false;
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();

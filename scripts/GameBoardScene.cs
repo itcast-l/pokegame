@@ -16,6 +16,10 @@ public partial class GameBoardScene : Control
 	private const float CardBackAnimationFps = 6.0f;
 	private const string ScoreFillEffectFramePattern = "res://art/fx/score_fill_orbs/run-001/processed/fx-{0}.png";
 	private const int ScoreFillEffectFrameCount = 4;
+	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
+	private const string FishAdventureDamageEffectFramePattern = "res://art/fx/fish_attack_burst/run-001/processed/fx-{0}.png";
+	private const string LanternfishAdventureDamageEffectFramePattern = "res://art/fx/lanternfish_lure_flash/run-001/processed/fx-{0}.png";
+	private const int AdventureDamageEffectFrameCount = 4;
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
 	private const int QuestionCardTransformFrameCount = 6;
 	private const string SpecialCardTriggerEffectFramePattern = "res://art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/processed/fx-{0}.png";
@@ -42,6 +46,25 @@ public partial class GameBoardScene : Control
 	private const string JackItemCardId = ItemCardCatalog.JackItemCardId;
 	private const string QueenItemCardId = ItemCardCatalog.QueenItemCardId;
 	private const string KingItemCardId = ItemCardCatalog.KingItemCardId;
+	private const string FishAdventureEnemyAvatarId = "fish";
+	private const string LanternfishAdventureEnemyAvatarId = "lanternfish";
+	private const string CrabAdventureEnemyAvatarId = "crab";
+	private const string JellyfishAdventureEnemyAvatarId = "jellyfish";
+	private const string GardenEelAdventureEnemyAvatarId = "garden_eel";
+	private const string SeaSlugAdventureEnemyAvatarId = "sea_slug";
+	private const string NautilusAdventureEnemyAvatarId = "nautilus";
+	private const string NarwhalAdventureEnemyAvatarId = "narwhal";
+	private const string LeafySeadragonAdventureEnemyAvatarId = "leafy_seadragon";
+	private const string DragonPrinceAdventureEnemyAvatarId = "dragon_prince_j";
+	private const string DragonQueenAdventureEnemyAvatarId = "dragon_queen_q";
+	private const string BossKAdventureEnemyAvatarId = "boss_k";
+	private const int CrabScoreReductionPerCard = 2;
+	private const int GardenEelCapturesBeforeSandAmbush = 2;
+	private const int NautilusCapturesBeforeBomb = 3;
+	private const int NarwhalCapturesBeforeDouble = 2;
+	private const int LeafySeadragonBladeBreakTableCardThreshold = 5;
+	private const int LeafySeadragonBladeBreakCooldownTurns = 1;
+	private const int DragonRoyalCaptureThreshold = 5;
 	private const string CardNamePrefix = "Card_";
 	private const string CardBackAnimatedMeta = "ocean_card_back_animated";
 	private const string HandCardSlotMeta = "ocean_hand_card_slot";
@@ -97,6 +120,8 @@ public partial class GameBoardScene : Control
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
 	private readonly List<Texture2D> _cardBackFrames = new();
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
+	private readonly List<Texture2D> _adventureDamageEffectFrames = new();
+	private readonly List<Texture2D> _adventureEnemyDamageEffectFrames = new();
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
 	private readonly List<Texture2D> _specialCardTriggerEffectFrames = new();
 	private readonly List<Texture2D> _bombPairDestroyEffectFrames = new();
@@ -144,6 +169,17 @@ public partial class GameBoardScene : Control
 	private bool _itemMode = true;
 	private bool _adventureMode;
 	private string _adventureEnemyAvatarId = "fish";
+	private bool _mantaRayTideShiftCheckedThisTurn;
+	private bool _jellyfishBubbleTriggeredThisTurn;
+	private int _jellyfishHiddenMainPlayerHandSlotIndex = -1;
+	private int _gardenEelCaptureCountUntilSandAmbush;
+	private bool _gardenEelSandAmbushReady;
+	private int _gardenEelBuriedTableCardIndex = -1;
+	private int _nautilusMainPlayerCaptureCountUntilBomb;
+	private int _narwhalCaptureCountUntilDouble;
+	private bool _narwhalDoubleReady;
+	private int _leafySeadragonBladeBreakCooldownTurns;
+	private bool _dragonPrinceJackUsed;
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
 	private int _winnerPlayerIndex = -1;
@@ -209,7 +245,20 @@ public partial class GameBoardScene : Control
 	public string adventure_enemy_avatar_id
 	{
 		get => _adventureEnemyAvatarId;
-		set => _adventureEnemyAvatarId = NormalizeAdventureEnemyAvatarId(value);
+		set
+		{
+			string normalized = NormalizeAdventureEnemyAvatarId(value);
+			if (_adventureEnemyAvatarId == normalized)
+			{
+				return;
+			}
+
+			_adventureEnemyAvatarId = normalized;
+			if (IsInsideTree())
+			{
+				LoadAdventureEnemyDamageEffectTextures();
+			}
+		}
 	}
 
 	[Export]
@@ -235,6 +284,8 @@ public partial class GameBoardScene : Control
 		_effectResolver = new SpecialCardEffectResolver(this);
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
+		LoadAdventureDamageEffectTextures();
+		LoadAdventureEnemyDamageEffectTextures();
 		LoadItemCardTextures();
 		LoadItemCardEnabledStates();
 		LoadAttachmentCardOverlayTextures();

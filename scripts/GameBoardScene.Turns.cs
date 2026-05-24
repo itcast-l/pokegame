@@ -18,7 +18,36 @@ public partial class GameBoardScene
 			while (turnSequenceGeneration == _turnSequenceGeneration && _currentTurnPlayerIndex != MainPlayerIndex && !IsGameOver())
 			{
 				int playerIndex = _currentTurnPlayerIndex;
-				if (playerIndex >= player_count || !PlayerHasPlayableHandCards(playerIndex))
+				if (playerIndex >= player_count)
+				{
+					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					continue;
+				}
+
+				ClearGardenEelBuriedCardIfNeeded(playerIndex);
+				await ResolveAdventureEnemyTurnStartAbilityAsync(playerIndex, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return;
+				}
+
+				PlayCardResult turnStartResult = await ResolveDragonPrinceJackTurnStartAsync(playerIndex, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return;
+				}
+
+				if (turnStartResult.Played)
+				{
+					if (turnStartResult.CompletesTurn)
+					{
+						await AdvanceTurnAfterPlayedResultAsync(playerIndex, turnStartResult);
+					}
+
+					continue;
+				}
+
+				if (!PlayerHasPlayableHandCards(playerIndex))
 				{
 					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
 					continue;
@@ -162,6 +191,14 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
+		if (ShouldGardenEelBuryNextPlayedCard(playerIndex) && _playerHands[playerIndex].Count > 0)
+		{
+			return await PlayCardFromHandAsync(
+				playerIndex,
+				_rng.RandiRange(0, _playerHands[playerIndex].Count - 1),
+				turnSequenceGeneration);
+		}
+
 		int selectedIndex = _rng.RandiRange(0, playableCount - 1);
 		if (selectedIndex < _playerHands[playerIndex].Count)
 		{
@@ -172,10 +209,84 @@ public partial class GameBoardScene
 		return await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
 	}
 
+	private async Task ResolveAdventureEnemyTurnStartAbilityAsync(int playerIndex, int turnSequenceGeneration)
+	{
+		if (IsMantaRayTideShiftEnemyTurn(playerIndex))
+		{
+			if (_mantaRayTideShiftCheckedThisTurn)
+			{
+				return;
+			}
+
+			_mantaRayTideShiftCheckedThisTurn = true;
+		}
+
+		if (!ShouldResolveMantaRayTideShift(playerIndex))
+		{
+			return;
+		}
+
+		TableCard tideShiftedCard = _tableCards[0];
+		Texture2D? triggerTexture = GetVisibleTableCardTexture(tideShiftedCard);
+		if (triggerTexture != null)
+		{
+			PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
+			List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+			if (cardPositions.Count > 0)
+			{
+				await PlaySpecialCardTriggerEffectAsync(triggerTexture, _centerArena.GlobalPosition + cardPositions[0], 0);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))
+				{
+					return;
+				}
+			}
+		}
+
+		_tableCards.RemoveAt(0);
+		_tableCards.Add(tideShiftedCard);
+		RenderTableCards();
+	}
+
+	private bool ShouldResolveMantaRayTideShift(int playerIndex)
+	{
+		return adventure_mode
+			&& playerIndex == 1
+			&& _mantaRayTideShiftCheckedThisTurn
+			&& IsMantaRayTideShiftEnemyTurn(playerIndex)
+			&& _tableCards.Count >= 4;
+	}
+
+	private bool IsMantaRayTideShiftEnemyTurn(int playerIndex)
+	{
+		return playerIndex == 1
+			&& CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) == 6
+			&& _currentTurnPlayerIndex == playerIndex;
+	}
+
+	private void ResetMantaRayTideShiftTurnStateIfNeeded(int previousPlayerIndex)
+	{
+		if (!adventure_mode
+			|| CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) != 6
+			|| previousPlayerIndex == 1
+			|| _currentTurnPlayerIndex != 1)
+		{
+			return;
+		}
+
+		_mantaRayTideShiftCheckedThisTurn = false;
+	}
+
 	private int AddBombCardToTable(ItemCard bombCard, int ownerPlayerIndex)
 	{
 		_tableCards.Add(new TableCard(null, false, bombCard, ownerPlayerIndex));
 		return _tableCards.Count - 1;
+	}
+
+	private int InsertBombCardIntoTable(ItemCard bombCard, int ownerPlayerIndex, int tableCardIndex)
+	{
+		int clampedIndex = Mathf.Clamp(tableCardIndex, 0, _tableCards.Count);
+		_tableCards.Insert(clampedIndex, new TableCard(null, false, bombCard, ownerPlayerIndex));
+		return clampedIndex;
 	}
 
 	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
@@ -185,6 +296,8 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ClearJellyfishBubbleIfMainPlayerTurnCompleted(playerIndex, result);
+
 		if (_questionCardRefreshAnchorPlayerIndex < 0)
 		{
 			_completedTurnsSinceQuestionCardRefresh = 0;
@@ -192,6 +305,14 @@ public partial class GameBoardScene
 		}
 
 		_currentTurnPlayerIndex = result.Captured ? playerIndex : GetNextTurnPlayerIndex(playerIndex);
+		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result);
+		if (IsGameOver())
+		{
+			return;
+		}
+
+		ResetMantaRayTideShiftTurnStateIfNeeded(playerIndex);
+		ResetJellyfishBubbleTurnStateIfNeeded(playerIndex);
 		if (!result.Captured)
 		{
 			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter(_currentTurnPlayerIndex);
@@ -288,6 +409,11 @@ public partial class GameBoardScene
 		if (scoreWinnerPlayerIndex >= 0)
 		{
 			DeclareWinner(scoreWinnerPlayerIndex);
+			return;
+		}
+
+		if (adventure_mode)
+		{
 			return;
 		}
 

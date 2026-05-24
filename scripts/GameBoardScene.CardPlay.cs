@@ -19,7 +19,9 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = hand[handIndex];
-		bool playedJackCollectsTable = ShouldJackCollectTable(playedCard) && _tableCards.Count > 0;
+		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, playedCard);
+		bool buryPlayedCardInSand = ShouldGardenEelBuryNextPlayedCard(playerIndex);
+		bool playedJackCollectsTable = !buryPlayedCardInSand && ShouldJackCollectTable(playedCard) && _tableCards.Count > 0;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, hand.Count, handArea.Size, cardOffset);
@@ -34,8 +36,14 @@ public partial class GameBoardScene
 		}
 
 		hand.RemoveAt(handIndex);
-		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped);
+		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, handIndex);
+		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped, buryPlayedCardInSand);
 		int playedTableCardIndex = _tableCards.Count - 1;
+		if (buryPlayedCardInSand)
+		{
+			MarkGardenEelBuriedCard(playedTableCardIndex);
+		}
+
 		if (playedJackCollectsTable)
 		{
 			captureStartIndex = 0;
@@ -78,6 +86,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 		if (captureStartIndex >= 0)
 		{
+			int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
 			await ToSignal(GetTree().CreateTimer(TableCaptureDelaySeconds), SceneTreeTimer.SignalName.Timeout);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
@@ -86,6 +95,7 @@ public partial class GameBoardScene
 
 			await RevealCapturedBaseCardsFromBottomAsync(
 				captureStartIndex,
+				scorePlayerIndex,
 				turnSequenceGeneration,
 				pendingFaceUpMagnetTriggerIndexes,
 				resolvedMagnetTriggerIndexes,
@@ -121,8 +131,7 @@ public partial class GameBoardScene
 			}
 
 			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, false, magnetExtraCaptureIndexes);
-			int collectedPoints = GetCapturedTablePoints(captureStartIndex, magnetExtraCaptureIndexes);
-			int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
+			int collectedPoints = GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes);
 			if (collectedPoints > 0)
 			{
 				List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, true, magnetExtraCaptureIndexes);
@@ -143,13 +152,14 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			int collectedCardCount = CaptureTableCards(
+			CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
 				playerIndex,
 				captureStartIndex,
 				true,
 				false,
-				out QuestionCardRewardAnimation? questionRewardAnimation,
+				turnSequenceGeneration,
 				magnetExtraCaptureIndexes);
+			int collectedCardCount = captureResult.CollectedCardCount;
 			if (IsGameOver())
 			{
 				return new PlayCardResult(true, true, collectedCardCount > 0);
@@ -159,9 +169,9 @@ public partial class GameBoardScene
 			Cut(_playerDecks[playerIndex]);
 			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			RenderTableCards();
-			if (questionRewardAnimation.HasValue && !questionRewardAnimation.Value.RequiresMagnetAttachment)
+			if (captureResult.QuestionRewardAnimation.HasValue && !captureResult.QuestionRewardAnimation.Value.RequiresMagnetAttachment)
 			{
-				HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + questionRewardAnimation.Value.ItemHandIndex);
+				HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + captureResult.QuestionRewardAnimation.Value.ItemHandIndex);
 			}
 
 			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
@@ -170,7 +180,7 @@ public partial class GameBoardScene
 				return new PlayCardResult(false, false);
 			}
 
-			await PlayQuestionCardRewardAnimationAsync(playerIndex, questionRewardAnimation, turnSequenceGeneration);
+			await PlayQuestionCardRewardAnimationAsync(playerIndex, captureResult.QuestionRewardAnimation, turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return new PlayCardResult(false, false);
@@ -199,6 +209,7 @@ public partial class GameBoardScene
 				}
 			}
 
+			ApplySeaSlugColorCurrentAfterMiss(playerIndex, playedTableCardIndex);
 			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			RenderTableCards();
 			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
@@ -209,11 +220,22 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		return new PlayCardResult(true, captureStartIndex >= 0, captureStartIndex >= 0, CompletesTurn: resolvedOvertimeTriggerIndexes.Count == 0);
+		bool captured = captureStartIndex >= 0 && !buryPlayedCardInSand;
+		return new PlayCardResult(true, captured, captured, CompletesTurn: resolvedOvertimeTriggerIndexes.Count == 0);
 	}
 
-	private int AddPlayedCardToTable(int playerIndex, PlayingCard playedCard, out bool matchedTableCardFlipped)
+	private int AddPlayedCardToTable(int playerIndex, PlayingCard playedCard, out bool matchedTableCardFlipped, bool buryInSand = false)
 	{
+		if (buryInSand)
+		{
+			matchedTableCardFlipped = false;
+			_tableCards.Add(new TableCard(playedCard, false, cardOwnerPlayerIndex: playerIndex)
+			{
+				IsBuriedInSand = true,
+			});
+			return -1;
+		}
+
 		int matchingIndex = FindMatchingTableCardIndex(playedCard);
 		bool isFaceUp = matchingIndex >= 0;
 		matchedTableCardFlipped = false;
@@ -232,7 +254,7 @@ public partial class GameBoardScene
 		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
 		{
 			PlayingCard? tableCard = _tableCards[tableCardIndex].Card;
-			if (tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
+			if (!_tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
 			{
 				return tableCardIndex;
 			}

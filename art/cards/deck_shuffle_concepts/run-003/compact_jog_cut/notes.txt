@@ -1,1 +1,0 @@
-Deterministic vertical cut concept assembled from the complete generated deck-stack source at run-002/tight_vertical_cut/processed/fx-1.png. Full packet layers only; no half-card redraws, no split-line prompt.

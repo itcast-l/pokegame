@@ -1,45 +1,21 @@
-[gd_scene load_steps=22 format=3]
+[gd_scene format=3 uid="uid://bbq35rvkraau3"]
 
-[ext_resource type="Script" path="res://scripts/CharacterAvatarGalleryScene.cs" id="1_avatar_gallery_scene"]
-[ext_resource type="Texture2D" path="res://art/characters/player_cat_avatar/run-002/idle/processed/idle-1.png" id="2_cat"]
-[ext_resource type="Texture2D" path="res://art/characters/player_fish_avatar/run-001/idle/processed/idle-1.png" id="3_fish"]
-[ext_resource type="Texture2D" path="res://art/characters/player_lanternfish_avatar/run-001/idle/processed/idle-1.png" id="4_lanternfish"]
-[ext_resource type="Texture2D" path="res://art/characters/player_shrimp_avatar/run-001/idle/processed/idle-1.png" id="5_shrimp"]
-[ext_resource type="Texture2D" path="res://art/characters/player_crab_avatar/run-001/idle/processed/idle-1.png" id="6_crab"]
-[ext_resource type="Texture2D" path="res://art/characters/player_jellyfish_avatar/run-001/idle/processed/idle-1.png" id="7_jellyfish"]
-[ext_resource type="Texture2D" path="res://art/characters/player_manta_ray_avatar/run-001/idle/processed/idle-1.png" id="8_manta_ray"]
-[ext_resource type="Texture2D" path="res://art/characters/player_garden_eel_avatar/run-001/idle/processed/idle-1.png" id="9_garden_eel"]
-[ext_resource type="Texture2D" path="res://art/characters/player_sea_slug_avatar/run-001/idle/processed/idle-1.png" id="10_sea_slug"]
-[ext_resource type="Texture2D" path="res://art/characters/player_nautilus_avatar/run-001/idle/processed/idle-1.png" id="11_nautilus"]
-[ext_resource type="Texture2D" path="res://art/characters/player_narwhal_avatar/run-001/idle/processed/idle-1.png" id="12_narwhal"]
-[ext_resource type="Texture2D" path="res://art/characters/player_leafy_seadragon_avatar/run-001/idle/processed/idle-1.png" id="13_leafy_seadragon"]
-[ext_resource type="Texture2D" path="res://art/characters/player_dragon_prince_avatar/run-001/idle/processed/idle-1.png" id="14_dragon_prince"]
-[ext_resource type="Texture2D" path="res://art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png" id="15_dragon_queen"]
-[ext_resource type="Texture2D" path="res://art/characters/boss_k_avatar/run-001/idle/processed/idle-1.png" id="16_boss"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
-bg_color = Color(0.0156863, 0.117647, 0.133333, 0.76)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.58, 1, 0.92, 0.42)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
-bg_color = Color(0.04, 0.17, 0.18, 0.56)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.48, 1, 0.92, 0.28)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[ext_resource type="Script" uid="uid://b0w5bn6msf10c" path="res://scripts/CharacterAvatarGalleryScene.cs" id="1_avatar_gallery_scene"]
+[ext_resource type="Texture2D" uid="uid://lep1o3qatf0p" path="res://art/characters/player_cat_avatar/run-002/idle/processed/idle-1.png" id="2_cat"]
+[ext_resource type="Texture2D" uid="uid://bcpjhyjniyu2n" path="res://art/characters/player_fish_avatar/run-001/idle/processed/idle-1.png" id="3_fish"]
+[ext_resource type="Texture2D" uid="uid://cuw1piolsnrje" path="res://art/characters/player_lanternfish_avatar/run-001/idle/processed/idle-1.png" id="4_lanternfish"]
+[ext_resource type="Texture2D" uid="uid://76a5gey81qbx" path="res://art/characters/player_shrimp_avatar/run-001/idle/processed/idle-1.png" id="5_shrimp"]
+[ext_resource type="Texture2D" uid="uid://c2phn0jbe8qxe" path="res://art/characters/player_crab_avatar/run-001/idle/processed/idle-1.png" id="6_crab"]
+[ext_resource type="Texture2D" uid="uid://dtraqm632p0mb" path="res://art/characters/player_jellyfish_avatar/run-001/idle/processed/idle-1.png" id="7_jellyfish"]
+[ext_resource type="Texture2D" uid="uid://bmantarayidl1" path="res://art/characters/player_manta_ray_avatar/run-001/idle/processed/idle-1.png" id="8_manta_ray"]
+[ext_resource type="Texture2D" uid="uid://ddc2cirqn8ktm" path="res://art/characters/player_garden_eel_avatar/run-001/idle/processed/idle-1.png" id="9_garden_eel"]
+[ext_resource type="Texture2D" uid="uid://c5fc3mdibx1di" path="res://art/characters/player_sea_slug_avatar/run-001/idle/processed/idle-1.png" id="10_sea_slug"]
+[ext_resource type="Texture2D" uid="uid://b2557w63h4hkg" path="res://art/characters/player_nautilus_avatar/run-001/idle/processed/idle-1.png" id="11_nautilus"]
+[ext_resource type="Texture2D" uid="uid://cbokatlynw0w3" path="res://art/characters/player_narwhal_avatar/run-001/idle/processed/idle-1.png" id="12_narwhal"]
+[ext_resource type="Texture2D" uid="uid://8wo446w3wy5u" path="res://art/characters/player_leafy_seadragon_avatar/run-001/idle/processed/idle-1.png" id="13_leafy_seadragon"]
+[ext_resource type="Texture2D" uid="uid://b3bca7eo5xcjm" path="res://art/characters/player_dragon_prince_avatar/run-001/idle/processed/idle-1.png" id="14_dragon_prince"]
+[ext_resource type="Texture2D" uid="uid://d3cskagl32jga" path="res://art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png" id="15_dragon_queen"]
+[ext_resource type="Texture2D" uid="uid://da5ly8uu4sl8c" path="res://art/characters/boss_k_avatar/run-001/idle/processed/idle-1.png" id="16_boss"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_selected"]
 bg_color = Color(0.08, 0.2, 0.18, 0.82)
@@ -60,6 +36,30 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.92, 0.42, 0.55)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.0156863, 0.117647, 0.133333, 0.76)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.58, 1, 0.92, 0.42)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
+bg_color = Color(0.04, 0.17, 0.18, 0.56)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.48, 1, 0.92, 0.28)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -89,7 +89,7 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="CharacterAvatarGalleryScene" type="Control"]
+[node name="CharacterAvatarGalleryScene" type="Control" unique_id=265027322]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -98,7 +98,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_avatar_gallery_scene")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=769120588]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -108,7 +108,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.015, 0.075, 0.09, 1)
 
-[node name="Content" type="MarginContainer" parent="."]
+[node name="Content" type="MarginContainer" parent="." unique_id=1037894469]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -120,16 +120,16 @@ theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 36
 theme_override_constants/margin_bottom = 32
 
-[node name="Layout" type="VBoxContainer" parent="Content"]
+[node name="Layout" type="VBoxContainer" parent="Content" unique_id=586044534]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Header" type="Control" parent="Content/Layout"]
+[node name="Header" type="Control" parent="Content/Layout" unique_id=1210819730]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Title" type="Label" parent="Content/Layout/Header"]
+[node name="Title" type="Label" parent="Content/Layout/Header" unique_id=156509615]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -144,49 +144,49 @@ theme_override_font_sizes/font_size = 28
 text = "头像一览"
 vertical_alignment = 1
 
-[node name="GridScroll" type="ScrollContainer" parent="Content/Layout"]
+[node name="GridScroll" type="ScrollContainer" parent="Content/Layout" unique_id=1381354912]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="AvatarGrid" type="GridContainer" parent="Content/Layout/GridScroll"]
+[node name="AvatarGrid" type="GridContainer" parent="Content/Layout/GridScroll" unique_id=2103118339]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 14
 theme_override_constants/v_separation = 16
 columns = 5
 
-[node name="CatAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="CatAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=864840575]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card_selected")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard" unique_id=2115288064]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin" unique_id=1262681883]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout" unique_id=600306587]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot_selected")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout/AvatarSlot" unique_id=372599773]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("2_cat")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/CatAvatarCard/Margin/Layout" unique_id=945537163]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.96, 0.68, 0.98)
@@ -195,36 +195,36 @@ text = "莫莫"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="FishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="FishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=702507502]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard" unique_id=1819934276]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin" unique_id=831384009]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout" unique_id=373388592]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout/AvatarSlot" unique_id=950165908]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("3_fish")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/FishAvatarCard/Margin/Layout" unique_id=378530506]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -233,36 +233,36 @@ text = "阿布"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="LanternfishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="LanternfishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=1293835772]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard" unique_id=933246824]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin" unique_id=146474346]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout" unique_id=665860848]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout/AvatarSlot" unique_id=849117379]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("4_lanternfish")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/LanternfishAvatarCard/Margin/Layout" unique_id=1098798077]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -271,36 +271,36 @@ text = "米露"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="ShrimpAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="ShrimpAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=1615334541]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard" unique_id=1876082172]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin" unique_id=673120382]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout" unique_id=1267749691]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout/AvatarSlot" unique_id=791938553]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("5_shrimp")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/ShrimpAvatarCard/Margin/Layout" unique_id=1516019848]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -309,36 +309,36 @@ text = "皮皮"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="CrabAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="CrabAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=107695489]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard" unique_id=1571439929]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin" unique_id=383435532]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout" unique_id=481807271]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout/AvatarSlot" unique_id=1227228476]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("6_crab")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/CrabAvatarCard/Margin/Layout" unique_id=1360129257]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -347,36 +347,36 @@ text = "嘟嘟"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="JellyfishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="JellyfishAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=99995044]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard" unique_id=86072545]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin" unique_id=2140294046]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout" unique_id=994045645]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout/AvatarSlot" unique_id=135928003]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("7_jellyfish")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/JellyfishAvatarCard/Margin/Layout" unique_id=49823233]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -385,36 +385,36 @@ text = "软糖"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="MantaRayAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="MantaRayAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=595372251]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard" unique_id=2117237868]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin" unique_id=1777729222]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout" unique_id=1145444319]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout/AvatarSlot" unique_id=389236573]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("8_manta_ray")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/MantaRayAvatarCard/Margin/Layout" unique_id=70886096]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -423,36 +423,36 @@ text = "悠悠"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="GardenEelAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="GardenEelAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=418807386]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard" unique_id=1383726623]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin" unique_id=568196960]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout" unique_id=1945707452]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout/AvatarSlot" unique_id=1896346289]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("9_garden_eel")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/GardenEelAvatarCard/Margin/Layout" unique_id=992719441]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -461,36 +461,36 @@ text = "阿豆"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="SeaSlugAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="SeaSlugAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=110944623]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard" unique_id=906319987]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin" unique_id=1572365503]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout" unique_id=794049652]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout/AvatarSlot" unique_id=756550417]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("10_sea_slug")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/SeaSlugAvatarCard/Margin/Layout" unique_id=366166721]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -499,36 +499,36 @@ text = "糯米"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="NautilusAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="NautilusAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=910716149]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard" unique_id=1560053030]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin" unique_id=1054767362]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout" unique_id=1896509180]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout/AvatarSlot" unique_id=413239883]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("11_nautilus")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/NautilusAvatarCard/Margin/Layout" unique_id=1203623334]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -537,36 +537,36 @@ text = "罗米"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="NarwhalAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="NarwhalAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=1925061953]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard" unique_id=1469747316]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin" unique_id=1330331302]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout" unique_id=639596695]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout/AvatarSlot" unique_id=473171474]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("12_narwhal")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/NarwhalAvatarCard/Margin/Layout" unique_id=471450564]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -575,36 +575,36 @@ text = "诺亚"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="LeafySeadragonAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="LeafySeadragonAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=1561492354]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard" unique_id=1279940469]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin" unique_id=1220142184]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout" unique_id=1855938141]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout/AvatarSlot" unique_id=333573438]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("13_leafy_seadragon")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/LeafySeadragonAvatarCard/Margin/Layout" unique_id=1383075798]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -613,36 +613,36 @@ text = "艾莉"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="DragonPrinceAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="DragonPrinceAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=734585848]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard" unique_id=749212458]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin" unique_id=197992993]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout" unique_id=677783276]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout/AvatarSlot" unique_id=628442834]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("14_dragon_prince")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/DragonPrinceAvatarCard/Margin/Layout" unique_id=416294290]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -651,36 +651,36 @@ text = "杰伊 J"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="DragonQueenAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="DragonQueenAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=1421559811]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard" unique_id=385379476]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin" unique_id=1217053222]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout" unique_id=2114674788]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout/AvatarSlot" unique_id=1712714893]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("15_dragon_queen")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/DragonQueenAvatarCard/Margin/Layout" unique_id=1282781885]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
@@ -689,36 +689,36 @@ text = "奎娜 Q"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="BossAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid"]
+[node name="BossAvatarCard" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid" unique_id=711868981]
 custom_minimum_size = Vector2(150, 184)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_boss")
 
-[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard"]
+[node name="Margin" type="MarginContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard" unique_id=1391983089]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin"]
+[node name="Layout" type="VBoxContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin" unique_id=1695096415]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout"]
+[node name="AvatarSlot" type="PanelContainer" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout" unique_id=842891127]
 custom_minimum_size = Vector2(118, 118)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot_boss")
 
-[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout/AvatarSlot"]
+[node name="AvatarTexture" type="TextureRect" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout/AvatarSlot" unique_id=675198224]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("16_boss")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout"]
+[node name="NameLabel" type="Label" parent="Content/Layout/GridScroll/AvatarGrid/BossAvatarCard/Margin/Layout" unique_id=478478760]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.9, 0.98)

@@ -4,13 +4,38 @@ MENU_ADVENTURE,冒险模式,冒險模式,Adventure
 MENU_MULTIPLAYER,多人游戏,多人遊戲,Multi
 MENU_SETTINGS,设置,設定,Settings
 MENU_EXIT,退出,離開,Exit
-ADVENTURE_AVATAR_TITLE,选择关卡,選擇關卡,Pick Level
+ADVENTURE_AVATAR_TITLE,选择敌人,選擇敵人,Pick Enemy
 ADVENTURE_START,开始游戏,開始遊戲,Start
 ADVENTURE_BACK,返回,返回,Back
 ADVENTURE_COMPLETED,已完成,已完成,Done
 ADVENTURE_AVAILABLE,可挑战,可挑戰,Ready
 ADVENTURE_TEST_AVAILABLE,测试开放,測試開放,Test
 ADVENTURE_LOCKED,未解锁,未解鎖,Locked
+ADVENTURE_ABILITY_TITLE,敌人能力,敵人能力,Enemy Ability
+ADVENTURE_ABILITY_NONE_NAME,无特殊能力,無特殊能力,None
+ADVENTURE_ABILITY_NONE_DESC,按基础规则行动。,按基礎規則行動。,Uses the base rules.
+ADVENTURE_ABILITY_TIDE_GUARD_NAME,甲壳护膜,甲殼護膜,Shell Guard
+ADVENTURE_ABILITY_TIDE_GUARD_DESC,玩家每张计分牌对嘟嘟造成的伤害 -2，单张最低为 0。,玩家每張計分牌對嘟嘟造成的傷害 -2，單張最低為 0。,Each scoring card deals 2 less damage to Dudu. Minimum 0 per card.
+ADVENTURE_ABILITY_BUBBLE_COVER_NAME,幻泡遮蔽,幻泡遮蔽,Bubble Cover
+ADVENTURE_ABILITY_BUBBLE_COVER_DESC,软糖每回合首次成功收取后，随机遮蔽玩家 1 张手牌，持续到玩家本回合结束。,軟糖每回合首次成功收取後，隨機遮蔽玩家 1 張手牌，持續到玩家本回合結束。,After Jelly's first successful capture each turn hides 1 random player hand card until the player's turn ends.
+ADVENTURE_ABILITY_TIDE_SHIFT_NAME,借潮换位,借潮換位,Tide Shift
+ADVENTURE_ABILITY_TIDE_SHIFT_DESC,轮到悠悠行动时，如果桌面有 4 张及以上牌，就把最左侧 1 张移到最右侧。,輪到悠悠行動時，如果桌面有 4 張及以上牌，就把最左側 1 張移到最右側。,When it is Tide Shift's turn and the table has 4 or more cards move the leftmost card to the far right.
+ADVENTURE_ABILITY_SAND_AMBUSH_NAME,沙底伏击,沙底伏擊,Sand Ambush
+ADVENTURE_ABILITY_SAND_AMBUSH_DESC,阿豆每收取 2 次后，下一次普通出牌会直接埋入最右侧，不触发匹配和收取。,阿豆每收取 2 次後，下一次普通出牌會直接埋入最右側，不觸發配對和收取。,After every 2 captures A-Dou's next normal played card is buried on the far right and does not match or capture.
+ADVENTURE_ABILITY_COLOR_CURRENT_NAME,变色乱流,變色亂流,Color Current
+ADVENTURE_ABILITY_COLOR_CURRENT_DESC,糯米空出牌时，会让刚打出的牌变为背面，并和另一张随机桌牌交换位置。,糯米空出牌時，會讓剛打出的牌變為背面，並和另一張隨機桌牌交換位置。,When Nuomi misses its played card turns face-down and swaps with 1 random table card.
+ADVENTURE_ABILITY_SPIRAL_SHELL_NAME,螺旋水雷,螺旋水雷,Spiral Mine
+ADVENTURE_ABILITY_SPIRAL_SHELL_DESC,玩家每成功收取 3 次后，若牌桌至少有 2 张牌，罗米会随机在两张牌之间插入 1 张炸弹牌。,玩家每成功收取 3 次後，若牌桌至少有 2 張牌，羅米會隨機在兩張牌之間插入 1 張炸彈牌。,After every 3 player captures if the table has at least 2 cards Romi inserts 1 bomb card between two table cards.
+ADVENTURE_ABILITY_TUSK_BREAK_NAME,猎潮附锋,獵潮附鋒,Tide Hunter
+ADVENTURE_ABILITY_TUSK_BREAK_DESC,诺亚每成功收取 2 次后，下一张普通出牌会自动附带 Double 效果。,諾亞每成功收取 2 次後，下一張普通出牌會自動附帶 Double 效果。,After every 2 successful captures Noah's next normal played card automatically gains Double.
+ADVENTURE_ABILITY_LEAFY_MIRAGE_NAME,叶刃断流,葉刃斷流,Leafblade Cut
+ADVENTURE_ABILITY_LEAFY_MIRAGE_DESC,牌桌堆积到 5 张以上且艾莉本回合没有收取时，会切断最早的 1 张普通牌，使其直接离场。,牌桌堆積到 5 張以上且艾莉本回合沒有收取時，會切斷最早的 1 張普通牌，使其直接離場。,When the table has 5 or more cards and Aili does not capture she cuts away the earliest normal table card.
+ADVENTURE_ABILITY_DRAGON_J_NAME,龙子号令,龍子號令,Dragon Jack
+ADVENTURE_ABILITY_DRAGON_J_DESC,每局只会使用一次。轮到杰伊时，若牌桌存在 5 张以上牌，立即收取场上所有牌。,每局只會使用一次。輪到傑伊時，若牌桌存在 5 張以上牌，立即收取場上所有牌。,Once per match. At Jay's turn start if the table has 5 or more cards he collects every table card.
+ADVENTURE_ABILITY_DRAGON_Q_NAME,龙后掠夺,龍后掠奪,Dragon Queen
+ADVENTURE_ABILITY_DRAGON_Q_DESC,奎娜每次收取 5 张以上牌后，随机偷取玩家手里 1 张牌。,奎娜每次收取 5 張以上牌後，隨機偷取玩家手裡 1 張牌。,After Queen captures 5 or more cards she steals 1 random card from the player's hand.
+ADVENTURE_ABILITY_DRAGON_K_NAME,龙王征税,龍王徵稅,Dragon King
+ADVENTURE_ABILITY_DRAGON_K_DESC,凯撒每次收取 5 张以上牌后，偷取玩家牌库顶 1 张牌。,凱撒每次收取 5 張以上牌後，偷取玩家牌庫頂 1 張牌。,After Kaiser captures 5 or more cards he steals the top card of the player's deck.
 PLAYER_COUNT_TITLE,选择游戏人数,選擇遊戲人數,Players
 PLAYER_COUNT_MESSAGE,选择本局参与人数,選擇本局參與人數,Pick player count
 PLAYER_COUNT_PLAYERS,游戏人数,遊戲人數,Players

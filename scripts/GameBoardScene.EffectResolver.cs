@@ -92,7 +92,7 @@ public partial class GameBoardScene
 		return new PlayCardResult(true, false, CompletesTurn: false);
 	}
 
-	private PlayCardResult ResolveCollectTableEffect(CardTriggerRequest request)
+	private async Task<PlayCardResult> ResolveCollectTableEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{
 		int ownerPlayerIndex = request.Event.ActorPlayerIndex;
 		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count)
@@ -101,17 +101,17 @@ public partial class GameBoardScene
 		}
 
 		bool captured = _tableCards.Count > 0;
-		int collectedCardCount = CaptureTableCards(
+		CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
 			ownerPlayerIndex,
 			0,
-			out QuestionCardRewardAnimation? questionRewardAnimation);
+			turnSequenceGeneration: turnSequenceGeneration);
 		if (!IsGameOver())
 		{
 			Shuffle(_playerDecks[ownerPlayerIndex]);
 			Cut(_playerDecks[ownerPlayerIndex]);
 		}
 
-		return new PlayCardResult(true, captured, collectedCardCount > 0, questionRewardAnimation);
+		return new PlayCardResult(true, captured, captureResult.CollectedCardCount > 0, captureResult.QuestionRewardAnimation);
 	}
 
 	private PlayCardResult ResolveStealCardEffect(CardTriggerRequest request)

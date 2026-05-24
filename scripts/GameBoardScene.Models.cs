@@ -111,6 +111,11 @@ public partial class GameBoardScene
 
 	private readonly record struct DrawnHandCard(PlayingCard Card, int HandIndex);
 
+	private readonly record struct CaptureTableCardsResult(
+		int CollectedCardCount,
+		int RemovedTableCardCount,
+		QuestionCardRewardAnimation? QuestionRewardAnimation);
+
 	private enum PendingItemSelectionMode
 	{
 		None,
@@ -150,6 +155,7 @@ public partial class GameBoardScene
 		public PlayingCard? Card { get; private set; }
 		public bool IsFaceUp { get; set; }
 		public bool IsHiddenDuringCapture { get; set; }
+		public bool IsBuriedInSand { get; set; }
 		public ItemCard? ItemOverlay { get; }
 		public int ItemOwnerPlayerIndex { get; }
 		public int CardOwnerPlayerIndex { get; }

@@ -31,7 +31,7 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		layout.AddThemeConstantOverride("separation", 10);
+		layout.AddThemeConstantOverride("separation", 9);
 		margin.AddChild(layout);
 
 		var stageBadge = new PanelContainer
@@ -112,6 +112,8 @@ public partial class AdventureAvatarMenuScene
 		_previewStatusLabel.AddThemeConstantOverride("shadow_offset_y", 2);
 		layout.AddChild(_previewStatusLabel);
 
+		layout.AddChild(CreateAbilityPreviewCard());
+
 		_startButton = CreateActionButton("ADVENTURE_START", new Color(0.98f, 0.92f, 0.46f), StartAdventure, true, 224.0f);
 		var startWrap = new CenterContainer
 		{
@@ -120,6 +122,80 @@ public partial class AdventureAvatarMenuScene
 		};
 		startWrap.AddChild(_startButton.GetParent());
 		layout.AddChild(startWrap);
+
+		return panel;
+	}
+
+	private Control CreateAbilityPreviewCard()
+	{
+		var panel = new PanelContainer
+		{
+			Name = "AbilityPreviewCard",
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		panel.AddThemeStyleboxOverride("panel", CreateAbilityCardStyle());
+
+		var margin = new MarginContainer
+		{
+			Name = "AbilityPreviewMargin",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		margin.AddThemeConstantOverride("margin_left", 14);
+		margin.AddThemeConstantOverride("margin_top", 10);
+		margin.AddThemeConstantOverride("margin_right", 14);
+		margin.AddThemeConstantOverride("margin_bottom", 12);
+		panel.AddChild(margin);
+
+		var stack = new VBoxContainer
+		{
+			Name = "AbilityPreviewStack",
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		stack.AddThemeConstantOverride("separation", 5);
+		margin.AddChild(stack);
+
+		_previewAbilityTitleLabel = new Label
+		{
+			Name = "AbilityTitleLabel",
+			HorizontalAlignment = HorizontalAlignment.Left,
+			VerticalAlignment = VerticalAlignment.Center,
+			ClipText = true,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_previewAbilityTitleLabel.AddThemeFontSizeOverride("font_size", 14);
+		_previewAbilityTitleLabel.AddThemeColorOverride("font_color", new Color(0.58f, 0.96f, 0.90f, 0.82f));
+		stack.AddChild(_previewAbilityTitleLabel);
+
+		_previewAbilityNameLabel = new Label
+		{
+			Name = "AbilityNameLabel",
+			HorizontalAlignment = HorizontalAlignment.Left,
+			VerticalAlignment = VerticalAlignment.Center,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_previewAbilityNameLabel.AddThemeFontSizeOverride("font_size", 21);
+		_previewAbilityNameLabel.AddThemeColorOverride("font_color", new Color(0.98f, 1.0f, 0.83f));
+		_previewAbilityNameLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.82f));
+		_previewAbilityNameLabel.AddThemeConstantOverride("shadow_offset_x", 1);
+		_previewAbilityNameLabel.AddThemeConstantOverride("shadow_offset_y", 1);
+		stack.AddChild(_previewAbilityNameLabel);
+
+		_previewAbilityDescriptionLabel = new Label
+		{
+			Name = "AbilityDescriptionLabel",
+			HorizontalAlignment = HorizontalAlignment.Left,
+			VerticalAlignment = VerticalAlignment.Top,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_previewAbilityDescriptionLabel.AddThemeFontSizeOverride("font_size", 16);
+		_previewAbilityDescriptionLabel.AddThemeColorOverride("font_color", new Color(0.86f, 0.98f, 0.96f, 0.92f));
+		_previewAbilityDescriptionLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.68f));
+		_previewAbilityDescriptionLabel.AddThemeConstantOverride("shadow_offset_x", 1);
+		_previewAbilityDescriptionLabel.AddThemeConstantOverride("shadow_offset_y", 1);
+		stack.AddChild(_previewAbilityDescriptionLabel);
 
 		return panel;
 	}

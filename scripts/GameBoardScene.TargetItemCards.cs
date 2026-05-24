@@ -5,7 +5,7 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private PlayCardResult ResolveJackEffect(int ownerPlayerIndex)
+	private async Task<PlayCardResult> ResolveJackEffectAsync(int ownerPlayerIndex, int turnSequenceGeneration)
 	{
 		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count)
 		{
@@ -13,17 +13,17 @@ public partial class GameBoardScene
 		}
 
 		bool captured = _tableCards.Count > 0;
-		int collectedCardCount = CaptureTableCards(
+		CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
 			ownerPlayerIndex,
 			0,
-			out QuestionCardRewardAnimation? questionRewardAnimation);
+			turnSequenceGeneration: turnSequenceGeneration);
 		if (!IsGameOver())
 		{
 			Shuffle(_playerDecks[ownerPlayerIndex]);
 			Cut(_playerDecks[ownerPlayerIndex]);
 		}
 
-		return new PlayCardResult(true, captured, collectedCardCount > 0, questionRewardAnimation);
+		return new PlayCardResult(true, captured, captureResult.CollectedCardCount > 0, captureResult.QuestionRewardAnimation);
 	}
 
 	private PlayCardResult ResolveQueenEffect(int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
@@ -279,6 +279,7 @@ public partial class GameBoardScene
 		ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemHandIndex];
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(ownerPlayerIndex, itemHandIndex);
 		_playerItemHands[ownerPlayerIndex].RemoveAt(itemHandIndex);
+		ShiftJellyfishHiddenHandSlotAfterRemovedCard(ownerPlayerIndex, _playerHands[ownerPlayerIndex].Count + itemHandIndex);
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();

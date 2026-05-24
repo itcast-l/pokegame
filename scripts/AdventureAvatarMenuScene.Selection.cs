@@ -55,6 +55,9 @@ public partial class AdventureAvatarMenuScene
 		_previewStageLabel.Text = FormatStageNumber(stageNumber);
 		_previewNameLabel.Text = avatarDefinition.DisplayName;
 		_previewStatusLabel.Text = GetStageStatusText(stageNumber);
+		_previewAbilityTitleLabel.Text = Tr("ADVENTURE_ABILITY_TITLE").ToString();
+		_previewAbilityNameLabel.Text = Tr(avatarDefinition.AdventureAbilityNameKey).ToString();
+		_previewAbilityDescriptionLabel.Text = Tr(avatarDefinition.AdventureAbilityDescriptionKey).ToString();
 		_previewStatusLabel.AddThemeColorOverride(
 			"font_color",
 			GetStageStatusColor(

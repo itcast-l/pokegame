@@ -23,6 +23,9 @@ public partial class AdventureAvatarMenuScene : Control
 	private Label _previewStageLabel = default!;
 	private Label _previewNameLabel = default!;
 	private Label _previewStatusLabel = default!;
+	private Label _previewAbilityTitleLabel = default!;
+	private Label _previewAbilityNameLabel = default!;
+	private Label _previewAbilityDescriptionLabel = default!;
 	private CharacterAvatar? _previewAvatar;
 	private Tween? _levelScrollTween;
 	private int _levelScrollTarget;

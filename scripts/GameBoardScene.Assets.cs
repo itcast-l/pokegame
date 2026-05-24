@@ -42,6 +42,47 @@ public partial class GameBoardScene
 		}
 	}
 
+	private void LoadAdventureDamageEffectTextures()
+	{
+		_adventureDamageEffectFrames.Clear();
+		for (int frameIndex = 1; frameIndex <= AdventureDamageEffectFrameCount; frameIndex++)
+		{
+			string path = string.Format(AdventureDamageEffectFramePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing adventure damage effect frame: {path}");
+				continue;
+			}
+
+			_adventureDamageEffectFrames.Add(texture);
+		}
+	}
+
+	private void LoadAdventureEnemyDamageEffectTextures()
+	{
+		_adventureEnemyDamageEffectFrames.Clear();
+		string framePattern = adventure_enemy_avatar_id switch
+		{
+			FishAdventureEnemyAvatarId => FishAdventureDamageEffectFramePattern,
+			LanternfishAdventureEnemyAvatarId => LanternfishAdventureDamageEffectFramePattern,
+			_ => AdventureDamageEffectFramePattern,
+		};
+
+		for (int frameIndex = 1; frameIndex <= AdventureDamageEffectFrameCount; frameIndex++)
+		{
+			string path = string.Format(framePattern, frameIndex);
+			Texture2D? texture = GD.Load<Texture2D>(path);
+			if (texture == null)
+			{
+				GD.PushWarning($"Missing adventure enemy damage effect frame: {path}");
+				continue;
+			}
+
+			_adventureEnemyDamageEffectFrames.Add(texture);
+		}
+	}
+
 	private void LoadQuestionCardTransformTextures()
 	{
 		_questionCardTransformFrames.Clear();

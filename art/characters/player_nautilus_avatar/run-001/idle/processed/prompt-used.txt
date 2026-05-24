@@ -1,1 +1,0 @@
-single-frame nautilus avatar idle pose retained from generated idle sheet; solid #FF00FF source background.

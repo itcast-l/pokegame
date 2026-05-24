@@ -1,1 +1,0 @@
-single narwhal avatar idle frame; same identity on transparent background processed from generated idle sheet frame 1.

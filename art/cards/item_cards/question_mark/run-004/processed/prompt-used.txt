@@ -1,7 +1,0 @@
-Edit the existing ocean special item card into a koi carp themed random-item card.
-
-Keep the same vertical rounded playing-card silhouette, pearl-white and pale seafoam card face, coral-and-shell border ornaments, tiny bubbles, restrained gold trim, dark navy accents, sea-glass highlights, and clean HD hand-painted Godot item-card readability.
-
-Replace the central question mark completely with one clear stylized koi carp / carp fish emblem in a graceful curled swim pose with flowing fins and tail. Use deep ocean navy outlines, teal and seafoam body accents, pearl highlights, and muted coral-gold touches.
-
-Strict content rules: no question mark symbol, no punctuation, no letters, no numbers, no readable text, no poker suit icons, no UI, no hands, no table, and no scene outside the card. Keep the full card and all effects safely inside the transparent-ready canvas.

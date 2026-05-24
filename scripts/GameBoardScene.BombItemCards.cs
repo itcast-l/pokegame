@@ -37,6 +37,7 @@ public partial class GameBoardScene
 		}
 
 		itemHand.RemoveAt(itemHandIndex);
+		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, displayIndex);
 		int tableCardIndex = AddBombCardToTable(bombCard, playerIndex);
 		await PlayItemCardToTableAnimationAsync(playerIndex, bombCard, startGlobalPosition, tableCardIndex, false);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -194,6 +195,7 @@ public partial class GameBoardScene
 		}
 
 		_tableCards.RemoveRange(firstBombIndex, secondBombIndex - firstBombIndex + 1);
+		RefreshGardenEelBuriedCardIndex();
 	}
 
 	private async Task PlayBombPairDestroySequenceAsync(int firstBombIndex, int secondBombIndex, int turnSequenceGeneration)

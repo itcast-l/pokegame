@@ -52,7 +52,9 @@ public partial class GameBoardScene
 					Position = cardPositions[cardIndex],
 					Size = CardVisualSize,
 					ZIndex = baseZIndex,
-					Modulate = showMainPlayerPreview
+					Modulate = tableCardData.IsBuriedInSand
+						? new Color(0.78f, 0.66f, 0.44f, 0.82f)
+						: showMainPlayerPreview
 						? new Color(1.0f, 1.0f, 1.0f, MainPlayerTablePreviewAlpha)
 						: Colors.White,
 				};
@@ -82,6 +84,12 @@ public partial class GameBoardScene
 				{
 					_centerArena.AddChild(descriptionLabel);
 				}
+
+				if (tableCardData.IsBuriedInSand)
+				{
+					AddSandBurialOverlay(cardPositions[cardIndex], baseZIndex + 1);
+				}
+
 				Texture2D? attachmentOverlayTexture = tableCardData.Card.HasValue && (tableCardData.IsFaceUp || showMainPlayerPreview)
 					? GetCardAttachmentOverlayTexture(tableCardData.Card.Value)
 					: null;
@@ -120,6 +128,39 @@ public partial class GameBoardScene
 
 			_centerArena.AddChild(itemOverlay);
 		}
+	}
+
+	private void AddSandBurialOverlay(Vector2 cardPosition, int zIndex)
+	{
+		var sandOverlay = new Panel
+		{
+			Name = "SandBurialOverlay",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = cardPosition,
+			Size = CardVisualSize,
+			ZIndex = zIndex,
+		};
+		sandOverlay.AddThemeStyleboxOverride("panel", CreateSandBurialOverlayStyle());
+		_centerArena.AddChild(sandOverlay);
+	}
+
+	private static StyleBoxFlat CreateSandBurialOverlayStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.66f, 0.50f, 0.24f, 0.30f),
+			BorderColor = new Color(0.96f, 0.78f, 0.38f, 0.62f),
+			BorderWidthLeft = 2,
+			BorderWidthTop = 2,
+			BorderWidthRight = 2,
+			BorderWidthBottom = 2,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ShadowColor = new Color(0.78f, 0.54f, 0.18f, 0.32f),
+			ShadowSize = 12,
+		};
 	}
 
 	private static bool ShouldShowMainPlayerTablePreview(TableCard tableCard)

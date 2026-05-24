@@ -13,6 +13,19 @@ public partial class GameBoardScene
 	private const int ScoreFillEffectTravelZIndex = PlayedCardFlightZIndex + 850;
 	private const int ScoreFillEffectBehindAvatarZIndex = 2;
 	private const float ScoreFillEffectBehindAvatarProgress = 0.72f;
+	private const float AdventureAttackEffectFlightSeconds = 0.48f;
+	private const float AdventureAttackEffectVisualSize = 104.0f;
+	private const float AdventureAttackImpactVisualSize = 124.0f;
+	private const float FishAdventureAttackBeamSeconds = 0.42f;
+	private const float FishAdventureAttackBeamThickness = 96.0f;
+	private const float FishAdventureAttackBeamStartInset = 24.0f;
+	private const float FishAdventureAttackBeamEndInset = 34.0f;
+	private const int AdventureAttackEffectTravelZIndex = PlayedCardFlightZIndex + 920;
+
+	private IReadOnlyList<Texture2D> GetScoreFillEffectFrames()
+	{
+		return _scoreFillEffectFrames;
+	}
 
 	private async Task PlayScoreFillCollectionAsync(
 		int playerIndex,
@@ -20,7 +33,18 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		Action? onArrival = null)
 	{
-		if (_scoreFillEffectFrames.Count == 0 || capturedCardVisuals.Count == 0)
+		if (adventure_mode)
+		{
+			await PlayAdventureScoreAttackSequenceAsync(
+				playerIndex,
+				capturedCardVisuals,
+				turnSequenceGeneration,
+				onArrival);
+			return;
+		}
+
+		IReadOnlyList<Texture2D> scoreFillEffectFrames = GetScoreFillEffectFrames();
+		if (scoreFillEffectFrames.Count == 0 || capturedCardVisuals.Count == 0)
 		{
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 			{
@@ -39,6 +63,7 @@ public partial class GameBoardScene
 			flightTasks.Add(PlayScoreFillEffectFlightAsync(
 				cardCenter,
 				targetCenter,
+				scoreFillEffectFrames,
 				flightTasks.Count,
 				visualIndex * ScoreFillEffectStaggerSeconds,
 				() =>
@@ -61,8 +86,209 @@ public partial class GameBoardScene
 				onArrival?.Invoke();
 			}
 
-			await PlayScoreFillArrivalPulseAsync(targetCenter);
+			await PlayScoreFillArrivalPulseAsync(targetCenter, scoreFillEffectFrames);
 		}
+	}
+
+	private async Task PlayAdventureScoreAttackSequenceAsync(
+		int attackerPlayerIndex,
+		IReadOnlyList<CapturedTableCardVisual> capturedCardVisuals,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		IReadOnlyList<Texture2D> collectionFrames = GetScoreFillEffectFrames();
+		Vector2 attackerCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
+		var collectionTasks = new List<Task>();
+		if (collectionFrames.Count > 0 && capturedCardVisuals.Count > 0)
+		{
+			for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && collectionTasks.Count < MaxScoreFillEffectFlights; visualIndex++)
+			{
+				Vector2 cardCenter = capturedCardVisuals[visualIndex].GlobalPosition + CardVisualSize / 2.0f;
+				collectionTasks.Add(PlayScoreFillEffectFlightAsync(
+					cardCenter,
+					attackerCenter,
+					collectionFrames,
+					collectionTasks.Count,
+					visualIndex * ScoreFillEffectStaggerSeconds,
+					() => { }));
+			}
+
+			await Task.WhenAll(collectionTasks);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+
+			await PlayScoreFillArrivalPulseAsync(attackerCenter, collectionFrames);
+		}
+
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
+		int targetPlayerIndex = GetAdventureDamageTargetPlayerIndex(attackerPlayerIndex);
+		await PlayAdventureAvatarAttackAsync(
+			attackerPlayerIndex,
+			targetPlayerIndex,
+			turnSequenceGeneration,
+			onHit);
+	}
+
+	private async Task PlayAdventureAvatarAttackAsync(
+		int attackerPlayerIndex,
+		int targetPlayerIndex,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		IReadOnlyList<Texture2D> attackFrames = GetAdventureAttackEffectFrames(attackerPlayerIndex);
+		if (attackFrames.Count == 0)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		Vector2 startCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
+		Vector2 targetCenter = GetPlayerAvatarGlobalCenter(targetPlayerIndex);
+		if (IsAdventureEnemyPlayer(attackerPlayerIndex)
+			&& adventure_enemy_avatar_id == FishAdventureEnemyAvatarId)
+		{
+			await PlayFishAdventureAttackBeamAsync(
+				startCenter,
+				targetCenter,
+				attackFrames,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
+		await PlayAdventureAttackEffectFlightAsync(
+			startCenter,
+			targetCenter,
+			attackFrames,
+			turnSequenceGeneration,
+			onHit);
+
+		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+		{
+			await PlayAdventureAttackImpactPulseAsync(targetCenter, attackFrames);
+		}
+	}
+
+	private IReadOnlyList<Texture2D> GetAdventureAttackEffectFrames(int attackerPlayerIndex)
+	{
+		if (IsAdventureEnemyPlayer(attackerPlayerIndex) && _adventureEnemyDamageEffectFrames.Count > 0)
+		{
+			return _adventureEnemyDamageEffectFrames;
+		}
+
+		return _adventureDamageEffectFrames.Count > 0
+			? _adventureDamageEffectFrames
+			: _scoreFillEffectFrames;
+	}
+
+	private static bool IsAdventureEnemyPlayer(int playerIndex)
+	{
+		return playerIndex == 1;
+	}
+
+	private async Task PlayFishAdventureAttackBeamAsync(
+		Vector2 startCenter,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		if (frames.Count == 0)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		Vector2 travel = targetCenter - startCenter;
+		float distance = travel.Length();
+		if (distance <= 1.0f)
+		{
+			onHit?.Invoke();
+			return;
+		}
+
+		Vector2 direction = travel / distance;
+		float beamLength = Math.Max(24.0f, distance - FishAdventureAttackBeamStartInset - FishAdventureAttackBeamEndInset);
+		Vector2 beamCenter = startCenter + direction * (FishAdventureAttackBeamStartInset + beamLength / 2.0f);
+		var beam = new Sprite2D
+		{
+			Name = "FishAdventureAttackBeam",
+			Texture = frames[0],
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = beamCenter,
+			Rotation = direction.Angle(),
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(beam);
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateFishAdventureAttackBeam(
+					beam,
+					frames,
+					beamCenter,
+					direction.Angle(),
+					beamLength,
+					progress)),
+				0.0f,
+				1.0f,
+				FishAdventureAttackBeamSeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(beam))
+			{
+				beam.QueueFree();
+			}
+		}
+	}
+
+	private Vector2 GetPlayerAvatarGlobalCenter(int playerIndex)
+	{
+		if (playerIndex >= 0
+			&& playerIndex < _playerAvatarAreas.Length
+			&& _playerAvatarAreas[playerIndex] is DraggableAvatarArea area
+			&& GodotObject.IsInstanceValid(area))
+		{
+			return area.GetGlobalRect().GetCenter();
+		}
+
+		if (playerIndex >= 0
+			&& playerIndex < _playerAvatars.Length
+			&& _playerAvatars[playerIndex] is CharacterAvatar avatar
+			&& GodotObject.IsInstanceValid(avatar))
+		{
+			return avatar.GetGlobalRect().GetCenter();
+		}
+
+		return GetScoreMeterGlobalCenter(playerIndex);
 	}
 
 	private Vector2 GetScoreMeterGlobalCenter(int playerIndex)
@@ -91,9 +317,110 @@ public partial class GameBoardScene
 		return Size / 2.0f;
 	}
 
+	private async Task PlayAdventureAttackEffectFlightAsync(
+		Vector2 startCenter,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onTouchTarget)
+	{
+		var effect = new Sprite2D
+		{
+			Name = "AdventureAttackEffectFlight",
+			Texture = frames[0],
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(effect);
+
+		Vector2 travel = targetCenter - startCenter;
+		Vector2 side = travel.LengthSquared() > 0.001f
+			? new Vector2(-travel.Y, travel.X).Normalized()
+			: Vector2.Zero;
+		Vector2 controlCenter = (startCenter + targetCenter) / 2.0f
+			+ new Vector2(0.0f, -38.0f)
+			+ side * _rng.RandfRange(-18.0f, 18.0f);
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetTrans(Tween.TransitionType.Cubic);
+			tween.SetEase(Tween.EaseType.InOut);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateAdventureAttackEffectFlight(
+					effect,
+					frames,
+					startCenter,
+					controlCenter,
+					targetCenter,
+					progress)),
+				0.0f,
+				1.0f,
+				AdventureAttackEffectFlightSeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onTouchTarget?.Invoke();
+			}
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(effect))
+			{
+				effect.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayAdventureAttackImpactPulseAsync(Vector2 targetCenter, IReadOnlyList<Texture2D> frames)
+	{
+		if (frames.Count == 0)
+		{
+			return;
+		}
+
+		var pulse = new Sprite2D
+		{
+			Name = "AdventureAttackImpactPulse",
+			Texture = frames[^1],
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.76f),
+		};
+		AddChild(pulse);
+		pulse.GlobalPosition = targetCenter;
+		Vector2 baseScale = GetSpriteScaleForVisualSize(frames[^1], AdventureAttackImpactVisualSize) * 0.72f;
+		pulse.Scale = baseScale;
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(pulse, "scale", baseScale * 1.34f, 0.22f);
+			tween.TweenProperty(pulse, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), 0.22f);
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(pulse))
+			{
+				pulse.QueueFree();
+			}
+		}
+	}
+
 	private async Task PlayScoreFillEffectFlightAsync(
 		Vector2 cardCenter,
 		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
 		int effectIndex,
 		float startDelaySeconds,
 		Action onTouchTarget)
@@ -106,7 +433,7 @@ public partial class GameBoardScene
 		var effect = new Sprite2D
 		{
 			Name = "ScoreFillEffectFlight",
-			Texture = _scoreFillEffectFrames[0],
+			Texture = frames[0],
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 			Centered = true,
 			ZIndex = ScoreFillEffectTravelZIndex + effectIndex,
@@ -134,7 +461,7 @@ public partial class GameBoardScene
 			tween.TweenMethod(
 				Callable.From<float>(progress => UpdateScoreFillEffectFlight(
 					effect,
-					_scoreFillEffectFrames,
+					frames,
 					startCenter,
 					controlCenter,
 					targetCenter,
@@ -156,9 +483,9 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayScoreFillArrivalPulseAsync(Vector2 targetCenter)
+	private async Task PlayScoreFillArrivalPulseAsync(Vector2 targetCenter, IReadOnlyList<Texture2D> frames)
 	{
-		if (_scoreFillEffectFrames.Count == 0)
+		if (frames.Count == 0)
 		{
 			return;
 		}
@@ -166,7 +493,7 @@ public partial class GameBoardScene
 		var pulse = new Sprite2D
 		{
 			Name = "ScoreFillEffectArrivalPulse",
-			Texture = _scoreFillEffectFrames[^1],
+			Texture = frames[^1],
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 			Centered = true,
 			ZIndex = ScoreFillEffectBehindAvatarZIndex,
@@ -175,7 +502,7 @@ public partial class GameBoardScene
 		};
 		AddChild(pulse);
 		pulse.GlobalPosition = targetCenter;
-		Vector2 baseScale = GetSpriteScaleForVisualSize(_scoreFillEffectFrames[^1], ScoreFillPulseVisualSize);
+		Vector2 baseScale = GetSpriteScaleForVisualSize(frames[^1], ScoreFillPulseVisualSize);
 		pulse.Scale = baseScale;
 
 		try
@@ -233,6 +560,69 @@ public partial class GameBoardScene
 		{
 			effect.Rotation = tangent.Angle();
 		}
+	}
+
+	private static void UpdateAdventureAttackEffectFlight(
+		Sprite2D effect,
+		IReadOnlyList<Texture2D> frames,
+		Vector2 startCenter,
+		Vector2 controlCenter,
+		Vector2 targetCenter,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(effect) || frames.Count == 0)
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		Vector2 center = QuadraticBezier(startCenter, controlCenter, targetCenter, easedProgress);
+		Vector2 tangent = QuadraticBezierTangent(startCenter, controlCenter, targetCenter, easedProgress);
+		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * frames.Count), 0, frames.Count - 1);
+		float alpha = clampedProgress < 0.12f
+			? Mathf.Lerp(0.0f, 1.0f, clampedProgress / 0.12f)
+			: Mathf.Lerp(1.0f, 0.86f, Mathf.Max(0.0f, clampedProgress - 0.82f) / 0.18f);
+		float scale = Mathf.Lerp(0.78f, 1.08f, Mathf.Sin(clampedProgress * Mathf.Pi));
+
+		Texture2D texture = frames[frameIndex];
+		effect.Texture = texture;
+		effect.GlobalPosition = center;
+		effect.Scale = GetSpriteScaleForVisualSize(texture, AdventureAttackEffectVisualSize) * scale;
+		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
+		if (tangent.LengthSquared() > 0.001f)
+		{
+			effect.Rotation = tangent.Angle();
+		}
+	}
+
+	private static void UpdateFishAdventureAttackBeam(
+		Sprite2D beam,
+		IReadOnlyList<Texture2D> frames,
+		Vector2 beamCenter,
+		float beamRotation,
+		float beamLength,
+		float progress)
+	{
+		if (!GodotObject.IsInstanceValid(beam) || frames.Count == 0)
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * frames.Count), 0, frames.Count - 1);
+		float alphaIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.12f, 0.0f, 1.0f));
+		float alphaOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.82f) / 0.18f, 0.0f, 1.0f));
+		float lengthScale = Mathf.Lerp(0.76f, 1.0f, alphaIn);
+		Texture2D texture = frames[frameIndex];
+
+		beam.Texture = texture;
+		beam.GlobalPosition = beamCenter;
+		beam.Rotation = beamRotation;
+		beam.Scale = new Vector2(
+			beamLength / Math.Max(1.0f, texture.GetWidth()) * lengthScale,
+			FishAdventureAttackBeamThickness / Math.Max(1.0f, texture.GetHeight()));
+		beam.Modulate = new Color(1.0f, 1.0f, 1.0f, alphaIn * alphaOut);
 	}
 
 	private static Vector2 QuadraticBezier(Vector2 start, Vector2 control, Vector2 end, float t)
