@@ -172,7 +172,7 @@ public partial class GameBoardScene
 		_winnerBannerPanel.AddChild(buttonRow);
 
 		Control replayFrame = CreateWinnerButton("Replay", "GAME_REPLAY", new Color(0.58f, 1.0f, 0.92f), RestartGameFromWinner, false);
-		Control mainMenuFrame = CreateWinnerButton("ReturnToMainMenu", "GAME_RETURN_MAIN_MENU", new Color(1.0f, 0.86f, 0.54f), ReturnToMainMenu, true);
+		Control mainMenuFrame = CreateWinnerButton("ReturnToMainMenu", GetWinnerReturnButtonKey(), new Color(1.0f, 0.86f, 0.54f), GetWinnerReturnAction(), true);
 		buttonRow.AddChild(replayFrame);
 		buttonRow.AddChild(mainMenuFrame);
 	}
@@ -225,6 +225,16 @@ public partial class GameBoardScene
 	{
 		HideWinnerBanner();
 		DealCardsToPlayers(playOpeningDealAnimation: true);
+	}
+
+	private string GetWinnerReturnButtonKey()
+	{
+		return adventure_mode ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
+	}
+
+	private Action GetWinnerReturnAction()
+	{
+		return adventure_mode ? ReturnToAdventureMenu : ReturnToMainMenu;
 	}
 
 	private Control CreateWinnerButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament)

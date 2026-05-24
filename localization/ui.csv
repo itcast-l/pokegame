@@ -4,9 +4,13 @@ MENU_ADVENTURE,冒险模式,冒險模式,Adventure
 MENU_MULTIPLAYER,多人游戏,多人遊戲,Multi
 MENU_SETTINGS,设置,設定,Settings
 MENU_EXIT,退出,離開,Exit
-ADVENTURE_AVATAR_TITLE,选择敌人关卡,選擇敵人關卡,Pick Enemy
+ADVENTURE_AVATAR_TITLE,选择关卡,選擇關卡,Pick Level
 ADVENTURE_START,开始游戏,開始遊戲,Start
 ADVENTURE_BACK,返回,返回,Back
+ADVENTURE_COMPLETED,已完成,已完成,Done
+ADVENTURE_AVAILABLE,可挑战,可挑戰,Ready
+ADVENTURE_TEST_AVAILABLE,测试开放,測試開放,Test
+ADVENTURE_LOCKED,未解锁,未解鎖,Locked
 PLAYER_COUNT_TITLE,选择游戏人数,選擇遊戲人數,Players
 PLAYER_COUNT_MESSAGE,选择本局参与人数,選擇本局參與人數,Pick player count
 PLAYER_COUNT_PLAYERS,游戏人数,遊戲人數,Players
@@ -75,6 +79,7 @@ GAME_PLAYER_SCORE,玩家 {0}: {1}/{2},玩家 {0}: {1}/{2},Player {0}: {1}/{2}
 GAME_WINNER,玩家 {0} 获胜,玩家 {0} 獲勝,Player {0} Wins
 GAME_REPLAY,再来一局,再來一局,Play Again
 GAME_RETURN_MAIN_MENU,回到主菜单,回到主選單,Main Menu
+GAME_RETURN_ADVENTURE,返回关卡,返回關卡,Stages
 GAME_CONTINUE,继续游戏,繼續遊戲,Continue
 GAME_QUIT,退出游戏,離開遊戲,Quit
 GAME_START,游戏开始,遊戲開始,Game Start

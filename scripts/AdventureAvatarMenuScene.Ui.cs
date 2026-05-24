@@ -5,6 +5,11 @@ public partial class AdventureAvatarMenuScene
 {
 	private void BuildUi()
 	{
+		if (GetEmbeddedMainMenuParent() == null)
+		{
+			AddStandaloneBackground();
+		}
+
 		var margin = new MarginContainer
 		{
 			Name = "SafeArea",
@@ -92,6 +97,18 @@ public partial class AdventureAvatarMenuScene
 
 		body.AddChild(CreateLevelListPanel());
 		body.AddChild(CreateEnemyPreviewPanel());
+	}
+
+	private void AddStandaloneBackground()
+	{
+		var background = new ColorRect
+		{
+			Name = "StandaloneBackground",
+			Color = new Color(0.004f, 0.055f, 0.078f),
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		background.SetAnchorsPreset(LayoutPreset.FullRect);
+		AddChild(background);
 	}
 
 	private Vector2 GetCompactMenuPanelSize()

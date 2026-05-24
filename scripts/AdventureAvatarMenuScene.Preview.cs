@@ -99,6 +99,19 @@ public partial class AdventureAvatarMenuScene
 		_previewNameLabel.AddThemeConstantOverride("shadow_offset_y", 2);
 		layout.AddChild(_previewNameLabel);
 
+		_previewStatusLabel = new Label
+		{
+			Name = "PreviewStatusLabel",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_previewStatusLabel.AddThemeFontSizeOverride("font_size", 18);
+		_previewStatusLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.88f));
+		_previewStatusLabel.AddThemeConstantOverride("shadow_offset_x", 1);
+		_previewStatusLabel.AddThemeConstantOverride("shadow_offset_y", 2);
+		layout.AddChild(_previewStatusLabel);
+
 		_startButton = CreateActionButton("ADVENTURE_START", new Color(0.98f, 0.92f, 0.46f), StartAdventure, true, 224.0f);
 		var startWrap = new CenterContainer
 		{

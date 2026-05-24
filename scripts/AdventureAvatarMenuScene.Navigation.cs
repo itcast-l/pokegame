@@ -4,6 +4,12 @@ public partial class AdventureAvatarMenuScene
 {
 	private void StartAdventure()
 	{
+		if (!IsStageUnlocked(_selectedAvatarId))
+		{
+			RefreshSelection();
+			return;
+		}
+
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
 		if (gameBoardScene == null)
 		{
@@ -16,6 +22,7 @@ public partial class AdventureAvatarMenuScene
 		gameBoard.Set("item_mode", true);
 		gameBoard.Set("adventure_mode", true);
 		gameBoard.Set("adventure_enemy_avatar_id", _selectedAvatarId);
+		gameBoard.Set("debug_main_player_has_one_card", true);
 		Node? currentScene = GetTree().CurrentScene;
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;

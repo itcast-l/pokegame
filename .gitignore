@@ -4,3 +4,14 @@
 /.idea/
 /addons/server/build/
 /addons/server/node_modules/
+
+# Local OS/editor metadata
+.DS_Store
+*.swp
+
+# Python/tool caches
+__pycache__/
+*.py[cod]
+
+# Local generated work areas
+/tmp/

@@ -4,6 +4,7 @@ using Godot;
 public partial class GameBoardScene
 {
 	private const string MainMenuScenePath = "res://scenes/main_menu_scene.tscn";
+	private const string AdventureAvatarMenuScenePath = "res://scenes/adventure_avatar_menu_scene.tscn";
 	private const string PauseMenuFrameTexturePath = "res://art/ui/pause_menu/run-001/processed/clean.png";
 	private const float PauseMenuWidth = 560.0f;
 	private const float PauseMenuHeight = 430.0f;
@@ -285,6 +286,22 @@ public partial class GameBoardScene
 		Node mainMenu = mainMenuScene.Instantiate();
 		GetTree().Root.AddChild(mainMenu);
 		GetTree().CurrentScene = mainMenu;
+		QueueFree();
+	}
+
+	private void ReturnToAdventureMenu()
+	{
+		GetTree().Paused = false;
+		PackedScene? adventureMenuScene = GD.Load<PackedScene>(AdventureAvatarMenuScenePath);
+		if (adventureMenuScene == null)
+		{
+			GD.PushError($"Missing adventure avatar menu scene: {AdventureAvatarMenuScenePath}");
+			return;
+		}
+
+		Node adventureMenu = adventureMenuScene.Instantiate();
+		GetTree().Root.AddChild(adventureMenu);
+		GetTree().CurrentScene = adventureMenu;
 		QueueFree();
 	}
 

@@ -4,6 +4,8 @@ public partial class AdventureAvatarMenuScene
 {
 	private void RefreshLocalizedText()
 	{
+		RefreshSelection();
+
 		for (int index = _localizedLabels.Count - 1; index >= 0; index--)
 		{
 			(Label label, string key) = _localizedLabels[index];

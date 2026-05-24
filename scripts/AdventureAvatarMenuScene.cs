@@ -13,6 +13,8 @@ public partial class AdventureAvatarMenuScene : Control
 
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
 	private readonly Dictionary<string, int> _stageNumbers = new();
+	private readonly Dictionary<string, Button> _stageButtons = new();
+	private readonly Dictionary<string, Label> _stageStatusLabels = new();
 	private readonly List<(Label Label, string Key)> _localizedLabels = new();
 	private readonly List<(Button Button, string Key)> _localizedButtons = new();
 	private Button _startButton = default!;
@@ -20,6 +22,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private ScrollContainer _levelScroll = default!;
 	private Label _previewStageLabel = default!;
 	private Label _previewNameLabel = default!;
+	private Label _previewStatusLabel = default!;
 	private CharacterAvatar? _previewAvatar;
 	private Tween? _levelScrollTween;
 	private int _levelScrollTarget;
@@ -44,6 +47,7 @@ public partial class AdventureAvatarMenuScene : Control
 			: NormalizeAdventureAvatarId(selected_avatar_id);
 		RefreshSelection();
 		ClampScrollTarget();
+		ScrollSelectedEntryIntoView();
 		RefreshLocalizedText();
 	}
 
@@ -56,6 +60,7 @@ public partial class AdventureAvatarMenuScene : Control
 		else if (what == NotificationResized && IsNodeReady())
 		{
 			ClampScrollTarget();
+			ScrollSelectedEntryIntoView();
 		}
 	}
 
@@ -66,5 +71,25 @@ public partial class AdventureAvatarMenuScene : Control
 			ReturnToMainMenu();
 			GetViewport().SetInputAsHandled();
 		}
+	}
+
+	private void ScrollSelectedEntryIntoView()
+	{
+		if (_levelScroll == null || !GodotObject.IsInstanceValid(_levelScroll))
+		{
+			return;
+		}
+
+		if (!_avatarFrames.TryGetValue(_selectedAvatarId, out OceanMenuButtonFrame? frame) || !GodotObject.IsInstanceValid(frame))
+		{
+			return;
+		}
+
+		float target = Mathf.Clamp(
+			frame.Position.Y + frame.Size.Y * 0.5f - _levelScroll.Size.Y * 0.5f,
+			0.0f,
+			GetMaxScrollTarget());
+		_levelScrollTarget = (int)Mathf.Round(target);
+		_levelScroll.ScrollVertical = _levelScrollTarget;
 	}
 }

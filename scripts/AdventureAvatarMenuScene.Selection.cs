@@ -4,16 +4,44 @@ public partial class AdventureAvatarMenuScene
 {
 	private void SelectAvatar(string avatarId)
 	{
-		_selectedAvatarId = NormalizeAdventureAvatarId(avatarId);
+		string normalized = NormalizeAdventureAvatarId(avatarId);
+		if (!IsStageUnlocked(normalized))
+		{
+			return;
+		}
+
+		_selectedAvatarId = normalized;
 		RefreshSelection();
 	}
 
 	private void RefreshSelection()
 	{
+		EnsureSelectedStageIsUnlocked();
+
 		foreach ((string avatarId, OceanMenuButtonFrame frame) in _avatarFrames)
 		{
+			int stageNumber = GetStageNumber(avatarId);
+			bool isUnlocked = IsStageUnlocked(stageNumber);
+			bool isCompleted = CharacterAvatarCatalog.IsAdventureStageCompleted(stageNumber);
+			bool isAvailable = CharacterAvatarCatalog.IsAdventureStageAvailable(stageNumber);
 			frame.Selected = avatarId == _selectedAvatarId;
+			frame.Modulate = isUnlocked ? Colors.White : new Color(0.48f, 0.58f, 0.62f, 0.58f);
 			frame.QueueRedraw();
+
+			if (_stageButtons.TryGetValue(avatarId, out Button? button))
+			{
+				button.Disabled = !isUnlocked;
+				button.MouseFilter = isUnlocked ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
+				button.TooltipText = isUnlocked
+					? CharacterAvatarCatalog.GetById(avatarId).DisplayName
+					: Tr("ADVENTURE_LOCKED").ToString();
+			}
+
+			if (_stageStatusLabels.TryGetValue(avatarId, out Label? statusLabel))
+			{
+				statusLabel.Text = GetStageStatusText(stageNumber);
+				statusLabel.AddThemeColorOverride("font_color", GetStageStatusColor(isCompleted, isAvailable, isUnlocked));
+			}
 		}
 
 		UpdatePreview();
@@ -26,6 +54,14 @@ public partial class AdventureAvatarMenuScene
 
 		_previewStageLabel.Text = FormatStageNumber(stageNumber);
 		_previewNameLabel.Text = avatarDefinition.DisplayName;
+		_previewStatusLabel.Text = GetStageStatusText(stageNumber);
+		_previewStatusLabel.AddThemeColorOverride(
+			"font_color",
+			GetStageStatusColor(
+				CharacterAvatarCatalog.IsAdventureStageCompleted(stageNumber),
+				CharacterAvatarCatalog.IsAdventureStageAvailable(stageNumber),
+				IsStageUnlocked(stageNumber)));
+		_startButton.Disabled = !IsStageUnlocked(stageNumber);
 
 		if (_previewAvatar != null && GodotObject.IsInstanceValid(_previewAvatar))
 		{
@@ -37,7 +73,11 @@ public partial class AdventureAvatarMenuScene
 
 	private string GetInitialAvatarId()
 	{
-		return NormalizeAdventureAvatarId(CharacterAvatarCatalog.LoadSelectedAvatar().Id);
+		int nextStage = Mathf.Clamp(
+			CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() + 1,
+			1,
+			CharacterAvatarCatalog.GetAdventureStageCount());
+		return CharacterAvatarCatalog.GetAdventureAvatarIdForStage(nextStage);
 	}
 
 	private static string NormalizeAdventureAvatarId(string avatarId)
@@ -62,6 +102,67 @@ public partial class AdventureAvatarMenuScene
 	private static string FormatStageNumber(int stageNumber)
 	{
 		return stageNumber.ToString("00");
+	}
+
+	private void EnsureSelectedStageIsUnlocked()
+	{
+		if (IsStageUnlocked(_selectedAvatarId))
+		{
+			return;
+		}
+
+		_selectedAvatarId = GetInitialAvatarId();
+	}
+
+	private int GetStageNumber(string avatarId)
+	{
+		return _stageNumbers.TryGetValue(avatarId, out int stageNumber)
+			? stageNumber
+			: CharacterAvatarCatalog.GetAdventureStageNumber(avatarId);
+	}
+
+	private bool IsStageUnlocked(string avatarId)
+	{
+		return IsStageUnlocked(GetStageNumber(avatarId));
+	}
+
+	private static bool IsStageUnlocked(int stageNumber)
+	{
+		return CharacterAvatarCatalog.IsAdventureStageUnlocked(stageNumber);
+	}
+
+	private string GetStageStatusText(int stageNumber)
+	{
+		if (CharacterAvatarCatalog.IsAdventureStageCompleted(stageNumber))
+		{
+			return Tr("ADVENTURE_COMPLETED").ToString();
+		}
+
+		if (CharacterAvatarCatalog.IsAdventureStageAvailable(stageNumber))
+		{
+			return Tr("ADVENTURE_AVAILABLE").ToString();
+		}
+
+		return IsStageUnlocked(stageNumber)
+			? Tr("ADVENTURE_TEST_AVAILABLE").ToString()
+			: Tr("ADVENTURE_LOCKED").ToString();
+	}
+
+	private static Color GetStageStatusColor(bool isCompleted, bool isAvailable, bool isUnlocked)
+	{
+		if (isCompleted)
+		{
+			return new Color(0.58f, 1.0f, 0.78f);
+		}
+
+		if (isAvailable)
+		{
+			return new Color(1.0f, 0.92f, 0.48f);
+		}
+
+		return isUnlocked
+			? new Color(0.80f, 0.95f, 1.0f)
+			: new Color(0.58f, 0.68f, 0.72f);
 	}
 
 	private static Color GetAvatarAccentColor(CharacterAvatarDefinition avatarDefinition)

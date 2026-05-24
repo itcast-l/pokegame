@@ -49,6 +49,8 @@ public partial class AdventureAvatarMenuScene
 
 		_avatarFrames.Clear();
 		_stageNumbers.Clear();
+		_stageButtons.Clear();
+		_stageStatusLabels.Clear();
 		int stageNumber = 1;
 		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
 		{
@@ -148,6 +150,22 @@ public partial class AdventureAvatarMenuScene
 		nameLabel.AddThemeConstantOverride("shadow_offset_y", 2);
 		row.AddChild(nameLabel);
 
+		var statusLabel = new Label
+		{
+			Name = "EntryStatus",
+			HorizontalAlignment = HorizontalAlignment.Right,
+			VerticalAlignment = VerticalAlignment.Center,
+			CustomMinimumSize = new Vector2(78.0f, 0.0f),
+			ClipText = true,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		statusLabel.AddThemeFontSizeOverride("font_size", 16);
+		statusLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.9f));
+		statusLabel.AddThemeConstantOverride("shadow_offset_x", 1);
+		statusLabel.AddThemeConstantOverride("shadow_offset_y", 2);
+		_stageStatusLabels[avatarDefinition.Id] = statusLabel;
+		row.AddChild(statusLabel);
+
 		var arrowLabel = new Label
 		{
 			Name = "EntryArrow",
@@ -176,6 +194,7 @@ public partial class AdventureAvatarMenuScene
 		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
 		button.Pressed += () => SelectAvatar(avatarDefinition.Id);
 		frame.AddChild(button);
+		_stageButtons[avatarDefinition.Id] = button;
 
 		return frame;
 	}

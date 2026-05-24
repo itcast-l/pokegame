@@ -24,6 +24,7 @@ public static class CharacterAvatarCatalog
 {
 	public const string SettingsConfigPath = "user://settings.cfg";
 	public const string DefaultAvatarId = "cat";
+	private const bool UnlockAllAdventureStagesForTesting = true;
 	private const string AdventureProgressSection = "adventure";
 	private const string HighestCompletedStageKey = "highest_completed_stage";
 
@@ -100,6 +101,30 @@ public static class CharacterAvatarCatalog
 		return stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage();
 	}
 
+	public static int GetAdventureStageCount()
+	{
+		return Avatars.Length - 1;
+	}
+
+	public static bool IsAdventureStageCompleted(int stageNumber)
+	{
+		return stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage();
+	}
+
+	public static bool IsAdventureStageAvailable(int stageNumber)
+	{
+		return stageNumber > 0
+			&& stageNumber <= GetAdventureStageCount()
+			&& stageNumber == LoadHighestCompletedAdventureStage() + 1;
+	}
+
+	public static bool IsAdventureStageUnlocked(int stageNumber)
+	{
+		return stageNumber > 0
+			&& stageNumber <= GetAdventureStageCount()
+			&& (UnlockAllAdventureStagesForTesting || stageNumber <= LoadHighestCompletedAdventureStage() + 1);
+	}
+
 	public static int GetAdventureStageNumber(string avatarId)
 	{
 		string normalized = NormalizeAvatarId(avatarId);
@@ -112,6 +137,13 @@ public static class CharacterAvatarCatalog
 		}
 
 		return 0;
+	}
+
+	public static string GetAdventureAvatarIdForStage(int stageNumber)
+	{
+		return stageNumber > 0 && stageNumber < Avatars.Length
+			? Avatars[stageNumber].Id
+			: DefaultAvatarId;
 	}
 
 	public static int LoadHighestCompletedAdventureStage()
