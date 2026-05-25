@@ -1,0 +1,13 @@
+Use the provided jellyfish avatar image as the visual reference for Soft Candy's identity, palette, material language, and attack personality.
+
+Create exactly one 2x2 animation sprite sheet for a 2D game attack FX, not a character body sheet. The effect is for Soft Candy, a cute translucent jellyfish hero with a rounded glassy bell, lavender-blue body, pink-violet highlights, cyan rim glow, tiny bubble accents, and soft candy-like underwater magic.
+
+The sprite sheet must show four frames of one continuous jellyfish sting attack effect:
+Top-left frame 1: compact wind-up, a small translucent cyan bubble ring with faint pink-violet electric threads curling inward, soft jelly glow beginning to form.
+Top-right frame 2: sting release, several short wavy jellyfish-tentacle lightning arcs snap forward, cyan-white cores with lavender and pink edges, small pearl bubbles trailing behind.
+Bottom-left frame 3: peak paralysis impact, a bright rounded aqua-white flash shaped like a soft jelly bloom, radial wavy tendril sparks, tiny candy-like star glints and bubbles, energetic but still cute.
+Bottom-right frame 4: fading afterimage, translucent violet-blue jelly arcs dissolve into drifting bubbles and a faint circular ripple, readable but gentle.
+
+Project-native clean HD 2D game FX style matching the reference: crisp readable silhouette, smooth hand-painted glow, glossy translucent jelly material, polished underwater fantasy look, cute and soft rather than harsh. Do not make pixel art. Do not draw the jellyfish character, no full creature, no eyes, no face, no body, no card, no UI.
+
+ABSOLUTE LAYOUT RULES: output exactly 4 equal cells in a 2 rows by 2 columns grid. Background must be 100% solid flat magenta #FF00FF across the entire sheet, including between cells. No visible grid lines, no borders, no labels, no text, no numbers, no arrows, no watermark. Each frame must be centered in its own cell, same visual scale and same approximate bounding box, with generous magenta margin on all four sides. No bubble, electric thread, tendril arc, glow, spark, ripple, or trail may cross or touch a cell edge.

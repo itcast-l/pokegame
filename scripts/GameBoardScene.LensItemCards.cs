@@ -50,7 +50,7 @@ public partial class GameBoardScene
 		Vector2 splitGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		Vector2 splitGlobalCenter = splitGlobalPosition + CardVisualSize / 2.0f;
 		itemHand.RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, displayIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
 		RenderPlayerHands();
 
 		await PlayLensCardSplitAnimationAsync(

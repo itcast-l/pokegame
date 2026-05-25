@@ -226,11 +226,16 @@ public partial class GameBoardScene
 			return;
 		}
 
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))
+		{
+			return;
+		}
+
 		TableCard tideShiftedCard = _tableCards[0];
 		Texture2D? triggerTexture = GetVisibleTableCardTexture(tideShiftedCard);
 		if (triggerTexture != null)
 		{
-			PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
 			List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
 			if (cardPositions.Count > 0)
 			{
@@ -305,7 +310,7 @@ public partial class GameBoardScene
 		}
 
 		_currentTurnPlayerIndex = result.Captured ? playerIndex : GetNextTurnPlayerIndex(playerIndex);
-		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result);
+		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result, _turnSequenceGeneration);
 		if (IsGameOver())
 		{
 			return;
@@ -434,6 +439,22 @@ public partial class GameBoardScene
 		}
 	}
 
+	private void ShowWinnerSequence(int playerIndex)
+	{
+		_ = ShowWinnerSequenceAsync(playerIndex);
+	}
+
+	private async Task ShowWinnerSequenceAsync(int playerIndex)
+	{
+		await PlayDefeatFinisherIfNeededAsync(playerIndex);
+		if (_winnerPlayerIndex != playerIndex)
+		{
+			return;
+		}
+
+		ShowWinnerBanner(playerIndex);
+	}
+
 	private bool PlayerHasCards(int playerIndex)
 	{
 		return _playerHands[playerIndex].Count > 0 || _playerDecks[playerIndex].Count > 0 || BuildPlayableItemIndexes(playerIndex).Count > 0;
@@ -466,7 +487,6 @@ public partial class GameBoardScene
 		_isProcessingCardPlay = false;
 		_currentTurnPlayerIndex = playerIndex;
 
-		ShowWinnerBanner(playerIndex);
 		for (int avatarPlayerIndex = 0; avatarPlayerIndex < player_count; avatarPlayerIndex++)
 		{
 			PlayPlayerAvatarAction(
@@ -477,6 +497,7 @@ public partial class GameBoardScene
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
+		ShowWinnerSequence(playerIndex);
 	}
 
 	private bool IsGameOver()

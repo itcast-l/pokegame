@@ -13,7 +13,16 @@ public partial class GameBoardScene
 	private const int ScoreFillEffectTravelZIndex = PlayedCardFlightZIndex + 850;
 	private const int ScoreFillEffectBehindAvatarZIndex = 2;
 	private const float ScoreFillEffectBehindAvatarProgress = 0.72f;
+	private const float EnemySpecialAbilityAvatarFxFrameSeconds = 0.08f;
+	private const float EnemySpecialAbilityAvatarFxTotalSeconds = EnemySpecialAbilityAvatarFxFrameSeconds * EnemySpecialAbilityAvatarFxFrameCount;
+	private const float EnemySpecialAbilityAvatarFxVisualScale = 1.22f;
+	private const int EnemySpecialAbilityAvatarFxZIndex = PlayedCardFlightZIndex + 980;
+	private const float MantaRayTideShiftCycloneSeconds = 0.72f;
+	private const float MantaRayTideShiftCycloneStartInset = 76.0f;
+	private const float MantaRayTideShiftCycloneTargetInset = 104.0f;
+	private const float MantaRayTideShiftCycloneVisualHeightScale = 0.82f;
 	private const float AdventureAttackEffectFlightSeconds = 0.48f;
+	private const float ShrimpAdventureAttackEffectFlightSeconds = 0.72f;
 	private const float AdventureAttackEffectVisualSize = 104.0f;
 	private const float AdventureAttackImpactVisualSize = 124.0f;
 	private const float CatAdventureScratchVisualSize = 132.0f;
@@ -24,6 +33,22 @@ public partial class GameBoardScene
 	private const double CatAdventureScratchFrame3DelaySeconds = 0.26d;
 	private const double CatAdventureScratchFrame4DelaySeconds = 0.42d;
 	private const double CatAdventureScratchHitDelaySeconds = CatAdventureScratchFrame3DelaySeconds;
+	private const float CrabAdventurePincerVisualSize = 150.0f;
+	private const float CrabAdventurePincerTotalSeconds = 0.72f;
+	private const double CrabAdventurePincerFrame2DelaySeconds = 0.16d;
+	private const double CrabAdventurePincerFrame3DelaySeconds = 0.32d;
+	private const double CrabAdventurePincerFrame4DelaySeconds = 0.48d;
+	private const double CrabAdventurePincerHitDelaySeconds = CrabAdventurePincerFrame3DelaySeconds;
+	private const float JellyfishAdventureTentacleVisualHeight = 246.0f;
+	private const float JellyfishAdventureTentacleStartInset = 18.0f;
+	private const float JellyfishAdventureTentacleTargetInset = 28.0f;
+	private const float JellyfishAdventureTentacleFullReachStartPixel = 74.0f;
+	private const float JellyfishAdventureTentacleFullReachEndPixel = 479.0f;
+	private const float JellyfishAdventureTentacleTotalSeconds = 0.78f;
+	private const double JellyfishAdventureTentacleFrame2DelaySeconds = 0.18d;
+	private const double JellyfishAdventureTentacleFrame3DelaySeconds = 0.38d;
+	private const double JellyfishAdventureTentacleFrame4DelaySeconds = 0.58d;
+	private const double JellyfishAdventureTentacleHitDelaySeconds = JellyfishAdventureTentacleFrame3DelaySeconds;
 	private const float FishAdventureAttackBeamSeconds = 0.42f;
 	private const float FishAdventureAttackBeamThickness = 96.0f;
 	private const float FishAdventureAttackBeamStartInset = 24.0f;
@@ -185,12 +210,36 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (ShouldPlayCrabAdventurePincerAttack(attackerPlayerIndex, targetPlayerIndex))
+		{
+			await PlayCrabAdventurePincerAttackAsync(
+				attackerPlayerIndex,
+				targetCenter,
+				attackFrames,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
+		if (ShouldPlayJellyfishAdventureTentacleAttack(attackerPlayerIndex, targetPlayerIndex))
+		{
+			await PlayJellyfishAdventureTentacleAttackAsync(
+				attackerPlayerIndex,
+				startCenter,
+				targetCenter,
+				attackFrames,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
 		await PlayAdventureAttackEffectFlightAsync(
 			startCenter,
 			targetCenter,
 			attackFrames,
 			turnSequenceGeneration,
-			onHit);
+			onHit,
+			GetAdventureAttackEffectFlightSeconds(attackerPlayerIndex));
 
 		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 		{
@@ -218,6 +267,31 @@ public partial class GameBoardScene
 	private static bool ShouldPlayCatAdventureScratchAttack(int attackerPlayerIndex)
 	{
 		return attackerPlayerIndex == MainPlayerIndex;
+	}
+
+	private bool ShouldPlayCrabAdventurePincerAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	{
+		return adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId
+			&& targetPlayerIndex == MainPlayerIndex
+			&& attackerPlayerIndex != MainPlayerIndex;
+	}
+
+	private bool ShouldPlayJellyfishAdventureTentacleAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	{
+		return adventure_enemy_avatar_id == JellyfishAdventureEnemyAvatarId
+			&& targetPlayerIndex == MainPlayerIndex
+			&& attackerPlayerIndex != MainPlayerIndex;
+	}
+
+	private float GetAdventureAttackEffectFlightSeconds(int attackerPlayerIndex)
+	{
+		return IsAdventureEnemyPlayer(attackerPlayerIndex)
+			? adventure_enemy_avatar_id switch
+			{
+				ShrimpAdventureEnemyAvatarId => ShrimpAdventureAttackEffectFlightSeconds,
+				_ => AdventureAttackEffectFlightSeconds,
+			}
+			: AdventureAttackEffectFlightSeconds;
 	}
 
 	private async Task PlayCatAdventureScratchAttackAsync(
@@ -299,6 +373,198 @@ public partial class GameBoardScene
 			if (GodotObject.IsInstanceValid(scratch))
 			{
 				scratch.Texture = frame;
+			}
+		})).SetDelay(delaySeconds);
+	}
+
+	private async Task PlayCrabAdventurePincerAttackAsync(
+		int attackerPlayerIndex,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		if (frames.Count == 0)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		Texture2D firstFrame = frames[0];
+		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, CrabAdventurePincerVisualSize);
+		var pincer = new Sprite2D
+		{
+			Name = "CrabAdventurePincerImpact",
+			Texture = firstFrame,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = targetCenter,
+			Scale = baseScale * 0.92f,
+			Modulate = Colors.White,
+		};
+		AddChild(pincer);
+
+		Tween tween = CreateTween();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(pincer, "scale", baseScale * 1.08f, CrabAdventurePincerTotalSeconds);
+		tween.TweenProperty(pincer, "modulate:a", 0.0f, CrabAdventurePincerTotalSeconds * 0.22f)
+			.SetDelay(CrabAdventurePincerFrame4DelaySeconds);
+		TweenCrabAdventurePincerTexture(tween, pincer, frames, 1, CrabAdventurePincerFrame2DelaySeconds);
+		TweenCrabAdventurePincerTexture(tween, pincer, frames, 2, CrabAdventurePincerFrame3DelaySeconds);
+		TweenCrabAdventurePincerTexture(tween, pincer, frames, 3, CrabAdventurePincerFrame4DelaySeconds);
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+		})).SetDelay(CrabAdventurePincerHitDelaySeconds);
+		tween.Finished += () =>
+		{
+			if (GodotObject.IsInstanceValid(pincer))
+			{
+				pincer.QueueFree();
+			}
+		};
+
+		await ToSignal(tween, Tween.SignalName.Finished);
+	}
+
+	private static void TweenCrabAdventurePincerTexture(
+		Tween tween,
+		Sprite2D pincer,
+		IReadOnlyList<Texture2D> frames,
+		int frameIndex,
+		double delaySeconds)
+	{
+		if (frameIndex >= frames.Count)
+		{
+			return;
+		}
+
+		Texture2D frame = frames[frameIndex];
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (GodotObject.IsInstanceValid(pincer))
+			{
+				pincer.Texture = frame;
+			}
+		})).SetDelay(delaySeconds);
+	}
+
+	private async Task PlayJellyfishAdventureTentacleAttackAsync(
+		int attackerPlayerIndex,
+		Vector2 startCenter,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		if (frames.Count == 0)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		Texture2D firstFrame = frames[0];
+		Vector2 travel = targetCenter - startCenter;
+		float distance = travel.Length();
+		if (distance <= 1.0f)
+		{
+			onHit?.Invoke();
+			return;
+		}
+
+		Vector2 direction = travel / distance;
+		float reachDistance = Math.Max(24.0f, distance - JellyfishAdventureTentacleStartInset - JellyfishAdventureTentacleTargetInset);
+		Vector2 reachStart = startCenter + direction * JellyfishAdventureTentacleStartInset;
+		Vector2 reachEnd = reachStart + direction * reachDistance;
+		float sourceReachPixels = Math.Max(1.0f, JellyfishAdventureTentacleFullReachEndPixel - JellyfishAdventureTentacleFullReachStartPixel);
+		Vector2 scale = new(
+			reachDistance / sourceReachPixels,
+			JellyfishAdventureTentacleVisualHeight / Math.Max(1.0f, firstFrame.GetHeight()));
+		Vector2 sourceReachCenter = new(
+			(JellyfishAdventureTentacleFullReachStartPixel + JellyfishAdventureTentacleFullReachEndPixel) / 2.0f,
+			firstFrame.GetHeight() / 2.0f);
+		Vector2 localReachCenter = (sourceReachCenter - new Vector2(firstFrame.GetWidth(), firstFrame.GetHeight()) / 2.0f) * scale;
+		Vector2 reachCenter = (reachStart + reachEnd) / 2.0f;
+		Vector2 spriteCenter = reachCenter - localReachCenter.Rotated(direction.Angle());
+		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		var tentacles = new Sprite2D
+		{
+			Name = "JellyfishAdventureTentacleAttack",
+			Texture = firstFrame,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = spriteCenter,
+			Rotation = direction.Angle(),
+			Scale = scale,
+			Modulate = Colors.White,
+		};
+		AddChild(tentacles);
+
+		Tween tween = CreateTween();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(tentacles, "scale", scale * new Vector2(1.02f, 0.98f), JellyfishAdventureTentacleTotalSeconds * 0.18f)
+			.SetDelay(JellyfishAdventureTentacleFrame3DelaySeconds);
+		tween.TweenProperty(tentacles, "modulate:a", 0.0f, JellyfishAdventureTentacleTotalSeconds * 0.24f)
+			.SetDelay(JellyfishAdventureTentacleFrame4DelaySeconds);
+		TweenJellyfishAdventureTentacleTexture(tween, tentacles, frames, 1, JellyfishAdventureTentacleFrame2DelaySeconds);
+		TweenJellyfishAdventureTentacleTexture(tween, tentacles, frames, 2, JellyfishAdventureTentacleFrame3DelaySeconds);
+		TweenJellyfishAdventureTentacleTexture(tween, tentacles, frames, 3, JellyfishAdventureTentacleFrame4DelaySeconds);
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+		})).SetDelay(JellyfishAdventureTentacleHitDelaySeconds);
+		tween.Finished += () =>
+		{
+			if (GodotObject.IsInstanceValid(tentacles))
+			{
+				tentacles.QueueFree();
+			}
+		};
+
+		await ToSignal(tween, Tween.SignalName.Finished);
+	}
+
+	private static void TweenJellyfishAdventureTentacleTexture(
+		Tween tween,
+		Sprite2D tentacles,
+		IReadOnlyList<Texture2D> frames,
+		int frameIndex,
+		double delaySeconds)
+	{
+		if (frameIndex >= frames.Count)
+		{
+			return;
+		}
+
+		Texture2D frame = frames[frameIndex];
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (GodotObject.IsInstanceValid(tentacles))
+			{
+				tentacles.Texture = frame;
 			}
 		})).SetDelay(delaySeconds);
 	}
@@ -390,6 +656,187 @@ public partial class GameBoardScene
 		}
 	}
 
+	private async Task PlayEnemySpecialAbilityAvatarFxAsync(int enemyPlayerIndex, int turnSequenceGeneration)
+	{
+		if (!adventure_mode
+			|| enemyPlayerIndex < 0
+			|| enemyPlayerIndex >= player_count
+			|| turnSequenceGeneration != _turnSequenceGeneration
+			|| IsGameOver())
+		{
+			return;
+		}
+
+		PlayPlayerAvatarAction(enemyPlayerIndex, CharacterAvatar.AvatarAction.Score);
+		if (adventure_enemy_avatar_id == MantaRayAdventureEnemyAvatarId)
+		{
+			await PlayMantaRayTideShiftCycloneFxAsync(enemyPlayerIndex, turnSequenceGeneration);
+			return;
+		}
+
+		if (_enemySpecialAbilityAvatarFxFrames.Count == 0 || !IsInsideTree())
+		{
+			return;
+		}
+
+		Texture2D firstFrame = _enemySpecialAbilityAvatarFxFrames[0];
+		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, GetPlayerAvatarFxVisualSize(enemyPlayerIndex));
+		var abilityFx = new Sprite2D
+		{
+			Name = "EnemySpecialAbilityAvatarFx",
+			Texture = firstFrame,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = EnemySpecialAbilityAvatarFxZIndex,
+			ZAsRelative = false,
+			GlobalPosition = GetPlayerAvatarGlobalCenter(enemyPlayerIndex),
+			Scale = baseScale * 0.88f,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(abilityFx);
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				abilityFx,
+				_enemySpecialAbilityAvatarFxFrames,
+				EnemySpecialAbilityAvatarFxFrameSeconds,
+				EnemySpecialAbilityAvatarFxTotalSeconds);
+			tween.TweenProperty(abilityFx, "modulate:a", 0.88f, EnemySpecialAbilityAvatarFxTotalSeconds * 0.18f);
+			tween.TweenProperty(abilityFx, "modulate:a", 0.0f, EnemySpecialAbilityAvatarFxTotalSeconds * 0.22f)
+				.SetDelay(EnemySpecialAbilityAvatarFxTotalSeconds * 0.78f);
+			tween.TweenProperty(abilityFx, "scale", baseScale * 1.08f, EnemySpecialAbilityAvatarFxTotalSeconds * 0.46f);
+			tween.TweenProperty(abilityFx, "scale", baseScale * 0.96f, EnemySpecialAbilityAvatarFxTotalSeconds * 0.54f)
+				.SetDelay(EnemySpecialAbilityAvatarFxTotalSeconds * 0.46f);
+			tween.TweenMethod(
+				Callable.From<float>(_ =>
+				{
+					if (GodotObject.IsInstanceValid(abilityFx))
+					{
+						abilityFx.GlobalPosition = GetPlayerAvatarGlobalCenter(enemyPlayerIndex);
+					}
+				}),
+				0.0f,
+				1.0f,
+				EnemySpecialAbilityAvatarFxTotalSeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(abilityFx))
+			{
+				abilityFx.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayMantaRayTideShiftCycloneFxAsync(int enemyPlayerIndex, int turnSequenceGeneration)
+	{
+		if (_mantaRayTideShiftCycloneFxFrames.Count == 0 || !IsInsideTree())
+		{
+			return;
+		}
+
+		Texture2D texture = _mantaRayTideShiftCycloneFxFrames[0];
+		Vector2 startCenter = GetPlayerAvatarGlobalCenter(enemyPlayerIndex);
+		Vector2 targetCenter = GetPlayerAvatarGlobalCenter(MainPlayerIndex);
+		Vector2 travel = targetCenter - startCenter;
+		float distance = travel.Length();
+		if (distance <= 1.0f)
+		{
+			return;
+		}
+
+		Vector2 direction = travel / distance;
+		float effectLength = Math.Max(48.0f, distance - MantaRayTideShiftCycloneStartInset - MantaRayTideShiftCycloneTargetInset);
+		Vector2 effectStart = startCenter + direction * MantaRayTideShiftCycloneStartInset;
+		Vector2 effectEnd = effectStart + direction * effectLength;
+		Vector2 effectCenter = (effectStart + effectEnd) / 2.0f;
+		float visualHeight = Math.Max(96.0f, GetPlayerAvatarFxVisualSize(enemyPlayerIndex) * MantaRayTideShiftCycloneVisualHeightScale);
+		Vector2 finalScale = new(
+			effectLength / Math.Max(1.0f, texture.GetWidth()),
+			visualHeight / Math.Max(1.0f, texture.GetHeight()));
+
+		var cyclone = new Sprite2D
+		{
+			Name = "MantaRayTideShiftCycloneFx",
+			Texture = texture,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = EnemySpecialAbilityAvatarFxZIndex,
+			ZAsRelative = false,
+			GlobalPosition = effectCenter - direction * 28.0f,
+			Rotation = direction.Angle(),
+			Scale = new Vector2(finalScale.X * 0.78f, finalScale.Y * 0.84f),
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(cyclone);
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(cyclone, "modulate:a", 0.92f, MantaRayTideShiftCycloneSeconds * 0.18f);
+			tween.TweenProperty(cyclone, "modulate:a", 0.0f, MantaRayTideShiftCycloneSeconds * 0.22f)
+				.SetDelay(MantaRayTideShiftCycloneSeconds * 0.78f);
+			tween.TweenProperty(cyclone, "global_position", effectCenter + direction * 18.0f, MantaRayTideShiftCycloneSeconds);
+			tween.TweenProperty(cyclone, "scale", finalScale, MantaRayTideShiftCycloneSeconds * 0.42f);
+			tween.TweenProperty(cyclone, "scale", new Vector2(finalScale.X * 1.03f, finalScale.Y * 0.94f), MantaRayTideShiftCycloneSeconds * 0.58f)
+				.SetDelay(MantaRayTideShiftCycloneSeconds * 0.42f);
+			tween.TweenMethod(
+				Callable.From<float>(_ => UpdateSpriteRotation(cyclone, direction.Angle())),
+				0.0f,
+				1.0f,
+				MantaRayTideShiftCycloneSeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(cyclone))
+			{
+				cyclone.QueueFree();
+			}
+		}
+	}
+
+	private float GetPlayerAvatarFxVisualSize(int playerIndex)
+	{
+		Rect2 avatarRect = GetPlayerAvatarGlobalRect(playerIndex);
+		float side = Math.Max(1.0f, Math.Min(avatarRect.Size.X, avatarRect.Size.Y));
+		return side * EnemySpecialAbilityAvatarFxVisualScale;
+	}
+
+	private Rect2 GetPlayerAvatarGlobalRect(int playerIndex)
+	{
+		if (playerIndex >= 0
+			&& playerIndex < _playerAvatarAreas.Length
+			&& _playerAvatarAreas[playerIndex] is DraggableAvatarArea area
+			&& GodotObject.IsInstanceValid(area))
+		{
+			return area.GetGlobalRect();
+		}
+
+		if (playerIndex >= 0
+			&& playerIndex < _playerAvatars.Length
+			&& _playerAvatars[playerIndex] is CharacterAvatar avatar
+			&& GodotObject.IsInstanceValid(avatar))
+		{
+			return avatar.GetGlobalRect();
+		}
+
+		Vector2 fallbackCenter = GetScoreMeterGlobalCenter(playerIndex);
+		return new Rect2(fallbackCenter - Vector2.One * 78.0f, Vector2.One * 156.0f);
+	}
+
 	private Vector2 GetPlayerAvatarGlobalCenter(int playerIndex)
 	{
 		if (playerIndex >= 0
@@ -442,7 +889,8 @@ public partial class GameBoardScene
 		Vector2 targetCenter,
 		IReadOnlyList<Texture2D> frames,
 		int turnSequenceGeneration,
-		Action? onTouchTarget)
+		Action? onTouchTarget,
+		float flightSeconds)
 	{
 		var effect = new Sprite2D
 		{
@@ -475,14 +923,14 @@ public partial class GameBoardScene
 				tween,
 				effect,
 				frames,
-				AdventureAttackEffectFlightSeconds / Math.Max(1, frames.Count),
-				AdventureAttackEffectFlightSeconds);
-			tween.TweenProperty(effect, "modulate:a", 1.0f, AdventureAttackEffectFlightSeconds * 0.12f);
-			tween.TweenProperty(effect, "modulate:a", 0.86f, AdventureAttackEffectFlightSeconds * 0.18f)
-				.SetDelay(AdventureAttackEffectFlightSeconds * 0.82f);
-			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], AdventureAttackEffectVisualSize) * 1.08f, AdventureAttackEffectFlightSeconds * 0.5f);
-			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], AdventureAttackEffectVisualSize) * 0.78f, AdventureAttackEffectFlightSeconds * 0.5f)
-				.SetDelay(AdventureAttackEffectFlightSeconds * 0.5f);
+				flightSeconds / Math.Max(1, frames.Count),
+				flightSeconds);
+			tween.TweenProperty(effect, "modulate:a", 1.0f, flightSeconds * 0.12f);
+			tween.TweenProperty(effect, "modulate:a", 0.86f, flightSeconds * 0.18f)
+				.SetDelay(flightSeconds * 0.82f);
+			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], AdventureAttackEffectVisualSize) * 1.08f, flightSeconds * 0.5f);
+			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], AdventureAttackEffectVisualSize) * 0.78f, flightSeconds * 0.5f)
+				.SetDelay(flightSeconds * 0.5f);
 			tween.TweenMethod(
 				Callable.From<float>(progress => UpdateSpriteBezierFlight(
 					effect,
@@ -492,7 +940,7 @@ public partial class GameBoardScene
 					progress)),
 				0.0f,
 				1.0f,
-				AdventureAttackEffectFlightSeconds);
+				flightSeconds);
 
 			await ToSignal(tween, Tween.SignalName.Finished);
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())

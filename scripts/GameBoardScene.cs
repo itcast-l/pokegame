@@ -16,13 +16,37 @@ public partial class GameBoardScene : Control
 	private const float CardBackAnimationFps = 6.0f;
 	private const string ScoreFillEffectFramePattern = "res://art/fx/score_fill_orbs/run-001/processed/fx-{0}.png";
 	private const int ScoreFillEffectFrameCount = 4;
+	private const string EnemySpecialAbilityAvatarFxFramePattern = "res://art/fx/enemy_special_ability_avatar/run-001/processed/fx-{0}.png";
+	private const int EnemySpecialAbilityAvatarFxFrameCount = 6;
+	private const string MantaRayTideShiftCycloneFxFramePattern = "res://art/fx/player_manta_ray_tide_shift_cyclone/run-001/processed/fx-{0}.png";
+	private const int MantaRayTideShiftCycloneFxFrameCount = 1;
 	private static readonly Texture2D[] ScoreFillEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(ScoreFillEffectFramePattern, ScoreFillEffectFrameCount, "score fill effect");
+	private static readonly Texture2D[] EnemySpecialAbilityAvatarFxFrames =
+		FrameAnimationHelpers.LoadTextureFrames(
+			EnemySpecialAbilityAvatarFxFramePattern,
+			EnemySpecialAbilityAvatarFxFrameCount,
+			"enemy special ability avatar effect",
+			preferImageFile: true);
+	private static readonly Texture2D[] MantaRayTideShiftCycloneFxFrames =
+		FrameAnimationHelpers.LoadTextureFrames(
+			MantaRayTideShiftCycloneFxFramePattern,
+			MantaRayTideShiftCycloneFxFrameCount,
+			"manta ray tide shift cyclone effect",
+			preferImageFile: true);
 	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
 	private const string CatAdventureDamageEffectFramePattern = "res://art/fx/player_cat_claw_attack/run-001/processed/fx-{0}.png";
 	private const string FishAdventureDamageEffectFramePattern = "res://art/fx/fish_attack_burst/run-001/processed/fx-{0}.png";
 	private const string LanternfishAdventureDamageEffectFramePattern = "res://art/fx/lanternfish_lure_flash/run-001/processed/fx-{0}.png";
+	private const string ShrimpAdventureDamageEffectFramePattern = "res://art/fx/player_shrimp_snap_attack/run-001/processed/fx-{0}.png";
+	private const string CrabAdventureDamageEffectFramePattern = "res://art/fx/player_crab_tidal_pincer_attack/run-001/processed/fx-{0}.png";
+	private const string JellyfishAdventureDamageEffectFramePattern = "res://art/fx/player_jellyfish_sting_attack/run-001/processed/fx-{0}.png";
 	private const int AdventureDamageEffectFrameCount = 4;
+	private const string FishDefeatFinisherFramePattern = "res://art/characters/player_fish_avatar/run-006/fp_fx_asset_preview/abu-fp-fx-asset-{0:00}.png";
+	private const int FishDefeatFinisherFrameCount = 20;
+	private const float FishDefeatFinisherSeconds = 1.12f;
+	private static readonly Texture2D[] FishDefeatFinisherFrames =
+		FrameAnimationHelpers.LoadTextureFrames(FishDefeatFinisherFramePattern, FishDefeatFinisherFrameCount, "fish defeat finisher");
 	private static readonly Texture2D[] CardBackFrames =
 		FrameAnimationHelpers.LoadTextureFrames(CardBackFramePattern, CardBackFrameCount, "card back animation");
 	private static readonly Texture2D[] DefaultAdventureDamageEffectFrames =
@@ -33,6 +57,12 @@ public partial class GameBoardScene : Control
 		FrameAnimationHelpers.LoadTextureFrames(FishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "fish adventure damage effect");
 	private static readonly Texture2D[] LanternfishAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(LanternfishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "lanternfish adventure damage effect");
+	private static readonly Texture2D[] ShrimpAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(ShrimpAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "shrimp adventure damage effect");
+	private static readonly Texture2D[] CrabAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(CrabAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "crab adventure damage effect");
+	private static readonly Texture2D[] JellyfishAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(JellyfishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "jellyfish adventure damage effect", preferImageFile: true);
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
 	private const int QuestionCardTransformFrameCount = 6;
 	private static readonly Texture2D[] QuestionCardTransformFrames =
@@ -72,8 +102,10 @@ public partial class GameBoardScene : Control
 	private const string KingItemCardId = ItemCardCatalog.KingItemCardId;
 	private const string FishAdventureEnemyAvatarId = "fish";
 	private const string LanternfishAdventureEnemyAvatarId = "lanternfish";
+	private const string ShrimpAdventureEnemyAvatarId = "shrimp";
 	private const string CrabAdventureEnemyAvatarId = "crab";
 	private const string JellyfishAdventureEnemyAvatarId = "jellyfish";
+	private const string MantaRayAdventureEnemyAvatarId = "manta_ray";
 	private const string GardenEelAdventureEnemyAvatarId = "garden_eel";
 	private const string SeaSlugAdventureEnemyAvatarId = "sea_slug";
 	private const string NautilusAdventureEnemyAvatarId = "nautilus";
@@ -143,6 +175,8 @@ public partial class GameBoardScene : Control
 	private readonly List<Control> _playerHandAreas = new();
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
+	private readonly List<Texture2D> _enemySpecialAbilityAvatarFxFrames = new();
+	private readonly List<Texture2D> _mantaRayTideShiftCycloneFxFrames = new();
 	private readonly List<Texture2D> _adventureDamageEffectFrames = new();
 	private readonly List<Texture2D> _adventureEnemyDamageEffectFrames = new();
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
@@ -168,6 +202,8 @@ public partial class GameBoardScene : Control
 	private Button? _winnerReplayButton;
 	private Label _winnerLabel = default!;
 	private CharacterAvatar? _resultAvatar;
+	private Control? _defeatFinisherRoot;
+	private TextureRect? _defeatFinisherTexture;
 	private bool _showingDefeatResult;
 	private int _currentTurnPlayerIndex = MainPlayerIndex;
 	private int _turnSequenceGeneration;
@@ -198,7 +234,7 @@ public partial class GameBoardScene : Control
 	private string _adventureEnemyAvatarId = "fish";
 	private bool _mantaRayTideShiftCheckedThisTurn;
 	private bool _jellyfishBubbleTriggeredThisTurn;
-	private int _jellyfishHiddenMainPlayerHandSlotIndex = -1;
+	private int _jellyfishDisabledMainPlayerHandSlotIndex = -1;
 	private int _gardenEelCaptureCountUntilSandAmbush;
 	private bool _gardenEelSandAmbushReady;
 	private int _gardenEelBuriedTableCardIndex = -1;
@@ -318,6 +354,8 @@ public partial class GameBoardScene : Control
 		_effectResolver = new SpecialCardEffectResolver(this);
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
+		LoadEnemySpecialAbilityAvatarFxTextures();
+		LoadMantaRayTideShiftCycloneFxTextures();
 		LoadAdventureDamageEffectTextures();
 		LoadAdventureEnemyDamageEffectTextures();
 		LoadItemCardTextures();
@@ -343,6 +381,7 @@ public partial class GameBoardScene : Control
 		BindQuestionCardTransformArea();
 		BindPlayerScoreMeters();
 		CreateWinnerLabel();
+		CreateDefeatFinisherOverlay();
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: true);
 	}

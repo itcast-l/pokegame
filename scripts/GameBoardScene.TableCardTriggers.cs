@@ -404,13 +404,13 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void ApplyJellyfishBubbleAfterCapture(int playerIndex)
+	private async Task ApplyJellyfishBubbleAfterCaptureAsync(int playerIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
 			|| adventure_enemy_avatar_id != JellyfishAdventureEnemyAvatarId
 			|| playerIndex != 1
 			|| _jellyfishBubbleTriggeredThisTurn
-			|| _jellyfishHiddenMainPlayerHandSlotIndex >= 0)
+			|| _jellyfishDisabledMainPlayerHandSlotIndex >= 0)
 		{
 			return;
 		}
@@ -421,9 +421,14 @@ public partial class GameBoardScene
 			return;
 		}
 
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
 		_jellyfishBubbleTriggeredThisTurn = true;
-		_jellyfishHiddenMainPlayerHandSlotIndex = handSlotIndex;
-		HideHandDisplaySlot(MainPlayerIndex, handSlotIndex);
+		_jellyfishDisabledMainPlayerHandSlotIndex = handSlotIndex;
 		RenderPlayerHands();
 	}
 
@@ -484,7 +489,7 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void ApplySeaSlugColorCurrentAfterMiss(int playerIndex, int playedTableCardIndex)
+	private async Task ApplySeaSlugColorCurrentAfterMissAsync(int playerIndex, int playedTableCardIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
 			|| adventure_enemy_avatar_id != SeaSlugAdventureEnemyAvatarId
@@ -499,6 +504,12 @@ public partial class GameBoardScene
 		_tableCards[playedTableCardIndex].IsFaceUp = false;
 		int swapIndex = PickSeaSlugColorCurrentSwapIndex(playedTableCardIndex);
 		if (swapIndex < 0)
+		{
+			return;
+		}
+
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
 		}
@@ -538,9 +549,14 @@ public partial class GameBoardScene
 			return;
 		}
 
+		await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
 		InsertBombCardIntoTable(bombCard.Value, 1, insertionIndex);
 		_nautilusMainPlayerCaptureCountUntilBomb = 0;
-		PlayPlayerAvatarAction(1, CharacterAvatar.AvatarAction.Score);
 		RenderTableCards();
 		await ResolveBombPairAsync(turnSequenceGeneration);
 		RenderTableCards();
@@ -564,9 +580,9 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task ResolveAdventureEnemyTurnEndAbilityAsync(int playerIndex, PlayCardResult result)
+	private async Task ResolveAdventureEnemyTurnEndAbilityAsync(int playerIndex, PlayCardResult result, int turnSequenceGeneration)
 	{
-		await ResolveLeafySeadragonBladeBreakAsync(playerIndex, result);
+		await ResolveLeafySeadragonBladeBreakAsync(playerIndex, result, turnSequenceGeneration);
 	}
 
 	private async Task<PlayCardResult> ResolveDragonPrinceJackTurnStartAsync(int playerIndex, int turnSequenceGeneration)
@@ -577,7 +593,12 @@ public partial class GameBoardScene
 		}
 
 		_dragonPrinceJackUsed = true;
-		PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return new PlayCardResult(false, false);
+		}
+
 		if (_tableCards.Count > 0)
 		{
 			Texture2D? triggerTexture = GetVisibleTableCardTexture(_tableCards[^1]);
@@ -608,7 +629,10 @@ public partial class GameBoardScene
 			&& _tableCards.Count >= DragonRoyalCaptureThreshold;
 	}
 
-	private void ApplyDragonQueenAndKingAfterEnemyCapture(int playerIndex, int removedTableCardCount)
+	private async Task ApplyDragonQueenAndKingAfterEnemyCaptureAsync(
+		int playerIndex,
+		int removedTableCardCount,
+		int turnSequenceGeneration)
 	{
 		if (!adventure_mode || playerIndex != 1 || removedTableCardCount < DragonRoyalCaptureThreshold)
 		{
@@ -617,15 +641,15 @@ public partial class GameBoardScene
 
 		if (adventure_enemy_avatar_id == DragonQueenAdventureEnemyAvatarId)
 		{
-			StealRandomMainPlayerHandCardForEnemy(playerIndex);
+			await StealRandomMainPlayerHandCardForEnemyAsync(playerIndex, turnSequenceGeneration);
 		}
 		else if (adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 		{
-			StealMainPlayerTopDeckCardForEnemy(playerIndex);
+			await StealMainPlayerTopDeckCardForEnemyAsync(playerIndex, turnSequenceGeneration);
 		}
 	}
 
-	private void StealRandomMainPlayerHandCardForEnemy(int enemyPlayerIndex)
+	private async Task StealRandomMainPlayerHandCardForEnemyAsync(int enemyPlayerIndex, int turnSequenceGeneration)
 	{
 		if (enemyPlayerIndex < 0
 			|| enemyPlayerIndex >= _playerHands.Count
@@ -643,11 +667,15 @@ public partial class GameBoardScene
 		}
 
 		int targetHandIndex = targetHandIndexes[_rng.RandiRange(0, targetHandIndexes.Count - 1)];
+		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
 		PlayCardResult result = ResolveQueenEffect(enemyPlayerIndex, MainPlayerIndex, targetHandIndex);
 		if (result.Played)
 		{
-			ShiftJellyfishHiddenHandSlotAfterRemovedCard(MainPlayerIndex, targetHandIndex);
-			PlayPlayerAvatarAction(enemyPlayerIndex, CharacterAvatar.AvatarAction.Score);
 			RenderPlayerHands();
 		}
 	}
@@ -673,7 +701,7 @@ public partial class GameBoardScene
 		return targetHandIndexes;
 	}
 
-	private void StealMainPlayerTopDeckCardForEnemy(int enemyPlayerIndex)
+	private async Task StealMainPlayerTopDeckCardForEnemyAsync(int enemyPlayerIndex, int turnSequenceGeneration)
 	{
 		if (enemyPlayerIndex < 0
 			|| enemyPlayerIndex >= _playerDecks.Count
@@ -683,15 +711,23 @@ public partial class GameBoardScene
 			return;
 		}
 
+		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
 		PlayingCard stolenCard = _playerDecks[MainPlayerIndex][0];
 		_playerDecks[MainPlayerIndex].RemoveAt(0);
 		AddCardToPlayerDeck(enemyPlayerIndex, stolenCard);
-		PlayPlayerAvatarAction(enemyPlayerIndex, CharacterAvatar.AvatarAction.Score);
 		PlayPlayerAvatarAction(MainPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 		RenderPlayerCardPiles();
 	}
 
-	private async Task ResolveLeafySeadragonBladeBreakAsync(int playerIndex, PlayCardResult result)
+	private async Task ResolveLeafySeadragonBladeBreakAsync(
+		int playerIndex,
+		PlayCardResult result,
+		int turnSequenceGeneration)
 	{
 		if (!ShouldResolveLeafySeadragonBladeBreak(playerIndex, result))
 		{
@@ -706,7 +742,12 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || targetTableCardIndex >= _tableCards.Count)
+		{
+			return;
+		}
+
 		_tableCards[targetTableCardIndex].IsHiddenDuringCapture = true;
 		RenderTableCards();
 		await PlayBombPairDestroyCardAsync(targetTableCardIndex, BuildTableCardPositions(_tableCards.Count)[targetTableCardIndex]);
@@ -843,13 +884,12 @@ public partial class GameBoardScene
 	{
 		if (playerIndex != MainPlayerIndex
 			|| result.Captured
-			|| _jellyfishHiddenMainPlayerHandSlotIndex < 0)
+			|| _jellyfishDisabledMainPlayerHandSlotIndex < 0)
 		{
 			return;
 		}
 
-		ForceShowHandDisplaySlot(MainPlayerIndex, _jellyfishHiddenMainPlayerHandSlotIndex);
-		_jellyfishHiddenMainPlayerHandSlotIndex = -1;
+		_jellyfishDisabledMainPlayerHandSlotIndex = -1;
 		RenderPlayerHands();
 	}
 
@@ -866,27 +906,91 @@ public partial class GameBoardScene
 		_jellyfishBubbleTriggeredThisTurn = false;
 	}
 
-	private void ShiftJellyfishHiddenHandSlotAfterRemovedCard(int playerIndex, int removedDisplayIndex)
+	private void ShiftHandDisplayStateAfterRemovedCard(int playerIndex, int removedDisplayIndex)
+	{
+		if (playerIndex < 0 || removedDisplayIndex < 0)
+		{
+			return;
+		}
+
+		ShiftHiddenHandDisplaySlotsAfterRemovedCard(playerIndex, removedDisplayIndex);
+		ShiftJellyfishDisabledHandSlotAfterRemovedCard(playerIndex, removedDisplayIndex);
+	}
+
+	private void ShiftHiddenHandDisplaySlotsAfterRemovedCard(int playerIndex, int removedDisplayIndex)
+	{
+		if (_hiddenHandDisplaySlots.Count == 0)
+		{
+			return;
+		}
+
+		var shiftedSlots = new HashSet<string>();
+		bool changed = false;
+		foreach (string key in _hiddenHandDisplaySlots)
+		{
+			if (!TryParseHandDisplaySlotKey(key, out int keyPlayerIndex, out int displayIndex)
+				|| keyPlayerIndex != playerIndex)
+			{
+				shiftedSlots.Add(key);
+				continue;
+			}
+
+			changed = true;
+			if (displayIndex < removedDisplayIndex)
+			{
+				shiftedSlots.Add(key);
+			}
+			else if (displayIndex > removedDisplayIndex)
+			{
+				shiftedSlots.Add(BuildHandDisplaySlotKey(playerIndex, displayIndex - 1));
+			}
+		}
+
+		if (!changed)
+		{
+			return;
+		}
+
+		_hiddenHandDisplaySlots.Clear();
+		foreach (string key in shiftedSlots)
+		{
+			_hiddenHandDisplaySlots.Add(key);
+		}
+	}
+
+	private static bool TryParseHandDisplaySlotKey(string key, out int playerIndex, out int displayIndex)
+	{
+		playerIndex = -1;
+		displayIndex = -1;
+		int separatorIndex = key.IndexOf(':');
+		return separatorIndex > 0
+			&& separatorIndex < key.Length - 1
+			&& int.TryParse(key[..separatorIndex], out playerIndex)
+			&& int.TryParse(key[(separatorIndex + 1)..], out displayIndex);
+	}
+
+	private void ShiftJellyfishDisabledHandSlotAfterRemovedCard(int playerIndex, int removedDisplayIndex)
 	{
 		if (playerIndex != MainPlayerIndex
-			|| _jellyfishHiddenMainPlayerHandSlotIndex < 0
-			|| removedDisplayIndex > _jellyfishHiddenMainPlayerHandSlotIndex)
+			|| _jellyfishDisabledMainPlayerHandSlotIndex < 0
+			|| removedDisplayIndex > _jellyfishDisabledMainPlayerHandSlotIndex)
 		{
 			return;
 		}
 
-		ForceShowHandDisplaySlot(MainPlayerIndex, _jellyfishHiddenMainPlayerHandSlotIndex);
-		if (removedDisplayIndex == _jellyfishHiddenMainPlayerHandSlotIndex)
+		if (removedDisplayIndex == _jellyfishDisabledMainPlayerHandSlotIndex)
 		{
-			_jellyfishHiddenMainPlayerHandSlotIndex = -1;
+			_jellyfishDisabledMainPlayerHandSlotIndex = -1;
 			return;
 		}
 
-		_jellyfishHiddenMainPlayerHandSlotIndex--;
-		if (_jellyfishHiddenMainPlayerHandSlotIndex >= 0)
-		{
-			HideHandDisplaySlot(MainPlayerIndex, _jellyfishHiddenMainPlayerHandSlotIndex);
-		}
+		_jellyfishDisabledMainPlayerHandSlotIndex--;
+	}
+
+	private bool IsJellyfishDisabledHandDisplaySlot(int playerIndex, int displayIndex)
+	{
+		return playerIndex == MainPlayerIndex
+			&& displayIndex == _jellyfishDisabledMainPlayerHandSlotIndex;
 	}
 
 }

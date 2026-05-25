@@ -37,7 +37,7 @@ public partial class GameBoardScene
 		}
 
 		itemHand.RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, displayIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
 		int tableCardIndex = AddBombCardToTable(bombCard, playerIndex);
 		await PlayItemCardToTableAnimationAsync(playerIndex, bombCard, startGlobalPosition, tableCardIndex, false);
 		if (turnSequenceGeneration != _turnSequenceGeneration)

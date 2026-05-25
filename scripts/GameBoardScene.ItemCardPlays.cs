@@ -74,7 +74,7 @@ public partial class GameBoardScene
 
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
 		itemHand.RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		RenderPlayerHands();
 		await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, itemGlobalPosition ?? Vector2.Zero, 0, GetCardRotationDegreesForPlayer(playerIndex));
 		if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -154,7 +154,7 @@ public partial class GameBoardScene
 
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		itemHand.RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		RenderPlayerHands();
 
 		await PlayItemCardToTransformAreaAnimationAsync(
@@ -208,7 +208,7 @@ public partial class GameBoardScene
 
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
 		itemHand.RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		RenderPlayerHands();
 		await PlaySpecialCardTriggerEffectAsync(
 			itemCard.Texture,

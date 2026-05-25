@@ -93,7 +93,7 @@ public partial class GameBoardScene
 
 			tableCard.IsFaceUp = true;
 			RenderTableCards();
-			if (revealedCard.HasValue)
+			if (revealedCard.HasValue && IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
 			{
 				bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
 				int popupPoints = GetCapturedCardScoreValueForPlayer(revealedCard.Value, scorePlayerIndex, hasDoubleEffect);
@@ -260,6 +260,47 @@ public partial class GameBoardScene
 		return tableCardIndex > captureStartIndex && tableCardIndex < _tableCards.Count - 1;
 	}
 
+	private bool HasCapturedScoringTableCards(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
+	{
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			if (IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex)
+				&& IsScoringTableCard(_tableCards[tableCardIndex]))
+			{
+				return true;
+			}
+		}
+
+		if (extraTableCardIndexes == null)
+		{
+			return false;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			if (tableCardIndex >= 0
+				&& tableCardIndex < _tableCards.Count
+				&& IsScoringTableCard(_tableCards[tableCardIndex]))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static bool IsScoringTableCard(TableCard tableCard)
+	{
+		return !tableCard.IsBuriedInSand
+			&& tableCard.Card.HasValue
+			&& GetCardScoreValue(tableCard.Card.Value) > 0;
+	}
+
 	private async Task<CaptureTableCardsResult> CaptureTableCardsAsync(
 		int playerIndex,
 		int captureStartIndex,
@@ -284,8 +325,18 @@ public partial class GameBoardScene
 		QuestionCardRewardAnimation? questionRewardAnimation = null;
 		int scorePlayerIndex = awardScore ? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex) : playerIndex;
 		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, extraTableCardIndexes) : 0;
+		bool capturedScoringCards = HasCapturedScoringTableCards(captureStartIndex, extraTableCardIndexes);
 		List<int> validExtraCaptureIndexes = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (awardScore && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, extraTableCardIndexes))
+		{
+			await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return new CaptureTableCardsResult(0, 0, null);
+			}
+		}
+
 		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
@@ -351,13 +402,13 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		if (!IsGameOver())
+		if (!IsGameOver() && capturedScoringCards)
 		{
 			RecordGardenEelCaptureForSandAmbush(playerIndex);
-			ApplyJellyfishBubbleAfterCapture(playerIndex);
+			await ApplyJellyfishBubbleAfterCaptureAsync(playerIndex, turnSequenceGeneration);
 			await ApplyNautilusBombAfterMainPlayerCaptureAsync(playerIndex, turnSequenceGeneration);
 			RecordNarwhalCaptureForDouble(playerIndex);
-			ApplyDragonQueenAndKingAfterEnemyCapture(playerIndex, removedTableCardCount);
+			await ApplyDragonQueenAndKingAfterEnemyCaptureAsync(playerIndex, removedTableCardCount, turnSequenceGeneration);
 		}
 
 		return new CaptureTableCardsResult(collectedCardCount, removedTableCardCount, questionRewardAnimation);

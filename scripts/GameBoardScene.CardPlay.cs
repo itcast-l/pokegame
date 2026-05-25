@@ -19,8 +19,27 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = hand[handIndex];
+		bool narwhalDoubleAbilityTriggered = ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, playedCard);
+		if (narwhalDoubleAbilityTriggered)
+		{
+			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return new PlayCardResult(false, false);
+			}
+		}
+
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, playedCard);
 		bool buryPlayedCardInSand = ShouldGardenEelBuryNextPlayedCard(playerIndex);
+		if (buryPlayedCardInSand)
+		{
+			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return new PlayCardResult(false, false);
+			}
+		}
+
 		bool playedJackCollectsTable = !buryPlayedCardInSand && ShouldJackCollectTable(playedCard) && _tableCards.Count > 0;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
@@ -36,7 +55,7 @@ public partial class GameBoardScene
 		}
 
 		hand.RemoveAt(handIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, handIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
 		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped, buryPlayedCardInSand);
 		int playedTableCardIndex = _tableCards.Count - 1;
 		if (buryPlayedCardInSand)
@@ -132,6 +151,15 @@ public partial class GameBoardScene
 
 			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, false, magnetExtraCaptureIndexes);
 			int collectedPoints = GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes);
+			if (ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
+			{
+				await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return new PlayCardResult(false, false);
+				}
+			}
+
 			if (collectedPoints > 0)
 			{
 				List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, true, magnetExtraCaptureIndexes);
@@ -209,7 +237,12 @@ public partial class GameBoardScene
 				}
 			}
 
-			ApplySeaSlugColorCurrentAfterMiss(playerIndex, playedTableCardIndex);
+			await ApplySeaSlugColorCurrentAfterMissAsync(playerIndex, playedTableCardIndex, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return new PlayCardResult(false, false);
+			}
+
 			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			RenderTableCards();
 			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);

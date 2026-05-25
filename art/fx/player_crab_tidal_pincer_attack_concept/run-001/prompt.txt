@@ -1,0 +1,13 @@
+Create exactly one 2x2 animation sprite sheet for a 2D game attack FX concept.
+
+Reference role: use the provided crab avatar images only to match the project style and character identity cues: vivid blue and violet shell palette, cyan glow highlights, cute but punchy ocean-fantasy look, crisp readable game asset edges. Do not include the crab character body in the output.
+
+Subject: Dudu the crab's signature attack effect, "tidal pincer crush". Four-frame sequence:
+Frame 1 top-left: two translucent blue-violet crab claw silhouettes begin to appear from left and right, curling water trails around them, small cyan bubbles.
+Frame 2 top-right: the claw shapes sweep inward faster, bright cyan current streaks spiral toward the center, hints of pearl and shell sparks.
+Frame 3 bottom-left: peak impact, the two claw shapes snap closed at center with a compact turquoise burst, coral-pink spark fragments, white seafoam crescent, energetic but not huge.
+Frame 4 bottom-right: fading afterimage, thin violet claw trails dissolve into bubbles and tiny shell-glint particles.
+
+Art direction: clean HD 2D Godot game FX, polished ocean fantasy, transparent-background-ready, strong silhouette when downscaled, similar visual language to the existing avatar art and attack FX. Keep the effect compact enough to overlay on an avatar portrait. No character, no card, no UI, no text, no watermark.
+
+Layout rules: output exactly four equal cells arranged as 2 rows by 2 columns. The entire background must be 100% solid flat magenta #FF00FF, including between cells. No visible grid lines, no borders, no labels. Each frame must stay centered in its cell, use consistent scale, leave safe magenta padding on all sides, and nothing may touch or cross cell edges.

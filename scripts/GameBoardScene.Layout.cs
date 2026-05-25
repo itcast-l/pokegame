@@ -208,6 +208,31 @@ public partial class GameBoardScene
 		buttonRow.AddChild(mainMenuFrame);
 	}
 
+	private void CreateDefeatFinisherOverlay()
+	{
+		_defeatFinisherRoot = new Control
+		{
+			Name = "DefeatFinisherRoot",
+			Visible = false,
+			MouseFilter = MouseFilterEnum.Ignore,
+			ZIndex = 950,
+		};
+		_defeatFinisherRoot.SetAnchorsPreset(LayoutPreset.FullRect);
+		AddChild(_defeatFinisherRoot);
+
+		_defeatFinisherTexture = new TextureRect
+		{
+			Name = "DefeatFinisherTexture",
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		_defeatFinisherTexture.SetAnchorsPreset(LayoutPreset.FullRect);
+		_defeatFinisherRoot.AddChild(_defeatFinisherTexture);
+	}
+
 	private void ShowWinnerBanner(int playerIndex)
 	{
 		_showingDefeatResult = ShouldShowDefeatResult(playerIndex);

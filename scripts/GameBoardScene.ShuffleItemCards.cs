@@ -37,7 +37,7 @@ public partial class GameBoardScene
 
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		itemHand.RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		RenderPlayerHands();
 
 		await PlayItemCardToTransformAreaAnimationAsync(

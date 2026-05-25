@@ -314,11 +314,6 @@ public partial class GameBoardScene
 
 	private void ShowHandDisplaySlot(int playerIndex, int displayIndex)
 	{
-		if (IsJellyfishHiddenHandDisplaySlot(playerIndex, displayIndex))
-		{
-			return;
-		}
-
 		ForceShowHandDisplaySlot(playerIndex, displayIndex);
 	}
 
@@ -329,26 +324,11 @@ public partial class GameBoardScene
 
 	private void ClearHiddenHandDisplaySlots(int playerIndex)
 	{
-		_hiddenHandDisplaySlots.RemoveWhere(key =>
-			key.StartsWith($"{playerIndex}:")
-			&& !IsJellyfishHiddenHandDisplaySlotKey(playerIndex, key));
+		_hiddenHandDisplaySlots.RemoveWhere(key => key.StartsWith($"{playerIndex}:"));
 	}
 
 	private static string BuildHandDisplaySlotKey(int playerIndex, int displayIndex)
 	{
 		return $"{playerIndex}:{displayIndex}";
-	}
-
-	private bool IsJellyfishHiddenHandDisplaySlot(int playerIndex, int displayIndex)
-	{
-		return playerIndex == MainPlayerIndex
-			&& displayIndex == _jellyfishHiddenMainPlayerHandSlotIndex;
-	}
-
-	private bool IsJellyfishHiddenHandDisplaySlotKey(int playerIndex, string key)
-	{
-		return playerIndex == MainPlayerIndex
-			&& _jellyfishHiddenMainPlayerHandSlotIndex >= 0
-			&& key == BuildHandDisplaySlotKey(playerIndex, _jellyfishHiddenMainPlayerHandSlotIndex);
 	}
 }

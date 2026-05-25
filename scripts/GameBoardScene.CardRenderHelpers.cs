@@ -204,6 +204,51 @@ public partial class GameBoardScene
 		parent.AddChild(overlay);
 	}
 
+	private static void AddDisabledCardProhibitedMark(Node parent, Vector2 position, Vector2 size, float rotationDegrees, int zIndex)
+	{
+		var mark = new DisabledCardProhibitedMark
+		{
+			Name = "DisabledCardProhibitedMark",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position,
+			Size = size,
+			PivotOffset = size / 2.0f,
+			RotationDegrees = rotationDegrees,
+			ZIndex = zIndex,
+		};
+		parent.AddChild(mark);
+	}
+
+	private partial class DisabledCardProhibitedMark : Control
+	{
+		public override void _Draw()
+		{
+			Vector2 center = Size / 2.0f;
+			float radius = Mathf.Min(Size.X, Size.Y) * 0.26f;
+			float slashOffset = radius * 0.72f;
+			float strokeWidth = Mathf.Max(4.0f, Mathf.Min(Size.X, Size.Y) * 0.055f);
+			var shadowColor = new Color(0.02f, 0.0f, 0.0f, 0.42f);
+			var rimColor = new Color(1.0f, 0.12f, 0.12f, 0.94f);
+			var highlightColor = new Color(1.0f, 1.0f, 1.0f, 0.78f);
+
+			DrawArc(center + new Vector2(1.5f, 2.0f), radius, 0.0f, Mathf.Tau, 72, shadowColor, strokeWidth + 2.0f, true);
+			DrawLine(
+				center + new Vector2(-slashOffset + 1.5f, slashOffset + 2.0f),
+				center + new Vector2(slashOffset + 1.5f, -slashOffset + 2.0f),
+				shadowColor,
+				strokeWidth + 2.0f,
+				true);
+			DrawArc(center, radius, 0.0f, Mathf.Tau, 72, rimColor, strokeWidth, true);
+			DrawLine(
+				center + new Vector2(-slashOffset, slashOffset),
+				center + new Vector2(slashOffset, -slashOffset),
+				rimColor,
+				strokeWidth,
+				true);
+			DrawArc(center, radius - strokeWidth * 0.42f, -0.2f, Mathf.Pi * 1.08f, 48, highlightColor, 1.4f, true);
+		}
+	}
+
 	private static float GetItemCardVisualScale(string itemCardId)
 	{
 		return 1.0f;

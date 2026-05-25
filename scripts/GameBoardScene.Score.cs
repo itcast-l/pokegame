@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class GameBoardScene
@@ -204,5 +205,49 @@ public partial class GameBoardScene
 		return adventure_mode
 			&& scorePlayerIndex == MainPlayerIndex
 			&& adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId;
+	}
+
+	private bool ShouldPlayCrabScoreReductionAbility(
+		int scorePlayerIndex,
+		int captureStartIndex,
+		HashSet<int>? extraTableCardIndexes = null)
+	{
+		if (!ShouldApplyCrabScoreReduction(scorePlayerIndex)
+			|| captureStartIndex < 0
+			|| captureStartIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, extraTableCardIndexes);
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			bool isBaseScoringCard = tableCardIndex >= captureStartIndex
+				&& IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex);
+			bool isExtraScoringCard = extraTableCardIndexes != null && extraTableCardIndexes.Contains(tableCardIndex);
+			if (!isBaseScoringCard && !isExtraScoringCard)
+			{
+				continue;
+			}
+
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (tableCard.IsBuriedInSand || !tableCard.Card.HasValue)
+			{
+				continue;
+			}
+
+			int rawPoints = GetCardScoreValue(tableCard.Card.Value);
+			if (hasDoubleEffect)
+			{
+				rawPoints *= 2;
+			}
+
+			if (rawPoints > 0)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

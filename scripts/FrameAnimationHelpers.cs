@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Godot;
 
 internal static class FrameAnimationHelpers
 {
-	public static Texture2D[] LoadTextureFrames(string framePattern, int frameCount, string warningLabel)
+	public static Texture2D[] LoadTextureFrames(string framePattern, int frameCount, string warningLabel, bool preferImageFile = false)
 	{
 		var frames = new List<Texture2D>(frameCount);
 		for (int frameIndex = 1; frameIndex <= frameCount; frameIndex++)
 		{
 			string path = string.Format(framePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
+			Texture2D? texture = LoadTextureWithImageFallback(path, preferImageFile);
 			if (texture == null)
 			{
 				GD.PushWarning($"Missing {warningLabel} frame: {path}");
@@ -21,6 +22,38 @@ internal static class FrameAnimationHelpers
 		}
 
 		return frames.ToArray();
+	}
+
+	private static Texture2D? LoadTextureWithImageFallback(string path, bool preferImageFile)
+	{
+		if (preferImageFile)
+		{
+			Texture2D? imageTexture = LoadTextureFromImageFile(path);
+			if (imageTexture != null)
+			{
+				return imageTexture;
+			}
+		}
+
+		Texture2D? texture = GD.Load<Texture2D>(path);
+		if (texture != null)
+		{
+			return texture;
+		}
+
+		return LoadTextureFromImageFile(path);
+	}
+
+	private static Texture2D? LoadTextureFromImageFile(string path)
+	{
+		string globalPath = ProjectSettings.GlobalizePath(path);
+		if (!File.Exists(globalPath))
+		{
+			return null;
+		}
+
+		Image image = Image.LoadFromFile(globalPath);
+		return image.IsEmpty() ? null : ImageTexture.CreateFromImage(image);
 	}
 
 	public static void TweenTextureFrames(

@@ -47,6 +47,7 @@ public partial class GameBoardScene
 		{
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
 			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
+			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 			_playerHands[ownerPlayerIndex].Add(stolenCard);
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 			return new PlayCardResult(true, false);
@@ -60,6 +61,7 @@ public partial class GameBoardScene
 		}
 
 		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
 		PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 		return new PlayCardResult(true, false);
@@ -279,7 +281,7 @@ public partial class GameBoardScene
 		ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemHandIndex];
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(ownerPlayerIndex, itemHandIndex);
 		_playerItemHands[ownerPlayerIndex].RemoveAt(itemHandIndex);
-		ShiftJellyfishHiddenHandSlotAfterRemovedCard(ownerPlayerIndex, _playerHands[ownerPlayerIndex].Count + itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(ownerPlayerIndex, _playerHands[ownerPlayerIndex].Count + itemHandIndex);
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();

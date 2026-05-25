@@ -13,6 +13,18 @@ public partial class GameBoardScene
 		_scoreFillEffectFrames.AddRange(ScoreFillEffectFrames);
 	}
 
+	private void LoadEnemySpecialAbilityAvatarFxTextures()
+	{
+		_enemySpecialAbilityAvatarFxFrames.Clear();
+		_enemySpecialAbilityAvatarFxFrames.AddRange(EnemySpecialAbilityAvatarFxFrames);
+	}
+
+	private void LoadMantaRayTideShiftCycloneFxTextures()
+	{
+		_mantaRayTideShiftCycloneFxFrames.Clear();
+		_mantaRayTideShiftCycloneFxFrames.AddRange(MantaRayTideShiftCycloneFxFrames);
+	}
+
 	private void LoadAdventureDamageEffectTextures()
 	{
 		_adventureDamageEffectFrames.Clear();
@@ -26,6 +38,9 @@ public partial class GameBoardScene
 		{
 			FishAdventureEnemyAvatarId => FishAdventureDamageEffectFrames,
 			LanternfishAdventureEnemyAvatarId => LanternfishAdventureDamageEffectFrames,
+			ShrimpAdventureEnemyAvatarId => ShrimpAdventureDamageEffectFrames,
+			CrabAdventureEnemyAvatarId => CrabAdventureDamageEffectFrames,
+			JellyfishAdventureEnemyAvatarId => JellyfishAdventureDamageEffectFrames,
 			_ => DefaultAdventureDamageEffectFrames,
 		};
 		_adventureEnemyDamageEffectFrames.AddRange(frames);

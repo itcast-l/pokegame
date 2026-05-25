@@ -1,0 +1,11 @@
+Create a 2x2 animation sprite sheet for a game attack FX only, no characters and no UI. Four equal quadrants on a solid #FF00FF magenta background with no borders, no labels, no text.
+
+Subject: exactly two translucent jellyfish tentacles extending from left to right, inspired by a cute soft jellyfish avatar with lavender, cyan, and pink bioluminescent colors. The tentacles are smooth, elastic, glossy, semi-transparent, with tiny glowing beads and soft cyan highlights. They should look like Soft Candy / jellyfish tentacles, not ropes, not snakes, not arms.
+
+Animation timing across the four quadrants:
+1. Frame 1: two short curled tentacles gathered on the left, preparing to lash forward.
+2. Frame 2: the two tentacles stretch farther right in parallel wavy arcs, accelerating.
+3. Frame 3: full extension to the right with a sharp slap impact at the tip, bright pink-cyan spark streaks only near the right tip.
+4. Frame 4: tentacles recoil with trailing glow wisps fading, still left-to-right.
+
+Composition rules: pure isolated FX only, transparent-looking tentacles on magenta background. Keep all art centered in each quadrant with generous magenta padding. The FX should occupy a wide horizontal band in each cell, roughly 80% of cell width and 35% of cell height. Same scale in all frames. Nothing crosses cell edges. No avatars, no faces, no bodies, no portraits, no cards, no scene background, no target markers, no text.

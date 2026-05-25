@@ -27,7 +27,7 @@ public partial class GameBoardScene
 		_hiddenHandDisplaySlots.Clear();
 		_mantaRayTideShiftCheckedThisTurn = false;
 		_jellyfishBubbleTriggeredThisTurn = false;
-		_jellyfishHiddenMainPlayerHandSlotIndex = -1;
+		_jellyfishDisabledMainPlayerHandSlotIndex = -1;
 		_gardenEelCaptureCountUntilSandAmbush = 0;
 		_gardenEelSandAmbushReady = false;
 		_gardenEelBuriedTableCardIndex = -1;
@@ -45,6 +45,16 @@ public partial class GameBoardScene
 		_isOpeningDealAnimationPlaying = playOpeningDealAnimation;
 		_winnerPlayerIndex = -1;
 		ResetPlayerScores();
+		if (_defeatFinisherRoot != null && GodotObject.IsInstanceValid(_defeatFinisherRoot))
+		{
+			_defeatFinisherRoot.Visible = false;
+		}
+		if (_defeatFinisherTexture != null && GodotObject.IsInstanceValid(_defeatFinisherTexture))
+		{
+			_defeatFinisherTexture.Texture = null;
+			_defeatFinisherTexture.Modulate = Colors.White;
+			_defeatFinisherTexture.Scale = Vector2.One;
+		}
 		if (_winnerLabel != null)
 		{
 			HideWinnerBanner();

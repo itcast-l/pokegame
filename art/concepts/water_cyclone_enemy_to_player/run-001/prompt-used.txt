@@ -1,0 +1,7 @@
+Create a clean HD game FX concept on a solid flat #FF00FF magenta background only. No text, no labels, no UI, no scenery.
+
+Make a left-to-right water cyclone attack effect that visually reads as traveling from an enemy avatar on the left toward a player avatar on the right. This is FX only, not a character.
+
+The cyclone should be a single coherent swirling ribbon of water and spray with a strong forward push from left to right, a spiral core, translucent aqua and cyan highlights, deeper blue shadowing, and bright white foam accents. The motion should imply the cyclone is being driven from the enemy side and sweeping toward the player side, with the densest swirl near the left-middle and a forward-reaching tail toward the right.
+
+Composition should feel like a preview effect for two avatar portraits on opposite sides: leave enough open space at the far left and far right so the effect can connect visually between a left enemy portrait and a right player portrait in a later composite. Keep the cyclone centered horizontally across the middle band of the image, large enough to read clearly, with no detached background. Do not draw portraits, faces, bodies, cards, borders, arrows, labels, or interface elements. Keep the shape energetic, readable, polished, and gameplay-ready.
