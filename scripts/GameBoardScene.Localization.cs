@@ -107,7 +107,9 @@ public partial class GameBoardScene
 
 		if (_winnerLabel != null && GodotObject.IsInstanceValid(_winnerLabel) && _winnerPlayerIndex >= 0)
 		{
-			_winnerLabel.Text = LocalizeFormat("GAME_WINNER", _winnerPlayerIndex + 1);
+			_winnerLabel.Text = _showingDefeatResult
+				? Localize("GAME_DEFEAT")
+				: LocalizeFormat("GAME_WINNER", _winnerPlayerIndex + 1);
 		}
 
 		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))

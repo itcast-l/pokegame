@@ -348,6 +348,7 @@ void fragment() {
 		gameBoard.Set("player_count", playerCount);
 		gameBoard.Set("item_mode", itemMode);
 		gameBoard.Set("winning_score", winningScore);
+		gameBoard.Set("solo_mode", true);
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;
 		QueueFree();

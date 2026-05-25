@@ -64,6 +64,7 @@ public partial class GameBoardScene
 			PivotOffset = SpecialCardTriggerFxVisualSize / 2.0f,
 			ZIndex = 20,
 			Visible = _specialCardTriggerEffectFrames.Count > 0,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
 		card.AddChild(triggerFx);
 
@@ -101,13 +102,13 @@ public partial class GameBoardScene
 			tween.TweenProperty(card, "scale", Vector2.One * 1.10f, SpecialCardTriggerEffectSeconds * 0.42f);
 			tween.TweenProperty(ring, "ring_progress", 0.58f, SpecialCardTriggerEffectSeconds * 0.42f);
 			tween.TweenProperty(ring, "ring_alpha", 1.0f, SpecialCardTriggerEffectSeconds * 0.18f);
-			tween.TweenProperty(triggerFx, "modulate", Colors.White, SpecialCardTriggerEffectSeconds * 0.12f);
+			tween.TweenProperty(triggerFx, "modulate:a", 1.0f, SpecialCardTriggerEffectSeconds * 0.12f);
 			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
 			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
 			{
 				if (effectRoot.GetChild(sparkIndex) is ColorRect spark)
 				{
-					tween.TweenProperty(spark, "modulate", Colors.White, SpecialCardTriggerEffectSeconds * 0.24f);
+					tween.TweenProperty(spark, "modulate:a", 1.0f, SpecialCardTriggerEffectSeconds * 0.24f);
 					tween.TweenProperty(spark, "scale", Vector2.One * 2.35f, SpecialCardTriggerEffectSeconds * 0.42f);
 				}
 			}
@@ -117,20 +118,26 @@ public partial class GameBoardScene
 			tween.TweenProperty(card, "scale", Vector2.One, SpecialCardTriggerEffectSeconds * 0.58f);
 			tween.TweenProperty(ring, "ring_progress", 1.0f, SpecialCardTriggerEffectSeconds * 0.58f);
 			tween.TweenProperty(ring, "ring_alpha", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(triggerFx, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(triggerFx, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
 			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.34f, SpecialCardTriggerEffectSeconds * 0.58f);
 			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
 			{
 				if (effectRoot.GetChild(sparkIndex) is ColorRect spark)
 				{
-					tween.TweenProperty(spark, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), SpecialCardTriggerEffectSeconds * 0.58f);
+					tween.TweenProperty(spark, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
 					tween.TweenProperty(spark, "scale", Vector2.One * 0.68f, SpecialCardTriggerEffectSeconds * 0.58f);
 				}
 			}
 
-			Task fxTask = PlaySpecialCardTriggerFxFramesAsync(triggerFx);
+			FrameAnimationHelpers.TweenTextureFrames(tween, triggerFx, _specialCardTriggerEffectFrames, SpecialCardTriggerFxFrameSeconds);
+			tween.Finished += () =>
+			{
+				if (GodotObject.IsInstanceValid(effectRoot))
+				{
+					effectRoot.QueueFree();
+				}
+			};
 			await ToSignal(tween, Tween.SignalName.Finished);
-			await fxTask;
 		}
 		finally
 		{
@@ -138,25 +145,6 @@ public partial class GameBoardScene
 			{
 				effectRoot.QueueFree();
 			}
-		}
-	}
-
-	private async Task PlaySpecialCardTriggerFxFramesAsync(TextureRect fx)
-	{
-		if (_specialCardTriggerEffectFrames.Count == 0)
-		{
-			return;
-		}
-
-		foreach (Texture2D frame in _specialCardTriggerEffectFrames)
-		{
-			if (!GodotObject.IsInstanceValid(fx))
-			{
-				return;
-			}
-
-			fx.Texture = frame;
-			await ToSignal(GetTree().CreateTimer(SpecialCardTriggerFxFrameSeconds), SceneTreeTimer.SignalName.Timeout);
 		}
 	}
 }

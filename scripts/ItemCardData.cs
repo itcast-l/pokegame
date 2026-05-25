@@ -3,6 +3,7 @@ using Godot;
 public partial class ItemCardData : Node2D
 {
 	private const double ItemCardFrameTime = 0.18;
+	private static readonly StringName ItemCardAnimationName = "item_card_frames";
 
 	[Export(PropertyHint.MultilineText)]
 	public string item_description = "";
@@ -11,9 +12,7 @@ public partial class ItemCardData : Node2D
 	public bool enabled_in_game = true;
 
 	private Sprite2D? _animatedSprite;
-	private Texture2D[] _animationFrames = System.Array.Empty<Texture2D>();
-	private int _animationFrame;
-	private Godot.Timer? _animationTimer;
+	private AnimationPlayer? _animationPlayer;
 	private ItemCardCatalog _catalog = default!;
 
 	public override void _Ready()
@@ -30,17 +29,16 @@ public partial class ItemCardData : Node2D
 			return;
 		}
 
-		_animationFrames = frames;
-		_animatedSprite.Texture = _animationFrames[0];
-		_animationTimer = new Godot.Timer
-		{
-			WaitTime = ItemCardFrameTime,
-			OneShot = false,
-			Autostart = false,
-		};
-		_animationTimer.Timeout += AdvanceAnimationFrame;
-		AddChild(_animationTimer);
-		_animationTimer.Start();
+		_animatedSprite.Texture = frames[0];
+		_animationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? CreateAnimationPlayer();
+		FrameAnimationHelpers.ConfigureTextureAnimation(
+			_animationPlayer,
+			ItemCardAnimationName,
+			new NodePath($"{_animatedSprite.Name}:texture"),
+			frames,
+			ItemCardFrameTime,
+			loops: true);
+		_animationPlayer.Play(ItemCardAnimationName);
 	}
 
 	public bool TryGetItemCardId(out string itemCardId)
@@ -76,14 +74,14 @@ public partial class ItemCardData : Node2D
 		return null;
 	}
 
-	private void AdvanceAnimationFrame()
+	private AnimationPlayer CreateAnimationPlayer()
 	{
-		if (_animatedSprite == null || _animationFrames.Length == 0)
+		var animationPlayer = new AnimationPlayer
 		{
-			return;
-		}
-
-		_animationFrame = (_animationFrame + 1) % _animationFrames.Length;
-		_animatedSprite.Texture = _animationFrames[_animationFrame];
+			Name = "AnimationPlayer",
+			RootNode = new NodePath(".."),
+		};
+		AddChild(animationPlayer);
+		return animationPlayer;
 	}
 }

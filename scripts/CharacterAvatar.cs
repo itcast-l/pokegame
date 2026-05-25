@@ -59,15 +59,15 @@ public partial class CharacterAvatar : Control
 
 	private Control _portraitPivot = default!;
 	private TextureRect _portrait = default!;
+	private AnimationPlayer _frameAnimationPlayer = default!;
 	private Texture2D? _idleFallbackTexture;
 	private Tween? _actionTween;
+	private Tween? _pulseTween;
+	private static readonly Dictionary<string, AvatarFrameCache> ActionFrameCache = new();
 	private readonly Dictionary<AvatarAction, Texture2D[]> _actionFrames = new();
 	private AvatarAction _currentAction = AvatarAction.Idle;
 	private AvatarAction _frameAction = AvatarAction.Idle;
 	private Vector2 _basePivotPosition;
-	private float _frameElapsed;
-	private int _frameIndex;
-	private bool _frameLoops;
 	private float _scorePulse;
 	private float _hitPulse;
 	private float _victoryPulse;
@@ -78,6 +78,7 @@ public partial class CharacterAvatar : Control
 		MouseFilter = MouseFilterEnum.Ignore;
 		_portraitPivot = GetNode<Control>("PortraitPivot");
 		_portrait = GetNode<TextureRect>("PortraitPivot/Portrait");
+		_frameAnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? CreateFrameAnimationPlayer();
 		_portrait.MouseFilter = MouseFilterEnum.Ignore;
 		_portraitPivot.MouseFilter = MouseFilterEnum.Ignore;
 
@@ -98,18 +99,6 @@ public partial class CharacterAvatar : Control
 		{
 			LayoutPortrait();
 		}
-	}
-
-	public override void _Process(double delta)
-	{
-		float dt = (float)delta;
-		AdvanceActionFrame(dt);
-
-		_scorePulse = Mathf.MoveToward(_scorePulse, 0.0f, dt * 2.8f);
-		_hitPulse = Mathf.MoveToward(_hitPulse, 0.0f, dt * 4.5f);
-		_victoryPulse = Mathf.MoveToward(_victoryPulse, 0.0f, dt * 1.7f);
-		_defeatShade = Mathf.MoveToward(_defeatShade, _currentAction == AvatarAction.Defeat ? 1.0f : 0.0f, dt * 2.0f);
-		QueueRedraw();
 	}
 
 	public override void _Draw()
@@ -199,7 +188,7 @@ public partial class CharacterAvatar : Control
 	public void PlayScore()
 	{
 		StartAction(AvatarAction.Score);
-		_scorePulse = 1.0f;
+		AnimateDrawPulse(value => _scorePulse = value, 1.0f, 0.0f, 0.36f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "scale", Vector2.One * 1.18f, 0.10f).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
@@ -222,7 +211,7 @@ public partial class CharacterAvatar : Control
 	public void PlayHit()
 	{
 		StartAction(AvatarAction.Hit);
-		_hitPulse = 1.0f;
+		AnimateDrawPulse(value => _hitPulse = value, 1.0f, 0.0f, 0.24f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portrait, "modulate", new Color(1.0f, 0.42f, 0.36f, 1.0f), 0.04f);
@@ -237,7 +226,7 @@ public partial class CharacterAvatar : Control
 	public void PlayVictory()
 	{
 		StartAction(AvatarAction.Victory);
-		_victoryPulse = 1.0f;
+		AnimateDrawPulse(value => _victoryPulse = value, 1.0f, 0.0f, 0.58f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition + new Vector2(0.0f, -14.0f), 0.16f).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
@@ -249,6 +238,7 @@ public partial class CharacterAvatar : Control
 	public void PlayDefeat()
 	{
 		StartAction(AvatarAction.Defeat);
+		AnimateDrawPulse(value => _defeatShade = value, 0.0f, 1.0f, 0.50f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition + new Vector2(0.0f, 12.0f), 0.18f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
@@ -266,7 +256,13 @@ public partial class CharacterAvatar : Control
 		_scorePulse = 0.0f;
 		_hitPulse = 0.0f;
 		_victoryPulse = 0.0f;
-		_defeatShade = 0.0f;
+		if (action != AvatarAction.Defeat)
+		{
+			_defeatShade = 0.0f;
+		}
+
+		_pulseTween?.Kill();
+		_pulseTween = null;
 		ResetPortraitPose();
 		BeginActionFrames(action);
 		QueueRedraw();
@@ -294,21 +290,94 @@ public partial class CharacterAvatar : Control
 	private void LoadGeneratedActionFrames()
 	{
 		_actionFrames.Clear();
-		_idleFallbackTexture = ResourceLoader.Load<Texture2D>($"{AvatarRoot}/idle/processed/idle-1.png");
+		AvatarFrameCache cache = LoadAvatarFrames(AvatarRoot);
+		_idleFallbackTexture = cache.IdleFallbackTexture;
 		if (!LoadActionFrames)
 		{
 			return;
 		}
 
+		foreach ((AvatarAction action, Texture2D[] frames) in cache.ActionFrames)
+		{
+			_actionFrames[action] = frames;
+		}
+	}
+
+	private void BeginActionFrames(AvatarAction action)
+	{
+		_frameAction = action;
+		if (_actionFrames.TryGetValue(_frameAction, out Texture2D[]? frames) && frames.Length > 0)
+		{
+			StringName animationName = GetActionAnimationName(action);
+			_portrait.Texture = frames[0];
+			FrameAnimationHelpers.ConfigureTextureAnimation(
+				_frameAnimationPlayer,
+				animationName,
+			new NodePath("PortraitPivot/Portrait:texture"),
+			frames,
+			GetActionFrameDuration(action),
+			action == AvatarAction.Idle);
+			_frameAnimationPlayer.Play(animationName);
+			return;
+		}
+
+		_frameAnimationPlayer.Stop();
+		if (_idleFallbackTexture != null)
+		{
+			_portrait.Texture = _idleFallbackTexture;
+			return;
+		}
+
+		if (PortraitTexture != null)
+		{
+			_portrait.Texture = PortraitTexture;
+		}
+	}
+
+	private AnimationPlayer CreateFrameAnimationPlayer()
+	{
+		var animationPlayer = new AnimationPlayer
+		{
+			Name = "AnimationPlayer",
+			RootNode = new NodePath(".."),
+		};
+		AddChild(animationPlayer);
+		return animationPlayer;
+	}
+
+	private void AnimateDrawPulse(Action<float> applyPulse, float from, float to, float seconds)
+	{
+		applyPulse(from);
+		QueueRedraw();
+		_pulseTween?.Kill();
+		_pulseTween = CreateTween();
+		_pulseTween.SetTrans(Tween.TransitionType.Cubic);
+		_pulseTween.SetEase(Tween.EaseType.Out);
+		_pulseTween.TweenMethod(Callable.From<float>(value =>
+		{
+			applyPulse(value);
+			QueueRedraw();
+		}), from, to, seconds);
+	}
+
+	private static AvatarFrameCache LoadAvatarFrames(string avatarRoot)
+	{
+		if (ActionFrameCache.TryGetValue(avatarRoot, out AvatarFrameCache? cachedFrames))
+		{
+			return cachedFrames;
+		}
+
+		var actionFrames = new Dictionary<AvatarAction, Texture2D[]>();
+		Texture2D? idleFallbackTexture = ResourceLoader.Load<Texture2D>($"{avatarRoot}/idle/processed/idle-1.png");
 		foreach (AvatarAction action in Enum.GetValues<AvatarAction>())
 		{
 			string slug = GetActionSlug(action);
-			Texture2D[] frames = new Texture2D[GetActionFrameCount(action)];
+			Texture2D[] frames = new Texture2D[GetActionFrameCount(avatarRoot, action)];
 			bool loadedAllFrames = true;
 
 			for (int index = 0; index < frames.Length; index++)
 			{
-				string path = $"{AvatarRoot}/{slug}/processed/{slug}-{index + 1}.png";
+				string path = $"{avatarRoot}/{slug}/processed/{slug}-{index + 1}.png";
 				Texture2D? texture = ResourceLoader.Load<Texture2D>(path);
 				if (texture == null)
 				{
@@ -321,69 +390,18 @@ public partial class CharacterAvatar : Control
 
 			if (loadedAllFrames)
 			{
-				_actionFrames[action] = frames;
+				actionFrames[action] = frames;
 			}
 		}
+
+		cachedFrames = new AvatarFrameCache(idleFallbackTexture, actionFrames);
+		ActionFrameCache[avatarRoot] = cachedFrames;
+		return cachedFrames;
 	}
 
-	private void BeginActionFrames(AvatarAction action)
+	private static StringName GetActionAnimationName(AvatarAction action)
 	{
-		_frameAction = action;
-		_frameIndex = 0;
-		_frameElapsed = 0.0f;
-		_frameLoops = action == AvatarAction.Idle;
-		ApplyActionFrame();
-	}
-
-	private void AdvanceActionFrame(float dt)
-	{
-		if (!_actionFrames.TryGetValue(_frameAction, out Texture2D[]? frames) || frames.Length <= 1)
-		{
-			return;
-		}
-
-		_frameElapsed += dt;
-		float duration = GetActionFrameDuration(_frameAction);
-		while (_frameElapsed >= duration)
-		{
-			_frameElapsed -= duration;
-
-			if (_frameIndex < frames.Length - 1)
-			{
-				_frameIndex++;
-			}
-			else if (_frameLoops)
-			{
-				_frameIndex = 0;
-			}
-			else
-			{
-				_frameElapsed = 0.0f;
-				break;
-			}
-
-			ApplyActionFrame();
-		}
-	}
-
-	private void ApplyActionFrame()
-	{
-		if (_actionFrames.TryGetValue(_frameAction, out Texture2D[]? frames) && _frameIndex >= 0 && _frameIndex < frames.Length)
-		{
-			_portrait.Texture = frames[_frameIndex];
-			return;
-		}
-
-		if (_idleFallbackTexture != null)
-		{
-			_portrait.Texture = _idleFallbackTexture;
-			return;
-		}
-
-		if (PortraitTexture != null)
-		{
-			_portrait.Texture = PortraitTexture;
-		}
+		return new StringName($"avatar_{GetActionSlug(action)}");
 	}
 
 	private void LayoutPortrait()
@@ -472,8 +490,15 @@ public partial class CharacterAvatar : Control
 
 	private int GetActionFrameCount(AvatarAction action)
 	{
-		return action == AvatarAction.Idle
-			? CharacterAvatarCatalog.GetIdleFrameCount(AvatarRoot)
-			: CharacterAvatarCatalog.GetActionFrameCount(AvatarRoot);
+		return GetActionFrameCount(AvatarRoot, action);
 	}
+
+	private static int GetActionFrameCount(string avatarRoot, AvatarAction action)
+	{
+		return action == AvatarAction.Idle
+			? CharacterAvatarCatalog.GetIdleFrameCount(avatarRoot)
+			: CharacterAvatarCatalog.GetActionFrameCount(avatarRoot);
+	}
+
+	private sealed record AvatarFrameCache(Texture2D? IdleFallbackTexture, Dictionary<AvatarAction, Texture2D[]> ActionFrames);
 }

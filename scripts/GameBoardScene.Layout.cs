@@ -109,7 +109,7 @@ public partial class GameBoardScene
 		Texture2D? bannerTexture = LoadTextureWithImageFallback(VictoryBannerTexturePath);
 		if (bannerTexture != null)
 		{
-			var bannerArt = new TextureRect
+			_winnerBannerArt = new TextureRect
 			{
 				Name = "GeneratedBannerArt",
 				Texture = bannerTexture,
@@ -118,8 +118,8 @@ public partial class GameBoardScene
 				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 				MouseFilter = MouseFilterEnum.Ignore,
 			};
-			bannerArt.SetAnchorsPreset(LayoutPreset.FullRect);
-			_winnerBannerPanel.AddChild(bannerArt);
+			_winnerBannerArt.SetAnchorsPreset(LayoutPreset.FullRect);
+			_winnerBannerPanel.AddChild(_winnerBannerArt);
 		}
 		else
 		{
@@ -132,6 +132,37 @@ public partial class GameBoardScene
 			fallbackPanel.AddThemeStyleboxOverride("panel", CreateWinnerBannerFallbackStyle());
 			_winnerBannerPanel.AddChild(fallbackPanel);
 			GD.PushWarning($"Missing victory banner texture: {VictoryBannerTexturePath}");
+		}
+
+		PackedScene? avatarScene = GD.Load<PackedScene>(CharacterAvatarScenePath);
+		if (avatarScene != null)
+		{
+			Node avatarNode = avatarScene.Instantiate();
+			if (avatarNode is CharacterAvatar resultAvatar)
+			{
+				_resultAvatar = resultAvatar;
+				_resultAvatar.Name = "ResultAvatar";
+				_resultAvatar.Visible = false;
+				_resultAvatar.ShowFrame = false;
+				_resultAvatar.LoadActionFrames = true;
+				_resultAvatar.PortraitScale = 0.86f;
+				_resultAvatar.MouseFilter = MouseFilterEnum.Ignore;
+				_resultAvatar.CustomMinimumSize = new Vector2(84.0f, 84.0f);
+				_resultAvatar.SetAnchorsPreset(LayoutPreset.CenterLeft);
+				_resultAvatar.AnchorLeft = 0.0f;
+				_resultAvatar.AnchorTop = 0.5f;
+				_resultAvatar.AnchorRight = 0.0f;
+				_resultAvatar.AnchorBottom = 0.5f;
+				_resultAvatar.OffsetLeft = 96.0f;
+				_resultAvatar.OffsetTop = -74.0f;
+				_resultAvatar.OffsetRight = 180.0f;
+				_resultAvatar.OffsetBottom = 10.0f;
+				_winnerBannerPanel.AddChild(_resultAvatar);
+			}
+			else
+			{
+				avatarNode.QueueFree();
+			}
 		}
 
 		_winnerLabel = new Label
@@ -179,8 +210,14 @@ public partial class GameBoardScene
 
 	private void ShowWinnerBanner(int playerIndex)
 	{
-		_winnerLabel.Text = LocalizeFormat("GAME_WINNER", playerIndex + 1);
+		_showingDefeatResult = ShouldShowDefeatResult(playerIndex);
+		_winnerLabel.Text = _showingDefeatResult
+			? Localize("GAME_DEFEAT")
+			: LocalizeFormat("GAME_WINNER", playerIndex + 1);
+		ApplyWinnerLabelLayout();
 		_winnerLabel.Visible = true;
+		ApplyWinnerBannerArt();
+		UpdateResultAvatar();
 		if (_winnerBannerRoot == null)
 		{
 			return;
@@ -216,6 +253,11 @@ public partial class GameBoardScene
 		if (_winnerBannerPanel != null)
 		{
 			_winnerBannerPanel.Scale = Vector2.One;
+		}
+
+		if (_resultAvatar != null)
+		{
+			_resultAvatar.Visible = false;
 		}
 
 		_winnerLabel.Visible = false;
@@ -314,6 +356,70 @@ public partial class GameBoardScene
 			ShadowSize = 22,
 			ShadowOffset = new Vector2(0.0f, 9.0f),
 		};
+	}
+
+	private bool ShouldShowDefeatResult(int winnerPlayerIndex)
+	{
+		if (winnerPlayerIndex == MainPlayerIndex)
+		{
+			return false;
+		}
+
+		return adventure_mode || solo_mode;
+	}
+
+	private void ApplyWinnerLabelLayout()
+	{
+		if (_winnerLabel == null || !GodotObject.IsInstanceValid(_winnerLabel))
+		{
+			return;
+		}
+
+		_winnerLabel.OffsetLeft = _showingDefeatResult ? 176.0f : 66.0f;
+		_winnerLabel.OffsetTop = 28.0f;
+		_winnerLabel.OffsetRight = -66.0f;
+		_winnerLabel.OffsetBottom = -78.0f;
+		_winnerLabel.HorizontalAlignment = _showingDefeatResult
+			? HorizontalAlignment.Left
+			: HorizontalAlignment.Center;
+	}
+
+	private void ApplyWinnerBannerArt()
+	{
+		if (_winnerBannerArt == null || !GodotObject.IsInstanceValid(_winnerBannerArt))
+		{
+			return;
+		}
+
+		string texturePath = _showingDefeatResult ? DefeatBannerTexturePath : VictoryBannerTexturePath;
+		Texture2D? texture = LoadTextureWithImageFallback(texturePath);
+		if (texture == null)
+		{
+			GD.PushWarning($"Missing result banner texture: {texturePath}");
+			return;
+		}
+
+		_winnerBannerArt.Texture = texture;
+	}
+
+	private void UpdateResultAvatar()
+	{
+		if (_resultAvatar == null || !GodotObject.IsInstanceValid(_resultAvatar))
+		{
+			return;
+		}
+
+		if (!_showingDefeatResult)
+		{
+			_resultAvatar.Visible = false;
+			return;
+		}
+
+		CharacterAvatarDefinition playerAvatarDefinition = CharacterAvatarCatalog.LoadSelectedAvatar();
+		_resultAvatar.AvatarRoot = playerAvatarDefinition.RootPath;
+		_resultAvatar.AccentColor = PlayerAvatarAccentColors[MainPlayerIndex];
+		_resultAvatar.Visible = true;
+		_resultAvatar.PlayAction(CharacterAvatar.AvatarAction.Defeat);
 	}
 
 	private static Vector2 GetHandAreaSize(int playerIndex)

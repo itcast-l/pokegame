@@ -440,7 +440,6 @@ public partial class GameBoardScene
 		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
 		card.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		card.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + pulse * 8.0f;
-		card.Scale = Vector2.One;
 	}
 
 	private Vector2 GetOpeningDealStartGlobalPosition()

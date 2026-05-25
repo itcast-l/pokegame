@@ -72,25 +72,38 @@ public partial class GameBoardScene
 		{
 			UpdateQuestionCardToTransformAreaFlight(
 				animationRoot,
-				fx,
-				_questionCardTransformFrames,
 				reward.StartGlobalPosition,
 				transformAreaGlobalPosition,
 				0.0f);
 
 			Tween areaFlightTween = CreateTween();
+			areaFlightTween.SetParallel(true);
 			areaFlightTween.SetTrans(Tween.TransitionType.Sine);
 			areaFlightTween.SetEase(Tween.EaseType.InOut);
 			areaFlightTween.TweenMethod(
 				Callable.From<float>(progress => UpdateQuestionCardToTransformAreaFlight(
 					animationRoot,
-					fx,
-					_questionCardTransformFrames,
 					reward.StartGlobalPosition,
 					transformAreaGlobalPosition,
 					progress)),
 				0.0f,
 				1.0f,
+				QuestionCardToTransformAreaFlightSeconds);
+			areaFlightTween.TweenProperty(animationRoot, "scale", Vector2.One * 1.08f, QuestionCardToTransformAreaFlightSeconds * 0.5f)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			areaFlightTween.TweenProperty(animationRoot, "scale", Vector2.One, QuestionCardToTransformAreaFlightSeconds * 0.5f)
+				.SetDelay(QuestionCardToTransformAreaFlightSeconds * 0.5f)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			areaFlightTween.TweenProperty(fx, "modulate:a", 0.42f, QuestionCardToTransformAreaFlightSeconds)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				areaFlightTween,
+				fx,
+				_questionCardTransformFrames,
+				QuestionCardToTransformAreaFlightSeconds / Math.Max(1, _questionCardTransformFrames.Count),
 				QuestionCardToTransformAreaFlightSeconds);
 
 			await ToSignal(areaFlightTween, Tween.SignalName.Finished);
@@ -101,19 +114,45 @@ public partial class GameBoardScene
 
 			animationRoot.GlobalPosition = transformAreaGlobalPosition;
 			Tween transformTween = CreateTween();
+			transformTween.SetParallel(true);
 			transformTween.SetTrans(Tween.TransitionType.Sine);
 			transformTween.SetEase(Tween.EaseType.InOut);
 			transformTween.TweenMethod(
-				Callable.From<float>(progress => UpdateQuestionCardTransform(
-					animationRoot,
-					card,
-					fx,
-					_questionCardTransformFrames,
-					questionTexture,
-					reward.ItemCard.Texture,
-					progress)),
+				Callable.From<float>(progress => UpdateQuestionCardTransform(animationRoot, progress)),
 				0.0f,
 				1.0f,
+				QuestionCardTransformSeconds);
+			float transformPeakDelay = QuestionCardTransformSeconds * 0.48f;
+			transformTween.TweenProperty(animationRoot, "scale", Vector2.One * 1.32f, transformPeakDelay)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			transformTween.TweenProperty(animationRoot, "scale", Vector2.One * 1.04f, QuestionCardTransformSeconds - transformPeakDelay)
+				.SetDelay(transformPeakDelay)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			float cardFlipDelay = QuestionCardTransformSeconds * 0.5f;
+			transformTween.TweenProperty(card, "scale", new Vector2(0.12f, 1.0f), cardFlipDelay)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			transformTween.TweenCallback(Callable.From(() =>
+			{
+				if (GodotObject.IsInstanceValid(card))
+				{
+					card.Texture = reward.ItemCard.Texture;
+				}
+			})).SetDelay(cardFlipDelay);
+			transformTween.TweenProperty(card, "scale", Vector2.One, QuestionCardTransformSeconds - cardFlipDelay)
+				.SetDelay(cardFlipDelay)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			transformTween.TweenProperty(fx, "modulate:a", 1.0f, QuestionCardTransformSeconds)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				transformTween,
+				fx,
+				_questionCardTransformFrames,
+				QuestionCardTransformSeconds / Math.Max(1, _questionCardTransformFrames.Count),
 				QuestionCardTransformSeconds);
 
 			await ToSignal(transformTween, Tween.SignalName.Finished);
@@ -135,19 +174,32 @@ public partial class GameBoardScene
 			Vector2 insertStartGlobalPosition = transformAreaGlobalPosition;
 			animationRoot.GlobalPosition = insertStartGlobalPosition;
 			animationRoot.RotationDegrees = 0.0f;
+			animationRoot.Scale = Vector2.One * 1.04f;
+			fx.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.75f);
 			Tween insertTween = CreateTween();
+			insertTween.SetParallel(true);
 			insertTween.SetTrans(Tween.TransitionType.Sine);
 			insertTween.SetEase(Tween.EaseType.Out);
 			insertTween.TweenMethod(
 				Callable.From<float>(progress => UpdateQuestionCardRewardInsert(
 					animationRoot,
-					fx,
-					_questionCardTransformFrames,
 					insertStartGlobalPosition,
 					targetGlobalPosition,
 					progress)),
 				0.0f,
 				1.0f,
+				QuestionCardRewardInsertSeconds);
+			insertTween.TweenProperty(animationRoot, "scale", Vector2.One, QuestionCardRewardInsertSeconds)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			insertTween.TweenProperty(fx, "modulate:a", 0.0f, QuestionCardRewardInsertSeconds)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				insertTween,
+				fx,
+				_questionCardTransformFrames,
+				QuestionCardRewardInsertSeconds / Math.Max(1, _questionCardTransformFrames.Count),
 				QuestionCardRewardInsertSeconds);
 
 			await ToSignal(insertTween, Tween.SignalName.Finished);
@@ -211,8 +263,6 @@ public partial class GameBoardScene
 
 	private static void UpdateQuestionCardToTransformAreaFlight(
 		Control animationRoot,
-		TextureRect fx,
-		IReadOnlyList<Texture2D> fxFrames,
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		float progress)
@@ -226,46 +276,25 @@ public partial class GameBoardScene
 		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
 		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * TableCaptureFlightArcHeight;
 		animationRoot.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
-		animationRoot.Scale = Vector2.One * Mathf.Lerp(0.92f, 1.08f, Mathf.Sin(clampedProgress * Mathf.Pi));
 		animationRoot.RotationDegrees = Mathf.Lerp(0.0f, 18.0f, Mathf.Sin(clampedProgress * Mathf.Pi));
-
-		UpdateQuestionCardFx(fx, fxFrames, clampedProgress * 0.35f, Mathf.Lerp(0.0f, 0.42f, clampedProgress));
 	}
 
 	private static void UpdateQuestionCardTransform(
 		Control animationRoot,
-		TextureRect card,
-		TextureRect fx,
-		IReadOnlyList<Texture2D> fxFrames,
-		Texture2D questionTexture,
-		Texture2D rewardTexture,
 		float progress)
 	{
-		if (!GodotObject.IsInstanceValid(animationRoot) || !GodotObject.IsInstanceValid(card))
+		if (!GodotObject.IsInstanceValid(animationRoot))
 		{
 			return;
 		}
 
 		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
 		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
-		bool showingReward = clampedProgress >= 0.5f;
-		float scale = clampedProgress < 0.48f
-			? Mathf.Lerp(1.0f, 1.32f, clampedProgress / 0.48f)
-			: Mathf.Lerp(1.32f, 1.04f, (clampedProgress - 0.48f) / 0.52f);
-		float flipDistance = Mathf.Abs(clampedProgress - 0.5f) / 0.5f;
-
-		animationRoot.Scale = new Vector2(scale, scale);
 		animationRoot.RotationDegrees = Mathf.Lerp(0.0f, 360.0f, easedProgress);
-		card.Texture = showingReward ? rewardTexture : questionTexture;
-		card.Scale = new Vector2(Mathf.Lerp(0.12f, 1.0f, flipDistance), 1.0f);
-
-		UpdateQuestionCardFx(fx, fxFrames, clampedProgress, 1.0f);
 	}
 
 	private static void UpdateQuestionCardRewardInsert(
 		Control animationRoot,
-		TextureRect fx,
-		IReadOnlyList<Texture2D> fxFrames,
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		float progress)
@@ -278,22 +307,7 @@ public partial class GameBoardScene
 		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
 		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
 		animationRoot.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress);
-		animationRoot.Scale = Vector2.One * Mathf.Lerp(1.04f, 1.0f, easedProgress);
 		animationRoot.RotationDegrees = 0.0f;
-
-		UpdateQuestionCardFx(fx, fxFrames, clampedProgress, Mathf.Lerp(0.75f, 0.0f, easedProgress));
-	}
-
-	private static void UpdateQuestionCardFx(TextureRect fx, IReadOnlyList<Texture2D> fxFrames, float progress, float alpha)
-	{
-		if (!GodotObject.IsInstanceValid(fx) || fxFrames.Count == 0)
-		{
-			return;
-		}
-
-		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(progress * fxFrames.Count), 0, fxFrames.Count - 1);
-		fx.Texture = fxFrames[frameIndex];
-		fx.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
 	}
 
 	private async Task PlayQuestionCardRefreshAnimationAsync(int tableCardIndex)
@@ -315,7 +329,6 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Texture2D> refreshFrames = LoadQuestionCardRefreshFrames();
 		Texture2D questionTexture = tableCard.ItemOverlay.Value.Texture;
 		var animationRoot = new Control
 		{
@@ -329,7 +342,7 @@ public partial class GameBoardScene
 		var fx = new TextureRect
 		{
 			Name = "QuestionCardRefreshFx",
-			Texture = refreshFrames.Count > 0 ? refreshFrames[0] : null,
+			Texture = QuestionCardRefreshFrames.Length > 0 ? QuestionCardRefreshFrames[0] : null,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
@@ -338,7 +351,7 @@ public partial class GameBoardScene
 			Size = QuestionCardRefreshFxVisualSize,
 			PivotOffset = QuestionCardRefreshFxVisualSize / 2.0f,
 			ZIndex = 0,
-			Visible = refreshFrames.Count > 0,
+			Visible = QuestionCardRefreshFrames.Length > 0,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
 		var card = new TextureRect
@@ -363,14 +376,30 @@ public partial class GameBoardScene
 
 		try
 		{
-			UpdateQuestionCardRefreshAnimation(animationRoot, card, fx, refreshFrames, 0.0f);
+			card.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+			card.Scale = Vector2.One * 0.82f;
+			card.RotationDegrees = -5.0f;
+			fx.Scale = Vector2.One * 0.9f;
 			Tween tween = CreateTween();
+			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
-			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateQuestionCardRefreshAnimation(animationRoot, card, fx, refreshFrames, progress)),
-				0.0f,
-				1.0f,
+			tween.TweenProperty(card, "modulate:a", 1.0f, QuestionCardRefreshSeconds * 0.52f)
+				.SetDelay(QuestionCardRefreshSeconds * 0.18f);
+			tween.TweenProperty(card, "scale", Vector2.One * 1.08f, QuestionCardRefreshSeconds * 0.42f);
+			tween.TweenProperty(card, "scale", Vector2.One, QuestionCardRefreshSeconds * 0.40f)
+				.SetDelay(QuestionCardRefreshSeconds * 0.42f);
+			tween.TweenProperty(card, "rotation_degrees", 0.0f, QuestionCardRefreshSeconds);
+			tween.TweenProperty(animationRoot, "scale", Vector2.One, QuestionCardRefreshSeconds);
+			tween.TweenProperty(fx, "modulate:a", 1.0f, QuestionCardRefreshSeconds * 0.2f);
+			tween.TweenProperty(fx, "modulate:a", 0.0f, QuestionCardRefreshSeconds * 0.32f)
+				.SetDelay(QuestionCardRefreshSeconds * 0.68f);
+			tween.TweenProperty(fx, "scale", Vector2.One * 1.08f, QuestionCardRefreshSeconds);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				fx,
+				QuestionCardRefreshFrames,
+				QuestionCardRefreshSeconds / Math.Max(1, QuestionCardRefreshFrames.Length),
 				QuestionCardRefreshSeconds);
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
@@ -383,56 +412,4 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static void UpdateQuestionCardRefreshAnimation(
-		Control animationRoot,
-		TextureRect card,
-		TextureRect fx,
-		IReadOnlyList<Texture2D> fxFrames,
-		float progress)
-	{
-		if (!GodotObject.IsInstanceValid(animationRoot) || !GodotObject.IsInstanceValid(card))
-		{
-			return;
-		}
-
-		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
-		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
-		float cardAlpha = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.18f) / 0.52f, 0.0f, 1.0f));
-		float cardPop = Mathf.Sin(Mathf.Clamp(clampedProgress / 0.82f, 0.0f, 1.0f) * Mathf.Pi);
-		card.Modulate = new Color(1.0f, 1.0f, 1.0f, cardAlpha);
-		card.Scale = Vector2.One * (Mathf.Lerp(0.82f, 1.0f, easedProgress) + cardPop * 0.08f);
-		card.RotationDegrees = Mathf.Lerp(-5.0f, 0.0f, easedProgress);
-		animationRoot.Scale = Vector2.One * Mathf.Lerp(0.96f, 1.0f, easedProgress);
-
-		if (!GodotObject.IsInstanceValid(fx) || fxFrames.Count == 0)
-		{
-			return;
-		}
-
-		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * fxFrames.Count), 0, fxFrames.Count - 1);
-		float fxAlphaIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.2f, 0.0f, 1.0f));
-		float fxAlphaOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.68f) / 0.32f, 0.0f, 1.0f));
-		fx.Texture = fxFrames[frameIndex];
-		fx.Modulate = new Color(1.0f, 1.0f, 1.0f, fxAlphaIn * fxAlphaOut);
-		fx.Scale = Vector2.One * Mathf.Lerp(0.9f, 1.08f, Mathf.Sin(clampedProgress * Mathf.Pi));
-	}
-
-	private static List<Texture2D> LoadQuestionCardRefreshFrames()
-	{
-		var frames = new List<Texture2D>();
-		for (int frameIndex = 1; frameIndex <= QuestionCardRefreshFrameCount; frameIndex++)
-		{
-			string path = string.Format(QuestionCardRefreshFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing question card refresh frame: {path}");
-				continue;
-			}
-
-			frames.Add(texture);
-		}
-
-		return frames;
-	}
 }

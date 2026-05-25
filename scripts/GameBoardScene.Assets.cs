@@ -4,151 +4,55 @@ public partial class GameBoardScene
 {
 	private void LoadCardBackTextures()
 	{
-		_cardBackTexture = GD.Load<Texture2D>(CardBackPath);
-		_cardBackFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= CardBackFrameCount; frameIndex++)
-		{
-			string path = string.Format(CardBackFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing card back animation frame: {path}");
-				continue;
-			}
-
-			_cardBackFrames.Add(texture);
-		}
-
-		if (_cardBackTexture == null && _cardBackFrames.Count > 0)
-		{
-			_cardBackTexture = _cardBackFrames[0];
-		}
+		_cardBackTexture = CardBackFrames.Length > 0 ? CardBackFrames[0] : GD.Load<Texture2D>(CardBackPath);
 	}
 
 	private void LoadScoreFillEffectTextures()
 	{
 		_scoreFillEffectFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= ScoreFillEffectFrameCount; frameIndex++)
-		{
-			string path = string.Format(ScoreFillEffectFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing score fill effect frame: {path}");
-				continue;
-			}
-
-			_scoreFillEffectFrames.Add(texture);
-		}
+		_scoreFillEffectFrames.AddRange(ScoreFillEffectFrames);
 	}
 
 	private void LoadAdventureDamageEffectTextures()
 	{
 		_adventureDamageEffectFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= AdventureDamageEffectFrameCount; frameIndex++)
-		{
-			string path = string.Format(AdventureDamageEffectFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing adventure damage effect frame: {path}");
-				continue;
-			}
-
-			_adventureDamageEffectFrames.Add(texture);
-		}
+		_adventureDamageEffectFrames.AddRange(CatAdventureDamageEffectFrames);
 	}
 
 	private void LoadAdventureEnemyDamageEffectTextures()
 	{
 		_adventureEnemyDamageEffectFrames.Clear();
-		string framePattern = adventure_enemy_avatar_id switch
+		Texture2D[] frames = adventure_enemy_avatar_id switch
 		{
-			FishAdventureEnemyAvatarId => FishAdventureDamageEffectFramePattern,
-			LanternfishAdventureEnemyAvatarId => LanternfishAdventureDamageEffectFramePattern,
-			_ => AdventureDamageEffectFramePattern,
+			FishAdventureEnemyAvatarId => FishAdventureDamageEffectFrames,
+			LanternfishAdventureEnemyAvatarId => LanternfishAdventureDamageEffectFrames,
+			_ => DefaultAdventureDamageEffectFrames,
 		};
-
-		for (int frameIndex = 1; frameIndex <= AdventureDamageEffectFrameCount; frameIndex++)
-		{
-			string path = string.Format(framePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing adventure enemy damage effect frame: {path}");
-				continue;
-			}
-
-			_adventureEnemyDamageEffectFrames.Add(texture);
-		}
+		_adventureEnemyDamageEffectFrames.AddRange(frames);
 	}
 
 	private void LoadQuestionCardTransformTextures()
 	{
 		_questionCardTransformFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= QuestionCardTransformFrameCount; frameIndex++)
-		{
-			string path = string.Format(QuestionCardTransformFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing question card transform frame: {path}");
-				continue;
-			}
-
-			_questionCardTransformFrames.Add(texture);
-		}
+		_questionCardTransformFrames.AddRange(QuestionCardTransformFrames);
 	}
 
 	private void LoadSpecialCardTriggerEffectTextures()
 	{
 		_specialCardTriggerEffectFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= SpecialCardTriggerEffectFrameCount; frameIndex++)
-		{
-			string path = string.Format(SpecialCardTriggerEffectFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing special card trigger effect frame: {path}");
-				continue;
-			}
-
-			_specialCardTriggerEffectFrames.Add(texture);
-		}
+		_specialCardTriggerEffectFrames.AddRange(SpecialCardTriggerEffectFrames);
 	}
 
 	private void LoadBombPairDestroyEffectTextures()
 	{
 		_bombPairDestroyEffectFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= BombPairDestroyEffectFrameCount; frameIndex++)
-		{
-			string path = string.Format(BombPairDestroyEffectFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing bomb pair destroy effect frame: {path}");
-				continue;
-			}
-
-			_bombPairDestroyEffectFrames.Add(texture);
-		}
+		_bombPairDestroyEffectFrames.AddRange(BombPairDestroyEffectFrames);
 	}
 
 	private void LoadLensRevealWispTextures()
 	{
 		_lensRevealWispFrames.Clear();
-		for (int frameIndex = 1; frameIndex <= LensRevealWispFrameCount; frameIndex++)
-		{
-			string path = string.Format(LensRevealWispFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing lens reveal wisp frame: {path}");
-				continue;
-			}
-
-			_lensRevealWispFrames.Add(texture);
-		}
+		_lensRevealWispFrames.AddRange(LensRevealWispFrames);
 	}
 
 	private void LoadAttachmentCardOverlayTextures()
@@ -175,36 +79,31 @@ public partial class GameBoardScene
 	private void LoadMagnetCountdownFxTextures()
 	{
 		_magnetCountdownFrameTextures.Clear();
-		for (int frameIndex = 1; frameIndex <= MagnetCountdownFrameCount; frameIndex++)
-		{
-			string path = string.Format(MagnetCountdownFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing magnet countdown frame: {path}");
-				continue;
-			}
-
-			_magnetCountdownFrameTextures.Add(texture);
-		}
+		_magnetCountdownFrameTextures.AddRange(MagnetCountdownFrames);
 	}
 
 	private void MarkAnimatedCardBack(TextureRect cardBack)
 	{
 		cardBack.SetMeta(CardBackAnimatedMeta, true);
-	}
-
-	private void UpdateAnimatedCardBacks(Node root, Texture2D frame)
-	{
-		foreach (Node child in root.GetChildren())
+		if (CardBackFrames.Length <= 1)
 		{
-			if (child is TextureRect { } textureRect && textureRect.HasMeta(CardBackAnimatedMeta))
-			{
-				textureRect.Texture = frame;
-			}
-
-			UpdateAnimatedCardBacks(child, frame);
+			return;
 		}
+
+		var animationPlayer = new AnimationPlayer
+		{
+			Name = "CardBackAnimationPlayer",
+			RootNode = new NodePath(".."),
+		};
+		cardBack.AddChild(animationPlayer);
+		FrameAnimationHelpers.ConfigureTextureAnimation(
+			animationPlayer,
+			new StringName("card_back_frames"),
+			new NodePath(".:texture"),
+			CardBackFrames,
+			1.0 / CardBackAnimationFps,
+			loops: true);
+		animationPlayer.Play("card_back_frames");
 	}
 
 	private void LoadItemCardTextures()

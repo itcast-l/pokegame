@@ -8,6 +8,8 @@ public partial class GameBoardScene
 	private const string QuestionCardRefreshFramePattern = "res://art/fx/question_card_refresh/run-001/processed/fx-{0}.png";
 	private const int QuestionCardRefreshFrameCount = 6;
 	private const float QuestionCardRefreshSeconds = 0.48f;
+	private static readonly Texture2D[] QuestionCardRefreshFrames =
+		FrameAnimationHelpers.LoadTextureFrames(QuestionCardRefreshFramePattern, QuestionCardRefreshFrameCount, "question card refresh");
 	private const float OpeningIntroFlyInSeconds = 0.42f;
 	private const float OpeningIntroHoldSeconds = 0.20f;
 	private const float OpeningIntroFadeOutSeconds = 0.14f;
@@ -24,6 +26,8 @@ public partial class GameBoardScene
 	private const int DeckShuffleFrameCount = 6;
 	private const int DeckShuffleRepeatCount = 3;
 	private const float DeckShuffleFrameSeconds = 0.065f;
+	private static readonly Texture2D[] DeckShuffleFrames =
+		FrameAnimationHelpers.LoadTextureFrames(DeckShuffleFramePattern, DeckShuffleFrameCount, "deck shuffle");
 	private const float PlayedCardFlightDuration = 0.34f;
 	private const float PlayedCardFlipMinScaleX = 0.06f;
 	private const float QuestionCardToTransformAreaFlightSeconds = 0.36f;

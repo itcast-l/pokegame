@@ -46,6 +46,9 @@ public partial class GameBoardScene
 					0.0f,
 					1.0f,
 					TableShuffleGatherSeconds);
+				gatherTween.TweenProperty(flightCard, "scale", Vector2.One * 0.86f, TableShuffleGatherSeconds)
+					.SetTrans(Tween.TransitionType.Cubic)
+					.SetEase(Tween.EaseType.Out);
 			}
 			gatherTween.TweenProperty(vortex, "vortex_alpha", 1.0f, TableShuffleGatherSeconds * 0.55f);
 
@@ -68,6 +71,9 @@ public partial class GameBoardScene
 					0.0f,
 					1.0f,
 					TableShuffleScatterSeconds);
+				scatterTween.TweenProperty(flightCard, "scale", Vector2.One, TableShuffleScatterSeconds)
+					.SetTrans(Tween.TransitionType.Cubic)
+					.SetEase(Tween.EaseType.Out);
 			}
 			scatterTween.TweenProperty(vortex, "vortex_alpha", 0.0f, TableShuffleScatterSeconds);
 			scatterTween.TweenProperty(vortex, "vortex_progress", 1.0f, TableShuffleScatterSeconds);
@@ -299,7 +305,6 @@ public partial class GameBoardScene
 
 		flightCard.GlobalPosition = visual.StartGlobalPosition.Lerp(gatherGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = direction * Mathf.Lerp(0.0f, TableShuffleRotationDegrees, easedProgress);
-		flightCard.Scale = Vector2.One * Mathf.Lerp(1.0f, 0.86f, easedProgress);
 	}
 
 	private static void UpdateShuffledTableCardScatterFlight(Control flightCard, ShuffledTableCardVisual visual, int visualIndex, float progress)
@@ -318,7 +323,6 @@ public partial class GameBoardScene
 
 		flightCard.GlobalPosition = gatherGlobalPosition.Lerp(visual.TargetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = direction * Mathf.Lerp(TableShuffleRotationDegrees, 0.0f, easedProgress);
-		flightCard.Scale = Vector2.One * Mathf.Lerp(0.86f, 1.0f, easedProgress);
 	}
 
 	private static Vector2 GetTableShuffleCenterOffset(int visualIndex)

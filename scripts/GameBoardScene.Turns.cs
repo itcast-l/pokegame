@@ -412,11 +412,6 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (adventure_mode)
-		{
-			return;
-		}
-
 		int remainingPlayerIndex = -1;
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{

@@ -9,7 +9,7 @@ public partial class GameBoardScene
 		const float countdownWidth = 176.0f;
 		const float countdownHeight = 172.0f;
 		_magnetAttachmentCountdownRemainingSeconds = MagnetAttachmentSelectionSeconds;
-		_magnetAttachmentCountdownPulseTime = 0.0;
+		_magnetAttachmentCountdownHintIsUrgent = false;
 
 		var root = new Control
 		{
@@ -103,7 +103,7 @@ public partial class GameBoardScene
 		Tween introTween = CreateTween();
 		introTween.SetTrans(Tween.TransitionType.Cubic);
 		introTween.SetEase(Tween.EaseType.Out);
-		introTween.TweenProperty(root, "modulate", Colors.White, 0.16f);
+		introTween.TweenProperty(root, "modulate:a", 1.0f, 0.16f);
 	}
 
 	private void UpdateMagnetAttachmentCountdown(double delta)
@@ -122,7 +122,6 @@ public partial class GameBoardScene
 		_magnetAttachmentCountdownRemainingSeconds = Mathf.Max(
 			0.0f,
 			(float)(_magnetAttachmentCountdownRemainingSeconds - delta));
-		_magnetAttachmentCountdownPulseTime += delta;
 		float progress = Mathf.Clamp(
 			(float)(_magnetAttachmentCountdownRemainingSeconds / MagnetAttachmentSelectionSeconds),
 			0.0f,
@@ -139,14 +138,7 @@ public partial class GameBoardScene
 				progress <= 0.35f ? new Color(1.0f, 0.86f, 0.42f) : Colors.White);
 		}
 
-		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
-		{
-			_magnetAttachmentCountdownHintLabel.Modulate = new Color(
-				1.0f,
-				1.0f,
-				1.0f,
-				progress <= 0.35f ? 0.78f + 0.22f * Mathf.Sin((float)_magnetAttachmentCountdownPulseTime * 9.0f) : 1.0f);
-		}
+		UpdateMagnetAttachmentCountdownHintPulse(progress <= 0.35f);
 
 		if (_magnetAttachmentCountdownRing != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownRing))
 		{
@@ -156,6 +148,8 @@ public partial class GameBoardScene
 
 	private void ClearMagnetAttachmentCountdown()
 	{
+		KillMagnetAttachmentCountdownHintTween();
+
 		if (_magnetAttachmentCountdownRoot != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownRoot))
 		{
 			RemoveChild(_magnetAttachmentCountdownRoot);
@@ -167,7 +161,47 @@ public partial class GameBoardScene
 		_magnetAttachmentCountdownLabel = null;
 		_magnetAttachmentCountdownHintLabel = null;
 		_magnetAttachmentCountdownRemainingSeconds = 0.0;
-		_magnetAttachmentCountdownPulseTime = 0.0;
+		_magnetAttachmentCountdownHintIsUrgent = false;
+	}
+
+	private void UpdateMagnetAttachmentCountdownHintPulse(bool isUrgent)
+	{
+		if (_magnetAttachmentCountdownHintLabel == null || !GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
+		{
+			return;
+		}
+
+		if (_magnetAttachmentCountdownHintIsUrgent == isUrgent)
+		{
+			return;
+		}
+
+		KillMagnetAttachmentCountdownHintTween();
+		_magnetAttachmentCountdownHintIsUrgent = isUrgent;
+		if (!isUrgent)
+		{
+			_magnetAttachmentCountdownHintLabel.Modulate = Colors.White;
+			return;
+		}
+
+		_magnetAttachmentCountdownHintLabel.Modulate = Colors.White;
+		Tween pulseTween = CreateTween();
+		pulseTween.SetLoops();
+		pulseTween.SetTrans(Tween.TransitionType.Cubic);
+		pulseTween.SetEase(Tween.EaseType.InOut);
+		pulseTween.TweenProperty(_magnetAttachmentCountdownHintLabel, "modulate:a", 0.78f, 0.16f);
+		pulseTween.TweenProperty(_magnetAttachmentCountdownHintLabel, "modulate:a", 1.0f, 0.16f);
+		_magnetAttachmentCountdownHintTween = pulseTween;
+	}
+
+	private void KillMagnetAttachmentCountdownHintTween()
+	{
+		if (_magnetAttachmentCountdownHintTween != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintTween))
+		{
+			_magnetAttachmentCountdownHintTween.Kill();
+		}
+
+		_magnetAttachmentCountdownHintTween = null;
 	}
 
 	private partial class MagnetAttachmentCountdownRing : Control

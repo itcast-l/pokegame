@@ -32,6 +32,9 @@ position = Vector2(180, 180)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("1_question_mark")
 
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/RandomCardItem"]
+root_node = NodePath("..")
+
 [node name="DestroyCardsItem" type="Node2D" parent="ItemCards" unique_id=307299030]
 script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_BOMB"
@@ -41,6 +44,9 @@ position = Vector2(340, 180)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("2_bomb")
 
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/DestroyCardsItem"]
+root_node = NodePath("..")
+
 [node name="MagnetCardItem" type="Node2D" parent="ItemCards" unique_id=1252918191]
 script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_MAGNET"
@@ -49,6 +55,9 @@ item_description = "ITEM_DESC_MAGNET"
 position = Vector2(500, 180)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("4_magnet")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/MagnetCardItem"]
+root_node = NodePath("..")
 
 [node name="GreedCardItem" type="Node2D" parent="ItemCards" unique_id=1089692596]
 script = ExtResource("3_item_card_data")
@@ -60,6 +69,9 @@ position = Vector2(660, 180)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("5_greed")
 
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/GreedCardItem"]
+root_node = NodePath("..")
+
 [node name="LensCardItem" type="Node2D" parent="ItemCards" unique_id=1232941760]
 script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_LENS"
@@ -68,6 +80,9 @@ item_description = "ITEM_DESC_LENS"
 position = Vector2(820, 180)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("6_lens")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/LensCardItem"]
+root_node = NodePath("..")
 
 [node name="DoubleCardItem" type="Node2D" parent="ItemCards" unique_id=1748694407]
 script = ExtResource("3_item_card_data")
@@ -78,6 +93,9 @@ position = Vector2(980, 180)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("7_double")
 
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/DoubleCardItem"]
+root_node = NodePath("..")
+
 [node name="OvertimeCardItem" type="Node2D" parent="ItemCards" unique_id=1603257696]
 script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_OVERTIME"
@@ -86,6 +104,9 @@ item_description = "ITEM_DESC_OVERTIME"
 position = Vector2(180, 500)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("8_overtime")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/OvertimeCardItem"]
+root_node = NodePath("..")
 
 [node name="DrawCardItem" type="Node2D" parent="ItemCards" unique_id=785303165]
 script = ExtResource("3_item_card_data")
@@ -96,6 +117,9 @@ position = Vector2(340, 500)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("9_draw_card")
 
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/DrawCardItem"]
+root_node = NodePath("..")
+
 [node name="ShuffleCardItem" type="Node2D" parent="ItemCards" unique_id=1564650625]
 script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_SHUFFLE"
@@ -104,3 +128,6 @@ item_description = "ITEM_DESC_SHUFFLE"
 position = Vector2(500, 500)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("10_shuffle")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/ShuffleCardItem"]
+root_node = NodePath("..")

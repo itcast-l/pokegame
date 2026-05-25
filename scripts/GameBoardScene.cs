@@ -16,24 +16,48 @@ public partial class GameBoardScene : Control
 	private const float CardBackAnimationFps = 6.0f;
 	private const string ScoreFillEffectFramePattern = "res://art/fx/score_fill_orbs/run-001/processed/fx-{0}.png";
 	private const int ScoreFillEffectFrameCount = 4;
+	private static readonly Texture2D[] ScoreFillEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(ScoreFillEffectFramePattern, ScoreFillEffectFrameCount, "score fill effect");
 	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
+	private const string CatAdventureDamageEffectFramePattern = "res://art/fx/player_cat_claw_attack/run-001/processed/fx-{0}.png";
 	private const string FishAdventureDamageEffectFramePattern = "res://art/fx/fish_attack_burst/run-001/processed/fx-{0}.png";
 	private const string LanternfishAdventureDamageEffectFramePattern = "res://art/fx/lanternfish_lure_flash/run-001/processed/fx-{0}.png";
 	private const int AdventureDamageEffectFrameCount = 4;
+	private static readonly Texture2D[] CardBackFrames =
+		FrameAnimationHelpers.LoadTextureFrames(CardBackFramePattern, CardBackFrameCount, "card back animation");
+	private static readonly Texture2D[] DefaultAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(AdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "adventure damage effect");
+	private static readonly Texture2D[] CatAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(CatAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "cat adventure damage effect");
+	private static readonly Texture2D[] FishAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(FishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "fish adventure damage effect");
+	private static readonly Texture2D[] LanternfishAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(LanternfishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "lanternfish adventure damage effect");
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
 	private const int QuestionCardTransformFrameCount = 6;
+	private static readonly Texture2D[] QuestionCardTransformFrames =
+		FrameAnimationHelpers.LoadTextureFrames(QuestionCardTransformFramePattern, QuestionCardTransformFrameCount, "question card transform");
 	private const string SpecialCardTriggerEffectFramePattern = "res://art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/processed/fx-{0}.png";
 	private const int SpecialCardTriggerEffectFrameCount = 4;
+	private static readonly Texture2D[] SpecialCardTriggerEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(SpecialCardTriggerEffectFramePattern, SpecialCardTriggerEffectFrameCount, "special card trigger effect");
 	private const string BombPairDestroyEffectFramePattern = "res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png";
 	private const int BombPairDestroyEffectFrameCount = 4;
+	private static readonly Texture2D[] BombPairDestroyEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(BombPairDestroyEffectFramePattern, BombPairDestroyEffectFrameCount, "bomb pair destroy effect");
 	private const string LensRevealWispFramePattern = "res://art/fx/lens_reveal_sprites/run-001/processed/fx-{0}.png";
 	private const int LensRevealWispFrameCount = 4;
+	private static readonly Texture2D[] LensRevealWispFrames =
+		FrameAnimationHelpers.LoadTextureFrames(LensRevealWispFramePattern, LensRevealWispFrameCount, "lens reveal wisp");
 	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
 	private const string DoubleCardOverlayPath = "res://art/fx/double_card_overlay/run-002/processed/card-aspect.png";
 	private const string OvertimeCardOverlayPath = "res://art/fx/overtime_card_overlay/run-001/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
+	private static readonly Texture2D[] MagnetCountdownFrames =
+		FrameAnimationHelpers.LoadTextureFrames(MagnetCountdownFramePattern, MagnetCountdownFrameCount, "magnet countdown");
 	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
+	private const string DefeatBannerTexturePath = "res://art/ui/defeat_banner/run-001/processed/banner-transparent.png";
 	private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
 	private const string BombItemCardId = ItemCardCatalog.BombItemCardId;
 	private const string MagnetItemCardId = ItemCardCatalog.MagnetItemCardId;
@@ -118,7 +142,6 @@ public partial class GameBoardScene : Control
 	private readonly List<Control> _playerCardPiles = new();
 	private readonly List<Control> _playerHandAreas = new();
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
-	private readonly List<Texture2D> _cardBackFrames = new();
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
 	private readonly List<Texture2D> _adventureDamageEffectFrames = new();
 	private readonly List<Texture2D> _adventureEnemyDamageEffectFrames = new();
@@ -139,11 +162,13 @@ public partial class GameBoardScene : Control
 	private Texture2D? _magnetCardOverlayTexture;
 	private Texture2D? _doubleCardOverlayTexture;
 	private Texture2D? _overtimeCardOverlayTexture;
-	private float _cardBackAnimationTime;
 	private Control? _winnerBannerRoot;
 	private Control? _winnerBannerPanel;
+	private TextureRect? _winnerBannerArt;
 	private Button? _winnerReplayButton;
 	private Label _winnerLabel = default!;
+	private CharacterAvatar? _resultAvatar;
+	private bool _showingDefeatResult;
 	private int _currentTurnPlayerIndex = MainPlayerIndex;
 	private int _turnSequenceGeneration;
 	private int _completedTurnsSinceQuestionCardRefresh;
@@ -159,14 +184,16 @@ public partial class GameBoardScene : Control
 	private Label? _magnetAttachmentCountdownLabel;
 	private Label? _magnetAttachmentCountdownHintLabel;
 	private MagnetAttachmentCountdownRing? _magnetAttachmentCountdownRing;
+	private Tween? _magnetAttachmentCountdownHintTween;
 	private double _magnetAttachmentCountdownRemainingSeconds;
-	private double _magnetAttachmentCountdownPulseTime;
+	private bool _magnetAttachmentCountdownHintIsUrgent;
 	private bool _isResolvingMagnetAttachmentSelection;
 	private bool _isAnimatingMagnetAttachment;
 	private bool _isResolvingTurnSequence;
 	private bool _isProcessingCardPlay;
 	private bool _isOpeningDealAnimationPlaying;
 	private bool _itemMode = true;
+	private bool _soloMode;
 	private bool _adventureMode;
 	private string _adventureEnemyAvatarId = "fish";
 	private bool _mantaRayTideShiftCheckedThisTurn;
@@ -239,6 +266,13 @@ public partial class GameBoardScene : Control
 	{
 		get => _adventureMode;
 		set => _adventureMode = value;
+	}
+
+	[Export]
+	public bool solo_mode
+	{
+		get => _soloMode;
+		set => _soloMode = value;
 	}
 
 	[Export]
@@ -316,15 +350,6 @@ public partial class GameBoardScene : Control
 	public override void _Process(double delta)
 	{
 		UpdateMagnetAttachmentCountdown(delta);
-
-		if (_cardBackFrames.Count <= 1)
-		{
-			return;
-		}
-
-		_cardBackAnimationTime += (float)delta;
-		int frameIndex = Mathf.FloorToInt(_cardBackAnimationTime * CardBackAnimationFps) % _cardBackFrames.Count;
-		UpdateAnimatedCardBacks(this, _cardBackFrames[frameIndex]);
 	}
 
 	public Control GetPlayerArea(int playerIndex)

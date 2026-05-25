@@ -37,6 +37,7 @@ public partial class GameBoardScene
 		try
 		{
 			Tween flightTween = CreateTween();
+			flightTween.SetParallel(true);
 			flightTween.SetTrans(Tween.TransitionType.Sine);
 			flightTween.SetEase(Tween.EaseType.InOut);
 			flightTween.TweenMethod(
@@ -49,6 +50,7 @@ public partial class GameBoardScene
 				0.0f,
 				1.0f,
 				LensCardFlightSeconds);
+			TweenFlightPulseScale(flightTween, flightCard, LensCardFlightSeconds, 1.12f);
 			await ToSignal(flightTween, Tween.SignalName.Finished);
 
 			if (!GodotObject.IsInstanceValid(flightCard))
@@ -61,7 +63,8 @@ public partial class GameBoardScene
 			splitTween.SetTrans(Tween.TransitionType.Cubic);
 			splitTween.SetEase(Tween.EaseType.In);
 			splitTween.TweenProperty(flightCard, "scale", new Vector2(0.12f, 1.22f), LensCardSplitSeconds);
-			splitTween.TweenProperty(flightCard, "modulate", new Color(0.7f, 1.0f, 0.96f, 0.0f), LensCardSplitSeconds);
+			flightCard.Modulate = new Color(0.7f, 1.0f, 0.96f, 1.0f);
+			splitTween.TweenProperty(flightCard, "modulate:a", 0.0f, LensCardSplitSeconds);
 			splitTween.TweenProperty(flightCard, "rotation_degrees", 0.0f, LensCardSplitSeconds);
 			await ToSignal(splitTween, Tween.SignalName.Finished);
 		}
@@ -92,8 +95,6 @@ public partial class GameBoardScene
 		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
 		flightCard.GlobalPosition = startGlobalPosition.Lerp(splitGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = Mathf.Lerp(startRotationDegrees, 0.0f, easedProgress) + pulse * 10.0f;
-		flightCard.Scale = Vector2.One * Mathf.Lerp(1.0f, 1.12f, pulse);
-		flightCard.Modulate = Colors.White;
 	}
 
 	private async Task PlayLensRevealWispFlightAsync(Vector2 startGlobalCenter, Vector2 targetGlobalCenter, int targetNumber, int tableCardIndex)
@@ -128,24 +129,46 @@ public partial class GameBoardScene
 
 		try
 		{
-			Task frameTask = PlayLensRevealWispFramesAsync(wisp);
 			Tween tween = CreateTween();
+			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			float sideOffset = targetNumber % 2 == 0 ? -18.0f : 18.0f;
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateLensRevealWispFlight(
-					wisp,
-					startGlobalCenter,
-					targetGlobalCenter,
-					sideOffset,
-					targetNumber,
-					progress)),
+			Callable.From<float>(progress => UpdateLensRevealWispFlight(
+				wisp,
+				startGlobalCenter,
+				targetGlobalCenter,
+				sideOffset,
+				targetNumber,
+				progress)),
 				0.0f,
 				1.0f,
 				LensRevealWispFlightSeconds);
+			tween.TweenProperty(wisp, "scale", Vector2.One * 1.08f, LensRevealWispFlightSeconds)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(wisp, "modulate:a", 1.0f, LensRevealWispFlightSeconds * 0.16f)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(wisp, "modulate:a", 0.0f, LensRevealWispFlightSeconds * 0.22f)
+				.SetDelay(LensRevealWispFlightSeconds * 0.78f)
+				.SetTrans(Tween.TransitionType.Cubic)
+				.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				wisp,
+				_lensRevealWispFrames,
+				LensRevealWispFrameSeconds,
+				LensRevealWispFlightSeconds);
+			tween.Finished += () =>
+			{
+				if (GodotObject.IsInstanceValid(wisp))
+				{
+					wisp.QueueFree();
+				}
+			};
 			await ToSignal(tween, Tween.SignalName.Finished);
-			await frameTask;
 		}
 		finally
 		{
@@ -153,26 +176,6 @@ public partial class GameBoardScene
 			{
 				wisp.QueueFree();
 			}
-		}
-	}
-
-	private async Task PlayLensRevealWispFramesAsync(TextureRect wisp)
-	{
-		if (_lensRevealWispFrames.Count == 0)
-		{
-			return;
-		}
-
-		int totalFrameCount = Math.Max(_lensRevealWispFrames.Count, Mathf.CeilToInt(LensRevealWispFlightSeconds / LensRevealWispFrameSeconds));
-		for (int frameIndex = 0; frameIndex < totalFrameCount; frameIndex++)
-		{
-			if (!GodotObject.IsInstanceValid(wisp))
-			{
-				return;
-			}
-
-			wisp.Texture = _lensRevealWispFrames[frameIndex % _lensRevealWispFrames.Count];
-			await ToSignal(GetTree().CreateTimer(LensRevealWispFrameSeconds), SceneTreeTimer.SignalName.Timeout);
 		}
 	}
 
@@ -194,13 +197,8 @@ public partial class GameBoardScene
 		Vector2 baseCenter = startGlobalCenter.Lerp(targetGlobalCenter, easedProgress);
 		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * LensRevealWispArcHeight;
 		float swirl = Mathf.Sin(clampedProgress * Mathf.Pi * 2.0f + targetNumber * Mathf.Pi * 0.42f) * sideOffset;
-		float fadeIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.16f, 0.0f, 1.0f));
-		float fadeOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.78f) / 0.22f, 0.0f, 1.0f));
-		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
 
 		wisp.GlobalPosition = baseCenter + new Vector2(swirl, arcY) - LensRevealWispVisualSize / 2.0f;
-		wisp.Modulate = new Color(1.0f, 1.0f, 1.0f, fadeIn * Mathf.Max(0.24f, fadeOut));
-		wisp.Scale = Vector2.One * Mathf.Lerp(0.72f, 1.08f, pulse);
 		wisp.RotationDegrees = Mathf.Lerp(-22.0f, 32.0f, clampedProgress) * (targetNumber % 2 == 0 ? 1.0f : -1.0f);
 	}
 }

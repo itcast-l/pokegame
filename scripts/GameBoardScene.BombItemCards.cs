@@ -55,7 +55,7 @@ public partial class GameBoardScene
 
 		RenderTableCards();
 		CheckForWinner();
-		return new PlayCardResult(true, false, CompletesTurn: false);
+		return new PlayCardResult(true, false);
 	}
 
 	private async Task ResolveBombPairAsync(int turnSequenceGeneration)
@@ -269,26 +269,22 @@ public partial class GameBoardScene
 			return;
 		}
 
-		try
-		{
-			for (int frameIndex = 0; frameIndex < _bombPairDestroyEffectFrames.Count; frameIndex++)
-			{
-				if (!GodotObject.IsInstanceValid(fx))
-				{
-					return;
-				}
-
-				fx.Texture = _bombPairDestroyEffectFrames[frameIndex];
-				await ToSignal(GetTree().CreateTimer(BombPairDestroyFxFrameSeconds), SceneTreeTimer.SignalName.Timeout);
-			}
-		}
-		finally
+		Tween tween = CreateTween();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Cubic);
+		tween.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(fx, "scale", Vector2.One * 1.08f, BombPairDestroyFxFrameSeconds * _bombPairDestroyEffectFrames.Count);
+		tween.TweenProperty(fx, "modulate:a", 0.0f, BombPairDestroyFxFrameSeconds * _bombPairDestroyEffectFrames.Count);
+		FrameAnimationHelpers.TweenTextureFrames(tween, fx, _bombPairDestroyEffectFrames, BombPairDestroyFxFrameSeconds);
+		tween.Finished += () =>
 		{
 			if (GodotObject.IsInstanceValid(fx))
 			{
 				fx.QueueFree();
 			}
-		}
+		};
+
+		await ToSignal(tween, Tween.SignalName.Finished);
 	}
 
 	private TextureRect? CreateBombPairDestroyFx(Vector2 localCenter, int tableCardIndex)

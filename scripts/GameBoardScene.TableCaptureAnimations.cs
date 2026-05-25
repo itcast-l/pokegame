@@ -35,24 +35,28 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween closeTween = CreateTween();
-			closeTween.SetTrans(Tween.TransitionType.Sine);
-			closeTween.SetEase(Tween.EaseType.In);
-			closeTween.TweenProperty(revealCard, "scale", new Vector2(TableCardRevealMinScaleX, 1.0f), TableCardRevealHalfFlipSeconds);
-			await ToSignal(closeTween, Tween.SignalName.Finished);
-
-			if (!GodotObject.IsInstanceValid(revealCard))
+			Tween revealTween = CreateTween();
+			revealTween.SetParallel(true);
+			revealTween.SetTrans(Tween.TransitionType.Cubic);
+			revealTween.SetEase(Tween.EaseType.Out);
+			revealTween.TweenProperty(revealCard, "scale", new Vector2(TableCardRevealMinScaleX, 1.0f), TableCardRevealHalfFlipSeconds);
+			revealTween.TweenCallback(Callable.From(() =>
 			{
-				return;
-			}
-
-			revealCard.Texture = faceTexture;
-
-			Tween openTween = CreateTween();
-			openTween.SetTrans(Tween.TransitionType.Sine);
-			openTween.SetEase(Tween.EaseType.Out);
-			openTween.TweenProperty(revealCard, "scale", Vector2.One, TableCardRevealHalfFlipSeconds);
-			await ToSignal(openTween, Tween.SignalName.Finished);
+				if (GodotObject.IsInstanceValid(revealCard))
+				{
+					revealCard.Texture = faceTexture;
+				}
+			})).SetDelay(TableCardRevealHalfFlipSeconds);
+			revealTween.TweenProperty(revealCard, "scale", Vector2.One, TableCardRevealHalfFlipSeconds)
+				.SetDelay(TableCardRevealHalfFlipSeconds);
+			revealTween.Finished += () =>
+			{
+				if (GodotObject.IsInstanceValid(revealCard))
+				{
+					revealCard.QueueFree();
+				}
+			};
+			await ToSignal(revealTween, Tween.SignalName.Finished);
 		}
 		finally
 		{
@@ -105,7 +109,7 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(pointLabel, "position", endPosition, TableCardPointPopupSeconds);
-			tween.TweenProperty(pointLabel, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), TableCardPointPopupSeconds);
+			tween.TweenProperty(pointLabel, "modulate:a", 0.0f, TableCardPointPopupSeconds);
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
 		finally
@@ -338,14 +342,12 @@ public partial class GameBoardScene
 			}
 
 			Tween tween = CreateTween();
+			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateCapturedCardFlight(
+				Callable.From<float>(progress => UpdateCapturedCardFlightMotion(
 					flightCard,
-					itemOverlay,
-					capturedCardVisual.StartTexture,
-					_cardBackTexture!,
 					capturedCardVisual.GlobalPosition,
 					targetGlobalPosition,
 					GetCardRotationDegreesForPlayer(playerIndex),
@@ -353,6 +355,19 @@ public partial class GameBoardScene
 				0.0f,
 				1.0f,
 				TableCaptureFlightDuration);
+			TweenCapturedCardFlightVisuals(
+				tween,
+				flightCard,
+				itemOverlay,
+				capturedCardVisual.StartTexture,
+				_cardBackTexture!);
+			tween.Finished += () =>
+			{
+				if (GodotObject.IsInstanceValid(flightCard))
+				{
+					flightCard.QueueFree();
+				}
+			};
 
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
@@ -365,11 +380,8 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static void UpdateCapturedCardFlight(
+	private static void UpdateCapturedCardFlightMotion(
 		TextureRect flightCard,
-		TextureRect? itemOverlay,
-		Texture2D startTexture,
-		Texture2D cardBackTexture,
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		float targetRotationDegrees,
@@ -384,21 +396,37 @@ public partial class GameBoardScene
 		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * TableCaptureFlightArcHeight;
 		flightCard.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, clampedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = Mathf.Lerp(0.0f, targetRotationDegrees, clampedProgress);
+	}
 
-		bool showingBack = clampedProgress >= 0.5f;
-		flightCard.Texture = showingBack ? cardBackTexture : startTexture;
-		if (itemOverlay != null)
+	private static void TweenCapturedCardFlightVisuals(
+		Tween tween,
+		TextureRect flightCard,
+		TextureRect? itemOverlay,
+		Texture2D startTexture,
+		Texture2D cardBackTexture)
+	{
+		flightCard.Texture = startTexture;
+		float halfDuration = TableCaptureFlightDuration * 0.5f;
+		float midScale = Mathf.Lerp(1.0f, TableCaptureFlightEndScale, 0.5f);
+		tween.TweenProperty(flightCard, "scale", new Vector2(PlayedCardFlipMinScaleX * midScale, midScale), halfDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+		tween.TweenCallback(Callable.From(() =>
 		{
-			itemOverlay.Visible = !showingBack;
-		}
+			if (!GodotObject.IsInstanceValid(flightCard))
+			{
+				return;
+			}
 
-		float halfProgress = showingBack
-			? (clampedProgress - 0.5f) * 2.0f
-			: clampedProgress * 2.0f;
-		float scaleX = showingBack
-			? Mathf.Lerp(PlayedCardFlipMinScaleX, 1.0f, halfProgress)
-			: Mathf.Lerp(1.0f, PlayedCardFlipMinScaleX, halfProgress);
-		float scale = Mathf.Lerp(1.0f, TableCaptureFlightEndScale, clampedProgress);
-		flightCard.Scale = new Vector2(scaleX * scale, scale);
+			flightCard.Texture = cardBackTexture;
+			if (itemOverlay != null && GodotObject.IsInstanceValid(itemOverlay))
+			{
+				itemOverlay.Visible = false;
+			}
+		})).SetDelay(halfDuration);
+		tween.TweenProperty(flightCard, "scale", Vector2.One * TableCaptureFlightEndScale, halfDuration)
+			.SetDelay(halfDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
 	}
 }

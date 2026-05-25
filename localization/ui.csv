@@ -102,6 +102,7 @@ EXIT_CONFIRM,确认退出,確認離開,Exit
 GAME_PLAYER,玩家 {0},玩家 {0},Player {0}
 GAME_PLAYER_SCORE,玩家 {0}: {1}/{2},玩家 {0}: {1}/{2},Player {0}: {1}/{2}
 GAME_WINNER,玩家 {0} 获胜,玩家 {0} 獲勝,Player {0} Wins
+GAME_DEFEAT,你失败了,你失敗了,You Lost
 GAME_REPLAY,再来一局,再來一局,Play Again
 GAME_RETURN_MAIN_MENU,回到主菜单,回到主選單,Main Menu
 GAME_RETURN_ADVENTURE,返回关卡,返回關卡,Stages

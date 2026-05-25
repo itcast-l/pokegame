@@ -127,38 +127,44 @@ public partial class GameBoardScene
 
 		try
 		{
-			UpdateDrawnCardFlight(
+			UpdateDrawnCardFlightMotion(
+				flightCard,
+				startGlobalPosition,
+				targetGlobalPosition,
+				startRotationDegrees,
+				targetRotationDegrees,
+				0.0f);
+
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.InOut);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateDrawnCardFlightMotion(
+					flightCard,
+					startGlobalPosition,
+					targetGlobalPosition,
+					startRotationDegrees,
+					targetRotationDegrees,
+					progress)),
+				0.0f,
+				1.0f,
+				ReplacementDrawFlightSeconds);
+			TweenDrawnCardFlightVisuals(
+				tween,
 				flightCard,
 				cardVisual,
 				attachmentOverlay,
 				startTexture,
 				targetTexture,
-				startGlobalPosition,
-				targetGlobalPosition,
-				startRotationDegrees,
-				targetRotationDegrees,
-				showFaceOnLanding,
-				0.0f);
-
-			Tween tween = CreateTween();
-			tween.SetTrans(Tween.TransitionType.Sine);
-			tween.SetEase(Tween.EaseType.InOut);
-			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateDrawnCardFlight(
-					flightCard,
-					cardVisual,
-					attachmentOverlay,
-					startTexture,
-					targetTexture,
-					startGlobalPosition,
-					targetGlobalPosition,
-					startRotationDegrees,
-					targetRotationDegrees,
-					showFaceOnLanding,
-					progress)),
-				0.0f,
-				1.0f,
-				ReplacementDrawFlightSeconds);
+				showFaceOnLanding);
+			tween.Finished += () =>
+			{
+				if (GodotObject.IsInstanceValid(flightCard))
+				{
+					flightCard.QueueFree();
+				}
+			};
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
 		finally
@@ -196,24 +202,19 @@ public partial class GameBoardScene
 		tween.SetTrans(Tween.TransitionType.Back);
 		tween.SetEase(Tween.EaseType.Out);
 		tween.TweenProperty(cardVisual, "scale", Vector2.One, ReplacementDrawSettleSeconds);
-		tween.TweenProperty(cardVisual, "modulate", Colors.White, ReplacementDrawSettleSeconds);
+		tween.TweenProperty(cardVisual, "modulate:a", 1.0f, ReplacementDrawSettleSeconds);
 		await ToSignal(tween, Tween.SignalName.Finished);
 	}
 
-	private static void UpdateDrawnCardFlight(
+	private static void UpdateDrawnCardFlightMotion(
 		Control flightCard,
-		TextureRect cardVisual,
-		TextureRect? attachmentOverlay,
-		Texture2D startTexture,
-		Texture2D targetTexture,
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees,
 		float targetRotationDegrees,
-		bool flipToFace,
 		float progress)
 	{
-		if (!GodotObject.IsInstanceValid(flightCard) || !GodotObject.IsInstanceValid(cardVisual))
+		if (!GodotObject.IsInstanceValid(flightCard))
 		{
 			return;
 		}
@@ -222,31 +223,55 @@ public partial class GameBoardScene
 		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
 		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * ReplacementDrawArcHeight;
 		float lift = Mathf.Sin(clampedProgress * Mathf.Pi);
-		float baseScale = Mathf.Lerp(ReplacementDrawStartScale, 1.0f, easedProgress);
 		flightCard.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + lift * 7.0f;
-		flightCard.Scale = Vector2.One * (baseScale + lift * (ReplacementDrawPeakScale - baseScale));
+	}
 
+	private static void TweenDrawnCardFlightVisuals(
+		Tween tween,
+		Control flightCard,
+		TextureRect cardVisual,
+		TextureRect? attachmentOverlay,
+		Texture2D startTexture,
+		Texture2D targetTexture,
+		bool flipToFace)
+	{
+		float halfDuration = ReplacementDrawFlightSeconds * 0.5f;
+		tween.TweenProperty(flightCard, "scale", Vector2.One * ReplacementDrawPeakScale, halfDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(flightCard, "scale", Vector2.One, ReplacementDrawFlightSeconds - halfDuration)
+			.SetDelay(halfDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
 		if (!flipToFace)
 		{
 			cardVisual.Texture = startTexture;
 			return;
 		}
 
-		bool showingFace = clampedProgress >= 0.58f;
-		cardVisual.Texture = showingFace ? targetTexture : startTexture;
-		if (attachmentOverlay != null)
+		cardVisual.Texture = startTexture;
+		float flipDelay = ReplacementDrawFlightSeconds * 0.58f;
+		tween.TweenProperty(cardVisual, "scale", new Vector2(PlayedCardFlipMinScaleX, 1.0f), flipDelay)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+		tween.TweenCallback(Callable.From(() =>
 		{
-			attachmentOverlay.Visible = showingFace;
-		}
+			if (!GodotObject.IsInstanceValid(cardVisual))
+			{
+				return;
+			}
 
-		float halfProgress = showingFace
-			? (clampedProgress - 0.58f) / 0.42f
-			: clampedProgress / 0.58f;
-		float scaleX = showingFace
-			? Mathf.Lerp(PlayedCardFlipMinScaleX, 1.0f, halfProgress)
-			: Mathf.Lerp(1.0f, PlayedCardFlipMinScaleX, halfProgress);
-		cardVisual.Scale = new Vector2(scaleX, 1.0f);
+			cardVisual.Texture = targetTexture;
+			if (attachmentOverlay != null && GodotObject.IsInstanceValid(attachmentOverlay))
+			{
+				attachmentOverlay.Visible = true;
+			}
+		})).SetDelay(flipDelay);
+		tween.TweenProperty(cardVisual, "scale", Vector2.One, ReplacementDrawFlightSeconds - flipDelay)
+			.SetDelay(flipDelay)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
 	}
 
 	private Vector2 GetDrawCardStartGlobalPosition(int playerIndex)

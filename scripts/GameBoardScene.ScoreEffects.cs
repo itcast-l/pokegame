@@ -16,6 +16,14 @@ public partial class GameBoardScene
 	private const float AdventureAttackEffectFlightSeconds = 0.48f;
 	private const float AdventureAttackEffectVisualSize = 104.0f;
 	private const float AdventureAttackImpactVisualSize = 124.0f;
+	private const float CatAdventureScratchVisualSize = 132.0f;
+	private const float CatAdventureScratchStartScale = 0.86f;
+	private const float CatAdventureScratchEndScale = 1.08f;
+	private const float CatAdventureScratchTotalSeconds = 0.72f;
+	private const double CatAdventureScratchFrame2DelaySeconds = 0.12d;
+	private const double CatAdventureScratchFrame3DelaySeconds = 0.26d;
+	private const double CatAdventureScratchFrame4DelaySeconds = 0.42d;
+	private const double CatAdventureScratchHitDelaySeconds = CatAdventureScratchFrame3DelaySeconds;
 	private const float FishAdventureAttackBeamSeconds = 0.42f;
 	private const float FishAdventureAttackBeamThickness = 96.0f;
 	private const float FishAdventureAttackBeamStartInset = 24.0f;
@@ -154,6 +162,17 @@ public partial class GameBoardScene
 
 		Vector2 startCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
 		Vector2 targetCenter = GetPlayerAvatarGlobalCenter(targetPlayerIndex);
+		if (ShouldPlayCatAdventureScratchAttack(attackerPlayerIndex))
+		{
+			await PlayCatAdventureScratchAttackAsync(
+				attackerPlayerIndex,
+				targetCenter,
+				attackFrames,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
 		if (IsAdventureEnemyPlayer(attackerPlayerIndex)
 			&& adventure_enemy_avatar_id == FishAdventureEnemyAvatarId)
 		{
@@ -194,6 +213,94 @@ public partial class GameBoardScene
 	private static bool IsAdventureEnemyPlayer(int playerIndex)
 	{
 		return playerIndex == 1;
+	}
+
+	private static bool ShouldPlayCatAdventureScratchAttack(int attackerPlayerIndex)
+	{
+		return attackerPlayerIndex == MainPlayerIndex;
+	}
+
+	private async Task PlayCatAdventureScratchAttackAsync(
+		int attackerPlayerIndex,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		if (frames.Count == 0)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		Texture2D firstFrame = frames[0];
+		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, CatAdventureScratchVisualSize);
+		var scratch = new Sprite2D
+		{
+			Name = "CatAdventureScratchImpact",
+			Texture = firstFrame,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = targetCenter,
+			Scale = baseScale * CatAdventureScratchStartScale,
+			Modulate = Colors.White,
+		};
+		AddChild(scratch);
+
+		Tween tween = CreateTween();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(scratch, "scale", baseScale * CatAdventureScratchEndScale, CatAdventureScratchTotalSeconds);
+		tween.TweenProperty(scratch, "modulate:a", 0.0f, CatAdventureScratchTotalSeconds);
+		TweenCatAdventureScratchTexture(tween, scratch, frames, 1, CatAdventureScratchFrame2DelaySeconds);
+		TweenCatAdventureScratchTexture(tween, scratch, frames, 2, CatAdventureScratchFrame3DelaySeconds);
+		TweenCatAdventureScratchTexture(tween, scratch, frames, 3, CatAdventureScratchFrame4DelaySeconds);
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+		})).SetDelay(CatAdventureScratchHitDelaySeconds);
+		tween.Finished += () =>
+		{
+			if (GodotObject.IsInstanceValid(scratch))
+			{
+				scratch.QueueFree();
+			}
+		};
+
+		await ToSignal(tween, Tween.SignalName.Finished);
+	}
+
+	private static void TweenCatAdventureScratchTexture(
+		Tween tween,
+		Sprite2D scratch,
+		IReadOnlyList<Texture2D> frames,
+		int frameIndex,
+		double delaySeconds)
+	{
+		if (frameIndex >= frames.Count)
+		{
+			return;
+		}
+
+		Texture2D frame = frames[frameIndex];
+		tween.TweenCallback(Callable.From(() =>
+		{
+			if (GodotObject.IsInstanceValid(scratch))
+			{
+				scratch.Texture = frame;
+			}
+		})).SetDelay(delaySeconds);
 	}
 
 	private async Task PlayFishAdventureAttackBeamAsync(
@@ -241,16 +348,29 @@ public partial class GameBoardScene
 		try
 		{
 			Tween tween = CreateTween();
-			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
+			beam.GlobalPosition = beamCenter;
+			beam.Rotation = direction.Angle();
+			beam.Scale = new Vector2(
+				beamLength / Math.Max(1.0f, frames[0].GetWidth()) * 0.76f,
+				FishAdventureAttackBeamThickness / Math.Max(1.0f, frames[0].GetHeight()));
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				beam,
+				frames,
+				FishAdventureAttackBeamSeconds / Math.Max(1, frames.Count),
+				FishAdventureAttackBeamSeconds);
+			tween.TweenProperty(beam, "modulate:a", 1.0f, FishAdventureAttackBeamSeconds * 0.12f);
+			tween.TweenProperty(beam, "modulate:a", 0.0f, FishAdventureAttackBeamSeconds * 0.18f)
+				.SetDelay(FishAdventureAttackBeamSeconds * 0.82f);
+			tween.TweenProperty(beam, "scale", new Vector2(
+				beamLength / Math.Max(1.0f, frames[0].GetWidth()),
+				FishAdventureAttackBeamThickness / Math.Max(1.0f, frames[0].GetHeight())),
+				FishAdventureAttackBeamSeconds * 0.12f);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateFishAdventureAttackBeam(
-					beam,
-					frames,
-					beamCenter,
-					direction.Angle(),
-					beamLength,
-					progress)),
+				Callable.From<float>(progress => UpdateSpriteRotation(beam, direction.Angle())),
 				0.0f,
 				1.0f,
 				FishAdventureAttackBeamSeconds);
@@ -347,12 +467,25 @@ public partial class GameBoardScene
 		try
 		{
 			Tween tween = CreateTween();
+			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
-			tween.SetEase(Tween.EaseType.InOut);
+			tween.SetEase(Tween.EaseType.Out);
+			ApplyAdventureAttackEffectTexture(effect, frames[0], AdventureAttackEffectVisualSize, 0.78f);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				effect,
+				frames,
+				AdventureAttackEffectFlightSeconds / Math.Max(1, frames.Count),
+				AdventureAttackEffectFlightSeconds);
+			tween.TweenProperty(effect, "modulate:a", 1.0f, AdventureAttackEffectFlightSeconds * 0.12f);
+			tween.TweenProperty(effect, "modulate:a", 0.86f, AdventureAttackEffectFlightSeconds * 0.18f)
+				.SetDelay(AdventureAttackEffectFlightSeconds * 0.82f);
+			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], AdventureAttackEffectVisualSize) * 1.08f, AdventureAttackEffectFlightSeconds * 0.5f);
+			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], AdventureAttackEffectVisualSize) * 0.78f, AdventureAttackEffectFlightSeconds * 0.5f)
+				.SetDelay(AdventureAttackEffectFlightSeconds * 0.5f);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateAdventureAttackEffectFlight(
+				Callable.From<float>(progress => UpdateSpriteBezierFlight(
 					effect,
-					frames,
 					startCenter,
 					controlCenter,
 					targetCenter,
@@ -405,7 +538,7 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(pulse, "scale", baseScale * 1.34f, 0.22f);
-			tween.TweenProperty(pulse, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), 0.22f);
+			tween.TweenProperty(pulse, "modulate:a", 0.0f, 0.22f);
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
 		finally
@@ -456,16 +589,31 @@ public partial class GameBoardScene
 		try
 		{
 			Tween tween = CreateTween();
-			tween.SetTrans(Tween.TransitionType.Sine);
-			tween.SetEase(Tween.EaseType.InOut);
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Cubic);
+			tween.SetEase(Tween.EaseType.Out);
+			ApplyScoreFillEffectTexture(effect, frames[0], ScoreFillEffectVisualSize, 0.92f);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				effect,
+				frames,
+				ScoreFillEffectFlightSeconds / Math.Max(1, frames.Count),
+				ScoreFillEffectFlightSeconds);
+			tween.TweenCallback(Callable.From(() =>
+			{
+				if (GodotObject.IsInstanceValid(effect))
+				{
+					effect.ZIndex = ScoreFillEffectBehindAvatarZIndex;
+				}
+			})).SetDelay(ScoreFillEffectFlightSeconds * ScoreFillEffectBehindAvatarProgress);
+			tween.TweenProperty(effect, "modulate:a", 1.0f, ScoreFillEffectFlightSeconds * 0.14f);
+			tween.TweenProperty(effect, "scale", GetSpriteScaleForVisualSize(frames[0], ScoreFillEffectVisualSize) * 0.48f, ScoreFillEffectFlightSeconds);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateScoreFillEffectFlight(
+				Callable.From<float>(progress => UpdateSpriteBezierFlight(
 					effect,
-					frames,
 					startCenter,
 					controlCenter,
 					targetCenter,
-					ScoreFillEffectTravelZIndex + effectIndex,
 					progress)),
 				0.0f,
 				1.0f,
@@ -512,7 +660,7 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(pulse, "scale", baseScale * 1.22f, 0.18f);
-			tween.TweenProperty(pulse, "modulate", new Color(1.0f, 1.0f, 1.0f, 0.0f), 0.18f);
+			tween.TweenProperty(pulse, "modulate:a", 0.0f, 0.18f);
 			await ToSignal(tween, Tween.SignalName.Finished);
 		}
 		finally
@@ -524,16 +672,14 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static void UpdateScoreFillEffectFlight(
+	private static void UpdateSpriteBezierFlight(
 		Sprite2D effect,
-		IReadOnlyList<Texture2D> frames,
 		Vector2 startCenter,
 		Vector2 controlCenter,
 		Vector2 targetCenter,
-		int travelZIndex,
 		float progress)
 	{
-		if (!GodotObject.IsInstanceValid(effect) || frames.Count == 0)
+		if (!GodotObject.IsInstanceValid(effect))
 		{
 			return;
 		}
@@ -542,87 +688,33 @@ public partial class GameBoardScene
 		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
 		Vector2 center = QuadraticBezier(startCenter, controlCenter, targetCenter, easedProgress);
 		Vector2 tangent = QuadraticBezierTangent(startCenter, controlCenter, targetCenter, easedProgress);
-		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * frames.Count), 0, frames.Count - 1);
-		float alpha = clampedProgress < 0.14f
-			? Mathf.Lerp(0.0f, 1.0f, clampedProgress / 0.14f)
-			: 1.0f;
-		float scale = Mathf.Lerp(0.92f, 0.48f, easedProgress);
-
-		Texture2D texture = frames[frameIndex];
-		effect.Texture = texture;
-		effect.ZIndex = clampedProgress >= ScoreFillEffectBehindAvatarProgress
-			? ScoreFillEffectBehindAvatarZIndex
-			: travelZIndex;
 		effect.GlobalPosition = center;
-		effect.Scale = GetSpriteScaleForVisualSize(texture, ScoreFillEffectVisualSize) * scale;
-		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
 		if (tangent.LengthSquared() > 0.001f)
 		{
 			effect.Rotation = tangent.Angle();
 		}
 	}
 
-	private static void UpdateAdventureAttackEffectFlight(
-		Sprite2D effect,
-		IReadOnlyList<Texture2D> frames,
-		Vector2 startCenter,
-		Vector2 controlCenter,
-		Vector2 targetCenter,
-		float progress)
+	private static void UpdateSpriteRotation(Sprite2D sprite, float rotation)
 	{
-		if (!GodotObject.IsInstanceValid(effect) || frames.Count == 0)
+		if (!GodotObject.IsInstanceValid(sprite))
 		{
 			return;
 		}
 
-		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
-		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
-		Vector2 center = QuadraticBezier(startCenter, controlCenter, targetCenter, easedProgress);
-		Vector2 tangent = QuadraticBezierTangent(startCenter, controlCenter, targetCenter, easedProgress);
-		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * frames.Count), 0, frames.Count - 1);
-		float alpha = clampedProgress < 0.12f
-			? Mathf.Lerp(0.0f, 1.0f, clampedProgress / 0.12f)
-			: Mathf.Lerp(1.0f, 0.86f, Mathf.Max(0.0f, clampedProgress - 0.82f) / 0.18f);
-		float scale = Mathf.Lerp(0.78f, 1.08f, Mathf.Sin(clampedProgress * Mathf.Pi));
-
-		Texture2D texture = frames[frameIndex];
-		effect.Texture = texture;
-		effect.GlobalPosition = center;
-		effect.Scale = GetSpriteScaleForVisualSize(texture, AdventureAttackEffectVisualSize) * scale;
-		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha);
-		if (tangent.LengthSquared() > 0.001f)
-		{
-			effect.Rotation = tangent.Angle();
-		}
+		sprite.Rotation = rotation;
 	}
 
-	private static void UpdateFishAdventureAttackBeam(
-		Sprite2D beam,
-		IReadOnlyList<Texture2D> frames,
-		Vector2 beamCenter,
-		float beamRotation,
-		float beamLength,
-		float progress)
+	private static void ApplyScoreFillEffectTexture(Sprite2D effect, Texture2D texture, float visualSize, float scale)
 	{
-		if (!GodotObject.IsInstanceValid(beam) || frames.Count == 0)
-		{
-			return;
-		}
+		effect.Texture = texture;
+		effect.Scale = GetSpriteScaleForVisualSize(texture, visualSize) * scale;
+	}
 
-		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
-		int frameIndex = Mathf.Clamp(Mathf.FloorToInt(clampedProgress * frames.Count), 0, frames.Count - 1);
-		float alphaIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.12f, 0.0f, 1.0f));
-		float alphaOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.82f) / 0.18f, 0.0f, 1.0f));
-		float lengthScale = Mathf.Lerp(0.76f, 1.0f, alphaIn);
-		Texture2D texture = frames[frameIndex];
-
-		beam.Texture = texture;
-		beam.GlobalPosition = beamCenter;
-		beam.Rotation = beamRotation;
-		beam.Scale = new Vector2(
-			beamLength / Math.Max(1.0f, texture.GetWidth()) * lengthScale,
-			FishAdventureAttackBeamThickness / Math.Max(1.0f, texture.GetHeight()));
-		beam.Modulate = new Color(1.0f, 1.0f, 1.0f, alphaIn * alphaOut);
+	private static void ApplyAdventureAttackEffectTexture(Sprite2D effect, Texture2D texture, float visualSize, float scale)
+	{
+		effect.Texture = texture;
+		effect.Scale = GetSpriteScaleForVisualSize(texture, visualSize) * scale;
 	}
 
 	private static Vector2 QuadraticBezier(Vector2 start, Vector2 control, Vector2 end, float t)

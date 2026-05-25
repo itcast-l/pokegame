@@ -24,8 +24,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Texture2D> shuffleFrames = LoadDeckShuffleFrames();
-		if (shuffleFrames.Count == 0)
+		if (DeckShuffleFrames.Length == 0)
 		{
 			return;
 		}
@@ -45,9 +44,10 @@ public partial class GameBoardScene
 			PivotOffset = DeckShuffleVisualSize / 2.0f,
 			RotationDegrees = shuffleBaseRotation,
 			ZIndex = VisiblePileCards + 20,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
-		TextureRect currentSprite = CreateDeckShuffleFrameSprite("DeckShuffleCurrentFrame", shuffleFrames[0], 0);
-		TextureRect nextSprite = CreateDeckShuffleFrameSprite("DeckShuffleNextFrame", shuffleFrames.Count > 1 ? shuffleFrames[1] : shuffleFrames[0], 1);
+		TextureRect currentSprite = CreateDeckShuffleFrameSprite("DeckShuffleCurrentFrame", DeckShuffleFrames[0], 0);
+		TextureRect nextSprite = CreateDeckShuffleFrameSprite("DeckShuffleNextFrame", DeckShuffleFrames.Length > 1 ? DeckShuffleFrames[1] : DeckShuffleFrames[0], 1);
 		nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		shuffleRoot.AddChild(currentSprite);
 		shuffleRoot.AddChild(nextSprite);
@@ -55,7 +55,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			await PlayDeckShuffleFramesAsync(shuffleRoot, currentSprite, nextSprite, shuffleFrames, shuffleBasePosition, shuffleBaseRotation);
+			await PlayDeckShuffleFramesAsync(shuffleRoot, currentSprite, nextSprite, DeckShuffleFrames, shuffleBasePosition, shuffleBaseRotation);
 		}
 		finally
 		{
@@ -87,25 +87,6 @@ public partial class GameBoardScene
 			PivotOffset = DeckShuffleVisualSize / 2.0f,
 			ZIndex = zIndex,
 		};
-	}
-
-	private static List<Texture2D> LoadDeckShuffleFrames()
-	{
-		var frames = new List<Texture2D>();
-		for (int frameIndex = 1; frameIndex <= DeckShuffleFrameCount; frameIndex++)
-		{
-			string path = string.Format(DeckShuffleFramePattern, frameIndex);
-			Texture2D? texture = GD.Load<Texture2D>(path);
-			if (texture == null)
-			{
-				GD.PushWarning($"Missing deck shuffle frame: {path}");
-				continue;
-			}
-
-			frames.Add(texture);
-		}
-
-		return frames;
 	}
 
 	private static List<TextureRect> GetVisiblePileCards(Control pile)
@@ -155,49 +136,33 @@ public partial class GameBoardScene
 		}
 
 		float animationSeconds = repeatCount * shuffleFrames.Count * frameSeconds;
-		UpdateDeckShuffleAnimation(shuffleRoot, currentSprite, nextSprite, shuffleFrames, basePosition, baseRotationDegrees, 0.0f, repeatCount, useMotion);
+		ApplyDeckShuffleFramePair(currentSprite, nextSprite, shuffleFrames, 0, 1, 1.0f, 0.0f);
+		shuffleRoot.Position = basePosition;
+		shuffleRoot.RotationDegrees = baseRotationDegrees;
+		shuffleRoot.Scale = Vector2.One;
+		shuffleRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		Tween tween = CreateTween();
-		tween.SetTrans(Tween.TransitionType.Sine);
-		tween.SetEase(Tween.EaseType.InOut);
-		tween.TweenMethod(
-			Callable.From<float>(progress => UpdateDeckShuffleAnimation(
-				shuffleRoot,
-				currentSprite,
-				nextSprite,
-				shuffleFrames,
-				basePosition,
-				baseRotationDegrees,
-				progress,
-				repeatCount,
-				useMotion)),
-			0.0f,
-			1.0f,
-			animationSeconds);
-		await ToSignal(tween, Tween.SignalName.Finished);
-	}
-
-	private static void UpdateDeckShuffleAnimation(
-		Control shuffleRoot,
-		TextureRect currentSprite,
-		TextureRect nextSprite,
-		IReadOnlyList<Texture2D> shuffleFrames,
-		Vector2 basePosition,
-		float baseRotationDegrees,
-		float progress,
-		int repeatCount,
-		bool useMotion)
-	{
-		if (!GodotObject.IsInstanceValid(shuffleRoot)
-			|| !GodotObject.IsInstanceValid(currentSprite)
-			|| !GodotObject.IsInstanceValid(nextSprite)
-			|| shuffleFrames.Count == 0)
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Cubic);
+		tween.SetEase(Tween.EaseType.Out);
+		TweenDeckShuffleFramePairs(tween, currentSprite, nextSprite, shuffleFrames, repeatCount, frameSeconds);
+		tween.TweenProperty(shuffleRoot, "modulate:a", 1.0f, animationSeconds * 0.16f);
+		tween.TweenProperty(shuffleRoot, "modulate:a", 0.0f, animationSeconds * 0.14f).SetDelay(animationSeconds * 0.86f);
+		if (useMotion)
 		{
-			return;
+			tween.TweenProperty(shuffleRoot, "scale", Vector2.One * 1.035f, animationSeconds * 0.5f);
+			tween.TweenProperty(shuffleRoot, "scale", Vector2.One, animationSeconds * 0.5f).SetDelay(animationSeconds * 0.5f);
 		}
 
-		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
-		if (clampedProgress >= 0.999f)
+		tween.Finished += () =>
 		{
+			if (!GodotObject.IsInstanceValid(shuffleRoot)
+				|| !GodotObject.IsInstanceValid(currentSprite)
+				|| !GodotObject.IsInstanceValid(nextSprite))
+			{
+				return;
+			}
+
 			shuffleRoot.Position = basePosition;
 			shuffleRoot.RotationDegrees = baseRotationDegrees;
 			shuffleRoot.Scale = Vector2.One;
@@ -205,42 +170,56 @@ public partial class GameBoardScene
 			currentSprite.Texture = shuffleFrames[shuffleFrames.Count - 1];
 			currentSprite.Modulate = Colors.White;
 			nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		};
+		await ToSignal(tween, Tween.SignalName.Finished);
+	}
+
+	private static void TweenDeckShuffleFramePairs(
+		Tween tween,
+		TextureRect currentSprite,
+		TextureRect nextSprite,
+		IReadOnlyList<Texture2D> shuffleFrames,
+		int repeatCount,
+		float frameSeconds)
+	{
+		if (shuffleFrames.Count == 0)
+		{
 			return;
 		}
 
-		float totalSlots = repeatCount * shuffleFrames.Count;
-		float timeline = clampedProgress * totalSlots;
-		int slotIndex = Mathf.FloorToInt(timeline);
-		float slotProgress = timeline - slotIndex;
-		int currentFrameIndex = slotIndex % shuffleFrames.Count;
-		int nextFrameIndex = (currentFrameIndex + 1) % shuffleFrames.Count;
-		float blendAlpha = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((slotProgress - 0.14f) / 0.72f, 0.0f, 1.0f));
-		float fadeIn = Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp(clampedProgress / 0.16f, 0.0f, 1.0f));
-		float fadeOut = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.86f) / 0.14f, 0.0f, 1.0f));
-		float alpha = fadeIn * fadeOut;
+		int totalSlots = repeatCount * shuffleFrames.Count;
+		for (int slotIndex = 0; slotIndex < totalSlots; slotIndex++)
+		{
+			int currentFrameIndex = slotIndex % shuffleFrames.Count;
+			int nextFrameIndex = (currentFrameIndex + 1) % shuffleFrames.Count;
+			tween.TweenCallback(Callable.From(() =>
+				ApplyDeckShuffleFramePair(currentSprite, nextSprite, shuffleFrames, currentFrameIndex, nextFrameIndex, 1.0f, 0.0f)))
+				.SetDelay(slotIndex * frameSeconds);
+			tween.TweenCallback(Callable.From(() =>
+				ApplyDeckShuffleFramePair(currentSprite, nextSprite, shuffleFrames, currentFrameIndex, nextFrameIndex, 0.0f, 1.0f)))
+				.SetDelay(slotIndex * frameSeconds + frameSeconds * 0.72f);
+		}
+	}
+
+	private static void ApplyDeckShuffleFramePair(
+		TextureRect currentSprite,
+		TextureRect nextSprite,
+		IReadOnlyList<Texture2D> shuffleFrames,
+		int currentFrameIndex,
+		int nextFrameIndex,
+		float currentAlpha,
+		float nextAlpha)
+	{
+		if (!GodotObject.IsInstanceValid(currentSprite)
+			|| !GodotObject.IsInstanceValid(nextSprite)
+			|| shuffleFrames.Count == 0)
+		{
+			return;
+		}
 
 		currentSprite.Texture = shuffleFrames[currentFrameIndex];
 		nextSprite.Texture = shuffleFrames[nextFrameIndex];
-		currentSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha * (1.0f - blendAlpha));
-		nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, alpha * blendAlpha);
-		shuffleRoot.Modulate = Colors.White;
-
-		if (!useMotion)
-		{
-			shuffleRoot.Position = basePosition;
-			shuffleRoot.RotationDegrees = baseRotationDegrees;
-			shuffleRoot.Scale = Vector2.One;
-			return;
-		}
-
-		float settle = 1.0f - Mathf.SmoothStep(0.0f, 1.0f, Mathf.Clamp((clampedProgress - 0.78f) / 0.22f, 0.0f, 1.0f));
-		float cycleAngle = timeline * FullCircleRadians / shuffleFrames.Count;
-		float driftX = Mathf.Sin(cycleAngle * 1.35f) * 4.5f * settle;
-		float driftY = Mathf.Cos(cycleAngle * 0.9f) * 2.5f * settle;
-		float tilt = Mathf.Sin(cycleAngle * 1.1f) * 3.5f * settle;
-		float scalePulse = 1.0f + Mathf.Sin(clampedProgress * Mathf.Pi) * 0.035f;
-		shuffleRoot.Position = basePosition + new Vector2(driftX, driftY);
-		shuffleRoot.RotationDegrees = baseRotationDegrees + tilt;
-		shuffleRoot.Scale = Vector2.One * scalePulse;
+		currentSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, currentAlpha);
+		nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, nextAlpha);
 	}
 }
