@@ -1,0 +1,15 @@
+{
+  "source": "res://art/menu/main_menu_concept_10.png",
+  "mode": "baked_scene_mode",
+  "visual_asset_source": "existing_assets",
+  "engine_target": "project-native Godot TextureRect animation",
+  "frame_pattern": "res://art/menu/main_menu_ocean_frames/frame-{0:000}.png",
+  "frame_count": 24,
+  "frames_per_second": 16.0,
+  "dimensions": {
+    "width": 1672,
+    "height": 941
+  },
+  "motion_scope": "Pronounced animation pass: bright cyan/blue ocean-surface highlights and open-water wave bands receive stronger localized displacement, shimmer, and animated crest strokes. Warm sand, green island/shore pixels above the waterline, and the right foreground reef are restored from the original image after every frame.",
+  "generation_note": "Derived deterministically from the original image to preserve non-water scenery while making the visible ocean surface wave motion much stronger."
+}

@@ -1,0 +1,48 @@
+Boss K / Caesar attack ability FX style preview.
+
+Asset plan:
+- asset_type: fx
+- action: attack / cast ability activation
+- view: centered 3/4 overlay FX
+- sheet: 3x4
+- frames: 12
+- bundle: single_asset concept preview
+- effect_policy: all
+- anchor: center
+- margin: safe
+- art_style: project-native clean HD pixel-inspired
+
+Reference roles:
+- Use the Caesar / Boss K avatar reference for visual identity only: deep royal blue dragon energy, sharp spiky silhouette language, white-blue flame edges, gold antler crown, pearl core, dark regal final-boss mood.
+- Use the 3x4 layout guide reference for layout only: rows, columns, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Prompt:
+Create a single PNG sprite sheet for a 2D game attack ability FX animation. Canvas divided invisibly into 3 rows x 4 columns of equal frame slots, 12 frames read left-to-right, top-to-bottom. Background must be pure solid flat chroma-key magenta #FF00FF everywhere between and around frames. No visible grid lines, no frame borders, no labels, no text, no numbers, no letters, no UI, no watermark. Each effect centered in its cell with generous magenta padding, nothing touching cell edges, consistent visual center and scale.
+
+Subject: FX-only attack and ability activation effect for Caesar / Boss K, the final boss. Do not include the full character body, face, hands, or attack pose. The effect must feel like Caesar is activating a royal theft judgment: capturing energy from many cards, seizing one card from the opponent's deck, and converting it into a blue dragon-crown strike. It should fit over or near the existing Caesar avatar without replacing the avatar.
+
+Style: clean HD pixel-inspired RPG battle sprite FX, crisp readable silhouettes, transparent-ready edges, saturated aquatic fantasy palette. Visual identity: deep royal blue and electric cyan dragonfire, white-hot flame highlights, black-navy inner energy shadows, gold antler-crown arcs, a pearly orb core, sharp spiky final-boss geometry. Card motif allowed as abstract blank card-shaped light shards and card-back silhouettes only; no readable ranks, no letters, no numbers, no suit symbols, no full card faces.
+
+Animation title: Imperial Card Seizure. Compact overlay FX suitable for a fixed-size avatar cell. Use a crown-shaped sigil, blank card shards, a pearl vortex, claw-like blue flame hooks, and a final diagonal judgment slash. Regal, cold, precise, predatory, aquatic, final-boss energy. No black background, no smoke cloud covering the cell, no wide fullscreen blast. Particles tightly grouped and fully inside each cell.
+
+Frame plan:
+1. Tiny cold blue pearl glint at center with a faint gold antler-crown outline, quiet start.
+2. Deep blue motes and small blank card-shaped sparks drift inward toward the pearl core.
+3. Thin gold crown ring forms around the core; three blank blue card shards begin orbiting, no markings.
+4. A darker royal-blue vortex opens behind the pearl; cyan dragonfire licks upward like small horns.
+5. Claw-like blue flame hooks pull the blank card shards inward, suggesting Caesar seizing a card.
+6. The stolen blank card silhouette locks in front of the pearl core, rim-lit cyan and gold, compact.
+7. Peak charge: gold antler crown flares, pearl core becomes white-hot, blue dragonfire coils tightly around it.
+8. Release begins: diagonal blue-white judgment slash cuts from lower-left to upper-right, card shards trailing behind.
+9. Brightest impact frame: compact crown-shaped burst, electric cyan flame spikes, pearl spark at center.
+10. Shock ring expands slightly but remains inside the cell; blank card fragments scatter as blue-gold sparks.
+11. Energy collapses into a smaller royal-blue spiral, gold crown fragments fading near center.
+12. Loop-ready settle: faint pearl glint, tiny cyan horns, a few gold dust motes, mostly empty magenta space.
+
+Quality rules:
+- same FX identity across all 12 frames
+- same bounding box and visual center across frames
+- leave clear magenta margin on all four sides of every frame
+- no effect, spark, card shard, slash tip, flame, or glow may cross a cell edge
+- no text-like marks, no readable glyphs, no poker ranks, no suits
+- polished sprite sheet asset, not a splash illustration

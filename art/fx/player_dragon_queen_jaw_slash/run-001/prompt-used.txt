@@ -1,0 +1,44 @@
+Dragon Queen Q / Quina Q normal attack FX style preview, revision 2.
+
+Asset plan:
+- asset_type: fx
+- action: attack
+- view: overlay / target-local impact
+- sheet: 2x2
+- frames: 4
+- bundle: single_asset concept preview
+- effect_policy: all
+- anchor: center
+- margin: safe
+- art_style: project-native clean HD pixel-inspired
+
+Design goal:
+The first version looked too decorative and too much like generic royal magic. This version is designed as a readable normal attack: two elegant sea-dragon fin blades snap shut like jaws, then burst at the target. It should not read as Dragon Queen Q's card-steal / collect-card special ability.
+
+Frame plan:
+1. Wind-up: two curved cyan-white fin blades open around a pearl target point.
+2. Snap-in: the blades close into an X-like bite path.
+3. Hit: bright pearl break point, jagged cyan-white impact and coral sparks.
+4. Release: blade fragments pass through and dissolve.
+
+Trigger design:
+Use this as the normal adventure damage attack FX for Dragon Queen Q, not as her special ability FX.
+
+Recommended runtime trigger:
+1. When adventure mode calls PlayAdventureScoreAttackSequenceAsync and the attacker is the adventure enemy Dragon Queen Q, route PlayAdventureAvatarAttackAsync into a DragonQueen-specific attack branch.
+2. Start CharacterAvatar.AvatarAction.Attack immediately on the Dragon Queen avatar.
+3. Spawn this FX as a Sprite2D at the target avatar center, above both avatars, using frames fx-1..fx-4.
+4. Play frame 1 at t=0.00, frame 2 at t=0.10, frame 3 at t=0.20, frame 4 at t=0.32.
+5. Invoke onHit exactly on frame 3, around t=0.20, so score/damage resolves on the visible bite impact.
+6. Fade and free the sprite after frame 4, around t=0.44.
+
+Important separation:
+- Normal attack trigger: PlayAdventureAvatarAttackAsync -> Dragon Queen branch -> this jaw-slash FX -> onHit on frame 3.
+- Special ability trigger: ApplyDragonQueenAndKingAfterEnemyCaptureAsync -> StealRandomMainPlayerHandCardForEnemyAsync -> PlayEnemySpecialAbilityAvatarFxAsync -> ResolveQueenEffectAsync. Do not reuse this normal attack FX there.
+
+Prompt:
+Use the Dragon Queen Q / Quina Q avatar as the visual identity reference: pearlescent white sea-dragon queen, cyan and ocean-blue fin blades, purple-blue shadows, coral-red accents, small gold royal ornaments, sharp elegant aquatic fantasy style. Create a single 1024x1024 PNG sprite sheet for a 2D game normal attack FX animation. Canvas divided invisibly into 2 rows x 2 columns of equal frame slots. Background pure solid flat chroma-key magenta #FF00FF. No grid lines, borders, labels, text, numbers, letters, UI, or watermark.
+
+Subject: FX-only normal attack effect for Dragon Queen Q. Do not include the character body, head, hands, full creature, portrait, or attack pose. This is not a special ability activation; it must not read as stealing cards, collecting cards, drawing cards, judgment magic, card trigger, or royal ceremony. This is a direct hit attack visual: a sea-dragon jaw slash made of two fin-blade energy crescents closing on the target.
+
+Art style: project-native clean HD pixel-inspired RPG battle FX, crisp readable silhouette, strong attack direction, transparent-ready edges. Palette matches the queen: pearly white blade cores, cyan and deep ocean-blue fins, small coral-red sparks, tiny gold ornament glints. Avoid big circular rings, generic magic circles, large decorative spirals, dense star fields, black smoke, or soft fog. The main shape should be angular and predatory, like two elegant dragon-fin jaws snapping shut.
