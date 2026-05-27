@@ -10,7 +10,8 @@ public partial class GameBoardScene
 		PlayingCard playedCard,
 		Vector2 startGlobalPosition,
 		int tableCardIndex,
-		bool tableCardIsFaceUp)
+		bool tableCardIsFaceUp,
+		Texture2D? visibleTextureOverride = null)
 	{
 		if (!IsInsideTree() || tableCardIndex < 0)
 		{
@@ -23,7 +24,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Texture2D? startTexture = GetVisibleHandCardTexture(playerIndex, playedCard);
+		Texture2D? startTexture = visibleTextureOverride ?? GetVisibleHandCardTexture(playerIndex, playedCard);
 		if (startTexture == null)
 		{
 			return;

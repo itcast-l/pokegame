@@ -1,0 +1,25 @@
+Create a single 1536x1152 PNG sprite sheet for a 2D game attack FX animation.
+
+Asset: FX-only attack effect for Jay J, the Dragon Prince elite enemy. Use the first reference image just shown as the visual identity reference for palette and style only: royal blue dragon energy, cyan fins/horn glow, white-hot highlights, gold-and-white regal armor language, jewel accents, sharp polished aquatic fantasy sprite style. Use the second reference image just shown only for card motif inspiration: ocean card backs and poker-card silhouettes, but do not copy readable ranks, letters, numbers, suit labels, or full card faces. Use the layout guide image just shown as a layout-only reference. Use it only to understand 3 rows, 4 columns, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Output style: clean HD pixel-inspired game sprite FX, crisp readable silhouettes, transparent-ready edges, saturated aquatic blue/cyan/white/gold palette, polished RPG battle effect style. This is a separate overlay FX asset, not a character body sheet. Do not draw the full character. Only use abstract dragonfire, royal sigils, horn-crown light, card-shaped shards, spark trails, and impact energy. The FX must stay compact enough to layer over or near Jay in a fixed-size avatar cell.
+
+Canvas and layout: exactly 12 frames arranged in a 3 rows x 4 columns grid, read left-to-right then top-to-bottom. Background must be 100% solid flat #FF00FF magenta everywhere, including between frames and all margins. No text, no labels, no UI, no numbers, no letters, no watermarks, no visible grid lines, no frame borders. Each frame must be centered in its invisible cell with generous magenta margin on all four sides. Nothing may touch or cross cell edges. Keep the same bounding box, same pixel scale, and same visual center across all 12 frames.
+
+Animation concept: "Royal Card Judgment". A controlled elite attack effect that starts as a small royal glyph, gathers cards into a dragon-shaped vortex, releases a blue-white judgment slash, then collapses into pearl sparks. The animation should feel regal, precise, dangerous, and aquatic.
+
+Frame order:
+1. Small cyan horn-crown glint and faint gold royal ring, quiet start.
+2. Blue motes gather inward, thin gold crescent sigil begins.
+3. Three or four abstract card-shaped light shards spiral into the sigil.
+4. Dragonfire coil forms a compact S-shaped curl with white-hot core.
+5. Stronger charge: gold royal circle and cyan flame petals tighten.
+6. Release begins: diagonal blue-white judgment slash appears, with cards pulled behind it.
+7. Peak impact: brightest frame, compact dragonfire burst, gold sigil flare, pearl sparks.
+8. Shockwave ring expands slightly but remains inside cell, card shards scatter outward.
+9. Dragonfire curls back into a smaller spiral, white core fading to cyan.
+10. Gold sigil breaks into clean fragments, tiny blue sparks drift.
+11. Residual horn-crown glow and two faint card-shaped afterimages.
+12. Loop-ready settle: almost empty, just a faint cyan royal spark and small gold dust.
+
+Important constraints: no full character body, no readable card faces, no J letters, no ranks, no numbers, no suit symbols as text-like graphics, no black background, no smoke cloud covering the whole cell, no wide fullscreen blast. Detached particles are allowed only if tightly grouped near the main effect and fully inside the cell. The effect must be readable as a coherent 12-frame game animation and suitable for chroma-key cleanup from magenta.

@@ -51,6 +51,7 @@ public partial class GameBoardScene
 			SeaSlugAdventureEnemyAvatarId => SeaSlugAdventureDamageEffectFrames,
 			NautilusAdventureEnemyAvatarId => NautilusAdventureDamageEffectFrames,
 			NarwhalAdventureEnemyAvatarId => NarwhalAdventureDamageEffectFrames,
+			DragonPrinceAdventureEnemyAvatarId => DragonPrinceAdventureDamageEffectFrames,
 			LeafySeadragonAdventureEnemyAvatarId => LeafySeadragonCollectAttackEffectFrames,
 			_ => DefaultAdventureDamageEffectFrames,
 		};
@@ -67,6 +68,15 @@ public partial class GameBoardScene
 	{
 		_specialCardTriggerEffectFrames.Clear();
 		_specialCardTriggerEffectFrames.AddRange(SpecialCardTriggerEffectFrames);
+	}
+
+	private void LoadDragonPrinceSpecialJackTexture()
+	{
+		_dragonPrinceSpecialJackTexture = GD.Load<Texture2D>(DragonPrinceSpecialJackTexturePath);
+		if (_dragonPrinceSpecialJackTexture == null)
+		{
+			GD.PushWarning($"Missing dragon prince special J texture: {DragonPrinceSpecialJackTexturePath}");
+		}
 	}
 
 	private void LoadBombPairDestroyEffectTextures()

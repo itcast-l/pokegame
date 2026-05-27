@@ -5,27 +5,6 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private async Task<PlayCardResult> ResolveJackEffectAsync(int ownerPlayerIndex, int turnSequenceGeneration)
-	{
-		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count)
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		bool captured = _tableCards.Count > 0;
-		CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
-			ownerPlayerIndex,
-			0,
-			turnSequenceGeneration: turnSequenceGeneration);
-		if (!IsGameOver())
-		{
-			Shuffle(_playerDecks[ownerPlayerIndex]);
-			Cut(_playerDecks[ownerPlayerIndex]);
-		}
-
-		return new PlayCardResult(true, captured, captureResult.CollectedCardCount > 0, captureResult.QuestionRewardAnimation);
-	}
-
 	private async Task<PlayCardResult> ResolveQueenEffectAsync(
 		int ownerPlayerIndex,
 		int targetPlayerIndex,

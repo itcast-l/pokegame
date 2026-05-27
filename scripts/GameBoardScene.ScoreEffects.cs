@@ -26,6 +26,16 @@ public partial class GameBoardScene
 	private const float ShrimpAdventureAttackEffectFlightSeconds = 0.72f;
 	private const float NautilusAdventureAttackEffectFlightSeconds = 0.78f;
 	private const float NarwhalAdventureAttackEffectFlightSeconds = 0.82f;
+	private const int DragonPrinceDamageHitFlightFrameCount = 5;
+	private const float DragonPrinceDamageHitFlightSeconds = 0.72f;
+	private const float DragonPrinceDamageHitImpactSeconds = 0.70f;
+	private const double DragonPrinceDamageHitImpactFrameSeconds = 0.10d;
+	private const double DragonPrinceDamageHitImpactHitDelaySeconds = DragonPrinceDamageHitImpactFrameSeconds;
+	private const float DragonPrinceDamageHitVisualSize = 132.0f;
+	private const float DragonPrinceDamageHitImpactVisualSize = 148.0f;
+	private const float DragonPrinceDamageHitStartInset = 34.0f;
+	private const float DragonPrinceDamageHitTargetInset = 20.0f;
+	private const float DragonPrinceDamageHitRotationOffset = 0.7853982f;
 	private const float AdventureAttackEffectVisualSize = 104.0f;
 	private const float AdventureAttackImpactVisualSize = 124.0f;
 	private const float CatAdventureScratchVisualSize = 132.0f;
@@ -304,6 +314,18 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (ShouldPlayDragonPrinceDamageHitAttack(attackerPlayerIndex, targetPlayerIndex))
+		{
+			await PlayDragonPrinceDamageHitAttackAsync(
+				attackerPlayerIndex,
+				startCenter,
+				targetCenter,
+				attackFrames,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
 		await PlayAdventureAttackEffectFlightAsync(
 			startCenter,
 			targetCenter,
@@ -328,6 +350,23 @@ public partial class GameBoardScene
 		return _adventureDamageEffectFrames.Count > 0
 			? _adventureDamageEffectFrames
 			: _scoreFillEffectFrames;
+	}
+
+	private static List<Texture2D> BuildFrameSlice(IReadOnlyList<Texture2D> frames, int startIndex, int count)
+	{
+		var slice = new List<Texture2D>(Math.Max(0, count));
+		for (int index = 0; index < count; index++)
+		{
+			int frameIndex = startIndex + index;
+			if (frameIndex < 0 || frameIndex >= frames.Count)
+			{
+				continue;
+			}
+
+			slice.Add(frames[frameIndex]);
+		}
+
+		return slice;
 	}
 
 	private static bool IsAdventureEnemyPlayer(int playerIndex)
@@ -379,6 +418,13 @@ public partial class GameBoardScene
 	private bool ShouldPlayLeafySeadragonCollectAttack(int attackerPlayerIndex, int targetPlayerIndex)
 	{
 		return adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
+			&& targetPlayerIndex == MainPlayerIndex
+			&& attackerPlayerIndex != MainPlayerIndex;
+	}
+
+	private bool ShouldPlayDragonPrinceDamageHitAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	{
+		return adventure_enemy_avatar_id == DragonPrinceAdventureEnemyAvatarId
 			&& targetPlayerIndex == MainPlayerIndex
 			&& attackerPlayerIndex != MainPlayerIndex;
 	}
@@ -953,6 +999,189 @@ public partial class GameBoardScene
 			if (GodotObject.IsInstanceValid(beam))
 			{
 				beam.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayDragonPrinceDamageHitAttackAsync(
+		int attackerPlayerIndex,
+		Vector2 startCenter,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		if (frames.Count == 0)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		Vector2 travel = targetCenter - startCenter;
+		float distance = travel.Length();
+		if (distance <= 1.0f)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		Vector2 direction = travel / distance;
+		Vector2 side = new(-direction.Y, direction.X);
+		Vector2 projectileStart = startCenter + direction * DragonPrinceDamageHitStartInset;
+		Vector2 projectileEnd = targetCenter - direction * DragonPrinceDamageHitTargetInset;
+		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
+			+ new Vector2(0.0f, -30.0f)
+			+ side * _rng.RandfRange(-14.0f, 14.0f);
+		int flightFrameCount = Math.Min(DragonPrinceDamageHitFlightFrameCount, frames.Count);
+		List<Texture2D> flightFrames = BuildFrameSlice(frames, 0, flightFrameCount);
+		List<Texture2D> impactFrames = BuildFrameSlice(frames, flightFrameCount, frames.Count - flightFrameCount);
+		if (impactFrames.Count == 0)
+		{
+			impactFrames = BuildFrameSlice(frames, Math.Max(0, frames.Count - 1), 1);
+		}
+
+		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		var projectile = new Sprite2D
+		{
+			Name = "DragonPrinceDamageHitFlight",
+			Texture = flightFrames[0],
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = projectileStart,
+			Rotation = direction.Angle() + DragonPrinceDamageHitRotationOffset,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(projectile);
+
+		try
+		{
+			Tween flightTween = CreateTween();
+			flightTween.SetParallel(true);
+			flightTween.SetTrans(Tween.TransitionType.Cubic);
+			flightTween.SetEase(Tween.EaseType.Out);
+			ApplyAdventureAttackEffectTexture(projectile, flightFrames[0], DragonPrinceDamageHitVisualSize, 0.84f);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				flightTween,
+				projectile,
+				flightFrames,
+				DragonPrinceDamageHitFlightSeconds / Math.Max(1, flightFrames.Count),
+				DragonPrinceDamageHitFlightSeconds);
+			flightTween.TweenProperty(projectile, "modulate:a", 1.0f, DragonPrinceDamageHitFlightSeconds * 0.14f);
+			flightTween.TweenProperty(projectile, "modulate:a", 0.92f, DragonPrinceDamageHitFlightSeconds * 0.18f)
+				.SetDelay(DragonPrinceDamageHitFlightSeconds * 0.82f);
+			flightTween.TweenProperty(
+				projectile,
+				"scale",
+				GetSpriteScaleForVisualSize(flightFrames[0], DragonPrinceDamageHitVisualSize) * 1.06f,
+				DragonPrinceDamageHitFlightSeconds * 0.55f);
+			flightTween.TweenProperty(
+				projectile,
+				"scale",
+				GetSpriteScaleForVisualSize(flightFrames[0], DragonPrinceDamageHitVisualSize) * 0.92f,
+				DragonPrinceDamageHitFlightSeconds * 0.45f)
+				.SetDelay(DragonPrinceDamageHitFlightSeconds * 0.55f);
+			flightTween.TweenMethod(
+				Callable.From<float>(progress => UpdateSpriteBezierFlight(
+					projectile,
+					projectileStart,
+					controlCenter,
+					projectileEnd,
+					progress,
+					DragonPrinceDamageHitRotationOffset)),
+				0.0f,
+				1.0f,
+				DragonPrinceDamageHitFlightSeconds);
+
+			await ToSignal(flightTween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(projectile))
+			{
+				projectile.QueueFree();
+			}
+		}
+
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
+		var impact = new Sprite2D
+		{
+			Name = "DragonPrinceDamageHitImpact",
+			Texture = impactFrames[0],
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = targetCenter,
+			Rotation = direction.Angle() + DragonPrinceDamageHitRotationOffset,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(impact);
+
+		bool hitInvoked = false;
+		void InvokeHitOnce()
+		{
+			if (hitInvoked
+				|| turnSequenceGeneration != _turnSequenceGeneration
+				|| IsGameOver())
+			{
+				return;
+			}
+
+			hitInvoked = true;
+			onHit?.Invoke();
+		}
+
+		try
+		{
+			Vector2 baseScale = GetSpriteScaleForVisualSize(impactFrames[0], DragonPrinceDamageHitImpactVisualSize);
+			impact.Scale = baseScale * 0.78f;
+
+			Tween impactTween = CreateTween();
+			impactTween.SetParallel(true);
+			impactTween.SetTrans(Tween.TransitionType.Sine);
+			impactTween.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				impactTween,
+				impact,
+				impactFrames,
+				DragonPrinceDamageHitImpactFrameSeconds,
+				DragonPrinceDamageHitImpactSeconds);
+			impactTween.TweenProperty(impact, "modulate:a", 1.0f, DragonPrinceDamageHitImpactSeconds * 0.12f);
+			impactTween.TweenProperty(impact, "modulate:a", 0.0f, DragonPrinceDamageHitImpactSeconds * 0.28f)
+				.SetDelay(DragonPrinceDamageHitImpactSeconds * 0.72f);
+			impactTween.TweenProperty(impact, "scale", baseScale * 1.12f, DragonPrinceDamageHitImpactSeconds * 0.36f);
+			impactTween.TweenProperty(impact, "scale", baseScale * 0.82f, DragonPrinceDamageHitImpactSeconds * 0.64f)
+				.SetDelay(DragonPrinceDamageHitImpactSeconds * 0.36f);
+			impactTween.TweenMethod(
+				Callable.From<float>(_ => UpdateSpriteRotation(impact, direction.Angle() + DragonPrinceDamageHitRotationOffset)),
+				0.0f,
+				1.0f,
+				DragonPrinceDamageHitImpactSeconds);
+			impactTween.TweenCallback(Callable.From(InvokeHitOnce))
+				.SetDelay(DragonPrinceDamageHitImpactHitDelaySeconds);
+
+			await ToSignal(impactTween, Tween.SignalName.Finished);
+			InvokeHitOnce();
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(impact))
+			{
+				impact.QueueFree();
 			}
 		}
 	}

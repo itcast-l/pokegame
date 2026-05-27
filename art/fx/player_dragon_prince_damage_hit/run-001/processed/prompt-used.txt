@@ -1,0 +1,29 @@
+Create a single 1536x1152 PNG sprite sheet for a compact 2D game damage attack FX animation.
+
+Asset purpose: this effect plays after Jay J has already collected cards and now deals damage to the player. It is NOT the special ability activation, NOT a card collection effect, NOT a card vortex, and NOT a table-card vacuum. The visual must read as a hostile damage projectile and hit impact against the player.
+
+Use the first reference image just shown as Jay J's visual identity reference for palette and style only: royal blue dragon energy, cyan horn-crown glow, sharp white highlights, gold-and-white elite accents, jewel-like sparks, polished aquatic fantasy sprite style. Use the layout guide image just shown as a layout-only reference. Use it only to understand 3 rows, 4 columns, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Output style: clean HD pixel-inspired game sprite FX, crisp readable silhouettes, transparent-ready edges, saturated blue/cyan/white/gold palette, polished RPG battle damage effect. FX-only, no full character body. The effect must be compact and centered for a fixed-size avatar damage effect.
+
+Canvas and layout: exactly 12 frames arranged in a 3 rows x 4 columns grid, read left-to-right then top-to-bottom. Background must be 100% solid flat #FF00FF magenta everywhere, including between frames and all margins. No text, no labels, no UI, no numbers, no letters, no readable card faces, no watermarks, no visible grid lines, no frame borders.
+
+Critical containment: keep every frame inside the central 60% to 68% of its invisible cell. Leave a very large empty magenta safety margin on all four sides. No flame tip, slash tip, spark, shard, smoke, ring, glow, or particle may touch or approach a cell edge. The peak impact frame must stay compact and must not fill the whole cell. Keep the same bounding box, same pixel scale, and same visual center across all 12 frames.
+
+Animation concept: "Dragon Prince Damage Verdict". A fast royal dragonfire damage strike. It begins as a sharp crown-horn spark, condenses into a blue-white dragon fang projectile, slashes forward, hits the player with a compact piercing royal burst, then fades into small cyan burn sparks. It should feel like damage, impact, and score loss.
+
+Frame order:
+1. Tiny cyan crown-horn spark, hostile and sharp, no cards.
+2. Spark stretches into a small blue-white fang of energy with two tiny gold accents.
+3. Compact dragonfire bolt, angled forward, white-hot core, short tail.
+4. Sharper bolt, still small and centered, no wide trail.
+5. First contact slash: short diagonal blue-white cut mark with gold rim, contained.
+6. Impact build: compact star at center, cyan flame petals, small gold shards.
+7. Peak damage impact: bright but compact white core, jagged blue dragonfire burst and gold shock spikes, all within central safe area.
+8. Small damage shock ring with cyan edge and gold cracks, ring does not exceed central safe area.
+9. Recoil flame curls backward like a dragon tail, smaller than the impact.
+10. Fragment fade: cyan embers, gold splinters, thin white hit scars.
+11. Residual damage mark: faint blue burn slash and tiny jewel sparks.
+12. Loop-ready settle: almost empty, one small cyan spark and a fading gold glint.
+
+Important constraints: no card vortex, no cards being pulled or collected, no poker card faces, no J letters, no ranks, no numbers, no suit icons, no full character body, no black background, no wide fullscreen blast. Detached sparks are allowed only if tightly grouped near the damage impact and fully inside the central safe area. The result must clearly read as the damage effect played against the player after the collect-card ability has already resolved.

@@ -35,6 +35,11 @@ public partial class GameBoardScene
 	private const float QuestionCardRewardInsertSeconds = 0.22f;
 	private const float SpecialCardTriggerEffectSeconds = 0.72f;
 	private const float SpecialCardTriggerFxFrameSeconds = 0.14f;
+	private const float DragonPrinceSpecialJackSpawnSeconds = 0.24f;
+	private const float DragonPrinceSpecialJackSpawnSettleSeconds = 0.14f;
+	private const float DragonPrinceSpecialJackFloatSeconds = 0.30f;
+	private const float DragonPrinceSpecialJackFloatRise = 9.0f;
+	private const float DragonPrinceSpecialJackFloatScale = 1.08f;
 	private const float LensCardFlightSeconds = 0.34f;
 	private const float LensCardSplitSeconds = 0.18f;
 	private const float LensRevealWispFlightSeconds = 0.42f;

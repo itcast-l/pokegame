@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://bbs213s1hu4jj"]
 
+[ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="1_mnnnh"]
 [ext_resource type="Texture2D" uid="uid://1jbasu6jw874" path="res://art/cards/item_cards/question_mark/run-004/processed/frames/frame-001.png" id="1_question_mark"]
 [ext_resource type="Texture2D" uid="uid://c8ncwnsd5nvn6" path="res://art/cards/item_cards/bomb/run-004/processed/frames/frame-001.png" id="2_bomb"]
 [ext_resource type="Script" uid="uid://dbcwwsqtbi2py" path="res://scripts/ItemCardData.cs" id="3_item_card_data"]
@@ -10,6 +11,11 @@
 [ext_resource type="Texture2D" uid="uid://h2gi3138hbra" path="res://art/cards/item_cards/overtime/run-004/processed/frames/frame-001.png" id="8_overtime"]
 [ext_resource type="Texture2D" uid="uid://dmh0h2213ukkr" path="res://art/cards/item_cards/draw_card/run-004/processed/frames/frame-001.png" id="9_draw_card"]
 [ext_resource type="Texture2D" uid="uid://chy7vfxvr6rnt" path="res://art/cards/item_cards/shuffle/run-004/processed/frames/frame-001.png" id="10_shuffle"]
+[ext_resource type="Script" uid="uid://bhexx6mj1xv3q" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="12_32prl"]
+[ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="13_ueshx"]
+
+[sub_resource type="Resource" id="Resource_o1a3y"]
+script = ExtResource("13_ueshx")
 
 [node name="ItemCardsScene" type="Node2D" unique_id=1024153444]
 texture_filter = 1
@@ -19,7 +25,12 @@ color = Color(0.06, 0.065, 0.075, 1)
 polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=551150247]
-position = Vector2(576, 324)
+top_level = true
+
+[node name="PhantomCameraHost" type="Node" parent="Camera2D" unique_id=735842270]
+process_priority = 300
+process_physics_priority = 300
+script = ExtResource("1_mnnnh")
 
 [node name="ItemCards" type="Node2D" parent="." unique_id=1819520481]
 
@@ -122,3 +133,7 @@ scale = Vector2(0.32, 0.32)
 texture = ExtResource("10_shuffle")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/ShuffleCardItem" unique_id=930125272]
+
+[node name="PhantomCamera2D" type="Node2D" parent="." unique_id=703258216]
+script = ExtResource("12_32prl")
+tween_resource = SubResource("Resource_o1a3y")

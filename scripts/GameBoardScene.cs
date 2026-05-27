@@ -45,10 +45,13 @@ public partial class GameBoardScene : Control
 	private const string SeaSlugAdventureDamageEffectFramePattern = "res://art/fx/player_sea_slug_hit_marker/run-001/processed/fx-{0}.png";
 	private const string NautilusAdventureDamageEffectFramePattern = "res://art/fx/player_nautilus_spiral_pressure_slash/run-001/processed/fx-{0}.png";
 	private const string NarwhalAdventureDamageEffectFramePattern = "res://art/fx/player_narwhal_tusk_break/run-001/processed/fx-{0}.png";
+	private const string DragonPrinceAdventureDamageEffectFramePattern = "res://art/fx/player_dragon_prince_damage_hit/run-001/processed/fx-{0}.png";
+	private const string DragonPrinceSpecialJackTexturePath = "res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png";
 	private const string LeafySeadragonCollectAttackEffectFramePattern = "res://art/fx/player_leafy_seadragon_collect_attack/run-002/processed/fx-{0}.png";
 	private const string LeafySeadragonBladeProjectileFramePattern = "res://art/fx/player_leafy_seadragon_leafy_mirage_slash/concept-001/processed/fx-{0}.png";
 	private const int AdventureDamageEffectFrameCount = 4;
 	private const int GardenEelAdventureDamageEffectFrameCount = 6;
+	private const int DragonPrinceAdventureDamageEffectFrameCount = 12;
 	private const int LeafySeadragonBladeProjectileFrameCount = 4;
 	private const string FishDefeatFinisherFramePattern = "res://art/characters/player_fish_avatar/run-006/fp_fx_asset_preview/abu-fp-fx-asset-{0:00}.png";
 	private const int FishDefeatFinisherFrameCount = 20;
@@ -88,6 +91,8 @@ public partial class GameBoardScene : Control
 		FrameAnimationHelpers.LoadTextureFrames(NautilusAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "nautilus adventure damage effect", preferImageFile: true);
 	private static readonly Texture2D[] NarwhalAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(NarwhalAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "narwhal adventure damage effect", preferImageFile: true);
+	private static readonly Texture2D[] DragonPrinceAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(DragonPrinceAdventureDamageEffectFramePattern, DragonPrinceAdventureDamageEffectFrameCount, "dragon prince adventure damage effect", preferImageFile: true);
 	private static readonly Texture2D[] LeafySeadragonCollectAttackEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonCollectAttackEffectFramePattern, AdventureDamageEffectFrameCount, "leafy seadragon collect attack effect", preferImageFile: true);
 	private static readonly Texture2D[] LeafySeadragonBladeProjectileFrames =
@@ -232,6 +237,7 @@ public partial class GameBoardScene : Control
 	private Texture2D? _doubleCardOverlayTexture;
 	private Texture2D? _overtimeCardOverlayTexture;
 	private Texture2D? _slimeCardOverlayTexture;
+	private Texture2D? _dragonPrinceSpecialJackTexture;
 	private Control? _winnerBannerRoot;
 	private Control? _winnerBannerPanel;
 	private TextureRect? _winnerBannerArt;
@@ -405,6 +411,7 @@ public partial class GameBoardScene : Control
 		LoadAttachmentCardOverlayTextures();
 		LoadQuestionCardTransformTextures();
 		LoadSpecialCardTriggerEffectTextures();
+		LoadDragonPrinceSpecialJackTexture();
 		LoadBombPairDestroyEffectTextures();
 		LoadLensRevealWispTextures();
 		LoadMagnetCountdownFxTextures();
