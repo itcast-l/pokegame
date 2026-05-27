@@ -30,17 +30,7 @@ public partial class GameBoardScene
 		}
 
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, playedCard);
-		bool buryPlayedCardInSand = ShouldGardenEelBuryNextPlayedCard(playerIndex);
-		if (buryPlayedCardInSand)
-		{
-			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-			{
-				return new PlayCardResult(false, false);
-			}
-		}
-
-		bool playedJackCollectsTable = !buryPlayedCardInSand && ShouldJackCollectTable(playedCard) && _tableCards.Count > 0;
+		bool playedJackCollectsTable = ShouldJackCollectTable(playedCard) && _tableCards.Count > 0;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, hand.Count, handArea.Size, cardOffset);
@@ -56,12 +46,8 @@ public partial class GameBoardScene
 
 		hand.RemoveAt(handIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
-		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped, buryPlayedCardInSand);
+		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, out bool matchedTableCardFlipped);
 		int playedTableCardIndex = _tableCards.Count - 1;
-		if (buryPlayedCardInSand)
-		{
-			MarkGardenEelBuriedCard(playedTableCardIndex);
-		}
 
 		if (playedJackCollectsTable)
 		{
@@ -105,125 +91,188 @@ public partial class GameBoardScene
 		RenderTableCards();
 		if (captureStartIndex >= 0)
 		{
-			int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
-			await ToSignal(GetTree().CreateTimer(TableCaptureDelaySeconds), SceneTreeTimer.SignalName.Timeout);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
+			PairCaptureEdgeFloatHold? pairCaptureEdgeFloat = null;
+			bool pairCaptureEdgeFloatHandedToDeck = false;
+			try
 			{
-				return new PlayCardResult(false, false);
-			}
+				int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
+				if (ShouldPlayPairCaptureEdgeFloat(captureStartIndex, playedTableCardIndex, playedJackCollectsTable))
+				{
+					pairCaptureEdgeFloat = await PlayPairCaptureEdgeFloatHoldAnimationAsync(captureStartIndex, playedTableCardIndex);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
 
-			await RevealCapturedBaseCardsFromBottomAsync(
-				captureStartIndex,
-				scorePlayerIndex,
-				turnSequenceGeneration,
-				pendingFaceUpMagnetTriggerIndexes,
-				resolvedMagnetTriggerIndexes,
-				magnetExtraCaptureIndexes,
-				resolvedDoubleTriggerIndexes,
-				resolvedOvertimeTriggerIndexes);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
-			{
-				return new PlayCardResult(false, false);
-			}
-
-			foreach (TableSpecialCardTrigger specialTrigger in GetCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes))
-			{
-				await PlayTableSpecialCardTriggerEffectAsync(specialTrigger);
+				await ToSignal(GetTree().CreateTimer(TableCaptureDelaySeconds), SceneTreeTimer.SignalName.Timeout);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return new PlayCardResult(false, false);
 				}
 
-				await PublishAndResolveCardEventAsync(
-					new CardGameEvent(
-						CardGameEvents.OnCollect,
-						playerIndex,
-						sourceTableCardIndex: specialTrigger.TableCardIndex,
-						captureStartIndex: captureStartIndex,
-						extraTableCardIndexes: magnetExtraCaptureIndexes,
-						originGlobalCenter: specialTrigger.GlobalPosition + CardVisualSize / 2.0f),
-					turnSequenceGeneration);
-				if (turnSequenceGeneration != _turnSequenceGeneration)
-				{
-					return new PlayCardResult(false, false);
-				}
-			}
-
-			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, false, magnetExtraCaptureIndexes);
-			int collectedPoints = GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes);
-			if (ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
-			{
-				await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
-				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-				{
-					return new PlayCardResult(false, false);
-				}
-			}
-
-			if (collectedPoints > 0)
-			{
-				List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(captureStartIndex, false, true, magnetExtraCaptureIndexes);
-				await PlayScoreFillCollectionAsync(
+				await RevealCapturedBaseCardsFromBottomAsync(
+					captureStartIndex,
 					scorePlayerIndex,
-					scoringCardVisuals,
 					turnSequenceGeneration,
-					() => AddPlayerScore(scorePlayerIndex, collectedPoints));
+					pendingFaceUpMagnetTriggerIndexes,
+					resolvedMagnetTriggerIndexes,
+					magnetExtraCaptureIndexes,
+					resolvedDoubleTriggerIndexes,
+					resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return new PlayCardResult(false, false);
 				}
-			}
 
-			await PlayCapturedCardsToDeckAnimationAsync(playerIndex, captureStartIndex, capturedCardVisuals, turnSequenceGeneration, magnetExtraCaptureIndexes);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
-			{
-				return new PlayCardResult(false, false);
-			}
+				foreach (TableSpecialCardTrigger specialTrigger in GetCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes))
+				{
+					await PlayTableSpecialCardTriggerEffectAsync(specialTrigger);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return new PlayCardResult(false, false);
+					}
 
-			CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
-				playerIndex,
-				captureStartIndex,
-				true,
-				false,
-				turnSequenceGeneration,
-				magnetExtraCaptureIndexes);
-			int collectedCardCount = captureResult.CollectedCardCount;
-			if (IsGameOver())
-			{
-				return new PlayCardResult(true, true, collectedCardCount > 0);
-			}
+					await PublishAndResolveCardEventAsync(
+						new CardGameEvent(
+							CardGameEvents.OnCollect,
+							playerIndex,
+							sourceTableCardIndex: specialTrigger.TableCardIndex,
+							captureStartIndex: captureStartIndex,
+							extraTableCardIndexes: magnetExtraCaptureIndexes,
+							originGlobalCenter: specialTrigger.GlobalPosition + CardVisualSize / 2.0f),
+						turnSequenceGeneration);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
 
-			Shuffle(_playerDecks[playerIndex]);
-			Cut(_playerDecks[playerIndex]);
-			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
-			RenderTableCards();
-			if (captureResult.QuestionRewardAnimation.HasValue && !captureResult.QuestionRewardAnimation.Value.RequiresMagnetAttachment)
-			{
-				HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + captureResult.QuestionRewardAnimation.Value.ItemHandIndex);
-			}
+				Dictionary<int, Vector2>? pairFloatFlightStartOverrides = pairCaptureEdgeFloat?.BuildFlightStartPositionOverrides();
+				List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(
+					captureStartIndex,
+					false,
+					false,
+					magnetExtraCaptureIndexes,
+					pairFloatFlightStartOverrides);
+				bool gardenEelSandBiteTriggered = ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedJackCollectsTable);
+				if (gardenEelSandBiteTriggered)
+				{
+					await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
 
-			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
-			{
-				return new PlayCardResult(false, false);
-			}
+				bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
+				int gardenEelSandBiteBonusPoints = gardenEelSandBiteTriggered
+					? ConsumeGardenEelSandBiteBonusPoints(playerIndex, captureStartIndex, scorePlayerIndex, hasDoubleEffect, playedJackCollectsTable)
+					: 0;
+				if (gardenEelSandBiteBonusPoints > 0)
+				{
+					_ = PlayTableCardPointPopupAsync(captureStartIndex, gardenEelSandBiteBonusPoints, hasDoubleEffect);
+				}
 
-			await PlayQuestionCardRewardAnimationAsync(playerIndex, captureResult.QuestionRewardAnimation, turnSequenceGeneration);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
-			{
-				return new PlayCardResult(false, false);
-			}
+				int collectedPoints = GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes)
+					+ gardenEelSandBiteBonusPoints;
+				if (ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
+				{
+					await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
 
-			await ResolvePendingMagnetAttachmentsAsync(turnSequenceGeneration);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
-			{
-				return new PlayCardResult(false, false);
-			}
+				if (collectedPoints > 0)
+				{
+					List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(
+						captureStartIndex,
+						false,
+						true,
+						magnetExtraCaptureIndexes,
+						includeCaptureStartScoring: gardenEelSandBiteBonusPoints > 0,
+						scorePlayerIndex: scorePlayerIndex);
+					await PlayScoreFillCollectionAsync(
+						scorePlayerIndex,
+						scoringCardVisuals,
+						turnSequenceGeneration,
+						() => AddPlayerScore(scorePlayerIndex, collectedPoints));
+					if (turnSequenceGeneration != _turnSequenceGeneration)
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
 
-			RenderPlayerHands();
-			if (collectedCardCount > 0)
+				float captureFlightStaggerSeconds = pairCaptureEdgeFloat != null ? 0.0f : TableCaptureFlightStaggerSeconds;
+				pairCaptureEdgeFloat?.QueueFreeOverlays();
+				pairCaptureEdgeFloatHandedToDeck = pairCaptureEdgeFloat != null;
+				await PlayCapturedCardsToDeckAnimationAsync(
+					playerIndex,
+					captureStartIndex,
+					capturedCardVisuals,
+					turnSequenceGeneration,
+					magnetExtraCaptureIndexes,
+					captureFlightStaggerSeconds);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
+
+				CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
+					playerIndex,
+					captureStartIndex,
+					true,
+					false,
+					turnSequenceGeneration,
+					magnetExtraCaptureIndexes,
+					suppressGardenEelCaptureRecord: gardenEelSandBiteBonusPoints > 0);
+				int collectedCardCount = captureResult.CollectedCardCount;
+				if (IsGameOver())
+				{
+					return new PlayCardResult(true, true, collectedCardCount > 0);
+				}
+
+				Shuffle(_playerDecks[playerIndex]);
+				Cut(_playerDecks[playerIndex]);
+				DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
+				RenderTableCards();
+				if (captureResult.QuestionRewardAnimation.HasValue && !captureResult.QuestionRewardAnimation.Value.RequiresMagnetAttachment)
+				{
+					HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + captureResult.QuestionRewardAnimation.Value.ItemHandIndex);
+				}
+
+				await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
+
+				await PlayQuestionCardRewardAnimationAsync(playerIndex, captureResult.QuestionRewardAnimation, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
+
+				await ResolvePendingMagnetAttachmentsAsync(turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new PlayCardResult(false, false);
+				}
+
+				RenderPlayerHands();
+				if (collectedCardCount > 0)
+				{
+					await PlayPhysicalDeckShuffleAsync(playerIndex);
+				}
+			}
+			finally
 			{
-				await PlayPhysicalDeckShuffleAsync(playerIndex);
+				if (!pairCaptureEdgeFloatHandedToDeck && pairCaptureEdgeFloat != null)
+				{
+					RestorePairCaptureEdgeFloatHold(pairCaptureEdgeFloat);
+				}
 			}
 		}
 		else
@@ -237,7 +286,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			await ApplySeaSlugColorCurrentAfterMissAsync(playerIndex, playedTableCardIndex, turnSequenceGeneration);
+			await ApplySeaSlugSlimeCoatAfterMissAsync(playerIndex, playedTableCardIndex, turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return new PlayCardResult(false, false);
@@ -253,22 +302,12 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		bool captured = captureStartIndex >= 0 && !buryPlayedCardInSand;
+		bool captured = captureStartIndex >= 0;
 		return new PlayCardResult(true, captured, captured, CompletesTurn: resolvedOvertimeTriggerIndexes.Count == 0);
 	}
 
-	private int AddPlayedCardToTable(int playerIndex, PlayingCard playedCard, out bool matchedTableCardFlipped, bool buryInSand = false)
+	private int AddPlayedCardToTable(int playerIndex, PlayingCard playedCard, out bool matchedTableCardFlipped)
 	{
-		if (buryInSand)
-		{
-			matchedTableCardFlipped = false;
-			_tableCards.Add(new TableCard(playedCard, false, cardOwnerPlayerIndex: playerIndex)
-			{
-				IsBuriedInSand = true,
-			});
-			return -1;
-		}
-
 		int matchingIndex = FindMatchingTableCardIndex(playedCard);
 		bool isFaceUp = matchingIndex >= 0;
 		matchedTableCardFlipped = false;

@@ -13,11 +13,20 @@ public partial class CharacterAvatarPreview : Control
 		BindAction("Controls/ActionButtons/Hit", CharacterAvatar.AvatarAction.Hit);
 		BindAction("Controls/ActionButtons/Victory", CharacterAvatar.AvatarAction.Victory);
 		BindAction("Controls/ActionButtons/Defeat", CharacterAvatar.AvatarAction.Defeat);
+		GetTree().CreateTimer(0.18).Timeout += PlayDemoAttack;
 	}
 
 	private void BindAction(string buttonPath, CharacterAvatar.AvatarAction action)
 	{
 		Button button = GetNode<Button>(buttonPath);
 		button.Pressed += () => _avatar.PlayAction(action);
+	}
+
+	private void PlayDemoAttack()
+	{
+		if (GodotObject.IsInstanceValid(_avatar))
+		{
+			_avatar.PlayAction(CharacterAvatar.AvatarAction.Attack);
+		}
 	}
 }

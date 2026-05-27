@@ -1,0 +1,18 @@
+Create a 2D game FX animation sprite sheet for a magical water cyclone attack.
+
+Use the reference image only as the visual style: bright cyan and deep blue water, white foam strokes, sparkling droplets, translucent magical energy, hand-painted clean HD game art.
+
+Sheet requirements:
+- exactly 8 frames arranged in a 2 row x 4 column grid
+- solid flat #FF00FF magenta background in every cell
+- no transparent checkerboard, no borders, no grid lines, no labels, no text
+- each cell contains one centered vertical water cyclone with the same scale and same bounding box
+- the cyclone core and spiral arms must visibly rotate clockwise from frame to frame
+- frame 1 and frame 8 should nearly loop
+- keep the silhouette compact enough for a card-battle attack effect
+- leave safe magenta padding on all sides of every cell
+
+Animation direction:
+Frame 1 starts with the spiral opening at upper-left.
+Each next frame advances the spiral phase clockwise by about 45 degrees.
+The tail stream curls and twists with the core, so the final animation feels like a spinning water vortex, not a static image sliding across the screen.

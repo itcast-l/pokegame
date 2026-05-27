@@ -46,6 +46,11 @@ public partial class GameBoardScene
 	private const float TableShuffleCenterSpread = 22.0f;
 	private const float TableShuffleArcHeight = 54.0f;
 	private const float TableShuffleRotationDegrees = 42.0f;
+	private const float MantaRayTideShiftTableMoveSeconds = 0.58f;
+	private const float MantaRayTideShiftTableSlideSeconds = 0.42f;
+	private const float MantaRayTideShiftTableSlideStaggerSeconds = 0.018f;
+	private const float MantaRayTideShiftMovedCardArcHeight = 58.0f;
+	private const float MantaRayTideShiftMovedCardRotationDegrees = 10.0f;
 	private const float FullCircleRadians = 6.2831855f;
 	private const int PlayedCardFlightZIndex = 2000;
 	private const int OpeningDealZIndex = 2400;

@@ -26,7 +26,11 @@ public partial class GameBoardScene
 		return new PlayCardResult(true, captured, captureResult.CollectedCardCount > 0, captureResult.QuestionRewardAnimation);
 	}
 
-	private PlayCardResult ResolveQueenEffect(int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
+	private async Task<PlayCardResult> ResolveQueenEffectAsync(
+		int ownerPlayerIndex,
+		int targetPlayerIndex,
+		int targetHandIndex,
+		int turnSequenceGeneration)
 	{
 		if (ownerPlayerIndex < 0
 			|| ownerPlayerIndex >= _playerHands.Count
@@ -45,6 +49,12 @@ public partial class GameBoardScene
 
 		if (targetHandIndex < _playerHands[targetPlayerIndex].Count)
 		{
+			if (!HasRoomForNewHandCard(ownerPlayerIndex)
+				&& !await DiscardHandCardForNewItemCardAsync(ownerPlayerIndex, turnSequenceGeneration))
+			{
+				return new PlayCardResult(false, false);
+			}
+
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
 			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
 			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
@@ -55,7 +65,8 @@ public partial class GameBoardScene
 
 		int itemHandIndex = targetHandIndex - _playerHands[targetPlayerIndex].Count;
 		ItemCard stolenItemCard = _playerItemHands[targetPlayerIndex][itemHandIndex];
-		if (!HasRoomForItemCard(ownerPlayerIndex))
+		if (!HasRoomForNewHandCard(ownerPlayerIndex)
+			&& !await DiscardHandCardForNewItemCardAsync(ownerPlayerIndex, turnSequenceGeneration))
 		{
 			return new PlayCardResult(false, false);
 		}

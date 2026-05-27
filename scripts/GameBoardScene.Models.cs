@@ -122,6 +122,7 @@ public partial class GameBoardScene
 		TargetPlayer,
 		TargetHandCard,
 		MagnetHandCard,
+		HandLimitDiscard,
 	}
 
 	private readonly struct ItemCard
@@ -156,6 +157,7 @@ public partial class GameBoardScene
 		public bool IsFaceUp { get; set; }
 		public bool IsHiddenDuringCapture { get; set; }
 		public bool IsBuriedInSand { get; set; }
+		public bool IsSlimeCoated { get; set; }
 		public ItemCard? ItemOverlay { get; }
 		public int ItemOwnerPlayerIndex { get; }
 		public int CardOwnerPlayerIndex { get; }

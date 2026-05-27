@@ -31,13 +31,13 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		layout.AddThemeConstantOverride("separation", 9);
+		layout.AddThemeConstantOverride("separation", 8);
 		margin.AddChild(layout);
 
 		var stageBadge = new PanelContainer
 		{
 			Name = "SelectedStageBadge",
-			CustomMinimumSize = new Vector2(104.0f, 46.0f),
+			CustomMinimumSize = new Vector2(96.0f, 42.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		stageBadge.AddThemeStyleboxOverride("panel", CreateBadgeStyle(new Color(0.9f, 0.94f, 0.56f)));
@@ -48,7 +48,7 @@ public partial class AdventureAvatarMenuScene
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		_previewStageLabel.AddThemeFontSizeOverride("font_size", 26);
+		_previewStageLabel.AddThemeFontSizeOverride("font_size", 24);
 		_previewStageLabel.AddThemeColorOverride("font_color", new Color(0.98f, 1.0f, 0.86f));
 		stageBadge.AddChild(_previewStageLabel);
 
@@ -63,8 +63,8 @@ public partial class AdventureAvatarMenuScene
 		var previewFrame = new PanelContainer
 		{
 			Name = "PreviewFrame",
-			SizeFlagsVertical = SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0.0f, 200.0f),
+			SizeFlagsVertical = SizeFlags.ShrinkCenter,
+			CustomMinimumSize = new Vector2(0.0f, 140.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		previewFrame.AddThemeStyleboxOverride("panel", CreatePreviewFrameStyle());
@@ -75,7 +75,7 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		_previewAvatar = CreateAvatarView(CharacterAvatarCatalog.Default, 190.0f, 0.84f);
+		_previewAvatar = CreateAvatarView(CharacterAvatarCatalog.Default, 138.0f, 0.80f);
 		if (_previewAvatar != null)
 		{
 			_previewAvatar.Name = "PreviewAvatar";
@@ -132,6 +132,8 @@ public partial class AdventureAvatarMenuScene
 		{
 			Name = "AbilityPreviewCard",
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(0.0f, 148.0f),
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		panel.AddThemeStyleboxOverride("panel", CreateAbilityCardStyle());
@@ -142,14 +144,16 @@ public partial class AdventureAvatarMenuScene
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		margin.AddThemeConstantOverride("margin_left", 14);
-		margin.AddThemeConstantOverride("margin_top", 10);
+		margin.AddThemeConstantOverride("margin_top", 8);
 		margin.AddThemeConstantOverride("margin_right", 14);
-		margin.AddThemeConstantOverride("margin_bottom", 12);
+		margin.AddThemeConstantOverride("margin_bottom", 10);
 		panel.AddChild(margin);
 
 		var stack = new VBoxContainer
 		{
 			Name = "AbilityPreviewStack",
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+			ClipContents = true,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		stack.AddThemeConstantOverride("separation", 5);
@@ -182,9 +186,22 @@ public partial class AdventureAvatarMenuScene
 		_previewAbilityNameLabel.AddThemeConstantOverride("shadow_offset_y", 1);
 		stack.AddChild(_previewAbilityNameLabel);
 
+		_previewAbilityDescriptionScroll = new ScrollContainer
+		{
+			Name = "AbilityDescriptionScroll",
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+			ClipContents = true,
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
+			MouseFilter = MouseFilterEnum.Stop,
+		};
+		stack.AddChild(_previewAbilityDescriptionScroll);
+
 		_previewAbilityDescriptionLabel = new Label
 		{
 			Name = "AbilityDescriptionLabel",
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
@@ -195,7 +212,7 @@ public partial class AdventureAvatarMenuScene
 		_previewAbilityDescriptionLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.68f));
 		_previewAbilityDescriptionLabel.AddThemeConstantOverride("shadow_offset_x", 1);
 		_previewAbilityDescriptionLabel.AddThemeConstantOverride("shadow_offset_y", 1);
-		stack.AddChild(_previewAbilityDescriptionLabel);
+		_previewAbilityDescriptionScroll.AddChild(_previewAbilityDescriptionLabel);
 
 		return panel;
 	}

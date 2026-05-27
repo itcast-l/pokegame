@@ -58,6 +58,11 @@ public partial class AdventureAvatarMenuScene
 		_previewAbilityTitleLabel.Text = Tr("ADVENTURE_ABILITY_TITLE").ToString();
 		_previewAbilityNameLabel.Text = Tr(avatarDefinition.AdventureAbilityNameKey).ToString();
 		_previewAbilityDescriptionLabel.Text = Tr(avatarDefinition.AdventureAbilityDescriptionKey).ToString();
+		if (_previewAbilityDescriptionScroll != null && GodotObject.IsInstanceValid(_previewAbilityDescriptionScroll))
+		{
+			_previewAbilityDescriptionScroll.ScrollVertical = 0;
+		}
+
 		_previewStatusLabel.AddThemeColorOverride(
 			"font_color",
 			GetStageStatusColor(

@@ -121,11 +121,136 @@ public partial class GameBoardScene
 		}
 	}
 
+	private sealed class PairCaptureEdgeFloatHold
+	{
+		public PairCaptureEdgeFloatHold(List<int> tableCardIndexes, List<TextureRect> overlays)
+		{
+			TableCardIndexes = tableCardIndexes;
+			Overlays = overlays;
+		}
+
+		public List<int> TableCardIndexes { get; }
+		public List<TextureRect> Overlays { get; }
+
+		public Dictionary<int, Vector2> BuildFlightStartPositionOverrides()
+		{
+			var positions = new Dictionary<int, Vector2>();
+			for (int index = 0; index < TableCardIndexes.Count && index < Overlays.Count; index++)
+			{
+				TextureRect overlay = Overlays[index];
+				if (GodotObject.IsInstanceValid(overlay))
+				{
+					positions[TableCardIndexes[index]] = overlay.GlobalPosition;
+				}
+			}
+
+			return positions;
+		}
+
+		public void QueueFreeOverlays()
+		{
+			foreach (TextureRect overlay in Overlays)
+			{
+				if (GodotObject.IsInstanceValid(overlay))
+				{
+					overlay.QueueFree();
+				}
+			}
+		}
+	}
+
+	private async Task<PairCaptureEdgeFloatHold?> PlayPairCaptureEdgeFloatHoldAnimationAsync(int captureStartIndex, int playedTableCardIndex)
+	{
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		var tableCardIndexes = new List<int>();
+		var overlays = new List<TextureRect>();
+		foreach (int tableCardIndex in BuildPairCaptureEdgeIndexes(captureStartIndex, playedTableCardIndex))
+		{
+			if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count || tableCardIndex >= cardPositions.Count)
+			{
+				continue;
+			}
+
+			Texture2D? texture = GetVisibleTableCardTexture(_tableCards[tableCardIndex]);
+			if (texture == null)
+			{
+				continue;
+			}
+
+			var overlay = new TextureRect
+			{
+				Name = "PairCaptureEdgeFloat",
+				Texture = texture,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+				TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+				MouseFilter = MouseFilterEnum.Ignore,
+				Size = CardVisualSize,
+				PivotOffset = CardVisualSize / 2.0f,
+				ZIndex = PlayedCardFlightZIndex + tableCardIndex * 2 + 220,
+				ZAsRelative = false,
+			};
+			AddChild(overlay);
+			overlay.GlobalPosition = _centerArena.GlobalPosition + cardPositions[tableCardIndex];
+			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
+			tableCardIndexes.Add(tableCardIndex);
+			overlays.Add(overlay);
+		}
+
+		if (overlays.Count == 0)
+		{
+			return null;
+		}
+
+		RenderTableCards();
+		Tween tween = CreateTween();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Sine);
+		tween.SetEase(Tween.EaseType.Out);
+		foreach (TextureRect overlay in overlays)
+		{
+			Vector2 startGlobalPosition = overlay.GlobalPosition;
+			tween.TweenProperty(overlay, "global_position", startGlobalPosition + new Vector2(0.0f, -PairCaptureEdgeFloatRise), PairCaptureEdgeFloatSeconds);
+			tween.TweenProperty(overlay, "scale", Vector2.One * PairCaptureEdgeFloatScale, PairCaptureEdgeFloatSeconds);
+		}
+
+		await ToSignal(tween, Tween.SignalName.Finished);
+		return new PairCaptureEdgeFloatHold(tableCardIndexes, overlays);
+	}
+
+	private void RestorePairCaptureEdgeFloatHold(PairCaptureEdgeFloatHold hold)
+	{
+		foreach (int tableCardIndex in hold.TableCardIndexes)
+		{
+			if (tableCardIndex >= 0 && tableCardIndex < _tableCards.Count)
+			{
+				_tableCards[tableCardIndex].IsHiddenDuringCapture = false;
+			}
+		}
+
+		hold.QueueFreeOverlays();
+		RenderTableCards();
+	}
+
+	private static List<int> BuildPairCaptureEdgeIndexes(int captureStartIndex, int playedTableCardIndex)
+	{
+		var indexes = new List<int> { captureStartIndex };
+		if (playedTableCardIndex != captureStartIndex)
+		{
+			indexes.Add(playedTableCardIndex);
+		}
+
+		return indexes;
+	}
+
 	private List<CapturedTableCardVisual> BuildCapturedTableCardVisuals(
 		int captureStartIndex,
 		bool includeQuestionCard,
 		bool scoringCardsOnly = false,
-		HashSet<int>? extraTableCardIndexes = null)
+		HashSet<int>? extraTableCardIndexes = null,
+		Dictionary<int, Vector2>? globalPositionOverrides = null,
+		bool includeCaptureStartScoring = false,
+		int scorePlayerIndex = -1)
 	{
 		var visuals = new List<CapturedTableCardVisual>();
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
@@ -149,8 +274,13 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			bool isScoringCardIndex = IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex) || isExtraCapturedIndex;
-			if (scoringCardsOnly && (!isScoringCardIndex || !tableCard.Card.HasValue))
+			bool isScoringCardIndex = IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex)
+				|| isExtraCapturedIndex
+				|| (includeCaptureStartScoring && tableCardIndex == captureStartIndex);
+			if (scoringCardsOnly
+				&& (!isScoringCardIndex
+					|| !tableCard.Card.HasValue
+					|| IsSeaSlugSlimeScoreSuppressed(tableCard, scorePlayerIndex)))
 			{
 				continue;
 			}
@@ -186,7 +316,11 @@ public partial class GameBoardScene
 			}
 
 			Texture2D? itemOverlayTexture = null;
-			if (tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue && (includeQuestionCard || !isQuestionCard))
+			if (tableCard.Card.HasValue && tableCard.IsSlimeCoated)
+			{
+				itemOverlayTexture = _slimeCardOverlayTexture;
+			}
+			else if (tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue && (includeQuestionCard || !isQuestionCard))
 			{
 				itemOverlayTexture = tableCard.ItemOverlay.Value.Texture;
 			}
@@ -198,7 +332,9 @@ public partial class GameBoardScene
 			visuals.Add(new CapturedTableCardVisual(
 				startTexture,
 				itemOverlayTexture,
-				_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+				globalPositionOverrides != null && globalPositionOverrides.TryGetValue(tableCardIndex, out Vector2 overrideGlobalPosition)
+					? overrideGlobalPosition
+					: _centerArena.GlobalPosition + cardPositions[tableCardIndex],
 				tableCardIndex * 2));
 		}
 
@@ -210,7 +346,8 @@ public partial class GameBoardScene
 		int captureStartIndex,
 		List<CapturedTableCardVisual> capturedCardVisuals,
 		int turnSequenceGeneration,
-		HashSet<int>? extraTableCardIndexes = null)
+		HashSet<int>? extraTableCardIndexes = null,
+		float flightStaggerSeconds = TableCaptureFlightStaggerSeconds)
 	{
 		if (_cardBackTexture == null
 			|| playerIndex < 0
@@ -272,7 +409,7 @@ public partial class GameBoardScene
 				capturedCardVisuals[visualIndex],
 				targetGlobalPosition,
 				playerIndex,
-				visualIndex * TableCaptureFlightStaggerSeconds));
+				visualIndex * flightStaggerSeconds));
 		}
 
 		await Task.WhenAll(flightTasks);

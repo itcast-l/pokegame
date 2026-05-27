@@ -4,7 +4,7 @@ public partial class GameBoardScene
 {
 	private void LoadCardBackTextures()
 	{
-		_cardBackTexture = CardBackFrames.Length > 0 ? CardBackFrames[0] : GD.Load<Texture2D>(CardBackPath);
+		_cardBackTexture = CardBackFrames.Length > 0 ? CardBackFrames[0] : null;
 	}
 
 	private void LoadScoreFillEffectTextures()
@@ -25,6 +25,12 @@ public partial class GameBoardScene
 		_mantaRayTideShiftCycloneFxFrames.AddRange(MantaRayTideShiftCycloneFxFrames);
 	}
 
+	private void LoadLeafySeadragonBladeProjectileTextures()
+	{
+		_leafySeadragonBladeProjectileFrames.Clear();
+		_leafySeadragonBladeProjectileFrames.AddRange(LeafySeadragonBladeProjectileFrames);
+	}
+
 	private void LoadAdventureDamageEffectTextures()
 	{
 		_adventureDamageEffectFrames.Clear();
@@ -41,6 +47,11 @@ public partial class GameBoardScene
 			ShrimpAdventureEnemyAvatarId => ShrimpAdventureDamageEffectFrames,
 			CrabAdventureEnemyAvatarId => CrabAdventureDamageEffectFrames,
 			JellyfishAdventureEnemyAvatarId => JellyfishAdventureDamageEffectFrames,
+			GardenEelAdventureEnemyAvatarId => GardenEelAdventureDamageEffectFrames,
+			SeaSlugAdventureEnemyAvatarId => SeaSlugAdventureDamageEffectFrames,
+			NautilusAdventureEnemyAvatarId => NautilusAdventureDamageEffectFrames,
+			NarwhalAdventureEnemyAvatarId => NarwhalAdventureDamageEffectFrames,
+			LeafySeadragonAdventureEnemyAvatarId => LeafySeadragonCollectAttackEffectFrames,
 			_ => DefaultAdventureDamageEffectFrames,
 		};
 		_adventureEnemyDamageEffectFrames.AddRange(frames);
@@ -88,6 +99,12 @@ public partial class GameBoardScene
 		if (_overtimeCardOverlayTexture == null)
 		{
 			GD.PushWarning($"Missing overtime card overlay texture: {OvertimeCardOverlayPath}");
+		}
+
+		_slimeCardOverlayTexture = GD.Load<Texture2D>(SlimeCardOverlayPath);
+		if (_slimeCardOverlayTexture == null)
+		{
+			GD.PushWarning($"Missing slime card overlay texture: {SlimeCardOverlayPath}");
 		}
 	}
 

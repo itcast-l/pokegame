@@ -1,0 +1,1 @@
+Existing accepted ocean card back frames, expanded from 4 to 8 frames by deterministic midpoint interpolation for smoother playback. Original art direction follows generate_ocean_card_back.py. No new raw image generation was needed.

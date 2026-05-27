@@ -20,6 +20,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		bool shouldResolveAttachedTableCardTriggers = HasCapturedMiddleTableCards(captureStartIndex);
 		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
@@ -30,7 +31,7 @@ public partial class GameBoardScene
 
 			if (tableCard.IsFaceUp)
 			{
-				if (pendingFaceUpMagnetTriggerIndexes.Contains(tableCardIndex))
+				if (shouldResolveAttachedTableCardTriggers && pendingFaceUpMagnetTriggerIndexes.Contains(tableCardIndex))
 				{
 					await ResolveMagnetTableCardTriggerAsync(
 						tableCardIndex,
@@ -47,7 +48,7 @@ public partial class GameBoardScene
 					}
 				}
 
-				if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+				if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 				{
 					await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -56,7 +57,7 @@ public partial class GameBoardScene
 					}
 				}
 
-				if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+				if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 				{
 					await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -85,22 +86,30 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
+			if (ShouldSkipOwnerPreviewRevealAnimation(tableCard))
 			{
-				return;
+				tableCard.IsFaceUp = true;
+				RenderTableCards();
 			}
+			else
+			{
+				await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return;
+				}
 
-			tableCard.IsFaceUp = true;
-			RenderTableCards();
+				tableCard.IsFaceUp = true;
+				RenderTableCards();
+			}
 			if (revealedCard.HasValue && IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
 			{
 				bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
-				int popupPoints = GetCapturedCardScoreValueForPlayer(revealedCard.Value, scorePlayerIndex, hasDoubleEffect);
+				int popupPoints = GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect);
 				_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
 			}
 
-			if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
+			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
 			{
 				await ResolveMagnetTableCardTriggerAsync(
 					tableCardIndex,
@@ -117,7 +126,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
 			{
 				await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -126,7 +135,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
 			{
 				await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -141,6 +150,61 @@ public partial class GameBoardScene
 				return;
 			}
 		}
+	}
+
+	private static bool ShouldSkipOwnerPreviewRevealAnimation(TableCard tableCard)
+	{
+		return ShouldShowMainPlayerTablePreview(tableCard);
+	}
+
+	private bool ShouldPlayPairCaptureEdgeFloat(int captureStartIndex, int tailTableCardIndex, bool playedJackCollectsTable)
+	{
+		if (playedJackCollectsTable)
+		{
+			return false;
+		}
+
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		int clampedTailIndex = Mathf.Clamp(tailTableCardIndex, captureStartIndex, _tableCards.Count - 1);
+		int capturedVisibleCardCount = 0;
+		for (int tableCardIndex = captureStartIndex; tableCardIndex <= clampedTailIndex; tableCardIndex++)
+		{
+			if (!_tableCards[tableCardIndex].IsBuriedInSand)
+			{
+				capturedVisibleCardCount++;
+			}
+		}
+
+		return capturedVisibleCardCount > 2;
+	}
+
+	private bool HasCapturedMiddleTableCards(int captureStartIndex)
+	{
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		int capturedVisibleCardCount = 0;
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			if (_tableCards[tableCardIndex].IsBuriedInSand)
+			{
+				continue;
+			}
+
+			capturedVisibleCardCount++;
+			if (capturedVisibleCardCount > 2)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private int GetCapturedTablePoints(int captureStartIndex, int scorePlayerIndex, HashSet<int>? extraTableCardIndexes = null)
@@ -167,7 +231,7 @@ public partial class GameBoardScene
 
 			if (tableCard.Card.HasValue)
 			{
-				collectedPoints += GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, scorePlayerIndex, hasDoubleEffect);
+				collectedPoints += GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect);
 			}
 		}
 
@@ -183,12 +247,30 @@ public partial class GameBoardScene
 				TableCard tableCard = _tableCards[tableCardIndex];
 				if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
 				{
-					collectedPoints += GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, scorePlayerIndex, hasDoubleEffect);
+					collectedPoints += GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect);
 				}
 			}
 		}
 
 		return collectedPoints;
+	}
+
+	private int GetCapturedTableCardScoreValueForPlayer(TableCard tableCard, int scorePlayerIndex, bool hasDoubleEffect)
+	{
+		if (!tableCard.Card.HasValue || IsSeaSlugSlimeScoreSuppressed(tableCard, scorePlayerIndex))
+		{
+			return 0;
+		}
+
+		return GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, scorePlayerIndex, hasDoubleEffect);
+	}
+
+	private bool IsSeaSlugSlimeScoreSuppressed(TableCard tableCard, int scorePlayerIndex)
+	{
+		return adventure_mode
+			&& adventure_enemy_avatar_id == SeaSlugAdventureEnemyAvatarId
+			&& scorePlayerIndex == MainPlayerIndex
+			&& tableCard.IsSlimeCoated;
 	}
 
 	private bool HasCapturedDoubleScoreEffect(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
@@ -307,7 +389,8 @@ public partial class GameBoardScene
 		bool reserveReplacementCard = false,
 		bool awardScore = true,
 		int turnSequenceGeneration = 0,
-		HashSet<int>? extraTableCardIndexes = null)
+		HashSet<int>? extraTableCardIndexes = null,
+		bool suppressGardenEelCaptureRecord = false)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerDecks.Count)
 		{
@@ -352,12 +435,12 @@ public partial class GameBoardScene
 				collectedCardCount++;
 			}
 
-			if (IsQuestionTableCard(tableCard))
-			{
-				QuestionCardRewardGrant? rewardGrant = GrantQuestionCardReward(playerIndex, reserveReplacementCard);
-				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)
+				if (IsQuestionTableCard(tableCard))
 				{
-					questionRewardAnimation = new QuestionCardRewardAnimation(
+					QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(playerIndex, reserveReplacementCard, turnSequenceGeneration);
+					if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)
+					{
+						questionRewardAnimation = new QuestionCardRewardAnimation(
 						rewardGrant.Value.ItemCard,
 						rewardGrant.Value.ItemHandIndex,
 						_centerArena.GlobalPosition + cardPositions[tableCardIndex],
@@ -404,7 +487,11 @@ public partial class GameBoardScene
 		CheckForWinner();
 		if (!IsGameOver() && capturedScoringCards)
 		{
-			RecordGardenEelCaptureForSandAmbush(playerIndex);
+			if (!suppressGardenEelCaptureRecord)
+			{
+				RecordGardenEelCaptureForSandBite(playerIndex);
+			}
+
 			await ApplyJellyfishBubbleAfterCaptureAsync(playerIndex, turnSequenceGeneration);
 			await ApplyNautilusBombAfterMainPlayerCaptureAsync(playerIndex, turnSequenceGeneration);
 			RecordNarwhalCaptureForDouble(playerIndex);

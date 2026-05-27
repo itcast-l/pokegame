@@ -1,0 +1,219 @@
+{
+  "target": "character",
+  "mode": "attack",
+  "asset_name": "player_garden_eel_burrow_ambush",
+  "input": "art/concepts/player_garden_eel_burrow_ambush/run-001/generated/raw-sheet.png",
+  "rows": 2,
+  "cols": 3,
+  "source_size": [
+    1024,
+    1024
+  ],
+  "source_cell_size": [
+    341,
+    512
+  ],
+  "cell_size": 256,
+  "fit_scale": 0.84,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "frame_labels": [
+    "attack-1",
+    "attack-2",
+    "attack-3",
+    "attack-4",
+    "attack-5",
+    "attack-6"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        341,
+        512
+      ],
+      "crop_bbox": [
+        53,
+        128,
+        313,
+        443
+      ],
+      "source_crop_size": [
+        260,
+        315
+      ],
+      "edge_touch": false,
+      "output_size": [
+        149,
+        180
+      ],
+      "paste_position": [
+        53,
+        56
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        341,
+        0,
+        682,
+        512
+      ],
+      "crop_bbox": [
+        42,
+        321,
+        293,
+        438
+      ],
+      "source_crop_size": [
+        251,
+        117
+      ],
+      "edge_touch": false,
+      "output_size": [
+        144,
+        67
+      ],
+      "paste_position": [
+        56,
+        169
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        682,
+        0,
+        1023,
+        512
+      ],
+      "crop_bbox": [
+        29,
+        226,
+        297,
+        446
+      ],
+      "source_crop_size": [
+        268,
+        220
+      ],
+      "edge_touch": false,
+      "output_size": [
+        153,
+        126
+      ],
+      "paste_position": [
+        51,
+        110
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        341,
+        1024
+      ],
+      "crop_bbox": [
+        55,
+        38,
+        289,
+        414
+      ],
+      "source_crop_size": [
+        234,
+        376
+      ],
+      "edge_touch": false,
+      "output_size": [
+        134,
+        215
+      ],
+      "paste_position": [
+        61,
+        21
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        341,
+        512,
+        682,
+        1024
+      ],
+      "crop_bbox": [
+        50,
+        38,
+        285,
+        414
+      ],
+      "source_crop_size": [
+        235,
+        376
+      ],
+      "edge_touch": false,
+      "output_size": [
+        134,
+        215
+      ],
+      "paste_position": [
+        61,
+        21
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        682,
+        512,
+        1023,
+        1024
+      ],
+      "crop_bbox": [
+        54,
+        70,
+        303,
+        428
+      ],
+      "source_crop_size": [
+        249,
+        358
+      ],
+      "edge_touch": false,
+      "output_size": [
+        142,
+        205
+      ],
+      "paste_position": [
+        57,
+        31
+      ]
+    }
+  ],
+  "edge_touch_frames": [],
+  "notes": "Concept storyboard only; not integrated into Godot runtime. Target marker is a visual placeholder, not final UI."
+}

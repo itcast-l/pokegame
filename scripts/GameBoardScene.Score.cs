@@ -179,6 +179,9 @@ public partial class GameBoardScene
 		return card.Rank switch
 		{
 			"A" => 1,
+			"J" when !string.IsNullOrWhiteSpace(card.Suit) => 11,
+			"Q" when !string.IsNullOrWhiteSpace(card.Suit) => 12,
+			"K" when !string.IsNullOrWhiteSpace(card.Suit) => 13,
 			"J" or "Q" or "K" => 10,
 			_ => 0,
 		};
@@ -186,7 +189,17 @@ public partial class GameBoardScene
 
 	private int GetCapturedCardScoreValueForPlayer(PlayingCard card, int scorePlayerIndex, bool hasDoubleEffect)
 	{
-		int points = GetCardScoreValue(card);
+		return ApplyCapturedCardScoreModifiers(GetCardScoreValue(card), scorePlayerIndex, hasDoubleEffect);
+	}
+
+	private int GetHalfCapturedCardScoreValueForPlayer(PlayingCard card, int scorePlayerIndex, bool hasDoubleEffect)
+	{
+		int points = Mathf.CeilToInt(GetCardScoreValue(card) / 2.0f);
+		return ApplyCapturedCardScoreModifiers(points, scorePlayerIndex, hasDoubleEffect);
+	}
+
+	private int ApplyCapturedCardScoreModifiers(int points, int scorePlayerIndex, bool hasDoubleEffect)
+	{
 		if (hasDoubleEffect)
 		{
 			points *= 2;

@@ -1,0 +1,155 @@
+{
+  "target": "character",
+  "mode": "attack",
+  "asset_name": "player_garden_eel_attack_style",
+  "input": "art/concepts/player_garden_eel_attack_style/run-001/generated/raw-sheet.png",
+  "rows": 2,
+  "cols": 2,
+  "source_size": [
+    1254,
+    1254
+  ],
+  "source_cell_size": [
+    627,
+    627
+  ],
+  "cell_size": 256,
+  "fit_scale": 0.86,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "frame_labels": [
+    "attack-1",
+    "attack-2",
+    "attack-3",
+    "attack-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "crop_bbox": [
+        173,
+        298,
+        519,
+        605
+      ],
+      "source_crop_size": [
+        346,
+        307
+      ],
+      "edge_touch": false,
+      "output_size": [
+        157,
+        139
+      ],
+      "paste_position": [
+        49,
+        99
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "crop_bbox": [
+        60,
+        263,
+        526,
+        605
+      ],
+      "source_crop_size": [
+        466,
+        342
+      ],
+      "edge_touch": false,
+      "output_size": [
+        212,
+        155
+      ],
+      "paste_position": [
+        22,
+        83
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "crop_bbox": [
+        192,
+        170,
+        491,
+        526
+      ],
+      "source_crop_size": [
+        299,
+        356
+      ],
+      "edge_touch": false,
+      "output_size": [
+        136,
+        162
+      ],
+      "paste_position": [
+        60,
+        76
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "crop_bbox": [
+        168,
+        41,
+        431,
+        526
+      ],
+      "source_crop_size": [
+        263,
+        485
+      ],
+      "edge_touch": false,
+      "output_size": [
+        119,
+        220
+      ],
+      "paste_position": [
+        68,
+        18
+      ]
+    }
+  ],
+  "edge_touch_frames": [],
+  "notes": "Generated as a style preview only; not integrated into Godot runtime."
+}

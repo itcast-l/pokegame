@@ -15,6 +15,11 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
+		if (_tableCards.Count == 0)
+		{
+			return new PlayCardResult(false, false);
+		}
+
 		List<ItemCard> itemHand = _playerItemHands[playerIndex];
 		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
 		{
@@ -246,6 +251,11 @@ public partial class GameBoardScene
 	{
 		if (tableCard.Card.HasValue)
 		{
+			if (ShouldShowMainPlayerTablePreview(tableCard))
+			{
+				return tableCard.Card.Value.Texture;
+			}
+
 			return tableCard.IsFaceUp || _cardBackTexture == null
 				? tableCard.Card.Value.Texture
 				: _cardBackTexture;

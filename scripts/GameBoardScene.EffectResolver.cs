@@ -114,12 +114,13 @@ public partial class GameBoardScene
 		return new PlayCardResult(true, captured, captureResult.CollectedCardCount > 0, captureResult.QuestionRewardAnimation);
 	}
 
-	private PlayCardResult ResolveStealCardEffect(CardTriggerRequest request)
+	private async Task<PlayCardResult> ResolveStealCardEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{
-		return ResolveQueenEffect(
+		return await ResolveQueenEffectAsync(
 			request.Event.ActorPlayerIndex,
 			request.Event.TargetPlayerIndex,
-			request.Event.TargetHandIndex);
+			request.Event.TargetHandIndex,
+			turnSequenceGeneration);
 	}
 
 	private PlayCardResult ResolveStealDeckCardsEffect(CardTriggerRequest request)

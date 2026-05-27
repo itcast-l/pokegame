@@ -1,0 +1,13 @@
+Create exactly one 2x2 sprite sheet for a redesigned Romi attack FX. Romi is a cute fantasy nautilus avatar whose visual language is deep ocean blue, electric cyan, turquoise glow, violet rim light, glossy underwater highlights, pearl bubbles, and clean HD game-sprite polish. Use those colors and materials only. Do not draw the character, face, eyes, tentacles, shell body, or creature silhouette.
+
+Subject: pure attack effect, no character. The design should read as a fast "spiral pressure slash" made from water and shell-energy, not a decorative nautilus shell picture. Avoid a complete circular shell illustration. Avoid a full vortex flower. The effect should feel sharp, compact, and usable in a card-battle attack: a spiral core drives a directional crescent shockwave from lower-left toward upper-right.
+
+Canvas and layout: exactly four equal cells arranged 2 rows x 2 columns, 1024x1024 overall if possible. Background must be 100% solid flat magenta #FF00FF across the entire sheet, including spaces between cells. No text, numbers, arrows, UI, grid lines, frame borders, watermark, or transparent checkerboard. Each FX frame is centered, same visual scale, similar bounding box, with generous magenta margin. No effect element may cross or touch a cell edge.
+
+Frame content:
+Top-left frame 1: ignition. A small tight cyan spiral core appears, with two short violet-blue crescent strokes wrapping around it and a few pearl bubbles pulled inward.
+Top-right frame 2: launch. The spiral snaps into a diagonal shell-pressure slash, a bright cyan crescent blade sweeps from lower-left to upper-right, with a compact spiral core at its base and thin violet rim sparks.
+Bottom-left frame 3: hit peak. A sharp aqua-white impact ring opens around the diagonal slash, with broken crescent shards, short water-pressure streaks, tiny star glints, and compressed bubbles bursting outward. This is the brightest frame.
+Bottom-right frame 4: dissolve. The slash breaks into faint blue-violet crescent afterimages, small bubbles, and a fading spiral ripple, leaving a clean readable footprint.
+
+Style: project-native clean HD 2D game FX, crisp silhouette, energetic but cute underwater fantasy lighting, high contrast cyan/blue/violet palette matching Romi. Not pixel art. Exactly four FX frames only.

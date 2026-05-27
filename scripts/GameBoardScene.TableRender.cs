@@ -90,7 +90,20 @@ public partial class GameBoardScene
 					AddSandBurialOverlay(cardPositions[cardIndex], baseZIndex + 1);
 				}
 
-				Texture2D? attachmentOverlayTexture = tableCardData.Card.HasValue && (tableCardData.IsFaceUp || showMainPlayerPreview)
+				Texture2D? slimeOverlayTexture = tableCardData.IsSlimeCoated ? _slimeCardOverlayTexture : null;
+				if (slimeOverlayTexture != null)
+				{
+					AddCardAttachmentOverlay(
+						_centerArena,
+						slimeOverlayTexture,
+						cardPositions[cardIndex],
+						CardVisualSize,
+						0.0f,
+						baseZIndex + 1,
+						showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f);
+				}
+
+				Texture2D? attachmentOverlayTexture = slimeOverlayTexture == null && tableCardData.Card.HasValue && (tableCardData.IsFaceUp || showMainPlayerPreview)
 					? GetCardAttachmentOverlayTexture(tableCardData.Card.Value)
 					: null;
 				if (attachmentOverlayTexture != null)

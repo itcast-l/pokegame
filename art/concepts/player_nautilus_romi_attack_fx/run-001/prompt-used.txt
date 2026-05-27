@@ -1,0 +1,15 @@
+Create exactly one 2x2 animation sprite sheet for Romi's nautilus-themed attack FX. Use the provided Romi nautilus avatar image only as a visual style reference for palette and material language: electric cyan, turquoise, deep blue, violet shell highlights, glossy underwater glow, pearl bubbles, and clean HD game-sprite rendering. Use the layout guide image only to understand the invisible 2 rows x 2 columns, equal cell spacing, centering, and safe padding. Do not reproduce the layout guide: no boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Important subject rule: this is an attack effect sheet only, not a character animation. Do not draw Romi's body. Do not draw a nautilus creature, eyes, face, tentacles, fins, full shell body, card UI, weapon, hand, or character silhouette. The effect may use an abstract nautilus spiral glyph, shell-curve energy, bubbles, water ribbons, and luminous vortex shapes, but it must remain a pure FX asset.
+
+Canvas and layout: one clean HD 2D game FX sprite sheet, exactly 4 equal cells arranged 2 rows x 2 columns, 1024x1024 overall if possible. The background must be 100% solid flat magenta #FF00FF across the entire sheet including all space between cells. No visible grid lines, no text, no numbers, no arrows, no UI, no watermark. Each frame must be centered in its cell with the same visual scale and similar bounding box. Leave generous magenta margin on every side. No effect element may cross or touch a cell edge.
+
+Attack FX concept: "spiral shell pressure burst" for Romi. It should feel like a magical water-pressure attack released from a nautilus spiral: cute, bright, aquatic, and readable at game size. The motion should read as a compact attack FX sequence from build-up to release to fade.
+
+Frame content:
+Top-left frame 1: wind-up. A small bright cyan nautilus spiral sigil forms at the center, with a few tight blue-violet water arcs curling inward and tiny pearl bubbles.
+Top-right frame 2: charge. The spiral grows brighter and denser, water ribbons wrap clockwise around it, shell-like crescent highlights appear, and bubbles compress toward the center.
+Bottom-left frame 3: peak attack. A compact aqua-white spiral burst opens outward like a shell-shaped water shockwave, with violet rim light, short curved water slashes, sparkling droplets, and a strong readable spiral core.
+Bottom-right frame 4: fade. The burst dissolves into translucent blue-violet crescent afterimages, scattered pearl bubbles, and a faint circular ripple while keeping the same centered footprint.
+
+Style: project-native clean HD 2D game FX, crisp readable silhouette, polished hand-painted glow, glossy underwater fantasy lighting, high contrast cyan/blue/violet palette matching Romi. Not pixel art. Exactly four FX frames only.

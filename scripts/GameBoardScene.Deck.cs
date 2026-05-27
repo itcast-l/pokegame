@@ -28,13 +28,14 @@ public partial class GameBoardScene
 		_mantaRayTideShiftCheckedThisTurn = false;
 		_jellyfishBubbleTriggeredThisTurn = false;
 		_jellyfishDisabledMainPlayerHandSlotIndex = -1;
-		_gardenEelCaptureCountUntilSandAmbush = 0;
-		_gardenEelSandAmbushReady = false;
+		_gardenEelCaptureCountUntilSandBite = 0;
+		_gardenEelSandBiteReady = false;
 		_gardenEelBuriedTableCardIndex = -1;
 		_nautilusMainPlayerCaptureCountUntilBomb = 0;
 		_narwhalCaptureCountUntilDouble = 0;
 		_narwhalDoubleReady = false;
 		_leafySeadragonBladeBreakCooldownTurns = 0;
+		_seaSlugMissCountUntilSlime = 0;
 		_dragonPrinceJackUsed = false;
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();

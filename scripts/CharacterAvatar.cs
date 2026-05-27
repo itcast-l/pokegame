@@ -4,6 +4,15 @@ using Godot;
 
 public partial class CharacterAvatar : Control
 {
+	private const string NarwhalAvatarRootPath = "res://art/characters/player_narwhal_avatar/run-001";
+	private const string NarwhalAttackFxRootPath = "res://art/fx/player_narwhal_tusk_break/run-001";
+	private const int AttackFxFrameCount = 4;
+	private const float AttackFxFrameSeconds = 0.12f;
+	private const float AttackFxVisualScale = 1.28f;
+	private const float AttackFxStartScale = 0.78f;
+	private const float AttackFxEndScale = 1.06f;
+	private const int AttackFxZIndex = 8;
+
 	public enum AvatarAction
 	{
 		Idle,
@@ -33,6 +42,7 @@ public partial class CharacterAvatar : Control
 	public bool LoadActionFrames { get; set; } = true;
 
 	private string _avatarRoot = CharacterAvatarCatalog.Default.RootPath;
+	private string _attackFxRoot = "";
 
 	[Export]
 	public string AvatarRoot
@@ -48,23 +58,50 @@ public partial class CharacterAvatar : Control
 				return;
 			}
 
+			string previousRoot = _avatarRoot;
 			_avatarRoot = nextRoot;
+			UpdateAttackFxRootForAvatarRoot(previousRoot);
 			if (IsNodeReady())
 			{
 				LoadGeneratedActionFrames();
+				LoadAttackFxFrames();
 				BeginActionFrames(_currentAction);
+			}
+		}
+	}
+
+	[Export]
+	public string AttackFxRoot
+	{
+		get => _attackFxRoot;
+		set
+		{
+			string nextRoot = value.Trim();
+			if (_attackFxRoot == nextRoot)
+			{
+				return;
+			}
+
+			_attackFxRoot = nextRoot;
+			if (IsNodeReady())
+			{
+				LoadAttackFxFrames();
 			}
 		}
 	}
 
 	private Control _portraitPivot = default!;
 	private TextureRect _portrait = default!;
+	private TextureRect _attackFx = default!;
 	private AnimationPlayer _frameAnimationPlayer = default!;
 	private Texture2D? _idleFallbackTexture;
 	private Tween? _actionTween;
 	private Tween? _pulseTween;
+	private Tween? _attackFxTween;
 	private static readonly Dictionary<string, AvatarFrameCache> ActionFrameCache = new();
+	private static readonly Dictionary<string, Texture2D[]> AttackFxFrameCache = new();
 	private readonly Dictionary<AvatarAction, Texture2D[]> _actionFrames = new();
+	private Texture2D[] _attackFxFrames = Array.Empty<Texture2D>();
 	private AvatarAction _currentAction = AvatarAction.Idle;
 	private AvatarAction _frameAction = AvatarAction.Idle;
 	private Vector2 _basePivotPosition;
@@ -78,11 +115,15 @@ public partial class CharacterAvatar : Control
 		MouseFilter = MouseFilterEnum.Ignore;
 		_portraitPivot = GetNode<Control>("PortraitPivot");
 		_portrait = GetNode<TextureRect>("PortraitPivot/Portrait");
+		_attackFx = GetNodeOrNull<TextureRect>("AttackFx") ?? CreateAttackFxRect();
 		_frameAnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? CreateFrameAnimationPlayer();
 		_portrait.MouseFilter = MouseFilterEnum.Ignore;
 		_portraitPivot.MouseFilter = MouseFilterEnum.Ignore;
+		_attackFx.MouseFilter = MouseFilterEnum.Ignore;
 
+		UpdateAttackFxRootForAvatarRoot(AvatarRoot);
 		LoadGeneratedActionFrames();
+		LoadAttackFxFrames();
 
 		if (PortraitTexture != null)
 		{
@@ -202,6 +243,7 @@ public partial class CharacterAvatar : Control
 	public void PlayAttack()
 	{
 		StartAction(AvatarAction.Attack);
+		PlayAttackFx();
 
 		_actionTween = CreateTween();
 		_actionTween.TweenInterval(GetActionFrameDuration(AvatarAction.Attack) * GetActionFrameCount(AvatarAction.Attack));
@@ -252,6 +294,9 @@ public partial class CharacterAvatar : Control
 	{
 		_actionTween?.Kill();
 		_actionTween = null;
+		_attackFxTween?.Kill();
+		_attackFxTween = null;
+		HideAttackFx();
 		_currentAction = action;
 		_scorePulse = 0.0f;
 		_hitPulse = 0.0f;
@@ -303,6 +348,48 @@ public partial class CharacterAvatar : Control
 		}
 	}
 
+	private void LoadAttackFxFrames()
+	{
+		_attackFxFrames = LoadFxFrames(AttackFxRoot);
+		HideAttackFx();
+	}
+
+	private void PlayAttackFx()
+	{
+		if (_attackFxFrames.Length == 0)
+		{
+			return;
+		}
+
+		LayoutAttackFx();
+		_attackFx.Visible = true;
+		_attackFx.Texture = _attackFxFrames[0];
+		_attackFx.Modulate = Colors.White;
+		_attackFx.Scale = Vector2.One * AttackFxStartScale;
+
+		_attackFxTween = CreateTween();
+		_attackFxTween.SetParallel(true);
+		_attackFxTween.SetTrans(Tween.TransitionType.Sine);
+		_attackFxTween.SetEase(Tween.EaseType.Out);
+		_attackFxTween.TweenProperty(_attackFx, "scale", Vector2.One * AttackFxEndScale, AttackFxFrameSeconds * AttackFxFrameCount);
+		_attackFxTween.TweenProperty(_attackFx, "modulate:a", 0.0f, AttackFxFrameSeconds * AttackFxFrameCount);
+		FrameAnimationHelpers.TweenTextureFrames(_attackFxTween, _attackFx, _attackFxFrames, AttackFxFrameSeconds);
+		_attackFxTween.Finished += HideAttackFx;
+	}
+
+	private void HideAttackFx()
+	{
+		if (_attackFx == null)
+		{
+			return;
+		}
+
+		_attackFx.Visible = false;
+		_attackFx.Texture = null;
+		_attackFx.Modulate = Colors.White;
+		_attackFx.Scale = Vector2.One;
+	}
+
 	private void BeginActionFrames(AvatarAction action)
 	{
 		_frameAction = action;
@@ -343,6 +430,22 @@ public partial class CharacterAvatar : Control
 		};
 		AddChild(animationPlayer);
 		return animationPlayer;
+	}
+
+	private TextureRect CreateAttackFxRect()
+	{
+		var attackFx = new TextureRect
+		{
+			Name = "AttackFx",
+			MouseFilter = MouseFilterEnum.Ignore,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			ZIndex = AttackFxZIndex,
+			Visible = false,
+		};
+		AddChild(attackFx);
+		return attackFx;
 	}
 
 	private void AnimateDrawPulse(Action<float> applyPulse, float from, float to, float seconds)
@@ -399,6 +502,27 @@ public partial class CharacterAvatar : Control
 		return cachedFrames;
 	}
 
+	private static Texture2D[] LoadFxFrames(string fxRoot)
+	{
+		if (string.IsNullOrWhiteSpace(fxRoot))
+		{
+			return Array.Empty<Texture2D>();
+		}
+
+		if (AttackFxFrameCache.TryGetValue(fxRoot, out Texture2D[]? cachedFrames))
+		{
+			return cachedFrames;
+		}
+
+		Texture2D[] frames = FrameAnimationHelpers.LoadTextureFrames(
+			$"{fxRoot}/processed/fx-{{0}}.png",
+			AttackFxFrameCount,
+			"avatar attack effect",
+			preferImageFile: true);
+		AttackFxFrameCache[fxRoot] = frames;
+		return frames;
+	}
+
 	private static StringName GetActionAnimationName(AvatarAction action)
 	{
 		return new StringName($"avatar_{GetActionSlug(action)}");
@@ -420,6 +544,40 @@ public partial class CharacterAvatar : Control
 		{
 			_portraitPivot.Position = _basePivotPosition;
 		}
+
+		LayoutAttackFx();
+	}
+
+	private void LayoutAttackFx()
+	{
+		if (_attackFx == null)
+		{
+			return;
+		}
+
+		float side = Mathf.Max(1.0f, Mathf.Min(Size.X, Size.Y) * AttackFxVisualScale);
+		_attackFx.Size = new Vector2(side, side);
+		_attackFx.PivotOffset = _attackFx.Size / 2.0f;
+		_attackFx.Position = (Size - _attackFx.Size) / 2.0f;
+	}
+
+	private void UpdateAttackFxRootForAvatarRoot(string previousRoot)
+	{
+		string previousDefaultFxRoot = GetDefaultAttackFxRoot(previousRoot);
+		if (!string.IsNullOrWhiteSpace(_attackFxRoot)
+			&& !string.Equals(_attackFxRoot, previousDefaultFxRoot, StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		_attackFxRoot = GetDefaultAttackFxRoot(AvatarRoot);
+	}
+
+	private static string GetDefaultAttackFxRoot(string avatarRoot)
+	{
+		return string.Equals(avatarRoot, NarwhalAvatarRootPath, StringComparison.Ordinal)
+			? NarwhalAttackFxRootPath
+			: "";
 	}
 
 	private static bool TryParseAction(string actionName, out AvatarAction action)

@@ -1,0 +1,17 @@
+Create exactly one 2x2 animation sprite sheet for Aili's attack FX only. This is a pure visual effect layer to overlay near the avatar, not a character animation.
+
+Use the layout guide image just shown only to understand the invisible 2 rows x 2 columns, equal cell spacing, centering, and safe padding. Do not reproduce the guide: no boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Important subject rule: draw only the attack effect. Do not draw Aili. Do not draw any leafy seadragon body, head, eye, face, tail, fins attached to a body, creature silhouette, card, target, hand, weapon, portrait, UI, scene background, or character pose. The effect may use abstract leafy sea-dragon motifs: floating leaf-shaped cyan blades, thin water crescents, turquoise ribbons, blue-violet glow beads, tiny aqua star sparks, and translucent afterimages.
+
+Canvas and layout: one clean HD 2D game FX sprite sheet, exactly 4 equal cells arranged 2 rows x 2 columns, 1024x1024 overall. Background must be 100% solid flat magenta #FF00FF across the entire sheet including all spaces between cells. No visible grid lines, no text, no numbers, no arrows, no UI, no watermark, no transparent checkerboard. Each frame centered in its cell with the same visual scale and similar bounding box. Leave generous magenta margin on every side. No effect element may cross or touch a cell edge.
+
+Attack FX concept: "Aili leafy mirage cut". It should feel like a cute but sharp aquatic leaf-blade illusion that cleanly cuts away something, matching Aili's blue, cyan, turquoise, sapphire, violet, and small glowing-dot visual language. Avoid generic sword slash. Avoid a full creature silhouette. Avoid large detached explosion. The motion should read as gather -> leafy mirage slash -> cut peak -> fading afterimage.
+
+Frame content:
+Top-left frame 1: wind-up. Three small curved aqua leaf-blade glints gather near center, with tiny blue-violet glow beads and short circular water ripples pulled inward.
+Top-right frame 2: slash release. A compact diagonal fan of translucent cyan leaf blades sweeps from upper-left toward lower-right, with a bright aqua-white cutting edge and small violet spark dots.
+Bottom-left frame 3: cut peak. The brightest frame: two crossing crescent leaf-water slashes form a sharp X-like cut mark, with short turquoise shards, tiny star glints, and a few blue-violet beads bursting outward, still compact and centered.
+Bottom-right frame 4: dissolve. The leaf blades break into faint cyan afterimage strokes, drifting tiny glow beads, and soft curved water wisps fading away, leaving a clean readable footprint.
+
+Style: project-native clean HD 2D game FX, crisp silhouette, smooth underwater glow, glossy aqua highlights, high contrast cyan / turquoise / deep blue / violet palette matching Aili. Not pixel art. Exactly four FX frames only.

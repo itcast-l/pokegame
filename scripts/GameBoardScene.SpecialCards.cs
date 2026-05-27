@@ -273,7 +273,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 				CardEffectTypes.RevealCards => await _runtime.ResolveRevealCardsEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.ShuffleTable => await _runtime.ResolveShuffleTableEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.CollectTable => await _runtime.ResolveCollectTableEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.StealCard => _runtime.ResolveStealCardEffect(request),
+				CardEffectTypes.StealCard => await _runtime.ResolveStealCardEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.StealDeckCards => _runtime.ResolveStealDeckCardsEffect(request),
 				CardEffectTypes.DoubleCollect => await _runtime.ResolveDoubleCollectEffectAsync(request, turnSequenceGeneration),
 				CardEffectTypes.ExtraTurn => await _runtime.ResolveExtraTurnEffectAsync(request, turnSequenceGeneration),

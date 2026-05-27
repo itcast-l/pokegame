@@ -83,6 +83,20 @@ public partial class GameBoardScene
 		return localizedText == key ? fallbackText : localizedText;
 	}
 
+	private string GetMagnetAttachmentCountdownHint()
+	{
+		if (!string.IsNullOrEmpty(_pendingItemCardId))
+		{
+			string description = GetItemDescription(_pendingItemCardId, _itemCardCatalog.GetDescriptionKey(_pendingItemCardId));
+			if (!string.IsNullOrWhiteSpace(description) && description != _pendingItemCardId)
+			{
+				return description;
+			}
+		}
+
+		return Localize("GAME_SELECT_BASE_CARD");
+	}
+
 	private void RefreshItemCardDescriptions()
 	{
 		foreach (string itemCardId in _enabledSceneItemCardIds)
@@ -114,7 +128,7 @@ public partial class GameBoardScene
 
 		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
 		{
-			_magnetAttachmentCountdownHintLabel.Text = Localize("GAME_SELECT_BASE_CARD");
+			_magnetAttachmentCountdownHintLabel.Text = GetMagnetAttachmentCountdownHint();
 		}
 
 		RefreshItemCardDescriptions();
@@ -145,6 +159,10 @@ public partial class GameBoardScene
 		else if (_pendingItemSelectionMode == PendingItemSelectionMode.TargetHandCard)
 		{
 			ShowTargetHandSelection(_revealedPlayerHandIndex);
+		}
+		else if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
+		{
+			ShowHandLimitDiscardSelection();
 		}
 	}
 

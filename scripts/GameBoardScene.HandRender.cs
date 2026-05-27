@@ -31,6 +31,7 @@ public partial class GameBoardScene
 			float cardRotation = GetCardRotationDegreesForPlayer(playerIndex);
 			bool canMainPlayerAct = CanMainPlayerAct();
 			bool isMagnetSelectionActive = IsMainPlayerMagnetSelectionActive();
+			bool isHandLimitDiscardSelectionActive = IsMainPlayerHandLimitDiscardSelectionActive();
 
 			void AddHandCard(
 				Texture2D? texture,
@@ -130,6 +131,12 @@ public partial class GameBoardScene
 							return;
 						}
 
+						if (isHandLimitDiscardSelectionActive)
+						{
+							TryCompleteMainPlayerHandLimitDiscard(inputEvent, displayIndex);
+							return;
+						}
+
 						if (itemHandIndex >= 0)
 						{
 							TryPlayMainPlayerItemCard(inputEvent, itemHandIndex);
@@ -140,10 +147,11 @@ public partial class GameBoardScene
 					};
 				}
 
-				if (!string.IsNullOrEmpty(tooltipText))
+				string effectiveTooltipText = isJellyfishDisabled ? Localize("GAME_CARD_DISABLED_THIS_TURN") : tooltipText;
+				if (!string.IsNullOrEmpty(effectiveTooltipText))
 				{
 					Label descriptionLabel = CreateCardDescriptionLabel(
-						tooltipText,
+						effectiveTooltipText,
 						GetHandCardDescriptionPosition(playerIndex),
 						new Vector2(204.0f, 42.0f));
 					cardSlot.AddChild(descriptionLabel);
@@ -180,16 +188,20 @@ public partial class GameBoardScene
 
 			for (int cardIndex = 0; cardIndex < visibleHandCount; cardIndex++)
 			{
-				PlayingCard card = hand[cardIndex];
-				bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
-				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
-				bool showMagnetSelectionHighlight = isMagnetSelectionActive
-					&& playerIndex == MainPlayerIndex
-					&& IsAttachableMagnetCard(card, _pendingItemCardId);
-				bool isJellyfishDisabled = IsJellyfishDisabledHandDisplaySlot(playerIndex, cardIndex);
-				bool isMagnetSelectionCard = showMagnetSelectionHighlight && !isJellyfishDisabled;
-				bool isPlayable = isMagnetSelectionCard
-					|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
+					PlayingCard card = hand[cardIndex];
+					bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+					Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
+					bool showMagnetSelectionHighlight = isMagnetSelectionActive
+						&& playerIndex == MainPlayerIndex
+						&& IsAttachableMagnetCard(card, _pendingItemCardId);
+					bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
+						&& IsJellyfishDisabledHandDisplaySlot(playerIndex, cardIndex);
+					bool isMagnetSelectionCard = showMagnetSelectionHighlight && !isJellyfishDisabled;
+					bool isHandLimitDiscardSelectionCard = isHandLimitDiscardSelectionActive
+						&& playerIndex == MainPlayerIndex;
+					bool isPlayable = isMagnetSelectionCard
+						|| isHandLimitDiscardSelectionCard
+						|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
 				AddHandCard(
 					texture,
 					cardIndex,
@@ -211,11 +223,10 @@ public partial class GameBoardScene
 				Texture2D? texture = showCardBack ? _cardBackTexture : itemCard.Texture;
 				float visualScale = showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id);
 				int displayIndex = hand.Count + itemIndex;
-				bool isJellyfishDisabled = IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
-				bool isPlayable = !isJellyfishDisabled
-					&& playerIndex == MainPlayerIndex
-					&& canMainPlayerAct
-					&& CanPlayItemCard(playerIndex, itemCard.Id);
+					bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
+						&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
+				bool isPlayable = playerIndex == MainPlayerIndex
+					&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
 				string tooltipText = !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
 					? description
 					: string.Empty;

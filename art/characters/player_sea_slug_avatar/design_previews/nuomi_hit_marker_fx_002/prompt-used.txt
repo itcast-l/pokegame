@@ -1,0 +1,19 @@
+Create a 2x2 animation sprite sheet for a standalone hit marker that appears on the target when Nuomi's soft sea-slug attack lands.
+
+FX marker only. Do not draw Nuomi, any character body, cat, paws, paw prints, claws, scratch marks, weapons, UI, cards, scenery, labels, or text. Avoid cartoon sticker style, mascot icon style, thick rounded badge outlines, cute star icons, emoji shapes, magic spell circles, big explosions, and particle-heavy VFX.
+
+Use the layout guide only for invisible slot count, centering, scale consistency, and safe padding. Do not reproduce guide boxes, borders, center marks, labels, black lines, or guide colors. The final image must be one square 1024x1024 PNG with exactly four equal cells in a 2x2 grid, no visible dividers, no labels, no text, on a flat solid #FF00FF magenta background.
+
+Visual style should match the existing game FX: clean high-resolution underwater sprite art, thin bright white-cyan highlights, translucent aqua water film, subtle teal rim, very small lavender-pink glints only as accents, crisp irregular edges, limited droplets. The marker should read as a soft wet impact imprint: a compressed oval water glint, a thin ripple crease, and a few tiny droplets close to the center. It should be understated and game-like, not a big icon. Keep the effect mostly white, cyan, and pale aqua; avoid large purple or pink filled areas.
+
+Keep the marker centered in each cell, same anchor and similar scale across frames, inside the central 45% safe area with generous magenta padding. Nothing may touch or cross cell edges. The design should stay compact, with no wide splash crown, no thick outline, no large star badge.
+
+Frame 1 top-left: pre-contact. A tiny narrow white-cyan crescent glint with two faint droplets, low opacity, centered.
+
+Frame 2 top-right: contact. A thin translucent aqua oval impact crease appears, slightly squashed horizontally, bright white highlight on one side, two small droplets and a faint lavender rim.
+
+Frame 3 bottom-left: peak. The oval water imprint is widest and clearest, with an irregular soft white-cyan membrane edge, a short central white streak, pale aqua inner transparency, and only a few close droplets. Still subtle and compact. Do not fill the oval with saturated pink or purple.
+
+Frame 4 bottom-right: fade. The imprint breaks into a thin partial crescent and tiny fading droplets, low opacity, centered.
+
+No visible grid lines. No text. No character. No background except pure #FF00FF.

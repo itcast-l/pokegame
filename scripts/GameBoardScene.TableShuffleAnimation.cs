@@ -107,6 +107,116 @@ public partial class GameBoardScene
 		}
 	}
 
+	private async Task PlayMantaRayTideShiftTableMoveAnimationAsync(int turnSequenceGeneration)
+	{
+		if (!IsInsideTree() || _tableCards.Count <= 1)
+		{
+			return;
+		}
+
+		List<ShuffledTableCardVisual> tideShiftVisuals = BuildMantaRayTideShiftTableMoveVisuals();
+		if (tideShiftVisuals.Count == 0)
+		{
+			return;
+		}
+
+		var hiddenStates = new List<bool>(_tableCards.Count);
+		foreach (TableCard tableCard in _tableCards)
+		{
+			hiddenStates.Add(tableCard.IsHiddenDuringCapture);
+			tableCard.IsHiddenDuringCapture = true;
+		}
+		RenderTableCards();
+
+		var flightCards = new List<Control>(tideShiftVisuals.Count);
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.InOut);
+			for (int visualIndex = 0; visualIndex < tideShiftVisuals.Count; visualIndex++)
+			{
+				ShuffledTableCardVisual visual = tideShiftVisuals[visualIndex];
+				bool wrapsToEnd = visualIndex == 0;
+				Control flightCard = CreateShuffledTableCardFlight(visual, visualIndex);
+				if (wrapsToEnd)
+				{
+					flightCard.ZIndex += _tableCards.Count * 4;
+				}
+
+				flightCards.Add(flightCard);
+
+				float delay = wrapsToEnd
+					? 0.0f
+					: Mathf.Min(0.08f, visualIndex * MantaRayTideShiftTableSlideStaggerSeconds);
+				float duration = wrapsToEnd ? MantaRayTideShiftTableMoveSeconds : MantaRayTideShiftTableSlideSeconds;
+				tween.TweenMethod(
+						Callable.From<float>(progress => UpdateMantaRayTideShiftTableCardFlight(
+							flightCard,
+							visual,
+							wrapsToEnd,
+							progress)),
+						0.0f,
+						1.0f,
+						duration)
+					.SetDelay(delay);
+			}
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			int restoreCount = Math.Min(hiddenStates.Count, _tableCards.Count);
+			for (int index = 0; index < restoreCount; index++)
+			{
+				_tableCards[index].IsHiddenDuringCapture = hiddenStates[index];
+			}
+
+			foreach (Control flightCard in flightCards)
+			{
+				if (GodotObject.IsInstanceValid(flightCard))
+				{
+					flightCard.QueueFree();
+				}
+			}
+
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				RenderTableCards();
+			}
+		}
+	}
+
+	private List<ShuffledTableCardVisual> BuildMantaRayTideShiftTableMoveVisuals()
+	{
+		var visuals = new List<ShuffledTableCardVisual>();
+		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		if (cardPositions.Count != _tableCards.Count)
+		{
+			return visuals;
+		}
+
+		int lastIndex = _tableCards.Count - 1;
+		for (int sourceIndex = 0; sourceIndex < _tableCards.Count; sourceIndex++)
+		{
+			int targetIndex = sourceIndex == 0 ? lastIndex : sourceIndex - 1;
+			int zIndex = sourceIndex == 0 ? _tableCards.Count * 2 + 4 : sourceIndex * 2;
+			ShuffledTableCardVisual? visual = BuildShuffledTableCardVisual(
+				_tableCards[sourceIndex],
+				_centerArena.GlobalPosition + cardPositions[sourceIndex],
+				_centerArena.GlobalPosition + cardPositions[targetIndex],
+				Vector2.Zero,
+				zIndex);
+			if (visual.HasValue)
+			{
+				visuals.Add(visual.Value);
+			}
+		}
+
+		return visuals;
+	}
+
 	private List<ShuffledTableCardVisual> BuildShuffledTableCardVisuals(IReadOnlyList<TableCard> shuffledTableCards)
 	{
 		var visuals = new List<ShuffledTableCardVisual>();
@@ -191,7 +301,12 @@ public partial class GameBoardScene
 		Texture2D? itemOverlayTexture = null;
 		Vector2 itemOverlayPosition = Vector2.Zero;
 		Vector2 itemOverlaySize = CardVisualSize;
-		if (tableCard.Card.HasValue && (tableCard.IsFaceUp || showMainPlayerPreview))
+		if (tableCard.Card.HasValue && tableCard.IsSlimeCoated)
+		{
+			itemOverlayTexture = _slimeCardOverlayTexture;
+		}
+
+		if (itemOverlayTexture == null && tableCard.Card.HasValue && (tableCard.IsFaceUp || showMainPlayerPreview))
 		{
 			itemOverlayTexture = GetCardAttachmentOverlayTexture(tableCard.Card.Value);
 		}
@@ -323,6 +438,32 @@ public partial class GameBoardScene
 
 		flightCard.GlobalPosition = gatherGlobalPosition.Lerp(visual.TargetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = direction * Mathf.Lerp(TableShuffleRotationDegrees, 0.0f, easedProgress);
+	}
+
+	private static void UpdateMantaRayTideShiftTableCardFlight(Control flightCard, ShuffledTableCardVisual visual, bool wrapsToEnd, float progress)
+	{
+		if (!GodotObject.IsInstanceValid(flightCard))
+		{
+			return;
+		}
+
+		float clampedProgress = Mathf.Clamp(progress, 0.0f, 1.0f);
+		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
+		Vector2 position = visual.StartGlobalPosition.Lerp(visual.TargetGlobalPosition, easedProgress);
+		if (!wrapsToEnd)
+		{
+			flightCard.GlobalPosition = position;
+			flightCard.RotationDegrees = 0.0f;
+			return;
+		}
+
+		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
+		flightCard.GlobalPosition = position + new Vector2(0.0f, -pulse * MantaRayTideShiftMovedCardArcHeight);
+		flightCard.RotationDegrees = Mathf.Lerp(
+			-MantaRayTideShiftMovedCardRotationDegrees,
+			MantaRayTideShiftMovedCardRotationDegrees,
+			easedProgress);
+		flightCard.Scale = Vector2.One * (1.0f + pulse * 0.08f);
 	}
 
 	private static Vector2 GetTableShuffleCenterOffset(int visualIndex)

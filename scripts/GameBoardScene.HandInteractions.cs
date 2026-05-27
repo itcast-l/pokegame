@@ -33,6 +33,21 @@ public partial class GameBoardScene
 		_ = CompleteMagnetAttachmentSelectionAsync(handIndex);
 	}
 
+	private void TryCompleteMainPlayerHandLimitDiscard(InputEvent inputEvent, int displayIndex)
+	{
+		if (!IsMainPlayerHandLimitDiscardSelectionActive())
+		{
+			return;
+		}
+
+		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+		{
+			return;
+		}
+
+		CompleteHandLimitDiscardSelection(displayIndex);
+	}
+
 	private void TryPlayMainPlayerItemCard(InputEvent inputEvent, int itemHandIndex)
 	{
 		if (!CanMainPlayerAct())

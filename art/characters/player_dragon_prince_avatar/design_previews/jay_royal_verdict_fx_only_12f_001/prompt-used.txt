@@ -1,0 +1,21 @@
+Create exactly one project-native clean HD / pixel-inspired 2D game FX-only animation sprite sheet for Jay J, the Dragon Prince elite enemy, showing the attack effect AFTER Jay has launched the attack. Use the first input image just shown only as palette and theme reference: electric cyan, deep blue, ivory white, gold royal sigils, polished aquatic dragon-prince energy. Do NOT draw Jay himself. Do NOT draw any character body, dragon head, face, eyes, claws, hands, armor, cloak, shoulder plates, weapon, creature silhouette, or full dragon. Use the second input image only as a layout guide for an invisible 3 rows x 4 columns grid, equal frame slots, centering, spacing, and safe padding. Do not reproduce any guide boxes, safe rectangles, center marks, labels, borders, or guide background.
+
+Output requirements: one 1536x1024 PNG sprite sheet, exactly 12 frames arranged 3 rows x 4 columns. Entire background must be 100% solid flat #FF00FF magenta, including space between cells. No text, no labels, no UI, no numbers, no watermarks, no visible grid lines, no borders. Every frame must contain only the same attack FX identity and same approximate scale, centered in its cell. All flame, sigil rings, card-shaped light shards, sparks, shockwaves, trails, smoke, and glow must fit fully inside each cell with clear magenta margin. No frame may touch or cross its cell edge.
+
+Animation concept: “Royal Dragon Verdict - launched FX”. This is the independent after-attack visual effect that appears in front of the target after Jay attacks. It should feel like the third-ranked elite enemy: controlled, powerful, regal, and stronger than normal characters. The effect is a compact blue-white royal dragonfire verdict blast with gold law-circle sigils and abstract card-light shards being collected into the blast. It must read as an elite enemy attack effect, not a body animation.
+
+Frame order, left-to-right then top-to-bottom:
+1. Small cyan spark and faint gold rune circle appear at center, minimal ignition.
+2. Spark opens into a tight blue-white spiral, tiny gold card-light shards start orbiting inward.
+3. Spiral grows into a compact dragonfire core, ivory-white center and deep blue outer flame.
+4. Gold royal sigil ring snaps fully open behind the core, card-light shards align in a circle.
+5. Forward blast begins: triangular blue-white flame lance pushes from left-center toward right-center, still compact.
+6. Blast thickens with three claw-like cyan flame prongs and gold rune sparks, highest forward motion.
+7. Peak impact: bright white-blue burst with a circular gold law seal, card shards pulled into the center, powerful but contained.
+8. Shockwave frame: cyan crescent wave expands around the burst, deep blue flame curls backward.
+9. Collapse begins: white core dims, gold ring fractures into luminous card-shaped shards.
+10. Aftershock: rotating blue flame ribbons and scattered gold shards, smaller than peak.
+11. Dissolve: faint cyan embers, pearl sparks, broken rune fragments drifting inward.
+12. Loop-ready fade: tiny residual cyan spark and a few gold motes, close to frame 1 but weaker.
+
+Style: match the existing game avatar style: polished clean HD sprite with pixel-inspired crisp edges, high contrast aquatic blue/cyan/white/gold palette, sharp readable silhouette, smooth glow, no painterly scene, no realistic smoke, no background elements. FX-only asset. No characters, no body parts, no dragon face, no readable cards, no UI.

@@ -24,7 +24,6 @@ public partial class GameBoardScene
 					continue;
 				}
 
-				ClearGardenEelBuriedCardIfNeeded(playerIndex);
 				await ResolveAdventureEnemyTurnStartAbilityAsync(playerIndex, turnSequenceGeneration);
 				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 				{
@@ -191,14 +190,6 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		if (ShouldGardenEelBuryNextPlayedCard(playerIndex) && _playerHands[playerIndex].Count > 0)
-		{
-			return await PlayCardFromHandAsync(
-				playerIndex,
-				_rng.RandiRange(0, _playerHands[playerIndex].Count - 1),
-				turnSequenceGeneration);
-		}
-
 		int selectedIndex = _rng.RandiRange(0, playableCount - 1);
 		if (selectedIndex < _playerHands[playerIndex].Count)
 		{
@@ -245,6 +236,12 @@ public partial class GameBoardScene
 					return;
 				}
 			}
+		}
+
+		await PlayMantaRayTideShiftTableMoveAnimationAsync(turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))
+		{
+			return;
 		}
 
 		_tableCards.RemoveAt(0);
@@ -371,6 +368,11 @@ public partial class GameBoardScene
 	private bool CanPlayItemCard(int playerIndex, string itemCardId)
 	{
 		if (!_itemCardCatalog.IsPlayable(itemCardId))
+		{
+			return false;
+		}
+
+		if (IsItemEffectType(itemCardId, CardEffectTypes.PlaceTablePairDestroy) && _tableCards.Count == 0)
 		{
 			return false;
 		}
@@ -519,6 +521,13 @@ public partial class GameBoardScene
 	{
 		return !IsGameOver()
 			&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+			&& _pendingItemOwnerIndex == MainPlayerIndex;
+	}
+
+	private bool IsMainPlayerHandLimitDiscardSelectionActive()
+	{
+		return !IsGameOver()
+			&& _pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
 			&& _pendingItemOwnerIndex == MainPlayerIndex;
 	}
 

@@ -1,0 +1,15 @@
+Use the image just shown as the visual reference only for Soft Candy's identity, palette, glow, and glossy translucent gummy material. Do not draw the jellyfish character, face, eyes, body, portrait, cards, UI, or any target avatar.
+
+Create exactly one 2x2 animation sprite sheet for a 2D game attack FX. It must be FX-only, clean HD, project-native ocean fantasy style, and designed to be overlaid directly on top of a player avatar portrait as a compact local whip impact.
+
+Canvas and grid: exactly 1024x1024 pixels, four equal 512x512 cells arranged 2 rows x 2 columns. The entire background must be 100% solid flat magenta #FF00FF, including all spaces between cells. No visible grid lines, no borders, no labels, no text, no numbers, no arrows, no watermark. Every frame must be centered in its own cell, same visual scale, same approximate bounding box, and leave generous magenta padding on all four sides. No effect element may touch or cross a cell edge.
+
+Core visual: exactly two short translucent gummy jellyfish tentacles, not long horizontal tentacles. Each tentacle is a compact curved whip stroke with rounded paddle tips, glossy semi-transparent lavender-blue gel, cyan glowing core, pink-violet rim highlights, tiny bubble beads, and a few small candy glints. They should feel cute, elastic, soft, and damaging, like soft jelly ribbons snapping over a portrait. They must not look like ropes, snakes, arms, claws, spikes, blades, lightning bolts, or monster anatomy.
+
+Animation content:
+Top-left frame 1: wind-up. Two small curved gummy tentacles curl inward around an invisible avatar center, one from upper-left and one from upper-right, with a faint cyan ring forming at the middle. Compact circular composition, no long travel path.
+Top-right frame 2: snap. The same two short tentacles whip downward and inward across the invisible avatar center, crossing near the middle with bright cyan motion smears and small bubbles. Compact and centered.
+Bottom-left frame 3: hit. The two rounded tips slap the center at the same time, creating a bright aqua-white soft impact flash, tiny violet splash streaks, bubble beads, and a circular ripple. This is the strongest readable hit frame, still compact.
+Bottom-right frame 4: recoil and fade. The tentacles spring back into two short curved jelly arcs around the center, leaving fading cyan-pink afterimage wisps, bubbles, and a gentle violet ripple.
+
+Important shape rules: the FX should occupy only the central 60% to 70% of each cell. Keep it round/oval around the center, not a wide side-to-side band. No source avatar, no target avatar, no enemy-to-player connection, no projectile flight, no screen-spanning trail. Make the four frames read as one continuous local avatar slap animation.

@@ -10,16 +10,11 @@ public partial class GameBoardScene : Control
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
 	private const string StandardCardsRootPath = "StandardPokerCards";
 	private const string SuitedJqkBackupCardsNodeName = "SuitedJqkBackupCards";
-	private const string CardBackPath = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png";
-	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
-	private const int CardBackFrameCount = 4;
-	private const float CardBackAnimationFps = 6.0f;
+	private const float CardBackAnimationFps = 12.0f;
 	private const string ScoreFillEffectFramePattern = "res://art/fx/score_fill_orbs/run-001/processed/fx-{0}.png";
 	private const int ScoreFillEffectFrameCount = 4;
 	private const string EnemySpecialAbilityAvatarFxFramePattern = "res://art/fx/enemy_special_ability_avatar/run-001/processed/fx-{0}.png";
 	private const int EnemySpecialAbilityAvatarFxFrameCount = 6;
-	private const string MantaRayTideShiftCycloneFxFramePattern = "res://art/fx/player_manta_ray_tide_shift_cyclone/run-001/processed/fx-{0}.png";
-	private const int MantaRayTideShiftCycloneFxFrameCount = 1;
 	private static readonly Texture2D[] ScoreFillEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(ScoreFillEffectFramePattern, ScoreFillEffectFrameCount, "score fill effect");
 	private static readonly Texture2D[] EnemySpecialAbilityAvatarFxFrames =
@@ -29,26 +24,48 @@ public partial class GameBoardScene : Control
 			"enemy special ability avatar effect",
 			preferImageFile: true);
 	private static readonly Texture2D[] MantaRayTideShiftCycloneFxFrames =
-		FrameAnimationHelpers.LoadTextureFrames(
-			MantaRayTideShiftCycloneFxFramePattern,
-			MantaRayTideShiftCycloneFxFrameCount,
-			"manta ray tide shift cyclone effect",
-			preferImageFile: true);
+	{
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-1.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-2.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-3.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-4.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-5.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-6.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-7.png"),
+		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-8.png"),
+	};
 	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
 	private const string CatAdventureDamageEffectFramePattern = "res://art/fx/player_cat_claw_attack/run-001/processed/fx-{0}.png";
 	private const string FishAdventureDamageEffectFramePattern = "res://art/fx/fish_attack_burst/run-001/processed/fx-{0}.png";
 	private const string LanternfishAdventureDamageEffectFramePattern = "res://art/fx/lanternfish_lure_flash/run-001/processed/fx-{0}.png";
 	private const string ShrimpAdventureDamageEffectFramePattern = "res://art/fx/player_shrimp_snap_attack/run-001/processed/fx-{0}.png";
 	private const string CrabAdventureDamageEffectFramePattern = "res://art/fx/player_crab_tidal_pincer_attack/run-001/processed/fx-{0}.png";
-	private const string JellyfishAdventureDamageEffectFramePattern = "res://art/fx/player_jellyfish_sting_attack/run-001/processed/fx-{0}.png";
+	private const string JellyfishAdventureDamageEffectFramePattern = "res://art/fx/player_jellyfish_sting_attack/run-002/processed/fx-{0}.png";
+	private const string GardenEelAdventureDamageEffectFramePattern = "res://art/fx/player_garden_eel_burrow_ambush/run-001/processed/fx-{0}.png";
+	private const string SeaSlugAdventureDamageEffectFramePattern = "res://art/fx/player_sea_slug_hit_marker/run-001/processed/fx-{0}.png";
+	private const string NautilusAdventureDamageEffectFramePattern = "res://art/fx/player_nautilus_spiral_pressure_slash/run-001/processed/fx-{0}.png";
+	private const string NarwhalAdventureDamageEffectFramePattern = "res://art/fx/player_narwhal_tusk_break/run-001/processed/fx-{0}.png";
+	private const string LeafySeadragonCollectAttackEffectFramePattern = "res://art/fx/player_leafy_seadragon_collect_attack/run-002/processed/fx-{0}.png";
+	private const string LeafySeadragonBladeProjectileFramePattern = "res://art/fx/player_leafy_seadragon_leafy_mirage_slash/concept-001/processed/fx-{0}.png";
 	private const int AdventureDamageEffectFrameCount = 4;
+	private const int GardenEelAdventureDamageEffectFrameCount = 6;
+	private const int LeafySeadragonBladeProjectileFrameCount = 4;
 	private const string FishDefeatFinisherFramePattern = "res://art/characters/player_fish_avatar/run-006/fp_fx_asset_preview/abu-fp-fx-asset-{0:00}.png";
 	private const int FishDefeatFinisherFrameCount = 20;
 	private const float FishDefeatFinisherSeconds = 1.12f;
 	private static readonly Texture2D[] FishDefeatFinisherFrames =
 		FrameAnimationHelpers.LoadTextureFrames(FishDefeatFinisherFramePattern, FishDefeatFinisherFrameCount, "fish defeat finisher");
 	private static readonly Texture2D[] CardBackFrames =
-		FrameAnimationHelpers.LoadTextureFrames(CardBackFramePattern, CardBackFrameCount, "card back animation");
+	{
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-002.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-003.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-004.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-005.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-006.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-007.png"),
+		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-008.png"),
+	};
 	private static readonly Texture2D[] DefaultAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(AdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "adventure damage effect");
 	private static readonly Texture2D[] CatAdventureDamageEffectFrames =
@@ -63,6 +80,18 @@ public partial class GameBoardScene : Control
 		FrameAnimationHelpers.LoadTextureFrames(CrabAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "crab adventure damage effect");
 	private static readonly Texture2D[] JellyfishAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(JellyfishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "jellyfish adventure damage effect", preferImageFile: true);
+	private static readonly Texture2D[] GardenEelAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(GardenEelAdventureDamageEffectFramePattern, GardenEelAdventureDamageEffectFrameCount, "garden eel adventure damage effect", preferImageFile: true);
+	private static readonly Texture2D[] SeaSlugAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(SeaSlugAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "sea slug adventure damage effect", preferImageFile: true);
+	private static readonly Texture2D[] NautilusAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(NautilusAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "nautilus adventure damage effect", preferImageFile: true);
+	private static readonly Texture2D[] NarwhalAdventureDamageEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(NarwhalAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "narwhal adventure damage effect", preferImageFile: true);
+	private static readonly Texture2D[] LeafySeadragonCollectAttackEffectFrames =
+		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonCollectAttackEffectFramePattern, AdventureDamageEffectFrameCount, "leafy seadragon collect attack effect", preferImageFile: true);
+	private static readonly Texture2D[] LeafySeadragonBladeProjectileFrames =
+		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeProjectileFramePattern, LeafySeadragonBladeProjectileFrameCount, "leafy seadragon blade projectile", preferImageFile: true);
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
 	private const int QuestionCardTransformFrameCount = 6;
 	private static readonly Texture2D[] QuestionCardTransformFrames =
@@ -82,6 +111,7 @@ public partial class GameBoardScene : Control
 	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
 	private const string DoubleCardOverlayPath = "res://art/fx/double_card_overlay/run-002/processed/card-aspect.png";
 	private const string OvertimeCardOverlayPath = "res://art/fx/overtime_card_overlay/run-001/processed/card-aspect.png";
+	private const string SlimeCardOverlayPath = "res://art/fx/slime_card_overlay/run-001/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
 	private static readonly Texture2D[] MagnetCountdownFrames =
@@ -115,11 +145,12 @@ public partial class GameBoardScene : Control
 	private const string DragonQueenAdventureEnemyAvatarId = "dragon_queen_q";
 	private const string BossKAdventureEnemyAvatarId = "boss_k";
 	private const int CrabScoreReductionPerCard = 2;
-	private const int GardenEelCapturesBeforeSandAmbush = 2;
+	private const int GardenEelCapturesBeforeSandBite = 2;
 	private const int NautilusCapturesBeforeBomb = 3;
 	private const int NarwhalCapturesBeforeDouble = 2;
 	private const int LeafySeadragonBladeBreakTableCardThreshold = 5;
 	private const int LeafySeadragonBladeBreakCooldownTurns = 1;
+	private const int SeaSlugMissesBeforeSlimeCoat = 2;
 	private const int DragonRoyalCaptureThreshold = 5;
 	private const string CardNamePrefix = "Card_";
 	private const string CardBackAnimatedMeta = "ocean_card_back_animated";
@@ -145,6 +176,9 @@ public partial class GameBoardScene : Control
 	private const float TableCaptureFlightStaggerSeconds = 0.07f;
 	private const float TableCaptureFlightArcHeight = 42.0f;
 	private const float TableCaptureFlightEndScale = 0.82f;
+	private const float PairCaptureEdgeFloatSeconds = 0.18f;
+	private const float PairCaptureEdgeFloatScale = 1.08f;
+	private const float PairCaptureEdgeFloatRise = 8.0f;
 	private const float BombDestroyCardStaggerSeconds = 0.08f;
 	private const float BombPairDestroyFxFrameSeconds = 0.055f;
 	private const float BombPairDestroyFxVisualSize = 132.0f;
@@ -159,7 +193,7 @@ public partial class GameBoardScene : Control
 	private const int LensRevealMaxCards = 2;
 
 	private static readonly Vector2 CardPileSize = new(124, 128);
-	private static readonly Vector2 CardVisualSize = new(72, 96);
+	private static readonly Vector2 CardVisualSize = new(84, 112);
 	private static readonly Vector2 CardPileOffset = new(3, -2);
 	private const int TableCardsPerRow = 7;
 	private static readonly float TableCardHorizontalStep = CardVisualSize.X + 18.0f;
@@ -177,6 +211,7 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
 	private readonly List<Texture2D> _enemySpecialAbilityAvatarFxFrames = new();
 	private readonly List<Texture2D> _mantaRayTideShiftCycloneFxFrames = new();
+	private readonly List<Texture2D> _leafySeadragonBladeProjectileFrames = new();
 	private readonly List<Texture2D> _adventureDamageEffectFrames = new();
 	private readonly List<Texture2D> _adventureEnemyDamageEffectFrames = new();
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
@@ -196,6 +231,7 @@ public partial class GameBoardScene : Control
 	private Texture2D? _magnetCardOverlayTexture;
 	private Texture2D? _doubleCardOverlayTexture;
 	private Texture2D? _overtimeCardOverlayTexture;
+	private Texture2D? _slimeCardOverlayTexture;
 	private Control? _winnerBannerRoot;
 	private Control? _winnerBannerPanel;
 	private TextureRect? _winnerBannerArt;
@@ -216,6 +252,7 @@ public partial class GameBoardScene : Control
 	private int _pendingItemTurnSequenceGeneration = -1;
 	private string _pendingItemCardId = string.Empty;
 	private TaskCompletionSource<bool>? _pendingMagnetAttachmentCompletion;
+	private TaskCompletionSource<int>? _pendingHandLimitDiscardCompletion;
 	private Control? _magnetAttachmentCountdownRoot;
 	private Label? _magnetAttachmentCountdownLabel;
 	private Label? _magnetAttachmentCountdownHintLabel;
@@ -235,13 +272,14 @@ public partial class GameBoardScene : Control
 	private bool _mantaRayTideShiftCheckedThisTurn;
 	private bool _jellyfishBubbleTriggeredThisTurn;
 	private int _jellyfishDisabledMainPlayerHandSlotIndex = -1;
-	private int _gardenEelCaptureCountUntilSandAmbush;
-	private bool _gardenEelSandAmbushReady;
+	private int _gardenEelCaptureCountUntilSandBite;
+	private bool _gardenEelSandBiteReady;
 	private int _gardenEelBuriedTableCardIndex = -1;
 	private int _nautilusMainPlayerCaptureCountUntilBomb;
 	private int _narwhalCaptureCountUntilDouble;
 	private bool _narwhalDoubleReady;
 	private int _leafySeadragonBladeBreakCooldownTurns;
+	private int _seaSlugMissCountUntilSlime;
 	private bool _dragonPrinceJackUsed;
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
@@ -337,6 +375,9 @@ public partial class GameBoardScene : Control
 	[Export]
 	public bool debug_main_player_has_one_card = false;
 
+	[Export]
+	public bool debug_random_item_cards_are_magnet = false;
+
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
 	private Control _topPlayerArea = default!;
@@ -356,6 +397,7 @@ public partial class GameBoardScene : Control
 		LoadScoreFillEffectTextures();
 		LoadEnemySpecialAbilityAvatarFxTextures();
 		LoadMantaRayTideShiftCycloneFxTextures();
+		LoadLeafySeadragonBladeProjectileTextures();
 		LoadAdventureDamageEffectTextures();
 		LoadAdventureEnemyDamageEffectTextures();
 		LoadItemCardTextures();

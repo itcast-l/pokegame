@@ -432,89 +432,103 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 	}
 
-	private bool ShouldGardenEelBuryNextPlayedCard(int playerIndex)
+	private bool ShouldApplyGardenEelSandBite(int playerIndex, int captureStartIndex, bool playedJackCollectsTable)
 	{
 		return adventure_mode
 			&& adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
 			&& playerIndex == 1
-			&& _gardenEelSandAmbushReady;
+			&& _gardenEelSandBiteReady
+			&& !playedJackCollectsTable
+			&& captureStartIndex >= 0
+			&& captureStartIndex < _tableCards.Count
+			&& !_tableCards[captureStartIndex].IsBuriedInSand
+			&& _tableCards[captureStartIndex].Card.HasValue;
 	}
 
-	private void MarkGardenEelBuriedCard(int tableCardIndex)
+	private int ConsumeGardenEelSandBiteBonusPoints(
+		int playerIndex,
+		int captureStartIndex,
+		int scorePlayerIndex,
+		bool hasDoubleEffect,
+		bool playedJackCollectsTable)
 	{
-		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (!ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedJackCollectsTable))
 		{
-			return;
+			return 0;
 		}
 
-		_gardenEelSandAmbushReady = false;
-		_gardenEelBuriedTableCardIndex = tableCardIndex;
-		_tableCards[tableCardIndex].IsBuriedInSand = true;
+		_gardenEelSandBiteReady = false;
+		_gardenEelCaptureCountUntilSandBite = 0;
+		return GetHalfCapturedCardScoreValueForPlayer(_tableCards[captureStartIndex].Card!.Value, scorePlayerIndex, hasDoubleEffect);
 	}
 
-	private void ClearGardenEelBuriedCardIfNeeded(int playerIndex)
-	{
-		if (!adventure_mode
-			|| adventure_enemy_avatar_id != GardenEelAdventureEnemyAvatarId
-			|| playerIndex != 1
-			|| _gardenEelBuriedTableCardIndex < 0)
-		{
-			return;
-		}
-
-		if (_gardenEelBuriedTableCardIndex < _tableCards.Count)
-		{
-			_tableCards[_gardenEelBuriedTableCardIndex].IsBuriedInSand = false;
-		}
-
-		_gardenEelBuriedTableCardIndex = -1;
-		RenderTableCards();
-	}
-
-	private void RecordGardenEelCaptureForSandAmbush(int playerIndex)
+	private void RecordGardenEelCaptureForSandBite(int playerIndex)
 	{
 		if (!adventure_mode
 			|| adventure_enemy_avatar_id != GardenEelAdventureEnemyAvatarId
 			|| playerIndex != 1
-			|| _gardenEelSandAmbushReady)
+			|| _gardenEelSandBiteReady)
 		{
 			return;
 		}
 
-		_gardenEelCaptureCountUntilSandAmbush++;
-		if (_gardenEelCaptureCountUntilSandAmbush >= GardenEelCapturesBeforeSandAmbush)
+		_gardenEelCaptureCountUntilSandBite++;
+		if (_gardenEelCaptureCountUntilSandBite >= GardenEelCapturesBeforeSandBite)
 		{
-			_gardenEelCaptureCountUntilSandAmbush = 0;
-			_gardenEelSandAmbushReady = true;
+			_gardenEelCaptureCountUntilSandBite = 0;
+			_gardenEelSandBiteReady = true;
 		}
 	}
 
-	private async Task ApplySeaSlugColorCurrentAfterMissAsync(int playerIndex, int playedTableCardIndex, int turnSequenceGeneration)
+	private async Task ApplySeaSlugSlimeCoatAfterMissAsync(int playerIndex, int playedTableCardIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
 			|| adventure_enemy_avatar_id != SeaSlugAdventureEnemyAvatarId
 			|| playerIndex != 1
 			|| playedTableCardIndex < 0
 			|| playedTableCardIndex >= _tableCards.Count
-			|| _tableCards.Count < 2)
+			|| !_tableCards[playedTableCardIndex].Card.HasValue
+			|| HasSeaSlugSlimeCoatedTableCard())
 		{
 			return;
 		}
 
-		_tableCards[playedTableCardIndex].IsFaceUp = false;
-		int swapIndex = PickSeaSlugColorCurrentSwapIndex(playedTableCardIndex);
-		if (swapIndex < 0)
+		_seaSlugMissCountUntilSlime++;
+		if (_seaSlugMissCountUntilSlime < SeaSlugMissesBeforeSlimeCoat)
 		{
 			return;
 		}
 
+		_seaSlugMissCountUntilSlime = 0;
 		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
 		}
 
-		(_tableCards[playedTableCardIndex], _tableCards[swapIndex]) = (_tableCards[swapIndex], _tableCards[playedTableCardIndex]);
+		if (playedTableCardIndex < 0
+			|| playedTableCardIndex >= _tableCards.Count
+			|| !_tableCards[playedTableCardIndex].Card.HasValue
+			|| HasSeaSlugSlimeCoatedTableCard())
+		{
+			return;
+		}
+
+		_tableCards[playedTableCardIndex].IsSlimeCoated = true;
+		RenderTableCards();
+	}
+
+	private bool HasSeaSlugSlimeCoatedTableCard()
+	{
+		foreach (TableCard tableCard in _tableCards)
+		{
+			if (tableCard.IsSlimeCoated)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private async Task ApplyNautilusBombAfterMainPlayerCaptureAsync(int playerIndex, int turnSequenceGeneration)
@@ -673,7 +687,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayCardResult result = ResolveQueenEffect(enemyPlayerIndex, MainPlayerIndex, targetHandIndex);
+		PlayCardResult result = await ResolveQueenEffectAsync(enemyPlayerIndex, MainPlayerIndex, targetHandIndex, turnSequenceGeneration);
 		if (result.Played)
 		{
 			RenderPlayerHands();
@@ -686,11 +700,6 @@ public partial class GameBoardScene
 		for (int handIndex = 0; handIndex < _playerHands[MainPlayerIndex].Count; handIndex++)
 		{
 			targetHandIndexes.Add(handIndex);
-		}
-
-		if (!HasRoomForItemCard(enemyPlayerIndex))
-		{
-			return targetHandIndexes;
 		}
 
 		for (int itemIndex = 0; itemIndex < _playerItemHands[MainPlayerIndex].Count; itemIndex++)
@@ -742,7 +751,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		await PlayLeafySeadragonBladeProjectilesAsync(playerIndex, targetTableCardIndex, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || targetTableCardIndex >= _tableCards.Count)
 		{
 			return;
@@ -756,10 +765,30 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayingCard destroyedCard = _tableCards[targetTableCardIndex].Card!.Value;
+		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
 		_tableCards.RemoveAt(targetTableCardIndex);
 		RefreshGardenEelBuriedCardIndex();
 		_leafySeadragonBladeBreakCooldownTurns = LeafySeadragonBladeBreakCooldownTurns;
 		RenderTableCards();
+
+		if (damagePoints <= 0)
+		{
+			return;
+		}
+
+		int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(playerIndex);
+		await PlayAdventureAvatarAttackAsync(
+			playerIndex,
+			damageTargetPlayerIndex,
+			turnSequenceGeneration,
+			() => AddPlayerScore(playerIndex, damagePoints));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return;
+		}
+
+		CheckForWinner();
 	}
 
 	private bool ShouldResolveLeafySeadragonBladeBreak(int playerIndex, PlayCardResult result)
@@ -834,22 +863,6 @@ public partial class GameBoardScene
 		}
 
 		return _rng.RandiRange(1, _tableCards.Count - 1);
-	}
-
-	private int PickSeaSlugColorCurrentSwapIndex(int playedTableCardIndex)
-	{
-		var candidates = new List<int>();
-		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (tableCardIndex == playedTableCardIndex || IsFixedDuringTableShuffle(_tableCards[tableCardIndex]))
-			{
-				continue;
-			}
-
-			candidates.Add(tableCardIndex);
-		}
-
-		return candidates.Count == 0 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
 	}
 
 	private void RefreshGardenEelBuriedCardIndex()

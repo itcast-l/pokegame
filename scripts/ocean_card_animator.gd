@@ -1,43 +1,50 @@
 extends Sprite2D
 
-@export_range(1.0, 30.0, 0.5) var animation_fps := 6.0
-@export_range(1, 12, 1) var frame_count := 4
+const ANIMATION_NAME := "card_frames"
+const BACK_FRAME_PATH := "res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png"
+const ANIMATION_FPS := 12.0
 
-var _frames: Array[Texture2D] = []
-var _elapsed := 0.0
+static var _card_back_frames: Array[Texture2D] = [
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-002.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-003.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-004.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-005.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-006.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-007.png"),
+	preload("res://art/cards/ocean_animated_deck/back/processed/frames/frame-008.png"),
+]
 
 
 func _ready() -> void:
-	_frames = _load_sibling_frames()
-	if _frames.size() <= 1:
-		set_process(false)
+	if texture == null or texture.resource_path != BACK_FRAME_PATH:
 		return
 
-	var phase := float(get_instance_id() % 1000) / 1000.0
-	_elapsed = phase * float(_frames.size()) / animation_fps
+	var animation_player := AnimationPlayer.new()
+	animation_player.name = "CardBackAnimationPlayer"
+	animation_player.root_node = NodePath("..")
+	add_child(animation_player)
+	_configure_texture_animation(animation_player, _card_back_frames, 1.0 / ANIMATION_FPS)
+	animation_player.play(ANIMATION_NAME)
 
 
-func _process(delta: float) -> void:
-	_elapsed += delta
-	var frame_index := int(_elapsed * animation_fps) % _frames.size()
-	texture = _frames[frame_index]
+func _configure_texture_animation(
+	animation_player: AnimationPlayer,
+	frames: Array[Texture2D],
+	frame_seconds: float
+) -> void:
+	var library := AnimationLibrary.new()
+	var animation := Animation.new()
+	animation.length = max(frame_seconds, frames.size() * frame_seconds)
+	animation.loop_mode = Animation.LOOP_LINEAR
 
+	var track_index := animation.add_track(Animation.TYPE_VALUE)
+	animation.track_set_path(track_index, NodePath(".:texture"))
+	animation.track_set_interpolation_type(track_index, Animation.INTERPOLATION_NEAREST)
+	animation.value_track_set_update_mode(track_index, Animation.UPDATE_DISCRETE)
 
-func _load_sibling_frames() -> Array[Texture2D]:
-	var loaded_frames: Array[Texture2D] = []
-	if texture == null:
-		return loaded_frames
+	for frame_index in frames.size():
+		animation.track_insert_key(track_index, frame_index * frame_seconds, frames[frame_index])
 
-	loaded_frames.append(texture)
-	var frame_path := texture.resource_path
-	if frame_path.is_empty():
-		return loaded_frames
-
-	var frame_dir := frame_path.get_base_dir()
-	for index in range(2, frame_count + 1):
-		var sibling_path := "%s/frame-%03d.png" % [frame_dir, index]
-		var sibling := load(sibling_path)
-		if sibling is Texture2D:
-			loaded_frames.append(sibling)
-
-	return loaded_frames
+	library.add_animation(ANIMATION_NAME, animation)
+	animation_player.add_animation_library("", library)

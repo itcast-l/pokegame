@@ -74,7 +74,10 @@ public partial class GameBoardScene
 		return false;
 	}
 
-	private QuestionCardRewardGrant? GrantQuestionCardReward(int playerIndex, bool reserveReplacementCard)
+	private async Task<QuestionCardRewardGrant?> GrantQuestionCardRewardAsync(
+		int playerIndex,
+		bool reserveReplacementCard,
+		int turnSequenceGeneration)
 	{
 		if (!item_mode)
 		{
@@ -106,7 +109,8 @@ public partial class GameBoardScene
 			return new QuestionCardRewardGrant(itemCard.Value, -1, true);
 		}
 
-		if (!HasRoomForItemCard(playerIndex, reserveReplacementCard ? 1 : 0))
+		if (!HasRoomForNewHandCard(playerIndex, reserveReplacementCard ? 1 : 0)
+			&& !await DiscardHandCardForNewItemCardAsync(playerIndex, turnSequenceGeneration))
 		{
 			return null;
 		}
@@ -118,6 +122,13 @@ public partial class GameBoardScene
 
 	private List<string> BuildEnabledQuestionRewardItemCardIds()
 	{
+		if (debug_random_item_cards_are_magnet)
+		{
+			return IsSpecialItemCardEnabled(MagnetItemCardId)
+				? new List<string> { MagnetItemCardId }
+				: new List<string>();
+		}
+
 		var rewardItemCardIds = new List<string>();
 		foreach (string itemCardId in _itemCardCatalog.RewardIds)
 		{

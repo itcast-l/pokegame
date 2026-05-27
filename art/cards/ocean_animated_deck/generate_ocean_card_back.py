@@ -15,7 +15,8 @@ TEST_IMAGE = Path("/Users/cakeju/.cc-switch/skills/test-image/scripts/generate_i
 SPRITE_PROCESSOR = Path("/Users/cakeju/.cc-switch/skills/generate2dsprite/scripts/generate2dsprite.py")
 
 CARD_SIZE = 128
-FRAME_COUNT = 4
+KEY_FRAME_COUNT = 4
+FRAME_COUNT = 8
 FIT_SCALE = "0.96"
 
 
@@ -47,25 +48,44 @@ def compose_sheet(frames: list[Image.Image], cols: int, rows: int) -> Image.Imag
     return sheet
 
 
+def insert_midpoint_frames(key_frames: list[Image.Image]) -> list[Image.Image]:
+    frames = []
+    for index, frame in enumerate(key_frames):
+        next_frame = key_frames[(index + 1) % len(key_frames)]
+        frames.append(frame)
+        frames.append(Image.blend(frame, next_frame, 0.5))
+    return frames
+
+
 def organize_processed_outputs(out_dir: Path, prompt: str) -> None:
-    frame_sources = [out_dir / f"idle-{index}.png" for index in range(1, FRAME_COUNT + 1)]
+    frame_sources = [out_dir / f"idle-{index}.png" for index in range(1, KEY_FRAME_COUNT + 1)]
     missing = [path for path in frame_sources if not path.exists()]
     if missing:
         raise FileNotFoundError(f"Missing processed frames: {missing}")
 
     frames_dir = out_dir / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
-    frames = []
+    key_frames = []
     for index, source in enumerate(frame_sources, start=1):
         frame = Image.open(source).convert("RGBA")
-        frame_path = frames_dir / f"frame-{index:03d}.png"
-        frame.save(frame_path)
-        frames.append(frame)
+        key_frames.append(frame)
+
+    frames = insert_midpoint_frames(key_frames)
+    for index, frame in enumerate(frames, start=1):
+        frame.save(frames_dir / f"frame-{index:03d}.png")
 
     frames[0].save(out_dir / "clean.png")
     frames[0].save(out_dir / "raw.png")
-    compose_sheet(frames, 4, 1).save(out_dir / "strip-transparent.png")
-    compose_sheet(frames, 2, 2).save(out_dir / "sheet-transparent.png")
+    compose_sheet(frames, 4, 2).save(out_dir / "sheet-transparent.png")
+    compose_sheet(frames, 8, 1).save(out_dir / "strip-transparent.png")
+    frames[0].save(
+        out_dir / "animation.gif",
+        save_all=True,
+        append_images=frames[1:],
+        duration=80,
+        loop=0,
+        disposal=2,
+    )
 
     meta_path = out_dir / "pipeline-meta.json"
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
@@ -75,6 +95,7 @@ def organize_processed_outputs(out_dir: Path, prompt: str) -> None:
             "rank": "back",
             "suit": "none",
             "role": "Ocean Card Back",
+            "key_frame_count": KEY_FRAME_COUNT,
             "frame_count": FRAME_COUNT,
             "single_size": CARD_SIZE,
             "raw_source": "source-sheet.png",
@@ -85,6 +106,10 @@ def organize_processed_outputs(out_dir: Path, prompt: str) -> None:
                 "frames/frame-002.png",
                 "frames/frame-003.png",
                 "frames/frame-004.png",
+                "frames/frame-005.png",
+                "frames/frame-006.png",
+                "frames/frame-007.png",
+                "frames/frame-008.png",
                 "sheet-transparent.png",
                 "strip-transparent.png",
                 "animation.gif",

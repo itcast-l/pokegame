@@ -1,0 +1,21 @@
+Create exactly one project-native clean HD / pixel-inspired 2D game sprite animation sheet for the existing character Jay J, the Dragon Prince elite enemy. Use the first input image just shown as the character identity reference: preserve Jay's blue dragon head, white horn crown, sharp angular snout, cyan fins, gold-and-white royal armor, deep blue cloak/fins, white shoulder armor, jewel accents, confident elite enemy personality, and the current game's polished sprite rendering. Use the second input image only as a layout guide for an invisible 3 rows x 4 columns grid, equal frame slots, centering, spacing, and safe padding. Do not reproduce any guide boxes, safe rectangles, center marks, labels, borders, or guide background.
+
+Output requirements: one 1536x1024 PNG sprite sheet, exactly 12 frames arranged 3 rows x 4 columns. Entire background must be 100% solid flat #FF00FF magenta, including space between cells. No text, no labels, no UI, no numbers, no watermarks, no visible grid lines, no borders. Every frame must contain the same Jay character identity and same sprite scale, centered in its cell, with all body, horns, armor, cloak, tail/fin tips, energy, flames, sparks, and smoke fully inside the cell. Leave clear magenta margin on every side. No frame may touch or cross its cell edge.
+
+Animation concept: elite-rank attack sequence, much stronger than normal characters: “Royal Dragon Verdict”. Jay gathers authority, opens a card-collecting vortex, then unleashes a compact blue-white royal dragonfire and claw sigil burst. The effect should feel like the third-ranked elite enemy: controlled, powerful, regal, not generic. Use bright cyan dragonfire, white-hot core, gold royal sigils, deep blue shadow flame, small pearl sparks, and a short spiral card-vortex motif, but keep the FX attached near Jay so his body does not shrink. No separate full cards or readable card faces, only abstract card-shaped light shards if needed.
+
+Frame order, left-to-right then top-to-bottom:
+1. Calm battle stance, eyes focused, faint cyan aura around horns.
+2. Shoulders lower, claw/hand or snout draws in blue motes, small gold sigil begins behind Jay.
+3. Wind-up grows, cloak/fins lift, cyan flame coils around the forearm and jaw.
+4. Royal charge frame, white horn crown glows, circular gold sigil and tiny abstract card shards spiral inward.
+5. First release, Jay lunges slightly forward, compact dragonfire arc forms from mouth/claw.
+6. Stronger release, blue-white flame thickens, angular claw mark appears in front of Jay.
+7. Peak impact, brightest frame: royal dragonfire burst plus gold sigil flare, powerful but still inside cell.
+8. Shockwave pulse, flame curls outward then starts collapsing, white-hot center fades to cyan.
+9. Follow-through, Jay's head and shoulders settle, trailing blue flame ribbons sweep back.
+10. Afterimage frame, gold sigil fragments and tiny pearl sparks drift near Jay.
+11. Recovery, aura dims, Jay returns to poised elite stance with a last cyan horn glow.
+12. Loop-ready settle, almost same silhouette as frame 1, only faint residual royal spark.
+
+Style: match the existing game avatar style: polished clean HD sprite with pixel-inspired crisp edges, strong readable silhouette, saturated aquatic blue/cyan/white/gold palette, dragon prince armor details, no painterly background, no realistic rendering, no chibi redesign, no human form. This is a body+attached FX preview sheet, not a wide screen effect.

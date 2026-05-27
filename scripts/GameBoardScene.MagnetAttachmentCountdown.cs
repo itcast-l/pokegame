@@ -79,7 +79,7 @@ public partial class GameBoardScene
 		var hintLabel = new Label
 		{
 			Name = "MagnetAttachmentCountdownHint",
-			Text = Localize("GAME_SELECT_BASE_CARD"),
+			Text = GetMagnetAttachmentCountdownHint(),
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
