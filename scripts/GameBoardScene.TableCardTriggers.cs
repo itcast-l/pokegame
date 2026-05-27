@@ -407,7 +407,8 @@ public partial class GameBoardScene
 	private async Task ApplyJellyfishBubbleAfterCaptureAsync(int playerIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != JellyfishAdventureEnemyAvatarId
+			|| !(adventure_enemy_avatar_id == JellyfishAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| playerIndex != 1
 			|| _jellyfishBubbleTriggeredThisTurn
 			|| _jellyfishDisabledMainPlayerHandSlotIndex >= 0)
@@ -421,7 +422,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, JellyfishAdventureEnemyAvatarId);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -435,7 +436,8 @@ public partial class GameBoardScene
 	private bool ShouldApplyGardenEelSandBite(int playerIndex, int captureStartIndex, bool playedJackCollectsTable)
 	{
 		return adventure_mode
-			&& adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
+			&& (adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			&& playerIndex == 1
 			&& _gardenEelSandBiteReady
 			&& !playedJackCollectsTable
@@ -465,7 +467,8 @@ public partial class GameBoardScene
 	private void RecordGardenEelCaptureForSandBite(int playerIndex)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != GardenEelAdventureEnemyAvatarId
+			|| !(adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| playerIndex != 1
 			|| _gardenEelSandBiteReady)
 		{
@@ -534,7 +537,8 @@ public partial class GameBoardScene
 	private async Task ApplyNautilusBombAfterMainPlayerCaptureAsync(int playerIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != NautilusAdventureEnemyAvatarId
+			|| !(adventure_enemy_avatar_id == NautilusAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| playerIndex != MainPlayerIndex)
 		{
 			return;
@@ -563,7 +567,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+		await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration, NautilusAdventureEnemyAvatarId);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -579,7 +583,8 @@ public partial class GameBoardScene
 	private void RecordNarwhalCaptureForDouble(int playerIndex)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != NarwhalAdventureEnemyAvatarId
+			|| !(adventure_enemy_avatar_id == NarwhalAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| playerIndex != 1
 			|| _narwhalDoubleReady)
 		{
@@ -607,7 +612,7 @@ public partial class GameBoardScene
 		}
 
 		_dragonPrinceJackUsed = true;
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, DragonPrinceAdventureEnemyAvatarId);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return new PlayCardResult(false, false);
@@ -625,6 +630,7 @@ public partial class GameBoardScene
 		}
 
 		PlayCardResult result = await ResolveDragonPrinceJackCollectTableAsync(playerIndex, turnSequenceGeneration, specialJackTableIndex);
+		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -832,10 +838,18 @@ public partial class GameBoardScene
 	private bool ShouldResolveDragonPrinceJack(int playerIndex)
 	{
 		return adventure_mode
-			&& adventure_enemy_avatar_id == DragonPrinceAdventureEnemyAvatarId
+			&& (adventure_enemy_avatar_id == DragonPrinceAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			&& playerIndex == 1
 			&& !_dragonPrinceJackUsed
-			&& _tableCards.Count >= DragonRoyalCaptureThreshold;
+			&& _tableCards.Count >= DragonRoyalCaptureThreshold
+			&& (!IsBossKEnemy(playerIndex) || ShouldResolveBossKDragonPrinceJack(playerIndex));
+	}
+
+	private bool ShouldResolveBossKDragonPrinceJack(int playerIndex)
+	{
+		return BossKCanUseActiveControl(playerIndex)
+			&& GetBestPotentialNormalCaptureCount(playerIndex, _tableCards) < DragonRoyalCaptureThreshold;
 	}
 
 	private async Task ApplyDragonQueenAndKingAfterEnemyCaptureAsync(
@@ -843,19 +857,72 @@ public partial class GameBoardScene
 		int removedTableCardCount,
 		int turnSequenceGeneration)
 	{
-		if (!adventure_mode || playerIndex != 1 || removedTableCardCount < DragonRoyalCaptureThreshold)
+		if (!adventure_mode || playerIndex != 1)
 		{
 			return;
 		}
 
-		if (adventure_enemy_avatar_id == DragonQueenAdventureEnemyAvatarId)
+		if (adventure_enemy_avatar_id == DragonQueenAdventureEnemyAvatarId
+			&& removedTableCardCount >= DragonQueenCaptureThreshold)
 		{
+			_dragonQueenCaptureCountUntilSteal++;
+			if (_dragonQueenCaptureCountUntilSteal < DragonQueenCapturesBeforeSteal)
+			{
+				return;
+			}
+
+			_dragonQueenCaptureCountUntilSteal = 0;
 			await StealRandomMainPlayerHandCardForEnemyAsync(playerIndex, turnSequenceGeneration);
 		}
-		else if (adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+		else if (adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId
+			&& removedTableCardCount > 0)
+		{
+			_bossKCaptureCountUntilSteal++;
+			if (_bossKCaptureCountUntilSteal < BossKCapturesBeforeSteal)
+			{
+				return;
+			}
+
+			_bossKCaptureCountUntilSteal = 0;
+			await ApplyBossKRandomStealAfterCaptureAsync(playerIndex, turnSequenceGeneration);
+		}
+	}
+
+	private async Task ApplyBossKRandomStealAfterCaptureAsync(int playerIndex, int turnSequenceGeneration)
+	{
+		bool canStealDeck = CanStealMainPlayerTopDeckCard(playerIndex);
+		bool canStealHand = CanStealRandomMainPlayerHandCard(playerIndex);
+		if (!canStealDeck && !canStealHand)
+		{
+			return;
+		}
+
+		if ((canStealDeck && canStealHand && _rng.RandiRange(0, 1) == 0)
+			|| (canStealDeck && !canStealHand))
 		{
 			await StealMainPlayerTopDeckCardForEnemyAsync(playerIndex, turnSequenceGeneration);
+			return;
 		}
+
+		await StealRandomMainPlayerHandCardForEnemyAsync(playerIndex, turnSequenceGeneration);
+	}
+
+	private bool CanStealRandomMainPlayerHandCard(int enemyPlayerIndex)
+	{
+		return enemyPlayerIndex >= 0
+			&& enemyPlayerIndex < _playerHands.Count
+			&& enemyPlayerIndex < _playerItemHands.Count
+			&& MainPlayerIndex < _playerHands.Count
+			&& MainPlayerIndex < _playerItemHands.Count
+			&& BuildDragonQueenStealTargetHandIndexes(enemyPlayerIndex).Count > 0;
+	}
+
+	private bool CanStealMainPlayerTopDeckCard(int enemyPlayerIndex)
+	{
+		return enemyPlayerIndex >= 0
+			&& enemyPlayerIndex < _playerDecks.Count
+			&& MainPlayerIndex < _playerDecks.Count
+			&& _playerDecks[MainPlayerIndex].Count > 0;
 	}
 
 	private async Task StealRandomMainPlayerHandCardForEnemyAsync(int enemyPlayerIndex, int turnSequenceGeneration)
@@ -876,7 +943,7 @@ public partial class GameBoardScene
 		}
 
 		int targetHandIndex = targetHandIndexes[_rng.RandiRange(0, targetHandIndexes.Count - 1)];
-		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration);
+		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration, DragonQueenAdventureEnemyAvatarId);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -915,7 +982,23 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration);
+		Vector2 startGlobalPosition = GetDrawCardStartGlobalPosition(MainPlayerIndex);
+		Vector2 targetGlobalPosition = GetDrawCardStartGlobalPosition(enemyPlayerIndex);
+		await PlayBossKRoyalSeizureLanceAttackAsync(
+			enemyPlayerIndex,
+			GetPlayerCardPileGlobalCenter(MainPlayerIndex),
+			turnSequenceGeneration,
+			null);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
+		await PlayStolenDeckCardFlightAsync(
+			startGlobalPosition,
+			targetGlobalPosition,
+			GetCardPileRotationDegreesForPlayer(MainPlayerIndex),
+			GetCardPileRotationDegreesForPlayer(enemyPlayerIndex));
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -946,6 +1029,15 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (IsBossKEnemy(playerIndex))
+		{
+			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, LeafySeadragonAdventureEnemyAvatarId);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+		}
+
 		await PlayLeafySeadragonBladeProjectilesAsync(playerIndex, targetTableCardIndex, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || targetTableCardIndex >= _tableCards.Count)
 		{
@@ -965,6 +1057,7 @@ public partial class GameBoardScene
 		_tableCards.RemoveAt(targetTableCardIndex);
 		RefreshGardenEelBuriedCardIndex();
 		_leafySeadragonBladeBreakCooldownTurns = LeafySeadragonBladeBreakCooldownTurns;
+		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
 
 		if (damagePoints <= 0)
@@ -989,18 +1082,21 @@ public partial class GameBoardScene
 	private bool ShouldResolveLeafySeadragonBladeBreak(int playerIndex, PlayCardResult result)
 	{
 		return adventure_mode
-			&& adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
+			&& (adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			&& playerIndex == 1
 			&& !result.Captured
 			&& _leafySeadragonBladeBreakCooldownTurns <= 0
 			&& _tableCards.Count >= LeafySeadragonBladeBreakTableCardThreshold
-			&& PickLeafySeadragonBladeBreakTargetIndex() >= 0;
+			&& PickLeafySeadragonBladeBreakTargetIndex() >= 0
+			&& (!IsBossKEnemy(playerIndex) || BossKCanUseActiveControl(playerIndex));
 	}
 
 	private void UpdateLeafySeadragonBladeBreakCooldown(int playerIndex)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != LeafySeadragonAdventureEnemyAvatarId
+			|| !(adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| playerIndex != 1
 			|| _leafySeadragonBladeBreakCooldownTurns <= 0)
 		{
@@ -1038,11 +1134,13 @@ public partial class GameBoardScene
 	private bool ShouldApplyNarwhalDoubleToPlayedCard(int playerIndex, PlayingCard card)
 	{
 		return adventure_mode
-			&& adventure_enemy_avatar_id == NarwhalAdventureEnemyAvatarId
+			&& (adventure_enemy_avatar_id == NarwhalAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			&& playerIndex == 1
 			&& _narwhalDoubleReady
 			&& !card.HasItemEffect
-			&& !IsExcludedDeckRank(card.Rank);
+			&& !IsExcludedDeckRank(card.Rank)
+			&& (!IsBossKEnemy(playerIndex) || FindMatchingTableCardIndex(card) >= 0);
 	}
 
 	private int PickNautilusBombInsertionIndex()
@@ -1058,6 +1156,26 @@ public partial class GameBoardScene
 		}
 
 		return _rng.RandiRange(1, _tableCards.Count - 1);
+	}
+
+	private bool IsBossKEnemy(int playerIndex)
+	{
+		return adventure_mode
+			&& playerIndex == 1
+			&& adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId;
+	}
+
+	private bool BossKCanUseActiveControl(int playerIndex)
+	{
+		return IsBossKEnemy(playerIndex) && !_bossKActiveControlUsedThisTurn;
+	}
+
+	private void MarkBossKActiveControlUsedIfNeeded(int playerIndex)
+	{
+		if (IsBossKEnemy(playerIndex))
+		{
+			_bossKActiveControlUsedThisTurn = true;
+		}
 	}
 
 	private void RefreshGardenEelBuriedCardIndex()
@@ -1104,7 +1222,8 @@ public partial class GameBoardScene
 	private void ResetJellyfishBubbleTurnStateIfNeeded(int previousPlayerIndex)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != JellyfishAdventureEnemyAvatarId
+			|| !(adventure_enemy_avatar_id == JellyfishAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| previousPlayerIndex == 1
 			|| _currentTurnPlayerIndex != 1)
 		{

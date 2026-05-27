@@ -295,8 +295,19 @@ public partial class GameBoardScene
 			return GetOpeningDealStartGlobalPosition();
 		}
 
-		Control handArea = _playerHandAreas[playerIndex];
 		int displayCardCount = Math.Max(1, _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count);
+		return GetHandDisplayCardGlobalPosition(playerIndex, displayIndex, displayCardCount);
+	}
+
+	private Vector2 GetHandDisplayCardGlobalPosition(int playerIndex, int displayIndex, int displayCardCount)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHandAreas.Count)
+		{
+			return GetOpeningDealStartGlobalPosition();
+		}
+
+		Control handArea = _playerHandAreas[playerIndex];
+		displayCardCount = Math.Max(1, displayCardCount);
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
 		return handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;

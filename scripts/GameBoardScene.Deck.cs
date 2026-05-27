@@ -37,6 +37,9 @@ public partial class GameBoardScene
 		_leafySeadragonBladeBreakCooldownTurns = 0;
 		_seaSlugMissCountUntilSlime = 0;
 		_dragonPrinceJackUsed = false;
+		_dragonQueenCaptureCountUntilSteal = 0;
+		_bossKCaptureCountUntilSteal = 0;
+		_bossKActiveControlUsedThisTurn = false;
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
@@ -368,7 +371,9 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		if (_playerDecks[playerIndex].Count == 0 || _playerHands[playerIndex].Count >= StartingHandCards)
+		if (_playerDecks[playerIndex].Count == 0
+			|| _playerHands[playerIndex].Count >= StartingHandCards
+			|| GetTotalHandCardCount(playerIndex) >= MaxTotalHandCards)
 		{
 			return null;
 		}

@@ -21,7 +21,14 @@ public partial class GameBoardScene
 				if (playerIndex >= player_count)
 				{
 					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
+				}
+
+				await RefillPlayerBaseHandAsync(playerIndex, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return;
 				}
 
 				await ResolveAdventureEnemyTurnStartAbilityAsync(playerIndex, turnSequenceGeneration);
@@ -49,6 +56,7 @@ public partial class GameBoardScene
 				if (!PlayerHasPlayableHandCards(playerIndex))
 				{
 					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
 				}
 
@@ -184,6 +192,11 @@ public partial class GameBoardScene
 		}
 
 		List<int> playableItemIndexes = BuildPlayableItemIndexes(playerIndex);
+		if (TryPickBossKBestCaptureHandIndex(playerIndex, out int bossKHandIndex))
+		{
+			return await PlayCardFromHandAsync(playerIndex, bossKHandIndex, turnSequenceGeneration);
+		}
+
 		int playableCount = _playerHands[playerIndex].Count + playableItemIndexes.Count;
 		if (playableCount == 0)
 		{
@@ -200,9 +213,85 @@ public partial class GameBoardScene
 		return await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
 	}
 
+	private bool TryPickBossKBestCaptureHandIndex(int playerIndex, out int handIndex)
+	{
+		handIndex = -1;
+		if (!IsBossKEnemy(playerIndex) || playerIndex < 0 || playerIndex >= _playerHands.Count)
+		{
+			return false;
+		}
+
+		int bestScore = 0;
+		int bestCaptureCount = 0;
+		for (int index = 0; index < _playerHands[playerIndex].Count; index++)
+		{
+			PlayingCard card = _playerHands[playerIndex][index];
+			int captureCount = GetPotentialNormalCaptureCount(card);
+			if (captureCount <= 0)
+			{
+				continue;
+			}
+
+			int score = GetPotentialNormalCapturePoints(playerIndex, card);
+			if (captureCount >= DragonRoyalCaptureThreshold)
+			{
+				score += 1000 + captureCount;
+			}
+
+			if (score > bestScore || (score == bestScore && captureCount > bestCaptureCount))
+			{
+				bestScore = score;
+				bestCaptureCount = captureCount;
+				handIndex = index;
+			}
+		}
+
+		return handIndex >= 0;
+	}
+
+	private int GetPotentialNormalCaptureCount(PlayingCard card)
+	{
+		if (ShouldJackCollectTable(card))
+		{
+			return _tableCards.Count > 0 ? CountCollectibleTableCards(_tableCards) + 1 : 0;
+		}
+
+		int matchingIndex = FindMatchingTableCardIndex(_tableCards, card);
+		return matchingIndex >= 0 ? CountCollectibleTableCards(_tableCards, matchingIndex) + 1 : 0;
+	}
+
+	private int GetPotentialNormalCapturePoints(int playerIndex, PlayingCard card)
+	{
+		int matchingIndex = ShouldJackCollectTable(card) && _tableCards.Count > 0
+			? 0
+			: FindMatchingTableCardIndex(_tableCards, card);
+		if (matchingIndex < 0 || !HasPotentialCapturedMiddleTableCards(matchingIndex))
+		{
+			return 0;
+		}
+
+		bool hasDoubleEffect = ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card);
+		int points = 0;
+		for (int tableCardIndex = matchingIndex + 1; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
+			{
+				points += GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, playerIndex, hasDoubleEffect);
+			}
+		}
+
+		return points;
+	}
+
+	private bool HasPotentialCapturedMiddleTableCards(int captureStartIndex)
+	{
+		return CountCollectibleTableCards(_tableCards, captureStartIndex) + 1 > 2;
+	}
+
 	private async Task ResolveAdventureEnemyTurnStartAbilityAsync(int playerIndex, int turnSequenceGeneration)
 	{
-		if (IsMantaRayTideShiftEnemyTurn(playerIndex))
+		if (IsAdventureEnemyWithMantaRayTideShift(playerIndex))
 		{
 			if (_mantaRayTideShiftCheckedThisTurn)
 			{
@@ -217,7 +306,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, MantaRayAdventureEnemyAvatarId);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))
 		{
 			return;
@@ -246,6 +335,7 @@ public partial class GameBoardScene
 
 		_tableCards.RemoveAt(0);
 		_tableCards.Add(tideShiftedCard);
+		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
 	}
 
@@ -255,20 +345,107 @@ public partial class GameBoardScene
 			&& playerIndex == 1
 			&& _mantaRayTideShiftCheckedThisTurn
 			&& IsMantaRayTideShiftEnemyTurn(playerIndex)
-			&& _tableCards.Count >= 4;
+			&& _tableCards.Count >= 4
+			&& (!IsBossKEnemy(playerIndex) || ShouldResolveBossKTideShift(playerIndex));
+	}
+
+	private bool ShouldResolveBossKTideShift(int playerIndex)
+	{
+		if (!BossKCanUseActiveControl(playerIndex) || ShouldResolveDragonPrinceJack(playerIndex))
+		{
+			return false;
+		}
+
+		var shiftedTableCards = new List<TableCard>(_tableCards);
+		TableCard shiftedCard = shiftedTableCards[0];
+		shiftedTableCards.RemoveAt(0);
+		shiftedTableCards.Add(shiftedCard);
+
+		int bossCaptureBefore = GetBestPotentialNormalCaptureCount(playerIndex, _tableCards);
+		int bossCaptureAfter = GetBestPotentialNormalCaptureCount(playerIndex, shiftedTableCards);
+		if (bossCaptureAfter > bossCaptureBefore && bossCaptureAfter >= DragonRoyalCaptureThreshold)
+		{
+			return true;
+		}
+
+		int playerCaptureBefore = GetBestPotentialNormalCaptureCount(MainPlayerIndex, _tableCards);
+		int playerCaptureAfter = GetBestPotentialNormalCaptureCount(MainPlayerIndex, shiftedTableCards);
+		return playerCaptureBefore >= DragonRoyalCaptureThreshold && playerCaptureAfter < playerCaptureBefore;
+	}
+
+	private int GetBestPotentialNormalCaptureCount(int playerIndex, IReadOnlyList<TableCard> tableCards)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count || tableCards.Count == 0)
+		{
+			return 0;
+		}
+
+		int bestCaptureCount = 0;
+		foreach (PlayingCard handCard in _playerHands[playerIndex])
+		{
+			if (ShouldJackCollectTable(handCard))
+			{
+				bestCaptureCount = Math.Max(bestCaptureCount, CountCollectibleTableCards(tableCards) + 1);
+				continue;
+			}
+
+			int matchingIndex = FindMatchingTableCardIndex(tableCards, handCard);
+			if (matchingIndex >= 0)
+			{
+				bestCaptureCount = Math.Max(bestCaptureCount, CountCollectibleTableCards(tableCards, matchingIndex) + 1);
+			}
+		}
+
+		return bestCaptureCount;
+	}
+
+	private static int CountCollectibleTableCards(IReadOnlyList<TableCard> tableCards, int startIndex = 0)
+	{
+		int count = 0;
+		for (int tableCardIndex = Math.Max(0, startIndex); tableCardIndex < tableCards.Count; tableCardIndex++)
+		{
+			if (!tableCards[tableCardIndex].IsBuriedInSand)
+			{
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	private static int FindMatchingTableCardIndex(IReadOnlyList<TableCard> tableCards, PlayingCard playedCard)
+	{
+		for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
+		{
+			PlayingCard? tableCard = tableCards[tableCardIndex].Card;
+			if (!tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
+			{
+				return tableCardIndex;
+			}
+		}
+
+		return -1;
 	}
 
 	private bool IsMantaRayTideShiftEnemyTurn(int playerIndex)
 	{
 		return playerIndex == 1
-			&& CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) == 6
+			&& IsAdventureEnemyWithMantaRayTideShift(playerIndex)
 			&& _currentTurnPlayerIndex == playerIndex;
+	}
+
+	private bool IsAdventureEnemyWithMantaRayTideShift(int playerIndex)
+	{
+		return playerIndex == 1
+			&& (CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) == 6
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId);
 	}
 
 	private void ResetMantaRayTideShiftTurnStateIfNeeded(int previousPlayerIndex)
 	{
 		if (!adventure_mode
-			|| CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) != 6
+			|| !(CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) == 6
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
 			|| previousPlayerIndex == 1
 			|| _currentTurnPlayerIndex != 1)
 		{
@@ -276,6 +453,7 @@ public partial class GameBoardScene
 		}
 
 		_mantaRayTideShiftCheckedThisTurn = false;
+		_bossKActiveControlUsedThisTurn = false;
 	}
 
 	private int AddBombCardToTable(ItemCard bombCard, int ownerPlayerIndex)
@@ -331,6 +509,43 @@ public partial class GameBoardScene
 				RenderTableCards();
 			}
 		}
+
+		await RefillCurrentTurnPlayerBaseHandAsync(_turnSequenceGeneration);
+	}
+
+	private async Task RefillCurrentTurnPlayerBaseHandAsync(int turnSequenceGeneration)
+	{
+		await RefillPlayerBaseHandAsync(_currentTurnPlayerIndex, turnSequenceGeneration);
+	}
+
+	private async Task RefillPlayerBaseHandAsync(int playerIndex, int turnSequenceGeneration)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= player_count
+			|| playerIndex >= _playerDecks.Count
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count)
+		{
+			return;
+		}
+
+		while (turnSequenceGeneration == _turnSequenceGeneration
+			&& !IsGameOver()
+			&& _playerHands[playerIndex].Count < StartingHandCards
+			&& GetTotalHandCardCount(playerIndex) < MaxTotalHandCards
+			&& _playerDecks[playerIndex].Count > 0)
+		{
+			DrawnHandCard? drawnCard = DrawReplacementCard(playerIndex);
+			if (!drawnCard.HasValue)
+			{
+				break;
+			}
+
+			await PlayReplacementDrawAnimationAsync(playerIndex, drawnCard, turnSequenceGeneration);
+		}
+
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
 	}
 
 	private bool PlayerHasPlayableHandCards(int playerIndex)

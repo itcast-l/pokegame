@@ -4,7 +4,7 @@ public partial class MainMenuScene : Control
 {
 	private async void StartAdventureMode()
 	{
-		if (!BeginMenuCameraPushIn(true))
+		if (!BeginMenuCameraAdventureDive())
 		{
 			return;
 		}
@@ -26,6 +26,7 @@ public partial class MainMenuScene : Control
 		}
 
 		ShowAdventureTransition(adventureAvatarMenu);
+		RevealAdventureTransition(adventureAvatarMenu);
 
 		if (!GodotObject.IsInstanceValid(this) || !GodotObject.IsInstanceValid(adventureAvatarMenu))
 		{
@@ -33,7 +34,7 @@ public partial class MainMenuScene : Control
 		}
 
 		UpdateAdventureTransitionPosition();
-		bool completed = await CompleteMenuCameraPushIn();
+		bool completed = await CompleteMenuCameraAdventureDive();
 		if (!completed || !GodotObject.IsInstanceValid(adventureAvatarMenu))
 		{
 			return;
@@ -102,17 +103,19 @@ public partial class MainMenuScene : Control
 
 	private void ShowAdventureTransition(Control adventureAvatarMenu)
 	{
+		_adventureTransitionTween?.Kill();
 		_adventureTransitionRoot?.QueueFree();
 
 		_adventureTransitionRoot = new Control
 		{
 			Name = "AdventureTransitionRoot",
-			MouseFilter = MouseFilterEnum.Stop,
-			Modulate = Colors.White,
+			Visible = true,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 			Size = GetViewportRect().Size,
 		};
-		_adventureTransitionRoot.Position = GetSecondaryMenuDepthPosition();
-		_adventureTransitionRoot.Scale = GetSecondaryMenuWorldScale();
+		_adventureTransitionRoot.Position = GetAdventureSecondaryMenuDepthPosition();
+		_adventureTransitionRoot.Scale = GetAdventureSecondaryMenuWorldScale();
 		AddChild(_adventureTransitionRoot);
 
 		var scrim = CreatePlayerCountDialogScrim();
@@ -135,6 +138,27 @@ public partial class MainMenuScene : Control
 		UpdateAdventureTransitionPosition();
 	}
 
+	private void RevealAdventureTransition(Control adventureAvatarMenu)
+	{
+		if (_adventureTransitionRoot == null || !GodotObject.IsInstanceValid(_adventureTransitionRoot))
+		{
+			return;
+		}
+
+		Control root = _adventureTransitionRoot;
+		root.Visible = true;
+		root.MouseFilter = MouseFilterEnum.Stop;
+		root.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Stop;
+		UpdateAdventureTransitionPosition();
+
+		_adventureTransitionTween?.Kill();
+		_adventureTransitionTween = CreateTween();
+		_adventureTransitionTween.TweenProperty(root, "modulate:a", 1.0f, AdventureMenuFadeSeconds)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+	}
+
 	public void HideAdventureAvatarMenu(Control adventureAvatarMenu)
 	{
 		if (_adventureTransitionRoot == null || !GodotObject.IsInstanceValid(_adventureTransitionRoot))
@@ -150,9 +174,12 @@ public partial class MainMenuScene : Control
 		SetMainMenuButtonsDisabled(false);
 		_isMenuCameraTransitioning = false;
 
-		Tween hideTween = CreateTween();
-		hideTween.TweenProperty(root, "modulate:a", 0.0f, DialogFadeSeconds);
-		hideTween.Finished += () =>
+		_adventureTransitionTween?.Kill();
+		_adventureTransitionTween = CreateTween();
+		_adventureTransitionTween.TweenProperty(root, "modulate:a", 0.0f, AdventureMenuFadeSeconds)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.In);
+		_adventureTransitionTween.Finished += () =>
 		{
 			if (GodotObject.IsInstanceValid(root))
 			{
@@ -163,6 +190,7 @@ public partial class MainMenuScene : Control
 			{
 				_adventureTransitionRoot = null;
 				_adventureTransitionMotion = null;
+				_adventureTransitionTween = null;
 			}
 
 			PrepareAdventureAvatarMenuCache();
@@ -180,8 +208,8 @@ public partial class MainMenuScene : Control
 		if (_adventureTransitionRoot != null && GodotObject.IsInstanceValid(_adventureTransitionRoot))
 		{
 			_adventureTransitionRoot.Size = GetViewportRect().Size;
-			_adventureTransitionRoot.Position = GetSecondaryMenuDepthPosition();
-			_adventureTransitionRoot.Scale = GetSecondaryMenuWorldScale();
+			_adventureTransitionRoot.Position = GetAdventureSecondaryMenuDepthPosition();
+			_adventureTransitionRoot.Scale = GetAdventureSecondaryMenuWorldScale();
 		}
 
 		ApplyFixedAdventureTransitionLayout();

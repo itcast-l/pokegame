@@ -17,6 +17,13 @@ public partial class GameBoardScene
 	private const float EnemySpecialAbilityAvatarFxTotalSeconds = EnemySpecialAbilityAvatarFxFrameSeconds * EnemySpecialAbilityAvatarFxFrameCount;
 	private const float EnemySpecialAbilityAvatarFxVisualScale = 1.22f;
 	private const int EnemySpecialAbilityAvatarFxZIndex = PlayedCardFlightZIndex + 980;
+	private const float BossKBorrowedAbilityAvatarFxTotalSeconds = 0.62f;
+	private const float BossKBorrowedAbilityAvatarFxPeakAlpha = 0.54f;
+	private const float BossKBorrowedAbilityAvatarFxPortraitScale = 0.90f;
+	private const float BossKBorrowedAbilityAvatarFxStartScale = 0.82f;
+	private const float BossKBorrowedAbilityAvatarFxPeakScale = 1.06f;
+	private const float BossKBorrowedAbilityAvatarFxEndScale = 0.96f;
+	private const int BossKBorrowedAbilityAvatarFxZIndex = EnemySpecialAbilityAvatarFxZIndex + 1;
 	private const float MantaRayTideShiftCycloneSeconds = 0.72f;
 	private const float MantaRayTideShiftCycloneFrameSeconds = 0.06f;
 	private const float MantaRayTideShiftCycloneStartInset = 76.0f;
@@ -36,6 +43,13 @@ public partial class GameBoardScene
 	private const float DragonPrinceDamageHitStartInset = 34.0f;
 	private const float DragonPrinceDamageHitTargetInset = 20.0f;
 	private const float DragonPrinceDamageHitRotationOffset = 0.7853982f;
+	private const float DragonQueenJawSlashVisualScale = 1.02f;
+	private const float DragonQueenJawSlashStartScale = 0.90f;
+	private const float DragonQueenJawSlashPeakScale = 1.08f;
+	private const float DragonQueenJawSlashEndScale = 0.98f;
+	private const double DragonQueenJawSlashFrameSeconds = 0.10d;
+	private const double DragonQueenJawSlashTotalSeconds = 0.44d;
+	private const double DragonQueenJawSlashHitDelaySeconds = DragonQueenJawSlashFrameSeconds * 2.0d;
 	private const float AdventureAttackEffectVisualSize = 104.0f;
 	private const float AdventureAttackImpactVisualSize = 124.0f;
 	private const float CatAdventureScratchVisualSize = 132.0f;
@@ -90,6 +104,11 @@ public partial class GameBoardScene
 	private const float LeafySeadragonBladeProjectileStartInset = 48.0f;
 	private const float LeafySeadragonBladeProjectileTargetInset = 12.0f;
 	private const float LeafySeadragonBladeProjectileRotationOffset = 0.0f;
+	private const float BossKRoyalSeizureLanceFlightSeconds = 0.56f;
+	private const float BossKRoyalSeizureLanceVisualSize = 136.0f;
+	private const float BossKRoyalSeizureLanceStartInset = 42.0f;
+	private const float BossKRoyalSeizureLanceTargetInset = 20.0f;
+	private const float BossKRoyalSeizureLanceArcHeight = 32.0f;
 	private const int AdventureAttackEffectTravelZIndex = PlayedCardFlightZIndex + 920;
 
 	private IReadOnlyList<Texture2D> GetScoreFillEffectFrames()
@@ -314,12 +333,33 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (ShouldPlayBossKRoyalSeizureLanceAttack(attackerPlayerIndex, targetPlayerIndex))
+		{
+			await PlayBossKRoyalSeizureLanceAttackAsync(
+				attackerPlayerIndex,
+				targetCenter,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
 		if (ShouldPlayDragonPrinceDamageHitAttack(attackerPlayerIndex, targetPlayerIndex))
 		{
 			await PlayDragonPrinceDamageHitAttackAsync(
 				attackerPlayerIndex,
 				startCenter,
 				targetCenter,
+				attackFrames,
+				turnSequenceGeneration,
+				onHit);
+			return;
+		}
+
+		if (ShouldPlayDragonQueenJawSlashAttack(attackerPlayerIndex, targetPlayerIndex))
+		{
+			await PlayDragonQueenJawSlashAttackAsync(
+				attackerPlayerIndex,
+				targetPlayerIndex,
 				attackFrames,
 				turnSequenceGeneration,
 				onHit);
@@ -425,6 +465,20 @@ public partial class GameBoardScene
 	private bool ShouldPlayDragonPrinceDamageHitAttack(int attackerPlayerIndex, int targetPlayerIndex)
 	{
 		return adventure_enemy_avatar_id == DragonPrinceAdventureEnemyAvatarId
+			&& targetPlayerIndex == MainPlayerIndex
+			&& attackerPlayerIndex != MainPlayerIndex;
+	}
+
+	private bool ShouldPlayDragonQueenJawSlashAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	{
+		return adventure_enemy_avatar_id == DragonQueenAdventureEnemyAvatarId
+			&& targetPlayerIndex == MainPlayerIndex
+			&& attackerPlayerIndex != MainPlayerIndex;
+	}
+
+	private bool ShouldPlayBossKRoyalSeizureLanceAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	{
+		return adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId
 			&& targetPlayerIndex == MainPlayerIndex
 			&& attackerPlayerIndex != MainPlayerIndex;
 	}
@@ -1186,6 +1240,96 @@ public partial class GameBoardScene
 		}
 	}
 
+	private async Task PlayDragonQueenJawSlashAttackAsync(
+		int attackerPlayerIndex,
+		int targetPlayerIndex,
+		IReadOnlyList<Texture2D> frames,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		if (frames.Count == 0 || !IsInsideTree())
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onHit?.Invoke();
+			}
+
+			return;
+		}
+
+		Texture2D firstFrame = frames[0];
+		Vector2 targetCenter = GetPlayerAvatarGlobalCenter(targetPlayerIndex);
+		Vector2 baseScale = GetSpriteScaleForVisualSize(
+			firstFrame,
+			GetPlayerAvatarFxVisualSize(targetPlayerIndex) * DragonQueenJawSlashVisualScale);
+
+		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		var jawSlash = new Sprite2D
+		{
+			Name = "DragonQueenJawSlashAttack",
+			Texture = firstFrame,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex,
+			ZAsRelative = false,
+			GlobalPosition = targetCenter,
+			Scale = baseScale * DragonQueenJawSlashStartScale,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(jawSlash);
+
+		bool hitInvoked = false;
+		void InvokeHitOnce()
+		{
+			if (hitInvoked
+				|| turnSequenceGeneration != _turnSequenceGeneration
+				|| IsGameOver())
+			{
+				return;
+			}
+
+			hitInvoked = true;
+			onHit?.Invoke();
+		}
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFrames(tween, jawSlash, frames, DragonQueenJawSlashFrameSeconds);
+			tween.TweenProperty(jawSlash, "modulate:a", 0.96f, DragonQueenJawSlashTotalSeconds * 0.14d);
+			tween.TweenProperty(jawSlash, "modulate:a", 0.0f, DragonQueenJawSlashTotalSeconds * 0.32d)
+				.SetDelay(DragonQueenJawSlashTotalSeconds * 0.68d);
+			tween.TweenProperty(jawSlash, "scale", baseScale * DragonQueenJawSlashPeakScale, DragonQueenJawSlashHitDelaySeconds);
+			tween.TweenProperty(jawSlash, "scale", baseScale * DragonQueenJawSlashEndScale, DragonQueenJawSlashTotalSeconds - DragonQueenJawSlashHitDelaySeconds)
+				.SetDelay(DragonQueenJawSlashHitDelaySeconds);
+			tween.TweenMethod(
+				Callable.From<float>(_ =>
+				{
+					if (GodotObject.IsInstanceValid(jawSlash))
+					{
+						jawSlash.GlobalPosition = GetPlayerAvatarGlobalCenter(targetPlayerIndex);
+					}
+				}),
+				0.0f,
+				1.0f,
+				DragonQueenJawSlashTotalSeconds);
+			tween.TweenCallback(Callable.From(InvokeHitOnce)).SetDelay(DragonQueenJawSlashHitDelaySeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+			InvokeHitOnce();
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(jawSlash))
+			{
+				jawSlash.QueueFree();
+			}
+		}
+	}
+
 	private async Task PlayLeafySeadragonCollectAttackAsync(
 		int attackerPlayerIndex,
 		Vector2 startCenter,
@@ -1325,7 +1469,120 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayEnemySpecialAbilityAvatarFxAsync(int enemyPlayerIndex, int turnSequenceGeneration)
+	private async Task PlayBossKRoyalSeizureLanceAttackAsync(
+		int attackerPlayerIndex,
+		Vector2 targetCenter,
+		int turnSequenceGeneration,
+		Action? onHit)
+	{
+		await PlayBossKRoyalSeizureLanceFlightAsync(attackerPlayerIndex, targetCenter, turnSequenceGeneration, onHit);
+		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+		{
+			await PlayAdventureAttackImpactPulseAsync(targetCenter, _bossKRoyalSeizureLanceFrames);
+		}
+	}
+
+	private async Task PlayBossKRoyalSeizureLanceFlightAsync(
+		int attackerPlayerIndex,
+		Vector2 targetCenter,
+		int turnSequenceGeneration,
+		Action? onTouchTarget = null)
+	{
+		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		if (_bossKRoyalSeizureLanceFrames.Count == 0
+			|| !IsInsideTree()
+			|| turnSequenceGeneration != _turnSequenceGeneration
+			|| IsGameOver())
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onTouchTarget?.Invoke();
+			}
+
+			return;
+		}
+
+		Vector2 startCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
+		Vector2 travel = targetCenter - startCenter;
+		float distance = travel.Length();
+		if (distance <= 1.0f)
+		{
+			onTouchTarget?.Invoke();
+			return;
+		}
+
+		Vector2 direction = travel / distance;
+		Vector2 side = new(-direction.Y, direction.X);
+		Vector2 projectileStart = startCenter + direction * BossKRoyalSeizureLanceStartInset;
+		Vector2 projectileEnd = targetCenter - direction * BossKRoyalSeizureLanceTargetInset;
+		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
+			+ new Vector2(0.0f, -BossKRoyalSeizureLanceArcHeight)
+			+ side * _rng.RandfRange(-14.0f, 14.0f);
+		Texture2D firstFrame = _bossKRoyalSeizureLanceFrames[0];
+		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, BossKRoyalSeizureLanceVisualSize);
+		var lance = new Sprite2D
+		{
+			Name = "BossKRoyalSeizureLance",
+			Texture = firstFrame,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			Centered = true,
+			ZIndex = AdventureAttackEffectTravelZIndex + 8,
+			ZAsRelative = false,
+			GlobalPosition = projectileStart,
+			Rotation = direction.Angle(),
+			Scale = baseScale * 0.82f,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+		};
+		AddChild(lance);
+
+		try
+		{
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Cubic);
+			tween.SetEase(Tween.EaseType.Out);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				tween,
+				lance,
+				_bossKRoyalSeizureLanceFrames,
+				BossKRoyalSeizureLanceFlightSeconds / Math.Max(1, _bossKRoyalSeizureLanceFrames.Count),
+				BossKRoyalSeizureLanceFlightSeconds);
+			tween.TweenProperty(lance, "modulate:a", 1.0f, BossKRoyalSeizureLanceFlightSeconds * 0.12f);
+			tween.TweenProperty(lance, "modulate:a", 0.0f, BossKRoyalSeizureLanceFlightSeconds * 0.18f)
+				.SetDelay(BossKRoyalSeizureLanceFlightSeconds * 0.82f);
+			tween.TweenProperty(lance, "scale", baseScale * 1.08f, BossKRoyalSeizureLanceFlightSeconds * 0.48f);
+			tween.TweenProperty(lance, "scale", baseScale * 0.94f, BossKRoyalSeizureLanceFlightSeconds * 0.52f)
+				.SetDelay(BossKRoyalSeizureLanceFlightSeconds * 0.48f);
+			tween.TweenMethod(
+				Callable.From<float>(progress => UpdateSpriteBezierFlight(
+					lance,
+					projectileStart,
+					controlCenter,
+					projectileEnd,
+					progress)),
+				0.0f,
+				1.0f,
+				BossKRoyalSeizureLanceFlightSeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
+			{
+				onTouchTarget?.Invoke();
+			}
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(lance))
+			{
+				lance.QueueFree();
+			}
+		}
+	}
+
+	private async Task PlayEnemySpecialAbilityAvatarFxAsync(
+		int enemyPlayerIndex,
+		int turnSequenceGeneration,
+		string bossKBorrowedAvatarId = "")
 	{
 		if (!adventure_mode
 			|| enemyPlayerIndex < 0
@@ -1336,9 +1593,18 @@ public partial class GameBoardScene
 			return;
 		}
 
+		Task? bossKBorrowedAvatarFxTask = ShouldPlayBossKBorrowedAbilityAvatarFx(enemyPlayerIndex, bossKBorrowedAvatarId)
+			? PlayBossKBorrowedAbilityAvatarFxAsync(enemyPlayerIndex, bossKBorrowedAvatarId, turnSequenceGeneration)
+			: null;
+
 		PlayPlayerAvatarAction(enemyPlayerIndex, CharacterAvatar.AvatarAction.Score);
 		if (_enemySpecialAbilityAvatarFxFrames.Count == 0 || !IsInsideTree())
 		{
+			if (bossKBorrowedAvatarFxTask != null)
+			{
+				await bossKBorrowedAvatarFxTask;
+			}
+
 			return;
 		}
 
@@ -1389,6 +1655,10 @@ public partial class GameBoardScene
 				EnemySpecialAbilityAvatarFxTotalSeconds);
 
 			await ToSignal(tween, Tween.SignalName.Finished);
+			if (bossKBorrowedAvatarFxTask != null)
+			{
+				await bossKBorrowedAvatarFxTask;
+			}
 		}
 		finally
 		{
@@ -1397,6 +1667,149 @@ public partial class GameBoardScene
 				abilityFx.QueueFree();
 			}
 		}
+	}
+
+	private async Task PlayBossKBorrowedAbilityAvatarFxAsync(
+		int bossPlayerIndex,
+		string borrowedAvatarId,
+		int turnSequenceGeneration)
+	{
+		if (!ShouldPlayBossKBorrowedAbilityAvatarFx(bossPlayerIndex, borrowedAvatarId)
+			|| !TryGetBossKBorrowedAbilityAvatarDefinition(borrowedAvatarId, out CharacterAvatarDefinition borrowedAvatarDefinition)
+			|| bossPlayerIndex >= _playerAvatarAreas.Length
+			|| _playerAvatarAreas[bossPlayerIndex] is not DraggableAvatarArea avatarArea
+			|| !GodotObject.IsInstanceValid(avatarArea)
+			|| !IsInsideTree())
+		{
+			return;
+		}
+
+		PackedScene? avatarScene = GD.Load<PackedScene>(CharacterAvatarScenePath);
+		if (avatarScene == null)
+		{
+			GD.PushWarning($"Missing avatar scene for Boss K borrowed ability FX: {CharacterAvatarScenePath}");
+			return;
+		}
+
+		Node avatarNode = avatarScene.Instantiate();
+		if (avatarNode is not CharacterAvatar borrowedAvatar)
+		{
+			GD.PushWarning($"{CharacterAvatarScenePath} root must use CharacterAvatar for Boss K borrowed ability FX.");
+			avatarNode.QueueFree();
+			return;
+		}
+
+		borrowedAvatar.Name = $"BossKBorrowed{borrowedAvatarDefinition.Id}AvatarFx";
+		borrowedAvatar.MouseFilter = MouseFilterEnum.Ignore;
+		borrowedAvatar.AvatarRoot = borrowedAvatarDefinition.RootPath;
+		borrowedAvatar.AccentColor = PlayerAvatarAccentColors[bossPlayerIndex];
+		borrowedAvatar.ShowFrame = false;
+		borrowedAvatar.LoadActionFrames = true;
+		borrowedAvatar.PortraitScale = BossKBorrowedAbilityAvatarFxPortraitScale;
+		borrowedAvatar.ZIndex = BossKBorrowedAbilityAvatarFxZIndex;
+		borrowedAvatar.ZAsRelative = false;
+		borrowedAvatar.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		borrowedAvatar.Scale = Vector2.One * BossKBorrowedAbilityAvatarFxStartScale;
+		avatarArea.AddChild(borrowedAvatar);
+		FitAvatarToArea(borrowedAvatar);
+		RefreshBossKBorrowedAbilityAvatarFxLayout(borrowedAvatar, avatarArea);
+
+		try
+		{
+			if (!borrowedAvatar.IsNodeReady())
+			{
+				await ToSignal(borrowedAvatar, Node.SignalName.Ready);
+			}
+
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+
+			borrowedAvatar.PlayAction(CharacterAvatar.AvatarAction.Score);
+
+			Tween tween = CreateTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(
+				borrowedAvatar,
+				"modulate:a",
+				BossKBorrowedAbilityAvatarFxPeakAlpha,
+				BossKBorrowedAbilityAvatarFxTotalSeconds * 0.20f);
+			tween.TweenProperty(
+				borrowedAvatar,
+				"modulate:a",
+				0.0f,
+				BossKBorrowedAbilityAvatarFxTotalSeconds * 0.28f)
+				.SetDelay(BossKBorrowedAbilityAvatarFxTotalSeconds * 0.72f);
+			tween.TweenProperty(
+				borrowedAvatar,
+				"scale",
+				Vector2.One * BossKBorrowedAbilityAvatarFxPeakScale,
+				BossKBorrowedAbilityAvatarFxTotalSeconds * 0.50f);
+			tween.TweenProperty(
+				borrowedAvatar,
+				"scale",
+				Vector2.One * BossKBorrowedAbilityAvatarFxEndScale,
+				BossKBorrowedAbilityAvatarFxTotalSeconds * 0.50f)
+				.SetDelay(BossKBorrowedAbilityAvatarFxTotalSeconds * 0.50f);
+			tween.TweenMethod(
+				Callable.From<float>(_ => RefreshBossKBorrowedAbilityAvatarFxLayout(borrowedAvatar, avatarArea)),
+				0.0f,
+				1.0f,
+				BossKBorrowedAbilityAvatarFxTotalSeconds);
+
+			await ToSignal(tween, Tween.SignalName.Finished);
+		}
+		finally
+		{
+			if (GodotObject.IsInstanceValid(borrowedAvatar))
+			{
+				borrowedAvatar.QueueFree();
+			}
+		}
+	}
+
+	private bool ShouldPlayBossKBorrowedAbilityAvatarFx(int bossPlayerIndex, string borrowedAvatarId)
+	{
+		return IsBossKEnemy(bossPlayerIndex)
+			&& !string.IsNullOrWhiteSpace(borrowedAvatarId);
+	}
+
+	private static bool TryGetBossKBorrowedAbilityAvatarDefinition(
+		string borrowedAvatarId,
+		out CharacterAvatarDefinition borrowedAvatarDefinition)
+	{
+		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
+		{
+			if (!string.Equals(avatarDefinition.Id, borrowedAvatarId, StringComparison.Ordinal)
+				&& !string.Equals(avatarDefinition.DisplayName, borrowedAvatarId, StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			borrowedAvatarDefinition = avatarDefinition;
+			return avatarDefinition.Id != BossKAdventureEnemyAvatarId
+				&& avatarDefinition.Id != SeaSlugAdventureEnemyAvatarId;
+		}
+
+		borrowedAvatarDefinition = CharacterAvatarCatalog.Default;
+		return false;
+	}
+
+	private static void RefreshBossKBorrowedAbilityAvatarFxLayout(
+		CharacterAvatar borrowedAvatar,
+		DraggableAvatarArea avatarArea)
+	{
+		if (!GodotObject.IsInstanceValid(borrowedAvatar) || !GodotObject.IsInstanceValid(avatarArea))
+		{
+			return;
+		}
+
+		borrowedAvatar.Position = Vector2.Zero;
+		borrowedAvatar.Size = avatarArea.Size;
+		borrowedAvatar.PivotOffset = borrowedAvatar.Size / 2.0f;
 	}
 
 	private async Task PlayLeafySeadragonBladeProjectilesAsync(
@@ -1801,6 +2214,18 @@ public partial class GameBoardScene
 		}
 
 		return Size / 2.0f;
+	}
+
+	private Vector2 GetPlayerCardPileGlobalCenter(int playerIndex)
+	{
+		if (playerIndex >= 0
+			&& playerIndex < _playerCardPiles.Count
+			&& GodotObject.IsInstanceValid(_playerCardPiles[playerIndex]))
+		{
+			return _playerCardPiles[playerIndex].GlobalPosition + CardPileSize / 2.0f;
+		}
+
+		return GetScoreMeterGlobalCenter(playerIndex);
 	}
 
 	private async Task PlayAdventureAttackEffectFlightAsync(

@@ -217,7 +217,8 @@ public partial class GameBoardScene
 	{
 		return adventure_mode
 			&& scorePlayerIndex == MainPlayerIndex
-			&& adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId;
+			&& (adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId
+				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId);
 	}
 
 	private bool ShouldPlayCrabScoreReductionAbility(

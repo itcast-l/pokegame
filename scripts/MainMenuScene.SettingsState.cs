@@ -57,6 +57,12 @@ public partial class MainMenuScene
 			? DisplayServer.WindowMode.Fullscreen
 			: DisplayServer.WindowMode.Windowed);
 
+		if (_backgroundAnimator != null)
+		{
+			_backgroundAnimator.motion_scale = _motionScale;
+			_backgroundAnimator.SetMotionEnabled(_oceanMotion);
+		}
+
 		if (_oceanDynamicsLayer != null)
 		{
 			_oceanDynamicsLayer.motion_scale = _motionScale;

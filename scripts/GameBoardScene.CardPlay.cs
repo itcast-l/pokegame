@@ -22,7 +22,7 @@ public partial class GameBoardScene
 		bool narwhalDoubleAbilityTriggered = ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, playedCard);
 		if (narwhalDoubleAbilityTriggered)
 		{
-			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, NarwhalAdventureEnemyAvatarId);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return new PlayCardResult(false, false);
@@ -96,6 +96,7 @@ public partial class GameBoardScene
 			try
 			{
 				int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
+				bool capturedMiddleCards = HasCapturedMiddleTableCards(captureStartIndex);
 				if (ShouldPlayPairCaptureEdgeFloat(captureStartIndex, playedTableCardIndex, playedJackCollectsTable))
 				{
 					pairCaptureEdgeFloat = await PlayPairCaptureEdgeFloatHoldAnimationAsync(captureStartIndex, playedTableCardIndex);
@@ -125,26 +126,29 @@ public partial class GameBoardScene
 					return new PlayCardResult(false, false);
 				}
 
-				foreach (TableSpecialCardTrigger specialTrigger in GetCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes))
+				if (capturedMiddleCards)
 				{
-					await PlayTableSpecialCardTriggerEffectAsync(specialTrigger);
-					if (turnSequenceGeneration != _turnSequenceGeneration)
+					foreach (TableSpecialCardTrigger specialTrigger in GetCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes))
 					{
-						return new PlayCardResult(false, false);
-					}
+						await PlayTableSpecialCardTriggerEffectAsync(specialTrigger);
+						if (turnSequenceGeneration != _turnSequenceGeneration)
+						{
+							return new PlayCardResult(false, false);
+						}
 
-					await PublishAndResolveCardEventAsync(
-						new CardGameEvent(
-							CardGameEvents.OnCollect,
-							playerIndex,
-							sourceTableCardIndex: specialTrigger.TableCardIndex,
-							captureStartIndex: captureStartIndex,
-							extraTableCardIndexes: magnetExtraCaptureIndexes,
-							originGlobalCenter: specialTrigger.GlobalPosition + CardVisualSize / 2.0f),
-						turnSequenceGeneration);
-					if (turnSequenceGeneration != _turnSequenceGeneration)
-					{
-						return new PlayCardResult(false, false);
+						await PublishAndResolveCardEventAsync(
+							new CardGameEvent(
+								CardGameEvents.OnCollect,
+								playerIndex,
+								sourceTableCardIndex: specialTrigger.TableCardIndex,
+								captureStartIndex: captureStartIndex,
+								extraTableCardIndexes: magnetExtraCaptureIndexes,
+								originGlobalCenter: specialTrigger.GlobalPosition + CardVisualSize / 2.0f),
+							turnSequenceGeneration);
+						if (turnSequenceGeneration != _turnSequenceGeneration)
+						{
+							return new PlayCardResult(false, false);
+						}
 					}
 				}
 
@@ -155,10 +159,11 @@ public partial class GameBoardScene
 					false,
 					magnetExtraCaptureIndexes,
 					pairFloatFlightStartOverrides);
-				bool gardenEelSandBiteTriggered = ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedJackCollectsTable);
+				bool gardenEelSandBiteTriggered = capturedMiddleCards
+					&& ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedJackCollectsTable);
 				if (gardenEelSandBiteTriggered)
 				{
-					await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+					await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, GardenEelAdventureEnemyAvatarId);
 					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 					{
 						return new PlayCardResult(false, false);
@@ -176,9 +181,9 @@ public partial class GameBoardScene
 
 				int collectedPoints = GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes)
 					+ gardenEelSandBiteBonusPoints;
-				if (ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
+				if (capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
 				{
-					await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+					await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration, CrabAdventureEnemyAvatarId);
 					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 					{
 						return new PlayCardResult(false, false);

@@ -209,7 +209,7 @@ public partial class GameBoardScene
 
 	private int GetCapturedTablePoints(int captureStartIndex, int scorePlayerIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count || !HasCapturedMiddleTableCards(captureStartIndex))
 		{
 			return 0;
 		}
@@ -344,7 +344,7 @@ public partial class GameBoardScene
 
 	private bool HasCapturedScoringTableCards(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count || !HasCapturedMiddleTableCards(captureStartIndex))
 		{
 			return false;
 		}
@@ -406,14 +406,17 @@ public partial class GameBoardScene
 		int collectedCardCount = 0;
 		int removedTableCardCount = 0;
 		QuestionCardRewardAnimation? questionRewardAnimation = null;
+		bool capturedMiddleCards = HasCapturedMiddleTableCards(captureStartIndex);
 		int scorePlayerIndex = awardScore ? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex) : playerIndex;
-		int collectedPoints = awardScore ? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, extraTableCardIndexes) : 0;
-		bool capturedScoringCards = HasCapturedScoringTableCards(captureStartIndex, extraTableCardIndexes);
+		int collectedPoints = awardScore && capturedMiddleCards
+			? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, extraTableCardIndexes)
+			: 0;
+		bool capturedScoringCards = capturedMiddleCards && HasCapturedScoringTableCards(captureStartIndex, extraTableCardIndexes);
 		List<int> validExtraCaptureIndexes = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
 		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (awardScore && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, extraTableCardIndexes))
+		if (awardScore && capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, extraTableCardIndexes))
 		{
-			await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration);
+			await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration, CrabAdventureEnemyAvatarId);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return new CaptureTableCardsResult(0, 0, null);
@@ -435,19 +438,18 @@ public partial class GameBoardScene
 				collectedCardCount++;
 			}
 
-				if (IsQuestionTableCard(tableCard))
+			if (capturedMiddleCards && IsQuestionTableCard(tableCard))
+			{
+				QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(playerIndex, reserveReplacementCard, turnSequenceGeneration);
+				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)
 				{
-					QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(playerIndex, reserveReplacementCard, turnSequenceGeneration);
-					if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)
-					{
-						questionRewardAnimation = new QuestionCardRewardAnimation(
+					questionRewardAnimation = new QuestionCardRewardAnimation(
 						rewardGrant.Value.ItemCard,
 						rewardGrant.Value.ItemHandIndex,
 						_centerArena.GlobalPosition + cardPositions[tableCardIndex],
 						rewardGrant.Value.RequiresMagnetAttachment);
 				}
 			}
-
 		}
 
 		foreach (int tableCardIndex in validExtraCaptureIndexes)
@@ -473,7 +475,7 @@ public partial class GameBoardScene
 			_tableCards.RemoveAt(validExtraCaptureIndexes[index]);
 		}
 		RefreshGardenEelBuriedCardIndex();
-		if (captureCount + validExtraCaptureIndexes.Count > 0)
+		if (capturedMiddleCards && captureCount + validExtraCaptureIndexes.Count > 0)
 		{
 			_completedTurnsSinceQuestionCardRefresh = 0;
 			_questionCardRefreshAnchorPlayerIndex = playerIndex;
@@ -485,16 +487,22 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		if (!IsGameOver() && capturedScoringCards)
+		if (!IsGameOver() && removedTableCardCount > 0)
 		{
-			if (!suppressGardenEelCaptureRecord)
+			if (capturedScoringCards && !suppressGardenEelCaptureRecord)
 			{
 				RecordGardenEelCaptureForSandBite(playerIndex);
 			}
 
-			await ApplyJellyfishBubbleAfterCaptureAsync(playerIndex, turnSequenceGeneration);
+			if (capturedScoringCards)
+			{
+				await ApplyJellyfishBubbleAfterCaptureAsync(playerIndex, turnSequenceGeneration);
+			}
 			await ApplyNautilusBombAfterMainPlayerCaptureAsync(playerIndex, turnSequenceGeneration);
-			RecordNarwhalCaptureForDouble(playerIndex);
+			if (capturedScoringCards)
+			{
+				RecordNarwhalCaptureForDouble(playerIndex);
+			}
 			await ApplyDragonQueenAndKingAfterEnemyCaptureAsync(playerIndex, removedTableCardCount, turnSequenceGeneration);
 		}
 

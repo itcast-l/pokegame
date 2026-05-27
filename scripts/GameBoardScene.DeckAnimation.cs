@@ -30,6 +30,9 @@ public partial class GameBoardScene
 		FrameAnimationHelpers.LoadTextureFrames(DeckShuffleFramePattern, DeckShuffleFrameCount, "deck shuffle");
 	private const float PlayedCardFlightDuration = 0.34f;
 	private const float PlayedCardFlipMinScaleX = 0.06f;
+	private const float StolenCardFlightSeconds = 0.42f;
+	private const float StolenCardFlightArcHeight = 74.0f;
+	private const float StolenCardFlightPeakScale = 1.08f;
 	private const float QuestionCardToTransformAreaFlightSeconds = 0.36f;
 	private const float QuestionCardTransformSeconds = 0.58f;
 	private const float QuestionCardRewardInsertSeconds = 0.22f;

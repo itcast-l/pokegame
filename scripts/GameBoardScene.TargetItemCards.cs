@@ -35,10 +35,25 @@ public partial class GameBoardScene
 			}
 
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
+			await PlayStealHandCardAnimationAsync(
+				ownerPlayerIndex,
+				targetPlayerIndex,
+				targetHandIndex,
+				GetVisibleStolenPlayingCardTexture(targetPlayerIndex, stolenCard),
+				GetVisibleStolenPlayingCardAttachmentOverlayTexture(targetPlayerIndex, stolenCard),
+				1.0f,
+				GetStolenPlayingCardTargetDisplayIndex(ownerPlayerIndex));
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				RenderPlayerHands();
+				return new PlayCardResult(false, false);
+			}
+
 			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
 			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 			_playerHands[ownerPlayerIndex].Add(stolenCard);
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+			RenderPlayerHands();
 			return new PlayCardResult(true, false);
 		}
 
@@ -50,11 +65,101 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
+		await PlayStealHandCardAnimationAsync(
+			ownerPlayerIndex,
+			targetPlayerIndex,
+			targetHandIndex,
+			GetVisibleStolenItemCardTexture(targetPlayerIndex, stolenItemCard),
+			null,
+			GetVisibleStolenItemCardScale(targetPlayerIndex, stolenItemCard),
+			GetStolenItemCardTargetDisplayIndex(ownerPlayerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			RenderPlayerHands();
+			return new PlayCardResult(false, false);
+		}
+
 		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
 		PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+		RenderPlayerHands();
 		return new PlayCardResult(true, false);
+	}
+
+	private async Task PlayStealHandCardAnimationAsync(
+		int ownerPlayerIndex,
+		int targetPlayerIndex,
+		int sourceDisplayIndex,
+		Texture2D? cardTexture,
+		Texture2D? attachmentOverlayTexture,
+		float visualScale,
+		int targetHandDisplayIndex)
+	{
+		if (cardTexture == null || !IsInsideTree())
+		{
+			return;
+		}
+
+		Vector2 startGlobalPosition = GetHandDisplayCardGlobalPosition(targetPlayerIndex, sourceDisplayIndex);
+		if (targetPlayerIndex >= 0 && targetPlayerIndex < _playerHandAreas.Count)
+		{
+			Control? sourceCardSlot = _playerHandAreas[targetPlayerIndex].GetNodeOrNull<Control>($"HandCard_{sourceDisplayIndex}");
+			startGlobalPosition = sourceCardSlot?.GlobalPosition ?? startGlobalPosition;
+			if (sourceCardSlot != null)
+			{
+				sourceCardSlot.Visible = false;
+			}
+		}
+
+		int ownerDisplayCardCountAfterSteal = GetTotalHandCardCount(ownerPlayerIndex) + 1;
+		Vector2 targetGlobalPosition = GetHandDisplayCardGlobalPosition(
+			ownerPlayerIndex,
+			targetHandDisplayIndex,
+			ownerDisplayCardCountAfterSteal);
+		await PlayStolenHandCardFlightAsync(
+			cardTexture,
+			attachmentOverlayTexture,
+			startGlobalPosition,
+			targetGlobalPosition,
+			GetCardRotationDegreesForPlayer(targetPlayerIndex),
+			GetCardRotationDegreesForPlayer(ownerPlayerIndex),
+			visualScale);
+	}
+
+	private Texture2D? GetVisibleStolenPlayingCardTexture(int sourcePlayerIndex, PlayingCard card)
+	{
+		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null ? _cardBackTexture : card.Texture;
+	}
+
+	private Texture2D? GetVisibleStolenPlayingCardAttachmentOverlayTexture(int sourcePlayerIndex, PlayingCard card)
+	{
+		return IsPlayerHandHidden(sourcePlayerIndex) ? null : GetCardAttachmentOverlayTexture(card);
+	}
+
+	private Texture2D? GetVisibleStolenItemCardTexture(int sourcePlayerIndex, ItemCard itemCard)
+	{
+		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null ? _cardBackTexture : itemCard.Texture;
+	}
+
+	private float GetVisibleStolenItemCardScale(int sourcePlayerIndex, ItemCard itemCard)
+	{
+		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null ? 1.0f : GetItemCardVisualScale(itemCard.Id);
+	}
+
+	private int GetStolenPlayingCardTargetDisplayIndex(int ownerPlayerIndex)
+	{
+		return ownerPlayerIndex >= 0 && ownerPlayerIndex < _playerHands.Count ? _playerHands[ownerPlayerIndex].Count : 0;
+	}
+
+	private int GetStolenItemCardTargetDisplayIndex(int ownerPlayerIndex)
+	{
+		return GetTotalHandCardCount(ownerPlayerIndex);
+	}
+
+	private bool IsPlayerHandHidden(int playerIndex)
+	{
+		return playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 	}
 
 	private PlayCardResult ResolveKingEffect(int ownerPlayerIndex, int targetPlayerIndex)

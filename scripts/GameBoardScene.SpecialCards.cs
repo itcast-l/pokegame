@@ -23,6 +23,12 @@ public partial class GameBoardScene : ICardTriggerProvider
 
 	private IEnumerable<ItemCardDefinition> CollectTriggerDefinitions(CardGameEvent gameEvent)
 	{
+		if (gameEvent.Trigger == CardGameEvents.OnCollect
+			&& (gameEvent.CaptureStartIndex < 0 || !HasCapturedMiddleTableCards(gameEvent.CaptureStartIndex)))
+		{
+			yield break;
+		}
+
 		if (!string.IsNullOrEmpty(gameEvent.SourceCardId)
 			&& _itemCardCatalog.TryGetDefinition(gameEvent.SourceCardId, out ItemCardDefinition sourceDefinition))
 		{

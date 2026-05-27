@@ -7,9 +7,11 @@ public partial class MainMenuScene : Control
 	private const string BackgroundMusicBankLabel = "main_menu";
 	private const string BackgroundMusicTrackName = "background";
 	private const float BackgroundMusicFadeSeconds = 2.0f;
+	private const string BackgroundArtPath = "BackgroundArt";
 	private const string MenuCameraPath = "MenuCamera2D";
 	private const string MenuCameraHomePath = "MenuCameraHome";
 	private const string MenuCameraPushInPath = "MenuCameraPushIn";
+	private const string MenuCameraAdventureDivePath = "MenuCameraAdventureDive";
 	private const string OceanDynamicsLayerPath = "OceanDynamicsLayer";
 	private const string UnderwaterAmbientLayerPath = "UnderwaterAmbientLayer";
 	private const string WaterCausticOverlayPath = "WaterCausticOverlay";
@@ -37,17 +39,21 @@ public partial class MainMenuScene : Control
 	private const bool DefaultItemMode = true;
 	private const int MenuCameraHomePriority = 10;
 	private const int MenuCameraPushInPriority = 20;
+	private const int MenuCameraAdventureDivePriority = 30;
 	private const int MenuCameraInactivePriority = 0;
 	private const float MenuCameraTransitionPaddingSeconds = 0.08f;
+	private const float AdventureMenuFadeSeconds = 0.32f;
 
 	private Camera2D? _menuCamera;
 	private Node2D? _menuCameraHome;
 	private Node2D? _menuCameraPushIn;
+	private Node2D? _menuCameraAdventureDive;
 	private Button _singlePlayerButton = default!;
 	private Button _adventureButton = default!;
 	private Button _multiplayerButton = default!;
 	private Button _settingsButton = default!;
 	private Button _exitButton = default!;
+	private MainMenuBackgroundAnimator? _backgroundAnimator;
 	private MainMenuOceanDynamics? _oceanDynamicsLayer;
 	private UnderwaterAmbientLayer? _underwaterAmbientLayer;
 	private CanvasItem? _waterCausticOverlay;
@@ -78,6 +84,7 @@ public partial class MainMenuScene : Control
 	private CanvasLayer? _avatarEditDialogLayer;
 	private Control? _adventureTransitionRoot;
 	private Control? _adventureTransitionMotion;
+	private Tween? _adventureTransitionTween;
 	private Control? _preparedAdventureAvatarMenu;
 	private bool _playAdventureReturnTransition;
 	private float _masterVolume = DefaultMasterVolume;
@@ -90,7 +97,8 @@ public partial class MainMenuScene : Control
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
 	private bool _isSyncingSettingsControls;
 	private bool _isMenuCameraTransitioning;
-	private ulong _menuCameraPushInStartMsec;
+	private ulong _menuCameraTransitionStartMsec;
+	private float _menuCameraTransitionTotalSeconds;
 	private float _appliedMusicVolumeDb = float.NaN;
 	private readonly System.Collections.Generic.List<(Label Label, string Key)> _localizedLabels = new();
 	private readonly System.Collections.Generic.List<(Button Button, string Key)> _localizedButtons = new();
@@ -132,7 +140,9 @@ public partial class MainMenuScene : Control
 		_menuCamera = GetNodeOrNull<Camera2D>(MenuCameraPath);
 		_menuCameraHome = GetNodeOrNull<Node2D>(MenuCameraHomePath);
 		_menuCameraPushIn = GetNodeOrNull<Node2D>(MenuCameraPushInPath);
+		_menuCameraAdventureDive = GetNodeOrNull<Node2D>(MenuCameraAdventureDivePath);
 		SyncMenuCameraToViewport();
+		_backgroundAnimator = GetNodeOrNull<MainMenuBackgroundAnimator>(BackgroundArtPath);
 		_oceanDynamicsLayer = GetNodeOrNull<MainMenuOceanDynamics>(OceanDynamicsLayerPath);
 		_underwaterAmbientLayer = GetNodeOrNull<UnderwaterAmbientLayer>(UnderwaterAmbientLayerPath);
 		_waterCausticOverlay = GetNodeOrNull<CanvasItem>(WaterCausticOverlayPath);
@@ -223,6 +233,23 @@ public partial class MainMenuScene : Control
 		return true;
 	}
 
+	private bool BeginMenuCameraAdventureDive()
+	{
+		if (_isMenuCameraTransitioning)
+		{
+			return false;
+		}
+
+		_isMenuCameraTransitioning = true;
+		SetMainMenuButtonsDisabled(true);
+		if (!SetMenuCameraAdventureDiveActive())
+		{
+			SetMenuCameraPushInActive();
+		}
+
+		return true;
+	}
+
 	private void CancelMenuCameraPushIn()
 	{
 		ResetMenuCamera();
@@ -232,9 +259,19 @@ public partial class MainMenuScene : Control
 
 	private async Task<bool> CompleteMenuCameraPushIn()
 	{
+		return await CompleteMenuCameraTransition();
+	}
+
+	private async Task<bool> CompleteMenuCameraAdventureDive()
+	{
+		return await CompleteMenuCameraTransition();
+	}
+
+	private async Task<bool> CompleteMenuCameraTransition()
+	{
 		try
 		{
-			await WaitForMenuCameraPushIn();
+			await WaitForMenuCameraTransition();
 			return GodotObject.IsInstanceValid(this);
 		}
 		finally
@@ -247,17 +284,22 @@ public partial class MainMenuScene : Control
 		}
 	}
 
-	private async Task WaitForMenuCameraPushIn()
+	private async Task WaitForMenuCameraTransition()
 	{
 		SceneTree tree = GetTree();
 		await ToSignal(
-			tree.CreateTimer(GetMenuCameraPushInRemainingSeconds()),
+			tree.CreateTimer(GetMenuCameraTransitionRemainingSeconds()),
 			SceneTreeTimer.SignalName.Timeout);
 	}
 
 	private float GetMenuCameraPushInTotalSeconds()
 	{
 		return GetMenuCameraPushInDuration() + MenuCameraTransitionPaddingSeconds;
+	}
+
+	private float GetMenuCameraAdventureDiveTotalSeconds()
+	{
+		return GetMenuCameraAdventureDiveDuration() + MenuCameraTransitionPaddingSeconds;
 	}
 
 	private float GetMenuCameraHomeTotalSeconds()
@@ -285,15 +327,37 @@ public partial class MainMenuScene : Control
 		return Mathf.Max(0.0f, _menuCameraPushIn.Call("get_tween_duration").AsSingle());
 	}
 
-	private float GetMenuCameraPushInRemainingSeconds()
+	private float GetMenuCameraAdventureDiveDuration()
 	{
-		float elapsedSeconds = 0.0f;
-		if (_menuCameraPushInStartMsec > 0)
+		if (_menuCameraAdventureDive == null)
 		{
-			elapsedSeconds = (Time.GetTicksMsec() - _menuCameraPushInStartMsec) / 1000.0f;
+			return GetMenuCameraPushInDuration();
 		}
 
-		return Mathf.Max(0.0f, GetMenuCameraPushInTotalSeconds() - elapsedSeconds);
+		return Mathf.Max(0.0f, _menuCameraAdventureDive.Call("get_tween_duration").AsSingle());
+	}
+
+	private float GetMenuCameraTransitionRemainingSeconds()
+	{
+		float elapsedSeconds = 0.0f;
+		if (_menuCameraTransitionStartMsec > 0)
+		{
+			elapsedSeconds = (Time.GetTicksMsec() - _menuCameraTransitionStartMsec) / 1000.0f;
+		}
+
+		return Mathf.Max(0.0f, _menuCameraTransitionTotalSeconds - elapsedSeconds);
+	}
+
+	private void StartMenuCameraTransition(float totalSeconds)
+	{
+		_menuCameraTransitionStartMsec = Time.GetTicksMsec();
+		_menuCameraTransitionTotalSeconds = Mathf.Max(0.0f, totalSeconds);
+	}
+
+	private void ClearMenuCameraTransition()
+	{
+		_menuCameraTransitionStartMsec = 0;
+		_menuCameraTransitionTotalSeconds = 0.0f;
 	}
 
 	private void SetMenuCameraPushInActive()
@@ -304,9 +368,25 @@ public partial class MainMenuScene : Control
 		}
 
 		_menuCameraPushIn.Position = GetViewportRect().Size * 0.5f;
-		_menuCameraPushInStartMsec = Time.GetTicksMsec();
+		StartMenuCameraTransition(GetMenuCameraPushInTotalSeconds());
+		_menuCameraAdventureDive?.Call("set_priority", MenuCameraInactivePriority);
 		_menuCameraHome.Call("set_priority", MenuCameraHomePriority);
 		_menuCameraPushIn.Call("set_priority", MenuCameraPushInPriority);
+	}
+
+	private bool SetMenuCameraAdventureDiveActive()
+	{
+		if (_menuCameraHome == null || _menuCameraAdventureDive == null)
+		{
+			return false;
+		}
+
+		_menuCameraAdventureDive.Position = GetMenuCameraAdventureDivePosition();
+		StartMenuCameraTransition(GetMenuCameraAdventureDiveTotalSeconds());
+		_menuCameraPushIn?.Call("set_priority", MenuCameraInactivePriority);
+		_menuCameraHome.Call("set_priority", MenuCameraHomePriority);
+		_menuCameraAdventureDive.Call("set_priority", MenuCameraAdventureDivePriority);
+		return true;
 	}
 
 	private void SetMenuCameraPushInInitial()
@@ -329,7 +409,9 @@ public partial class MainMenuScene : Control
 			_menuCameraHome.Call("set_priority", MenuCameraHomePriority);
 		}
 
+		_menuCameraAdventureDive?.Call("set_priority", MenuCameraInactivePriority);
 		_menuCameraPushIn.Call("set_priority", MenuCameraPushInPriority);
+		ClearMenuCameraTransition();
 	}
 
 	private void ResetMenuCamera()
@@ -339,8 +421,9 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
-		_menuCameraPushInStartMsec = 0;
+		ClearMenuCameraTransition();
 		_menuCameraPushIn.Call("set_priority", MenuCameraInactivePriority);
+		_menuCameraAdventureDive?.Call("set_priority", MenuCameraInactivePriority);
 		_menuCameraHome.Call("set_priority", MenuCameraHomePriority);
 	}
 
@@ -362,6 +445,11 @@ public partial class MainMenuScene : Control
 		{
 			_menuCameraPushIn.Position = center;
 		}
+
+		if (_menuCameraAdventureDive != null)
+		{
+			_menuCameraAdventureDive.Position = GetMenuCameraAdventureDivePosition();
+		}
 	}
 
 	private Vector2 GetSecondaryMenuDepthPosition()
@@ -371,9 +459,10 @@ public partial class MainMenuScene : Control
 
 	private Vector2 GetSecondaryMenuDepthPosition(Vector2 contentSize)
 	{
-		Vector2 viewportSize = GetViewportRect().Size;
-		Vector2 scale = GetSecondaryMenuWorldScale(contentSize);
-		return viewportSize * 0.5f - contentSize * scale * 0.5f;
+		return GetSecondaryMenuDepthPosition(
+			contentSize,
+			GetViewportRect().Size * 0.5f,
+			GetMenuCameraPushInZoom());
 	}
 
 	private Vector2 GetSecondaryMenuWorldScale()
@@ -383,7 +472,30 @@ public partial class MainMenuScene : Control
 
 	private Vector2 GetSecondaryMenuWorldScale(Vector2 contentSize)
 	{
-		Vector2 zoom = GetMenuCameraPushInZoom();
+		return GetSecondaryMenuWorldScale(contentSize, GetMenuCameraPushInZoom());
+	}
+
+	private Vector2 GetAdventureSecondaryMenuDepthPosition()
+	{
+		return GetSecondaryMenuDepthPosition(
+			GetViewportRect().Size,
+			GetMenuCameraAdventureDivePosition(),
+			GetMenuCameraAdventureDiveZoom());
+	}
+
+	private Vector2 GetAdventureSecondaryMenuWorldScale()
+	{
+		return GetSecondaryMenuWorldScale(GetViewportRect().Size, GetMenuCameraAdventureDiveZoom());
+	}
+
+	private Vector2 GetSecondaryMenuDepthPosition(Vector2 contentSize, Vector2 cameraPosition, Vector2 zoom)
+	{
+		Vector2 scale = GetSecondaryMenuWorldScale(contentSize, zoom);
+		return cameraPosition - contentSize * scale * 0.5f;
+	}
+
+	private Vector2 GetSecondaryMenuWorldScale(Vector2 contentSize, Vector2 zoom)
+	{
 		Vector2 viewportSize = GetViewportRect().Size;
 		return new Vector2(
 			viewportSize.X / Mathf.Max(contentSize.X, 1.0f) / zoom.X,
@@ -401,6 +513,24 @@ public partial class MainMenuScene : Control
 		return new Vector2(
 			Mathf.Max(zoom.X, 0.001f),
 			Mathf.Max(zoom.Y, 0.001f));
+	}
+
+	private Vector2 GetMenuCameraAdventureDiveZoom()
+	{
+		if (_menuCameraAdventureDive == null)
+		{
+			return GetMenuCameraPushInZoom();
+		}
+
+		Vector2 zoom = _menuCameraAdventureDive.Call("get_zoom").AsVector2();
+		return new Vector2(
+			Mathf.Max(zoom.X, 0.001f),
+			Mathf.Max(zoom.Y, 0.001f));
+	}
+
+	private Vector2 GetMenuCameraAdventureDivePosition()
+	{
+		return GetViewportRect().Size * 0.5f;
 	}
 
 	private void SetMainMenuButtonsDisabled(bool disabled)

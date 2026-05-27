@@ -31,6 +31,12 @@ public partial class GameBoardScene
 		_leafySeadragonBladeProjectileFrames.AddRange(LeafySeadragonBladeProjectileFrames);
 	}
 
+	private void LoadBossKRoyalSeizureLanceTextures()
+	{
+		_bossKRoyalSeizureLanceFrames.Clear();
+		_bossKRoyalSeizureLanceFrames.AddRange(BossKRoyalSeizureLanceFrames);
+	}
+
 	private void LoadAdventureDamageEffectTextures()
 	{
 		_adventureDamageEffectFrames.Clear();
@@ -52,6 +58,7 @@ public partial class GameBoardScene
 			NautilusAdventureEnemyAvatarId => NautilusAdventureDamageEffectFrames,
 			NarwhalAdventureEnemyAvatarId => NarwhalAdventureDamageEffectFrames,
 			DragonPrinceAdventureEnemyAvatarId => DragonPrinceAdventureDamageEffectFrames,
+			DragonQueenAdventureEnemyAvatarId => DragonQueenAdventureDamageEffectFrames,
 			LeafySeadragonAdventureEnemyAvatarId => LeafySeadragonCollectAttackEffectFrames,
 			_ => DefaultAdventureDamageEffectFrames,
 		};

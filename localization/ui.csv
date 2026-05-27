@@ -33,9 +33,9 @@ ADVENTURE_ABILITY_LEAFY_MIRAGE_DESC,牌桌堆积到 5 张以上且艾莉本回�
 ADVENTURE_ABILITY_DRAGON_J_NAME,龙子号令,龍子號令,Dragon Jack
 ADVENTURE_ABILITY_DRAGON_J_DESC,每局只会使用一次。轮到杰伊时，若牌桌存在 5 张以上牌，立即收取场上所有牌。,每局只會使用一次。輪到傑伊時，若牌桌存在 5 張以上牌，立即收取場上所有牌。,Once per match. At Jay's turn start if the table has 5 or more cards he collects every table card.
 ADVENTURE_ABILITY_DRAGON_Q_NAME,龙后掠夺,龍后掠奪,Dragon Queen
-ADVENTURE_ABILITY_DRAGON_Q_DESC,奎娜每次收取 5 张以上牌后，随机偷取玩家手里 1 张牌。,奎娜每次收取 5 張以上牌後，隨機偷取玩家手裡 1 張牌。,After Queen captures 5 or more cards she steals 1 random card from the player's hand.
+ADVENTURE_ABILITY_DRAGON_Q_DESC,奎娜每 3 次收取至少 1 张牌后，随机偷取玩家手里 1 张牌。,奎娜每 3 次收取至少 1 張牌後，隨機偷取玩家手裡 1 張牌。,Every 3 times Queen captures at least 1 card she steals 1 random card from the player's hand.
 ADVENTURE_ABILITY_DRAGON_K_NAME,龙王征税,龍王徵稅,Dragon King
-ADVENTURE_ABILITY_DRAGON_K_DESC,凯撒每次收取 5 张以上牌后，偷取玩家牌库顶 1 张牌。,凱撒每次收取 5 張以上牌後，偷取玩家牌庫頂 1 張牌。,After Kaiser captures 5 or more cards he steals the top card of the player's deck.
+ADVENTURE_ABILITY_DRAGON_K_DESC,凯撒继承多种敌人能力；每成功收取 3 次后，随机偷取玩家牌库顶 1 张牌或玩家手里 1 张牌。,凱撒繼承多種敵人能力；每成功收取 3 次後，隨機偷取玩家牌庫頂 1 張牌或玩家手裡 1 張牌。,Kaiser inherits several enemy abilities. Every 3 successful captures he randomly steals either the top card of the player's deck or 1 card from the player's hand.
 PLAYER_COUNT_TITLE,选择游戏人数,選擇遊戲人數,Players
 PLAYER_COUNT_MESSAGE,选择本局参与人数,選擇本局參與人數,Pick player count
 PLAYER_COUNT_PLAYERS,游戏人数,遊戲人數,Players
