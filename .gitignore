@@ -9,7 +9,7 @@
 .DS_Store
 *.swp
 
-# Python/tool caches
+# Python/tool caches/
 __pycache__/
 *.py[cod]
 
