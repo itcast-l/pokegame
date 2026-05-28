@@ -1,0 +1,492 @@
+{
+	"_entity_data": {
+		"_categories": [
+			{
+				"_category_id": "",
+				"_generate_ids": true,
+				"_icon_color": "00fff7ff",
+				"_id": "item_cards",
+				"_ids_generation_class": "ItemCardIds",
+				"_index": 0,
+				"_name": "Item Cards"
+			}
+		],
+		"_entities": [
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "question_mark",
+				"_index": 0,
+				"_name": "Question Mark",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": false
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_QUESTION_MARK"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "question_mark"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 0
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "QuestionMark"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "bomb",
+				"_index": 1,
+				"_name": "Bomb",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_BOMB"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "bomb"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 10
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Bomb"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "magnet",
+				"_index": 2,
+				"_name": "Magnet",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_MAGNET"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "magnet"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 20
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Magnet"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "greed",
+				"_index": 3,
+				"_name": "Greed",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_GREED"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": false
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "greed"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 30
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Greed"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "lens",
+				"_index": 4,
+				"_name": "Lens",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_LENS"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "lens"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 40
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Lens"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "double",
+				"_index": 5,
+				"_name": "Double",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-005"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_DOUBLE"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "double"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 50
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Double"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "overtime",
+				"_index": 6,
+				"_name": "Overtime",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_OVERTIME"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "overtime"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 60
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Overtime"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "draw_card",
+				"_index": 7,
+				"_name": "Draw Card",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_DRAW_CARD"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "draw_card"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 70
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "DrawCard"
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "shuffle",
+				"_index": 8,
+				"_name": "Shuffle",
+				"_property_overrides": {
+					"art_run": {
+						"type": "string",
+						"value": "run-004"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_SHUFFLE"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"frame_count": {
+						"type": "int",
+						"value": 4
+					},
+					"id": {
+						"type": "string",
+						"value": "shuffle"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 80
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Shuffle"
+					}
+				}
+			}
+		],
+		"_properties": [
+			{
+				"_category_id": "item_cards",
+				"_default_value": "",
+				"_id": "item_card_prop_id",
+				"_name": "id",
+				"_type": "string"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": "",
+				"_id": "item_card_prop_sprite_name",
+				"_name": "sprite_name",
+				"_type": "string"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": "",
+				"_id": "item_card_prop_description_key",
+				"_name": "description_key",
+				"_type": "string"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": true,
+				"_id": "item_card_prop_enabled_in_game",
+				"_name": "enabled_in_game",
+				"_type": "bool"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": false,
+				"_id": "item_card_prop_playable_from_hand",
+				"_name": "playable_from_hand",
+				"_type": "bool"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": true,
+				"_id": "item_card_prop_can_be_question_reward",
+				"_name": "can_be_question_reward",
+				"_type": "bool"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": "run-004",
+				"_id": "item_card_prop_art_run",
+				"_name": "art_run",
+				"_type": "string"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": 4,
+				"_id": "item_card_prop_frame_count",
+				"_name": "frame_count",
+				"_type": "int"
+			},
+			{
+				"_category_id": "item_cards",
+				"_default_value": 1000,
+				"_id": "item_card_prop_sort_order",
+				"_name": "sort_order",
+				"_type": "int"
+			}
+		]
+	},
+	"_id_generator": {
+		"_ids_by_context": {
+			"default": 18.0
+		}
+	}
+}
