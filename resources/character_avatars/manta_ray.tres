@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "manta_ray"
+DisplayName = "悠悠"
+RootPath = "res://art/characters/player_manta_ray_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 6
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_TIDE_SHIFT_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_TIDE_SHIFT_DESC"
+AbilityIdsCsv = "tide_shift"
+AbilityValuesRaw = "tide_shift_min_table_cards=4"
+DamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = false
+AttackEffectStyle = "manta_ray_cyclone"

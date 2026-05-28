@@ -175,13 +175,15 @@ public partial class GameBoardScene
 			bool isFaceUp,
 			ItemCard? itemOverlay = null,
 			int itemOwnerPlayerIndex = -1,
-			int cardOwnerPlayerIndex = -1)
+			int cardOwnerPlayerIndex = -1,
+			bool removeCardOnCapture = false)
 		{
 			Card = card;
 			IsFaceUp = isFaceUp;
 			ItemOverlay = itemOverlay;
 			ItemOwnerPlayerIndex = itemOwnerPlayerIndex;
 			CardOwnerPlayerIndex = cardOwnerPlayerIndex;
+			RemoveCardOnCapture = removeCardOnCapture;
 		}
 
 		public PlayingCard? Card { get; private set; }
@@ -192,6 +194,7 @@ public partial class GameBoardScene
 		public ItemCard? ItemOverlay { get; }
 		public int ItemOwnerPlayerIndex { get; }
 		public int CardOwnerPlayerIndex { get; }
+		public bool RemoveCardOnCapture { get; }
 
 		public void ClearAttachedItemEffect(string itemCardId)
 		{

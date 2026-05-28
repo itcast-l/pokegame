@@ -261,7 +261,8 @@ public partial class GameBoardScene
 				}
 
 				Vector2 targetGlobalPosition = GetOpeningHandCardGlobalPosition(playerIndex, handIndex);
-				await PlayOpeningDealCardFlightAsync(startGlobalPosition, targetGlobalPosition, playerIndex, dealNumber);
+				float targetVisualScale = GetHandDisplayCardVisualScale(playerIndex, handIndex);
+				await PlayOpeningDealCardFlightAsync(startGlobalPosition, targetGlobalPosition, playerIndex, dealNumber, targetVisualScale);
 				ShowOpeningHandCard(playerIndex, handIndex + 1);
 				dealNumber++;
 			}
@@ -312,32 +313,44 @@ public partial class GameBoardScene
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		int playerIndex,
-		int dealNumber)
+		int dealNumber,
+		float targetVisualScale)
 	{
 		if (_cardBackTexture == null || !IsInsideTree())
 		{
 			return;
 		}
 
-		var card = new TextureRect
+		float clampedTargetVisualScale = Mathf.Max(0.01f, targetVisualScale);
+		Vector2 targetVisualSize = CardVisualSize * clampedTargetVisualScale;
+		Vector2 targetVisualBasePosition = GetCardVisualBasePosition(clampedTargetVisualScale);
+		float startRotationDegrees = -8.0f + dealNumber % 5 * 4.0f;
+		var cardRoot = new Control
 		{
 			Name = "OpeningDealCardFlight",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			ZIndex = OpeningDealZIndex + dealNumber,
+			ZAsRelative = false,
+		};
+		var cardVisual = new TextureRect
+		{
+			Name = "OpeningDealCardVisual",
 			Texture = _cardBackTexture,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
 			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = -8.0f + dealNumber % 5 * 4.0f,
-			ZIndex = OpeningDealZIndex + dealNumber,
-			ZAsRelative = false,
-			Scale = Vector2.One,
+			Position = targetVisualBasePosition,
+			Size = targetVisualSize,
+			PivotOffset = targetVisualSize / 2.0f,
+			RotationDegrees = startRotationDegrees,
 		};
-		float startRotationDegrees = card.RotationDegrees;
-		MarkAnimatedCardBack(card);
-		AddChild(card);
-		card.GlobalPosition = startGlobalPosition;
+		MarkAnimatedCardBack(cardVisual);
+		cardRoot.AddChild(cardVisual);
+		AddChild(cardRoot);
+		cardRoot.GlobalPosition = startGlobalPosition;
 
 		try
 		{
@@ -345,8 +358,9 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateOpeningDealCardFlight(
-					card,
+				Callable.From<float>(progress => UpdateOpeningDealSlotCardFlight(
+					cardRoot,
+					cardVisual,
 					startGlobalPosition,
 					targetGlobalPosition,
 					startRotationDegrees,
@@ -360,9 +374,9 @@ public partial class GameBoardScene
 		}
 		finally
 		{
-			if (GodotObject.IsInstanceValid(card))
+			if (GodotObject.IsInstanceValid(cardRoot))
 			{
-				card.QueueFree();
+				cardRoot.QueueFree();
 			}
 		}
 	}
@@ -374,9 +388,19 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var card = new TextureRect
+		float startRotationDegrees = -6.0f + dealIndex % 4 * 4.0f;
+		var cardRoot = new Control
 		{
 			Name = "OpeningPileCardFlight",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = CardVisualSize,
+			PivotOffset = CardVisualSize / 2.0f,
+			ZIndex = OpeningDealZIndex + 200 + dealIndex,
+			ZAsRelative = false,
+		};
+		var cardVisual = new TextureRect
+		{
+			Name = "OpeningPileCardVisual",
 			Texture = _cardBackTexture,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
@@ -384,15 +408,12 @@ public partial class GameBoardScene
 			MouseFilter = MouseFilterEnum.Ignore,
 			Size = CardVisualSize,
 			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = -6.0f + dealIndex % 4 * 4.0f,
-			ZIndex = OpeningDealZIndex + 200 + dealIndex,
-			ZAsRelative = false,
-			Scale = Vector2.One,
+			RotationDegrees = startRotationDegrees,
 		};
-		float startRotationDegrees = card.RotationDegrees;
-		MarkAnimatedCardBack(card);
-		AddChild(card);
-		card.GlobalPosition = startGlobalPosition;
+		MarkAnimatedCardBack(cardVisual);
+		cardRoot.AddChild(cardVisual);
+		AddChild(cardRoot);
+		cardRoot.GlobalPosition = startGlobalPosition;
 
 		try
 		{
@@ -400,8 +421,9 @@ public partial class GameBoardScene
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
-				Callable.From<float>(progress => UpdateOpeningDealCardFlight(
-					card,
+				Callable.From<float>(progress => UpdateOpeningDealSlotCardFlight(
+					cardRoot,
+					cardVisual,
 					startGlobalPosition,
 					targetGlobalPosition,
 					startRotationDegrees,
@@ -414,22 +436,23 @@ public partial class GameBoardScene
 		}
 		finally
 		{
-			if (GodotObject.IsInstanceValid(card))
+			if (GodotObject.IsInstanceValid(cardRoot))
 			{
-				card.QueueFree();
+				cardRoot.QueueFree();
 			}
 		}
 	}
 
-	private static void UpdateOpeningDealCardFlight(
-		TextureRect card,
+	private static void UpdateOpeningDealSlotCardFlight(
+		Control cardRoot,
+		TextureRect cardVisual,
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees,
 		float targetRotationDegrees,
 		float progress)
 	{
-		if (!GodotObject.IsInstanceValid(card))
+		if (!GodotObject.IsInstanceValid(cardRoot) || !GodotObject.IsInstanceValid(cardVisual))
 		{
 			return;
 		}
@@ -438,8 +461,8 @@ public partial class GameBoardScene
 		float easedProgress = Mathf.SmoothStep(0.0f, 1.0f, clampedProgress);
 		float arcY = -Mathf.Sin(clampedProgress * Mathf.Pi) * 34.0f;
 		float pulse = Mathf.Sin(clampedProgress * Mathf.Pi);
-		card.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
-		card.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + pulse * 8.0f;
+		cardRoot.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
+		cardVisual.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + pulse * 8.0f;
 	}
 
 	private Vector2 GetOpeningDealStartGlobalPosition()
@@ -496,7 +519,9 @@ public partial class GameBoardScene
 		int displayCardCount = Math.Max(1, _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count);
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
-		return handArea.GlobalPosition + firstCardPosition + handIndex * cardOffset;
+		return handArea.GlobalPosition
+			+ firstCardPosition
+			+ handIndex * cardOffset;
 	}
 
 	private Vector2 GetOpeningPileGlobalPosition(int playerIndex)
@@ -506,7 +531,10 @@ public partial class GameBoardScene
 			return GetOpeningDealStartGlobalPosition();
 		}
 
-		return _playerCardPiles[playerIndex].GlobalPosition;
+		int visibleCardsAfterDeal = Math.Min(
+			Math.Min(_openingVisiblePileCardCounts[playerIndex] + 1, _playerDecks[playerIndex].Count),
+			VisiblePileCards);
+		return GetCardPileCardGlobalPosition(playerIndex, Math.Max(1, visibleCardsAfterDeal), Math.Max(0, visibleCardsAfterDeal - 1));
 	}
 
 	private List<int> BuildOpeningPileDealPlayerIndexes()

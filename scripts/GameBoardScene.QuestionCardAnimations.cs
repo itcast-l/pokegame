@@ -162,8 +162,9 @@ public partial class GameBoardScene
 			}
 
 			card.Texture = reward.ItemCard.Texture;
-			Vector2 rewardVisualSize = GetItemCardVisualSize(reward.ItemCard.Id);
-			card.Position = GetItemCardVisualPosition(reward.ItemCard.Id);
+			float rewardVisualScale = GetHandDisplayCardVisualScale(playerIndex, _playerHands[playerIndex].Count + reward.ItemHandIndex);
+			Vector2 rewardVisualSize = CardVisualSize * rewardVisualScale;
+			card.Position = GetCardVisualBasePosition(rewardVisualScale);
 			card.Size = rewardVisualSize;
 			card.PivotOffset = rewardVisualSize / 2.0f;
 			if (reward.RequiresMagnetAttachment)

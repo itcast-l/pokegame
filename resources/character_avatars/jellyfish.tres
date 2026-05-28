@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "jellyfish"
+DisplayName = "软糖"
+RootPath = "res://art/characters/player_jellyfish_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 5
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_BUBBLE_COVER_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_BUBBLE_COVER_DESC"
+AbilityIdsCsv = "bubble_cover"
+DamageEffectFramePattern = "res://art/fx/player_jellyfish_sting_attack/run-002/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = true
+AttackEffectStyle = "jellyfish_tentacle"

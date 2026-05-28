@@ -52,6 +52,19 @@ public partial class GameBoardScene
 		return string.Empty;
 	}
 
+	private string GetHandCardDescription(PlayingCard card, bool showCardBack)
+	{
+		string attachmentDescription = GetAttachmentCardDescription(card, showCardBack);
+		if (!string.IsNullOrEmpty(attachmentDescription))
+		{
+			return attachmentDescription;
+		}
+
+		return showCardBack || !ShouldPlayedCardCollectTable(card)
+			? string.Empty
+			: Localize("GAME_CARD_COLLECTS_TABLE");
+	}
+
 	private static Label CreateCardDescriptionLabel(string text, Vector2 position, Vector2 size)
 	{
 		var label = new Label
@@ -256,6 +269,42 @@ public partial class GameBoardScene
 		return 1.0f;
 	}
 
+	private static float GetHandCardVisualScaleForPlayer(int playerIndex)
+	{
+		return playerIndex == MainPlayerIndex ? 1.18f : 0.74f;
+	}
+
+	private float GetHandDisplayCardVisualScale(int playerIndex, int displayIndex)
+	{
+		float playerScale = GetHandCardVisualScaleForPlayer(playerIndex);
+		if (playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| displayIndex < _playerHands[playerIndex].Count)
+		{
+			return playerScale;
+		}
+
+		int itemIndex = displayIndex - _playerHands[playerIndex].Count;
+		if (itemIndex < 0 || itemIndex >= _playerItemHands[playerIndex].Count)
+		{
+			return playerScale;
+		}
+
+		return playerScale * GetItemCardVisualScale(_playerItemHands[playerIndex][itemIndex].Id);
+	}
+
+	private Vector2 GetHandDisplayCardVisualBasePosition(int playerIndex, int displayIndex)
+	{
+		float visualScale = GetHandDisplayCardVisualScale(playerIndex, displayIndex);
+		return GetCardVisualBasePosition(visualScale);
+	}
+
+	private static Vector2 GetCardVisualBasePosition(float visualScale)
+	{
+		return (CardVisualSize - CardVisualSize * visualScale) / 2.0f;
+	}
+
 	private static Vector2 GetItemCardVisualSize(string itemCardId)
 	{
 		return CardVisualSize * GetItemCardVisualScale(itemCardId);
@@ -278,7 +327,7 @@ public partial class GameBoardScene
 
 	private static float GetCardPileRotationDegreesForPlayer(int playerIndex)
 	{
-		return GetCardRotationDegreesForPlayer(playerIndex) * 0.22f;
+		return GetCardRotationDegreesForPlayer(playerIndex);
 	}
 
 	private static TextureRect? FindHandCardVisual(Control? handCardSlot)

@@ -5,7 +5,12 @@ using Godot;
 public partial class GameBoardScene
 {
 	private const int DefaultWinningScore = 100;
-	private const int AdventureStartingHealth = 100;
+	private const int AdventurePlayerStartingHealth = 100;
+	private const int AdventureEnemyNoAbilityStartingHealth = 50;
+	private const int AdventureEnemyAbilityStartingHealth = 100;
+	private const int AdventureEnemyRoyalStartingHealth = 150;
+	private const int AdventureEnemyBossStartingHealth = 200;
+	private const int AdventureEnemyPlayerIndex = 1;
 	private static readonly string[] ScoreMeterNodeNames =
 	{
 		"Player1ScoreMeter",
@@ -22,10 +27,10 @@ public partial class GameBoardScene
 	};
 	private static readonly Color[] AvatarScoreFillColors =
 	{
-		new(1.0f, 0.86f, 0.52f, 0.46f),
-		new(0.56f, 0.92f, 1.0f, 0.46f),
-		new(1.0f, 0.62f, 0.84f, 0.44f),
-		new(0.60f, 1.0f, 0.78f, 0.44f),
+		new(0.94f, 0.74f, 0.36f, 0.52f),
+		new(0.36f, 0.80f, 0.94f, 0.52f),
+		new(0.94f, 0.46f, 0.72f, 0.50f),
+		new(0.40f, 0.88f, 0.62f, 0.50f),
 	};
 	private static readonly Color[] AvatarScoreGlowColors =
 	{
@@ -53,7 +58,7 @@ public partial class GameBoardScene
 
 			meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
-			meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(), false);
+			meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(playerIndex), false);
 			_playerScoreMeters[playerIndex] = meter;
 			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[playerIndex]}");
 		}
@@ -112,7 +117,8 @@ public partial class GameBoardScene
 		}
 
 		meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
-		meter.SetScore(_playerScores[playerIndex], GetScoreLimit(), animate);
+		meter.SetScore(_playerScores[playerIndex], GetScoreLimit(playerIndex), animate);
+		UpdatePlayerAvatarTooltip(playerIndex);
 	}
 
 	private int GetScoreWinnerPlayerIndex()
@@ -135,12 +141,35 @@ public partial class GameBoardScene
 
 	private int GetStartingPlayerScore(int playerIndex)
 	{
-		return adventure_mode && playerIndex < player_count ? AdventureStartingHealth : 0;
+		if (!adventure_mode || playerIndex >= player_count)
+		{
+			return 0;
+		}
+
+		return GetAdventureStartingHealth(playerIndex);
 	}
 
-	private int GetScoreLimit()
+	private int GetScoreLimit(int playerIndex)
 	{
-		return adventure_mode ? AdventureStartingHealth : _winningScore;
+		return adventure_mode ? GetAdventureStartingHealth(playerIndex) : _winningScore;
+	}
+
+	private int GetAdventureStartingHealth(int playerIndex)
+	{
+		if (playerIndex != AdventureEnemyPlayerIndex)
+		{
+			return AdventurePlayerStartingHealth;
+		}
+
+		CharacterAvatarDefinition enemyDefinition = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id);
+		return enemyDefinition.Id switch
+		{
+			"boss_k" => AdventureEnemyBossStartingHealth,
+			"dragon_prince_j" or "dragon_queen_q" => AdventureEnemyRoyalStartingHealth,
+			_ => enemyDefinition.AbilityIds.Count > 0
+				? AdventureEnemyAbilityStartingHealth
+				: AdventureEnemyNoAbilityStartingHealth,
+		};
 	}
 
 	private int GetAdventureDamageTargetPlayerIndex(int sourcePlayerIndex)

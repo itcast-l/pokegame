@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Godot;
 
 public partial class GameBoardScene
@@ -13,7 +14,11 @@ public partial class GameBoardScene
 	private PauseMenuInputCatcher? _pauseMenuRoot;
 	private Control? _pauseMenuPanel;
 	private Button? _pauseContinueButton;
+	private Button? _pauseQuitButton;
+	private Control? _pauseQuitConfirmRoot;
+	private Button? _pauseQuitCancelButton;
 	private bool _isPauseMenuOpen;
+	private bool _isLeavingGame;
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
@@ -47,7 +52,7 @@ public partial class GameBoardScene
 			Visible = false,
 			MouseFilter = MouseFilterEnum.Stop,
 			ProcessMode = ProcessModeEnum.Always,
-			CancelPressed = HidePauseMenu,
+			CancelPressed = HandlePauseMenuCancelPressed,
 		};
 		_pauseMenuRoot.SetAnchorsPreset(LayoutPreset.FullRect);
 		_pauseMenuLayer.AddChild(_pauseMenuRoot);
@@ -73,6 +78,9 @@ public partial class GameBoardScene
 
 		_pauseMenuPanel = BuildPauseMenuPanel();
 		center.AddChild(_pauseMenuPanel);
+
+		_pauseQuitConfirmRoot = BuildPauseQuitConfirmDialog();
+		_pauseMenuRoot.AddChild(_pauseQuitConfirmRoot);
 	}
 
 	private Control BuildPauseMenuPanel()
@@ -169,12 +177,120 @@ public partial class GameBoardScene
 		return label;
 	}
 
-	private Control CreatePauseButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament)
+	private Control BuildPauseQuitConfirmDialog()
+	{
+		var root = new Control
+		{
+			Name = "PauseQuitConfirmRoot",
+			Visible = false,
+			MouseFilter = MouseFilterEnum.Stop,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		root.SetAnchorsPreset(LayoutPreset.FullRect);
+
+		var scrim = new ColorRect
+		{
+			Name = "ConfirmScrim",
+			Color = new Color(0.0f, 0.01f, 0.02f, 0.48f),
+			MouseFilter = MouseFilterEnum.Stop,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
+		scrim.GuiInput += inputEvent =>
+		{
+			if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+			{
+				HidePauseQuitConfirm();
+				GetViewport().SetInputAsHandled();
+			}
+		};
+		root.AddChild(scrim);
+
+		var center = new CenterContainer
+		{
+			Name = "ConfirmCenter",
+			MouseFilter = MouseFilterEnum.Ignore,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		center.SetAnchorsPreset(LayoutPreset.FullRect);
+		root.AddChild(center);
+
+		var panel = new PanelContainer
+		{
+			Name = "PauseQuitConfirmPanel",
+			CustomMinimumSize = new Vector2(520.0f, 286.0f),
+			MouseFilter = MouseFilterEnum.Stop,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		panel.AddThemeStyleboxOverride("panel", CreatePausePanelStyle());
+		center.AddChild(panel);
+
+		var margin = new MarginContainer
+		{
+			Name = "ConfirmMargin",
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		margin.AddThemeConstantOverride("margin_left", 34);
+		margin.AddThemeConstantOverride("margin_top", 28);
+		margin.AddThemeConstantOverride("margin_right", 34);
+		margin.AddThemeConstantOverride("margin_bottom", 28);
+		panel.AddChild(margin);
+
+		var layout = new VBoxContainer
+		{
+			Name = "ConfirmLayout",
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		layout.AddThemeConstantOverride("separation", 12);
+		margin.AddChild(layout);
+
+		Label title = CreatePauseLabel(Localize("GAME_QUIT_CONFIRM_TITLE"), 29, new Color(0.9f, 1.0f, 0.96f), HorizontalAlignment.Center);
+		layout.AddChild(title);
+
+		Label message = CreatePauseLabel(Localize("GAME_QUIT_CONFIRM_MESSAGE"), 20, new Color(0.66f, 0.96f, 0.92f, 0.92f), HorizontalAlignment.Center);
+		message.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		message.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		layout.AddChild(message);
+
+		Label hint = CreatePauseLabel(Localize("GAME_QUIT_CONFIRM_HINT"), 16, new Color(0.95f, 0.84f, 0.58f, 0.82f), HorizontalAlignment.Center);
+		hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		hint.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		layout.AddChild(hint);
+
+		var spacer = new Control
+		{
+			CustomMinimumSize = new Vector2(0.0f, 8.0f),
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		layout.AddChild(spacer);
+
+		var actions = new HBoxContainer
+		{
+			Name = "ConfirmActions",
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		actions.AddThemeConstantOverride("separation", 16);
+		layout.AddChild(actions);
+
+		Control cancelFrame = CreatePauseButton("CancelQuitGame", "GAME_QUIT_CONFIRM_CANCEL", new Color(0.58f, 1.0f, 0.92f), HidePauseQuitConfirm, false, 206.0f);
+		Control confirmFrame = CreatePauseButton("ConfirmQuitGame", "GAME_QUIT_CONFIRM_ACCEPT", new Color(0.95f, 0.68f, 0.56f), ConfirmQuitGameFromPauseMenu, true, 206.0f);
+		actions.AddChild(cancelFrame);
+		actions.AddChild(confirmFrame);
+
+		_pauseQuitCancelButton = cancelFrame.GetNodeOrNull<Button>("Button");
+		return root;
+	}
+
+	private Control CreatePauseButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament, float width = 288.0f)
 	{
 		var frame = new OceanMenuButtonFrame
 		{
 			Name = $"{nodeName}Frame",
-			CustomMinimumSize = new Vector2(288.0f, 62.0f),
+			CustomMinimumSize = new Vector2(width, 62.0f),
 			AccentColor = accentColor,
 			FlipOrnament = flipOrnament,
 			ProcessMode = ProcessModeEnum.Always,
@@ -211,6 +327,11 @@ public partial class GameBoardScene
 		if (_pauseContinueButton == null)
 		{
 			_pauseContinueButton = button;
+		}
+
+		if (nodeName == "QuitGame")
+		{
+			_pauseQuitButton = button;
 		}
 
 		TrackLocalizedGameButton(button, textKey);
@@ -254,8 +375,24 @@ public partial class GameBoardScene
 		_isPauseMenuOpen = true;
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
+		if (_pauseQuitConfirmRoot != null)
+		{
+			_pauseQuitConfirmRoot.Visible = false;
+		}
+
 		GetTree().Paused = true;
 		_pauseContinueButton?.GrabFocus();
+	}
+
+	private void HandlePauseMenuCancelPressed()
+	{
+		if (_pauseQuitConfirmRoot != null && _pauseQuitConfirmRoot.Visible)
+		{
+			HidePauseQuitConfirm();
+			return;
+		}
+
+		HidePauseMenu();
 	}
 
 	private void HidePauseMenu()
@@ -271,42 +408,95 @@ public partial class GameBoardScene
 		{
 			_pauseMenuRoot.Visible = false;
 		}
+
+		if (_pauseQuitConfirmRoot != null)
+		{
+			_pauseQuitConfirmRoot.Visible = false;
+		}
 	}
 
-	private void ReturnToMainMenu()
+	private async void ReturnToMainMenu()
 	{
-		GetTree().Paused = false;
-		PackedScene? mainMenuScene = GD.Load<PackedScene>(MainMenuScenePath);
-		if (mainMenuScene == null)
+		await ReturnToMenuSceneAsync(MainMenuScenePath);
+	}
+
+	private async void ReturnToAdventureMenu()
+	{
+		await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
+	}
+
+	private async Task ReturnToMenuSceneAsync(string scenePath)
+	{
+		if (_isLeavingGame)
 		{
-			GD.PushError($"Missing main menu scene: {MainMenuScenePath}");
 			return;
 		}
 
-		Node mainMenu = mainMenuScene.Instantiate();
-		GetTree().Root.AddChild(mainMenu);
-		GetTree().CurrentScene = mainMenu;
-		QueueFree();
-	}
-
-	private void ReturnToAdventureMenu()
-	{
-		GetTree().Paused = false;
-		PackedScene? adventureMenuScene = GD.Load<PackedScene>(AdventureAvatarMenuScenePath);
-		if (adventureMenuScene == null)
+		PackedScene? menuScene = GD.Load<PackedScene>(scenePath);
+		if (menuScene == null)
 		{
-			GD.PushError($"Missing adventure avatar menu scene: {AdventureAvatarMenuScenePath}");
+			GD.PushError($"Missing menu scene: {scenePath}");
 			return;
 		}
 
-		Node adventureMenu = adventureMenuScene.Instantiate();
-		GetTree().Root.AddChild(adventureMenu);
-		GetTree().CurrentScene = adventureMenu;
-		QueueFree();
+		_isLeavingGame = true;
+		_isPauseMenuOpen = false;
+		GetTree().Paused = false;
+		if (_pauseMenuRoot != null)
+		{
+			_pauseMenuRoot.MouseFilter = MouseFilterEnum.Ignore;
+		}
+
+		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
+		{
+			Node menu = menuScene.Instantiate();
+			GetTree().Root.AddChild(menu);
+			GetTree().CurrentScene = menu;
+			QueueFree();
+		});
 	}
 
 	private void QuitGameFromPauseMenu()
 	{
+		ShowPauseQuitConfirm();
+	}
+
+	private void ShowPauseQuitConfirm()
+	{
+		if (_isLeavingGame)
+		{
+			return;
+		}
+
+		EnsurePauseMenu();
+		if (_pauseQuitConfirmRoot == null)
+		{
+			return;
+		}
+
+		_pauseQuitConfirmRoot.Visible = true;
+		_pauseQuitCancelButton?.GrabFocus();
+	}
+
+	private void HidePauseQuitConfirm()
+	{
+		if (_pauseQuitConfirmRoot == null || !_pauseQuitConfirmRoot.Visible)
+		{
+			return;
+		}
+
+		_pauseQuitConfirmRoot.Visible = false;
+		_pauseQuitButton?.GrabFocus();
+	}
+
+	private void ConfirmQuitGameFromPauseMenu()
+	{
+		if (_isLeavingGame)
+		{
+			return;
+		}
+
+		_isLeavingGame = true;
 		GetTree().Paused = false;
 		GetTree().Quit();
 	}

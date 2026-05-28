@@ -43,8 +43,13 @@ public partial class GameBoardScene
 			}
 
 			Vector2 startGlobalPosition = GetDrawCardStartGlobalPosition(playerIndex);
-			Vector2 targetGlobalPosition = GetHandDisplayCardGlobalPosition(playerIndex, displayIndex);
-			await PlayDrawnCardFlightAsync(playerIndex, drawnCard.Value.Card, startGlobalPosition, targetGlobalPosition);
+			Vector2 targetGlobalPosition = GetHandDisplayCardSlotGlobalPosition(playerIndex, displayIndex);
+			await PlayDrawnCardFlightAsync(
+				playerIndex,
+				drawnCard.Value.Card,
+				startGlobalPosition,
+				targetGlobalPosition,
+				displayIndex);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
@@ -64,7 +69,8 @@ public partial class GameBoardScene
 		int playerIndex,
 		PlayingCard drawnCard,
 		Vector2 startGlobalPosition,
-		Vector2 targetGlobalPosition)
+		Vector2 targetGlobalPosition,
+		int displayIndex)
 	{
 		Texture2D? startTexture = _cardBackTexture ?? drawnCard.Texture;
 		if (startTexture == null || !IsInsideTree())
@@ -77,6 +83,7 @@ public partial class GameBoardScene
 		Texture2D? attachmentOverlayTexture = showFaceOnLanding ? GetCardAttachmentOverlayTexture(drawnCard) : null;
 		float startRotationDegrees = GetCardPileRotationDegreesForPlayer(playerIndex);
 		float targetRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
+		float targetVisualScale = GetHandDisplayCardVisualScale(playerIndex, displayIndex);
 		var flightCard = new Control
 		{
 			Name = "ReplacementDrawCardFlight",
@@ -157,7 +164,8 @@ public partial class GameBoardScene
 				attachmentOverlay,
 				startTexture,
 				targetTexture,
-				showFaceOnLanding);
+				showFaceOnLanding,
+				targetVisualScale);
 			tween.Finished += () =>
 			{
 				if (GodotObject.IsInstanceValid(flightCard))
@@ -234,13 +242,15 @@ public partial class GameBoardScene
 		TextureRect? attachmentOverlay,
 		Texture2D startTexture,
 		Texture2D targetTexture,
-		bool flipToFace)
+		bool flipToFace,
+		float targetVisualScale)
 	{
 		float halfDuration = ReplacementDrawFlightSeconds * 0.5f;
-		tween.TweenProperty(flightCard, "scale", Vector2.One * ReplacementDrawPeakScale, halfDuration)
+		float peakScale = targetVisualScale * ReplacementDrawPeakScale;
+		tween.TweenProperty(flightCard, "scale", Vector2.One * peakScale, halfDuration)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(flightCard, "scale", Vector2.One, ReplacementDrawFlightSeconds - halfDuration)
+		tween.TweenProperty(flightCard, "scale", Vector2.One * targetVisualScale, ReplacementDrawFlightSeconds - halfDuration)
 			.SetDelay(halfDuration)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
@@ -276,16 +286,16 @@ public partial class GameBoardScene
 
 	private Vector2 GetDrawCardStartGlobalPosition(int playerIndex)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerCardPiles.Count)
-		{
-			return GetOpeningDealStartGlobalPosition();
-		}
-
-		Control pile = _playerCardPiles[playerIndex];
-		return pile.GlobalPosition + (CardPileSize - CardVisualSize) / 2.0f;
+		return GetVisibleCardPileTopGlobalPosition(playerIndex);
 	}
 
 	private Vector2 GetHandDisplayCardGlobalPosition(int playerIndex, int displayIndex)
+	{
+		return GetHandDisplayCardSlotGlobalPosition(playerIndex, displayIndex)
+			+ GetHandDisplayCardVisualBasePosition(playerIndex, displayIndex);
+	}
+
+	private Vector2 GetHandDisplayCardSlotGlobalPosition(int playerIndex, int displayIndex)
 	{
 		if (playerIndex < 0
 			|| playerIndex >= _playerHandAreas.Count
@@ -296,10 +306,16 @@ public partial class GameBoardScene
 		}
 
 		int displayCardCount = Math.Max(1, _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count);
-		return GetHandDisplayCardGlobalPosition(playerIndex, displayIndex, displayCardCount);
+		return GetHandDisplayCardSlotGlobalPosition(playerIndex, displayIndex, displayCardCount);
 	}
 
 	private Vector2 GetHandDisplayCardGlobalPosition(int playerIndex, int displayIndex, int displayCardCount)
+	{
+		return GetHandDisplayCardSlotGlobalPosition(playerIndex, displayIndex, displayCardCount)
+			+ GetHandDisplayCardVisualBasePosition(playerIndex, displayIndex);
+	}
+
+	private Vector2 GetHandDisplayCardSlotGlobalPosition(int playerIndex, int displayIndex, int displayCardCount)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerHandAreas.Count)
 		{
@@ -310,7 +326,9 @@ public partial class GameBoardScene
 		displayCardCount = Math.Max(1, displayCardCount);
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
-		return handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
+		return handArea.GlobalPosition
+			+ firstCardPosition
+			+ displayIndex * cardOffset;
 	}
 
 	private bool IsHandDisplaySlotHidden(int playerIndex, int displayIndex)

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "sea_slug"
+DisplayName = "糯米"
+RootPath = "res://art/characters/player_sea_slug_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 8
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_COLOR_CURRENT_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_COLOR_CURRENT_DESC"
+AbilityIdsCsv = "color_current"
+AbilityValuesRaw = "misses_before_slime_coat=2"
+DamageEffectFramePattern = "res://art/fx/player_sea_slug_hit_marker/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = true
+AttackEffectStyle = "sea_slug_marker"
+BossBorrowedAbilityFxEligible = false

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "dragon_queen_q"
+DisplayName = "奎娜 Q"
+RootPath = "res://art/characters/player_dragon_queen_avatar/run-001"
+IdleFrameCount = 12
+ActionFrameCount = 12
+AdventureStageNumber = 13
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_DRAGON_Q_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_DRAGON_Q_DESC"
+AbilityIdsCsv = "dragon_queen"
+AbilityValuesRaw = "dragon_queen_capture_threshold=1;captures_before_steal=3"
+DamageEffectFramePattern = "res://art/fx/player_dragon_queen_jaw_slash/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = true
+AttackEffectStyle = "dragon_queen_jaw"
+AccentColorHtml = "#ffdb75"

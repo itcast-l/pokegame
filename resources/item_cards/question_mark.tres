@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "question_mark"
+DisplayName = "Question Mark"
+SpriteName = "QuestionMark"
+DescriptionKey = "ITEM_DESC_QUESTION_MARK"
+EnabledInGame = true
+PlayableFromHand = false
+CanBeQuestionReward = false
+ArtRunName = "run-004"
+FrameCount = 4
+SortOrder = 0
+Rarity = "common"
+TagsCsv = "fixed,reward"
+Trigger = "on_collect"
+EffectType = "grant_reward"
+EffectValuesRaw = ""
+Priority = 100
+Icon = ""
+Weight = 100
+Description = ""

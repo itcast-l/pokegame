@@ -312,6 +312,11 @@ public partial class GameBoardScene
 				continue;
 			}
 
+			if (tableCard.RemoveCardOnCapture)
+			{
+				continue;
+			}
+
 			bool isScoringCardIndex = IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex)
 				|| isExtraCapturedIndex
 				|| (includeCaptureStartScoring && tableCardIndex == captureStartIndex);
@@ -440,7 +445,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 
 		Task[] flightTasks = new Task[capturedCardVisuals.Count];
-		Vector2 targetGlobalPosition = GetCardPileCaptureTargetGlobalPosition(targetPile);
+		Vector2 targetGlobalPosition = GetCardPileCaptureTargetGlobalPosition(playerIndex);
 		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count; visualIndex++)
 		{
 			flightTasks[visualIndex] = PlayCapturedCardFlightAsync(
@@ -459,9 +464,9 @@ public partial class GameBoardScene
 			&& IsQuestionTableCard(tableCard);
 	}
 
-	private Vector2 GetCardPileCaptureTargetGlobalPosition(Control targetPile)
+	private Vector2 GetCardPileCaptureTargetGlobalPosition(int playerIndex)
 	{
-		return targetPile.GlobalPosition + (CardPileSize - CardVisualSize * TableCaptureFlightEndScale) / 2.0f;
+		return GetVisibleCardPileTopGlobalPosition(playerIndex) + (CardVisualSize - CardVisualSize * TableCaptureFlightEndScale) / 2.0f;
 	}
 
 	private async Task PlayCapturedCardFlightAsync(

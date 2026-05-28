@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "Q"
+DisplayName = "Queen"
+SpriteName = "Queen"
+DescriptionKey = "ITEM_DESC_QUEEN"
+EnabledInGame = false
+PlayableFromHand = false
+CanBeQuestionReward = false
+ArtRunName = "run-004"
+FramePathPattern = "res://art/cards/ocean_animated_deck/court/Q/processed/frames/frame-{0:000}.png"
+FrameCount = 1
+SortOrder = 901
+Rarity = "legacy"
+TagsCsv = ""
+PlayPresentation = "targeted_trigger"
+Trigger = "on_play"
+EffectType = "steal_card"
+EffectValuesRaw = "target=player_hand;count=1"
+Priority = 30
+Icon = ""
+Weight = 0
+Description = ""

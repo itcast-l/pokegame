@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "garden_eel"
+DisplayName = "阿豆"
+RootPath = "res://art/characters/player_garden_eel_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 7
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_SAND_AMBUSH_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_SAND_AMBUSH_DESC"
+AbilityIdsCsv = "sand_ambush"
+AbilityValuesRaw = "captures_before_sand_bite=2"
+DamageEffectFramePattern = "res://art/fx/player_garden_eel_burrow_ambush/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 6
+DamageEffectPreferImageFile = true
+AttackEffectStyle = "garden_eel_burrow"

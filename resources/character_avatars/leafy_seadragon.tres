@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "leafy_seadragon"
+DisplayName = "艾莉"
+RootPath = "res://art/characters/player_leafy_seadragon_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 11
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_LEAFY_MIRAGE_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_LEAFY_MIRAGE_DESC"
+AbilityIdsCsv = "leafy_mirage"
+AbilityValuesRaw = "blade_break_table_card_threshold=5;blade_break_cooldown_turns=1"
+DamageEffectFramePattern = "res://art/fx/player_leafy_seadragon_collect_attack/run-002/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = true
+AttackEffectStyle = "leafy_seadragon_slash"

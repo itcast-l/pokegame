@@ -5,7 +5,8 @@ public partial class MainMenuScene : Control
 {
 	private string Localize(string key)
 	{
-		return Tr(key).ToString();
+		string text = Tr(key).ToString();
+		return text == key ? GetMainMenuLocalizationFallback(key) : text;
 	}
 
 	private string LocalizeFormat(string key, params object[] args)
@@ -85,6 +86,7 @@ public partial class MainMenuScene : Control
 		RefreshWindowModeOptions();
 		RefreshLanguageOptions();
 		RefreshPlayerCountDialogOptions();
+		RefreshAvatarUnlockPromptText();
 	}
 
 	private Label CreateDialogLabel(string text, int fontSize, Color color, HorizontalAlignment alignment)

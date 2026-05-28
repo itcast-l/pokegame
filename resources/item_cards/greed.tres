@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "greed"
+DisplayName = "Greed"
+SpriteName = "Greed"
+DescriptionKey = "ITEM_DESC_GREED"
+EnabledInGame = false
+PlayableFromHand = false
+CanBeQuestionReward = true
+ArtRunName = "run-004"
+FrameCount = 4
+SortOrder = 30
+Rarity = "rare"
+TagsCsv = ""
+Trigger = "on_play"
+EffectType = ""
+EffectValuesRaw = ""
+Priority = 10
+Icon = ""
+Weight = 25
+Description = ""

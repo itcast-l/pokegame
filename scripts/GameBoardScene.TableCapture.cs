@@ -431,7 +431,7 @@ public partial class GameBoardScene
 			}
 
 			removedTableCardCount++;
-			if (tableCard.Card.HasValue)
+			if (tableCard.Card.HasValue && !tableCard.RemoveCardOnCapture)
 			{
 				AddCardToPlayerDeck(playerIndex, tableCard.Card.Value);
 				collectedCardCount++;
@@ -461,8 +461,11 @@ public partial class GameBoardScene
 				if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
 				{
 					removedTableCardCount++;
-					AddCardToPlayerDeck(playerIndex, tableCard.Card.Value);
-					collectedCardCount++;
+					if (!tableCard.RemoveCardOnCapture)
+					{
+						AddCardToPlayerDeck(playerIndex, tableCard.Card.Value);
+						collectedCardCount++;
+					}
 				}
 			}
 		}

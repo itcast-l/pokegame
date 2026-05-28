@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "magnet"
+DisplayName = "Magnet"
+SpriteName = "Magnet"
+DescriptionKey = "ITEM_DESC_MAGNET"
+EnabledInGame = true
+PlayableFromHand = false
+CanBeQuestionReward = true
+ArtRunName = "run-004"
+FrameCount = 4
+SortOrder = 20
+Rarity = "uncommon"
+TagsCsv = "attachment"
+AttachmentOverlayTexturePath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png"
+AttachmentOverlayPriority = 20
+Trigger = "on_play"
+EffectType = "attach_modifier"
+EffectValuesRaw = "modifier=magnet"
+Priority = 50
+AttachedTrigger = "on_collect"
+AttachedEffectType = "magnet_extra_capture"
+AttachedEffectValuesRaw = "target=opponent_table_face_down;count=1"
+AttachedPriority = 50
+Icon = ""
+Weight = 70
+Description = ""

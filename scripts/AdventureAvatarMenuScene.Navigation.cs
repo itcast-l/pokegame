@@ -1,9 +1,15 @@
+using System.Threading.Tasks;
 using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
 	private void StartAdventure()
 	{
+		if (_isStartingAdventure)
+		{
+			return;
+		}
+
 		if (!IsStageUnlocked(_selectedAvatarId))
 		{
 			RefreshSelection();
@@ -17,21 +23,35 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
-		Node gameBoard = gameBoardScene.Instantiate();
-		gameBoard.Set("player_count", 2);
-		gameBoard.Set("item_mode", true);
-		gameBoard.Set("solo_mode", true);
-		gameBoard.Set("adventure_mode", true);
-		gameBoard.Set("adventure_enemy_avatar_id", _selectedAvatarId);
-		Node? currentScene = GetTree().CurrentScene;
-		GetTree().Root.AddChild(gameBoard);
-		GetTree().CurrentScene = gameBoard;
-		if (currentScene != null && GodotObject.IsInstanceValid(currentScene) && currentScene != gameBoard)
-		{
-			currentScene.QueueFree();
-		}
+		_isStartingAdventure = true;
+		_backButton.Disabled = true;
+		_startButton.Disabled = true;
+		MouseFilter = MouseFilterEnum.Ignore;
 
-		QueueFree();
+		_ = StartAdventureWithTransitionAsync(gameBoardScene);
+	}
+
+	private async Task StartAdventureWithTransitionAsync(PackedScene gameBoardScene)
+	{
+		string selectedAvatarId = _selectedAvatarId;
+		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
+		{
+			Node gameBoard = gameBoardScene.Instantiate();
+			gameBoard.Set("player_count", 2);
+			gameBoard.Set("item_mode", true);
+			gameBoard.Set("solo_mode", true);
+			gameBoard.Set("adventure_mode", true);
+			gameBoard.Set("adventure_enemy_avatar_id", selectedAvatarId);
+			Node? currentScene = GetTree().CurrentScene;
+			GetTree().Root.AddChild(gameBoard);
+			GetTree().CurrentScene = gameBoard;
+			if (currentScene != null && GodotObject.IsInstanceValid(currentScene) && currentScene != gameBoard)
+			{
+				currentScene.QueueFree();
+			}
+
+			QueueFree();
+		});
 	}
 
 	private void ReturnToMainMenu()
@@ -50,6 +70,11 @@ public partial class AdventureAvatarMenuScene
 		MainMenuScene? embeddedMainMenu = GetEmbeddedMainMenuParent();
 		if (embeddedMainMenu != null)
 		{
+			if (_isShowingAvatarUnlockPrompt)
+			{
+				HideAvatarUnlockPrompt(showNext: false);
+			}
+
 			embeddedMainMenu.HideAdventureAvatarMenu(this);
 			return;
 		}

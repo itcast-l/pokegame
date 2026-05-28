@@ -28,11 +28,21 @@ public partial class AdventureAvatarMenuScene : Control
 	private Label _previewAbilityDescriptionLabel = default!;
 	private ScrollContainer _previewAbilityDescriptionScroll = default!;
 	private CharacterAvatar? _previewAvatar;
+	private Control? _avatarUnlockPromptRoot;
+	private Control? _avatarUnlockPromptPanel;
+	private Label? _avatarUnlockPromptTitleLabel;
+	private Label? _avatarUnlockPromptMessageLabel;
+	private Button? _avatarUnlockPromptButton;
+	private CharacterAvatar? _avatarUnlockPromptAvatar;
+	private CharacterAvatarDefinition? _avatarUnlockPromptDefinition;
 	private Tween? _levelScrollTween;
+	private Tween? _avatarUnlockPromptTween;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
 	private PackedScene? _characterAvatarScene;
 	private bool _isReturningToMainMenu;
+	private bool _isStartingAdventure;
+	private bool _isShowingAvatarUnlockPrompt;
 
 	[Export]
 	public string selected_avatar_id { get; set; } = string.Empty;
@@ -53,6 +63,7 @@ public partial class AdventureAvatarMenuScene : Control
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();
 		RefreshLocalizedText();
+		CallDeferred(nameof(ShowPendingAdventureAvatarUnlockPrompt));
 	}
 
 	public override void _Notification(int what)
@@ -65,6 +76,10 @@ public partial class AdventureAvatarMenuScene : Control
 		{
 			ClampScrollTarget();
 			ScrollSelectedEntryIntoView();
+		}
+		else if (what == NotificationVisibilityChanged && IsNodeReady() && Visible)
+		{
+			ShowPendingAdventureAvatarUnlockPrompt();
 		}
 	}
 

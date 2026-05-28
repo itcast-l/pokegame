@@ -101,7 +101,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Vector2 startGlobalPosition = GetHandDisplayCardGlobalPosition(targetPlayerIndex, sourceDisplayIndex);
+		Vector2 startGlobalPosition = GetHandDisplayCardSlotGlobalPosition(targetPlayerIndex, sourceDisplayIndex);
 		if (targetPlayerIndex >= 0 && targetPlayerIndex < _playerHandAreas.Count)
 		{
 			Control? sourceCardSlot = _playerHandAreas[targetPlayerIndex].GetNodeOrNull<Control>($"HandCard_{sourceDisplayIndex}");
@@ -113,10 +113,11 @@ public partial class GameBoardScene
 		}
 
 		int ownerDisplayCardCountAfterSteal = GetTotalHandCardCount(ownerPlayerIndex) + 1;
-		Vector2 targetGlobalPosition = GetHandDisplayCardGlobalPosition(
+		Vector2 targetGlobalPosition = GetHandDisplayCardSlotGlobalPosition(
 			ownerPlayerIndex,
 			targetHandDisplayIndex,
 			ownerDisplayCardCountAfterSteal);
+		float targetVisualScale = GetHandCardVisualScaleForPlayer(ownerPlayerIndex) * visualScale;
 		await PlayStolenHandCardFlightAsync(
 			cardTexture,
 			attachmentOverlayTexture,
@@ -124,7 +125,8 @@ public partial class GameBoardScene
 			targetGlobalPosition,
 			GetCardRotationDegreesForPlayer(targetPlayerIndex),
 			GetCardRotationDegreesForPlayer(ownerPlayerIndex),
-			visualScale);
+			visualScale,
+			targetVisualScale);
 	}
 
 	private Texture2D? GetVisibleStolenPlayingCardTexture(int sourcePlayerIndex, PlayingCard card)

@@ -270,12 +270,12 @@ public sealed class ItemCardCatalog
 				break;
 			}
 
-			if (directory.CurrentIsDir() || !fileName.EndsWith(".tres", StringComparison.OrdinalIgnoreCase))
+			if (directory.CurrentIsDir() || !TryGetResourceFileName(fileName, out string resourceFileName))
 			{
 				continue;
 			}
 
-			string path = $"{ItemCardResourceDirectory}/{fileName}";
+			string path = $"{ItemCardResourceDirectory}/{resourceFileName}";
 			ItemCardDefinition? definition = LoadItemCardDefinition(path);
 			if (definition == null)
 			{
@@ -295,6 +295,27 @@ public sealed class ItemCardCatalog
 
 		_resourceDefinitionsById = definitionsById;
 		return _resourceDefinitionsById;
+	}
+
+	private static bool TryGetResourceFileName(string fileName, out string resourceFileName)
+	{
+		const string ResourceExtension = ".tres";
+		const string RemapExtension = ".remap";
+
+		if (fileName.EndsWith(ResourceExtension, StringComparison.OrdinalIgnoreCase))
+		{
+			resourceFileName = fileName;
+			return true;
+		}
+
+		if (fileName.EndsWith(ResourceExtension + RemapExtension, StringComparison.OrdinalIgnoreCase))
+		{
+			resourceFileName = fileName[..^RemapExtension.Length];
+			return true;
+		}
+
+		resourceFileName = string.Empty;
+		return false;
 	}
 
 	private static ItemCardDefinition? LoadItemCardDefinition(string path)

@@ -5,6 +5,7 @@ public partial class AdventureAvatarMenuScene
 	private void RefreshLocalizedText()
 	{
 		RefreshSelection();
+		RefreshAvatarUnlockPromptText();
 
 		for (int index = _localizedLabels.Count - 1; index >= 0; index--)
 		{
@@ -15,7 +16,7 @@ public partial class AdventureAvatarMenuScene
 				continue;
 			}
 
-			label.Text = Tr(key).ToString();
+			label.Text = Localize(key);
 		}
 
 		for (int index = _localizedButtons.Count - 1; index >= 0; index--)
@@ -27,7 +28,18 @@ public partial class AdventureAvatarMenuScene
 				continue;
 			}
 
-			button.Text = Tr(key).ToString();
+			button.Text = Localize(key);
 		}
+	}
+
+	private string Localize(string key)
+	{
+		string text = Tr(key).ToString();
+		return text == key ? GetAdventureMenuLocalizationFallback(key) : text;
+	}
+
+	private string LocalizeFormat(string key, params object[] args)
+	{
+		return string.Format(Localize(key), args);
 	}
 }

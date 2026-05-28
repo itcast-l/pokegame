@@ -21,7 +21,7 @@ public partial class DraggableAvatarArea : Control
 	public override void _Ready()
 	{
 		drag_enabled = false;
-		MouseFilter = MouseFilterEnum.Ignore;
+		MouseFilter = MouseFilterEnum.Pass;
 		MouseDefaultCursorShape = CursorShape.Arrow;
 	}
 

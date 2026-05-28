@@ -99,6 +99,9 @@ public partial class GameBoardScene
 		int displayCardCount = _playerHands[playerIndex].Count + _playerItemHands[playerIndex].Count;
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
 		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
-		return handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
+		return handArea.GlobalPosition
+			+ firstCardPosition
+			+ displayIndex * cardOffset
+			+ GetHandDisplayCardVisualBasePosition(playerIndex, displayIndex);
 	}
 }

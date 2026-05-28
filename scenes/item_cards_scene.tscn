@@ -26,6 +26,7 @@ polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=551150247]
 top_level = true
+editor_draw_limits = true
 
 [node name="PhantomCameraHost" type="Node" parent="Camera2D" unique_id=735842270]
 process_priority = 300
@@ -137,3 +138,4 @@ texture = ExtResource("10_shuffle")
 [node name="PhantomCamera2D" type="Node2D" parent="." unique_id=703258216]
 script = ExtResource("12_32prl")
 tween_resource = SubResource("Resource_o1a3y")
+draw_limits = true

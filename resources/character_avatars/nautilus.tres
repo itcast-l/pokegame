@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "nautilus"
+DisplayName = "罗米"
+RootPath = "res://art/characters/player_nautilus_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 9
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_SPIRAL_SHELL_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_SPIRAL_SHELL_DESC"
+AbilityIdsCsv = "spiral_shell"
+AbilityValuesRaw = "captures_before_bomb=3;bomb_item_card_id=bomb"
+DamageEffectFramePattern = "res://art/fx/player_nautilus_spiral_pressure_slash/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = true
+AttackEffectFlightSeconds = 0.78

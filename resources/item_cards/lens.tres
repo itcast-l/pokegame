@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "lens"
+DisplayName = "Lens"
+SpriteName = "Lens"
+DescriptionKey = "ITEM_DESC_LENS"
+EnabledInGame = true
+PlayableFromHand = true
+CanBeQuestionReward = true
+ArtRunName = "run-004"
+FrameCount = 4
+SortOrder = 40
+Rarity = "uncommon"
+TagsCsv = ""
+PlayPresentation = "lens_split"
+Trigger = "on_play"
+EffectType = "reveal_cards"
+EffectValuesRaw = "target=opponent_table_face_down;count=2"
+Priority = 40
+Icon = ""
+Weight = 70
+Description = ""

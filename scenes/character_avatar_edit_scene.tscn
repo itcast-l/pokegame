@@ -4,17 +4,17 @@
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_character_avatar"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog_panel"]
-bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.92)
+bg_color = Color(0.006, 0.074, 0.098, 0.94)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.62, 1, 0.96, 0.42)
+border_color = Color(0.62, 1, 0.96, 0.46)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.025, 0.045, 0.42)
+shadow_color = Color(0, 0.025, 0.045, 0.44)
 shadow_size = 24
 shadow_offset = Vector2(0, 8)
 
@@ -50,13 +50,81 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_confirm_button"]
+content_margin_left = 22.0
+content_margin_top = 9.0
+content_margin_right = 22.0
+content_margin_bottom = 9.0
+bg_color = Color(0.1, 0.36, 0.33, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.9, 0.5, 0.62)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_confirm_button_hover"]
+content_margin_left = 22.0
+content_margin_top = 9.0
+content_margin_right = 22.0
+content_margin_bottom = 9.0
+bg_color = Color(0.15, 0.46, 0.4, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.96, 0.68, 0.82)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_panel"]
+bg_color = Color(0.013, 0.126, 0.14, 0.82)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.58, 1, 0.92, 0.5)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_stage"]
+bg_color = Color(0.01, 0.08, 0.09, 0.42)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.96, 0.28)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_option"]
-bg_color = Color(0.0156863, 0.117647, 0.133333, 0.76)
+bg_color = Color(0.0156863, 0.117647, 0.133333, 0.78)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.58, 1, 0.92, 0.42)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
+bg_color = Color(0.04, 0.17, 0.18, 0.48)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.48, 1, 0.92, 0.24)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -80,7 +148,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0.035, 0.07, 0.54)
+color = Color(0, 0.035, 0.07, 0.58)
 
 [node name="DialogCenter" type="CenterContainer" parent="." unique_id=708093156]
 layout_mode = 1
@@ -99,13 +167,13 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dialog_panel")
 [node name="DialogMargin" type="MarginContainer" parent="DialogCenter/DialogPanel" unique_id=1887076904]
 layout_mode = 2
 theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 24
+theme_override_constants/margin_top = 22
 theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 26
+theme_override_constants/margin_bottom = 24
 
 [node name="DialogLayout" type="VBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin" unique_id=1837791019]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 14
 
 [node name="Header" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=47287533]
 custom_minimum_size = Vector2(0, 48)
@@ -147,26 +215,40 @@ text = "选择头像"
 vertical_alignment = 1
 
 [node name="PreviewPanel" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=61674980]
-custom_minimum_size = Vector2(0, 170)
+custom_minimum_size = Vector2(0, 188)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_option")
+theme_override_styles/panel = SubResource("StyleBoxFlat_preview_panel")
 
 [node name="PreviewMargin" type="MarginContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel" unique_id=1430533013]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
 
 [node name="PreviewLayout" type="HBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin" unique_id=2057102611]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 22
 
 [node name="PreviewAvatarAnchor" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout" unique_id=575481611]
-custom_minimum_size = Vector2(142, 142)
+custom_minimum_size = Vector2(156, 156)
 layout_mode = 2
 mouse_filter = 2
+
+[node name="PreviewGlow" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_stage")
 
 [node name="PreviewAvatar" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor" unique_id=846208498 instance=ExtResource("2_character_avatar")]
 layout_mode = 1
@@ -181,122 +263,45 @@ grow_vertical = 2
 [node name="PreviewControls" type="VBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout" unique_id=1651805024]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="PreviewKicker" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.92, 0.58, 0.92)
+theme_override_font_sizes/font_size = 13
+text = "当前头像"
 
 [node name="PreviewName" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls" unique_id=2039506567]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88, 1, 0.96, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.78)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 30
 text = "默认头像"
 
-[node name="ActionButtons" type="GridContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls" unique_id=1818326839]
+[node name="PreviewSpacer" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 8
-columns = 3
-
-[node name="Idle" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons" unique_id=1624037652]
-custom_minimum_size = Vector2(88, 36)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "待机"
-
-[node name="Score" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons" unique_id=929616677]
-custom_minimum_size = Vector2(88, 36)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "得分"
-
-[node name="Attack" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons" unique_id=1500084849]
-custom_minimum_size = Vector2(88, 36)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "攻击"
-
-[node name="Hit" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons" unique_id=907328721]
-custom_minimum_size = Vector2(88, 36)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "受击"
-
-[node name="Victory" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons" unique_id=344056310]
-custom_minimum_size = Vector2(88, 36)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "胜利"
-
-[node name="Defeat" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons" unique_id=506231927]
-custom_minimum_size = Vector2(88, 36)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "失败"
+size_flags_vertical = 3
 
 [node name="ConfirmButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls" unique_id=1930066289]
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(168, 44)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_color = Color(1, 1, 0.9, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
 theme_override_font_sizes/font_size = 17
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
+theme_override_styles/normal = SubResource("StyleBoxFlat_confirm_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_confirm_button_hover")
+theme_override_styles/hover = SubResource("StyleBoxFlat_confirm_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_confirm_button_hover")
 text = "使用头像"
 
 [node name="GridScroll" type="ScrollContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=988066240]
-custom_minimum_size = Vector2(0, 220)
+custom_minimum_size = Vector2(0, 230)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -306,11 +311,11 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 10
-theme_override_constants/v_separation = 16
+theme_override_constants/v_separation = 14
 columns = 6
 
 [node name="DefaultAvatarOption" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" unique_id=546400816]
-custom_minimum_size = Vector2(108, 128)
+custom_minimum_size = Vector2(108, 126)
 layout_mode = 2
 
 [node name="OptionPanel" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption" unique_id=1171146699]
@@ -335,11 +340,22 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
+alignment = 1
 
 [node name="AvatarSlot" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin/OptionLayout" unique_id=172385602]
 custom_minimum_size = Vector2(78, 78)
 layout_mode = 2
 mouse_filter = 2
+
+[node name="SlotBackdrop" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin/OptionLayout/AvatarSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
 [node name="CharacterAvatar" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption/OptionPanel/OptionMargin/OptionLayout/AvatarSlot" unique_id=1452233049 instance=ExtResource("2_character_avatar")]
 custom_minimum_size = Vector2(0, 0)

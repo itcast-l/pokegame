@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "double"
+DisplayName = "Double"
+SpriteName = "Double"
+DescriptionKey = "ITEM_DESC_DOUBLE"
+EnabledInGame = true
+PlayableFromHand = true
+CanBeQuestionReward = true
+ArtRunName = "run-005"
+FrameCount = 4
+SortOrder = 50
+Rarity = "rare"
+TagsCsv = "attachment"
+AttachmentOverlayTexturePath = "res://art/fx/double_card_overlay/run-002/processed/card-aspect.png"
+AttachmentOverlayPriority = 30
+Trigger = "on_play"
+EffectType = "attach_modifier"
+EffectValuesRaw = "modifier=double"
+Priority = 60
+AttachedTrigger = "on_collect"
+AttachedEffectType = "double_collect"
+AttachedEffectValuesRaw = "multiplier=2"
+AttachedPriority = 60
+Icon = ""
+Weight = 45
+Description = ""

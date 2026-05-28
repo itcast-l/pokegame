@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "dragon_prince_j"
+DisplayName = "杰伊 J"
+RootPath = "res://art/characters/player_dragon_prince_avatar/run-001"
+IdleFrameCount = 12
+ActionFrameCount = 12
+AdventureStageNumber = 12
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_DRAGON_J_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_DRAGON_J_DESC"
+AbilityIdsCsv = "dragon_prince"
+AbilityValuesRaw = "royal_capture_threshold=5;special_jack_rank=J;special_jack_texture_path=res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png"
+DamageEffectFramePattern = "res://art/fx/player_dragon_prince_damage_hit/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 12
+DamageEffectPreferImageFile = true
+AttackEffectStyle = "dragon_prince_hit"
+AccentColorHtml = "#ffdb75"

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "narwhal"
+DisplayName = "诺亚"
+RootPath = "res://art/characters/player_narwhal_avatar/run-001"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 10
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_TUSK_BREAK_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_TUSK_BREAK_DESC"
+AbilityIdsCsv = "tusk_break"
+AbilityValuesRaw = "captures_before_double=2;double_item_card_id=double"
+DamageEffectFramePattern = "res://art/fx/player_narwhal_tusk_break/run-001/processed/fx-{0}.png"
+DamageEffectFrameCount = 4
+DamageEffectPreferImageFile = true
+AttackFxRoot = "res://art/fx/player_narwhal_tusk_break/run-001"
+AttackEffectFlightSeconds = 0.82

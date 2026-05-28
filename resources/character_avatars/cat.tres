@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "cat"
+DisplayName = "莫莫"
+RootPath = "res://art/characters/player_cat_avatar/run-002"
+IdleFrameCount = 1
+ActionFrameCount = 4
+AdventureStageNumber = 0
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_NONE_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_NONE_DESC"

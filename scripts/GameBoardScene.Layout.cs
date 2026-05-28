@@ -3,6 +3,9 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private static readonly Vector2 OpponentHorizontalHandCardOffset = new(45, 0);
+	private static readonly Vector2 VerticalHandCardOffset = new(0, 35);
+
 	private void CreatePlayerCardPiles()
 	{
 		_playerCardPiles.Clear();
@@ -457,7 +460,12 @@ public partial class GameBoardScene
 
 	private static Vector2 GetHandCardOffset(int playerIndex)
 	{
-		return HorizontalHandCardOffset;
+		return playerIndex switch
+		{
+			2 or 3 => VerticalHandCardOffset,
+			1 => OpponentHorizontalHandCardOffset,
+			_ => HorizontalHandCardOffset,
+		};
 	}
 
 	private static Vector2 GetHandCardOffset(int playerIndex, int cardCount)
@@ -475,11 +483,13 @@ public partial class GameBoardScene
 
 		if (!Mathf.IsZeroApprox(baseOffset.X))
 		{
-			float spacing = Math.Min(Math.Abs(baseOffset.X), (handAreaSize.X - CardVisualSize.X) / (cardCount - 1));
+			float availableSpacing = Math.Max(0.0f, handAreaSize.X - CardVisualSize.X);
+			float spacing = Math.Min(Math.Abs(baseOffset.X), availableSpacing / (cardCount - 1));
 			return new Vector2(baseOffset.X < 0.0f ? -spacing : spacing, baseOffset.Y);
 		}
 
-		float verticalSpacing = Math.Min(Math.Abs(baseOffset.Y), (handAreaSize.Y - CardVisualSize.Y) / (cardCount - 1));
+		float availableVerticalSpacing = Math.Max(0.0f, handAreaSize.Y - CardVisualSize.Y);
+		float verticalSpacing = Math.Min(Math.Abs(baseOffset.Y), availableVerticalSpacing / (cardCount - 1));
 		return new Vector2(baseOffset.X, baseOffset.Y < 0.0f ? -verticalSpacing : verticalSpacing);
 	}
 

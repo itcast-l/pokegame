@@ -2108,7 +2108,7 @@ public partial class GameBoardScene
 
 		if (playerIndex >= 0 && playerIndex < _playerCardPiles.Count && GodotObject.IsInstanceValid(_playerCardPiles[playerIndex]))
 		{
-			return _playerCardPiles[playerIndex].GlobalPosition + CardPileSize / 2.0f;
+			return GetVisibleCardPileTopGlobalPosition(playerIndex) + CardVisualSize / 2.0f;
 		}
 
 		return Size / 2.0f;
@@ -2120,7 +2120,7 @@ public partial class GameBoardScene
 			&& playerIndex < _playerCardPiles.Count
 			&& GodotObject.IsInstanceValid(_playerCardPiles[playerIndex]))
 		{
-			return _playerCardPiles[playerIndex].GlobalPosition + CardPileSize / 2.0f;
+			return GetVisibleCardPileTopGlobalPosition(playerIndex) + CardVisualSize / 2.0f;
 		}
 
 		return GetScoreMeterGlobalCenter(playerIndex);

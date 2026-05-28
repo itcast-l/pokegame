@@ -21,15 +21,6 @@ public partial class GameBoardScene
 			int cardCount = GetVisiblePileCardCountForRender(playerIndex, _playerDecks[playerIndex].Count);
 			int visibleCards = Math.Min(cardCount, VisiblePileCards);
 			float cardRotation = GetCardPileRotationDegreesForPlayer(playerIndex);
-			Vector2 firstCardPosition = Vector2.Zero;
-			if (visibleCards > 0)
-			{
-				float groupWidth = CardVisualSize.X + (visibleCards - 1) * CardPileOffset.X;
-				float groupHeight = CardVisualSize.Y - (visibleCards - 1) * CardPileOffset.Y;
-				firstCardPosition = new Vector2(
-					(CardPileSize.X - groupWidth) / 2.0f,
-					(CardPileSize.Y - groupHeight) / 2.0f - (visibleCards - 1) * CardPileOffset.Y);
-			}
 
 			for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 			{
@@ -40,7 +31,7 @@ public partial class GameBoardScene
 
 				cardBack.Visible = cardIndex < visibleCards;
 				cardBack.Texture = _cardBackTexture;
-				cardBack.Position = firstCardPosition + cardIndex * CardPileOffset;
+				cardBack.Position = GetCardPileCardLocalPosition(visibleCards, cardIndex);
 				cardBack.RotationDegrees = cardRotation;
 				cardBack.ZIndex = cardIndex;
 				SetAnimatedCardBackPlayback(cardBack, cardBack.Visible);
@@ -126,5 +117,44 @@ public partial class GameBoardScene
 	{
 		parent.RemoveChild(child);
 		child.QueueFree();
+	}
+
+	private static Vector2 GetCardPileCardLocalPosition(int visibleCards, int cardIndex)
+	{
+		int clampedVisibleCards = Mathf.Clamp(visibleCards, 1, VisiblePileCards);
+		int clampedCardIndex = Mathf.Clamp(cardIndex, 0, clampedVisibleCards - 1);
+		float groupWidth = CardVisualSize.X + (clampedVisibleCards - 1) * CardPileOffset.X;
+		float groupHeight = CardVisualSize.Y - (clampedVisibleCards - 1) * CardPileOffset.Y;
+		Vector2 firstCardPosition = new(
+			(CardPileSize.X - groupWidth) / 2.0f,
+			(CardPileSize.Y - groupHeight) / 2.0f - (clampedVisibleCards - 1) * CardPileOffset.Y);
+		return firstCardPosition + clampedCardIndex * CardPileOffset;
+	}
+
+	private Vector2 GetCardPileCardGlobalPosition(int playerIndex, int visibleCards, int cardIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerCardPiles.Count)
+		{
+			return GetOpeningDealStartGlobalPosition();
+		}
+
+		return _playerCardPiles[playerIndex].GlobalPosition + GetCardPileCardLocalPosition(visibleCards, cardIndex);
+	}
+
+	private Vector2 GetVisibleCardPileTopGlobalPosition(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerCardPiles.Count || playerIndex >= _playerDecks.Count)
+		{
+			return GetOpeningDealStartGlobalPosition();
+		}
+
+		int cardCount = GetVisiblePileCardCountForRender(playerIndex, _playerDecks[playerIndex].Count);
+		int visibleCards = Math.Min(cardCount, VisiblePileCards);
+		if (visibleCards <= 0)
+		{
+			return GetCardPileCardGlobalPosition(playerIndex, 1, 0);
+		}
+
+		return GetCardPileCardGlobalPosition(playerIndex, visibleCards, visibleCards - 1);
 	}
 }

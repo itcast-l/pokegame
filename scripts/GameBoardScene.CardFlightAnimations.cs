@@ -313,7 +313,8 @@ public partial class GameBoardScene
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees,
 		float targetRotationDegrees,
-		float visualScale)
+		float visualScale,
+		float targetVisualScale)
 	{
 		if (!IsInsideTree())
 		{
@@ -382,7 +383,7 @@ public partial class GameBoardScene
 				0.0f,
 				1.0f,
 				StolenCardFlightSeconds);
-			TweenFlightPulseScale(tween, flightCard, StolenCardFlightSeconds, StolenCardFlightPeakScale);
+			TweenStolenHandCardScale(tween, flightCard, StolenCardFlightSeconds, targetVisualScale);
 			tween.Finished += () =>
 			{
 				if (GodotObject.IsInstanceValid(flightCard))
@@ -420,6 +421,7 @@ public partial class GameBoardScene
 			targetGlobalPosition,
 			startRotationDegrees,
 			targetRotationDegrees,
+			1.0f,
 			1.0f);
 	}
 
@@ -462,6 +464,22 @@ public partial class GameBoardScene
 		float theftWobble = Mathf.Sin(clampedProgress * Mathf.Pi) * 8.0f;
 		flightCard.GlobalPosition = startGlobalPosition.Lerp(targetGlobalPosition, easedProgress) + new Vector2(0.0f, arcY);
 		flightCard.RotationDegrees = Mathf.Lerp(startRotationDegrees, targetRotationDegrees, easedProgress) + theftWobble;
+	}
+
+	private static void TweenStolenHandCardScale(
+		Tween tween,
+		Control flightCard,
+		float duration,
+		float targetVisualScale)
+	{
+		float halfDuration = duration * 0.5f;
+		tween.TweenProperty(flightCard, "scale", Vector2.One * targetVisualScale * StolenCardFlightPeakScale, halfDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(flightCard, "scale", Vector2.One * targetVisualScale, duration - halfDuration)
+			.SetDelay(halfDuration)
+			.SetTrans(Tween.TransitionType.Cubic)
+			.SetEase(Tween.EaseType.Out);
 	}
 
 	private static void UpdateCardToTableMotion(

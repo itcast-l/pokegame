@@ -32,13 +32,6 @@ public partial class CharacterAvatarEditScene : Control
 		_confirmButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ConfirmButton");
 		_confirmButton.Pressed += ConfirmSelection;
 
-		BindActionButton("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons/Idle", CharacterAvatar.AvatarAction.Idle);
-		BindActionButton("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons/Score", CharacterAvatar.AvatarAction.Score);
-		BindActionButton("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons/Attack", CharacterAvatar.AvatarAction.Attack);
-		BindActionButton("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons/Hit", CharacterAvatar.AvatarAction.Hit);
-		BindActionButton("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons/Victory", CharacterAvatar.AvatarAction.Victory);
-		BindActionButton("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ActionButtons/Defeat", CharacterAvatar.AvatarAction.Defeat);
-
 		_avatarGrid = GetNode<GridContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid");
 		BuildAvatarOptions();
 		ApplyPreviewAvatar();
@@ -69,9 +62,9 @@ public partial class CharacterAvatarEditScene : Control
 			Control option = (Control)template.Duplicate();
 			option.Name = $"{avatarDefinition.Id}AvatarOption";
 
-			if (option.GetNodeOrNull<CharacterAvatar>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/CharacterAvatar") is CharacterAvatar avatar)
+			if (option.GetNodeOrNull<Control>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot") is Control avatarSlot)
 			{
-				avatar.AvatarRoot = avatarDefinition.RootPath;
+				ReplaceOptionAvatarWithIcon(avatarSlot, avatarDefinition);
 			}
 
 			if (option.GetNodeOrNull<Label>("OptionPanel/OptionMargin/OptionLayout/AvatarName") is Label label)
@@ -102,16 +95,31 @@ public partial class CharacterAvatarEditScene : Control
 		ApplyPreviewAvatar();
 	}
 
+	private static void ReplaceOptionAvatarWithIcon(Control avatarSlot, CharacterAvatarDefinition avatarDefinition)
+	{
+		if (avatarSlot.GetNodeOrNull<CharacterAvatar>("CharacterAvatar") is CharacterAvatar templateAvatar)
+		{
+			avatarSlot.RemoveChild(templateAvatar);
+			templateAvatar.QueueFree();
+		}
+
+		var icon = new TextureRect
+		{
+			Name = "AvatarIcon",
+			Texture = ResourceLoader.Load<Texture2D>($"{avatarDefinition.RootPath}/idle/processed/idle-1.png"),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		icon.SetAnchorsPreset(LayoutPreset.FullRect);
+		avatarSlot.AddChild(icon);
+	}
+
 	private void ConfirmSelection()
 	{
 		EmitSignal(SignalName.AvatarSelected, CurrentAvatarId);
 		RequestClose();
-	}
-
-	private void BindActionButton(string buttonPath, CharacterAvatar.AvatarAction action)
-	{
-		Button button = GetNode<Button>(buttonPath);
-		button.Pressed += () => _previewAvatar.PlayAction(action);
 	}
 
 	private void ApplyPreviewAvatar()

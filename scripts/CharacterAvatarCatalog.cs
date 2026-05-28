@@ -150,9 +150,12 @@ public static class CharacterAvatarCatalog
 {
 	public const string SettingsConfigPath = "user://settings.cfg";
 	public const string DefaultAvatarId = "cat";
-	private const bool UnlockAllAdventureStagesForTesting = true;
+	private const bool UnlockAllAdventureStagesForTesting = false;
 	private const string AdventureProgressSection = "adventure";
 	private const string HighestCompletedStageKey = "highest_completed_stage";
+	private const string PendingAvatarUnlockQueueKey = "pending_avatar_unlock_queue";
+	private const string LegacyPendingAvatarUnlockKey = "pending_avatar_unlock";
+	private const string LegacyPendingAvatarUnlockStageKey = "pending_avatar_unlock_stage";
 	private const string AvatarResourceDirectory = "res://resources/character_avatars";
 
 	private static CharacterAvatarDefinition[]? _avatars;
@@ -305,7 +308,8 @@ public static class CharacterAvatarCatalog
 
 	public static void RecordAdventureVictory(string enemyAvatarId)
 	{
-		int stageNumber = GetAdventureStageNumber(enemyAvatarId);
+		string normalizedAvatarId = NormalizeAvatarId(enemyAvatarId);
+		int stageNumber = GetAdventureStageNumber(normalizedAvatarId);
 		if (stageNumber <= 0)
 		{
 			return;
@@ -326,11 +330,58 @@ public static class CharacterAvatarCatalog
 		}
 
 		config.SetValue(AdventureProgressSection, HighestCompletedStageKey, stageNumber);
+		var pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue(config);
+		pendingUnlocks.Add(normalizedAvatarId);
+		SavePendingAdventureAvatarUnlockQueue(config, pendingUnlocks);
 		Error saveResult = config.Save(SettingsConfigPath);
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save adventure progress: {saveResult}");
 		}
+	}
+
+	public static string ConsumePendingAdventureAvatarUnlock()
+	{
+		var config = new ConfigFile();
+		Error loadResult = config.Load(SettingsConfigPath);
+		if (loadResult != Error.Ok)
+		{
+			return string.Empty;
+		}
+
+		List<string> pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue(config);
+		if (pendingUnlocks.Count == 0)
+		{
+			return string.Empty;
+		}
+
+		while (pendingUnlocks.Count > 0)
+		{
+			string avatarId = pendingUnlocks[0];
+			pendingUnlocks.RemoveAt(0);
+			string normalizedAvatarId = NormalizeAvatarId(avatarId);
+			int stageNumber = GetAdventureStageNumber(normalizedAvatarId);
+			if (stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage())
+			{
+				SavePendingAdventureAvatarUnlockQueue(config, pendingUnlocks);
+				Error consumeSaveResult = config.Save(SettingsConfigPath);
+				if (consumeSaveResult != Error.Ok)
+				{
+					GD.PushWarning($"Failed to clear pending adventure avatar unlock: {consumeSaveResult}");
+				}
+
+				return normalizedAvatarId;
+			}
+		}
+
+		SavePendingAdventureAvatarUnlockQueue(config, pendingUnlocks);
+		Error saveResult = config.Save(SettingsConfigPath);
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to clear pending adventure avatar unlock: {saveResult}");
+		}
+
+		return string.Empty;
 	}
 
 	public static int GetIdleFrameCount(string avatarRoot)
@@ -404,12 +455,12 @@ public static class CharacterAvatarCatalog
 				break;
 			}
 
-			if (directory.CurrentIsDir() || !fileName.EndsWith(".tres", StringComparison.OrdinalIgnoreCase))
+			if (directory.CurrentIsDir() || !TryGetResourceFileName(fileName, out string resourceFileName))
 			{
 				continue;
 			}
 
-			string path = $"{AvatarResourceDirectory}/{fileName}";
+			string path = $"{AvatarResourceDirectory}/{resourceFileName}";
 			CharacterAvatarDefinition? definition = LoadAvatarDefinition(path);
 			if (definition == null)
 			{
@@ -438,6 +489,70 @@ public static class CharacterAvatarCatalog
 			return stageComparison != 0 ? stageComparison : string.CompareOrdinal(a.Id, b.Id);
 		});
 		return definitions.ToArray();
+	}
+
+	private static bool TryGetResourceFileName(string fileName, out string resourceFileName)
+	{
+		const string ResourceExtension = ".tres";
+		const string RemapExtension = ".remap";
+
+		if (fileName.EndsWith(ResourceExtension, StringComparison.OrdinalIgnoreCase))
+		{
+			resourceFileName = fileName;
+			return true;
+		}
+
+		if (fileName.EndsWith(ResourceExtension + RemapExtension, StringComparison.OrdinalIgnoreCase))
+		{
+			resourceFileName = fileName[..^RemapExtension.Length];
+			return true;
+		}
+
+		resourceFileName = string.Empty;
+		return false;
+	}
+
+	private static List<string> LoadPendingAdventureAvatarUnlockQueue(ConfigFile config)
+	{
+		string rawQueue = config.GetValue(AdventureProgressSection, PendingAvatarUnlockQueueKey, string.Empty).AsString();
+		List<string> queue = ParsePendingAdventureAvatarUnlockQueue(rawQueue);
+		if (queue.Count > 0)
+		{
+			return queue;
+		}
+
+		string legacyAvatarId = config.GetValue(AdventureProgressSection, LegacyPendingAvatarUnlockKey, string.Empty).AsString();
+		if (!string.IsNullOrWhiteSpace(legacyAvatarId))
+		{
+			queue.Add(legacyAvatarId);
+		}
+
+		return queue;
+	}
+
+	private static List<string> ParsePendingAdventureAvatarUnlockQueue(string rawQueue)
+	{
+		if (string.IsNullOrWhiteSpace(rawQueue))
+		{
+			return new List<string>();
+		}
+
+		return new List<string>(rawQueue.Split(new[] { '|', ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+	}
+
+	private static void SavePendingAdventureAvatarUnlockQueue(ConfigFile config, IReadOnlyList<string> queue)
+	{
+		if (queue.Count > 0)
+		{
+			config.SetValue(AdventureProgressSection, PendingAvatarUnlockQueueKey, string.Join("|", queue));
+		}
+		else
+		{
+			config.SetValue(AdventureProgressSection, PendingAvatarUnlockQueueKey, string.Empty);
+		}
+
+		config.SetValue(AdventureProgressSection, LegacyPendingAvatarUnlockKey, string.Empty);
+		config.SetValue(AdventureProgressSection, LegacyPendingAvatarUnlockStageKey, 0);
 	}
 
 	private static CharacterAvatarDefinition? LoadAvatarDefinition(string path)

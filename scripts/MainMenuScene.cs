@@ -96,6 +96,7 @@ public partial class MainMenuScene : Control
 	private string _languagePreference = Localization.DefaultLanguagePreference;
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
 	private bool _isSyncingSettingsControls;
+	private bool _isStartingGameTransition;
 	private bool _isMenuCameraTransitioning;
 	private ulong _menuCameraTransitionStartMsec;
 	private float _menuCameraTransitionTotalSeconds;
@@ -132,6 +133,7 @@ public partial class MainMenuScene : Control
 		_avatarEntry.Visible = true;
 		SetMainMenuButtonsDisabled(false);
 		PrepareAdventureAvatarMenuCache();
+		ShowPendingAdventureAvatarUnlockPrompt();
 	}
 
 	public override void _Ready()
@@ -183,6 +185,7 @@ public partial class MainMenuScene : Control
 		else
 		{
 			PrepareAdventureAvatarMenuCache();
+			ShowPendingAdventureAvatarUnlockPrompt();
 		}
 		PrepareBackgroundMusic();
 	}

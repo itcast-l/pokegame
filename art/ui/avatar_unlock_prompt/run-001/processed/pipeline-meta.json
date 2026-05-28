@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "Single clean 2D game UI reward frame asset for an underwater card adventure game, ornate shell frame with coral corners and pearl highlights, no text, no letters, no numbers, empty center for avatar and message, centered on pure solid flat magenta #FF00FF background, no gradient, no scene background, no shadows outside the frame, game-ready transparent-background asset.",
+  "role": "",
+  "input": "art/ui/avatar_unlock_prompt/run-001/raw/avatar-unlock-prompt-raw.png",
+  "threshold": 120,
+  "edge_threshold": 170,
+  "duration": 200,
+  "single_size": 768
+}

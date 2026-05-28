@@ -11,6 +11,9 @@ ADVENTURE_COMPLETED,已完成,已完成,Done
 ADVENTURE_AVAILABLE,可挑战,可挑戰,Ready
 ADVENTURE_TEST_AVAILABLE,测试开放,測試開放,Test
 ADVENTURE_LOCKED,未解锁,未解鎖,Locked
+AVATAR_UNLOCK_TITLE,头像已解锁,頭像已解鎖,Avatar Unlocked
+AVATAR_UNLOCK_MESSAGE,获得了 {0} 的头像,獲得了 {0} 的頭像,You got {0}'s avatar
+AVATAR_UNLOCK_CONFIRM,收下,收下,Collect
 ADVENTURE_ABILITY_TITLE,敌人能力,敵人能力,Enemy Ability
 ADVENTURE_ABILITY_NONE_NAME,无特殊能力,無特殊能力,None
 ADVENTURE_ABILITY_NONE_DESC,按基础规则行动。,按基礎規則行動。,Uses the base rules.
@@ -108,11 +111,17 @@ GAME_RETURN_MAIN_MENU,回到主菜单,回到主選單,Main Menu
 GAME_RETURN_ADVENTURE,返回关卡,返回關卡,Stages
 GAME_CONTINUE,继续游戏,繼續遊戲,Continue
 GAME_QUIT,退出游戏,離開遊戲,Quit
+GAME_QUIT_CONFIRM_TITLE,退出游戏,離開遊戲,Quit Game
+GAME_QUIT_CONFIRM_MESSAGE,确定要退出当前对局吗？,確定要離開目前對局嗎？,Quit the current match?
+GAME_QUIT_CONFIRM_HINT,退出后不会保存当前对局进度。,離開後不會儲存目前對局進度。,Current match progress will not be saved.
+GAME_QUIT_CONFIRM_CANCEL,继续游戏,繼續遊戲,Keep Playing
+GAME_QUIT_CONFIRM_ACCEPT,确认退出,確認離開,Quit
 GAME_START,游戏开始,遊戲開始,Game Start
 GAME_SELECT_PLAYER,选择玩家,選擇玩家,Pick Player
 GAME_PLAYER_HAND,玩家 {0} 手牌,玩家 {0} 手牌,P{0} Hand
 GAME_SPECIAL_CARD,特殊牌 {0},特殊牌 {0},Card {0}
 GAME_CARD_DISABLED_THIS_TURN,本回合不可使用,本回合不可使用,Not usable this turn
+GAME_CARD_COLLECTS_TABLE,收取牌桌所有牌,收取牌桌所有牌,Collect all table cards
 GAME_CANCEL,取消,取消,Cancel
 GAME_SELECT_BASE_CARD,选择基础牌,選擇基礎牌,Base Card
 GAME_SELECT_DISCARD_CARD,手牌已满，选择一张移除,手牌已滿，選擇一張移除,Hand full: remove 1

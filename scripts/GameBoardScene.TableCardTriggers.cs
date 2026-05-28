@@ -664,7 +664,7 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard specialJack = new(string.Empty, _dragonPrinceSpecialJackRank, _dragonPrinceSpecialJackTexture);
-		_tableCards.Add(new TableCard(specialJack, true, cardOwnerPlayerIndex: playerIndex));
+		_tableCards.Add(new TableCard(specialJack, true, cardOwnerPlayerIndex: playerIndex, removeCardOnCapture: true));
 		int tableCardIndex = _tableCards.Count - 1;
 		await PlayCardToTableAnimationAsync(
 			playerIndex,

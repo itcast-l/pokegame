@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "overtime"
+DisplayName = "Overtime"
+SpriteName = "Overtime"
+DescriptionKey = "ITEM_DESC_OVERTIME"
+EnabledInGame = true
+PlayableFromHand = true
+CanBeQuestionReward = true
+ArtRunName = "run-004"
+FrameCount = 4
+SortOrder = 60
+Rarity = "rare"
+TagsCsv = "attachment"
+AttachmentOverlayTexturePath = "res://art/fx/overtime_card_overlay/run-001/processed/card-aspect.png"
+AttachmentOverlayPriority = 10
+Trigger = "on_play"
+EffectType = "attach_modifier"
+EffectValuesRaw = "modifier=overtime"
+Priority = 55
+AttachedTrigger = "on_collect"
+AttachedEffectType = "extra_turn"
+AttachedEffectValuesRaw = ""
+AttachedPriority = 55
+Icon = ""
+Weight = 45
+Description = ""

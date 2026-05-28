@@ -82,12 +82,12 @@ public static class CardRankCatalog
 				break;
 			}
 
-			if (directory.CurrentIsDir() || !fileName.EndsWith(".tres", StringComparison.OrdinalIgnoreCase))
+			if (directory.CurrentIsDir() || !TryGetResourceFileName(fileName, out string resourceFileName))
 			{
 				continue;
 			}
 
-			string path = $"{CardRankResourceDirectory}/{fileName}";
+			string path = $"{CardRankResourceDirectory}/{resourceFileName}";
 			CardRankDefinition? definition = LoadCardRankDefinition(path);
 			if (definition == null)
 			{
@@ -107,6 +107,27 @@ public static class CardRankCatalog
 
 		_definitionsByRank = definitionsByRank;
 		return _definitionsByRank;
+	}
+
+	private static bool TryGetResourceFileName(string fileName, out string resourceFileName)
+	{
+		const string ResourceExtension = ".tres";
+		const string RemapExtension = ".remap";
+
+		if (fileName.EndsWith(ResourceExtension, StringComparison.OrdinalIgnoreCase))
+		{
+			resourceFileName = fileName;
+			return true;
+		}
+
+		if (fileName.EndsWith(ResourceExtension + RemapExtension, StringComparison.OrdinalIgnoreCase))
+		{
+			resourceFileName = fileName[..^RemapExtension.Length];
+			return true;
+		}
+
+		resourceFileName = string.Empty;
+		return false;
 	}
 
 	private static CardRankDefinition? LoadCardRankDefinition(string path)

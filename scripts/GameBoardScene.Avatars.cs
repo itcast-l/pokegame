@@ -32,6 +32,7 @@ public partial class GameBoardScene
 			}
 
 			_playerAvatarAreas[playerIndex] = area;
+			area.TooltipText = GetPlayerScoreTooltip(playerIndex);
 		}
 	}
 
@@ -160,5 +161,21 @@ public partial class GameBoardScene
 		}
 
 		avatar.PlayAction(action);
+	}
+
+	private void UpdatePlayerAvatarTooltip(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerAvatarAreas.Length)
+		{
+			return;
+		}
+
+		DraggableAvatarArea? area = _playerAvatarAreas[playerIndex];
+		if (area == null || !GodotObject.IsInstanceValid(area))
+		{
+			return;
+		}
+
+		area.TooltipText = GetPlayerScoreTooltip(playerIndex);
 	}
 }

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CardRankDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CardRankDefinitionResource.cs" id="1_card_rank_definition"]
+
+[resource]
+script = ExtResource("1_card_rank_definition")
+Rank = "10"
+ScoreValue = 10
+SuitedScoreValue = -1
+ExcludeFromStandardDeck = false

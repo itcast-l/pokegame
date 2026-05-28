@@ -335,8 +335,13 @@ void fragment() {
 		StartGameWithOptions(playerCount, itemMode, winningScore);
 	}
 
-	private void StartGameWithOptions(int playerCount, bool itemMode, int winningScore)
+	private async void StartGameWithOptions(int playerCount, bool itemMode, int winningScore)
 	{
+		if (_isStartingGameTransition)
+		{
+			return;
+		}
+
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
 		if (gameBoardScene == null)
 		{
@@ -344,13 +349,18 @@ void fragment() {
 			return;
 		}
 
-		Node gameBoard = gameBoardScene.Instantiate();
-		gameBoard.Set("player_count", playerCount);
-		gameBoard.Set("item_mode", itemMode);
-		gameBoard.Set("winning_score", winningScore);
-		gameBoard.Set("solo_mode", true);
-		GetTree().Root.AddChild(gameBoard);
-		GetTree().CurrentScene = gameBoard;
-		QueueFree();
+		_isStartingGameTransition = true;
+		SetMainMenuButtonsDisabled(true);
+		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
+		{
+			Node gameBoard = gameBoardScene.Instantiate();
+			gameBoard.Set("player_count", playerCount);
+			gameBoard.Set("item_mode", itemMode);
+			gameBoard.Set("winning_score", winningScore);
+			gameBoard.Set("solo_mode", true);
+			GetTree().Root.AddChild(gameBoard);
+			GetTree().CurrentScene = gameBoard;
+			QueueFree();
+		});
 	}
 }
