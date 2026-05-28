@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -18,8 +17,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> tableCardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= tableCardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 tableCardPosition))
 		{
 			return;
 		}
@@ -30,7 +28,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPositions[tableCardIndex];
+		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPosition;
 		bool showMainPlayerPreview = playerIndex == MainPlayerIndex && !tableCardIsFaceUp;
 		bool flipToCardBack = !showMainPlayerPreview && playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
@@ -145,8 +143,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> tableCardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= tableCardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 tableCardPosition))
 		{
 			return;
 		}
@@ -158,7 +155,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPositions[tableCardIndex];
+		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPosition;
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
 		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
 		var flightCard = new TextureRect

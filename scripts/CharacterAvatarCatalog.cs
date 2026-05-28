@@ -2,6 +2,54 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
+public static class AdventureEnemyAbilities
+{
+	public const string TideGuard = "tide_guard";
+	public const string BubbleCover = "bubble_cover";
+	public const string TideShift = "tide_shift";
+	public const string SandAmbush = "sand_ambush";
+	public const string ColorCurrent = "color_current";
+	public const string SpiralShell = "spiral_shell";
+	public const string TuskBreak = "tusk_break";
+	public const string LeafyMirage = "leafy_mirage";
+	public const string DragonPrince = "dragon_prince";
+	public const string DragonQueen = "dragon_queen";
+	public const string DragonKing = "dragon_king";
+}
+
+public static class AdventureAttackEffectStyles
+{
+	public const string FishBeam = "fish_beam";
+	public const string CrabPincer = "crab_pincer";
+	public const string JellyfishTentacle = "jellyfish_tentacle";
+	public const string MantaRayCyclone = "manta_ray_cyclone";
+	public const string SeaSlugMarker = "sea_slug_marker";
+	public const string GardenEelBurrow = "garden_eel_burrow";
+	public const string LeafySeadragonSlash = "leafy_seadragon_slash";
+	public const string DragonPrinceHit = "dragon_prince_hit";
+	public const string DragonQueenJaw = "dragon_queen_jaw";
+	public const string BossKRoyalSeizure = "boss_k_royal_seizure";
+}
+
+public static class AdventureEnemyAbilityValueKeys
+{
+	public const string ScoreReductionPerCard = "score_reduction_per_card";
+	public const string CapturesBeforeSandBite = "captures_before_sand_bite";
+	public const string TideShiftMinTableCards = "tide_shift_min_table_cards";
+	public const string MissesBeforeSlimeCoat = "misses_before_slime_coat";
+	public const string CapturesBeforeBomb = "captures_before_bomb";
+	public const string CapturesBeforeDouble = "captures_before_double";
+	public const string RoyalCaptureThreshold = "royal_capture_threshold";
+	public const string DragonQueenCaptureThreshold = "dragon_queen_capture_threshold";
+	public const string CapturesBeforeSteal = "captures_before_steal";
+	public const string BladeBreakTableCardThreshold = "blade_break_table_card_threshold";
+	public const string BladeBreakCooldownTurns = "blade_break_cooldown_turns";
+	public const string BombItemCardId = "bomb_item_card_id";
+	public const string DoubleItemCardId = "double_item_card_id";
+	public const string SpecialJackRank = "special_jack_rank";
+	public const string SpecialJackTexturePath = "special_jack_texture_path";
+}
+
 public sealed class CharacterAvatarDefinition
 {
 	public CharacterAvatarDefinition(
@@ -10,16 +58,40 @@ public sealed class CharacterAvatarDefinition
 		string rootPath,
 		int idleFrameCount,
 		int actionFrameCount = 4,
+		int adventureStageNumber = 0,
 		string adventureAbilityNameKey = "ADVENTURE_ABILITY_NONE_NAME",
-		string adventureAbilityDescriptionKey = "ADVENTURE_ABILITY_NONE_DESC")
+		string adventureAbilityDescriptionKey = "ADVENTURE_ABILITY_NONE_DESC",
+		string abilityIdsCsv = "",
+		string abilityValuesRaw = "",
+		string damageEffectFramePattern = "",
+		int damageEffectFrameCount = 0,
+		bool damageEffectPreferImageFile = false,
+		string attackFxRoot = "",
+		float attackEffectFlightSeconds = 0.0f,
+		string attackEffectStyle = "",
+		string accentColorHtml = "",
+		bool bossBorrowedAbilityFxEligible = true)
 	{
 		Id = id;
 		DisplayName = displayName;
 		RootPath = rootPath;
 		IdleFrameCount = idleFrameCount;
 		ActionFrameCount = actionFrameCount;
+		AdventureStageNumber = adventureStageNumber;
 		AdventureAbilityNameKey = adventureAbilityNameKey;
 		AdventureAbilityDescriptionKey = adventureAbilityDescriptionKey;
+		AbilityIdsCsv = abilityIdsCsv;
+		AbilityIds = ParseAbilityIds(abilityIdsCsv);
+		AbilityValuesRaw = abilityValuesRaw;
+		AbilityValues = CardEffectValues.Parse(abilityValuesRaw);
+		DamageEffectFramePattern = damageEffectFramePattern;
+		DamageEffectFrameCount = damageEffectFrameCount;
+		DamageEffectPreferImageFile = damageEffectPreferImageFile;
+		AttackFxRoot = attackFxRoot;
+		AttackEffectFlightSeconds = attackEffectFlightSeconds;
+		AttackEffectStyle = attackEffectStyle;
+		AccentColorHtml = accentColorHtml;
+		BossBorrowedAbilityFxEligible = bossBorrowedAbilityFxEligible;
 	}
 
 	public string Id { get; }
@@ -27,8 +99,51 @@ public sealed class CharacterAvatarDefinition
 	public string RootPath { get; }
 	public int IdleFrameCount { get; }
 	public int ActionFrameCount { get; }
+	public int AdventureStageNumber { get; }
 	public string AdventureAbilityNameKey { get; }
 	public string AdventureAbilityDescriptionKey { get; }
+	public string AbilityIdsCsv { get; }
+	public IReadOnlyList<string> AbilityIds { get; }
+	public string AbilityValuesRaw { get; }
+	public CardEffectValues AbilityValues { get; }
+	public string DamageEffectFramePattern { get; }
+	public int DamageEffectFrameCount { get; }
+	public bool DamageEffectPreferImageFile { get; }
+	public string AttackFxRoot { get; }
+	public float AttackEffectFlightSeconds { get; }
+	public string AttackEffectStyle { get; }
+	public string AccentColorHtml { get; }
+	public bool BossBorrowedAbilityFxEligible { get; }
+
+	public bool HasAbility(string abilityId)
+	{
+		foreach (string existingAbilityId in AbilityIds)
+		{
+			if (string.Equals(existingAbilityId, abilityId, StringComparison.Ordinal))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public int GetAbilityValueInt(string key, int fallback)
+	{
+		return AbilityValues.GetInt(key, fallback);
+	}
+
+	public string GetAbilityValueString(string key, string fallback)
+	{
+		return AbilityValues.GetString(key, fallback);
+	}
+
+	private static IReadOnlyList<string> ParseAbilityIds(string abilityIdsCsv)
+	{
+		return string.IsNullOrWhiteSpace(abilityIdsCsv)
+			? Array.Empty<string>()
+			: abilityIdsCsv.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+	}
 }
 
 public static class CharacterAvatarCatalog
@@ -38,28 +153,15 @@ public static class CharacterAvatarCatalog
 	private const bool UnlockAllAdventureStagesForTesting = true;
 	private const string AdventureProgressSection = "adventure";
 	private const string HighestCompletedStageKey = "highest_completed_stage";
+	private const string AvatarResourceDirectory = "res://resources/character_avatars";
 
-	private static readonly CharacterAvatarDefinition[] Avatars =
-	{
-		new("cat", "莫莫", "res://art/characters/player_cat_avatar/run-002", 1),
-		new("fish", "阿布", "res://art/characters/player_fish_avatar/run-001", 1),
-		new("lanternfish", "米露", "res://art/characters/player_lanternfish_avatar/run-001", 1),
-		new("shrimp", "皮皮", "res://art/characters/player_shrimp_avatar/run-001", 1),
-		new("crab", "嘟嘟", "res://art/characters/player_crab_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_TIDE_GUARD_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_TIDE_GUARD_DESC"),
-		new("jellyfish", "软糖", "res://art/characters/player_jellyfish_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_BUBBLE_COVER_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_BUBBLE_COVER_DESC"),
-		new("manta_ray", "悠悠", "res://art/characters/player_manta_ray_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_TIDE_SHIFT_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_TIDE_SHIFT_DESC"),
-		new("garden_eel", "阿豆", "res://art/characters/player_garden_eel_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_SAND_AMBUSH_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_SAND_AMBUSH_DESC"),
-		new("sea_slug", "糯米", "res://art/characters/player_sea_slug_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_COLOR_CURRENT_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_COLOR_CURRENT_DESC"),
-		new("nautilus", "罗米", "res://art/characters/player_nautilus_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_SPIRAL_SHELL_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_SPIRAL_SHELL_DESC"),
-		new("narwhal", "诺亚", "res://art/characters/player_narwhal_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_TUSK_BREAK_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_TUSK_BREAK_DESC"),
-		new("leafy_seadragon", "艾莉", "res://art/characters/player_leafy_seadragon_avatar/run-001", 1, adventureAbilityNameKey: "ADVENTURE_ABILITY_LEAFY_MIRAGE_NAME", adventureAbilityDescriptionKey: "ADVENTURE_ABILITY_LEAFY_MIRAGE_DESC"),
-		new("dragon_prince_j", "杰伊 J", "res://art/characters/player_dragon_prince_avatar/run-001", 12, 12, "ADVENTURE_ABILITY_DRAGON_J_NAME", "ADVENTURE_ABILITY_DRAGON_J_DESC"),
-		new("dragon_queen_q", "奎娜 Q", "res://art/characters/player_dragon_queen_avatar/run-001", 12, 12, "ADVENTURE_ABILITY_DRAGON_Q_NAME", "ADVENTURE_ABILITY_DRAGON_Q_DESC"),
-		new("boss_k", "凯撒 K", "res://art/characters/boss_k_avatar/run-001", 12, 12, "ADVENTURE_ABILITY_DRAGON_K_NAME", "ADVENTURE_ABILITY_DRAGON_K_DESC"),
-	};
+	private static CharacterAvatarDefinition[]? _avatars;
+	private static readonly CharacterAvatarDefinition EmptyDefault = new(DefaultAvatarId, DefaultAvatarId, string.Empty, 1);
+
+	private static CharacterAvatarDefinition[] Avatars => _avatars ??= LoadAvatarDefinitions();
 
 	public static IReadOnlyList<CharacterAvatarDefinition> All => Avatars;
-	public static CharacterAvatarDefinition Default => Avatars[0];
+	public static CharacterAvatarDefinition Default => Avatars.Length > 0 ? Avatars[0] : EmptyDefault;
 
 	public static CharacterAvatarDefinition GetById(string avatarId)
 	{
@@ -73,6 +175,24 @@ public static class CharacterAvatarCatalog
 		}
 
 		return Default;
+	}
+
+	public static bool TryGetAvatarIdForAbility(string abilityId, out string avatarId, bool requireBossBorrowedFxEligible = false)
+	{
+		foreach (CharacterAvatarDefinition avatar in Avatars)
+		{
+			if (!avatar.HasAbility(abilityId)
+				|| (requireBossBorrowedFxEligible && !avatar.BossBorrowedAbilityFxEligible))
+			{
+				continue;
+			}
+
+			avatarId = avatar.Id;
+			return true;
+		}
+
+		avatarId = string.Empty;
+		return false;
 	}
 
 	public static string NormalizeAvatarId(string avatarId)
@@ -90,11 +210,11 @@ public static class CharacterAvatarCatalog
 	{
 		var unlockedAvatars = new List<CharacterAvatarDefinition> { Default };
 		int highestCompletedStage = LoadHighestCompletedAdventureStage();
-		for (int avatarIndex = 1; avatarIndex < Avatars.Length; avatarIndex++)
+		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
-			if (avatarIndex <= highestCompletedStage)
+			if (avatar.AdventureStageNumber > 0 && avatar.AdventureStageNumber <= highestCompletedStage)
 			{
-				unlockedAvatars.Add(Avatars[avatarIndex]);
+				unlockedAvatars.Add(avatar);
 			}
 		}
 
@@ -115,7 +235,13 @@ public static class CharacterAvatarCatalog
 
 	public static int GetAdventureStageCount()
 	{
-		return Avatars.Length - 1;
+		int stageCount = 0;
+		foreach (CharacterAvatarDefinition avatar in Avatars)
+		{
+			stageCount = Math.Max(stageCount, avatar.AdventureStageNumber);
+		}
+
+		return stageCount;
 	}
 
 	public static bool IsAdventureStageCompleted(int stageNumber)
@@ -140,11 +266,11 @@ public static class CharacterAvatarCatalog
 	public static int GetAdventureStageNumber(string avatarId)
 	{
 		string normalized = NormalizeAvatarId(avatarId);
-		for (int avatarIndex = 1; avatarIndex < Avatars.Length; avatarIndex++)
+		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
-			if (string.Equals(Avatars[avatarIndex].Id, normalized, StringComparison.Ordinal))
+			if (string.Equals(avatar.Id, normalized, StringComparison.Ordinal))
 			{
-				return avatarIndex;
+				return avatar.AdventureStageNumber;
 			}
 		}
 
@@ -153,9 +279,15 @@ public static class CharacterAvatarCatalog
 
 	public static string GetAdventureAvatarIdForStage(int stageNumber)
 	{
-		return stageNumber > 0 && stageNumber < Avatars.Length
-			? Avatars[stageNumber].Id
-			: DefaultAvatarId;
+		foreach (CharacterAvatarDefinition avatar in Avatars)
+		{
+			if (avatar.AdventureStageNumber == stageNumber)
+			{
+				return avatar.Id;
+			}
+		}
+
+		return DefaultAvatarId;
 	}
 
 	public static int LoadHighestCompletedAdventureStage()
@@ -168,7 +300,7 @@ public static class CharacterAvatarCatalog
 		}
 
 		int highestCompletedStage = config.GetValue(AdventureProgressSection, HighestCompletedStageKey, 0).AsInt32();
-		return Mathf.Clamp(highestCompletedStage, 0, Avatars.Length - 1);
+		return Mathf.Clamp(highestCompletedStage, 0, GetAdventureStageCount());
 	}
 
 	public static void RecordAdventureVictory(string enemyAvatarId)
@@ -227,6 +359,19 @@ public static class CharacterAvatarCatalog
 		return Default.ActionFrameCount;
 	}
 
+	public static string GetAttackFxRoot(string avatarRoot)
+	{
+		foreach (CharacterAvatarDefinition avatar in Avatars)
+		{
+			if (string.Equals(avatar.RootPath, avatarRoot, StringComparison.Ordinal))
+			{
+				return avatar.AttackFxRoot;
+			}
+		}
+
+		return string.Empty;
+	}
+
 	public static CharacterAvatarDefinition LoadSelectedAvatar()
 	{
 		var config = new ConfigFile();
@@ -238,6 +383,119 @@ public static class CharacterAvatarCatalog
 
 		string avatarId = config.GetValue("general", "avatar", DefaultAvatarId).AsString();
 		return GetById(NormalizeUnlockedAvatarId(avatarId));
+	}
+
+	private static CharacterAvatarDefinition[] LoadAvatarDefinitions()
+	{
+		var definitions = new List<CharacterAvatarDefinition>();
+		using DirAccess? directory = DirAccess.Open(AvatarResourceDirectory);
+		if (directory == null)
+		{
+			GD.PushWarning($"Missing character avatar resource directory: {AvatarResourceDirectory}");
+			return Array.Empty<CharacterAvatarDefinition>();
+		}
+
+		directory.ListDirBegin();
+		while (true)
+		{
+			string fileName = directory.GetNext();
+			if (string.IsNullOrEmpty(fileName))
+			{
+				break;
+			}
+
+			if (directory.CurrentIsDir() || !fileName.EndsWith(".tres", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			string path = $"{AvatarResourceDirectory}/{fileName}";
+			CharacterAvatarDefinition? definition = LoadAvatarDefinition(path);
+			if (definition == null)
+			{
+				GD.PushWarning($"Invalid character avatar definition resource: {path}");
+				continue;
+			}
+
+			if (string.IsNullOrWhiteSpace(definition.Id) || string.IsNullOrWhiteSpace(definition.RootPath))
+			{
+				GD.PushWarning($"Character avatar definition resource is missing id or root path: {path}");
+				continue;
+			}
+
+			definitions.Add(definition);
+		}
+
+		if (definitions.Count == 0)
+		{
+			GD.PushWarning($"No character avatar definitions found in {AvatarResourceDirectory}");
+			return Array.Empty<CharacterAvatarDefinition>();
+		}
+
+		definitions.Sort((a, b) =>
+		{
+			int stageComparison = a.AdventureStageNumber.CompareTo(b.AdventureStageNumber);
+			return stageComparison != 0 ? stageComparison : string.CompareOrdinal(a.Id, b.Id);
+		});
+		return definitions.ToArray();
+	}
+
+	private static CharacterAvatarDefinition? LoadAvatarDefinition(string path)
+	{
+		Resource? resource = GD.Load(path);
+		if (resource is CharacterAvatarDefinitionResource avatarResource)
+		{
+			return avatarResource.ToDefinition();
+		}
+
+		if (resource == null)
+		{
+			return null;
+		}
+
+		return new CharacterAvatarDefinition(
+			GetResourceString(resource, "Id"),
+			GetResourceString(resource, "DisplayName"),
+			GetResourceString(resource, "RootPath"),
+			GetResourceInt(resource, "IdleFrameCount", 1),
+			GetResourceInt(resource, "ActionFrameCount", 4),
+			GetResourceInt(resource, "AdventureStageNumber"),
+			GetResourceString(resource, "AdventureAbilityNameKey", "ADVENTURE_ABILITY_NONE_NAME"),
+			GetResourceString(resource, "AdventureAbilityDescriptionKey", "ADVENTURE_ABILITY_NONE_DESC"),
+			GetResourceString(resource, "AbilityIdsCsv"),
+			GetResourceString(resource, "AbilityValuesRaw"),
+			GetResourceString(resource, "DamageEffectFramePattern"),
+			GetResourceInt(resource, "DamageEffectFrameCount"),
+			GetResourceBool(resource, "DamageEffectPreferImageFile"),
+			GetResourceString(resource, "AttackFxRoot"),
+			GetResourceFloat(resource, "AttackEffectFlightSeconds"),
+			GetResourceString(resource, "AttackEffectStyle"),
+			GetResourceString(resource, "AccentColorHtml"),
+			GetResourceBool(resource, "BossBorrowedAbilityFxEligible", true));
+	}
+
+	private static string GetResourceString(Resource resource, string propertyName, string fallback = "")
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsString();
+	}
+
+	private static int GetResourceInt(Resource resource, string propertyName, int fallback = 0)
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsInt32();
+	}
+
+	private static float GetResourceFloat(Resource resource, string propertyName, float fallback = 0.0f)
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsSingle();
+	}
+
+	private static bool GetResourceBool(Resource resource, string propertyName, bool fallback = false)
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsBool();
 	}
 
 }

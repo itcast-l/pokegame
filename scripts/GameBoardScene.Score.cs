@@ -171,20 +171,7 @@ public partial class GameBoardScene
 
 	private static int GetCardScoreValue(PlayingCard card)
 	{
-		if (int.TryParse(card.Rank, out int numericRank))
-		{
-			return Math.Max(0, numericRank);
-		}
-
-		return card.Rank switch
-		{
-			"A" => 1,
-			"J" when !string.IsNullOrWhiteSpace(card.Suit) => 11,
-			"Q" when !string.IsNullOrWhiteSpace(card.Suit) => 12,
-			"K" when !string.IsNullOrWhiteSpace(card.Suit) => 13,
-			"J" or "Q" or "K" => 10,
-			_ => 0,
-		};
+		return CardRankCatalog.GetScoreValue(card.Rank, !string.IsNullOrWhiteSpace(card.Suit));
 	}
 
 	private int GetCapturedCardScoreValueForPlayer(PlayingCard card, int scorePlayerIndex, bool hasDoubleEffect)
@@ -207,7 +194,9 @@ public partial class GameBoardScene
 
 		if (ShouldApplyCrabScoreReduction(scorePlayerIndex))
 		{
-			points = Math.Max(0, points - CrabScoreReductionPerCard);
+			points = Math.Max(
+				0,
+				points - GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.ScoreReductionPerCard, 2));
 		}
 
 		return points;
@@ -217,8 +206,7 @@ public partial class GameBoardScene
 	{
 		return adventure_mode
 			&& scorePlayerIndex == MainPlayerIndex
-			&& (adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId);
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.TideGuard);
 	}
 
 	private bool ShouldPlayCrabScoreReductionAbility(

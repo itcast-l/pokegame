@@ -63,8 +63,9 @@ public partial class ItemCardData : Node2D
 	private Sprite2D? FindAnimatedSprite()
 	{
 		_catalog ??= ItemCardCatalog.Load(this);
-		foreach (Node child in GetChildren())
+		for (int childIndex = 0; childIndex < GetChildCount(); childIndex++)
 		{
+			Node child = GetChild(childIndex);
 			if (child is Sprite2D sprite && _catalog.TryGetIdForSpriteName(sprite.Name.ToString(), out _))
 			{
 				return sprite;

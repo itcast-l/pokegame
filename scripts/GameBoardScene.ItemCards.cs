@@ -7,8 +7,21 @@ public partial class GameBoardScene
 {
 	private bool RequiresPlayerTarget(string itemCardId)
 	{
-		return IsItemEffectType(itemCardId, CardEffectTypes.StealCard)
-			|| IsItemEffectType(itemCardId, CardEffectTypes.StealDeckCards);
+		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			&& (definition.EffectValues.GetString(CardEffectValueKeys.Target) == CardEffectTargets.PlayerHand
+				|| definition.EffectValues.GetString(CardEffectValueKeys.Target) == CardEffectTargets.PlayerDeck);
+	}
+
+	private bool IsPlayerHandTargetItemCard(string itemCardId)
+	{
+		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			&& definition.EffectValues.GetString(CardEffectValueKeys.Target) == CardEffectTargets.PlayerHand;
+	}
+
+	private bool IsPlayerDeckTargetItemCard(string itemCardId)
+	{
+		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			&& definition.EffectValues.GetString(CardEffectValueKeys.Target) == CardEffectTargets.PlayerDeck;
 	}
 
 	private bool HasPendingItemSelection()
@@ -18,7 +31,21 @@ public partial class GameBoardScene
 
 	private bool HasPlayableTargetForItemCard(string itemCardId, int ownerPlayerIndex)
 	{
-		return BuildItemTargetPlayerCandidates(itemCardId, ownerPlayerIndex).Count > 0;
+		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
+		{
+			return false;
+		}
+
+		string target = definition.EffectValues.GetString(CardEffectValueKeys.Target);
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			if (IsResolvedItemTargetPlayerCandidate(target, ownerPlayerIndex, playerIndex))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private void StartPendingItemSelection(string itemCardId, int ownerPlayerIndex, int itemHandIndex, int turnSequenceGeneration)

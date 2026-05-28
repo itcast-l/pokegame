@@ -191,13 +191,13 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<int> playableItemIndexes = BuildPlayableItemIndexes(playerIndex);
+		int playableItemCount = CountPlayableItemIndexes(playerIndex);
 		if (TryPickBossKBestCaptureHandIndex(playerIndex, out int bossKHandIndex))
 		{
 			return await PlayCardFromHandAsync(playerIndex, bossKHandIndex, turnSequenceGeneration);
 		}
 
-		int playableCount = _playerHands[playerIndex].Count + playableItemIndexes.Count;
+		int playableCount = _playerHands[playerIndex].Count + playableItemCount;
 		if (playableCount == 0)
 		{
 			return new PlayCardResult(false, false);
@@ -209,7 +209,11 @@ public partial class GameBoardScene
 			return await PlayCardFromHandAsync(playerIndex, selectedIndex, turnSequenceGeneration);
 		}
 
-		int itemHandIndex = playableItemIndexes[selectedIndex - _playerHands[playerIndex].Count];
+		if (!TryGetPlayableItemIndexAt(playerIndex, selectedIndex - _playerHands[playerIndex].Count, out int itemHandIndex))
+		{
+			return new PlayCardResult(false, false);
+		}
+
 		return await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
 	}
 
@@ -233,7 +237,7 @@ public partial class GameBoardScene
 			}
 
 			int score = GetPotentialNormalCapturePoints(playerIndex, card);
-			if (captureCount >= DragonRoyalCaptureThreshold)
+			if (captureCount >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5))
 			{
 				score += 1000 + captureCount;
 			}
@@ -251,7 +255,7 @@ public partial class GameBoardScene
 
 	private int GetPotentialNormalCaptureCount(PlayingCard card)
 	{
-		if (ShouldJackCollectTable(card))
+		if (ShouldPlayedCardCollectTable(card))
 		{
 			return _tableCards.Count > 0 ? CountCollectibleTableCards(_tableCards) + 1 : 0;
 		}
@@ -262,7 +266,7 @@ public partial class GameBoardScene
 
 	private int GetPotentialNormalCapturePoints(int playerIndex, PlayingCard card)
 	{
-		int matchingIndex = ShouldJackCollectTable(card) && _tableCards.Count > 0
+		int matchingIndex = ShouldPlayedCardCollectTable(card) && _tableCards.Count > 0
 			? 0
 			: FindMatchingTableCardIndex(_tableCards, card);
 		if (matchingIndex < 0 || !HasPotentialCapturedMiddleTableCards(matchingIndex))
@@ -306,7 +310,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, MantaRayAdventureEnemyAvatarId);
+		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.TideShift);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))
 		{
 			return;
@@ -316,10 +320,9 @@ public partial class GameBoardScene
 		Texture2D? triggerTexture = GetVisibleTableCardTexture(tideShiftedCard);
 		if (triggerTexture != null)
 		{
-			List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-			if (cardPositions.Count > 0)
+			if (TryGetTableCardPosition(0, out Vector2 cardPosition))
 			{
-				await PlaySpecialCardTriggerEffectAsync(triggerTexture, _centerArena.GlobalPosition + cardPositions[0], 0);
+				await PlaySpecialCardTriggerEffectAsync(triggerTexture, _centerArena.GlobalPosition + cardPosition, 0);
 				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))
 				{
 					return;
@@ -345,7 +348,7 @@ public partial class GameBoardScene
 			&& playerIndex == 1
 			&& _mantaRayTideShiftCheckedThisTurn
 			&& IsMantaRayTideShiftEnemyTurn(playerIndex)
-			&& _tableCards.Count >= 4
+			&& _tableCards.Count >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.TideShiftMinTableCards, 4)
 			&& (!IsBossKEnemy(playerIndex) || ShouldResolveBossKTideShift(playerIndex));
 	}
 
@@ -356,21 +359,44 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		var shiftedTableCards = new List<TableCard>(_tableCards);
-		TableCard shiftedCard = shiftedTableCards[0];
-		shiftedTableCards.RemoveAt(0);
-		shiftedTableCards.Add(shiftedCard);
-
 		int bossCaptureBefore = GetBestPotentialNormalCaptureCount(playerIndex, _tableCards);
-		int bossCaptureAfter = GetBestPotentialNormalCaptureCount(playerIndex, shiftedTableCards);
-		if (bossCaptureAfter > bossCaptureBefore && bossCaptureAfter >= DragonRoyalCaptureThreshold)
+		int bossCaptureAfter = GetBestPotentialNormalCaptureCountAfterTideShift(playerIndex);
+		if (bossCaptureAfter > bossCaptureBefore
+			&& bossCaptureAfter >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5))
 		{
 			return true;
 		}
 
 		int playerCaptureBefore = GetBestPotentialNormalCaptureCount(MainPlayerIndex, _tableCards);
-		int playerCaptureAfter = GetBestPotentialNormalCaptureCount(MainPlayerIndex, shiftedTableCards);
-		return playerCaptureBefore >= DragonRoyalCaptureThreshold && playerCaptureAfter < playerCaptureBefore;
+		int playerCaptureAfter = GetBestPotentialNormalCaptureCountAfterTideShift(MainPlayerIndex);
+		return playerCaptureBefore >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
+			&& playerCaptureAfter < playerCaptureBefore;
+	}
+
+	private int GetBestPotentialNormalCaptureCountAfterTideShift(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count || _tableCards.Count == 0)
+		{
+			return 0;
+		}
+
+		int bestCaptureCount = 0;
+		foreach (PlayingCard handCard in _playerHands[playerIndex])
+		{
+			if (ShouldPlayedCardCollectTable(handCard))
+			{
+				bestCaptureCount = Math.Max(bestCaptureCount, CountTideShiftedCollectibleTableCards() + 1);
+				continue;
+			}
+
+			int matchingIndex = FindTideShiftedMatchingTableCardIndex(handCard);
+			if (matchingIndex >= 0)
+			{
+				bestCaptureCount = Math.Max(bestCaptureCount, CountTideShiftedCollectibleTableCards(matchingIndex) + 1);
+			}
+		}
+
+		return bestCaptureCount;
 	}
 
 	private int GetBestPotentialNormalCaptureCount(int playerIndex, IReadOnlyList<TableCard> tableCards)
@@ -383,7 +409,7 @@ public partial class GameBoardScene
 		int bestCaptureCount = 0;
 		foreach (PlayingCard handCard in _playerHands[playerIndex])
 		{
-			if (ShouldJackCollectTable(handCard))
+			if (ShouldPlayedCardCollectTable(handCard))
 			{
 				bestCaptureCount = Math.Max(bestCaptureCount, CountCollectibleTableCards(tableCards) + 1);
 				continue;
@@ -427,6 +453,41 @@ public partial class GameBoardScene
 		return -1;
 	}
 
+	private int CountTideShiftedCollectibleTableCards(int startIndex = 0)
+	{
+		int count = 0;
+		for (int shiftedIndex = Math.Max(0, startIndex); shiftedIndex < _tableCards.Count; shiftedIndex++)
+		{
+			if (!GetTideShiftedTableCard(shiftedIndex).IsBuriedInSand)
+			{
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	private int FindTideShiftedMatchingTableCardIndex(PlayingCard playedCard)
+	{
+		for (int shiftedIndex = _tableCards.Count - 1; shiftedIndex >= 0; shiftedIndex--)
+		{
+			TableCard shiftedTableCard = GetTideShiftedTableCard(shiftedIndex);
+			PlayingCard? tableCard = shiftedTableCard.Card;
+			if (!shiftedTableCard.IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
+			{
+				return shiftedIndex;
+			}
+		}
+
+		return -1;
+	}
+
+	private TableCard GetTideShiftedTableCard(int shiftedIndex)
+	{
+		int tableCardIndex = shiftedIndex == _tableCards.Count - 1 ? 0 : shiftedIndex + 1;
+		return _tableCards[tableCardIndex];
+	}
+
 	private bool IsMantaRayTideShiftEnemyTurn(int playerIndex)
 	{
 		return playerIndex == 1
@@ -437,15 +498,13 @@ public partial class GameBoardScene
 	private bool IsAdventureEnemyWithMantaRayTideShift(int playerIndex)
 	{
 		return playerIndex == 1
-			&& (CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) == 6
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId);
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.TideShift);
 	}
 
 	private void ResetMantaRayTideShiftTurnStateIfNeeded(int previousPlayerIndex)
 	{
 		if (!adventure_mode
-			|| !(CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id) == 6
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.TideShift)
 			|| previousPlayerIndex == 1
 			|| _currentTurnPlayerIndex != 1)
 		{
@@ -555,17 +614,57 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return _playerHands[playerIndex].Count > 0 || BuildPlayableItemIndexes(playerIndex).Count > 0;
+		return _playerHands[playerIndex].Count > 0 || HasPlayableItemCard(playerIndex);
 	}
 
-	private List<int> BuildPlayableItemIndexes(int playerIndex)
+	private bool HasPlayableItemCard(int playerIndex)
 	{
-		var itemIndexes = new List<int>();
 		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
 		{
-			return itemIndexes;
+			return false;
 		}
 
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
+		{
+			if (CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private int CountPlayableItemIndexes(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+		{
+			return 0;
+		}
+
+		int playableCount = 0;
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
+		{
+			if (CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
+			{
+				playableCount++;
+			}
+		}
+
+		return playableCount;
+	}
+
+	private bool TryGetPlayableItemIndexAt(int playerIndex, int playableOrdinal, out int itemHandIndex)
+	{
+		itemHandIndex = -1;
+		if (playableOrdinal < 0 || playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+		{
+			return false;
+		}
+
+		int currentOrdinal = 0;
 		List<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
@@ -574,20 +673,29 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			itemIndexes.Add(itemIndex);
+			if (currentOrdinal == playableOrdinal)
+			{
+				itemHandIndex = itemIndex;
+				return true;
+			}
+
+			currentOrdinal++;
 		}
 
-		return itemIndexes;
+		return false;
 	}
 
 	private bool CanPlayItemCard(int playerIndex, string itemCardId)
 	{
-		if (!_itemCardCatalog.IsPlayable(itemCardId))
+		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			|| !definition.EnabledInGame
+			|| !definition.PlayableFromHand)
 		{
 			return false;
 		}
 
-		if (IsItemEffectType(itemCardId, CardEffectTypes.PlaceTablePairDestroy) && _tableCards.Count == 0)
+		if (_itemPlayPresentationValidators.TryGetValue(definition.PlayPresentation, out CanPlayItemCardPresentation? presentationValidator)
+			&& !presentationValidator(playerIndex, definition))
 		{
 			return false;
 		}
@@ -597,17 +705,8 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (IsItemEffectType(itemCardId, CardEffectTypes.RevealCards) && !HasLensRevealTargets(playerIndex))
-		{
-			return false;
-		}
-
-		if (IsItemEffectType(itemCardId, CardEffectTypes.DrawCard) && (playerIndex < 0 || playerIndex >= _playerDecks.Count || _playerDecks[playerIndex].Count == 0))
-		{
-			return false;
-		}
-
-		if (IsItemEffectType(itemCardId, CardEffectTypes.ShuffleTable) && GetMovableTableShuffleCardCount() < 2)
+		if (definition.EffectValues.GetString(CardEffectValueKeys.Target) == CardEffectTargets.PlayerDeck
+			&& (playerIndex < 0 || playerIndex >= _playerDecks.Count || _playerDecks[playerIndex].Count == 0))
 		{
 			return false;
 		}
@@ -674,7 +773,7 @@ public partial class GameBoardScene
 
 	private bool PlayerHasCards(int playerIndex)
 	{
-		return _playerHands[playerIndex].Count > 0 || _playerDecks[playerIndex].Count > 0 || BuildPlayableItemIndexes(playerIndex).Count > 0;
+		return _playerHands[playerIndex].Count > 0 || _playerDecks[playerIndex].Count > 0 || HasPlayableItemCard(playerIndex);
 	}
 
 	private int GetMovableTableShuffleCardCount()

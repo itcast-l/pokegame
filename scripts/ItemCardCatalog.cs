@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 public sealed class ItemCardCatalog
 {
@@ -13,11 +14,9 @@ public sealed class ItemCardCatalog
 	public const string OvertimeItemCardId = "overtime";
 	public const string DrawCardItemCardId = "draw_card";
 	public const string ShuffleItemCardId = "shuffle";
-	public const string JackItemCardId = "J";
-	public const string QueenItemCardId = "Q";
-	public const string KingItemCardId = "K";
 
 	private const string ItemCardCategoryId = "item_cards";
+	private const string ItemCardResourceDirectory = "res://resources/item_cards";
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
 	private const string DefaultArtRunName = "run-004";
 	private const int DefaultFrameCount = 4;
@@ -25,29 +24,11 @@ public sealed class ItemCardCatalog
 	private const string DefaultRarity = "common";
 	private const int DefaultWeight = 100;
 
-	private static readonly Dictionary<string, ItemCardDefinition> DefaultsById = new()
-	{
-		[QuestionMarkItemCardId] = new ItemCardDefinition(QuestionMarkItemCardId, "Question Mark", "QuestionMark", "ITEM_DESC_QUESTION_MARK", true, false, false, DefaultArtRunName, DefaultFrameCount, 0, DefaultRarity, "fixed,reward", CardGameEvents.OnCollect, CardEffectTypes.GrantReward, "", 100, "", DefaultWeight),
-		[BombItemCardId] = new ItemCardDefinition(BombItemCardId, "Bomb", "Bomb", "ITEM_DESC_BOMB", true, true, true, DefaultArtRunName, DefaultFrameCount, 10, "rare", "bomb", CardGameEvents.OnPlay, CardEffectTypes.PlaceTablePairDestroy, "pair_tag=bomb", 80, "", 35),
-		[MagnetItemCardId] = new ItemCardDefinition(MagnetItemCardId, "Magnet", "Magnet", "ITEM_DESC_MAGNET", true, false, true, DefaultArtRunName, DefaultFrameCount, 20, "uncommon", "attachment", CardGameEvents.OnPlay, CardEffectTypes.AttachModifier, "modifier=magnet", 50, "", 70),
-		[GreedItemCardId] = new ItemCardDefinition(GreedItemCardId, "Greed", "Greed", "ITEM_DESC_GREED", false, false, true, DefaultArtRunName, DefaultFrameCount, 30, "rare", "", CardGameEvents.OnPlay, CardEffectTypes.None, "", 10, "", 25),
-		[LensItemCardId] = new ItemCardDefinition(LensItemCardId, "Lens", "Lens", "ITEM_DESC_LENS", true, true, true, DefaultArtRunName, DefaultFrameCount, 40, "uncommon", "", CardGameEvents.OnPlay, CardEffectTypes.RevealCards, "target=opponent_table_face_down;count=2", 40, "", 70),
-		[DoubleItemCardId] = new ItemCardDefinition(DoubleItemCardId, "Double", "Double", "ITEM_DESC_DOUBLE", true, true, true, "run-005", DefaultFrameCount, 50, "rare", "attachment", CardGameEvents.OnPlay, CardEffectTypes.AttachModifier, "modifier=double", 60, "", 45),
-		[OvertimeItemCardId] = new ItemCardDefinition(OvertimeItemCardId, "Overtime", "Overtime", "ITEM_DESC_OVERTIME", true, true, true, DefaultArtRunName, DefaultFrameCount, 60, "rare", "attachment", CardGameEvents.OnPlay, CardEffectTypes.AttachModifier, "modifier=overtime", 55, "", 45),
-		[DrawCardItemCardId] = new ItemCardDefinition(DrawCardItemCardId, "Draw Card", "DrawCard", "ITEM_DESC_DRAW_CARD", true, true, true, DefaultArtRunName, DefaultFrameCount, 70, DefaultRarity, "", CardGameEvents.OnPlay, CardEffectTypes.DrawCard, "count=1", 30, "", 100),
-		[ShuffleItemCardId] = new ItemCardDefinition(ShuffleItemCardId, "Shuffle", "Shuffle", "ITEM_DESC_SHUFFLE", true, true, true, DefaultArtRunName, DefaultFrameCount, 80, "uncommon", "", CardGameEvents.OnPlay, CardEffectTypes.ShuffleTable, "target=table", 20, "", 60),
-	};
-
-	private static readonly Dictionary<string, ItemCardDefinition> LegacyRuntimeRulesById = new()
-	{
-		[JackItemCardId] = new ItemCardDefinition(JackItemCardId, "Jack", "Jack", "ITEM_DESC_JACK", false, false, false, DefaultArtRunName, DefaultFrameCount, 900, "legacy", "", CardGameEvents.OnPlay, CardEffectTypes.CollectTable, "target=table", 30, "", 0),
-		[QueenItemCardId] = new ItemCardDefinition(QueenItemCardId, "Queen", "Queen", "ITEM_DESC_QUEEN", false, false, false, DefaultArtRunName, DefaultFrameCount, 901, "legacy", "", CardGameEvents.OnPlay, CardEffectTypes.StealCard, "target=player_hand;count=1", 30, "", 0),
-		[KingItemCardId] = new ItemCardDefinition(KingItemCardId, "King", "King", "ITEM_DESC_KING", false, false, false, DefaultArtRunName, DefaultFrameCount, 902, "legacy", "", CardGameEvents.OnPlay, CardEffectTypes.StealDeckCards, "target=player_deck;count=3", 30, "", 0),
-	};
-
 	private static ItemCardCatalog? _cached;
+	private static IReadOnlyDictionary<string, ItemCardDefinition>? _resourceDefinitionsById;
 
 	private readonly Dictionary<string, ItemCardDefinition> _definitionsById = new(StringComparer.Ordinal);
+	private readonly Dictionary<string, ItemCardDefinition> _runtimeRulesById = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, string> _idsBySpriteName = new(StringComparer.Ordinal);
 	private readonly List<string> _allIds = new();
 	private readonly List<string> _rewardIds = new();
@@ -104,7 +85,7 @@ public sealed class ItemCardCatalog
 			return true;
 		}
 
-		return LegacyRuntimeRulesById.TryGetValue(itemCardId, out definition);
+		return _runtimeRulesById.TryGetValue(itemCardId, out definition);
 	}
 
 	public bool HasEffectType(string itemCardId, string effectType)
@@ -149,18 +130,19 @@ public sealed class ItemCardCatalog
 		return false;
 	}
 
-	public static string GetDefaultDescriptionKey(string itemCardId)
-	{
-		return DefaultsById.TryGetValue(itemCardId, out ItemCardDefinition definition)
-			? definition.DescriptionKey
-			: itemCardId;
-	}
-
 	private static ItemCardCatalog Build(Node sceneNode)
 	{
 		var catalog = new ItemCardCatalog();
 		List<ItemCardDefinition> definitions = LoadDefinitions(sceneNode, out bool loadedFromPandora);
 		catalog.LoadedFromPandora = loadedFromPandora;
+		foreach (ItemCardDefinition runtimeRule in GetResourceDefinitions().Values)
+		{
+			if (IsRuntimeRuleDefinition(runtimeRule))
+			{
+				catalog._runtimeRulesById[runtimeRule.Id] = runtimeRule;
+			}
+		}
+
 		foreach (ItemCardDefinition definition in definitions)
 		{
 			if (string.IsNullOrWhiteSpace(definition.Id) || catalog._definitionsById.ContainsKey(definition.Id))
@@ -195,19 +177,36 @@ public sealed class ItemCardCatalog
 
 	private static List<ItemCardDefinition> LoadDefinitions(Node sceneNode, out bool loadedFromPandora)
 	{
-		var definitions = LoadPandoraDefinitions(sceneNode);
-		loadedFromPandora = definitions.Count > 0;
-		if (definitions.Count == 0)
+		var definitionsById = new Dictionary<string, ItemCardDefinition>(StringComparer.Ordinal);
+		foreach (ItemCardDefinition definition in GetResourceDefinitions().Values)
 		{
-			definitions.AddRange(DefaultsById.Values);
+			if (IsRuntimeRuleDefinition(definition))
+			{
+				continue;
+			}
+
+			definitionsById[definition.Id] = definition;
 		}
 
+		List<ItemCardDefinition> pandoraDefinitions = LoadPandoraDefinitions(sceneNode);
+		loadedFromPandora = pandoraDefinitions.Count > 0;
+		foreach (ItemCardDefinition definition in pandoraDefinitions)
+		{
+			definitionsById[definition.Id] = definition;
+		}
+
+		var definitions = new List<ItemCardDefinition>(definitionsById.Values);
 		definitions.Sort((a, b) =>
 		{
 			int orderComparison = a.SortOrder.CompareTo(b.SortOrder);
 			return orderComparison != 0 ? orderComparison : string.CompareOrdinal(a.Id, b.Id);
 		});
 		return definitions;
+	}
+
+	private static bool IsRuntimeRuleDefinition(ItemCardDefinition definition)
+	{
+		return !definition.EnabledInGame && !definition.PlayableFromHand && !definition.CanBeQuestionReward;
 	}
 
 	private static bool CanReadPandora(Node sceneNode)
@@ -246,6 +245,119 @@ public sealed class ItemCardCatalog
 		return definitions;
 	}
 
+	private static IReadOnlyDictionary<string, ItemCardDefinition> GetResourceDefinitions()
+	{
+		if (_resourceDefinitionsById != null)
+		{
+			return _resourceDefinitionsById;
+		}
+
+		var definitionsById = new Dictionary<string, ItemCardDefinition>(StringComparer.Ordinal);
+		using DirAccess? directory = DirAccess.Open(ItemCardResourceDirectory);
+		if (directory == null)
+		{
+			GD.PushWarning($"Missing item card resource directory: {ItemCardResourceDirectory}");
+			_resourceDefinitionsById = definitionsById;
+			return _resourceDefinitionsById;
+		}
+
+		directory.ListDirBegin();
+		while (true)
+		{
+			string fileName = directory.GetNext();
+			if (string.IsNullOrEmpty(fileName))
+			{
+				break;
+			}
+
+			if (directory.CurrentIsDir() || !fileName.EndsWith(".tres", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			string path = $"{ItemCardResourceDirectory}/{fileName}";
+			ItemCardDefinition? definition = LoadItemCardDefinition(path);
+			if (definition == null)
+			{
+				GD.PushWarning($"Invalid item card definition resource: {path}");
+				continue;
+			}
+
+			ItemCardDefinition value = definition.Value;
+			if (string.IsNullOrWhiteSpace(value.Id))
+			{
+				GD.PushWarning($"Item card definition resource is missing an id: {path}");
+				continue;
+			}
+
+			definitionsById[value.Id] = value;
+		}
+
+		_resourceDefinitionsById = definitionsById;
+		return _resourceDefinitionsById;
+	}
+
+	private static ItemCardDefinition? LoadItemCardDefinition(string path)
+	{
+		Resource? resource = GD.Load(path);
+		if (resource is ItemCardDefinitionResource itemCardResource)
+		{
+			return itemCardResource.ToDefinition();
+		}
+
+		if (resource == null)
+		{
+			return null;
+		}
+
+		return new ItemCardDefinition(
+			GetResourceString(resource, "Id"),
+			GetResourceString(resource, "DisplayName"),
+			GetResourceString(resource, "SpriteName"),
+			GetResourceString(resource, "DescriptionKey"),
+			GetResourceBool(resource, "EnabledInGame", true),
+			GetResourceBool(resource, "PlayableFromHand", true),
+			GetResourceBool(resource, "CanBeQuestionReward", true),
+			GetResourceString(resource, "ArtRunName", DefaultArtRunName),
+			GetResourceString(resource, "FramePathPattern"),
+			GetResourceInt(resource, "FrameCount", DefaultFrameCount),
+			GetResourceInt(resource, "SortOrder", DefaultSortOrder),
+			GetResourceString(resource, "Rarity", DefaultRarity),
+			GetResourceString(resource, "TagsCsv"),
+			GetResourceString(resource, "AttachmentOverlayTexturePath"),
+			GetResourceInt(resource, "AttachmentOverlayPriority"),
+			GetResourceString(resource, "PlayPresentation", CardPlayPresentationTypes.DirectTrigger),
+			GetResourceString(resource, "Trigger", CardGameEvents.OnPlay),
+			GetResourceString(resource, "EffectType", CardEffectTypes.None),
+			GetResourceString(resource, "EffectValuesRaw"),
+			GetResourceInt(resource, "Priority"),
+			GetResourceString(resource, "AttachedTrigger"),
+			GetResourceString(resource, "AttachedEffectType", CardEffectTypes.None),
+			GetResourceString(resource, "AttachedEffectValuesRaw"),
+			GetResourceInt(resource, "AttachedPriority"),
+			GetResourceString(resource, "Icon"),
+			GetResourceInt(resource, "Weight", DefaultWeight),
+			GetResourceString(resource, "Description"));
+	}
+
+	private static string GetResourceString(Resource resource, string propertyName, string fallback = "")
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsString();
+	}
+
+	private static int GetResourceInt(Resource resource, string propertyName, int fallback = 0)
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsInt32();
+	}
+
+	private static bool GetResourceBool(Resource resource, string propertyName, bool fallback = false)
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? fallback : value.AsBool();
+	}
+
 	private static bool TryCreateDefinitionFromPandoraEntity(GodotObject entity, out ItemCardDefinition definition)
 	{
 		string id = GetEntityString(entity, "id", "");
@@ -260,12 +372,13 @@ public sealed class ItemCardCatalog
 			return false;
 		}
 
-		DefaultsById.TryGetValue(id, out ItemCardDefinition defaults);
+		GetResourceDefinitions().TryGetValue(id, out ItemCardDefinition defaults);
 		string displayName = GetEntityString(entity, "name", GetEntityName(entity, string.IsNullOrWhiteSpace(defaults.DisplayName) ? ToPascalCase(id) : defaults.DisplayName));
 		string spriteName = GetEntityString(entity, "sprite_name", string.IsNullOrWhiteSpace(defaults.SpriteName) ? ToPascalCase(id) : defaults.SpriteName);
 		string descriptionKey = GetEntityString(entity, "description_key", string.IsNullOrWhiteSpace(defaults.DescriptionKey) ? id : defaults.DescriptionKey);
 		string description = GetEntityString(entity, "description", descriptionKey);
 		string artRunName = GetEntityString(entity, "art_run", string.IsNullOrWhiteSpace(defaults.ArtRunName) ? DefaultArtRunName : defaults.ArtRunName);
+		string framePathPattern = GetEntityString(entity, "frame_path_pattern", defaults.FramePathPattern);
 		int frameCount = GetEntityInt(entity, "frame_count", defaults.FrameCount > 0 ? defaults.FrameCount : DefaultFrameCount);
 		int sortOrder = GetEntityInt(entity, "sort_order", defaults.SortOrder != 0 ? defaults.SortOrder : DefaultSortOrder);
 		bool enabledInGame = GetEntityBool(entity, "enabled_in_game", defaults.EnabledInGame);
@@ -273,10 +386,17 @@ public sealed class ItemCardCatalog
 		bool canBeQuestionReward = GetEntityBool(entity, "can_be_question_reward", defaults.CanBeQuestionReward);
 		string rarity = GetEntityString(entity, "rarity", string.IsNullOrWhiteSpace(defaults.Rarity) ? DefaultRarity : defaults.Rarity);
 		string tags = GetEntityString(entity, "tags", defaults.TagsCsv);
+		string attachmentOverlayTexturePath = GetEntityString(entity, "attachment_overlay_texture_path", defaults.AttachmentOverlayTexturePath);
+		int attachmentOverlayPriority = GetEntityInt(entity, "attachment_overlay_priority", defaults.AttachmentOverlayPriority);
+		string playPresentation = GetEntityString(entity, "play_presentation", defaults.PlayPresentation);
 		string trigger = GetEntityString(entity, "trigger", defaults.Trigger);
 		string effectType = GetEntityString(entity, "effect_type", defaults.EffectType);
 		string effectValues = GetEntityString(entity, "effect_values", defaults.EffectValuesRaw);
 		int priority = GetEntityInt(entity, "priority", defaults.Priority);
+		string attachedTrigger = GetEntityString(entity, "attached_trigger", defaults.AttachedTrigger);
+		string attachedEffectType = GetEntityString(entity, "attached_effect_type", defaults.AttachedEffectType);
+		string attachedEffectValues = GetEntityString(entity, "attached_effect_values", defaults.AttachedEffectValuesRaw);
+		int attachedPriority = GetEntityInt(entity, "attached_priority", defaults.AttachedPriority);
 		string icon = GetEntityString(entity, "icon", defaults.Icon);
 		int weight = GetEntityInt(entity, "weight", defaults.Weight != 0 ? defaults.Weight : DefaultWeight);
 
@@ -289,14 +409,22 @@ public sealed class ItemCardCatalog
 			playableFromHand,
 			canBeQuestionReward,
 			artRunName,
+			framePathPattern,
 			Math.Max(1, frameCount),
 			sortOrder,
 			rarity,
 			tags,
+			attachmentOverlayTexturePath,
+			attachmentOverlayPriority,
+			playPresentation,
 			trigger,
 			effectType,
 			effectValues,
 			priority,
+			attachedTrigger,
+			attachedEffectType,
+			attachedEffectValues,
+			attachedPriority,
 			icon,
 			weight,
 			description);
@@ -356,7 +484,7 @@ public sealed class ItemCardCatalog
 		var frames = new List<Texture2D>();
 		for (int frameIndex = 1; frameIndex <= definition.FrameCount; frameIndex++)
 		{
-			string path = $"{ItemCardRootPath}/{definition.Id}/{definition.ArtRunName}/processed/frames/frame-{frameIndex:000}.png";
+			string path = GetFramePath(definition, frameIndex);
 			Texture2D? texture = GD.Load<Texture2D>(path);
 			if (texture == null)
 			{
@@ -368,6 +496,13 @@ public sealed class ItemCardCatalog
 		}
 
 		return frames.ToArray();
+	}
+
+	private static string GetFramePath(ItemCardDefinition definition, int frameIndex)
+	{
+		return string.IsNullOrWhiteSpace(definition.FramePathPattern)
+			? $"{ItemCardRootPath}/{definition.Id}/{definition.ArtRunName}/processed/frames/frame-{frameIndex:000}.png"
+			: string.Format(CultureInfo.InvariantCulture, definition.FramePathPattern, frameIndex);
 	}
 }
 
@@ -382,14 +517,22 @@ public readonly struct ItemCardDefinition
 		bool playableFromHand,
 		bool canBeQuestionReward,
 		string artRunName,
+		string framePathPattern,
 		int frameCount,
 		int sortOrder,
 		string rarity,
 		string tagsCsv,
+		string attachmentOverlayTexturePath,
+		int attachmentOverlayPriority,
+		string playPresentation,
 		string trigger,
 		string effectType,
 		string effectValuesRaw,
 		int priority,
+		string attachedTrigger,
+		string attachedEffectType,
+		string attachedEffectValuesRaw,
+		int attachedPriority,
 		string icon,
 		int weight,
 		string description = "")
@@ -402,15 +545,26 @@ public readonly struct ItemCardDefinition
 		PlayableFromHand = playableFromHand;
 		CanBeQuestionReward = canBeQuestionReward;
 		ArtRunName = artRunName;
+		FramePathPattern = string.IsNullOrWhiteSpace(framePathPattern) ? string.Empty : framePathPattern;
 		FrameCount = frameCount;
 		SortOrder = sortOrder;
 		Rarity = rarity;
 		TagsCsv = tagsCsv;
+		AttachmentOverlayTexturePath = attachmentOverlayTexturePath;
+		AttachmentOverlayPriority = attachmentOverlayPriority;
+		PlayPresentation = string.IsNullOrWhiteSpace(playPresentation)
+			? CardPlayPresentationTypes.DirectTrigger
+			: playPresentation;
 		Trigger = trigger;
 		EffectType = effectType;
 		EffectValuesRaw = effectValuesRaw;
 		EffectValues = CardEffectValues.Parse(effectValuesRaw);
 		Priority = priority;
+		AttachedTrigger = attachedTrigger;
+		AttachedEffectType = attachedEffectType;
+		AttachedEffectValuesRaw = attachedEffectValuesRaw;
+		AttachedEffectValues = CardEffectValues.Parse(attachedEffectValuesRaw);
+		AttachedPriority = attachedPriority;
 		Icon = icon;
 		Weight = weight;
 		Description = description;
@@ -425,21 +579,31 @@ public readonly struct ItemCardDefinition
 	public bool PlayableFromHand { get; }
 	public bool CanBeQuestionReward { get; }
 	public string ArtRunName { get; }
+	public string FramePathPattern { get; }
 	public int FrameCount { get; }
 	public int SortOrder { get; }
 	public string Rarity { get; }
 	public IReadOnlyList<string> Tags { get; }
 	public string TagsCsv { get; }
+	public string AttachmentOverlayTexturePath { get; }
+	public int AttachmentOverlayPriority { get; }
+	public string PlayPresentation { get; }
 	public string Trigger { get; }
 	public string EffectType { get; }
 	public string EffectValuesRaw { get; }
 	public CardEffectValues EffectValues { get; }
 	public int Priority { get; }
+	public string AttachedTrigger { get; }
+	public string AttachedEffectType { get; }
+	public string AttachedEffectValuesRaw { get; }
+	public CardEffectValues AttachedEffectValues { get; }
+	public int AttachedPriority { get; }
 	public string Icon { get; }
 	public int Weight { get; }
 	public string Description { get; }
 
 	public ItemCardEffectRule EffectRule => new(Trigger, EffectType, EffectValues, Priority);
+	public ItemCardEffectRule AttachedEffectRule => new(AttachedTrigger, AttachedEffectType, AttachedEffectValues, AttachedPriority);
 
 	public bool HasTag(string tag)
 	{

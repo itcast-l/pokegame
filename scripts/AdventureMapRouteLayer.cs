@@ -66,8 +66,9 @@ public partial class AdventureMapRouteLayer : Control
 		Control? avatarLayer = GetParent()?.GetNodeOrNull<Control>("AvatarLayer");
 		if (avatarLayer != null)
 		{
-			foreach (Node child in avatarLayer.GetChildren())
+			for (int childIndex = 0; childIndex < avatarLayer.GetChildCount(); childIndex++)
 			{
+				Node child = avatarLayer.GetChild(childIndex);
 				if (child is Control control && control.Visible)
 				{
 					routePoints.Add(control.Position + control.Size * 0.5f);

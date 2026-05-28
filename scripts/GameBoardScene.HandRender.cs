@@ -5,16 +5,17 @@ public partial class GameBoardScene
 {
 	private void RenderPlayerHands()
 	{
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-		{
-			Control handArea = _playerHandAreas[playerIndex];
-			foreach (Node child in handArea.GetChildren())
+			for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 			{
-				if (child.HasMeta(HandCardSlotMeta))
+				Control handArea = _playerHandAreas[playerIndex];
+				for (int childIndex = handArea.GetChildCount() - 1; childIndex >= 0; childIndex--)
 				{
-					RemoveAndQueueFreeChild(handArea, child);
+					Node child = handArea.GetChild(childIndex);
+					if (child.HasMeta(HandCardSlotMeta))
+					{
+						RemoveAndQueueFreeChild(handArea, child);
+					}
 				}
-			}
 
 			handArea.Visible = playerIndex < player_count;
 			if (!handArea.Visible)
@@ -33,14 +34,15 @@ public partial class GameBoardScene
 			bool isMagnetSelectionActive = IsMainPlayerMagnetSelectionActive();
 			bool isHandLimitDiscardSelectionActive = IsMainPlayerHandLimitDiscardSelectionActive();
 
-			void AddHandCard(
-				Texture2D? texture,
-				int displayIndex,
-				bool isPlayable,
-				int handIndex,
-				int itemHandIndex,
-				bool animateCardBack,
-				float visualScale,
+				void AddHandCard(
+					Texture2D? texture,
+					int displayIndex,
+					bool isPlayable,
+					bool canHover,
+					int handIndex,
+					int itemHandIndex,
+					bool animateCardBack,
+					float visualScale,
 				Texture2D? attachmentOverlayTexture = null,
 				bool showMagnetSelectionHighlight = false,
 				bool isJellyfishDisabled = false,
@@ -54,13 +56,13 @@ public partial class GameBoardScene
 				Vector2 basePosition = firstCardPosition + displayIndex * cardOffset;
 				Vector2 visualSize = CardVisualSize * visualScale;
 				Vector2 visualBasePosition = (CardVisualSize - visualSize) / 2.0f;
-				var cardSlot = new Control
-				{
-					Name = $"HandCard_{displayIndex}",
-					MouseFilter = isPlayable || isJellyfishDisabled || !string.IsNullOrEmpty(tooltipText) ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore,
-					Position = basePosition,
-					Size = CardVisualSize,
-					ZIndex = displayIndex,
+					var cardSlot = new Control
+					{
+						Name = $"HandCard_{displayIndex}",
+						MouseFilter = canHover || isPlayable || isJellyfishDisabled || !string.IsNullOrEmpty(tooltipText) ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore,
+						Position = basePosition,
+						Size = CardVisualSize,
+						ZIndex = displayIndex,
 					Visible = !IsHandDisplaySlotHidden(playerIndex, displayIndex),
 				};
 				cardSlot.SetMeta(HandCardSlotMeta, true);
@@ -89,10 +91,10 @@ public partial class GameBoardScene
 					MarkAnimatedCardBack(cardVisual);
 				}
 
-				if (isPlayable)
-				{
-					Tween? hoverTween = null;
-					void AnimateHover(bool hovered)
+					if (canHover)
+					{
+						Tween? hoverTween = null;
+						void AnimateHover(bool hovered)
 					{
 						hoverTween?.Kill();
 						if (hovered)
@@ -120,12 +122,15 @@ public partial class GameBoardScene
 						}
 					}
 
-					cardSlot.MouseEntered += () => AnimateHover(true);
-					cardSlot.MouseExited += () => AnimateHover(false);
+						cardSlot.MouseEntered += () => AnimateHover(true);
+						cardSlot.MouseExited += () => AnimateHover(false);
+					}
 
-					cardSlot.GuiInput += inputEvent =>
+					if (isPlayable)
 					{
-						if (showMagnetSelectionHighlight && handIndex >= 0)
+						cardSlot.GuiInput += inputEvent =>
+						{
+							if (showMagnetSelectionHighlight && handIndex >= 0)
 						{
 							TryCompleteMainPlayerMagnetAttachment(inputEvent, handIndex);
 							return;
@@ -155,21 +160,21 @@ public partial class GameBoardScene
 						GetHandCardDescriptionPosition(playerIndex),
 						new Vector2(204.0f, 42.0f));
 					cardSlot.AddChild(descriptionLabel);
-					cardSlot.MouseEntered += () =>
-					{
-						descriptionLabel.Visible = true;
-						if (!isPlayable)
+						cardSlot.MouseEntered += () =>
 						{
-							cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
-						}
+							descriptionLabel.Visible = true;
+							if (!canHover)
+							{
+								cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
+							}
 					};
-					cardSlot.MouseExited += () =>
-					{
-						descriptionLabel.Visible = false;
-						if (!isPlayable)
+						cardSlot.MouseExited += () =>
 						{
-							cardSlot.ZIndex = displayIndex;
-						}
+							descriptionLabel.Visible = false;
+							if (!canHover)
+							{
+								cardSlot.ZIndex = displayIndex;
+							}
 					};
 				}
 
@@ -199,16 +204,20 @@ public partial class GameBoardScene
 					bool isMagnetSelectionCard = showMagnetSelectionHighlight && !isJellyfishDisabled;
 					bool isHandLimitDiscardSelectionCard = isHandLimitDiscardSelectionActive
 						&& playerIndex == MainPlayerIndex;
-					bool isPlayable = isMagnetSelectionCard
-						|| isHandLimitDiscardSelectionCard
-						|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
-				AddHandCard(
-					texture,
-					cardIndex,
-					isPlayable,
-					cardIndex,
-					-1,
-					showCardBack,
+						bool isPlayable = isMagnetSelectionCard
+							|| isHandLimitDiscardSelectionCard
+							|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
+						bool canHover = playerIndex == MainPlayerIndex
+							&& !showCardBack
+							&& !isJellyfishDisabled;
+					AddHandCard(
+						texture,
+						cardIndex,
+						isPlayable,
+						canHover,
+						cardIndex,
+						-1,
+						showCardBack,
 					1.0f,
 					showCardBack ? null : GetCardAttachmentOverlayTexture(card),
 					isMagnetSelectionCard,
@@ -225,13 +234,16 @@ public partial class GameBoardScene
 				int displayIndex = hand.Count + itemIndex;
 					bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
 						&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
-				bool isPlayable = playerIndex == MainPlayerIndex
-					&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
-				string tooltipText = !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
-					? description
-					: string.Empty;
-				AddHandCard(texture, displayIndex, isPlayable, -1, itemIndex, showCardBack, visualScale, isJellyfishDisabled: isJellyfishDisabled, tooltipText: tooltipText);
-			}
+					bool isPlayable = playerIndex == MainPlayerIndex
+						&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
+					bool canHover = playerIndex == MainPlayerIndex
+						&& !showCardBack
+						&& !isJellyfishDisabled;
+					string tooltipText = !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
+						? description
+						: string.Empty;
+					AddHandCard(texture, displayIndex, isPlayable, canHover, -1, itemIndex, showCardBack, visualScale, isJellyfishDisabled: isJellyfishDisabled, tooltipText: tooltipText);
+				}
 		}
 	}
 }

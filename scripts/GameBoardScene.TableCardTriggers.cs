@@ -21,7 +21,7 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
+		if (!tableCard.Card.HasValue || !IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture))
 		{
 			return;
 		}
@@ -54,31 +54,28 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
+		if (!tableCard.Card.HasValue || !IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture))
 		{
 			return;
 		}
 
-		Texture2D triggerTexture = _itemCardTextures.TryGetValue(MagnetItemCardId, out Texture2D? magnetTexture)
-			? magnetTexture
-			: tableCard.Card.Value.Texture;
+		Texture2D triggerTexture = GetAttachedTriggerTexture(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture);
 		await PlaySpecialCardTriggerEffectAsync(
 			triggerTexture,
-			_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+			_centerArena.GlobalPosition + cardPosition,
 			tableCardIndex * 2 + 1);
 	}
 
 	private async Task ResolveDoubleTableCardTriggerAsync(
 		int tableCardIndex,
 		int turnSequenceGeneration,
-		HashSet<int> resolvedDoubleTriggerIndexes)
+		HashSet<int>? resolvedDoubleTriggerIndexes)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -86,12 +83,12 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+		if (!tableCard.Card.HasValue || !IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
 		{
 			return;
 		}
 
-		if (!resolvedDoubleTriggerIndexes.Add(tableCardIndex))
+		if (resolvedDoubleTriggerIndexes != null && !resolvedDoubleTriggerIndexes.Add(tableCardIndex))
 		{
 			return;
 		}
@@ -106,31 +103,28 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+		if (!tableCard.Card.HasValue || !IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
 		{
 			return;
 		}
 
-		Texture2D triggerTexture = _itemCardTextures.TryGetValue(DoubleItemCardId, out Texture2D? doubleTexture)
-			? doubleTexture
-			: tableCard.Card.Value.Texture;
+		Texture2D triggerTexture = GetAttachedTriggerTexture(tableCard.Card.Value, CardEffectTypes.DoubleCollect);
 		await PlaySpecialCardTriggerEffectAsync(
 			triggerTexture,
-			_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+			_centerArena.GlobalPosition + cardPosition,
 			tableCardIndex * 2 + 1);
 	}
 
 	private async Task ResolveOvertimeTableCardTriggerAsync(
 		int tableCardIndex,
 		int turnSequenceGeneration,
-		HashSet<int> resolvedOvertimeTriggerIndexes)
+		HashSet<int>? resolvedOvertimeTriggerIndexes)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -138,12 +132,12 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+		if (!tableCard.Card.HasValue || !IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn))
 		{
 			return;
 		}
 
-		if (!resolvedOvertimeTriggerIndexes.Add(tableCardIndex))
+		if (resolvedOvertimeTriggerIndexes != null && !resolvedOvertimeTriggerIndexes.Add(tableCardIndex))
 		{
 			return;
 		}
@@ -155,7 +149,7 @@ public partial class GameBoardScene
 		}
 
 		if (tableCard.Card.HasValue
-			&& TryGetAttachedItemIdByModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime, out string itemCardId))
+			&& TryGetAttachedItemIdByEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn, out string itemCardId))
 		{
 			tableCard.ClearAttachedItemEffect(itemCardId);
 		}
@@ -169,25 +163,30 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];
-		if (!tableCard.Card.HasValue || !IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+		if (!tableCard.Card.HasValue || !IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn))
 		{
 			return;
 		}
 
-		Texture2D triggerTexture = _itemCardTextures.TryGetValue(OvertimeItemCardId, out Texture2D? overtimeTexture)
-			? overtimeTexture
-			: tableCard.Card.Value.Texture;
+		Texture2D triggerTexture = GetAttachedTriggerTexture(tableCard.Card.Value, CardEffectTypes.ExtraTurn);
 		await PlaySpecialCardTriggerEffectAsync(
 			triggerTexture,
-			_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+			_centerArena.GlobalPosition + cardPosition,
 			tableCardIndex * 2 + 1);
+	}
+
+	private Texture2D GetAttachedTriggerTexture(PlayingCard card, string effectType)
+	{
+		return TryGetAttachedItemIdByEffectType(card, effectType, out string itemCardId)
+			&& _itemCardTextures.TryGetValue(itemCardId, out Texture2D? itemTexture)
+				? itemTexture
+				: card.Texture;
 	}
 
 	private async Task RevealRandomMagnetExtraTableCardAsync(
@@ -224,7 +223,7 @@ public partial class GameBoardScene
 		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
 		int popupPoints = GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, scorePlayerIndex, hasDoubleEffect);
 		_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
-		if (IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
+		if (IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture))
 		{
 			await ResolveMagnetTableCardTriggerAsync(
 				tableCardIndex,
@@ -241,7 +240,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+		if (IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
 		{
 			await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -250,7 +249,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+		if (IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn))
 		{
 			await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -264,7 +263,8 @@ public partial class GameBoardScene
 
 	private int PickRandomMagnetExtraRevealIndex(int captureStartIndex, HashSet<int> magnetExtraCaptureIndexes)
 	{
-		var candidates = new List<int>();
+		int selectedTableCardIndex = -1;
+		int candidateCount = 0;
 		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			if (tableCardIndex >= captureStartIndex)
@@ -280,46 +280,45 @@ public partial class GameBoardScene
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (!tableCard.IsBuriedInSand && !tableCard.IsFaceUp && tableCard.Card.HasValue)
 			{
-				candidates.Add(tableCardIndex);
+				candidateCount++;
+				if (_rng.RandiRange(1, candidateCount) == 1)
+				{
+					selectedTableCardIndex = tableCardIndex;
+				}
 			}
 		}
 
-		return candidates.Count == 0 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
+		return selectedTableCardIndex;
 	}
 
-	private List<TableSpecialCardTrigger> GetCapturedSpecialCardTriggers(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
+	private void BuildCapturedSpecialCardTriggers(int captureStartIndex, HashSet<int>? extraTableCardIndexes, List<TableSpecialCardTrigger> triggers)
 	{
-		var triggers = new List<TableSpecialCardTrigger>();
+		triggers.Clear();
 		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
 		{
-			return triggers;
+			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
-			AddCapturedSpecialCardTrigger(tableCardIndex, cardPositions, triggers);
+			AddCapturedSpecialCardTrigger(tableCardIndex, tableLayoutRect, triggers);
 		}
 
 		if (extraTableCardIndexes != null)
 		{
 			foreach (int tableCardIndex in extraTableCardIndexes)
 			{
-				AddCapturedSpecialCardTrigger(tableCardIndex, cardPositions, triggers);
+				AddCapturedSpecialCardTrigger(tableCardIndex, tableLayoutRect, triggers);
 			}
 		}
 
-		triggers.Sort((a, b) =>
-		{
-			int priorityComparison = GetTableTriggerPriority(b.TableCardIndex).CompareTo(GetTableTriggerPriority(a.TableCardIndex));
-			return priorityComparison != 0 ? priorityComparison : b.TableCardIndex.CompareTo(a.TableCardIndex);
-		});
-		return triggers;
+		triggers.Sort(TableSpecialCardTriggerComparer.Instance);
 	}
 
-	private void AddCapturedSpecialCardTrigger(int tableCardIndex, IReadOnlyList<Vector2> cardPositions, List<TableSpecialCardTrigger> triggers)
+	private void AddCapturedSpecialCardTrigger(int tableCardIndex, Rect2 tableLayoutRect, List<TableSpecialCardTrigger> triggers)
 	{
-		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count || tableCardIndex >= cardPositions.Count)
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -338,13 +337,9 @@ public partial class GameBoardScene
 		triggers.Add(new TableSpecialCardTrigger(
 			tableCardIndex,
 			tableCard.ItemOverlay.Value.Texture,
-			_centerArena.GlobalPosition + cardPositions[tableCardIndex] + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
-			tableCardIndex * 2 + 1));
-	}
-
-	private int GetTableTriggerPriority(int tableCardIndex)
-	{
-		return TryGetTableCardTriggerDefinition(tableCardIndex, out ItemCardDefinition definition) ? definition.Priority : 0;
+			_centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect) + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
+			tableCardIndex * 2 + 1,
+			GetTableTriggerPriority(tableCardIndex)));
 	}
 
 	private TableSpecialCardTrigger? GetTableSpecialCardTrigger(int tableCardIndex)
@@ -354,8 +349,7 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return null;
 		}
@@ -375,8 +369,9 @@ public partial class GameBoardScene
 		return new TableSpecialCardTrigger(
 			tableCardIndex,
 			itemOverlay.Texture,
-			_centerArena.GlobalPosition + cardPositions[tableCardIndex] + GetItemCardVisualPosition(itemOverlay.Id),
-			tableCardIndex * 2 + 1);
+			_centerArena.GlobalPosition + cardPosition + GetItemCardVisualPosition(itemOverlay.Id),
+			tableCardIndex * 2 + 1,
+			GetTableTriggerPriority(tableCardIndex));
 	}
 
 	private async Task PlayTableSpecialCardTriggerEffectAsync(TableSpecialCardTrigger trigger)
@@ -404,11 +399,26 @@ public partial class GameBoardScene
 		}
 	}
 
+	private int GetTableTriggerPriority(int tableCardIndex)
+	{
+		return TryGetTableCardTriggerDefinition(tableCardIndex, out ItemCardDefinition definition) ? definition.Priority : 0;
+	}
+
+	private sealed class TableSpecialCardTriggerComparer : IComparer<TableSpecialCardTrigger>
+	{
+		public static readonly TableSpecialCardTriggerComparer Instance = new();
+
+		public int Compare(TableSpecialCardTrigger a, TableSpecialCardTrigger b)
+		{
+			int priorityComparison = b.Priority.CompareTo(a.Priority);
+			return priorityComparison != 0 ? priorityComparison : b.TableCardIndex.CompareTo(a.TableCardIndex);
+		}
+	}
+
 	private async Task ApplyJellyfishBubbleAfterCaptureAsync(int playerIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
-			|| !(adventure_enemy_avatar_id == JellyfishAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.BubbleCover)
 			|| playerIndex != 1
 			|| _jellyfishBubbleTriggeredThisTurn
 			|| _jellyfishDisabledMainPlayerHandSlotIndex >= 0)
@@ -422,7 +432,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, JellyfishAdventureEnemyAvatarId);
+		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.BubbleCover);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -433,14 +443,13 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 	}
 
-	private bool ShouldApplyGardenEelSandBite(int playerIndex, int captureStartIndex, bool playedJackCollectsTable)
+	private bool ShouldApplyGardenEelSandBite(int playerIndex, int captureStartIndex, bool playedRankCollectsTable)
 	{
 		return adventure_mode
-			&& (adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.SandAmbush)
 			&& playerIndex == 1
 			&& _gardenEelSandBiteReady
-			&& !playedJackCollectsTable
+			&& !playedRankCollectsTable
 			&& captureStartIndex >= 0
 			&& captureStartIndex < _tableCards.Count
 			&& !_tableCards[captureStartIndex].IsBuriedInSand
@@ -452,9 +461,9 @@ public partial class GameBoardScene
 		int captureStartIndex,
 		int scorePlayerIndex,
 		bool hasDoubleEffect,
-		bool playedJackCollectsTable)
+		bool playedRankCollectsTable)
 	{
-		if (!ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedJackCollectsTable))
+		if (!ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedRankCollectsTable))
 		{
 			return 0;
 		}
@@ -467,8 +476,7 @@ public partial class GameBoardScene
 	private void RecordGardenEelCaptureForSandBite(int playerIndex)
 	{
 		if (!adventure_mode
-			|| !(adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.SandAmbush)
 			|| playerIndex != 1
 			|| _gardenEelSandBiteReady)
 		{
@@ -476,7 +484,7 @@ public partial class GameBoardScene
 		}
 
 		_gardenEelCaptureCountUntilSandBite++;
-		if (_gardenEelCaptureCountUntilSandBite >= GardenEelCapturesBeforeSandBite)
+		if (_gardenEelCaptureCountUntilSandBite >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSandBite, 2))
 		{
 			_gardenEelCaptureCountUntilSandBite = 0;
 			_gardenEelSandBiteReady = true;
@@ -486,7 +494,7 @@ public partial class GameBoardScene
 	private async Task ApplySeaSlugSlimeCoatAfterMissAsync(int playerIndex, int playedTableCardIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
-			|| adventure_enemy_avatar_id != SeaSlugAdventureEnemyAvatarId
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.ColorCurrent)
 			|| playerIndex != 1
 			|| playedTableCardIndex < 0
 			|| playedTableCardIndex >= _tableCards.Count
@@ -497,13 +505,13 @@ public partial class GameBoardScene
 		}
 
 		_seaSlugMissCountUntilSlime++;
-		if (_seaSlugMissCountUntilSlime < SeaSlugMissesBeforeSlimeCoat)
+		if (_seaSlugMissCountUntilSlime < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.MissesBeforeSlimeCoat, 2))
 		{
 			return;
 		}
 
 		_seaSlugMissCountUntilSlime = 0;
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration);
+		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.ColorCurrent);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -537,15 +545,14 @@ public partial class GameBoardScene
 	private async Task ApplyNautilusBombAfterMainPlayerCaptureAsync(int playerIndex, int turnSequenceGeneration)
 	{
 		if (!adventure_mode
-			|| !(adventure_enemy_avatar_id == NautilusAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.SpiralShell)
 			|| playerIndex != MainPlayerIndex)
 		{
 			return;
 		}
 
 		_nautilusMainPlayerCaptureCountUntilBomb++;
-		if (_nautilusMainPlayerCaptureCountUntilBomb < NautilusCapturesBeforeBomb)
+		if (_nautilusMainPlayerCaptureCountUntilBomb < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeBomb, 3))
 		{
 			return;
 		}
@@ -555,11 +562,17 @@ public partial class GameBoardScene
 			return;
 		}
 
-		ItemCard? bombCard = CreateItemCard(BombItemCardId);
-		if (!bombCard.HasValue)
-		{
-			return;
-		}
+			string bombItemCardId = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BombItemCardId, BombItemCardId);
+			if (!IsItemEffectType(bombItemCardId, CardEffectTypes.PlaceTablePairDestroy))
+			{
+				return;
+			}
+
+			ItemCard? bombCard = CreateItemCard(bombItemCardId);
+			if (!bombCard.HasValue)
+			{
+				return;
+			}
 
 		int insertionIndex = PickNautilusBombInsertionIndex();
 		if (insertionIndex < 0)
@@ -567,7 +580,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration, NautilusAdventureEnemyAvatarId);
+		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.SpiralShell);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -583,8 +596,7 @@ public partial class GameBoardScene
 	private void RecordNarwhalCaptureForDouble(int playerIndex)
 	{
 		if (!adventure_mode
-			|| !(adventure_enemy_avatar_id == NarwhalAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.TuskBreak)
 			|| playerIndex != 1
 			|| _narwhalDoubleReady)
 		{
@@ -592,7 +604,7 @@ public partial class GameBoardScene
 		}
 
 		_narwhalCaptureCountUntilDouble++;
-		if (_narwhalCaptureCountUntilDouble >= NarwhalCapturesBeforeDouble)
+		if (_narwhalCaptureCountUntilDouble >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeDouble, 2))
 		{
 			_narwhalCaptureCountUntilDouble = 0;
 			_narwhalDoubleReady = true;
@@ -612,7 +624,7 @@ public partial class GameBoardScene
 		}
 
 		_dragonPrinceJackUsed = true;
-		await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, DragonPrinceAdventureEnemyAvatarId);
+		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.DragonPrince);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return new PlayCardResult(false, false);
@@ -639,7 +651,7 @@ public partial class GameBoardScene
 
 	private async Task<int> PlayDragonPrinceSpecialJackToTableAsync(int playerIndex, int turnSequenceGeneration)
 	{
-		if (_dragonPrinceSpecialJackTexture == null)
+		if (_dragonPrinceSpecialJackTexture == null || string.IsNullOrWhiteSpace(_dragonPrinceSpecialJackRank))
 		{
 			return -1;
 		}
@@ -651,7 +663,7 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		PlayingCard specialJack = new(string.Empty, JackItemCardId, _dragonPrinceSpecialJackTexture);
+		PlayingCard specialJack = new(string.Empty, _dragonPrinceSpecialJackRank, _dragonPrinceSpecialJackTexture);
 		_tableCards.Add(new TableCard(specialJack, true, cardOwnerPlayerIndex: playerIndex));
 		int tableCardIndex = _tableCards.Count - 1;
 		await PlayCardToTableAnimationAsync(
@@ -740,11 +752,10 @@ public partial class GameBoardScene
 					return new PlayCardResult(false, false);
 				}
 
-				Dictionary<int, Vector2>? floatStartOverrides = specialJackFloat?.BuildFlightStartPositionOverrides();
 				List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(
 					0,
 					false,
-					globalPositionOverrides: floatStartOverrides);
+					flightStartOverrides: specialJackFloat);
 				if (capturedCardVisuals.Count > 0)
 				{
 					specialJackFloat?.QueueFreeOverlays();
@@ -793,8 +804,7 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return null;
 		}
@@ -813,7 +823,7 @@ public partial class GameBoardScene
 			ZAsRelative = false,
 		};
 		AddChild(overlay);
-		overlay.GlobalPosition = _centerArena.GlobalPosition + cardPositions[tableCardIndex];
+		overlay.GlobalPosition = _centerArena.GlobalPosition + cardPosition;
 		_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 		RenderTableCards();
 
@@ -832,24 +842,23 @@ public partial class GameBoardScene
 			Vector2.One * DragonPrinceSpecialJackFloatScale,
 			DragonPrinceSpecialJackFloatSeconds);
 		await ToSignal(tween, Tween.SignalName.Finished);
-		return new PairCaptureEdgeFloatHold(new List<int> { tableCardIndex }, new List<TextureRect> { overlay });
+		return new PairCaptureEdgeFloatHold(tableCardIndex, overlay);
 	}
 
 	private bool ShouldResolveDragonPrinceJack(int playerIndex)
 	{
 		return adventure_mode
-			&& (adventure_enemy_avatar_id == DragonPrinceAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.DragonPrince)
 			&& playerIndex == 1
 			&& !_dragonPrinceJackUsed
-			&& _tableCards.Count >= DragonRoyalCaptureThreshold
+			&& _tableCards.Count >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
 			&& (!IsBossKEnemy(playerIndex) || ShouldResolveBossKDragonPrinceJack(playerIndex));
 	}
 
 	private bool ShouldResolveBossKDragonPrinceJack(int playerIndex)
 	{
 		return BossKCanUseActiveControl(playerIndex)
-			&& GetBestPotentialNormalCaptureCount(playerIndex, _tableCards) < DragonRoyalCaptureThreshold;
+			&& GetBestPotentialNormalCaptureCount(playerIndex, _tableCards) < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5);
 	}
 
 	private async Task ApplyDragonQueenAndKingAfterEnemyCaptureAsync(
@@ -862,11 +871,12 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (adventure_enemy_avatar_id == DragonQueenAdventureEnemyAvatarId
-			&& removedTableCardCount >= DragonQueenCaptureThreshold)
+		if (!IsBossKEnemy(playerIndex)
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.DragonQueen)
+			&& removedTableCardCount >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.DragonQueenCaptureThreshold, 1))
 		{
 			_dragonQueenCaptureCountUntilSteal++;
-			if (_dragonQueenCaptureCountUntilSteal < DragonQueenCapturesBeforeSteal)
+			if (_dragonQueenCaptureCountUntilSteal < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSteal, 3))
 			{
 				return;
 			}
@@ -874,11 +884,10 @@ public partial class GameBoardScene
 			_dragonQueenCaptureCountUntilSteal = 0;
 			await StealRandomMainPlayerHandCardForEnemyAsync(playerIndex, turnSequenceGeneration);
 		}
-		else if (adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId
-			&& removedTableCardCount > 0)
+		else if (IsBossKEnemy(playerIndex) && removedTableCardCount > 0)
 		{
 			_bossKCaptureCountUntilSteal++;
-			if (_bossKCaptureCountUntilSteal < BossKCapturesBeforeSteal)
+			if (_bossKCaptureCountUntilSteal < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSteal, 3))
 			{
 				return;
 			}
@@ -914,7 +923,7 @@ public partial class GameBoardScene
 			&& enemyPlayerIndex < _playerItemHands.Count
 			&& MainPlayerIndex < _playerHands.Count
 			&& MainPlayerIndex < _playerItemHands.Count
-			&& BuildDragonQueenStealTargetHandIndexes(enemyPlayerIndex).Count > 0;
+			&& GetTotalHandCardCount(MainPlayerIndex) > 0;
 	}
 
 	private bool CanStealMainPlayerTopDeckCard(int enemyPlayerIndex)
@@ -936,14 +945,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<int> targetHandIndexes = BuildDragonQueenStealTargetHandIndexes(enemyPlayerIndex);
-		if (targetHandIndexes.Count == 0)
+		int targetHandCount = GetTotalHandCardCount(MainPlayerIndex);
+		if (targetHandCount == 0)
 		{
 			return;
 		}
 
-		int targetHandIndex = targetHandIndexes[_rng.RandiRange(0, targetHandIndexes.Count - 1)];
-		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration, DragonQueenAdventureEnemyAvatarId);
+		int targetHandIndex = _rng.RandiRange(0, targetHandCount - 1);
+		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(enemyPlayerIndex, turnSequenceGeneration, AdventureEnemyAbilities.DragonQueen);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -954,22 +963,6 @@ public partial class GameBoardScene
 		{
 			RenderPlayerHands();
 		}
-	}
-
-	private List<int> BuildDragonQueenStealTargetHandIndexes(int enemyPlayerIndex)
-	{
-		var targetHandIndexes = new List<int>();
-		for (int handIndex = 0; handIndex < _playerHands[MainPlayerIndex].Count; handIndex++)
-		{
-			targetHandIndexes.Add(handIndex);
-		}
-
-		for (int itemIndex = 0; itemIndex < _playerItemHands[MainPlayerIndex].Count; itemIndex++)
-		{
-			targetHandIndexes.Add(_playerHands[MainPlayerIndex].Count + itemIndex);
-		}
-
-		return targetHandIndexes;
 	}
 
 	private async Task StealMainPlayerTopDeckCardForEnemyAsync(int enemyPlayerIndex, int turnSequenceGeneration)
@@ -1031,7 +1024,7 @@ public partial class GameBoardScene
 
 		if (IsBossKEnemy(playerIndex))
 		{
-			await PlayEnemySpecialAbilityAvatarFxAsync(playerIndex, turnSequenceGeneration, LeafySeadragonAdventureEnemyAvatarId);
+			await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.LeafyMirage);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
@@ -1046,7 +1039,12 @@ public partial class GameBoardScene
 
 		_tableCards[targetTableCardIndex].IsHiddenDuringCapture = true;
 		RenderTableCards();
-		await PlayBombPairDestroyCardAsync(targetTableCardIndex, BuildTableCardPositions(_tableCards.Count)[targetTableCardIndex]);
+		if (!TryGetTableCardPosition(targetTableCardIndex, out Vector2 targetCardPosition))
+		{
+			return;
+		}
+
+		await PlayBombPairDestroyCardAsync(targetTableCardIndex, targetCardPosition);
 		if (IsGameOver() || targetTableCardIndex >= _tableCards.Count)
 		{
 			return;
@@ -1056,7 +1054,7 @@ public partial class GameBoardScene
 		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
 		_tableCards.RemoveAt(targetTableCardIndex);
 		RefreshGardenEelBuriedCardIndex();
-		_leafySeadragonBladeBreakCooldownTurns = LeafySeadragonBladeBreakCooldownTurns;
+		_leafySeadragonBladeBreakCooldownTurns = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakCooldownTurns, 1);
 		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
 
@@ -1082,12 +1080,11 @@ public partial class GameBoardScene
 	private bool ShouldResolveLeafySeadragonBladeBreak(int playerIndex, PlayCardResult result)
 	{
 		return adventure_mode
-			&& (adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.LeafyMirage)
 			&& playerIndex == 1
 			&& !result.Captured
 			&& _leafySeadragonBladeBreakCooldownTurns <= 0
-			&& _tableCards.Count >= LeafySeadragonBladeBreakTableCardThreshold
+			&& _tableCards.Count >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakTableCardThreshold, 5)
 			&& PickLeafySeadragonBladeBreakTargetIndex() >= 0
 			&& (!IsBossKEnemy(playerIndex) || BossKCanUseActiveControl(playerIndex));
 	}
@@ -1095,8 +1092,7 @@ public partial class GameBoardScene
 	private void UpdateLeafySeadragonBladeBreakCooldown(int playerIndex)
 	{
 		if (!adventure_mode
-			|| !(adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.LeafyMirage)
 			|| playerIndex != 1
 			|| _leafySeadragonBladeBreakCooldownTurns <= 0)
 		{
@@ -1127,20 +1123,31 @@ public partial class GameBoardScene
 			return card;
 		}
 
-		_narwhalDoubleReady = false;
-		return card.WithAttachedItemEffect(DoubleItemCardId);
-	}
+			string doubleItemCardId = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.DoubleItemCardId, DoubleItemCardId);
+			if (!IsItemAttachedEffectType(doubleItemCardId, CardEffectTypes.DoubleCollect))
+			{
+				return card;
+			}
+
+			_narwhalDoubleReady = false;
+			return card.WithAttachedItemEffect(doubleItemCardId);
+		}
 
 	private bool ShouldApplyNarwhalDoubleToPlayedCard(int playerIndex, PlayingCard card)
 	{
 		return adventure_mode
-			&& (adventure_enemy_avatar_id == NarwhalAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.TuskBreak)
 			&& playerIndex == 1
 			&& _narwhalDoubleReady
 			&& !card.HasItemEffect
 			&& !IsExcludedDeckRank(card.Rank)
 			&& (!IsBossKEnemy(playerIndex) || FindMatchingTableCardIndex(card) >= 0);
+	}
+
+	private bool IsItemAttachedEffectType(string itemCardId, string effectType)
+	{
+		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			&& string.Equals(definition.AttachedEffectType, effectType, StringComparison.Ordinal);
 	}
 
 	private int PickNautilusBombInsertionIndex()
@@ -1162,7 +1169,7 @@ public partial class GameBoardScene
 	{
 		return adventure_mode
 			&& playerIndex == 1
-			&& adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId;
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.DragonKing);
 	}
 
 	private bool BossKCanUseActiveControl(int playerIndex)
@@ -1194,16 +1201,21 @@ public partial class GameBoardScene
 	private int PickVisibleMainPlayerHandSlotIndex()
 	{
 		int totalHandCardCount = GetTotalHandCardCount(MainPlayerIndex);
-		var candidates = new List<int>();
+		int selectedDisplayIndex = -1;
+		int candidateCount = 0;
 		for (int displayIndex = 0; displayIndex < totalHandCardCount; displayIndex++)
 		{
 			if (!IsHandDisplaySlotHidden(MainPlayerIndex, displayIndex))
 			{
-				candidates.Add(displayIndex);
+				candidateCount++;
+				if (_rng.RandiRange(1, candidateCount) == 1)
+				{
+					selectedDisplayIndex = displayIndex;
+				}
 			}
 		}
 
-		return candidates.Count <= 1 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
+		return candidateCount <= 1 ? -1 : selectedDisplayIndex;
 	}
 
 	private void ClearJellyfishBubbleIfMainPlayerTurnCompleted(int playerIndex, PlayCardResult result)
@@ -1222,8 +1234,7 @@ public partial class GameBoardScene
 	private void ResetJellyfishBubbleTurnStateIfNeeded(int previousPlayerIndex)
 	{
 		if (!adventure_mode
-			|| !(adventure_enemy_avatar_id == JellyfishAdventureEnemyAvatarId
-				|| adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId)
+			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.BubbleCover)
 			|| previousPlayerIndex == 1
 			|| _currentTurnPlayerIndex != 1)
 		{
@@ -1251,38 +1262,40 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var shiftedSlots = new HashSet<string>();
+		_shiftedHiddenHandDisplaySlots.Clear();
 		bool changed = false;
 		foreach (string key in _hiddenHandDisplaySlots)
 		{
 			if (!TryParseHandDisplaySlotKey(key, out int keyPlayerIndex, out int displayIndex)
 				|| keyPlayerIndex != playerIndex)
 			{
-				shiftedSlots.Add(key);
+				_shiftedHiddenHandDisplaySlots.Add(key);
 				continue;
 			}
 
 			changed = true;
 			if (displayIndex < removedDisplayIndex)
 			{
-				shiftedSlots.Add(key);
+				_shiftedHiddenHandDisplaySlots.Add(key);
 			}
 			else if (displayIndex > removedDisplayIndex)
 			{
-				shiftedSlots.Add(BuildHandDisplaySlotKey(playerIndex, displayIndex - 1));
+				_shiftedHiddenHandDisplaySlots.Add(BuildHandDisplaySlotKey(playerIndex, displayIndex - 1));
 			}
 		}
 
 		if (!changed)
 		{
+			_shiftedHiddenHandDisplaySlots.Clear();
 			return;
 		}
 
 		_hiddenHandDisplaySlots.Clear();
-		foreach (string key in shiftedSlots)
+		foreach (string key in _shiftedHiddenHandDisplaySlots)
 		{
 			_hiddenHandDisplaySlots.Add(key);
 		}
+		_shiftedHiddenHandDisplaySlots.Clear();
 	}
 
 	private static bool TryParseHandDisplaySlotKey(string key, out int playerIndex, out int displayIndex)

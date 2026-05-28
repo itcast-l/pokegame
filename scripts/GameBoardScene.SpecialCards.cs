@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -54,14 +53,37 @@ public partial class GameBoardScene : ICardTriggerProvider
 				}
 			}
 
-			foreach (int tableCardIndex in gameEvent.ExtraTableCardIndexes.OrderByDescending(index => index))
+			if (gameEvent.ExtraTableCardIndexes.Count == 0)
 			{
+				yield break;
+			}
+
+			for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
+			{
+				if (!ContainsTableCardIndex(gameEvent.ExtraTableCardIndexes, tableCardIndex))
+				{
+					continue;
+				}
+
 				if (TryGetTableCardTriggerDefinition(tableCardIndex, out ItemCardDefinition extraDefinition))
 				{
 					yield return extraDefinition;
 				}
 			}
 		}
+	}
+
+	private static bool ContainsTableCardIndex(IReadOnlyCollection<int> tableCardIndexes, int targetTableCardIndex)
+	{
+		foreach (int tableCardIndex in tableCardIndexes)
+		{
+			if (tableCardIndex == targetTableCardIndex)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private bool TryGetTableCardTriggerDefinition(int tableCardIndex, out ItemCardDefinition definition)
@@ -92,25 +114,33 @@ public partial class GameBoardScene : ICardTriggerProvider
 	{
 		_cardEventBus.Publish(gameEvent, this);
 		PlayCardResult finalResult = new(false, false);
-		var resolved = new HashSet<string>(StringComparer.Ordinal);
-		while (_cardEventBus.TryDequeue(out CardTriggerRequest request))
+		HashSet<CardTriggerResolutionKey> resolved = _resolvedCardTriggerKeys;
+		resolved.Clear();
+		try
 		{
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			while (_cardEventBus.TryDequeue(out CardTriggerRequest request))
 			{
-				return new PlayCardResult(false, false);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					return new PlayCardResult(false, false);
+				}
+
+				CardTriggerResolutionKey resolutionKey = BuildRuntimeResolutionKey(request);
+				if (!resolved.Add(resolutionKey))
+				{
+					continue;
+				}
+
+				PlayCardResult result = await _effectResolver.ResolveAsync(request, turnSequenceGeneration);
+				finalResult = MergePlayCardResults(finalResult, result);
 			}
 
-			string resolutionKey = BuildRuntimeResolutionKey(request);
-			if (!resolved.Add(resolutionKey))
-			{
-				continue;
-			}
-
-			PlayCardResult result = await _effectResolver.ResolveAsync(request, turnSequenceGeneration);
-			finalResult = MergePlayCardResults(finalResult, result);
+			return finalResult;
 		}
-
-		return finalResult;
+		finally
+		{
+			resolved.Clear();
+		}
 	}
 
 	private async Task<PlayCardResult> ResolveItemCardOnPlayAsync(
@@ -151,9 +181,14 @@ public partial class GameBoardScene : ICardTriggerProvider
 		};
 	}
 
-	private static string BuildRuntimeResolutionKey(CardTriggerRequest request)
+	private static CardTriggerResolutionKey BuildRuntimeResolutionKey(CardTriggerRequest request)
 	{
-		return $"{request.Definition.Id}:{request.Rule.Trigger}:{request.Rule.EffectType}:{request.Event.SourceTableCardIndex}:{request.Event.SourceHandIndex}";
+		return new CardTriggerResolutionKey(
+			request.Definition.Id,
+			request.Rule.Trigger,
+			request.Rule.EffectType,
+			request.Event.SourceTableCardIndex,
+			request.Event.SourceHandIndex);
 	}
 
 	private bool IsItemEffectType(string itemCardId, string effectType)
@@ -180,7 +215,8 @@ public partial class GameBoardScene : ICardTriggerProvider
 	{
 		foreach (string attachedItemCardId in card.GetAttachedItemCardIds())
 		{
-			if (IsItemEffectType(attachedItemCardId, effectType))
+			if (_itemCardCatalog.TryGetDefinition(attachedItemCardId, out ItemCardDefinition definition)
+				&& string.Equals(definition.AttachedEffectType, effectType, StringComparison.Ordinal))
 			{
 				return true;
 			}
@@ -189,26 +225,12 @@ public partial class GameBoardScene : ICardTriggerProvider
 		return false;
 	}
 
-	private bool IsAttachedModifier(PlayingCard card, string modifier)
+	private bool TryGetAttachedItemIdByEffectType(PlayingCard card, string effectType, out string itemCardId)
 	{
 		foreach (string attachedItemCardId in card.GetAttachedItemCardIds())
 		{
 			if (_itemCardCatalog.TryGetDefinition(attachedItemCardId, out ItemCardDefinition definition)
-				&& string.Equals(definition.EffectValues.GetString(CardEffectValueKeys.Modifier), modifier, StringComparison.Ordinal))
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private bool TryGetAttachedItemIdByModifier(PlayingCard card, string modifier, out string itemCardId)
-	{
-		foreach (string attachedItemCardId in card.GetAttachedItemCardIds())
-		{
-			if (_itemCardCatalog.TryGetDefinition(attachedItemCardId, out ItemCardDefinition definition)
-				&& string.Equals(definition.EffectValues.GetString(CardEffectValueKeys.Modifier), modifier, StringComparison.Ordinal))
+				&& string.Equals(definition.AttachedEffectType, effectType, StringComparison.Ordinal))
 			{
 				itemCardId = attachedItemCardId;
 				return true;
@@ -233,13 +255,6 @@ public partial class GameBoardScene : ICardTriggerProvider
 		return false;
 	}
 
-	private string GetAttachmentModifier(string itemCardId)
-	{
-		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
-			? definition.EffectValues.GetString(CardEffectValueKeys.Modifier)
-			: string.Empty;
-	}
-
 	private bool IsQuestionItemCard(string itemCardId)
 	{
 		return IsItemEffectType(itemCardId, CardEffectTypes.GrantReward);
@@ -262,33 +277,38 @@ public partial class GameBoardScene : ICardTriggerProvider
 
 	private sealed class SpecialCardEffectResolver
 	{
+		private delegate Task<PlayCardResult> ResolveEffectAsync(CardTriggerRequest request, int turnSequenceGeneration);
+
 		private readonly GameBoardScene _runtime;
+		private readonly Dictionary<string, ResolveEffectAsync> _resolvers;
 
 		public SpecialCardEffectResolver(GameBoardScene runtime)
 		{
 			_runtime = runtime;
+			_resolvers = new Dictionary<string, ResolveEffectAsync>(StringComparer.Ordinal)
+			{
+				[CardEffectTypes.PlaceTablePairDestroy] = _runtime.ResolvePlaceTablePairDestroyAsync,
+				[CardEffectTypes.DrawCard] = _runtime.ResolveDrawCardEffectAsync,
+				[CardEffectTypes.AttachModifier] = _runtime.ResolveAttachModifierEffectAsync,
+				[CardEffectTypes.RevealCards] = _runtime.ResolveRevealCardsEffectAsync,
+				[CardEffectTypes.ShuffleTable] = _runtime.ResolveShuffleTableEffectAsync,
+				[CardEffectTypes.CollectTable] = _runtime.ResolveCollectTableEffectAsync,
+				[CardEffectTypes.StealCard] = _runtime.ResolveStealCardEffectAsync,
+				[CardEffectTypes.StealDeckCards] = (request, _) => Task.FromResult(_runtime.ResolveStealDeckCardsEffect(request)),
+				[CardEffectTypes.DoubleCollect] = _runtime.ResolveDoubleCollectEffectAsync,
+				[CardEffectTypes.ExtraTurn] = _runtime.ResolveExtraTurnEffectAsync,
+				[CardEffectTypes.GrantReward] = (request, _) => Task.FromResult(_runtime.ResolveGrantRewardEffect(request)),
+				[CardEffectTypes.DestroyCards] = _runtime.ResolveDestroyCardsEffectAsync,
+				[CardEffectTypes.ReverseCollect] = (request, _) => Task.FromResult(_runtime.ResolveReverseCollectEffect(request)),
+				[CardEffectTypes.BlockMatch] = (request, _) => Task.FromResult(_runtime.ResolveBlockMatchEffect(request)),
+			};
 		}
 
-		public async Task<PlayCardResult> ResolveAsync(CardTriggerRequest request, int turnSequenceGeneration)
+		public Task<PlayCardResult> ResolveAsync(CardTriggerRequest request, int turnSequenceGeneration)
 		{
-			return request.Rule.EffectType switch
-			{
-				CardEffectTypes.PlaceTablePairDestroy => await _runtime.ResolvePlaceTablePairDestroyAsync(request, turnSequenceGeneration),
-				CardEffectTypes.DrawCard => await _runtime.ResolveDrawCardEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.AttachModifier => await _runtime.ResolveAttachModifierEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.RevealCards => await _runtime.ResolveRevealCardsEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.ShuffleTable => await _runtime.ResolveShuffleTableEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.CollectTable => await _runtime.ResolveCollectTableEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.StealCard => await _runtime.ResolveStealCardEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.StealDeckCards => _runtime.ResolveStealDeckCardsEffect(request),
-				CardEffectTypes.DoubleCollect => await _runtime.ResolveDoubleCollectEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.ExtraTurn => await _runtime.ResolveExtraTurnEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.GrantReward => _runtime.ResolveGrantRewardEffect(request),
-				CardEffectTypes.DestroyCards => await _runtime.ResolveDestroyCardsEffectAsync(request, turnSequenceGeneration),
-				CardEffectTypes.ReverseCollect => _runtime.ResolveReverseCollectEffect(request),
-				CardEffectTypes.BlockMatch => _runtime.ResolveBlockMatchEffect(request),
-				_ => new PlayCardResult(false, false),
-			};
+			return _resolvers.TryGetValue(request.Rule.EffectType, out ResolveEffectAsync? resolver)
+				? resolver(request, turnSequenceGeneration)
+				: Task.FromResult(new PlayCardResult(false, false));
 		}
 	}
 }

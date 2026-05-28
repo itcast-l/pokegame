@@ -323,8 +323,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
@@ -334,7 +333,7 @@ public partial class GameBoardScene
 		{
 			Name = "QuestionCardRefreshAnimation",
 			MouseFilter = MouseFilterEnum.Ignore,
-			Position = cardPositions[tableCardIndex],
+			Position = cardPosition,
 			Size = CardVisualSize,
 			PivotOffset = CardVisualSize / 2.0f,
 			ZIndex = tableCardIndex * 2 + 120,

@@ -215,12 +215,8 @@ public partial class GameBoardScene
 
 	private Texture2D? GetItemAttachmentOverlayTexture(string itemCardId)
 	{
-		string modifier = GetAttachmentModifier(itemCardId);
-		return modifier switch
-		{
-			CardAttachmentModifiers.Double => _doubleCardOverlayTexture,
-			CardAttachmentModifiers.Overtime => _overtimeCardOverlayTexture,
-			_ => _magnetCardOverlayTexture,
-		};
+		return _itemAttachmentOverlaysById.TryGetValue(itemCardId, out ItemAttachmentOverlay overlay)
+			? overlay.Texture
+			: null;
 	}
 }

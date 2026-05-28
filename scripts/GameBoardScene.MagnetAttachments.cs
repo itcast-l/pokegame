@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -185,16 +184,21 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		var candidates = new List<int>();
+		int selectedHandIndex = -1;
+		int candidateCount = 0;
 		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
 		{
 			if (IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId))
 			{
-				candidates.Add(handIndex);
+				candidateCount++;
+				if (_rng.RandiRange(1, candidateCount) == 1)
+				{
+					selectedHandIndex = handIndex;
+				}
 			}
 		}
 
-		return candidates.Count == 0 ? -1 : candidates[_rng.RandiRange(0, candidates.Count - 1)];
+		return selectedHandIndex;
 	}
 
 	private bool IsValidMagnetAttachmentHandIndex(int playerIndex, int handIndex, string itemCardId)

@@ -129,20 +129,37 @@ public partial class GameBoardScene
 		TableCard secondBomb = _tableCards[secondBombIndex];
 		Texture2D? firstTexture = firstBomb.ItemOverlay?.Texture;
 		Texture2D? secondTexture = secondBomb.ItemOverlay?.Texture;
-		var revealTasks = new List<Task>();
+		Task? firstRevealTask = null;
+		Task? secondRevealTask = null;
 		if (!firstBomb.IsFaceUp && firstTexture != null)
 		{
-			revealTasks.Add(PlayTableCardRevealAnimationAsync(firstBombIndex, firstTexture));
+			firstRevealTask = PlayTableCardRevealAnimationAsync(firstBombIndex, firstTexture);
 		}
 
 		if (!secondBomb.IsFaceUp && secondTexture != null)
 		{
-			revealTasks.Add(PlayTableCardRevealAnimationAsync(secondBombIndex, secondTexture));
+			secondRevealTask = PlayTableCardRevealAnimationAsync(secondBombIndex, secondTexture);
 		}
 
-		if (revealTasks.Count > 0)
+		if (firstRevealTask != null && secondRevealTask != null)
 		{
-			await Task.WhenAll(revealTasks);
+			await Task.WhenAll(firstRevealTask, secondRevealTask);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+		else if (firstRevealTask != null)
+		{
+			await firstRevealTask;
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return;
+			}
+		}
+		else if (secondRevealTask != null)
+		{
+			await secondRevealTask;
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -173,8 +190,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
@@ -188,7 +204,7 @@ public partial class GameBoardScene
 		ItemCard bombCard = tableCard.ItemOverlay.Value;
 		await PlaySpecialCardTriggerEffectAsync(
 			bombCard.Texture,
-			_centerArena.GlobalPosition + cardPositions[tableCardIndex] + GetItemCardVisualPosition(bombCard.Id),
+			_centerArena.GlobalPosition + cardPosition + GetItemCardVisualPosition(bombCard.Id),
 			tableCardIndex * 2 + 1);
 	}
 
@@ -210,22 +226,13 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (secondBombIndex >= cardPositions.Count)
-		{
-			return;
-		}
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 
 		for (int tableCardIndex = secondBombIndex; tableCardIndex >= firstBombIndex; tableCardIndex--)
 		{
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
-			}
-
-			if (tableCardIndex >= cardPositions.Count)
-			{
-				continue;
 			}
 
 			TableCard tableCard = _tableCards[tableCardIndex];
@@ -237,7 +244,7 @@ public partial class GameBoardScene
 
 			tableCard.IsHiddenDuringCapture = true;
 			RenderTableCards();
-			await PlayBombPairDestroyCardAsync(tableCardIndex, cardPositions[tableCardIndex]);
+			await PlayBombPairDestroyCardAsync(tableCardIndex, GetTableCardPosition(tableCardIndex, tableLayoutRect));
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -328,13 +335,12 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return null;
 		}
 
-		return _centerArena.GlobalPosition + cardPositions[tableCardIndex] + CardVisualSize / 2.0f;
+		return _centerArena.GlobalPosition + cardPosition + CardVisualSize / 2.0f;
 	}
 
 	private bool IsBombTableCard(TableCard tableCard)

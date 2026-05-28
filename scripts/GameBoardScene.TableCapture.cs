@@ -48,7 +48,7 @@ public partial class GameBoardScene
 					}
 				}
 
-				if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+				if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
 				{
 					await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -57,7 +57,7 @@ public partial class GameBoardScene
 					}
 				}
 
-				if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+				if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn))
 				{
 					await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 					if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -109,7 +109,7 @@ public partial class GameBoardScene
 				_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
 			}
 
-			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Magnet))
+			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture))
 			{
 				await ResolveMagnetTableCardTriggerAsync(
 					tableCardIndex,
@@ -126,7 +126,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
 			{
 				await ResolveDoubleTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedDoubleTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -135,7 +135,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Overtime))
+			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn))
 			{
 				await ResolveOvertimeTableCardTriggerAsync(tableCardIndex, turnSequenceGeneration, resolvedOvertimeTriggerIndexes);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -157,9 +157,9 @@ public partial class GameBoardScene
 		return ShouldShowMainPlayerTablePreview(tableCard);
 	}
 
-	private bool ShouldPlayPairCaptureEdgeFloat(int captureStartIndex, int tailTableCardIndex, bool playedJackCollectsTable)
+	private bool ShouldPlayPairCaptureEdgeFloat(int captureStartIndex, int tailTableCardIndex, bool playedRankCollectsTable)
 	{
-		if (playedJackCollectsTable)
+		if (playedRankCollectsTable)
 		{
 			return false;
 		}
@@ -268,7 +268,7 @@ public partial class GameBoardScene
 	private bool IsSeaSlugSlimeScoreSuppressed(TableCard tableCard, int scorePlayerIndex)
 	{
 		return adventure_mode
-			&& adventure_enemy_avatar_id == SeaSlugAdventureEnemyAvatarId
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.ColorCurrent)
 			&& scorePlayerIndex == MainPlayerIndex
 			&& tableCard.IsSlimeCoated;
 	}
@@ -309,7 +309,7 @@ public partial class GameBoardScene
 
 	private bool HasDoubleScoreEffect(TableCard tableCard)
 	{
-		return (tableCard.Card.HasValue && IsAttachedModifier(tableCard.Card.Value, CardAttachmentModifiers.Double))
+		return (tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
 			|| IsItemEffectType(tableCard, CardEffectTypes.DoubleCollect);
 	}
 
@@ -412,11 +412,10 @@ public partial class GameBoardScene
 			? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, extraTableCardIndexes)
 			: 0;
 		bool capturedScoringCards = capturedMiddleCards && HasCapturedScoringTableCards(captureStartIndex, extraTableCardIndexes);
-		List<int> validExtraCaptureIndexes = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 		if (awardScore && capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, extraTableCardIndexes))
 		{
-			await PlayEnemySpecialAbilityAvatarFxAsync(1, turnSequenceGeneration, CrabAdventureEnemyAvatarId);
+			await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return new CaptureTableCardsResult(0, 0, null);
@@ -441,25 +440,30 @@ public partial class GameBoardScene
 			if (capturedMiddleCards && IsQuestionTableCard(tableCard))
 			{
 				QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(playerIndex, reserveReplacementCard, turnSequenceGeneration);
-				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex && tableCardIndex < cardPositions.Count)
+				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex)
 				{
 					questionRewardAnimation = new QuestionCardRewardAnimation(
 						rewardGrant.Value.ItemCard,
 						rewardGrant.Value.ItemHandIndex,
-						_centerArena.GlobalPosition + cardPositions[tableCardIndex],
+						_centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect),
 						rewardGrant.Value.RequiresMagnetAttachment);
 				}
 			}
 		}
 
-		foreach (int tableCardIndex in validExtraCaptureIndexes)
+		int validExtraCaptureCount = BuildValidExtraCaptureIndexes(captureStartIndex, extraTableCardIndexes);
+		if (validExtraCaptureCount > 0)
 		{
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
+			for (int index = 0; index < validExtraCaptureCount; index++)
 			{
-				removedTableCardCount++;
-				AddCardToPlayerDeck(playerIndex, tableCard.Card.Value);
-				collectedCardCount++;
+				int tableCardIndex = _validExtraCaptureIndexes[index];
+				TableCard tableCard = _tableCards[tableCardIndex];
+				if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
+				{
+					removedTableCardCount++;
+					AddCardToPlayerDeck(playerIndex, tableCard.Card.Value);
+					collectedCardCount++;
+				}
 			}
 		}
 
@@ -470,16 +474,20 @@ public partial class GameBoardScene
 				_tableCards.RemoveAt(tableCardIndex);
 			}
 		}
-		for (int index = validExtraCaptureIndexes.Count - 1; index >= 0; index--)
+		if (validExtraCaptureCount > 0)
 		{
-			_tableCards.RemoveAt(validExtraCaptureIndexes[index]);
+			for (int index = validExtraCaptureCount - 1; index >= 0; index--)
+			{
+				_tableCards.RemoveAt(_validExtraCaptureIndexes[index]);
+			}
 		}
 		RefreshGardenEelBuriedCardIndex();
-		if (capturedMiddleCards && captureCount + validExtraCaptureIndexes.Count > 0)
+		if (capturedMiddleCards && captureCount + validExtraCaptureCount > 0)
 		{
 			_completedTurnsSinceQuestionCardRefresh = 0;
 			_questionCardRefreshAnchorPlayerIndex = playerIndex;
 		}
+		_validExtraCaptureIndexes.Clear();
 
 		if (awardScore)
 		{
@@ -509,12 +517,12 @@ public partial class GameBoardScene
 		return new CaptureTableCardsResult(collectedCardCount, removedTableCardCount, questionRewardAnimation);
 	}
 
-	private List<int> BuildValidExtraCaptureIndexes(int captureStartIndex, HashSet<int>? extraTableCardIndexes)
+	private int BuildValidExtraCaptureIndexes(int captureStartIndex, HashSet<int>? extraTableCardIndexes)
 	{
-		var validIndexes = new List<int>();
+		_validExtraCaptureIndexes.Clear();
 		if (extraTableCardIndexes == null)
 		{
-			return validIndexes;
+			return 0;
 		}
 
 		foreach (int tableCardIndex in extraTableCardIndexes)
@@ -534,10 +542,10 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			validIndexes.Add(tableCardIndex);
+			_validExtraCaptureIndexes.Add(tableCardIndex);
 		}
 
-		validIndexes.Sort();
-		return validIndexes;
+		_validExtraCaptureIndexes.Sort();
+		return _validExtraCaptureIndexes.Count;
 	}
 }

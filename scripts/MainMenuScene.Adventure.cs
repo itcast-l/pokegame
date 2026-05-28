@@ -242,8 +242,9 @@ public partial class MainMenuScene : Control
 			container.QueueSort();
 		}
 
-		foreach (Node child in node.GetChildren())
+		for (int childIndex = 0; childIndex < node.GetChildCount(); childIndex++)
 		{
+			Node child = node.GetChild(childIndex);
 			QueueAdventureTransitionLayout(child);
 		}
 	}

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using Godot;
 
@@ -28,6 +27,7 @@ public static class CardEffectTypes
 	public const string GrantReward = "grant_reward";
 	public const string AttachModifier = "attach_modifier";
 	public const string RevealCards = "reveal_cards";
+	public const string MagnetExtraCapture = "magnet_extra_capture";
 	public const string ShuffleTable = "shuffle_table";
 	public const string DoubleCollect = "double_collect";
 	public const string ReverseCollect = "reverse_collect";
@@ -45,19 +45,29 @@ public static class CardEffectValueKeys
 	public const string Multiplier = "multiplier";
 }
 
+public static class CardEffectTargets
+{
+	public const string PlayerHand = "player_hand";
+	public const string PlayerDeck = "player_deck";
+	public const string Table = "table";
+	public const string OpponentTableFaceDown = "opponent_table_face_down";
+}
+
+public static class CardPlayPresentationTypes
+{
+	public const string DirectTrigger = "direct_trigger";
+	public const string TableOverlay = "table_overlay";
+	public const string TransformAreaTrigger = "transform_area_trigger";
+	public const string LensSplit = "lens_split";
+	public const string TargetedTrigger = "targeted_trigger";
+}
+
 public static class CardTags
 {
 	public const string Fixed = "fixed";
 	public const string Bomb = "bomb";
 	public const string Reward = "reward";
 	public const string Attachment = "attachment";
-}
-
-public static class CardAttachmentModifiers
-{
-	public const string Magnet = "magnet";
-	public const string Double = "double";
-	public const string Overtime = "overtime";
 }
 
 public sealed class CardEffectValues
@@ -242,6 +252,13 @@ public readonly record struct CardTriggerRequest(
 	CardGameEvent Event,
 	int Sequence);
 
+public readonly record struct CardTriggerResolutionKey(
+	string DefinitionId,
+	string Trigger,
+	string EffectType,
+	int SourceTableCardIndex,
+	int ScopeValue);
+
 public interface ICardTriggerProvider
 {
 	IEnumerable<CardTriggerRequest> CollectCardTriggers(CardGameEvent gameEvent, int sequenceStart);
@@ -254,77 +271,121 @@ public sealed class CardEventBus
 	private const int MaxSameTriggerResolutions = 4;
 
 	private readonly List<CardTriggerRequest> _pending = new();
-	private readonly Dictionary<string, int> _resolvedCounts = new(StringComparer.Ordinal);
+	private readonly Dictionary<CardTriggerResolutionKey, int> _resolvedCounts = new();
+	private int _pendingStartIndex;
 	private int _nextSequence;
 
-	public int PendingCount => _pending.Count;
+	public int PendingCount => _pending.Count - _pendingStartIndex;
 
 	public void Clear()
 	{
 		_pending.Clear();
 		_resolvedCounts.Clear();
+		_pendingStartIndex = 0;
 		_nextSequence = 0;
 	}
 
 	public void Publish(CardGameEvent gameEvent, ICardTriggerProvider provider)
 	{
-		if (gameEvent.Depth > MaxChainDepth || _pending.Count >= MaxQueuedTriggers)
+		CompactPendingIfNeeded();
+		if (gameEvent.Depth > MaxChainDepth || PendingCount >= MaxQueuedTriggers)
 		{
 			return;
 		}
 
-		List<CardTriggerRequest> requests = provider
-			.CollectCardTriggers(gameEvent, _nextSequence)
-			.Where(request => !string.IsNullOrWhiteSpace(request.Rule.Trigger)
-				&& !string.IsNullOrWhiteSpace(request.Rule.EffectType))
-			.ToList();
-		_nextSequence += requests.Count;
-
-		foreach (CardTriggerRequest request in requests)
+		int acceptedRequestCount = 0;
+		foreach (CardTriggerRequest request in provider.CollectCardTriggers(gameEvent, _nextSequence))
 		{
-			if (_pending.Count >= MaxQueuedTriggers)
+			if (string.IsNullOrWhiteSpace(request.Rule.Trigger)
+				|| string.IsNullOrWhiteSpace(request.Rule.EffectType))
 			{
-				break;
+				continue;
 			}
 
-			_pending.Add(request);
+			acceptedRequestCount++;
+			if (PendingCount < MaxQueuedTriggers)
+			{
+				_pending.Add(request);
+			}
 		}
 
+		_nextSequence += acceptedRequestCount;
 		SortPending();
 	}
 
 	public bool TryDequeue(out CardTriggerRequest request)
 	{
-		if (_pending.Count == 0)
+		while (PendingCount > 0)
 		{
-			request = default;
-			return false;
+			request = _pending[_pendingStartIndex++];
+			CardTriggerResolutionKey key = BuildTriggerKey(request);
+			_resolvedCounts.TryGetValue(key, out int resolvedCount);
+			CompactPendingIfNeeded();
+			if (resolvedCount >= MaxSameTriggerResolutions)
+			{
+				continue;
+			}
+
+			_resolvedCounts[key] = resolvedCount + 1;
+			return true;
 		}
 
-		request = _pending[0];
-		_pending.RemoveAt(0);
-		string key = BuildTriggerKey(request);
-		_resolvedCounts.TryGetValue(key, out int resolvedCount);
-		if (resolvedCount >= MaxSameTriggerResolutions)
-		{
-			return TryDequeue(out request);
-		}
-
-		_resolvedCounts[key] = resolvedCount + 1;
-		return true;
+		request = default;
+		return false;
 	}
 
 	private void SortPending()
 	{
-		_pending.Sort((a, b) =>
+		int pendingCount = PendingCount;
+		if (pendingCount <= 1)
+		{
+			return;
+		}
+
+		_pending.Sort(_pendingStartIndex, pendingCount, CardTriggerRequestComparer.Instance);
+	}
+
+	private void CompactPendingIfNeeded()
+	{
+		if (_pendingStartIndex == 0)
+		{
+			return;
+		}
+
+		if (_pendingStartIndex >= _pending.Count)
+		{
+			_pending.Clear();
+			_pendingStartIndex = 0;
+			return;
+		}
+
+		if (_pendingStartIndex < 32 && _pendingStartIndex * 2 < _pending.Count)
+		{
+			return;
+		}
+
+		_pending.RemoveRange(0, _pendingStartIndex);
+		_pendingStartIndex = 0;
+	}
+
+	private static CardTriggerResolutionKey BuildTriggerKey(CardTriggerRequest request)
+	{
+		return new CardTriggerResolutionKey(
+			request.Definition.Id,
+			request.Rule.Trigger,
+			request.Rule.EffectType,
+			request.Event.SourceTableCardIndex,
+			request.Event.Depth);
+	}
+
+	private sealed class CardTriggerRequestComparer : IComparer<CardTriggerRequest>
+	{
+		public static readonly CardTriggerRequestComparer Instance = new();
+
+		public int Compare(CardTriggerRequest a, CardTriggerRequest b)
 		{
 			int priorityComparison = b.Rule.Priority.CompareTo(a.Rule.Priority);
 			return priorityComparison != 0 ? priorityComparison : a.Sequence.CompareTo(b.Sequence);
-		});
-	}
-
-	private static string BuildTriggerKey(CardTriggerRequest request)
-	{
-		return $"{request.Definition.Id}:{request.Rule.Trigger}:{request.Rule.EffectType}:{request.Event.SourceTableCardIndex}:{request.Event.Depth}";
+		}
 	}
 }

@@ -17,6 +17,10 @@ public partial class MainMenuOceanDynamics : Control
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Bubble> _bubbles = new();
 	private readonly List<Glint> _glints = new();
+	private readonly Vector2[] _sunbeamPoints = new Vector2[4];
+	private readonly Vector2[] _surfaceWakePoints = new Vector2[56];
+	private readonly Vector2[] _currentRibbonPoints = new Vector2[34];
+	private readonly Vector2[] _causticRibbonPoints = new Vector2[46];
 	private double _time;
 
 	public override void _Ready()
@@ -99,14 +103,11 @@ public partial class MainMenuOceanDynamics : Control
 			float x = Size.X * (0.47f + i * 0.12f + Mathf.Sin(t * 0.08f + i) * 0.015f);
 			float width = Size.X * (0.07f + i * 0.014f);
 			float alpha = 0.062f + Mathf.Sin(t * 0.42f + i * 1.7f) * 0.024f;
-			Vector2[] beam =
-			{
-				new(x - width * 0.3f, 0.0f),
-				new(x + width * 0.8f, 0.0f),
-				new(x + width * 1.65f, Size.Y),
-				new(x - width * 1.1f, Size.Y),
-			};
-			DrawColoredPolygon(beam, new Color(0.74f, 1.0f, 0.96f, Mathf.Max(alpha, 0.0f)));
+			_sunbeamPoints[0] = new Vector2(x - width * 0.3f, 0.0f);
+			_sunbeamPoints[1] = new Vector2(x + width * 0.8f, 0.0f);
+			_sunbeamPoints[2] = new Vector2(x + width * 1.65f, Size.Y);
+			_sunbeamPoints[3] = new Vector2(x - width * 1.1f, Size.Y);
+			DrawColoredPolygon(_sunbeamPoints, new Color(0.74f, 1.0f, 0.96f, Mathf.Max(alpha, 0.0f)));
 		}
 	}
 
@@ -117,17 +118,16 @@ public partial class MainMenuOceanDynamics : Control
 		for (int line = 0; line < 6; line++)
 		{
 			float y = baseY + line * Size.Y * 0.018f;
-			Vector2[] points = new Vector2[56];
-			for (int i = 0; i < points.Length; i++)
+			for (int i = 0; i < _surfaceWakePoints.Length; i++)
 			{
-				float ratio = i / (float)(points.Length - 1);
+				float ratio = i / (float)(_surfaceWakePoints.Length - 1);
 				float x = ratio * Size.X;
 				float wave = Mathf.Sin(ratio * Mathf.Tau * (2.0f + line * 0.22f) + t * (0.46f + line * 0.06f)) * (5.0f + line);
 				float ripple = Mathf.Sin(ratio * Mathf.Tau * 8.0f - t * 0.7f + line) * 1.8f;
-				points[i] = new Vector2(x, y + wave + ripple);
+				_surfaceWakePoints[i] = new Vector2(x, y + wave + ripple);
 			}
 
-			DrawPolyline(points, new Color(0.78f, 1.0f, 0.96f, 0.16f - line * 0.012f), 1.65f, true);
+			DrawPolyline(_surfaceWakePoints, new Color(0.78f, 1.0f, 0.96f, 0.16f - line * 0.012f), 1.65f, true);
 		}
 	}
 
@@ -138,17 +138,16 @@ public partial class MainMenuOceanDynamics : Control
 		{
 			float yBase = Size.Y * (WaterlineRatio + 0.04f + ribbon * 0.07f);
 			float drift = Mathf.PosMod(t * (42.0f + ribbon * 8.0f) + ribbon * Size.X * 0.18f, Size.X * 1.18f) - Size.X * 0.14f;
-			Vector2[] points = new Vector2[34];
-			for (int i = 0; i < points.Length; i++)
+			for (int i = 0; i < _currentRibbonPoints.Length; i++)
 			{
-				float ratio = i / (float)(points.Length - 1);
+				float ratio = i / (float)(_currentRibbonPoints.Length - 1);
 				float x = drift + ratio * Size.X * 0.46f;
 				float y = yBase + ratio * Size.Y * 0.16f + Mathf.Sin(ratio * Mathf.Tau * 1.6f + t * 0.9f + ribbon) * 9.0f;
-				points[i] = new Vector2(x, y);
+				_currentRibbonPoints[i] = new Vector2(x, y);
 			}
 
 			float alpha = 0.07f + Mathf.Sin(t * 0.55f + ribbon) * 0.024f;
-			DrawPolyline(points, new Color(0.62f, 1.0f, 0.94f, Mathf.Max(alpha, 0.025f)), 2.2f, true);
+			DrawPolyline(_currentRibbonPoints, new Color(0.62f, 1.0f, 0.94f, Mathf.Max(alpha, 0.025f)), 2.2f, true);
 		}
 	}
 
@@ -158,15 +157,14 @@ public partial class MainMenuOceanDynamics : Control
 		for (int ribbon = 0; ribbon < 7; ribbon++)
 		{
 			float y = Size.Y * (0.58f + ribbon * 0.045f);
-			Vector2[] points = new Vector2[46];
-			for (int i = 0; i < points.Length; i++)
+			for (int i = 0; i < _causticRibbonPoints.Length; i++)
 			{
-				float ratio = i / (float)(points.Length - 1);
+				float ratio = i / (float)(_causticRibbonPoints.Length - 1);
 				float x = Size.X * (0.35f + ratio * 0.63f);
 				float wave = Mathf.Sin(ratio * Mathf.Tau * 2.4f + t * 0.55f + ribbon) * (8.0f + ribbon * 0.9f);
-				points[i] = new Vector2(x, y + wave);
+				_causticRibbonPoints[i] = new Vector2(x, y + wave);
 			}
-			DrawPolyline(points, new Color(0.66f, 1.0f, 0.9f, 0.08f), 1.6f, true);
+			DrawPolyline(_causticRibbonPoints, new Color(0.66f, 1.0f, 0.9f, 0.08f), 1.6f, true);
 		}
 	}
 

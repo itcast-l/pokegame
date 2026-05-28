@@ -26,8 +26,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<int> targetIndexes = PickLensRevealTargetIndexes(playerIndex, definition.EffectValues);
-		if (targetIndexes.Count == 0)
+		if (!HasLensRevealTargets(playerIndex, definition.EffectValues))
 		{
 			return new PlayCardResult(false, false);
 		}
@@ -74,17 +73,50 @@ public partial class GameBoardScene
 		return result with { CompletesTurn = false };
 	}
 
-	private bool HasLensRevealTargets(int ownerPlayerIndex)
+	private bool HasLensRevealTargets(int ownerPlayerIndex, CardEffectValues effectValues)
 	{
-		return BuildLensRevealTargetCandidates(ownerPlayerIndex, CardEffectValues.Empty).Count > 0;
+		string target = effectValues.GetString(CardEffectValueKeys.Target, CardEffectTargets.OpponentTableFaceDown);
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			if (IsLensRevealTargetCandidate(_tableCards[tableCardIndex], target, ownerPlayerIndex))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private List<int> PickLensRevealTargetIndexes(int ownerPlayerIndex, CardEffectValues effectValues)
 	{
-		List<int> candidates = BuildLensRevealTargetCandidates(ownerPlayerIndex, effectValues);
-		ShuffleLensRevealTargetCandidates(candidates);
-		int targetCount = Math.Min(Mathf.Max(1, effectValues.GetInt(CardEffectValueKeys.Count, LensRevealMaxCards)), candidates.Count);
-		return targetCount == candidates.Count ? candidates : candidates.GetRange(0, targetCount);
+		string target = effectValues.GetString(CardEffectValueKeys.Target, CardEffectTargets.OpponentTableFaceDown);
+		int targetLimit = Mathf.Max(1, effectValues.GetInt(CardEffectValueKeys.Count, LensRevealMaxCards));
+		var targets = new List<int>(Math.Min(targetLimit, _tableCards.Count));
+		int candidateCount = 0;
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!IsLensRevealTargetCandidate(tableCard, target, ownerPlayerIndex))
+			{
+				continue;
+			}
+
+			candidateCount++;
+			if (targets.Count < targetLimit)
+			{
+				targets.Add(tableCardIndex);
+				continue;
+			}
+
+			int replacementIndex = _rng.RandiRange(0, candidateCount - 1);
+			if (replacementIndex < targetLimit)
+			{
+				targets[replacementIndex] = tableCardIndex;
+			}
+		}
+
+		ShuffleLensRevealTargetCandidates(targets);
+		return targets;
 	}
 
 	private void ShuffleLensRevealTargetCandidates(List<int> candidates)
@@ -96,27 +128,15 @@ public partial class GameBoardScene
 		}
 	}
 
-	private List<int> BuildLensRevealTargetCandidates(int ownerPlayerIndex, CardEffectValues effectValues)
+	private static bool IsLensRevealTargetCandidate(TableCard tableCard, string target, int ownerPlayerIndex)
 	{
-		string target = effectValues.GetString(CardEffectValueKeys.Target, "opponent_table_face_down");
-		var candidates = new List<int>();
-		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		if (tableCard.IsFaceUp || !tableCard.Card.HasValue)
 		{
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (tableCard.IsFaceUp || !tableCard.Card.HasValue)
-			{
-				continue;
-			}
-
-			if (target == "opponent_table_face_down" && tableCard.CardOwnerPlayerIndex == ownerPlayerIndex)
-			{
-				continue;
-			}
-
-			candidates.Add(tableCardIndex);
+			return false;
 		}
 
-		return candidates;
+		return target != CardEffectTargets.OpponentTableFaceDown
+			|| tableCard.CardOwnerPlayerIndex != ownerPlayerIndex;
 	}
 
 	private async Task RevealLensTargetCardsAsync(
@@ -129,7 +149,8 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var wispTasks = new List<Task>();
+		Task[] wispTasks = new Task[targetIndexes.Count];
+		int wispTaskCount = 0;
 		for (int targetNumber = 0; targetNumber < targetIndexes.Count; targetNumber++)
 		{
 			int tableCardIndex = targetIndexes[targetNumber];
@@ -139,12 +160,26 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			wispTasks.Add(PlayLensRevealWispFlightAsync(splitGlobalCenter, targetGlobalCenter.Value, targetNumber, tableCardIndex));
+			wispTasks[wispTaskCount++] = PlayLensRevealWispFlightAsync(splitGlobalCenter, targetGlobalCenter.Value, targetNumber, tableCardIndex);
 		}
 
-		if (wispTasks.Count > 0)
+		if (wispTaskCount > 0)
 		{
-			await Task.WhenAll(wispTasks);
+			if (wispTaskCount == wispTasks.Length)
+			{
+				await Task.WhenAll(wispTasks);
+			}
+			else if (wispTaskCount == 1)
+			{
+				await wispTasks[0];
+			}
+			else
+			{
+				Task[] activeWispTasks = new Task[wispTaskCount];
+				Array.Copy(wispTasks, activeWispTasks, wispTaskCount);
+				await Task.WhenAll(activeWispTasks);
+			}
+
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;

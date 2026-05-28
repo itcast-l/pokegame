@@ -12,8 +12,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
@@ -26,7 +25,7 @@ public partial class GameBoardScene
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
 			MouseFilter = MouseFilterEnum.Ignore,
-			Position = cardPositions[tableCardIndex],
+			Position = cardPosition,
 			Size = CardVisualSize,
 			PivotOffset = CardVisualSize / 2.0f,
 			ZIndex = tableCardIndex * 2 + 100,
@@ -74,8 +73,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (tableCardIndex >= cardPositions.Count)
+		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 cardPosition))
 		{
 			return;
 		}
@@ -98,7 +96,7 @@ public partial class GameBoardScene
 		AddChild(pointLabel);
 
 		pointLabel.GlobalPosition = _centerArena.GlobalPosition
-			+ cardPositions[tableCardIndex]
+			+ cardPosition
 			+ new Vector2(0.0f, -TableCardPointPopupTopOffset);
 		Vector2 endPosition = pointLabel.Position + new Vector2(0.0f, -TableCardPointPopupRise);
 
@@ -123,58 +121,95 @@ public partial class GameBoardScene
 
 	private sealed class PairCaptureEdgeFloatHold
 	{
-		public PairCaptureEdgeFloatHold(List<int> tableCardIndexes, List<TextureRect> overlays)
+		public PairCaptureEdgeFloatHold(int firstTableCardIndex, TextureRect firstOverlay)
+			: this(firstTableCardIndex, firstOverlay, -1, null)
 		{
-			TableCardIndexes = tableCardIndexes;
-			Overlays = overlays;
 		}
 
-		public List<int> TableCardIndexes { get; }
-		public List<TextureRect> Overlays { get; }
-
-		public Dictionary<int, Vector2> BuildFlightStartPositionOverrides()
+		public PairCaptureEdgeFloatHold(
+			int firstTableCardIndex,
+			TextureRect firstOverlay,
+			int secondTableCardIndex,
+			TextureRect? secondOverlay)
 		{
-			var positions = new Dictionary<int, Vector2>();
-			for (int index = 0; index < TableCardIndexes.Count && index < Overlays.Count; index++)
+			_firstTableCardIndex = firstTableCardIndex;
+			_firstOverlay = firstOverlay;
+			_secondTableCardIndex = secondTableCardIndex;
+			_secondOverlay = secondOverlay;
+		}
+
+		private readonly int _firstTableCardIndex;
+		private readonly TextureRect _firstOverlay;
+		private readonly int _secondTableCardIndex;
+		private readonly TextureRect? _secondOverlay;
+
+		public bool TryGetFlightStartPositionOverride(int tableCardIndex, out Vector2 globalPosition)
+		{
+			if (tableCardIndex == _firstTableCardIndex && GodotObject.IsInstanceValid(_firstOverlay))
 			{
-				TextureRect overlay = Overlays[index];
-				if (GodotObject.IsInstanceValid(overlay))
-				{
-					positions[TableCardIndexes[index]] = overlay.GlobalPosition;
-				}
+				globalPosition = _firstOverlay.GlobalPosition;
+				return true;
 			}
 
-			return positions;
+			if (tableCardIndex == _secondTableCardIndex
+				&& _secondOverlay != null
+				&& GodotObject.IsInstanceValid(_secondOverlay))
+			{
+				globalPosition = _secondOverlay.GlobalPosition;
+				return true;
+			}
+
+			globalPosition = default;
+			return false;
+		}
+
+		public void RestoreHiddenTableCards(IReadOnlyList<TableCard> tableCards)
+		{
+			RestoreHiddenTableCard(tableCards, _firstTableCardIndex);
+			RestoreHiddenTableCard(tableCards, _secondTableCardIndex);
 		}
 
 		public void QueueFreeOverlays()
 		{
-			foreach (TextureRect overlay in Overlays)
+			if (GodotObject.IsInstanceValid(_firstOverlay))
 			{
-				if (GodotObject.IsInstanceValid(overlay))
-				{
-					overlay.QueueFree();
-				}
+				_firstOverlay.QueueFree();
+			}
+
+			if (_secondOverlay != null && GodotObject.IsInstanceValid(_secondOverlay))
+			{
+				_secondOverlay.QueueFree();
+			}
+		}
+
+		private static void RestoreHiddenTableCard(IReadOnlyList<TableCard> tableCards, int tableCardIndex)
+		{
+			if (tableCardIndex >= 0 && tableCardIndex < tableCards.Count)
+			{
+				tableCards[tableCardIndex].IsHiddenDuringCapture = false;
 			}
 		}
 	}
 
 	private async Task<PairCaptureEdgeFloatHold?> PlayPairCaptureEdgeFloatHoldAnimationAsync(int captureStartIndex, int playedTableCardIndex)
 	{
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		var tableCardIndexes = new List<int>();
-		var overlays = new List<TextureRect>();
-		foreach (int tableCardIndex in BuildPairCaptureEdgeIndexes(captureStartIndex, playedTableCardIndex))
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
+		int firstTableCardIndex = -1;
+		int secondTableCardIndex = -1;
+		TextureRect? firstOverlay = null;
+		TextureRect? secondOverlay = null;
+
+		void TryAddEdgeFloatOverlay(int tableCardIndex)
 		{
-			if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count || tableCardIndex >= cardPositions.Count)
+			if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 			{
-				continue;
+				return;
 			}
 
 			Texture2D? texture = GetVisibleTableCardTexture(_tableCards[tableCardIndex]);
 			if (texture == null)
 			{
-				continue;
+				return;
 			}
 
 			var overlay = new TextureRect
@@ -191,13 +226,27 @@ public partial class GameBoardScene
 				ZAsRelative = false,
 			};
 			AddChild(overlay);
-			overlay.GlobalPosition = _centerArena.GlobalPosition + cardPositions[tableCardIndex];
+			overlay.GlobalPosition = _centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect);
 			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
-			tableCardIndexes.Add(tableCardIndex);
-			overlays.Add(overlay);
+			if (firstOverlay == null)
+			{
+				firstTableCardIndex = tableCardIndex;
+				firstOverlay = overlay;
+			}
+			else
+			{
+				secondTableCardIndex = tableCardIndex;
+				secondOverlay = overlay;
+			}
 		}
 
-		if (overlays.Count == 0)
+		TryAddEdgeFloatOverlay(captureStartIndex);
+		if (playedTableCardIndex != captureStartIndex)
+		{
+			TryAddEdgeFloatOverlay(playedTableCardIndex);
+		}
+
+		if (firstOverlay == null)
 		{
 			return null;
 		}
@@ -207,40 +256,29 @@ public partial class GameBoardScene
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
-		foreach (TextureRect overlay in overlays)
+
+		void TweenOverlay(TextureRect overlay)
 		{
 			Vector2 startGlobalPosition = overlay.GlobalPosition;
 			tween.TweenProperty(overlay, "global_position", startGlobalPosition + new Vector2(0.0f, -PairCaptureEdgeFloatRise), PairCaptureEdgeFloatSeconds);
 			tween.TweenProperty(overlay, "scale", Vector2.One * PairCaptureEdgeFloatScale, PairCaptureEdgeFloatSeconds);
 		}
 
+		TweenOverlay(firstOverlay);
+		if (secondOverlay != null)
+		{
+			TweenOverlay(secondOverlay);
+		}
+
 		await ToSignal(tween, Tween.SignalName.Finished);
-		return new PairCaptureEdgeFloatHold(tableCardIndexes, overlays);
+		return new PairCaptureEdgeFloatHold(firstTableCardIndex, firstOverlay, secondTableCardIndex, secondOverlay);
 	}
 
 	private void RestorePairCaptureEdgeFloatHold(PairCaptureEdgeFloatHold hold)
 	{
-		foreach (int tableCardIndex in hold.TableCardIndexes)
-		{
-			if (tableCardIndex >= 0 && tableCardIndex < _tableCards.Count)
-			{
-				_tableCards[tableCardIndex].IsHiddenDuringCapture = false;
-			}
-		}
-
+		hold.RestoreHiddenTableCards(_tableCards);
 		hold.QueueFreeOverlays();
 		RenderTableCards();
-	}
-
-	private static List<int> BuildPairCaptureEdgeIndexes(int captureStartIndex, int playedTableCardIndex)
-	{
-		var indexes = new List<int> { captureStartIndex };
-		if (playedTableCardIndex != captureStartIndex)
-		{
-			indexes.Add(playedTableCardIndex);
-		}
-
-		return indexes;
 	}
 
 	private List<CapturedTableCardVisual> BuildCapturedTableCardVisuals(
@@ -248,7 +286,7 @@ public partial class GameBoardScene
 		bool includeQuestionCard,
 		bool scoringCardsOnly = false,
 		HashSet<int>? extraTableCardIndexes = null,
-		Dictionary<int, Vector2>? globalPositionOverrides = null,
+		PairCaptureEdgeFloatHold? flightStartOverrides = null,
 		bool includeCaptureStartScoring = false,
 		int scorePlayerIndex = -1)
 	{
@@ -258,8 +296,8 @@ public partial class GameBoardScene
 			return visuals;
 		}
 
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		for (int tableCardIndex = Math.Min(_tableCards.Count, cardPositions.Count) - 1; tableCardIndex >= 0; tableCardIndex--)
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
+		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
 		{
 			bool isBaseCapturedIndex = tableCardIndex >= captureStartIndex;
 			bool isExtraCapturedIndex = extraTableCardIndexes != null && extraTableCardIndexes.Contains(tableCardIndex);
@@ -332,9 +370,9 @@ public partial class GameBoardScene
 			visuals.Add(new CapturedTableCardVisual(
 				startTexture,
 				itemOverlayTexture,
-				globalPositionOverrides != null && globalPositionOverrides.TryGetValue(tableCardIndex, out Vector2 overrideGlobalPosition)
+				flightStartOverrides != null && flightStartOverrides.TryGetFlightStartPositionOverride(tableCardIndex, out Vector2 overrideGlobalPosition)
 					? overrideGlobalPosition
-					: _centerArena.GlobalPosition + cardPositions[tableCardIndex],
+					: _centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect),
 				tableCardIndex * 2));
 		}
 
@@ -401,15 +439,15 @@ public partial class GameBoardScene
 		}
 		RenderTableCards();
 
-		var flightTasks = new List<Task>();
+		Task[] flightTasks = new Task[capturedCardVisuals.Count];
 		Vector2 targetGlobalPosition = GetCardPileCaptureTargetGlobalPosition(targetPile);
 		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count; visualIndex++)
 		{
-			flightTasks.Add(PlayCapturedCardFlightAsync(
+			flightTasks[visualIndex] = PlayCapturedCardFlightAsync(
 				capturedCardVisuals[visualIndex],
 				targetGlobalPosition,
 				playerIndex,
-				visualIndex * flightStaggerSeconds));
+				visualIndex * flightStaggerSeconds);
 		}
 
 		await Task.WhenAll(flightTasks);

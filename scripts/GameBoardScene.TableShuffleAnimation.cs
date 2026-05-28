@@ -27,7 +27,7 @@ public partial class GameBoardScene
 		}
 		RenderTableCards();
 
-		var flightCards = new List<Control>(shuffledVisuals.Count);
+		Control?[] flightCards = new Control?[shuffledVisuals.Count];
 		TableShuffleVortex? vortex = null;
 		try
 		{
@@ -40,7 +40,7 @@ public partial class GameBoardScene
 			{
 				ShuffledTableCardVisual visual = shuffledVisuals[visualIndex];
 				Control flightCard = CreateShuffledTableCardFlight(visual, visualIndex);
-				flightCards.Add(flightCard);
+				flightCards[visualIndex] = flightCard;
 				gatherTween.TweenMethod(
 					Callable.From<float>(progress => UpdateShuffledTableCardGatherFlight(flightCard, visual, visualIndex, progress)),
 					0.0f,
@@ -65,7 +65,12 @@ public partial class GameBoardScene
 			for (int visualIndex = 0; visualIndex < shuffledVisuals.Count; visualIndex++)
 			{
 				ShuffledTableCardVisual visual = shuffledVisuals[visualIndex];
-				Control flightCard = flightCards[visualIndex];
+				Control? flightCard = flightCards[visualIndex];
+				if (flightCard == null)
+				{
+					continue;
+				}
+
 				scatterTween.TweenMethod(
 					Callable.From<float>(progress => UpdateShuffledTableCardScatterFlight(flightCard, visual, visualIndex, progress)),
 					0.0f,
@@ -87,9 +92,9 @@ public partial class GameBoardScene
 				tableCard.IsHiddenDuringCapture = false;
 			}
 
-			foreach (Control flightCard in flightCards)
+			foreach (Control? flightCard in flightCards)
 			{
-				if (GodotObject.IsInstanceValid(flightCard))
+				if (flightCard != null && GodotObject.IsInstanceValid(flightCard))
 				{
 					flightCard.QueueFree();
 				}
@@ -120,15 +125,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var hiddenStates = new List<bool>(_tableCards.Count);
-		foreach (TableCard tableCard in _tableCards)
+		bool[] hiddenStates = new bool[_tableCards.Count];
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
-			hiddenStates.Add(tableCard.IsHiddenDuringCapture);
-			tableCard.IsHiddenDuringCapture = true;
+			hiddenStates[tableCardIndex] = _tableCards[tableCardIndex].IsHiddenDuringCapture;
+			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 		}
 		RenderTableCards();
 
-		var flightCards = new List<Control>(tideShiftVisuals.Count);
+		Control?[] flightCards = new Control?[tideShiftVisuals.Count];
 		try
 		{
 			Tween tween = CreateTween();
@@ -145,7 +150,7 @@ public partial class GameBoardScene
 					flightCard.ZIndex += _tableCards.Count * 4;
 				}
 
-				flightCards.Add(flightCard);
+				flightCards[visualIndex] = flightCard;
 
 				float delay = wrapsToEnd
 					? 0.0f
@@ -167,15 +172,15 @@ public partial class GameBoardScene
 		}
 		finally
 		{
-			int restoreCount = Math.Min(hiddenStates.Count, _tableCards.Count);
+			int restoreCount = Math.Min(hiddenStates.Length, _tableCards.Count);
 			for (int index = 0; index < restoreCount; index++)
 			{
 				_tableCards[index].IsHiddenDuringCapture = hiddenStates[index];
 			}
 
-			foreach (Control flightCard in flightCards)
+			foreach (Control? flightCard in flightCards)
 			{
-				if (GodotObject.IsInstanceValid(flightCard))
+				if (flightCard != null && GodotObject.IsInstanceValid(flightCard))
 				{
 					flightCard.QueueFree();
 				}
@@ -190,12 +195,8 @@ public partial class GameBoardScene
 
 	private List<ShuffledTableCardVisual> BuildMantaRayTideShiftTableMoveVisuals()
 	{
-		var visuals = new List<ShuffledTableCardVisual>();
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (cardPositions.Count != _tableCards.Count)
-		{
-			return visuals;
-		}
+		var visuals = new List<ShuffledTableCardVisual>(_tableCards.Count);
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 
 		int lastIndex = _tableCards.Count - 1;
 		for (int sourceIndex = 0; sourceIndex < _tableCards.Count; sourceIndex++)
@@ -204,8 +205,8 @@ public partial class GameBoardScene
 			int zIndex = sourceIndex == 0 ? _tableCards.Count * 2 + 4 : sourceIndex * 2;
 			ShuffledTableCardVisual? visual = BuildShuffledTableCardVisual(
 				_tableCards[sourceIndex],
-				_centerArena.GlobalPosition + cardPositions[sourceIndex],
-				_centerArena.GlobalPosition + cardPositions[targetIndex],
+				_centerArena.GlobalPosition + GetTableCardPosition(sourceIndex, tableLayoutRect),
+				_centerArena.GlobalPosition + GetTableCardPosition(targetIndex, tableLayoutRect),
 				Vector2.Zero,
 				zIndex);
 			if (visual.HasValue)
@@ -219,18 +220,8 @@ public partial class GameBoardScene
 
 	private List<ShuffledTableCardVisual> BuildShuffledTableCardVisuals(IReadOnlyList<TableCard> shuffledTableCards)
 	{
-		var visuals = new List<ShuffledTableCardVisual>();
-		List<Vector2> cardPositions = BuildTableCardPositions(_tableCards.Count);
-		if (cardPositions.Count != _tableCards.Count)
-		{
-			return visuals;
-		}
-
-		var targetIndexesByCard = new Dictionary<TableCard, int>();
-		for (int targetIndex = 0; targetIndex < shuffledTableCards.Count; targetIndex++)
-		{
-			targetIndexesByCard[shuffledTableCards[targetIndex]] = targetIndex;
-		}
+		var visuals = new List<ShuffledTableCardVisual>(_tableCards.Count);
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 		Vector2 shuffleCenterGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(Vector2.Zero) + CardVisualSize / 2.0f;
 
 		for (int sourceIndex = 0; sourceIndex < _tableCards.Count; sourceIndex++)
@@ -241,15 +232,16 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			if (!targetIndexesByCard.TryGetValue(tableCard, out int targetIndex))
+			int targetIndex = FindTableCardReferenceIndex(shuffledTableCards, tableCard);
+			if (targetIndex < 0)
 			{
 				continue;
 			}
 
 			ShuffledTableCardVisual? visual = BuildShuffledTableCardVisual(
 				tableCard,
-				_centerArena.GlobalPosition + cardPositions[sourceIndex],
-				_centerArena.GlobalPosition + cardPositions[targetIndex],
+				_centerArena.GlobalPosition + GetTableCardPosition(sourceIndex, tableLayoutRect),
+				_centerArena.GlobalPosition + GetTableCardPosition(targetIndex, tableLayoutRect),
 				shuffleCenterGlobalPosition,
 				sourceIndex * 2);
 			if (visual.HasValue)
@@ -259,6 +251,19 @@ public partial class GameBoardScene
 		}
 
 		return visuals;
+	}
+
+	private static int FindTableCardReferenceIndex(IReadOnlyList<TableCard> tableCards, TableCard target)
+	{
+		for (int index = 0; index < tableCards.Count; index++)
+		{
+			if (ReferenceEquals(tableCards[index], target))
+			{
+				return index;
+			}
+		}
+
+		return -1;
 	}
 
 	private ShuffledTableCardVisual? BuildShuffledTableCardVisual(

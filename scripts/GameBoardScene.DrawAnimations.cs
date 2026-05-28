@@ -335,7 +335,25 @@ public partial class GameBoardScene
 
 	private void ClearHiddenHandDisplaySlots(int playerIndex)
 	{
-		_hiddenHandDisplaySlots.RemoveWhere(key => key.StartsWith($"{playerIndex}:"));
+		if (_hiddenHandDisplaySlots.Count == 0)
+		{
+			return;
+		}
+
+		_shiftedHiddenHandDisplaySlots.Clear();
+		foreach (string key in _hiddenHandDisplaySlots)
+		{
+			if (TryParseHandDisplaySlotKey(key, out int keyPlayerIndex, out _) && keyPlayerIndex == playerIndex)
+			{
+				_shiftedHiddenHandDisplaySlots.Add(key);
+			}
+		}
+
+		foreach (string key in _shiftedHiddenHandDisplaySlots)
+		{
+			_hiddenHandDisplaySlots.Remove(key);
+		}
+		_shiftedHiddenHandDisplaySlots.Clear();
 	}
 
 	private static string BuildHandDisplaySlotKey(int playerIndex, int displayIndex)

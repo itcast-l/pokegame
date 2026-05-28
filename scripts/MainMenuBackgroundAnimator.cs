@@ -3,6 +3,8 @@ using Godot;
 
 public partial class MainMenuBackgroundAnimator : TextureRect
 {
+	private static readonly StringName BackgroundAnimationName = "main_menu_ocean_background";
+
 	[Export]
 	public string frame_pattern = "res://art/menu/main_menu_ocean_frames/frame-{0:000}.png";
 
@@ -17,9 +19,8 @@ public partial class MainMenuBackgroundAnimator : TextureRect
 
 	private Texture2D[] _frames = Array.Empty<Texture2D>();
 	private Texture2D? _staticTexture;
+	private AnimationPlayer? _animationPlayer;
 	private bool _motionEnabled = true;
-	private double _elapsed;
-	private int _frameIndex;
 
 	public override void _Ready()
 	{
@@ -35,25 +36,19 @@ public partial class MainMenuBackgroundAnimator : TextureRect
 			Texture = _frames[0];
 		}
 
-		UpdateProcessingState();
-	}
-
-	public override void _Process(double delta)
-	{
-		if (!_motionEnabled || _frames.Length <= 1 || frames_per_second <= 0.0f)
+		if (_frames.Length > 1 && frames_per_second > 0.0f)
 		{
-			return;
+			_animationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? CreateAnimationPlayer();
+			FrameAnimationHelpers.ConfigureTextureAnimation(
+				_animationPlayer,
+				BackgroundAnimationName,
+				new NodePath(".:texture"),
+				_frames,
+				1.0 / frames_per_second,
+				loops: true);
 		}
 
-		_elapsed += delta * Mathf.Max(motion_scale, 0.0f);
-		int nextFrameIndex = Mathf.PosMod((int)Math.Floor(_elapsed * frames_per_second), _frames.Length);
-		if (nextFrameIndex == _frameIndex)
-		{
-			return;
-		}
-
-		_frameIndex = nextFrameIndex;
-		Texture = _frames[_frameIndex];
+		UpdateAnimationPlayback();
 	}
 
 	public void SetMotionEnabled(bool enabled)
@@ -61,20 +56,42 @@ public partial class MainMenuBackgroundAnimator : TextureRect
 		_motionEnabled = enabled;
 		if (!_motionEnabled)
 		{
-			_elapsed = 0.0;
-			_frameIndex = 0;
+			_animationPlayer?.Stop();
 			Texture = _staticTexture ?? (_frames.Length > 0 ? _frames[0] : Texture);
 		}
-		else if (_frames.Length > 0)
-		{
-			Texture = _frames[_frameIndex];
-		}
 
-		UpdateProcessingState();
+		UpdateAnimationPlayback();
 	}
 
-	private void UpdateProcessingState()
+	private AnimationPlayer CreateAnimationPlayer()
 	{
-		SetProcess(_motionEnabled && _frames.Length > 1 && frames_per_second > 0.0f);
+		var animationPlayer = new AnimationPlayer
+		{
+			Name = "AnimationPlayer",
+			RootNode = new NodePath(".."),
+		};
+		AddChild(animationPlayer);
+		return animationPlayer;
+	}
+
+	private void UpdateAnimationPlayback()
+	{
+		if (_animationPlayer == null || _frames.Length <= 1 || frames_per_second <= 0.0f)
+		{
+			return;
+		}
+
+		_animationPlayer.SpeedScale = Mathf.Max(motion_scale, 0.0f);
+		if (!_motionEnabled || Mathf.IsZeroApprox(_animationPlayer.SpeedScale))
+		{
+			_animationPlayer.Stop();
+			Texture = _staticTexture ?? _frames[0];
+			return;
+		}
+
+		if (!_animationPlayer.IsPlaying())
+		{
+			_animationPlayer.Play(BackgroundAnimationName);
+		}
 	}
 }

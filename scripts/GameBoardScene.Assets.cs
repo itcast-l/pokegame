@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class GameBoardScene
@@ -46,23 +48,51 @@ public partial class GameBoardScene
 	private void LoadAdventureEnemyDamageEffectTextures()
 	{
 		_adventureEnemyDamageEffectFrames.Clear();
-		Texture2D[] frames = adventure_enemy_avatar_id switch
-		{
-			FishAdventureEnemyAvatarId => FishAdventureDamageEffectFrames,
-			LanternfishAdventureEnemyAvatarId => LanternfishAdventureDamageEffectFrames,
-			ShrimpAdventureEnemyAvatarId => ShrimpAdventureDamageEffectFrames,
-			CrabAdventureEnemyAvatarId => CrabAdventureDamageEffectFrames,
-			JellyfishAdventureEnemyAvatarId => JellyfishAdventureDamageEffectFrames,
-			GardenEelAdventureEnemyAvatarId => GardenEelAdventureDamageEffectFrames,
-			SeaSlugAdventureEnemyAvatarId => SeaSlugAdventureDamageEffectFrames,
-			NautilusAdventureEnemyAvatarId => NautilusAdventureDamageEffectFrames,
-			NarwhalAdventureEnemyAvatarId => NarwhalAdventureDamageEffectFrames,
-			DragonPrinceAdventureEnemyAvatarId => DragonPrinceAdventureDamageEffectFrames,
-			DragonQueenAdventureEnemyAvatarId => DragonQueenAdventureDamageEffectFrames,
-			LeafySeadragonAdventureEnemyAvatarId => LeafySeadragonCollectAttackEffectFrames,
-			_ => DefaultAdventureDamageEffectFrames,
-		};
+		_dragonPrinceDamageHitFlightFrames.Clear();
+		_dragonPrinceDamageHitImpactFrames.Clear();
+		CharacterAvatarDefinition enemyDefinition = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id);
+		Texture2D[] frames = !string.IsNullOrWhiteSpace(enemyDefinition.DamageEffectFramePattern)
+			? FrameAnimationHelpers.LoadTextureFrames(
+				enemyDefinition.DamageEffectFramePattern,
+				Mathf.Max(1, enemyDefinition.DamageEffectFrameCount),
+				$"{enemyDefinition.Id} adventure damage effect",
+				enemyDefinition.DamageEffectPreferImageFile)
+			: DefaultAdventureDamageEffectFrames;
 		_adventureEnemyDamageEffectFrames.AddRange(frames);
+		CacheDragonPrinceDamageHitFrameSlices(enemyDefinition);
+	}
+
+	private void CacheDragonPrinceDamageHitFrameSlices(CharacterAvatarDefinition enemyDefinition)
+	{
+		if (!string.Equals(enemyDefinition.AttackEffectStyle, AdventureAttackEffectStyles.DragonPrinceHit, StringComparison.Ordinal)
+			|| _adventureEnemyDamageEffectFrames.Count == 0)
+		{
+			return;
+		}
+
+		int flightFrameCount = Math.Min(DragonPrinceDamageHitFlightFrameCount, _adventureEnemyDamageEffectFrames.Count);
+		AddFrameSlice(_adventureEnemyDamageEffectFrames, 0, flightFrameCount, _dragonPrinceDamageHitFlightFrames);
+		AddFrameSlice(
+			_adventureEnemyDamageEffectFrames,
+			flightFrameCount,
+			_adventureEnemyDamageEffectFrames.Count - flightFrameCount,
+			_dragonPrinceDamageHitImpactFrames);
+		if (_dragonPrinceDamageHitImpactFrames.Count == 0)
+		{
+			_dragonPrinceDamageHitImpactFrames.Add(_adventureEnemyDamageEffectFrames[^1]);
+		}
+	}
+
+	private static void AddFrameSlice(IReadOnlyList<Texture2D> frames, int startIndex, int count, List<Texture2D> target)
+	{
+		for (int index = 0; index < count; index++)
+		{
+			int frameIndex = startIndex + index;
+			if (frameIndex >= 0 && frameIndex < frames.Count)
+			{
+				target.Add(frames[frameIndex]);
+			}
+		}
 	}
 
 	private void LoadQuestionCardTransformTextures()
@@ -79,10 +109,25 @@ public partial class GameBoardScene
 
 	private void LoadDragonPrinceSpecialJackTexture()
 	{
-		_dragonPrinceSpecialJackTexture = GD.Load<Texture2D>(DragonPrinceSpecialJackTexturePath);
+		_dragonPrinceSpecialJackTexture = null;
+		_dragonPrinceSpecialJackRank = string.Empty;
+		if (!adventure_mode || !CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).HasAbility(AdventureEnemyAbilities.DragonPrince))
+		{
+			return;
+		}
+
+		string texturePath = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.SpecialJackTexturePath, string.Empty);
+		_dragonPrinceSpecialJackRank = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.SpecialJackRank, string.Empty);
+		if (string.IsNullOrWhiteSpace(texturePath) || string.IsNullOrWhiteSpace(_dragonPrinceSpecialJackRank))
+		{
+			GD.PushWarning($"Missing dragon prince special card ability values for {adventure_enemy_avatar_id}.");
+			return;
+		}
+
+		_dragonPrinceSpecialJackTexture = GD.Load<Texture2D>(texturePath);
 		if (_dragonPrinceSpecialJackTexture == null)
 		{
-			GD.PushWarning($"Missing dragon prince special J texture: {DragonPrinceSpecialJackTexturePath}");
+			GD.PushWarning($"Missing dragon prince special card texture: {texturePath}");
 		}
 	}
 
@@ -100,22 +145,23 @@ public partial class GameBoardScene
 
 	private void LoadAttachmentCardOverlayTextures()
 	{
-		_magnetCardOverlayTexture = GD.Load<Texture2D>(MagnetCardOverlayPath);
-		if (_magnetCardOverlayTexture == null)
+		_itemAttachmentOverlaysById.Clear();
+		foreach (string itemCardId in _itemCardCatalog.AllIds)
 		{
-			GD.PushWarning($"Missing magnet card overlay texture: {MagnetCardOverlayPath}");
-		}
+			if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+				|| string.IsNullOrWhiteSpace(definition.AttachmentOverlayTexturePath))
+			{
+				continue;
+			}
 
-		_doubleCardOverlayTexture = GD.Load<Texture2D>(DoubleCardOverlayPath);
-		if (_doubleCardOverlayTexture == null)
-		{
-			GD.PushWarning($"Missing double card overlay texture: {DoubleCardOverlayPath}");
-		}
+			Texture2D? overlayTexture = GD.Load<Texture2D>(definition.AttachmentOverlayTexturePath);
+			if (overlayTexture == null)
+			{
+				GD.PushWarning($"Missing item attachment overlay texture for {itemCardId}: {definition.AttachmentOverlayTexturePath}");
+				continue;
+			}
 
-		_overtimeCardOverlayTexture = GD.Load<Texture2D>(OvertimeCardOverlayPath);
-		if (_overtimeCardOverlayTexture == null)
-		{
-			GD.PushWarning($"Missing overtime card overlay texture: {OvertimeCardOverlayPath}");
+			_itemAttachmentOverlaysById[itemCardId] = new ItemAttachmentOverlay(overlayTexture, definition.AttachmentOverlayPriority);
 		}
 
 		_slimeCardOverlayTexture = GD.Load<Texture2D>(SlimeCardOverlayPath);
@@ -133,6 +179,12 @@ public partial class GameBoardScene
 
 	private void MarkAnimatedCardBack(TextureRect cardBack)
 	{
+		if (cardBack.HasMeta(CardBackAnimatedMeta))
+		{
+			SetAnimatedCardBackPlayback(cardBack, true);
+			return;
+		}
+
 		cardBack.SetMeta(CardBackAnimatedMeta, true);
 		if (CardBackFrames.Length <= 1)
 		{
@@ -153,6 +205,29 @@ public partial class GameBoardScene
 			1.0 / CardBackAnimationFps,
 			loops: true);
 		animationPlayer.Play("card_back_frames");
+	}
+
+	private static void SetAnimatedCardBackPlayback(TextureRect cardBack, bool shouldPlay)
+	{
+		if (cardBack.GetNodeOrNull<AnimationPlayer>("CardBackAnimationPlayer") is not AnimationPlayer animationPlayer)
+		{
+			return;
+		}
+
+		if (shouldPlay)
+		{
+			if (!animationPlayer.IsPlaying())
+			{
+				animationPlayer.Play("card_back_frames");
+			}
+
+			return;
+		}
+
+		if (animationPlayer.IsPlaying())
+		{
+			animationPlayer.Stop();
+		}
 	}
 
 	private void LoadItemCardTextures()
@@ -193,24 +268,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return itemCardId switch
-		{
-			JackItemCardId or QueenItemCardId or KingItemCardId => false,
-			_ => _itemCardCatalog.IsEnabled(itemCardId),
-		};
+		return _itemCardCatalog.IsEnabled(itemCardId);
 	}
 
 	private static bool IsExcludedDeckRank(string rank)
 	{
-		if (ExcludedDeckRanks.Contains(rank))
-		{
-			return true;
-		}
-
-		int suffixStartIndex = rank.LastIndexOf('_') + 1;
-		return suffixStartIndex > 0
-			&& suffixStartIndex < rank.Length
-			&& ExcludedDeckRanks.Contains(rank[suffixStartIndex..]);
+		return CardRankCatalog.ShouldExcludeFromStandardDeck(rank);
 	}
 
 	private void LoadItemCardEnabledStates()
@@ -230,7 +293,7 @@ public partial class GameBoardScene
 			}
 
 			_enabledSceneItemCardIds.Add(itemCardId);
-			_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, _itemCardCatalog.GetDescriptionKey(itemCardId));
+			_itemCardDescriptions[itemCardId] = GetItemDescription(_itemCardCatalog.GetDescriptionKey(itemCardId));
 		}
 	}
 }

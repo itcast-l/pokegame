@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -89,13 +88,11 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		List<string> rewardItemCardIds = BuildEnabledQuestionRewardItemCardIds();
-		if (rewardItemCardIds.Count == 0)
+		string itemCardId = PickQuestionRewardItemCardId();
+		if (string.IsNullOrEmpty(itemCardId))
 		{
 			return null;
 		}
-
-		string itemCardId = rewardItemCardIds[_rng.RandiRange(0, rewardItemCardIds.Count - 1)];
 
 		ItemCard? itemCard = CreateItemCard(itemCardId);
 		if (!itemCard.HasValue)
@@ -120,24 +117,36 @@ public partial class GameBoardScene
 		return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
 	}
 
-	private List<string> BuildEnabledQuestionRewardItemCardIds()
+	private string PickQuestionRewardItemCardId()
 	{
 		if (debug_random_item_cards_are_magnet)
 		{
-			return IsSpecialItemCardEnabled(MagnetItemCardId)
-				? new List<string> { MagnetItemCardId }
-				: new List<string>();
+			return IsSpecialItemCardEnabled(MagnetItemCardId) ? MagnetItemCardId : string.Empty;
 		}
 
-		var rewardItemCardIds = new List<string>();
+		string selectedItemCardId = string.Empty;
+		int totalWeight = 0;
 		foreach (string itemCardId in _itemCardCatalog.RewardIds)
 		{
-			if (IsSpecialItemCardEnabled(itemCardId))
+			if (!IsSpecialItemCardEnabled(itemCardId)
+				|| !_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
 			{
-				rewardItemCardIds.Add(itemCardId);
+				continue;
+			}
+
+			int weight = Math.Max(0, definition.Weight);
+			if (weight == 0)
+			{
+				continue;
+			}
+
+			totalWeight += weight;
+			if (_rng.RandiRange(1, totalWeight) <= weight)
+			{
+				selectedItemCardId = itemCardId;
 			}
 		}
 
-		return rewardItemCardIds;
+		return selectedItemCardId;
 	}
 }

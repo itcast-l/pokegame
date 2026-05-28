@@ -18,8 +18,8 @@ public partial class GameBoardScene
 			return;
 		}
 
-		List<TextureRect> originalCards = GetVisiblePileCards(pile);
-		if (originalCards.Count == 0)
+		int originalCardMask = GetVisiblePileCardMask(pile);
+		if (originalCardMask == 0)
 		{
 			return;
 		}
@@ -29,9 +29,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Label? countLabel = pile.GetNodeOrNull<Label>("CardCountLabel");
+		Label? countLabel = pile.GetNodeOrNull<Label>(CardCountLabelNodeName);
 		bool countLabelVisible = countLabel != null && countLabel.Visible;
-		SetOriginalPileVisualsVisible(originalCards, countLabel, false);
+		SetOriginalPileVisualsVisible(pile, originalCardMask, countLabel, false);
 
 		Vector2 shuffleBasePosition = (CardPileSize - DeckShuffleVisualSize) / 2.0f;
 		float shuffleBaseRotation = GetCardRotationDegreesForPlayer(playerIndex);
@@ -64,7 +64,7 @@ public partial class GameBoardScene
 				shuffleRoot.QueueFree();
 			}
 
-			SetOriginalPileVisualsVisible(originalCards, countLabel, true);
+			SetOriginalPileVisualsVisible(pile, originalCardMask, countLabel, true);
 			if (countLabel != null)
 			{
 				countLabel.Visible = countLabelVisible;
@@ -89,27 +89,36 @@ public partial class GameBoardScene
 		};
 	}
 
-	private static List<TextureRect> GetVisiblePileCards(Control pile)
+	private static int GetVisiblePileCardMask(Control pile)
 	{
-		var cards = new List<TextureRect>();
-		foreach (Node child in pile.GetChildren())
+		int cardMask = 0;
+		for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 		{
-			if (child is TextureRect textureRect && textureRect.HasMeta(CardBackAnimatedMeta))
+			if (pile.GetNodeOrNull<TextureRect>(PileCardNodeNames[cardIndex]) is TextureRect textureRect
+				&& textureRect.Visible
+				&& textureRect.HasMeta(CardBackAnimatedMeta))
 			{
-				cards.Add(textureRect);
+				cardMask |= 1 << cardIndex;
 			}
 		}
 
-		return cards;
+		return cardMask;
 	}
 
-	private static void SetOriginalPileVisualsVisible(IReadOnlyList<TextureRect> originalCards, Label? countLabel, bool visible)
+	private static void SetOriginalPileVisualsVisible(Control pile, int originalCardMask, Label? countLabel, bool visible)
 	{
-		foreach (TextureRect card in originalCards)
+		for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 		{
+			if ((originalCardMask & (1 << cardIndex)) == 0
+				|| pile.GetNodeOrNull<TextureRect>(PileCardNodeNames[cardIndex]) is not TextureRect card)
+			{
+				continue;
+			}
+
 			if (GodotObject.IsInstanceValid(card))
 			{
 				card.Visible = visible;
+				SetAnimatedCardBackPlayback(card, visible);
 			}
 		}
 
@@ -145,7 +154,7 @@ public partial class GameBoardScene
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Cubic);
 		tween.SetEase(Tween.EaseType.Out);
-		TweenDeckShuffleFramePairs(tween, currentSprite, nextSprite, shuffleFrames, repeatCount, frameSeconds);
+		PlayDeckShuffleFramePairs(shuffleRoot, currentSprite, nextSprite, shuffleFrames, repeatCount, frameSeconds);
 		tween.TweenProperty(shuffleRoot, "modulate:a", 1.0f, animationSeconds * 0.16f);
 		tween.TweenProperty(shuffleRoot, "modulate:a", 0.0f, animationSeconds * 0.14f).SetDelay(animationSeconds * 0.86f);
 		if (useMotion)
@@ -174,31 +183,62 @@ public partial class GameBoardScene
 		await ToSignal(tween, Tween.SignalName.Finished);
 	}
 
-	private static void TweenDeckShuffleFramePairs(
-		Tween tween,
+	private static void PlayDeckShuffleFramePairs(
+		Control shuffleRoot,
 		TextureRect currentSprite,
 		TextureRect nextSprite,
 		IReadOnlyList<Texture2D> shuffleFrames,
 		int repeatCount,
 		float frameSeconds)
 	{
-		if (shuffleFrames.Count == 0)
+		if (shuffleFrames.Count == 0 || repeatCount <= 0 || frameSeconds <= 0.0f)
 		{
 			return;
 		}
 
 		int totalSlots = repeatCount * shuffleFrames.Count;
+		var animationPlayer = new AnimationPlayer
+		{
+			Name = "DeckShuffleFrameAnimationPlayer",
+			RootNode = new NodePath(".."),
+		};
+		shuffleRoot.AddChild(animationPlayer);
+		AnimationLibrary library = new();
+		Animation animation = new()
+		{
+			Length = totalSlots * frameSeconds,
+			LoopMode = Animation.LoopModeEnum.None,
+		};
+
+		int currentTextureTrack = AddDiscreteValueTrack(animation, new NodePath($"{currentSprite.Name}:texture"));
+		int nextTextureTrack = AddDiscreteValueTrack(animation, new NodePath($"{nextSprite.Name}:texture"));
+		int currentAlphaTrack = AddLinearValueTrack(animation, new NodePath($"{currentSprite.Name}:modulate:a"));
+		int nextAlphaTrack = AddLinearValueTrack(animation, new NodePath($"{nextSprite.Name}:modulate:a"));
+
 		for (int slotIndex = 0; slotIndex < totalSlots; slotIndex++)
 		{
 			int currentFrameIndex = slotIndex % shuffleFrames.Count;
 			int nextFrameIndex = (currentFrameIndex + 1) % shuffleFrames.Count;
-			tween.TweenCallback(Callable.From(() =>
-				ApplyDeckShuffleFramePair(currentSprite, nextSprite, shuffleFrames, currentFrameIndex, nextFrameIndex, 1.0f, 0.0f)))
-				.SetDelay(slotIndex * frameSeconds);
-			tween.TweenCallback(Callable.From(() =>
-				ApplyDeckShuffleFramePair(currentSprite, nextSprite, shuffleFrames, currentFrameIndex, nextFrameIndex, 0.0f, 1.0f)))
-				.SetDelay(slotIndex * frameSeconds + frameSeconds * 0.72f);
+			double slotTime = slotIndex * frameSeconds;
+			double crossfadeTime = slotTime + frameSeconds * 0.72f;
+			animation.TrackInsertKey(currentTextureTrack, slotTime, shuffleFrames[currentFrameIndex]);
+			animation.TrackInsertKey(nextTextureTrack, slotTime, shuffleFrames[nextFrameIndex]);
+			animation.TrackInsertKey(currentAlphaTrack, slotTime, 1.0f);
+			animation.TrackInsertKey(nextAlphaTrack, slotTime, 0.0f);
+			animation.TrackInsertKey(currentAlphaTrack, crossfadeTime, 0.0f);
+			animation.TrackInsertKey(nextAlphaTrack, crossfadeTime, 1.0f);
 		}
+
+		library.AddAnimation("frames", animation);
+		animationPlayer.AddAnimationLibrary("", library);
+		animationPlayer.AnimationFinished += _ =>
+		{
+			if (GodotObject.IsInstanceValid(animationPlayer))
+			{
+				animationPlayer.QueueFree();
+			}
+		};
+		animationPlayer.Play("frames");
 	}
 
 	private static void ApplyDeckShuffleFramePair(
@@ -221,5 +261,23 @@ public partial class GameBoardScene
 		nextSprite.Texture = shuffleFrames[nextFrameIndex];
 		currentSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, currentAlpha);
 		nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, nextAlpha);
+	}
+
+	private static int AddDiscreteValueTrack(Animation animation, NodePath path)
+	{
+		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
+		animation.TrackSetPath(trackIndex, path);
+		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Nearest);
+		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Discrete);
+		return trackIndex;
+	}
+
+	private static int AddLinearValueTrack(Animation animation, NodePath path)
+	{
+		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
+		animation.TrackSetPath(trackIndex, path);
+		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Linear);
+		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Continuous);
+		return trackIndex;
 	}
 }

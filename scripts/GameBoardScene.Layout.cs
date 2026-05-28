@@ -508,7 +508,7 @@ public partial class GameBoardScene
 
 	private void SetCardPileCountVisible(Control pile, bool visible)
 	{
-		if (pile.GetNodeOrNull<Label>("CardCountLabel") is Label countLabel)
+		if (pile.GetNodeOrNull<Label>(CardCountLabelNodeName) is Label countLabel)
 		{
 			countLabel.Visible = visible;
 		}

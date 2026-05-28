@@ -12,13 +12,27 @@ public partial class GameBoardScene
 			Rank = rank;
 			Texture = texture;
 			AttachedItemCardIdsCsv = attachedItemCardIdsCsv;
+			_attachedItemCardIds = ParseAttachedItemCardIds(attachedItemCardIdsCsv);
+		}
+
+		private PlayingCard(string suit, string rank, Texture2D texture, string[] attachedItemCardIds)
+		{
+			Suit = suit;
+			Rank = rank;
+			Texture = texture;
+			_attachedItemCardIds = attachedItemCardIds;
+			AttachedItemCardIdsCsv = attachedItemCardIds.Length == 0 ? string.Empty : string.Join(",", attachedItemCardIds);
 		}
 
 		public string Suit { get; }
 		public string Rank { get; }
 		public Texture2D Texture { get; }
 		public string AttachedItemCardIdsCsv { get; }
-		public bool HasItemEffect => !string.IsNullOrEmpty(AttachedItemCardIdsCsv);
+		public bool HasItemEffect => AttachedItemCardIds.Count > 0;
+
+		private IReadOnlyList<string> AttachedItemCardIds => _attachedItemCardIds ?? Array.Empty<string>();
+
+		private readonly string[]? _attachedItemCardIds;
 
 		public PlayingCard WithAttachedItemEffect(string itemCardId)
 		{
@@ -27,10 +41,15 @@ public partial class GameBoardScene
 				return this;
 			}
 
-			string attachedItemCardIdsCsv = string.IsNullOrEmpty(AttachedItemCardIdsCsv)
-				? itemCardId
-				: $"{AttachedItemCardIdsCsv},{itemCardId}";
-			return new PlayingCard(Suit, Rank, Texture, attachedItemCardIdsCsv);
+			IReadOnlyList<string> existingIds = AttachedItemCardIds;
+			var attachedItemCardIds = new string[existingIds.Count + 1];
+			for (int index = 0; index < existingIds.Count; index++)
+			{
+				attachedItemCardIds[index] = existingIds[index];
+			}
+
+			attachedItemCardIds[^1] = itemCardId;
+			return new PlayingCard(Suit, Rank, Texture, attachedItemCardIds);
 		}
 
 		public PlayingCard WithoutAttachedItemEffect(string itemCardId)
@@ -40,23 +59,28 @@ public partial class GameBoardScene
 				return this;
 			}
 
-			var remainingIds = new List<string>();
-			foreach (string attachedItemCardId in GetAttachedItemCardIds())
+			IReadOnlyList<string> existingIds = AttachedItemCardIds;
+			if (existingIds.Count == 1)
+			{
+				return new PlayingCard(Suit, Rank, Texture);
+			}
+
+			var remainingIds = new string[existingIds.Count - 1];
+			int nextIndex = 0;
+			foreach (string attachedItemCardId in existingIds)
 			{
 				if (attachedItemCardId != itemCardId)
 				{
-					remainingIds.Add(attachedItemCardId);
+					remainingIds[nextIndex++] = attachedItemCardId;
 				}
 			}
 
-			return remainingIds.Count == 0
-				? new PlayingCard(Suit, Rank, Texture)
-				: new PlayingCard(Suit, Rank, Texture, string.Join(",", remainingIds));
+			return nextIndex == 0 ? new PlayingCard(Suit, Rank, Texture) : new PlayingCard(Suit, Rank, Texture, remainingIds);
 		}
 
 		public bool HasAttachedItemEffect(string itemCardId)
 		{
-			foreach (string attachedItemCardId in GetAttachedItemCardIds())
+			foreach (string attachedItemCardId in AttachedItemCardIds)
 			{
 				if (attachedItemCardId == itemCardId)
 				{
@@ -69,14 +93,19 @@ public partial class GameBoardScene
 
 		public IReadOnlyList<string> GetAttachedItemCardIds()
 		{
-			return string.IsNullOrWhiteSpace(AttachedItemCardIdsCsv)
-				? Array.Empty<string>()
-				: AttachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+			return AttachedItemCardIds;
 		}
 
 		public PlayingCard WithoutItemEffects()
 		{
 			return HasItemEffect ? new PlayingCard(Suit, Rank, Texture) : this;
+		}
+
+		private static string[] ParseAttachedItemCardIds(string attachedItemCardIdsCsv)
+		{
+			return string.IsNullOrWhiteSpace(attachedItemCardIdsCsv)
+				? Array.Empty<string>()
+				: attachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		}
 	}
 
@@ -88,6 +117,8 @@ public partial class GameBoardScene
 		bool CompletesTurn = true);
 
 	private readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
+
+	private readonly record struct ItemAttachmentOverlay(Texture2D Texture, int Priority);
 
 	private readonly record struct ShuffledTableCardVisual(
 		Texture2D MainTexture,
@@ -101,7 +132,7 @@ public partial class GameBoardScene
 		Vector2 ShuffleCenterGlobalPosition,
 		int ZIndex);
 
-	private readonly record struct TableSpecialCardTrigger(int TableCardIndex, Texture2D Texture, Vector2 GlobalPosition, int ZIndex);
+	private readonly record struct TableSpecialCardTrigger(int TableCardIndex, Texture2D Texture, Vector2 GlobalPosition, int ZIndex, int Priority);
 
 	private readonly record struct PendingItemAttachmentReward(int PlayerIndex, string ItemCardId);
 

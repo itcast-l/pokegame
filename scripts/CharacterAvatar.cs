@@ -4,8 +4,6 @@ using Godot;
 
 public partial class CharacterAvatar : Control
 {
-	private const string NarwhalAvatarRootPath = "res://art/characters/player_narwhal_avatar/run-001";
-	private const string NarwhalAttackFxRootPath = "res://art/fx/player_narwhal_tusk_break/run-001";
 	private const int AttackFxFrameCount = 4;
 	private const float AttackFxFrameSeconds = 0.12f;
 	private const float AttackFxVisualScale = 1.28f;
@@ -41,7 +39,7 @@ public partial class CharacterAvatar : Control
 	[Export]
 	public bool LoadActionFrames { get; set; } = true;
 
-	private string _avatarRoot = CharacterAvatarCatalog.Default.RootPath;
+	private string _avatarRoot = string.Empty;
 	private string _attackFxRoot = "";
 
 	[Export]
@@ -50,19 +48,17 @@ public partial class CharacterAvatar : Control
 		get => _avatarRoot;
 		set
 		{
-			string nextRoot = string.IsNullOrWhiteSpace(value)
-				? CharacterAvatarCatalog.Default.RootPath
-				: value.Trim();
+			string nextRoot = value?.Trim() ?? string.Empty;
 			if (_avatarRoot == nextRoot)
 			{
 				return;
 			}
 
-			string previousRoot = _avatarRoot;
+			string previousRoot = GetResolvedAvatarRoot();
 			_avatarRoot = nextRoot;
-			UpdateAttackFxRootForAvatarRoot(previousRoot);
 			if (IsNodeReady())
 			{
+				UpdateAttackFxRootForAvatarRoot(previousRoot);
 				LoadGeneratedActionFrames();
 				LoadAttackFxFrames();
 				BeginActionFrames(_currentAction);
@@ -335,7 +331,7 @@ public partial class CharacterAvatar : Control
 	private void LoadGeneratedActionFrames()
 	{
 		_actionFrames.Clear();
-		AvatarFrameCache cache = LoadAvatarFrames(AvatarRoot);
+		AvatarFrameCache cache = LoadAvatarFrames(GetResolvedAvatarRoot());
 		_idleFallbackTexture = cache.IdleFallbackTexture;
 		if (!LoadActionFrames)
 		{
@@ -570,14 +566,24 @@ public partial class CharacterAvatar : Control
 			return;
 		}
 
-		_attackFxRoot = GetDefaultAttackFxRoot(AvatarRoot);
+		_attackFxRoot = GetDefaultAttackFxRoot(GetResolvedAvatarRoot());
 	}
 
 	private static string GetDefaultAttackFxRoot(string avatarRoot)
 	{
-		return string.Equals(avatarRoot, NarwhalAvatarRootPath, StringComparison.Ordinal)
-			? NarwhalAttackFxRootPath
-			: "";
+		if (string.IsNullOrWhiteSpace(avatarRoot))
+		{
+			return string.Empty;
+		}
+
+		return CharacterAvatarCatalog.GetAttackFxRoot(avatarRoot);
+	}
+
+	private string GetResolvedAvatarRoot()
+	{
+		return string.IsNullOrWhiteSpace(_avatarRoot)
+			? CharacterAvatarCatalog.Default.RootPath
+			: _avatarRoot;
 	}
 
 	private static bool TryParseAction(string actionName, out AvatarAction action)
@@ -648,7 +654,7 @@ public partial class CharacterAvatar : Control
 
 	private int GetActionFrameCount(AvatarAction action)
 	{
-		return GetActionFrameCount(AvatarRoot, action);
+		return GetActionFrameCount(GetResolvedAvatarRoot(), action);
 	}
 
 	private static int GetActionFrameCount(string avatarRoot, AvatarAction action)

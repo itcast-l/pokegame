@@ -247,16 +247,18 @@ public partial class GameBoardScene
 			return deck;
 		}
 
-		foreach (Node suitNode in standardCards.GetChildren())
+		for (int suitIndex = 0; suitIndex < standardCards.GetChildCount(); suitIndex++)
 		{
+			Node suitNode = standardCards.GetChild(suitIndex);
 			string suit = suitNode.Name.ToString();
 			if (suit == "Back" || suit == SuitedJqkBackupCardsNodeName)
 			{
 				continue;
 			}
 
-			foreach (Node cardNode in suitNode.GetChildren())
+			for (int cardIndex = 0; cardIndex < suitNode.GetChildCount(); cardIndex++)
 			{
+				Node cardNode = suitNode.GetChild(cardIndex);
 				if (cardNode is not Sprite2D cardSprite || cardSprite.Texture == null)
 				{
 					continue;
@@ -294,8 +296,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		foreach (Node cardNode in suitedJqkBackupCards.GetChildren())
+		for (int cardIndex = 0; cardIndex < suitedJqkBackupCards.GetChildCount(); cardIndex++)
 		{
+			Node cardNode = suitedJqkBackupCards.GetChild(cardIndex);
 			if (cardNode is not Sprite2D cardSprite || cardSprite.Texture == null)
 			{
 				continue;
@@ -316,7 +319,7 @@ public partial class GameBoardScene
 		string[] nameParts = cardName.Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		if (nameParts.Length == 3
 			&& string.Equals(nameParts[0], "Backup", StringComparison.Ordinal)
-			&& ExcludedDeckRanks.Contains(nameParts[2]))
+			&& CardRankCatalog.ShouldExcludeFromStandardDeck(nameParts[2]))
 		{
 			suit = nameParts[1];
 			rank = nameParts[2];
@@ -359,9 +362,9 @@ public partial class GameBoardScene
 		}
 
 		int cutIndex = _rng.RandiRange(1, deck.Count - 1);
-		List<PlayingCard> topCards = deck.GetRange(0, cutIndex);
-		deck.RemoveRange(0, cutIndex);
-		deck.AddRange(topCards);
+		deck.Reverse(0, cutIndex);
+		deck.Reverse(cutIndex, deck.Count - cutIndex);
+		deck.Reverse();
 	}
 
 	private DrawnHandCard? DrawReplacementCard(int playerIndex)

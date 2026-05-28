@@ -100,6 +100,26 @@ public partial class GameBoardScene
 		return CharacterAvatarCatalog.DefaultAvatarId;
 	}
 
+	private bool AdventureEnemyHasAbility(string abilityId)
+	{
+		return adventure_mode
+			&& CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).HasAbility(abilityId);
+	}
+
+	private int GetAdventureEnemyAbilityValue(string key, int fallback)
+	{
+		return adventure_mode
+			? CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).GetAbilityValueInt(key, fallback)
+			: fallback;
+	}
+
+	private string GetAdventureEnemyAbilityValue(string key, string fallback)
+	{
+		return adventure_mode
+			? CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).GetAbilityValueString(key, fallback)
+			: fallback;
+	}
+
 	private static CharacterAvatar? InstantiateAvatar(PackedScene avatarScene, int playerIndex, CharacterAvatarDefinition avatarDefinition)
 	{
 		Node avatarNode = avatarScene.Instantiate();

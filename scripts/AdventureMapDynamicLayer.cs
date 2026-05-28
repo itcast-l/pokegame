@@ -9,6 +9,7 @@ public partial class AdventureMapDynamicLayer : Control
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<CurrentRibbon> _ribbons = new();
 	private readonly List<Sparkle> _sparkles = new();
+	private readonly Vector2[] _currentRibbonPoints = new Vector2[36];
 	private double _time;
 
 	public override void _Ready()
@@ -79,18 +80,17 @@ public partial class AdventureMapDynamicLayer : Control
 		float t = (float)_time;
 		foreach (CurrentRibbon ribbon in _ribbons)
 		{
-			Vector2[] points = new Vector2[36];
 			float drift = Mathf.PosMod(t * ribbon.Speed + ribbon.Phase * 80.0f, Size.X * 1.22f) - Size.X * 0.16f;
-			for (int i = 0; i < points.Length; i++)
+			for (int i = 0; i < _currentRibbonPoints.Length; i++)
 			{
-				float ratio = i / (float)(points.Length - 1);
+				float ratio = i / (float)(_currentRibbonPoints.Length - 1);
 				float x = drift + ratio * Size.X * 0.48f;
 				float wave = Mathf.Sin(ratio * Mathf.Tau * 1.6f + t * 0.62f + ribbon.Phase) * ribbon.Amplitude;
 				float y = Size.Y * ribbon.YRatio + wave;
-				points[i] = new Vector2(x, y);
+				_currentRibbonPoints[i] = new Vector2(x, y);
 			}
 
-			DrawPolyline(points, new Color(0.62f, 1.0f, 0.94f, ribbon.Alpha), 2.0f, true);
+			DrawPolyline(_currentRibbonPoints, new Color(0.62f, 1.0f, 0.94f, ribbon.Alpha), 2.0f, true);
 		}
 	}
 

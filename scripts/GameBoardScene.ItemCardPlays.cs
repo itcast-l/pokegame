@@ -5,6 +5,34 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private delegate Task<PlayCardResult> PlayItemCardPresentationAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration);
+	private delegate bool CanPlayItemCardPresentation(int playerIndex, ItemCardDefinition definition);
+
+	private Dictionary<string, PlayItemCardPresentationAsync> _itemPlayPresentationHandlers = default!;
+	private Dictionary<string, CanPlayItemCardPresentation> _itemPlayPresentationValidators = default!;
+
+	private Dictionary<string, PlayItemCardPresentationAsync> CreateItemPlayPresentationHandlers()
+	{
+		return new Dictionary<string, PlayItemCardPresentationAsync>(StringComparer.Ordinal)
+		{
+			[CardPlayPresentationTypes.TableOverlay] = PlayBombCardFromHandAsync,
+			[CardPlayPresentationTypes.LensSplit] = PlayLensCardFromHandAsync,
+			[CardPlayPresentationTypes.TransformAreaTrigger] = PlayTransformAreaItemCardFromHandAsync,
+		};
+	}
+
+	private Dictionary<string, CanPlayItemCardPresentation> CreateItemPlayPresentationValidators()
+	{
+		return new Dictionary<string, CanPlayItemCardPresentation>(StringComparer.Ordinal)
+		{
+			[CardPlayPresentationTypes.TableOverlay] = (_, _) => _tableCards.Count > 0,
+			[CardPlayPresentationTypes.LensSplit] = (playerIndex, definition) => HasLensRevealTargets(playerIndex, definition.EffectValues),
+			[CardPlayPresentationTypes.TransformAreaTrigger] = (_, definition) =>
+				definition.EffectValues.GetString(CardEffectValueKeys.Target) != CardEffectTargets.Table
+				|| GetMovableTableShuffleCardCount() >= 2,
+		};
+	}
+
 	private async Task<PlayCardResult> PlayItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
@@ -19,45 +47,22 @@ public partial class GameBoardScene
 		}
 
 		ItemCard itemCard = itemHand[itemHandIndex];
-		if (!_itemCardCatalog.IsPlayable(itemCard.Id))
+		if (!_itemCardCatalog.TryGetDefinition(itemCard.Id, out ItemCardDefinition definition)
+			|| !definition.PlayableFromHand
+			|| !definition.EnabledInGame
+			|| !CanPlayItemCard(playerIndex, itemCard.Id))
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		if (IsItemEffectType(itemCard.Id, CardEffectTypes.PlaceTablePairDestroy))
+		if (_itemPlayPresentationHandlers.TryGetValue(definition.PlayPresentation, out PlayItemCardPresentationAsync? presentationHandler))
 		{
-			return await PlayBombCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+			return await presentationHandler(playerIndex, itemHandIndex, turnSequenceGeneration);
 		}
 
-		if (IsItemEffectType(itemCard.Id, CardEffectTypes.RevealCards))
+		if (TryStartPendingTargetedItemSelection(itemCard, playerIndex, itemHandIndex, turnSequenceGeneration, out PlayCardResult pendingSelectionResult))
 		{
-			return await PlayLensCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
-		}
-
-		if (IsItemEffectType(itemCard.Id, CardEffectTypes.DrawCard))
-		{
-			return await PlayDrawCardItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
-		}
-
-		if (IsItemEffectType(itemCard.Id, CardEffectTypes.ShuffleTable))
-		{
-			return await PlayShuffleItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
-		}
-
-		if (IsAttachmentItemCard(itemCard.Id))
-		{
-			return await PlayAttachmentItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
-		}
-
-		if (playerIndex == MainPlayerIndex && RequiresPlayerTarget(itemCard.Id))
-		{
-			if (!HasPlayableTargetForItemCard(itemCard.Id, playerIndex))
-			{
-				return new PlayCardResult(false, false);
-			}
-
-			StartPendingItemSelection(itemCard.Id, playerIndex, itemHandIndex, turnSequenceGeneration);
-			return new PlayCardResult(true, false, CompletesTurn: false);
+			return pendingSelectionResult;
 		}
 
 		int targetPlayerIndex = -1;
@@ -65,8 +70,8 @@ public partial class GameBoardScene
 		if (RequiresPlayerTarget(itemCard.Id))
 		{
 			targetPlayerIndex = PickItemTargetPlayer(itemCard.Id, playerIndex);
-			targetHandIndex = IsItemEffectType(itemCard.Id, CardEffectTypes.StealCard) ? PickTargetHandIndex(targetPlayerIndex) : -1;
-			if (targetPlayerIndex < 0 || (IsItemEffectType(itemCard.Id, CardEffectTypes.StealCard) && targetHandIndex < 0))
+			targetHandIndex = IsPlayerHandTargetItemCard(itemCard.Id) ? PickTargetHandIndex(targetPlayerIndex) : -1;
+			if (targetPlayerIndex < 0 || (IsPlayerHandTargetItemCard(itemCard.Id) && targetHandIndex < 0))
 			{
 				return new PlayCardResult(false, false);
 			}
@@ -120,71 +125,33 @@ public partial class GameBoardScene
 		return result;
 	}
 
-	private async Task<PlayCardResult> PlayDrawCardItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
+	private bool TryStartPendingTargetedItemSelection(
+		ItemCard itemCard,
+		int playerIndex,
+		int itemHandIndex,
+		int turnSequenceGeneration,
+		out PlayCardResult result)
 	{
-		if (playerIndex < 0
-			|| playerIndex >= _playerHands.Count
-			|| playerIndex >= _playerItemHands.Count
-			|| playerIndex >= _playerHandAreas.Count
-			|| playerIndex >= _playerDecks.Count
-			|| _playerDecks[playerIndex].Count == 0)
+		result = new PlayCardResult(false, false);
+		if (!_itemCardCatalog.TryGetDefinition(itemCard.Id, out ItemCardDefinition definition)
+			|| definition.PlayPresentation != CardPlayPresentationTypes.TargetedTrigger
+			|| playerIndex != MainPlayerIndex
+			|| !RequiresPlayerTarget(itemCard.Id))
 		{
-			return new PlayCardResult(false, false);
+			return false;
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
-		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
+		if (!HasPlayableTargetForItemCard(itemCard.Id, playerIndex))
 		{
-			return new PlayCardResult(false, false);
+			return true;
 		}
 
-		ItemCard drawCard = itemHand[itemHandIndex];
-		if (!IsItemEffectType(drawCard.Id, CardEffectTypes.DrawCard))
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex)
-			?? _playerHandAreas[playerIndex].GlobalPosition + (_playerHandAreas[playerIndex].Size - CardVisualSize) / 2.0f;
-		Control? sourceCardSlot = _playerHandAreas[playerIndex].GetNodeOrNull<Control>($"HandCard_{_playerHands[playerIndex].Count + itemHandIndex}");
-		if (sourceCardSlot != null)
-		{
-			sourceCardSlot.Visible = false;
-		}
-
-		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
-		itemHand.RemoveAt(itemHandIndex);
-		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
-		RenderPlayerHands();
-
-		await PlayItemCardToTransformAreaAnimationAsync(
-			drawCard.Texture,
-			startGlobalPosition,
-			transformAreaGlobalPosition,
-			GetCardRotationDegreesForPlayer(playerIndex));
-		if (turnSequenceGeneration != _turnSequenceGeneration)
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		await PlaySpecialCardTriggerEffectAsync(drawCard.Texture, transformAreaGlobalPosition, 0);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		PlayCardResult result = await ResolveItemCardOnPlayAsync(
-			drawCard,
-			playerIndex,
-			itemHandIndex,
-			-1,
-			-1,
-			transformAreaGlobalPosition,
-			turnSequenceGeneration);
-		return result with { CompletesTurn = false };
+		StartPendingItemSelection(itemCard.Id, playerIndex, itemHandIndex, turnSequenceGeneration);
+		result = new PlayCardResult(true, false, CompletesTurn: false);
+		return true;
 	}
 
-	private async Task<PlayCardResult> PlayAttachmentItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
+	private async Task<PlayCardResult> PlayTransformAreaItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
 	{
 		if (playerIndex < 0
 			|| playerIndex >= _playerHands.Count
@@ -201,20 +168,31 @@ public partial class GameBoardScene
 		}
 
 		ItemCard itemCard = itemHand[itemHandIndex];
-		if (!IsAttachmentItemCard(itemCard.Id) || !PlayerHasAttachableMagnetCard(playerIndex, itemCard.Id))
+
+		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex)
+			?? _playerHandAreas[playerIndex].GlobalPosition + (_playerHandAreas[playerIndex].Size - CardVisualSize) / 2.0f;
+		Control? sourceCardSlot = _playerHandAreas[playerIndex].GetNodeOrNull<Control>($"HandCard_{_playerHands[playerIndex].Count + itemHandIndex}");
+		if (sourceCardSlot != null)
+		{
+			sourceCardSlot.Visible = false;
+		}
+
+		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		itemHand.RemoveAt(itemHandIndex);
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		RenderPlayerHands();
+
+		await PlayItemCardToTransformAreaAnimationAsync(
+			itemCard.Texture,
+			startGlobalPosition,
+			transformAreaGlobalPosition,
+			GetCardRotationDegreesForPlayer(playerIndex));
+		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
-		itemHand.RemoveAt(itemHandIndex);
-		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
-		RenderPlayerHands();
-		await PlaySpecialCardTriggerEffectAsync(
-			itemCard.Texture,
-			itemGlobalPosition ?? Vector2.Zero,
-			0,
-			GetCardRotationDegreesForPlayer(playerIndex));
+		await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);
@@ -226,7 +204,7 @@ public partial class GameBoardScene
 			itemHandIndex,
 			-1,
 			-1,
-			itemGlobalPosition ?? Vector2.Zero,
+			transformAreaGlobalPosition,
 			turnSequenceGeneration);
 		return result with { CompletesTurn = false };
 	}

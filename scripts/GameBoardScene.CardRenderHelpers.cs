@@ -2,6 +2,8 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private static readonly StyleBoxFlat MagnetSelectionPulseStyle = CreateMagnetSelectionPulseStyle();
+
 	private int GetVisibleHandCardCountForRender(int playerIndex, int handCount)
 	{
 		if (!_isOpeningDealAnimationPlaying)
@@ -114,7 +116,7 @@ public partial class GameBoardScene
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.74f),
 			Scale = Vector2.One * 0.98f,
 		};
-		glow.AddThemeStyleboxOverride("panel", CreateMagnetSelectionPulseStyle());
+		glow.AddThemeStyleboxOverride("panel", MagnetSelectionPulseStyle);
 		parent.AddChild(glow);
 
 		Tween tween = glow.CreateTween();
@@ -159,22 +161,22 @@ public partial class GameBoardScene
 
 	private Texture2D? GetCardAttachmentOverlayTexture(PlayingCard card)
 	{
-		if (IsAttachedModifier(card, CardAttachmentModifiers.Double))
+		Texture2D? overlayTexture = null;
+		int bestPriority = int.MinValue;
+
+		foreach (string itemCardId in card.GetAttachedItemCardIds())
 		{
-			return _doubleCardOverlayTexture;
+			if (!_itemAttachmentOverlaysById.TryGetValue(itemCardId, out ItemAttachmentOverlay candidate)
+				|| candidate.Priority < bestPriority)
+			{
+				continue;
+			}
+
+			overlayTexture = candidate.Texture;
+			bestPriority = candidate.Priority;
 		}
 
-		if (IsAttachedModifier(card, CardAttachmentModifiers.Magnet))
-		{
-			return _magnetCardOverlayTexture;
-		}
-
-		if (IsAttachedModifier(card, CardAttachmentModifiers.Overtime))
-		{
-			return _overtimeCardOverlayTexture;
-		}
-
-		return null;
+		return overlayTexture;
 	}
 
 	private static void AddCardAttachmentOverlay(
@@ -286,8 +288,9 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		foreach (Node child in handCardSlot.GetChildren())
+		for (int childIndex = 0; childIndex < handCardSlot.GetChildCount(); childIndex++)
 		{
+			Node child = handCardSlot.GetChild(childIndex);
 			if (child is TextureRect textureRect)
 			{
 				return textureRect;

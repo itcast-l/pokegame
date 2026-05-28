@@ -19,8 +19,9 @@ public partial class CardGallery : Control
 
 	private void PopulateCards()
 	{
-		foreach (Node child in _grid.GetChildren())
+		for (int childIndex = _grid.GetChildCount() - 1; childIndex >= 0; childIndex--)
 		{
+			Node child = _grid.GetChild(childIndex);
 			child.QueueFree();
 		}
 

@@ -5,6 +5,15 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private delegate Task AdventureAttackEffectHandler(
+		int attackerPlayerIndex,
+		int targetPlayerIndex,
+		Vector2 startCenter,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> attackFrames,
+		int turnSequenceGeneration,
+		Action? onHit);
+
 	private const float ScoreFillEffectFlightSeconds = 0.62f;
 	private const float ScoreFillEffectStaggerSeconds = 0.07f;
 	private const int MaxScoreFillEffectFlights = 12;
@@ -30,9 +39,6 @@ public partial class GameBoardScene
 	private const float MantaRayTideShiftCycloneTargetInset = 104.0f;
 	private const float MantaRayTideShiftCycloneVisualHeightScale = 0.82f;
 	private const float AdventureAttackEffectFlightSeconds = 0.48f;
-	private const float ShrimpAdventureAttackEffectFlightSeconds = 0.72f;
-	private const float NautilusAdventureAttackEffectFlightSeconds = 0.78f;
-	private const float NarwhalAdventureAttackEffectFlightSeconds = 0.82f;
 	private const int DragonPrinceDamageHitFlightFrameCount = 5;
 	private const float DragonPrinceDamageHitFlightSeconds = 0.72f;
 	private const float DragonPrinceDamageHitImpactSeconds = 0.70f;
@@ -60,12 +66,26 @@ public partial class GameBoardScene
 	private const double CatAdventureScratchFrame3DelaySeconds = 0.26d;
 	private const double CatAdventureScratchFrame4DelaySeconds = 0.42d;
 	private const double CatAdventureScratchHitDelaySeconds = CatAdventureScratchFrame3DelaySeconds;
+	private static readonly double[] CatAdventureScratchFrameKeyTimes =
+	{
+		0.0d,
+		CatAdventureScratchFrame2DelaySeconds,
+		CatAdventureScratchFrame3DelaySeconds,
+		CatAdventureScratchFrame4DelaySeconds,
+	};
 	private const float CrabAdventurePincerVisualSize = 150.0f;
 	private const float CrabAdventurePincerTotalSeconds = 0.72f;
 	private const double CrabAdventurePincerFrame2DelaySeconds = 0.16d;
 	private const double CrabAdventurePincerFrame3DelaySeconds = 0.32d;
 	private const double CrabAdventurePincerFrame4DelaySeconds = 0.48d;
 	private const double CrabAdventurePincerHitDelaySeconds = CrabAdventurePincerFrame3DelaySeconds;
+	private static readonly double[] CrabAdventurePincerFrameKeyTimes =
+	{
+		0.0d,
+		CrabAdventurePincerFrame2DelaySeconds,
+		CrabAdventurePincerFrame3DelaySeconds,
+		CrabAdventurePincerFrame4DelaySeconds,
+	};
 	private const float JellyfishAdventureTentacleLocalVisualScale = 1.44f;
 	private const float JellyfishAdventureTentacleLocalStartScale = 0.92f;
 	private const float JellyfishAdventureTentacleLocalEndScale = 1.04f;
@@ -75,6 +95,13 @@ public partial class GameBoardScene
 	private const double JellyfishAdventureTentacleFrame3DelaySeconds = 0.38d;
 	private const double JellyfishAdventureTentacleFrame4DelaySeconds = 0.58d;
 	private const double JellyfishAdventureTentacleHitDelaySeconds = JellyfishAdventureTentacleFrame3DelaySeconds;
+	private static readonly double[] JellyfishAdventureTentacleFrameKeyTimes =
+	{
+		0.0d,
+		JellyfishAdventureTentacleFrame2DelaySeconds,
+		JellyfishAdventureTentacleFrame3DelaySeconds,
+		JellyfishAdventureTentacleFrame4DelaySeconds,
+	};
 	private const float SeaSlugHitMarkerLocalVisualScale = 0.92f;
 	private const float SeaSlugHitMarkerStartScale = 0.88f;
 	private const float SeaSlugHitMarkerEndScale = 1.06f;
@@ -94,6 +121,7 @@ public partial class GameBoardScene
 	private const float FishAdventureAttackBeamEndInset = 34.0f;
 	private const float LeafySeadragonCollectAttackFlightSeconds = 0.58f;
 	private const float LeafySeadragonCollectAttackImpactSeconds = 0.24f;
+	private const double LeafySeadragonCollectAttackDissolveFrameDelaySeconds = LeafySeadragonCollectAttackImpactSeconds * 0.44d;
 	private const float LeafySeadragonCollectAttackVisualSize = 116.0f;
 	private const float LeafySeadragonCollectAttackRotationOffset = -0.7853982f;
 	private const float LeafySeadragonCollectAttackSpinRadians = 12.566371f;
@@ -144,16 +172,17 @@ public partial class GameBoardScene
 		}
 
 		Vector2 targetCenter = GetScoreMeterGlobalCenter(playerIndex);
-		var flightTasks = new List<Task>();
+		Task[] flightTasks = new Task[Math.Min(capturedCardVisuals.Count, MaxScoreFillEffectFlights)];
+		int flightTaskCount = 0;
 		bool scoreAwarded = false;
-		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && flightTasks.Count < MaxScoreFillEffectFlights; visualIndex++)
+		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && flightTaskCount < flightTasks.Length; visualIndex++)
 		{
 			Vector2 cardCenter = capturedCardVisuals[visualIndex].GlobalPosition + CardVisualSize / 2.0f;
-			flightTasks.Add(PlayScoreFillEffectFlightAsync(
+			flightTasks[flightTaskCount] = PlayScoreFillEffectFlightAsync(
 				cardCenter,
 				targetCenter,
 				scoreFillEffectFrames,
-				flightTasks.Count,
+				flightTaskCount,
 				visualIndex * ScoreFillEffectStaggerSeconds,
 				() =>
 				{
@@ -164,7 +193,8 @@ public partial class GameBoardScene
 
 					scoreAwarded = true;
 					onArrival?.Invoke();
-				}));
+				});
+			flightTaskCount++;
 		}
 
 		await Task.WhenAll(flightTasks);
@@ -187,19 +217,21 @@ public partial class GameBoardScene
 	{
 		IReadOnlyList<Texture2D> collectionFrames = GetScoreFillEffectFrames();
 		Vector2 attackerCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
-		var collectionTasks = new List<Task>();
 		if (collectionFrames.Count > 0 && capturedCardVisuals.Count > 0)
 		{
-			for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && collectionTasks.Count < MaxScoreFillEffectFlights; visualIndex++)
+			Task[] collectionTasks = new Task[Math.Min(capturedCardVisuals.Count, MaxScoreFillEffectFlights)];
+			int collectionTaskCount = 0;
+			for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count && collectionTaskCount < collectionTasks.Length; visualIndex++)
 			{
 				Vector2 cardCenter = capturedCardVisuals[visualIndex].GlobalPosition + CardVisualSize / 2.0f;
-				collectionTasks.Add(PlayScoreFillEffectFlightAsync(
+				collectionTasks[collectionTaskCount] = PlayScoreFillEffectFlightAsync(
 					cardCenter,
 					attackerCenter,
 					collectionFrames,
-					collectionTasks.Count,
+					collectionTaskCount,
 					visualIndex * ScoreFillEffectStaggerSeconds,
-					() => { }));
+					() => { });
+				collectionTaskCount++;
 			}
 
 			await Task.WhenAll(collectionTasks);
@@ -232,16 +264,6 @@ public partial class GameBoardScene
 	{
 		Vector2 startCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
 		Vector2 targetCenter = GetPlayerAvatarGlobalCenter(targetPlayerIndex);
-		if (ShouldPlayMantaRayTideShiftCycloneAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayMantaRayTideShiftCycloneAttackAsync(
-				attackerPlayerIndex,
-				targetPlayerIndex,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
 		IReadOnlyList<Texture2D> attackFrames = GetAdventureAttackEffectFrames(attackerPlayerIndex);
 		if (attackFrames.Count == 0)
 		{
@@ -264,102 +286,13 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (IsAdventureEnemyPlayer(attackerPlayerIndex)
-			&& adventure_enemy_avatar_id == FishAdventureEnemyAvatarId)
+		if (TryGetAdventureAttackEffectHandler(attackerPlayerIndex, targetPlayerIndex, out AdventureAttackEffectHandler attackEffectHandler))
 		{
-			await PlayFishAdventureAttackBeamAsync(
+			await attackEffectHandler(
+				attackerPlayerIndex,
+				targetPlayerIndex,
 				startCenter,
 				targetCenter,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayCrabAdventurePincerAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayCrabAdventurePincerAttackAsync(
-				attackerPlayerIndex,
-				targetCenter,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayJellyfishAdventureTentacleAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayJellyfishAdventureTentacleAttackAsync(
-				attackerPlayerIndex,
-				targetPlayerIndex,
-				targetCenter,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlaySeaSlugHitMarkerAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlaySeaSlugHitMarkerAttackAsync(
-				attackerPlayerIndex,
-				targetPlayerIndex,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayGardenEelBurrowAmbushAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayGardenEelBurrowAmbushAttackAsync(
-				attackerPlayerIndex,
-				targetPlayerIndex,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayLeafySeadragonCollectAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayLeafySeadragonCollectAttackAsync(
-				attackerPlayerIndex,
-				startCenter,
-				targetCenter,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayBossKRoyalSeizureLanceAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayBossKRoyalSeizureLanceAttackAsync(
-				attackerPlayerIndex,
-				targetCenter,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayDragonPrinceDamageHitAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayDragonPrinceDamageHitAttackAsync(
-				attackerPlayerIndex,
-				startCenter,
-				targetCenter,
-				attackFrames,
-				turnSequenceGeneration,
-				onHit);
-			return;
-		}
-
-		if (ShouldPlayDragonQueenJawSlashAttack(attackerPlayerIndex, targetPlayerIndex))
-		{
-			await PlayDragonQueenJawSlashAttackAsync(
-				attackerPlayerIndex,
-				targetPlayerIndex,
 				attackFrames,
 				turnSequenceGeneration,
 				onHit);
@@ -392,23 +325,6 @@ public partial class GameBoardScene
 			: _scoreFillEffectFrames;
 	}
 
-	private static List<Texture2D> BuildFrameSlice(IReadOnlyList<Texture2D> frames, int startIndex, int count)
-	{
-		var slice = new List<Texture2D>(Math.Max(0, count));
-		for (int index = 0; index < count; index++)
-		{
-			int frameIndex = startIndex + index;
-			if (frameIndex < 0 || frameIndex >= frames.Count)
-			{
-				continue;
-			}
-
-			slice.Add(frames[frameIndex]);
-		}
-
-		return slice;
-	}
-
 	private static bool IsAdventureEnemyPlayer(int playerIndex)
 	{
 		return playerIndex == 1;
@@ -419,80 +335,73 @@ public partial class GameBoardScene
 		return attackerPlayerIndex == MainPlayerIndex;
 	}
 
-	private bool ShouldPlayCrabAdventurePincerAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	private Dictionary<string, AdventureAttackEffectHandler> CreateAdventureAttackEffectHandlers()
 	{
-		return adventure_enemy_avatar_id == CrabAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
+		return new Dictionary<string, AdventureAttackEffectHandler>(StringComparer.Ordinal)
+		{
+			[AdventureAttackEffectStyles.FishBeam] = (_, _, startCenter, targetCenter, frames, turnSequenceGeneration, onHit) =>
+				PlayFishAdventureAttackBeamAsync(startCenter, targetCenter, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.CrabPincer] = (attackerPlayerIndex, _, _, targetCenter, frames, turnSequenceGeneration, onHit) =>
+				PlayCrabAdventurePincerAttackAsync(attackerPlayerIndex, targetCenter, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.JellyfishTentacle] = (attackerPlayerIndex, targetPlayerIndex, _, targetCenter, frames, turnSequenceGeneration, onHit) =>
+				PlayJellyfishAdventureTentacleAttackAsync(attackerPlayerIndex, targetPlayerIndex, targetCenter, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.MantaRayCyclone] = (attackerPlayerIndex, targetPlayerIndex, _, _, _, turnSequenceGeneration, onHit) =>
+				PlayMantaRayTideShiftCycloneAttackAsync(attackerPlayerIndex, targetPlayerIndex, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.SeaSlugMarker] = (attackerPlayerIndex, targetPlayerIndex, _, _, frames, turnSequenceGeneration, onHit) =>
+				PlaySeaSlugHitMarkerAttackAsync(attackerPlayerIndex, targetPlayerIndex, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.GardenEelBurrow] = (attackerPlayerIndex, targetPlayerIndex, _, _, frames, turnSequenceGeneration, onHit) =>
+				PlayGardenEelBurrowAmbushAttackAsync(attackerPlayerIndex, targetPlayerIndex, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.LeafySeadragonSlash] = (attackerPlayerIndex, _, startCenter, targetCenter, frames, turnSequenceGeneration, onHit) =>
+				PlayLeafySeadragonCollectAttackAsync(attackerPlayerIndex, startCenter, targetCenter, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.BossKRoyalSeizure] = (attackerPlayerIndex, _, _, targetCenter, _, turnSequenceGeneration, onHit) =>
+				PlayBossKRoyalSeizureLanceAttackAsync(attackerPlayerIndex, targetCenter, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.DragonPrinceHit] = (attackerPlayerIndex, _, startCenter, targetCenter, frames, turnSequenceGeneration, onHit) =>
+				PlayDragonPrinceDamageHitAttackAsync(attackerPlayerIndex, startCenter, targetCenter, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.DragonQueenJaw] = (attackerPlayerIndex, targetPlayerIndex, _, _, frames, turnSequenceGeneration, onHit) =>
+				PlayDragonQueenJawSlashAttackAsync(attackerPlayerIndex, targetPlayerIndex, frames, turnSequenceGeneration, onHit),
+		};
 	}
 
-	private bool ShouldPlayJellyfishAdventureTentacleAttack(int attackerPlayerIndex, int targetPlayerIndex)
+	private bool TryGetAdventureAttackEffectHandler(
+		int attackerPlayerIndex,
+		int targetPlayerIndex,
+		out AdventureAttackEffectHandler attackEffectHandler)
 	{
-		return adventure_enemy_avatar_id == JellyfishAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
-	}
+		attackEffectHandler = null!;
+		if (!IsAdventureEnemyPlayer(attackerPlayerIndex)
+			|| targetPlayerIndex != MainPlayerIndex
+			|| attackerPlayerIndex == MainPlayerIndex)
+		{
+			return false;
+		}
 
-	private bool ShouldPlayMantaRayTideShiftCycloneAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == MantaRayAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex
-			&& _mantaRayTideShiftCycloneFxFrames.Count > 0;
-	}
+		string attackEffectStyle = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).AttackEffectStyle;
+		if (string.Equals(attackEffectStyle, AdventureAttackEffectStyles.MantaRayCyclone, StringComparison.Ordinal)
+			&& _mantaRayTideShiftCycloneFxFrames.Count == 0)
+		{
+			return false;
+		}
 
-	private bool ShouldPlaySeaSlugHitMarkerAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == SeaSlugAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
-	}
+		if (string.IsNullOrWhiteSpace(attackEffectStyle)
+			|| !_adventureAttackEffectHandlers.TryGetValue(attackEffectStyle, out AdventureAttackEffectHandler? resolvedHandler))
+		{
+			return false;
+		}
 
-	private bool ShouldPlayGardenEelBurrowAmbushAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == GardenEelAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
-	}
-
-	private bool ShouldPlayLeafySeadragonCollectAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == LeafySeadragonAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
-	}
-
-	private bool ShouldPlayDragonPrinceDamageHitAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == DragonPrinceAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
-	}
-
-	private bool ShouldPlayDragonQueenJawSlashAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == DragonQueenAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
-	}
-
-	private bool ShouldPlayBossKRoyalSeizureLanceAttack(int attackerPlayerIndex, int targetPlayerIndex)
-	{
-		return adventure_enemy_avatar_id == BossKAdventureEnemyAvatarId
-			&& targetPlayerIndex == MainPlayerIndex
-			&& attackerPlayerIndex != MainPlayerIndex;
+		attackEffectHandler = resolvedHandler;
+		return true;
 	}
 
 	private float GetAdventureAttackEffectFlightSeconds(int attackerPlayerIndex)
 	{
-		return IsAdventureEnemyPlayer(attackerPlayerIndex)
-			? adventure_enemy_avatar_id switch
-				{
-					ShrimpAdventureEnemyAvatarId => ShrimpAdventureAttackEffectFlightSeconds,
-					NautilusAdventureEnemyAvatarId => NautilusAdventureAttackEffectFlightSeconds,
-					NarwhalAdventureEnemyAvatarId => NarwhalAdventureAttackEffectFlightSeconds,
-					_ => AdventureAttackEffectFlightSeconds,
-				}
+		if (!IsAdventureEnemyPlayer(attackerPlayerIndex))
+		{
+			return AdventureAttackEffectFlightSeconds;
+		}
+
+		CharacterAvatarDefinition enemyDefinition = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id);
+		return enemyDefinition.AttackEffectFlightSeconds > 0.0f
+			? enemyDefinition.AttackEffectFlightSeconds
 			: AdventureAttackEffectFlightSeconds;
 	}
 
@@ -536,9 +445,7 @@ public partial class GameBoardScene
 		tween.SetEase(Tween.EaseType.Out);
 		tween.TweenProperty(scratch, "scale", baseScale * CatAdventureScratchEndScale, CatAdventureScratchTotalSeconds);
 		tween.TweenProperty(scratch, "modulate:a", 0.0f, CatAdventureScratchTotalSeconds);
-		TweenCatAdventureScratchTexture(tween, scratch, frames, 1, CatAdventureScratchFrame2DelaySeconds);
-		TweenCatAdventureScratchTexture(tween, scratch, frames, 2, CatAdventureScratchFrame3DelaySeconds);
-		TweenCatAdventureScratchTexture(tween, scratch, frames, 3, CatAdventureScratchFrame4DelaySeconds);
+		FrameAnimationHelpers.PlayTextureKeyframes(scratch, frames, CatAdventureScratchFrameKeyTimes);
 		tween.TweenCallback(Callable.From(() =>
 		{
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
@@ -555,28 +462,6 @@ public partial class GameBoardScene
 		};
 
 		await ToSignal(tween, Tween.SignalName.Finished);
-	}
-
-	private static void TweenCatAdventureScratchTexture(
-		Tween tween,
-		Sprite2D scratch,
-		IReadOnlyList<Texture2D> frames,
-		int frameIndex,
-		double delaySeconds)
-	{
-		if (frameIndex >= frames.Count)
-		{
-			return;
-		}
-
-		Texture2D frame = frames[frameIndex];
-		tween.TweenCallback(Callable.From(() =>
-		{
-			if (GodotObject.IsInstanceValid(scratch))
-			{
-				scratch.Texture = frame;
-			}
-		})).SetDelay(delaySeconds);
 	}
 
 	private async Task PlayCrabAdventurePincerAttackAsync(
@@ -620,9 +505,7 @@ public partial class GameBoardScene
 		tween.TweenProperty(pincer, "scale", baseScale * 1.08f, CrabAdventurePincerTotalSeconds);
 		tween.TweenProperty(pincer, "modulate:a", 0.0f, CrabAdventurePincerTotalSeconds * 0.22f)
 			.SetDelay(CrabAdventurePincerFrame4DelaySeconds);
-		TweenCrabAdventurePincerTexture(tween, pincer, frames, 1, CrabAdventurePincerFrame2DelaySeconds);
-		TweenCrabAdventurePincerTexture(tween, pincer, frames, 2, CrabAdventurePincerFrame3DelaySeconds);
-		TweenCrabAdventurePincerTexture(tween, pincer, frames, 3, CrabAdventurePincerFrame4DelaySeconds);
+		FrameAnimationHelpers.PlayTextureKeyframes(pincer, frames, CrabAdventurePincerFrameKeyTimes);
 		tween.TweenCallback(Callable.From(() =>
 		{
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
@@ -639,28 +522,6 @@ public partial class GameBoardScene
 		};
 
 		await ToSignal(tween, Tween.SignalName.Finished);
-	}
-
-	private static void TweenCrabAdventurePincerTexture(
-		Tween tween,
-		Sprite2D pincer,
-		IReadOnlyList<Texture2D> frames,
-		int frameIndex,
-		double delaySeconds)
-	{
-		if (frameIndex >= frames.Count)
-		{
-			return;
-		}
-
-		Texture2D frame = frames[frameIndex];
-		tween.TweenCallback(Callable.From(() =>
-		{
-			if (GodotObject.IsInstanceValid(pincer))
-			{
-				pincer.Texture = frame;
-			}
-		})).SetDelay(delaySeconds);
 	}
 
 	private async Task PlayJellyfishAdventureTentacleAttackAsync(
@@ -711,9 +572,7 @@ public partial class GameBoardScene
 		tween.TweenProperty(tentacles, "rotation", -rotation, JellyfishAdventureTentacleTotalSeconds * 0.52f);
 		tween.TweenProperty(tentacles, "modulate:a", 0.0f, JellyfishAdventureTentacleTotalSeconds * 0.24f)
 			.SetDelay(JellyfishAdventureTentacleFrame4DelaySeconds);
-		TweenJellyfishAdventureTentacleTexture(tween, tentacles, frames, 1, JellyfishAdventureTentacleFrame2DelaySeconds);
-		TweenJellyfishAdventureTentacleTexture(tween, tentacles, frames, 2, JellyfishAdventureTentacleFrame3DelaySeconds);
-		TweenJellyfishAdventureTentacleTexture(tween, tentacles, frames, 3, JellyfishAdventureTentacleFrame4DelaySeconds);
+		FrameAnimationHelpers.PlayTextureKeyframes(tentacles, frames, JellyfishAdventureTentacleFrameKeyTimes);
 		tween.TweenCallback(Callable.From(() =>
 		{
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
@@ -730,28 +589,6 @@ public partial class GameBoardScene
 		};
 
 		await ToSignal(tween, Tween.SignalName.Finished);
-	}
-
-	private static void TweenJellyfishAdventureTentacleTexture(
-		Tween tween,
-		Sprite2D tentacles,
-		IReadOnlyList<Texture2D> frames,
-		int frameIndex,
-		double delaySeconds)
-	{
-		if (frameIndex >= frames.Count)
-		{
-			return;
-		}
-
-		Texture2D frame = frames[frameIndex];
-		tween.TweenCallback(Callable.From(() =>
-		{
-			if (GodotObject.IsInstanceValid(tentacles))
-			{
-				tentacles.Texture = frame;
-			}
-		})).SetDelay(delaySeconds);
 	}
 
 	private async Task PlaySeaSlugHitMarkerAttackAsync(
@@ -920,12 +757,7 @@ public partial class GameBoardScene
 					.SetDelay(GardenEelBurrowAmbushReturnDelaySeconds);
 			}
 
-			TweenGardenEelBurrowAmbushFrame(tween, ambush, frames, 0, startCenter, baseScale * GardenEelBurrowAmbushStartScale, 0.0d);
-			TweenGardenEelBurrowAmbushFrame(tween, ambush, frames, 1, startCenter, baseScale * 0.94f, GardenEelBurrowAmbushFrameSeconds);
-			TweenGardenEelBurrowAmbushFrame(tween, ambush, frames, 2, targetCenter, baseScale, GardenEelBurrowAmbushFrameSeconds * 2.0d);
-			TweenGardenEelBurrowAmbushFrame(tween, ambush, frames, 3, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale, GardenEelBurrowAmbushFrameSeconds * 3.0d);
-			TweenGardenEelBurrowAmbushFrame(tween, ambush, frames, 4, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale, GardenEelBurrowAmbushFrameSeconds * 4.0d);
-			TweenGardenEelBurrowAmbushFrame(tween, ambush, frames, 5, startCenter, baseScale * GardenEelBurrowAmbushStartScale, GardenEelBurrowAmbushReturnDelaySeconds);
+			PlayGardenEelBurrowAmbushFrames(ambush, frames, startCenter, targetCenter, baseScale);
 			tween.TweenCallback(Callable.From(InvokeHitOnce)).SetDelay(GardenEelBurrowAmbushHitDelaySeconds);
 
 			await ToSignal(tween, Tween.SignalName.Finished);
@@ -944,30 +776,82 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static void TweenGardenEelBurrowAmbushFrame(
-		Tween tween,
+	private static void PlayGardenEelBurrowAmbushFrames(
 		Sprite2D ambush,
 		IReadOnlyList<Texture2D> frames,
+		Vector2 startCenter,
+		Vector2 targetCenter,
+		Vector2 baseScale)
+	{
+		if (frames.Count == 0 || !GodotObject.IsInstanceValid(ambush))
+		{
+			return;
+		}
+
+		var animationPlayer = new AnimationPlayer
+		{
+			Name = "GardenEelAmbushFrameAnimationPlayer",
+			RootNode = new NodePath(".."),
+		};
+		ambush.AddChild(animationPlayer);
+
+		AnimationLibrary library = new();
+		Animation animation = new()
+		{
+			Length = (float)GardenEelBurrowAmbushReturnDelaySeconds,
+			LoopMode = Animation.LoopModeEnum.None,
+		};
+		int textureTrack = AddDiscreteAnimationTrack(animation, new NodePath(".:texture"));
+		int positionTrack = AddDiscreteAnimationTrack(animation, new NodePath(".:global_position"));
+		int scaleTrack = AddDiscreteAnimationTrack(animation, new NodePath(".:scale"));
+
+		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 0, 0.0d, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
+		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 1, GardenEelBurrowAmbushFrameSeconds, startCenter, baseScale * 0.94f);
+		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 2, GardenEelBurrowAmbushFrameSeconds * 2.0d, targetCenter, baseScale);
+		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 3, GardenEelBurrowAmbushFrameSeconds * 3.0d, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale);
+		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 4, GardenEelBurrowAmbushFrameSeconds * 4.0d, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale);
+		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 5, GardenEelBurrowAmbushReturnDelaySeconds, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
+
+		library.AddAnimation("frames", animation);
+		animationPlayer.AddAnimationLibrary("", library);
+		animationPlayer.AnimationFinished += _ =>
+		{
+			if (GodotObject.IsInstanceValid(animationPlayer))
+			{
+				animationPlayer.QueueFree();
+			}
+		};
+		animationPlayer.Play("frames");
+	}
+
+	private static void InsertGardenEelBurrowAmbushFrame(
+		Animation animation,
+		int textureTrack,
+		int positionTrack,
+		int scaleTrack,
+		IReadOnlyList<Texture2D> frames,
 		int frameIndex,
+		double timeSeconds,
 		Vector2 position,
-		Vector2 scale,
-		double delaySeconds)
+		Vector2 scale)
 	{
 		if (frameIndex >= frames.Count)
 		{
 			return;
 		}
 
-		Texture2D frame = frames[frameIndex];
-		tween.TweenCallback(Callable.From(() =>
-		{
-			if (GodotObject.IsInstanceValid(ambush))
-			{
-				ambush.Texture = frame;
-				ambush.GlobalPosition = position;
-				ambush.Scale = scale;
-			}
-		})).SetDelay(delaySeconds);
+		animation.TrackInsertKey(textureTrack, timeSeconds, frames[frameIndex]);
+		animation.TrackInsertKey(positionTrack, timeSeconds, position);
+		animation.TrackInsertKey(scaleTrack, timeSeconds, scale);
+	}
+
+	private static int AddDiscreteAnimationTrack(Animation animation, NodePath path)
+	{
+		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
+		animation.TrackSetPath(trackIndex, path);
+		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Nearest);
+		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Discrete);
+		return trackIndex;
 	}
 
 	private async Task PlayFishAdventureAttackBeamAsync(
@@ -1094,13 +978,12 @@ public partial class GameBoardScene
 		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
 			+ new Vector2(0.0f, -30.0f)
 			+ side * _rng.RandfRange(-14.0f, 14.0f);
-		int flightFrameCount = Math.Min(DragonPrinceDamageHitFlightFrameCount, frames.Count);
-		List<Texture2D> flightFrames = BuildFrameSlice(frames, 0, flightFrameCount);
-		List<Texture2D> impactFrames = BuildFrameSlice(frames, flightFrameCount, frames.Count - flightFrameCount);
-		if (impactFrames.Count == 0)
-		{
-			impactFrames = BuildFrameSlice(frames, Math.Max(0, frames.Count - 1), 1);
-		}
+		IReadOnlyList<Texture2D> flightFrames = _dragonPrinceDamageHitFlightFrames.Count > 0
+			? _dragonPrinceDamageHitFlightFrames
+			: frames;
+		IReadOnlyList<Texture2D> impactFrames = _dragonPrinceDamageHitImpactFrames.Count > 0
+			? _dragonPrinceDamageHitImpactFrames
+			: flightFrames;
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		var projectile = new Sprite2D
@@ -1436,11 +1319,15 @@ public partial class GameBoardScene
 			}
 
 			Vector2 impactScale = GetSpriteScaleForVisualSize(impactFrame, AdventureAttackImpactVisualSize * 1.08f);
-			blade.Texture = impactFrame;
 			blade.GlobalPosition = targetCenter;
 			blade.Rotation = 0.0f;
 			blade.Scale = impactScale * 0.78f;
 			blade.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.92f);
+			FrameAnimationHelpers.PlayTextureKeyframes(
+				blade,
+				impactFrame,
+				dissolveFrame,
+				LeafySeadragonCollectAttackDissolveFrameDelaySeconds);
 
 			Tween impactTween = CreateTween();
 			impactTween.SetParallel(true);
@@ -1453,7 +1340,6 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(blade))
 				{
-					blade.Texture = dissolveFrame;
 					blade.Rotation = _rng.RandfRange(-0.35f, 0.35f);
 				}
 			})).SetDelay(LeafySeadragonCollectAttackImpactSeconds * 0.44f);
@@ -1669,6 +1555,19 @@ public partial class GameBoardScene
 		}
 	}
 
+	private async Task PlayEnemySpecialAbilityAvatarFxForAbilityAsync(
+		int enemyPlayerIndex,
+		int turnSequenceGeneration,
+		string abilityId)
+	{
+		string bossKBorrowedAvatarId = IsBossKEnemy(enemyPlayerIndex)
+			&& CharacterAvatarCatalog.TryGetAvatarIdForAbility(abilityId, out string avatarId, requireBossBorrowedFxEligible: true)
+				? avatarId
+				: string.Empty;
+
+		await PlayEnemySpecialAbilityAvatarFxAsync(enemyPlayerIndex, turnSequenceGeneration, bossKBorrowedAvatarId);
+	}
+
 	private async Task PlayBossKBorrowedAbilityAvatarFxAsync(
 		int bossPlayerIndex,
 		string borrowedAvatarId,
@@ -1790,8 +1689,7 @@ public partial class GameBoardScene
 			}
 
 			borrowedAvatarDefinition = avatarDefinition;
-			return avatarDefinition.Id != BossKAdventureEnemyAvatarId
-				&& avatarDefinition.Id != SeaSlugAdventureEnemyAvatarId;
+			return avatarDefinition.BossBorrowedAbilityFxEligible;
 		}
 
 		borrowedAvatarDefinition = CharacterAvatarCatalog.Default;
@@ -1832,14 +1730,14 @@ public partial class GameBoardScene
 		}
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
-		var projectileTasks = new List<Task>(LeafySeadragonBladeProjectileCount);
+		Task[] projectileTasks = new Task[LeafySeadragonBladeProjectileCount];
 		for (int projectileIndex = 0; projectileIndex < LeafySeadragonBladeProjectileCount; projectileIndex++)
 		{
-			projectileTasks.Add(PlayLeafySeadragonBladeProjectileAsync(
+			projectileTasks[projectileIndex] = PlayLeafySeadragonBladeProjectileAsync(
 				attackerPlayerIndex,
 				targetCenter.Value,
 				projectileIndex,
-				turnSequenceGeneration));
+				turnSequenceGeneration);
 		}
 
 		await Task.WhenAll(projectileTasks);

@@ -135,7 +135,7 @@ public partial class GameBoardScene
 	{
 		if (request.Event.SourceTableCardIndex >= 0)
 		{
-			await ResolveDoubleTableCardTriggerAsync(request.Event.SourceTableCardIndex, turnSequenceGeneration, new HashSet<int>());
+			await ResolveDoubleTableCardTriggerAsync(request.Event.SourceTableCardIndex, turnSequenceGeneration, null);
 		}
 
 		return new PlayCardResult(true, false, CompletesTurn: false);
@@ -145,7 +145,7 @@ public partial class GameBoardScene
 	{
 		if (request.Event.SourceTableCardIndex >= 0)
 		{
-			await ResolveOvertimeTableCardTriggerAsync(request.Event.SourceTableCardIndex, turnSequenceGeneration, new HashSet<int>());
+			await ResolveOvertimeTableCardTriggerAsync(request.Event.SourceTableCardIndex, turnSequenceGeneration, null);
 		}
 
 		return new PlayCardResult(true, false, CompletesTurn: false);

@@ -200,24 +200,18 @@ public partial class GameBoardScene
 	private List<int> BuildItemTargetPlayerCandidates(string itemCardId, int ownerPlayerIndex)
 	{
 		var candidates = new List<int>();
+		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
+		{
+			return candidates;
+		}
+
+		string target = definition.EffectValues.GetString(CardEffectValueKeys.Target);
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			if (playerIndex == ownerPlayerIndex)
+			if (IsResolvedItemTargetPlayerCandidate(target, ownerPlayerIndex, playerIndex))
 			{
-				continue;
+				candidates.Add(playerIndex);
 			}
-
-			if (IsItemEffectType(itemCardId, CardEffectTypes.StealCard) && GetTotalHandCardCount(playerIndex) == 0)
-			{
-				continue;
-			}
-
-			if (IsItemEffectType(itemCardId, CardEffectTypes.StealDeckCards) && _playerDecks[playerIndex].Count == 0)
-			{
-				continue;
-			}
-
-			candidates.Add(playerIndex);
 		}
 
 		return candidates;
@@ -225,13 +219,60 @@ public partial class GameBoardScene
 
 	private int PickItemTargetPlayer(string itemCardId, int ownerPlayerIndex)
 	{
-		List<int> candidates = BuildItemTargetPlayerCandidates(itemCardId, ownerPlayerIndex);
-		if (candidates.Count == 0)
+		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
 		{
 			return -1;
 		}
 
-		return candidates[_rng.RandiRange(0, candidates.Count - 1)];
+		string target = definition.EffectValues.GetString(CardEffectValueKeys.Target);
+		int selectedPlayerIndex = -1;
+		int candidateCount = 0;
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			if (!IsResolvedItemTargetPlayerCandidate(target, ownerPlayerIndex, playerIndex))
+			{
+				continue;
+			}
+
+			candidateCount++;
+			if (_rng.RandiRange(1, candidateCount) == 1)
+			{
+				selectedPlayerIndex = playerIndex;
+			}
+		}
+
+		return selectedPlayerIndex;
+	}
+
+	private bool IsItemTargetPlayerCandidate(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex)
+	{
+		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			&& IsResolvedItemTargetPlayerCandidate(
+				definition.EffectValues.GetString(CardEffectValueKeys.Target),
+				ownerPlayerIndex,
+				targetPlayerIndex);
+	}
+
+	private bool IsResolvedItemTargetPlayerCandidate(string target, int ownerPlayerIndex, int targetPlayerIndex)
+	{
+		if (targetPlayerIndex < 0 || targetPlayerIndex >= player_count || targetPlayerIndex == ownerPlayerIndex)
+		{
+			return false;
+		}
+
+		if (target == CardEffectTargets.PlayerHand)
+		{
+			return targetPlayerIndex < _playerHands.Count
+				&& targetPlayerIndex < _playerItemHands.Count
+				&& GetTotalHandCardCount(targetPlayerIndex) > 0;
+		}
+
+		if (target == CardEffectTargets.PlayerDeck)
+		{
+			return targetPlayerIndex < _playerDecks.Count && _playerDecks[targetPlayerIndex].Count > 0;
+		}
+
+		return true;
 	}
 
 	private int PickTargetHandIndex(int targetPlayerIndex)
@@ -285,13 +326,13 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!BuildItemTargetPlayerCandidates(_pendingItemCardId, _pendingItemOwnerIndex).Contains(targetPlayerIndex))
+		if (!IsItemTargetPlayerCandidate(_pendingItemCardId, _pendingItemOwnerIndex, targetPlayerIndex))
 		{
 			CancelPendingItemSelection();
 			return;
 		}
 
-		if (IsItemEffectType(_pendingItemCardId, CardEffectTypes.StealDeckCards))
+		if (IsPlayerDeckTargetItemCard(_pendingItemCardId))
 		{
 			CompletePendingItemSelection(targetPlayerIndex, -1);
 			return;
@@ -354,19 +395,7 @@ public partial class GameBoardScene
 		int ownerPlayerIndex = _pendingItemOwnerIndex;
 		int itemHandIndex = _pendingItemHandIndex;
 		int turnSequenceGeneration = _pendingItemTurnSequenceGeneration;
-		bool targetIsValid = itemCardId switch
-		{
-			_ when IsItemEffectType(itemCardId, CardEffectTypes.StealCard) => targetPlayerIndex >= 0
-				&& targetPlayerIndex < _playerHands.Count
-				&& targetPlayerIndex != ownerPlayerIndex
-				&& targetHandIndex >= 0
-				&& targetHandIndex < GetTotalHandCardCount(targetPlayerIndex),
-			_ when IsItemEffectType(itemCardId, CardEffectTypes.StealDeckCards) => targetPlayerIndex >= 0
-				&& targetPlayerIndex < _playerDecks.Count
-				&& targetPlayerIndex != ownerPlayerIndex
-				&& _playerDecks[targetPlayerIndex].Count > 0,
-			_ => true,
-		};
+		bool targetIsValid = IsPendingItemTargetValid(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
 		if (!targetIsValid || itemHandIndex < 0 || itemHandIndex >= _playerItemHands[ownerPlayerIndex].Count)
 		{
 			CancelPendingItemSelection();
@@ -458,6 +487,28 @@ public partial class GameBoardScene
 			&& _pendingItemTurnSequenceGeneration == _turnSequenceGeneration
 			&& _pendingItemOwnerIndex >= 0
 			&& _pendingItemOwnerIndex < _playerItemHands.Count;
+	}
+
+	private bool IsPendingItemTargetValid(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
+	{
+		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
+		{
+			return false;
+		}
+
+		return definition.EffectValues.GetString(CardEffectValueKeys.Target) switch
+		{
+			CardEffectTargets.PlayerHand => targetPlayerIndex >= 0
+				&& targetPlayerIndex < _playerHands.Count
+				&& targetPlayerIndex != ownerPlayerIndex
+				&& targetHandIndex >= 0
+				&& targetHandIndex < GetTotalHandCardCount(targetPlayerIndex),
+			CardEffectTargets.PlayerDeck => targetPlayerIndex >= 0
+				&& targetPlayerIndex < _playerDecks.Count
+				&& targetPlayerIndex != ownerPlayerIndex
+				&& _playerDecks[targetPlayerIndex].Count > 0,
+			_ => true,
+		};
 	}
 
 	private Control CreateSelectionOverlay()

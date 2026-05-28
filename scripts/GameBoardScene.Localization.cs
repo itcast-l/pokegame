@@ -5,19 +5,6 @@ public partial class GameBoardScene
 {
 	private const string GameSettingsConfigPath = "user://settings.cfg";
 
-	private static readonly Dictionary<string, string> ItemDescriptionKeysById = new()
-	{
-		[QuestionMarkItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(QuestionMarkItemCardId),
-		[BombItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(BombItemCardId),
-		[MagnetItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(MagnetItemCardId),
-		[GreedItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(GreedItemCardId),
-		[LensItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(LensItemCardId),
-		[DoubleItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(DoubleItemCardId),
-		[OvertimeItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(OvertimeItemCardId),
-		[DrawCardItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(DrawCardItemCardId),
-		[ShuffleItemCardId] = ItemCardCatalog.GetDefaultDescriptionKey(ShuffleItemCardId),
-	};
-
 	private readonly List<(Button Button, string Key)> _localizedGameButtons = new();
 
 	public override void _Notification(int what)
@@ -69,11 +56,11 @@ public partial class GameBoardScene
 		return value.StartsWith("ITEM_DESC_", System.StringComparison.Ordinal);
 	}
 
-	private string GetItemDescription(string itemCardId, string fallbackText = "")
+	private string GetItemDescription(string fallbackText = "")
 	{
 		string key = LooksLikeLocalizationKey(fallbackText)
 			? fallbackText
-			: ItemDescriptionKeysById.TryGetValue(itemCardId, out string? mappedKey) ? mappedKey : string.Empty;
+			: string.Empty;
 		if (string.IsNullOrEmpty(key))
 		{
 			return fallbackText;
@@ -87,7 +74,7 @@ public partial class GameBoardScene
 	{
 		if (!string.IsNullOrEmpty(_pendingItemCardId))
 		{
-			string description = GetItemDescription(_pendingItemCardId, _itemCardCatalog.GetDescriptionKey(_pendingItemCardId));
+			string description = GetItemDescription(_itemCardCatalog.GetDescriptionKey(_pendingItemCardId));
 			if (!string.IsNullOrWhiteSpace(description) && description != _pendingItemCardId)
 			{
 				return description;
@@ -101,7 +88,7 @@ public partial class GameBoardScene
 	{
 		foreach (string itemCardId in _enabledSceneItemCardIds)
 		{
-			_itemCardDescriptions[itemCardId] = GetItemDescription(itemCardId, _itemCardCatalog.GetDescriptionKey(itemCardId));
+			_itemCardDescriptions[itemCardId] = GetItemDescription(_itemCardCatalog.GetDescriptionKey(itemCardId));
 		}
 	}
 

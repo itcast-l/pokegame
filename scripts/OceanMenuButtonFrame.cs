@@ -13,6 +13,13 @@ public partial class OceanMenuButtonFrame : Control
 
 	private Button? _button;
 	private float _glow;
+	private readonly Vector2[] _plaquePoints = new Vector2[6];
+	private readonly Vector2[] _insetPoints = new Vector2[6];
+	private readonly Vector2[] _shadowPoints = new Vector2[6];
+	private readonly Vector2[] _closedPlaquePoints = new Vector2[7];
+	private readonly Vector2[] _closedInsetPoints = new Vector2[7];
+	private readonly Vector2[] _causticPoints = new Vector2[3];
+	private readonly StyleBoxFlat _selectionGlowStyle = new();
 
 	public override void _Ready()
 	{
@@ -61,31 +68,24 @@ public partial class OceanMenuButtonFrame : Control
 		float bevel = h * 0.28f;
 		Vector2 origin = rect.Position;
 
-		Vector2[] plaque =
-		{
-			origin + new Vector2(bevel, 2.0f),
-			origin + new Vector2(w - bevel * 0.48f, 2.0f),
-			origin + new Vector2(w - 2.0f, h * 0.5f),
-			origin + new Vector2(w - bevel * 0.48f, h - 2.0f),
-			origin + new Vector2(bevel, h - 2.0f),
-			origin + new Vector2(2.0f, h * 0.5f),
-		};
+		_plaquePoints[0] = origin + new Vector2(bevel, 2.0f);
+		_plaquePoints[1] = origin + new Vector2(w - bevel * 0.48f, 2.0f);
+		_plaquePoints[2] = origin + new Vector2(w - 2.0f, h * 0.5f);
+		_plaquePoints[3] = origin + new Vector2(w - bevel * 0.48f, h - 2.0f);
+		_plaquePoints[4] = origin + new Vector2(bevel, h - 2.0f);
+		_plaquePoints[5] = origin + new Vector2(2.0f, h * 0.5f);
 
-		Vector2[] inset =
-		{
-			origin + new Vector2(bevel + 12.0f, 12.0f),
-			origin + new Vector2(w - bevel * 0.58f - 12.0f, 10.0f),
-			origin + new Vector2(w - 18.0f, h * 0.5f),
-			origin + new Vector2(w - bevel * 0.58f - 12.0f, h - 10.0f),
-			origin + new Vector2(bevel + 12.0f, h - 12.0f),
-			origin + new Vector2(18.0f, h * 0.5f),
-		};
+		_insetPoints[0] = origin + new Vector2(bevel + 12.0f, 12.0f);
+		_insetPoints[1] = origin + new Vector2(w - bevel * 0.58f - 12.0f, 10.0f);
+		_insetPoints[2] = origin + new Vector2(w - 18.0f, h * 0.5f);
+		_insetPoints[3] = origin + new Vector2(w - bevel * 0.58f - 12.0f, h - 10.0f);
+		_insetPoints[4] = origin + new Vector2(bevel + 12.0f, h - 12.0f);
+		_insetPoints[5] = origin + new Vector2(18.0f, h * 0.5f);
 
 		Color shadow = new(0.0f, 0.02f, 0.04f, 0.32f + _glow * 0.08f);
-		Vector2[] shadowShape = new Vector2[plaque.Length];
-		for (int i = 0; i < plaque.Length; i++)
+		for (int i = 0; i < _plaquePoints.Length; i++)
 		{
-			shadowShape[i] = plaque[i] + new Vector2(0.0f, 5.0f);
+			_shadowPoints[i] = _plaquePoints[i] + new Vector2(0.0f, 5.0f);
 		}
 
 		float selectedBoost = Selected ? 0.08f : 0.0f;
@@ -94,18 +94,21 @@ public partial class OceanMenuButtonFrame : Control
 		Color rim = AccentColor.Lerp(Colors.White, 0.18f + _glow * 0.22f);
 		Color highlight = AccentColor.Lerp(new Color(1.0f, 0.94f, 0.66f), _glow * 0.45f);
 
-		DrawColoredPolygon(shadowShape, shadow);
+		DrawColoredPolygon(_shadowPoints, shadow);
 		if (Selected)
 		{
+			ConfigureSelectionGlowStyle(_selectionGlowStyle);
 			DrawStyleBox(
-				CreateSelectionGlowStyle(),
+				_selectionGlowStyle,
 				new Rect2(rect.Position - new Vector2(3.0f, 3.0f), rect.Size + new Vector2(6.0f, 6.0f)));
 		}
 
-		DrawColoredPolygon(plaque, outer);
-		DrawColoredPolygon(inset, inner);
-		DrawPolyline(Close(plaque), new Color(rim.R, rim.G, rim.B, 0.58f + _glow * 0.28f), 2.0f + _glow, true);
-		DrawPolyline(Close(inset), new Color(0.82f, 1.0f, 0.95f, 0.22f + _glow * 0.18f), 1.2f, true);
+		CloseInto(_plaquePoints, _closedPlaquePoints);
+		CloseInto(_insetPoints, _closedInsetPoints);
+		DrawColoredPolygon(_plaquePoints, outer);
+		DrawColoredPolygon(_insetPoints, inner);
+		DrawPolyline(_closedPlaquePoints, new Color(rim.R, rim.G, rim.B, 0.58f + _glow * 0.28f), 2.0f + _glow, true);
+		DrawPolyline(_closedInsetPoints, new Color(0.82f, 1.0f, 0.95f, 0.22f + _glow * 0.18f), 1.2f, true);
 
 		DrawOrnament(origin, w, h, highlight);
 		DrawCausticStreaks(origin, w, h);
@@ -136,40 +139,42 @@ public partial class OceanMenuButtonFrame : Control
 			float y = origin.Y + h * (0.3f + i * 0.18f);
 			float x0 = origin.X + h * (0.84f + i * 0.15f);
 			float x1 = origin.X + w - h * (0.78f + i * 0.1f);
-			DrawPolyline(new[] { new Vector2(x0, y), new Vector2((x0 + x1) * 0.5f, y - 4.0f), new Vector2(x1, y + 2.0f) }, lineColor, 1.0f, true);
+			_causticPoints[0] = new Vector2(x0, y);
+			_causticPoints[1] = new Vector2((x0 + x1) * 0.5f, y - 4.0f);
+			_causticPoints[2] = new Vector2(x1, y + 2.0f);
+			DrawPolyline(_causticPoints, lineColor, 1.0f, true);
 		}
 	}
 
 	private void DrawCompactFrame(Rect2 rect)
 	{
-		StyleBoxFlat style = CreateSelectionGlowStyle();
-		style.BgColor = new Color(0.02f, 0.30f + _glow * 0.1f, 0.34f + _glow * 0.1f, 0.72f);
-		style.BorderColor = AccentColor.Lerp(Colors.White, 0.14f + _glow * 0.22f);
-		DrawStyleBox(style, rect);
+		ConfigureSelectionGlowStyle(_selectionGlowStyle);
+		_selectionGlowStyle.BgColor = new Color(0.02f, 0.30f + _glow * 0.1f, 0.34f + _glow * 0.1f, 0.72f);
+		_selectionGlowStyle.BorderColor = AccentColor.Lerp(Colors.White, 0.14f + _glow * 0.22f);
+		DrawStyleBox(_selectionGlowStyle, rect);
 	}
 
-	private static Vector2[] Close(Vector2[] points)
+	private static void CloseInto(Vector2[] points, Vector2[] closed)
 	{
-		Vector2[] closed = new Vector2[points.Length + 1];
-		points.CopyTo(closed, 0);
-		closed[^1] = points[0];
-		return closed;
-	}
-
-	private StyleBoxFlat CreateSelectionGlowStyle()
-	{
-		return new StyleBoxFlat
+		for (int index = 0; index < points.Length; index++)
 		{
-			BgColor = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.09f),
-			BorderColor = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.24f),
-			BorderWidthLeft = 1,
-			BorderWidthTop = 1,
-			BorderWidthRight = 1,
-			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8,
-		};
+			closed[index] = points[index];
+		}
+
+		closed[points.Length] = points[0];
+	}
+
+	private void ConfigureSelectionGlowStyle(StyleBoxFlat style)
+	{
+		style.BgColor = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.09f);
+		style.BorderColor = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.24f);
+		style.BorderWidthLeft = 1;
+		style.BorderWidthTop = 1;
+		style.BorderWidthRight = 1;
+		style.BorderWidthBottom = 1;
+		style.CornerRadiusTopLeft = 8;
+		style.CornerRadiusTopRight = 8;
+		style.CornerRadiusBottomLeft = 8;
+		style.CornerRadiusBottomRight = 8;
 	}
 }

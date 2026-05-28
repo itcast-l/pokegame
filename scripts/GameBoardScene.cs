@@ -23,83 +23,25 @@ public partial class GameBoardScene : Control
 			EnemySpecialAbilityAvatarFxFrameCount,
 			"enemy special ability avatar effect",
 			preferImageFile: true);
+	private const string MantaRayTideShiftCycloneFxFramePattern = "res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-{0}.png";
+	private const int MantaRayTideShiftCycloneFxFrameCount = 8;
 	private static readonly Texture2D[] MantaRayTideShiftCycloneFxFrames =
-	{
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-1.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-2.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-3.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-4.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-5.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-6.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-7.png"),
-		GD.Load<Texture2D>("res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-8.png"),
-	};
+		FrameAnimationHelpers.LoadTextureFrames(MantaRayTideShiftCycloneFxFramePattern, MantaRayTideShiftCycloneFxFrameCount, "manta ray tide shift cyclone", preferImageFile: true);
 	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
 	private const string CatAdventureDamageEffectFramePattern = "res://art/fx/player_cat_claw_attack/run-001/processed/fx-{0}.png";
-	private const string FishAdventureDamageEffectFramePattern = "res://art/fx/fish_attack_burst/run-001/processed/fx-{0}.png";
-	private const string LanternfishAdventureDamageEffectFramePattern = "res://art/fx/lanternfish_lure_flash/run-001/processed/fx-{0}.png";
-	private const string ShrimpAdventureDamageEffectFramePattern = "res://art/fx/player_shrimp_snap_attack/run-001/processed/fx-{0}.png";
-	private const string CrabAdventureDamageEffectFramePattern = "res://art/fx/player_crab_tidal_pincer_attack/run-001/processed/fx-{0}.png";
-	private const string JellyfishAdventureDamageEffectFramePattern = "res://art/fx/player_jellyfish_sting_attack/run-002/processed/fx-{0}.png";
-	private const string GardenEelAdventureDamageEffectFramePattern = "res://art/fx/player_garden_eel_burrow_ambush/run-001/processed/fx-{0}.png";
-	private const string SeaSlugAdventureDamageEffectFramePattern = "res://art/fx/player_sea_slug_hit_marker/run-001/processed/fx-{0}.png";
-	private const string NautilusAdventureDamageEffectFramePattern = "res://art/fx/player_nautilus_spiral_pressure_slash/run-001/processed/fx-{0}.png";
-	private const string NarwhalAdventureDamageEffectFramePattern = "res://art/fx/player_narwhal_tusk_break/run-001/processed/fx-{0}.png";
-	private const string DragonPrinceAdventureDamageEffectFramePattern = "res://art/fx/player_dragon_prince_damage_hit/run-001/processed/fx-{0}.png";
-	private const string DragonQueenAdventureDamageEffectFramePattern = "res://art/fx/player_dragon_queen_jaw_slash/run-001/processed/fx-{0}.png";
-	private const string DragonPrinceSpecialJackTexturePath = "res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png";
-	private const string LeafySeadragonCollectAttackEffectFramePattern = "res://art/fx/player_leafy_seadragon_collect_attack/run-002/processed/fx-{0}.png";
 	private const string LeafySeadragonBladeProjectileFramePattern = "res://art/fx/player_leafy_seadragon_leafy_mirage_slash/concept-001/processed/fx-{0}.png";
 	private const string BossKRoyalSeizureLanceFramePattern = "res://art/fx/boss_k_royal_seizure_lance/run-001/processed/fx-{0}.png";
 	private const int AdventureDamageEffectFrameCount = 4;
-	private const int GardenEelAdventureDamageEffectFrameCount = 6;
-	private const int DragonPrinceAdventureDamageEffectFrameCount = 12;
 	private const int LeafySeadragonBladeProjectileFrameCount = 4;
 	private const int BossKRoyalSeizureLanceFrameCount = 8;
-	private const string FishDefeatFinisherFramePattern = "res://art/characters/player_fish_avatar/run-006/fp_fx_asset_preview/abu-fp-fx-asset-{0:00}.png";
-	private const int FishDefeatFinisherFrameCount = 20;
-	private const float FishDefeatFinisherSeconds = 1.12f;
-	private static readonly Texture2D[] FishDefeatFinisherFrames =
-		FrameAnimationHelpers.LoadTextureFrames(FishDefeatFinisherFramePattern, FishDefeatFinisherFrameCount, "fish defeat finisher");
+	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
+	private const int CardBackFrameCount = 8;
 	private static readonly Texture2D[] CardBackFrames =
-	{
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-001.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-002.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-003.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-004.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-005.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-006.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-007.png"),
-		GD.Load<Texture2D>("res://art/cards/ocean_animated_deck/back/processed/frames/frame-008.png"),
-	};
+		FrameAnimationHelpers.LoadTextureFrames(CardBackFramePattern, CardBackFrameCount, "card back");
 	private static readonly Texture2D[] DefaultAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(AdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "adventure damage effect");
 	private static readonly Texture2D[] CatAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(CatAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "cat adventure damage effect");
-	private static readonly Texture2D[] FishAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(FishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "fish adventure damage effect");
-	private static readonly Texture2D[] LanternfishAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(LanternfishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "lanternfish adventure damage effect");
-	private static readonly Texture2D[] ShrimpAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(ShrimpAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "shrimp adventure damage effect");
-	private static readonly Texture2D[] CrabAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(CrabAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "crab adventure damage effect");
-	private static readonly Texture2D[] JellyfishAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(JellyfishAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "jellyfish adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] GardenEelAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(GardenEelAdventureDamageEffectFramePattern, GardenEelAdventureDamageEffectFrameCount, "garden eel adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] SeaSlugAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(SeaSlugAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "sea slug adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] NautilusAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(NautilusAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "nautilus adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] NarwhalAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(NarwhalAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "narwhal adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] DragonPrinceAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(DragonPrinceAdventureDamageEffectFramePattern, DragonPrinceAdventureDamageEffectFrameCount, "dragon prince adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] DragonQueenAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(DragonQueenAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "dragon queen adventure damage effect", preferImageFile: true);
-	private static readonly Texture2D[] LeafySeadragonCollectAttackEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonCollectAttackEffectFramePattern, AdventureDamageEffectFrameCount, "leafy seadragon collect attack effect", preferImageFile: true);
 	private static readonly Texture2D[] LeafySeadragonBladeProjectileFrames =
 		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeProjectileFramePattern, LeafySeadragonBladeProjectileFrameCount, "leafy seadragon blade projectile", preferImageFile: true);
 	private static readonly Texture2D[] BossKRoyalSeizureLanceFrames =
@@ -120,9 +62,6 @@ public partial class GameBoardScene : Control
 	private const int LensRevealWispFrameCount = 4;
 	private static readonly Texture2D[] LensRevealWispFrames =
 		FrameAnimationHelpers.LoadTextureFrames(LensRevealWispFramePattern, LensRevealWispFrameCount, "lens reveal wisp");
-	private const string MagnetCardOverlayPath = "res://art/fx/magnet_card_overlay/run-001/processed/card-aspect.png";
-	private const string DoubleCardOverlayPath = "res://art/fx/double_card_overlay/run-002/processed/card-aspect.png";
-	private const string OvertimeCardOverlayPath = "res://art/fx/overtime_card_overlay/run-001/processed/card-aspect.png";
 	private const string SlimeCardOverlayPath = "res://art/fx/slime_card_overlay/run-001/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 4;
@@ -130,51 +69,21 @@ public partial class GameBoardScene : Control
 		FrameAnimationHelpers.LoadTextureFrames(MagnetCountdownFramePattern, MagnetCountdownFrameCount, "magnet countdown");
 	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
 	private const string DefeatBannerTexturePath = "res://art/ui/defeat_banner/run-001/processed/banner-transparent.png";
-	private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
-	private const string BombItemCardId = ItemCardCatalog.BombItemCardId;
-	private const string MagnetItemCardId = ItemCardCatalog.MagnetItemCardId;
-	private const string GreedItemCardId = ItemCardCatalog.GreedItemCardId;
-	private const string LensItemCardId = ItemCardCatalog.LensItemCardId;
-	private const string DoubleItemCardId = ItemCardCatalog.DoubleItemCardId;
-	private const string OvertimeItemCardId = ItemCardCatalog.OvertimeItemCardId;
-	private const string DrawCardItemCardId = ItemCardCatalog.DrawCardItemCardId;
-	private const string ShuffleItemCardId = ItemCardCatalog.ShuffleItemCardId;
-	private const string JackItemCardId = ItemCardCatalog.JackItemCardId;
-	private const string QueenItemCardId = ItemCardCatalog.QueenItemCardId;
-	private const string KingItemCardId = ItemCardCatalog.KingItemCardId;
-	private const string FishAdventureEnemyAvatarId = "fish";
-	private const string LanternfishAdventureEnemyAvatarId = "lanternfish";
-	private const string ShrimpAdventureEnemyAvatarId = "shrimp";
-	private const string CrabAdventureEnemyAvatarId = "crab";
-	private const string JellyfishAdventureEnemyAvatarId = "jellyfish";
-	private const string MantaRayAdventureEnemyAvatarId = "manta_ray";
-	private const string GardenEelAdventureEnemyAvatarId = "garden_eel";
-	private const string SeaSlugAdventureEnemyAvatarId = "sea_slug";
-	private const string NautilusAdventureEnemyAvatarId = "nautilus";
-	private const string NarwhalAdventureEnemyAvatarId = "narwhal";
-	private const string LeafySeadragonAdventureEnemyAvatarId = "leafy_seadragon";
-	private const string DragonPrinceAdventureEnemyAvatarId = "dragon_prince_j";
-	private const string DragonQueenAdventureEnemyAvatarId = "dragon_queen_q";
-	private const string BossKAdventureEnemyAvatarId = "boss_k";
-	private const int CrabScoreReductionPerCard = 2;
-	private const int GardenEelCapturesBeforeSandBite = 2;
-	private const int NautilusCapturesBeforeBomb = 3;
-	private const int NarwhalCapturesBeforeDouble = 2;
-	private const int LeafySeadragonBladeBreakTableCardThreshold = 5;
-	private const int LeafySeadragonBladeBreakCooldownTurns = 1;
-	private const int SeaSlugMissesBeforeSlimeCoat = 2;
-	private const int DragonRoyalCaptureThreshold = 5;
-	private const int DragonQueenCaptureThreshold = 1;
-	private const int DragonQueenCapturesBeforeSteal = 3;
-	private const int BossKCapturesBeforeSteal = 3;
-	private const string CardNamePrefix = "Card_";
+		private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
+		private const string BombItemCardId = ItemCardCatalog.BombItemCardId;
+		private const string MagnetItemCardId = ItemCardCatalog.MagnetItemCardId;
+		private const string DoubleItemCardId = ItemCardCatalog.DoubleItemCardId;
+		private const string CardNamePrefix = "Card_";
 	private const string CardBackAnimatedMeta = "ocean_card_back_animated";
 	private const string HandCardSlotMeta = "ocean_hand_card_slot";
+	private const string TableRenderPooledTextureMeta = "ocean_table_render_texture";
+	private const string TableRenderPooledPanelMeta = "ocean_table_render_panel";
+	private const string CardCountLabelNodeName = "CardCountLabel";
 	private const int VisiblePileCards = 4;
+	private static readonly string[] PileCardNodeNames = { "PileCard_0", "PileCard_1", "PileCard_2", "PileCard_3" };
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;
 	private const int MainPlayerIndex = 0;
-	private static readonly HashSet<string> ExcludedDeckRanks = new() { JackItemCardId, QueenItemCardId, KingItemCardId };
 	private static readonly int[] ClockwiseTurnOrder = { 0, 2, 1, 3 };
 	private const float HoveredHandCardLift = 18.0f;
 	private const float HoveredHandCardScale = 1.06f;
@@ -230,6 +139,8 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _bossKRoyalSeizureLanceFrames = new();
 	private readonly List<Texture2D> _adventureDamageEffectFrames = new();
 	private readonly List<Texture2D> _adventureEnemyDamageEffectFrames = new();
+	private readonly List<Texture2D> _dragonPrinceDamageHitFlightFrames = new();
+	private readonly List<Texture2D> _dragonPrinceDamageHitImpactFrames = new();
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
 	private readonly List<Texture2D> _specialCardTriggerEffectFrames = new();
 	private readonly List<Texture2D> _bombPairDestroyEffectFrames = new();
@@ -237,18 +148,21 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
+	private readonly Dictionary<string, ItemAttachmentOverlay> _itemAttachmentOverlaysById = new();
 	private readonly HashSet<string> _hiddenHandDisplaySlots = new();
+	private readonly HashSet<string> _shiftedHiddenHandDisplaySlots = new();
 	private readonly CardEventBus _cardEventBus = new();
+	private readonly List<TextureRect> _tableRenderTexturePool = new();
+	private readonly List<Panel> _tableRenderPanelPool = new();
 	private SpecialCardEffectResolver _effectResolver = default!;
 	private ItemCardCatalog _itemCardCatalog = default!;
+	private Dictionary<string, AdventureAttackEffectHandler> _adventureAttackEffectHandlers = default!;
 	private readonly Queue<PendingItemAttachmentReward> _pendingItemAttachmentRewards = new();
 	private Control? _selectionOverlay;
 	private Texture2D? _cardBackTexture;
-	private Texture2D? _magnetCardOverlayTexture;
-	private Texture2D? _doubleCardOverlayTexture;
-	private Texture2D? _overtimeCardOverlayTexture;
 	private Texture2D? _slimeCardOverlayTexture;
 	private Texture2D? _dragonPrinceSpecialJackTexture;
+	private string _dragonPrinceSpecialJackRank = string.Empty;
 	private Control? _winnerBannerRoot;
 	private Control? _winnerBannerPanel;
 	private TextureRect? _winnerBannerArt;
@@ -303,7 +217,17 @@ public partial class GameBoardScene : Control
 	private bool _bossKActiveControlUsedThisTurn;
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
-	private int _winnerPlayerIndex = -1;
+	private readonly HashSet<int> _cardPlayPendingFaceUpMagnetTriggerIndexes = new();
+	private readonly HashSet<int> _cardPlayResolvedMagnetTriggerIndexes = new();
+	private readonly HashSet<int> _cardPlayMagnetExtraCaptureIndexes = new();
+	private readonly HashSet<int> _cardPlayResolvedDoubleTriggerIndexes = new();
+	private readonly HashSet<int> _cardPlayResolvedOvertimeTriggerIndexes = new();
+		private readonly HashSet<CardTriggerResolutionKey> _resolvedCardTriggerKeys = new();
+		private readonly List<TableSpecialCardTrigger> _capturedSpecialCardTriggers = new();
+		private readonly List<int> _tableShuffleIndexes = new();
+		private readonly List<TableCard> _tableShuffleMovableCards = new();
+		private readonly List<int> _validExtraCaptureIndexes = new();
+		private int _winnerPlayerIndex = -1;
 
 	[Export(PropertyHint.Range, "2,4,1")]
 	public int player_count
@@ -385,6 +309,7 @@ public partial class GameBoardScene : Control
 			if (IsInsideTree())
 			{
 				LoadAdventureEnemyDamageEffectTextures();
+				LoadDragonPrinceSpecialJackTexture();
 			}
 		}
 	}
@@ -413,6 +338,9 @@ public partial class GameBoardScene : Control
 		_rng.Randomize();
 		_itemCardCatalog = ItemCardCatalog.Load(this);
 		_effectResolver = new SpecialCardEffectResolver(this);
+		_itemPlayPresentationHandlers = CreateItemPlayPresentationHandlers();
+		_itemPlayPresentationValidators = CreateItemPlayPresentationValidators();
+		_adventureAttackEffectHandlers = CreateAdventureAttackEffectHandlers();
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
 		LoadEnemySpecialAbilityAvatarFxTextures();

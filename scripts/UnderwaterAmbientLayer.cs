@@ -19,6 +19,10 @@ public partial class UnderwaterAmbientLayer : Control
 	private readonly List<Bubble> _bubbles = new();
 	private readonly List<Mote> _motes = new();
 	private readonly List<SeagrassBlade> _seagrassBlades = new();
+	private readonly Vector2[] _waterCurrentTopPoints = new Vector2[3];
+	private readonly Vector2[] _waterCurrentBottomPoints = new Vector2[3];
+	private readonly Vector2[] _seagrassStemPoints = new Vector2[5];
+	private readonly Vector2[] _seagrassCenterLinePoints = new Vector2[3];
 	private double _time;
 
 	public override void _Ready()
@@ -153,20 +157,14 @@ public partial class UnderwaterAmbientLayer : Control
 		{
 			float offset = i * Size.X / 9.0f;
 			float sway = Mathf.Sin((float)_time * 0.45f + i * 0.7f) * 14.0f;
-			Vector2[] topPoints =
-			{
-				new(offset - Size.X * 0.12f, topY + sway),
-				new(offset, topY + 8.0f - sway * 0.25f),
-				new(offset + Size.X * 0.12f, topY + sway * 0.35f),
-			};
-			Vector2[] bottomPoints =
-			{
-				new(offset - Size.X * 0.12f, bottomY - sway * 0.25f),
-				new(offset, bottomY - 10.0f + sway * 0.2f),
-				new(offset + Size.X * 0.12f, bottomY - sway),
-			};
-			DrawPolyline(topPoints, lineColor, 1.25f, true);
-			DrawPolyline(bottomPoints, lineColor, 1.25f, true);
+			_waterCurrentTopPoints[0] = new Vector2(offset - Size.X * 0.12f, topY + sway);
+			_waterCurrentTopPoints[1] = new Vector2(offset, topY + 8.0f - sway * 0.25f);
+			_waterCurrentTopPoints[2] = new Vector2(offset + Size.X * 0.12f, topY + sway * 0.35f);
+			_waterCurrentBottomPoints[0] = new Vector2(offset - Size.X * 0.12f, bottomY - sway * 0.25f);
+			_waterCurrentBottomPoints[1] = new Vector2(offset, bottomY - 10.0f + sway * 0.2f);
+			_waterCurrentBottomPoints[2] = new Vector2(offset + Size.X * 0.12f, bottomY - sway);
+			DrawPolyline(_waterCurrentTopPoints, lineColor, 1.25f, true);
+			DrawPolyline(_waterCurrentBottomPoints, lineColor, 1.25f, true);
 		}
 	}
 
@@ -180,17 +178,17 @@ public partial class UnderwaterAmbientLayer : Control
 			Vector2 tip = blade.Base + new Vector2(wave * blade.Sway + sidePush * blade.Sway * 0.35f, blade.Height * direction);
 			Vector2 mid = blade.Base + new Vector2(wave * blade.Sway * 0.42f + sidePush * blade.Sway * 0.16f, blade.Height * direction * 0.52f);
 			var normal = new Vector2(blade.Width, 0.0f);
-			Vector2[] stem =
-			{
-				blade.Base - normal,
-				mid - normal * 0.45f,
-				tip,
-				mid + normal * 0.45f,
-				blade.Base + normal,
-			};
+			_seagrassStemPoints[0] = blade.Base - normal;
+			_seagrassStemPoints[1] = mid - normal * 0.45f;
+			_seagrassStemPoints[2] = tip;
+			_seagrassStemPoints[3] = mid + normal * 0.45f;
+			_seagrassStemPoints[4] = blade.Base + normal;
+			_seagrassCenterLinePoints[0] = blade.Base;
+			_seagrassCenterLinePoints[1] = mid;
+			_seagrassCenterLinePoints[2] = tip;
 
-			DrawColoredPolygon(stem, blade.Color);
-			DrawPolyline(new[] { blade.Base, mid, tip }, new Color(0.76f, 1.0f, 0.88f, blade.Color.A * 0.62f), 1.1f, true);
+			DrawColoredPolygon(_seagrassStemPoints, blade.Color);
+			DrawPolyline(_seagrassCenterLinePoints, new Color(0.76f, 1.0f, 0.88f, blade.Color.A * 0.62f), 1.1f, true);
 
 			Vector2 glowPosition = blade.Base.Lerp(tip, 0.34f + 0.18f * Mathf.Sin((float)_time * blade.Speed + blade.Phase * 1.7f));
 			DrawCircle(glowPosition, Mathf.Max(blade.Width * 0.42f, 1.6f), new Color(0.34f, 1.0f, 0.9f, blade.Color.A * 0.7f));
