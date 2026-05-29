@@ -34,6 +34,16 @@ public partial class MainMenuScene : Control
 
 	private void RefreshLocalizedText()
 	{
+		if (_titleLabel != null)
+		{
+			_titleLabel.Text = Localize("APP_NAME");
+		}
+
+		if (_subtitleLabel != null)
+		{
+			_subtitleLabel.Text = Localize("APP_SUBTITLE");
+		}
+
 		if (_singlePlayerButton != null)
 		{
 			_singlePlayerButton.Text = Localize("MENU_SINGLE_PLAYER");
@@ -84,6 +94,7 @@ public partial class MainMenuScene : Control
 		}
 
 		RefreshWindowModeOptions();
+		RefreshResolutionOptions();
 		RefreshLanguageOptions();
 		RefreshPlayerCountDialogOptions();
 		RefreshAvatarUnlockPromptText();

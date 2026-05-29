@@ -3,8 +3,6 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private const string GameSettingsConfigPath = "user://settings.cfg";
-
 	private readonly List<(Button Button, string Key)> _localizedGameButtons = new();
 
 	public override void _Notification(int what)
@@ -17,12 +15,7 @@ public partial class GameBoardScene
 
 	private void ApplySavedLanguagePreference()
 	{
-		var config = new ConfigFile();
-		Error loadResult = config.Load(GameSettingsConfigPath);
-		string preference = loadResult == Error.Ok
-			? config.GetValue("general", "language", Localization.DefaultLanguagePreference).AsString()
-			: Localization.DefaultLanguagePreference;
-
+		string preference = GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference);
 		TranslationServer.SetLocale(Localization.ResolveLocale(this, preference));
 	}
 
@@ -111,6 +104,7 @@ public partial class GameBoardScene
 			_winnerLabel.Text = _showingDefeatResult
 				? Localize("GAME_DEFEAT")
 				: LocalizeFormat("GAME_WINNER", _winnerPlayerIndex + 1);
+			UpdateWinnerPrimaryButton();
 		}
 
 		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))

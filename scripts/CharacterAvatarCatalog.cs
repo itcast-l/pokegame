@@ -148,14 +148,9 @@ public sealed class CharacterAvatarDefinition
 
 public static class CharacterAvatarCatalog
 {
-	public const string SettingsConfigPath = "user://settings.cfg";
 	public const string DefaultAvatarId = "cat";
 	private const bool UnlockAllAdventureStagesForTesting = false;
-	private const string AdventureProgressSection = "adventure";
-	private const string HighestCompletedStageKey = "highest_completed_stage";
-	private const string PendingAvatarUnlockQueueKey = "pending_avatar_unlock_queue";
-	private const string LegacyPendingAvatarUnlockKey = "pending_avatar_unlock";
-	private const string LegacyPendingAvatarUnlockStageKey = "pending_avatar_unlock_stage";
+	private const string PendingAvatarUnlockQueueSeparator = "|";
 	private const string AvatarResourceDirectory = "res://resources/character_avatars";
 
 	private static CharacterAvatarDefinition[]? _avatars;
@@ -295,14 +290,7 @@ public static class CharacterAvatarCatalog
 
 	public static int LoadHighestCompletedAdventureStage()
 	{
-		var config = new ConfigFile();
-		Error loadResult = config.Load(SettingsConfigPath);
-		if (loadResult != Error.Ok)
-		{
-			return 0;
-		}
-
-		int highestCompletedStage = config.GetValue(AdventureProgressSection, HighestCompletedStageKey, 0).AsInt32();
+		int highestCompletedStage = GameSaveStore.GetInt(GameSaveStore.HighestCompletedStageKey, 0);
 		return Mathf.Clamp(highestCompletedStage, 0, GetAdventureStageCount());
 	}
 
@@ -315,25 +303,19 @@ public static class CharacterAvatarCatalog
 			return;
 		}
 
-		var config = new ConfigFile();
-		Error loadResult = config.Load(SettingsConfigPath);
-		if (loadResult != Error.Ok && loadResult != Error.FileNotFound)
-		{
-			GD.PushWarning($"Failed to load settings for adventure progress: {loadResult}");
-			return;
-		}
-
-		int previousHighestStage = config.GetValue(AdventureProgressSection, HighestCompletedStageKey, 0).AsInt32();
+		int previousHighestStage = GameSaveStore.GetInt(GameSaveStore.HighestCompletedStageKey, 0);
 		if (stageNumber <= previousHighestStage)
 		{
 			return;
 		}
 
-		config.SetValue(AdventureProgressSection, HighestCompletedStageKey, stageNumber);
-		var pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue(config);
+		var pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue();
 		pendingUnlocks.Add(normalizedAvatarId);
-		SavePendingAdventureAvatarUnlockQueue(config, pendingUnlocks);
-		Error saveResult = config.Save(SettingsConfigPath);
+		Error saveResult = GameSaveStore.SetValues(
+			new GameSaveStore.SaveValue(GameSaveStore.HighestCompletedStageKey, stageNumber),
+			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockQueueKey, FormatPendingAdventureAvatarUnlockQueue(pendingUnlocks)),
+			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockKey, string.Empty),
+			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockStageKey, 0));
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save adventure progress: {saveResult}");
@@ -342,14 +324,7 @@ public static class CharacterAvatarCatalog
 
 	public static string ConsumePendingAdventureAvatarUnlock()
 	{
-		var config = new ConfigFile();
-		Error loadResult = config.Load(SettingsConfigPath);
-		if (loadResult != Error.Ok)
-		{
-			return string.Empty;
-		}
-
-		List<string> pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue(config);
+		List<string> pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue();
 		if (pendingUnlocks.Count == 0)
 		{
 			return string.Empty;
@@ -363,8 +338,7 @@ public static class CharacterAvatarCatalog
 			int stageNumber = GetAdventureStageNumber(normalizedAvatarId);
 			if (stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage())
 			{
-				SavePendingAdventureAvatarUnlockQueue(config, pendingUnlocks);
-				Error consumeSaveResult = config.Save(SettingsConfigPath);
+				Error consumeSaveResult = SavePendingAdventureAvatarUnlockQueue(pendingUnlocks);
 				if (consumeSaveResult != Error.Ok)
 				{
 					GD.PushWarning($"Failed to clear pending adventure avatar unlock: {consumeSaveResult}");
@@ -374,8 +348,7 @@ public static class CharacterAvatarCatalog
 			}
 		}
 
-		SavePendingAdventureAvatarUnlockQueue(config, pendingUnlocks);
-		Error saveResult = config.Save(SettingsConfigPath);
+		Error saveResult = SavePendingAdventureAvatarUnlockQueue(pendingUnlocks);
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to clear pending adventure avatar unlock: {saveResult}");
@@ -425,14 +398,7 @@ public static class CharacterAvatarCatalog
 
 	public static CharacterAvatarDefinition LoadSelectedAvatar()
 	{
-		var config = new ConfigFile();
-		Error loadResult = config.Load(SettingsConfigPath);
-		if (loadResult != Error.Ok)
-		{
-			return Default;
-		}
-
-		string avatarId = config.GetValue("general", "avatar", DefaultAvatarId).AsString();
+		string avatarId = GameSaveStore.GetString(GameSaveStore.SelectedAvatarKey, DefaultAvatarId);
 		return GetById(NormalizeUnlockedAvatarId(avatarId));
 	}
 
@@ -512,16 +478,16 @@ public static class CharacterAvatarCatalog
 		return false;
 	}
 
-	private static List<string> LoadPendingAdventureAvatarUnlockQueue(ConfigFile config)
+	private static List<string> LoadPendingAdventureAvatarUnlockQueue()
 	{
-		string rawQueue = config.GetValue(AdventureProgressSection, PendingAvatarUnlockQueueKey, string.Empty).AsString();
+		string rawQueue = GameSaveStore.GetString(GameSaveStore.PendingAvatarUnlockQueueKey, string.Empty);
 		List<string> queue = ParsePendingAdventureAvatarUnlockQueue(rawQueue);
 		if (queue.Count > 0)
 		{
 			return queue;
 		}
 
-		string legacyAvatarId = config.GetValue(AdventureProgressSection, LegacyPendingAvatarUnlockKey, string.Empty).AsString();
+		string legacyAvatarId = GameSaveStore.GetString(GameSaveStore.PendingAvatarUnlockKey, string.Empty);
 		if (!string.IsNullOrWhiteSpace(legacyAvatarId))
 		{
 			queue.Add(legacyAvatarId);
@@ -540,19 +506,17 @@ public static class CharacterAvatarCatalog
 		return new List<string>(rawQueue.Split(new[] { '|', ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 	}
 
-	private static void SavePendingAdventureAvatarUnlockQueue(ConfigFile config, IReadOnlyList<string> queue)
+	private static string FormatPendingAdventureAvatarUnlockQueue(IReadOnlyList<string> queue)
 	{
-		if (queue.Count > 0)
-		{
-			config.SetValue(AdventureProgressSection, PendingAvatarUnlockQueueKey, string.Join("|", queue));
-		}
-		else
-		{
-			config.SetValue(AdventureProgressSection, PendingAvatarUnlockQueueKey, string.Empty);
-		}
+		return queue.Count > 0 ? string.Join(PendingAvatarUnlockQueueSeparator, queue) : string.Empty;
+	}
 
-		config.SetValue(AdventureProgressSection, LegacyPendingAvatarUnlockKey, string.Empty);
-		config.SetValue(AdventureProgressSection, LegacyPendingAvatarUnlockStageKey, 0);
+	private static Error SavePendingAdventureAvatarUnlockQueue(IReadOnlyList<string> queue)
+	{
+		return GameSaveStore.SetValues(
+			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockQueueKey, FormatPendingAdventureAvatarUnlockQueue(queue)),
+			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockKey, string.Empty),
+			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockStageKey, 0));
 	}
 
 	private static CharacterAvatarDefinition? LoadAvatarDefinition(string path)

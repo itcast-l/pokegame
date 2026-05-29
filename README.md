@@ -1,6 +1,6 @@
-# pokegame
+# Deckland
 
-Godot 4.6 C# card battler prototype with an underwater visual theme, local card-table play, item-card effects, character avatars, and an early adventure progression flow.
+Deckland is a Godot 4.6 C# card battler prototype with local card-table play, item-card effects, character avatars, and an early adventure progression flow.
 
 ## Current State
 

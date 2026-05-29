@@ -1,10 +1,16 @@
 key,zh_CN,zh_TW,en
+APP_NAME,牌境纪行,牌境紀行,Deckland
+APP_SUBTITLE,卡牌对局,卡牌對局,Card Battler
 MENU_SINGLE_PLAYER,单人游戏,單人遊戲,Solo
 MENU_ADVENTURE,冒险模式,冒險模式,Adventure
 MENU_MULTIPLAYER,多人游戏,多人遊戲,Multi
 MENU_SETTINGS,设置,設定,Settings
 MENU_EXIT,退出,離開,Exit
 ADVENTURE_AVATAR_TITLE,选择敌人,選擇敵人,Pick Enemy
+ADVENTURE_MENU_TITLE,冒险模式,冒險模式,Adventure
+ADVENTURE_LIST_TITLE,冒险,冒險,Adventure
+ADVENTURE_ENEMY_LIST_TITLE,敌人,敵人,Enemies
+ADVENTURE_DEEP_TIDE_THRONE,深潮王座,深潮王座,Deep Tide Throne
 ADVENTURE_START,开始游戏,開始遊戲,Start
 ADVENTURE_BACK,返回,返回,Back
 ADVENTURE_COMPLETED,已完成,已完成,Done
@@ -61,6 +67,7 @@ SETTINGS_MUTE,静音,靜音,Mute
 SETTINGS_WINDOW_MODE,窗口模式,視窗模式,Window
 SETTINGS_WINDOWED,窗口,視窗,Windowed
 SETTINGS_FULLSCREEN,全屏,全螢幕,Full
+SETTINGS_RESOLUTION,分辨率,解析度,Resolution
 SETTINGS_LANGUAGE,语言,語言,Language
 SETTINGS_OCEAN_MOTION,海洋动态,海洋動態,Ocean FX
 SETTINGS_MOTION_SCALE,动态强度,動態強度,Motion
@@ -107,6 +114,7 @@ GAME_PLAYER_SCORE,玩家 {0}: {1}/{2},玩家 {0}: {1}/{2},Player {0}: {1}/{2}
 GAME_WINNER,玩家 {0} 获胜,玩家 {0} 獲勝,Player {0} Wins
 GAME_DEFEAT,你失败了,你失敗了,You Lost
 GAME_REPLAY,再来一局,再來一局,Play Again
+GAME_NEXT_ADVENTURE_STAGE,下一关,下一關,Next Stage
 GAME_RETURN_MAIN_MENU,回到主菜单,回到主選單,Main Menu
 GAME_RETURN_ADVENTURE,返回关卡,返回關卡,Stages
 GAME_CONTINUE,继续游戏,繼續遊戲,Continue

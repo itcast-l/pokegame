@@ -10,7 +10,10 @@ public partial class AdventureAvatarMenuScene : Control
 	private const int SmoothScrollWheelStep = 96;
 	private const float ReturnFadeSeconds = 0.18f;
 	private const float ReturnScale = 0.98f;
+	private const bool AvatarUnlockTestOpponentOneCardHand = true;
 
+	private readonly Dictionary<string, OceanMenuButtonFrame> _adventureFrames = new();
+	private readonly Dictionary<string, Button> _adventureButtons = new();
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
 	private readonly Dictionary<string, int> _stageNumbers = new();
 	private readonly Dictionary<string, Button> _stageButtons = new();
@@ -20,6 +23,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private Button _startButton = default!;
 	private Button _backButton = default!;
 	private ScrollContainer _levelScroll = default!;
+	private VBoxContainer _levelList = default!;
 	private Label _previewStageLabel = default!;
 	private Label _previewNameLabel = default!;
 	private Label _previewStatusLabel = default!;
@@ -31,14 +35,13 @@ public partial class AdventureAvatarMenuScene : Control
 	private Control? _avatarUnlockPromptRoot;
 	private Control? _avatarUnlockPromptPanel;
 	private Label? _avatarUnlockPromptTitleLabel;
-	private Label? _avatarUnlockPromptMessageLabel;
 	private Button? _avatarUnlockPromptButton;
 	private CharacterAvatar? _avatarUnlockPromptAvatar;
-	private CharacterAvatarDefinition? _avatarUnlockPromptDefinition;
 	private Tween? _levelScrollTween;
 	private Tween? _avatarUnlockPromptTween;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
+	private string _selectedAdventureId = DeepTideThroneAdventureId;
 	private PackedScene? _characterAvatarScene;
 	private bool _isReturningToMainMenu;
 	private bool _isStartingAdventure;

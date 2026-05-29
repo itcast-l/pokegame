@@ -92,9 +92,10 @@ public partial class AdventureAvatarMenuScene
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
-		body.AddThemeConstantOverride("separation", 18);
+		body.AddThemeConstantOverride("separation", 14);
 		layout.AddChild(body);
 
+		body.AddChild(CreateAdventureListPanel());
 		body.AddChild(CreateLevelListPanel());
 		body.AddChild(CreateEnemyPreviewPanel());
 	}
@@ -202,7 +203,7 @@ public partial class AdventureAvatarMenuScene
 		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.9f));
 		label.AddThemeConstantOverride("shadow_offset_x", 1);
 		label.AddThemeConstantOverride("shadow_offset_y", 2);
-		_localizedLabels.Add((label, "ADVENTURE_AVATAR_TITLE"));
+		_localizedLabels.Add((label, "ADVENTURE_MENU_TITLE"));
 		return label;
 	}
 }

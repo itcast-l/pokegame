@@ -205,7 +205,7 @@ public partial class GameBoardScene
 		buttonRow.AddThemeConstantOverride("separation", 14);
 		_winnerBannerPanel.AddChild(buttonRow);
 
-		Control replayFrame = CreateWinnerButton("Replay", "GAME_REPLAY", new Color(0.58f, 1.0f, 0.92f), RestartGameFromWinner, false);
+		Control replayFrame = CreateWinnerButton("Replay", "GAME_REPLAY", new Color(0.58f, 1.0f, 0.92f), PressWinnerPrimaryButton, false, trackLocalization: false);
 		Control mainMenuFrame = CreateWinnerButton("ReturnToMainMenu", GetWinnerReturnButtonKey(), new Color(1.0f, 0.86f, 0.54f), GetWinnerReturnAction(), true);
 		buttonRow.AddChild(replayFrame);
 		buttonRow.AddChild(mainMenuFrame);
@@ -242,6 +242,7 @@ public partial class GameBoardScene
 		_winnerLabel.Text = _showingDefeatResult
 			? Localize("GAME_DEFEAT")
 			: LocalizeFormat("GAME_WINNER", playerIndex + 1);
+		UpdateWinnerPrimaryButton();
 		ApplyWinnerLabelLayout();
 		_winnerLabel.Visible = true;
 		ApplyWinnerBannerArt();
@@ -297,6 +298,86 @@ public partial class GameBoardScene
 		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
 
+	private void PressWinnerPrimaryButton()
+	{
+		if (ShouldAdvanceAdventureFromWinner())
+		{
+			StartNextAdventureStageFromWinner();
+			return;
+		}
+
+		RestartGameFromWinner();
+	}
+
+	private void StartNextAdventureStageFromWinner()
+	{
+		if (!TryGetNextAdventureStageAvatarId(out string nextAvatarId))
+		{
+			RestartGameFromWinner();
+			return;
+		}
+
+		HideWinnerBanner();
+		adventure_enemy_avatar_id = nextAvatarId;
+		RefreshAdventureEnemyAvatar();
+		DealCardsToPlayers(playOpeningDealAnimation: true);
+	}
+
+	private void RefreshAdventureEnemyAvatar()
+	{
+		if (!adventure_mode
+			|| player_count <= 1
+			|| _playerAvatars[1] == null
+			|| !GodotObject.IsInstanceValid(_playerAvatars[1]))
+		{
+			return;
+		}
+
+		CharacterAvatarDefinition enemyDefinition = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id);
+		CharacterAvatar enemyAvatar = _playerAvatars[1]!;
+		enemyAvatar.AvatarRoot = enemyDefinition.RootPath;
+		enemyAvatar.AccentColor = PlayerAvatarAccentColors[1];
+		enemyAvatar.PlayAction(CharacterAvatar.AvatarAction.Idle);
+	}
+
+	private void UpdateWinnerPrimaryButton()
+	{
+		if (_winnerReplayButton == null || !GodotObject.IsInstanceValid(_winnerReplayButton))
+		{
+			return;
+		}
+
+		_winnerReplayButton.Text = Localize(GetWinnerPrimaryButtonKey());
+	}
+
+	private string GetWinnerPrimaryButtonKey()
+	{
+		return ShouldAdvanceAdventureFromWinner() ? "GAME_NEXT_ADVENTURE_STAGE" : "GAME_REPLAY";
+	}
+
+	private bool ShouldAdvanceAdventureFromWinner()
+	{
+		return adventure_mode
+			&& _winnerPlayerIndex == MainPlayerIndex
+			&& TryGetNextAdventureStageAvatarId(out _);
+	}
+
+	private bool TryGetNextAdventureStageAvatarId(out string nextAvatarId)
+	{
+		int currentStage = CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id);
+		int nextStage = currentStage + 1;
+		if (currentStage <= 0
+			|| nextStage > CharacterAvatarCatalog.GetAdventureStageCount()
+			|| !CharacterAvatarCatalog.IsAdventureStageUnlocked(nextStage))
+		{
+			nextAvatarId = string.Empty;
+			return false;
+		}
+
+		nextAvatarId = CharacterAvatarCatalog.GetAdventureAvatarIdForStage(nextStage);
+		return nextAvatarId != CharacterAvatarCatalog.DefaultAvatarId;
+	}
+
 	private string GetWinnerReturnButtonKey()
 	{
 		return adventure_mode ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
@@ -307,7 +388,7 @@ public partial class GameBoardScene
 		return adventure_mode ? ReturnToAdventureMenu : ReturnToMainMenu;
 	}
 
-	private Control CreateWinnerButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament)
+	private Control CreateWinnerButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament, bool trackLocalization = true)
 	{
 		var frame = new OceanMenuButtonFrame
 		{
@@ -349,7 +430,11 @@ public partial class GameBoardScene
 			_winnerReplayButton = button;
 		}
 
-		TrackLocalizedGameButton(button, textKey);
+		if (trackLocalization)
+		{
+			TrackLocalizedGameButton(button, textKey);
+		}
+
 		frame.AddChild(button);
 		return frame;
 	}

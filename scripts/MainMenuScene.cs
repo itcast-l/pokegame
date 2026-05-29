@@ -20,12 +20,13 @@ public partial class MainMenuScene : Control
 	private const string MultiplayerButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/MultiplayerFrame/Button";
 	private const string SettingsButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame/Button";
 	private const string ExitButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame/Button";
+	private const string TitleLabelPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/Title";
+	private const string SubtitleLabelPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/Subtitle";
 	private const string AvatarEntryPath = "AvatarEntryLayer/MainMenuAvatarEntry";
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const string AdventureAvatarMenuScenePath = "res://scenes/adventure_avatar_menu_scene.tscn";
 	private const string AvatarEditScenePath = "res://scenes/character_avatar_edit_scene.tscn";
 	private const string SettingsPanelTexturePath = "res://art/ui/settings_menu/run-002/processed/clean.png";
-	private const string SettingsConfigPath = "user://settings.cfg";
 	private const float DialogFadeSeconds = 0.14f;
 	private const int AvatarEditDialogLayer = 42;
 	private const int MinMenuPlayers = 2;
@@ -37,6 +38,18 @@ public partial class MainMenuScene : Control
 	private const bool DefaultFullscreen = false;
 	private const bool DefaultOceanMotion = true;
 	private const bool DefaultItemMode = true;
+	private static readonly Vector2I DesignResolution = new(1280, 720);
+	private static readonly Vector2I DefaultResolution = DesignResolution;
+	private static readonly ResolutionPreset[] ResolutionPresets =
+	{
+		new(960, 540),
+		new(1024, 576),
+		new(1280, 720),
+		new(1366, 768),
+		new(1600, 900),
+		new(1920, 1080),
+		new(2560, 1440),
+	};
 	private const int MenuCameraHomePriority = 10;
 	private const int MenuCameraPushInPriority = 20;
 	private const int MenuCameraAdventureDivePriority = 30;
@@ -53,6 +66,8 @@ public partial class MainMenuScene : Control
 	private Button _multiplayerButton = default!;
 	private Button _settingsButton = default!;
 	private Button _exitButton = default!;
+	private Label _titleLabel = default!;
+	private Label _subtitleLabel = default!;
 	private MainMenuBackgroundAnimator? _backgroundAnimator;
 	private MainMenuOceanDynamics? _oceanDynamicsLayer;
 	private UnderwaterAmbientLayer? _underwaterAmbientLayer;
@@ -76,6 +91,7 @@ public partial class MainMenuScene : Control
 	private CheckButton _muteAudioToggle = default!;
 	private CheckButton _oceanMotionToggle = default!;
 	private OptionButton _windowModeOption = default!;
+	private OptionButton _resolutionOption = default!;
 	private OptionButton _languageOption = default!;
 	private MainMenuAvatarEntry _avatarEntry = default!;
 	private Control _exitDialogRoot = default!;
@@ -93,16 +109,33 @@ public partial class MainMenuScene : Control
 	private bool _muteAudio = DefaultMuteAudio;
 	private bool _fullscreen = DefaultFullscreen;
 	private bool _oceanMotion = DefaultOceanMotion;
+	private Vector2I _selectedResolution = DefaultResolution;
 	private string _languagePreference = Localization.DefaultLanguagePreference;
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
 	private bool _isSyncingSettingsControls;
 	private bool _isStartingGameTransition;
 	private bool _isMenuCameraTransitioning;
+	private bool _hasAppliedWindowSettings;
+	private bool _lastAppliedFullscreen;
+	private Vector2I _lastAppliedResolution = DefaultResolution;
+	private uint _windowResolutionApplyToken;
 	private ulong _menuCameraTransitionStartMsec;
 	private float _menuCameraTransitionTotalSeconds;
 	private float _appliedMusicVolumeDb = float.NaN;
 	private readonly System.Collections.Generic.List<(Label Label, string Key)> _localizedLabels = new();
 	private readonly System.Collections.Generic.List<(Button Button, string Key)> _localizedButtons = new();
+
+	private readonly struct ResolutionPreset
+	{
+		public ResolutionPreset(int width, int height)
+		{
+			Size = new Vector2I(width, height);
+			Label = $"{width} x {height}";
+		}
+
+		public Vector2I Size { get; }
+		public string Label { get; }
+	}
 
 	public void PrepareAdventureReturnTransition()
 	{
@@ -162,6 +195,9 @@ public partial class MainMenuScene : Control
 
 		_exitButton = GetNode<Button>(ExitButtonPath);
 		_exitButton.Pressed += ShowExitDialog;
+
+		_titleLabel = GetNode<Label>(TitleLabelPath);
+		_subtitleLabel = GetNode<Label>(SubtitleLabelPath);
 
 		_avatarEntry = GetNode<MainMenuAvatarEntry>(AvatarEntryPath);
 		_avatarEntry.AvatarPressed += OpenAvatarEditor;

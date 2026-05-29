@@ -366,8 +366,9 @@ offset_top = -6.4400024
 offset_right = 225.23999
 offset_bottom = 149.56
 scale = Vector2(0.5, 0.5)
-mouse_default_cursor_shape = 13
+mouse_filter = 2
 script = ExtResource("7_draggable_avatar_area")
+drag_enabled = false
 
 [node name="Player2ScoreMeter" type="Control" parent="LayoutAreas/TopPlayerArea" unique_id=2136433309]
 unique_name_in_owner = true
@@ -417,8 +418,9 @@ offset_top = -14.52002
 offset_right = 129.02399
 offset_bottom = 141.47998
 scale = Vector2(0.5, 0.5)
-mouse_default_cursor_shape = 13
+mouse_filter = 2
 script = ExtResource("7_draggable_avatar_area")
+drag_enabled = false
 
 [node name="Player1ScoreMeter" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=521986776]
 unique_name_in_owner = true
@@ -464,8 +466,9 @@ offset_top = 14.400002
 offset_right = 179.6
 offset_bottom = 170.4
 scale = Vector2(0.5, 0.5)
-mouse_default_cursor_shape = 13
+mouse_filter = 2
 script = ExtResource("7_draggable_avatar_area")
+drag_enabled = false
 
 [node name="Player3ScoreMeter" type="Control" parent="LayoutAreas/LeftPlayerArea" unique_id=869053579]
 unique_name_in_owner = true
@@ -511,8 +514,9 @@ offset_top = 15.400002
 offset_right = 189.19995
 offset_bottom = 171.4
 scale = Vector2(0.5, 0.5)
-mouse_default_cursor_shape = 13
+mouse_filter = 2
 script = ExtResource("7_draggable_avatar_area")
+drag_enabled = false
 
 [node name="Player4ScoreMeter" type="Control" parent="LayoutAreas/RightPlayerArea" unique_id=806861522]
 unique_name_in_owner = true

@@ -4,37 +4,30 @@ public partial class MainMenuScene
 {
 	private void LoadSettings()
 	{
-		var config = new ConfigFile();
-		Error loadResult = config.Load(SettingsConfigPath);
-		if (loadResult != Error.Ok)
-		{
-			return;
-		}
-
-		_masterVolume = Mathf.Clamp(config.GetValue("audio", "master_volume", DefaultMasterVolume).AsSingle(), 0.0f, 1.0f);
-		_musicVolume = Mathf.Clamp(config.GetValue("audio", "music_volume", DefaultMusicVolume).AsSingle(), 0.0f, 1.0f);
-		_muteAudio = config.GetValue("audio", "mute", DefaultMuteAudio).AsBool();
-		_fullscreen = config.GetValue("video", "fullscreen", DefaultFullscreen).AsBool();
-		_oceanMotion = config.GetValue("video", "ocean_motion", DefaultOceanMotion).AsBool();
-		_motionScale = Mathf.Clamp(config.GetValue("video", "motion_scale", DefaultMotionScale).AsSingle(), 0.5f, 1.5f);
-		_languagePreference = Localization.NormalizePreference(config.GetValue("general", "language", Localization.DefaultLanguagePreference).AsString());
-		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(config.GetValue("general", "avatar", CharacterAvatarCatalog.DefaultAvatarId).AsString());
+		GameSaveStore.EnsureInitialized();
+		_masterVolume = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MasterVolumeKey, DefaultMasterVolume), 0.0f, 1.0f);
+		_musicVolume = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MusicVolumeKey, DefaultMusicVolume), 0.0f, 1.0f);
+		_muteAudio = GameSaveStore.GetBool(GameSaveStore.MuteAudioKey, DefaultMuteAudio);
+		_fullscreen = GameSaveStore.GetBool(GameSaveStore.FullscreenKey, DefaultFullscreen);
+		_selectedResolution = ParseResolutionSetting(GameSaveStore.GetString(GameSaveStore.ResolutionKey, ResolutionToString(DefaultResolution)));
+		_oceanMotion = GameSaveStore.GetBool(GameSaveStore.OceanMotionKey, DefaultOceanMotion);
+		_motionScale = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MotionScaleKey, DefaultMotionScale), 0.5f, 1.5f);
+		_languagePreference = Localization.NormalizePreference(GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference));
+		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(GameSaveStore.GetString(GameSaveStore.SelectedAvatarKey, CharacterAvatarCatalog.DefaultAvatarId));
 	}
 
 	private void SaveSettings()
 	{
-		var config = new ConfigFile();
-		config.Load(SettingsConfigPath);
-		config.SetValue("audio", "master_volume", _masterVolume);
-		config.SetValue("audio", "music_volume", _musicVolume);
-		config.SetValue("audio", "mute", _muteAudio);
-		config.SetValue("video", "fullscreen", _fullscreen);
-		config.SetValue("video", "ocean_motion", _oceanMotion);
-		config.SetValue("video", "motion_scale", _motionScale);
-		config.SetValue("general", "language", _languagePreference);
-		config.SetValue("general", "avatar", _selectedAvatarId);
-
-		Error saveResult = config.Save(SettingsConfigPath);
+		Error saveResult = GameSaveStore.SetValues(
+			new GameSaveStore.SaveValue(GameSaveStore.MasterVolumeKey, _masterVolume),
+			new GameSaveStore.SaveValue(GameSaveStore.MusicVolumeKey, _musicVolume),
+			new GameSaveStore.SaveValue(GameSaveStore.MuteAudioKey, _muteAudio),
+			new GameSaveStore.SaveValue(GameSaveStore.FullscreenKey, _fullscreen),
+			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
+			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
+			new GameSaveStore.SaveValue(GameSaveStore.MotionScaleKey, _motionScale),
+			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
+			new GameSaveStore.SaveValue(GameSaveStore.SelectedAvatarKey, _selectedAvatarId));
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save settings: {saveResult}");
@@ -53,9 +46,7 @@ public partial class MainMenuScene
 		AudioServer.SetBusMute(0, _muteAudio);
 		ApplyMusicVolume();
 
-		DisplayServer.WindowSetMode(_fullscreen
-			? DisplayServer.WindowMode.Fullscreen
-			: DisplayServer.WindowMode.Windowed);
+		ApplyWindowSettings();
 
 		if (_backgroundAnimator != null)
 		{
@@ -120,6 +111,8 @@ public partial class MainMenuScene
 		_musicVolumeSlider.Value = Mathf.RoundToInt(_musicVolume * 100.0f);
 		_muteAudioToggle.ButtonPressed = _muteAudio;
 		_windowModeOption.Select(_fullscreen ? 1 : 0);
+		RefreshResolutionOptions();
+		_resolutionOption.Select(GetResolutionOptionIndex(_selectedResolution));
 		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
 		_oceanMotionToggle.ButtonPressed = _oceanMotion;
 		_motionScaleSlider.Value = Mathf.RoundToInt(_motionScale * 100.0f);
@@ -157,6 +150,28 @@ public partial class MainMenuScene
 		_windowModeOption.SetItemText(1, Localize("SETTINGS_FULLSCREEN"));
 	}
 
+	private void RefreshResolutionOptions()
+	{
+		RefreshResolutionOptions(_resolutionOption);
+	}
+
+	private void RefreshResolutionOptions(OptionButton? option)
+	{
+		if (option == null)
+		{
+			return;
+		}
+
+		option.Clear();
+		for (int presetIndex = 0; presetIndex < ResolutionPresets.Length; presetIndex++)
+		{
+			ResolutionPreset preset = ResolutionPresets[presetIndex];
+			option.AddItem(preset.Label, presetIndex);
+		}
+
+		option.Select(GetResolutionOptionIndex(option, _selectedResolution));
+	}
+
 	private void RefreshLanguageOptions()
 	{
 		if (_languageOption == null)
@@ -183,6 +198,7 @@ public partial class MainMenuScene
 		_motionScale = DefaultMotionScale;
 		_muteAudio = DefaultMuteAudio;
 		_fullscreen = DefaultFullscreen;
+		_selectedResolution = DefaultResolution;
 		_oceanMotion = DefaultOceanMotion;
 		_languagePreference = Localization.DefaultLanguagePreference;
 		_selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
@@ -190,5 +206,189 @@ public partial class MainMenuScene
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();
+	}
+
+	private void ApplyWindowSettings()
+	{
+		_selectedResolution = NormalizeResolution(_selectedResolution);
+		Window window = GetWindow();
+		ApplyContentResolution(window);
+
+		bool windowModeChanged = !_hasAppliedWindowSettings || _lastAppliedFullscreen != _fullscreen;
+		bool resolutionChanged = !_hasAppliedWindowSettings || !AreSameResolution(_lastAppliedResolution, _selectedResolution);
+		if (!windowModeChanged && !resolutionChanged)
+		{
+			return;
+		}
+
+		bool nativeWindowResizeAllowed = IsNativeWindowResizeAllowed(window);
+		if (nativeWindowResizeAllowed)
+		{
+			DisplayServer.WindowSetMode(_fullscreen
+				? DisplayServer.WindowMode.Fullscreen
+				: DisplayServer.WindowMode.Windowed);
+		}
+
+		if (!_fullscreen)
+		{
+			_windowResolutionApplyToken++;
+			ApplyWindowedResolutionDeferred(_selectedResolution, _windowResolutionApplyToken);
+		}
+
+		_hasAppliedWindowSettings = true;
+		_lastAppliedFullscreen = _fullscreen;
+		_lastAppliedResolution = _selectedResolution;
+	}
+
+	private async void ApplyWindowedResolutionDeferred(Vector2I resolution, uint applyToken)
+	{
+		ApplyWindowedResolution(resolution, false);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		if (!GodotObject.IsInstanceValid(this) || applyToken != _windowResolutionApplyToken)
+		{
+			return;
+		}
+
+		ApplyWindowedResolution(resolution, false);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		if (!GodotObject.IsInstanceValid(this) || applyToken != _windowResolutionApplyToken)
+		{
+			return;
+		}
+
+		ApplyWindowedResolution(resolution, true);
+	}
+
+	private void ApplyWindowedResolution(Vector2I resolution, bool reportResult)
+	{
+		Window window = GetWindow();
+		ApplyContentResolution(window);
+		bool nativeWindowResizeAllowed = IsNativeWindowResizeAllowed(window);
+		if (nativeWindowResizeAllowed)
+		{
+			window.Size = resolution;
+			DisplayServer.WindowSetSize(resolution);
+			CenterWindow(resolution);
+		}
+
+		if (reportResult)
+		{
+			Vector2I windowSize = window.Size;
+			Vector2I contentSize = window.ContentScaleSize;
+			string nativeResizeStatus = nativeWindowResizeAllowed ? "native resize attempted" : "native resize skipped for embedded editor window";
+			GD.Print($"Resolution applied: requested {resolution.X}x{resolution.Y}, window {windowSize.X}x{windowSize.Y}, content {contentSize.X}x{contentSize.Y}, {nativeResizeStatus}");
+		}
+	}
+
+	private static void ApplyContentResolution(Window window)
+	{
+		if (window.ContentScaleMode == Window.ContentScaleModeEnum.Disabled)
+		{
+			window.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+		}
+
+		// Resolution presets resize the output window only; keep the UI design viewport fixed.
+		if (window.ContentScaleSize != DesignResolution)
+		{
+			window.ContentScaleSize = DesignResolution;
+		}
+	}
+
+	private static bool IsNativeWindowResizeAllowed(Window window)
+	{
+		return !Engine.IsEmbeddedInEditor() && !window.IsEmbedded();
+	}
+
+	private static void CenterWindow(Vector2I resolution)
+	{
+		Rect2I usableRect = DisplayServer.ScreenGetUsableRect(DisplayServer.WindowGetCurrentScreen());
+		if (usableRect.Size.X <= 0 || usableRect.Size.Y <= 0)
+		{
+			return;
+		}
+
+		Vector2I position = new(
+			usableRect.Position.X + Mathf.Max((usableRect.Size.X - resolution.X) / 2, 0),
+			usableRect.Position.Y + Mathf.Max((usableRect.Size.Y - resolution.Y) / 2, 0));
+		DisplayServer.WindowSetPosition(position);
+	}
+
+	private static Vector2I ParseResolutionSetting(string rawValue)
+	{
+		if (TryParseResolution(rawValue, out Vector2I resolution))
+		{
+			return NormalizeResolution(resolution);
+		}
+
+		return DefaultResolution;
+	}
+
+	private static bool TryParseResolution(string rawValue, out Vector2I resolution)
+	{
+		resolution = default;
+		if (string.IsNullOrWhiteSpace(rawValue))
+		{
+			return false;
+		}
+
+		string normalized = rawValue.Trim().ToLowerInvariant().Replace("*", "x");
+		string[] parts = normalized.Split('x');
+		if (parts.Length != 2)
+		{
+			return false;
+		}
+
+		if (!int.TryParse(parts[0].Trim(), out int width) || !int.TryParse(parts[1].Trim(), out int height))
+		{
+			return false;
+		}
+
+		resolution = new Vector2I(width, height);
+		return true;
+	}
+
+	private static Vector2I NormalizeResolution(Vector2I resolution)
+	{
+		for (int index = 0; index < ResolutionPresets.Length; index++)
+		{
+			if (AreSameResolution(ResolutionPresets[index].Size, resolution))
+			{
+				return ResolutionPresets[index].Size;
+			}
+		}
+
+		return DefaultResolution;
+	}
+
+	private int GetResolutionOptionIndex(Vector2I resolution)
+	{
+		return GetResolutionOptionIndex(_resolutionOption, resolution);
+	}
+
+	private static int GetResolutionOptionIndex(OptionButton option, Vector2I resolution)
+	{
+		Vector2I normalizedResolution = NormalizeResolution(resolution);
+		for (int itemIndex = 0; itemIndex < option.ItemCount; itemIndex++)
+		{
+			int presetIndex = option.GetItemId(itemIndex);
+			if (presetIndex >= 0
+				&& presetIndex < ResolutionPresets.Length
+				&& AreSameResolution(ResolutionPresets[presetIndex].Size, normalizedResolution))
+			{
+				return itemIndex;
+			}
+		}
+
+		return 0;
+	}
+
+	private static string ResolutionToString(Vector2I resolution)
+	{
+		return $"{resolution.X}x{resolution.Y}";
+	}
+
+	private static bool AreSameResolution(Vector2I first, Vector2I second)
+	{
+		return first.X == second.X && first.Y == second.Y;
 	}
 }

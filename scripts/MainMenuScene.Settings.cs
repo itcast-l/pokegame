@@ -38,14 +38,12 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		center.SetAnchorsPreset(LayoutPreset.FullRect);
-		center.OffsetTop = -28.0f;
-		center.OffsetBottom = -28.0f;
 		_settingsDialogRoot.AddChild(center);
 
 		_settingsDialogPanel = new Control
 		{
 			Name = "SettingsDialogPanel",
-			CustomMinimumSize = new Vector2(560.0f, 500.0f),
+			CustomMinimumSize = new Vector2(680.0f, 640.0f),
 			MouseFilter = MouseFilterEnum.Stop,
 		};
 		center.AddChild(_settingsDialogPanel);
@@ -87,10 +85,10 @@ public partial class MainMenuScene : Control
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		margin.SetAnchorsPreset(LayoutPreset.FullRect);
-		margin.AddThemeConstantOverride("margin_left", 74);
-		margin.AddThemeConstantOverride("margin_top", 64);
-		margin.AddThemeConstantOverride("margin_right", 74);
-		margin.AddThemeConstantOverride("margin_bottom", 56);
+		margin.AddThemeConstantOverride("margin_left", 84);
+		margin.AddThemeConstantOverride("margin_top", 72);
+		margin.AddThemeConstantOverride("margin_right", 84);
+		margin.AddThemeConstantOverride("margin_bottom", 64);
 		_settingsDialogPanel.AddChild(margin);
 
 		var layout = new VBoxContainer
@@ -141,6 +139,7 @@ public partial class MainMenuScene : Control
 		});
 
 		_windowModeOption = CreateWindowModeOption(settingsList);
+		_resolutionOption = CreateResolutionOption(settingsList);
 		_languageOption = CreateLanguageOption(settingsList);
 
 		_oceanMotionToggle = CreateSettingsToggle(settingsList, "SETTINGS_OCEAN_MOTION", pressed =>
@@ -262,7 +261,7 @@ public partial class MainMenuScene : Control
 		var option = new OptionButton
 		{
 			Name = "WindowModeOption",
-			CustomMinimumSize = new Vector2(174.0f, 40.0f),
+			CustomMinimumSize = new Vector2(220.0f, 40.0f),
 			FocusMode = FocusModeEnum.None,
 			MouseFilter = MouseFilterEnum.Stop,
 		};
@@ -283,6 +282,50 @@ public partial class MainMenuScene : Control
 		return option;
 	}
 
+	private OptionButton CreateResolutionOption(Container parent)
+	{
+		var row = CreateSettingsRow(parent, "SETTINGS_RESOLUTION");
+		var spacer = new Control
+		{
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		row.AddChild(spacer);
+
+		var option = new OptionButton
+		{
+			Name = "ResolutionOption",
+			CustomMinimumSize = new Vector2(220.0f, 40.0f),
+			FocusMode = FocusModeEnum.None,
+			MouseFilter = MouseFilterEnum.Stop,
+		};
+		RefreshResolutionOptions(option);
+		StyleDropdownOptionButton(option);
+		option.ItemSelected += index =>
+		{
+			if (_isSyncingSettingsControls)
+			{
+				return;
+			}
+
+			int presetIndex = option.GetItemId((int)index);
+			if (presetIndex < 0 || presetIndex >= ResolutionPresets.Length)
+			{
+				return;
+			}
+
+			_selectedResolution = ResolutionPresets[presetIndex].Size;
+			if (_fullscreen)
+			{
+				_fullscreen = false;
+				_windowModeOption.Select(0);
+			}
+			OnSettingsChanged();
+		};
+		row.AddChild(option);
+		return option;
+	}
+
 	private OptionButton CreateLanguageOption(Container parent)
 	{
 		var row = CreateSettingsRow(parent, "SETTINGS_LANGUAGE");
@@ -296,7 +339,7 @@ public partial class MainMenuScene : Control
 		var option = new OptionButton
 		{
 			Name = "LanguageOption",
-			CustomMinimumSize = new Vector2(174.0f, 40.0f),
+			CustomMinimumSize = new Vector2(220.0f, 40.0f),
 			FocusMode = FocusModeEnum.None,
 			MouseFilter = MouseFilterEnum.Stop,
 		};
@@ -351,7 +394,7 @@ public partial class MainMenuScene : Control
 		margin.AddChild(row);
 
 		var label = CreateLocalizedDialogLabel(labelText, 18, new Color(0.88f, 1.0f, 0.96f, 0.96f), HorizontalAlignment.Left);
-		label.CustomMinimumSize = new Vector2(104.0f, 38.0f);
+		label.CustomMinimumSize = new Vector2(132.0f, 38.0f);
 		label.VerticalAlignment = VerticalAlignment.Center;
 		row.AddChild(label);
 

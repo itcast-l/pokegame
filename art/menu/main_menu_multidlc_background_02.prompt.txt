@@ -1,0 +1,11 @@
+MAIN MENU SCENIC BACKGROUND ONLY. No table, no tabletop, no play mat, no board-game surface, no player zones, no deck pile, no large foreground cards, no gameplay layout.
+
+Create a single finished 16:9 title-screen background for a Godot 2D fantasy card battler called Deckland. It should look like a polished clean HD hand-painted 2D game background, suitable behind main-menu UI. This is an adventure hub scene, not an in-game battle board.
+
+Composition: keep the left third calm, dark, and low-detail as safe negative space for menu buttons and title text. Put the visual interest on the center-right: an ancient cliffside archive / magical gateway hall with several tall portal archways leading to different future DLC regions. Through the portals, show natural landscapes: forest ruins, desert canyon, snowy shrine, volcanic forge, sky temple, and a small ocean reef portal only as one minor option. A winding stone stairway or glowing path leads from the foreground into the portal hall.
+
+Gameplay identity should be subtle atmosphere only: tiny blank card-shaped light motes drifting in the air, a faint shuffle spiral in the dust, small score-crystal spark trails, a lens-prism glint, a magnet-like arc of light, and a tiny bomb-sigil spark embedded in the magic lighting. These details must not be arranged on any table or board and must not look like UI icons.
+
+Style and mood: inviting fantasy adventure, refined, readable, balanced palette. Use deep neutral shadows on the left, warm gold portal light, moss green, amber, violet, cool moonlit blues, and small teal accents. Avoid an overall underwater/ocean theme and avoid an overwhelmingly blue palette.
+
+Strict exclusions: no characters, no monsters, no UI widgets, no menu panel, no logo, no readable text, no captions, no letters, no labels, no annotations, no watermark, no split-screen collage, no tabletop, no card table.

@@ -1,0 +1,13 @@
+Create a production-ready main menu background illustration for a Godot 2D game called Deckland. This is a MAIN MENU BACKGROUND ONLY, not a card table, not a board, not a tabletop, not gameplay UI.
+
+Pipeline intent from generate2dmap: map_mode baked_scene_mode, visual_model baked_raster, runtime_object_model none, collision_model none, engine target Godot UI background. Single flat raster image suitable for a title/menu screen. Target composition is 16:9 landscape, designed to crop/rescale cleanly to 1672x941.
+
+Art direction: clean hand-painted HD 2D game background, crisp readable shapes, detailed but not noisy, not blurry, polished fantasy adventure mood. Sophisticated multi-DLC realm nexus, not ocean themed. Rich lighting, sharp architectural and landscape detail, clear depth, premium game key art.
+
+Composition: leave the left 38-42 percent as darker atmospheric negative space for future title/menu buttons, with subtle detail only and no important focal objects. Put the main visual landmark on the right two thirds: an ancient elevated realm-crossing causeway and portal horizon built into stone cliffs and floating landforms. Several distinct DLC-like biomes should be visible through natural gateways or distant vistas: green forest ruins, amber desert canyon, icy shrine, volcanic forge, sky citadel, and a very small distant blue reef world as only one minor accent. The scene should feel expandable across many adventures, not locked to water/ocean.
+
+Gameplay motif without literal cards or items: show two to four colored streams of magical light moving along branching paths, converging and splitting as if turns, captures, score pressure, and adventure progression are happening through the world itself. Use abstract energy ribbons, luminous floor inlays, soft particle trails, and opposing warm/cool light flows to imply tactical capture and local competition. Include no physical gameplay props.
+
+Strict exclusions: no playing cards, no card backs, no deck, no card fragments, no item icons, no bombs, no magnets, no lenses, no powerup objects, no poker chips, no tokens, no dice, no tabletop, no table surface, no board squares, no readable ranks, no numbers, no text, no logo, no UI, no menu buttons, no annotations, no characters, no monsters, no weapons, no treasure chests, no sci-fi interface, no dominant ocean theme.
+
+Visual requirements: fine detail, foreground/midground/background separation, no heavy blur, no muddy shapes. Left side dark cool fade for menu readability; right side colorful realm light. Make it feel like the background behind a polished fantasy card-battler/adventure menu while obeying the no-cards and no-items rule.

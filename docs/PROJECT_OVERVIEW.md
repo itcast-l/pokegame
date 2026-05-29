@@ -1,6 +1,6 @@
 # Project Overview
 
-`pokegame` is a Godot 4.6 C# card battler prototype. The current playable slice centers on a local card-table match with underwater-themed UI and animated character avatars.
+`Deckland` is a Godot 4.6 C# card battler prototype. The current playable slice centers on a local card-table match with animated character avatars, item-card effects, and an underwater-themed first region.
 
 ## Implemented
 

@@ -15,16 +15,12 @@ public partial class MainMenuScene
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_settingsDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		UpdateSettingsDialogPosition();
-		_settingsDialogPanel.Scale = new Vector2(0.94f, 0.94f);
-		_settingsDialogPanel.PivotOffset = _settingsDialogPanel.Size * 0.5f;
+		_settingsDialogPanel.Scale = Vector2.One;
+		_settingsDialogPanel.PivotOffset = Vector2.Zero;
 		SyncSettingsControls();
 
 		_settingsDialogTween = CreateTween();
-		_settingsDialogTween.SetParallel(true);
 		_settingsDialogTween.TweenProperty(_settingsDialogRoot, "modulate:a", 1.0f, DialogFadeSeconds);
-		_settingsDialogTween.TweenProperty(_settingsDialogPanel, "scale", Vector2.One, DialogFadeSeconds)
-			.SetTrans(Tween.TransitionType.Cubic)
-			.SetEase(Tween.EaseType.Out);
 		await CompleteMenuCameraPushIn();
 	}
 
@@ -36,11 +32,7 @@ public partial class MainMenuScene
 		ResetMenuCamera();
 
 		_settingsDialogTween = CreateTween();
-		_settingsDialogTween.SetParallel(true);
 		_settingsDialogTween.TweenProperty(_settingsDialogRoot, "modulate:a", 0.0f, DialogFadeSeconds);
-		_settingsDialogTween.TweenProperty(_settingsDialogPanel, "scale", new Vector2(0.96f, 0.96f), DialogFadeSeconds)
-			.SetTrans(Tween.TransitionType.Cubic)
-			.SetEase(Tween.EaseType.In);
 		_settingsDialogTween.Finished += () => _settingsDialogRoot.Visible = false;
 	}
 

@@ -3,7 +3,7 @@ using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
-	private const string AvatarUnlockPromptTexturePath = "res://art/ui/avatar_unlock_prompt/run-001/processed/clean.png";
+	private const string AvatarUnlockPromptTexturePath = "res://art/ui/avatar_unlock_prompt/run-003/processed/clean.png";
 	private const float AvatarUnlockPromptFadeSeconds = 0.18f;
 
 	private void ShowPendingAdventureAvatarUnlockPrompt()
@@ -36,7 +36,6 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
-		_avatarUnlockPromptDefinition = avatarDefinition;
 		_isShowingAvatarUnlockPrompt = true;
 		RefreshAvatarUnlockPromptText();
 		SetAdventureMenuButtonsDisabled(true);
@@ -93,7 +92,6 @@ public partial class AdventureAvatarMenuScene
 			_avatarUnlockPromptPanel.Scale = Vector2.One;
 		}
 
-		_avatarUnlockPromptDefinition = null;
 		_isShowingAvatarUnlockPrompt = false;
 		SetAdventureMenuButtonsDisabled(false);
 		if (showNext)
@@ -228,11 +226,6 @@ public partial class AdventureAvatarMenuScene
 			avatarSlot.AddChild(_avatarUnlockPromptAvatar);
 		}
 
-		_avatarUnlockPromptMessageLabel = CreatePromptLabel(string.Empty, 21, new Color(0.86f, 1.0f, 0.96f), HorizontalAlignment.Center);
-		_avatarUnlockPromptMessageLabel.CustomMinimumSize = new Vector2(0.0f, 58.0f);
-		_avatarUnlockPromptMessageLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-		layout.AddChild(_avatarUnlockPromptMessageLabel);
-
 		var actions = new HBoxContainer
 		{
 			Name = "PromptActions",
@@ -327,12 +320,6 @@ public partial class AdventureAvatarMenuScene
 			_avatarUnlockPromptTitleLabel.Text = Localize("AVATAR_UNLOCK_TITLE");
 		}
 
-		if (_avatarUnlockPromptMessageLabel != null && GodotObject.IsInstanceValid(_avatarUnlockPromptMessageLabel))
-		{
-			string avatarName = _avatarUnlockPromptDefinition?.DisplayName ?? string.Empty;
-			_avatarUnlockPromptMessageLabel.Text = LocalizeFormat("AVATAR_UNLOCK_MESSAGE", avatarName);
-		}
-
 		if (_avatarUnlockPromptButton != null && GodotObject.IsInstanceValid(_avatarUnlockPromptButton))
 		{
 			_avatarUnlockPromptButton.Text = Localize("AVATAR_UNLOCK_CONFIRM");
@@ -343,6 +330,14 @@ public partial class AdventureAvatarMenuScene
 	{
 		_backButton.Disabled = disabled;
 		_startButton.Disabled = disabled;
+		foreach (Button adventureButton in _adventureButtons.Values)
+		{
+			if (GodotObject.IsInstanceValid(adventureButton))
+			{
+				adventureButton.Disabled = disabled;
+			}
+		}
+
 		foreach (Button stageButton in _stageButtons.Values)
 		{
 			if (GodotObject.IsInstanceValid(stageButton))
@@ -372,6 +367,10 @@ public partial class AdventureAvatarMenuScene
 		bool simplifiedChinese = locale.StartsWith("zh", System.StringComparison.OrdinalIgnoreCase) && !traditionalChinese;
 		return key switch
 		{
+			"ADVENTURE_MENU_TITLE" => traditionalChinese ? "冒險模式" : simplifiedChinese ? "冒险模式" : "Adventure",
+			"ADVENTURE_LIST_TITLE" => traditionalChinese ? "冒險" : simplifiedChinese ? "冒险" : "Adventure",
+			"ADVENTURE_ENEMY_LIST_TITLE" => traditionalChinese ? "敵人" : simplifiedChinese ? "敌人" : "Enemies",
+			"ADVENTURE_DEEP_TIDE_THRONE" => "深潮王座",
 			"AVATAR_UNLOCK_TITLE" => traditionalChinese ? "頭像已解鎖" : simplifiedChinese ? "头像已解锁" : "Avatar Unlocked",
 			"AVATAR_UNLOCK_MESSAGE" => traditionalChinese ? "獲得了 {0} 的頭像" : simplifiedChinese ? "获得了 {0} 的头像" : "You got {0}'s avatar",
 			"AVATAR_UNLOCK_CONFIRM" => traditionalChinese || simplifiedChinese ? "收下" : "Collect",

@@ -7,7 +7,7 @@ public partial class AdventureAvatarMenuScene
 		var panel = new PanelContainer
 		{
 			Name = "LevelListPanel",
-			CustomMinimumSize = new Vector2(410.0f, 0.0f),
+			CustomMinimumSize = new Vector2(300.0f, 0.0f),
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
@@ -24,6 +24,17 @@ public partial class AdventureAvatarMenuScene
 		margin.AddThemeConstantOverride("margin_bottom", 14);
 		panel.AddChild(margin);
 
+		var layout = new VBoxContainer
+		{
+			Name = "LevelListLayout",
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		layout.AddThemeConstantOverride("separation", 10);
+		margin.AddChild(layout);
+
+		layout.AddChild(CreateColumnTitleLabel("ADVENTURE_ENEMY_LIST_TITLE"));
+
 		var scroll = new ScrollContainer
 		{
 			Name = "LevelScroll",
@@ -36,7 +47,7 @@ public partial class AdventureAvatarMenuScene
 		_levelScroll = scroll;
 		scroll.GuiInput += OnLevelScrollGuiInput;
 		scroll.GetVScrollBar().ValueChanged += value => _levelScrollTarget = (int)Mathf.Round(value);
-		margin.AddChild(scroll);
+		layout.AddChild(scroll);
 
 		var levelList = new VBoxContainer
 		{
@@ -45,25 +56,40 @@ public partial class AdventureAvatarMenuScene
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		levelList.AddThemeConstantOverride("separation", 8);
+		_levelList = levelList;
 		scroll.AddChild(levelList);
+
+		RebuildLevelList();
+		return panel;
+	}
+
+	private void RebuildLevelList()
+	{
+		if (_levelList == null || !GodotObject.IsInstanceValid(_levelList))
+		{
+			return;
+		}
+
+		while (_levelList.GetChildCount() > 0)
+		{
+			Node child = _levelList.GetChild(0);
+			_levelList.RemoveChild(child);
+			child.QueueFree();
+		}
 
 		_avatarFrames.Clear();
 		_stageNumbers.Clear();
 		_stageButtons.Clear();
 		_stageStatusLabels.Clear();
-		int stageNumber = 1;
-		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
+		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
 		{
-			if (avatarDefinition.Id == CharacterAvatarCatalog.DefaultAvatarId)
+			if (avatarDefinition.AdventureStageNumber <= 0)
 			{
 				continue;
 			}
 
-			levelList.AddChild(CreateLevelEntry(avatarDefinition, stageNumber));
-			stageNumber++;
+			_levelList.AddChild(CreateLevelEntry(avatarDefinition, avatarDefinition.AdventureStageNumber));
 		}
-
-		return panel;
 	}
 
 	private Control CreateLevelEntry(CharacterAvatarDefinition avatarDefinition, int stageNumber)

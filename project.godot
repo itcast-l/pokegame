@@ -10,8 +10,10 @@ config_version=5
 
 [application]
 
-config/name="pokegame"
+config/name="Deckland"
 run/main_scene="res://scenes/main_menu_scene.tscn"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="cakeju/deckland"
 config/features=PackedStringArray("4.6", "C#", "GL Compatibility")
 config/icon="res://icon.svg"
 

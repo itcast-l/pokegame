@@ -4,16 +4,14 @@ using Godot;
 public partial class MainMenuScene : Control
 {
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
-	private const string AvatarUnlockPromptTexturePath = "res://art/ui/avatar_unlock_prompt/run-001/processed/clean.png";
+	private const string AvatarUnlockPromptTexturePath = "res://art/ui/avatar_unlock_prompt/run-003/processed/clean.png";
 	private const float AvatarUnlockPromptFadeSeconds = 0.18f;
 
 	private Control? _avatarUnlockPromptRoot;
 	private Control? _avatarUnlockPromptPanel;
 	private Label? _avatarUnlockPromptTitleLabel;
-	private Label? _avatarUnlockPromptMessageLabel;
 	private Button? _avatarUnlockPromptButton;
 	private CharacterAvatar? _avatarUnlockPromptAvatar;
-	private CharacterAvatarDefinition? _avatarUnlockPromptDefinition;
 	private Tween? _avatarUnlockPromptTween;
 	private bool _isShowingAvatarUnlockPrompt;
 
@@ -47,7 +45,6 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
-		_avatarUnlockPromptDefinition = avatarDefinition;
 		_isShowingAvatarUnlockPrompt = true;
 		RefreshAvatarUnlockPromptText();
 		SetMainMenuButtonsDisabled(true);
@@ -99,7 +96,6 @@ public partial class MainMenuScene : Control
 			_avatarUnlockPromptPanel.Scale = Vector2.One;
 		}
 
-		_avatarUnlockPromptDefinition = null;
 		_isShowingAvatarUnlockPrompt = false;
 		SetMainMenuButtonsDisabled(false);
 		ShowPendingAdventureAvatarUnlockPrompt();
@@ -231,11 +227,6 @@ public partial class MainMenuScene : Control
 			avatarSlot.AddChild(_avatarUnlockPromptAvatar);
 		}
 
-		_avatarUnlockPromptMessageLabel = CreateDialogLabel(string.Empty, 21, new Color(0.86f, 1.0f, 0.96f), HorizontalAlignment.Center);
-		_avatarUnlockPromptMessageLabel.CustomMinimumSize = new Vector2(0.0f, 58.0f);
-		_avatarUnlockPromptMessageLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-		layout.AddChild(_avatarUnlockPromptMessageLabel);
-
 		var actions = new HBoxContainer
 		{
 			Name = "PromptActions",
@@ -286,12 +277,6 @@ public partial class MainMenuScene : Control
 			_avatarUnlockPromptTitleLabel.Text = Localize("AVATAR_UNLOCK_TITLE");
 		}
 
-		if (_avatarUnlockPromptMessageLabel != null && GodotObject.IsInstanceValid(_avatarUnlockPromptMessageLabel))
-		{
-			string avatarName = _avatarUnlockPromptDefinition?.DisplayName ?? string.Empty;
-			_avatarUnlockPromptMessageLabel.Text = LocalizeFormat("AVATAR_UNLOCK_MESSAGE", avatarName);
-		}
-
 		if (_avatarUnlockPromptButton != null && GodotObject.IsInstanceValid(_avatarUnlockPromptButton))
 		{
 			_avatarUnlockPromptButton.Text = Localize("AVATAR_UNLOCK_CONFIRM");
@@ -306,9 +291,12 @@ public partial class MainMenuScene : Control
 		bool simplifiedChinese = locale.StartsWith("zh", System.StringComparison.OrdinalIgnoreCase) && !traditionalChinese;
 		return key switch
 		{
+			"APP_NAME" => traditionalChinese ? "牌境紀行" : simplifiedChinese ? "牌境纪行" : "Deckland",
+			"APP_SUBTITLE" => traditionalChinese ? "卡牌對局" : simplifiedChinese ? "卡牌对局" : "Card Battler",
 			"AVATAR_UNLOCK_TITLE" => traditionalChinese ? "頭像已解鎖" : simplifiedChinese ? "头像已解锁" : "Avatar Unlocked",
 			"AVATAR_UNLOCK_MESSAGE" => traditionalChinese ? "獲得了 {0} 的頭像" : simplifiedChinese ? "获得了 {0} 的头像" : "You got {0}'s avatar",
 			"AVATAR_UNLOCK_CONFIRM" => traditionalChinese || simplifiedChinese ? "收下" : "Collect",
+			"SETTINGS_RESOLUTION" => traditionalChinese ? "解析度" : simplifiedChinese ? "分辨率" : "Resolution",
 			_ => key,
 		};
 	}

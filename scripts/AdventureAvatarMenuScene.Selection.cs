@@ -6,7 +6,7 @@ public partial class AdventureAvatarMenuScene
 	private void SelectAvatar(string avatarId)
 	{
 		string normalized = NormalizeAdventureAvatarId(avatarId);
-		if (!IsStageUnlocked(normalized))
+		if (!IsAvatarInSelectedAdventure(normalized) || !IsStageUnlocked(normalized))
 		{
 			return;
 		}
@@ -17,6 +17,7 @@ public partial class AdventureAvatarMenuScene
 
 	private void RefreshSelection()
 	{
+		RefreshAdventureModeSelection();
 		EnsureSelectedStageIsUnlocked();
 
 		foreach ((string avatarId, OceanMenuButtonFrame frame) in _avatarFrames)
@@ -86,26 +87,37 @@ public partial class AdventureAvatarMenuScene
 			CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() + 1,
 			1,
 			CharacterAvatarCatalog.GetAdventureStageCount());
-		return CharacterAvatarCatalog.GetAdventureAvatarIdForStage(nextStage);
-	}
-
-	private static string NormalizeAdventureAvatarId(string avatarId)
-	{
-		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
-		if (normalized != CharacterAvatarCatalog.DefaultAvatarId)
+		CharacterAvatarDefinition? nextEnemy = GetSelectedAdventureEnemyForStage(nextStage);
+		if (nextEnemy != null)
 		{
-			return normalized;
+			return nextEnemy.Id;
 		}
 
-		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
+		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
 		{
-			if (avatarDefinition.Id != CharacterAvatarCatalog.DefaultAvatarId)
+			if (IsStageUnlocked(avatarDefinition.AdventureStageNumber))
 			{
 				return avatarDefinition.Id;
 			}
 		}
 
+		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
+		{
+			return avatarDefinition.Id;
+		}
+
 		return CharacterAvatarCatalog.DefaultAvatarId;
+	}
+
+	private string NormalizeAdventureAvatarId(string avatarId)
+	{
+		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		if (normalized != CharacterAvatarCatalog.DefaultAvatarId && IsAvatarInSelectedAdventure(normalized))
+		{
+			return normalized;
+		}
+
+		return GetInitialAvatarId();
 	}
 
 	private static string FormatStageNumber(int stageNumber)
@@ -115,7 +127,7 @@ public partial class AdventureAvatarMenuScene
 
 	private void EnsureSelectedStageIsUnlocked()
 	{
-		if (IsStageUnlocked(_selectedAvatarId))
+		if (IsAvatarInSelectedAdventure(_selectedAvatarId) && IsStageUnlocked(_selectedAvatarId))
 		{
 			return;
 		}
