@@ -1,9 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dmujoh6slohou"]
 
-[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="1_frame"]
+[ext_resource type="Script" uid="uid://c4x2qwrms1ysj" path="res://scripts/OceanMenuButtonFrame.cs" id="1_frame"]
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_avatar"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 bg_color = Color(0.07, 0.16, 0.17, 0.88)
@@ -17,14 +15,17 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="AdventureLevelEntry" type="Control"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+
+[node name="AdventureLevelEntry" type="Control" unique_id=260516966]
 custom_minimum_size = Vector2(0, 68)
-layout_mode = 2
+layout_mode = 3
+anchors_preset = 0
 mouse_filter = 1
 script = ExtResource("1_frame")
 AccentColor = Color(0.62, 1, 0.92, 1)
 
-[node name="EntryContent" type="MarginContainer" parent="."]
+[node name="EntryContent" type="MarginContainer" parent="." unique_id=508362906]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -37,43 +38,40 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EntryRow" type="HBoxContainer" parent="EntryContent"]
+[node name="EntryRow" type="HBoxContainer" parent="EntryContent" unique_id=1747511280]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="StageBadge" type="PanelContainer" parent="EntryContent/EntryRow"]
+[node name="StageBadge" type="PanelContainer" parent="EntryContent/EntryRow" unique_id=769304286]
 custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 
-[node name="StageNumber" type="Label" parent="EntryContent/EntryRow/StageBadge"]
+[node name="StageNumber" type="Label" parent="EntryContent/EntryRow/StageBadge" unique_id=2023096546]
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.98, 1, 0.9, 1)
 theme_override_font_sizes/font_size = 21
 text = "01"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EntryAvatarAnchor" type="CenterContainer" parent="EntryContent/EntryRow"]
+[node name="EntryAvatarAnchor" type="CenterContainer" parent="EntryContent/EntryRow" unique_id=2031190206]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="EntryAvatar" parent="EntryContent/EntryRow/EntryAvatarAnchor" instance=ExtResource("2_avatar")]
+[node name="EntryAvatar" parent="EntryContent/EntryRow/EntryAvatarAnchor" unique_id=683550885 instance=ExtResource("2_avatar")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
-mouse_filter = 2
 PortraitScale = 0.74
 LoadActionFrames = false
 
-[node name="EntryName" type="Label" parent="EntryContent/EntryRow"]
+[node name="EntryName" type="Label" parent="EntryContent/EntryRow" unique_id=2141680247]
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.92)
 theme_override_constants/shadow_offset_x = 1
@@ -83,10 +81,9 @@ text = "Enemy"
 vertical_alignment = 1
 clip_text = true
 
-[node name="EntryStatus" type="Label" parent="EntryContent/EntryRow"]
+[node name="EntryStatus" type="Label" parent="EntryContent/EntryRow" unique_id=1873343900]
 custom_minimum_size = Vector2(78, 0)
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
@@ -96,17 +93,16 @@ horizontal_alignment = 2
 vertical_alignment = 1
 clip_text = true
 
-[node name="EntryArrow" type="Label" parent="EntryContent/EntryRow"]
+[node name="EntryArrow" type="Label" parent="EntryContent/EntryRow" unique_id=660591847]
 custom_minimum_size = Vector2(26, 0)
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.62, 1, 0.94, 0.82)
 theme_override_font_sizes/font_size = 20
 text = ">"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Button" type="Button" parent="."]
+[node name="Button" type="Button" parent="." unique_id=1124846966]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -116,7 +112,7 @@ grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 flat = true
