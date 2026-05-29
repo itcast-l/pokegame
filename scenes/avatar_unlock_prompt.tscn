@@ -1,0 +1,146 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/AvatarUnlockPrompt.cs" id="1_prompt"]
+[ext_resource type="Texture2D" path="res://art/ui/avatar_unlock_prompt/run-003/processed/clean.png" id="2_frame_texture"]
+[ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="3_avatar"]
+[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="4_button_frame"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+
+[node name="AvatarUnlockPromptRoot" type="Control"]
+visible = false
+z_index = 1500
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_prompt")
+
+[node name="Scrim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0.025, 0.05, 0.5)
+
+[node name="PromptCenter" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -18.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="AvatarUnlockPromptPanel" type="Control" parent="PromptCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 500)
+layout_mode = 2
+mouse_filter = 0
+
+[node name="GeneratedUnlockFrame" type="TextureRect" parent="PromptCenter/AvatarUnlockPromptPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -10.0
+offset_top = -12.0
+offset_right = 10.0
+offset_bottom = 12.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("2_frame_texture")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="PromptMargin" type="MarginContainer" parent="PromptCenter/AvatarUnlockPromptPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 76
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 76
+theme_override_constants/margin_bottom = 58
+
+[node name="PromptLayout" type="VBoxContainer" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="UnlockTitle" type="Label" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin/PromptLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.94, 0.58, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 32
+text = "AVATAR_UNLOCK_TITLE"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="AvatarSlot" type="CenterContainer" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin/PromptLayout"]
+custom_minimum_size = Vector2(0, 172)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="UnlockedAvatar" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin/PromptLayout/AvatarSlot" instance=ExtResource("3_avatar")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(156, 156)
+layout_mode = 2
+mouse_filter = 2
+PortraitScale = 0.92
+ShowFrame = true
+LoadActionFrames = true
+
+[node name="PromptActions" type="HBoxContainer" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin/PromptLayout"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="ConfirmFrame" type="Control" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin/PromptLayout/PromptActions"]
+custom_minimum_size = Vector2(170, 56)
+layout_mode = 2
+script = ExtResource("4_button_frame")
+AccentColor = Color(0.58, 1, 0.92, 1)
+FlipOrnament = true
+
+[node name="ConfirmButton" type="Button" parent="PromptCenter/AvatarUnlockPromptPanel/PromptMargin/PromptLayout/PromptActions/ConfirmFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 5.0
+offset_right = -4.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.78, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "AVATAR_UNLOCK_CONFIRM"
+flat = true

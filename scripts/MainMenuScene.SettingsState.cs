@@ -14,6 +14,7 @@ public partial class MainMenuScene
 		_motionScale = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MotionScaleKey, DefaultMotionScale), 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference));
 		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(GameSaveStore.GetString(GameSaveStore.SelectedAvatarKey, CharacterAvatarCatalog.DefaultAvatarId));
+		_playerName = PlayerNameRules.Normalize(GameSaveStore.GetString(GameSaveStore.PlayerNameKey, PlayerNameRules.DefaultPlayerName));
 	}
 
 	private void SaveSettings()
@@ -27,7 +28,8 @@ public partial class MainMenuScene
 			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
 			new GameSaveStore.SaveValue(GameSaveStore.MotionScaleKey, _motionScale),
 			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
-			new GameSaveStore.SaveValue(GameSaveStore.SelectedAvatarKey, _selectedAvatarId));
+			new GameSaveStore.SaveValue(GameSaveStore.SelectedAvatarKey, _selectedAvatarId),
+			new GameSaveStore.SaveValue(GameSaveStore.PlayerNameKey, _playerName));
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save settings: {saveResult}");
@@ -162,11 +164,17 @@ public partial class MainMenuScene
 			return;
 		}
 
-		option.Clear();
 		for (int presetIndex = 0; presetIndex < ResolutionPresets.Length; presetIndex++)
 		{
+			if (presetIndex >= option.ItemCount)
+			{
+				GD.PushWarning("Settings resolution option scene is missing preset rows.");
+				return;
+			}
+
 			ResolutionPreset preset = ResolutionPresets[presetIndex];
-			option.AddItem(preset.Label, presetIndex);
+			option.SetItemText(presetIndex, preset.Label);
+			option.SetItemId(presetIndex, presetIndex);
 		}
 
 		option.Select(GetResolutionOptionIndex(option, _selectedResolution));
@@ -181,7 +189,14 @@ public partial class MainMenuScene
 
 		for (int index = 0; index < Localization.SupportedLanguages.Length; index++)
 		{
+			if (index >= _languageOption.ItemCount)
+			{
+				GD.PushWarning("Settings language option scene is missing language rows.");
+				return;
+			}
+
 			_languageOption.SetItemText(index, Localize(Localization.SupportedLanguages[index].LabelKey));
+			_languageOption.SetItemId(index, index);
 		}
 	}
 
@@ -202,7 +217,9 @@ public partial class MainMenuScene
 		_oceanMotion = DefaultOceanMotion;
 		_languagePreference = Localization.DefaultLanguagePreference;
 		_selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
+		_playerName = PlayerNameRules.DefaultPlayerName;
 		ApplySelectedAvatar();
+		ApplyPlayerName();
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();

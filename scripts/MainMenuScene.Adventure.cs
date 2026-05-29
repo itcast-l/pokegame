@@ -106,35 +106,28 @@ public partial class MainMenuScene : Control
 		_adventureTransitionTween?.Kill();
 		_adventureTransitionRoot?.QueueFree();
 
-		_adventureTransitionRoot = new Control
+		PackedScene? transitionScene = GD.Load<PackedScene>(AdventureTransitionScenePath);
+		if (transitionScene?.Instantiate() is not MainMenuAdventureTransition transitionRoot)
 		{
-			Name = "AdventureTransitionRoot",
-			Visible = true,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-			Size = GetViewportRect().Size,
-		};
-		_adventureTransitionRoot.Position = GetAdventureSecondaryMenuDepthPosition();
-		_adventureTransitionRoot.Scale = GetAdventureSecondaryMenuWorldScale();
-		AddChild(_adventureTransitionRoot);
+			GD.PushError($"Missing adventure transition scene: {AdventureTransitionScenePath}");
+			return;
+		}
 
-		var scrim = CreatePlayerCountDialogScrim();
-		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
-		scrim.GuiInput += inputEvent =>
-		{
-			if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-			{
-				HideAdventureAvatarMenu(adventureAvatarMenu);
-				GetViewport().SetInputAsHandled();
-			}
-		};
-		_adventureTransitionRoot.AddChild(scrim);
+		_adventureTransitionRoot = transitionRoot;
+		transitionRoot.Visible = true;
+		transitionRoot.MouseFilter = MouseFilterEnum.Ignore;
+		transitionRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		transitionRoot.Size = GetViewportRect().Size;
+		transitionRoot.Position = GetAdventureSecondaryMenuDepthPosition();
+		transitionRoot.Scale = GetAdventureSecondaryMenuWorldScale();
+		AddChild(transitionRoot);
+		transitionRoot.CloseRequested += () => HideAdventureAvatarMenu(adventureAvatarMenu);
 
 		_adventureTransitionMotion = adventureAvatarMenu;
 		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
-		_adventureTransitionRoot.AddChild(adventureAvatarMenu);
+		transitionRoot.MenuHost.AddChild(adventureAvatarMenu);
 		ApplyFixedAdventureTransitionLayout();
-		QueueAdventureTransitionLayout(_adventureTransitionRoot);
+		QueueAdventureTransitionLayout(transitionRoot);
 		UpdateAdventureTransitionPosition();
 	}
 

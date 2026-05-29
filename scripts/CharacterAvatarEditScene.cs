@@ -7,34 +7,46 @@ public partial class CharacterAvatarEditScene : Control
 	public delegate void CloseRequestedEventHandler();
 
 	[Signal]
-	public delegate void AvatarSelectedEventHandler(string avatarId);
+	public delegate void ProfileSavedEventHandler(string avatarId, string playerName);
 
 	public string CurrentAvatarId { get; set; } = CharacterAvatarCatalog.DefaultAvatarId;
+	public string CurrentPlayerName { get; set; } = PlayerNameRules.DefaultPlayerName;
 
 	private static readonly Color SelectedOptionModulate = new(1.0f, 1.0f, 0.78f, 1.0f);
+	private static readonly Color ValidNameHintColor = new(0.62f, 1.0f, 0.92f, 0.76f);
+	private static readonly Color EmptyNameHintColor = new(1.0f, 0.72f, 0.58f, 0.92f);
 
 	private Button _backButton = default!;
 	private Button _confirmButton = default!;
 	private CharacterAvatar _previewAvatar = default!;
 	private Label _previewName = default!;
+	private LineEdit _playerNameInput = default!;
+	private Label _playerNameHint = default!;
 	private GridContainer _avatarGrid = default!;
 	private readonly Dictionary<string, PanelContainer> _optionPanels = new();
+	private readonly List<AvatarOptionSlot> _avatarOptionSlots = new();
 
 	public override void _Ready()
 	{
 		CurrentAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(CurrentAvatarId);
+		CurrentPlayerName = PlayerNameRules.Normalize(CurrentPlayerName);
 
 		_backButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackButton");
 		_backButton.Pressed += RequestClose;
 
 		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
 		_previewName = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PreviewName");
+		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
+		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
+		_playerNameInput.TextChanged += OnPlayerNameTextChanged;
 		_confirmButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ConfirmButton");
 		_confirmButton.Pressed += ConfirmSelection;
 
 		_avatarGrid = GetNode<GridContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid");
-		BuildAvatarOptions();
+		BindAvatarOptions();
+		ConfigureAvatarOptions();
 		ApplyPreviewAvatar();
+		ApplyPlayerNameInput();
 	}
 
 	public override void _UnhandledInput(InputEvent inputEvent)
@@ -51,40 +63,55 @@ public partial class CharacterAvatarEditScene : Control
 		EmitSignal(SignalName.CloseRequested);
 	}
 
-	private void BuildAvatarOptions()
+	private void BindAvatarOptions()
 	{
-		Control template = GetNode<Control>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid/DefaultAvatarOption");
-		_avatarGrid.RemoveChild(template);
-		_optionPanels.Clear();
-
-		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.GetUnlockedAvatars())
+		_avatarOptionSlots.Clear();
+		for (int optionIndex = 1; optionIndex <= 15; optionIndex++)
 		{
-			Control option = (Control)template.Duplicate();
-			option.Name = $"{avatarDefinition.Id}AvatarOption";
-
-			if (option.GetNodeOrNull<Control>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot") is Control avatarSlot)
+			if (_avatarGrid.GetNodeOrNull<Control>($"AvatarOption{optionIndex}") is not Control root)
 			{
-				ReplaceOptionAvatarWithIcon(avatarSlot, avatarDefinition);
+				continue;
 			}
 
-			if (option.GetNodeOrNull<Label>("OptionPanel/OptionMargin/OptionLayout/AvatarName") is Label label)
-			{
-				label.Text = avatarDefinition.DisplayName;
-			}
+			_avatarOptionSlots.Add(new AvatarOptionSlot(
+				root,
+				root.GetNode<PanelContainer>("OptionPanel"),
+				root.GetNode<CharacterAvatar>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/CharacterAvatar"),
+				root.GetNode<Label>("OptionPanel/OptionMargin/OptionLayout/AvatarName"),
+				root.GetNode<Button>("SelectButton")));
+		}
+	}
 
-			if (option.GetNodeOrNull<PanelContainer>("OptionPanel") is PanelContainer panel)
-			{
-				_optionPanels[avatarDefinition.Id] = panel;
-			}
-
-			Button button = option.GetNode<Button>("SelectButton");
-			button.TooltipText = $"预览{avatarDefinition.DisplayName}头像";
-			button.Pressed += () => SelectAvatar(avatarDefinition.Id);
-
-			_avatarGrid.AddChild(option);
+	private void ConfigureAvatarOptions()
+	{
+		_optionPanels.Clear();
+		foreach (AvatarOptionSlot optionSlot in _avatarOptionSlots)
+		{
+			optionSlot.Root.Visible = false;
 		}
 
-		template.QueueFree();
+		IReadOnlyList<CharacterAvatarDefinition> unlockedAvatars = CharacterAvatarCatalog.GetUnlockedAvatars();
+		for (int avatarIndex = 0; avatarIndex < unlockedAvatars.Count; avatarIndex++)
+		{
+			if (avatarIndex >= _avatarOptionSlots.Count)
+			{
+				GD.PushWarning("Character avatar edit scene does not have enough option slots for every unlocked avatar.");
+				break;
+			}
+
+			CharacterAvatarDefinition avatarDefinition = unlockedAvatars[avatarIndex];
+			AvatarOptionSlot optionSlot = _avatarOptionSlots[avatarIndex];
+
+			optionSlot.Root.Visible = true;
+			optionSlot.Avatar.AvatarRoot = avatarDefinition.RootPath;
+			optionSlot.Avatar.PlayIdle();
+			optionSlot.Label.Text = avatarDefinition.DisplayName;
+			optionSlot.Panel.Modulate = Colors.White;
+			optionSlot.Button.TooltipText = $"预览{avatarDefinition.DisplayName}头像";
+			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
+			_optionPanels[avatarDefinition.Id] = optionSlot.Panel;
+		}
+
 		RefreshOptionSelection();
 	}
 
@@ -95,30 +122,16 @@ public partial class CharacterAvatarEditScene : Control
 		ApplyPreviewAvatar();
 	}
 
-	private static void ReplaceOptionAvatarWithIcon(Control avatarSlot, CharacterAvatarDefinition avatarDefinition)
-	{
-		if (avatarSlot.GetNodeOrNull<CharacterAvatar>("CharacterAvatar") is CharacterAvatar templateAvatar)
-		{
-			avatarSlot.RemoveChild(templateAvatar);
-			templateAvatar.QueueFree();
-		}
-
-		var icon = new TextureRect
-		{
-			Name = "AvatarIcon",
-			Texture = ResourceLoader.Load<Texture2D>($"{avatarDefinition.RootPath}/idle/processed/idle-1.png"),
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		icon.SetAnchorsPreset(LayoutPreset.FullRect);
-		avatarSlot.AddChild(icon);
-	}
-
 	private void ConfirmSelection()
 	{
-		EmitSignal(SignalName.AvatarSelected, CurrentAvatarId);
+		if (!PlayerNameRules.IsValid(_playerNameInput.Text))
+		{
+			UpdatePlayerNameHint();
+			return;
+		}
+
+		CurrentPlayerName = _playerNameInput.Text;
+		EmitSignal(SignalName.ProfileSaved, CurrentAvatarId, CurrentPlayerName);
 		RequestClose();
 	}
 
@@ -137,4 +150,49 @@ public partial class CharacterAvatarEditScene : Control
 			panel.Modulate = avatarId == CurrentAvatarId ? SelectedOptionModulate : Colors.White;
 		}
 	}
+
+	private void ApplyPlayerNameInput()
+	{
+		_playerNameInput.Text = CurrentPlayerName;
+		_playerNameInput.CaretColumn = _playerNameInput.Text.Length;
+		UpdatePlayerNameHint();
+	}
+
+	private void OnPlayerNameTextChanged(string text)
+	{
+		CurrentPlayerName = text;
+		UpdatePlayerNameHint();
+	}
+
+	private void UpdatePlayerNameHint()
+	{
+		string playerName = _playerNameInput.Text;
+		bool isValidName = PlayerNameRules.IsValid(playerName);
+		if (isValidName)
+		{
+			_playerNameHint.Text = $"仅支持中英文，最多 {PlayerNameRules.MaxLength} 个字";
+		}
+		else if (string.IsNullOrEmpty(playerName))
+		{
+			_playerNameHint.Text = "请输入中英文名字";
+		}
+		else if (playerName.Length > PlayerNameRules.MaxLength)
+		{
+			_playerNameHint.Text = $"名字最多 {PlayerNameRules.MaxLength} 个字";
+		}
+		else
+		{
+			_playerNameHint.Text = "名字只能使用中文或英文字母";
+		}
+
+		_playerNameHint.Modulate = isValidName ? ValidNameHintColor : EmptyNameHintColor;
+		_confirmButton.Disabled = !isValidName;
+	}
+
+	private sealed record AvatarOptionSlot(
+		Control Root,
+		PanelContainer Panel,
+		CharacterAvatar Avatar,
+		Label Label,
+		Button Button);
 }

@@ -3,7 +3,6 @@ using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
-	private const string AvatarUnlockPromptTexturePath = "res://art/ui/avatar_unlock_prompt/run-003/processed/clean.png";
 	private const float AvatarUnlockPromptFadeSeconds = 0.18f;
 
 	private void ShowPendingAdventureAvatarUnlockPrompt()
@@ -107,223 +106,22 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
-		_avatarUnlockPromptRoot = new Control
+		_avatarUnlockPromptRoot = GetNodeOrNull<AvatarUnlockPrompt>("%AvatarUnlockPromptRoot");
+		if (_avatarUnlockPromptRoot == null)
 		{
-			Name = "AvatarUnlockPromptRoot",
-			Visible = false,
-			MouseFilter = MouseFilterEnum.Ignore,
-			ZIndex = 1500,
-		};
-		_avatarUnlockPromptRoot.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(_avatarUnlockPromptRoot);
-
-		var scrim = new ColorRect
-		{
-			Name = "Scrim",
-			Color = new Color(0.0f, 0.025f, 0.05f, 0.50f),
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
-		scrim.GuiInput += inputEvent =>
-		{
-			if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-			{
-				HideAvatarUnlockPrompt();
-				GetViewport().SetInputAsHandled();
-			}
-		};
-		_avatarUnlockPromptRoot.AddChild(scrim);
-
-		var center = new CenterContainer
-		{
-			Name = "PromptCenter",
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		center.SetAnchorsPreset(LayoutPreset.FullRect);
-		center.OffsetTop = -18.0f;
-		center.OffsetBottom = -18.0f;
-		_avatarUnlockPromptRoot.AddChild(center);
-
-		_avatarUnlockPromptPanel = BuildAvatarUnlockPromptPanel();
-		center.AddChild(_avatarUnlockPromptPanel);
-	}
-
-	private Control BuildAvatarUnlockPromptPanel()
-	{
-		var panel = new Control
-		{
-			Name = "AvatarUnlockPromptPanel",
-			CustomMinimumSize = new Vector2(560.0f, 500.0f),
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-
-		Texture2D? frameTexture = LoadTextureWithImageFallback(AvatarUnlockPromptTexturePath);
-		if (frameTexture != null)
-		{
-			var frameArt = new TextureRect
-			{
-				Name = "GeneratedUnlockFrame",
-				Texture = frameTexture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-				MouseFilter = MouseFilterEnum.Ignore,
-			};
-			frameArt.SetAnchorsPreset(LayoutPreset.FullRect);
-			frameArt.OffsetLeft = -10.0f;
-			frameArt.OffsetTop = -12.0f;
-			frameArt.OffsetRight = 10.0f;
-			frameArt.OffsetBottom = 12.0f;
-			panel.AddChild(frameArt);
-		}
-		else
-		{
-			var fallbackPanel = new Panel
-			{
-				Name = "FallbackPanel",
-				MouseFilter = MouseFilterEnum.Ignore,
-			};
-			fallbackPanel.SetAnchorsPreset(LayoutPreset.FullRect);
-			fallbackPanel.AddThemeStyleboxOverride("panel", CreateMenuPanelStyle());
-			panel.AddChild(fallbackPanel);
-			GD.PushWarning($"Missing avatar unlock prompt texture: {AvatarUnlockPromptTexturePath}");
+			GD.PushError("Adventure avatar menu scene is missing AvatarUnlockPromptRoot.");
+			return;
 		}
 
-		var margin = new MarginContainer
-		{
-			Name = "PromptMargin",
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		margin.SetAnchorsPreset(LayoutPreset.FullRect);
-		margin.AddThemeConstantOverride("margin_left", 76);
-		margin.AddThemeConstantOverride("margin_top", 64);
-		margin.AddThemeConstantOverride("margin_right", 76);
-		margin.AddThemeConstantOverride("margin_bottom", 58);
-		panel.AddChild(margin);
-
-		var layout = new VBoxContainer
-		{
-			Name = "PromptLayout",
-			Alignment = BoxContainer.AlignmentMode.Center,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		layout.AddThemeConstantOverride("separation", 14);
-		margin.AddChild(layout);
-
-		_avatarUnlockPromptTitleLabel = CreatePromptLabel(string.Empty, 32, new Color(1.0f, 0.94f, 0.58f), HorizontalAlignment.Center);
-		layout.AddChild(_avatarUnlockPromptTitleLabel);
-
-		var avatarSlot = new CenterContainer
-		{
-			Name = "AvatarSlot",
-			CustomMinimumSize = new Vector2(0.0f, 172.0f),
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		layout.AddChild(avatarSlot);
-		_avatarUnlockPromptAvatar = CreateAvatarUnlockPromptAvatar();
-		if (_avatarUnlockPromptAvatar != null)
-		{
-			avatarSlot.AddChild(_avatarUnlockPromptAvatar);
-		}
-
-		var actions = new HBoxContainer
-		{
-			Name = "PromptActions",
-			Alignment = BoxContainer.AlignmentMode.Center,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		layout.AddChild(actions);
-		Control confirmFrame = CreatePromptButton(Localize("AVATAR_UNLOCK_CONFIRM"), new Color(0.58f, 1.0f, 0.92f), HideAvatarUnlockPrompt, true, 170.0f);
-		_avatarUnlockPromptButton = confirmFrame.GetNodeOrNull<Button>("Button");
-		if (_avatarUnlockPromptButton != null)
-		{
-			_avatarUnlockPromptButton.FocusMode = FocusModeEnum.All;
-		}
-		actions.AddChild(confirmFrame);
-
-		return panel;
-	}
-
-	private CharacterAvatar? CreateAvatarUnlockPromptAvatar()
-	{
-		if (_characterAvatarScene?.Instantiate() is not CharacterAvatar avatar)
-		{
-			return null;
-		}
-
-		avatar.Name = "UnlockedAvatar";
-		avatar.CustomMinimumSize = new Vector2(156.0f, 156.0f);
-		avatar.PortraitScale = 0.92f;
-		avatar.ShowFrame = true;
-		avatar.LoadActionFrames = true;
-		avatar.MouseFilter = MouseFilterEnum.Ignore;
-		return avatar;
-	}
-
-	private Label CreatePromptLabel(string text, int fontSize, Color color, HorizontalAlignment alignment)
-	{
-		var label = new Label
-		{
-			Text = text,
-			HorizontalAlignment = alignment,
-			AutowrapMode = TextServer.AutowrapMode.WordSmart,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		label.AddThemeFontSizeOverride("font_size", fontSize);
-		label.AddThemeColorOverride("font_color", color);
-		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.9f));
-		label.AddThemeConstantOverride("shadow_offset_x", 1);
-		label.AddThemeConstantOverride("shadow_offset_y", 2);
-		return label;
-	}
-
-	private Control CreatePromptButton(string text, Color accentColor, System.Action pressedAction, bool flipOrnament, float width)
-	{
-		var frame = new OceanMenuButtonFrame
-		{
-			Name = $"{text}Frame",
-			CustomMinimumSize = new Vector2(width, 56.0f),
-			AccentColor = accentColor,
-			FlipOrnament = flipOrnament,
-		};
-
-		var button = new Button
-		{
-			Name = "Button",
-			Text = text,
-			Flat = true,
-			FocusMode = FocusModeEnum.None,
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		button.SetAnchorsPreset(LayoutPreset.FullRect);
-		button.OffsetLeft = flipOrnament ? 22.0f : 4.0f;
-		button.OffsetTop = 5.0f;
-		button.OffsetRight = flipOrnament ? -4.0f : -22.0f;
-		button.OffsetBottom = -5.0f;
-		button.AddThemeFontSizeOverride("font_size", 19);
-		button.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
-		button.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
-		button.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
-		button.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("hover", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("pressed", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-		button.Pressed += pressedAction;
-		frame.AddChild(button);
-		return frame;
+		_avatarUnlockPromptPanel = _avatarUnlockPromptRoot.PromptPanel;
+		_avatarUnlockPromptButton = _avatarUnlockPromptRoot.ConfirmButton;
+		_avatarUnlockPromptAvatar = _avatarUnlockPromptRoot.UnlockedAvatar;
+		_avatarUnlockPromptRoot.CloseRequested += HideAvatarUnlockPrompt;
 	}
 
 	private void RefreshAvatarUnlockPromptText()
 	{
-		if (_avatarUnlockPromptTitleLabel != null && GodotObject.IsInstanceValid(_avatarUnlockPromptTitleLabel))
-		{
-			_avatarUnlockPromptTitleLabel.Text = Localize("AVATAR_UNLOCK_TITLE");
-		}
-
-		if (_avatarUnlockPromptButton != null && GodotObject.IsInstanceValid(_avatarUnlockPromptButton))
-		{
-			_avatarUnlockPromptButton.Text = Localize("AVATAR_UNLOCK_CONFIRM");
-		}
+		_avatarUnlockPromptRoot?.RefreshLocalizedText(Localize);
 	}
 
 	private void SetAdventureMenuButtonsDisabled(bool disabled)
@@ -345,18 +143,6 @@ public partial class AdventureAvatarMenuScene
 				stageButton.Disabled = disabled;
 			}
 		}
-	}
-
-	private static Texture2D? LoadTextureWithImageFallback(string path)
-	{
-		Texture2D? texture = GD.Load<Texture2D>(path);
-		if (texture != null)
-		{
-			return texture;
-		}
-
-		Image image = Image.LoadFromFile(path);
-		return image.IsEmpty() ? null : ImageTexture.CreateFromImage(image);
 	}
 
 	private static string GetAdventureMenuLocalizationFallback(string key)

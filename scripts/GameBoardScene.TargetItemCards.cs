@@ -303,21 +303,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var overlay = CreateSelectionOverlay();
-		var panel = CreateSelectionPanel(Localize("GAME_SELECT_PLAYER"));
-
+		var options = new List<(string Text, Action Action)>();
 		foreach (int playerIndex in candidates)
 		{
 			int targetPlayerIndex = playerIndex;
-			Button button = CreateSelectionButton(GetPlayerLabel(playerIndex));
-			button.Pressed += () => SelectPendingItemTargetPlayer(targetPlayerIndex);
-			panel.AddChild(button);
+			options.Add((GetPlayerLabel(playerIndex), () => SelectPendingItemTargetPlayer(targetPlayerIndex)));
 		}
 
-		panel.AddChild(CreateCancelButton());
-		overlay.AddChild(panel);
-		AddChild(overlay);
-		_selectionOverlay = overlay;
+		ShowSelectionOverlay(Localize("GAME_SELECT_PLAYER"), options, showCancel: true);
 	}
 
 	private void SelectPendingItemTargetPlayer(int targetPlayerIndex)
@@ -355,34 +348,25 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var overlay = CreateSelectionOverlay();
-		var panel = CreateSelectionPanel(LocalizeFormat("GAME_PLAYER_HAND", targetPlayerIndex + 1));
-
+		var options = new List<(string Text, Action Action)>();
 		if (targetPlayerIndex >= 0 && targetPlayerIndex < _playerHands.Count)
 		{
 			for (int handIndex = 0; handIndex < _playerHands[targetPlayerIndex].Count; handIndex++)
 			{
 				PlayingCard card = _playerHands[targetPlayerIndex][handIndex];
 				int selectedHandIndex = handIndex;
-				Button button = CreateSelectionButton($"{card.Suit} {card.Rank}");
-				button.Pressed += () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex);
-				panel.AddChild(button);
+				options.Add(($"{card.Suit} {card.Rank}", () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex)));
 			}
 
 			for (int itemIndex = 0; itemIndex < _playerItemHands[targetPlayerIndex].Count; itemIndex++)
 			{
 				ItemCard itemCard = _playerItemHands[targetPlayerIndex][itemIndex];
 				int selectedHandIndex = _playerHands[targetPlayerIndex].Count + itemIndex;
-				Button button = CreateSelectionButton(LocalizeFormat("GAME_SPECIAL_CARD", itemCard.Id));
-				button.Pressed += () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex);
-				panel.AddChild(button);
+				options.Add((LocalizeFormat("GAME_SPECIAL_CARD", itemCard.Id), () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex)));
 			}
 		}
 
-		panel.AddChild(CreateCancelButton());
-		overlay.AddChild(panel);
-		AddChild(overlay);
-		_selectionOverlay = overlay;
+		ShowSelectionOverlay(LocalizeFormat("GAME_PLAYER_HAND", targetPlayerIndex + 1), options, showCancel: true);
 	}
 
 	private async void CompletePendingItemSelection(int targetPlayerIndex, int targetHandIndex)
@@ -513,67 +497,44 @@ public partial class GameBoardScene
 		};
 	}
 
-	private Control CreateSelectionOverlay()
+	private void ShowSelectionOverlay(string title, IReadOnlyList<(string Text, Action Action)> options, bool showCancel)
 	{
-		return new Control
+		ClearSelectionOverlay();
+		PackedScene? selectionOverlayScene = GD.Load<PackedScene>(ItemSelectionOverlayScenePath);
+		if (selectionOverlayScene?.Instantiate() is not ItemSelectionOverlay selectionOverlay)
 		{
-			Name = "ItemSelectionOverlay",
-			MouseFilter = MouseFilterEnum.Stop,
-			AnchorLeft = 0.0f,
-			AnchorTop = 0.0f,
-			AnchorRight = 1.0f,
-			AnchorBottom = 1.0f,
-			ZIndex = 2000,
-		};
+			GD.PushError($"Missing item selection overlay scene: {ItemSelectionOverlayScenePath}");
+			return;
+		}
+
+		var optionLabels = new List<string>(options.Count);
+		foreach ((string text, Action action) in options)
+		{
+			optionLabels.Add(text);
+			_selectionOverlayActions.Add(action);
+		}
+
+		AddChild(selectionOverlay);
+		_selectionOverlay = selectionOverlay;
+		selectionOverlay.Configure(title, optionLabels, Localize("GAME_CANCEL"), showCancel);
+		selectionOverlay.OptionSelected += SelectSelectionOverlayOption;
+		selectionOverlay.CancelRequested += CancelPendingItemSelection;
 	}
 
-	private VBoxContainer CreateSelectionPanel(string title)
+	private void SelectSelectionOverlayOption(int optionIndex)
 	{
-		var panel = new VBoxContainer
+		if (optionIndex < 0 || optionIndex >= _selectionOverlayActions.Count)
 		{
-			AnchorLeft = 0.39f,
-			AnchorTop = 0.32f,
-			AnchorRight = 0.61f,
-			AnchorBottom = 0.68f,
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		panel.AddThemeConstantOverride("separation", 8);
+			return;
+		}
 
-		var titleLabel = new Label
-		{
-			Text = title,
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Center,
-			CustomMinimumSize = new Vector2(0.0f, 32.0f),
-		};
-		titleLabel.AddThemeColorOverride("font_color", Colors.White);
-		titleLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.85f));
-		titleLabel.AddThemeConstantOverride("shadow_offset_x", 1);
-		titleLabel.AddThemeConstantOverride("shadow_offset_y", 1);
-		panel.AddChild(titleLabel);
-
-		return panel;
-	}
-
-	private Button CreateSelectionButton(string text)
-	{
-		return new Button
-		{
-			Text = text,
-			CustomMinimumSize = new Vector2(0.0f, 36.0f),
-			FocusMode = FocusModeEnum.None,
-		};
-	}
-
-	private Button CreateCancelButton()
-	{
-		Button button = CreateSelectionButton(Localize("GAME_CANCEL"));
-		button.Pressed += CancelPendingItemSelection;
-		return button;
+		Action action = _selectionOverlayActions[optionIndex];
+		action.Invoke();
 	}
 
 	private void ClearSelectionOverlay()
 	{
+		_selectionOverlayActions.Clear();
 		if (_selectionOverlay == null)
 		{
 			return;

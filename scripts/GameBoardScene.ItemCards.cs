@@ -191,29 +191,22 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var overlay = CreateSelectionOverlay();
-		var panel = CreateSelectionPanel(Localize("GAME_SELECT_DISCARD_CARD"));
+		var options = new List<(string Text, Action Action)>();
 		for (int handIndex = 0; handIndex < _playerHands[MainPlayerIndex].Count; handIndex++)
 		{
 			PlayingCard card = _playerHands[MainPlayerIndex][handIndex];
 			int selectedDisplayIndex = handIndex;
-			Button button = CreateSelectionButton($"{card.Suit} {card.Rank}");
-			button.Pressed += () => CompleteHandLimitDiscardSelection(selectedDisplayIndex);
-			panel.AddChild(button);
+			options.Add(($"{card.Suit} {card.Rank}", () => CompleteHandLimitDiscardSelection(selectedDisplayIndex)));
 		}
 
 		for (int itemIndex = 0; itemIndex < _playerItemHands[MainPlayerIndex].Count; itemIndex++)
 		{
 			ItemCard itemCard = _playerItemHands[MainPlayerIndex][itemIndex];
 			int selectedDisplayIndex = _playerHands[MainPlayerIndex].Count + itemIndex;
-			Button button = CreateSelectionButton(GetSpecialCardSelectionLabel(itemCard.Id));
-			button.Pressed += () => CompleteHandLimitDiscardSelection(selectedDisplayIndex);
-			panel.AddChild(button);
+			options.Add((GetSpecialCardSelectionLabel(itemCard.Id), () => CompleteHandLimitDiscardSelection(selectedDisplayIndex)));
 		}
 
-		overlay.AddChild(panel);
-		AddChild(overlay);
-		_selectionOverlay = overlay;
+		ShowSelectionOverlay(Localize("GAME_SELECT_DISCARD_CARD"), options, showCancel: false);
 	}
 
 	private void CompleteHandLimitDiscardSelection(int displayIndex)

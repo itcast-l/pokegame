@@ -42,7 +42,6 @@ public partial class AdventureAvatarMenuScene
 			gameBoard.Set("solo_mode", true);
 			gameBoard.Set("adventure_mode", true);
 			gameBoard.Set("adventure_enemy_avatar_id", selectedAvatarId);
-			gameBoard.Set("debug_opponent_has_one_card", AvatarUnlockTestOpponentOneCardHand);
 			Node? currentScene = GetTree().CurrentScene;
 			GetTree().Root.AddChild(gameBoard);
 			GetTree().CurrentScene = gameBoard;

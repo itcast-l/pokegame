@@ -10,8 +10,6 @@ public partial class AdventureAvatarMenuScene : Control
 	private const int SmoothScrollWheelStep = 96;
 	private const float ReturnFadeSeconds = 0.18f;
 	private const float ReturnScale = 0.98f;
-	private const bool AvatarUnlockTestOpponentOneCardHand = true;
-
 	private readonly Dictionary<string, OceanMenuButtonFrame> _adventureFrames = new();
 	private readonly Dictionary<string, Button> _adventureButtons = new();
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
@@ -32,9 +30,8 @@ public partial class AdventureAvatarMenuScene : Control
 	private Label _previewAbilityDescriptionLabel = default!;
 	private ScrollContainer _previewAbilityDescriptionScroll = default!;
 	private CharacterAvatar? _previewAvatar;
-	private Control? _avatarUnlockPromptRoot;
+	private AvatarUnlockPrompt? _avatarUnlockPromptRoot;
 	private Control? _avatarUnlockPromptPanel;
-	private Label? _avatarUnlockPromptTitleLabel;
 	private Button? _avatarUnlockPromptButton;
 	private CharacterAvatar? _avatarUnlockPromptAvatar;
 	private Tween? _levelScrollTween;
@@ -42,7 +39,6 @@ public partial class AdventureAvatarMenuScene : Control
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
 	private string _selectedAdventureId = DeepTideThroneAdventureId;
-	private PackedScene? _characterAvatarScene;
 	private bool _isReturningToMainMenu;
 	private bool _isStartingAdventure;
 	private bool _isShowingAvatarUnlockPrompt;
@@ -53,11 +49,9 @@ public partial class AdventureAvatarMenuScene : Control
 	public override void _Ready()
 	{
 		Localization.EnsureLoaded();
-		SetAnchorsPreset(LayoutPreset.FullRect);
 		MouseFilter = MouseFilterEnum.Stop;
-		_characterAvatarScene = GD.Load<PackedScene>(CharacterAvatarScenePath);
 
-		BuildUi();
+		BindUi();
 		_levelScrollTarget = 0;
 		_selectedAvatarId = string.IsNullOrWhiteSpace(selected_avatar_id)
 			? GetInitialAvatarId()

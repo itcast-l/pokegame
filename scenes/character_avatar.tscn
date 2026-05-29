@@ -34,5 +34,14 @@ texture = ExtResource("2_player_cat_avatar")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="AttackFx" type="TextureRect" parent="."]
+visible = false
+z_index = 8
+layout_mode = 0
+mouse_filter = 2
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 root_node = NodePath("..")

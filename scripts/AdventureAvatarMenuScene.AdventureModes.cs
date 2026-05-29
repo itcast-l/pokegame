@@ -32,135 +32,29 @@ public partial class AdventureAvatarMenuScene
 			new Color(0.58f, 0.98f, 1.0f)),
 	};
 
-	private Control CreateAdventureListPanel()
+	private void BindAdventureList()
 	{
-		var panel = new PanelContainer
-		{
-			Name = "AdventureListPanel",
-			CustomMinimumSize = new Vector2(190.0f, 0.0f),
-			SizeFlagsVertical = SizeFlags.ExpandFill,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		panel.AddThemeStyleboxOverride("panel", CreatePanelStyle(0.50f));
-
-		var margin = new MarginContainer
-		{
-			Name = "AdventureListMargin",
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		margin.AddThemeConstantOverride("margin_left", 12);
-		margin.AddThemeConstantOverride("margin_top", 14);
-		margin.AddThemeConstantOverride("margin_right", 12);
-		margin.AddThemeConstantOverride("margin_bottom", 14);
-		panel.AddChild(margin);
-
-		var layout = new VBoxContainer
-		{
-			Name = "AdventureList",
-			SizeFlagsVertical = SizeFlags.ExpandFill,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		layout.AddThemeConstantOverride("separation", 10);
-		margin.AddChild(layout);
-
-		layout.AddChild(CreateColumnTitleLabel("ADVENTURE_LIST_TITLE"));
-
 		_adventureFrames.Clear();
 		_adventureButtons.Clear();
 		foreach (AdventureModeDefinition adventureMode in AdventureModes)
 		{
-			layout.AddChild(CreateAdventureEntry(adventureMode));
+			string nodeName = $"%{adventureMode.Id}AdventureEntry";
+			if (GetNodeOrNull<OceanMenuButtonFrame>(nodeName) is not OceanMenuButtonFrame frame)
+			{
+				GD.PushWarning($"Missing adventure mode entry scene node: {nodeName}");
+				continue;
+			}
+
+			frame.AccentColor = adventureMode.AccentColor;
+			_adventureFrames[adventureMode.Id] = frame;
+			Label nameLabel = frame.GetNode<Label>("AdventureEntryContent/AdventureName");
+			_localizedLabels.Add((nameLabel, adventureMode.NameKey));
+			Button button = frame.GetNode<Button>("Button");
+			button.Pressed += () => SelectAdventure(adventureMode.Id);
+			_adventureButtons[adventureMode.Id] = button;
 		}
 
-		layout.AddChild(new Control
-		{
-			Name = "AdventureListFill",
-			SizeFlagsVertical = SizeFlags.ExpandFill,
-			MouseFilter = MouseFilterEnum.Ignore,
-		});
-
 		RefreshAdventureModeSelection();
-		return panel;
-	}
-
-	private Control CreateAdventureEntry(AdventureModeDefinition adventureMode)
-	{
-		var frame = new OceanMenuButtonFrame
-		{
-			Name = $"{adventureMode.Id}AdventureEntry",
-			CustomMinimumSize = new Vector2(0.0f, 64.0f),
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
-			AccentColor = adventureMode.AccentColor,
-		};
-		_adventureFrames[adventureMode.Id] = frame;
-
-		var margin = new MarginContainer
-		{
-			Name = "AdventureEntryContent",
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		margin.SetAnchorsPreset(LayoutPreset.FullRect);
-		margin.OffsetLeft = 32.0f;
-		margin.OffsetTop = 8.0f;
-		margin.OffsetRight = -16.0f;
-		margin.OffsetBottom = -8.0f;
-		frame.AddChild(margin);
-
-		var nameLabel = new Label
-		{
-			Name = "AdventureName",
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
-			SizeFlagsVertical = SizeFlags.ExpandFill,
-			HorizontalAlignment = HorizontalAlignment.Left,
-			VerticalAlignment = VerticalAlignment.Center,
-			AutowrapMode = TextServer.AutowrapMode.Off,
-			ClipText = true,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		nameLabel.AddThemeFontSizeOverride("font_size", 22);
-		nameLabel.AddThemeColorOverride("font_color", new Color(0.94f, 1.0f, 0.98f));
-		nameLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.90f));
-		nameLabel.AddThemeConstantOverride("shadow_offset_x", 1);
-		nameLabel.AddThemeConstantOverride("shadow_offset_y", 2);
-		_localizedLabels.Add((nameLabel, adventureMode.NameKey));
-		margin.AddChild(nameLabel);
-
-		var button = new Button
-		{
-			Name = "Button",
-			Flat = true,
-			FocusMode = FocusModeEnum.None,
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		button.SetAnchorsPreset(LayoutPreset.FullRect);
-		button.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("hover", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("pressed", new StyleBoxEmpty());
-		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-		button.Pressed += () => SelectAdventure(adventureMode.Id);
-		frame.AddChild(button);
-		_adventureButtons[adventureMode.Id] = button;
-
-		return frame;
-	}
-
-	private Label CreateColumnTitleLabel(string key)
-	{
-		var label = new Label
-		{
-			Name = $"{key}Label",
-			HorizontalAlignment = HorizontalAlignment.Left,
-			VerticalAlignment = VerticalAlignment.Center,
-			ClipText = true,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		label.AddThemeFontSizeOverride("font_size", 16);
-		label.AddThemeColorOverride("font_color", new Color(0.60f, 0.96f, 0.92f, 0.86f));
-		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.78f));
-		label.AddThemeConstantOverride("shadow_offset_x", 1);
-		label.AddThemeConstantOverride("shadow_offset_y", 1);
-		_localizedLabels.Add((label, key));
-		return label;
 	}
 
 	private void SelectAdventure(string adventureId)

@@ -74,166 +74,38 @@ public partial class GameBoardScene
 
 	private void CreateWinnerLabel()
 	{
-		_winnerBannerRoot = new Control
+		PackedScene? resultBannerScene = GD.Load<PackedScene>(ResultBannerScenePath);
+		if (resultBannerScene?.Instantiate() is not GameBoardResultBanner resultBanner)
 		{
-			Name = "WinnerBannerRoot",
-			Visible = false,
-			MouseFilter = MouseFilterEnum.Stop,
-			ZIndex = 1000,
-		};
-		_winnerBannerRoot.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(_winnerBannerRoot);
-
-		var scrim = new ColorRect
-		{
-			Name = "WinnerScrim",
-			Color = new Color(0.0f, 0.025f, 0.05f, 0.30f),
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		scrim.SetAnchorsPreset(LayoutPreset.FullRect);
-		_winnerBannerRoot.AddChild(scrim);
-
-		var center = new CenterContainer
-		{
-			Name = "WinnerCenter",
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		center.SetAnchorsPreset(LayoutPreset.FullRect);
-		_winnerBannerRoot.AddChild(center);
-
-		_winnerBannerPanel = new Control
-		{
-			Name = "WinnerBannerPanel",
-			CustomMinimumSize = new Vector2(520.0f, 186.0f),
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		center.AddChild(_winnerBannerPanel);
-
-		Texture2D? bannerTexture = LoadTextureWithImageFallback(VictoryBannerTexturePath);
-		if (bannerTexture != null)
-		{
-			_winnerBannerArt = new TextureRect
-			{
-				Name = "GeneratedBannerArt",
-				Texture = bannerTexture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-				MouseFilter = MouseFilterEnum.Ignore,
-			};
-			_winnerBannerArt.SetAnchorsPreset(LayoutPreset.FullRect);
-			_winnerBannerPanel.AddChild(_winnerBannerArt);
-		}
-		else
-		{
-			var fallbackPanel = new Panel
-			{
-				Name = "FallbackBannerPanel",
-				MouseFilter = MouseFilterEnum.Ignore,
-			};
-			fallbackPanel.SetAnchorsPreset(LayoutPreset.FullRect);
-			fallbackPanel.AddThemeStyleboxOverride("panel", CreateWinnerBannerFallbackStyle());
-			_winnerBannerPanel.AddChild(fallbackPanel);
-			GD.PushWarning($"Missing victory banner texture: {VictoryBannerTexturePath}");
+			GD.PushError($"Missing result banner scene: {ResultBannerScenePath}");
+			return;
 		}
 
-		PackedScene? avatarScene = GD.Load<PackedScene>(CharacterAvatarScenePath);
-		if (avatarScene != null)
-		{
-			Node avatarNode = avatarScene.Instantiate();
-			if (avatarNode is CharacterAvatar resultAvatar)
-			{
-				_resultAvatar = resultAvatar;
-				_resultAvatar.Name = "ResultAvatar";
-				_resultAvatar.Visible = false;
-				_resultAvatar.ShowFrame = false;
-				_resultAvatar.LoadActionFrames = true;
-				_resultAvatar.PortraitScale = 0.86f;
-				_resultAvatar.MouseFilter = MouseFilterEnum.Ignore;
-				_resultAvatar.CustomMinimumSize = new Vector2(84.0f, 84.0f);
-				_resultAvatar.SetAnchorsPreset(LayoutPreset.CenterLeft);
-				_resultAvatar.AnchorLeft = 0.0f;
-				_resultAvatar.AnchorTop = 0.5f;
-				_resultAvatar.AnchorRight = 0.0f;
-				_resultAvatar.AnchorBottom = 0.5f;
-				_resultAvatar.OffsetLeft = 96.0f;
-				_resultAvatar.OffsetTop = -74.0f;
-				_resultAvatar.OffsetRight = 180.0f;
-				_resultAvatar.OffsetBottom = 10.0f;
-				_winnerBannerPanel.AddChild(_resultAvatar);
-			}
-			else
-			{
-				avatarNode.QueueFree();
-			}
-		}
-
-		_winnerLabel = new Label
-		{
-			Name = "WinnerLabel",
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Center,
-			MouseFilter = MouseFilterEnum.Ignore,
-			AutowrapMode = TextServer.AutowrapMode.WordSmart,
-		};
-		_winnerLabel.SetAnchorsPreset(LayoutPreset.FullRect);
-		_winnerLabel.OffsetLeft = 66.0f;
-		_winnerLabel.OffsetTop = 28.0f;
-		_winnerLabel.OffsetRight = -66.0f;
-		_winnerLabel.OffsetBottom = -78.0f;
-		_winnerLabel.AddThemeFontSizeOverride("font_size", 30);
-		_winnerLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.94f, 0.58f));
-		_winnerLabel.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.13f, 0.17f, 0.90f));
-		_winnerLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.92f));
-		_winnerLabel.AddThemeConstantOverride("outline_size", 4);
-		_winnerLabel.AddThemeConstantOverride("shadow_offset_x", 0);
-		_winnerLabel.AddThemeConstantOverride("shadow_offset_y", 3);
-
-		_winnerBannerPanel.AddChild(_winnerLabel);
-
-		var buttonRow = new HBoxContainer
-		{
-			Name = "WinnerButtonRow",
-			Alignment = BoxContainer.AlignmentMode.Center,
-			MouseFilter = MouseFilterEnum.Ignore,
-		};
-		buttonRow.SetAnchorsPreset(LayoutPreset.FullRect);
-		buttonRow.OffsetLeft = 89.0f;
-		buttonRow.OffsetTop = 112.0f;
-		buttonRow.OffsetRight = -89.0f;
-		buttonRow.OffsetBottom = -28.0f;
-		buttonRow.AddThemeConstantOverride("separation", 14);
-		_winnerBannerPanel.AddChild(buttonRow);
-
-		Control replayFrame = CreateWinnerButton("Replay", "GAME_REPLAY", new Color(0.58f, 1.0f, 0.92f), PressWinnerPrimaryButton, false, trackLocalization: false);
-		Control mainMenuFrame = CreateWinnerButton("ReturnToMainMenu", GetWinnerReturnButtonKey(), new Color(1.0f, 0.86f, 0.54f), GetWinnerReturnAction(), true);
-		buttonRow.AddChild(replayFrame);
-		buttonRow.AddChild(mainMenuFrame);
+		AddChild(resultBanner);
+		_winnerBannerRoot = resultBanner;
+		_winnerBannerPanel = resultBanner.BannerPanel;
+		_winnerBannerArt = resultBanner.BannerArt;
+		_winnerLabel = resultBanner.WinnerLabel;
+		_resultAvatar = resultBanner.ResultAvatar;
+		_winnerReplayButton = resultBanner.PrimaryButton;
+		resultBanner.PrimaryPressed += PressWinnerPrimaryButton;
+		resultBanner.ReturnPressed += PressWinnerReturnButton;
+		UpdateWinnerPrimaryButton();
+		UpdateWinnerReturnButton();
 	}
 
 	private void CreateDefeatFinisherOverlay()
 	{
-		_defeatFinisherRoot = new Control
+		PackedScene? defeatFinisherScene = GD.Load<PackedScene>(DefeatFinisherOverlayScenePath);
+		if (defeatFinisherScene?.Instantiate() is not GameBoardDefeatFinisherOverlay defeatFinisher)
 		{
-			Name = "DefeatFinisherRoot",
-			Visible = false,
-			MouseFilter = MouseFilterEnum.Ignore,
-			ZIndex = 950,
-		};
-		_defeatFinisherRoot.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(_defeatFinisherRoot);
+			GD.PushError($"Missing defeat finisher overlay scene: {DefeatFinisherOverlayScenePath}");
+			return;
+		}
 
-		_defeatFinisherTexture = new TextureRect
-		{
-			Name = "DefeatFinisherTexture",
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		_defeatFinisherTexture.SetAnchorsPreset(LayoutPreset.FullRect);
-		_defeatFinisherRoot.AddChild(_defeatFinisherTexture);
+		AddChild(defeatFinisher);
+		_defeatFinisherRoot = defeatFinisher;
+		_defeatFinisherTexture = defeatFinisher.FinisherTexture;
 	}
 
 	private void ShowWinnerBanner(int playerIndex)
@@ -243,6 +115,7 @@ public partial class GameBoardScene
 			? Localize("GAME_DEFEAT")
 			: LocalizeFormat("GAME_WINNER", playerIndex + 1);
 		UpdateWinnerPrimaryButton();
+		UpdateWinnerReturnButton();
 		ApplyWinnerLabelLayout();
 		_winnerLabel.Visible = true;
 		ApplyWinnerBannerArt();
@@ -309,6 +182,11 @@ public partial class GameBoardScene
 		RestartGameFromWinner();
 	}
 
+	private void PressWinnerReturnButton()
+	{
+		GetWinnerReturnAction().Invoke();
+	}
+
 	private void StartNextAdventureStageFromWinner()
 	{
 		if (!TryGetNextAdventureStageAvatarId(out string nextAvatarId))
@@ -350,6 +228,16 @@ public partial class GameBoardScene
 		_winnerReplayButton.Text = Localize(GetWinnerPrimaryButtonKey());
 	}
 
+	private void UpdateWinnerReturnButton()
+	{
+		if (_winnerBannerRoot == null || !GodotObject.IsInstanceValid(_winnerBannerRoot))
+		{
+			return;
+		}
+
+		_winnerBannerRoot.ReturnButton.Text = Localize(GetWinnerReturnButtonKey());
+	}
+
 	private string GetWinnerPrimaryButtonKey()
 	{
 		return ShouldAdvanceAdventureFromWinner() ? "GAME_NEXT_ADVENTURE_STAGE" : "GAME_REPLAY";
@@ -388,57 +276,6 @@ public partial class GameBoardScene
 		return adventure_mode ? ReturnToAdventureMenu : ReturnToMainMenu;
 	}
 
-	private Control CreateWinnerButton(string nodeName, string textKey, Color accentColor, Action pressedAction, bool flipOrnament, bool trackLocalization = true)
-	{
-		var frame = new OceanMenuButtonFrame
-		{
-			Name = $"{nodeName}Frame",
-			CustomMinimumSize = new Vector2(162.0f, 46.0f),
-			AccentColor = accentColor,
-			FlipOrnament = flipOrnament,
-		};
-
-		var button = new Button
-		{
-			Name = "Button",
-			Text = Localize(textKey),
-			Flat = true,
-			FocusMode = FocusModeEnum.All,
-			MouseFilter = MouseFilterEnum.Stop,
-		};
-		button.SetAnchorsPreset(LayoutPreset.FullRect);
-		button.OffsetLeft = flipOrnament ? 20.0f : 4.0f;
-		button.OffsetTop = 4.0f;
-		button.OffsetRight = flipOrnament ? -4.0f : -20.0f;
-		button.OffsetBottom = -4.0f;
-		button.AddThemeFontSizeOverride("font_size", 16);
-		button.AddThemeColorOverride("font_color", new Color(0.92f, 1.0f, 0.97f));
-		button.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.78f));
-		button.AddThemeColorOverride("font_pressed_color", new Color(0.78f, 1.0f, 0.96f));
-		button.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.02f, 0.04f, 0.9f));
-		button.AddThemeConstantOverride("shadow_offset_x", 1);
-		button.AddThemeConstantOverride("shadow_offset_y", 2);
-		StyleBoxEmpty emptyStyle = new();
-		button.AddThemeStyleboxOverride("normal", emptyStyle);
-		button.AddThemeStyleboxOverride("hover", emptyStyle);
-		button.AddThemeStyleboxOverride("pressed", emptyStyle);
-		button.AddThemeStyleboxOverride("focus", emptyStyle);
-		button.Pressed += pressedAction;
-
-		if (_winnerReplayButton == null)
-		{
-			_winnerReplayButton = button;
-		}
-
-		if (trackLocalization)
-		{
-			TrackLocalizedGameButton(button, textKey);
-		}
-
-		frame.AddChild(button);
-		return frame;
-	}
-
 	private static Texture2D? LoadTextureWithImageFallback(string path)
 	{
 		Texture2D? texture = GD.Load<Texture2D>(path);
@@ -449,26 +286,6 @@ public partial class GameBoardScene
 
 		Image image = Image.LoadFromFile(ProjectSettings.GlobalizePath(path));
 		return image.IsEmpty() ? null : ImageTexture.CreateFromImage(image);
-	}
-
-	private static StyleBoxFlat CreateWinnerBannerFallbackStyle()
-	{
-		return new StyleBoxFlat
-		{
-			BgColor = new Color(0.02f, 0.30f, 0.36f, 0.90f),
-			BorderColor = new Color(0.98f, 0.80f, 0.36f, 0.82f),
-			BorderWidthLeft = 2,
-			BorderWidthTop = 2,
-			BorderWidthRight = 2,
-			BorderWidthBottom = 2,
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8,
-			ShadowColor = new Color(0.0f, 0.02f, 0.04f, 0.66f),
-			ShadowSize = 22,
-			ShadowOffset = new Vector2(0.0f, 9.0f),
-		};
 	}
 
 	private bool ShouldShowDefeatResult(int winnerPlayerIndex)

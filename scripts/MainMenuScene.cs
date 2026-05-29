@@ -26,7 +26,11 @@ public partial class MainMenuScene : Control
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const string AdventureAvatarMenuScenePath = "res://scenes/adventure_avatar_menu_scene.tscn";
 	private const string AvatarEditScenePath = "res://scenes/character_avatar_edit_scene.tscn";
-	private const string SettingsPanelTexturePath = "res://art/ui/settings_menu/run-002/processed/clean.png";
+	private const string PlayerCountDialogScenePath = "res://scenes/main_menu_player_count_dialog.tscn";
+	private const string SettingsDialogScenePath = "res://scenes/main_menu_settings_dialog.tscn";
+	private const string ExitDialogScenePath = "res://scenes/main_menu_exit_dialog.tscn";
+	private const string AvatarUnlockPromptScenePath = "res://scenes/avatar_unlock_prompt.tscn";
+	private const string AdventureTransitionScenePath = "res://scenes/main_menu_adventure_transition.tscn";
 	private const float DialogFadeSeconds = 0.14f;
 	private const int AvatarEditDialogLayer = 42;
 	private const int MinMenuPlayers = 2;
@@ -72,6 +76,7 @@ public partial class MainMenuScene : Control
 	private MainMenuOceanDynamics? _oceanDynamicsLayer;
 	private UnderwaterAmbientLayer? _underwaterAmbientLayer;
 	private CanvasItem? _waterCausticOverlay;
+	private MainMenuPlayerCountDialog _playerCountDialog = default!;
 	private Control _playerCountDialogRoot = default!;
 	private Control _playerCountDialogMotion = default!;
 	private PanelContainer _playerCountDialogPanel = default!;
@@ -79,6 +84,7 @@ public partial class MainMenuScene : Control
 	private OptionButton _playerCountOption = default!;
 	private OptionButton _itemModeOption = default!;
 	private OptionButton _winningScoreOption = default!;
+	private MainMenuSettingsDialog _settingsDialog = default!;
 	private Control _settingsDialogRoot = default!;
 	private Control _settingsDialogPanel = default!;
 	private Tween? _settingsDialogTween;
@@ -94,11 +100,12 @@ public partial class MainMenuScene : Control
 	private OptionButton _resolutionOption = default!;
 	private OptionButton _languageOption = default!;
 	private MainMenuAvatarEntry _avatarEntry = default!;
+	private MainMenuExitDialog _exitDialog = default!;
 	private Control _exitDialogRoot = default!;
 	private PanelContainer _exitDialogPanel = default!;
 	private Tween? _exitDialogTween;
 	private CanvasLayer? _avatarEditDialogLayer;
-	private Control? _adventureTransitionRoot;
+	private MainMenuAdventureTransition? _adventureTransitionRoot;
 	private Control? _adventureTransitionMotion;
 	private Tween? _adventureTransitionTween;
 	private Control? _preparedAdventureAvatarMenu;
@@ -112,6 +119,7 @@ public partial class MainMenuScene : Control
 	private Vector2I _selectedResolution = DefaultResolution;
 	private string _languagePreference = Localization.DefaultLanguagePreference;
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
+	private string _playerName = PlayerNameRules.DefaultPlayerName;
 	private bool _isSyncingSettingsControls;
 	private bool _isStartingGameTransition;
 	private bool _isMenuCameraTransitioning;
@@ -207,6 +215,7 @@ public partial class MainMenuScene : Control
 		BuildExitDialog();
 		LoadSettings();
 		ApplySelectedAvatar();
+		ApplyPlayerName();
 		SyncSettingsControls();
 		ApplySettings();
 		RefreshLocalizedText();

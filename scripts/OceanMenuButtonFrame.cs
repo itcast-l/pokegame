@@ -19,13 +19,27 @@ public partial class OceanMenuButtonFrame : Control
 	private readonly Vector2[] _closedPlaquePoints = new Vector2[7];
 	private readonly Vector2[] _closedInsetPoints = new Vector2[7];
 	private readonly Vector2[] _causticPoints = new Vector2[3];
+	private readonly Vector2[] _sideAccentPoints = new Vector2[3];
 	private readonly StyleBoxFlat _selectionGlowStyle = new();
 
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
-		_button = GetNodeOrNull<Button>("Button");
+		_button = GetNodeOrNull<Button>("Button") ?? FindDirectButtonChild();
 		SetProcess(true);
+	}
+
+	private Button? FindDirectButtonChild()
+	{
+		for (int index = 0; index < GetChildCount(); index++)
+		{
+			if (GetChild(index) is Button button)
+			{
+				return button;
+			}
+		}
+
+		return null;
 	}
 
 	public override void _Process(double delta)
@@ -110,25 +124,22 @@ public partial class OceanMenuButtonFrame : Control
 		DrawPolyline(_closedPlaquePoints, new Color(rim.R, rim.G, rim.B, 0.58f + _glow * 0.28f), 2.0f + _glow, true);
 		DrawPolyline(_closedInsetPoints, new Color(0.82f, 1.0f, 0.95f, 0.22f + _glow * 0.18f), 1.2f, true);
 
-		DrawOrnament(origin, w, h, highlight);
+		DrawSideAccent(origin, w, h, highlight);
 		DrawCausticStreaks(origin, w, h);
 	}
 
-	private void DrawOrnament(Vector2 origin, float w, float h, Color highlight)
+	private void DrawSideAccent(Vector2 origin, float w, float h, Color highlight)
 	{
-		float side = FlipOrnament ? w - h * 0.5f : h * 0.5f;
-		Vector2 center = origin + new Vector2(side, h * 0.5f);
 		float direction = FlipOrnament ? -1.0f : 1.0f;
+		float edgeX = FlipOrnament ? w - h * 0.2f : h * 0.2f;
+		float innerX = edgeX + direction * h * 0.18f;
 
-		DrawCircle(center, h * 0.24f, new Color(0.02f, 0.22f, 0.27f, 0.78f));
-		DrawCircle(center, h * 0.17f, new Color(highlight.R, highlight.G, highlight.B, 0.62f));
-		DrawCircle(center + new Vector2(-direction * h * 0.04f, -h * 0.05f), h * 0.07f, new Color(1.0f, 1.0f, 0.9f, 0.72f));
+		_sideAccentPoints[0] = origin + new Vector2(innerX, h * 0.24f);
+		_sideAccentPoints[1] = origin + new Vector2(edgeX, h * 0.5f);
+		_sideAccentPoints[2] = origin + new Vector2(innerX, h * 0.76f);
 
-		for (int i = 0; i < 3; i++)
-		{
-			float radius = h * (0.34f + i * 0.075f);
-			DrawArc(center, radius, -0.58f * direction, 0.58f * direction, 18, new Color(highlight.R, highlight.G, highlight.B, 0.22f), 1.1f, true);
-		}
+		DrawPolyline(_sideAccentPoints, new Color(0.0f, 0.03f, 0.04f, 0.38f), 4.0f, true);
+		DrawPolyline(_sideAccentPoints, new Color(highlight.R, highlight.G, highlight.B, 0.54f + _glow * 0.18f), 2.0f, true);
 	}
 
 	private void DrawCausticStreaks(Vector2 origin, float w, float h)

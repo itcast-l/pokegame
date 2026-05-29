@@ -105,7 +105,10 @@ public partial class GameBoardScene
 				? Localize("GAME_DEFEAT")
 				: LocalizeFormat("GAME_WINNER", _winnerPlayerIndex + 1);
 			UpdateWinnerPrimaryButton();
+			UpdateWinnerReturnButton();
 		}
+
+		_pauseMenuRoot?.RefreshLocalizedText(Localize);
 
 		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
 		{

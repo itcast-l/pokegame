@@ -1,0 +1,344 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/MainMenuPlayerCountDialog.cs" id="1_dialog"]
+[ext_resource type="Script" path="res://scripts/PearlDivider.cs" id="2_pearl"]
+[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="3_button_frame"]
+[ext_resource type="Shader" path="res://shaders/menu_blur_scrim.gdshader" id="4_scrim_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_scrim"]
+shader = ExtResource("4_scrim_shader")
+shader_parameter/blur_lod = 2.8
+shader_parameter/tint_color = Color(0, 0.035, 0.07, 0.48)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog_panel"]
+bg_color = Color(0.012, 0.14, 0.18, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 1, 0.94, 0.62)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.02, 0.04, 0.68)
+shadow_size = 26
+shadow_offset = Vector2(0, 10)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_row"]
+bg_color = Color(0.01, 0.18, 0.22, 0.48)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.16)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_option"]
+bg_color = Color(0.015, 0.18, 0.23, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.36)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 12
+content_margin_right = 12
+content_margin_top = 7
+content_margin_bottom = 7
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+
+[node name="PlayerCountDialogRoot" type="Control"]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_dialog")
+
+[node name="Scrim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_scrim")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(1, 1, 1, 1)
+
+[node name="DialogMotion" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DialogCenter" type="CenterContainer" parent="DialogMotion"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PlayerCountDialogPanel" type="PanelContainer" parent="DialogMotion/DialogCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 500)
+layout_mode = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_dialog_panel")
+
+[node name="DialogMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 26
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 26
+
+[node name="DialogLayout" type="VBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="PearlDivider" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_pearl")
+
+[node name="PlayerCountTitle" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 30
+text = "PLAYER_COUNT_TITLE"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="PlayerCountMessage" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.9)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER_COUNT_MESSAGE"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+
+[node name="DialogOptions" type="VBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PlayersRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/PlayersRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/PlayersRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PlayersLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/PlayersRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(116, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER_COUNT_PLAYERS"
+vertical_alignment = 1
+
+[node name="PlayersSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/PlayersRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlayerCountOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/PlayersRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 42)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.78, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
+item_count = 3
+selected = 0
+popup/item_0/text = "2 Players"
+popup/item_0/id = 2
+popup/item_1/text = "3 Players"
+popup/item_1/id = 3
+popup/item_2/text = "4 Players"
+popup/item_2/id = 4
+
+[node name="ItemModeRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/ItemModeRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/ItemModeRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ItemModeLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/ItemModeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(116, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER_COUNT_ITEM_MODE"
+vertical_alignment = 1
+
+[node name="ItemModeSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/ItemModeRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ItemModeOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/ItemModeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 42)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.78, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
+item_count = 2
+selected = 0
+popup/item_0/text = "On"
+popup/item_0/id = 1
+popup/item_1/text = "Off"
+popup/item_1/id = 0
+
+[node name="WinningScoreRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/WinningScoreRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/WinningScoreRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="WinningScoreLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/WinningScoreRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(116, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER_COUNT_WINNING_SCORE"
+vertical_alignment = 1
+
+[node name="WinningScoreSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/WinningScoreRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WinningScoreOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/WinningScoreRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 42)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.78, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
+item_count = 3
+selected = 1
+popup/item_0/text = "50"
+popup/item_0/id = 50
+popup/item_1/text = "100"
+popup/item_1/id = 100
+popup/item_2/text = "200"
+popup/item_2/id = 200
+
+[node name="ActionSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="StartGameFrame" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout"]
+custom_minimum_size = Vector2(230, 64)
+layout_mode = 2
+script = ExtResource("3_button_frame")
+AccentColor = Color(0.58, 1, 0.92, 1)
+
+[node name="StartGameButton" type="Button" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/StartGameFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 5.0
+offset_right = -26.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.78, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "PLAYER_COUNT_START_GAME"
+flat = true

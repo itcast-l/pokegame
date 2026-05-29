@@ -1,31 +1,16 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/MainMenuAvatarEntry.cs" id="1_avatar_entry"]
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_character_avatar"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_frame"]
-bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.42)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.62, 1, 0.96, 0.48)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.025, 0.045, 0.36)
-shadow_size = 12
-shadow_offset = Vector2(0, 5)
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
 
 [node name="MainMenuAvatarEntry" type="Control"]
-custom_minimum_size = Vector2(104, 104)
+custom_minimum_size = Vector2(148, 138)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 104.0
-offset_bottom = 104.0
+offset_right = 148.0
+offset_bottom = 138.0
 script = ExtResource("1_avatar_entry")
 
 [node name="Frame" type="PanelContainer" parent="."]
@@ -40,7 +25,7 @@ offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_frame")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_avatar_button")
 
 [node name="Margin" type="MarginContainer" parent="Frame"]
 layout_mode = 2
@@ -50,18 +35,36 @@ theme_override_constants/margin_top = 9
 theme_override_constants/margin_right = 9
 theme_override_constants/margin_bottom = 9
 
-[node name="AvatarAnchor" type="Control" parent="Frame/Margin"]
-custom_minimum_size = Vector2(76, 76)
+[node name="Layout" type="VBoxContainer" parent="Frame/Margin"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 4
 
-[node name="CharacterAvatar" parent="Frame/Margin/AvatarAnchor" instance=ExtResource("2_character_avatar")]
+[node name="AvatarAnchor" type="Control" parent="Frame/Margin/Layout"]
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="CharacterAvatar" parent="Frame/Margin/Layout/AvatarAnchor" instance=ExtResource("2_character_avatar")]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="NameLabel" type="Label" parent="Frame/Margin/Layout"]
+custom_minimum_size = Vector2(110, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.88)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 16
+text = "玩家"
+horizontal_alignment = 1
+text_overrun_behavior = 3
 
 [node name="Button" type="Button" parent="."]
 layout_mode = 1
@@ -72,7 +75,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
 focus_mode = 0
-tooltip_text = "修改头像"
+tooltip_text = "修改头像和名字"
 flat = true
 theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")

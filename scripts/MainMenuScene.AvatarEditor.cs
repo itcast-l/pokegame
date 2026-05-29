@@ -26,7 +26,8 @@ public partial class MainMenuScene : Control
 		}
 
 		avatarEditor.CurrentAvatarId = _selectedAvatarId;
-		avatarEditor.AvatarSelected += OnAvatarSelected;
+		avatarEditor.CurrentPlayerName = _playerName;
+		avatarEditor.ProfileSaved += OnProfileSaved;
 
 		_avatarEditDialogLayer = new CanvasLayer
 		{
@@ -51,10 +52,12 @@ public partial class MainMenuScene : Control
 		_avatarEditDialogLayer = null;
 	}
 
-	private void OnAvatarSelected(string avatarId)
+	private void OnProfileSaved(string avatarId, string playerName)
 	{
 		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(avatarId);
+		_playerName = PlayerNameRules.Normalize(playerName);
 		ApplySelectedAvatar();
+		ApplyPlayerName();
 		SaveSettings();
 	}
 
@@ -66,5 +69,15 @@ public partial class MainMenuScene : Control
 		}
 
 		_avatarEntry.SetAvatar(CharacterAvatarCatalog.GetById(_selectedAvatarId));
+	}
+
+	private void ApplyPlayerName()
+	{
+		if (_avatarEntry == null || !GodotObject.IsInstanceValid(_avatarEntry))
+		{
+			return;
+		}
+
+		_avatarEntry.SetPlayerName(_playerName);
 	}
 }

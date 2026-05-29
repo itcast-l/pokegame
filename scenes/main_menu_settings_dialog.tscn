@@ -1,0 +1,650 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/MainMenuSettingsDialog.cs" id="1_dialog"]
+[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
+[ext_resource type="Texture2D" path="res://art/ui/settings_menu/run-002/processed/clean.png" id="3_frame_texture"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_row"]
+bg_color = Color(0.01, 0.18, 0.22, 0.48)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.16)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_option"]
+bg_color = Color(0.015, 0.18, 0.23, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.36)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 12
+content_margin_right = 12
+content_margin_top = 7
+content_margin_bottom = 7
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slider"]
+bg_color = Color(0, 0.08, 0.12, 0.72)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.18)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_top = 5
+content_margin_bottom = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slider_fill"]
+bg_color = Color(0.56, 1, 0.92, 0.52)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.28)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_top = 5
+content_margin_bottom = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber"]
+bg_color = Color(0.84, 1, 0.96, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.08, 0.34, 0.38, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 8
+content_margin_right = 8
+content_margin_top = 8
+content_margin_bottom = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+
+[node name="SettingsDialogRoot" type="Control"]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_dialog")
+
+[node name="Scrim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0.035, 0.07, 0.58)
+
+[node name="DialogCenter" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SettingsDialogPanel" type="Control" parent="DialogCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(680, 640)
+layout_mode = 2
+mouse_filter = 0
+
+[node name="GeneratedSettingsFrame" type="TextureRect" parent="DialogCenter/SettingsDialogPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -8.0
+offset_top = -14.0
+offset_right = 8.0
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_frame_texture")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="SettingsDialogMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 84
+theme_override_constants/margin_top = 72
+theme_override_constants/margin_right = 84
+theme_override_constants/margin_bottom = 64
+
+[node name="SettingsDialogLayout" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="SettingsTitle" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 34
+text = "SETTINGS_TITLE"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="SettingsMessage" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.86)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 17
+text = "SETTINGS_MESSAGE"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="SettingsList" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MasterVolumeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MasterVolumeRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MasterVolumeRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MasterVolumeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_MASTER_VOLUME"
+vertical_alignment = 1
+
+[node name="MasterVolumeSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/slider = SubResource("StyleBoxFlat_slider")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_slider_fill")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_slider_fill")
+theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
+theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber")
+
+[node name="MasterVolumeValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.92)
+theme_override_font_sizes/font_size = 16
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="MusicVolumeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MusicVolumeRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MusicVolumeRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MusicVolumeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_MUSIC_VOLUME"
+vertical_alignment = 1
+
+[node name="MusicVolumeSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/slider = SubResource("StyleBoxFlat_slider")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_slider_fill")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_slider_fill")
+theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
+theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber")
+
+[node name="MusicVolumeValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.92)
+theme_override_font_sizes/font_size = 16
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="MuteAudioRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MuteAudioLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_MUTE"
+vertical_alignment = 1
+
+[node name="MuteSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MuteAudioToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+
+[node name="WindowModeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/WindowModeRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/WindowModeRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="WindowModeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_WINDOW_MODE"
+vertical_alignment = 1
+
+[node name="WindowSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WindowModeOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
+item_count = 2
+selected = 0
+popup/item_0/text = "Windowed"
+popup/item_0/id = 0
+popup/item_1/text = "Fullscreen"
+popup/item_1/id = 1
+
+[node name="ResolutionRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/ResolutionRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/ResolutionRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ResolutionLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_RESOLUTION"
+vertical_alignment = 1
+
+[node name="ResolutionSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ResolutionOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
+item_count = 7
+selected = 2
+popup/item_0/text = "960 x 540"
+popup/item_0/id = 0
+popup/item_1/text = "1024 x 576"
+popup/item_1/id = 1
+popup/item_2/text = "1280 x 720"
+popup/item_2/id = 2
+popup/item_3/text = "1366 x 768"
+popup/item_3/id = 3
+popup/item_4/text = "1600 x 900"
+popup/item_4/id = 4
+popup/item_5/text = "1920 x 1080"
+popup/item_5/id = 5
+popup/item_6/text = "2560 x 1440"
+popup/item_6/id = 6
+
+[node name="LanguageRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/LanguageRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/LanguageRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LanguageLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_LANGUAGE"
+vertical_alignment = 1
+
+[node name="LanguageSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LanguageOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
+item_count = 31
+selected = 0
+popup/item_0/text = "Auto"
+popup/item_0/id = 0
+popup/item_1/text = "Arabic"
+popup/item_1/id = 1
+popup/item_2/text = "Bulgarian"
+popup/item_2/id = 2
+popup/item_3/text = "Chinese Simplified"
+popup/item_3/id = 3
+popup/item_4/text = "Chinese Traditional"
+popup/item_4/id = 4
+popup/item_5/text = "Czech"
+popup/item_5/id = 5
+popup/item_6/text = "Danish"
+popup/item_6/id = 6
+popup/item_7/text = "Dutch"
+popup/item_7/id = 7
+popup/item_8/text = "English"
+popup/item_8/id = 8
+popup/item_9/text = "Finnish"
+popup/item_9/id = 9
+popup/item_10/text = "French"
+popup/item_10/id = 10
+popup/item_11/text = "German"
+popup/item_11/id = 11
+popup/item_12/text = "Greek"
+popup/item_12/id = 12
+popup/item_13/text = "Hungarian"
+popup/item_13/id = 13
+popup/item_14/text = "Indonesian"
+popup/item_14/id = 14
+popup/item_15/text = "Italian"
+popup/item_15/id = 15
+popup/item_16/text = "Japanese"
+popup/item_16/id = 16
+popup/item_17/text = "Korean"
+popup/item_17/id = 17
+popup/item_18/text = "Norwegian"
+popup/item_18/id = 18
+popup/item_19/text = "Polish"
+popup/item_19/id = 19
+popup/item_20/text = "Portuguese"
+popup/item_20/id = 20
+popup/item_21/text = "Portuguese Brazil"
+popup/item_21/id = 21
+popup/item_22/text = "Romanian"
+popup/item_22/id = 22
+popup/item_23/text = "Russian"
+popup/item_23/id = 23
+popup/item_24/text = "Spanish"
+popup/item_24/id = 24
+popup/item_25/text = "Spanish Latin America"
+popup/item_25/id = 25
+popup/item_26/text = "Swedish"
+popup/item_26/id = 26
+popup/item_27/text = "Thai"
+popup/item_27/id = 27
+popup/item_28/text = "Turkish"
+popup/item_28/id = 28
+popup/item_29/text = "Ukrainian"
+popup/item_29/id = 29
+popup/item_30/text = "Vietnamese"
+popup/item_30/id = 30
+
+[node name="OceanMotionRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/OceanMotionRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/OceanMotionRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="OceanMotionLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/OceanMotionRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_OCEAN_MOTION"
+vertical_alignment = 1
+
+[node name="OceanMotionSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/OceanMotionRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="OceanMotionToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/OceanMotionRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+
+[node name="MotionScaleRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MotionScaleRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MotionScaleRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MotionScaleLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MotionScaleRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_MOTION_SCALE"
+vertical_alignment = 1
+
+[node name="MotionScaleSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MotionScaleRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 50.0
+max_value = 150.0
+theme_override_styles/slider = SubResource("StyleBoxFlat_slider")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_slider_fill")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_slider_fill")
+theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
+theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber")
+
+[node name="MotionScaleValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MotionScaleRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.92)
+theme_override_font_sizes/font_size = 16
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="SettingsActions" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="ResetDefaultsFrame" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions"]
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.78, 0.9, 1, 1)
+
+[node name="ResetDefaultsButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions/ResetDefaultsFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 5.0
+offset_right = -26.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "SETTINGS_RESET_DEFAULTS"
+flat = true
+
+[node name="DoneFrame" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions"]
+custom_minimum_size = Vector2(160, 64)
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.58, 1, 0.92, 1)
+FlipOrnament = true
+
+[node name="DoneButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions/DoneFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 26.0
+offset_top = 5.0
+offset_right = -4.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "SETTINGS_DONE"
+flat = true

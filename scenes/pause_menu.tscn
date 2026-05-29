@@ -1,0 +1,350 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/PauseMenuOverlay.cs" id="1_pause_menu"]
+[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
+[ext_resource type="Texture2D" path="res://art/ui/pause_menu/run-001/processed/clean.png" id="3_pause_frame"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.012, 0.14, 0.18, 0.82)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 1, 0.94, 0.58)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.02, 0.04, 0.66)
+shadow_size = 24
+shadow_offset = Vector2(0, 10)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+
+[node name="PauseMenuRoot" type="Control"]
+visible = false
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_pause_menu")
+
+[node name="Scrim" type="ColorRect" parent="."]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0.025, 0.05, 0.58)
+
+[node name="PauseMenuCenter" type="CenterContainer" parent="."]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PauseMenuPanel" type="Control" parent="PauseMenuCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 430)
+process_mode = 3
+layout_mode = 2
+mouse_filter = 0
+
+[node name="GeneratedFrameArt" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel"]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -18.0
+offset_top = -36.0
+offset_right = 18.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_pause_frame")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="PauseMenuMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel"]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 82
+theme_override_constants/margin_top = 66
+theme_override_constants/margin_right = 82
+theme_override_constants/margin_bottom = 58
+
+[node name="PauseMenuLayout" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
+custom_minimum_size = Vector2(288, 62)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.58, 1, 0.92, 1)
+
+[node name="ContinueButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/ContinueFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 5.0
+offset_right = -26.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "GAME_CONTINUE"
+flat = true
+
+[node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
+custom_minimum_size = Vector2(288, 62)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.78, 0.9, 1, 1)
+
+[node name="ReturnToMainMenuButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/ReturnToMainMenuFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 5.0
+offset_right = -26.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "GAME_RETURN_MAIN_MENU"
+flat = true
+
+[node name="QuitFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
+custom_minimum_size = Vector2(288, 62)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.95, 0.68, 0.56, 1)
+
+[node name="QuitButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/QuitFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 5.0
+offset_right = -26.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "GAME_QUIT"
+flat = true
+
+[node name="PauseQuitConfirmRoot" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="ConfirmScrim" type="ColorRect" parent="PauseQuitConfirmRoot"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0.01, 0.02, 0.48)
+
+[node name="ConfirmCenter" type="CenterContainer" parent="PauseQuitConfirmRoot"]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PauseQuitConfirmPanel" type="PanelContainer" parent="PauseQuitConfirmRoot/ConfirmCenter"]
+custom_minimum_size = Vector2(520, 286)
+process_mode = 3
+layout_mode = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="ConfirmMargin" type="MarginContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 28
+
+[node name="ConfirmLayout" type="VBoxContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="QuitConfirmTitle" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 29
+text = "GAME_QUIT_CONFIRM_TITLE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="QuitConfirmMessage" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.92)
+theme_override_font_sizes/font_size = 20
+text = "GAME_QUIT_CONFIRM_MESSAGE"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="QuitConfirmHint" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.82)
+theme_override_font_sizes/font_size = 16
+text = "GAME_QUIT_CONFIRM_HINT"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ConfirmSpacer" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+custom_minimum_size = Vector2(0, 8)
+process_mode = 3
+layout_mode = 2
+
+[node name="ConfirmActions" type="HBoxContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="CancelQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions"]
+custom_minimum_size = Vector2(206, 62)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.58, 1, 0.92, 1)
+
+[node name="CancelQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions/CancelQuitFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 5.0
+offset_right = -26.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "GAME_QUIT_CONFIRM_CANCEL"
+flat = true
+
+[node name="ConfirmQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions"]
+custom_minimum_size = Vector2(206, 62)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.95, 0.68, 0.56, 1)
+FlipOrnament = true
+
+[node name="ConfirmQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions/ConfirmQuitFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 26.0
+offset_top = 5.0
+offset_right = -4.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "GAME_QUIT_CONFIRM_ACCEPT"
+flat = true

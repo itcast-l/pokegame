@@ -11,6 +11,7 @@ public static class GameSaveStore
 	public const string MotionScaleKey = "settings.video.motion_scale";
 	public const string LanguageKey = "settings.general.language";
 	public const string SelectedAvatarKey = "settings.general.avatar";
+	public const string PlayerNameKey = "settings.general.player_name";
 	public const string HighestCompletedStageKey = "adventure.highest_completed_stage";
 	public const string PendingAvatarUnlockQueueKey = "adventure.pending_avatar_unlock_queue";
 	public const string PendingAvatarUnlockKey = "adventure.pending_avatar_unlock";
@@ -172,6 +173,7 @@ public static class GameSaveStore
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "motion_scale", MotionScaleKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "language", LanguageKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "avatar", SelectedAvatarKey);
+		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "player_name", PlayerNameKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "highest_completed_stage", HighestCompletedStageKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "pending_avatar_unlock_queue", PendingAvatarUnlockQueueKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "pending_avatar_unlock", PendingAvatarUnlockKey);
