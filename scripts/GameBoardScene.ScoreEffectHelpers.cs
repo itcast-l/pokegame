@@ -101,6 +101,7 @@ public partial class GameBoardScene
 		Action? onTouchTarget,
 		float flightSeconds)
 	{
+		PlayAdventureAttackFlightSfx();
 		var effect = new Sprite2D
 		{
 			Name = "AdventureAttackEffectFlight",
@@ -173,6 +174,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayAdventureAttackImpactSfx();
 		var pulse = new Sprite2D
 		{
 			Name = "AdventureAttackImpactPulse",
@@ -220,6 +222,7 @@ public partial class GameBoardScene
 			await ToSignal(GetTree().CreateTimer(startDelaySeconds), SceneTreeTimer.SignalName.Timeout);
 		}
 
+		PlayGameSfx(GameSfx.ScoreFlight, -5.0f, 0.96f, 1.06f, 0.08);
 		var effect = new Sprite2D
 		{
 			Name = "ScoreFillEffectFlight",
@@ -295,6 +298,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.ScoreArrive, -2.0f, 0.97f, 1.04f, 0.04);
 		var pulse = new Sprite2D
 		{
 			Name = "ScoreFillEffectArrivalPulse",

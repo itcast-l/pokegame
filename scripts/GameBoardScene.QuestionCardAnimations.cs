@@ -113,6 +113,7 @@ public partial class GameBoardScene
 			}
 
 			animationRoot.GlobalPosition = transformAreaGlobalPosition;
+			PlayGameSfx(GameSfx.QuestionRewardTransform, -1.0f, 0.97f, 1.03f, 0.08);
 			Tween transformTween = CreateTween();
 			transformTween.SetParallel(true);
 			transformTween.SetTrans(Tween.TransitionType.Sine);
@@ -138,6 +139,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(card))
 				{
+					PlayGameSfx(GameSfx.QuestionRewardReveal, -1.0f, 0.98f, 1.03f, 0.08);
 					card.Texture = reward.ItemCard.Texture;
 				}
 			})).SetDelay(cardFlipDelay);
@@ -177,6 +179,7 @@ public partial class GameBoardScene
 			animationRoot.RotationDegrees = 0.0f;
 			animationRoot.Scale = Vector2.One * 1.04f;
 			fx.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.75f);
+			PlayGameSfx(GameSfx.QuestionRewardInsert, -2.0f, 0.97f, 1.04f, 0.08);
 			Tween insertTween = CreateTween();
 			insertTween.SetParallel(true);
 			insertTween.SetTrans(Tween.TransitionType.Sine);

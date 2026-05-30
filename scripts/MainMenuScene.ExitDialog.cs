@@ -27,6 +27,7 @@ public partial class MainMenuScene : Control
 		}
 
 		_exitDialogTween?.Kill();
+		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = false;
 		_exitDialogRoot.Visible = true;
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Stop;
@@ -47,6 +48,7 @@ public partial class MainMenuScene : Control
 	private void HideExitDialog()
 	{
 		_exitDialogTween?.Kill();
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = true;
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 		ResetMenuCamera();

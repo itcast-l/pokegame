@@ -18,6 +18,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.TableShuffle, -1.5f, 0.97f, 1.03f, 0.12);
 		foreach (TableCard tableCard in _tableCards)
 		{
 			if (!IsFixedDuringTableShuffle(tableCard))

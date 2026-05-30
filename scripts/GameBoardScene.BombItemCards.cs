@@ -44,7 +44,9 @@ public partial class GameBoardScene
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
 		int tableCardIndex = AddBombCardToTable(bombCard, playerIndex);
+		PlaySpecialItemCardPlaySfx();
 		await PlayItemCardToTableAnimationAsync(playerIndex, bombCard, startGlobalPosition, tableCardIndex, false);
+		PlayGameSfx(GameSfx.BombPlace, -1.5f, 0.97f, 1.03f, 0.06);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);
@@ -70,6 +72,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.BombPairLock, -1.0f, 0.97f, 1.03f, 0.08);
 		await RevealBombPairAsync(firstBombIndex, secondBombIndex, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -174,6 +177,7 @@ public partial class GameBoardScene
 
 	private async Task PlayBombPairTriggerEffectsAsync(int firstBombIndex, int secondBombIndex, int turnSequenceGeneration)
 	{
+		PlayGameSfx(GameSfx.BombWarning, -1.0f, 0.98f, 1.02f, 0.12);
 		await PlayBombTableCardTriggerEffectAsync(firstBombIndex, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -227,6 +231,7 @@ public partial class GameBoardScene
 		}
 
 		Rect2 tableLayoutRect = GetTableCardLayoutRect();
+		PlayGameSfx(GameSfx.BombExplosion, -0.5f, 0.97f, 1.02f, 0.12);
 
 		for (int tableCardIndex = secondBombIndex; tableCardIndex >= firstBombIndex; tableCardIndex--)
 		{
@@ -286,6 +291,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.BombDestroyCard, -2.0f, 0.95f, 1.06f, 0.03);
 		Tween tween = CreateTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Cubic);

@@ -30,6 +30,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.FishBeam);
 		Vector2 direction = travel / distance;
 		float beamLength = Math.Max(24.0f, distance - FishAdventureAttackBeamStartInset - FishAdventureAttackBeamEndInset);
 		Vector2 beamCenter = startCenter + direction * (FishAdventureAttackBeamStartInset + beamLength / 2.0f);

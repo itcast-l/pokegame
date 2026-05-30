@@ -66,6 +66,7 @@ public partial class GameBoardScene
 		}
 
 		Texture2D triggerTexture = GetAttachedTriggerTexture(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture);
+		PlayGameSfx(GameSfx.MagnetExtraCapture, -1.0f, 0.97f, 1.03f, 0.08);
 		await PlaySpecialCardTriggerEffectAsync(
 			triggerTexture,
 			_centerArena.GlobalPosition + cardPosition,
@@ -115,6 +116,7 @@ public partial class GameBoardScene
 		}
 
 		Texture2D triggerTexture = GetAttachedTriggerTexture(tableCard.Card.Value, CardEffectTypes.DoubleCollect);
+		PlayGameSfx(GameSfx.DoubleCollect, -1.0f, 0.97f, 1.04f, 0.08);
 		await PlaySpecialCardTriggerEffectAsync(
 			triggerTexture,
 			_centerArena.GlobalPosition + cardPosition,
@@ -175,6 +177,7 @@ public partial class GameBoardScene
 		}
 
 		Texture2D triggerTexture = GetAttachedTriggerTexture(tableCard.Card.Value, CardEffectTypes.ExtraTurn);
+		PlayGameSfx(GameSfx.ExtraTurn, -1.0f, 0.98f, 1.02f, 0.08);
 		await PlaySpecialCardTriggerEffectAsync(
 			triggerTexture,
 			_centerArena.GlobalPosition + cardPosition,

@@ -74,6 +74,7 @@ public partial class GameBoardScene
 		}
 
 		_isPauseMenuOpen = true;
+		PlayGameSfx(GameSfx.UiPauseOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
 		if (_pauseQuitConfirmRoot != null)
@@ -104,6 +105,7 @@ public partial class GameBoardScene
 		}
 
 		_isPauseMenuOpen = false;
+		PlayGameSfx(GameSfx.UiPauseClose, -2.0f, 0.98f, 1.02f, 0.08);
 		GetTree().Paused = false;
 		if (_pauseMenuRoot != null)
 		{
@@ -170,6 +172,7 @@ public partial class GameBoardScene
 		}
 
 		EnsurePauseMenu();
+		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		_pauseMenuRoot?.ShowQuitConfirm();
 	}
 
@@ -180,6 +183,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.08);
 		_pauseMenuRoot?.HideQuitConfirm();
 		_pauseQuitButton?.GrabFocus();
 	}

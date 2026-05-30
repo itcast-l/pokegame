@@ -36,6 +36,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private CharacterAvatar? _avatarUnlockPromptAvatar;
 	private Tween? _levelScrollTween;
 	private Tween? _avatarUnlockPromptTween;
+	private GameAudioManager? _gameAudio;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
 	private string _selectedAdventureId = DeepTideThroneAdventureId;
@@ -60,6 +61,7 @@ public partial class AdventureAvatarMenuScene : Control
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();
 		RefreshLocalizedText();
+		CallDeferred(nameof(PlayAdventureMenuMusicIfStandalone));
 		CallDeferred(nameof(ShowPendingAdventureAvatarUnlockPrompt));
 	}
 
@@ -107,5 +109,27 @@ public partial class AdventureAvatarMenuScene : Control
 			GetMaxScrollTarget());
 		_levelScrollTarget = (int)Mathf.Round(target);
 		_levelScroll.ScrollVertical = _levelScrollTarget;
+	}
+
+	private GameAudioManager? GameAudio => _gameAudio ??= GetNodeOrNull<GameAudioManager>("/root/GameAudio");
+
+	private void PlayMenuSfx(
+		string sfxId,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		GameAudio?.PlaySfx(sfxId, volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	private void PlayAdventureMenuMusicIfStandalone()
+	{
+		if (!Visible || GetEmbeddedMainMenuParent() != null)
+		{
+			return;
+		}
+
+		GameAudio?.PlayMusic(GameMusic.AdventureMenu, 1.2f);
 	}
 }

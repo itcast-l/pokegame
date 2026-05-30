@@ -43,6 +43,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(revealCard))
 				{
+					PlayGameSfx(GameSfx.CardFlip, -1.5f, 0.96f, 1.05f, 0.04);
 					revealCard.Texture = faceTexture;
 				}
 			})).SetDelay(TableCardRevealHalfFlipSeconds);
@@ -251,6 +252,7 @@ public partial class GameBoardScene
 			return null;
 		}
 
+		PlayGameSfx(GameSfx.CaptureLift, -2.0f, 0.98f, 1.02f);
 		RenderTableCards();
 		Tween tween = CreateTween();
 		tween.SetParallel(true);

@@ -74,6 +74,7 @@ void fragment() {
 		var transition = new CircularSceneTransition();
 		tree.Root.AddChild(transition);
 
+		transition.PlayTransitionSfx();
 		await transition.PlayCloseAsync();
 		if (!GodotObject.IsInstanceValid(transition))
 		{
@@ -94,6 +95,12 @@ void fragment() {
 	private async Task PlayCloseAsync()
 	{
 		await AnimateRadiusAsync(GetOpenRadius(), 0.0f, CloseSeconds);
+	}
+
+	private void PlayTransitionSfx()
+	{
+		GetNodeOrNull<GameAudioManager>("/root/GameAudio")
+			?.PlaySfx(GameSfx.UiSceneTransition, -2.0f, 0.98f, 1.02f, 0.12);
 	}
 
 	private async Task PlayOpenAsync()

@@ -65,6 +65,7 @@ public partial class GameBoardScene
 		}
 		RenderTableCards();
 
+		PlayGameSfx(GameSfx.CaptureCollect, -1.0f, 0.96f, 1.04f, 0.08);
 		Task[] flightTasks = new Task[capturedCardVisuals.Count];
 		Vector2 targetGlobalPosition = GetCardPileCaptureTargetGlobalPosition(playerIndex);
 		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count; visualIndex++)

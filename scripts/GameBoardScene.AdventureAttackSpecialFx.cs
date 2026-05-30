@@ -38,6 +38,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.LeafySeadragonSlash);
 		Vector2 direction = travel / distance;
 		Vector2 side = new(-direction.Y, direction.X);
 		Vector2 projectileStart = startCenter + direction * 34.0f;

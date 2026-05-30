@@ -100,6 +100,7 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		string abilityId)
 	{
+		PlayAdventureAbilitySfx(abilityId);
 		string bossKBorrowedAvatarId = IsBossKEnemy(enemyPlayerIndex)
 			&& CharacterAvatarCatalog.TryGetAvatarIdForAbility(abilityId, out string avatarId, requireBossBorrowedFxEligible: true)
 				? avatarId

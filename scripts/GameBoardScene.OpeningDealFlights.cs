@@ -17,6 +17,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.CardDeal, -4.0f, 0.94f, 1.08f, 0.03);
 		float clampedTargetVisualScale = Mathf.Max(0.01f, targetVisualScale);
 		Vector2 targetVisualSize = CardVisualSize * clampedTargetVisualScale;
 		Vector2 targetVisualBasePosition = GetCardVisualBasePosition(clampedTargetVisualScale);
@@ -84,6 +85,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.CardDeal, -5.0f, 0.92f, 1.06f, 0.03);
 		float startRotationDegrees = -6.0f + dealIndex % 4 * 4.0f;
 		var cardRoot = new Control
 		{

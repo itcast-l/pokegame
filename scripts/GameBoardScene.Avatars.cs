@@ -160,6 +160,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayPlayerAvatarActionSfx(action);
 		avatar.PlayAction(action);
 	}
 

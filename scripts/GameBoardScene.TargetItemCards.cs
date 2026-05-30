@@ -35,6 +35,7 @@ public partial class GameBoardScene
 			}
 
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
+			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 			await PlayStealHandCardAnimationAsync(
 				ownerPlayerIndex,
 				targetPlayerIndex,
@@ -65,6 +66,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
+		PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 		await PlayStealHandCardAnimationAsync(
 			ownerPlayerIndex,
 			targetPlayerIndex,
@@ -193,6 +195,7 @@ public partial class GameBoardScene
 		Shuffle(_playerDecks[targetPlayerIndex]);
 		if (cardsToMove > 0)
 		{
+			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 		}
 

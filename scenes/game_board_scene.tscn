@@ -25,6 +25,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
+debug_random_item_cards_are_magnet = true
 
 [node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
 layout_mode = 1

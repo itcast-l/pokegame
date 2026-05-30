@@ -122,7 +122,11 @@ public partial class GameBoardScene
 						}
 					}
 
-						cardSlot.MouseEntered += () => AnimateHover(true);
+						cardSlot.MouseEntered += () =>
+						{
+							PlayGameSfx(GameSfx.CardHover, -10.0f, 0.96f, 1.04f, 0.05);
+							AnimateHover(true);
+						};
 						cardSlot.MouseExited += () => AnimateHover(false);
 
 						cardSlot.GuiInput += inputEvent =>

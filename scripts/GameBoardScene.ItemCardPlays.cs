@@ -81,6 +81,7 @@ public partial class GameBoardScene
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		RenderPlayerHands();
+		PlaySpecialItemCardPlaySfx();
 		await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, itemGlobalPosition ?? Vector2.Zero, 0, GetCardRotationDegreesForPlayer(playerIndex));
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -181,6 +182,7 @@ public partial class GameBoardScene
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		RenderPlayerHands();
+		PlaySpecialItemCardPlaySfx();
 
 		await PlayItemCardToTransformAreaAnimationAsync(
 			itemCard.Texture,

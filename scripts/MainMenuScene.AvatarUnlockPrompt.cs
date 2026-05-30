@@ -43,6 +43,7 @@ public partial class MainMenuScene : Control
 		}
 
 		_isShowingAvatarUnlockPrompt = true;
+		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		RefreshAvatarUnlockPromptText();
 		SetMainMenuButtonsDisabled(true);
 
@@ -85,6 +86,7 @@ public partial class MainMenuScene : Control
 
 		_avatarUnlockPromptTween?.Kill();
 		_avatarUnlockPromptTween = null;
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarUnlockPromptRoot.Visible = false;
 		_avatarUnlockPromptRoot.MouseFilter = MouseFilterEnum.Ignore;
 		_avatarUnlockPromptRoot.Modulate = Colors.White;

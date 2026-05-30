@@ -32,6 +32,7 @@ public partial class GameBoardScene
 		};
 		AddChild(flightCard);
 		flightCard.GlobalPosition = startGlobalPosition;
+		PlayGameSfx(GameSfx.LensScan, -1.0f, 0.97f, 1.03f, 0.08);
 
 		Vector2 splitGlobalPosition = splitGlobalCenter - CardVisualSize / 2.0f;
 		try

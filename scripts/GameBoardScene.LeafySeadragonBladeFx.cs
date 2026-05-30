@@ -24,6 +24,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.LeafySeadragonSlash);
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		Task[] projectileTasks = new Task[LeafySeadragonBladeProjectileCount];
 		for (int projectileIndex = 0; projectileIndex < LeafySeadragonBladeProjectileCount; projectileIndex++)

@@ -74,6 +74,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 		if (captureStartIndex >= 0)
 		{
+			PlayGameSfx(GameSfx.CaptureBite, -1.0f, 0.97f, 1.03f);
 			ClearCardPlayTriggerScratchSets();
 			HashSet<int> pendingFaceUpMagnetTriggerIndexes = _cardPlayPendingFaceUpMagnetTriggerIndexes;
 			HashSet<int> resolvedMagnetTriggerIndexes = _cardPlayResolvedMagnetTriggerIndexes;

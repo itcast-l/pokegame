@@ -25,7 +25,10 @@ public partial class GameBoardScene
 			}
 			else
 			{
-				AttachMagnetToRandomHandCard(reward.PlayerIndex, reward.ItemCardId);
+				if (AttachMagnetToRandomHandCard(reward.PlayerIndex, reward.ItemCardId))
+				{
+					PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
+				}
 			}
 
 			RenderPlayerHands();

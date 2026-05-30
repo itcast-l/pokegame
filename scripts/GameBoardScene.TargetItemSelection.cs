@@ -108,6 +108,7 @@ public partial class GameBoardScene
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
 
+		PlaySpecialItemCardPlaySfx();
 		await PlaySpecialCardTriggerEffectAsync(
 			itemCard.Texture,
 			itemGlobalPosition ?? Vector2.Zero,
@@ -228,6 +229,7 @@ public partial class GameBoardScene
 
 		AddChild(selectionOverlay);
 		_selectionOverlay = selectionOverlay;
+		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		selectionOverlay.Configure(title, optionLabels, Localize("GAME_CANCEL"), showCancel);
 		selectionOverlay.OptionSelected += SelectSelectionOverlayOption;
 		selectionOverlay.CancelRequested += CancelPendingItemSelection;
@@ -237,6 +239,7 @@ public partial class GameBoardScene
 	{
 		if (optionIndex < 0 || optionIndex >= _selectionOverlayActions.Count)
 		{
+			PlayGameSfx(GameSfx.UiInvalid, -3.0f, 0.98f, 1.02f, 0.08);
 			return;
 		}
 

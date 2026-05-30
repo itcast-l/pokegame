@@ -52,6 +52,7 @@ public partial class GameBoardScene
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
 		RenderPlayerHands();
 
+		PlaySpecialItemCardPlaySfx();
 		await PlayLensCardSplitAnimationAsync(
 			lensCard.Texture,
 			startGlobalPosition,
@@ -219,6 +220,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.LensReveal, -1.5f, 0.97f, 1.04f, 0.06);
 		await PlayTableCardRevealAnimationAsync(tableCardIndex, tableCard.Card.Value.Texture);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{

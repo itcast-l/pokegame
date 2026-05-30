@@ -10,6 +10,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
 		PlayingCard card = _playerHands[playerIndex][handIndex];
 		Vector2 startGlobalPosition = GetHandCardGlobalPosition(playerIndex, handIndex);
 		Vector2 targetGlobalPosition = GetMagnetAttachmentAnimationTargetGlobalPosition();

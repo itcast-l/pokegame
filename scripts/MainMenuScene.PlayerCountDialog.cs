@@ -51,6 +51,7 @@ public partial class MainMenuScene : Control
 	private void ShowPlayerCountDialog()
 	{
 		_playerCountDialogTween?.Kill();
+		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_playerCountDialogRoot.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_playerCountDialogRoot.Modulate = Colors.White;
@@ -63,6 +64,7 @@ public partial class MainMenuScene : Control
 	private void HidePlayerCountDialog()
 	{
 		_playerCountDialogTween?.Kill();
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 		ResetMenuCamera();

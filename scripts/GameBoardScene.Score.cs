@@ -71,6 +71,8 @@ public partial class GameBoardScene
 			_playerScores[playerIndex] = GetStartingPlayerScore(playerIndex);
 			UpdatePlayerScoreMeter(playerIndex, false);
 		}
+
+		RefreshGameplayTensionMusic();
 	}
 
 	private void AddPlayerScore(int playerIndex, int points)
@@ -95,12 +97,14 @@ public partial class GameBoardScene
 			{
 				PlayPlayerAvatarAction(damageTargetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 			}
+			RefreshGameplayTensionMusic();
 			return;
 		}
 
 		_playerScores[playerIndex] += points;
 		UpdatePlayerScoreMeter(playerIndex, true);
 		PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
+		RefreshGameplayTensionMusic();
 	}
 
 	private void UpdatePlayerScoreMeter(int playerIndex, bool animate)
@@ -141,6 +145,11 @@ public partial class GameBoardScene
 
 	private int GetStartingPlayerScore(int playerIndex)
 	{
+		if (playerIndex == MainPlayerIndex && debug_main_player_starting_score >= 0)
+		{
+			return debug_main_player_starting_score;
+		}
+
 		if (!adventure_mode || playerIndex >= player_count)
 		{
 			return 0;

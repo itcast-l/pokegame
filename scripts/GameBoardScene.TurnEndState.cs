@@ -88,6 +88,7 @@ public partial class GameBoardScene
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
 		_currentTurnPlayerIndex = playerIndex;
+		PlayResultMusic(playerIndex);
 
 		for (int avatarPlayerIndex = 0; avatarPlayerIndex < player_count; avatarPlayerIndex++)
 		{

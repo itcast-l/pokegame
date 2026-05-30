@@ -10,6 +10,7 @@ public partial class MainMenuScene
 		}
 
 		_settingsDialogTween?.Kill();
+		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = false;
 		_settingsDialogRoot.Visible = true;
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
@@ -27,6 +28,7 @@ public partial class MainMenuScene
 	private void HideSettingsDialog()
 	{
 		_settingsDialogTween?.Kill();
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = true;
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 		ResetMenuCamera();

@@ -14,6 +14,7 @@ public partial class GameBoardScene
 	{
 		int drawCount = Mathf.Max(1, request.Rule.EffectValues.GetInt(CardEffectValueKeys.Count, 1));
 		bool drewAny = false;
+		PlayGameSfx(GameSfx.ItemDrawCard, -1.5f, 0.97f, 1.04f, 0.08);
 		for (int drawIndex = 0; drawIndex < drawCount; drawIndex++)
 		{
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -47,7 +48,10 @@ public partial class GameBoardScene
 		}
 		else
 		{
-			AttachMagnetToRandomHandCard(playerIndex, itemCardId);
+			if (AttachMagnetToRandomHandCard(playerIndex, itemCardId))
+			{
+				PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
+			}
 		}
 
 		RenderPlayerHands();

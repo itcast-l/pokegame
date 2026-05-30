@@ -150,6 +150,7 @@ public partial class MainMenuScene : Control
 		_adventureTransitionTween.TweenProperty(root, "modulate:a", 1.0f, AdventureMenuFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
+		GameAudio?.PlayMusic(GameMusic.AdventureMenu, 1.2f);
 	}
 
 	public void HideAdventureAvatarMenu(Control adventureAvatarMenu)
@@ -166,6 +167,7 @@ public partial class MainMenuScene : Control
 		ResetMenuCamera();
 		SetMainMenuButtonsDisabled(false);
 		_isMenuCameraTransitioning = false;
+		PrepareBackgroundMusic();
 
 		_adventureTransitionTween?.Kill();
 		_adventureTransitionTween = CreateTween();

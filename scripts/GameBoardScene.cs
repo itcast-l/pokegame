@@ -328,6 +328,9 @@ public partial class GameBoardScene : Control
 	[Export]
 	public bool debug_random_item_cards_are_magnet = false;
 
+	[Export(PropertyHint.Range, "-1,200,1")]
+	public int debug_main_player_starting_score = -1;
+
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
 	private Control _topPlayerArea = default!;
@@ -381,6 +384,7 @@ public partial class GameBoardScene : Control
 		CreateDefeatFinisherOverlay();
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: true);
+		PlayBoardMusic();
 	}
 
 	public override void _Process(double delta)

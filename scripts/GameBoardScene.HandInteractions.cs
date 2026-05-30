@@ -4,16 +4,18 @@ public partial class GameBoardScene
 {
 	private void TryPlayMainPlayerCard(InputEvent inputEvent, int handIndex)
 	{
-		if (!CanMainPlayerAct())
-		{
-			return;
-		}
-
 		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
 		{
 			return;
 		}
 
+		if (!CanMainPlayerAct())
+		{
+			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+			return;
+		}
+
+		PlayGameSfx(GameSfx.CardPickup, -2.0f, 0.97f, 1.04f, 0.04);
 		Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(MainPlayerIndex, handIndex);
 		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, _turnSequenceGeneration, startGlobalPosition);
 	}
@@ -30,6 +32,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
 		_ = CompleteMagnetAttachmentSelectionAsync(handIndex);
 	}
 
@@ -50,16 +53,18 @@ public partial class GameBoardScene
 
 	private void TryPlayMainPlayerItemCard(InputEvent inputEvent, int itemHandIndex)
 	{
-		if (!CanMainPlayerAct())
-		{
-			return;
-		}
-
 		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
 		{
 			return;
 		}
 
+		if (!CanMainPlayerAct())
+		{
+			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+			return;
+		}
+
+		PlayGameSfx(GameSfx.CardPickup, -2.0f, 0.97f, 1.04f, 0.04);
 		_ = PlayMainPlayerItemCardAndAdvanceAsync(itemHandIndex, _turnSequenceGeneration);
 	}
 

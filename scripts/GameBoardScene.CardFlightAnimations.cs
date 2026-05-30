@@ -82,6 +82,7 @@ public partial class GameBoardScene
 
 		try
 		{
+			PlayGameSfx(GameSfx.CardFlight, -2.0f, 0.96f, 1.05f, 0.04);
 			UpdateCardToTableMotion(
 				flightCard,
 				startGlobalPosition,
@@ -114,6 +115,7 @@ public partial class GameBoardScene
 				targetAlpha);
 			tween.Finished += () =>
 			{
+				PlayGameSfx(GameSfx.CardLand, -2.0f, 0.96f, 1.05f, 0.04);
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
 					flightCard.QueueFree();
@@ -177,6 +179,7 @@ public partial class GameBoardScene
 
 		try
 		{
+			PlayGameSfx(GameSfx.CardFlight, -2.0f, 0.95f, 1.04f, 0.04);
 			UpdateItemCardToTableMotion(
 				flightCard,
 				startGlobalPosition,
@@ -206,6 +209,7 @@ public partial class GameBoardScene
 				flipToCardBack);
 			tween.Finished += () =>
 			{
+				PlayGameSfx(GameSfx.CardLand, -2.0f, 0.96f, 1.05f, 0.04);
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
 					flightCard.QueueFree();

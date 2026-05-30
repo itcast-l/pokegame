@@ -33,6 +33,7 @@ public partial class GameBoardScene
 		HideHandDisplaySlot(playerIndex, displayIndex);
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
+		PlayGameSfx(GameSfx.CardDraw, -2.0f, 0.96f, 1.05f, 0.08);
 
 		try
 		{

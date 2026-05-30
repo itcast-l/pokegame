@@ -12,6 +12,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.SpecialTrigger, -1.0f, 0.97f, 1.03f, 0.08);
 		var effectRoot = new Control
 		{
 			Name = "SpecialCardTriggerEffect",

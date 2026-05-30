@@ -23,6 +23,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.OpeningIntro, -1.5f, 0.98f, 1.02f);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{

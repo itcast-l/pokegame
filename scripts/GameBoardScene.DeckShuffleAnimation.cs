@@ -29,6 +29,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		PlayGameSfx(GameSfx.DeckShuffle, -2.5f, 0.96f, 1.04f, 0.12);
 		Label? countLabel = pile.GetNodeOrNull<Label>(CardCountLabelNodeName);
 		bool countLabelVisible = countLabel != null && countLabel.Visible;
 		SetOriginalPileVisualsVisible(pile, originalCardMask, countLabel, false);

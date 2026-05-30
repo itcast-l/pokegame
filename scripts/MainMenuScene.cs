@@ -109,6 +109,7 @@ public partial class MainMenuScene : Control
 	private Control? _adventureTransitionMotion;
 	private Tween? _adventureTransitionTween;
 	private Control? _preparedAdventureAvatarMenu;
+	private GameAudioManager? _gameAudio;
 	private bool _playAdventureReturnTransition;
 	private float _masterVolume = DefaultMasterVolume;
 	private float _musicVolume = DefaultMusicVolume;
@@ -253,6 +254,18 @@ public partial class MainMenuScene : Control
 			HideExitDialog();
 			GetViewport().SetInputAsHandled();
 		}
+	}
+
+	private GameAudioManager? GameAudio => _gameAudio ??= GetNodeOrNull<GameAudioManager>("/root/GameAudio");
+
+	private void PlayMenuSfx(
+		string sfxId,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		GameAudio?.PlaySfx(sfxId, volumeDb, pitchMin, pitchMax, cooldownSeconds);
 	}
 
 }

@@ -90,13 +90,15 @@ public partial class MainMenuScene
 
 	private void ApplyMusicVolume()
 	{
+		float volumeDb = LinearVolumeToDb(_musicVolume);
+		GameAudio?.SetMusicVolumeDb(volumeDb);
+
 		Node? musicManager = GetMusicManager();
 		if (musicManager == null)
 		{
 			return;
 		}
 
-		float volumeDb = LinearVolumeToDb(_musicVolume);
 		if (!float.IsNaN(_appliedMusicVolumeDb) && Mathf.IsEqualApprox(_appliedMusicVolumeDb, volumeDb))
 		{
 			return;
