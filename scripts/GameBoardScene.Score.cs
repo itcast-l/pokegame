@@ -225,19 +225,10 @@ public partial class GameBoardScene
 
 	private int ApplyCapturedCardScoreModifiers(int points, int scorePlayerIndex, bool hasDoubleEffect)
 	{
-		if (hasDoubleEffect)
-		{
-			points *= 2;
-		}
-
-		if (ShouldApplyCrabScoreReduction(scorePlayerIndex))
-		{
-			points = Math.Max(
-				0,
-				points - GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.ScoreReductionPerCard, 2));
-		}
-
-		return points;
+		return CaptureScoringRules.ApplyCapturedCardScoreModifiers(
+			points,
+			BuildCaptureScoringContext(scorePlayerIndex),
+			hasDoubleEffect);
 	}
 
 	private bool ShouldApplyCrabScoreReduction(int scorePlayerIndex)

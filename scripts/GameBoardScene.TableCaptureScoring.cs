@@ -1,183 +1,109 @@
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Godot;
 
 public partial class GameBoardScene
 {
 	private int GetCapturedTablePoints(int captureStartIndex, int scorePlayerIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count || !HasCapturedMiddleTableCards(captureStartIndex))
-		{
-			return 0;
-		}
-
-		int collectedPoints = 0;
-		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, extraTableCardIndexes);
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (tableCard.IsBuriedInSand)
-			{
-				continue;
-			}
-
-			if (!IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
-			{
-				continue;
-			}
-
-			if (tableCard.Card.HasValue)
-			{
-				collectedPoints += GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect);
-			}
-		}
-
-		if (extraTableCardIndexes != null)
-		{
-			foreach (int tableCardIndex in extraTableCardIndexes)
-			{
-				if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
-				{
-					continue;
-				}
-
-				TableCard tableCard = _tableCards[tableCardIndex];
-				if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
-				{
-					collectedPoints += GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect);
-				}
-			}
-		}
-
-		return collectedPoints;
+		return CaptureScoringRules.GetCapturedTablePoints(
+			ToCaptureScoringTableCards(),
+			captureStartIndex,
+			BuildCaptureScoringContext(scorePlayerIndex),
+			extraTableCardIndexes);
 	}
 
 	private int GetCapturedTableCardScoreValueForPlayer(TableCard tableCard, int scorePlayerIndex, bool hasDoubleEffect)
 	{
-		if (!tableCard.Card.HasValue || IsSeaSlugSlimeScoreSuppressed(tableCard, scorePlayerIndex))
-		{
-			return 0;
-		}
+		return CaptureScoringRules.GetCapturedTableCardScoreValue(
+			ToCaptureScoringTableCard(tableCard),
+			BuildCaptureScoringContext(scorePlayerIndex),
+			hasDoubleEffect);
+	}
 
-		return GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, scorePlayerIndex, hasDoubleEffect);
+	private CaptureScoringRules.Context BuildCaptureScoringContext(int scorePlayerIndex)
+	{
+		bool applyScoreReduction = ShouldApplyCrabScoreReduction(scorePlayerIndex);
+		return new CaptureScoringRules.Context(
+			SuppressSlimeCoatedScore: ShouldSuppressSlimeCoatedCapturedScore(scorePlayerIndex),
+			ApplyScoreReductionPerCard: applyScoreReduction,
+			ScoreReductionPerCard: applyScoreReduction
+				? GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.ScoreReductionPerCard, 2)
+				: 0);
+	}
+
+	private bool ShouldSuppressSlimeCoatedCapturedScore(int scorePlayerIndex)
+	{
+		return adventure_mode
+			&& scorePlayerIndex == MainPlayerIndex
+			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.ColorCurrent);
 	}
 
 	private bool IsSeaSlugSlimeScoreSuppressed(TableCard tableCard, int scorePlayerIndex)
 	{
-		return adventure_mode
-			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.ColorCurrent)
-			&& scorePlayerIndex == MainPlayerIndex
-			&& tableCard.IsSlimeCoated;
+		return CaptureScoringRules.IsSlimeScoreSuppressed(
+			tableCard.IsSlimeCoated,
+			BuildCaptureScoringContext(scorePlayerIndex));
 	}
 
 	private bool HasCapturedDoubleScoreEffect(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
-		{
-			return false;
-		}
-
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (!_tableCards[tableCardIndex].IsBuriedInSand && HasDoubleScoreEffect(_tableCards[tableCardIndex]))
-			{
-				return true;
-			}
-		}
-
-		if (extraTableCardIndexes == null)
-		{
-			return false;
-		}
-
-		foreach (int tableCardIndex in extraTableCardIndexes)
-		{
-			if (tableCardIndex >= 0
-				&& tableCardIndex < _tableCards.Count
-				&& !_tableCards[tableCardIndex].IsBuriedInSand
-				&& HasDoubleScoreEffect(_tableCards[tableCardIndex]))
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private bool HasDoubleScoreEffect(TableCard tableCard)
-	{
-		return (tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.DoubleCollect))
-			|| IsItemEffectType(tableCard, CardEffectTypes.DoubleCollect);
+		return CaptureScoringRules.HasCapturedDoubleScoreEffect(
+			ToCaptureScoringTableCards(),
+			captureStartIndex,
+			extraTableCardIndexes);
 	}
 
 	private int GetCapturedTableScorePlayerIndex(int captureStartIndex, int fallbackPlayerIndex)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
-		{
-			return fallbackPlayerIndex;
-		}
-
-		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
-		{
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!IsItemEffectType(tableCard, CardEffectTypes.PlaceTablePairDestroy))
-			{
-				continue;
-			}
-
-			if (tableCard.ItemOwnerPlayerIndex >= 0 && tableCard.ItemOwnerPlayerIndex < player_count)
-			{
-				return tableCard.ItemOwnerPlayerIndex;
-			}
-		}
-
-		return fallbackPlayerIndex;
+		return CaptureScoringRules.GetCapturedTableScorePlayerIndex(
+			ToCaptureScoringTableCards(),
+			captureStartIndex,
+			fallbackPlayerIndex,
+			player_count);
 	}
 
 	private bool IsCapturedTableCardScoringIndex(int tableCardIndex, int captureStartIndex)
 	{
-		return tableCardIndex > captureStartIndex && tableCardIndex < _tableCards.Count - 1;
+		return CaptureScoringRules.IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex, _tableCards.Count);
 	}
 
 	private bool HasCapturedScoringTableCards(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count || !HasCapturedMiddleTableCards(captureStartIndex))
-		{
-			return false;
-		}
-
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex)
-				&& IsScoringTableCard(_tableCards[tableCardIndex]))
-			{
-				return true;
-			}
-		}
-
-		if (extraTableCardIndexes == null)
-		{
-			return false;
-		}
-
-		foreach (int tableCardIndex in extraTableCardIndexes)
-		{
-			if (tableCardIndex >= 0
-				&& tableCardIndex < _tableCards.Count
-				&& IsScoringTableCard(_tableCards[tableCardIndex]))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return CaptureScoringRules.HasCapturedScoringTableCards(
+			ToCaptureScoringTableCards(),
+			captureStartIndex,
+			extraTableCardIndexes);
 	}
 
-	private static bool IsScoringTableCard(TableCard tableCard)
+	private CaptureScoringRules.TableCard[] ToCaptureScoringTableCards()
 	{
-		return !tableCard.IsBuriedInSand
-			&& tableCard.Card.HasValue
-			&& GetCardScoreValue(tableCard.Card.Value) > 0;
+		var tableCards = new CaptureScoringRules.TableCard[_tableCards.Count];
+		for (int index = 0; index < _tableCards.Count; index++)
+		{
+			tableCards[index] = ToCaptureScoringTableCard(_tableCards[index]);
+		}
+
+		return tableCards;
+	}
+
+	private CaptureScoringRules.TableCard ToCaptureScoringTableCard(TableCard tableCard)
+	{
+		CaptureScoringRules.Card? card = tableCard.Card.HasValue
+			? ToCaptureScoringCard(tableCard.Card.Value)
+			: null;
+
+		return new CaptureScoringRules.TableCard(
+			card,
+			tableCard.IsBuriedInSand,
+			tableCard.IsSlimeCoated,
+			IsItemEffectType(tableCard, CardEffectTypes.DoubleCollect),
+			IsItemEffectType(tableCard, CardEffectTypes.PlaceTablePairDestroy),
+			tableCard.ItemOwnerPlayerIndex);
+	}
+
+	private CaptureScoringRules.Card ToCaptureScoringCard(PlayingCard card)
+	{
+		return new CaptureScoringRules.Card(
+			GetCardScoreValue(card),
+			IsAttachedEffectType(card, CardEffectTypes.DoubleCollect));
 	}
 }
