@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
@@ -46,72 +45,34 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		int bestScore = 0;
-		int bestCaptureCount = 0;
-		for (int index = 0; index < _playerHands[playerIndex].Count; index++)
-		{
-			PlayingCard card = _playerHands[playerIndex][index];
-			int captureCount = GetPotentialNormalCaptureCount(card);
-			if (captureCount <= 0)
-			{
-				continue;
-			}
-
-			int score = GetPotentialNormalCapturePoints(playerIndex, card);
-			if (captureCount >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5))
-			{
-				score += 1000 + captureCount;
-			}
-
-			if (score > bestScore || (score == bestScore && captureCount > bestCaptureCount))
-			{
-				bestScore = score;
-				bestCaptureCount = captureCount;
-				handIndex = index;
-			}
-		}
-
-		return handIndex >= 0;
+		return PotentialCaptureRules.TryPickBestCaptureCardIndex(
+			ToCaptureScoringTableCards(),
+			ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
+			BuildCaptureScoringContext(playerIndex),
+			GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5),
+			out handIndex);
 	}
 
 	private int GetPotentialNormalCaptureCount(PlayingCard card)
 	{
-		if (ShouldPlayedCardCollectTable(card))
-		{
-			return _tableCards.Count > 0 ? CountCollectibleTableCards(_tableCards) + 1 : 0;
-		}
-
-		int matchingIndex = FindMatchingTableCardIndex(_tableCards, card);
-		return matchingIndex >= 0 ? CountCollectibleTableCards(_tableCards, matchingIndex) + 1 : 0;
+		return PotentialCaptureRules.GetPotentialNormalCaptureCount(
+			ToCaptureScoringTableCards(),
+			ToPotentialCaptureCard(card));
 	}
 
 	private int GetPotentialNormalCapturePoints(int playerIndex, PlayingCard card)
 	{
-		int matchingIndex = ShouldPlayedCardCollectTable(card) && _tableCards.Count > 0
-			? 0
-			: FindMatchingTableCardIndex(_tableCards, card);
-		if (matchingIndex < 0 || !HasPotentialCapturedMiddleTableCards(matchingIndex))
-		{
-			return 0;
-		}
-
-		bool hasDoubleEffect = ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card);
-		int points = 0;
-		for (int tableCardIndex = matchingIndex + 1; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
-			{
-				points += GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, playerIndex, hasDoubleEffect);
-			}
-		}
-
-		return points;
+		return PotentialCaptureRules.GetPotentialNormalCapturePoints(
+			ToCaptureScoringTableCards(),
+			ToPotentialCaptureCard(card, ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card)),
+			BuildCaptureScoringContext(playerIndex));
 	}
 
 	private bool HasPotentialCapturedMiddleTableCards(int captureStartIndex)
 	{
-		return CountCollectibleTableCards(_tableCards, captureStartIndex) + 1 > 2;
+		return PotentialCaptureRules.HasPotentialCapturedMiddleTableCards(
+			ToCaptureScoringTableCards(),
+			captureStartIndex);
 	}
 
 	private async Task ResolveAdventureEnemyTurnStartAbilityAsync(int playerIndex, int turnSequenceGeneration)
@@ -201,23 +162,9 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		int bestCaptureCount = 0;
-		foreach (PlayingCard handCard in _playerHands[playerIndex])
-		{
-			if (ShouldPlayedCardCollectTable(handCard))
-			{
-				bestCaptureCount = Math.Max(bestCaptureCount, CountTideShiftedCollectibleTableCards() + 1);
-				continue;
-			}
-
-			int matchingIndex = FindTideShiftedMatchingTableCardIndex(handCard);
-			if (matchingIndex >= 0)
-			{
-				bestCaptureCount = Math.Max(bestCaptureCount, CountTideShiftedCollectibleTableCards(matchingIndex) + 1);
-			}
-		}
-
-		return bestCaptureCount;
+		return PotentialCaptureRules.GetBestPotentialNormalCaptureCount(
+			ToTideShiftedCaptureScoringTableCards(),
+			ToPotentialCaptureCards(_playerHands[playerIndex]));
 	}
 
 	private int GetBestPotentialNormalCaptureCount(int playerIndex, IReadOnlyList<TableCard> tableCards)
@@ -227,86 +174,52 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		int bestCaptureCount = 0;
-		foreach (PlayingCard handCard in _playerHands[playerIndex])
-		{
-			if (ShouldPlayedCardCollectTable(handCard))
-			{
-				bestCaptureCount = Math.Max(bestCaptureCount, CountCollectibleTableCards(tableCards) + 1);
-				continue;
-			}
-
-			int matchingIndex = FindMatchingTableCardIndex(tableCards, handCard);
-			if (matchingIndex >= 0)
-			{
-				bestCaptureCount = Math.Max(bestCaptureCount, CountCollectibleTableCards(tableCards, matchingIndex) + 1);
-			}
-		}
-
-		return bestCaptureCount;
+		return PotentialCaptureRules.GetBestPotentialNormalCaptureCount(
+			ToCaptureScoringTableCards(tableCards),
+			ToPotentialCaptureCards(_playerHands[playerIndex]));
 	}
 
-	private static int CountCollectibleTableCards(IReadOnlyList<TableCard> tableCards, int startIndex = 0)
+	private PotentialCaptureRules.Card[] ToPotentialCaptureCards(int playerIndex, IReadOnlyList<PlayingCard> cards)
 	{
-		int count = 0;
-		for (int tableCardIndex = Math.Max(0, startIndex); tableCardIndex < tableCards.Count; tableCardIndex++)
+		var potentialCards = new PotentialCaptureRules.Card[cards.Count];
+		for (int index = 0; index < cards.Count; index++)
 		{
-			if (!tableCards[tableCardIndex].IsBuriedInSand)
-			{
-				count++;
-			}
+			PlayingCard card = cards[index];
+			potentialCards[index] = ToPotentialCaptureCard(card, ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card));
 		}
 
-		return count;
+		return potentialCards;
 	}
 
-	private static int FindMatchingTableCardIndex(IReadOnlyList<TableCard> tableCards, PlayingCard playedCard)
+	private PotentialCaptureRules.Card[] ToPotentialCaptureCards(IReadOnlyList<PlayingCard> cards)
 	{
-		for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
+		var potentialCards = new PotentialCaptureRules.Card[cards.Count];
+		for (int index = 0; index < cards.Count; index++)
 		{
-			PlayingCard? tableCard = tableCards[tableCardIndex].Card;
-			if (!tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
-			{
-				return tableCardIndex;
-			}
+			potentialCards[index] = ToPotentialCaptureCard(cards[index]);
 		}
 
-		return -1;
+		return potentialCards;
 	}
 
-	private int CountTideShiftedCollectibleTableCards(int startIndex = 0)
+	private PotentialCaptureRules.Card ToPotentialCaptureCard(PlayingCard card, bool hasDoubleEffect = false)
 	{
-		int count = 0;
-		for (int shiftedIndex = Math.Max(0, startIndex); shiftedIndex < _tableCards.Count; shiftedIndex++)
+		return new PotentialCaptureRules.Card(
+			card.Rank,
+			ShouldPlayedCardCollectTable(card),
+			hasDoubleEffect);
+	}
+
+	private CaptureScoringRules.TableCard[] ToTideShiftedCaptureScoringTableCards()
+	{
+		var tableCards = new CaptureScoringRules.TableCard[_tableCards.Count];
+		for (int shiftedIndex = 0; shiftedIndex < _tableCards.Count; shiftedIndex++)
 		{
-			if (!GetTideShiftedTableCard(shiftedIndex).IsBuriedInSand)
-			{
-				count++;
-			}
+			int tableCardIndex = shiftedIndex == _tableCards.Count - 1 ? 0 : shiftedIndex + 1;
+			tableCards[shiftedIndex] = ToCaptureScoringTableCard(_tableCards[tableCardIndex]);
 		}
 
-		return count;
-	}
-
-	private int FindTideShiftedMatchingTableCardIndex(PlayingCard playedCard)
-	{
-		for (int shiftedIndex = _tableCards.Count - 1; shiftedIndex >= 0; shiftedIndex--)
-		{
-			TableCard shiftedTableCard = GetTideShiftedTableCard(shiftedIndex);
-			PlayingCard? tableCard = shiftedTableCard.Card;
-			if (!shiftedTableCard.IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
-			{
-				return shiftedIndex;
-			}
-		}
-
-		return -1;
-	}
-
-	private TableCard GetTideShiftedTableCard(int shiftedIndex)
-	{
-		int tableCardIndex = shiftedIndex == _tableCards.Count - 1 ? 0 : shiftedIndex + 1;
-		return _tableCards[tableCardIndex];
+		return tableCards;
 	}
 
 	private bool IsMantaRayTideShiftEnemyTurn(int playerIndex)

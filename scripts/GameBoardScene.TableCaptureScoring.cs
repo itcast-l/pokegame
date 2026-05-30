@@ -76,10 +76,15 @@ public partial class GameBoardScene
 
 	private CaptureScoringRules.TableCard[] ToCaptureScoringTableCards()
 	{
-		var tableCards = new CaptureScoringRules.TableCard[_tableCards.Count];
-		for (int index = 0; index < _tableCards.Count; index++)
+		return ToCaptureScoringTableCards(_tableCards);
+	}
+
+	private CaptureScoringRules.TableCard[] ToCaptureScoringTableCards(IReadOnlyList<TableCard> sourceTableCards)
+	{
+		var tableCards = new CaptureScoringRules.TableCard[sourceTableCards.Count];
+		for (int index = 0; index < sourceTableCards.Count; index++)
 		{
-			tableCards[index] = ToCaptureScoringTableCard(_tableCards[index]);
+			tableCards[index] = ToCaptureScoringTableCard(sourceTableCards[index]);
 		}
 
 		return tableCards;
@@ -103,6 +108,7 @@ public partial class GameBoardScene
 	private CaptureScoringRules.Card ToCaptureScoringCard(PlayingCard card)
 	{
 		return new CaptureScoringRules.Card(
+			card.Rank,
 			GetCardScoreValue(card),
 			IsAttachedEffectType(card, CardEffectTypes.DoubleCollect));
 	}
