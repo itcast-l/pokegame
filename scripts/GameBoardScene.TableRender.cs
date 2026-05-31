@@ -14,6 +14,7 @@ public partial class GameBoardScene
 		}
 
 		Rect2 tableLayoutRect = GetTableCardLayoutRect();
+		int oldestAnimatedTableCardBackIndex = GetOldestAnimatedTableCardBackIndex();
 		for (int cardIndex = 0; cardIndex < _tableCards.Count; cardIndex++)
 		{
 			TableCard tableCardData = _tableCards[cardIndex];
@@ -30,14 +31,16 @@ public partial class GameBoardScene
 			bool showMainPlayerPreview = ShouldShowMainPlayerTablePreview(tableCardData);
 			if (tableCardData.Card.HasValue)
 			{
-				animateCardBack = !showMainPlayerPreview && !tableCardData.IsFaceUp && _cardBackTexture != null;
+				animateCardBack = cardIndex >= oldestAnimatedTableCardBackIndex
+					&& CanAnimateTableCardBack(tableCardData);
 				tableCardTexture = showMainPlayerPreview
 					? tableCardData.Card.Value.Texture
 					: tableCardData.IsFaceUp ? tableCardData.Card.Value.Texture : _cardBackTexture;
 			}
 			else if (tableCardData.ItemOverlay.HasValue && !tableCardData.IsFaceUp && _cardBackTexture != null)
 			{
-				animateCardBack = true;
+				animateCardBack = cardIndex >= oldestAnimatedTableCardBackIndex
+					&& CanAnimateTableCardBack(tableCardData);
 				hideItemOverlay = true;
 				tableCardTexture = _cardBackTexture;
 			}
@@ -133,6 +136,35 @@ public partial class GameBoardScene
 
 			_centerArena.AddChild(itemOverlay);
 		}
+	}
+
+	private int GetOldestAnimatedTableCardBackIndex()
+	{
+		int animatedCardBackCount = 0;
+		for (int cardIndex = _tableCards.Count - 1; cardIndex >= 0; cardIndex--)
+		{
+			TableCard tableCard = _tableCards[cardIndex];
+			if (tableCard.IsHiddenDuringCapture || !CanAnimateTableCardBack(tableCard))
+			{
+				continue;
+			}
+
+			animatedCardBackCount++;
+			if (animatedCardBackCount >= MaxAnimatedTableCardBacks)
+			{
+				return cardIndex;
+			}
+		}
+
+		return animatedCardBackCount > 0 ? 0 : int.MaxValue;
+	}
+
+	private bool CanAnimateTableCardBack(TableCard tableCard)
+	{
+		return _cardBackTexture != null
+			&& !tableCard.IsFaceUp
+			&& !ShouldShowMainPlayerTablePreview(tableCard)
+			&& (tableCard.Card.HasValue || tableCard.ItemOverlay.HasValue);
 	}
 
 	private void AddSandBurialOverlay(Vector2 cardPosition, int zIndex)

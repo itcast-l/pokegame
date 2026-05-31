@@ -17,6 +17,7 @@ public partial class MainMenuExitDialog : Control
 	private ColorRect _scrim = default!;
 
 	public PanelContainer DialogPanel { get; private set; } = default!;
+	public Button CancelButton => _cancelButton;
 
 	public override void _Ready()
 	{
@@ -29,6 +30,8 @@ public partial class MainMenuExitDialog : Control
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		_scrim.GuiInput += OnScrimGuiInput;
+		_cancelButton.FocusMode = Control.FocusModeEnum.All;
+		_confirmButton.FocusMode = Control.FocusModeEnum.All;
 		_cancelButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_confirmButton.Pressed += () => EmitSignal(SignalName.ConfirmRequested);
 	}

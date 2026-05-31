@@ -64,6 +64,17 @@ public partial class MainMenuSettingsDialog : Control
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		_scrim.GuiInput += OnScrimGuiInput;
+		EnableKeyboardFocus(
+			MasterVolumeSlider,
+			MusicVolumeSlider,
+			MuteAudioToggle,
+			WindowModeOption,
+			ResolutionOption,
+			LanguageOption,
+			OceanMotionToggle,
+			MotionScaleSlider,
+			_resetButton,
+			_doneButton);
 		StyleOptionPopup(WindowModeOption);
 		StyleOptionPopup(ResolutionOption);
 		StyleOptionPopup(LanguageOption);
@@ -103,5 +114,13 @@ public partial class MainMenuSettingsDialog : Control
 		popup.ShrinkWidth = false;
 		popup.ShrinkHeight = true;
 		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
+	}
+
+	private static void EnableKeyboardFocus(params Control[] controls)
+	{
+		foreach (Control control in controls)
+		{
+			control.FocusMode = Control.FocusModeEnum.All;
+		}
 	}
 }

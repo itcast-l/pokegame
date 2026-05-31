@@ -15,6 +15,9 @@ public partial class UnderwaterAmbientLayer : Control
 	[Export(PropertyHint.Range, "0.0,2.0,0.05")]
 	public float motion_scale = 1.0f;
 
+	[Export(PropertyHint.Range, "1,60,1")]
+	public int redraw_fps = 20;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Bubble> _bubbles = new();
 	private readonly List<Mote> _motes = new();
@@ -24,12 +27,14 @@ public partial class UnderwaterAmbientLayer : Control
 	private readonly Vector2[] _seagrassStemPoints = new Vector2[5];
 	private readonly Vector2[] _seagrassCenterLinePoints = new Vector2[3];
 	private double _time;
+	private double _redrawAccumulator;
 
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
 		_rng.Seed = 4107;
 		RebuildAmbient();
+		QueueRedraw();
 	}
 
 	public override void _Notification(int what)
@@ -37,12 +42,26 @@ public partial class UnderwaterAmbientLayer : Control
 		if (what == NotificationResized)
 		{
 			RebuildAmbient();
+			QueueRedraw();
 		}
 	}
 
 	public override void _Process(double delta)
 	{
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		_time += delta * motion_scale;
+		_redrawAccumulator += delta;
+		double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
+		if (_redrawAccumulator < redrawInterval)
+		{
+			return;
+		}
+
+		_redrawAccumulator %= redrawInterval;
 		QueueRedraw();
 	}
 
@@ -221,7 +240,7 @@ public partial class UnderwaterAmbientLayer : Control
 			}
 
 			DrawCircle(position, bubble.Radius, new Color(0.72f, 0.98f, 1.0f, bubble.Alpha * 0.18f));
-			DrawArc(position, bubble.Radius, -Mathf.Pi * 0.15f, Mathf.Pi * 1.18f, 18, new Color(0.76f, 1.0f, 1.0f, bubble.Alpha), 1.4f, true);
+			DrawArc(position, bubble.Radius, -Mathf.Pi * 0.15f, Mathf.Pi * 1.18f, 10, new Color(0.76f, 1.0f, 1.0f, bubble.Alpha), 1.4f, true);
 			DrawCircle(position + new Vector2(-bubble.Radius * 0.28f, -bubble.Radius * 0.25f), Mathf.Max(bubble.Radius * 0.18f, 1.0f), new Color(1.0f, 1.0f, 1.0f, bubble.Alpha * 0.75f));
 		}
 	}

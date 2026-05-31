@@ -42,6 +42,7 @@ public partial class MainMenuScene : Control
 		_exitDialogTween.TweenProperty(_exitDialogPanel, "scale", Vector2.One, DialogFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
+		CallDeferred(nameof(FocusExitDialogDefault));
 		await CompleteMenuCameraPushIn();
 	}
 
@@ -59,7 +60,11 @@ public partial class MainMenuScene : Control
 		_exitDialogTween.TweenProperty(_exitDialogPanel, "scale", new Vector2(0.96f, 0.96f), DialogFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
-		_exitDialogTween.Finished += () => _exitDialogRoot.Visible = false;
+		_exitDialogTween.Finished += () =>
+		{
+			_exitDialogRoot.Visible = false;
+			FocusExitButton();
+		};
 	}
 
 	private void UpdateExitDialogPosition()

@@ -22,6 +22,7 @@ public partial class MainMenuScene
 
 		_settingsDialogTween = CreateTween();
 		_settingsDialogTween.TweenProperty(_settingsDialogRoot, "modulate:a", 1.0f, DialogFadeSeconds);
+		CallDeferred(nameof(FocusSettingsDialogDefault));
 		await CompleteMenuCameraPushIn();
 	}
 
@@ -35,7 +36,11 @@ public partial class MainMenuScene
 
 		_settingsDialogTween = CreateTween();
 		_settingsDialogTween.TweenProperty(_settingsDialogRoot, "modulate:a", 0.0f, DialogFadeSeconds);
-		_settingsDialogTween.Finished += () => _settingsDialogRoot.Visible = false;
+		_settingsDialogTween.Finished += () =>
+		{
+			_settingsDialogRoot.Visible = false;
+			FocusSettingsButton();
+		};
 	}
 
 	private void UpdateSettingsDialogPosition()

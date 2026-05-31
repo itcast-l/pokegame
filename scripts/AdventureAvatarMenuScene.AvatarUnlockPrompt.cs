@@ -95,9 +95,14 @@ public partial class AdventureAvatarMenuScene
 
 		_isShowingAvatarUnlockPrompt = false;
 		SetAdventureMenuButtonsDisabled(false);
+		RefreshSelection();
 		if (showNext)
 		{
 			ShowPendingAdventureAvatarUnlockPrompt();
+		}
+		if (!_isShowingAvatarUnlockPrompt)
+		{
+			FocusDefaultControlDeferred();
 		}
 	}
 
@@ -129,7 +134,7 @@ public partial class AdventureAvatarMenuScene
 	private void SetAdventureMenuButtonsDisabled(bool disabled)
 	{
 		_backButton.Disabled = disabled;
-		_startButton.Disabled = disabled;
+		_startButton.Disabled = disabled || !IsStageUnlocked(_selectedAvatarId);
 		foreach (Button adventureButton in _adventureButtons.Values)
 		{
 			if (GodotObject.IsInstanceValid(adventureButton))
@@ -138,11 +143,11 @@ public partial class AdventureAvatarMenuScene
 			}
 		}
 
-		foreach (Button stageButton in _stageButtons.Values)
+		foreach ((string avatarId, Button stageButton) in _stageButtons)
 		{
 			if (GodotObject.IsInstanceValid(stageButton))
 			{
-				stageButton.Disabled = disabled;
+				stageButton.Disabled = disabled || !IsStageUnlocked(avatarId);
 			}
 		}
 	}

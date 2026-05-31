@@ -130,14 +130,32 @@ public partial class GameBoardScene
 			case AdventureAttackEffectStyles.FishBeam:
 				PlayGameSfx(GameSfx.FishBeam, -2.0f, 0.98f, 1.03f, 0.12);
 				break;
+			case AdventureAttackEffectStyles.CrabPincer:
+				PlayGameSfx(GameSfx.CrabPincer, -2.0f, 0.97f, 1.04f, 0.12);
+				break;
+			case AdventureAttackEffectStyles.JellyfishTentacle:
+				PlayGameSfx(GameSfx.JellyfishTentacle, -2.0f, 0.97f, 1.04f, 0.12);
+				break;
 			case AdventureAttackEffectStyles.MantaRayCyclone:
 				PlayGameSfx(GameSfx.MantaRayTideShift, -1.5f, 0.98f, 1.02f, 0.18);
+				break;
+			case AdventureAttackEffectStyles.SeaSlugMarker:
+				PlayGameSfx(GameSfx.SeaSlugMarker, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.GardenEelBurrow:
 				PlayGameSfx(GameSfx.GardenEelAmbush, -2.0f, 0.97f, 1.04f, 0.16);
 				break;
 			case AdventureAttackEffectStyles.LeafySeadragonSlash:
 				PlayGameSfx(GameSfx.LeafySeadragonBlade, -2.0f, 0.97f, 1.04f, 0.12);
+				break;
+			case AdventureAttackEffectStyles.DragonPrinceHit:
+				PlayGameSfx(GameSfx.DragonPrinceHit, -2.0f, 0.97f, 1.04f, 0.12);
+				break;
+			case AdventureAttackEffectStyles.DragonQueenJaw:
+				PlayGameSfx(GameSfx.DragonQueenJaw, -1.5f, 0.97f, 1.03f, 0.16);
+				break;
+			case AdventureAttackEffectStyles.BossKRoyalSeizure:
+				PlayGameSfx(GameSfx.BossKRoyalSeizure, -1.0f, 0.96f, 1.02f, 0.20);
 				break;
 		}
 	}
@@ -151,11 +169,17 @@ public partial class GameBoardScene
 
 		switch (abilityId)
 		{
+			case AdventureEnemyAbilities.TideGuard:
+				PlayGameSfx(GameSfx.TideGuard, -1.5f, 0.98f, 1.03f, 0.18);
+				break;
 			case AdventureEnemyAbilities.BubbleCover:
 				PlayGameSfx(GameSfx.JellyfishBubbleCover, -1.5f, 0.98f, 1.03f, 0.18);
 				break;
 			case AdventureEnemyAbilities.SandAmbush:
 				PlayGameSfx(GameSfx.GardenEelAmbush, -2.0f, 0.97f, 1.04f, 0.16);
+				break;
+			case AdventureEnemyAbilities.ColorCurrent:
+				PlayGameSfx(GameSfx.ColorCurrent, -2.0f, 0.97f, 1.04f, 0.16);
 				break;
 			case AdventureEnemyAbilities.SpiralShell:
 				PlayGameSfx(GameSfx.NautilusSpiralShell, -1.5f, 0.98f, 1.02f, 0.18);
@@ -168,6 +192,15 @@ public partial class GameBoardScene
 				break;
 			case AdventureEnemyAbilities.LeafyMirage:
 				PlayGameSfx(GameSfx.LeafySeadragonBlade, -2.0f, 0.97f, 1.04f, 0.12);
+				break;
+			case AdventureEnemyAbilities.DragonPrince:
+				PlayGameSfx(GameSfx.DragonPrinceAbility, -1.5f, 0.97f, 1.03f, 0.18);
+				break;
+			case AdventureEnemyAbilities.DragonQueen:
+				PlayGameSfx(GameSfx.DragonQueenAbility, -1.5f, 0.97f, 1.03f, 0.18);
+				break;
+			case AdventureEnemyAbilities.DragonKing:
+				PlayGameSfx(GameSfx.DragonKingAbility, -1.0f, 0.96f, 1.02f, 0.22);
 				break;
 		}
 	}

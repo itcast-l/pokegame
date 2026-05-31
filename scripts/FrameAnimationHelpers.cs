@@ -395,13 +395,12 @@ internal static class FrameAnimationHelpers
 	private static AnimationLibrary GetOrCreateDefaultLibrary(AnimationPlayer animationPlayer)
 	{
 		var libraryName = new StringName("");
-		AnimationLibrary? library = animationPlayer.GetAnimationLibrary(libraryName);
-		if (library != null)
+		if (animationPlayer.HasAnimationLibrary(libraryName))
 		{
-			return library;
+			return animationPlayer.GetAnimationLibrary(libraryName);
 		}
 
-		library = new AnimationLibrary();
+		var library = new AnimationLibrary();
 		animationPlayer.AddAnimationLibrary(libraryName, library);
 		return library;
 	}

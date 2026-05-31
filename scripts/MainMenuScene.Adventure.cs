@@ -150,6 +150,10 @@ public partial class MainMenuScene : Control
 		_adventureTransitionTween.TweenProperty(root, "modulate:a", 1.0f, AdventureMenuFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.Out);
+		if (adventureAvatarMenu is AdventureAvatarMenuScene adventureScene)
+		{
+			adventureScene.FocusDefaultControlDeferred();
+		}
 		GameAudio?.PlayMusic(GameMusic.AdventureMenu, 1.2f);
 	}
 
@@ -189,6 +193,7 @@ public partial class MainMenuScene : Control
 			}
 
 			PrepareAdventureAvatarMenuCache();
+			CallDeferred(nameof(FocusInitialMainMenuButton));
 		};
 	}
 

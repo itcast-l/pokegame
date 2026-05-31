@@ -50,6 +50,7 @@ public partial class OceanMenuButtonFrame : Control
 			Rect2 buttonRect = _button.GetGlobalRect();
 			bool hovered = buttonRect.HasPoint(GetGlobalMousePosition());
 			target = Mathf.Max(target, hovered ? 1.0f : 0.0f);
+			target = Mathf.Max(target, _button.HasFocus() ? 1.0f : 0.0f);
 			if (_button.ButtonPressed)
 			{
 				target = 0.62f;

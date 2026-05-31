@@ -58,10 +58,11 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("4_underwater_ambient_layer")
-bubble_count = 30
-mote_count = 72
-seagrass_blade_count = 52
-motion_scale = 0.85
+bubble_count = 10
+mote_count = 24
+seagrass_blade_count = 16
+motion_scale = 0.55
+redraw_fps = 12
 
 [node name="LayoutAreas" type="Control" parent="." unique_id=193865572]
 layout_mode = 1
@@ -367,7 +368,7 @@ offset_top = -6.4400024
 offset_right = 225.23999
 offset_bottom = 149.56
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
@@ -419,7 +420,7 @@ offset_top = -14.52002
 offset_right = 129.02399
 offset_bottom = 141.47998
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
@@ -467,7 +468,7 @@ offset_top = 14.400002
 offset_right = 179.6
 offset_bottom = 170.4
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
@@ -515,7 +516,7 @@ offset_top = 15.400002
 offset_right = 189.19995
 offset_bottom = 171.4
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 

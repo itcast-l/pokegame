@@ -84,6 +84,7 @@ public partial class GameBoardScene : Control
 	private const string TableRenderPooledPanelMeta = "ocean_table_render_panel";
 	private const string CardCountLabelNodeName = "CardCountLabel";
 	private const int VisiblePileCards = 4;
+	private const int MaxAnimatedTableCardBacks = 2;
 	private static readonly string[] PileCardNodeNames = { "PileCard_0", "PileCard_1", "PileCard_2", "PileCard_3" };
 	private const int StartingHandCards = 5;
 	private const int MaxTotalHandCards = 8;

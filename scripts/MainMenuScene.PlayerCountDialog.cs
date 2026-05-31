@@ -59,6 +59,7 @@ public partial class MainMenuScene : Control
 		_playerCountDialogMotion.Position = Vector2.Zero;
 		_playerCountDialogMotion.Scale = Vector2.One;
 		_playerCountDialogPanel.PivotOffset = _playerCountDialogPanel.Size * 0.5f;
+		CallDeferred(nameof(FocusPlayerCountDialogDefault));
 	}
 
 	private void HidePlayerCountDialog()
@@ -71,7 +72,11 @@ public partial class MainMenuScene : Control
 
 		_playerCountDialogTween = CreateTween();
 		_playerCountDialogTween.TweenProperty(_playerCountDialogRoot, "modulate:a", 0.0f, PlayerCountDialogHideSeconds);
-		_playerCountDialogTween.Finished += () => _playerCountDialogRoot.Visible = false;
+		_playerCountDialogTween.Finished += () =>
+		{
+			_playerCountDialogRoot.Visible = false;
+			GrabFocusIfAvailable(_singlePlayerButton);
+		};
 	}
 
 	private void UpdatePlayerCountDialogPanelPosition()

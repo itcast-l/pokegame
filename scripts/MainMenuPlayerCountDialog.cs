@@ -40,6 +40,7 @@ public partial class MainMenuPlayerCountDialog : Control
 
 		_scrim.GuiInput += OnScrimGuiInput;
 		_startButton.Pressed += EmitStartGameRequested;
+		EnableKeyboardFocus(PlayerCountOption, ItemModeOption, WinningScoreOption, _startButton);
 		StyleOptionPopup(PlayerCountOption);
 		StyleOptionPopup(ItemModeOption);
 		StyleOptionPopup(WinningScoreOption);
@@ -101,5 +102,13 @@ public partial class MainMenuPlayerCountDialog : Control
 		popup.ShrinkWidth = false;
 		popup.ShrinkHeight = true;
 		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
+	}
+
+	private static void EnableKeyboardFocus(params Control[] controls)
+	{
+		foreach (Control control in controls)
+		{
+			control.FocusMode = Control.FocusModeEnum.All;
+		}
 	}
 }

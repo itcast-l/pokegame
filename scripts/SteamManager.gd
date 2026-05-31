@@ -72,6 +72,9 @@ func _exit_tree() -> void:
 
 
 func refresh_languages() -> void:
+	if not is_initialized:
+		return
+
 	var steam := _get_steam()
 	if steam == null:
 		return

@@ -61,6 +61,7 @@ public partial class AdventureAvatarMenuScene : Control
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();
 		RefreshLocalizedText();
+		FocusDefaultControlDeferred();
 		CallDeferred(nameof(PlayAdventureMenuMusicIfStandalone));
 		CallDeferred(nameof(ShowPendingAdventureAvatarUnlockPrompt));
 	}

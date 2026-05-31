@@ -34,5 +34,6 @@ public partial class MainMenuScene : Control
 		SetMainMenuButtonsDisabled(false);
 		PrepareAdventureAvatarMenuCache();
 		ShowPendingAdventureAvatarUnlockPrompt();
+		CallDeferred(nameof(FocusInitialMainMenuButton));
 	}
 }

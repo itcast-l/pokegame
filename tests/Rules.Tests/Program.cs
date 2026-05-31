@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 internal static class Program
 {
@@ -13,6 +14,11 @@ internal static class Program
 		Run("capture scoring redirects pair destroy owner", CaptureScoringRedirectsPairDestroyOwner);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
+		Run("adventure ai early profile can skip obvious capture", AdventureAiEarlyProfileCanSkipObviousCapture);
+		Run("adventure ai point scoring starts after early stages", AdventureAiPointScoringStartsAfterEarlyStages);
+		Run("adventure ai random capture can pick non-best capture", AdventureAiRandomCaptureCanPickNonBestCapture);
+		Run("adventure ai final profile always picks best capture", AdventureAiFinalProfileAlwaysPicksBestCapture);
+		Run("generated adventure sfx files exist", GeneratedAdventureSfxFilesExist);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
 		Run("turn rules skip inactive players", TurnRulesSkipInactivePlayers);
 		Run("turn rules find single remaining player", TurnRulesFindSingleRemainingPlayer);
@@ -119,6 +125,155 @@ internal static class Program
 		Equal(0, handIndex);
 	}
 
+	private static void AdventureAiEarlyProfileCanSkipObviousCapture()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(1),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 90,
+			randomCaptureOrdinal: 0,
+			out _);
+
+		False(picked);
+	}
+
+	private static void AdventureAiPointScoringStartsAfterEarlyStages()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("5", 5),
+			TableCard("6", 6),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: true),
+		};
+
+		bool earlyPicked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(6),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out int earlyHandIndex);
+		bool laterPicked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(7),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out int laterHandIndex);
+
+		True(earlyPicked);
+		True(laterPicked);
+		Equal(0, earlyHandIndex);
+		Equal(1, laterHandIndex);
+	}
+
+	private static void AdventureAiRandomCaptureCanPickNonBestCapture()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("K", 12),
+			TableCard("Q", 12),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(1),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 30,
+			randomCaptureOrdinal: 1,
+			out int handIndex);
+
+		True(picked);
+		Equal(1, handIndex);
+	}
+
+	private static void AdventureAiFinalProfileAlwaysPicksBestCapture()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 1),
+			TableCard("3", 1),
+			TableCard("K", 12),
+			TableCard("Q", 12),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(14),
+			royalCaptureThreshold: 5,
+			decisionRollPercent: 99,
+			randomCaptureOrdinal: 0,
+			out int handIndex);
+
+		True(picked);
+		Equal(0, handIndex);
+	}
+
+	private static void GeneratedAdventureSfxFilesExist()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string[] relativePaths =
+		{
+			"asset/audio/sfx/adventure/crab_pincer.mp3",
+			"asset/audio/sfx/adventure/jellyfish_tentacle.mp3",
+			"asset/audio/sfx/adventure/sea_slug_marker.mp3",
+			"asset/audio/sfx/adventure/dragon_prince_hit.mp3",
+			"asset/audio/sfx/adventure/dragon_queen_jaw.mp3",
+			"asset/audio/sfx/adventure/boss_k_royal_seizure.mp3",
+			"asset/audio/sfx/adventure/tide_guard.mp3",
+			"asset/audio/sfx/adventure/color_current.mp3",
+			"asset/audio/sfx/adventure/dragon_prince_ability.mp3",
+			"asset/audio/sfx/adventure/dragon_queen_ability.mp3",
+			"asset/audio/sfx/adventure/dragon_king_ability.mp3",
+		};
+
+		foreach (string relativePath in relativePaths)
+		{
+			string path = Path.Combine(repoRoot, relativePath);
+			True(File.Exists(path));
+			True(new FileInfo(path).Length > 1024);
+		}
+	}
+
 	private static void GameLoopPhasePrecedenceIsStable()
 	{
 		Equal(GameLoopPhase.LeavingGame, GameLoopPhaseRules.GetPhase(new GameLoopPhaseState(
@@ -178,6 +333,22 @@ internal static class Program
 		SuppressSlimeCoatedScore: false,
 		ApplyScoreReductionPerCard: false,
 		ScoreReductionPerCard: 0);
+
+	private static string FindRepositoryRoot()
+	{
+		DirectoryInfo? directory = new(AppContext.BaseDirectory);
+		while (directory != null)
+		{
+			if (File.Exists(Path.Combine(directory.FullName, "project.godot")))
+			{
+				return directory.FullName;
+			}
+
+			directory = directory.Parent;
+		}
+
+		throw new DirectoryNotFoundException("Could not locate project.godot.");
+	}
 
 	private static CaptureScoringRules.TableCard TableCard(
 		string rank,

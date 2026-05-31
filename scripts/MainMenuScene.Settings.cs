@@ -109,7 +109,7 @@ public partial class MainMenuScene : Control
 			}
 
 			_oceanMotion = pressed;
-			_motionScaleSlider.Editable = pressed;
+			SyncMotionScaleControlState();
 			OnSettingsChanged();
 		};
 		_motionScaleSlider.ValueChanged += value =>

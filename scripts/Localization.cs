@@ -186,6 +186,11 @@ public static class Localization
 			}
 
 			string translationPath = $"res://localization/ui.{preference}.translation";
+			if (!ResourceLoader.Exists(translationPath))
+			{
+				continue;
+			}
+
 			Translation? translation = GD.Load<Translation>(translationPath);
 			if (translation == null)
 			{

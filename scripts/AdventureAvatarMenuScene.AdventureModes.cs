@@ -50,7 +50,9 @@ public partial class AdventureAvatarMenuScene
 			Label nameLabel = frame.GetNode<Label>("AdventureEntryContent/AdventureName");
 			_localizedLabels.Add((nameLabel, adventureMode.NameKey));
 			Button button = frame.GetNode<Button>("Button");
+			button.FocusMode = Control.FocusModeEnum.All;
 			button.Pressed += () => SelectAdventure(adventureMode.Id);
+			button.FocusEntered += () => SelectAdventure(adventureMode.Id);
 			_adventureButtons[adventureMode.Id] = button;
 		}
 

@@ -182,6 +182,7 @@ public partial class MainMenuScene : Control
 		BuildPlayerCountDialog();
 		BuildSettingsDialog();
 		BuildExitDialog();
+		ConfigureMainMenuFocus();
 		LoadSettings();
 		ApplySelectedAvatar();
 		ApplyPlayerName();
@@ -200,6 +201,7 @@ public partial class MainMenuScene : Control
 		{
 			PrepareAdventureAvatarMenuCache();
 			ShowPendingAdventureAvatarUnlockPrompt();
+			CallDeferred(nameof(FocusInitialMainMenuButton));
 		}
 		PrepareBackgroundMusic();
 	}

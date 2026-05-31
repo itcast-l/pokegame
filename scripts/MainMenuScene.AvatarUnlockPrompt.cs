@@ -98,6 +98,7 @@ public partial class MainMenuScene : Control
 		_isShowingAvatarUnlockPrompt = false;
 		SetMainMenuButtonsDisabled(false);
 		ShowPendingAdventureAvatarUnlockPrompt();
+		CallDeferred(nameof(FocusInitialMainMenuButton));
 	}
 
 	private void EnsureAvatarUnlockPrompt()

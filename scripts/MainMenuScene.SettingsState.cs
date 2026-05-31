@@ -90,7 +90,7 @@ public partial class MainMenuScene
 
 		if (_motionScaleSlider != null)
 		{
-			_motionScaleSlider.Editable = _oceanMotion;
+			SyncMotionScaleControlState();
 		}
 
 		UpdateSettingsLabels();
@@ -133,9 +133,26 @@ public partial class MainMenuScene
 		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
 		_oceanMotionToggle.ButtonPressed = _oceanMotion;
 		_motionScaleSlider.Value = Mathf.RoundToInt(_motionScale * 100.0f);
-		_motionScaleSlider.Editable = _oceanMotion;
+		SyncMotionScaleControlState();
 		_isSyncingSettingsControls = false;
 		UpdateSettingsLabels();
+	}
+
+	private void SyncMotionScaleControlState()
+	{
+		if (_motionScaleSlider == null)
+		{
+			return;
+		}
+
+		_motionScaleSlider.Editable = _oceanMotion;
+		_motionScaleSlider.FocusMode = _oceanMotion
+			? Control.FocusModeEnum.All
+			: Control.FocusModeEnum.None;
+		if (!_oceanMotion && _motionScaleSlider.HasFocus())
+		{
+			_oceanMotionToggle.GrabFocus();
+		}
 	}
 
 	private void UpdateSettingsLabels()

@@ -1,6 +1,6 @@
 # Audio/Visual QA Coverage
 
-Last audited: 2026-05-30
+Last audited: 2026-05-31
 
 This is a static QA pass for the card-table audio/visual layer. It checks whether each major gameplay action, item-card effect, and adventure avatar ability has:
 
@@ -75,8 +75,8 @@ Generic adventure coverage:
 
 Dedicated SFX routing currently exists for:
 
-- Attack styles: `fish_beam`, `manta_ray_cyclone`, `garden_eel_burrow`, `leafy_seadragon_slash`.
-- Ability ids: `bubble_cover`, `sand_ambush`, `spiral_shell`, `tusk_break`, `tide_shift`, `leafy_mirage`.
+- Attack styles: `fish_beam`, `crab_pincer`, `jellyfish_tentacle`, `manta_ray_cyclone`, `sea_slug_marker`, `garden_eel_burrow`, `leafy_seadragon_slash`, `dragon_prince_hit`, `dragon_queen_jaw`, `boss_k_royal_seizure`.
+- Ability ids: `tide_guard`, `bubble_cover`, `sand_ambush`, `color_current`, `spiral_shell`, `tusk_break`, `tide_shift`, `leafy_mirage`, `dragon_prince`, `dragon_queen`, `dragon_king`.
 
 | Avatar | Ability id(s) | Attack visual | Ability visual | Dedicated SFX coverage | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -84,27 +84,26 @@ Dedicated SFX routing currently exists for:
 | Fish / stage 1 | None | `fish_beam` style and fish damage frames | N/A | `fish_beam` plus generic attack SFX | OK | No ability expected. |
 | Lanternfish / stage 2 | None | Lanternfish damage frames, generic attack flight | N/A | Generic attack SFX only | OK | No ability expected; unique attack SFX is optional. |
 | Shrimp / stage 3 | None | Shrimp damage frames, generic attack flight | N/A | Generic attack SFX only | OK | No ability expected; unique attack SFX is optional. |
-| Crab / stage 4 | `tide_guard` | `crab_pincer` style | Enemy ability overlay | Missing `tide_guard` ability SFX and `crab_pincer` style SFX | PARTIAL | Visuals are present; audio is generic except avatar/attack baseline. |
-| Jellyfish / stage 5 | `bubble_cover` | `jellyfish_tentacle` style | Enemy ability overlay | `bubble_cover` covered; missing `jellyfish_tentacle` style SFX | PARTIAL | Ability audio exists, attack style audio does not. |
+| Crab / stage 4 | `tide_guard` | `crab_pincer` style | Enemy ability overlay | `tide_guard`, `crab_pincer` | OK | Dedicated generated SFX are routed for both ability and attack style. |
+| Jellyfish / stage 5 | `bubble_cover` | `jellyfish_tentacle` style | Enemy ability overlay | `bubble_cover`, `jellyfish_tentacle` | OK | Dedicated generated SFX are routed for the attack style. |
 | Manta Ray / stage 6 | `tide_shift` | `manta_ray_cyclone` style | Enemy ability overlay | `manta_ray_tide_shift` covers ability/style | OK | Dedicated audio path exists. |
 | Garden Eel / stage 7 | `sand_ambush` | `garden_eel_burrow` style | Enemy ability overlay | `garden_eel_ambush` covers ability/style | OK | Dedicated audio path exists. |
-| Sea Slug / stage 8 | `color_current` | `sea_slug_marker` style | Enemy ability overlay | Missing `color_current` ability SFX and `sea_slug_marker` style SFX | PARTIAL | Visuals are present; audio is generic except avatar/attack baseline. |
+| Sea Slug / stage 8 | `color_current` | `sea_slug_marker` style | Enemy ability overlay | `color_current`, `sea_slug_marker` | OK | Dedicated generated SFX are routed for both ability and attack style. |
 | Nautilus / stage 9 | `spiral_shell` | Nautilus damage frames, generic attack flight | Enemy ability overlay | `nautilus_spiral_shell` ability SFX; generic attack SFX | OK | No explicit attack style is configured. |
 | Narwhal / stage 10 | `tusk_break` | Narwhal attack FX root and damage frames | Enemy ability overlay | `narwhal_tusk_break` ability SFX; generic attack SFX | OK | No explicit attack style is configured. |
 | Leafy Seadragon / stage 11 | `leafy_mirage` | `leafy_seadragon_slash` style | Enemy ability overlay | `leafy_seadragon_blade` covers ability/style | OK | Dedicated audio path exists. |
-| Dragon Prince J / stage 12 | `dragon_prince` | `dragon_prince_hit` style | Enemy ability overlay and special Jack-related flow | Missing `dragon_prince` ability SFX and `dragon_prince_hit` style SFX | PARTIAL | Visuals are present; audio is generic except avatar/attack baseline. |
-| Dragon Queen Q / stage 13 | `dragon_queen` | `dragon_queen_jaw` style | Enemy ability overlay and steal flow | Missing `dragon_queen` ability SFX and `dragon_queen_jaw` style SFX | PARTIAL | Steal-card SFX may play for card movement, but the ability id has no dedicated route. |
-| Boss K / stage 14 | `tide_guard`, `bubble_cover`, `tide_shift`, `sand_ambush`, `spiral_shell`, `tusk_break`, `leafy_mirage`, `dragon_prince`, `dragon_queen`, `dragon_king` | `boss_k_royal_seizure` style | Boss ability overlay and borrowed-avatar FX where eligible | Covered only for borrowed/known ability ids; missing `dragon_king`, `dragon_prince`, `dragon_queen`, `tide_guard`, `color_current`-style equivalents, and `boss_k_royal_seizure` style SFX | PARTIAL | Boss visuals are broad, but audio coverage is uneven. |
+| Dragon Prince J / stage 12 | `dragon_prince` | `dragon_prince_hit` style | Enemy ability overlay and special Jack-related flow | `dragon_prince`, `dragon_prince_hit` | OK | Dedicated generated SFX are routed for both ability and attack style. |
+| Dragon Queen Q / stage 13 | `dragon_queen` | `dragon_queen_jaw` style | Enemy ability overlay and steal flow | `dragon_queen`, `dragon_queen_jaw`; `steal_card` remains for card movement | OK | Dedicated generated SFX cover the ability identity; steal-card SFX still supports the card movement. |
+| Boss K / stage 14 | `tide_guard`, `bubble_cover`, `tide_shift`, `sand_ambush`, `spiral_shell`, `tusk_break`, `leafy_mirage`, `dragon_prince`, `dragon_queen`, `dragon_king` | `boss_k_royal_seizure` style | Boss ability overlay and borrowed-avatar FX where eligible | All configured ability ids plus `boss_k_royal_seizure` | OK | Static routing is complete; runtime mix QA is still required because Boss K can stack strong ability layers. |
 
 ## Open Gaps
 
 | Priority | Gap | Concrete next step |
 | --- | --- | --- |
-| P1 | Missing dedicated attack-style SFX routing for `crab_pincer`, `jellyfish_tentacle`, `sea_slug_marker`, `dragon_prince_hit`, `dragon_queen_jaw`, and `boss_k_royal_seizure`. | Add new `GameSfx` constants/assets or intentionally map these styles to existing generic/adventure SFX in `PlayAdventureAttackStyleSfx`. |
-| P1 | Missing dedicated ability SFX routing for `tide_guard`, `color_current`, `dragon_prince`, `dragon_queen`, and `dragon_king`. | Add switch cases in `PlayAdventureAbilitySfx`; reuse existing SFX only where the sound identity is acceptable. |
+| P1 | Newly generated adventure SFX have static routes, but their loudness, timing, and tonal fit have not been runtime-auditioned across stages 4-14. | Run the adventure stages with headphones/speakers, adjust `volumeDb`, pitch ranges, cooldowns, or regenerate any weak sounds. |
 | P2 | `greed.tres` is disabled and filtered out of rewards, but still has `CanBeQuestionReward = true` and an empty `EffectType`. | Either set `CanBeQuestionReward = false` for clarity, or implement the Greed effect before enabling it. |
 | P2 | Static coverage does not prove mix, timing, or runtime layering. | Run a Godot QA pass for main menu, local match, each item card, and adventure stages 4-14 while checking logs for missing stream warnings. |
-| P2 | No automated coverage check exists for ability ids and attack styles versus SFX switch cases. | Add a lightweight catalog smoke check that reports configured ability/style ids without dedicated SFX mapping. |
+| P2 | Automated coverage only checks generated SFX files exist; it does not yet compare all configured ability/style ids against routing. | Add a lightweight catalog smoke check that reports configured ability/style ids without dedicated SFX mapping. |
 
 ## Runtime QA Checklist
 

@@ -24,6 +24,7 @@ public partial class AdventureAvatarMenuScene
 
 		_backButton.Pressed += ReturnToMainMenu;
 		_startButton.Pressed += StartAdventure;
+		ConfigureAdventureMenuFocus();
 		_levelScroll.GuiInput += OnLevelScrollGuiInput;
 		_levelScroll.GetVScrollBar().ValueChanged += value => _levelScrollTarget = (int)Mathf.Round(value);
 

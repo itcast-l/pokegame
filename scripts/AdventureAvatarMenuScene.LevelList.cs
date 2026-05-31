@@ -60,8 +60,14 @@ public partial class AdventureAvatarMenuScene
 		arrowLabel.AddThemeColorOverride("font_color", new Color(accentColor.R, accentColor.G, accentColor.B, 0.82f));
 
 		Button button = frame.GetNode<Button>("Button");
+		button.FocusMode = Control.FocusModeEnum.All;
 		button.TooltipText = avatarDefinition.DisplayName;
 		button.Pressed += () => SelectAvatar(avatarDefinition.Id);
+		button.FocusEntered += () =>
+		{
+			SelectAvatar(avatarDefinition.Id);
+			ScrollSelectedEntryIntoView();
+		};
 		_stageButtons[avatarDefinition.Id] = button;
 	}
 }

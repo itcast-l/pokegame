@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="../../scripts/CaptureScoringRules.cs" Link="Rules/CaptureScoringRules.cs" />
     <Compile Include="../../scripts/PotentialCaptureRules.cs" Link="Rules/PotentialCaptureRules.cs" />
+    <Compile Include="../../scripts/EnemyAiRules.cs" Link="Rules/EnemyAiRules.cs" />
     <Compile Include="../../scripts/GameLoopPhaseRules.cs" Link="Rules/GameLoopPhaseRules.cs" />
     <Compile Include="../../scripts/GameTurnRules.cs" Link="Rules/GameTurnRules.cs" />
   </ItemGroup>
