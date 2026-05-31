@@ -385,6 +385,22 @@ public partial class GameAudioManager : Node
 		UpdateActiveMusicVolumes();
 	}
 
+	public void WarmupSfx(string sfxId)
+	{
+		if (!string.IsNullOrWhiteSpace(sfxId))
+		{
+			_ = GetSfxStream(sfxId);
+		}
+	}
+
+	public void WarmupMusic(string musicId)
+	{
+		if (!string.IsNullOrWhiteSpace(musicId) && MusicPaths.TryGetValue(musicId, out MusicTrackSpec? spec))
+		{
+			_ = GetMusicStream(musicId, spec);
+		}
+	}
+
 	private bool IsCoolingDown(string sfxId, double cooldownSeconds)
 	{
 		ulong now = Time.GetTicksMsec();

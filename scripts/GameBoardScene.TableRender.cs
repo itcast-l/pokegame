@@ -4,9 +4,23 @@ using Godot;
 public partial class GameBoardScene
 {
 	private static readonly StyleBoxFlat SandBurialOverlayStyle = CreateSandBurialOverlayStyle();
+	private int _tableRenderSignature;
+	private bool _tableRenderSignatureInitialized;
 
 	private void RenderTableCards()
 	{
+		ulong sampleStart = BeginPerformanceSample();
+		int renderSignature = BuildTableRenderSignature();
+		if (_tableRenderSignatureInitialized
+			&& _tableRenderSignature == renderSignature
+			&& CanSkipTableRender())
+		{
+			EndPerformanceSample("RenderTableCards(skip)", sampleStart);
+			return;
+		}
+
+		_tableRenderSignatureInitialized = true;
+		_tableRenderSignature = renderSignature;
 		for (int childIndex = _centerArena.GetChildCount() - 1; childIndex >= 0; childIndex--)
 		{
 			Node child = _centerArena.GetChild(childIndex);
@@ -136,6 +150,87 @@ public partial class GameBoardScene
 
 			_centerArena.AddChild(itemOverlay);
 		}
+		EndPerformanceSample("RenderTableCards", sampleStart);
+	}
+
+	private int BuildTableRenderSignature()
+	{
+		var signature = new HashCode();
+		Rect2 tableLayoutRect = GetTableCardLayoutRect();
+		signature.Add(_tableCards.Count);
+		signature.Add(tableLayoutRect.Position.X);
+		signature.Add(tableLayoutRect.Position.Y);
+		signature.Add(tableLayoutRect.Size.X);
+		signature.Add(tableLayoutRect.Size.Y);
+		signature.Add(_centerArena.Size.X);
+		signature.Add(_centerArena.Size.Y);
+		signature.Add(TranslationServer.GetLocale());
+		AddTextureSignature(ref signature, _cardBackTexture);
+		AddTextureSignature(ref signature, _slimeCardOverlayTexture);
+
+		for (int cardIndex = 0; cardIndex < _tableCards.Count; cardIndex++)
+		{
+			TableCard tableCard = _tableCards[cardIndex];
+			signature.Add(cardIndex);
+			signature.Add(tableCard.IsFaceUp);
+			signature.Add(tableCard.IsHiddenDuringCapture);
+			signature.Add(tableCard.IsBuriedInSand);
+			signature.Add(tableCard.IsSlimeCoated);
+			signature.Add(tableCard.ItemOwnerPlayerIndex);
+			signature.Add(tableCard.CardOwnerPlayerIndex);
+			signature.Add(tableCard.RemoveCardOnCapture);
+			if (tableCard.Card.HasValue)
+			{
+				PlayingCard card = tableCard.Card.Value;
+				signature.Add(card.Suit);
+				signature.Add(card.Rank);
+				signature.Add(card.AttachedItemCardIdsCsv);
+				AddTextureSignature(ref signature, card.Texture);
+				AddTextureSignature(ref signature, GetCardAttachmentOverlayTexture(card));
+			}
+			else
+			{
+				signature.Add(string.Empty);
+				signature.Add(string.Empty);
+				signature.Add(string.Empty);
+				AddTextureSignature(ref signature, null);
+				AddTextureSignature(ref signature, null);
+			}
+
+			if (tableCard.ItemOverlay.HasValue)
+			{
+				ItemCard itemOverlay = tableCard.ItemOverlay.Value;
+				signature.Add(itemOverlay.Id);
+				AddTextureSignature(ref signature, itemOverlay.Texture);
+			}
+			else
+			{
+				signature.Add(string.Empty);
+				AddTextureSignature(ref signature, null);
+			}
+		}
+
+		return signature.ToHashCode();
+	}
+
+	private bool CanSkipTableRender()
+	{
+		for (int childIndex = 0; childIndex < _centerArena.GetChildCount(); childIndex++)
+		{
+			if (!IsTableRenderManagedChild(_centerArena.GetChild(childIndex)))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static bool IsTableRenderManagedChild(Node child)
+	{
+		return child is TextureRect textureRect && textureRect.HasMeta(TableRenderPooledTextureMeta)
+			|| child is Panel panel && panel.HasMeta(TableRenderPooledPanelMeta)
+			|| child is Label label && label.Name.ToString() == "CardDescriptionLabel";
 	}
 
 	private int GetOldestAnimatedTableCardBackIndex()

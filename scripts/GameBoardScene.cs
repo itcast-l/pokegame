@@ -332,6 +332,12 @@ public partial class GameBoardScene : Control
 	[Export(PropertyHint.Range, "-1,200,1")]
 	public int debug_main_player_starting_score = -1;
 
+	[Export]
+	public bool debug_performance_trace = false;
+
+	[Export(PropertyHint.Range, "0,50,0.5")]
+	public float debug_performance_trace_min_ms = 4.0f;
+
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
 	private Control _topPlayerArea = default!;
@@ -386,6 +392,7 @@ public partial class GameBoardScene : Control
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: true);
 		PlayBoardMusic();
+		_ = WarmupGameplayResourcesAsync(_turnSequenceGeneration);
 	}
 
 	public override void _Process(double delta)

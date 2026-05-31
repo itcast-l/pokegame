@@ -43,6 +43,7 @@ public partial class GameBoardScene
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
+		InvalidateRenderCaches();
 		_isResolvingMagnetAttachmentSelection = false;
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;

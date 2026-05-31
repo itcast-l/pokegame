@@ -3,11 +3,24 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private readonly int[] _playerCardPileRenderSignatures = new int[MaxPlayers];
+	private readonly bool[] _playerCardPileRenderSignaturesInitialized = new bool[MaxPlayers];
+
 	private void RenderPlayerCardPiles()
 	{
+		ulong sampleStart = BeginPerformanceSample();
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			Control pile = _playerCardPiles[playerIndex];
+			int renderSignature = BuildPlayerCardPileRenderSignature(playerIndex, pile);
+			if (_playerCardPileRenderSignaturesInitialized[playerIndex]
+				&& _playerCardPileRenderSignatures[playerIndex] == renderSignature)
+			{
+				continue;
+			}
+
+			_playerCardPileRenderSignaturesInitialized[playerIndex] = true;
+			_playerCardPileRenderSignatures[playerIndex] = renderSignature;
 
 			pile.Visible = playerIndex < player_count;
 			if (!pile.Visible)
@@ -42,6 +55,37 @@ public partial class GameBoardScene
 				countLabel.Text = cardCount.ToString();
 			}
 		}
+
+		EndPerformanceSample("RenderPlayerCardPiles", sampleStart);
+	}
+
+	private int BuildPlayerCardPileRenderSignature(int playerIndex, Control pile)
+	{
+		var signature = new HashCode();
+		bool playerVisible = playerIndex < player_count;
+		signature.Add(playerVisible);
+		if (!playerVisible)
+		{
+			return signature.ToHashCode();
+		}
+
+		int cardCount = GetVisiblePileCardCountForRender(playerIndex, _playerDecks[playerIndex].Count);
+		signature.Add(player_count);
+		signature.Add(cardCount);
+		signature.Add(Math.Min(cardCount, VisiblePileCards));
+		signature.Add(GetCardPileRotationDegreesForPlayer(playerIndex));
+		signature.Add(_isOpeningDealAnimationPlaying);
+		signature.Add(pile.Size.X);
+		signature.Add(pile.Size.Y);
+		AddTextureSignature(ref signature, _cardBackTexture);
+		return signature.ToHashCode();
+	}
+
+	private void InvalidateRenderCaches()
+	{
+		Array.Fill(_playerHandRenderSignaturesInitialized, false);
+		Array.Fill(_playerCardPileRenderSignaturesInitialized, false);
+		_tableRenderSignatureInitialized = false;
 	}
 
 	private void EnsurePlayerCardPileVisuals(Control pile)
