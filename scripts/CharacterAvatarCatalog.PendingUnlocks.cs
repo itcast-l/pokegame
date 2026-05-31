@@ -6,20 +6,8 @@ public static partial class CharacterAvatarCatalog
 {
 	private static List<string> LoadPendingAdventureAvatarUnlockQueue()
 	{
-		string rawQueue = GameSaveStore.GetString(GameSaveStore.PendingAvatarUnlockQueueKey, string.Empty);
-		List<string> queue = ParsePendingAdventureAvatarUnlockQueue(rawQueue);
-		if (queue.Count > 0)
-		{
-			return queue;
-		}
-
-		string legacyAvatarId = GameSaveStore.GetString(GameSaveStore.PendingAvatarUnlockKey, string.Empty);
-		if (!string.IsNullOrWhiteSpace(legacyAvatarId))
-		{
-			queue.Add(legacyAvatarId);
-		}
-
-		return queue;
+		string rawQueue = GameSaveStore.LoadActiveProfile().PendingAvatarUnlockQueue;
+		return ParsePendingAdventureAvatarUnlockQueue(rawQueue);
 	}
 
 	private static List<string> ParsePendingAdventureAvatarUnlockQueue(string rawQueue)
@@ -39,9 +27,10 @@ public static partial class CharacterAvatarCatalog
 
 	private static Error SavePendingAdventureAvatarUnlockQueue(IReadOnlyList<string> queue)
 	{
-		return GameSaveStore.SetValues(
-			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockQueueKey, FormatPendingAdventureAvatarUnlockQueue(queue)),
-			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockKey, string.Empty),
-			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockStageKey, 0));
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		return GameSaveStore.SaveActiveProfile(profile with
+		{
+			PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(queue),
+		});
 	}
 }

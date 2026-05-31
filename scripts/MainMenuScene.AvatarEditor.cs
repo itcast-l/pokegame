@@ -58,7 +58,7 @@ public partial class MainMenuScene : Control
 		_playerName = PlayerNameRules.Normalize(playerName);
 		ApplySelectedAvatar();
 		ApplyPlayerName();
-		SaveSettings();
+		SavePlayerProfile();
 	}
 
 	private void ApplySelectedAvatar()

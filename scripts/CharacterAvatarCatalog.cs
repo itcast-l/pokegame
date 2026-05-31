@@ -146,7 +146,7 @@ public static partial class CharacterAvatarCatalog
 
 	public static int LoadHighestCompletedAdventureStage()
 	{
-		int highestCompletedStage = GameSaveStore.GetInt(GameSaveStore.HighestCompletedStageKey, 0);
+		int highestCompletedStage = GameSaveStore.LoadActiveProfile().HighestCompletedStage;
 		return Mathf.Clamp(highestCompletedStage, 0, GetAdventureStageCount());
 	}
 
@@ -159,7 +159,8 @@ public static partial class CharacterAvatarCatalog
 			return;
 		}
 
-		int previousHighestStage = GameSaveStore.GetInt(GameSaveStore.HighestCompletedStageKey, 0);
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		int previousHighestStage = Mathf.Clamp(profile.HighestCompletedStage, 0, GetAdventureStageCount());
 		if (stageNumber <= previousHighestStage)
 		{
 			return;
@@ -167,11 +168,11 @@ public static partial class CharacterAvatarCatalog
 
 		var pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue();
 		pendingUnlocks.Add(normalizedAvatarId);
-		Error saveResult = GameSaveStore.SetValues(
-			new GameSaveStore.SaveValue(GameSaveStore.HighestCompletedStageKey, stageNumber),
-			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockQueueKey, FormatPendingAdventureAvatarUnlockQueue(pendingUnlocks)),
-			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockKey, string.Empty),
-			new GameSaveStore.SaveValue(GameSaveStore.PendingAvatarUnlockStageKey, 0));
+		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		{
+			HighestCompletedStage = stageNumber,
+			PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(pendingUnlocks),
+		});
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save adventure progress: {saveResult}");
@@ -254,7 +255,7 @@ public static partial class CharacterAvatarCatalog
 
 	public static CharacterAvatarDefinition LoadSelectedAvatar()
 	{
-		string avatarId = GameSaveStore.GetString(GameSaveStore.SelectedAvatarKey, DefaultAvatarId);
+		string avatarId = GameSaveStore.LoadActiveProfile().SelectedAvatarId;
 		return GetById(NormalizeUnlockedAvatarId(avatarId));
 	}
 

@@ -305,15 +305,6 @@ theme_override_colors/font_color = Color(1, 0.92, 0.58, 0.92)
 theme_override_font_sizes/font_size = 13
 text = "当前头像"
 
-[node name="PreviewName" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls" unique_id=2039506567]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.78)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 30
-text = "默认头像"
-
 [node name="PlayerNameKicker" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.92, 0.58, 0.92)

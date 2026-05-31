@@ -19,7 +19,6 @@ public partial class CharacterAvatarEditScene : Control
 	private Button _backButton = default!;
 	private Button _confirmButton = default!;
 	private CharacterAvatar _previewAvatar = default!;
-	private Label _previewName = default!;
 	private LineEdit _playerNameInput = default!;
 	private Label _playerNameHint = default!;
 	private GridContainer _avatarGrid = default!;
@@ -35,7 +34,6 @@ public partial class CharacterAvatarEditScene : Control
 		_backButton.Pressed += RequestClose;
 
 		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
-		_previewName = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PreviewName");
 		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
 		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
 		_playerNameInput.TextChanged += OnPlayerNameTextChanged;
@@ -77,7 +75,6 @@ public partial class CharacterAvatarEditScene : Control
 				root,
 				root.GetNode<PanelContainer>("OptionPanel"),
 				root.GetNode<CharacterAvatar>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/CharacterAvatar"),
-				root.GetNode<Label>("OptionPanel/OptionMargin/OptionLayout/AvatarName"),
 				root.GetNode<Button>("SelectButton")));
 		}
 	}
@@ -105,9 +102,8 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Root.Visible = true;
 			optionSlot.Avatar.AvatarRoot = avatarDefinition.RootPath;
 			optionSlot.Avatar.PlayIdle();
-			optionSlot.Label.Text = avatarDefinition.DisplayName;
 			optionSlot.Panel.Modulate = Colors.White;
-			optionSlot.Button.TooltipText = $"预览{avatarDefinition.DisplayName}头像";
+			optionSlot.Button.TooltipText = "预览头像";
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
 			_optionPanels[avatarDefinition.Id] = optionSlot.Panel;
 		}
@@ -139,7 +135,6 @@ public partial class CharacterAvatarEditScene : Control
 	{
 		CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(CurrentAvatarId);
 		_previewAvatar.AvatarRoot = avatarDefinition.RootPath;
-		_previewName.Text = avatarDefinition.DisplayName;
 		_previewAvatar.PlayIdle();
 	}
 
@@ -193,6 +188,5 @@ public partial class CharacterAvatarEditScene : Control
 		Control Root,
 		PanelContainer Panel,
 		CharacterAvatar Avatar,
-		Label Label,
 		Button Button);
 }

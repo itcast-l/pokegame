@@ -13,8 +13,9 @@ public partial class MainMenuScene
 		_oceanMotion = GameSaveStore.GetBool(GameSaveStore.OceanMotionKey, DefaultOceanMotion);
 		_motionScale = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MotionScaleKey, DefaultMotionScale), 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference));
-		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(GameSaveStore.GetString(GameSaveStore.SelectedAvatarKey, CharacterAvatarCatalog.DefaultAvatarId));
-		_playerName = PlayerNameRules.Normalize(GameSaveStore.GetString(GameSaveStore.PlayerNameKey, PlayerNameRules.DefaultPlayerName));
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(profile.SelectedAvatarId);
+		_playerName = PlayerNameRules.Normalize(profile.PlayerName);
 	}
 
 	private void SaveSettings()
@@ -27,12 +28,24 @@ public partial class MainMenuScene
 			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
 			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
 			new GameSaveStore.SaveValue(GameSaveStore.MotionScaleKey, _motionScale),
-			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
-			new GameSaveStore.SaveValue(GameSaveStore.SelectedAvatarKey, _selectedAvatarId),
-			new GameSaveStore.SaveValue(GameSaveStore.PlayerNameKey, _playerName));
+			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference));
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save settings: {saveResult}");
+		}
+	}
+
+	private void SavePlayerProfile()
+	{
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		{
+			SelectedAvatarId = _selectedAvatarId,
+			PlayerName = _playerName,
+		});
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to save player profile: {saveResult}");
 		}
 	}
 
@@ -218,10 +231,6 @@ public partial class MainMenuScene
 		_selectedResolution = DefaultResolution;
 		_oceanMotion = DefaultOceanMotion;
 		_languagePreference = Localization.DefaultLanguagePreference;
-		_selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
-		_playerName = PlayerNameRules.DefaultPlayerName;
-		ApplySelectedAvatar();
-		ApplyPlayerName();
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();
