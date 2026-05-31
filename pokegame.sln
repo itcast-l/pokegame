@@ -5,6 +5,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "pokegame", "pokegame.csproj", "{850B1549-6FEC-4A29-8D2D-70EB78121490}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rules.Tests", "tests\Rules.Tests\Rules.Tests.csproj", "{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,8 +22,17 @@ Global
 		{850B1549-6FEC-4A29-8D2D-70EB78121490}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
 		{850B1549-6FEC-4A29-8D2D-70EB78121490}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
 		{850B1549-6FEC-4A29-8D2D-70EB78121490}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

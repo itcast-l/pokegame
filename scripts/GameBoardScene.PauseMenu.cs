@@ -54,10 +54,10 @@ public partial class GameBoardScene
 		_pauseQuitButton = pauseMenu.QuitButton;
 		_pauseQuitConfirmRoot = pauseMenu.QuitConfirmRoot;
 		pauseMenu.ContinueRequested += HidePauseMenu;
-		pauseMenu.ReturnToMainMenuRequested += ReturnToMainMenu;
+		pauseMenu.ReturnToMainMenuRequested += ReturnToPauseMenuDestination;
 		pauseMenu.QuitRequested += QuitGameFromPauseMenu;
 		pauseMenu.ConfirmQuitRequested += ConfirmQuitGameFromPauseMenu;
-		pauseMenu.RefreshLocalizedText(Localize);
+		pauseMenu.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
 	}
 
 	private void ShowPauseMenu()
@@ -75,6 +75,7 @@ public partial class GameBoardScene
 
 		_isPauseMenuOpen = true;
 		PlayGameSfx(GameSfx.UiPauseOpen, -2.0f, 0.98f, 1.02f, 0.08);
+		_pauseMenuRoot.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
 		if (_pauseQuitConfirmRoot != null)
@@ -126,6 +127,22 @@ public partial class GameBoardScene
 	private async void ReturnToAdventureMenu()
 	{
 		await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
+	}
+
+	private void ReturnToPauseMenuDestination()
+	{
+		if (adventure_mode)
+		{
+			ReturnToAdventureMenu();
+			return;
+		}
+
+		ReturnToMainMenu();
+	}
+
+	private string GetPauseReturnButtonKey()
+	{
+		return adventure_mode ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
 	}
 
 	private async Task ReturnToMenuSceneAsync(string scenePath)

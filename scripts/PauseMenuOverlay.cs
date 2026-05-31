@@ -48,10 +48,10 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		GetNode<ColorRect>("%ConfirmScrim").GuiInput += OnConfirmScrimGuiInput;
 	}
 
-	public void RefreshLocalizedText(Func<string, string> localize)
+	public void RefreshLocalizedText(Func<string, string> localize, string returnButtonKey = "GAME_RETURN_MAIN_MENU")
 	{
 		ContinueButton.Text = localize("GAME_CONTINUE");
-		ReturnToMainMenuButton.Text = localize("GAME_RETURN_MAIN_MENU");
+		ReturnToMainMenuButton.Text = localize(returnButtonKey);
 		QuitButton.Text = localize("GAME_QUIT");
 		QuitCancelButton.Text = localize("GAME_QUIT_CONFIRM_CANCEL");
 		QuitConfirmButton.Text = localize("GAME_QUIT_CONFIRM_ACCEPT");

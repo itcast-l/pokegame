@@ -1,18 +1,28 @@
 using System.Collections.Generic;
+using System.Text;
 using Godot;
 
 public partial class GameBoardScene
 {
+	private readonly string?[] _playerHandRenderSignatures = new string?[MaxPlayers];
+
 	private void RenderPlayerHands()
 	{
-			for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-			{
-				Control handArea = _playerHandAreas[playerIndex];
-				for (int childIndex = handArea.GetChildCount() - 1; childIndex >= 0; childIndex--)
+				for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 				{
-					Node child = handArea.GetChild(childIndex);
-					if (child.HasMeta(HandCardSlotMeta))
+					Control handArea = _playerHandAreas[playerIndex];
+					string renderSignature = BuildPlayerHandRenderSignature(playerIndex, handArea);
+					if (_playerHandRenderSignatures[playerIndex] == renderSignature)
 					{
+						continue;
+					}
+
+					_playerHandRenderSignatures[playerIndex] = renderSignature;
+					for (int childIndex = handArea.GetChildCount() - 1; childIndex >= 0; childIndex--)
+					{
+						Node child = handArea.GetChild(childIndex);
+						if (child.HasMeta(HandCardSlotMeta))
+						{
 						RemoveAndQueueFreeChild(handArea, child);
 					}
 				}
@@ -238,6 +248,113 @@ public partial class GameBoardScene
 						: string.Empty;
 					AddHandCard(texture, displayIndex, isPlayable, -1, itemIndex, showCardBack, visualScale, isJellyfishDisabled: isJellyfishDisabled, tooltipText: tooltipText);
 				}
+			}
 		}
+
+	private string BuildPlayerHandRenderSignature(int playerIndex, Control handArea)
+	{
+		var signature = new StringBuilder(512);
+		bool playerVisible = playerIndex < player_count;
+		signature.Append("visible=").Append(playerVisible);
+		if (!playerVisible)
+		{
+			return signature.ToString();
+		}
+
+		List<PlayingCard> hand = _playerHands[playerIndex];
+		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		int visibleHandCount = GetVisibleHandCardCountForRender(playerIndex, hand.Count);
+		bool canMainPlayerAct = CanMainPlayerAct();
+		bool isMagnetSelectionActive = IsMainPlayerMagnetSelectionActive();
+		bool isHandLimitDiscardSelectionActive = IsMainPlayerHandLimitDiscardSelectionActive();
+		bool showCardBack = playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+
+		signature.Append("|size=").Append(handArea.Size.X).Append(',').Append(handArea.Size.Y);
+		signature.Append("|playerCount=").Append(player_count);
+		signature.Append("|visibleHandCount=").Append(visibleHandCount);
+		signature.Append("|handCount=").Append(hand.Count);
+		signature.Append("|itemHandCount=").Append(itemHand.Count);
+		signature.Append("|canAct=").Append(canMainPlayerAct);
+		signature.Append("|magnet=").Append(isMagnetSelectionActive);
+		signature.Append("|discard=").Append(isHandLimitDiscardSelectionActive);
+		signature.Append("|revealed=").Append(_revealedPlayerHandIndex);
+		signature.Append("|pendingMode=").Append(_pendingItemSelectionMode);
+		signature.Append("|pendingOwner=").Append(_pendingItemOwnerIndex);
+		signature.Append("|pendingItem=").Append(_pendingItemCardId);
+		signature.Append("|opening=").Append(_isOpeningDealAnimationPlaying);
+
+		for (int cardIndex = 0; cardIndex < visibleHandCount; cardIndex++)
+		{
+			PlayingCard card = hand[cardIndex];
+			bool showMagnetSelectionHighlight = isMagnetSelectionActive
+				&& playerIndex == MainPlayerIndex
+				&& IsAttachableMagnetCard(card, _pendingItemCardId);
+			bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
+				&& IsJellyfishDisabledHandDisplaySlot(playerIndex, cardIndex);
+			bool isMagnetSelectionCard = showMagnetSelectionHighlight && !isJellyfishDisabled;
+			bool isHandLimitDiscardSelectionCard = isHandLimitDiscardSelectionActive
+				&& playerIndex == MainPlayerIndex;
+			bool isPlayable = isMagnetSelectionCard
+				|| isHandLimitDiscardSelectionCard
+				|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
+			string tooltipText = isJellyfishDisabled
+				? Localize("GAME_CARD_DISABLED_THIS_TURN")
+				: GetHandCardDescription(card, showCardBack);
+
+			signature.Append("|card=").Append(cardIndex);
+			signature.Append(':').Append(card.Suit).Append('/').Append(card.Rank);
+			signature.Append(':').Append(card.AttachedItemCardIdsCsv);
+			signature.Append(":back=").Append(showCardBack);
+			signature.Append(":playable=").Append(isPlayable);
+			signature.Append(":magnet=").Append(isMagnetSelectionCard);
+			signature.Append(":disabled=").Append(isJellyfishDisabled);
+			signature.Append(":hidden=").Append(IsHandDisplaySlotHidden(playerIndex, cardIndex));
+			signature.Append(":tooltip=").Append(tooltipText);
+			signature.Append(":texture=");
+			AppendTextureSignature(signature, showCardBack ? _cardBackTexture : card.Texture);
+			signature.Append(":attachment=");
+			AppendTextureSignature(signature, showCardBack ? null : GetCardAttachmentOverlayTexture(card));
+		}
+
+		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
+		{
+			ItemCard itemCard = itemHand[itemIndex];
+			int displayIndex = hand.Count + itemIndex;
+			bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
+				&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
+			bool isPlayable = playerIndex == MainPlayerIndex
+				&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
+			string tooltipText = isJellyfishDisabled
+				? Localize("GAME_CARD_DISABLED_THIS_TURN")
+				: !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
+					? description
+					: string.Empty;
+
+			signature.Append("|item=").Append(itemIndex);
+			signature.Append(':').Append(itemCard.Id);
+			signature.Append(":display=").Append(displayIndex);
+			signature.Append(":back=").Append(showCardBack);
+			signature.Append(":scale=").Append(showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id));
+			signature.Append(":playable=").Append(isPlayable);
+			signature.Append(":disabled=").Append(isJellyfishDisabled);
+			signature.Append(":hidden=").Append(IsHandDisplaySlotHidden(playerIndex, displayIndex));
+			signature.Append(":tooltip=").Append(tooltipText);
+			signature.Append(":texture=");
+			AppendTextureSignature(signature, showCardBack ? _cardBackTexture : itemCard.Texture);
+		}
+
+		return signature.ToString();
 	}
-}
+
+	private static void AppendTextureSignature(StringBuilder signature, Texture2D? texture)
+	{
+		if (texture == null)
+		{
+			signature.Append("<null>");
+			return;
+		}
+
+		signature.Append(texture.ResourcePath);
+		signature.Append('#').Append(texture.GetInstanceId());
+	}
+	}

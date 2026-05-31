@@ -12,9 +12,9 @@ public partial class GameBoardScene
 		}
 
 		int playableItemCount = CountPlayableItemIndexes(playerIndex);
-		if (TryPickBossKBestCaptureHandIndex(playerIndex, out int bossKHandIndex))
+		if (TryPickBestCaptureHandIndex(playerIndex, out int captureHandIndex))
 		{
-			return await PlayCardFromHandAsync(playerIndex, bossKHandIndex, turnSequenceGeneration);
+			return await PlayCardFromHandAsync(playerIndex, captureHandIndex, turnSequenceGeneration);
 		}
 
 		int playableCount = _playerHands[playerIndex].Count + playableItemCount;
@@ -24,9 +24,13 @@ public partial class GameBoardScene
 		}
 
 		int selectedIndex = _rng.RandiRange(0, playableCount - 1);
+		PlayCardResult result;
 		if (selectedIndex < _playerHands[playerIndex].Count)
 		{
-			return await PlayCardFromHandAsync(playerIndex, selectedIndex, turnSequenceGeneration);
+			result = await PlayCardFromHandAsync(playerIndex, selectedIndex, turnSequenceGeneration);
+			return result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
+				? result
+				: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 		}
 
 		if (!TryGetPlayableItemIndexAt(playerIndex, selectedIndex - _playerHands[playerIndex].Count, out int itemHandIndex))
@@ -34,22 +38,57 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		return await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		result = await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		return result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
+			? result
+			: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 	}
 
-	private bool TryPickBossKBestCaptureHandIndex(int playerIndex, out int handIndex)
+	private async Task<PlayCardResult> PlayFirstAvailableHandEntryForPlayerAsync(int playerIndex, int turnSequenceGeneration)
+	{
+		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+		{
+			PlayCardResult result = await PlayCardFromHandAsync(playerIndex, handIndex, turnSequenceGeneration);
+			if (result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return result;
+			}
+		}
+
+		int playableItemCount = CountPlayableItemIndexes(playerIndex);
+		for (int playableItemOrdinal = 0; playableItemOrdinal < playableItemCount; playableItemOrdinal++)
+		{
+			if (!TryGetPlayableItemIndexAt(playerIndex, playableItemOrdinal, out int itemHandIndex))
+			{
+				continue;
+			}
+
+			PlayCardResult result = await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+			if (result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return result;
+			}
+		}
+
+		return new PlayCardResult(false, false);
+	}
+
+	private bool TryPickBestCaptureHandIndex(int playerIndex, out int handIndex)
 	{
 		handIndex = -1;
-		if (!IsBossKEnemy(playerIndex) || playerIndex < 0 || playerIndex >= _playerHands.Count)
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
 		{
 			return false;
 		}
 
+		int royalCaptureThreshold = IsBossKEnemy(playerIndex)
+			? GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
+			: int.MaxValue;
 		return PotentialCaptureRules.TryPickBestCaptureCardIndex(
 			ToCaptureScoringTableCards(),
 			ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
 			BuildCaptureScoringContext(playerIndex),
-			GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5),
+			royalCaptureThreshold,
 			out handIndex);
 	}
 

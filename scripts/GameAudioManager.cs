@@ -86,6 +86,7 @@ public partial class GameAudioManager : Node
 	private const float DefaultMusicLinearVolume = 0.76f;
 	private const float AmbienceRelativeVolumeDb = -12.0f;
 	private const float TensionRelativeVolumeDb = -5.0f;
+	private const int MaxPooledSfxPlayers = 32;
 	private static readonly StringName UiAudioBoundMeta = new("game_audio_ui_bound");
 
 	private sealed class MusicTrackSpec
@@ -184,6 +185,7 @@ public partial class GameAudioManager : Node
 	private readonly Dictionary<string, ulong> _lastPlayedAt = new();
 	private readonly HashSet<string> _missingWarningIds = new();
 	private readonly HashSet<string> _missingMusicWarningIds = new();
+	private readonly Stack<AudioStreamPlayer> _sfxPlayerPool = new();
 	private readonly RandomNumberGenerator _rng = new();
 	private string _soundBus = FallbackSoundBus;
 	private string _musicBus = FallbackMusicBus;
@@ -229,23 +231,62 @@ public partial class GameAudioManager : Node
 
 		float safePitchMin = Mathf.Max(0.01f, Mathf.Min(pitchMin, pitchMax));
 		float safePitchMax = Mathf.Max(safePitchMin, Mathf.Max(pitchMin, pitchMax));
+		AudioStreamPlayer player = RentSfxPlayer();
+		player.Name = $"Sfx_{sfxId}";
+		player.Stream = stream;
+		player.Bus = _soundBus;
+		player.VolumeDb = volumeDb;
+		player.PitchScale = _rng.RandfRange(safePitchMin, safePitchMax);
+		player.Play();
+	}
+
+	private AudioStreamPlayer RentSfxPlayer()
+	{
+		while (_sfxPlayerPool.Count > 0)
+		{
+			AudioStreamPlayer pooledPlayer = _sfxPlayerPool.Pop();
+			if (IsLive(pooledPlayer) && !pooledPlayer.IsQueuedForDeletion())
+			{
+				return pooledPlayer;
+			}
+		}
+
+		return CreateSfxPlayer();
+	}
+
+	private AudioStreamPlayer CreateSfxPlayer()
+	{
 		var player = new AudioStreamPlayer
 		{
-			Name = $"Sfx_{sfxId}",
-			Stream = stream,
+			Name = "SfxPooled",
 			Bus = _soundBus,
-			VolumeDb = volumeDb,
-			PitchScale = _rng.RandfRange(safePitchMin, safePitchMax),
 		};
+		player.Finished += () => RecycleSfxPlayer(player);
 		AddChild(player);
-		player.Finished += () =>
+		return player;
+	}
+
+	private void RecycleSfxPlayer(AudioStreamPlayer player)
+	{
+		if (!IsLive(player) || player.IsQueuedForDeletion())
 		{
-			if (GodotObject.IsInstanceValid(player))
-			{
-				player.QueueFree();
-			}
-		};
-		player.Play();
+			return;
+		}
+
+		player.Stop();
+		player.Stream = null;
+		player.Name = "SfxPooled";
+		player.Bus = _soundBus;
+		player.VolumeDb = 0.0f;
+		player.PitchScale = 1.0f;
+
+		if (player.GetParent() != this || _sfxPlayerPool.Count >= MaxPooledSfxPlayers)
+		{
+			player.QueueFree();
+			return;
+		}
+
+		_sfxPlayerPool.Push(player);
 	}
 
 	public void PlayMusic(string musicId, float fadeSeconds = 1.5f, bool restartIfSame = false)

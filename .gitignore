@@ -4,6 +4,8 @@
 /.idea/
 /addons/server/build/
 /addons/server/node_modules/
+bin/
+obj/
 
 # Local OS/editor metadata
 .DS_Store

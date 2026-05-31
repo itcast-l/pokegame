@@ -69,7 +69,9 @@ public partial class GameBoardScene
 				PlayCardResult result = await PlayRandomHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 				if (!result.Played)
 				{
-					return;
+					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
+					continue;
 				}
 
 				if (IsGameOver())

@@ -19,25 +19,23 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int remainingPlayerIndex = -1;
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			if (!PlayerHasCards(playerIndex))
-			{
-				continue;
-			}
-
-			if (remainingPlayerIndex >= 0)
-			{
-				return;
-			}
-
-			remainingPlayerIndex = playerIndex;
-		}
-
-		if (remainingPlayerIndex >= 0)
+		Span<GameTurnRules.PlayerCardState> playerStates = stackalloc GameTurnRules.PlayerCardState[MaxPlayers];
+		BuildPlayerCardStates(playerStates);
+		if (GameTurnRules.TryGetSingleRemainingPlayer(playerStates, player_count, out int remainingPlayerIndex))
 		{
 			DeclareWinner(remainingPlayerIndex);
+		}
+	}
+
+	private void BuildPlayerCardStates(Span<GameTurnRules.PlayerCardState> playerStates)
+	{
+		int checkedPlayerCount = Math.Min(player_count, playerStates.Length);
+		for (int playerIndex = 0; playerIndex < checkedPlayerCount; playerIndex++)
+		{
+			playerStates[playerIndex] = new GameTurnRules.PlayerCardState(
+				_playerHands[playerIndex].Count,
+				_playerDecks[playerIndex].Count,
+				HasPlayableItemCard(playerIndex));
 		}
 	}
 
@@ -55,11 +53,6 @@ public partial class GameBoardScene
 		}
 
 		ShowWinnerBanner(playerIndex);
-	}
-
-	private bool PlayerHasCards(int playerIndex)
-	{
-		return _playerHands[playerIndex].Count > 0 || _playerDecks[playerIndex].Count > 0 || HasPlayableItemCard(playerIndex);
 	}
 
 	private int GetMovableTableShuffleCardCount()
@@ -110,44 +103,25 @@ public partial class GameBoardScene
 
 	private bool CanMainPlayerAct()
 	{
-		return !IsGameOver()
-			&& !HasPendingItemSelection()
-			&& !_isOpeningDealAnimationPlaying
-			&& !_isResolvingTurnSequence
-			&& !_isProcessingCardPlay
-			&& _currentTurnPlayerIndex == MainPlayerIndex;
+		return GetGameLoopPhase() == GameLoopPhase.AwaitingMainPlayerAction;
 	}
 
 	private bool IsMainPlayerMagnetSelectionActive()
 	{
-		return !IsGameOver()
+		return GetGameLoopPhase() == GameLoopPhase.PendingMainPlayerSelection
 			&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
 			&& _pendingItemOwnerIndex == MainPlayerIndex;
 	}
 
 	private bool IsMainPlayerHandLimitDiscardSelectionActive()
 	{
-		return !IsGameOver()
+		return GetGameLoopPhase() == GameLoopPhase.PendingMainPlayerSelection
 			&& _pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
 			&& _pendingItemOwnerIndex == MainPlayerIndex;
 	}
 
 	private int GetNextTurnPlayerIndex(int currentPlayerIndex)
 	{
-		int currentOrderIndex = Array.IndexOf(ClockwiseTurnOrder, currentPlayerIndex);
-		if (currentOrderIndex < 0)
-		{
-			return MainPlayerIndex;
-		}
-
-		for (int offset = 1; offset <= ClockwiseTurnOrder.Length; offset++)
-		{
-			int nextPlayerIndex = ClockwiseTurnOrder[(currentOrderIndex + offset) % ClockwiseTurnOrder.Length];
-			if (nextPlayerIndex < player_count)
-			{
-				return nextPlayerIndex;
-			}
-		}
-
-		return MainPlayerIndex;
-	}}
+		return GameTurnRules.GetNextTurnPlayerIndex(ClockwiseTurnOrder, currentPlayerIndex, player_count, MainPlayerIndex);
+	}
+}
