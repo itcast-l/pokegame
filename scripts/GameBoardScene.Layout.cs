@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Godot;
 
 public partial class GameBoardScene
@@ -220,28 +221,43 @@ public partial class GameBoardScene
 			return;
 		}
 
-		HideWinnerBanner();
-		adventure_enemy_avatar_id = nextAvatarId;
-		RefreshAdventureEnemyAvatar();
-		DealCardsToPlayers(playOpeningDealAnimation: true);
+		string gameBoardScenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(nextAvatarId);
+		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
+		if (gameBoardScene == null)
+		{
+			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
+			RestartGameFromWinner();
+			return;
+		}
+
+		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
 	}
 
-	private void RefreshAdventureEnemyAvatar()
+	private async Task StartNextAdventureStageWithTransitionAsync(PackedScene gameBoardScene, string nextAvatarId)
 	{
-		if (!adventure_mode
-			|| player_count <= 1
-			|| _playerAvatars[1] == null
-			|| !GodotObject.IsInstanceValid(_playerAvatars[1]))
+		if (_isLeavingGame)
 		{
 			return;
 		}
 
-		CharacterAvatarDefinition enemyDefinition = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id);
-		CharacterAvatar enemyAvatar = _playerAvatars[1]!;
-		enemyAvatar.AvatarRoot = enemyDefinition.RootPath;
-		enemyAvatar.AudioConfig = enemyDefinition.AudioConfig;
-		enemyAvatar.AccentColor = PlayerAvatarAccentColors[1];
-		enemyAvatar.PlayAction(CharacterAvatar.AvatarAction.Idle);
+		_isLeavingGame = true;
+		if (_winnerReplayButton != null)
+		{
+			_winnerReplayButton.Disabled = true;
+		}
+
+		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
+		{
+			Node gameBoard = gameBoardScene.Instantiate();
+			gameBoard.Set("player_count", 2);
+			gameBoard.Set("item_mode", true);
+			gameBoard.Set("solo_mode", true);
+			gameBoard.Set("adventure_mode", true);
+			gameBoard.Set("adventure_enemy_avatar_id", nextAvatarId);
+			GetTree().Root.AddChild(gameBoard);
+			GetTree().CurrentScene = gameBoard;
+			QueueFree();
+		});
 	}
 
 	private void UpdateWinnerPrimaryButton()

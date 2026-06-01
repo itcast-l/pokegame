@@ -6,6 +6,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private const string MainMenuScenePath = "res://scenes/main_menu_scene.tscn";
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const string TutorialGameBoardScenePath = "res://scenes/adventure_tutorial_game_board_scene.tscn";
+	private const string ItemTutorialGameBoardScenePath = "res://scenes/adventure_item_tutorial_game_board_scene.tscn";
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
 	private const double SmoothScrollTweenSeconds = 0.22;
 	private const int SmoothScrollWheelStep = 96;

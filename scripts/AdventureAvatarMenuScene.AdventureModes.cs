@@ -8,7 +8,7 @@ public partial class AdventureAvatarMenuScene
 	private static readonly AdventureLevelDefinition[] DeepTideThroneLevels =
 	{
 		new("fish", TutorialGameBoardScenePath),
-		new("lanternfish"),
+		new("lanternfish", ItemTutorialGameBoardScenePath),
 		new("shrimp"),
 		new("crab"),
 		new("jellyfish"),
@@ -129,9 +129,28 @@ public partial class AdventureAvatarMenuScene
 		return null;
 	}
 
+	public static string GetGameBoardScenePathForAdventureAvatar(string avatarId)
+	{
+		return GetGameBoardScenePathForAvatar(DeepTideThroneAdventureId, avatarId);
+	}
+
 	private string GetGameBoardScenePathForAvatar(string avatarId)
 	{
-		return GetSelectedAdventureLevelDefinition(avatarId)?.GameBoardScenePath ?? GameBoardScenePath;
+		return GetGameBoardScenePathForAvatar(_selectedAdventureId, avatarId);
+	}
+
+	private static string GetGameBoardScenePathForAvatar(string adventureId, string avatarId)
+	{
+		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		foreach (AdventureLevelDefinition level in GetAdventureModeDefinition(adventureId).Levels)
+		{
+			if (CharacterAvatarCatalog.NormalizeAvatarId(level.EnemyAvatarId) == normalized)
+			{
+				return level.GameBoardScenePath;
+			}
+		}
+
+		return GameBoardScenePath;
 	}
 
 	private AdventureLevelDefinition? GetSelectedAdventureLevelDefinition(string avatarId)

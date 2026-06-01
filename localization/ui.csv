@@ -133,6 +133,7 @@ GAME_CARD_COLLECTS_TABLE,收取牌桌所有牌,收取牌桌所有牌,Collect all
 GAME_CANCEL,取消,取消,Cancel
 GAME_SELECT_BASE_CARD,选择基础牌,選擇基礎牌,Base Card
 GAME_SELECT_DISCARD_CARD,手牌已满，选择一张移除,手牌已滿，選擇一張移除,Hand full: remove 1
+GAME_TUTORIAL_BASIC_INTRO,本局会教学基本规则：出牌、配对、收取,本局會教學基本規則：出牌、配對、收取,This match teaches the basics: play cards, match ranks, and capture cards.
 GAME_TUTORIAL_TOUR_PLAYER,这是你。头像旁边的生命值归零就会失败。,這是你。頭像旁邊的生命值歸零就會失敗。,This is you. If the health by your avatar reaches zero you lose.
 GAME_TUTORIAL_TOUR_ENEMY,这是敌人。你收取牌得到的分数会变成对敌人的伤害。,這是敵人。你收取牌得到的分數會變成對敵人的傷害。,This is the enemy. Points from captures become damage to the enemy.
 GAME_TUTORIAL_TOUR_HAND,底部是你的手牌。轮到你时从这里选择一张打出。,底部是你的手牌。輪到你時從這裡選擇一張打出。,Your hand is at the bottom. On your turn choose one card here to play.
@@ -140,6 +141,10 @@ GAME_TUTORIAL_TOUR_DECK,这是你的牌堆。收取到的牌会回到这里，�
 GAME_TUTORIAL_TOUR_TABLE,中间是牌桌。打出的牌会留在这里，配对后就能收取。,中間是牌桌。打出的牌會留在這裡，配對後就能收取。,The center is the table. Played cards stay here until matching cards capture them.
 GAME_TUTORIAL_STEP_MATCH,先出 7。它会和场上的 7 配对，夹在中间的 A 和 4 会造成 5 点伤害。,先出 7。它會和場上的 7 配對，夾在中間的 A 和 4 會造成 5 點傷害。,Play 7 first. It matches the 7 on the table and the A plus 4 between them deal 5 damage.
 GAME_TUTORIAL_STEP_CONTINUE,收取成功后还能继续行动。现在出 2，收取中间的 3，完成教学。,收取成功後還能繼續行動。現在出 2，收取中間的 3，完成教學。,After a successful capture you keep the turn. Now play 2 and capture the 3 in the middle.
+GAME_TUTORIAL_ITEM_INTRO,本局会教学道具牌的使用。,本局會教學道具牌的使用。,This match teaches item card usage.
+GAME_TUTORIAL_ITEM_COLLECT_BOMB,先出 4，收取问号牌，获得炸弹。,先出 4，收取問號牌，獲得炸彈。,Play 4 first. Capture the question card to get a bomb.
+GAME_TUTORIAL_ITEM_PLAY_BOMB,现在使用炸弹，把它放到牌桌上。,現在使用炸彈，把它放到牌桌上。,Now play the bomb and place it on the table.
+GAME_TUTORIAL_ITEM_ENEMY_TRIGGER_BOMB,敌人会收取炸弹范围，本该属于敌人的分数会转给你。,敵人會收取炸彈範圍，本該屬於敵人的分數會轉給你。,The enemy will capture through your bomb. Those points go to you.
 GAME_TUTORIAL_WRONG_CARD,先按提示出高亮的牌。,先按提示出高亮的牌。,Play the highlighted card first.
 GAME_TUTORIAL_CONTINUE,下一步,下一步,Next
 ITEM_DESC_QUESTION_MARK,随机获取一张道具,隨機取得一張道具,Random item

@@ -13,11 +13,14 @@ public partial class GameBoardScene
 	private const float AdventureTutorialCalloutMaxTextWidth = 246.0f;
 	private const float AdventureTutorialPlayCalloutMaxTextWidth = 306.0f;
 	private const float AdventureTutorialCalloutMinTextWidth = 116.0f;
+	private const float AdventureTutorialPlayCalloutMinTextWidth = 286.0f;
 	private const float AdventureTutorialCalloutHorizontalPadding = 12.0f;
 	private const float AdventureTutorialCalloutVerticalPadding = 8.0f;
 	private const float AdventureTutorialCalloutButtonGap = 4.0f;
 	private const float AdventureTutorialCalloutTextLineHeight = 21.0f;
 	private const float AdventureTutorialCalloutButtonHeight = 28.0f;
+	private const string AdventureTutorialFlowBasicCapture = "basic_capture";
+	private const string AdventureTutorialFlowBombItem = "bomb_item";
 	private static readonly Vector2 AdventureTutorialTargetPadding = new(10.0f, 10.0f);
 
 	private static readonly AdventureTutorialTourTarget[] AdventureTutorialTourTargets =
@@ -45,9 +48,14 @@ public partial class GameBoardScene
 	private enum AdventureTutorialPhase
 	{
 		None,
+		BasicIntro,
 		Tour,
 		MatchSeven,
 		MatchTwo,
+		BombIntro,
+		BombCollectReward,
+		BombPlay,
+		BombEnemyTrigger,
 		Complete,
 	}
 
@@ -73,16 +81,75 @@ public partial class GameBoardScene
 		return adventure_mode && adventure_tutorial_mode;
 	}
 
+	private static string NormalizeAdventureTutorialFlow(string flow)
+	{
+		return string.Equals(flow, AdventureTutorialFlowBombItem, StringComparison.Ordinal)
+			? AdventureTutorialFlowBombItem
+			: AdventureTutorialFlowBasicCapture;
+	}
+
+	private bool IsBombItemTutorialFlow()
+	{
+		return string.Equals(_adventureTutorialFlow, AdventureTutorialFlowBombItem, StringComparison.Ordinal);
+	}
+
+	private bool IsBasicCaptureTutorialCardStepActive()
+	{
+		return IsAdventureTutorialEnabled()
+			&& (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven
+				|| _adventureTutorialPhase == AdventureTutorialPhase.MatchTwo);
+	}
+
 	private bool IsAdventureTutorialTourActive()
 	{
 		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.Tour;
+	}
+
+	private bool IsAdventureTutorialBasicIntroActive()
+	{
+		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BasicIntro;
+	}
+
+	private bool IsAdventureTutorialBombIntroActive()
+	{
+		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BombIntro;
+	}
+
+	private bool IsAdventureTutorialContinueCalloutActive()
+	{
+		return IsAdventureTutorialBasicIntroActive()
+			|| IsAdventureTutorialTourActive()
+			|| IsAdventureTutorialBombIntroActive();
 	}
 
 	private bool IsAdventureTutorialCardStepActive()
 	{
 		return IsAdventureTutorialEnabled()
 			&& (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven
-				|| _adventureTutorialPhase == AdventureTutorialPhase.MatchTwo);
+				|| _adventureTutorialPhase == AdventureTutorialPhase.MatchTwo
+				|| _adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward);
+	}
+
+	private bool IsAdventureTutorialItemStepActive()
+	{
+		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BombPlay;
+	}
+
+	private bool IsAdventureTutorialEnemyStepActive()
+	{
+		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BombEnemyTrigger;
+	}
+
+	private bool IsAdventureTutorialPlayerActionStepActive()
+	{
+		return IsAdventureTutorialCardStepActive() || IsAdventureTutorialItemStepActive();
+	}
+
+	private bool IsAdventureTutorialOverlayActive()
+	{
+		return IsAdventureTutorialContinueCalloutActive()
+			|| IsAdventureTutorialPlayerActionStepActive()
+			|| IsAdventureTutorialEnemyStepActive();
 	}
 
 	private void ResetAdventureTutorialState()
@@ -115,9 +182,39 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (player_count != 2 || !TryLoadAdventureTutorialCards(out Dictionary<string, PlayingCard> cards))
+		if (player_count != 2)
 		{
 			GD.PushWarning("Adventure tutorial setup failed; falling back to normal deal.");
+			return false;
+		}
+
+		bool setup = IsBombItemTutorialFlow()
+			? TrySetupAdventureBombItemTutorialDeal()
+			: TrySetupAdventureBasicCaptureTutorialDeal();
+		if (!setup)
+		{
+			GD.PushWarning("Adventure tutorial setup failed; falling back to normal deal.");
+		}
+
+		return setup;
+	}
+
+	private bool TrySetupAdventureBasicCaptureTutorialDeal()
+	{
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "7"),
+			("Hearts", "2"),
+			("Hearts", "5"),
+			("Clubs", "K"),
+			("Clubs", "2"),
+			("Diamonds", "3"),
+			("Spades", "7"),
+			("Clubs", "A"),
+			("Diamonds", "4"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
 			return false;
 		}
 
@@ -137,7 +234,43 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private bool TryLoadAdventureTutorialCards(out Dictionary<string, PlayingCard> cards)
+	private bool TrySetupAdventureBombItemTutorialDeal()
+	{
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "4"),
+			("Hearts", "9"),
+			("Clubs", "4"),
+			("Clubs", "9"),
+			("Diamonds", "6"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		ItemCard? questionMark = CreateItemCard(QuestionMarkItemCardId);
+		if (!questionMark.HasValue)
+		{
+			return false;
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:4"]);
+		_playerHands[1].Add(cards["Clubs:9"]);
+
+		_tableCards.Add(new TableCard(cards["Hearts:9"], true));
+		_tableCards.Add(new TableCard(cards["Diamonds:6"], true));
+		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
+		_tableCards.Add(new TableCard(null, true, questionMark.Value));
+
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		return true;
+	}
+
+	private bool TryLoadAdventureTutorialCards(
+		(string Suit, string Rank)[] requiredCards,
+		out Dictionary<string, PlayingCard> cards)
 	{
 		cards = new Dictionary<string, PlayingCard>(StringComparer.Ordinal);
 		PackedScene? pokerCardsScene = GD.Load<PackedScene>(PokerCardsScenePath);
@@ -155,19 +288,6 @@ public partial class GameBoardScene
 			pokerCards.Free();
 			return false;
 		}
-
-		var requiredCards = new (string Suit, string Rank)[]
-		{
-			("Hearts", "7"),
-			("Hearts", "2"),
-			("Hearts", "5"),
-			("Clubs", "K"),
-			("Clubs", "2"),
-			("Diamonds", "3"),
-			("Spades", "7"),
-			("Clubs", "A"),
-			("Diamonds", "4"),
-		};
 
 		foreach ((string suit, string rank) in requiredCards)
 		{
@@ -206,7 +326,14 @@ public partial class GameBoardScene
 		}
 
 		EnsureAdventureTutorialOverlay();
-		_adventureTutorialPhase = AdventureTutorialPhase.Tour;
+		if (IsBombItemTutorialFlow())
+		{
+			_adventureTutorialPhase = AdventureTutorialPhase.BombIntro;
+			ShowAdventureTutorialCurrentCallout();
+			return;
+		}
+
+		_adventureTutorialPhase = AdventureTutorialPhase.BasicIntro;
 		_adventureTutorialTourIndex = 0;
 		ShowAdventureTutorialCurrentCallout();
 	}
@@ -377,7 +504,7 @@ public partial class GameBoardScene
 			_adventureTutorialContinueButton.FocusMode = Control.FocusModeEnum.None;
 		}
 
-		if (IsAdventureTutorialTourActive())
+		if (IsAdventureTutorialContinueCalloutActive())
 		{
 			_ = EnableAdventureTutorialContinueAfterDelayAsync(_adventureTutorialCalloutGeneration);
 		}
@@ -387,7 +514,7 @@ public partial class GameBoardScene
 	{
 		await ToSignal(GetTree().CreateTimer(AdventureTutorialCalloutReadSeconds), SceneTreeTimer.SignalName.Timeout);
 		if (generation != _adventureTutorialCalloutGeneration
-			|| !IsAdventureTutorialTourActive()
+			|| !IsAdventureTutorialContinueCalloutActive()
 			|| _adventureTutorialContinueButton == null
 			|| !GodotObject.IsInstanceValid(_adventureTutorialContinueButton))
 		{
@@ -401,7 +528,7 @@ public partial class GameBoardScene
 
 	private void PressAdventureTutorialContinue()
 	{
-		if (!IsAdventureTutorialTourActive())
+		if (!IsAdventureTutorialContinueCalloutActive())
 		{
 			return;
 		}
@@ -418,6 +545,20 @@ public partial class GameBoardScene
 			_adventureTutorialContinueButton.Disabled = true;
 		}
 
+		if (IsAdventureTutorialBombIntroActive())
+		{
+			BeginAdventureTutorialStep(AdventureTutorialPhase.BombCollectReward);
+			return;
+		}
+
+		if (IsAdventureTutorialBasicIntroActive())
+		{
+			_adventureTutorialPhase = AdventureTutorialPhase.Tour;
+			_adventureTutorialTourIndex = 0;
+			ShowAdventureTutorialCurrentCallout();
+			return;
+		}
+
 		if (_adventureTutorialTourIndex < AdventureTutorialTourTargets.Length - 1)
 		{
 			_adventureTutorialTourIndex++;
@@ -429,6 +570,11 @@ public partial class GameBoardScene
 	}
 
 	private void BeginAdventureTutorialCardStep(AdventureTutorialPhase phase)
+	{
+		BeginAdventureTutorialStep(phase);
+	}
+
+	private void BeginAdventureTutorialStep(AdventureTutorialPhase phase)
 	{
 		_adventureTutorialPhase = phase;
 		_canAdvanceTutorialCallout = false;
@@ -451,12 +597,37 @@ public partial class GameBoardScene
 		if (_adventureTutorialContinueButton != null && GodotObject.IsInstanceValid(_adventureTutorialContinueButton))
 		{
 			_adventureTutorialContinueButton.Text = Localize("GAME_TUTORIAL_CONTINUE");
-			_adventureTutorialContinueButton.Visible = IsAdventureTutorialTourActive();
+			_adventureTutorialContinueButton.Visible = IsAdventureTutorialContinueCalloutActive();
 		}
 	}
 
 	private string GetAdventureTutorialTextKey()
 	{
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BombIntro)
+		{
+			return "GAME_TUTORIAL_ITEM_INTRO";
+		}
+
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward)
+		{
+			return "GAME_TUTORIAL_ITEM_COLLECT_BOMB";
+		}
+
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BombPlay)
+		{
+			return "GAME_TUTORIAL_ITEM_PLAY_BOMB";
+		}
+
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BombEnemyTrigger)
+		{
+			return "GAME_TUTORIAL_ITEM_ENEMY_TRIGGER_BOMB";
+		}
+
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BasicIntro)
+		{
+			return "GAME_TUTORIAL_BASIC_INTRO";
+		}
+
 		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven)
 		{
 			return "GAME_TUTORIAL_STEP_MATCH";
@@ -496,7 +667,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool active = IsAdventureTutorialTourActive() || IsAdventureTutorialCardStepActive();
+		bool active = IsAdventureTutorialOverlayActive();
 		_adventureTutorialOverlayRoot.Visible = active;
 		if (!active || !TryGetAdventureTutorialTargetRect(out Rect2 targetRect))
 		{
@@ -505,10 +676,10 @@ public partial class GameBoardScene
 
 		if (_adventureTutorialInputBlocker != null && GodotObject.IsInstanceValid(_adventureTutorialInputBlocker))
 		{
-			_adventureTutorialInputBlocker.MouseFilter = IsAdventureTutorialTourActive()
+			_adventureTutorialInputBlocker.MouseFilter = IsAdventureTutorialContinueCalloutActive()
 				? MouseFilterEnum.Stop
 				: MouseFilterEnum.Ignore;
-			_adventureTutorialInputBlocker.Visible = IsAdventureTutorialTourActive();
+			_adventureTutorialInputBlocker.Visible = IsAdventureTutorialContinueCalloutActive();
 		}
 
 		Rect2 paddedTarget = new(
@@ -535,11 +706,20 @@ public partial class GameBoardScene
 	private Vector2 GetAdventureTutorialCalloutSize()
 	{
 		string text = _adventureTutorialCalloutLabel?.Text ?? Localize(GetAdventureTutorialTextKey());
-		bool showButton = IsAdventureTutorialTourActive();
+		bool showButton = IsAdventureTutorialContinueCalloutActive();
 		float maxTextWidth = showButton
 			? AdventureTutorialCalloutMaxTextWidth
 			: AdventureTutorialPlayCalloutMaxTextWidth;
-		float naturalTextWidth = Mathf.Max(AdventureTutorialCalloutMinTextWidth, EstimateAdventureTutorialTextWidth(text));
+		float viewportTextWidth = Mathf.Max(
+			AdventureTutorialCalloutMinTextWidth,
+			GetViewportRect().Size.X
+				- AdventureTutorialViewportPadding * 2.0f
+				- AdventureTutorialCalloutHorizontalPadding * 2.0f);
+		maxTextWidth = Mathf.Min(maxTextWidth, viewportTextWidth);
+		float minTextWidth = showButton
+			? AdventureTutorialCalloutMinTextWidth
+			: Mathf.Min(AdventureTutorialPlayCalloutMinTextWidth, maxTextWidth);
+		float naturalTextWidth = Mathf.Max(minTextWidth, EstimateAdventureTutorialTextWidth(text));
 		float textWidth = Mathf.Min(naturalTextWidth, maxTextWidth);
 		int lineCount = Math.Max(1, (int)Math.Ceiling(naturalTextWidth / textWidth));
 		float textHeight = lineCount * AdventureTutorialCalloutTextLineHeight;
@@ -563,7 +743,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool showButton = IsAdventureTutorialTourActive();
+		bool showButton = IsAdventureTutorialContinueCalloutActive();
 		float textWidth = Mathf.Max(1.0f, calloutSize.X - AdventureTutorialCalloutHorizontalPadding * 2.0f);
 		float textHeight = calloutSize.Y - AdventureTutorialCalloutVerticalPadding * 2.0f;
 		if (showButton)
@@ -654,6 +834,34 @@ public partial class GameBoardScene
 	private bool TryGetAdventureTutorialFixedCalloutPosition(Vector2 calloutSize, Vector2 viewportSize, out Vector2 position)
 	{
 		position = default;
+		if (IsAdventureTutorialBombIntroActive())
+		{
+			if (!TryGetControlGlobalRect("%TableCardLayoutArea", out Rect2 introTableRect))
+			{
+				return false;
+			}
+
+			position = ClampAdventureTutorialCalloutPosition(
+				introTableRect.GetCenter() - calloutSize * 0.5f,
+				calloutSize,
+				viewportSize);
+			return true;
+		}
+
+		if (IsAdventureTutorialBasicIntroActive())
+		{
+			if (!TryGetControlGlobalRect("%TableCardLayoutArea", out Rect2 introTableRect))
+			{
+				return false;
+			}
+
+			position = ClampAdventureTutorialCalloutPosition(
+				introTableRect.GetCenter() - calloutSize * 0.5f,
+				calloutSize,
+				viewportSize);
+			return true;
+		}
+
 		if (!IsAdventureTutorialTourActive())
 		{
 			return false;
@@ -682,7 +890,7 @@ public partial class GameBoardScene
 
 	private AdventureTutorialCalloutPlacement[] GetAdventureTutorialCalloutPlacementPreference()
 	{
-		if (IsAdventureTutorialCardStepActive())
+		if (IsAdventureTutorialPlayerActionStepActive())
 		{
 			return new[]
 			{
@@ -690,6 +898,17 @@ public partial class GameBoardScene
 				AdventureTutorialCalloutPlacement.Left,
 				AdventureTutorialCalloutPlacement.Right,
 				AdventureTutorialCalloutPlacement.Below,
+			};
+		}
+
+		if (IsAdventureTutorialEnemyStepActive())
+		{
+			return new[]
+			{
+				AdventureTutorialCalloutPlacement.Below,
+				AdventureTutorialCalloutPlacement.Left,
+				AdventureTutorialCalloutPlacement.Right,
+				AdventureTutorialCalloutPlacement.Above,
 			};
 		}
 
@@ -784,6 +1003,16 @@ public partial class GameBoardScene
 	private bool TryGetAdventureTutorialTargetRect(out Rect2 targetRect)
 	{
 		targetRect = default;
+		if (IsAdventureTutorialBombIntroActive())
+		{
+			return TryGetControlGlobalRect("%TableCardLayoutArea", out targetRect);
+		}
+
+		if (IsAdventureTutorialBasicIntroActive())
+		{
+			return TryGetControlGlobalRect("%TableCardLayoutArea", out targetRect);
+		}
+
 		if (IsAdventureTutorialCardStepActive())
 		{
 			if (TryGetAdventureTutorialAllowedHandIndex(out int handIndex)
@@ -793,6 +1022,23 @@ public partial class GameBoardScene
 			}
 
 			return TryGetControlGlobalRect($"%Player1HandArea", out targetRect);
+		}
+
+		if (IsAdventureTutorialItemStepActive())
+		{
+			if (TryGetAdventureTutorialAllowedItemDisplayIndex(out int displayIndex)
+				&& TryGetHandCardGlobalRect(MainPlayerIndex, displayIndex, out targetRect))
+			{
+				return true;
+			}
+
+			return TryGetControlGlobalRect($"%Player1HandArea", out targetRect);
+		}
+
+		if (IsAdventureTutorialEnemyStepActive())
+		{
+			return TryGetControlGlobalRect($"%Player2HandArea", out targetRect)
+				|| TryGetControlGlobalRect("%TableCardLayoutArea", out targetRect);
 		}
 
 		if (!IsAdventureTutorialTourActive())
@@ -885,7 +1131,7 @@ public partial class GameBoardScene
 
 	private bool IsAdventureTutorialBlockingMainPlayerAction()
 	{
-		return IsAdventureTutorialTourActive();
+		return IsAdventureTutorialContinueCalloutActive() || IsAdventureTutorialEnemyStepActive();
 	}
 
 	private bool CanPlayAdventureTutorialHandCard(int handIndex)
@@ -905,9 +1151,17 @@ public partial class GameBoardScene
 
 	private bool IsAdventureTutorialHandCardBlocked(int playerIndex, int handIndex)
 	{
-		return IsAdventureTutorialCardStepActive()
-			&& playerIndex == MainPlayerIndex
-			&& (!TryGetAdventureTutorialAllowedHandIndex(out int allowedHandIndex) || handIndex != allowedHandIndex);
+		if (!IsAdventureTutorialEnabled() || playerIndex != MainPlayerIndex)
+		{
+			return false;
+		}
+
+		if (IsAdventureTutorialCardStepActive())
+		{
+			return !TryGetAdventureTutorialAllowedHandIndex(out int allowedHandIndex) || handIndex != allowedHandIndex;
+		}
+
+		return IsAdventureTutorialItemStepActive();
 	}
 
 	private bool IsAdventureTutorialHandCardHighlighted(int playerIndex, int handIndex)
@@ -926,11 +1180,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		string rank = _adventureTutorialPhase == AdventureTutorialPhase.MatchSeven ? "7" : "2";
+		if (!TryGetAdventureTutorialAllowedHandCard(out string suit, out string rank))
+		{
+			return false;
+		}
+
 		List<PlayingCard> hand = _playerHands[MainPlayerIndex];
 		for (int index = 0; index < hand.Count; index++)
 		{
-			if (hand[index].Rank == rank)
+			if (IsAdventureTutorialCard(hand[index], suit, rank))
 			{
 				handIndex = index;
 				return true;
@@ -938,6 +1196,95 @@ public partial class GameBoardScene
 		}
 
 		return false;
+	}
+
+	private bool TryGetAdventureTutorialAllowedHandCard(out string suit, out string rank)
+	{
+		suit = string.Empty;
+		rank = string.Empty;
+		switch (_adventureTutorialPhase)
+		{
+			case AdventureTutorialPhase.MatchSeven:
+				suit = "Hearts";
+				rank = "7";
+				return true;
+			case AdventureTutorialPhase.MatchTwo:
+				suit = "Hearts";
+				rank = "2";
+				return true;
+			case AdventureTutorialPhase.BombCollectReward:
+				suit = "Hearts";
+				rank = "4";
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	private bool CanPlayAdventureTutorialItemCard(int itemHandIndex)
+	{
+		if (!IsAdventureTutorialEnabled())
+		{
+			return true;
+		}
+
+		if (!IsAdventureTutorialItemStepActive())
+		{
+			return false;
+		}
+
+		return TryGetAdventureTutorialAllowedItemIndex(out int allowedItemHandIndex)
+			&& itemHandIndex == allowedItemHandIndex;
+	}
+
+	private bool IsAdventureTutorialItemCardBlocked(int playerIndex, int itemHandIndex)
+	{
+		return IsAdventureTutorialItemStepActive()
+			&& playerIndex == MainPlayerIndex
+			&& (!TryGetAdventureTutorialAllowedItemIndex(out int allowedItemHandIndex)
+				|| itemHandIndex != allowedItemHandIndex);
+	}
+
+	private bool IsAdventureTutorialItemCardHighlighted(int playerIndex, int itemHandIndex)
+	{
+		return IsAdventureTutorialItemStepActive()
+			&& playerIndex == MainPlayerIndex
+			&& TryGetAdventureTutorialAllowedItemIndex(out int allowedItemHandIndex)
+			&& itemHandIndex == allowedItemHandIndex;
+	}
+
+	private bool TryGetAdventureTutorialAllowedItemIndex(out int itemHandIndex)
+	{
+		itemHandIndex = -1;
+		if (!IsAdventureTutorialItemStepActive() || _playerItemHands.Count <= MainPlayerIndex)
+		{
+			return false;
+		}
+
+		List<ItemCard> itemHand = _playerItemHands[MainPlayerIndex];
+		for (int index = 0; index < itemHand.Count; index++)
+		{
+			if (string.Equals(itemHand[index].Id, BombItemCardId, StringComparison.Ordinal))
+			{
+				itemHandIndex = index;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private bool TryGetAdventureTutorialAllowedItemDisplayIndex(out int displayIndex)
+	{
+		displayIndex = -1;
+		if (!TryGetAdventureTutorialAllowedItemIndex(out int itemHandIndex)
+			|| _playerHands.Count <= MainPlayerIndex)
+		{
+			return false;
+		}
+
+		displayIndex = _playerHands[MainPlayerIndex].Count + itemHandIndex;
+		return true;
 	}
 
 	private void TryRejectAdventureTutorialCard(InputEvent inputEvent)
@@ -960,7 +1307,13 @@ public partial class GameBoardScene
 
 		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven)
 		{
-			BeginAdventureTutorialCardStep(AdventureTutorialPhase.MatchTwo);
+			BeginAdventureTutorialStep(AdventureTutorialPhase.MatchTwo);
+			return false;
+		}
+
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward)
+		{
+			BeginAdventureTutorialStep(AdventureTutorialPhase.BombPlay);
 			return false;
 		}
 
@@ -970,21 +1323,66 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	private bool HandleAdventureTutorialMainPlayerItemResult(PlayCardResult result)
+	{
+		if (!IsAdventureTutorialItemStepActive() || !result.Played)
+		{
+			return false;
+		}
+
+		if (_adventureTutorialPhase == AdventureTutorialPhase.BombPlay)
+		{
+			BeginAdventureTutorialStep(AdventureTutorialPhase.BombEnemyTrigger);
+		}
+
+		return false;
+	}
+
+	private bool HandleAdventureTutorialOpponentResult(int playerIndex, PlayCardResult result)
+	{
+		if (!IsBombItemTutorialFlow()
+			|| _adventureTutorialPhase != AdventureTutorialPhase.BombEnemyTrigger
+			|| playerIndex == MainPlayerIndex
+			|| !result.Played
+			|| !result.Captured)
+		{
+			return false;
+		}
+
+		_adventureTutorialPhase = AdventureTutorialPhase.Complete;
+		ResetAdventureTutorialState();
+		if (!IsGameOver())
+		{
+			DeclareWinner(MainPlayerIndex);
+		}
+
+		return true;
+	}
+
+	private bool ShouldForceBombQuestionReward()
+	{
+		return IsBombItemTutorialFlow()
+			&& _adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward;
+	}
+
 	private void AddAdventureTutorialHandRenderSignature(ref HashCode signature, int playerIndex)
 	{
+		signature.Add(_adventureTutorialFlow);
 		signature.Add((int)_adventureTutorialPhase);
 		signature.Add(_adventureTutorialTourIndex);
 		signature.Add(playerIndex == MainPlayerIndex && TryGetAdventureTutorialAllowedHandIndex(out int handIndex) ? handIndex : -1);
+		signature.Add(playerIndex == MainPlayerIndex && TryGetAdventureTutorialAllowedItemIndex(out int itemIndex) ? itemIndex : -1);
 	}
 
 	private void AddAdventureTutorialTableRenderSignature(ref HashCode signature)
 	{
+		signature.Add(_adventureTutorialFlow);
 		signature.Add((int)_adventureTutorialPhase);
 	}
 
 	private void AddAdventureTutorialTableHighlights(Rect2 tableLayoutRect)
 	{
-		if (!IsAdventureTutorialCardStepActive())
+		if (!IsBasicCaptureTutorialCardStepActive())
 		{
 			return;
 		}

@@ -74,6 +74,11 @@ public partial class GameBoardScene
 					continue;
 				}
 
+				if (HandleAdventureTutorialOpponentResult(playerIndex, result))
+				{
+					return;
+				}
+
 				if (IsGameOver())
 				{
 					return;
@@ -158,6 +163,11 @@ public partial class GameBoardScene
 		{
 			PlayCardResult result = await PlayItemCardFromHandAsync(MainPlayerIndex, itemHandIndex, turnSequenceGeneration);
 			if (!result.Played || HasPendingItemSelection())
+			{
+				return;
+			}
+
+			if (HandleAdventureTutorialMainPlayerItemResult(result))
 			{
 				return;
 			}

@@ -66,7 +66,7 @@ public static partial class CharacterAvatarCatalog
 		int highestCompletedStage = LoadHighestCompletedAdventureStage();
 		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
-			if (avatar.AdventureStageNumber > 0 && avatar.AdventureStageNumber <= highestCompletedStage)
+			if (IsPlayerObtainableAdventureAvatar(avatar) && avatar.AdventureStageNumber <= highestCompletedStage)
 			{
 				unlockedAvatars.Add(avatar);
 			}
@@ -84,7 +84,7 @@ public static partial class CharacterAvatarCatalog
 		}
 
 		int stageNumber = GetAdventureStageNumber(normalized);
-		return stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage();
+		return IsPlayerObtainableAdventureStage(stageNumber) && stageNumber <= LoadHighestCompletedAdventureStage();
 	}
 
 	public static int GetAdventureStageCount()
@@ -167,7 +167,11 @@ public static partial class CharacterAvatarCatalog
 		}
 
 		var pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue();
-		pendingUnlocks.Add(normalizedAvatarId);
+		if (IsPlayerObtainableAdventureStage(stageNumber))
+		{
+			pendingUnlocks.Add(normalizedAvatarId);
+		}
+
 		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
 		{
 			HighestCompletedStage = stageNumber,
@@ -193,7 +197,7 @@ public static partial class CharacterAvatarCatalog
 			pendingUnlocks.RemoveAt(0);
 			string normalizedAvatarId = NormalizeAvatarId(avatarId);
 			int stageNumber = GetAdventureStageNumber(normalizedAvatarId);
-			if (stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage())
+			if (IsPlayerObtainableAdventureStage(stageNumber) && stageNumber <= LoadHighestCompletedAdventureStage())
 			{
 				Error consumeSaveResult = SavePendingAdventureAvatarUnlockQueue(pendingUnlocks);
 				if (consumeSaveResult != Error.Ok)
@@ -212,6 +216,16 @@ public static partial class CharacterAvatarCatalog
 		}
 
 		return string.Empty;
+	}
+
+	private static bool IsPlayerObtainableAdventureAvatar(CharacterAvatarDefinition avatar)
+	{
+		return IsPlayerObtainableAdventureStage(avatar.AdventureStageNumber);
+	}
+
+	private static bool IsPlayerObtainableAdventureStage(int stageNumber)
+	{
+		return stageNumber is 5 or 6 or 10;
 	}
 
 	public static int GetIdleFrameCount(string avatarRoot)
