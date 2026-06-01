@@ -38,7 +38,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.LeafySeadragonSlash);
+		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.LeafySeadragonSlash);
 		Vector2 direction = travel / distance;
 		Vector2 side = new(-direction.Y, direction.X);
 		Vector2 projectileStart = startCenter + direction * 34.0f;
@@ -157,7 +157,7 @@ public partial class GameBoardScene
 		await PlayBossKRoyalSeizureLanceFlightAsync(attackerPlayerIndex, targetCenter, turnSequenceGeneration, onHit);
 		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 		{
-			await PlayAdventureAttackImpactPulseAsync(targetCenter, _bossKRoyalSeizureLanceFrames);
+			await PlayAdventureAttackImpactPulseAsync(attackerPlayerIndex, targetCenter, _bossKRoyalSeizureLanceFrames);
 		}
 	}
 

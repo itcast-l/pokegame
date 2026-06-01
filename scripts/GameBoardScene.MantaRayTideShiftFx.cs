@@ -32,7 +32,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.MantaRayCyclone);
+		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.MantaRayCyclone);
 		Vector2 direction = travel / distance;
 		float effectLength = Math.Max(48.0f, distance - MantaRayTideShiftCycloneStartInset - MantaRayTideShiftCycloneTargetInset);
 		Vector2 effectStart = startCenter + direction * MantaRayTideShiftCycloneStartInset;

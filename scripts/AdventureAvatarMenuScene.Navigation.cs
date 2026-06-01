@@ -16,10 +16,12 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
-		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
+		string selectedAvatarId = _selectedAvatarId;
+		string gameBoardScenePath = GetGameBoardScenePathForAvatar(selectedAvatarId);
+		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
 		if (gameBoardScene == null)
 		{
-			GD.PushError($"Missing game board scene: {GameBoardScenePath}");
+			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
 			return;
 		}
 
@@ -28,12 +30,11 @@ public partial class AdventureAvatarMenuScene
 		_startButton.Disabled = true;
 		MouseFilter = MouseFilterEnum.Ignore;
 
-		_ = StartAdventureWithTransitionAsync(gameBoardScene);
+		_ = StartAdventureWithTransitionAsync(gameBoardScene, selectedAvatarId);
 	}
 
-	private async Task StartAdventureWithTransitionAsync(PackedScene gameBoardScene)
+	private async Task StartAdventureWithTransitionAsync(PackedScene gameBoardScene, string selectedAvatarId)
 	{
-		string selectedAvatarId = _selectedAvatarId;
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
 			Node gameBoard = gameBoardScene.Instantiate();

@@ -29,15 +29,15 @@ manager/music/bus="Music"
 [autoload]
 
 PhantomCameraManager="*uid://duq6jhf6unyis"
-SoundManager="*uid://sgxo2a017ehn"
-MusicManager="*uid://b3612i7nyqsva"
-Pandora="*uid://b10fe27aocjvi"
 SaveManager="*uid://d1wmxv27ppc12"
 SteamManager="*res://scripts/SteamManager.gd"
 GameAudio="*res://scripts/GameAudioManager.cs"
 MCPScreenshot="*res://addons/godot_mcp/mcp_screenshot_service.gd"
 MCPInputService="*res://addons/godot_mcp/mcp_input_service.gd"
 MCPGameInspector="*res://addons/godot_mcp/mcp_game_inspector_service.gd"
+Pandora="*uid://b10fe27aocjvi"
+SoundManager="*uid://sgxo2a017ehn"
+MusicManager="*uid://b3612i7nyqsva"
 
 [display]
 

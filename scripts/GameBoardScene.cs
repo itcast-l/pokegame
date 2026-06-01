@@ -205,6 +205,7 @@ public partial class GameBoardScene : Control
 	private bool _itemMode = true;
 	private bool _soloMode;
 	private bool _adventureMode;
+	private bool _adventureTutorialMode;
 	private string _adventureEnemyAvatarId = "fish";
 	private bool _mantaRayTideShiftCheckedThisTurn;
 	private bool _jellyfishBubbleTriggeredThisTurn;
@@ -290,6 +291,13 @@ public partial class GameBoardScene : Control
 	{
 		get => _adventureMode;
 		set => _adventureMode = value;
+	}
+
+	[Export]
+	public bool adventure_tutorial_mode
+	{
+		get => _adventureTutorialMode;
+		set => _adventureTutorialMode = value;
 	}
 
 	[Export]

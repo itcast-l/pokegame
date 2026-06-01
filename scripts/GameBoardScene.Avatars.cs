@@ -134,6 +134,7 @@ public partial class GameBoardScene
 		avatar.Name = $"Player{playerIndex + 1}Avatar";
 		avatar.MouseFilter = MouseFilterEnum.Ignore;
 		avatar.AvatarRoot = avatarDefinition.RootPath;
+		avatar.AudioConfig = avatarDefinition.AudioConfig;
 		avatar.AccentColor = PlayerAvatarAccentColors[playerIndex];
 		return avatar;
 	}
@@ -160,7 +161,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayPlayerAvatarActionSfx(action);
+		PlayPlayerAvatarActionSfx(playerIndex, action);
 		avatar.PlayAction(action);
 	}
 

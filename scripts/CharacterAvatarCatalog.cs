@@ -5,7 +5,7 @@ using Godot;
 public static partial class CharacterAvatarCatalog
 {
 	public const string DefaultAvatarId = "cat";
-	private const bool UnlockAllAdventureStagesForTesting = false;
+	private const bool UnlockAllAdventureStagesForTesting = true;
 	private const string PendingAvatarUnlockQueueSeparator = "|";
 	private const string AvatarResourceDirectory = "res://resources/character_avatars";
 

@@ -101,6 +101,7 @@ public partial class CharacterAvatarEditScene : Control
 
 			optionSlot.Root.Visible = true;
 			optionSlot.Avatar.AvatarRoot = avatarDefinition.RootPath;
+			optionSlot.Avatar.AudioConfig = avatarDefinition.AudioConfig;
 			optionSlot.Avatar.PlayIdle();
 			optionSlot.Panel.Modulate = Colors.White;
 			optionSlot.Button.TooltipText = "预览头像";
@@ -135,6 +136,7 @@ public partial class CharacterAvatarEditScene : Control
 	{
 		CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(CurrentAvatarId);
 		_previewAvatar.AvatarRoot = avatarDefinition.RootPath;
+		_previewAvatar.AudioConfig = avatarDefinition.AudioConfig;
 		_previewAvatar.PlayIdle();
 	}
 

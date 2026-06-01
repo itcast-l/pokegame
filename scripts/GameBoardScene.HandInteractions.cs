@@ -15,6 +15,13 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (!CanPlayAdventureTutorialHandCard(handIndex))
+		{
+			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+			PulseAdventureTutorialCallout();
+			return;
+		}
+
 		PlayGameSfx(GameSfx.CardPickup, -2.0f, 0.97f, 1.04f, 0.04);
 		Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(MainPlayerIndex, handIndex);
 		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, _turnSequenceGeneration, startGlobalPosition);

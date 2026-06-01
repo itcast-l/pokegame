@@ -35,7 +35,8 @@ public static partial class CharacterAvatarCatalog
 			GetResourceFloat(resource, "AttackEffectFlightSeconds"),
 			GetResourceString(resource, "AttackEffectStyle"),
 			GetResourceString(resource, "AccentColorHtml"),
-			GetResourceBool(resource, "BossBorrowedAbilityFxEligible", true));
+			GetResourceBool(resource, "BossBorrowedAbilityFxEligible", true),
+			GetResourceObject<CharacterAudioConfig>(resource, "AudioConfig"));
 	}
 
 	private static string GetResourceString(Resource resource, string propertyName, string fallback = "")
@@ -60,5 +61,12 @@ public static partial class CharacterAvatarCatalog
 	{
 		Variant value = resource.Get(propertyName);
 		return value.VariantType == Variant.Type.Nil ? fallback : value.AsBool();
+	}
+
+	private static T? GetResourceObject<T>(Resource resource, string propertyName)
+		where T : GodotObject
+	{
+		Variant value = resource.Get(propertyName);
+		return value.VariantType == Variant.Type.Nil ? null : value.AsGodotObject() as T;
 	}
 }

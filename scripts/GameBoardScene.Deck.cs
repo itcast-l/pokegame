@@ -12,6 +12,7 @@ public partial class GameBoardScene
 		}
 
 		List<PlayingCard> deck = BuildDeckForPlayerCount(player_count);
+		ResetAdventureTutorialState();
 
 		_playerDecks.Clear();
 		_playerHands.Clear();
@@ -71,6 +72,15 @@ public partial class GameBoardScene
 			_playerItemHands.Add(new List<ItemCard>());
 			_openingVisibleHandCardCounts.Add(0);
 			_openingVisiblePileCardCounts.Add(0);
+		}
+
+		if (TrySetupAdventureTutorialDeal())
+		{
+			RenderPlayerCardPiles();
+			RenderPlayerHands();
+			RenderTableCards();
+			StartAdventureTutorial();
+			return;
 		}
 
 		DealDeckToPlayerDecks(deck);

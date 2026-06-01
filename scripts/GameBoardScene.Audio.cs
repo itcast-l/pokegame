@@ -73,7 +73,7 @@ public partial class GameBoardScene
 		PlayGameSfx(GameSfx.SpecialItemCardPlay, -2.0f, 0.97f, 1.04f, 0.04);
 	}
 
-	private void PlayPlayerAvatarActionSfx(CharacterAvatar.AvatarAction action)
+	private void PlayPlayerAvatarActionSfx(int playerIndex, CharacterAvatar.AvatarAction action)
 	{
 		if (!adventure_mode
 			&& action != CharacterAvatar.AvatarAction.Victory
@@ -85,122 +85,167 @@ public partial class GameBoardScene
 		switch (action)
 		{
 			case CharacterAvatar.AvatarAction.Score:
-				PlayGameSfx(GameSfx.AvatarScore, -4.0f, 0.97f, 1.04f, 0.08);
+				GameAudio?.PlayCharacterActionSfx(GetCharacterAudioConfigForPlayer(playerIndex), action, -4.0f, 0.97f, 1.04f, 0.08);
 				break;
 			case CharacterAvatar.AvatarAction.Attack:
-				PlayGameSfx(GameSfx.AvatarAttack, -3.0f, 0.97f, 1.03f, 0.10);
+				GameAudio?.PlayCharacterActionSfx(
+					GetCharacterAudioConfigForPlayer(playerIndex),
+					action,
+					ShouldPlayCatAdventureScratchAttack(playerIndex) ? -8.0f : -3.0f,
+					0.97f,
+					1.03f,
+					0.10);
 				break;
 			case CharacterAvatar.AvatarAction.Hit:
-				PlayGameSfx(GameSfx.AvatarHit, -2.0f, 0.97f, 1.03f, 0.08);
+				GameAudio?.PlayCharacterActionSfx(GetCharacterAudioConfigForPlayer(playerIndex), action, -2.0f, 0.97f, 1.03f, 0.08);
 				break;
 			case CharacterAvatar.AvatarAction.Victory:
-				PlayGameSfx(GameSfx.AvatarVictory, -1.5f, 0.98f, 1.02f, 0.50);
+				GameAudio?.PlayCharacterActionSfx(GetCharacterAudioConfigForPlayer(playerIndex), action, -1.5f, 0.98f, 1.02f, 0.50);
 				break;
 			case CharacterAvatar.AvatarAction.Defeat:
-				PlayGameSfx(GameSfx.AvatarDefeat, -1.5f, 0.98f, 1.02f, 0.50);
+				GameAudio?.PlayCharacterActionSfx(GetCharacterAudioConfigForPlayer(playerIndex), action, -1.5f, 0.98f, 1.02f, 0.50);
 				break;
 		}
 	}
 
-	private void PlayAdventureAttackFlightSfx()
+	private CharacterAudioConfig? GetCharacterAudioConfigForPlayer(int playerIndex)
+	{
+		if (playerIndex >= 0
+			&& playerIndex < _playerAvatars.Length
+			&& _playerAvatars[playerIndex] is CharacterAvatar avatar
+			&& GodotObject.IsInstanceValid(avatar)
+			&& avatar.AudioConfig != null)
+		{
+			return avatar.AudioConfig;
+		}
+
+		if (adventure_mode)
+		{
+			if (playerIndex == MainPlayerIndex)
+			{
+				return CharacterAvatarCatalog.Default.AudioConfig;
+			}
+
+			if (IsAdventureEnemyPlayer(playerIndex))
+			{
+				return CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).AudioConfig;
+			}
+		}
+
+		return CharacterAvatarCatalog.LoadSelectedAvatar().AudioConfig;
+	}
+
+	private void PlayAdventureAttackFlightSfx(int attackerPlayerIndex)
 	{
 		if (adventure_mode)
 		{
-			PlayGameSfx(GameSfx.AdventureAttackFlight, -4.0f, 0.96f, 1.05f, 0.08);
+			GameAudio?.PlayCharacterAttackFlightSfx(
+				GetCharacterAudioConfigForPlayer(attackerPlayerIndex),
+				-4.0f,
+				0.96f,
+				1.05f,
+				0.08);
 		}
 	}
 
-	private void PlayAdventureAttackImpactSfx()
+	private void PlayAdventureAttackImpactSfx(int attackerPlayerIndex)
 	{
 		if (adventure_mode)
 		{
-			PlayGameSfx(GameSfx.AdventureAttackImpact, -2.5f, 0.97f, 1.04f, 0.05);
+			GameAudio?.PlayCharacterAttackImpactSfx(
+				GetCharacterAudioConfigForPlayer(attackerPlayerIndex),
+				-2.5f,
+				0.97f,
+				1.04f,
+				0.05);
 		}
 	}
 
-	private void PlayAdventureAttackStyleSfx(string attackEffectStyle)
+	private void PlayAdventureAttackStyleSfx(int attackerPlayerIndex, string attackEffectStyle)
 	{
 		if (!adventure_mode)
 		{
 			return;
 		}
 
+		CharacterAudioConfig? audioConfig = GetCharacterAudioConfigForPlayer(attackerPlayerIndex);
 		switch (attackEffectStyle)
 		{
 			case AdventureAttackEffectStyles.FishBeam:
-				PlayGameSfx(GameSfx.FishBeam, -2.0f, 0.98f, 1.03f, 0.12);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.98f, 1.03f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.CrabPincer:
-				PlayGameSfx(GameSfx.CrabPincer, -2.0f, 0.97f, 1.04f, 0.12);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.JellyfishTentacle:
-				PlayGameSfx(GameSfx.JellyfishTentacle, -2.0f, 0.97f, 1.04f, 0.12);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.MantaRayCyclone:
-				PlayGameSfx(GameSfx.MantaRayTideShift, -1.5f, 0.98f, 1.02f, 0.18);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -1.5f, 0.98f, 1.02f, 0.18);
 				break;
 			case AdventureAttackEffectStyles.SeaSlugMarker:
-				PlayGameSfx(GameSfx.SeaSlugMarker, -2.0f, 0.97f, 1.04f, 0.12);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.GardenEelBurrow:
-				PlayGameSfx(GameSfx.GardenEelAmbush, -2.0f, 0.97f, 1.04f, 0.16);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.97f, 1.04f, 0.16);
 				break;
 			case AdventureAttackEffectStyles.LeafySeadragonSlash:
-				PlayGameSfx(GameSfx.LeafySeadragonBlade, -2.0f, 0.97f, 1.04f, 0.12);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.DragonPrinceHit:
-				PlayGameSfx(GameSfx.DragonPrinceHit, -2.0f, 0.97f, 1.04f, 0.12);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureAttackEffectStyles.DragonQueenJaw:
-				PlayGameSfx(GameSfx.DragonQueenJaw, -1.5f, 0.97f, 1.03f, 0.16);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -1.5f, 0.97f, 1.03f, 0.16);
 				break;
 			case AdventureAttackEffectStyles.BossKRoyalSeizure:
-				PlayGameSfx(GameSfx.BossKRoyalSeizure, -1.0f, 0.96f, 1.02f, 0.20);
+				GameAudio?.PlayCharacterAttackStyleSfx(audioConfig, attackEffectStyle, -1.0f, 0.96f, 1.02f, 0.20);
 				break;
 		}
 	}
 
-	private void PlayAdventureAbilitySfx(string abilityId)
+	private void PlayAdventureAbilitySfx(int playerIndex, string abilityId)
 	{
 		if (!adventure_mode)
 		{
 			return;
 		}
 
+		CharacterAudioConfig? audioConfig = GetCharacterAudioConfigForPlayer(playerIndex);
 		switch (abilityId)
 		{
 			case AdventureEnemyAbilities.TideGuard:
-				PlayGameSfx(GameSfx.TideGuard, -1.5f, 0.98f, 1.03f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.98f, 1.03f, 0.18);
 				break;
 			case AdventureEnemyAbilities.BubbleCover:
-				PlayGameSfx(GameSfx.JellyfishBubbleCover, -1.5f, 0.98f, 1.03f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.98f, 1.03f, 0.18);
 				break;
 			case AdventureEnemyAbilities.SandAmbush:
-				PlayGameSfx(GameSfx.GardenEelAmbush, -2.0f, 0.97f, 1.04f, 0.16);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -2.0f, 0.97f, 1.04f, 0.16);
 				break;
 			case AdventureEnemyAbilities.ColorCurrent:
-				PlayGameSfx(GameSfx.ColorCurrent, -2.0f, 0.97f, 1.04f, 0.16);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -2.0f, 0.97f, 1.04f, 0.16);
 				break;
 			case AdventureEnemyAbilities.SpiralShell:
-				PlayGameSfx(GameSfx.NautilusSpiralShell, -1.5f, 0.98f, 1.02f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.98f, 1.02f, 0.18);
 				break;
 			case AdventureEnemyAbilities.TuskBreak:
-				PlayGameSfx(GameSfx.NarwhalTuskBreak, -1.5f, 0.98f, 1.03f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.98f, 1.03f, 0.18);
 				break;
 			case AdventureEnemyAbilities.TideShift:
-				PlayGameSfx(GameSfx.MantaRayTideShift, -1.5f, 0.98f, 1.02f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.98f, 1.02f, 0.18);
 				break;
 			case AdventureEnemyAbilities.LeafyMirage:
-				PlayGameSfx(GameSfx.LeafySeadragonBlade, -2.0f, 0.97f, 1.04f, 0.12);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -2.0f, 0.97f, 1.04f, 0.12);
 				break;
 			case AdventureEnemyAbilities.DragonPrince:
-				PlayGameSfx(GameSfx.DragonPrinceAbility, -1.5f, 0.97f, 1.03f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.97f, 1.03f, 0.18);
 				break;
 			case AdventureEnemyAbilities.DragonQueen:
-				PlayGameSfx(GameSfx.DragonQueenAbility, -1.5f, 0.97f, 1.03f, 0.18);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.5f, 0.97f, 1.03f, 0.18);
 				break;
 			case AdventureEnemyAbilities.DragonKing:
-				PlayGameSfx(GameSfx.DragonKingAbility, -1.0f, 0.96f, 1.02f, 0.22);
+				GameAudio?.PlayCharacterAbilitySfx(audioConfig, abilityId, -1.0f, 0.96f, 1.02f, 0.22);
 				break;
 		}
 	}

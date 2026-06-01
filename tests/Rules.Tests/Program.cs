@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 
 internal static class Program
 {
@@ -18,7 +19,7 @@ internal static class Program
 		Run("adventure ai point scoring starts after early stages", AdventureAiPointScoringStartsAfterEarlyStages);
 		Run("adventure ai random capture can pick non-best capture", AdventureAiRandomCaptureCanPickNonBestCapture);
 		Run("adventure ai final profile always picks best capture", AdventureAiFinalProfileAlwaysPicksBestCapture);
-		Run("generated adventure sfx files exist", GeneratedAdventureSfxFilesExist);
+		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
 		Run("turn rules skip inactive players", TurnRulesSkipInactivePlayers);
 		Run("turn rules find single remaining player", TurnRulesFindSingleRemainingPlayer);
@@ -248,30 +249,29 @@ internal static class Program
 		Equal(0, handIndex);
 	}
 
-	private static void GeneratedAdventureSfxFilesExist()
+	private static void CharacterAudioConfigResourcesPointToExistingFiles()
 	{
 		string repoRoot = FindRepositoryRoot();
-		string[] relativePaths =
-		{
-			"asset/audio/sfx/adventure/crab_pincer.mp3",
-			"asset/audio/sfx/adventure/jellyfish_tentacle.mp3",
-			"asset/audio/sfx/adventure/sea_slug_marker.mp3",
-			"asset/audio/sfx/adventure/dragon_prince_hit.mp3",
-			"asset/audio/sfx/adventure/dragon_queen_jaw.mp3",
-			"asset/audio/sfx/adventure/boss_k_royal_seizure.mp3",
-			"asset/audio/sfx/adventure/tide_guard.mp3",
-			"asset/audio/sfx/adventure/color_current.mp3",
-			"asset/audio/sfx/adventure/dragon_prince_ability.mp3",
-			"asset/audio/sfx/adventure/dragon_queen_ability.mp3",
-			"asset/audio/sfx/adventure/dragon_king_ability.mp3",
-		};
+		string audioConfigDirectory = Path.Combine(repoRoot, "resources", "character_audio");
+		True(Directory.Exists(audioConfigDirectory));
 
-		foreach (string relativePath in relativePaths)
+		string[] configPaths = Directory.GetFiles(audioConfigDirectory, "*.tres");
+		True(configPaths.Length > 0);
+
+		int audioReferenceCount = 0;
+		foreach (string configPath in configPaths)
 		{
-			string path = Path.Combine(repoRoot, relativePath);
-			True(File.Exists(path));
-			True(new FileInfo(path).Length > 1024);
+			string configText = File.ReadAllText(configPath);
+			foreach (Match match in Regex.Matches(configText, "path=\"res://([^\"]+\\.(?:mp3|wav))\""))
+			{
+				audioReferenceCount++;
+				string path = Path.Combine(repoRoot, match.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar));
+				True(File.Exists(path));
+				True(new FileInfo(path).Length > 1024);
+			}
 		}
+
+		True(audioReferenceCount > 0);
 	}
 
 	private static void GameLoopPhasePrecedenceIsStable()

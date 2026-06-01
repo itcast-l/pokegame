@@ -62,6 +62,8 @@ public partial class GameBoardScene
 				float visualScale,
 				Texture2D? attachmentOverlayTexture = null,
 				bool showMagnetSelectionHighlight = false,
+				bool showAdventureTutorialHighlight = false,
+				bool isAdventureTutorialBlocked = false,
 				bool isJellyfishDisabled = false,
 				string tooltipText = "")
 			{
@@ -78,13 +80,15 @@ public partial class GameBoardScene
 					isPlayable,
 					attachmentOverlayTexture,
 					showMagnetSelectionHighlight,
+					showAdventureTutorialHighlight,
+					isAdventureTutorialBlocked,
 					isJellyfishDisabled,
 					tooltipText);
 				Control cardSlot = canPoolSlot ? RentHandCardSlot() : CreateHandCardSlot(canPoolSlot);
 				TextureRect cardVisual = GetOrCreateHandCardVisual(cardSlot);
 
 				cardSlot.Name = $"HandCard_{displayIndex}";
-				cardSlot.MouseFilter = isPlayable || isJellyfishDisabled || !string.IsNullOrEmpty(tooltipText)
+				cardSlot.MouseFilter = isPlayable || isAdventureTutorialBlocked || isJellyfishDisabled || !string.IsNullOrEmpty(tooltipText)
 					? MouseFilterEnum.Stop
 					: MouseFilterEnum.Ignore;
 				cardSlot.Position = basePosition;
@@ -105,9 +109,16 @@ public partial class GameBoardScene
 				cardVisual.Scale = Vector2.One;
 				cardVisual.RotationDegrees = cardRotation;
 				cardVisual.ZIndex = 0;
-				cardVisual.Modulate = isJellyfishDisabled ? new Color(1.0f, 1.0f, 1.0f, 0.48f) : Colors.White;
+				cardVisual.Modulate = isJellyfishDisabled || isAdventureTutorialBlocked
+					? new Color(1.0f, 1.0f, 1.0f, 0.48f)
+					: Colors.White;
 
 				if (showMagnetSelectionHighlight)
+				{
+					AddMagnetSelectionPulse(cardSlot, visualBasePosition, visualSize, cardRotation);
+					StartMagnetSelectionBounce(cardSlot, basePosition);
+				}
+				else if (showAdventureTutorialHighlight)
 				{
 					AddMagnetSelectionPulse(cardSlot, visualBasePosition, visualSize, cardRotation);
 					StartMagnetSelectionBounce(cardSlot, basePosition);
@@ -183,8 +194,16 @@ public partial class GameBoardScene
 						TryPlayMainPlayerCard(inputEvent, handIndex);
 					};
 				}
+				else if (isAdventureTutorialBlocked)
+				{
+					cardSlot.GuiInput += TryRejectAdventureTutorialCard;
+				}
 
-				string effectiveTooltipText = isJellyfishDisabled ? Localize("GAME_CARD_DISABLED_THIS_TURN") : tooltipText;
+				string effectiveTooltipText = isJellyfishDisabled
+					? Localize("GAME_CARD_DISABLED_THIS_TURN")
+					: isAdventureTutorialBlocked
+					? Localize("GAME_TUTORIAL_WRONG_CARD")
+					: tooltipText;
 				if (!string.IsNullOrEmpty(effectiveTooltipText))
 				{
 					Label descriptionLabel = CreateCardDescriptionLabel(
@@ -236,9 +255,15 @@ public partial class GameBoardScene
 				bool isMagnetSelectionCard = showMagnetSelectionHighlight && !isJellyfishDisabled;
 				bool isHandLimitDiscardSelectionCard = isHandLimitDiscardSelectionActive
 					&& playerIndex == MainPlayerIndex;
+				bool showAdventureTutorialHighlight = IsAdventureTutorialHandCardHighlighted(playerIndex, cardIndex);
+				bool isAdventureTutorialBlocked = IsAdventureTutorialHandCardBlocked(playerIndex, cardIndex);
 				bool isPlayable = isMagnetSelectionCard
 					|| isHandLimitDiscardSelectionCard
 					|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
+				if (playerIndex == MainPlayerIndex && IsAdventureTutorialCardStepActive())
+				{
+					isPlayable = isPlayable && showAdventureTutorialHighlight;
+				}
 				AddHandCard(
 					texture,
 					cardIndex,
@@ -249,6 +274,8 @@ public partial class GameBoardScene
 					1.0f,
 					showCardBack ? null : GetCardAttachmentOverlayTexture(card),
 					isMagnetSelectionCard,
+					showAdventureTutorialHighlight,
+					isAdventureTutorialBlocked,
 					isJellyfishDisabled,
 					GetHandCardDescription(card, showCardBack));
 			}
@@ -263,6 +290,7 @@ public partial class GameBoardScene
 				bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
 					&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
 				bool isPlayable = playerIndex == MainPlayerIndex
+					&& !IsAdventureTutorialCardStepActive()
 					&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
 				string tooltipText = !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
 					? description
@@ -280,6 +308,7 @@ public partial class GameBoardScene
 			}
 		}
 
+		RefreshAdventureTutorialOverlayLayout();
 		EndPerformanceSample("RenderPlayerHands", sampleStart);
 	}
 
@@ -287,12 +316,16 @@ public partial class GameBoardScene
 		bool isPlayable,
 		Texture2D? attachmentOverlayTexture,
 		bool showMagnetSelectionHighlight,
+		bool showAdventureTutorialHighlight,
+		bool isAdventureTutorialBlocked,
 		bool isJellyfishDisabled,
 		string tooltipText)
 	{
 		return !isPlayable
 			&& attachmentOverlayTexture == null
 			&& !showMagnetSelectionHighlight
+			&& !showAdventureTutorialHighlight
+			&& !isAdventureTutorialBlocked
 			&& !isJellyfishDisabled
 			&& string.IsNullOrEmpty(tooltipText);
 	}
@@ -444,6 +477,7 @@ public partial class GameBoardScene
 		signature.Add(_pendingItemCardId);
 		signature.Add(_isOpeningDealAnimationPlaying);
 		signature.Add(TranslationServer.GetLocale());
+		AddAdventureTutorialHandRenderSignature(ref signature, playerIndex);
 
 		for (int cardIndex = 0; cardIndex < visibleHandCount; cardIndex++)
 		{
@@ -456,9 +490,15 @@ public partial class GameBoardScene
 			bool isMagnetSelectionCard = showMagnetSelectionHighlight && !isJellyfishDisabled;
 			bool isHandLimitDiscardSelectionCard = isHandLimitDiscardSelectionActive
 				&& playerIndex == MainPlayerIndex;
+			bool showAdventureTutorialHighlight = IsAdventureTutorialHandCardHighlighted(playerIndex, cardIndex);
+			bool isAdventureTutorialBlocked = IsAdventureTutorialHandCardBlocked(playerIndex, cardIndex);
 			bool isPlayable = isMagnetSelectionCard
 				|| isHandLimitDiscardSelectionCard
 				|| (!isJellyfishDisabled && playerIndex == MainPlayerIndex && canMainPlayerAct);
+			if (playerIndex == MainPlayerIndex && IsAdventureTutorialCardStepActive())
+			{
+				isPlayable = isPlayable && showAdventureTutorialHighlight;
+			}
 
 			signature.Add(cardIndex);
 			signature.Add(card.Suit);
@@ -467,6 +507,8 @@ public partial class GameBoardScene
 			signature.Add(showCardBack);
 			signature.Add(isPlayable);
 			signature.Add(isMagnetSelectionCard);
+			signature.Add(showAdventureTutorialHighlight);
+			signature.Add(isAdventureTutorialBlocked);
 			signature.Add(isJellyfishDisabled);
 			signature.Add(IsHandDisplaySlotHidden(playerIndex, cardIndex));
 			signature.Add(!showCardBack && ShouldPlayedCardCollectTable(card));
@@ -481,6 +523,7 @@ public partial class GameBoardScene
 			bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
 				&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
 			bool isPlayable = playerIndex == MainPlayerIndex
+				&& !IsAdventureTutorialCardStepActive()
 				&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
 
 			signature.Add(itemIndex);

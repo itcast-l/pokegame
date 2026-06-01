@@ -300,6 +300,7 @@ public partial class GameBoardScene
 		}
 
 		await PlayAdventureAttackEffectFlightAsync(
+			attackerPlayerIndex,
 			startCenter,
 			targetCenter,
 			attackFrames,
@@ -309,7 +310,7 @@ public partial class GameBoardScene
 
 		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 		{
-			await PlayAdventureAttackImpactPulseAsync(targetCenter, attackFrames);
+			await PlayAdventureAttackImpactPulseAsync(attackerPlayerIndex, targetCenter, attackFrames);
 		}
 	}
 
@@ -339,8 +340,8 @@ public partial class GameBoardScene
 	{
 		return new Dictionary<string, AdventureAttackEffectHandler>(StringComparer.Ordinal)
 		{
-			[AdventureAttackEffectStyles.FishBeam] = (_, _, startCenter, targetCenter, frames, turnSequenceGeneration, onHit) =>
-				PlayFishAdventureAttackBeamAsync(startCenter, targetCenter, frames, turnSequenceGeneration, onHit),
+			[AdventureAttackEffectStyles.FishBeam] = (attackerPlayerIndex, _, startCenter, targetCenter, frames, turnSequenceGeneration, onHit) =>
+				PlayFishAdventureAttackBeamAsync(attackerPlayerIndex, startCenter, targetCenter, frames, turnSequenceGeneration, onHit),
 			[AdventureAttackEffectStyles.CrabPincer] = (attackerPlayerIndex, _, _, targetCenter, frames, turnSequenceGeneration, onHit) =>
 				PlayCrabAdventurePincerAttackAsync(attackerPlayerIndex, targetCenter, frames, turnSequenceGeneration, onHit),
 			[AdventureAttackEffectStyles.JellyfishTentacle] = (attackerPlayerIndex, targetPlayerIndex, _, targetCenter, frames, turnSequenceGeneration, onHit) =>

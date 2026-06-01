@@ -124,11 +124,14 @@ export function registerEditorTools(
 
   server.tool(
     "execute_editor_script",
-    "Execute arbitrary GDScript code inside the Godot editor. Use _mcp_print() to output values.",
+    "Execute arbitrary GDScript code inside the Godot editor. Use _mcp_print() to output values. By default refuses to execute code that contains direct file/resource write APIs (ResourceSaver.save, FileAccess WRITE, ProjectSettings.save, ConfigFile.save, DirAccess filesystem mutations) because those bypass the per-command open-resource guards. Use the dedicated MCP tools (save_scene, create_script, etc.) for those operations, or pass allow_unsafe_editor_io=true ONLY when you have verified no open editor resource will be overwritten.",
     {
       code: z.string().describe(
         "GDScript code to execute. Use _mcp_print(value) to capture output. " +
         "The code runs inside a run() function with access to the full editor API."
+      ),
+      allow_unsafe_editor_io: z.boolean().optional().describe(
+        "Override the file-write safety guard. Only set this when you are certain no open scene/script/shader will be overwritten by the script. Prefer the dedicated MCP tools for ordinary save flows."
       ),
     },
     async (params) => {

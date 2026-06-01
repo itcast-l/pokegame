@@ -17,31 +17,6 @@ public static class GameSfx
 	public const string DeckShuffle = "deck_shuffle";
 	public const string ScoreFlight = "score_flight";
 	public const string ScoreArrive = "score_arrive";
-	public const string AvatarScore = "avatar_score";
-	public const string AvatarAttack = "avatar_attack";
-	public const string AvatarHit = "avatar_hit";
-	public const string AvatarVictory = "avatar_victory";
-	public const string AvatarDefeat = "avatar_defeat";
-	public const string AdventureAttackFlight = "adventure_attack_flight";
-	public const string AdventureAttackImpact = "adventure_attack_impact";
-	public const string FishBeam = "fish_beam";
-	public const string CrabPincer = "crab_pincer";
-	public const string JellyfishTentacle = "jellyfish_tentacle";
-	public const string MantaRayTideShift = "manta_ray_tide_shift";
-	public const string SeaSlugMarker = "sea_slug_marker";
-	public const string GardenEelAmbush = "garden_eel_ambush";
-	public const string LeafySeadragonBlade = "leafy_seadragon_blade";
-	public const string DragonPrinceHit = "dragon_prince_hit";
-	public const string DragonQueenJaw = "dragon_queen_jaw";
-	public const string BossKRoyalSeizure = "boss_k_royal_seizure";
-	public const string TideGuard = "tide_guard";
-	public const string JellyfishBubbleCover = "jellyfish_bubble_cover";
-	public const string ColorCurrent = "color_current";
-	public const string NautilusSpiralShell = "nautilus_spiral_shell";
-	public const string NarwhalTuskBreak = "narwhal_tusk_break";
-	public const string DragonPrinceAbility = "dragon_prince_ability";
-	public const string DragonQueenAbility = "dragon_queen_ability";
-	public const string DragonKingAbility = "dragon_king_ability";
 	public const string SpecialItemCardPlay = "special_item_card_play";
 	public const string SpecialTrigger = "special_trigger";
 	public const string BombPlace = "bomb_place";
@@ -132,31 +107,6 @@ public partial class GameAudioManager : Node
 		[GameSfx.DeckShuffle] = "res://asset/audio/sfx/core/deck_shuffle.mp3",
 		[GameSfx.ScoreFlight] = "res://asset/audio/sfx/core/score_flight.mp3",
 		[GameSfx.ScoreArrive] = "res://asset/audio/sfx/core/score_arrive.mp3",
-		[GameSfx.AvatarScore] = "res://asset/audio/sfx/adventure/avatar_score.mp3",
-		[GameSfx.AvatarAttack] = "res://asset/audio/sfx/adventure/avatar_attack.mp3",
-		[GameSfx.AvatarHit] = "res://asset/audio/sfx/adventure/avatar_hit.mp3",
-		[GameSfx.AvatarVictory] = "res://asset/audio/sfx/adventure/avatar_victory.mp3",
-		[GameSfx.AvatarDefeat] = "res://asset/audio/sfx/adventure/avatar_defeat.mp3",
-		[GameSfx.AdventureAttackFlight] = "res://asset/audio/sfx/adventure/adventure_attack_flight.mp3",
-		[GameSfx.AdventureAttackImpact] = "res://asset/audio/sfx/adventure/adventure_attack_impact.mp3",
-		[GameSfx.FishBeam] = "res://asset/audio/sfx/adventure/fish_beam.mp3",
-		[GameSfx.CrabPincer] = "res://asset/audio/sfx/adventure/crab_pincer.mp3",
-		[GameSfx.JellyfishTentacle] = "res://asset/audio/sfx/adventure/jellyfish_tentacle.mp3",
-		[GameSfx.MantaRayTideShift] = "res://asset/audio/sfx/adventure/manta_ray_tide_shift.mp3",
-		[GameSfx.SeaSlugMarker] = "res://asset/audio/sfx/adventure/sea_slug_marker.mp3",
-		[GameSfx.GardenEelAmbush] = "res://asset/audio/sfx/adventure/garden_eel_ambush.mp3",
-		[GameSfx.LeafySeadragonBlade] = "res://asset/audio/sfx/adventure/leafy_seadragon_blade.mp3",
-		[GameSfx.DragonPrinceHit] = "res://asset/audio/sfx/adventure/dragon_prince_hit.mp3",
-		[GameSfx.DragonQueenJaw] = "res://asset/audio/sfx/adventure/dragon_queen_jaw.mp3",
-		[GameSfx.BossKRoyalSeizure] = "res://asset/audio/sfx/adventure/boss_k_royal_seizure.mp3",
-		[GameSfx.TideGuard] = "res://asset/audio/sfx/adventure/tide_guard.mp3",
-		[GameSfx.JellyfishBubbleCover] = "res://asset/audio/sfx/adventure/jellyfish_bubble_cover.mp3",
-		[GameSfx.ColorCurrent] = "res://asset/audio/sfx/adventure/color_current.mp3",
-		[GameSfx.NautilusSpiralShell] = "res://asset/audio/sfx/adventure/nautilus_spiral_shell.mp3",
-		[GameSfx.NarwhalTuskBreak] = "res://asset/audio/sfx/adventure/narwhal_tusk_break.mp3",
-		[GameSfx.DragonPrinceAbility] = "res://asset/audio/sfx/adventure/dragon_prince_ability.mp3",
-		[GameSfx.DragonQueenAbility] = "res://asset/audio/sfx/adventure/dragon_queen_ability.mp3",
-		[GameSfx.DragonKingAbility] = "res://asset/audio/sfx/adventure/dragon_king_ability.mp3",
 		[GameSfx.SpecialItemCardPlay] = "res://asset/audio/sfx/special/item_card_play.mp3",
 		[GameSfx.SpecialTrigger] = "res://asset/audio/sfx/special/special_trigger.mp3",
 		[GameSfx.BombPlace] = "res://asset/audio/sfx/special/bomb_place.mp3",
@@ -251,10 +201,94 @@ public partial class GameAudioManager : Node
 			return;
 		}
 
+		PlaySfxStream(stream, $"Sfx_{sfxId}", volumeDb, pitchMin, pitchMax);
+	}
+
+	public void PlaySfx(
+		AudioStream? stream,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		if (stream == null)
+		{
+			return;
+		}
+
+		string cooldownKey = GetStreamCooldownKey(stream);
+		if (cooldownSeconds > 0.0 && IsCoolingDown(cooldownKey, cooldownSeconds))
+		{
+			return;
+		}
+
+		PlaySfxStream(stream, "Sfx_Character", volumeDb, pitchMin, pitchMax);
+	}
+
+	public void PlayCharacterActionSfx(
+		CharacterAudioConfig? audioConfig,
+		CharacterAvatar.AvatarAction action,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		PlaySfx(audioConfig?.GetActionStream(action), volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	public void PlayCharacterAttackFlightSfx(
+		CharacterAudioConfig? audioConfig,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		PlaySfx(audioConfig?.GetAttackFlightStream(), volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	public void PlayCharacterAttackImpactSfx(
+		CharacterAudioConfig? audioConfig,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		PlaySfx(audioConfig?.GetAttackImpactStream(), volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	public void PlayCharacterAttackStyleSfx(
+		CharacterAudioConfig? audioConfig,
+		string attackEffectStyle,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		PlaySfx(audioConfig?.GetAttackStyleStream(attackEffectStyle), volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	public void PlayCharacterAbilitySfx(
+		CharacterAudioConfig? audioConfig,
+		string abilityId,
+		float volumeDb = 0.0f,
+		float pitchMin = 0.98f,
+		float pitchMax = 1.02f,
+		double cooldownSeconds = 0.0)
+	{
+		PlaySfx(audioConfig?.GetAbilityStream(abilityId), volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	private void PlaySfxStream(
+		AudioStream stream,
+		string playerName,
+		float volumeDb,
+		float pitchMin,
+		float pitchMax)
+	{
 		float safePitchMin = Mathf.Max(0.01f, Mathf.Min(pitchMin, pitchMax));
 		float safePitchMax = Mathf.Max(safePitchMin, Mathf.Max(pitchMin, pitchMax));
 		AudioStreamPlayer player = RentSfxPlayer();
-		player.Name = $"Sfx_{sfxId}";
+		player.Name = playerName;
 		player.Stream = stream;
 		player.Bus = _soundBus;
 		player.VolumeDb = volumeDb;
@@ -393,6 +427,27 @@ public partial class GameAudioManager : Node
 		}
 	}
 
+	public void WarmupSfx(AudioStream? stream)
+	{
+		if (stream != null)
+		{
+			_ = GetStreamCooldownKey(stream);
+		}
+	}
+
+	public void WarmupCharacterAudioConfig(CharacterAudioConfig? audioConfig)
+	{
+		if (audioConfig == null)
+		{
+			return;
+		}
+
+		foreach (AudioStream stream in audioConfig.GetWarmupStreams())
+		{
+			WarmupSfx(stream);
+		}
+	}
+
 	public void WarmupMusic(string musicId)
 	{
 		if (!string.IsNullOrWhiteSpace(musicId) && MusicPaths.TryGetValue(musicId, out MusicTrackSpec? spec))
@@ -412,6 +467,13 @@ public partial class GameAudioManager : Node
 
 		_lastPlayedAt[sfxId] = now;
 		return false;
+	}
+
+	private static string GetStreamCooldownKey(AudioStream stream)
+	{
+		return string.IsNullOrWhiteSpace(stream.ResourcePath)
+			? "character_audio_stream"
+			: stream.ResourcePath;
 	}
 
 	private AudioStream? GetSfxStream(string sfxId)

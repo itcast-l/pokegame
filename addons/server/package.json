@@ -1,6 +1,6 @@
 {
   "name": "godot-mcp-pro",
-  "version": "1.13.0",
+  "version": "1.14.1",
   "description": "Premium MCP server for AI-powered Godot development with 172 tools",
   "main": "build/index.js",
   "bin": {

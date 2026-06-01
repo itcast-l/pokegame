@@ -42,12 +42,13 @@ export function registerScriptTools(
 
   server.tool(
     "create_script",
-    "Create a new GDScript file with optional content or auto-generated template",
+    "Create a new GDScript file with optional content or auto-generated template. Restricted to .gd/.cs paths. Refuses to overwrite a script that is currently open in Godot's script editor unless force=true is set.",
     {
-      path: z.string().describe("Path for the new script (e.g. 'res://scripts/enemy_ai.gd')"),
+      path: z.string().describe("Path for the new script (e.g. 'res://scripts/enemy_ai.gd'). Must be a .gd or .cs file."),
       content: z.string().optional().describe("Full script content. If empty, generates a template."),
       extends: z.string().optional().describe("Base class (default: 'Node'). Only used for template generation."),
       class_name: z.string().optional().describe("Class name to add. Only used for template generation."),
+      force: z.boolean().optional().describe("Override the open-script-editor guard and write anyway. Use only when no editor buffer holds unsaved changes for the target path."),
     },
     async (params) => {
       try {
@@ -61,9 +62,9 @@ export function registerScriptTools(
 
   server.tool(
     "edit_script",
-    "Edit a script using search-and-replace, full content replacement, or line insertion",
+    "Edit a script using search-and-replace, full content replacement, line insertion, or 1-based inclusive line-range replacement. Restricted to .gd/.cs paths. Refuses to write a script that is currently open in Godot's script editor unless force=true is set.",
     {
-      path: z.string().describe("Path to the script to edit"),
+      path: z.string().describe("Path to the script to edit. Must be a .gd or .cs file."),
       replacements: z
         .array(
           z.object({
@@ -74,9 +75,12 @@ export function registerScriptTools(
         )
         .optional()
         .describe("Array of search-and-replace operations"),
-      content: z.string().optional().describe("Full replacement content (replaces entire file)"),
+      content: z.string().optional().describe("Full replacement content (replaces entire file), or replacement lines when combined with start_line/end_line"),
       insert_at_line: z.number().optional().describe("Line number to insert text at (0-indexed)"),
       text: z.string().optional().describe("Text to insert (used with insert_at_line)"),
+      start_line: z.number().optional().describe("1-based inclusive starting line for range replacement (used with content)"),
+      end_line: z.number().optional().describe("1-based inclusive ending line for range replacement (defaults to start_line)"),
+      force: z.boolean().optional().describe("Override the open-script-editor guard and write anyway."),
     },
     async (params) => {
       try {

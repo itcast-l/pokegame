@@ -114,13 +114,15 @@ export function registerBatchTools(
 
   server.tool(
     "cross_scene_set_property",
-    "Set a property on all nodes of a given type across ALL scene files in the project. Scans .tscn files, modifies matching nodes, and saves. Use for project-wide changes like updating all Label fonts or all Sprite2D modulate colors.",
+    "Preview or apply a property change on all nodes of a given type across scene files in the project. Defaults to dry_run=true (returns the matching scenes and node paths without writing). To actually apply: pass force=true AND dry_run=false. Inactive open scenes are skipped and reported in skipped_open_scenes — open them as the active tab first to live-edit. The active open scene is live-edited via UndoRedo so changes are visible in the editor and undoable. Closed scenes are offline-saved. The response includes a per-scene `mode` field: dry_run / offline_saved / live_open_scene.",
     {
       type: z.string().describe("Node type to target (e.g. 'Label', 'Sprite2D')"),
       property: z.string().describe("Property name to set"),
       value: z.union([z.string(), z.number(), z.boolean()]).describe("Value to set. Strings auto-parsed for Vector2, Color, etc."),
       path_filter: z.string().optional().describe("Directory to search in (default: 'res://')"),
       exclude_addons: z.boolean().optional().describe("Exclude addons/ directory (default: true)"),
+      dry_run: z.boolean().optional().describe("Preview only — list affected scenes and nodes without writing. Defaults to true unless force=true is set."),
+      force: z.boolean().optional().describe("Required (alongside dry_run=false) to actually write. Acknowledges that this can modify many scene files at once."),
     },
     async (params) => {
       try {

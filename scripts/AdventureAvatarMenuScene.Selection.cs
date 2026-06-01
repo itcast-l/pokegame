@@ -76,6 +76,7 @@ public partial class AdventureAvatarMenuScene
 		if (_previewAvatar != null && GodotObject.IsInstanceValid(_previewAvatar))
 		{
 			_previewAvatar.AvatarRoot = avatarDefinition.RootPath;
+			_previewAvatar.AudioConfig = avatarDefinition.AudioConfig;
 			_previewAvatar.AccentColor = GetAvatarAccentColor(avatarDefinition);
 			_previewAvatar.PlayIdle();
 		}

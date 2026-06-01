@@ -43,6 +43,7 @@ public partial class AdventureAvatarMenuScene
 	{
 		avatar.LoadActionFrames = false;
 		avatar.AvatarRoot = avatarDefinition.RootPath;
+		avatar.AudioConfig = avatarDefinition.AudioConfig;
 		avatar.AccentColor = GetAvatarAccentColor(avatarDefinition);
 		avatar.PortraitScale = portraitScale;
 		avatar.MouseFilter = MouseFilterEnum.Ignore;

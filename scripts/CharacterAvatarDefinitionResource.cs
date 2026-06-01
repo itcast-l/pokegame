@@ -21,6 +21,7 @@ public partial class CharacterAvatarDefinitionResource : Resource
 	[Export] public string AttackEffectStyle { get; set; } = string.Empty;
 	[Export] public string AccentColorHtml { get; set; } = string.Empty;
 	[Export] public bool BossBorrowedAbilityFxEligible { get; set; } = true;
+	[Export] public CharacterAudioConfig? AudioConfig { get; set; }
 
 	public CharacterAvatarDefinition ToDefinition()
 	{
@@ -42,6 +43,7 @@ public partial class CharacterAvatarDefinitionResource : Resource
 			AttackEffectFlightSeconds,
 			AttackEffectStyle,
 			AccentColorHtml,
-			BossBorrowedAbilityFxEligible);
+			BossBorrowedAbilityFxEligible,
+			AudioConfig);
 	}
 }

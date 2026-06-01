@@ -39,6 +39,9 @@ public partial class CharacterAvatar : Control
 	[Export]
 	public bool LoadActionFrames { get; set; } = true;
 
+	[Export]
+	public CharacterAudioConfig? AudioConfig { get; set; }
+
 	private string _avatarRoot = string.Empty;
 	private string _attackFxRoot = "";
 

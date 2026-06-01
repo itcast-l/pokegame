@@ -111,6 +111,11 @@ public partial class GameBoardScene
 				return;
 			}
 
+			if (HandleAdventureTutorialMainPlayerCardResult(result))
+			{
+				return;
+			}
+
 			if (IsGameOver())
 			{
 				return;

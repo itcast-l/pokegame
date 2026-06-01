@@ -69,7 +69,8 @@ public sealed class CharacterAvatarDefinition
 		float attackEffectFlightSeconds = 0.0f,
 		string attackEffectStyle = "",
 		string accentColorHtml = "",
-		bool bossBorrowedAbilityFxEligible = true)
+		bool bossBorrowedAbilityFxEligible = true,
+		CharacterAudioConfig? audioConfig = null)
 	{
 		Id = id;
 		DisplayName = displayName;
@@ -91,6 +92,7 @@ public sealed class CharacterAvatarDefinition
 		AttackEffectStyle = attackEffectStyle;
 		AccentColorHtml = accentColorHtml;
 		BossBorrowedAbilityFxEligible = bossBorrowedAbilityFxEligible;
+		AudioConfig = audioConfig;
 	}
 
 	public string Id { get; }
@@ -113,6 +115,7 @@ public sealed class CharacterAvatarDefinition
 	public string AttackEffectStyle { get; }
 	public string AccentColorHtml { get; }
 	public bool BossBorrowedAbilityFxEligible { get; }
+	public CharacterAudioConfig? AudioConfig { get; }
 
 	public bool HasAbility(string abilityId)
 	{
@@ -144,4 +147,3 @@ public sealed class CharacterAvatarDefinition
 			: abilityIdsCsv.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 	}
 }
-

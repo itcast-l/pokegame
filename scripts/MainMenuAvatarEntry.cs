@@ -42,6 +42,7 @@ public partial class MainMenuAvatarEntry : Control
 	private void ApplyAvatarDefinition()
 	{
 		_avatar.AvatarRoot = _avatarDefinition.RootPath;
+		_avatar.AudioConfig = _avatarDefinition.AudioConfig;
 	}
 
 	private void ApplyPlayerName()

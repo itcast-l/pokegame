@@ -45,24 +45,6 @@ public partial class GameBoardScene
 		GameSfx.StealCard,
 	};
 
-	private static readonly string[] AdventureWarmupSfx =
-	{
-		GameSfx.AvatarScore,
-		GameSfx.AvatarAttack,
-		GameSfx.AvatarHit,
-		GameSfx.AvatarVictory,
-		GameSfx.AvatarDefeat,
-		GameSfx.AdventureAttackFlight,
-		GameSfx.AdventureAttackImpact,
-		GameSfx.FishBeam,
-		GameSfx.MantaRayTideShift,
-		GameSfx.GardenEelAmbush,
-		GameSfx.LeafySeadragonBlade,
-		GameSfx.JellyfishBubbleCover,
-		GameSfx.NautilusSpiralShell,
-		GameSfx.NarwhalTuskBreak,
-	};
-
 	private async Task WarmupGameplayResourcesAsync(int turnSequenceGeneration)
 	{
 		if (!await WaitForWarmupFrameAsync(turnSequenceGeneration))
@@ -78,7 +60,7 @@ public partial class GameBoardScene
 
 		if (adventure_mode)
 		{
-			await WarmupSfxGroupAsync(AdventureWarmupSfx, turnSequenceGeneration);
+			await WarmupCharacterAudioConfigsAsync(turnSequenceGeneration);
 		}
 
 		if (!await WaitForWarmupFrameAsync(turnSequenceGeneration))
@@ -98,6 +80,24 @@ public partial class GameBoardScene
 			EndPerformanceSample($"WarmupSfx:{sfxIds[index]}", sampleStart);
 
 			if ((index + 1) % GameplayWarmupBatchSize == 0
+				&& !await WaitForWarmupFrameAsync(turnSequenceGeneration))
+			{
+				return;
+			}
+		}
+	}
+
+	private async Task WarmupCharacterAudioConfigsAsync(int turnSequenceGeneration)
+	{
+		int warmedCount = 0;
+		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
+		{
+			ulong sampleStart = BeginPerformanceSample();
+			GameAudio?.WarmupCharacterAudioConfig(avatarDefinition.AudioConfig);
+			EndPerformanceSample($"WarmupCharacterAudio:{avatarDefinition.Id}", sampleStart);
+
+			warmedCount++;
+			if (warmedCount % GameplayWarmupBatchSize == 0
 				&& !await WaitForWarmupFrameAsync(turnSequenceGeneration))
 			{
 				return;

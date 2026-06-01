@@ -11,6 +11,10 @@ public partial class GameBoardScene
 		{
 			RefreshLocalizedGameText();
 		}
+		else if (what == NotificationResized && IsNodeReady())
+		{
+			RefreshAdventureTutorialOverlayLayout();
+		}
 	}
 
 	private void ApplySavedLanguagePreference()
@@ -103,7 +107,7 @@ public partial class GameBoardScene
 		{
 			_winnerLabel.Text = _showingDefeatResult
 				? Localize("GAME_DEFEAT")
-				: LocalizeFormat("GAME_WINNER", _winnerPlayerIndex + 1);
+				: GetWinnerText(_winnerPlayerIndex);
 			UpdateWinnerPrimaryButton();
 			UpdateWinnerReturnButton();
 		}
@@ -119,6 +123,8 @@ public partial class GameBoardScene
 		RefreshScoreTooltips();
 		RefreshSelectionOverlayText();
 		RefreshRenderedCardDescriptions();
+		RefreshAdventureTutorialOverlayText();
+		RefreshAdventureTutorialOverlayLayout();
 	}
 
 	private void RefreshScoreTooltips()

@@ -100,7 +100,7 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		string abilityId)
 	{
-		PlayAdventureAbilitySfx(abilityId);
+		PlayAdventureAbilitySfx(enemyPlayerIndex, abilityId);
 		string bossKBorrowedAvatarId = IsBossKEnemy(enemyPlayerIndex)
 			&& CharacterAvatarCatalog.TryGetAvatarIdForAbility(abilityId, out string avatarId, requireBossBorrowedFxEligible: true)
 				? avatarId
@@ -142,6 +142,7 @@ public partial class GameBoardScene
 		borrowedAvatar.Name = $"BossKBorrowed{borrowedAvatarDefinition.Id}AvatarFx";
 		borrowedAvatar.MouseFilter = MouseFilterEnum.Ignore;
 		borrowedAvatar.AvatarRoot = borrowedAvatarDefinition.RootPath;
+		borrowedAvatar.AudioConfig = borrowedAvatarDefinition.AudioConfig;
 		borrowedAvatar.AccentColor = PlayerAvatarAccentColors[bossPlayerIndex];
 		borrowedAvatar.ShowFrame = false;
 		borrowedAvatar.LoadActionFrames = true;

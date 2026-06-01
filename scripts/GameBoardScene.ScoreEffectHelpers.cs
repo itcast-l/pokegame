@@ -94,6 +94,7 @@ public partial class GameBoardScene
 	}
 
 	private async Task PlayAdventureAttackEffectFlightAsync(
+		int attackerPlayerIndex,
 		Vector2 startCenter,
 		Vector2 targetCenter,
 		IReadOnlyList<Texture2D> frames,
@@ -101,7 +102,7 @@ public partial class GameBoardScene
 		Action? onTouchTarget,
 		float flightSeconds)
 	{
-		PlayAdventureAttackFlightSfx();
+		PlayAdventureAttackFlightSfx(attackerPlayerIndex);
 		var effect = new Sprite2D
 		{
 			Name = "AdventureAttackEffectFlight",
@@ -167,14 +168,17 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayAdventureAttackImpactPulseAsync(Vector2 targetCenter, IReadOnlyList<Texture2D> frames)
+	private async Task PlayAdventureAttackImpactPulseAsync(
+		int attackerPlayerIndex,
+		Vector2 targetCenter,
+		IReadOnlyList<Texture2D> frames)
 	{
 		if (frames.Count == 0)
 		{
 			return;
 		}
 
-		PlayAdventureAttackImpactSfx();
+		PlayAdventureAttackImpactSfx(attackerPlayerIndex);
 		var pulse = new Sprite2D
 		{
 			Name = "AdventureAttackImpactPulse",

@@ -61,7 +61,7 @@ const serverName = MINIMAL_MODE
 const server = new McpServer(
   {
     name: serverName,
-    version: "1.13.0",
+    version: "1.14.1",
   },
   {
     instructions: loadInstructions(),
@@ -109,10 +109,12 @@ if (!LITE_MODE) {
 
 // Start server
 async function main() {
-  // Attempt initial connection to Godot (non-blocking)
+  // Attempt initial connection to Godot (non-blocking).
+  // If this fails (all ports occupied, etc.), tool calls will fail with a
+  // clear error message from sendCommand until the user restarts the server.
   godot.connect().catch((err) => {
     console.error(
-      `[MCP] Initial Godot connection failed: ${err.message}. Will retry on first command.`
+      `[MCP] Failed to start WebSocket server: ${err.message}`
     );
   });
 

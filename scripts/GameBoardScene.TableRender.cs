@@ -150,6 +150,7 @@ public partial class GameBoardScene
 
 			_centerArena.AddChild(itemOverlay);
 		}
+		AddAdventureTutorialTableHighlights(tableLayoutRect);
 		EndPerformanceSample("RenderTableCards", sampleStart);
 	}
 
@@ -165,6 +166,7 @@ public partial class GameBoardScene
 		signature.Add(_centerArena.Size.X);
 		signature.Add(_centerArena.Size.Y);
 		signature.Add(TranslationServer.GetLocale());
+		AddAdventureTutorialTableRenderSignature(ref signature);
 		AddTextureSignature(ref signature, _cardBackTexture);
 		AddTextureSignature(ref signature, _slimeCardOverlayTexture);
 
@@ -230,6 +232,7 @@ public partial class GameBoardScene
 	{
 		return child is TextureRect textureRect && textureRect.HasMeta(TableRenderPooledTextureMeta)
 			|| child is Panel panel && panel.HasMeta(TableRenderPooledPanelMeta)
+			|| IsAdventureTutorialTableHighlight(child)
 			|| child is Label label && label.Name.ToString() == "CardDescriptionLabel";
 	}
 

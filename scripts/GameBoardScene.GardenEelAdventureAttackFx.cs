@@ -35,7 +35,7 @@ public partial class GameBoardScene
 			? attackerAvatar.Modulate
 			: Colors.White;
 
-		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.GardenEelBurrow);
+		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.GardenEelBurrow);
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		var ambush = new Sprite2D
 		{

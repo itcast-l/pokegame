@@ -9,11 +9,12 @@ export function registerShaderTools(
 ): void {
   server.tool(
     "create_shader",
-    "Create a new shader file with a template or custom content",
+    "Create a new shader file with a template or custom content. Refuses to overwrite a shader that is currently loaded/open in the editor unless force=true.",
     {
       path: z.string().describe("Path for the shader file (e.g. 'res://shaders/dissolve.gdshader')"),
       shader_type: z.string().optional().describe("Shader type: spatial, canvas_item, particles, sky (default: spatial)"),
       content: z.string().optional().describe("Full shader code. If empty, generates a template."),
+      force: z.boolean().optional().describe("Override the open/cached-shader guard and write anyway."),
     },
     async (params) => {
       try {
@@ -43,7 +44,7 @@ export function registerShaderTools(
 
   server.tool(
     "edit_shader",
-    "Edit a shader file using full replacement or search-and-replace",
+    "Edit a shader file using full replacement or search-and-replace. Refreshes any cached/loaded copy of the shader via take_over_path + emit_changed so live materials pick up changes. Refuses to write if the shader is currently loaded/open in the editor unless force=true.",
     {
       path: z.string().describe("Path to the shader file"),
       content: z.string().optional().describe("Full replacement content"),
@@ -51,6 +52,7 @@ export function registerShaderTools(
         search: z.string().describe("Text to find"),
         replace: z.string().describe("Text to replace with"),
       })).optional().describe("Array of search-and-replace operations"),
+      force: z.boolean().optional().describe("Override the open/cached-shader guard and write anyway."),
     },
     async (params) => {
       try {

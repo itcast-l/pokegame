@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CharacterAudioConfig" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAudioConfig.cs" id="1_audio_config"]
+[ext_resource type="Resource" path="res://resources/character_audio/common.tres" id="2_common"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/jellyfish_tentacle.mp3" id="3_jellyfish_tentacle"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/jellyfish_bubble_cover.mp3" id="4_jellyfish_bubble_cover"]
+
+[resource]
+script = ExtResource("1_audio_config")
+Fallback = ExtResource("2_common")
+JellyfishTentacle = ExtResource("3_jellyfish_tentacle")
+JellyfishBubbleCover = ExtResource("4_jellyfish_bubble_cover")

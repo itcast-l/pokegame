@@ -113,7 +113,7 @@ public partial class GameBoardScene
 		_showingDefeatResult = ShouldShowDefeatResult(playerIndex);
 		_winnerLabel.Text = _showingDefeatResult
 			? Localize("GAME_DEFEAT")
-			: LocalizeFormat("GAME_WINNER", playerIndex + 1);
+			: GetWinnerText(playerIndex);
 		UpdateWinnerPrimaryButton();
 		UpdateWinnerReturnButton();
 		ApplyWinnerLabelLayout();
@@ -142,6 +142,31 @@ public partial class GameBoardScene
 			tween.Parallel().TweenProperty(_winnerBannerPanel, "scale", Vector2.One, 0.30f);
 		}
 		_winnerReplayButton?.GrabFocus();
+	}
+
+	private string GetWinnerText(int playerIndex)
+	{
+		string playerDisplayName = GetPlayerDisplayName(playerIndex);
+		string winnerText = LocalizeFormat("GAME_WINNER", playerDisplayName);
+		string legacyPlayerPrefix = LocalizeFormat("GAME_PLAYER", playerDisplayName);
+		return winnerText.StartsWith(legacyPlayerPrefix, StringComparison.Ordinal)
+			? playerDisplayName + winnerText[legacyPlayerPrefix.Length..]
+			: winnerText;
+	}
+
+	private string GetPlayerDisplayName(int playerIndex)
+	{
+		if (playerIndex == MainPlayerIndex)
+		{
+			return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
+		}
+
+		if (adventure_mode && IsAdventureEnemyPlayer(playerIndex))
+		{
+			return CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).DisplayName;
+		}
+
+		return LocalizeFormat("GAME_PLAYER", playerIndex + 1);
 	}
 
 	private void HideWinnerBanner()
@@ -214,6 +239,7 @@ public partial class GameBoardScene
 		CharacterAvatarDefinition enemyDefinition = CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id);
 		CharacterAvatar enemyAvatar = _playerAvatars[1]!;
 		enemyAvatar.AvatarRoot = enemyDefinition.RootPath;
+		enemyAvatar.AudioConfig = enemyDefinition.AudioConfig;
 		enemyAvatar.AccentColor = PlayerAvatarAccentColors[1];
 		enemyAvatar.PlayAction(CharacterAvatar.AvatarAction.Idle);
 	}
@@ -347,6 +373,7 @@ public partial class GameBoardScene
 
 		CharacterAvatarDefinition playerAvatarDefinition = CharacterAvatarCatalog.LoadSelectedAvatar();
 		_resultAvatar.AvatarRoot = playerAvatarDefinition.RootPath;
+		_resultAvatar.AudioConfig = playerAvatarDefinition.AudioConfig;
 		_resultAvatar.AccentColor = PlayerAvatarAccentColors[MainPlayerIndex];
 		_resultAvatar.Visible = true;
 		_resultAvatar.PlayAction(CharacterAvatar.AvatarAction.Defeat);

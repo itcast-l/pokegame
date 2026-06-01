@@ -103,6 +103,11 @@ public partial class GameBoardScene
 
 	private bool CanMainPlayerAct()
 	{
+		if (IsAdventureTutorialBlockingMainPlayerAction())
+		{
+			return false;
+		}
+
 		return GetGameLoopPhase() == GameLoopPhase.AwaitingMainPlayerAction;
 	}
 

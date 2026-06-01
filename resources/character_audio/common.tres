@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterAudioConfig" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAudioConfig.cs" id="1_audio_config"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/avatar_score.mp3" id="2_score"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/avatar_attack.mp3" id="3_attack"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/avatar_hit.mp3" id="4_hit"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/avatar_defeat.mp3" id="5_defeat"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/avatar_victory.mp3" id="6_victory"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/adventure_attack_flight.mp3" id="7_attack_flight"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/adventure_attack_impact.mp3" id="8_attack_impact"]
+
+[resource]
+script = ExtResource("1_audio_config")
+Score = ExtResource("2_score")
+Attack = ExtResource("3_attack")
+Hit = ExtResource("4_hit")
+Death = ExtResource("5_defeat")
+Victory = ExtResource("6_victory")
+Defeat = ExtResource("5_defeat")
+AttackFlight = ExtResource("7_attack_flight")
+AttackImpact = ExtResource("8_attack_impact")

@@ -50,6 +50,7 @@ public partial class MainMenuScene : Control
 		if (_avatarUnlockPromptAvatar != null && GodotObject.IsInstanceValid(_avatarUnlockPromptAvatar))
 		{
 			_avatarUnlockPromptAvatar.AvatarRoot = avatarDefinition.RootPath;
+			_avatarUnlockPromptAvatar.AudioConfig = avatarDefinition.AudioConfig;
 			_avatarUnlockPromptAvatar.AccentColor = GetAvatarUnlockAccentColor(avatarDefinition);
 			_avatarUnlockPromptAvatar.Visible = true;
 			_avatarUnlockPromptAvatar.PlayVictory();

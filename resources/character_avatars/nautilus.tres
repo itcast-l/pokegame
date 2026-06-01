@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+[ext_resource type="Resource" path="res://resources/character_audio/nautilus.tres" id="2_character_audio"]
 
 [resource]
 script = ExtResource("1_avatar_definition")
@@ -18,3 +19,4 @@ DamageEffectFramePattern = "res://art/fx/player_nautilus_spiral_pressure_slash/r
 DamageEffectFrameCount = 4
 DamageEffectPreferImageFile = true
 AttackEffectFlightSeconds = 0.78
+AudioConfig = ExtResource("2_character_audio")

@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CharacterAudioConfig" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAudioConfig.cs" id="1_audio_config"]
+[ext_resource type="Resource" path="res://resources/character_audio/common.tres" id="2_common"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/boss_k_royal_seizure.mp3" id="3_boss_k_royal_seizure"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/tide_guard.mp3" id="4_tide_guard"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/jellyfish_bubble_cover.mp3" id="5_jellyfish_bubble_cover"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/manta_ray_tide_shift.mp3" id="6_manta_ray_tide_shift"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/garden_eel_ambush.mp3" id="7_garden_eel_ambush"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/nautilus_spiral_shell.mp3" id="8_nautilus_spiral_shell"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/narwhal_tusk_break.mp3" id="9_narwhal_tusk_break"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/leafy_seadragon_blade.mp3" id="10_leafy_seadragon_blade"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/dragon_prince_ability.mp3" id="11_dragon_prince_ability"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/dragon_queen_ability.mp3" id="12_dragon_queen_ability"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/dragon_king_ability.mp3" id="13_dragon_king_ability"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/color_current.mp3" id="14_color_current"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/dragon_queen_jaw.mp3" id="15_dragon_queen_jaw"]
+
+[resource]
+script = ExtResource("1_audio_config")
+Fallback = ExtResource("2_common")
+BossKRoyalSeizure = ExtResource("3_boss_k_royal_seizure")
+TideGuard = ExtResource("4_tide_guard")
+JellyfishBubbleCover = ExtResource("5_jellyfish_bubble_cover")
+MantaRayTideShift = ExtResource("6_manta_ray_tide_shift")
+GardenEelAmbush = ExtResource("7_garden_eel_ambush")
+NautilusSpiralShell = ExtResource("8_nautilus_spiral_shell")
+NarwhalTuskBreak = ExtResource("9_narwhal_tusk_break")
+LeafySeadragonBlade = ExtResource("10_leafy_seadragon_blade")
+DragonPrinceAbility = ExtResource("11_dragon_prince_ability")
+DragonQueenAbility = ExtResource("12_dragon_queen_ability")
+DragonKingAbility = ExtResource("13_dragon_king_ability")
+ColorCurrent = ExtResource("14_color_current")
+DragonQueenJaw = ExtResource("15_dragon_queen_jaw")

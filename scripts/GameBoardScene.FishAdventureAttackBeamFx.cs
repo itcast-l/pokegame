@@ -6,6 +6,7 @@ using Godot;
 public partial class GameBoardScene
 {
 	private async Task PlayFishAdventureAttackBeamAsync(
+		int attackerPlayerIndex,
 		Vector2 startCenter,
 		Vector2 targetCenter,
 		IReadOnlyList<Texture2D> frames,
@@ -30,7 +31,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayAdventureAttackStyleSfx(AdventureAttackEffectStyles.FishBeam);
+		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.FishBeam);
 		Vector2 direction = travel / distance;
 		float beamLength = Math.Max(24.0f, distance - FishAdventureAttackBeamStartInset - FishAdventureAttackBeamEndInset);
 		Vector2 beamCenter = startCenter + direction * (FishAdventureAttackBeamStartInset + beamLength / 2.0f);

@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+[ext_resource type="Resource" path="res://resources/character_audio/cat.tres" id="2_character_audio"]
 
 [resource]
 script = ExtResource("1_avatar_definition")
@@ -12,3 +13,4 @@ ActionFrameCount = 4
 AdventureStageNumber = 0
 AdventureAbilityNameKey = "ADVENTURE_ABILITY_NONE_NAME"
 AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_NONE_DESC"
+AudioConfig = ExtResource("2_character_audio")

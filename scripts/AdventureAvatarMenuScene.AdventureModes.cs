@@ -5,22 +5,22 @@ public partial class AdventureAvatarMenuScene
 {
 	private const string DeepTideThroneAdventureId = "deep_tide_throne";
 
-	private static readonly string[] DeepTideThroneEnemyAvatarIds =
+	private static readonly AdventureLevelDefinition[] DeepTideThroneLevels =
 	{
-		"fish",
-		"lanternfish",
-		"shrimp",
-		"crab",
-		"jellyfish",
-		"manta_ray",
-		"garden_eel",
-		"sea_slug",
-		"nautilus",
-		"narwhal",
-		"leafy_seadragon",
-		"dragon_prince_j",
-		"dragon_queen_q",
-		"boss_k",
+		new("fish", TutorialGameBoardScenePath),
+		new("lanternfish"),
+		new("shrimp"),
+		new("crab"),
+		new("jellyfish"),
+		new("manta_ray"),
+		new("garden_eel"),
+		new("sea_slug"),
+		new("nautilus"),
+		new("narwhal"),
+		new("leafy_seadragon"),
+		new("dragon_prince_j"),
+		new("dragon_queen_q"),
+		new("boss_k"),
 	};
 
 	private static readonly AdventureModeDefinition[] AdventureModes =
@@ -28,7 +28,7 @@ public partial class AdventureAvatarMenuScene
 		new(
 			DeepTideThroneAdventureId,
 			"ADVENTURE_DEEP_TIDE_THRONE",
-			DeepTideThroneEnemyAvatarIds,
+			DeepTideThroneLevels,
 			new Color(0.58f, 0.98f, 1.0f)),
 	};
 
@@ -97,9 +97,9 @@ public partial class AdventureAvatarMenuScene
 	{
 		var definitions = new List<CharacterAvatarDefinition>();
 		AdventureModeDefinition adventureMode = GetSelectedAdventureDefinition();
-		foreach (string avatarId in adventureMode.EnemyAvatarIds)
+		foreach (AdventureLevelDefinition level in adventureMode.Levels)
 		{
-			CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(avatarId);
+			CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(level.EnemyAvatarId);
 			if (avatarDefinition.Id == CharacterAvatarCatalog.DefaultAvatarId || avatarDefinition.AdventureStageNumber <= 0)
 			{
 				continue;
@@ -113,16 +113,7 @@ public partial class AdventureAvatarMenuScene
 
 	private bool IsAvatarInSelectedAdventure(string avatarId)
 	{
-		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
-		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
-		{
-			if (avatarDefinition.Id == normalized)
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return GetSelectedAdventureLevelDefinition(avatarId) != null;
 	}
 
 	private CharacterAvatarDefinition? GetSelectedAdventureEnemyForStage(int stageNumber)
@@ -132,6 +123,25 @@ public partial class AdventureAvatarMenuScene
 			if (avatarDefinition.AdventureStageNumber == stageNumber)
 			{
 				return avatarDefinition;
+			}
+		}
+
+		return null;
+	}
+
+	private string GetGameBoardScenePathForAvatar(string avatarId)
+	{
+		return GetSelectedAdventureLevelDefinition(avatarId)?.GameBoardScenePath ?? GameBoardScenePath;
+	}
+
+	private AdventureLevelDefinition? GetSelectedAdventureLevelDefinition(string avatarId)
+	{
+		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		foreach (AdventureLevelDefinition level in GetSelectedAdventureDefinition().Levels)
+		{
+			if (CharacterAvatarCatalog.NormalizeAvatarId(level.EnemyAvatarId) == normalized)
+			{
+				return level;
 			}
 		}
 
@@ -170,23 +180,37 @@ public partial class AdventureAvatarMenuScene
 		return AdventureModes[0].Id;
 	}
 
+	private sealed class AdventureLevelDefinition
+	{
+		public AdventureLevelDefinition(string enemyAvatarId, string? gameBoardScenePath = null)
+		{
+			EnemyAvatarId = enemyAvatarId;
+			GameBoardScenePath = string.IsNullOrWhiteSpace(gameBoardScenePath)
+				? AdventureAvatarMenuScene.GameBoardScenePath
+				: gameBoardScenePath;
+		}
+
+		public string EnemyAvatarId { get; }
+		public string GameBoardScenePath { get; }
+	}
+
 	private sealed class AdventureModeDefinition
 	{
 		public AdventureModeDefinition(
 			string id,
 			string nameKey,
-			string[] enemyAvatarIds,
+			AdventureLevelDefinition[] levels,
 			Color accentColor)
 		{
 			Id = id;
 			NameKey = nameKey;
-			EnemyAvatarIds = enemyAvatarIds;
+			Levels = levels;
 			AccentColor = accentColor;
 		}
 
 		public string Id { get; }
 		public string NameKey { get; }
-		public string[] EnemyAvatarIds { get; }
+		public AdventureLevelDefinition[] Levels { get; }
 		public Color AccentColor { get; }
 	}
 }

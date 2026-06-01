@@ -250,27 +250,36 @@ const COMMANDS: Record<string, GroupDef> = {
         },
       },
       create: {
-        description: "Create a new script file",
+        description: "Create a new script file (.gd or .cs only)",
         method: "create_script",
         args: {
           path: { description: "Script path", required: true },
           content: { description: "Script content", required: true },
           base_type: { description: "Base class (default: Node)" },
+          force: { description: "Override open-script-editor guard" },
+        },
+        mapArgs: (p) => {
+          const r: Record<string, unknown> = { path: p.path, content: p.content };
+          if (p.base_type) r.base_type = p.base_type;
+          if (p.force !== undefined) r.force = p.force === "true";
+          return r;
         },
       },
       edit: {
-        description: "Edit an existing script (full replace or line range)",
+        description: "Edit an existing script (full replace or 1-based inclusive line range)",
         method: "edit_script",
         args: {
           path: { description: "Script path", required: true },
           content: { description: "New content", required: true },
-          start_line: { description: "Start line for partial edit", type: "number" },
-          end_line: { description: "End line for partial edit", type: "number" },
+          start_line: { description: "Start line for partial edit (1-based inclusive)", type: "number" },
+          end_line: { description: "End line for partial edit (1-based inclusive)", type: "number" },
+          force: { description: "Override open-script-editor guard" },
         },
         mapArgs: (p) => {
           const r: Record<string, unknown> = { path: p.path, content: p.content };
           if (p.start_line) r.start_line = parseInt(p.start_line);
           if (p.end_line) r.end_line = parseInt(p.end_line);
+          if (p.force !== undefined) r.force = p.force === "true";
           return r;
         },
       },
