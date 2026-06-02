@@ -17,3 +17,4 @@ __pycache__/
 
 # Local generated work areas
 /tmp/
+/outputs/

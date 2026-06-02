@@ -35,9 +35,7 @@ public partial class GameBoardScene
 	private const int BossKBorrowedAbilityAvatarFxZIndex = EnemySpecialAbilityAvatarFxZIndex + 1;
 	private const float MantaRayTideShiftCycloneSeconds = 0.72f;
 	private const float MantaRayTideShiftCycloneFrameSeconds = 0.06f;
-	private const float MantaRayTideShiftCycloneStartInset = 76.0f;
-	private const float MantaRayTideShiftCycloneTargetInset = 104.0f;
-	private const float MantaRayTideShiftCycloneVisualHeightScale = 0.82f;
+	private const float MantaRayTideShiftProjectileVisualSize = 188.0f;
 	private const float AdventureAttackEffectFlightSeconds = 0.48f;
 	private const int DragonPrinceDamageHitFlightFrameCount = 5;
 	private const float DragonPrinceDamageHitFlightSeconds = 0.72f;

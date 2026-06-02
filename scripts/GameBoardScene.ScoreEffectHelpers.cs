@@ -55,6 +55,19 @@ public partial class GameBoardScene
 		return GetScoreMeterGlobalCenter(playerIndex);
 	}
 
+	private Vector2 GetPlayerScoreEffectTargetGlobalCenter(int playerIndex)
+	{
+		if (playerIndex >= 0
+			&& playerIndex < _playerScoreEffectTargets.Length
+			&& _playerScoreEffectTargets[playerIndex] is ScoreEffectTarget target
+			&& GodotObject.IsInstanceValid(target))
+		{
+			return target.MarkerGlobalPosition;
+		}
+
+		return GetPlayerAvatarGlobalCenter(playerIndex);
+	}
+
 	private Vector2 GetScoreMeterGlobalCenter(int playerIndex)
 	{
 		if (playerIndex >= 0

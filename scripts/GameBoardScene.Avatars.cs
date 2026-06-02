@@ -32,7 +32,7 @@ public partial class GameBoardScene
 			}
 
 			_playerAvatarAreas[playerIndex] = area;
-			area.TooltipText = GetPlayerScoreTooltip(playerIndex);
+			BindPlayerStatusTooltipHover(area, playerIndex);
 		}
 	}
 
@@ -178,6 +178,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		area.TooltipText = GetPlayerScoreTooltip(playerIndex);
+		area.TooltipText = string.Empty;
+		RefreshPlayerStatusTooltip(playerIndex);
 	}
 }

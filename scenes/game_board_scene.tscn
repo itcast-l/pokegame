@@ -16,6 +16,12 @@ shader_parameter/wave_scale = 26.0
 shader_parameter/wave_speed = 0.62
 shader_parameter/edge_boost = 0.95
 shader_parameter/center_glow = 0.22
+shader_parameter/sun_color = Color(1, 0.93, 0.66, 0.28)
+shader_parameter/sun_pulse_strength = 0.42
+shader_parameter/sun_shadow_strength = 0.09
+shader_parameter/sun_pulse_speed = 0.36
+shader_parameter/center_motion_strength = 0.52
+shader_parameter/center_motion_speed = 0.58
 
 [node name="GameBoardScene" type="Control" unique_id=459694220]
 layout_mode = 3

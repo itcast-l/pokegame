@@ -27,7 +27,7 @@ public partial class GameBoardScene : Control
 			EnemySpecialAbilityAvatarFxFrameCount,
 			"enemy special ability avatar effect",
 			preferImageFile: true);
-	private const string MantaRayTideShiftCycloneFxFramePattern = "res://art/fx/player_manta_ray_tide_shift_cyclone/run-002/processed/fx-{0}.png";
+	private const string MantaRayTideShiftCycloneFxFramePattern = "res://art/fx/player_manta_ray_tide_shift_cyclone/run-003/processed/fx-{0}.png";
 	private const int MantaRayTideShiftCycloneFxFrameCount = 8;
 	private static readonly Texture2D[] MantaRayTideShiftCycloneFxFrames =
 		FrameAnimationHelpers.LoadTextureFrames(MantaRayTideShiftCycloneFxFramePattern, MantaRayTideShiftCycloneFxFrameCount, "manta ray tide shift cyclone", preferImageFile: true);
@@ -397,6 +397,7 @@ public partial class GameBoardScene : Control
 		_leftPlayerArea = GetNode<Control>("%LeftPlayerArea");
 		_rightPlayerArea = GetNode<Control>("%RightPlayerArea");
 
+		CreatePlayerStatusTooltip();
 		CreatePlayerCardPiles();
 		CreatePlayerHandAreas();
 		BindPlayerAvatarAreas();

@@ -14,6 +14,7 @@ public partial class GameBoardScene
 		else if (what == NotificationResized && IsNodeReady())
 		{
 			RefreshAdventureTutorialOverlayLayout();
+			UpdatePlayerStatusTooltipLayout();
 		}
 	}
 
@@ -41,11 +42,6 @@ public partial class GameBoardScene
 	private string GetPlayerLabel(int playerIndex)
 	{
 		return LocalizeFormat("GAME_PLAYER", playerIndex + 1);
-	}
-
-	private string GetPlayerScoreTooltip(int playerIndex)
-	{
-		return $"{_playerScores[playerIndex]}/{GetScoreLimit(playerIndex)}";
 	}
 
 	private static bool LooksLikeLocalizationKey(string value)

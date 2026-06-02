@@ -56,7 +56,7 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
+			BindPlayerStatusTooltipHover(meter, playerIndex);
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
 			meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(playerIndex), false);
 			_playerScoreMeters[playerIndex] = meter;
@@ -120,9 +120,10 @@ public partial class GameBoardScene
 			return;
 		}
 
-		meter.TooltipText = GetPlayerScoreTooltip(playerIndex);
+		meter.TooltipText = string.Empty;
 		meter.SetScore(_playerScores[playerIndex], GetScoreLimit(playerIndex), animate);
 		UpdatePlayerAvatarTooltip(playerIndex);
+		RefreshPlayerStatusTooltip(playerIndex);
 	}
 
 	private int GetScoreWinnerPlayerIndex()

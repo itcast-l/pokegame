@@ -110,7 +110,8 @@ EXIT_HINT,未保存的对局进度可能会丢失,未儲存的對局進度可能
 EXIT_CANCEL,继续游戏,繼續遊戲,Keep
 EXIT_CONFIRM,确认退出,確認離開,Exit
 GAME_PLAYER,玩家 {0},玩家 {0},Player {0}
-GAME_PLAYER_SCORE,玩家 {0}: {1}/{2},玩家 {0}: {1}/{2},Player {0}: {1}/{2}
+GAME_STATUS_HEALTH,生命值,生命值,Health
+GAME_STATUS_SCORE,分数,分數,Score
 GAME_WINNER,{0} 获胜,{0} 獲勝,{0} Wins
 GAME_DEFEAT,你失败了,你失敗了,You Lost
 GAME_REPLAY,再来一局,再來一局,Play Again
