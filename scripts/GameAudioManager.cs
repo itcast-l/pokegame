@@ -17,6 +17,7 @@ public static class GameSfx
 	public const string DeckShuffle = "deck_shuffle";
 	public const string ScoreFlight = "score_flight";
 	public const string ScoreArrive = "score_arrive";
+	public const string CardCollectPointPopup = "card_collect_point_popup";
 	public const string SpecialItemCardPlay = "special_item_card_play";
 	public const string SpecialTrigger = "special_trigger";
 	public const string BombPlace = "bomb_place";
@@ -97,7 +98,7 @@ public partial class GameAudioManager : Node
 		[GameSfx.CardDeal] = "res://asset/audio/sfx/core/card_deal.mp3",
 		[GameSfx.CardHover] = "res://asset/audio/sfx/core/card_hover.mp3",
 		[GameSfx.CardPickup] = "res://asset/audio/sfx/core/card_pickup.mp3",
-		[GameSfx.CardFlight] = "res://asset/audio/sfx/core/card_flight_v4.mp3",
+		[GameSfx.CardFlight] = "res://asset/audio/sfx/core/card_flight_soft_fly.wav",
 		[GameSfx.CardLand] = "res://asset/audio/sfx/core/card_land.mp3",
 		[GameSfx.CardFlip] = "res://asset/audio/sfx/core/card_flip.mp3",
 		[GameSfx.CaptureBite] = "res://asset/audio/sfx/core/capture_bite.mp3",
@@ -107,6 +108,7 @@ public partial class GameAudioManager : Node
 		[GameSfx.DeckShuffle] = "res://asset/audio/sfx/core/deck_shuffle.mp3",
 		[GameSfx.ScoreFlight] = "res://asset/audio/sfx/core/score_flight.mp3",
 		[GameSfx.ScoreArrive] = "res://asset/audio/sfx/core/score_arrive.mp3",
+		[GameSfx.CardCollectPointPopup] = "res://asset/audio/sfx/core/card_collect_point_popup.mp3",
 		[GameSfx.SpecialItemCardPlay] = "res://asset/audio/sfx/special/item_card_play.mp3",
 		[GameSfx.SpecialTrigger] = "res://asset/audio/sfx/special/special_trigger.mp3",
 		[GameSfx.BombPlace] = "res://asset/audio/sfx/special/bomb_place.mp3",
@@ -264,7 +266,8 @@ public partial class GameAudioManager : Node
 		float pitchMax = 1.02f,
 		double cooldownSeconds = 0.0)
 	{
-		PlaySfx(audioConfig?.GetAttackStyleStream(attackEffectStyle), volumeDb, pitchMin, pitchMax, cooldownSeconds);
+		AudioStream? stream = audioConfig?.GetAttackStyleStream(attackEffectStyle);
+		PlaySfx(RefreshStream(stream), volumeDb, pitchMin, pitchMax, cooldownSeconds);
 	}
 
 	public void PlayCharacterAbilitySfx(
@@ -474,6 +477,16 @@ public partial class GameAudioManager : Node
 		return string.IsNullOrWhiteSpace(stream.ResourcePath)
 			? "character_audio_stream"
 			: stream.ResourcePath;
+	}
+
+	private static AudioStream? RefreshStream(AudioStream? stream)
+	{
+		if (stream == null || string.IsNullOrWhiteSpace(stream.ResourcePath))
+		{
+			return stream;
+		}
+
+		return ResourceLoader.Load<AudioStream>(stream.ResourcePath) ?? stream;
 	}
 
 	private AudioStream? GetSfxStream(string sfxId)

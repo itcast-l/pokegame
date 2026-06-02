@@ -95,6 +95,7 @@ public partial class GameBoardScene
 		pointLabel.AddThemeConstantOverride("shadow_offset_x", 2);
 		pointLabel.AddThemeConstantOverride("shadow_offset_y", 2);
 		AddChild(pointLabel);
+		PlayGameSfx(GameSfx.CardCollectPointPopup, -5.5f, 0.98f, 1.02f, 0.0);
 
 		pointLabel.GlobalPosition = _centerArena.GlobalPosition
 			+ cardPosition
