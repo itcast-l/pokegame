@@ -267,6 +267,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		_winnerReplayButton.Disabled = false;
 		_winnerReplayButton.Text = Localize(GetWinnerPrimaryButtonKey());
 	}
 
@@ -347,13 +348,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_winnerLabel.OffsetLeft = _showingDefeatResult ? 176.0f : 66.0f;
-		_winnerLabel.OffsetTop = 28.0f;
-		_winnerLabel.OffsetRight = -66.0f;
-		_winnerLabel.OffsetBottom = -78.0f;
-		_winnerLabel.HorizontalAlignment = _showingDefeatResult
-			? HorizontalAlignment.Left
-			: HorizontalAlignment.Center;
+		_winnerLabel.OffsetLeft = 76.0f;
+		_winnerLabel.OffsetTop = 86.0f;
+		_winnerLabel.OffsetRight = -76.0f;
+		_winnerLabel.OffsetBottom = -118.0f;
+		_winnerLabel.HorizontalAlignment = HorizontalAlignment.Center;
 	}
 
 	private void ApplyWinnerBannerArt()
@@ -381,18 +380,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!_showingDefeatResult)
-		{
-			_resultAvatar.Visible = false;
-			return;
-		}
-
-		CharacterAvatarDefinition playerAvatarDefinition = CharacterAvatarCatalog.LoadSelectedAvatar();
-		_resultAvatar.AvatarRoot = playerAvatarDefinition.RootPath;
-		_resultAvatar.AudioConfig = playerAvatarDefinition.AudioConfig;
-		_resultAvatar.AccentColor = PlayerAvatarAccentColors[MainPlayerIndex];
-		_resultAvatar.Visible = true;
-		_resultAvatar.PlayAction(CharacterAvatar.AvatarAction.Defeat);
+		_resultAvatar.Visible = false;
 	}
 
 	private static Vector2 GetHandAreaSize(int playerIndex)

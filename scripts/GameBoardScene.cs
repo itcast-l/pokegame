@@ -71,8 +71,8 @@ public partial class GameBoardScene : Control
 	private const int MagnetCountdownFrameCount = 4;
 	private static readonly Texture2D[] MagnetCountdownFrames =
 		FrameAnimationHelpers.LoadTextureFrames(MagnetCountdownFramePattern, MagnetCountdownFrameCount, "magnet countdown");
-	private const string VictoryBannerTexturePath = "res://art/ui/victory_banner/run-001/processed/banner-transparent.png";
-	private const string DefeatBannerTexturePath = "res://art/ui/defeat_banner/run-001/processed/banner-transparent.png";
+	private const string VictoryBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/victory-text-prompt-effect.png";
+	private const string DefeatBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/defeat-text-prompt-effect.png";
 		private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
 		private const string BombItemCardId = ItemCardCatalog.BombItemCardId;
 		private const string MagnetItemCardId = ItemCardCatalog.MagnetItemCardId;
