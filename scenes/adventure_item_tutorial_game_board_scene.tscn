@@ -8,3 +8,10 @@ adventure_tutorial_mode = true
 adventure_tutorial_flow = "bomb_item"
 solo_mode = true
 adventure_enemy_avatar_id = "lanternfish"
+
+[node name="UnderwaterAmbientLayer" parent="." index="2" unique_id=1437166109]
+motion_scale = 0.55
+redraw_fps = 12
+sunbeam_intensity = 0.0
+center_caustic_intensity = 0.0
+center_glint_count = 0

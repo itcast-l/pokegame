@@ -7,21 +7,33 @@
 [ext_resource type="Script" uid="uid://kab5lotekms7" path="res://scripts/ScoreAvatarMeter.cs" id="5_score_avatar_meter"]
 [ext_resource type="Script" uid="uid://b3s43m2q8xefy" path="res://scripts/ScoreEffectTarget.cs" id="6_score_effect_target"]
 [ext_resource type="Script" uid="uid://cx5lmatxxhx6d" path="res://scripts/DraggableAvatarArea.cs" id="7_draggable_avatar_area"]
+[ext_resource type="Shader" uid="uid://bypnsrux3irf0" path="res://shaders/board_art_dynamics.gdshader" id="8_board_art_dynamics_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_board_art_dynamics"]
+shader = ExtResource("8_board_art_dynamics_shader")
+shader_parameter/sun_pulse_speed = 0.52
+shader_parameter/sun_brightness = 0.50
+shader_parameter/sun_shadow = 0.06
+shader_parameter/sun_drift = 0.026
+shader_parameter/center_line_strength = 0.36
+shader_parameter/center_line_speed = 0.88
+shader_parameter/center_warp_strength = 0.004
+shader_parameter/center_light_color = Color(0.68, 1, 0.84, 1)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_water_caustic"]
 shader = ExtResource("3_water_caustic_shader")
 shader_parameter/shimmer_color = Color(0.52, 0.98, 1, 0.24)
-shader_parameter/shimmer_strength = 0.55
+shader_parameter/shimmer_strength = 0.62
 shader_parameter/wave_scale = 26.0
-shader_parameter/wave_speed = 0.62
+shader_parameter/wave_speed = 0.74
 shader_parameter/edge_boost = 0.95
-shader_parameter/center_glow = 0.22
+shader_parameter/center_glow = 0.28
 shader_parameter/sun_color = Color(1, 0.93, 0.66, 0.28)
-shader_parameter/sun_pulse_strength = 0.42
-shader_parameter/sun_shadow_strength = 0.09
+shader_parameter/sun_pulse_strength = 0.68
+shader_parameter/sun_shadow_strength = 0.06
 shader_parameter/sun_pulse_speed = 0.36
-shader_parameter/center_motion_strength = 0.52
-shader_parameter/center_motion_speed = 0.58
+shader_parameter/center_motion_strength = 0.62
+shader_parameter/center_motion_speed = 0.72
 
 [node name="GameBoardScene" type="Control" unique_id=459694220]
 layout_mode = 3
@@ -34,6 +46,7 @@ script = ExtResource("1_game_board_scene")
 debug_random_item_cards_are_magnet = false
 
 [node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
+material = SubResource("ShaderMaterial_board_art_dynamics")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -67,8 +80,11 @@ script = ExtResource("4_underwater_ambient_layer")
 bubble_count = 10
 mote_count = 24
 seagrass_blade_count = 16
-motion_scale = 0.55
-redraw_fps = 12
+motion_scale = 0.92
+redraw_fps = 24
+sunbeam_intensity = 1.35
+center_caustic_intensity = 0.42
+center_glint_count = 16
 
 [node name="LayoutAreas" type="Control" parent="." unique_id=193865572]
 layout_mode = 1
