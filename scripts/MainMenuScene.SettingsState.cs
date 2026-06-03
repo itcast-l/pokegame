@@ -7,7 +7,13 @@ public partial class MainMenuScene
 		GameSaveStore.EnsureInitialized();
 		_masterVolume = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MasterVolumeKey, DefaultMasterVolume), 0.0f, 1.0f);
 		_musicVolume = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MusicVolumeKey, DefaultMusicVolume), 0.0f, 1.0f);
-		_muteAudio = GameSaveStore.GetBool(GameSaveStore.MuteAudioKey, DefaultMuteAudio);
+		bool legacyMuteAudio = GameSaveStore.GetBool(GameSaveStore.MuteAudioKey, false);
+		_muteBgm = GameSaveStore.HasValue(GameSaveStore.MuteBgmKey)
+			? GameSaveStore.GetBool(GameSaveStore.MuteBgmKey, DefaultMuteBgm)
+			: legacyMuteAudio;
+		_muteSfx = GameSaveStore.HasValue(GameSaveStore.MuteSfxKey)
+			? GameSaveStore.GetBool(GameSaveStore.MuteSfxKey, DefaultMuteSfx)
+			: legacyMuteAudio;
 		_fullscreen = GameSaveStore.GetBool(GameSaveStore.FullscreenKey, DefaultFullscreen);
 		_selectedResolution = ParseResolutionSetting(GameSaveStore.GetString(GameSaveStore.ResolutionKey, ResolutionToString(DefaultResolution)));
 		_oceanMotion = GameSaveStore.GetBool(GameSaveStore.OceanMotionKey, DefaultOceanMotion);
@@ -23,7 +29,8 @@ public partial class MainMenuScene
 		Error saveResult = GameSaveStore.SetValues(
 			new GameSaveStore.SaveValue(GameSaveStore.MasterVolumeKey, _masterVolume),
 			new GameSaveStore.SaveValue(GameSaveStore.MusicVolumeKey, _musicVolume),
-			new GameSaveStore.SaveValue(GameSaveStore.MuteAudioKey, _muteAudio),
+			new GameSaveStore.SaveValue(GameSaveStore.MuteBgmKey, _muteBgm),
+			new GameSaveStore.SaveValue(GameSaveStore.MuteSfxKey, _muteSfx),
 			new GameSaveStore.SaveValue(GameSaveStore.FullscreenKey, _fullscreen),
 			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
 			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
@@ -58,7 +65,8 @@ public partial class MainMenuScene
 		TranslationServer.SetLocale(Localization.ResolveLocale(this, _languagePreference));
 
 		AudioServer.SetBusVolumeDb(0, LinearVolumeToDb(_masterVolume));
-		AudioServer.SetBusMute(0, _muteAudio);
+		ApplyBusMute(MusicBusName, _muteBgm);
+		ApplyBusMute(SoundBusName, _muteSfx);
 		ApplyMusicVolume();
 
 		ApplyWindowSettings();
@@ -101,9 +109,20 @@ public partial class MainMenuScene
 		return value <= 0.001f ? -80.0f : Mathf.LinearToDb(value);
 	}
 
+	private static void ApplyBusMute(string busName, bool muted)
+	{
+		int busIndex = AudioServer.GetBusIndex(busName);
+		if (busIndex >= 0)
+		{
+			AudioServer.SetBusMute(busIndex, muted);
+		}
+	}
+
 	private void ApplyMusicVolume()
 	{
-		float volumeDb = LinearVolumeToDb(_musicVolume);
+		float volumeDb = _muteBgm
+			? LinearVolumeToDb(0.0f)
+			: LinearVolumeToDb(_musicVolume);
 		GameAudio?.SetMusicVolumeDb(volumeDb);
 
 		Node? musicManager = GetMusicManager();
@@ -126,7 +145,8 @@ public partial class MainMenuScene
 		_isSyncingSettingsControls = true;
 		_masterVolumeSlider.Value = Mathf.RoundToInt(_masterVolume * 100.0f);
 		_musicVolumeSlider.Value = Mathf.RoundToInt(_musicVolume * 100.0f);
-		_muteAudioToggle.ButtonPressed = _muteAudio;
+		_muteBgmToggle.ButtonPressed = _muteBgm;
+		_muteSfxToggle.ButtonPressed = _muteSfx;
 		_windowModeOption.Select(_fullscreen ? 1 : 0);
 		RefreshResolutionOptions();
 		_resolutionOption.Select(GetResolutionOptionIndex(_selectedResolution));
@@ -243,7 +263,8 @@ public partial class MainMenuScene
 		_masterVolume = DefaultMasterVolume;
 		_musicVolume = DefaultMusicVolume;
 		_motionScale = DefaultMotionScale;
-		_muteAudio = DefaultMuteAudio;
+		_muteBgm = DefaultMuteBgm;
+		_muteSfx = DefaultMuteSfx;
 		_fullscreen = DefaultFullscreen;
 		_selectedResolution = DefaultResolution;
 		_oceanMotion = DefaultOceanMotion;

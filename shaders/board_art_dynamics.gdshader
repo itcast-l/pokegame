@@ -1,6 +1,8 @@
 shader_type canvas_item;
 
 uniform float sun_pulse_speed : hint_range(0.0, 2.0) = 0.48;
+uniform float board_exposure : hint_range(0.75, 1.35) = 1.0;
+uniform float board_midtone_lift : hint_range(0.0, 0.6) = 0.0;
 uniform float sun_brightness : hint_range(0.0, 0.8) = 0.32;
 uniform float sun_shadow : hint_range(0.0, 0.6) = 0.22;
 uniform float sun_drift : hint_range(0.0, 0.08) = 0.018;
@@ -49,6 +51,8 @@ void fragment() {
 		sin(uv.y * 16.0 + t * center_line_speed),
 		cos(uv.x * 14.0 - t * center_line_speed * 0.82));
 	vec4 base = texture(TEXTURE, clamp(warped_uv, vec2(0.0), vec2(1.0))) * COLOR;
+	base.rgb *= board_exposure;
+	base.rgb = mix(base.rgb, sqrt(clamp(base.rgb, vec3(0.0), vec3(1.0))), board_midtone_lift);
 
 	float sun_mask = clamp(top_sun_mask(uv, -1.0, t) + top_sun_mask(uv, 1.0, t), 0.0, 1.0);
 	float sun_pulse = 0.5 + 0.5 * sin(t * sun_pulse_speed + sin(t * 0.21) * 0.55);

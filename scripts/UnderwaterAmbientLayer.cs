@@ -15,6 +15,9 @@ public partial class UnderwaterAmbientLayer : Control
 	[Export(PropertyHint.Range, "0.0,2.0,0.05")]
 	public float motion_scale = 1.0f;
 
+	[Export(PropertyHint.Range, "0.0,1.0,0.05")]
+	public float edge_depth_alpha_scale = 1.0f;
+
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int redraw_fps = 20;
 
@@ -184,7 +187,7 @@ public partial class UnderwaterAmbientLayer : Control
 	private void DrawEdgeDepth()
 	{
 		float pulse = 0.5f + 0.5f * Mathf.Sin((float)_time * 0.55f);
-		float edgeAlpha = 0.14f + pulse * 0.035f;
+		float edgeAlpha = (0.14f + pulse * 0.035f) * edge_depth_alpha_scale;
 		var deepTeal = new Color(0.0f, 0.13f, 0.19f, edgeAlpha);
 
 		DrawRect(new Rect2(0.0f, 0.0f, Size.X, Size.Y * 0.13f), deepTeal);

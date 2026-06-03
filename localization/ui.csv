@@ -34,7 +34,7 @@ ADVENTURE_ABILITY_SAND_AMBUSH_DESC,阿豆每成功收取 2 次后，下一次成
 ADVENTURE_ABILITY_COLOR_CURRENT_NAME,彩黏外衣,彩黏外衣,Slime Coat
 ADVENTURE_ABILITY_COLOR_CURRENT_DESC,糯米每累计 2 次出牌未收取，若场上没有黏液牌，会将刚打出的牌变成黏液牌。玩家收取黏液牌时，这张桌牌不计分；糯米收取时正常计分。,糯米每累計 2 次出牌未收取，若場上沒有黏液牌，會將剛打出的牌變成黏液牌。玩家收取黏液牌時，這張桌牌不計分；糯米收取時正常計分。,Every 2 Nuomi misses if no slime card is on the table its just-played card becomes a slime card. Player captures score that table card as 0. Nuomi captures score it normally.
 ADVENTURE_ABILITY_SPIRAL_SHELL_NAME,螺旋水雷,螺旋水雷,Spiral Mine
-ADVENTURE_ABILITY_SPIRAL_SHELL_DESC,玩家每成功收取 3 次后，若牌桌至少有 2 张牌，罗米会随机在两张牌之间插入 1 张炸弹牌。,玩家每成功收取 3 次後，若牌桌至少有 2 張牌，羅米會隨機在兩張牌之間插入 1 張炸彈牌。,After every 3 player captures if the table has at least 2 cards Romi inserts 1 bomb card between two table cards.
+ADVENTURE_ABILITY_SPIRAL_SHELL_DESC,玩家每成功收取 3 次后，若牌桌至少有 2 张牌，罗米会随机在两张牌之间插入 1 张炸弹牌；每局最多 2 次。,玩家每成功收取 3 次後，若牌桌至少有 2 張牌，羅米會隨機在兩張牌之間插入 1 張炸彈牌；每局最多 2 次。,After every 3 player captures if the table has at least 2 cards Romi inserts 1 bomb card between two table cards, up to 2 times per match.
 ADVENTURE_ABILITY_TUSK_BREAK_NAME,猎潮附锋,獵潮附鋒,Tide Hunter
 ADVENTURE_ABILITY_TUSK_BREAK_DESC,诺亚每成功收取 2 次后，下一张普通出牌会自动附带 Double 效果。,諾亞每成功收取 2 次後，下一張普通出牌會自動附帶 Double 效果。,After every 2 successful captures Noah's next normal played card automatically gains Double.
 ADVENTURE_ABILITY_LEAFY_MIRAGE_NAME,叶刃断流,葉刃斷流,Leafblade Cut
@@ -62,8 +62,9 @@ PLAYER_COUNT_START_GAME,开始游戏,開始遊戲,Start
 SETTINGS_TITLE,设置,設定,Settings
 SETTINGS_MESSAGE,基础游戏选项,基礎遊戲選項,Game options
 SETTINGS_MASTER_VOLUME,主音量,主音量,Master Vol
-SETTINGS_MUSIC_VOLUME,音乐音量,音樂音量,Music Vol
-SETTINGS_MUTE,静音,靜音,Mute
+SETTINGS_MUSIC_VOLUME,BGM音量,BGM音量,BGM Vol
+SETTINGS_MUTE_BGM,BGM静音,BGM靜音,Mute BGM
+SETTINGS_MUTE_SFX,音效静音,音效靜音,Mute SFX
 SETTINGS_WINDOW_MODE,窗口模式,視窗模式,Window
 SETTINGS_WINDOWED,窗口,視窗,Windowed
 SETTINGS_FULLSCREEN,全屏,全螢幕,Full

@@ -22,8 +22,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Vector2 startCenter = GetPlayerAvatarGlobalCenter(attackerPlayerIndex);
-		Vector2 targetCenter = GetPlayerAvatarGlobalCenter(targetPlayerIndex);
+		Rect2 attackerAvatarRect = GetPlayerAvatarGlobalRect(attackerPlayerIndex);
+		Vector2 startCenter = attackerAvatarRect.GetCenter() - new Vector2(0.0f, attackerAvatarRect.Size.Y * GardenEelBurrowAmbushStartUpOffsetRatio);
+		Rect2 targetAvatarRect = GetPlayerAvatarGlobalRect(targetPlayerIndex);
+		Vector2 targetCenter = targetAvatarRect.GetCenter();
+		Vector2 ambushCenter = targetCenter - new Vector2(0.0f, targetAvatarRect.Size.Y * GardenEelBurrowAmbushTargetUpOffsetRatio);
 		Texture2D firstFrame = frames[0];
 		Vector2 baseScale = GetSpriteScaleForVisualSize(
 			firstFrame,
@@ -82,7 +85,7 @@ public partial class GameBoardScene
 					.SetDelay(GardenEelBurrowAmbushReturnDelaySeconds);
 			}
 
-			PlayGardenEelBurrowAmbushFrames(ambush, frames, startCenter, targetCenter, baseScale);
+			PlayGardenEelBurrowAmbushFrames(ambush, frames, startCenter, ambushCenter, baseScale);
 			tween.TweenCallback(Callable.From(InvokeHitOnce)).SetDelay(GardenEelBurrowAmbushHitDelaySeconds);
 
 			await ToSignal(tween, Tween.SignalName.Finished);

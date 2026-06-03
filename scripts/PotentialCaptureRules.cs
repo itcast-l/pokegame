@@ -41,6 +41,19 @@ internal static class PotentialCaptureRules
 		return handIndex >= 0;
 	}
 
+	internal static bool IsPairOnlyCapture(
+		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
+		Card card)
+	{
+		if (card.CollectsTable)
+		{
+			return false;
+		}
+
+		int matchingIndex = FindMatchingTableCardIndex(tableCards, card);
+		return matchingIndex >= 0 && !HasPotentialCapturedMiddleTableCards(tableCards, matchingIndex);
+	}
+
 	internal static int GetPotentialNormalCaptureCount(
 		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
 		Card card)

@@ -136,7 +136,8 @@ public partial class GameBoardScene
 	{
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.SpiralShell)
-			|| playerIndex != MainPlayerIndex)
+			|| playerIndex != MainPlayerIndex
+			|| _nautilusBombInsertionsThisMatch >= MaxNautilusBombInsertionsPerMatch)
 		{
 			return;
 		}
@@ -152,17 +153,17 @@ public partial class GameBoardScene
 			return;
 		}
 
-			string bombItemCardId = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BombItemCardId, BombItemCardId);
-			if (!IsItemEffectType(bombItemCardId, CardEffectTypes.PlaceTablePairDestroy))
-			{
-				return;
-			}
+		string bombItemCardId = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BombItemCardId, BombItemCardId);
+		if (!IsItemEffectType(bombItemCardId, CardEffectTypes.PlaceTablePairDestroy))
+		{
+			return;
+		}
 
-			ItemCard? bombCard = CreateItemCard(bombItemCardId);
-			if (!bombCard.HasValue)
-			{
-				return;
-			}
+		ItemCard? bombCard = CreateItemCard(bombItemCardId);
+		if (!bombCard.HasValue)
+		{
+			return;
+		}
 
 		int insertionIndex = PickNautilusBombInsertionIndex();
 		if (insertionIndex < 0)
@@ -177,6 +178,7 @@ public partial class GameBoardScene
 		}
 
 		InsertBombCardIntoTable(bombCard.Value, 1, insertionIndex);
+		_nautilusBombInsertionsThisMatch++;
 		_nautilusMainPlayerCaptureCountUntilBomb = 0;
 		RenderTableCards();
 		await ResolveBombPairAsync(turnSequenceGeneration);

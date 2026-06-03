@@ -15,9 +15,13 @@ internal static class Program
 		Run("capture scoring redirects pair destroy owner", CaptureScoringRedirectsPairDestroyOwner);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
+		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
 		Run("adventure ai early profile can skip obvious capture", AdventureAiEarlyProfileCanSkipObviousCapture);
+		Run("adventure ai early profile skips pair only capture", AdventureAiEarlyProfileSkipsPairOnlyCapture);
 		Run("adventure ai point scoring starts after early stages", AdventureAiPointScoringStartsAfterEarlyStages);
 		Run("adventure ai random capture can pick non-best capture", AdventureAiRandomCaptureCanPickNonBestCapture);
+		Run("adventure ai late best capture skips pair only captures", AdventureAiLateBestCaptureSkipsPairOnlyCaptures);
+		Run("adventure ai late random capture skips pair only captures", AdventureAiLateRandomCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai final profile always picks best capture", AdventureAiFinalProfileAlwaysPicksBestCapture);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
@@ -126,6 +130,17 @@ internal static class Program
 		Equal(0, handIndex);
 	}
 
+	private static void PotentialCaptureIdentifiesPairOnlyCaptures()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+		};
+		var card = new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false);
+
+		True(PotentialCaptureRules.IsPairOnlyCapture(tableCards, card));
+	}
+
 	private static void AdventureAiEarlyProfileCanSkipObviousCapture()
 	{
 		var tableCards = new[]
@@ -145,6 +160,30 @@ internal static class Program
 			EnemyAiRules.GetAdventureProfile(1),
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 90,
+			randomCaptureOrdinal: 0,
+			out _);
+
+		False(picked);
+	}
+
+	private static void AdventureAiEarlyProfileSkipsPairOnlyCapture()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(1),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 0,
 			randomCaptureOrdinal: 0,
 			out _);
 
@@ -213,6 +252,58 @@ internal static class Program
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 30,
 			randomCaptureOrdinal: 1,
+			out int handIndex);
+
+		True(picked);
+		Equal(1, handIndex);
+	}
+
+	private static void AdventureAiLateBestCaptureSkipsPairOnlyCaptures()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(10),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out _);
+
+		False(picked);
+	}
+
+	private static void AdventureAiLateRandomCaptureSkipsPairOnlyCaptures()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("K", 12),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(10),
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 92,
+			randomCaptureOrdinal: 7,
 			out int handIndex);
 
 		True(picked);

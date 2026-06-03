@@ -33,6 +33,7 @@ public partial class GameBoardScene
 		_gardenEelSandBiteReady = false;
 		_gardenEelBuriedTableCardIndex = -1;
 		_nautilusMainPlayerCaptureCountUntilBomb = 0;
+		_nautilusBombInsertionsThisMatch = 0;
 		_narwhalCaptureCountUntilDouble = 0;
 		_narwhalDoubleReady = false;
 		_leafySeadragonBladeBreakCooldownTurns = 0;

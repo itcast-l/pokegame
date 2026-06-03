@@ -111,6 +111,7 @@ public partial class GameBoardScene : Control
 	private const float BombDestroyCardStaggerSeconds = 0.08f;
 	private const float BombPairDestroyFxFrameSeconds = 0.055f;
 	private const float BombPairDestroyFxVisualSize = 132.0f;
+	private const int MaxNautilusBombInsertionsPerMatch = 2;
 	private const float TableCardPointPopupSeconds = 0.42f;
 	private const float TableCardPointPopupRise = 24.0f;
 	private const float TableCardPointPopupTopOffset = 26.0f;
@@ -215,6 +216,7 @@ public partial class GameBoardScene : Control
 	private bool _gardenEelSandBiteReady;
 	private int _gardenEelBuriedTableCardIndex = -1;
 	private int _nautilusMainPlayerCaptureCountUntilBomb;
+	private int _nautilusBombInsertionsThisMatch;
 	private int _narwhalCaptureCountUntilDouble;
 	private bool _narwhalDoubleReady;
 	private int _leafySeadragonBladeBreakCooldownTurns;

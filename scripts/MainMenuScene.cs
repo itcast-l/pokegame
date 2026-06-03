@@ -31,6 +31,8 @@ public partial class MainMenuScene : Control
 	private const string ExitDialogScenePath = "res://scenes/main_menu_exit_dialog.tscn";
 	private const string AvatarUnlockPromptScenePath = "res://scenes/avatar_unlock_prompt.tscn";
 	private const string AdventureTransitionScenePath = "res://scenes/main_menu_adventure_transition.tscn";
+	private const string SoundBusName = "Sound";
+	private const string MusicBusName = "Music";
 	private const float DialogFadeSeconds = 0.14f;
 	private const int AvatarEditDialogLayer = 42;
 	private const int MinMenuPlayers = 2;
@@ -38,7 +40,8 @@ public partial class MainMenuScene : Control
 	private const float DefaultMasterVolume = 0.82f;
 	private const float DefaultMusicVolume = 0.76f;
 	private const float DefaultMotionScale = 1.0f;
-	private const bool DefaultMuteAudio = false;
+	private const bool DefaultMuteBgm = false;
+	private const bool DefaultMuteSfx = false;
 	private const bool DefaultFullscreen = false;
 	private const bool DefaultOceanMotion = true;
 	private const bool DefaultItemMode = true;
@@ -94,7 +97,8 @@ public partial class MainMenuScene : Control
 	private Label _masterVolumeValue = default!;
 	private Label _musicVolumeValue = default!;
 	private Label _motionScaleValue = default!;
-	private CheckButton _muteAudioToggle = default!;
+	private CheckButton _muteBgmToggle = default!;
+	private CheckButton _muteSfxToggle = default!;
 	private CheckButton _oceanMotionToggle = default!;
 	private OptionButton _windowModeOption = default!;
 	private OptionButton _resolutionOption = default!;
@@ -114,7 +118,8 @@ public partial class MainMenuScene : Control
 	private float _masterVolume = DefaultMasterVolume;
 	private float _musicVolume = DefaultMusicVolume;
 	private float _motionScale = DefaultMotionScale;
-	private bool _muteAudio = DefaultMuteAudio;
+	private bool _muteBgm = DefaultMuteBgm;
+	private bool _muteSfx = DefaultMuteSfx;
 	private bool _fullscreen = DefaultFullscreen;
 	private bool _oceanMotion = DefaultOceanMotion;
 	private Vector2I _selectedResolution = DefaultResolution;

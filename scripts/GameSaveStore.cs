@@ -7,6 +7,8 @@ public static class GameSaveStore
 	public const string MasterVolumeKey = "settings.audio.master_volume";
 	public const string MusicVolumeKey = "settings.audio.music_volume";
 	public const string MuteAudioKey = "settings.audio.mute";
+	public const string MuteBgmKey = "settings.audio.mute_bgm";
+	public const string MuteSfxKey = "settings.audio.mute_sfx";
 	public const string FullscreenKey = "settings.video.fullscreen";
 	public const string ResolutionKey = "settings.video.resolution";
 	public const string OceanMotionKey = "settings.video.ocean_motion";
@@ -338,6 +340,18 @@ public static class GameSaveStore
 		return GetValue(key, defaultValue).AsString();
 	}
 
+	public static bool HasValue(string key)
+	{
+		Node? saveManager = GetSaveManager();
+		if (saveManager == null)
+		{
+			return false;
+		}
+
+		EnsureLegacyMigration(saveManager);
+		return HasRawValue(saveManager, key);
+	}
+
 	public static Error SetValue(string key, Variant value)
 	{
 		Node? saveManager = GetSaveManager();
@@ -449,6 +463,8 @@ public static class GameSaveStore
 		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "master_volume", MasterVolumeKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "music_volume", MusicVolumeKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "mute", MuteAudioKey);
+		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "mute", MuteBgmKey);
+		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "mute", MuteSfxKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "fullscreen", FullscreenKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "resolution", ResolutionKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "ocean_motion", OceanMotionKey);

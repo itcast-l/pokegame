@@ -1,0 +1,56 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/LogoIntroScene.gd" id="1_logo_intro"]
+[ext_resource type="VideoStreamTheora" path="res://asset/video/logo_video.ogv" id="2_logo_video"]
+[ext_resource type="AudioStreamMP3" path="res://asset/video/cake_logo_reveal.mp3" id="3_logo_sound"]
+
+[node name="LogoIntroScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_logo_intro")
+
+[node name="LogoLayer" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+layer = 100
+
+[node name="LogoVisuals" type="Control" parent="LogoLayer"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Background" type="ColorRect" parent="LogoLayer/LogoVisuals"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="LogoVideoPlayer" type="VideoStreamPlayer" parent="LogoLayer/LogoVisuals"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stream = ExtResource("2_logo_video")
+expand = true
+
+[node name="LogoAudioPlayer" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("3_logo_sound")
+volume_db = -2.0
+bus = &"Sound"

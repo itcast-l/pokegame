@@ -6,26 +6,27 @@ internal static class EnemyAiRules
 	internal readonly record struct AdventureProfile(
 		int BestCaptureChancePercent,
 		int AnyCaptureChancePercent,
-		bool UsePointScoring);
+		bool UsePointScoring,
+		bool AvoidPairOnlyCaptures);
 
 	internal static AdventureProfile GetAdventureProfile(int stageNumber)
 	{
 		return stageNumber switch
 		{
-			<= 1 => new AdventureProfile(25, 15, false),
-			2 => new AdventureProfile(35, 20, false),
-			3 => new AdventureProfile(45, 25, false),
-			4 => new AdventureProfile(55, 25, false),
-			5 => new AdventureProfile(65, 20, false),
-			6 => new AdventureProfile(70, 20, false),
-			7 => new AdventureProfile(75, 15, true),
-			8 => new AdventureProfile(78, 15, true),
-			9 => new AdventureProfile(85, 10, true),
-			10 => new AdventureProfile(90, 5, true),
-			11 => new AdventureProfile(92, 5, true),
-			12 => new AdventureProfile(95, 5, true),
-			13 => new AdventureProfile(97, 3, true),
-			_ => new AdventureProfile(100, 0, true),
+			<= 1 => new AdventureProfile(25, 15, false, true),
+			2 => new AdventureProfile(35, 20, false, true),
+			3 => new AdventureProfile(45, 25, false, true),
+			4 => new AdventureProfile(55, 25, false, true),
+			5 => new AdventureProfile(65, 20, false, true),
+			6 => new AdventureProfile(70, 20, false, true),
+			7 => new AdventureProfile(75, 15, true, true),
+			8 => new AdventureProfile(78, 15, true, true),
+			9 => new AdventureProfile(85, 10, true, true),
+			10 => new AdventureProfile(90, 5, true, true),
+			11 => new AdventureProfile(92, 5, true, true),
+			12 => new AdventureProfile(95, 5, true, true),
+			13 => new AdventureProfile(97, 3, true, true),
+			_ => new AdventureProfile(100, 0, true, true),
 		};
 	}
 
@@ -53,13 +54,19 @@ internal static class EnemyAiRules
 				handCards,
 				context,
 				profile.UsePointScoring,
+				profile.AvoidPairOnlyCaptures,
 				royalCaptureThreshold,
 				out handIndex);
 		}
 
 		if (rollPercent < profile.BestCaptureChancePercent + profile.AnyCaptureChancePercent)
 		{
-			return TryPickAnyCaptureCardIndex(tableCards, handCards, randomCaptureOrdinal, out handIndex);
+			return TryPickAnyCaptureCardIndex(
+				tableCards,
+				handCards,
+				profile.AvoidPairOnlyCaptures,
+				randomCaptureOrdinal,
+				out handIndex);
 		}
 
 		return false;
@@ -70,6 +77,7 @@ internal static class EnemyAiRules
 		IReadOnlyList<PotentialCaptureRules.Card> handCards,
 		CaptureScoringRules.Context context,
 		bool usePointScoring,
+		bool avoidPairOnlyCaptures,
 		int royalCaptureThreshold,
 		out int handIndex)
 	{
@@ -80,7 +88,7 @@ internal static class EnemyAiRules
 		{
 			PotentialCaptureRules.Card card = handCards[index];
 			int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
-			if (captureCount <= 0)
+			if (captureCount <= 0 || (avoidPairOnlyCaptures && PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
 			{
 				continue;
 			}
@@ -107,34 +115,37 @@ internal static class EnemyAiRules
 	private static bool TryPickAnyCaptureCardIndex(
 		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
 		IReadOnlyList<PotentialCaptureRules.Card> handCards,
+		bool avoidPairOnlyCaptures,
 		int randomCaptureOrdinal,
 		out int handIndex)
 	{
 		handIndex = -1;
-		int captureCardCount = 0;
+		int preferredCaptureCardCount = 0;
 		foreach (PotentialCaptureRules.Card card in handCards)
 		{
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) > 0)
+			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) > 0
+				&& (!avoidPairOnlyCaptures || !PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
 			{
-				captureCardCount++;
+				preferredCaptureCardCount++;
 			}
 		}
 
-		if (captureCardCount == 0)
+		if (preferredCaptureCardCount == 0)
 		{
 			return false;
 		}
 
-		int targetOrdinal = randomCaptureOrdinal % captureCardCount;
+		int targetOrdinal = randomCaptureOrdinal % preferredCaptureCardCount;
 		if (targetOrdinal < 0)
 		{
-			targetOrdinal += captureCardCount;
+			targetOrdinal += preferredCaptureCardCount;
 		}
 
 		int currentOrdinal = 0;
 		for (int index = 0; index < handCards.Count; index++)
 		{
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, handCards[index]) <= 0)
+			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, handCards[index]) <= 0
+				|| (avoidPairOnlyCaptures && PotentialCaptureRules.IsPairOnlyCapture(tableCards, handCards[index])))
 			{
 				continue;
 			}

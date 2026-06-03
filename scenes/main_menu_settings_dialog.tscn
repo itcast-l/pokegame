@@ -112,7 +112,7 @@ mouse_filter = 2
 
 [node name="SettingsDialogPanel" type="Control" parent="DialogCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(680, 640)
+custom_minimum_size = Vector2(680, 696)
 layout_mode = 2
 mouse_filter = 0
 
@@ -267,35 +267,68 @@ text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="MuteAudioRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+[node name="MuteBgmRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_row")
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteBgmRowPanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 7
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 7
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteBgmRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="MuteAudioLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin/RowLayout"]
+[node name="MuteBgmLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(132, 38)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
-text = "SETTINGS_MUTE"
+text = "SETTINGS_MUTE_BGM"
 vertical_alignment = 1
 
-[node name="MuteSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin/RowLayout"]
+[node name="MuteBgmSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MuteAudioToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteAudioRowPanel/RowMargin/RowLayout"]
+[node name="MuteBgmToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+
+[node name="MuteSfxRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteSfxRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteSfxRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MuteSfxLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_MUTE_SFX"
+vertical_alignment = 1
+
+[node name="MuteSfxSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MuteSfxToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0

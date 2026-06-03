@@ -109,6 +109,8 @@ public partial class GameBoardScene
 	private const float GardenEelBurrowAmbushVisualScale = 1.28f;
 	private const float GardenEelBurrowAmbushStartScale = 0.92f;
 	private const float GardenEelBurrowAmbushEmergeScale = 1.08f;
+	private const float GardenEelBurrowAmbushStartUpOffsetRatio = 0.16f;
+	private const float GardenEelBurrowAmbushTargetUpOffsetRatio = 0.16f;
 	private const float GardenEelBurrowAmbushTotalSeconds = 0.78f;
 	private const double GardenEelBurrowAmbushFrameSeconds = 0.12d;
 	private const double GardenEelBurrowAmbushReturnDelaySeconds = GardenEelBurrowAmbushFrameSeconds * 5.0d;

@@ -10,7 +10,8 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _messageLabel = default!;
 	private Label _masterVolumeLabel = default!;
 	private Label _musicVolumeLabel = default!;
-	private Label _muteAudioLabel = default!;
+	private Label _muteBgmLabel = default!;
+	private Label _muteSfxLabel = default!;
 	private Label _windowModeLabel = default!;
 	private Label _resolutionLabel = default!;
 	private Label _languageLabel = default!;
@@ -27,7 +28,8 @@ public partial class MainMenuSettingsDialog : Control
 	public Label MasterVolumeValue { get; private set; } = default!;
 	public Label MusicVolumeValue { get; private set; } = default!;
 	public Label MotionScaleValue { get; private set; } = default!;
-	public CheckButton MuteAudioToggle { get; private set; } = default!;
+	public CheckButton MuteBgmToggle { get; private set; } = default!;
+	public CheckButton MuteSfxToggle { get; private set; } = default!;
 	public CheckButton OceanMotionToggle { get; private set; } = default!;
 	public OptionButton WindowModeOption { get; private set; } = default!;
 	public OptionButton ResolutionOption { get; private set; } = default!;
@@ -44,7 +46,8 @@ public partial class MainMenuSettingsDialog : Control
 		MasterVolumeValue = GetNode<Label>("%MasterVolumeValue");
 		MusicVolumeValue = GetNode<Label>("%MusicVolumeValue");
 		MotionScaleValue = GetNode<Label>("%MotionScaleValue");
-		MuteAudioToggle = GetNode<CheckButton>("%MuteAudioToggle");
+		MuteBgmToggle = GetNode<CheckButton>("%MuteBgmToggle");
+		MuteSfxToggle = GetNode<CheckButton>("%MuteSfxToggle");
 		OceanMotionToggle = GetNode<CheckButton>("%OceanMotionToggle");
 		WindowModeOption = GetNode<OptionButton>("%WindowModeOption");
 		ResolutionOption = GetNode<OptionButton>("%ResolutionOption");
@@ -53,7 +56,8 @@ public partial class MainMenuSettingsDialog : Control
 		_messageLabel = GetNode<Label>("%SettingsMessage");
 		_masterVolumeLabel = GetNode<Label>("%MasterVolumeLabel");
 		_musicVolumeLabel = GetNode<Label>("%MusicVolumeLabel");
-		_muteAudioLabel = GetNode<Label>("%MuteAudioLabel");
+		_muteBgmLabel = GetNode<Label>("%MuteBgmLabel");
+		_muteSfxLabel = GetNode<Label>("%MuteSfxLabel");
 		_windowModeLabel = GetNode<Label>("%WindowModeLabel");
 		_resolutionLabel = GetNode<Label>("%ResolutionLabel");
 		_languageLabel = GetNode<Label>("%LanguageLabel");
@@ -67,7 +71,8 @@ public partial class MainMenuSettingsDialog : Control
 		EnableKeyboardFocus(
 			MasterVolumeSlider,
 			MusicVolumeSlider,
-			MuteAudioToggle,
+			MuteBgmToggle,
+			MuteSfxToggle,
 			WindowModeOption,
 			ResolutionOption,
 			LanguageOption,
@@ -86,7 +91,8 @@ public partial class MainMenuSettingsDialog : Control
 		_messageLabel.Text = localize("SETTINGS_MESSAGE");
 		_masterVolumeLabel.Text = localize("SETTINGS_MASTER_VOLUME");
 		_musicVolumeLabel.Text = localize("SETTINGS_MUSIC_VOLUME");
-		_muteAudioLabel.Text = localize("SETTINGS_MUTE");
+		_muteBgmLabel.Text = localize("SETTINGS_MUTE_BGM");
+		_muteSfxLabel.Text = localize("SETTINGS_MUTE_SFX");
 		_windowModeLabel.Text = localize("SETTINGS_WINDOW_MODE");
 		_resolutionLabel.Text = localize("SETTINGS_RESOLUTION");
 		_languageLabel.Text = localize("SETTINGS_LANGUAGE");

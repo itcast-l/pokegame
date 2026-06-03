@@ -13,6 +13,14 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.SpecialTrigger, -1.0f, 0.97f, 1.03f, 0.08);
+		bool useEnemyAbilityFlashFx = _enemySpecialAbilityAvatarFxFrames.Count > 0;
+		IReadOnlyList<Texture2D> triggerFxFrames = useEnemyAbilityFlashFx
+			? _enemySpecialAbilityAvatarFxFrames
+			: _specialCardTriggerEffectFrames;
+		float triggerFxFrameSeconds = useEnemyAbilityFlashFx
+			? EnemySpecialAbilityAvatarFxFrameSeconds
+			: SpecialCardTriggerFxFrameSeconds;
+		float triggerFxPeakAlpha = useEnemyAbilityFlashFx ? 0.88f : 1.0f;
 		var effectRoot = new Control
 		{
 			Name = "SpecialCardTriggerEffect",
@@ -55,7 +63,7 @@ public partial class GameBoardScene
 		var triggerFx = new TextureRect
 		{
 			Name = "SpecialCardTriggerFx",
-			Texture = _specialCardTriggerEffectFrames.Count > 0 ? _specialCardTriggerEffectFrames[0] : null,
+			Texture = triggerFxFrames.Count > 0 ? triggerFxFrames[0] : null,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
 			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
@@ -64,7 +72,7 @@ public partial class GameBoardScene
 			Size = SpecialCardTriggerFxVisualSize,
 			PivotOffset = SpecialCardTriggerFxVisualSize / 2.0f,
 			ZIndex = 20,
-			Visible = _specialCardTriggerEffectFrames.Count > 0,
+			Visible = triggerFxFrames.Count > 0,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
 		card.AddChild(triggerFx);
@@ -103,7 +111,7 @@ public partial class GameBoardScene
 			tween.TweenProperty(card, "scale", Vector2.One * 1.10f, SpecialCardTriggerEffectSeconds * 0.42f);
 			tween.TweenProperty(ring, "ring_progress", 0.58f, SpecialCardTriggerEffectSeconds * 0.42f);
 			tween.TweenProperty(ring, "ring_alpha", 1.0f, SpecialCardTriggerEffectSeconds * 0.18f);
-			tween.TweenProperty(triggerFx, "modulate:a", 1.0f, SpecialCardTriggerEffectSeconds * 0.12f);
+			tween.TweenProperty(triggerFx, "modulate:a", triggerFxPeakAlpha, SpecialCardTriggerEffectSeconds * 0.12f);
 			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
 			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
 			{
@@ -130,7 +138,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			FrameAnimationHelpers.TweenTextureFrames(tween, triggerFx, _specialCardTriggerEffectFrames, SpecialCardTriggerFxFrameSeconds);
+			FrameAnimationHelpers.TweenTextureFrames(tween, triggerFx, triggerFxFrames, triggerFxFrameSeconds);
 			tween.Finished += () =>
 			{
 				if (GodotObject.IsInstanceValid(effectRoot))
