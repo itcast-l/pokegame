@@ -35,6 +35,7 @@ public partial class CharacterAudioConfig : Resource
 	[Export] public AudioStream? ColorCurrent { get; set; }
 	[Export] public AudioStream? NautilusSpiralShell { get; set; }
 	[Export] public AudioStream? NarwhalTuskBreak { get; set; }
+	[Export] public AudioStream? LeafyMirage { get; set; }
 	[Export] public AudioStream? DragonPrinceAbility { get; set; }
 	[Export] public AudioStream? DragonQueenAbility { get; set; }
 	[Export] public AudioStream? DragonKingAbility { get; set; }
@@ -91,7 +92,7 @@ public partial class CharacterAudioConfig : Resource
 			AdventureEnemyAbilities.SpiralShell => WithFallback(NautilusSpiralShell, config => config.GetAbilityStream(abilityId)),
 			AdventureEnemyAbilities.TuskBreak => WithFallback(NarwhalTuskBreak, config => config.GetAbilityStream(abilityId)),
 			AdventureEnemyAbilities.TideShift => WithFallback(MantaRayTideShift, config => config.GetAbilityStream(abilityId)),
-			AdventureEnemyAbilities.LeafyMirage => WithFallback(LeafySeadragonBlade, config => config.GetAbilityStream(abilityId)),
+			AdventureEnemyAbilities.LeafyMirage => WithFallback(LeafyMirage, config => config.GetAbilityStream(abilityId)),
 			AdventureEnemyAbilities.DragonPrince => WithFallback(DragonPrinceAbility, config => config.GetAbilityStream(abilityId)),
 			AdventureEnemyAbilities.DragonQueen => WithFallback(DragonQueenAbility, config => config.GetAbilityStream(abilityId)),
 			AdventureEnemyAbilities.DragonKing => WithFallback(DragonKingAbility, config => config.GetAbilityStream(abilityId)),
@@ -144,6 +145,7 @@ public partial class CharacterAudioConfig : Resource
 			ColorCurrent,
 			NautilusSpiralShell,
 			NarwhalTuskBreak,
+			LeafyMirage,
 			DragonPrinceAbility,
 			DragonQueenAbility,
 			DragonKingAbility,

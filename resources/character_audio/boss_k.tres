@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterAudioConfig" load_steps=16 format=3]
+[gd_resource type="Resource" script_class="CharacterAudioConfig" load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/CharacterAudioConfig.cs" id="1_audio_config"]
 [ext_resource type="Resource" path="res://resources/character_audio/common.tres" id="2_common"]
@@ -15,6 +15,7 @@
 [ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/dragon_king_ability.mp3" id="13_dragon_king_ability"]
 [ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/color_current.mp3" id="14_color_current"]
 [ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/dragon_queen_jaw.mp3" id="15_dragon_queen_jaw"]
+[ext_resource type="AudioStreamMP3" path="res://asset/audio/sfx/adventure/leafy_mirage.mp3" id="16_leafy_mirage"]
 
 [resource]
 script = ExtResource("1_audio_config")
@@ -27,6 +28,7 @@ GardenEelAmbush = ExtResource("7_garden_eel_ambush")
 NautilusSpiralShell = ExtResource("8_nautilus_spiral_shell")
 NarwhalTuskBreak = ExtResource("9_narwhal_tusk_break")
 LeafySeadragonBlade = ExtResource("10_leafy_seadragon_blade")
+LeafyMirage = ExtResource("16_leafy_mirage")
 DragonPrinceAbility = ExtResource("11_dragon_prince_ability")
 DragonQueenAbility = ExtResource("12_dragon_queen_ability")
 DragonKingAbility = ExtResource("13_dragon_king_ability")

@@ -133,7 +133,15 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		bool captured = _tableCards.Count > 0;
+		const int captureStartIndex = 0;
+		bool captured = _tableCards.Count > captureStartIndex;
+		int scorePlayerIndex = captured
+			? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex)
+			: playerIndex;
+		bool capturedMiddleCards = captured && HasCapturedMiddleTableCards(captureStartIndex);
+		int collectedPoints = capturedMiddleCards
+			? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex)
+			: 0;
 		PairCaptureEdgeFloatHold? specialJackFloat = null;
 		bool specialJackFloatHandedToDeck = false;
 		if (captured)
@@ -146,8 +154,35 @@ public partial class GameBoardScene
 					return new PlayCardResult(false, false);
 				}
 
+				if (capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, null))
+				{
+					await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
+
+				if (collectedPoints > 0)
+				{
+					List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(
+						captureStartIndex,
+						false,
+						true,
+						scorePlayerIndex: scorePlayerIndex);
+					await PlayScoreFillCollectionAsync(
+						scorePlayerIndex,
+						scoringCardVisuals,
+						turnSequenceGeneration,
+						() => AddPlayerScore(scorePlayerIndex, collectedPoints));
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return new PlayCardResult(false, false);
+					}
+				}
+
 				List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(
-					0,
+					captureStartIndex,
 					false,
 					flightStartOverrides: specialJackFloat);
 				if (capturedCardVisuals.Count > 0)
@@ -156,7 +191,7 @@ public partial class GameBoardScene
 					specialJackFloatHandedToDeck = specialJackFloat != null;
 					await PlayCapturedCardsToDeckAnimationAsync(
 						playerIndex,
-						0,
+						captureStartIndex,
 						capturedCardVisuals,
 						turnSequenceGeneration);
 				}
@@ -177,7 +212,8 @@ public partial class GameBoardScene
 
 		CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
 			playerIndex,
-			0,
+			captureStartIndex,
+			awardScore: false,
 			turnSequenceGeneration: turnSequenceGeneration);
 		if (!IsGameOver())
 		{

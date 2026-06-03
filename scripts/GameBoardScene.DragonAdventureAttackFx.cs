@@ -50,6 +50,7 @@ public partial class GameBoardScene
 			: flightFrames;
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		PlayAdventureAttackFlightSfx(attackerPlayerIndex);
 		var projectile = new Sprite2D
 		{
 			Name = "DragonPrinceDamageHitFlight",
@@ -131,6 +132,7 @@ public partial class GameBoardScene
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
 		AddChild(impact);
+		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.DragonPrinceHit);
 
 		bool hitInvoked = false;
 		void InvokeHitOnce()
@@ -211,6 +213,7 @@ public partial class GameBoardScene
 			GetPlayerAvatarFxVisualSize(targetPlayerIndex) * DragonQueenJawSlashVisualScale);
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
+		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.DragonQueenJaw);
 		var jawSlash = new Sprite2D
 		{
 			Name = "DragonQueenJawSlashAttack",
