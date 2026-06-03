@@ -8,8 +8,8 @@ public partial class GameBoardScene
 	private const int AdventurePlayerStartingHealth = 100;
 	private const int AdventureEnemyNoAbilityStartingHealth = 50;
 	private const int AdventureEnemyAbilityStartingHealth = 100;
-	private const int AdventureEnemyRoyalStartingHealth = 150;
-	private const int AdventureEnemyBossStartingHealth = 200;
+	private const int AdventureEnemyRoyalStartingHealth = 100;
+	private const int AdventureEnemyBossStartingHealth = 100;
 	private const int AdventureEnemyPlayerIndex = 1;
 	private static readonly string[] ScoreMeterNodeNames =
 	{
@@ -90,7 +90,9 @@ public partial class GameBoardScene
 				return;
 			}
 
-			_playerScores[damageTargetPlayerIndex] = Math.Max(0, _playerScores[damageTargetPlayerIndex] - points);
+			int previousScore = _playerScores[damageTargetPlayerIndex];
+			_playerScores[damageTargetPlayerIndex] = Math.Max(0, previousScore - points);
+			PlayAvatarDamagePopup(damageTargetPlayerIndex, previousScore - _playerScores[damageTargetPlayerIndex]);
 			UpdatePlayerScoreMeter(damageTargetPlayerIndex, true);
 			PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
 			if (damageTargetPlayerIndex != playerIndex)

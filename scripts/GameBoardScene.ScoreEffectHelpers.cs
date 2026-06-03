@@ -68,6 +68,55 @@ public partial class GameBoardScene
 		return GetPlayerAvatarGlobalCenter(playerIndex);
 	}
 
+	private void PlayAvatarDamagePopup(int playerIndex, int damage)
+	{
+		if (damage <= 0)
+		{
+			return;
+		}
+
+		Rect2 avatarRect = GetPlayerAvatarGlobalRect(playerIndex);
+		var damageLabel = new Label
+		{
+			Name = "AvatarDamagePopup",
+			Text = $"-{damage}",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+			Size = new Vector2(Math.Max(avatarRect.Size.X, 76.0f), 38.0f),
+			ZIndex = AvatarDamagePopupZIndex,
+		};
+		damageLabel.AddThemeFontSizeOverride("font_size", AvatarDamagePopupFontSize);
+		damageLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.25f, 0.18f));
+		damageLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.86f));
+		damageLabel.AddThemeConstantOverride("shadow_offset_x", 2);
+		damageLabel.AddThemeConstantOverride("shadow_offset_y", 2);
+		AddChild(damageLabel);
+
+		damageLabel.GlobalPosition = new Vector2(
+			avatarRect.GetCenter().X - damageLabel.Size.X / 2.0f,
+			avatarRect.Position.Y - AvatarDamagePopupTopOffset);
+		Vector2 endPosition = damageLabel.Position + new Vector2(0.0f, -AvatarDamagePopupRise);
+
+		Tween tween = CreateTween();
+		tween.SetParallel(true);
+		tween.SetTrans(Tween.TransitionType.Back);
+		tween.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(damageLabel, "position", endPosition, AvatarDamagePopupSeconds);
+		tween.TweenProperty(damageLabel, "scale", new Vector2(1.12f, 1.12f), AvatarDamagePopupSeconds * 0.32f);
+		tween.TweenProperty(damageLabel, "scale", Vector2.One, AvatarDamagePopupSeconds * 0.42f)
+			.SetDelay(AvatarDamagePopupSeconds * 0.32f);
+		tween.TweenProperty(damageLabel, "modulate:a", 0.0f, AvatarDamagePopupSeconds * 0.34f)
+			.SetDelay(AvatarDamagePopupSeconds * 0.66f);
+		tween.Finished += () =>
+		{
+			if (GodotObject.IsInstanceValid(damageLabel))
+			{
+				damageLabel.QueueFree();
+			}
+		};
+	}
+
 	private Vector2 GetScoreMeterGlobalCenter(int playerIndex)
 	{
 		if (playerIndex >= 0

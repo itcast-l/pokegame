@@ -118,6 +118,11 @@ public partial class GameBoardScene : Control
 	private const int TableCardPointPopupFontSize = 22;
 	private const int TableCardPointPopupDoubleFontSize = 26;
 	private const int TableCardPointPopupZIndex = 2800;
+	private const float AvatarDamagePopupSeconds = 0.58f;
+	private const float AvatarDamagePopupRise = 34.0f;
+	private const float AvatarDamagePopupTopOffset = 16.0f;
+	private const int AvatarDamagePopupFontSize = 28;
+	private const int AvatarDamagePopupZIndex = 2900;
 	private const int QuestionCardRefreshCyclesAfterCapture = 2;
 	private const double MagnetAttachmentSelectionSeconds = 5.0;
 	private const int LensRevealMaxCards = 2;
