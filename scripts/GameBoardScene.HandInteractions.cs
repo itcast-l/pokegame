@@ -9,6 +9,11 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ConfirmMainPlayerHandCard(handIndex);
+	}
+
+	private void ConfirmMainPlayerHandCard(int handIndex)
+	{
 		if (!CanMainPlayerAct())
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
@@ -39,6 +44,16 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ConfirmMainPlayerMagnetAttachment(handIndex);
+	}
+
+	private void ConfirmMainPlayerMagnetAttachment(int handIndex)
+	{
+		if (!IsMainPlayerMagnetSelectionActive() || _isAnimatingMagnetAttachment)
+		{
+			return;
+		}
+
 		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
 		_ = CompleteMagnetAttachmentSelectionAsync(handIndex);
 	}
@@ -55,6 +70,16 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ConfirmMainPlayerHandLimitDiscard(displayIndex);
+	}
+
+	private void ConfirmMainPlayerHandLimitDiscard(int displayIndex)
+	{
+		if (!IsMainPlayerHandLimitDiscardSelectionActive())
+		{
+			return;
+		}
+
 		CompleteHandLimitDiscardSelection(displayIndex);
 	}
 
@@ -65,6 +90,11 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ConfirmMainPlayerItemCard(itemHandIndex);
+	}
+
+	private void ConfirmMainPlayerItemCard(int itemHandIndex)
+	{
 		if (!CanMainPlayerAct())
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);

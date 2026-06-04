@@ -157,6 +157,7 @@ public partial class GameBoardScene
 
 	private PlayCardResult ResolveGrantRewardEffect(CardTriggerRequest request)
 	{
+		// Compatibility marker for Question Mark; the actual reward is granted in table capture flow.
 		return new PlayCardResult(true, false);
 	}
 
@@ -164,15 +165,5 @@ public partial class GameBoardScene
 	{
 		await ResolveBombPairAsync(turnSequenceGeneration);
 		return new PlayCardResult(true, false, CompletesTurn: false);
-	}
-
-	private PlayCardResult ResolveReverseCollectEffect(CardTriggerRequest request)
-	{
-		return new PlayCardResult(true, false);
-	}
-
-	private PlayCardResult ResolveBlockMatchEffect(CardTriggerRequest request)
-	{
-		return new PlayCardResult(true, false);
 	}
 }

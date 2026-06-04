@@ -16,7 +16,13 @@ public partial class GameBoardScene
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (!inputEvent.IsActionPressed("ui_cancel"))
+		if (TryHandleGameBoardControlInput(inputEvent))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+
+		if (!inputEvent.IsActionPressed(GameInputActions.GamePause))
 		{
 			return;
 		}

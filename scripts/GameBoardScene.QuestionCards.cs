@@ -7,31 +7,17 @@ public partial class GameBoardScene
 {
 	private int AdvanceQuestionCardRefreshTurnCounter(int nextTurnPlayerIndex)
 	{
-		if (!item_mode)
-		{
-			return -1;
-		}
+		QuestionCardRefreshAdvanceResult refreshResult = TurnProgressRules.AdvanceQuestionCardRefresh(
+			item_mode,
+			HasTableSpecialCard(),
+			new QuestionCardRefreshState(_completedTurnsSinceQuestionCardRefresh, _questionCardRefreshAnchorPlayerIndex),
+			nextTurnPlayerIndex,
+			player_count,
+			QuestionCardRefreshCyclesAfterCapture);
 
-		if (HasTableSpecialCard())
-		{
-			return -1;
-		}
-
-		if (_questionCardRefreshAnchorPlayerIndex < 0)
-		{
-			return -1;
-		}
-
-		_completedTurnsSinceQuestionCardRefresh++;
-		if (nextTurnPlayerIndex != _questionCardRefreshAnchorPlayerIndex
-			|| _completedTurnsSinceQuestionCardRefresh < GetQuestionCardRefreshTurnCount())
-		{
-			return -1;
-		}
-
-		_completedTurnsSinceQuestionCardRefresh = 0;
-		_questionCardRefreshAnchorPlayerIndex = -1;
-		return PlaceQuestionCardOnNextTableSlot();
+		_completedTurnsSinceQuestionCardRefresh = refreshResult.State.CompletedTurnsSinceQuestionCardRefresh;
+		_questionCardRefreshAnchorPlayerIndex = refreshResult.State.QuestionCardRefreshAnchorPlayerIndex;
+		return refreshResult.ShouldRefreshQuestionCard ? PlaceQuestionCardOnNextTableSlot() : -1;
 	}
 
 	private int PlaceQuestionCardOnNextTableSlot()
@@ -54,11 +40,6 @@ public partial class GameBoardScene
 
 		_tableCards.Add(new TableCard(null, true, itemOverlay));
 		return _tableCards.Count - 1;
-	}
-
-	private int GetQuestionCardRefreshTurnCount()
-	{
-		return Math.Max(1, player_count * QuestionCardRefreshCyclesAfterCapture);
 	}
 
 	private bool HasTableSpecialCard()

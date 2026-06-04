@@ -7,12 +7,14 @@ public partial class GameBoardScene
 	private const string HandRenderPoolableSlotMeta = "ocean_hand_render_poolable_slot";
 	private const string HandCardVisualNodeName = "HandCardVisual";
 	private const int MaxPooledHandCardSlots = MaxPlayers * MaxTotalHandCards;
+	private static readonly StyleBoxFlat InputSelectionFrameStyle = CreateInputSelectionFrameStyle();
 	private readonly int[] _playerHandRenderSignatures = new int[MaxPlayers];
 	private readonly bool[] _playerHandRenderSignaturesInitialized = new bool[MaxPlayers];
 	private readonly List<Control> _pooledHandCardSlots = new();
 
 	private void RenderPlayerHands()
 	{
+		RefreshMainPlayerHandSelection();
 		ulong sampleStart = BeginPerformanceSample();
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
@@ -65,6 +67,7 @@ public partial class GameBoardScene
 				bool showAdventureTutorialHighlight = false,
 				bool isAdventureTutorialBlocked = false,
 				bool isJellyfishDisabled = false,
+				bool showInputSelection = false,
 				string tooltipText = "")
 			{
 				if (texture == null)
@@ -83,6 +86,7 @@ public partial class GameBoardScene
 					showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked,
 					isJellyfishDisabled,
+					showInputSelection,
 					tooltipText);
 				Control cardSlot = canPoolSlot ? RentHandCardSlot() : CreateHandCardSlot(canPoolSlot);
 				TextureRect cardVisual = GetOrCreateHandCardVisual(cardSlot);
@@ -112,6 +116,15 @@ public partial class GameBoardScene
 				cardVisual.Modulate = isJellyfishDisabled || isAdventureTutorialBlocked
 					? new Color(1.0f, 1.0f, 1.0f, 0.48f)
 					: Colors.White;
+
+				if (showInputSelection)
+				{
+					cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
+					cardVisual.ZIndex = HoveredHandCardZIndexBoost;
+					cardVisual.Position = visualBasePosition + new Vector2(0.0f, -HoveredHandCardLift * 0.55f);
+					cardVisual.Scale = Vector2.One * 1.035f;
+					AddInputSelectionFrame(cardSlot, cardVisual.Position, visualSize, cardRotation);
+				}
 
 				if (showMagnetSelectionHighlight)
 				{
@@ -145,8 +158,13 @@ public partial class GameBoardScene
 							cardVisual.ZIndex = HoveredHandCardZIndexBoost;
 						}
 
-						Vector2 targetPosition = visualBasePosition + (hovered ? new Vector2(0.0f, -HoveredHandCardLift) : Vector2.Zero);
-						Vector2 targetScale = hovered ? Vector2.One * HoveredHandCardScale : Vector2.One;
+						Vector2 selectedOffset = showInputSelection ? new Vector2(0.0f, -HoveredHandCardLift * 0.55f) : Vector2.Zero;
+						Vector2 targetPosition = visualBasePosition + (hovered ? new Vector2(0.0f, -HoveredHandCardLift) : selectedOffset);
+						Vector2 targetScale = hovered
+							? Vector2.One * HoveredHandCardScale
+							: showInputSelection
+							? Vector2.One * 1.035f
+							: Vector2.One;
 						float duration = hovered ? HandCardHoverInTweenTime : HandCardHoverOutTweenTime;
 						hoverTween = cardVisual.CreateTween();
 						hoverTween.SetParallel(true);
@@ -158,8 +176,8 @@ public partial class GameBoardScene
 						{
 							hoverTween.Finished += () =>
 							{
-								cardSlot.ZIndex = displayIndex;
-								cardVisual.ZIndex = 0;
+								cardSlot.ZIndex = showInputSelection ? displayIndex + HoveredHandCardZIndexBoost : displayIndex;
+								cardVisual.ZIndex = showInputSelection ? HoveredHandCardZIndexBoost : 0;
 							};
 						}
 					}
@@ -221,12 +239,13 @@ public partial class GameBoardScene
 					};
 					cardSlot.MouseExited += () =>
 					{
-						descriptionLabel.Visible = false;
+						descriptionLabel.Visible = showInputSelection;
 						if (!isPlayable)
 						{
 							cardSlot.ZIndex = displayIndex;
 						}
 					};
+					descriptionLabel.Visible = showInputSelection;
 				}
 
 				if (attachmentOverlayTexture != null)
@@ -277,6 +296,7 @@ public partial class GameBoardScene
 					showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked,
 					isJellyfishDisabled,
+					IsMainPlayerHandDisplayIndexSelected(cardIndex),
 					GetHandCardDescription(card, showCardBack));
 			}
 
@@ -311,6 +331,7 @@ public partial class GameBoardScene
 					showAdventureTutorialHighlight: showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked: isAdventureTutorialBlocked,
 					isJellyfishDisabled: isJellyfishDisabled,
+					showInputSelection: IsMainPlayerHandDisplayIndexSelected(displayIndex),
 					tooltipText: tooltipText);
 			}
 		}
@@ -326,6 +347,7 @@ public partial class GameBoardScene
 		bool showAdventureTutorialHighlight,
 		bool isAdventureTutorialBlocked,
 		bool isJellyfishDisabled,
+		bool showInputSelection,
 		string tooltipText)
 	{
 		return !isPlayable
@@ -334,7 +356,46 @@ public partial class GameBoardScene
 			&& !showAdventureTutorialHighlight
 			&& !isAdventureTutorialBlocked
 			&& !isJellyfishDisabled
+			&& !showInputSelection
 			&& string.IsNullOrEmpty(tooltipText);
+	}
+
+	private static void AddInputSelectionFrame(Control cardSlot, Vector2 visualPosition, Vector2 visualSize, float rotationDegrees)
+	{
+		Vector2 padding = new(7.0f, 8.0f);
+		var frame = new Panel
+		{
+			Name = "InputSelectionFrame",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = visualPosition - padding,
+			Size = visualSize + padding * 2.0f,
+			PivotOffset = (visualSize + padding * 2.0f) / 2.0f,
+			RotationDegrees = rotationDegrees,
+			ZIndex = -1,
+			ZAsRelative = true,
+		};
+		frame.AddThemeStyleboxOverride("panel", InputSelectionFrameStyle);
+		cardSlot.AddChild(frame);
+		cardSlot.MoveChild(frame, 0);
+	}
+
+	private static StyleBoxFlat CreateInputSelectionFrameStyle()
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.12f, 0.78f, 0.92f, 0.10f),
+			BorderColor = new Color(0.88f, 1.0f, 0.62f, 0.96f),
+			BorderWidthLeft = 2,
+			BorderWidthTop = 2,
+			BorderWidthRight = 2,
+			BorderWidthBottom = 2,
+			CornerRadiusTopLeft = 7,
+			CornerRadiusTopRight = 7,
+			CornerRadiusBottomRight = 7,
+			CornerRadiusBottomLeft = 7,
+			ShadowColor = new Color(0.20f, 0.90f, 1.0f, 0.32f),
+			ShadowSize = 14,
+		};
 	}
 
 	private Control CreateHandCardSlot(bool poolable)
@@ -483,6 +544,10 @@ public partial class GameBoardScene
 		signature.Add(_pendingItemOwnerIndex);
 		signature.Add(_pendingItemCardId);
 		signature.Add(_isOpeningDealAnimationPlaying);
+		if (playerIndex == MainPlayerIndex)
+		{
+			signature.Add(_selectedMainPlayerHandDisplayIndex);
+		}
 		signature.Add(TranslationServer.GetLocale());
 		AddAdventureTutorialHandRenderSignature(ref signature, playerIndex);
 

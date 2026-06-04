@@ -18,6 +18,7 @@ internal static class Program
 		Run("capture resolver identifies middle captures", CaptureResolverIdentifiesMiddleCaptures);
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
+		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
 		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
@@ -34,6 +35,10 @@ internal static class Program
 		Run("turn state machine gates action starts", TurnStateMachineGatesActionStarts);
 		Run("turn rules skip inactive players", TurnRulesSkipInactivePlayers);
 		Run("turn rules find single remaining player", TurnRulesFindSingleRemainingPlayer);
+		Run("turn progress starts and resets question card tracking", TurnProgressStartsAndResetsQuestionCardTracking);
+		Run("turn progress waits for anchor turn before refreshing question card", TurnProgressWaitsForAnchorTurnBeforeRefreshingQuestionCard);
+		Run("turn progress refreshes question card after configured cycle", TurnProgressRefreshesQuestionCardAfterConfiguredCycle);
+		Run("turn progress stays blocked when table special cards are present", TurnProgressStaysBlockedWhenTableSpecialCardsArePresent);
 
 		Console.WriteLine($"{_passed} passed, {_failed} failed");
 		return _failed == 0 ? 0 : 1;
@@ -176,6 +181,14 @@ internal static class Program
 
 		True(reward.HasReward);
 		Equal("magnet", reward.ItemCardId);
+	}
+
+	private static void ItemCardEffectSupportBlocksReservedEmptyEffects()
+	{
+		True(ItemCardEffectSupport.IsSupportedEffectType("grant_reward"));
+		False(ItemCardEffectSupport.IsSupportedEffectType("block_match"));
+		False(ItemCardEffectSupport.IsSupportedEffectType("reverse_collect"));
+		False(ItemCardEffectSupport.IsSupportedEffectType(string.Empty));
 	}
 
 	private static void PotentialCaptureIgnoresBuriedMatches()
@@ -554,6 +567,63 @@ internal static class Program
 		True(GameTurnRules.TryGetSingleRemainingPlayer(singleRemaining, playerCount: 3, out int remainingPlayerIndex));
 		Equal(1, remainingPlayerIndex);
 		False(GameTurnRules.TryGetSingleRemainingPlayer(multipleRemaining, playerCount: 2, out _));
+	}
+
+	private static void TurnProgressStartsAndResetsQuestionCardTracking()
+	{
+		QuestionCardRefreshState tracking = TurnProgressRules.StartQuestionCardRefreshTracking(2);
+		QuestionCardRefreshState reset = TurnProgressRules.ResetQuestionCardRefreshTracking();
+
+		Equal(0, tracking.CompletedTurnsSinceQuestionCardRefresh);
+		Equal(2, tracking.QuestionCardRefreshAnchorPlayerIndex);
+		Equal(0, reset.CompletedTurnsSinceQuestionCardRefresh);
+		Equal(-1, reset.QuestionCardRefreshAnchorPlayerIndex);
+	}
+
+	private static void TurnProgressWaitsForAnchorTurnBeforeRefreshingQuestionCard()
+	{
+		QuestionCardRefreshAdvanceResult result = TurnProgressRules.AdvanceQuestionCardRefresh(
+			itemMode: true,
+			hasTableSpecialCard: false,
+			new QuestionCardRefreshState(1, 2),
+			nextTurnPlayerIndex: 1,
+			playerCount: 4,
+			refreshCyclesAfterCapture: 2);
+
+		False(result.ShouldRefreshQuestionCard);
+		Equal(2, result.State.CompletedTurnsSinceQuestionCardRefresh);
+		Equal(2, result.State.QuestionCardRefreshAnchorPlayerIndex);
+	}
+
+	private static void TurnProgressRefreshesQuestionCardAfterConfiguredCycle()
+	{
+		QuestionCardRefreshAdvanceResult result = TurnProgressRules.AdvanceQuestionCardRefresh(
+			itemMode: true,
+			hasTableSpecialCard: false,
+			new QuestionCardRefreshState(3, 2),
+			nextTurnPlayerIndex: 2,
+			playerCount: 2,
+			refreshCyclesAfterCapture: 2);
+
+		True(result.ShouldRefreshQuestionCard);
+		Equal(0, result.State.CompletedTurnsSinceQuestionCardRefresh);
+		Equal(-1, result.State.QuestionCardRefreshAnchorPlayerIndex);
+	}
+
+	private static void TurnProgressStaysBlockedWhenTableSpecialCardsArePresent()
+	{
+		QuestionCardRefreshState currentState = new(3, 2);
+		QuestionCardRefreshAdvanceResult result = TurnProgressRules.AdvanceQuestionCardRefresh(
+			itemMode: true,
+			hasTableSpecialCard: true,
+			currentState,
+			nextTurnPlayerIndex: 2,
+			playerCount: 2,
+			refreshCyclesAfterCapture: 2);
+
+		False(result.ShouldRefreshQuestionCard);
+		Equal(currentState.CompletedTurnsSinceQuestionCardRefresh, result.State.CompletedTurnsSinceQuestionCardRefresh);
+		Equal(currentState.QuestionCardRefreshAnchorPlayerIndex, result.State.QuestionCardRefreshAnchorPlayerIndex);
 	}
 
 	private static CaptureScoringRules.Context DefaultScoringContext => new(

@@ -51,6 +51,7 @@ public partial class AdventureAvatarMenuScene : Control
 
 	public override void _Ready()
 	{
+		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		MouseFilter = MouseFilterEnum.Stop;
 
@@ -87,7 +88,7 @@ public partial class AdventureAvatarMenuScene : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (inputEvent.IsActionPressed("ui_cancel"))
+		if (GameInputActions.IsCancelPressed(inputEvent))
 		{
 			ReturnToMainMenu();
 			GetViewport().SetInputAsHandled();

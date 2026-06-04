@@ -22,8 +22,9 @@ public partial class GameBoardScene
 		_openingVisiblePileCardCounts.Clear();
 		AdvanceTurnSequenceGeneration();
 		_currentTurnPlayerIndex = MainPlayerIndex;
-		_completedTurnsSinceQuestionCardRefresh = 0;
-		_questionCardRefreshAnchorPlayerIndex = -1;
+		QuestionCardRefreshState questionCardRefreshState = TurnProgressRules.ResetQuestionCardRefreshTracking();
+		_completedTurnsSinceQuestionCardRefresh = questionCardRefreshState.CompletedTurnsSinceQuestionCardRefresh;
+		_questionCardRefreshAnchorPlayerIndex = questionCardRefreshState.QuestionCardRefreshAnchorPlayerIndex;
 		_pendingItemAttachmentRewards.Clear();
 		_hiddenHandDisplaySlots.Clear();
 		_mantaRayTideShiftCheckedThisTurn = false;

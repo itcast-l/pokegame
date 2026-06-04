@@ -378,6 +378,7 @@ public partial class GameBoardScene : Control
 
 	public override void _Ready()
 	{
+		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();
 		_rng.Randomize();

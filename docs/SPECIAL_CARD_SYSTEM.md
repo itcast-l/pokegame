@@ -70,7 +70,13 @@ Add a new card by adding or reusing an `effect_type`; do not branch on `card.id`
 
 Implemented resolver types:
 
-`draw_card`, `steal_card`, `steal_deck_cards`, `collect_table`, `place_table_pair_destroy`, `attach_modifier`, `reveal_cards`, `shuffle_table`, `double_collect`, `destroy_cards`, `extra_turn`, `block_match`, `reverse_collect`, `grant_reward`.
+`draw_card`, `steal_card`, `steal_deck_cards`, `collect_table`, `place_table_pair_destroy`, `attach_modifier`, `reveal_cards`, `shuffle_table`, `double_collect`, `destroy_cards`, `extra_turn`, `grant_reward`.
+
+Reserved effect types not currently wired into gameplay:
+
+`block_match`, `reverse_collect`.
+
+`grant_reward` remains a compatibility marker for `Question Mark`; the actual reward grant is executed in the table-capture flow.
 
 If a new card can be represented by an existing `effect_type`, only add a Pandora entity with different `effect_values`, `priority`, `rarity`, `tags`, and `weight`.
 

@@ -153,6 +153,7 @@ public partial class MainMenuScene : Control
 
 	public override void _Ready()
 	{
+		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		_menuCamera = GetNodeOrNull<Camera2D>(MenuCameraPath);
 		_menuCameraHome = GetNodeOrNull<Node2D>(MenuCameraHomePath);
@@ -242,21 +243,21 @@ public partial class MainMenuScene : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (_settingsDialogRoot.Visible && inputEvent.IsActionPressed("ui_cancel"))
+		if (_settingsDialogRoot.Visible && GameInputActions.IsCancelPressed(inputEvent))
 		{
 			HideSettingsDialog();
 			GetViewport().SetInputAsHandled();
 			return;
 		}
 
-		if (_playerCountDialogRoot.Visible && inputEvent.IsActionPressed("ui_cancel"))
+		if (_playerCountDialogRoot.Visible && GameInputActions.IsCancelPressed(inputEvent))
 		{
 			HidePlayerCountDialog();
 			GetViewport().SetInputAsHandled();
 			return;
 		}
 
-		if (_exitDialogRoot.Visible && inputEvent.IsActionPressed("ui_cancel"))
+		if (_exitDialogRoot.Visible && GameInputActions.IsCancelPressed(inputEvent))
 		{
 			HideExitDialog();
 			GetViewport().SetInputAsHandled();

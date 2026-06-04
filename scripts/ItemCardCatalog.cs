@@ -70,7 +70,9 @@ public sealed partial class ItemCardCatalog
 
 	public bool IsEnabled(string itemCardId)
 	{
-		return _definitionsById.TryGetValue(itemCardId, out ItemCardDefinition definition) && definition.EnabledInGame;
+		return _definitionsById.TryGetValue(itemCardId, out ItemCardDefinition definition)
+			&& definition.EnabledInGame
+			&& ItemCardEffectSupport.IsSupportedEffectType(definition.EffectType);
 	}
 
 	public bool IsPlayable(string itemCardId)
@@ -153,11 +155,20 @@ public sealed partial class ItemCardCatalog
 			catalog._definitionsById[definition.Id] = definition;
 			catalog._idsBySpriteName[definition.SpriteName] = definition.Id;
 			catalog._allIds.Add(definition.Id);
-			if (definition.EnabledInGame && definition.CanBeQuestionReward)
+			if (definition.EnabledInGame && !ItemCardEffectSupport.IsSupportedEffectType(definition.EffectType))
+			{
+				GD.PushWarning($"Disabled item card '{definition.Id}' because effect type '{definition.EffectType}' is not supported.");
+			}
+
+			if (definition.EnabledInGame
+				&& ItemCardEffectSupport.IsSupportedEffectType(definition.EffectType)
+				&& definition.CanBeQuestionReward)
 			{
 				catalog._rewardIds.Add(definition.Id);
 			}
-			if (definition.EnabledInGame && definition.PlayableFromHand)
+			if (definition.EnabledInGame
+				&& ItemCardEffectSupport.IsSupportedEffectType(definition.EffectType)
+				&& definition.PlayableFromHand)
 			{
 				catalog._playableIds.Add(definition.Id);
 			}

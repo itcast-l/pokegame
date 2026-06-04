@@ -109,8 +109,9 @@ public partial class GameBoardScene
 		RefreshGardenEelBuriedCardIndex();
 		if (capturedMiddleCards && captureCount + validExtraCaptureCount > 0)
 		{
-			_completedTurnsSinceQuestionCardRefresh = 0;
-			_questionCardRefreshAnchorPlayerIndex = playerIndex;
+			QuestionCardRefreshState questionCardRefreshState = TurnProgressRules.StartQuestionCardRefreshTracking(playerIndex);
+			_completedTurnsSinceQuestionCardRefresh = questionCardRefreshState.CompletedTurnsSinceQuestionCardRefresh;
+			_questionCardRefreshAnchorPlayerIndex = questionCardRefreshState.QuestionCardRefreshAnchorPlayerIndex;
 		}
 		_validExtraCaptureIndexes.Clear();
 

@@ -27,6 +27,7 @@ public partial class CharacterAvatarEditScene : Control
 
 	public override void _Ready()
 	{
+		GameInputActions.EnsureRegistered();
 		CurrentAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(CurrentAvatarId);
 		CurrentPlayerName = PlayerNameRules.Normalize(CurrentPlayerName);
 
@@ -49,7 +50,7 @@ public partial class CharacterAvatarEditScene : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (inputEvent.IsActionPressed("ui_cancel"))
+		if (GameInputActions.IsCancelPressed(inputEvent))
 		{
 			RequestClose();
 			GetViewport().SetInputAsHandled();

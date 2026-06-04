@@ -299,8 +299,6 @@ public partial class GameBoardScene : ICardTriggerProvider
 				[CardEffectTypes.ExtraTurn] = _runtime.ResolveExtraTurnEffectAsync,
 				[CardEffectTypes.GrantReward] = (request, _) => Task.FromResult(_runtime.ResolveGrantRewardEffect(request)),
 				[CardEffectTypes.DestroyCards] = _runtime.ResolveDestroyCardsEffectAsync,
-				[CardEffectTypes.ReverseCollect] = (request, _) => Task.FromResult(_runtime.ResolveReverseCollectEffect(request)),
-				[CardEffectTypes.BlockMatch] = (request, _) => Task.FromResult(_runtime.ResolveBlockMatchEffect(request)),
 			};
 		}
 
@@ -308,7 +306,13 @@ public partial class GameBoardScene : ICardTriggerProvider
 		{
 			return _resolvers.TryGetValue(request.Rule.EffectType, out ResolveEffectAsync? resolver)
 				? resolver(request, turnSequenceGeneration)
-				: Task.FromResult(new PlayCardResult(false, false));
+				: ResolveUnsupportedEffectAsync(request);
+		}
+
+		private static Task<PlayCardResult> ResolveUnsupportedEffectAsync(CardTriggerRequest request)
+		{
+			GD.PushWarning($"Unsupported item card effect type '{request.Rule.EffectType}' for card '{request.Definition.Id}'.");
+			return Task.FromResult(new PlayCardResult(false, false));
 		}
 	}
 }

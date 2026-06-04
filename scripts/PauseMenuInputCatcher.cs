@@ -7,7 +7,8 @@ public partial class PauseMenuInputCatcher : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (!Visible || !inputEvent.IsActionPressed("ui_cancel"))
+		if (!Visible
+			|| (!GameInputActions.IsCancelPressed(inputEvent) && !inputEvent.IsActionPressed(GameInputActions.GamePause)))
 		{
 			return;
 		}

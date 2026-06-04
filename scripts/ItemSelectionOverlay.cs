@@ -13,6 +13,7 @@ public partial class ItemSelectionOverlay : Control
 	private readonly Button[] _optionButtons = new Button[MaxOptionCount];
 	private Label _titleLabel = default!;
 	private Button _cancelButton = default!;
+	private bool _showCancel;
 
 	public override void _Ready()
 	{
@@ -31,6 +32,7 @@ public partial class ItemSelectionOverlay : Control
 	public void Configure(string title, IReadOnlyList<string> options, string cancelText, bool showCancel)
 	{
 		_titleLabel.Text = title;
+		_showCancel = showCancel;
 		for (int index = 0; index < _optionButtons.Length; index++)
 		{
 			bool visible = index < options.Count;
@@ -45,5 +47,38 @@ public partial class ItemSelectionOverlay : Control
 		_cancelButton.Visible = showCancel;
 		_cancelButton.Disabled = !showCancel;
 		_cancelButton.Text = cancelText;
+		CallDeferred(nameof(FocusDefaultButton));
+	}
+
+	public override void _UnhandledInput(InputEvent inputEvent)
+	{
+		if (!Visible || !GameInputActions.IsCancelPressed(inputEvent))
+		{
+			return;
+		}
+
+		if (_showCancel)
+		{
+			EmitSignal(SignalName.CancelRequested);
+		}
+
+		GetViewport().SetInputAsHandled();
+	}
+
+	private void FocusDefaultButton()
+	{
+		foreach (Button optionButton in _optionButtons)
+		{
+			if (optionButton.Visible && !optionButton.Disabled)
+			{
+				optionButton.GrabFocus();
+				return;
+			}
+		}
+
+		if (_cancelButton.Visible && !_cancelButton.Disabled)
+		{
+			_cancelButton.GrabFocus();
+		}
 	}
 }
