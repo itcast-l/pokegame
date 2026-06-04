@@ -7,16 +7,13 @@ public partial class GameBoardScene
 {
 	private int AdvanceQuestionCardRefreshTurnCounter(int nextTurnPlayerIndex)
 	{
-		QuestionCardRefreshAdvanceResult refreshResult = TurnProgressRules.AdvanceQuestionCardRefresh(
+		QuestionCardRefreshAdvanceResult refreshResult = _turnAdvancementService.AdvanceQuestionCardRefresh(
+			_state,
 			item_mode,
 			HasTableSpecialCard(),
-			new QuestionCardRefreshState(_completedTurnsSinceQuestionCardRefresh, _questionCardRefreshAnchorPlayerIndex),
 			nextTurnPlayerIndex,
-			player_count,
 			QuestionCardRefreshCyclesAfterCapture);
 
-		_completedTurnsSinceQuestionCardRefresh = refreshResult.State.CompletedTurnsSinceQuestionCardRefresh;
-		_questionCardRefreshAnchorPlayerIndex = refreshResult.State.QuestionCardRefreshAnchorPlayerIndex;
 		return refreshResult.ShouldRefreshQuestionCard ? PlaceQuestionCardOnNextTableSlot() : -1;
 	}
 

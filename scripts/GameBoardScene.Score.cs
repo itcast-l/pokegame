@@ -40,10 +40,14 @@ public partial class GameBoardScene
 		new(0.82f, 1.0f, 0.90f, 0.34f),
 	};
 
-	private readonly int[] _playerScores = new int[MaxPlayers];
+	private int[] _playerScores => _state.PlayerScores;
 	private readonly ScoreAvatarMeter?[] _playerScoreMeters = new ScoreAvatarMeter?[MaxPlayers];
 	private readonly ScoreEffectTarget?[] _playerScoreEffectTargets = new ScoreEffectTarget?[MaxPlayers];
-	private int _winningScore = DefaultWinningScore;
+	private int _winningScore
+	{
+		get => _state.WinningScore;
+		set => _state.WinningScore = value;
+	}
 
 	private void BindPlayerScoreMeters()
 	{

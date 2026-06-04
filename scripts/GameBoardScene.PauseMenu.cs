@@ -12,7 +12,6 @@ public partial class GameBoardScene
 	private Button? _pauseQuitButton;
 	private Control? _pauseQuitConfirmRoot;
 	private bool _isPauseMenuOpen;
-	private bool _isLeavingGame;
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{

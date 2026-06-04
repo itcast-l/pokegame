@@ -14,13 +14,11 @@ public partial class GameBoardScene
 
 		ClearJellyfishBubbleIfMainPlayerTurnCompleted(playerIndex, result);
 
-		if (_questionCardRefreshAnchorPlayerIndex < 0)
-		{
-			_completedTurnsSinceQuestionCardRefresh = 0;
-			_questionCardRefreshAnchorPlayerIndex = playerIndex;
-		}
-
-		_currentTurnPlayerIndex = result.Captured ? playerIndex : GetNextTurnPlayerIndex(playerIndex);
+		_currentTurnPlayerIndex = _turnAdvancementService.ApplyPlayedResult(
+			_state,
+			playerIndex,
+			result.Captured,
+			GetNextTurnPlayerIndex(playerIndex));
 		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result, _turnSequenceGeneration);
 		if (IsGameOver())
 		{

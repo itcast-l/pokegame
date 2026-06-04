@@ -45,18 +45,22 @@ public partial class GameBoardScene
 			sourceCardSlot.Visible = false;
 		}
 
-		hand.RemoveAt(handIndex);
-		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
-		int captureStartIndex = AddPlayedCardToTable(playerIndex, playedCard, cardPlayPlan, out bool matchedTableCardFlipped);
-		int playedTableCardIndex = _tableCards.Count - 1;
-
-		if (playedRankCollectsTable)
+		CardPlayStartResult startResult = _cardPlayStateService.TryStartPlayFromHand(
+			_state,
+			playerIndex,
+			handIndex,
+			playedCard,
+			cardPlayPlan);
+		if (!startResult.Played)
 		{
-			captureStartIndex = 0;
-			_tableCards[playedTableCardIndex].IsFaceUp = true;
+			return new PlayCardResult(false, false);
 		}
 
-		bool playedTableCardIsFaceUp = _tableCards[playedTableCardIndex].IsFaceUp;
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
+		int captureStartIndex = startResult.CaptureStartIndex;
+		int playedTableCardIndex = startResult.PlayedTableCardIndex;
+		bool matchedTableCardFlipped = startResult.MatchedTableCardFlipped;
+		bool playedTableCardIsFaceUp = startResult.PlayedTableCardIsFaceUp;
 
 		await PlayCardToTableAnimationAsync(
 			playerIndex,
@@ -382,19 +386,6 @@ public partial class GameBoardScene
 		_cardPlayMagnetExtraCaptureIndexes.Clear();
 		_cardPlayResolvedDoubleTriggerIndexes.Clear();
 		_cardPlayResolvedOvertimeTriggerIndexes.Clear();
-	}
-
-	private int AddPlayedCardToTable(int playerIndex, PlayingCard playedCard, CardPlayPlan plan, out bool matchedTableCardFlipped)
-	{
-		bool isFaceUp = plan.MatchingTableCardIndex >= 0;
-		matchedTableCardFlipped = plan.MatchedTableCardFlipped;
-		if (isFaceUp)
-		{
-			_tableCards[plan.MatchingTableCardIndex].IsFaceUp = true;
-		}
-
-		_tableCards.Add(new TableCard(playedCard, isFaceUp, cardOwnerPlayerIndex: playerIndex));
-		return plan.CaptureStartIndex;
 	}
 
 	private int FindMatchingTableCardIndex(PlayingCard playedCard)

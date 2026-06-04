@@ -137,12 +137,20 @@ public partial class GameBoardScene : Control
 	private static readonly float TableCardHorizontalStep = CardVisualSize.X + 18.0f;
 	private static readonly float TableCardRowGap = CardVisualSize.Y * 0.62f;
 	private static readonly Vector2 HorizontalHandCardOffset = new(62, 0);
-	private int _playerCount = 2;
+	private readonly GameBoardState _state = new();
+	private readonly CardPlayStateService _cardPlayStateService = new();
+	private readonly CaptureStateService _captureStateService = new();
+	private readonly TurnAdvancementService _turnAdvancementService = new();
+	private int _playerCount
+	{
+		get => _state.PlayerCount;
+		set => _state.PlayerCount = value;
+	}
 	private readonly RandomNumberGenerator _rng = new();
-	private readonly List<List<PlayingCard>> _playerDecks = new();
-	private readonly List<List<PlayingCard>> _playerHands = new();
-	private readonly List<List<ItemCard>> _playerItemHands = new();
-	private readonly List<TableCard> _tableCards = new();
+	private List<List<PlayingCard>> _playerDecks => _state.PlayerDecks;
+	private List<List<PlayingCard>> _playerHands => _state.PlayerHands;
+	private List<List<ItemCard>> _playerItemHands => _state.PlayerItemHands;
+	private List<TableCard> _tableCards => _state.TableCards;
 	private readonly List<Control> _playerCardPiles = new();
 	private readonly List<Control> _playerHandAreas = new();
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
@@ -188,17 +196,57 @@ public partial class GameBoardScene : Control
 	private GameBoardDefeatFinisherOverlay? _defeatFinisherRoot;
 	private TextureRect? _defeatFinisherTexture;
 	private bool _showingDefeatResult;
-	private int _currentTurnPlayerIndex = MainPlayerIndex;
-	private int _turnSequenceGeneration;
+	private int _currentTurnPlayerIndex
+	{
+		get => _state.CurrentTurnPlayerIndex;
+		set => _state.CurrentTurnPlayerIndex = value;
+	}
+	private int _turnSequenceGeneration
+	{
+		get => _state.TurnSequenceGeneration;
+		set => _state.TurnSequenceGeneration = value;
+	}
 	private readonly TurnStateMachine _turnStateMachine = new();
-	private int _completedTurnsSinceQuestionCardRefresh;
-	private int _questionCardRefreshAnchorPlayerIndex = -1;
-	private int _revealedPlayerHandIndex = -1;
-	private PendingItemSelectionMode _pendingItemSelectionMode = PendingItemSelectionMode.None;
-	private int _pendingItemOwnerIndex = -1;
-	private int _pendingItemHandIndex = -1;
-	private int _pendingItemTurnSequenceGeneration = -1;
-	private string _pendingItemCardId = string.Empty;
+	private int _completedTurnsSinceQuestionCardRefresh
+	{
+		get => _state.CompletedTurnsSinceQuestionCardRefresh;
+		set => _state.CompletedTurnsSinceQuestionCardRefresh = value;
+	}
+	private int _questionCardRefreshAnchorPlayerIndex
+	{
+		get => _state.QuestionCardRefreshAnchorPlayerIndex;
+		set => _state.QuestionCardRefreshAnchorPlayerIndex = value;
+	}
+	private int _revealedPlayerHandIndex
+	{
+		get => _state.RevealedPlayerHandIndex;
+		set => _state.RevealedPlayerHandIndex = value;
+	}
+	private PendingItemSelectionMode _pendingItemSelectionMode
+	{
+		get => _state.PendingItemSelectionMode;
+		set => _state.PendingItemSelectionMode = value;
+	}
+	private int _pendingItemOwnerIndex
+	{
+		get => _state.PendingItemOwnerIndex;
+		set => _state.PendingItemOwnerIndex = value;
+	}
+	private int _pendingItemHandIndex
+	{
+		get => _state.PendingItemHandIndex;
+		set => _state.PendingItemHandIndex = value;
+	}
+	private int _pendingItemTurnSequenceGeneration
+	{
+		get => _state.PendingItemTurnSequenceGeneration;
+		set => _state.PendingItemTurnSequenceGeneration = value;
+	}
+	private string _pendingItemCardId
+	{
+		get => _state.PendingItemCardId;
+		set => _state.PendingItemCardId = value;
+	}
 	private TaskCompletionSource<bool>? _pendingMagnetAttachmentCompletion;
 	private TaskCompletionSource<int>? _pendingHandLimitDiscardCompletion;
 	private Control? _magnetAttachmentCountdownRoot;
@@ -208,11 +256,36 @@ public partial class GameBoardScene : Control
 	private Tween? _magnetAttachmentCountdownHintTween;
 	private double _magnetAttachmentCountdownRemainingSeconds;
 	private bool _magnetAttachmentCountdownHintIsUrgent;
-	private bool _isResolvingMagnetAttachmentSelection;
-	private bool _isAnimatingMagnetAttachment;
-	private bool _isResolvingTurnSequence;
-	private bool _isProcessingCardPlay;
-	private bool _isOpeningDealAnimationPlaying;
+	private bool _isResolvingMagnetAttachmentSelection
+	{
+		get => _state.IsResolvingMagnetAttachmentSelection;
+		set => _state.IsResolvingMagnetAttachmentSelection = value;
+	}
+	private bool _isAnimatingMagnetAttachment
+	{
+		get => _state.IsAnimatingMagnetAttachment;
+		set => _state.IsAnimatingMagnetAttachment = value;
+	}
+	private bool _isResolvingTurnSequence
+	{
+		get => _state.IsResolvingTurnSequence;
+		set => _state.IsResolvingTurnSequence = value;
+	}
+	private bool _isProcessingCardPlay
+	{
+		get => _state.IsProcessingCardPlay;
+		set => _state.IsProcessingCardPlay = value;
+	}
+	private bool _isOpeningDealAnimationPlaying
+	{
+		get => _state.IsOpeningDealAnimationPlaying;
+		set => _state.IsOpeningDealAnimationPlaying = value;
+	}
+	private bool _isLeavingGame
+	{
+		get => _state.IsLeavingGame;
+		set => _state.IsLeavingGame = value;
+	}
 	private bool _itemMode = true;
 	private bool _soloMode;
 	private bool _adventureMode;
@@ -248,8 +321,11 @@ public partial class GameBoardScene : Control
 		private readonly List<TableSpecialCardTrigger> _capturedSpecialCardTriggers = new();
 		private readonly List<int> _tableShuffleIndexes = new();
 		private readonly List<TableCard> _tableShuffleMovableCards = new();
-		private readonly List<int> _validExtraCaptureIndexes = new();
-		private int _winnerPlayerIndex = -1;
+		private int _winnerPlayerIndex
+		{
+			get => _state.WinnerPlayerIndex;
+			set => _state.WinnerPlayerIndex = value;
+		}
 
 	[Export(PropertyHint.Range, "2,4,1")]
 	public int player_count
