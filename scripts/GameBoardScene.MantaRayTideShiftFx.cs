@@ -37,20 +37,14 @@ public partial class GameBoardScene
 		Vector2 projectileScale = GetSpriteScaleForVisualSize(texture, MantaRayTideShiftProjectileVisualSize);
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
-		var cyclone = new Sprite2D
-		{
-			Name = "MantaRayTideShiftCycloneFx",
-			Texture = texture,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = startCenter,
-			Rotation = direction.Angle(),
-			Scale = projectileScale * 0.86f,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(cyclone);
+		Sprite2D cyclone = RentSpriteFx(
+			"MantaRayTideShiftCycloneFx",
+			texture,
+			AdventureAttackEffectTravelZIndex,
+			startCenter,
+			projectileScale * 0.86f,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			direction.Angle());
 
 		bool hitInvoked = false;
 		void InvokeHitOnce()
@@ -77,7 +71,7 @@ public partial class GameBoardScene
 			cycloneQueued = true;
 			if (GodotObject.IsInstanceValid(cyclone))
 			{
-				cyclone.QueueFree();
+				_animationPresenter.Release(cyclone);
 			}
 		}
 

@@ -85,52 +85,32 @@ public partial class GameBoardScene
 		float startRotationDegrees = GetCardPileRotationDegreesForPlayer(playerIndex);
 		float targetRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
 		float targetVisualScale = GetHandDisplayCardVisualScale(playerIndex, displayIndex);
-		var flightCard = new Control
-		{
-			Name = "ReplacementDrawCardFlight",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-			ZIndex = PlayedCardFlightZIndex + 120,
-			ZAsRelative = false,
-			Scale = Vector2.One * ReplacementDrawStartScale,
-		};
-		var cardVisual = new TextureRect
-		{
-			Name = "ReplacementDrawCardVisual",
-			Texture = startTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-		};
+		Control flightCard = _animationPresenter.RentControl(
+			this,
+			"ReplacementDrawCardFlight",
+			CardVisualSize,
+			PlayedCardFlightZIndex + 120);
+		flightCard.RotationDegrees = startRotationDegrees;
+		flightCard.Scale = Vector2.One * ReplacementDrawStartScale;
+		TextureRect cardVisual = _animationPresenter.RentTextureRect(
+			flightCard,
+			"ReplacementDrawCardVisual",
+			startTexture,
+			CardVisualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Nearest);
 		TextureRect? attachmentOverlay = null;
 		if (attachmentOverlayTexture != null)
 		{
-			attachmentOverlay = new TextureRect
-			{
-				Name = "ReplacementDrawAttachmentOverlay",
-				Texture = attachmentOverlayTexture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-				MouseFilter = MouseFilterEnum.Ignore,
-				Size = CardVisualSize,
-				PivotOffset = CardVisualSize / 2.0f,
-				ZIndex = 1,
-				Visible = false,
-			};
+			attachmentOverlay = _animationPresenter.RentTextureRect(
+				flightCard,
+				"ReplacementDrawAttachmentOverlay",
+				attachmentOverlayTexture,
+				CardVisualSize,
+				1,
+				CanvasItem.TextureFilterEnum.Linear);
+			attachmentOverlay.Visible = false;
 		}
-
-		flightCard.AddChild(cardVisual);
-		if (attachmentOverlay != null)
-		{
-			flightCard.AddChild(attachmentOverlay);
-		}
-		AddChild(flightCard);
 		flightCard.GlobalPosition = startGlobalPosition;
 
 		try
@@ -171,7 +151,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
-					flightCard.QueueFree();
+					_animationPresenter.Release(flightCard);
 				}
 			};
 			await ToSignal(tween, Tween.SignalName.Finished);
@@ -180,7 +160,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}

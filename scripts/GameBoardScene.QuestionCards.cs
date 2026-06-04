@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -129,8 +130,7 @@ public partial class GameBoardScene
 			return IsSpecialItemCardEnabled(MagnetItemCardId) ? MagnetItemCardId : string.Empty;
 		}
 
-		string selectedItemCardId = string.Empty;
-		int totalWeight = 0;
+		var candidates = new List<RewardCandidate>();
 		foreach (string itemCardId in _itemCardCatalog.RewardIds)
 		{
 			if (!IsSpecialItemCardEnabled(itemCardId)
@@ -145,13 +145,9 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			totalWeight += weight;
-			if (_rng.RandiRange(1, totalWeight) <= weight)
-			{
-				selectedItemCardId = itemCardId;
-			}
+			candidates.Add(new RewardCandidate(itemCardId, weight));
 		}
 
-		return selectedItemCardId;
+		return RewardResolver.PickWeightedReward(candidates, maxInclusive => _rng.RandiRange(1, maxInclusive)).ItemCardId;
 	}
 }

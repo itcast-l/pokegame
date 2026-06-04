@@ -76,22 +76,17 @@ public partial class GameBoardScene
 		}
 
 		Rect2 avatarRect = GetPlayerAvatarGlobalRect(playerIndex);
-		var damageLabel = new Label
-		{
-			Name = "AvatarDamagePopup",
-			Text = $"-{damage}",
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Center,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = new Vector2(Math.Max(avatarRect.Size.X, 76.0f), 38.0f),
-			ZIndex = AvatarDamagePopupZIndex,
-		};
+		Label damageLabel = _animationPresenter.RentLabel(
+			this,
+			"AvatarDamagePopup",
+			new Vector2(Math.Max(avatarRect.Size.X, 76.0f), 38.0f),
+			AvatarDamagePopupZIndex);
+		damageLabel.Text = $"-{damage}";
 		damageLabel.AddThemeFontSizeOverride("font_size", AvatarDamagePopupFontSize);
 		damageLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.25f, 0.18f));
 		damageLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.86f));
 		damageLabel.AddThemeConstantOverride("shadow_offset_x", 2);
 		damageLabel.AddThemeConstantOverride("shadow_offset_y", 2);
-		AddChild(damageLabel);
 
 		damageLabel.GlobalPosition = new Vector2(
 			avatarRect.GetCenter().X - damageLabel.Size.X / 2.0f,
@@ -112,7 +107,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(damageLabel))
 			{
-				damageLabel.QueueFree();
+				_animationPresenter.Release(damageLabel);
 			}
 		};
 	}
@@ -165,17 +160,13 @@ public partial class GameBoardScene
 		float flightSeconds)
 	{
 		PlayAdventureAttackFlightSfx(attackerPlayerIndex);
-		var effect = new Sprite2D
-		{
-			Name = "AdventureAttackEffectFlight",
-			Texture = frames[0],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(effect);
+		Sprite2D effect = _animationPresenter.RentSprite(
+			this,
+			"AdventureAttackEffectFlight",
+			frames[0],
+			AdventureAttackEffectTravelZIndex,
+			CanvasItem.TextureFilterEnum.Linear);
+		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 
 		Vector2 travel = targetCenter - startCenter;
 		Vector2 side = travel.LengthSquared() > 0.001f
@@ -225,7 +216,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(effect))
 			{
-				effect.QueueFree();
+				_animationPresenter.Release(effect);
 			}
 		}
 	}
@@ -241,17 +232,13 @@ public partial class GameBoardScene
 		}
 
 		PlayAdventureAttackImpactSfx(attackerPlayerIndex);
-		var pulse = new Sprite2D
-		{
-			Name = "AdventureAttackImpactPulse",
-			Texture = frames[^1],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.76f),
-		};
-		AddChild(pulse);
+		Sprite2D pulse = _animationPresenter.RentSprite(
+			this,
+			"AdventureAttackImpactPulse",
+			frames[^1],
+			AdventureAttackEffectTravelZIndex,
+			CanvasItem.TextureFilterEnum.Linear);
+		pulse.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.76f);
 		pulse.GlobalPosition = targetCenter;
 		Vector2 baseScale = GetSpriteScaleForVisualSize(frames[^1], AdventureAttackImpactVisualSize) * 0.72f;
 		pulse.Scale = baseScale;
@@ -270,7 +257,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(pulse))
 			{
-				pulse.QueueFree();
+				_animationPresenter.Release(pulse);
 			}
 		}
 	}
@@ -289,17 +276,13 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.ScoreFlight, -5.0f, 0.96f, 1.06f, 0.08);
-		var effect = new Sprite2D
-		{
-			Name = "ScoreFillEffectFlight",
-			Texture = frames[0],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = ScoreFillEffectTravelZIndex + effectIndex,
-			ZAsRelative = false,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(effect);
+		Sprite2D effect = _animationPresenter.RentSprite(
+			this,
+			"ScoreFillEffectFlight",
+			frames[0],
+			ScoreFillEffectTravelZIndex + effectIndex,
+			CanvasItem.TextureFilterEnum.Linear);
+		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 
 		Vector2 startCenter = cardCenter + RandomUnitVector() * _rng.RandfRange(4.0f, 16.0f);
 		Vector2 travel = targetCenter - startCenter;
@@ -352,7 +335,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(effect))
 			{
-				effect.QueueFree();
+				_animationPresenter.Release(effect);
 			}
 		}
 	}
@@ -365,17 +348,13 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.ScoreArrive, -2.0f, 0.97f, 1.04f, 0.04);
-		var pulse = new Sprite2D
-		{
-			Name = "ScoreFillEffectArrivalPulse",
-			Texture = frames[^1],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = ScoreFillEffectBehindAvatarZIndex,
-			ZAsRelative = false,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.72f),
-		};
-		AddChild(pulse);
+		Sprite2D pulse = _animationPresenter.RentSprite(
+			this,
+			"ScoreFillEffectArrivalPulse",
+			frames[^1],
+			ScoreFillEffectBehindAvatarZIndex,
+			CanvasItem.TextureFilterEnum.Linear);
+		pulse.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.72f);
 		pulse.GlobalPosition = targetCenter;
 		Vector2 baseScale = GetSpriteScaleForVisualSize(frames[^1], ScoreFillPulseVisualSize);
 		pulse.Scale = baseScale;
@@ -394,7 +373,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(pulse))
 			{
-				pulse.QueueFree();
+				_animationPresenter.Release(pulse);
 			}
 		}
 	}

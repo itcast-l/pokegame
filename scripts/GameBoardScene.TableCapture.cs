@@ -184,27 +184,7 @@ public partial class GameBoardScene
 
 	private bool HasCapturedMiddleTableCards(int captureStartIndex)
 	{
-		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
-		{
-			return false;
-		}
-
-		int capturedVisibleCardCount = 0;
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (_tableCards[tableCardIndex].IsBuriedInSand)
-			{
-				continue;
-			}
-
-			capturedVisibleCardCount++;
-			if (capturedVisibleCardCount > 2)
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return CaptureResolver.Resolve(ToCaptureScoringTableCards(), captureStartIndex).CapturedMiddleCards;
 	}
 
 }

@@ -51,19 +51,14 @@ public partial class GameBoardScene
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		PlayAdventureAttackFlightSfx(attackerPlayerIndex);
-		var projectile = new Sprite2D
-		{
-			Name = "DragonPrinceDamageHitFlight",
-			Texture = flightFrames[0],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = projectileStart,
-			Rotation = direction.Angle() + DragonPrinceDamageHitRotationOffset,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(projectile);
+		Sprite2D projectile = RentSpriteFx(
+			"DragonPrinceDamageHitFlight",
+			flightFrames[0],
+			AdventureAttackEffectTravelZIndex,
+			projectileStart,
+			Vector2.One,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			direction.Angle() + DragonPrinceDamageHitRotationOffset);
 
 		try
 		{
@@ -110,7 +105,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(projectile))
 			{
-				projectile.QueueFree();
+				_animationPresenter.Release(projectile);
 			}
 		}
 
@@ -119,19 +114,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var impact = new Sprite2D
-		{
-			Name = "DragonPrinceDamageHitImpact",
-			Texture = impactFrames[0],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = targetCenter,
-			Rotation = direction.Angle() + DragonPrinceDamageHitRotationOffset,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(impact);
+		Sprite2D impact = RentSpriteFx(
+			"DragonPrinceDamageHitImpact",
+			impactFrames[0],
+			AdventureAttackEffectTravelZIndex,
+			targetCenter,
+			Vector2.One,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			direction.Angle() + DragonPrinceDamageHitRotationOffset);
 		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.DragonPrinceHit);
 
 		bool hitInvoked = false;
@@ -184,7 +174,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(impact))
 			{
-				impact.QueueFree();
+				_animationPresenter.Release(impact);
 			}
 		}
 	}
@@ -214,19 +204,13 @@ public partial class GameBoardScene
 
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.DragonQueenJaw);
-		var jawSlash = new Sprite2D
-		{
-			Name = "DragonQueenJawSlashAttack",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = targetCenter,
-			Scale = baseScale * DragonQueenJawSlashStartScale,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(jawSlash);
+		Sprite2D jawSlash = RentSpriteFx(
+			"DragonQueenJawSlashAttack",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex,
+			targetCenter,
+			baseScale * DragonQueenJawSlashStartScale,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f));
 
 		bool hitInvoked = false;
 		void InvokeHitOnce()
@@ -275,7 +259,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(jawSlash))
 			{
-				jawSlash.QueueFree();
+				_animationPresenter.Release(jawSlash);
 			}
 		}
 	}

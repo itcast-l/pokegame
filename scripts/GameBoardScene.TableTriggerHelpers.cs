@@ -12,15 +12,20 @@ public partial class GameBoardScene
 			return card;
 		}
 
-			string doubleItemCardId = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.DoubleItemCardId, DoubleItemCardId);
-			if (!IsItemAttachedEffectType(doubleItemCardId, CardEffectTypes.DoubleCollect))
-			{
-				return card;
-			}
-
-			_narwhalDoubleReady = false;
-			return card.WithAttachedItemEffect(doubleItemCardId);
+		string doubleItemCardId = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.DoubleItemCardId, DoubleItemCardId);
+		if (!IsItemAttachedEffectType(doubleItemCardId, CardEffectTypes.DoubleCollect))
+		{
+			return card;
 		}
+
+		_narwhalDoubleReady = false;
+		if (IsBossKEnemy(playerIndex))
+		{
+			_bossKDoubleCollectTriggersThisMatch++;
+		}
+
+		return card.WithAttachedItemEffect(doubleItemCardId);
+	}
 
 	private bool ShouldApplyNarwhalDoubleToPlayedCard(int playerIndex, PlayingCard card)
 	{
@@ -30,6 +35,7 @@ public partial class GameBoardScene
 			&& _narwhalDoubleReady
 			&& !card.HasItemEffect
 			&& !IsExcludedDeckRank(card.Rank)
+			&& (!IsBossKEnemy(playerIndex) || _bossKDoubleCollectTriggersThisMatch < MaxBossKDoubleCollectTriggersPerMatch)
 			&& (!IsBossKEnemy(playerIndex) || FindMatchingTableCardIndex(card) >= 0);
 	}
 

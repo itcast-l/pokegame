@@ -112,6 +112,9 @@ public partial class GameBoardScene : Control
 	private const float BombPairDestroyFxFrameSeconds = 0.055f;
 	private const float BombPairDestroyFxVisualSize = 132.0f;
 	private const int MaxNautilusBombInsertionsPerMatch = 2;
+	private const int MaxBossKBombInsertionsPerMatch = 1;
+	private const int MaxBossKStealTriggersPerMatch = 3;
+	private const int MaxBossKDoubleCollectTriggersPerMatch = 1;
 	private const float TableCardPointPopupSeconds = 0.42f;
 	private const float TableCardPointPopupRise = 24.0f;
 	private const float TableCardPointPopupTopOffset = 26.0f;
@@ -165,6 +168,7 @@ public partial class GameBoardScene : Control
 	private readonly CardEventBus _cardEventBus = new();
 	private readonly List<TextureRect> _tableRenderTexturePool = new();
 	private readonly List<Panel> _tableRenderPanelPool = new();
+	private IGameBoardAnimationPresenter _animationPresenter = default!;
 	private SpecialCardEffectResolver _effectResolver = default!;
 	private ItemCardCatalog _itemCardCatalog = default!;
 	private Dictionary<string, AdventureAttackEffectHandler> _adventureAttackEffectHandlers = default!;
@@ -186,6 +190,7 @@ public partial class GameBoardScene : Control
 	private bool _showingDefeatResult;
 	private int _currentTurnPlayerIndex = MainPlayerIndex;
 	private int _turnSequenceGeneration;
+	private readonly TurnStateMachine _turnStateMachine = new();
 	private int _completedTurnsSinceQuestionCardRefresh;
 	private int _questionCardRefreshAnchorPlayerIndex = -1;
 	private int _revealedPlayerHandIndex = -1;
@@ -224,11 +229,13 @@ public partial class GameBoardScene : Control
 	private int _nautilusBombInsertionsThisMatch;
 	private int _narwhalCaptureCountUntilDouble;
 	private bool _narwhalDoubleReady;
+	private int _bossKDoubleCollectTriggersThisMatch;
 	private int _leafySeadragonBladeBreakCooldownTurns;
 	private int _seaSlugMissCountUntilSlime;
 	private bool _dragonPrinceJackUsed;
 	private int _dragonQueenCaptureCountUntilSteal;
 	private int _bossKCaptureCountUntilSteal;
+	private int _bossKStealTriggersThisMatch;
 	private bool _bossKActiveControlUsedThisTurn;
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
@@ -374,6 +381,7 @@ public partial class GameBoardScene : Control
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();
 		_rng.Randomize();
+		_animationPresenter = new GameBoardAnimationPresenter();
 		_itemCardCatalog = ItemCardCatalog.Load(this);
 		_effectResolver = new SpecialCardEffectResolver(this);
 		_itemPlayPresentationHandlers = CreateItemPlayPresentationHandlers();
@@ -416,7 +424,12 @@ public partial class GameBoardScene : Control
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: true);
 		PlayBoardMusic();
-		_ = WarmupGameplayResourcesAsync(_turnSequenceGeneration);
+		_ = WarmupGameplayResourcesAsync(GetCurrentTurnContext());
+	}
+
+	public override void _ExitTree()
+	{
+		_animationPresenter?.ClearPools();
 	}
 
 	public override void _Process(double delta)

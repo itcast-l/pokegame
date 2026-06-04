@@ -22,31 +22,21 @@ public partial class GameBoardScene
 		Vector2 targetVisualSize = CardVisualSize * clampedTargetVisualScale;
 		Vector2 targetVisualBasePosition = GetCardVisualBasePosition(clampedTargetVisualScale);
 		float startRotationDegrees = -8.0f + dealNumber % 5 * 4.0f;
-		var cardRoot = new Control
-		{
-			Name = "OpeningDealCardFlight",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = OpeningDealZIndex + dealNumber,
-			ZAsRelative = false,
-		};
-		var cardVisual = new TextureRect
-		{
-			Name = "OpeningDealCardVisual",
-			Texture = _cardBackTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = targetVisualBasePosition,
-			Size = targetVisualSize,
-			PivotOffset = targetVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-		};
+		Control cardRoot = _animationPresenter.RentControl(
+			this,
+			"OpeningDealCardFlight",
+			CardVisualSize,
+			OpeningDealZIndex + dealNumber);
+		TextureRect cardVisual = _animationPresenter.RentTextureRect(
+			cardRoot,
+			"OpeningDealCardVisual",
+			_cardBackTexture,
+			targetVisualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Nearest);
+		cardVisual.Position = targetVisualBasePosition;
+		cardVisual.RotationDegrees = startRotationDegrees;
 		MarkAnimatedCardBack(cardVisual);
-		cardRoot.AddChild(cardVisual);
-		AddChild(cardRoot);
 		cardRoot.GlobalPosition = startGlobalPosition;
 
 		try
@@ -73,7 +63,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(cardRoot))
 			{
-				cardRoot.QueueFree();
+				_animationPresenter.Release(cardRoot);
 			}
 		}
 	}
@@ -87,30 +77,20 @@ public partial class GameBoardScene
 
 		PlayGameSfx(GameSfx.CardDeal, -5.0f, 0.92f, 1.06f, 0.03);
 		float startRotationDegrees = -6.0f + dealIndex % 4 * 4.0f;
-		var cardRoot = new Control
-		{
-			Name = "OpeningPileCardFlight",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = OpeningDealZIndex + 200 + dealIndex,
-			ZAsRelative = false,
-		};
-		var cardVisual = new TextureRect
-		{
-			Name = "OpeningPileCardVisual",
-			Texture = _cardBackTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-		};
+		Control cardRoot = _animationPresenter.RentControl(
+			this,
+			"OpeningPileCardFlight",
+			CardVisualSize,
+			OpeningDealZIndex + 200 + dealIndex);
+		TextureRect cardVisual = _animationPresenter.RentTextureRect(
+			cardRoot,
+			"OpeningPileCardVisual",
+			_cardBackTexture,
+			CardVisualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Nearest);
+		cardVisual.RotationDegrees = startRotationDegrees;
 		MarkAnimatedCardBack(cardVisual);
-		cardRoot.AddChild(cardVisual);
-		AddChild(cardRoot);
 		cardRoot.GlobalPosition = startGlobalPosition;
 
 		try
@@ -136,7 +116,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(cardRoot))
 			{
-				cardRoot.QueueFree();
+				_animationPresenter.Release(cardRoot);
 			}
 		}
 	}

@@ -36,19 +36,13 @@ public partial class GameBoardScene
 
 		Texture2D firstFrame = _enemySpecialAbilityAvatarFxFrames[0];
 		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, GetPlayerAvatarFxVisualSize(enemyPlayerIndex));
-		var abilityFx = new Sprite2D
-		{
-			Name = "EnemySpecialAbilityAvatarFx",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = EnemySpecialAbilityAvatarFxZIndex,
-			ZAsRelative = false,
-			GlobalPosition = GetPlayerAvatarGlobalCenter(enemyPlayerIndex),
-			Scale = baseScale * 0.88f,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(abilityFx);
+		Sprite2D abilityFx = RentSpriteFx(
+			"EnemySpecialAbilityAvatarFx",
+			firstFrame,
+			EnemySpecialAbilityAvatarFxZIndex,
+			GetPlayerAvatarGlobalCenter(enemyPlayerIndex),
+			baseScale * 0.88f,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f));
 
 		try
 		{
@@ -90,7 +84,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(abilityFx))
 			{
-				abilityFx.QueueFree();
+				_animationPresenter.Release(abilityFx);
 			}
 		}
 	}

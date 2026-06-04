@@ -20,48 +20,32 @@ public partial class GameBoardScene
 		}
 
 		Vector2 visualSize = CardVisualSize * visualScale;
-		var flightCard = new Control
-		{
-			Name = "StolenHandCardFlight",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-			ZIndex = PlayedCardFlightZIndex + 840,
-			ZAsRelative = false,
-		};
-		AddChild(flightCard);
+		Control flightCard = _animationPresenter.RentControl(
+			this,
+			"StolenHandCardFlight",
+			CardVisualSize,
+			PlayedCardFlightZIndex + 840);
+		flightCard.RotationDegrees = startRotationDegrees;
 		flightCard.GlobalPosition = startGlobalPosition;
 
-		var cardVisual = new TextureRect
-		{
-			Name = "StolenHandCardFlightVisual",
-			Texture = cardTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = (CardVisualSize - visualSize) / 2.0f,
-			Size = visualSize,
-			PivotOffset = visualSize / 2.0f,
-		};
-		flightCard.AddChild(cardVisual);
+		TextureRect cardVisual = _animationPresenter.RentTextureRect(
+			flightCard,
+			"StolenHandCardFlightVisual",
+			cardTexture,
+			visualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Nearest);
+		cardVisual.Position = (CardVisualSize - visualSize) / 2.0f;
 
 		if (attachmentOverlayTexture != null)
 		{
-			var attachmentOverlay = new TextureRect
-			{
-				Name = "StolenHandCardAttachmentOverlay",
-				Texture = attachmentOverlayTexture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-				MouseFilter = MouseFilterEnum.Ignore,
-				Size = CardVisualSize,
-				PivotOffset = CardVisualSize / 2.0f,
-				ZIndex = 1,
-			};
-			flightCard.AddChild(attachmentOverlay);
+			_ = _animationPresenter.RentTextureRect(
+				flightCard,
+				"StolenHandCardAttachmentOverlay",
+				attachmentOverlayTexture,
+				CardVisualSize,
+				1,
+				CanvasItem.TextureFilterEnum.Linear);
 		}
 
 		try
@@ -86,7 +70,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
-					flightCard.QueueFree();
+					_animationPresenter.Release(flightCard);
 				}
 			};
 			await ToSignal(tween, Tween.SignalName.Finished);
@@ -95,7 +79,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}

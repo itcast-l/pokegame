@@ -97,39 +97,26 @@ public partial class GameBoardScene
 		int playerIndex,
 		float startDelaySeconds)
 	{
-		var flightCard = new TextureRect
-		{
-			Name = "CapturedCardFlight",
-			Texture = capturedCardVisual.StartTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + capturedCardVisual.ZIndex,
-			ZAsRelative = false,
-		};
-		AddChild(flightCard);
+		TextureRect flightCard = _animationPresenter.RentTextureRect(
+			this,
+			"CapturedCardFlight",
+			capturedCardVisual.StartTexture,
+			CardVisualSize,
+			PlayedCardFlightZIndex + capturedCardVisual.ZIndex,
+			CanvasItem.TextureFilterEnum.Nearest,
+			zAsRelative: false);
 		flightCard.GlobalPosition = capturedCardVisual.GlobalPosition;
 
 		TextureRect? itemOverlay = null;
 		if (capturedCardVisual.ItemOverlayTexture != null)
 		{
-			itemOverlay = new TextureRect
-			{
-				Name = "CapturedCardItemOverlayFlight",
-				Texture = capturedCardVisual.ItemOverlayTexture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-				MouseFilter = MouseFilterEnum.Ignore,
-				Position = Vector2.Zero,
-				Size = CardVisualSize,
-				PivotOffset = CardVisualSize / 2.0f,
-				ZIndex = 1,
-			};
-			flightCard.AddChild(itemOverlay);
+			itemOverlay = _animationPresenter.RentTextureRect(
+				flightCard,
+				"CapturedCardItemOverlayFlight",
+				capturedCardVisual.ItemOverlayTexture,
+				CardVisualSize,
+				1,
+				CanvasItem.TextureFilterEnum.Nearest);
 		}
 
 		try
@@ -167,7 +154,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
-					flightCard.QueueFree();
+					_animationPresenter.Release(flightCard);
 				}
 			};
 
@@ -177,7 +164,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}

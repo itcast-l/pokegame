@@ -180,6 +180,23 @@ public partial class GameAudioManager : Node
 		GetTree().NodeAdded += BindUiAudioRecursive;
 	}
 
+	public override void _ExitTree()
+	{
+		if (GetTree() != null)
+		{
+			GetTree().NodeAdded -= BindUiAudioRecursive;
+		}
+
+		while (_sfxPlayerPool.Count > 0)
+		{
+			AudioStreamPlayer pooledPlayer = _sfxPlayerPool.Pop();
+			if (GodotObject.IsInstanceValid(pooledPlayer) && !pooledPlayer.IsQueuedForDeletion())
+			{
+				pooledPlayer.QueueFree();
+			}
+		}
+	}
+
 	public void PlaySfx(
 		string sfxId,
 		float volumeDb = 0.0f,

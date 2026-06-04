@@ -30,6 +30,11 @@ public partial class GameBoardScene
 		}
 		else if (IsBossKEnemy(playerIndex) && removedTableCardCount > 0)
 		{
+			if (_bossKStealTriggersThisMatch >= MaxBossKStealTriggersPerMatch)
+			{
+				return;
+			}
+
 			_bossKCaptureCountUntilSteal++;
 			if (_bossKCaptureCountUntilSteal < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSteal, 3))
 			{
@@ -37,6 +42,7 @@ public partial class GameBoardScene
 			}
 
 			_bossKCaptureCountUntilSteal = 0;
+			_bossKStealTriggersThisMatch++;
 			await ApplyBossKRandomStealAfterCaptureAsync(playerIndex, turnSequenceGeneration);
 		}
 	}

@@ -34,50 +34,29 @@ public partial class GameBoardScene
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
 		float targetAlpha = showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f;
 		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
-		var flightCard = new Control
-		{
-			Name = "PlayedCardFlight",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-			ZIndex = PlayedCardFlightZIndex,
-			ZAsRelative = false,
-		};
-		AddChild(flightCard);
+		Control flightCard = _animationPresenter.RentControl(this, "PlayedCardFlight", CardVisualSize, PlayedCardFlightZIndex);
+		flightCard.RotationDegrees = startRotationDegrees;
 		flightCard.GlobalPosition = startGlobalPosition;
-		var cardVisual = new TextureRect
-		{
-			Name = "PlayedCardFlightVisual",
-			Texture = startTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = 0,
-		};
-		flightCard.AddChild(cardVisual);
+		TextureRect cardVisual = _animationPresenter.RentTextureRect(
+			flightCard,
+			"PlayedCardFlightVisual",
+			startTexture,
+			CardVisualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Nearest);
 		TextureRect? attachmentOverlay = null;
 		Texture2D? attachmentOverlayTexture = GetCardAttachmentOverlayTexture(playedCard);
 		bool startShowsAttachmentOverlay = attachmentOverlayTexture != null
 			&& (playerIndex == MainPlayerIndex || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null);
 		if (startShowsAttachmentOverlay)
 		{
-			attachmentOverlay = new TextureRect
-			{
-				Name = "PlayedCardAttachmentOverlay",
-				Texture = attachmentOverlayTexture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-				MouseFilter = MouseFilterEnum.Ignore,
-				Size = CardVisualSize,
-				PivotOffset = CardVisualSize / 2.0f,
-				ZIndex = 1,
-			};
-			flightCard.AddChild(attachmentOverlay);
+			attachmentOverlay = _animationPresenter.RentTextureRect(
+				flightCard,
+				"PlayedCardAttachmentOverlay",
+				attachmentOverlayTexture,
+				CardVisualSize,
+				1,
+				CanvasItem.TextureFilterEnum.Linear);
 		}
 
 		try
@@ -118,7 +97,7 @@ public partial class GameBoardScene
 				PlayGameSfx(GameSfx.CardLand, -2.0f, 0.96f, 1.05f, 0.04);
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
-					flightCard.QueueFree();
+					_animationPresenter.Release(flightCard);
 				}
 			};
 
@@ -128,7 +107,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}
@@ -160,21 +139,15 @@ public partial class GameBoardScene
 		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPosition;
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
 		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
-		var flightCard = new TextureRect
-		{
-			Name = "PlayedItemCardFlight",
-			Texture = startTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-			ZIndex = PlayedCardFlightZIndex,
-			ZAsRelative = false,
-		};
-		AddChild(flightCard);
+		TextureRect flightCard = _animationPresenter.RentTextureRect(
+			this,
+			"PlayedItemCardFlight",
+			startTexture,
+			CardVisualSize,
+			PlayedCardFlightZIndex,
+			CanvasItem.TextureFilterEnum.Nearest,
+			zAsRelative: false);
+		flightCard.RotationDegrees = startRotationDegrees;
 		flightCard.GlobalPosition = startGlobalPosition;
 
 		try
@@ -212,7 +185,7 @@ public partial class GameBoardScene
 				PlayGameSfx(GameSfx.CardLand, -2.0f, 0.96f, 1.05f, 0.04);
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
-					flightCard.QueueFree();
+					_animationPresenter.Release(flightCard);
 				}
 			};
 
@@ -222,7 +195,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}

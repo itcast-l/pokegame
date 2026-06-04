@@ -15,21 +15,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var flightCard = new TextureRect
-		{
-			Name = "ItemCardTransformAreaFlight",
-			Texture = itemTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-			ZIndex = PlayedCardFlightZIndex + 820,
-			ZAsRelative = false,
-		};
-		AddChild(flightCard);
+		TextureRect flightCard = _animationPresenter.RentTextureRect(
+			this,
+			"ItemCardTransformAreaFlight",
+			itemTexture,
+			CardVisualSize,
+			PlayedCardFlightZIndex + 820,
+			CanvasItem.TextureFilterEnum.Nearest,
+			zAsRelative: false);
+		flightCard.RotationDegrees = startRotationDegrees;
 		flightCard.GlobalPosition = startGlobalPosition;
 
 		try
@@ -53,7 +47,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(flightCard))
 				{
-					flightCard.QueueFree();
+					_animationPresenter.Release(flightCard);
 				}
 			};
 			await ToSignal(flightTween, Tween.SignalName.Finished);
@@ -62,7 +56,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}

@@ -198,48 +198,37 @@ public partial class GameBoardScene
 		}
 
 		int totalSlots = repeatCount * shuffleFrames.Count;
-		var animationPlayer = new AnimationPlayer
-		{
-			Name = "DeckShuffleFrameAnimationPlayer",
-			RootNode = new NodePath(".."),
-		};
-		shuffleRoot.AddChild(animationPlayer);
-		AnimationLibrary library = new();
-		Animation animation = new()
-		{
-			Length = totalSlots * frameSeconds,
-			LoopMode = Animation.LoopModeEnum.None,
-		};
-
-		int currentTextureTrack = AddDiscreteValueTrack(animation, new NodePath($"{currentSprite.Name}:texture"));
-		int nextTextureTrack = AddDiscreteValueTrack(animation, new NodePath($"{nextSprite.Name}:texture"));
-		int currentAlphaTrack = AddLinearValueTrack(animation, new NodePath($"{currentSprite.Name}:modulate:a"));
-		int nextAlphaTrack = AddLinearValueTrack(animation, new NodePath($"{nextSprite.Name}:modulate:a"));
-
+		Tween frameTween = shuffleRoot.CreateTween();
+		frameTween.SetParallel(true);
 		for (int slotIndex = 0; slotIndex < totalSlots; slotIndex++)
 		{
 			int currentFrameIndex = slotIndex % shuffleFrames.Count;
 			int nextFrameIndex = (currentFrameIndex + 1) % shuffleFrames.Count;
 			double slotTime = slotIndex * frameSeconds;
 			double crossfadeTime = slotTime + frameSeconds * 0.72f;
-			animation.TrackInsertKey(currentTextureTrack, slotTime, shuffleFrames[currentFrameIndex]);
-			animation.TrackInsertKey(nextTextureTrack, slotTime, shuffleFrames[nextFrameIndex]);
-			animation.TrackInsertKey(currentAlphaTrack, slotTime, 1.0f);
-			animation.TrackInsertKey(nextAlphaTrack, slotTime, 0.0f);
-			animation.TrackInsertKey(currentAlphaTrack, crossfadeTime, 0.0f);
-			animation.TrackInsertKey(nextAlphaTrack, crossfadeTime, 1.0f);
-		}
-
-		library.AddAnimation("frames", animation);
-		animationPlayer.AddAnimationLibrary("", library);
-		animationPlayer.AnimationFinished += _ =>
-		{
-			if (GodotObject.IsInstanceValid(animationPlayer))
+			frameTween.TweenCallback(Callable.From(() =>
 			{
-				animationPlayer.QueueFree();
-			}
-		};
-		animationPlayer.Play("frames");
+				if (!GodotObject.IsInstanceValid(currentSprite) || !GodotObject.IsInstanceValid(nextSprite))
+				{
+					return;
+				}
+
+				currentSprite.Texture = shuffleFrames[currentFrameIndex];
+				nextSprite.Texture = shuffleFrames[nextFrameIndex];
+				currentSprite.Modulate = Colors.White;
+				nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+			})).SetDelay(slotTime);
+			frameTween.TweenCallback(Callable.From(() =>
+			{
+				if (!GodotObject.IsInstanceValid(currentSprite) || !GodotObject.IsInstanceValid(nextSprite))
+				{
+					return;
+				}
+
+				currentSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+				nextSprite.Modulate = Colors.White;
+			})).SetDelay(crossfadeTime);
+		}
 	}
 
 	private static void ApplyDeckShuffleFramePair(

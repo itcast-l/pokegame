@@ -6,13 +6,15 @@ using Godot;
 
 internal static class FrameAnimationHelpers
 {
+	private static readonly Dictionary<string, Texture2D?> TextureCache = new();
+
 	public static Texture2D[] LoadTextureFrames(string framePattern, int frameCount, string warningLabel, bool preferImageFile = false)
 	{
 		var frames = new List<Texture2D>(frameCount);
 		for (int frameIndex = 1; frameIndex <= frameCount; frameIndex++)
 		{
 			string path = string.Format(CultureInfo.InvariantCulture, framePattern, frameIndex);
-			Texture2D? texture = LoadTextureWithImageFallback(path, preferImageFile);
+			Texture2D? texture = LoadTextureResource(path, preferImageFile);
 			if (texture == null)
 			{
 				GD.PushWarning($"Missing {warningLabel} frame: {path}");
@@ -25,24 +27,21 @@ internal static class FrameAnimationHelpers
 		return frames.ToArray();
 	}
 
-	private static Texture2D? LoadTextureWithImageFallback(string path, bool preferImageFile)
+	public static Texture2D? LoadTextureResource(string path, bool allowEditorImageFallback = false)
 	{
-		if (preferImageFile)
+		if (TextureCache.TryGetValue(path, out Texture2D? cachedTexture))
 		{
-			Texture2D? imageTexture = LoadTextureFromImageFile(path);
-			if (imageTexture != null)
-			{
-				return imageTexture;
-			}
+			return cachedTexture;
 		}
 
 		Texture2D? texture = GD.Load<Texture2D>(path);
-		if (texture != null)
+		if (texture == null && allowEditorImageFallback && Engine.IsEditorHint())
 		{
-			return texture;
+			texture = LoadTextureFromImageFile(path);
 		}
 
-		return LoadTextureFromImageFile(path);
+		TextureCache[path] = texture;
+		return texture;
 	}
 
 	private static Texture2D? LoadTextureFromImageFile(string path)
@@ -64,7 +63,13 @@ internal static class FrameAnimationHelpers
 		double frameSeconds,
 		int repeatCount = 1)
 	{
-		PlayTextureFrames(textureRect, frames, frameSeconds, repeatCount);
+		TweenTextureFrameSlots(
+			tween,
+			textureRect,
+			frames,
+			frameSeconds,
+			frames.Count * repeatCount,
+			(target, texture) => target.Texture = texture);
 	}
 
 	public static void TweenTextureFramesForDuration(
@@ -75,7 +80,13 @@ internal static class FrameAnimationHelpers
 		double animationSeconds)
 	{
 		int totalFrameCount = Math.Max(frames.Count, Mathf.CeilToInt((float)(animationSeconds / frameSeconds)));
-		PlayTextureFrameSlots(textureRect, frames, frameSeconds, totalFrameCount);
+		TweenTextureFrameSlots(
+			tween,
+			textureRect,
+			frames,
+			frameSeconds,
+			totalFrameCount,
+			(target, texture) => target.Texture = texture);
 	}
 
 	public static void TweenTextureFramesForDuration(
@@ -86,7 +97,13 @@ internal static class FrameAnimationHelpers
 		double animationSeconds)
 	{
 		int totalFrameCount = Math.Max(frames.Count, Mathf.CeilToInt((float)(animationSeconds / frameSeconds)));
-		PlayTextureFrameSlots(sprite, frames, frameSeconds, totalFrameCount);
+		TweenTextureFrameSlots(
+			tween,
+			sprite,
+			frames,
+			frameSeconds,
+			totalFrameCount,
+			(target, texture) => target.Texture = texture);
 	}
 
 	public static void TweenTextureFrames(
@@ -96,79 +113,76 @@ internal static class FrameAnimationHelpers
 		double frameSeconds,
 		int repeatCount = 1)
 	{
-		PlayTextureFrames(sprite, frames, frameSeconds, repeatCount);
+		TweenTextureFrameSlots(
+			tween,
+			sprite,
+			frames,
+			frameSeconds,
+			frames.Count * repeatCount,
+			(target, texture) => target.Texture = texture);
 	}
 
-	public static AnimationPlayer? PlayTextureFrames(
-		TextureRect textureRect,
+	private static void TweenTextureFrameSlots<T>(
+		Tween tween,
+		T target,
 		IReadOnlyList<Texture2D> frames,
 		double frameSeconds,
-		int repeatCount = 1)
+		int totalFrameCount,
+		Action<T, Texture2D> applyFrame)
+		where T : Node
 	{
-		return PlayTextureFrameSlots(textureRect, frames, frameSeconds, frames.Count * repeatCount);
+		if (frames.Count == 0
+			|| frameSeconds <= 0.0
+			|| totalFrameCount <= 0
+			|| !GodotObject.IsInstanceValid(target))
+		{
+			return;
+		}
+
+		Tween frameTween = target.CreateTween();
+		frameTween.SetParallel(true);
+		for (int frameSlot = 0; frameSlot < totalFrameCount; frameSlot++)
+		{
+			Texture2D frame = frames[frameSlot % frames.Count];
+			frameTween.TweenCallback(Callable.From(() =>
+			{
+				if (GodotObject.IsInstanceValid(target))
+				{
+					applyFrame(target, frame);
+				}
+			})).SetDelay(frameSlot * frameSeconds);
+		}
 	}
 
-	public static AnimationPlayer? PlayTextureFrames(
-		Sprite2D sprite,
-		IReadOnlyList<Texture2D> frames,
-		double frameSeconds,
-		int repeatCount = 1)
-	{
-		return PlayTextureFrameSlots(sprite, frames, frameSeconds, frames.Count * repeatCount);
-	}
-
-	public static AnimationPlayer? PlayTextureFrameSlots(
-		TextureRect textureRect,
-		IReadOnlyList<Texture2D> frames,
-		double frameSeconds,
-		int totalFrameCount)
-	{
-		return PlayTextureFrameSlots(textureRect, frames, frameSeconds, totalFrameCount, new NodePath(".."), new NodePath(".:texture"));
-	}
-
-	public static AnimationPlayer? PlayTextureFrameSlots(
-		Sprite2D sprite,
-		IReadOnlyList<Texture2D> frames,
-		double frameSeconds,
-		int totalFrameCount)
-	{
-		return PlayTextureFrameSlots(sprite, frames, frameSeconds, totalFrameCount, new NodePath(".."), new NodePath(".:texture"));
-	}
-
-	public static AnimationPlayer? PlayTextureKeyframes(
+	public static void PlayTextureKeyframes(
 		Sprite2D sprite,
 		IReadOnlyList<Texture2D> frames,
 		IReadOnlyList<double> keyTimes)
 	{
-		if (frames.Count == 0 || keyTimes.Count == 0 || !GodotObject.IsInstanceValid(sprite))
+		int keyCount = Math.Min(frames.Count, keyTimes.Count);
+		if (keyCount == 0 || !GodotObject.IsInstanceValid(sprite))
 		{
-			return null;
+			return;
 		}
 
-		var animationPlayer = new AnimationPlayer
+		sprite.Texture = frames[0];
+		Tween tween = sprite.CreateTween();
+		tween.SetParallel(true);
+		for (int keyIndex = 0; keyIndex < keyCount; keyIndex++)
 		{
-			Name = "FrameAnimationPlayer",
-			RootNode = new NodePath(".."),
-		};
-		sprite.AddChild(animationPlayer);
-		ConfigureTextureAnimationKeyframes(
-			animationPlayer,
-			new StringName("frames"),
-			new NodePath(".:texture"),
-			frames,
-			keyTimes);
-		animationPlayer.Play("frames");
-		animationPlayer.AnimationFinished += _ =>
-		{
-			if (GodotObject.IsInstanceValid(animationPlayer))
+			Texture2D frame = frames[keyIndex];
+			tween.TweenCallback(Callable.From(() =>
 			{
-				animationPlayer.QueueFree();
-			}
-		};
-		return animationPlayer;
+				if (GodotObject.IsInstanceValid(sprite))
+				{
+					sprite.Texture = frame;
+				}
+			})).SetDelay(Math.Max(0.0d, keyTimes[keyIndex]));
+		}
+
 	}
 
-	public static AnimationPlayer? PlayTextureKeyframes(
+	public static void PlayTextureKeyframes(
 		Sprite2D sprite,
 		Texture2D firstFrame,
 		Texture2D secondFrame,
@@ -176,31 +190,18 @@ internal static class FrameAnimationHelpers
 	{
 		if (!GodotObject.IsInstanceValid(sprite))
 		{
-			return null;
+			return;
 		}
 
-		var animationPlayer = new AnimationPlayer
+		sprite.Texture = firstFrame;
+		Tween tween = sprite.CreateTween();
+		tween.TweenCallback(Callable.From(() =>
 		{
-			Name = "FrameAnimationPlayer",
-			RootNode = new NodePath(".."),
-		};
-		sprite.AddChild(animationPlayer);
-		ConfigureTwoTextureKeyframes(
-			animationPlayer,
-			new StringName("frames"),
-			new NodePath(".:texture"),
-			firstFrame,
-			secondFrame,
-			secondKeyTime);
-		animationPlayer.Play("frames");
-		animationPlayer.AnimationFinished += _ =>
-		{
-			if (GodotObject.IsInstanceValid(animationPlayer))
+			if (GodotObject.IsInstanceValid(sprite))
 			{
-				animationPlayer.QueueFree();
+				sprite.Texture = secondFrame;
 			}
-		};
-		return animationPlayer;
+		})).SetDelay(Math.Max(0.0d, secondKeyTime));
 	}
 
 	public static void ConfigureTextureAnimation(
@@ -242,152 +243,6 @@ internal static class FrameAnimationHelpers
 		{
 			animation.TrackInsertKey(trackIndex, animation.Length, frames[^1]);
 		}
-
-		library.AddAnimation(animationName, animation);
-	}
-
-	private static AnimationPlayer? PlayTextureFrameSlots(
-		Node target,
-		IReadOnlyList<Texture2D> frames,
-		double frameSeconds,
-		int totalFrameCount,
-		NodePath rootNode,
-		NodePath trackPath)
-	{
-		if (frames.Count == 0 || frameSeconds <= 0.0 || totalFrameCount <= 0 || !GodotObject.IsInstanceValid(target))
-		{
-			return null;
-		}
-
-		var animationPlayer = new AnimationPlayer
-		{
-			Name = "FrameAnimationPlayer",
-			RootNode = rootNode,
-		};
-		target.AddChild(animationPlayer);
-		ConfigureTextureAnimationSlots(
-			animationPlayer,
-			new StringName("frames"),
-			trackPath,
-			frames,
-			frameSeconds,
-			totalFrameCount,
-			loops: false);
-		animationPlayer.Play("frames");
-		animationPlayer.AnimationFinished += _ =>
-		{
-			if (GodotObject.IsInstanceValid(animationPlayer))
-			{
-				animationPlayer.QueueFree();
-			}
-		};
-		return animationPlayer;
-	}
-
-	private static void ConfigureTextureAnimationSlots(
-		AnimationPlayer animationPlayer,
-		StringName animationName,
-		NodePath trackPath,
-		IReadOnlyList<Texture2D> frames,
-		double frameSeconds,
-		int totalFrameCount,
-		bool loops)
-	{
-		if (frames.Count == 0)
-		{
-			return;
-		}
-
-		AnimationLibrary library = GetOrCreateDefaultLibrary(animationPlayer);
-		if (library.HasAnimation(animationName))
-		{
-			library.RemoveAnimation(animationName);
-		}
-
-		var animation = new Animation
-		{
-			Length = (float)Math.Max(frameSeconds, totalFrameCount * frameSeconds),
-			LoopMode = loops ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None,
-		};
-
-		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
-		animation.TrackSetPath(trackIndex, trackPath);
-		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Nearest);
-		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Discrete);
-
-		for (int frameSlot = 0; frameSlot < totalFrameCount; frameSlot++)
-		{
-			animation.TrackInsertKey(trackIndex, frameSlot * frameSeconds, frames[frameSlot % frames.Count]);
-		}
-
-		if (!loops)
-		{
-			animation.TrackInsertKey(trackIndex, animation.Length, frames[(totalFrameCount - 1) % frames.Count]);
-		}
-
-		library.AddAnimation(animationName, animation);
-	}
-
-	private static void ConfigureTextureAnimationKeyframes(
-		AnimationPlayer animationPlayer,
-		StringName animationName,
-		NodePath trackPath,
-		IReadOnlyList<Texture2D> frames,
-		IReadOnlyList<double> keyTimes)
-	{
-		AnimationLibrary library = GetOrCreateDefaultLibrary(animationPlayer);
-		if (library.HasAnimation(animationName))
-		{
-			library.RemoveAnimation(animationName);
-		}
-
-		int keyCount = Math.Min(frames.Count, keyTimes.Count);
-		var animation = new Animation
-		{
-			Length = (float)Math.Max(0.001, keyTimes[keyCount - 1] + 0.001),
-			LoopMode = Animation.LoopModeEnum.None,
-		};
-
-		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
-		animation.TrackSetPath(trackIndex, trackPath);
-		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Nearest);
-		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Discrete);
-
-		for (int keyIndex = 0; keyIndex < keyCount; keyIndex++)
-		{
-			animation.TrackInsertKey(trackIndex, keyTimes[keyIndex], frames[keyIndex]);
-		}
-
-		library.AddAnimation(animationName, animation);
-	}
-
-	private static void ConfigureTwoTextureKeyframes(
-		AnimationPlayer animationPlayer,
-		StringName animationName,
-		NodePath trackPath,
-		Texture2D firstFrame,
-		Texture2D secondFrame,
-		double secondKeyTime)
-	{
-		AnimationLibrary library = GetOrCreateDefaultLibrary(animationPlayer);
-		if (library.HasAnimation(animationName))
-		{
-			library.RemoveAnimation(animationName);
-		}
-
-		double clampedSecondKeyTime = Math.Max(0.0d, secondKeyTime);
-		var animation = new Animation
-		{
-			Length = (float)Math.Max(0.001d, clampedSecondKeyTime + 0.001d),
-			LoopMode = Animation.LoopModeEnum.None,
-		};
-
-		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
-		animation.TrackSetPath(trackIndex, trackPath);
-		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Nearest);
-		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Discrete);
-		animation.TrackInsertKey(trackIndex, 0.0d, firstFrame);
-		animation.TrackInsertKey(trackIndex, clampedSecondKeyTime, secondFrame);
 
 		library.AddAnimation(animationName, animation);
 	}

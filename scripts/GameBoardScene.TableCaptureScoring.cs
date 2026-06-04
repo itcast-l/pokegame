@@ -4,11 +4,12 @@ public partial class GameBoardScene
 {
 	private int GetCapturedTablePoints(int captureStartIndex, int scorePlayerIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		return CaptureScoringRules.GetCapturedTablePoints(
+		return ScoreService.GetCapturedScore(
 			ToCaptureScoringTableCards(),
 			captureStartIndex,
+			scorePlayerIndex,
 			BuildCaptureScoringContext(scorePlayerIndex),
-			extraTableCardIndexes);
+			extraTableCardIndexes).Points;
 	}
 
 	private int GetCapturedTableCardScoreValueForPlayer(TableCard tableCard, int scorePlayerIndex, bool hasDoubleEffect)
@@ -54,7 +55,7 @@ public partial class GameBoardScene
 
 	private int GetCapturedTableScorePlayerIndex(int captureStartIndex, int fallbackPlayerIndex)
 	{
-		return CaptureScoringRules.GetCapturedTableScorePlayerIndex(
+		return ScoreService.GetCapturedScorePlayerIndex(
 			ToCaptureScoringTableCards(),
 			captureStartIndex,
 			fallbackPlayerIndex,

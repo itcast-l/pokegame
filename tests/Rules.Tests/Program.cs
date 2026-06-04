@@ -13,6 +13,11 @@ internal static class Program
 		Run("capture scoring applies double effect and skips buried cards", CaptureScoringAppliesDoubleEffectAndSkipsBuriedCards);
 		Run("capture scoring suppresses slime coated cards", CaptureScoringSuppressesSlimeCoatedCards);
 		Run("capture scoring redirects pair destroy owner", CaptureScoringRedirectsPairDestroyOwner);
+		Run("card play resolver ignores buried matches", CardPlayResolverIgnoresBuriedMatches);
+		Run("card play resolver captures table for collect card", CardPlayResolverCapturesTableForCollectCard);
+		Run("capture resolver identifies middle captures", CaptureResolverIdentifiesMiddleCaptures);
+		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
+		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
 		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
@@ -22,9 +27,11 @@ internal static class Program
 		Run("adventure ai random capture can pick non-best capture", AdventureAiRandomCaptureCanPickNonBestCapture);
 		Run("adventure ai late best capture skips pair only captures", AdventureAiLateBestCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai late random capture skips pair only captures", AdventureAiLateRandomCaptureSkipsPairOnlyCaptures);
-		Run("adventure ai final profile always picks best capture", AdventureAiFinalProfileAlwaysPicksBestCapture);
+		Run("adventure ai final profile can skip best capture", AdventureAiFinalProfileCanSkipBestCapture);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
+		Run("turn state machine advances context generation", TurnStateMachineAdvancesContextGeneration);
+		Run("turn state machine gates action starts", TurnStateMachineGatesActionStarts);
 		Run("turn rules skip inactive players", TurnRulesSkipInactivePlayers);
 		Run("turn rules find single remaining player", TurnRulesFindSingleRemainingPlayer);
 
@@ -84,6 +91,91 @@ internal static class Program
 			playerCount: 4);
 
 		Equal(2, playerIndex);
+	}
+
+	private static void CardPlayResolverIgnoresBuriedMatches()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: true),
+			new CardPlayTableCard("K", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("A", IsFaceUp: false, IsBuriedInSand: false),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(tableCards, new CardPlayCard("A", CollectsTable: false));
+
+		Equal(2, plan.MatchingTableCardIndex);
+		Equal(2, plan.CaptureStartIndex);
+		True(plan.MatchedTableCardFlipped);
+	}
+
+	private static void CardPlayResolverCapturesTableForCollectCard()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("3", IsFaceUp: true, IsBuriedInSand: false),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(tableCards, new CardPlayCard("Q", CollectsTable: true));
+
+		Equal(-1, plan.MatchingTableCardIndex);
+		True(plan.PlayedCardCollectsTable);
+		Equal(0, plan.CaptureStartIndex);
+	}
+
+	private static void CaptureResolverIdentifiesMiddleCaptures()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2, isBuriedInSand: true),
+			TableCard("3", 3),
+			TableCard("4", 4),
+		};
+
+		CapturePlan plan = CaptureResolver.Resolve(tableCards, 0);
+
+		True(plan.Captured);
+		True(plan.CapturedMiddleCards);
+	}
+
+	private static void ScoreServiceReturnsScoreBreakdown()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 5),
+			TableCard("3", 7, hasDoubleCollectItemEffect: true),
+			TableCard("4", 9),
+		};
+
+		ScoreBreakdown score = ScoreService.GetCapturedScore(
+			tableCards,
+			captureStartIndex: 0,
+			scorePlayerIndex: 1,
+			DefaultScoringContext);
+
+		Equal(1, score.ScorePlayerIndex);
+		True(score.HasDoubleEffect);
+		Equal(24, score.Points);
+	}
+
+	private static void RewardResolverUsesWeightedReservoirSelection()
+	{
+		var candidates = new[]
+		{
+			new RewardCandidate("bomb", 2),
+			new RewardCandidate("magnet", 3),
+			new RewardCandidate("lens", 5),
+		};
+		int[] rolls = { 2, 1, 6 };
+		int rollIndex = 0;
+
+		RewardPlan reward = RewardResolver.PickWeightedReward(candidates, maxInclusive => rolls[rollIndex++]);
+
+		True(reward.HasReward);
+		Equal("magnet", reward.ItemCardId);
 	}
 
 	private static void PotentialCaptureIgnoresBuriedMatches()
@@ -310,7 +402,7 @@ internal static class Program
 		Equal(1, handIndex);
 	}
 
-	private static void AdventureAiFinalProfileAlwaysPicksBestCapture()
+	private static void AdventureAiFinalProfileCanSkipBestCapture()
 	{
 		var tableCards = new[]
 		{
@@ -326,7 +418,16 @@ internal static class Program
 			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+		bool lowRollPicked = EnemyAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			EnemyAiRules.GetAdventureProfile(14),
+			royalCaptureThreshold: 5,
+			decisionRollPercent: 64,
+			randomCaptureOrdinal: 0,
+			out int lowRollHandIndex);
+		bool highRollPicked = EnemyAiRules.TryPickCaptureCardIndex(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
@@ -334,10 +435,11 @@ internal static class Program
 			royalCaptureThreshold: 5,
 			decisionRollPercent: 99,
 			randomCaptureOrdinal: 0,
-			out int handIndex);
+			out _);
 
-		True(picked);
-		Equal(0, handIndex);
+		True(lowRollPicked);
+		Equal(0, lowRollHandIndex);
+		False(highRollPicked);
 	}
 
 	private static void CharacterAudioConfigResourcesPointToExistingFiles()
@@ -391,6 +493,40 @@ internal static class Program
 			IsProcessingCardPlay: false,
 			IsResolvingTurnSequence: false,
 			IsMainPlayerTurn: true)));
+	}
+
+	private static void TurnStateMachineAdvancesContextGeneration()
+	{
+		var stateMachine = new TurnStateMachine();
+		TurnContext initialContext = stateMachine.CurrentContext;
+
+		int generation = stateMachine.AdvanceGeneration();
+		TurnContext nextContext = stateMachine.CurrentContext;
+
+		Equal(1, generation);
+		False(initialContext.IsCurrent(stateMachine.Generation));
+		True(nextContext.IsCurrent(stateMachine.Generation));
+	}
+
+	private static void TurnStateMachineGatesActionStarts()
+	{
+		var stateMachine = new TurnStateMachine();
+		var awaitingMainPlayer = new GameLoopPhaseState(
+			IsLeavingGame: false,
+			IsGameOver: false,
+			IsOpeningDeal: false,
+			HasPendingItemSelection: false,
+			IsProcessingCardPlay: false,
+			IsResolvingTurnSequence: false,
+			IsMainPlayerTurn: true);
+		var pendingSelection = awaitingMainPlayer with { HasPendingItemSelection = true };
+		var opponentTurn = awaitingMainPlayer with { IsMainPlayerTurn = false };
+
+		True(stateMachine.CanBeginMainPlayerAction(awaitingMainPlayer));
+		False(stateMachine.CanBeginMainPlayerAction(pendingSelection));
+		False(stateMachine.CanBeginOpponentSequence(awaitingMainPlayer));
+		True(stateMachine.CanBeginOpponentSequence(opponentTurn));
+		False(stateMachine.CanBeginOpponentSequence(opponentTurn with { IsResolvingTurnSequence = true }));
 	}
 
 	private static void TurnRulesSkipInactivePlayers()

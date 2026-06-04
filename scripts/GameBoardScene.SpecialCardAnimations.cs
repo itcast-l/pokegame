@@ -21,18 +21,12 @@ public partial class GameBoardScene
 			? EnemySpecialAbilityAvatarFxFrameSeconds
 			: SpecialCardTriggerFxFrameSeconds;
 		float triggerFxPeakAlpha = useEnemyAbilityFlashFx ? 0.88f : 1.0f;
-		var effectRoot = new Control
-		{
-			Name = "SpecialCardTriggerEffect",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + zIndex + 760,
-			ZAsRelative = false,
-			RotationDegrees = rotationDegrees,
-			Scale = Vector2.One,
-		};
-		AddChild(effectRoot);
+		Control effectRoot = _animationPresenter.RentControl(
+			this,
+			"SpecialCardTriggerEffect",
+			CardVisualSize,
+			PlayedCardFlightZIndex + zIndex + 760);
+		effectRoot.RotationDegrees = rotationDegrees;
 		effectRoot.GlobalPosition = globalPosition;
 
 		var ring = new SpecialCardTriggerRing
@@ -46,36 +40,25 @@ public partial class GameBoardScene
 		};
 		effectRoot.AddChild(ring);
 
-		var card = new TextureRect
-		{
-			Name = "SpecialCardTriggerCard",
-			Texture = cardTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = 2,
-		};
-		effectRoot.AddChild(card);
+		TextureRect card = _animationPresenter.RentTextureRect(
+			effectRoot,
+			"SpecialCardTriggerCard",
+			cardTexture,
+			CardVisualSize,
+			2,
+			CanvasItem.TextureFilterEnum.Nearest);
 
-		var triggerFx = new TextureRect
-		{
-			Name = "SpecialCardTriggerFx",
-			Texture = triggerFxFrames.Count > 0 ? triggerFxFrames[0] : null,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = (CardVisualSize - SpecialCardTriggerFxVisualSize) / 2.0f,
-			Size = SpecialCardTriggerFxVisualSize,
-			PivotOffset = SpecialCardTriggerFxVisualSize / 2.0f,
-			ZIndex = 20,
-			Visible = triggerFxFrames.Count > 0,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		card.AddChild(triggerFx);
+		TextureRect triggerFx = _animationPresenter.RentTextureRect(
+			card,
+			"SpecialCardTriggerFx",
+			triggerFxFrames.Count > 0 ? triggerFxFrames[0] : null,
+			SpecialCardTriggerFxVisualSize,
+			20,
+			CanvasItem.TextureFilterEnum.Linear);
+		triggerFx.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		triggerFx.Position = (CardVisualSize - SpecialCardTriggerFxVisualSize) / 2.0f;
+		triggerFx.Visible = triggerFxFrames.Count > 0;
+		triggerFx.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 
 		Vector2[] sparkPositions =
 		{
@@ -143,7 +126,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(effectRoot))
 				{
-					effectRoot.QueueFree();
+					_animationPresenter.Release(effectRoot);
 				}
 			};
 			await ToSignal(tween, Tween.SignalName.Finished);
@@ -152,7 +135,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(effectRoot))
 			{
-				effectRoot.QueueFree();
+				_animationPresenter.Release(effectRoot);
 			}
 		}
 	}

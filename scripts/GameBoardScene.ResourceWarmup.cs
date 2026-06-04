@@ -45,25 +45,25 @@ public partial class GameBoardScene
 		GameSfx.StealCard,
 	};
 
-	private async Task WarmupGameplayResourcesAsync(int turnSequenceGeneration)
+	private async Task WarmupGameplayResourcesAsync(TurnContext turnContext)
 	{
-		if (!await WaitForWarmupFrameAsync(turnSequenceGeneration))
+		if (!await WaitForWarmupFrameAsync(turnContext))
 		{
 			return;
 		}
 
-		await WarmupSfxGroupAsync(CoreWarmupSfx, turnSequenceGeneration);
+		await WarmupSfxGroupAsync(CoreWarmupSfx, turnContext);
 		if (item_mode)
 		{
-			await WarmupSfxGroupAsync(ItemWarmupSfx, turnSequenceGeneration);
+			await WarmupSfxGroupAsync(ItemWarmupSfx, turnContext);
 		}
 
 		if (adventure_mode)
 		{
-			await WarmupCharacterAudioConfigsAsync(turnSequenceGeneration);
+			await WarmupCharacterAudioConfigsAsync(turnContext);
 		}
 
-		if (!await WaitForWarmupFrameAsync(turnSequenceGeneration))
+		if (!await WaitForWarmupFrameAsync(turnContext))
 		{
 			return;
 		}
@@ -71,43 +71,46 @@ public partial class GameBoardScene
 		GameAudio?.WarmupMusic(GameMusic.GameplayTension);
 	}
 
-	private async Task WarmupSfxGroupAsync(string[] sfxIds, int turnSequenceGeneration)
+	private async Task WarmupSfxGroupAsync(string[] sfxIds, TurnContext turnContext)
 	{
 		for (int index = 0; index < sfxIds.Length; index++)
 		{
-			ulong sampleStart = BeginPerformanceSample();
+			ulong sampleStart = BeginPerformanceSample("ResourceLoad");
 			GameAudio?.WarmupSfx(sfxIds[index]);
 			EndPerformanceSample($"WarmupSfx:{sfxIds[index]}", sampleStart);
 
 			if ((index + 1) % GameplayWarmupBatchSize == 0
-				&& !await WaitForWarmupFrameAsync(turnSequenceGeneration))
+				&& !await WaitForWarmupFrameAsync(turnContext))
 			{
 				return;
 			}
 		}
 	}
 
-	private async Task WarmupCharacterAudioConfigsAsync(int turnSequenceGeneration)
+	private async Task WarmupCharacterAudioConfigsAsync(TurnContext turnContext)
 	{
 		int warmedCount = 0;
 		foreach (CharacterAvatarDefinition avatarDefinition in CharacterAvatarCatalog.All)
 		{
-			ulong sampleStart = BeginPerformanceSample();
+			ulong sampleStart = BeginPerformanceSample("ResourceLoad");
 			GameAudio?.WarmupCharacterAudioConfig(avatarDefinition.AudioConfig);
 			EndPerformanceSample($"WarmupCharacterAudio:{avatarDefinition.Id}", sampleStart);
 
 			warmedCount++;
 			if (warmedCount % GameplayWarmupBatchSize == 0
-				&& !await WaitForWarmupFrameAsync(turnSequenceGeneration))
+				&& !await WaitForWarmupFrameAsync(turnContext))
 			{
 				return;
 			}
 		}
 	}
 
-	private async Task<bool> WaitForWarmupFrameAsync(int turnSequenceGeneration)
+	private async Task<bool> WaitForWarmupFrameAsync(TurnContext turnContext)
 	{
-		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-		return IsInsideTree() && turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver();
+		return await ResourcePreloadService.WaitForNextFrameAsync(
+			this,
+			turnContext,
+			IsCurrentTurnContext,
+			IsGameOver);
 	}
 }

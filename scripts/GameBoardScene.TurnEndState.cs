@@ -77,7 +77,7 @@ public partial class GameBoardScene
 			CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);
 		}
 
-		_turnSequenceGeneration++;
+		AdvanceTurnSequenceGeneration();
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
 		_currentTurnPlayerIndex = playerIndex;

@@ -20,7 +20,7 @@ public partial class GameBoardScene
 		_tableCards.Clear();
 		_openingVisibleHandCardCounts.Clear();
 		_openingVisiblePileCardCounts.Clear();
-		_turnSequenceGeneration++;
+		AdvanceTurnSequenceGeneration();
 		_currentTurnPlayerIndex = MainPlayerIndex;
 		_completedTurnsSinceQuestionCardRefresh = 0;
 		_questionCardRefreshAnchorPlayerIndex = -1;
@@ -36,11 +36,13 @@ public partial class GameBoardScene
 		_nautilusBombInsertionsThisMatch = 0;
 		_narwhalCaptureCountUntilDouble = 0;
 		_narwhalDoubleReady = false;
+		_bossKDoubleCollectTriggersThisMatch = 0;
 		_leafySeadragonBladeBreakCooldownTurns = 0;
 		_seaSlugMissCountUntilSlime = 0;
 		_dragonPrinceJackUsed = false;
 		_dragonQueenCaptureCountUntilSteal = 0;
 		_bossKCaptureCountUntilSteal = 0;
+		_bossKStealTriggersThisMatch = 0;
 		_bossKActiveControlUsedThisTurn = false;
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();

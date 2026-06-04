@@ -40,19 +40,13 @@ public partial class GameBoardScene
 
 		PlayAdventureAttackStyleSfx(attackerPlayerIndex, AdventureAttackEffectStyles.GardenEelBurrow);
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
-		var ambush = new Sprite2D
-		{
-			Name = "GardenEelBurrowAmbushAttack",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = startCenter,
-			Scale = baseScale * GardenEelBurrowAmbushStartScale,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(ambush);
+		Sprite2D ambush = RentSpriteFx(
+			"GardenEelBurrowAmbushAttack",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex,
+			startCenter,
+			baseScale * GardenEelBurrowAmbushStartScale,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f));
 
 		bool hitInvoked = false;
 		void InvokeHitOnce()
@@ -99,7 +93,7 @@ public partial class GameBoardScene
 
 			if (GodotObject.IsInstanceValid(ambush))
 			{
-				ambush.QueueFree();
+				_animationPresenter.Release(ambush);
 			}
 		}
 	}
@@ -116,47 +110,19 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var animationPlayer = new AnimationPlayer
-		{
-			Name = "GardenEelAmbushFrameAnimationPlayer",
-			RootNode = new NodePath(".."),
-		};
-		ambush.AddChild(animationPlayer);
-
-		AnimationLibrary library = new();
-		Animation animation = new()
-		{
-			Length = (float)GardenEelBurrowAmbushReturnDelaySeconds,
-			LoopMode = Animation.LoopModeEnum.None,
-		};
-		int textureTrack = AddDiscreteAnimationTrack(animation, new NodePath(".:texture"));
-		int positionTrack = AddDiscreteAnimationTrack(animation, new NodePath(".:global_position"));
-		int scaleTrack = AddDiscreteAnimationTrack(animation, new NodePath(".:scale"));
-
-		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 0, 0.0d, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
-		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 1, GardenEelBurrowAmbushFrameSeconds, startCenter, baseScale * 0.94f);
-		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 2, GardenEelBurrowAmbushFrameSeconds * 2.0d, targetCenter, baseScale);
-		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 3, GardenEelBurrowAmbushFrameSeconds * 3.0d, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale);
-		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 4, GardenEelBurrowAmbushFrameSeconds * 4.0d, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale);
-		InsertGardenEelBurrowAmbushFrame(animation, textureTrack, positionTrack, scaleTrack, frames, 5, GardenEelBurrowAmbushReturnDelaySeconds, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
-
-		library.AddAnimation("frames", animation);
-		animationPlayer.AddAnimationLibrary("", library);
-		animationPlayer.AnimationFinished += _ =>
-		{
-			if (GodotObject.IsInstanceValid(animationPlayer))
-			{
-				animationPlayer.QueueFree();
-			}
-		};
-		animationPlayer.Play("frames");
+		Tween frameTween = ambush.CreateTween();
+		frameTween.SetParallel(true);
+		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 0, 0.0d, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
+		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 1, GardenEelBurrowAmbushFrameSeconds, startCenter, baseScale * 0.94f);
+		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 2, GardenEelBurrowAmbushFrameSeconds * 2.0d, targetCenter, baseScale);
+		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 3, GardenEelBurrowAmbushFrameSeconds * 3.0d, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale);
+		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 4, GardenEelBurrowAmbushFrameSeconds * 4.0d, targetCenter, baseScale * GardenEelBurrowAmbushEmergeScale);
+		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 5, GardenEelBurrowAmbushReturnDelaySeconds, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
 	}
 
-	private static void InsertGardenEelBurrowAmbushFrame(
-		Animation animation,
-		int textureTrack,
-		int positionTrack,
-		int scaleTrack,
+	private static void TweenGardenEelBurrowAmbushFrame(
+		Tween frameTween,
+		Sprite2D ambush,
 		IReadOnlyList<Texture2D> frames,
 		int frameIndex,
 		double timeSeconds,
@@ -168,17 +134,17 @@ public partial class GameBoardScene
 			return;
 		}
 
-		animation.TrackInsertKey(textureTrack, timeSeconds, frames[frameIndex]);
-		animation.TrackInsertKey(positionTrack, timeSeconds, position);
-		animation.TrackInsertKey(scaleTrack, timeSeconds, scale);
-	}
+		Texture2D texture = frames[frameIndex];
+		frameTween.TweenCallback(Callable.From(() =>
+		{
+			if (!GodotObject.IsInstanceValid(ambush))
+			{
+				return;
+			}
 
-	private static int AddDiscreteAnimationTrack(Animation animation, NodePath path)
-	{
-		int trackIndex = animation.AddTrack(Animation.TrackType.Value);
-		animation.TrackSetPath(trackIndex, path);
-		animation.TrackSetInterpolationType(trackIndex, Animation.InterpolationType.Nearest);
-		animation.ValueTrackSetUpdateMode(trackIndex, Animation.UpdateMode.Discrete);
-		return trackIndex;
+			ambush.Texture = texture;
+			ambush.GlobalPosition = position;
+			ambush.Scale = scale;
+		})).SetDelay(timeSeconds);
 	}
 }

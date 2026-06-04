@@ -14,7 +14,7 @@ AdventureStageNumber = 14
 AdventureAbilityNameKey = "ADVENTURE_ABILITY_DRAGON_K_NAME"
 AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_DRAGON_K_DESC"
 AbilityIdsCsv = "tide_guard,bubble_cover,tide_shift,sand_ambush,spiral_shell,tusk_break,leafy_mirage,dragon_prince,dragon_queen,dragon_king"
-AbilityValuesRaw = "score_reduction_per_card=2;tide_shift_min_table_cards=4;captures_before_sand_bite=2;misses_before_slime_coat=2;captures_before_bomb=3;bomb_item_card_id=bomb;captures_before_double=2;double_item_card_id=double;blade_break_table_card_threshold=5;blade_break_cooldown_turns=1;royal_capture_threshold=5;dragon_queen_capture_threshold=1;captures_before_steal=3;special_jack_rank=J;special_jack_texture_path=res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png"
+AbilityValuesRaw = "score_reduction_per_card=1;tide_shift_min_table_cards=4;captures_before_sand_bite=2;misses_before_slime_coat=2;captures_before_bomb=3;bomb_item_card_id=bomb;captures_before_double=2;double_item_card_id=double;blade_break_table_card_threshold=5;blade_break_cooldown_turns=2;royal_capture_threshold=5;dragon_queen_capture_threshold=1;captures_before_steal=3;special_jack_rank=J;special_jack_texture_path=res://art/cards/ocean_animated_deck/court/J/processed/frames/frame-001.png"
 DamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png"
 DamageEffectFrameCount = 4
 DamageEffectPreferImageFile = false

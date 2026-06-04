@@ -25,19 +25,13 @@ public partial class GameBoardScene
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		Texture2D firstFrame = frames[0];
 		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, CatAdventureScratchVisualSize);
-		var scratch = new Sprite2D
-		{
-			Name = "CatAdventureScratchImpact",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = targetCenter,
-			Scale = baseScale * CatAdventureScratchStartScale,
-			Modulate = Colors.White,
-		};
-		AddChild(scratch);
+		Sprite2D scratch = RentSpriteFx(
+			"CatAdventureScratchImpact",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex,
+			targetCenter,
+			baseScale * CatAdventureScratchStartScale,
+			Colors.White);
 
 		Tween tween = CreateTween();
 		tween.SetParallel(true);
@@ -57,7 +51,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(scratch))
 			{
-				scratch.QueueFree();
+				_animationPresenter.Release(scratch);
 			}
 		};
 
@@ -84,19 +78,13 @@ public partial class GameBoardScene
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 		Texture2D firstFrame = frames[0];
 		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, CrabAdventurePincerVisualSize);
-		var pincer = new Sprite2D
-		{
-			Name = "CrabAdventurePincerImpact",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = targetCenter,
-			Scale = baseScale * 0.92f,
-			Modulate = Colors.White,
-		};
-		AddChild(pincer);
+		Sprite2D pincer = RentSpriteFx(
+			"CrabAdventurePincerImpact",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex,
+			targetCenter,
+			baseScale * 0.92f,
+			Colors.White);
 
 		Tween tween = CreateTween();
 		tween.SetParallel(true);
@@ -117,7 +105,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(pincer))
 			{
-				pincer.QueueFree();
+				_animationPresenter.Release(pincer);
 			}
 		};
 
@@ -148,20 +136,14 @@ public partial class GameBoardScene
 			GetPlayerAvatarFxVisualSize(targetPlayerIndex) * JellyfishAdventureTentacleLocalVisualScale);
 		float rotation = Mathf.DegToRad(JellyfishAdventureTentacleLocalRotationDegrees);
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
-		var tentacles = new Sprite2D
-		{
-			Name = "JellyfishAdventureTentacleAttack",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = targetCenter,
-			Rotation = rotation,
-			Scale = baseScale * JellyfishAdventureTentacleLocalStartScale,
-			Modulate = Colors.White,
-		};
-		AddChild(tentacles);
+		Sprite2D tentacles = RentSpriteFx(
+			"JellyfishAdventureTentacleAttack",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex,
+			targetCenter,
+			baseScale * JellyfishAdventureTentacleLocalStartScale,
+			Colors.White,
+			rotation);
 
 		Tween tween = CreateTween();
 		tween.SetParallel(true);
@@ -184,7 +166,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(tentacles))
 			{
-				tentacles.QueueFree();
+				_animationPresenter.Release(tentacles);
 			}
 		};
 
@@ -213,19 +195,13 @@ public partial class GameBoardScene
 			firstFrame,
 			GetPlayerAvatarFxVisualSize(targetPlayerIndex) * SeaSlugHitMarkerLocalVisualScale);
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
-		var hitMarker = new Sprite2D
-		{
-			Name = "SeaSlugAdventureHitMarker",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = GetPlayerAvatarGlobalCenter(targetPlayerIndex),
-			Scale = baseScale * SeaSlugHitMarkerStartScale,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(hitMarker);
+		Sprite2D hitMarker = RentSpriteFx(
+			"SeaSlugAdventureHitMarker",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex,
+			GetPlayerAvatarGlobalCenter(targetPlayerIndex),
+			baseScale * SeaSlugHitMarkerStartScale,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f));
 
 		bool hitInvoked = false;
 		void InvokeHitOnce()
@@ -276,7 +252,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(hitMarker))
 			{
-				hitMarker.QueueFree();
+				_animationPresenter.Release(hitMarker);
 			}
 		}
 	}

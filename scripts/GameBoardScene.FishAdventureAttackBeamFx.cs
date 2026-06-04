@@ -35,19 +35,14 @@ public partial class GameBoardScene
 		Vector2 direction = travel / distance;
 		float beamLength = Math.Max(24.0f, distance - FishAdventureAttackBeamStartInset - FishAdventureAttackBeamEndInset);
 		Vector2 beamCenter = startCenter + direction * (FishAdventureAttackBeamStartInset + beamLength / 2.0f);
-		var beam = new Sprite2D
-		{
-			Name = "FishAdventureAttackBeam",
-			Texture = frames[0],
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = beamCenter,
-			Rotation = direction.Angle(),
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(beam);
+		Sprite2D beam = RentSpriteFx(
+			"FishAdventureAttackBeam",
+			frames[0],
+			AdventureAttackEffectTravelZIndex,
+			beamCenter,
+			Vector2.One,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			direction.Angle());
 
 		try
 		{
@@ -89,7 +84,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(beam))
 			{
-				beam.QueueFree();
+				_animationPresenter.Release(beam);
 			}
 		}
 	}

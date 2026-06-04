@@ -26,6 +26,7 @@ internal static class EnemyAiRules
 			11 => new AdventureProfile(92, 5, true, true),
 			12 => new AdventureProfile(95, 5, true, true),
 			13 => new AdventureProfile(97, 3, true, true),
+			14 => new AdventureProfile(65, 10, true, true),
 			_ => new AdventureProfile(100, 0, true, true),
 		};
 	}

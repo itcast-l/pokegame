@@ -7,7 +7,7 @@ public partial class GameBoardScene
 {
 	private async Task ResolveOpponentTurnsAsync(int turnSequenceGeneration)
 	{
-		if (_isResolvingTurnSequence || IsGameOver())
+		if (!_turnStateMachine.CanBeginOpponentSequence(BuildGameLoopPhaseState()))
 		{
 			return;
 		}
@@ -102,7 +102,7 @@ public partial class GameBoardScene
 
 	private async Task PlayMainPlayerCardAndAdvanceAsync(int handIndex, int turnSequenceGeneration, Vector2? startGlobalPositionOverride = null)
 	{
-		if (_isProcessingCardPlay || IsGameOver())
+		if (!_turnStateMachine.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
 		{
 			return;
 		}
@@ -152,7 +152,7 @@ public partial class GameBoardScene
 
 	private async Task PlayMainPlayerItemCardAndAdvanceAsync(int itemHandIndex, int turnSequenceGeneration)
 	{
-		if (_isProcessingCardPlay || IsGameOver())
+		if (!_turnStateMachine.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
 		{
 			return;
 		}

@@ -25,11 +25,22 @@ public partial class MainMenuBackgroundAnimator : TextureRect
 	public override void _Ready()
 	{
 		_staticTexture = Texture;
-		_frames = FrameAnimationHelpers.LoadTextureFrames(
+		_ = LoadFramesAndConfigureAnimationAsync();
+		UpdateAnimationPlayback();
+	}
+
+	private async System.Threading.Tasks.Task LoadFramesAndConfigureAnimationAsync()
+	{
+		_frames = await BackgroundFrameLoader.LoadTextureFramesAsync(
+			this,
 			frame_pattern,
 			frame_count,
-			"main menu ocean background",
-			preferImageFile: true);
+			"main menu ocean background");
+
+		if (!IsInsideTree())
+		{
+			return;
+		}
 
 		if (_frames.Length > 0)
 		{

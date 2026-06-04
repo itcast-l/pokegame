@@ -84,22 +84,16 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var spawnCard = new TextureRect
-		{
-			Name = "DragonPrinceSpecialJackSkillSpawn",
-			Texture = _dragonPrinceSpecialJackTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + 860,
-			ZAsRelative = false,
-			Scale = Vector2.One * 0.78f,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(spawnCard);
+		TextureRect spawnCard = _animationPresenter.RentTextureRect(
+			this,
+			"DragonPrinceSpecialJackSkillSpawn",
+			_dragonPrinceSpecialJackTexture,
+			CardVisualSize,
+			PlayedCardFlightZIndex + 860,
+			CanvasItem.TextureFilterEnum.Nearest,
+			zAsRelative: false);
+		spawnCard.Scale = Vector2.One * 0.78f;
+		spawnCard.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		spawnCard.GlobalPosition = skillGlobalPosition;
 
 		try
@@ -118,7 +112,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(spawnCard))
 			{
-				spawnCard.QueueFree();
+				_animationPresenter.Release(spawnCard);
 			}
 		}
 	}
@@ -187,7 +181,7 @@ public partial class GameBoardScene
 					flightStartOverrides: specialJackFloat);
 				if (capturedCardVisuals.Count > 0)
 				{
-					specialJackFloat?.QueueFreeOverlays();
+					specialJackFloat?.QueueFreeOverlays(_animationPresenter);
 					specialJackFloatHandedToDeck = specialJackFloat != null;
 					await PlayCapturedCardsToDeckAnimationAsync(
 						playerIndex,
@@ -239,20 +233,14 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		var overlay = new TextureRect
-		{
-			Name = "DragonPrinceSpecialJackTableFloat",
-			Texture = _dragonPrinceSpecialJackTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + tableCardIndex * 2 + 260,
-			ZAsRelative = false,
-		};
-		AddChild(overlay);
+		TextureRect overlay = _animationPresenter.RentTextureRect(
+			this,
+			"DragonPrinceSpecialJackTableFloat",
+			_dragonPrinceSpecialJackTexture,
+			CardVisualSize,
+			PlayedCardFlightZIndex + tableCardIndex * 2 + 260,
+			CanvasItem.TextureFilterEnum.Nearest,
+			zAsRelative: false);
 		overlay.GlobalPosition = _centerArena.GlobalPosition + cardPosition;
 		_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 		RenderTableCards();

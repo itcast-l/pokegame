@@ -321,14 +321,7 @@ public partial class GameBoardScene
 
 	private static Texture2D? LoadTextureWithImageFallback(string path)
 	{
-		Texture2D? texture = GD.Load<Texture2D>(path);
-		if (texture != null)
-		{
-			return texture;
-		}
-
-		Image image = Image.LoadFromFile(ProjectSettings.GlobalizePath(path));
-		return image.IsEmpty() ? null : ImageTexture.CreateFromImage(image);
+		return FrameAnimationHelpers.LoadTextureResource(path, allowEditorImageFallback: true);
 	}
 
 	private bool ShouldShowDefeatResult(int winnerPlayerIndex)

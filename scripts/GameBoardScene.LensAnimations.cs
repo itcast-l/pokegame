@@ -16,21 +16,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var flightCard = new TextureRect
-		{
-			Name = "LensCardFlight",
-			Texture = lensTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			RotationDegrees = startRotationDegrees,
-			ZIndex = PlayedCardFlightZIndex + 820,
-			ZAsRelative = false,
-		};
-		AddChild(flightCard);
+		TextureRect flightCard = _animationPresenter.RentTextureRect(
+			this,
+			"LensCardFlight",
+			lensTexture,
+			CardVisualSize,
+			PlayedCardFlightZIndex + 820,
+			CanvasItem.TextureFilterEnum.Nearest,
+			zAsRelative: false);
+		flightCard.RotationDegrees = startRotationDegrees;
 		flightCard.GlobalPosition = startGlobalPosition;
 		PlayGameSfx(GameSfx.LensScan, -1.0f, 0.97f, 1.03f, 0.08);
 
@@ -73,7 +67,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(flightCard))
 			{
-				flightCard.QueueFree();
+				_animationPresenter.Release(flightCard);
 			}
 		}
 	}
@@ -110,22 +104,17 @@ public partial class GameBoardScene
 			await ToSignal(GetTree().CreateTimer(LensRevealWispStaggerSeconds * targetNumber), SceneTreeTimer.SignalName.Timeout);
 		}
 
-		var wisp = new TextureRect
-		{
-			Name = "LensRevealWisp",
-			Texture = _lensRevealWispFrames[0],
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = LensRevealWispVisualSize,
-			PivotOffset = LensRevealWispVisualSize / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + tableCardIndex * 2 + 720 + targetNumber,
-			ZAsRelative = false,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-			Scale = Vector2.One * 0.72f,
-		};
-		AddChild(wisp);
+		TextureRect wisp = _animationPresenter.RentTextureRect(
+			this,
+			"LensRevealWisp",
+			_lensRevealWispFrames[0],
+			LensRevealWispVisualSize,
+			PlayedCardFlightZIndex + tableCardIndex * 2 + 720 + targetNumber,
+			CanvasItem.TextureFilterEnum.Linear,
+			zAsRelative: false);
+		wisp.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		wisp.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		wisp.Scale = Vector2.One * 0.72f;
 		wisp.GlobalPosition = startGlobalCenter - LensRevealWispVisualSize / 2.0f;
 
 		try
@@ -166,7 +155,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(wisp))
 				{
-					wisp.QueueFree();
+					_animationPresenter.Release(wisp);
 				}
 			};
 			await ToSignal(tween, Tween.SignalName.Finished);
@@ -175,7 +164,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(wisp))
 			{
-				wisp.QueueFree();
+				_animationPresenter.Release(wisp);
 			}
 		}
 	}

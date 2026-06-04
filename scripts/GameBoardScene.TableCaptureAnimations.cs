@@ -17,20 +17,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var revealCard = new TextureRect
-		{
-			Name = "TableCardReveal",
-			Texture = _cardBackTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = cardPosition,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = tableCardIndex * 2 + 100,
-		};
-		_centerArena.AddChild(revealCard);
+		TextureRect revealCard = _animationPresenter.RentTextureRect(
+			_centerArena,
+			"TableCardReveal",
+			_cardBackTexture,
+			CardVisualSize,
+			tableCardIndex * 2 + 100,
+			CanvasItem.TextureFilterEnum.Nearest);
+		revealCard.Position = cardPosition;
 
 		try
 		{
@@ -53,7 +47,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(revealCard))
 				{
-					revealCard.QueueFree();
+					_animationPresenter.Release(revealCard);
 				}
 			};
 			await ToSignal(revealTween, Tween.SignalName.Finished);
@@ -62,7 +56,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(revealCard))
 			{
-				revealCard.QueueFree();
+				_animationPresenter.Release(revealCard);
 			}
 		}
 	}
@@ -79,22 +73,17 @@ public partial class GameBoardScene
 			return;
 		}
 
-		var pointLabel = new Label
-		{
-			Name = "TableCardPointPopup",
-			Text = points == 0 ? "0" : $"{(isDamage ? "-" : "+")}{points}",
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Center,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = new Vector2(CardVisualSize.X, isDoubleScore ? 34.0f : 28.0f),
-			ZIndex = TableCardPointPopupZIndex,
-		};
+		Label pointLabel = _animationPresenter.RentLabel(
+			this,
+			"TableCardPointPopup",
+			new Vector2(CardVisualSize.X, isDoubleScore ? 34.0f : 28.0f),
+			TableCardPointPopupZIndex);
+		pointLabel.Text = points == 0 ? "0" : $"{(isDamage ? "-" : "+")}{points}";
 		pointLabel.AddThemeFontSizeOverride("font_size", isDoubleScore ? TableCardPointPopupDoubleFontSize : TableCardPointPopupFontSize);
 		pointLabel.AddThemeColorOverride("font_color", isDamage ? new Color(1.0f, 0.42f, 0.32f) : new Color(1.0f, 0.94f, 0.56f));
 		pointLabel.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.0f, 0.0f, 0.82f));
 		pointLabel.AddThemeConstantOverride("shadow_offset_x", 2);
 		pointLabel.AddThemeConstantOverride("shadow_offset_y", 2);
-		AddChild(pointLabel);
 		PlayGameSfx(GameSfx.CardCollectPointPopup, -5.5f, 0.98f, 1.02f, 0.0);
 
 		pointLabel.GlobalPosition = _centerArena.GlobalPosition
@@ -116,7 +105,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(pointLabel))
 			{
-				pointLabel.QueueFree();
+				_animationPresenter.Release(pointLabel);
 			}
 		}
 	}
@@ -171,16 +160,16 @@ public partial class GameBoardScene
 			RestoreHiddenTableCard(tableCards, _secondTableCardIndex);
 		}
 
-		public void QueueFreeOverlays()
+		public void QueueFreeOverlays(IGameBoardAnimationPresenter animationPresenter)
 		{
 			if (GodotObject.IsInstanceValid(_firstOverlay))
 			{
-				_firstOverlay.QueueFree();
+				animationPresenter.Release(_firstOverlay);
 			}
 
 			if (_secondOverlay != null && GodotObject.IsInstanceValid(_secondOverlay))
 			{
-				_secondOverlay.QueueFree();
+				animationPresenter.Release(_secondOverlay);
 			}
 		}
 
@@ -214,20 +203,14 @@ public partial class GameBoardScene
 				return;
 			}
 
-			var overlay = new TextureRect
-			{
-				Name = "PairCaptureEdgeFloat",
-				Texture = texture,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-				TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-				MouseFilter = MouseFilterEnum.Ignore,
-				Size = CardVisualSize,
-				PivotOffset = CardVisualSize / 2.0f,
-				ZIndex = PlayedCardFlightZIndex + tableCardIndex * 2 + 220,
-				ZAsRelative = false,
-			};
-			AddChild(overlay);
+			TextureRect overlay = _animationPresenter.RentTextureRect(
+				this,
+				"PairCaptureEdgeFloat",
+				texture,
+				CardVisualSize,
+				PlayedCardFlightZIndex + tableCardIndex * 2 + 220,
+				CanvasItem.TextureFilterEnum.Nearest,
+				zAsRelative: false);
 			overlay.GlobalPosition = _centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect);
 			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 			if (firstOverlay == null)
@@ -280,7 +263,7 @@ public partial class GameBoardScene
 	private void RestorePairCaptureEdgeFloatHold(PairCaptureEdgeFloatHold hold)
 	{
 		hold.RestoreHiddenTableCards(_tableCards);
-		hold.QueueFreeOverlays();
+		hold.QueueFreeOverlays(_animationPresenter);
 		RenderTableCards();
 	}
 

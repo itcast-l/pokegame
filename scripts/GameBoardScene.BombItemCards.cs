@@ -303,7 +303,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(fx))
 			{
-				fx.QueueFree();
+				_animationPresenter.Release(fx);
 			}
 		};
 
@@ -317,20 +317,16 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		var fx = new TextureRect
-		{
-			Name = "BombPairDestroyFx",
-			Texture = _bombPairDestroyEffectFrames[0],
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = localCenter - new Vector2(BombPairDestroyFxVisualSize, BombPairDestroyFxVisualSize) / 2.0f,
-			Size = new Vector2(BombPairDestroyFxVisualSize, BombPairDestroyFxVisualSize),
-			PivotOffset = new Vector2(BombPairDestroyFxVisualSize, BombPairDestroyFxVisualSize) / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + tableCardIndex * 2,
-		};
-		_centerArena.AddChild(fx);
+		Vector2 fxSize = new(BombPairDestroyFxVisualSize, BombPairDestroyFxVisualSize);
+		TextureRect fx = _animationPresenter.RentTextureRect(
+			_centerArena,
+			"BombPairDestroyFx",
+			_bombPairDestroyEffectFrames[0],
+			fxSize,
+			PlayedCardFlightZIndex + tableCardIndex * 2,
+			CanvasItem.TextureFilterEnum.Linear);
+		fx.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		fx.Position = localCenter - fxSize / 2.0f;
 		return fx;
 	}
 

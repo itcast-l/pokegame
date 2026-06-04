@@ -26,46 +26,30 @@ public partial class GameBoardScene
 		QuestionCardRewardAnimation reward = rewardAnimation.Value;
 		Vector2 targetGlobalPosition = GetQuestionCardRewardTargetGlobalPosition(playerIndex, reward);
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(reward.StartGlobalPosition);
-		var animationRoot = new Control
-		{
-			Name = "QuestionCardRewardTransform",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = PlayedCardFlightZIndex + 900,
-			ZAsRelative = false,
-		};
-		var fx = new TextureRect
-		{
-			Name = "QuestionCardTransformFx",
-			Texture = _questionCardTransformFrames.Count > 0 ? _questionCardTransformFrames[0] : null,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = (CardVisualSize - QuestionCardTransformFxVisualSize) / 2.0f,
-			Size = QuestionCardTransformFxVisualSize,
-			PivotOffset = QuestionCardTransformFxVisualSize / 2.0f,
-			ZIndex = 0,
-			Visible = _questionCardTransformFrames.Count > 0,
-		};
-		var card = new TextureRect
-		{
-			Name = "QuestionCardRewardCard",
-			Texture = questionTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = GetItemCardVisualPosition(QuestionMarkItemCardId),
-			Size = GetItemCardVisualSize(QuestionMarkItemCardId),
-			PivotOffset = GetItemCardVisualSize(QuestionMarkItemCardId) / 2.0f,
-			ZIndex = 1,
-		};
-
-		animationRoot.AddChild(fx);
-		animationRoot.AddChild(card);
-		AddChild(animationRoot);
+		Control animationRoot = _animationPresenter.RentControl(
+			this,
+			"QuestionCardRewardTransform",
+			CardVisualSize,
+			PlayedCardFlightZIndex + 900);
+		TextureRect fx = _animationPresenter.RentTextureRect(
+			animationRoot,
+			"QuestionCardTransformFx",
+			_questionCardTransformFrames.Count > 0 ? _questionCardTransformFrames[0] : null,
+			QuestionCardTransformFxVisualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Linear);
+		fx.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		fx.Position = (CardVisualSize - QuestionCardTransformFxVisualSize) / 2.0f;
+		fx.Visible = _questionCardTransformFrames.Count > 0;
+		Vector2 questionCardVisualSize = GetItemCardVisualSize(QuestionMarkItemCardId);
+		TextureRect card = _animationPresenter.RentTextureRect(
+			animationRoot,
+			"QuestionCardRewardCard",
+			questionTexture,
+			questionCardVisualSize,
+			1,
+			CanvasItem.TextureFilterEnum.Nearest);
+		card.Position = GetItemCardVisualPosition(QuestionMarkItemCardId);
 		animationRoot.GlobalPosition = reward.StartGlobalPosition;
 
 		try
@@ -214,7 +198,7 @@ public partial class GameBoardScene
 
 			if (GodotObject.IsInstanceValid(animationRoot))
 			{
-				animationRoot.QueueFree();
+				_animationPresenter.Release(animationRoot);
 			}
 		}
 	}
@@ -333,49 +317,35 @@ public partial class GameBoardScene
 		}
 
 		Texture2D questionTexture = tableCard.ItemOverlay.Value.Texture;
-		var animationRoot = new Control
-		{
-			Name = "QuestionCardRefreshAnimation",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = cardPosition,
-			Size = CardVisualSize,
-			PivotOffset = CardVisualSize / 2.0f,
-			ZIndex = tableCardIndex * 2 + 120,
-		};
-		var fx = new TextureRect
-		{
-			Name = "QuestionCardRefreshFx",
-			Texture = QuestionCardRefreshFrames.Length > 0 ? QuestionCardRefreshFrames[0] : null,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = (CardVisualSize - QuestionCardRefreshFxVisualSize) / 2.0f,
-			Size = QuestionCardRefreshFxVisualSize,
-			PivotOffset = QuestionCardRefreshFxVisualSize / 2.0f,
-			ZIndex = 0,
-			Visible = QuestionCardRefreshFrames.Length > 0,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		var card = new TextureRect
-		{
-			Name = "QuestionCardRefreshCard",
-			Texture = questionTexture,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = GetItemCardVisualPosition(QuestionMarkItemCardId),
-			Size = GetItemCardVisualSize(QuestionMarkItemCardId),
-			PivotOffset = GetItemCardVisualSize(QuestionMarkItemCardId) / 2.0f,
-			ZIndex = 1,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-			Scale = Vector2.One * 0.82f,
-		};
-
-		animationRoot.AddChild(fx);
-		animationRoot.AddChild(card);
-		_centerArena.AddChild(animationRoot);
+		Control animationRoot = _animationPresenter.RentControl(
+			_centerArena,
+			"QuestionCardRefreshAnimation",
+			CardVisualSize,
+			tableCardIndex * 2 + 120,
+			zAsRelative: true);
+		animationRoot.Position = cardPosition;
+		TextureRect fx = _animationPresenter.RentTextureRect(
+			animationRoot,
+			"QuestionCardRefreshFx",
+			QuestionCardRefreshFrames.Length > 0 ? QuestionCardRefreshFrames[0] : null,
+			QuestionCardRefreshFxVisualSize,
+			0,
+			CanvasItem.TextureFilterEnum.Linear);
+		fx.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		fx.Position = (CardVisualSize - QuestionCardRefreshFxVisualSize) / 2.0f;
+		fx.Visible = QuestionCardRefreshFrames.Length > 0;
+		fx.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		Vector2 questionCardVisualSize = GetItemCardVisualSize(QuestionMarkItemCardId);
+		TextureRect card = _animationPresenter.RentTextureRect(
+			animationRoot,
+			"QuestionCardRefreshCard",
+			questionTexture,
+			questionCardVisualSize,
+			1,
+			CanvasItem.TextureFilterEnum.Nearest);
+		card.Position = GetItemCardVisualPosition(QuestionMarkItemCardId);
+		card.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		card.Scale = Vector2.One * 0.82f;
 
 		try
 		{
@@ -410,7 +380,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(animationRoot))
 			{
-				animationRoot.QueueFree();
+				_animationPresenter.Release(animationRoot);
 			}
 		}
 	}

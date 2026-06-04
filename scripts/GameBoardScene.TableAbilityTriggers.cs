@@ -137,7 +137,7 @@ public partial class GameBoardScene
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.SpiralShell)
 			|| playerIndex != MainPlayerIndex
-			|| _nautilusBombInsertionsThisMatch >= MaxNautilusBombInsertionsPerMatch)
+			|| _nautilusBombInsertionsThisMatch >= GetNautilusBombInsertionLimit())
 		{
 			return;
 		}
@@ -185,12 +185,18 @@ public partial class GameBoardScene
 		RenderTableCards();
 	}
 
+	private int GetNautilusBombInsertionLimit()
+	{
+		return IsBossKEnemy(AdventureEnemyPlayerIndex) ? MaxBossKBombInsertionsPerMatch : MaxNautilusBombInsertionsPerMatch;
+	}
+
 	private void RecordNarwhalCaptureForDouble(int playerIndex)
 	{
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.TuskBreak)
 			|| playerIndex != 1
-			|| _narwhalDoubleReady)
+			|| _narwhalDoubleReady
+			|| (IsBossKEnemy(playerIndex) && _bossKDoubleCollectTriggersThisMatch >= MaxBossKDoubleCollectTriggersPerMatch))
 		{
 			return;
 		}

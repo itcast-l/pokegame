@@ -47,20 +47,14 @@ public partial class GameBoardScene
 			+ new Vector2(0.0f, -34.0f)
 			+ side * _rng.RandfRange(-18.0f, 18.0f);
 		Vector2 bladeScale = GetSpriteScaleForVisualSize(bladeFrame, LeafySeadragonCollectAttackVisualSize);
-		var blade = new Sprite2D
-		{
-			Name = "LeafySeadragonCollectAttackBlade",
-			Texture = bladeFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex,
-			ZAsRelative = false,
-			GlobalPosition = projectileStart,
-			Rotation = direction.Angle() + LeafySeadragonCollectAttackRotationOffset,
-			Scale = bladeScale * 0.82f,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(blade);
+		Sprite2D blade = RentSpriteFx(
+			"LeafySeadragonCollectAttackBlade",
+			bladeFrame,
+			AdventureAttackEffectTravelZIndex,
+			projectileStart,
+			bladeScale * 0.82f,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			direction.Angle() + LeafySeadragonCollectAttackRotationOffset);
 		PlayPlayerAvatarAction(attackerPlayerIndex, CharacterAvatar.AvatarAction.Attack);
 
 		bool hitInvoked = false;
@@ -143,7 +137,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(blade))
 			{
-				blade.QueueFree();
+				_animationPresenter.Release(blade);
 			}
 		}
 	}
@@ -199,20 +193,14 @@ public partial class GameBoardScene
 			+ side * _rng.RandfRange(-14.0f, 14.0f);
 		Texture2D firstFrame = _bossKRoyalSeizureLanceFrames[0];
 		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, BossKRoyalSeizureLanceVisualSize);
-		var lance = new Sprite2D
-		{
-			Name = "BossKRoyalSeizureLance",
-			Texture = firstFrame,
-			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-			Centered = true,
-			ZIndex = AdventureAttackEffectTravelZIndex + 8,
-			ZAsRelative = false,
-			GlobalPosition = projectileStart,
-			Rotation = direction.Angle(),
-			Scale = baseScale * 0.82f,
-			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-		};
-		AddChild(lance);
+		Sprite2D lance = RentSpriteFx(
+			"BossKRoyalSeizureLance",
+			firstFrame,
+			AdventureAttackEffectTravelZIndex + 8,
+			projectileStart,
+			baseScale * 0.82f,
+			new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			direction.Angle());
 
 		try
 		{
@@ -253,7 +241,7 @@ public partial class GameBoardScene
 		{
 			if (GodotObject.IsInstanceValid(lance))
 			{
-				lance.QueueFree();
+				_animationPresenter.Release(lance);
 			}
 		}
 	}

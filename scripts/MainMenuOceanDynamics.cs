@@ -14,6 +14,9 @@ public partial class MainMenuOceanDynamics : Control
 	[Export(PropertyHint.Range, "0.0,2.0,0.05")]
 	public float motion_scale = 1.0f;
 
+	[Export(PropertyHint.Range, "1,60,1")]
+	public int redraw_fps = 20;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Bubble> _bubbles = new();
 	private readonly List<Glint> _glints = new();
@@ -22,6 +25,7 @@ public partial class MainMenuOceanDynamics : Control
 	private readonly Vector2[] _currentRibbonPoints = new Vector2[34];
 	private readonly Vector2[] _causticRibbonPoints = new Vector2[46];
 	private double _time;
+	private double _redrawAccumulator;
 
 	public override void _Ready()
 	{
@@ -40,7 +44,20 @@ public partial class MainMenuOceanDynamics : Control
 
 	public override void _Process(double delta)
 	{
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		_time += delta * motion_scale;
+		_redrawAccumulator += delta;
+		double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
+		if (_redrawAccumulator < redrawInterval)
+		{
+			return;
+		}
+
+		_redrawAccumulator %= redrawInterval;
 		QueueRedraw();
 	}
 
