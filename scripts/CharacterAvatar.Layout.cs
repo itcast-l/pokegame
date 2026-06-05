@@ -126,7 +126,7 @@ public partial class CharacterAvatar
 	{
 		return action switch
 		{
-			AvatarAction.Idle => 0.16f,
+			AvatarAction.Idle => 0.12f,
 			AvatarAction.Defeat => 0.06f,
 			_ => 0.08f,
 		};
