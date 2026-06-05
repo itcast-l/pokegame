@@ -131,16 +131,28 @@ public partial class GameBoardScene
 			pendingFaceUpMagnetTriggerIndexes.Add(playedTableCardIndex);
 		}
 
-		PairCaptureEdgeFloatHold? pairCaptureEdgeFloat = null;
-		bool pairCaptureEdgeFloatHandedToDeck = false;
-		try
-		{
-			int scorePlayerIndex = GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex);
-			bool capturedMiddleCards = HasCapturedMiddleTableCards(captureStartIndex);
-			if (ShouldPlayPairCaptureEdgeFloat(captureStartIndex, playedTableCardIndex, playedRankCollectsTable))
+			PairCaptureEdgeFloatHold? pairCaptureEdgeFloat = null;
+			bool pairCaptureEdgeFloatHandedToDeck = false;
+			try
 			{
-				pairCaptureEdgeFloat = await PlayPairCaptureEdgeFloatHoldAnimationAsync(captureStartIndex, playedTableCardIndex);
-				if (turnSequenceGeneration != _turnSequenceGeneration)
+				CaptureScoringRules.TableCard[] captureScoringTableCards = ToCaptureScoringTableCards();
+				int scorePlayerIndex = ScoreService.GetCapturedScorePlayerIndex(
+					captureScoringTableCards,
+					captureStartIndex,
+					playerIndex,
+					player_count);
+				CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
+					captureScoringTableCards,
+					captureStartIndex,
+					scorePlayerIndex,
+					BuildCaptureScoringContext(scorePlayerIndex),
+					awardScore: true,
+					magnetExtraCaptureIndexes);
+				bool capturedMiddleCards = captureFlow.Capture.CapturedMiddleCards;
+				if (ShouldPlayPairCaptureEdgeFloat(captureStartIndex, playedTableCardIndex, playedRankCollectsTable))
+				{
+					pairCaptureEdgeFloat = await PlayPairCaptureEdgeFloatHoldAnimationAsync(captureStartIndex, playedTableCardIndex);
+					if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 				}
@@ -166,10 +178,10 @@ public partial class GameBoardScene
 				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 			}
 
-			if (capturedMiddleCards)
-			{
-				List<TableSpecialCardTrigger> specialTriggers = _capturedSpecialCardTriggers;
-				BuildCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes, specialTriggers);
+				if (capturedMiddleCards)
+				{
+					List<TableSpecialCardTrigger> specialTriggers = _capturedSpecialCardTriggers;
+					BuildCapturedSpecialCardTriggers(captureStartIndex, magnetExtraCaptureIndexes, specialTriggers);
 				try
 				{
 					for (int triggerIndex = 0; triggerIndex < specialTriggers.Count; triggerIndex++)
@@ -202,14 +214,14 @@ public partial class GameBoardScene
 				}
 			}
 
-			List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(
-				captureStartIndex,
-				false,
-				false,
-				magnetExtraCaptureIndexes,
-				pairCaptureEdgeFloat);
-			bool gardenEelSandBiteTriggered = capturedMiddleCards
-				&& ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedRankCollectsTable);
+				List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(
+					captureStartIndex,
+					false,
+					false,
+					magnetExtraCaptureIndexes,
+					pairCaptureEdgeFloat);
+				bool gardenEelSandBiteTriggered = capturedMiddleCards
+					&& ShouldApplyGardenEelSandBite(playerIndex, captureStartIndex, playedRankCollectsTable);
 			if (gardenEelSandBiteTriggered)
 			{
 				await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.SandAmbush);
@@ -219,20 +231,20 @@ public partial class GameBoardScene
 				}
 			}
 
-			bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
-			int gardenEelSandBiteBonusPoints = gardenEelSandBiteTriggered
-				? ConsumeGardenEelSandBiteBonusPoints(playerIndex, captureStartIndex, scorePlayerIndex, hasDoubleEffect, playedRankCollectsTable)
-				: 0;
-			if (gardenEelSandBiteBonusPoints > 0)
-			{
-				_ = PlayTableCardPointPopupAsync(captureStartIndex, gardenEelSandBiteBonusPoints, hasDoubleEffect);
-			}
+				bool hasDoubleEffect = captureFlow.Score.HasDoubleEffect;
+				int gardenEelSandBiteBonusPoints = gardenEelSandBiteTriggered
+					? ConsumeGardenEelSandBiteBonusPoints(playerIndex, captureStartIndex, scorePlayerIndex, hasDoubleEffect, playedRankCollectsTable)
+					: 0;
+				if (gardenEelSandBiteBonusPoints > 0)
+				{
+					_ = PlayTableCardPointPopupAsync(captureStartIndex, gardenEelSandBiteBonusPoints, hasDoubleEffect);
+				}
 
-			int collectedPoints = GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes)
-				+ gardenEelSandBiteBonusPoints;
-			if (capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
-			{
-				await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
+				int collectedPoints = captureFlow.Score.Points
+					+ gardenEelSandBiteBonusPoints;
+				if (capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
+				{
+					await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
 				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 				{
 					return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);

@@ -146,51 +146,56 @@ public partial class GameBoardScene
 					SetAnimatedCardBackPlayback(cardVisual, false);
 				}
 
-				if (isPlayable)
+				if (playerIndex == MainPlayerIndex)
 				{
-					Tween? hoverTween = null;
-					void AnimateHover(bool hovered)
+					if (isPlayable)
 					{
-						hoverTween?.Kill();
-						if (hovered)
+						Tween? hoverTween = null;
+						void AnimateHover(bool hovered)
 						{
-							cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
-							cardVisual.ZIndex = HoveredHandCardZIndexBoost;
-						}
-
-						Vector2 selectedOffset = showInputSelection ? new Vector2(0.0f, -HoveredHandCardLift * 0.55f) : Vector2.Zero;
-						Vector2 targetPosition = visualBasePosition + (hovered ? new Vector2(0.0f, -HoveredHandCardLift) : selectedOffset);
-						Vector2 targetScale = hovered
-							? Vector2.One * HoveredHandCardScale
-							: showInputSelection
-							? Vector2.One * 1.035f
-							: Vector2.One;
-						float duration = hovered ? HandCardHoverInTweenTime : HandCardHoverOutTweenTime;
-						hoverTween = cardVisual.CreateTween();
-						hoverTween.SetParallel(true);
-						hoverTween.SetTrans(hovered ? Tween.TransitionType.Cubic : Tween.TransitionType.Sine);
-						hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);
-						hoverTween.TweenProperty(cardVisual, "position", targetPosition, duration);
-						hoverTween.TweenProperty(cardVisual, "scale", targetScale, duration);
-						if (!hovered)
-						{
-							hoverTween.Finished += () =>
+							hoverTween?.Kill();
+							if (hovered)
 							{
-								cardSlot.ZIndex = showInputSelection ? displayIndex + HoveredHandCardZIndexBoost : displayIndex;
-								cardVisual.ZIndex = showInputSelection ? HoveredHandCardZIndexBoost : 0;
-							};
-						}
-					}
+								cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
+								cardVisual.ZIndex = HoveredHandCardZIndexBoost;
+							}
 
-					cardSlot.MouseEntered += () =>
-					{
-						PlayGameSfx(GameSfx.CardHover, -10.0f, 0.96f, 1.04f, 0.05);
-						AnimateHover(true);
-					};
-					cardSlot.MouseExited += () => AnimateHover(false);
+							Vector2 selectedOffset = showInputSelection ? new Vector2(0.0f, -HoveredHandCardLift * 0.55f) : Vector2.Zero;
+							Vector2 targetPosition = visualBasePosition + (hovered ? new Vector2(0.0f, -HoveredHandCardLift) : selectedOffset);
+							Vector2 targetScale = hovered
+								? Vector2.One * HoveredHandCardScale
+								: showInputSelection
+								? Vector2.One * 1.035f
+								: Vector2.One;
+							float duration = hovered ? HandCardHoverInTweenTime : HandCardHoverOutTweenTime;
+							hoverTween = cardVisual.CreateTween();
+							hoverTween.SetParallel(true);
+							hoverTween.SetTrans(hovered ? Tween.TransitionType.Cubic : Tween.TransitionType.Sine);
+							hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);
+							hoverTween.TweenProperty(cardVisual, "position", targetPosition, duration);
+							hoverTween.TweenProperty(cardVisual, "scale", targetScale, duration);
+							if (!hovered)
+							{
+								hoverTween.Finished += () =>
+								{
+									cardSlot.ZIndex = showInputSelection ? displayIndex + HoveredHandCardZIndexBoost : displayIndex;
+									cardVisual.ZIndex = showInputSelection ? HoveredHandCardZIndexBoost : 0;
+								};
+							}
+						}
+
+						cardSlot.MouseEntered += () =>
+						{
+							PlayGameSfx(GameSfx.CardHover, -10.0f, 0.96f, 1.04f, 0.05);
+							AnimateHover(true);
+						};
+						cardSlot.MouseExited += () => AnimateHover(false);
+					}
 
 					cardSlot.GuiInput += inputEvent =>
 					{
+						ClearMainPlayerHandSelectionInputOnMouseClick(inputEvent);
+
 						if (showMagnetSelectionHighlight && handIndex >= 0)
 						{
 							TryCompleteMainPlayerMagnetAttachment(inputEvent, handIndex);
@@ -209,12 +214,17 @@ public partial class GameBoardScene
 							return;
 						}
 
-						TryPlayMainPlayerCard(inputEvent, handIndex);
+						if (isAdventureTutorialBlocked)
+						{
+							TryRejectAdventureTutorialCard(inputEvent);
+							return;
+						}
+
+						if (isPlayable)
+						{
+							TryPlayMainPlayerCard(inputEvent, handIndex);
+						}
 					};
-				}
-				else if (isAdventureTutorialBlocked)
-				{
-					cardSlot.GuiInput += TryRejectAdventureTutorialCard;
 				}
 
 				string effectiveTooltipText = isJellyfishDisabled
@@ -296,7 +306,7 @@ public partial class GameBoardScene
 					showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked,
 					isJellyfishDisabled,
-					IsMainPlayerHandDisplayIndexSelected(cardIndex),
+					playerIndex == MainPlayerIndex && IsMainPlayerHandDisplayIndexSelected(cardIndex),
 					GetHandCardDescription(card, showCardBack));
 			}
 
@@ -331,7 +341,7 @@ public partial class GameBoardScene
 					showAdventureTutorialHighlight: showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked: isAdventureTutorialBlocked,
 					isJellyfishDisabled: isJellyfishDisabled,
-					showInputSelection: IsMainPlayerHandDisplayIndexSelected(displayIndex),
+					showInputSelection: playerIndex == MainPlayerIndex && IsMainPlayerHandDisplayIndexSelected(displayIndex),
 					tooltipText: tooltipText);
 			}
 		}

@@ -17,6 +17,8 @@ internal static class Program
 		Run("card play resolver captures table for collect card", CardPlayResolverCapturesTableForCollectCard);
 		Run("capture resolver identifies middle captures", CaptureResolverIdentifiesMiddleCaptures);
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
+		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
+		Run("capture flow planner skips score when award disabled", CaptureFlowPlannerSkipsScoreWhenAwardDisabled);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
@@ -164,6 +166,61 @@ internal static class Program
 		Equal(1, score.ScorePlayerIndex);
 		True(score.HasDoubleEffect);
 		Equal(24, score.Points);
+	}
+
+	private static void CaptureFlowPlannerBuildsCaptureSummary()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("3", 3, hasDoubleCollectItemEffect: true),
+			TableCard("4", 4),
+		};
+		var extras = new HashSet<int> { 1 };
+
+		CaptureFlowPlan plan = CaptureFlowPlanner.Build(
+			tableCards,
+			captureStartIndex: 0,
+			scorePlayerIndex: 2,
+			DefaultScoringContext,
+			awardScore: true,
+			extras);
+
+		True(plan.Capture.Captured);
+		True(plan.Capture.CapturedMiddleCards);
+		Equal(2, plan.Score.ScorePlayerIndex);
+		True(plan.Score.HasDoubleEffect);
+		True(plan.Score.Points > 0);
+		True(plan.CapturedScoringCards);
+		True(plan.ShouldTrackQuestionCardRefresh);
+		Equal(4, plan.CaptureCount);
+		Equal(1, plan.ExtraCaptureCount);
+		Equal(5, plan.TotalCapturedCardCount);
+	}
+
+	private static void CaptureFlowPlannerSkipsScoreWhenAwardDisabled()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("3", 3),
+		};
+
+		CaptureFlowPlan plan = CaptureFlowPlanner.Build(
+			tableCards,
+			captureStartIndex: 0,
+			scorePlayerIndex: 1,
+			DefaultScoringContext,
+			awardScore: false);
+
+		True(plan.Capture.Captured);
+		True(plan.Capture.CapturedMiddleCards);
+		Equal(1, plan.Score.ScorePlayerIndex);
+		Equal(0, plan.Score.Points);
+		False(plan.Score.HasDoubleEffect);
+		True(plan.ShouldTrackQuestionCardRefresh);
 	}
 
 	private static void RewardResolverUsesWeightedReservoirSelection()

@@ -22,7 +22,9 @@ public partial class CharacterAvatarEditScene : Control
 	private LineEdit _playerNameInput = default!;
 	private Label _playerNameHint = default!;
 	private GridContainer _avatarGrid = default!;
+	private ScrollContainer _avatarGridScroll = default!;
 	private readonly Dictionary<string, PanelContainer> _optionPanels = new();
+	private readonly Dictionary<string, Button> _optionButtons = new();
 	private readonly List<AvatarOptionSlot> _avatarOptionSlots = new();
 
 	public override void _Ready()
@@ -32,20 +34,27 @@ public partial class CharacterAvatarEditScene : Control
 		CurrentPlayerName = PlayerNameRules.Normalize(CurrentPlayerName);
 
 		_backButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackButton");
+		_backButton.FocusMode = Control.FocusModeEnum.All;
 		_backButton.Pressed += RequestClose;
 
 		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
 		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
+		_playerNameInput.FocusMode = Control.FocusModeEnum.All;
 		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
 		_playerNameInput.TextChanged += OnPlayerNameTextChanged;
+		_playerNameInput.TextSubmitted += OnPlayerNameTextSubmitted;
 		_confirmButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ConfirmButton");
+		_confirmButton.FocusMode = Control.FocusModeEnum.All;
 		_confirmButton.Pressed += ConfirmSelection;
 
 		_avatarGrid = GetNode<GridContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid");
+		_avatarGridScroll = GetNode<ScrollContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll");
+		_avatarGridScroll.FollowFocus = true;
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
 		ApplyPreviewAvatar();
 		ApplyPlayerNameInput();
+		FocusDefaultControlDeferred();
 	}
 
 	public override void _UnhandledInput(InputEvent inputEvent)
@@ -83,6 +92,7 @@ public partial class CharacterAvatarEditScene : Control
 	private void ConfigureAvatarOptions()
 	{
 		_optionPanels.Clear();
+		_optionButtons.Clear();
 		foreach (AvatarOptionSlot optionSlot in _avatarOptionSlots)
 		{
 			optionSlot.Root.Visible = false;
@@ -106,8 +116,11 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Avatar.PlayIdle();
 			optionSlot.Panel.Modulate = Colors.White;
 			optionSlot.Button.TooltipText = "预览头像";
+			optionSlot.Button.FocusMode = Control.FocusModeEnum.All;
+			optionSlot.Button.FocusEntered += () => SelectAvatar(avatarDefinition.Id);
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
 			_optionPanels[avatarDefinition.Id] = optionSlot.Panel;
+			_optionButtons[avatarDefinition.Id] = optionSlot.Button;
 		}
 
 		RefreshOptionSelection();
@@ -156,10 +169,34 @@ public partial class CharacterAvatarEditScene : Control
 		UpdatePlayerNameHint();
 	}
 
+	public void FocusDefaultControlDeferred()
+	{
+		CallDeferred(nameof(FocusDefaultControl));
+	}
+
+	private void FocusDefaultControl()
+	{
+		if (_optionButtons.TryGetValue(CurrentAvatarId, out Button? selectedButton))
+		{
+			GrabFocusIfAvailable(selectedButton);
+			if (selectedButton.HasFocus())
+			{
+				return;
+			}
+		}
+
+		GrabFocusIfAvailable(_backButton);
+	}
+
 	private void OnPlayerNameTextChanged(string text)
 	{
 		CurrentPlayerName = text;
 		UpdatePlayerNameHint();
+	}
+
+	private void OnPlayerNameTextSubmitted(string _text)
+	{
+		ConfirmSelection();
 	}
 
 	private void UpdatePlayerNameHint()
@@ -192,4 +229,22 @@ public partial class CharacterAvatarEditScene : Control
 		PanelContainer Panel,
 		CharacterAvatar Avatar,
 		Button Button);
+
+	private static void GrabFocusIfAvailable(Control? control)
+	{
+		if (control == null
+			|| !GodotObject.IsInstanceValid(control)
+			|| !control.IsVisibleInTree()
+			|| control.FocusMode == Control.FocusModeEnum.None)
+		{
+			return;
+		}
+
+		if (control is BaseButton { Disabled: true })
+		{
+			return;
+		}
+
+		control.GrabFocus();
+	}
 }

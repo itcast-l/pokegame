@@ -36,20 +36,28 @@ public partial class MainMenuScene : Control
 		};
 		AddChild(_avatarEditDialogLayer);
 
+		_avatarEntry.Visible = false;
+		SetMainMenuButtonsDisabled(true);
 		avatarEditor.CloseRequested += CloseAvatarEditor;
 		_avatarEditDialogLayer.AddChild(avatarEditor);
+		avatarEditor.FocusDefaultControlDeferred();
 	}
 
 	private void CloseAvatarEditor()
 	{
+		_avatarEntry.Visible = true;
+		SetMainMenuButtonsDisabled(false);
+
 		if (_avatarEditDialogLayer == null || !GodotObject.IsInstanceValid(_avatarEditDialogLayer))
 		{
 			_avatarEditDialogLayer = null;
+			CallDeferred(nameof(FocusAvatarEntry));
 			return;
 		}
 
 		_avatarEditDialogLayer.QueueFree();
 		_avatarEditDialogLayer = null;
+		CallDeferred(nameof(FocusAvatarEntry));
 	}
 
 	private void OnProfileSaved(string avatarId, string playerName)
@@ -79,5 +87,10 @@ public partial class MainMenuScene : Control
 		}
 
 		_avatarEntry.SetPlayerName(_playerName);
+	}
+
+	private void FocusAvatarEntry()
+	{
+		GrabFocusIfAvailable(_avatarEntry.Button);
 	}
 }

@@ -50,7 +50,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="SelectionPanel" type="PanelContainer" parent="SelectionCenter"]
-custom_minimum_size = Vector2(300, 390)
+custom_minimum_size = Vector2(360, 390)
 layout_mode = 2
 mouse_filter = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
@@ -78,6 +78,7 @@ theme_override_font_sizes/font_size = 20
 text = "Select"
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 2
 
 [node name="Option1Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -90,6 +91,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 1"
+text_overrun_behavior = 3
 
 [node name="Option2Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -102,6 +104,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 2"
+text_overrun_behavior = 3
 
 [node name="Option3Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -114,6 +117,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 3"
+text_overrun_behavior = 3
 
 [node name="Option4Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -126,6 +130,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 4"
+text_overrun_behavior = 3
 
 [node name="Option5Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -138,6 +143,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 5"
+text_overrun_behavior = 3
 
 [node name="Option6Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -150,6 +156,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 6"
+text_overrun_behavior = 3
 
 [node name="Option7Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -162,6 +169,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 7"
+text_overrun_behavior = 3
 
 [node name="Option8Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -174,6 +182,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Option 8"
+text_overrun_behavior = 3
 
 [node name="CancelButton" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
 unique_name_in_owner = true
@@ -186,3 +195,4 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 text = "Cancel"
+text_overrun_behavior = 3

@@ -11,11 +11,14 @@ public partial class MainMenuAvatarEntry : Control
 	private Label _nameLabel = default!;
 	private Button _button = default!;
 
+	public Button Button => _button;
+
 	public override void _Ready()
 	{
 		_avatar = GetNode<CharacterAvatar>("Frame/Margin/Layout/AvatarAnchor/CharacterAvatar");
 		_nameLabel = GetNode<Label>("Frame/Margin/Layout/NameLabel");
 		_button = GetNode<Button>("Button");
+		_button.FocusMode = Control.FocusModeEnum.All;
 		_button.Pressed += OnPressed;
 		ApplyAvatarDefinition();
 		ApplyPlayerName();

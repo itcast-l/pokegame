@@ -24,24 +24,30 @@ public partial class GameBoardScene
 			return new CaptureTableCardsResult(0, 0, null);
 		}
 
-		int captureCount = _tableCards.Count - captureStartIndex;
 		CaptureStatePlan capturePlan = _captureStateService.CreatePlan(_state, captureStartIndex, extraTableCardIndexes);
 		if (!capturePlan.IsValid)
 		{
 			return new CaptureTableCardsResult(0, 0, null);
 		}
 
+		CaptureScoringRules.TableCard[] captureScoringTableCards = ToCaptureScoringTableCards();
+		int scorePlayerIndex = awardScore
+			? ScoreService.GetCapturedScorePlayerIndex(captureScoringTableCards, captureStartIndex, playerIndex, player_count)
+			: playerIndex;
+		CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
+			captureScoringTableCards,
+			captureStartIndex,
+			scorePlayerIndex,
+			BuildCaptureScoringContext(scorePlayerIndex),
+			awardScore,
+			extraTableCardIndexes);
 		int collectedCardCount = 0;
 		int removedTableCardCount = 0;
 		QuestionCardRewardAnimation? questionRewardAnimation = null;
-		bool capturedMiddleCards = HasCapturedMiddleTableCards(captureStartIndex);
-		int scorePlayerIndex = awardScore ? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex) : playerIndex;
-		int collectedPoints = awardScore && capturedMiddleCards
-			? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex, extraTableCardIndexes)
-			: 0;
-		bool capturedScoringCards = capturedMiddleCards && HasCapturedScoringTableCards(captureStartIndex, extraTableCardIndexes);
 		Rect2 tableLayoutRect = GetTableCardLayoutRect();
-		if (awardScore && capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, extraTableCardIndexes))
+		if (awardScore
+			&& captureFlow.Capture.CapturedMiddleCards
+			&& ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, extraTableCardIndexes))
 		{
 			await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
@@ -53,7 +59,7 @@ public partial class GameBoardScene
 		foreach (int tableCardIndex in capturePlan.BaseTableCardIndexes)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
-			if (capturedMiddleCards && IsQuestionTableCard(tableCard))
+			if (captureFlow.Capture.CapturedMiddleCards && IsQuestionTableCard(tableCard))
 			{
 				QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(playerIndex, reserveReplacementCard, turnSequenceGeneration);
 				if (rewardGrant.HasValue && playerIndex == MainPlayerIndex)
@@ -75,7 +81,7 @@ public partial class GameBoardScene
 		collectedCardCount = captureStateResult.CollectedCardCount;
 		removedTableCardCount = captureStateResult.RemovedTableCardCount;
 		RefreshGardenEelBuriedCardIndex();
-		if (capturedMiddleCards && captureCount + capturePlan.ExtraTableCardIndexes.Count > 0)
+		if (captureFlow.ShouldTrackQuestionCardRefresh)
 		{
 			QuestionCardRefreshState questionCardRefreshState = _turnAdvancementService.StartQuestionCardRefreshTracking(playerIndex);
 			_completedTurnsSinceQuestionCardRefresh = questionCardRefreshState.CompletedTurnsSinceQuestionCardRefresh;
@@ -84,23 +90,23 @@ public partial class GameBoardScene
 
 		if (awardScore)
 		{
-			AddPlayerScore(scorePlayerIndex, collectedPoints);
+			AddPlayerScore(scorePlayerIndex, captureFlow.Score.Points);
 		}
 
 		CheckForWinner();
 		if (!IsGameOver() && removedTableCardCount > 0)
 		{
-			if (capturedScoringCards && !suppressGardenEelCaptureRecord)
+			if (captureFlow.CapturedScoringCards && !suppressGardenEelCaptureRecord)
 			{
 				RecordGardenEelCaptureForSandBite(playerIndex);
 			}
 
-			if (capturedScoringCards)
+			if (captureFlow.CapturedScoringCards)
 			{
 				await ApplyJellyfishBubbleAfterCaptureAsync(playerIndex, turnSequenceGeneration);
 			}
 			await ApplyNautilusBombAfterMainPlayerCaptureAsync(playerIndex, turnSequenceGeneration);
-			if (capturedScoringCards)
+			if (captureFlow.CapturedScoringCards)
 			{
 				RecordNarwhalCaptureForDouble(playerIndex);
 			}

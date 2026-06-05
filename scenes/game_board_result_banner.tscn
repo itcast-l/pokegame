@@ -116,7 +116,7 @@ theme_override_constants/separation = 14
 alignment = 1
 
 [node name="PrimaryFrame" type="Control" parent="WinnerCenter/WinnerBannerPanel/WinnerButtonRow"]
-custom_minimum_size = Vector2(166, 46)
+custom_minimum_size = Vector2(190, 46)
 layout_mode = 2
 script = ExtResource("4_button_frame")
 AccentColor = Color(0.58, 1, 0.92, 1)
@@ -144,7 +144,7 @@ text = "GAME_REPLAY"
 flat = true
 
 [node name="ReturnFrame" type="Control" parent="WinnerCenter/WinnerBannerPanel/WinnerButtonRow"]
-custom_minimum_size = Vector2(166, 46)
+custom_minimum_size = Vector2(190, 46)
 layout_mode = 2
 script = ExtResource("4_button_frame")
 AccentColor = Color(1, 0.86, 0.54, 1)

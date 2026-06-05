@@ -172,7 +172,7 @@ theme_override_constants/separation = 12
 
 [node name="PlayersLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/PlayersRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(116, 40)
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
@@ -224,7 +224,7 @@ theme_override_constants/separation = 12
 
 [node name="ItemModeLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/ItemModeRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(116, 40)
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
@@ -274,7 +274,7 @@ theme_override_constants/separation = 12
 
 [node name="WinningScoreLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/DialogOptions/WinningScoreRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(116, 40)
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)

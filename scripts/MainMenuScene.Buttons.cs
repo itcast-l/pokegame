@@ -6,6 +6,7 @@ public partial class MainMenuScene : Control
 {
 	private void SetMainMenuButtonsDisabled(bool disabled)
 	{
+		_avatarEntry.Button.Disabled = disabled;
 		_singlePlayerButton.Disabled = disabled;
 		_adventureButton.Disabled = disabled;
 		_multiplayerButton.Disabled = disabled;

@@ -4,6 +4,7 @@ public partial class MainMenuScene : Control
 {
 	private void ConfigureMainMenuFocus()
 	{
+		ConfigureAvatarEntryFocus();
 		EnableKeyboardFocus(_singlePlayerButton, _adventureButton, _settingsButton, _exitButton);
 		_multiplayerButton.FocusMode = Control.FocusModeEnum.None;
 	}
@@ -61,6 +62,24 @@ public partial class MainMenuScene : Control
 				control.FocusMode = Control.FocusModeEnum.All;
 			}
 		}
+	}
+
+	private void ConfigureAvatarEntryFocus()
+	{
+		if (!GodotObject.IsInstanceValid(_avatarEntry.Button))
+		{
+			return;
+		}
+
+		NodePath avatarEntryPath = GetPathTo(_avatarEntry.Button);
+		NodePath singlePlayerPath = GetPathTo(_singlePlayerButton);
+		_avatarEntry.Button.FocusNeighborTop = singlePlayerPath;
+		_avatarEntry.Button.FocusNeighborLeft = singlePlayerPath;
+		_avatarEntry.Button.FocusNeighborBottom = singlePlayerPath;
+		_avatarEntry.Button.FocusNeighborRight = singlePlayerPath;
+
+		_singlePlayerButton.FocusNeighborTop = avatarEntryPath;
+		_singlePlayerButton.FocusNeighborLeft = avatarEntryPath;
 	}
 
 	private static void GrabFocusIfAvailable(Control? control)

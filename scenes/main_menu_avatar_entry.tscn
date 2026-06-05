@@ -5,6 +5,18 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_button_focus"]
+bg_color = Color(0.0156863, 0.117647, 0.133333, 0.16)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.82, 1, 0.96, 0.72)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [node name="MainMenuAvatarEntry" type="Control"]
 custom_minimum_size = Vector2(148, 138)
 layout_mode = 3
@@ -80,4 +92,4 @@ flat = true
 theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_avatar_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_avatar_button_focus")

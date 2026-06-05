@@ -196,6 +196,7 @@ public partial class GameBoardScene : Control
 	private GameBoardDefeatFinisherOverlay? _defeatFinisherRoot;
 	private TextureRect? _defeatFinisherTexture;
 	private bool _showingDefeatResult;
+	private bool _mainPlayerHandSelectionInputEnabled;
 	private int _currentTurnPlayerIndex
 	{
 		get => _state.CurrentTurnPlayerIndex;

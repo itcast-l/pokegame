@@ -122,6 +122,17 @@ public partial class GameBoardScene
 			|| IsAdventureTutorialBombIntroActive();
 	}
 
+	private bool TryHandleAdventureTutorialContinueInput(InputEvent inputEvent)
+	{
+		if (!IsAdventureTutorialContinueCalloutActive() || !inputEvent.IsActionPressed(GameInputActions.GameConfirm))
+		{
+			return false;
+		}
+
+		PressAdventureTutorialContinue();
+		return true;
+	}
+
 	private bool IsAdventureTutorialCardStepActive()
 	{
 		return IsAdventureTutorialEnabled()
@@ -1289,6 +1300,7 @@ public partial class GameBoardScene
 
 	private void TryRejectAdventureTutorialCard(InputEvent inputEvent)
 	{
+		ClearMainPlayerHandSelectionInputOnMouseClick(inputEvent);
 		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
 		{
 			return;

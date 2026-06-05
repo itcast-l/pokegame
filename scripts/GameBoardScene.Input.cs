@@ -16,6 +16,16 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (TryHandleAdventureTutorialContinueInput(inputEvent))
+		{
+			return true;
+		}
+
+		if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+		{
+			DisableMainPlayerHandSelectionInput();
+		}
+
 		if (inputEvent.IsActionPressed(GameInputActions.GameCancel) && TryCancelMainPlayerPendingSelection())
 		{
 			return true;
@@ -23,23 +33,56 @@ public partial class GameBoardScene
 
 		if (inputEvent.IsActionPressed(GameInputActions.HandPrevious))
 		{
+			EnableMainPlayerHandSelectionInput();
 			MoveMainPlayerHandSelection(-1);
 			return true;
 		}
 
 		if (inputEvent.IsActionPressed(GameInputActions.HandNext))
 		{
+			EnableMainPlayerHandSelectionInput();
 			MoveMainPlayerHandSelection(1);
 			return true;
 		}
 
 		if (inputEvent.IsActionPressed(GameInputActions.GameConfirm))
 		{
+			EnableMainPlayerHandSelectionInput();
 			ConfirmSelectedMainPlayerHandEntry();
 			return true;
 		}
 
 		return false;
+	}
+
+	private void EnableMainPlayerHandSelectionInput()
+	{
+		if (_mainPlayerHandSelectionInputEnabled)
+		{
+			return;
+		}
+
+		_mainPlayerHandSelectionInputEnabled = true;
+	}
+
+	private void DisableMainPlayerHandSelectionInput()
+	{
+		if (!_mainPlayerHandSelectionInputEnabled && _selectedMainPlayerHandDisplayIndex < 0)
+		{
+			return;
+		}
+
+		_mainPlayerHandSelectionInputEnabled = false;
+		_selectedMainPlayerHandDisplayIndex = -1;
+		RenderPlayerHands();
+	}
+
+	private void ClearMainPlayerHandSelectionInputOnMouseClick(InputEvent inputEvent)
+	{
+		if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+		{
+			DisableMainPlayerHandSelectionInput();
+		}
 	}
 
 	private bool TryCancelMainPlayerPendingSelection()
@@ -109,6 +152,12 @@ public partial class GameBoardScene
 
 	private void RefreshMainPlayerHandSelection()
 	{
+		if (!_mainPlayerHandSelectionInputEnabled)
+		{
+			_selectedMainPlayerHandDisplayIndex = -1;
+			return;
+		}
+
 		if (IsMainPlayerHandDisplayIndexSelectable(_selectedMainPlayerHandDisplayIndex))
 		{
 			return;
@@ -158,7 +207,8 @@ public partial class GameBoardScene
 
 	private bool IsMainPlayerHandDisplayIndexSelected(int displayIndex)
 	{
-		return _selectedMainPlayerHandDisplayIndex == displayIndex
+		return _mainPlayerHandSelectionInputEnabled
+			&& _selectedMainPlayerHandDisplayIndex == displayIndex
 			&& IsMainPlayerHandDisplayIndexSelectable(displayIndex);
 	}
 
