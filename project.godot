@@ -40,6 +40,7 @@ MCPGameInspector="*res://addons/godot_mcp/mcp_game_inspector_service.gd"
 Pandora="*uid://b10fe27aocjvi"
 SoundManager="*uid://sgxo2a017ehn"
 MusicManager="*uid://b3612i7nyqsva"
+NetworkManager="*res://scripts/NetworkManager.cs"
 
 [display]
 

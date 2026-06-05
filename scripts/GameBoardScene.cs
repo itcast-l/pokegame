@@ -289,6 +289,13 @@ public partial class GameBoardScene : Control
 	}
 	private bool _itemMode = true;
 	private bool _soloMode;
+	private int _localPlayerIndex;
+	private string _networkSessionId = string.Empty;
+	private long _matchSeed;
+	private string _playerNamesCsv = string.Empty;
+	private string _playerAvatarIdsCsv = string.Empty;
+	private bool _networkWaitForInitialize;
+	private bool _networkBoardInitialized;
 	private bool _adventureMode;
 	private bool _adventureTutorialMode;
 	private string _adventureTutorialFlow = "basic_capture";
@@ -335,7 +342,7 @@ public partial class GameBoardScene : Control
 		set
 		{
 			_playerCount = Mathf.Clamp(value, MinPlayers, MaxPlayers);
-			if (IsInsideTree())
+			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				UpdatePlayerVisibility();
 				DealCardsToPlayers(playOpeningDealAnimation: true);
@@ -350,7 +357,7 @@ public partial class GameBoardScene : Control
 		set
 		{
 			_itemMode = value;
-			if (IsInsideTree())
+			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				LoadItemCardEnabledStates();
 				DealCardsToPlayers(playOpeningDealAnimation: true);
@@ -370,7 +377,7 @@ public partial class GameBoardScene : Control
 				_ => DefaultWinningScore,
 			};
 
-			if (IsInsideTree())
+			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				RefreshScoreTooltips();
 				CheckForWinner();
@@ -404,6 +411,48 @@ public partial class GameBoardScene : Control
 	{
 		get => _soloMode;
 		set => _soloMode = value;
+	}
+
+	[Export(PropertyHint.Range, "0,3,1")]
+	public int local_player_index
+	{
+		get => _localPlayerIndex;
+		set => _localPlayerIndex = Mathf.Clamp(value, 0, MaxPlayers - 1);
+	}
+
+	[Export]
+	public string network_session_id
+	{
+		get => _networkSessionId;
+		set => _networkSessionId = value?.Trim() ?? string.Empty;
+	}
+
+	[Export]
+	public long match_seed
+	{
+		get => _matchSeed;
+		set => _matchSeed = value;
+	}
+
+	[Export]
+	public string player_names_csv
+	{
+		get => _playerNamesCsv;
+		set => _playerNamesCsv = value ?? string.Empty;
+	}
+
+	[Export]
+	public string player_avatar_ids_csv
+	{
+		get => _playerAvatarIdsCsv;
+		set => _playerAvatarIdsCsv = value ?? string.Empty;
+	}
+
+	[Export]
+	public bool network_wait_for_initialize
+	{
+		get => _networkWaitForInitialize;
+		set => _networkWaitForInitialize = value;
 	}
 
 	[Export]
@@ -500,9 +549,72 @@ public partial class GameBoardScene : Control
 		CreateWinnerLabel();
 		CreateDefeatFinisherOverlay();
 		UpdatePlayerVisibility();
-		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: true);
+		if (_networkWaitForInitialize)
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.NotifyLocalBoardReady();
+		}
+		else
+		{
+			InitializeBoard(playOpeningIntroAnimation: true);
+		}
 		PlayBoardMusic();
 		_ = WarmupGameplayResourcesAsync(GetCurrentTurnContext());
+	}
+
+	public void ApplyNetworkBoardInitialize(Godot.Collections.Dictionary payload)
+	{
+		player_count = ReadNetworkInt(payload, "player_count", player_count);
+		item_mode = ReadNetworkBool(payload, "item_mode", item_mode);
+		winning_score = ReadNetworkInt(payload, "winning_score", winning_score);
+		network_session_id = ReadNetworkString(payload, "session_id", network_session_id);
+		match_seed = ReadNetworkLong(payload, "match_seed", match_seed);
+		player_names_csv = ReadNetworkString(payload, "player_names_csv", player_names_csv);
+		player_avatar_ids_csv = ReadNetworkString(payload, "player_avatar_ids_csv", player_avatar_ids_csv);
+		network_wait_for_initialize = false;
+		InitializeBoard(playOpeningIntroAnimation: true);
+	}
+
+	private void InitializeBoard(bool playOpeningIntroAnimation)
+	{
+		if (_networkBoardInitialized)
+		{
+			return;
+		}
+
+		_networkBoardInitialized = true;
+		ApplyMatchSeed();
+		UpdatePlayerVisibility();
+		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: playOpeningIntroAnimation);
+	}
+
+	private void ApplyMatchSeed()
+	{
+		if (_matchSeed == 0)
+		{
+			return;
+		}
+
+		_rng.Seed = unchecked((ulong)_matchSeed);
+	}
+
+	private static string ReadNetworkString(Godot.Collections.Dictionary payload, string key, string fallback)
+	{
+		return payload.TryGetValue(key, out Variant value) ? value.AsString() : fallback;
+	}
+
+	private static int ReadNetworkInt(Godot.Collections.Dictionary payload, string key, int fallback)
+	{
+		return payload.TryGetValue(key, out Variant value) ? (int)value.AsInt64() : fallback;
+	}
+
+	private static long ReadNetworkLong(Godot.Collections.Dictionary payload, string key, long fallback)
+	{
+		return payload.TryGetValue(key, out Variant value) ? value.AsInt64() : fallback;
+	}
+
+	private static bool ReadNetworkBool(Godot.Collections.Dictionary payload, string key, bool fallback)
+	{
+		return payload.TryGetValue(key, out Variant value) ? value.AsBool() : fallback;
 	}
 
 	public override void _ExitTree()

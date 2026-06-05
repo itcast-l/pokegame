@@ -24,6 +24,7 @@ public partial class MainMenuScene : Control
 	private const string SubtitleLabelPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/Subtitle";
 	private const string AvatarEntryPath = "AvatarEntryLayer/MainMenuAvatarEntry";
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
+	private const string MultiplayerLobbyScenePath = "res://scenes/multiplayer_lobby_scene.tscn";
 	private const string AdventureAvatarMenuScenePath = "res://scenes/adventure_avatar_menu_scene.tscn";
 	private const string AvatarEditScenePath = "res://scenes/character_avatar_edit_scene.tscn";
 	private const string PlayerCountDialogScenePath = "res://scenes/main_menu_player_count_dialog.tscn";
@@ -172,6 +173,7 @@ public partial class MainMenuScene : Control
 		_adventureButton.Pressed += StartAdventureMode;
 
 		_multiplayerButton = GetNode<Button>(MultiplayerButtonPath);
+		_multiplayerButton.Pressed += StartMultiplayerLobby;
 
 		_settingsButton = GetNode<Button>(SettingsButtonPath);
 		_settingsButton.Pressed += ShowSettingsDialog;

@@ -41,6 +41,11 @@ internal static class Program
 		Run("turn progress waits for anchor turn before refreshing question card", TurnProgressWaitsForAnchorTurnBeforeRefreshingQuestionCard);
 		Run("turn progress refreshes question card after configured cycle", TurnProgressRefreshesQuestionCardAfterConfiguredCycle);
 		Run("turn progress stays blocked when table special cards are present", TurnProgressStaysBlockedWhenTableSpecialCardsArePresent);
+		Run("steam metadata rejects dirty values", SteamMetadataRejectsDirtyValues);
+		Run("steam metadata parses valid values defensively", SteamMetadataParsesValidValuesDefensively);
+		Run("multiplayer lobby start requires filled ready seats", MultiplayerLobbyStartRequiresFilledReadySeats);
+		Run("scene load handshake completes and times out", SceneLoadHandshakeCompletesAndTimesOut);
+		Run("lan discovery parses valid messages and drops dirty data", LanDiscoveryParsesValidMessagesAndDropsDirtyData);
 
 		Console.WriteLine($"{_passed} passed, {_failed} failed");
 		return _failed == 0 ? 0 : 1;
@@ -683,10 +688,126 @@ internal static class Program
 		Equal(currentState.QuestionCardRefreshAnchorPlayerIndex, result.State.QuestionCardRefreshAnchorPlayerIndex);
 	}
 
+	private static void SteamMetadataRejectsDirtyValues()
+	{
+		var dirty = new Dictionary<string, string>
+		{
+			[SteamLobbyMetadata.ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
+			[SteamLobbyMetadata.SessionIdKey] = "session",
+			[SteamLobbyMetadata.HostNameKey] = "host",
+			[SteamLobbyMetadata.PlayerCountKey] = "four",
+			[SteamLobbyMetadata.ItemModeKey] = "sometimes",
+			[SteamLobbyMetadata.WinningScoreKey] = "75",
+			[SteamLobbyMetadata.StatusKey] = "Lobby",
+		};
+
+		False(SteamLobbyMetadata.TryReadRoom(dirty, 10, out _));
+	}
+
+	private static void SteamMetadataParsesValidValuesDefensively()
+	{
+		var metadata = new Dictionary<string, string>
+		{
+			[SteamLobbyMetadata.ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
+			[SteamLobbyMetadata.SessionIdKey] = "session",
+			[SteamLobbyMetadata.HostNameKey] = "host",
+			[SteamLobbyMetadata.PlayerCountKey] = "4",
+			[SteamLobbyMetadata.ItemModeKey] = "1",
+			[SteamLobbyMetadata.WinningScoreKey] = "200",
+			[SteamLobbyMetadata.StatusKey] = "Lobby",
+		};
+
+		True(SteamLobbyMetadata.TryReadRoom(metadata, 10, out NetworkRoomInfo room));
+		Equal(NetworkTransport.Steam, room.Transport);
+		Equal(4, room.PlayerCount);
+		True(room.ItemMode);
+		Equal(200, room.WinningScore);
+		Equal(10UL, room.SteamLobbyId);
+	}
+
+	private static void MultiplayerLobbyStartRequiresFilledReadySeats()
+	{
+		var readyPlayers = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 2, seatIndex: 1, isHost: false, isReady: true),
+		};
+		var missingReady = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 2, seatIndex: 1, isHost: false, isReady: false),
+		};
+		var missingSeat = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 2, seatIndex: 2, isHost: false, isReady: true),
+		};
+
+		True(MultiplayerLobbyRules.CanStart(readyPlayers, 2));
+		False(MultiplayerLobbyRules.CanStart(missingReady, 2));
+		False(MultiplayerLobbyRules.CanStart(missingSeat, 2));
+		Equal(1, MultiplayerLobbyRules.GetNextSeatIndex(new[] { readyPlayers[0] }, 2));
+		Equal(-1, MultiplayerLobbyRules.GetNextSeatIndex(readyPlayers, 2));
+	}
+
+	private static void SceneLoadHandshakeCompletesAndTimesOut()
+	{
+		var tracker = new SceneLoadHandshakeTracker("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
+
+		True(tracker.MarkLoaded("match", 0));
+		False(tracker.IsComplete);
+		False(tracker.MarkLoaded("wrong", 1));
+		True(tracker.MarkLoaded("match", 1));
+		True(tracker.IsComplete);
+		False(tracker.HasTimedOut(50));
+
+		var timedOut = new SceneLoadHandshakeTracker("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
+		True(timedOut.MarkLoaded("match", 0));
+		True(timedOut.HasTimedOut(40));
+	}
+
+	private static void LanDiscoveryParsesValidMessagesAndDropsDirtyData()
+	{
+		var config = new NetworkSessionConfig(
+			"session",
+			"match",
+			123,
+			NetworkTransport.Lan,
+			3,
+			ItemMode: false,
+			WinningScore: 100,
+			LobbyVisibility.FriendsOnly);
+		string payload = LanDiscoveryMessage.Build(config, "host", "Lobby");
+
+		True(LanDiscoveryMessage.TryParse(payload, "192.168.1.2", out NetworkRoomInfo room));
+		Equal(NetworkTransport.Lan, room.Transport);
+		Equal("192.168.1.2", room.Address);
+		Equal(3, room.PlayerCount);
+		False(room.ItemMode);
+		Equal(100, room.WinningScore);
+
+		False(LanDiscoveryMessage.TryParse("{bad json", "192.168.1.2", out _));
+		False(LanDiscoveryMessage.TryParse("{\"player_count\":\"nope\"}", "192.168.1.2", out _));
+	}
+
 	private static CaptureScoringRules.Context DefaultScoringContext => new(
 		SuppressSlimeCoatedScore: false,
 		ApplyScoreReductionPerCard: false,
 		ScoreReductionPerCard: 0);
+
+	private static NetworkPlayerPublicState Player(int peerId, int seatIndex, bool isHost, bool isReady)
+	{
+		return new NetworkPlayerPublicState(
+			peerId,
+			$"stable-{peerId}",
+			$"Player{peerId}",
+			"cat",
+			seatIndex,
+			isHost,
+			IsLocal: peerId == 1,
+			isReady,
+			IsConnected: true);
+	}
 
 	private static string FindRepositoryRoot()
 	{

@@ -69,6 +69,11 @@ public partial class GameBoardScene
 
 	private CharacterAvatarDefinition GetAvatarDefinitionForPlayer(int playerIndex, CharacterAvatarDefinition playerAvatarDefinition)
 	{
+		if (!adventure_mode && TryGetNetworkAvatarId(playerIndex, out string avatarId))
+		{
+			return CharacterAvatarCatalog.GetById(avatarId);
+		}
+
 		if (!adventure_mode)
 		{
 			return playerAvatarDefinition;

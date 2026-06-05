@@ -157,6 +157,11 @@ public partial class GameBoardScene
 
 	private string GetPlayerDisplayName(int playerIndex)
 	{
+		if (!adventure_mode && TryGetNetworkPlayerName(playerIndex, out string networkName))
+		{
+			return networkName;
+		}
+
 		if (playerIndex == MainPlayerIndex)
 		{
 			return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
