@@ -21,6 +21,7 @@ public partial class AdventureAvatarMenuScene
 		_previewAbilityDescriptionScroll = GetNode<ScrollContainer>("%AbilityDescriptionScroll");
 		_previewAbilityDescriptionLabel = GetNode<Label>("%AbilityDescriptionLabel");
 		_previewAvatar = GetNode<CharacterAvatar>("%PreviewAvatar");
+		_previewAvatar.LoadActionFrames = true;
 
 		_backButton.Pressed += ReturnToMainMenu;
 		_startButton.Pressed += StartAdventure;

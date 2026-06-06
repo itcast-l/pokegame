@@ -51,13 +51,13 @@ public partial class MainMenuScene : Control
 		if (_avatarEditDialogLayer == null || !GodotObject.IsInstanceValid(_avatarEditDialogLayer))
 		{
 			_avatarEditDialogLayer = null;
-			CallDeferred(nameof(FocusAvatarEntry));
+			CallDeferred(nameof(FocusInitialMainMenuButton));
 			return;
 		}
 
 		_avatarEditDialogLayer.QueueFree();
 		_avatarEditDialogLayer = null;
-		CallDeferred(nameof(FocusAvatarEntry));
+		CallDeferred(nameof(FocusInitialMainMenuButton));
 	}
 
 	private void OnProfileSaved(string avatarId, string playerName)
@@ -89,8 +89,4 @@ public partial class MainMenuScene : Control
 		_avatarEntry.SetPlayerName(_playerName);
 	}
 
-	private void FocusAvatarEntry()
-	{
-		GrabFocusIfAvailable(_avatarEntry.Button);
-	}
 }

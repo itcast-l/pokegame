@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>软糖触手飘浮待机示例</title>
+<style>
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #061419; color: #dff; font-family: system-ui, sans-serif; }
+main { display: grid; gap: 16px; justify-items: center; }
+.preview { width: 384px; height: 384px; image-rendering: auto; background: radial-gradient(circle at 50% 45%, rgba(80, 210, 230, .16), transparent 54%); border: 1px solid rgba(140,255,245,.28); border-radius: 8px; display: grid; place-items: center; }
+.preview img { width: 320px; height: 320px; }
+.row { display: flex; gap: 18px; align-items: center; opacity: .82; }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #bde; }
+</style>
+</head>
+<body>
+<main>
+  <div class="preview"><img id="sprite" src="frames/idle_tentacle_float-01.png" alt="软糖触手飘浮待机示例"></div>
+  <div class="row"><span>12 帧循环</span><span class="code">0.12s / frame</span><span>仅示例，未接入游戏</span></div>
+</main>
+<script>
+const frames = Array.from({ length: 12 }, (_, i) => `frames/idle_tentacle_float-${String(i + 1).padStart(2, '0')}.png`);
+const img = document.getElementById('sprite');
+let i = 0;
+setInterval(() => { i = (i + 1) % frames.length; img.src = frames[i]; }, 120);
+</script>
+</body>
+</html>
