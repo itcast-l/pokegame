@@ -47,6 +47,7 @@ public partial class NetworkManager : Node
 	private MultiplayerPeer? _steamPeer;
 	private NetworkSessionConfig _config = new(
 		string.Empty,
+		RoomNameRules.DefaultRoomName,
 		string.Empty,
 		0,
 		NetworkTransport.Lan,
@@ -93,12 +94,12 @@ public partial class NetworkManager : Node
 		PollSeatRetention(now);
 	}
 
-	public void HostLan(int playerCount, bool itemMode, int winningScore)
+	public void HostLan(int playerCount, bool itemMode, int winningScore, string roomName)
 	{
 		RefreshLocalIdentity();
 		LeaveSession();
 		SetState(NetworkSessionState.Hosting);
-		_config = CreateConfig(NetworkTransport.Lan, playerCount, itemMode, winningScore);
+		_config = CreateConfig(NetworkTransport.Lan, playerCount, itemMode, winningScore, roomName);
 
 		_enetPeer = new ENetMultiplayerPeer();
 		Error error = _enetPeer.CreateServer(NetworkSessionDefaults.LanGamePort, NetworkSessionDefaults.MaxPlayers - 1);
@@ -147,7 +148,12 @@ public partial class NetworkManager : Node
 		RefreshLocalIdentity();
 		LeaveSession();
 		SetState(NetworkSessionState.Joining);
-		_config = CreateConfig(NetworkTransport.Lan, NetworkSessionDefaults.DefaultPlayerCount, NetworkSessionDefaults.DefaultItemMode, NetworkSessionDefaults.DefaultWinningScore);
+		_config = CreateConfig(
+			NetworkTransport.Lan,
+			NetworkSessionDefaults.DefaultPlayerCount,
+			NetworkSessionDefaults.DefaultItemMode,
+			NetworkSessionDefaults.DefaultWinningScore,
+			RoomNameRules.DefaultRoomName);
 		_enetPeer = new ENetMultiplayerPeer();
 		Error error = _enetPeer.CreateClient(address.Trim(), NetworkSessionDefaults.LanGamePort);
 		if (error != Error.Ok)
@@ -159,7 +165,7 @@ public partial class NetworkManager : Node
 		Multiplayer.MultiplayerPeer = _enetPeer;
 	}
 
-	public void HostSteam(int playerCount, bool itemMode, int winningScore)
+	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName)
 	{
 		RefreshLocalIdentity();
 		LeaveSession();
@@ -170,7 +176,7 @@ public partial class NetworkManager : Node
 		}
 
 		SetState(NetworkSessionState.Hosting);
-		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore);
+		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName);
 		_players.Clear();
 		_players.Add(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
 		_pendingSteamHostLobby = true;
@@ -286,7 +292,12 @@ public partial class NetworkManager : Node
 		_players.Clear();
 		_rooms.Clear();
 		_roomLastSeenAt.Clear();
-		_config = CreateConfig(NetworkTransport.Lan, NetworkSessionDefaults.DefaultPlayerCount, NetworkSessionDefaults.DefaultItemMode, NetworkSessionDefaults.DefaultWinningScore);
+		_config = CreateConfig(
+			NetworkTransport.Lan,
+			NetworkSessionDefaults.DefaultPlayerCount,
+			NetworkSessionDefaults.DefaultItemMode,
+			NetworkSessionDefaults.DefaultWinningScore,
+			RoomNameRules.DefaultRoomName);
 		SetState(NetworkSessionState.Idle);
 		EmitPlayerListUpdated();
 		EmitRoomListUpdated();
@@ -380,10 +391,11 @@ public partial class NetworkManager : Node
 		}
 	}
 
-	private NetworkSessionConfig CreateConfig(NetworkTransport transport, int playerCount, bool itemMode, int winningScore)
+	private NetworkSessionConfig CreateConfig(NetworkTransport transport, int playerCount, bool itemMode, int winningScore, string roomName)
 	{
 		return new NetworkSessionConfig(
 			Guid.NewGuid().ToString("N"),
+			RoomNameRules.Normalize(roomName),
 			string.Empty,
 			0,
 			transport,
@@ -1053,6 +1065,7 @@ public partial class NetworkManager : Node
 		_config = _config with
 		{
 			SessionId = room.SessionId,
+			RoomName = room.RoomName,
 			Transport = NetworkTransport.Steam,
 			PlayerCount = room.PlayerCount,
 			ItemMode = room.ItemMode,
@@ -1074,6 +1087,7 @@ public partial class NetworkManager : Node
 		{
 			SteamLobbyMetadata.ProtocolKey,
 			SteamLobbyMetadata.SessionIdKey,
+			SteamLobbyMetadata.RoomNameKey,
 			SteamLobbyMetadata.HostNameKey,
 			SteamLobbyMetadata.PlayerCountKey,
 			SteamLobbyMetadata.ItemModeKey,
@@ -1151,6 +1165,7 @@ public partial class NetworkManager : Node
 		return new Godot.Collections.Dictionary
 		{
 			["session_id"] = config.SessionId,
+			["room_name"] = config.RoomName,
 			["match_id"] = config.MatchId,
 			["match_seed"] = config.MatchSeed,
 			["transport"] = config.Transport.ToString(),
@@ -1182,6 +1197,7 @@ public partial class NetworkManager : Node
 		return new Godot.Collections.Dictionary
 		{
 			["session_id"] = room.SessionId,
+			["room_name"] = room.RoomName,
 			["host_name"] = room.HostName,
 			["address"] = room.Address,
 			["transport"] = room.Transport.ToString(),
@@ -1197,6 +1213,7 @@ public partial class NetworkManager : Node
 	{
 		return new NetworkSessionConfig(
 			ReadString(dictionary, "session_id"),
+			RoomNameRules.Normalize(ReadString(dictionary, "room_name")),
 			ReadString(dictionary, "match_id"),
 			ReadLong(dictionary, "match_seed"),
 			ReadEnum(dictionary, "transport", NetworkTransport.Lan),

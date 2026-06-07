@@ -10,6 +10,7 @@ public partial class MultiplayerLobbyScene : Control
 	private VBoxContainer _playerList = default!;
 	private Label _statusLabel = default!;
 	private Label _toastLabel = default!;
+	private LineEdit _roomNameInput = default!;
 	private OptionButton _playerCountOption = default!;
 	private OptionButton _itemModeOption = default!;
 	private OptionButton _winningScoreOption = default!;
@@ -148,9 +149,10 @@ public partial class MultiplayerLobbyScene : Control
 		body.AddThemeConstantOverride("separation", 16);
 		multiRoot.AddChild(body);
 
-		VBoxContainer modeRail = CreatePanelColumn("ModeRail", 240);
-		body.AddChild(modeRail);
+		VBoxContainer modeRail = AddPanelColumn(body, "ModeRail", 240);
 		modeRail.AddChild(CreateSectionTitle("房间设置"));
+		_roomNameInput = CreateRoomNameInput();
+		modeRail.AddChild(_roomNameInput);
 		_playerCountOption = CreatePlayerCountOption();
 		_itemModeOption = CreateItemModeOption();
 		_winningScoreOption = CreateWinningScoreOption();
@@ -170,20 +172,18 @@ public partial class MultiplayerLobbyScene : Control
 		_steamRefreshButton.Pressed += () => _network.RefreshSteamLobbies();
 		modeRail.AddChild(_steamRefreshButton);
 
-		VBoxContainer roomBrowser = CreatePanelColumn("RoomBrowser", 320);
-		body.AddChild(roomBrowser);
+		VBoxContainer roomBrowser = AddPanelColumn(body, "RoomBrowser", 320);
 		roomBrowser.AddChild(CreateSectionTitle("房间列表"));
-		ScrollContainer roomScroll = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
-		_roomList = new VBoxContainer();
+		ScrollContainer roomScroll = CreateListScroll();
+		_roomList = CreateListContainer();
 		_roomList.AddThemeConstantOverride("separation", 8);
 		roomScroll.AddChild(_roomList);
 		roomBrowser.AddChild(roomScroll);
 
-		VBoxContainer lobbyPanel = CreatePanelColumn("LobbyPanel", 360);
-		body.AddChild(lobbyPanel);
+		VBoxContainer lobbyPanel = AddPanelColumn(body, "LobbyPanel", 360);
 		lobbyPanel.AddChild(CreateSectionTitle("玩家"));
-		ScrollContainer playerScroll = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
-		_playerList = new VBoxContainer();
+		ScrollContainer playerScroll = CreateListScroll();
+		_playerList = CreateListContainer();
 		_playerList.AddThemeConstantOverride("separation", 8);
 		playerScroll.AddChild(_playerList);
 		lobbyPanel.AddChild(playerScroll);
@@ -197,8 +197,7 @@ public partial class MultiplayerLobbyScene : Control
 		leaveSessionButton.Pressed += () => _network.LeaveSession();
 		lobbyPanel.AddChild(leaveSessionButton);
 
-		VBoxContainer friendsPanel = CreatePanelColumn("FriendsPanel", 230);
-		body.AddChild(friendsPanel);
+		VBoxContainer friendsPanel = AddPanelColumn(body, "FriendsPanel", 230);
 		friendsPanel.AddChild(CreateSectionTitle("Steam"));
 		Label steamStatus = new()
 		{
@@ -240,7 +239,7 @@ public partial class MultiplayerLobbyScene : Control
 		_network.ErrorRaised += ShowToast;
 	}
 
-	private VBoxContainer CreatePanelColumn(string nodeName, float minWidth)
+	private VBoxContainer AddPanelColumn(Container parent, string nodeName, float minWidth)
 	{
 		PanelContainer panel = new()
 		{
@@ -249,6 +248,7 @@ public partial class MultiplayerLobbyScene : Control
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 		};
 		panel.AddThemeStyleboxOverride("panel", CreatePanelStyle());
+		parent.AddChild(panel);
 
 		MarginContainer margin = new();
 		margin.AddThemeConstantOverride("margin_left", 16);
@@ -346,6 +346,38 @@ public partial class MultiplayerLobbyScene : Control
 		};
 	}
 
+	private static LineEdit CreateRoomNameInput()
+	{
+		LineEdit input = new()
+		{
+			Text = RoomNameRules.DefaultRoomName,
+			PlaceholderText = "房间名称",
+			MaxLength = RoomNameRules.MaxLength,
+			CustomMinimumSize = new Vector2(0, 42),
+			FocusMode = FocusModeEnum.All,
+		};
+		input.AddThemeFontSizeOverride("font_size", 16);
+		return input;
+	}
+
+	private static ScrollContainer CreateListScroll()
+	{
+		return new ScrollContainer
+		{
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+		};
+	}
+
+	private static VBoxContainer CreateListContainer()
+	{
+		return new VBoxContainer
+		{
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+		};
+	}
+
 	private int SelectedPlayerCount()
 	{
 		return _playerCountOption.GetSelectedId();
@@ -361,16 +393,39 @@ public partial class MultiplayerLobbyScene : Control
 		return _winningScoreOption.GetSelectedId();
 	}
 
+	private bool TryGetSelectedRoomName(out string roomName)
+	{
+		roomName = _roomNameInput.Text.Trim();
+		if (RoomNameRules.IsValid(roomName))
+		{
+			return true;
+		}
+
+		ShowToast($"房间名仅支持中英文、数字、空格、-、_，最多 {RoomNameRules.MaxLength} 个字");
+		_roomNameInput.GrabFocus();
+		return false;
+	}
+
 	private void HostLan()
 	{
+		if (!TryGetSelectedRoomName(out string roomName))
+		{
+			return;
+		}
+
 		_localReady = true;
-		_network.HostLan(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore());
+		_network.HostLan(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName);
 	}
 
 	private void HostSteam()
 	{
+		if (!TryGetSelectedRoomName(out string roomName))
+		{
+			return;
+		}
+
 		_localReady = true;
-		_network.HostSteam(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore());
+		_network.HostSteam(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName);
 	}
 
 	private void ToggleReady()
@@ -390,6 +445,7 @@ public partial class MultiplayerLobbyScene : Control
 		_lanSearchButton.Disabled = state is NetworkSessionState.Hosting or NetworkSessionState.Joining or NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene or NetworkSessionState.InGame;
 		_steamHostButton.Disabled = !steamEnabled || !canConfigureSession;
 		_steamRefreshButton.Disabled = !steamEnabled || state is NetworkSessionState.Hosting or NetworkSessionState.Joining or NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene or NetworkSessionState.InGame;
+		_roomNameInput.Editable = canConfigureSession;
 		_playerCountOption.Disabled = !canConfigureSession;
 		_itemModeOption.Disabled = !canConfigureSession;
 		_winningScoreOption.Disabled = !canConfigureSession;
@@ -409,9 +465,10 @@ public partial class MultiplayerLobbyScene : Control
 		foreach (Variant variant in rooms)
 		{
 			Godot.Collections.Dictionary room = variant.AsGodotDictionary();
+			string roomName = ReadDictionaryString(room, "room_name", ReadDictionaryString(room, "host_name", "房间"));
 			Button row = CreateButton(
-				$"{room["host_name"].AsString()}  {room["transport"].AsString()}  {room["player_count"].AsInt32()}人");
-			row.TooltipText = $"{room["address"].AsString()} / {room["status"].AsString()}";
+				$"{roomName}  {room["transport"].AsString()}  {room["player_count"].AsInt32()}人");
+			row.TooltipText = $"{ReadDictionaryString(room, "host_name", "Host")} / {room["address"].AsString()} / {room["status"].AsString()}";
 			row.Pressed += () =>
 			{
 				string transport = room["transport"].AsString();
@@ -464,11 +521,19 @@ public partial class MultiplayerLobbyScene : Control
 		Label label = new()
 		{
 			Text = text,
-			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			AutowrapMode = TextServer.AutowrapMode.Off,
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 		};
 		label.AddThemeColorOverride("font_color", new Color(0.62f, 0.86f, 0.86f));
 		label.AddThemeFontSizeOverride("font_size", 15);
 		return label;
+	}
+
+	private static string ReadDictionaryString(Godot.Collections.Dictionary dictionary, string key, string fallback)
+	{
+		return dictionary.TryGetValue(key, out Variant value) && !string.IsNullOrWhiteSpace(value.AsString())
+			? value.AsString()
+			: fallback;
 	}
 
 	private static void ClearChildren(Node node)

@@ -41,6 +41,7 @@ internal static class Program
 		Run("turn progress waits for anchor turn before refreshing question card", TurnProgressWaitsForAnchorTurnBeforeRefreshingQuestionCard);
 		Run("turn progress refreshes question card after configured cycle", TurnProgressRefreshesQuestionCardAfterConfiguredCycle);
 		Run("turn progress stays blocked when table special cards are present", TurnProgressStaysBlockedWhenTableSpecialCardsArePresent);
+		Run("room name rules restrict special symbols", RoomNameRulesRestrictSpecialSymbols);
 		Run("steam metadata rejects dirty values", SteamMetadataRejectsDirtyValues);
 		Run("steam metadata parses valid values defensively", SteamMetadataParsesValidValuesDefensively);
 		Run("multiplayer lobby start requires filled ready seats", MultiplayerLobbyStartRequiresFilledReadySeats);
@@ -694,6 +695,7 @@ internal static class Program
 		{
 			[SteamLobbyMetadata.ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
 			[SteamLobbyMetadata.SessionIdKey] = "session",
+			[SteamLobbyMetadata.RoomNameKey] = "bad@room",
 			[SteamLobbyMetadata.HostNameKey] = "host",
 			[SteamLobbyMetadata.PlayerCountKey] = "four",
 			[SteamLobbyMetadata.ItemModeKey] = "sometimes",
@@ -702,6 +704,32 @@ internal static class Program
 		};
 
 		False(SteamLobbyMetadata.TryReadRoom(dirty, 10, out _));
+
+		var dirtyRoomName = new Dictionary<string, string>
+		{
+			[SteamLobbyMetadata.ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
+			[SteamLobbyMetadata.SessionIdKey] = "session",
+			[SteamLobbyMetadata.RoomNameKey] = "bad@room",
+			[SteamLobbyMetadata.HostNameKey] = "host",
+			[SteamLobbyMetadata.PlayerCountKey] = "4",
+			[SteamLobbyMetadata.ItemModeKey] = "true",
+			[SteamLobbyMetadata.WinningScoreKey] = "100",
+			[SteamLobbyMetadata.StatusKey] = "Lobby",
+		};
+
+		False(SteamLobbyMetadata.TryReadRoom(dirtyRoomName, 10, out _));
+	}
+
+	private static void RoomNameRulesRestrictSpecialSymbols()
+	{
+		True(RoomNameRules.IsValid("我的房间 01"));
+		True(RoomNameRules.IsValid("Room-01_A"));
+		False(RoomNameRules.IsValid(""));
+		False(RoomNameRules.IsValid("bad@room"));
+		False(RoomNameRules.IsValid("bad/room"));
+		False(RoomNameRules.IsValid("bad.room"));
+		False(RoomNameRules.IsValid(new string('A', RoomNameRules.MaxLength + 1)));
+		Equal(RoomNameRules.DefaultRoomName, RoomNameRules.Normalize("bad@room"));
 	}
 
 	private static void SteamMetadataParsesValidValuesDefensively()
@@ -710,6 +738,7 @@ internal static class Program
 		{
 			[SteamLobbyMetadata.ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
 			[SteamLobbyMetadata.SessionIdKey] = "session",
+			[SteamLobbyMetadata.RoomNameKey] = "房间 01",
 			[SteamLobbyMetadata.HostNameKey] = "host",
 			[SteamLobbyMetadata.PlayerCountKey] = "4",
 			[SteamLobbyMetadata.ItemModeKey] = "1",
@@ -719,6 +748,7 @@ internal static class Program
 
 		True(SteamLobbyMetadata.TryReadRoom(metadata, 10, out NetworkRoomInfo room));
 		Equal(NetworkTransport.Steam, room.Transport);
+		Equal("房间 01", room.RoomName);
 		Equal(4, room.PlayerCount);
 		True(room.ItemMode);
 		Equal(200, room.WinningScore);
@@ -770,6 +800,7 @@ internal static class Program
 	{
 		var config = new NetworkSessionConfig(
 			"session",
+			"LAN 房间_1",
 			"match",
 			123,
 			NetworkTransport.Lan,
@@ -781,6 +812,7 @@ internal static class Program
 
 		True(LanDiscoveryMessage.TryParse(payload, "192.168.1.2", out NetworkRoomInfo room));
 		Equal(NetworkTransport.Lan, room.Transport);
+		Equal("LAN 房间_1", room.RoomName);
 		Equal("192.168.1.2", room.Address);
 		Equal(3, room.PlayerCount);
 		False(room.ItemMode);

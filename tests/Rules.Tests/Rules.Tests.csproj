@@ -22,6 +22,7 @@
     <Compile Include="../../scripts/ScoreService.cs" Link="Rules/ScoreService.cs" />
     <Compile Include="../../scripts/TurnStateMachine.cs" Link="Rules/TurnStateMachine.cs" />
     <Compile Include="../../scripts/NetworkSessionModels.cs" Link="Rules/NetworkSessionModels.cs" />
+    <Compile Include="../../scripts/RoomNameRules.cs" Link="Rules/RoomNameRules.cs" />
     <Compile Include="../../scripts/SteamLobbyMetadata.cs" Link="Rules/SteamLobbyMetadata.cs" />
     <Compile Include="../../scripts/LanDiscoveryMessage.cs" Link="Rules/LanDiscoveryMessage.cs" />
     <Compile Include="../../scripts/MultiplayerLobbyRules.cs" Link="Rules/MultiplayerLobbyRules.cs" />

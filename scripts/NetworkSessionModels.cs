@@ -29,6 +29,7 @@ public enum LobbyVisibility
 
 public readonly record struct NetworkSessionConfig(
 	string SessionId,
+	string RoomName,
 	string MatchId,
 	long MatchSeed,
 	NetworkTransport Transport,
@@ -50,6 +51,7 @@ public readonly record struct NetworkPlayerPublicState(
 
 public readonly record struct NetworkRoomInfo(
 	string SessionId,
+	string RoomName,
 	string HostName,
 	string Address,
 	NetworkTransport Transport,

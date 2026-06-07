@@ -10,6 +10,7 @@ public static class LanDiscoveryMessage
 		{
 			[SteamLobbyMetadata.ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
 			[SteamLobbyMetadata.SessionIdKey] = config.SessionId,
+			[SteamLobbyMetadata.RoomNameKey] = config.RoomName,
 			[SteamLobbyMetadata.HostNameKey] = hostName,
 			[SteamLobbyMetadata.PlayerCountKey] = config.PlayerCount.ToString(),
 			[SteamLobbyMetadata.ItemModeKey] = config.ItemMode ? "true" : "false",

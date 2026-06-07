@@ -5,6 +5,7 @@ public static class SteamLobbyMetadata
 {
 	public const string ProtocolKey = "deckland_protocol";
 	public const string SessionIdKey = "session_id";
+	public const string RoomNameKey = "room_name";
 	public const string HostNameKey = "host_name";
 	public const string PlayerCountKey = "player_count";
 	public const string ItemModeKey = "item_mode";
@@ -17,6 +18,7 @@ public static class SteamLobbyMetadata
 		{
 			[ProtocolKey] = NetworkSessionDefaults.ProtocolVersion.ToString(),
 			[SessionIdKey] = config.SessionId,
+			[RoomNameKey] = config.RoomName,
 			[HostNameKey] = hostName,
 			[PlayerCountKey] = config.PlayerCount.ToString(),
 			[ItemModeKey] = config.ItemMode ? "true" : "false",
@@ -46,12 +48,21 @@ public static class SteamLobbyMetadata
 		string hostName = TryReadString(metadata, HostNameKey, out string rawHostName)
 			? rawHostName
 			: "Steam Host";
+		string roomName = TryReadString(metadata, RoomNameKey, out string rawRoomName)
+			? rawRoomName
+			: hostName;
+		if (!RoomNameRules.IsValid(roomName))
+		{
+			return false;
+		}
+
 		string status = TryReadString(metadata, StatusKey, out string rawStatus)
 			? rawStatus
 			: "Lobby";
 
 		room = new NetworkRoomInfo(
 			sessionId,
+			RoomNameRules.Normalize(roomName),
 			hostName,
 			string.Empty,
 			NetworkTransport.Steam,
