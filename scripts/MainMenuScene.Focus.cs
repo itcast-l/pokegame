@@ -39,6 +39,11 @@ public partial class MainMenuScene : Control
 		GrabFocusIfAvailable(_masterVolumeSlider);
 	}
 
+	private void FocusControlsDialogDefault()
+	{
+		_controlsDialog?.FocusDefaultButton();
+	}
+
 	private void FocusExitDialogDefault()
 	{
 		GrabFocusIfAvailable(_exitDialog.CancelButton);
@@ -48,6 +53,7 @@ public partial class MainMenuScene : Control
 	{
 		return IsVisible(_playerCountDialogRoot)
 			|| IsVisible(_settingsDialogRoot)
+			|| IsVisible(_controlsDialogRoot)
 			|| IsVisible(_exitDialogRoot)
 			|| IsVisible(_avatarUnlockPromptRoot)
 			|| IsVisible(_adventureTransitionRoot);

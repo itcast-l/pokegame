@@ -28,6 +28,7 @@ public partial class MainMenuScene
 
 	private void HideSettingsDialog()
 	{
+		HideControlsDialog();
 		_settingsDialogTween?.Kill();
 		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = true;

@@ -14,6 +14,7 @@ public static class GameSaveStore
 	public const string OceanMotionKey = "settings.video.ocean_motion";
 	public const string MotionScaleKey = "settings.video.motion_scale";
 	public const string LanguageKey = "settings.general.language";
+	public const string InputBindingsKey = "settings.input.bindings";
 	public const string SelectedAvatarKey = "settings.general.avatar";
 	public const string PlayerNameKey = "settings.general.player_name";
 	public const string HighestCompletedStageKey = "adventure.highest_completed_stage";
@@ -338,6 +339,14 @@ public static class GameSaveStore
 	public static string GetString(string key, string defaultValue)
 	{
 		return GetValue(key, defaultValue).AsString();
+	}
+
+	public static Godot.Collections.Dictionary GetDictionary(string key)
+	{
+		Variant value = GetValue(key, new Godot.Collections.Dictionary());
+		return value.VariantType == Variant.Type.Dictionary
+			? value.AsGodotDictionary()
+			: new Godot.Collections.Dictionary();
 	}
 
 	public static bool HasValue(string key)

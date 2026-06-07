@@ -5,6 +5,8 @@ public partial class MainMenuScene
 	private void LoadSettings()
 	{
 		GameSaveStore.EnsureInitialized();
+		GameInputActions.EnsureRegistered();
+		GameInputActions.LoadBindings(GameSaveStore.GetDictionary(GameSaveStore.InputBindingsKey));
 		_masterVolume = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MasterVolumeKey, DefaultMasterVolume), 0.0f, 1.0f);
 		_musicVolume = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MusicVolumeKey, DefaultMusicVolume), 0.0f, 1.0f);
 		bool legacyMuteAudio = GameSaveStore.GetBool(GameSaveStore.MuteAudioKey, false);
@@ -35,10 +37,20 @@ public partial class MainMenuScene
 			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
 			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
 			new GameSaveStore.SaveValue(GameSaveStore.MotionScaleKey, _motionScale),
-			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference));
+			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
+			new GameSaveStore.SaveValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings()));
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save settings: {saveResult}");
+		}
+	}
+
+	private void SaveInputBindings()
+	{
+		Error saveResult = GameSaveStore.SetValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings());
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to save input bindings: {saveResult}");
 		}
 	}
 

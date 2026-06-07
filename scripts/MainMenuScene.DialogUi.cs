@@ -51,6 +51,7 @@ public partial class MainMenuScene : Control
 		}
 
 		_settingsDialog?.RefreshLocalizedText(Localize);
+		RefreshControlsDialogText();
 		_exitDialog?.RefreshLocalizedText(Localize);
 		RefreshWindowModeOptions();
 		RefreshResolutionOptions();

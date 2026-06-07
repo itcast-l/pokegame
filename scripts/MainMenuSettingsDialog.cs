@@ -15,8 +15,10 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _windowModeLabel = default!;
 	private Label _resolutionLabel = default!;
 	private Label _languageLabel = default!;
+	private Label _controlsLabel = default!;
 	private Label _oceanMotionLabel = default!;
 	private Label _motionScaleLabel = default!;
+	private Button _controlsButton = default!;
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
 	private ColorRect _scrim = default!;
@@ -34,6 +36,7 @@ public partial class MainMenuSettingsDialog : Control
 	public OptionButton WindowModeOption { get; private set; } = default!;
 	public OptionButton ResolutionOption { get; private set; } = default!;
 	public OptionButton LanguageOption { get; private set; } = default!;
+	public Button ControlsButton => _controlsButton;
 	public Button ResetDefaultsButton => _resetButton;
 	public Button DoneButton => _doneButton;
 
@@ -61,8 +64,10 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel = GetNode<Label>("%WindowModeLabel");
 		_resolutionLabel = GetNode<Label>("%ResolutionLabel");
 		_languageLabel = GetNode<Label>("%LanguageLabel");
+		_controlsLabel = GetNode<Label>("%ControlsLabel");
 		_oceanMotionLabel = GetNode<Label>("%OceanMotionLabel");
 		_motionScaleLabel = GetNode<Label>("%MotionScaleLabel");
+		_controlsButton = GetNode<Button>("%ControlsButton");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
@@ -76,6 +81,7 @@ public partial class MainMenuSettingsDialog : Control
 			WindowModeOption,
 			ResolutionOption,
 			LanguageOption,
+			_controlsButton,
 			OceanMotionToggle,
 			MotionScaleSlider,
 			_resetButton,
@@ -96,6 +102,8 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel.Text = localize("SETTINGS_WINDOW_MODE");
 		_resolutionLabel.Text = localize("SETTINGS_RESOLUTION");
 		_languageLabel.Text = localize("SETTINGS_LANGUAGE");
+		_controlsLabel.Text = localize("SETTINGS_CONTROLS");
+		_controlsButton.Text = localize("SETTINGS_CONTROLS_EDIT");
 		_oceanMotionLabel.Text = localize("SETTINGS_OCEAN_MOTION");
 		_motionScaleLabel.Text = localize("SETTINGS_MOTION_SCALE");
 		_resetButton.Text = localize("SETTINGS_RESET_DEFAULTS");

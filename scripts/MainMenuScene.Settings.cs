@@ -27,10 +27,12 @@ public partial class MainMenuScene : Control
 		_windowModeOption = dialog.WindowModeOption;
 		_resolutionOption = dialog.ResolutionOption;
 		_languageOption = dialog.LanguageOption;
+		_controlsButton = dialog.ControlsButton;
 
 		dialog.CloseRequested += HideSettingsDialog;
 		dialog.DoneButton.Pressed += HideSettingsDialog;
 		dialog.ResetDefaultsButton.Pressed += ResetSettingsToDefaults;
+		_controlsButton.Pressed += ShowControlsDialog;
 		_masterVolumeSlider.ValueChanged += value =>
 		{
 			if (_isSyncingSettingsControls)
@@ -133,5 +135,23 @@ public partial class MainMenuScene : Control
 			_motionScale = (float)value / 100.0f;
 			OnSettingsChanged();
 		};
+	}
+
+	private void BuildControlsDialog()
+	{
+		PackedScene? dialogScene = GD.Load<PackedScene>(ControlsDialogScenePath);
+		if (dialogScene?.Instantiate() is not MainMenuControlsDialog dialog)
+		{
+			GD.PushError($"Missing controls dialog scene: {ControlsDialogScenePath}");
+			return;
+		}
+
+		_controlsDialog = dialog;
+		_controlsDialogRoot = dialog;
+		AddChild(dialog);
+		_controlsDialogPanel = dialog.DialogPanel;
+		dialog.CloseRequested += HideControlsDialog;
+		dialog.ResetDefaultsRequested += ResetControlsToDefaults;
+		dialog.BindingEditRequested += OnBindingEditRequested;
 	}
 }

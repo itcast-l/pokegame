@@ -29,6 +29,7 @@ public partial class MainMenuScene : Control
 	private const string AvatarEditScenePath = "res://scenes/character_avatar_edit_scene.tscn";
 	private const string PlayerCountDialogScenePath = "res://scenes/main_menu_player_count_dialog.tscn";
 	private const string SettingsDialogScenePath = "res://scenes/main_menu_settings_dialog.tscn";
+	private const string ControlsDialogScenePath = "res://scenes/main_menu_controls_dialog.tscn";
 	private const string ExitDialogScenePath = "res://scenes/main_menu_exit_dialog.tscn";
 	private const string AvatarUnlockPromptScenePath = "res://scenes/avatar_unlock_prompt.tscn";
 	private const string AdventureTransitionScenePath = "res://scenes/main_menu_adventure_transition.tscn";
@@ -92,6 +93,10 @@ public partial class MainMenuScene : Control
 	private Control _settingsDialogRoot = default!;
 	private Control _settingsDialogPanel = default!;
 	private Tween? _settingsDialogTween;
+	private MainMenuControlsDialog _controlsDialog = default!;
+	private Control _controlsDialogRoot = default!;
+	private Control _controlsDialogPanel = default!;
+	private Tween? _controlsDialogTween;
 	private HSlider _masterVolumeSlider = default!;
 	private HSlider _musicVolumeSlider = default!;
 	private HSlider _motionScaleSlider = default!;
@@ -104,6 +109,7 @@ public partial class MainMenuScene : Control
 	private OptionButton _windowModeOption = default!;
 	private OptionButton _resolutionOption = default!;
 	private OptionButton _languageOption = default!;
+	private Button _controlsButton = default!;
 	private MainMenuAvatarEntry _avatarEntry = default!;
 	private MainMenuExitDialog _exitDialog = default!;
 	private Control _exitDialogRoot = default!;
@@ -128,6 +134,9 @@ public partial class MainMenuScene : Control
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
 	private string _playerName = PlayerNameRules.DefaultPlayerName;
 	private bool _isSyncingSettingsControls;
+	private string? _pendingBindingActionId;
+	private GameInputActions.BindingSlot? _pendingBindingSlot;
+	private int _bindingCaptureEarliestFrame;
 	private bool _isStartingGameTransition;
 	private bool _isMenuCameraTransitioning;
 	private bool _hasAppliedWindowSettings;
@@ -189,6 +198,7 @@ public partial class MainMenuScene : Control
 
 		BuildPlayerCountDialog();
 		BuildSettingsDialog();
+		BuildControlsDialog();
 		BuildExitDialog();
 		ConfigureMainMenuFocus();
 		LoadSettings();
@@ -226,6 +236,7 @@ public partial class MainMenuScene : Control
 			SyncMenuCameraToViewport();
 			UpdatePlayerCountDialogPanelPosition();
 			UpdateSettingsDialogPosition();
+			UpdateControlsDialogPosition();
 			UpdateExitDialogPosition();
 			UpdateAdventureTransitionPosition();
 		}
@@ -243,8 +254,34 @@ public partial class MainMenuScene : Control
 		await CompleteMenuCameraPushIn();
 	}
 
+	public override void _Input(InputEvent inputEvent)
+	{
+		TryHandleControlsBindingCapture(inputEvent);
+	}
+
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
+		if (TryHandleControlsBindingCapture(inputEvent))
+		{
+			return;
+		}
+
+		if (_controlsDialogRoot.Visible && GameInputActions.IsCancelPressed(inputEvent))
+		{
+			if (_pendingBindingActionId != null)
+			{
+				ClearPendingBindingCapture();
+				RefreshControlsDialogText();
+			}
+			else
+			{
+				HideControlsDialog();
+			}
+
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+
 		if (_settingsDialogRoot.Visible && GameInputActions.IsCancelPressed(inputEvent))
 		{
 			HideSettingsDialog();
