@@ -79,7 +79,8 @@ public partial class GameBoardScene
 				float displayVisualScale = GetHandCardVisualScaleForPlayer(playerIndex) * visualScale;
 				Vector2 visualSize = CardVisualSize * displayVisualScale;
 				Vector2 visualBasePosition = (CardVisualSize - visualSize) / 2.0f;
-				bool canPoolSlot = CanPoolHandCardSlot(
+				// Main-player slots bind per-render input delegates, so they must not be pooled.
+				bool canPoolSlot = playerIndex != MainPlayerIndex && CanPoolHandCardSlot(
 					isPlayable,
 					attachmentOverlayTexture,
 					showMagnetSelectionHighlight,
