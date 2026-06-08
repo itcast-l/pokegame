@@ -9,6 +9,7 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
+		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = false;
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 
@@ -118,14 +119,16 @@ public partial class MainMenuScene : Control
 		transitionRoot.MouseFilter = MouseFilterEnum.Ignore;
 		transitionRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		transitionRoot.Size = GetViewportRect().Size;
-		transitionRoot.Position = GetAdventureSecondaryMenuDepthPosition();
-		transitionRoot.Scale = GetAdventureSecondaryMenuWorldScale();
+		transitionRoot.Position = Vector2.Zero;
+		transitionRoot.Scale = Vector2.One;
 		AddChild(transitionRoot);
 		transitionRoot.CloseRequested += () => HideAdventureAvatarMenu(adventureAvatarMenu);
 
 		_adventureTransitionMotion = adventureAvatarMenu;
 		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
 		transitionRoot.MenuHost.AddChild(adventureAvatarMenu);
+		transitionRoot.MenuHost.Position = GetAdventureSecondaryMenuDepthPosition();
+		transitionRoot.MenuHost.Scale = GetAdventureSecondaryMenuWorldScale();
 		ApplyFixedAdventureTransitionLayout();
 		QueueAdventureTransitionLayout(transitionRoot);
 		UpdateAdventureTransitionPosition();
@@ -142,7 +145,7 @@ public partial class MainMenuScene : Control
 		root.Visible = true;
 		root.MouseFilter = MouseFilterEnum.Stop;
 		root.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Stop;
+		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
 		UpdateAdventureTransitionPosition();
 
 		_adventureTransitionTween?.Kill();
@@ -164,6 +167,7 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		Control root = _adventureTransitionRoot;
 		root.MouseFilter = MouseFilterEnum.Ignore;
 		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
@@ -208,8 +212,10 @@ public partial class MainMenuScene : Control
 		if (_adventureTransitionRoot != null && GodotObject.IsInstanceValid(_adventureTransitionRoot))
 		{
 			_adventureTransitionRoot.Size = GetViewportRect().Size;
-			_adventureTransitionRoot.Position = GetAdventureSecondaryMenuDepthPosition();
-			_adventureTransitionRoot.Scale = GetAdventureSecondaryMenuWorldScale();
+			_adventureTransitionRoot.Position = Vector2.Zero;
+			_adventureTransitionRoot.Scale = Vector2.One;
+			_adventureTransitionRoot.MenuHost.Position = GetAdventureSecondaryMenuDepthPosition();
+			_adventureTransitionRoot.MenuHost.Scale = GetAdventureSecondaryMenuWorldScale();
 		}
 
 		ApplyFixedAdventureTransitionLayout();

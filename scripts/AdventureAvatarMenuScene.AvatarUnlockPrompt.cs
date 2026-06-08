@@ -83,9 +83,9 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarUnlockPromptTween?.Kill();
 		_avatarUnlockPromptTween = null;
-		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarUnlockPromptRoot.Visible = false;
 		_avatarUnlockPromptRoot.MouseFilter = MouseFilterEnum.Ignore;
 		_avatarUnlockPromptRoot.Modulate = Colors.White;
@@ -124,6 +124,7 @@ public partial class AdventureAvatarMenuScene
 		_avatarUnlockPromptPanel = _avatarUnlockPromptRoot.PromptPanel;
 		_avatarUnlockPromptButton = _avatarUnlockPromptRoot.ConfirmButton;
 		_avatarUnlockPromptAvatar = _avatarUnlockPromptRoot.UnlockedAvatar;
+		SuppressDefaultPressedSfx(_avatarUnlockPromptButton);
 		_avatarUnlockPromptRoot.CloseRequested += HideAvatarUnlockPrompt;
 	}
 

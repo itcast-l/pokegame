@@ -14,6 +14,7 @@ public static class GameSaveStore
 	public const string OceanMotionKey = "settings.video.ocean_motion";
 	public const string MotionScaleKey = "settings.video.motion_scale";
 	public const string LanguageKey = "settings.general.language";
+	public const string MainMenuMusicTrackKey = "settings.audio.main_menu_music_track";
 	public const string InputBindingsKey = "settings.input.bindings";
 	public const string SelectedAvatarKey = "settings.general.avatar";
 	public const string PlayerNameKey = "settings.general.player_name";

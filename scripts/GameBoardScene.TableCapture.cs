@@ -152,7 +152,7 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static bool ShouldSkipOwnerPreviewRevealAnimation(TableCard tableCard)
+	private bool ShouldSkipOwnerPreviewRevealAnimation(TableCard tableCard)
 	{
 		return ShouldShowMainPlayerTablePreview(tableCard);
 	}

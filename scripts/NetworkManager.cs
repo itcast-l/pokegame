@@ -346,6 +346,73 @@ public partial class NetworkManager : Node
 		RpcId(1, MethodName.RpcClientSceneLoaded, _config.MatchId, LocalSeatIndex);
 	}
 
+	public void RequestPlayHandCard(int handIndex, int turnSequenceGeneration)
+	{
+		if (_state != NetworkSessionState.InGame || IsHost)
+		{
+			return;
+		}
+
+		RpcId(1, MethodName.RpcRequestPlayHandCard, handIndex, turnSequenceGeneration);
+	}
+
+	public void BroadcastCardPlayedEventFromHost(
+		int actorSeatIndex,
+		int handIndex,
+		string playedCardCode,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			["actor_seat_index"] = actorSeatIndex,
+			["hand_index"] = handIndex,
+			["played_card_code"] = playedCardCode,
+			["turn_sequence_generation"] = turnSequenceGeneration,
+			["snapshot_id"] = snapshotId,
+		};
+		Rpc(MethodName.RpcCardPlayedEvent, payload);
+	}
+
+	public void SendInitialBoardSnapshotsFromHost(GameBoardScene gameBoard)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+	}
+
+	public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (!player.IsConnected)
+			{
+				continue;
+			}
+
+			Godot.Collections.Dictionary snapshot = gameBoard.BuildNetworkBoardSnapshotForSeat(player.SeatIndex, snapshotId);
+			if (player.IsHost)
+			{
+				continue;
+			}
+
+			RpcId(player.PeerId, MethodName.RpcBoardSnapshot, snapshot);
+		}
+	}
+
 	private void ConnectMultiplayerSignals()
 	{
 		if (_signalsConnected)
@@ -816,6 +883,78 @@ public partial class NetworkManager : Node
 		}
 	}
 
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		int senderPeerId = Multiplayer.GetRemoteSenderId();
+		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, handIndex);
+			return;
+		}
+
+		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, handIndex);
+			return;
+		}
+
+		if (!gameBoard.TryStartNetworkHandCardPlayFromHost(
+			actorSeatIndex,
+			handIndex,
+			turnSequenceGeneration,
+			out MultiplayerBoardActionRejectReason rejectReason))
+		{
+			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, handIndex);
+		}
+	}
+
+	private void SendRejectBoardAction(
+		int peerId,
+		MultiplayerBoardActionRejectReason reason,
+		int turnSequenceGeneration,
+		int rejectedHandIndex)
+	{
+		if (peerId <= 0)
+		{
+			return;
+		}
+
+		RpcId(peerId, MethodName.RpcRejectBoardAction, reason.ToString(), turnSequenceGeneration, rejectedHandIndex);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcRejectBoardAction(string reason, int turnSequenceGeneration, int rejectedHandIndex)
+	{
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		{
+			gameBoard.RejectNetworkBoardAction(reason, turnSequenceGeneration, rejectedHandIndex);
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcCardPlayedEvent(Godot.Collections.Dictionary payload)
+	{
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		{
+			gameBoard.QueueNetworkCardPlayedEvent(payload);
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)
+	{
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		{
+			gameBoard.ApplyNetworkBoardSnapshot(snapshot);
+		}
+	}
+
 	private void LoadGameBoardScene(Godot.Collections.Dictionary bootstrap)
 	{
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
@@ -832,6 +971,7 @@ public partial class NetworkManager : Node
 		gameBoard.Set("solo_mode", false);
 		gameBoard.Set("local_player_index", LocalSeatIndex);
 		gameBoard.Set("network_session_id", _config.SessionId);
+		gameBoard.Set("network_match_id", _config.MatchId);
 		gameBoard.Set("match_seed", _config.MatchSeed);
 		gameBoard.Set("player_names_csv", BuildPlayerNamesCsv());
 		gameBoard.Set("player_avatar_ids_csv", BuildPlayerAvatarIdsCsv());

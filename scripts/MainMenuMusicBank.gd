@@ -1,6 +1,6 @@
 extends MusicBank
 
-const BACKGROUND_MUSIC: AudioStream = preload("res://asset/audio/background.mp3")
+const BACKGROUND_MUSIC: AudioStream = preload("res://asset/audio/bgm/main_menu_custom/Beneath_The_Sunken_Coast.mp3")
 const BANK_LABEL := "main_menu"
 const TRACK_NAME := "background"
 const STEM_NAME := "main"

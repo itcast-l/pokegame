@@ -33,9 +33,9 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		ClearPendingBindingCapture();
 		_controlsDialogTween?.Kill();
-		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_controlsDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 
 		_controlsDialogTween = CreateTween();

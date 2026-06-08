@@ -11,11 +11,13 @@ public partial class CharacterAvatarEditScene : Control
 
 	public string CurrentAvatarId { get; set; } = CharacterAvatarCatalog.DefaultAvatarId;
 	public string CurrentPlayerName { get; set; } = PlayerNameRules.DefaultPlayerName;
+	public PanelContainer DialogPanel { get; private set; } = default!;
 
 	private static readonly Color SelectedOptionModulate = new(1.0f, 1.0f, 0.78f, 1.0f);
 	private static readonly Color ValidNameHintColor = new(0.62f, 1.0f, 0.92f, 0.76f);
 	private static readonly Color EmptyNameHintColor = new(1.0f, 0.72f, 0.58f, 0.92f);
 
+	private ColorRect _scrim = default!;
 	private Button _backButton = default!;
 	private Button _confirmButton = default!;
 	private CharacterAvatar _previewAvatar = default!;
@@ -33,6 +35,9 @@ public partial class CharacterAvatarEditScene : Control
 		CurrentAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(CurrentAvatarId);
 		CurrentPlayerName = PlayerNameRules.Normalize(CurrentPlayerName);
 
+		_scrim = GetNode<ColorRect>("Scrim");
+		_scrim.GuiInput += OnScrimGuiInput;
+		DialogPanel = GetNode<PanelContainer>("DialogCenter/DialogPanel");
 		_backButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackButton");
 		_backButton.FocusMode = Control.FocusModeEnum.All;
 		_backButton.Pressed += RequestClose;
@@ -69,6 +74,17 @@ public partial class CharacterAvatarEditScene : Control
 	private void RequestClose()
 	{
 		EmitSignal(SignalName.CloseRequested);
+	}
+
+	private void OnScrimGuiInput(InputEvent inputEvent)
+	{
+		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+		{
+			return;
+		}
+
+		RequestClose();
+		GetViewport().SetInputAsHandled();
 	}
 
 	private void BindAvatarOptions()

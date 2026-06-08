@@ -26,6 +26,7 @@
     <Compile Include="../../scripts/SteamLobbyMetadata.cs" Link="Rules/SteamLobbyMetadata.cs" />
     <Compile Include="../../scripts/LanDiscoveryMessage.cs" Link="Rules/LanDiscoveryMessage.cs" />
     <Compile Include="../../scripts/MultiplayerLobbyRules.cs" Link="Rules/MultiplayerLobbyRules.cs" />
+    <Compile Include="../../scripts/MultiplayerBoardSyncRules.cs" Link="Rules/MultiplayerBoardSyncRules.cs" />
     <Compile Include="../../scripts/SceneLoadHandshakeTracker.cs" Link="Rules/SceneLoadHandshakeTracker.cs" />
   </ItemGroup>
 </Project>

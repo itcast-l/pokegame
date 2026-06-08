@@ -53,7 +53,7 @@ public partial class AdventureAvatarMenuScene : Control
 	{
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
-		MouseFilter = MouseFilterEnum.Stop;
+		MouseFilter = MouseFilterEnum.Ignore;
 
 		BindUi();
 		_levelScrollTarget = 0;
@@ -125,6 +125,16 @@ public partial class AdventureAvatarMenuScene : Control
 		double cooldownSeconds = 0.0)
 	{
 		GameAudio?.PlaySfx(sfxId, volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	private static void SuppressDefaultPressedSfx(BaseButton? button)
+	{
+		if (button == null || !GodotObject.IsInstanceValid(button))
+		{
+			return;
+		}
+
+		button.SetMeta(GameAudioManager.UiSuppressPressedSfxMeta, true);
 	}
 
 	private void PlayAdventureMenuMusicIfStandalone()

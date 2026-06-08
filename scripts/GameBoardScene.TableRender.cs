@@ -441,11 +441,11 @@ public partial class GameBoardScene
 		};
 	}
 
-	private static bool ShouldShowMainPlayerTablePreview(TableCard tableCard)
+	private bool ShouldShowMainPlayerTablePreview(TableCard tableCard)
 	{
 		return tableCard.Card.HasValue
 			&& !tableCard.IsFaceUp
-			&& tableCard.CardOwnerPlayerIndex == MainPlayerIndex;
+			&& IsLocalHandPlayer(tableCard.CardOwnerPlayerIndex);
 	}
 
 	private bool TryGetTableCardPosition(int tableCardIndex, out Vector2 position)

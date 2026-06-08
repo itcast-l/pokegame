@@ -112,7 +112,7 @@ mouse_filter = 2
 
 [node name="SettingsDialogPanel" type="Control" parent="DialogCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(680, 696)
+custom_minimum_size = Vector2(680, 760)
 layout_mode = 2
 mouse_filter = 0
 
@@ -538,6 +538,46 @@ popup/item_29/text = "Ukrainian"
 popup/item_29/id = 29
 popup/item_30/text = "Vietnamese"
 popup/item_30/id = 30
+
+[node name="MainMenuMusicTrackRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_row")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MainMenuMusicTrackRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 7
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MainMenuMusicTrackRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MainMenuMusicTrackLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
+theme_override_font_sizes/font_size = 18
+text = "SETTINGS_BACKGROUND_MUSIC"
+vertical_alignment = 1
+
+[node name="MainMenuMusicTrackSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MainMenuMusicTrackOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option")
 
 [node name="ControlsRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsList"]
 layout_mode = 2

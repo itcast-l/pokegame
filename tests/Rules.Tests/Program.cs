@@ -45,6 +45,9 @@ internal static class Program
 		Run("steam metadata rejects dirty values", SteamMetadataRejectsDirtyValues);
 		Run("steam metadata parses valid values defensively", SteamMetadataParsesValidValuesDefensively);
 		Run("multiplayer lobby start requires filled ready seats", MultiplayerLobbyStartRequiresFilledReadySeats);
+		Run("multiplayer board sync resolves sender seat", MultiplayerBoardSyncResolvesSenderSeat);
+		Run("multiplayer board sync rejects invalid play requests", MultiplayerBoardSyncRejectsInvalidPlayRequests);
+		Run("multiplayer board sync limits private hand visibility", MultiplayerBoardSyncLimitsPrivateHandVisibility);
 		Run("scene load handshake completes and times out", SceneLoadHandshakeCompletesAndTimesOut);
 		Run("lan discovery parses valid messages and drops dirty data", LanDiscoveryParsesValidMessagesAndDropsDirtyData);
 
@@ -778,6 +781,72 @@ internal static class Program
 		False(MultiplayerLobbyRules.CanStart(missingSeat, 2));
 		Equal(1, MultiplayerLobbyRules.GetNextSeatIndex(new[] { readyPlayers[0] }, 2));
 		Equal(-1, MultiplayerLobbyRules.GetNextSeatIndex(readyPlayers, 2));
+	}
+
+	private static void MultiplayerBoardSyncResolvesSenderSeat()
+	{
+		var players = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 23, seatIndex: 2, isHost: false, isReady: true),
+		};
+
+		True(MultiplayerBoardSyncRules.TryResolveSeatFromPeer(players, 23, out int seatIndex));
+		Equal(2, seatIndex);
+		False(MultiplayerBoardSyncRules.TryResolveSeatFromPeer(players, 99, out _));
+	}
+
+	private static void MultiplayerBoardSyncRejectsInvalidPlayRequests()
+	{
+		MultiplayerBoardActionValidation accepted = MultiplayerBoardSyncRules.ValidatePlayHandCardRequest(
+			senderSeatIndex: 1,
+			currentTurnPlayerIndex: 1,
+			requestedHandIndex: 2,
+			handCount: 5,
+			requestTurnSequenceGeneration: 7,
+			currentTurnSequenceGeneration: 7,
+			isGameOver: false,
+			isActionInProgress: false);
+		True(accepted.Accepted);
+		Equal(MultiplayerBoardActionRejectReason.None, accepted.RejectReason);
+
+		AssertRejected(MultiplayerBoardActionRejectReason.UnknownSender, senderSeatIndex: -1, currentTurnPlayerIndex: 1, handIndex: 0, handCount: 5, requestGeneration: 7, currentGeneration: 7);
+		AssertRejected(MultiplayerBoardActionRejectReason.WrongTurn, senderSeatIndex: 0, currentTurnPlayerIndex: 1, handIndex: 0, handCount: 5, requestGeneration: 7, currentGeneration: 7);
+		AssertRejected(MultiplayerBoardActionRejectReason.InvalidHandIndex, senderSeatIndex: 1, currentTurnPlayerIndex: 1, handIndex: 5, handCount: 5, requestGeneration: 7, currentGeneration: 7);
+		AssertRejected(MultiplayerBoardActionRejectReason.StaleTurnGeneration, senderSeatIndex: 1, currentTurnPlayerIndex: 1, handIndex: 0, handCount: 5, requestGeneration: 6, currentGeneration: 7);
+		AssertRejected(MultiplayerBoardActionRejectReason.ActionInProgress, senderSeatIndex: 1, currentTurnPlayerIndex: 1, handIndex: 0, handCount: 5, requestGeneration: 7, currentGeneration: 7, isActionInProgress: true);
+		AssertRejected(MultiplayerBoardActionRejectReason.GameOver, senderSeatIndex: 1, currentTurnPlayerIndex: 1, handIndex: 0, handCount: 5, requestGeneration: 7, currentGeneration: 7, isGameOver: true);
+	}
+
+	private static void MultiplayerBoardSyncLimitsPrivateHandVisibility()
+	{
+		True(MultiplayerBoardSyncRules.ShouldIncludePrivateHandCards(cardOwnerSeatIndex: 2, recipientSeatIndex: 2));
+		False(MultiplayerBoardSyncRules.ShouldIncludePrivateHandCards(cardOwnerSeatIndex: 2, recipientSeatIndex: 1));
+	}
+
+	private static void AssertRejected(
+		MultiplayerBoardActionRejectReason expectedReason,
+		int senderSeatIndex,
+		int currentTurnPlayerIndex,
+		int handIndex,
+		int handCount,
+		int requestGeneration,
+		int currentGeneration,
+		bool isGameOver = false,
+		bool isActionInProgress = false)
+	{
+		MultiplayerBoardActionValidation validation = MultiplayerBoardSyncRules.ValidatePlayHandCardRequest(
+			senderSeatIndex,
+			currentTurnPlayerIndex,
+			handIndex,
+			handCount,
+			requestGeneration,
+			currentGeneration,
+			isGameOver,
+			isActionInProgress);
+
+		False(validation.Accepted);
+		Equal(expectedReason, validation.RejectReason);
 	}
 
 	private static void SceneLoadHandshakeCompletesAndTimesOut()

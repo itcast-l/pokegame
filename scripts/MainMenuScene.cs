@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -35,6 +36,7 @@ public partial class MainMenuScene : Control
 	private const string AdventureTransitionScenePath = "res://scenes/main_menu_adventure_transition.tscn";
 	private const string SoundBusName = "Sound";
 	private const string MusicBusName = "Music";
+	private const string MainMenuCustomMusicDirectory = "res://asset/audio/bgm/main_menu_custom";
 	private const float DialogFadeSeconds = 0.14f;
 	private const int AvatarEditDialogLayer = 42;
 	private const int MinMenuPlayers = 2;
@@ -109,13 +111,16 @@ public partial class MainMenuScene : Control
 	private OptionButton _windowModeOption = default!;
 	private OptionButton _resolutionOption = default!;
 	private OptionButton _languageOption = default!;
+	private OptionButton _mainMenuMusicTrackOption = default!;
 	private Button _controlsButton = default!;
 	private MainMenuAvatarEntry _avatarEntry = default!;
 	private MainMenuExitDialog _exitDialog = default!;
 	private Control _exitDialogRoot = default!;
 	private PanelContainer _exitDialogPanel = default!;
 	private Tween? _exitDialogTween;
-	private CanvasLayer? _avatarEditDialogLayer;
+	private CharacterAvatarEditScene? _avatarEditDialogRoot;
+	private PanelContainer? _avatarEditDialogPanel;
+	private Tween? _avatarEditDialogTween;
 	private MainMenuAdventureTransition? _adventureTransitionRoot;
 	private Control? _adventureTransitionMotion;
 	private Tween? _adventureTransitionTween;
@@ -133,6 +138,7 @@ public partial class MainMenuScene : Control
 	private string _languagePreference = Localization.DefaultLanguagePreference;
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
 	private string _playerName = PlayerNameRules.DefaultPlayerName;
+	private string _selectedMainMenuMusicTrack = string.Empty;
 	private bool _isSyncingSettingsControls;
 	private string? _pendingBindingActionId;
 	private GameInputActions.BindingSlot? _pendingBindingSlot;
@@ -146,8 +152,23 @@ public partial class MainMenuScene : Control
 	private ulong _menuCameraTransitionStartMsec;
 	private float _menuCameraTransitionTotalSeconds;
 	private float _appliedMusicVolumeDb = float.NaN;
+	private readonly List<MainMenuMusicOption> _mainMenuMusicOptions = new();
 	private readonly System.Collections.Generic.List<(Label Label, string Key)> _localizedLabels = new();
 	private readonly System.Collections.Generic.List<(Button Button, string Key)> _localizedButtons = new();
+
+	private readonly struct MainMenuMusicOption
+	{
+		public MainMenuMusicOption(string id, string displayName, string absolutePath)
+		{
+			Id = id;
+			DisplayName = displayName;
+			AbsolutePath = absolutePath;
+		}
+
+		public string Id { get; }
+		public string DisplayName { get; }
+		public string AbsolutePath { get; }
+	}
 
 	private readonly struct ResolutionPreset
 	{
@@ -189,11 +210,16 @@ public partial class MainMenuScene : Control
 
 		_exitButton = GetNode<Button>(ExitButtonPath);
 		_exitButton.Pressed += ShowExitDialog;
+		SuppressDefaultPressedSfx(_singlePlayerButton);
+		SuppressDefaultPressedSfx(_adventureButton);
+		SuppressDefaultPressedSfx(_settingsButton);
+		SuppressDefaultPressedSfx(_exitButton);
 
 		_titleLabel = GetNode<Label>(TitleLabelPath);
 		_subtitleLabel = GetNode<Label>(SubtitleLabelPath);
 
 		_avatarEntry = GetNode<MainMenuAvatarEntry>(AvatarEntryPath);
+		SuppressDefaultPressedSfx(_avatarEntry.Button);
 		_avatarEntry.AvatarPressed += OpenAvatarEditor;
 
 		BuildPlayerCountDialog();
@@ -238,6 +264,7 @@ public partial class MainMenuScene : Control
 			UpdateSettingsDialogPosition();
 			UpdateControlsDialogPosition();
 			UpdateExitDialogPosition();
+			UpdateAvatarEditorPosition();
 			UpdateAdventureTransitionPosition();
 		}
 	}
@@ -313,6 +340,16 @@ public partial class MainMenuScene : Control
 		double cooldownSeconds = 0.0)
 	{
 		GameAudio?.PlaySfx(sfxId, volumeDb, pitchMin, pitchMax, cooldownSeconds);
+	}
+
+	private static void SuppressDefaultPressedSfx(BaseButton? button)
+	{
+		if (button == null || !GodotObject.IsInstanceValid(button))
+		{
+			return;
+		}
+
+		button.SetMeta(GameAudioManager.UiSuppressPressedSfxMeta, true);
 	}
 
 }

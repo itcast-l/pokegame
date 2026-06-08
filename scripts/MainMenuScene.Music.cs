@@ -4,7 +4,7 @@ public partial class MainMenuScene : Control
 {
 	private void PrepareBackgroundMusic()
 	{
-		GameAudio?.PlayMusic(GameMusic.MainMenu, BackgroundMusicFadeSeconds);
+		ApplyMainMenuMusicSelection();
 	}
 
 	private Node? GetMusicManager()

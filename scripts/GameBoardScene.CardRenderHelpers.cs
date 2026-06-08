@@ -269,9 +269,9 @@ public partial class GameBoardScene
 		return 1.0f;
 	}
 
-	private static float GetHandCardVisualScaleForPlayer(int playerIndex)
+	private float GetHandCardVisualScaleForPlayer(int playerIndex)
 	{
-		return playerIndex == MainPlayerIndex ? 1.18f : 0.74f;
+		return IsLocalHandPlayer(playerIndex) ? 1.18f : 0.74f;
 	}
 
 	private float GetHandDisplayCardVisualScale(int playerIndex, int displayIndex)

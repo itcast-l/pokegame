@@ -205,7 +205,6 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayGameSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.08);
 		_pauseMenuRoot?.HideQuitConfirm();
 		_pauseQuitButton?.GrabFocus();
 	}

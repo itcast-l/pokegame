@@ -28,8 +28,9 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.CardPickup, -2.0f, 0.97f, 1.04f, 0.04);
-		Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(MainPlayerIndex, handIndex);
-		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, _turnSequenceGeneration, startGlobalPosition);
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(localPlayerIndex, handIndex);
+		_playerInputHandler.ConfirmHandCard(handIndex, _turnSequenceGeneration, startGlobalPosition);
 	}
 
 	private void TryCompleteMainPlayerMagnetAttachment(InputEvent inputEvent, int handIndex)
@@ -95,6 +96,12 @@ public partial class GameBoardScene
 
 	private void ConfirmMainPlayerItemCard(int itemHandIndex)
 	{
+		if (IsNetworkMultiplayerMode())
+		{
+			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+			return;
+		}
+
 		if (!CanMainPlayerAct())
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);

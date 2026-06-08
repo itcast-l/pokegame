@@ -15,6 +15,7 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _windowModeLabel = default!;
 	private Label _resolutionLabel = default!;
 	private Label _languageLabel = default!;
+	private Label _mainMenuMusicTrackLabel = default!;
 	private Label _controlsLabel = default!;
 	private Label _oceanMotionLabel = default!;
 	private Label _motionScaleLabel = default!;
@@ -36,6 +37,7 @@ public partial class MainMenuSettingsDialog : Control
 	public OptionButton WindowModeOption { get; private set; } = default!;
 	public OptionButton ResolutionOption { get; private set; } = default!;
 	public OptionButton LanguageOption { get; private set; } = default!;
+	public OptionButton MainMenuMusicTrackOption { get; private set; } = default!;
 	public Button ControlsButton => _controlsButton;
 	public Button ResetDefaultsButton => _resetButton;
 	public Button DoneButton => _doneButton;
@@ -55,6 +57,7 @@ public partial class MainMenuSettingsDialog : Control
 		WindowModeOption = GetNode<OptionButton>("%WindowModeOption");
 		ResolutionOption = GetNode<OptionButton>("%ResolutionOption");
 		LanguageOption = GetNode<OptionButton>("%LanguageOption");
+		MainMenuMusicTrackOption = GetNode<OptionButton>("%MainMenuMusicTrackOption");
 		_titleLabel = GetNode<Label>("%SettingsTitle");
 		_messageLabel = GetNode<Label>("%SettingsMessage");
 		_masterVolumeLabel = GetNode<Label>("%MasterVolumeLabel");
@@ -64,6 +67,7 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel = GetNode<Label>("%WindowModeLabel");
 		_resolutionLabel = GetNode<Label>("%ResolutionLabel");
 		_languageLabel = GetNode<Label>("%LanguageLabel");
+		_mainMenuMusicTrackLabel = GetNode<Label>("%MainMenuMusicTrackLabel");
 		_controlsLabel = GetNode<Label>("%ControlsLabel");
 		_oceanMotionLabel = GetNode<Label>("%OceanMotionLabel");
 		_motionScaleLabel = GetNode<Label>("%MotionScaleLabel");
@@ -81,6 +85,7 @@ public partial class MainMenuSettingsDialog : Control
 			WindowModeOption,
 			ResolutionOption,
 			LanguageOption,
+			MainMenuMusicTrackOption,
 			_controlsButton,
 			OceanMotionToggle,
 			MotionScaleSlider,
@@ -89,6 +94,7 @@ public partial class MainMenuSettingsDialog : Control
 		StyleOptionPopup(WindowModeOption);
 		StyleOptionPopup(ResolutionOption);
 		StyleOptionPopup(LanguageOption);
+		StyleOptionPopup(MainMenuMusicTrackOption);
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize)
@@ -102,6 +108,7 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel.Text = localize("SETTINGS_WINDOW_MODE");
 		_resolutionLabel.Text = localize("SETTINGS_RESOLUTION");
 		_languageLabel.Text = localize("SETTINGS_LANGUAGE");
+		_mainMenuMusicTrackLabel.Text = localize("SETTINGS_BACKGROUND_MUSIC");
 		_controlsLabel.Text = localize("SETTINGS_CONTROLS");
 		_controlsButton.Text = localize("SETTINGS_CONTROLS_EDIT");
 		_oceanMotionLabel.Text = localize("SETTINGS_OCEAN_MOTION");

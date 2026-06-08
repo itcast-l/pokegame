@@ -128,7 +128,8 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int handCardCount = _playerHands[MainPlayerIndex].Count;
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		int handCardCount = _playerHands[localPlayerIndex].Count;
 		if (IsMainPlayerHandLimitDiscardSelectionActive())
 		{
 			ConfirmMainPlayerHandLimitDiscard(_selectedMainPlayerHandDisplayIndex);
@@ -175,12 +176,13 @@ public partial class GameBoardScene
 	private bool TryFindSelectableMainPlayerHandDisplayIndex(int direction, out int displayIndex)
 	{
 		displayIndex = -1;
-		if (MainPlayerIndex >= _playerHands.Count || MainPlayerIndex >= _playerItemHands.Count)
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		if (localPlayerIndex >= _playerHands.Count || localPlayerIndex >= _playerItemHands.Count)
 		{
 			return false;
 		}
 
-		int totalHandCardCount = GetTotalHandCardCount(MainPlayerIndex);
+		int totalHandCardCount = GetTotalHandCardCount(localPlayerIndex);
 		if (totalHandCardCount <= 0)
 		{
 			return false;
@@ -214,11 +216,12 @@ public partial class GameBoardScene
 
 	private bool IsMainPlayerHandDisplayIndexSelectable(int displayIndex)
 	{
-		if (MainPlayerIndex >= _playerHands.Count
-			|| MainPlayerIndex >= _playerItemHands.Count
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		if (localPlayerIndex >= _playerHands.Count
+			|| localPlayerIndex >= _playerItemHands.Count
 			|| displayIndex < 0
-			|| displayIndex >= GetTotalHandCardCount(MainPlayerIndex)
-			|| IsHandDisplaySlotHidden(MainPlayerIndex, displayIndex))
+			|| displayIndex >= GetTotalHandCardCount(localPlayerIndex)
+			|| IsHandDisplaySlotHidden(localPlayerIndex, displayIndex))
 		{
 			return false;
 		}
@@ -229,11 +232,11 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		int handCardCount = _playerHands[MainPlayerIndex].Count;
-		bool isJellyfishDisabled = IsJellyfishDisabledHandDisplaySlot(MainPlayerIndex, displayIndex);
+		int handCardCount = _playerHands[localPlayerIndex].Count;
+		bool isJellyfishDisabled = IsJellyfishDisabledHandDisplaySlot(localPlayerIndex, displayIndex);
 		if (displayIndex < handCardCount)
 		{
-			if (displayIndex >= GetVisibleHandCardCountForRender(MainPlayerIndex, handCardCount))
+			if (displayIndex >= GetVisibleHandCardCountForRender(localPlayerIndex, handCardCount))
 			{
 				return false;
 			}
@@ -243,7 +246,7 @@ public partial class GameBoardScene
 				return false;
 			}
 
-			PlayingCard card = _playerHands[MainPlayerIndex][displayIndex];
+			PlayingCard card = _playerHands[localPlayerIndex][displayIndex];
 			if (IsMainPlayerMagnetSelectionActive())
 			{
 				return IsAttachableMagnetCard(card, _pendingItemCardId);
@@ -252,18 +255,18 @@ public partial class GameBoardScene
 			return CanMainPlayerAct() && CanPlayAdventureTutorialHandCard(displayIndex);
 		}
 
-		if (IsMainPlayerMagnetSelectionActive() || isJellyfishDisabled || !CanMainPlayerAct())
+		if (IsNetworkMultiplayerMode() || IsMainPlayerMagnetSelectionActive() || isJellyfishDisabled || !CanMainPlayerAct())
 		{
 			return false;
 		}
 
 		int itemHandIndex = displayIndex - handCardCount;
-		if (itemHandIndex < 0 || itemHandIndex >= _playerItemHands[MainPlayerIndex].Count)
+		if (itemHandIndex < 0 || itemHandIndex >= _playerItemHands[localPlayerIndex].Count)
 		{
 			return false;
 		}
 
-		return CanPlayItemCard(MainPlayerIndex, _playerItemHands[MainPlayerIndex][itemHandIndex].Id)
+		return CanPlayItemCard(localPlayerIndex, _playerItemHands[localPlayerIndex][itemHandIndex].Id)
 			&& CanPlayAdventureTutorialItemCard(itemHandIndex);
 	}
 

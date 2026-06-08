@@ -27,7 +27,10 @@ public partial class MainMenuScene : Control
 		_windowModeOption = dialog.WindowModeOption;
 		_resolutionOption = dialog.ResolutionOption;
 		_languageOption = dialog.LanguageOption;
+		_mainMenuMusicTrackOption = dialog.MainMenuMusicTrackOption;
 		_controlsButton = dialog.ControlsButton;
+		SuppressDefaultPressedSfx(dialog.DoneButton);
+		SuppressDefaultPressedSfx(_controlsButton);
 
 		dialog.CloseRequested += HideSettingsDialog;
 		dialog.DoneButton.Pressed += HideSettingsDialog;
@@ -114,6 +117,21 @@ public partial class MainMenuScene : Control
 			_languagePreference = Localization.SupportedLanguages[(int)index].Preference;
 			OnSettingsChanged();
 		};
+		_mainMenuMusicTrackOption.ItemSelected += index =>
+		{
+			if (_isSyncingSettingsControls)
+			{
+				return;
+			}
+
+			if (index < 0 || index >= _mainMenuMusicOptions.Count)
+			{
+				return;
+			}
+
+			_selectedMainMenuMusicTrack = _mainMenuMusicOptions[(int)index].Id;
+			OnSettingsChanged();
+		};
 		_oceanMotionToggle.Toggled += pressed =>
 		{
 			if (_isSyncingSettingsControls)
@@ -150,6 +168,7 @@ public partial class MainMenuScene : Control
 		_controlsDialogRoot = dialog;
 		AddChild(dialog);
 		_controlsDialogPanel = dialog.DialogPanel;
+		SuppressDefaultPressedSfx(dialog.DoneButton);
 		dialog.CloseRequested += HideControlsDialog;
 		dialog.ResetDefaultsRequested += ResetControlsToDefaults;
 		dialog.BindingEditRequested += OnBindingEditRequested;

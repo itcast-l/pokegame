@@ -14,7 +14,7 @@ public partial class GameBoardScene
 			HasPendingItemSelection(),
 			_isProcessingCardPlay,
 			_isResolvingTurnSequence,
-			_currentTurnPlayerIndex == MainPlayerIndex);
+			IsLocalHandPlayer(_currentTurnPlayerIndex));
 	}
 
 	private TurnContext GetCurrentTurnContext()

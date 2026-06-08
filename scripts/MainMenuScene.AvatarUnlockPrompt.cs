@@ -85,9 +85,9 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarUnlockPromptTween?.Kill();
 		_avatarUnlockPromptTween = null;
-		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarUnlockPromptRoot.Visible = false;
 		_avatarUnlockPromptRoot.MouseFilter = MouseFilterEnum.Ignore;
 		_avatarUnlockPromptRoot.Modulate = Colors.White;
@@ -121,6 +121,7 @@ public partial class MainMenuScene : Control
 		_avatarUnlockPromptPanel = prompt.PromptPanel;
 		_avatarUnlockPromptButton = prompt.ConfirmButton;
 		_avatarUnlockPromptAvatar = prompt.UnlockedAvatar;
+		SuppressDefaultPressedSfx(_avatarUnlockPromptButton);
 		prompt.CloseRequested += HideAvatarUnlockPrompt;
 	}
 
@@ -185,6 +186,8 @@ public partial class MainMenuScene : Control
 			"SETTINGS_INPUT_GAMEPAD_LT" => "LT",
 			"SETTINGS_INPUT_GAMEPAD_RT" => "RT",
 			"SETTINGS_RESOLUTION" => traditionalChinese ? "解析度" : simplifiedChinese ? "分辨率" : "Resolution",
+			"SETTINGS_MAIN_MENU_MUSIC_TRACK" => traditionalChinese ? "主選單音樂曲目" : simplifiedChinese ? "主菜单音乐曲目" : "Main Menu Music Track",
+			"SETTINGS_BACKGROUND_MUSIC" => traditionalChinese ? "背景音樂" : simplifiedChinese ? "背景音乐" : "Background Music",
 			_ => key,
 		};
 	}

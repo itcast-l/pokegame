@@ -55,6 +55,7 @@ public partial class MainMenuScene : Control
 			|| IsVisible(_settingsDialogRoot)
 			|| IsVisible(_controlsDialogRoot)
 			|| IsVisible(_exitDialogRoot)
+			|| IsVisible(_avatarEditDialogRoot)
 			|| IsVisible(_avatarUnlockPromptRoot)
 			|| IsVisible(_adventureTransitionRoot);
 	}

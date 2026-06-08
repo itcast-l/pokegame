@@ -18,6 +18,7 @@ public partial class MainMenuExitDialog : Control
 
 	public PanelContainer DialogPanel { get; private set; } = default!;
 	public Button CancelButton => _cancelButton;
+	public Button ConfirmButton => _confirmButton;
 
 	public override void _Ready()
 	{

@@ -75,6 +75,7 @@ public partial class GameAudioManager : Node
 	private const float TensionRelativeVolumeDb = -5.0f;
 	private const int MaxPooledSfxPlayers = 32;
 	private static readonly StringName UiAudioBoundMeta = new("game_audio_ui_bound");
+	public static readonly StringName UiSuppressPressedSfxMeta = new("game_audio_ui_suppress_pressed_sfx");
 
 	private sealed class MusicTrackSpec
 	{
@@ -145,7 +146,7 @@ public partial class GameAudioManager : Node
 
 	private static readonly IReadOnlyDictionary<string, MusicTrackSpec> MusicPaths = new Dictionary<string, MusicTrackSpec>
 	{
-		[GameMusic.MainMenu] = new("res://asset/audio/background.mp3", true, 0.0f, true),
+		[GameMusic.MainMenu] = new("res://asset/audio/bgm/main_menu_custom/Beneath_The_Sunken_Coast.mp3", true, 0.0f, true),
 		[GameMusic.AdventureMenu] = new("res://asset/audio/bgm/adventure_menu_loop.mp3", true, -1.0f, true),
 		[GameMusic.Gameplay] = new("res://asset/audio/bgm/gameplay_calm_loop.mp3", true, -1.5f, true),
 		[GameMusic.GameplayTension] = new("res://asset/audio/bgm/gameplay_tension_loop.mp3", true, 0.0f, false),
@@ -164,6 +165,7 @@ public partial class GameAudioManager : Node
 	private string _soundBus = FallbackSoundBus;
 	private string _musicBus = FallbackMusicBus;
 	private string _currentMusicId = string.Empty;
+	private MusicTrackSpec? _currentMusicSpec;
 	private float _musicVolumeDb = LinearVolumeToDb(DefaultMusicLinearVolume);
 	private bool _gameplayTensionEnabled;
 	private AudioStreamPlayer? _musicPlayer;
@@ -385,6 +387,7 @@ public partial class GameAudioManager : Node
 			&& IsLive(currentPlayer)
 			&& currentPlayer.Playing)
 		{
+			_currentMusicSpec = spec;
 			SyncMusicLayers(spec, fadeSeconds);
 			return;
 		}
@@ -408,6 +411,60 @@ public partial class GameAudioManager : Node
 		nextPlayer.Play();
 		_musicPlayer = nextPlayer;
 		_currentMusicId = musicId;
+		_currentMusicSpec = spec;
+		FadePlayerTo(nextPlayer, GetEffectiveMusicVolumeDb(spec.RelativeVolumeDb), fadeSeconds);
+		FadeOutAndFree(oldPlayer, fadeSeconds);
+		SyncMusicLayers(spec, fadeSeconds);
+	}
+
+	public void PlayExternalMusic(
+		string musicId,
+		string absolutePath,
+		bool loop = true,
+		float relativeVolumeDb = 0.0f,
+		bool usesAmbience = true,
+		float fadeSeconds = 1.5f,
+		bool restartIfSame = false)
+	{
+		if (string.IsNullOrWhiteSpace(musicId) || string.IsNullOrWhiteSpace(absolutePath))
+		{
+			return;
+		}
+
+		var spec = new MusicTrackSpec(absolutePath, loop, relativeVolumeDb, usesAmbience);
+		AudioStreamPlayer? currentPlayer = _musicPlayer;
+		if (!restartIfSame
+			&& musicId == _currentMusicId
+			&& currentPlayer != null
+			&& IsLive(currentPlayer)
+			&& currentPlayer.Playing)
+		{
+			_currentMusicSpec = spec;
+			SyncMusicLayers(spec, fadeSeconds);
+			return;
+		}
+
+		AudioStream? stream = LoadAudioStream(absolutePath, loop);
+		if (stream == null)
+		{
+			WarnMissingMusic(musicId, $"Could not load {absolutePath}.");
+			return;
+		}
+
+		AudioStreamPlayer? oldPlayer = _musicPlayer;
+		var nextPlayer = new AudioStreamPlayer
+		{
+			Name = $"Music_{musicId}",
+			Stream = stream,
+			Bus = _musicBus,
+			VolumeDb = MutedVolumeDb,
+		};
+
+		AddChild(nextPlayer);
+		nextPlayer.Play();
+		_musicPlayer = nextPlayer;
+		_currentMusicId = musicId;
+		_currentMusicSpec = spec;
 		FadePlayerTo(nextPlayer, GetEffectiveMusicVolumeDb(spec.RelativeVolumeDb), fadeSeconds);
 		FadeOutAndFree(oldPlayer, fadeSeconds);
 		SyncMusicLayers(spec, fadeSeconds);
@@ -416,6 +473,7 @@ public partial class GameAudioManager : Node
 	public void StopMusic(float fadeSeconds = 1.0f)
 	{
 		_currentMusicId = string.Empty;
+		_currentMusicSpec = null;
 		FadeOutAndFree(_musicPlayer, fadeSeconds);
 		_musicPlayer = null;
 		SetAmbienceEnabled(false, fadeSeconds);
@@ -568,24 +626,30 @@ public partial class GameAudioManager : Node
 			return wav;
 		}
 
+		if (path.EndsWith(".ogg", System.StringComparison.OrdinalIgnoreCase))
+		{
+			AudioStreamOggVorbis? ogg = AudioStreamOggVorbis.LoadFromFile(path);
+			if (ogg != null)
+			{
+				ApplyLoopFlag(ogg, loop);
+			}
+
+			return ogg;
+		}
+
 		if (!path.EndsWith(".mp3", System.StringComparison.OrdinalIgnoreCase))
 		{
 			return stream;
 		}
 
-		Godot.FileAccess? file = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Read);
-		if (file == null)
+		AudioStreamMP3? mp3 = AudioStreamMP3.LoadFromFile(path);
+		if (mp3 != null)
 		{
-			return null;
+			ApplyLoopFlag(mp3, loop);
+			return mp3;
 		}
 
-		byte[] data = file.GetBuffer((long)file.GetLength());
-		file.Close();
-		return new AudioStreamMP3
-		{
-			Data = data,
-			Loop = loop,
-		};
+		return null;
 	}
 
 	private static void ApplyLoopFlag(AudioStream stream, bool loop)
@@ -593,6 +657,10 @@ public partial class GameAudioManager : Node
 		if (stream is AudioStreamMP3 mp3)
 		{
 			mp3.Loop = loop;
+		}
+		else if (stream is AudioStreamOggVorbis ogg)
+		{
+			ogg.Loop = loop;
 		}
 		else if (stream is AudioStreamWav wav)
 		{
@@ -731,12 +799,11 @@ public partial class GameAudioManager : Node
 	private void UpdateActiveMusicVolumes()
 	{
 		AudioStreamPlayer? currentPlayer = _musicPlayer;
-		if (_currentMusicId != string.Empty
-			&& MusicPaths.TryGetValue(_currentMusicId, out MusicTrackSpec? spec)
+		if (_currentMusicSpec != null
 			&& IsLive(currentPlayer)
 			&& currentPlayer != null)
 		{
-			currentPlayer.VolumeDb = GetEffectiveMusicVolumeDb(spec.RelativeVolumeDb);
+			currentPlayer.VolumeDb = GetEffectiveMusicVolumeDb(_currentMusicSpec.RelativeVolumeDb);
 		}
 
 		AudioStreamPlayer? ambiencePlayer = _ambiencePlayer;
@@ -826,7 +893,15 @@ public partial class GameAudioManager : Node
 			return;
 		}
 
-		button.Pressed += () => PlaySfx(ResolveButtonPressedSfx(button), -3.0f, 0.98f, 1.03f, 0.03);
+		button.Pressed += () =>
+		{
+			if (button.HasMeta(UiSuppressPressedSfxMeta) && button.GetMeta(UiSuppressPressedSfxMeta).AsBool())
+			{
+				return;
+			}
+
+			PlaySfx(ResolveButtonPressedSfx(button), -3.0f, 0.98f, 1.03f, 0.03);
+		};
 	}
 
 	private void BindRangeAudio(Godot.Range range)

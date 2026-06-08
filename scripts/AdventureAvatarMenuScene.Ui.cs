@@ -11,6 +11,7 @@ public partial class AdventureAvatarMenuScene
 
 		_backButton = GetNode<Button>("%BackButton");
 		_startButton = GetNode<Button>("%StartButton");
+		SuppressDefaultPressedSfx(_backButton);
 		_levelScroll = GetNode<ScrollContainer>("%LevelScroll");
 		_levelList = GetNode<VBoxContainer>("%LevelList");
 		_previewStageLabel = GetNode<Label>("%SelectedStageLabel");

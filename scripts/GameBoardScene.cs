@@ -141,6 +141,7 @@ public partial class GameBoardScene : Control
 	private readonly CardPlayStateService _cardPlayStateService = new();
 	private readonly CaptureStateService _captureStateService = new();
 	private readonly TurnAdvancementService _turnAdvancementService = new();
+	private IPlayerInputHandler _playerInputHandler = default!;
 	private int _playerCount
 	{
 		get => _state.PlayerCount;
@@ -296,6 +297,7 @@ public partial class GameBoardScene : Control
 	private string _playerAvatarIdsCsv = string.Empty;
 	private bool _networkWaitForInitialize;
 	private bool _networkBoardInitialized;
+	private string _networkMatchId = string.Empty;
 	private bool _adventureMode;
 	private bool _adventureTutorialMode;
 	private string _adventureTutorialFlow = "basic_capture";
@@ -428,6 +430,13 @@ public partial class GameBoardScene : Control
 	}
 
 	[Export]
+	public string network_match_id
+	{
+		get => _networkMatchId;
+		set => _networkMatchId = value?.Trim() ?? string.Empty;
+	}
+
+	[Export]
 	public long match_seed
 	{
 		get => _matchSeed;
@@ -542,6 +551,7 @@ public partial class GameBoardScene : Control
 		CreatePlayerStatusTooltip();
 		CreatePlayerCardPiles();
 		CreatePlayerHandAreas();
+		_playerInputHandler = CreatePlayerInputHandler();
 		BindPlayerAvatarAreas();
 		CreatePlayerAvatars();
 		BindQuestionCardTransformArea();
@@ -570,8 +580,19 @@ public partial class GameBoardScene : Control
 		match_seed = ReadNetworkLong(payload, "match_seed", match_seed);
 		player_names_csv = ReadNetworkString(payload, "player_names_csv", player_names_csv);
 		player_avatar_ids_csv = ReadNetworkString(payload, "player_avatar_ids_csv", player_avatar_ids_csv);
+		network_match_id = ReadNetworkString(payload, "match_id", network_match_id);
 		network_wait_for_initialize = false;
+		if (IsNetworkMultiplayerMode() && !IsNetworkHost())
+		{
+			InitializeNetworkClientBoardShell();
+			return;
+		}
+
 		InitializeBoard(playOpeningIntroAnimation: true);
+		if (IsNetworkHost())
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendInitialBoardSnapshotsFromHost(this);
+		}
 	}
 
 	private void InitializeBoard(bool playOpeningIntroAnimation)

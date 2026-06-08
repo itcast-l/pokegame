@@ -15,6 +15,7 @@ public partial class MainMenuScene : Control
 		_exitDialogRoot = dialog;
 		AddChild(dialog);
 		_exitDialogPanel = dialog.DialogPanel;
+		SuppressDefaultPressedSfx(dialog.CancelButton);
 		dialog.CloseRequested += HideExitDialog;
 		dialog.ConfirmRequested += QuitGame;
 	}
@@ -48,8 +49,8 @@ public partial class MainMenuScene : Control
 
 	private void HideExitDialog()
 	{
-		_exitDialogTween?.Kill();
 		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
+		_exitDialogTween?.Kill();
 		_avatarEntry.Visible = true;
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 		ResetMenuCamera();

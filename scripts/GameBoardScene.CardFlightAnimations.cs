@@ -29,8 +29,9 @@ public partial class GameBoardScene
 		}
 
 		Vector2 targetGlobalPosition = _centerArena.GlobalPosition + tableCardPosition;
-		bool showMainPlayerPreview = playerIndex == MainPlayerIndex && !tableCardIsFaceUp;
-		bool flipToCardBack = !showMainPlayerPreview && playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
+		bool isLocalHandPlayer = IsLocalHandPlayer(playerIndex);
+		bool showMainPlayerPreview = isLocalHandPlayer && !tableCardIsFaceUp;
+		bool flipToCardBack = !showMainPlayerPreview && !tableCardIsFaceUp && _cardBackTexture != null;
 		Texture2D targetTexture = flipToCardBack ? _cardBackTexture! : startTexture;
 		float targetAlpha = showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f;
 		float startRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
@@ -47,7 +48,7 @@ public partial class GameBoardScene
 		TextureRect? attachmentOverlay = null;
 		Texture2D? attachmentOverlayTexture = GetCardAttachmentOverlayTexture(playedCard);
 		bool startShowsAttachmentOverlay = attachmentOverlayTexture != null
-			&& (playerIndex == MainPlayerIndex || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null);
+			&& (isLocalHandPlayer || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null);
 		if (startShowsAttachmentOverlay)
 		{
 			attachmentOverlay = _animationPresenter.RentTextureRect(
@@ -129,7 +130,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool flipToCardBack = playerIndex == MainPlayerIndex && !tableCardIsFaceUp && _cardBackTexture != null;
+		bool flipToCardBack = IsLocalHandPlayer(playerIndex) && !tableCardIsFaceUp && _cardBackTexture != null;
 		Texture2D? startTexture = flipToCardBack ? _cardBackTexture : GetVisibleHandItemCardTexture(playerIndex, itemCard);
 		if (startTexture == null)
 		{
@@ -202,7 +203,7 @@ public partial class GameBoardScene
 
 	private Texture2D? GetVisibleHandCardTexture(int playerIndex, PlayingCard playedCard)
 	{
-		if (playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
+		if (!IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
 		{
 			return _cardBackTexture;
 		}
@@ -212,7 +213,7 @@ public partial class GameBoardScene
 
 	private Texture2D? GetVisibleHandItemCardTexture(int playerIndex, ItemCard itemCard)
 	{
-		if (playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
+		if (!IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
 		{
 			return _cardBackTexture;
 		}

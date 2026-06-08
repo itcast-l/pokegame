@@ -23,6 +23,7 @@ public partial class MainMenuScene : Control
 		_playerCountOption = dialog.PlayerCountOption;
 		_itemModeOption = dialog.ItemModeOption;
 		_winningScoreOption = dialog.WinningScoreOption;
+		SuppressDefaultPressedSfx(_singlePlayerButton);
 		dialog.CloseRequested += HidePlayerCountDialog;
 		dialog.StartGameRequested += StartGameWithOptions;
 	}
@@ -64,8 +65,8 @@ public partial class MainMenuScene : Control
 
 	private void HidePlayerCountDialog()
 	{
-		_playerCountDialogTween?.Kill();
 		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
+		_playerCountDialogTween?.Kill();
 		_avatarEntry.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 		ResetMenuCamera();

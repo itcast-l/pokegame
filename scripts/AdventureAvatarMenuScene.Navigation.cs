@@ -62,6 +62,7 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
+		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		_isReturningToMainMenu = true;
 		_backButton.Disabled = true;
 		_startButton.Disabled = true;

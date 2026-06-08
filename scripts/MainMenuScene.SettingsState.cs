@@ -21,9 +21,11 @@ public partial class MainMenuScene
 		_oceanMotion = GameSaveStore.GetBool(GameSaveStore.OceanMotionKey, DefaultOceanMotion);
 		_motionScale = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MotionScaleKey, DefaultMotionScale), 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference));
+		_selectedMainMenuMusicTrack = GameSaveStore.GetString(GameSaveStore.MainMenuMusicTrackKey, string.Empty).Trim();
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
 		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(profile.SelectedAvatarId);
 		_playerName = PlayerNameRules.Normalize(profile.PlayerName);
+		RefreshMainMenuMusicOptions();
 	}
 
 	private void SaveSettings()
@@ -38,6 +40,7 @@ public partial class MainMenuScene
 			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
 			new GameSaveStore.SaveValue(GameSaveStore.MotionScaleKey, _motionScale),
 			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
+			new GameSaveStore.SaveValue(GameSaveStore.MainMenuMusicTrackKey, _selectedMainMenuMusicTrack),
 			new GameSaveStore.SaveValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings()));
 		if (saveResult != Error.Ok)
 		{
@@ -80,6 +83,7 @@ public partial class MainMenuScene
 		ApplyBusMute(MusicBusName, _muteBgm);
 		ApplyBusMute(SoundBusName, _muteSfx);
 		ApplyMusicVolume();
+		ApplyMainMenuMusicSelection();
 
 		ApplyWindowSettings();
 
@@ -163,6 +167,7 @@ public partial class MainMenuScene
 		RefreshResolutionOptions();
 		_resolutionOption.Select(GetResolutionOptionIndex(_selectedResolution));
 		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
+		RefreshMainMenuMusicTrackOptions();
 		_oceanMotionToggle.ButtonPressed = _oceanMotion;
 		_motionScaleSlider.Value = Mathf.RoundToInt(_motionScale * 100.0f);
 		SyncMotionScaleControlState();
@@ -184,6 +189,32 @@ public partial class MainMenuScene
 		if (!_oceanMotion && _motionScaleSlider.HasFocus())
 		{
 			_oceanMotionToggle.GrabFocus();
+		}
+	}
+
+	private void RefreshMainMenuMusicTrackOptions()
+	{
+		if (_mainMenuMusicTrackOption == null)
+		{
+			return;
+		}
+
+		_mainMenuMusicTrackOption.Clear();
+		for (int index = 0; index < _mainMenuMusicOptions.Count; index++)
+		{
+			MainMenuMusicOption option = _mainMenuMusicOptions[index];
+			_mainMenuMusicTrackOption.AddItem(option.DisplayName, index);
+		}
+
+		int selectedIndex = GetMainMenuMusicOptionIndex(_selectedMainMenuMusicTrack);
+		if (selectedIndex < 0 && _mainMenuMusicOptions.Count > 0)
+		{
+			selectedIndex = 0;
+		}
+
+		if (selectedIndex >= 0 && selectedIndex < _mainMenuMusicTrackOption.ItemCount)
+		{
+			_mainMenuMusicTrackOption.Select(selectedIndex);
 		}
 	}
 
@@ -281,6 +312,8 @@ public partial class MainMenuScene
 		_selectedResolution = DefaultResolution;
 		_oceanMotion = DefaultOceanMotion;
 		_languagePreference = Localization.DefaultLanguagePreference;
+		_selectedMainMenuMusicTrack = string.Empty;
+		RefreshMainMenuMusicOptions();
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();
