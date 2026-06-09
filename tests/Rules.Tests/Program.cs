@@ -33,6 +33,9 @@ internal static class Program
 		Run("adventure ai final profile can skip best capture", AdventureAiFinalProfileCanSkipBestCapture);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
+		Run("result presentation uses local seat for network defeat", ResultPresentationUsesLocalSeatForNetworkDefeat);
+		Run("result presentation preserves local win and offline rules", ResultPresentationPreservesLocalWinAndOfflineRules);
+		Run("result presentation disables network replay primary action", ResultPresentationDisablesNetworkReplayPrimaryAction);
 		Run("turn state machine advances context generation", TurnStateMachineAdvancesContextGeneration);
 		Run("turn state machine gates action starts", TurnStateMachineGatesActionStarts);
 		Run("turn rules skip inactive players", TurnRulesSkipInactivePlayers);
@@ -44,12 +47,51 @@ internal static class Program
 		Run("room name rules restrict special symbols", RoomNameRulesRestrictSpecialSymbols);
 		Run("steam metadata rejects dirty values", SteamMetadataRejectsDirtyValues);
 		Run("steam metadata parses valid values defensively", SteamMetadataParsesValidValuesDefensively);
+		Run("steam metadata keeps active match lobby joinable for reconnect", SteamMetadataKeepsActiveMatchLobbyJoinableForReconnect);
 		Run("multiplayer lobby start requires filled ready seats", MultiplayerLobbyStartRequiresFilledReadySeats);
+		Run("multiplayer lobby only accepts join requests in lobby state", MultiplayerLobbyOnlyAcceptsJoinRequestsInLobbyState);
+		Run("multiplayer lobby room list only allows joining lobby rooms", MultiplayerLobbyRoomListOnlyAllowsJoiningLobbyRooms);
+		Run("multiplayer lobby only auto accepts steam invites from safe states", MultiplayerLobbyOnlyAutoAcceptsSteamInvitesFromSafeStates);
 		Run("multiplayer board sync resolves sender seat", MultiplayerBoardSyncResolvesSenderSeat);
 		Run("multiplayer board sync rejects invalid play requests", MultiplayerBoardSyncRejectsInvalidPlayRequests);
 		Run("multiplayer board sync limits private hand visibility", MultiplayerBoardSyncLimitsPrivateHandVisibility);
+		Run("local seat input enables only for in-game human connected state", LocalSeatInputEnablesOnlyForInGameHumanConnectedState);
+		Run("network seat control accepts remote actions only for connected humans", NetworkSeatControlAcceptsRemoteActionsOnlyForConnectedHumans);
+		Run("network seat control reveals pending target hand only for connected humans", NetworkSeatControlRevealsPendingTargetHandOnlyForConnectedHumans);
+		Run("network seat control sends pending selection requests only when client is ready", NetworkSeatControlSendsPendingSelectionRequestsOnlyWhenClientIsReady);
+		Run("network ai playable turn action ignores blocked item-only turns", NetworkAiPlayableTurnActionIgnoresBlockedItemOnlyTurns);
+		Run("network ai proxy capture profile matches weakest adventure ai", NetworkAiProxyCaptureProfileMatchesWeakestAdventureAi);
+		Run("network ai resumes proxy turn only after authority action settles", NetworkAiResumesProxyTurnOnlyAfterAuthorityActionSettles);
+		Run("network ai starts proxy turn for ai-owned pending selection", NetworkAiStartsProxyTurnForAiOwnedPendingSelection);
+		Run("network ai recovers only for host side unhandled failures", NetworkAiRecoversOnlyForHostSideUnhandledFailures);
+		Run("network ai blocked item skip is scoped to exact turn and item", NetworkAiBlockedItemSkipIsScopedToExactTurnAndItem);
+		Run("network ai pending choice fallback picks only legal candidates", NetworkAiPendingChoiceFallbackPicksOnlyLegalCandidates);
+		Run("network ai pending choice fallback fails without legal candidates", NetworkAiPendingChoiceFallbackFailsWithoutLegalCandidates);
+		Run("network reconnect credentials are sent before first board snapshot", NetworkReconnectCredentialsAreSentBeforeFirstBoardSnapshot);
+		Run("network reconnect rules defer claim while seat still connected", NetworkReconnectRulesDeferClaimWhileSeatStillConnected);
+		Run("network reconnect rules end match before reconnect after host termination", NetworkReconnectRulesEndMatchBeforeReconnectAfterHostTermination);
+		Run("network reconnect rules ignore stale disconnect after reconnect", NetworkReconnectRulesIgnoreStaleDisconnectAfterReconnect);
+		Run("network reconnect rules only hand off non host disconnects to ai", NetworkReconnectRulesOnlyHandOffNonHostDisconnectsToAi);
+		Run("network reconnect rules scope realtime board events to active in-game clients", NetworkReconnectRulesScopeRealtimeBoardEventsToActiveInGameClients);
+		Run("network reconnect rules classify steam lobby join retries", NetworkReconnectRulesClassifySteamLobbyJoinRetries);
+		Run("network reconnect rules reject steam owner migration during reconnect", NetworkReconnectRulesRejectSteamOwnerMigrationDuringReconnect);
+		Run("network reconnect rules apply reconnect snapshot immediately on client", NetworkReconnectRulesApplyReconnectSnapshotImmediatelyOnClient);
+		Run("network reconnect rules complete catch up only after visual queue drains", NetworkReconnectRulesCompleteCatchUpOnlyAfterVisualQueueDrains);
+		Run("network reconnect overlay shows only during client catch up", NetworkReconnectOverlayShowsOnlyDuringClientCatchUp);
+		Run("network reconnect presentation matches reconnect plan copy", NetworkReconnectPresentationMatchesReconnectPlanCopy);
+		Run("seat control disconnect transitions to ai reclaimable", SeatControlDisconnectTransitionsToAiReclaimable);
+		Run("seat control reclaim pending disconnect falls back to ai reclaimable", SeatControlReclaimPendingDisconnectFallsBackToAiReclaimable);
+		Run("seat control reconnect claim is idempotent for same peer", SeatControlReconnectClaimIsIdempotentForSamePeer);
+		Run("seat control reconnect claim rejects conflicting peer", SeatControlReconnectClaimRejectsConflictingPeer);
+		Run("seat control stays reclaim pending until own turn start", SeatControlStaysReclaimPendingUntilOwnTurnStart);
+		Run("seat control promotes reclaimed seat at turn start", SeatControlPromotesReclaimedSeatAtTurnStart);
+		Run("seat control allows reclaim again after reclaim pending disconnect", SeatControlAllowsReclaimAgainAfterReclaimPendingDisconnect);
+		Run("seat control rejects invalid reconnect metadata", SeatControlRejectsInvalidReconnectMetadata);
+		Run("seat control rejects reconnect claim after match end", SeatControlRejectsReconnectClaimAfterMatchEnd);
+		Run("seat control shared snapshot redacts reconnect token", SeatControlSharedSnapshotRedactsReconnectToken);
 		Run("scene load handshake completes and times out", SceneLoadHandshakeCompletesAndTimesOut);
 		Run("lan discovery parses valid messages and drops dirty data", LanDiscoveryParsesValidMessagesAndDropsDirtyData);
+		Run("local seat board controls block until human control is restored", LocalSeatBoardControlsBlockUntilHumanControlIsRestored);
 
 		Console.WriteLine($"{_passed} passed, {_failed} failed");
 		return _failed == 0 ? 0 : 1;
@@ -230,6 +272,69 @@ internal static class Program
 		Equal(0, plan.Score.Points);
 		False(plan.Score.HasDoubleEffect);
 		True(plan.ShouldTrackQuestionCardRefresh);
+	}
+
+	private static void ResultPresentationUsesLocalSeatForNetworkDefeat()
+	{
+		True(ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex: 0,
+			localPlayerIndex: 2,
+			isNetworkMultiplayer: true,
+			adventureMode: false,
+			soloMode: false));
+
+		False(ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex: 2,
+			localPlayerIndex: 2,
+			isNetworkMultiplayer: true,
+			adventureMode: false,
+			soloMode: false));
+	}
+
+	private static void ResultPresentationPreservesLocalWinAndOfflineRules()
+	{
+		False(ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex: 0,
+			localPlayerIndex: 0,
+			isNetworkMultiplayer: false,
+			adventureMode: false,
+			soloMode: false));
+
+		False(ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex: 1,
+			localPlayerIndex: 0,
+			isNetworkMultiplayer: false,
+			adventureMode: false,
+			soloMode: false));
+
+		True(ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex: 1,
+			localPlayerIndex: 0,
+			isNetworkMultiplayer: false,
+			adventureMode: true,
+			soloMode: false));
+
+		True(ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex: 1,
+			localPlayerIndex: 0,
+			isNetworkMultiplayer: false,
+			adventureMode: false,
+			soloMode: true));
+	}
+
+	private static void ResultPresentationDisablesNetworkReplayPrimaryAction()
+	{
+		False(ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
+			isNetworkMultiplayer: true,
+			shouldAdvanceAdventure: false));
+
+		True(ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
+			isNetworkMultiplayer: false,
+			shouldAdvanceAdventure: false));
+
+		True(ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
+			isNetworkMultiplayer: true,
+			shouldAdvanceAdventure: true));
 	}
 
 	private static void RewardResolverUsesWeightedReservoirSelection()
@@ -758,6 +863,20 @@ internal static class Program
 		Equal(10UL, room.SteamLobbyId);
 	}
 
+	private static void SteamMetadataKeepsActiveMatchLobbyJoinableForReconnect()
+	{
+		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Idle));
+		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Searching));
+		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Hosting));
+		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Joining));
+		True(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Lobby));
+		True(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Starting));
+		True(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.LoadingScene));
+		True(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.InGame));
+		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Reconnecting));
+		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Failed));
+	}
+
 	private static void MultiplayerLobbyStartRequiresFilledReadySeats()
 	{
 		var readyPlayers = new[]
@@ -781,6 +900,44 @@ internal static class Program
 		False(MultiplayerLobbyRules.CanStart(missingSeat, 2));
 		Equal(1, MultiplayerLobbyRules.GetNextSeatIndex(new[] { readyPlayers[0] }, 2));
 		Equal(-1, MultiplayerLobbyRules.GetNextSeatIndex(readyPlayers, 2));
+	}
+
+	private static void MultiplayerLobbyOnlyAcceptsJoinRequestsInLobbyState()
+	{
+		True(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Lobby));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Idle));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Searching));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Hosting));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Joining));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Starting));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.LoadingScene));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.InGame));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Reconnecting));
+		False(MultiplayerLobbyRules.CanAcceptJoinRequest(NetworkSessionState.Failed));
+	}
+
+	private static void MultiplayerLobbyRoomListOnlyAllowsJoiningLobbyRooms()
+	{
+		True(MultiplayerLobbyRules.CanJoinListedRoom(NetworkSessionState.Lobby.ToString()));
+		False(MultiplayerLobbyRules.CanJoinListedRoom(NetworkSessionState.Starting.ToString()));
+		False(MultiplayerLobbyRules.CanJoinListedRoom(NetworkSessionState.LoadingScene.ToString()));
+		False(MultiplayerLobbyRules.CanJoinListedRoom(NetworkSessionState.InGame.ToString()));
+		False(MultiplayerLobbyRules.CanJoinListedRoom("not-a-state"));
+	}
+
+	private static void MultiplayerLobbyOnlyAutoAcceptsSteamInvitesFromSafeStates()
+	{
+		True(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Idle));
+		True(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Searching));
+		True(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Failed));
+
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Hosting));
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Joining));
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Lobby));
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Starting));
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.LoadingScene));
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.InGame));
+		False(MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(NetworkSessionState.Reconnecting));
 	}
 
 	private static void MultiplayerBoardSyncResolvesSenderSeat()
@@ -822,6 +979,960 @@ internal static class Program
 	{
 		True(MultiplayerBoardSyncRules.ShouldIncludePrivateHandCards(cardOwnerSeatIndex: 2, recipientSeatIndex: 2));
 		False(MultiplayerBoardSyncRules.ShouldIncludePrivateHandCards(cardOwnerSeatIndex: 2, recipientSeatIndex: 1));
+	}
+
+	private static void NetworkReconnectCredentialsAreSentBeforeFirstBoardSnapshot()
+	{
+		False(NetworkReconnectRules.ShouldSendReconnectCredentials(
+			isHost: false,
+			state: NetworkSessionState.Starting));
+
+		False(NetworkReconnectRules.ShouldSendReconnectCredentials(
+			isHost: true,
+			state: NetworkSessionState.Lobby));
+
+		True(NetworkReconnectRules.ShouldSendReconnectCredentials(
+			isHost: true,
+			state: NetworkSessionState.Starting));
+
+		True(NetworkReconnectRules.ShouldSendReconnectCredentials(
+			isHost: true,
+			state: NetworkSessionState.LoadingScene));
+
+		True(NetworkReconnectRules.ShouldSendReconnectCredentials(
+			isHost: true,
+			state: NetworkSessionState.InGame));
+	}
+
+	private static void NetworkReconnectRulesEndMatchBeforeReconnectAfterHostTermination()
+	{
+		True(NetworkReconnectRules.ShouldBroadcastHostEndedMatch(
+			isHost: true,
+			state: NetworkSessionState.InGame));
+
+		False(NetworkReconnectRules.ShouldBroadcastHostEndedMatch(
+			isHost: true,
+			state: NetworkSessionState.Lobby));
+
+		False(NetworkReconnectRules.ShouldAttemptReconnectAfterServerDisconnect(
+			NetworkSessionState.InGame,
+			isHost: false,
+			canAttemptReconnectClaim: true,
+			hostEndedMatch: true));
+
+		True(NetworkReconnectRules.ShouldAttemptReconnectAfterServerDisconnect(
+			NetworkSessionState.InGame,
+			isHost: false,
+			canAttemptReconnectClaim: true,
+			hostEndedMatch: false));
+	}
+
+	private static void NetworkReconnectRulesIgnoreStaleDisconnectAfterReconnect()
+	{
+		True(NetworkReconnectRules.ShouldIgnoreLateServerDisconnectAfterReconnect(
+			NetworkSessionState.InGame,
+			isHost: false,
+			hasActivePeer: true,
+			peerIsConnected: true));
+
+		False(NetworkReconnectRules.ShouldIgnoreLateServerDisconnectAfterReconnect(
+			NetworkSessionState.Reconnecting,
+			isHost: false,
+			hasActivePeer: true,
+			peerIsConnected: true));
+
+		False(NetworkReconnectRules.ShouldIgnoreLateServerDisconnectAfterReconnect(
+			NetworkSessionState.InGame,
+			isHost: true,
+			hasActivePeer: true,
+			peerIsConnected: true));
+
+		False(NetworkReconnectRules.ShouldIgnoreLateServerDisconnectAfterReconnect(
+			NetworkSessionState.InGame,
+			isHost: false,
+			hasActivePeer: true,
+			peerIsConnected: false));
+	}
+
+	private static void NetworkReconnectRulesOnlyHandOffNonHostDisconnectsToAi()
+	{
+		True(NetworkReconnectRules.ShouldHandOffDisconnectedSeatToAi(
+			NetworkSessionState.InGame,
+			disconnectedPlayerIsHost: false));
+
+		False(NetworkReconnectRules.ShouldHandOffDisconnectedSeatToAi(
+			NetworkSessionState.InGame,
+			disconnectedPlayerIsHost: true));
+
+		False(NetworkReconnectRules.ShouldHandOffDisconnectedSeatToAi(
+			NetworkSessionState.Lobby,
+			disconnectedPlayerIsHost: false));
+	}
+
+	private static void NetworkReconnectRulesDeferClaimWhileSeatStillConnected()
+	{
+		True(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.HumanConnected,
+			currentPeerId: 22,
+			requestPeerId: 33,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-1",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-1"));
+
+		True(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.HumanConnected,
+			currentPeerId: 22,
+			requestPeerId: 22,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-1",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-1"));
+
+		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.AiProxyReclaimable,
+			currentPeerId: 0,
+			requestPeerId: 33,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-1",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-1"));
+
+		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.HumanConnected,
+			currentPeerId: 22,
+			requestPeerId: 33,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-2",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-1"));
+
+		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.HumanConnected,
+			currentPeerId: 22,
+			requestPeerId: 33,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-1",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-2"));
+
+		True(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.HumanReclaimPending,
+			currentPeerId: 44,
+			requestPeerId: 55,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-1",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-1"));
+
+		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			SeatControlMode.HumanReclaimPending,
+			currentPeerId: 44,
+			requestPeerId: 44,
+			currentReconnectToken: "token-1",
+			requestReconnectToken: "token-1",
+			currentStableUserId: "stable-1",
+			requestStableUserId: "stable-1"));
+	}
+
+	private static void NetworkReconnectRulesScopeRealtimeBoardEventsToActiveInGameClients()
+	{
+		True(NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+			isHost: true,
+			state: NetworkSessionState.InGame,
+			playerIsConnected: true,
+			playerIsHost: false));
+
+		False(NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+			isHost: false,
+			state: NetworkSessionState.InGame,
+			playerIsConnected: true,
+			playerIsHost: false));
+
+		False(NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+			isHost: true,
+			state: NetworkSessionState.Lobby,
+			playerIsConnected: true,
+			playerIsHost: false));
+
+		False(NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+			isHost: true,
+			state: NetworkSessionState.InGame,
+			playerIsConnected: false,
+			playerIsHost: false));
+
+		False(NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+			isHost: true,
+			state: NetworkSessionState.InGame,
+			playerIsConnected: true,
+			playerIsHost: true));
+
+		True(NetworkReconnectRules.ShouldQueueRealtimeBoardEventForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame));
+
+		False(NetworkReconnectRules.ShouldQueueRealtimeBoardEventForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting));
+
+		False(NetworkReconnectRules.ShouldQueueRealtimeBoardEventForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			networkState: NetworkSessionState.InGame));
+
+		False(NetworkReconnectRules.ShouldQueueRealtimeBoardEventForClient(
+			isNetworkMultiplayer: false,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame));
+	}
+
+	private static void NetworkReconnectRulesClassifySteamLobbyJoinRetries()
+	{
+		True(NetworkReconnectRules.IsSteamLobbyJoinSuccessful(response: 1));
+		False(NetworkReconnectRules.IsSteamLobbyJoinSuccessful(response: 5));
+
+		True(NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(
+			NetworkSessionState.Reconnecting,
+			response: 5));
+
+		False(NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(
+			NetworkSessionState.Joining,
+			response: 5));
+		False(NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(
+			NetworkSessionState.Reconnecting,
+			response: 2));
+		False(NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(
+			NetworkSessionState.Reconnecting,
+			response: 3));
+		False(NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(
+			NetworkSessionState.Reconnecting,
+			response: 4));
+	}
+
+	private static void NetworkReconnectRulesRejectSteamOwnerMigrationDuringReconnect()
+	{
+		True(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
+			NetworkSessionState.Reconnecting,
+			originalHostStableUserId: "steam:123",
+			currentLobbyOwnerSteamId: 456));
+
+		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
+			NetworkSessionState.Joining,
+			originalHostStableUserId: "steam:123",
+			currentLobbyOwnerSteamId: 456));
+
+		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
+			NetworkSessionState.Reconnecting,
+			originalHostStableUserId: "steam:123",
+			currentLobbyOwnerSteamId: 123));
+
+		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
+			NetworkSessionState.Reconnecting,
+			originalHostStableUserId: "peer:abc",
+			currentLobbyOwnerSteamId: 456));
+
+		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
+			NetworkSessionState.Reconnecting,
+			originalHostStableUserId: "steam:123",
+			currentLobbyOwnerSteamId: 0));
+	}
+
+	private static void NetworkReconnectRulesApplyReconnectSnapshotImmediatelyOnClient()
+	{
+		True(NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting));
+
+		False(NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame));
+
+		False(NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			networkState: NetworkSessionState.Reconnecting));
+
+		False(NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
+			isNetworkMultiplayer: false,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting));
+	}
+
+	private static void NetworkReconnectRulesCompleteCatchUpOnlyAfterVisualQueueDrains()
+	{
+		True(NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting,
+			isVisualQueueProcessing: false));
+
+		False(NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting,
+			isVisualQueueProcessing: true));
+
+		False(NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			isVisualQueueProcessing: false));
+
+		False(NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			networkState: NetworkSessionState.Reconnecting,
+			isVisualQueueProcessing: false));
+	}
+
+	private static void NetworkReconnectOverlayShowsOnlyDuringClientCatchUp()
+	{
+		False(NetworkReconnectPresentationRules.ShouldShowOverlay(
+			isNetworkMultiplayer: false,
+			isNetworkHost: false,
+			networkWaitForInitialize: false,
+			networkState: NetworkSessionState.Idle,
+			lastAppliedSnapshotId: 1));
+
+		False(NetworkReconnectPresentationRules.ShouldShowOverlay(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			networkWaitForInitialize: true,
+			networkState: NetworkSessionState.Reconnecting,
+			lastAppliedSnapshotId: -1));
+
+		True(NetworkReconnectPresentationRules.ShouldShowOverlay(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkWaitForInitialize: true,
+			networkState: NetworkSessionState.InGame,
+			lastAppliedSnapshotId: 5));
+
+		True(NetworkReconnectPresentationRules.ShouldShowOverlay(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkWaitForInitialize: false,
+			networkState: NetworkSessionState.Reconnecting,
+			lastAppliedSnapshotId: 5));
+
+		True(NetworkReconnectPresentationRules.ShouldShowOverlay(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkWaitForInitialize: false,
+			networkState: NetworkSessionState.InGame,
+			lastAppliedSnapshotId: 0));
+
+		False(NetworkReconnectPresentationRules.ShouldShowOverlay(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkWaitForInitialize: false,
+			networkState: NetworkSessionState.InGame,
+			lastAppliedSnapshotId: 2));
+	}
+
+	private static void NetworkReconnectPresentationMatchesReconnectPlanCopy()
+	{
+		Equal("断线中 · AI 接管", NetworkReconnectPresentationRules.GetSeatControlStatusText(
+			SeatControlMode.AiProxyReclaimable,
+			usesChineseLocale: true));
+		Equal("Disconnected · AI takeover", NetworkReconnectPresentationRules.GetSeatControlStatusText(
+			SeatControlMode.AiProxyReclaimable,
+			usesChineseLocale: false));
+		Equal("已重连 · 下回合恢复", NetworkReconnectPresentationRules.GetSeatControlStatusText(
+			SeatControlMode.HumanReclaimPending,
+			usesChineseLocale: true));
+		Equal("Reconnected · next turn", NetworkReconnectPresentationRules.GetSeatControlStatusText(
+			SeatControlMode.HumanReclaimPending,
+			usesChineseLocale: false));
+		Equal(string.Empty, NetworkReconnectPresentationRules.GetSeatControlStatusText(
+			SeatControlMode.HumanConnected,
+			usesChineseLocale: true));
+
+		Equal("正在同步最新战局…", NetworkReconnectPresentationRules.GetReconnectOverlayText(usesChineseLocale: true));
+		Equal("Syncing latest match...", NetworkReconnectPresentationRules.GetReconnectOverlayText(usesChineseLocale: false));
+		Equal("你已重连，当前回合结束后将在你的下一个回合恢复控制。", NetworkReconnectPresentationRules.GetReconnectNoticeText(usesChineseLocale: true));
+		Equal("Reconnected. Control returns on your next turn.", NetworkReconnectPresentationRules.GetReconnectNoticeText(usesChineseLocale: false));
+	}
+
+	private static void LocalSeatInputEnablesOnlyForInGameHumanConnectedState()
+	{
+		True(LocalSeatControlRules.IsLocalHumanInputEnabled(
+			isNetworkMultiplayer: false,
+			networkState: NetworkSessionState.Idle,
+			seatStateFound: false,
+			seatMode: SeatControlMode.AiProxyReclaimable));
+
+		True(LocalSeatControlRules.IsLocalHumanInputEnabled(
+			isNetworkMultiplayer: true,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanConnected));
+
+		False(LocalSeatControlRules.IsLocalHumanInputEnabled(
+			isNetworkMultiplayer: true,
+			networkState: NetworkSessionState.Reconnecting,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanConnected));
+
+		False(LocalSeatControlRules.IsLocalHumanInputEnabled(
+			isNetworkMultiplayer: true,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanReclaimPending));
+
+		False(LocalSeatControlRules.IsLocalHumanInputEnabled(
+			isNetworkMultiplayer: true,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: false,
+			seatMode: SeatControlMode.HumanConnected));
+	}
+
+	private static void LocalSeatBoardControlsBlockUntilHumanControlIsRestored()
+	{
+		False(LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: false,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Idle,
+			seatStateFound: false,
+			seatMode: SeatControlMode.AiProxyReclaimable));
+
+		False(LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanReclaimPending));
+
+		False(LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanConnected));
+
+		True(LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanConnected));
+
+		True(LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: true,
+			seatMode: SeatControlMode.HumanReclaimPending));
+
+		True(LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			seatStateFound: false,
+			seatMode: SeatControlMode.HumanConnected));
+	}
+
+	private static void NetworkSeatControlAcceptsRemoteActionsOnlyForConnectedHumans()
+	{
+		True(NetworkSeatControlRules.CanAcceptRemotePlayerAction(SeatControlMode.HumanConnected));
+		False(NetworkSeatControlRules.CanAcceptRemotePlayerAction(SeatControlMode.AiProxyReclaimable));
+		False(NetworkSeatControlRules.CanAcceptRemotePlayerAction(SeatControlMode.HumanReclaimPending));
+	}
+
+	private static void NetworkSeatControlRevealsPendingTargetHandOnlyForConnectedHumans()
+	{
+		True(NetworkSeatControlRules.CanRevealPendingTargetHand(SeatControlMode.HumanConnected));
+		False(NetworkSeatControlRules.CanRevealPendingTargetHand(SeatControlMode.AiProxyReclaimable));
+		False(NetworkSeatControlRules.CanRevealPendingTargetHand(SeatControlMode.HumanReclaimPending));
+	}
+
+	private static void NetworkSeatControlSendsPendingSelectionRequestsOnlyWhenClientIsReady()
+	{
+		True(NetworkSeatControlRules.CanSendPendingSelectionRequest(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			requestInFlight: false));
+
+		False(NetworkSeatControlRules.CanSendPendingSelectionRequest(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			requestInFlight: true));
+
+		False(NetworkSeatControlRules.CanSendPendingSelectionRequest(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.Reconnecting,
+			requestInFlight: false));
+
+		False(NetworkSeatControlRules.CanSendPendingSelectionRequest(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			networkState: NetworkSessionState.InGame,
+			requestInFlight: false));
+
+		False(NetworkSeatControlRules.CanSendPendingSelectionRequest(
+			isNetworkMultiplayer: false,
+			isNetworkHost: false,
+			networkState: NetworkSessionState.InGame,
+			requestInFlight: false));
+	}
+
+	private static void NetworkAiPlayableTurnActionIgnoresBlockedItemOnlyTurns()
+	{
+		True(NetworkAiFallbackRules.HasPlayableAiTurnAction(
+			handCardCount: 1,
+			playableItemCount: 0));
+
+		True(NetworkAiFallbackRules.HasPlayableAiTurnAction(
+			handCardCount: 0,
+			playableItemCount: 1));
+
+		False(NetworkAiFallbackRules.HasPlayableAiTurnAction(
+			handCardCount: 0,
+			playableItemCount: 0));
+	}
+
+	private static void NetworkAiProxyCaptureProfileMatchesWeakestAdventureAi()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("K", 12),
+			TableCard("Q", 12),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool picked = NetworkAiFallbackRules.TryPickCaptureHandIndexForNetworkAiProxy(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			decisionRollPercent: 30,
+			randomCaptureOrdinal: 1,
+			out int handIndex);
+
+		True(picked);
+		Equal(1, handIndex);
+	}
+
+	private static void NetworkAiResumesProxyTurnOnlyAfterAuthorityActionSettles()
+	{
+		True(NetworkAiFallbackRules.ShouldResumeAiProxyTurnAfterAuthorityAction(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			isGameOver: false,
+			isProcessingCardPlay: false));
+
+		False(NetworkAiFallbackRules.ShouldResumeAiProxyTurnAfterAuthorityAction(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			isGameOver: false,
+			isProcessingCardPlay: true));
+
+		False(NetworkAiFallbackRules.ShouldResumeAiProxyTurnAfterAuthorityAction(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			isGameOver: false,
+			isProcessingCardPlay: false));
+
+		False(NetworkAiFallbackRules.ShouldResumeAiProxyTurnAfterAuthorityAction(
+			isNetworkMultiplayer: false,
+			isNetworkHost: true,
+			isGameOver: false,
+			isProcessingCardPlay: false));
+
+		False(NetworkAiFallbackRules.ShouldResumeAiProxyTurnAfterAuthorityAction(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			isGameOver: true,
+			isProcessingCardPlay: false));
+	}
+
+	private static void NetworkAiStartsProxyTurnForAiOwnedPendingSelection()
+	{
+		True(NetworkAiFallbackRules.ShouldStartAiProxyForPendingSelection(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			hasAiOwnedPendingSelection: true));
+
+		False(NetworkAiFallbackRules.ShouldStartAiProxyForPendingSelection(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			hasAiOwnedPendingSelection: false));
+
+		False(NetworkAiFallbackRules.ShouldStartAiProxyForPendingSelection(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			hasAiOwnedPendingSelection: true));
+
+		False(NetworkAiFallbackRules.ShouldStartAiProxyForPendingSelection(
+			isNetworkMultiplayer: false,
+			isNetworkHost: true,
+			hasAiOwnedPendingSelection: true));
+	}
+
+	private static void NetworkAiRecoversOnlyForHostSideUnhandledFailures()
+	{
+		True(NetworkAiFallbackRules.ShouldRecoverFromUnhandledAiTurnFailure(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			isGameOver: false));
+
+		False(NetworkAiFallbackRules.ShouldRecoverFromUnhandledAiTurnFailure(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			isGameOver: false));
+
+		False(NetworkAiFallbackRules.ShouldRecoverFromUnhandledAiTurnFailure(
+			isNetworkMultiplayer: false,
+			isNetworkHost: true,
+			isGameOver: false));
+
+		False(NetworkAiFallbackRules.ShouldRecoverFromUnhandledAiTurnFailure(
+			isNetworkMultiplayer: true,
+			isNetworkHost: true,
+			isGameOver: true));
+	}
+
+	private static void NetworkAiBlockedItemSkipIsScopedToExactTurnAndItem()
+	{
+		NetworkAiBlockedItemState blocked = new(
+			OwnerSeatIndex: 2,
+			ItemCardId: "queen");
+
+		True(NetworkAiFallbackRules.ShouldSkipBlockedItem(
+			blocked,
+			ownerSeatIndex: 2,
+			itemCardId: "queen"));
+
+		False(NetworkAiFallbackRules.ShouldSkipBlockedItem(
+			blocked,
+			ownerSeatIndex: 1,
+			itemCardId: "queen"));
+
+		False(NetworkAiFallbackRules.ShouldSkipBlockedItem(
+			blocked,
+			ownerSeatIndex: 2,
+			itemCardId: "king"));
+
+		True(NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(previousTurnPlayerIndex: 2, nextTurnPlayerIndex: 3));
+		False(NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(previousTurnPlayerIndex: 2, nextTurnPlayerIndex: 2));
+	}
+
+	private static void NetworkAiPendingChoiceFallbackPicksOnlyLegalCandidates()
+	{
+		Equal(1, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 4,
+			isLegalCandidate: candidateIndex => candidateIndex is 1 or 3,
+			randomOrdinal: 0));
+		Equal(3, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 4,
+			isLegalCandidate: candidateIndex => candidateIndex is 1 or 3,
+			randomOrdinal: 1));
+		Equal(1, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 4,
+			isLegalCandidate: candidateIndex => candidateIndex is 1 or 3,
+			randomOrdinal: 2));
+		Equal(4, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 5,
+			isLegalCandidate: candidateIndex => candidateIndex is 0 or 2 or 4,
+			randomOrdinal: 5));
+		Equal(2, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 6,
+			isLegalCandidate: candidateIndex => candidateIndex >= 2 && candidateIndex <= 4,
+			randomOrdinal: 0));
+	}
+
+	private static void NetworkAiPendingChoiceFallbackFailsWithoutLegalCandidates()
+	{
+		Equal(-1, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 0,
+			isLegalCandidate: _ => true,
+			randomOrdinal: 0));
+		Equal(-1, NetworkAiFallbackRules.PickRandomLegalCandidate(
+			totalCandidateCount: 4,
+			isLegalCandidate: _ => false,
+			randomOrdinal: 17));
+	}
+
+	private static void SeatControlDisconnectTransitionsToAiReclaimable()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.HumanConnected,
+			PeerId: 20,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
+
+		True(SeatControlRules.TryMarkDisconnected(state, 20, out SeatControlState next, out ReconnectClaimRecord? updatedClaim, claim));
+		Equal(SeatControlMode.AiProxyReclaimable, next.Mode);
+		Equal(0, next.PeerId);
+		True(updatedClaim.HasValue);
+		ReconnectClaimRecord disconnectClaim = updatedClaim.GetValueOrDefault();
+		Equal(ReconnectClaimState.Unclaimed, disconnectClaim.ClaimState);
+		Equal(0, disconnectClaim.ClaimedPeerId);
+	}
+
+	private static void SeatControlReclaimPendingDisconnectFallsBackToAiReclaimable()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.HumanReclaimPending,
+			PeerId: 33,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claim = new(
+			"match-1",
+			1,
+			"token-1",
+			"stable-20",
+			33,
+			ReconnectClaimState.Claimed);
+
+		True(SeatControlRules.TryMarkDisconnected(state, 33, out SeatControlState next, out ReconnectClaimRecord? updatedClaim, claim));
+		Equal(SeatControlMode.AiProxyReclaimable, next.Mode);
+		Equal(0, next.PeerId);
+		True(updatedClaim.HasValue);
+		ReconnectClaimRecord disconnectClaim = updatedClaim.GetValueOrDefault();
+		Equal(ReconnectClaimState.Unclaimed, disconnectClaim.ClaimState);
+		Equal(0, disconnectClaim.ClaimedPeerId);
+	}
+
+	private static void SeatControlReconnectClaimIsIdempotentForSamePeer()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.AiProxyReclaimable,
+			PeerId: 0,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
+
+		ReconnectClaimResult first = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			state,
+			claim,
+			"match-1",
+			"token-1",
+			"stable-20",
+			senderPeerId: 33);
+		True(first.Accepted);
+		True(first.StateChanged);
+		True(first.ShouldSendSnapshot);
+		Equal(SeatControlMode.HumanReclaimPending, first.SeatControlState.Mode);
+		Equal(33, first.SeatControlState.PeerId);
+
+		ReconnectClaimResult second = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			first.SeatControlState,
+			first.ClaimRecord,
+			"match-1",
+			"token-1",
+			"stable-20",
+			senderPeerId: 33);
+		True(second.Accepted);
+		False(second.StateChanged);
+		False(second.ShouldSendSnapshot);
+		Equal(SeatControlMode.HumanReclaimPending, second.SeatControlState.Mode);
+	}
+
+	private static void SeatControlReconnectClaimRejectsConflictingPeer()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.HumanReclaimPending,
+			PeerId: 33,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claim = new(
+			"match-1",
+			1,
+			"token-1",
+			"stable-20",
+			33,
+			ReconnectClaimState.Claimed);
+
+		ReconnectClaimResult result = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			state,
+			claim,
+			"match-1",
+			"token-1",
+			"stable-20",
+			senderPeerId: 44);
+		False(result.Accepted);
+		Equal(ReconnectClaimRejectReason.AlreadyClaimedByDifferentPeer, result.RejectReason);
+	}
+
+	private static void SeatControlPromotesReclaimedSeatAtTurnStart()
+	{
+		SeatControlState state = new(
+			SeatIndex: 2,
+			Mode: SeatControlMode.HumanReclaimPending,
+			PeerId: 55,
+			StableUserId: "stable-55",
+			ReconnectToken: "token-2");
+
+		True(SeatControlRules.TryPromoteAtTurnStart(state, 2, out SeatControlState next));
+		Equal(SeatControlMode.HumanConnected, next.Mode);
+		Equal(55, next.PeerId);
+		False(SeatControlRules.TryPromoteAtTurnStart(next, 2, out _));
+	}
+
+	private static void SeatControlStaysReclaimPendingUntilOwnTurnStart()
+	{
+		SeatControlState state = new(
+			SeatIndex: 2,
+			Mode: SeatControlMode.HumanReclaimPending,
+			PeerId: 55,
+			StableUserId: "stable-55",
+			ReconnectToken: "token-2");
+
+		False(SeatControlRules.TryPromoteAtTurnStart(state, 1, out SeatControlState next));
+		Equal(state, next);
+	}
+
+	private static void SeatControlAllowsReclaimAgainAfterReclaimPendingDisconnect()
+	{
+		SeatControlState reclaimPending = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.HumanReclaimPending,
+			PeerId: 33,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claimed = new(
+			"match-1",
+			1,
+			"token-1",
+			"stable-20",
+			33,
+			ReconnectClaimState.Claimed);
+
+		True(SeatControlRules.TryMarkDisconnected(reclaimPending, 33, out SeatControlState disconnected, out ReconnectClaimRecord? updatedClaim, claimed));
+		True(updatedClaim.HasValue);
+		ReconnectClaimRecord resetClaim = updatedClaim.GetValueOrDefault();
+		Equal(SeatControlMode.AiProxyReclaimable, disconnected.Mode);
+		Equal(ReconnectClaimState.Unclaimed, resetClaim.ClaimState);
+		Equal(0, resetClaim.ClaimedPeerId);
+
+		ReconnectClaimResult reconnected = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			disconnected,
+			resetClaim,
+			"match-1",
+			"token-1",
+			"stable-20",
+			senderPeerId: 44);
+		True(reconnected.Accepted);
+		True(reconnected.StateChanged);
+		True(reconnected.ShouldSendSnapshot);
+		Equal(SeatControlMode.HumanReclaimPending, reconnected.SeatControlState.Mode);
+		Equal(44, reconnected.SeatControlState.PeerId);
+		Equal(ReconnectClaimState.Claimed, reconnected.ClaimRecord.ClaimState);
+		Equal(44, reconnected.ClaimRecord.ClaimedPeerId);
+	}
+
+	private static void SeatControlRejectsInvalidReconnectMetadata()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.AiProxyReclaimable,
+			PeerId: 0,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
+
+		ReconnectClaimResult wrongMatch = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			state,
+			claim,
+			"match-2",
+			"token-1",
+			"stable-20",
+			senderPeerId: 33);
+		False(wrongMatch.Accepted);
+		Equal(ReconnectClaimRejectReason.MatchMismatch, wrongMatch.RejectReason);
+
+		ReconnectClaimResult wrongToken = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			state,
+			claim,
+			"match-1",
+			"bad",
+			"stable-20",
+			senderPeerId: 33);
+		False(wrongToken.Accepted);
+		Equal(ReconnectClaimRejectReason.TokenMismatch, wrongToken.RejectReason);
+
+		ReconnectClaimResult wrongUser = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: true,
+			state,
+			claim,
+			"match-1",
+			"token-1",
+			"other",
+			senderPeerId: 33);
+		False(wrongUser.Accepted);
+		Equal(ReconnectClaimRejectReason.StableUserIdMismatch, wrongUser.RejectReason);
+	}
+
+	private static void SeatControlRejectsReconnectClaimAfterMatchEnd()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.AiProxyReclaimable,
+			PeerId: 0,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
+
+		ReconnectClaimResult result = SeatControlRules.ApplyReconnectClaim(
+			"match-1",
+			isMatchActive: false,
+			state,
+			claim,
+			"match-1",
+			"token-1",
+			"stable-20",
+			senderPeerId: 33);
+		False(result.Accepted);
+		Equal(ReconnectClaimRejectReason.MatchEnded, result.RejectReason);
+	}
+
+	private static void SeatControlSharedSnapshotRedactsReconnectToken()
+	{
+		SeatControlState state = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.HumanReclaimPending,
+			PeerId: 33,
+			StableUserId: "stable-20",
+			ReconnectToken: "token-1");
+
+		SeatControlState shared = SeatControlRules.RedactReconnectTokenForSharedSnapshot(state);
+
+		Equal(state.SeatIndex, shared.SeatIndex);
+		Equal(state.Mode, shared.Mode);
+		Equal(state.PeerId, shared.PeerId);
+		Equal(state.StableUserId, shared.StableUserId);
+		Equal(string.Empty, shared.ReconnectToken);
 	}
 
 	private static void AssertRejected(
@@ -870,6 +1981,7 @@ internal static class Program
 		var config = new NetworkSessionConfig(
 			"session",
 			"LAN 房间_1",
+			string.Empty,
 			"match",
 			123,
 			NetworkTransport.Lan,

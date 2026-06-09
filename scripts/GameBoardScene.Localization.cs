@@ -14,6 +14,7 @@ public partial class GameBoardScene
 		else if (what == NotificationResized && IsNodeReady())
 		{
 			RefreshAdventureTutorialOverlayLayout();
+			UpdateAllPlayerSeatControlIndicatorLayouts();
 			UpdatePlayerStatusTooltipLayout();
 		}
 	}
@@ -117,6 +118,7 @@ public partial class GameBoardScene
 
 		RefreshItemCardDescriptions();
 		RefreshScoreTooltips();
+		RefreshAllPlayerSeatControlIndicators();
 		RefreshSelectionOverlayText();
 		RefreshRenderedCardDescriptions();
 		RefreshAdventureTutorialOverlayText();
@@ -149,6 +151,10 @@ public partial class GameBoardScene
 		else if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
 		{
 			ShowHandLimitDiscardSelection();
+		}
+		else if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+		{
+			ShowMagnetHandSelection();
 		}
 	}
 

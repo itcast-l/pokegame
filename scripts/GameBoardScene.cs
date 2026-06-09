@@ -182,8 +182,20 @@ public partial class GameBoardScene : Control
 	private ItemCardCatalog _itemCardCatalog = default!;
 	private Dictionary<string, AdventureAttackEffectHandler> _adventureAttackEffectHandlers = default!;
 	private readonly Queue<PendingItemAttachmentReward> _pendingItemAttachmentRewards = new();
+	private readonly List<SeatControlState> _networkSeatControlStates = new();
+	private readonly Panel?[] _playerSeatControlIndicatorPanels = new Panel?[MaxPlayers];
+	private readonly Label?[] _playerSeatControlIndicatorLabels = new Label?[MaxPlayers];
+	private readonly SeatControlMode[] _playerSeatControlIndicatorModes = new SeatControlMode[MaxPlayers];
+	private NetworkAiBlockedItemState _networkAiBlockedItem = NetworkAiBlockedItemState.None;
 	private ItemSelectionOverlay? _selectionOverlay;
 	private readonly List<System.Action> _selectionOverlayActions = new();
+	private Panel? _networkReconnectOverlayPanel;
+	private Label? _networkReconnectOverlayLabel;
+	private Panel? _networkReconnectNoticePanel;
+	private Label? _networkReconnectNoticeLabel;
+	private double _networkReconnectNoticeHideAt;
+	private bool _networkManagerSignalsConnected;
+	private bool _networkReconnectCatchupPendingCompletion;
 	private Texture2D? _cardBackTexture;
 	private Texture2D? _slimeCardOverlayTexture;
 	private Texture2D? _dragonPrinceSpecialJackTexture;
@@ -556,8 +568,11 @@ public partial class GameBoardScene : Control
 		CreatePlayerAvatars();
 		BindQuestionCardTransformArea();
 		BindPlayerScoreMeters();
+		CreatePlayerSeatControlIndicators();
 		CreateWinnerLabel();
 		CreateDefeatFinisherOverlay();
+		CreateNetworkReconnectOverlay();
+		ConnectNetworkManagerSignalsForBoard();
 		UpdatePlayerVisibility();
 		if (_networkWaitForInitialize)
 		{
@@ -640,12 +655,27 @@ public partial class GameBoardScene : Control
 
 	public override void _ExitTree()
 	{
+		DisconnectNetworkManagerSignalsForBoard();
 		_animationPresenter?.ClearPools();
 	}
 
 	public override void _Process(double delta)
 	{
 		UpdateMagnetAttachmentCountdown(delta);
+		UpdateReconnectOverlay();
+		RefreshAllPlayerSeatControlIndicators();
+		RefreshActivePlayerStatusTooltip();
+	}
+
+	private void RefreshActivePlayerStatusTooltip()
+	{
+		if (_activeStatusTooltipPlayerIndex < 0)
+		{
+			return;
+		}
+
+		RefreshPlayerStatusTooltip(_activeStatusTooltipPlayerIndex);
+		UpdatePlayerStatusTooltipLayout();
 	}
 
 	public Control GetPlayerArea(int playerIndex)

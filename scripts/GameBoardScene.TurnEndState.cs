@@ -108,21 +108,31 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return GetGameLoopPhase() == GameLoopPhase.AwaitingMainPlayerAction;
+		return IsLocalSeatHumanConnected() && GetGameLoopPhase() == GameLoopPhase.AwaitingMainPlayerAction;
 	}
 
 	private bool IsMainPlayerMagnetSelectionActive()
 	{
+		if (!IsLocalSeatHumanConnected())
+		{
+			return false;
+		}
+
 		return GetGameLoopPhase() == GameLoopPhase.PendingMainPlayerSelection
 			&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
-			&& _pendingItemOwnerIndex == MainPlayerIndex;
+			&& _pendingItemOwnerIndex == GetPendingSelectionLocalOwnerIndex();
 	}
 
 	private bool IsMainPlayerHandLimitDiscardSelectionActive()
 	{
+		if (!IsLocalSeatHumanConnected())
+		{
+			return false;
+		}
+
 		return GetGameLoopPhase() == GameLoopPhase.PendingMainPlayerSelection
 			&& _pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
-			&& _pendingItemOwnerIndex == MainPlayerIndex;
+			&& _pendingItemOwnerIndex == GetPendingSelectionLocalOwnerIndex();
 	}
 
 	private int GetNextTurnPlayerIndex(int currentPlayerIndex)

@@ -11,6 +11,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (ShouldBlockBoardControlInput())
+		{
+			DisableMainPlayerHandSelectionInput();
+			return false;
+		}
+
 		if (_selectionOverlay != null && GodotObject.IsInstanceValid(_selectionOverlay) && _selectionOverlay.IsVisibleInTree())
 		{
 			return false;
@@ -55,6 +61,30 @@ public partial class GameBoardScene
 		return false;
 	}
 
+	private bool ShouldBlockBoardControlInput()
+	{
+		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
+		{
+			return false;
+		}
+
+		if (ShouldShowNetworkReconnectOverlay())
+		{
+			return true;
+		}
+
+		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkSessionState networkState = networkManager?.State ?? NetworkSessionState.Idle;
+		int localSeatIndex = GetLocalHandPlayerIndex();
+		bool seatStateFound = TryGetSeatControlStateForUi(localSeatIndex, out SeatControlState state);
+		return LocalSeatControlRules.ShouldBlockBoardControlInput(
+			isNetworkMultiplayer: true,
+			isNetworkHost: false,
+			networkState,
+			seatStateFound,
+			state.Mode);
+	}
+
 	private void EnableMainPlayerHandSelectionInput()
 	{
 		if (_mainPlayerHandSelectionInputEnabled)
@@ -90,6 +120,12 @@ public partial class GameBoardScene
 		if (!HasPendingItemSelection())
 		{
 			return false;
+		}
+
+		if (ShouldSendNetworkPendingItemSelectionRequest())
+		{
+			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+			return true;
 		}
 
 		if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
@@ -255,13 +291,18 @@ public partial class GameBoardScene
 			return CanMainPlayerAct() && CanPlayAdventureTutorialHandCard(displayIndex);
 		}
 
-		if (IsNetworkMultiplayerMode() || IsMainPlayerMagnetSelectionActive() || isJellyfishDisabled || !CanMainPlayerAct())
+		if (IsMainPlayerMagnetSelectionActive() || isJellyfishDisabled || !CanMainPlayerAct())
 		{
 			return false;
 		}
 
 		int itemHandIndex = displayIndex - handCardCount;
 		if (itemHandIndex < 0 || itemHandIndex >= _playerItemHands[localPlayerIndex].Count)
+		{
+			return false;
+		}
+
+		if (IsNetworkItemCardLocked(localPlayerIndex, itemHandIndex))
 		{
 			return false;
 		}

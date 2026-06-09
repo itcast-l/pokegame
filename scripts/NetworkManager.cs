@@ -27,20 +27,17 @@ public partial class NetworkManager : Node
 	[Signal]
 	public delegate void BoardInitializeEventHandler(Godot.Collections.Dictionary payload);
 
-	[Signal]
-	public delegate void InGameDisconnectRetentionStartedEventHandler(int seatIndex, double seconds);
-
-	[Signal]
-	public delegate void InGameDisconnectRetentionFailedEventHandler(int seatIndex);
-
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const double DiscoveryBroadcastSeconds = 1.0;
 	private const double RoomStaleSeconds = 5.0;
+	private const double ReconnectRetrySeconds = 2.0;
+	private const double HostEndedMatchBroadcastGraceSeconds = 0.15;
 
 	private readonly List<NetworkPlayerPublicState> _players = new();
 	private readonly List<NetworkRoomInfo> _rooms = new();
 	private readonly Dictionary<string, double> _roomLastSeenAt = new();
-	private readonly Dictionary<int, double> _retainedDisconnectedSeats = new();
+	private readonly List<SeatControlState> _seatControlStates = new();
+	private readonly Dictionary<int, ReconnectClaimRecord> _reconnectClaimsBySeat = new();
 	private PacketPeerUdp? _lanDiscoveryResponder;
 	private PacketPeerUdp? _lanDiscoveryBrowser;
 	private ENetMultiplayerPeer? _enetPeer;
@@ -48,6 +45,7 @@ public partial class NetworkManager : Node
 	private NetworkSessionConfig _config = new(
 		string.Empty,
 		RoomNameRules.DefaultRoomName,
+		string.Empty,
 		string.Empty,
 		0,
 		NetworkTransport.Lan,
@@ -60,15 +58,25 @@ public partial class NetworkManager : Node
 	private double _lastDiscoveryBroadcastAt;
 	private string _localDisplayName = PlayerNameRules.DefaultPlayerName;
 	private string _localAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
+	private string _localReconnectToken = string.Empty;
+	private string _lastLanJoinAddress = string.Empty;
+	private string _pendingJoinRoomPassword = string.Empty;
 	private ulong _steamLobbyId;
 	private bool _signalsConnected;
 	private bool _steamSignalsConnected;
 	private bool _pendingSteamHostLobby;
+	private double _nextReconnectAttemptAt;
+	private bool _reconnectAttemptInFlight;
+	private bool _lobbyRejectPending;
+	private string _lobbyRejectMessage = string.Empty;
+	private bool _hostEndedMatchPending;
+	private string _hostEndedMatchMessage = string.Empty;
+	private bool _hostEndedMatchBroadcasted;
 
 	public NetworkSessionState State => _state;
 	public bool SteamAvailable => GetSteamSingleton() != null && IsSteamInitialized();
 	public bool IsInLobby => _state is NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene;
-	public bool IsHost => Multiplayer.MultiplayerPeer != null && Multiplayer.IsServer();
+	public bool IsHost => TryGetCachedLocalIsHost(out bool isHost) ? isHost : TryIsServer();
 	public int LocalSeatIndex => GetLocalPlayer().SeatIndex;
 	public NetworkSessionConfig CurrentConfig => _config;
 
@@ -91,15 +99,15 @@ public partial class NetworkManager : Node
 		PollLanDiscoveryResponder(now);
 		PollLanDiscoveryBrowser(now);
 		PollLoadHandshake(now);
-		PollSeatRetention(now);
+		PollReconnect(now);
 	}
 
-	public void HostLan(int playerCount, bool itemMode, int winningScore, string roomName)
+	public void HostLan(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
 		RefreshLocalIdentity();
 		LeaveSession();
 		SetState(NetworkSessionState.Hosting);
-		_config = CreateConfig(NetworkTransport.Lan, playerCount, itemMode, winningScore, roomName);
+		_config = CreateConfig(NetworkTransport.Lan, playerCount, itemMode, winningScore, roomName, roomPassword);
 
 		_enetPeer = new ENetMultiplayerPeer();
 		Error error = _enetPeer.CreateServer(NetworkSessionDefaults.LanGamePort, NetworkSessionDefaults.MaxPlayers - 1);
@@ -137,7 +145,7 @@ public partial class NetworkManager : Node
 		EmitRoomListUpdated();
 	}
 
-	public void JoinLan(string address)
+	public void JoinLan(string address, string roomPassword)
 	{
 		if (string.IsNullOrWhiteSpace(address))
 		{
@@ -147,13 +155,16 @@ public partial class NetworkManager : Node
 
 		RefreshLocalIdentity();
 		LeaveSession();
+		_lastLanJoinAddress = address.Trim();
 		SetState(NetworkSessionState.Joining);
+		_pendingJoinRoomPassword = RoomPasswordRules.Normalize(roomPassword);
 		_config = CreateConfig(
 			NetworkTransport.Lan,
 			NetworkSessionDefaults.DefaultPlayerCount,
 			NetworkSessionDefaults.DefaultItemMode,
 			NetworkSessionDefaults.DefaultWinningScore,
-			RoomNameRules.DefaultRoomName);
+			RoomNameRules.DefaultRoomName,
+			string.Empty);
 		_enetPeer = new ENetMultiplayerPeer();
 		Error error = _enetPeer.CreateClient(address.Trim(), NetworkSessionDefaults.LanGamePort);
 		if (error != Error.Ok)
@@ -165,7 +176,7 @@ public partial class NetworkManager : Node
 		Multiplayer.MultiplayerPeer = _enetPeer;
 	}
 
-	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName)
+	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
 		RefreshLocalIdentity();
 		LeaveSession();
@@ -176,7 +187,7 @@ public partial class NetworkManager : Node
 		}
 
 		SetState(NetworkSessionState.Hosting);
-		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName);
+		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName, roomPassword);
 		_players.Clear();
 		_players.Add(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
 		_pendingSteamHostLobby = true;
@@ -198,17 +209,32 @@ public partial class NetworkManager : Node
 		EmitRoomListUpdated();
 	}
 
-	public void JoinSteamLobby(ulong lobbyId)
+	public void JoinSteamLobby(ulong lobbyId, string roomPassword)
 	{
 		RefreshLocalIdentity();
-		LeaveSession();
 		if (!SteamAvailable || lobbyId == 0)
 		{
 			Fail("Steam lobby is not available.");
 			return;
 		}
 
+		if (TryReadSteamRoom(lobbyId, out NetworkRoomInfo room)
+			&& !MultiplayerLobbyRules.CanJoinListedRoom(room.Status))
+		{
+			EmitSignal(SignalName.ErrorRaised, "该房间对局进行中，不可加入");
+			return;
+		}
+
+		LeaveSession();
 		SetState(NetworkSessionState.Joining);
+		_pendingJoinRoomPassword = RoomPasswordRules.Normalize(roomPassword);
+		_config = CreateConfig(
+			NetworkTransport.Steam,
+			NetworkSessionDefaults.DefaultPlayerCount,
+			NetworkSessionDefaults.DefaultItemMode,
+			NetworkSessionDefaults.DefaultWinningScore,
+			RoomNameRules.DefaultRoomName,
+			string.Empty);
 		_steamLobbyId = lobbyId;
 		GodotObject? steam = GetSteamSingleton();
 		steam?.Call("joinLobby", lobbyId);
@@ -244,7 +270,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		int localPeerId = Multiplayer.GetUniqueId();
+		int localPeerId = GetLocalPeerId();
 		SetPlayerReady(localPeerId == 0 ? 1 : localPeerId, isReady);
 		BroadcastPlayerList();
 	}
@@ -267,7 +293,9 @@ public partial class NetworkManager : Node
 			MatchId = Guid.NewGuid().ToString("N"),
 			MatchSeed = (long)GD.Randi(),
 		};
+		InitializeMatchSeatControlStates();
 		SetState(NetworkSessionState.Starting);
+		SendReconnectCredentialsToConnectedPeers();
 		Godot.Collections.Dictionary bootstrap = BuildMatchBootstrap();
 		Rpc(MethodName.RpcBeginSceneLoad, bootstrap);
 		RpcBeginSceneLoad(bootstrap);
@@ -275,18 +303,36 @@ public partial class NetworkManager : Node
 
 	public void LeaveSession()
 	{
+		if (NetworkReconnectRules.ShouldBroadcastHostEndedMatch(IsHost, _state) && !_hostEndedMatchBroadcasted)
+		{
+			Rpc(MethodName.RpcHostEndedMatch, "Host disconnected.");
+			_hostEndedMatchBroadcasted = true;
+		}
+
 		StopLanDiscoveryResponder();
 		StopLanDiscoveryBrowser();
 		_loadHandshake = null;
-		_retainedDisconnectedSeats.Clear();
+		_seatControlStates.Clear();
+		_reconnectClaimsBySeat.Clear();
+		_localReconnectToken = string.Empty;
+		_lastLanJoinAddress = string.Empty;
+		_nextReconnectAttemptAt = 0.0;
+		_reconnectAttemptInFlight = false;
+		_lobbyRejectPending = false;
+		_lobbyRejectMessage = string.Empty;
+		_hostEndedMatchPending = false;
+		_hostEndedMatchMessage = string.Empty;
+		_hostEndedMatchBroadcasted = false;
 		if (Multiplayer.MultiplayerPeer != null)
 		{
 			Multiplayer.MultiplayerPeer.Close();
 			Multiplayer.MultiplayerPeer = null;
 		}
 
+		LeaveSteamLobbyIfNeeded();
 		_enetPeer = null;
 		_steamPeer = null;
+		_pendingJoinRoomPassword = string.Empty;
 		_steamLobbyId = 0;
 		_pendingSteamHostLobby = false;
 		_players.Clear();
@@ -297,7 +343,8 @@ public partial class NetworkManager : Node
 			NetworkSessionDefaults.DefaultPlayerCount,
 			NetworkSessionDefaults.DefaultItemMode,
 			NetworkSessionDefaults.DefaultWinningScore,
-			RoomNameRules.DefaultRoomName);
+			RoomNameRules.DefaultRoomName,
+			string.Empty);
 		SetState(NetworkSessionState.Idle);
 		EmitPlayerListUpdated();
 		EmitRoomListUpdated();
@@ -325,6 +372,17 @@ public partial class NetworkManager : Node
 		return result;
 	}
 
+	public Godot.Collections.Array GetSeatControlStatesVariant(bool includeReconnectTokens = true)
+	{
+		var result = new Godot.Collections.Array();
+		foreach (SeatControlState state in _seatControlStates.OrderBy(state => state.SeatIndex))
+		{
+			result.Add(ToDictionary(includeReconnectTokens ? state : SeatControlRules.RedactReconnectTokenForSharedSnapshot(state)));
+		}
+
+		return result;
+	}
+
 	public Godot.Collections.Dictionary GetCurrentConfigVariant()
 	{
 		return ToDictionary(_config);
@@ -346,6 +404,37 @@ public partial class NetworkManager : Node
 		RpcId(1, MethodName.RpcClientSceneLoaded, _config.MatchId, LocalSeatIndex);
 	}
 
+	public async Task NotifyHostEndedMatchIfNeededAsync()
+	{
+		if (!NetworkReconnectRules.ShouldBroadcastHostEndedMatch(IsHost, _state)
+			|| _hostEndedMatchBroadcasted
+			|| !IsInsideTree())
+		{
+			return;
+		}
+
+		_hostEndedMatchBroadcasted = true;
+		Rpc(MethodName.RpcHostEndedMatch, "Host disconnected.");
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		if (!IsInsideTree())
+		{
+			return;
+		}
+
+		await ToSignal(GetTree().CreateTimer(HostEndedMatchBroadcastGraceSeconds), SceneTreeTimer.SignalName.Timeout);
+	}
+
+	public async Task LeaveSessionAfterHostEndedMatchAsync()
+	{
+		await NotifyHostEndedMatchIfNeededAsync();
+		LeaveSession();
+	}
+
+	public void LeaveSessionAfterHostEndedMatch()
+	{
+		_ = LeaveSessionAfterHostEndedMatchAsync();
+	}
+
 	public void RequestPlayHandCard(int handIndex, int turnSequenceGeneration)
 	{
 		if (_state != NetworkSessionState.InGame || IsHost)
@@ -354,6 +443,26 @@ public partial class NetworkManager : Node
 		}
 
 		RpcId(1, MethodName.RpcRequestPlayHandCard, handIndex, turnSequenceGeneration);
+	}
+
+	public void RequestPlayItemCard(int itemHandIndex, int turnSequenceGeneration)
+	{
+		if (_state != NetworkSessionState.InGame || IsHost)
+		{
+			return;
+		}
+
+		RpcId(1, MethodName.RpcRequestPlayItemCard, itemHandIndex, turnSequenceGeneration);
+	}
+
+	public void RequestPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
+	{
+		if (_state != NetworkSessionState.InGame || IsHost)
+		{
+			return;
+		}
+
+		RpcId(1, MethodName.RpcRequestPendingItemSelection, targetPlayerIndex, targetHandIndex, turnSequenceGeneration);
 	}
 
 	public void BroadcastCardPlayedEventFromHost(
@@ -376,7 +485,19 @@ public partial class NetworkManager : Node
 			["turn_sequence_generation"] = turnSequenceGeneration,
 			["snapshot_id"] = snapshotId,
 		};
-		Rpc(MethodName.RpcCardPlayedEvent, payload);
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (!NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+				IsHost,
+				_state,
+				player.IsConnected,
+				player.IsHost))
+			{
+				continue;
+			}
+
+			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
+		}
 	}
 
 	public void SendInitialBoardSnapshotsFromHost(GameBoardScene gameBoard)
@@ -386,6 +507,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
+		SendReconnectCredentialsToConnectedPeers();
 		SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
 	}
 
@@ -403,14 +525,27 @@ public partial class NetworkManager : Node
 				continue;
 			}
 
-			Godot.Collections.Dictionary snapshot = gameBoard.BuildNetworkBoardSnapshotForSeat(player.SeatIndex, snapshotId);
 			if (player.IsHost)
 			{
 				continue;
 			}
 
-			RpcId(player.PeerId, MethodName.RpcBoardSnapshot, snapshot);
+			SendBoardSnapshotToPeerFromHost(gameBoard, player.PeerId, player.SeatIndex, snapshotId);
 		}
+	}
+
+	private void SendBoardSnapshotToPeerFromHost(GameBoardScene gameBoard, int peerId, int seatIndex, int snapshotId)
+	{
+		if (!IsHost
+			|| _state != NetworkSessionState.InGame
+			|| peerId <= 0
+			|| seatIndex < 0)
+		{
+			return;
+		}
+
+		Godot.Collections.Dictionary snapshot = gameBoard.BuildNetworkBoardSnapshotForSeat(seatIndex, snapshotId);
+		RpcId(peerId, MethodName.RpcBoardSnapshot, snapshot);
 	}
 
 	private void ConnectMultiplayerSignals()
@@ -458,11 +593,12 @@ public partial class NetworkManager : Node
 		}
 	}
 
-	private NetworkSessionConfig CreateConfig(NetworkTransport transport, int playerCount, bool itemMode, int winningScore, string roomName)
+	private NetworkSessionConfig CreateConfig(NetworkTransport transport, int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
 		return new NetworkSessionConfig(
 			Guid.NewGuid().ToString("N"),
 			RoomNameRules.Normalize(roomName),
+			RoomPasswordRules.Normalize(roomPassword),
 			string.Empty,
 			0,
 			transport,
@@ -511,17 +647,75 @@ public partial class NetworkManager : Node
 
 	private NetworkPlayerPublicState GetLocalPlayer()
 	{
-		int peerId = Multiplayer.GetUniqueId();
-		NetworkPlayerPublicState localPlayer = _players.FirstOrDefault(player => player.IsLocal);
-		if (localPlayer.PeerId != 0)
+		if (TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer))
 		{
 			return localPlayer;
 		}
 
+		int peerId = GetLocalPeerId();
 		localPlayer = _players.FirstOrDefault(player => player.PeerId == peerId);
 		return localPlayer.PeerId != 0
 			? localPlayer
-			: new NetworkPlayerPublicState(peerId == 0 ? 1 : peerId, GetStableUserId(), _localDisplayName, _localAvatarId, 0, IsHost, true, false, true);
+			: new NetworkPlayerPublicState(peerId == 0 ? 1 : peerId, GetStableUserId(), _localDisplayName, _localAvatarId, 0, TryGetCachedLocalIsHost(out bool isHost) && isHost, true, false, true);
+	}
+
+	private bool TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer)
+	{
+		int localPlayerIndex = _players.FindIndex(player => player.IsLocal);
+		if (localPlayerIndex < 0)
+		{
+			localPlayer = default;
+			return false;
+		}
+
+		localPlayer = _players[localPlayerIndex];
+		return true;
+	}
+
+	private bool TryGetCachedLocalIsHost(out bool isHost)
+	{
+		if (!TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer))
+		{
+			isHost = false;
+			return false;
+		}
+
+		isHost = localPlayer.IsHost;
+		return true;
+	}
+
+	private int GetLocalPeerId()
+	{
+		if (Multiplayer.MultiplayerPeer == null)
+		{
+			return 0;
+		}
+
+		try
+		{
+			return Multiplayer.GetUniqueId();
+		}
+		catch (InvalidOperationException)
+		{
+			return 0;
+		}
+	}
+
+	private bool TryIsServer()
+	{
+		if (Multiplayer.MultiplayerPeer == null)
+		{
+			return false;
+		}
+
+		try
+		{
+			return Multiplayer.IsServer();
+		}
+		catch (InvalidOperationException)
+		{
+			return false;
+		}
 	}
 
 	private void StartLanDiscoveryResponder()
@@ -691,8 +885,16 @@ public partial class NetworkManager : Node
 		if (_state == NetworkSessionState.InGame)
 		{
 			_players[playerIndex] = _players[playerIndex] with { IsConnected = false };
-			_retainedDisconnectedSeats[seatIndex] = Time.GetTicksMsec() / 1000.0;
-			EmitSignal(SignalName.InGameDisconnectRetentionStarted, seatIndex, NetworkSessionDefaults.InGameSeatRetentionSeconds);
+			if (NetworkReconnectRules.ShouldHandOffDisconnectedSeatToAi(_state, _players[playerIndex].IsHost))
+			{
+				TryMarkSeatDisconnected((int)peerId);
+			}
+
+			if (GetTree().CurrentScene is GameBoardScene gameBoard)
+			{
+				SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+				gameBoard.BeginNetworkAiProxyTurnIfNeeded();
+			}
 		}
 		else if (_state is NetworkSessionState.Starting or NetworkSessionState.LoadingScene)
 		{
@@ -704,7 +906,7 @@ public partial class NetworkManager : Node
 			EmitPlayerListUpdated();
 		}
 
-		if (IsHost)
+		if (IsHost && _state == NetworkSessionState.Lobby)
 		{
 			BroadcastPlayerList();
 		}
@@ -713,16 +915,73 @@ public partial class NetworkManager : Node
 	private void OnConnectedToServer()
 	{
 		RefreshLocalIdentity();
-		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, GetStableUserId());
+		if (_state == NetworkSessionState.Reconnecting && CanAttemptReconnectClaim())
+		{
+			_reconnectAttemptInFlight = false;
+			RpcId(1, MethodName.RpcReconnectPlayer, _config.MatchId, _localReconnectToken, GetStableUserId());
+			return;
+		}
+
+		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, GetStableUserId(), _pendingJoinRoomPassword);
 	}
 
 	private void OnConnectionFailed()
 	{
+		if (_state == NetworkSessionState.Reconnecting)
+		{
+			ScheduleReconnectRetry();
+			return;
+		}
+
 		Fail("Connection failed.");
 	}
 
 	private void OnServerDisconnected()
 	{
+		if (_lobbyRejectPending)
+		{
+			FinalizeLobbyRejectedJoinIfNeeded();
+			return;
+		}
+
+		if (_state == NetworkSessionState.Failed)
+		{
+			return;
+		}
+
+		if (_hostEndedMatchPending)
+		{
+			_reconnectAttemptInFlight = false;
+			_nextReconnectAttemptAt = 0.0;
+			return;
+		}
+
+		MultiplayerPeer? activePeer = Multiplayer.MultiplayerPeer;
+		if (NetworkReconnectRules.ShouldIgnoreLateServerDisconnectAfterReconnect(
+			_state,
+			IsHost,
+			activePeer != null,
+			activePeer?.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected))
+		{
+			return;
+		}
+
+		if (NetworkReconnectRules.ShouldAttemptReconnectAfterServerDisconnect(
+			_state,
+			IsHost,
+			CanAttemptReconnectClaim(),
+			hostEndedMatch: false))
+		{
+			EnterReconnectState();
+			return;
+		}
+
+		if (_state == NetworkSessionState.Reconnecting)
+		{
+			ScheduleReconnectRetry();
+			return;
+		}
+
 		if (_state == NetworkSessionState.InGame)
 		{
 			Fail("Host disconnected.");
@@ -736,18 +995,31 @@ public partial class NetworkManager : Node
 	private void RpcRequestClientInfo()
 	{
 		RefreshLocalIdentity();
-		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, GetStableUserId());
+		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, GetStableUserId(), _pendingJoinRoomPassword);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcRegisterPlayer(string displayName, string avatarId, string stableUserId)
+	private void RpcRegisterPlayer(string displayName, string avatarId, string stableUserId, string roomPassword)
 	{
-		if (!IsHost || _state != NetworkSessionState.Lobby)
+		if (!IsHost)
 		{
 			return;
 		}
 
 		int senderId = Multiplayer.GetRemoteSenderId();
+		if (!MultiplayerLobbyRules.CanAcceptJoinRequest(_state))
+		{
+			RejectLobbyJoin(senderId, "当前房间不可加入");
+			return;
+		}
+
+		if (RoomPasswordRules.HasPassword(_config.RoomPassword)
+			&& !string.Equals(_config.RoomPassword, RoomPasswordRules.Normalize(roomPassword), StringComparison.Ordinal))
+		{
+			RejectLobbyJoin(senderId, "房间密码错误");
+			return;
+		}
+
 		if (_players.Any(player => player.PeerId == senderId))
 		{
 			return;
@@ -756,7 +1028,7 @@ public partial class NetworkManager : Node
 		int seatIndex = MultiplayerLobbyRules.GetNextSeatIndex(_players, _config.PlayerCount);
 		if (seatIndex < 0)
 		{
-			RpcId(senderId, MethodName.RpcLobbyRejected, "Lobby is full.");
+			RejectLobbyJoin(senderId, "Lobby is full.");
 			return;
 		}
 
@@ -776,7 +1048,17 @@ public partial class NetworkManager : Node
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcLobbyRejected(string message)
 	{
-		Fail(message);
+		_lobbyRejectPending = true;
+		_lobbyRejectMessage = string.IsNullOrWhiteSpace(message) ? "Join rejected." : message;
+		if (Multiplayer.MultiplayerPeer != null)
+		{
+			Multiplayer.MultiplayerPeer.Close();
+			Multiplayer.MultiplayerPeer = null;
+		}
+
+		_enetPeer = null;
+		_steamPeer = null;
+		CallDeferred(nameof(FinalizeLobbyRejectedJoinIfNeeded));
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -814,9 +1096,9 @@ public partial class NetworkManager : Node
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcSyncLobby(Godot.Collections.Dictionary config, Godot.Collections.Array players)
 	{
-		_config = ParseConfig(config);
+		_config = ParseSharedConfig(config);
 		_players.Clear();
-		int localPeerId = Multiplayer.GetUniqueId();
+		int localPeerId = GetLocalPeerId();
 		foreach (Variant variant in players)
 		{
 			if (variant.AsGodotDictionary() is not { } playerDictionary)
@@ -835,7 +1117,7 @@ public partial class NetworkManager : Node
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcBeginSceneLoad(Godot.Collections.Dictionary bootstrap)
 	{
-		_config = ParseConfig(bootstrap);
+		_config = ParseSharedConfig(bootstrap);
 		SetState(NetworkSessionState.LoadingScene);
 		EmitSignal(SignalName.BeginSceneLoad, bootstrap);
 		if (GetTree().CurrentScene is GameBoardScene)
@@ -898,6 +1180,20 @@ public partial class NetworkManager : Node
 			return;
 		}
 
+		if (!CanAcceptRemoteBoardActionFromSeat(actorSeatIndex))
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, handIndex);
+			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat)
+			{
+				SendBoardSnapshotToPeerFromHost(
+					gameBoardForRejectedSeat,
+					senderPeerId,
+					actorSeatIndex,
+					gameBoardForRejectedSeat.CreateNextNetworkSnapshotId());
+			}
+			return;
+		}
+
 		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, handIndex);
@@ -911,6 +1207,175 @@ public partial class NetworkManager : Node
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, handIndex);
+			SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcRequestPlayItemCard(int itemHandIndex, int turnSequenceGeneration)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		int senderPeerId = Multiplayer.GetRemoteSenderId();
+		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, itemHandIndex);
+			return;
+		}
+
+		if (!CanAcceptRemoteBoardActionFromSeat(actorSeatIndex))
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, itemHandIndex);
+			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat)
+			{
+				SendBoardSnapshotToPeerFromHost(
+					gameBoardForRejectedSeat,
+					senderPeerId,
+					actorSeatIndex,
+					gameBoardForRejectedSeat.CreateNextNetworkSnapshotId());
+			}
+			return;
+		}
+
+		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, itemHandIndex);
+			return;
+		}
+
+		if (!gameBoard.TryStartNetworkItemCardPlayFromHost(
+			actorSeatIndex,
+			itemHandIndex,
+			turnSequenceGeneration,
+			out MultiplayerBoardActionRejectReason rejectReason))
+		{
+			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, itemHandIndex);
+			SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcRequestPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		int senderPeerId = Multiplayer.GetRemoteSenderId();
+		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, -1);
+			return;
+		}
+
+		if (!CanAcceptRemoteBoardActionFromSeat(actorSeatIndex))
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, -1);
+			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat)
+			{
+				SendBoardSnapshotToPeerFromHost(
+					gameBoardForRejectedSeat,
+					senderPeerId,
+					actorSeatIndex,
+					gameBoardForRejectedSeat.CreateNextNetworkSnapshotId());
+			}
+			return;
+		}
+
+		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
+		{
+			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, -1);
+			return;
+		}
+
+		if (!gameBoard.TryStartNetworkPendingItemSelectionFromHost(
+			actorSeatIndex,
+			targetPlayerIndex,
+			targetHandIndex,
+			turnSequenceGeneration,
+			out MultiplayerBoardActionRejectReason rejectReason))
+		{
+			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, -1);
+			SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcReconnectPlayer(string matchId, string reconnectToken, string stableUserId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		int senderPeerId = Multiplayer.GetRemoteSenderId();
+		if (string.IsNullOrWhiteSpace(reconnectToken))
+		{
+			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "TokenMismatch", -1);
+			return;
+		}
+
+		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
+		{
+			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "ActionInProgress", -1);
+			return;
+		}
+
+		if (!TryFindSeatControlStateByToken(reconnectToken, out SeatControlState currentSeatState, out int stateIndex))
+		{
+			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "TokenMismatch", -1);
+			return;
+		}
+
+		if (NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
+			currentSeatState.Mode,
+			currentSeatState.PeerId,
+			senderPeerId,
+			currentSeatState.ReconnectToken,
+			reconnectToken,
+			currentSeatState.StableUserId,
+			stableUserId))
+		{
+			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "ActionInProgress", currentSeatState.SeatIndex);
+			return;
+		}
+
+		_reconnectClaimsBySeat.TryGetValue(currentSeatState.SeatIndex, out ReconnectClaimRecord existingClaim);
+		ReconnectClaimResult result = SeatControlRules.ApplyReconnectClaim(
+			_config.MatchId,
+			gameBoard.IsNetworkMatchClaimable(),
+			currentSeatState,
+			existingClaim,
+			matchId,
+			reconnectToken,
+			stableUserId,
+			senderPeerId);
+		if (!result.Accepted)
+		{
+			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, result.RejectReason.ToString(), currentSeatState.SeatIndex);
+			return;
+		}
+
+		_seatControlStates[stateIndex] = result.SeatControlState;
+		_reconnectClaimsBySeat[currentSeatState.SeatIndex] = result.ClaimRecord;
+		if (currentSeatState.PeerId != senderPeerId)
+		{
+			BindReconnectedPeerToSeat(currentSeatState.SeatIndex, senderPeerId);
+		}
+
+		RpcId(senderPeerId, MethodName.RpcReconnectResult, true, string.Empty, currentSeatState.SeatIndex);
+		if (result.StateChanged)
+		{
+			SendReconnectCredentialsToConnectedPeers();
+		}
+
+		if (result.ShouldSendSnapshot)
+		{
+			SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
 		}
 	}
 
@@ -953,6 +1418,57 @@ public partial class NetworkManager : Node
 		{
 			gameBoard.ApplyNetworkBoardSnapshot(snapshot);
 		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcReceiveReconnectCredentials(string matchId, int seatIndex, string reconnectToken, string stableUserId)
+	{
+		if (!string.Equals(GetStableUserId(), stableUserId, StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		if (!string.IsNullOrWhiteSpace(matchId))
+		{
+			_config = _config with { MatchId = matchId };
+		}
+
+		_localReconnectToken = reconnectToken?.Trim() ?? string.Empty;
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcReconnectResult(bool accepted, string reason, int seatIndex)
+	{
+		_reconnectAttemptInFlight = false;
+		if (!accepted)
+		{
+			if (_state == NetworkSessionState.Reconnecting
+				&& string.Equals(reason, "ActionInProgress", StringComparison.Ordinal))
+			{
+				ScheduleReconnectRetry();
+				return;
+			}
+
+			Fail(string.IsNullOrWhiteSpace(reason) ? "Reconnect rejected." : $"Reconnect rejected: {reason}");
+			return;
+		}
+
+		UpdateLocalPlayerAfterReconnect(seatIndex);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcHostEndedMatch(string message)
+	{
+		if (IsHost)
+		{
+			return;
+		}
+
+		_hostEndedMatchPending = true;
+		_hostEndedMatchMessage = string.IsNullOrWhiteSpace(message) ? "Host disconnected." : message;
+		_reconnectAttemptInFlight = false;
+		_nextReconnectAttemptAt = 0.0;
+		Fail(_hostEndedMatchMessage);
 	}
 
 	private void LoadGameBoardScene(Godot.Collections.Dictionary bootstrap)
@@ -1048,23 +1564,24 @@ public partial class NetworkManager : Node
 		EmitSignal(SignalName.ErrorRaised, message);
 	}
 
-	private void PollSeatRetention(double now)
+	private void PollReconnect(double now)
 	{
-		if (_state != NetworkSessionState.InGame)
+		if (_state != NetworkSessionState.Reconnecting)
 		{
 			return;
 		}
 
-		foreach (KeyValuePair<int, double> retainedSeat in _retainedDisconnectedSeats.ToArray())
+		if (Multiplayer.MultiplayerPeer != null)
 		{
-			if (now - retainedSeat.Value < NetworkSessionDefaults.InGameSeatRetentionSeconds)
-			{
-				continue;
-			}
-
-			_retainedDisconnectedSeats.Remove(retainedSeat.Key);
-			EmitSignal(SignalName.InGameDisconnectRetentionFailed, retainedSeat.Key);
+			return;
 		}
+
+		if (_reconnectAttemptInFlight || now < _nextReconnectAttemptAt)
+		{
+			return;
+		}
+
+		TryStartReconnectAttempt(now);
 	}
 
 	private bool TryCreateSteamPeer(bool server, ulong lobbyId, out MultiplayerPeer? peer)
@@ -1130,16 +1647,9 @@ public partial class NetworkManager : Node
 		}
 
 		_steamLobbyId = lobbyId;
-		GodotObject? steam = GetSteamSingleton();
-		steam?.Call("setLobbyJoinable", _steamLobbyId, true);
-		Dictionary<string, string> metadata = SteamLobbyMetadata.Build(_config, _localDisplayName, NetworkSessionState.Lobby.ToString());
-		foreach (KeyValuePair<string, string> entry in metadata)
-		{
-			steam?.Call("setLobbyData", _steamLobbyId, entry.Key, entry.Value);
-		}
-
 		if (!TryCreateSteamPeer(server: true, lobbyId, out MultiplayerPeer? steamPeer))
 		{
+			LeaveSteamLobbyIfNeeded();
 			Fail("Steam multiplayer peer is not available.");
 			return;
 		}
@@ -1152,21 +1662,46 @@ public partial class NetworkManager : Node
 
 	private void OnSteamLobbyJoined(ulong lobbyId, int permissions, bool locked, int response)
 	{
-		if (_pendingSteamHostLobby || _state != NetworkSessionState.Joining)
+		if (_pendingSteamHostLobby || (_state != NetworkSessionState.Joining && _state != NetworkSessionState.Reconnecting))
 		{
 			return;
 		}
 
-		if (response != 1 || locked)
+		if (!NetworkReconnectRules.IsSteamLobbyJoinSuccessful(response))
 		{
-			Fail("Steam lobby join failed.");
+			if (NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(_state, response))
+			{
+				ScheduleReconnectRetry();
+				return;
+			}
+
+			Fail(_state == NetworkSessionState.Reconnecting
+				? "Reconnect failed: Steam lobby join was denied."
+				: "Steam lobby join failed.");
 			return;
 		}
 
 		_steamLobbyId = lobbyId;
+		if (NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
+			_state,
+			GetOriginalHostStableUserId(),
+			GetSteamLobbyOwner(lobbyId)))
+		{
+			LeaveSteamLobbyIfNeeded();
+			Fail("Reconnect failed: original host is no longer available.");
+			return;
+		}
+
 		TryReadSteamLobbyConfig(lobbyId);
 		if (!TryCreateSteamPeer(server: false, lobbyId, out MultiplayerPeer? steamPeer))
 		{
+			LeaveSteamLobbyIfNeeded();
+			if (_state == NetworkSessionState.Reconnecting)
+			{
+				ScheduleReconnectRetry();
+				return;
+			}
+
 			Fail("Steam multiplayer peer is not available.");
 			return;
 		}
@@ -1192,7 +1727,13 @@ public partial class NetworkManager : Node
 
 	private void OnSteamJoinRequested(ulong lobbyId, ulong friendId)
 	{
-		JoinSteamLobby(lobbyId);
+		if (!MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(_state))
+		{
+			EmitSignal(SignalName.ErrorRaised, "请先离开当前房间或对局，再接受 Steam 邀请");
+			return;
+		}
+
+		JoinSteamLobby(lobbyId, string.Empty);
 	}
 
 	private void TryReadSteamLobbyConfig(ulong lobbyId)
@@ -1232,6 +1773,7 @@ public partial class NetworkManager : Node
 			SteamLobbyMetadata.PlayerCountKey,
 			SteamLobbyMetadata.ItemModeKey,
 			SteamLobbyMetadata.WinningScoreKey,
+			SteamLobbyMetadata.HasPasswordKey,
 			SteamLobbyMetadata.StatusKey,
 		})
 		{
@@ -1250,6 +1792,11 @@ public partial class NetworkManager : Node
 		}
 
 		return unchecked((ulong)steam.Call("getLobbyOwner", lobbyId).AsInt64());
+	}
+
+	private string GetOriginalHostStableUserId()
+	{
+		return _players.FirstOrDefault(player => player.IsHost).StableUserId;
 	}
 
 	private GodotObject? GetSteamSingleton()
@@ -1279,6 +1826,73 @@ public partial class NetworkManager : Node
 		EmitSignal(SignalName.ErrorRaised, message);
 	}
 
+	private void RejectLobbyJoin(int senderId, string message)
+	{
+		RpcId(senderId, MethodName.RpcLobbyRejected, message);
+		CallDeferred(nameof(DisconnectRejectedLobbyPeer), senderId);
+	}
+
+	private void DisconnectRejectedLobbyPeer(int senderId)
+	{
+		if (!IsHost || senderId <= 0 || Multiplayer.MultiplayerPeer == null)
+		{
+			return;
+		}
+
+		Multiplayer.MultiplayerPeer.DisconnectPeer(senderId);
+	}
+
+	private void FinalizeLobbyRejectedJoinIfNeeded()
+	{
+		if (!_lobbyRejectPending)
+		{
+			return;
+		}
+
+		string message = _lobbyRejectMessage;
+		_lobbyRejectPending = false;
+		_lobbyRejectMessage = string.Empty;
+		LeaveSession();
+		Fail(message);
+	}
+
+	private void RefreshSteamLobbyAdvertisedState()
+	{
+		if (!IsHost || _config.Transport != NetworkTransport.Steam || _steamLobbyId == 0)
+		{
+			return;
+		}
+
+		GodotObject? steam = GetSteamSingleton();
+		if (steam == null)
+		{
+			return;
+		}
+
+		steam.Call("setLobbyJoinable", _steamLobbyId, SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(_state));
+		Dictionary<string, string> metadata = SteamLobbyMetadata.Build(_config, _localDisplayName, _state.ToString());
+		foreach (KeyValuePair<string, string> entry in metadata)
+		{
+			steam.Call("setLobbyData", _steamLobbyId, entry.Key, entry.Value);
+		}
+	}
+
+	private void LeaveSteamLobbyIfNeeded()
+	{
+		if (_steamLobbyId == 0)
+		{
+			return;
+		}
+
+		GodotObject? steam = GetSteamSingleton();
+		if (steam == null || !steam.HasMethod("leaveLobby"))
+		{
+			return;
+		}
+
+		steam.Call("leaveLobby", _steamLobbyId);
+	}
+
 	private void SetState(NetworkSessionState state)
 	{
 		if (_state == state)
@@ -1287,6 +1901,7 @@ public partial class NetworkManager : Node
 		}
 
 		_state = state;
+		RefreshSteamLobbyAdvertisedState();
 		EmitSignal(SignalName.StateChanged, (int)_state);
 	}
 
@@ -1300,12 +1915,25 @@ public partial class NetworkManager : Node
 		EmitSignal(SignalName.PlayerListUpdated, GetPlayersVariant());
 	}
 
+	private static Godot.Collections.Dictionary ToDictionary(SeatControlState state)
+	{
+		return new Godot.Collections.Dictionary
+		{
+			["seat_index"] = state.SeatIndex,
+			["mode"] = state.Mode.ToString(),
+			["peer_id"] = state.PeerId,
+			["stable_user_id"] = state.StableUserId,
+			["reconnect_token"] = state.ReconnectToken,
+		};
+	}
+
 	private static Godot.Collections.Dictionary ToDictionary(NetworkSessionConfig config)
 	{
 		return new Godot.Collections.Dictionary
 		{
 			["session_id"] = config.SessionId,
 			["room_name"] = config.RoomName,
+			["room_password"] = string.Empty,
 			["match_id"] = config.MatchId,
 			["match_seed"] = config.MatchSeed,
 			["transport"] = config.Transport.ToString(),
@@ -1344,6 +1972,7 @@ public partial class NetworkManager : Node
 			["player_count"] = room.PlayerCount,
 			["item_mode"] = room.ItemMode,
 			["winning_score"] = room.WinningScore,
+			["has_password"] = room.HasPassword,
 			["status"] = room.Status,
 			["steam_lobby_id"] = room.SteamLobbyId,
 		};
@@ -1354,6 +1983,7 @@ public partial class NetworkManager : Node
 		return new NetworkSessionConfig(
 			ReadString(dictionary, "session_id"),
 			RoomNameRules.Normalize(ReadString(dictionary, "room_name")),
+			RoomPasswordRules.Normalize(ReadString(dictionary, "room_password")),
 			ReadString(dictionary, "match_id"),
 			ReadLong(dictionary, "match_seed"),
 			ReadEnum(dictionary, "transport", NetworkTransport.Lan),
@@ -1361,6 +1991,19 @@ public partial class NetworkManager : Node
 			ReadBool(dictionary, "item_mode", NetworkSessionDefaults.DefaultItemMode),
 			NetworkSessionDefaults.NormalizeWinningScore(ReadInt(dictionary, "winning_score", NetworkSessionDefaults.DefaultWinningScore)),
 			ReadEnum(dictionary, "lobby_visibility", LobbyVisibility.FriendsOnly));
+	}
+
+	private NetworkSessionConfig ParseSharedConfig(Godot.Collections.Dictionary dictionary)
+	{
+		NetworkSessionConfig parsed = ParseConfig(dictionary);
+		if (IsHost
+			&& RoomPasswordRules.HasPassword(_config.RoomPassword)
+			&& !RoomPasswordRules.HasPassword(parsed.RoomPassword))
+		{
+			return parsed with { RoomPassword = _config.RoomPassword };
+		}
+
+		return parsed;
 	}
 
 	private static NetworkPlayerPublicState ParsePlayer(Godot.Collections.Dictionary dictionary)
@@ -1406,5 +2049,282 @@ public partial class NetworkManager : Node
 		}
 
 		return Enum.TryParse(value.AsString(), ignoreCase: true, out TEnum parsed) ? parsed : fallback;
+	}
+
+	private void InitializeMatchSeatControlStates()
+	{
+		_seatControlStates.Clear();
+		_reconnectClaimsBySeat.Clear();
+		foreach (NetworkPlayerPublicState player in _players.OrderBy(player => player.SeatIndex))
+		{
+			string reconnectToken = Guid.NewGuid().ToString("N");
+			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
+			_seatControlStates.Add(state);
+			_reconnectClaimsBySeat[player.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
+			if (player.IsLocal)
+			{
+				_localReconnectToken = reconnectToken;
+			}
+		}
+	}
+
+	private bool TryGetSeatControlState(int seatIndex, out SeatControlState state, out int stateIndex)
+	{
+		stateIndex = _seatControlStates.FindIndex(candidate => candidate.SeatIndex == seatIndex);
+		if (stateIndex < 0)
+		{
+			state = default;
+			return false;
+		}
+
+		state = _seatControlStates[stateIndex];
+		return true;
+	}
+
+	private bool TryFindSeatControlStateByToken(string reconnectToken, out SeatControlState state, out int stateIndex)
+	{
+		stateIndex = _seatControlStates.FindIndex(candidate => string.Equals(candidate.ReconnectToken, reconnectToken, StringComparison.Ordinal));
+		if (stateIndex < 0)
+		{
+			state = default;
+			return false;
+		}
+
+		state = _seatControlStates[stateIndex];
+		return true;
+	}
+
+	private void TryMarkSeatDisconnected(int disconnectedPeerId)
+	{
+		int playerIndex = _players.FindIndex(player => player.PeerId == disconnectedPeerId);
+		if (playerIndex < 0)
+		{
+			return;
+		}
+
+		int seatIndex = _players[playerIndex].SeatIndex;
+		if (!TryGetSeatControlState(seatIndex, out SeatControlState current, out int stateIndex))
+		{
+			return;
+		}
+
+		_reconnectClaimsBySeat.TryGetValue(seatIndex, out ReconnectClaimRecord claim);
+		if (!SeatControlRules.TryMarkDisconnected(current, disconnectedPeerId, out SeatControlState next, out ReconnectClaimRecord? updatedClaim, claim))
+		{
+			return;
+		}
+
+		_seatControlStates[stateIndex] = next;
+		if (updatedClaim.HasValue)
+		{
+			_reconnectClaimsBySeat[seatIndex] = updatedClaim.Value;
+		}
+	}
+
+	private bool CanAcceptRemoteBoardActionFromSeat(int seatIndex)
+	{
+		return TryGetSeatControlState(seatIndex, out SeatControlState state, out _)
+			&& NetworkSeatControlRules.CanAcceptRemotePlayerAction(state.Mode);
+	}
+
+	private void SendReconnectCredentialsToConnectedPeers()
+	{
+		if (!NetworkReconnectRules.ShouldSendReconnectCredentials(IsHost, _state))
+		{
+			return;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (player.IsHost || !player.IsConnected)
+			{
+				continue;
+			}
+
+			if (!TryGetSeatControlState(player.SeatIndex, out SeatControlState seatControlState, out _))
+			{
+				continue;
+			}
+
+			RpcId(
+				player.PeerId,
+				MethodName.RpcReceiveReconnectCredentials,
+				_config.MatchId,
+				seatControlState.SeatIndex,
+				seatControlState.ReconnectToken,
+				seatControlState.StableUserId);
+		}
+	}
+
+	private bool CanAttemptReconnectClaim()
+	{
+		return !string.IsNullOrWhiteSpace(_config.MatchId)
+			&& !string.IsNullOrWhiteSpace(_localReconnectToken)
+			&& (!string.IsNullOrWhiteSpace(_lastLanJoinAddress) || _steamLobbyId != 0);
+	}
+
+	private void EnterReconnectState()
+	{
+		if (Multiplayer.MultiplayerPeer != null)
+		{
+			Multiplayer.MultiplayerPeer.Close();
+			Multiplayer.MultiplayerPeer = null;
+		}
+
+		_enetPeer = null;
+		_steamPeer = null;
+		_reconnectAttemptInFlight = false;
+		_nextReconnectAttemptAt = 0.0;
+		MarkLocalPlayerConnection(isConnected: false);
+		SetState(NetworkSessionState.Reconnecting);
+	}
+
+	private void ScheduleReconnectRetry()
+	{
+		if (Multiplayer.MultiplayerPeer != null)
+		{
+			Multiplayer.MultiplayerPeer.Close();
+			Multiplayer.MultiplayerPeer = null;
+		}
+
+		_enetPeer = null;
+		_steamPeer = null;
+		_reconnectAttemptInFlight = false;
+		_nextReconnectAttemptAt = Time.GetTicksMsec() / 1000.0 + ReconnectRetrySeconds;
+	}
+
+	private void TryStartReconnectAttempt(double now)
+	{
+		if (_config.Transport == NetworkTransport.Lan)
+		{
+			if (string.IsNullOrWhiteSpace(_lastLanJoinAddress))
+			{
+				Fail("Reconnect failed: LAN host address is missing.");
+				return;
+			}
+
+			_enetPeer = new ENetMultiplayerPeer();
+			Error error = _enetPeer.CreateClient(_lastLanJoinAddress, NetworkSessionDefaults.LanGamePort);
+			if (error != Error.Ok)
+			{
+				_enetPeer = null;
+				_nextReconnectAttemptAt = now + ReconnectRetrySeconds;
+				return;
+			}
+
+			_reconnectAttemptInFlight = true;
+			Multiplayer.MultiplayerPeer = _enetPeer;
+			return;
+		}
+
+		if (_config.Transport == NetworkTransport.Steam)
+		{
+			if (!SteamAvailable || _steamLobbyId == 0)
+			{
+				Fail("Reconnect failed: Steam lobby is not available.");
+				return;
+			}
+
+			_reconnectAttemptInFlight = true;
+			GodotObject? steam = GetSteamSingleton();
+			steam?.Call("joinLobby", _steamLobbyId);
+			return;
+		}
+
+		Fail("Reconnect failed: unsupported transport.");
+	}
+
+	private void BindReconnectedPeerToSeat(int seatIndex, int senderPeerId)
+	{
+		int playerIndex = _players.FindIndex(player => player.SeatIndex == seatIndex);
+		if (playerIndex < 0)
+		{
+			return;
+		}
+
+		_players[playerIndex] = _players[playerIndex] with
+		{
+			PeerId = senderPeerId,
+			IsConnected = true,
+		};
+	}
+
+	private void MarkLocalPlayerConnection(bool isConnected)
+	{
+		int localSeatIndex = LocalSeatIndex;
+		int playerIndex = _players.FindIndex(player => player.SeatIndex == localSeatIndex);
+		if (playerIndex < 0)
+		{
+			return;
+		}
+
+		_players[playerIndex] = _players[playerIndex] with
+		{
+			PeerId = isConnected ? GetLocalPeerId() : _players[playerIndex].PeerId,
+			IsConnected = isConnected,
+			IsLocal = true,
+		};
+	}
+
+	private void UpdateLocalPlayerAfterReconnect(int seatIndex)
+	{
+		int playerIndex = _players.FindIndex(player => player.SeatIndex == seatIndex);
+		if (playerIndex < 0)
+		{
+			return;
+		}
+
+		int peerId = GetLocalPeerId();
+		_players[playerIndex] = _players[playerIndex] with
+		{
+			PeerId = peerId == 0 ? _players[playerIndex].PeerId : peerId,
+			IsConnected = true,
+			IsLocal = true,
+		};
+	}
+
+	internal bool TryGetSeatControlStateForUi(int seatIndex, out SeatControlState state)
+	{
+		return TryGetSeatControlState(seatIndex, out state, out _);
+	}
+
+	public bool TryPromoteReclaimedSeatAtTurnStart(int seatIndex)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return false;
+		}
+
+		if (!TryGetSeatControlState(seatIndex, out SeatControlState current, out int stateIndex)
+			|| !SeatControlRules.TryPromoteAtTurnStart(current, seatIndex, out SeatControlState next))
+		{
+			return false;
+		}
+
+		_seatControlStates[stateIndex] = next;
+		return true;
+	}
+
+	public bool IsSeatAiControlled(int seatIndex)
+	{
+		if (!TryGetSeatControlState(seatIndex, out SeatControlState state, out _))
+		{
+			return false;
+		}
+
+		return state.Mode != SeatControlMode.HumanConnected;
+	}
+
+	public void NotifyReconnectSnapshotApplied(string matchId)
+	{
+		if (_state != NetworkSessionState.Reconnecting
+			|| !string.Equals(_config.MatchId, matchId, StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		_reconnectAttemptInFlight = false;
+		_nextReconnectAttemptAt = 0.0;
+		SetState(NetworkSessionState.InGame);
 	}
 }

@@ -4,6 +4,11 @@ public partial class GameBoardScene
 {
 	private void TryPlayMainPlayerCard(InputEvent inputEvent, int handIndex)
 	{
+		if (ShouldBlockBoardControlInput())
+		{
+			return;
+		}
+
 		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
 		{
 			return;
@@ -35,6 +40,11 @@ public partial class GameBoardScene
 
 	private void TryCompleteMainPlayerMagnetAttachment(InputEvent inputEvent, int handIndex)
 	{
+		if (ShouldBlockBoardControlInput())
+		{
+			return;
+		}
+
 		if (!IsMainPlayerMagnetSelectionActive() || _isAnimatingMagnetAttachment)
 		{
 			return;
@@ -56,11 +66,22 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
+		if (ShouldSendNetworkPendingItemSelectionRequest())
+		{
+			RequestNetworkPendingItemSelection(-1, handIndex, _pendingItemTurnSequenceGeneration);
+			return;
+		}
+
 		_ = CompleteMagnetAttachmentSelectionAsync(handIndex);
 	}
 
 	private void TryCompleteMainPlayerHandLimitDiscard(InputEvent inputEvent, int displayIndex)
 	{
+		if (ShouldBlockBoardControlInput())
+		{
+			return;
+		}
+
 		if (!IsMainPlayerHandLimitDiscardSelectionActive())
 		{
 			return;
@@ -86,6 +107,11 @@ public partial class GameBoardScene
 
 	private void TryPlayMainPlayerItemCard(InputEvent inputEvent, int itemHandIndex)
 	{
+		if (ShouldBlockBoardControlInput())
+		{
+			return;
+		}
+
 		if (inputEvent is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
 		{
 			return;
@@ -96,12 +122,6 @@ public partial class GameBoardScene
 
 	private void ConfirmMainPlayerItemCard(int itemHandIndex)
 	{
-		if (IsNetworkMultiplayerMode())
-		{
-			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
-			return;
-		}
-
 		if (!CanMainPlayerAct())
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
@@ -116,6 +136,12 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.CardPickup, -2.0f, 0.97f, 1.04f, 0.04);
+		if (IsNetworkMultiplayerMode())
+		{
+			RequestNetworkItemCardPlay(itemHandIndex, _turnSequenceGeneration);
+			return;
+		}
+
 		_ = PlayMainPlayerItemCardAndAdvanceAsync(itemHandIndex, _turnSequenceGeneration);
 	}
 

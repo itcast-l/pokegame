@@ -136,7 +136,6 @@ public partial class GameBoardScene
 		result = new PlayCardResult(false, false);
 		if (!_itemCardCatalog.TryGetDefinition(itemCard.Id, out ItemCardDefinition definition)
 			|| definition.PlayPresentation != CardPlayPresentationTypes.TargetedTrigger
-			|| playerIndex != MainPlayerIndex
 			|| !RequiresPlayerTarget(itemCard.Id))
 		{
 			return false;
@@ -147,9 +146,24 @@ public partial class GameBoardScene
 			return true;
 		}
 
+		if (!ShouldUseInteractiveTargetedItemSelection(playerIndex))
+		{
+			return false;
+		}
+
 		StartPendingItemSelection(itemCard.Id, playerIndex, itemHandIndex, turnSequenceGeneration);
 		result = new PlayCardResult(true, false, CompletesTurn: false);
 		return true;
+	}
+
+	private bool ShouldUseInteractiveTargetedItemSelection(int playerIndex)
+	{
+		if (!IsNetworkMultiplayerMode())
+		{
+			return playerIndex == MainPlayerIndex;
+		}
+
+		return !(GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(playerIndex) ?? false);
 	}
 
 	private async Task<PlayCardResult> PlayTransformAreaItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)

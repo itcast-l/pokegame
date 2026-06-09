@@ -26,7 +26,7 @@ public partial class GameBoardScene
 	private void PlayResultMusic(int winnerPlayerIndex)
 	{
 		GameAudio?.PlayMusic(
-			winnerPlayerIndex == MainPlayerIndex ? GameMusic.Victory : GameMusic.Defeat,
+			IsLocalHandPlayer(winnerPlayerIndex) ? GameMusic.Victory : GameMusic.Defeat,
 			0.8f,
 			restartIfSame: true);
 	}
@@ -117,6 +117,11 @@ public partial class GameBoardScene
 			&& avatar.AudioConfig != null)
 		{
 			return avatar.AudioConfig;
+		}
+
+		if (!adventure_mode && TryGetNetworkAvatarId(playerIndex, out string avatarId))
+		{
+			return CharacterAvatarCatalog.GetById(avatarId).AudioConfig;
 		}
 
 		if (adventure_mode)

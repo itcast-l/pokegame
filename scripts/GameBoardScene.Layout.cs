@@ -142,7 +142,15 @@ public partial class GameBoardScene
 		{
 			tween.Parallel().TweenProperty(_winnerBannerPanel, "scale", Vector2.One, 0.30f);
 		}
-		_winnerReplayButton?.GrabFocus();
+
+		if (_winnerReplayButton != null && !_winnerReplayButton.Disabled)
+		{
+			_winnerReplayButton.GrabFocus();
+		}
+		else
+		{
+			_winnerBannerRoot.ReturnButton.GrabFocus();
+		}
 	}
 
 	private string GetWinnerText(int playerIndex)
@@ -162,7 +170,7 @@ public partial class GameBoardScene
 			return networkName;
 		}
 
-		if (playerIndex == MainPlayerIndex)
+		if (!adventure_mode && IsLocalHandPlayer(playerIndex))
 		{
 			return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
 		}
@@ -204,6 +212,11 @@ public partial class GameBoardScene
 
 	private void PressWinnerPrimaryButton()
 	{
+		if (_winnerReplayButton != null && _winnerReplayButton.Disabled)
+		{
+			return;
+		}
+
 		if (ShouldAdvanceAdventureFromWinner())
 		{
 			StartNextAdventureStageFromWinner();
@@ -272,8 +285,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_winnerReplayButton.Disabled = false;
-		_winnerReplayButton.Text = Localize(GetWinnerPrimaryButtonKey());
+		bool shouldAdvanceAdventure = ShouldAdvanceAdventureFromWinner();
+		_winnerReplayButton.Disabled = !ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
+			IsNetworkMultiplayerMode(),
+			shouldAdvanceAdventure);
+		_winnerReplayButton.Text = Localize(shouldAdvanceAdventure ? "GAME_NEXT_ADVENTURE_STAGE" : "GAME_REPLAY");
 	}
 
 	private void UpdateWinnerReturnButton()
@@ -284,11 +300,6 @@ public partial class GameBoardScene
 		}
 
 		_winnerBannerRoot.ReturnButton.Text = Localize(GetWinnerReturnButtonKey());
-	}
-
-	private string GetWinnerPrimaryButtonKey()
-	{
-		return ShouldAdvanceAdventureFromWinner() ? "GAME_NEXT_ADVENTURE_STAGE" : "GAME_REPLAY";
 	}
 
 	private bool ShouldAdvanceAdventureFromWinner()
@@ -331,12 +342,12 @@ public partial class GameBoardScene
 
 	private bool ShouldShowDefeatResult(int winnerPlayerIndex)
 	{
-		if (winnerPlayerIndex == MainPlayerIndex)
-		{
-			return false;
-		}
-
-		return adventure_mode || solo_mode;
+		return ResultPresentationRules.ShouldShowDefeatResult(
+			winnerPlayerIndex,
+			IsNetworkMultiplayerMode() ? GetLocalHandPlayerIndex() : MainPlayerIndex,
+			IsNetworkMultiplayerMode(),
+			adventure_mode,
+			solo_mode);
 	}
 
 	private void ApplyWinnerLabelLayout()

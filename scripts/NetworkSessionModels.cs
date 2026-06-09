@@ -30,6 +30,7 @@ public enum LobbyVisibility
 public readonly record struct NetworkSessionConfig(
 	string SessionId,
 	string RoomName,
+	string RoomPassword,
 	string MatchId,
 	long MatchSeed,
 	NetworkTransport Transport,
@@ -49,6 +50,20 @@ public readonly record struct NetworkPlayerPublicState(
 	bool IsReady,
 	bool IsConnected);
 
+public enum SeatControlMode
+{
+	HumanConnected,
+	AiProxyReclaimable,
+	HumanReclaimPending,
+}
+
+public readonly record struct SeatControlState(
+	int SeatIndex,
+	SeatControlMode Mode,
+	int PeerId,
+	string StableUserId,
+	string ReconnectToken);
+
 public readonly record struct NetworkRoomInfo(
 	string SessionId,
 	string RoomName,
@@ -58,6 +73,7 @@ public readonly record struct NetworkRoomInfo(
 	int PlayerCount,
 	bool ItemMode,
 	int WinningScore,
+	bool HasPassword,
 	string Status,
 	ulong SteamLobbyId = 0);
 
@@ -70,9 +86,8 @@ public static class NetworkSessionDefaults
 	public const bool DefaultItemMode = true;
 	public const int LanDiscoveryPort = 37145;
 	public const int LanGamePort = 37146;
-	public const int ProtocolVersion = 1;
+	public const int ProtocolVersion = 3;
 	public const double SceneLoadTimeoutSeconds = 30.0;
-	public const double InGameSeatRetentionSeconds = 60.0;
 
 	public static int ClampPlayerCount(int playerCount)
 	{

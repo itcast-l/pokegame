@@ -57,7 +57,9 @@ public partial class GameBoardScene
 		_pendingItemSelectionMode = PendingItemSelectionMode.TargetPlayer;
 		_revealedPlayerHandIndex = -1;
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 		ShowTargetPlayerSelection();
+		BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
 	}
 
 	private void CancelPendingItemSelection()
@@ -66,6 +68,7 @@ public partial class GameBoardScene
 		ClearPendingItemSelectionState();
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 	}
 
 	private void ClearPendingItemSelectionState()
@@ -74,6 +77,7 @@ public partial class GameBoardScene
 		TaskCompletionSource<int>? handLimitDiscardCompletion = _pendingHandLimitDiscardCompletion;
 		ClearMagnetAttachmentCountdown();
 		_isAnimatingMagnetAttachment = false;
+		_networkPendingSelectionRequestInFlight = false;
 		_pendingItemSelectionMode = PendingItemSelectionMode.None;
 		_pendingItemOwnerIndex = -1;
 		_pendingItemHandIndex = -1;
@@ -125,31 +129,53 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (playerIndex == MainPlayerIndex)
+		if (ShouldUseInteractiveHumanItemFollowup(playerIndex))
 		{
-			return await ResolveMainPlayerHandLimitDiscardAsync(turnSequenceGeneration);
+			return await ResolveHumanHandLimitDiscardAsync(playerIndex, turnSequenceGeneration);
 		}
 
 		return RemoveHandCardFromGame(playerIndex, PickRandomHandDisplayIndex(playerIndex));
 	}
 
-	private async Task<bool> ResolveMainPlayerHandLimitDiscardAsync(int turnSequenceGeneration)
+	private bool ShouldUseInteractiveHumanItemFollowup(int playerIndex)
 	{
-		if (_pendingHandLimitDiscardCompletion != null || !HasAnyHandCard(MainPlayerIndex))
+		if (playerIndex < 0 || playerIndex >= player_count)
+		{
+			return false;
+		}
+
+		if (!IsNetworkMultiplayerMode())
+		{
+			return playerIndex == MainPlayerIndex;
+		}
+
+		return !(GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(playerIndex) ?? false);
+	}
+
+	private Task<bool> ResolveMainPlayerHandLimitDiscardAsync(int turnSequenceGeneration)
+	{
+		return ResolveHumanHandLimitDiscardAsync(MainPlayerIndex, turnSequenceGeneration);
+	}
+
+	private async Task<bool> ResolveHumanHandLimitDiscardAsync(int ownerPlayerIndex, int turnSequenceGeneration)
+	{
+		if (_pendingHandLimitDiscardCompletion != null || !HasAnyHandCard(ownerPlayerIndex))
 		{
 			return false;
 		}
 
 		bool wasProcessingCardPlay = _isProcessingCardPlay;
 		_isProcessingCardPlay = true;
-		_pendingItemOwnerIndex = MainPlayerIndex;
+		_pendingItemOwnerIndex = ownerPlayerIndex;
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
 		_pendingItemCardId = string.Empty;
 		_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
 		_pendingHandLimitDiscardCompletion = new TaskCompletionSource<int>();
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 		ShowHandLimitDiscardSelection();
+		BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
 
 		try
 		{
@@ -159,7 +185,7 @@ public partial class GameBoardScene
 				return false;
 			}
 
-			if (!RemoveHandCardFromGame(MainPlayerIndex, displayIndex))
+			if (!RemoveHandCardFromGame(ownerPlayerIndex, displayIndex))
 			{
 				return false;
 			}
@@ -167,11 +193,13 @@ public partial class GameBoardScene
 			ClearSelectionOverlay();
 			ClearPendingItemSelectionState();
 			RenderPlayerHands();
+			SendBoardSnapshotIfHost();
 			return true;
 		}
 		finally
 		{
-			if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
+			if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
+				&& _pendingItemOwnerIndex == ownerPlayerIndex)
 			{
 				ClearSelectionOverlay();
 				ClearPendingItemSelectionState();
@@ -185,24 +213,34 @@ public partial class GameBoardScene
 	private void ShowHandLimitDiscardSelection()
 	{
 		ClearSelectionOverlay();
-		if (!HasAnyHandCard(MainPlayerIndex))
+		if (!IsMainPlayerHandLimitDiscardSelectionActive())
 		{
-			_pendingHandLimitDiscardCompletion?.TrySetResult(-1);
+			return;
+		}
+
+		int ownerPlayerIndex = GetPendingSelectionLocalOwnerIndex();
+		if (!HasAnyHandCard(ownerPlayerIndex))
+		{
+			if (!ShouldSendNetworkPendingItemSelectionRequest())
+			{
+				_pendingHandLimitDiscardCompletion?.TrySetResult(-1);
+			}
+
 			return;
 		}
 
 		var options = new List<(string Text, Action Action)>();
-		for (int handIndex = 0; handIndex < _playerHands[MainPlayerIndex].Count; handIndex++)
+		for (int handIndex = 0; handIndex < _playerHands[ownerPlayerIndex].Count; handIndex++)
 		{
-			PlayingCard card = _playerHands[MainPlayerIndex][handIndex];
+			PlayingCard card = _playerHands[ownerPlayerIndex][handIndex];
 			int selectedDisplayIndex = handIndex;
 			options.Add(($"{card.Suit} {card.Rank}", () => CompleteHandLimitDiscardSelection(selectedDisplayIndex)));
 		}
 
-		for (int itemIndex = 0; itemIndex < _playerItemHands[MainPlayerIndex].Count; itemIndex++)
+		for (int itemIndex = 0; itemIndex < _playerItemHands[ownerPlayerIndex].Count; itemIndex++)
 		{
-			ItemCard itemCard = _playerItemHands[MainPlayerIndex][itemIndex];
-			int selectedDisplayIndex = _playerHands[MainPlayerIndex].Count + itemIndex;
+			ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemIndex];
+			int selectedDisplayIndex = _playerHands[ownerPlayerIndex].Count + itemIndex;
 			options.Add((GetSpecialCardSelectionLabel(itemCard.Id), () => CompleteHandLimitDiscardSelection(selectedDisplayIndex)));
 		}
 
@@ -212,13 +250,33 @@ public partial class GameBoardScene
 	private void CompleteHandLimitDiscardSelection(int displayIndex)
 	{
 		if (_pendingItemSelectionMode != PendingItemSelectionMode.HandLimitDiscard
-			|| _pendingItemOwnerIndex != MainPlayerIndex
+			|| _pendingItemOwnerIndex != GetPendingSelectionLocalOwnerIndex()
 			|| _pendingItemTurnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return;
 		}
 
+		if (!IsValidHandLimitDiscardSelection(_pendingItemOwnerIndex, displayIndex))
+		{
+			return;
+		}
+
+		if (ShouldSendNetworkPendingItemSelectionRequest())
+		{
+			RequestNetworkPendingItemSelection(-1, displayIndex, _pendingItemTurnSequenceGeneration);
+			return;
+		}
+
 		_pendingHandLimitDiscardCompletion?.TrySetResult(displayIndex);
+	}
+
+	private bool IsValidHandLimitDiscardSelection(int playerIndex, int displayIndex)
+	{
+		return playerIndex >= 0
+			&& playerIndex < _playerHands.Count
+			&& playerIndex < _playerItemHands.Count
+			&& displayIndex >= 0
+			&& displayIndex < GetTotalHandCardCount(playerIndex);
 	}
 
 	private int PickRandomHandDisplayIndex(int playerIndex)

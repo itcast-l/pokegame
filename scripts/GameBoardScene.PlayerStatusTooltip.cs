@@ -207,11 +207,23 @@ public partial class GameBoardScene
 		float progress = Mathf.Clamp((float)score / Math.Max(1, scoreLimit), 0.0f, 1.0f);
 
 		_playerStatusTooltipTitleLabel.Text = GetPlayerDisplayName(playerIndex);
-		_playerStatusTooltipValueLabel.Text = $"{GetPlayerStatusMetricLabel()}: {score}/{scoreLimit}";
+		string baseValueText = $"{GetPlayerStatusMetricLabel()}: {score}/{scoreLimit}";
+		string seatControlStatusText = GetPlayerSeatControlStatusText(playerIndex);
+		_playerStatusTooltipValueLabel.Text = string.IsNullOrWhiteSpace(seatControlStatusText)
+			? baseValueText
+			: $"{baseValueText}  {seatControlStatusText}";
 		if (_playerStatusTooltipBarFill != null)
 		{
 			_playerStatusTooltipBarFill.Color = AvatarScoreGlowColors[playerIndex];
 			_playerStatusTooltipBarFill.Size = new Vector2(PlayerStatusTooltipBarSize.X * progress, PlayerStatusTooltipBarSize.Y);
+		}
+	}
+
+	private void RefreshAllPlayerStatusTooltips()
+	{
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			UpdatePlayerAvatarTooltip(playerIndex);
 		}
 	}
 

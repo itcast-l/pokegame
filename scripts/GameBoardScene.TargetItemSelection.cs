@@ -5,8 +5,60 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private void RefreshNetworkPendingSelectionOverlay()
+	{
+		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
+		{
+			return;
+		}
+
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.TargetPlayer)
+		{
+			if (!ShouldShowLocalPendingItemSelectionUi())
+			{
+				ClearSelectionOverlay();
+				return;
+			}
+
+			ShowTargetPlayerSelection();
+			return;
+		}
+
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.TargetHandCard)
+		{
+			if (!ShouldShowLocalPendingItemSelectionUi())
+			{
+				ClearSelectionOverlay();
+				return;
+			}
+
+			ShowTargetHandSelection(_revealedPlayerHandIndex);
+			return;
+		}
+
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
+		{
+			ShowHandLimitDiscardSelection();
+			return;
+		}
+
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+		{
+			ShowMagnetHandSelection();
+			return;
+		}
+
+		ClearSelectionOverlay();
+	}
+
 	private void ShowTargetPlayerSelection()
 	{
+		if (!ShouldShowLocalPendingItemSelectionUi())
+		{
+			ClearSelectionOverlay();
+			return;
+		}
+
 		ClearSelectionOverlay();
 		List<int> candidates = BuildItemTargetPlayerCandidates(_pendingItemCardId, _pendingItemOwnerIndex);
 		if (candidates.Count == 0)
@@ -22,12 +74,12 @@ public partial class GameBoardScene
 			options.Add((GetPlayerLabel(playerIndex), () => SelectPendingItemTargetPlayer(targetPlayerIndex)));
 		}
 
-		ShowSelectionOverlay(Localize("GAME_SELECT_PLAYER"), options, showCancel: true);
+		ShowSelectionOverlay(Localize("GAME_SELECT_PLAYER"), options, showCancel: !ShouldSendNetworkPendingItemSelectionRequest());
 	}
 
 	private void SelectPendingItemTargetPlayer(int targetPlayerIndex)
 	{
-		if (!IsPendingItemSelectionValid())
+		if (!IsLocalPendingItemSelectionValid())
 		{
 			CancelPendingItemSelection();
 			return;
@@ -41,18 +93,43 @@ public partial class GameBoardScene
 
 		if (IsPlayerDeckTargetItemCard(_pendingItemCardId))
 		{
-			CompletePendingItemSelection(targetPlayerIndex, -1);
+			if (ShouldSendNetworkPendingItemSelectionRequest())
+			{
+				RequestNetworkPendingItemSelection(targetPlayerIndex, -1, _pendingItemTurnSequenceGeneration);
+				return;
+			}
+
+			_ = CompletePendingItemSelectionAuthorityAsync(
+				_pendingItemCardId,
+				_pendingItemOwnerIndex,
+				_pendingItemHandIndex,
+				targetPlayerIndex,
+				-1,
+				_pendingItemTurnSequenceGeneration);
+			return;
+		}
+
+		if (ShouldSendNetworkPendingItemSelectionRequest())
+		{
+			RequestNetworkPendingItemSelection(targetPlayerIndex, -1, _pendingItemTurnSequenceGeneration);
 			return;
 		}
 
 		_pendingItemSelectionMode = PendingItemSelectionMode.TargetHandCard;
 		_revealedPlayerHandIndex = targetPlayerIndex;
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 		ShowTargetHandSelection(targetPlayerIndex);
 	}
 
 	private void ShowTargetHandSelection(int targetPlayerIndex)
 	{
+		if (!ShouldShowLocalPendingItemSelectionUi())
+		{
+			ClearSelectionOverlay();
+			return;
+		}
+
 		ClearSelectionOverlay();
 		if (targetPlayerIndex < 0 || targetPlayerIndex >= _playerHands.Count || targetPlayerIndex >= _playerItemHands.Count || GetTotalHandCardCount(targetPlayerIndex) == 0)
 		{
@@ -78,25 +155,50 @@ public partial class GameBoardScene
 			}
 		}
 
-		ShowSelectionOverlay(LocalizeFormat("GAME_PLAYER_HAND", targetPlayerIndex + 1), options, showCancel: true);
+		ShowSelectionOverlay(LocalizeFormat("GAME_PLAYER_HAND", targetPlayerIndex + 1), options, showCancel: !ShouldSendNetworkPendingItemSelectionRequest());
 	}
 
 	private async void CompletePendingItemSelection(int targetPlayerIndex, int targetHandIndex)
 	{
-		if (!IsPendingItemSelectionValid())
+		if (!IsLocalPendingItemSelectionValid())
 		{
 			CancelPendingItemSelection();
 			return;
 		}
 
-		string itemCardId = _pendingItemCardId;
-		int ownerPlayerIndex = _pendingItemOwnerIndex;
-		int itemHandIndex = _pendingItemHandIndex;
-		int turnSequenceGeneration = _pendingItemTurnSequenceGeneration;
+		if (ShouldSendNetworkPendingItemSelectionRequest())
+		{
+			RequestNetworkPendingItemSelection(targetPlayerIndex, targetHandIndex, _pendingItemTurnSequenceGeneration);
+			return;
+		}
+
+		await CompletePendingItemSelectionAuthorityAsync(
+			_pendingItemCardId,
+			_pendingItemOwnerIndex,
+			_pendingItemHandIndex,
+			targetPlayerIndex,
+			targetHandIndex,
+			_pendingItemTurnSequenceGeneration);
+	}
+
+	private async Task CompletePendingItemSelectionAuthorityAsync(
+		string itemCardId,
+		int ownerPlayerIndex,
+		int itemHandIndex,
+		int targetPlayerIndex,
+		int targetHandIndex,
+		int turnSequenceGeneration)
+	{
+		if (!IsAuthorityPendingItemSelectionValid(ownerPlayerIndex, turnSequenceGeneration))
+		{
+			CancelPendingItemSelectionForAuthorityFailure(ownerPlayerIndex);
+			return;
+		}
+
 		bool targetIsValid = IsPendingItemTargetValid(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
 		if (!targetIsValid || itemHandIndex < 0 || itemHandIndex >= _playerItemHands[ownerPlayerIndex].Count)
 		{
-			CancelPendingItemSelection();
+			CancelPendingItemSelectionForAuthorityFailure(ownerPlayerIndex);
 			return;
 		}
 
@@ -107,6 +209,7 @@ public partial class GameBoardScene
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 
 		PlaySpecialItemCardPlaySfx();
 		await PlaySpecialCardTriggerEffectAsync(
@@ -154,10 +257,11 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		_ = FinishPendingMainPlayerItemCardAsync(result, turnSequenceGeneration);
+		SendBoardSnapshotIfHost();
+		await FinishPendingItemCardAsync(result, ownerPlayerIndex, turnSequenceGeneration);
 	}
 
-	private async System.Threading.Tasks.Task FinishPendingMainPlayerItemCardAsync(PlayCardResult result, int turnSequenceGeneration)
+	private async System.Threading.Tasks.Task FinishPendingItemCardAsync(PlayCardResult result, int ownerPlayerIndex, int turnSequenceGeneration)
 	{
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
@@ -168,24 +272,58 @@ public partial class GameBoardScene
 
 		if (result.CompletesTurn)
 		{
-			await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
+			await AdvanceTurnAfterPlayedResultAsync(ownerPlayerIndex, result);
 		}
 
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
+		if (IsNetworkMultiplayerMode())
+		{
+			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
+			return;
+		}
+
 		if (result.CompletesTurn && !result.Captured)
 		{
 			await ResolveOpponentTurnsAsync(turnSequenceGeneration);
 		}
 	}
 
-	private bool IsPendingItemSelectionValid()
+	private bool IsLocalPendingItemSelectionValid()
 	{
 		return _pendingItemSelectionMode != PendingItemSelectionMode.None
-			&& _pendingItemOwnerIndex == MainPlayerIndex
+			&& _pendingItemOwnerIndex == GetPendingSelectionLocalOwnerIndex()
 			&& _pendingItemTurnSequenceGeneration == _turnSequenceGeneration
 			&& _pendingItemOwnerIndex >= 0
 			&& _pendingItemOwnerIndex < _playerItemHands.Count;
+	}
+
+	private bool IsAuthorityPendingItemSelectionValid(int ownerPlayerIndex, int turnSequenceGeneration)
+	{
+		return _pendingItemSelectionMode != PendingItemSelectionMode.None
+			&& _pendingItemOwnerIndex == ownerPlayerIndex
+			&& _pendingItemTurnSequenceGeneration == turnSequenceGeneration
+			&& turnSequenceGeneration == _turnSequenceGeneration
+			&& ownerPlayerIndex >= 0
+			&& ownerPlayerIndex < _playerItemHands.Count;
+	}
+
+	private bool ShouldShowLocalPendingItemSelectionUi()
+	{
+		return _pendingItemSelectionMode is PendingItemSelectionMode.TargetPlayer or PendingItemSelectionMode.TargetHandCard
+			&& _pendingItemOwnerIndex == GetPendingSelectionLocalOwnerIndex()
+			&& IsLocalSeatHumanConnected();
+	}
+
+	private bool ShouldSendNetworkPendingItemSelectionRequest()
+	{
+		return IsNetworkMultiplayerMode() && !IsNetworkHost();
+	}
+
+	private int GetPendingSelectionLocalOwnerIndex()
+	{
+		return IsNetworkMultiplayerMode() ? GetLocalHandPlayerIndex() : MainPlayerIndex;
 	}
 
 	private bool IsPendingItemTargetValid(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex, int targetHandIndex)
@@ -232,7 +370,18 @@ public partial class GameBoardScene
 		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		selectionOverlay.Configure(title, optionLabels, Localize("GAME_CANCEL"), showCancel);
 		selectionOverlay.OptionSelected += SelectSelectionOverlayOption;
-		selectionOverlay.CancelRequested += CancelPendingItemSelection;
+		selectionOverlay.CancelRequested += HandleSelectionOverlayCancelRequested;
+	}
+
+	private void HandleSelectionOverlayCancelRequested()
+	{
+		if (ShouldSendNetworkPendingItemSelectionRequest())
+		{
+			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+			return;
+		}
+
+		CancelPendingItemSelection();
 	}
 
 	private void SelectSelectionOverlayOption(int optionIndex)

@@ -11,7 +11,7 @@ public partial class GameBoardScene
 		int turnSequenceGeneration)
 	{
 		if (!rewardAnimation.HasValue
-			|| playerIndex != MainPlayerIndex
+			|| !IsLocalHandPlayer(playerIndex)
 			|| !IsInsideTree()
 			|| !_itemCardTextures.TryGetValue(QuestionMarkItemCardId, out Texture2D? questionTexture))
 		{

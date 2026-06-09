@@ -79,7 +79,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool showFaceOnLanding = playerIndex == MainPlayerIndex || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null;
+		bool showFaceOnLanding = !IsPlayerHandHidden(playerIndex);
 		Texture2D targetTexture = showFaceOnLanding ? drawnCard.Texture : startTexture;
 		Texture2D? attachmentOverlayTexture = showFaceOnLanding ? GetCardAttachmentOverlayTexture(drawnCard) : null;
 		float startRotationDegrees = GetCardPileRotationDegreesForPlayer(playerIndex);

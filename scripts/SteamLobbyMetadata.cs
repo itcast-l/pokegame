@@ -10,6 +10,7 @@ public static class SteamLobbyMetadata
 	public const string PlayerCountKey = "player_count";
 	public const string ItemModeKey = "item_mode";
 	public const string WinningScoreKey = "winning_score";
+	public const string HasPasswordKey = "has_password";
 	public const string StatusKey = "status";
 
 	public static Dictionary<string, string> Build(NetworkSessionConfig config, string hostName, string status)
@@ -23,8 +24,17 @@ public static class SteamLobbyMetadata
 			[PlayerCountKey] = config.PlayerCount.ToString(),
 			[ItemModeKey] = config.ItemMode ? "true" : "false",
 			[WinningScoreKey] = config.WinningScore.ToString(),
+			[HasPasswordKey] = RoomPasswordRules.HasPassword(config.RoomPassword) ? "true" : "false",
 			[StatusKey] = status,
 		};
+	}
+
+	public static bool ShouldSteamLobbyStayJoinable(NetworkSessionState state)
+	{
+		return state is NetworkSessionState.Lobby
+			or NetworkSessionState.Starting
+			or NetworkSessionState.LoadingScene
+			or NetworkSessionState.InGame;
 	}
 
 	public static bool TryReadRoom(
@@ -59,6 +69,7 @@ public static class SteamLobbyMetadata
 		string status = TryReadString(metadata, StatusKey, out string rawStatus)
 			? rawStatus
 			: "Lobby";
+		bool hasPassword = TryReadBool(metadata, HasPasswordKey, out bool parsedHasPassword) && parsedHasPassword;
 
 		room = new NetworkRoomInfo(
 			sessionId,
@@ -69,6 +80,7 @@ public static class SteamLobbyMetadata
 			playerCount,
 			itemMode,
 			NetworkSessionDefaults.NormalizeWinningScore(winningScore),
+			hasPassword,
 			status,
 			lobbyId);
 		return true;

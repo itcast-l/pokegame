@@ -19,9 +19,9 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			if (reward.PlayerIndex == MainPlayerIndex)
+			if (ShouldUseInteractiveHumanItemFollowup(reward.PlayerIndex))
 			{
-				await ResolveMainPlayerMagnetAttachmentAsync(reward.ItemCardId, turnSequenceGeneration);
+				await ResolveHumanMagnetAttachmentAsync(reward.PlayerIndex, reward.ItemCardId, turnSequenceGeneration);
 			}
 			else
 			{
@@ -37,7 +37,12 @@ public partial class GameBoardScene
 
 	private async Task ResolveMainPlayerMagnetAttachmentAsync(string itemCardId, int turnSequenceGeneration)
 	{
-		if (_isResolvingMagnetAttachmentSelection || !PlayerHasAttachableMagnetCard(MainPlayerIndex, itemCardId))
+		await ResolveHumanMagnetAttachmentAsync(MainPlayerIndex, itemCardId, turnSequenceGeneration);
+	}
+
+	private async Task ResolveHumanMagnetAttachmentAsync(int ownerPlayerIndex, string itemCardId, int turnSequenceGeneration)
+	{
+		if (_isResolvingMagnetAttachmentSelection || !PlayerHasAttachableMagnetCard(ownerPlayerIndex, itemCardId))
 		{
 			return;
 		}
@@ -46,13 +51,15 @@ public partial class GameBoardScene
 		_isResolvingMagnetAttachmentSelection = true;
 		_isProcessingCardPlay = true;
 		_pendingItemCardId = itemCardId;
-		_pendingItemOwnerIndex = MainPlayerIndex;
+		_pendingItemOwnerIndex = ownerPlayerIndex;
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
 		_pendingItemSelectionMode = PendingItemSelectionMode.MagnetHandCard;
 		_pendingMagnetAttachmentCompletion = new TaskCompletionSource<bool>();
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 		ShowMagnetHandSelection();
+		BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
 
 		try
 		{
@@ -60,9 +67,9 @@ public partial class GameBoardScene
 			await Task.WhenAny(_pendingMagnetAttachmentCompletion.Task, timeoutTask);
 			if (turnSequenceGeneration == _turnSequenceGeneration
 				&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
-				&& _pendingItemOwnerIndex == MainPlayerIndex)
+				&& _pendingItemOwnerIndex == ownerPlayerIndex)
 			{
-				await CompleteMagnetAttachmentSelectionAsync(PickRandomAttachableMagnetHandIndex(MainPlayerIndex, itemCardId));
+				await CompleteMagnetAttachmentSelectionAsync(PickRandomAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId));
 			}
 
 			while (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
@@ -74,7 +81,8 @@ public partial class GameBoardScene
 		}
 		finally
 		{
-			if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+			if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+				&& _pendingItemOwnerIndex == ownerPlayerIndex)
 			{
 				ClearSelectionOverlay();
 				ClearPendingItemSelectionState();
@@ -95,9 +103,24 @@ public partial class GameBoardScene
 	private void ShowMagnetHandSelection()
 	{
 		ClearSelectionOverlay();
-		if (!PlayerHasAttachableMagnetCard(MainPlayerIndex, _pendingItemCardId))
+		if (!IsMainPlayerMagnetSelectionActive())
 		{
-			_ = CompleteMagnetAttachmentSelectionAsync(-1);
+			ClearMagnetAttachmentCountdown();
+			return;
+		}
+
+		int ownerPlayerIndex = GetPendingSelectionLocalOwnerIndex();
+		if (!PlayerHasAttachableMagnetCard(ownerPlayerIndex, _pendingItemCardId))
+		{
+			if (!ShouldSendNetworkPendingItemSelectionRequest())
+			{
+				_ = CompleteMagnetAttachmentSelectionAsync(-1);
+			}
+			else
+			{
+				ClearMagnetAttachmentCountdown();
+			}
+
 			return;
 		}
 
@@ -127,6 +150,7 @@ public partial class GameBoardScene
 			ClearSelectionOverlay();
 			ClearPendingItemSelectionState();
 			RenderPlayerHands();
+			SendBoardSnapshotIfHost();
 			return;
 		}
 
@@ -142,6 +166,7 @@ public partial class GameBoardScene
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
 	}
 
 	private bool PlayerHasAttachableMagnetCard(int playerIndex, string itemCardId)
@@ -187,21 +212,10 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		int selectedHandIndex = -1;
-		int candidateCount = 0;
-		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
-		{
-			if (IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId))
-			{
-				candidateCount++;
-				if (_rng.RandiRange(1, candidateCount) == 1)
-				{
-					selectedHandIndex = handIndex;
-				}
-			}
-		}
-
-		return selectedHandIndex;
+		return NetworkAiFallbackRules.PickRandomLegalCandidate(
+			_playerHands[playerIndex].Count,
+			handIndex => IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId),
+			_rng.RandiRange(0, int.MaxValue));
 	}
 
 	private bool IsValidMagnetAttachmentHandIndex(int playerIndex, int handIndex, string itemCardId)

@@ -13,7 +13,6 @@ var _finishing := false
 
 
 func _ready() -> void:
-	ResourceLoader.load_threaded_request(NEXT_SCENE_PATH, "PackedScene")
 	_video_player.finished.connect(_on_video_finished)
 	get_tree().create_timer(SKIP_DELAY_SECONDS).timeout.connect(_enable_skip)
 	_video_player.play()
@@ -79,12 +78,6 @@ func _instantiate_main_menu() -> Node:
 
 
 func _get_main_menu_packed_scene() -> PackedScene:
-	var load_status := ResourceLoader.load_threaded_get_status(NEXT_SCENE_PATH)
-	if load_status == ResourceLoader.THREAD_LOAD_LOADED or load_status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		var threaded_scene := ResourceLoader.load_threaded_get(NEXT_SCENE_PATH) as PackedScene
-		if threaded_scene != null:
-			return threaded_scene
-
 	return load(NEXT_SCENE_PATH) as PackedScene
 
 

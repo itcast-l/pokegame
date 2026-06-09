@@ -163,7 +163,7 @@ public partial class GameBoardScene
 
 	private bool IsPlayerHandHidden(int playerIndex)
 	{
-		return playerIndex != MainPlayerIndex && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+		return !IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 	}
 
 	private PlayCardResult ResolveKingEffect(int ownerPlayerIndex, int targetPlayerIndex)

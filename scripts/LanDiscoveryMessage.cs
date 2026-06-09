@@ -15,6 +15,7 @@ public static class LanDiscoveryMessage
 			[SteamLobbyMetadata.PlayerCountKey] = config.PlayerCount.ToString(),
 			[SteamLobbyMetadata.ItemModeKey] = config.ItemMode ? "true" : "false",
 			[SteamLobbyMetadata.WinningScoreKey] = config.WinningScore.ToString(),
+			[SteamLobbyMetadata.HasPasswordKey] = RoomPasswordRules.HasPassword(config.RoomPassword) ? "true" : "false",
 			[SteamLobbyMetadata.StatusKey] = status,
 		};
 

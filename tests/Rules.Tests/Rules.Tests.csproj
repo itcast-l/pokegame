@@ -19,14 +19,22 @@
     <Compile Include="../../scripts/GameTurnRules.cs" Link="Rules/GameTurnRules.cs" />
     <Compile Include="../../scripts/TurnProgressRules.cs" Link="Rules/TurnProgressRules.cs" />
     <Compile Include="../../scripts/RewardResolver.cs" Link="Rules/RewardResolver.cs" />
+    <Compile Include="../../scripts/ResultPresentationRules.cs" Link="Rules/ResultPresentationRules.cs" />
     <Compile Include="../../scripts/ScoreService.cs" Link="Rules/ScoreService.cs" />
     <Compile Include="../../scripts/TurnStateMachine.cs" Link="Rules/TurnStateMachine.cs" />
     <Compile Include="../../scripts/NetworkSessionModels.cs" Link="Rules/NetworkSessionModels.cs" />
     <Compile Include="../../scripts/RoomNameRules.cs" Link="Rules/RoomNameRules.cs" />
+    <Compile Include="../../scripts/RoomPasswordRules.cs" Link="Rules/RoomPasswordRules.cs" />
     <Compile Include="../../scripts/SteamLobbyMetadata.cs" Link="Rules/SteamLobbyMetadata.cs" />
     <Compile Include="../../scripts/LanDiscoveryMessage.cs" Link="Rules/LanDiscoveryMessage.cs" />
     <Compile Include="../../scripts/MultiplayerLobbyRules.cs" Link="Rules/MultiplayerLobbyRules.cs" />
     <Compile Include="../../scripts/MultiplayerBoardSyncRules.cs" Link="Rules/MultiplayerBoardSyncRules.cs" />
+    <Compile Include="../../scripts/LocalSeatControlRules.cs" Link="Rules/LocalSeatControlRules.cs" />
+    <Compile Include="../../scripts/NetworkAiFallbackRules.cs" Link="Rules/NetworkAiFallbackRules.cs" />
+    <Compile Include="../../scripts/NetworkReconnectRules.cs" Link="Rules/NetworkReconnectRules.cs" />
+    <Compile Include="../../scripts/NetworkSeatControlRules.cs" Link="Rules/NetworkSeatControlRules.cs" />
+    <Compile Include="../../scripts/NetworkReconnectPresentationRules.cs" Link="Rules/NetworkReconnectPresentationRules.cs" />
+    <Compile Include="../../scripts/SeatControlRules.cs" Link="Rules/SeatControlRules.cs" />
     <Compile Include="../../scripts/SceneLoadHandshakeTracker.cs" Link="Rules/SceneLoadHandshakeTracker.cs" />
   </ItemGroup>
 </Project>

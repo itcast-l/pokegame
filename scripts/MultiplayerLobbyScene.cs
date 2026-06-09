@@ -11,6 +11,7 @@ public partial class MultiplayerLobbyScene : Control
 	private Label _statusLabel = default!;
 	private Label _toastLabel = default!;
 	private LineEdit _roomNameInput = default!;
+	private LineEdit _roomPasswordInput = default!;
 	private OptionButton _playerCountOption = default!;
 	private OptionButton _itemModeOption = default!;
 	private OptionButton _winningScoreOption = default!;
@@ -152,7 +153,10 @@ public partial class MultiplayerLobbyScene : Control
 		VBoxContainer modeRail = AddPanelColumn(body, "ModeRail", 240);
 		modeRail.AddChild(CreateSectionTitle("房间设置"));
 		_roomNameInput = CreateRoomNameInput();
+		_roomPasswordInput = CreateRoomPasswordInput();
 		modeRail.AddChild(_roomNameInput);
+		modeRail.AddChild(_roomPasswordInput);
+		modeRail.AddChild(CreateHintLabel("建房时设置密码；加入加锁房间前先在这里输入"));
 		_playerCountOption = CreatePlayerCountOption();
 		_itemModeOption = CreateItemModeOption();
 		_winningScoreOption = CreateWinningScoreOption();
@@ -308,6 +312,18 @@ public partial class MultiplayerLobbyScene : Control
 		return button;
 	}
 
+	private static Label CreateHintLabel(string text)
+	{
+		Label label = new()
+		{
+			Text = text,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+		};
+		label.AddThemeColorOverride("font_color", new Color(0.62f, 0.86f, 0.86f));
+		label.AddThemeFontSizeOverride("font_size", 13);
+		return label;
+	}
+
 	private static OptionButton CreatePlayerCountOption()
 	{
 		OptionButton option = CreateOption();
@@ -360,6 +376,20 @@ public partial class MultiplayerLobbyScene : Control
 		return input;
 	}
 
+	private static LineEdit CreateRoomPasswordInput()
+	{
+		LineEdit input = new()
+		{
+			PlaceholderText = "房间密码（可选）",
+			MaxLength = RoomPasswordRules.MaxLength,
+			CustomMinimumSize = new Vector2(0, 42),
+			FocusMode = FocusModeEnum.All,
+			Secret = true,
+		};
+		input.AddThemeFontSizeOverride("font_size", 16);
+		return input;
+	}
+
 	private static ScrollContainer CreateListScroll()
 	{
 		return new ScrollContainer
@@ -388,6 +418,11 @@ public partial class MultiplayerLobbyScene : Control
 		return _itemModeOption.GetSelectedId() == 1;
 	}
 
+	private string SelectedRoomPassword()
+	{
+		return RoomPasswordRules.Normalize(_roomPasswordInput.Text);
+	}
+
 	private int SelectedWinningScore()
 	{
 		return _winningScoreOption.GetSelectedId();
@@ -414,7 +449,7 @@ public partial class MultiplayerLobbyScene : Control
 		}
 
 		_localReady = true;
-		_network.HostLan(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName);
+		_network.HostLan(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName, SelectedRoomPassword());
 	}
 
 	private void HostSteam()
@@ -425,7 +460,7 @@ public partial class MultiplayerLobbyScene : Control
 		}
 
 		_localReady = true;
-		_network.HostSteam(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName);
+		_network.HostSteam(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName, SelectedRoomPassword());
 	}
 
 	private void ToggleReady()
@@ -446,6 +481,7 @@ public partial class MultiplayerLobbyScene : Control
 		_steamHostButton.Disabled = !steamEnabled || !canConfigureSession;
 		_steamRefreshButton.Disabled = !steamEnabled || state is NetworkSessionState.Hosting or NetworkSessionState.Joining or NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene or NetworkSessionState.InGame;
 		_roomNameInput.Editable = canConfigureSession;
+		_roomPasswordInput.Editable = canConfigureSession;
 		_playerCountOption.Disabled = !canConfigureSession;
 		_itemModeOption.Disabled = !canConfigureSession;
 		_winningScoreOption.Disabled = !canConfigureSession;
@@ -466,19 +502,35 @@ public partial class MultiplayerLobbyScene : Control
 		{
 			Godot.Collections.Dictionary room = variant.AsGodotDictionary();
 			string roomName = ReadDictionaryString(room, "room_name", ReadDictionaryString(room, "host_name", "房间"));
+			bool hasPassword = room.TryGetValue("has_password", out Variant hasPasswordValue) && hasPasswordValue.AsBool();
+			string status = room["status"].AsString();
+			string privacy = hasPassword ? "加锁" : "公开";
 			Button row = CreateButton(
-				$"{roomName}  {room["transport"].AsString()}  {room["player_count"].AsInt32()}人");
-			row.TooltipText = $"{ReadDictionaryString(room, "host_name", "Host")} / {room["address"].AsString()} / {room["status"].AsString()}";
+				$"{roomName}  {room["transport"].AsString()}  {room["player_count"].AsInt32()}人  {privacy}");
+			row.TooltipText = $"{ReadDictionaryString(room, "host_name", "Host")} / {room["address"].AsString()} / {status} / {privacy}";
 			row.Pressed += () =>
 			{
+				if (!MultiplayerLobbyRules.CanJoinListedRoom(status))
+				{
+					ShowToast("该房间对局进行中，不可加入");
+					return;
+				}
+
+				if (hasPassword && string.IsNullOrEmpty(SelectedRoomPassword()))
+				{
+					ShowToast("该房间已加锁，请先输入房间密码");
+					_roomPasswordInput.GrabFocus();
+					return;
+				}
+
 				string transport = room["transport"].AsString();
 				if (transport == NetworkTransport.Steam.ToString())
 				{
-					_network.JoinSteamLobby(unchecked((ulong)room["steam_lobby_id"].AsInt64()));
+					_network.JoinSteamLobby(unchecked((ulong)room["steam_lobby_id"].AsInt64()), SelectedRoomPassword());
 				}
 				else
 				{
-					_network.JoinLan(room["address"].AsString());
+					_network.JoinLan(room["address"].AsString(), SelectedRoomPassword());
 				}
 			};
 			_roomList.AddChild(row);

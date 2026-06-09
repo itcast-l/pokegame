@@ -42,9 +42,9 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		if (playerIndex == MainPlayerIndex)
+		if (ShouldUseInteractiveHumanItemFollowup(playerIndex))
 		{
-			await ResolveMainPlayerMagnetAttachmentAsync(itemCardId, turnSequenceGeneration);
+			await ResolveHumanMagnetAttachmentAsync(playerIndex, itemCardId, turnSequenceGeneration);
 		}
 		else
 		{

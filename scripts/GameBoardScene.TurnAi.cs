@@ -44,6 +44,41 @@ public partial class GameBoardScene
 			: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 	}
 
+	private async Task<PlayCardResult> PlayRandomPlayableHandEntryWithoutCapturePriorityAsync(int playerIndex, int turnSequenceGeneration)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		int playableItemCount = CountPlayableItemIndexes(playerIndex);
+		int playableCount = _playerHands[playerIndex].Count + playableItemCount;
+		if (playableCount == 0)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		int selectedIndex = _rng.RandiRange(0, playableCount - 1);
+		PlayCardResult result;
+		if (selectedIndex < _playerHands[playerIndex].Count)
+		{
+			result = await PlayCardFromHandAsync(playerIndex, selectedIndex, turnSequenceGeneration);
+			return result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
+				? result
+				: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
+		}
+
+		if (!TryGetPlayableItemIndexAt(playerIndex, selectedIndex - _playerHands[playerIndex].Count, out int itemHandIndex))
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		result = await PlayItemCardFromHandAsync(playerIndex, itemHandIndex, turnSequenceGeneration);
+		return result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
+			? result
+			: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
+	}
+
 	private async Task<PlayCardResult> PlayFirstAvailableHandEntryForPlayerAsync(int playerIndex, int turnSequenceGeneration)
 	{
 		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)

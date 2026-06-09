@@ -76,12 +76,15 @@ func refresh_languages() -> void:
 		return
 
 	var steam := _get_steam()
-	if steam == null:
+	if steam == null or not is_initialized:
 		return
 
-	current_game_language = str(steam.getCurrentGameLanguage()).strip_edges()
-	steam_ui_language = str(steam.getSteamUILanguage()).strip_edges()
-	available_game_languages = str(steam.getAvailableGameLanguages()).strip_edges()
+	if steam.has_method("isSteamRunning") and not bool(steam.isSteamRunning()):
+		return
+
+	current_game_language = str(steam.getCurrentGameLanguage()).strip_edges() if steam.has_method("getCurrentGameLanguage") else ""
+	steam_ui_language = str(steam.getSteamUILanguage()).strip_edges() if steam.has_method("getSteamUILanguage") else ""
+	available_game_languages = str(steam.getAvailableGameLanguages()).strip_edges() if steam.has_method("getAvailableGameLanguages") else ""
 	preferred_godot_locale = _map_steam_language_to_locale(current_game_language)
 	if preferred_godot_locale.is_empty():
 		preferred_godot_locale = _map_steam_language_to_locale(steam_ui_language)

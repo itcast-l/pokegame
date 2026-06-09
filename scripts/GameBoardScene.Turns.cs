@@ -20,7 +20,8 @@ public partial class GameBoardScene
 				int playerIndex = _currentTurnPlayerIndex;
 				if (playerIndex >= player_count)
 				{
-					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+					PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
 				}
@@ -55,7 +56,8 @@ public partial class GameBoardScene
 
 				if (!PlayerHasPlayableHandCards(playerIndex))
 				{
-					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+					PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
 				}
@@ -69,7 +71,8 @@ public partial class GameBoardScene
 				PlayCardResult result = await PlayRandomHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 				if (!result.Played)
 				{
-					_currentTurnPlayerIndex = GetNextTurnPlayerIndex(playerIndex);
+					SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+					PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
 				}

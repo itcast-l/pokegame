@@ -5,6 +5,16 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private void SetCurrentTurnPlayerIndex(int nextTurnPlayerIndex)
+	{
+		if (NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(_currentTurnPlayerIndex, nextTurnPlayerIndex))
+		{
+			_networkAiBlockedItem = NetworkAiBlockedItemState.None;
+		}
+
+		_currentTurnPlayerIndex = nextTurnPlayerIndex;
+	}
+
 	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
 	{
 		if (!result.CompletesTurn)
@@ -14,11 +24,12 @@ public partial class GameBoardScene
 
 		ClearJellyfishBubbleIfMainPlayerTurnCompleted(playerIndex, result);
 
-		_currentTurnPlayerIndex = _turnAdvancementService.ApplyPlayedResult(
+		SetCurrentTurnPlayerIndex(_turnAdvancementService.ApplyPlayedResult(
 			_state,
 			playerIndex,
 			result.Captured,
-			GetNextTurnPlayerIndex(playerIndex));
+			GetNextTurnPlayerIndex(playerIndex)));
+		PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result, _turnSequenceGeneration);
 		if (IsGameOver())
 		{
@@ -45,6 +56,7 @@ public partial class GameBoardScene
 		}
 
 		await RefillCurrentTurnPlayerBaseHandAsync(_turnSequenceGeneration);
+		BeginNetworkAiProxyTurnIfNeeded();
 	}
 
 	private async Task RefillCurrentTurnPlayerBaseHandAsync(int turnSequenceGeneration)
@@ -89,7 +101,9 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return _playerHands[playerIndex].Count > 0 || HasPlayableItemCard(playerIndex);
+		return NetworkAiFallbackRules.HasPlayableAiTurnAction(
+			_playerHands[playerIndex].Count,
+			CountPlayableItemIndexes(playerIndex));
 	}
 
 	private bool HasPlayableItemCard(int playerIndex)
@@ -122,6 +136,11 @@ public partial class GameBoardScene
 		List<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
+			if (ShouldSkipNetworkAiBlockedItem(playerIndex, itemIndex, itemHand[itemIndex].Id))
+			{
+				continue;
+			}
+
 			if (CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
 			{
 				playableCount++;
@@ -143,6 +162,11 @@ public partial class GameBoardScene
 		List<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
+			if (ShouldSkipNetworkAiBlockedItem(playerIndex, itemIndex, itemHand[itemIndex].Id))
+			{
+				continue;
+			}
+
 			if (!CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
 			{
 				continue;
@@ -158,6 +182,14 @@ public partial class GameBoardScene
 		}
 
 		return false;
+	}
+
+	private bool ShouldSkipNetworkAiBlockedItem(int playerIndex, int itemHandIndex, string itemCardId)
+	{
+		return NetworkAiFallbackRules.ShouldSkipBlockedItem(
+			_networkAiBlockedItem,
+			playerIndex,
+			itemCardId);
 	}
 
 	private bool CanPlayItemCard(int playerIndex, string itemCardId)

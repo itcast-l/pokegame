@@ -167,6 +167,15 @@ public partial class GameBoardScene
 		_isLeavingGame = true;
 		_isPauseMenuOpen = false;
 		GetTree().Paused = false;
+			if (IsNetworkMultiplayerMode())
+			{
+				NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+				if (networkManager != null)
+				{
+					await networkManager.LeaveSessionAfterHostEndedMatchAsync();
+				}
+			}
+
 		if (_pauseMenuRoot != null)
 		{
 			_pauseMenuRoot.MouseFilter = MouseFilterEnum.Ignore;
@@ -209,7 +218,7 @@ public partial class GameBoardScene
 		_pauseQuitButton?.GrabFocus();
 	}
 
-	private void ConfirmQuitGameFromPauseMenu()
+	private async void ConfirmQuitGameFromPauseMenu()
 	{
 		if (_isLeavingGame)
 		{
@@ -218,6 +227,15 @@ public partial class GameBoardScene
 
 		_isLeavingGame = true;
 		GetTree().Paused = false;
+			if (IsNetworkMultiplayerMode())
+			{
+				NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+				if (networkManager != null)
+				{
+					await networkManager.LeaveSessionAfterHostEndedMatchAsync();
+				}
+			}
+
 		GetTree().Quit();
 	}
 }

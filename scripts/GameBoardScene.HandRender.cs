@@ -325,26 +325,26 @@ public partial class GameBoardScene
 				bool showAdventureTutorialHighlight = IsAdventureTutorialItemCardHighlighted(playerIndex, itemIndex);
 				bool isAdventureTutorialBlocked = IsAdventureTutorialItemCardBlocked(playerIndex, itemIndex);
 				bool isPlayable = isLocalHandPlayer
-					&& !IsNetworkMultiplayerMode()
 					&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
 				if (isLocalHandPlayer && IsAdventureTutorialPlayerActionStepActive())
 				{
 					isPlayable = isPlayable && showAdventureTutorialHighlight;
 				}
+				bool isLocked = IsNetworkItemCardLocked(playerIndex, itemIndex);
 				string tooltipText = !showCardBack && _itemCardDescriptions.TryGetValue(itemCard.Id, out string? description)
 					? description
 					: string.Empty;
 				AddHandCard(
 					texture,
 					displayIndex,
-					isPlayable,
+					isPlayable && !isLocked,
 					-1,
 					itemIndex,
 					showCardBack,
 					visualScale,
 					showAdventureTutorialHighlight: showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked: isAdventureTutorialBlocked,
-					isJellyfishDisabled: isJellyfishDisabled,
+					isJellyfishDisabled: isJellyfishDisabled || isLocked,
 					showInputSelection: isLocalHandPlayer && IsMainPlayerHandDisplayIndexSelected(displayIndex),
 					tooltipText: tooltipText);
 			}
@@ -609,30 +609,31 @@ public partial class GameBoardScene
 		{
 			ItemCard itemCard = itemHand[itemIndex];
 			int displayIndex = hand.Count + itemIndex;
-			bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
-				&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
-			bool showAdventureTutorialHighlight = IsAdventureTutorialItemCardHighlighted(playerIndex, itemIndex);
-			bool isAdventureTutorialBlocked = IsAdventureTutorialItemCardBlocked(playerIndex, itemIndex);
-			bool isPlayable = isLocalHandPlayer
-				&& !IsNetworkMultiplayerMode()
-				&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
-			if (isLocalHandPlayer && IsAdventureTutorialPlayerActionStepActive())
-			{
-				isPlayable = isPlayable && showAdventureTutorialHighlight;
-			}
+				bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
+					&& IsJellyfishDisabledHandDisplaySlot(playerIndex, displayIndex);
+				bool showAdventureTutorialHighlight = IsAdventureTutorialItemCardHighlighted(playerIndex, itemIndex);
+				bool isAdventureTutorialBlocked = IsAdventureTutorialItemCardBlocked(playerIndex, itemIndex);
+				bool isPlayable = isLocalHandPlayer
+					&& (isHandLimitDiscardSelectionActive || (!isJellyfishDisabled && canMainPlayerAct && CanPlayItemCard(playerIndex, itemCard.Id)));
+				if (isLocalHandPlayer && IsAdventureTutorialPlayerActionStepActive())
+				{
+					isPlayable = isPlayable && showAdventureTutorialHighlight;
+				}
+				bool isLocked = IsNetworkItemCardLocked(playerIndex, itemIndex);
 
-			signature.Add(itemIndex);
-			signature.Add(itemCard.Id);
-			signature.Add(displayIndex);
-			signature.Add(showCardBack);
-			signature.Add(showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id));
-			signature.Add(isPlayable);
-			signature.Add(showAdventureTutorialHighlight);
-			signature.Add(isAdventureTutorialBlocked);
-			signature.Add(isJellyfishDisabled);
-			signature.Add(IsHandDisplaySlotHidden(playerIndex, displayIndex));
-			signature.Add(!showCardBack && _itemCardDescriptions.ContainsKey(itemCard.Id));
-			AddTextureSignature(ref signature, showCardBack ? _cardBackTexture : itemCard.Texture);
+				signature.Add(itemIndex);
+				signature.Add(itemCard.Id);
+				signature.Add(displayIndex);
+				signature.Add(showCardBack);
+				signature.Add(showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id));
+				signature.Add(isPlayable && !isLocked);
+				signature.Add(isLocked);
+				signature.Add(showAdventureTutorialHighlight);
+				signature.Add(isAdventureTutorialBlocked);
+				signature.Add(isJellyfishDisabled || isLocked);
+				signature.Add(IsHandDisplaySlotHidden(playerIndex, displayIndex));
+				signature.Add(!showCardBack && _itemCardDescriptions.ContainsKey(itemCard.Id));
+				AddTextureSignature(ref signature, showCardBack ? _cardBackTexture : itemCard.Texture);
 		}
 
 		return signature.ToHashCode();

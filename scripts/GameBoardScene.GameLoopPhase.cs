@@ -14,7 +14,7 @@ public partial class GameBoardScene
 			HasPendingItemSelection(),
 			_isProcessingCardPlay,
 			_isResolvingTurnSequence,
-			IsLocalHandPlayer(_currentTurnPlayerIndex));
+			IsLocalHandPlayer(_currentTurnPlayerIndex) && IsLocalSeatHumanConnected());
 	}
 
 	private TurnContext GetCurrentTurnContext()
@@ -25,6 +25,7 @@ public partial class GameBoardScene
 	private int AdvanceTurnSequenceGeneration()
 	{
 		_turnSequenceGeneration = _turnStateMachine.AdvanceGeneration();
+		_networkAiBlockedItem = NetworkAiBlockedItemState.None;
 		return _turnSequenceGeneration;
 	}
 

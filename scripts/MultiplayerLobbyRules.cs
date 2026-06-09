@@ -3,6 +3,24 @@ using System.Linq;
 
 public static class MultiplayerLobbyRules
 {
+	public static bool CanAcceptJoinRequest(NetworkSessionState state)
+	{
+		return state == NetworkSessionState.Lobby;
+	}
+
+	public static bool CanJoinListedRoom(string status)
+	{
+		return System.Enum.TryParse(status, ignoreCase: true, out NetworkSessionState state)
+			&& state == NetworkSessionState.Lobby;
+	}
+
+	public static bool CanAutoAcceptSteamJoinRequest(NetworkSessionState state)
+	{
+		return state is NetworkSessionState.Idle
+			or NetworkSessionState.Searching
+			or NetworkSessionState.Failed;
+	}
+
 	public static bool CanStart(IReadOnlyList<NetworkPlayerPublicState> players, int playerCount)
 	{
 		int expectedPlayerCount = NetworkSessionDefaults.ClampPlayerCount(playerCount);
