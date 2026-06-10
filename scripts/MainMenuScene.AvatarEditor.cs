@@ -41,6 +41,7 @@ public partial class MainMenuScene : Control
 		avatarEditor.CloseRequested += CloseAvatarEditor;
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		avatarEditor.Visible = true;
+		SyncPrimaryMenuFocusState();
 		avatarEditor.MouseFilter = MouseFilterEnum.Stop;
 		avatarEditor.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		UpdateAvatarEditorPosition();
@@ -99,6 +100,7 @@ public partial class MainMenuScene : Control
 		{
 			if (GodotObject.IsInstanceValid(avatarEditor))
 			{
+				avatarEditor.Visible = false;
 				avatarEditor.QueueFree();
 			}
 
@@ -109,6 +111,7 @@ public partial class MainMenuScene : Control
 				_avatarEditDialogTween = null;
 			}
 
+			SyncPrimaryMenuFocusState();
 			CallDeferred(nameof(FocusInitialMainMenuButton));
 		};
 	}

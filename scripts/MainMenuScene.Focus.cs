@@ -5,8 +5,7 @@ public partial class MainMenuScene : Control
 	private void ConfigureMainMenuFocus()
 	{
 		ConfigureAvatarEntryFocus();
-		EnableKeyboardFocus(_singlePlayerButton, _adventureButton, _settingsButton, _exitButton);
-		_multiplayerButton.FocusMode = Control.FocusModeEnum.None;
+		SetPrimaryMenuFocusEnabled(true);
 	}
 
 	private void FocusInitialMainMenuButton()
@@ -60,14 +59,30 @@ public partial class MainMenuScene : Control
 			|| IsVisible(_adventureTransitionRoot);
 	}
 
-	private static void EnableKeyboardFocus(params Control[] controls)
+	private void SyncPrimaryMenuFocusState()
 	{
-		foreach (Control control in controls)
+		SetPrimaryMenuFocusEnabled(!IsMenuOverlayVisible());
+	}
+
+	private void SetPrimaryMenuFocusEnabled(bool enabled)
+	{
+		Control.FocusModeEnum focusMode = enabled ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
+		SetFocusModeIfValid(_avatarEntry?.Button, focusMode);
+		SetFocusModeIfValid(_singlePlayerButton, focusMode);
+		SetFocusModeIfValid(_adventureButton, focusMode);
+		SetFocusModeIfValid(_settingsButton, focusMode);
+		SetFocusModeIfValid(_exitButton, focusMode);
+		SetFocusModeIfValid(_multiplayerButton, Control.FocusModeEnum.None);
+
+		if (enabled)
 		{
-			if (GodotObject.IsInstanceValid(control))
-			{
-				control.FocusMode = Control.FocusModeEnum.All;
-			}
+			return;
+		}
+
+		Control? focusOwner = GetViewport().GuiGetFocusOwner();
+		if (IsPrimaryMenuControl(focusOwner))
+		{
+			GetViewport().GuiReleaseFocus();
 		}
 	}
 
@@ -107,5 +122,23 @@ public partial class MainMenuScene : Control
 	private static bool IsVisible(CanvasItem? item)
 	{
 		return item != null && GodotObject.IsInstanceValid(item) && item.IsVisibleInTree();
+	}
+
+	private bool IsPrimaryMenuControl(Control? control)
+	{
+		return control == _avatarEntry?.Button
+			|| control == _singlePlayerButton
+			|| control == _adventureButton
+			|| control == _multiplayerButton
+			|| control == _settingsButton
+			|| control == _exitButton;
+	}
+
+	private static void SetFocusModeIfValid(Control? control, Control.FocusModeEnum focusMode)
+	{
+		if (control != null && GodotObject.IsInstanceValid(control))
+		{
+			control.FocusMode = focusMode;
+		}
 	}
 }

@@ -13,6 +13,7 @@ public partial class MainMenuScene
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = false;
 		_settingsDialogRoot.Visible = true;
+		SyncPrimaryMenuFocusState();
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_settingsDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		UpdateSettingsDialogPosition();
@@ -40,6 +41,7 @@ public partial class MainMenuScene
 		_settingsDialogTween.Finished += () =>
 		{
 			_settingsDialogRoot.Visible = false;
+			SyncPrimaryMenuFocusState();
 			FocusSettingsButton();
 		};
 	}

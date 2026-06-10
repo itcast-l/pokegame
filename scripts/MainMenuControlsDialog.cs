@@ -21,6 +21,7 @@ public partial class MainMenuControlsDialog : Control
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
 	private ColorRect _scrim = default!;
+	private ScrollContainer _rowsScroll = default!;
 	private readonly List<RowWidgets> _rows = new();
 	private Func<string, string>? _localize;
 	private string? _captureActionId;
@@ -58,6 +59,7 @@ public partial class MainMenuControlsDialog : Control
 		_keyboardHeader = GetNode<Label>("%KeyboardHeader");
 		_gamepadHeader = GetNode<Label>("%GamepadHeader");
 		_captureHintLabel = GetNode<Label>("%CaptureHint");
+		_rowsScroll = GetNode<ScrollContainer>("%RowsScroll");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
@@ -73,6 +75,8 @@ public partial class MainMenuControlsDialog : Control
 			Label label = GetNode<Label>($"{rowLayoutPath}/ActionLabel");
 			Button keyboardButton = GetNode<Button>($"{rowLayoutPath}/KeyboardButton");
 			Button gamepadButton = GetNode<Button>($"{rowLayoutPath}/GamepadButton");
+			MainMenuInteractiveStyle.ApplyOptionLikeButton(keyboardButton);
+			MainMenuInteractiveStyle.ApplyOptionLikeButton(gamepadButton);
 			keyboardButton.FocusMode = FocusModeEnum.All;
 			gamepadButton.FocusMode = FocusModeEnum.All;
 			string actionId = action.Id;
@@ -90,6 +94,9 @@ public partial class MainMenuControlsDialog : Control
 		}
 
 		EnableKeyboardFocus(_resetButton, _doneButton);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20);
+		StyleScrollBar(_rowsScroll.GetVScrollBar());
 	}
 
 	public override void _Input(InputEvent inputEvent)
@@ -261,5 +268,55 @@ public partial class MainMenuControlsDialog : Control
 		{
 			control.FocusMode = FocusModeEnum.All;
 		}
+	}
+
+	private static void StyleScrollBar(ScrollBar scrollBar)
+	{
+		scrollBar.CustomMinimumSize = new Vector2(10.0f, 0.0f);
+		scrollBar.AddThemeConstantOverride("padding_left", 2);
+		scrollBar.AddThemeConstantOverride("padding_right", 2);
+
+		var track = new StyleBoxFlat
+		{
+			BgColor = new Color(0.03f, 0.14f, 0.18f, 0.82f),
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginTop = 4.0f,
+			ContentMarginBottom = 4.0f,
+		};
+		var grabber = new StyleBoxFlat
+		{
+			BgColor = new Color(0.78f, 1.0f, 0.96f, 0.68f),
+			BorderColor = new Color(0.18f, 0.64f, 0.68f, 0.92f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+		};
+		var grabberHighlight = new StyleBoxFlat
+		{
+			BgColor = new Color(0.94f, 1.0f, 0.98f, 0.86f),
+			BorderColor = new Color(0.30f, 0.88f, 0.86f, 1.0f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+		};
+
+		scrollBar.AddThemeStyleboxOverride("scroll", track);
+		scrollBar.AddThemeStyleboxOverride("scroll_focus", track);
+		scrollBar.AddThemeStyleboxOverride("grabber", grabber);
+		scrollBar.AddThemeStyleboxOverride("grabber_highlight", grabberHighlight);
+		scrollBar.AddThemeStyleboxOverride("grabber_pressed", grabberHighlight);
 	}
 }

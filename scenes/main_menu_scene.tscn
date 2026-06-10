@@ -134,7 +134,6 @@ mouse_filter = 2
 script = ExtResource("7_main_menu_ocean_dynamics")
 bubble_count = 72
 glint_count = 46
-motion_scale = 1.25
 
 [node name="LeftDepthVignette" type="ColorRect" parent="." unique_id=1865153471]
 material = SubResource("ShaderMaterial_left_depth_gradient")

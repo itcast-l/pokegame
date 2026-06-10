@@ -2,7 +2,8 @@
 
 [ext_resource type="Script" path="res://scripts/PauseMenuOverlay.cs" id="1_pause_menu"]
 [ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
-[ext_resource type="Texture2D" path="res://art/ui/pause_menu/run-001/processed/clean.png" id="3_pause_frame"]
+[ext_resource type="Script" path="res://scripts/OceanDialogPanelArt.cs" id="4_panel_art"]
+[ext_resource type="Script" path="res://scripts/PlayerCountDialogFrameArt.cs" id="5_frame_art"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.012, 0.14, 0.18, 0.82)
@@ -56,27 +57,24 @@ mouse_filter = 2
 
 [node name="PauseMenuPanel" type="Control" parent="PauseMenuCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(560, 430)
+custom_minimum_size = Vector2(744, 480)
 process_mode = 3
 layout_mode = 2
 mouse_filter = 0
 
-[node name="GeneratedFrameArt" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel"]
+[node name="GeneratedFrameArt" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
 process_mode = 3
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -18.0
-offset_top = -36.0
-offset_right = 18.0
-offset_bottom = 36.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("3_pause_frame")
-expand_mode = 1
-stretch_mode = 6
+script = ExtResource("4_panel_art")
+ShowTitleCrest = false
+ShowTitleGuides = false
+CoverBuiltInRowSlots = false
 
 [node name="PauseMenuMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel"]
 process_mode = 3
@@ -87,23 +85,23 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 82
-theme_override_constants/margin_top = 66
-theme_override_constants/margin_right = 82
-theme_override_constants/margin_bottom = 58
+theme_override_constants/margin_left = 124
+theme_override_constants/margin_top = 142
+theme_override_constants/margin_right = 124
+theme_override_constants/margin_bottom = 118
 
 [node name="PauseMenuLayout" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 26
 alignment = 1
 
 [node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
-custom_minimum_size = Vector2(288, 62)
+custom_minimum_size = Vector2(496, 56)
 process_mode = 3
 layout_mode = 2
-script = ExtResource("2_button_frame")
-AccentColor = Color(0.58, 1, 0.92, 1)
+script = ExtResource("5_frame_art")
+Kind = 0
 
 [node name="ContinueButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/ContinueFrame"]
 unique_name_in_owner = true
@@ -112,10 +110,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 5.0
-offset_right = -26.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
@@ -129,11 +123,11 @@ text = "GAME_CONTINUE"
 flat = true
 
 [node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
-custom_minimum_size = Vector2(288, 62)
+custom_minimum_size = Vector2(496, 56)
 process_mode = 3
 layout_mode = 2
-script = ExtResource("2_button_frame")
-AccentColor = Color(0.78, 0.9, 1, 1)
+script = ExtResource("5_frame_art")
+Kind = 0
 
 [node name="ReturnToMainMenuButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/ReturnToMainMenuFrame"]
 unique_name_in_owner = true
@@ -142,10 +136,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 5.0
-offset_right = -26.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
@@ -159,11 +149,11 @@ text = "GAME_RETURN_MAIN_MENU"
 flat = true
 
 [node name="QuitFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
-custom_minimum_size = Vector2(288, 62)
+custom_minimum_size = Vector2(496, 56)
 process_mode = 3
 layout_mode = 2
-script = ExtResource("2_button_frame")
-AccentColor = Color(0.95, 0.68, 0.56, 1)
+script = ExtResource("5_frame_art")
+Kind = 0
 
 [node name="QuitButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/QuitFrame"]
 unique_name_in_owner = true
@@ -172,10 +162,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 5.0
-offset_right = -26.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
@@ -223,24 +209,41 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="PauseQuitConfirmPanel" type="PanelContainer" parent="PauseQuitConfirmRoot/ConfirmCenter"]
-custom_minimum_size = Vector2(520, 286)
+custom_minimum_size = Vector2(744, 480)
 process_mode = 3
 layout_mode = 2
 mouse_filter = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+
+[node name="ConfirmFrameArt" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_panel_art")
+PanelTexturePath = "res://assets/ui/player_count_dialog_blank_panel.png"
+CoverBuiltInActionWell = false
+CoverBuiltInRowSlots = false
+InnerTopRatio = 0.24
+InnerBottomRatio = 0.13
+InnerSideRatio = 0.10
 
 [node name="ConfirmMargin" type="MarginContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/margin_left = 34
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 34
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 84
+theme_override_constants/margin_top = 74
+theme_override_constants/margin_right = 84
+theme_override_constants/margin_bottom = 68
 
 [node name="ConfirmLayout" type="VBoxContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 18
 alignment = 1
 
 [node name="QuitConfirmTitle" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
@@ -248,7 +251,7 @@ unique_name_in_owner = true
 process_mode = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
-theme_override_font_sizes/font_size = 29
+theme_override_font_sizes/font_size = 34
 text = "GAME_QUIT_CONFIRM_TITLE"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -258,8 +261,8 @@ unique_name_in_owner = true
 process_mode = 3
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.92)
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.86)
+theme_override_font_sizes/font_size = 18
 text = "GAME_QUIT_CONFIRM_MESSAGE"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -271,29 +274,29 @@ process_mode = 3
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.82)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 17
 text = "GAME_QUIT_CONFIRM_HINT"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="ConfirmSpacer" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
-custom_minimum_size = Vector2(0, 8)
+custom_minimum_size = Vector2(0, 20)
 process_mode = 3
 layout_mode = 2
 
 [node name="ConfirmActions" type="HBoxContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 18
 alignment = 1
 
 [node name="CancelQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions"]
-custom_minimum_size = Vector2(206, 62)
+custom_minimum_size = Vector2(248, 48)
 process_mode = 3
 layout_mode = 2
-script = ExtResource("2_button_frame")
-AccentColor = Color(0.58, 1, 0.92, 1)
+script = ExtResource("5_frame_art")
+Kind = 1
 
 [node name="CancelQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions/CancelQuitFrame"]
 unique_name_in_owner = true
@@ -302,10 +305,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 5.0
-offset_right = -26.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
@@ -319,12 +318,11 @@ text = "GAME_QUIT_CONFIRM_CANCEL"
 flat = true
 
 [node name="ConfirmQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions"]
-custom_minimum_size = Vector2(206, 62)
+custom_minimum_size = Vector2(248, 48)
 process_mode = 3
 layout_mode = 2
-script = ExtResource("2_button_frame")
-AccentColor = Color(0.95, 0.68, 0.56, 1)
-FlipOrnament = true
+script = ExtResource("5_frame_art")
+Kind = 1
 
 [node name="ConfirmQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions/ConfirmQuitFrame"]
 unique_name_in_owner = true
@@ -333,10 +331,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 26.0
-offset_top = 5.0
-offset_right = -4.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2

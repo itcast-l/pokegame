@@ -43,7 +43,6 @@ public partial class MainMenuScene : Control
 	private const int MaxMenuPlayers = 4;
 	private const float DefaultMasterVolume = 0.82f;
 	private const float DefaultMusicVolume = 0.76f;
-	private const float DefaultMotionScale = 1.0f;
 	private const bool DefaultMuteBgm = false;
 	private const bool DefaultMuteSfx = false;
 	private const bool DefaultFullscreen = false;
@@ -102,10 +101,8 @@ public partial class MainMenuScene : Control
 	private Tween? _controlsDialogTween;
 	private HSlider _masterVolumeSlider = default!;
 	private HSlider _musicVolumeSlider = default!;
-	private HSlider _motionScaleSlider = default!;
 	private Label _masterVolumeValue = default!;
 	private Label _musicVolumeValue = default!;
-	private Label _motionScaleValue = default!;
 	private CheckButton _muteBgmToggle = default!;
 	private CheckButton _muteSfxToggle = default!;
 	private CheckButton _oceanMotionToggle = default!;
@@ -130,7 +127,6 @@ public partial class MainMenuScene : Control
 	private bool _playAdventureReturnTransition;
 	private float _masterVolume = DefaultMasterVolume;
 	private float _musicVolume = DefaultMusicVolume;
-	private float _motionScale = DefaultMotionScale;
 	private bool _muteBgm = DefaultMuteBgm;
 	private bool _muteSfx = DefaultMuteSfx;
 	private bool _fullscreen = DefaultFullscreen;

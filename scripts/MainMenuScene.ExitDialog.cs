@@ -31,6 +31,8 @@ public partial class MainMenuScene : Control
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = false;
 		_exitDialogRoot.Visible = true;
+		SyncPrimaryMenuFocusState();
+		_exitDialog.ResetActionFocusHighlight();
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_exitDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		UpdateExitDialogPosition();
@@ -64,6 +66,7 @@ public partial class MainMenuScene : Control
 		_exitDialogTween.Finished += () =>
 		{
 			_exitDialogRoot.Visible = false;
+			SyncPrimaryMenuFocusState();
 			FocusExitButton();
 		};
 	}

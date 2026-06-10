@@ -18,6 +18,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private Label _confirmTitle = default!;
 	private Label _confirmMessage = default!;
 	private Label _confirmHint = default!;
+	private PlayerCountDialogFrameArt _quitCancelFrame = default!;
+	private PlayerCountDialogFrameArt _quitConfirmFrame = default!;
 
 	public Control PauseMenuPanel { get; private set; } = default!;
 	public Control QuitConfirmRoot { get; private set; } = default!;
@@ -36,16 +38,45 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		QuitButton = GetNode<Button>("%QuitButton");
 		QuitCancelButton = GetNode<Button>("%CancelQuitButton");
 		QuitConfirmButton = GetNode<Button>("%ConfirmQuitButton");
+		_quitCancelFrame = QuitCancelButton.GetParent() as PlayerCountDialogFrameArt
+			?? throw new InvalidOperationException("Quit cancel button must be wrapped by PlayerCountDialogFrameArt.");
+		_quitConfirmFrame = QuitConfirmButton.GetParent() as PlayerCountDialogFrameArt
+			?? throw new InvalidOperationException("Quit confirm button must be wrapped by PlayerCountDialogFrameArt.");
 		_confirmTitle = GetNode<Label>("%QuitConfirmTitle");
 		_confirmMessage = GetNode<Label>("%QuitConfirmMessage");
 		_confirmHint = GetNode<Label>("%QuitConfirmHint");
 
+		MainMenuInteractiveStyle.ApplyActionButton(ContinueButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(ReturnToMainMenuButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(QuitButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(QuitCancelButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(QuitConfirmButton, 20);
 		ContinueButton.Pressed += () => EmitSignal(SignalName.ContinueRequested);
 		ReturnToMainMenuButton.Pressed += () => EmitSignal(SignalName.ReturnToMainMenuRequested);
 		QuitButton.Pressed += () => EmitSignal(SignalName.QuitRequested);
 		QuitCancelButton.Pressed += HideQuitConfirm;
 		QuitConfirmButton.Pressed += () => EmitSignal(SignalName.ConfirmQuitRequested);
 		GetNode<ColorRect>("%ConfirmScrim").GuiInput += OnConfirmScrimGuiInput;
+	}
+
+	public override void _Input(InputEvent inputEvent)
+	{
+		base._Input(inputEvent);
+		if (!QuitConfirmRoot.Visible)
+		{
+			return;
+		}
+
+		if (IsPointerInput(inputEvent))
+		{
+			SetQuitConfirmFocusHighlightEnabled(false);
+			return;
+		}
+
+		if (IsNavigationInput(inputEvent))
+		{
+			SetQuitConfirmFocusHighlightEnabled(true);
+		}
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize, string returnButtonKey = "GAME_RETURN_MAIN_MENU")
@@ -63,6 +94,7 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	public void ShowQuitConfirm()
 	{
 		QuitConfirmRoot.Visible = true;
+		SetQuitConfirmFocusHighlightEnabled(false);
 		QuitCancelButton.GrabFocus();
 	}
 
@@ -81,5 +113,25 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 
 		HideQuitConfirm();
 		GetViewport().SetInputAsHandled();
+	}
+
+	private void SetQuitConfirmFocusHighlightEnabled(bool enabled)
+	{
+		_quitCancelFrame.HighlightFocus = enabled;
+		_quitConfirmFrame.HighlightFocus = enabled;
+		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(QuitCancelButton, enabled);
+		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(QuitConfirmButton, enabled);
+	}
+
+	private static bool IsPointerInput(InputEvent inputEvent)
+	{
+		return inputEvent is InputEventMouseButton or InputEventMouseMotion;
+	}
+
+	private static bool IsNavigationInput(InputEvent inputEvent)
+	{
+		return inputEvent is InputEventKey { Pressed: true, Echo: false }
+			|| inputEvent is InputEventJoypadButton { Pressed: true }
+			|| inputEvent is InputEventJoypadMotion joypadMotion && Mathf.Abs(joypadMotion.AxisValue) > 0.45f;
 	}
 }

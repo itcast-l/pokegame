@@ -19,7 +19,6 @@ public partial class MainMenuScene
 		_fullscreen = GameSaveStore.GetBool(GameSaveStore.FullscreenKey, DefaultFullscreen);
 		_selectedResolution = ParseResolutionSetting(GameSaveStore.GetString(GameSaveStore.ResolutionKey, ResolutionToString(DefaultResolution)));
 		_oceanMotion = GameSaveStore.GetBool(GameSaveStore.OceanMotionKey, DefaultOceanMotion);
-		_motionScale = Mathf.Clamp(GameSaveStore.GetFloat(GameSaveStore.MotionScaleKey, DefaultMotionScale), 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference));
 		_selectedMainMenuMusicTrack = GameSaveStore.GetString(GameSaveStore.MainMenuMusicTrackKey, string.Empty).Trim();
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
@@ -38,7 +37,6 @@ public partial class MainMenuScene
 			new GameSaveStore.SaveValue(GameSaveStore.FullscreenKey, _fullscreen),
 			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
 			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
-			new GameSaveStore.SaveValue(GameSaveStore.MotionScaleKey, _motionScale),
 			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
 			new GameSaveStore.SaveValue(GameSaveStore.MainMenuMusicTrackKey, _selectedMainMenuMusicTrack),
 			new GameSaveStore.SaveValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings()));
@@ -75,7 +73,6 @@ public partial class MainMenuScene
 	{
 		_masterVolume = Mathf.Clamp(_masterVolume, 0.0f, 1.0f);
 		_musicVolume = Mathf.Clamp(_musicVolume, 0.0f, 1.0f);
-		_motionScale = Mathf.Clamp(_motionScale, 0.5f, 1.5f);
 		_languagePreference = Localization.NormalizePreference(_languagePreference);
 		TranslationServer.SetLocale(Localization.ResolveLocale(this, _languagePreference));
 
@@ -89,20 +86,17 @@ public partial class MainMenuScene
 
 		if (_backgroundAnimator != null)
 		{
-			_backgroundAnimator.motion_scale = _motionScale;
 			_backgroundAnimator.SetMotionEnabled(_oceanMotion);
 		}
 
 		if (_oceanDynamicsLayer != null)
 		{
-			_oceanDynamicsLayer.motion_scale = _motionScale;
 			_oceanDynamicsLayer.Visible = _oceanMotion;
 			_oceanDynamicsLayer.SetProcess(_oceanMotion);
 		}
 
 		if (_underwaterAmbientLayer != null)
 		{
-			_underwaterAmbientLayer.motion_scale = _motionScale;
 			_underwaterAmbientLayer.Visible = _oceanMotion;
 			_underwaterAmbientLayer.SetProcess(_oceanMotion);
 		}
@@ -110,11 +104,6 @@ public partial class MainMenuScene
 		if (_waterCausticOverlay != null)
 		{
 			_waterCausticOverlay.Visible = _oceanMotion;
-		}
-
-		if (_motionScaleSlider != null)
-		{
-			SyncMotionScaleControlState();
 		}
 
 		UpdateSettingsLabels();
@@ -169,27 +158,8 @@ public partial class MainMenuScene
 		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
 		RefreshMainMenuMusicTrackOptions();
 		_oceanMotionToggle.ButtonPressed = _oceanMotion;
-		_motionScaleSlider.Value = Mathf.RoundToInt(_motionScale * 100.0f);
-		SyncMotionScaleControlState();
 		_isSyncingSettingsControls = false;
 		UpdateSettingsLabels();
-	}
-
-	private void SyncMotionScaleControlState()
-	{
-		if (_motionScaleSlider == null)
-		{
-			return;
-		}
-
-		_motionScaleSlider.Editable = _oceanMotion;
-		_motionScaleSlider.FocusMode = _oceanMotion
-			? Control.FocusModeEnum.All
-			: Control.FocusModeEnum.None;
-		if (!_oceanMotion && _motionScaleSlider.HasFocus())
-		{
-			_oceanMotionToggle.GrabFocus();
-		}
 	}
 
 	private void RefreshMainMenuMusicTrackOptions()
@@ -228,11 +198,6 @@ public partial class MainMenuScene
 		if (_musicVolumeValue != null)
 		{
 			_musicVolumeValue.Text = $"{Mathf.RoundToInt(_musicVolume * 100.0f)}%";
-		}
-
-		if (_motionScaleValue != null)
-		{
-			_motionScaleValue.Text = $"{Mathf.RoundToInt(_motionScale * 100.0f)}%";
 		}
 	}
 
@@ -305,7 +270,6 @@ public partial class MainMenuScene
 	{
 		_masterVolume = DefaultMasterVolume;
 		_musicVolume = DefaultMusicVolume;
-		_motionScale = DefaultMotionScale;
 		_muteBgm = DefaultMuteBgm;
 		_muteSfx = DefaultMuteSfx;
 		_fullscreen = DefaultFullscreen;

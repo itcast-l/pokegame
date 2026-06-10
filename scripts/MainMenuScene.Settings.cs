@@ -17,10 +17,8 @@ public partial class MainMenuScene : Control
 		_settingsDialogPanel = dialog.DialogPanel;
 		_masterVolumeSlider = dialog.MasterVolumeSlider;
 		_musicVolumeSlider = dialog.MusicVolumeSlider;
-		_motionScaleSlider = dialog.MotionScaleSlider;
 		_masterVolumeValue = dialog.MasterVolumeValue;
 		_musicVolumeValue = dialog.MusicVolumeValue;
-		_motionScaleValue = dialog.MotionScaleValue;
 		_muteBgmToggle = dialog.MuteBgmToggle;
 		_muteSfxToggle = dialog.MuteSfxToggle;
 		_oceanMotionToggle = dialog.OceanMotionToggle;
@@ -140,17 +138,6 @@ public partial class MainMenuScene : Control
 			}
 
 			_oceanMotion = pressed;
-			SyncMotionScaleControlState();
-			OnSettingsChanged();
-		};
-		_motionScaleSlider.ValueChanged += value =>
-		{
-			if (_isSyncingSettingsControls)
-			{
-				return;
-			}
-
-			_motionScale = (float)value / 100.0f;
 			OnSettingsChanged();
 		};
 	}

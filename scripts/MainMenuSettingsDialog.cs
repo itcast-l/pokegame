@@ -18,19 +18,18 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _mainMenuMusicTrackLabel = default!;
 	private Label _controlsLabel = default!;
 	private Label _oceanMotionLabel = default!;
-	private Label _motionScaleLabel = default!;
 	private Button _controlsButton = default!;
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
 	private ColorRect _scrim = default!;
+	private ScrollContainer _settingsScroll = default!;
+	private Func<string, string>? _localize;
 
 	public Control DialogPanel { get; private set; } = default!;
 	public HSlider MasterVolumeSlider { get; private set; } = default!;
 	public HSlider MusicVolumeSlider { get; private set; } = default!;
-	public HSlider MotionScaleSlider { get; private set; } = default!;
 	public Label MasterVolumeValue { get; private set; } = default!;
 	public Label MusicVolumeValue { get; private set; } = default!;
-	public Label MotionScaleValue { get; private set; } = default!;
 	public CheckButton MuteBgmToggle { get; private set; } = default!;
 	public CheckButton MuteSfxToggle { get; private set; } = default!;
 	public CheckButton OceanMotionToggle { get; private set; } = default!;
@@ -47,10 +46,8 @@ public partial class MainMenuSettingsDialog : Control
 		DialogPanel = GetNode<Control>("%SettingsDialogPanel");
 		MasterVolumeSlider = GetNode<HSlider>("%MasterVolumeSlider");
 		MusicVolumeSlider = GetNode<HSlider>("%MusicVolumeSlider");
-		MotionScaleSlider = GetNode<HSlider>("%MotionScaleSlider");
 		MasterVolumeValue = GetNode<Label>("%MasterVolumeValue");
 		MusicVolumeValue = GetNode<Label>("%MusicVolumeValue");
-		MotionScaleValue = GetNode<Label>("%MotionScaleValue");
 		MuteBgmToggle = GetNode<CheckButton>("%MuteBgmToggle");
 		MuteSfxToggle = GetNode<CheckButton>("%MuteSfxToggle");
 		OceanMotionToggle = GetNode<CheckButton>("%OceanMotionToggle");
@@ -70,13 +67,26 @@ public partial class MainMenuSettingsDialog : Control
 		_mainMenuMusicTrackLabel = GetNode<Label>("%MainMenuMusicTrackLabel");
 		_controlsLabel = GetNode<Label>("%ControlsLabel");
 		_oceanMotionLabel = GetNode<Label>("%OceanMotionLabel");
-		_motionScaleLabel = GetNode<Label>("%MotionScaleLabel");
+		_settingsScroll = GetNode<ScrollContainer>("%SettingsScroll");
 		_controlsButton = GetNode<Button>("%ControlsButton");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		_scrim.GuiInput += OnScrimGuiInput;
+		MainMenuInteractiveStyle.ApplyToggleButton(MuteBgmToggle);
+		MainMenuInteractiveStyle.ApplyToggleButton(MuteSfxToggle);
+		MainMenuInteractiveStyle.ApplyToggleButton(OceanMotionToggle);
+		MainMenuInteractiveStyle.ApplyOptionLikeButton(WindowModeOption);
+		MainMenuInteractiveStyle.ApplyOptionLikeButton(ResolutionOption);
+		MainMenuInteractiveStyle.ApplyOptionLikeButton(LanguageOption);
+		MainMenuInteractiveStyle.ApplyOptionLikeButton(MainMenuMusicTrackOption);
+		MainMenuInteractiveStyle.ApplyOptionLikeButton(_controlsButton);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20);
+		MuteBgmToggle.Toggled += _ => UpdateToggleText(MuteBgmToggle);
+		MuteSfxToggle.Toggled += _ => UpdateToggleText(MuteSfxToggle);
+		OceanMotionToggle.Toggled += _ => UpdateToggleText(OceanMotionToggle);
 		EnableKeyboardFocus(
 			MasterVolumeSlider,
 			MusicVolumeSlider,
@@ -88,17 +98,14 @@ public partial class MainMenuSettingsDialog : Control
 			MainMenuMusicTrackOption,
 			_controlsButton,
 			OceanMotionToggle,
-			MotionScaleSlider,
 			_resetButton,
 			_doneButton);
-		StyleOptionPopup(WindowModeOption);
-		StyleOptionPopup(ResolutionOption);
-		StyleOptionPopup(LanguageOption);
-		StyleOptionPopup(MainMenuMusicTrackOption);
+		StyleScrollBar(_settingsScroll.GetVScrollBar());
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize)
 	{
+		_localize = localize;
 		_titleLabel.Text = localize("SETTINGS_TITLE");
 		_messageLabel.Text = localize("SETTINGS_MESSAGE");
 		_masterVolumeLabel.Text = localize("SETTINGS_MASTER_VOLUME");
@@ -112,9 +119,11 @@ public partial class MainMenuSettingsDialog : Control
 		_controlsLabel.Text = localize("SETTINGS_CONTROLS");
 		_controlsButton.Text = localize("SETTINGS_CONTROLS_EDIT");
 		_oceanMotionLabel.Text = localize("SETTINGS_OCEAN_MOTION");
-		_motionScaleLabel.Text = localize("SETTINGS_MOTION_SCALE");
 		_resetButton.Text = localize("SETTINGS_RESET_DEFAULTS");
 		_doneButton.Text = localize("SETTINGS_DONE");
+		UpdateToggleText(MuteBgmToggle);
+		UpdateToggleText(MuteSfxToggle);
+		UpdateToggleText(OceanMotionToggle);
 	}
 
 	private void OnScrimGuiInput(InputEvent inputEvent)
@@ -128,20 +137,71 @@ public partial class MainMenuSettingsDialog : Control
 		GetViewport().SetInputAsHandled();
 	}
 
-	private static void StyleOptionPopup(OptionButton option)
-	{
-		PopupMenu popup = option.GetPopup();
-		popup.PreferNativeMenu = false;
-		popup.ShrinkWidth = false;
-		popup.ShrinkHeight = true;
-		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
-	}
-
 	private static void EnableKeyboardFocus(params Control[] controls)
 	{
 		foreach (Control control in controls)
 		{
 			control.FocusMode = Control.FocusModeEnum.All;
 		}
+	}
+
+	private void UpdateToggleText(CheckButton toggle)
+	{
+		if (_localize == null)
+		{
+			return;
+		}
+
+		toggle.Text = _localize(toggle.ButtonPressed ? "PLAYER_COUNT_ITEM_MODE_ON" : "PLAYER_COUNT_ITEM_MODE_OFF");
+	}
+
+	private static void StyleScrollBar(ScrollBar scrollBar)
+	{
+		scrollBar.CustomMinimumSize = new Vector2(10.0f, 0.0f);
+		scrollBar.AddThemeConstantOverride("padding_left", 2);
+		scrollBar.AddThemeConstantOverride("padding_right", 2);
+
+		var track = new StyleBoxFlat
+		{
+			BgColor = new Color(0.03f, 0.14f, 0.18f, 0.82f),
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginTop = 4.0f,
+			ContentMarginBottom = 4.0f,
+		};
+		var grabber = new StyleBoxFlat
+		{
+			BgColor = new Color(0.78f, 1.0f, 0.96f, 0.68f),
+			BorderColor = new Color(0.18f, 0.64f, 0.68f, 0.92f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+		};
+		var grabberHighlight = new StyleBoxFlat
+		{
+			BgColor = new Color(0.94f, 1.0f, 0.98f, 0.86f),
+			BorderColor = new Color(0.30f, 0.88f, 0.86f, 1.0f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+		};
+
+		scrollBar.AddThemeStyleboxOverride("scroll", track);
+		scrollBar.AddThemeStyleboxOverride("scroll_focus", track);
+		scrollBar.AddThemeStyleboxOverride("grabber", grabber);
+		scrollBar.AddThemeStyleboxOverride("grabber_highlight", grabberHighlight);
+		scrollBar.AddThemeStyleboxOverride("grabber_pressed", grabberHighlight);
 	}
 }

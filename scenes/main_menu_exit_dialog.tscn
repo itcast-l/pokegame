@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://scripts/MainMenuExitDialog.cs" id="1_dialog"]
 [ext_resource type="Script" path="res://scripts/PearlDivider.cs" id="2_pearl"]
 [ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="3_button_frame"]
+[ext_resource type="Script" path="res://scripts/OceanDialogPanelArt.cs" id="4_panel_art"]
+[ext_resource type="Script" path="res://scripts/PlayerCountDialogFrameArt.cs" id="5_frame_art"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog_panel"]
 bg_color = Color(0.012, 0.14, 0.18, 0.9)
@@ -55,24 +57,41 @@ mouse_filter = 2
 
 [node name="ExitDialogPanel" type="PanelContainer" parent="DialogCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 250)
+custom_minimum_size = Vector2(744, 480)
 layout_mode = 2
 mouse_filter = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_dialog_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+
+[node name="FrameArt" type="Control" parent="DialogCenter/ExitDialogPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_panel_art")
+PanelTexturePath = "res://assets/ui/player_count_dialog_blank_panel.png"
+CoverBuiltInActionWell = false
+CoverBuiltInRowSlots = false
+InnerTopRatio = 0.24
+InnerBottomRatio = 0.13
+InnerSideRatio = 0.10
 
 [node name="DialogMargin" type="MarginContainer" parent="DialogCenter/ExitDialogPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 26
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 26
+theme_override_constants/margin_left = 84
+theme_override_constants/margin_top = 74
+theme_override_constants/margin_right = 84
+theme_override_constants/margin_bottom = 68
 
 [node name="DialogLayout" type="VBoxContainer" parent="DialogCenter/ExitDialogPanel/DialogMargin"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 18
 alignment = 1
 
 [node name="PearlDivider" type="Control" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
+visible = false
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 mouse_filter = 2
@@ -85,7 +104,7 @@ theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 31
+theme_override_font_sizes/font_size = 34
 text = "EXIT_TITLE"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -93,11 +112,11 @@ autowrap_mode = 2
 [node name="ExitMessage" type="Label" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.9)
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.86)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 21
+theme_override_font_sizes/font_size = 18
 text = "EXIT_MESSAGE"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -105,17 +124,17 @@ autowrap_mode = 2
 [node name="ExitHint" type="Label" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.76)
+theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.82)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 17
 text = "EXIT_HINT"
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Spacer" type="Control" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
-custom_minimum_size = Vector2(0, 8)
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
 [node name="DialogActions" type="HBoxContainer" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
@@ -124,10 +143,10 @@ theme_override_constants/separation = 18
 alignment = 1
 
 [node name="CancelFrame" type="Control" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/DialogActions"]
-custom_minimum_size = Vector2(190, 64)
+custom_minimum_size = Vector2(248, 48)
 layout_mode = 2
-script = ExtResource("3_button_frame")
-AccentColor = Color(0.58, 1, 0.92, 1)
+script = ExtResource("5_frame_art")
+Kind = 1
 
 [node name="CancelButton" type="Button" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/DialogActions/CancelFrame"]
 unique_name_in_owner = true
@@ -135,10 +154,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 5.0
-offset_right = -26.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
@@ -152,11 +167,10 @@ text = "EXIT_CANCEL"
 flat = true
 
 [node name="ConfirmFrame" type="Control" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/DialogActions"]
-custom_minimum_size = Vector2(190, 64)
+custom_minimum_size = Vector2(248, 48)
 layout_mode = 2
-script = ExtResource("3_button_frame")
-AccentColor = Color(0.95, 0.68, 0.56, 1)
-FlipOrnament = true
+script = ExtResource("5_frame_art")
+Kind = 1
 
 [node name="ConfirmButton" type="Button" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/DialogActions/ConfirmFrame"]
 unique_name_in_owner = true
@@ -164,10 +178,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 26.0
-offset_top = 5.0
-offset_right = -4.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0

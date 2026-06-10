@@ -59,6 +59,7 @@ public partial class MainMenuScene : Control
 		_playerCountDialogTween?.Kill();
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_playerCountDialogRoot.Visible = true;
+		SyncPrimaryMenuFocusState();
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_playerCountDialogRoot.Modulate = Colors.White;
 		UpdatePlayerCountDialogPanelPosition();
@@ -81,6 +82,7 @@ public partial class MainMenuScene : Control
 		_playerCountDialogTween.Finished += () =>
 		{
 			_playerCountDialogRoot.Visible = false;
+			SyncPrimaryMenuFocusState();
 			GrabFocusIfAvailable(_singlePlayerButton);
 		};
 	}

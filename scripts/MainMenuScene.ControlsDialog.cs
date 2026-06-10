@@ -46,6 +46,7 @@ public partial class MainMenuScene : Control
 		_controlsDialogTween.Finished += () =>
 		{
 			_controlsDialogRoot.Visible = false;
+			SyncPrimaryMenuFocusState();
 			_controlsButton?.GrabFocus();
 		};
 	}

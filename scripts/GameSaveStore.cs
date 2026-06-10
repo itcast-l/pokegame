@@ -12,7 +12,6 @@ public static class GameSaveStore
 	public const string FullscreenKey = "settings.video.fullscreen";
 	public const string ResolutionKey = "settings.video.resolution";
 	public const string OceanMotionKey = "settings.video.ocean_motion";
-	public const string MotionScaleKey = "settings.video.motion_scale";
 	public const string LanguageKey = "settings.general.language";
 	public const string MainMenuMusicTrackKey = "settings.audio.main_menu_music_track";
 	public const string InputBindingsKey = "settings.input.bindings";
@@ -478,7 +477,6 @@ public static class GameSaveStore
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "fullscreen", FullscreenKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "resolution", ResolutionKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "ocean_motion", OceanMotionKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "motion_scale", MotionScaleKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "language", LanguageKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "avatar", SelectedAvatarKey);
 		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "player_name", PlayerNameKey);
