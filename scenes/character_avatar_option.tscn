@@ -3,42 +3,63 @@
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="1_character_avatar"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_option"]
-bg_color = Color(0.0156863, 0.117647, 0.133333, 0.78)
+bg_color = Color(0.025, 0.112, 0.14, 0.56)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.58, 1, 0.92, 0.42)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+border_color = Color(0.62, 1, 0.95, 0.14)
+corner_radius_top_left = 44
+corner_radius_top_right = 44
+corner_radius_bottom_right = 44
+corner_radius_bottom_left = 44
+shadow_color = Color(0, 0.035, 0.055, 0.28)
+shadow_size = 14
+shadow_offset = Vector2(0, 4)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
-bg_color = Color(0.04, 0.17, 0.18, 0.48)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.48, 1, 0.92, 0.24)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_selection_ring"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.95, 0.72, 0.82)
+corner_radius_top_left = 52
+corner_radius_top_right = 52
+corner_radius_bottom_right = 52
+corner_radius_bottom_left = 52
+shadow_color = Color(0.34, 1, 0.94, 0.22)
+shadow_size = 18
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
 
 [node name="CharacterAvatarOption" type="Control"]
-custom_minimum_size = Vector2(112, 104)
+custom_minimum_size = Vector2(104, 104)
 layout_mode = 2
-offset_right = 112.0
+offset_right = 104.0
 offset_bottom = 104.0
+
+[node name="SelectionRing" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_selection_ring")
 
 [node name="OptionPanel" type="PanelContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -47,31 +68,21 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_option")
 [node name="OptionMargin" type="MarginContainer" parent="OptionPanel"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="OptionLayout" type="VBoxContainer" parent="OptionPanel/OptionMargin"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 0
 alignment = 1
 
 [node name="AvatarSlot" type="Control" parent="OptionPanel/OptionMargin/OptionLayout"]
-custom_minimum_size = Vector2(78, 78)
+custom_minimum_size = Vector2(76, 76)
 layout_mode = 2
 mouse_filter = 2
-
-[node name="SlotBackdrop" type="PanelContainer" parent="OptionPanel/OptionMargin/OptionLayout/AvatarSlot"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
 [node name="CharacterAvatar" parent="OptionPanel/OptionMargin/OptionLayout/AvatarSlot" instance=ExtResource("1_character_avatar")]
 custom_minimum_size = Vector2(0, 0)

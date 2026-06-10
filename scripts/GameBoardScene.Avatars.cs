@@ -24,10 +24,11 @@ public partial class GameBoardScene
 	{
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			DraggableAvatarArea? area = GetNodeOrNull<DraggableAvatarArea>($"%{PlayerAvatarAreaNodeNames[playerIndex]}");
+			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
+			DraggableAvatarArea? area = GetNodeOrNull<DraggableAvatarArea>($"%{PlayerAvatarAreaNodeNames[viewSlotIndex]}");
 			if (area == null)
 			{
-				GD.PushWarning($"Missing avatar area node: {PlayerAvatarAreaNodeNames[playerIndex]}.");
+				GD.PushWarning($"Missing avatar area node: {PlayerAvatarAreaNodeNames[viewSlotIndex]}.");
 				continue;
 			}
 

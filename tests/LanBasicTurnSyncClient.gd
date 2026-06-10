@@ -55,6 +55,10 @@ func _track_progress() -> void:
 	if board == null:
 		return
 
+	if int(board.call("DebugGetLocalPlayerViewSlotIndex")) != 0:
+		_fail("Client local player was not mapped to the bottom view slot")
+		return
+
 	var current_turn := int(board.call("DebugGetCurrentTurnPlayerIndex"))
 	if current_turn == 0:
 		_saw_host_turn = true

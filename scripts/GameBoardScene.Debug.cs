@@ -164,6 +164,11 @@ public partial class GameBoardScene
 		return _currentTurnPlayerIndex;
 	}
 
+	public int DebugGetLocalPlayerViewSlotIndex()
+	{
+		return GetPlayerViewSlotIndex(GetLocalHandPlayerIndex());
+	}
+
 	public string DebugGetLocalSeatControlModeName()
 	{
 		return TryGetSeatControlStateForUi(GetLocalHandPlayerIndex(), out SeatControlState state)

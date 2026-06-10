@@ -13,7 +13,6 @@ public partial class CharacterAvatarEditScene : Control
 	public string CurrentPlayerName { get; set; } = PlayerNameRules.DefaultPlayerName;
 	public PanelContainer DialogPanel { get; private set; } = default!;
 
-	private static readonly Color SelectedOptionModulate = new(1.0f, 1.0f, 0.78f, 1.0f);
 	private static readonly Color ValidNameHintColor = new(0.62f, 1.0f, 0.92f, 0.76f);
 	private static readonly Color EmptyNameHintColor = new(1.0f, 0.72f, 0.58f, 0.92f);
 
@@ -26,6 +25,7 @@ public partial class CharacterAvatarEditScene : Control
 	private GridContainer _avatarGrid = default!;
 	private ScrollContainer _avatarGridScroll = default!;
 	private readonly Dictionary<string, PanelContainer> _optionPanels = new();
+	private readonly Dictionary<string, Control> _optionSelectionRings = new();
 	private readonly Dictionary<string, Button> _optionButtons = new();
 	private readonly List<AvatarOptionSlot> _avatarOptionSlots = new();
 
@@ -99,6 +99,7 @@ public partial class CharacterAvatarEditScene : Control
 
 			_avatarOptionSlots.Add(new AvatarOptionSlot(
 				root,
+				root.GetNode<Control>("SelectionRing"),
 				root.GetNode<PanelContainer>("OptionPanel"),
 				root.GetNode<CharacterAvatar>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/CharacterAvatar"),
 				root.GetNode<Button>("SelectButton")));
@@ -108,6 +109,7 @@ public partial class CharacterAvatarEditScene : Control
 	private void ConfigureAvatarOptions()
 	{
 		_optionPanels.Clear();
+		_optionSelectionRings.Clear();
 		_optionButtons.Clear();
 		foreach (AvatarOptionSlot optionSlot in _avatarOptionSlots)
 		{
@@ -131,11 +133,13 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Avatar.AudioConfig = avatarDefinition.AudioConfig;
 			optionSlot.Avatar.PlayIdle();
 			optionSlot.Panel.Modulate = Colors.White;
+			optionSlot.SelectionRing.Visible = false;
 			optionSlot.Button.TooltipText = "预览头像";
 			optionSlot.Button.FocusMode = Control.FocusModeEnum.All;
 			optionSlot.Button.FocusEntered += () => SelectAvatar(avatarDefinition.Id);
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
 			_optionPanels[avatarDefinition.Id] = optionSlot.Panel;
+			_optionSelectionRings[avatarDefinition.Id] = optionSlot.SelectionRing;
 			_optionButtons[avatarDefinition.Id] = optionSlot.Button;
 		}
 
@@ -174,7 +178,14 @@ public partial class CharacterAvatarEditScene : Control
 	{
 		foreach ((string avatarId, PanelContainer panel) in _optionPanels)
 		{
-			panel.Modulate = avatarId == CurrentAvatarId ? SelectedOptionModulate : Colors.White;
+			panel.Modulate = avatarId == CurrentAvatarId
+				? new Color(1.04f, 1.04f, 1.02f, 1.0f)
+				: Colors.White;
+		}
+
+		foreach ((string avatarId, Control ring) in _optionSelectionRings)
+		{
+			ring.Visible = avatarId == CurrentAvatarId;
 		}
 	}
 
@@ -242,6 +253,7 @@ public partial class CharacterAvatarEditScene : Control
 
 	private sealed record AvatarOptionSlot(
 		Control Root,
+		Control SelectionRing,
 		PanelContainer Panel,
 		CharacterAvatar Avatar,
 		Button Button);

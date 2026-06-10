@@ -178,7 +178,7 @@ public partial class GameBoardScene
 		Rect2 avatarRect = GetSeatControlIndicatorAnchorRect(_playerAvatarAreas[playerIndex]);
 		Rect2 scoreRect = GetSeatControlIndicatorAnchorRect(_playerScoreMeters[playerIndex]);
 
-		return playerIndex switch
+		return GetPlayerViewSlotIndex(playerIndex) switch
 		{
 			0 => new Vector2(
 				scoreRect.End.X + PlayerSeatControlIndicatorGap,

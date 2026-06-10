@@ -84,6 +84,7 @@ public partial class MainMenuScene : Control
 	private UnderwaterAmbientLayer? _underwaterAmbientLayer;
 	private CanvasItem? _waterCausticOverlay;
 	private MainMenuPlayerCountDialog _playerCountDialog = default!;
+	private CanvasLayer _playerCountDialogLayer = default!;
 	private Control _playerCountDialogRoot = default!;
 	private Control _playerCountDialogMotion = default!;
 	private PanelContainer _playerCountDialogPanel = default!;

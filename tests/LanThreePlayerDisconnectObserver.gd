@@ -59,6 +59,15 @@ func _verify_still_ingame_after_delay() -> void:
 	if _finished:
 		return
 
+	var board: Node = current_scene
+	if board == null:
+		_fail("Observer board missing")
+		return
+
+	if int(board.call("DebugGetLocalPlayerViewSlotIndex")) != 0:
+		_fail("Observer local player was not mapped to the bottom view slot")
+		return
+
 	if _network.State != INGAME_STATE:
 		_fail("Observer left in-game state")
 		return

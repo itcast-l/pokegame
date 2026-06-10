@@ -53,10 +53,11 @@ public partial class GameBoardScene
 	{
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			ScoreAvatarMeter? meter = GetNodeOrNull<ScoreAvatarMeter>($"%{ScoreMeterNodeNames[playerIndex]}");
+			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
+			ScoreAvatarMeter? meter = GetNodeOrNull<ScoreAvatarMeter>($"%{ScoreMeterNodeNames[viewSlotIndex]}");
 			if (meter == null)
 			{
-				GD.PushWarning($"Missing score meter node: {ScoreMeterNodeNames[playerIndex]}.");
+				GD.PushWarning($"Missing score meter node: {ScoreMeterNodeNames[viewSlotIndex]}.");
 				continue;
 			}
 
@@ -64,7 +65,7 @@ public partial class GameBoardScene
 			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
 			meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(playerIndex), false);
 			_playerScoreMeters[playerIndex] = meter;
-			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[playerIndex]}");
+			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[viewSlotIndex]}");
 		}
 	}
 

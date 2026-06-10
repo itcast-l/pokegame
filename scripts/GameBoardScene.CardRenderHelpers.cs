@@ -91,10 +91,10 @@ public partial class GameBoardScene
 		return label;
 	}
 
-	private static Vector2 GetHandCardDescriptionPosition(int playerIndex)
+	private Vector2 GetHandCardDescriptionPosition(int playerIndex)
 	{
 		var labelSize = new Vector2(204.0f, 42.0f);
-		float y = playerIndex == 1 ? CardVisualSize.Y + 4.0f : -labelSize.Y - 4.0f;
+		float y = GetPlayerViewSlotIndex(playerIndex) == 1 ? CardVisualSize.Y + 4.0f : -labelSize.Y - 4.0f;
 		return new Vector2((CardVisualSize.X - labelSize.X) / 2.0f, y);
 	}
 
@@ -315,9 +315,9 @@ public partial class GameBoardScene
 		return (CardVisualSize - GetItemCardVisualSize(itemCardId)) / 2.0f;
 	}
 
-	private static float GetCardRotationDegreesForPlayer(int playerIndex)
+	private float GetCardRotationDegreesForPlayer(int playerIndex)
 	{
-		return playerIndex switch
+		return GetPlayerViewSlotIndex(playerIndex) switch
 		{
 			2 => 90.0f,
 			3 => -90.0f,
@@ -325,7 +325,7 @@ public partial class GameBoardScene
 		};
 	}
 
-	private static float GetCardPileRotationDegreesForPlayer(int playerIndex)
+	private float GetCardPileRotationDegreesForPlayer(int playerIndex)
 	{
 		return GetCardRotationDegreesForPlayer(playerIndex);
 	}

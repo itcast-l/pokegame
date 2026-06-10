@@ -16,8 +16,13 @@ public partial class MainMenuScene : Control
 		}
 
 		_playerCountDialog = dialog;
+		_playerCountDialogLayer = new CanvasLayer
+		{
+			Name = "PlayerCountDialogLayer",
+		};
+		AddChild(_playerCountDialogLayer);
 		_playerCountDialogRoot = dialog;
-		AddChild(dialog);
+		_playerCountDialogLayer.AddChild(dialog);
 		_playerCountDialogMotion = dialog.MotionRoot;
 		_playerCountDialogPanel = dialog.DialogPanel;
 		_playerCountOption = dialog.PlayerCountOption;
@@ -84,8 +89,8 @@ public partial class MainMenuScene : Control
 	{
 		if (_playerCountDialogRoot != null && _playerCountDialogRoot.Visible)
 		{
-			_playerCountDialogRoot.Position = GetSecondaryMenuDepthPosition();
-			_playerCountDialogRoot.Scale = GetSecondaryMenuWorldScale();
+			_playerCountDialogRoot.Position = Vector2.Zero;
+			_playerCountDialogRoot.Scale = Vector2.One;
 		}
 	}
 

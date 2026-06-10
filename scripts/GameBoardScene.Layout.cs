@@ -13,7 +13,8 @@ public partial class GameBoardScene
 
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			Control pileArea = GetNode<Control>($"%Player{playerIndex + 1}CardPileArea");
+			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
+			Control pileArea = GetNode<Control>($"%Player{viewSlotIndex + 1}CardPileArea");
 			var pile = new Control
 			{
 				Name = $"Player{playerIndex + 1}CardPile",
@@ -41,7 +42,8 @@ public partial class GameBoardScene
 
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			Control handArea = GetNode<Control>($"%Player{playerIndex + 1}HandArea");
+			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
+			Control handArea = GetNode<Control>($"%Player{viewSlotIndex + 1}HandArea");
 			_playerHandAreas.Add(handArea);
 		}
 	}
@@ -392,7 +394,7 @@ public partial class GameBoardScene
 		_resultAvatar.Visible = false;
 	}
 
-	private static Vector2 GetHandAreaSize(int playerIndex)
+	private Vector2 GetHandAreaSize(int playerIndex)
 	{
 		Vector2 cardOffset = GetHandCardOffset(playerIndex);
 		return new Vector2(
@@ -400,9 +402,9 @@ public partial class GameBoardScene
 			CardVisualSize.Y + Math.Abs(cardOffset.Y) * (StartingHandCards - 1));
 	}
 
-	private static Vector2 GetHandCardOffset(int playerIndex)
+	private Vector2 GetHandCardOffset(int playerIndex)
 	{
-		return playerIndex switch
+		return GetPlayerViewSlotIndex(playerIndex) switch
 		{
 			2 or 3 => VerticalHandCardOffset,
 			1 => OpponentHorizontalHandCardOffset,
@@ -410,12 +412,12 @@ public partial class GameBoardScene
 		};
 	}
 
-	private static Vector2 GetHandCardOffset(int playerIndex, int cardCount)
+	private Vector2 GetHandCardOffset(int playerIndex, int cardCount)
 	{
 		return GetHandCardOffset(playerIndex, cardCount, GetHandAreaSize(playerIndex));
 	}
 
-	private static Vector2 GetHandCardOffset(int playerIndex, int cardCount, Vector2 handAreaSize)
+	private Vector2 GetHandCardOffset(int playerIndex, int cardCount, Vector2 handAreaSize)
 	{
 		Vector2 baseOffset = GetHandCardOffset(playerIndex);
 		if (cardCount <= 1)
@@ -435,7 +437,7 @@ public partial class GameBoardScene
 		return new Vector2(baseOffset.X, baseOffset.Y < 0.0f ? -verticalSpacing : verticalSpacing);
 	}
 
-	private static Vector2 GetHandFirstCardPosition(int playerIndex, int cardCount, Vector2 handAreaSize, Vector2 cardOffset)
+	private Vector2 GetHandFirstCardPosition(int playerIndex, int cardCount, Vector2 handAreaSize, Vector2 cardOffset)
 	{
 		if (cardCount <= 0)
 		{
