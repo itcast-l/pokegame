@@ -3,10 +3,6 @@ using Godot;
 
 public partial class MainMenuPlayerCountDialog : Control
 {
-	private const int DefaultPlayerCountId = 2;
-	private const int DefaultItemModeId = 1;
-	private const int DefaultWinningScoreId = 100;
-
 	[Signal]
 	public delegate void CloseRequestedEventHandler();
 
@@ -20,15 +16,11 @@ public partial class MainMenuPlayerCountDialog : Control
 	private Label _winningScoreLabel = default!;
 	private Button _startButton = default!;
 	private ColorRect _scrim = default!;
-	private PanelContainer _playerCountValueOverlay = default!;
-	private PanelContainer _itemModeValueOverlay = default!;
-	private PanelContainer _winningScoreValueOverlay = default!;
-	private Label _playerCountValueLabel = default!;
-	private Label _itemModeValueLabel = default!;
-	private Label _winningScoreValueLabel = default!;
+	private static Texture2D? _popupDiamondSelectedIcon;
+	private static Texture2D? _popupDiamondIdleIcon;
 
 	public Control MotionRoot { get; private set; } = default!;
-	public PanelContainer DialogPanel { get; private set; } = default!;
+	public Control DialogPanel { get; private set; } = default!;
 	public OptionButton PlayerCountOption { get; private set; } = default!;
 	public OptionButton ItemModeOption { get; private set; } = default!;
 	public OptionButton WinningScoreOption { get; private set; } = default!;
@@ -36,7 +28,7 @@ public partial class MainMenuPlayerCountDialog : Control
 	public override void _Ready()
 	{
 		MotionRoot = GetNode<Control>("%DialogMotion");
-		DialogPanel = GetNode<PanelContainer>("%PlayerCountDialogPanel");
+		DialogPanel = GetNode<Control>("%PlayerCountDialogPanel");
 		PlayerCountOption = GetNode<OptionButton>("%PlayerCountOption");
 		ItemModeOption = GetNode<OptionButton>("%ItemModeOption");
 		WinningScoreOption = GetNode<OptionButton>("%WinningScoreOption");
@@ -47,25 +39,13 @@ public partial class MainMenuPlayerCountDialog : Control
 		_winningScoreLabel = GetNode<Label>("%WinningScoreLabel");
 		_startButton = GetNode<Button>("%StartGameButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
-		_playerCountValueOverlay = GetNode<PanelContainer>("%PlayerCountValueOverlay");
-		_itemModeValueOverlay = GetNode<PanelContainer>("%ItemModeValueOverlay");
-		_winningScoreValueOverlay = GetNode<PanelContainer>("%WinningScoreValueOverlay");
-		_playerCountValueLabel = _playerCountValueOverlay.GetNode<Label>("Label");
-		_itemModeValueLabel = _itemModeValueOverlay.GetNode<Label>("Label");
-		_winningScoreValueLabel = _winningScoreValueOverlay.GetNode<Label>("Label");
 
 		_scrim.GuiInput += OnScrimGuiInput;
 		_startButton.Pressed += EmitStartGameRequested;
-		PlayerCountOption.ItemSelected += OnOptionSelectionChanged;
-		ItemModeOption.ItemSelected += OnOptionSelectionChanged;
-		WinningScoreOption.ItemSelected += OnOptionSelectionChanged;
-		Resized += OnLayoutChanged;
-		DialogPanel.Resized += OnLayoutChanged;
 		EnableKeyboardFocus(PlayerCountOption, ItemModeOption, WinningScoreOption, _startButton);
 		StyleOptionPopup(PlayerCountOption);
 		StyleOptionPopup(ItemModeOption);
 		StyleOptionPopup(WinningScoreOption);
-		CallDeferred(nameof(RefreshValueOverlays));
 	}
 
 	public void RefreshLocalizedText(
@@ -95,8 +75,6 @@ public partial class MainMenuPlayerCountDialog : Control
 		{
 			WinningScoreOption.SetItemText(index, getWinningScoreText(WinningScoreOption.GetItemId(index)));
 		}
-
-		CallDeferred(nameof(RefreshValueOverlays));
 	}
 
 	private void EmitStartGameRequested()
@@ -115,103 +93,150 @@ public partial class MainMenuPlayerCountDialog : Control
 			return;
 		}
 
+		if (DialogPanel.GetGlobalRect().HasPoint(GetGlobalMousePosition()))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+
 		EmitSignal(SignalName.CloseRequested);
 		GetViewport().SetInputAsHandled();
 	}
 
-	private void OnOptionSelectionChanged(long _index)
-	{
-		RefreshValueOverlays();
-	}
-
-	private void OnLayoutChanged()
-	{
-		CallDeferred(nameof(RefreshValueOverlays));
-	}
-
-	private void RefreshValueOverlays()
-	{
-		RefreshValueOverlay(_playerCountValueOverlay, _playerCountValueLabel, PlayerCountOption, DefaultPlayerCountId);
-		RefreshValueOverlay(_itemModeValueOverlay, _itemModeValueLabel, ItemModeOption, DefaultItemModeId);
-		RefreshValueOverlay(_winningScoreValueOverlay, _winningScoreValueLabel, WinningScoreOption, DefaultWinningScoreId);
-	}
-
-	private void RefreshValueOverlay(PanelContainer overlay, Label label, OptionButton option, int defaultId)
-	{
-		if (option.GetSelectedId() == defaultId)
-		{
-			overlay.Visible = false;
-			return;
-		}
-
-		PositionValueOverlay(overlay, option, new Vector2(4.0f, 3.0f), new Vector2(38.0f, 6.0f));
-		label.Text = GetSelectedItemText(option);
-	}
-
-	private void PositionValueOverlay(Control overlay, Control option, Vector2 insetPosition, Vector2 insetSize)
-	{
-		Rect2 optionRect = option.GetGlobalRect();
-		Rect2 panelRect = DialogPanel.GetGlobalRect();
-		Vector2 localPosition = optionRect.Position - panelRect.Position + insetPosition;
-		Vector2 overlaySize = optionRect.Size - insetSize;
-		overlay.Position = localPosition;
-		overlay.Size = new Vector2(Mathf.Max(overlaySize.X, 0.0f), Mathf.Max(overlaySize.Y, 0.0f));
-		overlay.Visible = overlay.Size.X > 0.0f && overlay.Size.Y > 0.0f;
-	}
-
-	private static string GetSelectedItemText(OptionButton option)
-	{
-		int selected = option.Selected;
-		return selected >= 0 ? option.GetItemText(selected) : string.Empty;
-	}
-
-	private static void StyleOptionPopup(OptionButton option)
+	private void StyleOptionPopup(OptionButton option)
 	{
 		PopupMenu popup = option.GetPopup();
 		popup.PreferNativeMenu = false;
 		popup.ShrinkWidth = false;
 		popup.ShrinkHeight = true;
 		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
-		popup.Theme = new Theme();
+		popup.Theme = BuildPopupTheme();
+	}
+
+	private static Theme BuildPopupTheme()
+	{
+		_popupDiamondSelectedIcon ??= CreateDiamondIndicatorTexture(
+			new Color(0.24f, 0.98f, 0.94f, 0.42f),
+			new Color(0.92f, 1.0f, 0.98f, 0.92f),
+			new Color(1.0f, 0.93f, 0.68f, 0.96f),
+			false);
+		_popupDiamondIdleIcon ??= CreateDiamondIndicatorTexture(
+			new Color(0.24f, 0.98f, 0.94f, 0.12f),
+			new Color(0.68f, 0.98f, 0.94f, 0.58f),
+			Colors.Transparent,
+			true);
+
+		Theme theme = new();
 		var popupStyle = new StyleBoxFlat
 		{
-			BgColor = new Color(0.03f, 0.16f, 0.20f, 0.96f),
-			BorderColor = new Color(0.55f, 0.98f, 0.94f, 0.42f),
+			BgColor = new Color(0.02f, 0.12f, 0.17f, 0.97f),
+			BorderColor = new Color(0.50f, 0.98f, 0.94f, 0.36f),
 			BorderWidthLeft = 1,
 			BorderWidthTop = 1,
 			BorderWidthRight = 1,
 			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 12,
-			CornerRadiusTopRight = 12,
-			CornerRadiusBottomLeft = 12,
-			CornerRadiusBottomRight = 12,
-			ContentMarginLeft = 8.0f,
-			ContentMarginTop = 8.0f,
-			ContentMarginRight = 8.0f,
-			ContentMarginBottom = 8.0f,
+			CornerRadiusTopLeft = 14,
+			CornerRadiusTopRight = 14,
+			CornerRadiusBottomLeft = 14,
+			CornerRadiusBottomRight = 14,
+			ContentMarginLeft = 12.0f,
+			ContentMarginTop = 12.0f,
+			ContentMarginRight = 12.0f,
+			ContentMarginBottom = 12.0f,
+			ShadowColor = new Color(0.0f, 0.02f, 0.04f, 0.42f),
+			ShadowSize = 14,
+			ShadowOffset = new Vector2(0.0f, 5.0f),
 		};
 		var hoverStyle = new StyleBoxFlat
 		{
-			BgColor = new Color(0.05f, 0.25f, 0.31f, 0.88f),
-			BorderColor = Colors.Transparent,
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8,
-			ContentMarginLeft = 8.0f,
-			ContentMarginTop = 5.0f,
-			ContentMarginRight = 8.0f,
-			ContentMarginBottom = 5.0f,
+			BgColor = new Color(0.06f, 0.28f, 0.33f, 0.92f),
+			BorderColor = new Color(0.86f, 1.0f, 0.96f, 0.24f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 10,
+			CornerRadiusTopRight = 10,
+			CornerRadiusBottomLeft = 10,
+			CornerRadiusBottomRight = 10,
+			ContentMarginLeft = 10.0f,
+			ContentMarginTop = 7.0f,
+			ContentMarginRight = 10.0f,
+			ContentMarginBottom = 7.0f,
 		};
-		popup.Theme.SetStylebox("panel", "PopupMenu", popupStyle);
-		popup.Theme.SetStylebox("hover", "PopupMenu", hoverStyle);
-		popup.Theme.SetStylebox("focus", "PopupMenu", hoverStyle);
-		popup.Theme.SetColor("font_color", "PopupMenu", new Color(0.90f, 1.0f, 0.97f, 1.0f));
-		popup.Theme.SetColor("font_hover_color", "PopupMenu", new Color(1.0f, 1.0f, 0.84f, 1.0f));
-		popup.Theme.SetColor("font_focus_color", "PopupMenu", new Color(1.0f, 1.0f, 0.84f, 1.0f));
-		popup.Theme.SetColor("font_separator_color", "PopupMenu", new Color(0.55f, 0.98f, 0.94f, 0.18f));
-		popup.Theme.SetFontSize("font_size", "PopupMenu", 18);
-		popup.Theme.SetConstant("v_separation", "PopupMenu", 4);
+		var separatorStyle = new StyleBoxLine
+		{
+			Color = new Color(0.55f, 0.98f, 0.94f, 0.16f),
+			Thickness = 1,
+			GrowBegin = 10.0f,
+			GrowEnd = 10.0f,
+		};
+		theme.SetStylebox("panel", "PopupMenu", popupStyle);
+		theme.SetStylebox("hover", "PopupMenu", hoverStyle);
+		theme.SetStylebox("focus", "PopupMenu", hoverStyle);
+		theme.SetStylebox("separator", "PopupMenu", separatorStyle);
+		theme.SetColor("font_color", "PopupMenu", new Color(0.90f, 1.0f, 0.97f, 1.0f));
+		theme.SetColor("font_hover_color", "PopupMenu", new Color(1.0f, 0.98f, 0.84f, 1.0f));
+		theme.SetColor("font_focus_color", "PopupMenu", new Color(1.0f, 0.98f, 0.84f, 1.0f));
+		theme.SetColor("font_disabled_color", "PopupMenu", new Color(0.56f, 0.78f, 0.77f, 0.64f));
+		theme.SetColor("font_outline_color", "PopupMenu", new Color(0.0f, 0.04f, 0.07f, 0.92f));
+		theme.SetColor("font_separator_color", "PopupMenu", new Color(0.55f, 0.98f, 0.94f, 0.18f));
+		theme.SetFontSize("font_size", "PopupMenu", 19);
+		theme.SetConstant("h_separation", "PopupMenu", 10);
+		theme.SetConstant("item_start_padding", "PopupMenu", 12);
+		theme.SetConstant("item_end_padding", "PopupMenu", 12);
+		theme.SetConstant("icon_max_width", "PopupMenu", 16);
+		theme.SetConstant("outline_size", "PopupMenu", 1);
+		theme.SetConstant("v_separation", "PopupMenu", 5);
+		theme.SetIcon("checked", "PopupMenu", _popupDiamondSelectedIcon);
+		theme.SetIcon("radio_checked", "PopupMenu", _popupDiamondSelectedIcon);
+		theme.SetIcon("unchecked", "PopupMenu", _popupDiamondIdleIcon);
+		theme.SetIcon("radio_unchecked", "PopupMenu", _popupDiamondIdleIcon);
+		return theme;
+	}
+
+	private static Texture2D CreateDiamondIndicatorTexture(Color glowColor, Color rimColor, Color fillColor, bool hollow)
+	{
+		const int size = 18;
+		Image image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+		Vector2 center = new(size * 0.5f - 0.5f, size * 0.5f - 0.5f);
+
+		for (int y = 0; y < size; y++)
+		{
+			for (int x = 0; x < size; x++)
+			{
+				float dx = Mathf.Abs(x - center.X);
+				float dy = Mathf.Abs(y - center.Y);
+				float diamondDistance = dx + dy;
+				Color pixel = Colors.Transparent;
+
+				if (diamondDistance <= 8.0f)
+				{
+					float glowFactor = 1.0f - diamondDistance / 8.0f;
+					pixel = pixel.Blend(new Color(glowColor.R, glowColor.G, glowColor.B, glowColor.A * glowFactor * glowFactor));
+				}
+
+				float rimDistance = Mathf.Abs(diamondDistance - 4.3f);
+				if (rimDistance <= 1.15f)
+				{
+					float rimFactor = 1.0f - rimDistance / 1.15f;
+					pixel = pixel.Blend(new Color(rimColor.R, rimColor.G, rimColor.B, rimColor.A * rimFactor));
+				}
+
+				if (!hollow && diamondDistance <= 3.0f)
+				{
+					float fillFactor = 1.0f - diamondDistance / 3.0f;
+					pixel = pixel.Blend(new Color(fillColor.R, fillColor.G, fillColor.B, fillColor.A * (0.70f + fillFactor * 0.30f)));
+				}
+
+				if (pixel.A > 0.0f)
+				{
+					image.SetPixel(x, y, pixel);
+				}
+			}
+		}
+
+		return ImageTexture.CreateFromImage(image);
 	}
 
 	private static void EnableKeyboardFocus(params Control[] controls)

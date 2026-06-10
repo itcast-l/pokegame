@@ -1,35 +1,50 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://d2tb1rq67at38"]
 
-[ext_resource type="Script" path="res://scripts/MainMenuPlayerCountDialog.cs" id="1_dialog"]
-[ext_resource type="Script" path="res://scripts/MainMenuPlayerCountDialogPanelArt.cs" id="2_panel_art"]
-[ext_resource type="Shader" path="res://shaders/menu_blur_scrim.gdshader" id="4_scrim_shader"]
+[ext_resource type="Script" uid="uid://bxnip0kry0oj5" path="res://scripts/MainMenuPlayerCountDialog.cs" id="1_dialog"]
+[ext_resource type="Script" uid="uid://cjnpxckhrm0wo" path="res://scripts/MainMenuPlayerCountDialogPanelArt.cs" id="2_panel_art"]
+[ext_resource type="Script" uid="uid://e47b5vrc1wkc" path="res://scripts/MainMenuPlayerCountIconBadge.cs" id="3_icon_badge"]
+[ext_resource type="Shader" uid="uid://6kv33puia40b" path="res://shaders/menu_blur_scrim.gdshader" id="5_scrim_shader"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_scrim"]
-shader = ExtResource("4_scrim_shader")
+shader = ExtResource("5_scrim_shader")
 shader_parameter/blur_lod = 2.8
 shader_parameter/tint_color = Color(0, 0.035, 0.07, 0.48)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog_panel"]
-draw_center = false
-border_width_left = 0
-border_width_top = 0
-border_width_right = 0
-border_width_bottom = 0
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_value_overlay"]
-bg_color = Color(0.06, 0.20, 0.25, 1)
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_option"]
 content_margin_left = 18.0
+content_margin_top = 6.0
 content_margin_right = 18.0
-content_margin_top = 7.0
-content_margin_bottom = 7.0
+content_margin_bottom = 6.0
+bg_color = Color(0.05, 0.17, 0.22, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.71, 0.91, 0.84, 0.34)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
 
-[node name="PlayerCountDialogRoot" type="Control"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_option_hover"]
+content_margin_left = 18.0
+content_margin_top = 6.0
+content_margin_right = 18.0
+content_margin_bottom = 6.0
+bg_color = Color(0.07, 0.24, 0.29, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.88, 1, 0.94, 0.54)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[node name="PlayerCountDialogRoot" type="Control" unique_id=1916703278]
 visible = false
 modulate = Color(1, 1, 1, 0)
 layout_mode = 3
@@ -38,10 +53,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 script = ExtResource("1_dialog")
 
-[node name="Scrim" type="ColorRect" parent="."]
+[node name="Scrim" type="ColorRect" parent="." unique_id=2019342274]
 unique_name_in_owner = true
 material = SubResource("ShaderMaterial_scrim")
 layout_mode = 1
@@ -50,10 +64,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
-color = Color(1, 1, 1, 1)
 
-[node name="DialogMotion" type="Control" parent="."]
+[node name="DialogMotion" type="Control" parent="." unique_id=2126737627]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -63,7 +75,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="DialogCenter" type="CenterContainer" parent="DialogMotion"]
+[node name="DialogCenter" type="CenterContainer" parent="DialogMotion" unique_id=438343410]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -72,68 +84,100 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="PlayerCountDialogPanel" type="PanelContainer" parent="DialogMotion/DialogCenter"]
+[node name="PlayerCountDialogPanel" type="Control" parent="DialogMotion/DialogCenter" unique_id=1965847195]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(720, 500)
+custom_minimum_size = Vector2(744, 480)
 layout_mode = 2
-mouse_filter = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_dialog_panel")
 script = ExtResource("2_panel_art")
 
-[node name="PlayerCountTitle" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
+[node name="PlayerCountTitle" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=379298506]
 unique_name_in_owner = true
-visible = false
-offset_right = 1.0
-offset_bottom = 1.0
-text = "PLAYER_COUNT_TITLE"
-
-[node name="PlayerCountMessage" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-visible = false
-offset_right = 1.0
-offset_bottom = 1.0
-text = "PLAYER_COUNT_MESSAGE"
-
-[node name="PlayersLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-visible = false
-offset_right = 1.0
-offset_bottom = 1.0
-text = "PLAYER_COUNT_PLAYERS"
-
-[node name="ItemModeLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-visible = false
-offset_right = 1.0
-offset_bottom = 1.0
-text = "PLAYER_COUNT_ITEM_MODE"
-
-[node name="WinningScoreLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-visible = false
-offset_right = 1.0
-offset_bottom = 1.0
-text = "PLAYER_COUNT_WINNING_SCORE"
-
-[node name="PlayerCountOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(194, 57)
 layout_mode = 1
-focus_mode = 0
-modulate = Color(1, 1, 1, 0)
-offset_left = 388.0
-offset_top = 133.0
-offset_right = 582.0
-offset_bottom = 190.0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 0)
-theme_override_colors/font_hover_color = Color(1, 1, 0.78, 0)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-item_count = 3
+offset_left = 170.0
+offset_top = 42.0
+offset_right = 574.0
+offset_bottom = 88.0
+theme_override_colors/font_color = Color(0.93, 1, 0.97, 0.98)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.88)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 34
+text = "PLAYER_COUNT_TITLE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayerCountMessage" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=1848126639]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 236.0
+offset_top = 86.0
+offset_right = 508.0
+offset_bottom = 114.0
+theme_override_colors/font_color = Color(0.68, 0.96, 0.93, 0.94)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER_COUNT_MESSAGE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayersRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=528326044]
+layout_mode = 1
+offset_left = 124.0
+offset_top = 142.0
+offset_right = 620.0
+offset_bottom = 198.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel" unique_id=904451758]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel/RowMargin" unique_id=1272346401]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PlayersIcon" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel/RowMargin/RowLayout" unique_id=260845652]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+
+[node name="PlayersLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel/RowMargin/RowLayout" unique_id=292409999]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "PLAYER_COUNT_PLAYERS"
+vertical_alignment = 1
+
+[node name="PlayersSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel/RowMargin/RowLayout" unique_id=1042389747]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlayerCountOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel/RowMargin/RowLayout" unique_id=51265692]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(156, 42)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 0
+item_count = 3
 popup/item_0/text = "双人对局"
 popup/item_0/id = 2
 popup/item_1/text = "三人对局"
@@ -141,49 +185,125 @@ popup/item_1/id = 3
 popup/item_2/text = "四人对局"
 popup/item_2/id = 4
 
-[node name="ItemModeOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(194, 57)
+[node name="ItemModeRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=1463530843]
 layout_mode = 1
-focus_mode = 0
-modulate = Color(1, 1, 1, 0)
-offset_left = 388.0
-offset_top = 205.0
-offset_right = 582.0
-offset_bottom = 262.0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 0)
-theme_override_colors/font_hover_color = Color(1, 1, 0.78, 0)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-item_count = 2
+offset_left = 124.0
+offset_top = 224.0
+offset_right = 620.0
+offset_bottom = 280.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel" unique_id=2008407824]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel/RowMargin" unique_id=129779429]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ItemModeIcon" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel/RowMargin/RowLayout" unique_id=503981919]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+IconType = 1
+
+[node name="ItemModeLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel/RowMargin/RowLayout" unique_id=1552366760]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "PLAYER_COUNT_ITEM_MODE"
+vertical_alignment = 1
+
+[node name="ItemModeSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel/RowMargin/RowLayout" unique_id=543951941]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ItemModeOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel/RowMargin/RowLayout" unique_id=1589007648]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(156, 42)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 0
+item_count = 2
 popup/item_0/text = "已开启"
 popup/item_0/id = 1
 popup/item_1/text = "已关闭"
 popup/item_1/id = 0
 
-[node name="WinningScoreOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(194, 57)
+[node name="WinningScoreRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=175710680]
 layout_mode = 1
-focus_mode = 0
-modulate = Color(1, 1, 1, 0)
-offset_left = 388.0
-offset_top = 278.0
-offset_right = 582.0
-offset_bottom = 335.0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 0)
-theme_override_colors/font_hover_color = Color(1, 1, 0.78, 0)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-item_count = 3
+offset_left = 124.0
+offset_top = 306.0
+offset_right = 620.0
+offset_bottom = 362.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel" unique_id=402795975]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel/RowMargin" unique_id=1994964297]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="WinningScoreIcon" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel/RowMargin/RowLayout" unique_id=488180839]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+IconType = 2
+
+[node name="WinningScoreLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel/RowMargin/RowLayout" unique_id=251223560]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "PLAYER_COUNT_WINNING_SCORE"
+vertical_alignment = 1
+
+[node name="WinningScoreSpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel/RowMargin/RowLayout" unique_id=1880858294]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WinningScoreOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel/RowMargin/RowLayout" unique_id=831349044]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(156, 42)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 1
+item_count = 3
 popup/item_0/text = "50 分"
 popup/item_0/id = 50
 popup/item_1/text = "100 分"
@@ -191,98 +311,32 @@ popup/item_1/id = 100
 popup/item_2/text = "200 分"
 popup/item_2/id = 200
 
-[node name="StartGameButton" type="Button" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
+[node name="StartGameFrame" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=907826060]
+custom_minimum_size = Vector2(248, 48)
+layout_mode = 1
+anchors_preset = 0
+offset_left = 248.0
+offset_top = 392.0
+offset_right = 496.0
+offset_bottom = 440.0
+mouse_filter = 2
+
+[node name="StartGameButton" type="Button" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/StartGameFrame" unique_id=1782446182]
 unique_name_in_owner = true
 layout_mode = 1
-modulate = Color(1, 1, 1, 0)
-offset_left = 220.0
-offset_top = 374.0
-offset_right = 500.0
-offset_bottom = 434.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 0)
-theme_override_colors/font_hover_color = Color(1, 1, 0.78, 0)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 0)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0)
-theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.92, 1, 0.98, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 text = "PLAYER_COUNT_START_GAME"
 flat = true
-
-[node name="ValueOverlays" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="PlayerCountValueOverlay" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ValueOverlays"]
-unique_name_in_owner = true
-visible = false
-offset_right = 194.0
-offset_bottom = 57.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_value_overlay")
-mouse_filter = 2
-
-[node name="Label" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ValueOverlays/PlayerCountValueOverlay"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 22
-vertical_alignment = 1
-
-[node name="ItemModeValueOverlay" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ValueOverlays"]
-unique_name_in_owner = true
-visible = false
-offset_right = 194.0
-offset_bottom = 57.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_value_overlay")
-mouse_filter = 2
-
-[node name="Label" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ValueOverlays/ItemModeValueOverlay"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 22
-vertical_alignment = 1
-
-[node name="WinningScoreValueOverlay" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ValueOverlays"]
-unique_name_in_owner = true
-visible = false
-offset_right = 194.0
-offset_bottom = 57.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_value_overlay")
-mouse_filter = 2
-
-[node name="Label" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ValueOverlays/WinningScoreValueOverlay"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 22
-vertical_alignment = 1

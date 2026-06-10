@@ -147,8 +147,8 @@ public static class GameInputActions
 		{
 			root[action.Id] = new Godot.Collections.Dictionary
 			{
-				["keyboard"] = SerializeEvent(GetEventForSlot(action, BindingSlot.Keyboard)),
-				["gamepad"] = SerializeEvent(GetEventForSlot(action, BindingSlot.Gamepad)),
+				["keyboard"] = SerializeEvents(GetEventsForSlot(action, BindingSlot.Keyboard)),
+				["gamepad"] = SerializeEvents(GetEventsForSlot(action, BindingSlot.Gamepad)),
 			};
 		}
 
@@ -170,16 +170,14 @@ public static class GameInputActions
 				continue;
 			}
 
-			if (TryParseEvent(actionData, "keyboard", BindingSlot.Keyboard, out InputEvent? keyboardEvent) && keyboardEvent != null)
+			if (TryParseEvents(actionData, "keyboard", BindingSlot.Keyboard, action.DefaultKeyboardEvent, out List<InputEvent> keyboardEvents))
 			{
-				ClearSlotBindings(action, BindingSlot.Keyboard);
-				ApplyBindingToInputMap(action, BindingSlot.Keyboard, keyboardEvent);
+				ReplaceSlotBindings(action, BindingSlot.Keyboard, keyboardEvents);
 			}
 
-			if (TryParseEvent(actionData, "gamepad", BindingSlot.Gamepad, out InputEvent? gamepadEvent) && gamepadEvent != null)
+			if (TryParseEvents(actionData, "gamepad", BindingSlot.Gamepad, action.DefaultGamepadEvent, out List<InputEvent> gamepadEvents))
 			{
-				ClearSlotBindings(action, BindingSlot.Gamepad);
-				ApplyBindingToInputMap(action, BindingSlot.Gamepad, gamepadEvent);
+				ReplaceSlotBindings(action, BindingSlot.Gamepad, gamepadEvents);
 			}
 		}
 
@@ -351,22 +349,44 @@ public static class GameInputActions
 		}
 	}
 
+	private static void ReplaceSlotBindings(BindingAction action, BindingSlot slot, IReadOnlyList<InputEvent> inputEvents)
+	{
+		ClearSlotBindings(action, slot);
+		foreach (InputEvent inputEvent in inputEvents)
+		{
+			ApplyBindingToInputMap(action, slot, inputEvent);
+		}
+	}
+
 	private static InputEvent GetEventForSlot(BindingAction action, BindingSlot slot)
 	{
-		foreach (string inputMapAction in action.InputMapActions)
+		foreach (InputEvent inputEvent in GetEventsForSlot(action, slot))
 		{
-			foreach (InputEvent inputEvent in InputMap.ActionGetEvents(inputMapAction))
-			{
-				if (MatchesSlot(inputEvent, slot))
-				{
-					return inputEvent;
-				}
-			}
+			return inputEvent;
 		}
 
 		return slot == BindingSlot.Keyboard
 			? action.DefaultKeyboardEvent
 			: action.DefaultGamepadEvent;
+	}
+
+	private static IReadOnlyList<InputEvent> GetEventsForSlot(BindingAction action, BindingSlot slot)
+	{
+		var result = new List<InputEvent>();
+		if (action.InputMapActions.Length == 0)
+		{
+			return result;
+		}
+
+		foreach (InputEvent inputEvent in InputMap.ActionGetEvents(action.InputMapActions[0]))
+		{
+			if (MatchesSlot(inputEvent, slot))
+			{
+				result.Add(inputEvent);
+			}
+		}
+
+		return result;
 	}
 
 	private static bool MatchesSlot(InputEvent inputEvent, BindingSlot slot)
@@ -435,18 +455,93 @@ public static class GameInputActions
 		return new Godot.Collections.Dictionary();
 	}
 
-	private static bool TryParseEvent(
+	private static Godot.Collections.Array SerializeEvents(IReadOnlyList<InputEvent> inputEvents)
+	{
+		var serializedEvents = new Godot.Collections.Array();
+		foreach (InputEvent inputEvent in inputEvents)
+		{
+			serializedEvents.Add(SerializeEvent(inputEvent));
+		}
+
+		return serializedEvents;
+	}
+
+	private static bool TryParseEvents(
 		Godot.Collections.Dictionary dictionary,
 		string key,
 		BindingSlot slot,
-		out InputEvent? inputEvent)
+		InputEvent defaultSlotEvent,
+		out List<InputEvent> inputEvents)
 	{
-		inputEvent = null;
-		if (!TryGetDictionaryValue(dictionary, key, out Godot.Collections.Dictionary eventData))
+		inputEvents = new List<InputEvent>();
+		if (!dictionary.ContainsKey(key))
 		{
 			return false;
 		}
 
+		Variant storedValue = dictionary[key];
+		if (storedValue.VariantType == Variant.Type.Array)
+		{
+			foreach (Variant entry in storedValue.AsGodotArray())
+			{
+				if (entry.VariantType != Variant.Type.Dictionary)
+				{
+					continue;
+				}
+
+				if (TryParseSerializedEvent(entry.AsGodotDictionary(), slot, out InputEvent? inputEvent) && inputEvent != null)
+				{
+					inputEvents.Add(inputEvent);
+				}
+			}
+
+			return inputEvents.Count > 0;
+		}
+
+		if (storedValue.VariantType == Variant.Type.Dictionary
+			&& TryParseSerializedEvent(storedValue.AsGodotDictionary(), slot, out InputEvent? legacyEvent)
+			&& legacyEvent != null)
+		{
+			if (AreEquivalentBindingEvents(legacyEvent, defaultSlotEvent))
+			{
+				return false;
+			}
+
+			inputEvents.Add(legacyEvent);
+			return true;
+		}
+
+		return false;
+	}
+
+	private static bool AreEquivalentBindingEvents(InputEvent left, InputEvent right)
+	{
+		if (left is InputEventKey leftKey && right is InputEventKey rightKey)
+		{
+			return leftKey.Keycode == rightKey.Keycode
+				&& leftKey.PhysicalKeycode == rightKey.PhysicalKeycode;
+		}
+
+		if (left is InputEventJoypadButton leftButton && right is InputEventJoypadButton rightButton)
+		{
+			return leftButton.ButtonIndex == rightButton.ButtonIndex;
+		}
+
+		if (left is InputEventJoypadMotion leftMotion && right is InputEventJoypadMotion rightMotion)
+		{
+			return leftMotion.Axis == rightMotion.Axis
+				&& Mathf.Sign(leftMotion.AxisValue) == Mathf.Sign(rightMotion.AxisValue);
+		}
+
+		return false;
+	}
+
+	private static bool TryParseSerializedEvent(
+		Godot.Collections.Dictionary eventData,
+		BindingSlot slot,
+		out InputEvent? inputEvent)
+	{
+		inputEvent = null;
 		string type = ReadDictionaryString(eventData, "type");
 		switch (type)
 		{
