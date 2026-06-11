@@ -189,14 +189,24 @@ public partial class GameAudioManager : Node
 			GetTree().NodeAdded -= BindUiAudioRecursive;
 		}
 
-		while (_sfxPlayerPool.Count > 0)
-		{
-			AudioStreamPlayer pooledPlayer = _sfxPlayerPool.Pop();
-			if (GodotObject.IsInstanceValid(pooledPlayer) && !pooledPlayer.IsQueuedForDeletion())
-			{
-				pooledPlayer.QueueFree();
-			}
-		}
+		DisposeAllAudioImmediately();
+	}
+
+	public void DisposeAllAudioImmediately()
+	{
+		_gameplayTensionEnabled = false;
+		DisposeAllAudioPlayers();
+		_sfxPlayerPool.Clear();
+		_streamCache.Clear();
+		_musicStreamCache.Clear();
+		_lastPlayedAt.Clear();
+		_missingWarningIds.Clear();
+		_missingMusicWarningIds.Clear();
+		_currentMusicId = string.Empty;
+		_currentMusicSpec = null;
+		_musicPlayer = null;
+		_ambiencePlayer = null;
+		_tensionPlayer = null;
 	}
 
 	public void PlaySfx(
@@ -339,32 +349,44 @@ public partial class GameAudioManager : Node
 			Name = "SfxPooled",
 			Bus = _soundBus,
 		};
-		player.Finished += () => RecycleSfxPlayer(player);
+		ulong playerId = player.GetInstanceId();
+		player.Finished += () => RecycleSfxPlayerById(playerId);
 		AddChild(player);
 		return player;
 	}
 
-	private void RecycleSfxPlayer(AudioStreamPlayer player)
+	private void RecycleSfxPlayerById(ulong playerId)
 	{
-		if (!IsLive(player) || player.IsQueuedForDeletion())
+		RecycleSfxPlayer(GetAudioPlayerById(playerId));
+	}
+
+	private void RecycleSfxPlayer(AudioStreamPlayer? player)
+	{
+		if (!IsLive(player))
 		{
 			return;
 		}
 
-		player.Stop();
-		player.Stream = null;
-		player.Name = "SfxPooled";
-		player.Bus = _soundBus;
-		player.VolumeDb = 0.0f;
-		player.PitchScale = 1.0f;
-
-		if (player.GetParent() != this || _sfxPlayerPool.Count >= MaxPooledSfxPlayers)
+		AudioStreamPlayer livePlayer = player!;
+		if (livePlayer.IsQueuedForDeletion())
 		{
-			player.QueueFree();
 			return;
 		}
 
-		_sfxPlayerPool.Push(player);
+		livePlayer.Stop();
+		livePlayer.Stream = null;
+		livePlayer.Name = "SfxPooled";
+		livePlayer.Bus = _soundBus;
+		livePlayer.VolumeDb = 0.0f;
+		livePlayer.PitchScale = 1.0f;
+
+		if (livePlayer.GetParent() != this || _sfxPlayerPool.Count >= MaxPooledSfxPlayers)
+		{
+			DisposeAudioPlayer(livePlayer);
+			return;
+		}
+
+		_sfxPlayerPool.Push(livePlayer);
 	}
 
 	public void PlayMusic(string musicId, float fadeSeconds = 1.5f, bool restartIfSame = false)
@@ -779,21 +801,16 @@ public partial class GameAudioManager : Node
 		AudioStreamPlayer livePlayer = player;
 		if (fadeSeconds <= 0.0f)
 		{
-			livePlayer.QueueFree();
+			DisposeAudioPlayer(livePlayer);
 			return;
 		}
 
+		ulong playerId = livePlayer.GetInstanceId();
 		Tween tween = CreateTween();
 		tween.TweenProperty(livePlayer, "volume_db", MutedVolumeDb, fadeSeconds)
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.In);
-		tween.Finished += () =>
-		{
-			if (GodotObject.IsInstanceValid(livePlayer))
-			{
-				livePlayer.QueueFree();
-			}
-		};
+		tween.Finished += () => DisposeAudioPlayerById(playerId);
 	}
 
 	private void UpdateActiveMusicVolumes()
@@ -829,6 +846,41 @@ public partial class GameAudioManager : Node
 	private static bool IsLive(AudioStreamPlayer? player)
 	{
 		return player != null && GodotObject.IsInstanceValid(player);
+	}
+
+	private AudioStreamPlayer? GetAudioPlayerById(ulong playerId)
+	{
+		return GodotObject.InstanceFromId(playerId) as AudioStreamPlayer;
+	}
+
+	private void DisposeAudioPlayerById(ulong playerId)
+	{
+		DisposeAudioPlayer(GetAudioPlayerById(playerId));
+	}
+
+	private void DisposeAllAudioPlayers()
+	{
+		foreach (Node child in new List<Node>(GetChildren()))
+		{
+			if (child is AudioStreamPlayer player)
+			{
+				DisposeAudioPlayer(player);
+			}
+		}
+	}
+
+	private void DisposeAudioPlayer(AudioStreamPlayer? player)
+	{
+		if (!IsLive(player))
+		{
+			return;
+		}
+
+		AudioStreamPlayer livePlayer = player!;
+		livePlayer.Stop();
+		livePlayer.Stream = null;
+		livePlayer.GetParent()?.RemoveChild(livePlayer);
+		livePlayer.Free();
 	}
 
 	private static float LoadSavedMusicVolumeDb()

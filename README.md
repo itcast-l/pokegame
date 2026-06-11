@@ -7,6 +7,8 @@ Deckland is a Godot 4.6 C# card battler prototype with local card-table play, it
 - Main scene: `res://scenes/main_menu_scene.tscn`
 - Core gameplay scene: `res://scenes/game_board_scene.tscn`
 - Local play supports 2-4 players, optional item mode, and configurable winning score.
+- Main-menu multiplayer opens a prototype lobby with LAN host/search, ready/start flow, and Steam lobby hooks when Steam is available.
+- LAN turn sync, reconnect, AI takeover, and pending-choice fallback flows have automated smoke coverage.
 - Adventure currently uses a linear enemy ladder: select the next available enemy, win a 2-player adventure battle, then unlock the next enemy.
 - Character avatar selection and adventure unlock progress are stored in SaveState profile slots, with legacy `user://settings.cfg` migration.
 - Item-card definitions are data-driven through Pandora data in `data.pandora`, with fallback definitions in `scripts/ItemCardCatalog.cs`.

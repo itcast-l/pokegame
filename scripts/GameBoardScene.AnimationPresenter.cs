@@ -241,7 +241,8 @@ public partial class GameBoardScene
 				T node = pool.Pop();
 				if (GodotObject.IsInstanceValid(node) && !node.IsQueuedForDeletion())
 				{
-					node.QueueFree();
+					node.GetParent()?.RemoveChild(node);
+					node.Free();
 				}
 			}
 		}

@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://c4f3r0g68r5cn"]
+[gd_scene load_steps=20 format=3 uid="uid://c4f3r0g68r5cn"]
 
 [ext_resource type="Texture2D" uid="uid://d1okmldodfjwc" path="res://art/menu/main_menu_concept_10.png" id="1_menu_background"]
 [ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="2_water_caustic_shader"]
@@ -9,7 +9,6 @@
 [ext_resource type="Script" uid="uid://ckc3u46a0io30" path="res://scripts/MainMenuOceanDynamics.cs" id="7_main_menu_ocean_dynamics"]
 [ext_resource type="Shader" uid="uid://cbdfaca7f7cye" path="res://shaders/menu_left_depth_gradient.gdshader" id="8_left_depth_gradient_shader"]
 [ext_resource type="PackedScene" path="res://scenes/main_menu_avatar_entry.tscn" id="9_avatar_entry"]
-[ext_resource type="Script" uid="uid://ctiqydcn7xvqq" path="res://scripts/MainMenuMusicBank.gd" id="10_main_menu_music_bank"]
 [ext_resource type="Script" uid="uid://bhexx6mj1xv3q" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="11_phantom_camera_2d"]
 [ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="12_phantom_camera_tween"]
 [ext_resource type="Script" uid="uid://bdanq3n52xpf8" path="res://scripts/MainMenuBackgroundAnimator.cs" id="13_background_animator"]
@@ -72,9 +71,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("5_main_menu_scene")
-
-[node name="MainMenuMusicBank" type="Node" parent="." unique_id=782640190]
-script = ExtResource("10_main_menu_music_bank")
 
 [node name="MenuCamera2D" type="Camera2D" parent="." unique_id=1287748772]
 top_level = true

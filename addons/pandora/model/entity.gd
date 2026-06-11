@@ -137,6 +137,8 @@ class OverridingProperty:
 			_parent_entity._property_overrides.erase(_property.get_property_name())
 
 	func _change_name(old_name: String, new_name: String) -> void:
+		if _parent_entity == null:
+			return
 		if _parent_entity._property_overrides.has(old_name):
 			var value = _parent_entity._property_overrides[old_name]
 			_parent_entity._property_overrides.erase(old_name)
@@ -148,6 +150,13 @@ class OverridingProperty:
 		var old_inherited_property = _parent_entity._inherited_properties[old_name]
 		_parent_entity._inherited_properties.erase(old_name)
 		_parent_entity._inherited_properties[new_name] = old_inherited_property
+
+	func _dispose_runtime_references() -> void:
+		if _property != null and _property.name_changed.is_connected(_change_name):
+			_property.name_changed.disconnect(_change_name)
+		_property = null
+		_parent_entity = null
+		super._dispose_runtime_references()
 
 
 ## do not rely on _init as it breaks .tres files that may still
@@ -656,6 +665,35 @@ func load_data(data: Dictionary) -> void:
 		_index = data["_index"]
 	else:
 		_index = 0
+
+
+func _dispose_runtime_references() -> void:
+	for property in _inherited_properties.values():
+		var inherited_property = property as OverridingProperty
+		if inherited_property != null:
+			inherited_property._dispose_runtime_references()
+
+	for key in _instance_properties:
+		var instance_property = _instance_properties[key] as PandoraPropertyInstance
+		if instance_property != null:
+			instance_property._dispose_runtime_references()
+
+	_properties.clear()
+	_property_map.clear()
+	_inherited_properties.clear()
+	_property_overrides.clear()
+	_instance_properties.clear()
+
+	if self is PandoraCategory:
+		var category = self as PandoraCategory
+		category._children.clear()
+
+	_instanced_from_id = ""
+	_category_id = ""
+	_script_path = ""
+	_icon_path = ""
+	_name = ""
+	_id = ""
 
 
 ## Produces a data dictionary that can be used on load_data()

@@ -47,5 +47,11 @@ func save_data() -> Dictionary:
 	return {"_value": type.write_value(_value), "_property_id": _property_id}
 
 
+func _dispose_runtime_references() -> void:
+	_property = null
+	_value = null
+	_property_id = ""
+
+
 func _to_string() -> String:
 	return "<PandoraPropertyInstance '" + get_property_name() + "'>"

@@ -2,11 +2,12 @@
 
 ## Short Term
 
-- Disable or implement the main-menu multiplayer button so it no longer behaves like a dead entry.
+- Investigate and fix the scene/object/resource cleanup leaks reported at the end of the Godot smoke runs.
 - Verify the linear adventure ladder in Godot: first enemy available, victory unlocks the next enemy, next-stage/replay/return buttons, persisted progress after restart, and final-stage completion behavior.
-- Run keyboard/controller focus QA for the main menu, adventure enemy list, settings rows, dialog controls, pause menu, and winner banner.
+- Run keyboard/controller focus QA for the main menu, multiplayer lobby, adventure enemy list, settings rows, dialog controls, pause menu, and winner banner.
 - Clean the Windows export preset so release builds exclude editor tooling, MCP/server files, vendor docs, sample scenes, and unused development assets.
-- Run the main menu, local match, adventure enemy selection, pause menu, winner banner, and adventure stages 1-14 in Godot and capture runtime issues.
+- Run the main menu, local match, multiplayer lobby, pause menu, winner banner, and adventure stages 1-14 in Godot and capture runtime issues.
+- Run manual Steam multiplayer QA for lobby creation, join, invite, and reconnect on top of the existing LAN smoke suite.
 
 ## Medium Term
 

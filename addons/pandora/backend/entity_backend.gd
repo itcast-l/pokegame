@@ -517,6 +517,12 @@ func _serialize_data(data: Dictionary) -> Array[Dictionary]:
 
 # used for testing only
 func _clear() -> void:
+	for entity in _entities.values():
+		entity._dispose_runtime_references()
+	for category in _categories.values():
+		category._dispose_runtime_references()
+	for property in _properties.values():
+		property._dispose_runtime_references()
 	_entities.clear()
 	_categories.clear()
 	_properties.clear()

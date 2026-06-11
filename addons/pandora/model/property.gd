@@ -156,6 +156,15 @@ func equals(other: PandoraProperty) -> bool:
 	)
 
 
+func _dispose_runtime_references() -> void:
+	_setting_overrides.clear()
+	_default_value = null
+	_type = null
+	_category_id = ""
+	_name = ""
+	_id = ""
+
+
 func _to_string() -> String:
 	return (
 		"<PandoraProperty '"

@@ -40,6 +40,7 @@ func _run() -> void:
 
 	if not _failed:
 		print("GODOT_SCENE_SMOKE_OK")
+		await _dispose_audio_before_quit()
 		quit(0)
 
 
@@ -82,3 +83,13 @@ func _fail(message: String) -> void:
 	push_error(message)
 	print("GODOT_SCENE_SMOKE_FAIL %s" % message)
 	quit(1)
+
+
+func _dispose_audio_before_quit() -> void:
+	var game_audio := root.get_node_or_null("GameAudio")
+	if game_audio == null or not game_audio.has_method("DisposeAllAudioImmediately"):
+		return
+
+	game_audio.call("DisposeAllAudioImmediately")
+	await process_frame
+	await process_frame

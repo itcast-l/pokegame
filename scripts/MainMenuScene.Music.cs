@@ -6,9 +6,4 @@ public partial class MainMenuScene : Control
 	{
 		ApplyMainMenuMusicSelection();
 	}
-
-	private Node? GetMusicManager()
-	{
-		return GetNodeOrNull<Node>("/root/MusicManager");
-	}
 }

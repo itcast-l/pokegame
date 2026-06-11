@@ -7,8 +7,6 @@ var _settings = ResonateSettings.new()
 
 
 func _enter_tree():
-	add_autoload_singleton("SoundManager", "sound_manager/sound_manager.gd")
-	add_autoload_singleton("MusicManager", "music_manager/music_manager.gd")
 	add_custom_type("SoundBank", "Node", preload("sound_manager/sound_bank.gd"), preload("sound_manager/sound_bank.svg"))
 	add_custom_type("MusicBank", "Node", preload("music_manager/music_bank.gd"), preload("music_manager/music_bank.svg"))
 
@@ -52,8 +50,6 @@ func _enter_tree():
 
 
 func _exit_tree():
-	remove_autoload_singleton("SoundManager")
-	remove_autoload_singleton("MusicManager")
 	remove_custom_type("SoundBank")
 	remove_custom_type("MusicBank")
 
@@ -100,4 +96,3 @@ func migrate_old_bus_settings():
 
 		ProjectSettings.set_setting(_settings.MUSIC_BANK_BUS_SETTING_NAME, value)
 		ProjectSettings.clear("audio/manager/music/bank")
-

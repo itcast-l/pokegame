@@ -5,8 +5,6 @@ using Godot;
 
 public partial class MainMenuScene : Control
 {
-	private const string BackgroundMusicBankLabel = "main_menu";
-	private const string BackgroundMusicTrackName = "background";
 	private const float BackgroundMusicFadeSeconds = 2.0f;
 	private const string BackgroundArtPath = "BackgroundArt";
 	private const string MenuCameraPath = "MenuCamera2D";
@@ -148,7 +146,6 @@ public partial class MainMenuScene : Control
 	private uint _windowResolutionApplyToken;
 	private ulong _menuCameraTransitionStartMsec;
 	private float _menuCameraTransitionTotalSeconds;
-	private float _appliedMusicVolumeDb = float.NaN;
 	private readonly List<MainMenuMusicOption> _mainMenuMusicOptions = new();
 	private readonly System.Collections.Generic.List<(Label Label, string Key)> _localizedLabels = new();
 	private readonly System.Collections.Generic.List<(Button Button, string Key)> _localizedButtons = new();

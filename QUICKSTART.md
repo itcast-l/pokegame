@@ -12,13 +12,19 @@
 dotnet build pokegame.csproj
 ```
 
+## Local Test Checks
+
+```sh
+dotnet run --project tests/Rules.Tests/Rules.Tests.csproj
+bash tests/run_multiplayer_reconnect_smoke_suite.sh
+```
+
 ## Main Flows
 
 - `Solo` opens the player-count dialog and starts a local 2-4 player match.
 - `Adventure` opens the enemy/avatar selection screen and starts a 2-player adventure battle.
+- `Multi` opens the multiplayer lobby with LAN host/search, room join, ready/start flow, and Steam host/refresh when Steam is initialized.
 - `Settings` controls master volume, music volume, mute, window mode, language, ocean motion, and motion scale.
-
-`Multi` is currently a visible placeholder and is not wired to a multiplayer flow yet.
 
 ## Useful Files
 

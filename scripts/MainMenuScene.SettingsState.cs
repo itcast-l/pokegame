@@ -129,20 +129,6 @@ public partial class MainMenuScene
 			? LinearVolumeToDb(0.0f)
 			: LinearVolumeToDb(_musicVolume);
 		GameAudio?.SetMusicVolumeDb(volumeDb);
-
-		Node? musicManager = GetMusicManager();
-		if (musicManager == null)
-		{
-			return;
-		}
-
-		if (!float.IsNaN(_appliedMusicVolumeDb) && Mathf.IsEqualApprox(_appliedMusicVolumeDb, volumeDb))
-		{
-			return;
-		}
-
-		musicManager.Call("set_volume", volumeDb);
-		_appliedMusicVolumeDb = volumeDb;
 	}
 
 	private void SyncSettingsControls()

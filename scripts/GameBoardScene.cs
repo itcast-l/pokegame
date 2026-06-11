@@ -656,7 +656,31 @@ public partial class GameBoardScene : Control
 	public override void _ExitTree()
 	{
 		DisconnectNetworkManagerSignalsForBoard();
+		ClearDetachedVisualPools();
 		_animationPresenter?.ClearPools();
+	}
+
+	private void ClearDetachedVisualPools()
+	{
+		FreeDetachedNodes(_pooledHandCardSlots);
+		FreeDetachedNodes(_tableRenderTexturePool);
+		FreeDetachedNodes(_tableRenderPanelPool);
+	}
+
+	private static void FreeDetachedNodes<T>(ICollection<T> nodes) where T : Node
+	{
+		foreach (T node in new List<T>(nodes))
+		{
+			if (!GodotObject.IsInstanceValid(node))
+			{
+				continue;
+			}
+
+			node.GetParent()?.RemoveChild(node);
+			node.Free();
+		}
+
+		nodes.Clear();
 	}
 
 	public override void _Process(double delta)
