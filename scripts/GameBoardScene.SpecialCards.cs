@@ -294,7 +294,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 				[CardEffectTypes.ShuffleTable] = _runtime.ResolveShuffleTableEffectAsync,
 				[CardEffectTypes.CollectTable] = _runtime.ResolveCollectTableEffectAsync,
 				[CardEffectTypes.StealCard] = _runtime.ResolveStealCardEffectAsync,
-				[CardEffectTypes.StealDeckCards] = (request, _) => Task.FromResult(_runtime.ResolveStealDeckCardsEffect(request)),
+					[CardEffectTypes.StealDeckCards] = _runtime.ResolveStealDeckCardsEffectAsync,
 				[CardEffectTypes.DoubleCollect] = _runtime.ResolveDoubleCollectEffectAsync,
 				[CardEffectTypes.ExtraTurn] = _runtime.ResolveExtraTurnEffectAsync,
 				[CardEffectTypes.GrantReward] = (request, _) => Task.FromResult(_runtime.ResolveGrantRewardEffect(request)),

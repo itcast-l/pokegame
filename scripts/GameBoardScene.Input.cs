@@ -122,13 +122,13 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (ShouldSendNetworkPendingItemSelectionRequest())
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 			return true;
 		}
 
-		if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 			return true;
@@ -278,6 +278,11 @@ public partial class GameBoardScene
 			}
 
 			if (isJellyfishDisabled)
+			{
+				return false;
+			}
+
+			if (IsNetworkHandCardLocked(localPlayerIndex, displayIndex))
 			{
 				return false;
 			}

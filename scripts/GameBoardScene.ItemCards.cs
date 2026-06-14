@@ -64,6 +64,12 @@ public partial class GameBoardScene
 
 	private void CancelPendingItemSelection()
 	{
+		if (ShouldSendNetworkPendingItemSelectionRequest() && _networkPredictedItemVisualActive)
+		{
+			RollbackPredictedNetworkItemCardPlay();
+			ClearNetworkPendingActionState();
+		}
+
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		_isProcessingCardPlay = false;
@@ -263,6 +269,7 @@ public partial class GameBoardScene
 
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
+			BeginPredictedNetworkHandLimitDiscardSelection(displayIndex);
 			RequestNetworkPendingItemSelection(-1, displayIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}

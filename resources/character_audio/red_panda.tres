@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="CharacterAudioConfig" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAudioConfig.cs" id="1_audio_config"]
+[ext_resource type="Resource" path="res://resources/character_audio/common.tres" id="2_common"]
+
+[resource]
+script = ExtResource("1_audio_config")
+Fallback = ExtResource("2_common")

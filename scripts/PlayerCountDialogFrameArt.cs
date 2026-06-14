@@ -42,15 +42,7 @@ public partial class PlayerCountDialogFrameArt : Control
 		{
 			CollectInteractiveDescendants(this);
 		}
-		byte[] bytes = Godot.FileAccess.GetFileAsBytes(SourceTexturePath);
-		if (bytes.Length > 0)
-		{
-			Image image = new();
-			if (image.LoadPngFromBuffer(bytes) == Error.Ok)
-			{
-				_sourceTexture = ImageTexture.CreateFromImage(image);
-			}
-		}
+		_sourceTexture = GD.Load<Texture2D>(SourceTexturePath);
 
 		SetProcess(true);
 		QueueRedraw();

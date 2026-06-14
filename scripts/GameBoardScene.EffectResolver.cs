@@ -127,12 +127,12 @@ public partial class GameBoardScene
 			turnSequenceGeneration);
 	}
 
-	private PlayCardResult ResolveStealDeckCardsEffect(CardTriggerRequest request)
+	private async Task<PlayCardResult> ResolveStealDeckCardsEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{
 		int ownerPlayerIndex = request.Event.ActorPlayerIndex;
 		int targetPlayerIndex = request.Event.TargetPlayerIndex;
 		int cardsToMoveLimit = Mathf.Max(1, request.Rule.EffectValues.GetInt(CardEffectValueKeys.Count, 3));
-		return ResolveKingEffect(ownerPlayerIndex, targetPlayerIndex, cardsToMoveLimit);
+		return await ResolveKingEffectAsync(ownerPlayerIndex, targetPlayerIndex, cardsToMoveLimit, turnSequenceGeneration);
 	}
 
 	private async Task<PlayCardResult> ResolveDoubleCollectEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)

@@ -30,6 +30,18 @@ public partial class GameBoardScene
 		}
 
 		int displayIndex = drawnCard.Value.HandIndex;
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastDrawCardVisualEventFromHost(
+				playerIndex,
+				displayIndex,
+				ToNetworkCardCode(drawnCard.Value.Card),
+				turnSequenceGeneration,
+				snapshotId);
+		}
+
 		HideHandDisplaySlot(playerIndex, displayIndex);
 		RenderPlayerCardPiles();
 		RenderPlayerHands();

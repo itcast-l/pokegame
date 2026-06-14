@@ -19,6 +19,7 @@ public partial class CharacterAvatar
 		if (_currentAction == AvatarAction.Idle)
 		{
 			_portraitPivot.Position = _basePivotPosition;
+			_portraitPivot.Scale = Vector2.One;
 		}
 
 		LayoutAttackFx();
@@ -122,14 +123,20 @@ public partial class CharacterAvatar
 		};
 	}
 
-	private static float GetActionFrameDuration(AvatarAction action)
+	private float GetActionFrameDuration(AvatarAction action)
 	{
 		return action switch
 		{
-			AvatarAction.Idle => 0.12f,
+			AvatarAction.Idle => GetIdleFrameDuration(),
 			AvatarAction.Defeat => 0.06f,
 			_ => 0.08f,
 		};
+	}
+
+	private float GetIdleFrameDuration()
+	{
+		float configured = CharacterAvatarCatalog.GetIdleFrameSeconds(GetResolvedAvatarRoot());
+		return configured > 0.0f ? configured : 0.12f;
 	}
 
 	private int GetActionFrameCount(AvatarAction action)

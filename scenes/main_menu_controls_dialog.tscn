@@ -100,7 +100,7 @@ mouse_filter = 2
 
 [node name="ControlsDialogPanel" type="PanelContainer" parent="DialogCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(744, 480)
+custom_minimum_size = Vector2(744, 600)
 layout_mode = 2
 mouse_filter = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
@@ -117,8 +117,8 @@ script = ExtResource("3_panel_art")
 PanelTexturePath = "res://assets/ui/player_count_dialog_blank_panel.png"
 CoverBuiltInActionWell = false
 CoverBuiltInRowSlots = false
-InnerTopRatio = 0.19
-InnerBottomRatio = 0.10
+InnerTopRatio = 0.15
+InnerBottomRatio = 0.08
 InnerSideRatio = 0.09
 
 [node name="DialogMargin" type="MarginContainer" parent="DialogCenter/ControlsDialogPanel"]
@@ -126,7 +126,7 @@ layout_mode = 2
 theme_override_constants/margin_left = 62
 theme_override_constants/margin_top = 62
 theme_override_constants/margin_right = 62
-theme_override_constants/margin_bottom = 46
+theme_override_constants/margin_bottom = 44
 
 [node name="DialogLayout" type="VBoxContainer" parent="DialogCenter/ControlsDialogPanel/DialogMargin"]
 layout_mode = 2
@@ -184,6 +184,7 @@ horizontal_alignment = 1
 
 [node name="RowsScroll" type="ScrollContainer" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 286)
 layout_mode = 2
 size_flags_vertical = 3
 follow_focus = true

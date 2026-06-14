@@ -101,7 +101,12 @@ public partial class GameBoardScene
 
 		CheckForWinner();
 		bool captured = captureStartIndex >= 0;
-		return new PlayCardResult(true, captured, captured, CompletesTurn: !branchResult.OvertimeTriggered);
+		return new PlayCardResult(
+			true,
+			captured,
+			captured,
+			CompletesTurn: !branchResult.OvertimeTriggered,
+			CaptureVisualSync: branchResult.CaptureVisualSync);
 	}
 
 	private async Task<CardPlayBranchResult> ResolvePlayedCardCaptureAsync(
@@ -272,6 +277,11 @@ public partial class GameBoardScene
 			}
 
 			float captureFlightStaggerSeconds = pairCaptureEdgeFloat != null ? 0.0f : TableCaptureFlightStaggerSeconds;
+			NetworkCaptureVisualSync captureVisualSync = new(
+				playerIndex,
+				captureStartIndex,
+				BuildSortedExtraTableCardIndexesArray(magnetExtraCaptureIndexes),
+				captureFlightStaggerSeconds);
 			pairCaptureEdgeFloat?.QueueFreeOverlays(_animationPresenter);
 			pairCaptureEdgeFloatHandedToDeck = pairCaptureEdgeFloat != null;
 			await PlayCapturedCardsToDeckAnimationAsync(
@@ -315,6 +325,7 @@ public partial class GameBoardScene
 				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 			}
 
+			SendQuestionRewardVisualEventIfNeeded(playerIndex, captureResult.QuestionRewardAnimation, turnSequenceGeneration);
 			await PlayQuestionCardRewardAnimationAsync(playerIndex, captureResult.QuestionRewardAnimation, turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
@@ -333,7 +344,7 @@ public partial class GameBoardScene
 				await PlayPhysicalDeckShuffleAsync(playerIndex);
 			}
 
-			return new CardPlayBranchResult(false, default, resolvedOvertimeTriggerIndexes.Count > 0);
+			return new CardPlayBranchResult(false, default, resolvedOvertimeTriggerIndexes.Count > 0, captureVisualSync);
 		}
 		finally
 		{
@@ -389,7 +400,28 @@ public partial class GameBoardScene
 		return new CardPlayBranchResult(false, default, overtimeTriggered);
 	}
 
-	private readonly record struct CardPlayBranchResult(bool ShouldReturn, PlayCardResult Result, bool OvertimeTriggered);
+	private static int[] BuildSortedExtraTableCardIndexesArray(IReadOnlyCollection<int> extraTableCardIndexes)
+	{
+		if (extraTableCardIndexes.Count == 0)
+		{
+			return Array.Empty<int>();
+		}
+
+		var result = new List<int>(extraTableCardIndexes.Count);
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			result.Add(tableCardIndex);
+		}
+
+		result.Sort();
+		return result.ToArray();
+	}
+
+	private readonly record struct CardPlayBranchResult(
+		bool ShouldReturn,
+		PlayCardResult Result,
+		bool OvertimeTriggered,
+		NetworkCaptureVisualSync? CaptureVisualSync = null);
 
 	private void ClearCardPlayTriggerScratchSets()
 	{

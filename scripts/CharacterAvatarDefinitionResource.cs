@@ -7,6 +7,7 @@ public partial class CharacterAvatarDefinitionResource : Resource
 	[Export] public string DisplayName { get; set; } = string.Empty;
 	[Export] public string RootPath { get; set; } = string.Empty;
 	[Export] public int IdleFrameCount { get; set; } = 1;
+	[Export] public float IdleFrameSeconds { get; set; }
 	[Export] public int ActionFrameCount { get; set; } = 4;
 	[Export] public int AdventureStageNumber { get; set; }
 	[Export] public string AdventureAbilityNameKey { get; set; } = "ADVENTURE_ABILITY_NONE_NAME";
@@ -30,6 +31,7 @@ public partial class CharacterAvatarDefinitionResource : Resource
 			DisplayName,
 			RootPath,
 			IdleFrameCount,
+			IdleFrameSeconds,
 			ActionFrameCount,
 			AdventureStageNumber,
 			AdventureAbilityNameKey,

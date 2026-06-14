@@ -90,7 +90,7 @@ public partial class CharacterAvatarEditScene : Control
 	private void BindAvatarOptions()
 	{
 		_avatarOptionSlots.Clear();
-		for (int optionIndex = 1; optionIndex <= 15; optionIndex++)
+		for (int optionIndex = 1; optionIndex <= 18; optionIndex++)
 		{
 			if (_avatarGrid.GetNodeOrNull<Control>($"AvatarOption{optionIndex}") is not Control root)
 			{
@@ -131,7 +131,7 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Root.Visible = true;
 			optionSlot.Avatar.AvatarRoot = avatarDefinition.RootPath;
 			optionSlot.Avatar.AudioConfig = avatarDefinition.AudioConfig;
-			optionSlot.Avatar.PlayIdle();
+			optionSlot.Avatar.ShowIdleStill();
 			optionSlot.Panel.Modulate = Colors.White;
 			optionSlot.SelectionRing.Visible = false;
 			optionSlot.Button.TooltipText = "预览头像";

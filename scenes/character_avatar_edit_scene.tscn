@@ -381,3 +381,12 @@ layout_mode = 2
 
 [node name="AvatarOption15" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
+
+[node name="AvatarOption16" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+layout_mode = 2
+
+[node name="AvatarOption17" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+layout_mode = 2
+
+[node name="AvatarOption18" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+layout_mode = 2

@@ -68,6 +68,7 @@ public partial class GameBoardScene
 		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
+			_ = BeginPredictedNetworkMagnetAttachmentSelectionAsync(handIndex);
 			RequestNetworkPendingItemSelection(-1, handIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}

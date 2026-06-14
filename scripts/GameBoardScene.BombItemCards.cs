@@ -62,7 +62,14 @@ public partial class GameBoardScene
 
 		RenderTableCards();
 		CheckForWinner();
-		return new PlayCardResult(true, false);
+		return new PlayCardResult(
+			true,
+			false,
+			ItemPlayVisualSync: new NetworkItemPlayVisualSync(
+				bombCard.Id,
+				CardPlayPresentationTypes.TableOverlay,
+				itemHandIndex,
+				tableCardIndex));
 	}
 
 	private async Task ResolveBombPairAsync(int turnSequenceGeneration)
@@ -70,6 +77,16 @@ public partial class GameBoardScene
 		if (!TryGetLastTableBombPair(out int firstBombIndex, out int secondBombIndex))
 		{
 			return;
+		}
+
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastBombPairVisualEventFromHost(
+				_currentTurnPlayerIndex,
+				turnSequenceGeneration,
+				snapshotId);
 		}
 
 		PlayGameSfx(GameSfx.BombPairLock, -1.0f, 0.97f, 1.03f, 0.08);

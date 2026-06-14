@@ -35,25 +35,40 @@ public partial class GameBoardScene
 			}
 
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
-			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
-			await PlayStealHandCardAnimationAsync(
+			bool shouldPlayLocalVisual = ShouldPlayOwnerOnlyVisualLocally(ownerPlayerIndex);
+			TryBroadcastStealHandCardVisualEventFromHost(
 				ownerPlayerIndex,
 				targetPlayerIndex,
 				targetHandIndex,
-				GetVisibleStolenPlayingCardTexture(targetPlayerIndex, stolenCard),
-				GetVisibleStolenPlayingCardAttachmentOverlayTexture(targetPlayerIndex, stolenCard),
-				1.0f,
-				GetStolenPlayingCardTargetDisplayIndex(ownerPlayerIndex));
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				stolenCard,
+				null,
+				turnSequenceGeneration);
+			if (shouldPlayLocalVisual)
 			{
-				RenderPlayerHands();
-				return new PlayCardResult(false, false);
+				PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
+				await PlayStealHandCardAnimationAsync(
+					ownerPlayerIndex,
+					targetPlayerIndex,
+					targetHandIndex,
+					GetVisibleStolenPlayingCardTexture(targetPlayerIndex, stolenCard),
+					GetVisibleStolenPlayingCardAttachmentOverlayTexture(targetPlayerIndex, stolenCard),
+					1.0f,
+					GetStolenPlayingCardTargetDisplayIndex(ownerPlayerIndex));
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					RenderPlayerHands();
+					return new PlayCardResult(false, false);
+				}
 			}
 
 			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
 			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 			_playerHands[ownerPlayerIndex].Add(stolenCard);
-			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+			if (shouldPlayLocalVisual)
+			{
+				PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+			}
+
 			RenderPlayerHands();
 			return new PlayCardResult(true, false);
 		}
@@ -66,25 +81,40 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
-		await PlayStealHandCardAnimationAsync(
+		bool shouldPlayLocalItemVisual = ShouldPlayOwnerOnlyVisualLocally(ownerPlayerIndex);
+		TryBroadcastStealHandCardVisualEventFromHost(
 			ownerPlayerIndex,
 			targetPlayerIndex,
 			targetHandIndex,
-			GetVisibleStolenItemCardTexture(targetPlayerIndex, stolenItemCard),
 			null,
-			GetVisibleStolenItemCardScale(targetPlayerIndex, stolenItemCard),
-			GetStolenItemCardTargetDisplayIndex(ownerPlayerIndex));
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			stolenItemCard,
+			turnSequenceGeneration);
+		if (shouldPlayLocalItemVisual)
 		{
-			RenderPlayerHands();
-			return new PlayCardResult(false, false);
+			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
+			await PlayStealHandCardAnimationAsync(
+				ownerPlayerIndex,
+				targetPlayerIndex,
+				targetHandIndex,
+				GetVisibleStolenItemCardTexture(targetPlayerIndex, stolenItemCard),
+				null,
+				GetVisibleStolenItemCardScale(targetPlayerIndex, stolenItemCard),
+				GetStolenItemCardTargetDisplayIndex(ownerPlayerIndex));
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				RenderPlayerHands();
+				return new PlayCardResult(false, false);
+			}
 		}
 
 		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
-		PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+		if (shouldPlayLocalItemVisual)
+		{
+			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+		}
+
 		RenderPlayerHands();
 		return new PlayCardResult(true, false);
 	}
@@ -166,12 +196,12 @@ public partial class GameBoardScene
 		return !IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
 	}
 
-	private PlayCardResult ResolveKingEffect(int ownerPlayerIndex, int targetPlayerIndex)
+	private Task<PlayCardResult> ResolveKingEffectAsync(int ownerPlayerIndex, int targetPlayerIndex, int turnSequenceGeneration)
 	{
-		return ResolveKingEffect(ownerPlayerIndex, targetPlayerIndex, 3);
+		return ResolveKingEffectAsync(ownerPlayerIndex, targetPlayerIndex, 3, turnSequenceGeneration);
 	}
 
-	private PlayCardResult ResolveKingEffect(int ownerPlayerIndex, int targetPlayerIndex, int cardsToMoveLimit)
+	private async Task<PlayCardResult> ResolveKingEffectAsync(int ownerPlayerIndex, int targetPlayerIndex, int cardsToMoveLimit, int turnSequenceGeneration)
 	{
 		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count || targetPlayerIndex < 0 || targetPlayerIndex >= _playerDecks.Count)
 		{
@@ -184,6 +214,22 @@ public partial class GameBoardScene
 		}
 
 		int cardsToMove = Math.Min(cardsToMoveLimit, _playerDecks[targetPlayerIndex].Count);
+		bool shouldPlayLocalVisual = ShouldPlayOwnerOnlyVisualLocally(ownerPlayerIndex);
+		if (cardsToMove > 0)
+		{
+			TryBroadcastStealDeckCardsVisualEventFromHost(ownerPlayerIndex, targetPlayerIndex, cardsToMove, turnSequenceGeneration);
+			if (shouldPlayLocalVisual)
+			{
+				PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
+				await PlayStealDeckCardsAnimationAsync(ownerPlayerIndex, targetPlayerIndex, cardsToMove, turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+				{
+					RenderPlayerCardPiles();
+					return new PlayCardResult(false, false);
+				}
+			}
+		}
+
 		for (int cardIndex = 0; cardIndex < cardsToMove; cardIndex++)
 		{
 			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
@@ -195,11 +241,100 @@ public partial class GameBoardScene
 		Shuffle(_playerDecks[targetPlayerIndex]);
 		if (cardsToMove > 0)
 		{
-			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
-			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+			if (shouldPlayLocalVisual)
+			{
+				PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
+			}
 		}
 
+		RenderPlayerCardPiles();
 		return new PlayCardResult(true, false, cardsToMove > 0);
+	}
+
+	private async Task PlayStealDeckCardsAnimationAsync(
+		int ownerPlayerIndex,
+		int targetPlayerIndex,
+		int cardsToMove,
+		int turnSequenceGeneration)
+	{
+		if (cardsToMove <= 0 || !IsInsideTree())
+		{
+			return;
+		}
+
+		Vector2 startGlobalPosition = GetDrawCardStartGlobalPosition(targetPlayerIndex);
+		Vector2 targetGlobalPosition = GetDrawCardStartGlobalPosition(ownerPlayerIndex);
+		float startRotationDegrees = GetCardPileRotationDegreesForPlayer(targetPlayerIndex);
+		float targetRotationDegrees = GetCardPileRotationDegreesForPlayer(ownerPlayerIndex);
+		for (int cardIndex = 0; cardIndex < cardsToMove; cardIndex++)
+		{
+			await PlayStolenDeckCardFlightAsync(
+				startGlobalPosition,
+				targetGlobalPosition,
+				startRotationDegrees,
+				targetRotationDegrees);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return;
+			}
+		}
+	}
+
+	private bool ShouldPlayOwnerOnlyVisualLocally(int ownerPlayerIndex)
+	{
+		return !IsNetworkMultiplayerMode() || IsLocalHandPlayer(ownerPlayerIndex);
+	}
+
+	private void TryBroadcastStealHandCardVisualEventFromHost(
+		int ownerPlayerIndex,
+		int targetPlayerIndex,
+		int targetHandIndex,
+		PlayingCard? stolenPlayingCard,
+		ItemCard? stolenItemCard,
+		int turnSequenceGeneration)
+	{
+		if (!IsNetworkMultiplayerMode()
+			|| !IsNetworkHost()
+			|| !TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			return;
+		}
+
+		string stolenCardCode = stolenPlayingCard.HasValue ? ToNetworkCardCode(stolenPlayingCard.Value) : string.Empty;
+		IReadOnlyList<string> attachedItemCardIds = stolenPlayingCard.HasValue
+			? stolenPlayingCard.Value.GetAttachedItemCardIds()
+			: Array.Empty<string>();
+		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastStealHandCardVisualEventFromHost(
+			ownerPlayerIndex,
+			targetPlayerIndex,
+			targetHandIndex,
+			stolenCardCode,
+			attachedItemCardIds,
+			stolenItemCard.HasValue ? stolenItemCard.Value.Id : string.Empty,
+			turnSequenceGeneration,
+			snapshotId);
+	}
+
+	private void TryBroadcastStealDeckCardsVisualEventFromHost(
+		int ownerPlayerIndex,
+		int targetPlayerIndex,
+		int movedCardCount,
+		int turnSequenceGeneration)
+	{
+		if (!IsNetworkMultiplayerMode()
+			|| !IsNetworkHost()
+			|| movedCardCount <= 0
+			|| !TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			return;
+		}
+
+		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastStealDeckCardsVisualEventFromHost(
+			ownerPlayerIndex,
+			targetPlayerIndex,
+			movedCardCount,
+			turnSequenceGeneration,
+			snapshotId);
 	}
 
 }

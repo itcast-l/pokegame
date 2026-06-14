@@ -5,6 +5,16 @@ using Godot;
 public static partial class CharacterAvatarCatalog
 {
 	public const string DefaultAvatarId = "cat";
+	private static readonly HashSet<string> StarterAvatarIds = new(StringComparer.Ordinal)
+	{
+		DefaultAvatarId,
+		"bear",
+		"fox",
+		"hamster",
+		"lop_rabbit",
+		"shiba",
+		"red_panda",
+	};
 	private const bool UnlockAllAdventureStagesForTesting = true;
 	private const string PendingAvatarUnlockQueueSeparator = "|";
 	private const string AvatarResourceDirectory = "res://resources/character_avatars";
@@ -15,7 +25,21 @@ public static partial class CharacterAvatarCatalog
 	private static CharacterAvatarDefinition[] Avatars => _avatars ??= LoadAvatarDefinitions();
 
 	public static IReadOnlyList<CharacterAvatarDefinition> All => Avatars;
-	public static CharacterAvatarDefinition Default => Avatars.Length > 0 ? Avatars[0] : EmptyDefault;
+	public static CharacterAvatarDefinition Default
+	{
+		get
+		{
+			foreach (CharacterAvatarDefinition avatar in Avatars)
+			{
+				if (string.Equals(avatar.Id, DefaultAvatarId, StringComparison.Ordinal))
+				{
+					return avatar;
+				}
+			}
+
+			return Avatars.Length > 0 ? Avatars[0] : EmptyDefault;
+		}
+	}
 
 	public static CharacterAvatarDefinition GetById(string avatarId)
 	{
@@ -62,11 +86,12 @@ public static partial class CharacterAvatarCatalog
 
 	public static IReadOnlyList<CharacterAvatarDefinition> GetUnlockedAvatars()
 	{
-		var unlockedAvatars = new List<CharacterAvatarDefinition> { Default };
+		var unlockedAvatars = new List<CharacterAvatarDefinition>();
 		int highestCompletedStage = LoadHighestCompletedAdventureStage();
 		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
-			if (IsPlayerObtainableAdventureAvatar(avatar) && avatar.AdventureStageNumber <= highestCompletedStage)
+			if (IsStarterAvatar(avatar.Id)
+				|| (IsPlayerObtainableAdventureAvatar(avatar) && avatar.AdventureStageNumber <= highestCompletedStage))
 			{
 				unlockedAvatars.Add(avatar);
 			}
@@ -78,7 +103,7 @@ public static partial class CharacterAvatarCatalog
 	public static bool IsAvatarUnlocked(string avatarId)
 	{
 		string normalized = NormalizeAvatarId(avatarId);
-		if (normalized == DefaultAvatarId)
+		if (IsStarterAvatar(normalized))
 		{
 			return true;
 		}
@@ -223,6 +248,11 @@ public static partial class CharacterAvatarCatalog
 		return IsPlayerObtainableAdventureStage(avatar.AdventureStageNumber);
 	}
 
+	private static bool IsStarterAvatar(string avatarId)
+	{
+		return StarterAvatarIds.Contains(avatarId);
+	}
+
 	private static bool IsPlayerObtainableAdventureStage(int stageNumber)
 	{
 		return stageNumber is 5 or 6 or 10;
@@ -252,6 +282,19 @@ public static partial class CharacterAvatarCatalog
 		}
 
 		return Default.ActionFrameCount;
+	}
+
+	public static float GetIdleFrameSeconds(string avatarRoot)
+	{
+		foreach (CharacterAvatarDefinition avatar in Avatars)
+		{
+			if (string.Equals(avatar.RootPath, avatarRoot, StringComparison.Ordinal))
+			{
+				return avatar.IdleFrameSeconds;
+			}
+		}
+
+		return 0.0f;
 	}
 
 	public static string GetAttackFxRoot(string avatarRoot)

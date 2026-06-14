@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text.RegularExpressions;
 
 internal static class Program
@@ -31,7 +32,11 @@ internal static class Program
 		Run("adventure ai late best capture skips pair only captures", AdventureAiLateBestCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai late random capture skips pair only captures", AdventureAiLateRandomCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai final profile can skip best capture", AdventureAiFinalProfileCanSkipBestCapture);
+		Run("lan address helper computes ipv4 broadcast address", LanAddressHelperComputesIpv4BroadcastAddress);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
+		Run("character avatar visual resources point to existing files", CharacterAvatarVisualResourcesPointToExistingFiles);
+		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
+		Run("board effect resources point to existing files", BoardEffectResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
 		Run("result presentation uses local seat for network defeat", ResultPresentationUsesLocalSeatForNetworkDefeat);
 		Run("result presentation preserves local win and offline rules", ResultPresentationPreservesLocalWinAndOfflineRules);
@@ -55,6 +60,7 @@ internal static class Program
 		Run("multiplayer board sync resolves sender seat", MultiplayerBoardSyncResolvesSenderSeat);
 		Run("multiplayer board sync rejects invalid play requests", MultiplayerBoardSyncRejectsInvalidPlayRequests);
 		Run("multiplayer board sync limits private hand visibility", MultiplayerBoardSyncLimitsPrivateHandVisibility);
+		Run("network table card snapshot roundtrips overlay fields", NetworkTableCardSnapshotRoundtripsOverlayFields);
 		Run("local seat input enables only for in-game human connected state", LocalSeatInputEnablesOnlyForInGameHumanConnectedState);
 		Run("network seat control accepts remote actions only for connected humans", NetworkSeatControlAcceptsRemoteActionsOnlyForConnectedHumans);
 		Run("network seat control reveals pending target hand only for connected humans", NetworkSeatControlRevealsPendingTargetHandOnlyForConnectedHumans);
@@ -649,6 +655,114 @@ internal static class Program
 		}
 
 		True(audioReferenceCount > 0);
+	}
+
+	private static void LanAddressHelperComputesIpv4BroadcastAddress()
+	{
+		IPAddress? broadcast = LanAddressHelper.TryComputeBroadcastAddress(
+			IPAddress.Parse("192.168.12.34"),
+			IPAddress.Parse("255.255.255.0"));
+
+		Equal("192.168.12.255", broadcast?.ToString());
+	}
+
+	private static void CharacterAvatarVisualResourcesPointToExistingFiles()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string avatarDirectory = Path.Combine(repoRoot, "resources", "character_avatars");
+		True(Directory.Exists(avatarDirectory));
+
+		string[] avatarPaths = Directory.GetFiles(avatarDirectory, "*.tres");
+		True(avatarPaths.Length > 0);
+
+		foreach (string avatarPath in avatarPaths)
+		{
+			string avatarText = File.ReadAllText(avatarPath);
+			string rootPath = ReadTresString(avatarText, "RootPath");
+			True(!string.IsNullOrWhiteSpace(rootPath));
+
+			int idleFrameCount = Math.Max(1, ReadTresInt(avatarText, "IdleFrameCount", 1));
+			int actionFrameCount = Math.Max(1, ReadTresInt(avatarText, "ActionFrameCount", 1));
+			AssertFramePatternExists(repoRoot, $"{rootPath}/idle/processed/idle-{{0}}.png", idleFrameCount);
+			foreach (string action in new[] { "score", "attack", "hit", "victory", "defeat" })
+			{
+				AssertFramePatternExists(repoRoot, $"{rootPath}/{action}/processed/{action}-{{0}}.png", actionFrameCount);
+			}
+
+			string attackFxRoot = ReadTresString(avatarText, "AttackFxRoot");
+			if (!string.IsNullOrWhiteSpace(attackFxRoot))
+			{
+				AssertFramePatternExists(repoRoot, $"{attackFxRoot}/processed/fx-{{0}}.png", 1);
+			}
+
+			string damageEffectFramePattern = ReadTresString(avatarText, "DamageEffectFramePattern");
+			int damageEffectFrameCount = ReadTresInt(avatarText, "DamageEffectFrameCount", 0);
+			if (!string.IsNullOrWhiteSpace(damageEffectFramePattern) && damageEffectFrameCount > 0)
+			{
+				AssertFramePatternExists(repoRoot, damageEffectFramePattern, damageEffectFrameCount);
+			}
+		}
+	}
+
+	private static void ItemCardVisualResourcesPointToExistingFiles()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string itemCardDirectory = Path.Combine(repoRoot, "resources", "item_cards");
+		True(Directory.Exists(itemCardDirectory));
+
+		string[] itemCardPaths = Directory.GetFiles(itemCardDirectory, "*.tres");
+		True(itemCardPaths.Length > 0);
+
+		foreach (string itemCardPath in itemCardPaths)
+		{
+			string itemCardText = File.ReadAllText(itemCardPath);
+			string itemCardId = ReadTresString(itemCardText, "Id");
+			True(!string.IsNullOrWhiteSpace(itemCardId));
+
+			int frameCount = Math.Max(1, ReadTresInt(itemCardText, "FrameCount", 1));
+			string framePathPattern = ReadTresString(itemCardText, "FramePathPattern");
+			if (string.IsNullOrWhiteSpace(framePathPattern))
+			{
+				string artRunName = ReadTresString(itemCardText, "ArtRunName");
+				True(!string.IsNullOrWhiteSpace(artRunName));
+				framePathPattern = $"res://art/cards/item_cards/{itemCardId}/{artRunName}/processed/frames/frame-{{0:000}}.png";
+			}
+
+			AssertFramePatternExists(repoRoot, framePathPattern, frameCount);
+
+			string attachmentOverlayTexturePath = ReadTresString(itemCardText, "AttachmentOverlayTexturePath");
+			if (!string.IsNullOrWhiteSpace(attachmentOverlayTexturePath))
+			{
+				AssertResPathExists(repoRoot, attachmentOverlayTexturePath);
+			}
+		}
+	}
+
+	private static void BoardEffectResourcesPointToExistingFiles()
+	{
+		string repoRoot = FindRepositoryRoot();
+		foreach ((string pattern, int frameCount) in new[]
+		{
+			("res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png", 8),
+			("res://art/cards/deck_shuffle/overhand_drop/game_frames/frame-{0:000}.png", 6),
+			("res://art/fx/question_card_transform/run-001/processed/fx-{0}.png", 6),
+			("res://art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/processed/fx-{0}.png", 4),
+			("res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png", 4),
+			("res://art/fx/lens_reveal_sprites/run-001/processed/fx-{0}.png", 4),
+		})
+		{
+			AssertFramePatternExists(repoRoot, pattern, frameCount);
+		}
+
+		foreach (string resPath in new[]
+		{
+			"res://art/fx/slime_card_overlay/run-001/processed/card-aspect.png",
+			"res://art/ui/result_text_prompt/run-001/processed/victory-text-prompt-effect.png",
+			"res://art/ui/result_text_prompt/run-001/processed/defeat-text-prompt-effect.png",
+		})
+		{
+			AssertResPathExists(repoRoot, resPath);
+		}
 	}
 
 	private static void GameLoopPhasePrecedenceIsStable()
@@ -2003,6 +2117,33 @@ internal static class Program
 		False(LanDiscoveryMessage.TryParse("{\"player_count\":\"nope\"}", "192.168.1.2", out _));
 	}
 
+	private static void NetworkTableCardSnapshotRoundtripsOverlayFields()
+	{
+		var snapshot = new NetworkTableCardSnapshot(
+			CardCode: string.Empty,
+			AttachedItemCardIds: Array.Empty<string>(),
+			IsFaceUp: false,
+			IsBuriedInSand: true,
+			IsSlimeCoated: false,
+			CardOwnerPlayerIndex: -1,
+			RemoveCardOnCapture: true,
+			ItemOverlayId: "bomb",
+			ItemOwnerPlayerIndex: 2);
+
+		Dictionary<string, object?> data = NetworkTableCardSnapshotCodec.ToDictionary(snapshot);
+		NetworkTableCardSnapshot parsed = NetworkTableCardSnapshotCodec.FromDictionary(data);
+
+		Equal(string.Empty, parsed.CardCode);
+		Equal(0, parsed.AttachedItemCardIds.Length);
+		False(parsed.IsFaceUp);
+		True(parsed.IsBuriedInSand);
+		False(parsed.IsSlimeCoated);
+		Equal(-1, parsed.CardOwnerPlayerIndex);
+		True(parsed.RemoveCardOnCapture);
+		Equal("bomb", parsed.ItemOverlayId);
+		Equal(2, parsed.ItemOwnerPlayerIndex);
+	}
+
 	private static CaptureScoringRules.Context DefaultScoringContext => new(
 		SuppressSlimeCoatedScore: false,
 		ApplyScoreReductionPerCard: false,
@@ -2020,6 +2161,34 @@ internal static class Program
 			IsLocal: peerId == 1,
 			isReady,
 			IsConnected: true);
+	}
+
+	private static string ReadTresString(string tresText, string propertyName)
+	{
+		Match match = Regex.Match(tresText, $"^{Regex.Escape(propertyName)} = \"([^\"]*)\"$", RegexOptions.Multiline);
+		return match.Success ? match.Groups[1].Value : string.Empty;
+	}
+
+	private static int ReadTresInt(string tresText, string propertyName, int fallback)
+	{
+		Match match = Regex.Match(tresText, $"^{Regex.Escape(propertyName)} = (-?\\d+)$", RegexOptions.Multiline);
+		return match.Success && int.TryParse(match.Groups[1].Value, out int value) ? value : fallback;
+	}
+
+	private static void AssertFramePatternExists(string repoRoot, string framePattern, int frameCount)
+	{
+		for (int frameIndex = 1; frameIndex <= frameCount; frameIndex++)
+		{
+			AssertResPathExists(repoRoot, string.Format(framePattern, frameIndex));
+		}
+	}
+
+	private static void AssertResPathExists(string repoRoot, string resPath)
+	{
+		True(resPath.StartsWith("res://", StringComparison.Ordinal));
+		string absolutePath = Path.Combine(repoRoot, resPath["res://".Length..].Replace('/', Path.DirectorySeparatorChar));
+		True(File.Exists(absolutePath));
+		True(new FileInfo(absolutePath).Length > 0);
 	}
 
 	private static string FindRepositoryRoot()

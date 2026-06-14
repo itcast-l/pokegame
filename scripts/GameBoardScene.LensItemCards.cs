@@ -150,6 +150,18 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastLensRevealVisualEventFromHost(
+				_currentTurnPlayerIndex,
+				splitGlobalCenter,
+				targetIndexes,
+				turnSequenceGeneration,
+				snapshotId);
+		}
+
 		Task[] wispTasks = new Task[targetIndexes.Count];
 		int wispTaskCount = 0;
 		for (int targetNumber = 0; targetNumber < targetIndexes.Count; targetNumber++)

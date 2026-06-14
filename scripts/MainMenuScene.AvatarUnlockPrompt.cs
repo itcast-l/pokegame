@@ -138,7 +138,7 @@ public partial class MainMenuScene : Control
 		bool simplifiedChinese = locale.StartsWith("zh", System.StringComparison.OrdinalIgnoreCase) && !traditionalChinese;
 		return key switch
 		{
-			"APP_NAME" => traditionalChinese ? "牌境紀行" : simplifiedChinese ? "牌境纪行" : "Deckland",
+			"APP_NAME" => traditionalChinese ? "奪牌" : simplifiedChinese ? "夺牌" : "Deckland",
 			"APP_SUBTITLE" => traditionalChinese ? "卡牌對局" : simplifiedChinese ? "卡牌对局" : "Card Battler",
 			"AVATAR_UNLOCK_TITLE" => traditionalChinese ? "頭像已解鎖" : simplifiedChinese ? "头像已解锁" : "Avatar Unlocked",
 			"AVATAR_UNLOCK_MESSAGE" => traditionalChinese ? "獲得了 {0} 的頭像" : simplifiedChinese ? "获得了 {0} 的头像" : "You got {0}'s avatar",

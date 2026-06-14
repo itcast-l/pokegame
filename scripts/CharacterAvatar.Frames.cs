@@ -93,6 +93,28 @@ public partial class CharacterAvatar
 		}
 	}
 
+	private void ShowActionStillFrame(AvatarAction action)
+	{
+		_frameAction = action;
+		_frameAnimationPlayer.Stop();
+		if (_actionFrames.TryGetValue(action, out Texture2D[]? frames) && frames.Length > 0)
+		{
+			_portrait.Texture = frames[0];
+			return;
+		}
+
+		if (_idleFallbackTexture != null)
+		{
+			_portrait.Texture = _idleFallbackTexture;
+			return;
+		}
+
+		if (PortraitTexture != null)
+		{
+			_portrait.Texture = PortraitTexture;
+		}
+	}
+
 	private AnimationPlayer CreateFrameAnimationPlayer()
 	{
 		var animationPlayer = new AnimationPlayer

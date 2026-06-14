@@ -305,6 +305,17 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastQuestionRefreshVisualEventFromHost(
+				_currentTurnPlayerIndex,
+				tableCardIndex,
+				_turnSequenceGeneration,
+				snapshotId);
+		}
+
 		TableCard tableCard = _tableCards[tableCardIndex];
 		if (!tableCard.ItemOverlay.HasValue || !IsQuestionTableCard(tableCard))
 		{

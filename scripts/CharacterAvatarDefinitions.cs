@@ -56,6 +56,7 @@ public sealed class CharacterAvatarDefinition
 		string displayName,
 		string rootPath,
 		int idleFrameCount,
+		float idleFrameSeconds = 0.0f,
 		int actionFrameCount = 4,
 		int adventureStageNumber = 0,
 		string adventureAbilityNameKey = "ADVENTURE_ABILITY_NONE_NAME",
@@ -76,6 +77,7 @@ public sealed class CharacterAvatarDefinition
 		DisplayName = displayName;
 		RootPath = rootPath;
 		IdleFrameCount = idleFrameCount;
+		IdleFrameSeconds = idleFrameSeconds;
 		ActionFrameCount = actionFrameCount;
 		AdventureStageNumber = adventureStageNumber;
 		AdventureAbilityNameKey = adventureAbilityNameKey;
@@ -99,6 +101,7 @@ public sealed class CharacterAvatarDefinition
 	public string DisplayName { get; }
 	public string RootPath { get; }
 	public int IdleFrameCount { get; }
+	public float IdleFrameSeconds { get; }
 	public int ActionFrameCount { get; }
 	public int AdventureStageNumber { get; }
 	public string AdventureAbilityNameKey { get; }

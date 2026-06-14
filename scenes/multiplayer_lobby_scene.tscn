@@ -1,8 +1,117 @@
-[gd_scene format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/MultiplayerLobbyScene.cs" id="1_lobby"]
+[ext_resource type="Texture2D" path="res://art/menu/main_menu_concept_10.png" id="2_background"]
+[ext_resource type="Script" path="res://scripts/MainMenuOceanDynamics.cs" id="3_ocean_dynamics"]
+[ext_resource type="PackedScene" path="res://scenes/multiplayer_lobby_room_row.tscn" id="4_room_row"]
+[ext_resource type="PackedScene" path="res://scenes/multiplayer_lobby_player_row.tscn" id="5_player_row"]
+[ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="6_water_caustic_shader"]
 
-[node name="MultiplayerLobbyScene" type="Control"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lobby_caustic"]
+shader = ExtResource("6_water_caustic_shader")
+shader_parameter/shimmer_color = Color(0.52, 0.98, 1, 0.18)
+shader_parameter/shimmer_strength = 0.34
+shader_parameter/wave_scale = 22.0
+shader_parameter/wave_speed = 0.42
+shader_parameter/edge_boost = 0.72
+shader_parameter/center_glow = 0.1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.008, 0.1, 0.13, 0.76)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.28)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.02, 0.04, 0.5)
+shadow_size = 18
+shadow_offset = Vector2(0, 8)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input"]
+bg_color = Color(0.035, 0.15, 0.19, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 1, 0.94, 0.26)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_focus"]
+bg_color = Color(0.05, 0.19, 0.23, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9, 1, 0.95, 0.5)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.05, 0.17, 0.22, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.71, 0.91, 0.84, 0.34)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 7.0
+content_margin_right = 14.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(0.07, 0.24, 0.29, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.88, 1, 0.94, 0.54)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 7.0
+content_margin_right = 14.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll"]
+bg_color = Color(0.015, 0.08, 0.11, 0.46)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.88, 0.85, 0.16)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+
+[node name="MultiplayerLobbyScene" type="Control" node_paths=PackedStringArray("StatusLabel", "ToastLabel", "RoomNameInput", "RoomPasswordInput", "LanHostInfoLabel", "SteamStatusLabel", "PlayerCountOption", "ItemModeOption", "WinningScoreOption", "RoomListContainer", "PlayerListContainer", "EmptyRoomsLabel", "EmptyPlayersLabel", "LanHostButton", "LanSearchButton", "SteamHostButton", "SteamRefreshButton", "ReadyButton", "StartButton", "LeaveSessionButton", "BackButton")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -10,3 +119,505 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_lobby")
+RoomRowScene = ExtResource("4_room_row")
+PlayerRowScene = ExtResource("5_player_row")
+StatusLabel = NodePath("SafeArea/MainLayout/Header/StatusLabel")
+ToastLabel = NodePath("ToastLayer/Toast")
+RoomNameInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput")
+RoomPasswordInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput")
+LanHostInfoLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostInfoLabel")
+SteamStatusLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamStatusLabel")
+PlayerCountOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/PlayerCountOption")
+ItemModeOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/ItemModeOption")
+WinningScoreOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/WinningScoreOption")
+RoomListContainer = NodePath("SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer")
+PlayerListContainer = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer")
+EmptyRoomsLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer/EmptyRoomsLabel")
+EmptyPlayersLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer/EmptyPlayersLabel")
+LanHostButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton")
+LanSearchButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanSearchButton")
+SteamHostButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/SteamHostButton")
+SteamRefreshButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/SteamRefreshButton")
+ReadyButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/ReadyButton")
+StartButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/StartButton")
+LeaveSessionButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/LeaveSessionButton")
+BackButton = NodePath("SafeArea/MainLayout/Header/BackButton")
+
+[node name="BackgroundArt" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="OceanDynamicsLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_ocean_dynamics")
+bubble_count = 56
+glint_count = 34
+
+[node name="WaterCausticOverlay" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_lobby_caustic")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ToastLayer" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="Toast" type="Label" parent="ToastLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 300.0
+offset_top = 18.0
+offset_right = -300.0
+offset_bottom = 62.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.96, 1, 0.94, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "Toast"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 38
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 38
+theme_override_constants/margin_bottom = 30
+
+[node name="MainLayout" type="VBoxContainer" parent="SafeArea"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="Header" type="HBoxContainer" parent="SafeArea/MainLayout"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="SafeArea/MainLayout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.95)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 34
+text = "多人大厅"
+
+[node name="StatusLabel" type="Label" parent="SafeArea/MainLayout/Header"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.96, 0.94, 1)
+theme_override_font_sizes/font_size = 16
+text = "Idle"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BackButton" type="Button" parent="SafeArea/MainLayout/Header"]
+custom_minimum_size = Vector2(86, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "返回"
+
+[node name="BodyScroll" type="ScrollContainer" parent="SafeArea/MainLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+follow_focus = true
+
+[node name="Body" type="HBoxContainer" parent="SafeArea/MainLayout/BodyScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="ModeRail" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.95
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="ModeRailContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="ModeTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 20
+text = "房间设置"
+
+[node name="RoomNameInput" type="LineEdit" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_placeholder_color = Color(0.62, 0.86, 0.86, 0.68)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_input")
+theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
+text = "我的房间"
+placeholder_text = "房间名称"
+max_length = 16
+
+[node name="RoomPasswordInput" type="LineEdit" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_placeholder_color = Color(0.62, 0.86, 0.86, 0.68)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_input")
+theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
+placeholder_text = "房间密码（可选）"
+max_length = 24
+secret = true
+
+[node name="PlayerCountOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+selected = 0
+item_count = 3
+popup/item_0/text = "2 人"
+popup/item_0/id = 2
+popup/item_1/text = "3 人"
+popup/item_1/id = 3
+popup/item_2/text = "4 人"
+popup/item_2/id = 4
+
+[node name="ItemModeOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+selected = 0
+item_count = 2
+popup/item_0/text = "道具开启"
+popup/item_0/id = 1
+popup/item_1/text = "道具关闭"
+popup/item_1/id = 0
+
+[node name="WinningScoreOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+selected = 1
+item_count = 3
+popup/item_0/text = "50 分"
+popup/item_0/id = 50
+popup/item_1/text = "100 分"
+popup/item_1/id = 100
+popup/item_2/text = "200 分"
+popup/item_2/id = 200
+
+[node name="LanHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "创建房间"
+
+[node name="LanSearchButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "搜索房间"
+
+[node name="LanHostInfoLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
+theme_override_font_sizes/font_size = 13
+text = "本机局域网地址将在建房后显示"
+autowrap_mode = 2
+
+[node name="SteamHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "Steam 建房"
+
+[node name="SteamRefreshButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "刷新 Steam"
+
+[node name="RoomBrowser" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="RoomBrowserContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="RoomTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 20
+text = "房间列表"
+
+[node name="RoomScroll" type="ScrollContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
+
+[node name="RoomListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="EmptyRoomsLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
+theme_override_font_sizes/font_size = 15
+text = "没有发现房间"
+horizontal_alignment = 1
+
+[node name="LobbyPanel" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.25
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="LobbyContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="PlayerTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 20
+text = "玩家准备状态"
+
+[node name="PlayerScroll" type="ScrollContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
+
+[node name="PlayerListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="EmptyPlayersLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
+theme_override_font_sizes/font_size = 15
+text = "尚未加入房间"
+horizontal_alignment = 1
+
+[node name="ReadyButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "准备"
+disabled = true
+
+[node name="StartButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "开始"
+disabled = true
+
+[node name="LeaveSessionButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = "离开房间"
+
+[node name="FriendsPanel" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.85
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="FriendsContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="SteamTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 20
+text = "Steam"
+
+[node name="SteamStatusLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.76, 0.95, 0.95, 1)
+theme_override_font_sizes/font_size = 16
+text = "Steam 不可用"
+autowrap_mode = 2
+
+[node name="SteamNoteLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
+theme_override_font_sizes/font_size = 14
+text = "Steam App ID 为 0 或初始化失败时，这里会禁用；LAN 不受影响。"
+autowrap_mode = 2

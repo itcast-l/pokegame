@@ -95,6 +95,11 @@ public partial class GameBoardScene
 		{
 			if (ShouldSendNetworkPendingItemSelectionRequest())
 			{
+				_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.TargetPlayer;
+				_networkLocallyCommittedPendingSelectionHandIndex = _pendingItemHandIndex;
+				_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
+				ClearSelectionOverlay();
+				_ = BeginPredictedNetworkTargetedItemCommitAsync();
 				RequestNetworkPendingItemSelection(targetPlayerIndex, -1, _pendingItemTurnSequenceGeneration);
 				return;
 			}
@@ -111,6 +116,12 @@ public partial class GameBoardScene
 
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
+			_pendingItemSelectionMode = PendingItemSelectionMode.TargetHandCard;
+			_revealedPlayerHandIndex = targetPlayerIndex;
+			_networkLocallyAdvancedPendingTargetSelection = true;
+			_networkPendingSelectionRequestInFlight = false;
+			RenderPlayerHands();
+			ShowTargetHandSelection(targetPlayerIndex);
 			RequestNetworkPendingItemSelection(targetPlayerIndex, -1, _pendingItemTurnSequenceGeneration);
 			return;
 		}
@@ -138,20 +149,27 @@ public partial class GameBoardScene
 		}
 
 		var options = new List<(string Text, Action Action)>();
+		bool useHiddenLabels = ShouldUseHiddenTargetHandLabels(targetPlayerIndex);
 		if (targetPlayerIndex >= 0 && targetPlayerIndex < _playerHands.Count)
 		{
 			for (int handIndex = 0; handIndex < _playerHands[targetPlayerIndex].Count; handIndex++)
 			{
 				PlayingCard card = _playerHands[targetPlayerIndex][handIndex];
 				int selectedHandIndex = handIndex;
-				options.Add(($"{card.Suit} {card.Rank}", () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex)));
+				string optionLabel = useHiddenLabels
+					? LocalizeFormat("GAME_SPECIAL_CARD", handIndex + 1)
+					: $"{card.Suit} {card.Rank}";
+				options.Add((optionLabel, () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex)));
 			}
 
 			for (int itemIndex = 0; itemIndex < _playerItemHands[targetPlayerIndex].Count; itemIndex++)
 			{
 				ItemCard itemCard = _playerItemHands[targetPlayerIndex][itemIndex];
 				int selectedHandIndex = _playerHands[targetPlayerIndex].Count + itemIndex;
-				options.Add((LocalizeFormat("GAME_SPECIAL_CARD", itemCard.Id), () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex)));
+				string optionLabel = useHiddenLabels
+					? LocalizeFormat("GAME_SPECIAL_CARD", selectedHandIndex + 1)
+					: LocalizeFormat("GAME_SPECIAL_CARD", itemCard.Id);
+				options.Add((optionLabel, () => CompletePendingItemSelection(targetPlayerIndex, selectedHandIndex)));
 			}
 		}
 
@@ -168,6 +186,12 @@ public partial class GameBoardScene
 
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
+			_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.TargetHandCard;
+			_networkLocallyCommittedPendingSelectionDisplayIndex = targetHandIndex;
+			_networkLocallyCommittedPendingSelectionHandIndex = _pendingItemHandIndex;
+			_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
+			ClearSelectionOverlay();
+			_ = BeginPredictedNetworkTargetedItemCommitAsync();
 			RequestNetworkPendingItemSelection(targetPlayerIndex, targetHandIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}
@@ -209,56 +233,85 @@ public partial class GameBoardScene
 		ClearSelectionOverlay();
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
-		SendBoardSnapshotIfHost();
-
-		PlaySpecialItemCardPlaySfx();
-		await PlaySpecialCardTriggerEffectAsync(
-			itemCard.Texture,
-			itemGlobalPosition ?? Vector2.Zero,
-			0,
-			GetCardRotationDegreesForPlayer(ownerPlayerIndex));
-		if (turnSequenceGeneration != _turnSequenceGeneration)
+		int snapshotId = IsNetworkMultiplayerMode() && IsNetworkHost()
+			? CreateNextNetworkSnapshotId()
+			: -1;
+		if (snapshotId >= 0)
 		{
-			_isProcessingCardPlay = false;
+			_networkAuthoritativeVisualSnapshotId = snapshotId;
+		}
+
+		try
+		{
+			if (snapshotId >= 0)
+			{
+				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastItemCardPlayedVisualEventFromHost(
+					ownerPlayerIndex,
+					new NetworkItemPlayVisualSync(itemCard.Id, CardPlayPresentationTypes.TargetedTrigger, itemHandIndex),
+					turnSequenceGeneration,
+					snapshotId);
+			}
+
+			PlaySpecialItemCardPlaySfx();
+			await PlaySpecialCardTriggerEffectAsync(
+				itemCard.Texture,
+				itemGlobalPosition ?? Vector2.Zero,
+				0,
+				GetCardRotationDegreesForPlayer(ownerPlayerIndex));
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				_isProcessingCardPlay = false;
+				RenderPlayerHands();
+				return;
+			}
+
+			PlayCardResult result = (await ResolveItemCardOnPlayAsync(
+				itemCard,
+				ownerPlayerIndex,
+				itemHandIndex,
+				targetPlayerIndex,
+				targetHandIndex,
+				itemGlobalPosition ?? Vector2.Zero,
+				turnSequenceGeneration)) with { CompletesTurn = false };
+			RenderPlayerCardPiles();
+			RenderTableCards();
+			SendQuestionRewardVisualEventIfNeeded(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
+			await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				_isProcessingCardPlay = false;
+				RenderPlayerHands();
+				return;
+			}
+
+			await ResolvePendingMagnetAttachmentsAsync(turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				_isProcessingCardPlay = false;
+				RenderPlayerHands();
+				return;
+			}
+
 			RenderPlayerHands();
-			return;
-		}
+			if (result.DeckCollected)
+			{
+				await PlayPhysicalDeckShuffleAsync(ownerPlayerIndex);
+			}
 
-		PlayCardResult result = (await ResolveItemCardOnPlayAsync(
-			itemCard,
-			ownerPlayerIndex,
-			itemHandIndex,
-			targetPlayerIndex,
-			targetHandIndex,
-			itemGlobalPosition ?? Vector2.Zero,
-			turnSequenceGeneration)) with { CompletesTurn = false };
-		RenderPlayerCardPiles();
-		RenderTableCards();
-		await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
+			CheckForWinner();
+			if (snapshotId >= 0)
+			{
+				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, snapshotId);
+			}
+			await FinishPendingItemCardAsync(result, ownerPlayerIndex, turnSequenceGeneration);
+		}
+		finally
 		{
-			_isProcessingCardPlay = false;
-			RenderPlayerHands();
-			return;
+			if (snapshotId >= 0)
+			{
+				_networkAuthoritativeVisualSnapshotId = -1;
+			}
 		}
-
-		await ResolvePendingMagnetAttachmentsAsync(turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
-		{
-			_isProcessingCardPlay = false;
-			RenderPlayerHands();
-			return;
-		}
-
-		RenderPlayerHands();
-		if (result.DeckCollected)
-		{
-			await PlayPhysicalDeckShuffleAsync(ownerPlayerIndex);
-		}
-
-		CheckForWinner();
-		SendBoardSnapshotIfHost();
-		await FinishPendingItemCardAsync(result, ownerPlayerIndex, turnSequenceGeneration);
 	}
 
 	private async System.Threading.Tasks.Task FinishPendingItemCardAsync(PlayCardResult result, int ownerPlayerIndex, int turnSequenceGeneration)
@@ -321,6 +374,13 @@ public partial class GameBoardScene
 		return IsNetworkMultiplayerMode() && !IsNetworkHost();
 	}
 
+	private bool ShouldUseHiddenTargetHandLabels(int targetPlayerIndex)
+	{
+		return ShouldSendNetworkPendingItemSelectionRequest()
+			&& _networkLocallyAdvancedPendingTargetSelection
+			&& targetPlayerIndex != GetLocalHandPlayerIndex();
+	}
+
 	private int GetPendingSelectionLocalOwnerIndex()
 	{
 		return IsNetworkMultiplayerMode() ? GetLocalHandPlayerIndex() : MainPlayerIndex;
@@ -375,7 +435,7 @@ public partial class GameBoardScene
 
 	private void HandleSelectionOverlayCancelRequested()
 	{
-		if (ShouldSendNetworkPendingItemSelectionRequest())
+		if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.MagnetHandCard)
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 			return;

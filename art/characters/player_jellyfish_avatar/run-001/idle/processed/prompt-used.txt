@@ -1,0 +1,1 @@
+Use the jellyfish avatar image shown in this conversation as the visual reference. Preserve the same cute translucent jellyfish player-avatar identity. Create a 4x4 clean HD idle loop on solid #FF00FF, same scale, centered in every cell.

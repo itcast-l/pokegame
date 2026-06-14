@@ -653,6 +653,11 @@ public partial class GameBoardScene : Control
 		return payload.TryGetValue(key, out Variant value) ? value.AsBool() : fallback;
 	}
 
+	private static float ReadNetworkFloat(Godot.Collections.Dictionary payload, string key, float fallback)
+	{
+		return payload.TryGetValue(key, out Variant value) ? value.AsSingle() : fallback;
+	}
+
 	public override void _ExitTree()
 	{
 		DisconnectNetworkManagerSignalsForBoard();

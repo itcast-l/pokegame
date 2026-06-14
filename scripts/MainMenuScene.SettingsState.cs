@@ -348,6 +348,11 @@ public partial class MainMenuScene
 			window.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
 		}
 
+		if (window.ContentScaleAspect != Window.ContentScaleAspectEnum.Expand)
+		{
+			window.ContentScaleAspect = Window.ContentScaleAspectEnum.Expand;
+		}
+
 		// Resolution presets resize the output window only; keep the UI design viewport fixed.
 		if (window.ContentScaleSize != DesignResolution)
 		{

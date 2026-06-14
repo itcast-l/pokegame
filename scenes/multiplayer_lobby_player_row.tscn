@@ -1,0 +1,68 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/MultiplayerLobbyPlayerRow.cs" id="1_player_row"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_row_panel"]
+bg_color = Color(0.035, 0.15, 0.19, 0.82)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.96, 0.92, 0.2)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[node name="MultiplayerLobbyPlayerRow" type="PanelContainer" node_paths=PackedStringArray("SeatLabel", "PlayerNameLabel", "RoleLabel", "ReadyLabel")]
+custom_minimum_size = Vector2(0, 56)
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_row_panel")
+script = ExtResource("1_player_row")
+SeatLabel = NodePath("RowLayout/SeatLabel")
+PlayerNameLabel = NodePath("RowLayout/PlayerNameLabel")
+RoleLabel = NodePath("RowLayout/RoleLabel")
+ReadyLabel = NodePath("RowLayout/ReadyLabel")
+
+[node name="RowLayout" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SeatLabel" type="Label" parent="RowLayout"]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.95, 0.7, 1)
+theme_override_font_sizes/font_size = 17
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayerNameLabel" type="Label" parent="RowLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_font_sizes/font_size = 17
+text = "Player"
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="RoleLabel" type="Label" parent="RowLayout"]
+custom_minimum_size = Vector2(52, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.66, 0.9, 0.88, 0.95)
+theme_override_font_sizes/font_size = 14
+text = "Peer"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ReadyLabel" type="Label" parent="RowLayout"]
+custom_minimum_size = Vector2(76, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 1, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "Waiting"
+horizontal_alignment = 1
+vertical_alignment = 1

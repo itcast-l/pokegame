@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CharacterAvatarDefinitionResource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/CharacterAvatarDefinitionResource.cs" id="1_avatar_definition"]
+[ext_resource type="Resource" path="res://resources/character_audio/lop_rabbit.tres" id="2_character_audio"]
+
+[resource]
+script = ExtResource("1_avatar_definition")
+Id = "lop_rabbit"
+DisplayName = "糯糯"
+RootPath = "res://art/characters/player_lop_rabbit_avatar/run-001"
+IdleFrameCount = 16
+IdleFrameSeconds = 0.055
+ActionFrameCount = 4
+AdventureStageNumber = 0
+AdventureAbilityNameKey = "ADVENTURE_ABILITY_NONE_NAME"
+AdventureAbilityDescriptionKey = "ADVENTURE_ABILITY_NONE_DESC"
+AccentColorHtml = "#53d7d0"
+AudioConfig = ExtResource("2_character_audio")

@@ -62,7 +62,7 @@ public partial class GameBoardScene
 			if (captureFlow.Capture.CapturedMiddleCards && IsQuestionTableCard(tableCard))
 			{
 				QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(playerIndex, reserveReplacementCard, turnSequenceGeneration);
-				if (rewardGrant.HasValue && IsLocalHandPlayer(playerIndex))
+				if (rewardGrant.HasValue)
 				{
 					questionRewardAnimation = new QuestionCardRewardAnimation(
 						rewardGrant.Value.ItemCard,

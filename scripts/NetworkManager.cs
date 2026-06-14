@@ -131,7 +131,11 @@ public partial class NetworkManager : Node
 		_rooms.Clear();
 		_roomLastSeenAt.Clear();
 		_lanDiscoveryBrowser = new PacketPeerUdp();
-		Error bindError = _lanDiscoveryBrowser.Bind(0);
+		Error bindError = _lanDiscoveryBrowser.Bind(NetworkSessionDefaults.LanDiscoveryPort);
+		if (bindError != Error.Ok)
+		{
+			bindError = _lanDiscoveryBrowser.Bind(0);
+		}
 		if (bindError != Error.Ok)
 		{
 			_lanDiscoveryBrowser.Close();
@@ -143,6 +147,12 @@ public partial class NetworkManager : Node
 		SetState(NetworkSessionState.Searching);
 		SendLanDiscoveryPing();
 		EmitRoomListUpdated();
+	}
+
+	public string GetLocalLanAddressSummary()
+	{
+		IReadOnlyList<string> addresses = LanAddressHelper.GetLocalIpv4Addresses();
+		return addresses.Count == 0 ? "未检测到局域网 IPv4 地址" : string.Join(" / ", addresses);
 	}
 
 	public void JoinLan(string address, string roomPassword)
@@ -479,12 +489,296 @@ public partial class NetworkManager : Node
 
 		var payload = new Godot.Collections.Dictionary
 		{
-			["actor_seat_index"] = actorSeatIndex,
-			["hand_index"] = handIndex,
-			["played_card_code"] = playedCardCode,
-			["turn_sequence_generation"] = turnSequenceGeneration,
-			["snapshot_id"] = snapshotId,
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.PlayHandCard,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = actorSeatIndex,
+			[NetworkBoardVisualEventTypes.HandIndexKey] = handIndex,
+			[NetworkBoardVisualEventTypes.PlayedCardCodeKey] = playedCardCode,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
+		BroadcastBoardVisualEventFromHost(payload);
+	}
+
+	internal void BroadcastItemCardPlayedVisualEventFromHost(
+		int actorSeatIndex,
+		NetworkItemPlayVisualSync visualSync,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.PlayItemCard,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = actorSeatIndex,
+			[NetworkBoardVisualEventTypes.HandIndexKey] = visualSync.ItemHandIndex,
+			[NetworkBoardVisualEventTypes.ItemCardIdKey] = visualSync.ItemCardId,
+			[NetworkBoardVisualEventTypes.PlayPresentationKey] = visualSync.PlayPresentation,
+			[NetworkBoardVisualEventTypes.TargetTableCardIndexKey] = visualSync.TargetTableCardIndex,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		if (visualSync.PlayPresentation == CardPlayPresentationTypes.TableOverlay)
+		{
+			BroadcastBoardVisualEventFromHost(payload);
+			return;
+		}
+
+		SendBoardVisualEventToSeatFromHost(actorSeatIndex, payload);
+	}
+
+	internal void BroadcastCaptureVisualEventFromHost(
+		NetworkCaptureVisualSync visualSync,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.CaptureToDeck,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = visualSync.PlayerIndex,
+			[NetworkBoardVisualEventTypes.CaptureStartIndexKey] = visualSync.CaptureStartIndex,
+			[NetworkBoardVisualEventTypes.ExtraTableCardIndexesKey] = new Godot.Collections.Array<int>(visualSync.ExtraTableCardIndexes),
+			[NetworkBoardVisualEventTypes.FlightStaggerSecondsKey] = visualSync.FlightStaggerSeconds,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		BroadcastBoardVisualEventFromHost(payload);
+	}
+
+	internal void BroadcastDrawCardVisualEventFromHost(
+		int playerIndex,
+		int displayIndex,
+		string drawnCardCode,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (!NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
+				IsHost,
+				_state,
+				player.IsConnected,
+				player.IsHost))
+			{
+				continue;
+			}
+
+			var payload = new Godot.Collections.Dictionary
+			{
+				[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.DrawCard,
+				[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = playerIndex,
+				[NetworkBoardVisualEventTypes.DisplayIndexKey] = displayIndex,
+				[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+				[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+			};
+			if (player.SeatIndex == playerIndex && !string.IsNullOrWhiteSpace(drawnCardCode))
+			{
+				payload[NetworkBoardVisualEventTypes.DrawnCardCodeKey] = drawnCardCode;
+			}
+
+			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
+		}
+	}
+
+	internal void BroadcastDeckShuffleVisualEventFromHost(int playerIndex, int turnSequenceGeneration, int snapshotId)
+	{
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.DeckShuffle,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = playerIndex,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(playerIndex, payload);
+	}
+
+	internal void BroadcastStealHandCardVisualEventFromHost(
+		int ownerSeatIndex,
+		int targetSeatIndex,
+		int targetHandIndex,
+		string stolenCardCode,
+		IReadOnlyList<string> attachedItemCardIds,
+		string stolenItemCardId,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.StealHandCard,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = ownerSeatIndex,
+			[NetworkBoardVisualEventTypes.TargetSeatIndexKey] = targetSeatIndex,
+			[NetworkBoardVisualEventTypes.TargetHandIndexKey] = targetHandIndex,
+			[NetworkBoardVisualEventTypes.PlayedCardCodeKey] = stolenCardCode,
+			[NetworkBoardVisualEventTypes.ItemCardIdKey] = stolenItemCardId,
+			[NetworkBoardVisualEventTypes.AttachedItemCardIdsKey] = new Godot.Collections.Array<string>((attachedItemCardIds ?? Array.Empty<string>()).ToArray()),
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(ownerSeatIndex, payload);
+	}
+
+	internal void BroadcastStealDeckCardsVisualEventFromHost(
+		int ownerSeatIndex,
+		int targetSeatIndex,
+		int movedCardCount,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame || movedCardCount <= 0)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.StealDeckCards,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = ownerSeatIndex,
+			[NetworkBoardVisualEventTypes.TargetSeatIndexKey] = targetSeatIndex,
+			[NetworkBoardVisualEventTypes.MovedCardCountKey] = movedCardCount,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(ownerSeatIndex, payload);
+	}
+
+	internal void BroadcastLensRevealVisualEventFromHost(
+		int ownerPlayerIndex,
+		Vector2 splitGlobalCenter,
+		IReadOnlyList<int> targetIndexes,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		NetworkPlayerPublicState recipient = _players.FirstOrDefault(player => player.SeatIndex == ownerPlayerIndex && player.IsConnected && !player.IsHost);
+		if (recipient.PeerId == 0)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.LensReveal,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = ownerPlayerIndex,
+			[NetworkBoardVisualEventTypes.SplitCenterXKey] = splitGlobalCenter.X,
+			[NetworkBoardVisualEventTypes.SplitCenterYKey] = splitGlobalCenter.Y,
+			[NetworkBoardVisualEventTypes.TargetTableCardIndexesKey] = new Godot.Collections.Array<int>(targetIndexes.ToArray()),
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
+	}
+
+	internal void BroadcastTableShuffleVisualEventFromHost(
+		int ownerPlayerIndex,
+		IReadOnlyList<int> targetIndexes,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.TableShuffle,
+			[NetworkBoardVisualEventTypes.ShuffleTargetIndexesKey] = new Godot.Collections.Array<int>(targetIndexes.ToArray()),
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(ownerPlayerIndex, payload);
+	}
+
+	internal void BroadcastQuestionRefreshVisualEventFromHost(int ownerPlayerIndex, int tableCardIndex, int turnSequenceGeneration, int snapshotId)
+	{
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.QuestionRefresh,
+			[NetworkBoardVisualEventTypes.TableCardIndexKey] = tableCardIndex,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(ownerPlayerIndex, payload);
+	}
+
+	internal void BroadcastBombPairVisualEventFromHost(int ownerPlayerIndex, int turnSequenceGeneration, int snapshotId)
+	{
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.BombPair,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(ownerPlayerIndex, payload);
+	}
+
+	internal void BroadcastMantaTideShiftVisualEventFromHost(int ownerPlayerIndex, int turnSequenceGeneration, int snapshotId)
+	{
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.MantaTideShift,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(ownerPlayerIndex, payload);
+	}
+
+	internal void SendQuestionRewardVisualEventToSeatFromHost(
+		int ownerSeatIndex,
+		QuestionCardRewardAnimation rewardAnimation,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		NetworkPlayerPublicState recipient = _players.FirstOrDefault(player => player.SeatIndex == ownerSeatIndex && player.IsConnected && !player.IsHost);
+		if (recipient.PeerId == 0)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.QuestionReward,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = ownerSeatIndex,
+			[NetworkBoardVisualEventTypes.ItemCardIdKey] = rewardAnimation.ItemCard.Id,
+			[NetworkBoardVisualEventTypes.HandIndexKey] = rewardAnimation.ItemHandIndex,
+			[NetworkBoardVisualEventTypes.StartGlobalXKey] = rewardAnimation.StartGlobalPosition.X,
+			[NetworkBoardVisualEventTypes.StartGlobalYKey] = rewardAnimation.StartGlobalPosition.Y,
+			[NetworkBoardVisualEventTypes.RequiresMagnetAttachmentKey] = rewardAnimation.RequiresMagnetAttachment,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
+	}
+
+	private void BroadcastBoardVisualEventFromHost(Godot.Collections.Dictionary payload)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
 		foreach (NetworkPlayerPublicState player in _players)
 		{
 			if (!NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
@@ -498,6 +792,22 @@ public partial class NetworkManager : Node
 
 			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
 		}
+	}
+
+	private void SendBoardVisualEventToSeatFromHost(int seatIndex, Godot.Collections.Dictionary payload)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		NetworkPlayerPublicState recipient = _players.FirstOrDefault(player => player.SeatIndex == seatIndex && player.IsConnected && !player.IsHost);
+		if (recipient.PeerId == 0)
+		{
+			return;
+		}
+
+		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
 	}
 
 	public void SendInitialBoardSnapshotsFromHost(GameBoardScene gameBoard)
@@ -779,6 +1089,7 @@ public partial class NetworkManager : Node
 		if (now - _lastDiscoveryBroadcastAt >= DiscoveryBroadcastSeconds)
 		{
 			_lastDiscoveryBroadcastAt = now;
+			BroadcastLanRoomAdvertisement();
 		}
 	}
 
@@ -790,8 +1101,28 @@ public partial class NetworkManager : Node
 		}
 
 		_lanDiscoveryBrowser.SetBroadcastEnabled(true);
-		_lanDiscoveryBrowser.SetDestAddress("255.255.255.255", NetworkSessionDefaults.LanDiscoveryPort);
-		_lanDiscoveryBrowser.PutPacket(Encoding.UTF8.GetBytes("deckland_discover"));
+		byte[] payload = Encoding.UTF8.GetBytes("deckland_discover");
+		foreach (string broadcastAddress in LanAddressHelper.GetBroadcastAddresses())
+		{
+			_lanDiscoveryBrowser.SetDestAddress(broadcastAddress, NetworkSessionDefaults.LanDiscoveryPort);
+			_lanDiscoveryBrowser.PutPacket(payload);
+		}
+	}
+
+	private void BroadcastLanRoomAdvertisement()
+	{
+		if (_lanDiscoveryResponder == null || _state != NetworkSessionState.Lobby || _config.Transport != NetworkTransport.Lan)
+		{
+			return;
+		}
+
+		_lanDiscoveryResponder.SetBroadcastEnabled(true);
+		byte[] payload = Encoding.UTF8.GetBytes(LanDiscoveryMessage.Build(_config, _localDisplayName, _state.ToString()));
+		foreach (string broadcastAddress in LanAddressHelper.GetBroadcastAddresses())
+		{
+			_lanDiscoveryResponder.SetDestAddress(broadcastAddress, NetworkSessionDefaults.LanDiscoveryPort);
+			_lanDiscoveryResponder.PutPacket(payload);
+		}
 	}
 
 	private void PollLanDiscoveryBrowser(double now)

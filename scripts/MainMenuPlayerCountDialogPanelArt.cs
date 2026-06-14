@@ -32,15 +32,7 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 		MouseFilter = MouseFilterEnum.Ignore;
 		_startGameFrame = GetNodeOrNull<Control>("StartGameFrame");
 		_startGameButton = GetNodeOrNull<Button>("StartGameFrame/StartGameButton");
-		byte[] bytes = Godot.FileAccess.GetFileAsBytes(PanelTexturePath);
-		if (bytes.Length > 0)
-		{
-			Image image = new();
-			if (image.LoadPngFromBuffer(bytes) == Error.Ok)
-			{
-				_panelTexture = ImageTexture.CreateFromImage(image);
-			}
-		}
+		_panelTexture = GD.Load<Texture2D>(PanelTexturePath);
 
 		SetProcess(true);
 		QueueRedraw();

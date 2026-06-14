@@ -48,6 +48,25 @@ public partial class CharacterAvatar
 		ResetPortraitPose();
 	}
 
+	public void ShowIdleStill()
+	{
+		_actionTween?.Kill();
+		_actionTween = null;
+		_attackFxTween?.Kill();
+		_attackFxTween = null;
+		HideAttackFx();
+		_pulseTween?.Kill();
+		_pulseTween = null;
+		_currentAction = AvatarAction.Idle;
+		_scorePulse = 0.0f;
+		_hitPulse = 0.0f;
+		_victoryPulse = 0.0f;
+		_defeatShade = 0.0f;
+		ResetPortraitPose();
+		ShowActionStillFrame(AvatarAction.Idle);
+		QueueRedraw();
+	}
+
 	public void PlayScore()
 	{
 		StartAction(AvatarAction.Score);

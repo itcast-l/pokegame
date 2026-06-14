@@ -112,7 +112,9 @@ internal readonly record struct PlayCardResult(
 	bool Captured,
 	bool DeckCollected = false,
 	QuestionCardRewardAnimation? QuestionRewardAnimation = null,
-	bool CompletesTurn = true);
+	bool CompletesTurn = true,
+	NetworkItemPlayVisualSync? ItemPlayVisualSync = null,
+	NetworkCaptureVisualSync? CaptureVisualSync = null);
 
 internal readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 
@@ -139,6 +141,18 @@ internal readonly record struct QuestionCardRewardGrant(ItemCard ItemCard, int I
 internal readonly record struct QuestionCardRewardAnimation(ItemCard ItemCard, int ItemHandIndex, Vector2 StartGlobalPosition, bool RequiresMagnetAttachment = false);
 
 internal readonly record struct DrawnHandCard(PlayingCard Card, int HandIndex);
+
+internal readonly record struct NetworkItemPlayVisualSync(
+	string ItemCardId,
+	string PlayPresentation,
+	int ItemHandIndex,
+	int TargetTableCardIndex = -1);
+
+internal readonly record struct NetworkCaptureVisualSync(
+	int PlayerIndex,
+	int CaptureStartIndex,
+	int[] ExtraTableCardIndexes,
+	float FlightStaggerSeconds);
 
 internal readonly record struct CaptureTableCardsResult(
 	int CollectedCardCount,

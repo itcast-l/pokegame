@@ -95,7 +95,11 @@ public partial class GameBoardScene
 			targetPlayerIndex,
 			targetHandIndex,
 			itemGlobalPosition ?? Vector2.Zero,
-			turnSequenceGeneration)) with { CompletesTurn = false };
+			turnSequenceGeneration)) with
+		{
+			CompletesTurn = false,
+			ItemPlayVisualSync = new NetworkItemPlayVisualSync(itemCard.Id, definition.PlayPresentation, itemHandIndex),
+		};
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -104,6 +108,7 @@ public partial class GameBoardScene
 
 		RenderPlayerCardPiles();
 		RenderTableCards();
+		SendQuestionRewardVisualEventIfNeeded(playerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
 		await PlayQuestionCardRewardAnimationAsync(playerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -123,7 +128,10 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
-		return result;
+		return result with
+		{
+			ItemPlayVisualSync = new NetworkItemPlayVisualSync(itemCard.Id, definition.PlayPresentation, itemHandIndex),
+		};
 	}
 
 	private bool TryStartPendingTargetedItemSelection(
@@ -222,7 +230,11 @@ public partial class GameBoardScene
 			-1,
 			transformAreaGlobalPosition,
 			turnSequenceGeneration);
-		return result with { CompletesTurn = false };
+		return result with
+		{
+			CompletesTurn = false,
+			ItemPlayVisualSync = new NetworkItemPlayVisualSync(itemCard.Id, CardPlayPresentationTypes.TransformAreaTrigger, itemHandIndex),
+		};
 	}
 
 }

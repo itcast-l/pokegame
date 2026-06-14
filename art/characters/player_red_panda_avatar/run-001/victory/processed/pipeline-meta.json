@@ -1,0 +1,175 @@
+{
+  "target": "player",
+  "mode": "attack",
+  "prompt": "Use the red panda image just shown as the visual reference. Preserve the exact same cute red panda avatar identity: rich orange-red fur, cream muzzle and cheeks, dark brown eye patches, small rounded ears, large teal-blue eyes, playful smile, teal sea-silk scarf, tiny shell pendant, and pearl accent. Keep the same premium cute mobile-game portrait style.\n\nCreate a polished clean HD 2D game character animation sheet. Exact layout: 2 columns by 2 rows, 4 equal square cells, one continuous victory animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.\n\nAction: joyful victory reaction. Frame 1 proud smile, frame 2 eyes closed in a delighted grin with slight ear lift, frame 3 brightest triumphant happy face with tiny scarf and pendant bounce, frame 4 content proud smile settling back. Keep motion compact and centered. No detached stars, no confetti, no floating symbols, no wide effects. Full portrait stays fully inside each cell with generous magenta margin. No ear, fur, scarf, or pendant may cross any cell edge. Same silhouette scale in every frame.",
+  "role": "",
+  "input": "art/characters/player_red_panda_avatar/run-001/victory/generated/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 120,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 362,
+  "fit_scale": 0.9,
+  "trim_border": 0,
+  "edge_clean_depth": 2,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 4,
+  "min_component_area": 1200,
+  "edge_touch_margin": 1,
+  "frame_labels": [
+    "victory-1",
+    "victory-2",
+    "victory-3",
+    "victory-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 184013,
+      "selected_component_bbox": [
+        71,
+        70,
+        585,
+        586
+      ],
+      "crop_bbox": [
+        67,
+        66,
+        589,
+        590
+      ],
+      "edge_touch": false,
+      "output_size": [
+        314,
+        316
+      ],
+      "paste_position": [
+        24,
+        23
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 186699,
+      "selected_component_bbox": [
+        31,
+        74,
+        556,
+        587
+      ],
+      "crop_bbox": [
+        27,
+        70,
+        560,
+        591
+      ],
+      "edge_touch": false,
+      "output_size": [
+        321,
+        314
+      ],
+      "paste_position": [
+        20,
+        24
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 183798,
+      "selected_component_bbox": [
+        84,
+        50,
+        616,
+        558
+      ],
+      "crop_bbox": [
+        80,
+        46,
+        620,
+        562
+      ],
+      "edge_touch": false,
+      "output_size": [
+        325,
+        311
+      ],
+      "paste_position": [
+        18,
+        25
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 181401,
+      "selected_component_bbox": [
+        43,
+        48,
+        555,
+        563
+      ],
+      "crop_bbox": [
+        39,
+        44,
+        559,
+        567
+      ],
+      "edge_touch": false,
+      "output_size": [
+        313,
+        315
+      ],
+      "paste_position": [
+        24,
+        23
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

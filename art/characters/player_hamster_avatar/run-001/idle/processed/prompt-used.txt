@@ -1,0 +1,1 @@
+Blink-only deterministic rebuild. Base frame: 1. Blink frames: {9: 7}. All non-blink frames are exact copies of frame 1; only eye-region pixels change on frame 9.

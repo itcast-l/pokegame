@@ -17,7 +17,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 tableCardPosition))
+		if (!TryGetTableCardAnimationPosition(tableCardIndex, out Vector2 tableCardPosition))
 		{
 			return;
 		}
@@ -125,7 +125,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!TryGetTableCardPosition(tableCardIndex, out Vector2 tableCardPosition))
+		if (!TryGetTableCardAnimationPosition(tableCardIndex, out Vector2 tableCardPosition))
 		{
 			return;
 		}
@@ -219,6 +219,23 @@ public partial class GameBoardScene
 		}
 
 		return itemCard.Texture;
+	}
+
+	private bool TryGetTableCardAnimationPosition(int tableCardIndex, out Vector2 position)
+	{
+		if (tableCardIndex < 0)
+		{
+			position = default;
+			return false;
+		}
+
+		if (tableCardIndex < _tableCards.Count)
+		{
+			return TryGetTableCardPosition(tableCardIndex, out position);
+		}
+
+		position = GetTableCardPosition(tableCardIndex, GetTableCardLayoutRect());
+		return true;
 	}
 
 }

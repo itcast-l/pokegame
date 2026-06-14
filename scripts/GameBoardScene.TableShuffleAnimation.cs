@@ -12,6 +12,17 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastTableShuffleVisualEventFromHost(
+				_currentTurnPlayerIndex,
+				BuildShuffleTargetIndexes(shuffledTableCards),
+				turnSequenceGeneration,
+				snapshotId);
+		}
+
 		List<ShuffledTableCardVisual> shuffledVisuals = BuildShuffledTableCardVisuals(shuffledTableCards);
 		if (shuffledVisuals.Count == 0)
 		{
@@ -120,6 +131,16 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastMantaTideShiftVisualEventFromHost(
+				_currentTurnPlayerIndex,
+				turnSequenceGeneration,
+				snapshotId);
+		}
+
 		List<ShuffledTableCardVisual> tideShiftVisuals = BuildMantaRayTideShiftTableMoveVisuals();
 		if (tideShiftVisuals.Count == 0)
 		{
@@ -217,6 +238,18 @@ public partial class GameBoardScene
 		}
 
 		return visuals;
+	}
+
+	private int[] BuildShuffleTargetIndexes(IReadOnlyList<TableCard> shuffledTableCards)
+	{
+		var result = new int[_tableCards.Count];
+		for (int sourceIndex = 0; sourceIndex < _tableCards.Count; sourceIndex++)
+		{
+			TableCard sourceTableCard = _tableCards[sourceIndex];
+			result[sourceIndex] = FindTableCardReferenceIndex(shuffledTableCards, sourceTableCard);
+		}
+
+		return result;
 	}
 
 	private List<ShuffledTableCardVisual> BuildShuffledTableCardVisuals(IReadOnlyList<TableCard> shuffledTableCards)

@@ -29,6 +29,21 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastDeckShuffleVisualEventFromHost(
+				playerIndex,
+				_turnSequenceGeneration,
+				snapshotId);
+		}
+
+		if (!ShouldPlayOwnerOnlyVisualLocally(playerIndex))
+		{
+			return;
+		}
+
 		PlayGameSfx(GameSfx.DeckShuffle, -2.5f, 0.96f, 1.04f, 0.12);
 		Label? countLabel = pile.GetNodeOrNull<Label>(CardCountLabelNodeName);
 		bool countLabelVisible = countLabel != null && countLabel.Visible;

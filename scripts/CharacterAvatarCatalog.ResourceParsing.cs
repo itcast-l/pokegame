@@ -22,6 +22,7 @@ public static partial class CharacterAvatarCatalog
 			GetResourceString(resource, "DisplayName"),
 			GetResourceString(resource, "RootPath"),
 			GetResourceInt(resource, "IdleFrameCount", 1),
+			GetResourceFloat(resource, "IdleFrameSeconds"),
 			GetResourceInt(resource, "ActionFrameCount", 4),
 			GetResourceInt(resource, "AdventureStageNumber"),
 			GetResourceString(resource, "AdventureAbilityNameKey", "ADVENTURE_ABILITY_NONE_NAME"),

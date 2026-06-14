@@ -1,0 +1,7 @@
+Create a polished clean HD 2D game character animation sheet for a cute shiba inu player avatar portrait, matching the visual language of the existing premium mobile-game cat avatar portrait. Exact layout: 3 columns by 4 rows, 12 equal square cells, one continuous idle animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.
+
+Character design: adorable shiba inu head-and-neck portrait only, centered in each cell, warm golden-orange fur with cream muzzle and cheeks, upright triangular ears, large teal-blue eyes, small confident smile, soft fluffy forehead and cheek fur. Add subtle ocean elements only as accessories: a teal sea-silk scarf tied under the chin, a tiny shell pendant, and one small pearl bead accent. Keep the character clearly a land animal, not a sea creature.
+
+Animation: gentle idle breathing and expression loop. Tiny ear twitch, soft blink, small cheek lift, slight scarf bob, calm friendly confident expression. The same shiba identity in every frame. Full portrait must fit fully inside each cell with generous magenta margin on all sides. No ear tip, fur, scarf, or pendant may cross any cell edge. Use the same silhouette scale and centered placement in every frame.
+
+Style: project-native cute avatar portrait style, crisp silhouette, soft painterly fur rendering, controlled highlights, readable at small size.

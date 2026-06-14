@@ -1,0 +1,1 @@
+Blink-only deterministic rebuild via diff-mask. Base frame: 1. Blink frames: {8: 9, 9: 10, 10: 11, 11: 10}.

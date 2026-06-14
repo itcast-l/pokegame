@@ -308,7 +308,7 @@ public partial class GameBoardScene
 					isMagnetSelectionCard,
 					showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked,
-					isJellyfishDisabled || isLocked,
+					isJellyfishDisabled,
 					isLocalHandPlayer && IsMainPlayerHandDisplayIndexSelected(cardIndex),
 					GetHandCardDescription(card, showCardBack));
 			}
@@ -344,7 +344,7 @@ public partial class GameBoardScene
 					visualScale,
 					showAdventureTutorialHighlight: showAdventureTutorialHighlight,
 					isAdventureTutorialBlocked: isAdventureTutorialBlocked,
-					isJellyfishDisabled: isJellyfishDisabled || isLocked,
+					isJellyfishDisabled: isJellyfishDisabled,
 					showInputSelection: isLocalHandPlayer && IsMainPlayerHandDisplayIndexSelected(displayIndex),
 					tooltipText: tooltipText);
 			}

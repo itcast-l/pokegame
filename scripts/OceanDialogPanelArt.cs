@@ -74,15 +74,7 @@ public partial class OceanDialogPanelArt : Control
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
 		string texturePath = string.IsNullOrWhiteSpace(PanelTexturePath) ? DefaultPanelTexturePath : PanelTexturePath;
-		byte[] bytes = Godot.FileAccess.GetFileAsBytes(texturePath);
-		if (bytes.Length > 0)
-		{
-			Image image = new();
-			if (image.LoadPngFromBuffer(bytes) == Error.Ok)
-			{
-				_panelTexture = ImageTexture.CreateFromImage(image);
-			}
-		}
+		_panelTexture = GD.Load<Texture2D>(texturePath);
 
 		SetProcess(true);
 		QueueRedraw();
