@@ -47,17 +47,6 @@ public partial class GameBoardScene
 			root.AddChild(countdownFrame);
 		}
 
-		var ring = new MagnetAttachmentCountdownRing
-		{
-			Name = "MagnetAttachmentCountdownRing",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = new Vector2(24.0f, 10.0f),
-			Size = new Vector2(128.0f, 128.0f),
-			ZIndex = 1,
-			countdown_progress = 1.0f,
-		};
-		root.AddChild(ring);
-
 		var countdownLabel = new Label
 		{
 			Name = "MagnetAttachmentCountdownLabel",
@@ -65,9 +54,9 @@ public partial class GameBoardScene
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
-			Position = ring.Position,
-			Size = ring.Size,
-			ZIndex = 2,
+			Position = new Vector2(24.0f, 10.0f),
+			Size = new Vector2(128.0f, 128.0f),
+			ZIndex = 1,
 		};
 		countdownLabel.AddThemeFontSizeOverride("font_size", 46);
 		countdownLabel.AddThemeColorOverride("font_color", Colors.White);
@@ -96,7 +85,6 @@ public partial class GameBoardScene
 
 		AddChild(root);
 		_magnetAttachmentCountdownRoot = root;
-		_magnetAttachmentCountdownRing = ring;
 		_magnetAttachmentCountdownLabel = countdownLabel;
 		_magnetAttachmentCountdownHintLabel = hintLabel;
 
@@ -140,10 +128,6 @@ public partial class GameBoardScene
 
 		UpdateMagnetAttachmentCountdownHintPulse(progress <= 0.35f);
 
-		if (_magnetAttachmentCountdownRing != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownRing))
-		{
-			_magnetAttachmentCountdownRing.countdown_progress = progress;
-		}
 	}
 
 	private void ClearMagnetAttachmentCountdown()
@@ -157,7 +141,6 @@ public partial class GameBoardScene
 		}
 
 		_magnetAttachmentCountdownRoot = null;
-		_magnetAttachmentCountdownRing = null;
 		_magnetAttachmentCountdownLabel = null;
 		_magnetAttachmentCountdownHintLabel = null;
 		_magnetAttachmentCountdownRemainingSeconds = 0.0;
@@ -202,41 +185,5 @@ public partial class GameBoardScene
 		}
 
 		_magnetAttachmentCountdownHintTween = null;
-	}
-
-	private partial class MagnetAttachmentCountdownRing : Control
-	{
-		private float _countdownProgress = 1.0f;
-		public float countdown_progress
-		{
-			get => _countdownProgress;
-			set
-			{
-				_countdownProgress = Mathf.Clamp(value, 0.0f, 1.0f);
-				QueueRedraw();
-			}
-		}
-
-		public override void _Draw()
-		{
-			Vector2 center = Size / 2.0f;
-			float radius = Mathf.Min(Size.X, Size.Y) * 0.36f;
-			bool urgent = _countdownProgress <= 0.35f;
-			Color accentColor = urgent
-				? new Color(1.0f, 0.76f, 0.24f, 0.95f)
-				: new Color(0.58f, 1.0f, 0.96f, 0.95f);
-
-			DrawArc(center, radius + 7.0f, 0.0f, FullCircleRadians, 96, new Color(0.76f, 1.0f, 0.96f, 0.24f), 5.0f, true);
-
-			if (_countdownProgress > 0.0f)
-			{
-				float startAngle = -Mathf.Pi / 2.0f;
-				float endAngle = startAngle + FullCircleRadians * _countdownProgress;
-				int pointCount = Mathf.Max(12, Mathf.CeilToInt(96.0f * _countdownProgress));
-				DrawArc(center, radius + 7.0f, startAngle, endAngle, pointCount, accentColor, urgent ? 7.0f : 6.0f, true);
-			}
-
-			DrawArc(center, radius - 8.0f, 0.0f, FullCircleRadians, 96, new Color(1.0f, 1.0f, 1.0f, 0.30f), 2.0f, true);
-		}
 	}
 }

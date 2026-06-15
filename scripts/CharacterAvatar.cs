@@ -10,6 +10,7 @@ public partial class CharacterAvatar : Control
 	private const float AttackFxStartScale = 0.78f;
 	private const float AttackFxEndScale = 1.06f;
 	private const int AttackFxZIndex = 8;
+	private const float FeedbackFxVisualScale = 1.42f;
 
 	public enum AvatarAction
 	{
@@ -92,22 +93,24 @@ public partial class CharacterAvatar : Control
 	private Control _portraitPivot = default!;
 	private TextureRect _portrait = default!;
 	private TextureRect _attackFx = default!;
+	private TextureRect _feedbackFx = default!;
 	private AnimationPlayer _frameAnimationPlayer = default!;
 	private Texture2D? _idleFallbackTexture;
 	private Tween? _actionTween;
-	private Tween? _pulseTween;
 	private Tween? _attackFxTween;
+	private Tween? _feedbackFxTween;
 	private static readonly Dictionary<string, AvatarFrameCache> ActionFrameCache = new();
 	private static readonly Dictionary<string, Texture2D[]> AttackFxFrameCache = new();
+	private static readonly Dictionary<string, Texture2D[]> FeedbackFxFrameCache = new();
 	private readonly Dictionary<AvatarAction, Texture2D[]> _actionFrames = new();
 	private Texture2D[] _attackFxFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _scoreFeedbackFxFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _hitFeedbackFxFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _victoryFeedbackFxFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _defeatFeedbackFxFrames = Array.Empty<Texture2D>();
 	private AvatarAction _currentAction = AvatarAction.Idle;
 	private AvatarAction _frameAction = AvatarAction.Idle;
 	private Vector2 _basePivotPosition;
-	private float _scorePulse;
-	private float _hitPulse;
-	private float _victoryPulse;
-	private float _defeatShade;
 
 	public override void _Ready()
 	{
@@ -115,14 +118,17 @@ public partial class CharacterAvatar : Control
 		_portraitPivot = GetNode<Control>("PortraitPivot");
 		_portrait = GetNode<TextureRect>("PortraitPivot/Portrait");
 		_attackFx = GetNodeOrNull<TextureRect>("AttackFx") ?? CreateAttackFxRect();
+		_feedbackFx = GetNodeOrNull<TextureRect>("FeedbackFx") ?? CreateFeedbackFxRect();
 		_frameAnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? CreateFrameAnimationPlayer();
 		_portrait.MouseFilter = MouseFilterEnum.Ignore;
 		_portraitPivot.MouseFilter = MouseFilterEnum.Ignore;
 		_attackFx.MouseFilter = MouseFilterEnum.Ignore;
+		_feedbackFx.MouseFilter = MouseFilterEnum.Ignore;
 
 		UpdateAttackFxRootForAvatarRoot(AvatarRoot);
 		LoadGeneratedActionFrames();
 		LoadAttackFxFrames();
+		LoadFeedbackFxFrames();
 
 		if (PortraitTexture != null)
 		{
@@ -157,28 +163,6 @@ public partial class CharacterAvatar : Control
 			DrawArc(center, radius, 0.0f, Mathf.Tau, 96, new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.48f), 3.0f, true);
 		}
 
-		if (_scorePulse > 0.0f)
-		{
-			DrawArc(center, radius + 16.0f * (1.0f - _scorePulse), 0.0f, Mathf.Tau, 96, new Color(0.7f, 1.0f, 0.8f, 0.34f * _scorePulse), 5.0f, true);
-		}
-
-		if (_hitPulse > 0.0f)
-		{
-			DrawCircle(center, radius * 1.02f, new Color(1.0f, 0.12f, 0.08f, 0.18f * _hitPulse));
-			DrawArc(center, radius * 1.03f, 0.0f, Mathf.Tau, 96, new Color(1.0f, 0.28f, 0.18f, 0.48f * _hitPulse), 4.0f, true);
-		}
-
-		if (_victoryPulse > 0.0f)
-		{
-			DrawArc(center, radius + 10.0f, 0.0f, Mathf.Tau, 96, new Color(1.0f, 0.88f, 0.34f, 0.5f * _victoryPulse), 4.0f, true);
-			DrawCircle(center + new Vector2(-radius * 0.28f, -radius * 0.32f), radius * 0.12f, new Color(1.0f, 0.96f, 0.62f, 0.42f * _victoryPulse));
-			DrawCircle(center + new Vector2(radius * 0.34f, -radius * 0.24f), radius * 0.08f, new Color(1.0f, 0.96f, 0.62f, 0.34f * _victoryPulse));
-		}
-
-		if (_defeatShade > 0.0f)
-		{
-			DrawCircle(center, radius * 0.96f, new Color(0.0f, 0.0f, 0.0f, 0.20f * _defeatShade));
-		}
 	}
 
 }

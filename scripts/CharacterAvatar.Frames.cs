@@ -26,6 +26,15 @@ public partial class CharacterAvatar
 		HideAttackFx();
 	}
 
+	private void LoadFeedbackFxFrames()
+	{
+		_scoreFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_score/run-001");
+		_hitFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_hit/run-001");
+		_victoryFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_victory/run-001");
+		_defeatFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_defeat/run-001");
+		HideFeedbackFx();
+	}
+
 	private void PlayAttackFx()
 	{
 		if (_attackFxFrames.Length == 0)
@@ -60,6 +69,45 @@ public partial class CharacterAvatar
 		_attackFx.Texture = null;
 		_attackFx.Modulate = Colors.White;
 		_attackFx.Scale = Vector2.One;
+	}
+
+	private void PlayFeedbackFx(Texture2D[] frames, float seconds)
+	{
+		if (_feedbackFx == null || frames.Length == 0)
+		{
+			return;
+		}
+
+		_feedbackFxTween?.Kill();
+		_feedbackFxTween = null;
+		LayoutFeedbackFx();
+		_feedbackFx.Visible = true;
+		_feedbackFx.Texture = frames[0];
+		_feedbackFx.Modulate = Colors.White;
+		_feedbackFx.Scale = Vector2.One * 0.92f;
+
+		float frameSeconds = Mathf.Max(0.04f, seconds / Mathf.Max(1, frames.Length));
+		_feedbackFxTween = CreateTween();
+		_feedbackFxTween.SetParallel(true);
+		_feedbackFxTween.SetTrans(Tween.TransitionType.Sine);
+		_feedbackFxTween.SetEase(Tween.EaseType.Out);
+		_feedbackFxTween.TweenProperty(_feedbackFx, "scale", Vector2.One * 1.05f, seconds);
+		_feedbackFxTween.TweenProperty(_feedbackFx, "modulate:a", 0.0f, seconds);
+		FrameAnimationHelpers.TweenTextureFrames(_feedbackFxTween, _feedbackFx, frames, frameSeconds);
+		_feedbackFxTween.Finished += HideFeedbackFx;
+	}
+
+	private void HideFeedbackFx()
+	{
+		if (_feedbackFx == null)
+		{
+			return;
+		}
+
+		_feedbackFx.Visible = false;
+		_feedbackFx.Texture = null;
+		_feedbackFx.Modulate = Colors.White;
+		_feedbackFx.Scale = Vector2.One;
 	}
 
 	private void BeginActionFrames(AvatarAction action)
@@ -142,19 +190,20 @@ public partial class CharacterAvatar
 		return attackFx;
 	}
 
-	private void AnimateDrawPulse(Action<float> applyPulse, float from, float to, float seconds)
+	private TextureRect CreateFeedbackFxRect()
 	{
-		applyPulse(from);
-		QueueRedraw();
-		_pulseTween?.Kill();
-		_pulseTween = CreateTween();
-		_pulseTween.SetTrans(Tween.TransitionType.Cubic);
-		_pulseTween.SetEase(Tween.EaseType.Out);
-		_pulseTween.TweenMethod(Callable.From<float>(value =>
+		var feedbackFx = new TextureRect
 		{
-			applyPulse(value);
-			QueueRedraw();
-		}), from, to, seconds);
+			Name = "FeedbackFx",
+			MouseFilter = MouseFilterEnum.Ignore,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			ZIndex = AttackFxZIndex + 1,
+			Visible = false,
+		};
+		AddChild(feedbackFx);
+		return feedbackFx;
 	}
 
 	private static AvatarFrameCache LoadAvatarFrames(string avatarRoot)
@@ -232,6 +281,35 @@ public partial class CharacterAvatar
 				preferImageFile: true);
 			AttackFxFrameCache[fxRoot] = frames;
 			return frames;
+		}
+
+		internal static Texture2D[] LoadNamedFxFrames(string fxRoot)
+		{
+			if (string.IsNullOrWhiteSpace(fxRoot))
+			{
+				return Array.Empty<Texture2D>();
+			}
+
+			if (FeedbackFxFrameCache.TryGetValue(fxRoot, out Texture2D[]? cachedFrames))
+			{
+				return cachedFrames;
+			}
+
+			var frames = new List<Texture2D>();
+			for (int index = 1; index <= 8; index++)
+			{
+				Texture2D? frame = FrameAnimationHelpers.LoadTextureResource($"{fxRoot}/processed/fx-{index}.png", allowEditorImageFallback: true);
+				if (frame == null)
+				{
+					break;
+				}
+
+				frames.Add(frame);
+			}
+
+			Texture2D[] result = frames.ToArray();
+			FeedbackFxFrameCache[fxRoot] = result;
+			return result;
 		}
 	}
 

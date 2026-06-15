@@ -93,7 +93,7 @@ theme_override_constants/margin_bottom = 118
 [node name="PauseMenuLayout" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 26
+theme_override_constants/separation = 22
 alignment = 1
 
 [node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
@@ -172,6 +172,60 @@ theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 text = "GAME_QUIT"
+flat = true
+
+[node name="RestartActionRoot" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchor_left = 0.2876344
+anchor_top = 0.79375
+anchor_right = 0.7123656
+anchor_bottom = 0.95208335
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RestartFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/RestartActionRoot"]
+custom_minimum_size = Vector2(316, 76)
+process_mode = 3
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -158.0
+offset_top = -38.0
+offset_right = 158.0
+offset_bottom = 38.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_button_frame")
+AccentColor = Color(0.98, 0.83, 0.52, 1)
+
+[node name="RestartButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/RestartActionRoot/RestartFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+text = "GAME_RESTART_MATCH"
 flat = true
 
 [node name="PauseQuitConfirmRoot" type="Control" parent="."]

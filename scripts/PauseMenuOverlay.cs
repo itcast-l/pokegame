@@ -10,6 +10,9 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	public delegate void ReturnToMainMenuRequestedEventHandler();
 
 	[Signal]
+	public delegate void RestartRequestedEventHandler();
+
+	[Signal]
 	public delegate void QuitRequestedEventHandler();
 
 	[Signal]
@@ -20,11 +23,13 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private Label _confirmHint = default!;
 	private PlayerCountDialogFrameArt _quitCancelFrame = default!;
 	private PlayerCountDialogFrameArt _quitConfirmFrame = default!;
+	private Control _restartActionRoot = default!;
 
 	public Control PauseMenuPanel { get; private set; } = default!;
 	public Control QuitConfirmRoot { get; private set; } = default!;
 	public Button ContinueButton { get; private set; } = default!;
 	public Button ReturnToMainMenuButton { get; private set; } = default!;
+	public Button RestartButton { get; private set; } = default!;
 	public Button QuitButton { get; private set; } = default!;
 	public Button QuitCancelButton { get; private set; } = default!;
 	public Button QuitConfirmButton { get; private set; } = default!;
@@ -33,8 +38,10 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	{
 		PauseMenuPanel = GetNode<Control>("%PauseMenuPanel");
 		QuitConfirmRoot = GetNode<Control>("%PauseQuitConfirmRoot");
+		_restartActionRoot = GetNode<Control>("%RestartActionRoot");
 		ContinueButton = GetNode<Button>("%ContinueButton");
 		ReturnToMainMenuButton = GetNode<Button>("%ReturnToMainMenuButton");
+		RestartButton = GetNode<Button>("%RestartButton");
 		QuitButton = GetNode<Button>("%QuitButton");
 		QuitCancelButton = GetNode<Button>("%CancelQuitButton");
 		QuitConfirmButton = GetNode<Button>("%ConfirmQuitButton");
@@ -48,11 +55,13 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 
 		MainMenuInteractiveStyle.ApplyActionButton(ContinueButton, 20);
 		MainMenuInteractiveStyle.ApplyActionButton(ReturnToMainMenuButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(RestartButton, 18);
 		MainMenuInteractiveStyle.ApplyActionButton(QuitButton, 20);
 		MainMenuInteractiveStyle.ApplyActionButton(QuitCancelButton, 20);
 		MainMenuInteractiveStyle.ApplyActionButton(QuitConfirmButton, 20);
 		ContinueButton.Pressed += () => EmitSignal(SignalName.ContinueRequested);
 		ReturnToMainMenuButton.Pressed += () => EmitSignal(SignalName.ReturnToMainMenuRequested);
+		RestartButton.Pressed += () => EmitSignal(SignalName.RestartRequested);
 		QuitButton.Pressed += () => EmitSignal(SignalName.QuitRequested);
 		QuitCancelButton.Pressed += HideQuitConfirm;
 		QuitConfirmButton.Pressed += () => EmitSignal(SignalName.ConfirmQuitRequested);
@@ -83,12 +92,19 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	{
 		ContinueButton.Text = localize("GAME_CONTINUE");
 		ReturnToMainMenuButton.Text = localize(returnButtonKey);
+		RestartButton.Text = localize("GAME_RESTART_MATCH");
 		QuitButton.Text = localize("GAME_QUIT");
 		QuitCancelButton.Text = localize("GAME_QUIT_CONFIRM_CANCEL");
 		QuitConfirmButton.Text = localize("GAME_QUIT_CONFIRM_ACCEPT");
 		_confirmTitle.Text = localize("GAME_QUIT_CONFIRM_TITLE");
 		_confirmMessage.Text = localize("GAME_QUIT_CONFIRM_MESSAGE");
 		_confirmHint.Text = localize("GAME_QUIT_CONFIRM_HINT");
+	}
+
+	public void SetRestartAvailable(bool available)
+	{
+		_restartActionRoot.Visible = available;
+		RestartButton.Disabled = !available;
 	}
 
 	public void ShowQuitConfirm()

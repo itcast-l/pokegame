@@ -55,22 +55,18 @@ public partial class CharacterAvatar
 		_attackFxTween?.Kill();
 		_attackFxTween = null;
 		HideAttackFx();
-		_pulseTween?.Kill();
-		_pulseTween = null;
+		_feedbackFxTween?.Kill();
+		_feedbackFxTween = null;
+		HideFeedbackFx();
 		_currentAction = AvatarAction.Idle;
-		_scorePulse = 0.0f;
-		_hitPulse = 0.0f;
-		_victoryPulse = 0.0f;
-		_defeatShade = 0.0f;
 		ResetPortraitPose();
 		ShowActionStillFrame(AvatarAction.Idle);
-		QueueRedraw();
 	}
 
 	public void PlayScore()
 	{
 		StartAction(AvatarAction.Score);
-		AnimateDrawPulse(value => _scorePulse = value, 1.0f, 0.0f, 0.36f);
+		PlayFeedbackFx(_scoreFeedbackFxFrames, 0.36f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "scale", Vector2.One * 1.18f, 0.10f).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
@@ -94,7 +90,7 @@ public partial class CharacterAvatar
 	public void PlayHit()
 	{
 		StartAction(AvatarAction.Hit);
-		AnimateDrawPulse(value => _hitPulse = value, 1.0f, 0.0f, 0.24f);
+		PlayFeedbackFx(_hitFeedbackFxFrames, 0.24f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portrait, "modulate", new Color(1.0f, 0.42f, 0.36f, 1.0f), 0.04f);
@@ -109,7 +105,7 @@ public partial class CharacterAvatar
 	public void PlayVictory()
 	{
 		StartAction(AvatarAction.Victory);
-		AnimateDrawPulse(value => _victoryPulse = value, 1.0f, 0.0f, 0.58f);
+		PlayFeedbackFx(_victoryFeedbackFxFrames, 0.58f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition + new Vector2(0.0f, -14.0f), 0.16f).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
@@ -121,7 +117,7 @@ public partial class CharacterAvatar
 	public void PlayDefeat()
 	{
 		StartAction(AvatarAction.Defeat);
-		AnimateDrawPulse(value => _defeatShade = value, 0.0f, 1.0f, 0.50f);
+		PlayFeedbackFx(_defeatFeedbackFxFrames, 0.50f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "position", _basePivotPosition + new Vector2(0.0f, 12.0f), 0.18f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
@@ -137,21 +133,13 @@ public partial class CharacterAvatar
 		_actionTween = null;
 		_attackFxTween?.Kill();
 		_attackFxTween = null;
+		_feedbackFxTween?.Kill();
+		_feedbackFxTween = null;
 		HideAttackFx();
+		HideFeedbackFx();
 		_currentAction = action;
-		_scorePulse = 0.0f;
-		_hitPulse = 0.0f;
-		_victoryPulse = 0.0f;
-		if (action != AvatarAction.Defeat)
-		{
-			_defeatShade = 0.0f;
-		}
-
-		_pulseTween?.Kill();
-		_pulseTween = null;
 		ResetPortraitPose();
 		BeginActionFrames(action);
-		QueueRedraw();
 	}
 
 	private void FinishAndReturnToIdle(AvatarAction finishedAction)

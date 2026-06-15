@@ -10,6 +10,7 @@ public partial class GameBoardScene
 	private PauseMenuOverlay? _pauseMenuRoot;
 	private Button? _pauseContinueButton;
 	private Button? _pauseQuitButton;
+	private Button? _pauseRestartButton;
 	private Control? _pauseQuitConfirmRoot;
 	private bool _isPauseMenuOpen;
 
@@ -56,13 +57,16 @@ public partial class GameBoardScene
 		_pauseMenuRoot = pauseMenu;
 		_pauseMenuRoot.CancelPressed = HandlePauseMenuCancelPressed;
 		_pauseContinueButton = pauseMenu.ContinueButton;
+		_pauseRestartButton = pauseMenu.RestartButton;
 		_pauseQuitButton = pauseMenu.QuitButton;
 		_pauseQuitConfirmRoot = pauseMenu.QuitConfirmRoot;
 		pauseMenu.ContinueRequested += HidePauseMenu;
 		pauseMenu.ReturnToMainMenuRequested += ReturnToPauseMenuDestination;
+		pauseMenu.RestartRequested += RestartCurrentMatchFromPauseMenu;
 		pauseMenu.QuitRequested += QuitGameFromPauseMenu;
 		pauseMenu.ConfirmQuitRequested += ConfirmQuitGameFromPauseMenu;
 		pauseMenu.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
+		pauseMenu.SetRestartAvailable(CanRestartCurrentMatchFromPauseMenu());
 	}
 
 	private void ShowPauseMenu()
@@ -81,6 +85,7 @@ public partial class GameBoardScene
 		_isPauseMenuOpen = true;
 		PlayGameSfx(GameSfx.UiPauseOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		_pauseMenuRoot.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
+		_pauseMenuRoot.SetRestartAvailable(CanRestartCurrentMatchFromPauseMenu());
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
 		if (_pauseQuitConfirmRoot != null)
@@ -216,6 +221,22 @@ public partial class GameBoardScene
 
 		_pauseMenuRoot?.HideQuitConfirm();
 		_pauseQuitButton?.GrabFocus();
+	}
+
+	private bool CanRestartCurrentMatchFromPauseMenu()
+	{
+		return !IsNetworkMultiplayerMode();
+	}
+
+	private void RestartCurrentMatchFromPauseMenu()
+	{
+		if (!CanRestartCurrentMatchFromPauseMenu() || _isLeavingGame)
+		{
+			return;
+		}
+
+		HidePauseMenu();
+		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
 
 	private async void ConfirmQuitGameFromPauseMenu()

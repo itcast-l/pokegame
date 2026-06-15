@@ -23,6 +23,7 @@ public partial class CharacterAvatar
 		}
 
 		LayoutAttackFx();
+		LayoutFeedbackFx();
 	}
 
 	private void LayoutAttackFx()
@@ -36,6 +37,19 @@ public partial class CharacterAvatar
 		_attackFx.Size = new Vector2(side, side);
 		_attackFx.PivotOffset = _attackFx.Size / 2.0f;
 		_attackFx.Position = (Size - _attackFx.Size) / 2.0f;
+	}
+
+	private void LayoutFeedbackFx()
+	{
+		if (_feedbackFx == null)
+		{
+			return;
+		}
+
+		float side = Mathf.Max(1.0f, Mathf.Min(Size.X, Size.Y) * FeedbackFxVisualScale);
+		_feedbackFx.Size = new Vector2(side, side);
+		_feedbackFx.PivotOffset = _feedbackFx.Size / 2.0f;
+		_feedbackFx.Position = (Size - _feedbackFx.Size) / 2.0f;
 	}
 
 	private void UpdateAttackFxRootForAvatarRoot(string previousRoot)

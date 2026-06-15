@@ -10,7 +10,7 @@ public partial class GameBoardScene
 		int targetTableCardIndex,
 		int turnSequenceGeneration)
 	{
-		if (_leafySeadragonBladeProjectileFrames.Count == 0
+		if (_leafySeadragonBladeFlightFrames.Count == 0
 			|| !IsInsideTree()
 			|| turnSequenceGeneration != _turnSequenceGeneration
 			|| IsGameOver())
@@ -74,9 +74,8 @@ public partial class GameBoardScene
 		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
 			+ side * (sideOffset * 0.42f)
 			+ new Vector2(0.0f, -16.0f);
-		Texture2D? hitFrame = _leafySeadragonBladeProjectileFrames.Count > 2
-			? _leafySeadragonBladeProjectileFrames[2]
-			: null;
+		Texture2D? flightFrame = _leafySeadragonBladeFlightFrames.Count > 0 ? _leafySeadragonBladeFlightFrames[0] : null;
+		Texture2D? hitFrame = _leafySeadragonBladeImpactFrames.Count > 0 ? _leafySeadragonBladeImpactFrames[0] : null;
 		var projectile = new Node2D
 		{
 			Name = "LeafySeadragonBladeProjectile",
@@ -87,68 +86,22 @@ public partial class GameBoardScene
 			Scale = Vector2.One * 0.78f,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
-		var flightBlade = new Node2D { Name = "FlightBlade" };
-		flightBlade.AddChild(CreateLeafySeadragonBladePolygon(
-			"TrailGlow",
-			new[]
+		Sprite2D? flightBlade = null;
+		if (flightFrame != null)
+		{
+			flightBlade = new Sprite2D
 			{
-				new Vector2(-58.0f, -6.0f),
-				new Vector2(12.0f, -3.0f),
-				new Vector2(28.0f, 0.0f),
-				new Vector2(12.0f, 3.0f),
-				new Vector2(-58.0f, 6.0f),
-			},
-			new Color(0.28f, 0.88f, 1.0f, 0.30f),
-			0));
-		flightBlade.AddChild(CreateLeafySeadragonBladePolygon(
-			"UpperLeafFin",
-			new[]
-			{
-				new Vector2(-8.0f, -7.0f),
-				new Vector2(24.0f, -22.0f),
-				new Vector2(46.0f, -10.0f),
-				new Vector2(18.0f, -3.0f),
-			},
-			new Color(0.23f, 0.92f, 0.86f, 0.78f),
-			1));
-		flightBlade.AddChild(CreateLeafySeadragonBladePolygon(
-			"LowerLeafFin",
-			new[]
-			{
-				new Vector2(-10.0f, 7.0f),
-				new Vector2(22.0f, 22.0f),
-				new Vector2(44.0f, 9.0f),
-				new Vector2(16.0f, 3.0f),
-			},
-			new Color(0.20f, 0.82f, 0.72f, 0.72f),
-			1));
-		flightBlade.AddChild(CreateLeafySeadragonBladePolygon(
-			"BladeBody",
-			new[]
-			{
-				new Vector2(-14.0f, -10.0f),
-				new Vector2(48.0f, -6.0f),
-				new Vector2(78.0f, 0.0f),
-				new Vector2(48.0f, 6.0f),
-				new Vector2(-14.0f, 10.0f),
-				new Vector2(4.0f, 0.0f),
-			},
-			new Color(0.54f, 0.98f, 1.0f, 0.94f),
-			2));
-		flightBlade.AddChild(CreateLeafySeadragonBladePolygon(
-			"BladeCore",
-			new[]
-			{
-				new Vector2(-2.0f, -3.0f),
-				new Vector2(56.0f, -2.0f),
-				new Vector2(82.0f, 0.0f),
-				new Vector2(56.0f, 2.0f),
-				new Vector2(-2.0f, 3.0f),
-				new Vector2(10.0f, 0.0f),
-			},
-			new Color(1.0f, 1.0f, 1.0f, 0.92f),
-			3));
-		projectile.AddChild(flightBlade);
+				Name = "FlightBlade",
+				Texture = flightFrame,
+				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+				Centered = true,
+				Scale = GetSpriteScaleForVisualSize(flightFrame, LeafySeadragonBladeProjectileVisualSize),
+			};
+		}
+		if (flightBlade != null)
+		{
+			projectile.AddChild(flightBlade);
+		}
 
 		Sprite2D? hitSlash = null;
 		if (hitFrame != null)
@@ -173,11 +126,32 @@ public partial class GameBoardScene
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
+			if (flightBlade != null)
+			{
+				FrameAnimationHelpers.TweenTextureFramesForDuration(
+					tween,
+					flightBlade,
+					_leafySeadragonBladeFlightFrames,
+					LeafySeadragonBladeProjectileFlightSeconds / Mathf.Max(1, _leafySeadragonBladeFlightFrames.Count),
+					LeafySeadragonBladeProjectileFlightSeconds * 0.82f);
+			}
+			if (hitSlash != null)
+			{
+				FrameAnimationHelpers.TweenTextureFramesForDuration(
+					tween,
+					hitSlash,
+					_leafySeadragonBladeImpactFrames,
+					Mathf.Max(0.04, (LeafySeadragonBladeProjectileFlightSeconds * 0.22f) / Mathf.Max(1, _leafySeadragonBladeImpactFrames.Count)),
+					LeafySeadragonBladeProjectileFlightSeconds * 0.22f);
+			}
 			tween.TweenCallback(Callable.From(() =>
 			{
 				if (GodotObject.IsInstanceValid(projectile))
 				{
-					flightBlade.Visible = false;
+					if (flightBlade != null && GodotObject.IsInstanceValid(flightBlade))
+					{
+						flightBlade.Visible = false;
+					}
 					if (hitSlash != null && GodotObject.IsInstanceValid(hitSlash))
 					{
 						hitSlash.Visible = true;
@@ -212,20 +186,4 @@ public partial class GameBoardScene
 			}
 		}
 	}
-
-	private static Polygon2D CreateLeafySeadragonBladePolygon(
-		string name,
-		Vector2[] polygon,
-		Color color,
-		int zIndex)
-	{
-		return new Polygon2D
-		{
-			Name = name,
-			Polygon = polygon,
-			Color = color,
-			ZIndex = zIndex,
-		};
-	}
-
 }

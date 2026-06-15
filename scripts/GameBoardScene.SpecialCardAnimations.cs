@@ -21,6 +21,7 @@ public partial class GameBoardScene
 			? EnemySpecialAbilityAvatarFxFrameSeconds
 			: SpecialCardTriggerFxFrameSeconds;
 		float triggerFxPeakAlpha = useEnemyAbilityFlashFx ? 0.88f : 1.0f;
+		IReadOnlyList<Texture2D> activationFrames = _specialCardTriggerActivationFrames;
 		Control effectRoot = _animationPresenter.RentControl(
 			this,
 			"SpecialCardTriggerEffect",
@@ -29,16 +30,17 @@ public partial class GameBoardScene
 		effectRoot.RotationDegrees = rotationDegrees;
 		effectRoot.GlobalPosition = globalPosition;
 
-		var ring = new SpecialCardTriggerRing
-		{
-			Name = "SpecialCardTriggerRing",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Position = (CardVisualSize - SpecialCardTriggerRingSize) / 2.0f,
-			Size = SpecialCardTriggerRingSize,
-			PivotOffset = SpecialCardTriggerRingSize / 2.0f,
-			ZIndex = 0,
-		};
-		effectRoot.AddChild(ring);
+		TextureRect activationOverlay = _animationPresenter.RentTextureRect(
+			effectRoot,
+			"SpecialCardTriggerActivation",
+			activationFrames.Count > 0 ? activationFrames[0] : null,
+			new Vector2(320.0f, 320.0f),
+			0,
+			CanvasItem.TextureFilterEnum.Linear);
+		activationOverlay.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		activationOverlay.Position = (CardVisualSize - activationOverlay.Size) / 2.0f;
+		activationOverlay.Visible = activationFrames.Count > 0;
+		activationOverlay.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 
 		TextureRect card = _animationPresenter.RentTextureRect(
 			effectRoot,
@@ -60,30 +62,6 @@ public partial class GameBoardScene
 		triggerFx.Visible = triggerFxFrames.Count > 0;
 		triggerFx.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 
-		Vector2[] sparkPositions =
-		{
-			new(-36.0f, -34.0f),
-			new(CardVisualSize.X + 17.0f, -28.0f),
-			new(-30.0f, CardVisualSize.Y + 16.0f),
-			new(CardVisualSize.X + 20.0f, CardVisualSize.Y + 15.0f),
-		};
-		foreach (Vector2 sparkPosition in sparkPositions)
-		{
-			var spark = new ColorRect
-			{
-				Name = "SpecialCardTriggerSpark",
-				Color = new Color(1.0f, 0.96f, 0.56f, 0.95f),
-				MouseFilter = MouseFilterEnum.Ignore,
-				Position = sparkPosition,
-				Size = SpecialCardTriggerSparkSize,
-				PivotOffset = SpecialCardTriggerSparkSize / 2.0f,
-				RotationDegrees = 45.0f,
-				ZIndex = 4,
-				Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
-			};
-			effectRoot.AddChild(spark);
-		}
-
 		try
 		{
 			Tween tween = CreateTween();
@@ -92,35 +70,20 @@ public partial class GameBoardScene
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.82f, SpecialCardTriggerEffectSeconds * 0.42f);
 			tween.TweenProperty(card, "scale", Vector2.One * 1.10f, SpecialCardTriggerEffectSeconds * 0.42f);
-			tween.TweenProperty(ring, "ring_progress", 0.58f, SpecialCardTriggerEffectSeconds * 0.42f);
-			tween.TweenProperty(ring, "ring_alpha", 1.0f, SpecialCardTriggerEffectSeconds * 0.18f);
+			tween.TweenProperty(activationOverlay, "modulate:a", 1.0f, SpecialCardTriggerEffectSeconds * 0.18f);
+			tween.TweenProperty(activationOverlay, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
 			tween.TweenProperty(triggerFx, "modulate:a", triggerFxPeakAlpha, SpecialCardTriggerEffectSeconds * 0.12f);
 			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
-			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
-			{
-				if (effectRoot.GetChild(sparkIndex) is ColorRect spark)
-				{
-					tween.TweenProperty(spark, "modulate:a", 1.0f, SpecialCardTriggerEffectSeconds * 0.24f);
-					tween.TweenProperty(spark, "scale", Vector2.One * 2.35f, SpecialCardTriggerEffectSeconds * 0.42f);
-				}
-			}
 
 			tween.Chain().SetParallel(true);
 			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.16f, SpecialCardTriggerEffectSeconds * 0.58f);
 			tween.TweenProperty(card, "scale", Vector2.One, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(ring, "ring_progress", 1.0f, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(ring, "ring_alpha", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(activationOverlay, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
+			tween.TweenProperty(activationOverlay, "scale", Vector2.One * 1.32f, SpecialCardTriggerEffectSeconds * 0.58f);
 			tween.TweenProperty(triggerFx, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
 			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.34f, SpecialCardTriggerEffectSeconds * 0.58f);
-			for (int sparkIndex = 0; sparkIndex < effectRoot.GetChildCount(); sparkIndex++)
-			{
-				if (effectRoot.GetChild(sparkIndex) is ColorRect spark)
-				{
-					tween.TweenProperty(spark, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
-					tween.TweenProperty(spark, "scale", Vector2.One * 0.68f, SpecialCardTriggerEffectSeconds * 0.58f);
-				}
-			}
 
+			FrameAnimationHelpers.TweenTextureFrames(tween, activationOverlay, activationFrames, SpecialCardTriggerEffectSeconds / Mathf.Max(1, activationFrames.Count));
 			FrameAnimationHelpers.TweenTextureFrames(tween, triggerFx, triggerFxFrames, triggerFxFrameSeconds);
 			tween.Finished += () =>
 			{

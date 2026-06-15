@@ -29,8 +29,10 @@ public partial class GameBoardScene
 
 	private void LoadLeafySeadragonBladeProjectileTextures()
 	{
-		_leafySeadragonBladeProjectileFrames.Clear();
-		_leafySeadragonBladeProjectileFrames.AddRange(LeafySeadragonBladeProjectileFrames);
+		_leafySeadragonBladeFlightFrames.Clear();
+		_leafySeadragonBladeFlightFrames.AddRange(LeafySeadragonBladeFlightFrames);
+		_leafySeadragonBladeImpactFrames.Clear();
+		_leafySeadragonBladeImpactFrames.AddRange(LeafySeadragonBladeImpactFrames);
 	}
 
 	private void LoadBossKRoyalSeizureLanceTextures()
@@ -105,6 +107,8 @@ public partial class GameBoardScene
 	{
 		_specialCardTriggerEffectFrames.Clear();
 		_specialCardTriggerEffectFrames.AddRange(SpecialCardTriggerEffectFrames);
+		_specialCardTriggerActivationFrames.Clear();
+		_specialCardTriggerActivationFrames.AddRange(SpecialCardTriggerActivationFrames);
 	}
 
 	private void LoadDragonPrinceSpecialJackTexture()
@@ -175,6 +179,10 @@ public partial class GameBoardScene
 	{
 		_magnetCountdownFrameTextures.Clear();
 		_magnetCountdownFrameTextures.AddRange(MagnetCountdownFrames);
+		_tableShuffleVortexFrames.Clear();
+		_tableShuffleVortexFrames.AddRange(TableShuffleVortexFrames);
+		_magnetAttachmentApplyRingFrames.Clear();
+		_magnetAttachmentApplyRingFrames.AddRange(MagnetAttachmentApplyRingFrames);
 	}
 
 	private void MarkAnimatedCardBack(TextureRect cardBack)

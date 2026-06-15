@@ -71,16 +71,19 @@ public partial class GameBoardScene
 			animationRoot.AddChild(magnetOverlay);
 		}
 
-		var ring = new MagnetAttachmentApplyRing
+		var ring = new TextureRect
 		{
 			Name = "MagnetAttachmentApplyRing",
+			Texture = _magnetAttachmentApplyRingFrames.Count > 0 ? _magnetAttachmentApplyRingFrames[0] : null,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
 			MouseFilter = MouseFilterEnum.Ignore,
 			Position = new Vector2(-34.0f, -22.0f),
 			Size = new Vector2(140.0f, 140.0f),
 			PivotOffset = new Vector2(70.0f, 70.0f),
 			ZIndex = 1,
-			ring_progress = 0.0f,
-			ring_alpha = 0.0f,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
 		};
 		animationRoot.AddChild(ring);
 
@@ -113,7 +116,7 @@ public partial class GameBoardScene
 	private async Task TweenMagnetAttachmentCardOutAsync(
 		Control animationRoot,
 		TextureRect cardVisual,
-		MagnetAttachmentApplyRing ring,
+		TextureRect ring,
 		Vector2 startGlobalPosition,
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees)
@@ -126,8 +129,8 @@ public partial class GameBoardScene
 		tween.TweenProperty(animationRoot, "scale", Vector2.One * 1.28f, 0.24f);
 		tween.TweenProperty(animationRoot, "rotation_degrees", startRotationDegrees + 9.0f, 0.24f);
 		tween.TweenProperty(cardVisual, "modulate", Colors.White, 0.24f);
-		tween.TweenProperty(ring, "ring_alpha", 0.75f, 0.18f);
-		tween.TweenProperty(ring, "ring_progress", 0.32f, 0.24f);
+		tween.TweenProperty(ring, "modulate:a", 0.75f, 0.18f);
+		FrameAnimationHelpers.TweenTextureFramesForDuration(tween, ring, _magnetAttachmentApplyRingFrames, 0.04f, 0.24f);
 		await ToSignal(tween, Tween.SignalName.Finished);
 	}
 
@@ -135,7 +138,7 @@ public partial class GameBoardScene
 		Control animationRoot,
 		TextureRect cardVisual,
 		TextureRect? magnetOverlay,
-		MagnetAttachmentApplyRing ring)
+		TextureRect ring)
 	{
 		Tween closeTween = CreateTween();
 		closeTween.SetParallel(true);
@@ -143,8 +146,8 @@ public partial class GameBoardScene
 		closeTween.SetEase(Tween.EaseType.In);
 		closeTween.TweenProperty(animationRoot, "scale", new Vector2(0.08f, 1.42f), 0.18f);
 		closeTween.TweenProperty(cardVisual, "modulate", new Color(0.82f, 1.0f, 0.98f, 1.0f), 0.18f);
-		closeTween.TweenProperty(ring, "ring_progress", 0.62f, 0.18f);
-		closeTween.TweenProperty(ring, "ring_alpha", 1.0f, 0.12f);
+		closeTween.TweenProperty(ring, "modulate:a", 1.0f, 0.12f);
+		FrameAnimationHelpers.TweenTextureFramesForDuration(closeTween, ring, _magnetAttachmentApplyRingFrames, 0.03f, 0.18f);
 		await ToSignal(closeTween, Tween.SignalName.Finished);
 
 		if (magnetOverlay != null)
@@ -159,8 +162,9 @@ public partial class GameBoardScene
 		openTween.SetEase(Tween.EaseType.Out);
 		openTween.TweenProperty(animationRoot, "scale", Vector2.One * 1.25f, 0.28f);
 		openTween.TweenProperty(cardVisual, "modulate", Colors.White, 0.28f);
-		openTween.TweenProperty(ring, "ring_progress", 1.0f, 0.28f);
-		openTween.TweenProperty(ring, "ring_alpha", 0.0f, 0.28f);
+		openTween.TweenProperty(ring, "scale", Vector2.One * 1.18f, 0.28f);
+		openTween.TweenProperty(ring, "modulate:a", 0.0f, 0.28f);
+		FrameAnimationHelpers.TweenTextureFramesForDuration(openTween, ring, _magnetAttachmentApplyRingFrames, 0.045f, 0.28f);
 		await ToSignal(openTween, Tween.SignalName.Finished);
 	}
 

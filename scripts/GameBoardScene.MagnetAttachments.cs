@@ -237,44 +237,4 @@ public partial class GameBoardScene
 		return !card.HasAttachedItemEffect(itemCardId);
 	}
 
-	private partial class MagnetAttachmentApplyRing : Control
-	{
-		private float _ringProgress;
-		private float _ringAlpha;
-
-		public float ring_progress
-		{
-			get => _ringProgress;
-			set
-			{
-				_ringProgress = Mathf.Clamp(value, 0.0f, 1.0f);
-				QueueRedraw();
-			}
-		}
-
-		public float ring_alpha
-		{
-			get => _ringAlpha;
-			set
-			{
-				_ringAlpha = Mathf.Clamp(value, 0.0f, 1.0f);
-				QueueRedraw();
-			}
-		}
-
-		public override void _Draw()
-		{
-			if (_ringAlpha <= 0.0f)
-			{
-				return;
-			}
-
-			Vector2 center = Size / 2.0f;
-			float radius = Mathf.Lerp(30.0f, 58.0f, _ringProgress);
-			DrawCircle(center, radius + 13.0f, new Color(0.08f, 0.78f, 0.92f, 0.14f * _ringAlpha));
-			DrawArc(center, radius + 7.0f, -Mathf.Pi / 2.0f, -Mathf.Pi / 2.0f + FullCircleRadians * _ringProgress, 72, new Color(0.42f, 1.0f, 0.95f, 0.92f * _ringAlpha), 6.0f, true);
-			DrawArc(center, radius - 7.0f, 0.0f, FullCircleRadians, 72, new Color(1.0f, 0.94f, 0.38f, 0.44f * _ringAlpha), 2.5f, true);
-			DrawArc(center, radius + 15.0f, 0.0f, FullCircleRadians, 72, new Color(1.0f, 1.0f, 1.0f, 0.22f * _ringAlpha), 2.0f, true);
-		}
-	}
 }

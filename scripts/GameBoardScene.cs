@@ -33,10 +33,12 @@ public partial class GameBoardScene : Control
 		FrameAnimationHelpers.LoadTextureFrames(MantaRayTideShiftCycloneFxFramePattern, MantaRayTideShiftCycloneFxFrameCount, "manta ray tide shift cyclone", preferImageFile: true);
 	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
 	private const string CatAdventureDamageEffectFramePattern = "res://art/fx/player_cat_claw_attack/run-001/processed/fx-{0}.png";
-	private const string LeafySeadragonBladeProjectileFramePattern = "res://art/fx/player_leafy_seadragon_leafy_mirage_slash/concept-001/processed/fx-{0}.png";
+	private const string LeafySeadragonBladeFlightFramePattern = "res://art/fx/player_leafy_seadragon_blade_projectile/run-001/flight/processed/fx-{0}.png";
+	private const string LeafySeadragonBladeImpactFramePattern = "res://art/fx/player_leafy_seadragon_blade_projectile/run-001/impact/processed/fx-{0}.png";
 	private const string BossKRoyalSeizureLanceFramePattern = "res://art/fx/boss_k_royal_seizure_lance/run-001/processed/fx-{0}.png";
 	private const int AdventureDamageEffectFrameCount = 4;
-	private const int LeafySeadragonBladeProjectileFrameCount = 4;
+	private const int LeafySeadragonBladeFlightFrameCount = 4;
+	private const int LeafySeadragonBladeImpactFrameCount = 4;
 	private const int BossKRoyalSeizureLanceFrameCount = 8;
 	private const string CardBackFramePattern = "res://art/cards/ocean_animated_deck/back/processed/frames/frame-{0:000}.png";
 	private const int CardBackFrameCount = 8;
@@ -46,8 +48,10 @@ public partial class GameBoardScene : Control
 		FrameAnimationHelpers.LoadTextureFrames(AdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "adventure damage effect");
 	private static readonly Texture2D[] CatAdventureDamageEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(CatAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "cat adventure damage effect");
-	private static readonly Texture2D[] LeafySeadragonBladeProjectileFrames =
-		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeProjectileFramePattern, LeafySeadragonBladeProjectileFrameCount, "leafy seadragon blade projectile", preferImageFile: true);
+	private static readonly Texture2D[] LeafySeadragonBladeFlightFrames =
+		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeFlightFramePattern, LeafySeadragonBladeFlightFrameCount, "leafy seadragon blade flight", preferImageFile: true);
+	private static readonly Texture2D[] LeafySeadragonBladeImpactFrames =
+		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeImpactFramePattern, LeafySeadragonBladeImpactFrameCount, "leafy seadragon blade impact", preferImageFile: true);
 	private static readonly Texture2D[] BossKRoyalSeizureLanceFrames =
 		FrameAnimationHelpers.LoadTextureFrames(BossKRoyalSeizureLanceFramePattern, BossKRoyalSeizureLanceFrameCount, "boss k royal seizure lance", preferImageFile: true);
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
@@ -58,6 +62,10 @@ public partial class GameBoardScene : Control
 	private const int SpecialCardTriggerEffectFrameCount = 4;
 	private static readonly Texture2D[] SpecialCardTriggerEffectFrames =
 		FrameAnimationHelpers.LoadTextureFrames(SpecialCardTriggerEffectFramePattern, SpecialCardTriggerEffectFrameCount, "special card trigger effect");
+	private const string SpecialCardTriggerActivationFramePattern = "res://art/fx/special_card_trigger_activation/run-001/processed/fx-{0}.png";
+	private const int SpecialCardTriggerActivationFrameCount = 6;
+	private static readonly Texture2D[] SpecialCardTriggerActivationFrames =
+		FrameAnimationHelpers.LoadTextureFrames(SpecialCardTriggerActivationFramePattern, SpecialCardTriggerActivationFrameCount, "special card trigger activation", preferImageFile: true);
 	private const string BombPairDestroyEffectFramePattern = "res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png";
 	private const int BombPairDestroyEffectFrameCount = 4;
 	private static readonly Texture2D[] BombPairDestroyEffectFrames =
@@ -71,6 +79,14 @@ public partial class GameBoardScene : Control
 	private const int MagnetCountdownFrameCount = 4;
 	private static readonly Texture2D[] MagnetCountdownFrames =
 		FrameAnimationHelpers.LoadTextureFrames(MagnetCountdownFramePattern, MagnetCountdownFrameCount, "magnet countdown");
+	private const string TableShuffleVortexFramePattern = "res://art/fx/table_shuffle_vortex/run-001/processed/fx-{0}.png";
+	private const int TableShuffleVortexFrameCount = 8;
+	private static readonly Texture2D[] TableShuffleVortexFrames =
+		FrameAnimationHelpers.LoadTextureFrames(TableShuffleVortexFramePattern, TableShuffleVortexFrameCount, "table shuffle vortex", preferImageFile: true);
+	private const string MagnetAttachmentApplyRingFramePattern = "res://art/fx/magnet_attach_apply_ring/run-001/processed/fx-{0}.png";
+	private const int MagnetAttachmentApplyRingFrameCount = 6;
+	private static readonly Texture2D[] MagnetAttachmentApplyRingFrames =
+		FrameAnimationHelpers.LoadTextureFrames(MagnetAttachmentApplyRingFramePattern, MagnetAttachmentApplyRingFrameCount, "magnet attachment apply ring", preferImageFile: true);
 	private const string VictoryBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/victory-text-prompt-effect.png";
 	private const string DefeatBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/defeat-text-prompt-effect.png";
 		private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
@@ -158,7 +174,8 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
 	private readonly List<Texture2D> _enemySpecialAbilityAvatarFxFrames = new();
 	private readonly List<Texture2D> _mantaRayTideShiftCycloneFxFrames = new();
-	private readonly List<Texture2D> _leafySeadragonBladeProjectileFrames = new();
+	private readonly List<Texture2D> _leafySeadragonBladeFlightFrames = new();
+	private readonly List<Texture2D> _leafySeadragonBladeImpactFrames = new();
 	private readonly List<Texture2D> _bossKRoyalSeizureLanceFrames = new();
 	private readonly List<Texture2D> _adventureDamageEffectFrames = new();
 	private readonly List<Texture2D> _adventureEnemyDamageEffectFrames = new();
@@ -166,9 +183,12 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _dragonPrinceDamageHitImpactFrames = new();
 	private readonly List<Texture2D> _questionCardTransformFrames = new();
 	private readonly List<Texture2D> _specialCardTriggerEffectFrames = new();
+	private readonly List<Texture2D> _specialCardTriggerActivationFrames = new();
 	private readonly List<Texture2D> _bombPairDestroyEffectFrames = new();
 	private readonly List<Texture2D> _lensRevealWispFrames = new();
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
+	private readonly List<Texture2D> _tableShuffleVortexFrames = new();
+	private readonly List<Texture2D> _magnetAttachmentApplyRingFrames = new();
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
 	private readonly Dictionary<string, ItemAttachmentOverlay> _itemAttachmentOverlaysById = new();
@@ -266,7 +286,6 @@ public partial class GameBoardScene : Control
 	private Control? _magnetAttachmentCountdownRoot;
 	private Label? _magnetAttachmentCountdownLabel;
 	private Label? _magnetAttachmentCountdownHintLabel;
-	private MagnetAttachmentCountdownRing? _magnetAttachmentCountdownRing;
 	private Tween? _magnetAttachmentCountdownHintTween;
 	private double _magnetAttachmentCountdownRemainingSeconds;
 	private bool _magnetAttachmentCountdownHintIsUrgent;

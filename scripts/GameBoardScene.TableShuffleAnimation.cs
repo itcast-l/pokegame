@@ -40,7 +40,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 
 		Control?[] flightCards = new Control?[shuffledVisuals.Count];
-		TableShuffleVortex? vortex = null;
+		TextureRect? vortex = null;
 		try
 		{
 			vortex = CreateTableShuffleVortex(GetQuestionCardTransformAreaCardGlobalPosition(Vector2.Zero) + CardVisualSize / 2.0f);
@@ -62,7 +62,14 @@ public partial class GameBoardScene
 					.SetTrans(Tween.TransitionType.Cubic)
 					.SetEase(Tween.EaseType.Out);
 			}
-			gatherTween.TweenProperty(vortex, "vortex_alpha", 1.0f, TableShuffleGatherSeconds * 0.55f);
+			gatherTween.TweenProperty(vortex, "modulate:a", 1.0f, TableShuffleGatherSeconds * 0.55f);
+			gatherTween.TweenProperty(vortex, "scale", Vector2.One * 1.08f, TableShuffleGatherSeconds);
+			FrameAnimationHelpers.TweenTextureFramesForDuration(
+				gatherTween,
+				vortex,
+				_tableShuffleVortexFrames,
+				(TableShuffleGatherSeconds + TableShuffleScatterSeconds) / Mathf.Max(1, _tableShuffleVortexFrames.Count),
+				TableShuffleGatherSeconds + TableShuffleScatterSeconds);
 
 			await ToSignal(gatherTween, Tween.SignalName.Finished);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -92,8 +99,8 @@ public partial class GameBoardScene
 					.SetTrans(Tween.TransitionType.Cubic)
 					.SetEase(Tween.EaseType.Out);
 			}
-			scatterTween.TweenProperty(vortex, "vortex_alpha", 0.0f, TableShuffleScatterSeconds);
-			scatterTween.TweenProperty(vortex, "vortex_progress", 1.0f, TableShuffleScatterSeconds);
+			scatterTween.TweenProperty(vortex, "modulate:a", 0.0f, TableShuffleScatterSeconds);
+			scatterTween.TweenProperty(vortex, "scale", Vector2.One * 1.22f, TableShuffleScatterSeconds);
 
 			await ToSignal(scatterTween, Tween.SignalName.Finished);
 		}
@@ -114,7 +121,7 @@ public partial class GameBoardScene
 
 			if (GodotObject.IsInstanceValid(vortex))
 			{
-				vortex.QueueFree();
+				_animationPresenter.Release(vortex);
 			}
 
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -425,20 +432,18 @@ public partial class GameBoardScene
 		return flightCard;
 	}
 
-	private TableShuffleVortex CreateTableShuffleVortex(Vector2 globalCenter)
+	private TextureRect CreateTableShuffleVortex(Vector2 globalCenter)
 	{
-		var vortex = new TableShuffleVortex
-		{
-			Name = "TableShuffleVortex",
-			MouseFilter = MouseFilterEnum.Ignore,
-			Size = new Vector2(180.0f, 180.0f),
-			PivotOffset = new Vector2(90.0f, 90.0f),
-			ZIndex = PlayedCardFlightZIndex + 500,
-			ZAsRelative = false,
-			vortex_alpha = 0.0f,
-			vortex_progress = 0.0f,
-		};
-		AddChild(vortex);
+		TextureRect vortex = _animationPresenter.RentTextureRect(
+			this,
+			"TableShuffleVortex",
+			_tableShuffleVortexFrames.Count > 0 ? _tableShuffleVortexFrames[0] : null,
+			new Vector2(180.0f, 180.0f),
+			PlayedCardFlightZIndex + 500,
+			CanvasItem.TextureFilterEnum.Linear,
+			zAsRelative: false);
+		vortex.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+		vortex.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		vortex.GlobalPosition = globalCenter - vortex.Size / 2.0f;
 		return vortex;
 	}
