@@ -1,24 +1,14 @@
 {
   "target": "player",
   "mode": "attack",
-  "prompt": "Use the shiba image just shown as the visual reference. Preserve the exact same cute shiba inu avatar identity: warm golden-orange fur, cream muzzle and cheeks, upright triangular ears, large teal-blue eyes, small black nose, confident friendly smile, teal sea-silk scarf, tiny shell pendant, and pearl accent. Keep the same premium cute mobile-game portrait style.\n\nCreate a polished clean HD 2D game character animation sheet. Exact layout: 2 columns by 2 rows, 4 equal square cells, one continuous attack animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.\n\nAction: compact cute attack portrait animation. Frame 1 alert wind-up with focused eyes, frame 2 slight forward lunge and one ear flick with confident smirk, frame 3 strongest attack face with determined glare and tiny scarf knot bounce, frame 4 recovery back toward poised neutral. No detached slash arc, no projectile, no impact burst, no floating symbols, no wide effects. Keep motion compact and centered. Full portrait stays fully inside each cell with generous magenta margin. No ear, fur, scarf, or pendant may cross any cell edge. Same silhouette scale in every frame.",
+  "prompt": "",
   "role": "",
-  "input": "art/characters/player_shiba_avatar/run-001/attack/generated/raw-sheet.png",
-  "threshold": 100,
-  "edge_threshold": 150,
-  "duration": 120,
+  "input": "/Users/cakeju/.codex/generated_images/019ec515-a265-7c90-888c-34ce5f414896/ig_0077a2fac145da0f016a2ec3c9ac288191aabcd1dbd123acd1.png",
+  "processor": "custom-bbox-remap",
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
-  "trim_border": 0,
-  "edge_clean_depth": 2,
-  "align": "center",
-  "shared_scale": true,
-  "component_mode": "largest",
-  "component_padding": 4,
-  "min_component_area": 1200,
-  "edge_touch_margin": 1,
+  "fit_scale": 0.5618604651162791,
   "frame_labels": [
     "attack-1",
     "attack-2",
@@ -27,6 +17,7 @@
   ],
   "frames": [
     {
+      "index": 1,
       "grid": [
         0,
         0
@@ -37,32 +28,36 @@
         627,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 156632,
-      "selected_component_bbox": [
-        95,
-        73,
-        558,
-        590
-      ],
       "crop_bbox": [
-        91,
-        69,
-        562,
-        594
+        112,
+        101,
+        550,
+        623
       ],
-      "edge_touch": false,
-      "output_size": [
-        280,
-        312
-      ],
-      "paste_position": [
+      "template_bbox": [
         41,
-        25
-      ]
+        25,
+        321,
+        337
+      ],
+      "output_size": [
+        246,
+        293
+      ],
+      "paste_position": [
+        58,
+        34
+      ],
+      "final_bbox": [
+        58,
+        34,
+        304,
+        327
+      ],
+      "edge_touch": false
     },
     {
+      "index": 2,
       "grid": [
         0,
         1
@@ -73,108 +68,114 @@
         1254,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 174882,
-      "selected_component_bbox": [
-        0,
-        100,
-        544,
-        627
-      ],
       "crop_bbox": [
-        0,
-        96,
-        548,
-        627
+        62,
+        117,
+        546,
+        619
       ],
-      "edge_touch": true,
-      "output_size": [
-        325,
-        315
-      ],
-      "paste_position": [
+      "template_bbox": [
         18,
-        23
-      ]
-    },
-    {
-      "grid": [
-        1,
-        0
+        23,
+        343,
+        338
       ],
-      "source_box": [
-        0,
-        627,
-        627,
-        1254
-      ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 156881,
-      "selected_component_bbox": [
-        104,
-        91,
-        593,
-        580
-      ],
-      "crop_bbox": [
-        100,
-        87,
-        597,
-        584
-      ],
-      "edge_touch": false,
       "output_size": [
-        295,
-        295
-      ],
-      "paste_position": [
-        33,
-        33
-      ]
-    },
-    {
-      "grid": [
-        1,
-        1
-      ],
-      "source_box": [
-        627,
-        627,
-        1254,
-        1254
-      ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 148750,
-      "selected_component_bbox": [
-        70,
-        52,
-        522,
-        553
-      ],
-      "crop_bbox": [
-        66,
-        48,
-        526,
-        557
-      ],
-      "edge_touch": false,
-      "output_size": [
-        273,
-        302
+        272,
+        282
       ],
       "paste_position": [
         44,
-        30
-      ]
+        40
+      ],
+      "final_bbox": [
+        45,
+        40,
+        315,
+        322
+      ],
+      "edge_touch": false
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "crop_bbox": [
+        107,
+        54,
+        550,
+        555
+      ],
+      "template_bbox": [
+        33,
+        33,
+        328,
+        328
+      ],
+      "output_size": [
+        249,
+        281
+      ],
+      "paste_position": [
+        56,
+        40
+      ],
+      "final_bbox": [
+        56,
+        40,
+        304,
+        321
+      ],
+      "edge_touch": false
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "crop_bbox": [
+        85,
+        52,
+        524,
+        568
+      ],
+      "template_bbox": [
+        44,
+        30,
+        317,
+        332
+      ],
+      "output_size": [
+        247,
+        290
+      ],
+      "paste_position": [
+        57,
+        36
+      ],
+      "final_bbox": [
+        58,
+        36,
+        304,
+        326
+      ],
+      "edge_touch": false
     }
   ],
-  "edge_touch_frames": [
-    [
-      0,
-      1
-    ]
-  ]
+  "edge_touch_frames": []
 }

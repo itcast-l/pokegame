@@ -1,7 +1,7 @@
 {
   "target": "player",
   "mode": "attack",
-  "prompt": "",
+  "prompt": "Hamster redesigned attack sheet: pale apricot cream small round hamster face, oversized cheek pouches, tiny pink nose, teal scarf and shell pendant.",
   "role": "",
   "input": "art/characters/player_hamster_avatar/run-001/attack/generated/raw-sheet.png",
   "threshold": 100,
@@ -10,7 +10,7 @@
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
+  "fit_scale": 0.86,
   "trim_border": 0,
   "edge_clean_depth": 2,
   "align": "center",
@@ -39,27 +39,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 179732,
+      "selected_component_area": 210164,
       "selected_component_bbox": [
-        97,
-        85,
-        570,
-        587
+        71,
+        64,
+        573,
+        606
       ],
       "crop_bbox": [
-        93,
-        81,
-        574,
-        591
+        67,
+        60,
+        577,
+        610
       ],
       "edge_touch": false,
       "output_size": [
-        307,
-        325
+        288,
+        311
       ],
       "paste_position": [
-        27,
-        18
+        37,
+        25
       ]
     },
     {
@@ -75,26 +75,26 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 180785,
+      "selected_component_area": 211926,
       "selected_component_bbox": [
-        45,
-        111,
-        542,
-        589
+        61,
+        64,
+        572,
+        605
       ],
       "crop_bbox": [
-        41,
-        107,
-        546,
-        593
+        57,
+        60,
+        576,
+        609
       ],
       "edge_touch": false,
       "output_size": [
-        322,
+        293,
         310
       ],
       "paste_position": [
-        20,
+        34,
         26
       ]
     },
@@ -111,27 +111,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 178376,
+      "selected_component_area": 203651,
       "selected_component_bbox": [
-        91,
-        58,
-        587,
-        535
+        80,
+        38,
+        584,
+        571
       ],
       "crop_bbox": [
-        87,
-        54,
-        591,
-        539
+        76,
+        34,
+        588,
+        575
       ],
       "edge_touch": false,
       "output_size": [
-        321,
-        309
+        289,
+        306
       ],
       "paste_position": [
-        20,
-        26
+        36,
+        28
       ]
     },
     {
@@ -147,27 +147,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 169044,
+      "selected_component_area": 199078,
       "selected_component_bbox": [
-        58,
-        37,
-        515,
-        528
+        69,
+        43,
+        560,
+        571
       ],
       "crop_bbox": [
-        54,
-        33,
-        519,
-        532
+        65,
+        39,
+        564,
+        575
       ],
       "edge_touch": false,
       "output_size": [
-        297,
-        318
+        282,
+        303
       ],
       "paste_position": [
-        32,
-        22
+        40,
+        29
       ]
     }
   ],

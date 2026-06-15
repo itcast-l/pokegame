@@ -1,7 +1,7 @@
 {
   "target": "player",
   "mode": "attack",
-  "prompt": "",
+  "prompt": "Bear redesigned score sheet: dark cocoa-brown broad bear face, wide cream muzzle, large dark nose, small round ears, teal scarf and shell pendant.",
   "role": "",
   "input": "art/characters/player_bear_avatar/run-001/score/generated/raw-sheet.png",
   "threshold": 100,
@@ -10,15 +10,15 @@
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
-  "trim_border": 0,
-  "edge_clean_depth": 2,
+  "fit_scale": 0.82,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
   "align": "center",
   "shared_scale": true,
   "component_mode": "largest",
-  "component_padding": 4,
+  "component_padding": 8,
   "min_component_area": 1200,
-  "edge_touch_margin": 1,
+  "edge_touch_margin": 3,
   "frame_labels": [
     "score-1",
     "score-2",
@@ -39,27 +39,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 170443,
+      "selected_component_area": 209205,
       "selected_component_bbox": [
-        102,
-        80,
-        557,
-        582
+        88,
+        73,
+        563,
+        619
       ],
       "crop_bbox": [
-        98,
-        76,
-        561,
-        586
+        80,
+        65,
+        571,
+        619
       ],
       "edge_touch": false,
       "output_size": [
-        295,
-        325
+        254,
+        286
       ],
       "paste_position": [
-        33,
-        18
+        54,
+        38
       ]
     },
     {
@@ -75,27 +75,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 168618,
+      "selected_component_area": 213304,
       "selected_component_bbox": [
+        53,
         69,
-        82,
-        529,
-        582
+        534,
+        619
       ],
       "crop_bbox": [
-        65,
-        78,
-        533,
-        586
+        45,
+        61,
+        542,
+        619
       ],
       "edge_touch": false,
       "output_size": [
-        298,
-        324
+        257,
+        289
       ],
       "paste_position": [
-        32,
-        19
+        52,
+        36
       ]
     },
     {
@@ -111,27 +111,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 156245,
+      "selected_component_area": 210634,
       "selected_component_bbox": [
-        106,
-        59,
-        554,
-        525
+        81,
+        42,
+        561,
+        595
       ],
       "crop_bbox": [
-        102,
-        55,
-        558,
-        529
+        73,
+        34,
+        569,
+        603
       ],
       "edge_touch": false,
       "output_size": [
-        291,
-        302
+        256,
+        294
       ],
       "paste_position": [
-        35,
-        30
+        53,
+        34
       ]
     },
     {
@@ -147,27 +147,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 162020,
+      "selected_component_area": 214731,
       "selected_component_bbox": [
-        80,
-        59,
-        520,
-        552
+        36,
+        43,
+        524,
+        600
       ],
       "crop_bbox": [
-        76,
-        55,
-        524,
-        556
+        28,
+        35,
+        532,
+        608
       ],
       "edge_touch": false,
       "output_size": [
-        286,
-        320
+        261,
+        296
       ],
       "paste_position": [
-        38,
-        21
+        50,
+        33
       ]
     }
   ],

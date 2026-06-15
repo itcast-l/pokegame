@@ -1,0 +1,1 @@
+Blink-only deterministic rebuild. Base frame: 1. Blink frames: {8: 'half', 9: 'full', 10: 'half'}. All non-blink frames are exact copies of frame 1 with stable scale and placement.

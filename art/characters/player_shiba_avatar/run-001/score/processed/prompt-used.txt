@@ -1,5 +1,1 @@
-Use the shiba image just shown as the visual reference. Preserve the exact same cute shiba inu avatar identity: warm golden-orange fur, cream muzzle and cheeks, upright triangular ears, large teal-blue eyes, small black nose, confident friendly smile, teal sea-silk scarf, tiny shell pendant, and pearl accent. Keep the same premium cute mobile-game portrait style.
-
-Create a polished clean HD 2D game character animation sheet. Exact layout: 2 columns by 2 rows, 4 equal square cells, one continuous score reaction animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.
-
-Action: happy score animation. Frame 1 bright pleased smile, frame 2 delighted eyes with subtle sparkle and lifted cheeks, frame 3 proud happy grin with tiny scarf and pendant bounce, frame 4 soft satisfied smile returning toward neutral. Keep motion compact and centered. No detached stars, no floating symbols, no wide effects. Full portrait stays fully inside each cell with generous magenta margin. No ear, fur, scarf, or pendant may cross any cell edge. Same silhouette scale in every frame.
+Custom applied shiba score using confirmed new avatar identity.

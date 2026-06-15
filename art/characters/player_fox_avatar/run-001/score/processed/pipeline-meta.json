@@ -1,24 +1,14 @@
 {
   "target": "player",
-  "mode": "attack",
+  "mode": "score",
   "prompt": "",
   "role": "",
-  "input": "art/characters/player_fox_avatar/run-001/score/generated/raw-sheet.png",
-  "threshold": 100,
-  "edge_threshold": 150,
-  "duration": 120,
+  "input": "/Users/cakeju/.codex/generated_images/019ec515-a265-7c90-888c-34ce5f414896/ig_0077a2fac145da0f016a2ec063cca08191b2f012d8105349e1.png",
+  "processor": "custom-bbox-remap",
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
-  "trim_border": 0,
-  "edge_clean_depth": 2,
-  "align": "center",
-  "shared_scale": true,
-  "component_mode": "largest",
-  "component_padding": 4,
-  "min_component_area": 1200,
-  "edge_touch_margin": 1,
+  "fit_scale": 0.5535135135135135,
   "frame_labels": [
     "score-1",
     "score-2",
@@ -27,6 +17,7 @@
   ],
   "frames": [
     {
+      "index": 1,
       "grid": [
         0,
         0
@@ -37,32 +28,36 @@
         627,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 130168,
-      "selected_component_bbox": [
-        137,
-        73,
-        550,
-        551
-      ],
       "crop_bbox": [
-        133,
-        69,
-        554,
-        555
+        117,
+        65,
+        534,
+        619
       ],
-      "edge_touch": false,
-      "output_size": [
-        278,
-        321
-      ],
-      "paste_position": [
+      "template_bbox": [
         42,
-        20
-      ]
+        20,
+        320,
+        341
+      ],
+      "output_size": [
+        231,
+        307
+      ],
+      "paste_position": [
+        66,
+        27
+      ],
+      "final_bbox": [
+        66,
+        27,
+        297,
+        334
+      ],
+      "edge_touch": false
     },
     {
+      "index": 2,
       "grid": [
         0,
         1
@@ -73,32 +68,36 @@
         1254,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 135055,
-      "selected_component_bbox": [
-        57,
-        72,
-        492,
-        549
-      ],
       "crop_bbox": [
-        53,
-        68,
-        496,
-        553
+        79,
+        64,
+        488,
+        619
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        35,
+        21,
+        327,
+        341
+      ],
       "output_size": [
-        292,
-        320
+        226,
+        307
       ],
       "paste_position": [
-        35,
-        21
-      ]
+        68,
+        28
+      ],
+      "final_bbox": [
+        68,
+        28,
+        294,
+        335
+      ],
+      "edge_touch": false
     },
     {
+      "index": 3,
       "grid": [
         1,
         0
@@ -109,32 +108,36 @@
         627,
         1254
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 135325,
-      "selected_component_bbox": [
-        135,
-        33,
-        572,
-        518
-      ],
       "crop_bbox": [
-        131,
-        29,
-        576,
-        522
+        121,
+        46,
+        532,
+        599
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        34,
+        18,
+        328,
+        343
+      ],
       "output_size": [
-        294,
-        325
+        227,
+        306
       ],
       "paste_position": [
-        34,
-        18
-      ]
+        68,
+        28
+      ],
+      "final_bbox": [
+        68,
+        28,
+        295,
+        334
+      ],
+      "edge_touch": false
     },
     {
+      "index": 4,
       "grid": [
         1,
         1
@@ -145,30 +148,33 @@
         1254,
         1254
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 129660,
-      "selected_component_bbox": [
-        79,
-        41,
-        494,
-        524
-      ],
       "crop_bbox": [
-        75,
-        37,
-        498,
-        528
+        81,
+        48,
+        485,
+        602
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        41,
+        19,
+        320,
+        343
+      ],
       "output_size": [
-        279,
-        324
+        224,
+        307
       ],
       "paste_position": [
-        41,
-        19
-      ]
+        68,
+        28
+      ],
+      "final_bbox": [
+        68,
+        28,
+        292,
+        335
+      ],
+      "edge_touch": false
     }
   ],
   "edge_touch_frames": []

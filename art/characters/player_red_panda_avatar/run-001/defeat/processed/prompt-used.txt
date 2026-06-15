@@ -1,5 +1,1 @@
-Use the red panda image just shown as the visual reference. Preserve the exact same cute red panda avatar identity: rich orange-red fur, cream muzzle and cheeks, dark brown eye patches, small rounded ears, large teal-blue eyes, playful smile, teal sea-silk scarf, tiny shell pendant, and pearl accent. Keep the same premium cute mobile-game portrait style.
-
-Create a polished clean HD 2D game character animation sheet. Exact layout: 2 columns by 2 rows, 4 equal square cells, one continuous defeat reaction animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.
-
-Action: soft disappointed defeat reaction. Frame 1 subdued blink and slight droop, frame 2 eyes closed with small frown and lowered ears, frame 3 saddest expression with downturned mouth and tired face, frame 4 calm defeated recovery. Keep motion compact and readable. No tears flying away, no detached symbols, no wide effects. Full portrait stays fully inside each cell with generous magenta margin. No ear, fur, scarf, or pendant may cross any cell edge. Same silhouette scale in every frame.
+Custom applied red_panda defeat using confirmed new avatar identity.

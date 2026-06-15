@@ -1,24 +1,14 @@
 {
   "target": "player",
-  "mode": "attack",
-  "prompt": "Use the red panda image just shown as the visual reference. Preserve the exact same cute red panda avatar identity: rich orange-red fur, cream muzzle and cheeks, dark brown eye patches, small rounded ears, large teal-blue eyes, playful smile, teal sea-silk scarf, tiny shell pendant, and pearl accent. Keep the same premium cute mobile-game portrait style.\n\nCreate a polished clean HD 2D game character animation sheet. Exact layout: 2 columns by 2 rows, 4 equal square cells, one continuous score reaction animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.\n\nAction: happy score animation. Frame 1 bright pleased smile, frame 2 delighted eyes with subtle sparkle and lifted cheeks, frame 3 proud happy grin with tiny scarf and pendant bounce, frame 4 soft satisfied smile returning toward neutral. Keep motion compact and centered. No detached stars, no floating symbols, no wide effects. Full portrait stays fully inside each cell with generous magenta margin. No ear, fur, scarf, or pendant may cross any cell edge. Same silhouette scale in every frame.",
+  "mode": "score",
+  "prompt": "",
   "role": "",
-  "input": "art/characters/player_red_panda_avatar/run-001/score/generated/raw-sheet.png",
-  "threshold": 100,
-  "edge_threshold": 150,
-  "duration": 120,
+  "input": "/Users/cakeju/.codex/generated_images/019ec515-a265-7c90-888c-34ce5f414896/ig_0077a2fac145da0f016a2ec2954a088191aae1ae41dd987750.png",
+  "processor": "custom-bbox-remap",
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
-  "trim_border": 0,
-  "edge_clean_depth": 2,
-  "align": "center",
-  "shared_scale": true,
-  "component_mode": "largest",
-  "component_padding": 4,
-  "min_component_area": 1200,
-  "edge_touch_margin": 1,
+  "fit_scale": 0.5806741573033708,
   "frame_labels": [
     "score-1",
     "score-2",
@@ -27,6 +17,7 @@
   ],
   "frames": [
     {
+      "index": 1,
       "grid": [
         0,
         0
@@ -37,104 +28,116 @@
         627,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 184067,
-      "selected_component_bbox": [
-        94,
-        81,
-        605,
-        591
-      ],
       "crop_bbox": [
-        90,
-        77,
-        609,
-        595
+        73,
+        89,
+        591,
+        601
       ],
-      "edge_touch": false,
-      "output_size": [
-        325,
-        324
-      ],
-      "paste_position": [
+      "template_bbox": [
         18,
-        19
-      ]
-    },
-    {
-      "grid": [
-        0,
-        1
-      ],
-      "source_box": [
-        627,
-        0,
-        1254,
-        627
-      ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 183955,
-      "selected_component_bbox": [
-        54,
-        82,
-        566,
-        591
-      ],
-      "crop_bbox": [
-        50,
-        78,
-        570,
-        595
-      ],
-      "edge_touch": false,
-      "output_size": [
-        325,
-        323
-      ],
-      "paste_position": [
-        18,
-        19
-      ]
-    },
-    {
-      "grid": [
-        1,
-        0
-      ],
-      "source_box": [
-        0,
-        627,
-        627,
-        1254
-      ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 181976,
-      "selected_component_bbox": [
-        97,
-        46,
-        606,
-        549
-      ],
-      "crop_bbox": [
-        93,
-        42,
-        610,
-        553
-      ],
-      "edge_touch": false,
-      "output_size": [
-        323,
-        320
-      ],
-      "paste_position": [
         19,
-        21
-      ]
+        343,
+        343
+      ],
+      "output_size": [
+        301,
+        297
+      ],
+      "paste_position": [
+        30,
+        32
+      ],
+      "final_bbox": [
+        30,
+        32,
+        330,
+        329
+      ],
+      "edge_touch": false
     },
     {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "crop_bbox": [
+        39,
+        95,
+        557,
+        601
+      ],
+      "template_bbox": [
+        18,
+        19,
+        343,
+        342
+      ],
+      "output_size": [
+        301,
+        294
+      ],
+      "paste_position": [
+        30,
+        34
+      ],
+      "final_bbox": [
+        30,
+        34,
+        330,
+        328
+      ],
+      "edge_touch": false
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "crop_bbox": [
+        75,
+        60,
+        609,
+        561
+      ],
+      "template_bbox": [
+        19,
+        21,
+        342,
+        341
+      ],
+      "output_size": [
+        310,
+        291
+      ],
+      "paste_position": [
+        26,
+        36
+      ],
+      "final_bbox": [
+        27,
+        36,
+        336,
+        327
+      ],
+      "edge_touch": false
+    },
+    {
+      "index": 4,
       "grid": [
         1,
         1
@@ -145,30 +148,33 @@
         1254,
         1254
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 183070,
-      "selected_component_bbox": [
-        55,
-        47,
-        566,
-        553
-      ],
       "crop_bbox": [
-        51,
-        43,
-        570,
-        557
+        47,
+        67,
+        551,
+        561
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        18,
+        20,
+        343,
+        342
+      ],
       "output_size": [
-        325,
-        322
+        293,
+        287
       ],
       "paste_position": [
-        18,
-        20
-      ]
+        34,
+        38
+      ],
+      "final_bbox": [
+        35,
+        38,
+        327,
+        325
+      ],
+      "edge_touch": false
     }
   ],
   "edge_touch_frames": []

@@ -1,7 +1,7 @@
 {
   "target": "player",
   "mode": "attack",
-  "prompt": "",
+  "prompt": "Hamster redesigned victory sheet: pale apricot cream small round hamster face, oversized cheek pouches, tiny pink nose, teal scarf and shell pendant.",
   "role": "",
   "input": "art/characters/player_hamster_avatar/run-001/victory/generated/raw-sheet.png",
   "threshold": 100,
@@ -10,15 +10,15 @@
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
-  "trim_border": 0,
-  "edge_clean_depth": 2,
+  "fit_scale": 0.82,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
   "align": "center",
   "shared_scale": true,
   "component_mode": "largest",
-  "component_padding": 4,
+  "component_padding": 8,
   "min_component_area": 1200,
-  "edge_touch_margin": 1,
+  "edge_touch_margin": 3,
   "frame_labels": [
     "victory-1",
     "victory-2",
@@ -39,27 +39,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 210541,
+      "selected_component_area": 226908,
       "selected_component_bbox": [
-        63,
-        71,
-        576,
-        611
+        75,
+        59,
+        597,
+        619
       ],
       "crop_bbox": [
-        59,
         67,
-        580,
-        615
+        51,
+        605,
+        619
       ],
       "edge_touch": false,
       "output_size": [
-        304,
-        319
+        277,
+        292
       ],
       "paste_position": [
-        29,
-        21
+        42,
+        35
       ]
     },
     {
@@ -75,27 +75,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 213394,
+      "selected_component_area": 225934,
       "selected_component_bbox": [
-        37,
-        61,
-        555,
-        611
+        62,
+        59,
+        583,
+        619
       ],
       "crop_bbox": [
-        33,
-        57,
-        559,
-        615
+        54,
+        51,
+        591,
+        619
       ],
       "edge_touch": false,
       "output_size": [
-        307,
-        325
+        276,
+        292
       ],
       "paste_position": [
-        27,
-        18
+        43,
+        35
       ]
     },
     {
@@ -111,27 +111,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 196634,
+      "selected_component_area": 223462,
       "selected_component_bbox": [
-        60,
-        29,
-        604,
-        547
+        80,
+        47,
+        599,
+        603
       ],
       "crop_bbox": [
-        56,
-        25,
-        608,
-        551
+        72,
+        39,
+        607,
+        611
       ],
       "edge_touch": false,
       "output_size": [
-        322,
-        307
+        275,
+        294
       ],
       "paste_position": [
-        20,
-        27
+        43,
+        34
       ]
     },
     {
@@ -147,27 +147,27 @@
       ],
       "component_mode": "largest",
       "component_count": 1,
-      "selected_component_area": 181747,
+      "selected_component_area": 225294,
       "selected_component_bbox": [
-        65,
-        51,
-        538,
-        559
+        62,
+        43,
+        582,
+        603
       ],
       "crop_bbox": [
-        61,
-        47,
-        542,
-        563
+        54,
+        35,
+        590,
+        611
       ],
       "edge_touch": false,
       "output_size": [
-        280,
-        301
+        276,
+        296
       ],
       "paste_position": [
-        41,
-        30
+        43,
+        33
       ]
     }
   ],

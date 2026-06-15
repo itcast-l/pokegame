@@ -1,1 +1,1 @@
-Blink-only deterministic rebuild via diff-mask. Base frame: 1. Blink frames: {8: 9, 9: 10, 10: 11, 11: 10}.
+Blink-only deterministic rebuild. Base frame: 1. Blink frames: {8: 'half', 9: 'full', 10: 'half', 11: 'soft'}. All non-blink frames are exact copies of frame 1 with stable scale and placement.

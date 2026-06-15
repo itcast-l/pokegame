@@ -1,24 +1,14 @@
 {
   "target": "player",
-  "mode": "attack",
-  "prompt": "Use the red panda image just shown as the visual reference. Preserve the exact same cute red panda avatar identity: rich orange-red fur, cream muzzle and cheeks, dark brown eye patches, small rounded ears, large teal-blue eyes, playful smile, teal sea-silk scarf, tiny shell pendant, and pearl accent. Keep the same premium cute mobile-game portrait style.\n\nCreate a polished clean HD 2D game character animation sheet. Exact layout: 2 columns by 2 rows, 4 equal square cells, one continuous defeat reaction animation read left-to-right, top-to-bottom. Background must be 100% solid flat magenta #FF00FF in every cell, no scene background, no text, no labels, no UI, no borders, no visible grid lines.\n\nAction: soft disappointed defeat reaction. Frame 1 subdued blink and slight droop, frame 2 eyes closed with small frown and lowered ears, frame 3 saddest expression with downturned mouth and tired face, frame 4 calm defeated recovery. Keep motion compact and readable. No tears flying away, no detached symbols, no wide effects. Full portrait stays fully inside each cell with generous magenta margin. No ear, fur, scarf, or pendant may cross any cell edge. Same silhouette scale in every frame.",
+  "mode": "defeat",
+  "prompt": "",
   "role": "",
-  "input": "art/characters/player_red_panda_avatar/run-001/defeat/generated/raw-sheet.png",
-  "threshold": 100,
-  "edge_threshold": 150,
-  "duration": 120,
+  "input": "/Users/cakeju/.codex/generated_images/019ec515-a265-7c90-888c-34ce5f414896/ig_0077a2fac145da0f016a2ec2f65d9c81918420923e20b9f98f.png",
+  "processor": "custom-bbox-remap",
   "rows": 2,
   "cols": 2,
   "cell_size": 362,
-  "fit_scale": 0.9,
-  "trim_border": 0,
-  "edge_clean_depth": 2,
-  "align": "center",
-  "shared_scale": true,
-  "component_mode": "largest",
-  "component_padding": 4,
-  "min_component_area": 1200,
-  "edge_touch_margin": 1,
+  "fit_scale": 0.5949295774647887,
   "frame_labels": [
     "defeat-1",
     "defeat-2",
@@ -27,6 +17,7 @@
   ],
   "frames": [
     {
+      "index": 1,
       "grid": [
         0,
         0
@@ -37,32 +28,36 @@
         627,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 194296,
-      "selected_component_bbox": [
-        77,
-        56,
-        602,
-        588
-      ],
       "crop_bbox": [
-        73,
-        52,
-        606,
-        592
+        88,
+        106,
+        596,
+        598
       ],
-      "edge_touch": false,
-      "output_size": [
-        321,
-        325
-      ],
-      "paste_position": [
+      "template_bbox": [
         20,
-        18
-      ]
+        18,
+        341,
+        343
+      ],
+      "output_size": [
+        302,
+        293
+      ],
+      "paste_position": [
+        30,
+        34
+      ],
+      "final_bbox": [
+        31,
+        34,
+        331,
+        327
+      ],
+      "edge_touch": false
     },
     {
+      "index": 2,
       "grid": [
         0,
         1
@@ -73,32 +68,36 @@
         1254,
         627
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 191681,
-      "selected_component_bbox": [
-        33,
-        75,
-        562,
-        604
-      ],
       "crop_bbox": [
-        29,
-        71,
-        566,
-        608
+        37,
+        105,
+        534,
+        594
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        19,
+        19,
+        342,
+        342
+      ],
       "output_size": [
-        323,
-        323
+        296,
+        291
       ],
       "paste_position": [
-        19,
-        19
-      ]
+        32,
+        35
+      ],
+      "final_bbox": [
+        33,
+        35,
+        327,
+        326
+      ],
+      "edge_touch": false
     },
     {
+      "index": 3,
       "grid": [
         1,
         0
@@ -109,32 +108,36 @@
         627,
         1254
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 178684,
-      "selected_component_bbox": [
-        78,
-        48,
-        602,
-        567
-      ],
       "crop_bbox": [
-        74,
-        44,
-        606,
-        571
+        93,
+        52,
+        593,
+        545
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        21,
+        22,
+        341,
+        339
+      ],
       "output_size": [
-        320,
-        317
+        297,
+        293
       ],
       "paste_position": [
-        21,
-        22
-      ]
+        32,
+        34
+      ],
+      "final_bbox": [
+        33,
+        34,
+        328,
+        326
+      ],
+      "edge_touch": false
     },
     {
+      "index": 4,
       "grid": [
         1,
         1
@@ -145,30 +148,33 @@
         1254,
         1254
       ],
-      "component_mode": "largest",
-      "component_count": 1,
-      "selected_component_area": 174374,
-      "selected_component_bbox": [
-        51,
-        48,
-        555,
-        561
-      ],
       "crop_bbox": [
-        47,
-        44,
-        559,
-        565
+        40,
+        52,
+        537,
+        544
       ],
-      "edge_touch": false,
+      "template_bbox": [
+        27,
+        24,
+        335,
+        338
+      ],
       "output_size": [
-        308,
-        314
+        296,
+        293
       ],
       "paste_position": [
-        27,
-        24
-      ]
+        33,
+        34
+      ],
+      "final_bbox": [
+        33,
+        34,
+        328,
+        327
+      ],
+      "edge_touch": false
     }
   ],
   "edge_touch_frames": []
