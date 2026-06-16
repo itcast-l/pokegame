@@ -45,7 +45,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
-debug_random_item_cards_are_magnet = true
 
 [node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
 material = SubResource("ShaderMaterial_board_art_dynamics")
@@ -79,6 +78,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("4_underwater_ambient_layer")
+RenderMode = 1
+VisualProfile = 1
 bubble_count = 10
 mote_count = 24
 seagrass_blade_count = 16

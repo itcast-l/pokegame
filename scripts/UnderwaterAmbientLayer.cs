@@ -1,8 +1,40 @@
-using Godot;
+using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class UnderwaterAmbientLayer : Control
 {
+	public enum AmbientRenderMode
+	{
+		Procedural,
+		ImageBased,
+	}
+
+	public enum AmbientVisualProfile
+	{
+		MainMenu,
+		GameBoard,
+		AdventureMap,
+	}
+
+	private const int SeagrassFrameCount = 8;
+	private const int CenterCausticFrameCount = 8;
+	private const int CenterGlintFrameCount = 6;
+
+	private const float SeagrassFramesPerSecond = 5.0f;
+	private const float CenterCausticFramesPerSecond = 5.0f;
+	private const float CenterGlintFramesPerSecond = 8.0f;
+
+	private static readonly Vector2 SeagrassFrameSize = new(256.0f, 512.0f);
+	private static readonly Vector2 CenterCausticFrameSize = new(512.0f, 512.0f);
+	private static readonly Vector2 CenterGlintFrameSize = new(96.0f, 96.0f);
+
+	[Export]
+	public AmbientRenderMode RenderMode { get; set; } = AmbientRenderMode.Procedural;
+
+	[Export]
+	public AmbientVisualProfile VisualProfile { get; set; } = AmbientVisualProfile.GameBoard;
+
 	[Export(PropertyHint.Range, "0,80,1")]
 	public int bubble_count = 26;
 
@@ -41,15 +73,33 @@ public partial class UnderwaterAmbientLayer : Control
 	private readonly Vector2[] _centerCausticPoints = new Vector2[9];
 	private readonly Vector2[] _seagrassStemPoints = new Vector2[5];
 	private readonly Vector2[] _seagrassCenterLinePoints = new Vector2[3];
+
+	private readonly List<ImageElement> _seagrassInstances = new();
+	private readonly List<ImageElement> _centerCausticInstances = new();
+	private readonly List<ImageElement> _centerGlintInstances = new();
+	private readonly Dictionary<string, bool> _missingCategoryWarnings = new();
+
 	private double _time;
 	private double _redrawAccumulator;
+	private bool _imageAssetsLoaded;
+	private bool _pendingImageRebuild;
+	private AmbientRenderMode _activeRenderMode = (AmbientRenderMode)(-1);
+	private AmbientVisualProfile _activeVisualProfile = (AmbientVisualProfile)(-1);
+
+	private Texture2D[] _seagrassFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _centerCausticFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _centerGlintFrames = Array.Empty<Texture2D>();
+
+	private Control? _seagrassLayer;
+	private Control? _centerCausticLayer;
+	private Control? _centerGlintLayer;
 
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
 		_rng.Seed = 4107;
+		ApplyConfiguration(force: true);
 		RebuildAmbient();
-		QueueRedraw();
 	}
 
 	public override void _Notification(int what)
@@ -57,26 +107,57 @@ public partial class UnderwaterAmbientLayer : Control
 		if (what == NotificationResized)
 		{
 			RebuildAmbient();
-			QueueRedraw();
 		}
 	}
 
 	public override void _Process(double delta)
 	{
+		if (RenderMode != _activeRenderMode || VisualProfile != _activeVisualProfile)
+		{
+			ApplyConfiguration(force: true);
+			RebuildAmbient();
+		}
+
+		if (_pendingImageRebuild && Size.X > 0.0f && Size.Y > 0.0f)
+		{
+			RebuildAmbient();
+		}
+
 		if (!IsVisibleInTree())
 		{
 			return;
 		}
 
 		_time += delta * motion_scale;
+		if (_activeRenderMode == AmbientRenderMode.ImageBased)
+		{
+			if (HasNoImageInstances())
+			{
+				EnsureImageAssetsLoaded(retryIfAllMissing: true);
+				RebuildImageInstances();
+			}
+
+			UpdateImageInstances();
+			_redrawAccumulator += delta;
+			double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
+			if (_redrawAccumulator < redrawInterval)
+			{
+				return;
+			}
+
+			_redrawAccumulator %= redrawInterval;
+			QueueRedraw();
+			return;
+		}
+
 		_redrawAccumulator += delta;
-		double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
-		if (_redrawAccumulator < redrawInterval)
+		double interval = 1.0 / Mathf.Max(redraw_fps, 1);
+		if (_redrawAccumulator < interval)
 		{
 			return;
 		}
 
-		_redrawAccumulator %= redrawInterval;
+		_redrawAccumulator %= interval;
 		QueueRedraw();
 	}
 
@@ -89,21 +170,69 @@ public partial class UnderwaterAmbientLayer : Control
 
 		DrawEdgeDepth();
 		DrawSunbeams();
-		DrawSeagrass();
+		if (ShouldDrawProceduralSeagrass())
+		{
+			DrawSeagrass();
+		}
+
 		DrawWaterCurrents();
-		DrawCenterCaustics();
+		if (ShouldDrawProceduralCenterCaustics())
+		{
+			DrawCenterCaustics();
+		}
+
 		DrawMotes();
-		DrawCenterGlints();
+		if (ShouldDrawProceduralCenterGlints())
+		{
+			DrawCenterGlints();
+		}
+
 		DrawBubbles();
+	}
+
+	private void ApplyConfiguration(bool force = false)
+	{
+		if (!force
+			&& RenderMode == _activeRenderMode
+			&& VisualProfile == _activeVisualProfile)
+		{
+			return;
+		}
+
+		_activeRenderMode = RenderMode;
+		_activeVisualProfile = VisualProfile;
+		_redrawAccumulator = 0.0;
+		if (_activeRenderMode == AmbientRenderMode.ImageBased)
+		{
+			EnsureImageAssetsLoaded();
+			EnsureImageLayers();
+			if (Size.X > 0.0f && Size.Y > 0.0f)
+			{
+				RebuildImageInstances();
+			}
+			else
+			{
+				_pendingImageRebuild = true;
+			}
+
+			SetImageLayersVisible(true);
+		}
+		else
+		{
+			SetImageLayersVisible(false);
+			QueueRedraw();
+		}
 	}
 
 	private void RebuildAmbient()
 	{
 		if (Size.X <= 0.0f || Size.Y <= 0.0f)
 		{
+			_pendingImageRebuild = true;
 			return;
 		}
 
+		_pendingImageRebuild = false;
 		_bubbles.Clear();
 		_motes.Clear();
 		_seagrassBlades.Clear();
@@ -168,6 +297,16 @@ public partial class UnderwaterAmbientLayer : Control
 				_rng.RandfRange(0.0f, Mathf.Tau),
 				_rng.RandfRange(0.10f, 0.28f)));
 		}
+
+		if (_activeRenderMode == AmbientRenderMode.ImageBased)
+		{
+			EnsureImageAssetsLoaded(retryIfAllMissing: true);
+			EnsureImageLayers();
+			RebuildImageInstances();
+			UpdateImageInstances();
+		}
+
+		QueueRedraw();
 	}
 
 	private Vector2 EdgePosition(int side, float bandRatio)
@@ -181,6 +320,413 @@ public partial class UnderwaterAmbientLayer : Control
 			1 => new Vector2(_rng.RandfRange(0.0f, Size.X), _rng.RandfRange(Size.Y - bandY, Size.Y)),
 			2 => new Vector2(_rng.RandfRange(0.0f, bandX), _rng.RandfRange(0.0f, Size.Y)),
 			_ => new Vector2(_rng.RandfRange(Size.X - bandX, Size.X), _rng.RandfRange(0.0f, Size.Y)),
+		};
+	}
+
+	private void EnsureImageAssetsLoaded(bool retryIfAllMissing = false)
+	{
+		if (_imageAssetsLoaded && !(retryIfAllMissing && AllImageFramesMissing()))
+		{
+			return;
+		}
+
+		_missingCategoryWarnings.Clear();
+		_seagrassFrames = LoadProfileFrames("seagrass", SeagrassFrameCount, "underwater seagrass");
+		_centerCausticFrames = LoadProfileFrames("center_caustic", CenterCausticFrameCount, "underwater center caustic");
+		_centerGlintFrames = LoadProfileFrames("center_glint", CenterGlintFrameCount, "underwater center glint");
+		_imageAssetsLoaded = true;
+	}
+
+	private Texture2D[] LoadProfileFrames(string category, int frameCount, string warningLabel)
+	{
+		string profileSlug = GetProfileSlug(_activeVisualProfile);
+		string framePattern = $"res://art/fx/environment/underwater_ambient/{profileSlug}/{category}/run-001/processed/fx-{{0}}.png";
+		Texture2D[] frames = FrameAnimationHelpers.LoadTextureFrames(framePattern, frameCount, warningLabel, preferImageFile: true);
+		if (frames.Length == 0)
+		{
+			WarnMissingCategory(category, framePattern);
+		}
+
+		return frames;
+	}
+
+	private void WarnMissingCategory(string category, string path)
+	{
+		if (_missingCategoryWarnings.ContainsKey(category))
+		{
+			return;
+		}
+
+		_missingCategoryWarnings[category] = true;
+		GD.PushWarning($"UnderwaterAmbientLayer missing {category} frames for {_activeVisualProfile}: {path}. Falling back to procedural draw for that category.");
+	}
+
+	private bool AllImageFramesMissing()
+	{
+		return _seagrassFrames.Length == 0
+			&& _centerCausticFrames.Length == 0
+			&& _centerGlintFrames.Length == 0;
+	}
+
+	private bool HasNoImageInstances()
+	{
+		return _seagrassInstances.Count == 0
+			&& _centerCausticInstances.Count == 0
+			&& _centerGlintInstances.Count == 0;
+	}
+
+	private void EnsureImageLayers()
+	{
+		_seagrassLayer = GetOrCreateLayer(ref _seagrassLayer, "SeagrassLayer", zIndex: -1);
+		_centerCausticLayer = GetOrCreateLayer(ref _centerCausticLayer, "CenterCausticLayer", zIndex: 1);
+		_centerGlintLayer = GetOrCreateLayer(ref _centerGlintLayer, "CenterGlintLayer", zIndex: 1);
+	}
+
+	private Control GetOrCreateLayer(ref Control? layer, string name, int zIndex)
+	{
+		if (layer != null && GodotObject.IsInstanceValid(layer))
+		{
+			layer.Visible = true;
+			return layer;
+		}
+
+		layer = new Control
+		{
+			Name = name,
+			MouseFilter = MouseFilterEnum.Ignore,
+			AnchorRight = 1.0f,
+			AnchorBottom = 1.0f,
+			GrowHorizontal = GrowDirection.Both,
+			GrowVertical = GrowDirection.Both,
+			ZAsRelative = false,
+			ZIndex = zIndex,
+		};
+		layer.SetAnchorsPreset(LayoutPreset.FullRect);
+		layer.OffsetRight = 0.0f;
+		layer.OffsetBottom = 0.0f;
+		AddChild(layer);
+		return layer;
+	}
+
+	private void SetImageLayersVisible(bool visible)
+	{
+		SetLayerVisible(_seagrassLayer, visible);
+		SetLayerVisible(_centerCausticLayer, visible);
+		SetLayerVisible(_centerGlintLayer, visible);
+	}
+
+	private static void SetLayerVisible(Control? layer, bool visible)
+	{
+		if (layer != null && GodotObject.IsInstanceValid(layer))
+		{
+			layer.Visible = visible;
+		}
+	}
+
+	private void RebuildImageInstances()
+	{
+		ClearImageInstances();
+		BuildSeagrassInstances();
+		BuildCenterCausticInstances();
+		BuildCenterGlintInstances();
+	}
+
+	private void ClearImageInstances()
+	{
+		ClearImageLayer(_seagrassLayer, _seagrassInstances);
+		ClearImageLayer(_centerCausticLayer, _centerCausticInstances);
+		ClearImageLayer(_centerGlintLayer, _centerGlintInstances);
+	}
+
+	private static void ClearImageLayer(Control? layer, List<ImageElement> instances)
+	{
+		instances.Clear();
+		if (layer == null || !GodotObject.IsInstanceValid(layer))
+		{
+			return;
+		}
+
+		while (layer.GetChildCount() > 0)
+		{
+			layer.GetChild(0).Free();
+		}
+	}
+
+	private void BuildSeagrassInstances()
+	{
+		if (_seagrassLayer == null || _seagrassFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < _seagrassBlades.Count; index++)
+		{
+			SeagrassBlade blade = _seagrassBlades[index];
+			var instance = CreateImageElement(
+				_seagrassLayer,
+				$"Seagrass{index + 1}",
+				_seagrassFrames,
+				SeagrassFrameSize,
+				SeagrassFramesPerSecond);
+			instance.Position = blade.Base;
+			instance.Scale = Mathf.Clamp(blade.Height / SeagrassFrameSize.Y, 0.22f, 0.62f);
+			instance.Alpha = Mathf.Clamp(blade.Color.A * 1.35f, 0.08f, 0.55f);
+			instance.Phase = blade.Phase;
+			instance.Speed = blade.Speed;
+			instance.Drift = blade.Sway;
+			instance.Secondary = blade.Flip;
+			instance.GrowsDown = blade.GrowsDown;
+			_seagrassInstances.Add(instance);
+		}
+	}
+
+	private void BuildCenterCausticInstances()
+	{
+		if (_centerCausticLayer == null || _centerCausticFrames.Length == 0 || center_caustic_intensity <= 0.0f)
+		{
+			return;
+		}
+
+		int count = GetCenterCausticInstanceCount();
+		for (int index = 0; index < count; index++)
+		{
+			var instance = CreateImageElement(
+				_centerCausticLayer,
+				$"CenterCaustic{index + 1}",
+				_centerCausticFrames,
+				CenterCausticFrameSize,
+				CenterCausticFramesPerSecond);
+			instance.XRatio = 0.34f + (index % 4) * 0.11f + _rng.RandfRange(-0.025f, 0.025f);
+			instance.YRatio = 0.34f + (index / 4) * 0.12f + _rng.RandfRange(-0.03f, 0.03f);
+			instance.Scale = GetCenterCausticBaseScale() + _rng.RandfRange(-0.05f, 0.08f);
+			instance.Alpha = GetCenterCausticBaseAlpha() * _rng.RandfRange(0.82f, 1.14f);
+			instance.Phase = _rng.RandfRange(0.0f, Mathf.Tau);
+			instance.Speed = _rng.RandfRange(0.18f, 0.34f);
+			instance.Drift = _rng.RandfRange(8.0f, 24.0f);
+			_centerCausticInstances.Add(instance);
+		}
+	}
+
+	private void BuildCenterGlintInstances()
+	{
+		if (_centerGlintLayer == null || _centerGlintFrames.Length == 0 || center_caustic_intensity <= 0.0f)
+		{
+			return;
+		}
+
+		for (int index = 0; index < _centerGlints.Count; index++)
+		{
+			CenterGlint glint = _centerGlints[index];
+			var instance = CreateImageElement(
+				_centerGlintLayer,
+				$"CenterGlint{index + 1}",
+				_centerGlintFrames,
+				CenterGlintFrameSize,
+				CenterGlintFramesPerSecond);
+			instance.XRatio = glint.XRatio;
+			instance.YRatio = glint.YRatio;
+			instance.Scale = Mathf.Clamp(glint.Radius / 8.5f, 0.18f, 0.75f);
+			instance.Alpha = glint.Alpha;
+			instance.Phase = glint.Phase;
+			instance.Speed = glint.Speed;
+			_centerGlintInstances.Add(instance);
+		}
+	}
+
+	private ImageElement CreateImageElement(
+		Control layer,
+		string name,
+		Texture2D[] frames,
+		Vector2 baseSize,
+		float framesPerSecond)
+	{
+		var node = new TextureRect
+		{
+			Name = name,
+			Texture = frames.Length > 0 ? frames[0] : null,
+			MouseFilter = MouseFilterEnum.Ignore,
+			TextureFilter = TextureFilterEnum.Linear,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Size = baseSize,
+			PivotOffset = baseSize / 2.0f,
+		};
+		layer.AddChild(node);
+		return new ImageElement
+		{
+			Node = node,
+			Frames = frames,
+			BaseSize = baseSize,
+			FramesPerSecond = framesPerSecond,
+		};
+	}
+
+	private void UpdateImageInstances()
+	{
+		UpdateSeagrassInstances();
+		UpdateCenterCausticInstances();
+		UpdateCenterGlintInstances();
+	}
+
+	private void UpdateSeagrassInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _seagrassInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float sizePulse = 0.97f + 0.03f * Mathf.Sin(time * instance.Speed + instance.Phase);
+			float scale = instance.Scale * sizePulse;
+			Vector2 size = instance.BaseSize * scale;
+			float direction = instance.GrowsDown ? 1.0f : -1.0f;
+			float centerX = instance.Position.X
+				+ Mathf.Sin(time * instance.Speed + instance.Phase) * instance.Drift * 0.14f
+				+ instance.Secondary * Mathf.Sin(time * instance.Speed * 0.7f + instance.Phase) * instance.Drift * 0.08f;
+			float centerY = instance.Position.Y - direction * size.Y * 0.5f;
+			float alpha = instance.Alpha * (0.92f + 0.08f * Mathf.Sin(time * 0.46f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateCenterCausticInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _centerCausticInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			Vector2 size = instance.BaseSize * instance.Scale;
+			float centerX = Size.X * instance.XRatio + Mathf.Sin(time * instance.Speed + instance.Phase) * instance.Drift;
+			float centerY = Size.Y * instance.YRatio + Mathf.Cos(time * 0.42f + instance.Phase) * instance.Drift * 0.35f;
+			float alpha = instance.Alpha
+				* center_caustic_intensity
+				* (0.78f + 0.22f * Mathf.Sin(time * 0.28f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateCenterGlintInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _centerGlintInstances)
+		{
+			instance.ElapsedTime = time;
+			float pulse = Mathf.Max(0.0f, Mathf.Sin(time * instance.Speed + instance.Phase));
+			if (pulse <= 0.08f)
+			{
+				instance.Node.Visible = false;
+				continue;
+			}
+
+			ApplyAnimatedFrame(instance);
+			Vector2 size = instance.BaseSize * instance.Scale * (0.72f + pulse * 0.95f);
+			float centerX = Size.X * instance.XRatio + Mathf.Sin(time * 0.18f + instance.Phase) * 10.0f;
+			float centerY = Size.Y * instance.YRatio + Mathf.Cos(time * 0.24f + instance.Phase) * 7.0f;
+			float alpha = instance.Alpha * pulse * center_caustic_intensity;
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private static void ApplyAnimatedFrame(ImageElement instance)
+	{
+		if (instance.Frames.Length == 0)
+		{
+			instance.Node.Texture = null;
+			return;
+		}
+
+		float frameTime = instance.ElapsedTime * instance.FramesPerSecond
+			+ instance.Phase * instance.Frames.Length / Mathf.Tau;
+		int frameIndex = WrapFrameIndex(Mathf.FloorToInt(frameTime), instance.Frames.Length);
+		Texture2D texture = instance.Frames[frameIndex];
+		if (instance.Node.Texture != texture)
+		{
+			instance.Node.Texture = texture;
+		}
+	}
+
+	private static int WrapFrameIndex(int frameIndex, int frameCount)
+	{
+		if (frameCount <= 0)
+		{
+			return 0;
+		}
+
+		int wrapped = frameIndex % frameCount;
+		return wrapped < 0 ? wrapped + frameCount : wrapped;
+	}
+
+	private void ApplyImageLayout(ImageElement instance, Vector2 center, Vector2 size, float alpha)
+	{
+		if (size.X <= 0.0f || size.Y <= 0.0f || alpha <= 0.001f)
+		{
+			instance.Node.Visible = false;
+			return;
+		}
+
+		instance.Node.Visible = true;
+		instance.Node.Size = size;
+		instance.Node.PivotOffset = size / 2.0f;
+		instance.Node.Position = center - size / 2.0f;
+		instance.Node.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
+	}
+
+	private bool ShouldDrawProceduralSeagrass()
+	{
+		return _activeRenderMode != AmbientRenderMode.ImageBased || _seagrassFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralCenterCaustics()
+	{
+		return _activeRenderMode != AmbientRenderMode.ImageBased || _centerCausticFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralCenterGlints()
+	{
+		return _activeRenderMode != AmbientRenderMode.ImageBased || _centerGlintFrames.Length == 0;
+	}
+
+	private static string GetProfileSlug(AmbientVisualProfile profile)
+	{
+		return profile switch
+		{
+			AmbientVisualProfile.MainMenu => "main_menu",
+			AmbientVisualProfile.GameBoard => "game_board",
+			AmbientVisualProfile.AdventureMap => "adventure_map",
+			_ => "game_board",
+		};
+	}
+
+	private int GetCenterCausticInstanceCount()
+	{
+		return _activeVisualProfile switch
+		{
+			AmbientVisualProfile.MainMenu => 5,
+			AmbientVisualProfile.GameBoard => 7,
+			AmbientVisualProfile.AdventureMap => 9,
+			_ => 7,
+		};
+	}
+
+	private float GetCenterCausticBaseScale()
+	{
+		return _activeVisualProfile switch
+		{
+			AmbientVisualProfile.MainMenu => 0.26f,
+			AmbientVisualProfile.GameBoard => 0.30f,
+			AmbientVisualProfile.AdventureMap => 0.36f,
+			_ => 0.30f,
+		};
+	}
+
+	private float GetCenterCausticBaseAlpha()
+	{
+		return _activeVisualProfile switch
+		{
+			AmbientVisualProfile.MainMenu => 0.08f,
+			AmbientVisualProfile.GameBoard => 0.10f,
+			AmbientVisualProfile.AdventureMap => 0.12f,
+			_ => 0.10f,
 		};
 	}
 
@@ -366,6 +912,25 @@ public partial class UnderwaterAmbientLayer : Control
 			DrawArc(position, bubble.Radius, -Mathf.Pi * 0.15f, Mathf.Pi * 1.18f, 10, new Color(0.76f, 1.0f, 1.0f, bubble.Alpha), 1.4f, true);
 			DrawCircle(position + new Vector2(-bubble.Radius * 0.28f, -bubble.Radius * 0.25f), Mathf.Max(bubble.Radius * 0.18f, 1.0f), new Color(1.0f, 1.0f, 1.0f, bubble.Alpha * 0.75f));
 		}
+	}
+
+	private sealed class ImageElement
+	{
+		public TextureRect Node { get; set; } = default!;
+		public Texture2D[] Frames { get; set; } = Array.Empty<Texture2D>();
+		public Vector2 BaseSize { get; set; }
+		public float FramesPerSecond { get; set; }
+		public Vector2 Position { get; set; }
+		public float XRatio { get; set; }
+		public float YRatio { get; set; }
+		public float Scale { get; set; }
+		public float Alpha { get; set; }
+		public float Phase { get; set; }
+		public float Speed { get; set; }
+		public float Drift { get; set; }
+		public float Secondary { get; set; }
+		public bool GrowsDown { get; set; }
+		public float ElapsedTime { get; set; }
 	}
 
 	private readonly record struct Bubble(Vector2 Base, float Radius, float Speed, float Phase, float Drift, float Alpha);

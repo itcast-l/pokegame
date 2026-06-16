@@ -1,0 +1,233 @@
+{
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/fx/environment/underwater_ambient/main_menu/seagrass/run-001/raw/raw-sheet.png",
+  "rows": 4,
+  "cols": 2,
+  "source_cell_width": 443,
+  "source_cell_height": 443,
+  "frame_width": 256,
+  "frame_height": 512,
+  "fit_scale": 0.9,
+  "threshold": 100,
+  "edge_threshold": 150,
+  "edge_clean_depth": 2,
+  "trim_border": 4,
+  "shared_scale": 1.3395348837209302,
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        443,
+        443
+      ],
+      "crop_box": [
+        168,
+        96,
+        319,
+        419
+      ],
+      "component_count": 1,
+      "output_size": [
+        202,
+        432
+      ],
+      "paste_position": [
+        27,
+        55
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        443,
+        0,
+        886,
+        443
+      ],
+      "crop_box": [
+        104,
+        85,
+        268,
+        419
+      ],
+      "component_count": 1,
+      "output_size": [
+        219,
+        447
+      ],
+      "paste_position": [
+        18,
+        40
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        443,
+        443,
+        886
+      ],
+      "crop_box": [
+        156,
+        91,
+        319,
+        404
+      ],
+      "component_count": 1,
+      "output_size": [
+        218,
+        419
+      ],
+      "paste_position": [
+        19,
+        68
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        443,
+        443,
+        886,
+        886
+      ],
+      "crop_box": [
+        106,
+        69,
+        273,
+        404
+      ],
+      "component_count": 1,
+      "output_size": [
+        223,
+        448
+      ],
+      "paste_position": [
+        16,
+        39
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        886,
+        443,
+        1329
+      ],
+      "crop_box": [
+        168,
+        80,
+        321,
+        385
+      ],
+      "component_count": 1,
+      "output_size": [
+        204,
+        408
+      ],
+      "paste_position": [
+        26,
+        79
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        443,
+        886,
+        886,
+        1329
+      ],
+      "crop_box": [
+        108,
+        58,
+        256,
+        385
+      ],
+      "component_count": 1,
+      "output_size": [
+        198,
+        438
+      ],
+      "paste_position": [
+        29,
+        49
+      ]
+    },
+    {
+      "grid": [
+        3,
+        0
+      ],
+      "source_box": [
+        0,
+        1329,
+        443,
+        1772
+      ],
+      "crop_box": [
+        168,
+        55,
+        308,
+        366
+      ],
+      "component_count": 1,
+      "output_size": [
+        187,
+        416
+      ],
+      "paste_position": [
+        34,
+        71
+      ]
+    },
+    {
+      "grid": [
+        3,
+        1
+      ],
+      "source_box": [
+        443,
+        1329,
+        886,
+        1772
+      ],
+      "crop_box": [
+        93,
+        57,
+        265,
+        366
+      ],
+      "component_count": 1,
+      "output_size": [
+        230,
+        413
+      ],
+      "paste_position": [
+        13,
+        74
+      ]
+    }
+  ]
+}

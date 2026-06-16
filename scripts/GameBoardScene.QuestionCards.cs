@@ -103,11 +103,6 @@ public partial class GameBoardScene
 			return BombItemCardId;
 		}
 
-		if (debug_random_item_cards_are_magnet)
-		{
-			return IsSpecialItemCardEnabled(MagnetItemCardId) ? MagnetItemCardId : string.Empty;
-		}
-
 		var candidates = new List<RewardCandidate>();
 		foreach (string itemCardId in _itemCardCatalog.RewardIds)
 		{

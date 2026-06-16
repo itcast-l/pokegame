@@ -1,0 +1,179 @@
+{
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/fx/environment/underwater_ambient/main_menu/center_glint/run-001/raw/raw-sheet.png",
+  "rows": 3,
+  "cols": 2,
+  "source_cell_width": 512,
+  "source_cell_height": 512,
+  "frame_width": 96,
+  "frame_height": 96,
+  "fit_scale": 0.78,
+  "threshold": 100,
+  "edge_threshold": 150,
+  "edge_clean_depth": 1,
+  "trim_border": 4,
+  "shared_scale": 0.4538181818181818,
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "crop_box": [
+        186,
+        189,
+        351,
+        345
+      ],
+      "component_count": 1,
+      "output_size": [
+        74,
+        70
+      ],
+      "paste_position": [
+        11,
+        13
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "crop_box": [
+        153,
+        181,
+        307,
+        346
+      ],
+      "component_count": 1,
+      "output_size": [
+        69,
+        74
+      ],
+      "paste_position": [
+        13,
+        11
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "crop_box": [
+        209,
+        185,
+        328,
+        305
+      ],
+      "component_count": 1,
+      "output_size": [
+        54,
+        54
+      ],
+      "paste_position": [
+        21,
+        21
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "crop_box": [
+        169,
+        174,
+        294,
+        317
+      ],
+      "component_count": 1,
+      "output_size": [
+        56,
+        64
+      ],
+      "paste_position": [
+        20,
+        16
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        1024,
+        512,
+        1536
+      ],
+      "crop_box": [
+        190,
+        132,
+        345,
+        277
+      ],
+      "component_count": 1,
+      "output_size": [
+        70,
+        65
+      ],
+      "paste_position": [
+        13,
+        15
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        512,
+        1024,
+        1024,
+        1536
+      ],
+      "crop_box": [
+        173,
+        146,
+        284,
+        268
+      ],
+      "component_count": 1,
+      "output_size": [
+        50,
+        55
+      ],
+      "paste_position": [
+        23,
+        20
+      ]
+    }
+  ]
+}
