@@ -128,6 +128,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("7_main_menu_ocean_dynamics")
+RenderMode = 1
 bubble_count = 72
 glint_count = 46
 

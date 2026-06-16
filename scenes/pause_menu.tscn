@@ -1,24 +1,15 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/PauseMenuOverlay.cs" id="1_pause_menu"]
-[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
-[ext_resource type="Script" path="res://scripts/OceanDialogPanelArt.cs" id="4_panel_art"]
+[ext_resource type="Script" path="res://scripts/MainMenuPlayerCountDialogPanelArt.cs" id="2_panel_art"]
+[ext_resource type="Script" path="res://scripts/MainMenuPlayerCountIconBadge.cs" id="3_icon_badge"]
 [ext_resource type="Script" path="res://scripts/PlayerCountDialogFrameArt.cs" id="5_frame_art"]
+[ext_resource type="Shader" path="res://shaders/menu_blur_scrim.gdshader" id="6_scrim_shader"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.012, 0.14, 0.18, 0.82)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.62, 1, 0.94, 0.58)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.02, 0.04, 0.66)
-shadow_size = 24
-shadow_offset = Vector2(0, 10)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_scrim"]
+shader = ExtResource("6_scrim_shader")
+shader_parameter/blur_lod = 2.8
+shader_parameter/tint_color = Color(0, 0.035, 0.07, 0.48)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
 
@@ -35,15 +26,15 @@ mouse_filter = 0
 script = ExtResource("1_pause_menu")
 
 [node name="Scrim" type="ColorRect" parent="."]
+unique_name_in_owner = true
 process_mode = 3
+material = SubResource("ShaderMaterial_scrim")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
-color = Color(0, 0.025, 0.05, 0.58)
 
 [node name="PauseMenuCenter" type="CenterContainer" parent="."]
 process_mode = 3
@@ -61,75 +52,100 @@ custom_minimum_size = Vector2(744, 480)
 process_mode = 3
 layout_mode = 2
 mouse_filter = 0
+script = ExtResource("2_panel_art")
 
-[node name="GeneratedFrameArt" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("4_panel_art")
-ShowTitleCrest = false
-ShowTitleGuides = false
-CoverBuiltInRowSlots = false
-
-[node name="PauseMenuMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel"]
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 124
-theme_override_constants/margin_top = 142
-theme_override_constants/margin_right = 124
-theme_override_constants/margin_bottom = 118
-
-[node name="PauseMenuLayout" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 22
-alignment = 1
-
-[node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
-custom_minimum_size = Vector2(496, 56)
-process_mode = 3
-layout_mode = 2
-script = ExtResource("5_frame_art")
-Kind = 0
-
-[node name="ContinueButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/ContinueFrame"]
+[node name="PauseMenuTitle" type="Label" parent="PauseMenuCenter/PauseMenuPanel"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
+offset_left = 170.0
+offset_top = 42.0
+offset_right = 574.0
+offset_bottom = 88.0
+theme_override_colors/font_color = Color(0.93, 1, 0.97, 0.98)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.88)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 34
+text = "暂停"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PauseMenuMessage" type="Label" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+offset_left = 236.0
+offset_top = 86.0
+offset_right = 508.0
+offset_bottom = 114.0
+theme_override_colors/font_color = Color(0.68, 0.96, 0.93, 0.94)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "当前对局菜单"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(496, 56)
+process_mode = 3
+layout_mode = 1
+offset_left = 124.0
+offset_top = 142.0
+offset_right = 620.0
+offset_bottom = 198.0
+mouse_filter = 2
+script = ExtResource("5_frame_art")
+Kind = 0
+
+[node name="ContinueRowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/ContinueFrame"]
+process_mode = 3
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-focus_mode = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="ContinueRowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/ContinueFrame/ContinueRowMargin"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ContinueIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/ContinueFrame/ContinueRowMargin/ContinueRowLayout"]
+custom_minimum_size = Vector2(36, 36)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+IconType = 3
+
+[node name="ContinueLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/ContinueFrame/ContinueRowMargin/ContinueRowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+process_mode = 3
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
 text = "GAME_CONTINUE"
-flat = true
+vertical_alignment = 1
 
-[node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
-custom_minimum_size = Vector2(496, 56)
+[node name="ContinueSpacer" type="Control" parent="PauseMenuCenter/PauseMenuPanel/ContinueFrame/ContinueRowMargin/ContinueRowLayout"]
 process_mode = 3
 layout_mode = 2
-script = ExtResource("5_frame_art")
-Kind = 0
+size_flags_horizontal = 3
 
-[node name="ReturnToMainMenuButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/ReturnToMainMenuFrame"]
+[node name="ContinueButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/ContinueFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -139,23 +155,70 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-text = "GAME_RETURN_MAIN_MENU"
 flat = true
 
-[node name="QuitFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout"]
+[node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(496, 56)
 process_mode = 3
-layout_mode = 2
+layout_mode = 1
+offset_left = 124.0
+offset_top = 224.0
+offset_right = 620.0
+offset_bottom = 280.0
+mouse_filter = 2
 script = ExtResource("5_frame_art")
 Kind = 0
 
-[node name="QuitButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuMargin/PauseMenuLayout/QuitFrame"]
+[node name="ReturnRowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/ReturnToMainMenuFrame"]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="ReturnRowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/ReturnToMainMenuFrame/ReturnRowMargin"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ReturnToMainMenuIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/ReturnToMainMenuFrame/ReturnRowMargin/ReturnRowLayout"]
+custom_minimum_size = Vector2(36, 36)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+IconType = 4
+
+[node name="ReturnToMainMenuLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/ReturnToMainMenuFrame/ReturnRowMargin/ReturnRowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+process_mode = 3
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "GAME_RETURN_MAIN_MENU"
+vertical_alignment = 1
+
+[node name="ReturnSpacer" type="Control" parent="PauseMenuCenter/PauseMenuPanel/ReturnToMainMenuFrame/ReturnRowMargin/ReturnRowLayout"]
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ReturnToMainMenuButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/ReturnToMainMenuFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -165,67 +228,113 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+flat = true
+
+[node name="RestartFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(496, 56)
+process_mode = 3
+layout_mode = 1
+offset_left = 124.0
+offset_top = 306.0
+offset_right = 620.0
+offset_bottom = 362.0
+mouse_filter = 2
+script = ExtResource("5_frame_art")
+Kind = 0
+
+[node name="RestartRowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/RestartFrame"]
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="RestartRowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/RestartFrame/RestartRowMargin"]
+process_mode = 3
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="RestartIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/RestartFrame/RestartRowMargin/RestartRowLayout"]
+custom_minimum_size = Vector2(36, 36)
+process_mode = 3
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+IconType = 5
+
+[node name="RestartLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/RestartFrame/RestartRowMargin/RestartRowLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+process_mode = 3
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "GAME_RESTART_MATCH"
+vertical_alignment = 1
+
+[node name="RestartSpacer" type="Control" parent="PauseMenuCenter/PauseMenuPanel/RestartFrame/RestartRowMargin/RestartRowLayout"]
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RestartButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/RestartFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+flat = true
+
+[node name="QuitFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(248, 48)
+process_mode = 3
+layout_mode = 1
+offset_left = 248.0
+offset_top = 392.0
+offset_right = 496.0
+offset_bottom = 440.0
+mouse_filter = 2
+script = ExtResource("5_frame_art")
+Kind = 1
+
+[node name="QuitButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/QuitFrame"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 text = "GAME_QUIT"
-flat = true
-
-[node name="RestartActionRoot" type="Control" parent="PauseMenuCenter/PauseMenuPanel"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 1
-anchor_left = 0.2876344
-anchor_top = 0.79375
-anchor_right = 0.7123656
-anchor_bottom = 0.95208335
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="RestartFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/RestartActionRoot"]
-custom_minimum_size = Vector2(316, 76)
-process_mode = 3
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -158.0
-offset_top = -38.0
-offset_right = 158.0
-offset_bottom = 38.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("2_button_frame")
-AccentColor = Color(0.98, 0.83, 0.52, 1)
-
-[node name="RestartButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/RestartActionRoot/RestartFrame"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 4.0
-offset_right = -4.0
-offset_bottom = -4.0
-grow_horizontal = 2
-grow_vertical = 2
-focus_mode = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-text = "GAME_RESTART_MATCH"
 flat = true
 
 [node name="PauseQuitConfirmRoot" type="Control" parent="."]
@@ -278,81 +387,70 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("4_panel_art")
-PanelTexturePath = "res://assets/ui/player_count_dialog_blank_panel.png"
-CoverBuiltInActionWell = false
-CoverBuiltInRowSlots = false
-InnerTopRatio = 0.24
-InnerBottomRatio = 0.13
-InnerSideRatio = 0.10
+script = ExtResource("2_panel_art")
 
-[node name="ConfirmMargin" type="MarginContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/margin_left = 84
-theme_override_constants/margin_top = 74
-theme_override_constants/margin_right = 84
-theme_override_constants/margin_bottom = 68
-
-[node name="ConfirmLayout" type="VBoxContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 18
-alignment = 1
-
-[node name="QuitConfirmTitle" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+[node name="QuitConfirmTitle" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
 unique_name_in_owner = true
 process_mode = 3
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
-theme_override_font_sizes/font_size = 34
+layout_mode = 1
+offset_left = 170.0
+offset_top = 74.0
+offset_right = 574.0
+offset_bottom = 116.0
+theme_override_colors/font_color = Color(0.93, 1, 0.97, 0.98)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.88)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 30
 text = "GAME_QUIT_CONFIRM_TITLE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="QuitConfirmMessage" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+[node name="QuitConfirmMessage" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
 unique_name_in_owner = true
 process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.86)
-theme_override_font_sizes/font_size = 18
+layout_mode = 1
+offset_left = 156.0
+offset_top = 144.0
+offset_right = 588.0
+offset_bottom = 216.0
+theme_override_colors/font_color = Color(0.68, 0.96, 0.93, 0.94)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 20
 text = "GAME_QUIT_CONFIRM_MESSAGE"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="QuitConfirmHint" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
+[node name="QuitConfirmHint" type="Label" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
 unique_name_in_owner = true
 process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.82)
-theme_override_font_sizes/font_size = 17
+layout_mode = 1
+offset_left = 186.0
+offset_top = 228.0
+offset_right = 558.0
+offset_bottom = 258.0
+theme_override_colors/font_color = Color(0.53, 0.88, 0.85, 0.78)
+theme_override_font_sizes/font_size = 15
 text = "GAME_QUIT_CONFIRM_HINT"
 horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 2
 
-[node name="ConfirmSpacer" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
-custom_minimum_size = Vector2(0, 20)
-process_mode = 3
-layout_mode = 2
-
-[node name="ConfirmActions" type="HBoxContainer" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 18
-alignment = 1
-
-[node name="CancelQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions"]
+[node name="CancelQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
 custom_minimum_size = Vector2(248, 48)
 process_mode = 3
-layout_mode = 2
+layout_mode = 1
+offset_left = 124.0
+offset_top = 322.0
+offset_right = 372.0
+offset_bottom = 370.0
+mouse_filter = 2
 script = ExtResource("5_frame_art")
 Kind = 1
 
-[node name="CancelQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions/CancelQuitFrame"]
+[node name="CancelQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/CancelQuitFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -362,8 +460,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
@@ -371,14 +467,19 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 text = "GAME_QUIT_CONFIRM_CANCEL"
 flat = true
 
-[node name="ConfirmQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions"]
+[node name="ConfirmQuitFrame" type="Control" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel"]
 custom_minimum_size = Vector2(248, 48)
 process_mode = 3
-layout_mode = 2
+layout_mode = 1
+offset_left = 372.0
+offset_top = 322.0
+offset_right = 620.0
+offset_bottom = 370.0
+mouse_filter = 2
 script = ExtResource("5_frame_art")
 Kind = 1
 
-[node name="ConfirmQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmMargin/ConfirmLayout/ConfirmActions/ConfirmQuitFrame"]
+[node name="ConfirmQuitButton" type="Button" parent="PauseQuitConfirmRoot/ConfirmCenter/PauseQuitConfirmPanel/ConfirmQuitFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -388,8 +489,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 2
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")

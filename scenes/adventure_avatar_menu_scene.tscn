@@ -1,9 +1,9 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cwpo3i26uuh38"]
 
-[ext_resource type="Script" path="res://scripts/AdventureAvatarMenuScene.cs" id="1_adventure_avatar_menu_scene"]
-[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
+[ext_resource type="Script" uid="uid://cqsqngx76bttl" path="res://scripts/AdventureAvatarMenuScene.cs" id="1_adventure_avatar_menu_scene"]
+[ext_resource type="Script" uid="uid://c4x2qwrms1ysj" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
 [ext_resource type="PackedScene" path="res://scenes/adventure_mode_entry.tscn" id="3_adventure_mode_entry"]
-[ext_resource type="PackedScene" path="res://scenes/adventure_level_entry.tscn" id="4_level_entry"]
+[ext_resource type="PackedScene" uid="uid://dmujoh6slohou" path="res://scenes/adventure_level_entry.tscn" id="4_level_entry"]
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="5_character_avatar"]
 [ext_resource type="PackedScene" path="res://scenes/avatar_unlock_prompt.tscn" id="6_avatar_unlock_prompt"]
 
@@ -22,6 +22,8 @@ shadow_color = Color(0, 0.02, 0.04, 0.72)
 shadow_size = 22
 shadow_offset = Vector2(0, 8)
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.005, 0.105, 0.13, 0.58)
 border_width_left = 1
@@ -35,20 +37,6 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 shadow_color = Color(0, 0, 0, 0.28)
 shadow_size = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ability"]
-bg_color = Color(0.018, 0.14, 0.16, 0.58)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.98, 0.92, 0.46, 0.28)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.02, 0.04, 0.22)
-shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 bg_color = Color(0.108, 0.141, 0.0896, 0.88)
@@ -74,7 +62,19 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ability"]
+bg_color = Color(0.018, 0.14, 0.16, 0.58)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.98, 0.92, 0.46, 0.28)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.02, 0.04, 0.22)
+shadow_size = 4
 
 [node name="AdventureAvatarMenuScene" type="Control" unique_id=1913276250]
 layout_mode = 3
@@ -86,7 +86,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_adventure_avatar_menu_scene")
 
-[node name="StandaloneBackground" type="ColorRect" parent="."]
+[node name="StandaloneBackground" type="ColorRect" parent="." unique_id=833063308]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -97,7 +97,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.004, 0.055, 0.078, 1)
 
-[node name="SafeArea" type="MarginContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="." unique_id=387012257]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -110,41 +110,40 @@ theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 32
 
-[node name="MenuCenter" type="CenterContainer" parent="SafeArea"]
+[node name="MenuCenter" type="CenterContainer" parent="SafeArea" unique_id=1222495090]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="AdventureMenuPanel" type="PanelContainer" parent="SafeArea/MenuCenter"]
+[node name="AdventureMenuPanel" type="PanelContainer" parent="SafeArea/MenuCenter" unique_id=322061772]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(1040, 620)
 layout_mode = 2
-mouse_filter = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
 
-[node name="AdventureMenuMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel"]
+[node name="AdventureMenuMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel" unique_id=1933191062]
 layout_mode = 2
 theme_override_constants/margin_left = 24
 theme_override_constants/margin_top = 22
 theme_override_constants/margin_right = 24
 theme_override_constants/margin_bottom = 22
 
-[node name="Layout" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin"]
+[node name="Layout" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin" unique_id=1520463972]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Header" type="HBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout"]
+[node name="Header" type="HBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout" unique_id=1395350197]
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 12
 
-[node name="BackFrame" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header"]
+[node name="BackFrame" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header" unique_id=1326510770]
 custom_minimum_size = Vector2(126, 56)
 layout_mode = 2
 script = ExtResource("2_button_frame")
 AccentColor = Color(0.72, 0.88, 1, 1)
 
-[node name="BackButton" type="Button" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/BackFrame"]
+[node name="BackButton" type="Button" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/BackFrame" unique_id=1799324681]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -160,28 +159,27 @@ focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 19
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 text = "ADVENTURE_BACK"
 flat = true
 
-[node name="TitleWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header"]
+[node name="TitleWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header" unique_id=1929766985]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="TitleBlock" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap"]
+[node name="TitleBlock" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap" unique_id=126802420]
 custom_minimum_size = Vector2(360, 54)
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="TitleLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap/TitleBlock"]
+[node name="TitleLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap/TitleBlock" unique_id=1420770758]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(360, 44)
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1
@@ -192,97 +190,95 @@ horizontal_alignment = 1
 vertical_alignment = 1
 clip_text = true
 
-[node name="TitleUnderlineWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap/TitleBlock"]
+[node name="TitleUnderlineWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap/TitleBlock" unique_id=759984155]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="TitleUnderline" type="ColorRect" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap/TitleBlock/TitleUnderlineWrap"]
+[node name="TitleUnderline" type="ColorRect" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/TitleWrap/TitleBlock/TitleUnderlineWrap" unique_id=2136890703]
 custom_minimum_size = Vector2(184, 2)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.64, 1, 0.93, 0.62)
 
-[node name="HeaderBalance" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header"]
+[node name="HeaderBalance" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header" unique_id=772388256]
 custom_minimum_size = Vector2(126, 1)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Body" type="HBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout"]
+[node name="Body" type="HBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout" unique_id=529070115]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 14
 
-[node name="AdventureListPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body"]
+[node name="AdventureListPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body" unique_id=278965709]
 custom_minimum_size = Vector2(190, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="AdventureListMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel"]
+[node name="AdventureListMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel" unique_id=1400726546]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 14
 
-[node name="AdventureList" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin"]
+[node name="AdventureList" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin" unique_id=482726533]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="AdventureListTitle" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList"]
+[node name="AdventureListTitle" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList" unique_id=1878535861]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.6, 0.96, 0.92, 0.86)
 theme_override_font_sizes/font_size = 16
 text = "ADVENTURE_LIST_TITLE"
 vertical_alignment = 1
 clip_text = true
 
-[node name="deep_tide_throneAdventureEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList" instance=ExtResource("3_adventure_mode_entry")]
+[node name="deep_tide_throneAdventureEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList" unique_id=419375319 instance=ExtResource("3_adventure_mode_entry")]
 unique_name_in_owner = true
 
-[node name="AdventureListFill" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList"]
+[node name="AdventureListFill" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList" unique_id=765631561]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="LevelListPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body"]
+[node name="LevelListPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body" unique_id=874148209]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="LevelListMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel"]
+[node name="LevelListMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel" unique_id=547006277]
 layout_mode = 2
 theme_override_constants/margin_left = 14
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 14
 
-[node name="LevelListLayout" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin"]
+[node name="LevelListLayout" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin" unique_id=2007190102]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="EnemyListTitle" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout"]
+[node name="EnemyListTitle" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout" unique_id=711776804]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.6, 0.96, 0.92, 0.86)
 theme_override_font_sizes/font_size = 16
 text = "ADVENTURE_ENEMY_LIST_TITLE"
 vertical_alignment = 1
 clip_text = true
 
-[node name="LevelScroll" type="ScrollContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout"]
+[node name="LevelScroll" type="ScrollContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout" unique_id=1702244770]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -291,43 +287,70 @@ mouse_filter = 0
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="LevelList" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll"]
+[node name="LevelList" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll" unique_id=1033204860]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="fishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
+[node name="fishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1909553925 instance=ExtResource("4_level_entry")]
 unique_name_in_owner = true
-[node name="lanternfishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="shrimpLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="crabLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="jellyfishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="manta_rayLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="garden_eelLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="sea_slugLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="nautilusLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="narwhalLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="leafy_seadragonLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="dragon_prince_jLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="dragon_queen_qLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-[node name="boss_kLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
+layout_mode = 2
 
-[node name="EnemyPreviewPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body"]
+[node name="lanternfishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=934999577 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="shrimpLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=2140470963 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="crabLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=101602566 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="jellyfishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1782634048 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="manta_rayLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=349343043 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="garden_eelLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1454591923 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="sea_slugLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1071280417 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="nautilusLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=312625615 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="narwhalLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=628650306 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="leafy_seadragonLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=358269066 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="dragon_prince_jLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=788998392 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="dragon_queen_qLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1296542463 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="boss_kLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1182186470 instance=ExtResource("4_level_entry")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="EnemyPreviewPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body" unique_id=1113797449]
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -335,63 +358,60 @@ size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="EnemyPreviewMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel"]
+[node name="EnemyPreviewMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel" unique_id=1012752199]
 layout_mode = 2
 theme_override_constants/margin_left = 22
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 22
 theme_override_constants/margin_bottom = 18
 
-[node name="EnemyPreviewLayout" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin"]
+[node name="EnemyPreviewLayout" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin" unique_id=952491757]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="SelectedStageWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
+[node name="SelectedStageWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=1251699941]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="SelectedStageBadge" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/SelectedStageWrap"]
+[node name="SelectedStageBadge" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/SelectedStageWrap" unique_id=1373002659]
 custom_minimum_size = Vector2(96, 42)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 
-[node name="SelectedStageLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/SelectedStageWrap/SelectedStageBadge"]
+[node name="SelectedStageLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/SelectedStageWrap/SelectedStageBadge" unique_id=2086355784]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.98, 1, 0.86, 1)
 theme_override_font_sizes/font_size = 24
 text = "01"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PreviewFrame" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
+[node name="PreviewFrame" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=715397679]
 custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_preview_frame")
 
-[node name="PreviewAvatarAnchor" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/PreviewFrame"]
+[node name="PreviewAvatarAnchor" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/PreviewFrame" unique_id=2116879033]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="PreviewAvatar" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/PreviewFrame/PreviewAvatarAnchor" instance=ExtResource("5_character_avatar")]
+[node name="PreviewAvatar" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/PreviewFrame/PreviewAvatarAnchor" unique_id=81837314 instance=ExtResource("5_character_avatar")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(138, 138)
 layout_mode = 2
-mouse_filter = 2
 PortraitScale = 0.8
 LoadActionFrames = false
 
-[node name="PreviewNameLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
+[node name="PreviewNameLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=203054899]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.98, 1, 0.93, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.92)
 theme_override_constants/shadow_offset_x = 1
@@ -402,10 +422,9 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="PreviewStatusLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
+[node name="PreviewStatusLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=1527787810]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.88)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
@@ -414,7 +433,7 @@ text = "Ready"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="AbilityPreviewCard" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
+[node name="AbilityPreviewCard" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=1382979060]
 custom_minimum_size = Vector2(0, 148)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -422,34 +441,32 @@ size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ability")
 
-[node name="AbilityPreviewMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard"]
+[node name="AbilityPreviewMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard" unique_id=961891779]
 layout_mode = 2
 theme_override_constants/margin_left = 14
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 10
 
-[node name="AbilityPreviewStack" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin"]
+[node name="AbilityPreviewStack" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin" unique_id=1769197672]
+clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 5
-clip_contents = true
 
-[node name="AbilityTitleLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack"]
+[node name="AbilityTitleLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack" unique_id=1008381]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.58, 0.96, 0.9, 0.82)
 theme_override_font_sizes/font_size = 14
 text = "Ability"
 vertical_alignment = 1
 clip_text = true
 
-[node name="AbilityNameLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack"]
+[node name="AbilityNameLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack" unique_id=1282097867]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.98, 1, 0.83, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.82)
 theme_override_constants/shadow_offset_x = 1
@@ -459,42 +476,38 @@ text = "Ability Name"
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="AbilityDescriptionScroll" type="ScrollContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack"]
+[node name="AbilityDescriptionScroll" type="ScrollContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack" unique_id=29548369]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 0
 horizontal_scroll_mode = 0
-vertical_scroll_mode = 1
-clip_contents = true
 
-[node name="AbilityDescriptionLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack/AbilityDescriptionScroll"]
+[node name="AbilityDescriptionLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack/AbilityDescriptionScroll" unique_id=747074057]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.86, 0.98, 0.96, 0.92)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.68)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 16
 text = "Ability description"
-vertical_alignment = 0
 autowrap_mode = 2
 
-[node name="StartWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
+[node name="StartWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=1011286767]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="StartFrame" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap"]
+[node name="StartFrame" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap" unique_id=1651622000]
 custom_minimum_size = Vector2(224, 56)
 layout_mode = 2
 script = ExtResource("2_button_frame")
 AccentColor = Color(0.98, 0.92, 0.46, 1)
 FlipOrnament = true
 
-[node name="StartButton" type="Button" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap/StartFrame"]
+[node name="StartButton" type="Button" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap/StartFrame" unique_id=948802280]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -510,11 +523,12 @@ focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 19
 theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 text = "ADVENTURE_START"
 flat = true
 
-[node name="AvatarUnlockPromptRoot" parent="." instance=ExtResource("6_avatar_unlock_prompt")]
+[node name="AvatarUnlockPromptRoot" parent="." unique_id=700060721 instance=ExtResource("6_avatar_unlock_prompt")]
 unique_name_in_owner = true
+layout_mode = 1

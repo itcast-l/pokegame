@@ -1,0 +1,150 @@
+{
+  "input": "/Users/cakeju/.codex/generated_images/019eca70-18c9-76d3-b9af-152da654da0c/ig_07d9eebcd6bfaa63016a2fc43c1ba48191ab8b5da67d9d70f6.png",
+  "rows": 4,
+  "cols": 2,
+  "frame_width": 128,
+  "frame_height": 128,
+  "fit_scale": 0.85,
+  "threshold": 80,
+  "edge_threshold": 150,
+  "edge_clean_depth": 2,
+  "shared_scale": 0.2125,
+  "frames": [
+    {
+      "index": 1,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 2,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 3,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 4,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 5,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 6,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 7,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    },
+    {
+      "index": 8,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        384
+      ],
+      "output_size": [
+        109,
+        82
+      ],
+      "paste_position": [
+        9,
+        23
+      ]
+    }
+  ]
+}

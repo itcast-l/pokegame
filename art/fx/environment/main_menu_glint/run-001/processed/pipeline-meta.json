@@ -1,0 +1,116 @@
+{
+  "input": "/Users/cakeju/.codex/generated_images/019eca70-18c9-76d3-b9af-152da654da0c/ig_07d9eebcd6bfaa63016a2fc47b54e48191952e00c38e9dee87.png",
+  "rows": 3,
+  "cols": 2,
+  "frame_width": 96,
+  "frame_height": 96,
+  "fit_scale": 0.76,
+  "threshold": 80,
+  "edge_threshold": 150,
+  "edge_clean_depth": 1,
+  "shared_scale": 0.14250000000000002,
+  "frames": [
+    {
+      "index": 1,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "output_size": [
+        73,
+        73
+      ],
+      "paste_position": [
+        11,
+        11
+      ]
+    },
+    {
+      "index": 2,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "output_size": [
+        73,
+        73
+      ],
+      "paste_position": [
+        11,
+        11
+      ]
+    },
+    {
+      "index": 3,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "output_size": [
+        73,
+        73
+      ],
+      "paste_position": [
+        11,
+        11
+      ]
+    },
+    {
+      "index": 4,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "output_size": [
+        73,
+        73
+      ],
+      "paste_position": [
+        11,
+        11
+      ]
+    },
+    {
+      "index": 5,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "output_size": [
+        73,
+        73
+      ],
+      "paste_position": [
+        11,
+        11
+      ]
+    },
+    {
+      "index": 6,
+      "source_bbox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "output_size": [
+        73,
+        73
+      ],
+      "paste_position": [
+        11,
+        11
+      ]
+    }
+  ]
+}

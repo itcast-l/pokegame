@@ -1,11 +1,11 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene format=3 uid="uid://cx4lwiav6rhbi"]
 
-[ext_resource type="Script" path="res://scripts/MultiplayerLobbyScene.cs" id="1_lobby"]
-[ext_resource type="Texture2D" path="res://art/menu/main_menu_concept_10.png" id="2_background"]
-[ext_resource type="Script" path="res://scripts/MainMenuOceanDynamics.cs" id="3_ocean_dynamics"]
+[ext_resource type="Script" uid="uid://b8v7peb2fjt5b" path="res://scripts/MultiplayerLobbyScene.cs" id="1_lobby"]
+[ext_resource type="Texture2D" uid="uid://d1okmldodfjwc" path="res://art/menu/main_menu_concept_10.png" id="2_background"]
+[ext_resource type="Script" uid="uid://ckc3u46a0io30" path="res://scripts/MainMenuOceanDynamics.cs" id="3_ocean_dynamics"]
 [ext_resource type="PackedScene" path="res://scenes/multiplayer_lobby_room_row.tscn" id="4_room_row"]
 [ext_resource type="PackedScene" path="res://scenes/multiplayer_lobby_player_row.tscn" id="5_player_row"]
-[ext_resource type="Shader" path="res://shaders/water_caustic_overlay.gdshader" id="6_water_caustic_shader"]
+[ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="6_water_caustic_shader"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lobby_caustic"]
 shader = ExtResource("6_water_caustic_shader")
@@ -15,6 +15,44 @@ shader_parameter/wave_scale = 22.0
 shader_parameter/wave_speed = 0.42
 shader_parameter/edge_boost = 0.72
 shader_parameter/center_glow = 0.1
+shader_parameter/sun_color = Color(1, 0.92, 0.68, 0.22)
+shader_parameter/sun_pulse_strength = 0.0
+shader_parameter/sun_shadow_strength = 0.0
+shader_parameter/sun_pulse_speed = 0.42
+shader_parameter/center_motion_strength = 0.0
+shader_parameter/center_motion_speed = 0.55
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+content_margin_left = 14.0
+content_margin_top = 7.0
+content_margin_right = 14.0
+content_margin_bottom = 7.0
+bg_color = Color(0.05, 0.17, 0.22, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.71, 0.91, 0.84, 0.34)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+content_margin_left = 14.0
+content_margin_top = 7.0
+content_margin_right = 14.0
+content_margin_bottom = 7.0
+bg_color = Color(0.07, 0.24, 0.29, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.88, 1, 0.94, 0.54)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.008, 0.1, 0.13, 0.76)
@@ -32,6 +70,10 @@ shadow_size = 18
 shadow_offset = Vector2(0, 8)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
 bg_color = Color(0.035, 0.15, 0.19, 0.92)
 border_width_left = 1
 border_width_top = 1
@@ -42,12 +84,12 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_focus"]
 content_margin_left = 12.0
 content_margin_top = 8.0
 content_margin_right = 12.0
 content_margin_bottom = 8.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_focus"]
 bg_color = Color(0.05, 0.19, 0.23, 0.96)
 border_width_left = 1
 border_width_top = 1
@@ -58,44 +100,12 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 12.0
-content_margin_top = 8.0
-content_margin_right = 12.0
-content_margin_bottom = 8.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
-bg_color = Color(0.05, 0.17, 0.22, 0.94)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.71, 0.91, 0.84, 0.34)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-content_margin_left = 14.0
-content_margin_top = 7.0
-content_margin_right = 14.0
-content_margin_bottom = 7.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
-bg_color = Color(0.07, 0.24, 0.29, 0.98)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.88, 1, 0.94, 0.54)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-content_margin_left = 14.0
-content_margin_top = 7.0
-content_margin_right = 14.0
-content_margin_bottom = 7.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
 bg_color = Color(0.015, 0.08, 0.11, 0.46)
 border_width_left = 1
 border_width_top = 1
@@ -106,12 +116,8 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 8.0
-content_margin_top = 8.0
-content_margin_right = 8.0
-content_margin_bottom = 8.0
 
-[node name="MultiplayerLobbyScene" type="Control" node_paths=PackedStringArray("StatusLabel", "ToastLabel", "RoomNameInput", "RoomPasswordInput", "LanHostInfoLabel", "SteamStatusLabel", "PlayerCountOption", "ItemModeOption", "WinningScoreOption", "RoomListContainer", "PlayerListContainer", "EmptyRoomsLabel", "EmptyPlayersLabel", "LanHostButton", "LanSearchButton", "SteamHostButton", "SteamRefreshButton", "ReadyButton", "StartButton", "LeaveSessionButton", "BackButton")]
+[node name="MultiplayerLobbyScene" type="Control" unique_id=848036090 node_paths=PackedStringArray("StatusLabel", "ToastLabel", "RoomNameInput", "RoomPasswordInput", "LanHostInfoLabel", "SteamStatusLabel", "PlayerCountOption", "ItemModeOption", "WinningScoreOption", "RoomListContainer", "PlayerListContainer", "EmptyRoomsLabel", "EmptyPlayersLabel", "LanHostButton", "LanSearchButton", "SteamHostButton", "SteamRefreshButton", "ReadyButton", "StartButton", "LeaveSessionButton", "BackButton")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -143,7 +149,7 @@ StartButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMarg
 LeaveSessionButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/LeaveSessionButton")
 BackButton = NodePath("SafeArea/MainLayout/Header/BackButton")
 
-[node name="BackgroundArt" type="TextureRect" parent="."]
+[node name="BackgroundArt" type="TextureRect" parent="." unique_id=1038100418]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -155,7 +161,7 @@ texture = ExtResource("2_background")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="OceanDynamicsLayer" type="Control" parent="."]
+[node name="OceanDynamicsLayer" type="Control" parent="." unique_id=73299093]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -164,10 +170,11 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_ocean_dynamics")
+RenderMode = 1
 bubble_count = 56
 glint_count = 34
 
-[node name="WaterCausticOverlay" type="ColorRect" parent="."]
+[node name="WaterCausticOverlay" type="ColorRect" parent="." unique_id=1609517505]
 material = SubResource("ShaderMaterial_lobby_caustic")
 layout_mode = 1
 anchors_preset = 15
@@ -177,12 +184,11 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="ToastLayer" type="CanvasLayer" parent="."]
+[node name="ToastLayer" type="CanvasLayer" parent="." unique_id=1348502194]
 layer = 20
 
-[node name="Toast" type="Label" parent="ToastLayer"]
+[node name="Toast" type="Label" parent="ToastLayer" unique_id=284835640]
 visible = false
-layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 300.0
@@ -199,7 +205,7 @@ text = "Toast"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="SafeArea" type="MarginContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="." unique_id=1077126215]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -211,17 +217,17 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 38
 theme_override_constants/margin_bottom = 30
 
-[node name="MainLayout" type="VBoxContainer" parent="SafeArea"]
+[node name="MainLayout" type="VBoxContainer" parent="SafeArea" unique_id=1515372743]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="Header" type="HBoxContainer" parent="SafeArea/MainLayout"]
+[node name="Header" type="HBoxContainer" parent="SafeArea/MainLayout" unique_id=2022752824]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="SafeArea/MainLayout/Header"]
+[node name="Title" type="Label" parent="SafeArea/MainLayout/Header" unique_id=79085630]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
@@ -231,7 +237,7 @@ theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 34
 text = "多人大厅"
 
-[node name="StatusLabel" type="Label" parent="SafeArea/MainLayout/Header"]
+[node name="StatusLabel" type="Label" parent="SafeArea/MainLayout/Header" unique_id=2117190382]
 custom_minimum_size = Vector2(130, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.96, 0.94, 1)
@@ -240,7 +246,7 @@ text = "Idle"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="BackButton" type="Button" parent="SafeArea/MainLayout/Header"]
+[node name="BackButton" type="Button" parent="SafeArea/MainLayout/Header" unique_id=1140662407]
 custom_minimum_size = Vector2(86, 42)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
@@ -253,19 +259,19 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
 text = "返回"
 
-[node name="BodyScroll" type="ScrollContainer" parent="SafeArea/MainLayout"]
+[node name="BodyScroll" type="ScrollContainer" parent="SafeArea/MainLayout" unique_id=1726555782]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 follow_focus = true
 
-[node name="Body" type="HBoxContainer" parent="SafeArea/MainLayout/BodyScroll"]
+[node name="Body" type="HBoxContainer" parent="SafeArea/MainLayout/BodyScroll" unique_id=1505423667]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="ModeRail" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+[node name="ModeRail" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body" unique_id=1719422848]
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -273,29 +279,28 @@ size_flags_vertical = 3
 size_flags_stretch_ratio = 0.95
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail"]
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail" unique_id=357389362]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="ModeRailContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin"]
+[node name="ModeRailContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin" unique_id=848080936]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="ModeTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="ModeTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1317599208]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
 theme_override_font_sizes/font_size = 20
 text = "房间设置"
 
-[node name="RoomNameInput" type="LineEdit" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="RoomNameInput" type="LineEdit" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1622261428]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_placeholder_color = Color(0.62, 0.86, 0.86, 0.68)
 theme_override_font_sizes/font_size = 16
@@ -305,10 +310,9 @@ text = "我的房间"
 placeholder_text = "房间名称"
 max_length = 16
 
-[node name="RoomPasswordInput" type="LineEdit" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="RoomPasswordInput" type="LineEdit" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1881654703]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_placeholder_color = Color(0.62, 0.86, 0.86, 0.68)
 theme_override_font_sizes/font_size = 16
@@ -318,10 +322,9 @@ placeholder_text = "房间密码（可选）"
 max_length = 24
 secret = true
 
-[node name="PlayerCountOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="PlayerCountOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=820987182]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -339,10 +342,9 @@ popup/item_1/id = 3
 popup/item_2/text = "4 人"
 popup/item_2/id = 4
 
-[node name="ItemModeOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="ItemModeOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=776449610]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -358,10 +360,9 @@ popup/item_0/id = 1
 popup/item_1/text = "道具关闭"
 popup/item_1/id = 0
 
-[node name="WinningScoreOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="WinningScoreOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=466136064]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -379,10 +380,9 @@ popup/item_1/id = 100
 popup/item_2/text = "200 分"
 popup/item_2/id = 200
 
-[node name="LanHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="LanHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=540567156]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -393,10 +393,9 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
 text = "创建房间"
 
-[node name="LanSearchButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="LanSearchButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1779506500]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -407,17 +406,16 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
 text = "搜索房间"
 
-[node name="LanHostInfoLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="LanHostInfoLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1975770257]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
 theme_override_font_sizes/font_size = 13
 text = "本机局域网地址将在建房后显示"
 autowrap_mode = 2
 
-[node name="SteamHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="SteamHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=2103494485]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -428,10 +426,9 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
 text = "Steam 建房"
 
-[node name="SteamRefreshButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+[node name="SteamRefreshButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1518247273]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -442,7 +439,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
 text = "刷新 Steam"
 
-[node name="RoomBrowser" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+[node name="RoomBrowser" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body" unique_id=2032768993]
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -450,38 +447,38 @@ size_flags_vertical = 3
 size_flags_stretch_ratio = 1.2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser"]
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser" unique_id=768256570]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="RoomBrowserContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin"]
+[node name="RoomBrowserContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin" unique_id=895430799]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="RoomTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent"]
+[node name="RoomTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent" unique_id=1550023365]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
 theme_override_font_sizes/font_size = 20
 text = "房间列表"
 
-[node name="RoomScroll" type="ScrollContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent"]
+[node name="RoomScroll" type="ScrollContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent" unique_id=815669175]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
 
-[node name="RoomListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll"]
+[node name="RoomListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll" unique_id=1396137249]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="EmptyRoomsLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer"]
+[node name="EmptyRoomsLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer" unique_id=1958891124]
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
@@ -489,7 +486,7 @@ theme_override_font_sizes/font_size = 15
 text = "没有发现房间"
 horizontal_alignment = 1
 
-[node name="LobbyPanel" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+[node name="LobbyPanel" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body" unique_id=1448706787]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -497,38 +494,38 @@ size_flags_vertical = 3
 size_flags_stretch_ratio = 1.25
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel"]
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel" unique_id=131407565]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="LobbyContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin"]
+[node name="LobbyContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin" unique_id=1075350533]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="PlayerTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+[node name="PlayerTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent" unique_id=1599668198]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
 theme_override_font_sizes/font_size = 20
 text = "玩家准备状态"
 
-[node name="PlayerScroll" type="ScrollContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+[node name="PlayerScroll" type="ScrollContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent" unique_id=384555289]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
 
-[node name="PlayerListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll"]
+[node name="PlayerListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll" unique_id=2028238675]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="EmptyPlayersLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer"]
+[node name="EmptyPlayersLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer" unique_id=246528752]
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
@@ -536,10 +533,9 @@ theme_override_font_sizes/font_size = 15
 text = "尚未加入房间"
 horizontal_alignment = 1
 
-[node name="ReadyButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+[node name="ReadyButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent" unique_id=1865513595]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -548,13 +544,12 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+disabled = true
 text = "准备"
-disabled = true
 
-[node name="StartButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+[node name="StartButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent" unique_id=741538469]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -563,13 +558,12 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
-text = "开始"
 disabled = true
+text = "开始"
 
-[node name="LeaveSessionButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent"]
+[node name="LeaveSessionButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent" unique_id=1841996529]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-focus_mode = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
@@ -580,7 +574,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
 text = "离开房间"
 
-[node name="FriendsPanel" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body"]
+[node name="FriendsPanel" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body" unique_id=657818956]
 custom_minimum_size = Vector2(190, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -588,33 +582,33 @@ size_flags_vertical = 3
 size_flags_stretch_ratio = 0.85
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel"]
+[node name="PanelMargin" type="MarginContainer" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel" unique_id=950735054]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="FriendsContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin"]
+[node name="FriendsContent" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin" unique_id=200532842]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="SteamTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent"]
+[node name="SteamTitle" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent" unique_id=180142482]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.96, 1)
 theme_override_font_sizes/font_size = 20
 text = "Steam"
 
-[node name="SteamStatusLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent"]
+[node name="SteamStatusLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent" unique_id=1826180116]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.76, 0.95, 0.95, 1)
 theme_override_font_sizes/font_size = 16
 text = "Steam 不可用"
 autowrap_mode = 2
 
-[node name="SteamNoteLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent"]
+[node name="SteamNoteLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent" unique_id=1153457234]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)

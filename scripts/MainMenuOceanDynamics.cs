@@ -1,9 +1,52 @@
-using Godot;
+using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class MainMenuOceanDynamics : Control
 {
+	public enum OceanRenderMode
+	{
+		Procedural,
+		ImageBased,
+	}
+
 	private const float WaterlineRatio = 0.34f;
+
+	private const int SunbeamInstanceCount = 5;
+	private const int SurfaceWakeInstanceCount = 6;
+	private const int CurrentRibbonInstanceCount = 8;
+	private const int CausticRibbonInstanceCount = 7;
+
+	private const string SunbeamFramePattern = "res://art/fx/environment/main_menu_sunbeam/run-001/processed/fx-{0}.png";
+	private const string SurfaceWakeFramePattern = "res://art/fx/environment/main_menu_surface_wake/run-001/processed/fx-{0}.png";
+	private const string CurrentRibbonFramePattern = "res://art/fx/environment/main_menu_current_ribbon/run-001/processed/fx-{0}.png";
+	private const string CausticRibbonFramePattern = "res://art/fx/environment/main_menu_caustic_ribbon/run-001/processed/fx-{0}.png";
+	private const string BubbleFramePattern = "res://art/fx/environment/main_menu_bubble/run-001/processed/fx-{0}.png";
+	private const string GlintFramePattern = "res://art/fx/environment/main_menu_glint/run-001/processed/fx-{0}.png";
+
+	private const int SunbeamFrameCount = 6;
+	private const int SurfaceWakeFrameCount = 8;
+	private const int CurrentRibbonFrameCount = 8;
+	private const int CausticRibbonFrameCount = 8;
+	private const int BubbleFrameCount = 8;
+	private const int GlintFrameCount = 6;
+
+	private const float SunbeamFramesPerSecond = 2.0f;
+	private const float SurfaceWakeFramesPerSecond = 4.0f;
+	private const float CurrentRibbonFramesPerSecond = 4.0f;
+	private const float CausticRibbonFramesPerSecond = 5.0f;
+	private const float BubbleFramesPerSecond = 8.0f;
+	private const float GlintFramesPerSecond = 8.0f;
+
+	private static readonly Vector2 SunbeamFrameSize = new(384.0f, 720.0f);
+	private static readonly Vector2 SurfaceWakeFrameSize = new(640.0f, 72.0f);
+	private static readonly Vector2 CurrentRibbonFrameSize = new(512.0f, 128.0f);
+	private static readonly Vector2 CausticRibbonFrameSize = new(512.0f, 128.0f);
+	private static readonly Vector2 BubbleFrameSize = new(128.0f, 128.0f);
+	private static readonly Vector2 GlintFrameSize = new(96.0f, 96.0f);
+
+	[Export]
+	public OceanRenderMode RenderMode { get; set; } = OceanRenderMode.Procedural;
 
 	[Export(PropertyHint.Range, "0,80,1")]
 	public int bubble_count = 42;
@@ -24,13 +67,39 @@ public partial class MainMenuOceanDynamics : Control
 	private readonly Vector2[] _surfaceWakePoints = new Vector2[56];
 	private readonly Vector2[] _currentRibbonPoints = new Vector2[34];
 	private readonly Vector2[] _causticRibbonPoints = new Vector2[46];
+
+	private readonly List<ImageElement> _sunbeamInstances = new();
+	private readonly List<ImageElement> _surfaceWakeInstances = new();
+	private readonly List<ImageElement> _currentRibbonInstances = new();
+	private readonly List<ImageElement> _causticRibbonInstances = new();
+	private readonly List<ImageElement> _bubbleInstances = new();
+	private readonly List<ImageElement> _glintInstances = new();
+
 	private double _time;
 	private double _redrawAccumulator;
+	private bool _imageAssetsLoaded;
+	private bool _pendingImageRebuild;
+	private OceanRenderMode _activeRenderMode = (OceanRenderMode)(-1);
+
+	private Texture2D[] _sunbeamFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _surfaceWakeFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _currentRibbonFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _causticRibbonFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _bubbleFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _glintFrames = Array.Empty<Texture2D>();
+
+	private Control? _sunbeamLayer;
+	private Control? _surfaceWakeLayer;
+	private Control? _currentRibbonLayer;
+	private Control? _causticRibbonLayer;
+	private Control? _bubbleLayer;
+	private Control? _glintLayer;
 
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
 		_rng.Seed = 80110;
+		ApplyRenderMode(force: true);
 		Rebuild();
 	}
 
@@ -44,12 +113,34 @@ public partial class MainMenuOceanDynamics : Control
 
 	public override void _Process(double delta)
 	{
+		if (RenderMode != _activeRenderMode)
+		{
+			ApplyRenderMode(force: true);
+			Rebuild();
+		}
+
+		if (_pendingImageRebuild && Size.X > 0.0f && Size.Y > 0.0f)
+		{
+			Rebuild();
+		}
+
 		if (!IsVisibleInTree())
 		{
 			return;
 		}
 
 		_time += delta * motion_scale;
+		if (_activeRenderMode == OceanRenderMode.ImageBased)
+		{
+			if (HasNoImageInstances())
+			{
+				EnsureImageAssetsLoaded(retryIfAllMissing: true);
+				RebuildImageInstances();
+			}
+			UpdateImageInstances();
+			return;
+		}
+
 		_redrawAccumulator += delta;
 		double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
 		if (_redrawAccumulator < redrawInterval)
@@ -63,7 +154,9 @@ public partial class MainMenuOceanDynamics : Control
 
 	public override void _Draw()
 	{
-		if (Size.X <= 0.0f || Size.Y <= 0.0f)
+		if (_activeRenderMode != OceanRenderMode.Procedural
+			|| Size.X <= 0.0f
+			|| Size.Y <= 0.0f)
 		{
 			return;
 		}
@@ -76,13 +169,60 @@ public partial class MainMenuOceanDynamics : Control
 		DrawGlints();
 	}
 
-	private void Rebuild()
+	private void ApplyRenderMode(bool force = false)
 	{
-		if (Size.X <= 0.0f || Size.Y <= 0.0f)
+		if (!force && RenderMode == _activeRenderMode)
 		{
 			return;
 		}
 
+		_activeRenderMode = RenderMode;
+		_redrawAccumulator = 0.0;
+		if (_activeRenderMode == OceanRenderMode.ImageBased)
+		{
+			EnsureImageAssetsLoaded();
+			EnsureImageLayers();
+			if (Size.X > 0.0f && Size.Y > 0.0f)
+			{
+				RebuildImageInstances();
+			}
+			else
+			{
+				_pendingImageRebuild = true;
+			}
+			SetImageLayersVisible(true);
+		}
+		else
+		{
+			SetImageLayersVisible(false);
+			QueueRedraw();
+		}
+	}
+
+	private void Rebuild()
+	{
+		if (Size.X <= 0.0f || Size.Y <= 0.0f)
+		{
+			_pendingImageRebuild = true;
+			return;
+		}
+
+		_pendingImageRebuild = false;
+		RebuildParticleData();
+		if (_activeRenderMode == OceanRenderMode.ImageBased)
+		{
+			EnsureImageAssetsLoaded(retryIfAllMissing: true);
+			EnsureImageLayers();
+			RebuildImageInstances();
+			UpdateImageInstances();
+			return;
+		}
+
+		QueueRedraw();
+	}
+
+	private void RebuildParticleData()
+	{
 		_bubbles.Clear();
 		_glints.Clear();
 
@@ -110,6 +250,486 @@ public partial class MainMenuOceanDynamics : Control
 				_rng.RandfRange(0.0f, Mathf.Tau),
 				_rng.RandfRange(0.08f, 0.26f)));
 		}
+	}
+
+	private void EnsureImageAssetsLoaded(bool retryIfAllMissing = false)
+	{
+		if (_imageAssetsLoaded && !(retryIfAllMissing && AllImageFramesMissing()))
+		{
+			return;
+		}
+
+		_sunbeamFrames = FrameAnimationHelpers.LoadTextureFrames(SunbeamFramePattern, SunbeamFrameCount, "main menu sunbeam", preferImageFile: true);
+		_surfaceWakeFrames = FrameAnimationHelpers.LoadTextureFrames(SurfaceWakeFramePattern, SurfaceWakeFrameCount, "main menu surface wake", preferImageFile: true);
+		_currentRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(CurrentRibbonFramePattern, CurrentRibbonFrameCount, "main menu current ribbon", preferImageFile: true);
+		_causticRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(CausticRibbonFramePattern, CausticRibbonFrameCount, "main menu caustic ribbon", preferImageFile: true);
+		_bubbleFrames = FrameAnimationHelpers.LoadTextureFrames(BubbleFramePattern, BubbleFrameCount, "main menu bubble", preferImageFile: true);
+		_glintFrames = FrameAnimationHelpers.LoadTextureFrames(GlintFramePattern, GlintFrameCount, "main menu glint", preferImageFile: true);
+		_imageAssetsLoaded = true;
+	}
+
+	private bool AllImageFramesMissing()
+	{
+		return _sunbeamFrames.Length == 0
+			&& _surfaceWakeFrames.Length == 0
+			&& _currentRibbonFrames.Length == 0
+			&& _causticRibbonFrames.Length == 0
+			&& _bubbleFrames.Length == 0
+			&& _glintFrames.Length == 0;
+	}
+
+	private bool HasNoImageInstances()
+	{
+		return _sunbeamInstances.Count == 0
+			&& _surfaceWakeInstances.Count == 0
+			&& _currentRibbonInstances.Count == 0
+			&& _causticRibbonInstances.Count == 0
+			&& _bubbleInstances.Count == 0
+			&& _glintInstances.Count == 0;
+	}
+
+	private void EnsureImageLayers()
+	{
+		GetOrCreateLayer(ref _sunbeamLayer, "SunbeamLayer");
+		GetOrCreateLayer(ref _surfaceWakeLayer, "SurfaceWakeLayer");
+		GetOrCreateLayer(ref _currentRibbonLayer, "CurrentRibbonLayer");
+		GetOrCreateLayer(ref _causticRibbonLayer, "CausticRibbonLayer");
+		GetOrCreateLayer(ref _bubbleLayer, "BubbleLayer");
+		GetOrCreateLayer(ref _glintLayer, "GlintLayer");
+	}
+
+	private void SetImageLayersVisible(bool visible)
+	{
+		SetLayerVisible(_sunbeamLayer, visible);
+		SetLayerVisible(_surfaceWakeLayer, visible);
+		SetLayerVisible(_currentRibbonLayer, visible);
+		SetLayerVisible(_causticRibbonLayer, visible);
+		SetLayerVisible(_bubbleLayer, visible);
+		SetLayerVisible(_glintLayer, visible);
+	}
+
+	private Control GetOrCreateLayer(ref Control? layer, string name)
+	{
+		if (layer != null && GodotObject.IsInstanceValid(layer))
+		{
+			layer.Visible = true;
+			return layer;
+		}
+
+		layer = new Control
+		{
+			Name = name,
+			MouseFilter = MouseFilterEnum.Ignore,
+			AnchorRight = 1.0f,
+			AnchorBottom = 1.0f,
+			GrowHorizontal = Control.GrowDirection.Both,
+			GrowVertical = Control.GrowDirection.Both,
+		};
+		layer.SetAnchorsPreset(LayoutPreset.FullRect);
+		layer.OffsetRight = 0.0f;
+		layer.OffsetBottom = 0.0f;
+		AddChild(layer);
+		return layer;
+	}
+
+	private static void SetLayerVisible(Control? layer, bool visible)
+	{
+		if (layer != null && GodotObject.IsInstanceValid(layer))
+		{
+			layer.Visible = visible;
+		}
+	}
+
+	private void RebuildImageInstances()
+	{
+		ClearImageInstances();
+		BuildSunbeamInstances();
+		BuildSurfaceWakeInstances();
+		BuildCurrentRibbonInstances();
+		BuildCausticRibbonInstances();
+		BuildBubbleInstances();
+		BuildGlintInstances();
+	}
+
+	private void ClearImageInstances()
+	{
+		ClearImageLayer(_sunbeamLayer, _sunbeamInstances);
+		ClearImageLayer(_surfaceWakeLayer, _surfaceWakeInstances);
+		ClearImageLayer(_currentRibbonLayer, _currentRibbonInstances);
+		ClearImageLayer(_causticRibbonLayer, _causticRibbonInstances);
+		ClearImageLayer(_bubbleLayer, _bubbleInstances);
+		ClearImageLayer(_glintLayer, _glintInstances);
+	}
+
+	private static void ClearImageLayer(Control? layer, List<ImageElement> instances)
+	{
+		instances.Clear();
+		if (layer == null || !GodotObject.IsInstanceValid(layer))
+		{
+			return;
+		}
+
+		while (layer.GetChildCount() > 0)
+		{
+			layer.GetChild(0).Free();
+		}
+	}
+
+	private void BuildSunbeamInstances()
+	{
+		if (_sunbeamLayer == null || _sunbeamFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < SunbeamInstanceCount; index++)
+		{
+			var instance = CreateImageElement(
+				_sunbeamLayer,
+				$"Sunbeam{index + 1}",
+				_sunbeamFrames,
+				SunbeamFrameSize,
+				SunbeamFramesPerSecond);
+			instance.XRatio = 0.56f + index * 0.08f + _rng.RandfRange(-0.008f, 0.008f);
+			instance.Scale = 0.44f + index * 0.035f;
+			instance.Alpha = 0.028f + index * 0.004f;
+			instance.Phase = _rng.RandfRange(0.0f, Mathf.Tau);
+			instance.Speed = _rng.RandfRange(0.01f, 0.03f);
+			instance.Drift = _rng.RandfRange(0.0f, 0.003f);
+			instance.Secondary = _rng.RandfRange(0.01f, 0.02f);
+			_sunbeamInstances.Add(instance);
+		}
+	}
+
+	private void BuildSurfaceWakeInstances()
+	{
+		if (_surfaceWakeLayer == null || _surfaceWakeFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < SurfaceWakeInstanceCount; index++)
+		{
+			var instance = CreateImageElement(
+				_surfaceWakeLayer,
+				$"SurfaceWake{index + 1}",
+				_surfaceWakeFrames,
+				SurfaceWakeFrameSize,
+				SurfaceWakeFramesPerSecond);
+			instance.XRatio = 0.56f + _rng.RandfRange(-0.035f, 0.035f);
+			instance.YRatio = 0.304f + index * 0.010f + _rng.RandfRange(-0.0025f, 0.0025f);
+			instance.Scale = 0.30f + index * 0.025f;
+			instance.Alpha = 0.050f - index * 0.005f;
+			instance.Phase = _rng.RandfRange(0.0f, Mathf.Tau);
+			instance.Speed = _rng.RandfRange(0.02f, 0.05f);
+			instance.Drift = _rng.RandfRange(1.0f, 3.0f);
+			_surfaceWakeInstances.Add(instance);
+		}
+	}
+
+	private void BuildCurrentRibbonInstances()
+	{
+		if (_currentRibbonLayer == null || _currentRibbonFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < CurrentRibbonInstanceCount; index++)
+		{
+			var instance = CreateImageElement(
+				_currentRibbonLayer,
+				$"CurrentRibbon{index + 1}",
+				_currentRibbonFrames,
+				CurrentRibbonFrameSize,
+				CurrentRibbonFramesPerSecond);
+			instance.XRatio = -0.18f + index * 0.11f;
+			instance.YRatio = WaterlineRatio + 0.08f + index * 0.045f + _rng.RandfRange(-0.006f, 0.006f);
+			instance.Scale = 0.14f + _rng.RandfRange(0.025f, 0.06f);
+			instance.Alpha = 0.042f + _rng.RandfRange(0.004f, 0.014f);
+			instance.Phase = _rng.RandfRange(0.0f, Mathf.Tau);
+			instance.Speed = 0.025f + index * 0.004f;
+			instance.Drift = _rng.RandfRange(2.0f, 5.0f);
+			_currentRibbonInstances.Add(instance);
+		}
+	}
+
+	private void BuildCausticRibbonInstances()
+	{
+		if (_causticRibbonLayer == null || _causticRibbonFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < CausticRibbonInstanceCount; index++)
+		{
+			var instance = CreateImageElement(
+				_causticRibbonLayer,
+				$"CausticRibbon{index + 1}",
+				_causticRibbonFrames,
+				CausticRibbonFrameSize,
+				CausticRibbonFramesPerSecond);
+			instance.XRatio = 0.58f + _rng.RandfRange(-0.08f, 0.08f);
+			instance.YRatio = 0.58f + index * 0.045f + _rng.RandfRange(-0.008f, 0.008f);
+			instance.Scale = 0.28f + _rng.RandfRange(0.04f, 0.12f);
+			instance.Alpha = 0.07f + _rng.RandfRange(0.0f, 0.02f);
+			instance.Phase = _rng.RandfRange(0.0f, Mathf.Tau);
+			instance.Speed = _rng.RandfRange(0.18f, 0.32f);
+			instance.Drift = _rng.RandfRange(2.0f, 6.0f);
+			_causticRibbonInstances.Add(instance);
+		}
+	}
+
+	private void BuildBubbleInstances()
+	{
+		if (_bubbleLayer == null || _bubbleFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < _bubbles.Count; index++)
+		{
+			Bubble bubble = _bubbles[index];
+			var instance = CreateImageElement(
+				_bubbleLayer,
+				$"Bubble{index + 1}",
+				_bubbleFrames,
+				BubbleFrameSize,
+				BubbleFramesPerSecond);
+			instance.XRatio = bubble.XRatio;
+			instance.YRatio = bubble.YRatio;
+			instance.Scale = bubble.Radius / 16.0f;
+			instance.Alpha = bubble.Alpha;
+			instance.Phase = bubble.Phase;
+			instance.Speed = bubble.Speed;
+			instance.Drift = bubble.Drift;
+			_bubbleInstances.Add(instance);
+		}
+	}
+
+	private void BuildGlintInstances()
+	{
+		if (_glintLayer == null || _glintFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < _glints.Count; index++)
+		{
+			Glint glint = _glints[index];
+			var instance = CreateImageElement(
+				_glintLayer,
+				$"Glint{index + 1}",
+				_glintFrames,
+				GlintFrameSize,
+				GlintFramesPerSecond);
+			instance.XRatio = glint.XRatio;
+			instance.YRatio = glint.YRatio;
+			instance.Scale = glint.Radius / 10.0f;
+			instance.Alpha = glint.Alpha;
+			instance.Phase = glint.Phase;
+			instance.Speed = glint.Speed;
+			_glintInstances.Add(instance);
+		}
+	}
+
+	private ImageElement CreateImageElement(
+		Control layer,
+		string name,
+		Texture2D[] frames,
+		Vector2 baseSize,
+		float framesPerSecond)
+	{
+		var node = new TextureRect
+		{
+			Name = name,
+			Texture = frames.Length > 0 ? frames[0] : null,
+			MouseFilter = MouseFilterEnum.Ignore,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Size = baseSize,
+			PivotOffset = baseSize / 2.0f,
+		};
+		layer.AddChild(node);
+		return new ImageElement
+		{
+			Node = node,
+			Frames = frames,
+			BaseSize = baseSize,
+			FramesPerSecond = framesPerSecond,
+		};
+	}
+
+	private void UpdateImageInstances()
+	{
+		UpdateSunbeamInstances();
+		UpdateSurfaceWakeInstances();
+		UpdateCurrentRibbonInstances();
+		UpdateCausticRibbonInstances();
+		UpdateBubbleInstances();
+		UpdateGlintInstances();
+	}
+
+	private void UpdateSunbeamInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _sunbeamInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float widthPulse = 0.72f + Mathf.Sin(time * 0.18f + instance.Phase) * instance.Secondary;
+			float scale = (Size.Y / instance.BaseSize.Y) * instance.Scale;
+			Vector2 size = new(instance.BaseSize.X * scale * widthPulse, instance.BaseSize.Y * scale);
+			float centerX = Size.X * instance.XRatio
+				+ Mathf.Sin(time * (0.02f + instance.Speed) + instance.Phase) * Size.X * instance.Drift;
+			float topY = -Size.Y * 0.015f + Mathf.Sin(time * 0.06f + instance.Phase) * 1.0f;
+			float alpha = instance.Alpha * (0.58f + 0.08f * Mathf.Sin(time * 0.14f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, topY + size.Y * 0.5f), size, alpha);
+		}
+	}
+
+	private void UpdateSurfaceWakeInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _surfaceWakeInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float width = Size.X * instance.Scale;
+			float scale = width / instance.BaseSize.X;
+			Vector2 size = instance.BaseSize * scale;
+			float centerX = Size.X * instance.XRatio + Mathf.Sin(time * (0.20f + instance.Speed) + instance.Phase) * 8.0f;
+			float centerY = Size.Y * instance.YRatio + Mathf.Sin(time * (0.24f + instance.Speed) + instance.Phase) * instance.Drift;
+			float alpha = instance.Alpha * (0.68f + 0.14f * Mathf.Sin(time * 0.28f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateCurrentRibbonInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _currentRibbonInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float width = Size.X * instance.Scale;
+			float scale = width / instance.BaseSize.X;
+			Vector2 size = instance.BaseSize * scale;
+			float xRatio = Mathf.PosMod(instance.XRatio + time * instance.Speed, 1.28f) - 0.18f;
+			float centerX = Size.X * xRatio;
+			float centerY = Size.Y * instance.YRatio + Mathf.Sin(time * 0.50f + instance.Phase) * instance.Drift;
+			float alpha = instance.Alpha * (0.64f + 0.14f * Mathf.Sin(time * 0.38f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateCausticRibbonInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _causticRibbonInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float width = Size.X * instance.Scale;
+			float scale = width / instance.BaseSize.X;
+			Vector2 size = instance.BaseSize * scale;
+			float centerX = Size.X * (instance.XRatio + Mathf.Sin(time * instance.Speed + instance.Phase) * 0.08f);
+			float centerY = Size.Y * instance.YRatio + Mathf.Sin(time * 0.42f + instance.Phase) * instance.Drift;
+			float alpha = instance.Alpha * (0.78f + 0.22f * Mathf.Sin(time * 0.28f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateBubbleInstances()
+	{
+		float time = (float)_time;
+		float waterlineY = Size.Y * WaterlineRatio;
+		float underwaterHeight = Size.Y - waterlineY;
+		foreach (ImageElement instance in _bubbleInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float sizePulse = 0.92f + 0.08f * Mathf.Sin(time * 1.6f + instance.Phase);
+			Vector2 size = instance.BaseSize * instance.Scale * sizePulse;
+			float rise = Mathf.PosMod(instance.YRatio * underwaterHeight + time * instance.Speed, underwaterHeight + size.Y * 0.35f);
+			float centerX = Size.X * instance.XRatio + Mathf.Sin(time * 0.82f + instance.Phase) * instance.Drift;
+			float centerY = Size.Y + size.Y * 0.35f - rise;
+			if (centerY < waterlineY + size.Y * 0.35f)
+			{
+				centerY += underwaterHeight;
+			}
+
+			float pulse = 0.72f + 0.28f * Mathf.Sin(time * 1.8f + instance.Phase);
+			float alpha = instance.Alpha * 0.88f * pulse;
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateGlintInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _glintInstances)
+		{
+			instance.ElapsedTime = time;
+			float pulse = Mathf.Max(0.0f, Mathf.Sin(time * instance.Speed + instance.Phase));
+			if (pulse <= 0.04f)
+			{
+				instance.Node.Visible = false;
+				continue;
+			}
+
+			ApplyAnimatedFrame(instance);
+			Vector2 size = instance.BaseSize * instance.Scale * (0.8f + pulse * 0.7f);
+			float centerX = Size.X * instance.XRatio + Mathf.Sin(time * 0.18f + instance.Phase) * 12.0f;
+			float centerY = Size.Y * instance.YRatio + Mathf.Cos(time * 0.22f + instance.Phase) * 8.0f;
+			float alpha = instance.Alpha * pulse;
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private static void ApplyAnimatedFrame(ImageElement instance)
+	{
+		if (instance.Frames.Length == 0)
+		{
+			instance.Node.Texture = null;
+			return;
+		}
+
+		float frameTime = instance.ElapsedTime * instance.FramesPerSecond
+			+ instance.Phase * instance.Frames.Length / Mathf.Tau;
+		int frameIndex = WrapFrameIndex(Mathf.FloorToInt(frameTime), instance.Frames.Length);
+		Texture2D texture = instance.Frames[frameIndex];
+		if (instance.Node.Texture != texture)
+		{
+			instance.Node.Texture = texture;
+		}
+	}
+
+	private static int WrapFrameIndex(int frameIndex, int frameCount)
+	{
+		if (frameCount <= 0)
+		{
+			return 0;
+		}
+
+		int wrapped = frameIndex % frameCount;
+		return wrapped < 0 ? wrapped + frameCount : wrapped;
+	}
+
+	private void ApplyImageLayout(ImageElement instance, Vector2 center, Vector2 size, float alpha)
+	{
+		instance.ElapsedTime = (float)_time;
+		if (size.X <= 0.0f || size.Y <= 0.0f || alpha <= 0.001f)
+		{
+			instance.Node.Visible = false;
+			return;
+		}
+
+		instance.Node.Visible = true;
+		instance.Node.Size = size;
+		instance.Node.PivotOffset = size / 2.0f;
+		instance.Node.Position = center - size / 2.0f;
+		instance.Node.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
 	}
 
 	private void DrawSunbeams()
@@ -229,6 +849,23 @@ public partial class MainMenuOceanDynamics : Control
 			DrawLine(position - new Vector2(0.0f, radius), position + new Vector2(0.0f, radius), color, 1.0f, true);
 			DrawCircle(position, radius * 0.22f, color);
 		}
+	}
+
+	private sealed class ImageElement
+	{
+		public TextureRect Node { get; set; } = default!;
+		public Texture2D[] Frames { get; set; } = Array.Empty<Texture2D>();
+		public Vector2 BaseSize { get; set; }
+		public float FramesPerSecond { get; set; }
+		public float XRatio { get; set; }
+		public float YRatio { get; set; }
+		public float Scale { get; set; }
+		public float Alpha { get; set; }
+		public float Phase { get; set; }
+		public float Speed { get; set; }
+		public float Drift { get; set; }
+		public float Secondary { get; set; }
+		public float ElapsedTime { get; set; }
 	}
 
 	private readonly record struct Bubble(float XRatio, float YRatio, float Radius, float Speed, float Alpha, float Phase, float Drift);
