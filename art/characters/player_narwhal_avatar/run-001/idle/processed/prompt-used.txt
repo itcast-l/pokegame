@@ -1,1 +1,0 @@
-Use the narwhal avatar image shown in this conversation as the visual reference. Preserve the same cute player-avatar identity. Create a 4x4 clean HD idle loop on solid #FF00FF, same scale, centered in every cell.

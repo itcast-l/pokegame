@@ -171,7 +171,6 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_ocean_dynamics")
 RenderMode = 1
-bubble_count = 56
 glint_count = 34
 
 [node name="WaterCausticOverlay" type="ColorRect" parent="." unique_id=1609517505]

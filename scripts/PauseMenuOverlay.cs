@@ -24,7 +24,7 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private Label _continueLabel = default!;
 	private Label _returnToMainMenuLabel = default!;
 	private Label _restartLabel = default!;
-	private Label _quitLabel = default!;
+	private Label? _quitLabel;
 	private Control _restartFrame = default!;
 	private PlayerCountDialogFrameArt _quitCancelFrame = default!;
 	private PlayerCountDialogFrameArt _quitConfirmFrame = default!;
@@ -58,7 +58,7 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		_continueLabel = GetNode<Label>("%ContinueLabel");
 		_returnToMainMenuLabel = GetNode<Label>("%ReturnToMainMenuLabel");
 		_restartLabel = GetNode<Label>("%RestartLabel");
-		_quitLabel = GetNode<Label>("%QuitLabel");
+		_quitLabel = GetNodeOrNull<Label>("%QuitLabel");
 		_restartFrame = GetNode<Control>("%RestartFrame");
 
 		PrepareRowButton(ContinueButton);
@@ -101,7 +101,16 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		_continueLabel.Text = localize("GAME_CONTINUE");
 		_returnToMainMenuLabel.Text = localize(returnButtonKey);
 		_restartLabel.Text = localize("GAME_RESTART_MATCH");
-		_quitLabel.Text = localize("GAME_QUIT");
+		string quitText = localize("GAME_QUIT");
+		if (_quitLabel != null && GodotObject.IsInstanceValid(_quitLabel))
+		{
+			_quitLabel.Text = quitText;
+			QuitButton.Text = string.Empty;
+		}
+		else
+		{
+			QuitButton.Text = quitText;
+		}
 		QuitCancelButton.Text = localize("GAME_QUIT_CONFIRM_CANCEL");
 		QuitConfirmButton.Text = localize("GAME_QUIT_CONFIRM_ACCEPT");
 		_confirmTitle.Text = localize("GAME_QUIT_CONFIRM_TITLE");

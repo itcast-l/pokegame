@@ -11,6 +11,8 @@ public partial class CharacterAvatar : Control
 	private const float AttackFxEndScale = 1.06f;
 	private const int AttackFxZIndex = 8;
 	private const float FeedbackFxVisualScale = 1.42f;
+	private const string FrameBaseTexturePath = "res://art/ui/avatar_frame/run-001/processed/base.png";
+	private const string FrameAccentTexturePath = "res://art/ui/avatar_frame/run-001/processed/accent.png";
 
 	public enum AvatarAction
 	{
@@ -28,14 +30,45 @@ public partial class CharacterAvatar : Control
 	[Export]
 	public Texture2D? PortraitTexture { get; set; }
 
+	private Color _accentColor = new(0.18f, 0.86f, 0.82f, 1.0f);
+
 	[Export]
-	public Color AccentColor { get; set; } = new(0.18f, 0.86f, 0.82f, 1.0f);
+	public Color AccentColor
+	{
+		get => _accentColor;
+		set
+		{
+			_accentColor = value;
+			if (IsNodeReady())
+			{
+				ApplyFrameTextures();
+				QueueRedraw();
+			}
+		}
+	}
 
 	[Export(PropertyHint.Range, "0.55,0.95,0.01")]
 	public float PortraitScale { get; set; } = 0.84f;
 
 	[Export]
 	public bool ShowFrame { get; set; } = true;
+
+	private bool _useTexturedFrame = true;
+
+	[Export]
+	public bool UseTexturedFrame
+	{
+		get => _useTexturedFrame;
+		set
+		{
+			_useTexturedFrame = value;
+			if (IsNodeReady())
+			{
+				ApplyFrameTextures();
+				QueueRedraw();
+			}
+		}
+	}
 
 	[Export]
 	public bool LoadActionFrames { get; set; } = true;
@@ -92,9 +125,15 @@ public partial class CharacterAvatar : Control
 
 	private Control _portraitPivot = default!;
 	private TextureRect _portrait = default!;
+	private TextureRect _frameBase = default!;
+	private TextureRect _frameAccent = default!;
 	private TextureRect _attackFx = default!;
 	private TextureRect _feedbackFx = default!;
 	private AnimationPlayer _frameAnimationPlayer = default!;
+	private Texture2D? _frameBaseTexture;
+	private Texture2D? _frameAccentTexture;
+	private bool _frameAssetsLoaded;
+	private bool _frameAssetsMissing;
 	private Texture2D? _idleFallbackTexture;
 	private Tween? _actionTween;
 	private Tween? _attackFxTween;
@@ -115,15 +154,20 @@ public partial class CharacterAvatar : Control
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
+		_frameBase = GetNodeOrNull<TextureRect>("FrameBase") ?? CreateFrameTextureRect("FrameBase", zIndex: -2);
+		_frameAccent = GetNodeOrNull<TextureRect>("FrameAccent") ?? CreateFrameTextureRect("FrameAccent", zIndex: -1);
 		_portraitPivot = GetNode<Control>("PortraitPivot");
 		_portrait = GetNode<TextureRect>("PortraitPivot/Portrait");
 		_attackFx = GetNodeOrNull<TextureRect>("AttackFx") ?? CreateAttackFxRect();
 		_feedbackFx = GetNodeOrNull<TextureRect>("FeedbackFx") ?? CreateFeedbackFxRect();
 		_frameAnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer") ?? CreateFrameAnimationPlayer();
+		_frameBase.MouseFilter = MouseFilterEnum.Ignore;
+		_frameAccent.MouseFilter = MouseFilterEnum.Ignore;
 		_portrait.MouseFilter = MouseFilterEnum.Ignore;
 		_portraitPivot.MouseFilter = MouseFilterEnum.Ignore;
 		_attackFx.MouseFilter = MouseFilterEnum.Ignore;
 		_feedbackFx.MouseFilter = MouseFilterEnum.Ignore;
+		LoadFrameTextures();
 
 		UpdateAttackFxRootForAvatarRoot(AvatarRoot);
 		LoadGeneratedActionFrames();
@@ -136,6 +180,7 @@ public partial class CharacterAvatar : Control
 		}
 
 		LayoutPortrait();
+		ApplyFrameTextures();
 		PlayIdle();
 	}
 
@@ -148,6 +193,19 @@ public partial class CharacterAvatar : Control
 	}
 
 	public override void _Draw()
+	{
+		if (ShouldDrawProceduralFrame())
+		{
+			DrawProceduralFrame();
+		}
+	}
+
+	private bool ShouldDrawProceduralFrame()
+	{
+		return ShowFrame && (!UseTexturedFrame || _frameAssetsMissing);
+	}
+
+	private void DrawProceduralFrame()
 	{
 		Vector2 center = Size / 2.0f;
 		float radius = Mathf.Min(Size.X, Size.Y) * 0.45f;
@@ -163,6 +221,48 @@ public partial class CharacterAvatar : Control
 			DrawArc(center, radius, 0.0f, Mathf.Tau, 96, new Color(AccentColor.R, AccentColor.G, AccentColor.B, 0.48f), 3.0f, true);
 		}
 
+	}
+
+	private void LoadFrameTextures()
+	{
+		if (_frameAssetsLoaded)
+		{
+			return;
+		}
+
+		_frameBaseTexture = FrameAnimationHelpers.LoadTextureResource(FrameBaseTexturePath, allowEditorImageFallback: true);
+		_frameAccentTexture = FrameAnimationHelpers.LoadTextureResource(FrameAccentTexturePath, allowEditorImageFallback: true);
+		_frameAssetsMissing = _frameBaseTexture == null || _frameAccentTexture == null;
+		_frameAssetsLoaded = true;
+	}
+
+	private void ApplyFrameTextures()
+	{
+		LoadFrameTextures();
+		bool showTextured = ShowFrame && UseTexturedFrame && !_frameAssetsMissing;
+		_frameBase.Visible = showTextured;
+		_frameAccent.Visible = showTextured;
+		_frameBase.Texture = showTextured ? _frameBaseTexture : null;
+		_frameAccent.Texture = showTextured ? _frameAccentTexture : null;
+		_frameAccent.Modulate = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 1.0f);
+		QueueRedraw();
+	}
+
+	private TextureRect CreateFrameTextureRect(string name, int zIndex)
+	{
+		var textureRect = new TextureRect
+		{
+			Name = name,
+			MouseFilter = MouseFilterEnum.Ignore,
+			TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			ZIndex = zIndex,
+			Visible = false,
+		};
+		AddChild(textureRect);
+		MoveChild(textureRect, 0);
+		return textureRect;
 	}
 
 }

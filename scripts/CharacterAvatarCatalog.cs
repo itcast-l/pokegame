@@ -255,7 +255,8 @@ public static partial class CharacterAvatarCatalog
 
 	private static bool IsPlayerObtainableAdventureStage(int stageNumber)
 	{
-		return stageNumber is 5 or 6 or 10;
+		// Adventure enemy avatars are no longer unlockable for player use.
+		return false;
 	}
 
 	public static int GetIdleFrameCount(string avatarRoot)

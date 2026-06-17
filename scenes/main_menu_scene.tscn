@@ -129,7 +129,6 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("7_main_menu_ocean_dynamics")
 RenderMode = 1
-bubble_count = 72
 glint_count = 46
 
 [node name="LeftDepthVignette" type="ColorRect" parent="." unique_id=1865153471]
@@ -163,9 +162,9 @@ mouse_filter = 2
 script = ExtResource("3_underwater_ambient_layer")
 RenderMode = 1
 VisualProfile = 0
-bubble_count = 48
 mote_count = 126
 seagrass_blade_count = 42
+sunbeam_intensity = 0.95
 
 [node name="AvatarEntryLayer" type="CanvasLayer" parent="." unique_id=2143607262]
 layer = 8

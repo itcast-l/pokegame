@@ -46,6 +46,7 @@ public partial class CharacterAvatarEditScene : Control
 		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
 		_playerNameInput.FocusMode = Control.FocusModeEnum.All;
 		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
+		_playerNameInput.GuiInput += OnPlayerNameInputGuiInput;
 		_playerNameInput.TextChanged += OnPlayerNameTextChanged;
 		_playerNameInput.TextSubmitted += OnPlayerNameTextSubmitted;
 		_confirmButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ConfirmButton");
@@ -64,6 +65,11 @@ public partial class CharacterAvatarEditScene : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
+		if (ShouldIgnoreCancelForNameEditing(inputEvent))
+		{
+			return;
+		}
+
 		if (GameInputActions.IsCancelPressed(inputEvent))
 		{
 			RequestClose();
@@ -224,6 +230,88 @@ public partial class CharacterAvatarEditScene : Control
 	private void OnPlayerNameTextSubmitted(string _text)
 	{
 		ConfirmSelection();
+	}
+
+	private void OnPlayerNameInputGuiInput(InputEvent inputEvent)
+	{
+		if (inputEvent is not InputEventKey
+			{
+				Pressed: true,
+				Echo: false,
+			} keyEvent)
+		{
+			return;
+		}
+
+		if (keyEvent.Keycode == Key.Backspace)
+		{
+			DeletePlayerNameCharacter(backspace: true);
+			_playerNameInput.AcceptEvent();
+			return;
+		}
+
+		if (keyEvent.Keycode == Key.Delete)
+		{
+			DeletePlayerNameCharacter(backspace: false);
+			_playerNameInput.AcceptEvent();
+		}
+	}
+
+	private bool ShouldIgnoreCancelForNameEditing(InputEvent inputEvent)
+	{
+		if (_playerNameInput == null
+			|| !GodotObject.IsInstanceValid(_playerNameInput)
+			|| !_playerNameInput.HasFocus())
+		{
+			return false;
+		}
+
+		return inputEvent is InputEventKey
+		{
+			Pressed: true,
+			Echo: false,
+		} keyEvent
+		&& (keyEvent.Keycode == Key.Backspace || keyEvent.Keycode == Key.Delete);
+	}
+
+	private void DeletePlayerNameCharacter(bool backspace)
+	{
+		if (_playerNameInput == null
+			|| !GodotObject.IsInstanceValid(_playerNameInput)
+			|| !_playerNameInput.Editable)
+		{
+			return;
+		}
+
+		string text = _playerNameInput.Text ?? string.Empty;
+		if (text.Length == 0)
+		{
+			return;
+		}
+
+		int caret = Mathf.Clamp(_playerNameInput.CaretColumn, 0, text.Length);
+		if (backspace)
+		{
+			if (caret <= 0)
+			{
+				return;
+			}
+
+			_playerNameInput.Text = text.Remove(caret - 1, 1);
+			_playerNameInput.CaretColumn = caret - 1;
+		}
+		else
+		{
+			if (caret >= text.Length)
+			{
+				return;
+			}
+
+			_playerNameInput.Text = text.Remove(caret, 1);
+			_playerNameInput.CaretColumn = caret;
+		}
+
+		OnPlayerNameTextChanged(_playerNameInput.Text);
 	}
 
 	private void UpdatePlayerNameHint()

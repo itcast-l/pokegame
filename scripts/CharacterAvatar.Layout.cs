@@ -22,8 +22,30 @@ public partial class CharacterAvatar
 			_portraitPivot.Scale = Vector2.One;
 		}
 
+		LayoutFrameTextures();
 		LayoutAttackFx();
 		LayoutFeedbackFx();
+		ApplyFrameTextures();
+	}
+
+	private void LayoutFrameTextures()
+	{
+		if (_frameBase == null || _frameAccent == null)
+		{
+			return;
+		}
+
+		float side = Mathf.Max(1.0f, Mathf.Min(Size.X, Size.Y) * 0.96f);
+		Vector2 textureSize = new(side, side);
+		Vector2 position = (Size - textureSize) / 2.0f;
+
+		_frameBase.Size = textureSize;
+		_frameBase.Position = position;
+		_frameBase.PivotOffset = textureSize / 2.0f;
+
+		_frameAccent.Size = textureSize;
+		_frameAccent.Position = position;
+		_frameAccent.PivotOffset = textureSize / 2.0f;
 	}
 
 	private void LayoutAttackFx()

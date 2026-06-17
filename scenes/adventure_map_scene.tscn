@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://d4ab2wuiofysq"]
 
-[ext_resource type="Script" path="res://scripts/AdventureMapScene.cs" id="1_adventure_map_scene"]
-[ext_resource type="Texture2D" uid="uid://b1470g0lba6ew" path="res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png" id="2_adventure_map_base"]
-[ext_resource type="Script" path="res://scripts/AdventureMapRouteLayer.cs" id="3_adventure_map_route_layer"]
+[ext_resource type="Script" uid="uid://h6mqqtsjhn81" path="res://scripts/AdventureMapScene.cs" id="1_adventure_map_scene"]
+[ext_resource type="Texture2D" uid="uid://dv1cdai300fmf" path="res://art/maps/adventure_map_base_with_route_v1.png" id="2_adventure_map_base"]
+[ext_resource type="Script" uid="uid://bo8xyskrt4thb" path="res://scripts/AdventureMapRouteLayer.cs" id="3_adventure_map_route_layer"]
 [ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="4_water_caustic_shader"]
 [ext_resource type="Script" uid="uid://b82b6b0sb0p4n" path="res://scripts/UnderwaterAmbientLayer.cs" id="5_underwater_ambient_layer"]
-[ext_resource type="Script" path="res://scripts/AdventureMapDynamicLayer.cs" id="6_adventure_map_dynamic_layer"]
+[ext_resource type="Script" uid="uid://cs11evvhndacl" path="res://scripts/AdventureMapDynamicLayer.cs" id="6_adventure_map_dynamic_layer"]
 [ext_resource type="Script" uid="uid://c4ayxvsj4os34" path="res://scripts/CharacterAvatar.cs" id="7_character_avatar_script"]
 [ext_resource type="Texture2D" uid="uid://bcpjhyjniyu2n" path="res://art/characters/player_fish_avatar/run-001/idle/processed/idle-1.png" id="8_fish_idle"]
 [ext_resource type="Texture2D" uid="uid://cuw1piolsnrje" path="res://art/characters/player_lanternfish_avatar/run-001/idle/processed/idle-1.png" id="9_lanternfish_idle"]
@@ -30,6 +30,12 @@ shader_parameter/wave_scale = 28.0
 shader_parameter/wave_speed = 0.36
 shader_parameter/edge_boost = 0.42
 shader_parameter/center_glow = 0.34
+shader_parameter/sun_color = Color(1, 0.92, 0.68, 0.22)
+shader_parameter/sun_pulse_strength = 0.0
+shader_parameter/sun_shadow_strength = 0.0
+shader_parameter/sun_pulse_speed = 0.42
+shader_parameter/center_motion_strength = 0.0
+shader_parameter/center_motion_speed = 0.55
 
 [node name="AdventureMapScene" type="Control" unique_id=1801026305]
 layout_mode = 3
@@ -39,9 +45,7 @@ offset_bottom = 1536.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_adventure_map_scene")
-MapDataPath = null
-MapBaseTexturePath = "res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png"
-selected_avatar_id = null
+MapBaseTexturePath = "res://art/maps/adventure_map_base_with_route_v1.png"
 
 [node name="Background" type="ColorRect" parent="." unique_id=508095391]
 layout_mode = 1
@@ -90,6 +94,7 @@ offset_right = 3072.0
 offset_bottom = 1536.0
 mouse_filter = 2
 script = ExtResource("6_adventure_map_dynamic_layer")
+RenderMode = 1
 MotionScale = 0.82
 
 [node name="MapAmbientLayer" type="Control" parent="MapViewport/MapContent" unique_id=1876852781]
@@ -100,12 +105,13 @@ mouse_filter = 2
 script = ExtResource("5_underwater_ambient_layer")
 RenderMode = 1
 VisualProfile = 2
-bubble_count = 72
 mote_count = 132
 seagrass_blade_count = 58
 motion_scale = 0.72
+sunbeam_intensity = 0.82
 
 [node name="RouteLayer" type="Control" parent="MapViewport/MapContent" unique_id=1636384289]
+visible = false
 anchors_preset = 0
 offset_right = 3072.0
 offset_bottom = 1536.0

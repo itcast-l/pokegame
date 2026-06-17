@@ -9,6 +9,10 @@ public partial class ScoreAvatarMeter : Control
 	private const float FullCircleRadians = 6.2831855f;
 	private const float FillAnimationSpeed = 150.0f;
 	private const float PulseFadeSpeed = 2.8f;
+	private const string BaseTexturePath = "res://art/ui/score_meter/run-001/processed/base.png";
+	private const string FillTexturePath = "res://art/ui/score_meter/run-001/processed/fill.png";
+	private const string OverTexturePath = "res://art/ui/score_meter/run-001/processed/over.png";
+	private const string PulseTexturePath = "res://art/ui/score_meter/run-001/processed/pulse.png";
 
 	private readonly Color _backgroundColor = new(0.0f, 0.08f, 0.12f, 0.08f);
 	private readonly Color _rimColor = new(0.92f, 0.98f, 1.0f, 0.24f);
@@ -19,6 +23,16 @@ public partial class ScoreAvatarMeter : Control
 	private float _targetScore;
 	private float _maxScore = 100.0f;
 	private float _pulseAmount;
+	private bool _texturedAssetsLoaded;
+	private bool _texturedAssetsMissing;
+	private Texture2D? _baseTexture;
+	private Texture2D? _fillTexture;
+	private Texture2D? _overTexture;
+	private Texture2D? _pulseTexture;
+	private TextureRect? _baseTextureRect;
+	private TextureProgressBar? _fillProgressBar;
+	private TextureRect? _overTextureRect;
+	private TextureRect? _pulseTextureRect;
 
 	[Export(PropertyHint.Range, "40,120,1")]
 	public float circle_diameter
@@ -29,6 +43,24 @@ public partial class ScoreAvatarMeter : Control
 			_circleDiameter = Mathf.Clamp(value, 24.0f, 200.0f);
 			if (IsInsideTree())
 			{
+				ApplyLayout();
+				QueueRedraw();
+			}
+		}
+	}
+
+	private bool _useTexturedMeter = true;
+
+	[Export]
+	public bool UseTexturedMeter
+	{
+		get => _useTexturedMeter;
+		set
+		{
+			_useTexturedMeter = value;
+			if (IsNodeReady())
+			{
+				ApplyVisualMode();
 				QueueRedraw();
 			}
 		}
@@ -43,6 +75,9 @@ public partial class ScoreAvatarMeter : Control
 		}
 
 		PivotOffset = Size / 2.0f;
+		EnsureTexturedNodes();
+		EnsureTexturedAssetsLoaded();
+		ApplyVisualMode();
 		SetProcess(false);
 	}
 
@@ -51,6 +86,7 @@ public partial class ScoreAvatarMeter : Control
 		if (what == NotificationResized)
 		{
 			PivotOffset = Size / 2.0f;
+			ApplyLayout();
 			QueueRedraw();
 		}
 	}
@@ -64,6 +100,7 @@ public partial class ScoreAvatarMeter : Control
 
 		if (!Mathf.IsEqualApprox(previousScore, _displayScore) || !Mathf.IsEqualApprox(previousPulse, _pulseAmount))
 		{
+			UpdateTexturedMeter();
 			QueueRedraw();
 		}
 
@@ -74,6 +111,215 @@ public partial class ScoreAvatarMeter : Control
 	}
 
 	public override void _Draw()
+	{
+		if (ShouldUseProceduralMeter())
+		{
+			DrawProceduralMeter();
+		}
+	}
+
+	public void Configure(Color fillColor, Color glowColor)
+	{
+		_fillColor = fillColor;
+		_glowColor = glowColor;
+		UpdateTexturedMeter();
+		QueueRedraw();
+	}
+
+	public void SetScore(int score, int maxScore, bool animate)
+	{
+		_maxScore = Math.Max(1, maxScore);
+		float nextTarget = Mathf.Clamp((float)score, 0.0f, _maxScore);
+		bool gainedScore = nextTarget > _targetScore;
+		_targetScore = nextTarget;
+
+		if (!animate)
+		{
+			_displayScore = _targetScore;
+			_pulseAmount = 0.0f;
+			SetProcess(false);
+			UpdateTexturedMeter();
+			QueueRedraw();
+			return;
+		}
+
+		if (gainedScore)
+		{
+			_pulseAmount = 1.0f;
+		}
+
+		UpdateTexturedMeter();
+		SetProcess(true);
+	}
+
+	private bool ShouldUseProceduralMeter()
+	{
+		return !UseTexturedMeter || _texturedAssetsMissing;
+	}
+
+	private void EnsureTexturedNodes()
+	{
+		_baseTextureRect ??= CreateTextureRect("BaseTexture");
+		_fillProgressBar ??= CreateFillProgressBar();
+		_overTextureRect ??= CreateTextureRect("OverTexture");
+		_pulseTextureRect ??= CreateTextureRect("PulseTexture");
+
+		EnsureChild(_baseTextureRect);
+		EnsureChild(_fillProgressBar);
+		EnsureChild(_overTextureRect);
+		EnsureChild(_pulseTextureRect);
+	}
+
+	private void EnsureTexturedAssetsLoaded()
+	{
+		if (_texturedAssetsLoaded)
+		{
+			return;
+		}
+
+		_baseTexture = FrameAnimationHelpers.LoadTextureResource(BaseTexturePath, allowEditorImageFallback: true);
+		_fillTexture = FrameAnimationHelpers.LoadTextureResource(FillTexturePath, allowEditorImageFallback: true);
+		_overTexture = FrameAnimationHelpers.LoadTextureResource(OverTexturePath, allowEditorImageFallback: true);
+		_pulseTexture = FrameAnimationHelpers.LoadTextureResource(PulseTexturePath, allowEditorImageFallback: true);
+		_texturedAssetsMissing = _baseTexture == null || _fillTexture == null || _overTexture == null || _pulseTexture == null;
+		_texturedAssetsLoaded = true;
+	}
+
+	private void ApplyVisualMode()
+	{
+		ApplyLayout();
+		UpdateTexturedMeter();
+
+		bool showTextured = !ShouldUseProceduralMeter();
+		SetTextureNodeVisible(_baseTextureRect, showTextured);
+		SetTextureNodeVisible(_fillProgressBar, showTextured);
+		SetTextureNodeVisible(_overTextureRect, showTextured);
+		SetTextureNodeVisible(_pulseTextureRect, showTextured && _pulseAmount > 0.001f);
+	}
+
+	private void ApplyLayout()
+	{
+		Vector2 center = Size / 2.0f;
+		float diameter = Mathf.Min(_circleDiameter, Mathf.Min(Size.X, Size.Y));
+		Vector2 textureSize = new(diameter, diameter);
+		Vector2 topLeft = center - textureSize / 2.0f;
+
+		ApplyTextureRectLayout(_baseTextureRect, topLeft, textureSize);
+		ApplyTextureRectLayout(_overTextureRect, topLeft, textureSize);
+		ApplyTextureRectLayout(_pulseTextureRect, topLeft, textureSize);
+		if (_fillProgressBar != null)
+		{
+			_fillProgressBar.Position = topLeft;
+			_fillProgressBar.Size = textureSize;
+			_fillProgressBar.PivotOffset = textureSize / 2.0f;
+		}
+	}
+
+	private void UpdateTexturedMeter()
+	{
+		if (_baseTextureRect == null || _fillProgressBar == null || _overTextureRect == null || _pulseTextureRect == null)
+		{
+			return;
+		}
+
+		EnsureTexturedAssetsLoaded();
+		ApplyVisualModeWithoutRecursion();
+		if (ShouldUseProceduralMeter())
+		{
+			return;
+		}
+
+		float progress = Mathf.Clamp(_displayScore / _maxScore, 0.0f, 1.0f);
+		_baseTextureRect.Texture = _baseTexture;
+		_overTextureRect.Texture = _overTexture;
+		_pulseTextureRect.Texture = _pulseTexture;
+		_fillProgressBar.TextureUnder = null;
+		_fillProgressBar.TextureOver = null;
+		_fillProgressBar.TextureProgress = _fillTexture;
+		_fillProgressBar.MaxValue = 100.0;
+		_fillProgressBar.Value = progress * 100.0f;
+		_fillProgressBar.TintProgress = _fillColor;
+		_fillProgressBar.TintUnder = Colors.Transparent;
+		_fillProgressBar.TintOver = Colors.Transparent;
+		_overTextureRect.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(_glowColor.A * 2.0f, 0.0f, 1.0f));
+
+		float pulseScale = 1.0f + 0.12f * _pulseAmount;
+		_pulseTextureRect.Scale = new Vector2(pulseScale, pulseScale);
+		_pulseTextureRect.Modulate = new Color(_fillColor.R, _fillColor.G, _fillColor.B, 0.85f * _pulseAmount);
+		SetTextureNodeVisible(_pulseTextureRect, _pulseAmount > 0.001f);
+	}
+
+	private void ApplyVisualModeWithoutRecursion()
+	{
+		bool showTextured = !ShouldUseProceduralMeter();
+		SetTextureNodeVisible(_baseTextureRect, showTextured);
+		SetTextureNodeVisible(_fillProgressBar, showTextured);
+		SetTextureNodeVisible(_overTextureRect, showTextured);
+		if (!showTextured)
+		{
+			SetTextureNodeVisible(_pulseTextureRect, false);
+		}
+	}
+
+	private static TextureRect CreateTextureRect(string name)
+	{
+		return new TextureRect
+		{
+			Name = name,
+			MouseFilter = MouseFilterEnum.Ignore,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			TextureFilter = TextureFilterEnum.Linear,
+			ZIndex = 0,
+		};
+	}
+
+	private static TextureProgressBar CreateFillProgressBar()
+	{
+		return new TextureProgressBar
+		{
+			Name = "FillProgress",
+			MouseFilter = MouseFilterEnum.Ignore,
+			FillMode = (int)TextureProgressBar.FillModeEnum.Clockwise,
+			RadialFillDegrees = 360.0f,
+			RadialInitialAngle = -90.0f,
+			Step = 0.0,
+			MinValue = 0.0,
+			MaxValue = 100.0,
+			TextureProgressOffset = Vector2.Zero,
+			ZIndex = 0,
+		};
+	}
+
+	private void EnsureChild(Node child)
+	{
+		if (child.GetParent() != this)
+		{
+			AddChild(child);
+		}
+	}
+
+	private static void SetTextureNodeVisible(CanvasItem? item, bool visible)
+	{
+		if (item != null)
+		{
+			item.Visible = visible;
+		}
+	}
+
+	private static void ApplyTextureRectLayout(TextureRect? textureRect, Vector2 topLeft, Vector2 size)
+	{
+		if (textureRect == null)
+		{
+			return;
+		}
+
+		textureRect.Position = topLeft;
+		textureRect.Size = size;
+		textureRect.PivotOffset = size / 2.0f;
+	}
+
+	private void DrawProceduralMeter()
 	{
 		Vector2 center = Size / 2.0f;
 		float radius = Mathf.Min(_circleDiameter, Mathf.Min(Size.X, Size.Y)) / 2.0f;
@@ -92,37 +338,6 @@ public partial class ScoreAvatarMeter : Control
 		DrawArc(center, radius - 1.0f, 0.0f, FullCircleRadians, 96, _rimColor, 2.0f, true);
 		DrawArc(center, radius - 4.0f, 0.0f, FullCircleRadians, 96, _glowColor, 1.5f, true);
 		DrawCircle(center + new Vector2(-radius * 0.18f, -radius * 0.20f), radius * 0.28f, new Color(1.0f, 1.0f, 1.0f, 0.055f));
-	}
-
-	public void Configure(Color fillColor, Color glowColor)
-	{
-		_fillColor = fillColor;
-		_glowColor = glowColor;
-		QueueRedraw();
-	}
-
-	public void SetScore(int score, int maxScore, bool animate)
-	{
-		_maxScore = Math.Max(1, maxScore);
-		float nextTarget = Mathf.Clamp((float)score, 0.0f, _maxScore);
-		bool gainedScore = nextTarget > _targetScore;
-		_targetScore = nextTarget;
-
-		if (!animate)
-		{
-			_displayScore = _targetScore;
-			_pulseAmount = 0.0f;
-			SetProcess(false);
-			QueueRedraw();
-			return;
-		}
-
-		if (gainedScore)
-		{
-			_pulseAmount = 1.0f;
-		}
-
-		SetProcess(true);
 	}
 
 	private void DrawBottomFill(Vector2 center, float radius, float progress)

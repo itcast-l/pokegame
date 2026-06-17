@@ -20,23 +20,29 @@ public partial class UnderwaterAmbientLayer : Control
 	private const int SeagrassFrameCount = 8;
 	private const int CenterCausticFrameCount = 8;
 	private const int CenterGlintFrameCount = 6;
+	private const int SunbeamFrameCount = 6;
+	private const int WaterCurrentFrameCount = 8;
+	private const int MoteFrameCount = 6;
 
 	private const float SeagrassFramesPerSecond = 5.0f;
 	private const float CenterCausticFramesPerSecond = 5.0f;
 	private const float CenterGlintFramesPerSecond = 8.0f;
+	private const float SunbeamFramesPerSecond = 2.0f;
+	private const float WaterCurrentFramesPerSecond = 4.0f;
+	private const float MoteFramesPerSecond = 6.0f;
 
 	private static readonly Vector2 SeagrassFrameSize = new(256.0f, 512.0f);
 	private static readonly Vector2 CenterCausticFrameSize = new(512.0f, 512.0f);
 	private static readonly Vector2 CenterGlintFrameSize = new(96.0f, 96.0f);
+	private static readonly Vector2 SunbeamFrameSize = new(384.0f, 720.0f);
+	private static readonly Vector2 WaterCurrentFrameSize = new(512.0f, 128.0f);
+	private static readonly Vector2 MoteFrameSize = new(96.0f, 96.0f);
 
 	[Export]
 	public AmbientRenderMode RenderMode { get; set; } = AmbientRenderMode.Procedural;
 
 	[Export]
 	public AmbientVisualProfile VisualProfile { get; set; } = AmbientVisualProfile.GameBoard;
-
-	[Export(PropertyHint.Range, "0,80,1")]
-	public int bubble_count = 26;
 
 	[Export(PropertyHint.Range, "0,140,1")]
 	public int mote_count = 64;
@@ -63,7 +69,6 @@ public partial class UnderwaterAmbientLayer : Control
 	public int center_glint_count = 0;
 
 	private readonly RandomNumberGenerator _rng = new();
-	private readonly List<Bubble> _bubbles = new();
 	private readonly List<Mote> _motes = new();
 	private readonly List<SeagrassBlade> _seagrassBlades = new();
 	private readonly List<CenterGlint> _centerGlints = new();
@@ -77,6 +82,9 @@ public partial class UnderwaterAmbientLayer : Control
 	private readonly List<ImageElement> _seagrassInstances = new();
 	private readonly List<ImageElement> _centerCausticInstances = new();
 	private readonly List<ImageElement> _centerGlintInstances = new();
+	private readonly List<ImageElement> _sunbeamInstances = new();
+	private readonly List<ImageElement> _waterCurrentInstances = new();
+	private readonly List<ImageElement> _moteInstances = new();
 	private readonly Dictionary<string, bool> _missingCategoryWarnings = new();
 
 	private double _time;
@@ -89,11 +97,15 @@ public partial class UnderwaterAmbientLayer : Control
 	private Texture2D[] _seagrassFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _centerCausticFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _centerGlintFrames = Array.Empty<Texture2D>();
-
+	private Texture2D[] _sunbeamFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _waterCurrentFrames = Array.Empty<Texture2D>();
+	private Texture2D[] _moteFrames = Array.Empty<Texture2D>();
 	private Control? _seagrassLayer;
 	private Control? _centerCausticLayer;
 	private Control? _centerGlintLayer;
-
+	private Control? _sunbeamLayer;
+	private Control? _waterCurrentLayer;
+	private Control? _moteLayer;
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
@@ -169,25 +181,33 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 
 		DrawEdgeDepth();
-		DrawSunbeams();
+		if (ShouldDrawProceduralSunbeams())
+		{
+			DrawSunbeams();
+		}
 		if (ShouldDrawProceduralSeagrass())
 		{
 			DrawSeagrass();
 		}
 
-		DrawWaterCurrents();
+		if (ShouldDrawProceduralWaterCurrents())
+		{
+			DrawWaterCurrents();
+		}
 		if (ShouldDrawProceduralCenterCaustics())
 		{
 			DrawCenterCaustics();
 		}
 
-		DrawMotes();
+		if (ShouldDrawProceduralMotes())
+		{
+			DrawMotes();
+		}
 		if (ShouldDrawProceduralCenterGlints())
 		{
 			DrawCenterGlints();
 		}
 
-		DrawBubbles();
 	}
 
 	private void ApplyConfiguration(bool force = false)
@@ -233,22 +253,9 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 
 		_pendingImageRebuild = false;
-		_bubbles.Clear();
 		_motes.Clear();
 		_seagrassBlades.Clear();
 		_centerGlints.Clear();
-
-		for (int i = 0; i < bubble_count; i++)
-		{
-			int side = _rng.RandiRange(0, 3);
-			_bubbles.Add(new Bubble(
-				EdgePosition(side, 0.18f),
-				_rng.RandfRange(3.0f, 14.0f),
-				_rng.RandfRange(0.15f, 0.5f),
-				_rng.RandfRange(0.0f, Mathf.Tau),
-				_rng.RandfRange(6.0f, 24.0f),
-				_rng.RandfRange(0.18f, 0.42f)));
-		}
 
 		for (int i = 0; i < mote_count; i++)
 		{
@@ -334,6 +341,9 @@ public partial class UnderwaterAmbientLayer : Control
 		_seagrassFrames = LoadProfileFrames("seagrass", SeagrassFrameCount, "underwater seagrass");
 		_centerCausticFrames = LoadProfileFrames("center_caustic", CenterCausticFrameCount, "underwater center caustic");
 		_centerGlintFrames = LoadProfileFrames("center_glint", CenterGlintFrameCount, "underwater center glint");
+		_sunbeamFrames = LoadProfileFrames("sunbeam", SunbeamFrameCount, "underwater sunbeam");
+		_waterCurrentFrames = LoadProfileFrames("water_current", WaterCurrentFrameCount, "underwater water current");
+		_moteFrames = LoadProfileFrames("mote", MoteFrameCount, "underwater mote");
 		_imageAssetsLoaded = true;
 	}
 
@@ -365,20 +375,29 @@ public partial class UnderwaterAmbientLayer : Control
 	{
 		return _seagrassFrames.Length == 0
 			&& _centerCausticFrames.Length == 0
-			&& _centerGlintFrames.Length == 0;
+			&& _centerGlintFrames.Length == 0
+			&& _sunbeamFrames.Length == 0
+			&& _waterCurrentFrames.Length == 0
+			&& _moteFrames.Length == 0;
 	}
 
 	private bool HasNoImageInstances()
 	{
 		return _seagrassInstances.Count == 0
 			&& _centerCausticInstances.Count == 0
-			&& _centerGlintInstances.Count == 0;
+			&& _centerGlintInstances.Count == 0
+			&& _sunbeamInstances.Count == 0
+			&& _waterCurrentInstances.Count == 0
+			&& _moteInstances.Count == 0;
 	}
 
 	private void EnsureImageLayers()
 	{
 		_seagrassLayer = GetOrCreateLayer(ref _seagrassLayer, "SeagrassLayer", zIndex: -1);
+		_sunbeamLayer = GetOrCreateLayer(ref _sunbeamLayer, "SunbeamLayer", zIndex: 0);
+		_waterCurrentLayer = GetOrCreateLayer(ref _waterCurrentLayer, "WaterCurrentLayer", zIndex: 0);
 		_centerCausticLayer = GetOrCreateLayer(ref _centerCausticLayer, "CenterCausticLayer", zIndex: 1);
+		_moteLayer = GetOrCreateLayer(ref _moteLayer, "MoteLayer", zIndex: 1);
 		_centerGlintLayer = GetOrCreateLayer(ref _centerGlintLayer, "CenterGlintLayer", zIndex: 1);
 	}
 
@@ -411,7 +430,10 @@ public partial class UnderwaterAmbientLayer : Control
 	private void SetImageLayersVisible(bool visible)
 	{
 		SetLayerVisible(_seagrassLayer, visible);
+		SetLayerVisible(_sunbeamLayer, visible);
+		SetLayerVisible(_waterCurrentLayer, visible);
 		SetLayerVisible(_centerCausticLayer, visible);
+		SetLayerVisible(_moteLayer, visible);
 		SetLayerVisible(_centerGlintLayer, visible);
 	}
 
@@ -426,15 +448,21 @@ public partial class UnderwaterAmbientLayer : Control
 	private void RebuildImageInstances()
 	{
 		ClearImageInstances();
+		BuildSunbeamInstances();
 		BuildSeagrassInstances();
+		BuildWaterCurrentInstances();
 		BuildCenterCausticInstances();
+		BuildMoteInstances();
 		BuildCenterGlintInstances();
 	}
 
 	private void ClearImageInstances()
 	{
 		ClearImageLayer(_seagrassLayer, _seagrassInstances);
+		ClearImageLayer(_sunbeamLayer, _sunbeamInstances);
+		ClearImageLayer(_waterCurrentLayer, _waterCurrentInstances);
 		ClearImageLayer(_centerCausticLayer, _centerCausticInstances);
+		ClearImageLayer(_moteLayer, _moteInstances);
 		ClearImageLayer(_centerGlintLayer, _centerGlintInstances);
 	}
 
@@ -477,6 +505,69 @@ public partial class UnderwaterAmbientLayer : Control
 			instance.Secondary = blade.Flip;
 			instance.GrowsDown = blade.GrowsDown;
 			_seagrassInstances.Add(instance);
+		}
+	}
+
+	private void BuildSunbeamInstances()
+	{
+		if (_sunbeamLayer == null || _sunbeamFrames.Length == 0 || sunbeam_intensity <= 0.0f)
+		{
+			return;
+		}
+
+		for (int side = 0; side < 2; side++)
+		{
+			for (int index = 0; index < 5; index++)
+			{
+				var instance = CreateImageElement(
+					_sunbeamLayer,
+					$"Sunbeam{side + 1}_{index + 1}",
+					_sunbeamFrames,
+					SunbeamFrameSize,
+					SunbeamFramesPerSecond);
+				instance.XRatio = side == 0
+					? 0.04f + index * 0.045f
+					: 0.96f - index * 0.045f;
+				instance.YRatio = 0.0f;
+				instance.Scale = 0.18f + index * 0.03f;
+				instance.Alpha = (0.04f + index * 0.006f) * sunbeam_intensity;
+				instance.Phase = index * 1.27f + side * 2.4f;
+				instance.Speed = 0.02f + index * 0.004f;
+				instance.Drift = 0.008f + index * 0.002f;
+				instance.Secondary = side == 0 ? 1.0f : -1.0f;
+				_sunbeamInstances.Add(instance);
+			}
+		}
+	}
+
+	private void BuildWaterCurrentInstances()
+	{
+		if (_waterCurrentLayer == null || _waterCurrentFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int edge = 0; edge < 2; edge++)
+		{
+			float yRatio = edge == 0 ? 0.075f : 0.925f;
+			for (int index = 0; index < 10; index++)
+			{
+				var instance = CreateImageElement(
+					_waterCurrentLayer,
+					$"WaterCurrent{edge + 1}_{index + 1}",
+					_waterCurrentFrames,
+					WaterCurrentFrameSize,
+					WaterCurrentFramesPerSecond);
+				instance.XRatio = index / 9.0f;
+				instance.YRatio = yRatio;
+				instance.Scale = 0.22f;
+				instance.Alpha = 0.10f;
+				instance.Phase = index * 0.7f + edge * 1.9f;
+				instance.Speed = 0.38f + index * 0.02f;
+				instance.Drift = 14.0f;
+				instance.Secondary = edge == 0 ? 1.0f : -1.0f;
+				_waterCurrentInstances.Add(instance);
+			}
 		}
 	}
 
@@ -533,6 +624,33 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 	}
 
+	private void BuildMoteInstances()
+	{
+		if (_moteLayer == null || _moteFrames.Length == 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < _motes.Count; index++)
+		{
+			Mote mote = _motes[index];
+			var instance = CreateImageElement(
+				_moteLayer,
+				$"Mote{index + 1}",
+				_moteFrames,
+				MoteFrameSize,
+				MoteFramesPerSecond);
+			instance.Position = mote.Base;
+			instance.Scale = Mathf.Clamp(mote.Radius / 8.0f, 0.14f, 0.36f);
+			instance.Alpha = Mathf.Clamp(mote.Alpha * 1.4f, 0.08f, 0.42f);
+			instance.Phase = mote.Phase;
+			instance.Speed = mote.Speed;
+			instance.Drift = mote.Drift;
+			instance.Secondary = 0.45f;
+			_moteInstances.Add(instance);
+		}
+	}
+
 	private ImageElement CreateImageElement(
 		Control layer,
 		string name,
@@ -563,9 +681,29 @@ public partial class UnderwaterAmbientLayer : Control
 
 	private void UpdateImageInstances()
 	{
+		UpdateSunbeamInstances();
 		UpdateSeagrassInstances();
+		UpdateWaterCurrentInstances();
 		UpdateCenterCausticInstances();
+		UpdateMoteInstances();
 		UpdateCenterGlintInstances();
+	}
+
+	private void UpdateSunbeamInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _sunbeamInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float widthPulse = 0.78f + Mathf.Sin(time * 0.18f + instance.Phase) * 0.08f;
+			float scale = (Size.Y / instance.BaseSize.Y) * instance.Scale;
+			Vector2 size = new(instance.BaseSize.X * scale * widthPulse, instance.BaseSize.Y * scale);
+			float centerX = Size.X * instance.XRatio + Mathf.Sin(time * instance.Speed + instance.Phase) * Size.X * instance.Drift;
+			float centerY = size.Y * 0.5f + Mathf.Sin(time * 0.06f + instance.Phase) * 1.0f;
+			float alpha = instance.Alpha * (0.58f + 0.08f * Mathf.Sin(time * 0.14f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
 	}
 
 	private void UpdateSeagrassInstances()
@@ -605,6 +743,24 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 	}
 
+	private void UpdateWaterCurrentInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _waterCurrentInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float width = Size.X * instance.Scale;
+			float scale = width / instance.BaseSize.X;
+			Vector2 size = instance.BaseSize * scale;
+			float sway = Mathf.Sin(time * 0.45f + instance.Phase) * instance.Drift;
+			float centerX = Size.X * instance.XRatio;
+			float centerY = Size.Y * instance.YRatio + sway * instance.Secondary;
+			float alpha = instance.Alpha * (0.82f + 0.18f * Mathf.Sin(time * 0.26f + instance.Phase));
+			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
 	private void UpdateCenterGlintInstances()
 	{
 		float time = (float)_time;
@@ -624,6 +780,23 @@ public partial class UnderwaterAmbientLayer : Control
 			float centerY = Size.Y * instance.YRatio + Mathf.Cos(time * 0.24f + instance.Phase) * 7.0f;
 			float alpha = instance.Alpha * pulse * center_caustic_intensity;
 			ApplyImageLayout(instance, new Vector2(centerX, centerY), size, alpha);
+		}
+	}
+
+	private void UpdateMoteInstances()
+	{
+		float time = (float)_time;
+		foreach (ImageElement instance in _moteInstances)
+		{
+			instance.ElapsedTime = time;
+			ApplyAnimatedFrame(instance);
+			float pulse = 0.86f + 0.14f * Mathf.Sin(time * instance.Speed * 1.2f + instance.Phase);
+			Vector2 size = instance.BaseSize * instance.Scale * pulse;
+			Vector2 center = instance.Position + new Vector2(
+				Mathf.Sin(time * instance.Speed + instance.Phase) * instance.Drift,
+				Mathf.Cos(time * instance.Speed * 0.8f + instance.Phase) * instance.Drift * instance.Secondary);
+			float alpha = instance.Alpha * (0.82f + 0.18f * Mathf.Sin(time * 0.34f + instance.Phase));
+			ApplyImageLayout(instance, center, size, alpha);
 		}
 	}
 
@@ -676,9 +849,24 @@ public partial class UnderwaterAmbientLayer : Control
 		return _activeRenderMode != AmbientRenderMode.ImageBased || _seagrassFrames.Length == 0;
 	}
 
+	private bool ShouldDrawProceduralSunbeams()
+	{
+		return _activeRenderMode != AmbientRenderMode.ImageBased || _sunbeamFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralWaterCurrents()
+	{
+		return _activeRenderMode != AmbientRenderMode.ImageBased || _waterCurrentFrames.Length == 0;
+	}
+
 	private bool ShouldDrawProceduralCenterCaustics()
 	{
 		return _activeRenderMode != AmbientRenderMode.ImageBased || _centerCausticFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralMotes()
+	{
+		return _activeRenderMode != AmbientRenderMode.ImageBased || _moteFrames.Length == 0;
 	}
 
 	private bool ShouldDrawProceduralCenterGlints()
@@ -894,26 +1082,6 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 	}
 
-	private void DrawBubbles()
-	{
-		foreach (Bubble bubble in _bubbles)
-		{
-			float rise = Mathf.PosMod((float)_time * bubble.Speed * 34.0f + bubble.Phase * 18.0f, Size.Y * 0.24f);
-			Vector2 position = bubble.Base + new Vector2(
-				Mathf.Sin((float)_time * bubble.Speed + bubble.Phase) * bubble.Drift,
-				-rise + Mathf.Cos((float)_time * bubble.Speed * 1.4f + bubble.Phase) * 5.0f);
-
-			if (position.Y < -bubble.Radius)
-			{
-				position.Y += Size.Y + bubble.Radius * 2.0f;
-			}
-
-			DrawCircle(position, bubble.Radius, new Color(0.72f, 0.98f, 1.0f, bubble.Alpha * 0.18f));
-			DrawArc(position, bubble.Radius, -Mathf.Pi * 0.15f, Mathf.Pi * 1.18f, 10, new Color(0.76f, 1.0f, 1.0f, bubble.Alpha), 1.4f, true);
-			DrawCircle(position + new Vector2(-bubble.Radius * 0.28f, -bubble.Radius * 0.25f), Mathf.Max(bubble.Radius * 0.18f, 1.0f), new Color(1.0f, 1.0f, 1.0f, bubble.Alpha * 0.75f));
-		}
-	}
-
 	private sealed class ImageElement
 	{
 		public TextureRect Node { get; set; } = default!;
@@ -933,7 +1101,6 @@ public partial class UnderwaterAmbientLayer : Control
 		public float ElapsedTime { get; set; }
 	}
 
-	private readonly record struct Bubble(Vector2 Base, float Radius, float Speed, float Phase, float Drift, float Alpha);
 	private readonly record struct Mote(Vector2 Base, float Radius, float Speed, float Phase, float Drift, float Alpha);
 	private readonly record struct SeagrassBlade(Vector2 Base, float Height, float Width, float Phase, float Speed, float Sway, Color Color, float Flip, bool GrowsDown);
 	private readonly record struct CenterGlint(float XRatio, float YRatio, float Radius, float Speed, float Phase, float Alpha);

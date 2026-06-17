@@ -22,13 +22,28 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!inputEvent.IsActionPressed(GameInputActions.GamePause))
+		if (!IsPauseMenuRequested(inputEvent))
 		{
 			return;
 		}
 
 		ShowPauseMenu();
 		GetViewport().SetInputAsHandled();
+	}
+
+	private static bool IsPauseMenuRequested(InputEvent inputEvent)
+	{
+		if (inputEvent.IsActionPressed(GameInputActions.GamePause))
+		{
+			return true;
+		}
+
+		return inputEvent is InputEventKey
+		{
+			Pressed: true,
+			Echo: false,
+			Keycode: Key.Escape,
+		};
 	}
 
 	private void EnsurePauseMenu()
