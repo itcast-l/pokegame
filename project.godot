@@ -17,7 +17,7 @@ config/custom_user_dir_name="cakeju/deckland"
 config/features=PackedStringArray("4.6", "C#", "GL Compatibility")
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/show_image=false
-config/icon="res://icon.svg"
+config/icon="res://assets/app_icon/deckland_app_icon_1024.png"
 
 [audio]
 

@@ -154,6 +154,14 @@ internal readonly record struct NetworkCaptureVisualSync(
 	int[] ExtraTableCardIndexes,
 	float FlightStaggerSeconds);
 
+internal readonly record struct NetworkCaptureRevealVisualSync(
+	int PlayerIndex,
+	int[] RevealTableCardIndexes,
+	string[] RevealCardCodes,
+	string[] RevealAttachedItemCardIdsCsv,
+	int[] RevealPointValues,
+	bool[] RevealPointDoubleFlags);
+
 internal readonly record struct CaptureTableCardsResult(
 	int CollectedCardCount,
 	int RemovedTableCardCount,

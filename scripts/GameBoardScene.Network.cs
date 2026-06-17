@@ -410,7 +410,7 @@ public partial class GameBoardScene
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, _playerHands[playerIndex][handIndex]);
 		CardPlayPlan plan = ResolveCardPlayPlan(playedCard);
 		tableCardIndex = _tableCards.Count;
-		tableCardIsFaceUp = plan.MatchingTableCardIndex >= 0 || plan.PlayedCardCollectsTable;
+		tableCardIsFaceUp = false;
 		_networkPredictedHandMatchedTableCardIndex = plan.MatchingTableCardIndex;
 		_networkPredictedHandMatchedTableCardFlipped = plan.MatchedTableCardFlipped;
 		return true;
@@ -427,13 +427,6 @@ public partial class GameBoardScene
 			out bool tableCardIsFaceUp))
 		{
 			return false;
-		}
-
-		if (_networkPredictedHandMatchedTableCardFlipped
-			&& _networkPredictedHandMatchedTableCardIndex >= 0
-			&& _networkPredictedHandMatchedTableCardIndex < _tableCards.Count)
-		{
-			_tableCards[_networkPredictedHandMatchedTableCardIndex].IsFaceUp = true;
 		}
 
 		_tableCards.Add(new TableCard(playedCard, tableCardIsFaceUp, cardOwnerPlayerIndex: localPlayerIndex));
@@ -583,13 +576,6 @@ public partial class GameBoardScene
 		if (_networkPendingHandIndex >= 0)
 		{
 			ShowHandDisplaySlot(localPlayerIndex, _networkPendingHandIndex);
-		}
-
-		if (_networkPredictedHandMatchedTableCardFlipped
-			&& _networkPredictedHandMatchedTableCardIndex >= 0
-			&& _networkPredictedHandMatchedTableCardIndex < _tableCards.Count)
-		{
-			_tableCards[_networkPredictedHandMatchedTableCardIndex].IsFaceUp = false;
 		}
 
 		if (_networkPredictedHandTableCardIndex >= 0
@@ -848,6 +834,7 @@ public partial class GameBoardScene
 			["pending_item_card_id"] = _pendingItemCardId,
 			["pending_turn_sequence_generation"] = _pendingItemTurnSequenceGeneration,
 			["revealed_player_hand_index"] = ShouldRevealTargetHandToSeat(recipientSeatIndex) ? _revealedPlayerHandIndex : -1,
+			["opening_deal_animation_playing"] = _isOpeningDealAnimationPlaying,
 			["seat_control_states"] = BuildSeatControlStatesArray(),
 		};
 	}
@@ -983,6 +970,9 @@ public partial class GameBoardScene
 			case NetworkBoardVisualEventTypes.PlayItemCard:
 				await PlayNetworkItemCardVisualEventAsync(payload);
 				return;
+			case NetworkBoardVisualEventTypes.CaptureReveal:
+				await PlayNetworkCaptureRevealVisualEventAsync(payload);
+				return;
 			case NetworkBoardVisualEventTypes.CaptureToDeck:
 				await PlayNetworkCaptureVisualEventAsync(payload);
 				return;
@@ -1023,6 +1013,7 @@ public partial class GameBoardScene
 		int actorSeatIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
 		int handIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1);
 		string playedCardCode = ReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, string.Empty);
+		bool playedCardIsFaceUp = ReadNetworkBool(payload, NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey, false);
 		if (actorSeatIndex < 0 || actorSeatIndex >= player_count)
 		{
 			return;
@@ -1035,7 +1026,7 @@ public partial class GameBoardScene
 			&& _networkPredictedHandVisualActive;
 		if (!matchesLocalPrediction)
 		{
-			_tableCards.Add(new TableCard(playedCard, isFaceUp: true, cardOwnerPlayerIndex: actorSeatIndex));
+			_tableCards.Add(new TableCard(playedCard, playedCardIsFaceUp, cardOwnerPlayerIndex: actorSeatIndex));
 			if (actorSeatIndex == GetLocalHandPlayerIndex()
 				&& handIndex == _networkPendingHandIndex)
 			{
@@ -1053,7 +1044,7 @@ public partial class GameBoardScene
 				await ToSignal(GetTree().CreateTimer(debugPlaybackDelaySeconds), SceneTreeTimer.SignalName.Timeout);
 			}
 
-			await PlayCardToTableAnimationAsync(actorSeatIndex, playedCard, startGlobalPosition, tableCardIndex, tableCardIsFaceUp: true);
+			await PlayCardToTableAnimationAsync(actorSeatIndex, playedCard, startGlobalPosition, tableCardIndex, playedCardIsFaceUp);
 		}
 		else
 		{
@@ -1451,6 +1442,85 @@ public partial class GameBoardScene
 			flightStaggerSeconds);
 	}
 
+	private async Task PlayNetworkCaptureRevealVisualEventAsync(Godot.Collections.Dictionary payload)
+	{
+		int playerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
+		if (playerIndex != GetLocalHandPlayerIndex())
+		{
+			return;
+		}
+
+		Godot.Collections.Array revealIndexesArray = ReadArray(payload, NetworkBoardVisualEventTypes.RevealTableCardIndexesKey);
+		int[] revealIndexes = ReadIntArray(payload, NetworkBoardVisualEventTypes.RevealTableCardIndexesKey, revealIndexesArray.Count);
+		string[] revealCardCodes = ReadStringArray(payload, NetworkBoardVisualEventTypes.RevealCardCodesKey);
+		string[] revealAttachedItemCardIdsCsv = ReadStringArray(payload, NetworkBoardVisualEventTypes.RevealAttachedItemCardIdsCsvKey);
+		int[] revealPointValues = ReadIntArray(payload, NetworkBoardVisualEventTypes.RevealPointValuesKey, revealIndexes.Length);
+		bool[] revealPointDoubleFlags = ReadBoolArray(payload, NetworkBoardVisualEventTypes.RevealPointDoubleFlagsKey, revealIndexes.Length);
+		for (int revealIndex = 0; revealIndex < revealIndexes.Length; revealIndex++)
+		{
+			int tableCardIndex = revealIndexes[revealIndex];
+			if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+			{
+				continue;
+			}
+
+			TableCard tableCard = _tableCards[tableCardIndex];
+			string cardCode = revealIndex < revealCardCodes.Length ? revealCardCodes[revealIndex] : string.Empty;
+			if (!string.IsNullOrWhiteSpace(cardCode))
+			{
+				string attachedItemCardIdsCsv = revealIndex < revealAttachedItemCardIdsCsv.Length ? revealAttachedItemCardIdsCsv[revealIndex] : string.Empty;
+				PlayingCard revealedCard = CreateNetworkPlayingCard(cardCode);
+				if (!string.IsNullOrWhiteSpace(attachedItemCardIdsCsv))
+				{
+					foreach (string attachedItemCardId in attachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+					{
+						revealedCard = revealedCard.WithAttachedItemEffect(attachedItemCardId);
+					}
+				}
+
+				tableCard = new TableCard(
+					revealedCard,
+					tableCard.IsFaceUp,
+					tableCard.ItemOverlay,
+					tableCard.ItemOwnerPlayerIndex,
+					tableCard.CardOwnerPlayerIndex,
+					tableCard.RemoveCardOnCapture)
+				{
+					IsBuriedInSand = tableCard.IsBuriedInSand,
+					IsSlimeCoated = tableCard.IsSlimeCoated,
+					IsHiddenDuringCapture = tableCard.IsHiddenDuringCapture,
+				};
+				_tableCards[tableCardIndex] = tableCard;
+			}
+
+			Texture2D? revealTexture = tableCard.Card.HasValue
+				? tableCard.Card.Value.Texture
+				: tableCard.ItemOverlay?.Texture;
+			if (revealTexture == null)
+			{
+				continue;
+			}
+
+			await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
+			if (_turnSequenceGeneration != ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, _turnSequenceGeneration)
+				|| IsGameOver())
+			{
+				return;
+			}
+
+			_tableCards[tableCardIndex].IsFaceUp = true;
+			RenderTableCards();
+			int points = revealIndex < revealPointValues.Length ? revealPointValues[revealIndex] : 0;
+			if (points > 0 && _tableCards[tableCardIndex].Card.HasValue)
+			{
+				bool isDouble = revealIndex < revealPointDoubleFlags.Length && revealPointDoubleFlags[revealIndex];
+				_ = PlayTableCardPointPopupAsync(tableCardIndex, points, isDouble);
+			}
+
+			await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+		}
+	}
+
 	private void ApplyNetworkBoardSnapshotNow(Godot.Collections.Dictionary snapshot, int snapshotId)
 	{
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
@@ -1481,7 +1551,10 @@ public partial class GameBoardScene
 		ApplyItemHandsFromSnapshot(snapshot);
 		ApplyTableCardsFromSnapshot(snapshot);
 		ApplySeatControlStatesFromSnapshot(snapshot);
-		_isOpeningDealAnimationPlaying = false;
+		bool shouldResumeOpeningDealAnimation = !isReconnectCatchup
+			&& ReadNetworkBool(snapshot, "opening_deal_animation_playing", false)
+			&& !_isOpeningDealAnimationPlaying;
+		_isOpeningDealAnimationPlaying = ReadNetworkBool(snapshot, "opening_deal_animation_playing", false);
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
 		InvalidateRenderCaches();
@@ -1504,6 +1577,11 @@ public partial class GameBoardScene
 		if (_winnerPlayerIndex >= 0)
 		{
 			ShowWinnerSequence(_winnerPlayerIndex);
+		}
+
+		if (shouldResumeOpeningDealAnimation)
+		{
+			_ = PlayOpeningDealAnimationAsync(_turnSequenceGeneration);
 		}
 	}
 
@@ -1914,6 +1992,18 @@ public partial class GameBoardScene
 		}
 
 		return result.ToArray();
+	}
+
+	private static bool[] ReadBoolArray(Godot.Collections.Dictionary dictionary, string key, int count)
+	{
+		Godot.Collections.Array array = ReadArray(dictionary, key);
+		var result = new bool[Math.Max(count, array.Count)];
+		for (int index = 0; index < array.Count; index++)
+		{
+			result[index] = array[index].AsBool();
+		}
+
+		return result;
 	}
 
 	private static void ApplyIntArray(Godot.Collections.Dictionary dictionary, string key, int[] target, int count)

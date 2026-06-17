@@ -69,6 +69,7 @@ public partial class GameBoardScene
 				playerIndex,
 				handIndex,
 				ToNetworkCardCode(playedCard),
+				playedTableCardIsFaceUp,
 				turnSequenceGeneration,
 				snapshotId);
 		}
@@ -178,6 +179,17 @@ public partial class GameBoardScene
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+			}
+
+			if (IsNetworkMultiplayerMode()
+				&& IsNetworkHost()
+				&& TryBuildNetworkCaptureRevealVisualSync(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes, out NetworkCaptureRevealVisualSync captureRevealVisualSync)
+				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int captureRevealSnapshotId))
+			{
+				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCaptureRevealVisualEventFromHost(
+					captureRevealVisualSync,
+					turnSequenceGeneration,
+					captureRevealSnapshotId);
 			}
 
 			await RevealCapturedBaseCardsFromBottomAsync(
@@ -450,6 +462,74 @@ public partial class GameBoardScene
 		_cardPlayMagnetExtraCaptureIndexes.Clear();
 		_cardPlayResolvedDoubleTriggerIndexes.Clear();
 		_cardPlayResolvedOvertimeTriggerIndexes.Clear();
+	}
+
+	private bool TryBuildNetworkCaptureRevealVisualSync(
+		int captureStartIndex,
+		int scorePlayerIndex,
+		HashSet<int>? magnetExtraCaptureIndexes,
+		out NetworkCaptureRevealVisualSync visualSync)
+	{
+		visualSync = default;
+		if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		var revealTableCardIndexes = new List<int>();
+		var revealCardCodes = new List<string>();
+		var revealAttachedItemCardIdsCsv = new List<string>();
+		var revealPointValues = new List<int>();
+		var revealPointDoubleFlags = new List<bool>();
+		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (tableCard.IsBuriedInSand
+				|| tableCard.IsFaceUp
+				|| ShouldSkipOwnerPreviewRevealAnimation(tableCard))
+			{
+				continue;
+			}
+
+			Texture2D? revealTexture = null;
+			if (tableCard.Card.HasValue)
+			{
+				revealTexture = tableCard.Card.Value.Texture;
+			}
+			else if (tableCard.ItemOverlay.HasValue)
+			{
+				revealTexture = tableCard.ItemOverlay.Value.Texture;
+			}
+
+			if (revealTexture == null)
+			{
+				continue;
+			}
+
+			revealTableCardIndexes.Add(tableCardIndex);
+			revealCardCodes.Add(tableCard.Card.HasValue ? ToNetworkCardCode(tableCard.Card.Value) : string.Empty);
+			revealAttachedItemCardIdsCsv.Add(tableCard.Card.HasValue ? tableCard.Card.Value.AttachedItemCardIdsCsv : string.Empty);
+			bool hasDoubleEffect = tableCard.Card.HasValue && HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
+			int pointValue = tableCard.Card.HasValue && IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex)
+				? GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect)
+				: 0;
+			revealPointValues.Add(pointValue);
+			revealPointDoubleFlags.Add(pointValue > 0 && hasDoubleEffect);
+		}
+
+		if (revealTableCardIndexes.Count == 0)
+		{
+			return false;
+		}
+
+		visualSync = new NetworkCaptureRevealVisualSync(
+			GetLocalHandPlayerIndex(),
+			revealTableCardIndexes.ToArray(),
+			revealCardCodes.ToArray(),
+			revealAttachedItemCardIdsCsv.ToArray(),
+			revealPointValues.ToArray(),
+			revealPointDoubleFlags.ToArray());
+		return true;
 	}
 
 	private int FindMatchingTableCardIndex(PlayingCard playedCard)

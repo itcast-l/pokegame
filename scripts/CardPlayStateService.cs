@@ -46,7 +46,6 @@ internal sealed class CardPlayStateService
 		if (playedRankCollectsTable)
 		{
 			captureStartIndex = 0;
-			state.TableCards[playedTableCardIndex].IsFaceUp = true;
 		}
 
 		bool playedTableCardIsFaceUp = state.TableCards[playedTableCardIndex].IsFaceUp;
@@ -68,14 +67,8 @@ internal sealed class CardPlayStateService
 		CardPlayPlan plan,
 		out bool matchedTableCardFlipped)
 	{
-		bool isFaceUp = plan.MatchingTableCardIndex >= 0;
 		matchedTableCardFlipped = plan.MatchedTableCardFlipped;
-		if (isFaceUp)
-		{
-			state.TableCards[plan.MatchingTableCardIndex].IsFaceUp = true;
-		}
-
-		state.TableCards.Add(new TableCard(playedCard, isFaceUp, cardOwnerPlayerIndex: playerIndex));
+		state.TableCards.Add(new TableCard(playedCard, isFaceUp: false, cardOwnerPlayerIndex: playerIndex));
 		return plan.CaptureStartIndex;
 	}
 }

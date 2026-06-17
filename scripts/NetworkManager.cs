@@ -479,6 +479,7 @@ public partial class NetworkManager : Node
 		int actorSeatIndex,
 		int handIndex,
 		string playedCardCode,
+		bool playedCardIsFaceUp,
 		int turnSequenceGeneration,
 		int snapshotId)
 	{
@@ -493,6 +494,7 @@ public partial class NetworkManager : Node
 			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = actorSeatIndex,
 			[NetworkBoardVisualEventTypes.HandIndexKey] = handIndex,
 			[NetworkBoardVisualEventTypes.PlayedCardCodeKey] = playedCardCode,
+			[NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey] = playedCardIsFaceUp,
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
@@ -551,6 +553,31 @@ public partial class NetworkManager : Node
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
 		BroadcastBoardVisualEventFromHost(payload);
+	}
+
+	internal void BroadcastCaptureRevealVisualEventFromHost(
+		NetworkCaptureRevealVisualSync visualSync,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.CaptureReveal,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = visualSync.PlayerIndex,
+			[NetworkBoardVisualEventTypes.RevealTableCardIndexesKey] = new Godot.Collections.Array<int>(visualSync.RevealTableCardIndexes),
+			[NetworkBoardVisualEventTypes.RevealCardCodesKey] = new Godot.Collections.Array<string>(visualSync.RevealCardCodes),
+			[NetworkBoardVisualEventTypes.RevealAttachedItemCardIdsCsvKey] = new Godot.Collections.Array<string>(visualSync.RevealAttachedItemCardIdsCsv),
+			[NetworkBoardVisualEventTypes.RevealPointValuesKey] = new Godot.Collections.Array<int>(visualSync.RevealPointValues),
+			[NetworkBoardVisualEventTypes.RevealPointDoubleFlagsKey] = new Godot.Collections.Array<bool>(visualSync.RevealPointDoubleFlags),
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		SendBoardVisualEventToSeatFromHost(visualSync.PlayerIndex, payload);
 	}
 
 	internal void BroadcastDrawCardVisualEventFromHost(

@@ -8,6 +8,7 @@ internal static class NetworkBoardVisualEventTypes
 
 	public const string PlayHandCard = "play_hand_card";
 	public const string PlayItemCard = "play_item_card";
+	public const string CaptureReveal = "capture_reveal";
 	public const string CaptureToDeck = "capture_to_deck";
 	public const string DrawCard = "draw_card";
 	public const string DeckShuffle = "deck_shuffle";
@@ -21,12 +22,18 @@ internal static class NetworkBoardVisualEventTypes
 	public const string MantaTideShift = "manta_tide_shift";
 
 	public const string PlayedCardCodeKey = "played_card_code";
+	public const string PlayedCardIsFaceUpKey = "played_card_is_face_up";
 	public const string ItemCardIdKey = "item_card_id";
 	public const string PlayPresentationKey = "play_presentation";
 	public const string TargetTableCardIndexKey = "target_table_card_index";
 	public const string TargetSeatIndexKey = "target_seat_index";
 	public const string TargetHandIndexKey = "target_hand_index";
 	public const string CaptureStartIndexKey = "capture_start_index";
+	public const string RevealTableCardIndexesKey = "reveal_table_card_indexes";
+	public const string RevealCardCodesKey = "reveal_card_codes";
+	public const string RevealAttachedItemCardIdsCsvKey = "reveal_attached_item_card_ids_csv";
+	public const string RevealPointValuesKey = "reveal_point_values";
+	public const string RevealPointDoubleFlagsKey = "reveal_point_double_flags";
 	public const string ExtraTableCardIndexesKey = "extra_table_card_indexes";
 	public const string FlightStaggerSecondsKey = "flight_stagger_seconds";
 	public const string DisplayIndexKey = "display_index";
