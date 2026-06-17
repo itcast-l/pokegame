@@ -35,6 +35,7 @@ internal static class Program
 		Run("lan address helper computes ipv4 broadcast address", LanAddressHelperComputesIpv4BroadcastAddress);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("character avatar visual resources point to existing files", CharacterAvatarVisualResourcesPointToExistingFiles);
+		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
 		Run("board effect resources point to existing files", BoardEffectResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
@@ -701,6 +702,22 @@ internal static class Program
 			{
 				AssertFramePatternExists(repoRoot, damageEffectFramePattern, damageEffectFrameCount);
 			}
+		}
+	}
+
+	private static void AvatarFeedbackEffectResourcesStayContiguous()
+	{
+		string repoRoot = FindRepositoryRoot();
+		foreach ((string root, int minFrameCount) in new[]
+		{
+			("res://art/fx/avatar_feedback_score/run-001/processed", 4),
+			("res://art/fx/avatar_feedback_hit/run-001/processed", 4),
+			("res://art/fx/avatar_feedback_victory/run-001/processed", 4),
+			("res://art/fx/avatar_feedback_defeat/run-001/processed", 4),
+		})
+		{
+			int frameCount = CountContiguousFrames(repoRoot, root, "fx-{0}.png");
+			True(frameCount >= minFrameCount);
 		}
 	}
 
@@ -2189,6 +2206,28 @@ internal static class Program
 		string absolutePath = Path.Combine(repoRoot, resPath["res://".Length..].Replace('/', Path.DirectorySeparatorChar));
 		True(File.Exists(absolutePath));
 		True(new FileInfo(absolutePath).Length > 0);
+	}
+
+	private static int CountContiguousFrames(string repoRoot, string resDirectory, string filePattern)
+	{
+		True(resDirectory.StartsWith("res://", StringComparison.Ordinal));
+		string absoluteDirectory = Path.Combine(repoRoot, resDirectory["res://".Length..].Replace('/', Path.DirectorySeparatorChar));
+		True(Directory.Exists(absoluteDirectory));
+
+		int frameCount = 0;
+		for (int frameIndex = 1; ; frameIndex++)
+		{
+			string absolutePath = Path.Combine(absoluteDirectory, string.Format(filePattern, frameIndex));
+			if (!File.Exists(absolutePath))
+			{
+				break;
+			}
+
+			True(new FileInfo(absolutePath).Length > 0);
+			frameCount++;
+		}
+
+		return frameCount;
 	}
 
 	private static string FindRepositoryRoot()

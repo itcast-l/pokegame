@@ -66,7 +66,14 @@ public partial class GameBoardScene
 
 		_networkPendingItemHandIndex = itemHandIndex;
 		_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
-		if (!await BeginPredictedNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration))
+		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		bool predictionStarted = BeginPredictedNetworkItemCardPlay(itemHandIndex, turnSequenceGeneration);
+		if (predictionStarted)
+		{
+			networkManager?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
+		}
+
+		if (!await CompletePredictedNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration))
 		{
 			ClearNetworkPendingActionState();
 			ResetNetworkPredictedItemVisualState();
@@ -74,8 +81,6 @@ public partial class GameBoardScene
 			RenderTableCards();
 			return;
 		}
-
-		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
 	}
 
 	internal void RequestNetworkPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
@@ -123,7 +128,14 @@ public partial class GameBoardScene
 
 		_networkPendingHandIndex = handIndex;
 		_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
-		if (!await BeginPredictedNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration))
+		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		bool predictionStarted = BeginPredictedNetworkHandCardPlay(handIndex, turnSequenceGeneration);
+		if (predictionStarted)
+		{
+			networkManager?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
+		}
+
+		if (!await CompletePredictedNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration))
 		{
 			ClearNetworkPendingActionState();
 			ResetNetworkPredictedHandVisualState();
@@ -131,8 +143,6 @@ public partial class GameBoardScene
 			RenderTableCards();
 			return;
 		}
-
-		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
 	}
 
 	internal void ConfirmNetworkHostItemCardPlay(int itemHandIndex, int turnSequenceGeneration)
@@ -406,7 +416,7 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private async Task<bool> BeginPredictedNetworkHandCardPlayAsync(int handIndex, int turnSequenceGeneration)
+	private bool BeginPredictedNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)
 	{
 		int localPlayerIndex = GetLocalHandPlayerIndex();
 		if (!TryGetPredictedHandPlayVisual(
@@ -419,8 +429,6 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		Vector2 startGlobalPosition = TryGetHandCardStartGlobalPosition(localPlayerIndex, handIndex)
-			?? GetVisibleCardPileTopGlobalPosition(localPlayerIndex);
 		if (_networkPredictedHandMatchedTableCardFlipped
 			&& _networkPredictedHandMatchedTableCardIndex >= 0
 			&& _networkPredictedHandMatchedTableCardIndex < _tableCards.Count)
@@ -433,6 +441,27 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 		_networkPredictedHandVisualActive = true;
 		_networkPredictedHandTableCardIndex = tableCardIndex;
+		return true;
+	}
+
+	private async Task<bool> CompletePredictedNetworkHandCardPlayAsync(int handIndex, int turnSequenceGeneration)
+	{
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		if (!_networkPredictedHandVisualActive
+			|| _networkPendingHandIndex != handIndex
+			|| localPlayerIndex < 0
+			|| localPlayerIndex >= _playerHands.Count
+			|| _networkPredictedHandTableCardIndex < 0
+			|| _networkPredictedHandTableCardIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		int tableCardIndex = _networkPredictedHandTableCardIndex;
+		PlayingCard playedCard = _tableCards[_networkPredictedHandTableCardIndex].Card ?? default;
+		bool tableCardIsFaceUp = _tableCards[_networkPredictedHandTableCardIndex].IsFaceUp;
+		Vector2 startGlobalPosition = TryGetHandCardStartGlobalPosition(localPlayerIndex, handIndex)
+			?? GetVisibleCardPileTopGlobalPosition(localPlayerIndex);
 		await PlayCardToTableAnimationAsync(localPlayerIndex, playedCard, startGlobalPosition, tableCardIndex, tableCardIsFaceUp);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
@@ -443,7 +472,7 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private async Task<bool> BeginPredictedNetworkItemCardPlayAsync(int itemHandIndex, int turnSequenceGeneration)
+	private bool BeginPredictedNetworkItemCardPlay(int itemHandIndex, int turnSequenceGeneration)
 	{
 		int localPlayerIndex = GetLocalHandPlayerIndex();
 		if (localPlayerIndex < 0
@@ -474,7 +503,31 @@ public partial class GameBoardScene
 		HideHandDisplaySlot(localPlayerIndex, displayIndex);
 		RenderPlayerHands();
 		PlaySpecialItemCardPlaySfx();
+		return true;
+	}
 
+	private async Task<bool> CompletePredictedNetworkItemCardPlayAsync(int itemHandIndex, int turnSequenceGeneration)
+	{
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		if (!_networkPredictedItemVisualActive
+			|| _networkPendingItemHandIndex != itemHandIndex
+			|| localPlayerIndex < 0
+			|| localPlayerIndex >= _playerItemHands.Count
+			|| itemHandIndex < 0
+			|| itemHandIndex >= _playerItemHands[localPlayerIndex].Count)
+		{
+			return false;
+		}
+
+		ItemCard itemCard = _playerItemHands[localPlayerIndex][itemHandIndex];
+		if (!_itemCardCatalog.TryGetDefinition(itemCard.Id, out ItemCardDefinition definition)
+			|| _networkPredictedItemPlayPresentation != definition.PlayPresentation)
+		{
+			return false;
+		}
+
+		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(localPlayerIndex, itemHandIndex)
+			?? GetVisibleCardPileTopGlobalPosition(localPlayerIndex);
 		switch (definition.PlayPresentation)
 		{
 			case CardPlayPresentationTypes.TableOverlay:
@@ -689,23 +742,6 @@ public partial class GameBoardScene
 			{
 				_isProcessingCardPlay = false;
 				RenderPlayerHands();
-			}
-
-			if (played)
-			{
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCardPlayedEventFromHost(
-					actorSeatIndex,
-					handIndex,
-					playedCardCode,
-					turnSequenceGeneration,
-					snapshotId);
-				if (result.CaptureVisualSync.HasValue)
-				{
-					GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCaptureVisualEventFromHost(
-						result.CaptureVisualSync.Value,
-						turnSequenceGeneration,
-						snapshotId);
-				}
 			}
 
 			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, snapshotId);

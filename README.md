@@ -14,7 +14,7 @@ Deckland is a Godot 4.6 C# card battler prototype with local card-table play, it
 - Item-card definitions are data-driven through Pandora data in `data.pandora`, with fallback definitions in `scripts/ItemCardCatalog.cs`.
 - Localization currently has complete strings for `zh_CN`, `zh_TW`, and `en`.
 
-Known unfinished areas are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
+Active priorities and open follow-up work are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Requirements
 
@@ -33,6 +33,22 @@ dotnet build pokegame.csproj
 
 To run the game, open this folder in Godot and run the configured main scene.
 
+For the current multiplayer regression baseline, also run:
+
+```sh
+dotnet run --project tests/Rules.Tests/Rules.Tests.csproj
+bash tests/run_multiplayer_reconnect_smoke_suite.sh
+```
+
+Steam reconnect validation remains a manual dual-account check. Use:
+
+```sh
+bash tests/run_steam_reconnect_manual_host.sh
+CODEX_STEAM_LOBBY_ID=<lobbyId> bash tests/run_steam_reconnect_manual_client.sh
+```
+
+For local Steam testing, keep `project.godot` `steam/initialization/app_id` on a valid test or shipping app id instead of `0`.
+
 ## Project Layout
 
 - `project.godot` - Godot project settings and autoloads.
@@ -42,6 +58,15 @@ To run the game, open this folder in Godot and run the configured main scene.
 - `asset/audio/` - audio assets.
 - `localization/` - translation CSV and generated translation imports.
 - `docs/` - project documentation and retained third-party notes.
+
+## Documentation
+
+- Roadmap and current sprint: [docs/ROADMAP.md](docs/ROADMAP.md), [docs/HIGH_PRIORITY_2_TO_3_WEEK_SPRINT_PLAN.md](docs/HIGH_PRIORITY_2_TO_3_WEEK_SPRINT_PLAN.md), [docs/HIGH_PRIORITY_SPRINT_TASK_BREAKDOWN.md](docs/HIGH_PRIORITY_SPRINT_TASK_BREAKDOWN.md)
+- Resource baseline: [docs/RESOURCE_BASELINE.md](docs/RESOURCE_BASELINE.md)
+- Steam reconnect manual regression: [docs/STEAM_RECONNECT_REGRESSION.md](docs/STEAM_RECONNECT_REGRESSION.md)
+- Multiplayer authority model: [docs/NETWORK_AUTHORITY_MODEL.md](docs/NETWORK_AUTHORITY_MODEL.md)
+- Card-effect sync requirements: [docs/CARD_EFFECT_SYNC_REQUIREMENTS.md](docs/CARD_EFFECT_SYNC_REQUIREMENTS.md)
+- Card-effect verification gate: [docs/CARD_EFFECT_VERIFICATION_GATE.md](docs/CARD_EFFECT_VERIFICATION_GATE.md)
 
 ## Notes
 

@@ -143,7 +143,6 @@ public partial class CharacterAvatar : Control
 	private static readonly Dictionary<string, Texture2D[]> FeedbackFxFrameCache = new();
 	private readonly Dictionary<AvatarAction, Texture2D[]> _actionFrames = new();
 	private Texture2D[] _attackFxFrames = Array.Empty<Texture2D>();
-	private Texture2D[] _scoreFeedbackFxFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _hitFeedbackFxFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _victoryFeedbackFxFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _defeatFeedbackFxFrames = Array.Empty<Texture2D>();

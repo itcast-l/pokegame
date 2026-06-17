@@ -27,6 +27,17 @@ internal static class FrameAnimationHelpers
 		return frames.ToArray();
 	}
 
+	public static Texture2D? LoadExistingTextureResource(string path, bool allowEditorImageFallback = false)
+	{
+		if (!GlobalizedPathExists(path))
+		{
+			TextureCache[path] = null;
+			return null;
+		}
+
+		return LoadTextureResource(path, allowEditorImageFallback);
+	}
+
 	public static Texture2D? LoadTextureResource(string path, bool allowEditorImageFallback = false)
 	{
 		if (TextureCache.TryGetValue(path, out Texture2D? cachedTexture))
@@ -54,6 +65,12 @@ internal static class FrameAnimationHelpers
 
 		Image image = Image.LoadFromFile(globalPath);
 		return image.IsEmpty() ? null : ImageTexture.CreateFromImage(image);
+	}
+
+	private static bool GlobalizedPathExists(string path)
+	{
+		string globalPath = ProjectSettings.GlobalizePath(path);
+		return File.Exists(globalPath);
 	}
 
 	public static void TweenTextureFrames(

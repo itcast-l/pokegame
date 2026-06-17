@@ -61,6 +61,17 @@ public partial class GameBoardScene
 		int playedTableCardIndex = startResult.PlayedTableCardIndex;
 		bool matchedTableCardFlipped = startResult.MatchedTableCardFlipped;
 		bool playedTableCardIsFaceUp = startResult.PlayedTableCardIsFaceUp;
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+		{
+			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCardPlayedEventFromHost(
+				playerIndex,
+				handIndex,
+				ToNetworkCardCode(playedCard),
+				turnSequenceGeneration,
+				snapshotId);
+		}
 
 		await PlayCardToTableAnimationAsync(
 			playerIndex,
@@ -282,6 +293,15 @@ public partial class GameBoardScene
 				captureStartIndex,
 				BuildSortedExtraTableCardIndexesArray(magnetExtraCaptureIndexes),
 				captureFlightStaggerSeconds);
+			if (IsNetworkMultiplayerMode()
+				&& IsNetworkHost()
+				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
+			{
+				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCaptureVisualEventFromHost(
+					captureVisualSync,
+					turnSequenceGeneration,
+					snapshotId);
+			}
 			pairCaptureEdgeFloat?.QueueFreeOverlays(_animationPresenter);
 			pairCaptureEdgeFloatHandedToDeck = pairCaptureEdgeFloat != null;
 			await PlayCapturedCardsToDeckAnimationAsync(

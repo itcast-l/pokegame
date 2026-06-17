@@ -65,6 +65,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+PortraitScale = 0.76
 
 [node name="NameLabel" type="Label" parent="Frame/Margin/Layout"]
 custom_minimum_size = Vector2(110, 20)

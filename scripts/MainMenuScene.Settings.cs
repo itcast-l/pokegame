@@ -21,7 +21,6 @@ public partial class MainMenuScene : Control
 		_musicVolumeValue = dialog.MusicVolumeValue;
 		_muteBgmToggle = dialog.MuteBgmToggle;
 		_muteSfxToggle = dialog.MuteSfxToggle;
-		_oceanMotionToggle = dialog.OceanMotionToggle;
 		_windowModeOption = dialog.WindowModeOption;
 		_resolutionOption = dialog.ResolutionOption;
 		_languageOption = dialog.LanguageOption;
@@ -128,16 +127,6 @@ public partial class MainMenuScene : Control
 			}
 
 			_selectedMainMenuMusicTrack = _mainMenuMusicOptions[(int)index].Id;
-			OnSettingsChanged();
-		};
-		_oceanMotionToggle.Toggled += pressed =>
-		{
-			if (_isSyncingSettingsControls)
-			{
-				return;
-			}
-
-			_oceanMotion = pressed;
 			OnSettingsChanged();
 		};
 	}

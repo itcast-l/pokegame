@@ -695,53 +695,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "SETTINGS_CONTROLS_EDIT"
 
-[node name="OceanMotionRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
-
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/OceanMotionRowPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
-
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/OceanMotionRowPanel/RowMargin"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="OceanMotionLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/OceanMotionRowPanel/RowMargin/RowLayout"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
-theme_override_font_sizes/font_size = 18
-text = "SETTINGS_OCEAN_MOTION"
-vertical_alignment = 1
-
-[node name="OceanMotionSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/OceanMotionRowPanel/RowMargin/RowLayout"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="OceanMotionToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/OceanMotionRowPanel/RowMargin/RowLayout"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 40)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
-theme_override_colors/font_pressed_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 0.84, 1)
-theme_override_font_sizes/font_size = 17
-theme_override_styles/normal = SubResource("StyleBoxFlat_option")
-theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
-theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
-text = "PLAYER_COUNT_ITEM_MODE_OFF"
-
 [node name="SettingsActions" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
 layout_mode = 2
 theme_override_constants/separation = 16

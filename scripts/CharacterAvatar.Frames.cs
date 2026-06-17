@@ -28,7 +28,6 @@ public partial class CharacterAvatar
 
 	private void LoadFeedbackFxFrames()
 	{
-		_scoreFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_score/run-001");
 		_hitFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_hit/run-001");
 		_victoryFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_victory/run-001");
 		_defeatFeedbackFxFrames = AvatarFrameCacheService.LoadNamedFxFrames("res://art/fx/avatar_feedback_defeat/run-001");
@@ -298,7 +297,7 @@ public partial class CharacterAvatar
 			var frames = new List<Texture2D>();
 			for (int index = 1; index <= 8; index++)
 			{
-				Texture2D? frame = FrameAnimationHelpers.LoadTextureResource($"{fxRoot}/processed/fx-{index}.png", allowEditorImageFallback: true);
+				Texture2D? frame = FrameAnimationHelpers.LoadExistingTextureResource($"{fxRoot}/processed/fx-{index}.png", allowEditorImageFallback: true);
 				if (frame == null)
 				{
 					break;

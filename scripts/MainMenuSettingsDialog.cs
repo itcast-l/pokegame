@@ -17,7 +17,6 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _languageLabel = default!;
 	private Label _mainMenuMusicTrackLabel = default!;
 	private Label _controlsLabel = default!;
-	private Label _oceanMotionLabel = default!;
 	private Button _controlsButton = default!;
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
@@ -32,7 +31,6 @@ public partial class MainMenuSettingsDialog : Control
 	public Label MusicVolumeValue { get; private set; } = default!;
 	public CheckButton MuteBgmToggle { get; private set; } = default!;
 	public CheckButton MuteSfxToggle { get; private set; } = default!;
-	public CheckButton OceanMotionToggle { get; private set; } = default!;
 	public OptionButton WindowModeOption { get; private set; } = default!;
 	public OptionButton ResolutionOption { get; private set; } = default!;
 	public OptionButton LanguageOption { get; private set; } = default!;
@@ -50,7 +48,6 @@ public partial class MainMenuSettingsDialog : Control
 		MusicVolumeValue = GetNode<Label>("%MusicVolumeValue");
 		MuteBgmToggle = GetNode<CheckButton>("%MuteBgmToggle");
 		MuteSfxToggle = GetNode<CheckButton>("%MuteSfxToggle");
-		OceanMotionToggle = GetNode<CheckButton>("%OceanMotionToggle");
 		WindowModeOption = GetNode<OptionButton>("%WindowModeOption");
 		ResolutionOption = GetNode<OptionButton>("%ResolutionOption");
 		LanguageOption = GetNode<OptionButton>("%LanguageOption");
@@ -66,7 +63,6 @@ public partial class MainMenuSettingsDialog : Control
 		_languageLabel = GetNode<Label>("%LanguageLabel");
 		_mainMenuMusicTrackLabel = GetNode<Label>("%MainMenuMusicTrackLabel");
 		_controlsLabel = GetNode<Label>("%ControlsLabel");
-		_oceanMotionLabel = GetNode<Label>("%OceanMotionLabel");
 		_settingsScroll = GetNode<ScrollContainer>("%SettingsScroll");
 		_controlsButton = GetNode<Button>("%ControlsButton");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
@@ -76,7 +72,6 @@ public partial class MainMenuSettingsDialog : Control
 		_scrim.GuiInput += OnScrimGuiInput;
 		MainMenuInteractiveStyle.ApplyToggleButton(MuteBgmToggle);
 		MainMenuInteractiveStyle.ApplyToggleButton(MuteSfxToggle);
-		MainMenuInteractiveStyle.ApplyToggleButton(OceanMotionToggle);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(WindowModeOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(ResolutionOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(LanguageOption);
@@ -86,7 +81,6 @@ public partial class MainMenuSettingsDialog : Control
 		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20);
 		MuteBgmToggle.Toggled += _ => UpdateToggleText(MuteBgmToggle);
 		MuteSfxToggle.Toggled += _ => UpdateToggleText(MuteSfxToggle);
-		OceanMotionToggle.Toggled += _ => UpdateToggleText(OceanMotionToggle);
 		EnableKeyboardFocus(
 			MasterVolumeSlider,
 			MusicVolumeSlider,
@@ -97,7 +91,6 @@ public partial class MainMenuSettingsDialog : Control
 			LanguageOption,
 			MainMenuMusicTrackOption,
 			_controlsButton,
-			OceanMotionToggle,
 			_resetButton,
 			_doneButton);
 		StyleScrollBar(_settingsScroll.GetVScrollBar());
@@ -118,12 +111,10 @@ public partial class MainMenuSettingsDialog : Control
 		_mainMenuMusicTrackLabel.Text = localize("SETTINGS_BACKGROUND_MUSIC");
 		_controlsLabel.Text = localize("SETTINGS_CONTROLS");
 		_controlsButton.Text = localize("SETTINGS_CONTROLS_EDIT");
-		_oceanMotionLabel.Text = localize("SETTINGS_OCEAN_MOTION");
 		_resetButton.Text = localize("SETTINGS_RESET_DEFAULTS");
 		_doneButton.Text = localize("SETTINGS_DONE");
 		UpdateToggleText(MuteBgmToggle);
 		UpdateToggleText(MuteSfxToggle);
-		UpdateToggleText(OceanMotionToggle);
 	}
 
 	private void OnScrimGuiInput(InputEvent inputEvent)

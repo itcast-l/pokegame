@@ -18,7 +18,6 @@ public partial class MainMenuScene
 			: legacyMuteAudio;
 		_fullscreen = GameSaveStore.GetBool(GameSaveStore.FullscreenKey, DefaultFullscreen);
 		_selectedResolution = ParseResolutionSetting(GameSaveStore.GetString(GameSaveStore.ResolutionKey, ResolutionToString(DefaultResolution)));
-		_oceanMotion = GameSaveStore.GetBool(GameSaveStore.OceanMotionKey, DefaultOceanMotion);
 		_languagePreference = Localization.NormalizePreference(GameSaveStore.GetString(GameSaveStore.LanguageKey, Localization.DefaultLanguagePreference));
 		_selectedMainMenuMusicTrack = GameSaveStore.GetString(GameSaveStore.MainMenuMusicTrackKey, string.Empty).Trim();
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
@@ -36,7 +35,6 @@ public partial class MainMenuScene
 			new GameSaveStore.SaveValue(GameSaveStore.MuteSfxKey, _muteSfx),
 			new GameSaveStore.SaveValue(GameSaveStore.FullscreenKey, _fullscreen),
 			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
-			new GameSaveStore.SaveValue(GameSaveStore.OceanMotionKey, _oceanMotion),
 			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
 			new GameSaveStore.SaveValue(GameSaveStore.MainMenuMusicTrackKey, _selectedMainMenuMusicTrack),
 			new GameSaveStore.SaveValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings()));
@@ -86,24 +84,24 @@ public partial class MainMenuScene
 
 		if (_backgroundAnimator != null)
 		{
-			_backgroundAnimator.SetMotionEnabled(_oceanMotion);
+			_backgroundAnimator.SetMotionEnabled(true);
 		}
 
 		if (_oceanDynamicsLayer != null)
 		{
-			_oceanDynamicsLayer.Visible = _oceanMotion;
-			_oceanDynamicsLayer.SetProcess(_oceanMotion);
+			_oceanDynamicsLayer.Visible = true;
+			_oceanDynamicsLayer.SetProcess(true);
 		}
 
 		if (_underwaterAmbientLayer != null)
 		{
-			_underwaterAmbientLayer.Visible = _oceanMotion;
-			_underwaterAmbientLayer.SetProcess(_oceanMotion);
+			_underwaterAmbientLayer.Visible = true;
+			_underwaterAmbientLayer.SetProcess(true);
 		}
 
 		if (_waterCausticOverlay != null)
 		{
-			_waterCausticOverlay.Visible = _oceanMotion;
+			_waterCausticOverlay.Visible = true;
 		}
 
 		UpdateSettingsLabels();
@@ -143,7 +141,6 @@ public partial class MainMenuScene
 		_resolutionOption.Select(GetResolutionOptionIndex(_selectedResolution));
 		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
 		RefreshMainMenuMusicTrackOptions();
-		_oceanMotionToggle.ButtonPressed = _oceanMotion;
 		_isSyncingSettingsControls = false;
 		UpdateSettingsLabels();
 	}
@@ -260,7 +257,6 @@ public partial class MainMenuScene
 		_muteSfx = DefaultMuteSfx;
 		_fullscreen = DefaultFullscreen;
 		_selectedResolution = DefaultResolution;
-		_oceanMotion = DefaultOceanMotion;
 		_languagePreference = Localization.DefaultLanguagePreference;
 		_selectedMainMenuMusicTrack = string.Empty;
 		RefreshMainMenuMusicOptions();

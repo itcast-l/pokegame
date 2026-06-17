@@ -44,7 +44,6 @@ public partial class MainMenuScene : Control
 	private const bool DefaultMuteBgm = false;
 	private const bool DefaultMuteSfx = false;
 	private const bool DefaultFullscreen = false;
-	private const bool DefaultOceanMotion = true;
 	private const bool DefaultItemMode = true;
 	private static readonly Vector2I DesignResolution = new(1280, 720);
 	private static readonly Vector2I DefaultResolution = DesignResolution;
@@ -103,7 +102,6 @@ public partial class MainMenuScene : Control
 	private Label _musicVolumeValue = default!;
 	private CheckButton _muteBgmToggle = default!;
 	private CheckButton _muteSfxToggle = default!;
-	private CheckButton _oceanMotionToggle = default!;
 	private OptionButton _windowModeOption = default!;
 	private OptionButton _resolutionOption = default!;
 	private OptionButton _languageOption = default!;
@@ -128,7 +126,6 @@ public partial class MainMenuScene : Control
 	private bool _muteBgm = DefaultMuteBgm;
 	private bool _muteSfx = DefaultMuteSfx;
 	private bool _fullscreen = DefaultFullscreen;
-	private bool _oceanMotion = DefaultOceanMotion;
 	private Vector2I _selectedResolution = DefaultResolution;
 	private string _languagePreference = Localization.DefaultLanguagePreference;
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;

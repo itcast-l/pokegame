@@ -66,7 +66,6 @@ public partial class CharacterAvatar
 	public void PlayScore()
 	{
 		StartAction(AvatarAction.Score);
-		PlayFeedbackFx(_scoreFeedbackFxFrames, 0.36f);
 
 		_actionTween = CreateTween();
 		_actionTween.TweenProperty(_portraitPivot, "scale", Vector2.One * 1.18f, 0.10f).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
