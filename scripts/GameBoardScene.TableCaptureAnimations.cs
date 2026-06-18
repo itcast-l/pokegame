@@ -154,6 +154,26 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		public bool TryGetOverlay(int tableCardIndex, out TextureRect? overlay)
+		{
+			if (tableCardIndex == _firstTableCardIndex && GodotObject.IsInstanceValid(_firstOverlay))
+			{
+				overlay = _firstOverlay;
+				return true;
+			}
+
+			if (tableCardIndex == _secondTableCardIndex
+				&& _secondOverlay != null
+				&& GodotObject.IsInstanceValid(_secondOverlay))
+			{
+				overlay = _secondOverlay;
+				return true;
+			}
+
+			overlay = null;
+			return false;
+		}
+
 		public void RestoreHiddenTableCards(IReadOnlyList<TableCard> tableCards)
 		{
 			RestoreHiddenTableCard(tableCards, _firstTableCardIndex);
@@ -258,6 +278,37 @@ public partial class GameBoardScene
 
 		await ToSignal(tween, Tween.SignalName.Finished);
 		return new PairCaptureEdgeFloatHold(firstTableCardIndex, firstOverlay, secondTableCardIndex, secondOverlay);
+	}
+
+	private async Task<bool> PlayPairCaptureEdgeFloatRevealAnimationAsync(
+		PairCaptureEdgeFloatHold hold,
+		int tableCardIndex,
+		Texture2D faceTexture)
+	{
+		if (!hold.TryGetOverlay(tableCardIndex, out TextureRect? overlay) || overlay == null)
+		{
+			return false;
+		}
+
+		Vector2 settledScale = overlay.Scale;
+		Vector2 flippedScale = new(TableCardRevealMinScaleX * settledScale.X, settledScale.Y);
+		Tween revealTween = CreateTween();
+		revealTween.SetParallel(true);
+		revealTween.SetTrans(Tween.TransitionType.Cubic);
+		revealTween.SetEase(Tween.EaseType.Out);
+		revealTween.TweenProperty(overlay, "scale", flippedScale, TableCardRevealHalfFlipSeconds);
+		revealTween.TweenCallback(Callable.From(() =>
+		{
+			if (GodotObject.IsInstanceValid(overlay))
+			{
+				PlayGameSfx(GameSfx.CardFlip, -1.5f, 0.96f, 1.05f, 0.04);
+				overlay.Texture = faceTexture;
+			}
+		})).SetDelay(TableCardRevealHalfFlipSeconds);
+		revealTween.TweenProperty(overlay, "scale", settledScale, TableCardRevealHalfFlipSeconds)
+			.SetDelay(TableCardRevealHalfFlipSeconds);
+		await ToSignal(revealTween, Tween.SignalName.Finished);
+		return true;
 	}
 
 	private void RestorePairCaptureEdgeFloatHold(PairCaptureEdgeFloatHold hold)

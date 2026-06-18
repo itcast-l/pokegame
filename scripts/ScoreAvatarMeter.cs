@@ -30,7 +30,8 @@ public partial class ScoreAvatarMeter : Control
 	private Texture2D? _overTexture;
 	private Texture2D? _pulseTexture;
 	private TextureRect? _baseTextureRect;
-	private TextureProgressBar? _fillProgressBar;
+	private Control? _fillClipRoot;
+	private TextureRect? _fillTextureRect;
 	private TextureRect? _overTextureRect;
 	private TextureRect? _pulseTextureRect;
 
@@ -160,12 +161,17 @@ public partial class ScoreAvatarMeter : Control
 	private void EnsureTexturedNodes()
 	{
 		_baseTextureRect ??= CreateTextureRect("BaseTexture");
-		_fillProgressBar ??= CreateFillProgressBar();
+		_fillClipRoot ??= CreateClipRoot("FillClip");
+		_fillTextureRect ??= CreateTextureRect("FillTexture");
 		_overTextureRect ??= CreateTextureRect("OverTexture");
 		_pulseTextureRect ??= CreateTextureRect("PulseTexture");
 
 		EnsureChild(_baseTextureRect);
-		EnsureChild(_fillProgressBar);
+		EnsureChild(_fillClipRoot);
+		if (_fillClipRoot != null && _fillTextureRect != null && _fillTextureRect.GetParent() != _fillClipRoot)
+		{
+			_fillClipRoot.AddChild(_fillTextureRect);
+		}
 		EnsureChild(_overTextureRect);
 		EnsureChild(_pulseTextureRect);
 	}
@@ -192,7 +198,7 @@ public partial class ScoreAvatarMeter : Control
 
 		bool showTextured = !ShouldUseProceduralMeter();
 		SetTextureNodeVisible(_baseTextureRect, showTextured);
-		SetTextureNodeVisible(_fillProgressBar, showTextured);
+		SetTextureNodeVisible(_fillClipRoot, showTextured && _displayScore > 0.0f);
 		SetTextureNodeVisible(_overTextureRect, showTextured);
 		SetTextureNodeVisible(_pulseTextureRect, showTextured && _pulseAmount > 0.001f);
 	}
@@ -207,17 +213,16 @@ public partial class ScoreAvatarMeter : Control
 		ApplyTextureRectLayout(_baseTextureRect, topLeft, textureSize);
 		ApplyTextureRectLayout(_overTextureRect, topLeft, textureSize);
 		ApplyTextureRectLayout(_pulseTextureRect, topLeft, textureSize);
-		if (_fillProgressBar != null)
-		{
-			_fillProgressBar.Position = topLeft;
-			_fillProgressBar.Size = textureSize;
-			_fillProgressBar.PivotOffset = textureSize / 2.0f;
-		}
+		ApplyFillTextureProgress(Mathf.Clamp(_displayScore / _maxScore, 0.0f, 1.0f));
 	}
 
 	private void UpdateTexturedMeter()
 	{
-		if (_baseTextureRect == null || _fillProgressBar == null || _overTextureRect == null || _pulseTextureRect == null)
+		if (_baseTextureRect == null
+			|| _fillClipRoot == null
+			|| _fillTextureRect == null
+			|| _overTextureRect == null
+			|| _pulseTextureRect == null)
 		{
 			return;
 		}
@@ -231,16 +236,11 @@ public partial class ScoreAvatarMeter : Control
 
 		float progress = Mathf.Clamp(_displayScore / _maxScore, 0.0f, 1.0f);
 		_baseTextureRect.Texture = _baseTexture;
+		_fillTextureRect.Texture = _fillTexture;
+		_fillTextureRect.Modulate = _fillColor;
 		_overTextureRect.Texture = _overTexture;
 		_pulseTextureRect.Texture = _pulseTexture;
-		_fillProgressBar.TextureUnder = null;
-		_fillProgressBar.TextureOver = null;
-		_fillProgressBar.TextureProgress = _fillTexture;
-		_fillProgressBar.MaxValue = 100.0;
-		_fillProgressBar.Value = progress * 100.0f;
-		_fillProgressBar.TintProgress = _fillColor;
-		_fillProgressBar.TintUnder = Colors.Transparent;
-		_fillProgressBar.TintOver = Colors.Transparent;
+		ApplyFillTextureProgress(progress);
 		_overTextureRect.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(_glowColor.A * 2.0f, 0.0f, 1.0f));
 
 		float pulseScale = 1.0f + 0.12f * _pulseAmount;
@@ -253,12 +253,50 @@ public partial class ScoreAvatarMeter : Control
 	{
 		bool showTextured = !ShouldUseProceduralMeter();
 		SetTextureNodeVisible(_baseTextureRect, showTextured);
-		SetTextureNodeVisible(_fillProgressBar, showTextured);
+		SetTextureNodeVisible(_fillClipRoot, showTextured && _displayScore > 0.0f);
 		SetTextureNodeVisible(_overTextureRect, showTextured);
 		if (!showTextured)
 		{
 			SetTextureNodeVisible(_pulseTextureRect, false);
 		}
+	}
+
+	private void ApplyFillTextureProgress(float progress)
+	{
+		if (_fillClipRoot == null || _fillTextureRect == null)
+		{
+			return;
+		}
+
+		Vector2 center = Size / 2.0f;
+		float diameter = Mathf.Min(_circleDiameter, Mathf.Min(Size.X, Size.Y));
+		Vector2 textureSize = new(diameter, diameter);
+		Vector2 topLeft = center - textureSize / 2.0f;
+		float visibleHeight = textureSize.Y * progress;
+		if (visibleHeight <= 0.001f)
+		{
+			_fillClipRoot.Visible = false;
+			return;
+		}
+
+		_fillClipRoot.Position = new Vector2(topLeft.X, topLeft.Y + textureSize.Y - visibleHeight);
+		_fillClipRoot.Size = new Vector2(textureSize.X, visibleHeight);
+		_fillClipRoot.PivotOffset = Vector2.Zero;
+		_fillTextureRect.Position = new Vector2(0.0f, visibleHeight - textureSize.Y);
+		_fillTextureRect.Size = textureSize;
+		_fillTextureRect.PivotOffset = textureSize / 2.0f;
+		_fillClipRoot.Visible = !ShouldUseProceduralMeter();
+	}
+
+	private static Control CreateClipRoot(string name)
+	{
+		return new Control
+		{
+			Name = name,
+			MouseFilter = MouseFilterEnum.Ignore,
+			ClipContents = true,
+			ZIndex = 0,
+		};
 	}
 
 	private static TextureRect CreateTextureRect(string name)
@@ -270,23 +308,6 @@ public partial class ScoreAvatarMeter : Control
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
 			TextureFilter = TextureFilterEnum.Linear,
-			ZIndex = 0,
-		};
-	}
-
-	private static TextureProgressBar CreateFillProgressBar()
-	{
-		return new TextureProgressBar
-		{
-			Name = "FillProgress",
-			MouseFilter = MouseFilterEnum.Ignore,
-			FillMode = (int)TextureProgressBar.FillModeEnum.Clockwise,
-			RadialFillDegrees = 360.0f,
-			RadialInitialAngle = -90.0f,
-			Step = 0.0,
-			MinValue = 0.0,
-			MaxValue = 100.0,
-			TextureProgressOffset = Vector2.Zero,
 			ZIndex = 0,
 		};
 	}

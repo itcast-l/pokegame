@@ -9,6 +9,7 @@ public partial class GameBoardScene
 		int captureStartIndex,
 		int scorePlayerIndex,
 		int turnSequenceGeneration,
+		PairCaptureEdgeFloatHold? pairCaptureEdgeFloat,
 		HashSet<int> pendingFaceUpMagnetTriggerIndexes,
 		HashSet<int> resolvedMagnetTriggerIndexes,
 		HashSet<int> magnetExtraCaptureIndexes,
@@ -93,7 +94,12 @@ public partial class GameBoardScene
 			}
 			else
 			{
-				await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
+				bool overlayRevealPlayed = pairCaptureEdgeFloat != null
+					&& await PlayPairCaptureEdgeFloatRevealAnimationAsync(pairCaptureEdgeFloat, tableCardIndex, revealTexture);
+				if (!overlayRevealPlayed)
+				{
+					await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
+				}
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
 					return;

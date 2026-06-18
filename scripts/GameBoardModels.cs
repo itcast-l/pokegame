@@ -15,11 +15,12 @@ internal readonly struct PlayingCard
 
 	private PlayingCard(string suit, string rank, Texture2D texture, string[] attachedItemCardIds)
 	{
+		string[] normalizedAttachedItemCardIds = NormalizeAttachedItemCardIds(attachedItemCardIds);
 		Suit = suit;
 		Rank = rank;
 		Texture = texture;
-		_attachedItemCardIds = attachedItemCardIds;
-		AttachedItemCardIdsCsv = attachedItemCardIds.Length == 0 ? string.Empty : string.Join(",", attachedItemCardIds);
+		_attachedItemCardIds = normalizedAttachedItemCardIds;
+		AttachedItemCardIdsCsv = normalizedAttachedItemCardIds.Length == 0 ? string.Empty : string.Join(",", normalizedAttachedItemCardIds);
 	}
 
 	public string Suit { get; }
@@ -34,20 +35,18 @@ internal readonly struct PlayingCard
 
 	public PlayingCard WithAttachedItemEffect(string itemCardId)
 	{
-		if (string.IsNullOrWhiteSpace(itemCardId) || HasAttachedItemEffect(itemCardId))
+		if (string.IsNullOrWhiteSpace(itemCardId))
 		{
 			return this;
 		}
 
-		IReadOnlyList<string> existingIds = AttachedItemCardIds;
-		var attachedItemCardIds = new string[existingIds.Count + 1];
-		for (int index = 0; index < existingIds.Count; index++)
+		string normalizedItemCardId = itemCardId.Trim();
+		if (AttachedItemCardIds.Count == 1 && string.Equals(AttachedItemCardIds[0], normalizedItemCardId, StringComparison.Ordinal))
 		{
-			attachedItemCardIds[index] = existingIds[index];
+			return this;
 		}
 
-		attachedItemCardIds[^1] = itemCardId;
-		return new PlayingCard(Suit, Rank, Texture, attachedItemCardIds);
+		return new PlayingCard(Suit, Rank, Texture, new[] { normalizedItemCardId });
 	}
 
 	public PlayingCard WithoutAttachedItemEffect(string itemCardId)
@@ -103,7 +102,21 @@ internal readonly struct PlayingCard
 	{
 		return string.IsNullOrWhiteSpace(attachedItemCardIdsCsv)
 			? Array.Empty<string>()
-			: attachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+			: NormalizeAttachedItemCardIds(attachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+	}
+
+	private static string[] NormalizeAttachedItemCardIds(IReadOnlyList<string> attachedItemCardIds)
+	{
+		for (int index = attachedItemCardIds.Count - 1; index >= 0; index--)
+		{
+			string itemCardId = attachedItemCardIds[index];
+			if (!string.IsNullOrWhiteSpace(itemCardId))
+			{
+				return new[] { itemCardId.Trim() };
+			}
+		}
+
+		return Array.Empty<string>();
 	}
 }
 

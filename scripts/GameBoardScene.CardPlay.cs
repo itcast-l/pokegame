@@ -196,6 +196,7 @@ public partial class GameBoardScene
 				captureStartIndex,
 				scorePlayerIndex,
 				turnSequenceGeneration,
+				pairCaptureEdgeFloat,
 				pendingFaceUpMagnetTriggerIndexes,
 				resolvedMagnetTriggerIndexes,
 				magnetExtraCaptureIndexes,

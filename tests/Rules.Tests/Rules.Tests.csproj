@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../scripts/GameBoardModels.cs" Link="Rules/GameBoardModels.cs" />
+    <Compile Include="../../scripts/GameBoardScene.State.cs" Link="Rules/GameBoardScene.State.cs" />
+    <Compile Include="../../scripts/CaptureStateService.cs" Link="Rules/CaptureStateService.cs" />
     <Compile Include="../../scripts/CaptureScoringRules.cs" Link="Rules/CaptureScoringRules.cs" />
     <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
     <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />

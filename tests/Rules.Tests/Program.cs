@@ -22,6 +22,10 @@ internal static class Program
 		Run("capture flow planner skips score when award disabled", CaptureFlowPlannerSkipsScoreWhenAwardDisabled);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
+		Run("playing card attachment replaces existing effect", PlayingCardAttachmentReplacesExistingEffect);
+		Run("capture state apply capture clears effects when preserve disabled", CaptureStateApplyCaptureClearsEffectsWhenPreserveDisabled);
+		Run("capture state apply capture preserves effects when preserve enabled", CaptureStateApplyCapturePreservesEffectsWhenPreserveEnabled);
+		Run("captured card effect persists through deck and can be replaced", CapturedCardEffectPersistsThroughDeckAndCanBeReplaced);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
 		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
@@ -367,6 +371,69 @@ internal static class Program
 		False(ItemCardEffectSupport.IsSupportedEffectType("block_match"));
 		False(ItemCardEffectSupport.IsSupportedEffectType("reverse_collect"));
 		False(ItemCardEffectSupport.IsSupportedEffectType(string.Empty));
+	}
+
+	private static void PlayingCardAttachmentReplacesExistingEffect()
+	{
+		PlayingCard card = CreatePlayingCard()
+			.WithAttachedItemEffect("magnet")
+			.WithAttachedItemEffect("double");
+
+		True(card.HasItemEffect);
+		False(card.HasAttachedItemEffect("magnet"));
+		True(card.HasAttachedItemEffect("double"));
+		Equal("double", card.AttachedItemCardIdsCsv);
+		Equal(1, card.GetAttachedItemCardIds().Count);
+		Equal("double", card.GetAttachedItemCardIds()[0]);
+	}
+
+	private static void CaptureStateApplyCaptureClearsEffectsWhenPreserveDisabled()
+	{
+		GameBoardState state = CreateCaptureState(CreatePlayingCard().WithAttachedItemEffect("magnet"));
+		var service = new CaptureStateService();
+
+		CaptureStatePlan plan = service.CreatePlan(state, 0, null);
+		CaptureStateResult result = service.ApplyCapture(state, plan, playerIndex: 0, preserveCardEffectsWhenEnteringDeck: false);
+
+		Equal(1, result.CollectedCardCount);
+		Equal(1, state.PlayerDecks[0].Count);
+		False(state.PlayerDecks[0][0].HasItemEffect);
+		Equal(0, state.TableCards.Count);
+	}
+
+	private static void CaptureStateApplyCapturePreservesEffectsWhenPreserveEnabled()
+	{
+		GameBoardState state = CreateCaptureState(CreatePlayingCard().WithAttachedItemEffect("magnet"));
+		var service = new CaptureStateService();
+
+		CaptureStatePlan plan = service.CreatePlan(state, 0, null);
+		CaptureStateResult result = service.ApplyCapture(state, plan, playerIndex: 0, preserveCardEffectsWhenEnteringDeck: true);
+
+		Equal(1, result.CollectedCardCount);
+		Equal(1, state.PlayerDecks[0].Count);
+		True(state.PlayerDecks[0][0].HasAttachedItemEffect("magnet"));
+		Equal("magnet", state.PlayerDecks[0][0].AttachedItemCardIdsCsv);
+		Equal(0, state.TableCards.Count);
+	}
+
+	private static void CapturedCardEffectPersistsThroughDeckAndCanBeReplaced()
+	{
+		GameBoardState state = CreateCaptureState(CreatePlayingCard().WithAttachedItemEffect("magnet"));
+		state.PlayerHands.Add(new List<PlayingCard>());
+		var service = new CaptureStateService();
+
+		CaptureStatePlan plan = service.CreatePlan(state, 0, null);
+		service.ApplyCapture(state, plan, playerIndex: 0, preserveCardEffectsWhenEnteringDeck: true);
+
+		PlayingCard drawnCard = state.PlayerDecks[0][0];
+		state.PlayerHands[0].Add(drawnCard);
+		state.PlayerDecks[0].RemoveAt(0);
+
+		state.PlayerHands[0][0] = state.PlayerHands[0][0].WithAttachedItemEffect("double");
+
+		False(state.PlayerHands[0][0].HasAttachedItemEffect("magnet"));
+		True(state.PlayerHands[0][0].HasAttachedItemEffect("double"));
+		Equal("double", state.PlayerHands[0][0].AttachedItemCardIdsCsv);
 	}
 
 	private static void PotentialCaptureIgnoresBuriedMatches()
@@ -2165,6 +2232,19 @@ internal static class Program
 		SuppressSlimeCoatedScore: false,
 		ApplyScoreReductionPerCard: false,
 		ScoreReductionPerCard: 0);
+
+	private static PlayingCard CreatePlayingCard()
+	{
+		return new PlayingCard("hearts", "A", new Godot.Texture2D());
+	}
+
+	private static GameBoardState CreateCaptureState(PlayingCard card)
+	{
+		var state = new GameBoardState();
+		state.PlayerDecks.Add(new List<PlayingCard>());
+		state.TableCards.Add(new TableCard(card, isFaceUp: true));
+		return state;
+	}
 
 	private static NetworkPlayerPublicState Player(int peerId, int seatIndex, bool isHost, bool isReady)
 	{

@@ -213,7 +213,7 @@ public partial class GameBoardScene
 
 	private bool ShouldPreserveCardEffectsWhenEnteringDeck()
 	{
-		return false;
+		return true;
 	}
 
 	private void ApplyDebugOpponentOneCardHand()

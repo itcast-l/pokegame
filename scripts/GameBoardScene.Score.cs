@@ -61,12 +61,12 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			BindPlayerStatusTooltipHover(meter, playerIndex);
-			meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
-			meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(playerIndex), false);
-			_playerScoreMeters[playerIndex] = meter;
-			_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[viewSlotIndex]}");
-		}
+				BindPlayerStatusTooltipHover(meter, playerIndex);
+				meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
+				meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(playerIndex), false);
+				_playerScoreMeters[playerIndex] = meter;
+				_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[viewSlotIndex]}");
+			}
 	}
 
 	private void ResetPlayerScores()
