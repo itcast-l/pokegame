@@ -8,6 +8,7 @@ public static class CardGameEvents
 	public const string OnPlay = "on_play";
 	public const string OnMatch = "on_match";
 	public const string OnCollect = "on_collect";
+	public const string OnMiss = "on_miss";
 	public const string OnRoundStart = "on_round_start";
 	public const string OnRoundEnd = "on_round_end";
 	public const string OnDraw = "on_draw";
@@ -33,6 +34,12 @@ public static class CardEffectTypes
 	public const string ReverseCollect = "reverse_collect";
 	public const string DestroyCards = "destroy_cards";
 	public const string ExtraTurn = "extra_turn";
+	public const string EndpointCrown = "endpoint_crown";
+	public const string BorrowTide = "borrow_tide";
+	public const string ReverseAnchor = "reverse_anchor";
+	public const string MidTideUpgrade = "mid_tide_upgrade";
+	public const string ReverseFlowAnchor = "reverse_flow_anchor";
+	public const string EmptyTideContinuation = "empty_tide_continuation";
 	public const string BlockMatch = "block_match";
 }
 

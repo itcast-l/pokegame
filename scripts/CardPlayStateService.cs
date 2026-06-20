@@ -40,7 +40,7 @@ internal sealed class CardPlayStateService
 			playedCard,
 			plan,
 			out bool matchedTableCardFlipped);
-		int playedTableCardIndex = state.TableCards.Count - 1;
+		int playedTableCardIndex = plan.TableInsertIndex;
 
 		bool playedRankCollectsTable = plan.PlayedCardCollectsTable;
 		if (playedRankCollectsTable)
@@ -68,7 +68,10 @@ internal sealed class CardPlayStateService
 		out bool matchedTableCardFlipped)
 	{
 		matchedTableCardFlipped = plan.MatchedTableCardFlipped;
-		state.TableCards.Add(new TableCard(playedCard, isFaceUp: false, cardOwnerPlayerIndex: playerIndex));
+		int insertIndex = plan.TableInsertIndex < 0
+			? state.TableCards.Count
+			: System.Math.Min(plan.TableInsertIndex, state.TableCards.Count);
+		state.TableCards.Insert(insertIndex, new TableCard(playedCard, isFaceUp: false, cardOwnerPlayerIndex: playerIndex));
 		return plan.CaptureStartIndex;
 	}
 }

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+
+[resource]
+script = ExtResource("1_item_card_definition")
+Id = "borrow_tide"
+DisplayName = "Borrow Tide"
+SpriteName = "BorrowTide"
+DescriptionKey = "ITEM_DESC_BORROW_TIDE"
+EnabledInGame = true
+PlayableFromHand = true
+CanBeQuestionReward = true
+ArtRunName = "run-001"
+FrameCount = 4
+SortOrder = 100
+Rarity = "uncommon"
+TagsCsv = "attachment"
+AttachmentOverlayTexturePath = "res://art/fx/borrow_tide_card_overlay/run-001/processed/card-aspect.png"
+AttachmentOverlayPriority = 20
+Trigger = "on_play"
+EffectType = "attach_modifier"
+EffectValuesRaw = "modifier=borrow_tide"
+Priority = 50
+AttachedTrigger = "on_collect"
+AttachedEffectType = "borrow_tide"
+AttachedEffectValuesRaw = ""
+AttachedPriority = 50
+Icon = ""
+Weight = 40
+Description = ""

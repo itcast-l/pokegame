@@ -31,6 +31,7 @@ public partial class GameBoardScene
 
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, playedCard);
 		CardPlayPlan cardPlayPlan = ResolveCardPlayPlan(playedCard);
+		ConsumeBorrowTideIfUsed(cardPlayPlan);
 		bool playedRankCollectsTable = cardPlayPlan.PlayedCardCollectsTable;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
@@ -70,6 +71,11 @@ public partial class GameBoardScene
 				handIndex,
 				ToNetworkCardCode(playedCard),
 				playedTableCardIsFaceUp,
+				new NetworkHandPlayVisualSync(
+					playedTableCardIndex,
+					cardPlayPlan.MatchingTableCardIndex,
+					cardPlayPlan.MatchedTableCardFlipped,
+					cardPlayPlan.EffectiveRank),
 				turnSequenceGeneration,
 				snapshotId);
 		}
@@ -118,7 +124,12 @@ public partial class GameBoardScene
 			captured,
 			captured,
 			CompletesTurn: !branchResult.OvertimeTriggered,
-			CaptureVisualSync: branchResult.CaptureVisualSync);
+			CaptureVisualSync: branchResult.CaptureVisualSync,
+			HandPlayVisualSync: new NetworkHandPlayVisualSync(
+				playedTableCardIndex,
+				cardPlayPlan.MatchingTableCardIndex,
+				cardPlayPlan.MatchedTableCardFlipped,
+				cardPlayPlan.EffectiveRank));
 	}
 
 	private async Task<CardPlayBranchResult> ResolvePlayedCardCaptureAsync(
@@ -152,6 +163,15 @@ public partial class GameBoardScene
 			bool pairCaptureEdgeFloatHandedToDeck = false;
 			try
 			{
+				captureStartIndex = await TryResolveReverseAnchorCaptureStartAsync(
+					captureStartIndex,
+					playerIndex,
+					turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+				}
+
 				CaptureScoringRules.TableCard[] captureScoringTableCards = ToCaptureScoringTableCards();
 				int scorePlayerIndex = ScoreService.GetCapturedScorePlayerIndex(
 					captureScoringTableCards,
@@ -264,13 +284,27 @@ public partial class GameBoardScene
 				int gardenEelSandBiteBonusPoints = gardenEelSandBiteTriggered
 					? ConsumeGardenEelSandBiteBonusPoints(playerIndex, captureStartIndex, scorePlayerIndex, hasDoubleEffect, playedRankCollectsTable)
 					: 0;
+				int endpointCrownBonusPoints = GetCaptureStartScoreBonusPoints(captureStartIndex, scorePlayerIndex, hasDoubleEffect);
+				int midTideUpgradeBonusPoints = GetCaptureEndScoreBonusPoints(captureStartIndex, scorePlayerIndex, hasDoubleEffect);
 				if (gardenEelSandBiteBonusPoints > 0)
 				{
 					_ = PlayTableCardPointPopupAsync(captureStartIndex, gardenEelSandBiteBonusPoints, hasDoubleEffect);
 				}
+				if (endpointCrownBonusPoints > 0)
+				{
+					_ = PlayTableCardPointPopupAsync(captureStartIndex, endpointCrownBonusPoints, hasDoubleEffect);
+				}
+
+				int captureTailTableCardIndex = GetCaptureTailTableCardIndex(captureStartIndex);
+				if (midTideUpgradeBonusPoints > 0 && captureTailTableCardIndex >= 0)
+				{
+					_ = PlayTableCardPointPopupAsync(captureTailTableCardIndex, midTideUpgradeBonusPoints, hasDoubleEffect);
+				}
 
 				int collectedPoints = captureFlow.Score.Points
-					+ gardenEelSandBiteBonusPoints;
+					+ gardenEelSandBiteBonusPoints
+					+ endpointCrownBonusPoints
+					+ midTideUpgradeBonusPoints;
 				if (capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, magnetExtraCaptureIndexes))
 				{
 					await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
@@ -287,7 +321,7 @@ public partial class GameBoardScene
 					false,
 					true,
 					magnetExtraCaptureIndexes,
-					includeCaptureStartScoring: gardenEelSandBiteBonusPoints > 0,
+					includeCaptureStartScoring: gardenEelSandBiteBonusPoints > 0 || endpointCrownBonusPoints > 0,
 					scorePlayerIndex: scorePlayerIndex);
 				await PlayScoreFillCollectionAsync(
 					scorePlayerIndex,
@@ -371,6 +405,8 @@ public partial class GameBoardScene
 				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 			}
 
+			TryAssignBorrowTideAfterCapture(playerIndex, captureStartIndex, playedCard.Rank);
+
 			RenderPlayerHands();
 			if (collectedCardCount > 0)
 			{
@@ -417,6 +453,12 @@ public partial class GameBoardScene
 		}
 
 		await ApplySeaSlugSlimeCoatAfterMissAsync(playerIndex, playedTableCardIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+		}
+
+		await TryResolveEmptyTideContinuationAfterMissAsync(playedTableCardIndex, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
@@ -545,9 +587,12 @@ public partial class GameBoardScene
 
 	private CardPlayPlan ResolveCardPlayPlan(PlayingCard playedCard)
 	{
+		List<string>? alternateRanks = BuildBorrowTideAlternateRanks(playedCard);
 		return CardPlayResolver.Resolve(
 			ToCardPlayTableCards(),
-			new CardPlayCard(playedCard.Rank, ShouldPlayedCardCollectTable(playedCard)));
+			new CardPlayCard(playedCard.Rank, ShouldPlayedCardCollectTable(playedCard)),
+			alternateRanks,
+			insertAtTableStart: ShouldInsertMissedCardAtTableStart(playedCard));
 	}
 
 	private CardPlayTableCard[] ToCardPlayTableCards()
@@ -563,5 +608,65 @@ public partial class GameBoardScene
 		}
 
 		return tableCards;
+	}
+
+	private List<string>? BuildBorrowTideAlternateRanks(PlayingCard playedCard)
+	{
+		if (!ShouldApplyBorrowTideToPlayedCard(playedCard))
+		{
+			return null;
+		}
+
+		var alternateRanks = new List<string>();
+		if (!string.IsNullOrWhiteSpace(_borrowTideAdjustedRank))
+		{
+			alternateRanks.Add(_borrowTideAdjustedRank);
+		}
+
+		foreach (string adjacentRank in GetAdjacentNumericRanks(playedCard.Rank))
+		{
+			if (!alternateRanks.Contains(adjacentRank))
+			{
+				alternateRanks.Add(adjacentRank);
+			}
+		}
+
+		return alternateRanks.Count == 0 ? null : alternateRanks;
+	}
+
+	private bool ShouldApplyBorrowTideToPlayedCard(PlayingCard playedCard)
+	{
+		return _borrowTidePending
+			&& _borrowTideOwnerPlayerIndex == _currentTurnPlayerIndex
+			&& !playedCard.HasItemEffect
+			&& TryGetNumericRankValue(playedCard.Rank, out _);
+	}
+
+	private bool ShouldInsertMissedCardAtTableStart(PlayingCard playedCard)
+	{
+		return IsAttachedEffectType(playedCard, CardEffectTypes.ReverseFlowAnchor);
+	}
+
+	private static IEnumerable<string> GetAdjacentNumericRanks(string rank)
+	{
+		if (!TryGetNumericRankValue(rank, out int rankValue))
+		{
+			yield break;
+		}
+
+		if (rankValue > 1)
+		{
+			yield return (rankValue - 1).ToString();
+		}
+
+		if (rankValue < 10)
+		{
+			yield return (rankValue + 1).ToString();
+		}
+	}
+
+	private static bool TryGetNumericRankValue(string rank, out int rankValue)
+	{
+		return int.TryParse(rank, out rankValue) && rankValue >= 1 && rankValue <= 10;
 	}
 }

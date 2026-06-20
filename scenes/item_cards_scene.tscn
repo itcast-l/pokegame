@@ -11,8 +11,14 @@
 [ext_resource type="Texture2D" uid="uid://h2gi3138hbra" path="res://art/cards/item_cards/overtime/run-004/processed/frames/frame-001.png" id="8_overtime"]
 [ext_resource type="Texture2D" uid="uid://dmh0h2213ukkr" path="res://art/cards/item_cards/draw_card/run-004/processed/frames/frame-001.png" id="9_draw_card"]
 [ext_resource type="Texture2D" uid="uid://chy7vfxvr6rnt" path="res://art/cards/item_cards/shuffle/run-004/processed/frames/frame-001.png" id="10_shuffle"]
+[ext_resource type="Texture2D" path="res://art/cards/item_cards/endpoint_crown/run-001/processed/frames/frame-001.png" id="11_endpoint_crown"]
 [ext_resource type="Script" uid="uid://bhexx6mj1xv3q" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="12_32prl"]
 [ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="13_ueshx"]
+[ext_resource type="Texture2D" path="res://art/cards/item_cards/borrow_tide/run-001/processed/frames/frame-001.png" id="14_borrow_tide"]
+[ext_resource type="Texture2D" path="res://art/cards/item_cards/reverse_anchor/run-001/processed/frames/frame-001.png" id="15_reverse_anchor"]
+[ext_resource type="Texture2D" path="res://art/cards/item_cards/mid_tide_upgrade/run-001/processed/frames/frame-001.png" id="16_mid_tide_upgrade"]
+[ext_resource type="Texture2D" path="res://art/cards/item_cards/reverse_flow_anchor/run-001/processed/frames/frame-001.png" id="17_reverse_flow_anchor"]
+[ext_resource type="Texture2D" path="res://art/cards/item_cards/empty_tide_continuation/run-001/processed/frames/frame-001.png" id="18_empty_tide_continuation"]
 
 [sub_resource type="Resource" id="Resource_o1a3y"]
 script = ExtResource("13_ueshx")
@@ -96,7 +102,7 @@ script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_DOUBLE"
 
 [node name="Double" type="Sprite2D" parent="ItemCards/DoubleCardItem" unique_id=1233789211]
-position = Vector2(980, 180)
+position = Vector2(180, 340)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("7_double")
 
@@ -107,7 +113,7 @@ script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_OVERTIME"
 
 [node name="Overtime" type="Sprite2D" parent="ItemCards/OvertimeCardItem" unique_id=1228476608]
-position = Vector2(180, 500)
+position = Vector2(340, 340)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("8_overtime")
 
@@ -118,7 +124,7 @@ script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_DRAW_CARD"
 
 [node name="DrawCard" type="Sprite2D" parent="ItemCards/DrawCardItem" unique_id=742945675]
-position = Vector2(340, 500)
+position = Vector2(500, 340)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("9_draw_card")
 
@@ -129,11 +135,77 @@ script = ExtResource("3_item_card_data")
 item_description = "ITEM_DESC_SHUFFLE"
 
 [node name="Shuffle" type="Sprite2D" parent="ItemCards/ShuffleCardItem" unique_id=574691291]
-position = Vector2(500, 500)
+position = Vector2(660, 340)
 scale = Vector2(0.32, 0.32)
 texture = ExtResource("10_shuffle")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/ShuffleCardItem" unique_id=930125272]
+
+[node name="EndpointCrownCardItem" type="Node2D" parent="ItemCards"]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_ENDPOINT_CROWN"
+
+[node name="EndpointCrown" type="Sprite2D" parent="ItemCards/EndpointCrownCardItem"]
+position = Vector2(820, 340)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("11_endpoint_crown")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/EndpointCrownCardItem"]
+
+[node name="BorrowTideCardItem" type="Node2D" parent="ItemCards"]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_BORROW_TIDE"
+
+[node name="BorrowTide" type="Sprite2D" parent="ItemCards/BorrowTideCardItem"]
+position = Vector2(180, 500)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("14_borrow_tide")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/BorrowTideCardItem"]
+
+[node name="ReverseAnchorCardItem" type="Node2D" parent="ItemCards"]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_REVERSE_ANCHOR"
+
+[node name="ReverseAnchor" type="Sprite2D" parent="ItemCards/ReverseAnchorCardItem"]
+position = Vector2(340, 500)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("15_reverse_anchor")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/ReverseAnchorCardItem"]
+
+[node name="MidTideUpgradeCardItem" type="Node2D" parent="ItemCards"]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_MID_TIDE_UPGRADE"
+
+[node name="MidTideUpgrade" type="Sprite2D" parent="ItemCards/MidTideUpgradeCardItem"]
+position = Vector2(500, 500)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("16_mid_tide_upgrade")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/MidTideUpgradeCardItem"]
+
+[node name="ReverseFlowAnchorCardItem" type="Node2D" parent="ItemCards"]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_REVERSE_FLOW_ANCHOR"
+
+[node name="ReverseFlowAnchor" type="Sprite2D" parent="ItemCards/ReverseFlowAnchorCardItem"]
+position = Vector2(660, 500)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("17_reverse_flow_anchor")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/ReverseFlowAnchorCardItem"]
+
+[node name="EmptyTideContinuationCardItem" type="Node2D" parent="ItemCards"]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_EMPTY_TIDE_CONTINUATION"
+
+[node name="EmptyTideContinuation" type="Sprite2D" parent="ItemCards/EmptyTideContinuationCardItem"]
+position = Vector2(820, 500)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("18_empty_tide_continuation")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/EmptyTideContinuationCardItem"]
 
 [node name="PhantomCamera2D" type="Node2D" parent="." unique_id=703258216]
 script = ExtResource("12_32prl")

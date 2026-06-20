@@ -93,6 +93,20 @@ internal readonly struct PlayingCard
 		return AttachedItemCardIds;
 	}
 
+	public bool HasAttachedItemEffectType(string effectType, ItemCardCatalog itemCardCatalog)
+	{
+		foreach (string attachedItemCardId in AttachedItemCardIds)
+		{
+			if (itemCardCatalog.TryGetDefinition(attachedItemCardId, out ItemCardDefinition definition)
+				&& string.Equals(definition.AttachedEffectType, effectType, StringComparison.Ordinal))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	public PlayingCard WithoutItemEffects()
 	{
 		return HasItemEffect ? new PlayingCard(Suit, Rank, Texture) : this;
@@ -127,7 +141,8 @@ internal readonly record struct PlayCardResult(
 	QuestionCardRewardAnimation? QuestionRewardAnimation = null,
 	bool CompletesTurn = true,
 	NetworkItemPlayVisualSync? ItemPlayVisualSync = null,
-	NetworkCaptureVisualSync? CaptureVisualSync = null);
+	NetworkCaptureVisualSync? CaptureVisualSync = null,
+	NetworkHandPlayVisualSync? HandPlayVisualSync = null);
 
 internal readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 
@@ -160,6 +175,12 @@ internal readonly record struct NetworkItemPlayVisualSync(
 	string PlayPresentation,
 	int ItemHandIndex,
 	int TargetTableCardIndex = -1);
+
+internal readonly record struct NetworkHandPlayVisualSync(
+	int TableCardIndex,
+	int MatchingTableCardIndex = -1,
+	bool MatchedTableCardFlipped = false,
+	string BorrowTideAdjustedRank = "");
 
 internal readonly record struct NetworkCaptureVisualSync(
 	int PlayerIndex,

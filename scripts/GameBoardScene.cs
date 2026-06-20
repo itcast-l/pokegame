@@ -319,6 +319,31 @@ public partial class GameBoardScene : Control
 		get => _state.IsLeavingGame;
 		set => _state.IsLeavingGame = value;
 	}
+	private bool _borrowTidePending
+	{
+		get => _state.BorrowTidePending;
+		set => _state.BorrowTidePending = value;
+	}
+	private int _borrowTideOwnerPlayerIndex
+	{
+		get => _state.BorrowTideOwnerPlayerIndex;
+		set => _state.BorrowTideOwnerPlayerIndex = value;
+	}
+	private string _borrowTideCardId
+	{
+		get => _state.BorrowTideCardId;
+		set => _state.BorrowTideCardId = value;
+	}
+	private string _borrowTideAdjustedRank
+	{
+		get => _state.BorrowTideAdjustedRank;
+		set => _state.BorrowTideAdjustedRank = value;
+	}
+	private int _borrowTideExpiresAtTurnPlayerIndex
+	{
+		get => _state.BorrowTideExpiresAtTurnPlayerIndex;
+		set => _state.BorrowTideExpiresAtTurnPlayerIndex = value;
+	}
 	private bool _itemMode = true;
 	private bool _soloMode;
 	private int _localPlayerIndex;

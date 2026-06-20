@@ -16,6 +16,8 @@ internal static class Program
 		Run("capture scoring redirects pair destroy owner", CaptureScoringRedirectsPairDestroyOwner);
 		Run("card play resolver ignores buried matches", CardPlayResolverIgnoresBuriedMatches);
 		Run("card play resolver captures table for collect card", CardPlayResolverCapturesTableForCollectCard);
+		Run("card play resolver uses alternate rank for borrow tide match", CardPlayResolverUsesAlternateRankForBorrowTideMatch);
+		Run("card play resolver inserts miss at table start for reverse flow anchor", CardPlayResolverInsertsMissAtTableStartForReverseFlowAnchor);
 		Run("capture resolver identifies middle captures", CaptureResolverIdentifiesMiddleCaptures);
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
 		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
@@ -191,6 +193,48 @@ internal static class Program
 		Equal(-1, plan.MatchingTableCardIndex);
 		True(plan.PlayedCardCollectsTable);
 		Equal(0, plan.CaptureStartIndex);
+	}
+
+	private static void CardPlayResolverUsesAlternateRankForBorrowTideMatch()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("6", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("7", IsFaceUp: false, IsBuriedInSand: false),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("8", CollectsTable: false),
+			new[] { "7", "9" },
+			insertAtTableStart: false);
+
+		Equal(1, plan.MatchingTableCardIndex);
+		Equal(1, plan.CaptureStartIndex);
+		Equal("7", plan.EffectiveRank);
+		True(plan.MatchedTableCardFlipped);
+		Equal(2, plan.TableInsertIndex);
+	}
+
+	private static void CardPlayResolverInsertsMissAtTableStartForReverseFlowAnchor()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("4", IsFaceUp: true, IsBuriedInSand: false),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("9", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: true);
+
+		Equal(-1, plan.MatchingTableCardIndex);
+		Equal(-1, plan.CaptureStartIndex);
+		Equal("9", plan.EffectiveRank);
+		Equal(0, plan.TableInsertIndex);
+		False(plan.MatchedTableCardFlipped);
 	}
 
 	private static void CaptureResolverIdentifiesMiddleCaptures()

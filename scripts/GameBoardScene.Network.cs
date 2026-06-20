@@ -21,6 +21,7 @@ public partial class GameBoardScene
 	private int _networkPredictedHandTableCardIndex = -1;
 	private int _networkPredictedHandMatchedTableCardIndex = -1;
 	private bool _networkPredictedHandMatchedTableCardFlipped;
+	private string _networkPredictedHandBorrowTideAdjustedRank = string.Empty;
 	private bool _networkPredictedItemVisualActive;
 	private int _networkPredictedItemDisplayIndex = -1;
 	private string _networkPredictedItemCardId = string.Empty;
@@ -353,6 +354,7 @@ public partial class GameBoardScene
 		_networkPredictedHandTableCardIndex = -1;
 		_networkPredictedHandMatchedTableCardIndex = -1;
 		_networkPredictedHandMatchedTableCardFlipped = false;
+		_networkPredictedHandBorrowTideAdjustedRank = string.Empty;
 	}
 
 	private void ResetNetworkPredictedItemVisualState()
@@ -393,10 +395,12 @@ public partial class GameBoardScene
 		int playerIndex,
 		int handIndex,
 		out PlayingCard playedCard,
+		out CardPlayPlan plan,
 		out int tableCardIndex,
 		out bool tableCardIsFaceUp)
 	{
 		playedCard = default;
+		plan = default;
 		tableCardIndex = -1;
 		tableCardIsFaceUp = false;
 		if (playerIndex < 0
@@ -408,11 +412,12 @@ public partial class GameBoardScene
 		}
 
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, _playerHands[playerIndex][handIndex]);
-		CardPlayPlan plan = ResolveCardPlayPlan(playedCard);
-		tableCardIndex = _tableCards.Count;
+		plan = ResolveCardPlayPlan(playedCard);
+		tableCardIndex = plan.TableInsertIndex;
 		tableCardIsFaceUp = false;
 		_networkPredictedHandMatchedTableCardIndex = plan.MatchingTableCardIndex;
 		_networkPredictedHandMatchedTableCardFlipped = plan.MatchedTableCardFlipped;
+		_networkPredictedHandBorrowTideAdjustedRank = plan.EffectiveRank;
 		return true;
 	}
 
@@ -423,13 +428,14 @@ public partial class GameBoardScene
 			localPlayerIndex,
 			handIndex,
 			out PlayingCard playedCard,
+			out CardPlayPlan plan,
 			out int tableCardIndex,
 			out bool tableCardIsFaceUp))
 		{
 			return false;
 		}
 
-		_tableCards.Add(new TableCard(playedCard, tableCardIsFaceUp, cardOwnerPlayerIndex: localPlayerIndex));
+		_tableCards.Insert(tableCardIndex, new TableCard(playedCard, tableCardIsFaceUp, cardOwnerPlayerIndex: localPlayerIndex));
 		HideHandDisplaySlot(localPlayerIndex, handIndex);
 		RenderPlayerHands();
 		_networkPredictedHandVisualActive = true;
@@ -833,6 +839,11 @@ public partial class GameBoardScene
 			["pending_selection_owner"] = _pendingItemOwnerIndex,
 			["pending_item_card_id"] = _pendingItemCardId,
 			["pending_turn_sequence_generation"] = _pendingItemTurnSequenceGeneration,
+			["borrow_tide_pending"] = _state.BorrowTidePending,
+			["borrow_tide_owner_player_index"] = _state.BorrowTideOwnerPlayerIndex,
+			["borrow_tide_card_id"] = _state.BorrowTideCardId,
+			["borrow_tide_adjusted_rank"] = _state.BorrowTideAdjustedRank,
+			["borrow_tide_expires_at_turn_player_index"] = _state.BorrowTideExpiresAtTurnPlayerIndex,
 			["revealed_player_hand_index"] = ShouldRevealTargetHandToSeat(recipientSeatIndex) ? _revealedPlayerHandIndex : -1,
 			["opening_deal_animation_playing"] = _isOpeningDealAnimationPlaying,
 			["seat_control_states"] = BuildSeatControlStatesArray(),
@@ -1014,19 +1025,23 @@ public partial class GameBoardScene
 		int handIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1);
 		string playedCardCode = ReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, string.Empty);
 		bool playedCardIsFaceUp = ReadNetworkBool(payload, NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey, false);
+		int tableCardIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TableCardIndexKey, _tableCards.Count);
+		string borrowTideAdjustedRank = ReadNetworkString(payload, NetworkBoardVisualEventTypes.BorrowTideAdjustedRankKey, string.Empty);
 		if (actorSeatIndex < 0 || actorSeatIndex >= player_count)
 		{
 			return;
 		}
 
 		PlayingCard playedCard = CreateNetworkPlayingCard(playedCardCode);
-		int tableCardIndex = _tableCards.Count;
+		int clampedTableCardIndex = Mathf.Clamp(tableCardIndex, 0, _tableCards.Count);
 		bool matchesLocalPrediction = actorSeatIndex == GetLocalHandPlayerIndex()
 			&& handIndex == _networkPendingHandIndex
-			&& _networkPredictedHandVisualActive;
+			&& _networkPredictedHandVisualActive
+			&& clampedTableCardIndex == _networkPredictedHandTableCardIndex
+			&& string.Equals(borrowTideAdjustedRank, _networkPredictedHandBorrowTideAdjustedRank, StringComparison.Ordinal);
 		if (!matchesLocalPrediction)
 		{
-			_tableCards.Add(new TableCard(playedCard, playedCardIsFaceUp, cardOwnerPlayerIndex: actorSeatIndex));
+			_tableCards.Insert(clampedTableCardIndex, new TableCard(playedCard, playedCardIsFaceUp, cardOwnerPlayerIndex: actorSeatIndex));
 			if (actorSeatIndex == GetLocalHandPlayerIndex()
 				&& handIndex == _networkPendingHandIndex)
 			{
@@ -1044,7 +1059,7 @@ public partial class GameBoardScene
 				await ToSignal(GetTree().CreateTimer(debugPlaybackDelaySeconds), SceneTreeTimer.SignalName.Timeout);
 			}
 
-			await PlayCardToTableAnimationAsync(actorSeatIndex, playedCard, startGlobalPosition, tableCardIndex, playedCardIsFaceUp);
+			await PlayCardToTableAnimationAsync(actorSeatIndex, playedCard, startGlobalPosition, clampedTableCardIndex, playedCardIsFaceUp);
 		}
 		else
 		{
@@ -2068,6 +2083,11 @@ public partial class GameBoardScene
 		_pendingItemOwnerIndex = ReadNetworkInt(snapshot, "pending_selection_owner", -1);
 		_pendingItemCardId = ReadNetworkString(snapshot, "pending_item_card_id", string.Empty);
 		_pendingItemTurnSequenceGeneration = ReadNetworkInt(snapshot, "pending_turn_sequence_generation", -1);
+		_borrowTidePending = ReadNetworkBool(snapshot, "borrow_tide_pending", false);
+		_borrowTideOwnerPlayerIndex = ReadNetworkInt(snapshot, "borrow_tide_owner_player_index", -1);
+		_borrowTideCardId = ReadNetworkString(snapshot, "borrow_tide_card_id", string.Empty);
+		_borrowTideAdjustedRank = ReadNetworkString(snapshot, "borrow_tide_adjusted_rank", string.Empty);
+		_borrowTideExpiresAtTurnPlayerIndex = ReadNetworkInt(snapshot, "borrow_tide_expires_at_turn_player_index", -1);
 		_revealedPlayerHandIndex = ReadNetworkBool(snapshot, "revealed_target_hand_visible", false)
 			? ReadNetworkInt(snapshot, "revealed_player_hand_index", -1)
 			: -1;

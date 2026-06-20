@@ -14,6 +14,12 @@ public sealed partial class ItemCardCatalog
 	public const string OvertimeItemCardId = "overtime";
 	public const string DrawCardItemCardId = "draw_card";
 	public const string ShuffleItemCardId = "shuffle";
+	public const string EndpointCrownItemCardId = "endpoint_crown";
+	public const string BorrowTideItemCardId = "borrow_tide";
+	public const string ReverseAnchorItemCardId = "reverse_anchor";
+	public const string MidTideUpgradeItemCardId = "mid_tide_upgrade";
+	public const string ReverseFlowAnchorItemCardId = "reverse_flow_anchor";
+	public const string EmptyTideContinuationItemCardId = "empty_tide_continuation";
 
 	private const string ItemCardCategoryId = "item_cards";
 	private const string ItemCardResourceDirectory = "res://resources/item_cards";

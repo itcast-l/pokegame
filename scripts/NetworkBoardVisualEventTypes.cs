@@ -23,6 +23,10 @@ internal static class NetworkBoardVisualEventTypes
 
 	public const string PlayedCardCodeKey = "played_card_code";
 	public const string PlayedCardIsFaceUpKey = "played_card_is_face_up";
+	public const string TableCardIndexKey = "table_card_index";
+	public const string MatchingTableCardIndexKey = "matching_table_card_index";
+	public const string MatchedTableCardFlippedKey = "matched_table_card_flipped";
+	public const string BorrowTideAdjustedRankKey = "borrow_tide_adjusted_rank";
 	public const string ItemCardIdKey = "item_card_id";
 	public const string PlayPresentationKey = "play_presentation";
 	public const string TargetTableCardIndexKey = "target_table_card_index";
@@ -42,7 +46,6 @@ internal static class NetworkBoardVisualEventTypes
 	public const string SplitCenterYKey = "split_center_y";
 	public const string TargetTableCardIndexesKey = "target_table_card_indexes";
 	public const string ShuffleTargetIndexesKey = "shuffle_target_indexes";
-	public const string TableCardIndexKey = "table_card_index";
 	public const string DrawnCardCodeKey = "drawn_card_code";
 	public const string AttachedItemCardIdsKey = "attached_item_card_ids";
 	public const string StartGlobalXKey = "start_global_x";

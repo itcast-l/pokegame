@@ -18,6 +18,12 @@ public static class ItemCardEffectSupport
 			|| effectType == "reveal_cards"
 			|| effectType == "shuffle_table"
 			|| effectType == "double_collect"
+			|| effectType == "endpoint_crown"
+			|| effectType == "borrow_tide"
+			|| effectType == "reverse_anchor"
+			|| effectType == "mid_tide_upgrade"
+			|| effectType == "reverse_flow_anchor"
+			|| effectType == "empty_tide_continuation"
 			|| effectType == "destroy_cards"
 			|| effectType == "extra_turn";
 	}

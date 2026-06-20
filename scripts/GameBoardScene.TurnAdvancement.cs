@@ -7,11 +7,13 @@ public partial class GameBoardScene
 {
 	private void SetCurrentTurnPlayerIndex(int nextTurnPlayerIndex)
 	{
+		int previousTurnPlayerIndex = _currentTurnPlayerIndex;
 		if (NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(_currentTurnPlayerIndex, nextTurnPlayerIndex))
 		{
 			_networkAiBlockedItem = NetworkAiBlockedItemState.None;
 		}
 
+		UpdateBorrowTideTurnTransition(previousTurnPlayerIndex, nextTurnPlayerIndex);
 		_currentTurnPlayerIndex = nextTurnPlayerIndex;
 	}
 

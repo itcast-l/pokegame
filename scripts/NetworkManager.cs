@@ -475,11 +475,12 @@ public partial class NetworkManager : Node
 		RpcId(1, MethodName.RpcRequestPendingItemSelection, targetPlayerIndex, targetHandIndex, turnSequenceGeneration);
 	}
 
-	public void BroadcastCardPlayedEventFromHost(
+	internal void BroadcastCardPlayedEventFromHost(
 		int actorSeatIndex,
 		int handIndex,
 		string playedCardCode,
 		bool playedCardIsFaceUp,
+		NetworkHandPlayVisualSync visualSync,
 		int turnSequenceGeneration,
 		int snapshotId)
 	{
@@ -495,6 +496,10 @@ public partial class NetworkManager : Node
 			[NetworkBoardVisualEventTypes.HandIndexKey] = handIndex,
 			[NetworkBoardVisualEventTypes.PlayedCardCodeKey] = playedCardCode,
 			[NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey] = playedCardIsFaceUp,
+			[NetworkBoardVisualEventTypes.TableCardIndexKey] = visualSync.TableCardIndex,
+			[NetworkBoardVisualEventTypes.MatchingTableCardIndexKey] = visualSync.MatchingTableCardIndex,
+			[NetworkBoardVisualEventTypes.MatchedTableCardFlippedKey] = visualSync.MatchedTableCardFlipped,
+			[NetworkBoardVisualEventTypes.BorrowTideAdjustedRankKey] = visualSync.BorrowTideAdjustedRank,
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
