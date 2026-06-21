@@ -185,6 +185,9 @@ public partial class GameBoardScene
 		}
 
 		area.TooltipText = string.Empty;
-		RefreshPlayerStatusTooltip(playerIndex);
+		if (_activeStatusTooltipPlayerIndex == playerIndex)
+		{
+			MarkActivePlayerStatusTooltipContentDirty();
+		}
 	}
 }

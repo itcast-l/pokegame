@@ -189,7 +189,7 @@ public partial class GameBoardScene
 		GetTree().Paused = false;
 			if (IsNetworkMultiplayerMode())
 			{
-				NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+				NetworkManager? networkManager = GetNetworkManager();
 				if (networkManager != null)
 				{
 					await networkManager.LeaveSessionAfterHostEndedMatchAsync();
@@ -265,7 +265,7 @@ public partial class GameBoardScene
 		GetTree().Paused = false;
 			if (IsNetworkMultiplayerMode())
 			{
-				NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+				NetworkManager? networkManager = GetNetworkManager();
 				if (networkManager != null)
 				{
 					await networkManager.LeaveSessionAfterHostEndedMatchAsync();

@@ -304,7 +304,7 @@ public partial class GameBoardScene
 		IReadOnlyList<string> attachedItemCardIds = stolenPlayingCard.HasValue
 			? stolenPlayingCard.Value.GetAttachedItemCardIds()
 			: Array.Empty<string>();
-		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastStealHandCardVisualEventFromHost(
+		GetNetworkManager()?.BroadcastStealHandCardVisualEventFromHost(
 			ownerPlayerIndex,
 			targetPlayerIndex,
 			targetHandIndex,
@@ -329,7 +329,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastStealDeckCardsVisualEventFromHost(
+		GetNetworkManager()?.BroadcastStealDeckCardsVisualEventFromHost(
 			ownerPlayerIndex,
 			targetPlayerIndex,
 			movedCardCount,

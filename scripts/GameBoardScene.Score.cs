@@ -130,7 +130,10 @@ public partial class GameBoardScene
 		meter.TooltipText = string.Empty;
 		meter.SetScore(_playerScores[playerIndex], GetScoreLimit(playerIndex), animate);
 		UpdatePlayerAvatarTooltip(playerIndex);
-		RefreshPlayerStatusTooltip(playerIndex);
+		if (_activeStatusTooltipPlayerIndex == playerIndex)
+		{
+			MarkActivePlayerStatusTooltipContentDirty();
+		}
 	}
 
 	private int GetScoreWinnerPlayerIndex()

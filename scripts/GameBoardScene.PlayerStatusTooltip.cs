@@ -160,8 +160,9 @@ public partial class GameBoardScene
 		}
 
 		_activeStatusTooltipPlayerIndex = playerIndex;
-		RefreshPlayerStatusTooltip(playerIndex);
-		UpdatePlayerStatusTooltipLayout();
+		MarkActivePlayerStatusTooltipContentDirty();
+		MarkActivePlayerStatusTooltipLayoutDirty();
+		FlushUiDirtyFlagsIfNeeded();
 		_playerStatusTooltipPanel.Visible = true;
 
 		_playerStatusTooltipTween?.Kill();
@@ -219,14 +220,6 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void RefreshAllPlayerStatusTooltips()
-	{
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			UpdatePlayerAvatarTooltip(playerIndex);
-		}
-	}
-
 	private void UpdatePlayerStatusTooltipLayout()
 	{
 		if (_playerStatusTooltipPanel == null || _activeStatusTooltipPlayerIndex < 0)
@@ -255,6 +248,17 @@ public partial class GameBoardScene
 			Mathf.Max(PlayerStatusTooltipViewportPadding, viewportSize.Y - PlayerStatusTooltipSize.Y - PlayerStatusTooltipViewportPadding));
 
 		_playerStatusTooltipPanel.GlobalPosition = position;
+	}
+
+	private void MarkActivePlayerStatusTooltipForRefresh()
+	{
+		if (_activeStatusTooltipPlayerIndex < 0)
+		{
+			return;
+		}
+
+		MarkActivePlayerStatusTooltipContentDirty();
+		MarkActivePlayerStatusTooltipLayoutDirty();
 	}
 
 	private Rect2 GetPlayerStatusTooltipTargetRect(int playerIndex)

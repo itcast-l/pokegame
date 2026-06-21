@@ -34,7 +34,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastDrawCardVisualEventFromHost(
+			GetNetworkManager()?.BroadcastDrawCardVisualEventFromHost(
 				playerIndex,
 				displayIndex,
 				ToNetworkCardCode(drawnCard.Value.Card),

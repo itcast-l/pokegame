@@ -33,7 +33,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastDeckShuffleVisualEventFromHost(
+			GetNetworkManager()?.BroadcastDeckShuffleVisualEventFromHost(
 				playerIndex,
 				_turnSequenceGeneration,
 				snapshotId);

@@ -3,6 +3,19 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private NetworkManager? _cachedNetworkManager;
+
+	private NetworkManager? GetNetworkManager()
+	{
+		if (_cachedNetworkManager != null && GodotObject.IsInstanceValid(_cachedNetworkManager))
+		{
+			return _cachedNetworkManager;
+		}
+
+		_cachedNetworkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		return _cachedNetworkManager;
+	}
+
 	private void ConnectNetworkManagerSignalsForBoard()
 	{
 		if (_networkManagerSignalsConnected || !IsNetworkMultiplayerMode())
@@ -10,13 +23,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager == null)
 		{
 			return;
 		}
 
 		networkManager.ErrorRaised += HandleNetworkManagerBoardError;
+		networkManager.StateChanged += HandleNetworkManagerStateChanged;
+		networkManager.SeatControlStatesUpdated += HandleNetworkManagerSeatControlStatesUpdated;
 		_networkManagerSignalsConnected = true;
 	}
 
@@ -27,10 +42,12 @@ public partial class GameBoardScene
 			return;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager != null && GodotObject.IsInstanceValid(networkManager))
 		{
 			networkManager.ErrorRaised -= HandleNetworkManagerBoardError;
+			networkManager.StateChanged -= HandleNetworkManagerStateChanged;
+			networkManager.SeatControlStatesUpdated -= HandleNetworkManagerSeatControlStatesUpdated;
 		}
 
 		_networkManagerSignalsConnected = false;
@@ -43,7 +60,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager == null)
 		{
 			return;
@@ -56,6 +73,17 @@ public partial class GameBoardScene
 		}
 
 		_ = ExitNetworkMatchToMainMenuAsync();
+	}
+
+	private void HandleNetworkManagerSeatControlStatesUpdated()
+	{
+		MarkSeatControlIndicatorsDirty();
+		MarkActivePlayerStatusTooltipForRefresh();
+	}
+
+	private void HandleNetworkManagerStateChanged(int state)
+	{
+		RefreshNetworkReconnectOverlayIfNeeded((NetworkSessionState)state);
 	}
 
 	private async Task ExitNetworkMatchToMainMenuAsync()

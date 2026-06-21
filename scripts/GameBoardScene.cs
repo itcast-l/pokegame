@@ -206,6 +206,10 @@ public partial class GameBoardScene : Control
 	private readonly Panel?[] _playerSeatControlIndicatorPanels = new Panel?[MaxPlayers];
 	private readonly Label?[] _playerSeatControlIndicatorLabels = new Label?[MaxPlayers];
 	private readonly SeatControlMode[] _playerSeatControlIndicatorModes = new SeatControlMode[MaxPlayers];
+	private bool _seatControlIndicatorsDirty;
+	private bool _seatControlIndicatorLayoutDirty;
+	private bool _activePlayerTooltipContentDirty;
+	private bool _activePlayerTooltipLayoutDirty;
 	private NetworkAiBlockedItemState _networkAiBlockedItem = NetworkAiBlockedItemState.None;
 	private ItemSelectionOverlay? _selectionOverlay;
 	private readonly List<System.Action> _selectionOverlayActions = new();
@@ -213,7 +217,7 @@ public partial class GameBoardScene : Control
 	private Label? _networkReconnectOverlayLabel;
 	private Panel? _networkReconnectNoticePanel;
 	private Label? _networkReconnectNoticeLabel;
-	private double _networkReconnectNoticeHideAt;
+	private Godot.Timer? _networkReconnectNoticeHideTimer;
 	private bool _networkManagerSignalsConnected;
 	private bool _networkReconnectCatchupPendingCompletion;
 	private Texture2D? _cardBackTexture;
@@ -403,6 +407,9 @@ public partial class GameBoardScene : Control
 			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				UpdatePlayerVisibility();
+				MarkSeatControlIndicatorsDirty();
+				MarkSeatControlIndicatorLayoutDirty();
+				MarkActivePlayerStatusTooltipForRefresh();
 				DealCardsToPlayers(playOpeningDealAnimation: true);
 			}
 		}
@@ -614,10 +621,11 @@ public partial class GameBoardScene : Control
 		CreateDefeatFinisherOverlay();
 		CreateNetworkReconnectOverlay();
 		ConnectNetworkManagerSignalsForBoard();
+		RefreshNetworkReconnectOverlayIfNeeded();
 		UpdatePlayerVisibility();
 		if (_networkWaitForInitialize)
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.NotifyLocalBoardReady();
+			GetNetworkManager()?.NotifyLocalBoardReady();
 		}
 		else
 		{
@@ -638,6 +646,7 @@ public partial class GameBoardScene : Control
 		player_avatar_ids_csv = ReadNetworkString(payload, "player_avatar_ids_csv", player_avatar_ids_csv);
 		network_match_id = ReadNetworkString(payload, "match_id", network_match_id);
 		network_wait_for_initialize = false;
+		RefreshNetworkReconnectOverlayIfNeeded();
 		if (IsNetworkMultiplayerMode() && !IsNetworkHost())
 		{
 			InitializeNetworkClientBoardShell();
@@ -647,7 +656,7 @@ public partial class GameBoardScene : Control
 		InitializeBoard(playOpeningIntroAnimation: true);
 		if (IsNetworkHost())
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendInitialBoardSnapshotsFromHost(this);
+			GetNetworkManager()?.SendInitialBoardSnapshotsFromHost(this);
 		}
 	}
 
@@ -732,20 +741,59 @@ public partial class GameBoardScene : Control
 	public override void _Process(double delta)
 	{
 		UpdateMagnetAttachmentCountdown(delta);
-		UpdateReconnectOverlay();
-		RefreshAllPlayerSeatControlIndicators();
-		RefreshActivePlayerStatusTooltip();
+		FlushUiDirtyFlagsIfNeeded();
 	}
 
-	private void RefreshActivePlayerStatusTooltip()
+	private void MarkSeatControlIndicatorsDirty()
 	{
+		_seatControlIndicatorsDirty = true;
+	}
+
+	private void MarkSeatControlIndicatorLayoutDirty()
+	{
+		_seatControlIndicatorLayoutDirty = true;
+	}
+
+	private void MarkActivePlayerStatusTooltipContentDirty()
+	{
+		_activePlayerTooltipContentDirty = true;
+	}
+
+	private void MarkActivePlayerStatusTooltipLayoutDirty()
+	{
+		_activePlayerTooltipLayoutDirty = true;
+	}
+
+	private void FlushUiDirtyFlagsIfNeeded()
+	{
+		if (_seatControlIndicatorsDirty)
+		{
+			RefreshAllPlayerSeatControlIndicators();
+			_seatControlIndicatorsDirty = false;
+		}
+
+		if (_seatControlIndicatorLayoutDirty)
+		{
+			UpdateAllPlayerSeatControlIndicatorLayouts();
+			_seatControlIndicatorLayoutDirty = false;
+		}
+
 		if (_activeStatusTooltipPlayerIndex < 0)
 		{
 			return;
 		}
 
-		RefreshPlayerStatusTooltip(_activeStatusTooltipPlayerIndex);
-		UpdatePlayerStatusTooltipLayout();
+		if (_activePlayerTooltipContentDirty)
+		{
+			RefreshPlayerStatusTooltip(_activeStatusTooltipPlayerIndex);
+			_activePlayerTooltipContentDirty = false;
+		}
+
+		if (_activePlayerTooltipLayoutDirty)
+		{
+			UpdatePlayerStatusTooltipLayout();
+			_activePlayerTooltipLayoutDirty = false;
+		}
 	}
 
 	private int GetPlayerViewSlotIndex(int playerIndex)

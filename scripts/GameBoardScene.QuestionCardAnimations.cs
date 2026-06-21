@@ -309,7 +309,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastQuestionRefreshVisualEventFromHost(
+			GetNetworkManager()?.BroadcastQuestionRefreshVisualEventFromHost(
 				_currentTurnPlayerIndex,
 				tableCardIndex,
 				_turnSequenceGeneration,

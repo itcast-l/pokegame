@@ -22,6 +22,9 @@ public partial class AdventureMapDynamicLayer : Control
 	[Export(PropertyHint.Range, "0.0,2.0,0.05")]
 	public float MotionScale { get; set; } = 1.0f;
 
+	[Export(PropertyHint.Range, "1,60,1")]
+	public int redraw_fps = 20;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<CurrentRibbon> _ribbons = new();
 	private readonly List<Sparkle> _sparkles = new();
@@ -29,6 +32,7 @@ public partial class AdventureMapDynamicLayer : Control
 	private readonly List<ImageElement> _sparkleInstances = new();
 	private readonly Vector2[] _currentRibbonPoints = new Vector2[36];
 	private double _time;
+	private double _redrawAccumulator;
 	private bool _imageAssetsLoaded;
 	private bool _pendingImageRebuild;
 	private DynamicRenderMode _activeRenderMode = (DynamicRenderMode)(-1);
@@ -66,6 +70,11 @@ public partial class AdventureMapDynamicLayer : Control
 			Rebuild();
 		}
 
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		_time += delta * MotionScale;
 		if (_activeRenderMode == DynamicRenderMode.ImageBased)
 		{
@@ -76,8 +85,29 @@ public partial class AdventureMapDynamicLayer : Control
 			}
 
 			UpdateImageInstances();
+			if (ShouldQueueRedrawForImageFallback())
+			{
+				_redrawAccumulator += delta;
+				double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
+				if (_redrawAccumulator < redrawInterval)
+				{
+					return;
+				}
+
+				_redrawAccumulator %= redrawInterval;
+				QueueRedraw();
+			}
+			return;
 		}
 
+		_redrawAccumulator += delta;
+		double interval = 1.0 / Mathf.Max(redraw_fps, 1);
+		if (_redrawAccumulator < interval)
+		{
+			return;
+		}
+
+		_redrawAccumulator %= interval;
 		QueueRedraw();
 	}
 
@@ -107,6 +137,7 @@ public partial class AdventureMapDynamicLayer : Control
 		}
 
 		_activeRenderMode = RenderMode;
+		_redrawAccumulator = 0.0;
 		if (_activeRenderMode == DynamicRenderMode.ImageBased)
 		{
 			EnsureImageAssetsLoaded();
@@ -167,6 +198,10 @@ public partial class AdventureMapDynamicLayer : Control
 			EnsureImageLayers();
 			RebuildImageInstances();
 			UpdateImageInstances();
+			if (ShouldQueueRedrawForImageFallback())
+			{
+				QueueRedraw();
+			}
 		}
 	}
 
@@ -198,6 +233,11 @@ public partial class AdventureMapDynamicLayer : Control
 	private bool HasNoImageInstances()
 	{
 		return _currentRibbonInstances.Count == 0 && _sparkleInstances.Count == 0;
+	}
+
+	private bool ShouldQueueRedrawForImageFallback()
+	{
+		return _currentRibbonFrames.Length == 0 || _sparkleFrames.Length == 0;
 	}
 
 	private void EnsureImageLayers()

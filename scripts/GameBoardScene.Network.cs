@@ -67,7 +67,7 @@ public partial class GameBoardScene
 
 		_networkPendingItemHandIndex = itemHandIndex;
 		_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		bool predictionStarted = BeginPredictedNetworkItemCardPlay(itemHandIndex, turnSequenceGeneration);
 		if (predictionStarted)
 		{
@@ -86,7 +86,7 @@ public partial class GameBoardScene
 
 	internal void RequestNetworkPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
 	{
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager == null)
 		{
 			return;
@@ -129,7 +129,7 @@ public partial class GameBoardScene
 
 		_networkPendingHandIndex = handIndex;
 		_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		bool predictionStarted = BeginPredictedNetworkHandCardPlay(handIndex, turnSequenceGeneration);
 		if (predictionStarted)
 		{
@@ -736,7 +736,7 @@ public partial class GameBoardScene
 				RenderPlayerHands();
 			}
 
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, snapshotId);
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, snapshotId);
 			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
 			_networkAuthoritativeVisualSnapshotId = -1;
 		}
@@ -779,13 +779,13 @@ public partial class GameBoardScene
 			{
 				if (played && result.ItemPlayVisualSync.HasValue)
 				{
-					GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastItemCardPlayedVisualEventFromHost(
+					GetNetworkManager()?.BroadcastItemCardPlayedVisualEventFromHost(
 						actorSeatIndex,
 						result.ItemPlayVisualSync.Value,
 						turnSequenceGeneration,
 						snapshotId);
 				}
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, snapshotId);
+				GetNetworkManager()?.SendBoardSnapshotsFromHost(this, snapshotId);
 			}
 
 			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
@@ -812,7 +812,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
+		GetNetworkManager()?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
 	}
 
 	internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat(int recipientSeatIndex, int snapshotId)
@@ -857,7 +857,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
@@ -881,7 +881,7 @@ public partial class GameBoardScene
 
 	internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)
 	{
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (!NetworkReconnectRules.ShouldQueueRealtimeBoardEventForClient(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
@@ -1540,7 +1540,7 @@ public partial class GameBoardScene
 	{
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
-			&& GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.State == NetworkSessionState.Reconnecting;
+			&& GetNetworkManager()?.State == NetworkSessionState.Reconnecting;
 		if (isReconnectCatchup)
 		{
 			_networkVisualEventQueue.Clear();
@@ -1582,7 +1582,9 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 		RenderTableCards();
 		RefreshNetworkPendingSelectionOverlay();
-		RefreshAllPlayerStatusTooltips();
+		RefreshNetworkReconnectOverlayIfNeeded();
+		MarkSeatControlIndicatorsDirty();
+		MarkActivePlayerStatusTooltipForRefresh();
 		if (isReconnectCatchup)
 		{
 			_networkReconnectCatchupPendingCompletion = true;
@@ -1607,7 +1609,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		if (!NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
@@ -1619,7 +1621,6 @@ public partial class GameBoardScene
 
 		_networkReconnectCatchupPendingCompletion = false;
 		networkManager?.NotifyReconnectSnapshotApplied(_networkMatchId);
-		UpdateReconnectOverlay();
 		ShowReconnectRecoveryNoticeIfNeeded();
 	}
 
@@ -1926,7 +1927,7 @@ public partial class GameBoardScene
 
 	private Godot.Collections.Array BuildSeatControlStatesArray()
 	{
-		return GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.GetSeatControlStatesVariant(includeReconnectTokens: false)
+		return GetNetworkManager()?.GetSeatControlStatesVariant(includeReconnectTokens: false)
 			?? new Godot.Collections.Array();
 	}
 
@@ -2095,6 +2096,7 @@ public partial class GameBoardScene
 
 	private void ApplySeatControlStatesFromSnapshot(Godot.Collections.Dictionary snapshot)
 	{
+		bool wasActiveTooltipAffected = _activeStatusTooltipPlayerIndex >= 0;
 		_networkSeatControlStates.Clear();
 		foreach (Variant stateVariant in ReadArray(snapshot, "seat_control_states"))
 		{
@@ -2110,6 +2112,12 @@ public partial class GameBoardScene
 				ReadNetworkString(stateDictionary, "stable_user_id", string.Empty),
 				ReadNetworkString(stateDictionary, "reconnect_token", string.Empty)));
 		}
+
+		if (wasActiveTooltipAffected)
+		{
+			MarkActivePlayerStatusTooltipForRefresh();
+		}
+		MarkSeatControlIndicatorsDirty();
 	}
 
 	internal bool IsNetworkMatchClaimable()
@@ -2124,7 +2132,7 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		NetworkSessionState networkState = networkManager?.State ?? NetworkSessionState.Idle;
 		int localSeatIndex = GetLocalHandPlayerIndex();
 		bool seatStateFound = TryGetSeatControlStateForUi(localSeatIndex, out SeatControlState state);
@@ -2143,9 +2151,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.TryPromoteReclaimedSeatAtTurnStart(_currentTurnPlayerIndex) == true)
+		if (GetNetworkManager()?.TryPromoteReclaimedSeatAtTurnStart(_currentTurnPlayerIndex) == true)
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
+			MarkSeatControlIndicatorsDirty();
+			MarkActivePlayerStatusTooltipForRefresh();
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
 		}
 	}
 
@@ -2212,7 +2222,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(_currentTurnPlayerIndex) ?? false;
+		return GetNetworkManager()?.IsSeatAiControlled(_currentTurnPlayerIndex) ?? false;
 	}
 
 	private async Task ResolveNetworkAiProxyTurnsAsync(int turnSequenceGeneration)
@@ -2230,7 +2240,7 @@ public partial class GameBoardScene
 			while (turnSequenceGeneration == _turnSequenceGeneration
 				&& !IsGameOver()
 				&& (ShouldResolvePendingNetworkAiProxySelection()
-					|| (GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(_currentTurnPlayerIndex) ?? false)))
+					|| (GetNetworkManager()?.IsSeatAiControlled(_currentTurnPlayerIndex) ?? false)))
 			{
 				int failedSeatIndex = ShouldResolvePendingNetworkAiProxySelection()
 					? _pendingItemOwnerIndex
@@ -2304,7 +2314,7 @@ public partial class GameBoardScene
 			RenderPlayerHands();
 			if (IsNetworkHost())
 			{
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
+				GetNetworkManager()?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
 			}
 		}
 	}
@@ -2371,7 +2381,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(_pendingItemOwnerIndex) ?? false;
+		return GetNetworkManager()?.IsSeatAiControlled(_pendingItemOwnerIndex) ?? false;
 	}
 
 	private async Task<bool> TryResolvePendingNetworkAiProxySelectionAsync(int turnSequenceGeneration)
@@ -2575,7 +2585,7 @@ public partial class GameBoardScene
 		if (IsNetworkMultiplayerMode()
 			&& IsNetworkHost()
 			&& ownerSeatIndex >= 0
-			&& (GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(ownerSeatIndex) ?? false))
+			&& (GetNetworkManager()?.IsSeatAiControlled(ownerSeatIndex) ?? false))
 		{
 			CancelPendingNetworkAiProxySelectionForFailedItem(ownerSeatIndex);
 			return;
@@ -2732,7 +2742,7 @@ public partial class GameBoardScene
 
 	private bool IsNetworkHost()
 	{
-		return GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsHost ?? false;
+		return GetNetworkManager()?.IsHost ?? false;
 	}
 
 	private int GetLocalHandPlayerIndex()
@@ -2894,7 +2904,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendQuestionRewardVisualEventToSeatFromHost(
+		GetNetworkManager()?.SendQuestionRewardVisualEventToSeatFromHost(
 			playerIndex,
 			rewardAnimation.Value,
 			turnSequenceGeneration,

@@ -48,6 +48,7 @@ public partial class GameBoardScene
 		}
 
 		UpdateAllPlayerSeatControlIndicatorLayouts();
+		MarkSeatControlIndicatorsDirty();
 	}
 
 	private void RefreshAllPlayerSeatControlIndicators()
@@ -79,18 +80,17 @@ public partial class GameBoardScene
 		string statusText = playerVisible ? GetPlayerSeatControlStatusText(playerIndex) : string.Empty;
 		bool visible = playerVisible && !string.IsNullOrWhiteSpace(statusText);
 		SeatControlMode nextMode = SeatControlMode.HumanConnected;
+		bool needsContentRefresh = panel.Visible != visible;
 		if (visible)
 		{
 			TryGetSeatControlStateForUi(playerIndex, out SeatControlState state);
 			nextMode = state.Mode;
-			bool needsContentRefresh = !panel.Visible
-				|| !string.Equals(label.Text, statusText)
+			needsContentRefresh |= !string.Equals(label.Text, statusText)
 				|| _playerSeatControlIndicatorModes[playerIndex] != nextMode;
 			if (needsContentRefresh)
 			{
 				label.Text = statusText;
 				panel.AddThemeStyleboxOverride("panel", CreatePlayerSeatControlIndicatorStyle(nextMode));
-				ApplyPlayerSeatControlIndicatorLayout(playerIndex);
 			}
 		}
 
@@ -102,7 +102,10 @@ public partial class GameBoardScene
 		}
 
 		_playerSeatControlIndicatorModes[playerIndex] = nextMode;
-		ApplyPlayerSeatControlIndicatorLayout(playerIndex);
+		if (needsContentRefresh)
+		{
+			ApplyPlayerSeatControlIndicatorLayout(playerIndex);
+		}
 	}
 
 	private void UpdateAllPlayerSeatControlIndicatorLayouts()

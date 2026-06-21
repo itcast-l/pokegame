@@ -171,7 +171,7 @@ public partial class GameBoardScene
 			return playerIndex == MainPlayerIndex;
 		}
 
-		return !(GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.IsSeatAiControlled(playerIndex) ?? false);
+		return !(GetNetworkManager()?.IsSeatAiControlled(playerIndex) ?? false);
 	}
 
 	private async Task<PlayCardResult> PlayTransformAreaItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)

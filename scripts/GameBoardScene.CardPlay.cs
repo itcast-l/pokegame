@@ -66,7 +66,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCardPlayedEventFromHost(
+			GetNetworkManager()?.BroadcastCardPlayedEventFromHost(
 				playerIndex,
 				handIndex,
 				ToNetworkCardCode(playedCard),
@@ -206,7 +206,7 @@ public partial class GameBoardScene
 				&& TryBuildNetworkCaptureRevealVisualSync(captureStartIndex, scorePlayerIndex, magnetExtraCaptureIndexes, out NetworkCaptureRevealVisualSync captureRevealVisualSync)
 				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int captureRevealSnapshotId))
 			{
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCaptureRevealVisualEventFromHost(
+				GetNetworkManager()?.BroadcastCaptureRevealVisualEventFromHost(
 					captureRevealVisualSync,
 					turnSequenceGeneration,
 					captureRevealSnapshotId);
@@ -344,7 +344,7 @@ public partial class GameBoardScene
 				&& IsNetworkHost()
 				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 			{
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastCaptureVisualEventFromHost(
+				GetNetworkManager()?.BroadcastCaptureVisualEventFromHost(
 					captureVisualSync,
 					turnSequenceGeneration,
 					snapshotId);

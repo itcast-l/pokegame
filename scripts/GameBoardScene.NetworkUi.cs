@@ -78,9 +78,25 @@ public partial class GameBoardScene
 		_networkReconnectNoticePanel.AddChild(_networkReconnectNoticeLabel);
 	}
 
-	private void UpdateReconnectOverlay()
+	private bool ShouldShowNetworkReconnectOverlay()
 	{
-		bool shouldShowOverlay = ShouldShowNetworkReconnectOverlay();
+		NetworkManager? networkManager = GetNetworkManager();
+		return NetworkReconnectPresentationRules.ShouldShowOverlay(
+			IsNetworkMultiplayerMode(),
+			IsNetworkHost(),
+			_networkWaitForInitialize,
+			networkManager?.State ?? NetworkSessionState.Idle,
+			_networkLastAppliedSnapshotId);
+	}
+
+	private void RefreshNetworkReconnectOverlayIfNeeded(NetworkSessionState? networkState = null)
+	{
+		bool shouldShowOverlay = NetworkReconnectPresentationRules.ShouldShowOverlay(
+			IsNetworkMultiplayerMode(),
+			IsNetworkHost(),
+			_networkWaitForInitialize,
+			networkState ?? (GetNetworkManager()?.State ?? NetworkSessionState.Idle),
+			_networkLastAppliedSnapshotId);
 		if (_networkReconnectOverlayPanel != null)
 		{
 			_networkReconnectOverlayPanel.Visible = shouldShowOverlay;
@@ -91,23 +107,6 @@ public partial class GameBoardScene
 			_networkReconnectOverlayLabel.Text = GetNetworkReconnectOverlayText();
 		}
 
-		if (_networkReconnectNoticePanel != null
-			&& _networkReconnectNoticePanel.Visible
-			&& Time.GetTicksMsec() / 1000.0 >= _networkReconnectNoticeHideAt)
-		{
-			_networkReconnectNoticePanel.Visible = false;
-		}
-	}
-
-	private bool ShouldShowNetworkReconnectOverlay()
-	{
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
-		return NetworkReconnectPresentationRules.ShouldShowOverlay(
-			IsNetworkMultiplayerMode(),
-			IsNetworkHost(),
-			_networkWaitForInitialize,
-			networkManager?.State ?? NetworkSessionState.Idle,
-			_networkLastAppliedSnapshotId);
 	}
 
 	private void ShowReconnectRecoveryNoticeIfNeeded()
@@ -132,8 +131,34 @@ public partial class GameBoardScene
 		}
 
 		_networkReconnectNoticeLabel.Text = message;
-		_networkReconnectNoticeHideAt = Time.GetTicksMsec() / 1000.0 + NetworkReconnectNoticeSeconds;
 		_networkReconnectNoticePanel.Visible = true;
+		EnsureNetworkReconnectNoticeHideTimer();
+		_networkReconnectNoticeHideTimer!.Start(NetworkReconnectNoticeSeconds);
+	}
+
+	private void HideNetworkReconnectNotice()
+	{
+		if (_networkReconnectNoticePanel != null)
+		{
+			_networkReconnectNoticePanel.Visible = false;
+		}
+	}
+
+	private void EnsureNetworkReconnectNoticeHideTimer()
+	{
+		if (_networkReconnectNoticeHideTimer != null && GodotObject.IsInstanceValid(_networkReconnectNoticeHideTimer))
+		{
+			return;
+		}
+
+		_networkReconnectNoticeHideTimer = new Godot.Timer
+		{
+			Name = "NetworkReconnectNoticeHideTimer",
+			OneShot = true,
+			ProcessMode = ProcessModeEnum.Always,
+		};
+		_networkReconnectNoticeHideTimer.Timeout += HideNetworkReconnectNotice;
+		AddChild(_networkReconnectNoticeHideTimer);
 	}
 
 	private bool TryGetSeatControlStateForUi(int seatIndex, out SeatControlState state)
@@ -146,7 +171,7 @@ public partial class GameBoardScene
 
 		if (IsNetworkHost())
 		{
-			return GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.TryGetSeatControlStateForUi(seatIndex, out state) == true;
+			return GetNetworkManager()?.TryGetSeatControlStateForUi(seatIndex, out state) == true;
 		}
 
 		foreach (SeatControlState candidate in _networkSeatControlStates)
@@ -179,6 +204,16 @@ public partial class GameBoardScene
 	private string GetNetworkReconnectNoticeText()
 	{
 		return NetworkReconnectPresentationRules.GetReconnectNoticeText(UsesChineseLocale());
+	}
+
+	private void RefreshNetworkReconnectNoticeTextIfVisible()
+	{
+		if (_networkReconnectNoticePanel?.Visible != true || _networkReconnectNoticeLabel == null)
+		{
+			return;
+		}
+
+		_networkReconnectNoticeLabel.Text = GetNetworkReconnectNoticeText();
 	}
 
 	private static StyleBoxFlat CreateNetworkReconnectOverlayStyle()

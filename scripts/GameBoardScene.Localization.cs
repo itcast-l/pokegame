@@ -10,12 +10,14 @@ public partial class GameBoardScene
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
 			RefreshLocalizedGameText();
+			MarkSeatControlIndicatorsDirty();
+			MarkActivePlayerStatusTooltipContentDirty();
 		}
 		else if (what == NotificationResized && IsNodeReady())
 		{
 			RefreshAdventureTutorialOverlayLayout();
-			UpdateAllPlayerSeatControlIndicatorLayouts();
-			UpdatePlayerStatusTooltipLayout();
+			MarkSeatControlIndicatorLayoutDirty();
+			MarkActivePlayerStatusTooltipLayoutDirty();
 		}
 	}
 
@@ -118,7 +120,9 @@ public partial class GameBoardScene
 
 		RefreshItemCardDescriptions();
 		RefreshScoreTooltips();
-		RefreshAllPlayerSeatControlIndicators();
+		MarkSeatControlIndicatorsDirty();
+		RefreshNetworkReconnectOverlayIfNeeded();
+		RefreshNetworkReconnectNoticeTextIfVisible();
 		RefreshSelectionOverlayText();
 		RefreshRenderedCardDescriptions();
 		RefreshAdventureTutorialOverlayText();

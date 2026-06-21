@@ -154,7 +154,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastLensRevealVisualEventFromHost(
+			GetNetworkManager()?.BroadcastLensRevealVisualEventFromHost(
 				_currentTurnPlayerIndex,
 				splitGlobalCenter,
 				targetIndexes,

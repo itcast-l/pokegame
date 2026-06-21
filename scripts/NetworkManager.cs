@@ -13,6 +13,9 @@ public partial class NetworkManager : Node
 	public delegate void ErrorRaisedEventHandler(string message);
 
 	[Signal]
+	public delegate void SeatControlStatesUpdatedEventHandler();
+
+	[Signal]
 	public delegate void RoomListUpdatedEventHandler(Godot.Collections.Array rooms);
 
 	[Signal]
@@ -119,7 +122,7 @@ public partial class NetworkManager : Node
 
 		Multiplayer.MultiplayerPeer = _enetPeer;
 		_players.Clear();
-		_players.Add(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
+		InsertPlayerInSeatOrder(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
 		StartLanDiscoveryResponder();
 		SetState(NetworkSessionState.Lobby);
 		EmitPlayerListUpdated();
@@ -199,7 +202,7 @@ public partial class NetworkManager : Node
 		SetState(NetworkSessionState.Hosting);
 		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName, roomPassword);
 		_players.Clear();
-		_players.Add(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
+		InsertPlayerInSeatOrder(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
 		_pendingSteamHostLobby = true;
 		TryCreateSteamLobby();
 		EmitPlayerListUpdated();
@@ -374,7 +377,7 @@ public partial class NetworkManager : Node
 	public Godot.Collections.Array GetPlayersVariant()
 	{
 		var result = new Godot.Collections.Array();
-		foreach (NetworkPlayerPublicState player in _players.OrderBy(player => player.SeatIndex))
+		foreach (NetworkPlayerPublicState player in _players)
 		{
 			result.Add(ToDictionary(player));
 		}
@@ -385,7 +388,7 @@ public partial class NetworkManager : Node
 	public Godot.Collections.Array GetSeatControlStatesVariant(bool includeReconnectTokens = true)
 	{
 		var result = new Godot.Collections.Array();
-		foreach (SeatControlState state in _seatControlStates.OrderBy(state => state.SeatIndex))
+		foreach (SeatControlState state in _seatControlStates)
 		{
 			result.Add(ToDictionary(includeReconnectTokens ? state : SeatControlRules.RedactReconnectTokenForSharedSnapshot(state)));
 		}
@@ -660,7 +663,7 @@ public partial class NetworkManager : Node
 			[NetworkBoardVisualEventTypes.TargetHandIndexKey] = targetHandIndex,
 			[NetworkBoardVisualEventTypes.PlayedCardCodeKey] = stolenCardCode,
 			[NetworkBoardVisualEventTypes.ItemCardIdKey] = stolenItemCardId,
-			[NetworkBoardVisualEventTypes.AttachedItemCardIdsKey] = new Godot.Collections.Array<string>((attachedItemCardIds ?? Array.Empty<string>()).ToArray()),
+			[NetworkBoardVisualEventTypes.AttachedItemCardIdsKey] = new Godot.Collections.Array<string>(attachedItemCardIds ?? Array.Empty<string>()),
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
@@ -703,8 +706,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		NetworkPlayerPublicState recipient = _players.FirstOrDefault(player => player.SeatIndex == ownerPlayerIndex && player.IsConnected && !player.IsHost);
-		if (recipient.PeerId == 0)
+		if (!TryGetConnectedRemotePlayerBySeatIndex(ownerPlayerIndex, out NetworkPlayerPublicState recipient))
 		{
 			return;
 		}
@@ -715,7 +717,7 @@ public partial class NetworkManager : Node
 			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = ownerPlayerIndex,
 			[NetworkBoardVisualEventTypes.SplitCenterXKey] = splitGlobalCenter.X,
 			[NetworkBoardVisualEventTypes.SplitCenterYKey] = splitGlobalCenter.Y,
-			[NetworkBoardVisualEventTypes.TargetTableCardIndexesKey] = new Godot.Collections.Array<int>(targetIndexes.ToArray()),
+			[NetworkBoardVisualEventTypes.TargetTableCardIndexesKey] = new Godot.Collections.Array<int>(targetIndexes),
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
@@ -731,7 +733,7 @@ public partial class NetworkManager : Node
 		var payload = new Godot.Collections.Dictionary
 		{
 			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.TableShuffle,
-			[NetworkBoardVisualEventTypes.ShuffleTargetIndexesKey] = new Godot.Collections.Array<int>(targetIndexes.ToArray()),
+			[NetworkBoardVisualEventTypes.ShuffleTargetIndexesKey] = new Godot.Collections.Array<int>(targetIndexes),
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
@@ -783,8 +785,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		NetworkPlayerPublicState recipient = _players.FirstOrDefault(player => player.SeatIndex == ownerSeatIndex && player.IsConnected && !player.IsHost);
-		if (recipient.PeerId == 0)
+		if (!TryGetConnectedRemotePlayerBySeatIndex(ownerSeatIndex, out NetworkPlayerPublicState recipient))
 		{
 			return;
 		}
@@ -833,8 +834,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		NetworkPlayerPublicState recipient = _players.FirstOrDefault(player => player.SeatIndex == seatIndex && player.IsConnected && !player.IsHost);
-		if (recipient.PeerId == 0)
+		if (!TryGetConnectedRemotePlayerBySeatIndex(seatIndex, out NetworkPlayerPublicState recipient))
 		{
 			return;
 		}
@@ -1383,7 +1383,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		if (_players.Any(player => player.PeerId == senderId))
+		if (TryGetPlayerIndexByPeerId(senderId, out _))
 		{
 			return;
 		}
@@ -1395,7 +1395,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		_players.Add(new NetworkPlayerPublicState(
+		InsertPlayerInSeatOrder(new NetworkPlayerPublicState(
 			senderId,
 			string.IsNullOrWhiteSpace(stableUserId) ? $"peer:{senderId}" : stableUserId,
 			PlayerNameRules.Normalize(displayName),
@@ -1470,7 +1470,7 @@ public partial class NetworkManager : Node
 			}
 
 			NetworkPlayerPublicState player = ParsePlayer(playerDictionary);
-			_players.Add(player with { IsLocal = player.PeerId == localPeerId || (localPeerId == 0 && player.IsHost) });
+			InsertPlayerInSeatOrder(player with { IsLocal = player.PeerId == localPeerId || (localPeerId == 0 && player.IsHost) });
 		}
 
 		SetState(NetworkSessionState.Lobby);
@@ -1882,16 +1882,12 @@ public partial class NetworkManager : Node
 
 	private string BuildPlayerNamesCsv()
 	{
-		return string.Join(",", _players
-			.OrderBy(player => player.SeatIndex)
-			.Select(player => EscapeCsvValue(player.DisplayName)));
+		return string.Join(",", _players.Select(player => EscapeCsvValue(player.DisplayName)));
 	}
 
 	private string BuildPlayerAvatarIdsCsv()
 	{
-		return string.Join(",", _players
-			.OrderBy(player => player.SeatIndex)
-			.Select(player => EscapeCsvValue(player.AvatarId)));
+		return string.Join(",", _players.Select(player => EscapeCsvValue(player.AvatarId)));
 	}
 
 	private static string EscapeCsvValue(string value)
@@ -2162,6 +2158,61 @@ public partial class NetworkManager : Node
 		return _players.FirstOrDefault(player => player.IsHost).StableUserId;
 	}
 
+	private void InsertPlayerInSeatOrder(NetworkPlayerPublicState player)
+	{
+		int insertIndex = _players.FindIndex(candidate => candidate.SeatIndex > player.SeatIndex);
+		if (insertIndex < 0)
+		{
+			_players.Add(player);
+			return;
+		}
+
+		_players.Insert(insertIndex, player);
+	}
+
+	private bool TryGetPlayerIndexByPeerId(int peerId, out int playerIndex)
+	{
+		playerIndex = _players.FindIndex(player => player.PeerId == peerId);
+		return playerIndex >= 0;
+	}
+
+	private bool TryGetPlayerIndexBySeatIndex(int seatIndex, out int playerIndex)
+	{
+		if (seatIndex >= 0
+			&& seatIndex < _players.Count
+			&& _players[seatIndex].SeatIndex == seatIndex)
+		{
+			playerIndex = seatIndex;
+			return true;
+		}
+
+		playerIndex = _players.FindIndex(player => player.SeatIndex == seatIndex);
+		return playerIndex >= 0;
+	}
+
+	private bool TryGetConnectedRemotePlayerBySeatIndex(int seatIndex, out NetworkPlayerPublicState recipient)
+	{
+		if (TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
+		{
+			NetworkPlayerPublicState candidate = _players[playerIndex];
+			if (candidate.IsConnected && !candidate.IsHost)
+			{
+				recipient = candidate;
+				return true;
+			}
+		}
+
+		int fallbackIndex = _players.FindIndex(player => player.SeatIndex == seatIndex && player.IsConnected && !player.IsHost);
+		if (fallbackIndex < 0)
+		{
+			recipient = default;
+			return false;
+		}
+
+		recipient = _players[fallbackIndex];
+		return true;
+	}
+
 	private GodotObject? GetSteamSingleton()
 	{
 		return Engine.HasSingleton("Steam") ? Engine.GetSingleton("Steam") : null;
@@ -2276,6 +2327,11 @@ public partial class NetworkManager : Node
 	private void EmitPlayerListUpdated()
 	{
 		EmitSignal(SignalName.PlayerListUpdated, GetPlayersVariant());
+	}
+
+	private void EmitSeatControlStatesUpdated()
+	{
+		EmitSignal(SignalName.SeatControlStatesUpdated);
 	}
 
 	private static Godot.Collections.Dictionary ToDictionary(SeatControlState state)
@@ -2418,7 +2474,7 @@ public partial class NetworkManager : Node
 	{
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
-		foreach (NetworkPlayerPublicState player in _players.OrderBy(player => player.SeatIndex))
+		foreach (NetworkPlayerPublicState player in _players)
 		{
 			string reconnectToken = Guid.NewGuid().ToString("N");
 			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
@@ -2429,10 +2485,21 @@ public partial class NetworkManager : Node
 				_localReconnectToken = reconnectToken;
 			}
 		}
+
+		EmitSeatControlStatesUpdated();
 	}
 
 	private bool TryGetSeatControlState(int seatIndex, out SeatControlState state, out int stateIndex)
 	{
+		if (seatIndex >= 0
+			&& seatIndex < _seatControlStates.Count
+			&& _seatControlStates[seatIndex].SeatIndex == seatIndex)
+		{
+			stateIndex = seatIndex;
+			state = _seatControlStates[stateIndex];
+			return true;
+		}
+
 		stateIndex = _seatControlStates.FindIndex(candidate => candidate.SeatIndex == seatIndex);
 		if (stateIndex < 0)
 		{
@@ -2482,6 +2549,8 @@ public partial class NetworkManager : Node
 		{
 			_reconnectClaimsBySeat[seatIndex] = updatedClaim.Value;
 		}
+
+		EmitSeatControlStatesUpdated();
 	}
 
 	private bool CanAcceptRemoteBoardActionFromSeat(int seatIndex)
@@ -2599,8 +2668,7 @@ public partial class NetworkManager : Node
 
 	private void BindReconnectedPeerToSeat(int seatIndex, int senderPeerId)
 	{
-		int playerIndex = _players.FindIndex(player => player.SeatIndex == seatIndex);
-		if (playerIndex < 0)
+		if (!TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
 		{
 			return;
 		}
@@ -2615,8 +2683,7 @@ public partial class NetworkManager : Node
 	private void MarkLocalPlayerConnection(bool isConnected)
 	{
 		int localSeatIndex = LocalSeatIndex;
-		int playerIndex = _players.FindIndex(player => player.SeatIndex == localSeatIndex);
-		if (playerIndex < 0)
+		if (!TryGetPlayerIndexBySeatIndex(localSeatIndex, out int playerIndex))
 		{
 			return;
 		}
@@ -2631,8 +2698,7 @@ public partial class NetworkManager : Node
 
 	private void UpdateLocalPlayerAfterReconnect(int seatIndex)
 	{
-		int playerIndex = _players.FindIndex(player => player.SeatIndex == seatIndex);
-		if (playerIndex < 0)
+		if (!TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
 		{
 			return;
 		}
@@ -2665,6 +2731,7 @@ public partial class NetworkManager : Node
 		}
 
 		_seatControlStates[stateIndex] = next;
+		EmitSeatControlStatesUpdated();
 		return true;
 	}
 

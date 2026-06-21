@@ -16,7 +16,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastTableShuffleVisualEventFromHost(
+			GetNetworkManager()?.BroadcastTableShuffleVisualEventFromHost(
 				_currentTurnPlayerIndex,
 				BuildShuffleTargetIndexes(shuffledTableCards),
 				turnSequenceGeneration,
@@ -142,7 +142,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
-			GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastMantaTideShiftVisualEventFromHost(
+			GetNetworkManager()?.BroadcastMantaTideShiftVisualEventFromHost(
 				_currentTurnPlayerIndex,
 				turnSequenceGeneration,
 				snapshotId);

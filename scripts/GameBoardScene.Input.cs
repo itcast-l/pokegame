@@ -73,7 +73,7 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		NetworkManager? networkManager = GetNodeOrNull<NetworkManager>("/root/NetworkManager");
+		NetworkManager? networkManager = GetNetworkManager();
 		NetworkSessionState networkState = networkManager?.State ?? NetworkSessionState.Idle;
 		int localSeatIndex = GetLocalHandPlayerIndex();
 		bool seatStateFound = TryGetSeatControlStateForUi(localSeatIndex, out SeatControlState state);

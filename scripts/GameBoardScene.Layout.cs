@@ -474,5 +474,7 @@ public partial class GameBoardScene
 		_topPlayerArea.Visible = player_count >= 2;
 		_leftPlayerArea.Visible = player_count >= 3;
 		_rightPlayerArea.Visible = player_count >= 4;
+		MarkSeatControlIndicatorLayoutDirty();
+		MarkActivePlayerStatusTooltipLayoutDirty();
 	}
 }

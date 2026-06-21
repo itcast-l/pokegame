@@ -245,7 +245,7 @@ public partial class GameBoardScene
 		{
 			if (snapshotId >= 0)
 			{
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.BroadcastItemCardPlayedVisualEventFromHost(
+				GetNetworkManager()?.BroadcastItemCardPlayedVisualEventFromHost(
 					ownerPlayerIndex,
 					new NetworkItemPlayVisualSync(itemCard.Id, CardPlayPresentationTypes.TargetedTrigger, itemHandIndex),
 					turnSequenceGeneration,
@@ -301,7 +301,7 @@ public partial class GameBoardScene
 			CheckForWinner();
 			if (snapshotId >= 0)
 			{
-				GetNodeOrNull<NetworkManager>("/root/NetworkManager")?.SendBoardSnapshotsFromHost(this, snapshotId);
+				GetNetworkManager()?.SendBoardSnapshotsFromHost(this, snapshotId);
 			}
 			await FinishPendingItemCardAsync(result, ownerPlayerIndex, turnSequenceGeneration);
 		}
