@@ -41,6 +41,7 @@ internal static class Program
 		Run("lan address helper computes ipv4 broadcast address", LanAddressHelperComputesIpv4BroadcastAddress);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("character avatar visual resources point to existing files", CharacterAvatarVisualResourcesPointToExistingFiles);
+		Run("character avatar display names are localized for every locale", CharacterAvatarDisplayNamesAreLocalizedForEveryLocale);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
 		Run("board effect resources point to existing files", BoardEffectResourcesPointToExistingFiles);
@@ -812,6 +813,70 @@ internal static class Program
 			if (!string.IsNullOrWhiteSpace(damageEffectFramePattern) && damageEffectFrameCount > 0)
 			{
 				AssertFramePatternExists(repoRoot, damageEffectFramePattern, damageEffectFrameCount);
+			}
+		}
+	}
+
+	private static void CharacterAvatarDisplayNamesAreLocalizedForEveryLocale()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string avatarDirectory = Path.Combine(repoRoot, "resources", "character_avatars");
+		string localizationPath = Path.Combine(repoRoot, "localization", "ui.csv");
+		True(Directory.Exists(avatarDirectory));
+		True(File.Exists(localizationPath));
+
+		string[] localizationLines = File.ReadAllLines(localizationPath);
+		True(localizationLines.Length > 1);
+		List<string> header = ParseCsvLine(localizationLines[0]);
+		True(header.Count > 1);
+
+		var rowsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+		foreach (string line in localizationLines[1..])
+		{
+			if (string.IsNullOrWhiteSpace(line))
+			{
+				continue;
+			}
+
+			List<string> row = ParseCsvLine(line);
+			if (row.Count == 0 || string.IsNullOrWhiteSpace(row[0]))
+			{
+				continue;
+			}
+
+			rowsByKey[row[0].Trim()] = row;
+		}
+
+		string[] avatarPaths = Directory.GetFiles(avatarDirectory, "*.tres");
+		True(avatarPaths.Length > 0);
+
+		foreach (string avatarPath in avatarPaths)
+		{
+			string avatarText = File.ReadAllText(avatarPath);
+			string avatarId = ReadTresString(avatarText, "Id");
+			string fallbackName = ReadTresString(avatarText, "DisplayName");
+			string displayNameKey = ReadTresString(avatarText, "DisplayNameKey");
+			True(!string.IsNullOrWhiteSpace(avatarId));
+			True(!string.IsNullOrWhiteSpace(fallbackName));
+			True(!string.IsNullOrWhiteSpace(displayNameKey));
+			True(displayNameKey.StartsWith("AVATAR_", StringComparison.Ordinal));
+			True(displayNameKey.EndsWith("_NAME", StringComparison.Ordinal));
+			if (!rowsByKey.TryGetValue(displayNameKey, out List<string>? row))
+			{
+				throw new InvalidOperationException($"missing localization row for {displayNameKey}");
+			}
+
+			Equal(header.Count, row.Count);
+
+			for (int index = 1; index < header.Count; index++)
+			{
+				string locale = header[index];
+				string localizedName = row[index].Trim();
+				True(!string.IsNullOrWhiteSpace(localizedName));
+				if (locale != "zh_CN" && locale != "zh_TW")
+				{
+					False(ContainsHanCharacter(localizedName));
+				}
 			}
 		}
 	}
@@ -2308,6 +2373,56 @@ internal static class Program
 	{
 		Match match = Regex.Match(tresText, $"^{Regex.Escape(propertyName)} = \"([^\"]*)\"$", RegexOptions.Multiline);
 		return match.Success ? match.Groups[1].Value : string.Empty;
+	}
+
+	private static List<string> ParseCsvLine(string line)
+	{
+		var values = new List<string>();
+		var current = new System.Text.StringBuilder();
+		bool inQuotes = false;
+
+		for (int index = 0; index < line.Length; index++)
+		{
+			char value = line[index];
+			if (value == '"')
+			{
+				if (inQuotes && index + 1 < line.Length && line[index + 1] == '"')
+				{
+					current.Append('"');
+					index++;
+				}
+				else
+				{
+					inQuotes = !inQuotes;
+				}
+				continue;
+			}
+
+			if (value == ',' && !inQuotes)
+			{
+				values.Add(current.ToString());
+				current.Clear();
+				continue;
+			}
+
+			current.Append(value);
+		}
+
+		values.Add(current.ToString());
+		return values;
+	}
+
+	private static bool ContainsHanCharacter(string value)
+	{
+		foreach (char character in value)
+		{
+			if (character is >= '\u3400' and <= '\u9fff')
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private static int ReadTresInt(string tresText, string propertyName, int fallback)

@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "hamster"
 DisplayName = "小仓"
+DisplayNameKey = "AVATAR_HAMSTER_NAME"
 RootPath = "res://art/characters/player_hamster_avatar/run-001"
 IdleFrameCount = 16
 IdleFrameSeconds = 0.08

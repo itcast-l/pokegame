@@ -33,11 +33,12 @@ public static partial class CharacterAvatarCatalog
 			GetResourceInt(resource, "DamageEffectFrameCount"),
 			GetResourceBool(resource, "DamageEffectPreferImageFile"),
 			GetResourceString(resource, "AttackFxRoot"),
-			GetResourceFloat(resource, "AttackEffectFlightSeconds"),
-			GetResourceString(resource, "AttackEffectStyle"),
-			GetResourceString(resource, "AccentColorHtml"),
-			GetResourceBool(resource, "BossBorrowedAbilityFxEligible", true),
-			GetResourceObject<CharacterAudioConfig>(resource, "AudioConfig"));
+				GetResourceFloat(resource, "AttackEffectFlightSeconds"),
+				GetResourceString(resource, "AttackEffectStyle"),
+				GetResourceString(resource, "AccentColorHtml"),
+				GetResourceBool(resource, "BossBorrowedAbilityFxEligible", true),
+				GetResourceObject<CharacterAudioConfig>(resource, "AudioConfig"),
+				GetResourceString(resource, "DisplayNameKey"));
 	}
 
 	private static string GetResourceString(Resource resource, string propertyName, string fallback = "")

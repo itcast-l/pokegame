@@ -1,6 +1,27 @@
 key,ar,bg,zh_CN,zh_TW,cs,da,nl,en,fi,fr,de,el,hu,id,it,ja,ko,no,pl,pt,pt_BR,ro,ru,es,es_419,sv,th,tr,uk,vi
 APP_NAME,Deckland,Deckland,夺牌,奪牌,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland,Deckland
 APP_SUBTITLE,معركة بطاقات,Картова битка,卡牌对局,卡牌對局,Karetní souboj,Kortkamp,Kaartduel,Card Battler,Korttitaisto,Duel de cartes,Kartenduell,Μάχη καρτών,Kártyacsata,Duel Kartu,Duello di carte,カード対戦,카드 대전,Kortkamp,Pojedynek kart,Batalha de cartas,Batalha de cartas,Luptă de cărți,Карточная битва,Duelo de cartas,Duelo de cartas,Kortkamp,ดวลการ์ด,Kart Düellosu,Карткова битва,Đấu bài
+AVATAR_BEAR_NAME,كوما,Кума,小熊,小熊,Kuma,Kuma,Kuma,Kuma,Kuma,Kuma,Kuma,Κούμα,Kuma,Kuma,Kuma,クマ,쿠마,Kuma,Kuma,Kuma,Kuma,Kuma,Кума,Kuma,Kuma,Kuma,คูมะ,Kuma,Кума,Kuma
+AVATAR_BOSS_K_NAME,كايزر K,Кайзер K,凯撒 K,凱撒 K,Kaiser K,Kaiser K,Kaiser K,Kaiser K,Kaiser K,Kaiser K,Kaiser K,Κάιζερ K,Kaiser K,Kaiser K,Kaiser K,カイザー K,카이저 K,Kaiser K,Kaiser K,Kaiser K,Kaiser K,Kaiser K,Кайзер K,Kaiser K,Kaiser K,Kaiser K,ไคเซอร์ K,Kaiser K,Кайзер K,Kaiser K
+AVATAR_CAT_NAME,مومو,Момо,莫莫,莫莫,Momo,Momo,Momo,Momo,Momo,Momo,Momo,Μόμο,Momo,Momo,Momo,モモ,모모,Momo,Momo,Momo,Momo,Momo,Момо,Momo,Momo,Momo,โมโมะ,Momo,Момо,Momo
+AVATAR_CRAB_NAME,دودو,Дуду,嘟嘟,嘟嘟,Dudu,Dudu,Dudu,Dudu,Dudu,Dudu,Dudu,Ντούντου,Dudu,Dudu,Dudu,ドゥドゥ,두두,Dudu,Dudu,Dudu,Dudu,Dudu,Дуду,Dudu,Dudu,Dudu,ดูดู,Dudu,Дуду,Dudu
+AVATAR_DRAGON_PRINCE_J_NAME,جاي J,Джей J,杰伊 J,傑伊 J,Jay J,Jay J,Jay J,Jay J,Jay J,Jay J,Jay J,Τζέι J,Jay J,Jay J,Jay J,ジェイ J,제이 J,Jay J,Jay J,Jay J,Jay J,Jay J,Джей J,Jay J,Jay J,Jay J,เจย์ J,Jay J,Джей J,Jay J
+AVATAR_DRAGON_QUEEN_Q_NAME,كوينا Q,Куина Q,奎娜 Q,奎娜 Q,Queena Q,Queena Q,Queena Q,Queena Q,Queena Q,Queena Q,Queena Q,Κουίνα Q,Queena Q,Queena Q,Queena Q,クイーナ Q,퀴나 Q,Queena Q,Queena Q,Queena Q,Queena Q,Queena Q,Куина Q,Queena Q,Queena Q,Queena Q,ควีนา Q,Queena Q,Куїна Q,Queena Q
+AVATAR_FISH_NAME,أبو,Абу,阿布,阿布,Abu,Abu,Abu,Abu,Abu,Abu,Abu,Άμπου,Abu,Abu,Abu,アブ,아부,Abu,Abu,Abu,Abu,Abu,Абу,Abu,Abu,Abu,อาบู,Abu,Абу,Abu
+AVATAR_FOX_NAME,فوكسي,Фокси,小狐,小狐,Foxy,Foxy,Foxy,Foxy,Foxy,Foxy,Foxy,Φόξι,Foxy,Foxy,Foxy,フォクシー,폭시,Foxy,Foxy,Foxy,Foxy,Foxy,Фокси,Foxy,Foxy,Foxy,ฟ็อกซี,Foxy,Фоксі,Foxy
+AVATAR_GARDEN_EEL_NAME,أدو,Адо,阿豆,阿豆,Ado,Ado,Ado,Ado,Ado,Ado,Ado,Άντο,Ado,Ado,Ado,アド,아도,Ado,Ado,Ado,Ado,Ado,Адо,Ado,Ado,Ado,อาโด,Ado,Адо,Ado
+AVATAR_HAMSTER_NAME,هامي,Хами,小仓,小倉,Hami,Hami,Hami,Hami,Hami,Hami,Hami,Χάμι,Hami,Hami,Hami,ハミ,하미,Hami,Hami,Hami,Hami,Hami,Хами,Hami,Hami,Hami,ฮามิ,Hami,Хамі,Hami
+AVATAR_JELLYFISH_NAME,جيلي,Джели,软糖,軟糖,Jelly,Jelly,Jelly,Jelly,Jelly,Jelly,Jelly,Τζέλι,Jelly,Jelly,Jelly,ジェリー,젤리,Jelly,Jelly,Jelly,Jelly,Jelly,Джелли,Jelly,Jelly,Jelly,เจลลี่,Jelly,Джеллі,Jelly
+AVATAR_LANTERNFISH_NAME,ميلو,Милу,米露,米露,Milu,Milu,Milu,Milu,Milu,Milu,Milu,Μίλου,Milu,Milu,Milu,ミル,밀루,Milu,Milu,Milu,Milu,Milu,Милу,Milu,Milu,Milu,มิลู,Milu,Мілу,Milu
+AVATAR_LEAFY_SEADRAGON_NAME,آيلي,Айли,艾莉,艾莉,Aili,Aili,Aili,Aili,Aili,Aili,Aili,Άιλι,Aili,Aili,Aili,アイリ,아이리,Aili,Aili,Aili,Aili,Aili,Айли,Aili,Aili,Aili,ไอลี,Aili,Айлі,Aili
+AVATAR_LOP_RABBIT_NAME,نونو,Ноно,糯糯,糯糯,Nono,Nono,Nono,Nono,Nono,Nono,Nono,Νόνο,Nono,Nono,Nono,ノノ,노노,Nono,Nono,Nono,Nono,Nono,Ноно,Nono,Nono,Nono,โนโน,Nono,Ноно,Nono
+AVATAR_MANTA_RAY_NAME,يويو,Йойо,悠悠,悠悠,Yoyo,Yoyo,Yoyo,Yoyo,Yoyo,Yoyo,Yoyo,Γιόγιο,Yoyo,Yoyo,Yoyo,ヨーヨー,요요,Yoyo,Yoyo,Yoyo,Yoyo,Yoyo,Йойо,Yoyo,Yoyo,Yoyo,โยโย,Yoyo,Йойо,Yoyo
+AVATAR_NARWHAL_NAME,نوح,Ной,诺亚,諾亞,Noah,Noah,Noah,Noah,Noah,Noah,Noah,Νώε,Noah,Noah,Noah,ノア,노아,Noah,Noah,Noah,Noah,Noah,Ной,Noah,Noah,Noah,โนอาห์,Noah,Ной,Noah
+AVATAR_NAUTILUS_NAME,رومي,Роми,罗米,羅米,Romy,Romy,Romy,Romy,Romy,Romy,Romy,Ρόμι,Romy,Romy,Romy,ロミー,로미,Romy,Romy,Romy,Romy,Romy,Роми,Romy,Romy,Romy,โรมี,Romy,Ромі,Romy
+AVATAR_RED_PANDA_NAME,يوزو,Юзу,柚柚,柚柚,Yuzu,Yuzu,Yuzu,Yuzu,Yuzu,Yuzu,Yuzu,Γιούζου,Yuzu,Yuzu,Yuzu,ユズ,유즈,Yuzu,Yuzu,Yuzu,Yuzu,Yuzu,Юзу,Yuzu,Yuzu,Yuzu,ยูซุ,Yuzu,Юзу,Yuzu
+AVATAR_SEA_SLUG_NAME,نومي,Номи,糯米,糯米,Nomi,Nomi,Nomi,Nomi,Nomi,Nomi,Nomi,Νόμι,Nomi,Nomi,Nomi,ノミ,노미,Nomi,Nomi,Nomi,Nomi,Nomi,Номи,Nomi,Nomi,Nomi,โนมิ,Nomi,Номі,Nomi
+AVATAR_SHIBA_NAME,دانغو,Данго,团子,團子,Dango,Dango,Dango,Dango,Dango,Dango,Dango,Ντάνγκο,Dango,Dango,Dango,ダンゴ,단고,Dango,Dango,Dango,Dango,Dango,Данго,Dango,Dango,Dango,ดังโกะ,Dango,Данго,Dango
+AVATAR_SHRIMP_NAME,بيبي,Пипи,皮皮,皮皮,Pipi,Pipi,Pipi,Pipi,Pipi,Pipi,Pipi,Πίπι,Pipi,Pipi,Pipi,ピピ,피피,Pipi,Pipi,Pipi,Pipi,Pipi,Пипи,Pipi,Pipi,Pipi,ปีปี,Pipi,Піпі,Pipi
 MENU_SINGLE_PLAYER,فردي,Соло,单人游戏,單人遊戲,Sólo,Solo,Solo,Solo,Soolo,Solo,Solo,Σόλο,Szóló,Solo,Solo,ソロ,솔로,Solo,Solo,Solo,Solo,Solo,Соло,Solo,Solo,Solo,เดี่ยว,Solo,Соло,Solo
 MENU_ADVENTURE,مغامرة,Приключение,冒险模式,冒險模式,Dobrodružství,Eventyr,Avontuur,Adventure,Seikkailu,Aventure,Abenteuer,Περιπέτεια,Kaland,Petualangan,Avventura,冒険,모험,Eventyr,Przygoda,Aventura,Aventura,Aventura,Приключение,Aventura,Aventura,Äventyr,การผจญภัย,Macera,Пригода,Phiêu lưu
 MENU_MULTIPLAYER,متعدد,Мулти,多人游戏,多人遊戲,Multi,Multi,Multi,Multi,Moni,Multi,Multi,Πολλοί,Multi,Multi,Multi,マルチ,멀티,Multi,Multi,Multi,Multi,Multi,Мульти,Multi,Multi,Multi,หลายคน,Çoklu,Мульти,Nhiều

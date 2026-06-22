@@ -19,7 +19,7 @@ content_margin_right = 12.0
 content_margin_bottom = 8.0
 
 [node name="MultiplayerLobbyPlayerRow" type="PanelContainer" node_paths=PackedStringArray("SeatLabel", "PlayerNameLabel", "RoleLabel", "ReadyLabel")]
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(300, 56)
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_row_panel")
 script = ExtResource("1_player_row")
 SeatLabel = NodePath("RowLayout/SeatLabel")

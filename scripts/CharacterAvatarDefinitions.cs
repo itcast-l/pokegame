@@ -71,10 +71,12 @@ public sealed class CharacterAvatarDefinition
 		string attackEffectStyle = "",
 		string accentColorHtml = "",
 		bool bossBorrowedAbilityFxEligible = true,
-		CharacterAudioConfig? audioConfig = null)
+		CharacterAudioConfig? audioConfig = null,
+		string displayNameKey = "")
 	{
 		Id = id;
 		DisplayName = displayName;
+		DisplayNameKey = displayNameKey;
 		RootPath = rootPath;
 		IdleFrameCount = idleFrameCount;
 		IdleFrameSeconds = idleFrameSeconds;
@@ -99,6 +101,7 @@ public sealed class CharacterAvatarDefinition
 
 	public string Id { get; }
 	public string DisplayName { get; }
+	public string DisplayNameKey { get; }
 	public string RootPath { get; }
 	public int IdleFrameCount { get; }
 	public float IdleFrameSeconds { get; }

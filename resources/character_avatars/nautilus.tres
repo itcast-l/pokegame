@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "nautilus"
 DisplayName = "罗米"
+DisplayNameKey = "AVATAR_NAUTILUS_NAME"
 RootPath = "res://art/characters/player_nautilus_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 4

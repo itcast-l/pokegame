@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "leafy_seadragon"
 DisplayName = "艾莉"
+DisplayNameKey = "AVATAR_LEAFY_SEADRAGON_NAME"
 RootPath = "res://art/characters/player_leafy_seadragon_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 4

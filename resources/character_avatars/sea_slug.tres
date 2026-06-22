@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "sea_slug"
 DisplayName = "糯米"
+DisplayNameKey = "AVATAR_SEA_SLUG_NAME"
 RootPath = "res://art/characters/player_sea_slug_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 4

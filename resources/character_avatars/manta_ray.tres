@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "manta_ray"
 DisplayName = "悠悠"
+DisplayNameKey = "AVATAR_MANTA_RAY_NAME"
 RootPath = "res://art/characters/player_manta_ray_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 4

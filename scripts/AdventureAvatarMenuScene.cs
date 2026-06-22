@@ -12,11 +12,15 @@ public partial class AdventureAvatarMenuScene : Control
 	private const int SmoothScrollWheelStep = 96;
 	private const float ReturnFadeSeconds = 0.18f;
 	private const float ReturnScale = 0.98f;
+	private const int StageNameBaseFontSize = 24;
+	private const int StageNameMinFontSize = 16;
+	private const float StageNameWidthTolerance = 2.0f;
 	private readonly Dictionary<string, OceanMenuButtonFrame> _adventureFrames = new();
 	private readonly Dictionary<string, Button> _adventureButtons = new();
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
 	private readonly Dictionary<string, int> _stageNumbers = new();
 	private readonly Dictionary<string, Button> _stageButtons = new();
+	private readonly Dictionary<string, Label> _stageNameLabels = new();
 	private readonly Dictionary<string, Label> _stageStatusLabels = new();
 	private readonly List<(Label Label, string Key)> _localizedLabels = new();
 	private readonly List<(Button Button, string Key)> _localizedButtons = new();

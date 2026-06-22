@@ -37,6 +37,22 @@ public partial class GameBoardScene
 		return string.Format(Localize(key), args);
 	}
 
+	private string LocalizeAvatarDisplayName(CharacterAvatarDefinition avatarDefinition)
+	{
+		if (!string.IsNullOrWhiteSpace(avatarDefinition.DisplayNameKey))
+		{
+			string text = Localize(avatarDefinition.DisplayNameKey);
+			if (text != avatarDefinition.DisplayNameKey)
+			{
+				return text;
+			}
+		}
+
+		return string.IsNullOrWhiteSpace(avatarDefinition.DisplayName)
+			? avatarDefinition.Id
+			: avatarDefinition.DisplayName;
+	}
+
 	private void TrackLocalizedGameButton(Button button, string key)
 	{
 		_localizedGameButtons.Add((button, key));

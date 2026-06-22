@@ -7,6 +7,7 @@ public partial class AdventureAvatarMenuScene
 		_avatarFrames.Clear();
 		_stageNumbers.Clear();
 		_stageButtons.Clear();
+		_stageNameLabels.Clear();
 		_stageStatusLabels.Clear();
 
 		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
@@ -50,8 +51,10 @@ public partial class AdventureAvatarMenuScene
 			ConfigureAvatarView(avatar, avatarDefinition, 0.74f);
 		}
 
+		string displayName = LocalizeAvatarDisplayName(avatarDefinition);
 		Label nameLabel = frame.GetNode<Label>("EntryContent/EntryRow/EntryName");
-		nameLabel.Text = avatarDefinition.DisplayName;
+		ApplyStageNameLabelText(nameLabel, displayName);
+		_stageNameLabels[avatarDefinition.Id] = nameLabel;
 
 		Label statusLabel = frame.GetNode<Label>("EntryContent/EntryRow/EntryStatus");
 		_stageStatusLabels[avatarDefinition.Id] = statusLabel;
@@ -61,7 +64,7 @@ public partial class AdventureAvatarMenuScene
 
 		Button button = frame.GetNode<Button>("Button");
 		button.FocusMode = Control.FocusModeEnum.All;
-		button.TooltipText = avatarDefinition.DisplayName;
+		button.TooltipText = displayName;
 		button.Pressed += () => SelectAvatar(avatarDefinition.Id);
 		button.FocusEntered += () =>
 		{

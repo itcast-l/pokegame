@@ -35,8 +35,13 @@ public partial class AdventureAvatarMenuScene
 				button.Disabled = !isUnlocked;
 				button.MouseFilter = isUnlocked ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
 				button.TooltipText = isUnlocked
-					? CharacterAvatarCatalog.GetById(avatarId).DisplayName
+					? LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId))
 					: Tr("ADVENTURE_LOCKED").ToString();
+			}
+
+			if (_stageNameLabels.TryGetValue(avatarId, out Label? nameLabel))
+			{
+				ApplyStageNameLabelText(nameLabel, LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId)));
 			}
 
 			if (_stageStatusLabels.TryGetValue(avatarId, out Label? statusLabel))
@@ -55,7 +60,7 @@ public partial class AdventureAvatarMenuScene
 		int stageNumber = _stageNumbers.TryGetValue(avatarDefinition.Id, out int number) ? number : 1;
 
 		_previewStageLabel.Text = FormatStageNumber(stageNumber);
-		_previewNameLabel.Text = avatarDefinition.DisplayName;
+		_previewNameLabel.Text = LocalizeAvatarDisplayName(avatarDefinition);
 		_previewStatusLabel.Text = GetStageStatusText(stageNumber);
 		_previewAbilityTitleLabel.Text = Tr("ADVENTURE_ABILITY_TITLE").ToString();
 		_previewAbilityNameLabel.Text = Tr(avatarDefinition.AdventureAbilityNameKey).ToString();

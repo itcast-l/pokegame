@@ -42,4 +42,47 @@ public partial class AdventureAvatarMenuScene
 	{
 		return string.Format(Localize(key), args);
 	}
+
+	private string LocalizeAvatarDisplayName(CharacterAvatarDefinition avatarDefinition)
+	{
+		if (!string.IsNullOrWhiteSpace(avatarDefinition.DisplayNameKey))
+		{
+			string text = Localize(avatarDefinition.DisplayNameKey);
+			if (text != avatarDefinition.DisplayNameKey)
+			{
+				return text;
+			}
+		}
+
+		return string.IsNullOrWhiteSpace(avatarDefinition.DisplayName)
+			? avatarDefinition.Id
+			: avatarDefinition.DisplayName;
+	}
+
+	private void ApplyStageNameLabelText(Label label, string text)
+	{
+		label.Text = text;
+		label.AddThemeFontSizeOverride("font_size", GetFittingStageNameFontSize(label, text));
+	}
+
+	private static int GetFittingStageNameFontSize(Label label, string text)
+	{
+		float availableWidth = label.Size.X;
+		if (availableWidth <= 0.0f || string.IsNullOrEmpty(text))
+		{
+			return StageNameBaseFontSize;
+		}
+
+		Font font = label.GetThemeFont("font");
+		for (int fontSize = StageNameBaseFontSize; fontSize > StageNameMinFontSize; fontSize--)
+		{
+			float width = font.GetStringSize(text, label.HorizontalAlignment, -1.0f, fontSize).X;
+			if (width <= availableWidth + StageNameWidthTolerance)
+			{
+				return fontSize;
+			}
+		}
+
+		return StageNameMinFontSize;
+	}
 }

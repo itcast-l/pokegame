@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "fox"
 DisplayName = "小狐"
+DisplayNameKey = "AVATAR_FOX_NAME"
 RootPath = "res://art/characters/player_fox_avatar/run-001"
 IdleFrameCount = 16
 IdleFrameSeconds = 0.055

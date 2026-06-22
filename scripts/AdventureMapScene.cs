@@ -19,6 +19,7 @@ public partial class AdventureMapScene : Control
 
 	public override void _Ready()
 	{
+		LayoutDirection = LayoutDirectionEnum.Ltr;
 		MouseFilter = MouseFilterEnum.Stop;
 		_mapViewport = GetNodeOrNull<Control>("MapViewport");
 		_mapContent = GetNodeOrNull<Control>("MapViewport/MapContent");

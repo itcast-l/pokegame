@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "boss_k"
 DisplayName = "凯撒 K"
+DisplayNameKey = "AVATAR_BOSS_K_NAME"
 RootPath = "res://art/characters/boss_k_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 12

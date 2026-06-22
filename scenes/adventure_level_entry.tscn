@@ -18,7 +18,7 @@ corner_radius_bottom_left = 8
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
 
 [node name="AdventureLevelEntry" type="Control" unique_id=260516966]
-custom_minimum_size = Vector2(0, 68)
+custom_minimum_size = Vector2(392, 68)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 1
@@ -82,7 +82,7 @@ vertical_alignment = 1
 clip_text = true
 
 [node name="EntryStatus" type="Label" parent="EntryContent/EntryRow" unique_id=1873343900]
-custom_minimum_size = Vector2(78, 0)
+custom_minimum_size = Vector2(112, 0)
 layout_mode = 2
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1

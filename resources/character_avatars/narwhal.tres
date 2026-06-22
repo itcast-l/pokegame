@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "narwhal"
 DisplayName = "诺亚"
+DisplayNameKey = "AVATAR_NARWHAL_NAME"
 RootPath = "res://art/characters/player_narwhal_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 4

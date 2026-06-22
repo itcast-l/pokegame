@@ -179,7 +179,7 @@ public partial class GameBoardScene
 
 		if (adventure_mode && IsAdventureEnemyPlayer(playerIndex))
 		{
-			return CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id).DisplayName;
+			return LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id));
 		}
 
 		return LocalizeFormat("GAME_PLAYER", playerIndex + 1);

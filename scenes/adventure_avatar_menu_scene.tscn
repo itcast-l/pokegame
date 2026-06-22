@@ -116,7 +116,7 @@ mouse_filter = 2
 
 [node name="AdventureMenuPanel" type="PanelContainer" parent="SafeArea/MenuCenter" unique_id=322061772]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(1040, 620)
+custom_minimum_size = Vector2(1160, 620)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
 
@@ -212,7 +212,7 @@ mouse_filter = 2
 theme_override_constants/separation = 14
 
 [node name="AdventureListPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body" unique_id=278965709]
-custom_minimum_size = Vector2(190, 0)
+custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -250,7 +250,7 @@ size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="LevelListPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body" unique_id=874148209]
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(420, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2

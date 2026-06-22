@@ -7,6 +7,7 @@
 script = ExtResource("1_avatar_definition")
 Id = "crab"
 DisplayName = "嘟嘟"
+DisplayNameKey = "AVATAR_CRAB_NAME"
 RootPath = "res://art/characters/player_crab_avatar/run-001"
 IdleFrameCount = 12
 ActionFrameCount = 4

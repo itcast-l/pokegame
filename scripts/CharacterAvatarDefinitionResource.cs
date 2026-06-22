@@ -5,6 +5,7 @@ public partial class CharacterAvatarDefinitionResource : Resource
 {
 	[Export] public string Id { get; set; } = string.Empty;
 	[Export] public string DisplayName { get; set; } = string.Empty;
+	[Export] public string DisplayNameKey { get; set; } = string.Empty;
 	[Export] public string RootPath { get; set; } = string.Empty;
 	[Export] public int IdleFrameCount { get; set; } = 1;
 	[Export] public float IdleFrameSeconds { get; set; }
@@ -46,6 +47,7 @@ public partial class CharacterAvatarDefinitionResource : Resource
 			AttackEffectStyle,
 			AccentColorHtml,
 			BossBorrowedAbilityFxEligible,
-			AudioConfig);
+			AudioConfig,
+			DisplayNameKey);
 	}
 }
