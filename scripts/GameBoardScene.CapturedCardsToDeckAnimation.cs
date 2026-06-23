@@ -88,7 +88,13 @@ public partial class GameBoardScene
 
 	private Vector2 GetCardPileCaptureTargetGlobalPosition(int playerIndex)
 	{
-		return GetVisibleCardPileTopGlobalPosition(playerIndex) + (CardVisualSize - CardVisualSize * TableCaptureFlightEndScale) / 2.0f;
+		Control? visiblePileCard = GetVisiblePileCardControl(playerIndex);
+		if (visiblePileCard != null)
+		{
+			return visiblePileCard.GetGlobalRect().Position;
+		}
+
+		return GetVisibleCardPileTopGlobalPosition(playerIndex);
 	}
 
 	private async Task PlayCapturedCardFlightAsync(

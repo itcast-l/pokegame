@@ -239,7 +239,7 @@ public partial class GameBoardScene
 					Label descriptionLabel = CreateCardDescriptionLabel(
 						effectiveTooltipText,
 						GetHandCardDescriptionPosition(playerIndex),
-						new Vector2(204.0f, 42.0f));
+						HandCardDescriptionLabelSize);
 					cardSlot.AddChild(descriptionLabel);
 					cardSlot.MouseEntered += () =>
 					{

@@ -186,6 +186,11 @@ public partial class GameBoardScene
 		return GetTotalHandCardCount(playerIndex);
 	}
 
+	public Vector2 DebugGetCardPileCaptureTargetGlobalPosition(int playerIndex)
+	{
+		return GetCardPileCaptureTargetGlobalPosition(playerIndex);
+	}
+
 	public bool DebugAddScoreAndCheckWinner(int playerIndex, int points)
 	{
 		if (playerIndex < 0

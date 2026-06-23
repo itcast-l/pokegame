@@ -3,6 +3,8 @@ using Godot;
 public partial class GameBoardScene
 {
 	private static readonly StyleBoxFlat MagnetSelectionPulseStyle = CreateMagnetSelectionPulseStyle();
+	private static readonly Vector2 HandCardDescriptionLabelSize = new(212.0f, 50.0f);
+	private static readonly Vector2 TableCardDescriptionLabelSize = new(224.0f, 52.0f);
 
 	private int GetVisibleHandCardCountForRender(int playerIndex, int handCount)
 	{
@@ -81,11 +83,11 @@ public partial class GameBoardScene
 			ZAsRelative = false,
 			ZIndex = TableCardPointPopupZIndex - 10,
 		};
-		label.AddThemeFontSizeOverride("font_size", 15);
-		label.AddThemeColorOverride("font_color", new Color(0.86f, 1.0f, 0.96f, 0.96f));
-		label.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.09f, 0.12f, 0.74f));
-		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.05f, 0.08f, 0.88f));
-		label.AddThemeConstantOverride("outline_size", 1);
+		label.AddThemeFontSizeOverride("font_size", 18);
+		label.AddThemeColorOverride("font_color", new Color(0.36f, 0.96f, 1.0f, 1.0f));
+		label.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.05f, 0.09f, 0.92f));
+		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.03f, 0.05f, 0.95f));
+		label.AddThemeConstantOverride("outline_size", 2);
 		label.AddThemeConstantOverride("shadow_offset_x", 0);
 		label.AddThemeConstantOverride("shadow_offset_y", 2);
 		return label;
@@ -93,7 +95,7 @@ public partial class GameBoardScene
 
 	private Vector2 GetHandCardDescriptionPosition(int playerIndex)
 	{
-		var labelSize = new Vector2(204.0f, 42.0f);
+		var labelSize = HandCardDescriptionLabelSize;
 		float y = GetPlayerViewSlotIndex(playerIndex) == 1 ? CardVisualSize.Y + 4.0f : -labelSize.Y - 4.0f;
 		return new Vector2((CardVisualSize.X - labelSize.X) / 2.0f, y);
 	}

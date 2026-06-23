@@ -80,7 +80,7 @@ public partial class GameBoardScene
 					if (!string.IsNullOrEmpty(tooltipText))
 					{
 						tableCard.MouseFilter = MouseFilterEnum.Stop;
-						var labelSize = new Vector2(218.0f, 44.0f);
+						var labelSize = TableCardDescriptionLabelSize;
 						descriptionLabel = CreateCardDescriptionLabel(
 							tooltipText,
 							GetTableCardDescriptionPosition(cardPosition, labelSize),
