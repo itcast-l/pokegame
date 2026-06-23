@@ -22,12 +22,14 @@ internal static class Program
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
 		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
 		Run("capture flow planner skips score when award disabled", CaptureFlowPlannerSkipsScoreWhenAwardDisabled);
+		Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
 		Run("playing card attachment replaces existing effect", PlayingCardAttachmentReplacesExistingEffect);
 		Run("capture state apply capture clears effects when preserve disabled", CaptureStateApplyCaptureClearsEffectsWhenPreserveDisabled);
 		Run("capture state apply capture preserves effects when preserve enabled", CaptureStateApplyCapturePreservesEffectsWhenPreserveEnabled);
 		Run("captured card effect persists through deck and can be replaced", CapturedCardEffectPersistsThroughDeckAndCanBeReplaced);
+		Run("capture refill shuffles before replacement draw animation", CaptureRefillShufflesBeforeReplacementDrawAnimation);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
 		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
@@ -44,6 +46,10 @@ internal static class Program
 		Run("character avatar display names are localized for every locale", CharacterAvatarDisplayNamesAreLocalizedForEveryLocale);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
+		Run("attachment selection preview follows pending item card", AttachmentSelectionPreviewFollowsPendingItemCard);
+		Run("main menu bubbles rise and fade through lifecycle", MainMenuBubblesRiseAndFadeThroughLifecycle);
+		Run("main menu bubbles hide before crossing waterline", MainMenuBubblesHideBeforeCrossingWaterline);
+		Run("main menu bubble visual resource points to existing file", MainMenuBubbleVisualResourcePointsToExistingFile);
 		Run("board effect resources point to existing files", BoardEffectResourcesPointToExistingFiles);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
 		Run("result presentation uses local seat for network defeat", ResultPresentationUsesLocalSeatForNetworkDefeat);
@@ -479,6 +485,37 @@ internal static class Program
 		False(state.PlayerHands[0][0].HasAttachedItemEffect("magnet"));
 		True(state.PlayerHands[0][0].HasAttachedItemEffect("double"));
 		Equal("double", state.PlayerHands[0][0].AttachedItemCardIdsCsv);
+	}
+
+	private static void CaptureRefillShufflesBeforeReplacementDrawAnimation()
+	{
+		string source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.CardPlay.cs"));
+		int methodStart = source.IndexOf("private async Task<CardPlayBranchResult> ResolvePlayedCardCaptureAsync(", StringComparison.Ordinal);
+		int methodEnd = source.IndexOf("private async Task<CardPlayBranchResult> ResolveMissedPlayedCardAsync(", methodStart, StringComparison.Ordinal);
+		True(methodStart >= 0);
+		True(methodEnd > methodStart);
+
+		string method = source[methodStart..methodEnd];
+		int captureApplyIndex = method.IndexOf("CaptureTableCardsResult captureResult = await CaptureTableCardsAsync", StringComparison.Ordinal);
+		int shuffleIndex = method.IndexOf("Shuffle(_playerDecks[playerIndex]);", captureApplyIndex, StringComparison.Ordinal);
+		int cutIndex = method.IndexOf("Cut(_playerDecks[playerIndex]);", shuffleIndex, StringComparison.Ordinal);
+		int shuffleAnimationIndex = method.IndexOf("await PlayPhysicalDeckShuffleAsync(playerIndex);", cutIndex, StringComparison.Ordinal);
+		int drawReplacementIndex = method.IndexOf("DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);", cutIndex, StringComparison.Ordinal);
+		int drawAnimationIndex = method.IndexOf("await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);", drawReplacementIndex, StringComparison.Ordinal);
+
+		True(captureApplyIndex >= 0);
+		True(shuffleIndex > captureApplyIndex);
+		True(cutIndex > shuffleIndex);
+		True(shuffleAnimationIndex > cutIndex);
+		True(drawReplacementIndex > shuffleAnimationIndex);
+		True(drawAnimationIndex > drawReplacementIndex);
+	}
+
+	private static void CaptureRevealOrderOpensEdgesBeforeMiddle()
+	{
+		int[] order = CaptureRevealOrder.BuildBaseRevealIndexes(captureStartIndex: 2, tableCardCount: 6);
+
+		Equal("2,5,3,4", string.Join(",", order));
 	}
 
 	private static void PotentialCaptureIgnoresBuriedMatches()
@@ -929,6 +966,49 @@ internal static class Program
 				AssertResPathExists(repoRoot, attachmentOverlayTexturePath);
 			}
 		}
+	}
+
+	private static void AttachmentSelectionPreviewFollowsPendingItemCard()
+	{
+		Equal("double", AttachmentSelectionPreviewRules.GetPreviewItemCardId("double"));
+		Equal("magnet", AttachmentSelectionPreviewRules.GetPreviewItemCardId("magnet"));
+		Equal("magnet", AttachmentSelectionPreviewRules.GetPreviewItemCardId(string.Empty));
+	}
+
+	private static void MainMenuBubblesRiseAndFadeThroughLifecycle()
+	{
+		MainMenuBubbleMotionState early = MainMenuBubbleMotionRules.Evaluate(timeSeconds: 0.4f, phase: 0.0f, durationSeconds: 4.0f, riseDistance: 120.0f);
+		MainMenuBubbleMotionState middle = MainMenuBubbleMotionRules.Evaluate(timeSeconds: 2.0f, phase: 0.0f, durationSeconds: 4.0f, riseDistance: 120.0f);
+		MainMenuBubbleMotionState late = MainMenuBubbleMotionRules.Evaluate(timeSeconds: 3.8f, phase: 0.0f, durationSeconds: 4.0f, riseDistance: 120.0f);
+		MainMenuBubbleMotionState wrapped = MainMenuBubbleMotionRules.Evaluate(timeSeconds: 4.2f, phase: 0.0f, durationSeconds: 4.0f, riseDistance: 120.0f);
+
+		True(middle.RiseOffsetY < early.RiseOffsetY - 35.0f);
+		True(late.RiseOffsetY < middle.RiseOffsetY - 25.0f);
+		True(late.AlphaMultiplier < middle.AlphaMultiplier);
+		True(wrapped.RiseOffsetY > late.RiseOffsetY + 80.0f);
+		True(wrapped.AlphaMultiplier < middle.AlphaMultiplier);
+	}
+
+	private static void MainMenuBubblesHideBeforeCrossingWaterline()
+	{
+		float visible = MainMenuBubbleMotionRules.GetSurfaceAlphaMultiplier(
+			centerY: 430.0f,
+			topOffset: 32.0f,
+			waterlineY: 340.0f,
+			fadeDistance: 48.0f);
+		float hidden = MainMenuBubbleMotionRules.GetSurfaceAlphaMultiplier(
+			centerY: 365.0f,
+			topOffset: 32.0f,
+			waterlineY: 340.0f,
+			fadeDistance: 48.0f);
+
+		True(visible > 0.9f);
+		Equal(0.0f, hidden);
+	}
+
+	private static void MainMenuBubbleVisualResourcePointsToExistingFile()
+	{
+		AssertResPathExists(FindRepositoryRoot(), "res://art/fx/environment/main_menu_bubble/run-001/processed/fx-1.png");
 	}
 
 	private static void BoardEffectResourcesPointToExistingFiles()

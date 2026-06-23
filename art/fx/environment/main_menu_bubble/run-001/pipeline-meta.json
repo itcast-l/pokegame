@@ -1,0 +1,9 @@
+{
+  "asset_type": "fx",
+  "action": "single",
+  "art_style": "project-native",
+  "raw_source": "raw/raw-bubble.png",
+  "processed_output": "processed/fx-1.png",
+  "processor": "Pillow chroma key #FF00FF, alpha crop, square pad, resize to 512x512",
+  "runtime_usage": "MainMenuOceanDynamics floating bubble texture"
+}

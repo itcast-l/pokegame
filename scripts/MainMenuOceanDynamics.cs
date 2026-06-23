@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Godot;
 
 public partial class MainMenuOceanDynamics : Control
@@ -11,17 +12,21 @@ public partial class MainMenuOceanDynamics : Control
 	}
 
 	private const float WaterlineRatio = 0.34f;
+	private const float BubbleSurfaceFadeDistanceRatio = 0.075f;
+	private const float BubbleTextureTopOffsetFactor = 1.55f;
 
 	private const int SunbeamInstanceCount = 5;
 	private const int SurfaceWakeInstanceCount = 6;
 	private const int CurrentRibbonInstanceCount = 8;
 	private const int CausticRibbonInstanceCount = 7;
+	private const int BubbleInstanceCount = 30;
 
 	private const string SunbeamFramePattern = "res://art/fx/environment/main_menu_sunbeam/run-001/processed/fx-{0}.png";
 	private const string SurfaceWakeFramePattern = "res://art/fx/environment/main_menu_surface_wake/run-001/processed/fx-{0}.png";
 	private const string CurrentRibbonFramePattern = "res://art/fx/environment/main_menu_current_ribbon/run-001/processed/fx-{0}.png";
 	private const string CausticRibbonFramePattern = "res://art/fx/environment/main_menu_caustic_ribbon/run-001/processed/fx-{0}.png";
 	private const string GlintFramePattern = "res://art/fx/environment/main_menu_glint/run-001/processed/fx-{0}.png";
+	private const string BubbleTexturePath = "res://art/fx/environment/main_menu_bubble/run-001/processed/fx-1.png";
 
 	private const int SunbeamFrameCount = 6;
 	private const int SurfaceWakeFrameCount = 8;
@@ -47,6 +52,9 @@ public partial class MainMenuOceanDynamics : Control
 	[Export(PropertyHint.Range, "0,60,1")]
 	public int glint_count = 26;
 
+	[Export(PropertyHint.Range, "0,60,1")]
+	public int bubble_count = BubbleInstanceCount;
+
 	[Export(PropertyHint.Range, "0.0,2.0,0.05")]
 	public float motion_scale = 1.0f;
 
@@ -65,6 +73,7 @@ public partial class MainMenuOceanDynamics : Control
 	private readonly List<ImageElement> _currentRibbonInstances = new();
 	private readonly List<ImageElement> _causticRibbonInstances = new();
 	private readonly List<ImageElement> _glintInstances = new();
+	private readonly List<Bubble> _bubbles = new();
 
 	private double _time;
 	private double _redrawAccumulator;
@@ -77,6 +86,8 @@ public partial class MainMenuOceanDynamics : Control
 	private Texture2D[] _currentRibbonFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _causticRibbonFrames = Array.Empty<Texture2D>();
 	private Texture2D[] _glintFrames = Array.Empty<Texture2D>();
+	private Texture2D? _bubbleTexture;
+	private bool _bubbleTextureLoadAttempted;
 
 	private Control? _sunbeamLayer;
 	private Control? _surfaceWakeLayer;
@@ -127,9 +138,15 @@ public partial class MainMenuOceanDynamics : Control
 				RebuildImageInstances();
 			}
 			UpdateImageInstances();
+			AdvanceRedrawAccumulator(delta);
 			return;
 		}
 
+		AdvanceRedrawAccumulator(delta);
+	}
+
+	private void AdvanceRedrawAccumulator(double delta)
+	{
 		_redrawAccumulator += delta;
 		double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
 		if (_redrawAccumulator < redrawInterval)
@@ -143,18 +160,22 @@ public partial class MainMenuOceanDynamics : Control
 
 	public override void _Draw()
 	{
-		if (_activeRenderMode != OceanRenderMode.Procedural
-			|| Size.X <= 0.0f
+		if (Size.X <= 0.0f
 			|| Size.Y <= 0.0f)
 		{
 			return;
 		}
 
-		DrawSunbeams();
-		DrawSurfaceWake();
-		DrawCurrentRibbons();
-		DrawCausticRibbons();
-		DrawGlints();
+		if (_activeRenderMode == OceanRenderMode.Procedural)
+		{
+			DrawSunbeams();
+			DrawSurfaceWake();
+			DrawCurrentRibbons();
+			DrawCausticRibbons();
+			DrawGlints();
+		}
+
+		DrawBubbles();
 	}
 
 	private void ApplyRenderMode(bool force = false)
@@ -212,6 +233,7 @@ public partial class MainMenuOceanDynamics : Control
 	private void RebuildParticleData()
 	{
 		_glints.Clear();
+		_bubbles.Clear();
 
 		for (int i = 0; i < glint_count; i++)
 		{
@@ -223,6 +245,79 @@ public partial class MainMenuOceanDynamics : Control
 				_rng.RandfRange(0.0f, Mathf.Tau),
 				_rng.RandfRange(0.08f, 0.26f)));
 		}
+
+		BuildBubbleInstances();
+	}
+
+	private void BuildBubbleInstances()
+	{
+		if (bubble_count <= 0)
+		{
+			return;
+		}
+
+		for (int index = 0; index < bubble_count; index++)
+		{
+			int lane = index % 4;
+			float xRatio = lane switch
+			{
+				0 => _rng.RandfRange(0.36f, 0.49f),
+				1 => _rng.RandfRange(0.62f, 0.76f),
+				2 => _rng.RandfRange(0.84f, 1.02f),
+				_ => _rng.RandfRange(0.90f, 1.04f),
+			};
+
+			float yRatio = lane switch
+			{
+				0 => _rng.RandfRange(0.48f, 0.92f),
+				1 => _rng.RandfRange(0.42f, 0.86f),
+				2 => _rng.RandfRange(WaterlineRatio + 0.08f, 0.82f),
+				_ => _rng.RandfRange(WaterlineRatio + 0.08f, 0.72f),
+			};
+
+			_bubbles.Add(new Bubble(
+				xRatio,
+				yRatio,
+				_rng.RandfRange(6.0f, 20.0f),
+				_rng.RandfRange(110.0f, 260.0f),
+				_rng.RandfRange(4.6f, 8.8f),
+				_rng.RandfRange(4.0f, 14.0f),
+				_rng.RandfRange(0.18f, 0.48f),
+				_rng.Randf(),
+				_rng.RandfRange(0.20f, 0.46f)));
+		}
+	}
+
+	private Texture2D? GetBubbleTexture()
+	{
+		if (_bubbleTextureLoadAttempted)
+		{
+			return _bubbleTexture;
+		}
+
+		_bubbleTextureLoadAttempted = true;
+		_bubbleTexture = GD.Load<Texture2D>(BubbleTexturePath);
+		if (_bubbleTexture != null)
+		{
+			return _bubbleTexture;
+		}
+
+		string globalPath = ProjectSettings.GlobalizePath(BubbleTexturePath);
+		if (File.Exists(globalPath))
+		{
+			Image image = Image.LoadFromFile(globalPath);
+			if (!image.IsEmpty())
+			{
+				_bubbleTexture = ImageTexture.CreateFromImage(image);
+			}
+		}
+
+		if (_bubbleTexture == null)
+		{
+			GD.PushWarning($"Missing main menu bubble texture: {BubbleTexturePath}");
+		}
+
+		return _bubbleTexture;
 	}
 
 	private void EnsureImageAssetsLoaded(bool retryIfAllMissing = false)
@@ -740,6 +835,70 @@ public partial class MainMenuOceanDynamics : Control
 		}
 	}
 
+	private void DrawBubbles()
+	{
+		float t = (float)_time;
+		float viewportScale = Mathf.Clamp(Mathf.Min(Size.X / 1672.0f, Size.Y / 941.0f), 0.78f, 1.28f);
+		Texture2D? bubbleTexture = GetBubbleTexture();
+		foreach (Bubble bubble in _bubbles)
+		{
+			MainMenuBubbleMotionState motion = MainMenuBubbleMotionRules.Evaluate(
+				t,
+				bubble.Phase,
+				bubble.Duration,
+				bubble.RiseDistance * viewportScale);
+
+			float alpha = bubble.Alpha * motion.AlphaMultiplier;
+			if (alpha <= 0.01f)
+			{
+				continue;
+			}
+
+			float radius = bubble.Radius * motion.SizeMultiplier * viewportScale;
+			Vector2 basePosition = new(Size.X * bubble.XRatio, Size.Y * bubble.YRatio);
+			Vector2 position = basePosition + new Vector2(
+				Mathf.Sin(t * bubble.SwaySpeed + bubble.Phase * Mathf.Tau) * bubble.Sway * viewportScale,
+				motion.RiseOffsetY);
+			float surfaceAlpha = MainMenuBubbleMotionRules.GetSurfaceAlphaMultiplier(
+				position.Y,
+				radius * BubbleTextureTopOffsetFactor,
+				Size.Y * WaterlineRatio,
+				Size.Y * BubbleSurfaceFadeDistanceRatio);
+			alpha *= surfaceAlpha;
+			if (alpha <= 0.01f)
+			{
+				continue;
+			}
+
+			if (bubbleTexture != null)
+			{
+				DrawBubbleTexture(bubbleTexture, position, radius, alpha);
+				continue;
+			}
+
+			DrawProceduralBubble(position, radius, alpha);
+		}
+	}
+
+	private void DrawBubbleTexture(Texture2D bubbleTexture, Vector2 position, float radius, float alpha)
+	{
+		float side = Mathf.Max(radius * 3.35f, 8.0f);
+		Vector2 size = new(side, side);
+		Color modulate = new(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha * 1.22f, 0.0f, 1.0f));
+		DrawTextureRect(bubbleTexture, new Rect2(position - size / 2.0f, size), false, modulate, false);
+	}
+
+	private void DrawProceduralBubble(Vector2 position, float radius, float alpha)
+	{
+		Color aura = new(0.62f, 0.95f, 1.0f, alpha * 0.10f);
+		Color ring = new(0.86f, 1.0f, 1.0f, alpha * 0.55f);
+		Color core = new(1.0f, 1.0f, 1.0f, alpha * 0.28f);
+
+		DrawCircle(position, radius * 1.18f, aura);
+		DrawArc(position, radius, 0.0f, Mathf.Tau, 32, ring, Mathf.Max(1.0f, radius * 0.12f), true);
+		DrawCircle(position + new Vector2(-radius * 0.24f, -radius * 0.22f), Mathf.Max(1.0f, radius * 0.14f), core);
+	}
+
 	private sealed class ImageElement
 	{
 		public TextureRect Node { get; set; } = default!;
@@ -756,6 +915,17 @@ public partial class MainMenuOceanDynamics : Control
 		public float Secondary { get; set; }
 		public float ElapsedTime { get; set; }
 	}
+
+	private readonly record struct Bubble(
+		float XRatio,
+		float YRatio,
+		float Radius,
+		float RiseDistance,
+		float Duration,
+		float Sway,
+		float SwaySpeed,
+		float Phase,
+		float Alpha);
 
 	private readonly record struct Glint(float XRatio, float YRatio, float Radius, float Speed, float Phase, float Alpha);
 }

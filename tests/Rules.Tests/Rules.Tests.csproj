@@ -11,11 +11,14 @@
     <Compile Include="../../scripts/GameBoardModels.cs" Link="Rules/GameBoardModels.cs" />
     <Compile Include="../../scripts/GameBoardScene.State.cs" Link="Rules/GameBoardScene.State.cs" />
     <Compile Include="../../scripts/CaptureStateService.cs" Link="Rules/CaptureStateService.cs" />
+    <Compile Include="../../scripts/CaptureRevealOrder.cs" Link="Rules/CaptureRevealOrder.cs" />
     <Compile Include="../../scripts/CaptureScoringRules.cs" Link="Rules/CaptureScoringRules.cs" />
     <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
     <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />
     <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
     <Compile Include="../../scripts/ItemCardEffectSupport.cs" Link="Rules/ItemCardEffectSupport.cs" />
+    <Compile Include="../../scripts/AttachmentSelectionPreviewRules.cs" Link="Rules/AttachmentSelectionPreviewRules.cs" />
+    <Compile Include="../../scripts/MainMenuBubbleMotionRules.cs" Link="Rules/MainMenuBubbleMotionRules.cs" />
     <Compile Include="../../scripts/PotentialCaptureRules.cs" Link="Rules/PotentialCaptureRules.cs" />
     <Compile Include="../../scripts/EnemyAiRules.cs" Link="Rules/EnemyAiRules.cs" />
     <Compile Include="../../scripts/GameLoopPhaseRules.cs" Link="Rules/GameLoopPhaseRules.cs" />

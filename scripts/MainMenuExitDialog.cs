@@ -10,7 +10,6 @@ public partial class MainMenuExitDialog : Control
 	public delegate void ConfirmRequestedEventHandler();
 
 	private Label _titleLabel = default!;
-	private Label _messageLabel = default!;
 	private Label _hintLabel = default!;
 	private Button _cancelButton = default!;
 	private Button _confirmButton = default!;
@@ -26,7 +25,6 @@ public partial class MainMenuExitDialog : Control
 	{
 		DialogPanel = GetNode<PanelContainer>("%ExitDialogPanel");
 		_titleLabel = GetNode<Label>("%ExitTitle");
-		_messageLabel = GetNode<Label>("%ExitMessage");
 		_hintLabel = GetNode<Label>("%ExitHint");
 		_cancelButton = GetNode<Button>("%CancelButton");
 		_confirmButton = GetNode<Button>("%ConfirmButton");
@@ -67,7 +65,6 @@ public partial class MainMenuExitDialog : Control
 	public void RefreshLocalizedText(Func<string, string> localize)
 	{
 		_titleLabel.Text = localize("EXIT_TITLE");
-		_messageLabel.Text = localize("EXIT_MESSAGE");
 		_hintLabel.Text = localize("EXIT_HINT");
 		_cancelButton.Text = localize("EXIT_CANCEL");
 		_confirmButton.Text = localize("EXIT_CONFIRM");

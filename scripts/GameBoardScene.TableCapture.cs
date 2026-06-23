@@ -5,7 +5,7 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private async Task RevealCapturedBaseCardsFromBottomAsync(
+	private async Task RevealCapturedBaseCardsEdgesBeforeMiddleAsync(
 		int captureStartIndex,
 		int scorePlayerIndex,
 		int turnSequenceGeneration,
@@ -22,7 +22,7 @@ public partial class GameBoardScene
 		}
 
 		bool shouldResolveAttachedTableCardTriggers = HasCapturedMiddleTableCards(captureStartIndex);
-		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
+		foreach (int tableCardIndex in CaptureRevealOrder.BuildBaseRevealIndexes(captureStartIndex, _tableCards.Count))
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.IsBuriedInSand)

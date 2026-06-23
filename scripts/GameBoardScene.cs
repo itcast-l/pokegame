@@ -75,8 +75,8 @@ public partial class GameBoardScene : Control
 	private static readonly Texture2D[] LensRevealWispFrames =
 		FrameAnimationHelpers.LoadTextureFrames(LensRevealWispFramePattern, LensRevealWispFrameCount, "lens reveal wisp");
 	private const string SlimeCardOverlayPath = "res://art/fx/slime_card_overlay/run-001/processed/card-aspect.png";
-	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-001/countdown_orb/processed/fx-{0}.png";
-	private const int MagnetCountdownFrameCount = 4;
+	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-002/countdown_ring_normal/processed/fx-{0}.png";
+	private const int MagnetCountdownFrameCount = 8;
 	private static readonly Texture2D[] MagnetCountdownFrames =
 		FrameAnimationHelpers.LoadTextureFrames(MagnetCountdownFramePattern, MagnetCountdownFrameCount, "magnet countdown");
 	private const string TableShuffleVortexFramePattern = "res://art/fx/table_shuffle_vortex/run-001/processed/fx-{0}.png";

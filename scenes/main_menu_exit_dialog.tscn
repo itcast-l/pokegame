@@ -109,18 +109,6 @@ text = "EXIT_TITLE"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="ExitMessage" type="Label" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.86)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 18
-text = "EXIT_MESSAGE"
-horizontal_alignment = 1
-autowrap_mode = 2
-
 [node name="ExitHint" type="Label" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
 layout_mode = 2

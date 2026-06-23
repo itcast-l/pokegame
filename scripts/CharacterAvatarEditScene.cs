@@ -53,7 +53,7 @@ public partial class CharacterAvatarEditScene : Control
 		_confirmButton.FocusMode = Control.FocusModeEnum.All;
 		_confirmButton.Pressed += ConfirmSelection;
 
-		_avatarGrid = GetNode<GridContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid");
+		_avatarGrid = GetNode<GridContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/GridRow/AvatarGrid");
 		_avatarGridScroll = GetNode<ScrollContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll");
 		_avatarGridScroll.FollowFocus = true;
 		BindAvatarOptions();
@@ -140,7 +140,7 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Avatar.ShowIdleStill();
 			optionSlot.Panel.Modulate = Colors.White;
 			optionSlot.SelectionRing.Visible = false;
-			optionSlot.Button.TooltipText = "预览头像";
+			optionSlot.Button.TooltipText = string.Empty;
 			optionSlot.Button.FocusMode = Control.FocusModeEnum.All;
 			optionSlot.Button.FocusEntered += () => SelectAvatar(avatarDefinition.Id);
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);

@@ -212,7 +212,7 @@ public partial class GameBoardScene
 					captureRevealSnapshotId);
 			}
 
-			await RevealCapturedBaseCardsFromBottomAsync(
+			await RevealCapturedBaseCardsEdgesBeforeMiddleAsync(
 				captureStartIndex,
 				scorePlayerIndex,
 				turnSequenceGeneration,
@@ -379,8 +379,18 @@ public partial class GameBoardScene
 
 			Shuffle(_playerDecks[playerIndex]);
 			Cut(_playerDecks[playerIndex]);
-			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			RenderTableCards();
+			if (collectedCardCount > 0)
+			{
+				RenderPlayerCardPiles();
+				await PlayPhysicalDeckShuffleAsync(playerIndex);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+				}
+			}
+
+			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
 			if (captureResult.QuestionRewardAnimation.HasValue && !captureResult.QuestionRewardAnimation.Value.RequiresMagnetAttachment)
 			{
 				HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + captureResult.QuestionRewardAnimation.Value.ItemHandIndex);
@@ -408,10 +418,6 @@ public partial class GameBoardScene
 			TryAssignBorrowTideAfterCapture(playerIndex, captureStartIndex, playedCard.Rank);
 
 			RenderPlayerHands();
-			if (collectedCardCount > 0)
-			{
-				await PlayPhysicalDeckShuffleAsync(playerIndex);
-			}
 
 			return new CardPlayBranchResult(false, default, resolvedOvertimeTriggerIndexes.Count > 0, captureVisualSync);
 		}
@@ -524,7 +530,7 @@ public partial class GameBoardScene
 		var revealAttachedItemCardIdsCsv = new List<string>();
 		var revealPointValues = new List<int>();
 		var revealPointDoubleFlags = new List<bool>();
-		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
+		foreach (int tableCardIndex in CaptureRevealOrder.BuildBaseRevealIndexes(captureStartIndex, _tableCards.Count))
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.IsBuriedInSand

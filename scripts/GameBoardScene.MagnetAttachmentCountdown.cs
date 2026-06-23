@@ -47,6 +47,26 @@ public partial class GameBoardScene
 			root.AddChild(countdownFrame);
 		}
 
+		Texture2D? previewTexture = GetAttachmentSelectionPreviewTexture();
+		if (previewTexture != null)
+		{
+			var preview = new TextureRect
+			{
+				Name = "MagnetAttachmentCountdownPreview",
+				Texture = previewTexture,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+				TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+				MouseFilter = MouseFilterEnum.Ignore,
+				Position = new Vector2(111.0f, -12.0f),
+				Size = new Vector2(58.0f, 58.0f),
+				PivotOffset = new Vector2(29.0f, 29.0f),
+				RotationDegrees = 7.0f,
+				ZIndex = 2,
+			};
+			root.AddChild(preview);
+		}
+
 		var countdownLabel = new Label
 		{
 			Name = "MagnetAttachmentCountdownLabel",
@@ -185,5 +205,13 @@ public partial class GameBoardScene
 		}
 
 		_magnetAttachmentCountdownHintTween = null;
+	}
+
+	private Texture2D? GetAttachmentSelectionPreviewTexture()
+	{
+		string previewItemCardId = AttachmentSelectionPreviewRules.GetPreviewItemCardId(_pendingItemCardId);
+		return _itemCardTextures.TryGetValue(previewItemCardId, out Texture2D? texture)
+			? texture
+			: null;
 	}
 }

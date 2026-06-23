@@ -2,6 +2,15 @@ using Godot;
 
 public partial class OceanMenuButtonFrame : Control
 {
+	public enum ButtonFrameStyle
+	{
+		OceanPlaque,
+		CardSlabs
+	}
+
+	[Export]
+	public ButtonFrameStyle FrameStyle { get; set; } = ButtonFrameStyle.OceanPlaque;
+
 	[Export]
 	public Color AccentColor { get; set; } = new(0.55f, 1.0f, 0.92f, 1.0f);
 
@@ -20,7 +29,11 @@ public partial class OceanMenuButtonFrame : Control
 	private readonly Vector2[] _closedInsetPoints = new Vector2[7];
 	private readonly Vector2[] _causticPoints = new Vector2[3];
 	private readonly Vector2[] _sideAccentPoints = new Vector2[3];
+	private readonly Vector2[] _cardHighlightPoints = new Vector2[4];
 	private readonly StyleBoxFlat _selectionGlowStyle = new();
+	private readonly StyleBoxFlat _cardBackStyle = new();
+	private readonly StyleBoxFlat _cardFrameStyle = new();
+	private readonly StyleBoxFlat _cardGlowStyle = new();
 
 	public override void _Ready()
 	{
@@ -74,6 +87,12 @@ public partial class OceanMenuButtonFrame : Control
 
 		float w = rect.Size.X;
 		float h = rect.Size.Y;
+		if (FrameStyle == ButtonFrameStyle.CardSlabs)
+		{
+			DrawCardSlabFrame(rect);
+			return;
+		}
+
 		if (w < h * 2.05f || h < 28.0f)
 		{
 			DrawCompactFrame(rect);
@@ -127,6 +146,54 @@ public partial class OceanMenuButtonFrame : Control
 
 		DrawSideAccent(origin, w, h, highlight);
 		DrawCausticStreaks(origin, w, h);
+	}
+
+	private void DrawCardSlabFrame(Rect2 rect)
+	{
+		float selectedBoost = Selected ? 0.12f : 0.0f;
+		float pressedInset = _button?.ButtonPressed == true ? 1.0f : 0.0f;
+		Rect2 frameRect = new(rect.Position + new Vector2(0.0f, pressedInset), rect.Size);
+		Rect2 backRect = new(frameRect.Position + new Vector2(4.0f, 5.0f), frameRect.Size - new Vector2(2.0f, 0.0f));
+		Color cardAccent = AccentColor.Lerp(new Color(0.72f, 0.95f, 0.94f, 1.0f), 0.62f);
+
+		ConfigureCardGlowStyle(_cardGlowStyle, cardAccent);
+		DrawStyleBox(
+			_cardGlowStyle,
+			new Rect2(frameRect.Position - new Vector2(2.0f, 2.0f), frameRect.Size + new Vector2(4.0f, 4.0f)));
+
+		ConfigureCardBackStyle(_cardBackStyle);
+		DrawStyleBox(_cardBackStyle, backRect);
+
+		ConfigureCardFrameStyle(_cardFrameStyle, cardAccent, selectedBoost);
+		DrawStyleBox(_cardFrameStyle, frameRect);
+
+		if (_glow > 0.05f || Selected)
+		{
+			_selectionGlowStyle.BgColor = new Color(cardAccent.R, cardAccent.G, cardAccent.B, 0.34f + _glow * 0.18f);
+			_selectionGlowStyle.BorderColor = new Color(cardAccent.R, cardAccent.G, cardAccent.B, 0.18f + _glow * 0.28f);
+			_selectionGlowStyle.BorderWidthLeft = 1;
+			_selectionGlowStyle.BorderWidthTop = 0;
+			_selectionGlowStyle.BorderWidthRight = 1;
+			_selectionGlowStyle.BorderWidthBottom = 0;
+			_selectionGlowStyle.CornerRadiusTopLeft = 3;
+			_selectionGlowStyle.CornerRadiusTopRight = 3;
+			_selectionGlowStyle.CornerRadiusBottomLeft = 3;
+			_selectionGlowStyle.CornerRadiusBottomRight = 3;
+			DrawStyleBox(
+				_selectionGlowStyle,
+				new Rect2(frameRect.Position + new Vector2(7.0f, 11.0f), new Vector2(6.0f, frameRect.Size.Y - 22.0f)));
+		}
+
+		float x0 = frameRect.Position.X + 14.0f;
+		float x1 = frameRect.End.X - 14.0f;
+		float y = frameRect.Position.Y + 8.0f;
+		_cardHighlightPoints[0] = new Vector2(x0 + 8.0f, y);
+		_cardHighlightPoints[1] = new Vector2(x1 - 8.0f, y);
+		_cardHighlightPoints[2] = new Vector2(x1 - 20.0f, y + 1.0f);
+		_cardHighlightPoints[3] = new Vector2(x0 + 20.0f, y + 1.0f);
+		DrawColoredPolygon(
+			_cardHighlightPoints,
+			new Color(0.88f, 1.0f, 0.96f, 0.08f + _glow * 0.07f + selectedBoost * 0.25f));
 	}
 
 	private void DrawSideAccent(Vector2 origin, float w, float h, Color highlight)
@@ -188,5 +255,64 @@ public partial class OceanMenuButtonFrame : Control
 		style.CornerRadiusTopRight = 8;
 		style.CornerRadiusBottomLeft = 8;
 		style.CornerRadiusBottomRight = 8;
+	}
+
+	private static void ConfigureCardBackStyle(StyleBoxFlat style)
+	{
+		style.BgColor = new Color(0.004f, 0.036f, 0.052f, 0.74f);
+		style.BorderColor = new Color(0.12f, 0.32f, 0.36f, 0.46f);
+		style.BorderWidthLeft = 1;
+		style.BorderWidthTop = 1;
+		style.BorderWidthRight = 1;
+		style.BorderWidthBottom = 1;
+		style.CornerRadiusTopLeft = 10;
+		style.CornerRadiusTopRight = 10;
+		style.CornerRadiusBottomLeft = 10;
+		style.CornerRadiusBottomRight = 10;
+		style.ShadowColor = new Color(0.0f, 0.014f, 0.022f, 0.32f);
+		style.ShadowSize = 10;
+		style.ShadowOffset = new Vector2(0.0f, 3.0f);
+	}
+
+	private void ConfigureCardFrameStyle(StyleBoxFlat style, Color cardAccent, float selectedBoost)
+	{
+		style.BgColor = new Color(
+			0.012f,
+			0.094f + _glow * 0.036f + selectedBoost * 0.08f,
+			0.118f + _glow * 0.034f + selectedBoost * 0.08f,
+			0.83f + _glow * 0.06f);
+		style.BorderColor = new Color(
+			cardAccent.R,
+			cardAccent.G,
+			cardAccent.B,
+			0.46f + _glow * 0.30f + selectedBoost * 0.18f);
+		style.BorderWidthLeft = 1;
+		style.BorderWidthTop = 1;
+		style.BorderWidthRight = 1;
+		style.BorderWidthBottom = 1;
+		style.CornerRadiusTopLeft = 10;
+		style.CornerRadiusTopRight = 10;
+		style.CornerRadiusBottomLeft = 10;
+		style.CornerRadiusBottomRight = 10;
+		style.ShadowColor = new Color(0.0f, 0.014f, 0.022f, 0.18f + _glow * 0.08f);
+		style.ShadowSize = 6;
+		style.ShadowOffset = new Vector2(0.0f, 2.0f);
+	}
+
+	private void ConfigureCardGlowStyle(StyleBoxFlat style, Color cardAccent)
+	{
+		style.BgColor = new Color(cardAccent.R, cardAccent.G, cardAccent.B, _glow * 0.035f);
+		style.BorderColor = new Color(cardAccent.R, cardAccent.G, cardAccent.B, 0.03f + _glow * 0.14f);
+		style.BorderWidthLeft = 1;
+		style.BorderWidthTop = 1;
+		style.BorderWidthRight = 1;
+		style.BorderWidthBottom = 1;
+		style.CornerRadiusTopLeft = 12;
+		style.CornerRadiusTopRight = 12;
+		style.CornerRadiusBottomLeft = 12;
+		style.CornerRadiusBottomRight = 12;
+		style.ShadowColor = new Color(cardAccent.R, cardAccent.G, cardAccent.B, _glow * 0.09f);
+		style.ShadowSize = 12;
+		style.ShadowOffset = Vector2.Zero;
 	}
 }
