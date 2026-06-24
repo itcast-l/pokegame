@@ -8,6 +8,8 @@ const VIEWPORT_SPECS := [
 ]
 const RECT_TOLERANCE := 1.5
 const NORMALIZED_TOLERANCE := 0.02
+const GUTTER_SAMPLE_BAND_HEIGHT := 96
+const GUTTER_COLOR_DELTA_MIN := 0.035
 const TRACKED_NODE_PATHS := [
 	"LayoutAreas/Player1CardPileArea",
 	"LayoutAreas/Player2CardPileArea",
@@ -65,10 +67,14 @@ func _audit_viewport(spec: Dictionary) -> void:
 	await process_frame
 
 	var mode_name := String(spec.get("name", "unknown"))
+	var backdrop := board.get_node_or_null("UltraWideBackdrop") as TextureRect
 	var board_art := board.get_node_or_null("BoardArt") as TextureRect
 	var layout_areas := board.get_node_or_null("LayoutAreas") as Control
-	if board_art == null or layout_areas == null:
-		_fail("%s missing BoardArt or LayoutAreas" % mode_name)
+	if backdrop == null or board_art == null or layout_areas == null:
+		_fail("%s missing UltraWideBackdrop, BoardArt, or LayoutAreas" % mode_name)
+		return
+	if backdrop.get_global_rect().size.x <= 0.0 or backdrop.get_global_rect().size.y <= 0.0:
+		_fail("%s backdrop has invalid rect: %s" % [mode_name, str(backdrop.get_global_rect())])
 		return
 
 	var board_rect := _get_board_art_visible_rect(board_art)
@@ -112,6 +118,44 @@ func _audit_viewport(spec: Dictionary) -> void:
 					str(metrics.get(node_path, {})),
 				])
 				return
+
+	if mode_name == "wide":
+		await RenderingServer.frame_post_draw
+		var image := root.get_viewport().get_texture().get_image()
+		if image == null:
+			_fail("%s viewport image missing" % mode_name)
+			return
+
+		var left_gutter := Rect2i(
+			0,
+			maxi(0, int(board_rect.get_center().y) - GUTTER_SAMPLE_BAND_HEIGHT / 2),
+			maxi(0, int(board_rect.position.x)),
+			mini(GUTTER_SAMPLE_BAND_HEIGHT, image.get_height()))
+		var right_gutter_width := maxi(0, image.get_width() - int(ceil(board_rect.end.x)))
+		var right_gutter := Rect2i(
+			int(ceil(board_rect.end.x)),
+			maxi(0, int(board_rect.get_center().y) - GUTTER_SAMPLE_BAND_HEIGHT / 2),
+			right_gutter_width,
+			mini(GUTTER_SAMPLE_BAND_HEIGHT, image.get_height()))
+		if left_gutter.size.x <= 0 or right_gutter.size.x <= 0:
+			_fail("%s expected visible side gutters, got left=%s right=%s board=%s image=%dx%d" % [
+				mode_name,
+				str(left_gutter),
+				str(right_gutter),
+				str(board_rect),
+				image.get_width(),
+				image.get_height(),
+			])
+			return
+
+		var left_color := _average_color(image, left_gutter)
+		var right_color := _average_color(image, right_gutter)
+		if not _is_underwater_tinted(left_color):
+			_fail("%s left gutter still too neutral: %s rect=%s" % [mode_name, str(left_color), str(left_gutter)])
+			return
+		if not _is_underwater_tinted(right_color):
+			_fail("%s right gutter still too neutral: %s rect=%s" % [mode_name, str(right_color), str(right_gutter)])
+			return
 
 	board.queue_free()
 	await process_frame
@@ -171,6 +215,37 @@ func _rect_inside(inner: Rect2, outer: Rect2, tolerance: float) -> bool:
 		and inner.position.y >= outer.position.y - tolerance \
 		and inner.end.x <= outer.end.x + tolerance \
 		and inner.end.y <= outer.end.y + tolerance
+
+
+func _average_color(image: Image, rect: Rect2i) -> Color:
+	var start_x := maxi(0, rect.position.x)
+	var start_y := maxi(0, rect.position.y)
+	var end_x := mini(image.get_width(), rect.end.x)
+	var end_y := mini(image.get_height(), rect.end.y)
+	if start_x >= end_x or start_y >= end_y:
+		return Color.BLACK
+
+	var sum := Color(0, 0, 0, 0)
+	var count := 0
+	var step_x := maxi(1, (end_x - start_x) / 16)
+	var step_y := maxi(1, (end_y - start_y) / 8)
+	for y in range(start_y, end_y, step_y):
+		for x in range(start_x, end_x, step_x):
+			sum += image.get_pixel(x, y)
+			count += 1
+
+	if count == 0:
+		return Color.BLACK
+
+	return sum / float(count)
+
+
+func _is_underwater_tinted(color: Color) -> bool:
+	var max_channel := maxf(color.r, maxf(color.g, color.b))
+	var min_channel := minf(color.r, minf(color.g, color.b))
+	return color.g - color.r >= GUTTER_COLOR_DELTA_MIN \
+		and color.b - color.r >= GUTTER_COLOR_DELTA_MIN \
+		and max_channel - min_channel >= GUTTER_COLOR_DELTA_MIN
 
 
 func _fail(message: String) -> void:
