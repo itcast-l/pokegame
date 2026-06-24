@@ -140,6 +140,11 @@ public partial class GameBoardScene
 			return await ResolveHumanHandLimitDiscardAsync(playerIndex, turnSequenceGeneration);
 		}
 
+		if (IsOfflineSoloAiPlayer(playerIndex))
+		{
+			return RemoveHandCardFromGame(playerIndex, PickOfflineSoloAiDiscardDisplayIndex(playerIndex));
+		}
+
 		return RemoveHandCardFromGame(playerIndex, PickRandomHandDisplayIndex(playerIndex));
 	}
 

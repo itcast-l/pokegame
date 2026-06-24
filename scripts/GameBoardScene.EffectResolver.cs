@@ -48,7 +48,7 @@ public partial class GameBoardScene
 		}
 		else
 		{
-			if (AttachMagnetToRandomHandCard(playerIndex, itemCardId))
+			if (AttachMagnetToAutoSelectedHandCard(playerIndex, itemCardId))
 			{
 				PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
 			}

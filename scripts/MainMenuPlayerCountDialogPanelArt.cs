@@ -165,42 +165,10 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 		CloseInto(_buttonInnerPoints, _buttonClosedInnerPoints);
 
 		Color outerAura = new(0.18f, 0.98f, 0.96f, 0.11f * glow);
-		Color innerFill = new(0.08f, 0.54f, 0.58f, 0.14f * glow);
 		Color outerLine = new(0.78f, 1.0f, 0.95f, 0.34f * glow);
-		Color innerLine = new(1.0f, 0.95f, 0.78f, 0.32f * glow);
 
 		DrawColoredPolygon(_buttonOuterPoints, outerAura);
-		DrawColoredPolygon(_buttonInnerPoints, innerFill);
 		DrawPolyline(_buttonClosedOuterPoints, outerLine, 2.2f + glow * 1.2f, true);
-		DrawPolyline(_buttonClosedInnerPoints, innerLine, 1.4f + glow * 0.8f, true);
-
-		Vector2 center = rect.GetCenter();
-		float streakInset = h * 0.68f;
-		for (int index = 0; index < 2; index++)
-		{
-			float y = rect.Position.Y + h * (0.34f + index * 0.22f);
-			DrawLine(
-				new Vector2(rect.Position.X + streakInset, y),
-				new Vector2(rect.End.X - streakInset, y + (index == 0 ? -2.0f : 2.0f)),
-				new Color(0.82f, 1.0f, 0.94f, 0.10f * glow),
-				1.0f);
-		}
-
-		DrawCircle(center, h * 0.10f, new Color(1.0f, 0.96f, 0.82f, 0.18f * glow));
-		DrawButtonAccentSpark(rect.Position + new Vector2(12.0f, h * 0.5f), glow);
-		DrawButtonAccentSpark(rect.Position + new Vector2(w - 12.0f, h * 0.5f), glow);
-		DrawButtonAccentSpark(rect.Position + new Vector2(w * 0.5f, h + 4.0f), glow * 0.82f);
-	}
-
-	private void DrawButtonAccentSpark(Vector2 center, float glow)
-	{
-		float radius = 3.0f + glow * 1.8f;
-		Color aura = new(0.30f, 1.0f, 0.96f, 0.18f * glow);
-		Color line = new(0.96f, 0.98f, 0.88f, 0.36f * glow);
-
-		DrawCircle(center, radius * 2.2f, aura);
-		DrawLine(center + new Vector2(-radius, 0.0f), center + new Vector2(radius, 0.0f), line, 1.1f);
-		DrawLine(center + new Vector2(0.0f, -radius), center + new Vector2(0.0f, radius), line, 1.1f);
 	}
 
 	private static void CloseInto(Vector2[] points, Vector2[] closed)

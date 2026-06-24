@@ -86,6 +86,7 @@ public partial class MainMenuScene : Control
 	private Control _playerCountDialogPanel = default!;
 	private Tween? _playerCountDialogTween;
 	private OptionButton _playerCountOption = default!;
+	private OptionButton _difficultyOption = default!;
 	private OptionButton _itemModeOption = default!;
 	private OptionButton _winningScoreOption = default!;
 	private MainMenuSettingsDialog _settingsDialog = default!;

@@ -469,6 +469,7 @@ text = "房间列表"
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
 
 [node name="RoomListContainer" type="VBoxContainer" parent="SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll" unique_id=1396137249]

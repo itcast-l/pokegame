@@ -4,11 +4,30 @@ const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 25.0
 const MODE_SPECS := [
 	{
-		"name": "solo",
+		"name": "solo_low",
 		"player_count": 2,
 		"item_mode": true,
 		"winning_score": 100,
 		"solo_mode": true,
+		"solo_ai_difficulty": 0,
+		"adventure_mode": false,
+	},
+	{
+		"name": "solo_high",
+		"player_count": 2,
+		"item_mode": true,
+		"winning_score": 100,
+		"solo_mode": true,
+		"solo_ai_difficulty": 2,
+		"adventure_mode": false,
+	},
+	{
+		"name": "solo_high_four_player",
+		"player_count": 4,
+		"item_mode": true,
+		"winning_score": 100,
+		"solo_mode": true,
+		"solo_ai_difficulty": 2,
 		"adventure_mode": false,
 	},
 	{
@@ -60,6 +79,7 @@ func _smoke_mode(spec: Dictionary) -> void:
 	board.set("item_mode", bool(spec.get("item_mode", true)))
 	board.set("winning_score", int(spec.get("winning_score", 100)))
 	board.set("solo_mode", bool(spec.get("solo_mode", true)))
+	board.set("solo_ai_difficulty", int(spec.get("solo_ai_difficulty", 1)))
 	board.set("adventure_mode", bool(spec.get("adventure_mode", false)))
 	if spec.has("adventure_enemy_avatar_id"):
 		board.set("adventure_enemy_avatar_id", String(spec.get("adventure_enemy_avatar_id", "fish")))

@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dmrk7slvtljmk"]
 
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="1_character_avatar"]
 
@@ -13,6 +13,9 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.035, 0.055, 0.18)
+shadow_size = 10
+shadow_offset = Vector2(0, 3)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
 bg_color = Color(0.04, 0.17, 0.18, 0.48)
@@ -28,13 +31,14 @@ corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
 
-[node name="CharacterAvatarOption" type="Control"]
+[node name="CharacterAvatarOption" type="Control" unique_id=1601523940]
 custom_minimum_size = Vector2(112, 104)
-layout_mode = 2
+layout_mode = 3
+anchors_preset = 0
 offset_right = 112.0
 offset_bottom = 104.0
 
-[node name="OptionPanel" type="PanelContainer" parent="."]
+[node name="OptionPanel" type="PanelContainer" parent="." unique_id=430056988]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -44,7 +48,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_option")
 
-[node name="OptionMargin" type="MarginContainer" parent="OptionPanel"]
+[node name="OptionMargin" type="MarginContainer" parent="OptionPanel" unique_id=1749151276]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 10
@@ -52,18 +56,18 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="OptionLayout" type="VBoxContainer" parent="OptionPanel/OptionMargin"]
+[node name="OptionLayout" type="VBoxContainer" parent="OptionPanel/OptionMargin" unique_id=1809395239]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AvatarSlot" type="Control" parent="OptionPanel/OptionMargin/OptionLayout"]
+[node name="AvatarSlot" type="Control" parent="OptionPanel/OptionMargin/OptionLayout" unique_id=540312194]
 custom_minimum_size = Vector2(78, 78)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="SlotBackdrop" type="PanelContainer" parent="OptionPanel/OptionMargin/OptionLayout/AvatarSlot"]
+[node name="SlotBackdrop" type="PanelContainer" parent="OptionPanel/OptionMargin/OptionLayout/AvatarSlot" unique_id=1832447123]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -73,7 +77,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_slot")
 
-[node name="CharacterAvatar" parent="OptionPanel/OptionMargin/OptionLayout/AvatarSlot" instance=ExtResource("1_character_avatar")]
+[node name="CharacterAvatar" parent="OptionPanel/OptionMargin/OptionLayout/AvatarSlot" unique_id=782270501 instance=ExtResource("1_character_avatar")]
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 1
 anchors_preset = 15
@@ -87,7 +91,7 @@ grow_horizontal = 2
 grow_vertical = 2
 ShowFrame = false
 
-[node name="SelectButton" type="Button" parent="."]
+[node name="SelectButton" type="Button" parent="." unique_id=1591052357]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

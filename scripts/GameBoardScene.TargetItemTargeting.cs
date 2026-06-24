@@ -33,6 +33,11 @@ public partial class GameBoardScene
 		}
 
 		string target = definition.EffectValues.GetString(CardEffectValueKeys.Target);
+		if (IsOfflineSoloAiPlayer(ownerPlayerIndex))
+		{
+			return PickOfflineSoloAiTargetPlayer(target, ownerPlayerIndex);
+		}
+
 		int selectedPlayerIndex = -1;
 		int candidateCount = 0;
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)

@@ -111,6 +111,11 @@ public partial class GameBoardScene
 	private bool TryPickAiCaptureHandIndex(int playerIndex, out int handIndex)
 	{
 		handIndex = -1;
+		if (IsOfflineSoloAiPlayer(playerIndex))
+		{
+			return TryPickSoloAiCaptureHandIndex(playerIndex, out handIndex);
+		}
+
 		if (!adventure_mode || !IsAdventureEnemyPlayer(playerIndex))
 		{
 			return TryPickBestCaptureHandIndex(playerIndex, out handIndex);

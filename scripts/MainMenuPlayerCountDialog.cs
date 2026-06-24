@@ -7,11 +7,12 @@ public partial class MainMenuPlayerCountDialog : Control
 	public delegate void CloseRequestedEventHandler();
 
 	[Signal]
-	public delegate void StartGameRequestedEventHandler(int playerCount, bool itemMode, int winningScore);
+	public delegate void StartGameRequestedEventHandler(int playerCount, int soloAiDifficulty, bool itemMode, int winningScore);
 
 	private Label _titleLabel = default!;
 	private Label _messageLabel = default!;
 	private Label _playersLabel = default!;
+	private Label _difficultyLabel = default!;
 	private Label _itemModeLabel = default!;
 	private Label _winningScoreLabel = default!;
 	private Button _startButton = default!;
@@ -20,6 +21,7 @@ public partial class MainMenuPlayerCountDialog : Control
 	public Control MotionRoot { get; private set; } = default!;
 	public Control DialogPanel { get; private set; } = default!;
 	public OptionButton PlayerCountOption { get; private set; } = default!;
+	public OptionButton DifficultyOption { get; private set; } = default!;
 	public OptionButton ItemModeOption { get; private set; } = default!;
 	public OptionButton WinningScoreOption { get; private set; } = default!;
 
@@ -28,11 +30,13 @@ public partial class MainMenuPlayerCountDialog : Control
 		MotionRoot = GetNode<Control>("%DialogMotion");
 		DialogPanel = GetNode<Control>("%PlayerCountDialogPanel");
 		PlayerCountOption = GetNode<OptionButton>("%PlayerCountOption");
+		DifficultyOption = GetNode<OptionButton>("%DifficultyOption");
 		ItemModeOption = GetNode<OptionButton>("%ItemModeOption");
 		WinningScoreOption = GetNode<OptionButton>("%WinningScoreOption");
 		_titleLabel = GetNode<Label>("%PlayerCountTitle");
 		_messageLabel = GetNode<Label>("%PlayerCountMessage");
 		_playersLabel = GetNode<Label>("%PlayersLabel");
+		_difficultyLabel = GetNode<Label>("%DifficultyLabel");
 		_itemModeLabel = GetNode<Label>("%ItemModeLabel");
 		_winningScoreLabel = GetNode<Label>("%WinningScoreLabel");
 		_startButton = GetNode<Button>("%StartGameButton");
@@ -40,8 +44,9 @@ public partial class MainMenuPlayerCountDialog : Control
 
 		_scrim.GuiInput += OnScrimGuiInput;
 		_startButton.Pressed += EmitStartGameRequested;
-		EnableKeyboardFocus(PlayerCountOption, ItemModeOption, WinningScoreOption, _startButton);
+		EnableKeyboardFocus(PlayerCountOption, DifficultyOption, ItemModeOption, WinningScoreOption, _startButton);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(PlayerCountOption);
+		MainMenuInteractiveStyle.ApplyOptionLikeButton(DifficultyOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(ItemModeOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(WinningScoreOption);
 		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 25);
@@ -50,11 +55,13 @@ public partial class MainMenuPlayerCountDialog : Control
 	public void RefreshLocalizedText(
 		Func<string, string> localize,
 		Func<int, string> getPlayerCountText,
+		Func<int, string> getDifficultyText,
 		Func<int, string> getWinningScoreText)
 	{
 		_titleLabel.Text = localize("PLAYER_COUNT_TITLE");
 		_messageLabel.Text = localize("PLAYER_COUNT_MESSAGE");
 		_playersLabel.Text = localize("PLAYER_COUNT_PLAYERS");
+		_difficultyLabel.Text = localize("PLAYER_COUNT_DIFFICULTY");
 		_itemModeLabel.Text = localize("PLAYER_COUNT_ITEM_MODE");
 		_winningScoreLabel.Text = localize("PLAYER_COUNT_WINNING_SCORE");
 		_startButton.Text = localize("PLAYER_COUNT_START_GAME");
@@ -62,6 +69,11 @@ public partial class MainMenuPlayerCountDialog : Control
 		for (int index = 0; index < PlayerCountOption.ItemCount; index++)
 		{
 			PlayerCountOption.SetItemText(index, getPlayerCountText(PlayerCountOption.GetItemId(index)));
+		}
+
+		for (int index = 0; index < DifficultyOption.ItemCount; index++)
+		{
+			DifficultyOption.SetItemText(index, getDifficultyText(DifficultyOption.GetItemId(index)));
 		}
 
 		if (ItemModeOption.ItemCount >= 2)
@@ -81,6 +93,7 @@ public partial class MainMenuPlayerCountDialog : Control
 		EmitSignal(
 			SignalName.StartGameRequested,
 			PlayerCountOption.GetSelectedId(),
+			DifficultyOption.GetSelectedId(),
 			ItemModeOption.GetSelectedId() == 1,
 			WinningScoreOption.GetSelectedId());
 	}

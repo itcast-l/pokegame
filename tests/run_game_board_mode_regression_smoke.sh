@@ -33,9 +33,15 @@ if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	exit 1
 fi
 
-grep -Fq "SOLO_PLAYED_CARD" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
-grep -Fq "SOLO_SAW_OPPONENT_TURN" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
-grep -Fq "MODE_OK solo" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "SOLO_LOW_PLAYED_CARD" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "SOLO_LOW_SAW_OPPONENT_TURN" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "MODE_OK solo_low" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "SOLO_HIGH_PLAYED_CARD" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "SOLO_HIGH_SAW_OPPONENT_TURN" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "MODE_OK solo_high" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "SOLO_HIGH_FOUR_PLAYER_PLAYED_CARD" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "SOLO_HIGH_FOUR_PLAYER_SAW_OPPONENT_TURN" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "MODE_OK solo_high_four_player" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 grep -Fq "ADVENTURE_PLAYED_CARD" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 grep -Fq "ADVENTURE_SAW_OPPONENT_TURN" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 grep -Fq "MODE_OK adventure" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }

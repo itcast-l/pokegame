@@ -40,10 +40,16 @@ internal static class Program
 		Run("adventure ai late best capture skips pair only captures", AdventureAiLateBestCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai late random capture skips pair only captures", AdventureAiLateRandomCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai final profile can skip best capture", AdventureAiFinalProfileCanSkipBestCapture);
+		Run("solo ai difficulty profiles expose expected values", SoloAiDifficultyProfilesExposeExpectedValues);
+		Run("solo ai medium capture prefers more cards while high prefers points", SoloAiMediumCapturePrefersMoreCardsWhileHighPrefersPoints);
+		Run("solo ai medium and high skip pair only captures", SoloAiMediumAndHighSkipPairOnlyCaptures);
+		Run("solo ai target player strategy picks largest relevant opponent", SoloAiTargetPlayerStrategyPicksLargestRelevantOpponent);
+		Run("solo ai discard and magnet heuristics keep immediate captures when possible", SoloAiDiscardAndMagnetHeuristicsKeepImmediateCapturesWhenPossible);
 		Run("lan address helper computes ipv4 broadcast address", LanAddressHelperComputesIpv4BroadcastAddress);
 		Run("character audio config resources point to existing files", CharacterAudioConfigResourcesPointToExistingFiles);
 		Run("character avatar visual resources point to existing files", CharacterAvatarVisualResourcesPointToExistingFiles);
 		Run("character avatar display names are localized for every locale", CharacterAvatarDisplayNamesAreLocalizedForEveryLocale);
+		Run("player count localization difficulty rows exist for every locale", PlayerCountLocalizationDifficultyRowsExistForEveryLocale);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
 		Run("attachment selection preview follows pending item card", AttachmentSelectionPreviewFollowsPendingItemCard);
@@ -782,6 +788,207 @@ internal static class Program
 		False(highRollPicked);
 	}
 
+	private static void SoloAiDifficultyProfilesExposeExpectedValues()
+	{
+		SoloAiRules.Profile low = SoloAiRules.GetProfile(SoloAiRules.Difficulty.Low);
+		SoloAiRules.Profile medium = SoloAiRules.GetProfile(SoloAiRules.Difficulty.Medium);
+		SoloAiRules.Profile high = SoloAiRules.GetProfile(SoloAiRules.Difficulty.High);
+
+		Equal(25, low.BestCaptureChancePercent);
+		Equal(25, low.AnyCaptureChancePercent);
+		False(low.UsePointScoring);
+		False(low.AvoidPairOnlyCaptures);
+
+		Equal(55, medium.BestCaptureChancePercent);
+		Equal(20, medium.AnyCaptureChancePercent);
+		False(medium.UsePointScoring);
+		True(medium.AvoidPairOnlyCaptures);
+
+		Equal(78, high.BestCaptureChancePercent);
+		Equal(12, high.AnyCaptureChancePercent);
+		True(high.UsePointScoring);
+		True(high.AvoidPairOnlyCaptures);
+	}
+
+	private static void SoloAiMediumCapturePrefersMoreCardsWhileHighPrefersPoints()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("3", 3),
+			TableCard("K", 0),
+			TableCard("10", 10),
+			TableCard("Q", 0),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: true),
+		};
+
+		bool mediumPicked = SoloAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			SoloAiRules.Difficulty.Medium,
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out int mediumHandIndex);
+		bool highPicked = SoloAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			SoloAiRules.Difficulty.High,
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out int highHandIndex);
+
+		True(mediumPicked);
+		True(highPicked);
+		Equal(0, mediumHandIndex);
+		Equal(1, highHandIndex);
+	}
+
+	private static void SoloAiMediumAndHighSkipPairOnlyCaptures()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("K", 12),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		bool mediumPicked = SoloAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			SoloAiRules.Difficulty.Medium,
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 60,
+			randomCaptureOrdinal: 7,
+			out int mediumHandIndex);
+		bool highPicked = SoloAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			SoloAiRules.Difficulty.High,
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 80,
+			randomCaptureOrdinal: 7,
+			out int highHandIndex);
+		bool lowPicked = SoloAiRules.TryPickCaptureCardIndex(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			SoloAiRules.Difficulty.Low,
+			royalCaptureThreshold: int.MaxValue,
+			decisionRollPercent: 30,
+			randomCaptureOrdinal: 0,
+			out int lowHandIndex);
+
+		True(mediumPicked);
+		True(highPicked);
+		True(lowPicked);
+		Equal(1, mediumHandIndex);
+		Equal(1, highHandIndex);
+		Equal(0, lowHandIndex);
+	}
+
+	private static void SoloAiTargetPlayerStrategyPicksLargestRelevantOpponent()
+	{
+		var candidates = new[]
+		{
+			new SoloAiRules.PlayerTargetCandidate(PlayerIndex: 1, TotalHandCardCount: 5, DeckCount: 2, Score: 14),
+			new SoloAiRules.PlayerTargetCandidate(PlayerIndex: 2, TotalHandCardCount: 7, DeckCount: 8, Score: 12),
+			new SoloAiRules.PlayerTargetCandidate(PlayerIndex: 3, TotalHandCardCount: 6, DeckCount: 8, Score: 18),
+		};
+
+		Equal(2, SoloAiRules.PickItemTargetPlayer(
+			SoloAiRules.Difficulty.High,
+			SoloAiRules.TargetPreferenceKind.PlayerHand,
+			candidates,
+			strategyRollPercent: 0,
+			tieBreakOrdinal: 0));
+		Equal(3, SoloAiRules.PickItemTargetPlayer(
+			SoloAiRules.Difficulty.High,
+			SoloAiRules.TargetPreferenceKind.PlayerScore,
+			candidates,
+			strategyRollPercent: 0,
+			tieBreakOrdinal: 0));
+		Equal(2, SoloAiRules.PickItemTargetPlayer(
+			SoloAiRules.Difficulty.High,
+			SoloAiRules.TargetPreferenceKind.PlayerDeck,
+			candidates,
+			strategyRollPercent: 0,
+			tieBreakOrdinal: 0));
+		Equal(1, SoloAiRules.PickItemTargetPlayer(
+			SoloAiRules.Difficulty.Low,
+			SoloAiRules.TargetPreferenceKind.PlayerScore,
+			candidates,
+			strategyRollPercent: 0,
+			tieBreakOrdinal: 0));
+		Equal(1, SoloAiRules.PickItemTargetPlayer(
+			SoloAiRules.Difficulty.Medium,
+			SoloAiRules.TargetPreferenceKind.PlayerScore,
+			candidates,
+			strategyRollPercent: 95,
+			tieBreakOrdinal: 0));
+	}
+
+	private static void SoloAiDiscardAndMagnetHeuristicsKeepImmediateCapturesWhenPossible()
+	{
+		var discardCandidates = new[]
+		{
+			new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true),
+			new SoloAiRules.HandCardDecisionCandidate(Index: 1, ScoreValue: 3, CanCaptureNow: false),
+			new SoloAiRules.HandCardDecisionCandidate(Index: 2, ScoreValue: 2, CanCaptureNow: false),
+		};
+
+		Equal(0, SoloAiRules.PickDiscardDisplayIndex(
+			SoloAiRules.Difficulty.Low,
+			discardCandidates,
+			totalDisplayCount: 4,
+			tieBreakOrdinal: 0));
+		Equal(0, SoloAiRules.PickDiscardDisplayIndex(
+			SoloAiRules.Difficulty.Medium,
+			new[] { new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true) },
+			totalDisplayCount: 3,
+			tieBreakOrdinal: 0));
+		Equal(2, SoloAiRules.PickDiscardDisplayIndex(
+			SoloAiRules.Difficulty.High,
+			discardCandidates,
+			totalDisplayCount: 4,
+			tieBreakOrdinal: 0));
+
+		var magnetCandidates = new[]
+		{
+			new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true),
+			new SoloAiRules.HandCardDecisionCandidate(Index: 1, ScoreValue: 3, CanCaptureNow: false),
+			new SoloAiRules.HandCardDecisionCandidate(Index: 2, ScoreValue: 2, CanCaptureNow: false),
+		};
+
+		Equal(0, SoloAiRules.PickMagnetHandIndex(
+			SoloAiRules.Difficulty.Low,
+			magnetCandidates,
+			tieBreakOrdinal: 0));
+		Equal(0, SoloAiRules.PickMagnetHandIndex(
+			SoloAiRules.Difficulty.Medium,
+			new[] { new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true) },
+			tieBreakOrdinal: 0));
+		Equal(2, SoloAiRules.PickMagnetHandIndex(
+			SoloAiRules.Difficulty.High,
+			magnetCandidates,
+			tieBreakOrdinal: 0));
+	}
+
 	private static void CharacterAudioConfigResourcesPointToExistingFiles()
 	{
 		string repoRoot = FindRepositoryRoot();
@@ -914,6 +1121,51 @@ internal static class Program
 				{
 					False(ContainsHanCharacter(localizedName));
 				}
+			}
+		}
+	}
+
+	private static void PlayerCountLocalizationDifficultyRowsExistForEveryLocale()
+	{
+		string localizationPath = Path.Combine(FindRepositoryRoot(), "localization", "ui.csv");
+		True(File.Exists(localizationPath));
+
+		string[] localizationLines = File.ReadAllLines(localizationPath);
+		True(localizationLines.Length > 1);
+		List<string> header = ParseCsvLine(localizationLines[0]);
+		True(header.Count > 1);
+
+		var rowsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+		foreach (string line in localizationLines[1..])
+		{
+			if (string.IsNullOrWhiteSpace(line))
+			{
+				continue;
+			}
+
+			List<string> row = ParseCsvLine(line);
+			if (row.Count == 0 || string.IsNullOrWhiteSpace(row[0]))
+			{
+				continue;
+			}
+
+			rowsByKey[row[0].Trim()] = row;
+		}
+
+		foreach (string key in new[]
+		{
+			"PLAYER_COUNT_DIFFICULTY",
+			"PLAYER_COUNT_DIFFICULTY_LOW",
+			"PLAYER_COUNT_DIFFICULTY_MEDIUM",
+			"PLAYER_COUNT_DIFFICULTY_HIGH",
+		})
+		{
+			True(rowsByKey.TryGetValue(key, out List<string>? row));
+			Equal(header.Count, row.Count);
+
+			for (int index = 1; index < row.Count; index++)
+			{
+				True(!string.IsNullOrWhiteSpace(row[index]));
 			}
 		}
 	}

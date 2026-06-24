@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bxnip0kry0oj5" path="res://scripts/MainMenuPlayerCountDialog.cs" id="1_dialog"]
 [ext_resource type="Script" uid="uid://cjnpxckhrm0wo" path="res://scripts/MainMenuPlayerCountDialogPanelArt.cs" id="2_panel_art"]
 [ext_resource type="Script" uid="uid://e47b5vrc1wkc" path="res://scripts/MainMenuPlayerCountIconBadge.cs" id="3_icon_badge"]
+[ext_resource type="Script" uid="uid://cf5byadaqnflj" path="res://scripts/PlayerCountDialogFrameArt.cs" id="4_frame_art"]
 [ext_resource type="Shader" uid="uid://6kv33puia40b" path="res://shaders/menu_blur_scrim.gdshader" id="5_scrim_shader"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_scrim"]
@@ -130,6 +131,8 @@ offset_right = 620.0
 offset_bottom = 198.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+script = ExtResource("4_frame_art")
+Kind = 0
 
 [node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/PlayersRowPanel" unique_id=904451758]
 layout_mode = 2
@@ -185,14 +188,82 @@ popup/item_1/id = 3
 popup/item_2/text = "四人对局"
 popup/item_2/id = 4
 
+[node name="DifficultyRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=164235182]
+layout_mode = 1
+offset_left = 124.0
+offset_top = 204.0
+offset_right = 620.0
+offset_bottom = 260.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+script = ExtResource("4_frame_art")
+Kind = 0
+
+[node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DifficultyRowPanel" unique_id=1592374410]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
+
+[node name="RowLayout" type="HBoxContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DifficultyRowPanel/RowMargin" unique_id=175118102]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="DifficultyIcon" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DifficultyRowPanel/RowMargin/RowLayout" unique_id=121574154]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+script = ExtResource("3_icon_badge")
+IconType = 7
+
+[node name="DifficultyLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DifficultyRowPanel/RowMargin/RowLayout" unique_id=998913500]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "PLAYER_COUNT_DIFFICULTY"
+vertical_alignment = 1
+
+[node name="DifficultySpacer" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DifficultyRowPanel/RowMargin/RowLayout" unique_id=111784257]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DifficultyOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DifficultyRowPanel/RowMargin/RowLayout" unique_id=856007102]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(156, 42)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_option")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
+theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
+selected = 1
+item_count = 3
+popup/item_0/text = "低"
+popup/item_0/id = 0
+popup/item_1/text = "中"
+popup/item_1/id = 1
+popup/item_2/text = "高"
+popup/item_2/id = 2
+
 [node name="ItemModeRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=1463530843]
 layout_mode = 1
 offset_left = 124.0
-offset_top = 224.0
+offset_top = 262.0
 offset_right = 620.0
-offset_bottom = 280.0
+offset_bottom = 318.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+script = ExtResource("4_frame_art")
+Kind = 0
 
 [node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/ItemModeRowPanel" unique_id=2008407824]
 layout_mode = 2
@@ -250,11 +321,13 @@ popup/item_1/id = 0
 [node name="WinningScoreRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=175710680]
 layout_mode = 1
 offset_left = 124.0
-offset_top = 306.0
+offset_top = 320.0
 offset_right = 620.0
-offset_bottom = 362.0
+offset_bottom = 376.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+script = ExtResource("4_frame_art")
+Kind = 0
 
 [node name="RowMargin" type="MarginContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/WinningScoreRowPanel" unique_id=402795975]
 layout_mode = 2

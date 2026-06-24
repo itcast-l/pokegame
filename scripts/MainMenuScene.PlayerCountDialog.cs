@@ -26,6 +26,7 @@ public partial class MainMenuScene : Control
 		_playerCountDialogMotion = dialog.MotionRoot;
 		_playerCountDialogPanel = dialog.DialogPanel;
 		_playerCountOption = dialog.PlayerCountOption;
+		_difficultyOption = dialog.DifficultyOption;
 		_itemModeOption = dialog.ItemModeOption;
 		_winningScoreOption = dialog.WinningScoreOption;
 		SuppressDefaultPressedSfx(_singlePlayerButton);
@@ -35,7 +36,7 @@ public partial class MainMenuScene : Control
 
 	private void RefreshPlayerCountDialogOptions()
 	{
-		_playerCountDialog?.RefreshLocalizedText(Localize, GetPlayerCountOptionText, GetWinningScoreOptionText);
+		_playerCountDialog?.RefreshLocalizedText(Localize, GetPlayerCountOptionText, GetDifficultyOptionText, GetWinningScoreOptionText);
 	}
 
 	private string GetPlayerCountOptionText(int playerCount)
@@ -52,6 +53,16 @@ public partial class MainMenuScene : Control
 	private string GetWinningScoreOptionText(int winningScore)
 	{
 		return LocalizeFormat("PLAYER_COUNT_WINNING_SCORE_OPTION", winningScore);
+	}
+
+	private string GetDifficultyOptionText(int difficulty)
+	{
+		return difficulty switch
+		{
+			0 => Localize("PLAYER_COUNT_DIFFICULTY_LOW"),
+			2 => Localize("PLAYER_COUNT_DIFFICULTY_HIGH"),
+			_ => Localize("PLAYER_COUNT_DIFFICULTY_MEDIUM"),
+		};
 	}
 
 	private void ShowPlayerCountDialog()
@@ -99,12 +110,13 @@ public partial class MainMenuScene : Control
 	private void StartGameWithSelectedOptions()
 	{
 		int playerCount = _playerCountOption.GetSelectedId();
+		int soloAiDifficulty = _difficultyOption.GetSelectedId();
 		bool itemMode = _itemModeOption.GetSelectedId() == 1;
 		int winningScore = _winningScoreOption.GetSelectedId();
-		StartGameWithOptions(playerCount, itemMode, winningScore);
+		StartGameWithOptions(playerCount, soloAiDifficulty, itemMode, winningScore);
 	}
 
-	private async void StartGameWithOptions(int playerCount, bool itemMode, int winningScore)
+	private async void StartGameWithOptions(int playerCount, int soloAiDifficulty, bool itemMode, int winningScore)
 	{
 		if (_isStartingGameTransition)
 		{
@@ -124,6 +136,7 @@ public partial class MainMenuScene : Control
 		{
 			Node gameBoard = gameBoardScene.Instantiate();
 			gameBoard.Set("player_count", playerCount);
+			gameBoard.Set("solo_ai_difficulty", soloAiDifficulty);
 			gameBoard.Set("item_mode", itemMode);
 			gameBoard.Set("winning_score", winningScore);
 			gameBoard.Set("solo_mode", true);

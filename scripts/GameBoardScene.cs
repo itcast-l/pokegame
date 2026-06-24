@@ -350,6 +350,7 @@ public partial class GameBoardScene : Control
 	}
 	private bool _itemMode = true;
 	private bool _soloMode;
+	private int _soloAiDifficulty = (int)SoloAiRules.Difficulty.Medium;
 	private int _localPlayerIndex;
 	private string _networkSessionId = string.Empty;
 	private long _matchSeed;
@@ -478,6 +479,13 @@ public partial class GameBoardScene : Control
 		set => _soloMode = value;
 	}
 
+	[Export(PropertyHint.Enum, "Low,Medium,High")]
+	public int solo_ai_difficulty
+	{
+		get => _soloAiDifficulty;
+		set => _soloAiDifficulty = Mathf.Clamp(value, (int)SoloAiRules.Difficulty.Low, (int)SoloAiRules.Difficulty.High);
+	}
+
 	[Export(PropertyHint.Range, "0,3,1")]
 	public int local_player_index
 	{
@@ -570,6 +578,8 @@ public partial class GameBoardScene : Control
 	private Control _leftPlayerArea = default!;
 	private Control _rightPlayerArea = default!;
 	private Control _questionCardTransformArea = default!;
+	private TextureRect _boardArt = default!;
+	private Control _layoutAreas = default!;
 
 	public override void _Ready()
 	{
@@ -601,6 +611,9 @@ public partial class GameBoardScene : Control
 		LoadLensRevealWispTextures();
 		LoadMagnetCountdownFxTextures();
 
+		_boardArt = GetNode<TextureRect>("BoardArt");
+		_layoutAreas = GetNode<Control>("LayoutAreas");
+		RefreshResponsiveBoardLayout();
 		_centerArena = GetNode<Control>("%CenterArena");
 		_tableCardLayoutArea = GetNode<Control>("%TableCardLayoutArea");
 		_topPlayerArea = GetNode<Control>("%TopPlayerArea");

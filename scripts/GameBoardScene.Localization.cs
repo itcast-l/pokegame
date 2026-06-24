@@ -15,6 +15,8 @@ public partial class GameBoardScene
 		}
 		else if (what == NotificationResized && IsNodeReady())
 		{
+			RefreshResponsiveBoardLayout();
+			RefreshResponsiveBoardVisuals();
 			RefreshAdventureTutorialOverlayLayout();
 			MarkSeatControlIndicatorLayoutDirty();
 			MarkActivePlayerStatusTooltipLayoutDirty();
@@ -180,6 +182,24 @@ public partial class GameBoardScene
 
 	private void RefreshRenderedCardDescriptions()
 	{
+		if (_playerHandAreas.Count == MaxPlayers)
+		{
+			RenderPlayerHands();
+		}
+
+		if (_centerArena != null && GodotObject.IsInstanceValid(_centerArena))
+		{
+			RenderTableCards();
+		}
+	}
+
+	private void RefreshResponsiveBoardVisuals()
+	{
+		if (_playerCardPiles.Count == MaxPlayers)
+		{
+			RenderPlayerCardPiles();
+		}
+
 		if (_playerHandAreas.Count == MaxPlayers)
 		{
 			RenderPlayerHands();

@@ -2,12 +2,16 @@ using Godot;
 
 public partial class MainMenuPlayerCountIconBadge : Control
 {
-	[Export(PropertyHint.Enum, "Players,Items,Score,Continue,Return,Restart,Quit")]
+	private const string DifficultyGlyphTexturePath = "res://assets/ui/player_count_difficulty_glyph.png";
+	private Texture2D? _difficultyGlyphTexture;
+
+	[Export(PropertyHint.Enum, "Players,Items,Score,Continue,Return,Restart,Quit,Difficulty")]
 	public int IconType { get; set; }
 
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
+		_difficultyGlyphTexture = GD.Load<Texture2D>(DifficultyGlyphTexturePath);
 	}
 
 	public override void _Draw()
@@ -25,6 +29,9 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 		switch (IconType)
 		{
+			case 7:
+				DrawDifficultyIcon(center, icon);
+				break;
 			case 3:
 				DrawContinueIcon(center, icon);
 				break;
@@ -88,6 +95,19 @@ public partial class MainMenuPlayerCountIconBadge : Control
 		DrawLine(center + new Vector2(10.5f, -2.0f), center + new Vector2(7.0f, 1.0f), color, 1.6f);
 		DrawRect(new Rect2(center + new Vector2(-1.4f, 1.0f), new Vector2(2.8f, 5.5f)), color);
 		DrawRect(new Rect2(center + new Vector2(-5.0f, 6.0f), new Vector2(10.0f, 2.4f)), color);
+	}
+
+	private void DrawDifficultyIcon(Vector2 center, Color color)
+	{
+		if (_difficultyGlyphTexture == null)
+		{
+			return;
+		}
+
+		Rect2 glowRect = new(center - new Vector2(13.0f, 13.0f), new Vector2(26.0f, 26.0f));
+		Rect2 iconRect = new(center - new Vector2(10.0f, 10.0f), new Vector2(20.0f, 20.0f));
+		DrawTextureRect(_difficultyGlyphTexture, glowRect, false, new Color(0.46f, 1.0f, 0.96f, 0.26f));
+		DrawTextureRect(_difficultyGlyphTexture, iconRect, false, color);
 	}
 
 	private void DrawContinueIcon(Vector2 center, Color color)

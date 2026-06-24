@@ -25,7 +25,7 @@ public partial class GameBoardScene
 			}
 			else
 			{
-				if (AttachMagnetToRandomHandCard(reward.PlayerIndex, reward.ItemCardId))
+				if (AttachMagnetToAutoSelectedHandCard(reward.PlayerIndex, reward.ItemCardId))
 				{
 					PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
 				}
@@ -69,7 +69,7 @@ public partial class GameBoardScene
 				&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
 				&& _pendingItemOwnerIndex == ownerPlayerIndex)
 			{
-				await CompleteMagnetAttachmentSelectionAsync(PickRandomAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId));
+				await CompleteMagnetAttachmentSelectionAsync(PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId));
 			}
 
 			while (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
@@ -144,7 +144,7 @@ public partial class GameBoardScene
 		string itemCardId = _pendingItemCardId;
 		int attachHandIndex = IsValidMagnetAttachmentHandIndex(ownerPlayerIndex, handIndex, itemCardId)
 			? handIndex
-			: PickRandomAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
+			: PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
 		if (attachHandIndex < 0)
 		{
 			ClearSelectionOverlay();
@@ -160,7 +160,7 @@ public partial class GameBoardScene
 		bool attached = AttachMagnetToHandCard(ownerPlayerIndex, attachHandIndex, itemCardId);
 		if (!attached)
 		{
-			AttachMagnetToRandomHandCard(ownerPlayerIndex, itemCardId);
+			AttachMagnetToAutoSelectedHandCard(ownerPlayerIndex, itemCardId);
 		}
 
 		ClearSelectionOverlay();
@@ -203,6 +203,26 @@ public partial class GameBoardScene
 	{
 		int handIndex = PickRandomAttachableMagnetHandIndex(playerIndex, itemCardId);
 		return AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
+	}
+
+	private bool AttachMagnetToAutoSelectedHandCard(int playerIndex, string itemCardId)
+	{
+		int handIndex = PickAutoAttachableMagnetHandIndex(playerIndex, itemCardId);
+		return AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
+	}
+
+	private int PickAutoAttachableMagnetHandIndex(int playerIndex, string itemCardId)
+	{
+		if (IsOfflineSoloAiPlayer(playerIndex))
+		{
+			int handIndex = PickOfflineSoloAiMagnetHandIndex(playerIndex, itemCardId);
+			if (IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))
+			{
+				return handIndex;
+			}
+		}
+
+		return PickRandomAttachableMagnetHandIndex(playerIndex, itemCardId);
 	}
 
 	private int PickRandomAttachableMagnetHandIndex(int playerIndex, string itemCardId)
