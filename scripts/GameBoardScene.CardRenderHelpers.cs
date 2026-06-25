@@ -2,7 +2,9 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private const string DisabledCardProhibitedTexturePath = "res://assets/ui/disabled_card_prohibited_mark.png";
 	private static readonly StyleBoxFlat MagnetSelectionPulseStyle = CreateMagnetSelectionPulseStyle();
+	private static readonly Texture2D? DisabledCardProhibitedTexture = GD.Load<Texture2D>(DisabledCardProhibitedTexturePath);
 	private static readonly Vector2 HandCardDescriptionLabelSize = new(212.0f, 50.0f);
 	private static readonly Vector2 TableCardDescriptionLabelSize = new(224.0f, 52.0f);
 
@@ -232,12 +234,15 @@ public partial class GameBoardScene
 			PivotOffset = size / 2.0f,
 			RotationDegrees = rotationDegrees,
 			ZIndex = zIndex,
+			MarkerTexture = DisabledCardProhibitedTexture,
 		};
 		parent.AddChild(mark);
 	}
 
 	private partial class DisabledCardProhibitedMark : Control
 	{
+		public Texture2D? MarkerTexture { get; set; }
+
 		public override void _Draw()
 		{
 			Vector2 center = Size / 2.0f;
@@ -247,6 +252,12 @@ public partial class GameBoardScene
 			var shadowColor = new Color(0.02f, 0.0f, 0.0f, 0.42f);
 			var rimColor = new Color(1.0f, 0.12f, 0.12f, 0.94f);
 			var highlightColor = new Color(1.0f, 1.0f, 1.0f, 0.78f);
+
+			if (MarkerTexture != null)
+			{
+				DrawTextureRect(MarkerTexture, new Rect2(Vector2.Zero, Size), false, new Color(1.0f, 1.0f, 1.0f, 0.92f));
+				return;
+			}
 
 			DrawArc(center + new Vector2(1.5f, 2.0f), radius, 0.0f, Mathf.Tau, 72, shadowColor, strokeWidth + 2.0f, true);
 			DrawLine(

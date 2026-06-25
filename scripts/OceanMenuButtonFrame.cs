@@ -20,6 +20,18 @@ public partial class OceanMenuButtonFrame : Control
 	[Export]
 	public bool Selected { get; set; }
 
+	[Export]
+	public Texture2D? OceanPlaqueTexture { get; set; }
+
+	[Export]
+	public Texture2D? OceanPlaqueFlippedTexture { get; set; }
+
+	[Export]
+	public Texture2D? CardSlabTexture { get; set; }
+
+	[Export]
+	public Texture2D? SelectionGlowTexture { get; set; }
+
 	private Button? _button;
 	private float _glow;
 	private readonly Vector2[] _plaquePoints = new Vector2[6];
@@ -85,6 +97,11 @@ public partial class OceanMenuButtonFrame : Control
 			return;
 		}
 
+		if (TryDrawTexturedFrame(rect))
+		{
+			return;
+		}
+
 		float w = rect.Size.X;
 		float h = rect.Size.Y;
 		if (FrameStyle == ButtonFrameStyle.CardSlabs)
@@ -146,6 +163,32 @@ public partial class OceanMenuButtonFrame : Control
 
 		DrawSideAccent(origin, w, h, highlight);
 		DrawCausticStreaks(origin, w, h);
+	}
+
+	private bool TryDrawTexturedFrame(Rect2 rect)
+	{
+		Texture2D? texture = FrameStyle == ButtonFrameStyle.CardSlabs
+			? CardSlabTexture
+			: (FlipOrnament && OceanPlaqueFlippedTexture != null ? OceanPlaqueFlippedTexture : OceanPlaqueTexture);
+		if (texture == null)
+		{
+			return false;
+		}
+
+		DrawTextureRect(texture, rect, false);
+		if (SelectionGlowTexture != null && (_glow > 0.01f || Selected))
+		{
+			float alpha = Selected
+				? 0.56f + _glow * 0.08f
+				: 0.18f + _glow * 0.22f;
+			DrawTextureRect(
+				SelectionGlowTexture,
+				rect.GrowIndividual(4.0f, 4.0f, 4.0f, 4.0f),
+				false,
+				new Color(1.0f, 1.0f, 1.0f, alpha));
+		}
+
+		return true;
 	}
 
 	private void DrawCardSlabFrame(Rect2 rect)

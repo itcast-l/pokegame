@@ -18,10 +18,19 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 	};
 
 	private Texture2D? _panelTexture;
+	[Export]
+	public Texture2D? PanelTextureOverride { get; set; }
+
 	private Control? _startGameFrame;
 	private Button? _startGameButton;
 	private double _time;
 	private float _startButtonGlow;
+	[Export]
+	public Texture2D? PanelSparkTexture { get; set; }
+
+	[Export]
+	public Texture2D? StartButtonGlowTexture { get; set; }
+
 	private readonly Vector2[] _buttonOuterPoints = new Vector2[6];
 	private readonly Vector2[] _buttonInnerPoints = new Vector2[6];
 	private readonly Vector2[] _buttonClosedOuterPoints = new Vector2[7];
@@ -32,7 +41,7 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 		MouseFilter = MouseFilterEnum.Ignore;
 		_startGameFrame = GetNodeOrNull<Control>("StartGameFrame");
 		_startGameButton = GetNodeOrNull<Button>("StartGameFrame/StartGameButton");
-		_panelTexture = GD.Load<Texture2D>(PanelTexturePath);
+		_panelTexture = PanelTextureOverride ?? GD.Load<Texture2D>(PanelTexturePath);
 
 		SetProcess(true);
 		QueueRedraw();
@@ -92,6 +101,21 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 			Color core = new(0.88f, 1.0f, 0.96f, spark.Alpha * pulse);
 			Color centerDot = new(1.0f, 0.98f, 0.84f, spark.Alpha * (0.44f + pulse * 0.56f));
 
+			if (PanelSparkTexture != null)
+			{
+				DrawTextureRect(
+					PanelSparkTexture,
+					new Rect2(center - new Vector2(radius * 1.25f, radius * 1.25f), new Vector2(radius * 2.5f, radius * 2.5f)),
+					false,
+					aura);
+				DrawTextureRect(
+					PanelSparkTexture,
+					new Rect2(center - new Vector2(radius * 0.72f, radius * 0.72f), new Vector2(radius * 1.44f, radius * 1.44f)),
+					false,
+					centerDot);
+				continue;
+			}
+
 			DrawCircle(center, radius * 2.4f, aura);
 			DrawCircle(center, radius * 1.1f, new Color(core.R, core.G, core.B, core.A * 0.46f));
 			DrawCircle(center, radius * 0.28f, centerDot);
@@ -146,6 +170,16 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 		Vector2 origin = rect.Position;
 		float pulse = 0.86f + 0.14f * Mathf.Sin((float)_time * 6.0f);
 		float glow = _startButtonGlow * pulse;
+
+		if (StartButtonGlowTexture != null)
+		{
+			DrawTextureRect(
+				StartButtonGlowTexture,
+				rect.GrowIndividual(8.0f, 8.0f, 8.0f, 8.0f),
+				false,
+				new Color(1.0f, 1.0f, 1.0f, 0.28f * glow));
+			return;
+		}
 
 		_buttonOuterPoints[0] = origin + new Vector2(bevel, 2.0f);
 		_buttonOuterPoints[1] = origin + new Vector2(w - bevel, 2.0f);

@@ -76,6 +76,42 @@ public partial class CharacterAvatar : Control
 	[Export]
 	public CharacterAudioConfig? AudioConfig { get; set; }
 
+	private Texture2D? _frameBaseTextureOverride;
+
+	[Export]
+	public Texture2D? FrameBaseTextureOverride
+	{
+		get => _frameBaseTextureOverride;
+		set
+		{
+			if (_frameBaseTextureOverride == value)
+			{
+				return;
+			}
+
+			_frameBaseTextureOverride = value;
+			ResetFrameTextures();
+		}
+	}
+
+	private Texture2D? _frameAccentTextureOverride;
+
+	[Export]
+	public Texture2D? FrameAccentTextureOverride
+	{
+		get => _frameAccentTextureOverride;
+		set
+		{
+			if (_frameAccentTextureOverride == value)
+			{
+				return;
+			}
+
+			_frameAccentTextureOverride = value;
+			ResetFrameTextures();
+		}
+	}
+
 	private string _avatarRoot = string.Empty;
 	private string _attackFxRoot = "";
 
@@ -229,10 +265,27 @@ public partial class CharacterAvatar : Control
 			return;
 		}
 
-		_frameBaseTexture = FrameAnimationHelpers.LoadTextureResource(FrameBaseTexturePath, allowEditorImageFallback: true);
-		_frameAccentTexture = FrameAnimationHelpers.LoadTextureResource(FrameAccentTexturePath, allowEditorImageFallback: true);
+		_frameBaseTexture = FrameBaseTextureOverride
+			?? FrameAnimationHelpers.LoadTextureResource(FrameBaseTexturePath, allowEditorImageFallback: true);
+		_frameAccentTexture = FrameAccentTextureOverride
+			?? FrameAnimationHelpers.LoadTextureResource(FrameAccentTexturePath, allowEditorImageFallback: true);
 		_frameAssetsMissing = _frameBaseTexture == null || _frameAccentTexture == null;
 		_frameAssetsLoaded = true;
+	}
+
+	private void ResetFrameTextures()
+	{
+		_frameAssetsLoaded = false;
+		_frameAssetsMissing = false;
+		_frameBaseTexture = null;
+		_frameAccentTexture = null;
+		if (!IsNodeReady())
+		{
+			return;
+		}
+
+		LoadFrameTextures();
+		ApplyFrameTextures();
 	}
 
 	private void ApplyFrameTextures()

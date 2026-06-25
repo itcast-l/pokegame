@@ -5,6 +5,33 @@ public partial class MainMenuPlayerCountIconBadge : Control
 	private const string DifficultyGlyphTexturePath = "res://assets/ui/player_count_difficulty_glyph.png";
 	private Texture2D? _difficultyGlyphTexture;
 
+	[Export]
+	public Texture2D? BadgeTexture { get; set; }
+
+	[Export]
+	public Texture2D? PlayersIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? ItemsIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? ScoreIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? ContinueIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? ReturnIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? RestartIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? QuitIconTexture { get; set; }
+
+	[Export]
+	public Texture2D? DifficultyIconTexture { get; set; }
+
 	[Export(PropertyHint.Enum, "Players,Items,Score,Continue,Return,Restart,Quit,Difficulty")]
 	public int IconType { get; set; }
 
@@ -23,9 +50,16 @@ public partial class MainMenuPlayerCountIconBadge : Control
 		Color rim = new(0.67f, 0.98f, 0.95f, 0.55f);
 		Color icon = new(0.92f, 1.0f, 0.97f, 0.96f);
 
-		DrawCircle(center, radius + 3.0f, glow);
-		DrawCircle(center, radius, fill);
-		DrawArc(center, radius, 0.0f, Mathf.Tau, 40, rim, 1.4f, true);
+		if (BadgeTexture != null)
+		{
+			DrawTextureRect(BadgeTexture, new Rect2(Vector2.Zero, Size), false);
+		}
+		else
+		{
+			DrawCircle(center, radius + 3.0f, glow);
+			DrawCircle(center, radius, fill);
+			DrawArc(center, radius, 0.0f, Mathf.Tau, 40, rim, 1.4f, true);
+		}
 
 		switch (IconType)
 		{
@@ -58,6 +92,11 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawPlayersIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(PlayersIconTexture, center, color, 0.56f))
+		{
+			return;
+		}
+
 		DrawCircle(center + new Vector2(0.0f, -5.5f), 4.5f, color);
 		Vector2[] shoulders =
 		{
@@ -71,6 +110,11 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawItemsIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(ItemsIconTexture, center, color, 0.56f))
+		{
+			return;
+		}
+
 		DrawLine(center + new Vector2(-6.0f, 7.0f), center + new Vector2(6.0f, -7.0f), color, 2.2f);
 		DrawLine(center + new Vector2(-6.0f, -7.0f), center + new Vector2(6.0f, 7.0f), color, 2.2f);
 		DrawLine(center + new Vector2(-8.0f, 9.0f), center + new Vector2(-4.0f, 5.0f), color, 1.4f);
@@ -81,6 +125,11 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawScoreIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(ScoreIconTexture, center, color, 0.58f))
+		{
+			return;
+		}
+
 		Vector2[] cup =
 		{
 			center + new Vector2(-6.5f, -7.0f),
@@ -99,19 +148,25 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawDifficultyIcon(Vector2 center, Color color)
 	{
-		if (_difficultyGlyphTexture == null)
+		Texture2D? iconTexture = DifficultyIconTexture ?? _difficultyGlyphTexture;
+		if (iconTexture == null)
 		{
 			return;
 		}
 
 		Rect2 glowRect = new(center - new Vector2(13.0f, 13.0f), new Vector2(26.0f, 26.0f));
 		Rect2 iconRect = new(center - new Vector2(10.0f, 10.0f), new Vector2(20.0f, 20.0f));
-		DrawTextureRect(_difficultyGlyphTexture, glowRect, false, new Color(0.46f, 1.0f, 0.96f, 0.26f));
-		DrawTextureRect(_difficultyGlyphTexture, iconRect, false, color);
+		DrawTextureRect(iconTexture, glowRect, false, new Color(0.46f, 1.0f, 0.96f, 0.26f));
+		DrawTextureRect(iconTexture, iconRect, false, color);
 	}
 
 	private void DrawContinueIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(ContinueIconTexture, center, color, 0.54f))
+		{
+			return;
+		}
+
 		Vector2[] triangle =
 		{
 			center + new Vector2(-4.0f, -8.0f),
@@ -123,6 +178,11 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawReturnIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(ReturnIconTexture, center, color, 0.58f))
+		{
+			return;
+		}
+
 		DrawLine(center + new Vector2(8.0f, -6.0f), center + new Vector2(-1.0f, -6.0f), color, 2.2f);
 		DrawLine(center + new Vector2(-1.0f, -6.0f), center + new Vector2(-1.0f, 4.0f), color, 2.2f);
 		Vector2[] arrow =
@@ -136,6 +196,11 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawRestartIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(RestartIconTexture, center, color, 0.58f))
+		{
+			return;
+		}
+
 		float radius = 8.0f;
 		DrawArc(center, radius, Mathf.Pi * 0.18f, Mathf.Pi * 1.72f, 24, color, 2.2f, true);
 		Vector2 tip = center + new Vector2(radius * 0.88f, -radius * 0.18f);
@@ -150,7 +215,25 @@ public partial class MainMenuPlayerCountIconBadge : Control
 
 	private void DrawQuitIcon(Vector2 center, Color color)
 	{
+		if (DrawIconTexture(QuitIconTexture, center, color, 0.58f))
+		{
+			return;
+		}
+
 		DrawArc(center, 8.5f, -Mathf.Pi * 0.22f, Mathf.Pi * 1.22f, 24, color, 2.2f, true);
 		DrawLine(center + new Vector2(0.0f, -10.0f), center + new Vector2(0.0f, -1.0f), color, 2.2f);
+	}
+
+	private bool DrawIconTexture(Texture2D? texture, Vector2 center, Color modulate, float sizeRatio)
+	{
+		if (texture == null)
+		{
+			return false;
+		}
+
+		float size = Mathf.Min(Size.X, Size.Y) * sizeRatio;
+		Vector2 iconSize = new(size, size);
+		DrawTextureRect(texture, new Rect2(center - iconSize / 2.0f, iconSize), false, modulate);
+		return true;
 	}
 }

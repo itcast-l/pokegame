@@ -16,6 +16,18 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_button"]
+bg_color = Color(0.04, 0.18, 0.21, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.56, 1, 0.94, 0.4)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [node name="CharacterAvatarPreview" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -84,29 +96,71 @@ alignment = 1
 [node name="Idle" type="Button" parent="Controls/ActionButtons"]
 custom_minimum_size = Vector2(96, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_preview_button")
 text = "待机"
 
 [node name="Score" type="Button" parent="Controls/ActionButtons"]
 custom_minimum_size = Vector2(96, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_preview_button")
 text = "得分"
 
 [node name="Attack" type="Button" parent="Controls/ActionButtons"]
 custom_minimum_size = Vector2(96, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_preview_button")
 text = "攻击"
 
 [node name="Hit" type="Button" parent="Controls/ActionButtons"]
 custom_minimum_size = Vector2(106, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_preview_button")
 text = "受到攻击"
 
 [node name="Victory" type="Button" parent="Controls/ActionButtons"]
 custom_minimum_size = Vector2(96, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_preview_button")
 text = "胜利"
 
 [node name="Defeat" type="Button" parent="Controls/ActionButtons"]
 custom_minimum_size = Vector2(96, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.84, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_preview_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_preview_button")
 text = "失败"

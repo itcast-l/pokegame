@@ -27,6 +27,12 @@ public partial class AdventureMapRouteLayer : Control
 	[Export(PropertyHint.Range, "1.0,18.0,0.5")]
 	public float RouteWidth { get; set; } = 5.0f;
 
+	[Export]
+	public Texture2D? RouteSegmentTexture { get; set; }
+
+	[Export]
+	public Texture2D? RouteNodeTexture { get; set; }
+
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
@@ -50,8 +56,21 @@ public partial class AdventureMapRouteLayer : Control
 		}
 
 		Vector2[] points = routePoints.ToArray();
-		DrawPolyline(points, RouteShadowColor, RouteWidth + 5.0f, true);
-		DrawPolyline(points, RouteColor, RouteWidth, true);
+		if (RouteSegmentTexture != null)
+		{
+			DrawRouteSegmentsWithTexture(points);
+		}
+		else
+		{
+			DrawPolyline(points, RouteShadowColor, RouteWidth + 5.0f, true);
+			DrawPolyline(points, RouteColor, RouteWidth, true);
+		}
+
+		if (RouteNodeTexture != null)
+		{
+			DrawRouteNodesWithTexture(points);
+			return;
+		}
 
 		foreach (Vector2 point in points)
 		{
@@ -84,5 +103,63 @@ public partial class AdventureMapRouteLayer : Control
 
 		routePoints.AddRange(FallbackRoute);
 		return routePoints;
+	}
+
+	private void DrawRouteSegmentsWithTexture(Vector2[] points)
+	{
+		if (RouteSegmentTexture == null)
+		{
+			return;
+		}
+
+		Vector2 textureSize = RouteSegmentTexture.GetSize();
+		float segmentThickness = Mathf.Max(RouteWidth * 2.8f, textureSize.Y > 0.0f ? textureSize.Y : 12.0f);
+		float targetStampLength = Mathf.Max(textureSize.X * 0.75f, RouteWidth * 4.0f);
+		for (int index = 1; index < points.Length; index++)
+		{
+			Vector2 start = points[index - 1];
+			Vector2 end = points[index];
+			Vector2 delta = end - start;
+			float length = delta.Length();
+			if (length <= 0.01f)
+			{
+				continue;
+			}
+
+			Vector2 direction = delta / length;
+			Vector2 normal = new(-direction.Y, direction.X);
+			float angle = direction.Angle();
+			int stampCount = Mathf.Max(1, Mathf.CeilToInt(length / targetStampLength));
+			float step = length / stampCount;
+			for (int stampIndex = 0; stampIndex < stampCount; stampIndex++)
+			{
+				float distance = step * (stampIndex + 0.5f);
+				Vector2 center = start + direction * distance;
+				Vector2 drawSize = new(step + 2.0f, segmentThickness);
+
+				DrawSetTransform(center + normal * 2.0f, angle, Vector2.One);
+				DrawTextureRect(RouteSegmentTexture, new Rect2(-drawSize / 2.0f, drawSize), false, RouteShadowColor);
+
+				DrawSetTransform(center, angle, Vector2.One);
+				DrawTextureRect(RouteSegmentTexture, new Rect2(-drawSize / 2.0f, drawSize), false, RouteColor);
+			}
+		}
+
+		DrawSetTransform(Vector2.Zero, 0.0f, Vector2.One);
+	}
+
+	private void DrawRouteNodesWithTexture(Vector2[] points)
+	{
+		if (RouteNodeTexture == null)
+		{
+			return;
+		}
+
+		float size = Mathf.Max(RouteWidth * 5.0f, 18.0f);
+		Vector2 drawSize = new(size, size);
+		foreach (Vector2 point in points)
+		{
+			DrawTextureRect(RouteNodeTexture, new Rect2(point - drawSize / 2.0f, drawSize), false);
+		}
 	}
 }

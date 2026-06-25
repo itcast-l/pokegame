@@ -34,6 +34,10 @@ public partial class ScoreAvatarMeter : Control
 	private TextureRect? _fillTextureRect;
 	private TextureRect? _overTextureRect;
 	private TextureRect? _pulseTextureRect;
+	private Texture2D? _baseTextureOverride;
+	private Texture2D? _fillTextureOverride;
+	private Texture2D? _overTextureOverride;
+	private Texture2D? _pulseTextureOverride;
 
 	[Export(PropertyHint.Range, "40,120,1")]
 	public float circle_diameter
@@ -64,6 +68,70 @@ public partial class ScoreAvatarMeter : Control
 				ApplyVisualMode();
 				QueueRedraw();
 			}
+		}
+	}
+
+	[Export]
+	public Texture2D? BaseTextureOverride
+	{
+		get => _baseTextureOverride;
+		set
+		{
+			if (_baseTextureOverride == value)
+			{
+				return;
+			}
+
+			_baseTextureOverride = value;
+			ResetTexturedAssets();
+		}
+	}
+
+	[Export]
+	public Texture2D? FillTextureOverride
+	{
+		get => _fillTextureOverride;
+		set
+		{
+			if (_fillTextureOverride == value)
+			{
+				return;
+			}
+
+			_fillTextureOverride = value;
+			ResetTexturedAssets();
+		}
+	}
+
+	[Export]
+	public Texture2D? OverTextureOverride
+	{
+		get => _overTextureOverride;
+		set
+		{
+			if (_overTextureOverride == value)
+			{
+				return;
+			}
+
+			_overTextureOverride = value;
+			ResetTexturedAssets();
+		}
+	}
+
+	[Export]
+	public Texture2D? PulseTextureOverride
+	{
+		get => _pulseTextureOverride;
+		set
+		{
+			if (_pulseTextureOverride == value)
+			{
+				return;
+			}
+
+			_pulseTextureOverride = value;
+			ResetTexturedAssets();
 		}
 	}
 
@@ -183,12 +251,34 @@ public partial class ScoreAvatarMeter : Control
 			return;
 		}
 
-		_baseTexture = FrameAnimationHelpers.LoadTextureResource(BaseTexturePath, allowEditorImageFallback: true);
-		_fillTexture = FrameAnimationHelpers.LoadTextureResource(FillTexturePath, allowEditorImageFallback: true);
-		_overTexture = FrameAnimationHelpers.LoadTextureResource(OverTexturePath, allowEditorImageFallback: true);
-		_pulseTexture = FrameAnimationHelpers.LoadTextureResource(PulseTexturePath, allowEditorImageFallback: true);
+		_baseTexture = BaseTextureOverride
+			?? FrameAnimationHelpers.LoadTextureResource(BaseTexturePath, allowEditorImageFallback: true);
+		_fillTexture = FillTextureOverride
+			?? FrameAnimationHelpers.LoadTextureResource(FillTexturePath, allowEditorImageFallback: true);
+		_overTexture = OverTextureOverride
+			?? FrameAnimationHelpers.LoadTextureResource(OverTexturePath, allowEditorImageFallback: true);
+		_pulseTexture = PulseTextureOverride
+			?? FrameAnimationHelpers.LoadTextureResource(PulseTexturePath, allowEditorImageFallback: true);
 		_texturedAssetsMissing = _baseTexture == null || _fillTexture == null || _overTexture == null || _pulseTexture == null;
 		_texturedAssetsLoaded = true;
+	}
+
+	private void ResetTexturedAssets()
+	{
+		_texturedAssetsLoaded = false;
+		_texturedAssetsMissing = false;
+		_baseTexture = null;
+		_fillTexture = null;
+		_overTexture = null;
+		_pulseTexture = null;
+		if (!IsNodeReady())
+		{
+			return;
+		}
+
+		EnsureTexturedAssetsLoaded();
+		ApplyVisualMode();
+		QueueRedraw();
 	}
 
 	private void ApplyVisualMode()

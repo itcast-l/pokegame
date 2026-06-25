@@ -64,6 +64,18 @@ public partial class OceanDialogPanelArt : Control
 	[Export(PropertyHint.File, "*.png")]
 	public string PanelTexturePath { get; set; } = DefaultPanelTexturePath;
 
+	[Export]
+	public Texture2D? PanelTextureOverride { get; set; }
+
+	[Export]
+	public Texture2D? PanelSparkTexture { get; set; }
+
+	[Export]
+	public Texture2D? RowCoverTexture { get; set; }
+
+	[Export]
+	public Texture2D? ActionWellCoverTexture { get; set; }
+
 	private Texture2D? _panelTexture;
 	private readonly StyleBoxFlat _slotCoverGlowStyle = new();
 	private readonly StyleBoxFlat _slotCoverStyle = new();
@@ -74,7 +86,7 @@ public partial class OceanDialogPanelArt : Control
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
 		string texturePath = string.IsNullOrWhiteSpace(PanelTexturePath) ? DefaultPanelTexturePath : PanelTexturePath;
-		_panelTexture = GD.Load<Texture2D>(texturePath);
+		_panelTexture = PanelTextureOverride ?? GD.Load<Texture2D>(texturePath);
 
 		SetProcess(true);
 		QueueRedraw();
@@ -147,6 +159,12 @@ public partial class OceanDialogPanelArt : Control
 
 	private void DrawSlotCover(Rect2 coverRect, float extraGlow)
 	{
+		if (RowCoverTexture != null)
+		{
+			DrawTextureRect(RowCoverTexture, coverRect, false, new Color(1.0f, 1.0f, 1.0f, 0.92f + extraGlow * 0.4f));
+			return;
+		}
+
 		int radius = Mathf.RoundToInt(Mathf.Clamp(coverRect.Size.Y * 0.34f, 16.0f, 28.0f));
 		ConfigureCoverStyles(_slotCoverGlowStyle, _slotCoverStyle, radius);
 		_slotCoverGlowStyle.BgColor = new Color(0.01f, 0.11f, 0.16f, 0.82f + extraGlow);
@@ -157,6 +175,12 @@ public partial class OceanDialogPanelArt : Control
 	private void DrawActionWellCover()
 	{
 		Rect2 coverRect = ScaleSourceRect(BuiltInActionWellRegion).GrowIndividual(6.0f, 5.0f, 6.0f, 4.0f);
+		if (ActionWellCoverTexture != null)
+		{
+			DrawTextureRect(ActionWellCoverTexture, coverRect, false);
+			return;
+		}
+
 		int radius = Mathf.RoundToInt(Mathf.Clamp(coverRect.Size.Y * 0.38f, 18.0f, 30.0f));
 		_wellCoverStyle.BgColor = new Color(0.02f, 0.12f, 0.17f, 0.97f);
 		_wellCoverStyle.BorderWidthLeft = 0;
@@ -195,6 +219,21 @@ public partial class OceanDialogPanelArt : Control
 			Color aura = new(0.24f, 0.98f, 0.98f, spark.Alpha * pulse * 0.28f);
 			Color core = new(0.88f, 1.0f, 0.96f, spark.Alpha * pulse);
 			Color centerDot = new(1.0f, 0.98f, 0.84f, spark.Alpha * (0.44f + pulse * 0.56f));
+
+			if (PanelSparkTexture != null)
+			{
+				DrawTextureRect(
+					PanelSparkTexture,
+					new Rect2(center - new Vector2(radius * 1.25f, radius * 1.25f), new Vector2(radius * 2.5f, radius * 2.5f)),
+					false,
+					aura);
+				DrawTextureRect(
+					PanelSparkTexture,
+					new Rect2(center - new Vector2(radius * 0.72f, radius * 0.72f), new Vector2(radius * 1.44f, radius * 1.44f)),
+					false,
+					centerDot);
+				continue;
+			}
 
 			DrawCircle(center, radius * 2.4f, aura);
 			DrawCircle(center, radius * 1.1f, new Color(core.R, core.G, core.B, core.A * 0.46f));

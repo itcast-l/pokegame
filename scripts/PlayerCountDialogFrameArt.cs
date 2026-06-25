@@ -22,10 +22,22 @@ public partial class PlayerCountDialogFrameArt : Control
 	[Export]
 	public bool HighlightFocus { get; set; } = true;
 
+	[Export]
+	public Texture2D? SourceTextureOverride { get; set; }
+
 	private Texture2D? _sourceTexture;
 	private Button? _button;
 	private readonly List<Control> _interactiveControls = new();
 	private float _glow;
+	[Export]
+	public Texture2D? ActionButtonHoverTexture { get; set; }
+
+	[Export]
+	public Texture2D? RowSlotHoverTexture { get; set; }
+
+	[Export]
+	public Texture2D? AccentSparkTexture { get; set; }
+
 	private readonly Vector2[] _buttonOuterPoints = new Vector2[6];
 	private readonly Vector2[] _buttonInnerPoints = new Vector2[6];
 	private readonly Vector2[] _buttonClosedOuterPoints = new Vector2[7];
@@ -42,7 +54,7 @@ public partial class PlayerCountDialogFrameArt : Control
 		{
 			CollectInteractiveDescendants(this);
 		}
-		_sourceTexture = GD.Load<Texture2D>(SourceTexturePath);
+		_sourceTexture = SourceTextureOverride ?? GD.Load<Texture2D>(SourceTexturePath);
 
 		SetProcess(true);
 		QueueRedraw();
@@ -190,6 +202,16 @@ public partial class PlayerCountDialogFrameArt : Control
 		float pulse = 0.86f + 0.14f * Mathf.Sin((float)_time * 6.0f);
 		float glow = _glow * pulse;
 
+		if (ActionButtonHoverTexture != null)
+		{
+			DrawTextureRect(
+				ActionButtonHoverTexture,
+				rect.GrowIndividual(4.0f, 4.0f, 4.0f, 4.0f),
+				false,
+				new Color(1.0f, 1.0f, 1.0f, 0.35f * glow));
+			return;
+		}
+
 		_buttonOuterPoints[0] = origin + new Vector2(bevel, 2.0f);
 		_buttonOuterPoints[1] = origin + new Vector2(w - bevel, 2.0f);
 		_buttonOuterPoints[2] = origin + new Vector2(w - 2.0f, h * 0.5f);
@@ -237,6 +259,16 @@ public partial class PlayerCountDialogFrameArt : Control
 
 	private void DrawRowSlotHoverGlow(Rect2 rect)
 	{
+		if (RowSlotHoverTexture != null)
+		{
+			DrawTextureRect(
+				RowSlotHoverTexture,
+				rect.GrowIndividual(2.0f, 2.0f, 2.0f, 2.0f),
+				false,
+				new Color(1.0f, 1.0f, 1.0f, 0.24f * _glow));
+			return;
+		}
+
 		float glow = _glow * (0.88f + 0.12f * Mathf.Sin((float)_time * 5.2f));
 		int radius = Mathf.RoundToInt(Mathf.Clamp(rect.Size.Y * 0.32f, 12.0f, 24.0f));
 
@@ -278,6 +310,14 @@ public partial class PlayerCountDialogFrameArt : Control
 
 	private void DrawButtonAccentSpark(Vector2 center, float glow)
 	{
+		if (AccentSparkTexture != null)
+		{
+			float size = 7.5f + glow * 4.0f;
+			Rect2 rect = new(center - new Vector2(size, size), new Vector2(size * 2.0f, size * 2.0f));
+			DrawTextureRect(AccentSparkTexture, rect, false, new Color(1.0f, 1.0f, 1.0f, 0.42f * glow));
+			return;
+		}
+
 		float radius = 3.0f + glow * 1.8f;
 		Color aura = new(0.30f, 1.0f, 0.96f, 0.18f * glow);
 		Color line = new(0.96f, 0.98f, 0.88f, 0.36f * glow);

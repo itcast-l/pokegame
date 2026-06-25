@@ -15,6 +15,15 @@ public partial class DraggableAvatarArea : Control
 	[Export]
 	public Color dragging_rim_color { get; set; } = new(1.0f, 0.92f, 0.48f, 0.82f);
 
+	[Export]
+	public Texture2D? fill_texture { get; set; }
+
+	[Export]
+	public Texture2D? rim_texture { get; set; }
+
+	[Export]
+	public Texture2D? dragging_rim_texture { get; set; }
+
 	private bool _dragging;
 	private Vector2 _dragOffset;
 
@@ -69,8 +78,31 @@ public partial class DraggableAvatarArea : Control
 		}
 
 		Color ringColor = _dragging ? dragging_rim_color : rim_color;
-		DrawCircle(center, radius * 0.94f, fill_color);
-		DrawArc(center, radius * 0.94f, 0.0f, Mathf.Tau, 96, ringColor, 3.0f, true);
-		DrawArc(center, radius * 0.76f, 0.0f, Mathf.Tau, 96, new Color(ringColor.R, ringColor.G, ringColor.B, ringColor.A * 0.32f), 1.5f, true);
+		Rect2 rect = new(Vector2.Zero, Size);
+		if (fill_texture != null)
+		{
+			DrawTextureRect(fill_texture, rect, false, fill_color);
+		}
+		else
+		{
+			DrawCircle(center, radius * 0.94f, fill_color);
+		}
+
+		Texture2D? activeRingTexture = _dragging && dragging_rim_texture != null
+			? dragging_rim_texture
+			: rim_texture;
+		if (activeRingTexture != null)
+		{
+			DrawTextureRect(activeRingTexture, rect, false, ringColor);
+			if (!_dragging && rim_texture == null)
+			{
+				return;
+			}
+		}
+		else
+		{
+			DrawArc(center, radius * 0.94f, 0.0f, Mathf.Tau, 96, ringColor, 3.0f, true);
+			DrawArc(center, radius * 0.76f, 0.0f, Mathf.Tau, 96, new Color(ringColor.R, ringColor.G, ringColor.B, ringColor.A * 0.32f), 1.5f, true);
+		}
 	}
 }
