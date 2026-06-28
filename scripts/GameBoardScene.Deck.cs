@@ -87,6 +87,14 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (TrySetupDebugRecordingDeal())
+		{
+			RenderPlayerCardPiles();
+			RenderPlayerHands();
+			RenderTableCards();
+			return;
+		}
+
 		DealDeckToPlayerDecks(deck);
 
 		DrawStartingHands();

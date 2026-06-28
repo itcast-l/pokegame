@@ -19,6 +19,7 @@
 [ext_resource type="Texture2D" uid="uid://dxh5wtjnyr0n3" path="res://art/cards/item_cards/mid_tide_upgrade/run-001/processed/frames/frame-001.png" id="16_mid_tide_upgrade"]
 [ext_resource type="Texture2D" uid="uid://cvsvoyhuei1fs" path="res://art/cards/item_cards/reverse_flow_anchor/run-001/processed/frames/frame-001.png" id="17_reverse_flow_anchor"]
 [ext_resource type="Texture2D" uid="uid://cyui4uxqdidyv" path="res://art/cards/item_cards/empty_tide_continuation/run-001/processed/frames/frame-001.png" id="18_empty_tide_continuation"]
+[ext_resource type="Texture2D" uid="uid://b8su3kj4fl1nq" path="res://art/cards/item_cards/suit_collect/run-001/processed/frames/frame-001.png" id="19_suit_collect"]
 
 [sub_resource type="Resource" id="Resource_o1a3y"]
 script = ExtResource("13_ueshx")
@@ -206,6 +207,17 @@ scale = Vector2(0.32, 0.32)
 texture = ExtResource("18_empty_tide_continuation")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/EmptyTideContinuationCardItem" unique_id=1262882223]
+
+[node name="SuitCollectCardItem" type="Node2D" parent="ItemCards" unique_id=1018470914]
+script = ExtResource("3_item_card_data")
+item_description = "ITEM_DESC_SUIT_COLLECT"
+
+[node name="SuitCollect" type="Sprite2D" parent="ItemCards/SuitCollectCardItem" unique_id=1837114124]
+position = Vector2(980, 500)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("19_suit_collect")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ItemCards/SuitCollectCardItem" unique_id=2029680199]
 
 [node name="PhantomCamera2D" type="Node2D" parent="." unique_id=703258216]
 script = ExtResource("12_32prl")

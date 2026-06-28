@@ -319,6 +319,13 @@ public partial class MainMenuScene : Control
 		{
 			HideExitDialog();
 			GetViewport().SetInputAsHandled();
+			return;
+		}
+
+		if (!IsMenuOverlayVisible() && GameInputActions.IsCancelPressed(inputEvent))
+		{
+			ShowExitDialog();
+			GetViewport().SetInputAsHandled();
 		}
 	}
 

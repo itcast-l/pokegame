@@ -3,7 +3,11 @@ using System.Collections.Generic;
 
 internal static class CaptureScoringRules
 {
-	internal readonly record struct Card(string Rank, int ScoreValue, bool HasDoubleCollectEffect);
+	internal readonly record struct Card(
+		string Rank,
+		int ScoreValue,
+		bool HasDoubleCollectEffect,
+		string Suit = "");
 
 	internal readonly record struct TableCard(
 		Card? Card,

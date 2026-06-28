@@ -315,7 +315,9 @@ public partial class GameBoardScene
 		return new PotentialCaptureRules.Card(
 			card.Rank,
 			ShouldPlayedCardCollectTable(card),
-			hasDoubleEffect);
+			hasDoubleEffect,
+			card.Suit,
+			ShouldCollectBySuit(card));
 	}
 
 	private CaptureScoringRules.TableCard[] ToTideShiftedCaptureScoringTableCards()

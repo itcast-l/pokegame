@@ -596,7 +596,11 @@ public partial class GameBoardScene
 		List<string>? alternateRanks = BuildBorrowTideAlternateRanks(playedCard);
 		return CardPlayResolver.Resolve(
 			ToCardPlayTableCards(),
-			new CardPlayCard(playedCard.Rank, ShouldPlayedCardCollectTable(playedCard)),
+			new CardPlayCard(
+				playedCard.Rank,
+				ShouldPlayedCardCollectTable(playedCard),
+				playedCard.Suit,
+				ShouldCollectBySuit(playedCard)),
 			alternateRanks,
 			insertAtTableStart: ShouldInsertMissedCardAtTableStart(playedCard));
 	}
@@ -610,7 +614,8 @@ public partial class GameBoardScene
 			tableCards[tableCardIndex] = new CardPlayTableCard(
 				tableCard.Card?.Rank,
 				tableCard.IsFaceUp,
-				tableCard.IsBuriedInSand);
+				tableCard.IsBuriedInSand,
+				tableCard.Card?.Suit);
 		}
 
 		return tableCards;
@@ -651,6 +656,12 @@ public partial class GameBoardScene
 	private bool ShouldInsertMissedCardAtTableStart(PlayingCard playedCard)
 	{
 		return IsAttachedEffectType(playedCard, CardEffectTypes.ReverseFlowAnchor);
+	}
+
+	private bool ShouldCollectBySuit(PlayingCard playedCard)
+	{
+		return !string.IsNullOrWhiteSpace(playedCard.Suit)
+			&& IsAttachedEffectType(playedCard, CardEffectTypes.SuitCollect);
 	}
 
 	private static IEnumerable<string> GetAdjacentNumericRanks(string rank)

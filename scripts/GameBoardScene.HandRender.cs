@@ -303,7 +303,7 @@ public partial class GameBoardScene
 					cardIndex,
 					-1,
 					showCardBack,
-					1.0f,
+					showCardBack ? 1.0f : CardVisualTuningRules.GetPlayingCardHandVisualScale(card.Rank),
 					showCardBack ? null : GetCardAttachmentOverlayTexture(card),
 					isMagnetSelectionCard,
 					showAdventureTutorialHighlight,

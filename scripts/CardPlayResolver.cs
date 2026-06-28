@@ -1,8 +1,19 @@
 using System.Collections.Generic;
 
-internal readonly record struct CardPlayCard(string Rank, bool CollectsTable);
+using System;
+using System.Collections.Generic;
 
-internal readonly record struct CardPlayTableCard(string? Rank, bool IsFaceUp, bool IsBuriedInSand);
+internal readonly record struct CardPlayCard(
+	string Rank,
+	bool CollectsTable,
+	string Suit = "",
+	bool CollectBySuit = false);
+
+internal readonly record struct CardPlayTableCard(
+	string? Rank,
+	bool IsFaceUp,
+	bool IsBuriedInSand,
+	string? Suit = null);
 
 internal readonly record struct CardPlayPlan(
 	int MatchingTableCardIndex,
@@ -46,6 +57,15 @@ internal static class CardPlayResolver
 			}
 		}
 
+		if (playedCard.CollectBySuit && !string.IsNullOrWhiteSpace(playedCard.Suit))
+		{
+			int suitMatchingIndex = FindFirstMatchingSuitTableCardIndex(tableCards, playedCard.Suit);
+			if (suitMatchingIndex >= 0)
+			{
+				matchingIndex = suitMatchingIndex;
+			}
+		}
+
 		bool playedCardCollectsTable = playedCard.CollectsTable && tableCards.Count > 0;
 		int captureStartIndex = playedCardCollectsTable ? 0 : matchingIndex;
 		bool matchedTableCardFlipped = matchingIndex >= 0 && !tableCards[matchingIndex].IsFaceUp;
@@ -65,6 +85,21 @@ internal static class CardPlayResolver
 		{
 			CardPlayTableCard tableCard = tableCards[tableCardIndex];
 			if (!tableCard.IsBuriedInSand && tableCard.Rank == rank)
+			{
+				return tableCardIndex;
+			}
+		}
+
+		return -1;
+	}
+
+	internal static int FindFirstMatchingSuitTableCardIndex(IReadOnlyList<CardPlayTableCard> tableCards, string suit)
+	{
+		for (int tableCardIndex = 0; tableCardIndex < tableCards.Count; tableCardIndex++)
+		{
+			CardPlayTableCard tableCard = tableCards[tableCardIndex];
+			if (!tableCard.IsBuriedInSand
+				&& string.Equals(tableCard.Suit, suit, StringComparison.Ordinal))
 			{
 				return tableCardIndex;
 			}

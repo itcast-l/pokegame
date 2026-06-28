@@ -3,7 +3,12 @@ using System.Collections.Generic;
 
 internal static class PotentialCaptureRules
 {
-	internal readonly record struct Card(string Rank, bool CollectsTable, bool HasDoubleEffect);
+	internal readonly record struct Card(
+		string Rank,
+		bool CollectsTable,
+		bool HasDoubleEffect,
+		string Suit = "",
+		bool CollectBySuit = false);
 
 	internal static bool TryPickBestCaptureCardIndex(
 		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
@@ -137,6 +142,21 @@ internal static class PotentialCaptureRules
 
 	private static int FindMatchingTableCardIndex(IReadOnlyList<CaptureScoringRules.TableCard> tableCards, Card playedCard)
 	{
+		if (playedCard.CollectBySuit && !string.IsNullOrWhiteSpace(playedCard.Suit))
+		{
+			for (int tableCardIndex = 0; tableCardIndex < tableCards.Count; tableCardIndex++)
+			{
+				CaptureScoringRules.TableCard tableCard = tableCards[tableCardIndex];
+				CaptureScoringRules.Card? tableCardData = tableCard.Card;
+				if (!tableCard.IsBuriedInSand
+					&& tableCardData.HasValue
+					&& string.Equals(tableCardData.Value.Suit, playedCard.Suit, StringComparison.Ordinal))
+				{
+					return tableCardIndex;
+				}
+			}
+		}
+
 		for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
 		{
 			CaptureScoringRules.Card? tableCard = tableCards[tableCardIndex].Card;

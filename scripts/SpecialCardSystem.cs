@@ -40,6 +40,7 @@ public static class CardEffectTypes
 	public const string MidTideUpgrade = "mid_tide_upgrade";
 	public const string ReverseFlowAnchor = "reverse_flow_anchor";
 	public const string EmptyTideContinuation = "empty_tide_continuation";
+	public const string SuitCollect = "suit_collect";
 	public const string BlockMatch = "block_match";
 }
 

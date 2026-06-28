@@ -12,7 +12,9 @@ import {
 } from "./utils/errors.js";
 
 const BASE_PORT = 6505;
-const MAX_PORT = 6509;
+// Match the Godot plugin's full client scan range so new MCP sessions can
+// still bind when 6505-6509 are occupied by parallel or stale sessions.
+const MAX_PORT = 6514;
 const COMMAND_TIMEOUT_MS = 30000;
 const HEARTBEAT_INTERVAL_MS = 10000;
 const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3;

@@ -111,6 +111,7 @@ public partial class GameBoardScene
 		return new CaptureScoringRules.Card(
 			card.Rank,
 			GetCardScoreValue(card),
-			IsAttachedEffectType(card, CardEffectTypes.DoubleCollect));
+			IsAttachedEffectType(card, CardEffectTypes.DoubleCollect),
+			card.Suit);
 	}
 }

@@ -8,7 +8,7 @@
 [ext_resource type="Script" uid="uid://b3s43m2q8xefy" path="res://scripts/ScoreEffectTarget.cs" id="6_score_effect_target"]
 [ext_resource type="Script" uid="uid://cx5lmatxxhx6d" path="res://scripts/DraggableAvatarArea.cs" id="7_draggable_avatar_area"]
 [ext_resource type="Shader" uid="uid://bypnsrux3irf0" path="res://shaders/board_art_dynamics.gdshader" id="8_board_art_dynamics_shader"]
-[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_ultrawide_backdrop_1536x1024.png" id="9_ultrawide_backdrop"]
+[ext_resource type="Texture2D" uid="uid://5nv2x7ygpdhx" path="res://art/maps/underwater_card_table_ultrawide_backdrop_1536x1024.png" id="9_ultrawide_backdrop"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_board_art_dynamics"]
 shader = ExtResource("8_board_art_dynamics_shader")
@@ -39,6 +39,7 @@ shader_parameter/center_motion_strength = 0.62
 shader_parameter/center_motion_speed = 0.72
 
 [node name="GameBoardScene" type="Control" unique_id=459694220]
+clip_contents = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -46,8 +47,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
+debug_recording_setup_id = "jellyfish_capture_showcase_01"
 
-[node name="UltraWideBackdrop" type="TextureRect" parent="."]
+[node name="UltraWideBackdrop" type="TextureRect" parent="." unique_id=1523489372]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

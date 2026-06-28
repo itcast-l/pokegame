@@ -9,16 +9,34 @@ public partial class GameBoardScene
 	private CanvasLayer? _pauseMenuLayer;
 	private PauseMenuOverlay? _pauseMenuRoot;
 	private Button? _pauseContinueButton;
-	private Button? _pauseQuitButton;
-	private Button? _pauseRestartButton;
-	private Control? _pauseQuitConfirmRoot;
 	private bool _isPauseMenuOpen;
+
+	public override void _Input(InputEvent inputEvent)
+	{
+		if (!TryOpenPauseMenuFromInput(inputEvent))
+		{
+			return;
+		}
+
+		GetViewport().SetInputAsHandled();
+	}
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
+		if (TryOpenPauseMenuFromInput(inputEvent))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+
 		if (TryHandleGameBoardControlInput(inputEvent))
 		{
 			GetViewport().SetInputAsHandled();
+			return;
+		}
+
+		if (_isPauseMenuOpen)
+		{
 			return;
 		}
 
@@ -29,6 +47,24 @@ public partial class GameBoardScene
 
 		ShowPauseMenu();
 		GetViewport().SetInputAsHandled();
+	}
+
+	private bool TryOpenPauseMenuFromInput(InputEvent inputEvent)
+	{
+		if (_isPauseMenuOpen || !IsPauseMenuRequested(inputEvent))
+		{
+			return false;
+		}
+
+		if (_selectionOverlay != null
+			&& GodotObject.IsInstanceValid(_selectionOverlay)
+			&& _selectionOverlay.Visible)
+		{
+			return false;
+		}
+
+		ShowPauseMenu();
+		return true;
 	}
 
 	private static bool IsPauseMenuRequested(InputEvent inputEvent)
@@ -72,9 +108,6 @@ public partial class GameBoardScene
 		_pauseMenuRoot = pauseMenu;
 		_pauseMenuRoot.CancelPressed = HandlePauseMenuCancelPressed;
 		_pauseContinueButton = pauseMenu.ContinueButton;
-		_pauseRestartButton = pauseMenu.RestartButton;
-		_pauseQuitButton = pauseMenu.QuitButton;
-		_pauseQuitConfirmRoot = pauseMenu.QuitConfirmRoot;
 		pauseMenu.ContinueRequested += HidePauseMenu;
 		pauseMenu.ReturnToMainMenuRequested += ReturnToPauseMenuDestination;
 		pauseMenu.RestartRequested += RestartCurrentMatchFromPauseMenu;
@@ -103,10 +136,7 @@ public partial class GameBoardScene
 		_pauseMenuRoot.SetRestartAvailable(CanRestartCurrentMatchFromPauseMenu());
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
-		if (_pauseQuitConfirmRoot != null)
-		{
-			_pauseQuitConfirmRoot.Visible = false;
-		}
+		_pauseMenuRoot.HideQuitConfirm();
 
 		GetTree().Paused = true;
 		_pauseContinueButton?.GrabFocus();
@@ -114,7 +144,7 @@ public partial class GameBoardScene
 
 	private void HandlePauseMenuCancelPressed()
 	{
-		if (_pauseQuitConfirmRoot != null && _pauseQuitConfirmRoot.Visible)
+		if (_pauseMenuRoot?.QuitConfirmRoot.Visible == true)
 		{
 			HidePauseQuitConfirm();
 			return;
@@ -135,12 +165,8 @@ public partial class GameBoardScene
 		GetTree().Paused = false;
 		if (_pauseMenuRoot != null)
 		{
+			_pauseMenuRoot.HideQuitConfirm();
 			_pauseMenuRoot.Visible = false;
-		}
-
-		if (_pauseQuitConfirmRoot != null)
-		{
-			_pauseQuitConfirmRoot.Visible = false;
 		}
 	}
 
@@ -229,13 +255,7 @@ public partial class GameBoardScene
 
 	private void HidePauseQuitConfirm()
 	{
-		if (_pauseQuitConfirmRoot == null || !_pauseQuitConfirmRoot.Visible)
-		{
-			return;
-		}
-
 		_pauseMenuRoot?.HideQuitConfirm();
-		_pauseQuitButton?.GrabFocus();
 	}
 
 	private bool CanRestartCurrentMatchFromPauseMenu()

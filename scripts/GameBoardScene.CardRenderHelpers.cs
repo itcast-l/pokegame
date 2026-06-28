@@ -279,7 +279,7 @@ public partial class GameBoardScene
 
 	private static float GetItemCardVisualScale(string itemCardId)
 	{
-		return 1.0f;
+		return CardVisualTuningRules.GetItemCardHandVisualScale(itemCardId);
 	}
 
 	private float GetHandCardVisualScaleForPlayer(int playerIndex)
@@ -295,7 +295,15 @@ public partial class GameBoardScene
 			|| playerIndex >= _playerItemHands.Count
 			|| displayIndex < _playerHands[playerIndex].Count)
 		{
-			return playerScale;
+			if (playerIndex < 0
+				|| playerIndex >= _playerHands.Count
+				|| displayIndex < 0
+				|| displayIndex >= _playerHands[playerIndex].Count)
+			{
+				return playerScale;
+			}
+
+			return playerScale * CardVisualTuningRules.GetPlayingCardHandVisualScale(_playerHands[playerIndex][displayIndex].Rank);
 		}
 
 		int itemIndex = displayIndex - _playerHands[playerIndex].Count;

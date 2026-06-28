@@ -20,6 +20,7 @@ public sealed partial class ItemCardCatalog
 	public const string MidTideUpgradeItemCardId = "mid_tide_upgrade";
 	public const string ReverseFlowAnchorItemCardId = "reverse_flow_anchor";
 	public const string EmptyTideContinuationItemCardId = "empty_tide_continuation";
+	public const string SuitCollectItemCardId = "suit_collect";
 
 	private const string ItemCardCategoryId = "item_cards";
 	private const string ItemCardResourceDirectory = "res://resources/item_cards";

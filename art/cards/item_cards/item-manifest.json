@@ -35,6 +35,10 @@
     "shuffle": {
       "image": "shuffle/run-003/processed/frames/frame-001.png",
       "description": "把牌桌上的牌打乱顺序"
+    },
+    "suit_collect": {
+      "image": "suit_collect/run-001/processed/frames/frame-001.png",
+      "description": "按花色收取：从最左侧首张同花色牌开始，整段收走"
     }
   }
 }

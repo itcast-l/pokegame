@@ -18,6 +18,9 @@ internal static class Program
 		Run("card play resolver captures table for collect card", CardPlayResolverCapturesTableForCollectCard);
 		Run("card play resolver uses alternate rank for borrow tide match", CardPlayResolverUsesAlternateRankForBorrowTideMatch);
 		Run("card play resolver inserts miss at table start for reverse flow anchor", CardPlayResolverInsertsMissAtTableStartForReverseFlowAnchor);
+		Run("card play resolver uses first matching suit for suit collect attachment", CardPlayResolverUsesFirstMatchingSuitForSuitCollectAttachment);
+		Run("card play resolver falls back to rank when suit collect has no suit match", CardPlayResolverFallsBackToRankWhenSuitCollectHasNoSuitMatch);
+		Run("card play resolver prefers suit start over later rank match for suit collect", CardPlayResolverPrefersSuitStartOverLaterRankMatchForSuitCollect);
 		Run("capture resolver identifies middle captures", CaptureResolverIdentifiesMiddleCaptures);
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
 		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
@@ -31,6 +34,7 @@ internal static class Program
 		Run("captured card effect persists through deck and can be replaced", CapturedCardEffectPersistsThroughDeckAndCanBeReplaced);
 		Run("capture refill shuffles before replacement draw animation", CaptureRefillShufflesBeforeReplacementDrawAnimation);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
+		Run("potential capture counts suit collect from first matching suit", PotentialCaptureCountsSuitCollectFromFirstMatchingSuit);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
 		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
 		Run("adventure ai early profile can skip obvious capture", AdventureAiEarlyProfileCanSkipObviousCapture);
@@ -52,6 +56,7 @@ internal static class Program
 		Run("player count localization difficulty rows exist for every locale", PlayerCountLocalizationDifficultyRowsExistForEveryLocale);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
+		Run("jack hand visual scale is normalized", JackHandVisualScaleIsNormalized);
 		Run("attachment selection preview follows pending item card", AttachmentSelectionPreviewFollowsPendingItemCard);
 		Run("main menu bubbles rise and fade through lifecycle", MainMenuBubblesRiseAndFadeThroughLifecycle);
 		Run("main menu bubbles hide before crossing waterline", MainMenuBubblesHideBeforeCrossingWaterline);
@@ -208,6 +213,13 @@ internal static class Program
 		Equal(0, plan.CaptureStartIndex);
 	}
 
+	private static void JackHandVisualScaleIsNormalized()
+	{
+		Equal(1.0f, CardVisualTuningRules.GetPlayingCardHandVisualScale("A"));
+		Equal(1.08f, CardVisualTuningRules.GetPlayingCardHandVisualScale("J"));
+		Equal(1.08f, CardVisualTuningRules.GetItemCardHandVisualScale("J"));
+	}
+
 	private static void CardPlayResolverUsesAlternateRankForBorrowTideMatch()
 	{
 		var tableCards = new[]
@@ -248,6 +260,62 @@ internal static class Program
 		Equal("9", plan.EffectiveRank);
 		Equal(0, plan.TableInsertIndex);
 		False(plan.MatchedTableCardFlipped);
+	}
+
+	private static void CardPlayResolverUsesFirstMatchingSuitForSuitCollectAttachment()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
+			new CardPlayTableCard("7", IsFaceUp: false, IsBuriedInSand: false, Suit: "hearts"),
+			new CardPlayTableCard("9", IsFaceUp: true, IsBuriedInSand: false, Suit: "spades"),
+			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false, Suit: "hearts"),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("5", CollectsTable: false, Suit: "hearts", CollectBySuit: true));
+
+		Equal(1, plan.MatchingTableCardIndex);
+		Equal(1, plan.CaptureStartIndex);
+		Equal("5", plan.EffectiveRank);
+		True(plan.MatchedTableCardFlipped);
+	}
+
+	private static void CardPlayResolverFallsBackToRankWhenSuitCollectHasNoSuitMatch()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("5", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
+			new CardPlayTableCard("8", IsFaceUp: true, IsBuriedInSand: false, Suit: "diamonds"),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("5", CollectsTable: false, Suit: "hearts", CollectBySuit: true));
+
+		Equal(0, plan.MatchingTableCardIndex);
+		Equal(0, plan.CaptureStartIndex);
+		Equal("5", plan.EffectiveRank);
+		False(plan.MatchedTableCardFlipped);
+	}
+
+	private static void CardPlayResolverPrefersSuitStartOverLaterRankMatchForSuitCollect()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "hearts"),
+			new CardPlayTableCard("5", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
+			new CardPlayTableCard("8", IsFaceUp: true, IsBuriedInSand: false, Suit: "spades"),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("5", CollectsTable: false, Suit: "hearts", CollectBySuit: true));
+
+		Equal(0, plan.MatchingTableCardIndex);
+		Equal(0, plan.CaptureStartIndex);
+		Equal("5", plan.EffectiveRank);
 	}
 
 	private static void CaptureResolverIdentifiesMiddleCaptures()
@@ -539,6 +607,24 @@ internal static class Program
 
 		Equal(3, captureCount);
 		Equal(4, points);
+	}
+
+	private static void PotentialCaptureCountsSuitCollectFromFirstMatchingSuit()
+	{
+		var tableCards = new[]
+		{
+			TableCard("2", 1, suit: "clubs"),
+			TableCard("4", 4, suit: "hearts"),
+			TableCard("6", 5, suit: "spades"),
+			TableCard("8", 6, suit: "hearts"),
+		};
+		var card = new PotentialCaptureRules.Card("8", CollectsTable: false, HasDoubleEffect: false, Suit: "hearts", CollectBySuit: true);
+
+		int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
+		int points = PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, DefaultScoringContext);
+
+		Equal(4, captureCount);
+		Equal(11, points);
 	}
 
 	private static void PotentialCapturePrefersRoyalThreshold()
@@ -1159,9 +1245,10 @@ internal static class Program
 			"PLAYER_COUNT_DIFFICULTY_MEDIUM",
 			"PLAYER_COUNT_DIFFICULTY_HIGH",
 		})
-		{
-			True(rowsByKey.TryGetValue(key, out List<string>? row));
-			Equal(header.Count, row.Count);
+			{
+				True(rowsByKey.TryGetValue(key, out List<string>? row));
+				row ??= new List<string>();
+				Equal(header.Count, row.Count);
 
 			for (int index = 1; index < row.Count; index++)
 			{
@@ -2824,10 +2911,11 @@ internal static class Program
 		bool isSlimeCoated = false,
 		bool hasDoubleCollectItemEffect = false,
 		bool hasPairDestroyItemEffect = false,
-		int itemOwnerPlayerIndex = -1)
+		int itemOwnerPlayerIndex = -1,
+		string suit = "")
 	{
 		return new CaptureScoringRules.TableCard(
-			new CaptureScoringRules.Card(rank, scoreValue, HasDoubleCollectEffect: false),
+			new CaptureScoringRules.Card(rank, scoreValue, HasDoubleCollectEffect: false, Suit: suit),
 			isBuriedInSand,
 			isSlimeCoated,
 			hasDoubleCollectItemEffect,

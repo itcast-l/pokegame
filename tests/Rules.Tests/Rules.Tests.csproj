@@ -16,6 +16,7 @@
     <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
     <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />
     <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
+    <Compile Include="../../scripts/CardVisualTuningRules.cs" Link="Rules/CardVisualTuningRules.cs" />
     <Compile Include="../../scripts/ItemCardEffectSupport.cs" Link="Rules/ItemCardEffectSupport.cs" />
     <Compile Include="../../scripts/AttachmentSelectionPreviewRules.cs" Link="Rules/AttachmentSelectionPreviewRules.cs" />
     <Compile Include="../../scripts/MainMenuBubbleMotionRules.cs" Link="Rules/MainMenuBubbleMotionRules.cs" />
