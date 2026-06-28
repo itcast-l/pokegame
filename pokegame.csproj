@@ -9,5 +9,7 @@
 
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
+    <Compile Remove="outputs/**/*.cs" />
+    <Compile Remove="**/node_modules/**/*.cs" />
   </ItemGroup>
 </Project>

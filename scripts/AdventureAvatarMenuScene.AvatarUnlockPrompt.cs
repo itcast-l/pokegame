@@ -165,6 +165,7 @@ public partial class AdventureAvatarMenuScene
 			"ADVENTURE_MENU_TITLE" => traditionalChinese ? "冒險模式" : simplifiedChinese ? "冒险模式" : "Adventure",
 			"ADVENTURE_LIST_TITLE" => traditionalChinese ? "冒險" : simplifiedChinese ? "冒险" : "Adventure",
 			"ADVENTURE_ENEMY_LIST_TITLE" => traditionalChinese ? "敵人" : simplifiedChinese ? "敌人" : "Enemies",
+			"ADVENTURE_TUTORIAL" => traditionalChinese ? "教學" : simplifiedChinese ? "教学" : "Tutorial",
 			"ADVENTURE_DEEP_TIDE_THRONE" => "深潮王座",
 			"AVATAR_UNLOCK_TITLE" => traditionalChinese ? "頭像已解鎖" : simplifiedChinese ? "头像已解锁" : "Avatar Unlocked",
 			"AVATAR_UNLOCK_MESSAGE" => traditionalChinese ? "獲得了 {0} 的頭像" : simplifiedChinese ? "获得了 {0} 的头像" : "You got {0}'s avatar",

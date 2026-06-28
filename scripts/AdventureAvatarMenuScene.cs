@@ -18,6 +18,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private readonly Dictionary<string, OceanMenuButtonFrame> _adventureFrames = new();
 	private readonly Dictionary<string, Button> _adventureButtons = new();
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
+	private readonly Dictionary<string, int> _displayStageNumbers = new();
 	private readonly Dictionary<string, int> _stageNumbers = new();
 	private readonly Dictionary<string, Button> _stageButtons = new();
 	private readonly Dictionary<string, Label> _stageNameLabels = new();
@@ -45,7 +46,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private GameAudioManager? _gameAudio;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
-	private string _selectedAdventureId = DeepTideThroneAdventureId;
+	private string _selectedAdventureId = TutorialAdventureId;
 	private bool _isReturningToMainMenu;
 	private bool _isStartingAdventure;
 	private bool _isShowingAvatarUnlockPrompt;
@@ -61,9 +62,13 @@ public partial class AdventureAvatarMenuScene : Control
 
 		BindUi();
 		_levelScrollTarget = 0;
+		_selectedAdventureId = string.IsNullOrWhiteSpace(selected_avatar_id)
+			? GetInitialAdventureId()
+			: GetAdventureIdForAvatar(selected_avatar_id);
 		_selectedAvatarId = string.IsNullOrWhiteSpace(selected_avatar_id)
 			? GetInitialAvatarId()
 			: NormalizeAdventureAvatarId(selected_avatar_id);
+		RebuildLevelList();
 		RefreshSelection();
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();

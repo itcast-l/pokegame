@@ -3,12 +3,17 @@ using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
+	private const string TutorialAdventureId = "tutorial";
 	private const string DeepTideThroneAdventureId = "deep_tide_throne";
 
-	private static readonly AdventureLevelDefinition[] DeepTideThroneLevels =
+	private static readonly AdventureLevelDefinition[] TutorialLevels =
 	{
 		new("fish", TutorialGameBoardScenePath),
 		new("lanternfish", ItemTutorialGameBoardScenePath),
+	};
+
+	private static readonly AdventureLevelDefinition[] DeepTideThroneLevels =
+	{
 		new("shrimp"),
 		new("crab"),
 		new("jellyfish"),
@@ -25,6 +30,11 @@ public partial class AdventureAvatarMenuScene
 
 	private static readonly AdventureModeDefinition[] AdventureModes =
 	{
+		new(
+			TutorialAdventureId,
+			"ADVENTURE_TUTORIAL",
+			TutorialLevels,
+			new Color(0.82f, 0.97f, 0.66f)),
 		new(
 			DeepTideThroneAdventureId,
 			"ADVENTURE_DEEP_TIDE_THRONE",
@@ -118,8 +128,14 @@ public partial class AdventureAvatarMenuScene
 
 	private CharacterAvatarDefinition? GetSelectedAdventureEnemyForStage(int stageNumber)
 	{
-		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
+		foreach (AdventureLevelDefinition level in GetSelectedAdventureDefinition().Levels)
 		{
+			CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(level.EnemyAvatarId);
+			if (avatarDefinition.Id == CharacterAvatarCatalog.DefaultAvatarId)
+			{
+				continue;
+			}
+
 			if (avatarDefinition.AdventureStageNumber == stageNumber)
 			{
 				return avatarDefinition;
@@ -131,7 +147,8 @@ public partial class AdventureAvatarMenuScene
 
 	public static string GetGameBoardScenePathForAdventureAvatar(string avatarId)
 	{
-		return GetGameBoardScenePathForAvatar(DeepTideThroneAdventureId, avatarId);
+		string adventureId = GetAdventureIdForAvatar(avatarId);
+		return GetGameBoardScenePathForAvatar(adventureId, avatarId);
 	}
 
 	private string GetGameBoardScenePathForAvatar(string avatarId)
@@ -170,6 +187,44 @@ public partial class AdventureAvatarMenuScene
 	private AdventureModeDefinition GetSelectedAdventureDefinition()
 	{
 		return GetAdventureModeDefinition(_selectedAdventureId);
+	}
+
+	private string GetInitialAdventureId()
+	{
+		int nextStage = Mathf.Clamp(
+			CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() + 1,
+			1,
+			CharacterAvatarCatalog.GetAdventureStageCount());
+		foreach (AdventureModeDefinition adventureMode in AdventureModes)
+		{
+			foreach (AdventureLevelDefinition level in adventureMode.Levels)
+			{
+				CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(level.EnemyAvatarId);
+				if (avatarDefinition.AdventureStageNumber == nextStage)
+				{
+					return adventureMode.Id;
+				}
+			}
+		}
+
+		return AdventureModes[0].Id;
+	}
+
+	private static string GetAdventureIdForAvatar(string avatarId)
+	{
+		string normalized = CharacterAvatarCatalog.NormalizeAvatarId(avatarId);
+		foreach (AdventureModeDefinition adventureMode in AdventureModes)
+		{
+			foreach (AdventureLevelDefinition level in adventureMode.Levels)
+			{
+				if (CharacterAvatarCatalog.NormalizeAvatarId(level.EnemyAvatarId) == normalized)
+				{
+					return adventureMode.Id;
+				}
+			}
+		}
+
+		return AdventureModes[0].Id;
 	}
 
 	private static AdventureModeDefinition GetAdventureModeDefinition(string adventureId)

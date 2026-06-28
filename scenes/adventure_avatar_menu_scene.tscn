@@ -241,6 +241,9 @@ text = "ADVENTURE_LIST_TITLE"
 vertical_alignment = 1
 clip_text = true
 
+[node name="tutorialAdventureEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList" unique_id=724591184 instance=ExtResource("3_adventure_mode_entry")]
+unique_name_in_owner = true
+
 [node name="deep_tide_throneAdventureEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList" unique_id=419375319 instance=ExtResource("3_adventure_mode_entry")]
 unique_name_in_owner = true
 

@@ -57,9 +57,10 @@ public partial class AdventureAvatarMenuScene
 	private void UpdatePreview()
 	{
 		CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(_selectedAvatarId);
-		int stageNumber = _stageNumbers.TryGetValue(avatarDefinition.Id, out int number) ? number : 1;
+		int displayStageNumber = GetDisplayStageNumber(avatarDefinition.Id);
+		int stageNumber = GetStageNumber(avatarDefinition.Id);
 
-		_previewStageLabel.Text = FormatStageNumber(stageNumber);
+		_previewStageLabel.Text = FormatStageNumber(displayStageNumber);
 		_previewNameLabel.Text = LocalizeAvatarDisplayName(avatarDefinition);
 		_previewStatusLabel.Text = GetStageStatusText(stageNumber);
 		_previewAbilityTitleLabel.Text = Tr("ADVENTURE_ABILITY_TITLE").ToString();
@@ -146,6 +147,13 @@ public partial class AdventureAvatarMenuScene
 		return _stageNumbers.TryGetValue(avatarId, out int stageNumber)
 			? stageNumber
 			: CharacterAvatarCatalog.GetAdventureStageNumber(avatarId);
+	}
+
+	private int GetDisplayStageNumber(string avatarId)
+	{
+		return _displayStageNumbers.TryGetValue(avatarId, out int displayStageNumber)
+			? displayStageNumber
+			: 1;
 	}
 
 	private bool IsStageUnlocked(string avatarId)

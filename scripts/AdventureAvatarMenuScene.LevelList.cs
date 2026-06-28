@@ -5,31 +5,59 @@ public partial class AdventureAvatarMenuScene
 	private void BindLevelList()
 	{
 		_avatarFrames.Clear();
+		_displayStageNumbers.Clear();
 		_stageNumbers.Clear();
 		_stageButtons.Clear();
 		_stageNameLabels.Clear();
 		_stageStatusLabels.Clear();
 
-		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
+		var boundAvatarIds = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+		foreach (AdventureModeDefinition adventureMode in AdventureModes)
 		{
-			if (avatarDefinition.AdventureStageNumber <= 0)
+			foreach (AdventureLevelDefinition level in adventureMode.Levels)
 			{
-				continue;
-			}
+				CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(level.EnemyAvatarId);
+				if (avatarDefinition.AdventureStageNumber <= 0 || !boundAvatarIds.Add(avatarDefinition.Id))
+				{
+					continue;
+				}
 
-			BindLevelEntry(avatarDefinition, avatarDefinition.AdventureStageNumber);
+				BindLevelEntry(avatarDefinition);
+			}
 		}
+
+		RebuildLevelList();
 	}
 
 	private void RebuildLevelList()
 	{
+		_displayStageNumbers.Clear();
+
 		foreach ((string avatarId, OceanMenuButtonFrame frame) in _avatarFrames)
 		{
-			frame.Visible = IsAvatarInSelectedAdventure(avatarId);
+			frame.Visible = false;
+		}
+
+		AdventureLevelDefinition[] levels = GetSelectedAdventureDefinition().Levels;
+		for (int index = 0; index < levels.Length; index++)
+		{
+			string avatarId = CharacterAvatarCatalog.NormalizeAvatarId(levels[index].EnemyAvatarId);
+			if (!_avatarFrames.TryGetValue(avatarId, out OceanMenuButtonFrame? frame))
+			{
+				continue;
+			}
+
+			frame.Visible = true;
+			_displayStageNumbers[avatarId] = index + 1;
+
+			if (frame.GetNodeOrNull<Label>("EntryContent/EntryRow/StageBadge/StageNumber") is Label badgeLabel)
+			{
+				badgeLabel.Text = FormatStageNumber(index + 1);
+			}
 		}
 	}
 
-	private void BindLevelEntry(CharacterAvatarDefinition avatarDefinition, int stageNumber)
+	private void BindLevelEntry(CharacterAvatarDefinition avatarDefinition)
 	{
 		string nodeName = $"%{avatarDefinition.Id}LevelEntry";
 		if (GetNodeOrNull<OceanMenuButtonFrame>(nodeName) is not OceanMenuButtonFrame frame)
@@ -41,10 +69,7 @@ public partial class AdventureAvatarMenuScene
 		Color accentColor = GetAvatarAccentColor(avatarDefinition);
 		frame.AccentColor = accentColor;
 		_avatarFrames[avatarDefinition.Id] = frame;
-		_stageNumbers[avatarDefinition.Id] = stageNumber;
-
-		Label badgeLabel = frame.GetNode<Label>("EntryContent/EntryRow/StageBadge/StageNumber");
-		badgeLabel.Text = FormatStageNumber(stageNumber);
+		_stageNumbers[avatarDefinition.Id] = avatarDefinition.AdventureStageNumber;
 
 		if (frame.GetNodeOrNull<CharacterAvatar>("EntryContent/EntryRow/EntryAvatarAnchor/EntryAvatar") is CharacterAvatar avatar)
 		{
