@@ -53,7 +53,7 @@ project/assembly_name="pokegame"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/SteamLocaleMapper/plugin.cfg", "res://addons/godot_mcp/plugin.cfg", "res://addons/godotsteam/plugin.cfg", "res://addons/pandora/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/resonate/plugin.cfg", "res://addons/savestate/plugin.cfg")
+enabled=PackedStringArray("res://addons/SteamLocaleMapper/plugin.cfg", "res://addons/adventure_suit_upgrades/plugin.cfg", "res://addons/godot_mcp/plugin.cfg", "res://addons/godotsteam/plugin.cfg", "res://addons/pandora/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/resonate/plugin.cfg", "res://addons/savestate/plugin.cfg")
 
 [internationalization]
 

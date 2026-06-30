@@ -27,8 +27,9 @@ static func generate_entity_id_file(entity_class_name: String, entities: Array[P
 		return []
 	var lines:Array[String] = ["# Do not modify! Auto-generated file.", "class_name " + entity_class_name + "\n\n"]
 	var name_usages = {}
+	var use_entity_id_tokens := entity_class_name == "AdventureSuitUpgradeIds"
 	for entity in entities:
-		var entity_name = entity.get_entity_name()
+		var entity_name = entity.get_entity_id() if use_entity_id_tokens else entity.get_entity_name()
 		if not name_usages.has(entity_name):
 			name_usages[entity_name] = 0
 		else:

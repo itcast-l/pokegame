@@ -9,6 +9,15 @@
 				"_ids_generation_class": "ItemCardIds",
 				"_index": 0,
 				"_name": "Item Cards"
+			},
+			{
+				"_category_id": "",
+				"_generate_ids": true,
+				"_icon_color": "00fff7ff",
+				"_id": "adventure_suit_upgrades",
+				"_ids_generation_class": "AdventureSuitUpgradeIds",
+				"_index": 1,
+				"_name": "Adventure Suit Upgrades"
 			}
 		],
 		"_entities": [
@@ -416,6 +425,2115 @@
 						"value": "Shuffle"
 					}
 				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_warm_current_supply",
+				"_index": 0,
+				"_name": "温流补给",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "抽 1 张牌。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "稳定补牌"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 10
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "每回合首次成功收牌后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_long_capture_recovery",
+				"_index": 1,
+				"_name": "长收回春",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "回复 2 点生命。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "高伤续航"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 20
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "单次收牌造成 6 点及以上伤害时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_miss_bandage",
+				"_index": 2,
+				"_name": "失手包扎",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下回合开始时，回复 3，抽 1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "失误补救"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 30
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "你的回合以空打结束时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_question_mark_first_aid",
+				"_index": 3,
+				"_name": "问号急救",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "回复 4 点生命。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "问号续航"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 40
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得问号奖励时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_shoal_preparation",
+				"_index": 4,
+				"_name": "浅湾整备",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "抽 1 张牌。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "开局稳定"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 50
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "战斗开始时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_thick_blood",
+				"_index": 5,
+				"_name": "厚血",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "Max HP +4；回复 4。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "共享生命前提"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 60
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_chain_tide_breath",
+				"_index": 6,
+				"_name": "连潮喘息",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "抽 1；回复 2。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "连收成型"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 70
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "同一回合第二次成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_red_tide_return",
+				"_index": 7,
+				"_name": "红潮返航",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "回复 5；抽 2。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "低血翻稳"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 80
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "本战首次生命降到 50% 以下时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_supply_cache_return",
+				"_index": 8,
+				"_name": "补给回箱",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "回复 3；抽 1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "问号双收益"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 90
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得问号奖励时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_enchanted_recovery",
+				"_index": 9,
+				"_name": "附魔回春",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "回复 3；若该牌本次成功收牌，再抽 1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "附魔续航"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 100
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "触发附着道具效果时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_deep_tide_lung",
+				"_index": 10,
+				"_name": "深潮肺叶",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "Max HP +8；战斗开始时抽 1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "共享生命前提"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 110
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_return_tide_heart",
+				"_index": 11,
+				"_name": "回潮心室",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "抽 1；回复 2。若本回合再次成功收牌，再抽 1；再回复 3。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "红桃核心引擎"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 120
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "每回合首次成功收牌后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_revival_draw",
+				"_index": 12,
+				"_name": "起死回牌",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "回复 8；抽 2。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "强翻盘"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 130
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "本战首次生命降到 25% 以下时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "hearts_overflow_growth",
+				"_index": 13,
+				"_name": "过量生长",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "每 4 点溢出治疗转为 +1 Max HP。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "共享生命前提"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 140
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "治疗溢出时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_small_insurance",
+				"_index": 14,
+				"_name": "小额保价",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "按 5 结算。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "稳定保底"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 10
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "单次收牌伤害<5"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_question_mark_raise",
+				"_index": 15,
+				"_name": "问号加注",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "抽 1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "问号补牌"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 20
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得问号奖励时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_rejudge_once",
+				"_index": 16,
+				"_name": "再判一次",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "奖励可重掷 1 次。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "奖励修正"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 30
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "本战首次获得问号奖励时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_miss_discount",
+				"_index": 17,
+				"_name": "空打折现",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "积 1 层；下次收牌伤害+1/层，后清空。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "失误变现"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 40
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "每次空打时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_first_capture_pressure",
+				"_index": 18,
+				"_name": "首收加压",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "本次伤害 +2。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "开局起量"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 50
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "本战首次成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_question_mark_windfall",
+				"_index": 19,
+				"_name": "问号外快",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "第1/2/3...次问号，立刻造成1/2/3...伤害。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "问号直伤累计"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 60
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得问号奖励时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_bounty_amplify",
+				"_index": 20,
+				"_name": "赏金放大",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "本次伤害 +3。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "即时兑现"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 70
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得问号的那次收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_high_return_bonus",
+				"_index": 21,
+				"_name": "高额返利",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下次收牌伤害 +2。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "高伤滚利"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 80
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "单次收牌伤害≥7"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_question_mark_echo",
+				"_index": 22,
+				"_name": "问号回响",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "后续收牌时，每张计分牌点数 +1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "逐张增值"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 90
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "本战首次获得问号奖励后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_multi_card_premium",
+				"_index": 23,
+				"_name": "多张溢价",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "若计分牌≥3张，这些牌本次点数各 +1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "大收成增值"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 100
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_question_mark_interest",
+				"_index": 24,
+				"_name": "问号升息",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "后续所有收牌伤害永久 +1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "问号成长"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 110
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "每次获得问号奖励时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_top_prize_repeat",
+				"_index": 25,
+				"_name": "头筹复写",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "最高点数的计分牌额外结算 1 次。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "高价值复制"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 120
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_full_payout",
+				"_index": 26,
+				"_name": "满额派息",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "若计分牌≥3张，额外造成这些牌原始点数和一半的伤害。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "大收成爆发"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 130
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "diamonds_final_double",
+				"_index": 27,
+				"_name": "终局翻倍",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "后续所有收牌伤害翻倍。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "方片终局核"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 140
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "第3次获得问号奖励后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_dark_harbor_reveal",
+				"_index": 28,
+				"_name": "暗港显形",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下一张牌正面入桌。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "后续更易针对"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 10
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_wrong_shore_lineup",
+				"_index": 29,
+				"_name": "错岸入列",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下一张牌放最左。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "改桌面顺序"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 20
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_missed_beat_blunt_hurt",
+				"_index": 30,
+				"_name": "失拍钝伤",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下一张牌若成功收牌，伤害 -3。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "延迟惩罚"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 30
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_miss_bleed",
+				"_index": 31,
+				"_name": "失手流血",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "敌人受 2 伤。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "简单直伤"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 40
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打且桌面4张以上"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_trace_hunt",
+				"_index": 32,
+				"_name": "追痕",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "标记最右旧桌牌；下次收走它时 +4。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "基础猎杀"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 50
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "你成功收牌后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_reverse_capture_tax",
+				"_index": 33,
+				"_name": "逆收税",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "中间每有1张旧桌牌，伤害 -1，最多 -3。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "旧牌税负"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 60
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_undertow_asphyxia",
+				"_index": 34,
+				"_name": "暗流窒息",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "若从旧桌牌开线，伤害 -3。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "压旧牌开线"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 70
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_hook_dredge",
+				"_index": 35,
+				"_name": "钩沉",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "最早旧桌牌置入你牌堆顶，并造成其半分伤害。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "残局收益"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 80
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打且桌面5张以上"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_tail_pressure",
+				"_index": 36,
+				"_name": "压尾",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "本次打出的牌留桌并翻正。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "成功留债"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 90
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人成功收牌且总收3张以上"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_return_tide_misorder",
+				"_index": 37,
+				"_name": "回潮错列",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下一张牌放到最早旧桌牌左侧。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "自动改序"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 100
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打后，若已有旧桌牌"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_exaction",
+				"_index": 38,
+				"_name": "盘剥",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "若中间包含旧桌牌，伤害 -4。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "重税惩罚"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 110
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_hunt_order",
+				"_index": 39,
+				"_name": "追猎令",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "自动标记最早旧桌牌；收走它时 +6。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "强化猎杀"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 120
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "你的回合开始时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_intercept_beat",
+				"_index": 40,
+				"_name": "截拍",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "你立刻额外打1张牌，之后正常开始回合。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "反打核心"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 130
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_black_ledger",
+				"_index": 41,
+				"_name": "黑账",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "你收旧桌牌时都计分；敌人收旧桌牌时不计分。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "改写归属价值"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 140
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "持续生效"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_missed_beat_calamity",
+				"_index": 42,
+				"_name": "失拍成灾",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "下一张牌：正面入桌、放最左、若成功收牌则伤害 -3。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "空打惩罚引擎"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 150
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "敌人空打后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_short_branch_return",
+				"_index": 43,
+				"_name": "短枝回手",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "若手牌空间足够，这两张牌加入手牌；否则正常进入牌堆。每回合 1 次。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "短收回手"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 10
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "只收走两张基础牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_gap_rooting",
+				"_index": 44,
+				"_name": "夹缝生根",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "额外收走收牌区间左侧最近的 1 张基础牌；不计分。每回合 1 次。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "无分短收补牌权"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 20
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "成功收牌且本次中间没有计分牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_primary_root_return",
+				"_index": 45,
+				"_name": "主根复返",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "本次打出的基础牌在结算后回到手牌；若手牌已满，则正常进入牌堆。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "主牌循环"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 30
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "以基础牌成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_miss_climb_growth",
+				"_index": 46,
+				"_name": "失手攀枝",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "积 1 层攀枝。你的数字基础牌按攀枝层数提高点数用于匹配；成功收牌后清空所有攀枝。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "空打转匹配"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 40
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "每次空打时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_borrow_suit_set",
+				"_index": 47,
+				"_name": "借花成套",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "本回合你下一次打出的数字基础牌，可按花色匹配收牌；结算后失效。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "问号转同花"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 50
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "获得问号奖励后"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_hollow_burst",
+				"_index": 48,
+				"_name": "空腔爆开",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "将桌面上所有盖牌翻正。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "短收开桌"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "common"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 60
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "本次成功收牌仅收走首尾两张可见牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_hanging_reverse",
+				"_index": 49,
+				"_name": "倒挂",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "这张牌改为插入桌面最左端。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "改桌面形状"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 70
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "空打时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_wild_branch",
+				"_index": 50,
+				"_name": "乱枝",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "立刻随机重排桌面。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "洗台改局"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 80
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "空打时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_canopy_reveal",
+				"_index": 51,
+				"_name": "透棚",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "直到这张牌离场，之后落在它右侧的牌都正面朝上。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "右侧明牌棚"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 90
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "空打时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_continue_branch",
+				"_index": 52,
+				"_name": "续枝",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "立刻额外打 1 张基础牌。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "失手续打"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 100
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "空打且桌面已有 4 张以上牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_linked_stems",
+				"_index": 53,
+				"_name": "连株",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "立刻获得 1 次问号奖励。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "连收兑奖"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 110
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "同一回合第二次成功收牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_climb_canopy",
+				"_index": 54,
+				"_name": "攀棚",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "若本次打出的基础牌成功收牌，则该牌在结算后回到手牌。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "附着回枝"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "rare"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 120
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "当你的附着道具效果实际生效时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_cross_graft",
+				"_index": 55,
+				"_name": "横嫁",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "你的数字基础牌可按上下相邻点数匹配收牌。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "邻点扩匹"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 130
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "持续生效"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_crown_canopy",
+				"_index": 56,
+				"_name": "冠棚",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "你的基础牌成功收牌时，首牌与尾牌也计分。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "首尾计分"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 140
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "持续生效"
+					}
+				}
 			}
 		],
 		"_properties": [
@@ -479,6 +2597,55 @@
 				"_category_id": "item_cards",
 				"_default_value": 1000,
 				"_id": "item_card_prop_sort_order",
+				"_name": "sort_order",
+				"_type": "int"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": "",
+				"_id": "adventure_suit_upgrade_prop_suit",
+				"_name": "suit",
+				"_type": "string"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": "",
+				"_id": "adventure_suit_upgrade_prop_rarity",
+				"_name": "rarity",
+				"_type": "string"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": "",
+				"_id": "adventure_suit_upgrade_prop_trigger_text",
+				"_name": "trigger_text",
+				"_type": "string"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": "",
+				"_id": "adventure_suit_upgrade_prop_effect_text",
+				"_name": "effect_text",
+				"_type": "string"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": "",
+				"_id": "adventure_suit_upgrade_prop_notes",
+				"_name": "notes",
+				"_type": "string"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": true,
+				"_id": "adventure_suit_upgrade_prop_enabled",
+				"_name": "enabled",
+				"_type": "bool"
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_default_value": 0,
+				"_id": "adventure_suit_upgrade_prop_sort_order",
 				"_name": "sort_order",
 				"_type": "int"
 			}

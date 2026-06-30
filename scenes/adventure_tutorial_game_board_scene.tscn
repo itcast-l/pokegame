@@ -1,10 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cfakpjv03ih0w"]
 
 [ext_resource type="PackedScene" uid="uid://dm510cyafsu8m" path="res://scenes/game_board_scene.tscn" id="1_game_board_scene"]
 
-[node name="GameBoardScene" instance=ExtResource("1_game_board_scene")]
+[node name="GameBoardScene" unique_id=1315705549 instance=ExtResource("1_game_board_scene")]
 player_count = 2
 adventure_mode = true
 adventure_tutorial_mode = true
 solo_mode = true
-adventure_enemy_avatar_id = "fish"

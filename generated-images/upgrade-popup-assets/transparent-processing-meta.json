@@ -1,0 +1,530 @@
+[
+  {
+    "source": "generated-images/upgrade-popup-assets/clubs/raw/clubs-common-raw.png",
+    "output": "generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 847196,
+    "opaque_pixels": 725320,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 1395,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/clubs/raw/clubs-rare-raw.png",
+    "output": "generated-images/upgrade-popup-assets/clubs/processed/clubs-rare.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 816018,
+    "opaque_pixels": 756498,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 34,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/clubs/raw/clubs-uncommon-raw.png",
+    "output": "generated-images/upgrade-popup-assets/clubs/processed/clubs-uncommon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 831298,
+    "opaque_pixels": 741218,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 2732,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/diamonds/raw/diamonds-common-raw.png",
+    "output": "generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 849903,
+    "opaque_pixels": 722613,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 396,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/diamonds/raw/diamonds-rare-raw.png",
+    "output": "generated-images/upgrade-popup-assets/diamonds/processed/diamonds-rare.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 821091,
+    "opaque_pixels": 751425,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 173,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/diamonds/raw/diamonds-uncommon-raw.png",
+    "output": "generated-images/upgrade-popup-assets/diamonds/processed/diamonds-uncommon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 821018,
+    "opaque_pixels": 751498,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 2302,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/hearts/raw/hearts-common-raw.png",
+    "output": "generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 850129,
+    "opaque_pixels": 722387,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 52,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/hearts/raw/hearts-rare-raw.png",
+    "output": "generated-images/upgrade-popup-assets/hearts/processed/hearts-rare.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 816305,
+    "opaque_pixels": 756211,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 186,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/hearts/raw/hearts-uncommon-raw.png",
+    "output": "generated-images/upgrade-popup-assets/hearts/processed/hearts-uncommon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 830221,
+    "opaque_pixels": 742295,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 1677,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/spades/raw/spades-common-raw.png",
+    "output": "generated-images/upgrade-popup-assets/spades/processed/spades-common.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 848663,
+    "opaque_pixels": 723853,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 1090,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/spades/raw/spades-rare-raw.png",
+    "output": "generated-images/upgrade-popup-assets/spades/processed/spades-rare.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 818374,
+    "opaque_pixels": 754142,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 770,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "source": "generated-images/upgrade-popup-assets/spades/raw/spades-uncommon-raw.png",
+    "output": "generated-images/upgrade-popup-assets/spades/processed/spades-uncommon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "transparent_pixels": 826411,
+    "opaque_pixels": 746105,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "despilled_pixels": 2102,
+    "transparent_rgb_zeroed": true,
+    "corner_rgba": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  }
+]

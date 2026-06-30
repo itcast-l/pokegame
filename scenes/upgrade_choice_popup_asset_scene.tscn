@@ -1,0 +1,311 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/UpgradeChoicePopupPreview.gd" id="1"]
+[ext_resource type="FontFile" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="2"]
+
+[node name="UpgradeChoicePopupAssetScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.015, 0.022, 0.035, 1)
+
+[node name="VignetteTop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 220.0
+grow_horizontal = 2
+color = Color(0.02, 0.08, 0.09, 0.35)
+
+[node name="VignetteBottom" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -240.0
+grow_horizontal = 2
+grow_vertical = 0
+color = Color(0, 0, 0, 0.45)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 28
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 18
+
+[node name="Header" type="VBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleRow" type="HBoxContainer" parent="Margin/Layout/Header"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="LeftLine" type="ColorRect" parent="Margin/Layout/Header/TitleRow"]
+custom_minimum_size = Vector2(150, 2)
+layout_mode = 2
+color = Color(0.78, 0.60, 0.28, 0.72)
+
+[node name="LeftDiamond" type="Label" parent="Margin/Layout/Header/TitleRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "✦"
+modulate = Color(0.98, 0.84, 0.50, 1)
+
+[node name="Title" type="Label" parent="Margin/Layout/Header/TitleRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 38
+text = "选择一项强化"
+modulate = Color(0.98, 0.92, 0.82, 1)
+
+[node name="RightDiamond" type="Label" parent="Margin/Layout/Header/TitleRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "✦"
+modulate = Color(0.98, 0.84, 0.50, 1)
+
+[node name="RightLine" type="ColorRect" parent="Margin/Layout/Header/TitleRow"]
+custom_minimum_size = Vector2(150, 2)
+layout_mode = 2
+color = Color(0.78, 0.60, 0.28, 0.72)
+
+[node name="Subtitle" type="Label" parent="Margin/Layout/Header"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
+text = "已接入四个花色：红桃 / 黑桃 / 方片 / 梅花"
+modulate = Color(0.76, 0.82, 0.88, 0.85)
+
+[node name="PreviewPanel" type="PanelContainer" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+self_modulate = Color(1, 1, 1, 0.96)
+
+[node name="PreviewMargin" type="MarginContainer" parent="Margin/Layout/PreviewPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="PreviewLayout" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="PreviewHint" type="Label" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+text = "当前场景已接入四组透明卡面成品，绿底已离线移除。"
+modulate = Color(0.70, 0.77, 0.84, 0.84)
+
+[node name="SuitGroups" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+theme_override_constants/separation = 18
+
+[node name="HeartsGroup" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeartsLabel" type="Label" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 20
+text = "红桃"
+modulate = Color(0.98, 0.83, 0.83, 1)
+
+[node name="HeartsRow" type="HBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup"]
+layout_mode = 2
+size_flags_horizontal = 4
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SpadesGroup" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SpadesLabel" type="Label" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 20
+text = "黑桃"
+modulate = Color(0.84, 0.86, 0.98, 1)
+
+[node name="SpadesRow" type="HBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup"]
+layout_mode = 2
+size_flags_horizontal = 4
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DiamondsGroup" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DiamondsLabel" type="Label" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 20
+text = "方片"
+modulate = Color(0.98, 0.88, 0.72, 1)
+
+[node name="DiamondsRow" type="HBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup"]
+layout_mode = 2
+size_flags_horizontal = 4
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ClubsGroup" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ClubsLabel" type="Label" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 20
+text = "梅花"
+modulate = Color(0.78, 0.88, 1, 1)
+
+[node name="ClubsRow" type="HBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup"]
+layout_mode = 2
+size_flags_horizontal = 4
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow"]
+custom_minimum_size = Vector2(250, 384)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Footer" type="Label" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+text = "4 花色 x 3 稀有度透明素材已经接入完成。下一步可继续补文案层。"
+modulate = Color(0.66, 0.72, 0.79, 0.82)
