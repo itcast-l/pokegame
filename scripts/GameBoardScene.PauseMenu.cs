@@ -56,9 +56,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (_selectionOverlay != null
-			&& GodotObject.IsInstanceValid(_selectionOverlay)
-			&& _selectionOverlay.Visible)
+		if ((_selectionOverlay != null
+				&& GodotObject.IsInstanceValid(_selectionOverlay)
+				&& _selectionOverlay.Visible)
+			|| (_adventureUpgradeSelectionOverlay != null
+				&& GodotObject.IsInstanceValid(_adventureUpgradeSelectionOverlay)
+				&& _adventureUpgradeSelectionOverlay.Visible))
 		{
 			return false;
 		}
@@ -213,6 +216,10 @@ public partial class GameBoardScene
 		_isLeavingGame = true;
 		_isPauseMenuOpen = false;
 		GetTree().Paused = false;
+		if (ShouldUseAdventureUpgradeSystem())
+		{
+			AdventureUpgradeRunState.Clear();
+		}
 			if (IsNetworkMultiplayerMode())
 			{
 				NetworkManager? networkManager = GetNetworkManager();
@@ -271,6 +278,10 @@ public partial class GameBoardScene
 		}
 
 		HidePauseMenu();
+		if (ShouldUseAdventureUpgradeSystem())
+		{
+			AdventureUpgradeRunState.BeginNewRun(CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id));
+		}
 		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
 

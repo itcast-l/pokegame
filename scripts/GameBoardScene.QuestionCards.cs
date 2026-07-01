@@ -98,29 +98,7 @@ public partial class GameBoardScene
 
 	private string PickQuestionRewardItemCardId()
 	{
-		if (ShouldForceBombQuestionReward())
-		{
-			return BombItemCardId;
-		}
-
-		var candidates = new List<RewardCandidate>();
-		foreach (string itemCardId in _itemCardCatalog.RewardIds)
-		{
-			if (!IsSpecialItemCardEnabled(itemCardId)
-				|| !_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
-			{
-				continue;
-			}
-
-			int weight = Math.Max(0, definition.Weight);
-			if (weight == 0)
-			{
-				continue;
-			}
-
-			candidates.Add(new RewardCandidate(itemCardId, weight));
-		}
-
-		return RewardResolver.PickWeightedReward(candidates, maxInclusive => _rng.RandiRange(1, maxInclusive)).ItemCardId;
+		// Temporary test override: question cards always grant Suit Collect.
+		return ItemCardCatalog.SuitCollectItemCardId;
 	}
 }

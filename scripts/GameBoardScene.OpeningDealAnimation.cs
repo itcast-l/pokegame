@@ -150,6 +150,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+		bool shouldResolveRunStartUpgrade = false;
 		try
 		{
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -192,7 +193,14 @@ public partial class GameBoardScene
 				_isOpeningDealAnimationPlaying = false;
 				RenderPlayerCardPiles();
 				RenderPlayerHands();
+				QueueAdventureRunStartUpgradeIfNeeded();
+				shouldResolveRunStartUpgrade = _pendingAdventureUpgradeTriggers.Count > 0;
 			}
+		}
+
+		if (shouldResolveRunStartUpgrade)
+		{
+			await ResolvePendingAdventureUpgradeTriggersAsync(turnSequenceGeneration);
 		}
 	}
 

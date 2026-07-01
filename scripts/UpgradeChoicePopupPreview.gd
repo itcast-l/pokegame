@@ -1,54 +1,134 @@
 @tool
 extends Control
 
-const HEARTS_TEXTURES := {
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/CommonCard": "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/UncommonCard": "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-uncommon.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/RareCard": "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-rare.png",
-}
+const VISUAL_CATALOG_PATH := "res://resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres"
+const PREVIEW_BINDINGS := [
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/CommonCard",
+		"suit": "hearts",
+		"tier": "common",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/UncommonCard",
+		"suit": "hearts",
+		"tier": "uncommon",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/RareCard",
+		"suit": "hearts",
+		"tier": "rare",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/CommonCard",
+		"suit": "spades",
+		"tier": "common",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/UncommonCard",
+		"suit": "spades",
+		"tier": "uncommon",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/RareCard",
+		"suit": "spades",
+		"tier": "rare",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/CommonCard",
+		"suit": "diamonds",
+		"tier": "common",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/UncommonCard",
+		"suit": "diamonds",
+		"tier": "uncommon",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/RareCard",
+		"suit": "diamonds",
+		"tier": "rare",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/CommonCard",
+		"suit": "clubs",
+		"tier": "common",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/UncommonCard",
+		"suit": "clubs",
+		"tier": "uncommon",
+	},
+	{
+		"node_path": "Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/RareCard",
+		"suit": "clubs",
+		"tier": "rare",
+	},
+]
 
-const SPADES_TEXTURES := {
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/CommonCard": "res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/UncommonCard": "res://generated-images/upgrade-popup-assets/spades/processed/spades-uncommon.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/RareCard": "res://generated-images/upgrade-popup-assets/spades/processed/spades-rare.png",
-}
-
-const DIAMONDS_TEXTURES := {
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/CommonCard": "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/UncommonCard": "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-uncommon.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/RareCard": "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-rare.png",
-}
-
-const CLUBS_TEXTURES := {
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/CommonCard": "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/UncommonCard": "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-uncommon.png",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/RareCard": "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-rare.png",
-}
+var _catalog: Resource
+var _entry_by_key := {}
 
 
 func _ready() -> void:
-	_apply_texture_group(HEARTS_TEXTURES)
-	_apply_texture_group(SPADES_TEXTURES)
-	_apply_texture_group(DIAMONDS_TEXTURES)
-	_apply_texture_group(CLUBS_TEXTURES)
+	_apply_preview_textures()
 
 
-func _apply_texture_group(texture_map: Dictionary) -> void:
-	for node_path in texture_map.keys():
-		var texture_rect := get_node_or_null(node_path) as TextureRect
+func _apply_preview_textures() -> void:
+	if not _load_catalog():
+		return
+
+	for binding in PREVIEW_BINDINGS:
+		var texture_rect := get_node_or_null(String(binding["node_path"])) as TextureRect
 		if texture_rect == null:
 			continue
 
-		var texture := _load_texture_from_png(String(texture_map[node_path]))
-		if texture != null:
-			texture_rect.texture = texture
+		var entry := _find_entry(String(binding["suit"]), String(binding["tier"]))
+		if entry == null:
+			push_warning("Missing popup preview catalog entry for %s/%s" % [binding["suit"], binding["tier"]])
+			continue
+
+		var atlas_texture := _create_atlas_texture(entry)
+		if atlas_texture != null:
+			texture_rect.texture = atlas_texture
 
 
-func _load_texture_from_png(resource_path: String) -> Texture2D:
-	var image := Image.new()
-	var error := image.load(ProjectSettings.globalize_path(resource_path))
-	if error != OK:
-		push_warning("Failed to load popup preview texture: %s" % resource_path)
+func _load_catalog() -> bool:
+	if _catalog != null:
+		return true
+
+	_catalog = load(VISUAL_CATALOG_PATH)
+	if _catalog == null:
+		push_warning("Failed to load popup preview visual catalog: %s" % VISUAL_CATALOG_PATH)
+		return false
+
+	_entry_by_key.clear()
+	var entries = _catalog.get("Entries")
+	if entries == null:
+		push_warning("Popup preview visual catalog has no Entries array")
+		return false
+
+	for entry in entries:
+		if entry == null:
+			continue
+		var suit := String(entry.get("Suit")).strip_edges().to_lower()
+		var tier := String(entry.get("Tier")).strip_edges().to_lower()
+		_entry_by_key["%s::%s" % [suit, tier]] = entry
+
+	return true
+
+
+func _find_entry(suit: String, tier: String) -> Resource:
+	return _entry_by_key.get("%s::%s" % [suit.strip_edges().to_lower(), tier.strip_edges().to_lower()])
+
+
+func _create_atlas_texture(entry: Resource) -> AtlasTexture:
+	var texture_path := String(entry.get("TexturePath"))
+	var source_texture := load(texture_path) as Texture2D
+	if source_texture == null:
+		push_warning("Failed to load popup preview texture: %s" % texture_path)
 		return null
 
-	return ImageTexture.create_from_image(image)
+	var atlas_texture := AtlasTexture.new()
+	atlas_texture.atlas = source_texture
+	atlas_texture.region = entry.get("Region") as Rect2
+	return atlas_texture

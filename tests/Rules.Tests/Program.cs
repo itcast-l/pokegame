@@ -25,6 +25,12 @@ internal static class Program
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
 		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
 		Run("capture flow planner skips score when award disabled", CaptureFlowPlannerSkipsScoreWhenAwardDisabled);
+		Run("adventure upgrade rules map main stages and weights", AdventureUpgradeRulesMapMainStagesAndWeights);
+		Run("adventure upgrade choice skips acquired ids and deduplicates offer", AdventureUpgradeChoiceSkipsAcquiredIdsAndDeduplicatesOffer);
+		Run("adventure upgrade choice falls back when rolled rarity unavailable", AdventureUpgradeChoiceFallsBackWhenRolledRarityUnavailable);
+		Run("adventure upgrade choice returns remaining pool when below offer size", AdventureUpgradeChoiceReturnsRemainingPoolWhenBelowOfferSize);
+		Run("adventure upgrade trigger ordering prefers big capture before victory", AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory);
+		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
 		Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
@@ -55,6 +61,12 @@ internal static class Program
 		Run("character avatar display names are localized for every locale", CharacterAvatarDisplayNamesAreLocalizedForEveryLocale);
 		Run("player count localization difficulty rows exist for every locale", PlayerCountLocalizationDifficultyRowsExistForEveryLocale);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
+		Run("adventure upgrade popup scene has no embedded image payloads", AdventureUpgradePopupSceneHasNoEmbeddedImagePayloads);
+		Run("adventure upgrade visual catalog exposes 12 processed card visuals", AdventureUpgradeVisualCatalogExposesTwelveProcessedCards);
+		Run("adventure upgrade visual resolver returns atlas texture from catalog", AdventureUpgradeVisualResolverReturnsAtlasTextureFromCatalog);
+		Run("adventure upgrade runtime no longer hardcodes popup art path switch tables", AdventureUpgradeRuntimeNoLongerHardcodesPopupArtSwitchTables);
+		Run("adventure upgrade preview script reads popup art metadata from catalog", AdventureUpgradePreviewScriptReadsPopupArtMetadataFromCatalog);
+		Run("adventure upgrade overlay sample art uses catalog keys instead of hardcoded atlas metadata", AdventureUpgradeOverlaySampleArtUsesCatalogKeysInsteadOfHardcodedAtlasMetadata);
 		Run("item card visual resources point to existing files", ItemCardVisualResourcesPointToExistingFiles);
 		Run("jack hand visual scale is normalized", JackHandVisualScaleIsNormalized);
 		Run("attachment selection preview follows pending item card", AttachmentSelectionPreviewFollowsPendingItemCard);
@@ -408,6 +420,149 @@ internal static class Program
 		Equal(0, plan.Score.Points);
 		False(plan.Score.HasDoubleEffect);
 		True(plan.ShouldTrackQuestionCardRefresh);
+	}
+
+	private static void AdventureUpgradeRulesMapMainStagesAndWeights()
+	{
+		False(AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(2));
+		True(AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(3));
+		True(AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(14));
+		False(AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(15));
+
+		Equal(1, AdventureUpgradeChoiceRules.ToRunStageIndex(3));
+		Equal(4, AdventureUpgradeChoiceRules.ToRunStageIndex(6));
+		Equal(12, AdventureUpgradeChoiceRules.ToRunStageIndex(14));
+
+		AdventureUpgradeRarityWeights early = AdventureUpgradeChoiceRules.GetRarityWeights(1);
+		AdventureUpgradeRarityWeights mid = AdventureUpgradeChoiceRules.GetRarityWeights(5);
+		AdventureUpgradeRarityWeights late = AdventureUpgradeChoiceRules.GetRarityWeights(9);
+
+		Equal(70, early.CommonWeight);
+		Equal(25, early.RareWeight);
+		Equal(5, early.LegendaryWeight);
+		Equal(50, mid.CommonWeight);
+		Equal(35, mid.RareWeight);
+		Equal(15, mid.LegendaryWeight);
+		Equal(30, late.CommonWeight);
+		Equal(45, late.RareWeight);
+		Equal(25, late.LegendaryWeight);
+
+		False(AdventureUpgradeChoiceRules.ShouldGrantBigCapture(6));
+		True(AdventureUpgradeChoiceRules.ShouldGrantBigCapture(7));
+	}
+
+	private static void AdventureUpgradeChoiceSkipsAcquiredIdsAndDeduplicatesOffer()
+	{
+		var definitions = new[]
+		{
+			Upgrade("common_a", "common"),
+			Upgrade("common_b", "common"),
+			Upgrade("common_c", "common"),
+			Upgrade("rare_a", "rare"),
+		};
+		var acquiredIds = new HashSet<string>(StringComparer.Ordinal)
+		{
+			"common_a",
+		};
+		int[] rolls = { 0, 0, 0, 0, 0, 0 };
+		int rollIndex = 0;
+
+		IReadOnlyList<AdventureUpgradeDefinitionModel> offer = AdventureUpgradeChoiceRules.BuildOffer(
+			definitions,
+			acquiredIds,
+			runStageIndex: 1,
+			maxExclusive => rolls[rollIndex++] % maxExclusive);
+
+		Equal(3, offer.Count);
+		False(ContainsUpgradeId(offer, "common_a"));
+		True(ContainsUpgradeId(offer, "common_b"));
+		True(ContainsUpgradeId(offer, "common_c"));
+		True(ContainsUpgradeId(offer, "rare_a"));
+		True(HasUniqueUpgradeIds(offer));
+	}
+
+	private static void AdventureUpgradeChoiceFallsBackWhenRolledRarityUnavailable()
+	{
+		var definitions = new[]
+		{
+			Upgrade("common_a", "common"),
+			Upgrade("common_b", "common"),
+			Upgrade("rare_a", "rare"),
+			Upgrade("rare_b", "rare"),
+		};
+		int[] rolls = { 99, 1, 0, 0, 99, 0 };
+		int rollIndex = 0;
+
+		IReadOnlyList<AdventureUpgradeDefinitionModel> offer = AdventureUpgradeChoiceRules.BuildOffer(
+			definitions,
+			acquiredIds: Array.Empty<string>(),
+			runStageIndex: 1,
+			maxExclusive => rolls[rollIndex++] % maxExclusive);
+
+		Equal(3, offer.Count);
+		Equal("rare_b", offer[0].Id);
+		Equal("common_a", offer[1].Id);
+		Equal("rare_a", offer[2].Id);
+	}
+
+	private static void AdventureUpgradeChoiceReturnsRemainingPoolWhenBelowOfferSize()
+	{
+		var definitions = new[]
+		{
+			Upgrade("legendary_a", "legendary"),
+			Upgrade("rare_a", "rare"),
+		};
+
+		IReadOnlyList<AdventureUpgradeDefinitionModel> offer = AdventureUpgradeChoiceRules.BuildOffer(
+			definitions,
+			acquiredIds: Array.Empty<string>(),
+			runStageIndex: 12,
+			maxExclusive => throw new InvalidOperationException("random should not be used when fewer than three upgrades remain"));
+
+		Equal(2, offer.Count);
+		Equal("legendary_a", offer[0].Id);
+		Equal("rare_a", offer[1].Id);
+	}
+
+	private static void AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory()
+	{
+		IReadOnlyList<AdventureUpgradeTriggerSource> triggerOrder = AdventureUpgradeTriggerRules.BuildTriggerOrder(
+			bigCaptureTriggered: true,
+			victoryTriggered: true);
+
+		Equal(2, triggerOrder.Count);
+		Equal(AdventureUpgradeTriggerSource.BigCapture, triggerOrder[0]);
+		Equal(AdventureUpgradeTriggerSource.Victory, triggerOrder[1]);
+	}
+
+	private static void AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds()
+	{
+		AdventureUpgradeRunState.Clear();
+		AdventureUpgradeRunState.BeginNewRun(avatarStageNumber: 3);
+
+		True(AdventureUpgradeRunState.IsActive);
+		Equal(1, AdventureUpgradeRunState.CurrentRunStageIndex);
+		True(AdventureUpgradeRunState.ShouldGrantRunStartUpgrade);
+		True(AdventureUpgradeRunState.ShouldGrantVictoryUpgrade);
+
+		AdventureUpgradeRunState.MarkRunStartUpgradeGranted();
+		AdventureUpgradeRunState.AcquireUpgrade("common_a");
+		False(AdventureUpgradeRunState.ShouldGrantRunStartUpgrade);
+		True(AdventureUpgradeRunState.HasAcquiredUpgrade("common_a"));
+
+		AdventureUpgradeRunState.MarkVictoryUpgradeGranted();
+		False(AdventureUpgradeRunState.ShouldGrantVictoryUpgrade);
+
+		AdventureUpgradeRunState.AdvanceToStage(avatarStageNumber: 4);
+		Equal(2, AdventureUpgradeRunState.CurrentRunStageIndex);
+		False(AdventureUpgradeRunState.ShouldGrantRunStartUpgrade);
+		True(AdventureUpgradeRunState.ShouldGrantVictoryUpgrade);
+		True(AdventureUpgradeRunState.HasAcquiredUpgrade("common_a"));
+
+		AdventureUpgradeRunState.Clear();
+		False(AdventureUpgradeRunState.IsActive);
+		Equal(0, AdventureUpgradeRunState.CurrentRunStageIndex);
+		False(AdventureUpgradeRunState.HasAcquiredUpgrade("common_a"));
 	}
 
 	private static void ResultPresentationUsesLocalSeatForNetworkDefeat()
@@ -1271,6 +1426,130 @@ internal static class Program
 			int frameCount = CountContiguousFrames(repoRoot, root, "fx-{0}.png");
 			True(frameCount >= minFrameCount);
 		}
+	}
+
+	private static void AdventureUpgradePopupSceneHasNoEmbeddedImagePayloads()
+	{
+		string scenePath = Path.Combine(FindRepositoryRoot(), "scenes", "upgrade_choice_popup_asset_scene.tscn");
+		string text = File.ReadAllText(scenePath);
+
+		False(text.Contains("[sub_resource type=\"Image\""));
+		False(text.Contains("[sub_resource type=\"ImageTexture\""));
+		False(text.Contains("PackedByteArray("));
+	}
+
+	private static void AdventureUpgradeVisualCatalogExposesTwelveProcessedCards()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string catalogPath = Path.Combine(
+			repoRoot,
+			"resources",
+			"adventure_upgrades",
+			"visuals",
+			"adventure_upgrade_card_visual_catalog.tres");
+		True(File.Exists(catalogPath));
+		string text = File.ReadAllText(catalogPath);
+
+		Equal(12, Regex.Matches(text, @"(?m)^\[sub_resource type=""Resource"" id=""Entry_").Count);
+
+		MatchCollection suits = Regex.Matches(text, @"(?m)^Suit = ""([^""]+)""$");
+		MatchCollection tiers = Regex.Matches(text, @"(?m)^Tier = ""([^""]+)""$");
+		MatchCollection texturePaths = Regex.Matches(text, @"(?m)^TexturePath = ""([^""]+)""$");
+		MatchCollection regions = Regex.Matches(text, @"(?m)^Region = Rect2\(([^)]+)\)$");
+		Equal(12, suits.Count);
+		Equal(12, tiers.Count);
+		Equal(12, texturePaths.Count);
+		Equal(12, regions.Count);
+
+		var seenKeys = new HashSet<string>(StringComparer.Ordinal);
+		var seenSuits = new HashSet<string>(StringComparer.Ordinal);
+		var seenTiers = new HashSet<string>(StringComparer.Ordinal);
+
+		for (int index = 0; index < 12; index++)
+		{
+			string suit = suits[index].Groups[1].Value.Trim().ToLowerInvariant();
+			string tier = tiers[index].Groups[1].Value.Trim().ToLowerInvariant();
+			string texturePath = texturePaths[index].Groups[1].Value;
+			True(seenKeys.Add($"{suit}::{tier}"));
+			seenSuits.Add(suit);
+			seenTiers.Add(tier);
+
+			True(texturePath.StartsWith("res://generated-images/upgrade-popup-assets/", StringComparison.Ordinal));
+			True(texturePath.Contains("/processed/", StringComparison.Ordinal));
+
+			string[] regionParts = regions[index].Groups[1].Value.Split(',', StringSplitOptions.TrimEntries);
+			Equal(4, regionParts.Length);
+			True(float.TryParse(regionParts[2], out float width));
+			True(float.TryParse(regionParts[3], out float height));
+			True(width > 0.0f);
+			True(height > 0.0f);
+			AssertResPathExists(repoRoot, texturePath);
+		}
+
+		Equal(4, seenSuits.Count);
+		True(seenSuits.Contains("hearts"));
+		True(seenSuits.Contains("spades"));
+		True(seenSuits.Contains("diamonds"));
+		True(seenSuits.Contains("clubs"));
+
+		Equal(3, seenTiers.Count);
+		True(seenTiers.Contains("common"));
+		True(seenTiers.Contains("uncommon"));
+		True(seenTiers.Contains("rare"));
+	}
+
+	private static void AdventureUpgradeVisualResolverReturnsAtlasTextureFromCatalog()
+	{
+		string resolverPath = Path.Combine(FindRepositoryRoot(), "scripts", "AdventureUpgradeCardVisualResolver.cs");
+		True(File.Exists(resolverPath));
+
+		string text = File.ReadAllText(resolverPath);
+		True(text.Contains("adventure_upgrade_card_visual_catalog.tres", StringComparison.Ordinal));
+		True(text.Contains("new AtlasTexture", StringComparison.Ordinal));
+		True(text.Contains("entry.Region", StringComparison.Ordinal));
+		True(text.Contains("entry.TexturePath", StringComparison.Ordinal));
+	}
+
+	private static void AdventureUpgradeRuntimeNoLongerHardcodesPopupArtSwitchTables()
+	{
+		string runtimePath = Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs");
+		string text = File.ReadAllText(runtimePath);
+
+		False(text.Contains("GetAdventureUpgradeCardTextureRegion(", StringComparison.Ordinal));
+		False(text.Contains("GetAdventureUpgradeCardTexturePath(", StringComparison.Ordinal));
+		False(text.Contains("res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png", StringComparison.Ordinal));
+	}
+
+	private static void AdventureUpgradePreviewScriptReadsPopupArtMetadataFromCatalog()
+	{
+		string previewScriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "UpgradeChoicePopupPreview.gd");
+		string text = File.ReadAllText(previewScriptPath);
+
+		True(text.Contains("resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres", StringComparison.Ordinal));
+		False(text.Contains("hearts-common.png", StringComparison.Ordinal));
+		False(text.Contains("spades-common.png", StringComparison.Ordinal));
+		False(text.Contains("diamonds-common.png", StringComparison.Ordinal));
+		False(text.Contains("clubs-common.png", StringComparison.Ordinal));
+		False(text.Contains("Image.new()", StringComparison.Ordinal));
+		False(text.Contains("ImageTexture.create_from_image", StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static void AdventureUpgradeOverlaySampleArtUsesCatalogKeysInsteadOfHardcodedAtlasMetadata()
+	{
+		string overlayScenePath = Path.Combine(FindRepositoryRoot(), "scenes", "adventure_upgrade_selection_overlay.tscn");
+		string text = File.ReadAllText(overlayScenePath);
+
+		False(text.Contains("AtlasTexture_sample_", StringComparison.Ordinal));
+		False(text.Contains("generated-images/upgrade-popup-assets/", StringComparison.Ordinal));
+		True(text.Contains("PreviewSuit = \"diamonds\"", StringComparison.Ordinal));
+		True(text.Contains("PreviewSuit = \"hearts\"", StringComparison.Ordinal));
+		True(text.Contains("PreviewSuit = \"spades\"", StringComparison.Ordinal));
+		True(text.Contains("PreviewTier = \"uncommon\"", StringComparison.Ordinal));
+		True(text.Contains("PreviewTier = \"common\"", StringComparison.Ordinal));
+		True(text.Contains("PreviewTier = \"rare\"", StringComparison.Ordinal));
 	}
 
 	private static void ItemCardVisualResourcesPointToExistingFiles()
@@ -2921,6 +3200,45 @@ internal static class Program
 			hasDoubleCollectItemEffect,
 			hasPairDestroyItemEffect,
 			itemOwnerPlayerIndex);
+	}
+
+	private static AdventureUpgradeDefinitionModel Upgrade(string id, string rarity, string suit = "hearts")
+	{
+		return new AdventureUpgradeDefinitionModel(
+			id,
+			DisplayName: id,
+			suit,
+			rarity,
+			TriggerText: string.Empty,
+			EffectText: string.Empty,
+			Enabled: true);
+	}
+
+	private static bool ContainsUpgradeId(IReadOnlyList<AdventureUpgradeDefinitionModel> offer, string upgradeId)
+	{
+		foreach (AdventureUpgradeDefinitionModel definition in offer)
+		{
+			if (definition.Id == upgradeId)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static bool HasUniqueUpgradeIds(IReadOnlyList<AdventureUpgradeDefinitionModel> offer)
+	{
+		var seen = new HashSet<string>(StringComparer.Ordinal);
+		foreach (AdventureUpgradeDefinitionModel definition in offer)
+		{
+			if (!seen.Add(definition.Id))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private static void Run(string name, Action test)

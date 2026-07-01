@@ -12,6 +12,7 @@ public partial class GameBoardScene : Control
 	private const string ResultBannerScenePath = "res://scenes/game_board_result_banner.tscn";
 	private const string DefeatFinisherOverlayScenePath = "res://scenes/game_board_defeat_finisher_overlay.tscn";
 	private const string ItemSelectionOverlayScenePath = "res://scenes/item_selection_overlay.tscn";
+	private const string AdventureUpgradeSelectionOverlayScenePath = "res://scenes/adventure_upgrade_selection_overlay.tscn";
 	private const string StandardCardsRootPath = "StandardPokerCards";
 	private const string SuitedJqkBackupCardsNodeName = "SuitedJqkBackupCards";
 	private const float CardBackAnimationFps = 12.0f;
@@ -212,6 +213,7 @@ public partial class GameBoardScene : Control
 	private bool _activePlayerTooltipLayoutDirty;
 	private NetworkAiBlockedItemState _networkAiBlockedItem = NetworkAiBlockedItemState.None;
 	private ItemSelectionOverlay? _selectionOverlay;
+	private Control? _adventureUpgradeSelectionOverlay;
 	private readonly List<System.Action> _selectionOverlayActions = new();
 	private Panel? _networkReconnectOverlayPanel;
 	private Label? _networkReconnectOverlayLabel;
@@ -581,6 +583,8 @@ public partial class GameBoardScene : Control
 	private Control _leftPlayerArea = default!;
 	private Control _rightPlayerArea = default!;
 	private Control _questionCardTransformArea = default!;
+	private TextureRect _ultraWideBackdrop = default!;
+	private TextureRect _verticalBackdrop = default!;
 	private TextureRect _boardArt = default!;
 	private Control _layoutAreas = default!;
 
@@ -595,6 +599,7 @@ public partial class GameBoardScene : Control
 		_effectResolver = new SpecialCardEffectResolver(this);
 		_itemPlayPresentationHandlers = CreateItemPlayPresentationHandlers();
 		_itemPlayPresentationValidators = CreateItemPlayPresentationValidators();
+		LoadAdventureUpgradeCatalog();
 		_adventureAttackEffectHandlers = CreateAdventureAttackEffectHandlers();
 		LoadCardBackTextures();
 		LoadScoreFillEffectTextures();
@@ -614,6 +619,8 @@ public partial class GameBoardScene : Control
 		LoadLensRevealWispTextures();
 		LoadMagnetCountdownFxTextures();
 
+		_ultraWideBackdrop = GetNode<TextureRect>("UltraWideBackdrop");
+		_verticalBackdrop = GetNode<TextureRect>("VerticalBackdrop");
 		_boardArt = GetNode<TextureRect>("BoardArt");
 		_layoutAreas = GetNode<Control>("LayoutAreas");
 		RefreshResponsiveBoardLayout();
@@ -685,6 +692,7 @@ public partial class GameBoardScene : Control
 
 		_networkBoardInitialized = true;
 		ApplyMatchSeed();
+		InitializeAdventureUpgradeRunForCurrentBoard();
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: playOpeningIntroAnimation);
 	}

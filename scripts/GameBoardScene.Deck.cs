@@ -47,6 +47,7 @@ public partial class GameBoardScene
 		_bossKActiveControlUsedThisTurn = false;
 		_cardEventBus.Clear();
 		ClearSelectionOverlay();
+		ResetAdventureUpgradeBoardState();
 		ClearPendingItemSelectionState();
 		InvalidateRenderCaches();
 		_isResolvingMagnetAttachmentSelection = false;

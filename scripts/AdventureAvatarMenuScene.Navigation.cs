@@ -35,6 +35,16 @@ public partial class AdventureAvatarMenuScene
 
 	private async Task StartAdventureWithTransitionAsync(PackedScene gameBoardScene, string selectedAvatarId)
 	{
+		int avatarStageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(selectedAvatarId);
+		if (AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber))
+		{
+			AdventureUpgradeRunState.BeginNewRun(avatarStageNumber);
+		}
+		else
+		{
+			AdventureUpgradeRunState.Clear();
+		}
+
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
 			Node gameBoard = gameBoardScene.Instantiate();

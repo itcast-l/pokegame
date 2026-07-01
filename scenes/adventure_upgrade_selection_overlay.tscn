@@ -1,0 +1,261 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/AdventureUpgradeChoiceArt.cs" id="1_choice_art_script"]
+[ext_resource type="FontFile" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="2_title_font"]
+[ext_resource type="Script" path="res://scripts/PearlDivider.cs" id="7_pearl_divider_script"]
+[ext_resource type="FontFile" path="res://addons/phantom_camera/fonts/Nunito-Regular.ttf" id="6_body_font"]
+[sub_resource type="Gradient" id="Gradient_description_fade"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(0.00784314, 0.0235294, 0.0509804, 0, 0.00784314, 0.0235294, 0.0509804, 0.08, 0.00784314, 0.0235294, 0.0509804, 0.42)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_description_fade"]
+gradient = SubResource("Gradient_description_fade")
+fill = 1
+
+[sub_resource type="Gradient" id="Gradient_selection_halo"]
+offsets = PackedFloat32Array(0, 0.4, 1)
+colors = PackedColorArray(0.0, 0.0, 0.0, 0.0, 0.1, 0.36, 0.42, 0.08, 0.0, 0.0, 0.0, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_selection_halo"]
+gradient = SubResource("Gradient_selection_halo")
+fill = 2
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_card_focus"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_highlight"]
+bg_color = Color(0.96, 0.99, 1, 0)
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.88, 0.97, 1, 0.52)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0.72, 0.92, 1, 0.06)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_selection_panel"]
+bg_color = Color(0.02, 0.06, 0.1, 0.08)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+border_color = Color(0.64, 0.88, 0.98, 0)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+shadow_color = Color(0, 0, 0, 0.03)
+shadow_size = 2
+anti_aliasing = true
+
+[node name="AdventureUpgradeSelectionOverlay" type="Control"]
+z_index = 2000
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.03, 0.06, 0.88)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 56
+theme_override_constants/margin_top = 46
+theme_override_constants/margin_right = 56
+theme_override_constants/margin_bottom = 40
+
+[node name="SelectionPanel" type="Panel" parent="Margin"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.12
+anchor_top = 0.1
+anchor_right = 0.88
+anchor_bottom = 0.93
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_selection_panel")
+
+[node name="SelectionHalo" type="TextureRect" parent="Margin"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.14
+anchor_top = 0.13
+anchor_right = 0.86
+anchor_bottom = 0.91
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_selection_halo")
+expand_mode = 1
+stretch_mode = 6
+mouse_filter = 2
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="Header" type="VBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SelectionTitle" type="Label" parent="Margin/Layout/Header" unique_name_in_owner=true]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_font_sizes/font_size = 26
+text = "选择一项强化"
+modulate = Color(0.92, 0.88, 0.82, 0.78)
+
+[node name="SelectionSubtitle" type="Label" parent="Margin/Layout/Header" unique_name_in_owner=true]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+text = "开局强化"
+modulate = Color(0.68, 0.76, 0.84, 0.64)
+
+[node name="HeaderDivider" type="Control" parent="Margin/Layout/Header"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("7_pearl_divider_script")
+LineColor = Color(0.46, 0.82, 0.88, 0.22)
+PearlColor = Color(0.9, 0.98, 1, 0.46)
+
+[node name="CardsRow" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_horizontal = 4
+alignment = 1
+theme_override_constants/separation = 28
+
+[node name="Option1Button" type="Button" parent="Margin/Layout/CardsRow" unique_name_in_owner=true]
+custom_minimum_size = Vector2(286, 436)
+layout_mode = 2
+size_flags_horizontal = 4
+flat = true
+focus_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_card_focus")
+text = ""
+
+[node name="CardFrame" type="Control" parent="Margin/Layout/CardsRow/Option1Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/CardsRow/Option1Button/CardFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("6_body_font")
+PreviewSuit = "diamonds"
+PreviewTier = "uncommon"
+PreviewTitle = "温流补给"
+PreviewDescription = "抽 1 张牌。"
+
+[node name="Option2Button" type="Button" parent="Margin/Layout/CardsRow" unique_name_in_owner=true]
+custom_minimum_size = Vector2(286, 436)
+layout_mode = 2
+size_flags_horizontal = 4
+flat = true
+focus_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_card_focus")
+text = ""
+
+[node name="CardFrame" type="Control" parent="Margin/Layout/CardsRow/Option2Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/CardsRow/Option2Button/CardFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("6_body_font")
+PreviewSuit = "hearts"
+PreviewTier = "common"
+PreviewTitle = "浅湾整备"
+PreviewDescription = "抽 1 张牌。"
+
+[node name="Option3Button" type="Button" parent="Margin/Layout/CardsRow" unique_name_in_owner=true]
+custom_minimum_size = Vector2(286, 436)
+layout_mode = 2
+size_flags_horizontal = 4
+flat = true
+focus_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_card_focus")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_card_focus")
+text = ""
+
+[node name="CardFrame" type="Control" parent="Margin/Layout/CardsRow/Option3Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/CardsRow/Option3Button/CardFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("6_body_font")
+PreviewSuit = "spades"
+PreviewTier = "rare"
+PreviewTitle = "长收回春"
+PreviewDescription = "回复 2 点生命。"

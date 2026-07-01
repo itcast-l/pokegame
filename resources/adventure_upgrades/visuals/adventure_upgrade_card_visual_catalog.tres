@@ -1,0 +1,116 @@
+[gd_resource type="Resource" script_class="AdventureUpgradeCardVisualCatalogResource" load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/AdventureUpgradeCardVisualCatalogResource.cs" id="1_catalog_script"]
+[ext_resource type="Script" path="res://scripts/AdventureUpgradeCardVisualEntryResource.cs" id="2_entry_script"]
+
+[sub_resource type="Resource" id="Entry_hearts_common"]
+script = ExtResource("2_entry_script")
+Suit = "hearts"
+Tier = "common"
+TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png"
+Region = Rect2(291, 58, 671, 1097)
+SortOrder = 10
+PreviewLabel = "hearts/common"
+
+[sub_resource type="Resource" id="Entry_hearts_uncommon"]
+script = ExtResource("2_entry_script")
+Suit = "hearts"
+Tier = "uncommon"
+TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-uncommon.png"
+Region = Rect2(291, 58, 671, 1097)
+SortOrder = 20
+PreviewLabel = "hearts/uncommon"
+
+[sub_resource type="Resource" id="Entry_hearts_rare"]
+script = ExtResource("2_entry_script")
+Suit = "hearts"
+Tier = "rare"
+TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-rare.png"
+Region = Rect2(291, 58, 671, 1097)
+SortOrder = 30
+PreviewLabel = "hearts/rare"
+
+[sub_resource type="Resource" id="Entry_spades_common"]
+script = ExtResource("2_entry_script")
+Suit = "spades"
+Tier = "common"
+TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png"
+Region = Rect2(290, 32, 673, 1167)
+SortOrder = 40
+PreviewLabel = "spades/common"
+
+[sub_resource type="Resource" id="Entry_spades_uncommon"]
+script = ExtResource("2_entry_script")
+Suit = "spades"
+Tier = "uncommon"
+TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-uncommon.png"
+Region = Rect2(290, 32, 673, 1167)
+SortOrder = 50
+PreviewLabel = "spades/uncommon"
+
+[sub_resource type="Resource" id="Entry_spades_rare"]
+script = ExtResource("2_entry_script")
+Suit = "spades"
+Tier = "rare"
+TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-rare.png"
+Region = Rect2(290, 32, 673, 1167)
+SortOrder = 60
+PreviewLabel = "spades/rare"
+
+[sub_resource type="Resource" id="Entry_diamonds_common"]
+script = ExtResource("2_entry_script")
+Suit = "diamonds"
+Tier = "common"
+TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png"
+Region = Rect2(296, 42, 659, 1156)
+SortOrder = 70
+PreviewLabel = "diamonds/common"
+
+[sub_resource type="Resource" id="Entry_diamonds_uncommon"]
+script = ExtResource("2_entry_script")
+Suit = "diamonds"
+Tier = "uncommon"
+TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-uncommon.png"
+Region = Rect2(296, 42, 659, 1156)
+SortOrder = 80
+PreviewLabel = "diamonds/uncommon"
+
+[sub_resource type="Resource" id="Entry_diamonds_rare"]
+script = ExtResource("2_entry_script")
+Suit = "diamonds"
+Tier = "rare"
+TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-rare.png"
+Region = Rect2(296, 42, 659, 1156)
+SortOrder = 90
+PreviewLabel = "diamonds/rare"
+
+[sub_resource type="Resource" id="Entry_clubs_common"]
+script = ExtResource("2_entry_script")
+Suit = "clubs"
+Tier = "common"
+TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png"
+Region = Rect2(291, 53, 670, 1106)
+SortOrder = 100
+PreviewLabel = "clubs/common"
+
+[sub_resource type="Resource" id="Entry_clubs_uncommon"]
+script = ExtResource("2_entry_script")
+Suit = "clubs"
+Tier = "uncommon"
+TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-uncommon.png"
+Region = Rect2(291, 53, 670, 1106)
+SortOrder = 110
+PreviewLabel = "clubs/uncommon"
+
+[sub_resource type="Resource" id="Entry_clubs_rare"]
+script = ExtResource("2_entry_script")
+Suit = "clubs"
+Tier = "rare"
+TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-rare.png"
+Region = Rect2(291, 53, 670, 1106)
+SortOrder = 120
+PreviewLabel = "clubs/rare"
+
+[resource]
+script = ExtResource("1_catalog_script")
+Entries = Array[ExtResource("2_entry_script")]([SubResource("Entry_hearts_common"), SubResource("Entry_hearts_uncommon"), SubResource("Entry_hearts_rare"), SubResource("Entry_spades_common"), SubResource("Entry_spades_uncommon"), SubResource("Entry_spades_rare"), SubResource("Entry_diamonds_common"), SubResource("Entry_diamonds_uncommon"), SubResource("Entry_diamonds_rare"), SubResource("Entry_clubs_common"), SubResource("Entry_clubs_uncommon"), SubResource("Entry_clubs_rare")])

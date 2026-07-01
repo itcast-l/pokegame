@@ -93,6 +93,15 @@ public partial class GameBoardScene
 			AddPlayerScore(scorePlayerIndex, captureFlow.Score.Points);
 		}
 
+		if (captureFlow.CapturedScoringCards)
+		{
+			await ResolveAdventureBigCaptureUpgradeAsync(playerIndex, captureFlow.TotalCapturedCardCount, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || _isLeavingGame)
+			{
+				return new CaptureTableCardsResult(collectedCardCount, removedTableCardCount, questionRewardAnimation);
+			}
+		}
+
 		CheckForWinner();
 		if (!IsGameOver() && removedTableCardCount > 0)
 		{

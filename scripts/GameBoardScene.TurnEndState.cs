@@ -15,6 +15,11 @@ public partial class GameBoardScene
 		int scoreWinnerPlayerIndex = GetScoreWinnerPlayerIndex();
 		if (scoreWinnerPlayerIndex >= 0)
 		{
+			if (TryQueueAdventureVictoryUpgradeBeforeWinner(scoreWinnerPlayerIndex))
+			{
+				return;
+			}
+
 			DeclareWinner(scoreWinnerPlayerIndex);
 			return;
 		}

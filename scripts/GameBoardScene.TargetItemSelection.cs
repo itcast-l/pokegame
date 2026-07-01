@@ -459,6 +459,17 @@ public partial class GameBoardScene
 	private void ClearSelectionOverlay()
 	{
 		_selectionOverlayActions.Clear();
+		if (_adventureUpgradeSelectionOverlay != null)
+		{
+			if (IsInstanceValid(_adventureUpgradeSelectionOverlay))
+			{
+				RemoveChild(_adventureUpgradeSelectionOverlay);
+				_adventureUpgradeSelectionOverlay.QueueFree();
+			}
+
+			_adventureUpgradeSelectionOverlay = null;
+		}
+
 		if (_selectionOverlay == null)
 		{
 			return;

@@ -12,13 +12,23 @@ public partial class GameBoardScene
 	{
 		if (_boardArt == null
 			|| !GodotObject.IsInstanceValid(_boardArt)
+			|| _ultraWideBackdrop == null
+			|| !GodotObject.IsInstanceValid(_ultraWideBackdrop)
+			|| _verticalBackdrop == null
+			|| !GodotObject.IsInstanceValid(_verticalBackdrop)
 			|| _layoutAreas == null
 			|| !GodotObject.IsInstanceValid(_layoutAreas))
 		{
 			return;
 		}
 
+		Rect2 boardArtRect = _boardArt.GetGlobalRect();
 		Rect2 boardVisibleRect = GetBoardArtVisibleRect();
+		bool hasHorizontalLetterboxing = boardVisibleRect.Size.X < boardArtRect.Size.X - 0.5f;
+		bool hasVerticalLetterboxing = boardVisibleRect.Size.Y < boardArtRect.Size.Y - 0.5f;
+		_ultraWideBackdrop.Visible = hasHorizontalLetterboxing;
+		_verticalBackdrop.Visible = hasVerticalLetterboxing && !hasHorizontalLetterboxing;
+
 		_layoutAreas.AnchorLeft = 0.0f;
 		_layoutAreas.AnchorTop = 0.0f;
 		_layoutAreas.AnchorRight = 0.0f;
@@ -270,6 +280,12 @@ public partial class GameBoardScene
 
 	private void RestartGameFromWinner()
 	{
+		if (ShouldRestartAdventureRunFromWinner())
+		{
+			RestartAdventureRunFromWinner();
+			return;
+		}
+
 		HideWinnerBanner();
 		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
@@ -312,7 +328,32 @@ public partial class GameBoardScene
 			return;
 		}
 
+		AdventureUpgradeRunState.AdvanceToStage(CharacterAvatarCatalog.GetAdventureStageNumber(nextAvatarId));
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
+	}
+
+	private bool ShouldRestartAdventureRunFromWinner()
+	{
+		return ShouldUseAdventureUpgradeSystem()
+			&& _winnerPlayerIndex >= 0
+			&& (_winnerPlayerIndex != MainPlayerIndex || !TryGetNextAdventureStageAvatarId(out _));
+	}
+
+	private void RestartAdventureRunFromWinner()
+	{
+		string firstAvatarId = GetFirstMainAdventureAvatarId();
+		string gameBoardScenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(firstAvatarId);
+		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
+		if (gameBoardScene == null)
+		{
+			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
+			HideWinnerBanner();
+			DealCardsToPlayers(playOpeningDealAnimation: true);
+			return;
+		}
+
+		AdventureUpgradeRunState.BeginNewRun(FirstMainAdventureAvatarStageNumber);
+		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
 	}
 
 	private async Task StartNextAdventureStageWithTransitionAsync(PackedScene gameBoardScene, string nextAvatarId)

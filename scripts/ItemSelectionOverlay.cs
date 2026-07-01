@@ -99,16 +99,21 @@ public partial class ItemSelectionOverlay : Control
 
 	private void FocusDefaultButton()
 	{
+		if (!IsInsideTree())
+		{
+			return;
+		}
+
 		foreach (Button optionButton in _optionButtons)
 		{
-			if (optionButton.Visible && !optionButton.Disabled)
+			if (optionButton.Visible && !optionButton.Disabled && IsInstanceValid(optionButton))
 			{
 				optionButton.GrabFocus();
 				return;
 			}
 		}
 
-		if (_cancelButton.Visible && !_cancelButton.Disabled)
+		if (_cancelButton.Visible && !_cancelButton.Disabled && IsInstanceValid(_cancelButton))
 		{
 			_cancelButton.GrabFocus();
 		}
