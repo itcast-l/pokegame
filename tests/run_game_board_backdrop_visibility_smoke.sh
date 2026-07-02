@@ -26,7 +26,15 @@ cleanup() {
 
 trap cleanup EXIT
 
+set +e
 "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardBackdropVisibilitySmoke.gd >"$LOG_FILE" 2>&1
+GODOT_STATUS=$?
+set -e
+
+if [[ "$GODOT_STATUS" -ne 0 ]]; then
+	cat "$LOG_FILE" >&2
+	exit "$GODOT_STATUS"
+fi
 
 if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2

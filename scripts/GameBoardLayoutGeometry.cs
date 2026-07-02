@@ -105,13 +105,6 @@ public static class GameBoardLayoutGeometry
 			boardArt.Visible = state.ShowBoardArt;
 		}
 
-		layoutAreas.AnchorLeft = 0.0f;
-		layoutAreas.AnchorTop = 0.0f;
-		layoutAreas.AnchorRight = 0.0f;
-		layoutAreas.AnchorBottom = 0.0f;
-		layoutAreas.Position = state.VisibleRect.Position;
-		layoutAreas.Size = state.VisibleRect.Size;
-
 		if (questionCardTransformArea != null && GodotObject.IsInstanceValid(questionCardTransformArea))
 		{
 			questionCardTransformArea.PivotOffset = questionCardTransformArea.Size / 2.0f;

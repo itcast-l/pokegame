@@ -18,7 +18,7 @@ fi
 
 TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
-LOG_FILE="$TMP_DIR/game_board_layout_areas_visible_rect_smoke.log"
+LOG_FILE="$TMP_DIR/game_board_manual_layout_parity_smoke.log"
 
 cleanup() {
 	rm -rf "$TMP_DIR"
@@ -26,13 +26,21 @@ cleanup() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardLayoutAreasVisibleRectSmoke.gd >"$LOG_FILE" 2>&1
+set +e
+"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardManualLayoutParitySmoke.gd >"$LOG_FILE" 2>&1
+GODOT_STATUS=$?
+set -e
+
+if [[ "$GODOT_STATUS" -ne 0 ]]; then
+	cat "$LOG_FILE" >&2
+	exit "$GODOT_STATUS"
+fi
 
 if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi
 
-grep -Fq "GAME_BOARD_LAYOUT_AREAS_VISIBLE_RECT_SMOKE_OK" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
+grep -Fq "GAME_BOARD_MANUAL_LAYOUT_PARITY_SMOKE_OK" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 
 cat "$LOG_FILE"

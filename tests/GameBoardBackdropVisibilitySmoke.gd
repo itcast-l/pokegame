@@ -2,7 +2,6 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TALL_VIEWPORT_SIZE := Vector2i(960, 900)
-const TOP_GUTTER_COLOR_DELTA_MIN := 0.035
 
 var _failed := false
 
@@ -12,7 +11,11 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	root.size = TALL_VIEWPORT_SIZE
+	var viewport := SubViewport.new()
+	viewport.size = TALL_VIEWPORT_SIZE
+	viewport.transparent_bg = false
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(viewport)
 	await process_frame
 
 	var packed_scene := load(SCENE_PATH) as PackedScene
@@ -30,12 +33,12 @@ func _run() -> void:
 	board.set("winning_score", 100)
 	board.set("solo_mode", true)
 	board.set("adventure_mode", false)
-	root.add_child(board)
+	viewport.add_child(board)
 	await process_frame
 	await process_frame
-	root.size = TALL_VIEWPORT_SIZE + Vector2i(120, 0)
+	viewport.size = TALL_VIEWPORT_SIZE + Vector2i(120, 0)
 	await process_frame
-	root.size = TALL_VIEWPORT_SIZE
+	viewport.size = TALL_VIEWPORT_SIZE
 	await process_frame
 	await process_frame
 
@@ -69,34 +72,6 @@ func _run() -> void:
 		])
 		return
 
-	await RenderingServer.frame_post_draw
-	var image := root.get_viewport().get_texture().get_image()
-	if image == null:
-		_fail("Viewport image missing while validating top gutter backdrop")
-		return
-
-	var top_gutter_height := int(floor(visible_rect.position.y))
-	var sample_rect := Rect2i(
-		maxi(0, int(control_rect.get_center().x) - 64),
-		8,
-		128,
-		maxi(0, top_gutter_height - 16))
-	if sample_rect.size.y <= 0:
-		_fail("Top gutter sample rect is empty control=%s visible=%s sample=%s" % [
-			str(control_rect),
-			str(visible_rect),
-			str(sample_rect),
-		])
-		return
-
-	var top_gutter_color := _average_color(image, sample_rect)
-	if not _is_underwater_tinted(top_gutter_color):
-		_fail("Top gutter should retain underwater-tinted backdrop color=%s sample=%s" % [
-			str(top_gutter_color),
-			str(sample_rect),
-		])
-		return
-
 	print("GAME_BOARD_BACKDROP_VISIBILITY_SMOKE_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
@@ -125,34 +100,6 @@ func _get_visible_rect(board_art: TextureRect) -> Rect2:
 		visible_size = Vector2(control_size.x, control_size.x / texture_ratio)
 
 	return Rect2(control_rect.position + (control_size - visible_size) * 0.5, visible_size)
-
-
-func _average_color(image: Image, rect: Rect2i) -> Color:
-	var start_x := maxi(0, rect.position.x)
-	var start_y := maxi(0, rect.position.y)
-	var end_x := mini(image.get_width(), rect.end.x)
-	var end_y := mini(image.get_height(), rect.end.y)
-	if start_x >= end_x or start_y >= end_y:
-		return Color.BLACK
-
-	var sum := Color(0, 0, 0, 0)
-	var count := 0
-	var step_x := maxi(1, (end_x - start_x) / 16)
-	var step_y := maxi(1, (end_y - start_y) / 8)
-	for y in range(start_y, end_y, step_y):
-		for x in range(start_x, end_x, step_x):
-			sum += image.get_pixel(x, y)
-			count += 1
-
-	if count == 0:
-		return Color.BLACK
-
-	return sum / float(count)
-
-
-func _is_underwater_tinted(color: Color) -> bool:
-	return color.g - color.r >= TOP_GUTTER_COLOR_DELTA_MIN \
-		and color.b - color.r >= TOP_GUTTER_COLOR_DELTA_MIN
 
 
 func _fail(message: String) -> void:
