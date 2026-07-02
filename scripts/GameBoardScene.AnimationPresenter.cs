@@ -197,7 +197,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			node.QueueFree();
+			node.Free();
 		}
 
 		public void ClearPools()
@@ -227,7 +227,7 @@ public partial class GameBoardScene
 			node.SetMeta(InPoolMeta, true);
 			if (pool.Count >= maxCount)
 			{
-				node.QueueFree();
+				node.Free();
 				return;
 			}
 

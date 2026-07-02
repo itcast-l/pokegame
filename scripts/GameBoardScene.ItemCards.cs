@@ -70,7 +70,7 @@ public partial class GameBoardScene
 			ClearNetworkPendingActionState();
 		}
 
-		ClearSelectionOverlay();
+		DisposeActiveSelectionOverlay();
 		ClearPendingItemSelectionState();
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
@@ -201,20 +201,20 @@ public partial class GameBoardScene
 				return false;
 			}
 
-			ClearSelectionOverlay();
-			ClearPendingItemSelectionState();
-			RenderPlayerHands();
-			SendBoardSnapshotIfHost();
+				DisposeActiveSelectionOverlay();
+				ClearPendingItemSelectionState();
+				RenderPlayerHands();
+				SendBoardSnapshotIfHost();
 			return true;
 		}
 		finally
 		{
-			if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
-				&& _pendingItemOwnerIndex == ownerPlayerIndex)
-			{
-				ClearSelectionOverlay();
-				ClearPendingItemSelectionState();
-			}
+				if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
+					&& _pendingItemOwnerIndex == ownerPlayerIndex)
+				{
+					DisposeActiveSelectionOverlay();
+					ClearPendingItemSelectionState();
+				}
 
 			_isProcessingCardPlay = wasProcessingCardPlay;
 			RenderPlayerHands();
@@ -223,7 +223,7 @@ public partial class GameBoardScene
 
 	private void ShowHandLimitDiscardSelection()
 	{
-		ClearSelectionOverlay();
+		DisposeActiveSelectionOverlay();
 		if (!IsMainPlayerHandLimitDiscardSelectionActive())
 		{
 			return;

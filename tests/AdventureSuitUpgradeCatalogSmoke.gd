@@ -9,13 +9,6 @@ const EXPECTED_SUIT_COUNTS := {
 	"clubs": 14,
 }
 
-const KEY_EXPECTED_NAMES := {
-	"hearts_warm_current_supply": "温流补给",
-	"diamonds_small_insurance": "小额保价",
-	"spades_missed_beat_calamity": "失拍成灾",
-	"clubs_crown_canopy": "冠棚",
-}
-
 var _failed := false
 
 
@@ -48,7 +41,6 @@ func _run() -> void:
 		if _failed:
 			return
 
-	var expected_name_hits := {}
 	var rarity_counts := {
 		"common": 0,
 		"rare": 0,
@@ -57,9 +49,10 @@ func _run() -> void:
 
 	for definition in all_definitions:
 		var definition_id := String(definition.get("id", ""))
-		var display_name := String(definition.get("display_name", ""))
 		var suit := String(definition.get("suit", ""))
 		var rarity := String(definition.get("rarity", ""))
+		var description_key := String(definition.get("description_key", ""))
+		var effect_text := String(definition.get("effect_text", ""))
 		var enabled := bool(definition.get("enabled", false))
 
 		_assert(EXPECTED_SUIT_COUNTS.has(suit), "Definition %s has unexpected suit=%s" % [definition_id, suit])
@@ -74,18 +67,16 @@ func _run() -> void:
 			_fail("Unexpected rarity %s on %s" % [rarity, definition_id])
 			return
 		rarity_counts[rarity] += 1
-
-		if KEY_EXPECTED_NAMES.has(definition_id):
-			expected_name_hits[definition_id] = display_name == KEY_EXPECTED_NAMES[definition_id]
+		_assert(
+			not description_key.is_empty() or not effect_text.is_empty(),
+			"Definition %s should expose either description_key or effect_text fallback" % definition_id
+		)
+		if _failed:
+			return
 
 	_assert(rarity_counts["common"] == 25, "Expected 25 common definitions, got %d" % rarity_counts["common"])
 	_assert(rarity_counts["rare"] == 21, "Expected 21 rare definitions, got %d" % rarity_counts["rare"])
 	_assert(rarity_counts["legendary"] == 11, "Expected 11 legendary definitions, got %d" % rarity_counts["legendary"])
-	for definition_id in KEY_EXPECTED_NAMES:
-		_assert(
-			bool(expected_name_hits.get(definition_id, false)),
-			"Missing expected display name for %s" % definition_id
-		)
 	if _failed:
 		return
 

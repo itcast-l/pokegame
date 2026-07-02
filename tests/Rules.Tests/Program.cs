@@ -30,7 +30,9 @@ internal static class Program
 		Run("adventure upgrade choice falls back when rolled rarity unavailable", AdventureUpgradeChoiceFallsBackWhenRolledRarityUnavailable);
 		Run("adventure upgrade choice returns remaining pool when below offer size", AdventureUpgradeChoiceReturnsRemainingPoolWhenBelowOfferSize);
 		Run("adventure upgrade trigger ordering prefers big capture before victory", AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory);
+		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
+		Run("game save progress roundtrips pending adventure run json", GameSaveProgressRoundTripsPendingAdventureRunJson);
 		Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
@@ -63,7 +65,9 @@ internal static class Program
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("adventure upgrade popup scene has no embedded image payloads", AdventureUpgradePopupSceneHasNoEmbeddedImagePayloads);
 		Run("adventure upgrade visual catalog exposes 12 processed card visuals", AdventureUpgradeVisualCatalogExposesTwelveProcessedCards);
+		Run("adventure upgrade visual catalog includes palette fields and rarity tier mappings", AdventureUpgradeVisualCatalogIncludesPaletteFieldsAndRarityTierMappings);
 		Run("adventure upgrade visual resolver returns atlas texture from catalog", AdventureUpgradeVisualResolverReturnsAtlasTextureFromCatalog);
+		Run("adventure upgrade visual resolver uses catalog rarity tier mappings", AdventureUpgradeVisualResolverUsesCatalogRarityTierMappings);
 		Run("adventure upgrade runtime no longer hardcodes popup art path switch tables", AdventureUpgradeRuntimeNoLongerHardcodesPopupArtSwitchTables);
 		Run("adventure upgrade preview script reads popup art metadata from catalog", AdventureUpgradePreviewScriptReadsPopupArtMetadataFromCatalog);
 		Run("adventure upgrade overlay sample art uses catalog keys instead of hardcoded atlas metadata", AdventureUpgradeOverlaySampleArtUsesCatalogKeysInsteadOfHardcodedAtlasMetadata);
@@ -527,6 +531,7 @@ internal static class Program
 	private static void AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory()
 	{
 		IReadOnlyList<AdventureUpgradeTriggerSource> triggerOrder = AdventureUpgradeTriggerRules.BuildTriggerOrder(
+			runStartTriggered: false,
 			bigCaptureTriggered: true,
 			victoryTriggered: true);
 
@@ -535,34 +540,62 @@ internal static class Program
 		Equal(AdventureUpgradeTriggerSource.Victory, triggerOrder[1]);
 	}
 
+	private static void AdventureUpgradeTriggerOrderingIncludesRunStartFirst()
+	{
+		IReadOnlyList<AdventureUpgradeTriggerSource> triggerOrder = AdventureUpgradeTriggerRules.BuildTriggerOrder(
+			runStartTriggered: true,
+			bigCaptureTriggered: true,
+			victoryTriggered: true);
+
+		Equal(3, triggerOrder.Count);
+		Equal(AdventureUpgradeTriggerSource.RunStart, triggerOrder[0]);
+		Equal(AdventureUpgradeTriggerSource.BigCapture, triggerOrder[1]);
+		Equal(AdventureUpgradeTriggerSource.Victory, triggerOrder[2]);
+	}
+
 	private static void AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds()
 	{
-		AdventureUpgradeRunState.Clear();
-		AdventureUpgradeRunState.BeginNewRun(avatarStageNumber: 3);
+		var runState = new AdventureUpgradeRunState();
+		runState.BeginNewRun(avatarStageNumber: 3);
 
-		True(AdventureUpgradeRunState.IsActive);
-		Equal(1, AdventureUpgradeRunState.CurrentRunStageIndex);
-		True(AdventureUpgradeRunState.ShouldGrantRunStartUpgrade);
-		True(AdventureUpgradeRunState.ShouldGrantVictoryUpgrade);
+		True(runState.IsActive);
+		Equal(1, runState.CurrentRunStageIndex);
+		True(runState.ShouldGrantRunStartUpgrade);
+		True(runState.ShouldGrantVictoryUpgrade);
 
-		AdventureUpgradeRunState.MarkRunStartUpgradeGranted();
-		AdventureUpgradeRunState.AcquireUpgrade("common_a");
-		False(AdventureUpgradeRunState.ShouldGrantRunStartUpgrade);
-		True(AdventureUpgradeRunState.HasAcquiredUpgrade("common_a"));
+		runState.MarkRunStartUpgradeGranted();
+		runState.AcquireUpgrade("common_a");
+		False(runState.ShouldGrantRunStartUpgrade);
+		True(runState.HasAcquiredUpgrade("common_a"));
 
-		AdventureUpgradeRunState.MarkVictoryUpgradeGranted();
-		False(AdventureUpgradeRunState.ShouldGrantVictoryUpgrade);
+		runState.MarkVictoryUpgradeGranted();
+		False(runState.ShouldGrantVictoryUpgrade);
 
-		AdventureUpgradeRunState.AdvanceToStage(avatarStageNumber: 4);
-		Equal(2, AdventureUpgradeRunState.CurrentRunStageIndex);
-		False(AdventureUpgradeRunState.ShouldGrantRunStartUpgrade);
-		True(AdventureUpgradeRunState.ShouldGrantVictoryUpgrade);
-		True(AdventureUpgradeRunState.HasAcquiredUpgrade("common_a"));
+		runState.AdvanceToStage(avatarStageNumber: 4);
+		Equal(2, runState.CurrentRunStageIndex);
+		False(runState.ShouldGrantRunStartUpgrade);
+		True(runState.ShouldGrantVictoryUpgrade);
+		True(runState.HasAcquiredUpgrade("common_a"));
 
-		AdventureUpgradeRunState.Clear();
-		False(AdventureUpgradeRunState.IsActive);
-		Equal(0, AdventureUpgradeRunState.CurrentRunStageIndex);
-		False(AdventureUpgradeRunState.HasAcquiredUpgrade("common_a"));
+		runState.Clear();
+		False(runState.IsActive);
+		Equal(0, runState.CurrentRunStageIndex);
+		False(runState.HasAcquiredUpgrade("common_a"));
+	}
+
+	private static void GameSaveProgressRoundTripsPendingAdventureRunJson()
+	{
+		const string pendingRunJson = "{\"CurrentAvatarStageNumber\":3}";
+		GameSaveStore.GameProgressData progress = GameSaveStore.GameProgressData.CreateDefault() with
+		{
+			PendingAdventureRunJson = pendingRunJson,
+		};
+
+		GameSaveStore.GameProgressData roundTripped = GameSaveStore.GameProgressData.FromDictionary(
+			progress.ToDictionary(),
+			GameSaveStore.GameProgressData.CreateDefault());
+
+		Equal(pendingRunJson, roundTripped.PendingAdventureRunJson);
 	}
 
 	private static void ResultPresentationUsesLocalSeatForNetworkDefeat()
@@ -1452,24 +1485,20 @@ internal static class Program
 
 		Equal(12, Regex.Matches(text, @"(?m)^\[sub_resource type=""Resource"" id=""Entry_").Count);
 
-		MatchCollection suits = Regex.Matches(text, @"(?m)^Suit = ""([^""]+)""$");
-		MatchCollection tiers = Regex.Matches(text, @"(?m)^Tier = ""([^""]+)""$");
-		MatchCollection texturePaths = Regex.Matches(text, @"(?m)^TexturePath = ""([^""]+)""$");
-		MatchCollection regions = Regex.Matches(text, @"(?m)^Region = Rect2\(([^)]+)\)$");
-		Equal(12, suits.Count);
-		Equal(12, tiers.Count);
-		Equal(12, texturePaths.Count);
-		Equal(12, regions.Count);
+		MatchCollection entryBlocks = Regex.Matches(
+			text,
+			@"(?ms)^\[sub_resource type=""Resource"" id=""Entry_[^""]+""\]\s+script = ExtResource\(""[^""]+""\)\s+Suit = ""([^""]+)""\s+Tier = ""([^""]+)""\s+TexturePath = ""([^""]+)""\s+Region = Rect2\(([^)]+)\)");
+		Equal(12, entryBlocks.Count);
 
 		var seenKeys = new HashSet<string>(StringComparer.Ordinal);
 		var seenSuits = new HashSet<string>(StringComparer.Ordinal);
 		var seenTiers = new HashSet<string>(StringComparer.Ordinal);
 
-		for (int index = 0; index < 12; index++)
+		for (int index = 0; index < entryBlocks.Count; index++)
 		{
-			string suit = suits[index].Groups[1].Value.Trim().ToLowerInvariant();
-			string tier = tiers[index].Groups[1].Value.Trim().ToLowerInvariant();
-			string texturePath = texturePaths[index].Groups[1].Value;
+			string suit = entryBlocks[index].Groups[1].Value.Trim().ToLowerInvariant();
+			string tier = entryBlocks[index].Groups[2].Value.Trim().ToLowerInvariant();
+			string texturePath = entryBlocks[index].Groups[3].Value;
 			True(seenKeys.Add($"{suit}::{tier}"));
 			seenSuits.Add(suit);
 			seenTiers.Add(tier);
@@ -1477,7 +1506,7 @@ internal static class Program
 			True(texturePath.StartsWith("res://generated-images/upgrade-popup-assets/", StringComparison.Ordinal));
 			True(texturePath.Contains("/processed/", StringComparison.Ordinal));
 
-			string[] regionParts = regions[index].Groups[1].Value.Split(',', StringSplitOptions.TrimEntries);
+			string[] regionParts = entryBlocks[index].Groups[4].Value.Split(',', StringSplitOptions.TrimEntries);
 			Equal(4, regionParts.Length);
 			True(float.TryParse(regionParts[2], out float width));
 			True(float.TryParse(regionParts[3], out float height));
@@ -1498,6 +1527,42 @@ internal static class Program
 		True(seenTiers.Contains("rare"));
 	}
 
+	private static void AdventureUpgradeVisualCatalogIncludesPaletteFieldsAndRarityTierMappings()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string catalogPath = Path.Combine(
+			repoRoot,
+			"resources",
+			"adventure_upgrades",
+			"visuals",
+			"adventure_upgrade_card_visual_catalog.tres");
+		True(File.Exists(catalogPath));
+		string text = File.ReadAllText(catalogPath);
+
+		Equal(12, Regex.Matches(text, @"(?m)^TitleColor = Color\(([^)]+)\)$").Count);
+		Equal(12, Regex.Matches(text, @"(?m)^GlowColor = Color\(([^)]+)\)$").Count);
+		Equal(12, Regex.Matches(text, @"(?m)^RuleColor = Color\(([^)]+)\)$").Count);
+
+		Equal(3, Regex.Matches(text, @"(?m)^\[sub_resource type=""Resource"" id=""RarityTier_").Count);
+
+		MatchCollection mappingBlocks = Regex.Matches(
+			text,
+			@"(?ms)^\[sub_resource type=""Resource"" id=""RarityTier_[^""]+""\]\s+script = ExtResource\(""[^""]+""\)\s+Rarity = ""([^""]+)""\s+Tier = ""([^""]+)""$");
+		Equal(3, mappingBlocks.Count);
+
+		var tierMappings = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (Match mappingBlock in mappingBlocks)
+		{
+			string rarity = mappingBlock.Groups[1].Value.Trim().ToLowerInvariant();
+			string mappedTier = mappingBlock.Groups[2].Value.Trim().ToLowerInvariant();
+			tierMappings[rarity] = mappedTier;
+		}
+
+		Equal("common", tierMappings["common"]);
+		Equal("uncommon", tierMappings["rare"]);
+		Equal("rare", tierMappings["legendary"]);
+	}
+
 	private static void AdventureUpgradeVisualResolverReturnsAtlasTextureFromCatalog()
 	{
 		string resolverPath = Path.Combine(FindRepositoryRoot(), "scripts", "AdventureUpgradeCardVisualResolver.cs");
@@ -1508,6 +1573,17 @@ internal static class Program
 		True(text.Contains("new AtlasTexture", StringComparison.Ordinal));
 		True(text.Contains("entry.Region", StringComparison.Ordinal));
 		True(text.Contains("entry.TexturePath", StringComparison.Ordinal));
+	}
+
+	private static void AdventureUpgradeVisualResolverUsesCatalogRarityTierMappings()
+	{
+		string resolverPath = Path.Combine(FindRepositoryRoot(), "scripts", "AdventureUpgradeCardVisualResolver.cs");
+		True(File.Exists(resolverPath));
+
+		string text = File.ReadAllText(resolverPath);
+		True(text.Contains("ResolveTier(", StringComparison.Ordinal));
+		True(text.Contains("LoadCatalog()", StringComparison.Ordinal));
+		True(text.Contains("catalog.ResolveTier", StringComparison.Ordinal));
 	}
 
 	private static void AdventureUpgradeRuntimeNoLongerHardcodesPopupArtSwitchTables()
@@ -1521,6 +1597,10 @@ internal static class Program
 		False(text.Contains("res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png", StringComparison.Ordinal));
 		False(text.Contains("res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png", StringComparison.Ordinal));
 		False(text.Contains("res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png", StringComparison.Ordinal));
+		False(text.Contains("MapAdventureUpgradeRarityToTextureTier(", StringComparison.Ordinal));
+		False(text.Contains("ApplyAdventureUpgradeChoicePalette(", StringComparison.Ordinal));
+		False(text.Contains("normalizedSuit == ", StringComparison.Ordinal));
+		False(text.Contains("normalizedRarity == ", StringComparison.Ordinal));
 	}
 
 	private static void AdventureUpgradePreviewScriptReadsPopupArtMetadataFromCatalog()

@@ -46,8 +46,8 @@ public partial class GameBoardScene
 		_bossKStealTriggersThisMatch = 0;
 		_bossKActiveControlUsedThisTurn = false;
 		_cardEventBus.Clear();
-		ClearSelectionOverlay();
-		ResetAdventureUpgradeBoardState();
+			DisposeActiveSelectionOverlay();
+			ResetAdventureUpgradeBoardState();
 		ClearPendingItemSelectionState();
 		InvalidateRenderCaches();
 		_isResolvingMagnetAttachmentSelection = false;

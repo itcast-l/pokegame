@@ -7,6 +7,7 @@ public partial class GameBoardScene
 	private bool _debugForceNextPendingTargetPlayerHeuristicFailure;
 	private bool _debugForceNextPendingTargetHandHeuristicFailure;
 	private bool _debugForceNextPendingHandLimitDiscardHeuristicFailure;
+	private bool _debugForceNextAdventureUpgradeOverlayDisplayFailure;
 	private double _debugNetworkVisualPlaybackDelaySeconds;
 
 	public bool DebugStartPendingHandLimitDiscardForSeat(int ownerPlayerIndex)
@@ -154,6 +155,11 @@ public partial class GameBoardScene
 		_debugForceNextPendingHandLimitDiscardHeuristicFailure = true;
 	}
 
+	public void DebugForceNextAdventureUpgradeOverlayDisplayFailure()
+	{
+		_debugForceNextAdventureUpgradeOverlayDisplayFailure = true;
+	}
+
 	public string DebugGetGameLoopPhaseName()
 	{
 		return GetGameLoopPhase().ToString();
@@ -288,37 +294,15 @@ public partial class GameBoardScene
 
 	public bool DebugIsAdventureUpgradeSelectionVisible()
 	{
-		return ((_selectionOverlay != null
-				&& GodotObject.IsInstanceValid(_selectionOverlay)
-				&& _selectionOverlay.IsVisibleInTree())
-			|| (_adventureUpgradeSelectionOverlay != null
-				&& GodotObject.IsInstanceValid(_adventureUpgradeSelectionOverlay)
-				&& _adventureUpgradeSelectionOverlay.IsVisibleInTree()))
+		return IsSelectionOverlayVisible(SelectionOverlayKind.AdventureUpgrade)
 			&& _adventureUpgradeSelectionCompletionSource != null;
 	}
 
 	public int DebugGetAdventureUpgradeOptionCount()
 	{
-		if (_adventureUpgradeSelectionCompletionSource != null
-			&& _adventureUpgradeSelectionOverlay != null
-			&& GodotObject.IsInstanceValid(_adventureUpgradeSelectionOverlay)
-			&& _adventureUpgradeSelectionOverlay.IsVisibleInTree())
-		{
-			int visibleCount = 0;
-			for (int optionIndex = 0; optionIndex < 3; optionIndex++)
-			{
-				Button button = _adventureUpgradeSelectionOverlay.GetNode<Button>($"Margin/Layout/CardsRow/Option{optionIndex + 1}Button");
-				if (button.Visible && !button.Disabled)
-				{
-					visibleCount++;
-				}
-			}
-
-			return visibleCount;
-		}
-
-		return _adventureUpgradeSelectionCompletionSource != null
-			? _selectionOverlayActions.Count
+		SelectionOverlaySession? session = GetActiveSelectionOverlaySession(SelectionOverlayKind.AdventureUpgrade);
+		return _adventureUpgradeSelectionCompletionSource != null && session != null
+			? session.OptionCount
 			: 0;
 	}
 
@@ -329,33 +313,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (_adventureUpgradeSelectionOverlay != null
-			&& GodotObject.IsInstanceValid(_adventureUpgradeSelectionOverlay)
-			&& _adventureUpgradeSelectionOverlay.IsVisibleInTree())
-		{
-			int optionCount = DebugGetAdventureUpgradeOptionCount();
-			if (optionIndex >= optionCount)
-			{
-				return false;
-			}
-
-			Button button = _adventureUpgradeSelectionOverlay.GetNode<Button>($"Margin/Layout/CardsRow/Option{optionIndex + 1}Button");
-			button.EmitSignal(BaseButton.SignalName.Pressed);
-			return true;
-		}
-
-		if (optionIndex >= _selectionOverlayActions.Count)
-		{
-			return false;
-		}
-
-		_selectionOverlayActions[optionIndex].Invoke();
-		return true;
+		return TrySelectActiveSelectionOverlayOption(SelectionOverlayKind.AdventureUpgrade, optionIndex);
 	}
 
 	public int DebugGetAdventureAcquiredUpgradeCount()
 	{
-		return AdventureUpgradeRunState.GetAcquiredUpgradeIds().Count;
+		return GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds().Count ?? 0;
 	}
 
 	public int DebugGetPendingAdventureUpgradeTriggerCount()
@@ -413,6 +376,17 @@ public partial class GameBoardScene
 		}
 
 		_debugForceNextPendingHandLimitDiscardHeuristicFailure = false;
+		return true;
+	}
+
+	private bool ConsumeDebugForceNextAdventureUpgradeOverlayDisplayFailure()
+	{
+		if (!_debugForceNextAdventureUpgradeOverlayDisplayFailure)
+		{
+			return false;
+		}
+
+		_debugForceNextAdventureUpgradeOverlayDisplayFailure = false;
 		return true;
 	}
 

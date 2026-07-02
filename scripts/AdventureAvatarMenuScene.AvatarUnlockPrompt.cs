@@ -167,6 +167,14 @@ public partial class AdventureAvatarMenuScene
 			"ADVENTURE_ENEMY_LIST_TITLE" => traditionalChinese ? "敵人" : simplifiedChinese ? "敌人" : "Enemies",
 			"ADVENTURE_TUTORIAL" => traditionalChinese ? "教學" : simplifiedChinese ? "教学" : "Tutorial",
 			"ADVENTURE_DEEP_TIDE_THRONE" => "深潮王座",
+			"ADVENTURE_RESUME_RUN_TITLE" => traditionalChinese ? "繼續未完成的強化旅程？" : simplifiedChinese ? "继续未完成的强化旅程？" : "Continue unfinished upgrade run?",
+			"ADVENTURE_RESUME_RUN_BODY" => traditionalChinese
+				? "偵測到目前存檔中有一條未完成的強化旅程。你可以繼續它，或放棄它並從目前選擇重新開始。"
+				: simplifiedChinese
+					? "检测到当前存档中有一条未完成的强化旅程。你可以继续它，或放弃它并从当前选择重新开始。"
+					: "This profile has an unfinished upgrade run. Continue it, or abandon it and restart from the current selection.",
+			"ADVENTURE_CONTINUE_RUN" => traditionalChinese ? "繼續" : simplifiedChinese ? "继续" : "Continue",
+			"ADVENTURE_RESTART_RUN" => traditionalChinese ? "重開" : simplifiedChinese ? "重开" : "Restart",
 			"AVATAR_UNLOCK_TITLE" => traditionalChinese ? "頭像已解鎖" : simplifiedChinese ? "头像已解锁" : "Avatar Unlocked",
 			"AVATAR_UNLOCK_MESSAGE" => traditionalChinese ? "獲得了 {0} 的頭像" : simplifiedChinese ? "获得了 {0} 的头像" : "You got {0}'s avatar",
 			"AVATAR_UNLOCK_CONFIRM" => traditionalChinese || simplifiedChinese ? "收下" : "Collect",

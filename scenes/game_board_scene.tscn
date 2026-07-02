@@ -9,7 +9,8 @@
 [ext_resource type="Script" uid="uid://cx5lmatxxhx6d" path="res://scripts/DraggableAvatarArea.cs" id="7_draggable_avatar_area"]
 [ext_resource type="Shader" uid="uid://bypnsrux3irf0" path="res://shaders/board_art_dynamics.gdshader" id="8_board_art_dynamics_shader"]
 [ext_resource type="Texture2D" uid="uid://5nv2x7ygpdhx" path="res://art/maps/underwater_card_table_ultrawide_backdrop_1536x1024.png" id="9_ultrawide_backdrop"]
-[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_vertical_backdrop_1920x1080.png" id="10_vertical_backdrop"]
+[ext_resource type="Texture2D" uid="uid://bluh0ayxp8buw" path="res://art/maps/underwater_card_table_vertical_backdrop_1920x1080.png" id="10_vertical_backdrop"]
+[ext_resource type="Script" path="res://scripts/GameBoardLayoutAreasEditorPreview.cs" id="11_layout_areas_editor_preview"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_board_art_dynamics"]
 shader = ExtResource("8_board_art_dynamics_shader")
@@ -50,6 +51,7 @@ grow_vertical = 2
 script = ExtResource("1_game_board_scene")
 
 [node name="UltraWideBackdrop" type="TextureRect" parent="." unique_id=1523489372]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -62,7 +64,6 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="VerticalBackdrop" type="TextureRect" parent="." unique_id=1124600215]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -75,6 +76,7 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
+visible = false
 material = SubResource("ShaderMaterial_board_art_dynamics")
 layout_mode = 1
 anchors_preset = 15
@@ -118,12 +120,14 @@ center_glint_count = 16
 
 [node name="LayoutAreas" type="Control" parent="." unique_id=193865572]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 0
+offset_top = 56.25
+offset_right = 1080.0
+offset_bottom = 663.75
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("11_layout_areas_editor_preview")
 
 [node name="Player1CardPileArea" type="Control" parent="LayoutAreas" unique_id=608670238]
 unique_name_in_owner = true
@@ -133,10 +137,10 @@ anchor_left = 0.6935
 anchor_top = 0.8515
 anchor_right = 0.6935
 anchor_bottom = 0.8515
-offset_left = -65.91199
-offset_top = -74.77197
-offset_right = 58.088013
-offset_bottom = 53.228027
+offset_left = -47.97998
+offset_top = -90.536255
+offset_right = 76.02002
+offset_bottom = 37.463745
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -160,10 +164,10 @@ anchor_left = 0.6935
 anchor_top = 0.153
 anchor_right = 0.6935
 anchor_bottom = 0.153
-offset_left = -93.91199
-offset_top = -97.144
-offset_right = 30.088013
-offset_bottom = 30.856003
+offset_left = -85.97998
+offset_top = -84.197495
+offset_right = 38.02002
+offset_bottom = 43.802505
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -187,10 +191,10 @@ anchor_left = 0.1867
 anchor_top = 0.5454
 anchor_right = 0.1867
 anchor_bottom = 0.5454
-offset_left = -127.0784
-offset_top = 39.58078
-offset_right = -3.0783997
-offset_bottom = 167.58078
+offset_left = -111.636
+offset_top = 45.419495
+offset_right = 12.363998
+offset_bottom = 173.4195
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -214,10 +218,10 @@ anchor_left = 0.8133
 anchor_top = 0.5454
 anchor_right = 0.8133
 anchor_bottom = 0.5454
-offset_left = 0.07836914
-offset_top = 43.58078
-offset_right = 124.07837
-offset_bottom = 171.58078
+offset_left = -6.3640137
+offset_top = 46.419495
+offset_right = 117.63599
+offset_bottom = 174.4195
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -241,10 +245,10 @@ anchor_left = 0.47936
 anchor_top = 0.8655
 anchor_right = 0.47936
 anchor_bottom = 0.8655
-offset_left = -194.72272
-offset_top = -82.343994
-offset_right = 165.27728
-offset_bottom = 47.656006
+offset_left = -181.7088
+offset_top = -91.04126
+offset_right = 178.2912
+offset_bottom = 38.95874
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -268,10 +272,10 @@ anchor_left = 0.47936
 anchor_top = 0.13462
 anchor_right = 0.47936
 anchor_bottom = 0.13462
-offset_left = -127.72272
-offset_top = -74.23376
-offset_right = 142.27728
-offset_bottom = 3.766243
+offset_left = -126.7088
+offset_top = -46.031647
+offset_right = 143.2912
+offset_bottom = 31.96836
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -295,10 +299,10 @@ anchor_left = 0.142
 anchor_top = 0.53
 anchor_right = 0.142
 anchor_bottom = 0.53
-offset_left = -46.0
-offset_top = -196.0
-offset_right = 46.0
-offset_bottom = 70.0
+offset_left = -51.36
+offset_top = -161.22498
+offset_right = 40.64
+offset_bottom = 104.775024
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -322,10 +326,10 @@ anchor_left = 0.858
 anchor_top = 0.53
 anchor_right = 0.858
 anchor_bottom = 0.53
-offset_left = -46.0
-offset_top = -196.0
-offset_right = 46.0
-offset_bottom = 70.0
+offset_left = -42.639954
+offset_top = -152.22498
+offset_right = 49.360046
+offset_bottom = 113.775024
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -388,12 +392,13 @@ anchor_left = 0.56
 anchor_top = 0.45
 anchor_right = 0.56
 anchor_bottom = 0.45
-offset_left = -138.12
-offset_top = -91.600006
-offset_right = -0.11999512
-offset_bottom = 76.399994
+offset_left = -131.79999
+offset_top = -95.0
+offset_right = 6.200012
+offset_bottom = 73.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(69, 84)
 mouse_filter = 2
 
 [node name="TopPlayerArea" type="Control" parent="LayoutAreas" unique_id=1388315151]
@@ -403,22 +408,26 @@ anchor_left = 0.242
 anchor_top = 0.052
 anchor_right = 0.758
 anchor_bottom = 0.205
+offset_left = -11.359985
+offset_top = 11.16
+offset_right = -11.359985
+offset_bottom = 11.160011
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="TopAvatarAnchor" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=1786079014]
-position = Vector2(120.216, 78.304)
+position = Vector2(107, 49)
 
 [node name="Player2AvatarArea" type="Control" parent="LayoutAreas/TopPlayerArea" unique_id=490703162]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
 anchors_preset = 0
-offset_left = 69.23999
-offset_top = -6.4400024
-offset_right = 225.23999
-offset_bottom = 149.56
+offset_left = 70.0
+offset_top = -6.0
+offset_right = 226.0
+offset_bottom = 150.0
 scale = Vector2(0.5, 0.5)
 mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
@@ -429,10 +438,10 @@ unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 61.23999
-offset_top = -14.440002
-offset_right = 153.23999
-offset_bottom = 77.56
+offset_left = 60.0
+offset_top = -14.0
+offset_right = 152.0
+offset_bottom = 78.0
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
@@ -441,7 +450,7 @@ circle_diameter = 70.0
 [node name="Player2ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=2097461514]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(107.23999, 48.559998)
+position = Vector2(107, 47)
 script = ExtResource("6_score_effect_target")
 
 [node name="BottomPlayerArea" type="Control" parent="LayoutAreas" unique_id=634798856]
@@ -451,26 +460,26 @@ anchor_left = 0.242
 anchor_top = 0.785
 anchor_right = 0.758
 anchor_bottom = 0.96
-offset_left = 4.2160034
-offset_top = -1.6800232
-offset_right = 4.2160034
-offset_bottom = -1.6800537
+offset_left = 8.640015
+offset_top = -9.137512
+offset_right = 8.640015
+offset_bottom = -9.137573
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="BottomAvatarAnchor" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1423675064]
-position = Vector2(116.216, 78.31995)
+position = Vector2(13, 42)
 
 [node name="Player1AvatarArea" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=299262318]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
 anchors_preset = 0
-offset_left = -26.976013
-offset_top = -14.52002
-offset_right = 129.02399
-offset_bottom = 141.47998
+offset_left = -28.0
+offset_top = -14.0
+offset_right = 128.0
+offset_bottom = 142.0
 scale = Vector2(0.5, 0.5)
 mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
@@ -503,22 +512,26 @@ anchor_left = 0.08
 anchor_top = 0.18
 anchor_right = 0.19
 anchor_bottom = 0.81
+offset_left = 0.5999985
+offset_top = 5.399994
+offset_right = 0.59999084
+offset_bottom = 5.3999634
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="LeftAvatarAnchor" type="Marker2D" parent="LayoutAreas/LeftPlayerArea" unique_id=539701425]
-position = Vector2(110, 82)
+position = Vector2(66, 67)
 
 [node name="Player3AvatarArea" type="Control" parent="LayoutAreas/LeftPlayerArea" unique_id=1073955881]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
 anchors_preset = 0
-offset_left = 23.600006
-offset_top = 14.400002
-offset_right = 179.6
-offset_bottom = 170.4
+offset_left = 24.0
+offset_top = 13.000008
+offset_right = 180.0
+offset_bottom = 169.0
 scale = Vector2(0.5, 0.5)
 mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
@@ -529,10 +542,10 @@ unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 17.600006
-offset_top = 7.4000015
-offset_right = 109.600006
-offset_bottom = 99.4
+offset_left = 17.0
+offset_top = 6.0000076
+offset_right = 109.0
+offset_bottom = 98.00001
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
@@ -551,22 +564,26 @@ anchor_left = 0.81
 anchor_top = 0.18
 anchor_right = 0.92
 anchor_bottom = 0.81
+offset_left = -21.799988
+offset_top = 3.399994
+offset_right = -21.799988
+offset_bottom = 3.3999634
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="RightAvatarAnchor" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=381356973]
-position = Vector2(110, 82)
+position = Vector2(72, 66)
 
 [node name="Player4AvatarArea" type="Control" parent="LayoutAreas/RightPlayerArea" unique_id=1459197906]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
 anchors_preset = 0
-offset_left = 33.19995
-offset_top = 15.400002
-offset_right = 189.19995
-offset_bottom = 171.4
+offset_left = 33.0
+offset_top = 16.000008
+offset_right = 189.0
+offset_bottom = 172.0
 scale = Vector2(0.5, 0.5)
 mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
@@ -577,10 +594,10 @@ unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 27.199951
-offset_top = 7.4000015
-offset_right = 119.19995
-offset_bottom = 99.4
+offset_left = 24.0
+offset_top = 6.0000076
+offset_right = 116.0
+offset_bottom = 98.00001
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
@@ -589,5 +606,5 @@ circle_diameter = 71.0
 [node name="Player4ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=369324978]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(74.19995, 72.399994)
+position = Vector2(71, 67)
 script = ExtResource("6_score_effect_target")

@@ -4,7 +4,6 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private static readonly Vector2 BoardDesignSize = new(1920.0f, 1080.0f);
 	private static readonly Vector2 OpponentHorizontalHandCardOffset = new(45, 0);
 	private static readonly Vector2 VerticalHandCardOffset = new(0, 35);
 
@@ -22,61 +21,36 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Rect2 boardArtRect = _boardArt.GetGlobalRect();
-		Rect2 boardVisibleRect = GetBoardArtVisibleRect();
-		bool hasHorizontalLetterboxing = boardVisibleRect.Size.X < boardArtRect.Size.X - 0.5f;
-		bool hasVerticalLetterboxing = boardVisibleRect.Size.Y < boardArtRect.Size.Y - 0.5f;
-		_ultraWideBackdrop.Visible = hasHorizontalLetterboxing;
-		_verticalBackdrop.Visible = hasVerticalLetterboxing && !hasHorizontalLetterboxing;
-
-		_layoutAreas.AnchorLeft = 0.0f;
-		_layoutAreas.AnchorTop = 0.0f;
-		_layoutAreas.AnchorRight = 0.0f;
-		_layoutAreas.AnchorBottom = 0.0f;
-		_layoutAreas.Position = boardVisibleRect.Position;
-		_layoutAreas.Size = boardVisibleRect.Size;
-
-		if (_questionCardTransformArea != null && GodotObject.IsInstanceValid(_questionCardTransformArea))
+		if (!GameBoardLayoutGeometry.TryBuildLayoutState(
+			_boardArt,
+			GameBoardLayoutGeometry.DefaultBoardDesignSize,
+			out GameBoardLayoutState state))
 		{
-			_questionCardTransformArea.PivotOffset = _questionCardTransformArea.Size / 2.0f;
+			return;
 		}
+
+		GameBoardLayoutGeometry.ApplyLayout(
+			state,
+			_boardArt,
+			_ultraWideBackdrop,
+			_verticalBackdrop,
+			_layoutAreas,
+			_questionCardTransformArea);
 	}
 
 	private Rect2 GetBoardArtVisibleRect()
 	{
-		if (_boardArt == null || !GodotObject.IsInstanceValid(_boardArt))
-		{
-			return new Rect2(Vector2.Zero, Size);
-		}
-
-		Rect2 boardRect = _boardArt.GetGlobalRect();
-		Vector2 textureSize = GetBoardArtTextureSize();
-		if (textureSize.X <= 0.0f || textureSize.Y <= 0.0f || boardRect.Size.X <= 0.0f || boardRect.Size.Y <= 0.0f)
-		{
-			return boardRect;
-		}
-
-		float textureAspect = textureSize.X / textureSize.Y;
-		float controlAspect = boardRect.Size.X / boardRect.Size.Y;
-		Vector2 visibleSize = controlAspect > textureAspect
-			? new Vector2(boardRect.Size.Y * textureAspect, boardRect.Size.Y)
-			: new Vector2(boardRect.Size.X, boardRect.Size.X / textureAspect);
-		Vector2 visiblePosition = boardRect.Position + (boardRect.Size - visibleSize) / 2.0f;
-		return new Rect2(visiblePosition, visibleSize);
+		return GameBoardLayoutGeometry.GetBoardArtVisibleRect(
+			_boardArt,
+			GameBoardLayoutGeometry.DefaultBoardDesignSize,
+			new Rect2(Vector2.Zero, Size));
 	}
 
 	private Vector2 GetBoardArtTextureSize()
 	{
-		if (_boardArt?.Texture != null)
-		{
-			Vector2 textureSize = _boardArt.Texture.GetSize();
-			if (textureSize.X > 0.0f && textureSize.Y > 0.0f)
-			{
-				return textureSize;
-			}
-		}
-
-		return BoardDesignSize;
+		return GameBoardLayoutGeometry.ResolveBoardArtTextureSize(
+			_boardArt,
+			GameBoardLayoutGeometry.DefaultBoardDesignSize);
 	}
 
 	private void CreatePlayerCardPiles()
@@ -328,7 +302,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdventureUpgradeRunState.AdvanceToStage(CharacterAvatarCatalog.GetAdventureStageNumber(nextAvatarId));
+		AdvanceAdventureUpgradeRunToStage(CharacterAvatarCatalog.GetAdventureStageNumber(nextAvatarId));
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
 	}
 
@@ -352,7 +326,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdventureUpgradeRunState.BeginNewRun(FirstMainAdventureAvatarStageNumber);
+		BeginAdventureUpgradeRun(FirstMainAdventureAvatarStageNumber);
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
 	}
 

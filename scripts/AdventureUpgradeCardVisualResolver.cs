@@ -10,6 +10,20 @@ public static class AdventureUpgradeCardVisualResolver
 	private static readonly Dictionary<string, AdventureUpgradeCardVisualEntryResource> EntryCache = new(StringComparer.Ordinal);
 	private static readonly Dictionary<string, Texture2D> AtlasTextureCache = new(StringComparer.Ordinal);
 
+	public static AdventureUpgradeCardVisualEntryResource? ResolveEntry(string suit, string rarity)
+	{
+		AdventureUpgradeCardVisualCatalogResource? catalog = LoadCatalog();
+		if (catalog == null)
+		{
+			return null;
+		}
+
+		string tier = catalog.ResolveTier(rarity);
+		return TryGetEntry(suit, tier, out AdventureUpgradeCardVisualEntryResource entry)
+			? entry
+			: null;
+	}
+
 	public static bool TryGetEntry(string suit, string tier, out AdventureUpgradeCardVisualEntryResource entry)
 	{
 		string key = BuildKey(suit, tier);
@@ -59,6 +73,18 @@ public static class AdventureUpgradeCardVisualResolver
 		};
 		AtlasTextureCache[key] = atlasTexture;
 		return atlasTexture;
+	}
+
+	public static Texture2D? LoadAtlasTextureForRarity(string suit, string rarity)
+	{
+		AdventureUpgradeCardVisualCatalogResource? catalog = LoadCatalog();
+		if (catalog == null)
+		{
+			return null;
+		}
+
+		string tier = catalog.ResolveTier(rarity);
+		return LoadAtlasTexture(suit, tier);
 	}
 
 	private static AdventureUpgradeCardVisualCatalogResource? LoadCatalog()

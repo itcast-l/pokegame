@@ -7,41 +7,80 @@ public partial class GameBoardScene
 {
 	private void CheckForWinner()
 	{
+		_ = CheckForWinnerAsync(_turnSequenceGeneration);
+	}
+
+	private async Task<bool> CheckForWinnerAsync(int turnSequenceGeneration, bool bigCaptureTriggered = false)
+	{
 		if (IsGameOver())
 		{
-			return;
+			return false;
+		}
+
+		if (bigCaptureTriggered)
+		{
+			await QueueAndResolveAdventureUpgradeTriggersAsync(
+				runStartTriggered: false,
+				bigCaptureTriggered: true,
+				victoryTriggered: false,
+				turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || _isLeavingGame || IsGameOver())
+			{
+				return false;
+			}
 		}
 
 		int scoreWinnerPlayerIndex = GetScoreWinnerPlayerIndex();
 		if (scoreWinnerPlayerIndex >= 0)
 		{
-			if (TryQueueAdventureVictoryUpgradeBeforeWinner(scoreWinnerPlayerIndex))
+			bool victoryTriggered = ShouldDelayWinnerForAdventureVictoryUpgrade(scoreWinnerPlayerIndex);
+			if (victoryTriggered)
 			{
-				return;
+				await QueueAndResolveAdventureUpgradeTriggersAsync(
+					runStartTriggered: false,
+					bigCaptureTriggered: false,
+					victoryTriggered: victoryTriggered,
+					turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration || _isLeavingGame)
+				{
+					return victoryTriggered;
+				}
+			}
+
+			if (victoryTriggered)
+			{
+				return true;
 			}
 
 			DeclareWinner(scoreWinnerPlayerIndex);
-			return;
+			return false;
 		}
 
-		Span<GameTurnRules.PlayerCardState> playerStates = stackalloc GameTurnRules.PlayerCardState[MaxPlayers];
-		BuildPlayerCardStates(playerStates);
-		if (GameTurnRules.TryGetSingleRemainingPlayer(playerStates, player_count, out int remainingPlayerIndex))
+		if (TryGetSingleRemainingPlayerIndex(out int remainingPlayerIndex))
 		{
 			DeclareWinner(remainingPlayerIndex);
 		}
+
+		return false;
 	}
 
 	private void BuildPlayerCardStates(Span<GameTurnRules.PlayerCardState> playerStates)
 	{
 		int checkedPlayerCount = Math.Min(player_count, playerStates.Length);
 		for (int playerIndex = 0; playerIndex < checkedPlayerCount; playerIndex++)
-		{
-			playerStates[playerIndex] = new GameTurnRules.PlayerCardState(
-				_playerHands[playerIndex].Count,
-				_playerDecks[playerIndex].Count,
-				HasPlayableItemCard(playerIndex));
+			{
+				playerStates[playerIndex] = new GameTurnRules.PlayerCardState(
+					_playerHands[playerIndex].Count,
+					_playerDecks[playerIndex].Count,
+					HasPlayableItemCard(playerIndex));
+			}
 		}
+
+	private bool TryGetSingleRemainingPlayerIndex(out int remainingPlayerIndex)
+	{
+		Span<GameTurnRules.PlayerCardState> playerStates = stackalloc GameTurnRules.PlayerCardState[MaxPlayers];
+		BuildPlayerCardStates(playerStates);
+		return GameTurnRules.TryGetSingleRemainingPlayer(playerStates, player_count, out remainingPlayerIndex);
 	}
 
 	private void ShowWinnerSequence(int playerIndex)
@@ -80,6 +119,10 @@ public partial class GameBoardScene
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{
 			CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);
+			if (ShouldUseAdventureUpgradeSystem() && !TryGetNextAdventureStageAvatarId(out _))
+			{
+				ClearAdventureUpgradeRun();
+			}
 		}
 
 		AdvanceTurnSequenceGeneration();

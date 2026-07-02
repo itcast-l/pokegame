@@ -43,7 +43,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 	public void ConfigureChoice(Texture2D? cardTexture, string title, string description, bool highlighted)
 	{
 		_cardTexture = cardTexture;
-		_title = title?.Trim() ?? string.Empty;
+		_title = string.Empty;
 		_description = description?.Trim() ?? string.Empty;
 		_highlighted = highlighted;
 		QueueRedraw();
@@ -82,6 +82,16 @@ public partial class AdventureUpgradeChoiceArt : Control
 		};
 	}
 
+	public string DebugGetTitleText()
+	{
+		return _title;
+	}
+
+	public string DebugGetDescriptionText()
+	{
+		return _description;
+	}
+
 	public override void _Draw()
 	{
 		if (Size.X <= 0.0f || Size.Y <= 0.0f)
@@ -115,20 +125,8 @@ public partial class AdventureUpgradeChoiceArt : Control
 				new Color(_glowColor.R, _glowColor.G, _glowColor.B, _glowColor.A * 0.58f));
 		}
 
-		Font headingFont = HeadingFont ?? ThemeDB.FallbackFont;
 		Font bodyFont = BodyFont ?? ThemeDB.FallbackFont;
-		const int headingFontSize = 13;
 		int bodyFontSize = GetDescriptionFontSize(_description);
-
-		Rect2 titleRect = new(Size.X * 0.19f, Size.Y * 0.028f, Size.X * 0.62f, Size.Y * 0.082f);
-		DrawEmbossedCenteredText(
-			headingFont,
-			headingFontSize,
-			_title,
-			titleRect,
-			_titleColor,
-			new Color(0, 0, 0, 0.58f),
-			new Color(_titleColor.R, _titleColor.G, _titleColor.B, 0.14f));
 
 		Rect2 descriptionRect = GetDescriptionBandRect();
 		DrawDescriptionWell(descriptionRect);

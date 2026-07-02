@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-public sealed partial class AdventureSuitUpgradeCatalog : Node
+public sealed class AdventureSuitUpgradeCatalog
 {
 	private const string CategoryId = "adventure_suit_upgrades";
 
@@ -53,16 +53,17 @@ public sealed partial class AdventureSuitUpgradeCatalog : Node
 				continue;
 			}
 
-			definitions.Add(new AdventureSuitUpgradeDefinition(
-				id,
-				entity.Call("get_entity_name").AsString(),
-				GetEntityString(entity, "suit"),
-				GetEntityString(entity, "rarity"),
-				GetEntityString(entity, "trigger_text"),
-				GetEntityString(entity, "effect_text"),
-				GetEntityString(entity, "notes"),
-				GetEntityBool(entity, "enabled"),
-				GetEntityInt(entity, "sort_order")));
+				definitions.Add(new AdventureSuitUpgradeDefinition(
+					id,
+					entity.Call("get_entity_name").AsString(),
+					GetEntityString(entity, "suit"),
+					GetEntityString(entity, "rarity"),
+					GetEntityString(entity, "trigger_text"),
+					GetEntityString(entity, "effect_text"),
+					GetEntityString(entity, "description_key", BuildDefaultDescriptionKey(id)),
+					GetEntityString(entity, "notes"),
+					GetEntityBool(entity, "enabled"),
+					GetEntityInt(entity, "sort_order")));
 		}
 
 		definitions.Sort((a, b) =>
@@ -116,9 +117,14 @@ public sealed partial class AdventureSuitUpgradeCatalog : Node
 
 	private static string GetEntityString(GodotObject entity, string propertyName)
 	{
+		return GetEntityString(entity, propertyName, string.Empty);
+	}
+
+	private static string GetEntityString(GodotObject entity, string propertyName, string fallbackValue)
+	{
 		return entity.Call("has_entity_property", propertyName).AsBool()
 			? entity.Call("get_string", propertyName).AsString()
-			: string.Empty;
+			: fallbackValue;
 	}
 
 	private static bool GetEntityBool(GodotObject entity, string propertyName)
@@ -143,5 +149,12 @@ public sealed partial class AdventureSuitUpgradeCatalog : Node
 		}
 
 		return array;
+	}
+
+	private static string BuildDefaultDescriptionKey(string id)
+	{
+		return string.IsNullOrWhiteSpace(id)
+			? string.Empty
+			: $"UPGRADE_DESC_{id.Trim().ToUpperInvariant()}";
 	}
 }

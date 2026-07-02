@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 
-internal static class AdventureUpgradeRunState
+internal sealed class AdventureUpgradeRunState
 {
-	private static readonly HashSet<string> AcquiredUpgradeIds = new(StringComparer.Ordinal);
+	private readonly HashSet<string> AcquiredUpgradeIds = new(StringComparer.Ordinal);
 
-	internal static bool IsActive { get; private set; }
-	internal static int CurrentAvatarStageNumber { get; private set; }
-	internal static int CurrentRunStageIndex { get; private set; }
-	internal static bool ShouldGrantRunStartUpgrade { get; private set; }
-	internal static bool ShouldGrantVictoryUpgrade { get; private set; }
+	internal bool IsActive { get; private set; }
+	internal int CurrentAvatarStageNumber { get; private set; }
+	internal int CurrentRunStageIndex { get; private set; }
+	internal bool ShouldGrantRunStartUpgrade { get; private set; }
+	internal bool ShouldGrantVictoryUpgrade { get; private set; }
 
-	internal static void BeginNewRun(int avatarStageNumber)
+	internal void BeginNewRun(int avatarStageNumber)
 	{
 		Clear();
 		if (!AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber))
@@ -26,7 +26,7 @@ internal static class AdventureUpgradeRunState
 		ShouldGrantVictoryUpgrade = true;
 	}
 
-	internal static void AdvanceToStage(int avatarStageNumber)
+	internal void AdvanceToStage(int avatarStageNumber)
 	{
 		if (!IsActive)
 		{
@@ -45,17 +45,17 @@ internal static class AdventureUpgradeRunState
 		ShouldGrantVictoryUpgrade = true;
 	}
 
-	internal static void MarkRunStartUpgradeGranted()
+	internal void MarkRunStartUpgradeGranted()
 	{
 		ShouldGrantRunStartUpgrade = false;
 	}
 
-	internal static void MarkVictoryUpgradeGranted()
+	internal void MarkVictoryUpgradeGranted()
 	{
 		ShouldGrantVictoryUpgrade = false;
 	}
 
-	internal static void AcquireUpgrade(string upgradeId)
+	internal void AcquireUpgrade(string upgradeId)
 	{
 		if (string.IsNullOrWhiteSpace(upgradeId))
 		{
@@ -65,17 +65,48 @@ internal static class AdventureUpgradeRunState
 		AcquiredUpgradeIds.Add(upgradeId.Trim());
 	}
 
-	internal static bool HasAcquiredUpgrade(string upgradeId)
+	internal bool HasAcquiredUpgrade(string upgradeId)
 	{
 		return !string.IsNullOrWhiteSpace(upgradeId) && AcquiredUpgradeIds.Contains(upgradeId.Trim());
 	}
 
-	internal static IReadOnlyCollection<string> GetAcquiredUpgradeIds()
+	internal IReadOnlyCollection<string> GetAcquiredUpgradeIds()
 	{
 		return AcquiredUpgradeIds;
 	}
 
-	internal static void Clear()
+	internal AdventureUpgradeRunSnapshot ToSnapshot()
+	{
+		return new AdventureUpgradeRunSnapshot(
+			AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
+			CurrentAvatarStageNumber,
+			CurrentRunStageIndex,
+			ShouldGrantRunStartUpgrade,
+			ShouldGrantVictoryUpgrade,
+			new List<string>(AcquiredUpgradeIds));
+	}
+
+	internal void RestoreFromSnapshot(AdventureUpgradeRunSnapshot snapshot)
+	{
+		Clear();
+		if (snapshot.SchemaVersion != AdventureUpgradeRunSnapshot.CurrentSchemaVersion
+			|| !AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(snapshot.CurrentAvatarStageNumber))
+		{
+			return;
+		}
+
+		IsActive = true;
+		CurrentAvatarStageNumber = snapshot.CurrentAvatarStageNumber;
+		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndex(snapshot.CurrentAvatarStageNumber);
+		ShouldGrantRunStartUpgrade = snapshot.ShouldGrantRunStartUpgrade;
+		ShouldGrantVictoryUpgrade = snapshot.ShouldGrantVictoryUpgrade;
+		foreach (string upgradeId in snapshot.AcquiredUpgradeIds)
+		{
+			AcquireUpgrade(upgradeId);
+		}
+	}
+
+	internal void Clear()
 	{
 		IsActive = false;
 		CurrentAvatarStageNumber = 0;

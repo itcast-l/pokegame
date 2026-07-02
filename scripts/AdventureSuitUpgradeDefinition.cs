@@ -9,6 +9,7 @@ public readonly struct AdventureSuitUpgradeDefinition
 		string rarity,
 		string triggerText,
 		string effectText,
+		string descriptionKey,
 		string notes,
 		bool enabled,
 		int sortOrder)
@@ -19,6 +20,7 @@ public readonly struct AdventureSuitUpgradeDefinition
 		Rarity = rarity;
 		TriggerText = triggerText;
 		EffectText = effectText;
+		DescriptionKey = descriptionKey;
 		Notes = notes;
 		Enabled = enabled;
 		SortOrder = sortOrder;
@@ -30,6 +32,7 @@ public readonly struct AdventureSuitUpgradeDefinition
 	public string Rarity { get; }
 	public string TriggerText { get; }
 	public string EffectText { get; }
+	public string DescriptionKey { get; }
 	public string Notes { get; }
 	public bool Enabled { get; }
 	public int SortOrder { get; }
@@ -40,13 +43,14 @@ public readonly struct AdventureSuitUpgradeDefinition
 		{
 			["id"] = Id,
 			["display_name"] = DisplayName,
-			["suit"] = Suit,
-			["rarity"] = Rarity,
-			["trigger_text"] = TriggerText,
-			["effect_text"] = EffectText,
-			["notes"] = Notes,
-			["enabled"] = Enabled,
-			["sort_order"] = SortOrder,
-		};
+				["suit"] = Suit,
+				["rarity"] = Rarity,
+				["trigger_text"] = TriggerText,
+				["effect_text"] = EffectText,
+				["description_key"] = DescriptionKey,
+				["notes"] = Notes,
+				["enabled"] = Enabled,
+				["sort_order"] = SortOrder,
+			};
 	}
 }

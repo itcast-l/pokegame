@@ -16,12 +16,14 @@
     <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
     <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />
     <Compile Include="../../scripts/AdventureUpgradeChoiceRules.cs" Link="Rules/AdventureUpgradeChoiceRules.cs" />
+    <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunState.cs" Link="Rules/AdventureUpgradeRunState.cs" />
     <Compile Include="../../scripts/AdventureUpgradeTriggerRules.cs" Link="Rules/AdventureUpgradeTriggerRules.cs" />
     <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
     <Compile Include="../../scripts/CardVisualTuningRules.cs" Link="Rules/CardVisualTuningRules.cs" />
     <Compile Include="../../scripts/ItemCardEffectSupport.cs" Link="Rules/ItemCardEffectSupport.cs" />
     <Compile Include="../../scripts/AttachmentSelectionPreviewRules.cs" Link="Rules/AttachmentSelectionPreviewRules.cs" />
+    <Compile Include="../../scripts/GameSaveStore.cs" Link="Rules/GameSaveStore.cs" />
     <Compile Include="../../scripts/MainMenuBubbleMotionRules.cs" Link="Rules/MainMenuBubbleMotionRules.cs" />
     <Compile Include="../../scripts/PotentialCaptureRules.cs" Link="Rules/PotentialCaptureRules.cs" />
     <Compile Include="../../scripts/EnemyAiRules.cs" Link="Rules/EnemyAiRules.cs" />

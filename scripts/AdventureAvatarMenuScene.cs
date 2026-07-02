@@ -44,12 +44,20 @@ public partial class AdventureAvatarMenuScene : Control
 	private Tween? _levelScrollTween;
 	private Tween? _avatarUnlockPromptTween;
 	private GameAudioManager? _gameAudio;
+	private AdventureRunSessionStore? _adventureRunSessionStore;
+	private Control? _runResumeDialogRoot;
+	private Label? _runResumeTitleLabel;
+	private Label? _runResumeBodyLabel;
+	private Button? _runResumeContinueButton;
+	private Button? _runResumeRestartButton;
+	private Button? _runResumeCancelButton;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
 	private string _selectedAdventureId = TutorialAdventureId;
 	private bool _isReturningToMainMenu;
 	private bool _isStartingAdventure;
 	private bool _isShowingAvatarUnlockPrompt;
+	private bool _isShowingRunResumeDialog;
 
 	[Export]
 	public string selected_avatar_id { get; set; } = string.Empty;
@@ -59,6 +67,7 @@ public partial class AdventureAvatarMenuScene : Control
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		MouseFilter = MouseFilterEnum.Ignore;
+		GetAdventureRunSessionStore()?.ReloadFromActiveProfile();
 
 		BindUi();
 		_levelScrollTarget = 0;

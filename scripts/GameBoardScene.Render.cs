@@ -160,7 +160,7 @@ public partial class GameBoardScene
 	private static void RemoveAndQueueFreeChild(Node parent, Node child)
 	{
 		parent.RemoveChild(child);
-		child.QueueFree();
+		child.Free();
 	}
 
 	private static Vector2 GetCardPileCardLocalPosition(int visibleCards, int cardIndex)

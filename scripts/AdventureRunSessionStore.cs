@@ -1,0 +1,105 @@
+using Godot;
+using System;
+using System.Text.Json;
+
+public sealed partial class AdventureRunSessionStore : Node
+{
+	private readonly AdventureUpgradeRunState _runState = new();
+
+	public bool HasActiveRun => _runState.IsActive;
+
+	public override void _Ready()
+	{
+		ReloadFromActiveProfile();
+	}
+
+	internal AdventureUpgradeRunState GetRunState()
+	{
+		return _runState;
+	}
+
+	internal bool TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot)
+	{
+		if (!_runState.IsActive)
+		{
+			snapshot = default;
+			return false;
+		}
+
+		snapshot = _runState.ToSnapshot();
+		return true;
+	}
+
+	internal void BeginNewRun(int avatarStageNumber)
+	{
+		_runState.BeginNewRun(avatarStageNumber);
+		Persist();
+	}
+
+	internal void AdvanceToStage(int avatarStageNumber)
+	{
+		_runState.AdvanceToStage(avatarStageNumber);
+		Persist();
+	}
+
+	internal void MarkRunStartUpgradeGranted()
+	{
+		_runState.MarkRunStartUpgradeGranted();
+		Persist();
+	}
+
+	internal void MarkVictoryUpgradeGranted()
+	{
+		_runState.MarkVictoryUpgradeGranted();
+		Persist();
+	}
+
+	internal void AcquireUpgrade(string upgradeId)
+	{
+		_runState.AcquireUpgrade(upgradeId);
+		Persist();
+	}
+
+	internal void ClearRun()
+	{
+		_runState.Clear();
+		Persist();
+	}
+
+	internal void ReloadFromActiveProfile()
+	{
+		_runState.Clear();
+		string json = GameSaveStore.LoadActiveProfile().PendingAdventureRunJson;
+		if (string.IsNullOrWhiteSpace(json))
+		{
+			return;
+		}
+
+		try
+		{
+			AdventureUpgradeRunSnapshot snapshot = JsonSerializer.Deserialize<AdventureUpgradeRunSnapshot>(json);
+			_runState.RestoreFromSnapshot(snapshot);
+		}
+		catch (Exception error)
+		{
+			GD.PushWarning($"Failed to restore adventure upgrade run session: {error.Message}");
+			_runState.Clear();
+		}
+	}
+
+	private void Persist()
+	{
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		string json = _runState.IsActive
+			? JsonSerializer.Serialize(_runState.ToSnapshot())
+			: string.Empty;
+		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		{
+			PendingAdventureRunJson = json,
+		});
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to persist adventure upgrade run session: {saveResult}");
+		}
+	}
+}

@@ -17,8 +17,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if ((_selectionOverlay != null && GodotObject.IsInstanceValid(_selectionOverlay) && _selectionOverlay.IsVisibleInTree())
-			|| (_adventureUpgradeSelectionOverlay != null && GodotObject.IsInstanceValid(_adventureUpgradeSelectionOverlay) && _adventureUpgradeSelectionOverlay.IsVisibleInTree()))
+		if (HasVisibleSelectionOverlay())
 		{
 			return false;
 		}

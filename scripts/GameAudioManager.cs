@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -160,7 +161,9 @@ public partial class GameAudioManager : Node
 	private readonly Dictionary<string, ulong> _lastPlayedAt = new();
 	private readonly HashSet<string> _missingWarningIds = new();
 	private readonly HashSet<string> _missingMusicWarningIds = new();
+	private readonly Dictionary<ulong, Action> _sfxFinishedHandlers = new();
 	private readonly Stack<AudioStreamPlayer> _sfxPlayerPool = new();
+	private readonly List<Tween> _ownedAudioTweens = new();
 	private readonly RandomNumberGenerator _rng = new();
 	private string _soundBus = FallbackSoundBus;
 	private string _musicBus = FallbackMusicBus;
@@ -195,18 +198,24 @@ public partial class GameAudioManager : Node
 	public void DisposeAllAudioImmediately()
 	{
 		_gameplayTensionEnabled = false;
+		StopOwnedAudioTweens();
 		DisposeAllAudioPlayers();
+		_musicPlayer = null;
+		_ambiencePlayer = null;
+		_tensionPlayer = null;
 		_sfxPlayerPool.Clear();
 		_streamCache.Clear();
 		_musicStreamCache.Clear();
 		_lastPlayedAt.Clear();
 		_missingWarningIds.Clear();
 		_missingMusicWarningIds.Clear();
+		_sfxFinishedHandlers.Clear();
 		_currentMusicId = string.Empty;
 		_currentMusicSpec = null;
-		_musicPlayer = null;
-		_ambiencePlayer = null;
-		_tensionPlayer = null;
+		WaitForAudioServerFlush();
+		GC.Collect();
+		GC.WaitForPendingFinalizers();
+		GC.Collect();
 	}
 
 	public void PlaySfx(
@@ -350,7 +359,9 @@ public partial class GameAudioManager : Node
 			Bus = _soundBus,
 		};
 		ulong playerId = player.GetInstanceId();
-		player.Finished += () => RecycleSfxPlayerById(playerId);
+		Action recycleHandler = () => RecycleSfxPlayerById(playerId);
+		_sfxFinishedHandlers[playerId] = recycleHandler;
+		player.Finished += recycleHandler;
 		AddChild(player);
 		return player;
 	}
@@ -785,7 +796,7 @@ public partial class GameAudioManager : Node
 			return;
 		}
 
-		Tween tween = CreateTween();
+		Tween tween = CreateOwnedAudioTween();
 		tween.TweenProperty(livePlayer, "volume_db", volumeDb, fadeSeconds)
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.Out);
@@ -806,7 +817,7 @@ public partial class GameAudioManager : Node
 		}
 
 		ulong playerId = livePlayer.GetInstanceId();
-		Tween tween = CreateTween();
+		Tween tween = CreateOwnedAudioTween();
 		tween.TweenProperty(livePlayer, "volume_db", MutedVolumeDb, fadeSeconds)
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.In);
@@ -853,6 +864,43 @@ public partial class GameAudioManager : Node
 		return GodotObject.InstanceFromId(playerId) as AudioStreamPlayer;
 	}
 
+	private Tween CreateOwnedAudioTween()
+	{
+		Tween tween = CreateTween();
+		_ownedAudioTweens.Add(tween);
+		ulong tweenId = tween.GetInstanceId();
+		tween.Finished += () => ForgetOwnedAudioTween(tweenId);
+		return tween;
+	}
+
+	private void ForgetOwnedAudioTween(ulong tweenId)
+	{
+		Tween? tween = GodotObject.InstanceFromId(tweenId) as Tween;
+		if (tween != null)
+		{
+			_ownedAudioTweens.Remove(tween);
+		}
+	}
+
+	private void StopOwnedAudioTweens()
+	{
+		foreach (Tween tween in new List<Tween>(_ownedAudioTweens))
+		{
+			if (GodotObject.IsInstanceValid(tween))
+			{
+				tween.Kill();
+			}
+		}
+
+		_ownedAudioTweens.Clear();
+	}
+
+	private static void WaitForAudioServerFlush()
+	{
+		double flushSeconds = Math.Max(0.1, AudioServer.GetTimeToNextMix() + AudioServer.GetOutputLatency() + 0.02);
+		OS.DelayMsec((int)Math.Ceiling(flushSeconds * 1000.0));
+	}
+
 	private void DisposeAudioPlayerById(ulong playerId)
 	{
 		DisposeAudioPlayer(GetAudioPlayerById(playerId));
@@ -877,6 +925,28 @@ public partial class GameAudioManager : Node
 		}
 
 		AudioStreamPlayer livePlayer = player!;
+		ulong playerId = livePlayer.GetInstanceId();
+		if (_sfxFinishedHandlers.TryGetValue(playerId, out Action? recycleHandler))
+		{
+			livePlayer.Finished -= recycleHandler;
+			_sfxFinishedHandlers.Remove(playerId);
+		}
+
+		if (ReferenceEquals(livePlayer, _musicPlayer))
+		{
+			_musicPlayer = null;
+		}
+
+		if (ReferenceEquals(livePlayer, _ambiencePlayer))
+		{
+			_ambiencePlayer = null;
+		}
+
+		if (ReferenceEquals(livePlayer, _tensionPlayer))
+		{
+			_tensionPlayer = null;
+		}
+
 		livePlayer.Stop();
 		livePlayer.Stream = null;
 		livePlayer.GetParent()?.RemoveChild(livePlayer);

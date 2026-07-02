@@ -6,6 +6,7 @@ using System.Collections.Generic;
 public partial class AdventureUpgradeCardVisualCatalogResource : Resource
 {
 	[Export] public Godot.Collections.Array<AdventureUpgradeCardVisualEntryResource> Entries { get; set; } = new();
+	[Export] public Godot.Collections.Array<AdventureUpgradeRarityTierMappingResource> RarityTierMappings { get; set; } = new();
 
 	public IReadOnlyList<AdventureUpgradeCardVisualEntryResource> GetSortedEntries()
 	{
@@ -38,6 +39,24 @@ public partial class AdventureUpgradeCardVisualCatalogResource : Resource
 		}
 
 		return null;
+	}
+
+	public string ResolveTier(string rarity)
+	{
+		string normalizedRarity = Normalize(rarity);
+		foreach (AdventureUpgradeRarityTierMappingResource mapping in RarityTierMappings)
+		{
+			if (mapping != null && Normalize(mapping.Rarity) == normalizedRarity)
+			{
+				string mappedTier = Normalize(mapping.Tier);
+				if (!string.IsNullOrWhiteSpace(mappedTier))
+				{
+					return mappedTier;
+				}
+			}
+		}
+
+		return normalizedRarity;
 	}
 
 	private static string Normalize(string value)

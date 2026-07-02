@@ -117,6 +117,7 @@ alignment = 1
 theme_override_constants/separation = 10
 
 [node name="Header" type="VBoxContainer" parent="Margin/Layout"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 4
 

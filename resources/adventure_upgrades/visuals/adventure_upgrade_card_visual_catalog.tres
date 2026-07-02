@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="AdventureUpgradeCardVisualCatalogResource" load_steps=14 format=3]
+[gd_resource type="Resource" script_class="AdventureUpgradeCardVisualCatalogResource" format=3 uid="uid://uk7finewo5ig"]
 
-[ext_resource type="Script" path="res://scripts/AdventureUpgradeCardVisualCatalogResource.cs" id="1_catalog_script"]
-[ext_resource type="Script" path="res://scripts/AdventureUpgradeCardVisualEntryResource.cs" id="2_entry_script"]
+[ext_resource type="Script" uid="uid://cel78vcdne1ao" path="res://scripts/AdventureUpgradeCardVisualCatalogResource.cs" id="1_catalog_script"]
+[ext_resource type="Script" uid="uid://cbej61d8bwtpm" path="res://scripts/AdventureUpgradeCardVisualEntryResource.cs" id="2_entry_script"]
+[ext_resource type="Script" uid="uid://cquqv0m6xjov4" path="res://scripts/AdventureUpgradeRarityTierMappingResource.cs" id="3_rarity_tier_script"]
 
 [sub_resource type="Resource" id="Entry_hearts_common"]
 script = ExtResource("2_entry_script")
@@ -9,6 +10,7 @@ Suit = "hearts"
 Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png"
 Region = Rect2(291, 58, 671, 1097)
+TitleColor = Color(0.9354, 0.9492, 0.9748, 0.9918)
 SortOrder = 10
 PreviewLabel = "hearts/common"
 
@@ -18,6 +20,9 @@ Suit = "hearts"
 Tier = "uncommon"
 TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-uncommon.png"
 Region = Rect2(291, 58, 671, 1097)
+TitleColor = Color(0.8944, 0.9656, 0.9338, 0.9918)
+GlowColor = Color(0.32, 0.98, 0.82, 0.07)
+RuleColor = Color(0.95, 0.92, 0.7, 0.09)
 SortOrder = 20
 PreviewLabel = "hearts/uncommon"
 
@@ -27,6 +32,9 @@ Suit = "hearts"
 Tier = "rare"
 TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-rare.png"
 Region = Rect2(291, 58, 671, 1097)
+TitleColor = Color(0.96, 0.8836, 0.9748, 0.9918)
+GlowColor = Color(0.72, 0.42, 1, 0.08)
+RuleColor = Color(0.94, 0.8, 1, 0.1)
 SortOrder = 30
 PreviewLabel = "hearts/rare"
 
@@ -36,6 +44,7 @@ Suit = "spades"
 Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png"
 Region = Rect2(290, 32, 673, 1167)
+TitleColor = Color(0.9225, 0.955, 1, 0.9925)
 SortOrder = 40
 PreviewLabel = "spades/common"
 
@@ -45,6 +54,9 @@ Suit = "spades"
 Tier = "uncommon"
 TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-uncommon.png"
 Region = Rect2(290, 32, 673, 1167)
+TitleColor = Color(0.885, 0.97, 0.9625, 0.9925)
+GlowColor = Color(0.32, 0.98, 0.82, 0.07)
+RuleColor = Color(0.95, 0.92, 0.7, 0.09)
 SortOrder = 50
 PreviewLabel = "spades/uncommon"
 
@@ -54,6 +66,9 @@ Suit = "spades"
 Tier = "rare"
 TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-rare.png"
 Region = Rect2(290, 32, 673, 1167)
+TitleColor = Color(0.945, 0.895, 1, 0.9925)
+GlowColor = Color(0.72, 0.42, 1, 0.08)
+RuleColor = Color(0.94, 0.8, 1, 0.1)
 SortOrder = 60
 PreviewLabel = "spades/rare"
 
@@ -63,6 +78,7 @@ Suit = "diamonds"
 Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png"
 Region = Rect2(296, 42, 659, 1156)
+TitleColor = Color(0.9344, 0.9512, 0.9692, 0.9922)
 SortOrder = 70
 PreviewLabel = "diamonds/common"
 
@@ -72,6 +88,9 @@ Suit = "diamonds"
 Tier = "uncommon"
 TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-uncommon.png"
 Region = Rect2(296, 42, 659, 1156)
+TitleColor = Color(0.8954, 0.9668, 0.9302, 0.9922)
+GlowColor = Color(0.32, 0.98, 0.82, 0.07)
+RuleColor = Color(0.95, 0.92, 0.7, 0.09)
 SortOrder = 80
 PreviewLabel = "diamonds/uncommon"
 
@@ -81,6 +100,9 @@ Suit = "diamonds"
 Tier = "rare"
 TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-rare.png"
 Region = Rect2(296, 42, 659, 1156)
+TitleColor = Color(0.9578, 0.8888, 0.9692, 0.9922)
+GlowColor = Color(0.72, 0.42, 1, 0.08)
+RuleColor = Color(0.94, 0.8, 1, 0.1)
 SortOrder = 90
 PreviewLabel = "diamonds/rare"
 
@@ -90,6 +112,7 @@ Suit = "clubs"
 Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png"
 Region = Rect2(291, 53, 670, 1106)
+TitleColor = Color(0.916, 0.964, 0.984, 0.992)
 SortOrder = 100
 PreviewLabel = "clubs/common"
 
@@ -99,6 +122,9 @@ Suit = "clubs"
 Tier = "uncommon"
 TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-uncommon.png"
 Region = Rect2(291, 53, 670, 1106)
+TitleColor = Color(0.876, 0.98, 0.944, 0.992)
+GlowColor = Color(0.32, 0.98, 0.82, 0.07)
+RuleColor = Color(0.95, 0.92, 0.7, 0.09)
 SortOrder = 110
 PreviewLabel = "clubs/uncommon"
 
@@ -108,9 +134,28 @@ Suit = "clubs"
 Tier = "rare"
 TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-rare.png"
 Region = Rect2(291, 53, 670, 1106)
+TitleColor = Color(0.94, 0.9, 0.984, 0.992)
+GlowColor = Color(0.72, 0.42, 1, 0.08)
+RuleColor = Color(0.94, 0.8, 1, 0.1)
 SortOrder = 120
 PreviewLabel = "clubs/rare"
+
+[sub_resource type="Resource" id="RarityTier_common"]
+script = ExtResource("3_rarity_tier_script")
+Rarity = "common"
+Tier = "common"
+
+[sub_resource type="Resource" id="RarityTier_rare"]
+script = ExtResource("3_rarity_tier_script")
+Rarity = "rare"
+Tier = "uncommon"
+
+[sub_resource type="Resource" id="RarityTier_legendary"]
+script = ExtResource("3_rarity_tier_script")
+Rarity = "legendary"
+Tier = "rare"
 
 [resource]
 script = ExtResource("1_catalog_script")
 Entries = Array[ExtResource("2_entry_script")]([SubResource("Entry_hearts_common"), SubResource("Entry_hearts_uncommon"), SubResource("Entry_hearts_rare"), SubResource("Entry_spades_common"), SubResource("Entry_spades_uncommon"), SubResource("Entry_spades_rare"), SubResource("Entry_diamonds_common"), SubResource("Entry_diamonds_uncommon"), SubResource("Entry_diamonds_rare"), SubResource("Entry_clubs_common"), SubResource("Entry_clubs_uncommon"), SubResource("Entry_clubs_rare")])
+RarityTierMappings = Array[ExtResource("3_rarity_tier_script")]([SubResource("RarityTier_common"), SubResource("RarityTier_rare"), SubResource("RarityTier_legendary")])

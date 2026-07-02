@@ -1,7 +1,67 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://de1hm5bj8p61c"]
 
-[ext_resource type="Script" path="res://scripts/UpgradeChoicePopupPreview.gd" id="1"]
-[ext_resource type="FontFile" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="2"]
+[ext_resource type="Script" uid="uid://dqymkognodm25" path="res://scripts/UpgradeChoicePopupPreview.gd" id="1"]
+[ext_resource type="FontFile" uid="uid://c4mm3of2mc8o5" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="2"]
+[ext_resource type="Texture2D" uid="uid://08ej47b3hu10" path="res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png" id="3_suuet"]
+[ext_resource type="Texture2D" uid="uid://c3ugmq4ip8icd" path="res://generated-images/upgrade-popup-assets/hearts/processed/hearts-uncommon.png" id="4_rxmgg"]
+[ext_resource type="Texture2D" uid="uid://dg2lgbuv6de7q" path="res://generated-images/upgrade-popup-assets/hearts/processed/hearts-rare.png" id="5_6qvvc"]
+[ext_resource type="Texture2D" uid="uid://b82iof8ugf3ok" path="res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png" id="6_2ujfj"]
+[ext_resource type="Texture2D" uid="uid://diu6e1jth24rb" path="res://generated-images/upgrade-popup-assets/spades/processed/spades-uncommon.png" id="7_g4qbi"]
+[ext_resource type="Texture2D" uid="uid://dbwd808rp18pl" path="res://generated-images/upgrade-popup-assets/spades/processed/spades-rare.png" id="8_7ka13"]
+[ext_resource type="Texture2D" uid="uid://ch1j5cgu6udv6" path="res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png" id="9_tvv4o"]
+[ext_resource type="Texture2D" uid="uid://dybxyen2u6pm4" path="res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-uncommon.png" id="10_wcx4d"]
+[ext_resource type="Texture2D" uid="uid://btonwg7mco2lk" path="res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-rare.png" id="11_131dn"]
+[ext_resource type="Texture2D" uid="uid://dc2iw4rkvfx4" path="res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png" id="12_evcqt"]
+[ext_resource type="Texture2D" uid="uid://7e6cjp4hq62i" path="res://generated-images/upgrade-popup-assets/clubs/processed/clubs-uncommon.png" id="13_k837k"]
+[ext_resource type="Texture2D" uid="uid://4oeijl4rr5w1" path="res://generated-images/upgrade-popup-assets/clubs/processed/clubs-rare.png" id="14_58u3t"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mapmf"]
+atlas = ExtResource("3_suuet")
+region = Rect2(291, 58, 671, 1097)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f5efn"]
+atlas = ExtResource("4_rxmgg")
+region = Rect2(291, 58, 671, 1097)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7rta3"]
+atlas = ExtResource("5_6qvvc")
+region = Rect2(291, 58, 671, 1097)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_u7u4y"]
+atlas = ExtResource("6_2ujfj")
+region = Rect2(290, 32, 673, 1167)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_08rk3"]
+atlas = ExtResource("7_g4qbi")
+region = Rect2(290, 32, 673, 1167)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_a35ap"]
+atlas = ExtResource("8_7ka13")
+region = Rect2(290, 32, 673, 1167)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nuyhh"]
+atlas = ExtResource("9_tvv4o")
+region = Rect2(296, 42, 659, 1156)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7ecdk"]
+atlas = ExtResource("10_wcx4d")
+region = Rect2(296, 42, 659, 1156)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_c7j7e"]
+atlas = ExtResource("11_131dn")
+region = Rect2(296, 42, 659, 1156)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mmfk1"]
+atlas = ExtResource("12_evcqt")
+region = Rect2(291, 53, 670, 1106)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fabt2"]
+atlas = ExtResource("13_k837k")
+region = Rect2(291, 53, 670, 1106)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1surk"]
+atlas = ExtResource("14_58u3t")
+region = Rect2(291, 53, 670, 1106)
 
 [node name="UpgradeChoicePopupAssetScene" type="Control" unique_id=2032623848]
 layout_mode = 3
@@ -158,6 +218,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_mapmf")
 expand_mode = 1
 stretch_mode = 5
 
@@ -166,6 +227,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_f5efn")
 expand_mode = 1
 stretch_mode = 5
 
@@ -174,6 +236,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_7rta3")
 expand_mode = 1
 stretch_mode = 5
 
@@ -200,6 +263,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_u7u4y")
 expand_mode = 1
 stretch_mode = 5
 
@@ -208,6 +272,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_08rk3")
 expand_mode = 1
 stretch_mode = 5
 
@@ -216,6 +281,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_a35ap")
 expand_mode = 1
 stretch_mode = 5
 
@@ -242,6 +308,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_nuyhh")
 expand_mode = 1
 stretch_mode = 5
 
@@ -250,6 +317,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_7ecdk")
 expand_mode = 1
 stretch_mode = 5
 
@@ -258,6 +326,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_c7j7e")
 expand_mode = 1
 stretch_mode = 5
 
@@ -284,6 +353,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_mmfk1")
 expand_mode = 1
 stretch_mode = 5
 
@@ -292,6 +362,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_fabt2")
 expand_mode = 1
 stretch_mode = 5
 
@@ -300,6 +371,7 @@ texture_filter = 1
 custom_minimum_size = Vector2(250, 384)
 layout_mode = 2
 size_flags_horizontal = 4
+texture = SubResource("AtlasTexture_1surk")
 expand_mode = 1
 stretch_mode = 5
 

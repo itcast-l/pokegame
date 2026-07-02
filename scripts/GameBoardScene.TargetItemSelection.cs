@@ -16,7 +16,7 @@ public partial class GameBoardScene
 		{
 			if (!ShouldShowLocalPendingItemSelectionUi())
 			{
-				ClearSelectionOverlay();
+				DismissActiveSelectionOverlay(invokeCancel: false);
 				return;
 			}
 
@@ -28,7 +28,7 @@ public partial class GameBoardScene
 		{
 			if (!ShouldShowLocalPendingItemSelectionUi())
 			{
-				ClearSelectionOverlay();
+				DismissActiveSelectionOverlay(invokeCancel: false);
 				return;
 			}
 
@@ -48,18 +48,18 @@ public partial class GameBoardScene
 			return;
 		}
 
-		ClearSelectionOverlay();
+		DismissActiveSelectionOverlay(invokeCancel: false);
 	}
 
 	private void ShowTargetPlayerSelection()
 	{
 		if (!ShouldShowLocalPendingItemSelectionUi())
 		{
-			ClearSelectionOverlay();
+			DismissActiveSelectionOverlay(invokeCancel: false);
 			return;
 		}
 
-		ClearSelectionOverlay();
+		DismissActiveSelectionOverlay(invokeCancel: false);
 		List<int> candidates = BuildItemTargetPlayerCandidates(_pendingItemCardId, _pendingItemOwnerIndex);
 		if (candidates.Count == 0)
 		{
@@ -98,7 +98,7 @@ public partial class GameBoardScene
 				_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.TargetPlayer;
 				_networkLocallyCommittedPendingSelectionHandIndex = _pendingItemHandIndex;
 				_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
-				ClearSelectionOverlay();
+				DismissActiveSelectionOverlay(invokeCancel: false);
 				_ = BeginPredictedNetworkTargetedItemCommitAsync();
 				RequestNetworkPendingItemSelection(targetPlayerIndex, -1, _pendingItemTurnSequenceGeneration);
 				return;
@@ -137,11 +137,11 @@ public partial class GameBoardScene
 	{
 		if (!ShouldShowLocalPendingItemSelectionUi())
 		{
-			ClearSelectionOverlay();
+			DismissActiveSelectionOverlay(invokeCancel: false);
 			return;
 		}
 
-		ClearSelectionOverlay();
+		DismissActiveSelectionOverlay(invokeCancel: false);
 		if (targetPlayerIndex < 0 || targetPlayerIndex >= _playerHands.Count || targetPlayerIndex >= _playerItemHands.Count || GetTotalHandCardCount(targetPlayerIndex) == 0)
 		{
 			CancelPendingItemSelection();
@@ -190,7 +190,7 @@ public partial class GameBoardScene
 			_networkLocallyCommittedPendingSelectionDisplayIndex = targetHandIndex;
 			_networkLocallyCommittedPendingSelectionHandIndex = _pendingItemHandIndex;
 			_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
-			ClearSelectionOverlay();
+			DismissActiveSelectionOverlay(invokeCancel: false);
 			_ = BeginPredictedNetworkTargetedItemCommitAsync();
 			RequestNetworkPendingItemSelection(targetPlayerIndex, targetHandIndex, _pendingItemTurnSequenceGeneration);
 			return;
@@ -230,7 +230,7 @@ public partial class GameBoardScene
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(ownerPlayerIndex, itemHandIndex);
 		_playerItemHands[ownerPlayerIndex].RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(ownerPlayerIndex, _playerHands[ownerPlayerIndex].Count + itemHandIndex);
-		ClearSelectionOverlay();
+		DismissActiveSelectionOverlay(invokeCancel: false);
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
 		int snapshotId = IsNetworkMultiplayerMode() && IsNetworkHost()
@@ -410,7 +410,7 @@ public partial class GameBoardScene
 
 	private void ShowSelectionOverlay(string title, IReadOnlyList<(string Text, Action Action)> options, bool showCancel)
 	{
-		ClearSelectionOverlay();
+		DisposeActiveSelectionOverlay();
 		PackedScene? selectionOverlayScene = GD.Load<PackedScene>(ItemSelectionOverlayScenePath);
 		if (selectionOverlayScene?.Instantiate() is not ItemSelectionOverlay selectionOverlay)
 		{
@@ -419,64 +419,69 @@ public partial class GameBoardScene
 		}
 
 		var optionLabels = new List<string>(options.Count);
+		var optionActions = new List<Action>(options.Count);
 		foreach ((string text, Action action) in options)
 		{
 			optionLabels.Add(text);
-			_selectionOverlayActions.Add(action);
+			optionActions.Add(action);
 		}
 
 		AddChild(selectionOverlay);
-		_selectionOverlay = selectionOverlay;
 		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		selectionOverlay.Configure(title, optionLabels, Localize("GAME_CANCEL"), showCancel);
-		selectionOverlay.OptionSelected += SelectSelectionOverlayOption;
-		selectionOverlay.CancelRequested += HandleSelectionOverlayCancelRequested;
-	}
-
-	private void HandleSelectionOverlayCancelRequested()
-	{
-		if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.MagnetHandCard)
+		selectionOverlay.OptionSelected += optionIndex =>
 		{
-			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
-			return;
-		}
-
-		CancelPendingItemSelection();
-	}
-
-	private void SelectSelectionOverlayOption(int optionIndex)
-	{
-		if (optionIndex < 0 || optionIndex >= _selectionOverlayActions.Count)
-		{
-			PlayGameSfx(GameSfx.UiInvalid, -3.0f, 0.98f, 1.02f, 0.08);
-			return;
-		}
-
-		Action action = _selectionOverlayActions[optionIndex];
-		action.Invoke();
-	}
-
-	private void ClearSelectionOverlay()
-	{
-		_selectionOverlayActions.Clear();
-		if (_adventureUpgradeSelectionOverlay != null)
-		{
-			if (IsInstanceValid(_adventureUpgradeSelectionOverlay))
+			if (optionIndex < 0 || optionIndex >= optionActions.Count)
 			{
-				RemoveChild(_adventureUpgradeSelectionOverlay);
-				_adventureUpgradeSelectionOverlay.QueueFree();
+				PlayGameSfx(GameSfx.UiInvalid, -3.0f, 0.98f, 1.02f, 0.08);
+				return;
 			}
 
-			_adventureUpgradeSelectionOverlay = null;
-		}
-
-		if (_selectionOverlay == null)
+			optionActions[optionIndex].Invoke();
+		};
+		selectionOverlay.CancelRequested += () =>
 		{
-			return;
-		}
+			if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.MagnetHandCard)
+			{
+				PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+				return;
+			}
 
-		RemoveChild(_selectionOverlay);
-		_selectionOverlay.QueueFree();
-		_selectionOverlay = null;
+			CancelPendingItemSelection();
+		};
+
+		RegisterSelectionOverlaySession(new SelectionOverlaySession(
+			SelectionOverlayKind.ItemSelection,
+			selectionOverlay,
+			optionActions.Count,
+			optionIndex =>
+			{
+				if (optionIndex < 0 || optionIndex >= optionActions.Count)
+				{
+					PlayGameSfx(GameSfx.UiInvalid, -3.0f, 0.98f, 1.02f, 0.08);
+					return false;
+				}
+
+				optionActions[optionIndex].Invoke();
+				return true;
+			},
+			cancel: () =>
+			{
+				if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.MagnetHandCard)
+				{
+					PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+					return;
+				}
+
+				CancelPendingItemSelection();
+			},
+			dispose: () =>
+			{
+				if (IsInstanceValid(selectionOverlay))
+				{
+					RemoveChild(selectionOverlay);
+					selectionOverlay.CallDeferred(Node.MethodName.QueueFree);
+				}
+			}));
 	}
 }

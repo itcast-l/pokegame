@@ -10,9 +10,17 @@ internal enum AdventureUpgradeTriggerSource
 
 internal static class AdventureUpgradeTriggerRules
 {
-	internal static IReadOnlyList<AdventureUpgradeTriggerSource> BuildTriggerOrder(bool bigCaptureTriggered, bool victoryTriggered)
+	internal static IReadOnlyList<AdventureUpgradeTriggerSource> BuildTriggerOrder(
+		bool runStartTriggered,
+		bool bigCaptureTriggered,
+		bool victoryTriggered)
 	{
-		var results = new List<AdventureUpgradeTriggerSource>(2);
+		var results = new List<AdventureUpgradeTriggerSource>(3);
+		if (runStartTriggered)
+		{
+			results.Add(AdventureUpgradeTriggerSource.RunStart);
+		}
+
 		if (bigCaptureTriggered)
 		{
 			results.Add(AdventureUpgradeTriggerSource.BigCapture);

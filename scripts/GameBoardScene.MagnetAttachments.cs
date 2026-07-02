@@ -79,14 +79,14 @@ public partial class GameBoardScene
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 			}
 		}
-		finally
-		{
-			if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
-				&& _pendingItemOwnerIndex == ownerPlayerIndex)
+			finally
 			{
-				ClearSelectionOverlay();
-				ClearPendingItemSelectionState();
-			}
+				if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+					&& _pendingItemOwnerIndex == ownerPlayerIndex)
+				{
+					DisposeActiveSelectionOverlay();
+					ClearPendingItemSelectionState();
+				}
 
 			_isResolvingMagnetAttachmentSelection = false;
 			_pendingMagnetAttachmentCompletion = null;
@@ -102,7 +102,7 @@ public partial class GameBoardScene
 
 	private void ShowMagnetHandSelection()
 	{
-		ClearSelectionOverlay();
+		DisposeActiveSelectionOverlay();
 		if (!IsMainPlayerMagnetSelectionActive())
 		{
 			ClearMagnetAttachmentCountdown();
@@ -142,15 +142,15 @@ public partial class GameBoardScene
 
 		int ownerPlayerIndex = _pendingItemOwnerIndex;
 		string itemCardId = _pendingItemCardId;
-		int attachHandIndex = IsValidMagnetAttachmentHandIndex(ownerPlayerIndex, handIndex, itemCardId)
-			? handIndex
-			: PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
-		if (attachHandIndex < 0)
-		{
-			ClearSelectionOverlay();
-			ClearPendingItemSelectionState();
-			RenderPlayerHands();
-			SendBoardSnapshotIfHost();
+			int attachHandIndex = IsValidMagnetAttachmentHandIndex(ownerPlayerIndex, handIndex, itemCardId)
+				? handIndex
+				: PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
+			if (attachHandIndex < 0)
+			{
+				DisposeActiveSelectionOverlay();
+				ClearPendingItemSelectionState();
+				RenderPlayerHands();
+				SendBoardSnapshotIfHost();
 			return;
 		}
 
@@ -163,7 +163,7 @@ public partial class GameBoardScene
 			AttachMagnetToAutoSelectedHandCard(ownerPlayerIndex, itemCardId);
 		}
 
-		ClearSelectionOverlay();
+		DisposeActiveSelectionOverlay();
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();

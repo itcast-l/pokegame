@@ -450,7 +450,7 @@ public partial class GameBoardScene
 			}
 			else
 			{
-				cardSlot.QueueFree();
+				cardSlot.Free();
 			}
 
 			return;

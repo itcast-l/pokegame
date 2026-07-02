@@ -67,7 +67,8 @@ public partial class GameBoardScene
 
 	private static bool LooksLikeLocalizationKey(string value)
 	{
-		return value.StartsWith("ITEM_DESC_", System.StringComparison.Ordinal);
+		return value.StartsWith("ITEM_DESC_", System.StringComparison.Ordinal)
+			|| value.StartsWith("UPGRADE_DESC_", System.StringComparison.Ordinal);
 	}
 
 	private string GetItemDescription(string fallbackText = "")
@@ -82,6 +83,22 @@ public partial class GameBoardScene
 
 		string localizedText = Localize(key);
 		return localizedText == key ? fallbackText : localizedText;
+	}
+
+	private string GetAdventureUpgradeDescription(string descriptionKey, string fallbackText = "")
+	{
+		if (string.IsNullOrWhiteSpace(descriptionKey))
+		{
+			return fallbackText;
+		}
+
+		if (!LooksLikeLocalizationKey(descriptionKey))
+		{
+			return descriptionKey;
+		}
+
+		string localizedText = Localize(descriptionKey);
+		return localizedText == descriptionKey ? fallbackText : localizedText;
 	}
 
 	private string GetMagnetAttachmentCountdownHint()
@@ -157,7 +174,7 @@ public partial class GameBoardScene
 
 	private void RefreshSelectionOverlayText()
 	{
-		if (_selectionOverlay == null || !GodotObject.IsInstanceValid(_selectionOverlay))
+		if (!IsSelectionOverlayVisible(SelectionOverlayKind.ItemSelection))
 		{
 			return;
 		}

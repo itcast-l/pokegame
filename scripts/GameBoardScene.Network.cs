@@ -109,7 +109,7 @@ public partial class GameBoardScene
 		}
 
 		_networkPendingSelectionRequestInFlight = true;
-		ClearSelectionOverlay();
+		DisposeActiveSelectionOverlay();
 		networkManager.RequestPendingItemSelection(targetPlayerIndex, targetHandIndex, turnSequenceGeneration);
 	}
 
@@ -610,16 +610,16 @@ public partial class GameBoardScene
 			_tableCards.RemoveAt(_networkPredictedItemTargetTableCardIndex);
 		}
 
-		if (_networkPredictedItemVisualActive
-			&& _networkPredictedItemPlayPresentation == CardPlayPresentationTypes.TargetedTrigger
-			&& HasPendingItemSelection()
-			&& _pendingItemOwnerIndex == localPlayerIndex
-			&& _pendingItemCardId == _networkPredictedItemCardId)
-		{
-			ClearSelectionOverlay();
-			ClearPendingItemSelectionState();
-			_isProcessingCardPlay = false;
-		}
+			if (_networkPredictedItemVisualActive
+				&& _networkPredictedItemPlayPresentation == CardPlayPresentationTypes.TargetedTrigger
+				&& HasPendingItemSelection()
+				&& _pendingItemOwnerIndex == localPlayerIndex
+				&& _pendingItemCardId == _networkPredictedItemCardId)
+			{
+				DisposeActiveSelectionOverlay();
+				ClearPendingItemSelectionState();
+				_isProcessingCardPlay = false;
+			}
 
 		switch (_networkLocallyCommittedPendingSelectionMode)
 		{
@@ -647,12 +647,12 @@ public partial class GameBoardScene
 	private void BeginPredictedNetworkHandLimitDiscardSelection(int displayIndex)
 	{
 		int localPlayerIndex = GetLocalHandPlayerIndex();
-		_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
-		_networkLocallyCommittedPendingSelectionDisplayIndex = displayIndex;
-		HideHandDisplaySlot(localPlayerIndex, displayIndex);
-		ClearSelectionOverlay();
-		RenderPlayerHands();
-	}
+			_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
+			_networkLocallyCommittedPendingSelectionDisplayIndex = displayIndex;
+			HideHandDisplaySlot(localPlayerIndex, displayIndex);
+			DisposeActiveSelectionOverlay();
+			RenderPlayerHands();
+		}
 
 	private async Task BeginPredictedNetworkMagnetAttachmentSelectionAsync(int handIndex)
 	{
@@ -666,12 +666,12 @@ public partial class GameBoardScene
 		}
 
 		_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.MagnetHandCard;
-		_networkLocallyCommittedPendingSelectionHandIndex = handIndex;
-		_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
-		_networkLocallyCommittedPendingSelectionOriginalCard = _playerHands[localPlayerIndex][handIndex];
-		ClearSelectionOverlay();
-		ClearMagnetAttachmentCountdown();
-		_isAnimatingMagnetAttachment = true;
+			_networkLocallyCommittedPendingSelectionHandIndex = handIndex;
+			_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
+			_networkLocallyCommittedPendingSelectionOriginalCard = _playerHands[localPlayerIndex][handIndex];
+			DisposeActiveSelectionOverlay();
+			ClearMagnetAttachmentCountdown();
+			_isAnimatingMagnetAttachment = true;
 		try
 		{
 			await PlayMagnetAttachmentToHandCardAnimationAsync(localPlayerIndex, handIndex, _pendingItemCardId);
@@ -1103,15 +1103,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (actorSeatIndex == GetLocalHandPlayerIndex()
-			&& itemHandIndex == _networkPendingItemHandIndex
-			&& _networkPredictedItemVisualActive
-			&& playPresentation == CardPlayPresentationTypes.TargetedTrigger)
-		{
-			ClearSelectionOverlay();
-			ClearPendingItemSelectionState();
-			ClearNetworkPendingActionState();
-			ResetNetworkPredictedItemVisualState();
+			if (actorSeatIndex == GetLocalHandPlayerIndex()
+				&& itemHandIndex == _networkPendingItemHandIndex
+				&& _networkPredictedItemVisualActive
+				&& playPresentation == CardPlayPresentationTypes.TargetedTrigger)
+			{
+				DisposeActiveSelectionOverlay();
+				ClearPendingItemSelectionState();
+				ClearNetworkPendingActionState();
+				ResetNetworkPredictedItemVisualState();
 			RenderPlayerHands();
 		}
 

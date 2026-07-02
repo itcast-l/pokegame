@@ -212,9 +212,8 @@ public partial class GameBoardScene : Control
 	private bool _activePlayerTooltipContentDirty;
 	private bool _activePlayerTooltipLayoutDirty;
 	private NetworkAiBlockedItemState _networkAiBlockedItem = NetworkAiBlockedItemState.None;
-	private ItemSelectionOverlay? _selectionOverlay;
-	private Control? _adventureUpgradeSelectionOverlay;
-	private readonly List<System.Action> _selectionOverlayActions = new();
+	private AdventureRunSessionStore? _adventureRunSessionStore;
+	private SelectionOverlaySession? _activeSelectionOverlaySession;
 	private Panel? _networkReconnectOverlayPanel;
 	private Label? _networkReconnectOverlayLabel;
 	private Panel? _networkReconnectNoticePanel;
@@ -735,8 +734,20 @@ public partial class GameBoardScene : Control
 	public override void _ExitTree()
 	{
 		DisconnectNetworkManagerSignalsForBoard();
+		DisposeActiveSelectionOverlay();
 		ClearDetachedVisualPools();
 		_animationPresenter?.ClearPools();
+	}
+
+	private AdventureRunSessionStore? GetAdventureRunSessionStore()
+	{
+		if (_adventureRunSessionStore != null && GodotObject.IsInstanceValid(_adventureRunSessionStore))
+		{
+			return _adventureRunSessionStore;
+		}
+
+		_adventureRunSessionStore = GetNodeOrNull<AdventureRunSessionStore>("/root/AdventureRunSessionStore");
+		return _adventureRunSessionStore;
 	}
 
 	private void ClearDetachedVisualPools()

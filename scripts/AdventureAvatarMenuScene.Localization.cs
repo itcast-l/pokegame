@@ -6,6 +6,7 @@ public partial class AdventureAvatarMenuScene
 	{
 		RefreshSelection();
 		RefreshAvatarUnlockPromptText();
+		RefreshRunResumeDialogText();
 
 		for (int index = _localizedLabels.Count - 1; index >= 0; index--)
 		{

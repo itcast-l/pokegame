@@ -5,8 +5,16 @@ public partial class AdventureAvatarMenuScene
 {
 	private void StartAdventure()
 	{
-		if (_isStartingAdventure)
+		if (_isStartingAdventure || _isReturningToMainMenu || _isShowingRunResumeDialog)
 		{
+			return;
+		}
+
+		AdventureRunSessionStore? runSessionStore = GetAdventureRunSessionStore();
+		runSessionStore?.ReloadFromActiveProfile();
+		if (runSessionStore?.HasActiveRun == true)
+		{
+			ShowRunResumeDialog();
 			return;
 		}
 
@@ -38,11 +46,11 @@ public partial class AdventureAvatarMenuScene
 		int avatarStageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(selectedAvatarId);
 		if (AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber))
 		{
-			AdventureUpgradeRunState.BeginNewRun(avatarStageNumber);
+			GetAdventureRunSessionStore()?.BeginNewRun(avatarStageNumber);
 		}
 		else
 		{
-			AdventureUpgradeRunState.Clear();
+			GetAdventureRunSessionStore()?.ClearRun();
 		}
 
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>

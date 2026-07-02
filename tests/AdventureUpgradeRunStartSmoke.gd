@@ -49,6 +49,15 @@ func _run() -> void:
 		_fail("Expected adventure upgrade selection overlay scene")
 		return
 
+	var header := overlay.get_node_or_null("Margin/Layout/Header") as Control
+	if header == null:
+		_fail("Adventure upgrade overlay is missing header container")
+		return
+
+	if header.visible:
+		_fail("Adventure upgrade overlay header should be hidden when only descriptions are shown")
+		return
+
 	var visible_overlay_options := 0
 	var card_frame_y_positions := []
 	var card_frame_rotations := []
@@ -85,6 +94,20 @@ func _run() -> void:
 
 		if art.has_method("DebugGetDescriptionBand") == false:
 			_fail("Adventure upgrade choice art should expose DebugGetDescriptionBand for layout verification")
+			return
+
+		if art.has_method("DebugGetTitleText") == false or art.has_method("DebugGetDescriptionText") == false:
+			_fail("Adventure upgrade choice art should expose debug text accessors")
+			return
+
+		var title_value := String(art.call("DebugGetTitleText"))
+		if not title_value.is_empty():
+			_fail("Adventure upgrade choice art should not keep a visible title payload")
+			return
+
+		var description_value := String(art.call("DebugGetDescriptionText"))
+		if description_value.is_empty():
+			_fail("Adventure upgrade choice art should keep a non-empty localized description")
 			return
 
 		if option_button.get_node_or_null("CardFrame/InfoOverlay") != null:
@@ -139,7 +162,8 @@ func _run() -> void:
 		return
 
 	board.queue_free()
-	await process_frame
+	for _frame in range(12):
+		await process_frame
 	print("ADVENTURE_UPGRADE_RUN_START_SMOKE_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
@@ -197,5 +221,5 @@ func _dispose_audio_before_quit() -> void:
 		return
 
 	game_audio.call("DisposeAllAudioImmediately")
-	await process_frame
-	await process_frame
+	for _frame in range(12):
+		await process_frame

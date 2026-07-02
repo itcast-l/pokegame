@@ -35,6 +35,7 @@ public static class GameSaveStore
 	private const string ProgressSelectedAvatarIdKey = "selected_avatar_id";
 	private const string ProgressPlayerNameKey = "player_name";
 	private const string ProgressPendingAvatarUnlockQueueKey = "pending_avatar_unlock_queue";
+	private const string ProgressPendingAdventureRunJsonKey = "pending_adventure_run_json";
 	private const string ProgressPlaytimeSecondsKey = "playtime_seconds";
 	private const string ProgressCreatedUnixTimeKey = "created_unix_time";
 	private const string ProgressUpdatedUnixTimeKey = "updated_unix_time";
@@ -49,6 +50,7 @@ public static class GameSaveStore
 		string SelectedAvatarId,
 		string PlayerName,
 		string PendingAvatarUnlockQueue,
+		string PendingAdventureRunJson,
 		double PlaytimeSeconds,
 		long CreatedUnixTime,
 		long UpdatedUnixTime)
@@ -61,6 +63,7 @@ public static class GameSaveStore
 				0,
 				CharacterAvatarCatalog.DefaultAvatarId,
 				PlayerNameRules.DefaultPlayerName,
+				string.Empty,
 				string.Empty,
 				0.0,
 				now,
@@ -75,6 +78,7 @@ public static class GameSaveStore
 				ReadString(data, ProgressSelectedAvatarIdKey, fallback.SelectedAvatarId),
 				ReadString(data, ProgressPlayerNameKey, fallback.PlayerName),
 				ReadString(data, ProgressPendingAvatarUnlockQueueKey, fallback.PendingAvatarUnlockQueue),
+				ReadString(data, ProgressPendingAdventureRunJsonKey, fallback.PendingAdventureRunJson),
 				ReadDouble(data, ProgressPlaytimeSecondsKey, fallback.PlaytimeSeconds),
 				ReadLong(data, ProgressCreatedUnixTimeKey, fallback.CreatedUnixTime),
 				ReadLong(data, ProgressUpdatedUnixTimeKey, fallback.UpdatedUnixTime)).Normalize();
@@ -89,6 +93,7 @@ public static class GameSaveStore
 				[ProgressSelectedAvatarIdKey] = SelectedAvatarId,
 				[ProgressPlayerNameKey] = PlayerName,
 				[ProgressPendingAvatarUnlockQueueKey] = PendingAvatarUnlockQueue,
+				[ProgressPendingAdventureRunJsonKey] = PendingAdventureRunJson,
 				[ProgressPlaytimeSecondsKey] = PlaytimeSeconds,
 				[ProgressCreatedUnixTimeKey] = CreatedUnixTime,
 				[ProgressUpdatedUnixTimeKey] = UpdatedUnixTime,
@@ -123,6 +128,9 @@ public static class GameSaveStore
 				SelectedAvatarId = selectedAvatarId,
 				PlayerName = PlayerNameRules.Normalize(PlayerName),
 				PendingAvatarUnlockQueue = PendingAvatarUnlockQueue.Trim(),
+				PendingAdventureRunJson = string.IsNullOrWhiteSpace(PendingAdventureRunJson)
+					? string.Empty
+					: PendingAdventureRunJson,
 				PlaytimeSeconds = Math.Max(0.0, PlaytimeSeconds),
 				CreatedUnixTime = createdUnixTime,
 				UpdatedUnixTime = updatedUnixTime,
@@ -252,6 +260,7 @@ public static class GameSaveStore
 			0,
 			selectedAvatarId,
 			playerName,
+			string.Empty,
 			string.Empty,
 			0.0,
 			now,
@@ -552,6 +561,7 @@ public static class GameSaveStore
 			GetRawValue(saveManager, SelectedAvatarKey, CharacterAvatarCatalog.DefaultAvatarId).AsString(),
 			GetRawValue(saveManager, PlayerNameKey, PlayerNameRules.DefaultPlayerName).AsString(),
 			pendingQueue,
+			string.Empty,
 			0.0,
 			now,
 			now).Normalize();
