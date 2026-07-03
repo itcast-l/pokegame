@@ -3,6 +3,7 @@ using Godot;
 public partial class OceanDialogPanelArt : Control
 {
 	private const string DefaultPanelTexturePath = "res://assets/ui/player_count_dialog_interactive_panel.png";
+	private const double SparkRedrawInterval = 1.0 / 12.0;
 	private static readonly Vector2 SourcePanelSize = new(744.0f, 480.0f);
 	private static readonly Rect2[] BuiltInRowRegions =
 	{
@@ -81,6 +82,7 @@ public partial class OceanDialogPanelArt : Control
 	private readonly StyleBoxFlat _slotCoverStyle = new();
 	private readonly StyleBoxFlat _wellCoverStyle = new();
 	private double _time;
+	private double _redrawAccumulator;
 
 	public override void _Ready()
 	{
@@ -102,7 +104,19 @@ public partial class OceanDialogPanelArt : Control
 
 	public override void _Process(double delta)
 	{
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		_time += delta;
+		_redrawAccumulator += delta;
+		if (_redrawAccumulator < SparkRedrawInterval)
+		{
+			return;
+		}
+
+		_redrawAccumulator %= SparkRedrawInterval;
 		QueueRedraw();
 	}
 

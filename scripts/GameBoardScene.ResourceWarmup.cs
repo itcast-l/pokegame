@@ -63,6 +63,11 @@ public partial class GameBoardScene
 			await WarmupCharacterAudioConfigsAsync(turnContext);
 		}
 
+		if (!await WarmupOptionalFxResourcesAsync(turnContext))
+		{
+			return;
+		}
+
 		if (!await WaitForWarmupFrameAsync(turnContext))
 		{
 			return;
@@ -103,6 +108,41 @@ public partial class GameBoardScene
 				return;
 			}
 		}
+	}
+
+	private async Task<bool> WarmupOptionalFxResourcesAsync(TurnContext turnContext)
+	{
+		ulong sampleStart = BeginPerformanceSample("ResourceLoad");
+		EnsureCommonGameplayFxResourcesLoaded();
+		EndPerformanceSample("WarmupOptionalFx:CoreGameplay", sampleStart);
+		if (!await WaitForWarmupFrameAsync(turnContext))
+		{
+			return false;
+		}
+
+		if (item_mode)
+		{
+			ulong itemSampleStart = BeginPerformanceSample("ResourceLoad");
+			EnsureItemModeOptionalFxResourcesLoaded();
+			EndPerformanceSample("WarmupOptionalFx:ItemMode", itemSampleStart);
+			if (!await WaitForWarmupFrameAsync(turnContext))
+			{
+				return false;
+			}
+		}
+
+		if (adventure_mode)
+		{
+			ulong adventureSampleStart = BeginPerformanceSample("ResourceLoad");
+			EnsureAdventureModeResourcesLoaded();
+			EndPerformanceSample("WarmupOptionalFx:AdventureMode", adventureSampleStart);
+			if (!await WaitForWarmupFrameAsync(turnContext))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private async Task<bool> WaitForWarmupFrameAsync(TurnContext turnContext)

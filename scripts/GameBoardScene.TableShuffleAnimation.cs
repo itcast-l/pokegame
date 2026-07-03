@@ -7,6 +7,8 @@ public partial class GameBoardScene
 {
 	private async Task PlayTableCardsShuffleAnimationAsync(IReadOnlyList<TableCard> shuffledTableCards, int turnSequenceGeneration)
 	{
+		EnsureItemModeOptionalFxResourcesLoaded();
+
 		if (!IsInsideTree() || shuffledTableCards.Count <= 1 || shuffledTableCards.Count != _tableCards.Count)
 		{
 			return;

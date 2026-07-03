@@ -10,6 +10,8 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		string bossKBorrowedAvatarId = "")
 	{
+		EnsureAdventureModeResourcesLoaded();
+
 		if (!adventure_mode
 			|| enemyPlayerIndex < 0
 			|| enemyPlayerIndex >= player_count

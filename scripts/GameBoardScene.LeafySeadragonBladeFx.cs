@@ -10,6 +10,8 @@ public partial class GameBoardScene
 		int targetTableCardIndex,
 		int turnSequenceGeneration)
 	{
+		EnsureAdventureModeResourcesLoaded();
+
 		if (_leafySeadragonBladeFlightFrames.Count == 0
 			|| !IsInsideTree()
 			|| turnSequenceGeneration != _turnSequenceGeneration

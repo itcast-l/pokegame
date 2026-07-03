@@ -141,6 +141,7 @@ public partial class GameBoardScene
 
 	private IReadOnlyList<Texture2D> GetScoreFillEffectFrames()
 	{
+		EnsureCommonGameplayFxResourcesLoaded();
 		return _scoreFillEffectFrames;
 	}
 
@@ -316,6 +317,9 @@ public partial class GameBoardScene
 
 	private IReadOnlyList<Texture2D> GetAdventureAttackEffectFrames(int attackerPlayerIndex)
 	{
+		EnsureCommonGameplayFxResourcesLoaded();
+		EnsureAdventureModeResourcesLoaded();
+
 		if (IsAdventureEnemyPlayer(attackerPlayerIndex) && _adventureEnemyDamageEffectFrames.Count > 0)
 		{
 			return _adventureEnemyDamageEffectFrames;

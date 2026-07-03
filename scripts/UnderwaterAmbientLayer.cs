@@ -150,15 +150,21 @@ public partial class UnderwaterAmbientLayer : Control
 			}
 
 			UpdateImageInstances();
-			_redrawAccumulator += delta;
-			double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
-			if (_redrawAccumulator < redrawInterval)
+			if (ShouldQueueRedrawForImageFallback())
 			{
+				_redrawAccumulator += delta;
+				double redrawInterval = 1.0 / Mathf.Max(redraw_fps, 1);
+				if (_redrawAccumulator < redrawInterval)
+				{
+					return;
+				}
+
+				_redrawAccumulator %= redrawInterval;
+				QueueRedraw();
 				return;
 			}
 
-			_redrawAccumulator %= redrawInterval;
-			QueueRedraw();
+			_redrawAccumulator = 0.0;
 			return;
 		}
 
@@ -872,6 +878,16 @@ public partial class UnderwaterAmbientLayer : Control
 	private bool ShouldDrawProceduralCenterGlints()
 	{
 		return _activeRenderMode != AmbientRenderMode.ImageBased || _centerGlintFrames.Length == 0;
+	}
+
+	private bool ShouldQueueRedrawForImageFallback()
+	{
+		return ShouldDrawProceduralSunbeams()
+			|| ShouldDrawProceduralSeagrass()
+			|| ShouldDrawProceduralWaterCurrents()
+			|| ShouldDrawProceduralCenterCaustics()
+			|| ShouldDrawProceduralMotes()
+			|| ShouldDrawProceduralCenterGlints();
 	}
 
 	private static string GetProfileSlug(AmbientVisualProfile profile)

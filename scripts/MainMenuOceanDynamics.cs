@@ -138,6 +138,12 @@ public partial class MainMenuOceanDynamics : Control
 				RebuildImageInstances();
 			}
 			UpdateImageInstances();
+			if (!ShouldQueueRedrawInImageMode())
+			{
+				_redrawAccumulator = 0.0;
+				return;
+			}
+
 			AdvanceRedrawAccumulator(delta);
 			return;
 		}
@@ -166,16 +172,31 @@ public partial class MainMenuOceanDynamics : Control
 			return;
 		}
 
-		if (_activeRenderMode == OceanRenderMode.Procedural)
+		if (ShouldDrawProceduralSunbeams())
 		{
 			DrawSunbeams();
+		}
+		if (ShouldDrawProceduralSurfaceWake())
+		{
 			DrawSurfaceWake();
+		}
+		if (ShouldDrawProceduralCurrentRibbons())
+		{
 			DrawCurrentRibbons();
+		}
+		if (ShouldDrawProceduralCausticRibbons())
+		{
 			DrawCausticRibbons();
+		}
+		if (ShouldDrawProceduralGlints())
+		{
 			DrawGlints();
 		}
 
-		DrawBubbles();
+		if (ShouldDrawBubbles())
+		{
+			DrawBubbles();
+		}
 	}
 
 	private void ApplyRenderMode(bool force = false)
@@ -224,6 +245,7 @@ public partial class MainMenuOceanDynamics : Control
 			EnsureImageLayers();
 			RebuildImageInstances();
 			UpdateImageInstances();
+			QueueRedraw();
 			return;
 		}
 
@@ -897,6 +919,46 @@ public partial class MainMenuOceanDynamics : Control
 		DrawCircle(position, radius * 1.18f, aura);
 		DrawArc(position, radius, 0.0f, Mathf.Tau, 32, ring, Mathf.Max(1.0f, radius * 0.12f), true);
 		DrawCircle(position + new Vector2(-radius * 0.24f, -radius * 0.22f), Mathf.Max(1.0f, radius * 0.14f), core);
+	}
+
+	private bool ShouldDrawProceduralSunbeams()
+	{
+		return _activeRenderMode != OceanRenderMode.ImageBased || _sunbeamFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralSurfaceWake()
+	{
+		return _activeRenderMode != OceanRenderMode.ImageBased || _surfaceWakeFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralCurrentRibbons()
+	{
+		return _activeRenderMode != OceanRenderMode.ImageBased || _currentRibbonFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralCausticRibbons()
+	{
+		return _activeRenderMode != OceanRenderMode.ImageBased || _causticRibbonFrames.Length == 0;
+	}
+
+	private bool ShouldDrawProceduralGlints()
+	{
+		return _activeRenderMode != OceanRenderMode.ImageBased || _glintFrames.Length == 0;
+	}
+
+	private bool ShouldDrawBubbles()
+	{
+		return _bubbles.Count > 0;
+	}
+
+	private bool ShouldQueueRedrawInImageMode()
+	{
+		return ShouldDrawProceduralSunbeams()
+			|| ShouldDrawProceduralSurfaceWake()
+			|| ShouldDrawProceduralCurrentRibbons()
+			|| ShouldDrawProceduralCausticRibbons()
+			|| ShouldDrawProceduralGlints()
+			|| ShouldDrawBubbles();
 	}
 
 	private sealed class ImageElement

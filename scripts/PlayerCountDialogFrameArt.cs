@@ -3,6 +3,9 @@ using Godot;
 
 public partial class PlayerCountDialogFrameArt : Control
 {
+	private const double ActiveRedrawInterval = 1.0 / 24.0;
+	private const float GlowEpsilon = 0.001f;
+
 	public enum FrameKind
 	{
 		RowSlot,
@@ -45,6 +48,7 @@ public partial class PlayerCountDialogFrameArt : Control
 	private readonly StyleBoxFlat _rowGlowStyle = new();
 	private readonly StyleBoxFlat _rowRimStyle = new();
 	private double _time;
+	private double _redrawAccumulator;
 
 	public override void _Ready()
 	{
@@ -70,6 +74,11 @@ public partial class PlayerCountDialogFrameArt : Control
 
 	public override void _Process(double delta)
 	{
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		_time += delta;
 		float targetGlow = 0.0f;
 		if (ReactToHover)
@@ -89,7 +98,28 @@ public partial class PlayerCountDialogFrameArt : Control
 			}
 		}
 
-		_glow = Mathf.Lerp(_glow, targetGlow, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		float nextGlow = Mathf.Lerp(_glow, targetGlow, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		bool glowChanged = Mathf.Abs(nextGlow - _glow) > GlowEpsilon;
+		_glow = nextGlow;
+		if (glowChanged)
+		{
+			_redrawAccumulator = 0.0;
+			QueueRedraw();
+			return;
+		}
+
+		if (_glow <= 0.01f && targetGlow <= 0.01f)
+		{
+			return;
+		}
+
+		_redrawAccumulator += delta;
+		if (_redrawAccumulator < ActiveRedrawInterval)
+		{
+			return;
+		}
+
+		_redrawAccumulator %= ActiveRedrawInterval;
 		QueueRedraw();
 	}
 

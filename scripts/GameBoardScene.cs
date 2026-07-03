@@ -20,18 +20,8 @@ public partial class GameBoardScene : Control
 	private const int ScoreFillEffectFrameCount = 4;
 	private const string EnemySpecialAbilityAvatarFxFramePattern = "res://art/fx/enemy_special_ability_avatar/run-001/processed/fx-{0}.png";
 	private const int EnemySpecialAbilityAvatarFxFrameCount = 6;
-	private static readonly Texture2D[] ScoreFillEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(ScoreFillEffectFramePattern, ScoreFillEffectFrameCount, "score fill effect");
-	private static readonly Texture2D[] EnemySpecialAbilityAvatarFxFrames =
-		FrameAnimationHelpers.LoadTextureFrames(
-			EnemySpecialAbilityAvatarFxFramePattern,
-			EnemySpecialAbilityAvatarFxFrameCount,
-			"enemy special ability avatar effect",
-			preferImageFile: true);
 	private const string MantaRayTideShiftCycloneFxFramePattern = "res://art/fx/player_manta_ray_tide_shift_cyclone/run-003/processed/fx-{0}.png";
 	private const int MantaRayTideShiftCycloneFxFrameCount = 8;
-	private static readonly Texture2D[] MantaRayTideShiftCycloneFxFrames =
-		FrameAnimationHelpers.LoadTextureFrames(MantaRayTideShiftCycloneFxFramePattern, MantaRayTideShiftCycloneFxFrameCount, "manta ray tide shift cyclone", preferImageFile: true);
 	private const string AdventureDamageEffectFramePattern = "res://art/fx/attack_bubble_burst/run-001/processed/fx-{0}.png";
 	private const string CatAdventureDamageEffectFramePattern = "res://art/fx/player_cat_claw_attack/run-001/processed/fx-{0}.png";
 	private const string LeafySeadragonBladeFlightFramePattern = "res://art/fx/player_leafy_seadragon_blade_projectile/run-001/flight/processed/fx-{0}.png";
@@ -45,49 +35,23 @@ public partial class GameBoardScene : Control
 	private const int CardBackFrameCount = 8;
 	private static readonly Texture2D[] CardBackFrames =
 		FrameAnimationHelpers.LoadTextureFrames(CardBackFramePattern, CardBackFrameCount, "card back");
-	private static readonly Texture2D[] DefaultAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(AdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "adventure damage effect");
-	private static readonly Texture2D[] CatAdventureDamageEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(CatAdventureDamageEffectFramePattern, AdventureDamageEffectFrameCount, "cat adventure damage effect");
-	private static readonly Texture2D[] LeafySeadragonBladeFlightFrames =
-		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeFlightFramePattern, LeafySeadragonBladeFlightFrameCount, "leafy seadragon blade flight", preferImageFile: true);
-	private static readonly Texture2D[] LeafySeadragonBladeImpactFrames =
-		FrameAnimationHelpers.LoadTextureFrames(LeafySeadragonBladeImpactFramePattern, LeafySeadragonBladeImpactFrameCount, "leafy seadragon blade impact", preferImageFile: true);
-	private static readonly Texture2D[] BossKRoyalSeizureLanceFrames =
-		FrameAnimationHelpers.LoadTextureFrames(BossKRoyalSeizureLanceFramePattern, BossKRoyalSeizureLanceFrameCount, "boss k royal seizure lance", preferImageFile: true);
 	private const string QuestionCardTransformFramePattern = "res://art/fx/question_card_transform/run-001/processed/fx-{0}.png";
 	private const int QuestionCardTransformFrameCount = 6;
-	private static readonly Texture2D[] QuestionCardTransformFrames =
-		FrameAnimationHelpers.LoadTextureFrames(QuestionCardTransformFramePattern, QuestionCardTransformFrameCount, "question card transform");
 	private const string SpecialCardTriggerEffectFramePattern = "res://art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/processed/fx-{0}.png";
 	private const int SpecialCardTriggerEffectFrameCount = 4;
-	private static readonly Texture2D[] SpecialCardTriggerEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(SpecialCardTriggerEffectFramePattern, SpecialCardTriggerEffectFrameCount, "special card trigger effect");
 	private const string SpecialCardTriggerActivationFramePattern = "res://art/fx/special_card_trigger_activation/run-001/processed/fx-{0}.png";
 	private const int SpecialCardTriggerActivationFrameCount = 6;
-	private static readonly Texture2D[] SpecialCardTriggerActivationFrames =
-		FrameAnimationHelpers.LoadTextureFrames(SpecialCardTriggerActivationFramePattern, SpecialCardTriggerActivationFrameCount, "special card trigger activation", preferImageFile: true);
 	private const string BombPairDestroyEffectFramePattern = "res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png";
 	private const int BombPairDestroyEffectFrameCount = 4;
-	private static readonly Texture2D[] BombPairDestroyEffectFrames =
-		FrameAnimationHelpers.LoadTextureFrames(BombPairDestroyEffectFramePattern, BombPairDestroyEffectFrameCount, "bomb pair destroy effect");
 	private const string LensRevealWispFramePattern = "res://art/fx/lens_reveal_sprites/run-001/processed/fx-{0}.png";
 	private const int LensRevealWispFrameCount = 4;
-	private static readonly Texture2D[] LensRevealWispFrames =
-		FrameAnimationHelpers.LoadTextureFrames(LensRevealWispFramePattern, LensRevealWispFrameCount, "lens reveal wisp");
 	private const string SlimeCardOverlayPath = "res://art/fx/slime_card_overlay/run-001/processed/card-aspect.png";
 	private const string MagnetCountdownFramePattern = "res://art/fx/magnet_selection_rework/run-002/countdown_ring_normal/processed/fx-{0}.png";
 	private const int MagnetCountdownFrameCount = 8;
-	private static readonly Texture2D[] MagnetCountdownFrames =
-		FrameAnimationHelpers.LoadTextureFrames(MagnetCountdownFramePattern, MagnetCountdownFrameCount, "magnet countdown");
 	private const string TableShuffleVortexFramePattern = "res://art/fx/table_shuffle_vortex/run-001/processed/fx-{0}.png";
 	private const int TableShuffleVortexFrameCount = 8;
-	private static readonly Texture2D[] TableShuffleVortexFrames =
-		FrameAnimationHelpers.LoadTextureFrames(TableShuffleVortexFramePattern, TableShuffleVortexFrameCount, "table shuffle vortex", preferImageFile: true);
 	private const string MagnetAttachmentApplyRingFramePattern = "res://art/fx/magnet_attach_apply_ring/run-001/processed/fx-{0}.png";
 	private const int MagnetAttachmentApplyRingFrameCount = 6;
-	private static readonly Texture2D[] MagnetAttachmentApplyRingFrames =
-		FrameAnimationHelpers.LoadTextureFrames(MagnetAttachmentApplyRingFramePattern, MagnetAttachmentApplyRingFrameCount, "magnet attachment apply ring", preferImageFile: true);
 	private const string VictoryBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/victory-text-prompt-effect.png";
 	private const string DefeatBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/defeat-text-prompt-effect.png";
 		private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
@@ -190,6 +154,10 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly List<Texture2D> _tableShuffleVortexFrames = new();
 	private readonly List<Texture2D> _magnetAttachmentApplyRingFrames = new();
+	private bool _commonGameplayFxResourcesLoaded;
+	private bool _adventureModeResourcesLoaded;
+	private bool _itemModeResourcesLoaded;
+	private bool _itemModeOptionalFxResourcesLoaded;
 	private readonly HashSet<string> _enabledSceneItemCardIds = new();
 	private readonly Dictionary<string, string> _itemCardDescriptions = new();
 	private readonly Dictionary<string, ItemAttachmentOverlay> _itemAttachmentOverlaysById = new();
@@ -405,7 +373,13 @@ public partial class GameBoardScene : Control
 		get => _playerCount;
 		set
 		{
-			_playerCount = Mathf.Clamp(value, MinPlayers, MaxPlayers);
+			int normalizedPlayerCount = Mathf.Clamp(value, MinPlayers, MaxPlayers);
+			if (normalizedPlayerCount == _playerCount)
+			{
+				return;
+			}
+
+			_playerCount = normalizedPlayerCount;
 			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				UpdatePlayerVisibility();
@@ -423,7 +397,17 @@ public partial class GameBoardScene : Control
 		get => _itemMode;
 		set
 		{
+			if (value == _itemMode)
+			{
+				return;
+			}
+
 			_itemMode = value;
+			if (_itemMode && IsInsideTree())
+			{
+				EnsureItemModeResourcesLoaded();
+			}
+
 			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				LoadItemCardEnabledStates();
@@ -438,11 +422,17 @@ public partial class GameBoardScene : Control
 		get => _winningScore;
 		set
 		{
-			_winningScore = value switch
+			int normalizedWinningScore = value switch
 			{
 				50 or 100 or 200 => value,
 				_ => DefaultWinningScore,
 			};
+			if (normalizedWinningScore == _winningScore)
+			{
+				return;
+			}
+
+			_winningScore = normalizedWinningScore;
 
 			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
@@ -456,7 +446,19 @@ public partial class GameBoardScene : Control
 	public bool adventure_mode
 	{
 		get => _adventureMode;
-		set => _adventureMode = value;
+		set
+		{
+			if (_adventureMode == value)
+			{
+				return;
+			}
+
+			_adventureMode = value;
+			if (_adventureMode && IsInsideTree())
+			{
+				EnsureAdventureModeResourcesLoaded();
+			}
+		}
 	}
 
 	[Export]
@@ -549,7 +551,7 @@ public partial class GameBoardScene : Control
 			}
 
 			_adventureEnemyAvatarId = normalized;
-			if (IsInsideTree())
+			if (IsInsideTree() && adventure_mode)
 			{
 				LoadAdventureEnemyDamageEffectTextures();
 				LoadDragonPrinceSpecialJackTexture();
@@ -601,22 +603,11 @@ public partial class GameBoardScene : Control
 		LoadAdventureUpgradeCatalog();
 		_adventureAttackEffectHandlers = CreateAdventureAttackEffectHandlers();
 		LoadCardBackTextures();
-		LoadScoreFillEffectTextures();
-		LoadEnemySpecialAbilityAvatarFxTextures();
-		LoadMantaRayTideShiftCycloneFxTextures();
-		LoadLeafySeadragonBladeProjectileTextures();
-		LoadBossKRoyalSeizureLanceTextures();
-		LoadAdventureDamageEffectTextures();
-		LoadAdventureEnemyDamageEffectTextures();
-		LoadItemCardTextures();
 		LoadItemCardEnabledStates();
-		LoadAttachmentCardOverlayTextures();
-		LoadQuestionCardTransformTextures();
-		LoadSpecialCardTriggerEffectTextures();
-		LoadDragonPrinceSpecialJackTexture();
-		LoadBombPairDestroyEffectTextures();
-		LoadLensRevealWispTextures();
-		LoadMagnetCountdownFxTextures();
+		if (item_mode)
+		{
+			EnsureItemModeResourcesLoaded();
+		}
 
 		_ultraWideBackdrop = GetNode<TextureRect>("UltraWideBackdrop");
 		_verticalBackdrop = GetNode<TextureRect>("VerticalBackdrop");

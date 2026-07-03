@@ -10,6 +10,8 @@ public partial class GameBoardScene
 		QuestionCardRewardAnimation? rewardAnimation,
 		int turnSequenceGeneration)
 	{
+		EnsureItemModeOptionalFxResourcesLoaded();
+
 		if (!rewardAnimation.HasValue
 			|| !IsLocalHandPlayer(playerIndex)
 			|| !IsInsideTree()

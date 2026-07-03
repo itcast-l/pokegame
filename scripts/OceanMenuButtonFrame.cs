@@ -2,6 +2,8 @@ using Godot;
 
 public partial class OceanMenuButtonFrame : Control
 {
+	private const float GlowEpsilon = 0.001f;
+
 	public enum ButtonFrameStyle
 	{
 		OceanPlaque,
@@ -69,6 +71,11 @@ public partial class OceanMenuButtonFrame : Control
 
 	public override void _Process(double delta)
 	{
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		float target = Selected ? 0.56f : 0.0f;
 		if (_button != null)
 		{
@@ -82,8 +89,13 @@ public partial class OceanMenuButtonFrame : Control
 			}
 		}
 
-		_glow = Mathf.Lerp(_glow, target, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
-		QueueRedraw();
+		float nextGlow = Mathf.Lerp(_glow, target, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		bool glowChanged = Mathf.Abs(nextGlow - _glow) > GlowEpsilon;
+		_glow = nextGlow;
+		if (glowChanged)
+		{
+			QueueRedraw();
+		}
 	}
 
 	public override void _Draw()

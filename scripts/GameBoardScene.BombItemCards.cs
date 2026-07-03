@@ -302,6 +302,8 @@ public partial class GameBoardScene
 
 	private async Task PlayBombPairDestroyCardAsync(int tableCardIndex, Vector2 centerArenaPosition)
 	{
+		EnsureItemModeOptionalFxResourcesLoaded();
+
 		TextureRect? fx = CreateBombPairDestroyFx(centerArenaPosition + CardVisualSize / 2.0f, tableCardIndex);
 		if (fx == null)
 		{

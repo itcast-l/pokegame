@@ -106,6 +106,32 @@ internal static class Program
 		Run("network seat control accepts remote actions only for connected humans", NetworkSeatControlAcceptsRemoteActionsOnlyForConnectedHumans);
 		Run("network seat control reveals pending target hand only for connected humans", NetworkSeatControlRevealsPendingTargetHandOnlyForConnectedHumans);
 		Run("network seat control sends pending selection requests only when client is ready", NetworkSeatControlSendsPendingSelectionRequestsOnlyWhenClientIsReady);
+		Run("game board exported setters short circuit redundant work", GameBoardExportedSettersShortCircuitRedundantWork);
+		Run("decorative ui art avoids unconditional per frame redraws", DecorativeUiArtAvoidsUnconditionalPerFrameRedraws);
+		Run("dynamic background layers gate image mode redraw to fallback needs", DynamicBackgroundLayersGateImageModeRedrawToFallbackNeeds);
+		Run("main menu ocean dynamics keeps procedural fallback paths in image mode", MainMenuOceanDynamicsKeepsProceduralFallbackPathsInImageMode);
+		Run("game board defers mode specific resource loads until needed", GameBoardDefersModeSpecificResourceLoadsUntilNeeded);
+		Run("game board optional fx resources are no longer statically preloaded", GameBoardOptionalFxResourcesAreNoLongerStaticallyPreloaded);
+		Run("game board warmup includes optional fx resource category", GameBoardWarmupIncludesOptionalFxResources);
+		Run("game board idle performance trace smoke exists", GameBoardIdlePerformanceTraceSmokeExists);
+		Run("resource export audit script checks tracked assets and export config", ResourceExportAuditScriptChecksTrackedAssetsAndExportConfig);
+		Run("resource export audit doc describes read only command", ResourceExportAuditDocDescribesReadOnlyCommand);
+		Run("export preset excludes upgrade popup source only assets", ExportPresetExcludesUpgradePopupSourceOnlyAssets);
+		Run("gitignore covers upgrade popup source only assets", GitignoreCoversUpgradePopupSourceOnlyAssets);
+		Run("tracked generated asset inventory doc summarizes current categories", TrackedGeneratedAssetInventoryDocSummarizesCurrentCategories);
+		Run("tracked generated asset inventory doc includes suggested manual cleanup batches", TrackedGeneratedAssetInventoryDocIncludesSuggestedManualCleanupBatches);
+		Run("network manager serialization helpers move into partial file", NetworkManagerSerializationHelpersMoveIntoPartialFile);
+		Run("network manager lan discovery helpers move into partial file", NetworkManagerLanDiscoveryHelpersMoveIntoPartialFile);
+		Run("network manager steam helpers move into partial file", NetworkManagerSteamHelpersMoveIntoPartialFile);
+		Run("network manager reconnect helpers move into partial file", NetworkManagerReconnectHelpersMoveIntoPartialFile);
+		Run("network manager lobby helpers move into partial file", NetworkManagerLobbyHelpersMoveIntoPartialFile);
+		Run("network manager board sync helpers move into partial file", NetworkManagerBoardSyncHelpersMoveIntoPartialFile);
+		Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
+		Run("game board network visual queue helpers move into partial file", GameBoardNetworkVisualQueueHelpersMoveIntoPartialFile);
+		Run("game board network prediction helpers move into partial file", GameBoardNetworkPredictionHelpersMoveIntoPartialFile);
+		Run("game board network authority helpers move into partial file", GameBoardNetworkAuthorityHelpersMoveIntoPartialFile);
+		Run("game board network ai proxy helpers move into partial file", GameBoardNetworkAiProxyHelpersMoveIntoPartialFile);
+		Run("game board network card helpers move into partial file", GameBoardNetworkCardHelpersMoveIntoPartialFile);
 		Run("network ai playable turn action ignores blocked item-only turns", NetworkAiPlayableTurnActionIgnoresBlockedItemOnlyTurns);
 		Run("network ai proxy capture profile matches weakest adventure ai", NetworkAiProxyCaptureProfileMatchesWeakestAdventureAi);
 		Run("network ai resumes proxy turn only after authority action settles", NetworkAiResumesProxyTurnOnlyAfterAuthorityActionSettles);
@@ -2566,6 +2592,522 @@ internal static class Program
 			isNetworkHost: false,
 			networkState: NetworkSessionState.InGame,
 			requestInFlight: false));
+	}
+
+	private static void GameBoardExportedSettersShortCircuitRedundantWork()
+	{
+		string path = Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.cs");
+		string text = File.ReadAllText(path);
+
+		True(text.Contains("if (normalizedPlayerCount == _playerCount)", StringComparison.Ordinal));
+		True(text.Contains("if (value == _itemMode)", StringComparison.Ordinal));
+		True(text.Contains("if (normalizedWinningScore == _winningScore)", StringComparison.Ordinal));
+	}
+
+	private static void DecorativeUiArtAvoidsUnconditionalPerFrameRedraws()
+	{
+		string repoRoot = FindRepositoryRoot();
+
+		string oceanMenuText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "OceanMenuButtonFrame.cs"));
+		False(Regex.IsMatch(
+			oceanMenuText,
+			@"_glow = Mathf\.Lerp\(_glow, target, .*?\);\s*QueueRedraw\(\);",
+			RegexOptions.Singleline));
+
+		string oceanDialogText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "OceanDialogPanelArt.cs"));
+		True(oceanDialogText.Contains("SparkRedrawInterval", StringComparison.Ordinal));
+		True(oceanDialogText.Contains("if (!IsVisibleInTree())", StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			oceanDialogText,
+			@"public override void _Process\(double delta\)\s*\{\s*_time \+= delta;\s*QueueRedraw\(\);\s*\}",
+			RegexOptions.Singleline));
+
+		string playerCountFrameText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "PlayerCountDialogFrameArt.cs"));
+		False(Regex.IsMatch(
+			playerCountFrameText,
+			@"_glow = Mathf\.Lerp\(_glow, targetGlow, .*?\);\s*QueueRedraw\(\);",
+			RegexOptions.Singleline));
+
+		string mainMenuPanelText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "MainMenuPlayerCountDialogPanelArt.cs"));
+		True(mainMenuPanelText.Contains("IdleSparkRedrawInterval", StringComparison.Ordinal));
+		True(mainMenuPanelText.Contains("ActiveGlowRedrawInterval", StringComparison.Ordinal));
+		True(mainMenuPanelText.Contains("if (!IsVisibleInTree())", StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			mainMenuPanelText,
+			@"_startButtonGlow = Mathf\.Lerp\(_startButtonGlow, targetGlow, .*?\);\s*QueueRedraw\(\);",
+			RegexOptions.Singleline));
+	}
+
+	private static void DynamicBackgroundLayersGateImageModeRedrawToFallbackNeeds()
+	{
+		string repoRoot = FindRepositoryRoot();
+
+		string underwaterText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "UnderwaterAmbientLayer.cs"));
+		True(underwaterText.Contains("ShouldQueueRedrawForImageFallback()", StringComparison.Ordinal));
+		True(underwaterText.Contains("if (ShouldQueueRedrawForImageFallback())", StringComparison.Ordinal));
+
+		string adventureMapText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "AdventureMapDynamicLayer.cs"));
+		True(adventureMapText.Contains("ShouldQueueRedrawForImageFallback()", StringComparison.Ordinal));
+		True(adventureMapText.Contains("if (ShouldQueueRedrawForImageFallback())", StringComparison.Ordinal));
+	}
+
+	private static void MainMenuOceanDynamicsKeepsProceduralFallbackPathsInImageMode()
+	{
+		string path = Path.Combine(FindRepositoryRoot(), "scripts", "MainMenuOceanDynamics.cs");
+		string text = File.ReadAllText(path);
+
+		True(text.Contains("ShouldQueueRedrawInImageMode()", StringComparison.Ordinal));
+		True(text.Contains("ShouldDrawProceduralSunbeams()", StringComparison.Ordinal));
+		True(text.Contains("ShouldDrawProceduralSurfaceWake()", StringComparison.Ordinal));
+		True(text.Contains("ShouldDrawProceduralCurrentRibbons()", StringComparison.Ordinal));
+		True(text.Contains("ShouldDrawProceduralCausticRibbons()", StringComparison.Ordinal));
+		True(text.Contains("ShouldDrawProceduralGlints()", StringComparison.Ordinal));
+		True(text.Contains("ShouldDrawBubbles()", StringComparison.Ordinal));
+		False(text.Contains("if (_activeRenderMode == OceanRenderMode.Procedural)", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardDefersModeSpecificResourceLoadsUntilNeeded()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string gameBoardText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"));
+		string assetsText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Assets.cs"));
+
+		True(gameBoardText.Contains("EnsureAdventureModeResourcesLoaded();", StringComparison.Ordinal));
+		True(gameBoardText.Contains("EnsureItemModeResourcesLoaded();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadMantaRayTideShiftCycloneFxTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadLeafySeadragonBladeProjectileTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadBossKRoyalSeizureLanceTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadAdventureDamageEffectTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadItemCardTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadAttachmentCardOverlayTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadQuestionCardTransformTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadBombPairDestroyEffectTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadLensRevealWispTextures();", StringComparison.Ordinal));
+		False(gameBoardText.Contains("LoadMagnetCountdownFxTextures();", StringComparison.Ordinal));
+		True(assetsText.Contains("private void EnsureAdventureModeResourcesLoaded()", StringComparison.Ordinal));
+		True(assetsText.Contains("private void EnsureItemModeResourcesLoaded()", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardOptionalFxResourcesAreNoLongerStaticallyPreloaded()
+	{
+		string text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.cs"));
+
+		False(text.Contains("private static readonly Texture2D[] ScoreFillEffectFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] EnemySpecialAbilityAvatarFxFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] MantaRayTideShiftCycloneFxFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] DefaultAdventureDamageEffectFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] CatAdventureDamageEffectFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] LeafySeadragonBladeFlightFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] LeafySeadragonBladeImpactFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] BossKRoyalSeizureLanceFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] QuestionCardTransformFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] SpecialCardTriggerEffectFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] SpecialCardTriggerActivationFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] BombPairDestroyEffectFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] LensRevealWispFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] MagnetCountdownFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] TableShuffleVortexFrames", StringComparison.Ordinal));
+		False(text.Contains("private static readonly Texture2D[] MagnetAttachmentApplyRingFrames", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardWarmupIncludesOptionalFxResources()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string warmupText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.ResourceWarmup.cs"));
+		string assetsText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Assets.cs"));
+
+		True(warmupText.Contains("WarmupOptionalFxResourcesAsync", StringComparison.Ordinal));
+		True(warmupText.Contains("WarmupOptionalFx:CoreGameplay", StringComparison.Ordinal));
+		True(warmupText.Contains("WarmupOptionalFx:AdventureMode", StringComparison.Ordinal));
+		True(warmupText.Contains("WarmupOptionalFx:ItemMode", StringComparison.Ordinal));
+		True(assetsText.Contains("private void EnsureCommonGameplayFxResourcesLoaded()", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardIdlePerformanceTraceSmokeExists()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string smokeScriptPath = Path.Combine(repoRoot, "tests", "GameBoardIdlePerformanceTraceSmoke.gd");
+		string runnerPath = Path.Combine(repoRoot, "tests", "run_game_board_idle_performance_trace_smoke.sh");
+
+		True(File.Exists(smokeScriptPath));
+		True(File.Exists(runnerPath));
+
+		string smokeText = File.ReadAllText(smokeScriptPath);
+		string runnerText = File.ReadAllText(runnerPath);
+
+		True(smokeText.Contains("IDLE_WINDOW_BEGIN", StringComparison.Ordinal));
+		True(smokeText.Contains("IDLE_WINDOW_END", StringComparison.Ordinal));
+		True(smokeText.Contains("debug_performance_trace", StringComparison.Ordinal));
+		True(runnerText.Contains("RenderPlayerHands", StringComparison.Ordinal));
+		True(runnerText.Contains("RenderTableCards", StringComparison.Ordinal));
+		True(runnerText.Contains("IDLE_WINDOW_BEGIN", StringComparison.Ordinal));
+		True(runnerText.Contains("IDLE_WINDOW_END", StringComparison.Ordinal));
+	}
+
+	private static void ResourceExportAuditScriptChecksTrackedAssetsAndExportConfig()
+	{
+		string scriptPath = Path.Combine(FindRepositoryRoot(), "tools", "audit_export_resources.sh");
+		True(File.Exists(scriptPath));
+		string text = File.ReadAllText(scriptPath);
+
+		True(text.Contains("git ls-files", StringComparison.Ordinal));
+		True(text.Contains("generated-images", StringComparison.Ordinal));
+		True(text.Contains("outputs", StringComparison.Ordinal));
+		True(text.Contains("debug-sse.log", StringComparison.Ordinal));
+		True(text.Contains("project.godot", StringComparison.Ordinal));
+		True(text.Contains("export_presets.cfg", StringComparison.Ordinal));
+		True(text.Contains("autoload", StringComparison.Ordinal));
+		True(text.Contains("exclude_filter", StringComparison.Ordinal));
+		True(text.Contains("raw", StringComparison.Ordinal));
+		True(text.Contains("transparent-processing-meta.json", StringComparison.Ordinal));
+		True(text.Contains("upgrade-popup-assets", StringComparison.Ordinal));
+		True(text.Contains("source", StringComparison.Ordinal));
+		True(text.Contains("Category Summary", StringComparison.Ordinal));
+		True(text.Contains("upgrade_popup_processed", StringComparison.Ordinal));
+		True(text.Contains("board_top_preview", StringComparison.Ordinal));
+		False(text.Contains("git rm", StringComparison.Ordinal));
+		False(text.Contains("rm -rf", StringComparison.Ordinal));
+	}
+
+	private static void ResourceExportAuditDocDescribesReadOnlyCommand()
+	{
+		string docPath = Path.Combine(FindRepositoryRoot(), "docs", "RESOURCE_EXPORT_AUDIT.md");
+		True(File.Exists(docPath));
+		string text = File.ReadAllText(docPath);
+
+		True(text.Contains("bash tools/audit_export_resources.sh", StringComparison.Ordinal));
+		True(text.Contains("只报告", StringComparison.Ordinal));
+		True(text.Contains("不自动删除", StringComparison.Ordinal));
+		True(text.Contains("processed", StringComparison.Ordinal));
+		True(text.Contains("raw", StringComparison.Ordinal));
+	}
+
+	private static void ExportPresetExcludesUpgradePopupSourceOnlyAssets()
+	{
+		string text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "export_presets.cfg"));
+
+		True(text.Contains("generated-images/upgrade-popup-assets/raw/**", StringComparison.Ordinal));
+		True(text.Contains("generated-images/upgrade-popup-assets/*.png", StringComparison.Ordinal));
+		True(text.Contains("generated-images/upgrade-popup-assets/*.png.import", StringComparison.Ordinal));
+		True(text.Contains("generated-images/upgrade-popup-assets/transparent-processing-meta.json", StringComparison.Ordinal));
+	}
+
+	private static void GitignoreCoversUpgradePopupSourceOnlyAssets()
+	{
+		string text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), ".gitignore"));
+
+		True(text.Contains("/generated-images/upgrade-popup-assets/*/raw/", StringComparison.Ordinal));
+		True(text.Contains("/generated-images/upgrade-popup-assets/transparent-processing-meta.json", StringComparison.Ordinal));
+		True(text.Contains("/generated-images/upgrade-popup-assets/*.png", StringComparison.Ordinal));
+		True(text.Contains("/generated-images/upgrade-popup-assets/*.png.import", StringComparison.Ordinal));
+	}
+
+	private static void TrackedGeneratedAssetInventoryDocSummarizesCurrentCategories()
+	{
+		string docPath = Path.Combine(FindRepositoryRoot(), "docs", "TRACKED_GENERATED_ASSET_INVENTORY.md");
+		True(File.Exists(docPath));
+		string text = File.ReadAllText(docPath);
+
+		True(text.Contains("upgrade_popup_processed", StringComparison.Ordinal));
+		True(text.Contains("upgrade_popup_raw", StringComparison.Ordinal));
+		True(text.Contains("board_top_preview", StringComparison.Ordinal));
+		True(text.Contains("generated_misc", StringComparison.Ordinal));
+		True(text.Contains("debug_log", StringComparison.Ordinal));
+		True(text.Contains("保留跟踪", StringComparison.Ordinal));
+		True(text.Contains("候选取消跟踪", StringComparison.Ordinal));
+	}
+
+	private static void TrackedGeneratedAssetInventoryDocIncludesSuggestedManualCleanupBatches()
+	{
+		string docPath = Path.Combine(FindRepositoryRoot(), "docs", "TRACKED_GENERATED_ASSET_INVENTORY.md");
+		string text = File.ReadAllText(docPath);
+
+		True(text.Contains("Suggested Manual Cleanup Batches", StringComparison.Ordinal));
+		True(text.Contains("Batch 1", StringComparison.Ordinal));
+		True(text.Contains("board-top-extension-preview", StringComparison.Ordinal));
+		True(text.Contains("git rm --cached --", StringComparison.Ordinal));
+		True(text.Contains("review first", StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static void NetworkManagerSerializationHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.Serialization.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(partialText.Contains("private static Godot.Collections.Dictionary ToDictionary(NetworkSessionConfig config)", StringComparison.Ordinal));
+		True(partialText.Contains("private static NetworkSessionConfig ParseConfig(Godot.Collections.Dictionary dictionary)", StringComparison.Ordinal));
+		True(partialText.Contains("private static NetworkPlayerPublicState ParsePlayer(Godot.Collections.Dictionary dictionary)", StringComparison.Ordinal));
+		False(mainText.Contains("private static Godot.Collections.Dictionary ToDictionary(NetworkSessionConfig config)", StringComparison.Ordinal));
+		False(mainText.Contains("private static NetworkPlayerPublicState ParsePlayer(Godot.Collections.Dictionary dictionary)", StringComparison.Ordinal));
+		False(mainText.Contains("private static TEnum ReadEnum<TEnum>", StringComparison.Ordinal));
+	}
+
+	private static void NetworkManagerLanDiscoveryHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.LanDiscovery.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(partialText.Contains("private void StartLanDiscoveryResponder()", StringComparison.Ordinal));
+		True(partialText.Contains("private void PollLanDiscoveryResponder(double now)", StringComparison.Ordinal));
+		True(partialText.Contains("private void PollLanDiscoveryBrowser(double now)", StringComparison.Ordinal));
+		True(partialText.Contains("private void UpsertRoom(NetworkRoomInfo room)", StringComparison.Ordinal));
+		False(mainText.Contains("private void StartLanDiscoveryResponder()", StringComparison.Ordinal));
+		False(mainText.Contains("private void PollLanDiscoveryResponder(double now)", StringComparison.Ordinal));
+		False(mainText.Contains("private void PollLanDiscoveryBrowser(double now)", StringComparison.Ordinal));
+		False(mainText.Contains("private void UpsertRoom(NetworkRoomInfo room)", StringComparison.Ordinal));
+	}
+
+	private static void NetworkManagerSteamHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.Steam.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(partialText.Contains("public void HostSteam(", StringComparison.Ordinal));
+		True(partialText.Contains("private void TryConnectSteamSignals()", StringComparison.Ordinal));
+		True(partialText.Contains("private void OnSteamLobbyJoined(", StringComparison.Ordinal));
+		True(partialText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
+		True(partialText.Contains("private GodotObject? GetSteamSingleton()", StringComparison.Ordinal));
+		True(partialText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
+		False(mainText.Contains("public void HostSteam(", StringComparison.Ordinal));
+		False(mainText.Contains("private void TryConnectSteamSignals()", StringComparison.Ordinal));
+		False(mainText.Contains("private void OnSteamLobbyJoined(", StringComparison.Ordinal));
+		False(mainText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
+		False(mainText.Contains("private GodotObject? GetSteamSingleton()", StringComparison.Ordinal));
+		False(mainText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
+	}
+
+	private static void NetworkManagerReconnectHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.Reconnect.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(partialText.Contains("private void PollReconnect(double now)", StringComparison.Ordinal));
+		True(partialText.Contains("private void TryMarkSeatDisconnected(int disconnectedPeerId)", StringComparison.Ordinal));
+		True(partialText.Contains("private bool CanAttemptReconnectClaim()", StringComparison.Ordinal));
+		True(partialText.Contains("private void TryStartReconnectAttempt(double now)", StringComparison.Ordinal));
+		True(partialText.Contains("public void NotifyReconnectSnapshotApplied(string matchId)", StringComparison.Ordinal));
+		False(mainText.Contains("private void PollReconnect(double now)", StringComparison.Ordinal));
+		False(mainText.Contains("private void TryMarkSeatDisconnected(int disconnectedPeerId)", StringComparison.Ordinal));
+		False(mainText.Contains("private bool CanAttemptReconnectClaim()", StringComparison.Ordinal));
+		False(mainText.Contains("private void TryStartReconnectAttempt(double now)", StringComparison.Ordinal));
+		False(mainText.Contains("public void NotifyReconnectSnapshotApplied(string matchId)", StringComparison.Ordinal));
+	}
+
+	private static void NetworkManagerLobbyHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.Lobby.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(partialText.Contains("public void SetLocalReady(bool isReady)", StringComparison.Ordinal));
+		True(partialText.Contains("public void StartMatch()", StringComparison.Ordinal));
+		True(partialText.Contains("public void LeaveSession()", StringComparison.Ordinal));
+		True(partialText.Contains("private void RpcRegisterPlayer(", StringComparison.Ordinal));
+		True(partialText.Contains("private void BroadcastPlayerList()", StringComparison.Ordinal));
+		True(partialText.Contains("private void MarkClientSceneLoaded(", StringComparison.Ordinal));
+		True(partialText.Contains("private void PollLoadHandshake(double now)", StringComparison.Ordinal));
+		False(mainText.Contains("public void SetLocalReady(bool isReady)", StringComparison.Ordinal));
+		False(mainText.Contains("public void StartMatch()", StringComparison.Ordinal));
+		False(mainText.Contains("public void LeaveSession()", StringComparison.Ordinal));
+		False(mainText.Contains("private void RpcRegisterPlayer(", StringComparison.Ordinal));
+		False(mainText.Contains("private void BroadcastPlayerList()", StringComparison.Ordinal));
+		False(mainText.Contains("private void MarkClientSceneLoaded(", StringComparison.Ordinal));
+		False(mainText.Contains("private void PollLoadHandshake(double now)", StringComparison.Ordinal));
+	}
+
+	private static void NetworkManagerBoardSyncHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.BoardSync.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(partialText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
+		True(partialText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
+		True(partialText.Contains("private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("private void RpcReconnectPlayer(string matchId, string reconnectToken, string stableUserId)", StringComparison.Ordinal));
+		True(partialText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
+		False(mainText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
+		False(mainText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
+		False(mainText.Contains("private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("private void RpcReconnectPlayer(string matchId, string reconnectToken, string stableUserId)", StringComparison.Ordinal));
+		False(mainText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardNetworkSnapshotHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkSnapshot.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
+		True(partialText.Contains("internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat", StringComparison.Ordinal));
+		True(partialText.Contains("internal void ApplyNetworkBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
+		True(partialText.Contains("private void ApplyNetworkBoardSnapshotNow(", StringComparison.Ordinal));
+		True(partialText.Contains("private void ApplyHandsFromSnapshot(", StringComparison.Ordinal));
+		True(partialText.Contains("private void ApplyItemHandsFromSnapshot(", StringComparison.Ordinal));
+		True(partialText.Contains("private void ApplyTableCardsFromSnapshot(", StringComparison.Ordinal));
+		True(partialText.Contains("private void ApplyPendingSelectionFromSnapshot(", StringComparison.Ordinal));
+		True(partialText.Contains("private void ApplySeatControlStatesFromSnapshot(", StringComparison.Ordinal));
+		False(mainText.Contains("internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat", StringComparison.Ordinal));
+		False(mainText.Contains("private void ApplyNetworkBoardSnapshotNow(", StringComparison.Ordinal));
+		False(mainText.Contains("private void ApplyHandsFromSnapshot(", StringComparison.Ordinal));
+		False(mainText.Contains("private void ApplySeatControlStatesFromSnapshot(", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardNetworkVisualQueueHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkVisualQueue.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
+		True(partialText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task ProcessNetworkVisualQueueAsync()", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkCardPlayedEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkItemCardVisualEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		False(mainText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task ProcessNetworkVisualQueueAsync()", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task PlayNetworkCardPlayedEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardNetworkPredictionHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkPrediction.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
+		True(partialText.Contains("private void ResetNetworkPredictedHandVisualState()", StringComparison.Ordinal));
+		True(partialText.Contains("private bool BeginPredictedNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("private bool BeginPredictedNetworkItemCardPlay(int itemHandIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("private void RollbackPredictedNetworkHandCardPlay()", StringComparison.Ordinal));
+		True(partialText.Contains("private void RollbackPredictedNetworkItemCardPlay()", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task BeginPredictedNetworkMagnetAttachmentSelectionAsync(int handIndex)", StringComparison.Ordinal));
+		False(mainText.Contains("private void ResetNetworkPredictedHandVisualState()", StringComparison.Ordinal));
+		False(mainText.Contains("private bool BeginPredictedNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("private bool BeginPredictedNetworkItemCardPlay(int itemHandIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("private void RollbackPredictedNetworkItemCardPlay()", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardNetworkAuthorityHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkAuthority.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
+		True(partialText.Contains("internal void ConfirmNetworkHostItemCardPlay(int itemHandIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("internal bool TryStartNetworkHandCardPlayFromHost(", StringComparison.Ordinal));
+		True(partialText.Contains("internal bool TryStartNetworkItemCardPlayFromHost(", StringComparison.Ordinal));
+		True(partialText.Contains("internal bool TryStartNetworkPendingItemSelectionFromHost(", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkHostHandCardAndBroadcastAsync(", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkHostItemCardAndBroadcastAsync(", StringComparison.Ordinal));
+		True(partialText.Contains("internal int CreateNextNetworkSnapshotId()", StringComparison.Ordinal));
+		True(partialText.Contains("internal void SendBoardSnapshotIfHost()", StringComparison.Ordinal));
+		False(mainText.Contains("internal void ConfirmNetworkHostItemCardPlay(int itemHandIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("internal bool TryStartNetworkHandCardPlayFromHost(", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task PlayNetworkHostItemCardAndBroadcastAsync(", StringComparison.Ordinal));
+		False(mainText.Contains("internal void SendBoardSnapshotIfHost()", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardNetworkAiProxyHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkAiProxy.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
+		True(partialText.Contains("internal bool IsNetworkMatchClaimable()", StringComparison.Ordinal));
+		True(partialText.Contains("private bool IsLocalSeatHumanConnected()", StringComparison.Ordinal));
+		True(partialText.Contains("internal void BeginNetworkAiProxyTurnIfNeeded()", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task ResolveNetworkAiProxyTurnsAsync(int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task<bool> RecoverNetworkAiProxyTurnAfterFailureAsync(int failedSeatIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task<bool> TryResolvePendingNetworkAiProxySelectionAsync(int turnSequenceGeneration)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task<PlayCardResult> PlayNetworkAiProxyHandEntryAsync(int playerIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("internal void BeginNetworkAiProxyTurnIfNeeded()", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task ResolveNetworkAiProxyTurnsAsync(int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task<PlayCardResult> PlayNetworkAiProxyHandEntryAsync(int playerIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
+		False(mainText.Contains("private int PickPendingItemTargetPlayerForNetworkAiProxy()", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardNetworkCardHelpersMoveIntoPartialFile()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkCards.cs");
+		string mainText = File.ReadAllText(mainPath);
+
+		True(File.Exists(partialPath));
+		string partialText = File.ReadAllText(partialPath);
+
+		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
+		True(partialText.Contains("private string ToNetworkCardCode(PlayingCard card)", StringComparison.Ordinal));
+		True(partialText.Contains("private PlayingCard CreateNetworkPlayingCard(string cardCode)", StringComparison.Ordinal));
+		True(partialText.Contains("private ItemCard CreateNetworkVisualItemCard(string itemCardId)", StringComparison.Ordinal));
+		True(partialText.Contains("private void EnsureNetworkCardCache()", StringComparison.Ordinal));
+		True(partialText.Contains("private bool TryGetNetworkPlayerName(int playerIndex, out string playerName)", StringComparison.Ordinal));
+		True(partialText.Contains("private static string[] SplitNetworkCsv(string csv)", StringComparison.Ordinal));
+		False(mainText.Contains("private string ToNetworkCardCode(PlayingCard card)", StringComparison.Ordinal));
+		False(mainText.Contains("private PlayingCard CreateNetworkPlayingCard(string cardCode)", StringComparison.Ordinal));
+		False(mainText.Contains("private ItemCard CreateNetworkVisualItemCard(string itemCardId)", StringComparison.Ordinal));
+		False(mainText.Contains("private void EnsureNetworkCardCache()", StringComparison.Ordinal));
+		False(mainText.Contains("private bool TryGetNetworkPlayerName(int playerIndex, out string playerName)", StringComparison.Ordinal));
 	}
 
 	private static void NetworkAiPlayableTurnActionIgnoresBlockedItemOnlyTurns()

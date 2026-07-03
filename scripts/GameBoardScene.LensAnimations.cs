@@ -11,6 +11,8 @@ public partial class GameBoardScene
 		Vector2 splitGlobalCenter,
 		float startRotationDegrees)
 	{
+		EnsureItemModeOptionalFxResourcesLoaded();
+
 		if (!IsInsideTree())
 		{
 			return;
@@ -94,6 +96,8 @@ public partial class GameBoardScene
 
 	private async Task PlayLensRevealWispFlightAsync(Vector2 startGlobalCenter, Vector2 targetGlobalCenter, int targetNumber, int tableCardIndex)
 	{
+		EnsureItemModeOptionalFxResourcesLoaded();
+
 		if (!IsInsideTree() || _lensRevealWispFrames.Count == 0)
 		{
 			return;

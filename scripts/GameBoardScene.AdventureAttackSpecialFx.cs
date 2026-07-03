@@ -148,6 +148,8 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		Action? onHit)
 	{
+		EnsureAdventureModeResourcesLoaded();
+
 		await PlayBossKRoyalSeizureLanceFlightAsync(attackerPlayerIndex, targetCenter, turnSequenceGeneration, onHit);
 		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 		{

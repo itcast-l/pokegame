@@ -11,6 +11,8 @@ Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png"
 Region = Rect2(291, 58, 671, 1097)
 TitleColor = Color(0.9354, 0.9492, 0.9748, 0.9918)
+GlowColor = Color(0.48, 0.92, 1, 0.06)
+RuleColor = Color(0.98, 0.9, 0.7, 0.08)
 SortOrder = 10
 PreviewLabel = "hearts/common"
 
@@ -45,6 +47,8 @@ Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png"
 Region = Rect2(290, 32, 673, 1167)
 TitleColor = Color(0.9225, 0.955, 1, 0.9925)
+GlowColor = Color(0.48, 0.92, 1, 0.06)
+RuleColor = Color(0.98, 0.9, 0.7, 0.08)
 SortOrder = 40
 PreviewLabel = "spades/common"
 
@@ -79,6 +83,8 @@ Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png"
 Region = Rect2(296, 42, 659, 1156)
 TitleColor = Color(0.9344, 0.9512, 0.9692, 0.9922)
+GlowColor = Color(0.48, 0.92, 1, 0.06)
+RuleColor = Color(0.98, 0.9, 0.7, 0.08)
 SortOrder = 70
 PreviewLabel = "diamonds/common"
 
@@ -113,6 +119,8 @@ Tier = "common"
 TexturePath = "res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png"
 Region = Rect2(291, 53, 670, 1106)
 TitleColor = Color(0.916, 0.964, 0.984, 0.992)
+GlowColor = Color(0.48, 0.92, 1, 0.06)
+RuleColor = Color(0.98, 0.9, 0.7, 0.08)
 SortOrder = 100
 PreviewLabel = "clubs/common"
 

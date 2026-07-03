@@ -4,6 +4,197 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private void EnsureCommonGameplayFxResourcesLoaded()
+	{
+		if (_commonGameplayFxResourcesLoaded)
+		{
+			return;
+		}
+
+		LoadScoreFillEffectTextures();
+		LoadSpecialCardTriggerEffectTextures();
+		_commonGameplayFxResourcesLoaded = true;
+	}
+
+	private void EnsureAdventureModeResourcesLoaded()
+	{
+		if (_adventureModeResourcesLoaded)
+		{
+			return;
+		}
+
+		LoadEnemySpecialAbilityAvatarFxTextures();
+		LoadMantaRayTideShiftCycloneFxTextures();
+		LoadLeafySeadragonBladeProjectileTextures();
+		LoadBossKRoyalSeizureLanceTextures();
+		LoadAdventureDamageEffectTextures();
+		LoadAdventureEnemyDamageEffectTextures();
+		LoadDragonPrinceSpecialJackTexture();
+		_adventureModeResourcesLoaded = true;
+	}
+
+	private void EnsureItemModeResourcesLoaded()
+	{
+		if (_itemModeResourcesLoaded)
+		{
+			return;
+		}
+
+		LoadItemCardTextures();
+		LoadAttachmentCardOverlayTextures();
+		_itemModeResourcesLoaded = true;
+	}
+
+	private void EnsureItemModeOptionalFxResourcesLoaded()
+	{
+		if (_itemModeOptionalFxResourcesLoaded)
+		{
+			return;
+		}
+
+		LoadQuestionCardTransformTextures();
+		LoadBombPairDestroyEffectTextures();
+		LoadLensRevealWispTextures();
+		LoadMagnetCountdownFxTextures();
+		_itemModeOptionalFxResourcesLoaded = true;
+	}
+
+	private static Texture2D[] LoadEnemySpecialAbilityAvatarFxFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			EnemySpecialAbilityAvatarFxFramePattern,
+			EnemySpecialAbilityAvatarFxFrameCount,
+			"enemy special ability avatar effect",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadScoreFillEffectFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			ScoreFillEffectFramePattern,
+			ScoreFillEffectFrameCount,
+			"score fill effect");
+	}
+
+	private static Texture2D[] LoadMantaRayTideShiftCycloneFxFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			MantaRayTideShiftCycloneFxFramePattern,
+			MantaRayTideShiftCycloneFxFrameCount,
+			"manta ray tide shift cyclone",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadDefaultAdventureDamageEffectFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			AdventureDamageEffectFramePattern,
+			AdventureDamageEffectFrameCount,
+			"adventure damage effect");
+	}
+
+	private static Texture2D[] LoadCatAdventureDamageEffectFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			CatAdventureDamageEffectFramePattern,
+			AdventureDamageEffectFrameCount,
+			"cat adventure damage effect");
+	}
+
+	private static Texture2D[] LoadLeafySeadragonBladeFlightFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			LeafySeadragonBladeFlightFramePattern,
+			LeafySeadragonBladeFlightFrameCount,
+			"leafy seadragon blade flight",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadLeafySeadragonBladeImpactFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			LeafySeadragonBladeImpactFramePattern,
+			LeafySeadragonBladeImpactFrameCount,
+			"leafy seadragon blade impact",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadBossKRoyalSeizureLanceFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			BossKRoyalSeizureLanceFramePattern,
+			BossKRoyalSeizureLanceFrameCount,
+			"boss k royal seizure lance",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadQuestionCardTransformFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			QuestionCardTransformFramePattern,
+			QuestionCardTransformFrameCount,
+			"question card transform");
+	}
+
+	private static Texture2D[] LoadSpecialCardTriggerEffectFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			SpecialCardTriggerEffectFramePattern,
+			SpecialCardTriggerEffectFrameCount,
+			"special card trigger effect");
+	}
+
+	private static Texture2D[] LoadSpecialCardTriggerActivationFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			SpecialCardTriggerActivationFramePattern,
+			SpecialCardTriggerActivationFrameCount,
+			"special card trigger activation",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadBombPairDestroyEffectFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			BombPairDestroyEffectFramePattern,
+			BombPairDestroyEffectFrameCount,
+			"bomb pair destroy effect");
+	}
+
+	private static Texture2D[] LoadLensRevealWispFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			LensRevealWispFramePattern,
+			LensRevealWispFrameCount,
+			"lens reveal wisp");
+	}
+
+	private static Texture2D[] LoadMagnetCountdownFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			MagnetCountdownFramePattern,
+			MagnetCountdownFrameCount,
+			"magnet countdown");
+	}
+
+	private static Texture2D[] LoadTableShuffleVortexFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			TableShuffleVortexFramePattern,
+			TableShuffleVortexFrameCount,
+			"table shuffle vortex",
+			preferImageFile: true);
+	}
+
+	private static Texture2D[] LoadMagnetAttachmentApplyRingFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			MagnetAttachmentApplyRingFramePattern,
+			MagnetAttachmentApplyRingFrameCount,
+			"magnet attachment apply ring",
+			preferImageFile: true);
+	}
+
 	private void LoadCardBackTextures()
 	{
 		_cardBackTexture = CardBackFrames.Length > 0 ? CardBackFrames[0] : null;
@@ -12,39 +203,39 @@ public partial class GameBoardScene
 	private void LoadScoreFillEffectTextures()
 	{
 		_scoreFillEffectFrames.Clear();
-		_scoreFillEffectFrames.AddRange(ScoreFillEffectFrames);
+		_scoreFillEffectFrames.AddRange(LoadScoreFillEffectFrames());
 	}
 
 	private void LoadEnemySpecialAbilityAvatarFxTextures()
 	{
 		_enemySpecialAbilityAvatarFxFrames.Clear();
-		_enemySpecialAbilityAvatarFxFrames.AddRange(EnemySpecialAbilityAvatarFxFrames);
+		_enemySpecialAbilityAvatarFxFrames.AddRange(LoadEnemySpecialAbilityAvatarFxFrames());
 	}
 
 	private void LoadMantaRayTideShiftCycloneFxTextures()
 	{
 		_mantaRayTideShiftCycloneFxFrames.Clear();
-		_mantaRayTideShiftCycloneFxFrames.AddRange(MantaRayTideShiftCycloneFxFrames);
+		_mantaRayTideShiftCycloneFxFrames.AddRange(LoadMantaRayTideShiftCycloneFxFrames());
 	}
 
 	private void LoadLeafySeadragonBladeProjectileTextures()
 	{
 		_leafySeadragonBladeFlightFrames.Clear();
-		_leafySeadragonBladeFlightFrames.AddRange(LeafySeadragonBladeFlightFrames);
+		_leafySeadragonBladeFlightFrames.AddRange(LoadLeafySeadragonBladeFlightFrames());
 		_leafySeadragonBladeImpactFrames.Clear();
-		_leafySeadragonBladeImpactFrames.AddRange(LeafySeadragonBladeImpactFrames);
+		_leafySeadragonBladeImpactFrames.AddRange(LoadLeafySeadragonBladeImpactFrames());
 	}
 
 	private void LoadBossKRoyalSeizureLanceTextures()
 	{
 		_bossKRoyalSeizureLanceFrames.Clear();
-		_bossKRoyalSeizureLanceFrames.AddRange(BossKRoyalSeizureLanceFrames);
+		_bossKRoyalSeizureLanceFrames.AddRange(LoadBossKRoyalSeizureLanceFrames());
 	}
 
 	private void LoadAdventureDamageEffectTextures()
 	{
 		_adventureDamageEffectFrames.Clear();
-		_adventureDamageEffectFrames.AddRange(CatAdventureDamageEffectFrames);
+		_adventureDamageEffectFrames.AddRange(LoadCatAdventureDamageEffectFrames());
 	}
 
 	private void LoadAdventureEnemyDamageEffectTextures()
@@ -59,7 +250,7 @@ public partial class GameBoardScene
 				Mathf.Max(1, enemyDefinition.DamageEffectFrameCount),
 				$"{enemyDefinition.Id} adventure damage effect",
 				enemyDefinition.DamageEffectPreferImageFile)
-			: DefaultAdventureDamageEffectFrames;
+			: LoadDefaultAdventureDamageEffectFrames();
 		_adventureEnemyDamageEffectFrames.AddRange(frames);
 		CacheDragonPrinceDamageHitFrameSlices(enemyDefinition);
 	}
@@ -100,15 +291,15 @@ public partial class GameBoardScene
 	private void LoadQuestionCardTransformTextures()
 	{
 		_questionCardTransformFrames.Clear();
-		_questionCardTransformFrames.AddRange(QuestionCardTransformFrames);
+		_questionCardTransformFrames.AddRange(LoadQuestionCardTransformFrames());
 	}
 
 	private void LoadSpecialCardTriggerEffectTextures()
 	{
 		_specialCardTriggerEffectFrames.Clear();
-		_specialCardTriggerEffectFrames.AddRange(SpecialCardTriggerEffectFrames);
+		_specialCardTriggerEffectFrames.AddRange(LoadSpecialCardTriggerEffectFrames());
 		_specialCardTriggerActivationFrames.Clear();
-		_specialCardTriggerActivationFrames.AddRange(SpecialCardTriggerActivationFrames);
+		_specialCardTriggerActivationFrames.AddRange(LoadSpecialCardTriggerActivationFrames());
 	}
 
 	private void LoadDragonPrinceSpecialJackTexture()
@@ -138,13 +329,13 @@ public partial class GameBoardScene
 	private void LoadBombPairDestroyEffectTextures()
 	{
 		_bombPairDestroyEffectFrames.Clear();
-		_bombPairDestroyEffectFrames.AddRange(BombPairDestroyEffectFrames);
+		_bombPairDestroyEffectFrames.AddRange(LoadBombPairDestroyEffectFrames());
 	}
 
 	private void LoadLensRevealWispTextures()
 	{
 		_lensRevealWispFrames.Clear();
-		_lensRevealWispFrames.AddRange(LensRevealWispFrames);
+		_lensRevealWispFrames.AddRange(LoadLensRevealWispFrames());
 	}
 
 	private void LoadAttachmentCardOverlayTextures()
@@ -178,11 +369,11 @@ public partial class GameBoardScene
 	private void LoadMagnetCountdownFxTextures()
 	{
 		_magnetCountdownFrameTextures.Clear();
-		_magnetCountdownFrameTextures.AddRange(MagnetCountdownFrames);
+		_magnetCountdownFrameTextures.AddRange(LoadMagnetCountdownFrames());
 		_tableShuffleVortexFrames.Clear();
-		_tableShuffleVortexFrames.AddRange(TableShuffleVortexFrames);
+		_tableShuffleVortexFrames.AddRange(LoadTableShuffleVortexFrames());
 		_magnetAttachmentApplyRingFrames.Clear();
-		_magnetAttachmentApplyRingFrames.AddRange(MagnetAttachmentApplyRingFrames);
+		_magnetAttachmentApplyRingFrames.AddRange(LoadMagnetAttachmentApplyRingFrames());
 	}
 
 	private void MarkAnimatedCardBack(TextureRect cardBack)

@@ -18,3 +18,11 @@ __pycache__/
 # Local generated work areas
 /tmp/
 /outputs/
+/generated-images/*.png
+/generated-images/*.png.import
+/generated-images/board-top-extension-preview/
+/generated-images/upgrade-popup-assets/*/raw/
+/generated-images/upgrade-popup-assets/transparent-processing-meta.json
+/generated-images/upgrade-popup-assets/*.png
+/generated-images/upgrade-popup-assets/*.png.import
+*.debug-sse.log

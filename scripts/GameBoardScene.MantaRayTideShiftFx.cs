@@ -11,6 +11,8 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		Action? onHit)
 	{
+		EnsureAdventureModeResourcesLoaded();
+
 		if (_mantaRayTideShiftCycloneFxFrames.Count == 0 || !IsInsideTree())
 		{
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())

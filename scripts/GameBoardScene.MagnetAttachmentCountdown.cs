@@ -4,6 +4,8 @@ public partial class GameBoardScene
 {
 	private void ShowMagnetAttachmentCountdown()
 	{
+		EnsureItemModeOptionalFxResourcesLoaded();
+
 		ClearMagnetAttachmentCountdown();
 
 		const float countdownWidth = 176.0f;

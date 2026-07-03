@@ -3,6 +3,9 @@ using Godot;
 public partial class MainMenuPlayerCountDialogPanelArt : Control
 {
 	private const string PanelTexturePath = "res://assets/ui/player_count_dialog_interactive_panel.png";
+	private const double IdleSparkRedrawInterval = 1.0 / 12.0;
+	private const double ActiveGlowRedrawInterval = 1.0 / 24.0;
+	private const float GlowEpsilon = 0.001f;
 	private static readonly PanelSpark[] PanelSparks =
 	{
 		new(new Vector2(0.500f, 0.066f), 8.8f, 0.42f, 1.65f, 0.45f, 11.0f, 5.8f),
@@ -24,6 +27,7 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 	private Control? _startGameFrame;
 	private Button? _startGameButton;
 	private double _time;
+	private double _redrawAccumulator;
 	private float _startButtonGlow;
 	[Export]
 	public Texture2D? PanelSparkTexture { get; set; }
@@ -57,6 +61,11 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 
 	public override void _Process(double delta)
 	{
+		if (!IsVisibleInTree())
+		{
+			return;
+		}
+
 		_time += delta;
 
 		float targetGlow = 0.0f;
@@ -70,7 +79,26 @@ public partial class MainMenuPlayerCountDialogPanelArt : Control
 			}
 		}
 
-		_startButtonGlow = Mathf.Lerp(_startButtonGlow, targetGlow, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		float nextGlow = Mathf.Lerp(_startButtonGlow, targetGlow, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		bool glowChanged = Mathf.Abs(nextGlow - _startButtonGlow) > GlowEpsilon;
+		_startButtonGlow = nextGlow;
+		if (glowChanged)
+		{
+			_redrawAccumulator = 0.0;
+			QueueRedraw();
+			return;
+		}
+
+		_redrawAccumulator += delta;
+		double redrawInterval = (_startButtonGlow > 0.01f || targetGlow > 0.01f)
+			? ActiveGlowRedrawInterval
+			: IdleSparkRedrawInterval;
+		if (_redrawAccumulator < redrawInterval)
+		{
+			return;
+		}
+
+		_redrawAccumulator %= redrawInterval;
 		QueueRedraw();
 	}
 

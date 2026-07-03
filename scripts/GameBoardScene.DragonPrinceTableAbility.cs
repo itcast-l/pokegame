@@ -12,6 +12,8 @@ public partial class GameBoardScene
 
 	private async Task<PlayCardResult> ResolveDragonPrinceJackTurnStartAsync(int playerIndex, int turnSequenceGeneration)
 	{
+		EnsureAdventureModeResourcesLoaded();
+
 		if (!ShouldResolveDragonPrinceJack(playerIndex))
 		{
 			return new PlayCardResult(false, false);
