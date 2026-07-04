@@ -16,13 +16,32 @@ public partial class AdventureUpgradeChoiceArt : Control
 	private Texture2D? _cardTexture;
 	private string _title = string.Empty;
 	private string _description = string.Empty;
-	private bool _highlighted;
+	private float _highlightAmount;
 	private Color _titleColor = new(0.93f, 0.96f, 1.0f, 0.99f);
 	private Color _glowColor = new(0.48f, 0.92f, 1.0f, 0.06f);
 	private Color _ruleColor = new(0.98f, 0.9f, 0.7f, 0.08f);
 	private readonly StyleBoxFlat _highlightStyle = new();
 	private readonly StyleBoxFlat _descriptionWellStyle = new();
-	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.115f, 0.805f, 0.77f, 0.105f);
+	private const float DescriptionLineSpacing = 0.25f;
+	private const int MaxDescriptionFontSize = 16;
+	private const int MinDescriptionFontSize = 11;
+	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.115f, 0.758f, 0.77f, 0.152f);
+
+	public float HighlightAmount
+	{
+		get => _highlightAmount;
+		set
+		{
+			float clamped = Mathf.Clamp(value, 0.0f, 1.0f);
+			if (Mathf.IsEqualApprox(_highlightAmount, clamped))
+			{
+				return;
+			}
+
+			_highlightAmount = clamped;
+			QueueRedraw();
+		}
+	}
 
 	public override void _Ready()
 	{
@@ -45,19 +64,17 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_cardTexture = cardTexture;
 		_title = string.Empty;
 		_description = description?.Trim() ?? string.Empty;
-		_highlighted = highlighted;
-		QueueRedraw();
+		HighlightAmount = highlighted ? 1.0f : 0.0f;
 	}
 
 	public void SetHighlighted(bool highlighted)
 	{
-		if (_highlighted == highlighted)
-		{
-			return;
-		}
+		HighlightAmount = highlighted ? 1.0f : 0.0f;
+	}
 
-		_highlighted = highlighted;
-		QueueRedraw();
+	public void SetHighlightAmount(float amount)
+	{
+		HighlightAmount = amount;
 	}
 
 	public void SetPalette(Color titleColor, Color glowColor, Color ruleColor)
@@ -82,6 +99,18 @@ public partial class AdventureUpgradeChoiceArt : Control
 		};
 	}
 
+	public Godot.Collections.Dictionary DebugGetCardDrawRect()
+	{
+		Rect2 rect = GetCardDrawRect();
+		return new Godot.Collections.Dictionary
+		{
+			["x"] = rect.Position.X,
+			["y"] = rect.Position.Y,
+			["width"] = rect.Size.X,
+			["height"] = rect.Size.Y,
+		};
+	}
+
 	public string DebugGetTitleText()
 	{
 		return _title;
@@ -92,6 +121,12 @@ public partial class AdventureUpgradeChoiceArt : Control
 		return _description;
 	}
 
+	public int DebugGetResolvedDescriptionFontSize()
+	{
+		Font bodyFont = BodyFont ?? ThemeDB.FallbackFont;
+		return GetDescriptionFontSize(bodyFont, _description, GetDescriptionBandRect().Size, DescriptionLineSpacing);
+	}
+
 	public override void _Draw()
 	{
 		if (Size.X <= 0.0f || Size.Y <= 0.0f)
@@ -99,36 +134,31 @@ public partial class AdventureUpgradeChoiceArt : Control
 			return;
 		}
 
-		Rect2 rect = new(Vector2.Zero, Size);
-		if (_highlighted)
-		{
-			DrawStyleBox(_highlightStyle, rect.Grow(2.0f));
-		}
+		Rect2 rect = GetCardDrawRect();
+		float highlightAmount = HighlightAmount;
 
 		if (_cardTexture != null)
 		{
-			Color cardTint = _highlighted
-				? new Color(0.98f, 0.99f, 1.0f, 1.0f)
-				: new Color(0.88f, 0.91f, 0.96f, 0.93f);
+			Color cardTint = new Color(0.88f, 0.91f, 0.96f, 0.93f).Lerp(
+				new Color(0.98f, 0.99f, 1.0f, 1.0f),
+				highlightAmount);
 			DrawTextureRect(_cardTexture, rect, false, cardTint);
 		}
 
-		if (_highlighted)
+		if (highlightAmount > 0.001f)
 		{
-			DrawRect(
-				new Rect2(Size.X * 0.06f, Size.Y * 0.05f, Size.X * 0.88f, Size.Y * 0.9f),
-				_glowColor,
-				false);
 			DrawCircle(
-				new Vector2(Size.X * 0.5f, Size.Y * 0.42f),
-				Size.X * 0.19f,
-				new Color(_glowColor.R, _glowColor.G, _glowColor.B, _glowColor.A * 0.58f));
+				new Vector2(
+					rect.Position.X + rect.Size.X * 0.5f,
+					rect.Position.Y + rect.Size.Y * 0.42f),
+				rect.Size.X * 0.19f,
+				new Color(_glowColor.R, _glowColor.G, _glowColor.B, _glowColor.A * 0.58f * highlightAmount));
 		}
 
-		Font bodyFont = BodyFont ?? ThemeDB.FallbackFont;
-		int bodyFontSize = GetDescriptionFontSize(_description);
-
 		Rect2 descriptionRect = GetDescriptionBandRect();
+		Font bodyFont = BodyFont ?? ThemeDB.FallbackFont;
+		int bodyFontSize = GetDescriptionFontSize(bodyFont, _description, descriptionRect.Size, DescriptionLineSpacing);
+
 		DrawDescriptionWell(descriptionRect);
 		DrawEmbossedWrappedCenteredText(
 			bodyFont,
@@ -138,7 +168,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 			new Color(0.97f, 0.99f, 1.0f, 0.96f),
 			new Color(0, 0, 0, 0.76f),
 			new Color(_ruleColor.R, _ruleColor.G, _ruleColor.B, _ruleColor.A),
-			1.0f);
+			DescriptionLineSpacing);
 	}
 
 	private void DrawEmbossedCenteredText(Font font, int fontSize, string text, Rect2 rect, Color color, Color shadowColor, Color highlightColor)
@@ -254,20 +284,52 @@ public partial class AdventureUpgradeChoiceArt : Control
 		return lines.ToArray();
 	}
 
-	private static int GetDescriptionFontSize(string description)
+	private Rect2 GetCardDrawRect()
 	{
-		int length = string.IsNullOrWhiteSpace(description) ? 0 : description.Length;
-		if (length >= 34)
+		Rect2 bounds = new(Vector2.Zero, Size);
+		if (_cardTexture == null)
 		{
-			return 8;
+			return bounds;
 		}
 
-		if (length >= 24)
+		Vector2 textureSize = _cardTexture.GetSize();
+		if (textureSize.X <= 0.0f || textureSize.Y <= 0.0f)
 		{
-			return 10;
+			return bounds;
 		}
 
-		return 11;
+		float textureAspect = textureSize.X / textureSize.Y;
+		float boundsAspect = bounds.Size.X / bounds.Size.Y;
+		if (boundsAspect > textureAspect)
+		{
+			float fittedWidth = bounds.Size.Y * textureAspect;
+			float horizontalInset = (bounds.Size.X - fittedWidth) * 0.5f;
+			return new Rect2(horizontalInset, 0.0f, fittedWidth, bounds.Size.Y);
+		}
+
+		float fittedHeight = bounds.Size.X / textureAspect;
+		float verticalInset = (bounds.Size.Y - fittedHeight) * 0.5f;
+		return new Rect2(0.0f, verticalInset, bounds.Size.X, fittedHeight);
+	}
+
+	private static int GetDescriptionFontSize(Font font, string description, Vector2 rectSize, float lineSpacing)
+	{
+		if (string.IsNullOrWhiteSpace(description))
+		{
+			return MinDescriptionFontSize;
+		}
+
+		for (int fontSize = MaxDescriptionFontSize; fontSize >= MinDescriptionFontSize; fontSize--)
+		{
+			string[] lines = WrapLines(font, fontSize, description, rectSize.X);
+			float totalHeight = lines.Length * (font.GetHeight(fontSize) + lineSpacing);
+			if (totalHeight <= rectSize.Y)
+			{
+				return fontSize;
+			}
+		}
+
+		return MinDescriptionFontSize;
 	}
 
 	private Texture2D? ResolvePreviewCardTexture()
@@ -297,18 +359,18 @@ public partial class AdventureUpgradeChoiceArt : Control
 
 	private Rect2 GetDescriptionBandRect()
 	{
+		Rect2 cardRect = GetCardDrawRect();
 		return new Rect2(
-			Size.X * DescriptionBandNormalizedRect.Position.X,
-			Size.Y * DescriptionBandNormalizedRect.Position.Y,
-			Size.X * DescriptionBandNormalizedRect.Size.X,
-			Size.Y * DescriptionBandNormalizedRect.Size.Y);
+			cardRect.Position.X + cardRect.Size.X * DescriptionBandNormalizedRect.Position.X,
+			cardRect.Position.Y + cardRect.Size.Y * DescriptionBandNormalizedRect.Position.Y,
+			cardRect.Size.X * DescriptionBandNormalizedRect.Size.X,
+			cardRect.Size.Y * DescriptionBandNormalizedRect.Size.Y);
 	}
 
 	private void ConfigureHighlightStyle()
 	{
 		_highlightStyle.DrawCenter = false;
 		_highlightStyle.BgColor = new Color(1, 1, 1, 0);
-		_highlightStyle.BorderColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, 0.22f);
 		_highlightStyle.BorderWidthLeft = 1;
 		_highlightStyle.BorderWidthTop = 1;
 		_highlightStyle.BorderWidthRight = 1;
@@ -317,8 +379,13 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_highlightStyle.CornerRadiusTopRight = 12;
 		_highlightStyle.CornerRadiusBottomRight = 12;
 		_highlightStyle.CornerRadiusBottomLeft = 12;
-		_highlightStyle.ShadowColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, 0.04f);
 		_highlightStyle.ShadowSize = 3;
+	}
+
+	private void ApplyHighlightStyle(float highlightAmount)
+	{
+		_highlightStyle.BorderColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, 0.22f * highlightAmount);
+		_highlightStyle.ShadowColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, 0.04f * highlightAmount);
 	}
 
 	private void ConfigureDescriptionWellStyle()

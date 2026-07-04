@@ -52,6 +52,9 @@ internal static class Program
 		Run("adventure ai late best capture skips pair only captures", AdventureAiLateBestCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai late random capture skips pair only captures", AdventureAiLateRandomCaptureSkipsPairOnlyCaptures);
 		Run("adventure ai final profile can skip best capture", AdventureAiFinalProfileCanSkipBestCapture);
+		Run("ai early table new card priority picks non matching card before capture", AiEarlyTableNewCardPriorityPicksNonMatchingCardBeforeCapture);
+		Run("ai early table new card priority yields after four table cards", AiEarlyTableNewCardPriorityYieldsAfterFourTableCards);
+		Run("ai early table new card priority ignores buried matches", AiEarlyTableNewCardPriorityIgnoresBuriedMatches);
 		Run("solo ai difficulty profiles expose expected values", SoloAiDifficultyProfilesExposeExpectedValues);
 		Run("solo ai medium capture prefers more cards while high prefers points", SoloAiMediumCapturePrefersMoreCardsWhileHighPrefersPoints);
 		Run("solo ai medium and high skip pair only captures", SoloAiMediumAndHighSkipPairOnlyCaptures);
@@ -1086,6 +1089,76 @@ internal static class Program
 		True(lowRollPicked);
 		Equal(0, lowRollHandIndex);
 		False(highRollPicked);
+	}
+
+	private static void AiEarlyTableNewCardPriorityPicksNonMatchingCardBeforeCapture()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
+		};
+		var handCards = new[]
+		{
+			new CardPlayCard("A", CollectsTable: false),
+			new CardPlayCard("K", CollectsTable: false),
+		};
+
+		bool picked = AiCardSelectionRules.TryPickEarlyTableNewCardIndex(
+			tableCards,
+			handCards,
+			randomOrdinal: 0,
+			out int handIndex);
+
+		True(picked);
+		Equal(1, handIndex);
+	}
+
+	private static void AiEarlyTableNewCardPriorityYieldsAfterFourTableCards()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("3", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("4", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("5", IsFaceUp: true, IsBuriedInSand: false),
+		};
+		var handCards = new[]
+		{
+			new CardPlayCard("K", CollectsTable: false),
+		};
+
+		bool picked = AiCardSelectionRules.TryPickEarlyTableNewCardIndex(
+			tableCards,
+			handCards,
+			randomOrdinal: 0,
+			out _);
+
+		False(picked);
+	}
+
+	private static void AiEarlyTableNewCardPriorityIgnoresBuriedMatches()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("K", IsFaceUp: true, IsBuriedInSand: true),
+			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false),
+		};
+		var handCards = new[]
+		{
+			new CardPlayCard("A", CollectsTable: false),
+			new CardPlayCard("K", CollectsTable: false),
+		};
+
+		bool picked = AiCardSelectionRules.TryPickEarlyTableNewCardIndex(
+			tableCards,
+			handCards,
+			randomOrdinal: 0,
+			out int handIndex);
+
+		True(picked);
+		Equal(1, handIndex);
 	}
 
 	private static void SoloAiDifficultyProfilesExposeExpectedValues()

@@ -129,13 +129,26 @@ func _try_debugger_continue() -> void:
 
 
 func _find_debugger_continue_button(node: Node) -> Button:
-	# Search for the Continue button in ScriptEditorDebugger
+	# Search for the Continue button in ScriptEditorDebugger.
+	# The editor UI is translated, so matching tooltip/label text fails for
+	# non-English editors (issue #34: Italian → "Continua"). Match by the editor
+	# theme icon "DebugContinue" first, falling back to English text.
+	var continue_icon: Texture2D = null
+	var base: Control = EditorInterface.get_base_control()
+	if base != null and base.has_theme_icon("DebugContinue", "EditorIcons"):
+		continue_icon = base.get_theme_icon("DebugContinue", "EditorIcons")
+	return _find_continue_button_recursive(node, continue_icon)
+
+
+func _find_continue_button_recursive(node: Node, continue_icon: Texture2D) -> Button:
 	if node is Button:
 		var btn: Button = node
+		if continue_icon != null and btn.icon == continue_icon:
+			return btn
 		if btn.tooltip_text.contains("Continue") or btn.text == "Continue":
 			return btn
 	for child in node.get_children():
-		var found: Button = _find_debugger_continue_button(child)
+		var found: Button = _find_continue_button_recursive(child, continue_icon)
 		if found:
 			return found
 	return null

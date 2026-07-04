@@ -12,6 +12,14 @@ public partial class GameBoardScene
 		}
 
 		int playableItemCount = CountPlayableItemIndexes(playerIndex);
+		if (TryPickEarlyTableNewCardHandIndex(playerIndex, out int earlyTableHandIndex))
+		{
+			PlayCardResult earlyTableResult = await PlayCardFromHandAsync(playerIndex, earlyTableHandIndex, turnSequenceGeneration);
+			return earlyTableResult.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
+				? earlyTableResult
+				: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
+		}
+
 		if (TryPickAiCaptureHandIndex(playerIndex, out int captureHandIndex))
 		{
 			return await PlayCardFromHandAsync(playerIndex, captureHandIndex, turnSequenceGeneration);
@@ -139,6 +147,26 @@ public partial class GameBoardScene
 			royalCaptureThreshold,
 			_rng.RandiRange(0, 99),
 			_rng.RandiRange(0, 9999),
+			out handIndex);
+	}
+
+	private bool TryPickEarlyTableNewCardHandIndex(int playerIndex, out int handIndex)
+	{
+		handIndex = -1;
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		{
+			return false;
+		}
+
+		return AiCardSelectionRules.TryPickEarlyTableNewCardIndex(
+			_tableCards.Count,
+			_playerHands[playerIndex].Count,
+			handCardIndex =>
+			{
+				CardPlayPlan plan = ResolveCardPlayPlan(_playerHands[playerIndex][handCardIndex]);
+				return plan.MatchingTableCardIndex < 0 && !plan.PlayedCardCollectsTable;
+			},
+			_rng.RandiRange(0, int.MaxValue),
 			out handIndex);
 	}
 

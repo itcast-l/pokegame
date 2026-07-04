@@ -343,7 +343,7 @@ func _send_game_command(command: String, params: Dictionary, timeout_sec: float 
 	if not FileAccess.file_exists(response_path):
 		# Try to auto-resume the debugger (runtime error may have paused the game)
 		if ei.is_playing_scene():
-			_try_debugger_continue()
+			try_debugger_continue()
 			# Give the game a chance to recover and write a response
 			for _retry in 20:
 				await get_tree().create_timer(0.1).timeout
@@ -353,9 +353,7 @@ func _send_game_command(command: String, params: Dictionary, timeout_sec: float 
 	if not FileAccess.file_exists(response_path):
 		if FileAccess.file_exists(request_path):
 			DirAccess.remove_absolute(request_path)
-		return error(-32000, "Game command timed out after %.1fs" % timeout_sec, {
-			"suggestion": "Ensure the game is running and MCPGameInspector autoload is active",
-		})
+		return build_timeout_error(timeout_sec)
 
 	# Read response
 	var file := FileAccess.open(response_path, FileAccess.READ)
@@ -373,26 +371,3 @@ func _send_game_command(command: String, params: Dictionary, timeout_sec: float 
 		return error(-32000, str(parsed["error"]))
 
 	return success(parsed)
-
-
-## Press the debugger "Continue" button to resume a paused game process.
-func _try_debugger_continue() -> void:
-	var base := EditorInterface.get_base_control()
-	if base == null:
-		return
-	var queue: Array[Node] = [base]
-	while not queue.is_empty():
-		var node := queue.pop_front()
-		if node.get_class() == "ScriptEditorDebugger":
-			var inner: Array[Node] = [node]
-			while not inner.is_empty():
-				var n := inner.pop_front()
-				if n is Button and n.tooltip_text == "Continue":
-					n.emit_signal("pressed")
-					push_warning("[MCP] Auto-resumed debugger after runtime error")
-					return
-				for c in n.get_children():
-					inner.append(c)
-			return
-		for child in node.get_children():
-			queue.append(child)

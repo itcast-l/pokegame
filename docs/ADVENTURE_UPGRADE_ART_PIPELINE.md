@@ -40,12 +40,49 @@ Last updated: 2026-07-01
 
 - `raw/` 保留在仓库内
 - 但 `raw/` 不得被 gameplay code、gameplay scenes、resource catalog 直接引用
+- `generated-images/upgrade-popup-assets-v2/` 是非卡通重绘候选区，只能作为 source-only 草稿使用，直到人工挑选并复制/处理到正式 `upgrade-popup-assets/<suit>/processed/` 路径
 
 允许 `raw/` 的位置：
 
 - 处理脚本
 - 处理记录 JSON
 - 美术工作流文档
+
+## V2 Non-Cartoon Candidate Generation
+
+The v2 candidate set is generated with `gpt-image-2` through the local
+`test-image` compatibility script. It intentionally avoids cute, chibi,
+cartoon, toy-like, oversized icon, and thick-outline language. The center of
+each frame is prompted as bright low-texture vellum so upgrade text remains
+readable.
+
+Dry-run prompts and manifest without API calls:
+
+```sh
+python3 tools/generate_adventure_upgrade_popup_assets_v2.py --dry-run
+```
+
+Generate one smoke-test image:
+
+```sh
+python3 tools/generate_adventure_upgrade_popup_assets_v2.py --suit hearts --tier rare --retries 1
+```
+
+Generate all 12 suit/tier candidates after the upstream image API is available:
+
+```sh
+python3 tools/generate_adventure_upgrade_popup_assets_v2.py
+```
+
+The script writes candidates under:
+
+- `generated-images/upgrade-popup-assets-v2/<suit>/raw/*.png`
+- `generated-images/upgrade-popup-assets-v2/<suit>/prompts/*.txt`
+- `generated-images/upgrade-popup-assets-v2/manifest.json`
+
+Do not reference v2 raw candidates from runtime resources. Promote a selected
+candidate by processing it into the governed `upgrade-popup-assets/<suit>/processed/`
+path and updating `transparent-processing-meta.json` plus the visual catalog.
 
 ## How Crop Regions Are Governed
 

@@ -27,6 +27,15 @@ export class TimeoutError extends Error {
 export function formatErrorForMcp(error: unknown): string {
   if (error instanceof GodotCommandError) {
     let msg = `Godot error (${error.code}): ${error.message}`;
+    // Surface runtime errors captured at timeout so the agent sees the actual
+    // cause (a script error that paused the scene) instead of assuming the
+    // game/connection is dead.
+    const runtimeErrors = error.data?.runtime_errors;
+    if (Array.isArray(runtimeErrors) && runtimeErrors.length > 0) {
+      msg += `\nRuntime errors:\n${runtimeErrors
+        .map((e) => `  - ${String(e)}`)
+        .join("\n")}`;
+    }
     if (error.data?.suggestion) {
       msg += `\nSuggestion: ${error.data.suggestion}`;
     }

@@ -26,6 +26,7 @@
     <Compile Include="../../scripts/GameSaveStore.cs" Link="Rules/GameSaveStore.cs" />
     <Compile Include="../../scripts/MainMenuBubbleMotionRules.cs" Link="Rules/MainMenuBubbleMotionRules.cs" />
     <Compile Include="../../scripts/PotentialCaptureRules.cs" Link="Rules/PotentialCaptureRules.cs" />
+    <Compile Include="../../scripts/AiCardSelectionRules.cs" Link="Rules/AiCardSelectionRules.cs" />
     <Compile Include="../../scripts/EnemyAiRules.cs" Link="Rules/EnemyAiRules.cs" />
     <Compile Include="../../scripts/SoloAiRules.cs" Link="Rules/SoloAiRules.cs" />
     <Compile Include="../../scripts/GameLoopPhaseRules.cs" Link="Rules/GameLoopPhaseRules.cs" />

@@ -251,4 +251,56 @@ export function registerNodeTools(
       }
     }
   );
+
+  server.tool(
+    "get_editor_selection",
+    "Get the nodes currently selected in the editor Scene dock",
+    {
+      top_only: z.boolean().optional().describe("Return only the topmost selected nodes, excluding a node whose parent is already selected (default: false)"),
+    },
+    async (params) => {
+      try {
+        const result = await godot.sendCommand("get_editor_selection", params);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: "text", text: formatErrorForMcp(e) }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    "select_nodes",
+    "Select one or more nodes in the editor Scene dock, optionally focusing and inspecting them",
+    {
+      node_path: z.string().optional().describe("Path to a single node to select"),
+      node_paths: z.array(z.string()).optional().describe("Paths to multiple nodes to select (use instead of node_path)"),
+      mode: z.enum(["replace", "add", "remove"]).optional().describe("How to apply the selection (default: replace)"),
+      inspect: z.boolean().optional().describe("Show the node in the Inspector (only applied when a single node is selected; default: true)"),
+      focus: z.boolean().optional().describe("Focus the node in the Scene dock (only applied when a single node is selected; default: follows inspect)"),
+      for_property: z.string().optional().describe("Inspector property to focus on"),
+      inspector_only: z.boolean().optional().describe("Show in Inspector without changing the edited node (default: false)"),
+    },
+    async (params) => {
+      try {
+        const result = await godot.sendCommand("select_nodes", params);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: "text", text: formatErrorForMcp(e) }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    "clear_editor_selection",
+    "Clear the current editor Scene-dock selection",
+    {},
+    async (params) => {
+      try {
+        const result = await godot.sendCommand("clear_editor_selection", params);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: "text", text: formatErrorForMcp(e) }], isError: true };
+      }
+    }
+  );
 }

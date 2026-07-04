@@ -147,9 +147,9 @@ async function main() {
     const modeLabel = MINIMAL_MODE
       ? "[MCP] Godot MCP Pro MINIMAL started (35 tools, stdio transport)"
       : THREED_MODE
-        ? "[MCP] Godot MCP Pro 3D started (100 tools, stdio transport)"
+        ? "[MCP] Godot MCP Pro 3D started (103 tools, stdio transport)"
         : LITE_MODE
-          ? "[MCP] Godot MCP Pro LITE started (81 tools, stdio transport)"
+          ? "[MCP] Godot MCP Pro LITE started (84 tools, stdio transport)"
           : "[MCP] Godot MCP Pro started (stdio transport)";
     console.error(modeLabel);
   }

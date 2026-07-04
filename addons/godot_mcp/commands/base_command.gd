@@ -237,6 +237,148 @@ func set_property_with_undo(target: Object, property: String, new_value: Variant
 	undo_redo.commit_action()
 
 
+## ── Game-command timeout diagnostics ──────────────────────────────────────────
+## Shared by the file-IPC `_send_game_command` helpers (runtime/test commands).
+## The goal is to never tell the agent "the game isn't running / autoload missing"
+## when the game IS running and merely paused by a runtime error.
+
+## Locate the editor's ScriptEditorDebugger node (BFS from base control).
+func _find_script_editor_debugger() -> Node:
+	var base := EditorInterface.get_base_control()
+	if base == null:
+		return null
+	var queue: Array[Node] = [base]
+	while not queue.is_empty():
+		var node := queue.pop_front()
+		if node.get_class() == "ScriptEditorDebugger":
+			return node
+		for child in node.get_children():
+			queue.append(child)
+	return null
+
+
+## Look up an editor theme icon by name (locale-independent), or null.
+func _get_editor_icon(icon_name: String) -> Texture2D:
+	var base := EditorInterface.get_base_control()
+	if base != null and base.has_theme_icon(icon_name, "EditorIcons"):
+		return base.get_theme_icon(icon_name, "EditorIcons")
+	return null
+
+
+## Find the debugger "Continue" button without relying on UI text.
+## The editor is translated, so matching tooltip/label text breaks for
+## non-English editors (issue #34: Italian → "Continua"). Match by the editor
+## theme icon "DebugContinue" first, falling back to the English text only if
+## the icon can't be resolved.
+func _find_debugger_continue_button() -> Button:
+	var dbg := _find_script_editor_debugger()
+	if dbg == null:
+		return null
+	var continue_icon := _get_editor_icon("DebugContinue")
+	var fallback: Button = null
+	var inner: Array[Node] = [dbg]
+	while not inner.is_empty():
+		var n := inner.pop_front()
+		if n is Button:
+			var b := n as Button
+			if continue_icon != null and b.icon == continue_icon:
+				return b
+			if b.tooltip_text == "Continue":
+				fallback = b
+		for c in n.get_children():
+			inner.append(c)
+	return fallback
+
+
+## True when the running game is halted at a breakpoint or runtime error
+## (the debugger's "Continue" button is present and enabled).
+func is_debugger_paused() -> bool:
+	var btn := _find_debugger_continue_button()
+	return btn != null and not btn.disabled
+
+
+## Read recent runtime errors from the debugger's "Errors" tab tree, so a
+## timeout caused by a script error can report the actual cause inline.
+func collect_debugger_errors(max_errors: int = 10) -> Array:
+	var out: Array = []
+	var dbg := _find_script_editor_debugger()
+	if dbg == null:
+		return out
+	for child in dbg.get_children():
+		if child is TabContainer:
+			var tab_container := child as TabContainer
+			for tab_idx in range(tab_container.get_tab_count()):
+				var tab_control: Control = tab_container.get_tab_control(tab_idx)
+				if tab_control is VBoxContainer and tab_control.name.begins_with("Errors"):
+					for vchild in tab_control.get_children():
+						if vchild is Tree:
+							var tree := vchild as Tree
+							var root_item: TreeItem = tree.get_root()
+							if root_item:
+								var item: TreeItem = root_item.get_first_child()
+								while item and out.size() < max_errors:
+									var col0: String = item.get_text(0).strip_edges()
+									var col1: String = item.get_text(1).strip_edges()
+									var msg: String = col0
+									if not col1.is_empty():
+										msg = (msg + " " + col1) if not msg.is_empty() else col1
+									if not msg.is_empty():
+										out.append(msg)
+									item = item.get_next()
+					break
+			break
+	return out
+
+
+## Press the debugger "Continue" button to resume a paused game process.
+func try_debugger_continue() -> void:
+	var btn := _find_debugger_continue_button()
+	if btn != null and not btn.disabled:
+		btn.emit_signal("pressed")
+		push_warning("[MCP] Auto-resumed debugger after runtime error")
+
+
+## Build an accurate error for a file-IPC game-command timeout.
+## Distinguishes "game not running" from "game running but unresponsive
+## (likely paused by a runtime error / breakpoint)" so callers aren't misled
+## into thinking the MCP connection is dead or the autoload is missing.
+func build_timeout_error(timeout_sec: float) -> Dictionary:
+	# Re-check play state at the moment we give up.
+	if not get_editor().is_playing_scene():
+		return error(
+			-32000,
+			"Game command timed out after %.1fs and the game process is no longer running." % timeout_sec,
+			{
+				"game_running": false,
+				"suggestion": "The scene stopped. Call play_scene to start it again before sending runtime commands.",
+			}
+		)
+
+	# The game IS running. Figure out *why* it didn't answer.
+	var paused := is_debugger_paused()
+	var runtime_errors := collect_debugger_errors(10)
+	var data := {
+		"game_running": true,
+		"debugger_paused": paused,
+	}
+	if not runtime_errors.is_empty():
+		data["runtime_errors"] = runtime_errors
+
+	var msg: String
+	if paused or not runtime_errors.is_empty():
+		msg = ("Game command timed out after %.1fs, but the game IS running. " % timeout_sec) \
+			+ "A runtime/script error paused the scene, so it could not respond to the command."
+		data["suggestion"] = "This is NOT a connection or autoload problem. Fix the error in 'runtime_errors' " \
+			+ "(or call get_editor_errors for the full list), then retry. The debugger was auto-resumed; " \
+			+ "if errors persist, call stop_scene then play_scene to restart cleanly."
+	else:
+		msg = ("Game command timed out after %.1fs. The game is running but did not respond in time." % timeout_sec)
+		data["suggestion"] = "The MCP server connection is fine and the game is running. The command may be slow " \
+			+ "or the game may be busy/blocked. Retry with a longer timeout, and call get_editor_errors to check " \
+			+ "for runtime errors. In rare cases (custom projects) verify the MCPGameInspector autoload is active."
+	return error(-32000, msg, data)
+
+
 ## Find node by path in edited scene
 func find_node_by_path(node_path: String) -> Node:
 	var root := get_edited_root()

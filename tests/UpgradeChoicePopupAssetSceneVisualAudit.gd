@@ -15,6 +15,8 @@ const TEXTURE_PATHS := [
 	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/UncommonCard",
 	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/RareCard",
 ]
+const VIEWPORT_SIZE := Vector2i(1920, 1080)
+const EDGE_PADDING_PIXELS := 4
 
 var _failed := false
 
@@ -24,6 +26,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	root.size = VIEWPORT_SIZE
+	await process_frame
+
 	var packed_scene := load(SCENE_PATH) as PackedScene
 	if packed_scene == null:
 		_fail("Failed to load popup asset scene")
@@ -57,9 +62,51 @@ func _run() -> void:
 		if not (texture_rect.texture is Texture2D):
 			_fail("Preview texture is not Texture2D: %s" % texture_rect.get_path())
 			return
+		if not _rect_inside_viewport(texture_rect.get_global_rect(), root.size):
+			_fail("Preview texture is clipped by viewport: %s rect=%s viewport=%s" % [
+				texture_rect.get_path(),
+				str(texture_rect.get_global_rect()),
+				str(root.size),
+			])
+			return
+		if _texture_touches_crop_edge(texture_rect.texture.get_image()):
+			_fail("Preview texture touches atlas crop edge: %s" % texture_rect.get_path())
+			return
 
 	print("UPGRADE_CHOICE_POPUP_ASSET_SCENE_VISUAL_AUDIT_OK")
 	quit(0)
+
+
+func _rect_inside_viewport(rect: Rect2, viewport_size: Vector2i) -> bool:
+	return (
+		rect.position.x >= 0.0
+		and rect.position.y >= 0.0
+		and rect.end.x <= float(viewport_size.x)
+		and rect.end.y <= float(viewport_size.y)
+	)
+
+
+func _texture_touches_crop_edge(image: Image) -> bool:
+	if image == null:
+		return true
+
+	var width := image.get_width()
+	var height := image.get_height()
+	for y in range(height):
+		for x in range(EDGE_PADDING_PIXELS):
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+			if image.get_pixel(width - 1 - x, y).a > 0.0:
+				return true
+
+	for x in range(width):
+		for y in range(EDGE_PADDING_PIXELS):
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+			if image.get_pixel(x, height - 1 - y).a > 0.0:
+				return true
+
+	return false
 
 
 func _fail(message: String) -> void:

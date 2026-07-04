@@ -15,53 +15,53 @@
 [ext_resource type="Texture2D" uid="uid://7e6cjp4hq62i" path="res://generated-images/upgrade-popup-assets/clubs/processed/clubs-uncommon.png" id="13_k837k"]
 [ext_resource type="Texture2D" uid="uid://4oeijl4rr5w1" path="res://generated-images/upgrade-popup-assets/clubs/processed/clubs-rare.png" id="14_58u3t"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_mapmf"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_suuet"]
 atlas = ExtResource("3_suuet")
-region = Rect2(291, 58, 671, 1097)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_f5efn"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_rxmgg"]
 atlas = ExtResource("4_rxmgg")
-region = Rect2(291, 58, 671, 1097)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_7rta3"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_6qvvc"]
 atlas = ExtResource("5_6qvvc")
-region = Rect2(291, 58, 671, 1097)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_u7u4y"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_2ujfj"]
 atlas = ExtResource("6_2ujfj")
-region = Rect2(290, 32, 673, 1167)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_08rk3"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_g4qbi"]
 atlas = ExtResource("7_g4qbi")
-region = Rect2(290, 32, 673, 1167)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_a35ap"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_7ka13"]
 atlas = ExtResource("8_7ka13")
-region = Rect2(290, 32, 673, 1167)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_nuyhh"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_tvv4o"]
 atlas = ExtResource("9_tvv4o")
-region = Rect2(296, 42, 659, 1156)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_7ecdk"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_wcx4d"]
 atlas = ExtResource("10_wcx4d")
-region = Rect2(296, 42, 659, 1156)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_c7j7e"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_131dn"]
 atlas = ExtResource("11_131dn")
-region = Rect2(296, 42, 659, 1156)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_mmfk1"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_evcqt"]
 atlas = ExtResource("12_evcqt")
-region = Rect2(291, 53, 670, 1106)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_fabt2"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_k837k"]
 atlas = ExtResource("13_k837k")
-region = Rect2(291, 53, 670, 1106)
+region = Rect2(256, 24, 742, 1165)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_1surk"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_58u3t"]
 atlas = ExtResource("14_58u3t")
-region = Rect2(291, 53, 670, 1106)
+region = Rect2(256, 24, 742, 1165)
 
 [node name="UpgradeChoicePopupAssetScene" type="Control" unique_id=2032623848]
 layout_mode = 3
@@ -189,11 +189,13 @@ theme_override_font_sizes/font_size = 14
 text = "当前场景已接入四组透明卡面成品，绿底已离线移除。"
 horizontal_alignment = 1
 
-[node name="SuitGroups" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout" unique_id=911812972]
+[node name="SuitGroups" type="GridContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout" unique_id=911812972]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 3
-theme_override_constants/separation = 18
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 18
+columns = 2
 
 [node name="HeartsGroup" type="VBoxContainer" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups" unique_id=14494755]
 layout_mode = 2
@@ -215,28 +217,28 @@ alignment = 1
 
 [node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow" unique_id=1255256445]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_mapmf")
+texture = SubResource("AtlasTexture_suuet")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow" unique_id=51654274]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_f5efn")
+texture = SubResource("AtlasTexture_rxmgg")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow" unique_id=1832198534]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_7rta3")
+texture = SubResource("AtlasTexture_6qvvc")
 expand_mode = 1
 stretch_mode = 5
 
@@ -260,28 +262,28 @@ alignment = 1
 
 [node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow" unique_id=470995958]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_u7u4y")
+texture = SubResource("AtlasTexture_2ujfj")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow" unique_id=372266279]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_08rk3")
+texture = SubResource("AtlasTexture_g4qbi")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow" unique_id=46968184]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_a35ap")
+texture = SubResource("AtlasTexture_7ka13")
 expand_mode = 1
 stretch_mode = 5
 
@@ -305,28 +307,28 @@ alignment = 1
 
 [node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow" unique_id=726640646]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_nuyhh")
+texture = SubResource("AtlasTexture_tvv4o")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow" unique_id=1885651068]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_7ecdk")
+texture = SubResource("AtlasTexture_wcx4d")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow" unique_id=228921610]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_c7j7e")
+texture = SubResource("AtlasTexture_131dn")
 expand_mode = 1
 stretch_mode = 5
 
@@ -350,28 +352,28 @@ alignment = 1
 
 [node name="CommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow" unique_id=262158931]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_mmfk1")
+texture = SubResource("AtlasTexture_evcqt")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="UncommonCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow" unique_id=107780245]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_fabt2")
+texture = SubResource("AtlasTexture_k837k")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="RareCard" type="TextureRect" parent="Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow" unique_id=310148285]
 texture_filter = 1
-custom_minimum_size = Vector2(250, 384)
+custom_minimum_size = Vector2(170, 264)
 layout_mode = 2
 size_flags_horizontal = 4
-texture = SubResource("AtlasTexture_1surk")
+texture = SubResource("AtlasTexture_58u3t")
 expand_mode = 1
 stretch_mode = 5
 

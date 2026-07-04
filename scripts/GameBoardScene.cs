@@ -767,6 +767,7 @@ public partial class GameBoardScene : Control
 	public override void _Process(double delta)
 	{
 		UpdateMagnetAttachmentCountdown(delta);
+		UpdateAdventureUpgradeOverlayCardMotion(delta);
 		FlushUiDirtyFlagsIfNeeded();
 	}
 

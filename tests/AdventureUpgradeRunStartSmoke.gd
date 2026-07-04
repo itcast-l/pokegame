@@ -61,6 +61,7 @@ func _run() -> void:
 	var visible_overlay_options := 0
 	var card_frame_y_positions := []
 	var card_frame_rotations := []
+	var option_buttons := []
 	for option_index in range(1, 4):
 		var option_button := overlay.get_node_or_null("Margin/Layout/CardsRow/Option%dButton" % option_index) as Button
 		if option_button == null:
@@ -96,8 +97,16 @@ func _run() -> void:
 			_fail("Adventure upgrade choice art should expose DebugGetDescriptionBand for layout verification")
 			return
 
+		if art.has_method("DebugGetCardDrawRect") == false:
+			_fail("Adventure upgrade choice art should expose DebugGetCardDrawRect for aspect-ratio verification")
+			return
+
 		if art.has_method("DebugGetTitleText") == false or art.has_method("DebugGetDescriptionText") == false:
 			_fail("Adventure upgrade choice art should expose debug text accessors")
+			return
+
+		if art.has_method("DebugGetResolvedDescriptionFontSize") == false:
+			_fail("Adventure upgrade choice art should expose DebugGetResolvedDescriptionFontSize for typography verification")
 			return
 
 		var title_value := String(art.call("DebugGetTitleText"))
@@ -119,6 +128,41 @@ func _run() -> void:
 			_fail("Adventure upgrade overlay is missing card frame")
 			return
 
+		if option_button.custom_minimum_size.x > 264.0 or option_button.custom_minimum_size.y > 402.0:
+			_fail("Adventure upgrade option cards should stay below the tuned overlay size budget")
+			return
+
+		var card_draw_rect := art.call("DebugGetCardDrawRect") as Dictionary
+		if card_draw_rect.is_empty():
+			_fail("Adventure upgrade choice art should report a non-empty card draw rect")
+			return
+
+		var card_draw_width := float(card_draw_rect.get("width", 0.0))
+		var card_draw_height := float(card_draw_rect.get("height", 0.0))
+		if card_draw_width <= 0.0 or card_draw_height <= 0.0:
+			_fail("Adventure upgrade choice art should report a valid card draw rect size")
+			return
+
+		if card_draw_width / card_draw_height > 0.62:
+			_fail("Adventure upgrade card art should preserve a narrow card aspect ratio")
+			return
+
+		var description_band := art.call("DebugGetDescriptionBand") as Dictionary
+		if description_band.is_empty():
+			_fail("Adventure upgrade choice art should report a non-empty description band")
+			return
+
+		var description_band_height := float(description_band.get("height", 0.0))
+		if description_band_height < card_draw_height * 0.15:
+			_fail("Adventure upgrade description band should reserve at least 15% of the card height for text")
+			return
+
+		var description_font_size := int(art.call("DebugGetResolvedDescriptionFontSize"))
+		if description_font_size < 11:
+			_fail("Adventure upgrade description font should not collapse to a tiny size")
+			return
+
+		option_buttons.append(option_button)
 		card_frame_y_positions.append(card_frame.position.y)
 		card_frame_rotations.append(card_frame.rotation_degrees)
 
@@ -135,15 +179,73 @@ func _run() -> void:
 		var left_y := float(card_frame_y_positions[0])
 		var center_y := float(card_frame_y_positions[1])
 		var right_y := float(card_frame_y_positions[2])
-		if not (center_y < left_y and center_y < right_y):
-			_fail("Expected middle upgrade card to sit slightly forward of the side cards")
+		if not (is_equal_approx(left_y, center_y) and is_equal_approx(center_y, right_y)):
+			_fail("Expected adventure upgrade cards to stay parallel instead of pushing the middle card forward")
 			return
 
 		var left_rotation := float(card_frame_rotations[0])
 		var center_rotation := float(card_frame_rotations[1])
 		var right_rotation := float(card_frame_rotations[2])
-		if not (left_rotation < -0.2 and absf(center_rotation) < 0.2 and right_rotation > 0.2):
-			_fail("Expected adventure upgrade cards to fan slightly instead of sitting perfectly flat")
+		if not (absf(left_rotation) < 0.05 and absf(center_rotation) < 0.05 and absf(right_rotation) < 0.05):
+			_fail("Expected adventure upgrade cards to stay flat and parallel")
+			return
+
+	if option_buttons.size() >= 3:
+		var hover_button := option_buttons[2] as Button
+		var hover_card_frame := hover_button.get_node_or_null("CardFrame") as Control
+		if hover_card_frame == null:
+			_fail("Adventure upgrade hover verification is missing the card frame")
+			return
+
+		var rest_y := float(hover_card_frame.position.y)
+		var rest_scale := float(hover_card_frame.scale.x)
+		hover_button.emit_signal("mouse_entered")
+		await process_frame
+
+		var hover_step_y := float(hover_card_frame.position.y)
+		var hover_step_scale := float(hover_card_frame.scale.x)
+		if not (hover_step_y < rest_y):
+			_fail("Adventure upgrade hover motion should lift the hovered card")
+			return
+		if not (hover_step_scale > rest_scale):
+			_fail("Adventure upgrade hover motion should enlarge the hovered card")
+			return
+		if hover_step_scale >= 0.995:
+			_fail("Adventure upgrade hover motion should ease toward the target instead of snapping in one frame")
+			return
+
+		for _hover_frame in range(18):
+			await process_frame
+
+		var settled_hover_y := float(hover_card_frame.position.y)
+		var settled_hover_scale := float(hover_card_frame.scale.x)
+		if not (settled_hover_y < hover_step_y):
+			_fail("Adventure upgrade hover motion should continue moving after the first frame")
+			return
+		if settled_hover_scale <= hover_step_scale:
+			_fail("Adventure upgrade hover scale should continue easing after the first frame")
+			return
+
+		hover_button.emit_signal("mouse_exited")
+		await process_frame
+
+		var exit_step_y := float(hover_card_frame.position.y)
+		var exit_step_scale := float(hover_card_frame.scale.x)
+		if not (exit_step_y > settled_hover_y):
+			_fail("Adventure upgrade hover release should move the card back toward the row")
+			return
+		if not (exit_step_scale < settled_hover_scale):
+			_fail("Adventure upgrade hover release should shrink the card back toward its resting scale")
+			return
+
+		for _exit_frame in range(18):
+			await process_frame
+
+		if absf(float(hover_card_frame.position.y) - rest_y) > 0.35:
+			_fail("Adventure upgrade hover release should settle back onto the shared row")
+			return
+		if absf(float(hover_card_frame.scale.x) - rest_scale) > 0.02:
+			_fail("Adventure upgrade hover release should settle back to the resting card scale")
 			return
 
 	if int(board.call("DebugGetAdventureAcquiredUpgradeCount")) != 0:

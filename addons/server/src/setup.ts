@@ -200,7 +200,7 @@ async function cmdConfigure(): Promise<void> {
 
   // Default: create .mcp.json in cwd (Claude Code)
   const target = candidates[0]; // Claude Code project-level
-  // No GODOT_MCP_PORT env: lets the server auto-scan 6505-6514 so multiple
+  // No GODOT_MCP_PORT env: lets the server auto-scan 6505-6509 so multiple
   // Claude Code sessions can each grab a free port. Pinning a single port
   // here would force every session to collide on 6505.
   const entry = {

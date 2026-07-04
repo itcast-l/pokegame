@@ -1,0 +1,9 @@
+Vertical fantasy game UI upgrade choice card frame, transparent PNG, portrait 1024x1536. HEARTS suit, COMMON rarity.
+
+Design goal: the suit mark must be much smaller than previous versions, and the lower description area must be large and readable. No title area is needed at the top.
+
+Composition: an elegant full-card panel with a thin antique brass and muted red enamel border. Place one small refined red heart crest centered in the upper 28% of the card, about 18% of card width, like an embossed suit emblem on vellum. Keep the bottom 55% to 60% of the card as a clean warm ivory parchment text field, almost empty, softly lit, low texture, no decoration crossing the text area. Add only very subtle corner filigree and tiny heart inlays along the border.
+
+Style: mature premium 2D game UI asset, antique playing-card and tarot inspiration, realistic matte vellum, lightly tarnished metal, restrained common-tier ornament, calm silhouette, readable mobile game interface, polished fantasy RPG upgrade selection frame.
+
+Strict negatives: no text, no letters, no numbers, no title banner, no top blank title gap, no character, no mascot, no oversized heart, no huge suit symbol, no busy center art, no anime, no chibi, no cartoon, no toy-like plastic, no thick black outlines, no watermark, no background outside the card, transparent outside silhouette.

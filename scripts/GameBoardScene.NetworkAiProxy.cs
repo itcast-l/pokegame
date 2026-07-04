@@ -482,6 +482,11 @@ public partial class GameBoardScene
 	{
 		try
 		{
+			if (TryPickEarlyTableNewCardHandIndex(playerIndex, out int earlyTableHandIndex))
+			{
+				return await PlayCardFromHandAsync(playerIndex, earlyTableHandIndex, turnSequenceGeneration);
+			}
+
 			if (playerIndex >= 0
 				&& playerIndex < _playerHands.Count
 				&& NetworkAiFallbackRules.TryPickCaptureHandIndexForNetworkAiProxy(

@@ -298,6 +298,17 @@ public partial class GameBoardScene
 			&& _adventureUpgradeSelectionCompletionSource != null;
 	}
 
+	public bool DebugShowAdventureUpgradeSelectionOverlaySample()
+	{
+		AdventureUpgradeOverlayOptionModel[] options =
+		{
+			new("clubs", "common", "示例强化一。"),
+			new("diamonds", "rare", "示例强化二。"),
+			new("spades", "uncommon", "示例强化三。"),
+		};
+		return ShowAdventureUpgradeSelectionOverlay(options);
+	}
+
 	public int DebugGetAdventureUpgradeOptionCount()
 	{
 		SelectionOverlaySession? session = GetActiveSelectionOverlaySession(SelectionOverlayKind.AdventureUpgrade);
