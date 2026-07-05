@@ -115,7 +115,13 @@ public partial class GameBoardScene
 			Cut(_playerDecks[ownerPlayerIndex]);
 		}
 
-		return new PlayCardResult(true, captured, captureResult.CollectedCardCount > 0, captureResult.QuestionRewardAnimation);
+		return new PlayCardResult(
+			true,
+			captured,
+			captureResult.CollectedCardCount > 0,
+			captureResult.QuestionRewardAnimation,
+			AdventureQuestionRewardEffects: captureResult.AdventureQuestionRewardEffects,
+			AdventurePostCaptureEffects: captureResult.AdventurePostCaptureEffects);
 	}
 
 	private async Task<PlayCardResult> ResolveStealCardEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)

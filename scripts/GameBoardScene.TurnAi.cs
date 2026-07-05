@@ -193,14 +193,14 @@ public partial class GameBoardScene
 	{
 		return PotentialCaptureRules.GetPotentialNormalCaptureCount(
 			ToCaptureScoringTableCards(),
-			ToPotentialCaptureCard(card));
+			ToPotentialCaptureCard(MainPlayerIndex, card));
 	}
 
 	private int GetPotentialNormalCapturePoints(int playerIndex, PlayingCard card)
 	{
 		return PotentialCaptureRules.GetPotentialNormalCapturePoints(
 			ToCaptureScoringTableCards(),
-			ToPotentialCaptureCard(card, ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card)),
+			ToPotentialCaptureCard(playerIndex, card, ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card)),
 			BuildCaptureScoringContext(playerIndex));
 	}
 
@@ -321,7 +321,10 @@ public partial class GameBoardScene
 		for (int index = 0; index < cards.Count; index++)
 		{
 			PlayingCard card = cards[index];
-			potentialCards[index] = ToPotentialCaptureCard(card, ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card));
+			potentialCards[index] = ToPotentialCaptureCard(
+				playerIndex,
+				card,
+				ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card));
 		}
 
 		return potentialCards;
@@ -332,20 +335,27 @@ public partial class GameBoardScene
 		var potentialCards = new PotentialCaptureRules.Card[cards.Count];
 		for (int index = 0; index < cards.Count; index++)
 		{
-			potentialCards[index] = ToPotentialCaptureCard(cards[index]);
+			potentialCards[index] = ToPotentialCaptureCard(MainPlayerIndex, cards[index]);
 		}
 
 		return potentialCards;
 	}
 
-	private PotentialCaptureRules.Card ToPotentialCaptureCard(PlayingCard card, bool hasDoubleEffect = false)
+	private PotentialCaptureRules.Card ToPotentialCaptureCard(int playerIndex, PlayingCard card, bool hasDoubleEffect = false)
 	{
+		string primaryRank = playerIndex == MainPlayerIndex
+			? ResolveAdventureMainPlayerPrimaryMatchRank(card)
+			: card.Rank;
+		List<string>? alternateRanks = playerIndex == MainPlayerIndex
+			? BuildAdventureMainPlayerAlternateRanks(card)
+			: null;
 		return new PotentialCaptureRules.Card(
-			card.Rank,
+			primaryRank,
 			ShouldPlayedCardCollectTable(card),
 			hasDoubleEffect,
 			card.Suit,
-			ShouldCollectBySuit(card));
+			ShouldCollectBySuit(card),
+			alternateRanks);
 	}
 
 	private CaptureScoringRules.TableCard[] ToTideShiftedCaptureScoringTableCards()

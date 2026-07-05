@@ -18,6 +18,17 @@ internal sealed class GameBoardState
 	public int TurnSequenceGeneration { get; set; }
 	public int CompletedTurnsSinceQuestionCardRefresh { get; set; }
 	public int QuestionCardRefreshAnchorPlayerIndex { get; set; } = -1;
+	public int AdventureMainPlayerSuccessfulCapturesThisTurn { get; set; }
+	public int AdventureMainPlayerCaptureCountThisBattle { get; set; }
+	public bool AdventureMainPlayerQuestionRewardEchoActive { get; set; }
+	public bool AdventureMainPlayerPendingExtraBaseCardAction { get; set; }
+	public bool AdventureMainPlayerExtraBaseCardActionKeepsTurn { get; set; }
+	public bool AdventureQuestionRejudgeUsedThisBattle { get; set; }
+	public bool AdventureMainPlayerHalfHealthRescueUsed { get; set; }
+	public bool AdventureMainPlayerQuarterHealthRescueUsed { get; set; }
+	public bool AdventureEnemyNextBaseCardFacesUp { get; set; }
+	public AdventureEnemyNextCardInsertMode AdventureEnemyNextCardInsertMode { get; set; } = AdventureEnemyNextCardInsertMode.None;
+	public int AdventureEnemyNextCaptureDamageDelta { get; set; }
 	public int WinnerPlayerIndex { get; set; } = -1;
 	public bool IsLeavingGame { get; set; }
 	public bool IsProcessingCardPlay { get; set; }

@@ -15,6 +15,11 @@ public partial class GameBoardScene
 
 		UpdateBorrowTideTurnTransition(previousTurnPlayerIndex, nextTurnPlayerIndex);
 		_currentTurnPlayerIndex = nextTurnPlayerIndex;
+		if (nextTurnPlayerIndex == MainPlayerIndex && previousTurnPlayerIndex != MainPlayerIndex)
+		{
+			_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
+			RefreshAdventureHuntOrderMarkForMainPlayerTurn();
+		}
 	}
 
 	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
@@ -64,6 +69,18 @@ public partial class GameBoardScene
 	private async Task RefillCurrentTurnPlayerBaseHandAsync(int turnSequenceGeneration)
 	{
 		await RefillPlayerBaseHandAsync(_currentTurnPlayerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
+		await ApplyAdventureMainPlayerTurnStartEffectsAsync(_currentTurnPlayerIndex, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
+		await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
 	}
 
 	private async Task RefillPlayerBaseHandAsync(int playerIndex, int turnSequenceGeneration)
@@ -111,6 +128,11 @@ public partial class GameBoardScene
 	private bool HasPlayableItemCard(int playerIndex)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+		{
+			return false;
+		}
+
+		if (playerIndex == MainPlayerIndex && _adventureMainPlayerPendingExtraBaseCardAction)
 		{
 			return false;
 		}

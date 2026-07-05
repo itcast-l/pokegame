@@ -283,6 +283,14 @@ public partial class GameBoardScene
 				RenderPlayerHands();
 				return;
 			}
+			ApplyAdventureQuestionRewardEffects(ownerPlayerIndex, result.AdventureQuestionRewardEffects);
+			await ApplyAdventurePostCaptureEffectsAsync(ownerPlayerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				_isProcessingCardPlay = false;
+				RenderPlayerHands();
+				return;
+			}
 
 			await ResolvePendingMagnetAttachmentsAsync(turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)

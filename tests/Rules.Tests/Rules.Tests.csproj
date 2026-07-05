@@ -16,6 +16,8 @@
     <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
     <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />
     <Compile Include="../../scripts/AdventureUpgradeChoiceRules.cs" Link="Rules/AdventureUpgradeChoiceRules.cs" />
+    <Compile Include="../../scripts/AdventureUpgradeEffectState.cs" Link="Rules/AdventureUpgradeEffectState.cs" />
+    <Compile Include="../../scripts/AdventureUpgradeEffectService.cs" Link="Rules/AdventureUpgradeEffectService.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunState.cs" Link="Rules/AdventureUpgradeRunState.cs" />
     <Compile Include="../../scripts/AdventureUpgradeTriggerRules.cs" Link="Rules/AdventureUpgradeTriggerRules.cs" />

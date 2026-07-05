@@ -6,6 +6,7 @@ public partial class GameBoardScene
 {
 	private const string DebugRecordingSetupJellyfishCaptureShowcase01 = "jellyfish_capture_showcase_01";
 	private const string DebugRecordingSetupShrimpCaptureVictoryOrder01 = "shrimp_capture_victory_order_01";
+	private const string DebugRecordingSetupShrimpPairCaptureReturn01 = "shrimp_pair_capture_return_01";
 	private const string JellyfishEnemyAvatarId = "jellyfish";
 	private const string ShrimpEnemyAvatarId = "shrimp";
 
@@ -59,6 +60,27 @@ public partial class GameBoardScene
 			return true;
 		}
 
+		if (string.Equals(setupId, DebugRecordingSetupShrimpPairCaptureReturn01, StringComparison.Ordinal))
+		{
+			if (!adventure_mode
+				|| player_count != 2
+				|| !string.Equals(adventure_enemy_avatar_id, ShrimpEnemyAvatarId, StringComparison.Ordinal))
+			{
+				GD.PushWarning(
+					$"Debug recording setup '{setupId}' requires 2-player adventure mode against '{ShrimpEnemyAvatarId}'; falling back to normal deal.");
+				return false;
+			}
+
+			bool pairCaptureSetupSucceeded = TrySetupShrimpPairCaptureReturnRecordingDeal();
+			if (!pairCaptureSetupSucceeded)
+			{
+				GD.PushWarning($"Debug recording setup '{setupId}' failed; falling back to normal deal.");
+				return false;
+			}
+
+			return true;
+		}
+
 		GD.PushWarning($"Unknown debug recording setup '{setupId}'; falling back to normal deal.");
 		return false;
 	}
@@ -66,6 +88,31 @@ public partial class GameBoardScene
 	private bool TrySetupShrimpCaptureVictoryOrderRecordingDeal()
 	{
 		return TrySetupSharedBigCaptureRecordingDeal();
+	}
+
+	private bool TrySetupShrimpPairCaptureReturnRecordingDeal()
+	{
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Clubs", "5"),
+			("Spades", "A"),
+			("Diamonds", "9"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		_playerHands[1].Add(cards["Diamonds:9"]);
+
+		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		return true;
 	}
 
 	private bool TrySetupJellyfishCaptureShowcaseRecordingDeal()
@@ -167,7 +214,7 @@ public partial class GameBoardScene
 
 		return PotentialCaptureRules.GetPotentialNormalCaptureCount(
 			ToCaptureScoringTableCards(),
-			ToPotentialCaptureCard(_playerHands[playerIndex][handIndex]));
+			ToPotentialCaptureCard(playerIndex, _playerHands[playerIndex][handIndex]));
 	}
 
 	public int DebugGetDeckCardCountForPlayer(int playerIndex)

@@ -25,6 +25,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 	private const float DescriptionLineSpacing = 0.25f;
 	private const int MaxDescriptionFontSize = 16;
 	private const int MinDescriptionFontSize = 11;
+	private const float MaxCardAspectRatio = 0.6f;
 	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.115f, 0.758f, 0.77f, 0.152f);
 
 	public float HighlightAmount
@@ -298,7 +299,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 			return bounds;
 		}
 
-		float textureAspect = textureSize.X / textureSize.Y;
+		float textureAspect = Mathf.Min(textureSize.X / textureSize.Y, MaxCardAspectRatio);
 		float boundsAspect = bounds.Size.X / bounds.Size.Y;
 		if (boundsAspect > textureAspect)
 		{

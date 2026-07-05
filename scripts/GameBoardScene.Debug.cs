@@ -144,6 +144,274 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	public bool DebugAcquireAdventureUpgrade(string upgradeId)
+	{
+		if (!ShouldUseAdventureUpgradeSystem() || string.IsNullOrWhiteSpace(upgradeId))
+		{
+			return false;
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true || runState.HasAcquiredUpgrade(upgradeId))
+		{
+			return false;
+		}
+
+		RecordAdventureAcquiredUpgrade(upgradeId);
+		ApplyAdventureUpgradeAcquisitionEffects(upgradeId, AdventureUpgradeTriggerSource.None);
+		return true;
+	}
+
+	public bool DebugConfigureAdventurePairCaptureReturnScenario()
+	{
+		if (!adventure_mode || player_count != 2)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Clubs", "5"),
+			("Spades", "A"),
+			("Diamonds", "9"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		_playerDecks.Clear();
+		_playerHands.Clear();
+		_playerItemHands.Clear();
+		_tableCards.Clear();
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerDecks.Add(new List<PlayingCard>());
+			_playerHands.Add(new List<PlayingCard>());
+			_playerItemHands.Add(new List<ItemCard>());
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		_playerHands[1].Add(cards["Diamonds:9"]);
+		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
+	}
+
+	public bool DebugConfigureAdventureSuitCollectReturnScenario()
+	{
+		if (!adventure_mode || player_count != 2)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Hearts", "9"),
+			("Clubs", "2"),
+			("Spades", "7"),
+			("Diamonds", "8"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		_playerDecks.Clear();
+		_playerHands.Clear();
+		_playerItemHands.Clear();
+		_tableCards.Clear();
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerDecks.Add(new List<PlayingCard>());
+			_playerHands.Add(new List<PlayingCard>());
+			_playerItemHands.Add(new List<ItemCard>());
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Diamonds:8"]);
+		_playerHands[1].Add(cards["Spades:7"]);
+		_tableCards.Add(new TableCard(cards["Hearts:9"], true));
+		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
+	}
+
+	public bool DebugConfigureAdventureGapRootingScenario()
+	{
+		if (!adventure_mode || player_count != 2)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Clubs", "2"),
+			("Clubs", "5"),
+			("Spades", "A"),
+			("Diamonds", "9"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		_playerDecks.Clear();
+		_playerHands.Clear();
+		_playerItemHands.Clear();
+		_tableCards.Clear();
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerDecks.Add(new List<PlayingCard>());
+			_playerHands.Add(new List<PlayingCard>());
+			_playerItemHands.Add(new List<ItemCard>());
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		_playerHands[1].Add(cards["Diamonds:9"]);
+		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
+		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
+	}
+
+	public bool DebugAttachItemEffectToMainPlayerHandCard(int handIndex, string itemCardId)
+	{
+		if (handIndex < 0
+			|| handIndex >= _playerHands[MainPlayerIndex].Count
+			|| string.IsNullOrWhiteSpace(itemCardId))
+		{
+			return false;
+		}
+
+		_playerHands[MainPlayerIndex][handIndex] = _playerHands[MainPlayerIndex][handIndex].WithAttachedItemEffect(itemCardId.Trim());
+		RenderPlayerHands();
+		return true;
+	}
+
+	public bool DebugSimulateAdventureEnemyMiss(int tableCardCountAfterMiss, bool hadOldTableCardsBeforeMiss)
+	{
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return false;
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return false;
+		}
+
+		AdventureEnemyMissEffectResult effectResult = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			runState.GetAcquiredUpgradeIds(),
+			tableCardCountAfterMiss,
+			hadOldTableCardsBeforeMiss);
+		_adventureEnemyNextBaseCardFacesUp = effectResult.NextCardFacesUp;
+		_adventureEnemyNextCardInsertMode = effectResult.InsertMode;
+		_adventureEnemyNextCaptureDamageDelta = effectResult.NextCaptureDamageDelta;
+		if (effectResult.GrantMainPlayerExtraBaseAction)
+		{
+			TryGrantAdventureMainPlayerExtraBaseCardAction(keepsTurnAfterAction: true);
+		}
+
+		if (effectResult.DirectDamageToEnemy > 0)
+		{
+			AddPlayerScore(MainPlayerIndex, effectResult.DirectDamageToEnemy);
+		}
+
+		return true;
+	}
+
+	public bool DebugSimulateAdventureMainPlayerMiss(int tableCardCountAfterMiss)
+	{
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return false;
+		}
+
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (runState?.IsActive != true)
+		{
+			return false;
+		}
+
+		AdventureMainPlayerMissEffectResult result = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds(),
+			tableCardCountAfterMiss);
+		store!.ReplaceEffectState(runState.EffectState.Clone());
+		if (result.GrantExtraBaseCardAction)
+		{
+			TryGrantAdventureMainPlayerExtraBaseCardAction();
+		}
+
+		return true;
+	}
+
+	public bool DebugGetAdventureEnemyNextCardFacesUp()
+	{
+		return _adventureEnemyNextBaseCardFacesUp;
+	}
+
+	public string DebugGetAdventureEnemyNextCardInsertModeName()
+	{
+		return _adventureEnemyNextCardInsertMode.ToString();
+	}
+
+	public int DebugGetAdventureEnemyNextCaptureDamageDelta()
+	{
+		return _adventureEnemyNextCaptureDamageDelta;
+	}
+
+	public bool DebugHasAdventurePendingExtraBaseCardAction()
+	{
+		return _adventureMainPlayerPendingExtraBaseCardAction;
+	}
+
+	public string DebugResolveAdventureQuestionRewardRejudge(string itemCardId)
+	{
+		if (string.IsNullOrWhiteSpace(itemCardId))
+		{
+			return string.Empty;
+		}
+
+		return MaybeRejudgeQuestionRewardItemCardIdAsync(itemCardId.Trim(), MainPlayerIndex)
+			.GetAwaiter()
+			.GetResult();
+	}
+
+	public bool DebugHasAdventureQuestionRejudgeUsed()
+	{
+		return _adventureQuestionRejudgeUsedThisBattle;
+	}
+
 	public void DebugForceNextPendingTargetSelectionAiFallback()
 	{
 		_debugForceNextPendingTargetPlayerHeuristicFailure = true;
@@ -325,6 +593,26 @@ public partial class GameBoardScene
 		}
 
 		return TrySelectActiveSelectionOverlayOption(SelectionOverlayKind.AdventureUpgrade, optionIndex);
+	}
+
+	public bool DebugSetAdventureUpgradeHoverState(int optionIndex, bool hovered)
+	{
+		SelectionOverlaySession? session = GetActiveSelectionOverlaySession(SelectionOverlayKind.AdventureUpgrade);
+		if (session == null
+			|| optionIndex < 0
+			|| optionIndex >= session.OptionCount)
+		{
+			return false;
+		}
+
+		Button button = session.Root.GetNodeOrNull<Button>($"Margin/Layout/CardsRow/Option{optionIndex + 1}Button");
+		if (button == null || !button.Visible)
+		{
+			return false;
+		}
+
+		SetAdventureUpgradeOverlayPointerHover(button, hovered);
+		return true;
 	}
 
 	public int DebugGetAdventureAcquiredUpgradeCount()

@@ -34,7 +34,8 @@ internal sealed class CaptureStateService
 		GameBoardState state,
 		CaptureStatePlan plan,
 		int playerIndex,
-		bool preserveCardEffectsWhenEnteringDeck)
+		bool preserveCardEffectsWhenEnteringDeck,
+		HashSet<int>? preservedTableCardIndexes = null)
 	{
 		if (!plan.IsValid || playerIndex < 0 || playerIndex >= state.PlayerDecks.Count)
 		{
@@ -46,9 +47,18 @@ internal sealed class CaptureStateService
 		foreach (int tableCardIndex in plan.BaseTableCardIndexes)
 		{
 			TableCard tableCard = state.TableCards[tableCardIndex];
-			removedTableCardCount++;
+			if (!IsPreservedCapturedTableCard(preservedTableCardIndexes, tableCardIndex))
+			{
+				removedTableCardCount++;
+			}
+
 			if (tableCard.Card.HasValue && !tableCard.RemoveCardOnCapture)
 			{
+				if (IsPreservedCapturedTableCard(preservedTableCardIndexes, tableCardIndex))
+				{
+					continue;
+				}
+
 				AddCardToPlayerDeck(state, playerIndex, tableCard.Card.Value, preserveCardEffectsWhenEnteringDeck);
 				collectedCardCount++;
 			}
@@ -57,9 +67,18 @@ internal sealed class CaptureStateService
 		foreach (int tableCardIndex in plan.ExtraTableCardIndexes)
 		{
 			TableCard tableCard = state.TableCards[tableCardIndex];
-			removedTableCardCount++;
+			if (!IsPreservedCapturedTableCard(preservedTableCardIndexes, tableCardIndex))
+			{
+				removedTableCardCount++;
+			}
+
 			if (tableCard.Card.HasValue && !tableCard.RemoveCardOnCapture)
 			{
+				if (IsPreservedCapturedTableCard(preservedTableCardIndexes, tableCardIndex))
+				{
+					continue;
+				}
+
 				AddCardToPlayerDeck(state, playerIndex, tableCard.Card.Value, preserveCardEffectsWhenEnteringDeck);
 				collectedCardCount++;
 			}
@@ -67,7 +86,8 @@ internal sealed class CaptureStateService
 
 		for (int tableCardIndex = state.TableCards.Count - 1; tableCardIndex >= plan.CaptureStartIndex; tableCardIndex--)
 		{
-			if (!state.TableCards[tableCardIndex].IsBuriedInSand)
+			if (!state.TableCards[tableCardIndex].IsBuriedInSand
+				&& !IsPreservedCapturedTableCard(preservedTableCardIndexes, tableCardIndex))
 			{
 				state.TableCards.RemoveAt(tableCardIndex);
 			}
@@ -75,7 +95,10 @@ internal sealed class CaptureStateService
 
 		for (int index = plan.ExtraTableCardIndexes.Count - 1; index >= 0; index--)
 		{
-			state.TableCards.RemoveAt(plan.ExtraTableCardIndexes[index]);
+			if (!IsPreservedCapturedTableCard(preservedTableCardIndexes, plan.ExtraTableCardIndexes[index]))
+			{
+				state.TableCards.RemoveAt(plan.ExtraTableCardIndexes[index]);
+			}
 		}
 
 		return new CaptureStateResult(collectedCardCount, removedTableCardCount);
@@ -110,6 +133,11 @@ internal sealed class CaptureStateService
 
 		validIndexes.Sort();
 		return validIndexes;
+	}
+
+	private static bool IsPreservedCapturedTableCard(HashSet<int>? preservedTableCardIndexes, int tableCardIndex)
+	{
+		return preservedTableCardIndexes != null && preservedTableCardIndexes.Contains(tableCardIndex);
 	}
 
 	private static void AddCardToPlayerDeck(

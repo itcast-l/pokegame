@@ -224,6 +224,61 @@ public partial class GameBoardScene : Control
 		get => _state.QuestionCardRefreshAnchorPlayerIndex;
 		set => _state.QuestionCardRefreshAnchorPlayerIndex = value;
 	}
+	private int _adventureMainPlayerSuccessfulCapturesThisTurn
+	{
+		get => _state.AdventureMainPlayerSuccessfulCapturesThisTurn;
+		set => _state.AdventureMainPlayerSuccessfulCapturesThisTurn = value;
+	}
+	private int _adventureMainPlayerCaptureCountThisBattle
+	{
+		get => _state.AdventureMainPlayerCaptureCountThisBattle;
+		set => _state.AdventureMainPlayerCaptureCountThisBattle = value;
+	}
+	private bool _adventureMainPlayerQuestionRewardEchoActive
+	{
+		get => _state.AdventureMainPlayerQuestionRewardEchoActive;
+		set => _state.AdventureMainPlayerQuestionRewardEchoActive = value;
+	}
+	private bool _adventureMainPlayerPendingExtraBaseCardAction
+	{
+		get => _state.AdventureMainPlayerPendingExtraBaseCardAction;
+		set => _state.AdventureMainPlayerPendingExtraBaseCardAction = value;
+	}
+	private bool _adventureMainPlayerExtraBaseCardActionKeepsTurn
+	{
+		get => _state.AdventureMainPlayerExtraBaseCardActionKeepsTurn;
+		set => _state.AdventureMainPlayerExtraBaseCardActionKeepsTurn = value;
+	}
+	private bool _adventureQuestionRejudgeUsedThisBattle
+	{
+		get => _state.AdventureQuestionRejudgeUsedThisBattle;
+		set => _state.AdventureQuestionRejudgeUsedThisBattle = value;
+	}
+	private bool _adventureMainPlayerHalfHealthRescueUsed
+	{
+		get => _state.AdventureMainPlayerHalfHealthRescueUsed;
+		set => _state.AdventureMainPlayerHalfHealthRescueUsed = value;
+	}
+	private bool _adventureMainPlayerQuarterHealthRescueUsed
+	{
+		get => _state.AdventureMainPlayerQuarterHealthRescueUsed;
+		set => _state.AdventureMainPlayerQuarterHealthRescueUsed = value;
+	}
+	private bool _adventureEnemyNextBaseCardFacesUp
+	{
+		get => _state.AdventureEnemyNextBaseCardFacesUp;
+		set => _state.AdventureEnemyNextBaseCardFacesUp = value;
+	}
+	private AdventureEnemyNextCardInsertMode _adventureEnemyNextCardInsertMode
+	{
+		get => _state.AdventureEnemyNextCardInsertMode;
+		set => _state.AdventureEnemyNextCardInsertMode = value;
+	}
+	private int _adventureEnemyNextCaptureDamageDelta
+	{
+		get => _state.AdventureEnemyNextCaptureDamageDelta;
+		set => _state.AdventureEnemyNextCaptureDamageDelta = value;
+	}
 	private int _revealedPlayerHandIndex
 	{
 		get => _state.RevealedPlayerHandIndex;

@@ -60,6 +60,18 @@ public sealed partial class AdventureRunSessionStore : Node
 		Persist();
 	}
 
+	internal void SetHealth(int currentHealth, int maxHealth)
+	{
+		_runState.SetHealth(currentHealth, maxHealth);
+		Persist();
+	}
+
+	internal void ReplaceEffectState(AdventureUpgradeEffectState effectState)
+	{
+		_runState.ReplaceEffectState(effectState);
+		Persist();
+	}
+
 	internal void ClearRun()
 	{
 		_runState.Clear();

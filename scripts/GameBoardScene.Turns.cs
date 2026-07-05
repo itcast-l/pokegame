@@ -129,6 +129,14 @@ public partial class GameBoardScene
 				return;
 			}
 
+			if (result.AdventureConsumedExtraBaseCardAction && _adventureMainPlayerExtraBaseCardActionKeepsTurn)
+			{
+				_adventureMainPlayerExtraBaseCardActionKeepsTurn = false;
+				_isProcessingCardPlay = false;
+				await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
+				return;
+			}
+
 			if (result.CompletesTurn)
 			{
 				await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
@@ -141,6 +149,7 @@ public partial class GameBoardScene
 			else
 			{
 				_isProcessingCardPlay = false;
+				await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
 			}
 		}
 		finally

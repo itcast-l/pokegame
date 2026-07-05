@@ -21,7 +21,8 @@ internal readonly record struct CardPlayPlan(
 	int CaptureStartIndex,
 	bool MatchedTableCardFlipped,
 	int TableInsertIndex,
-	string EffectiveRank);
+	string EffectiveRank,
+	bool PlayedCardFacesUp);
 
 internal static class CardPlayResolver
 {
@@ -34,7 +35,9 @@ internal static class CardPlayResolver
 		IReadOnlyList<CardPlayTableCard> tableCards,
 		CardPlayCard playedCard,
 		IReadOnlyList<string>? alternateRanks,
-		bool insertAtTableStart)
+		bool insertAtTableStart,
+		int tableInsertIndexOverride = -1,
+		bool playedCardFacesUp = false)
 	{
 		string effectiveRank = playedCard.Rank;
 		int matchingIndex = FindMatchingTableCardIndex(tableCards, playedCard.Rank);
@@ -69,14 +72,17 @@ internal static class CardPlayResolver
 		bool playedCardCollectsTable = playedCard.CollectsTable && tableCards.Count > 0;
 		int captureStartIndex = playedCardCollectsTable ? 0 : matchingIndex;
 		bool matchedTableCardFlipped = matchingIndex >= 0 && !tableCards[matchingIndex].IsFaceUp;
-		int tableInsertIndex = insertAtTableStart ? 0 : tableCards.Count;
+		int tableInsertIndex = tableInsertIndexOverride >= 0
+			? System.Math.Min(tableInsertIndexOverride, tableCards.Count)
+			: (insertAtTableStart ? 0 : tableCards.Count);
 		return new CardPlayPlan(
 			matchingIndex,
 			playedCardCollectsTable,
 			captureStartIndex,
 			matchedTableCardFlipped,
 			tableInsertIndex,
-			effectiveRank);
+			effectiveRank,
+			playedCardFacesUp);
 	}
 
 	internal static int FindMatchingTableCardIndex(IReadOnlyList<CardPlayTableCard> tableCards, string rank)

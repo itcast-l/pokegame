@@ -97,8 +97,47 @@ public partial class GameBoardScene
 
 			int previousScore = _playerScores[damageTargetPlayerIndex];
 			_playerScores[damageTargetPlayerIndex] = Math.Max(0, previousScore - points);
-			PlayAvatarDamagePopup(damageTargetPlayerIndex, previousScore - _playerScores[damageTargetPlayerIndex]);
+			int actualDamage = previousScore - _playerScores[damageTargetPlayerIndex];
+			if (damageTargetPlayerIndex == MainPlayerIndex && ShouldUseAdventureUpgradeSystem())
+			{
+				AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+				if (runState?.IsActive == true)
+				{
+					AdventureLowHealthRescueResult rescueResult = AdventureUpgradeEffectService.ResolveMainPlayerLowHealthRescue(
+						previousScore,
+						_playerScores[damageTargetPlayerIndex],
+						runState.MaxHealth,
+						runState.GetAcquiredUpgradeIds(),
+						_adventureMainPlayerHalfHealthRescueUsed,
+						_adventureMainPlayerQuarterHealthRescueUsed);
+					if (rescueResult.ConsumedHalfThreshold)
+					{
+						_adventureMainPlayerHalfHealthRescueUsed = true;
+					}
+
+					if (rescueResult.ConsumedQuarterThreshold)
+					{
+						_adventureMainPlayerQuarterHealthRescueUsed = true;
+					}
+
+					if (rescueResult.HealAmount > 0 || rescueResult.DrawCount > 0)
+					{
+						PersistAdventureMainPlayerHealthIfNeeded(damageTargetPlayerIndex);
+						if (rescueResult.HealAmount > 0)
+						{
+							ApplyAdventureMainPlayerHealing(rescueResult.HealAmount);
+						}
+
+						if (rescueResult.DrawCount > 0)
+						{
+							DrawCardsFromDeckToHandForAdventureEffect(MainPlayerIndex, rescueResult.DrawCount);
+						}
+					}
+				}
+			}
+			PlayAvatarDamagePopup(damageTargetPlayerIndex, actualDamage);
 			UpdatePlayerScoreMeter(damageTargetPlayerIndex, true);
+			PersistAdventureMainPlayerHealthIfNeeded(damageTargetPlayerIndex);
 			PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
 			if (damageTargetPlayerIndex != playerIndex)
 			{
@@ -166,11 +205,24 @@ public partial class GameBoardScene
 			return 0;
 		}
 
+		if (playerIndex == MainPlayerIndex
+			&& TryGetAdventureMainPlayerRunHealth(out int currentHealth, out _))
+		{
+			return currentHealth;
+		}
+
 		return GetAdventureStartingHealth(playerIndex);
 	}
 
 	private int GetScoreLimit(int playerIndex)
 	{
+		if (adventure_mode
+			&& playerIndex == MainPlayerIndex
+			&& TryGetAdventureMainPlayerRunHealth(out _, out int maxHealth))
+		{
+			return maxHealth;
+		}
+
 		return adventure_mode ? GetAdventureStartingHealth(playerIndex) : _winningScore;
 	}
 
@@ -178,6 +230,12 @@ public partial class GameBoardScene
 	{
 		if (playerIndex != AdventureEnemyPlayerIndex)
 		{
+			if (playerIndex == MainPlayerIndex
+				&& TryGetAdventureMainPlayerRunHealth(out _, out int maxHealth))
+			{
+				return maxHealth;
+			}
+
 			return AdventurePlayerStartingHealth;
 		}
 
@@ -216,6 +274,73 @@ public partial class GameBoardScene
 		}
 
 		return -1;
+	}
+
+	private bool TryGetAdventureMainPlayerRunHealth(out int currentHealth, out int maxHealth)
+	{
+		currentHealth = 0;
+		maxHealth = 0;
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return false;
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return false;
+		}
+
+		currentHealth = runState.CurrentHealth;
+		maxHealth = runState.MaxHealth;
+		return true;
+	}
+
+	private void PersistAdventureMainPlayerHealthIfNeeded(int playerIndex)
+	{
+		if (playerIndex != MainPlayerIndex || !ShouldUseAdventureUpgradeSystem())
+		{
+			return;
+		}
+
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (runState?.IsActive != true)
+		{
+			return;
+		}
+
+		store!.SetHealth(_playerScores[playerIndex], runState.MaxHealth);
+	}
+
+	private bool ApplyAdventureMainPlayerHealing(int healAmount, int maxHealthDelta = 0, bool animate = true)
+	{
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return false;
+		}
+
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (store == null || runState?.IsActive != true)
+		{
+			return false;
+		}
+
+		int nextMaxHealth = Math.Max(1, runState.MaxHealth + Math.Max(0, maxHealthDelta));
+		AdventureHealingResult healingResult = AdventureUpgradeEffectService.ApplyHealing(
+			runState.CurrentHealth,
+			nextMaxHealth,
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds(),
+			healAmount);
+		store.ReplaceEffectState(runState.EffectState.Clone());
+		store.SetHealth(healingResult.CurrentHealth, healingResult.MaxHealth);
+
+		_playerScores[MainPlayerIndex] = healingResult.CurrentHealth;
+		UpdatePlayerScoreMeter(MainPlayerIndex, animate);
+		RefreshGameplayTensionMusic();
+		return true;
 	}
 
 	private static int GetCardScoreValue(PlayingCard card)

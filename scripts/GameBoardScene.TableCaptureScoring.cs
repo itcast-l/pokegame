@@ -75,6 +75,322 @@ public partial class GameBoardScene
 			extraTableCardIndexes);
 	}
 
+	private void BuildAdventureCaptureDamageCardPointLists(
+		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
+		int captureStartIndex,
+		int scorePlayerIndex,
+		IReadOnlySet<int>? extraTableCardIndexes,
+		List<int> rawPoints,
+		List<int> resolvedPoints)
+	{
+		rawPoints.Clear();
+		resolvedPoints.Clear();
+		if (captureStartIndex < 0 || captureStartIndex >= tableCards.Count)
+		{
+			return;
+		}
+
+		bool hasDoubleEffect = CaptureScoringRules.HasCapturedDoubleScoreEffect(
+			tableCards,
+			captureStartIndex,
+			extraTableCardIndexes);
+		CaptureScoringRules.Context context = BuildCaptureScoringContext(scorePlayerIndex);
+		var addedIndexes = new HashSet<int>();
+
+		void TryAddCardPointValues(int tableCardIndex, bool allowAnyVisibleCapturedCard)
+		{
+			if (!addedIndexes.Add(tableCardIndex)
+				|| tableCardIndex < 0
+				|| tableCardIndex >= tableCards.Count)
+			{
+				return;
+			}
+
+			CaptureScoringRules.TableCard tableCard = tableCards[tableCardIndex];
+			if (tableCard.IsBuriedInSand || !tableCard.Card.HasValue)
+			{
+				return;
+			}
+
+			if (!allowAnyVisibleCapturedCard
+				&& !CaptureScoringRules.IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex, tableCards.Count))
+			{
+				return;
+			}
+
+			int rawPoint = Math.Max(0, tableCard.Card.Value.ScoreValue);
+			if (rawPoint <= 0)
+			{
+				return;
+			}
+
+			rawPoints.Add(rawPoint);
+			resolvedPoints.Add(CaptureScoringRules.GetCapturedTableCardScoreValue(tableCard, context, hasDoubleEffect));
+		}
+
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < tableCards.Count; tableCardIndex++)
+		{
+			TryAddCardPointValues(tableCardIndex, allowAnyVisibleCapturedCard: false);
+		}
+
+		if (extraTableCardIndexes == null)
+		{
+			return;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			TryAddCardPointValues(tableCardIndex, allowAnyVisibleCapturedCard: true);
+		}
+	}
+
+	private int CountCapturedOldScoringTableCards(
+		IReadOnlyCollection<TableCard> prePlayTableCards,
+		int captureStartIndex,
+		HashSet<int>? extraTableCardIndexes = null)
+	{
+		if (prePlayTableCards.Count == 0)
+		{
+			return 0;
+		}
+
+		var oldTableCards = new HashSet<TableCard>(prePlayTableCards);
+		int count = 0;
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			if (!oldTableCards.Contains(_tableCards[tableCardIndex])
+				|| !IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
+			{
+				continue;
+			}
+
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue && GetCardScoreValue(tableCard.Card.Value) > 0)
+			{
+				count++;
+			}
+		}
+
+		if (extraTableCardIndexes == null)
+		{
+			return count;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			if (tableCardIndex < 0
+				|| tableCardIndex >= _tableCards.Count
+				|| !oldTableCards.Contains(_tableCards[tableCardIndex]))
+			{
+				continue;
+			}
+
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue && GetCardScoreValue(tableCard.Card.Value) > 0)
+			{
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	private void GetCapturedOldTableResolvedPointTotals(
+		IReadOnlyCollection<TableCard> prePlayTableCards,
+		int captureStartIndex,
+		int scorePlayerIndex,
+		HashSet<int>? extraTableCardIndexes,
+		out int totalResolvedOldTablePoints,
+		out int currentResolvedOldTableScoringPoints)
+	{
+		int totalPoints = 0;
+		int currentScoringPoints = 0;
+		if (prePlayTableCards.Count == 0)
+		{
+			totalResolvedOldTablePoints = 0;
+			currentResolvedOldTableScoringPoints = 0;
+			return;
+		}
+
+		CaptureScoringRules.TableCard[] captureScoringTableCards = ToCaptureScoringTableCards();
+		bool hasDoubleEffect = CaptureScoringRules.HasCapturedDoubleScoreEffect(
+			captureScoringTableCards,
+			captureStartIndex,
+			extraTableCardIndexes);
+		CaptureScoringRules.Context context = BuildCaptureScoringContext(scorePlayerIndex);
+		var oldTableCards = new HashSet<TableCard>(prePlayTableCards);
+		var countedIndexes = new HashSet<int>();
+
+		void AccumulateIfOld(int tableCardIndex, bool currentlyScoring)
+		{
+			if (!countedIndexes.Add(tableCardIndex)
+				|| tableCardIndex < 0
+				|| tableCardIndex >= _tableCards.Count)
+			{
+				return;
+			}
+
+			TableCard liveTableCard = _tableCards[tableCardIndex];
+			if (!oldTableCards.Contains(liveTableCard) || liveTableCard.IsBuriedInSand || !liveTableCard.Card.HasValue)
+			{
+				return;
+			}
+
+			int resolvedPoints = CaptureScoringRules.GetCapturedTableCardScoreValue(
+				ToCaptureScoringTableCard(liveTableCard),
+				context,
+				hasDoubleEffect);
+			if (resolvedPoints <= 0)
+			{
+				return;
+			}
+
+			totalPoints += resolvedPoints;
+			if (currentlyScoring)
+			{
+				currentScoringPoints += resolvedPoints;
+			}
+		}
+
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			AccumulateIfOld(
+				tableCardIndex,
+				IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex));
+		}
+
+		if (extraTableCardIndexes == null)
+		{
+			totalResolvedOldTablePoints = totalPoints;
+			currentResolvedOldTableScoringPoints = currentScoringPoints;
+			return;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			AccumulateIfOld(tableCardIndex, currentlyScoring: true);
+		}
+
+		totalResolvedOldTablePoints = totalPoints;
+		currentResolvedOldTableScoringPoints = currentScoringPoints;
+	}
+
+	private bool IsCapturedTableCardReference(
+		TableCard? target,
+		int captureStartIndex,
+		HashSet<int>? extraTableCardIndexes = null)
+	{
+		if (target == null)
+		{
+			return false;
+		}
+
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			if (ReferenceEquals(_tableCards[tableCardIndex], target))
+			{
+				return true;
+			}
+		}
+
+		if (extraTableCardIndexes == null)
+		{
+			return false;
+		}
+
+		foreach (int tableCardIndex in extraTableCardIndexes)
+		{
+			if (tableCardIndex >= 0
+				&& tableCardIndex < _tableCards.Count
+				&& ReferenceEquals(_tableCards[tableCardIndex], target))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private TableCard? FindRightmostRemainingOldBaseTableCard(IReadOnlyCollection<TableCard> prePlayTableCards)
+	{
+		if (prePlayTableCards.Count == 0)
+		{
+			return null;
+		}
+
+		var oldTableCards = new HashSet<TableCard>(prePlayTableCards);
+		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (oldTableCards.Contains(tableCard) && !tableCard.IsBuriedInSand && tableCard.Card.HasValue)
+			{
+				return tableCard;
+			}
+		}
+
+		return null;
+	}
+
+	private TableCard? FindLeftmostCurrentBaseTableCard()
+	{
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
+			{
+				return tableCard;
+			}
+		}
+
+		return null;
+	}
+
+	private bool CapturedOnlyOuterVisibleCards(
+		IReadOnlyCollection<TableCard> prePlayTableCards,
+		int captureStartIndex,
+		HashSet<int>? extraTableCardIndexes = null)
+	{
+		if (prePlayTableCards.Count == 0)
+		{
+			return false;
+		}
+
+		var oldTableCards = new HashSet<TableCard>(prePlayTableCards);
+		int visibleCapturedCount = 0;
+		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!oldTableCards.Contains(tableCard) || tableCard.IsBuriedInSand)
+			{
+				continue;
+			}
+
+			if (tableCard.IsFaceUp)
+			{
+				visibleCapturedCount++;
+			}
+		}
+
+		if (extraTableCardIndexes != null)
+		{
+			foreach (int tableCardIndex in extraTableCardIndexes)
+			{
+				if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+				{
+					continue;
+				}
+
+				TableCard tableCard = _tableCards[tableCardIndex];
+				if (oldTableCards.Contains(tableCard) && !tableCard.IsBuriedInSand && tableCard.IsFaceUp)
+				{
+					visibleCapturedCount++;
+				}
+			}
+		}
+
+		return visibleCapturedCount == 2;
+	}
+
 	private CaptureScoringRules.TableCard[] ToCaptureScoringTableCards()
 	{
 		return ToCaptureScoringTableCards(_tableCards);

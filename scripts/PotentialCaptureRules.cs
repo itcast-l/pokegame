@@ -8,7 +8,8 @@ internal static class PotentialCaptureRules
 		bool CollectsTable,
 		bool HasDoubleEffect,
 		string Suit = "",
-		bool CollectBySuit = false);
+		bool CollectBySuit = false,
+		IReadOnlyList<string>? AlternateRanks = null);
 
 	internal static bool TryPickBestCaptureCardIndex(
 		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
@@ -163,6 +164,26 @@ internal static class PotentialCaptureRules
 			if (!tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
 			{
 				return tableCardIndex;
+			}
+		}
+
+		if (playedCard.AlternateRanks != null)
+		{
+			foreach (string alternateRank in playedCard.AlternateRanks)
+			{
+				if (string.IsNullOrWhiteSpace(alternateRank) || alternateRank == playedCard.Rank)
+				{
+					continue;
+				}
+
+				for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
+				{
+					CaptureScoringRules.Card? tableCard = tableCards[tableCardIndex].Card;
+					if (!tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == alternateRank)
+					{
+						return tableCardIndex;
+					}
+				}
 			}
 		}
 

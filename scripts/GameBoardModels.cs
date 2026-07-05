@@ -142,7 +142,10 @@ internal readonly record struct PlayCardResult(
 	bool CompletesTurn = true,
 	NetworkItemPlayVisualSync? ItemPlayVisualSync = null,
 	NetworkCaptureVisualSync? CaptureVisualSync = null,
-	NetworkHandPlayVisualSync? HandPlayVisualSync = null);
+	NetworkHandPlayVisualSync? HandPlayVisualSync = null,
+	AdventureQuestionRewardEffectResult? AdventureQuestionRewardEffects = null,
+	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null,
+	bool AdventureConsumedExtraBaseCardAction = false);
 
 internal readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
 
@@ -199,7 +202,9 @@ internal readonly record struct NetworkCaptureRevealVisualSync(
 internal readonly record struct CaptureTableCardsResult(
 	int CollectedCardCount,
 	int RemovedTableCardCount,
-	QuestionCardRewardAnimation? QuestionRewardAnimation);
+	QuestionCardRewardAnimation? QuestionRewardAnimation,
+	AdventureQuestionRewardEffectResult? AdventureQuestionRewardEffects = null,
+	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null);
 
 internal enum PendingItemSelectionMode
 {

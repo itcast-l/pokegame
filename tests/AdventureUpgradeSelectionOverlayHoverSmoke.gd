@@ -35,6 +35,9 @@ func _run() -> void:
 	if not board.has_method("DebugShowAdventureUpgradeSelectionOverlaySample"):
 		_fail("Missing direct adventure upgrade overlay debug hook")
 		return
+	if not board.has_method("DebugSetAdventureUpgradeHoverState"):
+		_fail("Missing direct adventure upgrade hover-state debug hook")
+		return
 
 	if not bool(board.call("DebugShowAdventureUpgradeSelectionOverlaySample")):
 		_fail("Failed to show direct adventure upgrade overlay sample")
@@ -89,7 +92,9 @@ func _run() -> void:
 
 	var rest_y := float(hover_card_frame.position.y)
 	var rest_scale := float(hover_card_frame.scale.x)
-	hover_button.emit_signal("mouse_entered")
+	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 2, true)):
+		_fail("Failed to force hover state for the third adventure upgrade card")
+		return
 	await process_frame
 
 	var hover_step_y := float(hover_card_frame.position.y)
@@ -116,7 +121,9 @@ func _run() -> void:
 		_fail("Adventure upgrade hover scale should continue easing after the first frame")
 		return
 
-	hover_button.emit_signal("mouse_exited")
+	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 2, false)):
+		_fail("Failed to clear hover state for the third adventure upgrade card")
+		return
 	await process_frame
 
 	var exit_step_y := float(hover_card_frame.position.y)

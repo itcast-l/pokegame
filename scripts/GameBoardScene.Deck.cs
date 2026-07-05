@@ -25,6 +25,17 @@ public partial class GameBoardScene
 		QuestionCardRefreshState questionCardRefreshState = TurnProgressRules.ResetQuestionCardRefreshTracking();
 		_completedTurnsSinceQuestionCardRefresh = questionCardRefreshState.CompletedTurnsSinceQuestionCardRefresh;
 		_questionCardRefreshAnchorPlayerIndex = questionCardRefreshState.QuestionCardRefreshAnchorPlayerIndex;
+		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
+		_adventureMainPlayerCaptureCountThisBattle = 0;
+		_adventureMainPlayerQuestionRewardEchoActive = false;
+		_adventureMainPlayerPendingExtraBaseCardAction = false;
+		_adventureMainPlayerExtraBaseCardActionKeepsTurn = false;
+		_adventureQuestionRejudgeUsedThisBattle = false;
+		_adventureMainPlayerHalfHealthRescueUsed = false;
+		_adventureMainPlayerQuarterHealthRescueUsed = false;
+		_adventureEnemyNextBaseCardFacesUp = false;
+		_adventureEnemyNextCardInsertMode = AdventureEnemyNextCardInsertMode.None;
+		_adventureEnemyNextCaptureDamageDelta = 0;
 		_pendingItemAttachmentRewards.Clear();
 		_hiddenHandDisplaySlots.Clear();
 		_mantaRayTideShiftCheckedThisTurn = false;
@@ -101,6 +112,14 @@ public partial class GameBoardScene
 		DrawStartingHands();
 		ApplyDebugMainPlayerOneCardHand();
 		ApplyDebugOpponentOneCardHand();
+		int adventureBattleStartDrawCount = GetAdventureBattleStartDrawCount();
+		for (int drawIndex = 0; drawIndex < adventureBattleStartDrawCount; drawIndex++)
+		{
+			if (!DrawCardFromDeckToHand(MainPlayerIndex).HasValue)
+			{
+				break;
+			}
+		}
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();

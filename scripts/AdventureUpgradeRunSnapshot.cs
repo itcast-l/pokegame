@@ -6,7 +6,20 @@ internal readonly record struct AdventureUpgradeRunSnapshot(
 	int CurrentRunStageIndex,
 	bool ShouldGrantRunStartUpgrade,
 	bool ShouldGrantVictoryUpgrade,
-	IReadOnlyList<string> AcquiredUpgradeIds)
+	IReadOnlyList<string> AcquiredUpgradeIds,
+	int CurrentHealth = 100,
+	int MaxHealth = 100,
+	int PermanentCaptureDamageBonus = 0,
+	int QuestionRewardCount = 0,
+	bool ThirdQuestionDamageDoubleActive = false,
+	int HealingOverflowRemainder = 0,
+	int NextCaptureDamageBonus = 0,
+	int NextTurnHealAmount = 0,
+	int NextTurnDrawCount = 0,
+	bool ClubShortBranchReturnUsedThisTurn = false,
+	int ClubMissClimbGrowthStacks = 0,
+	bool ClubBorrowSuitSetArmed = false,
+	bool ClubGapRootingUsedThisTurn = false)
 {
-	internal const int CurrentSchemaVersion = 1;
+	internal const int CurrentSchemaVersion = 2;
 }

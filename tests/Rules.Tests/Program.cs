@@ -21,6 +21,7 @@ internal static class Program
 		Run("card play resolver uses first matching suit for suit collect attachment", CardPlayResolverUsesFirstMatchingSuitForSuitCollectAttachment);
 		Run("card play resolver falls back to rank when suit collect has no suit match", CardPlayResolverFallsBackToRankWhenSuitCollectHasNoSuitMatch);
 		Run("card play resolver prefers suit start over later rank match for suit collect", CardPlayResolverPrefersSuitStartOverLaterRankMatchForSuitCollect);
+		Run("card play resolver supports pending insert override and face up", CardPlayResolverSupportsPendingInsertOverrideAndFaceUp);
 		Run("capture resolver identifies middle captures", CaptureResolverIdentifiesMiddleCaptures);
 		Run("score service returns score breakdown", ScoreServiceReturnsScoreBreakdown);
 		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
@@ -32,6 +33,46 @@ internal static class Program
 		Run("adventure upgrade trigger ordering prefers big capture before victory", AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory);
 		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
+		Run("adventure upgrade ids expose fifty six active upgrades across four suits", AdventureUpgradeIdsExposeFiftySixActiveUpgradesAcrossFourSuits);
+		Run("adventure upgrade run snapshot v2 restores legacy v1 saves", AdventureUpgradeRunSnapshotV2RestoresLegacyV1Saves);
+		Run("adventure upgrade run state persists effect counters and health", AdventureUpgradeRunStatePersistsEffectCountersAndHealth);
+		Run("adventure question reward side effects track count permanent bonus and final double", AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble);
+		Run("adventure question reward support upgrades add heal draw and one time rejudge access", AdventureQuestionRewardSupportUpgradesAddHealDrawAndOneTimeRejudgeAccess);
+		Run("adventure upgrade acquire applies immediate max health heal and draw bonuses", AdventureUpgradeAcquireAppliesImmediateMaxHealthHealAndDrawBonuses);
+		Run("adventure battle start draw bonuses stack across acquired heart upgrades", AdventureBattleStartDrawBonusesStackAcrossAcquiredHeartUpgrades);
+		Run("adventure healing overflow increases max health every four overflow", AdventureHealingOverflowIncreasesMaxHealthEveryFourOverflow);
+		Run("adventure miss effects queue turn start recovery and next capture bonus", AdventureMissEffectsQueueTurnStartRecoveryAndNextCaptureBonus);
+		Run("adventure miss effects include club table rewrites", AdventureMissEffectsIncludeClubTableRewrites);
+		Run("adventure turn start effects are consumed once", AdventureTurnStartEffectsAreConsumedOnce);
+		Run("adventure capture damage applies minimum and final double in order", AdventureCaptureDamageAppliesMinimumAndFinalDoubleInOrder);
+		Run("adventure capture damage consumes carry bonus and re-arms high return bonus", AdventureCaptureDamageConsumesCarryBonusAndReArmsHighReturnBonus);
+		Run("adventure capture damage applies first capture pressure once per battle", AdventureCaptureDamageAppliesFirstCapturePressureOncePerBattle);
+		Run("adventure capture damage applies multi card premium and top prize repeat", AdventureCaptureDamageAppliesMultiCardPremiumAndTopPrizeRepeat);
+		Run("adventure capture damage adds full payout from raw scoring cards", AdventureCaptureDamageAddsFullPayoutFromRawScoringCards);
+		Run("adventure capture damage adds bounty amplify when reward question is captured", AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured);
+		Run("adventure capture damage adds question echo point bonus per scoring card", AdventureCaptureDamageAddsQuestionEchoPointBonusPerScoringCard);
+		Run("adventure post capture heal triggers after six damage", AdventurePostCaptureHealTriggersAfterSixDamage);
+		Run("adventure post capture bonuses stack by capture ordinal", AdventurePostCaptureBonusesStackByCaptureOrdinal);
+		Run("adventure post capture includes enchanted recovery and hollow burst", AdventurePostCaptureIncludesEnchantedRecoveryAndHollowBurst);
+		Run("adventure low health rescue triggers at half and quarter thresholds once each", AdventureLowHealthRescueTriggersAtHalfAndQuarterThresholdsOnceEach);
+		Run("adventure enemy miss effects queue reveal insert penalty and bleed damage", AdventureEnemyMissEffectsQueueRevealInsertPenaltyAndBleedDamage);
+		Run("adventure enemy miss misorder only arms tracked anchor when old cards existed", AdventureEnemyMissMisorderOnlyArmsTrackedAnchorWhenOldCardsExisted);
+		Run("adventure enemy miss grants extra base action from intercept beat", AdventureEnemyMissGrantsExtraBaseActionFromInterceptBeat);
+		Run("adventure main player miss grants continue branch extra action only at four cards", AdventureMainPlayerMissGrantsContinueBranchExtraActionOnlyAtFourCards);
+		Run("adventure black ledger changes old table score contribution by capturer", AdventureBlackLedgerChangesOldTableScoreContributionByCapturer);
+		Run("adventure enemy miss hook dredge moves oldest old card and deals half damage", AdventureEnemyMissHookDredgeMovesOldestOldCardAndDealsHalfDamage);
+		Run("adventure enemy tail pressure preserves played tail card on large capture", AdventureEnemyTailPressurePreservesPlayedTailCardOnLargeCapture);
+		Run("adventure old table damage delta applies player mark bonuses", AdventureOldTableDamageDeltaAppliesPlayerMarkBonuses);
+		Run("adventure old table damage delta applies enemy tax and exaction", AdventureOldTableDamageDeltaAppliesEnemyTaxAndExaction);
+		Run("adventure clubs primary root return gives played base card back", AdventureClubsPrimaryRootReturnGivesPlayedBaseCardBack);
+		Run("adventure clubs short branch return only applies to two-card capture once", AdventureClubsShortBranchReturnOnlyAppliesToTwoCardCaptureOnce);
+		Run("adventure clubs climb canopy returns played base card after attached effect trigger", AdventureClubsClimbCanopyReturnsPlayedBaseCardAfterAttachedEffectTrigger);
+		Run("adventure clubs crown canopy includes capture endpoints in scoring", AdventureClubsCrownCanopyIncludesCaptureEndpointsInScoring);
+		Run("adventure clubs gap rooting captures left adjacent base once per turn", AdventureClubsGapRootingCapturesLeftAdjacentBaseOncePerTurn);
+		Run("adventure clubs linked stems grants question reward on second capture", AdventureClubsLinkedStemsGrantsQuestionRewardOnSecondCapture);
+		Run("adventure clubs miss climb growth and cross graft adjust match ranks", AdventureClubsMissClimbGrowthAndCrossGraftAdjustMatchRanks);
+		Run("adventure clubs borrow suit set arms and is consumed by next numeric base card", AdventureClubsBorrowSuitSetArmsAndIsConsumedByNextNumericBaseCard);
+		Run("adventure disabled undertow upgrade stays out of enabled pool", AdventureDisabledUndertowUpgradeStaysOutOfEnabledPool);
 		Run("game save progress roundtrips pending adventure run json", GameSaveProgressRoundTripsPendingAdventureRunJson);
 		Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
@@ -43,6 +84,7 @@ internal static class Program
 		Run("capture refill shuffles before replacement draw animation", CaptureRefillShufflesBeforeReplacementDrawAnimation);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
 		Run("potential capture counts suit collect from first matching suit", PotentialCaptureCountsSuitCollectFromFirstMatchingSuit);
+		Run("potential capture uses alternate ranks for club graft matching", PotentialCaptureUsesAlternateRanksForClubGraftMatching);
 		Run("potential capture prefers royal threshold", PotentialCapturePrefersRoyalThreshold);
 		Run("potential capture identifies pair only captures", PotentialCaptureIdentifiesPairOnlyCaptures);
 		Run("adventure ai early profile can skip obvious capture", AdventureAiEarlyProfileCanSkipObviousCapture);
@@ -363,6 +405,26 @@ internal static class Program
 		Equal("5", plan.EffectiveRank);
 	}
 
+	private static void CardPlayResolverSupportsPendingInsertOverrideAndFaceUp()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("7", IsFaceUp: true, IsBuriedInSand: false),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("5", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			tableInsertIndexOverride: 1,
+			playedCardFacesUp: true);
+
+		Equal(1, plan.TableInsertIndex);
+		True(plan.PlayedCardFacesUp);
+	}
+
 	private static void CaptureResolverIdentifiesMiddleCaptures()
 	{
 		var tableCards = new[]
@@ -612,6 +674,713 @@ internal static class Program
 		False(runState.HasAcquiredUpgrade("common_a"));
 	}
 
+	private static void AdventureUpgradeIdsExposeFiftySixActiveUpgradesAcrossFourSuits()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string idsPath = Path.Combine(repoRoot, "pandora", "adventure_suit_upgrade_ids.gd");
+		True(File.Exists(idsPath));
+		string text = File.ReadAllText(idsPath);
+
+		MatchCollection constants = Regex.Matches(text, @"(?m)^const ([A-Z0-9_]+) = ""([a-z0-9_]+)""$");
+		Equal(57, constants.Count);
+
+		var activePerSuit = new Dictionary<string, int>(StringComparer.Ordinal)
+		{
+			["hearts"] = 0,
+			["diamonds"] = 0,
+			["spades"] = 0,
+			["clubs"] = 0,
+		};
+
+		foreach (Match constant in constants)
+		{
+			string id = constant.Groups[2].Value;
+			if (id == "spades_undertow_asphyxia")
+			{
+				continue;
+			}
+
+			string suit = id.Split('_')[0];
+			activePerSuit[suit] = activePerSuit[suit] + 1;
+		}
+
+		Equal(14, activePerSuit["hearts"]);
+		Equal(14, activePerSuit["diamonds"]);
+		Equal(14, activePerSuit["spades"]);
+		Equal(14, activePerSuit["clubs"]);
+	}
+
+	private static void AdventureUpgradeRunSnapshotV2RestoresLegacyV1Saves()
+	{
+		AdventureUpgradeRunSnapshot legacy = new(
+			1,
+			3,
+			1,
+			true,
+			true,
+			new List<string> { "hearts_thick_blood" });
+
+		var state = new AdventureUpgradeRunState();
+		state.RestoreFromSnapshot(legacy);
+
+		True(state.IsActive);
+		Equal(100, state.CurrentHealth);
+		Equal(100, state.MaxHealth);
+		True(state.HasAcquiredUpgrade("hearts_thick_blood"));
+		Equal(0, state.EffectState.PermanentCaptureDamageBonus);
+		Equal(0, state.EffectState.QuestionRewardCount);
+		False(state.EffectState.ThirdQuestionDamageDoubleActive);
+	}
+
+	private static void AdventureUpgradeRunStatePersistsEffectCountersAndHealth()
+	{
+		var state = new AdventureUpgradeRunState();
+		state.BeginNewRun(3);
+		state.SetHealth(92, 108);
+		state.ReplaceEffectState(new AdventureUpgradeEffectState
+		{
+			PermanentCaptureDamageBonus = 2,
+			QuestionRewardCount = 3,
+			ThirdQuestionDamageDoubleActive = true,
+			HealingOverflowRemainder = 1,
+			NextCaptureDamageBonus = 4,
+			NextTurnHealAmount = 3,
+			NextTurnDrawCount = 1,
+		});
+
+		AdventureUpgradeRunSnapshot snapshot = state.ToSnapshot();
+		var restored = new AdventureUpgradeRunState();
+		restored.RestoreFromSnapshot(snapshot);
+
+		Equal(92, restored.CurrentHealth);
+		Equal(108, restored.MaxHealth);
+		Equal(2, restored.EffectState.PermanentCaptureDamageBonus);
+		Equal(3, restored.EffectState.QuestionRewardCount);
+		True(restored.EffectState.ThirdQuestionDamageDoubleActive);
+		Equal(1, restored.EffectState.HealingOverflowRemainder);
+		Equal(4, restored.EffectState.NextCaptureDamageBonus);
+		Equal(3, restored.EffectState.NextTurnHealAmount);
+		Equal(1, restored.EffectState.NextTurnDrawCount);
+	}
+
+	private static void AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble()
+	{
+		var state = new AdventureUpgradeEffectState();
+		string[] upgrades =
+		{
+			"diamonds_question_mark_windfall",
+			"diamonds_question_mark_interest",
+			"diamonds_final_double",
+		};
+
+		AdventureQuestionRewardEffectResult first = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
+		AdventureQuestionRewardEffectResult second = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
+		AdventureQuestionRewardEffectResult third = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
+
+		Equal(1, first.BonusDirectDamage);
+		Equal(2, second.BonusDirectDamage);
+		Equal(3, third.BonusDirectDamage);
+		Equal(3, state.QuestionRewardCount);
+		Equal(3, state.PermanentCaptureDamageBonus);
+		True(state.ThirdQuestionDamageDoubleActive);
+	}
+
+	private static void AdventureQuestionRewardSupportUpgradesAddHealDrawAndOneTimeRejudgeAccess()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureQuestionRewardEffectResult result = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+			state,
+			new[]
+			{
+				"diamonds_question_mark_raise",
+				"hearts_question_mark_first_aid",
+				"hearts_supply_cache_return",
+			});
+
+		Equal(7, result.HealAmount);
+		Equal(2, result.DrawCount);
+		True(AdventureUpgradeEffectService.ShouldOfferQuestionRewardRejudge(
+			new[] { "diamonds_rejudge_once" },
+			questionRejudgeUsedThisBattle: false));
+		False(AdventureUpgradeEffectService.ShouldOfferQuestionRewardRejudge(
+			new[] { "diamonds_rejudge_once" },
+			questionRejudgeUsedThisBattle: true));
+	}
+
+	private static void AdventureUpgradeAcquireAppliesImmediateMaxHealthHealAndDrawBonuses()
+	{
+		AdventureUpgradeAcquisitionEffectResult thickBlood = AdventureUpgradeEffectService.OnUpgradeAcquired(
+			new AdventureUpgradeEffectState(),
+			"hearts_thick_blood",
+			triggerBattleStartBonusImmediately: false);
+		AdventureUpgradeAcquisitionEffectResult deepTideLung = AdventureUpgradeEffectService.OnUpgradeAcquired(
+			new AdventureUpgradeEffectState(),
+			"hearts_deep_tide_lung",
+			triggerBattleStartBonusImmediately: true);
+
+		Equal(4, thickBlood.MaxHealthDelta);
+		Equal(4, thickBlood.HealAmount);
+		Equal(0, thickBlood.ImmediateDrawCount);
+		Equal(8, deepTideLung.MaxHealthDelta);
+		Equal(0, deepTideLung.HealAmount);
+		Equal(1, deepTideLung.ImmediateDrawCount);
+	}
+
+	private static void AdventureBattleStartDrawBonusesStackAcrossAcquiredHeartUpgrades()
+	{
+		int drawCount = AdventureUpgradeEffectService.GetBattleStartDrawCount(new[]
+		{
+			"hearts_shoal_preparation",
+			"hearts_deep_tide_lung",
+		});
+
+		Equal(2, drawCount);
+	}
+
+	private static void AdventureHealingOverflowIncreasesMaxHealthEveryFourOverflow()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureHealingResult result = AdventureUpgradeEffectService.ApplyHealing(
+			currentHealth: 100,
+			maxHealth: 100,
+			state,
+			new[] { "hearts_overflow_growth" },
+			healAmount: 9);
+
+		Equal(102, result.CurrentHealth);
+		Equal(102, result.MaxHealth);
+		Equal(2, result.MaxHealthIncrease);
+		Equal(1, result.OverflowRemainder);
+		Equal(1, state.HealingOverflowRemainder);
+	}
+
+	private static void AdventureMissEffectsQueueTurnStartRecoveryAndNextCaptureBonus()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureMainPlayerMissEffectResult result = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
+			state,
+			new[] { "hearts_miss_bandage", "diamonds_miss_discount" },
+			tableCardCountAfterMiss: 1);
+
+		Equal(3, state.NextTurnHealAmount);
+		Equal(1, state.NextTurnDrawCount);
+		Equal(1, state.NextCaptureDamageBonus);
+		False(result.GrantExtraBaseCardAction);
+	}
+
+	private static void AdventureMissEffectsIncludeClubTableRewrites()
+	{
+		AdventureMainPlayerMissEffectResult result = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
+			new AdventureUpgradeEffectState(),
+			new[] { "clubs_hanging_reverse", "clubs_wild_branch", "clubs_canopy_reveal" },
+			tableCardCountAfterMiss: 4);
+
+		True(result.InsertPlayedCardAtLeftmost);
+		True(result.ShuffleTableAfterMiss);
+		True(result.SetCanopyRevealAnchor);
+	}
+
+	private static void AdventureTurnStartEffectsAreConsumedOnce()
+	{
+		var state = new AdventureUpgradeEffectState
+		{
+			NextTurnHealAmount = 3,
+			NextTurnDrawCount = 1,
+			ClubShortBranchReturnUsedThisTurn = true,
+		};
+
+		AdventureTurnStartEffectResult first = AdventureUpgradeEffectService.ConsumeMainPlayerTurnStartEffects(state);
+		AdventureTurnStartEffectResult second = AdventureUpgradeEffectService.ConsumeMainPlayerTurnStartEffects(state);
+
+		Equal(3, first.HealAmount);
+		Equal(1, first.DrawCount);
+		False(state.ClubShortBranchReturnUsedThisTurn);
+		Equal(0, second.HealAmount);
+		Equal(0, second.DrawCount);
+	}
+
+	private static void AdventureCaptureDamageAppliesMinimumAndFinalDoubleInOrder()
+	{
+		var state = new AdventureUpgradeEffectState
+		{
+			ThirdQuestionDamageDoubleActive = true,
+		};
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_small_insurance" },
+			new AdventureCaptureDamageInput(BaseDamage: 4));
+
+		Equal(10, result.FinalDamage);
+		Equal(0, state.NextCaptureDamageBonus);
+	}
+
+	private static void AdventureCaptureDamageConsumesCarryBonusAndReArmsHighReturnBonus()
+	{
+		var state = new AdventureUpgradeEffectState
+		{
+			PermanentCaptureDamageBonus = 1,
+			NextCaptureDamageBonus = 2,
+		};
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_high_return_bonus" },
+			new AdventureCaptureDamageInput(BaseDamage: 4));
+
+		Equal(7, result.FinalDamage);
+		Equal(2, state.NextCaptureDamageBonus);
+		True(result.ReArmedNextCaptureDamageBonus);
+	}
+
+	private static void AdventureCaptureDamageAppliesFirstCapturePressureOncePerBattle()
+	{
+		var state = new AdventureUpgradeEffectState();
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_first_capture_pressure" },
+			new AdventureCaptureDamageInput(BaseDamage: 4, IsFirstCaptureThisBattle: true));
+
+		Equal(6, result.FinalDamage);
+	}
+
+	private static void AdventureCaptureDamageAppliesMultiCardPremiumAndTopPrizeRepeat()
+	{
+		var state = new AdventureUpgradeEffectState();
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_multi_card_premium", "diamonds_top_prize_repeat" },
+			new AdventureCaptureDamageInput(
+				BaseDamage: 12,
+				ScoringCardRawPoints: new[] { 3, 4, 5 },
+				ScoringCardResolvedPoints: new[] { 3, 4, 5 }));
+
+		Equal(21, result.FinalDamage);
+	}
+
+	private static void AdventureCaptureDamageAddsFullPayoutFromRawScoringCards()
+	{
+		var state = new AdventureUpgradeEffectState();
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_full_payout" },
+			new AdventureCaptureDamageInput(
+				BaseDamage: 12,
+				ScoringCardRawPoints: new[] { 3, 4, 5 },
+				ScoringCardResolvedPoints: new[] { 3, 4, 5 }));
+
+		Equal(18, result.FinalDamage);
+	}
+
+	private static void AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured()
+	{
+		var state = new AdventureUpgradeEffectState();
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_bounty_amplify" },
+			new AdventureCaptureDamageInput(
+				BaseDamage: 6,
+				IncludesQuestionReward: true,
+				ScoringCardRawPoints: new[] { 2, 4 },
+				ScoringCardResolvedPoints: new[] { 2, 4 }));
+
+		Equal(9, result.FinalDamage);
+	}
+
+	private static void AdventureCaptureDamageAddsQuestionEchoPointBonusPerScoringCard()
+	{
+		var state = new AdventureUpgradeEffectState();
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_question_mark_echo" },
+			new AdventureCaptureDamageInput(
+				BaseDamage: 9,
+				QuestionRewardEchoActive: true,
+				ScoringCardRawPoints: new[] { 2, 3, 4 },
+				ScoringCardResolvedPoints: new[] { 2, 3, 4 }));
+
+		Equal(12, result.FinalDamage);
+	}
+
+	private static void AdventurePostCaptureHealTriggersAfterSixDamage()
+	{
+		AdventurePostCaptureEffectResult result = AdventureUpgradeEffectService.OnMainPlayerCaptureResolved(
+			new AdventureUpgradeEffectState(),
+			new[] { "hearts_long_capture_recovery" },
+			finalDamage: 6);
+
+		Equal(2, result.HealAmount);
+	}
+
+	private static void AdventurePostCaptureBonusesStackByCaptureOrdinal()
+	{
+		AdventurePostCaptureEffectResult first = AdventureUpgradeEffectService.OnMainPlayerCaptureResolved(
+			new AdventureUpgradeEffectState(),
+			new[] { "hearts_warm_current_supply", "hearts_return_tide_heart" },
+			finalDamage: 4,
+			successfulCapturesThisTurn: 1);
+		AdventurePostCaptureEffectResult second = AdventureUpgradeEffectService.OnMainPlayerCaptureResolved(
+			new AdventureUpgradeEffectState(),
+			new[] { "hearts_chain_tide_breath", "hearts_return_tide_heart" },
+			finalDamage: 4,
+			successfulCapturesThisTurn: 2);
+
+		Equal(2, first.DrawCount);
+		Equal(2, first.HealAmount);
+		Equal(2, second.DrawCount);
+		Equal(5, second.HealAmount);
+	}
+
+	private static void AdventurePostCaptureIncludesEnchantedRecoveryAndHollowBurst()
+	{
+		AdventurePostCaptureEffectResult result = AdventureUpgradeEffectService.OnMainPlayerCaptureResolved(
+			new AdventureUpgradeEffectState(),
+			new[] { "hearts_enchanted_recovery", "clubs_hollow_burst" },
+			finalDamage: 4,
+			successfulCapturesThisTurn: 1,
+			attachedEffectTriggered: true,
+			capturedOnlyOuterVisibleCards: true);
+
+		Equal(3, result.HealAmount);
+		Equal(1, result.DrawCount);
+		True(result.RevealRemainingHiddenCards);
+	}
+
+	private static void AdventureLowHealthRescueTriggersAtHalfAndQuarterThresholdsOnceEach()
+	{
+		AdventureLowHealthRescueResult half = AdventureUpgradeEffectService.ResolveMainPlayerLowHealthRescue(
+			previousHealth: 60,
+			currentHealth: 45,
+			maxHealth: 100,
+			new[] { "hearts_red_tide_return", "hearts_revival_draw" },
+			halfThresholdUsed: false,
+			quarterThresholdUsed: false);
+		AdventureLowHealthRescueResult quarter = AdventureUpgradeEffectService.ResolveMainPlayerLowHealthRescue(
+			previousHealth: 30,
+			currentHealth: 20,
+			maxHealth: 100,
+			new[] { "hearts_red_tide_return", "hearts_revival_draw" },
+			halfThresholdUsed: true,
+			quarterThresholdUsed: false);
+		AdventureLowHealthRescueResult none = AdventureUpgradeEffectService.ResolveMainPlayerLowHealthRescue(
+			previousHealth: 20,
+			currentHealth: 10,
+			maxHealth: 100,
+			new[] { "hearts_red_tide_return", "hearts_revival_draw" },
+			halfThresholdUsed: true,
+			quarterThresholdUsed: true);
+
+		Equal(5, half.HealAmount);
+		Equal(2, half.DrawCount);
+		True(half.ConsumedHalfThreshold);
+		Equal(8, quarter.HealAmount);
+		Equal(2, quarter.DrawCount);
+		True(quarter.ConsumedQuarterThreshold);
+		Equal(0, none.HealAmount);
+		Equal(0, none.DrawCount);
+	}
+
+	private static void AdventureEnemyMissEffectsQueueRevealInsertPenaltyAndBleedDamage()
+	{
+		AdventureEnemyMissEffectResult result = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			new[]
+			{
+				"spades_dark_harbor_reveal",
+				"spades_wrong_shore_lineup",
+				"spades_missed_beat_blunt_hurt",
+				"spades_miss_bleed",
+				"spades_missed_beat_calamity",
+			},
+			tableCardCountAfterMiss: 4,
+			hadOldTableCardsBeforeMiss: true);
+
+		True(result.NextCardFacesUp);
+		Equal(AdventureEnemyNextCardInsertMode.Leftmost, result.InsertMode);
+		Equal(-6, result.NextCaptureDamageDelta);
+		Equal(2, result.DirectDamageToEnemy);
+	}
+
+	private static void AdventureEnemyMissMisorderOnlyArmsTrackedAnchorWhenOldCardsExisted()
+	{
+		AdventureEnemyMissEffectResult armed = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			new[] { "spades_return_tide_misorder" },
+			tableCardCountAfterMiss: 2,
+			hadOldTableCardsBeforeMiss: true);
+		AdventureEnemyMissEffectResult notArmed = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			new[] { "spades_return_tide_misorder" },
+			tableCardCountAfterMiss: 1,
+			hadOldTableCardsBeforeMiss: false);
+
+		Equal(AdventureEnemyNextCardInsertMode.BeforeTrackedOldest, armed.InsertMode);
+		Equal(AdventureEnemyNextCardInsertMode.None, notArmed.InsertMode);
+	}
+
+	private static void AdventureEnemyMissGrantsExtraBaseActionFromInterceptBeat()
+	{
+		AdventureEnemyMissEffectResult result = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			new[] { "spades_intercept_beat" },
+			tableCardCountAfterMiss: 2,
+			hadOldTableCardsBeforeMiss: false);
+
+		True(result.GrantMainPlayerExtraBaseAction);
+	}
+
+	private static void AdventureMainPlayerMissGrantsContinueBranchExtraActionOnlyAtFourCards()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureMainPlayerMissEffectResult granted = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
+			state,
+			new[] { "clubs_continue_branch" },
+			tableCardCountAfterMiss: 4);
+		AdventureMainPlayerMissEffectResult notGranted = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
+			new AdventureUpgradeEffectState(),
+			new[] { "clubs_continue_branch" },
+			tableCardCountAfterMiss: 3);
+
+		True(granted.GrantExtraBaseCardAction);
+		False(notGranted.GrantExtraBaseCardAction);
+	}
+
+	private static void AdventureBlackLedgerChangesOldTableScoreContributionByCapturer()
+	{
+		int mainDelta = AdventureUpgradeEffectService.ResolveBlackLedgerDamageDelta(
+			blackLedgerActive: true,
+			capturingPlayerIsMain: true,
+			totalResolvedOldTableCardPoints: 10,
+			currentResolvedOldTableScoringPoints: 4);
+		int enemyDelta = AdventureUpgradeEffectService.ResolveBlackLedgerDamageDelta(
+			blackLedgerActive: true,
+			capturingPlayerIsMain: false,
+			totalResolvedOldTableCardPoints: 10,
+			currentResolvedOldTableScoringPoints: 4);
+		int inactiveDelta = AdventureUpgradeEffectService.ResolveBlackLedgerDamageDelta(
+			blackLedgerActive: false,
+			capturingPlayerIsMain: true,
+			totalResolvedOldTableCardPoints: 10,
+			currentResolvedOldTableScoringPoints: 4);
+
+		Equal(6, mainDelta);
+		Equal(-4, enemyDelta);
+		Equal(0, inactiveDelta);
+	}
+
+	private static void AdventureEnemyMissHookDredgeMovesOldestOldCardAndDealsHalfDamage()
+	{
+		AdventureEnemyMissHookDredgeResult result = AdventureUpgradeEffectService.ResolveEnemyMissHookDredge(
+			new[] { "spades_hook_dredge" },
+			tableCardCountAfterMiss: 5,
+			oldestOldTableCardRawScore: 5);
+
+		True(result.MoveOldestOldTableCardToPlayerDeckTop);
+		Equal(3, result.DirectDamageToEnemy);
+	}
+
+	private static void AdventureEnemyTailPressurePreservesPlayedTailCardOnLargeCapture()
+	{
+		True(AdventureUpgradeEffectService.ShouldPreserveEnemyCaptureTailCard(
+			new[] { "spades_tail_pressure" },
+			totalCapturedCardCount: 3));
+		False(AdventureUpgradeEffectService.ShouldPreserveEnemyCaptureTailCard(
+			new[] { "spades_tail_pressure" },
+			totalCapturedCardCount: 2));
+	}
+
+	private static void AdventureOldTableDamageDeltaAppliesPlayerMarkBonuses()
+	{
+		int delta = AdventureUpgradeEffectService.ResolveOldTableCaptureDamageDelta(
+			new[] { "spades_trace_hunt", "spades_hunt_order" },
+			capturingPlayerIsMain: true,
+			capturedOldScoringCardCount: 1,
+			capturedTraceMark: true,
+			capturedHuntMark: true);
+
+		Equal(10, delta);
+	}
+
+	private static void AdventureOldTableDamageDeltaAppliesEnemyTaxAndExaction()
+	{
+		int taxDelta = AdventureUpgradeEffectService.ResolveOldTableCaptureDamageDelta(
+			new[] { "spades_reverse_capture_tax" },
+			capturingPlayerIsMain: false,
+			capturedOldScoringCardCount: 4,
+			capturedTraceMark: false,
+			capturedHuntMark: false);
+		int exactionDelta = AdventureUpgradeEffectService.ResolveOldTableCaptureDamageDelta(
+			new[] { "spades_exaction" },
+			capturingPlayerIsMain: false,
+			capturedOldScoringCardCount: 1,
+			capturedTraceMark: false,
+			capturedHuntMark: false);
+
+		Equal(-3, taxDelta);
+		Equal(-4, exactionDelta);
+	}
+
+	private static void AdventureClubsPrimaryRootReturnGivesPlayedBaseCardBack()
+	{
+		AdventureClubCaptureEffectResult result = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
+			new AdventureUpgradeEffectState(),
+			new[] { "clubs_primary_root_return" },
+			baseCaptureCardCount: 3,
+			handCountBeforeReturn: 2,
+			maxTotalHandCards: 8,
+			playUsedAttachedEffect: false,
+			playedCardWasBaseCard: true);
+
+		True(result.ReturnPlayedCardToHand);
+		False(result.ReturnTwoCapturedCardsToHand);
+	}
+
+	private static void AdventureClubsShortBranchReturnOnlyAppliesToTwoCardCaptureOnce()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureClubCaptureEffectResult first = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
+			state,
+			new[] { "clubs_short_branch_return" },
+			baseCaptureCardCount: 2,
+			handCountBeforeReturn: 2,
+			maxTotalHandCards: 8,
+			playUsedAttachedEffect: false,
+			playedCardWasBaseCard: true);
+		AdventureClubCaptureEffectResult second = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
+			state,
+			new[] { "clubs_short_branch_return" },
+			baseCaptureCardCount: 2,
+			handCountBeforeReturn: 2,
+			maxTotalHandCards: 8,
+			playUsedAttachedEffect: false,
+			playedCardWasBaseCard: true);
+
+		True(first.ReturnTwoCapturedCardsToHand);
+		False(second.ReturnTwoCapturedCardsToHand);
+	}
+
+	private static void AdventureClubsClimbCanopyReturnsPlayedBaseCardAfterAttachedEffectTrigger()
+	{
+		AdventureClubCaptureEffectResult result = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
+			new AdventureUpgradeEffectState(),
+			new[] { "clubs_climb_canopy" },
+			baseCaptureCardCount: 3,
+			handCountBeforeReturn: 2,
+			maxTotalHandCards: 8,
+			playUsedAttachedEffect: true,
+			playedCardWasBaseCard: true);
+
+		True(result.ReturnPlayedCardToHand);
+	}
+
+	private static void AdventureClubsCrownCanopyIncludesCaptureEndpointsInScoring()
+	{
+		AdventureClubCaptureScoringResult result = AdventureUpgradeEffectService.ResolveClubCaptureScoring(
+			new[] { "clubs_crown_canopy" });
+
+		True(result.IncludeCaptureEndpointsInScoring);
+	}
+
+	private static void AdventureClubsGapRootingCapturesLeftAdjacentBaseOncePerTurn()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureClubCaptureExtensionResult first = AdventureUpgradeEffectService.ResolveClubCaptureExtensions(
+			state,
+			new[] { "clubs_gap_rooting" },
+			hasMiddleScoringCards: false,
+			leftAdjacentBaseCardAvailable: true);
+		AdventureClubCaptureExtensionResult second = AdventureUpgradeEffectService.ResolveClubCaptureExtensions(
+			state,
+			new[] { "clubs_gap_rooting" },
+			hasMiddleScoringCards: false,
+			leftAdjacentBaseCardAvailable: true);
+
+		True(first.CaptureLeftAdjacentBaseCard);
+		False(second.CaptureLeftAdjacentBaseCard);
+	}
+
+	private static void AdventureClubsLinkedStemsGrantsQuestionRewardOnSecondCapture()
+	{
+		True(AdventureUpgradeEffectService.ShouldGrantLinkedStemsQuestionReward(
+			new[] { "clubs_linked_stems" },
+			successfulCapturesThisTurn: 2));
+		False(AdventureUpgradeEffectService.ShouldGrantLinkedStemsQuestionReward(
+			new[] { "clubs_linked_stems" },
+			successfulCapturesThisTurn: 1));
+	}
+
+	private static void AdventureClubsMissClimbGrowthAndCrossGraftAdjustMatchRanks()
+	{
+		var state = new AdventureUpgradeEffectState
+		{
+			ClubMissClimbGrowthStacks = 2,
+		};
+
+		AdventureClubPlayAdjustmentResult result = AdventureUpgradeEffectService.ResolveClubPlayAdjustments(
+			state,
+			new[] { "clubs_miss_climb_growth", "clubs_cross_graft" },
+			playedCardRank: "4");
+
+		Equal("6", result.PrimaryRank);
+		Equal(2, result.AlternateRanks.Count);
+		Equal("5", result.AlternateRanks[0]);
+		Equal("7", result.AlternateRanks[1]);
+	}
+
+	private static void AdventureClubsBorrowSuitSetArmsAndIsConsumedByNextNumericBaseCard()
+	{
+		var state = new AdventureUpgradeEffectState();
+		AdventureQuestionRewardEffectResult _ = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+			state,
+			new[] { "clubs_borrow_suit_set" });
+
+		AdventureClubPlayAdjustmentResult armed = AdventureUpgradeEffectService.ResolveClubPlayAdjustments(
+			state,
+			new[] { "clubs_borrow_suit_set" },
+			playedCardRank: "4");
+		AdventureUpgradeEffectService.ConsumeBorrowSuitSetAfterNumericBaseCardPlay(state, "4");
+		AdventureClubPlayAdjustmentResult consumed = AdventureUpgradeEffectService.ResolveClubPlayAdjustments(
+			state,
+			new[] { "clubs_borrow_suit_set" },
+			playedCardRank: "4");
+
+		True(armed.CollectBySuitOnce);
+		False(consumed.CollectBySuitOnce);
+	}
+
+	private static void AdventureDisabledUndertowUpgradeStaysOutOfEnabledPool()
+	{
+		var definitions = new[]
+		{
+			new AdventureUpgradeDefinitionModel(
+				"spades_undertow_asphyxia",
+				"Undertow",
+				"spades",
+				"rare",
+				"",
+				"",
+				Enabled: false),
+			new AdventureUpgradeDefinitionModel(
+				"spades_dark_harbor_reveal",
+				"Reveal",
+				"spades",
+				"common",
+				"",
+				"",
+				Enabled: true),
+		};
+
+		IReadOnlyList<AdventureUpgradeDefinitionModel> offer = AdventureUpgradeChoiceRules.BuildOffer(
+			definitions,
+			Array.Empty<string>(),
+			runStageIndex: 1,
+			nextIntExclusive: _ => 0);
+
+		Equal(1, offer.Count);
+		Equal("spades_dark_harbor_reveal", offer[0].Id);
+	}
+
 	private static void GameSaveProgressRoundTripsPendingAdventureRunJson()
 	{
 		const string pendingRunJson = "{\"CurrentAvatarStageNumber\":3}";
@@ -842,6 +1611,29 @@ internal static class Program
 
 		Equal(4, captureCount);
 		Equal(11, points);
+	}
+
+	private static void PotentialCaptureUsesAlternateRanksForClubGraftMatching()
+	{
+		var tableCards = new[]
+		{
+			TableCard("5", 2),
+			TableCard("7", 4),
+			TableCard("9", 6),
+		};
+		var card = new PotentialCaptureRules.Card(
+			"6",
+			CollectsTable: false,
+			HasDoubleEffect: false,
+			Suit: "",
+			CollectBySuit: false,
+			AlternateRanks: new[] { "5", "7" });
+
+		int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
+		int points = PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, DefaultScoringContext);
+
+		Equal(4, captureCount);
+		Equal(10, points);
 	}
 
 	private static void PotentialCapturePrefersRoyalThreshold()

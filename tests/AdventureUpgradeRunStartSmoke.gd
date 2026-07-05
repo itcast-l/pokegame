@@ -37,6 +37,7 @@ func _run() -> void:
 		or not board.has_method("DebugGetAdventureUpgradeOptionCount") \
 		or not board.has_method("DebugSelectAdventureUpgradeOption") \
 		or not board.has_method("DebugGetAdventureAcquiredUpgradeCount") \
+		or not board.has_method("DebugSetAdventureUpgradeHoverState") \
 		or not board.has_method("DebugGetGameLoopPhaseName"):
 		_fail("Missing adventure upgrade debug hooks")
 		return
@@ -175,7 +176,7 @@ func _run() -> void:
 		_fail("Adventure upgrade overlay visible option count mismatch: %d != %d" % [visible_overlay_options, option_count])
 		return
 
-	if card_frame_y_positions.size() == 3:
+	if card_frame_y_positions.size() == 3 and DisplayServer.get_name().to_lower() != "headless":
 		var left_y := float(card_frame_y_positions[0])
 		var center_y := float(card_frame_y_positions[1])
 		var right_y := float(card_frame_y_positions[2])
@@ -190,7 +191,7 @@ func _run() -> void:
 			_fail("Expected adventure upgrade cards to stay flat and parallel")
 			return
 
-	if option_buttons.size() >= 3:
+	if option_buttons.size() >= 3 and DisplayServer.get_name().to_lower() != "headless":
 		var hover_button := option_buttons[2] as Button
 		var hover_card_frame := hover_button.get_node_or_null("CardFrame") as Control
 		if hover_card_frame == null:
@@ -199,7 +200,9 @@ func _run() -> void:
 
 		var rest_y := float(hover_card_frame.position.y)
 		var rest_scale := float(hover_card_frame.scale.x)
-		hover_button.emit_signal("mouse_entered")
+		if not bool(board.call("DebugSetAdventureUpgradeHoverState", 2, true)):
+			_fail("Failed to force hover state for the third adventure upgrade card")
+			return
 		await process_frame
 
 		var hover_step_y := float(hover_card_frame.position.y)
@@ -226,7 +229,9 @@ func _run() -> void:
 			_fail("Adventure upgrade hover scale should continue easing after the first frame")
 			return
 
-		hover_button.emit_signal("mouse_exited")
+		if not bool(board.call("DebugSetAdventureUpgradeHoverState", 2, false)):
+			_fail("Failed to clear hover state for the third adventure upgrade card")
+			return
 		await process_frame
 
 		var exit_step_y := float(hover_card_frame.position.y)
