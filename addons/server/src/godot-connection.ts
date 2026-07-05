@@ -12,7 +12,7 @@ import {
 } from "./utils/errors.js";
 
 const BASE_PORT = 6505;
-const MAX_PORT = 6509;
+const MAX_PORT = 6514;
 const COMMAND_TIMEOUT_MS = 30000;
 const HEARTBEAT_INTERVAL_MS = 10000;
 const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3;

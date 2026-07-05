@@ -3461,8 +3461,10 @@ internal static class Program
 
 	private static void GameBoardExportedSettersShortCircuitRedundantWork()
 	{
-		string path = Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.cs");
-		string text = File.ReadAllText(path);
+		string repoRoot = FindRepositoryRoot();
+		string text =
+			File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"))
+			+ File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Exports.cs"));
 
 		True(text.Contains("if (normalizedPlayerCount == _playerCount)", StringComparison.Ordinal));
 		True(text.Contains("if (value == _itemMode)", StringComparison.Ordinal));
@@ -3507,7 +3509,9 @@ internal static class Program
 	{
 		string repoRoot = FindRepositoryRoot();
 
-		string underwaterText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "UnderwaterAmbientLayer.cs"));
+		string underwaterText =
+			File.ReadAllText(Path.Combine(repoRoot, "scripts", "UnderwaterAmbientLayer.cs"))
+			+ File.ReadAllText(Path.Combine(repoRoot, "scripts", "UnderwaterAmbientLayer.ProceduralDraw.cs"));
 		True(underwaterText.Contains("ShouldQueueRedrawForImageFallback()", StringComparison.Ordinal));
 		True(underwaterText.Contains("if (ShouldQueueRedrawForImageFallback())", StringComparison.Ordinal));
 
@@ -3518,8 +3522,10 @@ internal static class Program
 
 	private static void MainMenuOceanDynamicsKeepsProceduralFallbackPathsInImageMode()
 	{
-		string path = Path.Combine(FindRepositoryRoot(), "scripts", "MainMenuOceanDynamics.cs");
-		string text = File.ReadAllText(path);
+		string repoRoot = FindRepositoryRoot();
+		string text =
+			File.ReadAllText(Path.Combine(repoRoot, "scripts", "MainMenuOceanDynamics.cs"))
+			+ File.ReadAllText(Path.Combine(repoRoot, "scripts", "MainMenuOceanDynamics.ProceduralDraw.cs"));
 
 		True(text.Contains("ShouldQueueRedrawInImageMode()", StringComparison.Ordinal));
 		True(text.Contains("ShouldDrawProceduralSunbeams()", StringComparison.Ordinal));
@@ -3534,7 +3540,9 @@ internal static class Program
 	private static void GameBoardDefersModeSpecificResourceLoadsUntilNeeded()
 	{
 		string repoRoot = FindRepositoryRoot();
-		string gameBoardText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"));
+		string gameBoardText =
+			File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"))
+			+ File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Exports.cs"));
 		string assetsText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Assets.cs"));
 
 		True(gameBoardText.Contains("EnsureAdventureModeResourcesLoaded();", StringComparison.Ordinal));

@@ -112,37 +112,95 @@ public partial class GameBoardScene
 
 	private async Task<bool> WarmupOptionalFxResourcesAsync(TurnContext turnContext)
 	{
-		ulong sampleStart = BeginPerformanceSample("ResourceLoad");
-		EnsureCommonGameplayFxResourcesLoaded();
-		EndPerformanceSample("WarmupOptionalFx:CoreGameplay", sampleStart);
-		if (!await WaitForWarmupFrameAsync(turnContext))
+		if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:CoreGameplay:ScoreFill", EnsureScoreFillEffectTexturesLoaded, turnContext))
 		{
 			return false;
 		}
 
+		if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:CoreGameplay:SpecialCardTrigger", EnsureSpecialCardTriggerEffectTexturesLoaded, turnContext))
+		{
+			return false;
+		}
+
+		_commonGameplayFxResourcesLoaded = true;
+
 		if (item_mode)
 		{
-			ulong itemSampleStart = BeginPerformanceSample("ResourceLoad");
-			EnsureItemModeOptionalFxResourcesLoaded();
-			EndPerformanceSample("WarmupOptionalFx:ItemMode", itemSampleStart);
-			if (!await WaitForWarmupFrameAsync(turnContext))
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:ItemMode:QuestionCardTransform", EnsureQuestionCardTransformTexturesLoaded, turnContext))
 			{
 				return false;
 			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:ItemMode:BombPairDestroy", EnsureBombPairDestroyEffectTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:ItemMode:LensRevealWisp", EnsureLensRevealWispTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:ItemMode:MagnetCountdown", EnsureMagnetCountdownFxTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			_itemModeOptionalFxResourcesLoaded = true;
 		}
 
 		if (adventure_mode)
 		{
-			ulong adventureSampleStart = BeginPerformanceSample("ResourceLoad");
-			EnsureAdventureModeResourcesLoaded();
-			EndPerformanceSample("WarmupOptionalFx:AdventureMode", adventureSampleStart);
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:EnemySpecialAbilityAvatar", EnsureEnemySpecialAbilityAvatarFxTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:MantaRayTideShiftCyclone", EnsureMantaRayTideShiftCycloneFxTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:LeafySeadragonBladeProjectile", EnsureLeafySeadragonBladeProjectileTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:BossKRoyalSeizureLance", EnsureBossKRoyalSeizureLanceTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:AdventureDamage", EnsureAdventureDamageEffectTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:AdventureEnemyDamage", EnsureAdventureEnemyDamageEffectTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
+			ulong dragonPrinceSampleStart = BeginPerformanceSample("ResourceLoad");
+			LoadDragonPrinceSpecialJackTexture();
+			EndPerformanceSample("WarmupOptionalFx:AdventureMode:DragonPrinceSpecialJack", dragonPrinceSampleStart);
 			if (!await WaitForWarmupFrameAsync(turnContext))
 			{
 				return false;
 			}
+
+			_adventureModeResourcesLoaded = true;
 		}
 
 		return true;
+	}
+
+	private async Task<bool> WarmupOptionalFxGroupAsync(string sampleName, Action ensureLoaded, TurnContext turnContext)
+	{
+		ulong sampleStart = BeginPerformanceSample("ResourceLoad");
+		ensureLoaded();
+		EndPerformanceSample(sampleName, sampleStart);
+		return await WaitForWarmupFrameAsync(turnContext);
 	}
 
 	private async Task<bool> WaitForWarmupFrameAsync(TurnContext turnContext)
