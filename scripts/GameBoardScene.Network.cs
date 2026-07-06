@@ -51,36 +51,76 @@ public partial class GameBoardScene
 		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, turnSequenceGeneration, startGlobalPosition);
 	}
 
-	internal async void RequestNetworkItemCardPlay(int itemHandIndex, int turnSequenceGeneration)
+	internal void RequestNetworkItemCardPlay(int itemHandIndex, int turnSequenceGeneration)
 	{
-		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
-		{
-			ConfirmNetworkHostItemCardPlay(itemHandIndex, turnSequenceGeneration);
-			return;
-		}
+		_ = RequestNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration);
+	}
 
-		if (_networkPendingHandIndex >= 0 || _networkPendingItemHandIndex >= 0)
+	private async Task RequestNetworkItemCardPlayAsync(int itemHandIndex, int turnSequenceGeneration)
+	{
+		try
 		{
-			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
-			return;
-		}
+			if (!IsNetworkMultiplayerMode() || IsNetworkHost())
+			{
+				ConfirmNetworkHostItemCardPlay(itemHandIndex, turnSequenceGeneration);
+				return;
+			}
 
-		_networkPendingItemHandIndex = itemHandIndex;
-		_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
-		NetworkManager? networkManager = GetNetworkManager();
-		bool predictionStarted = BeginPredictedNetworkItemCardPlay(itemHandIndex, turnSequenceGeneration);
-		if (predictionStarted)
-		{
-			networkManager?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
-		}
+			if (_networkPendingHandIndex >= 0 || _networkPendingItemHandIndex >= 0)
+			{
+				PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+				return;
+			}
 
-		if (!await CompletePredictedNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration))
+			_networkPendingItemHandIndex = itemHandIndex;
+			_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
+			NetworkManager? networkManager = GetNetworkManager();
+			bool predictionStarted = BeginPredictedNetworkItemCardPlay(itemHandIndex, turnSequenceGeneration);
+			if (predictionStarted)
+			{
+				networkManager?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
+			}
+
+			if (!await CompletePredictedNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration))
+			{
+				ClearNetworkPendingActionState();
+				ResetNetworkPredictedItemVisualState();
+				RenderPlayerHands();
+				RenderTableCards();
+				return;
+			}
+		}
+		catch (Exception error)
 		{
+			if (IsInsideTree())
+			{
+				if (_networkPredictedItemVisualActive
+					|| HasPendingItemSelection()
+					|| _networkLocallyCommittedPendingSelectionMode != PendingItemSelectionMode.None)
+				{
+					RollbackPredictedNetworkItemCardPlay();
+				}
+				else
+				{
+					ResetNetworkPredictedItemVisualState();
+					ResetNetworkLocallyCommittedPendingSelectionState();
+					RenderPlayerHands();
+					RenderTableCards();
+				}
+			}
+			else
+			{
+				ResetNetworkPredictedItemVisualState();
+				ResetNetworkLocallyCommittedPendingSelectionState();
+				if (HasPendingItemSelection())
+				{
+					ClearPendingItemSelectionState();
+					_isProcessingCardPlay = false;
+				}
+			}
+
 			ClearNetworkPendingActionState();
-			ResetNetworkPredictedItemVisualState();
-			RenderPlayerHands();
-			RenderTableCards();
-			return;
+			GD.PushWarning($"Failed to request network item card play: {error.Message}");
 		}
 	}
 
@@ -113,36 +153,67 @@ public partial class GameBoardScene
 		networkManager.RequestPendingItemSelection(targetPlayerIndex, targetHandIndex, turnSequenceGeneration);
 	}
 
-	internal async void RequestNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)
+	internal void RequestNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)
 	{
-		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
-		{
-			ConfirmLocalHandCardPlay(handIndex, turnSequenceGeneration, TryGetHandCardStartGlobalPosition(GetLocalHandPlayerIndex(), handIndex));
-			return;
-		}
+		_ = RequestNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration);
+	}
 
-		if (_networkPendingHandIndex >= 0 || _networkPendingItemHandIndex >= 0)
+	private async Task RequestNetworkHandCardPlayAsync(int handIndex, int turnSequenceGeneration)
+	{
+		try
 		{
-			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
-			return;
-		}
+			if (!IsNetworkMultiplayerMode() || IsNetworkHost())
+			{
+				ConfirmLocalHandCardPlay(handIndex, turnSequenceGeneration, TryGetHandCardStartGlobalPosition(GetLocalHandPlayerIndex(), handIndex));
+				return;
+			}
 
-		_networkPendingHandIndex = handIndex;
-		_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
-		NetworkManager? networkManager = GetNetworkManager();
-		bool predictionStarted = BeginPredictedNetworkHandCardPlay(handIndex, turnSequenceGeneration);
-		if (predictionStarted)
-		{
-			networkManager?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
-		}
+			if (_networkPendingHandIndex >= 0 || _networkPendingItemHandIndex >= 0)
+			{
+				PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
+				return;
+			}
 
-		if (!await CompletePredictedNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration))
+			_networkPendingHandIndex = handIndex;
+			_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
+			NetworkManager? networkManager = GetNetworkManager();
+			bool predictionStarted = BeginPredictedNetworkHandCardPlay(handIndex, turnSequenceGeneration);
+			if (predictionStarted)
+			{
+				networkManager?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
+			}
+
+			if (!await CompletePredictedNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration))
+			{
+				ClearNetworkPendingActionState();
+				ResetNetworkPredictedHandVisualState();
+				RenderPlayerHands();
+				RenderTableCards();
+				return;
+			}
+		}
+		catch (Exception error)
 		{
+			if (IsInsideTree())
+			{
+				if (_networkPredictedHandVisualActive)
+				{
+					RollbackPredictedNetworkHandCardPlay();
+				}
+				else
+				{
+					ResetNetworkPredictedHandVisualState();
+					RenderPlayerHands();
+					RenderTableCards();
+				}
+			}
+			else
+			{
+				ResetNetworkPredictedHandVisualState();
+			}
+
 			ClearNetworkPendingActionState();
-			ResetNetworkPredictedHandVisualState();
-			RenderPlayerHands();
-			RenderTableCards();
-			return;
+			GD.PushWarning($"Failed to request network hand card play: {error.Message}");
 		}
 	}
 

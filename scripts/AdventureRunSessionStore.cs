@@ -81,21 +81,43 @@ public sealed partial class AdventureRunSessionStore : Node
 	internal void ReloadFromActiveProfile()
 	{
 		_runState.Clear();
-		string json = GameSaveStore.LoadActiveProfile().PendingAdventureRunJson;
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		string json = profile.PendingAdventureRunJson;
 		if (string.IsNullOrWhiteSpace(json))
 		{
 			return;
 		}
 
+		bool shouldClearSavedRun = false;
 		try
 		{
 			AdventureUpgradeRunSnapshot snapshot = JsonSerializer.Deserialize<AdventureUpgradeRunSnapshot>(json);
 			_runState.RestoreFromSnapshot(snapshot);
+			if (!_runState.IsActive)
+			{
+				GD.PushWarning("Failed to restore adventure upgrade run session: snapshot is invalid for the current adventure run schema.");
+				shouldClearSavedRun = true;
+			}
 		}
 		catch (Exception error)
 		{
 			GD.PushWarning($"Failed to restore adventure upgrade run session: {error.Message}");
-			_runState.Clear();
+			shouldClearSavedRun = true;
+		}
+
+		if (!shouldClearSavedRun)
+		{
+			return;
+		}
+
+		_runState.Clear();
+		Error clearResult = GameSaveStore.SaveActiveProfile(profile with
+		{
+			PendingAdventureRunJson = string.Empty,
+		});
+		if (clearResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to clear invalid adventure upgrade run session: {clearResult}");
 		}
 	}
 

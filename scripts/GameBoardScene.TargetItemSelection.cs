@@ -176,33 +176,62 @@ public partial class GameBoardScene
 		ShowSelectionOverlay(LocalizeFormat("GAME_PLAYER_HAND", targetPlayerIndex + 1), options, showCancel: !ShouldSendNetworkPendingItemSelectionRequest());
 	}
 
-	private async void CompletePendingItemSelection(int targetPlayerIndex, int targetHandIndex)
+	private void CompletePendingItemSelection(int targetPlayerIndex, int targetHandIndex)
 	{
-		if (!IsLocalPendingItemSelectionValid())
-		{
-			CancelPendingItemSelection();
-			return;
-		}
+		_ = CompletePendingItemSelectionAsync(targetPlayerIndex, targetHandIndex);
+	}
 
-		if (ShouldSendNetworkPendingItemSelectionRequest())
+	private async Task CompletePendingItemSelectionAsync(int targetPlayerIndex, int targetHandIndex)
+	{
+		try
 		{
-			_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.TargetHandCard;
-			_networkLocallyCommittedPendingSelectionDisplayIndex = targetHandIndex;
-			_networkLocallyCommittedPendingSelectionHandIndex = _pendingItemHandIndex;
-			_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
-			DismissActiveSelectionOverlay(invokeCancel: false);
-			_ = BeginPredictedNetworkTargetedItemCommitAsync();
-			RequestNetworkPendingItemSelection(targetPlayerIndex, targetHandIndex, _pendingItemTurnSequenceGeneration);
-			return;
-		}
+			if (!IsLocalPendingItemSelectionValid())
+			{
+				CancelPendingItemSelection();
+				return;
+			}
 
-		await CompletePendingItemSelectionAuthorityAsync(
-			_pendingItemCardId,
-			_pendingItemOwnerIndex,
-			_pendingItemHandIndex,
-			targetPlayerIndex,
-			targetHandIndex,
-			_pendingItemTurnSequenceGeneration);
+			if (ShouldSendNetworkPendingItemSelectionRequest())
+			{
+				_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.TargetHandCard;
+				_networkLocallyCommittedPendingSelectionDisplayIndex = targetHandIndex;
+				_networkLocallyCommittedPendingSelectionHandIndex = _pendingItemHandIndex;
+				_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
+				DismissActiveSelectionOverlay(invokeCancel: false);
+				_ = BeginPredictedNetworkTargetedItemCommitAsync();
+				RequestNetworkPendingItemSelection(targetPlayerIndex, targetHandIndex, _pendingItemTurnSequenceGeneration);
+				return;
+			}
+
+			await CompletePendingItemSelectionAuthorityAsync(
+				_pendingItemCardId,
+				_pendingItemOwnerIndex,
+				_pendingItemHandIndex,
+				targetPlayerIndex,
+				targetHandIndex,
+				_pendingItemTurnSequenceGeneration);
+		}
+		catch (Exception error)
+		{
+			if (IsInsideTree())
+			{
+				CancelPendingItemSelection();
+			}
+			else
+			{
+				if (HasPendingItemSelection())
+				{
+					ClearPendingItemSelectionState();
+				}
+
+				_isProcessingCardPlay = false;
+				ResetNetworkPredictedItemVisualState();
+			}
+
+			ResetNetworkLocallyCommittedPendingSelectionState();
+			ClearNetworkPendingActionState();
+			GD.PushWarning($"Failed to complete pending item selection: {error.Message}");
+		}
 	}
 
 	private async Task CompletePendingItemSelectionAuthorityAsync(

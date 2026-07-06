@@ -303,6 +303,33 @@ public static class GameSaveStore
 
 		EnsureInitialized(saveManager);
 		string normalizedSlotId = NormalizeProfileSlotId(slotId);
+		string activeSlotId = GetActiveProfileSlotIdRaw(saveManager);
+		bool deletingActiveSlot = string.Equals(activeSlotId, normalizedSlotId, StringComparison.Ordinal);
+		if (deletingActiveSlot)
+		{
+			string replacementSlotId = FindFirstExistingProfileSlotId(saveManager, normalizedSlotId);
+			if (string.IsNullOrEmpty(replacementSlotId))
+			{
+				replacementSlotId = FindFirstEmptyProfileSlotId(saveManager, normalizedSlotId);
+				if (string.IsNullOrEmpty(replacementSlotId))
+				{
+					return Error.Unavailable;
+				}
+
+				Error saveReplacementResult = SaveProfileRaw(saveManager, replacementSlotId, GameProgressData.CreateDefault());
+				if (saveReplacementResult != Error.Ok)
+				{
+					return saveReplacementResult;
+				}
+			}
+
+			Error setActiveResult = SetActiveProfileRaw(saveManager, replacementSlotId);
+			if (setActiveResult != Error.Ok)
+			{
+				return setActiveResult;
+			}
+		}
+
 		Error removeResult = RemoveProfileSlotFiles(saveManager, normalizedSlotId);
 		if (removeResult != Error.Ok)
 		{
@@ -310,23 +337,7 @@ public static class GameSaveStore
 		}
 
 		saveManager.Call("unregister_slot", new StringName(normalizedSlotId));
-		if (!string.Equals(GetActiveProfileSlotIdRaw(saveManager), normalizedSlotId, StringComparison.Ordinal))
-		{
-			return Error.Ok;
-		}
-
-		string nextSlotId = FindFirstExistingProfileSlotId(saveManager);
-		if (string.IsNullOrEmpty(nextSlotId))
-		{
-			nextSlotId = DefaultProfileSlotId;
-			Error saveDefaultResult = SaveProfileRaw(saveManager, nextSlotId, GameProgressData.CreateDefault());
-			if (saveDefaultResult != Error.Ok)
-			{
-				return saveDefaultResult;
-			}
-		}
-
-		return SetActiveProfileRaw(saveManager, nextSlotId);
+		return Error.Ok;
 	}
 
 	public static float GetFloat(string key, float defaultValue)
@@ -614,16 +625,41 @@ public static class GameSaveStore
 
 	private static Error SetActiveProfileRaw(Node saveManager, string slotId)
 	{
-		SetRawValue(saveManager, ActiveProfileSlotKey, NormalizeProfileSlotId(slotId));
-		return Persist(saveManager);
+		string previousSlotId = GetActiveProfileSlotIdRaw(saveManager);
+		string normalizedSlotId = NormalizeProfileSlotId(slotId);
+		SetRawValue(saveManager, ActiveProfileSlotKey, normalizedSlotId);
+		Error persistResult = Persist(saveManager);
+		if (persistResult == Error.Ok)
+		{
+			return Error.Ok;
+		}
+
+		SetRawValue(saveManager, ActiveProfileSlotKey, previousSlotId);
+		return persistResult;
 	}
 
-	private static string FindFirstExistingProfileSlotId(Node saveManager)
+	private static string FindFirstExistingProfileSlotId(Node saveManager, string excludedSlotId = "")
 	{
 		for (int index = 0; index < ProfileSlotCount; index++)
 		{
 			string slotId = GetProfileSlotId(index);
-			if (ProfileSlotFileExists(saveManager, slotId))
+			if (!string.Equals(slotId, excludedSlotId, StringComparison.Ordinal)
+				&& ProfileSlotFileExists(saveManager, slotId))
+			{
+				return slotId;
+			}
+		}
+
+		return string.Empty;
+	}
+
+	private static string FindFirstEmptyProfileSlotId(Node saveManager, string excludedSlotId = "")
+	{
+		for (int index = 0; index < ProfileSlotCount; index++)
+		{
+			string slotId = GetProfileSlotId(index);
+			if (!string.Equals(slotId, excludedSlotId, StringComparison.Ordinal)
+				&& !ProfileSlotFileExists(saveManager, slotId))
 			{
 				return slotId;
 			}

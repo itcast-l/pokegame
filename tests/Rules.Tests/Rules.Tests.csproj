@@ -20,6 +20,7 @@
     <Compile Include="../../scripts/AdventureUpgradeEffectService.cs" Link="Rules/AdventureUpgradeEffectService.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunState.cs" Link="Rules/AdventureUpgradeRunState.cs" />
+    <Compile Include="../../scripts/AdventureRunSessionStore.cs" Link="Rules/AdventureRunSessionStore.cs" />
     <Compile Include="../../scripts/AdventureUpgradeTriggerRules.cs" Link="Rules/AdventureUpgradeTriggerRules.cs" />
     <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
     <Compile Include="../../scripts/CardVisualTuningRules.cs" Link="Rules/CardVisualTuningRules.cs" />

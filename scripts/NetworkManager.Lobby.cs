@@ -327,12 +327,55 @@ public partial class NetworkManager
 			return;
 		}
 
+		int senderPeerId = Multiplayer.GetRemoteSenderId();
+		if (!MultiplayerBoardSyncRules.CanAcceptSceneLoadAck(_players, senderPeerId, seatIndex, out int senderSeatIndex))
+		{
+			if (senderSeatIndex < 0)
+			{
+				GD.PushWarning($"Ignoring scene-load ACK from unknown peer {senderPeerId} for reported seat {seatIndex}.");
+				return;
+			}
+
+			GD.PushWarning($"Ignoring scene-load ACK from peer {senderPeerId}: reported seat {seatIndex} does not match sender seat {senderSeatIndex}.");
+			return;
+		}
+
 		MarkClientSceneLoaded(matchId, seatIndex);
 	}
 
 	private void MarkClientSceneLoaded(string matchId, int seatIndex)
 	{
-		if (_loadHandshake == null || !_loadHandshake.MarkLoaded(matchId, seatIndex))
+		if (_loadHandshake == null)
+		{
+			return;
+		}
+
+		if (!TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
+		{
+			GD.PushWarning($"Ignoring scene-load ACK for unknown seat {seatIndex}.");
+			return;
+		}
+
+		NetworkPlayerPublicState player = _players[playerIndex];
+		if (!player.IsConnected)
+		{
+			GD.PushWarning($"Ignoring scene-load ACK for offline seat {seatIndex}.");
+			return;
+		}
+
+		if (!string.Equals(_loadHandshake.MatchId, matchId, StringComparison.Ordinal))
+		{
+			GD.PushWarning($"Ignoring stale scene-load ACK for seat {seatIndex}: expected match {_loadHandshake.MatchId}, got {matchId}.");
+			return;
+		}
+
+		if (!_loadHandshake.ExpectedSeats.Contains(seatIndex))
+		{
+			GD.PushWarning($"Ignoring expired scene-load ACK for seat {seatIndex}.");
+			return;
+		}
+
+		if (!_loadHandshake.MarkLoaded(matchId, seatIndex))
 		{
 			return;
 		}

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 internal static class Program
@@ -74,6 +76,11 @@ internal static class Program
 		Run("adventure clubs borrow suit set arms and is consumed by next numeric base card", AdventureClubsBorrowSuitSetArmsAndIsConsumedByNextNumericBaseCard);
 		Run("adventure disabled undertow upgrade stays out of enabled pool", AdventureDisabledUndertowUpgradeStaysOutOfEnabledPool);
 		Run("game save progress roundtrips pending adventure run json", GameSaveProgressRoundTripsPendingAdventureRunJson);
+		Run("delete active profile switches replacement before removing original slot", DeleteActiveProfileSwitchesReplacementBeforeRemovingOriginalSlot);
+		Run("delete active profile keeps original slot when replacement creation fails", DeleteActiveProfileKeepsOriginalSlotWhenReplacementCreationFails);
+		Run("delete active profile keeps original slot when active switch fails", DeleteActiveProfileKeepsOriginalSlotWhenActiveSwitchFails);
+		Run("damaged pending adventure run json clears from active profile", DamagedPendingAdventureRunJsonClearsFromActiveProfile);
+		Run("valid pending adventure run json reloads active run", ValidPendingAdventureRunJsonReloadsActiveRun);
 		Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
@@ -144,6 +151,9 @@ internal static class Program
 		Run("multiplayer lobby room list only allows joining lobby rooms", MultiplayerLobbyRoomListOnlyAllowsJoiningLobbyRooms);
 		Run("multiplayer lobby only auto accepts steam invites from safe states", MultiplayerLobbyOnlyAutoAcceptsSteamInvitesFromSafeStates);
 		Run("multiplayer board sync resolves sender seat", MultiplayerBoardSyncResolvesSenderSeat);
+		Run("scene load ack accepts only sender own seat", SceneLoadAckAcceptsOnlySenderOwnSeat);
+		Run("scene load ack rejects unregistered sender", SceneLoadAckRejectsUnregisteredSender);
+		Run("scene load ack rejects mismatched reported seat", SceneLoadAckRejectsMismatchedReportedSeat);
 		Run("multiplayer board sync rejects invalid play requests", MultiplayerBoardSyncRejectsInvalidPlayRequests);
 		Run("multiplayer board sync limits private hand visibility", MultiplayerBoardSyncLimitsPrivateHandVisibility);
 		Run("network table card snapshot roundtrips overlay fields", NetworkTableCardSnapshotRoundtripsOverlayFields);
@@ -172,6 +182,9 @@ internal static class Program
 		Run("network manager lobby helpers move into partial file", NetworkManagerLobbyHelpersMoveIntoPartialFile);
 		Run("network manager board sync helpers move into partial file", NetworkManagerBoardSyncHelpersMoveIntoPartialFile);
 		Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
+		Run("game board network request entry points avoid async void", GameBoardNetworkRequestEntryPointsAvoidAsyncVoid);
+		Run("target item selection completion avoids async void", TargetItemSelectionCompletionAvoidsAsyncVoid);
+		Run("network manager scene load ack validates sender before mark loaded", NetworkManagerSceneLoadAckValidatesSenderBeforeMarkingLoaded);
 		Run("game board network visual queue helpers move into partial file", GameBoardNetworkVisualQueueHelpersMoveIntoPartialFile);
 		Run("game board network prediction helpers move into partial file", GameBoardNetworkPredictionHelpersMoveIntoPartialFile);
 		Run("game board network authority helpers move into partial file", GameBoardNetworkAuthorityHelpersMoveIntoPartialFile);
@@ -1394,6 +1407,110 @@ internal static class Program
 			GameSaveStore.GameProgressData.CreateDefault());
 
 		Equal(pendingRunJson, roundTripped.PendingAdventureRunJson);
+	}
+
+	private static void DeleteActiveProfileSwitchesReplacementBeforeRemovingOriginalSlot()
+	{
+		ResetGameSaveStoreTestState();
+		string originalSlotId = GameSaveStore.DefaultProfileSlotId;
+		string replacementSlotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(originalSlotId);
+		SeedProfile(saveManager, originalSlotId, CreateProgressData(playerName: "Active"));
+
+		string activeSlotDuringDelete = string.Empty;
+		Godot.DirAccess.BeforeRemoveAbsolute = path =>
+		{
+			if (path.EndsWith($"{originalSlotId}.json", StringComparison.Ordinal))
+			{
+				activeSlotDuringDelete = saveManager.GetStoredString(GameSaveStore.ActiveProfileSlotKey);
+			}
+		};
+
+		Equal(Godot.Error.Ok, GameSaveStore.DeleteProfile(originalSlotId));
+		Equal(replacementSlotId, activeSlotDuringDelete);
+		Equal(replacementSlotId, saveManager.GetStoredString(GameSaveStore.ActiveProfileSlotKey));
+		False(saveManager.HasSlotFile(originalSlotId));
+		True(saveManager.HasSlotFile(replacementSlotId));
+		Equal(1, saveManager.UnregisteredSlots.Count);
+		Equal(originalSlotId, saveManager.UnregisteredSlots[0]);
+	}
+
+	private static void DeleteActiveProfileKeepsOriginalSlotWhenReplacementCreationFails()
+	{
+		ResetGameSaveStoreTestState();
+		string originalSlotId = GameSaveStore.DefaultProfileSlotId;
+		string replacementSlotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(originalSlotId);
+		SeedProfile(saveManager, originalSlotId, CreateProgressData(playerName: "Active"));
+		saveManager.SaveSlotResults[replacementSlotId] = Godot.Error.Failed;
+
+		Equal(Godot.Error.Failed, GameSaveStore.DeleteProfile(originalSlotId));
+		Equal(originalSlotId, saveManager.GetStoredString(GameSaveStore.ActiveProfileSlotKey));
+		True(saveManager.HasSlotFile(originalSlotId));
+		False(saveManager.HasSlotFile(replacementSlotId));
+		Equal(0, saveManager.UnregisteredSlots.Count);
+	}
+
+	private static void DeleteActiveProfileKeepsOriginalSlotWhenActiveSwitchFails()
+	{
+		ResetGameSaveStoreTestState();
+		string originalSlotId = GameSaveStore.DefaultProfileSlotId;
+		string replacementSlotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(originalSlotId);
+		SeedProfile(saveManager, originalSlotId, CreateProgressData(playerName: "Active"));
+		SeedProfile(saveManager, replacementSlotId, CreateProgressData(playerName: "Replacement"));
+		saveManager.PersistResult = Godot.Error.Failed;
+
+		Equal(Godot.Error.Failed, GameSaveStore.DeleteProfile(originalSlotId));
+		Equal(originalSlotId, saveManager.GetStoredString(GameSaveStore.ActiveProfileSlotKey));
+		True(saveManager.HasSlotFile(originalSlotId));
+		True(saveManager.HasSlotFile(replacementSlotId));
+		Equal(0, saveManager.UnregisteredSlots.Count);
+	}
+
+	private static void DamagedPendingAdventureRunJsonClearsFromActiveProfile()
+	{
+		ResetGameSaveStoreTestState();
+		string activeSlotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(activeSlotId);
+		SeedProfile(saveManager, activeSlotId, CreateProgressData(
+			playerName: "Runner",
+			pendingAdventureRunJson: "{bad json"));
+
+		var store = new AdventureRunSessionStore();
+		store.ReloadFromActiveProfile();
+
+		False(store.HasActiveRun);
+		Equal(string.Empty, LoadStoredProfile(saveManager, activeSlotId).PendingAdventureRunJson);
+		Equal(1, Godot.GD.WarningMessages.Count);
+
+		store.ReloadFromActiveProfile();
+		Equal(1, Godot.GD.WarningMessages.Count);
+		Equal(string.Empty, LoadStoredProfile(saveManager, activeSlotId).PendingAdventureRunJson);
+	}
+
+	private static void ValidPendingAdventureRunJsonReloadsActiveRun()
+	{
+		ResetGameSaveStoreTestState();
+		string activeSlotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(activeSlotId);
+		var runState = new AdventureUpgradeRunState();
+		runState.BeginNewRun(3);
+		runState.AcquireUpgrade("test_upgrade");
+		string pendingRunJson = JsonSerializer.Serialize(runState.ToSnapshot());
+		SeedProfile(saveManager, activeSlotId, CreateProgressData(
+			playerName: "Runner",
+			pendingAdventureRunJson: pendingRunJson));
+
+		var store = new AdventureRunSessionStore();
+		store.ReloadFromActiveProfile();
+
+		True(store.HasActiveRun);
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot));
+		Equal(3, snapshot.CurrentAvatarStageNumber);
+		Equal(1, snapshot.CurrentRunStageIndex);
+		Equal(pendingRunJson, LoadStoredProfile(saveManager, activeSlotId).PendingAdventureRunJson);
+		Equal(0, Godot.GD.WarningMessages.Count);
 	}
 
 	private static void ResultPresentationUsesLocalSeatForNetworkDefeat()
@@ -2929,6 +3046,45 @@ internal static class Program
 		False(MultiplayerBoardSyncRules.TryResolveSeatFromPeer(players, 99, out _));
 	}
 
+	private static void SceneLoadAckAcceptsOnlySenderOwnSeat()
+	{
+		var players = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 23, seatIndex: 2, isHost: false, isReady: true),
+		};
+
+		bool accepted = InvokeCanAcceptSceneLoadAck(players, senderPeerId: 23, reportedSeatIndex: 2, out int senderSeatIndex);
+		True(accepted);
+		Equal(2, senderSeatIndex);
+	}
+
+	private static void SceneLoadAckRejectsUnregisteredSender()
+	{
+		var players = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 23, seatIndex: 2, isHost: false, isReady: true),
+		};
+
+		bool accepted = InvokeCanAcceptSceneLoadAck(players, senderPeerId: 99, reportedSeatIndex: 2, out int senderSeatIndex);
+		False(accepted);
+		Equal(-1, senderSeatIndex);
+	}
+
+	private static void SceneLoadAckRejectsMismatchedReportedSeat()
+	{
+		var players = new[]
+		{
+			Player(peerId: 1, seatIndex: 0, isHost: true, isReady: true),
+			Player(peerId: 23, seatIndex: 2, isHost: false, isReady: true),
+		};
+
+		bool accepted = InvokeCanAcceptSceneLoadAck(players, senderPeerId: 23, reportedSeatIndex: 1, out int senderSeatIndex);
+		False(accepted);
+		Equal(2, senderSeatIndex);
+	}
+
 	private static void MultiplayerBoardSyncRejectsInvalidPlayRequests()
 	{
 		MultiplayerBoardActionValidation accepted = MultiplayerBoardSyncRules.ValidatePlayHandCardRequest(
@@ -3865,6 +4021,42 @@ internal static class Program
 		False(mainText.Contains("private void ApplySeatControlStatesFromSnapshot(", StringComparison.Ordinal));
 	}
 
+	private static void GameBoardNetworkRequestEntryPointsAvoidAsyncVoid()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string path = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
+		string text = File.ReadAllText(path);
+
+		False(text.Contains("internal async void RequestNetworkItemCardPlay(", StringComparison.Ordinal));
+		True(text.Contains("internal void RequestNetworkItemCardPlay(", StringComparison.Ordinal));
+		True(text.Contains("private async Task RequestNetworkItemCardPlayAsync(", StringComparison.Ordinal));
+		False(text.Contains("internal async void RequestNetworkHandCardPlay(", StringComparison.Ordinal));
+		True(text.Contains("internal void RequestNetworkHandCardPlay(", StringComparison.Ordinal));
+		True(text.Contains("private async Task RequestNetworkHandCardPlayAsync(", StringComparison.Ordinal));
+	}
+
+	private static void TargetItemSelectionCompletionAvoidsAsyncVoid()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string path = Path.Combine(repoRoot, "scripts", "GameBoardScene.TargetItemSelection.cs");
+		string text = File.ReadAllText(path);
+
+		False(text.Contains("private async void CompletePendingItemSelection(", StringComparison.Ordinal));
+		True(text.Contains("private void CompletePendingItemSelection(", StringComparison.Ordinal));
+		True(text.Contains("private async Task CompletePendingItemSelectionAsync(", StringComparison.Ordinal));
+	}
+
+	private static void NetworkManagerSceneLoadAckValidatesSenderBeforeMarkingLoaded()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string path = Path.Combine(repoRoot, "scripts", "NetworkManager.Lobby.cs");
+		string text = File.ReadAllText(path);
+
+		True(text.Contains("int senderPeerId = Multiplayer.GetRemoteSenderId();", StringComparison.Ordinal));
+		True(text.Contains("CanAcceptSceneLoadAck(_players, senderPeerId, seatIndex, out int senderSeatIndex)", StringComparison.Ordinal));
+		True(text.Contains("GD.PushWarning(", StringComparison.Ordinal));
+	}
+
 	private static void GameBoardNetworkVisualQueueHelpersMoveIntoPartialFile()
 	{
 		string repoRoot = FindRepositoryRoot();
@@ -4546,6 +4738,78 @@ internal static class Program
 		state.PlayerDecks.Add(new List<PlayingCard>());
 		state.TableCards.Add(new TableCard(card, isFaceUp: true));
 		return state;
+	}
+
+	private static bool InvokeCanAcceptSceneLoadAck(
+		IReadOnlyCollection<NetworkPlayerPublicState> players,
+		int senderPeerId,
+		int reportedSeatIndex,
+		out int senderSeatIndex)
+	{
+		MethodInfo? method = typeof(MultiplayerBoardSyncRules).GetMethod(
+			"CanAcceptSceneLoadAck",
+			BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+		True(method != null);
+		object?[] args = { players, senderPeerId, reportedSeatIndex, -1 };
+		bool accepted = (bool)(method!.Invoke(null, args) ?? false);
+		senderSeatIndex = (int)args[3]!;
+		return accepted;
+	}
+
+	private static void ResetGameSaveStoreTestState()
+	{
+		Godot.Engine.MainLoopOverride = null;
+		Godot.GD.ClearWarnings();
+		Godot.FileAccess.ClearTestState();
+		Godot.DirAccess.ClearTestState();
+		SetStaticField(typeof(GameSaveStore), "_attemptedLegacyMigration", false);
+		SetStaticField(typeof(GameSaveStore), "_attemptedProgressProfileMigration", false);
+		SetStaticField(typeof(GameSaveStore), "_warnedMissingSaveManager", false);
+	}
+
+	private static Godot.TestSaveManagerNode InstallSaveManagerForTests(string activeSlotId)
+	{
+		var root = new Godot.Node();
+		var saveManager = new Godot.TestSaveManagerNode();
+		root.AddNamedChild("SaveManager", saveManager);
+		Godot.Engine.MainLoopOverride = new Godot.SceneTree { Root = root };
+		saveManager.SeedValue("migration.settings_cfg.v1", true);
+		saveManager.SeedValue("migration.progress_profile.v1", true);
+		saveManager.SeedValue(GameSaveStore.ActiveProfileSlotKey, activeSlotId);
+		return saveManager;
+	}
+
+	private static void SeedProfile(
+		Godot.TestSaveManagerNode saveManager,
+		string slotId,
+		GameSaveStore.GameProgressData progressData)
+	{
+		saveManager.SeedSlot(slotId, progressData.ToDictionary());
+	}
+
+	private static GameSaveStore.GameProgressData LoadStoredProfile(Godot.TestSaveManagerNode saveManager, string slotId)
+	{
+		return GameSaveStore.GameProgressData.FromDictionary(
+			saveManager.GetSlotData(slotId),
+			GameSaveStore.GameProgressData.CreateDefault());
+	}
+
+	private static GameSaveStore.GameProgressData CreateProgressData(
+		string playerName,
+		string pendingAdventureRunJson = "")
+	{
+		return GameSaveStore.GameProgressData.CreateDefault() with
+		{
+			PlayerName = playerName,
+			PendingAdventureRunJson = pendingAdventureRunJson,
+		};
+	}
+
+	private static void SetStaticField(Type type, string fieldName, object value)
+	{
+		FieldInfo? field = type.GetField(fieldName, BindingFlags.Static | BindingFlags.NonPublic);
+		True(field != null);
+		field!.SetValue(null, value);
 	}
 
 	private static NetworkPlayerPublicState Player(int peerId, int seatIndex, bool isHost, bool isReady)

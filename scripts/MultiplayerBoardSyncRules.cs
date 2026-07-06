@@ -41,6 +41,20 @@ internal static class MultiplayerBoardSyncRules
 		return seatIndex >= 0;
 	}
 
+	internal static bool CanAcceptSceneLoadAck(
+		IReadOnlyCollection<NetworkPlayerPublicState> players,
+		int senderPeerId,
+		int reportedSeatIndex,
+		out int senderSeatIndex)
+	{
+		if (!TryResolveSeatFromPeer(players, senderPeerId, out senderSeatIndex))
+		{
+			return false;
+		}
+
+		return senderSeatIndex == reportedSeatIndex;
+	}
+
 	internal static MultiplayerBoardActionValidation ValidatePlayHandCardRequest(
 		int senderSeatIndex,
 		int currentTurnPlayerIndex,
