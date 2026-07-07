@@ -8,6 +8,8 @@ public partial class AdventureAvatarMenuScene : Control
 	private const string TutorialGameBoardScenePath = "res://scenes/adventure_tutorial_game_board_scene.tscn";
 	private const string ItemTutorialGameBoardScenePath = "res://scenes/adventure_item_tutorial_game_board_scene.tscn";
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
+	private const string TemporaryDebugSetupAdventureAvatarId = "shrimp";
+	private const string TemporaryDebugSetupRecordingId = "shrimp_question_rejudge_manual_01";
 	private const double SmoothScrollTweenSeconds = 0.22;
 	private const int SmoothScrollWheelStep = 96;
 	private const float ReturnFadeSeconds = 0.18f;
@@ -163,5 +165,15 @@ public partial class AdventureAvatarMenuScene : Control
 		}
 
 		GameAudio?.PlayMusic(GameMusic.AdventureMenu, 1.2f);
+	}
+
+	private static void ApplyTemporaryAdventureDebugSetup(Node gameBoard, string avatarId)
+	{
+		if (gameBoard == null || !string.Equals(avatarId, TemporaryDebugSetupAdventureAvatarId, System.StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		gameBoard.Set("debug_recording_setup_id", TemporaryDebugSetupRecordingId);
 	}
 }

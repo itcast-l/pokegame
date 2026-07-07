@@ -68,7 +68,7 @@ theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.88)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 34
-text = "暂停"
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -85,7 +85,7 @@ theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.72)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 18
-text = "当前对局菜单"
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 

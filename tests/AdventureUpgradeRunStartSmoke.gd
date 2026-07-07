@@ -152,12 +152,24 @@ func _run() -> void:
 		if description_band.is_empty():
 			_fail("Adventure upgrade choice art should report a non-empty description band")
 			return
-
+		
+		var card_draw_y := float(card_draw_rect.get("y", 0.0))
+		var description_band_y := float(description_band.get("y", 0.0))
 		var description_band_height := float(description_band.get("height", 0.0))
-		if description_band_height < card_draw_height * 0.15:
-			_fail("Adventure upgrade description band should reserve at least 15% of the card height for text")
+		var description_band_top_ratio := (description_band_y - card_draw_y) / card_draw_height
+		if description_band_top_ratio > 0.72:
+			_fail("Adventure upgrade description band should start higher on the card so long text can use the empty lower-middle area")
 			return
-
+		
+		if description_band_height < card_draw_height * 0.18:
+			_fail("Adventure upgrade description band should reserve at least 18% of the card height for long localized text")
+			return
+		
+		var description_band_bottom_ratio := ((description_band_y + description_band_height) - card_draw_y) / card_draw_height
+		if description_band_bottom_ratio > 0.90:
+			_fail("Adventure upgrade description band should stay clear of the bottom frame ornament")
+			return
+		
 		var description_font_size := int(art.call("DebugGetResolvedDescriptionFontSize"))
 		if description_font_size < 11:
 			_fail("Adventure upgrade description font should not collapse to a tiny size")

@@ -74,7 +74,6 @@ public partial class GameBoardScene
 		}
 
 		string itemCardId = PickQuestionRewardItemCardId();
-		itemCardId = await MaybeRejudgeQuestionRewardItemCardIdAsync(itemCardId, playerIndex);
 		if (string.IsNullOrEmpty(itemCardId))
 		{
 			return null;
@@ -85,6 +84,9 @@ public partial class GameBoardScene
 		{
 			return null;
 		}
+
+		_debugQuestionRewardGrantCount++;
+		_debugLastQuestionRewardItemCardId = itemCardId;
 
 		if (IsAttachmentItemCard(itemCardId))
 		{
@@ -127,7 +129,10 @@ public partial class GameBoardScene
 		return reward.ItemCardId;
 	}
 
-	private async Task<string> MaybeRejudgeQuestionRewardItemCardIdAsync(string originalItemCardId, int playerIndex)
+	private async Task<string> MaybeRejudgeQuestionRewardItemCardIdAsync(
+		string originalItemCardId,
+		int playerIndex,
+		AdventureQuestionRejudgeChoice? forcedChoice = null)
 	{
 		if (string.IsNullOrEmpty(originalItemCardId)
 			|| !ShouldUseAdventureUpgradeSystem()
@@ -146,16 +151,27 @@ public partial class GameBoardScene
 			return originalItemCardId;
 		}
 
-		_adventureQuestionRejudgeUsedThisBattle = true;
-		if (ShouldAutoResolveAdventureQuestionRejudge())
+		AdventureQuestionRejudgeChoice choice;
+		if (forcedChoice.HasValue)
+		{
+			choice = forcedChoice.Value;
+		}
+		else if (ShouldAutoResolveAdventureQuestionRejudge())
+		{
+			return originalItemCardId;
+		}
+		else
+		{
+			choice = await PromptAdventureQuestionRejudgeAsync(originalItemCardId);
+		}
+
+		if (choice != AdventureQuestionRejudgeChoice.Reroll)
 		{
 			return originalItemCardId;
 		}
 
-		AdventureQuestionRejudgeChoice choice = await PromptAdventureQuestionRejudgeAsync(originalItemCardId);
-		return choice == AdventureQuestionRejudgeChoice.Reroll
-			? PickQuestionRewardItemCardId()
-			: originalItemCardId;
+		_adventureQuestionRejudgeUsedThisBattle = true;
+		return PickQuestionRewardItemCardId();
 	}
 
 	private bool ShouldAutoResolveAdventureQuestionRejudge()
@@ -167,58 +183,13 @@ public partial class GameBoardScene
 
 	private async Task<AdventureQuestionRejudgeChoice> PromptAdventureQuestionRejudgeAsync(string originalItemCardId)
 	{
-		var completionSource = new TaskCompletionSource<AdventureQuestionRejudgeChoice>(TaskCreationOptions.RunContinuationsAsynchronously);
-		PackedScene? selectionOverlayScene = GD.Load<PackedScene>(ItemSelectionOverlayScenePath);
-		if (selectionOverlayScene?.Instantiate() is not ItemSelectionOverlay selectionOverlay)
+		ItemCard? rewardItem = CreateItemCard(originalItemCardId);
+		if (!rewardItem.HasValue)
 		{
 			return AdventureQuestionRejudgeChoice.Keep;
 		}
 
-		void ResolveChoice(AdventureQuestionRejudgeChoice choice)
-		{
-			if (completionSource.TrySetResult(choice))
-			{
-				DisposeActiveSelectionOverlay();
-			}
-		}
-
-		AddChild(selectionOverlay);
-		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
-		selectionOverlay.Configure(
-			$"Reward: {originalItemCardId}",
-			new List<string> { "Keep", "Reroll Once" },
-			Localize("GAME_CANCEL"),
-			showCancel: true);
-		selectionOverlay.OptionSelected += optionIndex =>
-		{
-			ResolveChoice(optionIndex == 1
-				? AdventureQuestionRejudgeChoice.Reroll
-				: AdventureQuestionRejudgeChoice.Keep);
-		};
-		selectionOverlay.CancelRequested += () => ResolveChoice(AdventureQuestionRejudgeChoice.Keep);
-
-		RegisterSelectionOverlaySession(new SelectionOverlaySession(
-			SelectionOverlayKind.ItemSelection,
-			selectionOverlay,
-			2,
-			optionIndex =>
-			{
-				ResolveChoice(optionIndex == 1
-					? AdventureQuestionRejudgeChoice.Reroll
-					: AdventureQuestionRejudgeChoice.Keep);
-				return true;
-			},
-			cancel: () => ResolveChoice(AdventureQuestionRejudgeChoice.Keep),
-			dispose: () =>
-			{
-				if (IsInstanceValid(selectionOverlay))
-				{
-					RemoveChild(selectionOverlay);
-					selectionOverlay.CallDeferred(Node.MethodName.QueueFree);
-				}
-			}));
-
-		return await completionSource.Task;
+		return (await PromptAdventureQuestionRejudgeOverlayAsync(rewardItem.Value)).Choice;
 	}
 
 	private AdventureQuestionRewardEffectResult? ResolveAdventureQuestionRewardEffects(int playerIndex)

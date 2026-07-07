@@ -7,6 +7,7 @@ public partial class GameBoardScene
 	private const string DebugRecordingSetupJellyfishCaptureShowcase01 = "jellyfish_capture_showcase_01";
 	private const string DebugRecordingSetupShrimpCaptureVictoryOrder01 = "shrimp_capture_victory_order_01";
 	private const string DebugRecordingSetupShrimpPairCaptureReturn01 = "shrimp_pair_capture_return_01";
+	private const string DebugRecordingSetupShrimpQuestionRejudgeManual01 = "shrimp_question_rejudge_manual_01";
 	private const string JellyfishEnemyAvatarId = "jellyfish";
 	private const string ShrimpEnemyAvatarId = "shrimp";
 
@@ -81,6 +82,27 @@ public partial class GameBoardScene
 			return true;
 		}
 
+		if (string.Equals(setupId, DebugRecordingSetupShrimpQuestionRejudgeManual01, StringComparison.Ordinal))
+		{
+			if (!adventure_mode
+				|| player_count != 2
+				|| !string.Equals(adventure_enemy_avatar_id, ShrimpEnemyAvatarId, StringComparison.Ordinal))
+			{
+				GD.PushWarning(
+					$"Debug recording setup '{setupId}' requires 2-player adventure mode against '{ShrimpEnemyAvatarId}'; falling back to normal deal.");
+				return false;
+			}
+
+			bool rejudgeSetupSucceeded = TrySetupShrimpQuestionRejudgeManualRecordingDeal();
+			if (!rejudgeSetupSucceeded)
+			{
+				GD.PushWarning($"Debug recording setup '{setupId}' failed; falling back to normal deal.");
+				return false;
+			}
+
+			return true;
+		}
+
 		GD.PushWarning($"Unknown debug recording setup '{setupId}'; falling back to normal deal.");
 		return false;
 	}
@@ -118,6 +140,44 @@ public partial class GameBoardScene
 	private bool TrySetupJellyfishCaptureShowcaseRecordingDeal()
 	{
 		return TrySetupSharedBigCaptureRecordingDeal();
+	}
+
+	private bool TrySetupShrimpQuestionRejudgeManualRecordingDeal()
+	{
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "4"),
+			("Clubs", "4"),
+			("Diamonds", "6"),
+			("Spades", "9"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		ItemCard? questionMark = CreateItemCard(QuestionMarkItemCardId);
+		if (!questionMark.HasValue)
+		{
+			return false;
+		}
+
+		if (!DebugAcquireAdventureUpgrade("diamonds_rejudge_once"))
+		{
+			return false;
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:4"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Diamonds:6"]);
+		_playerHands[1].Add(cards["Spades:9"]);
+
+		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
+		_tableCards.Add(new TableCard(null, true, questionMark.Value));
+		_tableCards.Add(new TableCard(cards["Diamonds:6"], true));
+
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		return true;
 	}
 
 	private bool TrySetupSharedBigCaptureRecordingDeal()

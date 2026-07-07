@@ -21,6 +21,8 @@ public partial class CharacterAvatarEditScene : Control
 	private Button _backButton = default!;
 	private Button _confirmButton = default!;
 	private CharacterAvatar _previewAvatar = default!;
+	private Label _previewKickerLabel = default!;
+	private Label _playerNameKickerLabel = default!;
 	private LineEdit _playerNameInput = default!;
 	private Label _playerNameHint = default!;
 	private GridContainer _avatarGrid = default!;
@@ -32,6 +34,7 @@ public partial class CharacterAvatarEditScene : Control
 	public override void _Ready()
 	{
 		GameInputActions.EnsureRegistered();
+		Localization.EnsureLoaded();
 		CurrentAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(CurrentAvatarId);
 		CurrentPlayerName = PlayerNameRules.Normalize(CurrentPlayerName);
 
@@ -43,6 +46,8 @@ public partial class CharacterAvatarEditScene : Control
 		_backButton.Pressed += RequestClose;
 
 		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
+		_previewKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PreviewKicker");
+		_playerNameKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameKicker");
 		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
 		_playerNameInput.FocusMode = Control.FocusModeEnum.All;
 		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
@@ -58,9 +63,18 @@ public partial class CharacterAvatarEditScene : Control
 		_avatarGridScroll.FollowFocus = true;
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
+		RefreshLocalizedText();
 		ApplyPreviewAvatar();
 		ApplyPlayerNameInput();
 		FocusDefaultControlDeferred();
+	}
+
+	public override void _Notification(int what)
+	{
+		if (what == NotificationTranslationChanged && IsNodeReady())
+		{
+			RefreshLocalizedText();
+		}
 	}
 
 	public override void _UnhandledInput(InputEvent inputEvent)
@@ -137,7 +151,7 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Avatar.AudioConfig = avatarDefinition.AudioConfig;
 			optionSlot.Avatar.PlayIdle();
 			optionSlot.Panel.Modulate = Colors.White;
-			optionSlot.Button.TooltipText = "预览头像";
+			optionSlot.Button.TooltipText = Localize("AVATAR_EDIT_OPTION_TOOLTIP");
 			optionSlot.Button.FocusMode = Control.FocusModeEnum.All;
 			optionSlot.Button.FocusEntered += () => SelectAvatar(avatarDefinition.Id);
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
@@ -309,23 +323,52 @@ public partial class CharacterAvatarEditScene : Control
 		bool isValidName = PlayerNameRules.IsValid(playerName);
 		if (isValidName)
 		{
-			_playerNameHint.Text = $"仅支持中英文，最多 {PlayerNameRules.MaxLength} 个字";
+			_playerNameHint.Text = LocalizeFormat("AVATAR_EDIT_PLAYER_NAME_HINT_VALID", PlayerNameRules.MaxLength);
 		}
 		else if (string.IsNullOrEmpty(playerName))
 		{
-			_playerNameHint.Text = "请输入中英文名字";
+			_playerNameHint.Text = Localize("AVATAR_EDIT_PLAYER_NAME_HINT_EMPTY");
 		}
 		else if (playerName.Length > PlayerNameRules.MaxLength)
 		{
-			_playerNameHint.Text = $"名字最多 {PlayerNameRules.MaxLength} 个字";
+			_playerNameHint.Text = LocalizeFormat("AVATAR_EDIT_PLAYER_NAME_HINT_TOO_LONG", PlayerNameRules.MaxLength);
 		}
 		else
 		{
-			_playerNameHint.Text = "名字只能使用中文或英文字母";
+			_playerNameHint.Text = Localize("AVATAR_EDIT_PLAYER_NAME_HINT_INVALID");
 		}
 
 		_playerNameHint.Modulate = isValidName ? ValidNameHintColor : EmptyNameHintColor;
 		_confirmButton.Disabled = !isValidName;
+	}
+
+	private void RefreshLocalizedText()
+	{
+		_backButton.Text = Localize("ADVENTURE_BACK");
+		_previewKickerLabel.Text = Localize("AVATAR_EDIT_CURRENT_AVATAR");
+		_playerNameKickerLabel.Text = Localize("AVATAR_EDIT_PLAYER_NAME_LABEL");
+		_playerNameInput.PlaceholderText = Localize("AVATAR_EDIT_PLAYER_NAME_PLACEHOLDER");
+		_confirmButton.Text = Localize("AVATAR_EDIT_SAVE");
+
+		foreach (Button button in _optionButtons.Values)
+		{
+			if (GodotObject.IsInstanceValid(button))
+			{
+				button.TooltipText = Localize("AVATAR_EDIT_OPTION_TOOLTIP");
+			}
+		}
+
+		UpdatePlayerNameHint();
+	}
+
+	private string Localize(string key)
+	{
+		return Tr(key).ToString();
+	}
+
+	private string LocalizeFormat(string key, params object[] args)
+	{
+		return string.Format(Localize(key), args);
 	}
 
 	private sealed record AvatarOptionSlot(

@@ -49,7 +49,7 @@ public partial class NetworkManager
 		if (TryReadSteamRoom(lobbyId, out NetworkRoomInfo room)
 			&& !MultiplayerLobbyRules.CanJoinListedRoom(room.Status))
 		{
-			EmitSignal(SignalName.ErrorRaised, "该房间对局进行中，不可加入");
+			EmitSignal(SignalName.ErrorRaised, "MULTIPLAYER_LOBBY_ROOM_IN_PROGRESS");
 			return;
 		}
 
@@ -260,7 +260,7 @@ public partial class NetworkManager
 	{
 		if (!MultiplayerLobbyRules.CanAutoAcceptSteamJoinRequest(_state))
 		{
-			EmitSignal(SignalName.ErrorRaised, "请先离开当前房间或对局，再接受 Steam 邀请");
+			EmitSignal(SignalName.ErrorRaised, "MULTIPLAYER_LOBBY_STEAM_INVITE_BUSY");
 			return;
 		}
 

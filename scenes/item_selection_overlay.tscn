@@ -75,7 +75,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 20
-text = "Select"
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
@@ -90,7 +90,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 1"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option2Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -103,7 +103,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 2"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option3Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -116,7 +116,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 3"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option4Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -129,7 +129,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 4"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option5Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -142,7 +142,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 5"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option6Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -155,7 +155,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 6"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option7Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -168,7 +168,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 7"
+text = ""
 text_overrun_behavior = 3
 
 [node name="Option8Button" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -181,7 +181,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Option 8"
+text = ""
 text_overrun_behavior = 3
 
 [node name="CancelButton" type="Button" parent="SelectionCenter/SelectionPanel/SelectionMargin/SelectionLayout"]
@@ -194,5 +194,5 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-text = "Cancel"
+text = ""
 text_overrun_behavior = 3

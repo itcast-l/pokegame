@@ -84,14 +84,14 @@ modulate = Color(0.92, 0.88, 0.82, 0.78)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_title_font")
 theme_override_font_sizes/font_size = 26
-text = "选择一项强化"
+text = ""
 horizontal_alignment = 1
 
 [node name="SelectionSubtitle" type="Label" parent="Margin/Layout/Header" unique_id=1105060969]
 modulate = Color(0.68, 0.76, 0.84, 0.64)
 layout_mode = 2
 theme_override_font_sizes/font_size = 13
-text = "开局强化"
+text = ""
 horizontal_alignment = 1
 
 [node name="HeaderDivider" type="Control" parent="Margin/Layout/Header" unique_id=1084266456]

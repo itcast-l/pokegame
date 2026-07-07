@@ -463,7 +463,10 @@ public partial class GameBoardScene
 			{
 				preservedTailTableCard.IsFaceUp = true;
 			}
-			RenderTableCards();
+			if (!captureResult.QuestionRewardAnimation.HasValue)
+			{
+				RenderTableCards();
+			}
 			if (collectedCardCount > 0)
 			{
 				RenderPlayerCardPiles();
@@ -496,6 +499,15 @@ public partial class GameBoardScene
 			await ApplyAdventurePostCaptureEffectsAsync(
 				playerIndex,
 				resolvedAdventurePostCaptureEffects ?? captureResult.AdventurePostCaptureEffects,
+				turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+			}
+
+			await MaybeResolveAppliedAdventureQuestionRewardRejudgeAsync(
+				playerIndex,
+				captureResult.QuestionRewardAnimation,
 				turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{

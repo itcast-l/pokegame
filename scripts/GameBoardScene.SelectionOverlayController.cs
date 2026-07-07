@@ -7,6 +7,7 @@ public partial class GameBoardScene
 	{
 		ItemSelection = 0,
 		AdventureUpgrade = 1,
+		QuestionRejudge = 2,
 	}
 
 	private sealed class SelectionOverlaySession

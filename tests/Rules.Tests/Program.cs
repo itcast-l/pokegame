@@ -114,6 +114,9 @@ internal static class Program
 		Run("character avatar visual resources point to existing files", CharacterAvatarVisualResourcesPointToExistingFiles);
 		Run("character avatar display names are localized for every locale", CharacterAvatarDisplayNamesAreLocalizedForEveryLocale);
 		Run("player count localization difficulty rows exist for every locale", PlayerCountLocalizationDifficultyRowsExistForEveryLocale);
+		Run("runtime localization keys exist for every reference", RuntimeLocalizationKeysExistForEveryReference);
+		Run("runtime localization rows cover every supported language", RuntimeLocalizationRowsCoverEverySupportedLanguage);
+		Run("runtime scenes do not expose hardcoded natural language text", RuntimeScenesDoNotExposeHardcodedNaturalLanguageText);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("adventure upgrade popup scene has no embedded image payloads", AdventureUpgradePopupSceneHasNoEmbeddedImagePayloads);
 		Run("adventure upgrade visual catalog exposes 12 processed card visuals", AdventureUpgradeVisualCatalogExposesTwelveProcessedCards);
@@ -2449,6 +2452,97 @@ internal static class Program
 			for (int index = 1; index < row.Count; index++)
 			{
 				True(!string.IsNullOrWhiteSpace(row[index]));
+			}
+		}
+	}
+
+	private static void RuntimeLocalizationKeysExistForEveryReference()
+	{
+		string repoRoot = FindRepositoryRoot();
+		var rowsByKey = ReadLocalizationRowsByKey(Path.Combine(repoRoot, "localization", "ui.csv"), out _);
+		var missing = new List<string>();
+
+		foreach (string relativePath in EnumerateRuntimeLocalizationReferenceFiles(repoRoot))
+		{
+			string absolutePath = Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+			foreach (LocalizationReference reference in FindLocalizationReferences(relativePath, File.ReadAllLines(absolutePath)))
+			{
+				if (!rowsByKey.ContainsKey(reference.Key))
+				{
+					missing.Add($"{reference.Key} ({reference.RelativePath}:{reference.LineNumber})");
+				}
+			}
+		}
+
+		if (missing.Count > 0)
+		{
+			throw new InvalidOperationException("missing runtime localization keys: " + string.Join(", ", missing));
+		}
+	}
+
+	private static void RuntimeLocalizationRowsCoverEverySupportedLanguage()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string localizationPath = Path.Combine(repoRoot, "localization", "ui.csv");
+		var rowsByKey = ReadLocalizationRowsByKey(localizationPath, out List<string> header);
+		List<string> expectedLocales = ReadSupportedLocalePreferences(repoRoot);
+		List<string> actualLocales = header.Skip(1).Select(locale => locale.Trim()).ToList();
+
+		if (expectedLocales.Count != actualLocales.Count)
+		{
+			throw new InvalidOperationException($"expected {expectedLocales.Count} localization locales, got {actualLocales.Count}");
+		}
+
+		for (int index = 0; index < expectedLocales.Count; index++)
+		{
+			if (!string.Equals(expectedLocales[index], actualLocales[index], StringComparison.Ordinal))
+			{
+				throw new InvalidOperationException($"localization header locale mismatch at column {index + 1}: expected {expectedLocales[index]}, got {actualLocales[index]}");
+			}
+		}
+
+		foreach (KeyValuePair<string, List<string>> entry in rowsByKey)
+		{
+			List<string> row = entry.Value;
+			if (row.Count != header.Count)
+			{
+				throw new InvalidOperationException($"localization row {entry.Key} has {row.Count} columns; expected {header.Count}");
+			}
+
+			for (int index = 1; index < row.Count; index++)
+			{
+				if (string.IsNullOrWhiteSpace(row[index]))
+				{
+					throw new InvalidOperationException($"localization row {entry.Key} is missing a value for locale {header[index]}");
+				}
+			}
+		}
+	}
+
+	private static void RuntimeScenesDoNotExposeHardcodedNaturalLanguageText()
+	{
+		string repoRoot = FindRepositoryRoot();
+		foreach (string relativePath in RuntimeHardcodedSceneRelativePaths)
+		{
+			string absolutePath = Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+			True(File.Exists(absolutePath));
+
+			string[] lines = File.ReadAllLines(absolutePath);
+			for (int index = 0; index < lines.Length; index++)
+			{
+				Match match = Regex.Match(lines[index], "^\\s*(?<property>(?:text|placeholder_text|tooltip_text|popup/item_\\d+/text))\\s*=\\s*\"(?<value>[^\"]*)\"$");
+				if (!match.Success)
+				{
+					continue;
+				}
+
+				string value = match.Groups["value"].Value.Trim();
+				if (IsAllowedRuntimeSceneText(value))
+				{
+					continue;
+				}
+
+				throw new InvalidOperationException($"hardcoded runtime scene text in {relativePath}:{index + 1} -> {value}");
 			}
 		}
 	}
@@ -4832,6 +4926,35 @@ internal static class Program
 		return match.Success ? match.Groups[1].Value : string.Empty;
 	}
 
+	private static Dictionary<string, List<string>> ReadLocalizationRowsByKey(string localizationPath, out List<string> header)
+	{
+		True(File.Exists(localizationPath));
+		string[] localizationLines = File.ReadAllLines(localizationPath);
+		True(localizationLines.Length > 1);
+
+		header = ParseCsvLine(localizationLines[0]);
+		True(header.Count > 1);
+
+		var rowsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+		foreach (string line in localizationLines[1..])
+		{
+			if (string.IsNullOrWhiteSpace(line))
+			{
+				continue;
+			}
+
+			List<string> row = ParseCsvLine(line);
+			if (row.Count == 0 || string.IsNullOrWhiteSpace(row[0]))
+			{
+				continue;
+			}
+
+			rowsByKey[row[0].Trim()] = row;
+		}
+
+		return rowsByKey;
+	}
+
 	private static List<string> ParseCsvLine(string line)
 	{
 		var values = new List<string>();
@@ -4882,11 +5005,200 @@ internal static class Program
 		return false;
 	}
 
+	private static List<string> ReadSupportedLocalePreferences(string repoRoot)
+	{
+		string localizationSourcePath = Path.Combine(repoRoot, "scripts", "Localization.cs");
+		True(File.Exists(localizationSourcePath));
+
+		string source = File.ReadAllText(localizationSourcePath);
+		var locales = new List<string>();
+		foreach (Match match in Regex.Matches(
+			source,
+			"^\\s*\\(\"(?<preference>[^\"]+)\",\\s*\"[^\"]+\",\\s*\"[^\"]*\",\\s*\"[^\"]*\"\\),?\\s*$",
+			RegexOptions.Multiline))
+		{
+			string preference = match.Groups["preference"].Value.Trim();
+			if (!string.IsNullOrWhiteSpace(preference) && preference != "auto")
+			{
+				locales.Add(preference);
+			}
+		}
+
+		True(locales.Count > 0);
+		return locales;
+	}
+
+	private static IEnumerable<string> EnumerateRuntimeLocalizationReferenceFiles(string repoRoot)
+	{
+		foreach (string absolutePath in Directory.GetFiles(repoRoot, "*.*", SearchOption.AllDirectories))
+		{
+			string extension = Path.GetExtension(absolutePath);
+			if (extension != ".cs" && extension != ".tscn" && extension != ".tres")
+			{
+				continue;
+			}
+
+			string relativePath = Path.GetRelativePath(repoRoot, absolutePath).Replace('\\', '/');
+			if (IsExcludedRuntimeLocalizationPath(relativePath))
+			{
+				continue;
+			}
+
+			yield return relativePath;
+		}
+	}
+
+	private static bool IsExcludedRuntimeLocalizationPath(string relativePath)
+	{
+		if (relativePath.StartsWith("tests/", StringComparison.Ordinal)
+			|| relativePath.StartsWith("addons/", StringComparison.Ordinal)
+			|| relativePath.StartsWith(".godot/", StringComparison.Ordinal)
+			|| relativePath.StartsWith("outputs/", StringComparison.Ordinal))
+		{
+			return true;
+		}
+
+		if (relativePath.EndsWith(".uid", StringComparison.Ordinal)
+			|| relativePath.EndsWith(".import", StringComparison.Ordinal))
+		{
+			return true;
+		}
+
+		if (relativePath.Contains("gallery", StringComparison.OrdinalIgnoreCase)
+			|| relativePath.Contains("preview", StringComparison.OrdinalIgnoreCase)
+			|| relativePath.Contains("_editor_", StringComparison.OrdinalIgnoreCase))
+		{
+			return true;
+		}
+
+		if (relativePath == "scenes/adventure_suit_upgrade_editor_scene.tscn"
+			|| relativePath == "scenes/upgrade_choice_popup_asset_scene.tscn")
+		{
+			return true;
+		}
+
+		return relativePath.EndsWith(".cs", StringComparison.Ordinal)
+			&& (relativePath.Contains(".Debug", StringComparison.Ordinal)
+				|| relativePath.Contains("DebugRecording", StringComparison.Ordinal));
+	}
+
+	private static IEnumerable<LocalizationReference> FindLocalizationReferences(string relativePath, string[] lines)
+	{
+		for (int index = 0; index < lines.Length; index++)
+		{
+			string line = lines[index];
+			if (relativePath.EndsWith(".cs", StringComparison.Ordinal))
+			{
+				foreach (Match match in Regex.Matches(line, "\\b(?:Localize|localize|Tr)\\(\\s*\"(?<key>[A-Z0-9_]+)\"\\s*\\)"))
+				{
+					string key = match.Groups["key"].Value;
+					if (IsLikelyLocalizationKey(key))
+					{
+						yield return new LocalizationReference(relativePath, index + 1, key);
+					}
+				}
+
+				continue;
+			}
+
+			if (relativePath.EndsWith(".tscn", StringComparison.Ordinal))
+			{
+				foreach (Match match in Regex.Matches(line, "^\\s*(?:text|placeholder_text|tooltip_text|popup/item_\\d+/text)\\s*=\\s*\"(?<key>[^\"]*)\"$"))
+				{
+					string key = match.Groups["key"].Value.Trim();
+					if (IsLikelyLocalizationKey(key))
+					{
+						yield return new LocalizationReference(relativePath, index + 1, key);
+					}
+				}
+
+				continue;
+			}
+
+			foreach (Match match in Regex.Matches(line, "^\\s*[A-Za-z0-9_]*Key\\s*=\\s*\"(?<key>[^\"]*)\"$"))
+			{
+				string key = match.Groups["key"].Value.Trim();
+				if (IsLikelyLocalizationKey(key))
+				{
+					yield return new LocalizationReference(relativePath, index + 1, key);
+				}
+			}
+		}
+	}
+
+	private static bool IsLikelyLocalizationKey(string value)
+	{
+		if (string.IsNullOrWhiteSpace(value) || !value.Contains('_', StringComparison.Ordinal))
+		{
+			return false;
+		}
+
+		foreach (char character in value)
+		{
+			if ((character < 'A' || character > 'Z') && (character < '0' || character > '9') && character != '_')
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static bool IsAllowedRuntimeSceneText(string value)
+	{
+		if (string.IsNullOrWhiteSpace(value) || IsLikelyLocalizationKey(value))
+		{
+			return true;
+		}
+
+		if (Regex.IsMatch(value, "^v\\d+(?:\\.\\d+)*$", RegexOptions.CultureInvariant)
+			|| Regex.IsMatch(value, "^\\d+$", RegexOptions.CultureInvariant)
+			|| Regex.IsMatch(value, "^\\d+%$", RegexOptions.CultureInvariant)
+			|| Regex.IsMatch(value, "^\\d+\\s*x\\s*\\d+$", RegexOptions.CultureInvariant))
+		{
+			return true;
+		}
+
+		if (value is "A" or "B" or "J" or "Q" or "K" or "P" or "Enter" or "Escape" or "Start"
+			or "Up" or "Down" or "Left" or "Right"
+			or "D-Pad Up" or "D-Pad Down" or "D-Pad Left" or "D-Pad Right"
+			or "Deckland" or "Steam" or "LAN")
+		{
+			return true;
+		}
+
+		return !ContainsHanCharacter(value) && !Regex.IsMatch(value, "[A-Za-z]", RegexOptions.CultureInvariant);
+	}
+
 	private static int ReadTresInt(string tresText, string propertyName, int fallback)
 	{
 		Match match = Regex.Match(tresText, $"^{Regex.Escape(propertyName)} = (-?\\d+)$", RegexOptions.Multiline);
 		return match.Success && int.TryParse(match.Groups[1].Value, out int value) ? value : fallback;
 	}
+
+	private static readonly string[] RuntimeHardcodedSceneRelativePaths =
+	{
+		"scenes/main_menu_scene.tscn",
+		"scenes/main_menu_player_count_dialog.tscn",
+		"scenes/main_menu_settings_dialog.tscn",
+		"scenes/main_menu_controls_dialog.tscn",
+		"scenes/main_menu_exit_dialog.tscn",
+		"scenes/main_menu_avatar_entry.tscn",
+		"scenes/character_avatar_edit_scene.tscn",
+		"scenes/avatar_unlock_prompt.tscn",
+		"scenes/multiplayer_lobby_scene.tscn",
+		"scenes/multiplayer_lobby_room_row.tscn",
+		"scenes/multiplayer_lobby_player_row.tscn",
+		"scenes/game_board_result_banner.tscn",
+		"scenes/pause_menu.tscn",
+		"scenes/item_selection_overlay.tscn",
+		"scenes/adventure_avatar_menu_scene.tscn",
+		"scenes/adventure_level_entry.tscn",
+		"scenes/adventure_mode_entry.tscn",
+		"scenes/adventure_upgrade_selection_overlay.tscn",
+	};
+
+	private readonly record struct LocalizationReference(string RelativePath, int LineNumber, string Key);
 
 	private static void AssertFramePatternExists(string repoRoot, string framePattern, int frameCount)
 	{

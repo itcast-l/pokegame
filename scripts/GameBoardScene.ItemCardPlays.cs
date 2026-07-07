@@ -107,7 +107,10 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerCardPiles();
-		RenderTableCards();
+		if (!result.QuestionRewardAnimation.HasValue)
+		{
+			RenderTableCards();
+		}
 		SendQuestionRewardVisualEventIfNeeded(playerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
 		await PlayQuestionCardRewardAnimationAsync(playerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -116,6 +119,15 @@ public partial class GameBoardScene
 		}
 		ApplyAdventureQuestionRewardEffects(playerIndex, result.AdventureQuestionRewardEffects);
 		await ApplyAdventurePostCaptureEffectsAsync(playerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		await MaybeResolveAppliedAdventureQuestionRewardRejudgeAsync(
+			playerIndex,
+			result.QuestionRewardAnimation,
+			turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);

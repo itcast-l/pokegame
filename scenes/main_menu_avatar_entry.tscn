@@ -75,7 +75,7 @@ theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.88)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 16
-text = "玩家"
+text = ""
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
@@ -88,7 +88,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
 focus_mode = 0
-tooltip_text = "修改头像和名字"
+tooltip_text = ""
 flat = true
 theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")

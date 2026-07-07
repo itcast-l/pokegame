@@ -22,6 +22,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private Label _returnToMainMenuLabel = default!;
 	private Label _restartLabel = default!;
 	private Label? _quitLabel;
+	private Label _pauseTitleLabel = default!;
+	private Label _pauseMessageLabel = default!;
 	private Control _restartFrame = default!;
 
 	public Control PauseMenuPanel { get; private set; } = default!;
@@ -39,6 +41,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		ReturnToMainMenuButton = GetNode<Button>("%ReturnToMainMenuButton");
 		RestartButton = GetNode<Button>("%RestartButton");
 		QuitButton = GetNode<Button>("%QuitButton");
+		_pauseTitleLabel = GetNode<Label>("%PauseMenuTitle");
+		_pauseMessageLabel = GetNode<Label>("%PauseMenuMessage");
 		_continueLabel = GetNode<Label>("%ContinueLabel");
 		_returnToMainMenuLabel = GetNode<Label>("%ReturnToMainMenuLabel");
 		_restartLabel = GetNode<Label>("%RestartLabel");
@@ -59,6 +63,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 
 	public void RefreshLocalizedText(Func<string, string> localize, string returnButtonKey = "GAME_RETURN_MAIN_MENU")
 	{
+		_pauseTitleLabel.Text = localize("GAME_PAUSE_TITLE");
+		_pauseMessageLabel.Text = localize("GAME_PAUSE_MESSAGE");
 		_continueLabel.Text = localize("GAME_CONTINUE");
 		_returnToMainMenuLabel.Text = localize(returnButtonKey);
 		_restartLabel.Text = localize("GAME_RESTART_MATCH");

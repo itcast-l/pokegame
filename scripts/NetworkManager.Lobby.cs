@@ -31,7 +31,7 @@ public partial class NetworkManager
 
 		if (!MultiplayerLobbyRules.CanStart(_players, _config.PlayerCount))
 		{
-			EmitSignal(SignalName.ErrorRaised, "All seats must be filled and ready.");
+			EmitSignal(SignalName.ErrorRaised, "MULTIPLAYER_LOBBY_START_REQUIRE_READY");
 			return;
 		}
 

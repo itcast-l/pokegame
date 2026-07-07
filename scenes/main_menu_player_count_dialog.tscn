@@ -181,11 +181,11 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 0
 item_count = 3
-popup/item_0/text = "双人对局"
+popup/item_0/text = "PLAYER_COUNT_2_TITLE"
 popup/item_0/id = 2
-popup/item_1/text = "三人对局"
+popup/item_1/text = "PLAYER_COUNT_3_TITLE"
 popup/item_1/id = 3
-popup/item_2/text = "四人对局"
+popup/item_2/text = "PLAYER_COUNT_4_TITLE"
 popup/item_2/id = 4
 
 [node name="DifficultyRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=164235182]
@@ -247,11 +247,11 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 1
 item_count = 3
-popup/item_0/text = "低"
+popup/item_0/text = "PLAYER_COUNT_DIFFICULTY_LOW"
 popup/item_0/id = 0
-popup/item_1/text = "中"
+popup/item_1/text = "PLAYER_COUNT_DIFFICULTY_MEDIUM"
 popup/item_1/id = 1
-popup/item_2/text = "高"
+popup/item_2/text = "PLAYER_COUNT_DIFFICULTY_HIGH"
 popup/item_2/id = 2
 
 [node name="ItemModeRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=1463530843]
@@ -313,9 +313,9 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 0
 item_count = 2
-popup/item_0/text = "已开启"
+popup/item_0/text = "PLAYER_COUNT_ITEM_MODE_ON"
 popup/item_0/id = 1
-popup/item_1/text = "已关闭"
+popup/item_1/text = "PLAYER_COUNT_ITEM_MODE_OFF"
 popup/item_1/id = 0
 
 [node name="WinningScoreRowPanel" type="PanelContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=175710680]
@@ -377,11 +377,11 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 selected = 1
 item_count = 3
-popup/item_0/text = "50 分"
+popup/item_0/text = "50"
 popup/item_0/id = 50
-popup/item_1/text = "100 分"
+popup/item_1/text = "100"
 popup/item_1/id = 100
-popup/item_2/text = "200 分"
+popup/item_2/text = "200"
 popup/item_2/id = 200
 
 [node name="StartGameFrame" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel" unique_id=907826060]

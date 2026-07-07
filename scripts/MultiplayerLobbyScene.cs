@@ -4,6 +4,17 @@ using Godot;
 public partial class MultiplayerLobbyScene : Control
 {
 	private const string MainMenuScenePath = "res://scenes/main_menu_scene.tscn";
+	private const string TitleLabelPath = "SafeArea/MainLayout/Header/Title";
+	private const string ModeTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/ModeTitle";
+	private const string RoomTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomTitle";
+	private const string PlayerTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerTitle";
+	private const string SteamNoteLabelPath = "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel";
+
+	private Label _titleLabel = default!;
+	private Label _modeTitleLabel = default!;
+	private Label _roomTitleLabel = default!;
+	private Label _playerTitleLabel = default!;
+	private Label _steamNoteLabel = default!;
 
 	[Export]
 	public PackedScene RoomRowScene { get; set; } = default!;
@@ -92,15 +103,28 @@ public partial class MultiplayerLobbyScene : Control
 		}
 
 		_network = EnsureNetworkManager();
+		BindStaticLabels();
 		InitializeSceneDefaults();
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(PlayerCountOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(ItemModeOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(WinningScoreOption);
 		ConnectButtonSignals();
 		ConnectNetworkSignals();
+		RefreshLocalizedText();
 		RefreshState((int)_network.State);
 		RefreshRooms(_network.GetRoomsVariant());
 		RefreshPlayers(_network.GetPlayersVariant());
+	}
+
+	public override void _Notification(int what)
+	{
+		if (what == NotificationTranslationChanged && IsNodeReady())
+		{
+			RefreshLocalizedText();
+			RefreshState((int)_network.State);
+			RefreshRooms(_network.GetRoomsVariant());
+			RefreshPlayers(_network.GetPlayersVariant());
+		}
 	}
 
 	public override void _ExitTree()
@@ -173,10 +197,20 @@ public partial class MultiplayerLobbyScene : Control
 		return networkManager;
 	}
 
+	private void BindStaticLabels()
+	{
+		_titleLabel = GetNode<Label>(TitleLabelPath);
+		_modeTitleLabel = GetNode<Label>(ModeTitleLabelPath);
+		_roomTitleLabel = GetNode<Label>(RoomTitleLabelPath);
+		_playerTitleLabel = GetNode<Label>(PlayerTitleLabelPath);
+		_steamNoteLabel = GetNode<Label>(SteamNoteLabelPath);
+	}
+
 	private void InitializeSceneDefaults()
 	{
-		RoomNameInput.Text = RoomNameRules.Normalize(RoomNameInput.Text);
-		SteamStatusLabel.Text = _network.SteamAvailable ? "Steam 可用" : "Steam 不可用";
+		string roomName = RoomNameInput.Text.Trim();
+		RoomNameInput.Text = RoomNameRules.IsValid(roomName) ? roomName : string.Empty;
+		RoomPasswordInput.Text = RoomPasswordRules.Normalize(RoomPasswordInput.Text);
 	}
 
 	private void ConnectButtonSignals()
@@ -247,7 +281,7 @@ public partial class MultiplayerLobbyScene : Control
 			return true;
 		}
 
-		ShowToast($"房间名仅支持中英文、数字、空格、-、_，最多 {RoomNameRules.MaxLength} 个字");
+		ShowToast(LocalizeFormat("MULTIPLAYER_LOBBY_INVALID_ROOM_NAME", RoomNameRules.MaxLength));
 		RoomNameInput.GrabFocus();
 		return false;
 	}
@@ -288,7 +322,7 @@ public partial class MultiplayerLobbyScene : Control
 	{
 		_localReady = !_localReady;
 		_network.SetLocalReady(_localReady);
-		ReadyButton.Text = _localReady ? "取消准备" : "准备";
+		UpdateReadyButtonText();
 	}
 
 	private void StartMatch()
@@ -304,8 +338,10 @@ public partial class MultiplayerLobbyScene : Control
 	private void RefreshState(int stateValue)
 	{
 		var state = (NetworkSessionState)stateValue;
-		StatusLabel.Text = state.ToString();
-		SteamStatusLabel.Text = _network.SteamAvailable ? "Steam 可用" : "Steam 不可用";
+		StatusLabel.Text = Localize(GetNetworkStateLocalizationKey(state));
+		SteamStatusLabel.Text = _network.SteamAvailable
+			? Localize("MULTIPLAYER_LOBBY_STEAM_AVAILABLE")
+			: Localize("MULTIPLAYER_LOBBY_STEAM_UNAVAILABLE");
 
 		bool steamEnabled = _network.SteamAvailable;
 		bool canConfigureSession = state is NetworkSessionState.Idle or NetworkSessionState.Searching or NetworkSessionState.Failed;
@@ -328,8 +364,8 @@ public partial class MultiplayerLobbyScene : Control
 		ReadyButton.Disabled = state != NetworkSessionState.Lobby;
 		LeaveSessionButton.Disabled = state is NetworkSessionState.Idle or NetworkSessionState.Searching or NetworkSessionState.Failed;
 		LanHostInfoLabel.Text = state == NetworkSessionState.Lobby && _network.CurrentConfig.Transport == NetworkTransport.Lan
-			? $"本机局域网地址: {_network.GetLocalLanAddressSummary()}"
-			: "本机局域网地址将在建房后显示";
+			? LocalizeFormat("MULTIPLAYER_LOBBY_LAN_ADDRESS_FORMAT", _network.GetLocalLanAddressSummary())
+			: Localize("MULTIPLAYER_LOBBY_LAN_ADDRESS_PENDING");
 		UpdateStartButtonState();
 	}
 
@@ -361,7 +397,7 @@ public partial class MultiplayerLobbyScene : Control
 		if (players.Count == 0)
 		{
 			_localReady = false;
-			ReadyButton.Text = "准备";
+			UpdateReadyButtonText();
 			UpdateStartButtonState();
 			return;
 		}
@@ -376,7 +412,7 @@ public partial class MultiplayerLobbyScene : Control
 			if (ReadDictionaryBool(player, "is_local", false))
 			{
 				_localReady = ReadDictionaryBool(player, "is_ready", false);
-				ReadyButton.Text = _localReady ? "取消准备" : "准备";
+				UpdateReadyButtonText();
 			}
 		}
 
@@ -412,14 +448,14 @@ public partial class MultiplayerLobbyScene : Control
 		string status = ReadDictionaryString(room, "status", NetworkSessionState.Idle.ToString());
 		if (!MultiplayerLobbyRules.CanJoinListedRoom(status))
 		{
-			ShowToast("该房间对局进行中，不可加入");
+			ShowToast("MULTIPLAYER_LOBBY_ROOM_IN_PROGRESS");
 			return;
 		}
 
 		bool hasPassword = ReadDictionaryBool(room, "has_password", false);
 		if (hasPassword && string.IsNullOrEmpty(SelectedRoomPassword()))
 		{
-			ShowToast("该房间已加锁，请先输入房间密码");
+			ShowToast("MULTIPLAYER_LOBBY_ROOM_PASSWORD_REQUIRED");
 			RoomPasswordInput.GrabFocus();
 			return;
 		}
@@ -498,7 +534,7 @@ public partial class MultiplayerLobbyScene : Control
 	private void ShowToast(string message)
 	{
 		_toastTween?.Kill();
-		ToastLabel.Text = message;
+		ToastLabel.Text = LooksLikeLocalizationKey(message) ? Localize(message) : message;
 		ToastLabel.Visible = true;
 		_toastTween = CreateTween();
 		_toastTween.TweenInterval(3.0);
@@ -531,5 +567,110 @@ public partial class MultiplayerLobbyScene : Control
 	private static bool ReadDictionaryBool(Godot.Collections.Dictionary dictionary, string key, bool fallback)
 	{
 		return dictionary.TryGetValue(key, out Variant value) ? value.AsBool() : fallback;
+	}
+
+	private void RefreshLocalizedText()
+	{
+		_titleLabel.Text = Localize("MENU_MULTIPLAYER");
+		_modeTitleLabel.Text = Localize("MULTIPLAYER_LOBBY_ROOM_SETTINGS");
+		_roomTitleLabel.Text = Localize("MULTIPLAYER_LOBBY_ROOM_LIST_TITLE");
+		_playerTitleLabel.Text = Localize("MULTIPLAYER_LOBBY_PLAYER_LIST_TITLE");
+		_steamNoteLabel.Text = Localize("MULTIPLAYER_LOBBY_STEAM_NOTE");
+		RoomNameInput.PlaceholderText = Localize("MULTIPLAYER_LOBBY_ROOM_NAME_PLACEHOLDER");
+		RoomPasswordInput.PlaceholderText = Localize("MULTIPLAYER_LOBBY_ROOM_PASSWORD_PLACEHOLDER");
+		BackButton.Text = Localize("ADVENTURE_BACK");
+		LanHostButton.Text = Localize("MULTIPLAYER_LOBBY_HOST_LAN");
+		LanSearchButton.Text = Localize("MULTIPLAYER_LOBBY_SEARCH_LAN");
+		SteamHostButton.Text = Localize("MULTIPLAYER_LOBBY_HOST_STEAM");
+		SteamRefreshButton.Text = Localize("MULTIPLAYER_LOBBY_REFRESH_STEAM");
+		EmptyRoomsLabel.Text = Localize("MULTIPLAYER_LOBBY_EMPTY_ROOMS");
+		EmptyPlayersLabel.Text = Localize("MULTIPLAYER_LOBBY_EMPTY_PLAYERS");
+		StartButton.Text = Localize("PLAYER_COUNT_START_GAME");
+		LeaveSessionButton.Text = Localize("MULTIPLAYER_LOBBY_LEAVE");
+		UpdateReadyButtonText();
+		RefreshOptionTexts();
+	}
+
+	private void RefreshOptionTexts()
+	{
+		for (int index = 0; index < PlayerCountOption.ItemCount; index++)
+		{
+			PlayerCountOption.SetItemText(index, GetPlayerCountOptionText(PlayerCountOption.GetItemId(index)));
+		}
+
+		for (int index = 0; index < ItemModeOption.ItemCount; index++)
+		{
+			int itemId = ItemModeOption.GetItemId(index);
+			ItemModeOption.SetItemText(index, Localize(itemId == 1 ? "PLAYER_COUNT_ITEM_MODE_ON" : "PLAYER_COUNT_ITEM_MODE_OFF"));
+		}
+
+		for (int index = 0; index < WinningScoreOption.ItemCount; index++)
+		{
+			WinningScoreOption.SetItemText(index, LocalizeFormat("PLAYER_COUNT_WINNING_SCORE_OPTION", WinningScoreOption.GetItemId(index)));
+		}
+	}
+
+	private void UpdateReadyButtonText()
+	{
+		ReadyButton.Text = Localize(_localReady ? "MULTIPLAYER_LOBBY_CANCEL_READY" : "MULTIPLAYER_LOBBY_READY");
+	}
+
+	private string GetPlayerCountOptionText(int playerCount)
+	{
+		return playerCount switch
+		{
+			2 => Localize("PLAYER_COUNT_2_TITLE"),
+			3 => Localize("PLAYER_COUNT_3_TITLE"),
+			4 => Localize("PLAYER_COUNT_4_TITLE"),
+			_ => playerCount.ToString(),
+		};
+	}
+
+	private string Localize(string key)
+	{
+		string text = Tr(key).ToString();
+		return text == key ? key : text;
+	}
+
+	private string LocalizeFormat(string key, params object[] args)
+	{
+		return string.Format(Localize(key), args);
+	}
+
+	private static bool LooksLikeLocalizationKey(string value)
+	{
+		if (string.IsNullOrWhiteSpace(value) || !value.Contains('_', System.StringComparison.Ordinal))
+		{
+			return false;
+		}
+
+		for (int index = 0; index < value.Length; index++)
+		{
+			char character = value[index];
+			if ((character < 'A' || character > 'Z') && (character < '0' || character > '9') && character != '_')
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static string GetNetworkStateLocalizationKey(NetworkSessionState state)
+	{
+		return state switch
+		{
+			NetworkSessionState.Idle => "NETWORK_STATE_IDLE",
+			NetworkSessionState.Searching => "NETWORK_STATE_SEARCHING",
+			NetworkSessionState.Hosting => "NETWORK_STATE_HOSTING",
+			NetworkSessionState.Joining => "NETWORK_STATE_JOINING",
+			NetworkSessionState.Lobby => "NETWORK_STATE_LOBBY",
+			NetworkSessionState.Starting => "NETWORK_STATE_STARTING",
+			NetworkSessionState.LoadingScene => "NETWORK_STATE_LOADING_SCENE",
+			NetworkSessionState.InGame => "NETWORK_STATE_IN_GAME",
+			NetworkSessionState.Reconnecting => "NETWORK_STATE_RECONNECTING",
+			NetworkSessionState.Failed => "NETWORK_STATE_FAILED",
+			_ => "NETWORK_STATE_IDLE",
+		};
 	}
 }

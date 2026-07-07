@@ -303,7 +303,10 @@ public partial class GameBoardScene
 				itemGlobalPosition ?? Vector2.Zero,
 				turnSequenceGeneration)) with { CompletesTurn = false };
 			RenderPlayerCardPiles();
-			RenderTableCards();
+			if (!result.QuestionRewardAnimation.HasValue)
+			{
+				RenderTableCards();
+			}
 			SendQuestionRewardVisualEventIfNeeded(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
 			await PlayQuestionCardRewardAnimationAsync(ownerPlayerIndex, result.QuestionRewardAnimation, turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
@@ -314,6 +317,17 @@ public partial class GameBoardScene
 			}
 			ApplyAdventureQuestionRewardEffects(ownerPlayerIndex, result.AdventureQuestionRewardEffects);
 			await ApplyAdventurePostCaptureEffectsAsync(ownerPlayerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				_isProcessingCardPlay = false;
+				RenderPlayerHands();
+				return;
+			}
+
+			await MaybeResolveAppliedAdventureQuestionRewardRejudgeAsync(
+				ownerPlayerIndex,
+				result.QuestionRewardAnimation,
+				turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				_isProcessingCardPlay = false;

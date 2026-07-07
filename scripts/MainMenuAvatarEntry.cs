@@ -24,6 +24,14 @@ public partial class MainMenuAvatarEntry : Control
 		ApplyPlayerName();
 	}
 
+	public override void _Notification(int what)
+	{
+		if (what == NotificationTranslationChanged && IsNodeReady())
+		{
+			ApplyPlayerName();
+		}
+	}
+
 	public void SetAvatar(CharacterAvatarDefinition avatarDefinition)
 	{
 		_avatarDefinition = avatarDefinition;
@@ -51,12 +59,18 @@ public partial class MainMenuAvatarEntry : Control
 	private void ApplyPlayerName()
 	{
 		_nameLabel.Text = _playerName;
-		_button.TooltipText = $"修改头像和名字：{_playerName}";
+		_button.TooltipText = string.Format(Localize("MAIN_MENU_AVATAR_TOOLTIP"), _playerName);
 	}
 
 	private void OnPressed()
 	{
 		_avatar.PlayScore();
 		EmitSignal(SignalName.AvatarPressed);
+	}
+
+	private string Localize(string key)
+	{
+		string text = Tr(key).ToString();
+		return text == key ? key : text;
 	}
 }

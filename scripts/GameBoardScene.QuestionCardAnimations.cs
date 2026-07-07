@@ -53,6 +53,7 @@ public partial class GameBoardScene
 			CanvasItem.TextureFilterEnum.Nearest);
 		card.Position = GetItemCardVisualPosition(QuestionMarkItemCardId);
 		animationRoot.GlobalPosition = reward.StartGlobalPosition;
+		RenderTableCards();
 
 		try
 		{

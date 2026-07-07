@@ -36,6 +36,8 @@ public partial class GameBoardScene
 		_adventureEnemyNextBaseCardFacesUp = false;
 		_adventureEnemyNextCardInsertMode = AdventureEnemyNextCardInsertMode.None;
 		_adventureEnemyNextCaptureDamageDelta = 0;
+		_debugQuestionRewardGrantCount = 0;
+		_debugLastQuestionRewardItemCardId = string.Empty;
 		_pendingItemAttachmentRewards.Clear();
 		_hiddenHandDisplaySlots.Clear();
 		_mantaRayTideShiftCheckedThisTurn = false;

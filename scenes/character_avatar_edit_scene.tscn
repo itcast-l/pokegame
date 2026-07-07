@@ -234,7 +234,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
 theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
-text = "返回"
+text = ""
 
 [node name="Title" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout" unique_id=1020255827]
 layout_mode = 2
@@ -303,13 +303,13 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.92, 0.58, 0.92)
 theme_override_font_sizes/font_size = 13
-text = "当前头像"
+text = ""
 
 [node name="PlayerNameKicker" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.92, 0.58, 0.92)
 theme_override_font_sizes/font_size = 13
-text = "玩家名字"
+text = ""
 
 [node name="PlayerNameInput" type="LineEdit" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
 custom_minimum_size = Vector2(260, 38)
@@ -323,7 +323,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_name_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_name_input_focus")
 theme_override_styles/read_only = SubResource("StyleBoxFlat_name_input")
-placeholder_text = "输入名字"
+placeholder_text = ""
 max_length = 12
 clear_button_enabled = true
 
@@ -331,7 +331,7 @@ clear_button_enabled = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 1, 0.92, 0.76)
 theme_override_font_sizes/font_size = 12
-text = "仅支持中英文，最多 12 个字"
+text = ""
 
 [node name="PreviewSpacer" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
 layout_mode = 2
@@ -350,7 +350,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_confirm_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_confirm_button_hover")
 theme_override_styles/hover = SubResource("StyleBoxFlat_confirm_button_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_confirm_button_hover")
-text = "保存"
+text = ""
 
 [node name="GridScroll" type="ScrollContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=988066240]
 custom_minimum_size = Vector2(0, 230)

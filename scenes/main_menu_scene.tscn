@@ -224,7 +224,7 @@ theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 18
-text = "Card Battler"
+text = ""
 horizontal_alignment = 1
 
 [node name="TopSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=26882160]

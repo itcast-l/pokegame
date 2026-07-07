@@ -6,6 +6,7 @@ const VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 const OVERFLOW_TOLERANCE := 2.0
 const VIEWPORT_TOLERANCE := 1.0
 const ISSUE_PRINT_LIMIT := 400
+const SCENE_ALLOWLIST_ENV := "LOCALIZATION_LAYOUT_SCENE_ALLOWLIST"
 
 var _translations := {}
 var _translation_keys := {}
@@ -13,6 +14,7 @@ var _locales: PackedStringArray = []
 var _scenes: PackedStringArray = []
 var _issues: Array[String] = []
 var _warnings: Array[String] = []
+var _scene_allowlist := {}
 
 
 func _initialize() -> void:
@@ -24,6 +26,7 @@ func _run() -> void:
 	await process_frame
 
 	_load_translations()
+	_load_scene_allowlist()
 	_collect_scenes(SCENE_ROOT)
 	_scenes.sort()
 
@@ -128,9 +131,50 @@ func _collect_scenes(path: String) -> void:
 		var child_path := "%s/%s" % [path, entry]
 		if dir.current_is_dir():
 			_collect_scenes(child_path)
-		elif entry.ends_with(".tscn"):
+		elif entry.ends_with(".tscn") and (_scene_allowlist.is_empty() or _scene_allowlist.has(child_path)):
 			_scenes.append(child_path)
 	dir.list_dir_end()
+
+
+func _load_scene_allowlist() -> void:
+	var raw_allowlist := OS.get_environment(SCENE_ALLOWLIST_ENV).strip_edges()
+	if raw_allowlist.is_empty():
+		return
+
+	for entry in raw_allowlist.split(";", false):
+		var scene_path := String(entry).strip_edges()
+		if not scene_path.is_empty():
+			_scene_allowlist[scene_path] = true
+
+
+func _prepare_scene_for_audit(scene_path: String, node: Node) -> void:
+	if scene_path.ends_with("multiplayer_lobby_room_row.tscn") and node.has_method("Configure") and node is Control:
+		var sample_room := {
+			"room_name": "Sample Room",
+			"host_name": "Host",
+			"address": "192.168.1.20",
+			"transport": "Lan",
+			"status": "Lobby",
+			"player_count": 2,
+			"winning_score": 100,
+			"item_mode": true,
+			"has_password": false,
+		}
+		(node as Control).size = Vector2(420.0, 76.0)
+		node.call("Configure", sample_room)
+		return
+
+	if scene_path.ends_with("multiplayer_lobby_player_row.tscn") and node.has_method("Configure") and node is Control:
+		var sample_player := {
+			"seat_index": 0,
+			"display_name": "Player",
+			"is_host": true,
+			"is_local": true,
+			"is_ready": true,
+			"is_connected": true,
+		}
+		(node as Control).size = Vector2(420.0, 40.0)
+		node.call("Configure", sample_player)
 
 
 func _audit_scene(scene_path: String) -> void:
@@ -145,6 +189,9 @@ func _audit_scene(scene_path: String) -> void:
 		return
 
 	root.add_child(node)
+	await process_frame
+	await process_frame
+	_prepare_scene_for_audit(scene_path, node)
 	await process_frame
 	await process_frame
 

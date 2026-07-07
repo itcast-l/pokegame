@@ -23,10 +23,10 @@ public partial class AdventureUpgradeChoiceArt : Control
 	private readonly StyleBoxFlat _highlightStyle = new();
 	private readonly StyleBoxFlat _descriptionWellStyle = new();
 	private const float DescriptionLineSpacing = 0.25f;
-	private const int MaxDescriptionFontSize = 16;
-	private const int MinDescriptionFontSize = 11;
+	private const int MaxDescriptionFontSize = 15;
+	private const int MinDescriptionFontSize = 10;
 	private const float MaxCardAspectRatio = 0.6f;
-	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.115f, 0.758f, 0.77f, 0.152f);
+	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.115f, 0.685f, 0.77f, 0.19f);
 
 	public float HighlightAmount
 	{

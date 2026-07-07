@@ -9,6 +9,8 @@ public partial class GameBoardScene
 	private bool _debugForceNextPendingHandLimitDiscardHeuristicFailure;
 	private bool _debugForceNextAdventureUpgradeOverlayDisplayFailure;
 	private double _debugNetworkVisualPlaybackDelaySeconds;
+	private int _debugQuestionRewardGrantCount;
+	private string _debugLastQuestionRewardItemCardId = string.Empty;
 
 	public bool DebugStartPendingHandLimitDiscardForSeat(int ownerPlayerIndex)
 	{
@@ -407,6 +409,21 @@ public partial class GameBoardScene
 			.GetResult();
 	}
 
+	public string DebugResolveAdventureQuestionRewardRejudgeWithChoice(string itemCardId, bool rerollReward)
+	{
+		if (string.IsNullOrWhiteSpace(itemCardId))
+		{
+			return string.Empty;
+		}
+
+		return MaybeRejudgeQuestionRewardItemCardIdAsync(
+			itemCardId.Trim(),
+			MainPlayerIndex,
+			rerollReward ? AdventureQuestionRejudgeChoice.Reroll : AdventureQuestionRejudgeChoice.Keep)
+			.GetAwaiter()
+			.GetResult();
+	}
+
 	public bool DebugHasAdventureQuestionRejudgeUsed()
 	{
 		return _adventureQuestionRejudgeUsedThisBattle;
@@ -458,6 +475,26 @@ public partial class GameBoardScene
 	public int DebugGetTotalHandCardCountForPlayer(int playerIndex)
 	{
 		return GetTotalHandCardCount(playerIndex);
+	}
+
+	public int DebugGetTotalItemHandCardCountForPlayer(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+		{
+			return 0;
+		}
+
+		return _playerItemHands[playerIndex].Count;
+	}
+
+	public int DebugGetQuestionRewardGrantCount()
+	{
+		return _debugQuestionRewardGrantCount;
+	}
+
+	public string DebugGetLastQuestionRewardItemCardId()
+	{
+		return _debugLastQuestionRewardItemCardId;
 	}
 
 	public Vector2 DebugGetCardPileCaptureTargetGlobalPosition(int playerIndex)
@@ -575,6 +612,18 @@ public partial class GameBoardScene
 			new("spades", "uncommon", "示例强化三。"),
 		};
 		return ShowAdventureUpgradeSelectionOverlay(options);
+	}
+
+	public bool DebugShowAdventureQuestionRejudgeOverlaySample()
+	{
+		ItemCard? rewardItem = CreateItemCard(ItemCardCatalog.OvertimeItemCardId)
+			?? CreateItemCard(ItemCardCatalog.BombItemCardId);
+		if (!rewardItem.HasValue)
+		{
+			return false;
+		}
+
+		return ShowAdventureQuestionRejudgeOverlay(rewardItem.Value, (_, _) => { });
 	}
 
 	public int DebugGetAdventureUpgradeOptionCount()
