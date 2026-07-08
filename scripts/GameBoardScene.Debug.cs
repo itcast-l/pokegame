@@ -623,7 +623,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return ShowAdventureQuestionRejudgeOverlay(rewardItem.Value, (_, _) => { });
+		return ShowAdventureQuestionRejudgeOverlay(rewardItem.Value, (_, _) => DisposeActiveSelectionOverlay());
 	}
 
 	public int DebugGetAdventureUpgradeOptionCount()

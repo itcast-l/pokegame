@@ -41,6 +41,9 @@ func _run() -> void:
 		_fail("Continue should reopen the saved adventure stage instead of the highlighted selection")
 		return
 
+	if not _assert_no_debug_setup(continued_board, "Continue"):
+		return
+
 	if not await _wait_for_actionable_state(continued_board):
 		return
 
@@ -49,6 +52,32 @@ func _run() -> void:
 		return
 
 	continued_board.queue_free()
+	await process_frame
+	await process_frame
+
+	var saved_avatar_restart_menu := await _instantiate_menu(SAVED_RUN_AVATAR_ID)
+	if _failed or saved_avatar_restart_menu == null:
+		return
+
+	if not await _open_resume_dialog(saved_avatar_restart_menu):
+		return
+
+	if not bool(saved_avatar_restart_menu.call("DebugSelectAdventureRunResumeRestart")):
+		_fail("Failed to select Restart on the saved-avatar adventure run resume dialog")
+		return
+
+	var saved_avatar_restarted_board := await _wait_for_board_scene()
+	if _failed or saved_avatar_restarted_board == null:
+		return
+
+	if String(saved_avatar_restarted_board.get("adventure_enemy_avatar_id")) != SAVED_RUN_AVATAR_ID:
+		_fail("Restart should use the currently highlighted saved avatar when it stays selected")
+		return
+
+	if not _assert_no_debug_setup(saved_avatar_restarted_board, "Restart on saved avatar"):
+		return
+
+	saved_avatar_restarted_board.queue_free()
 	await process_frame
 	await process_frame
 
@@ -69,6 +98,9 @@ func _run() -> void:
 
 	if String(restarted_board.get("adventure_enemy_avatar_id")) != RESTART_TARGET_AVATAR_ID:
 		_fail("Restart should start from the currently highlighted adventure selection")
+		return
+
+	if not _assert_no_debug_setup(restarted_board, "Restart"):
 		return
 
 	if not await _wait_for_actionable_state(restarted_board):
@@ -240,6 +272,15 @@ func _wait_for_actionable_state(board: Node) -> bool:
 
 	_fail("Timed out waiting for the adventure board to become actionable")
 	return false
+
+
+func _assert_no_debug_setup(board: Node, scenario: String) -> bool:
+	var setup_id := String(board.get("debug_recording_setup_id"))
+	if not setup_id.is_empty():
+		_fail("%s should not inject debug recording setup, got %s" % [scenario, setup_id])
+		return false
+
+	return true
 
 
 func _fail(message: String) -> void:

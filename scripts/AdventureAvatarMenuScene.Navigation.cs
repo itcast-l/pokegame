@@ -61,7 +61,6 @@ public partial class AdventureAvatarMenuScene
 			gameBoard.Set("solo_mode", true);
 			gameBoard.Set("adventure_mode", true);
 			gameBoard.Set("adventure_enemy_avatar_id", selectedAvatarId);
-			ApplyTemporaryAdventureDebugSetup(gameBoard, selectedAvatarId);
 			Node? currentScene = GetTree().CurrentScene;
 			GetTree().Root.AddChild(gameBoard);
 			GetTree().CurrentScene = gameBoard;
