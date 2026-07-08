@@ -13,8 +13,7 @@ public partial class GameBoardScene
 			_networkAiBlockedItem = NetworkAiBlockedItemState.None;
 		}
 
-		UpdateBorrowTideTurnTransition(previousTurnPlayerIndex, nextTurnPlayerIndex);
-		_currentTurnPlayerIndex = nextTurnPlayerIndex;
+			_currentTurnPlayerIndex = nextTurnPlayerIndex;
 		if (nextTurnPlayerIndex == MainPlayerIndex && previousTurnPlayerIndex != MainPlayerIndex)
 		{
 			_adventureMainPlayerSuccessfulCapturesThisTurn = 0;

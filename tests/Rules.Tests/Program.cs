@@ -19,6 +19,8 @@ internal static class Program
 		Run("card play resolver ignores buried matches", CardPlayResolverIgnoresBuriedMatches);
 		Run("card play resolver captures table for collect card", CardPlayResolverCapturesTableForCollectCard);
 		Run("card play resolver uses alternate rank for borrow tide match", CardPlayResolverUsesAlternateRankForBorrowTideMatch);
+		Run("borrow tide only grants alternate ranks to the enchanted card", BorrowTideOnlyGrantsAlternateRanksToTheEnchantedCard);
+		Run("borrow tide only counts as used when alternate rank matched", BorrowTideOnlyCountsAsUsedWhenAlternateRankMatched);
 		Run("card play resolver inserts miss at table start for reverse flow anchor", CardPlayResolverInsertsMissAtTableStartForReverseFlowAnchor);
 		Run("card play resolver uses first matching suit for suit collect attachment", CardPlayResolverUsesFirstMatchingSuitForSuitCollectAttachment);
 		Run("card play resolver falls back to rank when suit collect has no suit match", CardPlayResolverFallsBackToRankWhenSuitCollectHasNoSuitMatch);
@@ -40,6 +42,8 @@ internal static class Program
 		Run("adventure upgrade run state persists effect counters and health", AdventureUpgradeRunStatePersistsEffectCountersAndHealth);
 		Run("adventure question reward side effects track count permanent bonus and final double", AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble);
 		Run("adventure question reward support upgrades add heal draw and one time rejudge access", AdventureQuestionRewardSupportUpgradesAddHealDrawAndOneTimeRejudgeAccess);
+		Run("question reward table render only waits for local hand player animation", QuestionRewardTableRenderOnlyWaitsForLocalHandPlayerAnimation);
+		Run("adventure question reward direct damage reuses player attack animation", AdventureQuestionRewardDirectDamageReusesPlayerAttackAnimation);
 		Run("adventure upgrade acquire applies immediate max health heal and draw bonuses", AdventureUpgradeAcquireAppliesImmediateMaxHealthHealAndDrawBonuses);
 		Run("adventure battle start draw bonuses stack across acquired heart upgrades", AdventureBattleStartDrawBonusesStackAcrossAcquiredHeartUpgrades);
 		Run("adventure healing overflow increases max health every four overflow", AdventureHealingOverflowIncreasesMaxHealthEveryFourOverflow);
@@ -50,7 +54,9 @@ internal static class Program
 		Run("adventure capture damage consumes carry bonus and re-arms high return bonus", AdventureCaptureDamageConsumesCarryBonusAndReArmsHighReturnBonus);
 		Run("adventure capture damage applies first capture pressure once per battle", AdventureCaptureDamageAppliesFirstCapturePressureOncePerBattle);
 		Run("adventure capture damage applies multi card premium and top prize repeat", AdventureCaptureDamageAppliesMultiCardPremiumAndTopPrizeRepeat);
-		Run("adventure capture damage adds full payout from raw scoring cards", AdventureCaptureDamageAddsFullPayoutFromRawScoringCards);
+		Run("adventure capture damage does not apply full payout below six scoring cards", AdventureCaptureDamageDoesNotApplyFullPayoutBelowSixScoringCards);
+		Run("adventure capture damage doubles full payout at six scoring cards after final additions", AdventureCaptureDamageDoublesFullPayoutAtSixScoringCardsAfterFinalAdditions);
+		Run("adventure capture damage stacks full payout with final double before high return bonus", AdventureCaptureDamageStacksFullPayoutWithFinalDoubleBeforeHighReturnBonus);
 		Run("adventure capture damage adds bounty amplify when reward question is captured", AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured);
 		Run("adventure capture damage adds question echo point bonus per scoring card", AdventureCaptureDamageAddsQuestionEchoPointBonusPerScoringCard);
 		Run("adventure post capture heal triggers after six damage", AdventurePostCaptureHealTriggersAfterSixDamage);
@@ -342,6 +348,42 @@ internal static class Program
 		Equal("7", plan.EffectiveRank);
 		True(plan.MatchedTableCardFlipped);
 		Equal(2, plan.TableInsertIndex);
+	}
+
+	private static void BorrowTideOnlyGrantsAlternateRanksToTheEnchantedCard()
+	{
+		IReadOnlyList<string> noEffectRanks = BorrowTideRules.GetAlternateRanks(
+			cardHasBorrowTideEffect: false,
+			playedRank: "8");
+		Equal(0, noEffectRanks.Count);
+
+		IReadOnlyList<string> enchantedRanks = BorrowTideRules.GetAlternateRanks(
+			cardHasBorrowTideEffect: true,
+			playedRank: "8");
+		Equal(2, enchantedRanks.Count);
+		Equal("7", enchantedRanks[0]);
+		Equal("9", enchantedRanks[1]);
+
+		IReadOnlyList<string> nonNumericRanks = BorrowTideRules.GetAlternateRanks(
+			cardHasBorrowTideEffect: true,
+			playedRank: "Q");
+		Equal(0, nonNumericRanks.Count);
+	}
+
+	private static void BorrowTideOnlyCountsAsUsedWhenAlternateRankMatched()
+	{
+		False(BorrowTideRules.DidUseBorrowTide(
+			cardHasBorrowTideEffect: false,
+			playedRank: "8",
+			effectiveRank: "7"));
+		False(BorrowTideRules.DidUseBorrowTide(
+			cardHasBorrowTideEffect: true,
+			playedRank: "8",
+			effectiveRank: "8"));
+		True(BorrowTideRules.DidUseBorrowTide(
+			cardHasBorrowTideEffect: true,
+			playedRank: "8",
+			effectiveRank: "7"));
 	}
 
 	private static void CardPlayResolverInsertsMissAtTableStartForReverseFlowAnchor()
@@ -789,15 +831,20 @@ internal static class Program
 			"diamonds_final_double",
 		};
 
-		AdventureQuestionRewardEffectResult first = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
-		AdventureQuestionRewardEffectResult second = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
-		AdventureQuestionRewardEffectResult third = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
+		for (int rewardCount = 1; rewardCount <= 9; rewardCount++)
+		{
+			AdventureQuestionRewardEffectResult result = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
+			Equal(rewardCount, result.BonusDirectDamage);
+			Equal(rewardCount, state.QuestionRewardCount);
+			Equal(rewardCount, state.PermanentCaptureDamageBonus);
+			False(state.ThirdQuestionDamageDoubleActive);
+		}
 
-		Equal(1, first.BonusDirectDamage);
-		Equal(2, second.BonusDirectDamage);
-		Equal(3, third.BonusDirectDamage);
-		Equal(3, state.QuestionRewardCount);
-		Equal(3, state.PermanentCaptureDamageBonus);
+		AdventureQuestionRewardEffectResult tenth = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
+
+		Equal(10, tenth.BonusDirectDamage);
+		Equal(10, state.QuestionRewardCount);
+		Equal(10, state.PermanentCaptureDamageBonus);
 		True(state.ThirdQuestionDamageDoubleActive);
 	}
 
@@ -821,6 +868,36 @@ internal static class Program
 		False(AdventureUpgradeEffectService.ShouldOfferQuestionRewardRejudge(
 			new[] { "diamonds_rejudge_once" },
 			questionRejudgeUsedThisBattle: true));
+	}
+
+	private static void QuestionRewardTableRenderOnlyWaitsForLocalHandPlayerAnimation()
+	{
+		False(QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
+			hasQuestionRewardAnimation: false,
+			isLocalHandPlayer: true));
+		False(QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
+			hasQuestionRewardAnimation: true,
+			isLocalHandPlayer: false));
+		True(QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
+			hasQuestionRewardAnimation: true,
+			isLocalHandPlayer: true));
+	}
+
+	private static void AdventureQuestionRewardDirectDamageReusesPlayerAttackAnimation()
+	{
+		string source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs"));
+		int methodStart = source.IndexOf("private async Task ApplyAdventureQuestionRewardEffects(", StringComparison.Ordinal);
+		int methodEnd = source.IndexOf("private void ApplyAdventureUpgradeAcquisitionEffects(", methodStart, StringComparison.Ordinal);
+
+		True(methodStart >= 0);
+		True(methodEnd > methodStart);
+
+		string method = source[methodStart..methodEnd];
+		int attackAnimationIndex = method.IndexOf("await PlayAdventureAvatarAttackAsync(", StringComparison.Ordinal);
+		int damageCallbackIndex = method.IndexOf("() => AddPlayerScore(playerIndex, resolved.BonusDirectDamage)", StringComparison.Ordinal);
+
+		True(attackAnimationIndex >= 0);
+		True(damageCallbackIndex > attackAnimationIndex);
 	}
 
 	private static void AdventureUpgradeAcquireAppliesImmediateMaxHealthHealAndDrawBonuses()
@@ -976,7 +1053,7 @@ internal static class Program
 		Equal(21, result.FinalDamage);
 	}
 
-	private static void AdventureCaptureDamageAddsFullPayoutFromRawScoringCards()
+	private static void AdventureCaptureDamageDoesNotApplyFullPayoutBelowSixScoringCards()
 	{
 		var state = new AdventureUpgradeEffectState();
 
@@ -985,10 +1062,51 @@ internal static class Program
 			new[] { "diamonds_full_payout" },
 			new AdventureCaptureDamageInput(
 				BaseDamage: 12,
-				ScoringCardRawPoints: new[] { 3, 4, 5 },
-				ScoringCardResolvedPoints: new[] { 3, 4, 5 }));
+				ScoringCardRawPoints: new[] { 1, 1, 1, 1, 1 },
+				ScoringCardResolvedPoints: new[] { 1, 1, 1, 1, 1 }));
 
-		Equal(18, result.FinalDamage);
+		Equal(12, result.FinalDamage);
+	}
+
+	private static void AdventureCaptureDamageDoublesFullPayoutAtSixScoringCardsAfterFinalAdditions()
+	{
+		var state = new AdventureUpgradeEffectState
+		{
+			PermanentCaptureDamageBonus = 1,
+			NextCaptureDamageBonus = 2,
+		};
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_full_payout" },
+			new AdventureCaptureDamageInput(
+				BaseDamage: 12,
+				FlatDamageDelta: 3,
+				ScoringCardRawPoints: new[] { 1, 1, 1, 1, 1, 1 },
+				ScoringCardResolvedPoints: new[] { 1, 1, 1, 1, 1, 1 }));
+
+		Equal(36, result.FinalDamage);
+		Equal(0, state.NextCaptureDamageBonus);
+	}
+
+	private static void AdventureCaptureDamageStacksFullPayoutWithFinalDoubleBeforeHighReturnBonus()
+	{
+		var state = new AdventureUpgradeEffectState
+		{
+			ThirdQuestionDamageDoubleActive = true,
+		};
+
+		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			state,
+			new[] { "diamonds_full_payout", "diamonds_high_return_bonus" },
+			new AdventureCaptureDamageInput(
+				BaseDamage: 2,
+				ScoringCardRawPoints: new[] { 1, 1, 1, 1, 1, 1 },
+				ScoringCardResolvedPoints: new[] { 1, 1, 1, 1, 1, 1 }));
+
+		Equal(8, result.FinalDamage);
+		Equal(2, state.NextCaptureDamageBonus);
+		True(result.ReArmedNextCaptureDamageBonus);
 	}
 
 	private static void AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured()

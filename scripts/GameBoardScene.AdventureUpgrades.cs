@@ -455,7 +455,7 @@ public partial class GameBoardScene
 		return modifiers;
 	}
 
-	private void ApplyAdventureQuestionRewardEffects(int playerIndex, AdventureQuestionRewardEffectResult? effectResult)
+	private async Task ApplyAdventureQuestionRewardEffects(int playerIndex, AdventureQuestionRewardEffectResult? effectResult, int turnSequenceGeneration)
 	{
 		if (!effectResult.HasValue || playerIndex != MainPlayerIndex)
 		{
@@ -475,7 +475,11 @@ public partial class GameBoardScene
 
 		if (resolved.BonusDirectDamage > 0)
 		{
-			AddPlayerScore(playerIndex, resolved.BonusDirectDamage);
+			await PlayAdventureAvatarAttackAsync(
+				playerIndex,
+				GetAdventureDamageTargetPlayerIndex(playerIndex),
+				turnSequenceGeneration,
+				() => AddPlayerScore(playerIndex, resolved.BonusDirectDamage));
 		}
 	}
 
@@ -912,7 +916,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		ApplyAdventureQuestionRewardEffects(playerIndex, ResolveAdventureQuestionRewardEffects(playerIndex));
+		await ApplyAdventureQuestionRewardEffects(playerIndex, ResolveAdventureQuestionRewardEffects(playerIndex), turnSequenceGeneration);
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 	}

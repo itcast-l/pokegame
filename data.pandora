@@ -1397,7 +1397,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "若计分牌≥3张，额外造成这些牌原始点数和一半的伤害。"
+						"value": "计分牌>=6时，造成双倍伤害。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1434,7 +1434,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "后续所有收牌伤害翻倍。"
+						"value": "后续记分翻倍。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1458,7 +1458,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "第3次获得问号奖励后"
+						"value": "10次获得道具后"
 					}
 				}
 			},

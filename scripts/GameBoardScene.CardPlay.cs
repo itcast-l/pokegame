@@ -37,7 +37,6 @@ public partial class GameBoardScene
 			adventureEnemyNextBaseCardModifiers.TableInsertIndex,
 			adventureEnemyNextBaseCardModifiers.FacesUp);
 		bool playedCardUsedAttachedEffectOnPlan = DidPlayedCardUseAttachedEffectOnPlan(playedCard, cardPlayPlan);
-		ConsumeBorrowTideIfUsed(cardPlayPlan);
 		bool playedRankCollectsTable = cardPlayPlan.PlayedCardCollectsTable;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
@@ -463,7 +462,9 @@ public partial class GameBoardScene
 			{
 				preservedTailTableCard.IsFaceUp = true;
 			}
-			if (!captureResult.QuestionRewardAnimation.HasValue)
+			if (!QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
+				captureResult.QuestionRewardAnimation.HasValue,
+				IsLocalHandPlayer(playerIndex)))
 			{
 				RenderTableCards();
 			}
@@ -495,7 +496,7 @@ public partial class GameBoardScene
 			{
 				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 			}
-			ApplyAdventureQuestionRewardEffects(playerIndex, captureResult.AdventureQuestionRewardEffects);
+			await ApplyAdventureQuestionRewardEffects(playerIndex, captureResult.AdventureQuestionRewardEffects, turnSequenceGeneration);
 			await ApplyAdventurePostCaptureEffectsAsync(
 				playerIndex,
 				resolvedAdventurePostCaptureEffects ?? captureResult.AdventurePostCaptureEffects,
@@ -519,8 +520,6 @@ public partial class GameBoardScene
 			{
 				return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 			}
-
-			TryAssignBorrowTideAfterCapture(playerIndex, captureStartIndex, playedCard.Rank);
 
 			RenderPlayerHands();
 
@@ -754,6 +753,14 @@ public partial class GameBoardScene
 
 	private bool DidPlayedCardUseAttachedEffectOnPlan(PlayingCard playedCard, CardPlayPlan plan)
 	{
+		if (BorrowTideRules.DidUseBorrowTide(
+			IsAttachedEffectType(playedCard, CardEffectTypes.BorrowTide),
+			playedCard.Rank,
+			plan.EffectiveRank))
+		{
+			return true;
+		}
+
 		if (ShouldCollectBySuit(playedCard)
 			&& !string.IsNullOrWhiteSpace(playedCard.Suit)
 			&& CardPlayResolver.FindFirstMatchingSuitTableCardIndex(ToCardPlayTableCards(), playedCard.Suit) >= 0)
@@ -789,34 +796,15 @@ public partial class GameBoardScene
 
 	private List<string>? BuildBorrowTideAlternateRanks(PlayingCard playedCard)
 	{
-		if (!ShouldApplyBorrowTideToPlayedCard(playedCard))
+		IReadOnlyList<string> alternateRanks = BorrowTideRules.GetAlternateRanks(
+			IsAttachedEffectType(playedCard, CardEffectTypes.BorrowTide),
+			playedCard.Rank);
+		if (alternateRanks.Count == 0)
 		{
 			return null;
 		}
 
-		var alternateRanks = new List<string>();
-		if (!string.IsNullOrWhiteSpace(_borrowTideAdjustedRank))
-		{
-			alternateRanks.Add(_borrowTideAdjustedRank);
-		}
-
-		foreach (string adjacentRank in GetAdjacentNumericRanks(playedCard.Rank))
-		{
-			if (!alternateRanks.Contains(adjacentRank))
-			{
-				alternateRanks.Add(adjacentRank);
-			}
-		}
-
-		return alternateRanks.Count == 0 ? null : alternateRanks;
-	}
-
-	private bool ShouldApplyBorrowTideToPlayedCard(PlayingCard playedCard)
-	{
-		return _borrowTidePending
-			&& _borrowTideOwnerPlayerIndex == _currentTurnPlayerIndex
-			&& !playedCard.HasItemEffect
-			&& TryGetNumericRankValue(playedCard.Rank, out _);
+		return new List<string>(alternateRanks);
 	}
 
 	private bool ShouldInsertMissedCardAtTableStart(PlayingCard playedCard)

@@ -26,13 +26,8 @@ public partial class GameBoardScene
 			["revealed_item_hand_cards"] = BuildRevealedItemHandCardsArray(recipientSeatIndex),
 			["pending_selection_mode"] = _pendingItemSelectionMode.ToString(),
 			["pending_selection_owner"] = _pendingItemOwnerIndex,
-			["pending_item_card_id"] = _pendingItemCardId,
-			["pending_turn_sequence_generation"] = _pendingItemTurnSequenceGeneration,
-			["borrow_tide_pending"] = _state.BorrowTidePending,
-			["borrow_tide_owner_player_index"] = _state.BorrowTideOwnerPlayerIndex,
-			["borrow_tide_card_id"] = _state.BorrowTideCardId,
-			["borrow_tide_adjusted_rank"] = _state.BorrowTideAdjustedRank,
-			["borrow_tide_expires_at_turn_player_index"] = _state.BorrowTideExpiresAtTurnPlayerIndex,
+				["pending_item_card_id"] = _pendingItemCardId,
+				["pending_turn_sequence_generation"] = _pendingItemTurnSequenceGeneration,
 			["revealed_player_hand_index"] = ShouldRevealTargetHandToSeat(recipientSeatIndex) ? _revealedPlayerHandIndex : -1,
 			["opening_deal_animation_playing"] = _isOpeningDealAnimationPlaying,
 			["seat_control_states"] = BuildSeatControlStatesArray(),
@@ -612,15 +607,10 @@ public partial class GameBoardScene
 
 	private void ApplyPendingSelectionFromSnapshot(Godot.Collections.Dictionary snapshot)
 	{
-		_pendingItemSelectionMode = ReadEnum(snapshot, "pending_selection_mode", PendingItemSelectionMode.None);
-		_pendingItemOwnerIndex = ReadNetworkInt(snapshot, "pending_selection_owner", -1);
-		_pendingItemCardId = ReadNetworkString(snapshot, "pending_item_card_id", string.Empty);
-		_pendingItemTurnSequenceGeneration = ReadNetworkInt(snapshot, "pending_turn_sequence_generation", -1);
-		_borrowTidePending = ReadNetworkBool(snapshot, "borrow_tide_pending", false);
-		_borrowTideOwnerPlayerIndex = ReadNetworkInt(snapshot, "borrow_tide_owner_player_index", -1);
-		_borrowTideCardId = ReadNetworkString(snapshot, "borrow_tide_card_id", string.Empty);
-		_borrowTideAdjustedRank = ReadNetworkString(snapshot, "borrow_tide_adjusted_rank", string.Empty);
-		_borrowTideExpiresAtTurnPlayerIndex = ReadNetworkInt(snapshot, "borrow_tide_expires_at_turn_player_index", -1);
+			_pendingItemSelectionMode = ReadEnum(snapshot, "pending_selection_mode", PendingItemSelectionMode.None);
+			_pendingItemOwnerIndex = ReadNetworkInt(snapshot, "pending_selection_owner", -1);
+			_pendingItemCardId = ReadNetworkString(snapshot, "pending_item_card_id", string.Empty);
+			_pendingItemTurnSequenceGeneration = ReadNetworkInt(snapshot, "pending_turn_sequence_generation", -1);
 		_revealedPlayerHandIndex = ReadNetworkBool(snapshot, "revealed_target_hand_visible", false)
 			? ReadNetworkInt(snapshot, "revealed_player_hand_index", -1)
 			: -1;

@@ -36,11 +36,6 @@ internal sealed class GameBoardState
 	public bool IsOpeningDealAnimationPlaying { get; set; }
 	public bool IsResolvingMagnetAttachmentSelection { get; set; }
 	public bool IsAnimatingMagnetAttachment { get; set; }
-	public bool BorrowTidePending { get; set; }
-	public int BorrowTideOwnerPlayerIndex { get; set; } = -1;
-	public string BorrowTideCardId { get; set; } = string.Empty;
-	public string BorrowTideAdjustedRank { get; set; } = string.Empty;
-	public int BorrowTideExpiresAtTurnPlayerIndex { get; set; } = -1;
 	public int RevealedPlayerHandIndex { get; set; } = -1;
 	public PendingItemSelectionMode PendingItemSelectionMode { get; set; } = PendingItemSelectionMode.None;
 	public int PendingItemOwnerIndex { get; set; } = -1;

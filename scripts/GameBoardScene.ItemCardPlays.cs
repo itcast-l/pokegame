@@ -107,7 +107,9 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerCardPiles();
-		if (!result.QuestionRewardAnimation.HasValue)
+		if (!QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
+			result.QuestionRewardAnimation.HasValue,
+			IsLocalHandPlayer(playerIndex)))
 		{
 			RenderTableCards();
 		}
@@ -117,7 +119,7 @@ public partial class GameBoardScene
 		{
 			return new PlayCardResult(false, false);
 		}
-		ApplyAdventureQuestionRewardEffects(playerIndex, result.AdventureQuestionRewardEffects);
+		await ApplyAdventureQuestionRewardEffects(playerIndex, result.AdventureQuestionRewardEffects, turnSequenceGeneration);
 		await ApplyAdventurePostCaptureEffectsAsync(playerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{

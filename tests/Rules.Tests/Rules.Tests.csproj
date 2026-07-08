@@ -36,6 +36,8 @@
     <Compile Include="../../scripts/GameTurnRules.cs" Link="Rules/GameTurnRules.cs" />
     <Compile Include="../../scripts/TurnProgressRules.cs" Link="Rules/TurnProgressRules.cs" />
     <Compile Include="../../scripts/RewardResolver.cs" Link="Rules/RewardResolver.cs" />
+    <Compile Include="../../scripts/QuestionRewardPresentationRules.cs" Link="Rules/QuestionRewardPresentationRules.cs" />
+    <Compile Include="../../scripts/BorrowTideRules.cs" Link="Rules/BorrowTideRules.cs" />
     <Compile Include="../../scripts/ResultPresentationRules.cs" Link="Rules/ResultPresentationRules.cs" />
     <Compile Include="../../scripts/ScoreService.cs" Link="Rules/ScoreService.cs" />
     <Compile Include="../../scripts/TurnStateMachine.cs" Link="Rules/TurnStateMachine.cs" />

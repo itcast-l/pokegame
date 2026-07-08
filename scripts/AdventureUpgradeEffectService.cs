@@ -143,7 +143,7 @@ internal static class AdventureUpgradeEffectService
 			drawCount++;
 		}
 
-		if (acquired.Contains("diamonds_final_double") && state.QuestionRewardCount >= 3)
+		if (acquired.Contains("diamonds_final_double") && state.QuestionRewardCount >= 10)
 		{
 			state.ThirdQuestionDamageDoubleActive = true;
 		}
@@ -482,17 +482,6 @@ internal static class AdventureUpgradeEffectService
 			damage += highestAdjustedPoint;
 		}
 
-		if (scoringCardCount >= 3 && acquired.Contains("diamonds_full_payout"))
-		{
-			int rawPointTotal = 0;
-			for (int index = 0; index < scoringCardCount; index++)
-			{
-				rawPointTotal += Math.Max(0, rawPoints[index]);
-			}
-
-			damage += (rawPointTotal + 1) / 2;
-		}
-
 		damage += input.FlatDamageDelta;
 
 		damage += state.PermanentCaptureDamageBonus;
@@ -513,6 +502,13 @@ internal static class AdventureUpgradeEffectService
 			&& acquired.Contains("diamonds_small_insurance"))
 		{
 			damage = 5;
+		}
+
+		if (damage > 0
+			&& scoringCardCount >= 6
+			&& acquired.Contains("diamonds_full_payout"))
+		{
+			damage *= 2;
 		}
 
 		if (damage > 0 && state.ThirdQuestionDamageDoubleActive)

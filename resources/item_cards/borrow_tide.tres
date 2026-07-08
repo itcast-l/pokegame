@@ -22,7 +22,7 @@ Trigger = "on_play"
 EffectType = "attach_modifier"
 EffectValuesRaw = "modifier=borrow_tide"
 Priority = 50
-AttachedTrigger = "on_collect"
+AttachedTrigger = "on_play"
 AttachedEffectType = "borrow_tide"
 AttachedEffectValuesRaw = ""
 AttachedPriority = 50

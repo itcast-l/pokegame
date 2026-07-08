@@ -303,7 +303,9 @@ public partial class GameBoardScene
 				itemGlobalPosition ?? Vector2.Zero,
 				turnSequenceGeneration)) with { CompletesTurn = false };
 			RenderPlayerCardPiles();
-			if (!result.QuestionRewardAnimation.HasValue)
+			if (!QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
+				result.QuestionRewardAnimation.HasValue,
+				IsLocalHandPlayer(ownerPlayerIndex)))
 			{
 				RenderTableCards();
 			}
@@ -315,7 +317,7 @@ public partial class GameBoardScene
 				RenderPlayerHands();
 				return;
 			}
-			ApplyAdventureQuestionRewardEffects(ownerPlayerIndex, result.AdventureQuestionRewardEffects);
+			await ApplyAdventureQuestionRewardEffects(ownerPlayerIndex, result.AdventureQuestionRewardEffects, turnSequenceGeneration);
 			await ApplyAdventurePostCaptureEffectsAsync(ownerPlayerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
