@@ -131,6 +131,11 @@ public partial class GameBoardScene
 						baseZIndex + 1,
 						showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f);
 				}
+
+				if (ReferenceEquals(tableCardData, _adventureTraceHuntMarkedTableCard))
+				{
+					AddAdventureTraceHuntMarkerOverlay(cardPosition, baseZIndex + 1);
+				}
 			}
 
 			if (!tableCardData.ItemOverlay.HasValue || hideItemOverlay)
@@ -174,6 +179,7 @@ public partial class GameBoardScene
 		{
 			TableCard tableCard = _tableCards[cardIndex];
 			signature.Add(cardIndex);
+			signature.Add(ReferenceEquals(tableCard, _adventureTraceHuntMarkedTableCard));
 			signature.Add(tableCard.IsFaceUp);
 			signature.Add(tableCard.IsHiddenDuringCapture);
 			signature.Add(tableCard.IsBuriedInSand);

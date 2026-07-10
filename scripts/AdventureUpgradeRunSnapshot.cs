@@ -11,7 +11,7 @@ internal readonly record struct AdventureUpgradeRunSnapshot(
 	int MaxHealth = 100,
 	int PermanentCaptureDamageBonus = 0,
 	int QuestionRewardCount = 0,
-	bool ThirdQuestionDamageDoubleActive = false,
+	bool FinalDoubleCaptureDamageActive = false,
 	int HealingOverflowRemainder = 0,
 	int NextCaptureDamageBonus = 0,
 	int NextTurnHealAmount = 0,
@@ -19,7 +19,8 @@ internal readonly record struct AdventureUpgradeRunSnapshot(
 	bool ClubShortBranchReturnUsedThisTurn = false,
 	int ClubMissClimbGrowthStacks = 0,
 	bool ClubBorrowSuitSetArmed = false,
-	bool ClubGapRootingUsedThisTurn = false)
+	bool ClubGapRootingUsedThisTurn = false,
+	int FinalDoubleQuestionRewardCountThisBattle = 0)
 {
-	internal const int CurrentSchemaVersion = 2;
+	internal const int CurrentSchemaVersion = 3;
 }

@@ -262,13 +262,13 @@ public partial class GameBoardScene
 						&& CapturedOnlyOuterVisibleCards(prePlayTableCards, captureStartIndex, extraTableCardIndexes));
 			}
 		}
+		if (capturedTraceMark)
+		{
+			SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
+		}
+
 		if (playerIndex == MainPlayerIndex && captureStateResult.CollectedCardCount > 0)
 		{
-			if (capturedTraceMark)
-			{
-				_adventureTraceHuntMarkedTableCard = null;
-			}
-
 			if (capturedHuntMark)
 			{
 				_adventureHuntOrderMarkedTableCard = null;

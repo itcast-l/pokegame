@@ -53,6 +53,8 @@ public partial class GameBoardScene : Control
 	private const int TableShuffleVortexFrameCount = 8;
 	private const string MagnetAttachmentApplyRingFramePattern = "res://art/fx/magnet_attach_apply_ring/run-001/processed/fx-{0}.png";
 	private const int MagnetAttachmentApplyRingFrameCount = 6;
+	private const string AdventureTraceHuntMarkerFramePattern = "res://art/fx/adventure_trace_hunt_marker/run-004/processed/fx-{0}.png";
+	private const int AdventureTraceHuntMarkerFrameCount = 4;
 	private const string VictoryBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/victory-text-prompt-effect.png";
 	private const string DefeatBannerTexturePath = "res://art/ui/result_text_prompt/run-001/processed/defeat-text-prompt-effect.png";
 		private const string QuestionMarkItemCardId = ItemCardCatalog.QuestionMarkItemCardId;
@@ -155,6 +157,7 @@ public partial class GameBoardScene : Control
 	private readonly List<Texture2D> _magnetCountdownFrameTextures = new();
 	private readonly List<Texture2D> _tableShuffleVortexFrames = new();
 	private readonly List<Texture2D> _magnetAttachmentApplyRingFrames = new();
+	private readonly List<Texture2D> _adventureTraceHuntMarkerFrames = new();
 	private bool _commonGameplayFxResourcesLoaded;
 	private bool _adventureModeResourcesLoaded;
 	private bool _itemModeResourcesLoaded;

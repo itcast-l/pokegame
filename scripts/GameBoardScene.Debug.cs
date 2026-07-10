@@ -303,6 +303,125 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	public bool DebugConfigureAdventureTraceHuntMarkerScenario()
+	{
+		if (!ShouldUseAdventureUpgradeSystem() || player_count != 2)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Hearts", "7"),
+			("Clubs", "5"),
+			("Diamonds", "7"),
+			("Spades", "2"),
+			("Clubs", "A"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		ClearAdventureTraceHuntMarkerIntro();
+		_adventureTraceHuntMarkedTableCard = null;
+		_playerDecks.Clear();
+		_playerHands.Clear();
+		_playerItemHands.Clear();
+		_tableCards.Clear();
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerDecks.Add(new List<PlayingCard>());
+			_playerHands.Add(new List<PlayingCard>());
+			_playerItemHands.Add(new List<ItemCard>());
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Hearts:7"]);
+		_playerHands[1].Add(cards["Clubs:A"]);
+		_tableCards.Add(new TableCard(cards["Spades:2"], true));
+		_tableCards.Add(new TableCard(cards["Diamonds:7"], false));
+		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
+	}
+
+	public int DebugGetAdventureTraceHuntMarkedTableCardIndex()
+	{
+		return GetAdventureTraceHuntMarkedTableCardIndex();
+	}
+
+	public bool DebugHasAdventureTraceHuntMarkerOverlay()
+	{
+		return FindAdventureTraceHuntMarkerOverlay() != null;
+	}
+
+	public string DebugGetAdventureTraceHuntMarkerOverlayTexturePath()
+	{
+		return FindAdventureTraceHuntMarkerOverlay()?.Texture?.ResourcePath ?? string.Empty;
+	}
+
+	public bool DebugHasAdventureTraceHuntMarkerIntro()
+	{
+		return _adventureTraceHuntMarkerIntro != null
+			&& GodotObject.IsInstanceValid(_adventureTraceHuntMarkerIntro)
+			&& !_adventureTraceHuntMarkerIntro.IsQueuedForDeletion();
+	}
+
+	public bool DebugRetargetAdventureTraceHuntMarker(int tableCardIndex)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return false;
+		}
+
+		SetAdventureTraceHuntMarkedTableCard(_tableCards[tableCardIndex], playIntro: true);
+		RenderTableCards();
+		return true;
+	}
+
+	public bool DebugRemoveMarkedAdventureTraceHuntCardWithBombPair()
+	{
+		if (GetAdventureTraceHuntMarkedTableCardIndex() < 0 || _tableCards.Count == 0)
+		{
+			return false;
+		}
+
+		RemoveBombPairAndCardsBetween(0, _tableCards.Count - 1);
+		RenderTableCards();
+		return true;
+	}
+
+	public bool DebugRemoveMarkedAdventureTraceHuntCardWithLeafyBlade()
+	{
+		int markedTableCardIndex = GetAdventureTraceHuntMarkedTableCardIndex();
+		if (markedTableCardIndex < 0
+			|| markedTableCardIndex >= _tableCards.Count
+			|| !_tableCards[markedTableCardIndex].Card.HasValue)
+		{
+			return false;
+		}
+
+		RemoveLeafySeadragonBladeBreakTableCard(markedTableCardIndex);
+		RenderTableCards();
+		return true;
+	}
+
+	public bool DebugClearAdventureUpgradeRunForTraceHuntMarker()
+	{
+		ClearAdventureUpgradeRun();
+		RenderTableCards();
+		return GetAdventureTraceHuntMarkedTableCardIndex() < 0;
+	}
+
 	public bool DebugAttachItemEffectToMainPlayerHandCard(int handIndex, string itemCardId)
 	{
 		if (handIndex < 0

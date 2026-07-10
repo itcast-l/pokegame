@@ -39,6 +39,7 @@ public partial class GameBoardScene
 		_isResolvingAdventureUpgradeSelection = false;
 		ResetAdventureEnemyMissPendingState();
 		_adventureTraceHuntMarkedTableCard = null;
+		ClearAdventureTraceHuntMarkerIntro();
 		_adventureHuntOrderMarkedTableCard = null;
 		_adventureCanopyRevealAnchorTableCard = null;
 		_adventureUpgradeResolutionTask = Task.CompletedTask;
@@ -227,11 +228,13 @@ public partial class GameBoardScene
 	{
 		if (!ShouldUseAdventureUpgradeSystem() || !HasAdventureUpgrade("spades_trace_hunt"))
 		{
-			_adventureTraceHuntMarkedTableCard = null;
+			SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
 			return;
 		}
 
-		_adventureTraceHuntMarkedTableCard = FindRightmostRemainingOldBaseTableCard(prePlayTableCards);
+		SetAdventureTraceHuntMarkedTableCard(
+			FindRightmostRemainingOldBaseTableCard(prePlayTableCards),
+			playIntro: true);
 	}
 
 	private async Task<bool> ApplyAdventureMainPlayerMissTableEffectsAsync(
@@ -923,6 +926,8 @@ public partial class GameBoardScene
 
 	private void ClearAdventureUpgradeRun()
 	{
+		SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
+		ClearAdventureTraceHuntMarkerIntro();
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		if (store == null)
 		{

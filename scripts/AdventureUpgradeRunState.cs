@@ -44,6 +44,11 @@ internal sealed class AdventureUpgradeRunState
 			return;
 		}
 
+		if (CurrentAvatarStageNumber != avatarStageNumber)
+		{
+			_effectState.ResetFinalDoubleProgressForNewEnemy();
+		}
+
 		CurrentAvatarStageNumber = avatarStageNumber;
 		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndex(avatarStageNumber);
 		ShouldGrantRunStartUpgrade = false;
@@ -105,7 +110,7 @@ internal sealed class AdventureUpgradeRunState
 			MaxHealth,
 			_effectState.PermanentCaptureDamageBonus,
 			_effectState.QuestionRewardCount,
-			_effectState.ThirdQuestionDamageDoubleActive,
+			_effectState.FinalDoubleCaptureDamageActive,
 			_effectState.HealingOverflowRemainder,
 			_effectState.NextCaptureDamageBonus,
 			_effectState.NextTurnHealAmount,
@@ -113,13 +118,16 @@ internal sealed class AdventureUpgradeRunState
 			_effectState.ClubShortBranchReturnUsedThisTurn,
 			_effectState.ClubMissClimbGrowthStacks,
 			_effectState.ClubBorrowSuitSetArmed,
-			_effectState.ClubGapRootingUsedThisTurn);
+			_effectState.ClubGapRootingUsedThisTurn,
+			_effectState.FinalDoubleQuestionRewardCountThisBattle);
 	}
 
 	internal void RestoreFromSnapshot(AdventureUpgradeRunSnapshot snapshot)
 	{
 		Clear();
-		if ((snapshot.SchemaVersion != 1 && snapshot.SchemaVersion != AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
+		if ((snapshot.SchemaVersion != 1
+			&& snapshot.SchemaVersion != 2
+			&& snapshot.SchemaVersion != AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
 			|| !AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(snapshot.CurrentAvatarStageNumber))
 		{
 			return;
@@ -135,12 +143,11 @@ internal sealed class AdventureUpgradeRunState
 			AcquireUpgrade(upgradeId);
 		}
 
-		if (snapshot.SchemaVersion >= AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
+		if (snapshot.SchemaVersion >= 2)
 		{
 			SetHealth(snapshot.CurrentHealth, snapshot.MaxHealth);
 			_effectState.PermanentCaptureDamageBonus = snapshot.PermanentCaptureDamageBonus;
 			_effectState.QuestionRewardCount = snapshot.QuestionRewardCount;
-			_effectState.ThirdQuestionDamageDoubleActive = snapshot.ThirdQuestionDamageDoubleActive;
 			_effectState.HealingOverflowRemainder = snapshot.HealingOverflowRemainder;
 			_effectState.NextCaptureDamageBonus = snapshot.NextCaptureDamageBonus;
 			_effectState.NextTurnHealAmount = snapshot.NextTurnHealAmount;
@@ -149,6 +156,12 @@ internal sealed class AdventureUpgradeRunState
 			_effectState.ClubMissClimbGrowthStacks = snapshot.ClubMissClimbGrowthStacks;
 			_effectState.ClubBorrowSuitSetArmed = snapshot.ClubBorrowSuitSetArmed;
 			_effectState.ClubGapRootingUsedThisTurn = snapshot.ClubGapRootingUsedThisTurn;
+			if (snapshot.SchemaVersion >= 3)
+			{
+				_effectState.FinalDoubleQuestionRewardCountThisBattle = snapshot.FinalDoubleQuestionRewardCountThisBattle;
+				_effectState.FinalDoubleCaptureDamageActive = snapshot.FinalDoubleCaptureDamageActive;
+			}
+
 			return;
 		}
 

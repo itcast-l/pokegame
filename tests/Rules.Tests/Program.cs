@@ -38,9 +38,11 @@ internal static class Program
 		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
 		Run("adventure upgrade ids expose current active upgrades across suits", AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits);
-		Run("adventure upgrade run snapshot v2 restores legacy v1 saves", AdventureUpgradeRunSnapshotV2RestoresLegacyV1Saves);
+		Run("adventure upgrade run snapshot v3 restores legacy v1 saves", AdventureUpgradeRunSnapshotV3RestoresLegacyV1Saves);
 		Run("adventure upgrade run state persists effect counters and health", AdventureUpgradeRunStatePersistsEffectCountersAndHealth);
 		Run("adventure question reward side effects track count permanent bonus and final double", AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble);
+		Run("adventure final double resets after each enemy", AdventureFinalDoubleResetsAfterEachEnemy);
+		Run("adventure final double snapshot preserves battle progress and clears legacy v2 status", AdventureFinalDoubleSnapshotPreservesBattleProgressAndClearsLegacyV2Status);
 		Run("adventure question reward support upgrades add heal draw and one time rejudge access", AdventureQuestionRewardSupportUpgradesAddHealDrawAndOneTimeRejudgeAccess);
 		Run("question reward table render only waits for local hand player animation", QuestionRewardTableRenderOnlyWaitsForLocalHandPlayerAnimation);
 		Run("adventure question reward direct damage reuses player attack animation", AdventureQuestionRewardDirectDamageReusesPlayerAttackAnimation);
@@ -765,7 +767,7 @@ internal static class Program
 		Equal(14, activePerSuit["clubs"]);
 	}
 
-	private static void AdventureUpgradeRunSnapshotV2RestoresLegacyV1Saves()
+	private static void AdventureUpgradeRunSnapshotV3RestoresLegacyV1Saves()
 	{
 		AdventureUpgradeRunSnapshot legacy = new(
 			1,
@@ -784,7 +786,8 @@ internal static class Program
 		True(state.HasAcquiredUpgrade("hearts_thick_blood"));
 		Equal(0, state.EffectState.PermanentCaptureDamageBonus);
 		Equal(0, state.EffectState.QuestionRewardCount);
-		False(state.EffectState.ThirdQuestionDamageDoubleActive);
+		Equal(0, state.EffectState.FinalDoubleQuestionRewardCountThisBattle);
+		False(state.EffectState.FinalDoubleCaptureDamageActive);
 	}
 
 	private static void AdventureUpgradeRunStatePersistsEffectCountersAndHealth()
@@ -796,7 +799,8 @@ internal static class Program
 		{
 			PermanentCaptureDamageBonus = 2,
 			QuestionRewardCount = 3,
-			ThirdQuestionDamageDoubleActive = true,
+			FinalDoubleQuestionRewardCountThisBattle = 10,
+			FinalDoubleCaptureDamageActive = true,
 			HealingOverflowRemainder = 1,
 			NextCaptureDamageBonus = 4,
 			NextTurnHealAmount = 3,
@@ -811,7 +815,8 @@ internal static class Program
 		Equal(108, restored.MaxHealth);
 		Equal(2, restored.EffectState.PermanentCaptureDamageBonus);
 		Equal(3, restored.EffectState.QuestionRewardCount);
-		True(restored.EffectState.ThirdQuestionDamageDoubleActive);
+		Equal(10, restored.EffectState.FinalDoubleQuestionRewardCountThisBattle);
+		True(restored.EffectState.FinalDoubleCaptureDamageActive);
 		Equal(1, restored.EffectState.HealingOverflowRemainder);
 		Equal(4, restored.EffectState.NextCaptureDamageBonus);
 		Equal(3, restored.EffectState.NextTurnHealAmount);
@@ -833,16 +838,127 @@ internal static class Program
 			AdventureQuestionRewardEffectResult result = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
 			Equal(rewardCount, result.BonusDirectDamage);
 			Equal(rewardCount, state.QuestionRewardCount);
+			Equal(rewardCount, state.FinalDoubleQuestionRewardCountThisBattle);
 			Equal(rewardCount, state.PermanentCaptureDamageBonus);
-			False(state.ThirdQuestionDamageDoubleActive);
+			False(state.FinalDoubleCaptureDamageActive);
 		}
 
 		AdventureQuestionRewardEffectResult tenth = AdventureUpgradeEffectService.OnQuestionRewardGranted(state, upgrades);
 
 		Equal(10, tenth.BonusDirectDamage);
 		Equal(10, state.QuestionRewardCount);
+		Equal(10, state.FinalDoubleQuestionRewardCountThisBattle);
 		Equal(10, state.PermanentCaptureDamageBonus);
-		True(state.ThirdQuestionDamageDoubleActive);
+		True(state.FinalDoubleCaptureDamageActive);
+	}
+
+	private static void AdventureFinalDoubleResetsAfterEachEnemy()
+	{
+		var runState = new AdventureUpgradeRunState();
+		runState.BeginNewRun(3);
+		runState.AcquireUpgrade("diamonds_final_double");
+
+		for (int rewardCount = 0; rewardCount < 10; rewardCount++)
+		{
+			_ = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+				runState.EffectState,
+				runState.GetAcquiredUpgradeIds());
+		}
+
+		AdventureCaptureDamageResult firstEnemyResult = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds(),
+			new AdventureCaptureDamageInput(BaseDamage: 1));
+		Equal(2, firstEnemyResult.FinalDamage);
+
+		runState.AdvanceToStage(4);
+		Equal(10, runState.EffectState.QuestionRewardCount);
+
+		AdventureCaptureDamageResult secondEnemyBeforeRewards = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds(),
+			new AdventureCaptureDamageInput(BaseDamage: 1));
+		Equal(1, secondEnemyBeforeRewards.FinalDamage);
+
+		for (int rewardCount = 0; rewardCount < 9; rewardCount++)
+		{
+			_ = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+				runState.EffectState,
+				runState.GetAcquiredUpgradeIds());
+		}
+
+		AdventureCaptureDamageResult secondEnemyBeforeThreshold = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds(),
+			new AdventureCaptureDamageInput(BaseDamage: 1));
+		Equal(1, secondEnemyBeforeThreshold.FinalDamage);
+
+		_ = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds());
+		AdventureCaptureDamageResult secondEnemyAtThreshold = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds(),
+			new AdventureCaptureDamageInput(BaseDamage: 1));
+		Equal(2, secondEnemyAtThreshold.FinalDamage);
+	}
+
+	private static void AdventureFinalDoubleSnapshotPreservesBattleProgressAndClearsLegacyV2Status()
+	{
+		var runState = new AdventureUpgradeRunState();
+		runState.BeginNewRun(3);
+		runState.AcquireUpgrade("diamonds_final_double");
+		for (int rewardCount = 0; rewardCount < 9; rewardCount++)
+		{
+			_ = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+				runState.EffectState,
+				runState.GetAcquiredUpgradeIds());
+		}
+
+		var restoredCurrentBattle = new AdventureUpgradeRunState();
+		restoredCurrentBattle.RestoreFromSnapshot(runState.ToSnapshot());
+		_ = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+			restoredCurrentBattle.EffectState,
+			restoredCurrentBattle.GetAcquiredUpgradeIds());
+		AdventureCaptureDamageResult restoredCurrentBattleResult = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			restoredCurrentBattle.EffectState,
+			restoredCurrentBattle.GetAcquiredUpgradeIds(),
+			new AdventureCaptureDamageInput(BaseDamage: 1));
+		Equal(2, restoredCurrentBattleResult.FinalDamage);
+
+		const string legacyV2Json = """
+		{
+		  "SchemaVersion": 2,
+		  "CurrentAvatarStageNumber": 3,
+		  "CurrentRunStageIndex": 1,
+		  "ShouldGrantRunStartUpgrade": false,
+		  "ShouldGrantVictoryUpgrade": true,
+		  "AcquiredUpgradeIds": ["diamonds_final_double"],
+		  "CurrentHealth": 100,
+		  "MaxHealth": 100,
+		  "PermanentCaptureDamageBonus": 0,
+		  "QuestionRewardCount": 10,
+		  "ThirdQuestionDamageDoubleActive": true,
+		  "HealingOverflowRemainder": 0,
+		  "NextCaptureDamageBonus": 0,
+		  "NextTurnHealAmount": 0,
+		  "NextTurnDrawCount": 0,
+		  "ClubShortBranchReturnUsedThisTurn": false,
+		  "ClubMissClimbGrowthStacks": 0,
+		  "ClubBorrowSuitSetArmed": false,
+		  "ClubGapRootingUsedThisTurn": false
+		}
+		""";
+		AdventureUpgradeRunSnapshot legacyV2Snapshot = JsonSerializer.Deserialize<AdventureUpgradeRunSnapshot>(legacyV2Json);
+		var restoredLegacyV2 = new AdventureUpgradeRunState();
+		restoredLegacyV2.RestoreFromSnapshot(legacyV2Snapshot);
+		Equal(10, restoredLegacyV2.EffectState.QuestionRewardCount);
+
+		AdventureCaptureDamageResult restoredLegacyV2Result = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			restoredLegacyV2.EffectState,
+			restoredLegacyV2.GetAcquiredUpgradeIds(),
+			new AdventureCaptureDamageInput(BaseDamage: 1));
+		Equal(1, restoredLegacyV2Result.FinalDamage);
 	}
 
 	private static void AdventureQuestionRewardSupportUpgradesAddHealDrawAndOneTimeRejudgeAccess()
@@ -993,7 +1109,7 @@ internal static class Program
 	{
 		var state = new AdventureUpgradeEffectState
 		{
-			ThirdQuestionDamageDoubleActive = true,
+			FinalDoubleCaptureDamageActive = true,
 		};
 
 		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
@@ -1090,7 +1206,7 @@ internal static class Program
 	{
 		var state = new AdventureUpgradeEffectState
 		{
-			ThirdQuestionDamageDoubleActive = true,
+			FinalDoubleCaptureDamageActive = true,
 		};
 
 		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
@@ -1350,14 +1466,21 @@ internal static class Program
 
 	private static void AdventureOldTableDamageDeltaAppliesPlayerMarkBonuses()
 	{
-		int delta = AdventureUpgradeEffectService.ResolveOldTableCaptureDamageDelta(
-			new[] { "spades_trace_hunt", "spades_hunt_order" },
+		int traceHuntDelta = AdventureUpgradeEffectService.ResolveOldTableCaptureDamageDelta(
+			new[] { "spades_trace_hunt" },
 			capturingPlayerIsMain: true,
 			capturedOldScoringCardCount: 1,
 			capturedTraceMark: true,
+			capturedHuntMark: false);
+		int huntOrderDelta = AdventureUpgradeEffectService.ResolveOldTableCaptureDamageDelta(
+			new[] { "spades_hunt_order" },
+			capturingPlayerIsMain: true,
+			capturedOldScoringCardCount: 1,
+			capturedTraceMark: false,
 			capturedHuntMark: true);
 
-		Equal(10, delta);
+		Equal(4, traceHuntDelta);
+		Equal(6, huntOrderDelta);
 	}
 
 	private static void AdventureOldTableDamageDeltaAppliesEnemyTaxAndExaction()
@@ -2964,6 +3087,7 @@ internal static class Program
 			("res://art/fx/special_card_trigger/ocean_chrysanthemum_preview5/sea_anemone_rays/processed/fx-{0}.png", 4),
 			("res://art/fx/bomb_pair_destroy/card_rip_burst/run-001/processed/fx-{0}.png", 4),
 			("res://art/fx/lens_reveal_sprites/run-001/processed/fx-{0}.png", 4),
+			("res://art/fx/adventure_trace_hunt_marker/run-004/processed/fx-{0}.png", 4),
 		})
 		{
 			AssertFramePatternExists(repoRoot, pattern, frameCount);

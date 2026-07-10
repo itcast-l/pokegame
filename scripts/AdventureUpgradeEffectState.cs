@@ -2,7 +2,8 @@ internal sealed class AdventureUpgradeEffectState
 {
 	internal int PermanentCaptureDamageBonus { get; set; }
 	internal int QuestionRewardCount { get; set; }
-	internal bool ThirdQuestionDamageDoubleActive { get; set; }
+	internal int FinalDoubleQuestionRewardCountThisBattle { get; set; }
+	internal bool FinalDoubleCaptureDamageActive { get; set; }
 	internal int HealingOverflowRemainder { get; set; }
 	internal int NextCaptureDamageBonus { get; set; }
 	internal int NextTurnHealAmount { get; set; }
@@ -16,7 +17,8 @@ internal sealed class AdventureUpgradeEffectState
 	{
 		PermanentCaptureDamageBonus = 0;
 		QuestionRewardCount = 0;
-		ThirdQuestionDamageDoubleActive = false;
+		FinalDoubleQuestionRewardCountThisBattle = 0;
+		FinalDoubleCaptureDamageActive = false;
 		HealingOverflowRemainder = 0;
 		NextCaptureDamageBonus = 0;
 		NextTurnHealAmount = 0;
@@ -25,6 +27,12 @@ internal sealed class AdventureUpgradeEffectState
 		ClubMissClimbGrowthStacks = 0;
 		ClubBorrowSuitSetArmed = false;
 		ClubGapRootingUsedThisTurn = false;
+	}
+
+	internal void ResetFinalDoubleProgressForNewEnemy()
+	{
+		FinalDoubleQuestionRewardCountThisBattle = 0;
+		FinalDoubleCaptureDamageActive = false;
 	}
 
 	internal void CopyFrom(AdventureUpgradeEffectState? other)
@@ -37,7 +45,8 @@ internal sealed class AdventureUpgradeEffectState
 
 		PermanentCaptureDamageBonus = other.PermanentCaptureDamageBonus;
 		QuestionRewardCount = other.QuestionRewardCount;
-		ThirdQuestionDamageDoubleActive = other.ThirdQuestionDamageDoubleActive;
+		FinalDoubleQuestionRewardCountThisBattle = other.FinalDoubleQuestionRewardCountThisBattle;
+		FinalDoubleCaptureDamageActive = other.FinalDoubleCaptureDamageActive;
 		HealingOverflowRemainder = other.HealingOverflowRemainder;
 		NextCaptureDamageBonus = other.NextCaptureDamageBonus;
 		NextTurnHealAmount = other.NextTurnHealAmount;

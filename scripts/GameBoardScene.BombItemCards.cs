@@ -236,6 +236,11 @@ public partial class GameBoardScene
 			return;
 		}
 
+		for (int tableCardIndex = firstBombIndex; tableCardIndex <= secondBombIndex; tableCardIndex++)
+		{
+			ClearAdventureTraceHuntMarkerIfTableCardRemoved(_tableCards[tableCardIndex]);
+		}
+
 		_tableCards.RemoveRange(firstBombIndex, secondBombIndex - firstBombIndex + 1);
 		RefreshGardenEelBuriedCardIndex();
 	}

@@ -181,6 +181,11 @@ public partial class GameBoardScene
 				return false;
 			}
 
+			if (!await WarmupOptionalFxGroupAsync("WarmupOptionalFx:AdventureMode:TraceHuntMarker", EnsureAdventureTraceHuntMarkerTexturesLoaded, turnContext))
+			{
+				return false;
+			}
+
 			ulong dragonPrinceSampleStart = BeginPerformanceSample("ResourceLoad");
 			LoadDragonPrinceSpecialJackTexture();
 			EndPerformanceSample("WarmupOptionalFx:AdventureMode:DragonPrinceSpecialJack", dragonPrinceSampleStart);

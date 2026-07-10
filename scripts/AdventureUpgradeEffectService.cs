@@ -107,6 +107,7 @@ internal static class AdventureUpgradeEffectService
 
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
 		state.QuestionRewardCount++;
+		state.FinalDoubleQuestionRewardCountThisBattle++;
 
 		int bonusDirectDamage = 0;
 		int healAmount = 0;
@@ -143,9 +144,10 @@ internal static class AdventureUpgradeEffectService
 			drawCount++;
 		}
 
-		if (acquired.Contains("diamonds_final_double") && state.QuestionRewardCount >= 10)
+		if (acquired.Contains("diamonds_final_double")
+			&& state.FinalDoubleQuestionRewardCountThisBattle >= 10)
 		{
-			state.ThirdQuestionDamageDoubleActive = true;
+			state.FinalDoubleCaptureDamageActive = true;
 		}
 
 		return new AdventureQuestionRewardEffectResult(
@@ -511,7 +513,7 @@ internal static class AdventureUpgradeEffectService
 			damage *= 2;
 		}
 
-		if (damage > 0 && state.ThirdQuestionDamageDoubleActive)
+		if (damage > 0 && state.FinalDoubleCaptureDamageActive)
 		{
 			damage *= 2;
 		}

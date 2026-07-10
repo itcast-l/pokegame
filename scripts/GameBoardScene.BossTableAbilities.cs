@@ -200,10 +200,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayingCard destroyedCard = _tableCards[targetTableCardIndex].Card!.Value;
-		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
-		_tableCards.RemoveAt(targetTableCardIndex);
-		RefreshGardenEelBuriedCardIndex();
+		int damagePoints = RemoveLeafySeadragonBladeBreakTableCard(targetTableCardIndex);
 		_leafySeadragonBladeBreakCooldownTurns = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakCooldownTurns, 1);
 		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
@@ -225,6 +222,17 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
+	}
+
+	private int RemoveLeafySeadragonBladeBreakTableCard(int tableCardIndex)
+	{
+		TableCard destroyedTableCard = _tableCards[tableCardIndex];
+		PlayingCard destroyedCard = destroyedTableCard.Card!.Value;
+		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
+		ClearAdventureTraceHuntMarkerIfTableCardRemoved(destroyedTableCard);
+		_tableCards.RemoveAt(tableCardIndex);
+		RefreshGardenEelBuriedCardIndex();
+		return damagePoints;
 	}
 
 	private bool ShouldResolveLeafySeadragonBladeBreak(int playerIndex, PlayCardResult result)

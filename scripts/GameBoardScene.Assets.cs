@@ -16,6 +16,7 @@ public partial class GameBoardScene
 	private bool _bombPairDestroyEffectResourcesLoaded;
 	private bool _lensRevealWispResourcesLoaded;
 	private bool _magnetCountdownFxResourcesLoaded;
+	private bool _adventureTraceHuntMarkerResourcesLoaded;
 
 	private void EnsureCommonGameplayFxResourcesLoaded()
 	{
@@ -42,6 +43,7 @@ public partial class GameBoardScene
 		EnsureBossKRoyalSeizureLanceTexturesLoaded();
 		EnsureAdventureDamageEffectTexturesLoaded();
 		EnsureAdventureEnemyDamageEffectTexturesLoaded();
+		EnsureAdventureTraceHuntMarkerTexturesLoaded();
 		LoadDragonPrinceSpecialJackTexture();
 		_adventureModeResourcesLoaded = true;
 	}
@@ -204,6 +206,17 @@ public partial class GameBoardScene
 		_magnetCountdownFxResourcesLoaded = true;
 	}
 
+	private void EnsureAdventureTraceHuntMarkerTexturesLoaded()
+	{
+		if (_adventureTraceHuntMarkerResourcesLoaded)
+		{
+			return;
+		}
+
+		LoadAdventureTraceHuntMarkerTextures();
+		_adventureTraceHuntMarkerResourcesLoaded = true;
+	}
+
 	private static Texture2D[] LoadEnemySpecialAbilityAvatarFxFrames()
 	{
 		return FrameAnimationHelpers.LoadTextureFrames(
@@ -340,6 +353,15 @@ public partial class GameBoardScene
 			preferImageFile: true);
 	}
 
+	private static Texture2D[] LoadAdventureTraceHuntMarkerFrames()
+	{
+		return FrameAnimationHelpers.LoadTextureFrames(
+			AdventureTraceHuntMarkerFramePattern,
+			AdventureTraceHuntMarkerFrameCount,
+			"adventure trace hunt marker",
+			preferImageFile: true);
+	}
+
 	private void LoadCardBackTextures()
 	{
 		_cardBackTexture = CardBackFrames.Length > 0 ? CardBackFrames[0] : null;
@@ -405,6 +427,13 @@ public partial class GameBoardScene
 		_adventureEnemyDamageEffectFrames.AddRange(frames);
 		CacheDragonPrinceDamageHitFrameSlices(enemyDefinition);
 		_adventureEnemyDamageEffectResourcesLoaded = true;
+	}
+
+	private void LoadAdventureTraceHuntMarkerTextures()
+	{
+		_adventureTraceHuntMarkerFrames.Clear();
+		_adventureTraceHuntMarkerFrames.AddRange(LoadAdventureTraceHuntMarkerFrames());
+		_adventureTraceHuntMarkerResourcesLoaded = true;
 	}
 
 	private void CacheDragonPrinceDamageHitFrameSlices(CharacterAvatarDefinition enemyDefinition)
