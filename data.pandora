@@ -1495,7 +1495,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "敌人空打后"
+						"value": "敌人成功收牌后"
 					}
 				}
 			},
@@ -1532,7 +1532,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "敌人空打后"
+						"value": "敌人成功收牌后"
 					}
 				}
 			},
@@ -1582,7 +1582,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "敌人受 2 伤。"
+						"value": "敌人-2。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1606,7 +1606,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "敌人空打且桌面4张以上"
+						"value": "桌面≥6且敌人未收取时"
 					}
 				}
 			},
@@ -1656,7 +1656,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "中间每有1张旧桌牌，伤害 -1，最多 -3。"
+						"value": "中间每有1张旧桌牌，伤害 -1。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1687,87 +1687,13 @@
 			{
 				"_category_id": "adventure_suit_upgrades",
 				"_icon_color": "00000000",
-				"_id": "spades_undertow_asphyxia",
-				"_index": 34,
-				"_name": "暗流窒息",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "若从旧桌牌开线，伤害 -3。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "压旧牌开线"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "common"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 70
-					},
-					"suit": {
-						"type": "string",
-						"value": "spades"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "敌人成功收牌时"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
-				"_id": "spades_hook_dredge",
-				"_index": 35,
-				"_name": "钩沉",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "最早旧桌牌置入你牌堆顶，并造成其半分伤害。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "残局收益"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 80
-					},
-					"suit": {
-						"type": "string",
-						"value": "spades"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "敌人空打且桌面5张以上"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
 				"_id": "spades_tail_pressure",
 				"_index": 36,
 				"_name": "压尾",
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "本次打出的牌留桌并翻正。"
+						"value": "保持正面回到牌桌。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1791,7 +1717,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "敌人成功收牌且总收3张以上"
+						"value": "敌人收牌总数=7时"
 					}
 				}
 			},

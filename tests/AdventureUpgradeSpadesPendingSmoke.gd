@@ -38,6 +38,7 @@ func _run() -> void:
 		or not board.has_method("DebugSelectAdventureUpgradeOption") \
 		or not board.has_method("DebugAcquireAdventureUpgrade") \
 		or not board.has_method("DebugSimulateAdventureEnemyMiss") \
+		or not board.has_method("DebugSimulateAdventureEnemyCapture") \
 		or not board.has_method("DebugGetAdventureEnemyNextCardFacesUp") \
 		or not board.has_method("DebugGetAdventureEnemyNextCardInsertModeName") \
 		or not board.has_method("DebugGetAdventureEnemyNextCaptureDamageDelta") \
@@ -62,20 +63,68 @@ func _run() -> void:
 		_fail("Failed to normalize player scores before pending-state assertions")
 		return
 
-	var required_upgrades := [
+	var capture_triggered_upgrades := [
 		"spades_dark_harbor_reveal",
+		"spades_wrong_shore_lineup",
+	]
+	for upgrade_id in capture_triggered_upgrades:
+		if not bool(board.call("DebugAcquireAdventureUpgrade", upgrade_id)):
+			_fail("Failed to inject adventure upgrade %s" % upgrade_id)
+			return
+
+	if not bool(board.call("DebugSimulateAdventureEnemyMiss", 4, true)):
+		_fail("Failed to simulate enemy miss before capture-trigger assertions")
+		return
+
+	if bool(board.call("DebugGetAdventureEnemyNextCardFacesUp")):
+		_fail("Expected dark harbor reveal not to trigger from enemy miss")
+		return
+
+	if String(board.call("DebugGetAdventureEnemyNextCardInsertModeName")) != "None":
+		_fail("Expected wrong shore lineup not to trigger from enemy miss")
+		return
+
+	if int(board.call("DebugGetAdventureEnemyNextCaptureDamageDelta")) != 0:
+		_fail("Expected capture-triggered upgrades not to alter next capture damage")
+		return
+
+	if not bool(board.call("DebugSimulateAdventureEnemyCapture")):
+		_fail("Failed to simulate enemy capture pending state")
+		return
+
+	if not bool(board.call("DebugGetAdventureEnemyNextCardFacesUp")):
+		_fail("Expected dark harbor reveal to trigger from enemy capture")
+		return
+
+	if String(board.call("DebugGetAdventureEnemyNextCardInsertModeName")) != "Leftmost":
+		_fail("Expected wrong shore lineup to trigger from enemy capture")
+		return
+
+	if int(board.call("DebugGetAdventureEnemyNextCaptureDamageDelta")) != 0:
+		_fail("Expected enemy capture pending state to leave damage delta unchanged")
+		return
+
+	var miss_triggered_upgrades := [
 		"spades_missed_beat_blunt_hurt",
 		"spades_missed_beat_calamity",
 		"spades_miss_bleed",
 		"spades_return_tide_misorder",
 		"spades_intercept_beat",
 	]
-	for upgrade_id in required_upgrades:
+	for upgrade_id in miss_triggered_upgrades:
 		if not bool(board.call("DebugAcquireAdventureUpgrade", upgrade_id)):
 			_fail("Failed to inject adventure upgrade %s" % upgrade_id)
 			return
 
-	if not bool(board.call("DebugSimulateAdventureEnemyMiss", 4, true)):
+	if not bool(board.call("DebugSimulateAdventureEnemyMiss", 5, true)):
+		_fail("Failed to simulate below-threshold enemy miss pending state")
+		return
+
+	if int(board.call("DebugGetPlayerScoreValue", ENEMY_PLAYER_INDEX)) != 100:
+		_fail("Expected miss bleed not to deal direct damage below 6 table cards")
+		return
+
+	if not bool(board.call("DebugSimulateAdventureEnemyMiss", 6, true)):
 		_fail("Failed to simulate enemy miss pending state")
 		return
 

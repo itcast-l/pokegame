@@ -1,0 +1,233 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/AdventureQuestionRejudgeOverlay.cs" id="1_rejudge_overlay"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_prompt_panel"]
+bg_color = Color(0.02, 0.14, 0.2, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.28, 0.78, 0.88, 0.62)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0, 0.14, 0.18, 0.52)
+shadow_size = 18
+shadow_offset = Vector2(0, 8)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_keep_button"]
+bg_color = Color(0.03, 0.2, 0.27, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.8, 0.9, 0.72)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0.04, 0.26, 0.3, 0.38)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_keep_button_hover"]
+bg_color = Color(0.04, 0.25, 0.33, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.94, 1, 0.9)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0.16, 0.74, 0.82, 0.3)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_reroll_button"]
+bg_color = Color(0.08, 0.66, 0.74, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.58, 1, 1, 0.94)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0.2, 0.84, 0.92, 0.34)
+shadow_size = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_reroll_button_hover"]
+bg_color = Color(0.12, 0.78, 0.86, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 1, 1, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0.38, 0.96, 1, 0.42)
+shadow_size = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_reward_effect_panel"]
+bg_color = Color(0.01, 0.08, 0.12, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.34, 0.84, 0.92, 0.46)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0.14, 0.18, 0.32)
+shadow_size = 12
+
+[node name="AdventureQuestionRejudgeOverlay" type="Control"]
+z_index = 2050
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_rejudge_overlay")
+
+[node name="RewardPreview" type="Control" parent="."]
+custom_minimum_size = Vector2(248, 336)
+layout_mode = 1
+anchor_left = 0.28
+anchor_top = 0.5
+anchor_right = 0.28
+anchor_bottom = 0.5
+offset_left = -124.0
+offset_top = -168.0
+offset_right = 124.0
+offset_bottom = 168.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RewardMargin" type="MarginContainer" parent="RewardPreview"]
+layout_mode = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="RewardCard" type="TextureRect" parent="RewardPreview/RewardMargin"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(228, 316)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RewardOverlay" type="Control" parent="RewardPreview/RewardMargin"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="RewardEffectPanel" type="PanelContainer" parent="RewardPreview/RewardMargin/RewardOverlay"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -86.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_reward_effect_panel")
+
+[node name="RewardEffectMargin" type="MarginContainer" parent="RewardPreview/RewardMargin/RewardOverlay/RewardEffectPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="RewardEffectLabel" type="Label" parent="RewardPreview/RewardMargin/RewardOverlay/RewardEffectPanel/RewardEffectMargin"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.98, 1, 0.98)
+theme_override_colors/font_outline_color = Color(0, 0.05, 0.08, 0.86)
+theme_override_font_sizes/font_size = 16
+theme_override_constants/outline_size = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="PromptPanel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(452, 156)
+layout_mode = 1
+anchor_left = 0.69
+anchor_top = 0.5
+anchor_right = 0.69
+anchor_bottom = 0.5
+offset_left = -226.0
+offset_top = -78.0
+offset_right = 226.0
+offset_bottom = 78.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_prompt_panel")
+
+[node name="PromptMargin" type="MarginContainer" parent="PromptPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="PromptLayout" type="VBoxContainer" parent="PromptPanel/PromptMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PromptLabel" type="Label" parent="PromptPanel/PromptMargin/PromptLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 0.98)
+theme_override_font_sizes/font_size = 18
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ButtonsRow" type="HBoxContainer" parent="PromptPanel/PromptMargin/PromptLayout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="KeepButton" type="Button" parent="PromptPanel/PromptMargin/PromptLayout/ButtonsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(184, 54)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_keep_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_keep_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_keep_button_hover")
+text = ""
+
+[node name="RerollButton" type="Button" parent="PromptPanel/PromptMargin/PromptLayout/ButtonsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(184, 54)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.97, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_reroll_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_reroll_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_reroll_button_hover")
+text = ""

@@ -1,0 +1,13 @@
+Create exactly one clean HD 2D game FX sprite sheet, 1024x1024, arranged as an invisible 2x2 grid of four equal 512x512 cells.
+
+Subject: "Trace Hunt card mark" - a spectral tracking marker effect for a playing-card tabletop game. The effect should look like a cursed hunter's trace sigil that can be layered over a marked table card: thin black-spade energy, cyan-blue sea-glow highlights, small pearl bubbles, faint silver scratch trails, and a subtle circular target glyph. It should feel premium, ocean-fantasy, readable at small UI size, and consistent with clean hand-painted Godot game FX. FX only: no card, no hand, no character, no UI panel, no text, no numbers, no letters.
+
+STRICT BACKGROUND: the entire canvas is 100% solid flat magenta #FF00FF, including spaces between cells. No visible grid lines, no boxes, no labels, no borders, no guide marks, no watermark, no checkerboard. Leave generous magenta margin around every FX element; no element crosses or touches any cell edge.
+
+Four frames, centered in each equal cell with consistent scale and similar bounding boxes:
+1) Top-left frame: mark appears as three small cyan-black tracking sparks and a faint broken ring beginning to form.
+2) Top-right frame: lock-on shape, a thin spade-shaped shadow sigil in the center with a clean cyan circular trace ring and two short diagonal scratch glints.
+3) Bottom-left frame: pulse peak, brightest frame; the ring expands slightly, cyan glow intensifies, small pearl bubbles and silver star glints flare around the black spade core.
+4) Bottom-right frame: stable marked state, calmer thin ring with a dark spade core, faint trailing scratches, tiny cyan motes drifting inward.
+
+Style: project-native clean HD 2D game FX, crisp silhouette, smooth hand-painted glow, transparent-overlay friendly, high contrast black / deep navy / cyan / silver palette. Not pixel art. No background scene. No card artwork. No text.

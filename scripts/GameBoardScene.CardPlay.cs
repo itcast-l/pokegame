@@ -588,7 +588,6 @@ public partial class GameBoardScene
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 		}
 		ApplyAdventureEnemyMissEffects(playerIndex, playedTableCardIndex, prePlayTableCards);
-		ApplyAdventureEnemyHookDredgeIfNeeded(prePlayTableCards, playerIndex);
 		if (mainPlayerMissEffects.GrantExtraBaseCardAction)
 		{
 			overtimeTriggered = TryGrantAdventureMainPlayerExtraBaseCardAction() || overtimeTriggered;

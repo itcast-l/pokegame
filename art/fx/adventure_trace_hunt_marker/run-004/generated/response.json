@@ -1,0 +1,46 @@
+{
+  "id": "13-1e2a042c-4407-4078-bfed-b253a2219f5f",
+  "object": "",
+  "created": 1783606084,
+  "model": "gpt-image-2",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Progressing...\n1% 2% 5% 10% 20% 50% 100% \nSuccessfully Generated Image\n\n![image](https://file3.aitohumanize.com/file/c8d2862a520d4b15b173c4b838c81a4a.png)"
+      },
+      "finish_reason": "stop",
+      "content_filter_results": {
+        "hate": {
+          "filtered": false
+        },
+        "self_harm": {
+          "filtered": false
+        },
+        "sexual": {
+          "filtered": false
+        },
+        "violence": {
+          "filtered": false
+        },
+        "jailbreak": {
+          "filtered": false,
+          "detected": false
+        },
+        "profanity": {
+          "filtered": false,
+          "detected": false
+        }
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 211,
+    "completion_tokens": 6250,
+    "total_tokens": 6461,
+    "prompt_tokens_details": null,
+    "completion_tokens_details": null
+  },
+  "system_fingerprint": ""
+}

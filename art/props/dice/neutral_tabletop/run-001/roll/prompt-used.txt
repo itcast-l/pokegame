@@ -1,0 +1,19 @@
+Create a clean HD 2D game sprite animation sheet for a neutral tabletop six-sided die rolling in place.
+
+Sheet layout: exactly 6 equal square cells arranged in 2 rows and 3 columns. No visible borders, no grid lines, no labels, no text.
+
+Background rules: the entire background must be 100% solid flat magenta #FF00FF. No gradients, no scene background, no table surface, no hand, no floor, no environment.
+
+Subject in every cell: the same standard tabletop d6 with an ivory off-white plastic body, softly rounded beveled corners, crisp edges, dark charcoal recessed pips, subtle neutral highlights, no symbols, no numerals, no colored pips, no casino styling.
+
+Camera and containment: consistent 3/4 view in every frame, centered, same scale across all six cells, die occupies roughly the central 60% of each cell, generous magenta padding on all sides, nothing may cross a cell edge.
+
+Animation progression:
+Frame 1 top-left: the die starts a forward-right roll from a stable pose.
+Frame 2 top-middle: the die rotates further, clearly tilting and exposing a different top/front/right face combination.
+Frame 3 top-right: the die reaches the fastest mid-roll pose, strongest diagonal rotation, still fully contained.
+Frame 4 bottom-left: the die passes through the opposite tilt with a new visible face combination.
+Frame 5 bottom-middle: the die begins settling, rotation slowing, still clearly a continuous roll.
+Frame 6 bottom-right: the die reaches a clean near-landing pose that feels ready to stop.
+
+Style rules: clean HD prop art, crisp readable silhouette, polished but simple tabletop game asset, not painterly, not pixel art, not photorealistic. Keep the die identity identical in all frames. No detached motion trails, no dust, no spark effects, no cast shadow outside the die silhouette, no extra objects.

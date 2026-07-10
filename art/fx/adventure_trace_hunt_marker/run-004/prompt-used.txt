@@ -1,0 +1,7 @@
+Clean HD 2D game FX sprite sheet, 1024x1024, invisible 2x2 grid, four equal 512x512 cells.
+
+FX only: Trace Hunt marker overlay for a playing-card tabletop game. No card, no hand, no character, no UI, no text. Use a dark spade-shaped tracking sigil, thin cyan-blue glowing target ring, silver scratch glints, tiny pearl bubbles, and a subtle ocean-fantasy glow. It must read clearly when layered over a card.
+
+Frames: top-left small sparks and broken ring forming; top-right lock-on ring with black spade core; bottom-left brightest pulse with expanded cyan ring and glints; bottom-right stable marked state with calm thin ring and inward motes.
+
+Every frame centered, same scale, same bounding box, generous margin. Nothing touches cell edges. Background is pure solid #FF00FF magenta across entire image including between cells. No borders, guide lines, labels, watermark, or checkerboard. Not pixel art.

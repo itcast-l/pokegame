@@ -198,66 +198,6 @@ public partial class GameBoardScene
 		await PlayMainPlayerCardAndAdvanceAsync(0, turnSequenceGeneration);
 	}
 
-	private void ApplyAdventureEnemyHookDredgeIfNeeded(
-		IReadOnlyCollection<TableCard> prePlayTableCards,
-		int playerIndex)
-	{
-		if (!ShouldUseAdventureUpgradeSystem() || !IsAdventureEnemyPlayer(playerIndex) || prePlayTableCards.Count == 0)
-		{
-			return;
-		}
-
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
-		if (runState?.IsActive != true)
-		{
-			return;
-		}
-
-		TableCard? oldestOldTableCard = null;
-		foreach (TableCard tableCard in prePlayTableCards)
-		{
-			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
-			{
-				oldestOldTableCard = tableCard;
-				break;
-			}
-		}
-
-		if (oldestOldTableCard == null || !_tableCards.Contains(oldestOldTableCard))
-		{
-			return;
-		}
-
-		AdventureEnemyMissHookDredgeResult result = AdventureUpgradeEffectService.ResolveEnemyMissHookDredge(
-			runState.GetAcquiredUpgradeIds(),
-			_tableCards.Count,
-			GetCardScoreValue(oldestOldTableCard.Card!.Value));
-		if (!result.MoveOldestOldTableCardToPlayerDeckTop)
-		{
-			return;
-		}
-
-		_tableCards.Remove(oldestOldTableCard);
-		_playerDecks[MainPlayerIndex].Insert(0, PrepareCardForPlayerDeck(oldestOldTableCard.Card.Value));
-		if (ReferenceEquals(_adventureTraceHuntMarkedTableCard, oldestOldTableCard))
-		{
-			_adventureTraceHuntMarkedTableCard = null;
-		}
-
-		if (ReferenceEquals(_adventureHuntOrderMarkedTableCard, oldestOldTableCard))
-		{
-			_adventureHuntOrderMarkedTableCard = null;
-		}
-
-		RefreshAdventureCanopyAnchorAfterTableMutation();
-		RenderPlayerCardPiles();
-		RenderTableCards();
-		if (result.DirectDamageToEnemy > 0)
-		{
-			AddPlayerScore(MainPlayerIndex, result.DirectDamageToEnemy);
-		}
-	}
-
 	private void ResetAdventureEnemyMissPendingState()
 	{
 		_adventureEnemyNextBaseCardFacesUp = false;
@@ -400,6 +340,31 @@ public partial class GameBoardScene
 		{
 			TryGrantAdventureMainPlayerExtraBaseCardAction(keepsTurnAfterAction: true);
 		}
+	}
+
+	private void ApplyAdventureEnemyCaptureEffects(int playerIndex)
+	{
+		if (!ShouldUseAdventureUpgradeSystem() || !IsAdventureEnemyPlayer(playerIndex))
+		{
+			return;
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return;
+		}
+
+		AdventureEnemyCaptureEffectResult effectResult = AdventureUpgradeEffectService.ResolveEnemyCaptureEffects(
+			runState.GetAcquiredUpgradeIds());
+		if (!effectResult.NextCardFacesUp && effectResult.InsertMode == AdventureEnemyNextCardInsertMode.None)
+		{
+			return;
+		}
+
+		_adventureEnemyNextBaseCardFacesUp = effectResult.NextCardFacesUp;
+		_adventureEnemyNextCardInsertMode = effectResult.InsertMode;
+		_adventureEnemyNextInsertAnchorTableCard = null;
 	}
 
 	private TableCard? ResolveAdventureEnemyNextInsertAnchorAfterMiss(

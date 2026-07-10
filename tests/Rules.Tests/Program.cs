@@ -37,7 +37,7 @@ internal static class Program
 		Run("adventure upgrade trigger ordering prefers big capture before victory", AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory);
 		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
-		Run("adventure upgrade ids expose fifty six active upgrades across four suits", AdventureUpgradeIdsExposeFiftySixActiveUpgradesAcrossFourSuits);
+		Run("adventure upgrade ids expose current active upgrades across suits", AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits);
 		Run("adventure upgrade run snapshot v2 restores legacy v1 saves", AdventureUpgradeRunSnapshotV2RestoresLegacyV1Saves);
 		Run("adventure upgrade run state persists effect counters and health", AdventureUpgradeRunStatePersistsEffectCountersAndHealth);
 		Run("adventure question reward side effects track count permanent bonus and final double", AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble);
@@ -63,13 +63,14 @@ internal static class Program
 		Run("adventure post capture bonuses stack by capture ordinal", AdventurePostCaptureBonusesStackByCaptureOrdinal);
 		Run("adventure post capture includes enchanted recovery and hollow burst", AdventurePostCaptureIncludesEnchantedRecoveryAndHollowBurst);
 		Run("adventure low health rescue triggers at half and quarter thresholds once each", AdventureLowHealthRescueTriggersAtHalfAndQuarterThresholdsOnceEach);
+		Run("adventure enemy miss does not queue capture triggered reveal and lineup", AdventureEnemyMissDoesNotQueueCaptureTriggeredRevealAndLineup);
+		Run("adventure enemy capture queues reveal and lineup", AdventureEnemyCaptureQueuesRevealAndLineup);
 		Run("adventure enemy miss effects queue reveal insert penalty and bleed damage", AdventureEnemyMissEffectsQueueRevealInsertPenaltyAndBleedDamage);
 		Run("adventure enemy miss misorder only arms tracked anchor when old cards existed", AdventureEnemyMissMisorderOnlyArmsTrackedAnchorWhenOldCardsExisted);
 		Run("adventure enemy miss grants extra base action from intercept beat", AdventureEnemyMissGrantsExtraBaseActionFromInterceptBeat);
 		Run("adventure main player miss grants continue branch extra action only at four cards", AdventureMainPlayerMissGrantsContinueBranchExtraActionOnlyAtFourCards);
 		Run("adventure black ledger changes old table score contribution by capturer", AdventureBlackLedgerChangesOldTableScoreContributionByCapturer);
-		Run("adventure enemy miss hook dredge moves oldest old card and deals half damage", AdventureEnemyMissHookDredgeMovesOldestOldCardAndDealsHalfDamage);
-		Run("adventure enemy tail pressure preserves played tail card on large capture", AdventureEnemyTailPressurePreservesPlayedTailCardOnLargeCapture);
+		Run("adventure enemy tail pressure preserves played tail card only at seven captured cards", AdventureEnemyTailPressurePreservesPlayedTailCardOnlyAtSevenCapturedCards);
 		Run("adventure old table damage delta applies player mark bonuses", AdventureOldTableDamageDeltaAppliesPlayerMarkBonuses);
 		Run("adventure old table damage delta applies enemy tax and exaction", AdventureOldTableDamageDeltaAppliesEnemyTaxAndExaction);
 		Run("adventure clubs primary root return gives played base card back", AdventureClubsPrimaryRootReturnGivesPlayedBaseCardBack);
@@ -80,7 +81,7 @@ internal static class Program
 		Run("adventure clubs linked stems grants question reward on second capture", AdventureClubsLinkedStemsGrantsQuestionRewardOnSecondCapture);
 		Run("adventure clubs miss climb growth and cross graft adjust match ranks", AdventureClubsMissClimbGrowthAndCrossGraftAdjustMatchRanks);
 		Run("adventure clubs borrow suit set arms and is consumed by next numeric base card", AdventureClubsBorrowSuitSetArmsAndIsConsumedByNextNumericBaseCard);
-		Run("adventure disabled undertow upgrade stays out of enabled pool", AdventureDisabledUndertowUpgradeStaysOutOfEnabledPool);
+		Run("adventure disabled upgrade stays out of enabled pool", AdventureDisabledUpgradeStaysOutOfEnabledPool);
 		Run("game save progress roundtrips pending adventure run json", GameSaveProgressRoundTripsPendingAdventureRunJson);
 		Run("delete active profile switches replacement before removing original slot", DeleteActiveProfileSwitchesReplacementBeforeRemovingOriginalSlot);
 		Run("delete active profile keeps original slot when replacement creation fails", DeleteActiveProfileKeepsOriginalSlotWhenReplacementCreationFails);
@@ -139,6 +140,7 @@ internal static class Program
 		Run("main menu bubbles hide before crossing waterline", MainMenuBubblesHideBeforeCrossingWaterline);
 		Run("main menu bubble visual resource points to existing file", MainMenuBubbleVisualResourcePointsToExistingFile);
 		Run("board effect resources point to existing files", BoardEffectResourcesPointToExistingFiles);
+		Run("dice roll presentation resources map roll and result frames", DiceRollPresentationResourcesMapRollAndResultFrames);
 		Run("game loop phase precedence is stable", GameLoopPhasePrecedenceIsStable);
 		Run("result presentation uses local seat for network defeat", ResultPresentationUsesLocalSeatForNetworkDefeat);
 		Run("result presentation preserves local win and offline rules", ResultPresentationPreservesLocalWinAndOfflineRules);
@@ -732,7 +734,7 @@ internal static class Program
 		False(runState.HasAcquiredUpgrade("common_a"));
 	}
 
-	private static void AdventureUpgradeIdsExposeFiftySixActiveUpgradesAcrossFourSuits()
+	private static void AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits()
 	{
 		string repoRoot = FindRepositoryRoot();
 		string idsPath = Path.Combine(repoRoot, "pandora", "adventure_suit_upgrade_ids.gd");
@@ -740,7 +742,7 @@ internal static class Program
 		string text = File.ReadAllText(idsPath);
 
 		MatchCollection constants = Regex.Matches(text, @"(?m)^const ([A-Z0-9_]+) = ""([a-z0-9_]+)""$");
-		Equal(57, constants.Count);
+		Equal(55, constants.Count);
 
 		var activePerSuit = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
@@ -753,18 +755,13 @@ internal static class Program
 		foreach (Match constant in constants)
 		{
 			string id = constant.Groups[2].Value;
-			if (id == "spades_undertow_asphyxia")
-			{
-				continue;
-			}
-
 			string suit = id.Split('_')[0];
 			activePerSuit[suit] = activePerSuit[suit] + 1;
 		}
 
 		Equal(14, activePerSuit["hearts"]);
 		Equal(14, activePerSuit["diamonds"]);
-		Equal(14, activePerSuit["spades"]);
+		Equal(13, activePerSuit["spades"]);
 		Equal(14, activePerSuit["clubs"]);
 	}
 
@@ -1219,8 +1216,42 @@ internal static class Program
 		Equal(0, none.DrawCount);
 	}
 
+	private static void AdventureEnemyMissDoesNotQueueCaptureTriggeredRevealAndLineup()
+	{
+		AdventureEnemyMissEffectResult result = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			new[]
+			{
+				"spades_dark_harbor_reveal",
+				"spades_wrong_shore_lineup",
+			},
+			tableCardCountAfterMiss: 4,
+			hadOldTableCardsBeforeMiss: true);
+
+		False(result.NextCardFacesUp);
+		Equal(AdventureEnemyNextCardInsertMode.None, result.InsertMode);
+		Equal(0, result.NextCaptureDamageDelta);
+		Equal(0, result.DirectDamageToEnemy);
+	}
+
+	private static void AdventureEnemyCaptureQueuesRevealAndLineup()
+	{
+		AdventureEnemyCaptureEffectResult result = AdventureUpgradeEffectService.ResolveEnemyCaptureEffects(
+			new[]
+			{
+				"spades_dark_harbor_reveal",
+				"spades_wrong_shore_lineup",
+			});
+
+		True(result.NextCardFacesUp);
+		Equal(AdventureEnemyNextCardInsertMode.Leftmost, result.InsertMode);
+	}
+
 	private static void AdventureEnemyMissEffectsQueueRevealInsertPenaltyAndBleedDamage()
 	{
+		AdventureEnemyMissEffectResult belowThreshold = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
+			new[] { "spades_miss_bleed" },
+			tableCardCountAfterMiss: 5,
+			hadOldTableCardsBeforeMiss: true);
 		AdventureEnemyMissEffectResult result = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
 			new[]
 			{
@@ -1230,9 +1261,10 @@ internal static class Program
 				"spades_miss_bleed",
 				"spades_missed_beat_calamity",
 			},
-			tableCardCountAfterMiss: 4,
+			tableCardCountAfterMiss: 6,
 			hadOldTableCardsBeforeMiss: true);
 
+		Equal(0, belowThreshold.DirectDamageToEnemy);
 		True(result.NextCardFacesUp);
 		Equal(AdventureEnemyNextCardInsertMode.Leftmost, result.InsertMode);
 		Equal(-6, result.NextCaptureDamageDelta);
@@ -1303,25 +1335,17 @@ internal static class Program
 		Equal(0, inactiveDelta);
 	}
 
-	private static void AdventureEnemyMissHookDredgeMovesOldestOldCardAndDealsHalfDamage()
-	{
-		AdventureEnemyMissHookDredgeResult result = AdventureUpgradeEffectService.ResolveEnemyMissHookDredge(
-			new[] { "spades_hook_dredge" },
-			tableCardCountAfterMiss: 5,
-			oldestOldTableCardRawScore: 5);
-
-		True(result.MoveOldestOldTableCardToPlayerDeckTop);
-		Equal(3, result.DirectDamageToEnemy);
-	}
-
-	private static void AdventureEnemyTailPressurePreservesPlayedTailCardOnLargeCapture()
+	private static void AdventureEnemyTailPressurePreservesPlayedTailCardOnlyAtSevenCapturedCards()
 	{
 		True(AdventureUpgradeEffectService.ShouldPreserveEnemyCaptureTailCard(
 			new[] { "spades_tail_pressure" },
-			totalCapturedCardCount: 3));
+			totalCapturedCardCount: 7));
 		False(AdventureUpgradeEffectService.ShouldPreserveEnemyCaptureTailCard(
 			new[] { "spades_tail_pressure" },
-			totalCapturedCardCount: 2));
+			totalCapturedCardCount: 6));
+		False(AdventureUpgradeEffectService.ShouldPreserveEnemyCaptureTailCard(
+			new[] { "spades_tail_pressure" },
+			totalCapturedCardCount: 8));
 	}
 
 	private static void AdventureOldTableDamageDeltaAppliesPlayerMarkBonuses()
@@ -1351,7 +1375,7 @@ internal static class Program
 			capturedTraceMark: false,
 			capturedHuntMark: false);
 
-		Equal(-3, taxDelta);
+		Equal(-4, taxDelta);
 		Equal(-4, exactionDelta);
 	}
 
@@ -1483,13 +1507,13 @@ internal static class Program
 		False(consumed.CollectBySuitOnce);
 	}
 
-	private static void AdventureDisabledUndertowUpgradeStaysOutOfEnabledPool()
+	private static void AdventureDisabledUpgradeStaysOutOfEnabledPool()
 	{
 		var definitions = new[]
 		{
 			new AdventureUpgradeDefinitionModel(
-				"spades_undertow_asphyxia",
-				"Undertow",
+				"spades_disabled_upgrade",
+				"Disabled",
 				"spades",
 				"rare",
 				"",
@@ -2954,6 +2978,29 @@ internal static class Program
 		{
 			AssertResPathExists(repoRoot, resPath);
 		}
+	}
+
+	private static void DiceRollPresentationResourcesMapRollAndResultFrames()
+	{
+		string repoRoot = FindRepositoryRoot();
+
+		Equal(16, DiceRollPresentationRules.RollingPathFrameCount);
+		Equal("res://art/props/dice/neutral_tabletop/run-002/rolling_path/frame-001.png", DiceRollPresentationRules.GetRollingPathFramePath(1));
+		Equal("res://art/props/dice/neutral_tabletop/run-002/rolling_path/frame-016.png", DiceRollPresentationRules.GetRollingPathFramePath(16));
+		Equal(string.Empty, DiceRollPresentationRules.GetRollingPathFramePath(0));
+		Equal(string.Empty, DiceRollPresentationRules.GetRollingPathFramePath(17));
+
+		for (int result = DiceRollPresentationRules.MinResult; result <= DiceRollPresentationRules.MaxResult; result++)
+		{
+			True(DiceRollPresentationRules.TryGetResultMotionFramePath(result, out string resultPath));
+			Equal($"res://art/props/dice/neutral_tabletop/run-002/result_motion_frames/result-{result}.png", resultPath);
+			AssertResPathExists(repoRoot, resultPath);
+		}
+
+		False(DiceRollPresentationRules.TryGetResultMotionFramePath(0, out _));
+		False(DiceRollPresentationRules.TryGetResultMotionFramePath(7, out _));
+		AssertFramePatternExists(repoRoot, DiceRollPresentationRules.RollingPathFramePattern, DiceRollPresentationRules.RollingPathFrameCount);
+		AssertResPathExists(repoRoot, DiceRollPresentationRules.RollingPathPreviewGifPath);
 	}
 
 	private static void GameLoopPhasePrecedenceIsStable()

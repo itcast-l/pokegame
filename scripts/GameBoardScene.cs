@@ -454,6 +454,7 @@ public partial class GameBoardScene : Control
 		CreateWinnerLabel();
 		CreateDefeatFinisherOverlay();
 		CreateNetworkReconnectOverlay();
+		CreateDiceRollOverlay();
 		ConnectNetworkManagerSignalsForBoard();
 		RefreshNetworkReconnectOverlayIfNeeded();
 		UpdatePlayerVisibility();

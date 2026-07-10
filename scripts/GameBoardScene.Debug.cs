@@ -350,6 +350,23 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	public bool DebugSimulateAdventureEnemyCapture()
+	{
+		if (!ShouldUseAdventureUpgradeSystem() || player_count <= 1)
+		{
+			return false;
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return false;
+		}
+
+		ApplyAdventureEnemyCaptureEffects(1);
+		return true;
+	}
+
 	public bool DebugSimulateAdventureMainPlayerMiss(int tableCardCountAfterMiss)
 	{
 		if (!ShouldUseAdventureUpgradeSystem())

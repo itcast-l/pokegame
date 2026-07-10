@@ -1,0 +1,11 @@
+Create a clean HD 2D game sprite animation sheet of a neutral six-sided tabletop die rolling across an invisible tabletop plane, then slowing to a stop.
+
+Exact sheet: 4 rows by 4 columns, 16 equal square cells, read left-to-right across rows. No borders, no grid lines, no labels, no text.
+
+Background must be solid flat #FF00FF magenta only. No table texture, no room, no hand, no floor. The tabletop is implied by the die's contact angle and a tiny soft contact shadow directly underneath the die.
+
+Die design: same ivory off-white d6 in every frame, rounded beveled corners, crisp edges, dark charcoal recessed pips, subtle neutral highlights. No symbols, no numerals, no colored pips.
+
+Motion: frames 1-4 enter and start rolling from left to right with changing faces; frames 5-8 tumble fastest with small bounce; frames 9-12 slow down and wobble; frames 13-16 settle into a stable resting pose ready to freeze on a chosen result. The die should visibly translate left-to-right within the frame sequence, not merely spin in place.
+
+Keep the same scale and identity in all frames. Every die must stay fully inside its cell with generous magenta margin. Clean HD game prop art, not pixel art, not photorealistic. No dust, trails, spark effects, or extra objects.

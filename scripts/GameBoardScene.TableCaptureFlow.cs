@@ -153,6 +153,11 @@ public partial class GameBoardScene
 			removedTableCardCount++;
 		}
 		RefreshGardenEelBuriedCardIndex();
+		if (collectedCardCount > 0)
+		{
+			ApplyAdventureEnemyCaptureEffects(playerIndex);
+		}
+
 		if (captureFlow.ShouldTrackQuestionCardRefresh)
 		{
 			QuestionCardRefreshState questionCardRefreshState = _turnAdvancementService.StartQuestionCardRefreshTracking(playerIndex);

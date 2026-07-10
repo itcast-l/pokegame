@@ -1,0 +1,119 @@
+{
+  "motion_cell_size": [
+    512,
+    320
+  ],
+  "rolling_frame_count": 16,
+  "preview_result": 6,
+  "preview_hold_frames": 8,
+  "motion_offsets": [
+    {
+      "frame": 1,
+      "source": "roll_across_table/roll-pose-1.png",
+      "x": 10,
+      "y": 38
+    },
+    {
+      "frame": 2,
+      "source": "roll_across_table/roll-pose-2.png",
+      "x": 38,
+      "y": 26
+    },
+    {
+      "frame": 3,
+      "source": "roll_across_table/roll-pose-3.png",
+      "x": 64,
+      "y": 14
+    },
+    {
+      "frame": 4,
+      "source": "roll_across_table/roll-pose-4.png",
+      "x": 88,
+      "y": 30
+    },
+    {
+      "frame": 5,
+      "source": "roll_across_table/roll-pose-5.png",
+      "x": 111,
+      "y": 20
+    },
+    {
+      "frame": 6,
+      "source": "roll_across_table/roll-pose-6.png",
+      "x": 132,
+      "y": 34
+    },
+    {
+      "frame": 7,
+      "source": "roll_across_table/roll-pose-7.png",
+      "x": 152,
+      "y": 24
+    },
+    {
+      "frame": 8,
+      "source": "roll_across_table/roll-pose-8.png",
+      "x": 170,
+      "y": 38
+    },
+    {
+      "frame": 9,
+      "source": "roll_across_table/roll-pose-9.png",
+      "x": 186,
+      "y": 32
+    },
+    {
+      "frame": 10,
+      "source": "roll_across_table/roll-pose-10.png",
+      "x": 201,
+      "y": 40
+    },
+    {
+      "frame": 11,
+      "source": "roll_across_table/roll-pose-11.png",
+      "x": 213,
+      "y": 38
+    },
+    {
+      "frame": 12,
+      "source": "roll_across_table/roll-pose-12.png",
+      "x": 224,
+      "y": 43
+    },
+    {
+      "frame": 13,
+      "source": "roll_across_table/roll-pose-13.png",
+      "x": 233,
+      "y": 44
+    },
+    {
+      "frame": 14,
+      "source": "roll_across_table/roll-pose-14.png",
+      "x": 240,
+      "y": 46
+    },
+    {
+      "frame": 15,
+      "source": "roll_across_table/roll-pose-15.png",
+      "x": 244,
+      "y": 47
+    },
+    {
+      "frame": 16,
+      "source": "roll_across_table/roll-pose-16.png",
+      "x": 246,
+      "y": 48
+    }
+  ],
+  "result_motion_frames": {
+    "1": "result_motion_frames/result-1.png",
+    "2": "result_motion_frames/result-2.png",
+    "3": "result_motion_frames/result-3.png",
+    "4": "result_motion_frames/result-4.png",
+    "5": "result_motion_frames/result-5.png",
+    "6": "result_motion_frames/result-6.png"
+  },
+  "rolling_path_sheet": "rolling_path/sheet-transparent.png",
+  "rolling_path_gif": "rolling_path/animation.gif",
+  "roll_to_result_6_sheet": "roll_to_result_6/sheet-transparent.png",
+  "roll_to_result_6_gif": "roll_to_result_6/animation.gif"
+}

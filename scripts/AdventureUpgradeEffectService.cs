@@ -60,9 +60,9 @@ internal readonly record struct AdventureClubCaptureScoringResult(
 	bool IncludeCaptureEndpointsInScoring);
 internal readonly record struct AdventureClubCaptureExtensionResult(
 	bool CaptureLeftAdjacentBaseCard);
-internal readonly record struct AdventureEnemyMissHookDredgeResult(
-	bool MoveOldestOldTableCardToPlayerDeckTop,
-	int DirectDamageToEnemy);
+internal readonly record struct AdventureEnemyCaptureEffectResult(
+	bool NextCardFacesUp,
+	AdventureEnemyNextCardInsertMode InsertMode);
 
 internal enum AdventureEnemyNextCardInsertMode
 {
@@ -644,22 +644,12 @@ internal static class AdventureUpgradeEffectService
 		int nextCaptureDamageDelta = 0;
 		int directDamageToEnemy = 0;
 
-		if (acquired.Contains("spades_dark_harbor_reveal"))
-		{
-			nextCardFacesUp = true;
-		}
-
-		if (acquired.Contains("spades_wrong_shore_lineup"))
-		{
-			insertMode = AdventureEnemyNextCardInsertMode.Leftmost;
-		}
-
 		if (acquired.Contains("spades_missed_beat_blunt_hurt"))
 		{
 			nextCaptureDamageDelta -= 3;
 		}
 
-		if (acquired.Contains("spades_miss_bleed") && tableCardCountAfterMiss >= 4)
+		if (acquired.Contains("spades_miss_bleed") && tableCardCountAfterMiss >= 6)
 		{
 			directDamageToEnemy += 2;
 		}
@@ -686,6 +676,18 @@ internal static class AdventureUpgradeEffectService
 			nextCaptureDamageDelta,
 			directDamageToEnemy,
 			acquired.Contains("spades_intercept_beat"));
+	}
+
+	internal static AdventureEnemyCaptureEffectResult ResolveEnemyCaptureEffects(
+		IEnumerable<string> acquiredUpgradeIds)
+	{
+		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		bool nextCardFacesUp = acquired.Contains("spades_dark_harbor_reveal");
+		AdventureEnemyNextCardInsertMode insertMode = acquired.Contains("spades_wrong_shore_lineup")
+			? AdventureEnemyNextCardInsertMode.Leftmost
+			: AdventureEnemyNextCardInsertMode.None;
+
+		return new AdventureEnemyCaptureEffectResult(nextCardFacesUp, insertMode);
 	}
 
 	internal static int ResolveOldTableCaptureDamageDelta(
@@ -724,7 +726,7 @@ internal static class AdventureUpgradeEffectService
 
 		if (acquired.Contains("spades_reverse_capture_tax"))
 		{
-			return -Math.Min(3, capturedOldScoringCardCount);
+			return -capturedOldScoringCardCount;
 		}
 
 		return 0;
@@ -749,22 +751,11 @@ internal static class AdventureUpgradeEffectService
 		return -Math.Max(0, currentResolvedOldTableScoringPoints);
 	}
 
-	internal static AdventureEnemyMissHookDredgeResult ResolveEnemyMissHookDredge(
-		IEnumerable<string> acquiredUpgradeIds,
-		int tableCardCountAfterMiss,
-		int oldestOldTableCardRawScore)
-	{
-		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
-		bool moveCard = acquired.Contains("spades_hook_dredge") && tableCardCountAfterMiss >= 5;
-		int damage = moveCard ? (Math.Max(0, oldestOldTableCardRawScore) + 1) / 2 : 0;
-		return new AdventureEnemyMissHookDredgeResult(moveCard, damage);
-	}
-
 	internal static bool ShouldPreserveEnemyCaptureTailCard(
 		IEnumerable<string> acquiredUpgradeIds,
 		int totalCapturedCardCount)
 	{
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
-		return acquired.Contains("spades_tail_pressure") && totalCapturedCardCount >= 3;
+		return acquired.Contains("spades_tail_pressure") && totalCapturedCardCount == 7;
 	}
 }

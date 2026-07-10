@@ -1,0 +1,31 @@
+Use the layout guide image just shown as a layout-only reference. Use it only to understand the 4 rows, 4 columns, equal invisible frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, no safe-area rectangles, no center marks, no labels, no borders, no guide background.
+
+Create a clean HD 2D game sprite animation sheet for a neutral tabletop six-sided die rolling across an invisible tabletop plane and then slowing down.
+
+Sheet layout: exactly 16 equal square cells arranged in a 4x4 grid. Read frames left-to-right across each row, then continue on the next row. No visible borders, no grid lines, no labels, no text.
+
+Background rules: the entire background must be 100% solid flat magenta #FF00FF. No gradients, no scene background, no drawn table texture, no hand, no floor, no environment. The tabletop is implied only by the die's contact angle and a very small soft contact shadow directly under the die.
+
+Subject in every cell: the same standard tabletop d6 with an ivory off-white plastic body, softly rounded beveled corners, crisp edges, dark charcoal recessed pips, subtle neutral highlights, no symbols, no numerals, no colored pips, no casino styling.
+
+Camera and containment: consistent 3/4 game view in every frame, same scale across all 16 cells, die occupies roughly the central 55% to 65% safe area, generous magenta padding on all sides, nothing may cross a cell edge. The die may shift slightly left/right/down within the safe area to imply real travel, but it must remain fully inside its cell.
+
+Animation progression:
+Frame 1: die enters from the left side of the tabletop path, tilted forward, just making contact.
+Frame 2: die rolls forward-right, exposing a new top/front/right face combination.
+Frame 3: faster tumble, diagonal corner lifted, contact point changes.
+Frame 4: small bounce, die briefly higher above the contact shadow.
+Frame 5: lands on another edge, strong rotation.
+Frame 6: rolls across the middle of the path, top face changing.
+Frame 7: fastest mid-roll frame, most dynamic tilt.
+Frame 8: another bounce with a different visible face combination.
+Frame 9: momentum starts decreasing, lower bounce, still moving right.
+Frame 10: die rolls on a lower edge, rotation slowing.
+Frame 11: wobble begins, less travel.
+Frame 12: first near-settle pose, still tipped.
+Frame 13: small wobble back the other way.
+Frame 14: almost stopped, readable die but still angled.
+Frame 15: final tiny settle wobble.
+Frame 16: stable resting pose, ready for the game to freeze on a chosen result face.
+
+Style rules: clean HD prop art, crisp readable silhouette, polished but simple tabletop game asset, not painterly, not pixel art, not photorealistic. Keep the die identity identical in all frames. No dust, no spark effects, no motion trails, no extra objects.
