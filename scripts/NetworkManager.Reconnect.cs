@@ -211,8 +211,7 @@ public partial class NetworkManager
 			}
 
 			_reconnectAttemptInFlight = true;
-			GodotObject? steam = GetSteamSingleton();
-			steam?.Call("joinLobby", _steamLobbyId);
+			StartSteamLobbyJoin(_steamLobbyId);
 			return;
 		}
 

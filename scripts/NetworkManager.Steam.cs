@@ -4,6 +4,9 @@ using Godot;
 
 public partial class NetworkManager
 {
+	private ulong _pendingSteamLobbyJoinId;
+	private ulong _acceptedSteamLobbyJoinId;
+
 	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
 		RefreshLocalIdentity();
@@ -18,6 +21,7 @@ public partial class NetworkManager
 		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName, roomPassword);
 		_players.Clear();
 		InsertPlayerInSeatOrder(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
+		_pendingSteamLobbyJoinId = 0;
 		_pendingSteamHostLobby = true;
 		TryCreateSteamLobby();
 		EmitPlayerListUpdated();
@@ -64,8 +68,7 @@ public partial class NetworkManager
 			RoomNameRules.DefaultRoomName,
 			string.Empty);
 		_steamLobbyId = lobbyId;
-		GodotObject? steam = GetSteamSingleton();
-		steam?.Call("joinLobby", lobbyId);
+		StartSteamLobbyJoin(lobbyId);
 	}
 
 	public void InviteSteamFriend(ulong steamId)
@@ -187,37 +190,58 @@ public partial class NetworkManager
 
 		_steamPeer = steamPeer;
 		Multiplayer.MultiplayerPeer = _steamPeer;
+		_acceptedSteamLobbyJoinId = lobbyId;
 		SetState(NetworkSessionState.Lobby);
 		EmitPlayerListUpdated();
 	}
 
 	private void OnSteamLobbyJoined(ulong lobbyId, int permissions, bool locked, int response)
 	{
-		if (_pendingSteamHostLobby || (_state != NetworkSessionState.Joining && _state != NetworkSessionState.Reconnecting))
-		{
-			return;
-		}
-
-		if (!NetworkReconnectRules.IsSteamLobbyJoinSuccessful(response))
-		{
-			if (NetworkReconnectRules.ShouldRetrySteamLobbyJoinAfterFailure(_state, response))
+		NetworkSessionState callbackState = _state;
+		NetworkReconnectRules.DispatchSteamLobbyJoinCallback(
+			callbackState,
+			_pendingSteamHostLobby,
+			_pendingSteamLobbyJoinId,
+			lobbyId,
+			_acceptedSteamLobbyJoinId,
+			response,
+			LeaveSteamLobby,
+			() =>
 			{
+				_pendingSteamLobbyJoinId = 0;
 				ScheduleReconnectRetry();
-				return;
-			}
+			},
+			() =>
+			{
+				_pendingSteamLobbyJoinId = 0;
+				Fail(callbackState == NetworkSessionState.Reconnecting
+					? "Reconnect failed: Steam lobby join was denied."
+					: "Steam lobby join failed.");
+			},
+			() =>
+			{
+				_pendingSteamLobbyJoinId = 0;
+				_acceptedSteamLobbyJoinId = lobbyId;
+				CompleteExpectedSteamLobbyJoin(lobbyId);
+			});
+	}
 
-			Fail(_state == NetworkSessionState.Reconnecting
-				? "Reconnect failed: Steam lobby join was denied."
-				: "Steam lobby join failed.");
-			return;
-		}
+	private void StartSteamLobbyJoin(ulong lobbyId)
+	{
+		_pendingSteamLobbyJoinId = lobbyId;
+		_acceptedSteamLobbyJoinId = 0;
+		GodotObject? steam = GetSteamSingleton();
+		steam?.Call("joinLobby", lobbyId);
+	}
 
-		_steamLobbyId = lobbyId;
+	private void CompleteExpectedSteamLobbyJoin(ulong lobbyId)
+	{
 		if (NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
 			_state,
 			GetOriginalHostStableUserId(),
 			GetSteamLobbyOwner(lobbyId)))
 		{
+			ClearAcceptedSteamLobbyJoinIfNeeded(lobbyId);
 			LeaveSteamLobbyIfNeeded();
 			Fail("Reconnect failed: original host is no longer available.");
 			return;
@@ -226,6 +250,7 @@ public partial class NetworkManager
 		TryReadSteamLobbyConfig(lobbyId);
 		if (!TryCreateSteamPeer(server: false, lobbyId, out MultiplayerPeer? steamPeer))
 		{
+			ClearAcceptedSteamLobbyJoinIfNeeded(lobbyId);
 			LeaveSteamLobbyIfNeeded();
 			if (_state == NetworkSessionState.Reconnecting)
 			{
@@ -239,6 +264,14 @@ public partial class NetworkManager
 
 		_steamPeer = steamPeer;
 		Multiplayer.MultiplayerPeer = _steamPeer;
+	}
+
+	private void ClearAcceptedSteamLobbyJoinIfNeeded(ulong lobbyId)
+	{
+		if (_acceptedSteamLobbyJoinId == lobbyId)
+		{
+			_acceptedSteamLobbyJoinId = 0;
+		}
 	}
 
 	private void OnSteamLobbyMatchList(Godot.Collections.Array lobbies)
@@ -372,9 +405,9 @@ public partial class NetworkManager
 		}
 	}
 
-	private void LeaveSteamLobbyIfNeeded()
+	private void LeaveSteamLobby(ulong lobbyId)
 	{
-		if (_steamLobbyId == 0)
+		if (lobbyId == 0)
 		{
 			return;
 		}
@@ -385,6 +418,11 @@ public partial class NetworkManager
 			return;
 		}
 
-		steam.Call("leaveLobby", _steamLobbyId);
+		steam.Call("leaveLobby", lobbyId);
+	}
+
+	private void LeaveSteamLobbyIfNeeded()
+	{
+		LeaveSteamLobby(_steamLobbyId);
 	}
 }

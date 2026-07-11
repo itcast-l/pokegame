@@ -156,12 +156,10 @@ internal static class FrameAnimationHelpers
 			return;
 		}
 
-		Tween frameTween = target.CreateTween();
-		frameTween.SetParallel(true);
 		for (int frameSlot = 0; frameSlot < totalFrameCount; frameSlot++)
 		{
 			Texture2D frame = frames[frameSlot % frames.Count];
-			frameTween.TweenCallback(Callable.From(() =>
+			tween.TweenCallback(Callable.From(() =>
 			{
 				if (GodotObject.IsInstanceValid(target))
 				{

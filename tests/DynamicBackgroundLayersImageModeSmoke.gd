@@ -7,6 +7,9 @@ const ADVENTURE_MAP_SCENE_PATH := "res://scenes/adventure_map_scene.tscn"
 const VIEWPORT_SIZE := Vector2i(1600, 900)
 const IMAGE_BASED_RENDER_MODE := 1
 const BUBBLE_TEXTURE_PATH := "res://art/fx/environment/main_menu_bubble/run-001/processed/fx-1.png"
+const MAIN_MENU_BACKGROUND_ANIMATION := &"main_menu_ocean_background"
+const MAIN_MENU_BACKGROUND_FRAME_COUNT := 24
+const MAIN_MENU_BACKGROUND_LOAD_TIMEOUT_FRAMES := 120
 
 var _failed := false
 
@@ -45,8 +48,14 @@ func _assert_main_menu_layers() -> void:
 		return
 
 	var main_menu := scene["instance"] as Node
+	var background_art := _require_node(main_menu, "BackgroundArt", "main menu animated background")
 	var ocean_layer := _require_node(main_menu, "OceanDynamicsLayer", "main menu ocean dynamics layer")
 	var ambient_layer := _require_node(main_menu, "UnderwaterAmbientLayer", "main menu underwater ambient layer")
+	if _failed:
+		_cleanup_scene(scene)
+		return
+
+	await _assert_main_menu_background_animation(background_art)
 	if _failed:
 		_cleanup_scene(scene)
 		return
@@ -92,6 +101,36 @@ func _assert_main_menu_layers() -> void:
 			return
 
 	_cleanup_scene(scene)
+
+
+func _assert_main_menu_background_animation(background_art: Node) -> void:
+	var animation_player := background_art.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	for _frame in MAIN_MENU_BACKGROUND_LOAD_TIMEOUT_FRAMES:
+		if animation_player != null and animation_player.has_animation(MAIN_MENU_BACKGROUND_ANIMATION):
+			break
+		await process_frame
+		animation_player = background_art.get_node_or_null("AnimationPlayer") as AnimationPlayer
+
+	if animation_player == null:
+		_fail("Main menu background did not create AnimationPlayer after loading its 24 frames")
+		return
+	if not animation_player.has_animation(MAIN_MENU_BACKGROUND_ANIMATION):
+		_fail("Main menu background did not configure its frame animation")
+		return
+
+	var animation := animation_player.get_animation(MAIN_MENU_BACKGROUND_ANIMATION)
+	if animation == null:
+		_fail("Main menu background animation resource is missing")
+		return
+	if animation.get_track_count() != 1 or animation.track_get_key_count(0) != MAIN_MENU_BACKGROUND_FRAME_COUNT:
+		_fail("Main menu background expected %d configured frame keys, got tracks=%d keys=%d" % [
+			MAIN_MENU_BACKGROUND_FRAME_COUNT,
+			animation.get_track_count(),
+			animation.track_get_key_count(0) if animation.get_track_count() > 0 else 0,
+		])
+		return
+	if not animation_player.is_playing():
+		_fail("Main menu background frame animation is configured but not playing")
 
 
 func _assert_multiplayer_lobby_layers() -> void:

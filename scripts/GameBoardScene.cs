@@ -391,7 +391,6 @@ public partial class GameBoardScene : Control
 	private readonly HashSet<int> _cardPlayMagnetExtraCaptureIndexes = new();
 	private readonly HashSet<int> _cardPlayResolvedDoubleTriggerIndexes = new();
 	private readonly HashSet<int> _cardPlayResolvedOvertimeTriggerIndexes = new();
-		private readonly HashSet<CardTriggerResolutionKey> _resolvedCardTriggerKeys = new();
 		private readonly List<TableSpecialCardTrigger> _capturedSpecialCardTriggers = new();
 		private readonly List<int> _tableShuffleIndexes = new();
 		private readonly List<TableCard> _tableShuffleMovableCards = new();

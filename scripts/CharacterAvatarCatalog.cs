@@ -15,7 +15,6 @@ public static partial class CharacterAvatarCatalog
 		"shiba",
 		"red_panda",
 	};
-	private const bool UnlockAllAdventureStagesForTesting = true;
 	private const string PendingAvatarUnlockQueueSeparator = "|";
 	private const string AvatarResourceDirectory = "res://resources/character_avatars";
 
@@ -139,7 +138,7 @@ public static partial class CharacterAvatarCatalog
 	{
 		return stageNumber > 0
 			&& stageNumber <= GetAdventureStageCount()
-			&& (UnlockAllAdventureStagesForTesting || stageNumber <= LoadHighestCompletedAdventureStage() + 1);
+			&& stageNumber <= LoadHighestCompletedAdventureStage() + 1;
 	}
 
 	public static int GetAdventureStageNumber(string avatarId)
@@ -187,6 +186,10 @@ public static partial class CharacterAvatarCatalog
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
 		int previousHighestStage = Mathf.Clamp(profile.HighestCompletedStage, 0, GetAdventureStageCount());
 		if (stageNumber <= previousHighestStage)
+		{
+			return;
+		}
+		if (stageNumber != previousHighestStage + 1)
 		{
 			return;
 		}

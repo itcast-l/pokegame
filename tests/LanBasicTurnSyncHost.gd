@@ -6,12 +6,19 @@ const ITEM_MODE := true
 const WINNING_SCORE := 100
 const TIMEOUT_SECONDS := 25.0
 const POST_SYNC_SETTLE_SECONDS := 0.4
+const LOBBY_STATE := 4
+const LOADING_SCENE_STATE := 6
+const IN_GAME_STATE := 7
 
 var _network: Node
 var _started_match := false
 var _board_initialized := false
 var _played_card := false
 var _finished := false
+var _state_sequence: Array[int] = []
+var _loading_scene_count := 0
+var _saw_loading_handshake := false
+var _saw_lobby_after_loading := false
 
 
 func _initialize() -> void:
@@ -21,6 +28,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_network = root.get_node("/root/NetworkManager")
 	_network.connect("PlayerListUpdated", Callable(self, "_on_player_list_updated"))
+	_network.connect("StateChanged", Callable(self, "_on_state_changed"))
 	_network.connect("BoardInitialize", Callable(self, "_on_board_initialize"))
 	print("HOST_START")
 	await process_frame
@@ -52,12 +60,53 @@ func _on_player_list_updated(players: Array) -> void:
 	_network.StartMatch()
 
 
+func _on_state_changed(state: int) -> void:
+	_state_sequence.append(state)
+	print("HOST_STATE %d" % state)
+	if state == LOADING_SCENE_STATE:
+		_loading_scene_count += 1
+		_saw_loading_handshake = bool(_network.call("DebugIsLoadHandshakeTimeoutActive"))
+		print("HOST_LOAD_HANDSHAKE_ACTIVE %s" % _saw_loading_handshake)
+		return
+
+	if _loading_scene_count > 0 and state == LOBBY_STATE:
+		_saw_lobby_after_loading = true
+
+
+func _assert_match_start_reentrancy_invariants() -> bool:
+	if _loading_scene_count != 1:
+		_fail("LoadingScene was reached %d times; states=%s" % [_loading_scene_count, _state_sequence])
+		return false
+
+	if not _saw_loading_handshake:
+		_fail("Load handshake timeout was inactive during LoadingScene")
+		return false
+
+	if _saw_lobby_after_loading:
+		_fail("Lobby was reached after LoadingScene; states=%s" % _state_sequence)
+		return false
+
+	return true
+
+
 func _on_board_initialize(_payload: Dictionary) -> void:
 	if _board_initialized:
 		return
 
+	if not _assert_match_start_reentrancy_invariants():
+		return
+
+	if _state_sequence.is_empty() or _state_sequence.back() != IN_GAME_STATE:
+		_fail("Board initialized outside InGame; states=%s" % _state_sequence)
+		return
+
+	if bool(_network.call("DebugIsLoadHandshakeTimeoutActive")):
+		_fail("Load handshake timeout remained active after InGame")
+		return
+
 	_board_initialized = true
 	print("HOST_BOARD_INIT")
+	print("HOST_REENTRANCY_GUARD_OK")
 	_track_progress()
 
 

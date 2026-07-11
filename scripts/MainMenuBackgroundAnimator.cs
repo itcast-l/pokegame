@@ -29,18 +29,26 @@ public partial class MainMenuBackgroundAnimator : TextureRect
 		UpdateAnimationPlayback();
 	}
 
-	private async System.Threading.Tasks.Task LoadFramesAndConfigureAnimationAsync()
+	protected virtual System.Threading.Tasks.Task<Texture2D[]>
+		LoadBackgroundFramesAsync()
 	{
-		_frames = await BackgroundFrameLoader.LoadTextureFramesAsync(
+		return BackgroundFrameLoader.LoadTextureFramesAsync(
 			this,
 			frame_pattern,
 			frame_count,
 			"main menu ocean background");
+	}
 
-		if (!IsInsideTree())
+	private async System.Threading.Tasks.Task LoadFramesAndConfigureAnimationAsync()
+	{
+		Texture2D[] frames = await LoadBackgroundFramesAsync();
+
+		if (!GodotObject.IsInstanceValid(this) || !IsInsideTree())
 		{
 			return;
 		}
+
+		_frames = frames;
 
 		if (_frames.Length > 0)
 		{

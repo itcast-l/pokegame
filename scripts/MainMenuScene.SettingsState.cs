@@ -278,6 +278,8 @@ public partial class MainMenuScene
 			return;
 		}
 
+		uint applyToken = ++_windowResolutionApplyToken;
+
 		bool nativeWindowResizeAllowed = IsNativeWindowResizeAllowed(window);
 		if (nativeWindowResizeAllowed)
 		{
@@ -288,8 +290,7 @@ public partial class MainMenuScene
 
 		if (!_fullscreen)
 		{
-			_windowResolutionApplyToken++;
-			ApplyWindowedResolutionDeferred(_selectedResolution, _windowResolutionApplyToken);
+			ApplyWindowedResolutionDeferred(_selectedResolution, applyToken);
 		}
 
 		_hasAppliedWindowSettings = true;

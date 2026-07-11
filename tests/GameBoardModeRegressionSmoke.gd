@@ -50,9 +50,12 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await process_frame
+	var requested_mode := _get_requested_mode()
 	for spec in MODE_SPECS:
 		if _failed:
 			return
+		if not requested_mode.is_empty() and String(spec.get("name", "")) != requested_mode:
+			continue
 
 		await _smoke_mode(spec)
 
@@ -60,6 +63,13 @@ func _run() -> void:
 		print("GAME_BOARD_MODE_REGRESSION_SMOKE_OK")
 		await _dispose_audio_before_quit()
 		quit(0)
+
+
+func _get_requested_mode() -> String:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--mode="):
+			return argument.trim_prefix("--mode=")
+	return ""
 
 
 func _smoke_mode(spec: Dictionary) -> void:
@@ -85,6 +95,13 @@ func _smoke_mode(spec: Dictionary) -> void:
 		board.set("adventure_enemy_avatar_id", String(spec.get("adventure_enemy_avatar_id", "fish")))
 
 	root.add_child(board)
+	await process_frame
+	if not board.has_method("DebugRestartWithoutOpeningDealAnimation"):
+		_fail("%s fast mode setup hook missing" % mode_name)
+		return
+	if not bool(board.call("DebugRestartWithoutOpeningDealAnimation")):
+		_fail("%s fast mode setup hook rejected the board" % mode_name)
+		return
 	await process_frame
 
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
@@ -124,6 +141,7 @@ func _smoke_mode(spec: Dictionary) -> void:
 
 		if saw_opponent_turn and current_turn == 0 and phase == "AwaitingMainPlayerAction":
 			board.queue_free()
+			await process_frame
 			await process_frame
 			print("MODE_OK %s" % mode_name)
 			return

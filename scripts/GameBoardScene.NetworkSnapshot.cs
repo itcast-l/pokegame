@@ -4,6 +4,201 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private readonly record struct NetworkPlayingCardSnapshot(string CardCode, string[] AttachedItemCardIds);
+
+	private sealed record ValidatedNetworkBoardSnapshot(
+		int SnapshotId, int TurnSequenceGeneration, int CurrentTurnPlayerIndex,
+		int WinnerPlayerIndex, int[] Scores, int[] DeckCounts, int[] HandCounts,
+		int[] ItemHandCounts, NetworkPlayingCardSnapshot[] OwnHandCards,
+		string[] OwnItemHandCardIds, bool RevealedTargetHandVisible,
+		NetworkPlayingCardSnapshot[] RevealedHandCards,
+		string[] RevealedItemHandCardIds, PendingItemSelectionMode PendingSelectionMode,
+		int PendingSelectionOwner, string PendingItemCardId,
+		int PendingTurnSequenceGeneration, int RevealedPlayerHandIndex,
+		bool OpeningDealAnimationPlaying, NetworkTableCardSnapshot[] TableCards,
+		SeatControlState[] SeatControlStates);
+
+	private static bool TryReadNetworkArray(Godot.Collections.Dictionary dictionary, string key, out Godot.Collections.Array values)
+	{
+		values = default!;
+		if (!dictionary.TryGetValue(key, out Variant rawValue) || rawValue.VariantType != Variant.Type.Array) return false;
+		values = rawValue.AsGodotArray();
+		return true;
+	}
+
+	private static bool TryReadNetworkDictionary(Variant rawValue, out Godot.Collections.Dictionary dictionary)
+	{
+		dictionary = default!;
+		if (rawValue.VariantType != Variant.Type.Dictionary) return false;
+		dictionary = rawValue.AsGodotDictionary();
+		return true;
+	}
+
+	private static bool TryReadBoundedNetworkIntArray(Godot.Collections.Dictionary dictionary, string key, int minimumCount, int maximumCount, int minimumValue, int maximumValue, out int[] values)
+	{
+		values = Array.Empty<int>();
+		if (!TryReadNetworkArray(dictionary, key, out Godot.Collections.Array rawValues) || rawValues.Count < minimumCount || rawValues.Count > maximumCount) return false;
+		var decoded = new int[rawValues.Count];
+		for (int index = 0; index < rawValues.Count; index++)
+		{
+			if (!TryConvertNetworkInt32(rawValues[index], out int value) || value < minimumValue || value > maximumValue) return false;
+			decoded[index] = value;
+		}
+		values = decoded;
+		return true;
+	}
+
+	private static bool TryReadBoundedNetworkStringArray(Godot.Collections.Dictionary dictionary, string key, int minimumCount, int maximumCount, int maximumElementLength, out string[] values)
+	{
+		values = Array.Empty<string>();
+		if (!TryReadNetworkArray(dictionary, key, out Godot.Collections.Array rawValues) || rawValues.Count < minimumCount || rawValues.Count > maximumCount) return false;
+		var decoded = new string[rawValues.Count];
+		for (int index = 0; index < rawValues.Count; index++)
+		{
+			if (rawValues[index].VariantType != Variant.Type.String) return false;
+			string value = rawValues[index].AsString();
+			if (value.Length > maximumElementLength) return false;
+			decoded[index] = value;
+		}
+		values = decoded;
+		return true;
+	}
+
+	private static bool TryReadNetworkEnum<TEnum>(Godot.Collections.Dictionary dictionary, string key, out TEnum value) where TEnum : struct, Enum
+	{
+		value = default;
+		return TryReadNetworkString(dictionary, key, out string rawValue) && Enum.TryParse(rawValue, true, out value) && Enum.IsDefined(typeof(TEnum), value);
+	}
+
+	private static bool TryReadExactNetworkBoolArray(Godot.Collections.Dictionary dictionary, string key, int expectedCount, out bool[] values)
+	{
+		values = Array.Empty<bool>();
+		if (!TryReadNetworkArray(dictionary, key, out Godot.Collections.Array rawValues) || rawValues.Count != expectedCount) return false;
+		var decoded = new bool[expectedCount];
+		for (int index = 0; index < expectedCount; index++) { if (rawValues[index].VariantType != Variant.Type.Bool) return false; decoded[index] = rawValues[index].AsBool(); }
+		values = decoded;
+		return true;
+	}
+
+	private static bool HasUniqueValues(IReadOnlyList<int> values)
+	{
+		for (int index = 0; index < values.Count; index++) for (int previous = 0; previous < index; previous++) if (values[index] == values[previous]) return false;
+		return true;
+	}
+
+	private bool IsValidNetworkItemCardId(string itemCardId, bool requirePlayableFromHand)
+	{
+		return !string.IsNullOrWhiteSpace(itemCardId) && itemCardId.Length <= MaxNetworkItemCardIdLength
+			&& _itemCardCatalog.IsEnabled(itemCardId) && (!requirePlayableFromHand || _itemCardCatalog.IsPlayable(itemCardId))
+			&& _itemCardTextures.ContainsKey(itemCardId);
+	}
+
+	private bool IsValidNetworkAttachmentItemCardId(string itemCardId) => IsValidNetworkItemCardId(itemCardId, false) && IsAttachmentItemCard(itemCardId);
+	private bool HasValidNetworkAttachedItemCardIds(IReadOnlyList<string> ids) => ids.Count <= 1 && (ids.Count == 0 || IsValidNetworkAttachmentItemCardId(ids[0]));
+	private bool TryParseNetworkAttachedItemCardIdCsv(string value, out string[] itemCardIds)
+	{
+		itemCardIds = Array.Empty<string>();
+		if (string.IsNullOrEmpty(value)) return true;
+		if (value.Length > MaxNetworkAttachmentCsvLength || value.IndexOf(',') >= 0) return false;
+		string itemCardId = value.Trim();
+		if (itemCardId.Length == 0 || !IsValidNetworkAttachmentItemCardId(itemCardId)) return false;
+		itemCardIds = new[] { itemCardId };
+		return true;
+	}
+
+	private bool TryValidateNetworkCaptureRevealEntry(int tableCardIndex, string cardCode, string attachmentCsv, int points, bool doubled, out string[] attachedIds)
+	{
+		attachedIds = Array.Empty<string>();
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count || cardCode.Length > MaxNetworkCardCodeLength || !TryParseNetworkAttachedItemCardIdCsv(attachmentCsv, out attachedIds) || (points == 0 && doubled)) return false;
+		TableCard tableCard = _tableCards[tableCardIndex];
+		if (tableCard.IsFaceUp || tableCard.IsBuriedInSand) return false;
+		if (string.IsNullOrEmpty(cardCode)) return !tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue && attachedIds.Length == 0 && points == 0 && !doubled;
+		return tableCard.Card.HasValue && _networkCardsByCode.ContainsKey(cardCode);
+	}
+
+	private bool TryDecodeNetworkPlayingCards(Godot.Collections.Array rawCards, out NetworkPlayingCardSnapshot[] cards)
+	{
+		cards = Array.Empty<NetworkPlayingCardSnapshot>();
+		if (rawCards.Count > MaxTotalHandCards) return false;
+		var decoded = new NetworkPlayingCardSnapshot[rawCards.Count];
+		for (int index = 0; index < rawCards.Count; index++)
+		{
+			if (!TryReadNetworkDictionary(rawCards[index], out Godot.Collections.Dictionary rawCard)
+				|| !TryReadNetworkString(rawCard, "code", MaxNetworkCardCodeLength, out string cardCode)
+				|| string.IsNullOrWhiteSpace(cardCode) || !_networkCardsByCode.ContainsKey(cardCode)
+				|| !TryReadBoundedNetworkStringArray(rawCard, "attached_item_card_ids", 0, 1, MaxNetworkItemCardIdLength, out string[] ids)
+				|| !HasValidNetworkAttachedItemCardIds(ids)) return false;
+			decoded[index] = new NetworkPlayingCardSnapshot(cardCode, ids);
+		}
+		cards = decoded;
+		return true;
+	}
+
+	private bool TryDecodeNetworkItemCards(Godot.Collections.Array rawCards, out string[] ids)
+	{
+		ids = Array.Empty<string>();
+		if (rawCards.Count > MaxTotalHandCards) return false;
+		var decoded = new string[rawCards.Count];
+		for (int index = 0; index < rawCards.Count; index++)
+		{
+			if (!TryReadNetworkDictionary(rawCards[index], out Godot.Collections.Dictionary rawCard)
+				|| !TryReadNetworkString(rawCard, "id", MaxNetworkItemCardIdLength, out string id)
+				|| !IsValidNetworkItemCardId(id, true)) return false;
+			decoded[index] = id;
+		}
+		ids = decoded;
+		return true;
+	}
+
+	private bool TryDecodeNetworkTableCards(Godot.Collections.Array rawCards, int maximumCount, out NetworkTableCardSnapshot[] cards)
+	{
+		cards = Array.Empty<NetworkTableCardSnapshot>();
+		if (rawCards.Count > maximumCount) return false;
+		var decoded = new NetworkTableCardSnapshot[rawCards.Count];
+		for (int index = 0; index < rawCards.Count; index++)
+		{
+			if (!TryReadNetworkDictionary(rawCards[index], out Godot.Collections.Dictionary rawCard)
+				|| !TryReadNetworkString(rawCard, NetworkTableCardSnapshotCodec.CodeKey, MaxNetworkCardCodeLength, out string code)
+				|| (!string.IsNullOrEmpty(code) && !_networkCardsByCode.ContainsKey(code))
+				|| !TryReadBoundedNetworkStringArray(rawCard, NetworkTableCardSnapshotCodec.AttachedItemCardIdsKey, 0, 1, MaxNetworkItemCardIdLength, out string[] attachedIds)
+				|| !HasValidNetworkAttachedItemCardIds(attachedIds) || (attachedIds.Length > 0 && string.IsNullOrEmpty(code))
+				|| !TryReadNetworkBool(rawCard, NetworkTableCardSnapshotCodec.IsFaceUpKey, out bool faceUp)
+				|| !TryReadNetworkBool(rawCard, NetworkTableCardSnapshotCodec.IsBuriedInSandKey, out bool buried)
+				|| !TryReadNetworkBool(rawCard, NetworkTableCardSnapshotCodec.IsSlimeCoatedKey, out bool slime)
+				|| !TryReadNetworkInt32(rawCard, NetworkTableCardSnapshotCodec.CardOwnerPlayerIndexKey, -1, player_count - 1, out int cardOwner)
+				|| !TryReadNetworkBool(rawCard, NetworkTableCardSnapshotCodec.RemoveCardOnCaptureKey, out bool removeOnCapture)
+				|| !TryReadNetworkString(rawCard, NetworkTableCardSnapshotCodec.ItemOverlayIdKey, MaxNetworkItemCardIdLength, out string overlayId)
+				|| (!string.IsNullOrEmpty(overlayId) && !IsValidNetworkItemCardId(overlayId, false))
+				|| !TryReadNetworkInt32(rawCard, NetworkTableCardSnapshotCodec.ItemOwnerPlayerIndexKey, -1, player_count - 1, out int itemOwner)
+				|| (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(overlayId) && faceUp)
+				|| (string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(overlayId) && cardOwner != -1)
+				|| (string.IsNullOrEmpty(overlayId) && itemOwner != -1)) return false;
+			decoded[index] = new NetworkTableCardSnapshot(code, attachedIds, faceUp, buried, slime, cardOwner, removeOnCapture, overlayId, itemOwner);
+		}
+		cards = decoded;
+		return true;
+	}
+
+	private static bool TryDecodeNetworkSeatControlStates(Godot.Collections.Array rawStates, int playerCount, out SeatControlState[] states)
+	{
+		states = Array.Empty<SeatControlState>();
+		if (rawStates.Count != playerCount) return false;
+		var decoded = new SeatControlState[playerCount];
+		var seen = new bool[playerCount];
+		for (int index = 0; index < rawStates.Count; index++)
+		{
+			if (!TryReadNetworkDictionary(rawStates[index], out Godot.Collections.Dictionary rawState)
+				|| !TryReadNetworkInt32(rawState, "seat_index", 0, playerCount - 1, out int seatIndex) || seen[seatIndex]
+				|| !TryReadNetworkEnum(rawState, "mode", out SeatControlMode mode)
+				|| !TryReadNetworkInt32(rawState, "peer_id", 0, int.MaxValue, out int peerId)
+				|| !TryReadNetworkString(rawState, "stable_user_id", MaxNetworkOpaqueIdentityLength, out string stableUserId)
+				|| !TryReadNetworkString(rawState, "reconnect_token", MaxNetworkOpaqueIdentityLength, out string reconnectToken)) return false;
+			seen[seatIndex] = true;
+			decoded[seatIndex] = new SeatControlState(seatIndex, mode, peerId, stableUserId, reconnectToken);
+		}
+		states = decoded;
+		return true;
+	}
 	internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat(int recipientSeatIndex, int snapshotId)
 	{
 		return new Godot.Collections.Dictionary
@@ -36,34 +231,41 @@ public partial class GameBoardScene
 
 	internal void ApplyNetworkBoardSnapshot(Godot.Collections.Dictionary snapshot)
 	{
-		if (!IsUsableNetworkSnapshot(snapshot, out int snapshotId))
+		if (!TryDecodeNetworkBoardSnapshot(snapshot, out ValidatedNetworkBoardSnapshot decodedSnapshot))
 		{
 			return;
 		}
 
 		NetworkManager? networkManager = GetNetworkManager();
+		bool isReconnectCatchup = IsNetworkMultiplayerMode()
+			&& !IsNetworkHost()
+			&& networkManager?.State == NetworkSessionState.Reconnecting;
+		if (isReconnectCatchup)
+		{
+			_networkReconnectCatchupPendingCompletion = true;
+		}
+		if (_networkVisualQueueProcessing || HasQueuedEventForSnapshot(decodedSnapshot.SnapshotId))
+		{
+			if (_networkQueuedSnapshot == null || _networkQueuedSnapshot.SnapshotId <= decodedSnapshot.SnapshotId)
+			{
+				_networkQueuedSnapshot = decodedSnapshot;
+			}
+			return;
+		}
+
 		if (NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			networkManager?.State ?? NetworkSessionState.Idle))
 		{
-			ApplyNetworkBoardSnapshotNow(snapshot, snapshotId);
+			ApplyNetworkBoardSnapshotNow(decodedSnapshot);
 			return;
 		}
 
-		if (_networkVisualQueueProcessing || HasQueuedEventForSnapshot(snapshotId))
-		{
-			if (_networkQueuedSnapshot == null || ReadNetworkInt(_networkQueuedSnapshot, "snapshot_id", -1) <= snapshotId)
-			{
-				_networkQueuedSnapshot = snapshot;
-			}
-			return;
-		}
-
-		ApplyNetworkBoardSnapshotNow(snapshot, snapshotId);
+		ApplyNetworkBoardSnapshotNow(decodedSnapshot);
 	}
 
-	private void ApplyNetworkBoardSnapshotNow(Godot.Collections.Dictionary snapshot, int snapshotId)
+	private void ApplyNetworkBoardSnapshotNow(ValidatedNetworkBoardSnapshot snapshot)
 	{
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
@@ -74,7 +276,6 @@ public partial class GameBoardScene
 			_networkQueuedSnapshot = null;
 		}
 
-		_networkLastAppliedSnapshotId = snapshotId;
 		_networkBoardInitialized = true;
 		ClearNetworkPendingActionState();
 		ResetNetworkPredictedClientState();
@@ -82,21 +283,22 @@ public partial class GameBoardScene
 		_shiftedHiddenHandDisplaySlots.Clear();
 
 		EnsureNetworkStateLists();
-		_turnSequenceGeneration = ReadNetworkInt(snapshot, "turn_sequence_generation", _turnSequenceGeneration);
+		_turnSequenceGeneration = snapshot.TurnSequenceGeneration;
 		_turnStateMachine.SyncGeneration(_turnSequenceGeneration);
-		_currentTurnPlayerIndex = ReadNetworkInt(snapshot, "current_turn_player_index", _currentTurnPlayerIndex);
-		_winnerPlayerIndex = ReadNetworkInt(snapshot, "winner_player_index", _winnerPlayerIndex);
-		ApplyIntArray(snapshot, "scores", _playerScores, player_count);
-		ApplyCountArray(snapshot, "deck_counts", _playerDecks, player_count, CreatePlaceholderPlayingCard);
+		_currentTurnPlayerIndex = snapshot.CurrentTurnPlayerIndex;
+		_winnerPlayerIndex = snapshot.WinnerPlayerIndex;
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++) _playerScores[playerIndex] = snapshot.Scores[playerIndex];
+		ApplyValidatedCountArray(snapshot.DeckCounts, _playerDecks, CreatePlaceholderPlayingCard);
 		ApplyPendingSelectionFromSnapshot(snapshot);
 		ApplyHandsFromSnapshot(snapshot);
 		ApplyItemHandsFromSnapshot(snapshot);
 		ApplyTableCardsFromSnapshot(snapshot);
 		ApplySeatControlStatesFromSnapshot(snapshot);
 		bool shouldResumeOpeningDealAnimation = !isReconnectCatchup
-			&& ReadNetworkBool(snapshot, "opening_deal_animation_playing", false)
+			&& snapshot.OpeningDealAnimationPlaying
 			&& !_isOpeningDealAnimationPlaying;
-		_isOpeningDealAnimationPlaying = ReadNetworkBool(snapshot, "opening_deal_animation_playing", false);
+		_isOpeningDealAnimationPlaying = snapshot.OpeningDealAnimationPlaying;
+		_networkLastAppliedSnapshotId = snapshot.SnapshotId;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
 		InvalidateRenderCaches();
@@ -151,28 +353,68 @@ public partial class GameBoardScene
 		ShowReconnectRecoveryNoticeIfNeeded();
 	}
 
-	private bool IsUsableNetworkSnapshot(Godot.Collections.Dictionary snapshot, out int snapshotId)
+	private bool IsUsableNetworkSnapshot(Godot.Collections.Dictionary raw, out int snapshotId)
 	{
-		snapshotId = ReadNetworkInt(snapshot, "snapshot_id", -1);
-		if (ReadNetworkInt(snapshot, "protocol_version", 0) != MultiplayerBoardSyncRules.ProtocolVersion)
-		{
-			return false;
-		}
+		bool decoded = TryDecodeNetworkBoardSnapshot(raw, out ValidatedNetworkBoardSnapshot snapshot);
+		snapshotId = decoded ? snapshot.SnapshotId : -1;
+		return decoded;
+	}
 
-		if (!string.IsNullOrWhiteSpace(_networkMatchId)
-			&& ReadNetworkString(snapshot, "match_id", _networkMatchId) != _networkMatchId)
-		{
-			return false;
-		}
+	private bool TryDecodeNetworkBoardSnapshot(Godot.Collections.Dictionary raw, out ValidatedNetworkBoardSnapshot snapshot)
+	{
+		snapshot = default!;
+		if (player_count < 2 || player_count > MaxPlayers
+			|| !TryReadNetworkInt32(raw, "protocol_version", MultiplayerBoardSyncRules.ProtocolVersion, MultiplayerBoardSyncRules.ProtocolVersion, out _)
+			|| !TryReadNetworkString(raw, "match_id", MaxNetworkSessionIdLength, out string matchId)
+			|| (!string.IsNullOrWhiteSpace(_networkMatchId) && !string.Equals(matchId, _networkMatchId, StringComparison.Ordinal))
+			|| !TryReadNetworkInt32(raw, "snapshot_id", 0, int.MaxValue, out int snapshotId) || snapshotId <= _networkLastAppliedSnapshotId
+			|| !TryReadNetworkInt32(raw, "turn_sequence_generation", 0, int.MaxValue, out int generation)
+			|| !TryReadNetworkInt32(raw, "current_turn_player_index", 0, player_count - 1, out int currentPlayer)
+			|| !TryReadNetworkInt32(raw, "winner_player_index", -1, player_count - 1, out int winner)) return false;
 
-		return snapshotId > _networkLastAppliedSnapshotId;
+		EnsureNetworkCardCache();
+		int maxDeck = _networkCardsByCode.Count * (player_count > 2 ? 2 : 1);
+		if (maxDeck <= 0 || !TryReadBoundedNetworkIntArray(raw, "scores", player_count, player_count, 0, int.MaxValue, out int[] scores)
+			|| !TryReadBoundedNetworkIntArray(raw, "deck_counts", player_count, player_count, 0, maxDeck, out int[] decks)
+			|| !TryReadBoundedNetworkIntArray(raw, "hand_counts", player_count, player_count, 0, MaxTotalHandCards, out int[] hands)
+			|| !TryReadBoundedNetworkIntArray(raw, "item_hand_counts", player_count, player_count, 0, MaxTotalHandCards, out int[] items)) return false;
+		for (int seat = 0; seat < player_count; seat++) if ((long)hands[seat] + items[seat] > MaxTotalHandCards) return false;
+
+		if (!TryReadNetworkArray(raw, "own_hand_cards", out Godot.Collections.Array ownPlayingRaw)
+			|| !TryReadNetworkArray(raw, "own_item_hand_cards", out Godot.Collections.Array ownItemsRaw)
+			|| !TryReadNetworkArray(raw, "revealed_hand_cards", out Godot.Collections.Array revealedPlayingRaw)
+			|| !TryReadNetworkArray(raw, "revealed_item_hand_cards", out Godot.Collections.Array revealedItemsRaw)
+			|| !TryReadNetworkArray(raw, "table_cards", out Godot.Collections.Array tableRaw)
+			|| !TryReadNetworkArray(raw, "seat_control_states", out Godot.Collections.Array seatsRaw)
+			|| !TryDecodeNetworkPlayingCards(ownPlayingRaw, out NetworkPlayingCardSnapshot[] ownPlaying)
+			|| !TryDecodeNetworkItemCards(ownItemsRaw, out string[] ownItems)
+			|| !TryDecodeNetworkPlayingCards(revealedPlayingRaw, out NetworkPlayingCardSnapshot[] revealedPlaying)
+			|| !TryDecodeNetworkItemCards(revealedItemsRaw, out string[] revealedItems)
+			|| !TryDecodeNetworkTableCards(tableRaw, maxDeck * player_count + MaxTotalHandCards * player_count, out NetworkTableCardSnapshot[] table)
+			|| !TryDecodeNetworkSeatControlStates(seatsRaw, player_count, out SeatControlState[] seats)
+			|| !TryReadNetworkBool(raw, "revealed_target_hand_visible", out bool revealedVisible)
+			|| !TryReadNetworkInt32(raw, "revealed_player_hand_index", -1, player_count - 1, out int revealedPlayer)
+			|| !TryReadNetworkEnum(raw, "pending_selection_mode", out PendingItemSelectionMode pendingMode)
+			|| !TryReadNetworkInt32(raw, "pending_selection_owner", -1, player_count - 1, out int pendingOwner)
+			|| !TryReadNetworkString(raw, "pending_item_card_id", MaxNetworkItemCardIdLength, out string pendingId)
+			|| !TryReadNetworkInt32(raw, "pending_turn_sequence_generation", -1, int.MaxValue, out int pendingGeneration)
+			|| !TryReadNetworkBool(raw, "opening_deal_animation_playing", out bool opening)) return false;
+
+		int localSeat = GetLocalHandPlayerIndex();
+		if (localSeat < 0 || localSeat >= player_count || ownPlaying.Length != hands[localSeat] || ownItems.Length != items[localSeat]) return false;
+		if (revealedVisible ? (pendingMode != PendingItemSelectionMode.TargetHandCard || pendingOwner != localSeat || revealedPlayer < 0 || revealedPlayer == localSeat || revealedPlaying.Length != hands[revealedPlayer] || revealedItems.Length != items[revealedPlayer]) : (revealedPlayer != -1 || revealedPlaying.Length != 0 || revealedItems.Length != 0)) return false;
+
+		bool pendingValid = pendingMode switch { PendingItemSelectionMode.None => pendingOwner == -1 && pendingGeneration == -1 && string.IsNullOrEmpty(pendingId), PendingItemSelectionMode.HandLimitDiscard => pendingOwner >= 0 && pendingGeneration >= 0 && string.IsNullOrEmpty(pendingId), PendingItemSelectionMode.MagnetHandCard => pendingOwner >= 0 && pendingGeneration >= 0 && IsValidNetworkAttachmentItemCardId(pendingId), PendingItemSelectionMode.TargetPlayer or PendingItemSelectionMode.TargetHandCard => pendingOwner >= 0 && pendingGeneration >= 0 && IsValidNetworkItemCardId(pendingId, true), _ => false };
+		if (!pendingValid) return false;
+		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, generation, currentPlayer, winner, scores, decks, hands, items, ownPlaying, ownItems, revealedVisible, revealedPlaying, revealedItems, pendingMode, pendingOwner, pendingId, pendingGeneration, revealedPlayer, opening, table, seats);
+		return true;
 	}
 
 	private bool HasQueuedEventForSnapshot(int snapshotId)
 	{
-		foreach (Godot.Collections.Dictionary payload in _networkVisualEventQueue)
+		foreach (NetworkVisualEvent payload in _networkVisualEventQueue)
 		{
-			if (ReadNetworkInt(payload, "snapshot_id", -1) == snapshotId)
+			if (payload.SnapshotId == snapshotId)
 			{
 				return true;
 			}
@@ -215,133 +457,67 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void ApplyHandsFromSnapshot(Godot.Collections.Dictionary snapshot)
+	private static void ApplyValidatedCountArray<T>(IReadOnlyList<int> values, IReadOnlyList<List<T>> target, Func<T> createPlaceholder)
 	{
-		int localSeatIndex = GetLocalHandPlayerIndex();
-		int revealedPlayerIndex = ReadNetworkInt(snapshot, "revealed_player_hand_index", -1);
-		bool revealedTargetHandVisible = ReadNetworkBool(snapshot, "revealed_target_hand_visible", false);
-		Godot.Collections.Array revealedHandCards = ReadArray(snapshot, "revealed_hand_cards");
-		int[] handCounts = ReadIntArray(snapshot, "hand_counts", player_count);
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		for (int index = 0; index < values.Count && index < target.Count; index++)
 		{
-			_playerHands[playerIndex].Clear();
-			if (playerIndex == localSeatIndex)
-			{
-				foreach (Variant cardVariant in ReadArray(snapshot, "own_hand_cards"))
-				{
-					if (cardVariant.AsGodotDictionary() is Godot.Collections.Dictionary card)
-					{
-						_playerHands[playerIndex].Add(CreateNetworkPlayingCard(card));
-					}
-				}
-				continue;
-			}
-
-			if (revealedTargetHandVisible && playerIndex == revealedPlayerIndex)
-			{
-				foreach (Variant cardVariant in revealedHandCards)
-				{
-					if (cardVariant.AsGodotDictionary() is Godot.Collections.Dictionary card)
-					{
-						_playerHands[playerIndex].Add(CreateNetworkPlayingCard(card));
-					}
-				}
-				continue;
-			}
-
-			int handCount = playerIndex < handCounts.Length ? handCounts[playerIndex] : 0;
-			for (int cardIndex = 0; cardIndex < handCount; cardIndex++)
-			{
-				_playerHands[playerIndex].Add(CreatePlaceholderPlayingCard());
-			}
+			target[index].Clear();
+			for (int itemIndex = 0; itemIndex < values[index]; itemIndex++) target[index].Add(createPlaceholder());
 		}
 	}
 
-	private void ApplyItemHandsFromSnapshot(Godot.Collections.Dictionary snapshot)
+	private void ApplyPendingSelectionFromSnapshot(ValidatedNetworkBoardSnapshot snapshot)
 	{
-		int localSeatIndex = GetLocalHandPlayerIndex();
-		int revealedPlayerIndex = ReadNetworkInt(snapshot, "revealed_player_hand_index", -1);
-		bool revealedTargetHandVisible = ReadNetworkBool(snapshot, "revealed_target_hand_visible", false);
-		Godot.Collections.Array revealedItemHandCards = ReadArray(snapshot, "revealed_item_hand_cards");
-		int[] itemHandCounts = ReadIntArray(snapshot, "item_hand_counts", player_count);
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		_pendingItemSelectionMode = snapshot.PendingSelectionMode;
+		_pendingItemOwnerIndex = snapshot.PendingSelectionOwner;
+		_pendingItemCardId = snapshot.PendingItemCardId;
+		_pendingItemTurnSequenceGeneration = snapshot.PendingTurnSequenceGeneration;
+		_revealedPlayerHandIndex = snapshot.RevealedTargetHandVisible ? snapshot.RevealedPlayerHandIndex : -1;
+	}
+
+	private void ApplyHandsFromSnapshot(ValidatedNetworkBoardSnapshot snapshot)
+	{
+		int localSeat = GetLocalHandPlayerIndex();
+		for (int player = 0; player < player_count; player++)
 		{
-			_playerItemHands[playerIndex].Clear();
-			if (playerIndex == localSeatIndex)
-			{
-				foreach (Variant cardVariant in ReadArray(snapshot, "own_item_hand_cards"))
-				{
-					if (cardVariant.AsGodotDictionary() is not Godot.Collections.Dictionary itemCard)
-					{
-						continue;
-					}
-
-					string itemCardId = ReadNetworkString(itemCard, "id", string.Empty);
-					ItemCard? createdCard = CreateItemCard(itemCardId);
-					_playerItemHands[playerIndex].Add(createdCard ?? CreatePlaceholderItemCard());
-				}
-				continue;
-			}
-
-			if (revealedTargetHandVisible && playerIndex == revealedPlayerIndex)
-			{
-				foreach (Variant cardVariant in revealedItemHandCards)
-				{
-					if (cardVariant.AsGodotDictionary() is not Godot.Collections.Dictionary itemCard)
-					{
-						continue;
-					}
-
-					string itemCardId = ReadNetworkString(itemCard, "id", string.Empty);
-					ItemCard? createdCard = CreateItemCard(itemCardId);
-					_playerItemHands[playerIndex].Add(createdCard ?? CreatePlaceholderItemCard());
-				}
-				continue;
-			}
-
-			int itemHandCount = playerIndex < itemHandCounts.Length ? itemHandCounts[playerIndex] : 0;
-			for (int itemIndex = 0; itemIndex < itemHandCount; itemIndex++)
-			{
-				_playerItemHands[playerIndex].Add(CreatePlaceholderItemCard());
-			}
+			List<PlayingCard> target = _playerHands[player]; target.Clear();
+			if (player == localSeat) foreach (NetworkPlayingCardSnapshot card in snapshot.OwnHandCards) target.Add(CreateNetworkPlayingCard(card.CardCode, card.AttachedItemCardIds));
+			else if (snapshot.RevealedTargetHandVisible && player == snapshot.RevealedPlayerHandIndex) foreach (NetworkPlayingCardSnapshot card in snapshot.RevealedHandCards) target.Add(CreateNetworkPlayingCard(card.CardCode, card.AttachedItemCardIds));
+			else for (int card = 0; card < snapshot.HandCounts[player]; card++) target.Add(CreatePlaceholderPlayingCard());
 		}
 	}
 
-	private void ApplyTableCardsFromSnapshot(Godot.Collections.Dictionary snapshot)
+	private void ApplyItemHandsFromSnapshot(ValidatedNetworkBoardSnapshot snapshot)
+	{
+		int localSeat = GetLocalHandPlayerIndex();
+		for (int player = 0; player < player_count; player++)
+		{
+			List<ItemCard> target = _playerItemHands[player]; target.Clear();
+			if (player == localSeat) foreach (string id in snapshot.OwnItemHandCardIds) target.Add(CreateValidatedNetworkItemCard(id));
+			else if (snapshot.RevealedTargetHandVisible && player == snapshot.RevealedPlayerHandIndex) foreach (string id in snapshot.RevealedItemHandCardIds) target.Add(CreateValidatedNetworkItemCard(id));
+			else for (int item = 0; item < snapshot.ItemHandCounts[player]; item++) target.Add(CreatePlaceholderItemCard());
+		}
+	}
+
+	private ItemCard CreateValidatedNetworkItemCard(string itemCardId) => new(itemCardId, _itemCardTextures[itemCardId]);
+
+	private void ApplyTableCardsFromSnapshot(ValidatedNetworkBoardSnapshot snapshot)
 	{
 		_tableCards.Clear();
-		foreach (Variant tableCardVariant in ReadArray(snapshot, "table_cards"))
+		foreach (NetworkTableCardSnapshot tableCard in snapshot.TableCards)
 		{
-			if (tableCardVariant.AsGodotDictionary() is not Godot.Collections.Dictionary tableCard)
-			{
-				continue;
-			}
-
-			NetworkTableCardSnapshot tableCardSnapshot = new(
-				ReadNetworkString(tableCard, NetworkTableCardSnapshotCodec.CodeKey, string.Empty),
-				ReadStringArray(tableCard, NetworkTableCardSnapshotCodec.AttachedItemCardIdsKey),
-				ReadNetworkBool(tableCard, NetworkTableCardSnapshotCodec.IsFaceUpKey, false),
-				ReadNetworkBool(tableCard, NetworkTableCardSnapshotCodec.IsBuriedInSandKey, false),
-				ReadNetworkBool(tableCard, NetworkTableCardSnapshotCodec.IsSlimeCoatedKey, false),
-				ReadNetworkInt(tableCard, NetworkTableCardSnapshotCodec.CardOwnerPlayerIndexKey, -1),
-				ReadNetworkBool(tableCard, NetworkTableCardSnapshotCodec.RemoveCardOnCaptureKey, false),
-				ReadNetworkString(tableCard, NetworkTableCardSnapshotCodec.ItemOverlayIdKey, string.Empty),
-				ReadNetworkInt(tableCard, NetworkTableCardSnapshotCodec.ItemOwnerPlayerIndexKey, -1));
-			PlayingCard? card = BuildNetworkSnapshotTableCard(tableCard, tableCardSnapshot);
-			ItemCard? itemOverlay = CreateNetworkSnapshotItemOverlay(tableCardSnapshot.ItemOverlayId);
-			var appliedCard = new TableCard(
-				card,
-				tableCardSnapshot.IsFaceUp,
-				itemOverlay,
-				tableCardSnapshot.ItemOwnerPlayerIndex,
-				tableCardSnapshot.CardOwnerPlayerIndex,
-				tableCardSnapshot.RemoveCardOnCapture)
-			{
-				IsBuriedInSand = tableCardSnapshot.IsBuriedInSand,
-				IsSlimeCoated = tableCardSnapshot.IsSlimeCoated,
-			};
-			_tableCards.Add(appliedCard);
+			PlayingCard? card = !string.IsNullOrEmpty(tableCard.CardCode) ? CreateNetworkPlayingCard(tableCard.CardCode, tableCard.AttachedItemCardIds) : !string.IsNullOrEmpty(tableCard.ItemOverlayId) ? null : CreatePlaceholderPlayingCard();
+			ItemCard? overlay = string.IsNullOrEmpty(tableCard.ItemOverlayId) ? null : CreateValidatedNetworkItemCard(tableCard.ItemOverlayId);
+			_tableCards.Add(new TableCard(card, tableCard.IsFaceUp, overlay, tableCard.ItemOwnerPlayerIndex, tableCard.CardOwnerPlayerIndex, tableCard.RemoveCardOnCapture) { IsBuriedInSand = tableCard.IsBuriedInSand, IsSlimeCoated = tableCard.IsSlimeCoated });
 		}
+	}
+
+	private void ApplySeatControlStatesFromSnapshot(ValidatedNetworkBoardSnapshot snapshot)
+	{
+		bool tooltip = _activeStatusTooltipPlayerIndex >= 0;
+		_networkSeatControlStates.Clear(); _networkSeatControlStates.AddRange(snapshot.SeatControlStates);
+		if (tooltip) MarkActivePlayerStatusTooltipForRefresh();
+		MarkSeatControlIndicatorsDirty();
 	}
 
 	private Godot.Collections.Array BuildTableCardsArray(int recipientSeatIndex)
@@ -502,143 +678,4 @@ public partial class GameBoardScene
 		return result;
 	}
 
-	private static Godot.Collections.Array ReadArray(Godot.Collections.Dictionary dictionary, string key)
-	{
-		return dictionary.TryGetValue(key, out Variant value) && value.VariantType == Variant.Type.Array
-			? value.AsGodotArray()
-			: new Godot.Collections.Array();
-	}
-
-	private static int[] ReadIntArray(Godot.Collections.Dictionary dictionary, string key, int count)
-	{
-		Godot.Collections.Array array = ReadArray(dictionary, key);
-		var result = new int[Math.Max(count, array.Count)];
-		for (int index = 0; index < array.Count; index++)
-		{
-			result[index] = array[index].AsInt32();
-		}
-
-		return result;
-	}
-
-	private static string[] ReadStringArray(Godot.Collections.Dictionary dictionary, string key)
-	{
-		Godot.Collections.Array array = ReadArray(dictionary, key);
-		var result = new List<string>(array.Count);
-		foreach (Variant entry in array)
-		{
-			string value = entry.AsString();
-			if (!string.IsNullOrWhiteSpace(value))
-			{
-				result.Add(value);
-			}
-		}
-
-		return result.ToArray();
-	}
-
-	private static bool[] ReadBoolArray(Godot.Collections.Dictionary dictionary, string key, int count)
-	{
-		Godot.Collections.Array array = ReadArray(dictionary, key);
-		var result = new bool[Math.Max(count, array.Count)];
-		for (int index = 0; index < array.Count; index++)
-		{
-			result[index] = array[index].AsBool();
-		}
-
-		return result;
-	}
-
-	private static void ApplyIntArray(Godot.Collections.Dictionary dictionary, string key, int[] target, int count)
-	{
-		int[] values = ReadIntArray(dictionary, key, count);
-		for (int index = 0; index < count && index < target.Length; index++)
-		{
-			target[index] = index < values.Length ? values[index] : 0;
-		}
-	}
-
-	private static void ApplyCountArray<T>(
-		Godot.Collections.Dictionary dictionary,
-		string key,
-		IReadOnlyList<List<T>> target,
-		int count,
-		Func<T> createPlaceholder)
-	{
-		int[] values = ReadIntArray(dictionary, key, count);
-		for (int index = 0; index < count && index < target.Count; index++)
-		{
-			target[index].Clear();
-			int itemCount = index < values.Length ? values[index] : 0;
-			for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
-			{
-				target[index].Add(createPlaceholder());
-			}
-		}
-	}
-
-	private PlayingCard? BuildNetworkSnapshotTableCard(
-		Godot.Collections.Dictionary tableCard,
-		NetworkTableCardSnapshot tableCardSnapshot)
-	{
-		if (!string.IsNullOrWhiteSpace(tableCardSnapshot.CardCode))
-		{
-			return CreateNetworkPlayingCard(tableCard);
-		}
-
-		if (!string.IsNullOrWhiteSpace(tableCardSnapshot.ItemOverlayId))
-		{
-			return null;
-		}
-
-		return tableCardSnapshot.IsFaceUp ? null : CreatePlaceholderPlayingCard();
-	}
-
-	private ItemCard? CreateNetworkSnapshotItemOverlay(string itemCardId)
-	{
-		if (string.IsNullOrWhiteSpace(itemCardId))
-		{
-			return null;
-		}
-
-		ItemCard? itemOverlay = CreateItemCard(itemCardId);
-		return itemOverlay ?? new ItemCard(itemCardId, GetNetworkPlaceholderTexture());
-	}
-
-	private void ApplyPendingSelectionFromSnapshot(Godot.Collections.Dictionary snapshot)
-	{
-			_pendingItemSelectionMode = ReadEnum(snapshot, "pending_selection_mode", PendingItemSelectionMode.None);
-			_pendingItemOwnerIndex = ReadNetworkInt(snapshot, "pending_selection_owner", -1);
-			_pendingItemCardId = ReadNetworkString(snapshot, "pending_item_card_id", string.Empty);
-			_pendingItemTurnSequenceGeneration = ReadNetworkInt(snapshot, "pending_turn_sequence_generation", -1);
-		_revealedPlayerHandIndex = ReadNetworkBool(snapshot, "revealed_target_hand_visible", false)
-			? ReadNetworkInt(snapshot, "revealed_player_hand_index", -1)
-			: -1;
-	}
-
-	private void ApplySeatControlStatesFromSnapshot(Godot.Collections.Dictionary snapshot)
-	{
-		bool wasActiveTooltipAffected = _activeStatusTooltipPlayerIndex >= 0;
-		_networkSeatControlStates.Clear();
-		foreach (Variant stateVariant in ReadArray(snapshot, "seat_control_states"))
-		{
-			if (stateVariant.AsGodotDictionary() is not Godot.Collections.Dictionary stateDictionary)
-			{
-				continue;
-			}
-
-			_networkSeatControlStates.Add(new SeatControlState(
-				ReadNetworkInt(stateDictionary, "seat_index", -1),
-				ReadEnum(stateDictionary, "mode", SeatControlMode.HumanConnected),
-				ReadNetworkInt(stateDictionary, "peer_id", 0),
-				ReadNetworkString(stateDictionary, "stable_user_id", string.Empty),
-				ReadNetworkString(stateDictionary, "reconnect_token", string.Empty)));
-		}
-
-		if (wasActiveTooltipAffected)
-		{
-			MarkActivePlayerStatusTooltipForRefresh();
-		}
-		MarkSeatControlIndicatorsDirty();
-	}
 }

@@ -81,6 +81,8 @@ public partial class NetworkManager
 		_steamPeer = null;
 		_pendingJoinRoomPassword = string.Empty;
 		_steamLobbyId = 0;
+		_pendingSteamLobbyJoinId = 0;
+		_acceptedSteamLobbyJoinId = 0;
 		_pendingSteamHostLobby = false;
 		_players.Clear();
 		_rooms.Clear();
@@ -279,9 +281,15 @@ public partial class NetworkManager
 
 	private void BroadcastPlayerList()
 	{
+		if (!IsHost || _state != NetworkSessionState.Lobby)
+		{
+			return;
+		}
+
+		Godot.Collections.Dictionary config = ToDictionary(_config);
 		Godot.Collections.Array players = GetPlayersVariant();
-		Rpc(MethodName.RpcSyncLobby, ToDictionary(_config), players);
-		RpcSyncLobby(ToDictionary(_config), players);
+		Rpc(MethodName.RpcSyncLobby, config, players);
+		RpcSyncLobby(config, players);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -475,16 +483,58 @@ public partial class NetworkManager
 
 	private void CancelMatchStart(string message)
 	{
+		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
 		_loadHandshake = null;
 		SetState(NetworkSessionState.Lobby);
 		Rpc(MethodName.RpcCancelMatchStart, message);
-		RpcCancelMatchStart(message);
+		ApplyMatchStartCancellation(message, returnGeneration);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcCancelMatchStart(string message)
 	{
+		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
+		ApplyMatchStartCancellation(message, returnGeneration);
+	}
+
+	private void ApplyMatchStartCancellation(string message, long returnGeneration)
+	{
+		_loadHandshake = null;
 		SetState(NetworkSessionState.Lobby);
 		EmitSignal(SignalName.ErrorRaised, message);
+		CallDeferred(
+			nameof(ReturnToMultiplayerLobbyScene),
+			(int)NetworkSessionState.Lobby,
+			returnGeneration);
+	}
+
+	private long GetGenerationAfterStateTransition(NetworkSessionState state)
+	{
+		return _state == state ? _stateGeneration : _stateGeneration + 1;
+	}
+
+	private void ReturnToMultiplayerLobbyScene(int expectedState, long expectedGeneration)
+	{
+		if (!GodotObject.IsInstanceValid(this)
+			|| !IsInsideTree()
+			|| _state != (NetworkSessionState)expectedState
+			|| _stateGeneration != expectedGeneration)
+		{
+			return;
+		}
+
+		SceneTree tree = GetTree();
+		if (tree.CurrentScene is MultiplayerLobbyScene)
+		{
+			return;
+		}
+
+		const string lobbyScenePath =
+			"res://scenes/multiplayer_lobby_scene.tscn";
+		Error changeSceneError = tree.ChangeSceneToFile(lobbyScenePath);
+		if (changeSceneError != Error.Ok)
+		{
+			Fail($"Failed to return to multiplayer lobby: {changeSceneError}");
+		}
 	}
 }

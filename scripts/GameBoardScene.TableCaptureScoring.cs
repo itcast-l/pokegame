@@ -75,74 +75,102 @@ public partial class GameBoardScene
 			extraTableCardIndexes);
 	}
 
-	private void BuildAdventureCaptureDamageCardPointLists(
-		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
-		int captureStartIndex,
-		int scorePlayerIndex,
-		IReadOnlySet<int>? extraTableCardIndexes,
-		List<int> rawPoints,
-		List<int> resolvedPoints)
+	private int BuildAdventureCaptureDamageCardPointLists(
+	IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
+	int captureStartIndex,
+	int scorePlayerIndex,
+	IReadOnlySet<int>? extraTableCardIndexes,
+	List<int> rawPoints,
+	List<int> resolvedPoints,
+	bool includeCaptureEndpointsInScoring = false)
+{
+	rawPoints.Clear();
+	resolvedPoints.Clear();
+	if (captureStartIndex < 0 || captureStartIndex >= tableCards.Count)
 	{
-		rawPoints.Clear();
-		resolvedPoints.Clear();
-		if (captureStartIndex < 0 || captureStartIndex >= tableCards.Count)
+		return 0;
+	}
+
+	bool hasDoubleEffect = CaptureScoringRules.HasCapturedDoubleScoreEffect(
+		tableCards,
+		captureStartIndex,
+		extraTableCardIndexes);
+	CaptureScoringRules.Context context = BuildCaptureScoringContext(scorePlayerIndex);
+	var addedIndexes = new HashSet<int>();
+
+	int TryAddCardPointValues(int tableCardIndex, bool allowAnyVisibleCapturedCard)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= tableCards.Count)
 		{
-			return;
+			return 0;
 		}
 
-		bool hasDoubleEffect = CaptureScoringRules.HasCapturedDoubleScoreEffect(
-			tableCards,
-			captureStartIndex,
-			extraTableCardIndexes);
-		CaptureScoringRules.Context context = BuildCaptureScoringContext(scorePlayerIndex);
-		var addedIndexes = new HashSet<int>();
-
-		void TryAddCardPointValues(int tableCardIndex, bool allowAnyVisibleCapturedCard)
+		CaptureScoringRules.TableCard tableCard = tableCards[tableCardIndex];
+		if (tableCard.IsBuriedInSand || !tableCard.Card.HasValue)
 		{
-			if (!addedIndexes.Add(tableCardIndex)
-				|| tableCardIndex < 0
-				|| tableCardIndex >= tableCards.Count)
-			{
-				return;
-			}
-
-			CaptureScoringRules.TableCard tableCard = tableCards[tableCardIndex];
-			if (tableCard.IsBuriedInSand || !tableCard.Card.HasValue)
-			{
-				return;
-			}
-
-			if (!allowAnyVisibleCapturedCard
-				&& !CaptureScoringRules.IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex, tableCards.Count))
-			{
-				return;
-			}
-
-			int rawPoint = Math.Max(0, tableCard.Card.Value.ScoreValue);
-			if (rawPoint <= 0)
-			{
-				return;
-			}
-
-			rawPoints.Add(rawPoint);
-			resolvedPoints.Add(CaptureScoringRules.GetCapturedTableCardScoreValue(tableCard, context, hasDoubleEffect));
+			return 0;
 		}
 
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < tableCards.Count; tableCardIndex++)
+		if (!allowAnyVisibleCapturedCard
+			&& !CaptureScoringRules.IsCapturedTableCardScoringIndex(
+				tableCardIndex,
+				captureStartIndex,
+				tableCards.Count))
 		{
-			TryAddCardPointValues(tableCardIndex, allowAnyVisibleCapturedCard: false);
+			return 0;
 		}
 
-		if (extraTableCardIndexes == null)
+		int rawPoint = Math.Max(0, tableCard.Card.Value.ScoreValue);
+		if (rawPoint <= 0 || !addedIndexes.Add(tableCardIndex))
 		{
-			return;
+			return 0;
 		}
 
+		int resolvedPoint = CaptureScoringRules.GetCapturedTableCardScoreValue(
+			tableCard,
+			context,
+			hasDoubleEffect);
+		rawPoints.Add(rawPoint);
+		resolvedPoints.Add(resolvedPoint);
+		return resolvedPoint;
+	}
+
+	for (int tableCardIndex = captureStartIndex; tableCardIndex < tableCards.Count; tableCardIndex++)
+	{
+		TryAddCardPointValues(tableCardIndex, allowAnyVisibleCapturedCard: false);
+	}
+
+	if (extraTableCardIndexes != null)
+	{
 		foreach (int tableCardIndex in extraTableCardIndexes)
 		{
 			TryAddCardPointValues(tableCardIndex, allowAnyVisibleCapturedCard: true);
 		}
 	}
+
+	if (!includeCaptureEndpointsInScoring)
+	{
+		return 0;
+	}
+
+	int captureTailTableCardIndex = -1;
+	for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
+	{
+		if (!tableCards[tableCardIndex].IsBuriedInSand)
+		{
+			captureTailTableCardIndex = tableCardIndex;
+			break;
+		}
+	}
+
+	int endpointResolvedPoints = TryAddCardPointValues(
+		captureStartIndex,
+		allowAnyVisibleCapturedCard: true);
+	endpointResolvedPoints += TryAddCardPointValues(
+		captureTailTableCardIndex,
+		allowAnyVisibleCapturedCard: true);
+	return endpointResolvedPoints;
+}
 
 	private int CountCapturedOldScoringTableCards(
 		IReadOnlyCollection<TableCard> prePlayTableCards,

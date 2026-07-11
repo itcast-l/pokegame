@@ -83,10 +83,9 @@ public partial class GameBoardScene
 	private async Task<PlayCardResult> ResolveShuffleTableEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{
 		List<TableCard> shuffledTableCards = BuildShuffledTableCards();
-		await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
+		bool shuffleCompleted = await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
+		if (!shuffleCompleted || turnSequenceGeneration != _turnSequenceGeneration)
 		{
-			RenderTableCards();
 			return new PlayCardResult(false, false);
 		}
 
@@ -96,33 +95,48 @@ public partial class GameBoardScene
 		return new PlayCardResult(true, false, CompletesTurn: false);
 	}
 
-	private async Task<PlayCardResult> ResolveCollectTableEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
+	private async Task<PlayCardResult> ResolveCollectTableEffectAsync(
+	CardTriggerRequest request,
+	int turnSequenceGeneration)
+{
+	int ownerPlayerIndex = request.Event.ActorPlayerIndex;
+	if (ownerPlayerIndex < 0
+		|| ownerPlayerIndex >= _playerDecks.Count)
 	{
-		int ownerPlayerIndex = request.Event.ActorPlayerIndex;
-		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= _playerDecks.Count)
-		{
-			return new PlayCardResult(false, false);
-		}
+		return new PlayCardResult(false, false);
+	}
 
-		bool captured = _tableCards.Count > 0;
-		CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
+	var captureTableReferenceSnapshot =
+		new List<TableCard>(_tableCards);
+	CaptureTableCardsResult captureResult =
+		await CaptureTableCardsAsync(
 			ownerPlayerIndex,
 			0,
-			turnSequenceGeneration: turnSequenceGeneration);
-		if (!IsGameOver())
-		{
-			Shuffle(_playerDecks[ownerPlayerIndex]);
-			Cut(_playerDecks[ownerPlayerIndex]);
-		}
-
-		return new PlayCardResult(
-			true,
-			captured,
-			captureResult.CollectedCardCount > 0,
-			captureResult.QuestionRewardAnimation,
-			AdventureQuestionRewardEffects: captureResult.AdventureQuestionRewardEffects,
-			AdventurePostCaptureEffects: captureResult.AdventurePostCaptureEffects);
+			turnSequenceGeneration:
+				turnSequenceGeneration,
+			expectedTableCardReferences:
+				captureTableReferenceSnapshot);
+	if (captureResult.Aborted)
+	{
+		return new PlayCardResult(false, false);
 	}
+
+	if (captureResult.Applied && !IsGameOver())
+	{
+		Shuffle(_playerDecks[ownerPlayerIndex]);
+		Cut(_playerDecks[ownerPlayerIndex]);
+	}
+
+	return new PlayCardResult(
+		true,
+		captureResult.Applied,
+		captureResult.CollectedCardCount > 0,
+		captureResult.QuestionRewardAnimation,
+		AdventureQuestionRewardEffects:
+			captureResult.AdventureQuestionRewardEffects,
+		AdventurePostCaptureEffects:
+			captureResult.AdventurePostCaptureEffects);
+}
 
 	private async Task<PlayCardResult> ResolveStealCardEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{

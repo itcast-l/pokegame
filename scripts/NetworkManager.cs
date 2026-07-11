@@ -75,6 +75,7 @@ public partial class NetworkManager : Node
 	private bool _hostEndedMatchPending;
 	private string _hostEndedMatchMessage = string.Empty;
 	private bool _hostEndedMatchBroadcasted;
+	private long _stateGeneration;
 
 	public NetworkSessionState State => _state;
 	public bool SteamAvailable => GetSteamSingleton() != null && IsSteamInitialized();
@@ -376,13 +377,13 @@ public partial class NetworkManager : Node
 
 	private void OnPeerDisconnected(long peerId)
 	{
-		int playerIndex = _players.FindIndex(player => player.PeerId == (int)peerId);
+		int playerIndex = _players.FindIndex(
+			player => player.PeerId == (int)peerId);
 		if (playerIndex < 0)
 		{
 			return;
 		}
 
-		int seatIndex = _players[playerIndex].SeatIndex;
 		if (_state == NetworkSessionState.InGame)
 		{
 			_players[playerIndex] = _players[playerIndex] with { IsConnected = false };
@@ -399,6 +400,12 @@ public partial class NetworkManager : Node
 		}
 		else if (_state is NetworkSessionState.Starting or NetworkSessionState.LoadingScene)
 		{
+			if (!IsHost)
+			{
+				return;
+			}
+
+			_players.RemoveAt(playerIndex);
 			CancelMatchStart("A player disconnected while loading.");
 		}
 		else
@@ -447,6 +454,19 @@ public partial class NetworkManager : Node
 
 		if (_state == NetworkSessionState.Failed)
 		{
+			return;
+		}
+
+		if (_state is NetworkSessionState.Starting or NetworkSessionState.LoadingScene)
+		{
+			const string message = "Host disconnected.";
+			long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Idle);
+			LeaveSession();
+			EmitSignal(SignalName.ErrorRaised, message);
+			CallDeferred(
+				nameof(ReturnToMultiplayerLobbyScene),
+				(int)NetworkSessionState.Idle,
+				returnGeneration);
 			return;
 		}
 
@@ -591,6 +611,7 @@ public partial class NetworkManager : Node
 		}
 
 		_state = state;
+		_stateGeneration++;
 		RefreshSteamLobbyAdvertisedState();
 		EmitSignal(SignalName.StateChanged, (int)_state);
 	}

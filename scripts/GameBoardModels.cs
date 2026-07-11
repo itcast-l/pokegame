@@ -200,11 +200,30 @@ internal readonly record struct NetworkCaptureRevealVisualSync(
 	bool[] RevealPointDoubleFlags);
 
 internal readonly record struct CaptureTableCardsResult(
+	bool Applied,
+	bool Aborted,
 	int CollectedCardCount,
 	int RemovedTableCardCount,
 	QuestionCardRewardAnimation? QuestionRewardAnimation,
 	AdventureQuestionRewardEffectResult? AdventureQuestionRewardEffects = null,
-	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null);
+	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null)
+{
+	public bool Completed => Applied && !Aborted;
+
+	public static CaptureTableCardsResult NotApplied => new(
+		Applied: false,
+		Aborted: false,
+		CollectedCardCount: 0,
+		RemovedTableCardCount: 0,
+		QuestionRewardAnimation: null);
+
+	public static CaptureTableCardsResult AbortedBeforeApply => new(
+		Applied: false,
+		Aborted: true,
+		CollectedCardCount: 0,
+		RemovedTableCardCount: 0,
+		QuestionRewardAnimation: null);
+}
 
 internal enum PendingItemSelectionMode
 {

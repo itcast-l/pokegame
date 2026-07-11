@@ -258,8 +258,8 @@ public partial class GameBoardScene
 		if (effectResult.ShuffleTableAfterMiss && GetMovableTableShuffleCardCount() >= 2)
 		{
 			List<TableCard> shuffledTableCards = BuildShuffledTableCards();
-			await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			bool shuffleCompleted = await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
+			if (!shuffleCompleted || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return false;
 			}

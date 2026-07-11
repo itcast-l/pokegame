@@ -67,24 +67,35 @@ public partial class GameBoardScene
 		try
 		{
 			Tween tween = CreateTween();
+			if (_debugSpecialCardProbeRunning)
+			{
+				_debugSpecialCardProbeTween = tween;
+				_debugSpecialCardProbeEffectRoot = effectRoot;
+			}
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
-			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.82f, SpecialCardTriggerEffectSeconds * 0.42f);
-			tween.TweenProperty(card, "scale", Vector2.One * 1.10f, SpecialCardTriggerEffectSeconds * 0.42f);
+			float firstPhaseSeconds = SpecialCardTriggerEffectSeconds * 0.42f;
+			float secondPhaseSeconds = SpecialCardTriggerEffectSeconds * 0.58f;
+			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.82f, firstPhaseSeconds);
+			tween.TweenProperty(card, "scale", Vector2.One * 1.10f, firstPhaseSeconds);
 			tween.TweenProperty(activationOverlay, "modulate:a", 1.0f, SpecialCardTriggerEffectSeconds * 0.18f);
-			tween.TweenProperty(activationOverlay, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
+			tween.TweenProperty(activationOverlay, "scale", Vector2.One * 1.18f, firstPhaseSeconds);
 			tween.TweenProperty(triggerFx, "modulate:a", triggerFxPeakAlpha, SpecialCardTriggerEffectSeconds * 0.12f);
-			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.18f, SpecialCardTriggerEffectSeconds * 0.42f);
+			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.18f, firstPhaseSeconds);
 
-			tween.Chain().SetParallel(true);
-			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.16f, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(card, "scale", Vector2.One, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(activationOverlay, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(activationOverlay, "scale", Vector2.One * 1.32f, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(triggerFx, "modulate:a", 0.0f, SpecialCardTriggerEffectSeconds * 0.58f);
-			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.34f, SpecialCardTriggerEffectSeconds * 0.58f);
-
+			tween.TweenProperty(effectRoot, "scale", Vector2.One * 1.16f, secondPhaseSeconds)
+				.SetDelay(firstPhaseSeconds);
+			tween.TweenProperty(card, "scale", Vector2.One, secondPhaseSeconds)
+				.SetDelay(firstPhaseSeconds);
+			tween.TweenProperty(activationOverlay, "modulate:a", 0.0f, secondPhaseSeconds)
+				.SetDelay(firstPhaseSeconds);
+			tween.TweenProperty(activationOverlay, "scale", Vector2.One * 1.32f, secondPhaseSeconds)
+				.SetDelay(firstPhaseSeconds);
+			tween.TweenProperty(triggerFx, "modulate:a", 0.0f, secondPhaseSeconds)
+				.SetDelay(firstPhaseSeconds);
+			tween.TweenProperty(triggerFx, "scale", Vector2.One * 1.34f, secondPhaseSeconds)
+				.SetDelay(firstPhaseSeconds);
 			FrameAnimationHelpers.TweenTextureFrames(tween, activationOverlay, activationFrames, SpecialCardTriggerEffectSeconds / Mathf.Max(1, activationFrames.Count));
 			FrameAnimationHelpers.TweenTextureFrames(tween, triggerFx, triggerFxFrames, triggerFxFrameSeconds);
 			tween.Finished += () =>

@@ -205,32 +205,73 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private async Task PlayNetworkHostHandCardAndBroadcastAsync(int actorSeatIndex, int handIndex, int turnSequenceGeneration)
+	private bool CanFinalizeNetworkAuthorityAction(
+	int snapshotId,
+	int turnSequenceGeneration,
+	bool played)
+{
+	return snapshotId >= 0
+		&& _networkAuthoritativeVisualSnapshotId == snapshotId
+		&& (turnSequenceGeneration == _turnSequenceGeneration
+			|| (played && IsGameOver()));
+}
+
+private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
+	int snapshotId)
+{
+	if (snapshotId >= 0
+		&& _networkAuthoritativeVisualSnapshotId == snapshotId)
 	{
-		if (actorSeatIndex < 0 || actorSeatIndex >= _playerHands.Count || handIndex < 0 || handIndex >= _playerHands[actorSeatIndex].Count)
-		{
-			return;
-		}
+		_networkAuthoritativeVisualSnapshotId = -1;
+	}
+}
 
-		int snapshotId = CreateNextNetworkSnapshotId();
-		PlayingCard playedCard = _playerHands[actorSeatIndex][handIndex];
-		string playedCardCode = ToNetworkCardCode(playedCard);
-		bool played = false;
-		PlayCardResult result = new(false, false);
+private async Task PlayNetworkHostHandCardAndBroadcastAsync(
+	int actorSeatIndex,
+	int handIndex,
+	int turnSequenceGeneration)
+{
+	if (actorSeatIndex < 0
+		|| actorSeatIndex >= _playerHands.Count
+		|| handIndex < 0
+		|| handIndex >= _playerHands[actorSeatIndex].Count)
+	{
+		return;
+	}
 
-		_networkAuthoritativeVisualSnapshotId = snapshotId;
-		_isProcessingCardPlay = true;
-		try
+	int snapshotId = CreateNextNetworkSnapshotId();
+	bool played = false;
+	PlayCardResult result = new(false, false);
+
+	_networkAuthoritativeVisualSnapshotId = snapshotId;
+	_isProcessingCardPlay = true;
+	try
+	{
+		Vector2? startGlobalPosition =
+			TryGetHandCardStartGlobalPosition(
+				actorSeatIndex,
+				handIndex);
+		result = await PlayCardFromHandAsync(
+			actorSeatIndex,
+			handIndex,
+			turnSequenceGeneration,
+			startGlobalPosition);
+		played = result.Played;
+		if (result.Played
+			&& !IsGameOver()
+			&& result.CompletesTurn)
 		{
-			Vector2? startGlobalPosition = TryGetHandCardStartGlobalPosition(actorSeatIndex, handIndex);
-			result = await PlayCardFromHandAsync(actorSeatIndex, handIndex, turnSequenceGeneration, startGlobalPosition);
-			played = result.Played;
-			if (result.Played && !IsGameOver() && result.CompletesTurn)
-			{
-				await AdvanceTurnAfterPlayedResultAsync(actorSeatIndex, result);
-			}
+			await AdvanceTurnAfterPlayedResultAsync(
+				actorSeatIndex,
+				result);
 		}
-		finally
+	}
+	finally
+	{
+		if (CanFinalizeNetworkAuthorityAction(
+			snapshotId,
+			turnSequenceGeneration,
+			played))
 		{
 			if (!IsGameOver())
 			{
@@ -238,40 +279,62 @@ public partial class GameBoardScene
 				RenderPlayerHands();
 			}
 
-			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, snapshotId);
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(
+				this,
+				snapshotId);
 			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
-			_networkAuthoritativeVisualSnapshotId = -1;
 		}
+
+		ClearNetworkAuthoritativeVisualSnapshotIfOwned(snapshotId);
+	}
+}
+
+private async Task PlayNetworkHostItemCardAndBroadcastAsync(
+	int actorSeatIndex,
+	int itemHandIndex,
+	int turnSequenceGeneration)
+{
+	if (actorSeatIndex < 0
+		|| actorSeatIndex >= _playerItemHands.Count
+		|| itemHandIndex < 0
+		|| itemHandIndex
+			>= _playerItemHands[actorSeatIndex].Count)
+	{
+		return;
 	}
 
-	private async Task PlayNetworkHostItemCardAndBroadcastAsync(int actorSeatIndex, int itemHandIndex, int turnSequenceGeneration)
+	int snapshotId = CreateNextNetworkSnapshotId();
+	bool played = false;
+	PlayCardResult result = new(false, false);
+
+	_networkAuthoritativeVisualSnapshotId = snapshotId;
+	_isProcessingCardPlay = true;
+	try
 	{
-		if (actorSeatIndex < 0
-			|| actorSeatIndex >= _playerItemHands.Count
-			|| itemHandIndex < 0
-			|| itemHandIndex >= _playerItemHands[actorSeatIndex].Count)
+		result = await PlayItemCardFromHandAsync(
+			actorSeatIndex,
+			itemHandIndex,
+			turnSequenceGeneration);
+		played = result.Played;
+		if (result.Played
+			&& !IsGameOver()
+			&& result.CompletesTurn
+			&& !HasPendingItemSelection())
 		{
-			return;
+			await AdvanceTurnAfterPlayedResultAsync(
+				actorSeatIndex,
+				result);
 		}
-
-		int snapshotId = CreateNextNetworkSnapshotId();
-		bool played = false;
-		PlayCardResult result = new(false, false);
-
-		_networkAuthoritativeVisualSnapshotId = snapshotId;
-		_isProcessingCardPlay = true;
-		try
+	}
+	finally
+	{
+		if (CanFinalizeNetworkAuthorityAction(
+			snapshotId,
+			turnSequenceGeneration,
+			played))
 		{
-			result = await PlayItemCardFromHandAsync(actorSeatIndex, itemHandIndex, turnSequenceGeneration);
-			played = result.Played;
-			if (result.Played && !IsGameOver() && result.CompletesTurn && !HasPendingItemSelection())
-			{
-				await AdvanceTurnAfterPlayedResultAsync(actorSeatIndex, result);
-			}
-		}
-		finally
-		{
-			if (!IsGameOver() && !HasPendingItemSelection())
+			if (!IsGameOver()
+				&& !HasPendingItemSelection())
 			{
 				_isProcessingCardPlay = false;
 				RenderPlayerHands();
@@ -279,21 +342,27 @@ public partial class GameBoardScene
 
 			if (played || HasPendingItemSelection())
 			{
-				if (played && result.ItemPlayVisualSync.HasValue)
+				if (played
+					&& result.ItemPlayVisualSync.HasValue)
 				{
-					GetNetworkManager()?.BroadcastItemCardPlayedVisualEventFromHost(
-						actorSeatIndex,
-						result.ItemPlayVisualSync.Value,
-						turnSequenceGeneration,
-						snapshotId);
+					GetNetworkManager()
+						?.BroadcastItemCardPlayedVisualEventFromHost(
+							actorSeatIndex,
+							result.ItemPlayVisualSync.Value,
+							turnSequenceGeneration,
+							snapshotId);
 				}
-				GetNetworkManager()?.SendBoardSnapshotsFromHost(this, snapshotId);
+				GetNetworkManager()?.SendBoardSnapshotsFromHost(
+					this,
+					snapshotId);
 			}
 
 			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
-			_networkAuthoritativeVisualSnapshotId = -1;
 		}
+
+		ClearNetworkAuthoritativeVisualSnapshotIfOwned(snapshotId);
 	}
+}
 
 	internal int CreateNextNetworkSnapshotId()
 	{

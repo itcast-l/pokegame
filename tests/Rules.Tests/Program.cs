@@ -93,6 +93,7 @@ internal static class Program
 		Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
+		Run("draw item availability uses post-use hand capacity and deck count", DrawItemAvailabilityUsesPostUseHandCapacityAndDeckCount);
 		Run("playing card attachment replaces existing effect", PlayingCardAttachmentReplacesExistingEffect);
 		Run("capture state apply capture clears effects when preserve disabled", CaptureStateApplyCaptureClearsEffectsWhenPreserveDisabled);
 		Run("capture state apply capture preserves effects when preserve enabled", CaptureStateApplyCapturePreservesEffectsWhenPreserveEnabled);
@@ -218,6 +219,8 @@ internal static class Program
 		Run("network reconnect rules only hand off non host disconnects to ai", NetworkReconnectRulesOnlyHandOffNonHostDisconnectsToAi);
 		Run("network reconnect rules scope realtime board events to active in-game clients", NetworkReconnectRulesScopeRealtimeBoardEventsToActiveInGameClients);
 		Run("network reconnect rules classify steam lobby join retries", NetworkReconnectRulesClassifySteamLobbyJoinRetries);
+		Run("network reconnect rules dispatch Steam lobby join callbacks", NetworkReconnectRulesDispatchSteamLobbyJoinCallbacks);
+		Run("Steam lobby join handler gates client peer creation", SteamLobbyJoinHandlerGatesClientPeerCreation);
 		Run("network reconnect rules reject steam owner migration during reconnect", NetworkReconnectRulesRejectSteamOwnerMigrationDuringReconnect);
 		Run("network reconnect rules apply reconnect snapshot immediately on client", NetworkReconnectRulesApplyReconnectSnapshotImmediatelyOnClient);
 		Run("network reconnect rules complete catch up only after visual queue drains", NetworkReconnectRulesCompleteCatchUpOnlyAfterVisualQueueDrains);
@@ -236,6 +239,10 @@ internal static class Program
 		Run("scene load handshake completes and times out", SceneLoadHandshakeCompletesAndTimesOut);
 		Run("lan discovery parses valid messages and drops dirty data", LanDiscoveryParsesValidMessagesAndDropsDirtyData);
 		Run("local seat board controls block until human control is restored", LocalSeatBoardControlsBlockUntilHumanControlIsRestored);
+		Run("card event bus scopes trigger limits to one dispatch", CardEventBusScopesTriggerLimitsToOneDispatch);
+		Run("card event bus ends aborted and failed dispatches", CardEventBusEndsAbortedAndFailedDispatches);
+		Run("card event bus rejects stale dispatch ownership", CardEventBusRejectsStaleDispatchOwnership);
+		Run("card event resolver ends its owned dispatch in finally", CardEventResolverEndsItsOwnedDispatchInFinally);
 
 		Console.WriteLine($"{_passed} passed, {_failed} failed");
 		return _failed == 0 ? 0 : 1;
@@ -1867,6 +1874,16 @@ internal static class Program
 		False(ItemCardEffectSupport.IsSupportedEffectType("block_match"));
 		False(ItemCardEffectSupport.IsSupportedEffectType("reverse_collect"));
 		False(ItemCardEffectSupport.IsSupportedEffectType(string.Empty));
+	}
+
+	private static void DrawItemAvailabilityUsesPostUseHandCapacityAndDeckCount()
+	{
+		True(ItemCardEffectSupport.CanFulfillDrawCardEffect(1, 8, 8, 1));
+		False(ItemCardEffectSupport.CanFulfillDrawCardEffect(0, 8, 8, 1));
+		False(ItemCardEffectSupport.CanFulfillDrawCardEffect(2, 8, 8, 2));
+		True(ItemCardEffectSupport.CanFulfillDrawCardEffect(2, 7, 8, 2));
+		False(ItemCardEffectSupport.CanFulfillDrawCardEffect(1, 7, 8, 2));
+		False(ItemCardEffectSupport.CanFulfillDrawCardEffect(1, 0, 8, 1));
 	}
 
 	private static void PlayingCardAttachmentReplacesExistingEffect()
@@ -3726,6 +3743,180 @@ internal static class Program
 			response: 4));
 	}
 
+	private static void NetworkReconnectRulesDispatchSteamLobbyJoinCallbacks()
+	{
+		int leaveCount = 0;
+		int retryCount = 0;
+		int failCount = 0;
+		int acceptCount = 0;
+		ulong leftLobbyId = 0;
+
+		SteamLobbyJoinCallbackAction Dispatch(
+			NetworkSessionState state,
+			bool pendingHost,
+			ulong expected,
+			ulong callback,
+			ulong accepted,
+			int response)
+		{
+			leaveCount = 0;
+			retryCount = 0;
+			failCount = 0;
+			acceptCount = 0;
+			leftLobbyId = 0;
+			return NetworkReconnectRules.DispatchSteamLobbyJoinCallback(
+				state,
+				pendingHost,
+				expected,
+				callback,
+				accepted,
+				response,
+				id =>
+				{
+					leaveCount++;
+					leftLobbyId = id;
+				},
+				() => retryCount++,
+				() => failCount++,
+				() => acceptCount++);
+		}
+
+		Equal(
+			SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby,
+			Dispatch(NetworkSessionState.Joining, false, 22, 11, 0, 1));
+		Equal(1, leaveCount);
+		Equal(11UL, leftLobbyId);
+		Equal(0, acceptCount);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby,
+			Dispatch(NetworkSessionState.Idle, false, 0, 11, 0, 1));
+		Equal(1, leaveCount);
+		Equal(0, acceptCount);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.Ignore,
+			Dispatch(NetworkSessionState.Hosting, true, 0, 33, 0, 1));
+		Equal(0, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.Ignore,
+			Dispatch(NetworkSessionState.Lobby, false, 0, 33, 33, 1));
+		Equal(0, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby,
+			Dispatch(NetworkSessionState.Lobby, false, 33, 33, 0, 1));
+		Equal(1, leaveCount);
+		Equal(33UL, leftLobbyId);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.AcceptExpectedJoin,
+			Dispatch(NetworkSessionState.Reconnecting, false, 22, 22, 0, 1));
+		Equal(1, acceptCount);
+		Equal(0, leaveCount);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.RetryExpectedJoin,
+			Dispatch(NetworkSessionState.Reconnecting, false, 22, 22, 0, 5));
+		Equal(1, retryCount);
+		Equal(0, acceptCount);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.FailExpectedJoin,
+			Dispatch(NetworkSessionState.Joining, false, 22, 22, 0, 5));
+		Equal(1, failCount);
+		Equal(0, acceptCount);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby,
+			Dispatch(NetworkSessionState.Joining, false, 0, 22, 0, 1));
+		Equal(1, leaveCount);
+		Equal(0, acceptCount);
+		Equal(1, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.Ignore,
+			Dispatch(NetworkSessionState.Reconnecting, false, 0, 22, 0, 5));
+		Equal(0, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.Ignore,
+			Dispatch(NetworkSessionState.Joining, false, 0, 22, 22, 1));
+		Equal(0, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.Ignore,
+			Dispatch(NetworkSessionState.Lobby, false, 0, 22, 22, 1));
+		Equal(0, leaveCount + retryCount + failCount + acceptCount);
+
+		Equal(
+			SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby,
+			Dispatch(NetworkSessionState.Joining, false, 0, 11, 22, 1));
+		Equal(1, leaveCount);
+		Equal(11UL, leftLobbyId);
+	}
+
+	private static void SteamLobbyJoinHandlerGatesClientPeerCreation()
+	{
+		string path = Path.Combine(FindRepositoryRoot(), "scripts", "NetworkManager.Steam.cs");
+		string source = File.ReadAllText(path);
+		int callbackStart = source.IndexOf("private void OnSteamLobbyJoined(", StringComparison.Ordinal);
+		int beginStart = source.IndexOf("private void StartSteamLobbyJoin(", StringComparison.Ordinal);
+		int completionStart = source.IndexOf("private void CompleteExpectedSteamLobbyJoin(", StringComparison.Ordinal);
+		int leaveStart = source.IndexOf("private void LeaveSteamLobby(", StringComparison.Ordinal);
+		True(callbackStart >= 0);
+		True(beginStart > callbackStart);
+		True(completionStart > callbackStart);
+		True(leaveStart > completionStart);
+
+		string callbackMethod = source[callbackStart..completionStart];
+		int hostCreatedStart = source.IndexOf("private void OnSteamLobbyCreated(", StringComparison.Ordinal);
+		int lobbyJoinedStart = source.IndexOf("private void OnSteamLobbyJoined(", StringComparison.Ordinal);
+		True(hostCreatedStart >= 0);
+		True(lobbyJoinedStart > hostCreatedStart);
+		string hostCreatedMethod = source[hostCreatedStart..lobbyJoinedStart];
+		True(hostCreatedMethod.Contains("_acceptedSteamLobbyJoinId = lobbyId;", StringComparison.Ordinal));
+		string beginMethod = source[beginStart..completionStart];
+		string completionMethod = source[completionStart..leaveStart];
+		True(callbackMethod.Contains("NetworkReconnectRules.DispatchSteamLobbyJoinCallback(", StringComparison.Ordinal));
+		True(callbackMethod.Contains("_pendingSteamLobbyJoinId = 0;", StringComparison.Ordinal));
+		True(callbackMethod.Contains("_acceptedSteamLobbyJoinId = lobbyId;", StringComparison.Ordinal));
+		False(callbackMethod.Contains("TryCreateSteamPeer(", StringComparison.Ordinal));
+		True(beginMethod.Contains("_pendingSteamLobbyJoinId = lobbyId;", StringComparison.Ordinal));
+		True(beginMethod.Contains("steam?.Call(\"joinLobby\", lobbyId);", StringComparison.Ordinal));
+		Equal(
+			2,
+			Regex.Matches(
+				completionMethod,
+				@"ClearAcceptedSteamLobbyJoinIfNeeded\(lobbyId\)",
+				RegexOptions.CultureInvariant).Count);
+		string reconnectSource = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "NetworkManager.Reconnect.cs"));
+		True(reconnectSource.Contains("StartSteamLobbyJoin(_steamLobbyId);", StringComparison.Ordinal));
+		False(reconnectSource.Contains("Call(\"joinLobby\", _steamLobbyId)", StringComparison.Ordinal));
+		string lobbySource = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "NetworkManager.Lobby.cs"));
+		True(lobbySource.Contains("_pendingSteamLobbyJoinId = 0;", StringComparison.Ordinal));
+		True(lobbySource.Contains("_acceptedSteamLobbyJoinId = 0;", StringComparison.Ordinal));
+		Equal(
+			1,
+			Regex.Matches(
+				completionMethod,
+				@"TryCreateSteamPeer\s*\(\s*server:\s*false",
+				RegexOptions.CultureInvariant).Count);
+		Equal(
+			1,
+			Regex.Matches(
+				source,
+				@"TryCreateSteamPeer\s*\(\s*server:\s*false",
+				RegexOptions.CultureInvariant).Count);
+	}
+
 	private static void NetworkReconnectRulesRejectSteamOwnerMigrationDuringReconnect()
 	{
 		True(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
@@ -4453,13 +4644,22 @@ internal static class Program
 		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
 		True(partialText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
 		True(partialText.Contains("private async Task ProcessNetworkVisualQueueAsync()", StringComparison.Ordinal));
-		True(partialText.Contains("private async Task PlayNetworkCardPlayedEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
-		True(partialText.Contains("private async Task PlayNetworkItemCardVisualEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
-		True(partialText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		True(partialText.Contains("private sealed record NetworkVisualEvent", StringComparison.Ordinal));
+		True(partialText.Contains("private bool TryDecodeNetworkVisualEvent", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkItemCardVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		True(partialText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		True(partialText.Contains("NetworkCaptureRevealEntry[] CaptureRevealEntries", StringComparison.Ordinal));
+		False(partialText.Contains("IsUsableNetworkVisualEvent(payload", StringComparison.Ordinal));
+		False(partialText.Contains("= ReadNetworkInt(payload", StringComparison.Ordinal));
+		False(partialText.Contains("= ReadNetworkString(payload", StringComparison.Ordinal));
+		False(partialText.Contains("= ReadArray(payload", StringComparison.Ordinal));
+		False(partialText.Contains("= ReadIntArray(payload", StringComparison.Ordinal));
+		False(partialText.Contains("Split(',', StringSplitOptions", StringComparison.Ordinal));
 		False(mainText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
 		False(mainText.Contains("private async Task ProcessNetworkVisualQueueAsync()", StringComparison.Ordinal));
-		False(mainText.Contains("private async Task PlayNetworkCardPlayedEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
-		False(mainText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		False(mainText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 	}
 
 	private static void GameBoardNetworkPredictionHelpersMoveIntoPartialFile()
@@ -5599,6 +5799,228 @@ internal static class Program
 		}
 
 		return true;
+	}
+
+	private static void CardEventBusScopesTriggerLimitsToOneDispatch()
+	{
+		var bus = new CardEventBus();
+		var gameEvent = new CardGameEvent(
+			CardGameEvents.OnPlay,
+			sourceTableCardIndex: 3);
+
+		long firstDispatchId = bus.BeginDispatch();
+		bus.Publish(
+			firstDispatchId,
+			gameEvent,
+			new FixedCardTriggerProvider(5));
+		int firstDispatchCount = 0;
+		while (bus.TryDequeue(firstDispatchId, out _))
+		{
+			firstDispatchCount++;
+		}
+		Equal(4, firstDispatchCount);
+		True(bus.EndDispatch(firstDispatchId));
+
+		for (int dispatchIndex = 0; dispatchIndex < 5; dispatchIndex++)
+		{
+			long dispatchId = bus.BeginDispatch();
+			bus.Publish(
+				dispatchId,
+				gameEvent,
+				new FixedCardTriggerProvider(1));
+			True(bus.TryDequeue(
+				dispatchId,
+				out CardTriggerRequest request));
+			Equal(0, request.Sequence);
+			False(bus.TryDequeue(dispatchId, out _));
+			True(bus.EndDispatch(dispatchId));
+		}
+
+		long drainedDispatchId = bus.BeginDispatch();
+		bus.Publish(
+			drainedDispatchId,
+			gameEvent,
+			new FixedCardTriggerProvider(1));
+		True(bus.TryDequeue(drainedDispatchId, out _));
+		Equal(0, bus.PendingCount);
+		bool beginThrew = false;
+		try
+		{
+			bus.BeginDispatch();
+		}
+		catch (InvalidOperationException)
+		{
+			beginThrew = true;
+		}
+
+		True(beginThrew);
+		True(bus.EndDispatch(drainedDispatchId));
+	}
+
+	private static void CardEventBusEndsAbortedAndFailedDispatches()
+	{
+		var bus = new CardEventBus();
+		var gameEvent = new CardGameEvent(CardGameEvents.OnPlay);
+
+		long abortedDispatchId = bus.BeginDispatch();
+		try
+		{
+			bus.Publish(
+				abortedDispatchId,
+				gameEvent,
+				new FixedCardTriggerProvider(3));
+			True(bus.TryDequeue(abortedDispatchId, out _));
+		}
+		finally
+		{
+			True(bus.EndDispatch(abortedDispatchId));
+		}
+		Equal(0, bus.PendingCount);
+
+		bool resolverThrew = false;
+		long failedDispatchId = bus.BeginDispatch();
+		try
+		{
+			try
+			{
+				bus.Publish(
+					failedDispatchId,
+					gameEvent,
+					new FixedCardTriggerProvider(3));
+				True(bus.TryDequeue(failedDispatchId, out _));
+				throw new InvalidOperationException(
+					"simulated resolver failure");
+			}
+			finally
+			{
+				True(bus.EndDispatch(failedDispatchId));
+			}
+		}
+		catch (InvalidOperationException exception)
+			when (exception.Message == "simulated resolver failure")
+		{
+			resolverThrew = true;
+		}
+		True(resolverThrew);
+		Equal(0, bus.PendingCount);
+
+		long replacementDispatchId = bus.BeginDispatch();
+		bus.Publish(
+			replacementDispatchId,
+			gameEvent,
+			new FixedCardTriggerProvider(1));
+		True(bus.TryDequeue(
+			replacementDispatchId,
+			out CardTriggerRequest replacementRequest));
+		Equal(0, replacementRequest.Sequence);
+		True(bus.EndDispatch(replacementDispatchId));
+	}
+
+	private static void CardEventBusRejectsStaleDispatchOwnership()
+	{
+		var bus = new CardEventBus();
+		var gameEvent = new CardGameEvent(CardGameEvents.OnPlay);
+		long staleDispatchId = bus.BeginDispatch();
+		bus.Publish(
+			staleDispatchId,
+			gameEvent,
+			new FixedCardTriggerProvider(2));
+		bus.Clear();
+		Equal(0, bus.PendingCount);
+
+		long currentDispatchId = bus.BeginDispatch();
+		bus.Publish(
+			currentDispatchId,
+			gameEvent,
+			new FixedCardTriggerProvider(1));
+		bool stalePublishThrew = false;
+		try
+		{
+			bus.Publish(
+				staleDispatchId,
+				gameEvent,
+				new FixedCardTriggerProvider(1));
+		}
+		catch (InvalidOperationException)
+		{
+			stalePublishThrew = true;
+		}
+		True(stalePublishThrew);
+
+		bool staleDequeueThrew = false;
+		try
+		{
+			bus.TryDequeue(staleDispatchId, out _);
+		}
+		catch (InvalidOperationException)
+		{
+			staleDequeueThrew = true;
+		}
+		True(staleDequeueThrew);
+		False(bus.EndDispatch(staleDispatchId));
+		True(bus.TryDequeue(
+			currentDispatchId,
+			out CardTriggerRequest currentRequest));
+		Equal(0, currentRequest.Sequence);
+		True(bus.EndDispatch(currentDispatchId));
+	}
+
+	private static void CardEventResolverEndsItsOwnedDispatchInFinally()
+	{
+		string path = Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"GameBoardScene.SpecialCards.cs");
+		string source = File.ReadAllText(path);
+		int start = source.IndexOf(
+			"private async Task<PlayCardResult> PublishAndResolveCardEventAsync(",
+			StringComparison.Ordinal);
+		True(start >= 0);
+		int end = source.IndexOf(
+			"private async Task<PlayCardResult> ResolveItemCardOnPlayAsync(",
+			start,
+			StringComparison.Ordinal);
+		True(end > start);
+
+		string method = source[start..end];
+		True(Regex.IsMatch(
+			method,
+			@"try\s*\{[\s\S]*?_cardEventBus\.Publish\(dispatchId,[\s\S]*?\}\s*finally\s*\{\s*_cardEventBus\.EndDispatch\(dispatchId\);\s*\}",
+			RegexOptions.CultureInvariant));
+	}
+
+	private sealed class FixedCardTriggerProvider : ICardTriggerProvider
+	{
+		private readonly int _requestCount;
+
+		internal FixedCardTriggerProvider(int requestCount)
+		{
+			_requestCount = requestCount;
+		}
+
+		public IEnumerable<CardTriggerRequest> CollectCardTriggers(
+			CardGameEvent gameEvent,
+			int sequenceStart)
+		{
+			var definition = new ItemCardDefinition(
+				"dispatch-test-card",
+				string.Empty);
+			var rule = new ItemCardEffectRule(
+				CardGameEvents.OnPlay,
+				CardEffectTypes.DrawCard,
+				CardEffectValues.Empty,
+				0);
+			for (int requestIndex = 0;
+				requestIndex < _requestCount;
+				requestIndex++)
+			{
+				yield return new CardTriggerRequest(
+					definition,
+					rule,
+					gameEvent,
+					sequenceStart + requestIndex);
+			}
+		}
 	}
 
 	private static void Run(string name, Action test)

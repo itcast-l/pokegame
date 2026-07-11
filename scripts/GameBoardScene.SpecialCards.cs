@@ -112,19 +112,24 @@ public partial class GameBoardScene : ICardTriggerProvider
 
 	private async Task<PlayCardResult> PublishAndResolveCardEventAsync(CardGameEvent gameEvent, int turnSequenceGeneration)
 	{
-		_cardEventBus.Publish(gameEvent, this);
-		PlayCardResult finalResult = new(false, false);
-		HashSet<CardTriggerResolutionKey> resolved = _resolvedCardTriggerKeys;
-		resolved.Clear();
+		long dispatchId = _cardEventBus.BeginDispatch();
 		try
 		{
-			while (_cardEventBus.TryDequeue(out CardTriggerRequest request))
+			if (turnSequenceGeneration != _turnSequenceGeneration
+				|| IsGameOver())
 			{
-				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-				{
-					return new PlayCardResult(false, false);
-				}
+				return new PlayCardResult(false, false);
+			}
 
+			_cardEventBus.Publish(dispatchId, gameEvent, this);
+			PlayCardResult finalResult = new(false, false);
+			var resolved = new HashSet<CardTriggerResolutionKey>();
+			while (turnSequenceGeneration == _turnSequenceGeneration
+				&& !IsGameOver()
+				&& _cardEventBus.TryDequeue(
+					dispatchId,
+					out CardTriggerRequest request))
+			{
 				CardTriggerResolutionKey resolutionKey = BuildRuntimeResolutionKey(request);
 				if (!resolved.Add(resolutionKey))
 				{
@@ -135,11 +140,14 @@ public partial class GameBoardScene : ICardTriggerProvider
 				finalResult = MergePlayCardResults(finalResult, result);
 			}
 
-			return finalResult;
+			return turnSequenceGeneration == _turnSequenceGeneration
+				&& !IsGameOver()
+				? finalResult
+				: new PlayCardResult(false, false);
 		}
 		finally
 		{
-			resolved.Clear();
+			_cardEventBus.EndDispatch(dispatchId);
 		}
 	}
 

@@ -92,7 +92,9 @@ public partial class DiceRollOverlay : Control
 			_playbackCompletion.TrySetResult(LastResult);
 		}
 
-		_playbackCompletion = new TaskCompletionSource<int>();
+		var completionSource = new TaskCompletionSource<int>(
+			TaskCreationOptions.RunContinuationsAsynchronously);
+		_playbackCompletion = completionSource;
 		_targetResult = result;
 		LastResult = result;
 		_elapsedSeconds = 0.0;
@@ -102,14 +104,39 @@ public partial class DiceRollOverlay : Control
 		_textureRect.Texture = _rollingFrames[0];
 		RefreshLayout();
 		SetProcess(true);
-		return _playbackCompletion.Task;
+		return completionSource.Task;
+	}
+
+	public bool DebugStartPlayRollAwaitProbe(int result, Godot.Collections.Dictionary probe)
+	{
+		if (probe == null || !HasRequiredTexturesForResult(result))
+		{
+			return false;
+		}
+
+		_ = ObservePlayRollAsync(result, probe);
+		return true;
+	}
+
+	private async Task ObservePlayRollAsync(int result, Godot.Collections.Dictionary probe)
+	{
+		int completedResult = await PlayRollAsync(result);
+		probe["completed"] = true;
+		probe["result"] = completedResult;
+		probe["visible_when_completed"] = Visible;
+		probe["playing_when_completed"] = IsPlaying;
+		probe["completion_count"] = (int)probe.GetValueOrDefault("completion_count", 0) + 1;
 	}
 
 	private void FinishPlayback()
 	{
+		int result = _targetResult;
+		TaskCompletionSource<int>? completionSource = _playbackCompletion;
+		_playbackCompletion = null;
 		_isPlaying = false;
 		SetProcess(false);
-		_playbackCompletion?.TrySetResult(_targetResult);
+		Visible = false;
+		completionSource?.TrySetResult(result);
 	}
 
 	private void EnsureTextureRect()

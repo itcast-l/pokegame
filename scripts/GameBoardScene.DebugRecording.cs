@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Godot;
 
 public partial class GameBoardScene
@@ -180,6 +181,16 @@ public partial class GameBoardScene
 		}
 
 		return FormatPlayingCardCode(_tableCards[tableCardIndex].Card!.Value);
+	}
+
+	public int DebugGetTableCardReferenceIdentity(int tableCardIndex)
+	{
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		{
+			return 0;
+		}
+
+		return RuntimeHelpers.GetHashCode(_tableCards[tableCardIndex]);
 	}
 
 	public bool DebugIsTableCardFaceUp(int tableCardIndex)

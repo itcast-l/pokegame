@@ -17,7 +17,6 @@ else
 fi
 
 TMP_DIR="$(mktemp -d)"
-codex_setup_godot_test_home "$TMP_DIR"
 LOG_FILE="$TMP_DIR/mode.log"
 
 cleanup() {
@@ -26,7 +25,14 @@ cleanup() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardModeRegressionSmoke.gd >"$LOG_FILE" 2>&1
+for mode in solo_low solo_high solo_high_four_player adventure; do
+	MODE_TMP_DIR="$TMP_DIR/$mode"
+	codex_setup_godot_test_home "$MODE_TMP_DIR"
+	if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardModeRegressionSmoke.gd -- --mode="$mode" >>"$LOG_FILE" 2>&1; then
+		cat "$LOG_FILE" >&2
+		exit 1
+	fi
+done
 
 if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2

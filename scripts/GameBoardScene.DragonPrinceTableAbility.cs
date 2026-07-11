@@ -10,40 +10,130 @@ public partial class GameBoardScene
 		await ResolveLeafySeadragonBladeBreakAsync(playerIndex, result, turnSequenceGeneration);
 	}
 
-	private async Task<PlayCardResult> ResolveDragonPrinceJackTurnStartAsync(int playerIndex, int turnSequenceGeneration)
+	private async Task<PlayCardResult>
+	ResolveDragonPrinceJackTurnStartAsync(
+		int playerIndex,
+		int turnSequenceGeneration)
+{
+	EnsureAdventureModeResourcesLoaded();
+
+	if (!ShouldResolveDragonPrinceJack(playerIndex))
 	{
-		EnsureAdventureModeResourcesLoaded();
-
-		if (!ShouldResolveDragonPrinceJack(playerIndex))
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		_dragonPrinceJackUsed = true;
-		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.DragonPrince);
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		int specialJackTableIndex = await PlayDragonPrinceSpecialJackToTableAsync(playerIndex, turnSequenceGeneration);
-		if (specialJackTableIndex < 0)
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-		{
-			return new PlayCardResult(false, false);
-		}
-
-		PlayCardResult result = await ResolveDragonPrinceJackCollectTableAsync(playerIndex, turnSequenceGeneration, specialJackTableIndex);
-		MarkBossKActiveControlUsedIfNeeded(playerIndex);
-		RenderPlayerCardPiles();
-		RenderPlayerHands();
-		RenderTableCards();
-		return result with { CompletesTurn = true };
+		return new PlayCardResult(false, false);
 	}
+
+	_dragonPrinceJackUsed = true;
+	await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(
+		playerIndex,
+		turnSequenceGeneration,
+		AdventureEnemyAbilities.DragonPrince);
+	if (turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return new PlayCardResult(false, false);
+	}
+
+	int specialJackTableIndex =
+		await PlayDragonPrinceSpecialJackToTableAsync(
+			playerIndex,
+			turnSequenceGeneration);
+	if (specialJackTableIndex < 0
+		|| turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return new PlayCardResult(false, false);
+	}
+
+	PlayCardResult result =
+		await ResolveDragonPrinceJackCollectTableAsync(
+			playerIndex,
+			turnSequenceGeneration,
+			specialJackTableIndex);
+	PlayCardResult completedResult = result with
+	{
+		CompletesTurn = true,
+	};
+	if (!result.Played
+		|| turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return completedResult;
+	}
+
+	RenderPlayerCardPiles();
+	if (!QuestionRewardPresentationRules
+		.ShouldDelayTableRenderForQuestionReward(
+			result.QuestionRewardAnimation.HasValue,
+			IsLocalHandPlayer(playerIndex)))
+	{
+		RenderTableCards();
+	}
+	SendQuestionRewardVisualEventIfNeeded(
+		playerIndex,
+		result.QuestionRewardAnimation,
+		turnSequenceGeneration);
+	await PlayQuestionCardRewardAnimationAsync(
+		playerIndex,
+		result.QuestionRewardAnimation,
+		turnSequenceGeneration);
+	if (turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return completedResult;
+	}
+
+	await ApplyAdventureQuestionRewardEffects(
+		playerIndex,
+		result.AdventureQuestionRewardEffects,
+		turnSequenceGeneration);
+	if (turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return completedResult;
+	}
+
+	await ApplyAdventurePostCaptureEffectsAsync(
+		playerIndex,
+		result.AdventurePostCaptureEffects,
+		turnSequenceGeneration);
+	if (turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return completedResult;
+	}
+
+	await MaybeResolveAppliedAdventureQuestionRewardRejudgeAsync(
+		playerIndex,
+		result.QuestionRewardAnimation,
+		turnSequenceGeneration);
+	if (turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return completedResult;
+	}
+
+	await ResolvePendingMagnetAttachmentsAsync(
+		turnSequenceGeneration);
+	if (turnSequenceGeneration != _turnSequenceGeneration
+		|| _isLeavingGame
+		|| IsGameOver())
+	{
+		return completedResult;
+	}
+
+	MarkBossKActiveControlUsedIfNeeded(playerIndex);
+	RenderPlayerCardPiles();
+	RenderPlayerHands();
+	RenderTableCards();
+	return completedResult;
+}
 
 	private async Task<int> PlayDragonPrinceSpecialJackToTableAsync(int playerIndex, int turnSequenceGeneration)
 	{
@@ -119,98 +209,145 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task<PlayCardResult> ResolveDragonPrinceJackCollectTableAsync(
+	private async Task<PlayCardResult>
+	ResolveDragonPrinceJackCollectTableAsync(
 		int playerIndex,
 		int turnSequenceGeneration,
 		int specialJackTableIndex)
+{
+	if (playerIndex < 0
+		|| playerIndex >= _playerDecks.Count)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerDecks.Count)
+		return new PlayCardResult(false, false);
+	}
+
+	const int captureStartIndex = 0;
+	var captureTableReferenceSnapshot =
+		new List<TableCard>(_tableCards);
+	if (captureTableReferenceSnapshot.Count == 0
+		|| specialJackTableIndex < 0
+		|| specialJackTableIndex
+			>= captureTableReferenceSnapshot.Count)
+	{
+		return new PlayCardResult(false, false);
+	}
+
+	bool OwnsDragonCapture()
+	{
+		return !_isLeavingGame
+			&& !IsGameOver()
+			&& IsCaptureTableReferenceSnapshotCurrent(
+				turnSequenceGeneration,
+				captureTableReferenceSnapshot);
+	}
+
+	int scorePlayerIndex =
+		GetCapturedTableScorePlayerIndex(
+			captureStartIndex,
+			playerIndex);
+	bool capturedMiddleCards =
+		HasCapturedMiddleTableCards(captureStartIndex);
+	int collectedPoints = capturedMiddleCards
+		? GetCapturedTablePoints(
+			captureStartIndex,
+			scorePlayerIndex)
+		: 0;
+	PairCaptureEdgeFloatHold? specialJackFloat = null;
+	bool specialJackFloatHandedToDeck = false;
+	try
+	{
+		specialJackFloat =
+			await PlayDragonPrinceSpecialJackTableFloatHoldAsync(
+				specialJackTableIndex);
+		if (!OwnsDragonCapture())
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		const int captureStartIndex = 0;
-		bool captured = _tableCards.Count > captureStartIndex;
-		int scorePlayerIndex = captured
-			? GetCapturedTableScorePlayerIndex(captureStartIndex, playerIndex)
-			: playerIndex;
-		bool capturedMiddleCards = captured && HasCapturedMiddleTableCards(captureStartIndex);
-		int collectedPoints = capturedMiddleCards
-			? GetCapturedTablePoints(captureStartIndex, scorePlayerIndex)
-			: 0;
-		PairCaptureEdgeFloatHold? specialJackFloat = null;
-		bool specialJackFloatHandedToDeck = false;
-		if (captured)
+		if (capturedMiddleCards
+			&& ShouldPlayCrabScoreReductionAbility(
+				scorePlayerIndex,
+				captureStartIndex,
+				null))
 		{
-			try
+			await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(
+				1,
+				turnSequenceGeneration,
+				AdventureEnemyAbilities.TideGuard);
+			if (!OwnsDragonCapture())
 			{
-				specialJackFloat = await PlayDragonPrinceSpecialJackTableFloatHoldAsync(specialJackTableIndex);
-				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-				{
-					return new PlayCardResult(false, false);
-				}
+				return new PlayCardResult(false, false);
+			}
+		}
 
-				if (capturedMiddleCards && ShouldPlayCrabScoreReductionAbility(scorePlayerIndex, captureStartIndex, null))
-				{
-					await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(1, turnSequenceGeneration, AdventureEnemyAbilities.TideGuard);
-					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-					{
-						return new PlayCardResult(false, false);
-					}
-				}
-
-				if (collectedPoints > 0)
-				{
-					List<CapturedTableCardVisual> scoringCardVisuals = BuildCapturedTableCardVisuals(
+		if (collectedPoints > 0)
+		{
+			List<CapturedTableCardVisual>
+				scoringCardVisuals =
+					BuildCapturedTableCardVisuals(
 						captureStartIndex,
 						false,
 						true,
-						scorePlayerIndex: scorePlayerIndex);
-					await PlayScoreFillCollectionAsync(
-						scorePlayerIndex,
-						scoringCardVisuals,
-						turnSequenceGeneration,
-						() => AddPlayerScore(scorePlayerIndex, collectedPoints));
-					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-					{
-						return new PlayCardResult(false, false);
-					}
-				}
-
-				List<CapturedTableCardVisual> capturedCardVisuals = BuildCapturedTableCardVisuals(
-					captureStartIndex,
-					false,
-					flightStartOverrides: specialJackFloat);
-				if (capturedCardVisuals.Count > 0)
-				{
-					specialJackFloat?.QueueFreeOverlays(_animationPresenter);
-					specialJackFloatHandedToDeck = specialJackFloat != null;
-					await PlayCapturedCardsToDeckAnimationAsync(
-						playerIndex,
-						captureStartIndex,
-						capturedCardVisuals,
-						turnSequenceGeneration);
-				}
-			}
-			finally
+						scorePlayerIndex:
+							scorePlayerIndex);
+			await PlayScoreFillCollectionAsync(
+				scorePlayerIndex,
+				scoringCardVisuals,
+				turnSequenceGeneration,
+				() => { });
+			if (!OwnsDragonCapture())
 			{
-				if (!specialJackFloatHandedToDeck && specialJackFloat != null)
-				{
-					RestorePairCaptureEdgeFloatHold(specialJackFloat);
-				}
+				return new PlayCardResult(false, false);
 			}
 		}
 
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		List<CapturedTableCardVisual> capturedCardVisuals =
+			BuildCapturedTableCardVisuals(
+				captureStartIndex,
+				false,
+				flightStartOverrides:
+					specialJackFloat);
+		if (capturedCardVisuals.Count > 0)
+		{
+			specialJackFloat?.QueueFreeOverlays(
+				_animationPresenter);
+			specialJackFloatHandedToDeck =
+				specialJackFloat != null;
+			await PlayCapturedCardsToDeckAnimationAsync(
+				playerIndex,
+				captureStartIndex,
+				capturedCardVisuals,
+				turnSequenceGeneration);
+			if (!OwnsDragonCapture())
+			{
+				return new PlayCardResult(false, false);
+			}
+		}
+
+		CaptureTableCardsResult captureResult =
+			await CaptureTableCardsAsync(
+				playerIndex,
+				captureStartIndex,
+				awardScore: false,
+				turnSequenceGeneration:
+					turnSequenceGeneration,
+				expectedTableCardReferences:
+					captureTableReferenceSnapshot,
+				commitImmediatelyBeforeApply: () =>
+				{
+					if (collectedPoints > 0)
+					{
+						AddPlayerScore(
+							scorePlayerIndex,
+							collectedPoints);
+					}
+				});
+		if (!captureResult.Applied
+			|| captureResult.Aborted)
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
-			playerIndex,
-			captureStartIndex,
-			awardScore: false,
-			turnSequenceGeneration: turnSequenceGeneration);
 		if (!IsGameOver())
 		{
 			Shuffle(_playerDecks[playerIndex]);
@@ -219,12 +356,36 @@ public partial class GameBoardScene
 
 		return new PlayCardResult(
 			true,
-			captured,
+			true,
 			captureResult.CollectedCardCount > 0,
 			captureResult.QuestionRewardAnimation,
-			AdventureQuestionRewardEffects: captureResult.AdventureQuestionRewardEffects,
-			AdventurePostCaptureEffects: captureResult.AdventurePostCaptureEffects);
+			AdventureQuestionRewardEffects:
+				captureResult
+					.AdventureQuestionRewardEffects,
+			AdventurePostCaptureEffects:
+				captureResult
+					.AdventurePostCaptureEffects);
 	}
+	finally
+	{
+		if (!specialJackFloatHandedToDeck
+			&& specialJackFloat != null)
+		{
+			if (IsCaptureTableReferenceSnapshotCurrent(
+				turnSequenceGeneration,
+				captureTableReferenceSnapshot))
+			{
+				RestorePairCaptureEdgeFloatHold(
+					specialJackFloat);
+			}
+			else
+			{
+				specialJackFloat.QueueFreeOverlays(
+					_animationPresenter);
+			}
+		}
+	}
+}
 
 	private async Task<PairCaptureEdgeFloatHold?> PlayDragonPrinceSpecialJackTableFloatHoldAsync(int tableCardIndex)
 	{

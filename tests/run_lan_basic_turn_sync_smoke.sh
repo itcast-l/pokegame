@@ -80,7 +80,9 @@ if [[ "$HOST_STATUS" -ne 0 || "$CLIENT_STATUS" -ne 0 ]]; then
 fi
 
 require_log_line "$HOST_LOG" "HOST_START_MATCH"
+require_log_line "$HOST_LOG" "HOST_LOAD_HANDSHAKE_ACTIVE true"
 require_log_line "$HOST_LOG" "HOST_BOARD_INIT"
+require_log_line "$HOST_LOG" "HOST_REENTRANCY_GUARD_OK"
 require_log_line "$HOST_LOG" "HOST_PLAYED_CARD"
 require_log_line "$HOST_LOG" "HOST_SAW_CLIENT_TURN"
 require_log_line "$HOST_LOG" "HOST_DONE"

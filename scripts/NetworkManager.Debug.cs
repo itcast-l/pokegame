@@ -1,5 +1,11 @@
 public partial class NetworkManager
 {
+	public bool DebugIsLoadHandshakeTimeoutActive()
+	{
+		return _state == NetworkSessionState.LoadingScene
+			&& _loadHandshake != null;
+	}
+
 	public ulong DebugGetCurrentSteamLobbyId()
 	{
 		return _steamLobbyId;

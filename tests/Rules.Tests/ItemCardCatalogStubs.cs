@@ -1,10 +1,17 @@
 public readonly struct ItemCardDefinition
 {
 	public ItemCardDefinition(string attachedEffectType)
+		: this(string.Empty, attachedEffectType)
 	{
+	}
+
+	public ItemCardDefinition(string id, string attachedEffectType)
+	{
+		Id = id;
 		AttachedEffectType = attachedEffectType;
 	}
 
+	public string Id { get; }
 	public string AttachedEffectType { get; }
 }
 

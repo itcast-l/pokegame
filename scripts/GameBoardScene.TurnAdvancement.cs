@@ -224,6 +224,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (string.Equals(
+				definition.EffectType,
+				CardEffectTypes.DrawCard,
+				StringComparison.Ordinal)
+			&& !CanFulfillDrawItemCardEffect(playerIndex, definition))
+		{
+			return false;
+		}
+
 		if (_itemPlayPresentationValidators.TryGetValue(definition.PlayPresentation, out CanPlayItemCardPresentation? presentationValidator)
 			&& !presentationValidator(playerIndex, definition))
 		{
@@ -247,6 +256,28 @@ public partial class GameBoardScene
 		}
 
 		return true;
+	}
+
+	private bool CanFulfillDrawItemCardEffect(
+		int playerIndex,
+		ItemCardDefinition definition)
+	{
+		if (playerIndex < 0
+			|| playerIndex >= _playerDecks.Count
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count)
+		{
+			return false;
+		}
+
+		int drawCount = definition.EffectValues.GetInt(
+			CardEffectValueKeys.Count,
+			1);
+		return ItemCardEffectSupport.CanFulfillDrawCardEffect(
+			_playerDecks[playerIndex].Count,
+			GetTotalHandCardCount(playerIndex),
+			MaxTotalHandCards,
+			drawCount);
 	}
 
 }

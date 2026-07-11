@@ -59,75 +59,112 @@ public partial class GameBoardScene
 	}
 
 	private async Task<QuestionCardRewardGrant?> GrantQuestionCardRewardAsync(
-		int playerIndex,
-		bool reserveReplacementCard,
-		int turnSequenceGeneration)
+	int playerIndex,
+	bool reserveReplacementCard,
+	int turnSequenceGeneration,
+	Func<bool>? canCommit = null)
+{
+	bool CanCommitReward()
 	{
-		if (!item_mode)
+		return turnSequenceGeneration == _turnSequenceGeneration
+			&& !_isLeavingGame
+			&& !IsGameOver()
+			&& (canCommit?.Invoke() ?? true);
+	}
+
+	if (!CanCommitReward() || !item_mode)
+	{
+		return null;
+	}
+
+	if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+	{
+		return null;
+	}
+
+	string itemCardId = PickQuestionRewardItemCardId();
+	if (string.IsNullOrEmpty(itemCardId))
+	{
+		return null;
+	}
+
+	ItemCard? itemCard = CreateItemCard(itemCardId);
+	if (!itemCard.HasValue)
+	{
+		return null;
+	}
+
+	if (IsAttachmentItemCard(itemCardId))
+	{
+		if (!CanCommitReward())
 		{
 			return null;
 		}
 
-		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
-		{
-			return null;
-		}
-
-		string itemCardId = PickQuestionRewardItemCardId();
-		if (string.IsNullOrEmpty(itemCardId))
-		{
-			return null;
-		}
-
-		ItemCard? itemCard = CreateItemCard(itemCardId);
-		if (!itemCard.HasValue)
-		{
-			return null;
-		}
-
+		_pendingItemAttachmentRewards.Enqueue(
+			new PendingItemAttachmentReward(playerIndex, itemCardId));
 		_debugQuestionRewardGrantCount++;
 		_debugLastQuestionRewardItemCardId = itemCardId;
-
-		if (IsAttachmentItemCard(itemCardId))
-		{
-			_pendingItemAttachmentRewards.Enqueue(new PendingItemAttachmentReward(playerIndex, itemCardId));
-			return new QuestionCardRewardGrant(itemCard.Value, -1, true);
-		}
-
-		if (!HasRoomForNewHandCard(playerIndex, reserveReplacementCard ? 1 : 0)
-			&& !await DiscardHandCardForNewItemCardAsync(playerIndex, turnSequenceGeneration))
-		{
-			return null;
-		}
-
-		int itemHandIndex = _playerItemHands[playerIndex].Count;
-		_playerItemHands[playerIndex].Add(itemCard.Value);
-		return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
+		return new QuestionCardRewardGrant(itemCard.Value, -1, true);
 	}
+
+	if (!HasRoomForNewHandCard(
+			playerIndex,
+			reserveReplacementCard ? 1 : 0)
+		&& !await DiscardHandCardForNewItemCardAsync(
+			playerIndex,
+			turnSequenceGeneration,
+			CanCommitReward))
+	{
+		return null;
+	}
+
+	if (!CanCommitReward())
+	{
+		return null;
+	}
+
+	int itemHandIndex = _playerItemHands[playerIndex].Count;
+	_playerItemHands[playerIndex].Add(itemCard.Value);
+	_debugQuestionRewardGrantCount++;
+	_debugLastQuestionRewardItemCardId = itemCardId;
+	return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
+}
 
 	private string PickQuestionRewardItemCardId()
+{
+	string forcedItemCardId =
+		ConsumeDebugForcedNextQuestionRewardItemCardId();
+	if (!string.IsNullOrEmpty(forcedItemCardId))
 	{
-		var candidates = new List<RewardCandidate>();
-		foreach (string itemCardId in _itemCardCatalog.RewardIds)
-		{
-			if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
-			{
-				continue;
-			}
-
-			candidates.Add(new RewardCandidate(itemCardId, definition.Weight));
-		}
-
-		if (candidates.Count == 0)
-		{
-			return string.Empty;
-		}
-
-		RewardPlan reward = RewardResolver.PickWeightedReward(
-			candidates,
-			maxInclusive => _rng.RandiRange(1, maxInclusive));
-		return reward.ItemCardId;
+		return forcedItemCardId;
 	}
+
+	var candidates = new List<RewardCandidate>();
+	foreach (string itemCardId in _itemCardCatalog.RewardIds)
+	{
+		if (!_itemCardCatalog.TryGetDefinition(
+			itemCardId,
+			out ItemCardDefinition definition))
+		{
+			continue;
+		}
+
+		candidates.Add(new RewardCandidate(
+			itemCardId,
+			definition.Weight));
+	}
+
+	if (candidates.Count == 0)
+	{
+		return string.Empty;
+	}
+
+	RewardPlan reward = RewardResolver.PickWeightedReward(
+		candidates,
+		maxInclusive => _rng.RandiRange(1, maxInclusive));
+	return reward.ItemCardId;
+}
 
 	private async Task<string> MaybeRejudgeQuestionRewardItemCardIdAsync(
 		string originalItemCardId,

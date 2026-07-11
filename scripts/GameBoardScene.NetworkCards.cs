@@ -34,13 +34,6 @@ public partial class GameBoardScene
 		return card;
 	}
 
-	private PlayingCard CreateNetworkPlayingCard(Godot.Collections.Dictionary cardDictionary)
-	{
-		return CreateNetworkPlayingCard(
-			ReadNetworkString(cardDictionary, "code", string.Empty),
-			ReadStringArray(cardDictionary, "attached_item_card_ids"));
-	}
-
 	private Godot.Collections.Dictionary BuildPlayingCardArrayEntry(PlayingCard card)
 	{
 		return new Godot.Collections.Dictionary
@@ -76,48 +69,81 @@ public partial class GameBoardScene
 		return itemCard ?? new ItemCard(itemCardId, GetNetworkPlaceholderTexture());
 	}
 
-	private void EnsureNetworkHandCardPlaceholder(int playerIndex, int handIndex, string cardCode)
+	private bool CanExpandNetworkPlayingHandToIndex(int playerIndex, int handIndex)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count || handIndex < 0)
+		return playerIndex >= 0 && playerIndex < _playerHands.Count
+			&& playerIndex < _playerItemHands.Count
+			&& handIndex >= 0 && handIndex < MaxTotalHandCards
+			&& handIndex <= _playerHands[playerIndex].Count
+			&& GetTotalHandCardCount(playerIndex) + (handIndex == _playerHands[playerIndex].Count ? 1 : 0) <= MaxTotalHandCards;
+	}
+
+	private bool CanExpandNetworkItemHandToIndex(int playerIndex, int itemHandIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count
+			|| itemHandIndex < 0 || itemHandIndex >= MaxTotalHandCards || itemHandIndex > _playerItemHands[playerIndex].Count)
 		{
-			return;
+			return false;
+		}
+		int added = itemHandIndex == _playerItemHands[playerIndex].Count ? 1 : 0;
+		return GetTotalHandCardCount(playerIndex) + added <= MaxTotalHandCards;
+	}
+
+	private bool EnsureNetworkQuestionRewardItem(int playerIndex, int itemHandIndex, ItemCard item)
+	{
+		if (!CanExpandNetworkItemHandToIndex(playerIndex, itemHandIndex)) return false;
+		if (itemHandIndex == _playerItemHands[playerIndex].Count) _playerItemHands[playerIndex].Add(item);
+		return true;
+	}
+
+	private bool EnsureNetworkHandCardPlaceholder(int playerIndex, int handIndex, string cardCode)
+	{
+		if (!CanExpandNetworkPlayingHandToIndex(playerIndex, handIndex))
+		{
+			return false;
 		}
 
-		while (_playerHands[playerIndex].Count <= handIndex)
+		if (handIndex == _playerHands[playerIndex].Count)
 		{
 			_playerHands[playerIndex].Add(string.IsNullOrWhiteSpace(cardCode)
 				? CreatePlaceholderPlayingCard()
 				: CreateNetworkPlayingCard(cardCode));
 		}
+		return true;
 	}
 
-	private void InsertNetworkTableOverlayIfMissing(int actorSeatIndex, int targetTableCardIndex, ItemCard itemCard)
+	private bool InsertNetworkTableOverlayIfMissing(int actorSeatIndex, int targetTableCardIndex, ItemCard itemCard)
 	{
-		if (targetTableCardIndex < 0)
-		{
-			return;
-		}
-
-		ItemCard? existingItemOverlay = targetTableCardIndex < _tableCards.Count
-			? _tableCards[targetTableCardIndex].ItemOverlay
-			: null;
-		if (existingItemOverlay.HasValue
-			&& string.Equals(existingItemOverlay.Value.Id, itemCard.Id, StringComparison.Ordinal))
-		{
-			return;
-		}
-
-		int insertIndex = Mathf.Clamp(targetTableCardIndex, 0, _tableCards.Count);
-		_tableCards.Insert(insertIndex, new TableCard(null, false, itemCard, actorSeatIndex));
+		if (!CanApplyNetworkTableOverlay(actorSeatIndex, targetTableCardIndex, itemCard.Id)) return false;
+		if (targetTableCardIndex == _tableCards.Count) _tableCards.Add(new TableCard(null, false, itemCard, actorSeatIndex));
+		return true;
 	}
 
-	private void EnsureNetworkQuestionTableCard(int tableCardIndex)
+	private bool CanApplyNetworkTableOverlay(int actorSeatIndex, int targetTableCardIndex, string itemCardId)
 	{
+		if (actorSeatIndex < 0 || actorSeatIndex >= player_count || targetTableCardIndex < 0 || targetTableCardIndex > _tableCards.Count || !IsValidNetworkItemCardId(itemCardId, true)) return false;
+		if (targetTableCardIndex == _tableCards.Count) return true;
+		TableCard existing = _tableCards[targetTableCardIndex];
+		return existing.ItemOverlay.HasValue && string.Equals(existing.ItemOverlay.Value.Id, itemCardId, StringComparison.Ordinal) && existing.ItemOwnerPlayerIndex == actorSeatIndex;
+	}
+
+	private bool MatchesNetworkPredictedItemVisual(int actorSeatIndex, int itemHandIndex, string itemCardId, string presentation, int targetTableCardIndex)
+	{
+		return _networkPredictedItemVisualActive
+			&& actorSeatIndex == GetLocalHandPlayerIndex()
+			&& itemHandIndex == _networkPendingItemHandIndex
+			&& string.Equals(itemCardId, _networkPredictedItemCardId, StringComparison.Ordinal)
+			&& string.Equals(presentation, _networkPredictedItemPlayPresentation, StringComparison.Ordinal)
+			&& targetTableCardIndex == _networkPredictedItemTargetTableCardIndex;
+	}
+
+	private bool EnsureNetworkQuestionTableCard(int tableCardIndex)
+	{
+		if (tableCardIndex < 0 || tableCardIndex > _tableCards.Count) return false;
+		if (tableCardIndex < _tableCards.Count) return true;
 		ItemCard questionMarkCard = CreateNetworkVisualItemCard(QuestionMarkItemCardId);
-		while (_tableCards.Count <= tableCardIndex)
-		{
-			_tableCards.Add(new TableCard(null, true, questionMarkCard));
-		}
+		_tableCards.Add(new TableCard(null, true, questionMarkCard));
+		return true;
 	}
 
 	private List<TableCard> BuildNetworkShuffledTableCards(IReadOnlyList<int> targetIndexes)

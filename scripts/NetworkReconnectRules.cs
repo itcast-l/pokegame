@@ -1,5 +1,14 @@
 using System;
 
+internal enum SteamLobbyJoinCallbackAction
+{
+	Ignore,
+	LeaveUnexpectedLobby,
+	RetryExpectedJoin,
+	FailExpectedJoin,
+	AcceptExpectedJoin,
+}
+
 internal static class NetworkReconnectRules
 {
 	private const int SteamChatRoomEnterResponseSuccess = 1;
@@ -120,6 +129,88 @@ internal static class NetworkReconnectRules
 	internal static bool IsSteamLobbyJoinSuccessful(int response)
 	{
 		return response == SteamChatRoomEnterResponseSuccess;
+	}
+
+	internal static SteamLobbyJoinCallbackAction ClassifySteamLobbyJoinCallback(
+		NetworkSessionState state,
+		bool pendingSteamHostLobby,
+		ulong expectedLobbyId,
+		ulong callbackLobbyId,
+		ulong acceptedLobbyId,
+		int response)
+	{
+		// LobbyEnter can accompany lobby creation. With no join target, this
+		// handler cannot distinguish it safely from an older join callback.
+		if (pendingSteamHostLobby)
+		{
+			return SteamLobbyJoinCallbackAction.Ignore;
+		}
+
+		bool expected = (state is NetworkSessionState.Joining
+				or NetworkSessionState.Reconnecting)
+			&& expectedLobbyId != 0
+			&& callbackLobbyId == expectedLobbyId;
+		if (!expected)
+		{
+			if (IsSteamLobbyJoinSuccessful(response)
+				&& callbackLobbyId != 0
+				&& acceptedLobbyId == callbackLobbyId)
+			{
+				return SteamLobbyJoinCallbackAction.Ignore;
+			}
+
+			return IsSteamLobbyJoinSuccessful(response)
+				&& callbackLobbyId != 0
+					? SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby
+					: SteamLobbyJoinCallbackAction.Ignore;
+		}
+
+		if (IsSteamLobbyJoinSuccessful(response))
+		{
+			return SteamLobbyJoinCallbackAction.AcceptExpectedJoin;
+		}
+
+		return ShouldRetrySteamLobbyJoinAfterFailure(state, response)
+			? SteamLobbyJoinCallbackAction.RetryExpectedJoin
+			: SteamLobbyJoinCallbackAction.FailExpectedJoin;
+	}
+
+	internal static SteamLobbyJoinCallbackAction DispatchSteamLobbyJoinCallback(
+		NetworkSessionState state,
+		bool pendingSteamHostLobby,
+		ulong expectedLobbyId,
+		ulong callbackLobbyId,
+		ulong acceptedLobbyId,
+		int response,
+		Action<ulong> leaveUnexpectedLobby,
+		Action retryExpectedJoin,
+		Action failExpectedJoin,
+		Action acceptExpectedJoin)
+	{
+		SteamLobbyJoinCallbackAction action = ClassifySteamLobbyJoinCallback(
+			state,
+			pendingSteamHostLobby,
+			expectedLobbyId,
+			callbackLobbyId,
+			acceptedLobbyId,
+			response);
+		switch (action)
+		{
+			case SteamLobbyJoinCallbackAction.LeaveUnexpectedLobby:
+				leaveUnexpectedLobby(callbackLobbyId);
+				break;
+			case SteamLobbyJoinCallbackAction.RetryExpectedJoin:
+				retryExpectedJoin();
+				break;
+			case SteamLobbyJoinCallbackAction.FailExpectedJoin:
+				failExpectedJoin();
+				break;
+			case SteamLobbyJoinCallbackAction.AcceptExpectedJoin:
+				acceptExpectedJoin();
+				break;
+		}
+
+		return action;
 	}
 
 	internal static bool ShouldRetrySteamLobbyJoinAfterFailure(NetworkSessionState state, int response)

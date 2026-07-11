@@ -452,7 +452,14 @@ public partial class AdventureAvatarMenuScene
 		_runResumeDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		CallDeferred(nameof(RefreshRunResumeDialogLayout));
-		_runResumeContinueButton?.GrabFocus();
+		if (_isShowingAvatarUnlockPrompt)
+		{
+			GrabFocusIfAvailable(_avatarUnlockPromptButton);
+		}
+		else
+		{
+			GrabFocusIfAvailable(_runResumeContinueButton);
+		}
 	}
 
 	private void HideRunResumeDialog()
@@ -466,9 +473,22 @@ public partial class AdventureAvatarMenuScene
 		_runResumeDialogRoot.Visible = false;
 		_runResumeDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
 		_isShowingRunResumeDialog = false;
-		SetAdventureMenuButtonsDisabled(_isShowingAvatarUnlockPrompt);
 		RefreshSelection();
-		FocusDefaultControlDeferred();
+		bool disableBackground =
+			_isShowingAvatarUnlockPrompt
+			|| _isStartingAdventure
+			|| _isReturningToMainMenu;
+		SetAdventureMenuButtonsDisabled(disableBackground);
+		if (_isShowingAvatarUnlockPrompt)
+		{
+			GrabFocusIfAvailable(_avatarUnlockPromptButton);
+			return;
+		}
+
+		if (!_isStartingAdventure && !_isReturningToMainMenu)
+		{
+			FocusDefaultControlDeferred();
+		}
 	}
 
 	private void ContinueSavedAdventureRun()
@@ -550,6 +570,40 @@ public partial class AdventureAvatarMenuScene
 			&& _runResumeDialogRoot != null
 			&& GodotObject.IsInstanceValid(_runResumeDialogRoot)
 			&& _runResumeDialogRoot.Visible;
+	}
+
+	public bool DebugShowAdventureRunResumeDialog()
+	{
+		ShowRunResumeDialog();
+		return DebugIsAdventureRunResumeDialogVisible();
+	}
+
+	public bool DebugAreAdventureMenuBackgroundButtonsDisabled()
+	{
+		if (!_backButton.Disabled || !_startButton.Disabled)
+		{
+			return false;
+		}
+
+		foreach (Button adventureButton in _adventureButtons.Values)
+		{
+			if (GodotObject.IsInstanceValid(adventureButton)
+				&& !adventureButton.Disabled)
+			{
+				return false;
+			}
+		}
+
+		foreach (Button stageButton in _stageButtons.Values)
+		{
+			if (GodotObject.IsInstanceValid(stageButton)
+				&& !stageButton.Disabled)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	public bool DebugSelectAdventureRunResumeContinue()

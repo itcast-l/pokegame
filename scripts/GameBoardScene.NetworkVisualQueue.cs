@@ -5,6 +5,21 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	// This is the trust-boundary representation. Godot Variants must not cross into playback.
+	private sealed record NetworkVisualEvent(
+		string Type, int SnapshotId, int Generation, int Actor, int HandIndex, int TargetSeat,
+		int TargetHandIndex, int TableIndex, int DisplayIndex, int CaptureStartIndex, int MovedCount,
+		string CardCode, string ItemId, string Presentation, bool FaceUp, bool RequiresMagnet,
+		float FirstFloat, float SecondFloat, int[] Indexes, string[] Strings,
+		NetworkCaptureRevealEntry[] CaptureRevealEntries);
+
+	private readonly record struct NetworkCaptureRevealEntry(
+		int TableCardIndex,
+		string CardCode,
+		string[] AttachedItemCardIds,
+		int PointValue,
+		bool PointDoubleFlag);
+
 	internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)
 	{
 		NetworkManager? networkManager = GetNetworkManager();
@@ -16,17 +31,172 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int snapshotId = ReadNetworkInt(payload, "snapshot_id", -1);
-		if (snapshotId >= 0 && snapshotId <= _networkLastAppliedSnapshotId)
+		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent? visualEvent)
+			|| visualEvent.SnapshotId <= _networkLastAppliedSnapshotId)
 		{
 			return;
 		}
 
-		_networkVisualEventQueue.Enqueue(payload);
+		_networkVisualEventQueue.Enqueue(visualEvent);
 		if (!_networkVisualQueueProcessing)
 		{
 			_ = ProcessNetworkVisualQueueAsync();
 		}
+	}
+
+	private bool TryDecodeNetworkVisualEvent(Godot.Collections.Dictionary payload, out NetworkVisualEvent? visualEvent)
+	{
+		visualEvent = null;
+		EnsureNetworkCardCache();
+		if (!TryReadNetworkString(payload, NetworkBoardVisualEventTypes.EventTypeKey, out string type)
+			|| !IsKnownNetworkVisualEventType(type)
+			|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.SnapshotIdKey, 0, int.MaxValue, out int snapshotId)
+			|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, 0, int.MaxValue, out int generation)
+			|| generation != _turnSequenceGeneration) return false;
+
+		int actor = -1, handIndex = -1, targetSeat = -1, targetHandIndex = -1, tableIndex = -1, displayIndex = -1, captureStartIndex = -1, movedCount = -1;
+		string cardCode = string.Empty, itemId = string.Empty, presentation = string.Empty;
+		bool faceUp = false, requiresMagnet = false;
+		float firstFloat = 0, secondFloat = 0;
+		int[] indexes = Array.Empty<int>();
+		string[] strings = Array.Empty<string>();
+		NetworkCaptureRevealEntry[] captureRevealEntries = Array.Empty<NetworkCaptureRevealEntry>();
+		bool seat(string key, out int value) => TryReadNetworkInt32(payload, key, 0, player_count - 1, out value);
+
+		switch (type)
+		{
+			case NetworkBoardVisualEventTypes.PlayHandCard:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor >= _playerHands.Count
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, _playerHands[actor].Count - 1, out handIndex)
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, MaxNetworkCardCodeLength, out cardCode) || !_networkCardsByCode.ContainsKey(cardCode)
+					|| !TryReadNetworkBool(payload, NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey, out faceUp)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TableCardIndexKey, 0, _tableCards.Count, out tableIndex)
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.BorrowTideAdjustedRankKey, MaxNetworkCardCodeLength, out string rank)) return false;
+				if (_networkPredictedHandVisualActive && actor == GetLocalHandPlayerIndex()
+					&& (handIndex != _networkPendingHandIndex || tableIndex != _networkPredictedHandTableCardIndex
+						|| !string.Equals(rank, _networkPredictedHandBorrowTideAdjustedRank, StringComparison.Ordinal))) return false;
+				strings = new[] { rank };
+				break;
+			case NetworkBoardVisualEventTypes.PlayItemCard:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor >= _playerItemHands.Count
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, _playerItemHands[actor].Count - 1, out handIndex)
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, MaxNetworkItemCardIdLength, out itemId) || !IsValidNetworkItemCardId(itemId, true)
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayPresentationKey, out presentation) || !IsKnownCardPlayPresentation(presentation)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TargetTableCardIndexKey, -1, _tableCards.Count, out tableIndex)
+					|| (_networkPredictedItemVisualActive && actor == GetLocalHandPlayerIndex() && !MatchesNetworkPredictedItemVisual(actor, handIndex, itemId, presentation, tableIndex))
+					|| (presentation == CardPlayPresentationTypes.TableOverlay ? !CanApplyNetworkTableOverlay(actor, tableIndex, itemId) : actor != GetLocalHandPlayerIndex() || tableIndex != -1)) return false;
+				break;
+			case NetworkBoardVisualEventTypes.DrawCard:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.DisplayIndexKey, 0, MaxTotalHandCards - 1, out displayIndex)
+					|| !CanExpandNetworkPlayingHandToIndex(actor, displayIndex)
+					|| !TryReadOptionalNetworkString(payload, NetworkBoardVisualEventTypes.DrawnCardCodeKey, out cardCode)
+					|| (cardCode.Length > MaxNetworkCardCodeLength || (cardCode.Length > 0 && !_networkCardsByCode.ContainsKey(cardCode)))) return false;
+				break;
+			case NetworkBoardVisualEventTypes.DeckShuffle:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex()) return false;
+				break;
+			case NetworkBoardVisualEventTypes.QuestionRefresh:
+				if (!TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TableCardIndexKey, 0, _tableCards.Count, out tableIndex)) return false;
+				break;
+			case NetworkBoardVisualEventTypes.TableShuffle:
+				if (_tableCards.Count <= 1 || !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.ShuffleTargetIndexesKey, _tableCards.Count, _tableCards.Count, 0, _tableCards.Count - 1, out indexes) || !HasUniqueValues(indexes)) return false;
+				break;
+			case NetworkBoardVisualEventTypes.LensReveal:
+				int maxLens = Math.Min(LensRevealMaxCards, _tableCards.Count);
+				if (maxLens <= 0 || !seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex()
+					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.SplitCenterXKey, out firstFloat)
+					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.SplitCenterYKey, out secondFloat)
+					|| !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.TargetTableCardIndexesKey, 1, maxLens, 0, _tableCards.Count - 1, out indexes) || !HasUniqueValues(indexes)) return false;
+				break;
+			case NetworkBoardVisualEventTypes.CaptureToDeck:
+				if (_tableCards.Count == 0 || !seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.CaptureStartIndexKey, 0, _tableCards.Count - 1, out captureStartIndex)
+					|| !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.ExtraTableCardIndexesKey, 0, _tableCards.Count, 0, _tableCards.Count - 1, out indexes) || !HasUniqueValues(indexes)
+					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.FlightStaggerSecondsKey, out firstFloat) || firstFloat < 0 || firstFloat > TableCaptureFlightStaggerSeconds) return false;
+				break;
+			case NetworkBoardVisualEventTypes.QuestionReward:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex()
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, MaxNetworkItemCardIdLength, out itemId) || !IsValidNetworkItemCardId(itemId, false)
+					|| !_itemCardCatalog.TryGetDefinition(itemId, out ItemCardDefinition reward) || !reward.CanBeQuestionReward
+					|| !TryReadNetworkBool(payload, NetworkBoardVisualEventTypes.RequiresMagnetAttachmentKey, out requiresMagnet) || requiresMagnet != IsValidNetworkAttachmentItemCardId(itemId)
+					|| (!requiresMagnet && !_itemCardCatalog.IsPlayable(itemId))
+					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.StartGlobalXKey, out firstFloat)
+					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.StartGlobalYKey, out secondFloat)
+					|| !(requiresMagnet ? TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1, -1, out handIndex) : TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, MaxTotalHandCards - 1, out handIndex) && CanExpandNetworkItemHandToIndex(actor, handIndex))) return false;
+				break;
+			case NetworkBoardVisualEventTypes.StealDeckCards:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex() || !seat(NetworkBoardVisualEventTypes.TargetSeatIndexKey, out targetSeat) || targetSeat == actor || targetSeat >= _playerDecks.Count || !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.MovedCardCountKey, 1, _playerDecks[targetSeat].Count, out movedCount)) return false;
+				break;
+			case NetworkBoardVisualEventTypes.StealHandCard:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex() || !seat(NetworkBoardVisualEventTypes.TargetSeatIndexKey, out targetSeat) || targetSeat == actor || targetSeat >= _playerHands.Count || targetSeat >= _playerItemHands.Count || GetTotalHandCardCount(actor) >= MaxTotalHandCards
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TargetHandIndexKey, 0, GetTotalHandCardCount(targetSeat) - 1, out targetHandIndex)
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, MaxNetworkItemCardIdLength, out itemId)
+					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, MaxNetworkCardCodeLength, out cardCode)
+					|| !TryReadBoundedNetworkStringArray(payload, NetworkBoardVisualEventTypes.AttachedItemCardIdsKey, 0, 1, MaxNetworkItemCardIdLength, out strings) || !HasValidNetworkAttachedItemCardIds(strings)) return false;
+				if (itemId.Length == 0)
+				{
+					if (!_networkCardsByCode.ContainsKey(cardCode) || targetHandIndex >= _playerHands[targetSeat].Count || !string.Equals(ToNetworkCardCode(_playerHands[targetSeat][targetHandIndex]), cardCode, StringComparison.Ordinal) || !string.Equals(_playerHands[targetSeat][targetHandIndex].AttachedItemCardIdsCsv, strings.Length == 0 ? string.Empty : strings[0], StringComparison.Ordinal)) return false;
+				}
+				else if (!IsValidNetworkItemCardId(itemId, true) || cardCode.Length != 0 || strings.Length != 0 || targetHandIndex - _playerHands[targetSeat].Count < 0 || targetHandIndex - _playerHands[targetSeat].Count >= _playerItemHands[targetSeat].Count || !string.Equals(_playerItemHands[targetSeat][targetHandIndex - _playerHands[targetSeat].Count].Id, itemId, StringComparison.Ordinal)) return false;
+				break;
+			case NetworkBoardVisualEventTypes.CaptureReveal:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex() || !TryDecodeNetworkCaptureRevealEntries(payload, out captureRevealEntries)) return false;
+				indexes = new int[captureRevealEntries.Length];
+				for (int index = 0; index < indexes.Length; index++) indexes[index] = captureRevealEntries[index].TableCardIndex;
+				break;
+			case NetworkBoardVisualEventTypes.BombPair:
+				break;
+			case NetworkBoardVisualEventTypes.MantaTideShift:
+				if (_tableCards.Count <= 1) return false;
+				break;
+			default: return false;
+		}
+
+		visualEvent = new(type, snapshotId, generation, actor, handIndex, targetSeat, targetHandIndex, tableIndex, displayIndex, captureStartIndex, movedCount, cardCode, itemId, presentation, faceUp, requiresMagnet, firstFloat, secondFloat, indexes, strings, captureRevealEntries);
+		return true;
+	}
+
+	private static bool IsKnownNetworkVisualEventType(string value) => value is NetworkBoardVisualEventTypes.PlayHandCard or NetworkBoardVisualEventTypes.PlayItemCard or NetworkBoardVisualEventTypes.CaptureReveal or NetworkBoardVisualEventTypes.CaptureToDeck or NetworkBoardVisualEventTypes.DrawCard or NetworkBoardVisualEventTypes.DeckShuffle or NetworkBoardVisualEventTypes.StealHandCard or NetworkBoardVisualEventTypes.StealDeckCards or NetworkBoardVisualEventTypes.LensReveal or NetworkBoardVisualEventTypes.TableShuffle or NetworkBoardVisualEventTypes.QuestionRefresh or NetworkBoardVisualEventTypes.QuestionReward or NetworkBoardVisualEventTypes.BombPair or NetworkBoardVisualEventTypes.MantaTideShift;
+	private static bool IsKnownCardPlayPresentation(string value) => value is CardPlayPresentationTypes.DirectTrigger or CardPlayPresentationTypes.TableOverlay or CardPlayPresentationTypes.TransformAreaTrigger or CardPlayPresentationTypes.LensSplit or CardPlayPresentationTypes.TargetedTrigger;
+	private bool HasCurrentNetworkTableIndexes(int[] indexes, int minimumCount, int maximumCount)
+	{
+		if (indexes.Length < minimumCount
+			|| indexes.Length > maximumCount
+			|| _tableCards.Count == 0
+			|| !HasUniqueValues(indexes))
+		{
+			return false;
+		}
+
+		foreach (int index in indexes)
+		{
+			if (index < 0 || index >= _tableCards.Count)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+	private bool TryDecodeNetworkCaptureRevealEntries(Godot.Collections.Dictionary payload, out NetworkCaptureRevealEntry[] entries)
+	{
+		entries = Array.Empty<NetworkCaptureRevealEntry>();
+		if (_tableCards.Count == 0
+			|| !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.RevealTableCardIndexesKey, 1, _tableCards.Count, 0, _tableCards.Count - 1, out int[] indexes)
+			|| !HasUniqueValues(indexes)
+			|| !TryReadBoundedNetworkStringArray(payload, NetworkBoardVisualEventTypes.RevealCardCodesKey, indexes.Length, indexes.Length, MaxNetworkCardCodeLength, out string[] codes)
+			|| !TryReadBoundedNetworkStringArray(payload, NetworkBoardVisualEventTypes.RevealAttachedItemCardIdsCsvKey, indexes.Length, indexes.Length, MaxNetworkAttachmentCsvLength, out string[] csv)
+			|| !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.RevealPointValuesKey, indexes.Length, indexes.Length, 0, int.MaxValue, out int[] points)
+			|| !TryReadExactNetworkBoolArray(payload, NetworkBoardVisualEventTypes.RevealPointDoubleFlagsKey, indexes.Length, out bool[] doubled)) return false;
+		var decoded = new NetworkCaptureRevealEntry[indexes.Length];
+		for (int index = 0; index < indexes.Length; index++)
+		{
+			if (!TryValidateNetworkCaptureRevealEntry(indexes[index], codes[index], csv[index], points[index], doubled[index], out string[] attachedIds)) return false;
+			decoded[index] = new NetworkCaptureRevealEntry(indexes[index], codes[index], attachedIds, points[index], doubled[index]);
+		}
+		entries = decoded;
+		return true;
 	}
 
 	internal void RejectNetworkBoardAction(string reason, int turnSequenceGeneration, int rejectedHandIndex)
@@ -67,15 +237,19 @@ public partial class GameBoardScene
 		{
 			while (_networkVisualEventQueue.Count > 0)
 			{
-				Godot.Collections.Dictionary payload = _networkVisualEventQueue.Dequeue();
-				int snapshotId = ReadNetworkInt(payload, "snapshot_id", -1);
-				if (snapshotId >= 0 && snapshotId <= _networkLastAppliedSnapshotId)
+				NetworkVisualEvent payload = _networkVisualEventQueue.Dequeue();
+				double debugPlaybackDelaySeconds = GetDebugNetworkVisualPlaybackDelaySeconds();
+				if (debugPlaybackDelaySeconds > 0.0)
+				{
+					await ToSignal(GetTree().CreateTimer(debugPlaybackDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+				}
+				if (payload.SnapshotId <= _networkLastAppliedSnapshotId)
 				{
 					continue;
 				}
 
 				if (_networkQueuedSnapshot != null
-					&& ReadNetworkInt(_networkQueuedSnapshot, "snapshot_id", -1) > snapshotId)
+					&& _networkQueuedSnapshot.SnapshotId > payload.SnapshotId)
 				{
 					continue;
 				}
@@ -86,22 +260,19 @@ public partial class GameBoardScene
 		finally
 		{
 			_networkVisualQueueProcessing = false;
-			CompleteReconnectCatchupIfReady();
 			if (_networkQueuedSnapshot != null)
 			{
-				Godot.Collections.Dictionary snapshot = _networkQueuedSnapshot;
+				ValidatedNetworkBoardSnapshot snapshot = _networkQueuedSnapshot;
 				_networkQueuedSnapshot = null;
-				if (IsUsableNetworkSnapshot(snapshot, out int snapshotId))
-				{
-					ApplyNetworkBoardSnapshotNow(snapshot, snapshotId);
-				}
+				ApplyNetworkBoardSnapshotNow(snapshot);
 			}
+			CompleteReconnectCatchupIfReady();
 		}
 	}
 
-	private async Task PlayNetworkCardPlayedEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)
 	{
-		string eventType = ReadNetworkString(payload, NetworkBoardVisualEventTypes.EventTypeKey, NetworkBoardVisualEventTypes.PlayHandCard);
+		string eventType = payload.Type;
 		switch (eventType)
 		{
 			case NetworkBoardVisualEventTypes.PlayItemCard:
@@ -147,24 +318,34 @@ public partial class GameBoardScene
 				break;
 		}
 
-		int actorSeatIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		int handIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1);
-		string playedCardCode = ReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, string.Empty);
-		bool playedCardIsFaceUp = ReadNetworkBool(payload, NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey, false);
-		int tableCardIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TableCardIndexKey, _tableCards.Count);
-		string borrowTideAdjustedRank = ReadNetworkString(payload, NetworkBoardVisualEventTypes.BorrowTideAdjustedRankKey, string.Empty);
+		int actorSeatIndex = payload.Actor;
+		int handIndex = payload.HandIndex;
+		string playedCardCode = payload.CardCode;
+		bool playedCardIsFaceUp = payload.FaceUp;
+		int tableCardIndex = payload.TableIndex;
+		string borrowTideAdjustedRank = payload.Strings.Length == 1 ? payload.Strings[0] : string.Empty;
 		if (actorSeatIndex < 0 || actorSeatIndex >= player_count)
 		{
 			return;
 		}
 
 		PlayingCard playedCard = CreateNetworkPlayingCard(playedCardCode);
-		int clampedTableCardIndex = Mathf.Clamp(tableCardIndex, 0, _tableCards.Count);
+		int clampedTableCardIndex = tableCardIndex;
 		bool matchesLocalPrediction = actorSeatIndex == GetLocalHandPlayerIndex()
 			&& handIndex == _networkPendingHandIndex
 			&& _networkPredictedHandVisualActive
 			&& clampedTableCardIndex == _networkPredictedHandTableCardIndex
 			&& string.Equals(borrowTideAdjustedRank, _networkPredictedHandBorrowTideAdjustedRank, StringComparison.Ordinal);
+		if (!matchesLocalPrediction
+			&& (actorSeatIndex >= _playerHands.Count
+				|| handIndex < 0
+				|| handIndex >= _playerHands[actorSeatIndex].Count
+				|| !string.Equals(ToNetworkCardCode(_playerHands[actorSeatIndex][handIndex]), playedCardCode, StringComparison.Ordinal)
+				|| tableCardIndex < 0
+				|| tableCardIndex > _tableCards.Count))
+		{
+			return;
+		}
 		if (!matchesLocalPrediction)
 		{
 			_tableCards.Insert(clampedTableCardIndex, new TableCard(playedCard, playedCardIsFaceUp, cardOwnerPlayerIndex: actorSeatIndex));
@@ -179,12 +360,6 @@ public partial class GameBoardScene
 		{
 			Vector2 startGlobalPosition = TryGetHandCardStartGlobalPosition(actorSeatIndex, handIndex)
 				?? GetVisibleCardPileTopGlobalPosition(actorSeatIndex);
-			double debugPlaybackDelaySeconds = GetDebugNetworkVisualPlaybackDelaySeconds();
-			if (debugPlaybackDelaySeconds > 0.0)
-			{
-				await ToSignal(GetTree().CreateTimer(debugPlaybackDelaySeconds), SceneTreeTimer.SignalName.Timeout);
-			}
-
 			await PlayCardToTableAnimationAsync(actorSeatIndex, playedCard, startGlobalPosition, clampedTableCardIndex, playedCardIsFaceUp);
 		}
 		else
@@ -195,13 +370,13 @@ public partial class GameBoardScene
 		RenderTableCards();
 	}
 
-	private async Task PlayNetworkItemCardVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkItemCardVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int actorSeatIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		int itemHandIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1);
-		string itemCardId = ReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, string.Empty);
-		string playPresentation = ReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayPresentationKey, CardPlayPresentationTypes.DirectTrigger);
-		int targetTableCardIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TargetTableCardIndexKey, -1);
+		int actorSeatIndex = payload.Actor;
+		int itemHandIndex = payload.HandIndex;
+		string itemCardId = payload.ItemId;
+		string playPresentation = payload.Presentation;
+		int targetTableCardIndex = payload.TableIndex;
 		if (actorSeatIndex < 0 || actorSeatIndex >= player_count || string.IsNullOrWhiteSpace(itemCardId))
 		{
 			return;
@@ -253,7 +428,14 @@ public partial class GameBoardScene
 			?? GetVisibleCardPileTopGlobalPosition(actorSeatIndex);
 		if (playPresentation == CardPlayPresentationTypes.TableOverlay && targetTableCardIndex >= 0)
 		{
-			InsertNetworkTableOverlayIfMissing(actorSeatIndex, targetTableCardIndex, itemCard);
+			if (actorSeatIndex >= _playerItemHands.Count
+				|| itemHandIndex < 0
+				|| itemHandIndex >= _playerItemHands[actorSeatIndex].Count
+				|| !string.Equals(_playerItemHands[actorSeatIndex][itemHandIndex].Id, itemCardId, StringComparison.Ordinal)
+				|| !InsertNetworkTableOverlayIfMissing(actorSeatIndex, targetTableCardIndex, itemCard))
+			{
+				return;
+			}
 			await PlayItemCardToTableAnimationAsync(actorSeatIndex, itemCard, startGlobalPosition, targetTableCardIndex, tableCardIsFaceUp: false);
 			RenderTableCards();
 			return;
@@ -281,17 +463,20 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayNetworkDrawCardVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkDrawCardVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int playerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		int displayIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.DisplayIndexKey, -1);
-		string drawnCardCode = ReadNetworkString(payload, NetworkBoardVisualEventTypes.DrawnCardCodeKey, string.Empty);
+		int playerIndex = payload.Actor;
+		int displayIndex = payload.DisplayIndex;
+		string drawnCardCode = payload.CardCode;
 		if (playerIndex < 0 || playerIndex >= player_count || displayIndex < 0)
 		{
 			return;
 		}
 
-		EnsureNetworkHandCardPlaceholder(playerIndex, displayIndex, drawnCardCode);
+		if (!EnsureNetworkHandCardPlaceholder(playerIndex, displayIndex, drawnCardCode))
+		{
+			return;
+		}
 		DrawnHandCard drawnCard = new(
 			string.IsNullOrWhiteSpace(drawnCardCode)
 				? CreatePlaceholderPlayingCard()
@@ -300,9 +485,9 @@ public partial class GameBoardScene
 		await PlayReplacementDrawAnimationAsync(playerIndex, drawnCard, _turnSequenceGeneration);
 	}
 
-	private async Task PlayNetworkDeckShuffleVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkDeckShuffleVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int playerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
+		int playerIndex = payload.Actor;
 		if (playerIndex < 0 || playerIndex >= player_count)
 		{
 			return;
@@ -311,14 +496,14 @@ public partial class GameBoardScene
 		await PlayPhysicalDeckShuffleAsync(playerIndex);
 	}
 
-	private async Task PlayNetworkStealHandCardVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkStealHandCardVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int ownerPlayerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		int targetPlayerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TargetSeatIndexKey, -1);
-		int targetHandIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TargetHandIndexKey, -1);
-		string itemCardId = ReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, string.Empty);
-		string stolenCardCode = ReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, string.Empty);
-		string[] attachedItemCardIds = ReadStringArray(payload, NetworkBoardVisualEventTypes.AttachedItemCardIdsKey);
+		int ownerPlayerIndex = payload.Actor;
+		int targetPlayerIndex = payload.TargetSeat;
+		int targetHandIndex = payload.TargetHandIndex;
+		string itemCardId = payload.ItemId;
+		string stolenCardCode = payload.CardCode;
+		string[] attachedItemCardIds = payload.Strings;
 		if (ownerPlayerIndex != GetLocalHandPlayerIndex()
 			|| ownerPlayerIndex < 0
 			|| ownerPlayerIndex >= player_count
@@ -333,9 +518,9 @@ public partial class GameBoardScene
 		if (stealsItemCard)
 		{
 			int sourceItemHandIndex = targetHandIndex - _playerHands[targetPlayerIndex].Count;
-			ItemCard stolenItemCard = sourceItemHandIndex >= 0 && sourceItemHandIndex < _playerItemHands[targetPlayerIndex].Count
-				? _playerItemHands[targetPlayerIndex][sourceItemHandIndex]
-				: CreateNetworkVisualItemCard(itemCardId);
+			if (sourceItemHandIndex < 0 || sourceItemHandIndex >= _playerItemHands[targetPlayerIndex].Count
+				|| !string.Equals(_playerItemHands[targetPlayerIndex][sourceItemHandIndex].Id, itemCardId, StringComparison.Ordinal)) return;
+			ItemCard stolenItemCard = _playerItemHands[targetPlayerIndex][sourceItemHandIndex];
 			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 			await PlayStealHandCardAnimationAsync(
 				ownerPlayerIndex,
@@ -345,26 +530,28 @@ public partial class GameBoardScene
 				null,
 				GetVisibleStolenItemCardScale(targetPlayerIndex, stolenItemCard),
 				GetStolenItemCardTargetDisplayIndex(ownerPlayerIndex));
-			if (_turnSequenceGeneration != ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, _turnSequenceGeneration)
+			if (_turnSequenceGeneration != payload.Generation
 				|| IsGameOver())
 			{
 				RenderPlayerHands();
 				return;
 			}
 
-			if (sourceItemHandIndex >= 0 && sourceItemHandIndex < _playerItemHands[targetPlayerIndex].Count)
-			{
-				_playerItemHands[targetPlayerIndex].RemoveAt(sourceItemHandIndex);
-				ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-			}
+			if (GetTotalHandCardCount(ownerPlayerIndex) >= MaxTotalHandCards
+				|| sourceItemHandIndex < 0
+				|| sourceItemHandIndex >= _playerItemHands[targetPlayerIndex].Count
+				|| !string.Equals(_playerItemHands[targetPlayerIndex][sourceItemHandIndex].Id, itemCardId, StringComparison.Ordinal)) return;
+			_playerItemHands[targetPlayerIndex].RemoveAt(sourceItemHandIndex);
+			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 
 			_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
 		}
 		else
 		{
-			PlayingCard stolenCard = targetHandIndex >= 0 && targetHandIndex < _playerHands[targetPlayerIndex].Count
-				? _playerHands[targetPlayerIndex][targetHandIndex]
-				: CreateNetworkPlayingCard(stolenCardCode, attachedItemCardIds);
+			if (targetHandIndex < 0 || targetHandIndex >= _playerHands[targetPlayerIndex].Count
+				|| !string.Equals(ToNetworkCardCode(_playerHands[targetPlayerIndex][targetHandIndex]), stolenCardCode, StringComparison.Ordinal)
+				|| !string.Equals(_playerHands[targetPlayerIndex][targetHandIndex].AttachedItemCardIdsCsv, attachedItemCardIds.Length == 0 ? string.Empty : attachedItemCardIds[0], StringComparison.Ordinal)) return;
+			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
 			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 			await PlayStealHandCardAnimationAsync(
 				ownerPlayerIndex,
@@ -374,18 +561,20 @@ public partial class GameBoardScene
 				GetVisibleStolenPlayingCardAttachmentOverlayTexture(targetPlayerIndex, stolenCard),
 				1.0f,
 				GetStolenPlayingCardTargetDisplayIndex(ownerPlayerIndex));
-			if (_turnSequenceGeneration != ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, _turnSequenceGeneration)
+			if (_turnSequenceGeneration != payload.Generation
 				|| IsGameOver())
 			{
 				RenderPlayerHands();
 				return;
 			}
 
-			if (targetHandIndex >= 0 && targetHandIndex < _playerHands[targetPlayerIndex].Count)
-			{
-				_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
-				ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-			}
+			if (GetTotalHandCardCount(ownerPlayerIndex) >= MaxTotalHandCards
+				|| targetHandIndex < 0
+				|| targetHandIndex >= _playerHands[targetPlayerIndex].Count
+				|| !string.Equals(ToNetworkCardCode(_playerHands[targetPlayerIndex][targetHandIndex]), stolenCardCode, StringComparison.Ordinal)
+				|| !string.Equals(_playerHands[targetPlayerIndex][targetHandIndex].AttachedItemCardIdsCsv, attachedItemCardIds.Length == 0 ? string.Empty : attachedItemCardIds[0], StringComparison.Ordinal)) return;
+			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
+			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 
 			_playerHands[ownerPlayerIndex].Add(stolenCard);
 		}
@@ -394,12 +583,12 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 	}
 
-	private async Task PlayNetworkStealDeckCardsVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkStealDeckCardsVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int ownerPlayerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		int targetPlayerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TargetSeatIndexKey, -1);
-		int movedCardCount = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.MovedCardCountKey, 0);
-		int turnSequenceGeneration = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, _turnSequenceGeneration);
+		int ownerPlayerIndex = payload.Actor;
+		int targetPlayerIndex = payload.TargetSeat;
+		int movedCardCount = payload.MovedCount;
+		int turnSequenceGeneration = payload.Generation;
 		if (ownerPlayerIndex != GetLocalHandPlayerIndex()
 			|| ownerPlayerIndex < 0
 			|| ownerPlayerIndex >= player_count
@@ -409,13 +598,19 @@ public partial class GameBoardScene
 		{
 			return;
 		}
+		if (targetPlayerIndex >= _playerDecks.Count
+			|| ownerPlayerIndex >= _playerDecks.Count
+			|| movedCardCount > _playerDecks[targetPlayerIndex].Count)
+		{
+			return;
+		}
 
 		PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 		Vector2 startGlobalPosition = GetDrawCardStartGlobalPosition(targetPlayerIndex);
 		Vector2 targetGlobalPosition = GetDrawCardStartGlobalPosition(ownerPlayerIndex);
 		float startRotationDegrees = GetCardPileRotationDegreesForPlayer(targetPlayerIndex);
 		float targetRotationDegrees = GetCardPileRotationDegreesForPlayer(ownerPlayerIndex);
-		int appliedMoveCount = Mathf.Min(movedCardCount, _playerDecks[targetPlayerIndex].Count);
+		int appliedMoveCount = movedCardCount;
 		for (int cardIndex = 0; cardIndex < appliedMoveCount; cardIndex++)
 		{
 			await PlayStolenDeckCardFlightAsync(
@@ -429,6 +624,16 @@ public partial class GameBoardScene
 				return;
 			}
 
+		}
+		if (turnSequenceGeneration != _turnSequenceGeneration
+			|| IsGameOver()
+			|| movedCardCount > _playerDecks[targetPlayerIndex].Count)
+		{
+			RenderPlayerCardPiles();
+			return;
+		}
+		for (int cardIndex = 0; cardIndex < appliedMoveCount; cardIndex++)
+		{
 			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
 			_playerDecks[targetPlayerIndex].RemoveAt(0);
 			AddCardToPlayerDeck(ownerPlayerIndex, topCard);
@@ -444,14 +649,16 @@ public partial class GameBoardScene
 		RenderPlayerCardPiles();
 	}
 
-	private async Task PlayNetworkLensRevealVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkLensRevealVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int ownerPlayerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		float splitCenterX = ReadNetworkFloat(payload, NetworkBoardVisualEventTypes.SplitCenterXKey, 0.0f);
-		float splitCenterY = ReadNetworkFloat(payload, NetworkBoardVisualEventTypes.SplitCenterYKey, 0.0f);
-		Godot.Collections.Array targetIndexesArray = ReadArray(payload, NetworkBoardVisualEventTypes.TargetTableCardIndexesKey);
-		int[] targetIndexes = ReadIntArray(payload, NetworkBoardVisualEventTypes.TargetTableCardIndexesKey, targetIndexesArray.Count);
-		if (ownerPlayerIndex < 0 || ownerPlayerIndex >= player_count || targetIndexes.Length == 0)
+		int ownerPlayerIndex = payload.Actor;
+		float splitCenterX = payload.FirstFloat;
+		float splitCenterY = payload.SecondFloat;
+		int[] targetIndexes = payload.Indexes;
+		if (ownerPlayerIndex != GetLocalHandPlayerIndex()
+			|| ownerPlayerIndex < 0
+			|| ownerPlayerIndex >= player_count
+			|| !HasCurrentNetworkTableIndexes(targetIndexes, 1, Math.Min(LensRevealMaxCards, _tableCards.Count)))
 		{
 			return;
 		}
@@ -459,28 +666,35 @@ public partial class GameBoardScene
 		await RevealLensTargetCardsAsync(targetIndexes, new Vector2(splitCenterX, splitCenterY), _turnSequenceGeneration);
 	}
 
-	private async Task PlayNetworkTableShuffleVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkTableShuffleVisualEventAsync(NetworkVisualEvent payload)
 	{
-		Godot.Collections.Array targetIndexesArray = ReadArray(payload, NetworkBoardVisualEventTypes.ShuffleTargetIndexesKey);
-		int[] targetIndexes = ReadIntArray(payload, NetworkBoardVisualEventTypes.ShuffleTargetIndexesKey, targetIndexesArray.Count);
-		List<TableCard> shuffledTableCards = BuildNetworkShuffledTableCards(targetIndexes);
-		if (shuffledTableCards.Count != _tableCards.Count)
+		int[] targetIndexes = payload.Indexes;
+		if (targetIndexes.Length != _tableCards.Count || !HasUniqueValues(targetIndexes))
 		{
 			return;
 		}
-
-		await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, _turnSequenceGeneration);
+		List<TableCard> shuffledTableCards = BuildNetworkShuffledTableCards(targetIndexes);
+		if (shuffledTableCards.Count != _tableCards.Count
+			|| !await PlayTableCardsShuffleAnimationAsync(
+				shuffledTableCards,
+				payload.Generation))
+		{
+			return;
+		}
 	}
 
-	private async Task PlayNetworkQuestionRefreshVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkQuestionRefreshVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int tableCardIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TableCardIndexKey, -1);
-		if (tableCardIndex < 0)
+		int tableCardIndex = payload.TableIndex;
+		if (tableCardIndex < 0 || tableCardIndex > _tableCards.Count)
 		{
 			return;
 		}
 
-		EnsureNetworkQuestionTableCard(tableCardIndex);
+		if (!EnsureNetworkQuestionTableCard(tableCardIndex))
+		{
+			return;
+		}
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
 			return;
@@ -490,27 +704,18 @@ public partial class GameBoardScene
 		RenderTableCards();
 	}
 
-	private async Task PlayNetworkQuestionRewardVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkQuestionRewardVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int playerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		string itemCardId = ReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, string.Empty);
-		int itemHandIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1);
-		float startGlobalX = ReadNetworkFloat(payload, NetworkBoardVisualEventTypes.StartGlobalXKey, 0.0f);
-		float startGlobalY = ReadNetworkFloat(payload, NetworkBoardVisualEventTypes.StartGlobalYKey, 0.0f);
-		bool requiresMagnetAttachment = ReadNetworkBool(payload, NetworkBoardVisualEventTypes.RequiresMagnetAttachmentKey, false);
-		if (playerIndex != GetLocalHandPlayerIndex() || string.IsNullOrWhiteSpace(itemCardId))
+		int playerIndex = payload.Actor;
+		string itemCardId = payload.ItemId;
+		int itemHandIndex = payload.HandIndex;
+		float startGlobalX = payload.FirstFloat;
+		float startGlobalY = payload.SecondFloat;
+		bool requiresMagnetAttachment = payload.RequiresMagnet;
+		ItemCard rewardItem = CreateValidatedNetworkItemCard(itemCardId);
+		if (!requiresMagnetAttachment)
 		{
-			return;
-		}
-
-		ItemCard rewardItem = CreateNetworkVisualItemCard(itemCardId);
-		if (!requiresMagnetAttachment && playerIndex >= 0 && playerIndex < _playerItemHands.Count && itemHandIndex >= 0)
-		{
-			while (_playerItemHands[playerIndex].Count <= itemHandIndex)
-			{
-				_playerItemHands[playerIndex].Add(rewardItem);
-			}
-
+			if (!EnsureNetworkQuestionRewardItem(playerIndex, itemHandIndex, rewardItem)) return;
 			HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 			RenderPlayerHands();
 		}
@@ -525,13 +730,13 @@ public partial class GameBoardScene
 			_turnSequenceGeneration);
 	}
 
-	private async Task PlayNetworkBombPairVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkBombPairVisualEventAsync(NetworkVisualEvent payload)
 	{
 		await ResolveBombPairAsync(_turnSequenceGeneration);
 		RenderTableCards();
 	}
 
-	private async Task PlayNetworkMantaTideShiftVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkMantaTideShiftVisualEventAsync(NetworkVisualEvent payload)
 	{
 		if (_tableCards.Count <= 1)
 		{
@@ -539,7 +744,7 @@ public partial class GameBoardScene
 		}
 
 		await PlayMantaRayTideShiftTableMoveAnimationAsync(_turnSequenceGeneration);
-		if (_tableCards.Count > 0)
+		if (_turnSequenceGeneration == payload.Generation && !IsGameOver() && _tableCards.Count > 1)
 		{
 			TableCard tideShiftedCard = _tableCards[0];
 			_tableCards.RemoveAt(0);
@@ -548,17 +753,17 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task PlayNetworkCaptureVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkCaptureVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int playerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
-		int captureStartIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.CaptureStartIndexKey, -1);
-		Godot.Collections.Array extraIndexesArray = ReadArray(payload, NetworkBoardVisualEventTypes.ExtraTableCardIndexesKey);
-		int[] extraIndexes = ReadIntArray(payload, NetworkBoardVisualEventTypes.ExtraTableCardIndexesKey, extraIndexesArray.Count);
-		float flightStaggerSeconds = ReadNetworkFloat(payload, NetworkBoardVisualEventTypes.FlightStaggerSecondsKey, TableCaptureFlightStaggerSeconds);
+		int playerIndex = payload.Actor;
+		int captureStartIndex = payload.CaptureStartIndex;
+		int[] extraIndexes = payload.Indexes;
+		float flightStaggerSeconds = payload.FirstFloat;
 		if (playerIndex < 0
 			|| playerIndex >= player_count
 			|| captureStartIndex < 0
-			|| captureStartIndex >= _tableCards.Count)
+			|| captureStartIndex >= _tableCards.Count
+			|| !HasCurrentNetworkTableIndexes(extraIndexes, 0, _tableCards.Count))
 		{
 			return;
 		}
@@ -583,49 +788,40 @@ public partial class GameBoardScene
 			flightStaggerSeconds);
 	}
 
-	private async Task PlayNetworkCaptureRevealVisualEventAsync(Godot.Collections.Dictionary payload)
+	private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)
 	{
-		int playerIndex = ReadNetworkInt(payload, NetworkBoardVisualEventTypes.ActorSeatIndexKey, -1);
+		int playerIndex = payload.Actor;
 		if (playerIndex != GetLocalHandPlayerIndex())
 		{
 			return;
 		}
 
-		Godot.Collections.Array revealIndexesArray = ReadArray(payload, NetworkBoardVisualEventTypes.RevealTableCardIndexesKey);
-		int[] revealIndexes = ReadIntArray(payload, NetworkBoardVisualEventTypes.RevealTableCardIndexesKey, revealIndexesArray.Count);
-		string[] revealCardCodes = ReadStringArray(payload, NetworkBoardVisualEventTypes.RevealCardCodesKey);
-		string[] revealAttachedItemCardIdsCsv = ReadStringArray(payload, NetworkBoardVisualEventTypes.RevealAttachedItemCardIdsCsvKey);
-		int[] revealPointValues = ReadIntArray(payload, NetworkBoardVisualEventTypes.RevealPointValuesKey, revealIndexes.Length);
-		bool[] revealPointDoubleFlags = ReadBoolArray(payload, NetworkBoardVisualEventTypes.RevealPointDoubleFlagsKey, revealIndexes.Length);
-		for (int revealIndex = 0; revealIndex < revealIndexes.Length; revealIndex++)
+		NetworkCaptureRevealEntry[] entries = payload.CaptureRevealEntries;
+		// Every target is checked against the current board before the first replacement.
+		// A queued event can become stale while an earlier visual is playing.
+		for (int revealIndex = 0; revealIndex < entries.Length; revealIndex++)
 		{
-			int tableCardIndex = revealIndexes[revealIndex];
-			if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+			NetworkCaptureRevealEntry entry = entries[revealIndex];
+			if (entry.TableCardIndex < 0 || entry.TableCardIndex >= _tableCards.Count
+				|| !TryValidateNetworkCaptureRevealEntry(entry.TableCardIndex, entry.CardCode,
+					entry.AttachedItemCardIds.Length == 0 ? string.Empty : entry.AttachedItemCardIds[0],
+					entry.PointValue, entry.PointDoubleFlag, out string[] validatedAttachedIds)
+				|| !validatedAttachedIds.AsSpan().SequenceEqual(entry.AttachedItemCardIds))
 			{
-				continue;
+				return;
 			}
+		}
 
+		for (int revealIndex = 0; revealIndex < entries.Length; revealIndex++)
+		{
+			NetworkCaptureRevealEntry entry = entries[revealIndex];
+			int tableCardIndex = entry.TableCardIndex;
 			TableCard tableCard = _tableCards[tableCardIndex];
-			string cardCode = revealIndex < revealCardCodes.Length ? revealCardCodes[revealIndex] : string.Empty;
-			if (!string.IsNullOrWhiteSpace(cardCode))
+			if (entry.CardCode.Length > 0)
 			{
-				string attachedItemCardIdsCsv = revealIndex < revealAttachedItemCardIdsCsv.Length ? revealAttachedItemCardIdsCsv[revealIndex] : string.Empty;
-				PlayingCard revealedCard = CreateNetworkPlayingCard(cardCode);
-				if (!string.IsNullOrWhiteSpace(attachedItemCardIdsCsv))
-				{
-					foreach (string attachedItemCardId in attachedItemCardIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-					{
-						revealedCard = revealedCard.WithAttachedItemEffect(attachedItemCardId);
-					}
-				}
-
-				tableCard = new TableCard(
-					revealedCard,
-					tableCard.IsFaceUp,
-					tableCard.ItemOverlay,
-					tableCard.ItemOwnerPlayerIndex,
-					tableCard.CardOwnerPlayerIndex,
-					tableCard.RemoveCardOnCapture)
+				PlayingCard revealedCard = CreateNetworkPlayingCard(entry.CardCode, entry.AttachedItemCardIds);
+				tableCard = new TableCard(revealedCard, tableCard.IsFaceUp, tableCard.ItemOverlay,
+					tableCard.ItemOwnerPlayerIndex, tableCard.CardOwnerPlayerIndex, tableCard.RemoveCardOnCapture)
 				{
 					IsBuriedInSand = tableCard.IsBuriedInSand,
 					IsSlimeCoated = tableCard.IsSlimeCoated,
@@ -639,11 +835,11 @@ public partial class GameBoardScene
 				: tableCard.ItemOverlay?.Texture;
 			if (revealTexture == null)
 			{
-				continue;
+				return;
 			}
 
 			await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
-			if (_turnSequenceGeneration != ReadNetworkInt(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, _turnSequenceGeneration)
+			if (_turnSequenceGeneration != payload.Generation
 				|| IsGameOver())
 			{
 				return;
@@ -651,10 +847,10 @@ public partial class GameBoardScene
 
 			_tableCards[tableCardIndex].IsFaceUp = true;
 			RenderTableCards();
-			int points = revealIndex < revealPointValues.Length ? revealPointValues[revealIndex] : 0;
+			int points = entry.PointValue;
 			if (points > 0 && _tableCards[tableCardIndex].Card.HasValue)
 			{
-				bool isDouble = revealIndex < revealPointDoubleFlags.Length && revealPointDoubleFlags[revealIndex];
+				bool isDouble = entry.PointDoubleFlag;
 				_ = PlayTableCardPointPopupAsync(tableCardIndex, points, isDouble);
 			}
 

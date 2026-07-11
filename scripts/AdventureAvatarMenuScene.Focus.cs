@@ -14,7 +14,10 @@ public partial class AdventureAvatarMenuScene : Control
 
 	private void FocusSelectedStageButton()
 	{
-		if (_isShowingAvatarUnlockPrompt || _isStartingAdventure || _isReturningToMainMenu)
+		if (_isShowingAvatarUnlockPrompt
+			|| _isShowingRunResumeDialog
+			|| _isStartingAdventure
+			|| _isReturningToMainMenu)
 		{
 			return;
 		}

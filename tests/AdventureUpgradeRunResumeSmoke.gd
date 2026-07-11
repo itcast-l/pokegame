@@ -4,7 +4,7 @@ const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 20.0
 const SAVED_RUN_AVATAR_ID := "shrimp"
-const RESTART_TARGET_AVATAR_ID := "crab"
+const RESTART_TARGET_AVATAR_ID := "fish"
 
 var _failed := false
 

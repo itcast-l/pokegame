@@ -282,21 +282,43 @@ public sealed class CardEventBus
 	private readonly Dictionary<CardTriggerResolutionKey, int> _resolvedCounts = new();
 	private int _pendingStartIndex;
 	private int _nextSequence;
+	private long _nextDispatchId = 1;
+	private long _activeDispatchId;
 
 	public int PendingCount => _pending.Count - _pendingStartIndex;
 
-	public void Clear()
+	public long BeginDispatch()
 	{
-		_pending.Clear();
-		_resolvedCounts.Clear();
-		_pendingStartIndex = 0;
-		_nextSequence = 0;
+		if (_activeDispatchId != 0)
+		{
+			throw new InvalidOperationException(
+				"Cannot begin a card event dispatch while another dispatch is active.");
+		}
+
+		ResetDispatchState();
+		long dispatchId = _nextDispatchId;
+		_nextDispatchId = _nextDispatchId == long.MaxValue
+			? 1
+			: _nextDispatchId + 1;
+		_activeDispatchId = dispatchId;
+		return dispatchId;
 	}
 
-	public void Publish(CardGameEvent gameEvent, ICardTriggerProvider provider)
+	public void Clear()
 	{
+		_activeDispatchId = 0;
+		ResetDispatchState();
+	}
+
+	public void Publish(
+		long dispatchId,
+		CardGameEvent gameEvent,
+		ICardTriggerProvider provider)
+	{
+		EnsureActiveDispatch(dispatchId);
 		CompactPendingIfNeeded();
-		if (gameEvent.Depth > MaxChainDepth || PendingCount >= MaxQueuedTriggers)
+		if (gameEvent.Depth > MaxChainDepth
+			|| PendingCount >= MaxQueuedTriggers)
 		{
 			return;
 		}
@@ -304,6 +326,7 @@ public sealed class CardEventBus
 		int acceptedRequestCount = 0;
 		foreach (CardTriggerRequest request in provider.CollectCardTriggers(gameEvent, _nextSequence))
 		{
+			EnsureActiveDispatch(dispatchId);
 			if (string.IsNullOrWhiteSpace(request.Rule.Trigger)
 				|| string.IsNullOrWhiteSpace(request.Rule.EffectType))
 			{
@@ -317,12 +340,16 @@ public sealed class CardEventBus
 			}
 		}
 
+		EnsureActiveDispatch(dispatchId);
 		_nextSequence += acceptedRequestCount;
 		SortPending();
 	}
 
-	public bool TryDequeue(out CardTriggerRequest request)
+	public bool TryDequeue(
+		long dispatchId,
+		out CardTriggerRequest request)
 	{
+		EnsureActiveDispatch(dispatchId);
 		while (PendingCount > 0)
 		{
 			request = _pending[_pendingStartIndex++];
@@ -340,6 +367,35 @@ public sealed class CardEventBus
 
 		request = default;
 		return false;
+	}
+
+	public bool EndDispatch(long dispatchId)
+	{
+		if (dispatchId == 0 || dispatchId != _activeDispatchId)
+		{
+			return false;
+		}
+
+		_activeDispatchId = 0;
+		ResetDispatchState();
+		return true;
+	}
+
+	private void ResetDispatchState()
+	{
+		_pending.Clear();
+		_resolvedCounts.Clear();
+		_pendingStartIndex = 0;
+		_nextSequence = 0;
+	}
+
+	private void EnsureActiveDispatch(long dispatchId)
+	{
+		if (dispatchId == 0 || dispatchId != _activeDispatchId)
+		{
+			throw new InvalidOperationException(
+				"Card event dispatch ownership is no longer active.");
+		}
 	}
 
 	private void SortPending()

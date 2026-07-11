@@ -204,6 +204,7 @@ public partial class GameBoardScene
 			cancel: CancelAdventureUpgradeSelection,
 			dispose: () =>
 			{
+				CancelAdventureUpgradeSelection();
 				ResetAdventureUpgradeOverlayCardMotionStates();
 				if (IsInstanceValid(selectionOverlay))
 				{

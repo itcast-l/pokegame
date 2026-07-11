@@ -19,6 +19,10 @@ func _run() -> void:
 	if _failed:
 		return
 
+	await _run_adventure_upgrade_await_completion_phase()
+	if _failed:
+		return
+
 	print("SELECTION_OVERLAY_CONTROLLER_ISOLATION_SMOKE_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
@@ -113,6 +117,133 @@ func _run_adventure_overlay_phase() -> void:
 	board.queue_free()
 	for _frame in range(12):
 		await process_frame
+
+
+func _run_adventure_upgrade_await_completion_phase() -> void:
+	# The generic item-selection disposal above intentionally advances to a second
+	# choice. These probes cover only the independent upgrade await lifecycle.
+	await _run_adventure_upgrade_await_terminal("select")
+	await _run_adventure_upgrade_await_terminal("cancel")
+	await _run_adventure_upgrade_await_terminal("dispose")
+	await _run_adventure_upgrade_await_terminal("replace")
+	await _run_adventure_upgrade_await_terminal("restart")
+	await _run_adventure_upgrade_await_terminal("exit")
+
+
+func _run_adventure_upgrade_await_terminal(terminal: String) -> void:
+	if _failed:
+		return
+
+	var board := await _instantiate_board(false)
+	if board == null:
+		return
+
+	for method_name in [
+		"DebugStartAdventureUpgradeSelectionAwaitProbe",
+		"DebugReplaceAdventureUpgradeSelectionAwaitProbe",
+		"DebugDisposeActiveSelectionOverlayForAwaitProbe",
+		"DebugCancelActiveSelectionOverlayForAwaitProbe",
+		"DebugRestartMatchForSelectionAwaitProbe",
+		"DebugSelectAdventureUpgradeOption",
+	]:
+		if not board.has_method(method_name):
+			_fail("Missing adventure upgrade await probe hook: %s" % method_name)
+			return
+
+	var result_a := {}
+	if not bool(board.call("DebugStartAdventureUpgradeSelectionAwaitProbe", result_a)):
+		_fail("Failed to start adventure upgrade await probe for %s" % terminal)
+		return
+	if not await _wait_for_overlay(board, "AdventureUpgradeSelectionOverlay"):
+		return
+
+	if terminal == "select":
+		if not bool(board.call("DebugSelectAdventureUpgradeOption", 0)):
+			_fail("Failed to select adventure upgrade await probe option")
+			return
+		if not await _wait_for_result(result_a):
+			return
+		_assert_upgrade_result(result_a, "Confirmed", 0, terminal)
+		await process_frame
+		if int(result_a.get("completion_count", -1)) != 1:
+			_fail("Adventure upgrade select completion was not idempotent")
+	elif terminal == "cancel":
+		if not bool(board.call("DebugCancelActiveSelectionOverlayForAwaitProbe")):
+			_fail("Failed to cancel adventure upgrade await probe")
+			return
+		if await _wait_for_result(result_a):
+			_assert_upgrade_result(result_a, "Canceled", -1, terminal)
+	elif terminal == "dispose":
+		if not bool(board.call("DebugDisposeActiveSelectionOverlayForAwaitProbe")):
+			_fail("Failed to dispose adventure upgrade await probe")
+			return
+		if await _wait_for_result(result_a):
+			_assert_upgrade_result(result_a, "Canceled", -1, terminal)
+	elif terminal == "replace":
+		var result_b := {}
+		if not bool(board.call("DebugReplaceAdventureUpgradeSelectionAwaitProbe", result_b)):
+			_fail("Failed to replace adventure upgrade await probe")
+			return
+		for _frame in range(2):
+			await process_frame
+		if not bool(result_a.get("completed", false)):
+			_fail("Replaced adventure upgrade await probe A did not complete within two frames")
+			return
+		_assert_upgrade_result(result_a, "Canceled", -1, terminal + " A")
+		if bool(result_b.get("completed", false)):
+			_fail("Replacement adventure upgrade await probe B completed unexpectedly")
+			return
+		if not bool(board.call("DebugCancelActiveSelectionOverlayForAwaitProbe")):
+			_fail("Failed to cancel replacement adventure upgrade await probe B")
+			return
+		if await _wait_for_result(result_b):
+			_assert_upgrade_result(result_b, "Canceled", -1, terminal + " B")
+	elif terminal == "restart":
+		if not bool(board.call("DebugRestartMatchForSelectionAwaitProbe")):
+			_fail("Failed to restart match with adventure upgrade await probe")
+			return
+		if await _wait_for_result(result_a):
+			_assert_upgrade_result(result_a, "Canceled", -1, terminal)
+	elif terminal == "exit":
+		board.queue_free()
+		if await _wait_for_result(result_a):
+			_assert_upgrade_result(result_a, "Canceled", -1, terminal)
+
+	if is_instance_valid(board):
+		board.queue_free()
+	for _frame in range(12):
+		await process_frame
+
+
+func _wait_for_overlay(board: Node, overlay_name: String) -> bool:
+	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	while Time.get_ticks_msec() / 1000.0 < deadline:
+		await process_frame
+		if not is_instance_valid(board):
+			_fail("Board freed unexpectedly while waiting for %s" % overlay_name)
+			return false
+		if board.get_node_or_null(overlay_name) != null:
+			return true
+	_fail("Timed out waiting for %s" % overlay_name)
+	return false
+
+
+func _wait_for_result(result: Dictionary) -> bool:
+	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	while Time.get_ticks_msec() / 1000.0 < deadline:
+		await process_frame
+		if bool(result.get("completed", false)):
+			return true
+	_fail("Timed out waiting for await probe result")
+	return false
+
+
+func _assert_upgrade_result(result: Dictionary, expected_outcome: String, expected_index: int, context: String) -> void:
+	if String(result.get("error", "")) != "" \
+		or int(result.get("completion_count", -1)) != 1 \
+		or String(result.get("outcome", "")) != expected_outcome \
+		or int(result.get("selected_index", -99)) != expected_index:
+		_fail("Unexpected adventure upgrade await result for %s: %s" % [context, result])
 
 
 func _instantiate_board(adventure_mode_enabled: bool) -> Node:

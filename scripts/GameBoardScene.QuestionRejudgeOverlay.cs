@@ -7,7 +7,7 @@ public partial class GameBoardScene
 	private readonly record struct AdventureQuestionRejudgePromptResult(
 		AdventureQuestionRejudgeChoice Choice,
 		Rect2 PreviewGlobalRect,
-		AdventureQuestionRejudgeOverlay Overlay);
+		AdventureQuestionRejudgeOverlay? Overlay);
 
 	private const string RejudgeKeepFallbackText = "Keep";
 	private const string RejudgeRerollFallbackText = "Reroll Once";
@@ -15,7 +15,8 @@ public partial class GameBoardScene
 
 	private bool ShowAdventureQuestionRejudgeOverlay(
 		ItemCard rewardItem,
-		Action<AdventureQuestionRejudgeChoice, Rect2> resolveChoice)
+		Action<AdventureQuestionRejudgeChoice, Rect2> resolveChoice,
+		Action? onDisposed = null)
 	{
 		PackedScene? overlayScene = GD.Load<PackedScene>(AdventureQuestionRejudgeOverlayScenePath);
 		if (overlayScene?.Instantiate() is not AdventureQuestionRejudgeOverlay overlay)
@@ -60,6 +61,7 @@ public partial class GameBoardScene
 			cancel: () => Resolve(AdventureQuestionRejudgeChoice.Keep),
 			dispose: () =>
 			{
+				onDisposed?.Invoke();
 				if (IsInstanceValid(overlay))
 				{
 					RemoveChild(overlay);
@@ -72,6 +74,10 @@ public partial class GameBoardScene
 	private async Task<AdventureQuestionRejudgePromptResult> PromptAdventureQuestionRejudgeOverlayAsync(ItemCard rewardItem)
 	{
 		var completionSource = new TaskCompletionSource<AdventureQuestionRejudgePromptResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var fallbackResult = new AdventureQuestionRejudgePromptResult(
+			AdventureQuestionRejudgeChoice.Keep,
+			new Rect2(),
+			null);
 		if (!ShowAdventureQuestionRejudgeOverlay(rewardItem, (choice, previewGlobalRect) =>
 		{
 			AdventureQuestionRejudgeOverlay? overlay = GetActiveSelectionOverlaySession(SelectionOverlayKind.QuestionRejudge)?.Root as AdventureQuestionRejudgeOverlay;
@@ -79,9 +85,9 @@ public partial class GameBoardScene
 			{
 				completionSource.TrySetResult(new AdventureQuestionRejudgePromptResult(choice, previewGlobalRect, overlay));
 			}
-		}))
+		}, onDisposed: () => completionSource.TrySetResult(fallbackResult)))
 		{
-			return new AdventureQuestionRejudgePromptResult(AdventureQuestionRejudgeChoice.Keep, new Rect2(), null!);
+			return fallbackResult;
 		}
 
 		return await completionSource.Task;
@@ -119,7 +125,11 @@ public partial class GameBoardScene
 		}
 
 		AdventureQuestionRejudgePromptResult promptResult = await PromptAdventureQuestionRejudgeOverlayAsync(rewardAnimation.Value.ItemCard);
-		if (turnSequenceGeneration != _turnSequenceGeneration || promptResult.Choice != AdventureQuestionRejudgeChoice.Reroll)
+		AdventureQuestionRejudgeOverlay? sourceOverlay = promptResult.Overlay;
+		if (turnSequenceGeneration != _turnSequenceGeneration
+			|| IsGameOver()
+			|| promptResult.Choice != AdventureQuestionRejudgeChoice.Reroll
+			|| sourceOverlay == null)
 		{
 			DisposeActiveSelectionOverlay();
 			return;
@@ -144,7 +154,9 @@ public partial class GameBoardScene
 			rewardAnimation.Value,
 			rerolledItemCardId,
 			turnSequenceGeneration);
-		if (!replacementPlan.HasValue)
+		if (turnSequenceGeneration != _turnSequenceGeneration
+			|| IsGameOver()
+			|| !replacementPlan.HasValue)
 		{
 			DisposeActiveSelectionOverlay();
 			return;
@@ -153,13 +165,13 @@ public partial class GameBoardScene
 		await PlayQuestionCardRewardRejudgeAnimationAsync(
 			playerIndex,
 			promptResult.PreviewGlobalRect,
-			promptResult.Overlay,
+			sourceOverlay,
 			rewardAnimation.Value,
 			rerolledItemCard.Value,
 			replacementPlan.Value.TargetItemHandIndex,
 			replacementPlan.Value.RerolledRequiresAttachment,
 			turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration)
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			DisposeActiveSelectionOverlay();
 			return;

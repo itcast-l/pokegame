@@ -81,6 +81,8 @@ public partial class GameBoardScene
 	{
 		TaskCompletionSource<bool>? magnetAttachmentCompletion = _pendingMagnetAttachmentCompletion;
 		TaskCompletionSource<int>? handLimitDiscardCompletion = _pendingHandLimitDiscardCompletion;
+		_pendingMagnetAttachmentCompletion = null;
+		_pendingHandLimitDiscardCompletion = null;
 		ClearMagnetAttachmentCountdown();
 		_isAnimatingMagnetAttachment = false;
 		_networkPendingSelectionRequestInFlight = false;
@@ -90,7 +92,6 @@ public partial class GameBoardScene
 		_pendingItemTurnSequenceGeneration = -1;
 		_pendingItemCardId = string.Empty;
 		_revealedPlayerHandIndex = -1;
-		_pendingHandLimitDiscardCompletion = null;
 		magnetAttachmentCompletion?.TrySetResult(true);
 		handLimitDiscardCompletion?.TrySetResult(-1);
 	}
@@ -125,28 +126,52 @@ public partial class GameBoardScene
 		return GetTotalHandCardCount(playerIndex) > 0;
 	}
 
-	private async Task<bool> DiscardHandCardForNewItemCardAsync(int playerIndex, int turnSequenceGeneration)
+	private async Task<bool> DiscardHandCardForNewItemCardAsync(
+	int playerIndex,
+	int turnSequenceGeneration,
+	Func<bool>? canCommit = null)
+{
+	bool CanCommitDiscard()
 	{
-		if (playerIndex < 0
-			|| playerIndex >= _playerHands.Count
-			|| playerIndex >= _playerItemHands.Count
-			|| !HasAnyHandCard(playerIndex))
-		{
-			return false;
-		}
-
-		if (ShouldUseInteractiveHumanItemFollowup(playerIndex))
-		{
-			return await ResolveHumanHandLimitDiscardAsync(playerIndex, turnSequenceGeneration);
-		}
-
-		if (IsOfflineSoloAiPlayer(playerIndex))
-		{
-			return RemoveHandCardFromGame(playerIndex, PickOfflineSoloAiDiscardDisplayIndex(playerIndex));
-		}
-
-		return RemoveHandCardFromGame(playerIndex, PickRandomHandDisplayIndex(playerIndex));
+		return turnSequenceGeneration == _turnSequenceGeneration
+			&& !_isLeavingGame
+			&& !IsGameOver()
+			&& (canCommit?.Invoke() ?? true);
 	}
+
+	if (!CanCommitDiscard()
+		|| playerIndex < 0
+		|| playerIndex >= _playerHands.Count
+		|| playerIndex >= _playerItemHands.Count
+		|| !HasAnyHandCard(playerIndex))
+	{
+		return false;
+	}
+
+	if (ShouldUseInteractiveHumanItemFollowup(playerIndex))
+	{
+		return await ResolveHumanHandLimitDiscardAsync(
+			playerIndex,
+			turnSequenceGeneration,
+			CanCommitDiscard);
+	}
+
+	if (!CanCommitDiscard())
+	{
+		return false;
+	}
+
+	if (IsOfflineSoloAiPlayer(playerIndex))
+	{
+		return RemoveHandCardFromGame(
+			playerIndex,
+			PickOfflineSoloAiDiscardDisplayIndex(playerIndex));
+	}
+
+	return RemoveHandCardFromGame(
+		playerIndex,
+		PickRandomHandDisplayIndex(playerIndex));
+}
 
 	private bool ShouldUseInteractiveHumanItemFollowup(int playerIndex)
 	{
@@ -168,58 +193,74 @@ public partial class GameBoardScene
 		return ResolveHumanHandLimitDiscardAsync(MainPlayerIndex, turnSequenceGeneration);
 	}
 
-	private async Task<bool> ResolveHumanHandLimitDiscardAsync(int ownerPlayerIndex, int turnSequenceGeneration)
+	private async Task<bool> ResolveHumanHandLimitDiscardAsync(
+	int ownerPlayerIndex,
+	int turnSequenceGeneration,
+	Func<bool>? canCommit = null)
+{
+	bool CanCommitDiscard()
 	{
-		if (_pendingHandLimitDiscardCompletion != null || !HasAnyHandCard(ownerPlayerIndex))
+		return turnSequenceGeneration == _turnSequenceGeneration
+			&& !_isLeavingGame
+			&& !IsGameOver()
+			&& (canCommit?.Invoke() ?? true);
+	}
+
+	if (!CanCommitDiscard()
+		|| _pendingHandLimitDiscardCompletion != null
+		|| !HasAnyHandCard(ownerPlayerIndex))
+	{
+		return false;
+	}
+
+	bool wasProcessingCardPlay = _isProcessingCardPlay;
+	var completionSource = new TaskCompletionSource<int>();
+	bool discarded = false;
+	_isProcessingCardPlay = true;
+	_pendingItemOwnerIndex = ownerPlayerIndex;
+	_pendingItemHandIndex = -1;
+	_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
+	_pendingItemCardId = string.Empty;
+	_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
+	_pendingHandLimitDiscardCompletion = completionSource;
+	RenderPlayerHands();
+	SendBoardSnapshotIfHost();
+	ShowHandLimitDiscardSelection();
+	BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
+
+	try
+	{
+		int displayIndex = await completionSource.Task;
+		if (!CanCommitDiscard())
 		{
 			return false;
 		}
 
-		bool wasProcessingCardPlay = _isProcessingCardPlay;
-		_isProcessingCardPlay = true;
-		_pendingItemOwnerIndex = ownerPlayerIndex;
-		_pendingItemHandIndex = -1;
-		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-		_pendingItemCardId = string.Empty;
-		_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
-		_pendingHandLimitDiscardCompletion = new TaskCompletionSource<int>();
-		RenderPlayerHands();
-		SendBoardSnapshotIfHost();
-		ShowHandLimitDiscardSelection();
-		BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
-
-		try
+		if (!RemoveHandCardFromGame(ownerPlayerIndex, displayIndex))
 		{
-			int displayIndex = await _pendingHandLimitDiscardCompletion.Task;
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-			{
-				return false;
-			}
-
-			if (!RemoveHandCardFromGame(ownerPlayerIndex, displayIndex))
-			{
-				return false;
-			}
-
-				DisposeActiveSelectionOverlay();
-				ClearPendingItemSelectionState();
-				RenderPlayerHands();
-				SendBoardSnapshotIfHost();
-			return true;
+			return false;
 		}
-		finally
-		{
-				if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard
-					&& _pendingItemOwnerIndex == ownerPlayerIndex)
-				{
-					DisposeActiveSelectionOverlay();
-					ClearPendingItemSelectionState();
-				}
 
+		discarded = true;
+		return true;
+	}
+	finally
+	{
+		if (ReferenceEquals(
+			_pendingHandLimitDiscardCompletion,
+			completionSource))
+		{
+			DisposeActiveSelectionOverlay();
+			ClearPendingItemSelectionState();
 			_isProcessingCardPlay = wasProcessingCardPlay;
 			RenderPlayerHands();
+			if (discarded)
+			{
+				SendBoardSnapshotIfHost();
+			}
 		}
 	}
+}
 
 	private void ShowHandLimitDiscardSelection()
 	{

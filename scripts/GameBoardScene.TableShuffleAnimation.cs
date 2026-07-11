@@ -5,13 +5,16 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private async Task PlayTableCardsShuffleAnimationAsync(IReadOnlyList<TableCard> shuffledTableCards, int turnSequenceGeneration)
+	private async Task<bool> PlayTableCardsShuffleAnimationAsync(IReadOnlyList<TableCard> shuffledTableCards, int turnSequenceGeneration)
 	{
 		EnsureItemModeOptionalFxResourcesLoaded();
 
-		if (!IsInsideTree() || shuffledTableCards.Count <= 1 || shuffledTableCards.Count != _tableCards.Count)
+		if (!IsInsideTree()
+			|| turnSequenceGeneration != _turnSequenceGeneration
+			|| shuffledTableCards.Count <= 1
+			|| shuffledTableCards.Count != _tableCards.Count)
 		{
-			return;
+			return false;
 		}
 
 		if (IsNetworkMultiplayerMode()
@@ -28,25 +31,37 @@ public partial class GameBoardScene
 		List<ShuffledTableCardVisual> shuffledVisuals = BuildShuffledTableCardVisuals(shuffledTableCards);
 		if (shuffledVisuals.Count == 0)
 		{
-			return;
+			return false;
+		}
+
+		var ownedTableCards = new TableCard[_tableCards.Count];
+		var originalHiddenStates = new bool[_tableCards.Count];
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			ownedTableCards[tableCardIndex] = tableCard;
+			originalHiddenStates[tableCardIndex] = tableCard.IsHiddenDuringCapture;
 		}
 
 		PlayGameSfx(GameSfx.TableShuffle, -1.5f, 0.97f, 1.03f, 0.12);
-		foreach (TableCard tableCard in _tableCards)
-		{
-			if (!IsFixedDuringTableShuffle(tableCard))
-			{
-				tableCard.IsHiddenDuringCapture = true;
-			}
-		}
-		RenderTableCards();
-
 		Control?[] flightCards = new Control?[shuffledVisuals.Count];
 		TextureRect? vortex = null;
+		Tween? gatherTween = null;
+		Tween? scatterTween = null;
+		Tween? vortexFrameTween = null;
 		try
 		{
+			foreach (TableCard tableCard in ownedTableCards)
+			{
+				if (!IsFixedDuringTableShuffle(tableCard))
+				{
+					tableCard.IsHiddenDuringCapture = true;
+				}
+			}
+			RenderTableCards();
+
 			vortex = CreateTableShuffleVortex(GetQuestionCardTransformAreaCardGlobalPosition(Vector2.Zero) + CardVisualSize / 2.0f);
-			Tween gatherTween = CreateTween();
+			gatherTween = CreateTween();
 			gatherTween.SetParallel(true);
 			gatherTween.SetTrans(Tween.TransitionType.Sine);
 			gatherTween.SetEase(Tween.EaseType.InOut);
@@ -66,20 +81,22 @@ public partial class GameBoardScene
 			}
 			gatherTween.TweenProperty(vortex, "modulate:a", 1.0f, TableShuffleGatherSeconds * 0.55f);
 			gatherTween.TweenProperty(vortex, "scale", Vector2.One * 1.08f, TableShuffleGatherSeconds);
+			vortexFrameTween = CreateTween();
+			vortexFrameTween.SetParallel(true);
 			FrameAnimationHelpers.TweenTextureFramesForDuration(
-				gatherTween,
+				vortexFrameTween,
 				vortex,
 				_tableShuffleVortexFrames,
 				(TableShuffleGatherSeconds + TableShuffleScatterSeconds) / Mathf.Max(1, _tableShuffleVortexFrames.Count),
 				TableShuffleGatherSeconds + TableShuffleScatterSeconds);
 
 			await ToSignal(gatherTween, Tween.SignalName.Finished);
-			if (turnSequenceGeneration != _turnSequenceGeneration)
+			if (!OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards))
 			{
-				return;
+				return false;
 			}
 
-			Tween scatterTween = CreateTween();
+			scatterTween = CreateTween();
 			scatterTween.SetParallel(true);
 			scatterTween.SetTrans(Tween.TransitionType.Sine);
 			scatterTween.SetEase(Tween.EaseType.InOut);
@@ -105,12 +122,21 @@ public partial class GameBoardScene
 			scatterTween.TweenProperty(vortex, "scale", Vector2.One * 1.22f, TableShuffleScatterSeconds);
 
 			await ToSignal(scatterTween, Tween.SignalName.Finished);
+			return OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards);
 		}
 		finally
 		{
-			foreach (TableCard tableCard in _tableCards)
+			if (gatherTween != null && gatherTween.IsValid())
 			{
-				tableCard.IsHiddenDuringCapture = false;
+				gatherTween.Kill();
+			}
+			if (scatterTween != null && scatterTween.IsValid())
+			{
+				scatterTween.Kill();
+			}
+			if (vortexFrameTween != null && vortexFrameTween.IsValid())
+			{
+				vortexFrameTween.Kill();
 			}
 
 			foreach (Control? flightCard in flightCards)
@@ -126,11 +152,33 @@ public partial class GameBoardScene
 				_animationPresenter.Release(vortex);
 			}
 
-			if (turnSequenceGeneration != _turnSequenceGeneration)
+			if (OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards))
 			{
+				for (int tableCardIndex = 0; tableCardIndex < ownedTableCards.Length; tableCardIndex++)
+				{
+					ownedTableCards[tableCardIndex].IsHiddenDuringCapture = originalHiddenStates[tableCardIndex];
+				}
 				RenderTableCards();
 			}
 		}
+	}
+
+	private bool OwnsTableShuffleState(int turnSequenceGeneration, IReadOnlyList<TableCard> ownedTableCards)
+	{
+		if (turnSequenceGeneration != _turnSequenceGeneration || ownedTableCards.Count != _tableCards.Count)
+		{
+			return false;
+		}
+
+		for (int tableCardIndex = 0; tableCardIndex < ownedTableCards.Count; tableCardIndex++)
+		{
+			if (!ReferenceEquals(ownedTableCards[tableCardIndex], _tableCards[tableCardIndex]))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private async Task PlayMantaRayTideShiftTableMoveAnimationAsync(int turnSequenceGeneration)

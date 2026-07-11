@@ -2,7 +2,7 @@ extends SceneTree
 
 const HOST_ADDRESS := "127.0.0.1"
 const TIMEOUT_SECONDS := 25.0
-const VISUAL_DELAY_SECONDS := 1.2
+const VISUAL_DELAY_SECONDS := 3.0
 const LOBBY_STATE := 4
 const IN_GAME_STATE := 7
 const RECONNECTING_STATE := 8

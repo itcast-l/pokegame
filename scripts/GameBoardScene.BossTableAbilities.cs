@@ -172,22 +172,29 @@ public partial class GameBoardScene
 			return;
 		}
 
+		TableCard targetTableCard = _tableCards[targetTableCardIndex];
 		if (IsBossKEnemy(playerIndex))
 		{
 			await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.LeafyMirage);
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			if (!IsLeafySeadragonBladeBreakTargetCurrent(
+				turnSequenceGeneration,
+				targetTableCardIndex,
+				targetTableCard))
 			{
 				return;
 			}
 		}
 
 		await PlayLeafySeadragonBladeProjectilesAsync(playerIndex, targetTableCardIndex, turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || targetTableCardIndex >= _tableCards.Count)
+		if (!IsLeafySeadragonBladeBreakTargetCurrent(
+			turnSequenceGeneration,
+			targetTableCardIndex,
+			targetTableCard))
 		{
 			return;
 		}
 
-		_tableCards[targetTableCardIndex].IsHiddenDuringCapture = true;
+		targetTableCard.IsHiddenDuringCapture = true;
 		RenderTableCards();
 		if (!TryGetTableCardPosition(targetTableCardIndex, out Vector2 targetCardPosition))
 		{
@@ -195,12 +202,19 @@ public partial class GameBoardScene
 		}
 
 		await PlayBombPairDestroyCardAsync(targetTableCardIndex, targetCardPosition);
-		if (IsGameOver() || targetTableCardIndex >= _tableCards.Count)
+		if (!IsLeafySeadragonBladeBreakTargetCurrent(
+			turnSequenceGeneration,
+			targetTableCardIndex,
+			targetTableCard))
 		{
 			return;
 		}
 
-		int damagePoints = RemoveLeafySeadragonBladeBreakTableCard(targetTableCardIndex);
+		PlayingCard destroyedCard = targetTableCard.Card!.Value;
+		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
+		ClearAdventureTraceHuntMarkerIfTableCardRemoved(targetTableCard);
+		_tableCards.RemoveAt(targetTableCardIndex);
+		RefreshGardenEelBuriedCardIndex();
 		_leafySeadragonBladeBreakCooldownTurns = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakCooldownTurns, 1);
 		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
@@ -222,6 +236,18 @@ public partial class GameBoardScene
 		}
 
 		CheckForWinner();
+	}
+
+	private bool IsLeafySeadragonBladeBreakTargetCurrent(
+		int turnSequenceGeneration,
+		int targetTableCardIndex,
+		TableCard targetTableCard)
+	{
+		return turnSequenceGeneration == _turnSequenceGeneration
+			&& !IsGameOver()
+			&& targetTableCardIndex >= 0
+			&& targetTableCardIndex < _tableCards.Count
+			&& ReferenceEquals(_tableCards[targetTableCardIndex], targetTableCard);
 	}
 
 	private int RemoveLeafySeadragonBladeBreakTableCard(int tableCardIndex)

@@ -106,11 +106,25 @@ public partial class AdventureAvatarMenuScene : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (GameInputActions.IsCancelPressed(inputEvent))
+		if (!GameInputActions.IsCancelPressed(inputEvent))
+		{
+			return;
+		}
+
+		if (_isShowingAvatarUnlockPrompt)
+		{
+			HideAvatarUnlockPrompt();
+		}
+		else if (_isShowingRunResumeDialog)
+		{
+			HideRunResumeDialog();
+		}
+		else
 		{
 			ReturnToMainMenu();
-			GetViewport().SetInputAsHandled();
 		}
+
+		GetViewport().SetInputAsHandled();
 	}
 
 	private void ScrollSelectedEntryIntoView()

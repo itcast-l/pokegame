@@ -12,4 +12,9 @@
     <Compile Remove="outputs/**/*.cs" />
     <Compile Remove="**/node_modules/**/*.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+	<Compile Include="tests/AdventureStageUnlockHarness.cs" />
+    <Compile Include="tests/MainMenuBackgroundAnimatorLifetimeHarness.cs" />
+  </ItemGroup>
 </Project>

@@ -120,6 +120,10 @@ func _run() -> void:
 	for _frame in range(12):
 		await process_frame
 
+	await _run_rejudge_await_completion_phase()
+	if _failed:
+		return
+
 	print("ADVENTURE_QUESTION_REJUDGE_OVERLAY_SMOKE_OK")
 	quit(0)
 
@@ -132,3 +136,140 @@ func _fail(message: String) -> void:
 	push_error(message)
 	print("ADVENTURE_QUESTION_REJUDGE_OVERLAY_SMOKE_FAIL %s" % message)
 	quit(1)
+
+
+func _run_rejudge_await_completion_phase() -> void:
+	for terminal in ["select", "cancel", "dispose", "replace", "restart", "exit"]:
+		await _run_rejudge_await_terminal(terminal)
+		if _failed:
+			return
+
+
+func _run_rejudge_await_terminal(terminal: String) -> void:
+	var board := await _instantiate_probe_board()
+	if board == null:
+		return
+	for method_name in [
+		"DebugStartAdventureQuestionRejudgeAwaitProbe",
+		"DebugReplaceAdventureQuestionRejudgeAwaitProbe",
+		"DebugDisposeActiveSelectionOverlayForAwaitProbe",
+		"DebugCancelActiveSelectionOverlayForAwaitProbe",
+		"DebugRestartMatchForSelectionAwaitProbe",
+		"DebugSelectAdventureQuestionRejudgeOption",
+	]:
+		if not board.has_method(method_name):
+			_fail("Missing rejudge await probe hook: %s" % method_name)
+			return
+
+	var result_a := {}
+	if not bool(board.call("DebugStartAdventureQuestionRejudgeAwaitProbe", result_a)):
+		_fail("Failed to start rejudge await probe for %s" % terminal)
+		return
+	if not await _wait_for_overlay(board):
+		return
+
+	if terminal == "select":
+		if not bool(board.call("DebugSelectAdventureQuestionRejudgeOption", 1)):
+			_fail("Failed to select rejudge reroll option")
+			return
+		if await _wait_for_result(result_a):
+			_assert_rejudge_result(result_a, "Reroll", false, false, terminal)
+		await process_frame
+		if int(result_a.get("completion_count", -1)) != 1:
+			_fail("Rejudge select completion was not idempotent")
+	elif terminal == "cancel":
+		if not bool(board.call("DebugCancelActiveSelectionOverlayForAwaitProbe")):
+			_fail("Failed to cancel rejudge await probe")
+			return
+		if await _wait_for_result(result_a):
+			_assert_rejudge_result(result_a, "Keep", false, false, terminal)
+	elif terminal == "dispose":
+		if not bool(board.call("DebugDisposeActiveSelectionOverlayForAwaitProbe")):
+			_fail("Failed to dispose rejudge await probe")
+			return
+		if await _wait_for_result(result_a):
+			_assert_rejudge_result(result_a, "Keep", true, true, terminal)
+	elif terminal == "replace":
+		var result_b := {}
+		if not bool(board.call("DebugReplaceAdventureQuestionRejudgeAwaitProbe", result_b)):
+			_fail("Failed to replace rejudge await probe")
+			return
+		for _frame in range(2):
+			await process_frame
+		if not bool(result_a.get("completed", false)):
+			_fail("Replaced rejudge await probe A did not complete within two frames")
+			return
+		_assert_rejudge_result(result_a, "Keep", true, true, terminal + " A")
+		if bool(result_b.get("completed", false)):
+			_fail("Replacement rejudge await probe B completed unexpectedly")
+			return
+		if not bool(board.call("DebugCancelActiveSelectionOverlayForAwaitProbe")):
+			_fail("Failed to cancel replacement rejudge await probe B")
+			return
+		if await _wait_for_result(result_b):
+			_assert_rejudge_result(result_b, "Keep", false, false, terminal + " B")
+	elif terminal == "restart":
+		if not bool(board.call("DebugRestartMatchForSelectionAwaitProbe")):
+			_fail("Failed to restart match with rejudge await probe")
+			return
+		if await _wait_for_result(result_a):
+			_assert_rejudge_result(result_a, "Keep", true, true, terminal)
+	elif terminal == "exit":
+		board.queue_free()
+		if await _wait_for_result(result_a):
+			_assert_rejudge_result(result_a, "Keep", true, true, terminal)
+
+	if is_instance_valid(board):
+		board.queue_free()
+	for _frame in range(12):
+		await process_frame
+
+
+func _instantiate_probe_board() -> Node:
+	var packed_scene := load(SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		_fail("Failed to load probe scene: %s" % SCENE_PATH)
+		return null
+	var board := packed_scene.instantiate()
+	if board == null:
+		_fail("Failed to instantiate rejudge await probe board")
+		return null
+	board.set("player_count", 2)
+	board.set("item_mode", true)
+	board.set("winning_score", 100)
+	board.set("solo_mode", true)
+	board.set("adventure_mode", true)
+	board.set("adventure_enemy_avatar_id", "shrimp")
+	root.add_child(board)
+	await process_frame
+	return board
+
+
+func _wait_for_overlay(board: Node) -> bool:
+	for _frame in range(120):
+		await process_frame
+		if not is_instance_valid(board):
+			_fail("Board freed while waiting for rejudge await overlay")
+			return false
+		if board.get_node_or_null("AdventureQuestionRejudgeOverlay") != null:
+			return true
+	_fail("Timed out waiting for rejudge await overlay")
+	return false
+
+
+func _wait_for_result(result: Dictionary) -> bool:
+	for _frame in range(120):
+		await process_frame
+		if bool(result.get("completed", false)):
+			return true
+	_fail("Timed out waiting for rejudge await result")
+	return false
+
+
+func _assert_rejudge_result(result: Dictionary, expected_choice: String, empty_rect: bool, null_overlay: bool, context: String) -> void:
+	if String(result.get("error", "")) != "" \
+		or int(result.get("completion_count", -1)) != 1 \
+		or String(result.get("choice", "")) != expected_choice \
+		or bool(result.get("rect_is_empty", not empty_rect)) != empty_rect \
+		or bool(result.get("overlay_is_null", not null_overlay)) != null_overlay:
+		_fail("Unexpected rejudge await result for %s: %s" % [context, result])
