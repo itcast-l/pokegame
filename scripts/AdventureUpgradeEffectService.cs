@@ -661,17 +661,6 @@ internal static class AdventureUpgradeEffectService
 			insertMode = AdventureEnemyNextCardInsertMode.BeforeTrackedOldest;
 		}
 
-		if (acquired.Contains("spades_missed_beat_calamity"))
-		{
-			nextCardFacesUp = true;
-			if (insertMode == AdventureEnemyNextCardInsertMode.None)
-			{
-				insertMode = AdventureEnemyNextCardInsertMode.Leftmost;
-			}
-
-			nextCaptureDamageDelta -= 3;
-		}
-
 		return new AdventureEnemyMissEffectResult(
 			nextCardFacesUp,
 			insertMode,
@@ -734,23 +723,36 @@ internal static class AdventureUpgradeEffectService
 		return 0;
 	}
 
-	internal static int ResolveBlackLedgerDamageDelta(
+	internal static int ResolveBlackLedgerRedirectTableCardIndex(
 		bool blackLedgerActive,
 		bool capturingPlayerIsMain,
-		int totalResolvedOldTableCardPoints,
-		int currentResolvedOldTableScoringPoints)
+		IReadOnlyList<int> tableCardScoreValues,
+		int captureStartIndex)
 	{
-		if (!blackLedgerActive)
+		if (!blackLedgerActive
+			|| capturingPlayerIsMain
+			|| tableCardScoreValues == null
+			|| captureStartIndex < 0
+			|| captureStartIndex >= tableCardScoreValues.Count)
 		{
-			return 0;
+			return -1;
 		}
 
-		if (capturingPlayerIsMain)
+		int selectedTableCardIndex = -1;
+		int highestScoreValue = 0;
+		for (int tableCardIndex = captureStartIndex + 1;
+			tableCardIndex < tableCardScoreValues.Count - 1;
+			tableCardIndex++)
 		{
-			return Math.Max(0, totalResolvedOldTableCardPoints) - Math.Max(0, currentResolvedOldTableScoringPoints);
+			int scoreValue = tableCardScoreValues[tableCardIndex];
+			if (scoreValue > highestScoreValue)
+			{
+				highestScoreValue = scoreValue;
+				selectedTableCardIndex = tableCardIndex;
+			}
 		}
 
-		return -Math.Max(0, currentResolvedOldTableScoringPoints);
+		return selectedTableCardIndex;
 	}
 
 	internal static bool ShouldPreserveEnemyCaptureTailCard(

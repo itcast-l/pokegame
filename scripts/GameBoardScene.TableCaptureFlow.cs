@@ -19,7 +19,8 @@ public partial class GameBoardScene
 	int preserveTailTableCardIndex = -1,
 	bool suppressGardenEelCaptureRecord = false,
 	IReadOnlyList<TableCard>? expectedTableCardReferences = null,
-	Action? commitImmediatelyBeforeApply = null)
+	Action? commitImmediatelyBeforeApply = null,
+	int blackLedgerRedirectTableCardIndex = -2)
 {
 	if (expectedTableCardReferences == null
 		|| _isLeavingGame
@@ -49,6 +50,13 @@ public partial class GameBoardScene
 	if (!capturePlan.IsValid)
 	{
 		return CaptureTableCardsResult.NotApplied;
+	}
+	if (blackLedgerRedirectTableCardIndex == -2)
+	{
+		blackLedgerRedirectTableCardIndex =
+			ResolveBlackLedgerRedirectTableCardIndex(
+				playerIndex,
+				captureStartIndex);
 	}
 
 	CaptureScoringRules.TableCard[] captureScoringTableCards =
@@ -235,7 +243,9 @@ public partial class GameBoardScene
 			capturePlan,
 			playerIndex,
 			preserveCardEffectsWhenEnteringDeck,
-			preservedTableCardIndexes);
+			preservedTableCardIndexes,
+			blackLedgerRedirectTableCardIndex,
+			MainPlayerIndex);
 	collectedCardCount =
 		captureStateResult.CollectedCardCount;
 	removedTableCardCount =
@@ -363,13 +373,6 @@ public partial class GameBoardScene
 		if (prePlayTableCards != null
 			&& prePlayTableCards.Count > 0)
 		{
-			GetCapturedOldTableResolvedPointTotals(
-				prePlayTableCards,
-				captureStartIndex,
-				scorePlayerIndex,
-				extraTableCardIndexes,
-				out int totalResolvedOldTablePoints,
-				out int currentResolvedOldTableScoringPoints);
 			adventureOldTableDamageDelta +=
 				AdventureUpgradeEffectService
 					.ResolveOldTableCaptureDamageDelta(
@@ -383,17 +386,6 @@ public partial class GameBoardScene
 							extraTableCardIndexes),
 						capturedTraceMark,
 						capturedHuntMark);
-			adventureOldTableDamageDelta +=
-				AdventureUpgradeEffectService
-					.ResolveBlackLedgerDamageDelta(
-						AdventureUpgradeEffectService
-							.HasBlackLedger(
-								GetAdventureUpgradeRunState()
-									?.GetAcquiredUpgradeIds()
-									?? Array.Empty<string>()),
-						playerIndex == MainPlayerIndex,
-						totalResolvedOldTablePoints,
-						currentResolvedOldTableScoringPoints);
 		}
 
 		bool isFirstCaptureThisBattle =

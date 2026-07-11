@@ -1,11 +1,11 @@
 extends SceneTree
 
 const CATALOG_SCRIPT := preload("res://scripts/AdventureSuitUpgradeCatalog.cs")
-const EXPECTED_TOTAL := 55
+const EXPECTED_TOTAL := 54
 const EXPECTED_SUIT_COUNTS := {
 	"hearts": 14,
 	"diamonds": 14,
-	"spades": 13,
+	"spades": 12,
 	"clubs": 14,
 }
 
@@ -76,7 +76,7 @@ func _run() -> void:
 
 	_assert(rarity_counts["common"] == 24, "Expected 24 common definitions, got %d" % rarity_counts["common"])
 	_assert(rarity_counts["rare"] == 20, "Expected 20 rare definitions, got %d" % rarity_counts["rare"])
-	_assert(rarity_counts["legendary"] == 11, "Expected 11 legendary definitions, got %d" % rarity_counts["legendary"])
+	_assert(rarity_counts["legendary"] == 10, "Expected 10 legendary definitions, got %d" % rarity_counts["legendary"])
 	if _failed:
 		return
 

@@ -67,11 +67,11 @@ internal static class Program
 		Run("adventure low health rescue triggers at half and quarter thresholds once each", AdventureLowHealthRescueTriggersAtHalfAndQuarterThresholdsOnceEach);
 		Run("adventure enemy miss does not queue capture triggered reveal and lineup", AdventureEnemyMissDoesNotQueueCaptureTriggeredRevealAndLineup);
 		Run("adventure enemy capture queues reveal and lineup", AdventureEnemyCaptureQueuesRevealAndLineup);
-		Run("adventure enemy miss effects queue reveal insert penalty and bleed damage", AdventureEnemyMissEffectsQueueRevealInsertPenaltyAndBleedDamage);
+		Run("adventure enemy miss effects queue insert penalty and bleed damage", AdventureEnemyMissEffectsQueueInsertPenaltyAndBleedDamage);
 		Run("adventure enemy miss misorder only arms tracked anchor when old cards existed", AdventureEnemyMissMisorderOnlyArmsTrackedAnchorWhenOldCardsExisted);
 		Run("adventure enemy miss grants extra base action from intercept beat", AdventureEnemyMissGrantsExtraBaseActionFromInterceptBeat);
 		Run("adventure main player miss grants continue branch extra action only at four cards", AdventureMainPlayerMissGrantsContinueBranchExtraActionOnlyAtFourCards);
-		Run("adventure black ledger changes old table score contribution by capturer", AdventureBlackLedgerChangesOldTableScoreContributionByCapturer);
+		Run("adventure black ledger redirects highest scoring middle card after enemy capture", AdventureBlackLedgerRedirectsHighestScoringMiddleCardAfterEnemyCapture);
 		Run("adventure enemy tail pressure preserves played tail card only at seven captured cards", AdventureEnemyTailPressurePreservesPlayedTailCardOnlyAtSevenCapturedCards);
 		Run("adventure old table damage delta applies player mark bonuses", AdventureOldTableDamageDeltaAppliesPlayerMarkBonuses);
 		Run("adventure old table damage delta applies enemy tax and exaction", AdventureOldTableDamageDeltaAppliesEnemyTaxAndExaction);
@@ -97,6 +97,7 @@ internal static class Program
 		Run("playing card attachment replaces existing effect", PlayingCardAttachmentReplacesExistingEffect);
 		Run("capture state apply capture clears effects when preserve disabled", CaptureStateApplyCaptureClearsEffectsWhenPreserveDisabled);
 		Run("capture state apply capture preserves effects when preserve enabled", CaptureStateApplyCapturePreservesEffectsWhenPreserveEnabled);
+		Run("capture state redirects one captured card to another player deck", CaptureStateRedirectsOneCapturedCardToAnotherPlayerDeck);
 		Run("captured card effect persists through deck and can be replaced", CapturedCardEffectPersistsThroughDeckAndCanBeReplaced);
 		Run("capture refill shuffles before replacement draw animation", CaptureRefillShufflesBeforeReplacementDrawAnimation);
 		Run("potential capture ignores buried matches", PotentialCaptureIgnoresBuriedMatches);
@@ -751,7 +752,7 @@ internal static class Program
 		string text = File.ReadAllText(idsPath);
 
 		MatchCollection constants = Regex.Matches(text, @"(?m)^const ([A-Z0-9_]+) = ""([a-z0-9_]+)""$");
-		Equal(55, constants.Count);
+		Equal(54, constants.Count);
 
 		var activePerSuit = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
@@ -770,7 +771,7 @@ internal static class Program
 
 		Equal(14, activePerSuit["hearts"]);
 		Equal(14, activePerSuit["diamonds"]);
-		Equal(13, activePerSuit["spades"]);
+		Equal(12, activePerSuit["spades"]);
 		Equal(14, activePerSuit["clubs"]);
 	}
 
@@ -1369,7 +1370,7 @@ internal static class Program
 		Equal(AdventureEnemyNextCardInsertMode.Leftmost, result.InsertMode);
 	}
 
-	private static void AdventureEnemyMissEffectsQueueRevealInsertPenaltyAndBleedDamage()
+	private static void AdventureEnemyMissEffectsQueueInsertPenaltyAndBleedDamage()
 	{
 		AdventureEnemyMissEffectResult belowThreshold = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
 			new[] { "spades_miss_bleed" },
@@ -1379,18 +1380,17 @@ internal static class Program
 			new[]
 			{
 				"spades_dark_harbor_reveal",
-				"spades_wrong_shore_lineup",
 				"spades_missed_beat_blunt_hurt",
 				"spades_miss_bleed",
-				"spades_missed_beat_calamity",
+				"spades_return_tide_misorder",
 			},
 			tableCardCountAfterMiss: 6,
 			hadOldTableCardsBeforeMiss: true);
 
 		Equal(0, belowThreshold.DirectDamageToEnemy);
-		True(result.NextCardFacesUp);
-		Equal(AdventureEnemyNextCardInsertMode.Leftmost, result.InsertMode);
-		Equal(-6, result.NextCaptureDamageDelta);
+		False(result.NextCardFacesUp);
+		Equal(AdventureEnemyNextCardInsertMode.BeforeTrackedOldest, result.InsertMode);
+		Equal(-3, result.NextCaptureDamageDelta);
 		Equal(2, result.DirectDamageToEnemy);
 	}
 
@@ -1435,27 +1435,39 @@ internal static class Program
 		False(notGranted.GrantExtraBaseCardAction);
 	}
 
-	private static void AdventureBlackLedgerChangesOldTableScoreContributionByCapturer()
+	private static void AdventureBlackLedgerRedirectsHighestScoringMiddleCardAfterEnemyCapture()
 	{
-		int mainDelta = AdventureUpgradeEffectService.ResolveBlackLedgerDamageDelta(
-			blackLedgerActive: true,
-			capturingPlayerIsMain: true,
-			totalResolvedOldTableCardPoints: 10,
-			currentResolvedOldTableScoringPoints: 4);
-		int enemyDelta = AdventureUpgradeEffectService.ResolveBlackLedgerDamageDelta(
+		int redirectedIndex = AdventureUpgradeEffectService.ResolveBlackLedgerRedirectTableCardIndex(
 			blackLedgerActive: true,
 			capturingPlayerIsMain: false,
-			totalResolvedOldTableCardPoints: 10,
-			currentResolvedOldTableScoringPoints: 4);
-		int inactiveDelta = AdventureUpgradeEffectService.ResolveBlackLedgerDamageDelta(
-			blackLedgerActive: false,
+			tableCardScoreValues: new[] { 13, 4, 10, 2, 12 },
+			captureStartIndex: 0);
+		int tieIndex = AdventureUpgradeEffectService.ResolveBlackLedgerRedirectTableCardIndex(
+			blackLedgerActive: true,
+			capturingPlayerIsMain: false,
+			tableCardScoreValues: new[] { 0, 8, 8, 0 },
+			captureStartIndex: 0);
+		int mainCaptureIndex = AdventureUpgradeEffectService.ResolveBlackLedgerRedirectTableCardIndex(
+			blackLedgerActive: true,
 			capturingPlayerIsMain: true,
-			totalResolvedOldTableCardPoints: 10,
-			currentResolvedOldTableScoringPoints: 4);
+			tableCardScoreValues: new[] { 0, 8, 0 },
+			captureStartIndex: 0);
+		int inactiveIndex = AdventureUpgradeEffectService.ResolveBlackLedgerRedirectTableCardIndex(
+			blackLedgerActive: false,
+			capturingPlayerIsMain: false,
+			tableCardScoreValues: new[] { 0, 8, 0 },
+			captureStartIndex: 0);
+		int noScoringCardIndex = AdventureUpgradeEffectService.ResolveBlackLedgerRedirectTableCardIndex(
+			blackLedgerActive: true,
+			capturingPlayerIsMain: false,
+			tableCardScoreValues: new[] { 12, 0, 0, 11 },
+			captureStartIndex: 0);
 
-		Equal(6, mainDelta);
-		Equal(-4, enemyDelta);
-		Equal(0, inactiveDelta);
+		Equal(2, redirectedIndex);
+		Equal(1, tieIndex);
+		Equal(-1, mainCaptureIndex);
+		Equal(-1, inactiveIndex);
+		Equal(-1, noScoringCardIndex);
 	}
 
 	private static void AdventureEnemyTailPressurePreservesPlayedTailCardOnlyAtSevenCapturedCards()
@@ -1926,6 +1938,36 @@ internal static class Program
 		Equal(1, state.PlayerDecks[0].Count);
 		True(state.PlayerDecks[0][0].HasAttachedItemEffect("magnet"));
 		Equal("magnet", state.PlayerDecks[0][0].AttachedItemCardIdsCsv);
+		Equal(0, state.TableCards.Count);
+	}
+
+	private static void CaptureStateRedirectsOneCapturedCardToAnotherPlayerDeck()
+	{
+		var state = new GameBoardState();
+		state.PlayerDecks.Add(new List<PlayingCard>());
+		state.PlayerDecks.Add(new List<PlayingCard>());
+		PlayingCard left = new("hearts", "2", new Godot.Texture2D());
+		PlayingCard redirected = new("spades", "10", new Godot.Texture2D());
+		PlayingCard right = new("clubs", "3", new Godot.Texture2D());
+		state.TableCards.Add(new TableCard(left, isFaceUp: true));
+		state.TableCards.Add(new TableCard(redirected, isFaceUp: true));
+		state.TableCards.Add(new TableCard(right, isFaceUp: true));
+		var service = new CaptureStateService();
+
+		CaptureStatePlan plan = service.CreatePlan(state, 0, null);
+		CaptureStateResult result = service.ApplyCapture(
+			state,
+			plan,
+			playerIndex: 1,
+			preserveCardEffectsWhenEnteringDeck: false,
+			redirectedTableCardIndex: 1,
+			redirectedPlayerIndex: 0);
+
+		Equal(3, result.CollectedCardCount);
+		Equal(3, result.RemovedTableCardCount);
+		Equal(1, state.PlayerDecks[0].Count);
+		Equal("10", state.PlayerDecks[0][0].Rank);
+		Equal(2, state.PlayerDecks[1].Count);
 		Equal(0, state.TableCards.Count);
 	}
 

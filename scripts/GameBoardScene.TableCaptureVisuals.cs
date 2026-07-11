@@ -102,6 +102,7 @@ public partial class GameBoardScene
 		}
 
 		visuals.Add(new CapturedTableCardVisual(
+			tableCardIndex,
 			startTexture,
 			itemOverlayTexture,
 			flightStartOverrides != null

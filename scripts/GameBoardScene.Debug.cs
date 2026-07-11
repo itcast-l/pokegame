@@ -28,6 +28,8 @@ public partial class GameBoardScene
 	private int _debugQuestionRewardGrantCount;
 	private string _debugLastQuestionRewardItemCardId = string.Empty;
 	private bool _debugLeafyBladeProbeRunning;
+	private bool _debugBlackLedgerProbeRunning;
+	private int _debugBlackLedgerExpectedDamage;
 	private int _debugLeafyBladeTargetTableCardIndex = -1;
 	private TableCard? _debugLeafyBladeReplacementTableCard;
 	private bool _debugLeafyBladeReplacementHiddenSentinel;
@@ -195,6 +197,116 @@ public partial class GameBoardScene
 		RecordAdventureAcquiredUpgrade(upgradeId);
 		ApplyAdventureUpgradeAcquisitionEffects(upgradeId, AdventureUpgradeTriggerSource.None);
 		return true;
+	}
+
+	public bool DebugConfigureBlackLedgerCaptureProbe()
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? initialRunState = store?.GetRunState();
+		if (_debugBlackLedgerProbeRunning
+			|| !adventure_mode
+			|| player_count != 2
+			|| store == null
+			|| initialRunState?.IsActive != true)
+		{
+			return false;
+		}
+		int avatarStageNumber = initialRunState.CurrentAvatarStageNumber;
+		store.BeginNewRun(avatarStageNumber);
+		store.MarkRunStartUpgradeGranted();
+		store.AcquireUpgrade("spades_black_ledger");
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Spades", "10"),
+			("Clubs", "4"),
+			("Diamonds", "5"),
+		};
+		if (!TryLoadAdventureTutorialCards(
+			requiredCards,
+			out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		_tableCards.Clear();
+		_tableCards.Add(new TableCard(cards["Hearts:5"], true));
+		_tableCards.Add(new TableCard(cards["Spades:10"], true));
+		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			_playerDecks[playerIndex].Clear();
+			_playerHands[playerIndex].Clear();
+			_playerItemHands[playerIndex].Clear();
+		}
+		_playerHands[1].Add(cards["Diamonds:5"]);
+		// Adventure capture damage for this fixed 10-and-4 middle-card setup.
+		_debugBlackLedgerExpectedDamage = 14;
+		_playerScores[MainPlayerIndex] = 100;
+		_playerScores[1] = 100;
+		_winnerPlayerIndex = -1;
+		_currentTurnPlayerIndex = 1;
+		_isOpeningDealAnimationPlaying = false;
+		RenderPlayerHands();
+		RenderPlayerCardPiles();
+		RenderTableCards();
+		UpdatePlayerScoreMeter(MainPlayerIndex, false);
+		UpdatePlayerScoreMeter(1, false);
+		return _debugBlackLedgerExpectedDamage > 0;
+	}
+
+	public bool DebugStartBlackLedgerCaptureProbe(
+		Godot.Collections.Dictionary result)
+	{
+		if (result == null
+			|| _debugBlackLedgerProbeRunning
+			|| _playerHands.Count <= 1
+			|| _playerHands[1].Count != 1)
+		{
+			return false;
+		}
+
+		result.Clear();
+		result["completed"] = false;
+		result["error"] = string.Empty;
+		_debugBlackLedgerProbeRunning = true;
+		_ = RunDebugBlackLedgerCaptureProbeAsync(result);
+		return true;
+	}
+
+	private async Task RunDebugBlackLedgerCaptureProbeAsync(
+		Godot.Collections.Dictionary result)
+	{
+		try
+		{
+			int expectedDamage = _debugBlackLedgerExpectedDamage;
+			int mainHealthBefore = _playerScores[MainPlayerIndex];
+			PlayCardResult playResult = await PlayCardFromHandAsync(
+				1,
+				0,
+				_turnSequenceGeneration);
+			result["played"] = playResult.Played;
+			result["captured"] = playResult.Captured;
+			result["expected_damage"] = expectedDamage;
+			result["actual_damage"] = mainHealthBefore
+				- _playerScores[MainPlayerIndex];
+			result["main_deck_count"] = _playerDecks[MainPlayerIndex].Count;
+			result["enemy_deck_count"] = _playerDecks[1].Count;
+			result["main_has_ten"] = _playerDecks[MainPlayerIndex]
+				.Exists(card => string.Equals(card.Rank, "10", StringComparison.Ordinal));
+			result["enemy_has_ten"] = _playerDecks[1]
+				.Exists(card => string.Equals(card.Rank, "10", StringComparison.Ordinal));
+		}
+		catch (Exception exception)
+		{
+			result["error"] = exception.ToString();
+		}
+		finally
+		{
+			result["completed"] = true;
+			_debugBlackLedgerProbeRunning = false;
+		}
 	}
 
 	public bool DebugConfigureAdventurePairCaptureReturnScenario()

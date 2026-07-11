@@ -11,7 +11,8 @@ public partial class GameBoardScene
 		List<CapturedTableCardVisual> capturedCardVisuals,
 		int turnSequenceGeneration,
 		HashSet<int>? extraTableCardIndexes = null,
-		float flightStaggerSeconds = TableCaptureFlightStaggerSeconds)
+		float flightStaggerSeconds = TableCaptureFlightStaggerSeconds,
+		int redirectedTableCardIndex = -1)
 	{
 		if (_cardBackTexture == null
 			|| playerIndex < 0
@@ -67,13 +68,16 @@ public partial class GameBoardScene
 
 		PlayGameSfx(GameSfx.CaptureCollect, -1.0f, 0.96f, 1.04f, 0.08);
 		Task[] flightTasks = new Task[capturedCardVisuals.Count];
-		Vector2 targetGlobalPosition = GetCardPileCaptureTargetGlobalPosition(playerIndex);
 		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count; visualIndex++)
 		{
+			int targetPlayerIndex = capturedCardVisuals[visualIndex].TableCardIndex
+				== redirectedTableCardIndex
+				? MainPlayerIndex
+				: playerIndex;
 			flightTasks[visualIndex] = PlayCapturedCardFlightAsync(
 				capturedCardVisuals[visualIndex],
-				targetGlobalPosition,
-				playerIndex,
+				GetCardPileCaptureTargetGlobalPosition(targetPlayerIndex),
+				targetPlayerIndex,
 				visualIndex * flightStaggerSeconds);
 		}
 

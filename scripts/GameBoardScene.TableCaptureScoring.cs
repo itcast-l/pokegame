@@ -223,84 +223,32 @@ public partial class GameBoardScene
 		return count;
 	}
 
-	private void GetCapturedOldTableResolvedPointTotals(
-		IReadOnlyCollection<TableCard> prePlayTableCards,
-		int captureStartIndex,
-		int scorePlayerIndex,
-		HashSet<int>? extraTableCardIndexes,
-		out int totalResolvedOldTablePoints,
-		out int currentResolvedOldTableScoringPoints)
+	private int ResolveBlackLedgerRedirectTableCardIndex(
+		int playerIndex,
+		int captureStartIndex)
 	{
-		int totalPoints = 0;
-		int currentScoringPoints = 0;
-		if (prePlayTableCards.Count == 0)
+		var scoreValues = new int[_tableCards.Count];
+		for (int tableCardIndex = 0;
+			tableCardIndex < _tableCards.Count;
+			tableCardIndex++)
 		{
-			totalResolvedOldTablePoints = 0;
-			currentResolvedOldTableScoringPoints = 0;
-			return;
+			TableCard tableCard = _tableCards[tableCardIndex];
+			scoreValues[tableCardIndex] = !tableCard.IsBuriedInSand
+				&& !tableCard.RemoveCardOnCapture
+				&& tableCard.Card.HasValue
+				? Math.Max(0, GetCardScoreValue(tableCard.Card.Value))
+				: 0;
 		}
 
-		CaptureScoringRules.TableCard[] captureScoringTableCards = ToCaptureScoringTableCards();
-		bool hasDoubleEffect = CaptureScoringRules.HasCapturedDoubleScoreEffect(
-			captureScoringTableCards,
-			captureStartIndex,
-			extraTableCardIndexes);
-		CaptureScoringRules.Context context = BuildCaptureScoringContext(scorePlayerIndex);
-		var oldTableCards = new HashSet<TableCard>(prePlayTableCards);
-		var countedIndexes = new HashSet<int>();
-
-		void AccumulateIfOld(int tableCardIndex, bool currentlyScoring)
-		{
-			if (!countedIndexes.Add(tableCardIndex)
-				|| tableCardIndex < 0
-				|| tableCardIndex >= _tableCards.Count)
-			{
-				return;
-			}
-
-			TableCard liveTableCard = _tableCards[tableCardIndex];
-			if (!oldTableCards.Contains(liveTableCard) || liveTableCard.IsBuriedInSand || !liveTableCard.Card.HasValue)
-			{
-				return;
-			}
-
-			int resolvedPoints = CaptureScoringRules.GetCapturedTableCardScoreValue(
-				ToCaptureScoringTableCard(liveTableCard),
-				context,
-				hasDoubleEffect);
-			if (resolvedPoints <= 0)
-			{
-				return;
-			}
-
-			totalPoints += resolvedPoints;
-			if (currentlyScoring)
-			{
-				currentScoringPoints += resolvedPoints;
-			}
-		}
-
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			AccumulateIfOld(
-				tableCardIndex,
-				IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex));
-		}
-
-		if (extraTableCardIndexes == null)
-		{
-			totalResolvedOldTablePoints = totalPoints;
-			currentResolvedOldTableScoringPoints = currentScoringPoints;
-			return;
-		}
-
-		foreach (int tableCardIndex in extraTableCardIndexes)
-		{
-			AccumulateIfOld(tableCardIndex, currentlyScoring: true);
-		}
-
-		totalResolvedOldTablePoints = totalPoints;
-		currentResolvedOldTableScoringPoints = currentScoringPoints;
+		return AdventureUpgradeEffectService
+			.ResolveBlackLedgerRedirectTableCardIndex(
+				AdventureUpgradeEffectService.HasBlackLedger(
+					GetAdventureUpgradeRunState()
+						?.GetAcquiredUpgradeIds()
+						?? Array.Empty<string>()),
+				playerIndex == MainPlayerIndex,
+				scoreValues,
+				captureStartIndex);
 	}
 
 	private bool IsCapturedTableCardReference(

@@ -35,7 +35,9 @@ internal sealed class CaptureStateService
 		CaptureStatePlan plan,
 		int playerIndex,
 		bool preserveCardEffectsWhenEnteringDeck,
-		HashSet<int>? preservedTableCardIndexes = null)
+		HashSet<int>? preservedTableCardIndexes = null,
+		int redirectedTableCardIndex = -1,
+		int redirectedPlayerIndex = -1)
 	{
 		if (!plan.IsValid || playerIndex < 0 || playerIndex >= state.PlayerDecks.Count)
 		{
@@ -59,7 +61,12 @@ internal sealed class CaptureStateService
 					continue;
 				}
 
-				AddCardToPlayerDeck(state, playerIndex, tableCard.Card.Value, preserveCardEffectsWhenEnteringDeck);
+				int deckPlayerIndex = tableCardIndex == redirectedTableCardIndex
+					&& redirectedPlayerIndex >= 0
+					&& redirectedPlayerIndex < state.PlayerDecks.Count
+					? redirectedPlayerIndex
+					: playerIndex;
+				AddCardToPlayerDeck(state, deckPlayerIndex, tableCard.Card.Value, preserveCardEffectsWhenEnteringDeck);
 				collectedCardCount++;
 			}
 		}

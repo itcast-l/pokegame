@@ -147,7 +147,12 @@ internal readonly record struct PlayCardResult(
 	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null,
 	bool AdventureConsumedExtraBaseCardAction = false);
 
-internal readonly record struct CapturedTableCardVisual(Texture2D StartTexture, Texture2D? ItemOverlayTexture, Vector2 GlobalPosition, int ZIndex);
+internal readonly record struct CapturedTableCardVisual(
+	int TableCardIndex,
+	Texture2D StartTexture,
+	Texture2D? ItemOverlayTexture,
+	Vector2 GlobalPosition,
+	int ZIndex);
 
 internal readonly record struct ItemAttachmentOverlay(Texture2D Texture, int Priority);
 
@@ -189,7 +194,8 @@ internal readonly record struct NetworkCaptureVisualSync(
 	int PlayerIndex,
 	int CaptureStartIndex,
 	int[] ExtraTableCardIndexes,
-	float FlightStaggerSeconds);
+	float FlightStaggerSeconds,
+	int RedirectedTableCardIndex = -1);
 
 internal readonly record struct NetworkCaptureRevealVisualSync(
 	int PlayerIndex,

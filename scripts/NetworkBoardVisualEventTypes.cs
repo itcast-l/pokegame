@@ -33,6 +33,7 @@ internal static class NetworkBoardVisualEventTypes
 	public const string TargetSeatIndexKey = "target_seat_index";
 	public const string TargetHandIndexKey = "target_hand_index";
 	public const string CaptureStartIndexKey = "capture_start_index";
+	public const string RedirectedTableCardIndexKey = "redirected_table_card_index";
 	public const string RevealTableCardIndexesKey = "reveal_table_card_indexes";
 	public const string RevealCardCodesKey = "reveal_card_codes";
 	public const string RevealAttachedItemCardIdsCsvKey = "reveal_attached_item_card_ids_csv";

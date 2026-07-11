@@ -1878,7 +1878,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "你收旧桌牌时都计分；敌人收旧桌牌时不计分。"
+						"value": "敌人收牌后，分值最高的1张桌牌收入你的牌堆，敌人本次伤害照常结算。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1903,43 +1903,6 @@
 					"trigger_text": {
 						"type": "string",
 						"value": "持续生效"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
-				"_id": "spades_missed_beat_calamity",
-				"_index": 42,
-				"_name": "失拍成灾",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "下一张牌：正面入桌、放最左、若成功收牌则伤害 -3。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "空打惩罚引擎"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "legendary"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 150
-					},
-					"suit": {
-						"type": "string",
-						"value": "spades"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "敌人空打后"
 					}
 				}
 			},

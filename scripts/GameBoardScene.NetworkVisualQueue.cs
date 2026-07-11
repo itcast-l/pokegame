@@ -112,6 +112,8 @@ public partial class GameBoardScene
 			case NetworkBoardVisualEventTypes.CaptureToDeck:
 				if (_tableCards.Count == 0 || !seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor)
 					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.CaptureStartIndexKey, 0, _tableCards.Count - 1, out captureStartIndex)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.RedirectedTableCardIndexKey, -1, _tableCards.Count - 1, out tableIndex)
+					|| (tableIndex >= 0 && (tableIndex <= captureStartIndex || tableIndex >= _tableCards.Count - 1))
 					|| !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.ExtraTableCardIndexesKey, 0, _tableCards.Count, 0, _tableCards.Count - 1, out indexes) || !HasUniqueValues(indexes)
 					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.FlightStaggerSecondsKey, out firstFloat) || firstFloat < 0 || firstFloat > TableCaptureFlightStaggerSeconds) return false;
 				break;
@@ -785,7 +787,8 @@ public partial class GameBoardScene
 			capturedCardVisuals,
 			_turnSequenceGeneration,
 			extraTableCardIndexes,
-			flightStaggerSeconds);
+			flightStaggerSeconds,
+			payload.TableIndex);
 	}
 
 	private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)

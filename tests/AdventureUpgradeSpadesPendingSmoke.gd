@@ -106,7 +106,6 @@ func _run() -> void:
 
 	var miss_triggered_upgrades := [
 		"spades_missed_beat_blunt_hurt",
-		"spades_missed_beat_calamity",
 		"spades_miss_bleed",
 		"spades_return_tide_misorder",
 		"spades_intercept_beat",
@@ -128,16 +127,16 @@ func _run() -> void:
 		_fail("Failed to simulate enemy miss pending state")
 		return
 
-	if not bool(board.call("DebugGetAdventureEnemyNextCardFacesUp")):
-		_fail("Expected enemy next base card to be forced face-up")
+	if bool(board.call("DebugGetAdventureEnemyNextCardFacesUp")):
+		_fail("Expected enemy next base card to remain face-down")
 		return
 
 	if String(board.call("DebugGetAdventureEnemyNextCardInsertModeName")) != "BeforeTrackedOldest":
 		_fail("Expected misorder to override insert mode to BeforeTrackedOldest")
 		return
 
-	if int(board.call("DebugGetAdventureEnemyNextCaptureDamageDelta")) != -6:
-		_fail("Expected stacked next enemy capture damage delta to be -6")
+	if int(board.call("DebugGetAdventureEnemyNextCaptureDamageDelta")) != -3:
+		_fail("Expected next enemy capture damage delta to be -3")
 		return
 
 	if not bool(board.call("DebugHasAdventurePendingExtraBaseCardAction")):

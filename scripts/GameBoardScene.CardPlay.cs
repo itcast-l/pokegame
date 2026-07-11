@@ -371,6 +371,10 @@ public partial class GameBoardScene
 			}
 		}
 
+		int blackLedgerRedirectTableCardIndex =
+			ResolveBlackLedgerRedirectTableCardIndex(
+				playerIndex,
+				captureStartIndex);
 		List<CapturedTableCardVisual> capturedCardVisuals =
 			BuildCapturedTableCardVisuals(
 				captureStartIndex,
@@ -581,7 +585,8 @@ public partial class GameBoardScene
 			captureStartIndex,
 			BuildSortedExtraTableCardIndexesArray(
 				magnetExtraCaptureIndexes),
-			captureFlightStaggerSeconds);
+			captureFlightStaggerSeconds,
+			blackLedgerRedirectTableCardIndex);
 		pairCaptureEdgeFloat?.QueueFreeOverlays(_animationPresenter);
 		pairCaptureEdgeFloatHandedToDeck =
 			pairCaptureEdgeFloat != null;
@@ -591,7 +596,8 @@ public partial class GameBoardScene
 			capturedCardVisuals,
 			turnSequenceGeneration,
 			magnetExtraCaptureIndexes,
-			captureFlightStaggerSeconds);
+			captureFlightStaggerSeconds,
+			blackLedgerRedirectTableCardIndex);
 		if (!IsCaptureTableReferenceSnapshotCurrent(
 				turnSequenceGeneration,
 				captureTableReferenceSnapshot)
@@ -686,7 +692,9 @@ public partial class GameBoardScene
 								turnSequenceGeneration,
 								snapshotId);
 					}
-				});
+				},
+				blackLedgerRedirectTableCardIndex:
+					blackLedgerRedirectTableCardIndex);
 		if (!captureResult.Applied
 			|| captureResult.Aborted)
 		{
@@ -710,6 +718,12 @@ public partial class GameBoardScene
 
 		Shuffle(_playerDecks[playerIndex]);
 		Cut(_playerDecks[playerIndex]);
+		if (blackLedgerRedirectTableCardIndex >= 0
+			&& playerIndex != MainPlayerIndex)
+		{
+			Shuffle(_playerDecks[MainPlayerIndex]);
+			Cut(_playerDecks[MainPlayerIndex]);
+		}
 		if (preserveTailTableCard
 			&& preservedTailTableCard != null
 			&& _tableCards.Contains(preservedTailTableCard))
@@ -733,6 +747,18 @@ public partial class GameBoardScene
 					true,
 					new PlayCardResult(false, false),
 					false);
+			}
+			if (blackLedgerRedirectTableCardIndex >= 0
+				&& playerIndex != MainPlayerIndex)
+			{
+				await PlayPhysicalDeckShuffleAsync(MainPlayerIndex);
+				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return new CardPlayBranchResult(
+						true,
+						new PlayCardResult(false, false),
+						false);
+				}
 			}
 		}
 
