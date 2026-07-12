@@ -122,6 +122,7 @@ public partial class GameBoardScene
 				break;
 			}
 		}
+		ResetAdventureClubFlourishForNewBattle();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();

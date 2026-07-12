@@ -947,6 +947,43 @@
 			{
 				"_category_id": "adventure_suit_upgrades",
 				"_icon_color": "00000000",
+				"_id": "hearts_blood_tide_resonance",
+				"_index": 57,
+				"_name": "血潮共鸣",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "每拥有 1 个红桃强化，受到的所有治疗量 +1。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "治疗共鸣"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 150
+					},
+					"suit": {
+						"type": "string",
+						"value": "hearts"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "持续生效"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
 				"_id": "diamonds_small_insurance",
 				"_index": 14,
 				"_name": "小额保价",
@@ -1465,6 +1502,43 @@
 			{
 				"_category_id": "adventure_suit_upgrades",
 				"_icon_color": "00000000",
+				"_id": "diamonds_all_gains_converge",
+				"_index": 58,
+				"_name": "万利归一",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "每次成功收牌且存在计分牌时，最高点数的 1 张计分牌本次点数 +X；X 为方片强化数量。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "最终定点加成"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 150
+					},
+					"suit": {
+						"type": "string",
+						"value": "diamonds"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "主玩家成功收牌且本次存在计分牌时"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
 				"_id": "spades_dark_harbor_reveal",
 				"_index": 28,
 				"_name": "暗港显形",
@@ -1895,6 +1969,43 @@
 					"sort_order": {
 						"type": "int",
 						"value": 140
+					},
+					"suit": {
+						"type": "string",
+						"value": "spades"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "持续生效"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "spades_black_tide_dominion",
+				"_index": 59,
+				"_name": "黑潮统御",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "每拥有 1 个黑桃强化，玩家收牌伤害最终 +1，敌人收牌伤害最终 -1（最低为 0）。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "最终伤害统御"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 150
 					},
 					"suit": {
 						"type": "string",
@@ -2421,6 +2532,43 @@
 					"trigger_text": {
 						"type": "string",
 						"value": "持续生效"
+					}
+				}
+			},
+			{
+				"_category_id": "adventure_suit_upgrades",
+				"_icon_color": "00000000",
+				"_id": "clubs_lush_growth",
+				"_index": 60,
+				"_name": "枝繁叶茂",
+				"_property_overrides": {
+					"effect_text": {
+						"type": "string",
+						"value": "战斗开始时获得 X 层繁茂；总手牌不足 8 张时，每消耗 1 层抽 1 张，直到达到 8 张、牌堆无法抽牌或繁茂耗尽。"
+					},
+					"enabled": {
+						"type": "bool",
+						"value": true
+					},
+					"notes": {
+						"type": "string",
+						"value": "手牌繁茂"
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legendary"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 150
+					},
+					"suit": {
+						"type": "string",
+						"value": "clubs"
+					},
+					"trigger_text": {
+						"type": "string",
+						"value": "战斗开始时及总手牌减少后"
 					}
 				}
 			}

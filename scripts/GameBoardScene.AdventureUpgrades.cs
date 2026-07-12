@@ -153,6 +153,117 @@ public partial class GameBoardScene
 		return drawnCardCount;
 	}
 
+	private void ResetAdventureClubFlourishForNewBattle()
+	{
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return;
+		}
+
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (store == null || runState?.IsActive != true)
+		{
+			return;
+		}
+
+		AdventureUpgradeEffectService.ResetClubFlourishForNewBattle(
+			runState.EffectState,
+			runState.GetAcquiredUpgradeIds());
+		store.ReplaceEffectState(runState.EffectState.Clone());
+		MarkActivePlayerStatusTooltipForRefresh();
+		_ = RefillAdventureClubFlourishAsync(
+			_turnSequenceGeneration,
+			playDrawAnimations: false);
+	}
+
+	private async Task RefillAdventureClubFlourishAsync(
+		int turnSequenceGeneration,
+		bool playDrawAnimations = true)
+	{
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return;
+		}
+
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (store == null || runState?.IsActive != true)
+		{
+			return;
+		}
+
+		bool drewAny = false;
+		while (turnSequenceGeneration == _turnSequenceGeneration
+			&& !_isLeavingGame
+			&& !IsGameOver()
+			&& AdventureUpgradeEffectService.CanConsumeClubFlourishDraw(
+				runState.EffectState,
+				runState.GetAcquiredUpgradeIds(),
+				GetTotalHandCardCount(MainPlayerIndex),
+				MaxTotalHandCards))
+		{
+			DrawnHandCard? drawnCard = DrawCardFromDeckToHand(MainPlayerIndex);
+			if (!drawnCard.HasValue)
+			{
+				break;
+			}
+
+			if (!AdventureUpgradeEffectService
+				.ConsumeClubFlourishStackAfterSuccessfulDraw(
+					runState.EffectState,
+					runState.GetAcquiredUpgradeIds()))
+			{
+				break;
+			}
+
+			store.ReplaceEffectState(runState.EffectState.Clone());
+			MarkActivePlayerStatusTooltipForRefresh();
+			drewAny = true;
+			if (playDrawAnimations)
+			{
+				await PlayReplacementDrawAnimationAsync(
+					MainPlayerIndex,
+					drawnCard,
+					turnSequenceGeneration);
+				if (turnSequenceGeneration != _turnSequenceGeneration
+					|| _isLeavingGame
+					|| IsGameOver())
+				{
+					return;
+				}
+			}
+		}
+
+		if (drewAny)
+		{
+			RenderPlayerCardPiles();
+			RenderPlayerHands();
+		}
+	}
+
+	private bool TryGetAdventureClubFlourishStacks(
+		int playerIndex,
+		out int stacks)
+	{
+		stacks = 0;
+		if (playerIndex != MainPlayerIndex
+			|| !ShouldUseAdventureUpgradeSystem())
+		{
+			return false;
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true
+			|| !runState.HasAcquiredUpgrade("clubs_lush_growth"))
+		{
+			return false;
+		}
+
+		stacks = Math.Max(0, runState.EffectState.ClubFlourishStacks);
+		return true;
+	}
+
 	private bool TryGrantAdventureMainPlayerExtraBaseCardAction(bool keepsTurnAfterAction = false)
 	{
 		if (!ShouldUseAdventureUpgradeSystem())
@@ -449,11 +560,14 @@ public partial class GameBoardScene
 				turnSequenceGeneration,
 				() => AddPlayerScore(playerIndex, resolved.BonusDirectDamage));
 		}
+
+		await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
 	}
 
-	private void ApplyAdventureUpgradeAcquisitionEffects(
+	private async Task ApplyAdventureUpgradeAcquisitionEffectsAsync(
 		string upgradeId,
-		AdventureUpgradeTriggerSource triggerSource)
+		AdventureUpgradeTriggerSource triggerSource,
+		int turnSequenceGeneration)
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		AdventureUpgradeRunState? runState = store?.GetRunState();
@@ -466,8 +580,19 @@ public partial class GameBoardScene
 		AdventureUpgradeAcquisitionEffectResult effectResult = AdventureUpgradeEffectService.OnUpgradeAcquired(
 			runState.EffectState,
 			upgradeId,
-			triggerBattleStartBonusImmediately);
+			triggerBattleStartBonusImmediately,
+			runState.GetAcquiredUpgradeIds());
+		if (effectResult.ClubFlourishStacksGranted > 0)
+		{
+			runState.EffectState.ClubFlourishStacks +=
+				effectResult.ClubFlourishStacksGranted;
+		}
+
 		store.ReplaceEffectState(runState.EffectState.Clone());
+		if (effectResult.ClubFlourishStacksGranted > 0)
+		{
+			MarkActivePlayerStatusTooltipForRefresh();
+		}
 
 		if (effectResult.MaxHealthDelta > 0 || effectResult.HealAmount > 0)
 		{
@@ -478,35 +603,72 @@ public partial class GameBoardScene
 		{
 			DrawCardsFromDeckToHandForAdventureEffect(MainPlayerIndex, effectResult.ImmediateDrawCount);
 		}
+
+		if (effectResult.ClubFlourishStacksGranted > 0)
+		{
+			await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
+		}
 	}
 
-	private int ResolveAdventureCaptureDamage(
+	private AdventureCaptureDamageResult ResolveAdventureCaptureDamage(
 		int playerIndex,
 		AdventureCaptureDamageInput damageInput)
 	{
+		AdventureCaptureDamageInput normalizedInput = damageInput with
+		{
+			CapturerIsMainPlayer = playerIndex == MainPlayerIndex,
+		};
 		if (!ShouldUseAdventureUpgradeSystem())
 		{
-			return Math.Max(0, damageInput.BaseDamage + damageInput.FlatDamageDelta);
-		}
-
-		if (playerIndex != MainPlayerIndex)
-		{
-			return Math.Max(0, damageInput.BaseDamage + damageInput.FlatDamageDelta);
+			return new AdventureCaptureDamageResult(
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
+				false);
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		AdventureUpgradeRunState? runState = store?.GetRunState();
 		if (store == null || runState?.IsActive != true)
 		{
-			return Math.Max(0, damageInput.BaseDamage);
+			return new AdventureCaptureDamageResult(
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
+				false);
 		}
 
 		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
 			runState.EffectState,
 			runState.GetAcquiredUpgradeIds(),
-			damageInput);
+			normalizedInput);
 		store.ReplaceEffectState(runState.EffectState.Clone());
-		return result.FinalDamage;
+		return result;
+	}
+
+	private AdventureCaptureDamageResult PreviewAdventureCaptureDamage(
+		int playerIndex,
+		AdventureCaptureDamageInput damageInput)
+	{
+		AdventureCaptureDamageInput normalizedInput = damageInput with
+		{
+			CapturerIsMainPlayer = playerIndex == MainPlayerIndex,
+		};
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return new AdventureCaptureDamageResult(
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
+				false);
+		}
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return new AdventureCaptureDamageResult(
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
+				false);
+		}
+
+		return AdventureUpgradeEffectService.ApplyCaptureDamage(
+			runState.EffectState.Clone(),
+			runState.GetAcquiredUpgradeIds(),
+			normalizedInput);
 	}
 
 	private AdventurePostCaptureEffectResult? ResolveAdventurePostCaptureEffects(

@@ -82,6 +82,7 @@ public partial class GameBoardScene
 	AdventurePostCaptureEffectResult? adventurePostCaptureEffects = null;
 	var adventureCaptureRawPoints = new List<int>();
 	var adventureCaptureResolvedPoints = new List<int>();
+	var adventureCaptureScoringTableIndexes = new List<int>();
 	var capturedBaseCards = new List<PlayingCard>();
 	bool capturedTraceMark = false;
 	bool capturedHuntMark = false;
@@ -236,6 +237,42 @@ public partial class GameBoardScene
 		GetAdventureRunSessionStore()?.ReplaceEffectState(
 			plannedClubCaptureEffectState.Clone());
 	}
+	AdventureAllGainsConvergeResult allGainsConverge = default;
+	if (awardScore)
+	{
+		BuildAdventureCaptureDamageCardPointLists(
+			captureScoringTableCards,
+			captureStartIndex,
+			scorePlayerIndex,
+			extraTableCardIndexes,
+			adventureCaptureRawPoints,
+			adventureCaptureResolvedPoints,
+			adventureCaptureScoringTableIndexes);
+		allGainsConverge = AdventureUpgradeEffectService
+			.ResolveAllGainsConverge(
+				GetAdventureUpgradeRunState()
+					?.GetAcquiredUpgradeIds()
+					?? Array.Empty<string>(),
+				new AdventureCaptureDamageInput(
+					BaseDamage: captureFlow.Score.Points,
+					QuestionRewardEchoActive:
+						_adventureMainPlayerQuestionRewardEchoActive,
+					ScoringCardRawPoints:
+						adventureCaptureRawPoints,
+					ScoringCardResolvedPoints:
+						adventureCaptureResolvedPoints,
+					ScoringCardTableIndexes:
+						adventureCaptureScoringTableIndexes,
+					CapturerIsMainPlayer:
+						playerIndex == MainPlayerIndex));
+	}
+	if (allGainsConverge.BonusDamage > 0
+		&& allGainsConverge.ScoringCardTableIndex >= 0)
+	{
+		_ = PlayTableCardPointPopupAsync(
+			allGainsConverge.ScoringCardTableIndex,
+			allGainsConverge.BonusDamage);
+	}
 	commitImmediatelyBeforeApply?.Invoke();
 	CaptureStateResult captureStateResult =
 		_captureStateService.ApplyCapture(
@@ -361,13 +398,6 @@ public partial class GameBoardScene
 
 	if (awardScore)
 	{
-		BuildAdventureCaptureDamageCardPointLists(
-			captureScoringTableCards,
-			captureStartIndex,
-			scorePlayerIndex,
-			extraTableCardIndexes,
-			adventureCaptureRawPoints,
-			adventureCaptureResolvedPoints);
 		int adventureOldTableDamageDelta =
 			adventureFlatDamageDelta;
 		if (prePlayTableCards != null
@@ -392,7 +422,7 @@ public partial class GameBoardScene
 			playerIndex == MainPlayerIndex
 			&& _adventureMainPlayerCaptureCountThisBattle
 				== 0;
-		int resolvedDamage =
+		AdventureCaptureDamageResult resolvedCaptureDamage =
 			ResolveAdventureCaptureDamage(
 				playerIndex,
 				new AdventureCaptureDamageInput(
@@ -409,14 +439,23 @@ public partial class GameBoardScene
 					ScoringCardRawPoints:
 						adventureCaptureRawPoints,
 					ScoringCardResolvedPoints:
-						adventureCaptureResolvedPoints));
-		AddPlayerScore(scorePlayerIndex, resolvedDamage);
+						adventureCaptureResolvedPoints,
+					ScoringCardTableIndexes:
+						adventureCaptureScoringTableIndexes,
+					CapturerIsMainPlayer:
+						playerIndex == MainPlayerIndex));
+		if (resolvedCaptureDamage.FinalDamage > 0)
+		{
+			AddPlayerScore(
+				scorePlayerIndex,
+				resolvedCaptureDamage.FinalDamage);
+		}
 		if (playerIndex == MainPlayerIndex)
 		{
 			adventurePostCaptureEffects =
 				ResolveAdventurePostCaptureEffects(
 					playerIndex,
-					resolvedDamage,
+					resolvedCaptureDamage.FinalDamage,
 					_adventureMainPlayerSuccessfulCapturesThisTurn
 						+ 1,
 					attachedEffectTriggered:

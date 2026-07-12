@@ -245,6 +245,8 @@ public partial class GameBoardScene
 		GetCapturedTableScorePlayerIndex(
 			captureStartIndex,
 			playerIndex);
+	CaptureScoringRules.TableCard[] captureScoringTableCards =
+		ToCaptureScoringTableCards();
 	bool capturedMiddleCards =
 		HasCapturedMiddleTableCards(captureStartIndex);
 	int collectedPoints = capturedMiddleCards
@@ -252,6 +254,23 @@ public partial class GameBoardScene
 			captureStartIndex,
 			scorePlayerIndex)
 		: 0;
+	var adventureCaptureRawPoints = new List<int>();
+	var adventureCaptureResolvedPoints = new List<int>();
+	var adventureCaptureScoringTableIndexes = new List<int>();
+	BuildAdventureCaptureDamageCardPointLists(
+		captureScoringTableCards,
+		captureStartIndex,
+		scorePlayerIndex,
+		null,
+		adventureCaptureRawPoints,
+		adventureCaptureResolvedPoints,
+		adventureCaptureScoringTableIndexes);
+	var adventureCaptureDamageInput = new AdventureCaptureDamageInput(
+		BaseDamage: collectedPoints,
+		ScoringCardRawPoints: adventureCaptureRawPoints,
+		ScoringCardResolvedPoints: adventureCaptureResolvedPoints,
+		ScoringCardTableIndexes: adventureCaptureScoringTableIndexes,
+		CapturerIsMainPlayer: playerIndex == MainPlayerIndex);
 	PairCaptureEdgeFloatHold? specialJackFloat = null;
 	bool specialJackFloatHandedToDeck = false;
 	try
@@ -280,7 +299,19 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (collectedPoints > 0)
+		AdventureCaptureDamageResult previewCaptureDamage =
+			PreviewAdventureCaptureDamage(
+				playerIndex,
+				adventureCaptureDamageInput);
+		if (previewCaptureDamage.AllGainsConvergeBonusDamage > 0
+			&& previewCaptureDamage.AllGainsConvergeScoringCardTableIndex >= 0)
+		{
+			_ = PlayTableCardPointPopupAsync(
+				previewCaptureDamage.AllGainsConvergeScoringCardTableIndex,
+				previewCaptureDamage.AllGainsConvergeBonusDamage);
+		}
+
+		if (previewCaptureDamage.FinalDamage > 0)
 		{
 			List<CapturedTableCardVisual>
 				scoringCardVisuals =
@@ -335,11 +366,15 @@ public partial class GameBoardScene
 					captureTableReferenceSnapshot,
 				commitImmediatelyBeforeApply: () =>
 				{
-					if (collectedPoints > 0)
+					AdventureCaptureDamageResult resolvedCaptureDamage =
+						ResolveAdventureCaptureDamage(
+							playerIndex,
+							adventureCaptureDamageInput);
+					if (resolvedCaptureDamage.FinalDamage > 0)
 					{
 						AddPlayerScore(
 							scorePlayerIndex,
-							collectedPoints);
+							resolvedCaptureDamage.FinalDamage);
 					}
 				});
 		if (!captureResult.Applied

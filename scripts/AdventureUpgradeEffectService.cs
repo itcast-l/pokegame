@@ -9,7 +9,8 @@ internal readonly record struct AdventureQuestionRewardEffectResult(
 internal readonly record struct AdventureUpgradeAcquisitionEffectResult(
 	int MaxHealthDelta,
 	int HealAmount,
-	int ImmediateDrawCount);
+	int ImmediateDrawCount,
+	int ClubFlourishStacksGranted = 0);
 
 internal readonly record struct AdventureHealingResult(
 	int CurrentHealth,
@@ -27,11 +28,19 @@ internal readonly record struct AdventureCaptureDamageInput(
 	bool IncludesQuestionReward = false,
 	bool QuestionRewardEchoActive = false,
 	IReadOnlyList<int>? ScoringCardRawPoints = null,
-	IReadOnlyList<int>? ScoringCardResolvedPoints = null);
+	IReadOnlyList<int>? ScoringCardResolvedPoints = null,
+	IReadOnlyList<int>? ScoringCardTableIndexes = null,
+	bool CapturerIsMainPlayer = true);
+
+internal readonly record struct AdventureAllGainsConvergeResult(
+	int BonusDamage,
+	int ScoringCardTableIndex);
 
 internal readonly record struct AdventureCaptureDamageResult(
 	int FinalDamage,
-	bool ReArmedNextCaptureDamageBonus);
+	bool ReArmedNextCaptureDamageBonus,
+	int AllGainsConvergeBonusDamage = 0,
+	int AllGainsConvergeScoringCardTableIndex = -1);
 
 internal readonly record struct AdventurePostCaptureEffectResult(
 	int HealAmount,
@@ -80,6 +89,39 @@ internal readonly record struct AdventureEnemyMissEffectResult(
 
 internal static class AdventureUpgradeEffectService
 {
+	private const string HeartsBloodTideResonanceId = "hearts_blood_tide_resonance";
+	private const string DiamondsAllGainsConvergeId = "diamonds_all_gains_converge";
+	private const string SpadesBlackTideDominionId = "spades_black_tide_dominion";
+	private const string ClubsLushGrowthId = "clubs_lush_growth";
+
+	internal static int CountAcquiredSuitUpgrades(
+		IEnumerable<string>? acquiredUpgradeIds,
+		string suit)
+	{
+		if (string.IsNullOrWhiteSpace(suit))
+		{
+			return 0;
+		}
+
+		string prefix = $"{suit.Trim().ToLowerInvariant()}_";
+		var matchingIds = new HashSet<string>(StringComparer.Ordinal);
+		foreach (string? upgradeId in acquiredUpgradeIds ?? Array.Empty<string>())
+		{
+			if (string.IsNullOrWhiteSpace(upgradeId))
+			{
+				continue;
+			}
+
+			string normalizedId = upgradeId.Trim();
+			if (normalizedId.StartsWith(prefix, StringComparison.Ordinal))
+			{
+				matchingIds.Add(normalizedId);
+			}
+		}
+
+		return matchingIds.Count;
+	}
+
 	internal static bool HasBlackLedger(IEnumerable<string> acquiredUpgradeIds)
 	{
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
@@ -159,15 +201,31 @@ internal static class AdventureUpgradeEffectService
 	internal static AdventureUpgradeAcquisitionEffectResult OnUpgradeAcquired(
 		AdventureUpgradeEffectState state,
 		string upgradeId,
-		bool triggerBattleStartBonusImmediately)
+		bool triggerBattleStartBonusImmediately,
+		IEnumerable<string>? acquiredUpgradeIds = null)
 	{
 		ArgumentNullException.ThrowIfNull(state);
+
+		string normalizedUpgradeId = upgradeId?.Trim() ?? string.Empty;
+		var acquired = new HashSet<string>(
+			acquiredUpgradeIds ?? Array.Empty<string>(),
+			StringComparer.Ordinal);
+		if (!string.IsNullOrEmpty(normalizedUpgradeId))
+		{
+			acquired.Add(normalizedUpgradeId);
+		}
 
 		int maxHealthDelta = 0;
 		int healAmount = 0;
 		int immediateDrawCount = 0;
+		int clubFlourishStacksGranted = string.Equals(
+			normalizedUpgradeId,
+			ClubsLushGrowthId,
+			StringComparison.Ordinal)
+			? CountAcquiredSuitUpgrades(acquired, "clubs")
+			: 0;
 
-		switch (upgradeId)
+		switch (normalizedUpgradeId)
 		{
 			case "hearts_thick_blood":
 				maxHealthDelta += 4;
@@ -191,7 +249,54 @@ internal static class AdventureUpgradeEffectService
 		return new AdventureUpgradeAcquisitionEffectResult(
 			maxHealthDelta,
 			healAmount,
-			immediateDrawCount);
+			immediateDrawCount,
+			clubFlourishStacksGranted);
+	}
+
+	internal static int ResetClubFlourishForNewBattle(
+		AdventureUpgradeEffectState state,
+		IEnumerable<string>? acquiredUpgradeIds)
+	{
+		ArgumentNullException.ThrowIfNull(state);
+
+		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		state.ClubFlourishStacks = acquired.Contains(ClubsLushGrowthId)
+			? CountAcquiredSuitUpgrades(acquired, "clubs")
+			: 0;
+		return state.ClubFlourishStacks;
+	}
+
+	internal static bool CanConsumeClubFlourishDraw(
+		AdventureUpgradeEffectState state,
+		IEnumerable<string>? acquiredUpgradeIds,
+		int totalHandCardCount,
+		int maxTotalHandCards)
+	{
+		ArgumentNullException.ThrowIfNull(state);
+
+		if (maxTotalHandCards <= 0 || totalHandCardCount >= maxTotalHandCards || state.ClubFlourishStacks <= 0)
+		{
+			return false;
+		}
+
+		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		return acquired.Contains(ClubsLushGrowthId);
+	}
+
+	internal static bool ConsumeClubFlourishStackAfterSuccessfulDraw(
+		AdventureUpgradeEffectState state,
+		IEnumerable<string>? acquiredUpgradeIds)
+	{
+		ArgumentNullException.ThrowIfNull(state);
+
+		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		if (state.ClubFlourishStacks <= 0 || !acquired.Contains(ClubsLushGrowthId))
+		{
+			return false;
+		}
+
+		state.ClubFlourishStacks--;
+		return true;
 	}
 
 	internal static int GetBattleStartDrawCount(IEnumerable<string> acquiredUpgradeIds)
@@ -417,6 +522,11 @@ internal static class AdventureUpgradeEffectService
 				state.HealingOverflowRemainder);
 		}
 
+		if (acquired.Contains(HeartsBloodTideResonanceId))
+		{
+			normalizedHealAmount += CountAcquiredSuitUpgrades(acquired, "hearts");
+		}
+
 		if (!acquired.Contains("hearts_overflow_growth"))
 		{
 			int healedHealth = Math.Min(normalizedMaxHealth, normalizedCurrentHealth + normalizedHealAmount);
@@ -456,8 +566,139 @@ internal static class AdventureUpgradeEffectService
 		IReadOnlyList<int> rawPoints = input.ScoringCardRawPoints ?? Array.Empty<int>();
 		IReadOnlyList<int> resolvedPoints = input.ScoringCardResolvedPoints ?? Array.Empty<int>();
 		int scoringCardCount = Math.Min(rawPoints.Count, resolvedPoints.Count);
-		int perCardPointBonus = 0;
+		int allGainsConvergeBonusDamage = 0;
+		int allGainsConvergeScoringCardTableIndex = -1;
+		if (input.CapturerIsMainPlayer)
+		{
+			int perCardPointBonus = GetPerCardCapturePointBonus(acquired, input, scoringCardCount);
+			if (perCardPointBonus > 0)
+			{
+				damage += scoringCardCount * perCardPointBonus;
+			}
 
+			if (scoringCardCount >= 3 && acquired.Contains("diamonds_top_prize_repeat"))
+			{
+				int highestAdjustedPoint = 0;
+				for (int index = 0; index < scoringCardCount; index++)
+				{
+					highestAdjustedPoint = Math.Max(highestAdjustedPoint, resolvedPoints[index] + perCardPointBonus);
+				}
+
+				damage += highestAdjustedPoint;
+			}
+
+			damage += input.FlatDamageDelta;
+
+			damage += state.PermanentCaptureDamageBonus;
+			damage += state.NextCaptureDamageBonus;
+			state.NextCaptureDamageBonus = 0;
+			if (input.IsFirstCaptureThisBattle && acquired.Contains("diamonds_first_capture_pressure"))
+			{
+				damage += 2;
+			}
+
+			if (input.IncludesQuestionReward && acquired.Contains("diamonds_bounty_amplify"))
+			{
+				damage += 3;
+			}
+
+			if (damage >= 1
+				&& damage <= 4
+				&& acquired.Contains("diamonds_small_insurance"))
+			{
+				damage = 5;
+			}
+
+			if (damage > 0
+				&& scoringCardCount >= 6
+				&& acquired.Contains("diamonds_full_payout"))
+			{
+				damage *= 2;
+			}
+
+			if (damage > 0 && state.FinalDoubleCaptureDamageActive)
+			{
+				damage *= 2;
+			}
+
+			AdventureAllGainsConvergeResult allGainsConverge = ResolveAllGainsConverge(acquired, input);
+			allGainsConvergeBonusDamage = allGainsConverge.BonusDamage;
+			allGainsConvergeScoringCardTableIndex = allGainsConverge.ScoringCardTableIndex;
+			damage += allGainsConvergeBonusDamage;
+		}
+		else
+		{
+			damage += input.FlatDamageDelta;
+		}
+
+		if (acquired.Contains(SpadesBlackTideDominionId))
+		{
+			int blackTideModifier = CountAcquiredSuitUpgrades(acquired, "spades");
+			damage += input.CapturerIsMainPlayer ? blackTideModifier : -blackTideModifier;
+		}
+
+		damage = Math.Max(0, damage);
+		bool reArmedNextCaptureDamageBonus = false;
+		if (input.CapturerIsMainPlayer
+			&& damage >= 7
+			&& acquired.Contains("diamonds_high_return_bonus"))
+		{
+			state.NextCaptureDamageBonus += 2;
+			reArmedNextCaptureDamageBonus = true;
+		}
+
+		return new AdventureCaptureDamageResult(
+			damage,
+			reArmedNextCaptureDamageBonus,
+			allGainsConvergeBonusDamage,
+			allGainsConvergeScoringCardTableIndex);
+	}
+
+	internal static AdventureAllGainsConvergeResult ResolveAllGainsConverge(
+		IEnumerable<string>? acquiredUpgradeIds,
+		AdventureCaptureDamageInput input)
+	{
+		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		if (!input.CapturerIsMainPlayer || !acquired.Contains(DiamondsAllGainsConvergeId))
+		{
+			return new AdventureAllGainsConvergeResult(0, -1);
+		}
+
+		IReadOnlyList<int> rawPoints = input.ScoringCardRawPoints ?? Array.Empty<int>();
+		IReadOnlyList<int> resolvedPoints = input.ScoringCardResolvedPoints ?? Array.Empty<int>();
+		int scoringCardCount = Math.Min(rawPoints.Count, resolvedPoints.Count);
+		if (scoringCardCount == 0)
+		{
+			return new AdventureAllGainsConvergeResult(0, -1);
+		}
+
+		IReadOnlyList<int> tableIndexes = input.ScoringCardTableIndexes ?? Array.Empty<int>();
+		int perCardPointBonus = GetPerCardCapturePointBonus(acquired, input, scoringCardCount);
+		int highestPoint = int.MinValue;
+		int selectedTableCardIndex = int.MaxValue;
+		for (int index = 0; index < scoringCardCount; index++)
+		{
+			int tableCardIndex = index < tableIndexes.Count ? tableIndexes[index] : index;
+			int adjustedPoint = resolvedPoints[index] + perCardPointBonus;
+			if (adjustedPoint > highestPoint
+				|| (adjustedPoint == highestPoint && tableCardIndex < selectedTableCardIndex))
+			{
+				highestPoint = adjustedPoint;
+				selectedTableCardIndex = tableCardIndex;
+			}
+		}
+
+		return new AdventureAllGainsConvergeResult(
+			CountAcquiredSuitUpgrades(acquired, "diamonds"),
+			selectedTableCardIndex);
+	}
+
+	private static int GetPerCardCapturePointBonus(
+		IReadOnlySet<string> acquired,
+		AdventureCaptureDamageInput input,
+		int scoringCardCount)
+	{
+		int perCardPointBonus = 0;
 		if (scoringCardCount >= 3 && acquired.Contains("diamonds_multi_card_premium"))
 		{
 			perCardPointBonus++;
@@ -468,66 +709,7 @@ internal static class AdventureUpgradeEffectService
 			perCardPointBonus++;
 		}
 
-		if (perCardPointBonus > 0)
-		{
-			damage += scoringCardCount * perCardPointBonus;
-		}
-
-		if (scoringCardCount >= 3 && acquired.Contains("diamonds_top_prize_repeat"))
-		{
-			int highestAdjustedPoint = 0;
-			for (int index = 0; index < scoringCardCount; index++)
-			{
-				highestAdjustedPoint = Math.Max(highestAdjustedPoint, resolvedPoints[index] + perCardPointBonus);
-			}
-
-			damage += highestAdjustedPoint;
-		}
-
-		damage += input.FlatDamageDelta;
-
-		damage += state.PermanentCaptureDamageBonus;
-		damage += state.NextCaptureDamageBonus;
-		state.NextCaptureDamageBonus = 0;
-		if (input.IsFirstCaptureThisBattle && acquired.Contains("diamonds_first_capture_pressure"))
-		{
-			damage += 2;
-		}
-
-		if (input.IncludesQuestionReward && acquired.Contains("diamonds_bounty_amplify"))
-		{
-			damage += 3;
-		}
-
-		if (damage >= 1
-			&& damage <= 4
-			&& acquired.Contains("diamonds_small_insurance"))
-		{
-			damage = 5;
-		}
-
-		if (damage > 0
-			&& scoringCardCount >= 6
-			&& acquired.Contains("diamonds_full_payout"))
-		{
-			damage *= 2;
-		}
-
-		if (damage > 0 && state.FinalDoubleCaptureDamageActive)
-		{
-			damage *= 2;
-		}
-
-		bool reArmedNextCaptureDamageBonus = false;
-		if (damage >= 7 && acquired.Contains("diamonds_high_return_bonus"))
-		{
-			state.NextCaptureDamageBonus += 2;
-			reArmedNextCaptureDamageBonus = true;
-		}
-
-		return new AdventureCaptureDamageResult(
-			damage,
-			reArmedNextCaptureDamageBonus);
+		return perCardPointBonus;
 	}
 
 	internal static AdventurePostCaptureEffectResult OnMainPlayerCaptureResolved(

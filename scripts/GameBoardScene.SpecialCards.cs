@@ -160,7 +160,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 		Vector2 originGlobalCenter,
 		int turnSequenceGeneration)
 	{
-		return await PublishAndResolveCardEventAsync(
+		PlayCardResult result = await PublishAndResolveCardEventAsync(
 			new CardGameEvent(
 				CardGameEvents.OnPlay,
 				ownerPlayerIndex,
@@ -170,6 +170,14 @@ public partial class GameBoardScene : ICardTriggerProvider
 				targetHandIndex: targetHandIndex,
 				originGlobalCenter: originGlobalCenter),
 			turnSequenceGeneration);
+		if (ownerPlayerIndex == MainPlayerIndex
+			&& turnSequenceGeneration == _turnSequenceGeneration
+			&& !IsGameOver())
+		{
+			await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
+		}
+
+		return result;
 	}
 
 	private static PlayCardResult MergePlayCardResults(PlayCardResult current, PlayCardResult next)

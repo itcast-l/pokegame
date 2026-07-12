@@ -187,6 +187,7 @@ public partial class GameBoardScene
 
 		_adventureQuestionRejudgeUsedThisBattle = true;
 		_debugLastQuestionRewardItemCardId = rerolledItemCardId;
+		await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
 	}

@@ -12,6 +12,7 @@ internal sealed class AdventureUpgradeEffectState
 	internal int ClubMissClimbGrowthStacks { get; set; }
 	internal bool ClubBorrowSuitSetArmed { get; set; }
 	internal bool ClubGapRootingUsedThisTurn { get; set; }
+	internal int ClubFlourishStacks { get; set; }
 
 	internal void Clear()
 	{
@@ -27,6 +28,7 @@ internal sealed class AdventureUpgradeEffectState
 		ClubMissClimbGrowthStacks = 0;
 		ClubBorrowSuitSetArmed = false;
 		ClubGapRootingUsedThisTurn = false;
+		ClubFlourishStacks = 0;
 	}
 
 	internal void ResetFinalDoubleProgressForNewEnemy()
@@ -55,6 +57,7 @@ internal sealed class AdventureUpgradeEffectState
 		ClubMissClimbGrowthStacks = other.ClubMissClimbGrowthStacks;
 		ClubBorrowSuitSetArmed = other.ClubBorrowSuitSetArmed;
 		ClubGapRootingUsedThisTurn = other.ClubGapRootingUsedThisTurn;
+		ClubFlourishStacks = other.ClubFlourishStacks;
 	}
 
 	internal AdventureUpgradeEffectState Clone()

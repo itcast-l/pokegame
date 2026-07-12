@@ -20,7 +20,8 @@ internal readonly record struct AdventureUpgradeRunSnapshot(
 	int ClubMissClimbGrowthStacks = 0,
 	bool ClubBorrowSuitSetArmed = false,
 	bool ClubGapRootingUsedThisTurn = false,
-	int FinalDoubleQuestionRewardCountThisBattle = 0)
+	int FinalDoubleQuestionRewardCountThisBattle = 0,
+	int ClubFlourishStacks = 0)
 {
-	internal const int CurrentSchemaVersion = 3;
+	internal const int CurrentSchemaVersion = 4;
 }

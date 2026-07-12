@@ -70,6 +70,11 @@ public partial class GameBoardScene
 			}
 
 			RenderPlayerHands();
+			if (targetPlayerIndex == MainPlayerIndex)
+			{
+				await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
+			}
+
 			return new PlayCardResult(true, false);
 		}
 
@@ -116,6 +121,11 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerHands();
+		if (targetPlayerIndex == MainPlayerIndex)
+		{
+			await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
+		}
+
 		return new PlayCardResult(true, false);
 	}
 

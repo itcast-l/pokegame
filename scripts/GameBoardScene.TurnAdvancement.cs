@@ -79,6 +79,12 @@ public partial class GameBoardScene
 			return;
 		}
 
+		await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return;
+		}
+
 		await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
 	}
 

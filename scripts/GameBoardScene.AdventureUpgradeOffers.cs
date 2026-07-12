@@ -162,7 +162,10 @@ public partial class GameBoardScene
 				AdventureSuitUpgradeDefinition selectedDefinition = offer[selectedIndex];
 				MarkAdventureUpgradeTriggerAsGranted(triggerSource);
 				RecordAdventureAcquiredUpgrade(selectedDefinition.Id);
-				ApplyAdventureUpgradeAcquisitionEffects(selectedDefinition.Id, triggerSource);
+				await ApplyAdventureUpgradeAcquisitionEffectsAsync(
+					selectedDefinition.Id,
+					triggerSource,
+					turnSequenceGeneration);
 				GD.Print($"Adventure upgrade acquired: {selectedDefinition.Id}");
 				_pendingAdventureUpgradeTriggers.Dequeue();
 			}

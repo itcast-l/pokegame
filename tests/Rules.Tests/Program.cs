@@ -38,7 +38,10 @@ internal static class Program
 		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
 		Run("adventure upgrade ids expose current active upgrades across suits", AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits);
+		Run("adventure suit upgrade catalog includes four suit legendaries", AdventureSuitUpgradeCatalogIncludesFourSuitLegendaries);
+		Run("adventure suit legendary count includes itself and deduplicates", AdventureSuitLegendaryCountIncludesSelfAndDeduplicates);
 		Run("adventure upgrade run snapshot v3 restores legacy v1 saves", AdventureUpgradeRunSnapshotV3RestoresLegacyV1Saves);
+		Run("adventure upgrade run snapshot v4 persists flourish and restores legacy defaults", AdventureUpgradeRunSnapshotV4PersistsFlourishAndRestoresLegacyDefaults);
 		Run("adventure upgrade run state persists effect counters and health", AdventureUpgradeRunStatePersistsEffectCountersAndHealth);
 		Run("adventure question reward side effects track count permanent bonus and final double", AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble);
 		Run("adventure final double resets after each enemy", AdventureFinalDoubleResetsAfterEachEnemy);
@@ -49,6 +52,7 @@ internal static class Program
 		Run("adventure upgrade acquire applies immediate max health heal and draw bonuses", AdventureUpgradeAcquireAppliesImmediateMaxHealthHealAndDrawBonuses);
 		Run("adventure battle start draw bonuses stack across acquired heart upgrades", AdventureBattleStartDrawBonusesStackAcrossAcquiredHeartUpgrades);
 		Run("adventure healing overflow increases max health every four overflow", AdventureHealingOverflowIncreasesMaxHealthEveryFourOverflow);
+		Run("adventure blood tide amplifies healing without creating zero healing", AdventureBloodTideAmplifiesHealingWithoutCreatingZeroHealing);
 		Run("adventure miss effects queue turn start recovery and next capture bonus", AdventureMissEffectsQueueTurnStartRecoveryAndNextCaptureBonus);
 		Run("adventure miss effects include club table rewrites", AdventureMissEffectsIncludeClubTableRewrites);
 		Run("adventure turn start effects are consumed once", AdventureTurnStartEffectsAreConsumedOnce);
@@ -61,6 +65,9 @@ internal static class Program
 		Run("adventure capture damage stacks full payout with final double before high return bonus", AdventureCaptureDamageStacksFullPayoutWithFinalDoubleBeforeHighReturnBonus);
 		Run("adventure capture damage adds bounty amplify when reward question is captured", AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured);
 		Run("adventure capture damage adds question echo point bonus per scoring card", AdventureCaptureDamageAddsQuestionEchoPointBonusPerScoringCard);
+		Run("adventure all gains converge applies once after final doubles", AdventureAllGainsConvergeAppliesOnceAfterFinalDoubles);
+		Run("adventure black tide applies final player and enemy modifiers", AdventureBlackTideAppliesFinalPlayerAndEnemyModifiers);
+		Run("adventure lush growth resets and consumes only after successful draws", AdventureLushGrowthResetsAndConsumesOnlyAfterSuccessfulDraws);
 		Run("adventure post capture heal triggers after six damage", AdventurePostCaptureHealTriggersAfterSixDamage);
 		Run("adventure post capture bonuses stack by capture ordinal", AdventurePostCaptureBonusesStackByCaptureOrdinal);
 		Run("adventure post capture includes enchanted recovery and hollow burst", AdventurePostCaptureIncludesEnchantedRecoveryAndHollowBurst);
@@ -752,7 +759,7 @@ internal static class Program
 		string text = File.ReadAllText(idsPath);
 
 		MatchCollection constants = Regex.Matches(text, @"(?m)^const ([A-Z0-9_]+) = ""([a-z0-9_]+)""$");
-		Equal(54, constants.Count);
+		Equal(58, constants.Count);
 
 		var activePerSuit = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
@@ -769,10 +776,104 @@ internal static class Program
 			activePerSuit[suit] = activePerSuit[suit] + 1;
 		}
 
-		Equal(14, activePerSuit["hearts"]);
-		Equal(14, activePerSuit["diamonds"]);
-		Equal(12, activePerSuit["spades"]);
-		Equal(14, activePerSuit["clubs"]);
+		Equal(15, activePerSuit["hearts"]);
+		Equal(15, activePerSuit["diamonds"]);
+		Equal(13, activePerSuit["spades"]);
+		Equal(15, activePerSuit["clubs"]);
+	}
+
+	private static void AdventureSuitUpgradeCatalogIncludesFourSuitLegendaries()
+	{
+		string dataPath = Path.Combine(FindRepositoryRoot(), "data.pandora");
+		using JsonDocument document = JsonDocument.Parse(File.ReadAllText(dataPath));
+		JsonElement entities = document.RootElement
+			.GetProperty("_entity_data")
+			.GetProperty("_entities");
+
+		var suitCounts = new Dictionary<string, int>(StringComparer.Ordinal)
+		{
+			["hearts"] = 0,
+			["diamonds"] = 0,
+			["spades"] = 0,
+			["clubs"] = 0,
+		};
+		var rarityCounts = new Dictionary<string, int>(StringComparer.Ordinal)
+		{
+			["common"] = 0,
+			["rare"] = 0,
+			["legendary"] = 0,
+		};
+		var enabledLegendaryIds = new HashSet<string>(StringComparer.Ordinal);
+		int enabledCount = 0;
+
+		foreach (JsonElement entity in entities.EnumerateArray())
+		{
+			if (!string.Equals(
+				entity.GetProperty("_category_id").GetString(),
+				"adventure_suit_upgrades",
+				StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			JsonElement properties = entity.GetProperty("_property_overrides");
+			bool enabled = properties.GetProperty("enabled")
+				.GetProperty("value").GetBoolean();
+			if (!enabled)
+			{
+				continue;
+			}
+
+			string suit = properties.GetProperty("suit")
+				.GetProperty("value").GetString() ?? string.Empty;
+			string rarity = properties.GetProperty("rarity")
+				.GetProperty("value").GetString() ?? string.Empty;
+			True(suitCounts.ContainsKey(suit));
+			True(rarityCounts.ContainsKey(rarity));
+			suitCounts[suit]++;
+			rarityCounts[rarity]++;
+			enabledCount++;
+			if (string.Equals(rarity, "legendary", StringComparison.Ordinal))
+			{
+				enabledLegendaryIds.Add(entity.GetProperty("_id").GetString() ?? string.Empty);
+			}
+		}
+
+		Equal(58, enabledCount);
+		Equal(15, suitCounts["hearts"]);
+		Equal(15, suitCounts["diamonds"]);
+		Equal(13, suitCounts["spades"]);
+		Equal(15, suitCounts["clubs"]);
+		Equal(24, rarityCounts["common"]);
+		Equal(20, rarityCounts["rare"]);
+		Equal(14, rarityCounts["legendary"]);
+		True(enabledLegendaryIds.Contains("hearts_blood_tide_resonance"));
+		True(enabledLegendaryIds.Contains("diamonds_all_gains_converge"));
+		True(enabledLegendaryIds.Contains("spades_black_tide_dominion"));
+		True(enabledLegendaryIds.Contains("clubs_lush_growth"));
+	}
+
+	private static void AdventureSuitLegendaryCountIncludesSelfAndDeduplicates()
+	{
+		Equal(0, AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(null, "hearts"));
+		Equal(0, AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(
+			new[] { string.Empty, "diamonds_small_insurance" },
+			"hearts"));
+
+		int heartCount = AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(
+			new[]
+			{
+				"hearts_blood_tide_resonance",
+				"hearts_warm_current_supply",
+				"hearts_warm_current_supply",
+				"hearts_long_capture_recovery",
+				"hearts_miss_bandage",
+				"hearts_question_mark_first_aid",
+				"diamonds_small_insurance",
+			},
+			"hearts");
+
+		Equal(5, heartCount);
 	}
 
 	private static void AdventureUpgradeRunSnapshotV3RestoresLegacyV1Saves()
@@ -813,6 +914,7 @@ internal static class Program
 			NextCaptureDamageBonus = 4,
 			NextTurnHealAmount = 3,
 			NextTurnDrawCount = 1,
+			ClubFlourishStacks = 2,
 		});
 
 		AdventureUpgradeRunSnapshot snapshot = state.ToSnapshot();
@@ -829,6 +931,36 @@ internal static class Program
 		Equal(4, restored.EffectState.NextCaptureDamageBonus);
 		Equal(3, restored.EffectState.NextTurnHealAmount);
 		Equal(1, restored.EffectState.NextTurnDrawCount);
+		Equal(2, restored.EffectState.ClubFlourishStacks);
+	}
+
+	private static void AdventureUpgradeRunSnapshotV4PersistsFlourishAndRestoresLegacyDefaults()
+	{
+		var currentState = new AdventureUpgradeRunState();
+		currentState.BeginNewRun(3);
+		currentState.AcquireUpgrade("clubs_lush_growth");
+		currentState.EffectState.ClubFlourishStacks = 4;
+
+		AdventureUpgradeRunSnapshot currentSnapshot = currentState.ToSnapshot();
+		Equal(4, currentSnapshot.SchemaVersion);
+		var restoredCurrentState = new AdventureUpgradeRunState();
+		restoredCurrentState.RestoreFromSnapshot(currentSnapshot);
+		Equal(4, restoredCurrentState.EffectState.ClubFlourishStacks);
+
+		foreach (int legacySchemaVersion in new[] { 1, 2, 3 })
+		{
+			AdventureUpgradeRunSnapshot legacySnapshot = new(
+				legacySchemaVersion,
+				3,
+				1,
+				false,
+				true,
+				new List<string> { "clubs_lush_growth" },
+				ClubFlourishStacks: 7);
+			var restoredLegacyState = new AdventureUpgradeRunState();
+			restoredLegacyState.RestoreFromSnapshot(legacySnapshot);
+			Equal(0, restoredLegacyState.EffectState.ClubFlourishStacks);
+		}
 	}
 
 	private static void AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble()
@@ -1008,7 +1140,7 @@ internal static class Program
 	{
 		string source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs"));
 		int methodStart = source.IndexOf("private async Task ApplyAdventureQuestionRewardEffects(", StringComparison.Ordinal);
-		int methodEnd = source.IndexOf("private void ApplyAdventureUpgradeAcquisitionEffects(", methodStart, StringComparison.Ordinal);
+		int methodEnd = source.IndexOf("private async Task ApplyAdventureUpgradeAcquisitionEffectsAsync(", methodStart, StringComparison.Ordinal);
 
 		True(methodStart >= 0);
 		True(methodEnd > methodStart);
@@ -1080,6 +1212,49 @@ internal static class Program
 		Equal(1, state.NextTurnDrawCount);
 		Equal(1, state.NextCaptureDamageBonus);
 		False(result.GrantExtraBaseCardAction);
+	}
+
+	private static void AdventureBloodTideAmplifiesHealingWithoutCreatingZeroHealing()
+	{
+		string[] upgrades =
+		{
+			"hearts_blood_tide_resonance",
+			"hearts_thick_blood",
+		};
+		AdventureHealingResult healed = AdventureUpgradeEffectService.ApplyHealing(
+			currentHealth: 90,
+			maxHealth: 100,
+			new AdventureUpgradeEffectState(),
+			upgrades,
+			healAmount: 3);
+		Equal(95, healed.CurrentHealth);
+		Equal(5, healed.ActualHealAmount);
+
+		AdventureHealingResult zeroBaseHealing = AdventureUpgradeEffectService.ApplyHealing(
+			currentHealth: 90,
+			maxHealth: 100,
+			new AdventureUpgradeEffectState(),
+			upgrades,
+			healAmount: 0);
+		Equal(90, zeroBaseHealing.CurrentHealth);
+		Equal(0, zeroBaseHealing.ActualHealAmount);
+
+		var overflowState = new AdventureUpgradeEffectState();
+		AdventureHealingResult overflowHealing = AdventureUpgradeEffectService.ApplyHealing(
+			currentHealth: 99,
+			maxHealth: 100,
+			overflowState,
+			new[]
+			{
+				"hearts_blood_tide_resonance",
+				"hearts_thick_blood",
+				"hearts_overflow_growth",
+			},
+			healAmount: 2);
+		Equal(101, overflowHealing.CurrentHealth);
+		Equal(101, overflowHealing.MaxHealth);
+		Equal(1, overflowHealing.MaxHealthIncrease);
+		Equal(0, overflowHealing.OverflowRemainder);
 	}
 
 	private static void AdventureMissEffectsIncludeClubTableRewrites()
@@ -1270,6 +1445,122 @@ internal static class Program
 			finalDamage: 6);
 
 		Equal(2, result.HealAmount);
+	}
+
+	private static void AdventureAllGainsConvergeAppliesOnceAfterFinalDoubles()
+	{
+		string[] upgrades =
+		{
+			"diamonds_all_gains_converge",
+			"diamonds_small_insurance",
+		};
+		var noScoringState = new AdventureUpgradeEffectState
+		{
+			FinalDoubleCaptureDamageActive = true,
+		};
+		AdventureCaptureDamageResult noScoring = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			noScoringState,
+			upgrades,
+			new AdventureCaptureDamageInput(BaseDamage: 10));
+		Equal(20, noScoring.FinalDamage);
+		Equal(0, noScoring.AllGainsConvergeBonusDamage);
+		Equal(-1, noScoring.AllGainsConvergeScoringCardTableIndex);
+
+		var scoringState = new AdventureUpgradeEffectState
+		{
+			FinalDoubleCaptureDamageActive = true,
+		};
+		AdventureCaptureDamageResult scoring = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			scoringState,
+			upgrades,
+			new AdventureCaptureDamageInput(
+				BaseDamage: 10,
+				ScoringCardRawPoints: new[] { 5, 5 },
+				ScoringCardResolvedPoints: new[] { 8, 8 },
+				ScoringCardTableIndexes: new[] { 9, 2 }));
+		Equal(22, scoring.FinalDamage);
+		Equal(2, scoring.AllGainsConvergeBonusDamage);
+		Equal(2, scoring.AllGainsConvergeScoringCardTableIndex);
+	}
+
+	private static void AdventureBlackTideAppliesFinalPlayerAndEnemyModifiers()
+	{
+		string[] upgrades =
+		{
+			"spades_black_tide_dominion",
+			"spades_black_ledger",
+			"spades_trace_hunt",
+		};
+		AdventureCaptureDamageResult playerDamage = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			new AdventureUpgradeEffectState
+			{
+				FinalDoubleCaptureDamageActive = true,
+			},
+			upgrades,
+			new AdventureCaptureDamageInput(BaseDamage: 5, CapturerIsMainPlayer: true));
+		Equal(13, playerDamage.FinalDamage);
+
+		AdventureCaptureDamageResult enemyDamage = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			new AdventureUpgradeEffectState(),
+			upgrades,
+			new AdventureCaptureDamageInput(BaseDamage: 5, CapturerIsMainPlayer: false));
+		Equal(2, enemyDamage.FinalDamage);
+
+		AdventureCaptureDamageResult zeroBasePlayerDamage = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			new AdventureUpgradeEffectState(),
+			upgrades,
+			new AdventureCaptureDamageInput(BaseDamage: 0, CapturerIsMainPlayer: true));
+		Equal(3, zeroBasePlayerDamage.FinalDamage);
+
+		AdventureCaptureDamageResult zeroBaseEnemyDamage = AdventureUpgradeEffectService.ApplyCaptureDamage(
+			new AdventureUpgradeEffectState(),
+			upgrades,
+			new AdventureCaptureDamageInput(BaseDamage: 0, CapturerIsMainPlayer: false));
+		Equal(0, zeroBaseEnemyDamage.FinalDamage);
+	}
+
+	private static void AdventureLushGrowthResetsAndConsumesOnlyAfterSuccessfulDraws()
+	{
+		string[] acquiredBeforeLegendary =
+		{
+			"clubs_short_branch_return",
+			"clubs_gap_rooting",
+		};
+		var state = new AdventureUpgradeEffectState();
+		AdventureUpgradeAcquisitionEffectResult acquired = AdventureUpgradeEffectService.OnUpgradeAcquired(
+			state,
+			"clubs_lush_growth",
+			triggerBattleStartBonusImmediately: false,
+			acquiredBeforeLegendary);
+		Equal(3, acquired.ClubFlourishStacksGranted);
+		state.ClubFlourishStacks += acquired.ClubFlourishStacksGranted;
+
+		string[] allAcquired =
+		{
+			"clubs_short_branch_return",
+			"clubs_gap_rooting",
+			"clubs_lush_growth",
+		};
+		True(AdventureUpgradeEffectService.CanConsumeClubFlourishDraw(
+			state,
+			allAcquired,
+			totalHandCardCount: 5,
+			maxTotalHandCards: 8));
+		True(AdventureUpgradeEffectService.ConsumeClubFlourishStackAfterSuccessfulDraw(
+			state,
+			allAcquired));
+		Equal(2, state.ClubFlourishStacks);
+
+		False(AdventureUpgradeEffectService.CanConsumeClubFlourishDraw(
+			state,
+			allAcquired,
+			totalHandCardCount: 8,
+			maxTotalHandCards: 8));
+		Equal(2, state.ClubFlourishStacks);
+
+		state.ClubFlourishStacks = 1;
+		Equal(3, AdventureUpgradeEffectService.ResetClubFlourishForNewBattle(state, allAcquired));
+		Equal(3, state.ClubFlourishStacks);
 	}
 
 	private static void AdventurePostCaptureBonusesStackByCaptureOrdinal()

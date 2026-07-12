@@ -119,7 +119,8 @@ internal sealed class AdventureUpgradeRunState
 			_effectState.ClubMissClimbGrowthStacks,
 			_effectState.ClubBorrowSuitSetArmed,
 			_effectState.ClubGapRootingUsedThisTurn,
-			_effectState.FinalDoubleQuestionRewardCountThisBattle);
+			_effectState.FinalDoubleQuestionRewardCountThisBattle,
+			_effectState.ClubFlourishStacks);
 	}
 
 	internal void RestoreFromSnapshot(AdventureUpgradeRunSnapshot snapshot)
@@ -127,6 +128,7 @@ internal sealed class AdventureUpgradeRunState
 		Clear();
 		if ((snapshot.SchemaVersion != 1
 			&& snapshot.SchemaVersion != 2
+			&& snapshot.SchemaVersion != 3
 			&& snapshot.SchemaVersion != AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
 			|| !AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(snapshot.CurrentAvatarStageNumber))
 		{
@@ -160,6 +162,11 @@ internal sealed class AdventureUpgradeRunState
 			{
 				_effectState.FinalDoubleQuestionRewardCountThisBattle = snapshot.FinalDoubleQuestionRewardCountThisBattle;
 				_effectState.FinalDoubleCaptureDamageActive = snapshot.FinalDoubleCaptureDamageActive;
+			}
+
+			if (snapshot.SchemaVersion >= 4)
+			{
+				_effectState.ClubFlourishStacks = snapshot.ClubFlourishStacks;
 			}
 
 			return;

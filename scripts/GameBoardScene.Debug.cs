@@ -29,6 +29,7 @@ public partial class GameBoardScene
 	private string _debugLastQuestionRewardItemCardId = string.Empty;
 	private bool _debugLeafyBladeProbeRunning;
 	private bool _debugBlackLedgerProbeRunning;
+	private bool _debugAdventureSuitLegendaryProbeRunning;
 	private int _debugBlackLedgerExpectedDamage;
 	private int _debugLeafyBladeTargetTableCardIndex = -1;
 	private TableCard? _debugLeafyBladeReplacementTableCard;
@@ -195,7 +196,259 @@ public partial class GameBoardScene
 		}
 
 		RecordAdventureAcquiredUpgrade(upgradeId);
-		ApplyAdventureUpgradeAcquisitionEffects(upgradeId, AdventureUpgradeTriggerSource.None);
+		_ = ApplyAdventureUpgradeAcquisitionEffectsAsync(
+			upgradeId,
+			AdventureUpgradeTriggerSource.None,
+			_turnSequenceGeneration);
+		return true;
+	}
+
+	public bool DebugStartAdventureSuitLegendaryProbe(
+		Godot.Collections.Dictionary result)
+	{
+		if (result == null
+			|| _debugAdventureSuitLegendaryProbeRunning
+			|| !ShouldUseAdventureUpgradeSystem()
+			|| player_count != 2)
+		{
+			return false;
+		}
+
+		result.Clear();
+		result["completed"] = false;
+		result["error"] = string.Empty;
+		_debugAdventureSuitLegendaryProbeRunning = true;
+		_ = RunDebugAdventureSuitLegendaryProbeAsync(result);
+		return true;
+	}
+
+	private async Task RunDebugAdventureSuitLegendaryProbeAsync(
+		Godot.Collections.Dictionary result)
+	{
+		try
+		{
+			if (!TryConfigureAdventureSuitLegendaryProbe(
+					out AdventureRunSessionStore? store,
+					out Dictionary<string, PlayingCard> cards)
+				|| store == null)
+			{
+				result["error"] = "Failed to configure the adventure suit legendary probe.";
+				return;
+			}
+
+			AdventureUpgradeRunState runState = store.GetRunState();
+			result["hearts_x"] = AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(
+				runState.GetAcquiredUpgradeIds(),
+				"hearts");
+			result["diamonds_x"] = AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(
+				runState.GetAcquiredUpgradeIds(),
+				"diamonds");
+			result["spades_x"] = AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(
+				runState.GetAcquiredUpgradeIds(),
+				"spades");
+
+			RecordAdventureAcquiredUpgrade("clubs_lush_growth");
+			await ApplyAdventureUpgradeAcquisitionEffectsAsync(
+				"clubs_lush_growth",
+				AdventureUpgradeTriggerSource.None,
+				_turnSequenceGeneration);
+			runState = store.GetRunState();
+			result["clubs_x"] = AdventureUpgradeEffectService.CountAcquiredSuitUpgrades(
+				runState.GetAcquiredUpgradeIds(),
+				"clubs");
+			result["acquisition_total_hand"] = GetTotalHandCardCount(MainPlayerIndex);
+			result["acquisition_item_hand"] = _playerItemHands[MainPlayerIndex].Count;
+			result["acquisition_flourish_stacks"] = runState.EffectState.ClubFlourishStacks;
+			result["acquisition_deck_count"] = _playerDecks[MainPlayerIndex].Count;
+
+			result["health_before"] = runState.CurrentHealth;
+			result["healing_applied"] = ApplyAdventureMainPlayerHealing(3, animate: false);
+			result["health_after_healing"] = runState.CurrentHealth;
+			ApplyAdventureMainPlayerHealing(0, animate: false);
+			result["health_after_zero_healing"] = runState.CurrentHealth;
+
+			runState.EffectState.FinalDoubleCaptureDamageActive = true;
+			store.ReplaceEffectState(runState.EffectState.Clone());
+			var playerDamageInput = new AdventureCaptureDamageInput(
+				BaseDamage: 10,
+				ScoringCardRawPoints: new[] { 2, 4, 4 },
+				ScoringCardResolvedPoints: new[] { 2, 4, 4 },
+				ScoringCardTableIndexes: new[] { 5, 3, 1 });
+			AdventureCaptureDamageResult playerCaptureDamage =
+				ResolveAdventureCaptureDamage(MainPlayerIndex, playerDamageInput);
+			AdventureCaptureDamageResult enemyCaptureDamage =
+				ResolveAdventureCaptureDamage(1, new AdventureCaptureDamageInput(BaseDamage: 2));
+			AdventureCaptureDamageResult zeroBasePlayerCaptureDamage =
+				ResolveAdventureCaptureDamage(MainPlayerIndex, new AdventureCaptureDamageInput(BaseDamage: 0));
+			result["player_capture_damage"] = playerCaptureDamage.FinalDamage;
+			result["all_gains_bonus_damage"] = playerCaptureDamage.AllGainsConvergeBonusDamage;
+			result["all_gains_feedback_table_index"] =
+				playerCaptureDamage.AllGainsConvergeScoringCardTableIndex;
+			result["enemy_capture_damage"] = enemyCaptureDamage.FinalDamage;
+			result["zero_base_player_capture_damage"] = zeroBasePlayerCaptureDamage.FinalDamage;
+
+			if (!ResetDebugAdventureSuitLegendaryProbeHandState(cards))
+			{
+				result["error"] = "Failed to reset the battle-start hand state.";
+				return;
+			}
+
+			ResetAdventureClubFlourishForNewBattle();
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			runState = store.GetRunState();
+			result["battle_start_total_hand"] = GetTotalHandCardCount(MainPlayerIndex);
+			result["battle_start_item_hand"] = _playerItemHands[MainPlayerIndex].Count;
+			result["battle_start_flourish_stacks"] = runState.EffectState.ClubFlourishStacks;
+			result["battle_start_deck_count"] = _playerDecks[MainPlayerIndex].Count;
+
+			if (_playerHands[MainPlayerIndex].Count == 0)
+			{
+				result["error"] = "The battle-start hand did not contain a base card.";
+				return;
+			}
+
+			_playerHands[MainPlayerIndex].RemoveAt(0);
+			RenderPlayerHands();
+			await RefillAdventureClubFlourishAsync(
+				_turnSequenceGeneration,
+				playDrawAnimations: false);
+			result["empty_deck_total_hand"] = GetTotalHandCardCount(MainPlayerIndex);
+			result["empty_deck_flourish_stacks"] = runState.EffectState.ClubFlourishStacks;
+
+			_playerDecks[MainPlayerIndex].Add(cards["Spades:9"]);
+			await RefillAdventureClubFlourishAsync(
+				_turnSequenceGeneration,
+				playDrawAnimations: false);
+			result["restored_deck_total_hand"] = GetTotalHandCardCount(MainPlayerIndex);
+			result["restored_deck_flourish_stacks"] = runState.EffectState.ClubFlourishStacks;
+
+			ShowPlayerStatusTooltip(MainPlayerIndex);
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			Control? tooltipContent = _playerStatusTooltipPanel == null
+				? null
+				: _playerStatusTooltipPanel.GetChildOrNull<Control>(0);
+			Vector2 tooltipContentMinimumSize = tooltipContent == null
+				? Vector2.Zero
+				: tooltipContent.GetCombinedMinimumSize();
+			result["tooltip_visible"] = _playerStatusTooltipPanel?.Visible ?? false;
+			result["tooltip_flourish_visible"] =
+				_playerStatusTooltipAdventureStatusLabel?.Visible ?? false;
+			result["tooltip_flourish_text"] =
+				_playerStatusTooltipAdventureStatusLabel?.Text ?? string.Empty;
+			result["tooltip_panel_height"] = _playerStatusTooltipPanel?.Size.Y ?? 0.0f;
+			result["tooltip_content_minimum_height"] = tooltipContentMinimumSize.Y;
+		}
+		catch (Exception exception)
+		{
+			result["error"] = exception.ToString();
+		}
+		finally
+		{
+			result["completed"] = true;
+			_debugAdventureSuitLegendaryProbeRunning = false;
+		}
+	}
+
+	private bool TryConfigureAdventureSuitLegendaryProbe(
+		out AdventureRunSessionStore? store,
+		out Dictionary<string, PlayingCard> cards)
+	{
+		store = GetAdventureRunSessionStore();
+		cards = new Dictionary<string, PlayingCard>(StringComparer.Ordinal);
+		AdventureUpgradeRunState? initialRunState = store?.GetRunState();
+		if (store == null
+			|| initialRunState?.IsActive != true
+			|| !TryLoadAdventureTutorialCards(
+				new[]
+				{
+					("Hearts", "5"),
+					("Diamonds", "5"),
+					("Spades", "5"),
+					("Clubs", "5"),
+					("Hearts", "6"),
+					("Clubs", "2"),
+					("Diamonds", "7"),
+					("Spades", "9"),
+				},
+				out cards))
+		{
+			return false;
+		}
+
+		int avatarStageNumber = initialRunState.CurrentAvatarStageNumber;
+		store.BeginNewRun(avatarStageNumber);
+		store.MarkRunStartUpgradeGranted();
+		foreach (string upgradeId in new[]
+		{
+			"hearts_warm_current_supply",
+			"hearts_blood_tide_resonance",
+			"diamonds_small_insurance",
+			"diamonds_all_gains_converge",
+			"spades_black_ledger",
+			"spades_black_tide_dominion",
+			"clubs_miss_climb_growth",
+			"clubs_borrow_suit_set",
+			"clubs_linked_stems",
+		})
+		{
+			store.AcquireUpgrade(upgradeId);
+		}
+
+		store.SetHealth(10, 20);
+		_playerScores[MainPlayerIndex] = 10;
+		_playerScores[1] = 100;
+		_winnerPlayerIndex = -1;
+		return ResetDebugAdventureSuitLegendaryProbeHandState(cards);
+	}
+
+	private bool ResetDebugAdventureSuitLegendaryProbeHandState(
+		IReadOnlyDictionary<string, PlayingCard> cards)
+	{
+		ItemCard? createdItemCard = CreateItemCard(ItemCardCatalog.DrawCardItemCardId);
+		if (!cards.TryGetValue("Hearts:5", out PlayingCard heartsFive)
+			|| !cards.TryGetValue("Diamonds:5", out PlayingCard diamondsFive)
+			|| !cards.TryGetValue("Spades:5", out PlayingCard spadesFive)
+			|| !cards.TryGetValue("Clubs:5", out PlayingCard clubsFive)
+			|| !cards.TryGetValue("Hearts:6", out PlayingCard heartsSix)
+			|| !cards.TryGetValue("Clubs:2", out PlayingCard clubsTwo)
+			|| !cards.TryGetValue("Diamonds:7", out PlayingCard diamondsSeven)
+			|| !cards.TryGetValue("Spades:9", out PlayingCard spadesNine)
+			|| !createdItemCard.HasValue)
+		{
+			return false;
+		}
+
+		ItemCard itemCard = createdItemCard.Value;
+		_playerDecks.Clear();
+		_playerHands.Clear();
+		_playerItemHands.Clear();
+		_tableCards.Clear();
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerDecks.Add(new List<PlayingCard>());
+			_playerHands.Add(new List<PlayingCard>());
+			_playerItemHands.Add(new List<ItemCard>());
+		}
+
+		_playerHands[MainPlayerIndex].Add(heartsFive);
+		_playerHands[MainPlayerIndex].Add(diamondsFive);
+		_playerHands[MainPlayerIndex].Add(spadesFive);
+		_playerHands[MainPlayerIndex].Add(clubsFive);
+		_playerHands[MainPlayerIndex].Add(heartsSix);
+		_playerItemHands[MainPlayerIndex].Add(itemCard);
+		_playerDecks[MainPlayerIndex].Add(clubsTwo);
+		_playerDecks[MainPlayerIndex].Add(diamondsSeven);
+		_playerHands[1].Add(spadesNine);
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		UpdatePlayerScoreMeter(MainPlayerIndex, false);
+		UpdatePlayerScoreMeter(1, false);
 		return true;
 	}
 
@@ -417,6 +670,7 @@ public partial class GameBoardScene
 		};
 		var rawPoints = new List<int>();
 		var resolvedPoints = new List<int>();
+		var scoringTableIndexes = new List<int>();
 		bool includeEndpoints = AdventureUpgradeEffectService.ResolveClubCaptureScoring(
 			GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds() ?? Array.Empty<string>())
 			.IncludeCaptureEndpointsInScoring;
@@ -427,11 +681,13 @@ public partial class GameBoardScene
 			new HashSet<int> { 1 },
 			rawPoints,
 			resolvedPoints,
+			scoringTableIndexes,
 			includeEndpoints);
 		int scoreFillVisualCount = includeEndpoints ? 3 : 1;
 		result["capture_start_index"] = 0;
 		result["raw_point_count"] = rawPoints.Count;
 		result["resolved_point_count"] = resolvedPoints.Count;
+		result["scoring_table_index_count"] = scoringTableIndexes.Count;
 		result["raw_point_sum"] = SumDebugPoints(rawPoints);
 		result["resolved_point_sum"] = SumDebugPoints(resolvedPoints);
 		result["endpoint_points"] = endpointPoints;
