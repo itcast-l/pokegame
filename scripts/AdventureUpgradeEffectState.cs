@@ -21,7 +21,6 @@ internal sealed class AdventureUpgradeEffectState
 	internal const int MaxQuestionRewardCount = 10;
 	internal const int MaxPermanentCaptureDamageBonus = 5;
 	internal const int MaxHealingOverflowRemainder = 3;
-	internal const int MaxHighReturnCarryBonus = 2;
 	internal const int MaxClubMissClimbGrowthStacks = 9;
 
 	private static readonly IReadOnlyDictionary<string, AdventureUpgradeEffectStateFieldMetadata> Metadata =
@@ -34,7 +33,6 @@ internal sealed class AdventureUpgradeEffectState
 				[nameof(FinalDoubleCaptureDamageActive)] = RunField(1),
 				[nameof(HealingOverflowRemainder)] = RunField(MaxHealingOverflowRemainder),
 				[nameof(NextCaptureDamageBonus)] = BattleField(int.MaxValue),
-				[nameof(HighReturnBonusIncludedInNextCaptureDamageBonus)] = BattleField(MaxHighReturnCarryBonus),
 				[nameof(NextTurnHealAmount)] = NextTurnCarryField(int.MaxValue),
 				[nameof(NextTurnDrawCount)] = NextTurnCarryField(int.MaxValue),
 				[nameof(ClubShortBranchReturnUsedThisTurn)] = TurnField(1),
@@ -57,7 +55,6 @@ internal sealed class AdventureUpgradeEffectState
 	internal bool FinalDoubleCaptureDamageActive { get; set; }
 	internal int HealingOverflowRemainder { get; set; }
 	internal int NextCaptureDamageBonus { get; set; }
-	internal int HighReturnBonusIncludedInNextCaptureDamageBonus { get; set; }
 	internal int NextTurnHealAmount { get; set; }
 	internal int NextTurnDrawCount { get; set; }
 	internal bool ClubShortBranchReturnUsedThisTurn { get; set; }
@@ -79,10 +76,6 @@ internal sealed class AdventureUpgradeEffectState
 			0,
 			MaxHealingOverflowRemainder);
 		NextCaptureDamageBonus = Math.Max(0, NextCaptureDamageBonus);
-		HighReturnBonusIncludedInNextCaptureDamageBonus = Math.Clamp(
-			HighReturnBonusIncludedInNextCaptureDamageBonus,
-			0,
-			Math.Min(MaxHighReturnCarryBonus, NextCaptureDamageBonus));
 		NextTurnHealAmount = Math.Max(0, NextTurnHealAmount);
 		NextTurnDrawCount = Math.Max(0, NextTurnDrawCount);
 		ClubMissClimbGrowthStacks = Math.Clamp(
@@ -114,7 +107,6 @@ internal sealed class AdventureUpgradeEffectState
 		ClearTurnScope();
 		ClearNextTurnCarryScope();
 		NextCaptureDamageBonus = 0;
-		HighReturnBonusIncludedInNextCaptureDamageBonus = 0;
 		ClubMissClimbGrowthStacks = 0;
 	}
 
@@ -146,7 +138,6 @@ internal sealed class AdventureUpgradeEffectState
 		FinalDoubleCaptureDamageActive = other.FinalDoubleCaptureDamageActive;
 		HealingOverflowRemainder = other.HealingOverflowRemainder;
 		NextCaptureDamageBonus = other.NextCaptureDamageBonus;
-		HighReturnBonusIncludedInNextCaptureDamageBonus = other.HighReturnBonusIncludedInNextCaptureDamageBonus;
 		NextTurnHealAmount = other.NextTurnHealAmount;
 		NextTurnDrawCount = other.NextTurnDrawCount;
 		ClubShortBranchReturnUsedThisTurn = other.ClubShortBranchReturnUsedThisTurn;

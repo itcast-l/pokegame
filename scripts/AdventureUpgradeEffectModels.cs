@@ -45,7 +45,6 @@ internal readonly record struct AdventureCaptureDamageInput(
 
 internal readonly record struct AdventureCaptureDamageResult(
 	int FinalDamage,
-	bool ReArmedNextCaptureDamageBonus,
 	int WholeCaptureMultiplier = 1,
 	bool DamageCapped = false);
 
@@ -112,4 +111,3 @@ internal readonly record struct AdventureQuestionRejudgeRuleResult(
 	bool Offered,
 	bool ConsumesOpportunity,
 	bool ShouldReroll);
-

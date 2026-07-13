@@ -1027,7 +1027,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "可保留原奖励或重掷 1 次；无论选择哪项都会消耗本战机会。"
+						"value": "可保留原奖励或重掷；仅重掷会消耗本战机会。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1051,7 +1051,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "每战首次获得问号奖励时"
+						"value": "获得问号奖励且本战尚未重掷时"
 					}
 				}
 			},
@@ -1206,43 +1206,6 @@
 			{
 				"_category_id": "adventure_suit_upgrades",
 				"_icon_color": "00000000",
-				"_id": "diamonds_high_return_bonus",
-				"_index": 21,
-				"_name": "高额返利",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "下次收牌伤害 +2。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "高伤滚利"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 80
-					},
-					"suit": {
-						"type": "string",
-						"value": "diamonds"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "单次收牌伤害（不含本次消费的 +2 返利）达到 7 及以上时"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
 				"_id": "diamonds_question_mark_echo",
 				"_index": 22,
 				"_name": "问号回响",
@@ -1323,7 +1286,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "从下一次收牌起永久伤害 +1，最多累计 +5。"
+						"value": "每次获得道具，永久+1伤害，当前获得 {current_item_count}。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1347,7 +1310,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "每次获得问号奖励时"
+						"value": "每次获得道具时"
 					}
 				}
 			},

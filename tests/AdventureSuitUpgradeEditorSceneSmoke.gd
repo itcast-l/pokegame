@@ -3,7 +3,7 @@ extends SceneTree
 const SCENE_PATH := "res://scenes/adventure_suit_upgrade_editor_scene.tscn"
 const EDITOR_PATH := "Editor"
 const ROWS_PATH := "Editor/RowsScroll/RowsContainer"
-const EXPECTED_ROW_COUNT := 54
+const EXPECTED_ROW_COUNT := 53
 const KEY_EXPECTED_IDS := [
 	"hearts_warm_current_supply",
 	"hearts_overflow_growth",

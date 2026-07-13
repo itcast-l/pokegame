@@ -574,8 +574,7 @@ public partial class GameBoardScene
 		if (!ShouldUseAdventureUpgradeSystem())
 		{
 			return new AdventureCaptureDamageResult(
-				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
-				false);
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
@@ -583,8 +582,7 @@ public partial class GameBoardScene
 		if (store == null || runState?.IsActive != true)
 		{
 			return new AdventureCaptureDamageResult(
-				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
-				false);
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
 		}
 
 		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
@@ -604,16 +602,14 @@ public partial class GameBoardScene
 		if (!ShouldUseAdventureUpgradeSystem())
 		{
 			return new AdventureCaptureDamageResult(
-				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
-				false);
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
 		}
 
 		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return new AdventureCaptureDamageResult(
-				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta),
-				false);
+				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
 		}
 
 		return AdventureUpgradeEffectService.ApplyCaptureDamage(
@@ -728,6 +724,7 @@ public partial class GameBoardScene
 		}
 
 		store.ReplaceEffectState(runState.EffectState.Clone());
+		RenderPlayerHands();
 		return result;
 	}
 

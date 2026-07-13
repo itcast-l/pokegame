@@ -44,7 +44,7 @@ internal static partial class Program
 		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
 		Run("adventure upgrade ids expose current active upgrades across suits", AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits);
-		Run("adventure suit upgrade catalog exposes only 54 active upgrades", AdventureSuitUpgradeCatalogExposesOnlyActiveUpgrades);
+		Run("adventure suit upgrade catalog exposes only 53 active upgrades", AdventureSuitUpgradeCatalogExposesOnlyActiveUpgrades);
 		Run("adventure suit counting deduplicates active ids", AdventureSuitCountingDeduplicatesActiveIds);
 		Run("adventure upgrade run snapshot v5 restores legacy v1 saves", AdventureUpgradeRunSnapshotV3RestoresLegacyV1Saves);
 		Run("adventure upgrade run snapshot v4 filters retired flourish state", AdventureUpgradeRunSnapshotV4FiltersRetiredFlourishState);
@@ -62,12 +62,11 @@ internal static partial class Program
 		Run("adventure miss effects include club table rewrites", AdventureMissEffectsIncludeClubTableRewrites);
 		Run("adventure turn start effects are consumed once", AdventureTurnStartEffectsAreConsumedOnce);
 		Run("adventure capture damage applies minimum and final double in order", AdventureCaptureDamageAppliesMinimumAndFinalDoubleInOrder);
-		Run("adventure capture damage consumes carry bonus without self rearming", AdventureCaptureDamageConsumesCarryBonusAndReArmsHighReturnBonus);
 		Run("adventure capture damage applies first capture pressure once per battle", AdventureCaptureDamageAppliesFirstCapturePressureOncePerBattle);
 		Run("adventure capture damage applies multi card premium and top prize repeat", AdventureCaptureDamageAppliesMultiCardPremiumAndTopPrizeRepeat);
 		Run("adventure capture damage does not apply full payout below six scoring cards", AdventureCaptureDamageDoesNotApplyFullPayoutBelowSixScoringCards);
 		Run("adventure capture damage doubles full payout at six scoring cards after final additions", AdventureCaptureDamageDoublesFullPayoutAtSixScoringCardsAfterFinalAdditions);
-		Run("adventure capture damage stacks full payout with final double before high return bonus", AdventureCaptureDamageStacksFullPayoutWithFinalDoubleBeforeHighReturnBonus);
+		Run("adventure capture damage stacks full payout with final double", AdventureCaptureDamageStacksFullPayoutWithFinalDouble);
 		Run("adventure capture damage adds bounty amplify when reward question is captured", AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured);
 		Run("adventure capture damage adds question echo point bonus per scoring card", AdventureCaptureDamageAddsQuestionEchoPointBonusPerScoringCard);
 		Run("adventure post capture heal triggers after six damage", AdventurePostCaptureHealTriggersAfterSixDamage);

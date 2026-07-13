@@ -54,17 +54,17 @@ func _run() -> void:
 		_fail("Expected headless rejudge flow to keep the original reward by default")
 		return
 
-	if not bool(board.call("DebugHasAdventureQuestionRejudgeUsed")):
-		_fail("Expected keeping the first reward to consume the once-per-battle opportunity")
+	if bool(board.call("DebugHasAdventureQuestionRejudgeUsed")):
+		_fail("Expected keeping the first reward to preserve the once-per-battle reroll")
 		return
 
-	var second_result := String(board.call("DebugResolveAdventureQuestionRewardRejudge", "lens"))
-	if second_result != "lens":
-		_fail("Expected later rewards to keep the original reward after the opportunity was consumed")
+	var second_result := String(board.call("DebugResolveAdventureQuestionRewardRejudgeWithChoice", "lens", true))
+	if second_result.is_empty():
+		_fail("Expected the next reward to support the preserved reroll")
 		return
 
 	if not bool(board.call("DebugHasAdventureQuestionRejudgeUsed")):
-		_fail("Expected the once-per-battle opportunity to remain consumed")
+		_fail("Expected choosing reroll to consume the once-per-battle opportunity")
 		return
 
 	var third_result := String(board.call("DebugResolveAdventureQuestionRewardRejudgeWithChoice", "shuffle", true))

@@ -10,6 +10,7 @@ internal static partial class Program
 	{
 		"hearts_blood_tide_resonance",
 		"diamonds_all_gains_converge",
+		"diamonds_high_return_bonus",
 		"spades_black_tide_dominion",
 		"clubs_lush_growth",
 	};
@@ -20,6 +21,7 @@ internal static partial class Program
 		Run("adventure upgrade manifest is immutable and applies legacy migration policy", AdventureUpgradeManifestIsImmutableAndAppliesLegacyMigrationPolicy);
 		Run("adventure upgrade manifest rejects missing runtime and catalog entries", AdventureUpgradeManifestRejectsContractDrift);
 		Run("adventure upgrade acquisition requires a ready manifest whitelist", AdventureUpgradeAcquisitionRequiresReadyManifestWhitelist);
+		Run("question mark interest description shows current item count", QuestionMarkInterestDescriptionShowsCurrentItemCount);
 		Run("adventure upgrade snapshots migrate v1 through v4 into canonical v5", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
 		Run("adventure upgrade v5 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
 		Run("adventure upgrade snapshots reject invalid schema and stage values", AdventureUpgradeSnapshotsRejectInvalidSchemaAndStageValues);
@@ -28,18 +30,40 @@ internal static partial class Program
 		Run("adventure run store preserves invalid payloads and deduplicates warnings", AdventureRunStorePreservesInvalidPayloadsAndDeduplicatesWarnings);
 	}
 
+	private static void QuestionMarkInterestDescriptionShowsCurrentItemCount()
+	{
+		Equal(
+			"每次获得道具，永久+1伤害，当前获得 4。",
+			AdventureUpgradeDescriptionRules.Format(
+				"diamonds_question_mark_interest",
+				"每次获得道具，永久+1伤害，当前获得 {current_item_count}。",
+				4));
+		Equal(
+			"Fallback copy (3)",
+			AdventureUpgradeDescriptionRules.Format(
+				"diamonds_question_mark_interest",
+				"Fallback copy",
+				3));
+		Equal(
+			"Unrelated {current_item_count}",
+			AdventureUpgradeDescriptionRules.Format(
+				"hearts_thick_blood",
+				"Unrelated {current_item_count}",
+				9));
+	}
+
 	private static void AdventureUpgradeManifestMatchesPandoraAndLocalizationBidirectionally()
 	{
 		List<AdventureSuitUpgradeDefinition> definitions = ReadEnabledAdventureUpgradeDefinitions();
-		Equal(54, definitions.Count);
-		Equal(54, AdventureUpgradeRuntimeContract.All.Count);
+		Equal(53, definitions.Count);
+		Equal(53, AdventureUpgradeRuntimeContract.All.Count);
 
 		var catalog = new AdventureSuitUpgradeCatalog();
 		GetCatalogDefinitionList(catalog).AddRange(definitions);
 		True(catalog.TryCreateManifest(out AdventureUpgradeManifest manifest));
 		True(manifest.IsReady);
-		Equal(54, manifest.EnabledIds.Count);
-		Equal(54, manifest.Entries.Count);
+		Equal(53, manifest.EnabledIds.Count);
+		Equal(53, manifest.Entries.Count);
 		var suitCounts = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
 			["hearts"] = 0,
@@ -77,11 +101,11 @@ internal static partial class Program
 		}
 
 		Equal(14, suitCounts["hearts"]);
-		Equal(14, suitCounts["diamonds"]);
+		Equal(13, suitCounts["diamonds"]);
 		Equal(12, suitCounts["spades"]);
 		Equal(14, suitCounts["clubs"]);
 		Equal(24, rarityCounts["common"]);
-		Equal(20, rarityCounts["rare"]);
+		Equal(19, rarityCounts["rare"]);
 		Equal(10, rarityCounts["legendary"]);
 		True(catalog.TryCreateManifest(out AdventureUpgradeManifest cachedManifest));
 		True(ReferenceEquals(manifest, cachedManifest));
@@ -651,20 +675,17 @@ internal static partial class Program
 			"单次收牌伤害为 1 至 4 时",
 			"伤害按 5 结算；0 伤害仍为 0。");
 		AssertPandoraCopy(definitionsById, "diamonds_rejudge_once",
-			"每战首次获得问号奖励时",
-			"可保留原奖励或重掷 1 次；无论选择哪项都会消耗本战机会。");
+			"获得问号奖励且本战尚未重掷时",
+			"可保留原奖励或重掷；仅重掷会消耗本战机会。");
 		AssertPandoraCopy(definitionsById, "diamonds_question_mark_windfall",
 			"获得问号奖励时",
 			"run 内问号计数最多 10；按当前序号立刻直伤，单次最多 5。");
-		AssertPandoraCopy(definitionsById, "diamonds_high_return_bonus",
-			"单次收牌伤害（不含本次消费的 +2 返利）达到 7 及以上时",
-			"下次收牌伤害 +2。");
 		AssertPandoraCopy(definitionsById, "diamonds_question_mark_echo",
 			"本 run 首次问号奖励完成后",
 			"从下一次收牌起，每张计分牌点数 +1。");
 		AssertPandoraCopy(definitionsById, "diamonds_question_mark_interest",
-			"每次获得问号奖励时",
-			"从下一次收牌起永久伤害 +1，最多累计 +5。");
+			"每次获得道具时",
+			"每次获得道具，永久+1伤害，当前获得 {current_item_count}。");
 		AssertPandoraCopy(definitionsById, "diamonds_top_prize_repeat",
 			"成功收牌且至少有 3 张计分牌时",
 			"最高点数的 1 张计分牌额外结算 1 次；并列取收牌前最左。");
@@ -777,116 +798,136 @@ internal static partial class Program
 	{
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_WARM_CURRENT_SUPPLY",
 			"After the first capture each real turn: draw 1.",
-			"每个真实回合首次收牌后：抽1。",
-			"每個真實回合首次收牌後：抽1。");
+			"首次收牌后，额外抽1。",
+			"首次收牌後，額外抽1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_MISS_BANDAGE",
 			"When a miss truly ends your real turn: at the next real turn start, heal 3 and draw 1.",
-			"空打且行动权真正交给敌方时：下个真实回合开始治疗3并抽1。",
-			"空打且行動權真正交給敵方時：下個真實回合開始治療3並抽1。");
+			"未收取时，下个回合治疗3并抽1。",
+			"未收取時，下個回合治療3並抽1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_CHAIN_TIDE_BREATH",
 			"On your second capture in the same real turn: draw 1 and recover 2 HP.",
-			"同一真实回合第二次收牌时：抽1并回复2。",
-			"同一真實回合第二次收牌時：抽1並回復2。");
+			"第二次收牌时，额外抽1治疗2。",
+			"第二次收牌時，額外抽1治療2。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_RED_TIDE_RETURN",
 			"Once per battle, when HP falls from 50% or more to below 50%: recover 5 HP and draw 2.",
-			"每战一次，生命从50%及以上降到50%以下时：回复5并抽2。",
-			"每戰一次，生命從50%及以上降到50%以下時：回復5並抽2。");
+			"生命低于50%时，治疗5并抽2。",
+			"生命低於50%時，治療5並抽2。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_ENCHANTED_RECOVERY",
 			"When a real attached item effect triggers: heal 3 once this action; if the action captures, draw 1.",
-			"本动作真实附着效果触发时治疗3（每动作最多一次）；若成功收牌再抽1。",
-			"本動作真實附著效果觸發時治療3（每動作最多一次）；若成功收牌再抽1。");
+			"特殊牌触发时，治疗1，收牌后额外抽1。",
+			"特殊牌觸發時，治療1，收牌後額外抽1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_RETURN_TIDE_HEART",
 			"After the first capture each real turn: draw 1, recover 2; after the second, draw 1, recover 3.",
-			"每个真实回合首次收牌后抽1并回复2；第二次收牌后再抽1并回复3。",
-			"每個真實回合首次收牌後抽1並回復2；第二次收牌後再抽1並回復3。");
+			"首次收牌后，治疗2并抽1，二次收牌时，治疗3抽1。",
+			"首次收牌後，治療2並抽1，二次收牌時，治療3抽1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_REVIVAL_DRAW",
 			"Once per battle, when HP falls from 25% or more to below 25%: recover 8 HP and draw 2.",
-			"每战一次，生命从25%及以上降到25%以下时：回复8并抽2。",
-			"每戰一次，生命從25%及以上降到25%以下時：回復8並抽2。");
+			"每战斗一次，生命少于25%时，治疗8并抽2。",
+			"每戰鬥一次，生命少於25%時，治療8並抽2。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_OVERFLOW_GROWTH",
 			"Every 4 overflow healing raises Max HP by 1, up to 150; carry up to 3 overflow between heals.",
-			"每累计4点溢出治疗，Max HP+1（全run最高150）；余数最多保留3。",
-			"每累計4點溢出治療，Max HP+1（全run最高150）；餘數最多保留3。");
+			"每4点溢出治疗，最大HP+1。",
+			"每4點溢出治療，最大HP+1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_SMALL_INSURANCE",
 			"When capture damage is 1-4: resolve it as 5. Zero damage stays zero.",
-			"单次收牌伤害为1-4时按5点结算；0伤害仍为0。",
-			"單次收牌傷害為1-4時按5點結算；0傷害仍為0。");
+			"单次伤害小于4时，按5结算。",
+			"單次傷害小於4時，按5結算。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_REJUDGE_ONCE",
-			"At the first question reward each battle: keep it or reroll once; either choice consumes the opportunity.",
-			"每战首次问号奖励可保留或重掷一次；无论选择哪项都会消耗机会。",
-			"每戰首次問號獎勵可保留或重擲一次；無論選擇哪項都會消耗機會。");
+			"You may reroll one question reward per battle; keeping it preserves the opportunity for a later reward.",
+			"每战可重掷一次问号奖励；选择保留不会消耗机会，可在后续奖励中使用。",
+			"每戰可重擲一次問號獎勵；選擇保留不會消耗機會，可在後續獎勵中使用。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_WINDFALL",
 			"On the Nth question reward (up to 10): immediately deal min(N, 5) damage.",
-			"第N次问号奖励（最多计10次）立即造成min(N,5)点伤害。",
-			"第N次問號獎勵（最多計10次）立即造成min(N,5)點傷害。");
-		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_HIGH_RETURN_BONUS",
-			"When a capture deals 7+ damage excluding the +2 rebate it consumes: the next capture gets +2 damage.",
-			"本次消费的+2返利不计入判断；其余伤害达到7时，下次收牌伤害+2。",
-			"本次消費的+2返利不計入判斷；其餘傷害達到7時，下次收牌傷害+2。");
+			"根据道具获得次数造成伤害。",
+			"根據道具獲得次數造成傷害。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_ECHO",
 			"After the first question reward in this run: from the next capture, every scoring card gets +1.",
-			"本run首次问号奖励完成后，从下一次收牌起每张计分牌+1。",
-			"本run首次問號獎勵完成後，從下一次收牌起每張計分牌+1。");
+			"下次获得道具后激活，每张牌的伤害+1。",
+			"下次獲得道具後啟用，每張牌的傷害+1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_INTEREST",
-			"On question reward: future capture damage +1 permanently, up to +5; applies from the next capture.",
-			"每次问号奖励使后续收牌伤害永久+1（最多+5），从下一次收牌生效。",
-			"每次問號獎勵使後續收牌傷害永久+1（最多+5），從下一次收牌生效。");
+			"Each item gained permanently adds +1 damage. Items gained: {current_item_count}.",
+			"每次获得道具，永久+1伤害，当前获得 {current_item_count}。",
+			"每次獲得道具，永久+1傷害，目前獲得 {current_item_count}。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_TOP_PRIZE_REPEAT",
 			"On a capture with at least 3 scoring cards: the highest scoring card resolves one extra time; ties use the leftmost card before capture.",
-			"收牌至少有3张计分牌时，最高点计分牌额外结算1次；并列取收牌前最左。",
-			"收牌至少有3張計分牌時，最高點計分牌額外結算1次；並列取收牌前最左。");
+			"收取5张以上时，最高牌额外结算一次。",
+			"收取5張以上時，最高牌額外結算一次。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_FULL_PAYOUT",
 			"On capture with 6+ scoring cards: add +1 to the capture multiplier bucket.",
-			"收牌含至少6张计分牌时：本次整次倍率桶+1。",
-			"收牌含至少6張計分牌時：本次整次倍率桶+1。");
+			"收取至少8张牌时，倍率+1。",
+			"收取至少8張牌時，倍率+1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_DIAMONDS_FINAL_DOUBLE",
 			"After completing the 10th question reward: add +1 to the capture multiplier bucket from the next capture.",
-			"完成第10次问号奖励后，从下一次收牌起整次倍率桶+1。",
-			"完成第10次問號獎勵後，從下一次收牌起整次倍率桶+1。");
+			"获得10次道具后，倍率+1。",
+			"獲得10次道具後，倍率+1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_DARK_HARBOR_REVEAL",
 			"After an enemy capture: the next played card enters face up.",
-			"敌人成功收牌后：下一张牌正面入桌；敌人空打不触发。",
-			"敵人成功收牌後：下一張牌正面入桌；敵人空打不觸發。");
+			"敌人收牌后，下张牌正面出牌。",
+			"敵人收牌後，下張牌正面出牌。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_WRONG_SHORE_LINEUP",
 			"After an enemy capture: the next played card goes to the far left.",
-			"敌人成功收牌后：下一张牌放到最左；敌人空打不触发。",
-			"敵人成功收牌後：下一張牌放到最左；敵人空打不觸發。");
+			"敌人收牌后，下张牌放置最左。",
+			"敵人收牌後，下張牌放置最左。");
+		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_MISSED_BEAT_BLUNT_HURT",
+			"After an enemy miss: if the next card captures, its damage is -3.",
+			"敌人空打时，下次收牌伤害-3。",
+			"敵人空打時，下次收牌傷害-3。");
+		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_MISS_BLEED",
+			"After an enemy miss with 6+ table cards: deal 2 direct damage to that enemy.",
+			"敌人空打并且桌面至少6张牌时，收到2点伤害。",
+			"敵人空打並且桌面至少6張牌時，收到2點傷害。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_REVERSE_CAPTURE_TAX",
 			"When an enemy captures: each old middle table card gives -1 damage; with Exaction, use only the stronger reduction.",
-			"敌人收牌时，中间每有1张旧桌牌伤害-1；与盘剥同时生效时只取较强减伤。",
-			"敵人收牌時，中間每有1張舊桌牌傷害-1；與盤剝同時生效時只取較強減傷。");
+			"根据敌人收取牌的数量减免伤害。",
+			"根據敵人收取牌的數量減免傷害。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_EXACTION",
 			"When an enemy capture includes an old middle table card: damage -4; with Reverse Capture Tax, use only the stronger reduction.",
-			"敌人收牌且中间含旧桌牌时伤害-4；与逆收税同时生效时只取较强减伤。",
-			"敵人收牌且中間含舊桌牌時傷害-4；與逆收稅同時生效時只取較強減傷。");
+			"敌人收牌伤害-4。",
+			"敵人收牌傷害-4。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_HUNT_ORDER",
 			"At your real turn start: mark the oldest old table card; taking it gives +6 damage.",
-			"你的真实回合开始时标记最早旧桌牌；收走它时伤害+6。",
-			"你的真實回合開始時標記最早舊桌牌；收走它時傷害+6。");
+			"回合开始时标记首牌，该牌点数+6。",
+			"回合開始時標記首牌，該牌點數+6。");
+		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_TRACE_HUNT",
+			"After you capture: mark the rightmost old table card; taking it later gives +4 damage.",
+			"收牌后，标记相邻牌，额外提供4点伤害。",
+			"收牌後，標記相鄰牌，額外提供4點傷害。");
+		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_TAIL_PRESSURE",
+			"When an enemy captures exactly 7 cards: its played tail card stays face-up on the table.",
+			"敌人收取的牌等于7时，打出的牌留在桌面。",
+			"敵人收取的牌等於7時，打出的牌留在桌面。");
+		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_RETURN_TIDE_MISORDER",
+			"After an enemy miss with an old table card: the next card goes left of the oldest old card.",
+			"敌人空打时，下张牌放最左。",
+			"敵人空打時，下張牌放最左。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_INTERCEPT_BEAT",
 			"After an enemy miss: immediately play 1 extra base card; after the entire derived chain resolves, your normal real turn still begins.",
-			"敌人空打后立刻额外打1张基础牌；整条派生链结束后仍正常开始真实回合。",
-			"敵人空打後立刻額外打1張基礎牌；整條派生鏈結束後仍正常開始真實回合。");
+			"敌人空打时，可立即出一张牌。",
+			"敵人空打時，可立即出一張牌。");
+		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_SPADES_BLACK_LEDGER",
+			"After an enemy captures, the highest-value scoring table card goes into your deck; this capture deals damage normally.",
+			"敌人收取时，点数最高的牌进入你的牌堆。",
+			"敵人收取時，點數最高的牌進入你的牌堆。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_SHORT_BRANCH_RETURN",
 			"Once per real turn, when the complete capture has exactly 2 unique base cards: return both if hand capacity allows.",
-			"每真实回合一次；完整收牌集合恰好含2张唯一基础牌且手牌容量足够时，两张都回手。",
-			"每真實回合一次；完整收牌集合恰好含2張唯一基礎牌且手牌容量足夠時，兩張都回手。");
+			"只收取两张牌时，可回手。",
+			"只收取兩張牌時，可回手。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_GAP_ROOTING",
 			"Once per real turn, on a capture with no middle scoring card: also take the nearest base card to the left; it does not score.",
-			"每真实回合一次；收牌且中间没有计分牌时，额外收走区间左侧最近1张基础牌，该牌不计分。",
-			"每真實回合一次；收牌且中間沒有計分牌時，額外收走區間左側最近1張基礎牌，該牌不計分。");
+			"收取并且没有记分时，额外收走相邻牌。",
+			"收取並且沒有記分時，額外收走相鄰牌。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_PRIMARY_ROOT_RETURN",
 			"When the played base card captures: return it after resolution if hand space allows; with Climb Canopy, Primary Root returns it only once.",
-			"本次打出的基础牌成功收牌时，手牌有空位则结算后回手；与攀棚同时满足时由主根复返覆盖且只回手一次。",
-			"本次打出的基礎牌成功收牌時，手牌有空位則結算後回手；與攀棚同時滿足時由主根復返覆蓋且只回手一次。");
+			"收牌后，打出的牌回手。",
+			"收牌後，打出的牌回手。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_MISS_CLIMB_GROWTH",
 			"On each miss: gain 1 Branch stack; numbered cards keep their original rank and additionally match at original rank + Branch stacks; clear all Branch stacks after capture.",
-			"每次空打积1层攀枝；数字基础牌保留原点数，并额外按原点数+攀枝层数匹配；成功收牌后清空。",
-			"每次空打積1層攀枝；數字基礎牌保留原點數，並額外按原點數+攀枝層數匹配；成功收牌後清空。");
+			"每次空打可为手牌点数+1。",
+			"每次空打可為手牌點數+1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_BORROW_SUIT_SET",
 			"After a question reward, keep one armed use (repeated gains only refresh it): this real turn's next numbered base card uses suit only when no rank or alternate-rank match exists; a valid play consumes it, and real-turn or battle end clears it.",
-			"问号奖励后保持1次armed（重复获得只刷新）；本真实回合下一张数字基础牌仅在无点数及替代点数候选时按花色兜底；合法出牌后消费，真实回合或战斗结束时清除。",
-			"問號獎勵後保持1次armed（重複獲得只刷新）；本真實回合下一張數字基礎牌僅在無點數及替代點數候選時按花色兜底；合法出牌後消費，真實回合或戰鬥結束時清除。");
+			"获得道具后，下一张牌可同时按花色收取。",
+			"獲得道具後，下一張牌可同時按花色收取。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_CONTINUE_BRANCH",
 			"Once per real turn, on a miss with 6+ table cards: play 1 extra base card. Extra actions cannot trigger this.",
 			"每真实回合一次；空打后桌面至少6张时额外出1张基础牌；额外行动不能再次触发。",

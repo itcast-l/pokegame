@@ -10,7 +10,6 @@ internal static partial class Program
 		Run("adventure damage event caps at target max health 150 percent", DamageEventCapsAtTargetMaxHealth150Percent);
 		Run("adventure question run progress caps and applies on the next capture", QuestionRunProgressCapsAndAppliesNextCapture);
 		Run("QuestionRewardModifiersApplyFromNextCapture", QuestionRewardModifiersApplyFromNextCapture);
-		Run("adventure high return cannot self rearm", HighReturnCannotSelfRearm);
 		Run("adventure effect arithmetic saturates instead of wrapping", SaturatingArithmetic);
 		Run("adventure stronger enemy damage reduction wins", StrongerEnemyDamageReductionWins);
 		Run("adventure low health rescues aggregate from one damage snapshot", LowHealthRescuesAggregateFromSameDamageSnapshot);
@@ -19,7 +18,7 @@ internal static partial class Program
 		Run("adventure borrow suit set prefers rank before suit fallback", BorrowSuitSetRankFirstSuitFallback);
 		Run("adventure borrow suit set expires at real turn end", BorrowSuitSetExpiresAtRealTurnEnd);
 		Run("adventure borrow suit set refreshes without stacking", BorrowSuitSetRefreshesWithoutStacking);
-		Run("adventure rejudge keep consumes first opportunity", RejudgeKeepConsumesFirstOpportunity);
+		Run("adventure rejudge keep preserves opportunity until reroll", RejudgeKeepPreservesOpportunityUntilReroll);
 		Run("PrimaryRootAndClimbCanopyAreMutuallyExclusiveCandidates", PrimaryRootAndClimbCanopyAreMutuallyExclusiveCandidates);
 		Run("adventure short return capacity uses unique cards", ShortReturnCapacityUsesUniqueCards);
 		Run("adventure short return counts capture extensions", ShortReturnCountsCaptureExtensions);
@@ -263,26 +262,6 @@ internal static partial class Program
 		Equal("clubs_primary_root_return", legacyCombination.PlayedCardReturnSourceUpgradeId);
 	}
 
-	private static void HighReturnCannotSelfRearm()
-	{
-		var state = new AdventureUpgradeEffectState();
-		string[] upgrades = { "diamonds_high_return_bonus" };
-		AdventureCaptureDamageResult armed = AdventureUpgradeEffectService.ApplyCaptureDamage(
-			state,
-			upgrades,
-			new AdventureCaptureDamageInput(BaseDamage: 7));
-		AdventureCaptureDamageResult consumed = AdventureUpgradeEffectService.ApplyCaptureDamage(
-			state,
-			upgrades,
-			new AdventureCaptureDamageInput(BaseDamage: 5));
-
-		True(armed.ReArmedNextCaptureDamageBonus);
-		Equal(7, consumed.FinalDamage);
-		False(consumed.ReArmedNextCaptureDamageBonus);
-		Equal(0, state.NextCaptureDamageBonus);
-		Equal(0, state.HighReturnBonusIncludedInNextCaptureDamageBonus);
-	}
-
 	private static void SaturatingArithmetic()
 	{
 		var state = new AdventureUpgradeEffectState
@@ -379,7 +358,6 @@ internal static partial class Program
 			FinalDoubleCaptureDamageActive = true,
 			HealingOverflowRemainder = 3,
 			NextCaptureDamageBonus = 7,
-			HighReturnBonusIncludedInNextCaptureDamageBonus = 2,
 			NextTurnHealAmount = 3,
 			NextTurnDrawCount = 1,
 			ClubShortBranchReturnUsedThisTurn = true,
@@ -395,7 +373,6 @@ internal static partial class Program
 		True(state.FinalDoubleCaptureDamageActive);
 		Equal(3, state.HealingOverflowRemainder);
 		Equal(0, state.NextCaptureDamageBonus);
-		Equal(0, state.HighReturnBonusIncludedInNextCaptureDamageBonus);
 		Equal(0, state.NextTurnHealAmount);
 		Equal(0, state.NextTurnDrawCount);
 		False(state.ClubShortBranchReturnUsedThisTurn);
@@ -408,7 +385,7 @@ internal static partial class Program
 	private static void EffectStateMetadataDeclaresScopesAndCaps()
 	{
 		var metadata = AdventureUpgradeEffectState.FieldMetadata;
-		Equal(13, metadata.Count);
+		Equal(12, metadata.Count);
 		Equal(AdventureEffectStateScope.Run, metadata[nameof(AdventureUpgradeEffectState.PermanentCaptureDamageBonus)].Scope);
 		Equal(5, metadata[nameof(AdventureUpgradeEffectState.PermanentCaptureDamageBonus)].MaximumValue);
 		Equal(AdventureEffectStateScope.Run, metadata[nameof(AdventureUpgradeEffectState.QuestionRewardCount)].Scope);
@@ -502,13 +479,18 @@ internal static partial class Program
 		False(state.ClubBorrowSuitSetArmed);
 	}
 
-	private static void RejudgeKeepConsumesFirstOpportunity()
+	private static void RejudgeKeepPreservesOpportunityUntilReroll()
 	{
 		AdventureQuestionRejudgeRuleResult kept =
 			AdventureUpgradeEffectService.ResolveQuestionRewardRejudgeChoice(
 				new[] { "diamonds_rejudge_once" },
 				questionRejudgeUsedThisBattle: false,
 				AdventureQuestionRejudgeRuleChoice.Keep);
+		AdventureQuestionRejudgeRuleResult rerolledLater =
+			AdventureUpgradeEffectService.ResolveQuestionRewardRejudgeChoice(
+				new[] { "diamonds_rejudge_once" },
+				questionRejudgeUsedThisBattle: kept.ConsumesOpportunity,
+				AdventureQuestionRejudgeRuleChoice.Reroll);
 		AdventureQuestionRejudgeRuleResult alreadyUsed =
 			AdventureUpgradeEffectService.ResolveQuestionRewardRejudgeChoice(
 				new[] { "diamonds_rejudge_once" },
@@ -516,8 +498,11 @@ internal static partial class Program
 				AdventureQuestionRejudgeRuleChoice.Reroll);
 
 		True(kept.Offered);
-		True(kept.ConsumesOpportunity);
+		False(kept.ConsumesOpportunity);
 		False(kept.ShouldReroll);
+		True(rerolledLater.Offered);
+		True(rerolledLater.ConsumesOpportunity);
+		True(rerolledLater.ShouldReroll);
 		False(alreadyUsed.Offered);
 		False(alreadyUsed.ConsumesOpportunity);
 		False(alreadyUsed.ShouldReroll);

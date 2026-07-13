@@ -4,7 +4,6 @@ using System.Collections.Generic;
 internal static class AdventureUpgradeEffectMath
 {
 	internal const int FullPayoutScoringCardThreshold = 6;
-	internal const int HighReturnDamageThreshold = 7;
 
 internal static int CountAcquiredSuitUpgrades(
 		IEnumerable<string>? acquiredUpgradeIds,

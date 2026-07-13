@@ -108,7 +108,6 @@ internal static class AdventureUpgradeRuntimeContract
 		Add(metadata, "diamonds_first_capture_pressure", AdventureUpgradeStateScope.Battle, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerBattle, 1);
 		Add(metadata, "diamonds_question_mark_windfall", AdventureUpgradeStateScope.Run, AdventureUpgradeStackingMode.Max, AdventureUpgradeTriggerPolicy.OncePerAction, 10);
 		Add(metadata, "diamonds_bounty_amplify", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 3);
-		Add(metadata, "diamonds_high_return_bonus", AdventureUpgradeStateScope.Battle, AdventureUpgradeStackingMode.Refresh, AdventureUpgradeTriggerPolicy.OncePerAction, 2);
 		Add(metadata, "diamonds_question_mark_echo", AdventureUpgradeStateScope.Run, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.None, 1);
 		Add(metadata, "diamonds_multi_card_premium", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 1);
 		Add(metadata, "diamonds_question_mark_interest", AdventureUpgradeStateScope.Run, AdventureUpgradeStackingMode.Additive, AdventureUpgradeTriggerPolicy.OncePerAction, 5);

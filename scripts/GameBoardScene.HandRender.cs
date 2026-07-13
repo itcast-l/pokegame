@@ -271,6 +271,16 @@ public partial class GameBoardScene
 				}
 
 				handArea.AddChild(cardSlot);
+				if (handIndex >= 0)
+				{
+					AddAdventureMissClimbBadge(
+						cardSlot,
+						cardVisual,
+						playerIndex,
+						hand[handIndex],
+						animateCardBack,
+						showInputSelection);
+				}
 			}
 
 			for (int cardIndex = 0; cardIndex < visibleHandCount; cardIndex++)
@@ -559,6 +569,7 @@ public partial class GameBoardScene
 		signature.Add(_pendingItemOwnerIndex);
 		signature.Add(_pendingItemCardId);
 		signature.Add(_isOpeningDealAnimationPlaying);
+		signature.Add(GetAdventureMissClimbBadgeGrowthForRender(playerIndex));
 		if (isLocalHandPlayer)
 		{
 			signature.Add(_selectedMainPlayerHandDisplayIndex);

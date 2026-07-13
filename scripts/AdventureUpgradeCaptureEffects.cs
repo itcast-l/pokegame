@@ -268,7 +268,6 @@ internal static AdventureCaptureDamageResult ApplyCaptureDamage(
 			QuestionRewardEchoActive = modifierSnapshot.QuestionRewardEchoActive,
 		};
 		long damage = Math.Max(0L, input.BaseDamage);
-		long rearmQualificationDamage = damage;
 		IReadOnlyList<AdventureCaptureScoreItem>? normalScoreItems =
 			input.CaptureContext?.NormalScoreItems;
 		IReadOnlyList<int> rawPoints = normalScoreItems == null
@@ -296,7 +295,6 @@ internal static AdventureCaptureDamageResult ApplyCaptureDamage(
 			{
 				long perCardBonusDamage = AdventureUpgradeEffectMath.SaturatingMultiply(scoringCardCount, perCardPointBonus);
 				damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, perCardBonusDamage);
-				rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(rearmQualificationDamage, perCardBonusDamage);
 			}
 
 			if (input.CaptureContext != null)
@@ -308,44 +306,27 @@ internal static AdventureCaptureDamageResult ApplyCaptureDamage(
 						duplicateItem.ResolvedPoints,
 						perCardPointBonus);
 					damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, duplicateDamage);
-					rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(
-						rearmQualificationDamage,
-						duplicateDamage);
 				}
 			}
 			damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, fixedDamageDelta);
-			rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(rearmQualificationDamage, fixedDamageDelta);
 			damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, modifierSnapshot.PermanentCaptureDamageBonus);
-			rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(
-				rearmQualificationDamage,
-				modifierSnapshot.PermanentCaptureDamageBonus);
 
 			int pendingCaptureDamageBonus = state.NextCaptureDamageBonus;
-			int consumedHighReturnBonus = Math.Min(
-				pendingCaptureDamageBonus,
-				state.HighReturnBonusIncludedInNextCaptureDamageBonus);
 			damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, pendingCaptureDamageBonus);
-			rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(
-				rearmQualificationDamage,
-				pendingCaptureDamageBonus - consumedHighReturnBonus);
 			state.NextCaptureDamageBonus = 0;
-			state.HighReturnBonusIncludedInNextCaptureDamageBonus = 0;
 			if (input.IsFirstCaptureThisBattle && acquired.Contains("diamonds_first_capture_pressure"))
 			{
 				damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, 2);
-				rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(rearmQualificationDamage, 2);
 			}
 
 			if (input.IncludesQuestionReward && acquired.Contains("diamonds_bounty_amplify"))
 			{
 				damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, 3);
-				rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingAdd(rearmQualificationDamage, 3);
 			}
 
 			if (acquired.Contains("diamonds_small_insurance"))
 			{
 				damage = AdventureUpgradeEffectMath.ApplySmallInsurance(damage);
-				rearmQualificationDamage = AdventureUpgradeEffectMath.ApplySmallInsurance(rearmQualificationDamage);
 			}
 
 			if (damage > 0
@@ -363,43 +344,19 @@ internal static AdventureCaptureDamageResult ApplyCaptureDamage(
 			}
 
 			damage = AdventureUpgradeEffectMath.SaturatingMultiply(damage, wholeCaptureMultiplier);
-			rearmQualificationDamage = AdventureUpgradeEffectMath.SaturatingMultiply(
-				rearmQualificationDamage,
-				wholeCaptureMultiplier);
 		}
 		else
 		{
 			damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, fixedDamageDelta);
-			rearmQualificationDamage = damage;
 		}
 
 		damage = Math.Max(0L, AdventureUpgradeEffectMath.SaturatingAdd(damage, reductionAfterMultiplier));
-		rearmQualificationDamage = Math.Max(
-			0L,
-			AdventureUpgradeEffectMath.SaturatingAdd(rearmQualificationDamage, reductionAfterMultiplier));
 		long damageEventCap = AdventureUpgradeEffectMath.GetDamageEventCap(input.TargetMaxHealth);
 		bool damageCapped = damage > damageEventCap;
 		damage = Math.Min(damage, damageEventCap);
-		rearmQualificationDamage = Math.Min(rearmQualificationDamage, damageEventCap);
-
-		bool reArmedNextCaptureDamageBonus = false;
-		if (input.CapturerIsMainPlayer
-			&& rearmQualificationDamage >= AdventureUpgradeEffectMath.HighReturnDamageThreshold
-			&& acquired.Contains("diamonds_high_return_bonus"))
-		{
-			state.NextCaptureDamageBonus = AdventureUpgradeEffectMath.SaturatingAddToInt(
-				state.NextCaptureDamageBonus,
-				AdventureUpgradeEffectState.MaxHighReturnCarryBonus);
-			state.HighReturnBonusIncludedInNextCaptureDamageBonus = Math.Min(
-				AdventureUpgradeEffectState.MaxHighReturnCarryBonus,
-				state.HighReturnBonusIncludedInNextCaptureDamageBonus
-					+ AdventureUpgradeEffectState.MaxHighReturnCarryBonus);
-			reArmedNextCaptureDamageBonus = true;
-		}
 
 		return new AdventureCaptureDamageResult(
 			AdventureUpgradeEffectMath.ToSafeNonNegativeInt(damage),
-			reArmedNextCaptureDamageBonus,
 			WholeCaptureMultiplier: wholeCaptureMultiplier,
 			DamageCapped: damageCapped);
 	}
@@ -567,4 +524,3 @@ internal static int ResolveBlackLedgerRedirectTableCardIndex(
 		return selectedTableCardIndex;
 	}
 }
-

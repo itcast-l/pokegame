@@ -193,7 +193,156 @@ public partial class GameBoardScene
 			upgradeId,
 			AdventureUpgradeTriggerSource.None,
 			_turnSequenceGeneration);
+		RenderPlayerHands();
 		return true;
+	}
+
+	public bool DebugConfigureAdventureMissClimbBadgeScenario(int growthStacks)
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (!ShouldUseAdventureUpgradeSystem()
+			|| player_count != 2
+			|| store == null
+			|| runState?.IsActive != true
+			|| growthStacks < 0
+			|| growthStacks > AdventureUpgradeEffectState.MaxClubMissClimbGrowthStacks)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "4"),
+			("Spades", "6"),
+			("Diamonds", "10"),
+			("Clubs", "J"),
+			("Clubs", "4"),
+			("Spades", "A"),
+			("Hearts", "5"),
+			("Diamonds", "9"),
+			("Clubs", "8"),
+		};
+		ItemCard? itemCard = CreateItemCard(BombItemCardId);
+		if (!itemCard.HasValue
+			|| !TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		_playerDecks.Clear();
+		_playerHands.Clear();
+		_playerItemHands.Clear();
+		_tableCards.Clear();
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerDecks.Add(new List<PlayingCard>());
+			_playerHands.Add(new List<PlayingCard>());
+			_playerItemHands.Add(new List<ItemCard>());
+		}
+
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:4"]);
+		_playerHands[MainPlayerIndex].Add(cards["Spades:6"]);
+		_playerHands[MainPlayerIndex].Add(cards["Diamonds:10"]);
+		_playerHands[MainPlayerIndex].Add(cards["Clubs:J"]);
+		_playerItemHands[MainPlayerIndex].Add(itemCard.Value);
+		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		_playerDecks[MainPlayerIndex].Add(cards["Hearts:5"]);
+		_playerHands[1].Add(cards["Diamonds:9"]);
+		_playerDecks[1].Add(cards["Clubs:8"]);
+		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
+
+		runState.EffectState.ClubMissClimbGrowthStacks = growthStacks;
+		store.ReplaceEffectState(runState.EffectState.Clone());
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		_mainPlayerHandSelectionInputEnabled = false;
+		_selectedMainPlayerHandDisplayIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
+	}
+
+	public int DebugGetAdventureMissClimbGrowthStacks()
+	{
+		return GetAdventureUpgradeRunState()?.EffectState.ClubMissClimbGrowthStacks ?? 0;
+	}
+
+	public int DebugGetAdventureMissClimbBadgeCount()
+	{
+		if (MainPlayerIndex >= _playerHandAreas.Count)
+		{
+			return 0;
+		}
+
+		int badgeCount = 0;
+		Control handArea = _playerHandAreas[MainPlayerIndex];
+		for (int childIndex = 0; childIndex < handArea.GetChildCount(); childIndex++)
+		{
+			if (handArea.GetChild(childIndex) is not Control cardSlot)
+			{
+				continue;
+			}
+
+			TextureRect? cardVisual = FindHandCardVisual(cardSlot);
+			if (cardVisual?.GetNodeOrNull<Control>(AdventureMissClimbBadgeNodeName) != null)
+			{
+				badgeCount++;
+			}
+		}
+
+		return badgeCount;
+	}
+
+	public bool DebugSetAdventureMissClimbBadgeHoverState(int handIndex, bool hovered)
+	{
+		if (MainPlayerIndex >= _playerHandAreas.Count
+			|| handIndex < 0
+			|| handIndex >= _playerHands[MainPlayerIndex].Count)
+		{
+			return false;
+		}
+
+		Control? cardSlot = _playerHandAreas[MainPlayerIndex]
+			.GetNodeOrNull<Control>($"HandCard_{handIndex}");
+		TextureRect? cardVisual = FindHandCardVisual(cardSlot);
+		if (cardSlot == null
+			|| cardVisual?.GetNodeOrNull<Control>(AdventureMissClimbBadgeNodeName) == null)
+		{
+			return false;
+		}
+
+		cardSlot.EmitSignal(hovered
+			? Control.SignalName.MouseEntered
+			: Control.SignalName.MouseExited);
+		return true;
+	}
+
+	public bool DebugSetAdventureMissClimbBadgeKeyboardSelection(int handIndex, bool selected)
+	{
+		if (!selected)
+		{
+			_mainPlayerHandSelectionInputEnabled = false;
+			_selectedMainPlayerHandDisplayIndex = -1;
+			RenderPlayerHands();
+			return true;
+		}
+
+		if (handIndex < 0
+			|| handIndex >= _playerHands[MainPlayerIndex].Count
+			|| !IsMainPlayerHandDisplayIndexSelectable(handIndex))
+		{
+			return false;
+		}
+
+		_mainPlayerHandSelectionInputEnabled = true;
+		_selectedMainPlayerHandDisplayIndex = handIndex;
+		RenderPlayerHands();
+		return IsMainPlayerHandDisplayIndexSelected(handIndex);
 	}
 
 	public bool DebugConfigureBlackLedgerCaptureProbe()
@@ -929,6 +1078,7 @@ public partial class GameBoardScene
 		}
 
 		store!.ReplaceEffectState(runState.EffectState.Clone());
+		RenderPlayerHands();
 		if (result.GrantExtraBaseCardAction)
 		{
 			TryGrantAdventureMainPlayerExtraBaseCardAction(

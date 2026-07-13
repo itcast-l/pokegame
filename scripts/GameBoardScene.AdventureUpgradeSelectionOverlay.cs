@@ -218,7 +218,12 @@ public partial class GameBoardScene
 
 	private string FormatAdventureUpgradeDescription(AdventureSuitUpgradeDefinition definition)
 	{
-		return GetAdventureUpgradeDescription(definition.DescriptionKey, definition.EffectText);
+		string description = GetAdventureUpgradeDescription(definition.DescriptionKey, definition.EffectText);
+		int currentItemCount = GetAdventureUpgradeRunState()?.EffectState.QuestionRewardCount ?? 0;
+		return AdventureUpgradeDescriptionRules.Format(
+			definition.Id,
+			description,
+			currentItemCount);
 	}
 
 	private void ConfigureAdventureUpgradeSelectionOverlay(

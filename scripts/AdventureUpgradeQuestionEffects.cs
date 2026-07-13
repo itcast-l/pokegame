@@ -19,10 +19,11 @@ internal static AdventureQuestionRejudgeRuleResult ResolveQuestionRewardRejudgeC
 		bool offered = ShouldOfferQuestionRewardRejudge(
 			acquiredUpgradeIds,
 			questionRejudgeUsedThisBattle);
+		bool shouldReroll = offered && choice == AdventureQuestionRejudgeRuleChoice.Reroll;
 		return new AdventureQuestionRejudgeRuleResult(
 			offered,
-			ConsumesOpportunity: offered,
-			ShouldReroll: offered && choice == AdventureQuestionRejudgeRuleChoice.Reroll);
+			ConsumesOpportunity: shouldReroll,
+			ShouldReroll: shouldReroll);
 	}
 
 internal static AdventureQuestionRewardEffectResult OnQuestionRewardGranted(

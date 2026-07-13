@@ -370,6 +370,7 @@ public partial class GameBoardScene
 			GetAdventureRunSessionStore()
 				?.ReplaceEffectState(
 					runState.EffectState.Clone());
+			RenderPlayerHands();
 		}
 
 		_adventureMainPlayerSuccessfulCapturesThisTurn++;

@@ -174,7 +174,7 @@ internal static partial class Program
 		string text = File.ReadAllText(idsPath);
 
 		MatchCollection constants = Regex.Matches(text, @"(?m)^const ([A-Z0-9_]+) = ""([a-z0-9_]+)""$");
-		Equal(54, constants.Count);
+		Equal(53, constants.Count);
 
 		var activePerSuit = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
@@ -192,7 +192,7 @@ internal static partial class Program
 		}
 
 		Equal(14, activePerSuit["hearts"]);
-		Equal(14, activePerSuit["diamonds"]);
+		Equal(13, activePerSuit["diamonds"]);
 		Equal(12, activePerSuit["spades"]);
 		Equal(14, activePerSuit["clubs"]);
 	}
@@ -251,16 +251,17 @@ internal static partial class Program
 			enabledIds.Add(entity.GetProperty("_id").GetString() ?? string.Empty);
 		}
 
-		Equal(54, enabledCount);
+		Equal(53, enabledCount);
 		Equal(14, suitCounts["hearts"]);
-		Equal(14, suitCounts["diamonds"]);
+		Equal(13, suitCounts["diamonds"]);
 		Equal(12, suitCounts["spades"]);
 		Equal(14, suitCounts["clubs"]);
 		Equal(24, rarityCounts["common"]);
-		Equal(20, rarityCounts["rare"]);
+		Equal(19, rarityCounts["rare"]);
 		Equal(10, rarityCounts["legendary"]);
 		False(enabledIds.Contains("hearts_blood_tide_resonance"));
 		False(enabledIds.Contains("diamonds_all_gains_converge"));
+		False(enabledIds.Contains("diamonds_high_return_bonus"));
 		False(enabledIds.Contains("spades_black_tide_dominion"));
 		False(enabledIds.Contains("clubs_lush_growth"));
 	}
@@ -651,25 +652,6 @@ internal static partial class Program
 		Equal(0, state.NextCaptureDamageBonus);
 	}
 
-	private static void AdventureCaptureDamageConsumesCarryBonusAndReArmsHighReturnBonus()
-	{
-		var state = new AdventureUpgradeEffectState();
-		string[] upgrades = { "diamonds_high_return_bonus" };
-		_ = AdventureUpgradeEffectService.ApplyCaptureDamage(
-			state,
-			upgrades,
-			new AdventureCaptureDamageInput(BaseDamage: 7));
-
-		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
-			state,
-			upgrades,
-			new AdventureCaptureDamageInput(BaseDamage: 5));
-
-		Equal(7, result.FinalDamage);
-		Equal(0, state.NextCaptureDamageBonus);
-		False(result.ReArmedNextCaptureDamageBonus);
-	}
-
 	private static void AdventureCaptureDamageAppliesFirstCapturePressureOncePerBattle()
 	{
 		var state = new AdventureUpgradeEffectState();
@@ -760,7 +742,7 @@ internal static partial class Program
 		Equal(0, state.NextCaptureDamageBonus);
 	}
 
-	private static void AdventureCaptureDamageStacksFullPayoutWithFinalDoubleBeforeHighReturnBonus()
+	private static void AdventureCaptureDamageStacksFullPayoutWithFinalDouble()
 	{
 		var state = new AdventureUpgradeEffectState
 		{
@@ -770,7 +752,7 @@ internal static partial class Program
 
 		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
 			state,
-			new[] { "diamonds_full_payout", "diamonds_final_double", "diamonds_high_return_bonus" },
+			new[] { "diamonds_full_payout", "diamonds_final_double" },
 			new AdventureCaptureDamageInput(
 				BaseDamage: 3,
 				ScoringCardRawPoints: new[] { 1, 1, 1, 1, 1, 1 },
@@ -778,8 +760,7 @@ internal static partial class Program
 
 		Equal(9, result.FinalDamage);
 		Equal(3, result.WholeCaptureMultiplier);
-		Equal(2, state.NextCaptureDamageBonus);
-		True(result.ReArmedNextCaptureDamageBonus);
+		Equal(0, state.NextCaptureDamageBonus);
 	}
 
 	private static void AdventureCaptureDamageAddsBountyAmplifyWhenRewardQuestionIsCaptured()
@@ -1360,4 +1341,3 @@ internal static partial class Program
 
 
 }
-
