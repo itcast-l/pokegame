@@ -37,6 +37,23 @@ public partial class GameBoardScene
 		return TryReadNetworkInt32(payload, key, out value) && value >= minimum && value <= maximum;
 	}
 
+	private static bool TryReadOptionalNetworkInt32(
+		Godot.Collections.Dictionary payload,
+		string key,
+		int fallback,
+		int minimum,
+		int maximum,
+		out int value)
+	{
+		if (!payload.ContainsKey(key))
+		{
+			value = fallback;
+			return true;
+		}
+
+		return TryReadNetworkInt32(payload, key, minimum, maximum, out value);
+	}
+
 	private static bool TryReadNetworkString(Godot.Collections.Dictionary payload, string key, out string value)
 	{
 		value = string.Empty;

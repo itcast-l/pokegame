@@ -19,6 +19,12 @@
     <Compile Include="../../scripts/AdventureUpgradeChoiceRules.cs" Link="Rules/AdventureUpgradeChoiceRules.cs" />
 	<Compile Include="../../scripts/AdventureUpgradeEffectState.cs" Link="Rules/AdventureUpgradeEffectState.cs" />
 	<Compile Include="../../scripts/AdventureUpgradeEffectService.cs" Link="Rules/AdventureUpgradeEffectService.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeEffectModels.cs" Link="Rules/AdventureUpgradeEffectModels.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeQuestionEffects.cs" Link="Rules/AdventureUpgradeQuestionEffects.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeTurnEffects.cs" Link="Rules/AdventureUpgradeTurnEffects.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeCaptureEffects.cs" Link="Rules/AdventureUpgradeCaptureEffects.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeEnemyEffects.cs" Link="Rules/AdventureUpgradeEnemyEffects.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeEffectMath.cs" Link="Rules/AdventureUpgradeEffectMath.cs" />
 	<Compile Include="../../scripts/AdventureCaptureContexts.cs" Link="Rules/AdventureCaptureContexts.cs" />
 	<Compile Include="../../scripts/AdventureExtraActionChain.cs" Link="Rules/AdventureExtraActionChain.cs" />
 	<Compile Include="../../scripts/AdventureUpgradeManifest.cs" Link="Rules/AdventureUpgradeManifest.cs" />
@@ -33,6 +39,9 @@
     <Compile Include="../../scripts/ItemCardEffectSupport.cs" Link="Rules/ItemCardEffectSupport.cs" />
     <Compile Include="../../scripts/AttachmentSelectionPreviewRules.cs" Link="Rules/AttachmentSelectionPreviewRules.cs" />
     <Compile Include="../../scripts/GameSaveStore.cs" Link="Rules/GameSaveStore.cs" />
+    <Compile Include="../../scripts/GameSaveProfileRepository.cs" Link="Rules/GameSaveProfileRepository.cs" />
+    <Compile Include="../../scripts/GameSaveMigration.cs" Link="Rules/GameSaveMigration.cs" />
+    <Compile Include="../../scripts/GameSaveLegacyAdapter.cs" Link="Rules/GameSaveLegacyAdapter.cs" />
     <Compile Include="../../scripts/MainMenuBubbleMotionRules.cs" Link="Rules/MainMenuBubbleMotionRules.cs" />
     <Compile Include="../../scripts/PotentialCaptureRules.cs" Link="Rules/PotentialCaptureRules.cs" />
     <Compile Include="../../scripts/AiCardSelectionRules.cs" Link="Rules/AiCardSelectionRules.cs" />
@@ -65,5 +74,7 @@
     <Compile Include="../../scripts/LanAddressHelper.cs" Link="Rules/LanAddressHelper.cs" />
     <Compile Include="../../scripts/NetworkTableCardSnapshotCodec.cs" Link="Rules/NetworkTableCardSnapshotCodec.cs" />
     <Compile Include="../../scripts/SpecialCardSystem.cs" Link="Rules/SpecialCardSystem.cs" />
+    <Compile Include="../../scripts/VisualUpdateThrottle.cs" Link="Rules/VisualUpdateThrottle.cs" />
+    <Compile Include="../../scripts/NetworkVisualQueuePolicy.cs" Link="Rules/NetworkVisualQueuePolicy.cs" />
   </ItemGroup>
 </Project>

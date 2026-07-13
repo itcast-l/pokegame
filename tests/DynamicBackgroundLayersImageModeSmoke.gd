@@ -95,7 +95,7 @@ func _assert_main_menu_layers() -> void:
 			_cleanup_scene(scene)
 			return
 
-		await _assert_node_moves(bubble_node, 20, "main menu bubble image node")
+		await _assert_node_stops_and_resumes(ocean_layer, bubble_node, "main menu ocean bubble image node")
 		if _failed:
 			_cleanup_scene(scene)
 			return
@@ -176,6 +176,27 @@ func _assert_game_board_layers() -> void:
 	_assert_layer_has_children(ambient_layer, "WaterCurrentLayer", "game board ambient water currents")
 	_assert_layer_has_children_when_enabled(ambient_layer, "CenterCausticLayer", "center_caustic_intensity", "game board ambient center caustics")
 	_assert_layer_has_children(ambient_layer, "MoteLayer", "game board ambient motes")
+	if _failed:
+		_cleanup_scene(scene)
+		return
+
+		var seagrass_layer := ambient_layer.get_node_or_null("SeagrassLayer") as Control
+		if seagrass_layer == null or seagrass_layer.get_child_count() == 0:
+			_fail("Game board seagrass layer did not create image nodes")
+			_cleanup_scene(scene)
+			return
+
+		var seagrass_node := seagrass_layer.get_child(0) as Control
+		if seagrass_node == null:
+			_fail("Game board seagrass child is not a Control")
+			_cleanup_scene(scene)
+			return
+
+		await _assert_node_stops_and_resumes(ambient_layer, seagrass_node, "game board seagrass image node")
+		if _failed:
+			_cleanup_scene(scene)
+			return
+
 	_cleanup_scene(scene)
 
 
@@ -216,7 +237,7 @@ func _assert_adventure_map_layers() -> void:
 		_cleanup_scene(scene)
 		return
 
-	await _assert_node_moves(ribbon_node, 20, "adventure map current ribbon image node")
+		await _assert_node_stops_and_resumes(dynamic_layer, ribbon_node, "adventure map current ribbon image node")
 	_cleanup_scene(scene)
 
 
@@ -299,20 +320,38 @@ func _assert_layer_has_children_when_enabled(owner: Node, layer_name: String, pr
 	_assert_layer_has_children(owner, layer_name, label)
 
 
-func _assert_node_moves(node: Control, frame_count: int, label: String) -> void:
+func _assert_node_stops_and_resumes(owner: CanvasItem, node: Control, label: String) -> void:
 	if _failed:
 		return
 
 	var start_position := node.position
-	await _await_frames(frame_count)
+	await _await_seconds(1.0)
 	var end_position := node.position
 	if end_position.distance_to(start_position) <= 0.01:
-		_fail("%s did not move after %d frames start=%s end=%s" % [
+		_fail("%s did not move after one second start=%s end=%s" % [
 			label,
-			frame_count,
 			str(start_position),
 			str(end_position),
 		])
+		return
+
+	owner.visible = false
+	await _await_seconds(0.25)
+	var hidden_position := node.position
+	await _await_seconds(0.5)
+	if node.position.distance_to(hidden_position) > 0.01:
+		_fail("%s kept moving while its owner was hidden" % label)
+		owner.visible = true
+		return
+
+	owner.visible = true
+	await _await_seconds(1.0)
+	if node.position.distance_to(hidden_position) <= 0.01:
+		_fail("%s did not resume after its owner became visible" % label)
+
+
+func _await_seconds(seconds: float) -> void:
+	await create_timer(seconds).timeout
 
 
 func _require_node(owner: Node, node_path: String, label: String) -> Node:

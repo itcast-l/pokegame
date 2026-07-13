@@ -107,6 +107,7 @@ public partial class GameBoardScene
 	private TaskCompletionSource<AdventureUpgradeSelectionResult>? _adventureUpgradeSelectionCompletionSource;
 	private AdventureUpgradeOverlayRevealState? _adventureUpgradeOverlayRevealState;
 	private readonly Dictionary<ulong, AdventureUpgradeOverlayCardMotionState> _adventureUpgradeOverlayCardMotionStates = new();
+	private readonly List<ulong> _staleAdventureUpgradeMotionStateIds = new();
 
 	private async Task<AdventureUpgradeSelectionResult> ShowAdventureUpgradeSelectionAsync(
 		AdventureUpgradeTriggerSource triggerSource,
@@ -503,6 +504,7 @@ public partial class GameBoardScene
 	{
 		_adventureUpgradeOverlayRevealState = null;
 		_adventureUpgradeOverlayCardMotionStates.Clear();
+		_staleAdventureUpgradeMotionStateIds.Clear();
 	}
 
 	private void UpdateAdventureUpgradeOverlayCardMotion(double delta)
@@ -516,14 +518,14 @@ public partial class GameBoardScene
 
 		float motionWeight = ComputeAdventureUpgradeOverlaySmoothingWeight(delta, AdventureUpgradeOverlayMotionSmoothSpeed);
 		float highlightWeight = ComputeAdventureUpgradeOverlaySmoothingWeight(delta, AdventureUpgradeOverlayHighlightSmoothSpeed);
-		List<ulong> staleStateIds = new();
+		_staleAdventureUpgradeMotionStateIds.Clear();
 
 		foreach (KeyValuePair<ulong, AdventureUpgradeOverlayCardMotionState> pair in _adventureUpgradeOverlayCardMotionStates)
 		{
 			AdventureUpgradeOverlayCardMotionState state = pair.Value;
 			if (!IsInstanceValid(state.Button) || !IsInstanceValid(state.CardFrame) || !IsInstanceValid(state.ChoiceArt))
 			{
-				staleStateIds.Add(pair.Key);
+					_staleAdventureUpgradeMotionStateIds.Add(pair.Key);
 				continue;
 			}
 
@@ -557,7 +559,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		foreach (ulong staleStateId in staleStateIds)
+			foreach (ulong staleStateId in _staleAdventureUpgradeMotionStateIds)
 		{
 			_adventureUpgradeOverlayCardMotionStates.Remove(staleStateId);
 		}

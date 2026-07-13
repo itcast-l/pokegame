@@ -11,6 +11,7 @@
     <Compile Remove="tests/**/*.cs" />
     <Compile Remove="outputs/**/*.cs" />
     <Compile Remove="**/node_modules/**/*.cs" />
+	<Compile Remove="scripts/GameBoardScene.Debug.cs" Condition="'$(Configuration)' == 'Release'" />
   </ItemGroup>
 
   <ItemGroup>

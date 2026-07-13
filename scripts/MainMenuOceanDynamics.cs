@@ -61,6 +61,9 @@ public partial class MainMenuOceanDynamics : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int redraw_fps = 20;
 
+	[Export(PropertyHint.Range, "1,60,1")]
+	public int image_update_fps = 30;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Glint> _glints = new();
 	private readonly Vector2[] _sunbeamPoints = new Vector2[4];
@@ -78,6 +81,7 @@ public partial class MainMenuOceanDynamics : Control
 
 	private double _time;
 	private double _redrawAccumulator;
+	private VisualUpdateThrottle _imageUpdateThrottle;
 	private bool _imageAssetsLoaded;
 	private bool _pendingImageRebuild;
 	private OceanRenderMode _activeRenderMode = (OceanRenderMode)(-1);
@@ -99,10 +103,21 @@ public partial class MainMenuOceanDynamics : Control
 
 	public override void _Ready()
 	{
+		VisibilityChanged += HandleVisibilityChanged;
 		MouseFilter = MouseFilterEnum.Ignore;
 		_rng.Seed = 80110;
 		ApplyRenderMode(force: true);
 		Rebuild();
+		SetProcess(IsVisibleInTree());
+	}
+
+	public override void _ExitTree()
+	{
+		Callable callback = Callable.From(HandleVisibilityChanged);
+		if (IsConnected(CanvasItem.SignalName.VisibilityChanged, callback))
+		{
+			VisibilityChanged -= HandleVisibilityChanged;
+		}
 	}
 
 	public override void _Notification(int what)
@@ -138,8 +153,14 @@ public partial class MainMenuOceanDynamics : Control
 			{
 				EnsureImageAssetsLoaded(retryIfAllMissing: true);
 				RebuildImageInstances();
+				UpdateImageInstances();
+				_imageUpdateThrottle.Reset();
 			}
-			UpdateImageInstances();
+
+			if (_imageUpdateThrottle.Advance(delta, image_update_fps))
+			{
+				UpdateImageInstances();
+			}
 			if (!ShouldQueueRedrawInImageMode())
 			{
 				_redrawAccumulator = 0.0;
@@ -151,6 +172,29 @@ public partial class MainMenuOceanDynamics : Control
 		}
 
 		AdvanceRedrawAccumulator(delta);
+	}
+
+	private void HandleVisibilityChanged()
+	{
+		bool isVisible = IsVisibleInTree();
+		SetProcess(isVisible);
+		if (!isVisible)
+		{
+			return;
+		}
+
+		_imageUpdateThrottle.ForceNextUpdate();
+		if (RenderMode != _activeRenderMode)
+		{
+			ApplyRenderMode(force: true);
+		}
+
+		if (Size.X > 0.0f
+			&& Size.Y > 0.0f
+			&& (_pendingImageRebuild || (_activeRenderMode == OceanRenderMode.ImageBased && HasNoImageInstances())))
+		{
+			Rebuild();
+		}
 	}
 
 	private void AdvanceRedrawAccumulator(double delta)
@@ -245,9 +289,10 @@ public partial class MainMenuOceanDynamics : Control
 		{
 			EnsureImageAssetsLoaded(retryIfAllMissing: true);
 			EnsureImageLayers();
-			RebuildImageInstances();
-			UpdateImageInstances();
-			QueueRedraw();
+				RebuildImageInstances();
+				UpdateImageInstances();
+				_imageUpdateThrottle.Reset();
+				QueueRedraw();
 			return;
 		}
 

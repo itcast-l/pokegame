@@ -15,18 +15,7 @@ public partial class GameBoardScene
 	private ulong _debugTableShuffleVortexInstanceId;
 	private TextureRect? _debugTableShuffleReusedVortex;
 	private Texture2D? _debugTableShuffleReuseSentinelTexture;
-	private bool _debugSpecialCardProbeRunning;
-	private Tween? _debugSpecialCardProbeTween;
-	private Control? _debugSpecialCardProbeEffectRoot;
-	private double _debugSpecialCardProbeElapsedSeconds;
 	private const string DebugPendingTargetHandSelectionItemCardId = "Q";
-	private bool _debugForceNextPendingTargetPlayerHeuristicFailure;
-	private bool _debugForceNextPendingTargetHandHeuristicFailure;
-	private bool _debugForceNextPendingHandLimitDiscardHeuristicFailure;
-	private bool _debugForceNextAdventureUpgradeOverlayDisplayFailure;
-	private double _debugNetworkVisualPlaybackDelaySeconds;
-	private int _debugQuestionRewardGrantCount;
-	private string _debugLastQuestionRewardItemCardId = string.Empty;
 	private bool _debugLeafyBladeProbeRunning;
 	private bool _debugBlackLedgerProbeRunning;
 	private int _debugBlackLedgerExpectedDamage;
@@ -1189,12 +1178,12 @@ public partial class GameBoardScene
 
 	public bool DebugIsNetworkVisualQueueProcessing()
 	{
-		return _networkVisualQueueProcessing;
+		return NetworkVisualPlayback.IsProcessing;
 	}
 
 	public int DebugGetNetworkVisualEventQueueCount()
 	{
-		return _networkVisualEventQueue.Count;
+		return NetworkVisualPlayback.PendingEventCount;
 	}
 
 	public int DebugGetNetworkLastAppliedSnapshotId()
@@ -1317,8 +1306,7 @@ public partial class GameBoardScene
 		Godot.Collections.Dictionary payload,
 		Godot.Collections.Dictionary replacementSnapshot)
 	{
-		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent? visualEvent)
-			|| visualEvent == null
+		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent)
 			|| !TryDecodeNetworkBoardSnapshot(replacementSnapshot, out ValidatedNetworkBoardSnapshot snapshot))
 		{
 			return false;
@@ -1336,21 +1324,16 @@ public partial class GameBoardScene
 		Godot.Collections.Dictionary payload,
 		Godot.Collections.Dictionary replacementSnapshot)
 	{
-		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent? visualEvent)
-			|| visualEvent == null
+		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent)
 			|| !TryDecodeNetworkBoardSnapshot(replacementSnapshot, out ValidatedNetworkBoardSnapshot snapshot)
 			|| snapshot.SnapshotId <= visualEvent.SnapshotId)
 		{
 			return false;
 		}
 
-		_networkQueuedSnapshot = snapshot;
-		_networkVisualEventQueue.Enqueue(visualEvent);
-		if (!_networkVisualQueueProcessing)
-		{
-			_ = ProcessNetworkVisualQueueAsync();
-		}
-		return true;
+			NetworkVisualPlayback.StagePendingSnapshot(snapshot);
+			NetworkVisualPlayback.Enqueue(visualEvent);
+			return true;
 	}
 
 	public bool DebugQueueDelayedNetworkVisualEventWithSnapshotFence(
@@ -1358,10 +1341,8 @@ public partial class GameBoardScene
 		Godot.Collections.Dictionary queuedPayload,
 		Godot.Collections.Dictionary replacementSnapshot)
 	{
-		if (!TryDecodeNetworkVisualEvent(blockingPayload, out NetworkVisualEvent? blockingEvent)
-			|| blockingEvent == null
-			|| !TryDecodeNetworkVisualEvent(queuedPayload, out NetworkVisualEvent? queuedEvent)
-			|| queuedEvent == null
+		if (!TryDecodeNetworkVisualEvent(blockingPayload, out NetworkVisualEvent blockingEvent)
+			|| !TryDecodeNetworkVisualEvent(queuedPayload, out NetworkVisualEvent queuedEvent)
 			|| !TryDecodeNetworkBoardSnapshot(replacementSnapshot, out ValidatedNetworkBoardSnapshot snapshot)
 			|| snapshot.SnapshotId <= blockingEvent.SnapshotId
 			|| snapshot.SnapshotId <= queuedEvent.SnapshotId)
@@ -1369,13 +1350,9 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_networkVisualEventQueue.Enqueue(blockingEvent);
-		if (!_networkVisualQueueProcessing)
-		{
-			_ = ProcessNetworkVisualQueueAsync();
-		}
-		_networkVisualEventQueue.Enqueue(queuedEvent);
-		_networkQueuedSnapshot = snapshot;
+		NetworkVisualPlayback.Enqueue(blockingEvent);
+		NetworkVisualPlayback.Enqueue(queuedEvent);
+		NetworkVisualPlayback.StagePendingSnapshot(snapshot);
 		return true;
 	}
 
@@ -1730,55 +1707,6 @@ public partial class GameBoardScene
 		return _playerScores[playerIndex];
 	}
 
-	private bool ConsumeDebugForceNextPendingTargetPlayerHeuristicFailure()
-	{
-		if (!_debugForceNextPendingTargetPlayerHeuristicFailure)
-		{
-			return false;
-		}
-
-		_debugForceNextPendingTargetPlayerHeuristicFailure = false;
-		return true;
-	}
-
-	private bool ConsumeDebugForceNextPendingTargetHandHeuristicFailure()
-	{
-		if (!_debugForceNextPendingTargetHandHeuristicFailure)
-		{
-			return false;
-		}
-
-		_debugForceNextPendingTargetHandHeuristicFailure = false;
-		return true;
-	}
-
-	private bool ConsumeDebugForceNextPendingHandLimitDiscardHeuristicFailure()
-	{
-		if (!_debugForceNextPendingHandLimitDiscardHeuristicFailure)
-		{
-			return false;
-		}
-
-		_debugForceNextPendingHandLimitDiscardHeuristicFailure = false;
-		return true;
-	}
-
-	private bool ConsumeDebugForceNextAdventureUpgradeOverlayDisplayFailure()
-	{
-		if (!_debugForceNextAdventureUpgradeOverlayDisplayFailure)
-		{
-			return false;
-		}
-
-		_debugForceNextAdventureUpgradeOverlayDisplayFailure = false;
-		return true;
-	}
-
-	private double GetDebugNetworkVisualPlaybackDelaySeconds()
-	{
-		return _debugNetworkVisualPlaybackDelaySeconds;
-	}
-
 public int DebugGetPendingItemAttachmentRewardCount()
 {
 	return _pendingItemAttachmentRewards.Count;
@@ -1794,8 +1722,6 @@ public int DebugGetNetworkAuthoritativeVisualSnapshotId()
 	return _networkAuthoritativeVisualSnapshotId;
 }
 
-private string _debugForcedNextQuestionRewardItemCardId =
-	string.Empty;
 private bool _debugDragonCaptureProbeRunning;
 private bool _debugCollectTableCaptureProbeRunning;
 
@@ -1815,14 +1741,6 @@ public bool DebugForceNextQuestionRewardItemCardId(
 
 	_debugForcedNextQuestionRewardItemCardId = itemCardId;
 	return true;
-}
-
-private string ConsumeDebugForcedNextQuestionRewardItemCardId()
-{
-	string itemCardId =
-		_debugForcedNextQuestionRewardItemCardId;
-	_debugForcedNextQuestionRewardItemCardId = string.Empty;
-	return itemCardId;
 }
 
 public bool DebugConfigureDragonQuestionCaptureOwnershipProbe()
@@ -2007,17 +1925,6 @@ private async Task RunDebugCollectTableCaptureOwnershipProbeAsync(
 	}
 }
 
-private TaskCompletionSource<bool>?
-	_debugCaptureBeforeApplyBarrier;
-private TaskCompletionSource<bool>?
-	_debugCaptureAfterApplyBarrier;
-private bool _debugCaptureBeforeApplyBarrierEntered;
-private bool _debugCaptureAfterApplyBarrierEntered;
-private bool _debugCaptureResultObservationArmed;
-private bool _debugCaptureResultObserved;
-private bool _debugCaptureResultApplied;
-private bool _debugCaptureResultAborted;
-
 public bool DebugArmCaptureBeforeApplyBarrier()
 {
 	if (_debugCaptureBeforeApplyBarrier != null)
@@ -2046,32 +1953,6 @@ public bool DebugArmCaptureAfterApplyBarrier()
 	_debugCaptureAfterApplyBarrier =
 		new TaskCompletionSource<bool>();
 	return true;
-}
-
-private Task WaitForDebugCaptureBeforeApplyBarrierAsync()
-{
-	TaskCompletionSource<bool>? completionSource =
-		_debugCaptureBeforeApplyBarrier;
-	if (completionSource == null)
-	{
-		return Task.CompletedTask;
-	}
-
-	_debugCaptureBeforeApplyBarrierEntered = true;
-	return completionSource.Task;
-}
-
-private Task WaitForDebugCaptureAfterApplyBarrierAsync()
-{
-	TaskCompletionSource<bool>? completionSource =
-		_debugCaptureAfterApplyBarrier;
-	if (completionSource == null)
-	{
-		return Task.CompletedTask;
-	}
-
-	_debugCaptureAfterApplyBarrierEntered = true;
-	return completionSource.Task;
 }
 
 public bool DebugReleaseCaptureBeforeApplyBarrier()
@@ -2148,20 +2029,6 @@ public bool DebugReplaceTableCardReference(int tableCardIndex)
 		IsSlimeCoated = source.IsSlimeCoated,
 	};
 	return true;
-}
-
-private void RecordDebugCaptureOwnershipResult(
-	CaptureTableCardsResult result)
-{
-	if (!_debugCaptureResultObservationArmed)
-	{
-		return;
-	}
-
-	_debugCaptureResultObservationArmed = false;
-	_debugCaptureResultObserved = true;
-	_debugCaptureResultApplied = result.Applied;
-	_debugCaptureResultAborted = result.Aborted;
 }
 
 public bool DebugWasCaptureOwnershipResultObserved()

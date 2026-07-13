@@ -59,6 +59,9 @@ public partial class UnderwaterAmbientLayer : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int redraw_fps = 20;
 
+	[Export(PropertyHint.Range, "1,60,1")]
+	public int image_update_fps = 30;
+
 	[Export(PropertyHint.Range, "0.0,2.0,0.05")]
 	public float sunbeam_intensity = 0.0f;
 
@@ -89,6 +92,7 @@ public partial class UnderwaterAmbientLayer : Control
 
 	private double _time;
 	private double _redrawAccumulator;
+	private VisualUpdateThrottle _imageUpdateThrottle;
 	private bool _imageAssetsLoaded;
 	private bool _pendingImageRebuild;
 	private AmbientRenderMode _activeRenderMode = (AmbientRenderMode)(-1);
@@ -108,10 +112,21 @@ public partial class UnderwaterAmbientLayer : Control
 	private Control? _moteLayer;
 	public override void _Ready()
 	{
+		VisibilityChanged += HandleVisibilityChanged;
 		MouseFilter = MouseFilterEnum.Ignore;
 		_rng.Seed = 4107;
 		ApplyConfiguration(force: true);
 		RebuildAmbient();
+		SetProcess(IsVisibleInTree());
+	}
+
+	public override void _ExitTree()
+	{
+		Callable callback = Callable.From(HandleVisibilityChanged);
+		if (IsConnected(CanvasItem.SignalName.VisibilityChanged, callback))
+		{
+			VisibilityChanged -= HandleVisibilityChanged;
+		}
 	}
 
 	public override void _Notification(int what)
@@ -144,12 +159,17 @@ public partial class UnderwaterAmbientLayer : Control
 		if (_activeRenderMode == AmbientRenderMode.ImageBased)
 		{
 			if (HasNoImageInstances())
-			{
-				EnsureImageAssetsLoaded(retryIfAllMissing: true);
-				RebuildImageInstances();
-			}
+				{
+					EnsureImageAssetsLoaded(retryIfAllMissing: true);
+					RebuildImageInstances();
+					UpdateImageInstances();
+					_imageUpdateThrottle.Reset();
+				}
 
-			UpdateImageInstances();
+				if (_imageUpdateThrottle.Advance(delta, image_update_fps))
+				{
+					UpdateImageInstances();
+				}
 			if (ShouldQueueRedrawForImageFallback())
 			{
 				_redrawAccumulator += delta;
@@ -243,12 +263,35 @@ public partial class UnderwaterAmbientLayer : Control
 
 			SetImageLayersVisible(true);
 		}
-		else
-		{
-			SetImageLayersVisible(false);
-			QueueRedraw();
+			else
+			{
+				SetImageLayersVisible(false);
+				QueueRedraw();
+			}
 		}
-	}
+
+		private void HandleVisibilityChanged()
+	{
+		bool isVisible = IsVisibleInTree();
+		SetProcess(isVisible);
+		if (!isVisible)
+		{
+			return;
+		}
+
+		_imageUpdateThrottle.ForceNextUpdate();
+		if (RenderMode != _activeRenderMode || VisualProfile != _activeVisualProfile)
+		{
+			ApplyConfiguration(force: true);
+		}
+
+		if (Size.X > 0.0f
+			&& Size.Y > 0.0f
+			&& (_pendingImageRebuild || (_activeRenderMode == AmbientRenderMode.ImageBased && HasNoImageInstances())))
+			{
+				RebuildAmbient();
+			}
+		}
 
 	private void RebuildAmbient()
 	{
@@ -312,12 +355,13 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 
 		if (_activeRenderMode == AmbientRenderMode.ImageBased)
-		{
-			EnsureImageAssetsLoaded(retryIfAllMissing: true);
-			EnsureImageLayers();
-			RebuildImageInstances();
-			UpdateImageInstances();
-		}
+			{
+				EnsureImageAssetsLoaded(retryIfAllMissing: true);
+				EnsureImageLayers();
+				RebuildImageInstances();
+				UpdateImageInstances();
+				_imageUpdateThrottle.Reset();
+			}
 
 		QueueRedraw();
 	}

@@ -31,22 +31,18 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent? visualEvent)
-			|| visualEvent.SnapshotId <= _networkLastAppliedSnapshotId)
+			if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent)
+				|| visualEvent.SnapshotId <= _networkLastAppliedSnapshotId)
 		{
 			return;
 		}
 
-		_networkVisualEventQueue.Enqueue(visualEvent);
-		if (!_networkVisualQueueProcessing)
-		{
-			_ = ProcessNetworkVisualQueueAsync();
+			NetworkVisualPlayback.Enqueue(visualEvent);
 		}
-	}
 
-	private bool TryDecodeNetworkVisualEvent(Godot.Collections.Dictionary payload, out NetworkVisualEvent? visualEvent)
+		private bool TryDecodeNetworkVisualEvent(Godot.Collections.Dictionary payload, out NetworkVisualEvent visualEvent)
 	{
-		visualEvent = null;
+		visualEvent = default!;
 		EnsureNetworkCardCache();
 		if (!TryReadNetworkString(payload, NetworkBoardVisualEventTypes.EventTypeKey, out string type)
 			|| !IsKnownNetworkVisualEventType(type)
@@ -112,7 +108,7 @@ public partial class GameBoardScene
 			case NetworkBoardVisualEventTypes.CaptureToDeck:
 				if (_tableCards.Count == 0 || !seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor)
 					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.CaptureStartIndexKey, 0, _tableCards.Count - 1, out captureStartIndex)
-					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.RedirectedTableCardIndexKey, -1, _tableCards.Count - 1, out tableIndex)
+					|| !TryReadOptionalNetworkInt32(payload, NetworkBoardVisualEventTypes.RedirectedTableCardIndexKey, -1, -1, _tableCards.Count - 1, out tableIndex)
 					|| (tableIndex >= 0 && (tableIndex <= captureStartIndex || tableIndex >= _tableCards.Count - 1))
 					|| !TryReadBoundedNetworkIntArray(payload, NetworkBoardVisualEventTypes.ExtraTableCardIndexesKey, 0, _tableCards.Count, 0, _tableCards.Count - 1, out indexes) || !HasUniqueValues(indexes)
 					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.FlightStaggerSecondsKey, out firstFloat) || firstFloat < 0 || firstFloat > TableCaptureFlightStaggerSeconds) return false;
@@ -230,46 +226,6 @@ public partial class GameBoardScene
 
 		PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 		RenderPlayerHands();
-	}
-
-	private async Task ProcessNetworkVisualQueueAsync()
-	{
-		_networkVisualQueueProcessing = true;
-		try
-		{
-			while (_networkVisualEventQueue.Count > 0)
-			{
-				NetworkVisualEvent payload = _networkVisualEventQueue.Dequeue();
-				double debugPlaybackDelaySeconds = GetDebugNetworkVisualPlaybackDelaySeconds();
-				if (debugPlaybackDelaySeconds > 0.0)
-				{
-					await ToSignal(GetTree().CreateTimer(debugPlaybackDelaySeconds), SceneTreeTimer.SignalName.Timeout);
-				}
-				if (payload.SnapshotId <= _networkLastAppliedSnapshotId)
-				{
-					continue;
-				}
-
-				if (_networkQueuedSnapshot != null
-					&& _networkQueuedSnapshot.SnapshotId > payload.SnapshotId)
-				{
-					continue;
-				}
-
-				await PlayNetworkCardPlayedEventAsync(payload);
-			}
-		}
-		finally
-		{
-			_networkVisualQueueProcessing = false;
-			if (_networkQueuedSnapshot != null)
-			{
-				ValidatedNetworkBoardSnapshot snapshot = _networkQueuedSnapshot;
-				_networkQueuedSnapshot = null;
-				ApplyNetworkBoardSnapshotNow(snapshot);
-			}
-			CompleteReconnectCatchupIfReady();
-		}
 	}
 
 	private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)

@@ -25,6 +25,9 @@ public partial class AdventureMapDynamicLayer : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int redraw_fps = 20;
 
+	[Export(PropertyHint.Range, "1,60,1")]
+	public int image_update_fps = 30;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<CurrentRibbon> _ribbons = new();
 	private readonly List<Sparkle> _sparkles = new();
@@ -33,6 +36,7 @@ public partial class AdventureMapDynamicLayer : Control
 	private readonly Vector2[] _currentRibbonPoints = new Vector2[36];
 	private double _time;
 	private double _redrawAccumulator;
+	private VisualUpdateThrottle _imageUpdateThrottle;
 	private bool _imageAssetsLoaded;
 	private bool _pendingImageRebuild;
 	private DynamicRenderMode _activeRenderMode = (DynamicRenderMode)(-1);
@@ -43,10 +47,21 @@ public partial class AdventureMapDynamicLayer : Control
 
 	public override void _Ready()
 	{
+		VisibilityChanged += HandleVisibilityChanged;
 		MouseFilter = MouseFilterEnum.Ignore;
 		_rng.Seed = 23581;
 		ApplyConfiguration(force: true);
 		Rebuild();
+		SetProcess(IsVisibleInTree());
+	}
+
+	public override void _ExitTree()
+	{
+		Callable callback = Callable.From(HandleVisibilityChanged);
+		if (IsConnected(CanvasItem.SignalName.VisibilityChanged, callback))
+		{
+			VisibilityChanged -= HandleVisibilityChanged;
+		}
 	}
 
 	public override void _Notification(int what)
@@ -76,15 +91,20 @@ public partial class AdventureMapDynamicLayer : Control
 		}
 
 		_time += delta * MotionScale;
-		if (_activeRenderMode == DynamicRenderMode.ImageBased)
-		{
-			if (HasNoImageInstances())
+			if (_activeRenderMode == DynamicRenderMode.ImageBased)
 			{
-				EnsureImageAssetsLoaded(retryIfAllMissing: true);
-				RebuildImageInstances();
-			}
+				if (HasNoImageInstances())
+				{
+					EnsureImageAssetsLoaded(retryIfAllMissing: true);
+					RebuildImageInstances();
+					UpdateImageInstances();
+					_imageUpdateThrottle.Reset();
+				}
 
-			UpdateImageInstances();
+				if (_imageUpdateThrottle.Advance(delta, image_update_fps))
+				{
+					UpdateImageInstances();
+				}
 			if (ShouldQueueRedrawForImageFallback())
 			{
 				_redrawAccumulator += delta;
@@ -153,12 +173,35 @@ public partial class AdventureMapDynamicLayer : Control
 
 			SetImageLayersVisible(true);
 		}
-		else
-		{
-			SetImageLayersVisible(false);
-			QueueRedraw();
+			else
+			{
+				SetImageLayersVisible(false);
+				QueueRedraw();
+			}
 		}
-	}
+
+		private void HandleVisibilityChanged()
+	{
+		bool isVisible = IsVisibleInTree();
+		SetProcess(isVisible);
+		if (!isVisible)
+		{
+			return;
+		}
+
+		_imageUpdateThrottle.ForceNextUpdate();
+		if (RenderMode != _activeRenderMode)
+		{
+			ApplyConfiguration(force: true);
+		}
+
+		if (Size.X > 0.0f
+			&& Size.Y > 0.0f
+			&& (_pendingImageRebuild || (_activeRenderMode == DynamicRenderMode.ImageBased && HasNoImageInstances())))
+			{
+				Rebuild();
+			}
+		}
 
 	private void Rebuild()
 	{
@@ -192,12 +235,13 @@ public partial class AdventureMapDynamicLayer : Control
 				_rng.RandfRange(0.08f, 0.24f)));
 		}
 
-		if (_activeRenderMode == DynamicRenderMode.ImageBased)
-		{
-			EnsureImageAssetsLoaded(retryIfAllMissing: true);
-			EnsureImageLayers();
-			RebuildImageInstances();
-			UpdateImageInstances();
+			if (_activeRenderMode == DynamicRenderMode.ImageBased)
+			{
+				EnsureImageAssetsLoaded(retryIfAllMissing: true);
+				EnsureImageLayers();
+				RebuildImageInstances();
+				UpdateImageInstances();
+				_imageUpdateThrottle.Reset();
 			if (ShouldQueueRedrawForImageFallback())
 			{
 				QueueRedraw();
@@ -423,9 +467,9 @@ public partial class AdventureMapDynamicLayer : Control
 		{
 			instance.ElapsedTime = time;
 			float pulse = Mathf.Max(0.0f, Mathf.Sin(time * instance.Speed + instance.Phase));
-			if (pulse <= 0.03f)
-			{
-				instance.Node.Visible = false;
+				if (pulse <= 0.03f)
+				{
+					SetImageVisible(instance, false);
 				continue;
 			}
 
@@ -440,19 +484,24 @@ public partial class AdventureMapDynamicLayer : Control
 
 	private static void ApplyAnimatedFrame(ImageElement instance)
 	{
-		if (instance.Frames.Length == 0)
-		{
-			instance.Node.Texture = null;
-			return;
+			if (instance.Frames.Length == 0)
+			{
+				if (instance.Node.Texture != null)
+				{
+					instance.Node.Texture = null;
+				}
+				instance.LastFrameIndex = -1;
+				return;
 		}
 
 		float frameTime = instance.ElapsedTime * instance.FramesPerSecond
 			+ instance.Phase * instance.Frames.Length / Mathf.Tau;
 		int frameIndex = WrapFrameIndex(Mathf.FloorToInt(frameTime), instance.Frames.Length);
 		Texture2D texture = instance.Frames[frameIndex];
-		if (instance.Node.Texture != texture)
-		{
-			instance.Node.Texture = texture;
+			if (instance.LastFrameIndex != frameIndex || instance.Node.Texture != texture)
+			{
+				instance.Node.Texture = texture;
+				instance.LastFrameIndex = frameIndex;
 		}
 	}
 
@@ -469,18 +518,42 @@ public partial class AdventureMapDynamicLayer : Control
 
 	private void ApplyImageLayout(ImageElement instance, Vector2 center, Vector2 size, float alpha)
 	{
-		if (size.X <= 0.0f || size.Y <= 0.0f || alpha <= 0.001f)
-		{
-			instance.Node.Visible = false;
-			return;
+			if (size.X <= 0.0f || size.Y <= 0.0f || alpha <= 0.001f)
+			{
+				SetImageVisible(instance, false);
+				return;
+			}
+
+			Vector2 position = center - size / 2.0f;
+			Color modulate = new(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
+			SetImageVisible(instance, true);
+			if (!instance.HasAppliedLayout || instance.LastSize.DistanceTo(size) >= 0.01f)
+			{
+				instance.Node.Size = size;
+				instance.Node.PivotOffset = size / 2.0f;
+				instance.LastSize = size;
+			}
+			if (!instance.HasAppliedLayout || instance.LastPosition.DistanceTo(position) >= 0.01f)
+			{
+				instance.Node.Position = position;
+				instance.LastPosition = position;
+			}
+			if (!instance.HasAppliedLayout || Mathf.Abs(instance.LastModulate.A - modulate.A) >= 0.001f)
+			{
+				instance.Node.Modulate = modulate;
+				instance.LastModulate = modulate;
+			}
+			instance.HasAppliedLayout = true;
 		}
 
-		instance.Node.Visible = true;
-		instance.Node.Size = size;
-		instance.Node.PivotOffset = size / 2.0f;
-		instance.Node.Position = center - size / 2.0f;
-		instance.Node.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
-	}
+		private static void SetImageVisible(ImageElement instance, bool visible)
+		{
+			if (!instance.HasAppliedLayout || instance.LastVisible != visible)
+			{
+				instance.Node.Visible = visible;
+				instance.LastVisible = visible;
+			}
+		}
 
 	private void DrawCurrentRibbons()
 	{
@@ -545,9 +618,15 @@ public partial class AdventureMapDynamicLayer : Control
 		public float Alpha { get; set; }
 		public float Phase { get; set; }
 		public float Speed { get; set; }
-		public float Drift { get; set; }
-		public float ElapsedTime { get; set; }
-	}
+			public float Drift { get; set; }
+			public float ElapsedTime { get; set; }
+			public int LastFrameIndex { get; set; } = -1;
+			public bool LastVisible { get; set; }
+			public Vector2 LastPosition { get; set; }
+			public Vector2 LastSize { get; set; }
+			public Color LastModulate { get; set; }
+			public bool HasAppliedLayout { get; set; }
+		}
 
 	private readonly record struct CurrentRibbon(float YRatio, float Phase, float Speed, float Amplitude, float Alpha);
 	private readonly record struct Sparkle(Vector2 PositionRatio, float Radius, float Speed, float Phase, float Alpha);

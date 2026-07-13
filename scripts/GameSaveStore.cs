@@ -24,27 +24,11 @@ public static class GameSaveStore
 	public const string DefaultProfileSlotId = "profile_0";
 	public const int ProfileSlotCount = 3;
 
-	private const string SaveManagerNodeName = "SaveManager";
-	private const string LegacySettingsConfigPath = "user://settings.cfg";
-	private const string LegacyMigrationKey = "migration.settings_cfg.v1";
-	private const string ProgressProfileMigrationKey = "migration.progress_profile.v1";
-	private const string MissingSentinel = "__pokegame_save_missing_2B1E5D5F__";
-	private const int CurrentProgressSchemaVersion = 1;
-	private const string ProgressSchemaVersionKey = "schema_version";
-	private const string ProgressHighestCompletedStageKey = "highest_completed_stage";
-	private const string ProgressSelectedAvatarIdKey = "selected_avatar_id";
-	private const string ProgressPlayerNameKey = "player_name";
-	private const string ProgressPendingAvatarUnlockQueueKey = "pending_avatar_unlock_queue";
-	private const string ProgressPendingAdventureRunJsonKey = "pending_adventure_run_json";
-	private const string ProgressPlaytimeSecondsKey = "playtime_seconds";
-	private const string ProgressCreatedUnixTimeKey = "created_unix_time";
-	private const string ProgressUpdatedUnixTimeKey = "updated_unix_time";
-
 	private static bool _attemptedLegacyMigration;
 	private static bool _attemptedProgressProfileMigration;
 	private static bool _warnedMissingSaveManager;
 
-	public sealed record GameProgressData(
+public sealed record GameProgressData(
 		int SchemaVersion,
 		int HighestCompletedStage,
 		string SelectedAvatarId,
@@ -57,9 +41,9 @@ public static class GameSaveStore
 	{
 		public static GameProgressData CreateDefault()
 		{
-			long now = GetUnixTime();
+			long now = GameSaveStore.GetUnixTime();
 			return new GameProgressData(
-				CurrentProgressSchemaVersion,
+				GameSaveProfileRepository.CurrentProgressSchemaVersion,
 				0,
 				CharacterAvatarCatalog.DefaultAvatarId,
 				PlayerNameRules.DefaultPlayerName,
@@ -73,30 +57,30 @@ public static class GameSaveStore
 		public static GameProgressData FromDictionary(Godot.Collections.Dictionary data, GameProgressData fallback)
 		{
 			return new GameProgressData(
-				ReadInt(data, ProgressSchemaVersionKey, fallback.SchemaVersion),
-				ReadInt(data, ProgressHighestCompletedStageKey, fallback.HighestCompletedStage),
-				ReadString(data, ProgressSelectedAvatarIdKey, fallback.SelectedAvatarId),
-				ReadString(data, ProgressPlayerNameKey, fallback.PlayerName),
-				ReadString(data, ProgressPendingAvatarUnlockQueueKey, fallback.PendingAvatarUnlockQueue),
-				ReadString(data, ProgressPendingAdventureRunJsonKey, fallback.PendingAdventureRunJson),
-				ReadDouble(data, ProgressPlaytimeSecondsKey, fallback.PlaytimeSeconds),
-				ReadLong(data, ProgressCreatedUnixTimeKey, fallback.CreatedUnixTime),
-				ReadLong(data, ProgressUpdatedUnixTimeKey, fallback.UpdatedUnixTime)).Normalize();
+				GameSaveProfileRepository.ReadInt(data, GameSaveProfileRepository.ProgressSchemaVersionKey, fallback.SchemaVersion),
+				GameSaveProfileRepository.ReadInt(data, GameSaveProfileRepository.ProgressHighestCompletedStageKey, fallback.HighestCompletedStage),
+				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressSelectedAvatarIdKey, fallback.SelectedAvatarId),
+				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPlayerNameKey, fallback.PlayerName),
+				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPendingAvatarUnlockQueueKey, fallback.PendingAvatarUnlockQueue),
+				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPendingAdventureRunJsonKey, fallback.PendingAdventureRunJson),
+				GameSaveProfileRepository.ReadDouble(data, GameSaveProfileRepository.ProgressPlaytimeSecondsKey, fallback.PlaytimeSeconds),
+				GameSaveProfileRepository.ReadLong(data, GameSaveProfileRepository.ProgressCreatedUnixTimeKey, fallback.CreatedUnixTime),
+				GameSaveProfileRepository.ReadLong(data, GameSaveProfileRepository.ProgressUpdatedUnixTimeKey, fallback.UpdatedUnixTime)).Normalize();
 		}
 
 		public Godot.Collections.Dictionary ToDictionary()
 		{
 			return new Godot.Collections.Dictionary
 			{
-				[ProgressSchemaVersionKey] = SchemaVersion,
-				[ProgressHighestCompletedStageKey] = HighestCompletedStage,
-				[ProgressSelectedAvatarIdKey] = SelectedAvatarId,
-				[ProgressPlayerNameKey] = PlayerName,
-				[ProgressPendingAvatarUnlockQueueKey] = PendingAvatarUnlockQueue,
-				[ProgressPendingAdventureRunJsonKey] = PendingAdventureRunJson,
-				[ProgressPlaytimeSecondsKey] = PlaytimeSeconds,
-				[ProgressCreatedUnixTimeKey] = CreatedUnixTime,
-				[ProgressUpdatedUnixTimeKey] = UpdatedUnixTime,
+				[GameSaveProfileRepository.ProgressSchemaVersionKey] = SchemaVersion,
+				[GameSaveProfileRepository.ProgressHighestCompletedStageKey] = HighestCompletedStage,
+				[GameSaveProfileRepository.ProgressSelectedAvatarIdKey] = SelectedAvatarId,
+				[GameSaveProfileRepository.ProgressPlayerNameKey] = PlayerName,
+				[GameSaveProfileRepository.ProgressPendingAvatarUnlockQueueKey] = PendingAvatarUnlockQueue,
+				[GameSaveProfileRepository.ProgressPendingAdventureRunJsonKey] = PendingAdventureRunJson,
+				[GameSaveProfileRepository.ProgressPlaytimeSecondsKey] = PlaytimeSeconds,
+				[GameSaveProfileRepository.ProgressCreatedUnixTimeKey] = CreatedUnixTime,
+				[GameSaveProfileRepository.ProgressUpdatedUnixTimeKey] = UpdatedUnixTime,
 			};
 		}
 
@@ -114,7 +98,7 @@ public static class GameSaveStore
 
 		public GameProgressData Normalize()
 		{
-			long now = GetUnixTime();
+			long now = GameSaveStore.GetUnixTime();
 			long createdUnixTime = CreatedUnixTime > 0 ? CreatedUnixTime : now;
 			long updatedUnixTime = UpdatedUnixTime > 0 ? UpdatedUnixTime : createdUnixTime;
 			string selectedAvatarId = string.IsNullOrWhiteSpace(SelectedAvatarId)
@@ -157,17 +141,14 @@ public static class GameSaveStore
 
 		public string Key { get; }
 		public Variant Value { get; }
-	}
-
+}
 	public static void EnsureInitialized()
 	{
 		Node? saveManager = GetSaveManager();
-		if (saveManager == null)
+		if (saveManager != null)
 		{
-			return;
+			GameSaveMigration.EnsureInitialized(saveManager);
 		}
-
-		EnsureInitialized(saveManager);
 	}
 
 	public static string GetProfileSlotId(int slotIndex)
@@ -183,17 +164,8 @@ public static class GameSaveStore
 			return Array.Empty<SaveSlotMetadata>();
 		}
 
-		EnsureInitialized(saveManager);
-		var profiles = new List<SaveSlotMetadata>(ProfileSlotCount);
-		for (int index = 0; index < ProfileSlotCount; index++)
-		{
-			string slotId = GetProfileSlotId(index);
-			bool exists = ProfileSlotFileExists(saveManager, slotId);
-			GameProgressData progressData = exists ? LoadProfileRaw(saveManager, slotId) : GameProgressData.CreateDefault();
-			profiles.Add(progressData.ToMetadata(slotId, exists));
-		}
-
-		return profiles;
+		GameSaveMigration.EnsureInitialized(saveManager);
+		return GameSaveProfileRepository.ListProfiles(saveManager);
 	}
 
 	public static GameProgressData LoadActiveProfile()
@@ -204,8 +176,8 @@ public static class GameSaveStore
 			return GameProgressData.CreateDefault();
 		}
 
-		EnsureInitialized(saveManager);
-		return LoadProfileRaw(saveManager, GetActiveProfileSlotIdRaw(saveManager));
+		GameSaveMigration.EnsureInitialized(saveManager);
+		return GameSaveProfileRepository.LoadProfileRaw(saveManager, GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager));
 	}
 
 	public static GameProgressData LoadProfile(string slotId)
@@ -216,8 +188,8 @@ public static class GameSaveStore
 			return GameProgressData.CreateDefault();
 		}
 
-		EnsureInitialized(saveManager);
-		return LoadProfileRaw(saveManager, NormalizeProfileSlotId(slotId));
+		GameSaveMigration.EnsureInitialized(saveManager);
+		return GameSaveProfileRepository.LoadProfileRaw(saveManager, GameSaveProfileRepository.NormalizeProfileSlotId(slotId));
 	}
 
 	public static Error SaveActiveProfile(GameProgressData progressData)
@@ -228,8 +200,8 @@ public static class GameSaveStore
 			return Error.Unavailable;
 		}
 
-		EnsureInitialized(saveManager);
-		return SaveProfileRaw(saveManager, GetActiveProfileSlotIdRaw(saveManager), progressData);
+		GameSaveMigration.EnsureInitialized(saveManager);
+		return GameSaveProfileRepository.SaveProfileRaw(saveManager, GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager), progressData);
 	}
 
 	public static Error SaveProfile(string slotId, GameProgressData progressData)
@@ -240,8 +212,8 @@ public static class GameSaveStore
 			return Error.Unavailable;
 		}
 
-		EnsureInitialized(saveManager);
-		return SaveProfileRaw(saveManager, NormalizeProfileSlotId(slotId), progressData);
+		GameSaveMigration.EnsureInitialized(saveManager);
+		return GameSaveProfileRepository.SaveProfileRaw(saveManager, GameSaveProfileRepository.NormalizeProfileSlotId(slotId), progressData);
 	}
 
 	public static Error CreateProfile(string slotId, string playerName, string selectedAvatarId)
@@ -252,11 +224,11 @@ public static class GameSaveStore
 			return Error.Unavailable;
 		}
 
-		EnsureInitialized(saveManager);
-		string normalizedSlotId = NormalizeProfileSlotId(slotId);
+		GameSaveMigration.EnsureInitialized(saveManager);
+		string normalizedSlotId = GameSaveProfileRepository.NormalizeProfileSlotId(slotId);
 		long now = GetUnixTime();
 		var progressData = new GameProgressData(
-			CurrentProgressSchemaVersion,
+			GameSaveProfileRepository.CurrentProgressSchemaVersion,
 			0,
 			selectedAvatarId,
 			playerName,
@@ -266,13 +238,13 @@ public static class GameSaveStore
 			now,
 			now);
 
-		Error saveResult = SaveProfileRaw(saveManager, normalizedSlotId, progressData);
+		Error saveResult = GameSaveProfileRepository.SaveProfileRaw(saveManager, normalizedSlotId, progressData);
 		if (saveResult != Error.Ok)
 		{
 			return saveResult;
 		}
 
-		return SetActiveProfileRaw(saveManager, normalizedSlotId);
+		return GameSaveProfileRepository.SetActiveProfileRaw(saveManager, normalizedSlotId);
 	}
 
 	public static Error SetActiveProfile(string slotId)
@@ -283,14 +255,14 @@ public static class GameSaveStore
 			return Error.Unavailable;
 		}
 
-		EnsureInitialized(saveManager);
-		string normalizedSlotId = NormalizeProfileSlotId(slotId);
-		if (!ProfileSlotFileExists(saveManager, normalizedSlotId))
+		GameSaveMigration.EnsureInitialized(saveManager);
+		string normalizedSlotId = GameSaveProfileRepository.NormalizeProfileSlotId(slotId);
+		if (!GameSaveProfileRepository.ProfileSlotFileExists(saveManager, normalizedSlotId))
 		{
 			return Error.FileNotFound;
 		}
 
-		return SetActiveProfileRaw(saveManager, normalizedSlotId);
+		return GameSaveProfileRepository.SetActiveProfileRaw(saveManager, normalizedSlotId);
 	}
 
 	public static Error DeleteProfile(string slotId)
@@ -301,36 +273,36 @@ public static class GameSaveStore
 			return Error.Unavailable;
 		}
 
-		EnsureInitialized(saveManager);
-		string normalizedSlotId = NormalizeProfileSlotId(slotId);
-		string activeSlotId = GetActiveProfileSlotIdRaw(saveManager);
+		GameSaveMigration.EnsureInitialized(saveManager);
+		string normalizedSlotId = GameSaveProfileRepository.NormalizeProfileSlotId(slotId);
+		string activeSlotId = GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager);
 		bool deletingActiveSlot = string.Equals(activeSlotId, normalizedSlotId, StringComparison.Ordinal);
 		if (deletingActiveSlot)
 		{
-			string replacementSlotId = FindFirstExistingProfileSlotId(saveManager, normalizedSlotId);
+			string replacementSlotId = GameSaveProfileRepository.FindFirstExistingProfileSlotId(saveManager, normalizedSlotId);
 			if (string.IsNullOrEmpty(replacementSlotId))
 			{
-				replacementSlotId = FindFirstEmptyProfileSlotId(saveManager, normalizedSlotId);
+				replacementSlotId = GameSaveProfileRepository.FindFirstEmptyProfileSlotId(saveManager, normalizedSlotId);
 				if (string.IsNullOrEmpty(replacementSlotId))
 				{
 					return Error.Unavailable;
 				}
 
-				Error saveReplacementResult = SaveProfileRaw(saveManager, replacementSlotId, GameProgressData.CreateDefault());
+				Error saveReplacementResult = GameSaveProfileRepository.SaveProfileRaw(saveManager, replacementSlotId, GameProgressData.CreateDefault());
 				if (saveReplacementResult != Error.Ok)
 				{
 					return saveReplacementResult;
 				}
 			}
 
-			Error setActiveResult = SetActiveProfileRaw(saveManager, replacementSlotId);
+			Error setActiveResult = GameSaveProfileRepository.SetActiveProfileRaw(saveManager, replacementSlotId);
 			if (setActiveResult != Error.Ok)
 			{
 				return setActiveResult;
 			}
 		}
 
-		Error removeResult = RemoveProfileSlotFiles(saveManager, normalizedSlotId);
+		Error removeResult = GameSaveProfileRepository.RemoveProfileSlotFiles(saveManager, normalizedSlotId);
 		if (removeResult != Error.Ok)
 		{
 			return removeResult;
@@ -341,88 +313,34 @@ public static class GameSaveStore
 	}
 
 	public static float GetFloat(string key, float defaultValue)
-	{
-		return GetValue(key, defaultValue).AsSingle();
-	}
+		=> GameSaveLegacyAdapter.GetValue(key, defaultValue).AsSingle();
 
 	public static bool GetBool(string key, bool defaultValue)
-	{
-		return GetValue(key, defaultValue).AsBool();
-	}
+		=> GameSaveLegacyAdapter.GetValue(key, defaultValue).AsBool();
 
 	public static int GetInt(string key, int defaultValue)
-	{
-		return GetValue(key, defaultValue).AsInt32();
-	}
+		=> GameSaveLegacyAdapter.GetValue(key, defaultValue).AsInt32();
 
 	public static string GetString(string key, string defaultValue)
-	{
-		return GetValue(key, defaultValue).AsString();
-	}
+		=> GameSaveLegacyAdapter.GetValue(key, defaultValue).AsString();
 
 	public static Godot.Collections.Dictionary GetDictionary(string key)
 	{
-		Variant value = GetValue(key, new Godot.Collections.Dictionary());
-		return value.VariantType == Variant.Type.Dictionary
-			? value.AsGodotDictionary()
-			: new Godot.Collections.Dictionary();
+		Variant value = GameSaveLegacyAdapter.GetValue(key, new Godot.Collections.Dictionary());
+		return value.VariantType == Variant.Type.Dictionary ? value.AsGodotDictionary() : new Godot.Collections.Dictionary();
 	}
 
 	public static bool HasValue(string key)
-	{
-		Node? saveManager = GetSaveManager();
-		if (saveManager == null)
-		{
-			return false;
-		}
-
-		EnsureLegacyMigration(saveManager);
-		return HasRawValue(saveManager, key);
-	}
+		=> GameSaveLegacyAdapter.HasValue(key);
 
 	public static Error SetValue(string key, Variant value)
-	{
-		Node? saveManager = GetSaveManager();
-		if (saveManager == null)
-		{
-			return Error.Unavailable;
-		}
-
-		EnsureLegacyMigration(saveManager);
-		SetRawValue(saveManager, key, value);
-		return Persist(saveManager);
-	}
+		=> GameSaveLegacyAdapter.SetValue(key, value);
 
 	public static Error SetValues(params SaveValue[] values)
-	{
-		Node? saveManager = GetSaveManager();
-		if (saveManager == null)
-		{
-			return Error.Unavailable;
-		}
+		=> GameSaveLegacyAdapter.SetValues(values);
 
-		EnsureLegacyMigration(saveManager);
-		foreach (SaveValue value in values)
-		{
-			SetRawValue(saveManager, value.Key, value.Value);
-		}
 
-		return Persist(saveManager);
-	}
-
-	private static Variant GetValue(string key, Variant defaultValue)
-	{
-		Node? saveManager = GetSaveManager();
-		if (saveManager == null)
-		{
-			return defaultValue;
-		}
-
-		EnsureLegacyMigration(saveManager);
-		return GetRawValue(saveManager, key, defaultValue);
-	}
-
-	private static Node? GetSaveManager()
+	internal static Node? GetSaveManager()
 	{
 		if (Engine.GetMainLoop() is not SceneTree tree)
 		{
@@ -430,7 +348,7 @@ public static class GameSaveStore
 			return null;
 		}
 
-		Node? saveManager = tree.Root.GetNodeOrNull<Node>(SaveManagerNodeName);
+		Node? saveManager = tree.Root.GetNodeOrNull<Node>("SaveManager");
 		if (saveManager == null)
 		{
 			WarnMissingSaveManager();
@@ -450,356 +368,21 @@ public static class GameSaveStore
 		GD.PushWarning("SaveManager autoload is missing; game save data could not be persisted through SaveState.");
 	}
 
-	private static void EnsureInitialized(Node saveManager)
-	{
-		EnsureLegacyMigration(saveManager);
-		EnsureProgressProfileMigration(saveManager);
-	}
-
-	private static void EnsureLegacyMigration(Node? saveManager = null)
-	{
-		if (_attemptedLegacyMigration)
-		{
-			return;
-		}
-
-		saveManager ??= GetSaveManager();
-		if (saveManager == null)
-		{
-			return;
-		}
-
-		_attemptedLegacyMigration = true;
-		if (GetRawValue(saveManager, LegacyMigrationKey, false).AsBool())
-		{
-			return;
-		}
-
-		var legacyConfig = new ConfigFile();
-		Error loadResult = legacyConfig.Load(LegacySettingsConfigPath);
-		if (loadResult == Error.FileNotFound)
-		{
-			return;
-		}
-
-		if (loadResult != Error.Ok)
-		{
-			GD.PushWarning($"Failed to migrate legacy settings into SaveState: {loadResult}");
-			return;
-		}
-
-		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "master_volume", MasterVolumeKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "music_volume", MusicVolumeKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "mute", MuteAudioKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "mute", MuteBgmKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "audio", "mute", MuteSfxKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "fullscreen", FullscreenKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "video", "resolution", ResolutionKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "language", LanguageKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "avatar", SelectedAvatarKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "general", "player_name", PlayerNameKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "highest_completed_stage", HighestCompletedStageKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "pending_avatar_unlock_queue", PendingAvatarUnlockQueueKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "pending_avatar_unlock", PendingAvatarUnlockKey);
-		TryMigrateLegacyKey(saveManager, legacyConfig, "adventure", "pending_avatar_unlock_stage", PendingAvatarUnlockStageKey);
-		SetRawValue(saveManager, LegacyMigrationKey, true);
-
-		Error saveResult = Persist(saveManager);
-		if (saveResult != Error.Ok)
-		{
-			GD.PushWarning($"Failed to persist migrated SaveState data: {saveResult}");
-		}
-	}
-
-	private static void EnsureProgressProfileMigration(Node? saveManager = null)
-	{
-		if (_attemptedProgressProfileMigration)
-		{
-			return;
-		}
-
-		saveManager ??= GetSaveManager();
-		if (saveManager == null)
-		{
-			return;
-		}
-
-		EnsureLegacyMigration(saveManager);
-		_attemptedProgressProfileMigration = true;
-
-		bool hasActiveProfile = HasRawValue(saveManager, ActiveProfileSlotKey);
-		bool migrationComplete = GetRawValue(saveManager, ProgressProfileMigrationKey, false).AsBool();
-		if (migrationComplete && hasActiveProfile)
-		{
-			return;
-		}
-
-		if (!ProfileSlotFileExists(saveManager, DefaultProfileSlotId))
-		{
-			Error saveProfileResult = SaveProfileRaw(saveManager, DefaultProfileSlotId, CreateProgressProfileFromLegacyKv(saveManager));
-			if (saveProfileResult != Error.Ok)
-			{
-				GD.PushWarning($"Failed to migrate adventure progress into profile slot: {saveProfileResult}");
-				return;
-			}
-		}
-
-		if (!hasActiveProfile)
-		{
-			SetRawValue(saveManager, ActiveProfileSlotKey, DefaultProfileSlotId);
-		}
-
-		SetRawValue(saveManager, ProgressProfileMigrationKey, true);
-		Error saveResult = Persist(saveManager);
-		if (saveResult != Error.Ok)
-		{
-			GD.PushWarning($"Failed to persist progress profile migration marker: {saveResult}");
-		}
-	}
-
-	private static GameProgressData CreateProgressProfileFromLegacyKv(Node saveManager)
-	{
-		long now = GetUnixTime();
-		string pendingQueue = GetRawValue(saveManager, PendingAvatarUnlockQueueKey, string.Empty).AsString();
-		if (string.IsNullOrWhiteSpace(pendingQueue))
-		{
-			pendingQueue = GetRawValue(saveManager, PendingAvatarUnlockKey, string.Empty).AsString();
-		}
-
-		return new GameProgressData(
-			CurrentProgressSchemaVersion,
-			GetRawValue(saveManager, HighestCompletedStageKey, 0).AsInt32(),
-			GetRawValue(saveManager, SelectedAvatarKey, CharacterAvatarCatalog.DefaultAvatarId).AsString(),
-			GetRawValue(saveManager, PlayerNameKey, PlayerNameRules.DefaultPlayerName).AsString(),
-			pendingQueue,
-			string.Empty,
-			0.0,
-			now,
-			now).Normalize();
-	}
-
-	private static GameProgressData LoadProfileRaw(Node saveManager, string slotId)
-	{
-		EnsureProfileSlot(saveManager, slotId);
-		if (!ProfileSlotFileExists(saveManager, slotId))
-		{
-			return GameProgressData.CreateDefault();
-		}
-
-		Godot.Collections.Dictionary data = saveManager.Call("load_from_slot_sync", new StringName(slotId)).AsGodotDictionary();
-		if (data.Count == 0)
-		{
-			GD.PushWarning($"Profile save slot '{slotId}' is empty or unreadable; using default progress for this session.");
-			return GameProgressData.CreateDefault();
-		}
-
-		return GameProgressData.FromDictionary(data, GameProgressData.CreateDefault());
-	}
-
-	private static Error SaveProfileRaw(Node saveManager, string slotId, GameProgressData progressData)
-	{
-		EnsureProfileSlot(saveManager, slotId);
-		GameProgressData normalizedProgress = progressData.Normalize();
-		long now = GetUnixTime();
-		if (normalizedProgress.CreatedUnixTime <= 0)
-		{
-			normalizedProgress = normalizedProgress with { CreatedUnixTime = now };
-		}
-
-		normalizedProgress = normalizedProgress with
-		{
-			SchemaVersion = CurrentProgressSchemaVersion,
-			UpdatedUnixTime = now,
-		};
-
-		return (Error)saveManager.Call(
-			"save_to_slot_sync",
-			new StringName(slotId),
-			normalizedProgress.ToDictionary()).AsInt32();
-	}
-
-	private static string GetActiveProfileSlotIdRaw(Node saveManager)
-	{
-		return NormalizeProfileSlotId(GetRawValue(saveManager, ActiveProfileSlotKey, DefaultProfileSlotId).AsString());
-	}
-
-	private static Error SetActiveProfileRaw(Node saveManager, string slotId)
-	{
-		string previousSlotId = GetActiveProfileSlotIdRaw(saveManager);
-		string normalizedSlotId = NormalizeProfileSlotId(slotId);
-		SetRawValue(saveManager, ActiveProfileSlotKey, normalizedSlotId);
-		Error persistResult = Persist(saveManager);
-		if (persistResult == Error.Ok)
-		{
-			return Error.Ok;
-		}
-
-		SetRawValue(saveManager, ActiveProfileSlotKey, previousSlotId);
-		return persistResult;
-	}
-
-	private static string FindFirstExistingProfileSlotId(Node saveManager, string excludedSlotId = "")
-	{
-		for (int index = 0; index < ProfileSlotCount; index++)
-		{
-			string slotId = GetProfileSlotId(index);
-			if (!string.Equals(slotId, excludedSlotId, StringComparison.Ordinal)
-				&& ProfileSlotFileExists(saveManager, slotId))
-			{
-				return slotId;
-			}
-		}
-
-		return string.Empty;
-	}
-
-	private static string FindFirstEmptyProfileSlotId(Node saveManager, string excludedSlotId = "")
-	{
-		for (int index = 0; index < ProfileSlotCount; index++)
-		{
-			string slotId = GetProfileSlotId(index);
-			if (!string.Equals(slotId, excludedSlotId, StringComparison.Ordinal)
-				&& !ProfileSlotFileExists(saveManager, slotId))
-			{
-				return slotId;
-			}
-		}
-
-		return string.Empty;
-	}
-
-	private static string NormalizeProfileSlotId(string slotId)
-	{
-		for (int index = 0; index < ProfileSlotCount; index++)
-		{
-			string candidate = GetProfileSlotId(index);
-			if (string.Equals(slotId, candidate, StringComparison.Ordinal))
-			{
-				return candidate;
-			}
-		}
-
-		return DefaultProfileSlotId;
-	}
-
-	private static bool ProfileSlotFileExists(Node saveManager, string slotId)
-	{
-		EnsureProfileSlot(saveManager, slotId);
-		return Godot.FileAccess.FileExists(GetProfileSlotPath(saveManager, slotId));
-	}
-
-	private static void EnsureProfileSlot(Node saveManager, string slotId)
-	{
-		saveManager.Call("ensure_slot_for_file_base", new StringName(slotId), slotId);
-	}
-
-	private static string GetProfileSlotPath(Node saveManager, string slotId)
-	{
-		string saveRoot = saveManager.Get("save_root").AsString().Trim();
-		if (string.IsNullOrEmpty(saveRoot))
-		{
-			saveRoot = "user://savestate";
-		}
-
-		if (!saveRoot.EndsWith("/", StringComparison.Ordinal))
-		{
-			saveRoot += "/";
-		}
-
-		string extension = saveManager.Get("use_json").AsBool() ? "json" : "bin";
-		return $"{saveRoot}{slotId}.{extension}";
-	}
-
-	private static Error RemoveProfileSlotFiles(Node saveManager, string slotId)
-	{
-		string path = GetProfileSlotPath(saveManager, slotId);
-		Error mainRemoveResult = RemoveFileIfExists(path);
-		if (mainRemoveResult != Error.Ok)
-		{
-			return mainRemoveResult;
-		}
-
-		return RemoveFileIfExists($"{path}.bak");
-	}
-
-	private static Error RemoveFileIfExists(string path)
-	{
-		if (!Godot.FileAccess.FileExists(path))
-		{
-			return Error.Ok;
-		}
-
-		return DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
-	}
-
-	private static void TryMigrateLegacyKey(
-		Node saveManager,
-		ConfigFile legacyConfig,
-		string legacySection,
-		string legacyKey,
-		string saveKey)
-	{
-		if (!legacyConfig.HasSectionKey(legacySection, legacyKey) || HasRawValue(saveManager, saveKey))
-		{
-			return;
-		}
-
-		SetRawValue(saveManager, saveKey, legacyConfig.GetValue(legacySection, legacyKey));
-	}
-
-	private static bool HasRawValue(Node saveManager, string key)
-	{
-		return GetRawValue(saveManager, key, MissingSentinel).AsString() != MissingSentinel;
-	}
-
-	private static Variant GetRawValue(Node saveManager, string key, Variant defaultValue)
-	{
-		return saveManager.Call("get_value", new StringName(key), defaultValue);
-	}
-
-	private static void SetRawValue(Node saveManager, string key, Variant value)
-	{
-		saveManager.Call("set_value", new StringName(key), value);
-	}
-
-	private static Error Persist(Node saveManager)
-	{
-		return (Error)saveManager.Call("persist").AsInt32();
-	}
-
-	private static Variant ReadDictionaryValue(Godot.Collections.Dictionary data, string key, Variant defaultValue)
-	{
-		if (data.ContainsKey(key))
-		{
-			return data[key];
-		}
-
-		var stringNameKey = new StringName(key);
-		return data.ContainsKey(stringNameKey) ? data[stringNameKey] : defaultValue;
-	}
-
-	private static string ReadString(Godot.Collections.Dictionary data, string key, string defaultValue)
-	{
-		return ReadDictionaryValue(data, key, defaultValue).AsString();
-	}
-
-	private static int ReadInt(Godot.Collections.Dictionary data, string key, int defaultValue)
-	{
-		return ReadDictionaryValue(data, key, defaultValue).AsInt32();
-	}
-
-	private static long ReadLong(Godot.Collections.Dictionary data, string key, long defaultValue)
-	{
-		return ReadDictionaryValue(data, key, defaultValue).AsInt64();
-	}
-
-	private static double ReadDouble(Godot.Collections.Dictionary data, string key, double defaultValue)
-	{
-		return ReadDictionaryValue(data, key, defaultValue).AsDouble();
-	}
-
-	private static long GetUnixTime()
+	internal static long GetUnixTime()
 	{
 		return (long)Time.GetUnixTimeFromSystem();
 	}
+
+	internal static bool AttemptedLegacyMigration
+	{
+		get => _attemptedLegacyMigration;
+		set => _attemptedLegacyMigration = value;
+	}
+
+	internal static bool AttemptedProgressProfileMigration
+	{
+		get => _attemptedProgressProfileMigration;
+		set => _attemptedProgressProfileMigration = value;
+	}
+
 }

@@ -6,9 +6,6 @@ using Godot;
 public partial class GameBoardScene
 {
 	private readonly Dictionary<string, PlayingCard> _networkCardsByCode = new(StringComparer.Ordinal);
-	private readonly Queue<NetworkVisualEvent> _networkVisualEventQueue = new();
-	private ValidatedNetworkBoardSnapshot? _networkQueuedSnapshot;
-	private bool _networkVisualQueueProcessing;
 	private int _networkSnapshotId;
 	private int _networkAuthoritativeVisualSnapshotId = -1;
 	private int _networkLastAppliedSnapshotId;

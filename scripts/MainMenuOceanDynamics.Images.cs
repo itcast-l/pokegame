@@ -469,7 +469,7 @@ public partial class MainMenuOceanDynamics
 			float pulse = Mathf.Max(0.0f, Mathf.Sin(time * instance.Speed + instance.Phase));
 			if (pulse <= 0.04f)
 			{
-				instance.Node.Visible = false;
+				SetImageVisible(instance, false);
 				continue;
 			}
 
@@ -489,7 +489,7 @@ public partial class MainMenuOceanDynamics
 		{
 			foreach (BubbleImageElement instance in _bubbleImageInstances)
 			{
-				instance.Node.Visible = false;
+				SetBubbleVisible(instance, false);
 			}
 
 			return;
@@ -500,21 +500,18 @@ public partial class MainMenuOceanDynamics
 			if (instance.Node.Texture != bubbleTexture)
 			{
 				instance.Node.Texture = bubbleTexture;
+				instance.ResetCache();
 			}
 
 			if (!TryGetBubbleLayout(instance.Bubble, out Vector2 position, out float radius, out float alpha))
 			{
-				instance.Node.Visible = false;
+				SetBubbleVisible(instance, false);
 				continue;
 			}
 
 			float side = Mathf.Max(radius * 3.35f, 8.0f);
 			Vector2 size = new(side, side);
-			instance.Node.Visible = true;
-			instance.Node.Size = size;
-			instance.Node.PivotOffset = size / 2.0f;
-			instance.Node.Position = position - size / 2.0f;
-			instance.Node.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha * 1.22f, 0.0f, 1.0f));
+			ApplyBubbleLayout(instance, position - size / 2.0f, size, alpha * 1.22f);
 		}
 	}
 
@@ -522,7 +519,11 @@ public partial class MainMenuOceanDynamics
 	{
 		if (instance.Frames.Length == 0)
 		{
-			instance.Node.Texture = null;
+			if (instance.Node.Texture != null)
+			{
+				instance.Node.Texture = null;
+			}
+			instance.LastFrameIndex = -1;
 			return;
 		}
 
@@ -530,9 +531,10 @@ public partial class MainMenuOceanDynamics
 			+ instance.Phase * instance.Frames.Length / Mathf.Tau;
 		int frameIndex = WrapFrameIndex(Mathf.FloorToInt(frameTime), instance.Frames.Length);
 		Texture2D texture = instance.Frames[frameIndex];
-		if (instance.Node.Texture != texture)
-		{
-			instance.Node.Texture = texture;
+			if (instance.LastFrameIndex != frameIndex || instance.Node.Texture != texture)
+			{
+				instance.Node.Texture = texture;
+				instance.LastFrameIndex = frameIndex;
 		}
 	}
 
@@ -550,18 +552,74 @@ public partial class MainMenuOceanDynamics
 	private void ApplyImageLayout(ImageElement instance, Vector2 center, Vector2 size, float alpha)
 	{
 		instance.ElapsedTime = (float)_time;
-		if (size.X <= 0.0f || size.Y <= 0.0f || alpha <= 0.001f)
-		{
-			instance.Node.Visible = false;
-			return;
+			if (size.X <= 0.0f || size.Y <= 0.0f || alpha <= 0.001f)
+			{
+				SetImageVisible(instance, false);
+				return;
+			}
+
+			Vector2 position = center - size / 2.0f;
+			Color modulate = new(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
+			SetImageVisible(instance, true);
+			if (!instance.HasAppliedLayout || instance.LastSize.DistanceTo(size) >= 0.01f)
+			{
+				instance.Node.Size = size;
+				instance.Node.PivotOffset = size / 2.0f;
+				instance.LastSize = size;
+			}
+			if (!instance.HasAppliedLayout || instance.LastPosition.DistanceTo(position) >= 0.01f)
+			{
+				instance.Node.Position = position;
+				instance.LastPosition = position;
+			}
+			if (!instance.HasAppliedLayout || Mathf.Abs(instance.LastModulate.A - modulate.A) >= 0.001f)
+			{
+				instance.Node.Modulate = modulate;
+				instance.LastModulate = modulate;
+			}
+			instance.HasAppliedLayout = true;
 		}
 
-		instance.Node.Visible = true;
-		instance.Node.Size = size;
-		instance.Node.PivotOffset = size / 2.0f;
-		instance.Node.Position = center - size / 2.0f;
-		instance.Node.Modulate = new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
-	}
+		private static void SetImageVisible(ImageElement instance, bool visible)
+		{
+			if (!instance.HasAppliedLayout || instance.LastVisible != visible)
+			{
+				instance.Node.Visible = visible;
+				instance.LastVisible = visible;
+			}
+		}
+
+		private static void SetBubbleVisible(BubbleImageElement instance, bool visible)
+		{
+			if (!instance.HasAppliedLayout || instance.LastVisible != visible)
+			{
+				instance.Node.Visible = visible;
+				instance.LastVisible = visible;
+			}
+		}
+
+		private static void ApplyBubbleLayout(BubbleImageElement instance, Vector2 position, Vector2 size, float alpha)
+		{
+			Color modulate = new(1.0f, 1.0f, 1.0f, Mathf.Clamp(alpha, 0.0f, 1.0f));
+			SetBubbleVisible(instance, true);
+			if (!instance.HasAppliedLayout || instance.LastSize.DistanceTo(size) >= 0.01f)
+			{
+				instance.Node.Size = size;
+				instance.Node.PivotOffset = size / 2.0f;
+				instance.LastSize = size;
+			}
+			if (!instance.HasAppliedLayout || instance.LastPosition.DistanceTo(position) >= 0.01f)
+			{
+				instance.Node.Position = position;
+				instance.LastPosition = position;
+			}
+			if (!instance.HasAppliedLayout || Mathf.Abs(instance.LastModulate.A - modulate.A) >= 0.001f)
+			{
+				instance.Node.Modulate = modulate;
+				instance.LastModulate = modulate;
+			}
+			instance.HasAppliedLayout = true;
+		}
 
 	private sealed class ImageElement
 	{
@@ -576,13 +634,35 @@ public partial class MainMenuOceanDynamics
 		public float Phase { get; set; }
 		public float Speed { get; set; }
 		public float Drift { get; set; }
-		public float Secondary { get; set; }
-		public float ElapsedTime { get; set; }
+			public float Secondary { get; set; }
+			public float ElapsedTime { get; set; }
+			public int LastFrameIndex { get; set; } = -1;
+			public bool LastVisible { get; set; }
+			public Vector2 LastPosition { get; set; }
+			public Vector2 LastSize { get; set; }
+			public Color LastModulate { get; set; }
+			public bool HasAppliedLayout { get; set; }
 	}
 
 	private sealed class BubbleImageElement
-	{
-		public TextureRect Node { get; set; } = default!;
-		public Bubble Bubble { get; set; }
-	}
+		{
+			public TextureRect Node { get; set; } = default!;
+			public Bubble Bubble { get; set; }
+			public int LastFrameIndex { get; set; } = -1;
+			public bool LastVisible { get; set; }
+			public Vector2 LastPosition { get; set; }
+			public Vector2 LastSize { get; set; }
+			public Color LastModulate { get; set; }
+			public bool HasAppliedLayout { get; set; }
+
+			public void ResetCache()
+			{
+				LastFrameIndex = -1;
+				LastVisible = false;
+				LastPosition = Vector2.Zero;
+				LastSize = Vector2.Zero;
+				LastModulate = Colors.Transparent;
+				HasAppliedLayout = false;
+			}
+		}
 }

@@ -187,14 +187,16 @@ func _wait_for_result(result: Dictionary) -> bool:
 func _assert_required_source_guards() -> void:
 	var flow := FileAccess.get_file_as_string("res://scripts/GameBoardScene.TableCaptureFlow.cs")
 	var card_play := FileAccess.get_file_as_string("res://scripts/GameBoardScene.CardPlay.cs")
+	var coordinator := FileAccess.get_file_as_string("res://scripts/GameBoardScene.CaptureResolutionCoordinator.cs")
 	var dragon := FileAccess.get_file_as_string("res://scripts/GameBoardScene.DragonPrinceTableAbility.cs")
 	var effects := FileAccess.get_file_as_string("res://scripts/GameBoardScene.EffectResolver.cs")
 	var commit_apply := "commitImmediatelyBeforeApply?.Invoke();\n\tCaptureStateResult captureStateResult =\n\t\t_captureStateService.ApplyCapture"
-	if card_play.count("expectedTableCardReferences:") < 1 \
+	if not card_play.contains("ResolvePlayedCardCaptureAsync(") \
+		or coordinator.count("expectedTableCardReferences:") < 1 \
 		or dragon.count("expectedTableCardReferences:") < 1 \
 		or effects.count("expectedTableCardReferences:") < 1 \
 		or not flow.contains(commit_apply) \
-		or not card_play.contains("captureResult.Aborted") \
+		or not coordinator.contains("captureResult.Aborted") \
 		or not dragon.contains("captureResult.Aborted") \
 		or not effects.contains("captureResult.Aborted"):
 		_fail("Required capture ownership caller guards are missing")

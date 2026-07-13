@@ -236,33 +236,14 @@ public partial class GameBoardScene
 			return;
 		}
 
-		NetworkManager? networkManager = GetNetworkManager();
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
-			&& networkManager?.State == NetworkSessionState.Reconnecting;
+			&& GetNetworkManager()?.State == NetworkSessionState.Reconnecting;
 		if (isReconnectCatchup)
 		{
 			_networkReconnectCatchupPendingCompletion = true;
 		}
-		if (_networkVisualQueueProcessing || HasQueuedEventForSnapshot(decodedSnapshot.SnapshotId))
-		{
-			if (_networkQueuedSnapshot == null || _networkQueuedSnapshot.SnapshotId <= decodedSnapshot.SnapshotId)
-			{
-				_networkQueuedSnapshot = decodedSnapshot;
-			}
-			return;
-		}
-
-		if (NetworkReconnectRules.ShouldApplyBoardSnapshotImmediatelyForClient(
-			IsNetworkMultiplayerMode(),
-			IsNetworkHost(),
-			networkManager?.State ?? NetworkSessionState.Idle))
-		{
-			ApplyNetworkBoardSnapshotNow(decodedSnapshot);
-			return;
-		}
-
-		ApplyNetworkBoardSnapshotNow(decodedSnapshot);
+		NetworkVisualPlayback.SubmitSnapshot(decodedSnapshot);
 	}
 
 	private void ApplyNetworkBoardSnapshotNow(ValidatedNetworkBoardSnapshot snapshot)
@@ -272,8 +253,8 @@ public partial class GameBoardScene
 			&& GetNetworkManager()?.State == NetworkSessionState.Reconnecting;
 		if (isReconnectCatchup)
 		{
-			_networkVisualEventQueue.Clear();
-			_networkQueuedSnapshot = null;
+			NetworkVisualPlayback.ClearEvents();
+			NetworkVisualPlayback.ClearPendingSnapshot();
 		}
 
 		_networkBoardInitialized = true;
@@ -343,7 +324,7 @@ public partial class GameBoardScene
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			networkManager?.State ?? NetworkSessionState.Idle,
-			_networkVisualQueueProcessing))
+			NetworkVisualPlayback.IsProcessing))
 		{
 			return;
 		}
@@ -408,19 +389,6 @@ public partial class GameBoardScene
 		if (!pendingValid) return false;
 		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, generation, currentPlayer, winner, scores, decks, hands, items, ownPlaying, ownItems, revealedVisible, revealedPlaying, revealedItems, pendingMode, pendingOwner, pendingId, pendingGeneration, revealedPlayer, opening, table, seats);
 		return true;
-	}
-
-	private bool HasQueuedEventForSnapshot(int snapshotId)
-	{
-		foreach (NetworkVisualEvent payload in _networkVisualEventQueue)
-		{
-			if (payload.SnapshotId == snapshotId)
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	private void InitializeNetworkClientBoardShell()
