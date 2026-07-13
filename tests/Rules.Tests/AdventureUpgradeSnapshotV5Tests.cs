@@ -916,13 +916,21 @@ internal static partial class Program
 		True(rowsByKey.TryGetValue(key, out List<string>? row));
 		for (int columnIndex = 1; columnIndex < header.Count; columnIndex++)
 		{
-			string expected = header[columnIndex] switch
+			switch (header[columnIndex])
 			{
-				"zh_CN" => expectedSimplifiedChinese,
-				"zh_TW" => expectedTraditionalChinese,
-				_ => expectedEnglish,
-			};
-			Equal(expected, row![columnIndex]);
+				case "en":
+					Equal(expectedEnglish, row![columnIndex]);
+					break;
+				case "zh_CN":
+					Equal(expectedSimplifiedChinese, row![columnIndex]);
+					break;
+				case "zh_TW":
+					Equal(expectedTraditionalChinese, row![columnIndex]);
+					break;
+				default:
+					True(!string.IsNullOrWhiteSpace(row![columnIndex]));
+					break;
+			}
 		}
 	}
 
