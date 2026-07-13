@@ -20,9 +20,10 @@ internal sealed class GameBoardState
 	public int QuestionCardRefreshAnchorPlayerIndex { get; set; } = -1;
 	public int AdventureMainPlayerSuccessfulCapturesThisTurn { get; set; }
 	public int AdventureMainPlayerCaptureCountThisBattle { get; set; }
-	public bool AdventureMainPlayerQuestionRewardEchoActive { get; set; }
-	public bool AdventureMainPlayerPendingExtraBaseCardAction { get; set; }
-	public bool AdventureMainPlayerExtraBaseCardActionKeepsTurn { get; set; }
+	public AdventureExtraActionQueueState AdventureExtraActionQueue { get; } = new();
+	public bool AdventureRealMainPlayerTurnActive { get; set; }
+	public bool AdventureRealMainPlayerTurnStartPending { get; set; }
+	public long AdventureNextBaseCardActionId { get; set; } = 1;
 	public bool AdventureQuestionRejudgeUsedThisBattle { get; set; }
 	public bool AdventureMainPlayerHalfHealthRescueUsed { get; set; }
 	public bool AdventureMainPlayerQuarterHealthRescueUsed { get; set; }

@@ -459,7 +459,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "每回合首次成功收牌后"
+						"value": "每个真实回合首次成功收牌后"
 					}
 				}
 			},
@@ -509,7 +509,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "下回合开始时，回复 3，抽 1。"
+						"value": "登记下个真实回合开始时回复 3 并抽 1。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -533,7 +533,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "你的回合以空打结束时"
+						"value": "空打且行动权将真正交给敌方时"
 					}
 				}
 			},
@@ -681,7 +681,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "同一回合第二次成功收牌时"
+						"value": "同一真实回合第二次成功收牌时"
 					}
 				}
 			},
@@ -718,7 +718,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "本战首次生命降到 50% 以下时"
+						"value": "每战一次，生命从 50% 及以上降到 50% 以下时"
 					}
 				}
 			},
@@ -768,7 +768,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "回复 3；若该牌本次成功收牌，再抽 1。"
+						"value": "本动作最多治疗 3；若该基础牌成功收牌，再抽 1。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -792,7 +792,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "触发附着道具效果时"
+						"value": "本动作真实附着道具效果生效时"
 					}
 				}
 			},
@@ -842,7 +842,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "抽 1；回复 2。若本回合再次成功收牌，再抽 1；再回复 3。"
+						"value": "抽 1；回复 2。同一真实回合第二次成功收牌后，再抽 1；再回复 3。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -866,7 +866,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "每回合首次成功收牌后"
+						"value": "每个真实回合首次成功收牌后"
 					}
 				}
 			},
@@ -903,7 +903,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "本战首次生命降到 25% 以下时"
+						"value": "每战一次，生命从 25% 及以上降到 25% 以下时"
 					}
 				}
 			},
@@ -916,7 +916,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "每 4 点溢出治疗转为 +1 Max HP。"
+						"value": "每 4 点溢出治疗使 Max HP +1（run 内最高 150），当前生命同步抬升；余数最多保留 3。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -947,50 +947,13 @@
 			{
 				"_category_id": "adventure_suit_upgrades",
 				"_icon_color": "00000000",
-				"_id": "hearts_blood_tide_resonance",
-				"_index": 57,
-				"_name": "血潮共鸣",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "每拥有 1 个红桃强化，受到的所有治疗量 +1。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "治疗共鸣"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "legendary"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 150
-					},
-					"suit": {
-						"type": "string",
-						"value": "hearts"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "持续生效"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
 				"_id": "diamonds_small_insurance",
 				"_index": 14,
 				"_name": "小额保价",
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "按 5 结算。"
+						"value": "伤害按 5 结算；0 伤害仍为 0。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1014,7 +977,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "单次收牌伤害<5"
+						"value": "单次收牌伤害为 1 至 4 时"
 					}
 				}
 			},
@@ -1064,7 +1027,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "奖励可重掷 1 次。"
+						"value": "可保留原奖励或重掷 1 次；无论选择哪项都会消耗本战机会。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1088,7 +1051,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "本战首次获得问号奖励时"
+						"value": "每战首次获得问号奖励时"
 					}
 				}
 			},
@@ -1175,7 +1138,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "第1/2/3...次问号，立刻造成1/2/3...伤害。"
+						"value": "run 内问号计数最多 10；按当前序号立刻直伤，单次最多 5。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1273,7 +1236,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "单次收牌伤害≥7"
+						"value": "单次收牌伤害（不含本次消费的 +2 返利）达到 7 及以上时"
 					}
 				}
 			},
@@ -1286,7 +1249,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "后续收牌时，每张计分牌点数 +1。"
+						"value": "从下一次收牌起，每张计分牌点数 +1。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1310,7 +1273,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "本战首次获得问号奖励后"
+						"value": "本 run 首次问号奖励完成后"
 					}
 				}
 			},
@@ -1360,7 +1323,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "后续所有收牌伤害永久 +1。"
+						"value": "从下一次收牌起永久伤害 +1，最多累计 +5。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1397,7 +1360,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "最高点数的计分牌额外结算 1 次。"
+						"value": "最高点数的 1 张计分牌额外结算 1 次；并列取收牌前最左。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1421,7 +1384,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "成功收牌时"
+						"value": "成功收牌且至少有 3 张计分牌时"
 					}
 				}
 			},
@@ -1434,7 +1397,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "计分牌>=6时，造成双倍伤害。"
+						"value": "本次整次倍率桶 +1。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1458,7 +1421,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "成功收牌时"
+						"value": "成功收牌且至少有 6 张计分牌时"
 					}
 				}
 			},
@@ -1471,7 +1434,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "后续记分翻倍。"
+						"value": "从下一次收牌起，本次整次倍率桶 +1。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1495,44 +1458,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "10次获得道具后"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
-				"_id": "diamonds_all_gains_converge",
-				"_index": 58,
-				"_name": "万利归一",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "每次成功收牌且存在计分牌时，最高点数的 1 张计分牌本次点数 +X；X 为方片强化数量。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "最终定点加成"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "legendary"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 150
-					},
-					"suit": {
-						"type": "string",
-						"value": "diamonds"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "主玩家成功收牌且本次存在计分牌时"
+						"value": "run 内第 10 次问号奖励完成后"
 					}
 				}
 			},
@@ -1730,7 +1656,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "中间每有1张旧桌牌，伤害 -1。"
+						"value": "中间每有 1 张旧桌牌，伤害 -1；与盘剥同时生效时只取较强减伤。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1754,7 +1680,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "敌人成功收牌时"
+						"value": "敌人成功收牌且中间含旧桌牌时"
 					}
 				}
 			},
@@ -1841,7 +1767,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "若中间包含旧桌牌，伤害 -4。"
+						"value": "伤害 -4；与逆收税同时生效时只取较强减伤。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1865,7 +1791,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "敌人成功收牌时"
+						"value": "敌人成功收牌且中间含旧桌牌时"
 					}
 				}
 			},
@@ -1902,7 +1828,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "你的回合开始时"
+						"value": "你的真实回合开始时"
 					}
 				}
 			},
@@ -1915,7 +1841,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "你立刻额外打1张牌，之后正常开始回合。"
+						"value": "你立刻额外打 1 张基础牌；整条派生链结束后仍正常开始真实回合。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1983,50 +1909,13 @@
 			{
 				"_category_id": "adventure_suit_upgrades",
 				"_icon_color": "00000000",
-				"_id": "spades_black_tide_dominion",
-				"_index": 59,
-				"_name": "黑潮统御",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "每拥有 1 个黑桃强化，玩家收牌伤害最终 +1，敌人收牌伤害最终 -1（最低为 0）。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "最终伤害统御"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "legendary"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 150
-					},
-					"suit": {
-						"type": "string",
-						"value": "spades"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "持续生效"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
 				"_id": "clubs_short_branch_return",
 				"_index": 43,
 				"_name": "短枝回手",
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "若手牌空间足够，这两张牌加入手牌；否则正常进入牌堆。每回合 1 次。"
+						"value": "若手牌容量足以容纳全部唯一回手候选，这两张牌回手；否则正常进入牌堆。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2050,7 +1939,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "只收走两张基础牌时"
+						"value": "每个真实回合一次，完整收牌集合恰好含 2 张唯一基础牌时"
 					}
 				}
 			},
@@ -2063,7 +1952,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "额外收走收牌区间左侧最近的 1 张基础牌；不计分。每回合 1 次。"
+						"value": "额外收走收牌区间左侧最近的 1 张基础牌；该牌不计分。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2087,7 +1976,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "成功收牌且本次中间没有计分牌时"
+						"value": "每个真实回合一次，成功收牌且中间没有计分牌时"
 					}
 				}
 			},
@@ -2100,7 +1989,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "本次打出的基础牌在结算后回到手牌；若手牌已满，则正常进入牌堆。"
+						"value": "若手牌有空位，该牌结算后回手；与攀棚同时满足时由主根复返覆盖且只回手一次。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2124,7 +2013,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "以基础牌成功收牌时"
+						"value": "本次打出的基础牌成功收牌时"
 					}
 				}
 			},
@@ -2137,7 +2026,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "积 1 层攀枝。你的数字基础牌按攀枝层数提高点数用于匹配；成功收牌后清空所有攀枝。"
+						"value": "积 1 层攀枝；数字基础牌保留原点数，并额外按原点数 + 层数匹配；成功收牌后清空。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2174,7 +2063,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "本回合你下一次打出的数字基础牌，可按花色匹配收牌；结算后失效。"
+						"value": "保持 1 次 armed，重复获得只刷新；本真实回合下一张数字基础牌仅在无点数或替代点数候选时按花色兜底，合法出牌后消费；真实回合或战斗结束时清除。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2359,7 +2248,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "立刻额外打 1 张基础牌。"
+						"value": "立刻额外打 1 张基础牌；额外行动不能再次触发续枝。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2383,7 +2272,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "空打且桌面已有 4 张以上牌时"
+						"value": "每个真实回合一次，空打结算后桌面至少有 6 张牌时"
 					}
 				}
 			},
@@ -2420,7 +2309,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "同一回合第二次成功收牌时"
+						"value": "同一真实回合第二次成功收牌时"
 					}
 				}
 			},
@@ -2433,7 +2322,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "若本次打出的基础牌成功收牌，则该牌在结算后回到手牌。"
+						"value": "若手牌有空位，该牌结算后回手；主根复返优先且该牌只回手一次。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2457,7 +2346,7 @@
 					},
 					"trigger_text": {
 						"type": "string",
-						"value": "当你的附着道具效果实际生效时"
+						"value": "本动作真实附着道具效果生效且打出的基础牌成功收牌时"
 					}
 				}
 			},
@@ -2507,7 +2396,7 @@
 				"_property_overrides": {
 					"effect_text": {
 						"type": "string",
-						"value": "你的基础牌成功收牌时，首牌与尾牌也计分。"
+						"value": "你的基础牌成功收牌时，首尾端点各计分一次，不生成重复普通计分项。"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2532,43 +2421,6 @@
 					"trigger_text": {
 						"type": "string",
 						"value": "持续生效"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
-				"_id": "clubs_lush_growth",
-				"_index": 60,
-				"_name": "枝繁叶茂",
-				"_property_overrides": {
-					"effect_text": {
-						"type": "string",
-						"value": "战斗开始时获得 X 层繁茂；总手牌不足 8 张时，每消耗 1 层抽 1 张，直到达到 8 张、牌堆无法抽牌或繁茂耗尽。"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "手牌繁茂"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "legendary"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 150
-					},
-					"suit": {
-						"type": "string",
-						"value": "clubs"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "战斗开始时及总手牌减少后"
 					}
 				}
 			}

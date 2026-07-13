@@ -35,4 +35,11 @@ fi
 
 grep -Fq "ADVENTURE_UPGRADE_VICTORY_DISPLAY_FAILURE_SMOKE_OK" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 
+ACQUIRED_COUNT="$(grep -Fc "Adventure upgrade acquired:" "$LOG_FILE" || true)"
+if [[ "$ACQUIRED_COUNT" -ne 2 ]]; then
+	echo "Expected exactly 2 adventure upgrade acquisition log lines, found $ACQUIRED_COUNT." >&2
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
+
 cat "$LOG_FILE"

@@ -238,21 +238,6 @@ public partial class GameBoardScene : Control
 		get => _state.AdventureMainPlayerCaptureCountThisBattle;
 		set => _state.AdventureMainPlayerCaptureCountThisBattle = value;
 	}
-	private bool _adventureMainPlayerQuestionRewardEchoActive
-	{
-		get => _state.AdventureMainPlayerQuestionRewardEchoActive;
-		set => _state.AdventureMainPlayerQuestionRewardEchoActive = value;
-	}
-	private bool _adventureMainPlayerPendingExtraBaseCardAction
-	{
-		get => _state.AdventureMainPlayerPendingExtraBaseCardAction;
-		set => _state.AdventureMainPlayerPendingExtraBaseCardAction = value;
-	}
-	private bool _adventureMainPlayerExtraBaseCardActionKeepsTurn
-	{
-		get => _state.AdventureMainPlayerExtraBaseCardActionKeepsTurn;
-		set => _state.AdventureMainPlayerExtraBaseCardActionKeepsTurn = value;
-	}
 	private bool _adventureQuestionRejudgeUsedThisBattle
 	{
 		get => _state.AdventureQuestionRejudgeUsedThisBattle;

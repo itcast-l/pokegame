@@ -116,6 +116,15 @@ public partial class GameBoardScene
 			PlayCardResult result = await PlayCardFromHandAsync(MainPlayerIndex, handIndex, turnSequenceGeneration, startGlobalPositionOverride);
 			if (!result.Played)
 			{
+				if (result.ConsumedAdventureExtraActionGrant.HasValue)
+				{
+					bool resumeNormalTurn = AbortAdventureExtraActionRootChain(
+						"accepted_action_did_not_complete");
+					await SettleAdventureExtraActionChainAbortAsync(
+						resumeNormalTurn,
+						turnSequenceGeneration);
+				}
+
 				return;
 			}
 
@@ -129,12 +138,45 @@ public partial class GameBoardScene
 				return;
 			}
 
-			if (result.AdventureConsumedExtraBaseCardAction && _adventureMainPlayerExtraBaseCardActionKeepsTurn)
+			if (result.ConsumedAdventureExtraActionGrant is AdventureExtraActionGrant consumedGrant)
 			{
-				_adventureMainPlayerExtraBaseCardActionKeepsTurn = false;
-				_isProcessingCardPlay = false;
-				await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
-				return;
+				AdventureExtraActionCompletionResult completion =
+					CompleteConsumedAdventureExtraActionGrant(consumedGrant);
+				if (completion.Kind == AdventureExtraActionCompletionKind.ContinueChain)
+				{
+					_isProcessingCardPlay = false;
+					await RefillPlayerBaseHandAsync(MainPlayerIndex, turnSequenceGeneration);
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return;
+					}
+
+					if (_playerHands[MainPlayerIndex].Count == 0)
+					{
+						bool resumeNormalTurn = AbortAdventureExtraActionRootChain(
+							"no_base_card_available_after_action");
+						await SettleAdventureExtraActionChainAbortAsync(
+							resumeNormalTurn,
+							turnSequenceGeneration);
+						return;
+					}
+
+					await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
+					return;
+				}
+
+				if (completion.Kind == AdventureExtraActionCompletionKind.ResumeNormalTurn)
+				{
+					_isProcessingCardPlay = false;
+					await RefillPlayerBaseHandAsync(MainPlayerIndex, turnSequenceGeneration);
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					{
+						return;
+					}
+
+					await BeginRealMainPlayerTurnIfNeededAsync(turnSequenceGeneration);
+					return;
+				}
 			}
 
 			if (result.CompletesTurn)
@@ -173,6 +215,14 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 		try
 		{
+			await BeginRealMainPlayerTurnIfNeededAsync(turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration
+				|| IsGameOver()
+				|| HasPendingAdventureExtraBaseCardAction())
+			{
+				return;
+			}
+
 			PlayCardResult result = await PlayItemCardFromHandAsync(MainPlayerIndex, itemHandIndex, turnSequenceGeneration);
 			if (!result.Played || HasPendingItemSelection())
 			{

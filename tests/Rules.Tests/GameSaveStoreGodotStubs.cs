@@ -11,16 +11,25 @@ namespace Godot
 		Unavailable = 49,
 	}
 
-	public class Node
+	public class GodotObject
+	{
+		public virtual Variant Call(string method, params object[] args)
+		{
+			return default;
+		}
+	}
+
+	public class Node : GodotObject
 	{
 		private readonly Dictionary<string, Node> _children = new(StringComparer.Ordinal);
 		private readonly Dictionary<string, Variant> _properties = new(StringComparer.Ordinal);
+		private readonly Dictionary<string, List<Callable>> _signalConnections = new(StringComparer.Ordinal);
 
 		public virtual void _Ready()
 		{
 		}
 
-		public virtual Variant Call(string method, params object[] args)
+		public override Variant Call(string method, params object[] args)
 		{
 			return default;
 		}
@@ -43,6 +52,80 @@ namespace Godot
 		public void SetProperty(string property, Variant value)
 		{
 			_properties[property] = value;
+		}
+
+		public bool IsConnected(string signal, Callable callable)
+		{
+			return _signalConnections.TryGetValue(signal, out List<Callable>? callables)
+				&& callables.Contains(callable);
+		}
+
+		public Error Connect(string signal, Callable callable)
+		{
+			if (!_signalConnections.TryGetValue(signal, out List<Callable>? callables))
+			{
+				callables = new List<Callable>();
+				_signalConnections[signal] = callables;
+			}
+			if (!callables.Contains(callable))
+			{
+				callables.Add(callable);
+			}
+			return Error.Ok;
+		}
+
+		public int GetSignalConnectionCount(string signal)
+		{
+			return _signalConnections.TryGetValue(signal, out List<Callable>? callables)
+				? callables.Count
+				: 0;
+		}
+
+		public void EmitSignal(string signal)
+		{
+			if (!_signalConnections.TryGetValue(signal, out List<Callable>? callables))
+			{
+				return;
+			}
+			foreach (Callable callable in callables.ToArray())
+			{
+				callable.Invoke();
+			}
+		}
+	}
+
+	public readonly struct Callable : IEquatable<Callable>
+	{
+		private readonly Action? _callback;
+
+		private Callable(Action callback)
+		{
+			_callback = callback;
+		}
+
+		public static Callable From(Action callback)
+		{
+			return new Callable(callback);
+		}
+
+		public void Invoke()
+		{
+			_callback?.Invoke();
+		}
+
+		public bool Equals(Callable other)
+		{
+			return Equals(_callback, other._callback);
+		}
+
+		public override bool Equals(object? obj)
+		{
+			return obj is Callable other && Equals(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return _callback?.GetHashCode() ?? 0;
 		}
 	}
 
@@ -112,6 +195,8 @@ namespace Godot
 		{
 			Nil = 0,
 			Dictionary = 1,
+			Array = 2,
+			Object = 3,
 		}
 
 		private readonly object? _value;
@@ -121,7 +206,13 @@ namespace Godot
 			_value = value;
 		}
 
-		public Type VariantType => _value is Godot.Collections.Dictionary ? Type.Dictionary : Type.Nil;
+		public Type VariantType => _value switch
+		{
+			Godot.Collections.Dictionary => Type.Dictionary,
+			Godot.Collections.Array => Type.Array,
+			GodotObject => Type.Object,
+			_ => Type.Nil,
+		};
 
 		public string AsString()
 		{
@@ -162,6 +253,16 @@ namespace Godot
 			return _value as Godot.Collections.Dictionary ?? new Godot.Collections.Dictionary();
 		}
 
+		public Godot.Collections.Array AsGodotArray()
+		{
+			return _value as Godot.Collections.Array ?? new Godot.Collections.Array();
+		}
+
+		public GodotObject? AsGodotObject()
+		{
+			return _value as GodotObject;
+		}
+
 		public static implicit operator Variant(string value) => new(value);
 		public static implicit operator Variant(bool value) => new(value);
 		public static implicit operator Variant(int value) => new(value);
@@ -171,6 +272,8 @@ namespace Godot
 		public static implicit operator Variant(StringName value) => new(value);
 		public static implicit operator Variant(Error value) => new((int)value);
 		public static implicit operator Variant(Godot.Collections.Dictionary value) => new(value);
+		public static implicit operator Variant(Godot.Collections.Array value) => new(value);
+		public static implicit operator Variant(GodotObject value) => new(value);
 	}
 
 	public sealed class ConfigFile
@@ -273,6 +376,7 @@ namespace Godot
 		public Error PersistResult { get; set; } = Error.Ok;
 		public Dictionary<string, Error> SaveSlotResults { get; } = new(StringComparer.Ordinal);
 		public List<string> UnregisteredSlots { get; } = new();
+		public int SaveToSlotCallCount { get; private set; }
 
 		public override Variant Call(string method, params object[] args)
 		{
@@ -361,6 +465,7 @@ namespace Godot
 
 		private Variant SaveToSlotSync(StringName slotId, Godot.Collections.Dictionary data)
 		{
+			SaveToSlotCallCount++;
 			string key = slotId.ToString();
 			if (SaveSlotResults.TryGetValue(key, out Error result) && result != Error.Ok)
 			{
@@ -388,10 +493,114 @@ namespace Godot
 			return default;
 		}
 	}
+
+	public sealed class TestPandoraNode : Node
+	{
+		private readonly GodotObject _category = new();
+
+		public bool IsLoaded { get; set; }
+		public Godot.Collections.Array Entities { get; } = new();
+
+		public override Variant Call(string method, params object[] args)
+		{
+			return method switch
+			{
+				"is_loaded" => IsLoaded,
+				"get_category" => args.Length > 0
+					&& string.Equals(args[0]?.ToString(), "adventure_suit_upgrades", StringComparison.Ordinal)
+						? new Variant(_category)
+						: default,
+				"get_all_entities" => Entities,
+				_ => default,
+			};
+		}
+	}
+
+	public sealed class TestPandoraEntity : GodotObject
+	{
+		private readonly string _id;
+		private readonly string _displayName;
+		private readonly Dictionary<string, Variant> _properties;
+
+		public TestPandoraEntity(
+			string id,
+			string displayName,
+			string suit,
+			string rarity,
+			string triggerText,
+			string effectText,
+			string descriptionKey,
+			string notes,
+			bool enabled,
+			int sortOrder)
+		{
+			_id = id;
+			_displayName = displayName;
+			_properties = new Dictionary<string, Variant>(StringComparer.Ordinal)
+			{
+				["suit"] = suit,
+				["rarity"] = rarity,
+				["trigger_text"] = triggerText,
+				["effect_text"] = effectText,
+				["description_key"] = descriptionKey,
+				["notes"] = notes,
+				["enabled"] = enabled,
+				["sort_order"] = sortOrder,
+			};
+		}
+
+		public override Variant Call(string method, params object[] args)
+		{
+			string propertyName = args.Length > 0 ? args[0]?.ToString() ?? string.Empty : string.Empty;
+			return method switch
+			{
+				"get_entity_id" => _id,
+				"get_entity_name" => _displayName,
+				"has_entity_property" => _properties.ContainsKey(propertyName),
+				"get_string" => GetProperty(propertyName),
+				"get_bool" => GetProperty(propertyName),
+				"get_integer" => GetProperty(propertyName),
+				_ => default,
+			};
+		}
+
+		private Variant GetProperty(string propertyName)
+		{
+			return _properties.TryGetValue(propertyName, out Variant value) ? value : default;
+		}
+	}
 }
 
 namespace Godot.Collections
 {
+	public sealed class Array : System.Collections.Generic.IEnumerable<Godot.Variant>
+	{
+		private readonly System.Collections.Generic.List<Godot.Variant> _values = new();
+
+		public int Count => _values.Count;
+
+		public Godot.Variant this[int index]
+		{
+			get => _values[index];
+			set => _values[index] = value;
+		}
+
+		public void Add(Godot.Variant value)
+		{
+			_values.Add(value);
+		}
+
+		public System.Collections.Generic.IEnumerator<Godot.Variant> GetEnumerator()
+		{
+			return _values.GetEnumerator();
+		}
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+	}
+
 	public sealed class Dictionary
 	{
 		private readonly System.Collections.Generic.Dictionary<object, Godot.Variant> _values = new();

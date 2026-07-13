@@ -6,21 +6,22 @@ using Godot;
 public partial class GameBoardScene
 {
 	private async Task<CaptureTableCardsResult> CaptureTableCardsAsync(
-	int playerIndex,
-	int captureStartIndex,
-	bool reserveReplacementCard = false,
-	bool awardScore = true,
-	int turnSequenceGeneration = 0,
-	HashSet<int>? extraTableCardIndexes = null,
-	int adventureFlatDamageDelta = 0,
-	IReadOnlyCollection<TableCard>? prePlayTableCards = null,
-	bool playedCardUsedAttachedEffect = false,
-	PlayingCard? playedCardForAdventureReturns = null,
-	int preserveTailTableCardIndex = -1,
-	bool suppressGardenEelCaptureRecord = false,
-	IReadOnlyList<TableCard>? expectedTableCardReferences = null,
-	Action? commitImmediatelyBeforeApply = null,
-	int blackLedgerRedirectTableCardIndex = -2)
+		int playerIndex,
+		int captureStartIndex,
+		bool reserveReplacementCard = false,
+		int turnSequenceGeneration = 0,
+		HashSet<int>? extraTableCardIndexes = null,
+		int adventureFlatDamageDelta = 0,
+		IReadOnlyCollection<TableCard>? prePlayTableCards = null,
+		int preserveTailTableCardIndex = -1,
+		bool suppressGardenEelCaptureRecord = false,
+		IReadOnlyList<TableCard>? expectedTableCardReferences = null,
+		Action? commitImmediatelyBeforeApply = null,
+		int blackLedgerRedirectTableCardIndex = -2,
+		BaseCardActionContext? baseCardActionContext = null,
+		string actionSource = "capture",
+		AdventureCaptureMatchSource matchSource = AdventureCaptureMatchSource.CollectAll,
+		IReadOnlyCollection<string>? triggeredAttachedItemCardIds = null)
 {
 	if (expectedTableCardReferences == null
 		|| _isLeavingGame
@@ -61,29 +62,24 @@ public partial class GameBoardScene
 
 	CaptureScoringRules.TableCard[] captureScoringTableCards =
 		ToCaptureScoringTableCards();
-	int scorePlayerIndex = awardScore
-		? ScoreService.GetCapturedScorePlayerIndex(
+			int scorePlayerIndex = ScoreService.GetCapturedScorePlayerIndex(
+					captureScoringTableCards,
+					captureStartIndex,
+					playerIndex,
+					player_count);
+		CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
 			captureScoringTableCards,
 			captureStartIndex,
-			playerIndex,
-			player_count)
-		: playerIndex;
-	CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
-		captureScoringTableCards,
-		captureStartIndex,
-		scorePlayerIndex,
-		BuildCaptureScoringContext(scorePlayerIndex),
-		awardScore,
-		extraTableCardIndexes);
+			scorePlayerIndex,
+			BuildCaptureScoringContext(scorePlayerIndex),
+			extraTableCardIndexes);
 	int collectedCardCount = 0;
 	int removedTableCardCount = 0;
 	QuestionCardRewardAnimation? questionRewardAnimation = null;
 	AdventureQuestionRewardEffectResult? adventureQuestionRewardEffects = null;
-	AdventurePostCaptureEffectResult? adventurePostCaptureEffects = null;
-	var adventureCaptureRawPoints = new List<int>();
-	var adventureCaptureResolvedPoints = new List<int>();
-	var adventureCaptureScoringTableIndexes = new List<int>();
-	var capturedBaseCards = new List<PlayingCard>();
+		AdventurePostCaptureEffectResult? adventurePostCaptureEffects = null;
+		CaptureResolutionContext? adventureCaptureContext = null;
+		AdventureCaptureDamageResult resolvedCaptureDamage = default;
 	bool capturedTraceMark = false;
 	bool capturedHuntMark = false;
 	TableCard? clubGapRootingTargetTableCard = null;
@@ -101,14 +97,15 @@ public partial class GameBoardScene
 			QuestionRewardAnimation: questionRewardAnimation,
 			AdventureQuestionRewardEffects:
 				adventureQuestionRewardEffects,
-			AdventurePostCaptureEffects:
-				adventurePostCaptureEffects);
+				AdventurePostCaptureEffects:
+					adventurePostCaptureEffects,
+				AdventureCaptureContext:
+					adventureCaptureContext);
 		RecordDebugCaptureOwnershipResult(result);
 		return result;
 	}
 
-	if (awardScore
-		&& captureFlow.Capture.CapturedMiddleCards
+		if (captureFlow.Capture.CapturedMiddleCards
 		&& ShouldPlayCrabScoreReductionAbility(
 			scorePlayerIndex,
 			captureStartIndex,
@@ -133,85 +130,20 @@ public partial class GameBoardScene
 	{
 		if (tableCardIndex < 0
 			|| tableCardIndex >= _tableCards.Count)
-		{
-			return CaptureTableCardsResult.NotApplied;
-		}
-
-		TableCard tableCard = _tableCards[tableCardIndex];
-		if (tableCard.Card.HasValue
-			&& !tableCard.RemoveCardOnCapture)
-		{
-			capturedBaseCards.Add(tableCard.Card.Value);
-		}
-
-		if (questionRewardStartGlobalPosition == null
-			&& captureFlow.Capture.CapturedMiddleCards
-			&& IsQuestionTableCard(tableCard))
-		{
-			questionRewardStartGlobalPosition =
-				_centerArena.GlobalPosition
-				+ GetTableCardPosition(
-					tableCardIndex,
-					tableLayoutRect);
-		}
-	}
-
-	capturedTraceMark = IsCapturedTableCardReference(
-		_adventureTraceHuntMarkedTableCard,
-		captureStartIndex,
-		extraTableCardIndexes);
-	capturedHuntMark = IsCapturedTableCardReference(
-		_adventureHuntOrderMarkedTableCard,
-		captureStartIndex,
-		extraTableCardIndexes);
-	if (playerIndex == MainPlayerIndex)
-	{
-		bool hasMiddleScoringCards = false;
-		for (int tableCardIndex = captureStartIndex + 1;
-			tableCardIndex < _tableCards.Count - 1;
-			tableCardIndex++)
-		{
-			TableCard middleTableCard = _tableCards[tableCardIndex];
-			if (!middleTableCard.IsBuriedInSand
-				&& middleTableCard.Card.HasValue
-				&& GetCardScoreValue(
-					middleTableCard.Card.Value) > 0)
 			{
-				hasMiddleScoringCards = true;
-				break;
+				return CaptureTableCardsResult.NotApplied;
 			}
 		}
 
-		AdventureUpgradeRunState? runState =
-			GetAdventureUpgradeRunState();
-		bool leftAdjacentBaseCardAvailable =
-			captureStartIndex > 0
-			&& !_tableCards[captureStartIndex - 1]
-				.IsBuriedInSand
-			&& _tableCards[captureStartIndex - 1]
-				.Card.HasValue;
-		if (runState?.IsActive == true)
-		{
-			AdventureUpgradeEffectState effectStatePreview =
-				runState.EffectState.Clone();
-			AdventureClubCaptureExtensionResult
-				clubCaptureExtensionResult =
-					AdventureUpgradeEffectService
-						.ResolveClubCaptureExtensions(
-							effectStatePreview,
-							runState.GetAcquiredUpgradeIds(),
-							hasMiddleScoringCards,
-							leftAdjacentBaseCardAvailable);
-			plannedClubCaptureEffectState =
-				effectStatePreview;
-			if (clubCaptureExtensionResult
-				.CaptureLeftAdjacentBaseCard)
-			{
-				clubGapRootingTargetTableCard =
-					_tableCards[captureStartIndex - 1];
-			}
-		}
-	}
+		AdventureClubCaptureExtensionPlan clubCaptureExtensionPlan =
+			BuildAdventureClubCaptureExtensionPlan(
+				playerIndex,
+				captureStartIndex,
+				extraTableCardIndexes);
+		clubGapRootingTargetTableCard =
+			clubCaptureExtensionPlan.GapRootingTarget;
+		plannedClubCaptureEffectState =
+			clubCaptureExtensionPlan.PlannedEffectState;
 
 	HashSet<int>? preservedTableCardIndexes =
 		preserveTailTableCardIndex >= 0
@@ -237,43 +169,57 @@ public partial class GameBoardScene
 		GetAdventureRunSessionStore()?.ReplaceEffectState(
 			plannedClubCaptureEffectState.Clone());
 	}
-	AdventureAllGainsConvergeResult allGainsConverge = default;
-	if (awardScore)
-	{
-		BuildAdventureCaptureDamageCardPointLists(
-			captureScoringTableCards,
-			captureStartIndex,
-			scorePlayerIndex,
-			extraTableCardIndexes,
-			adventureCaptureRawPoints,
-			adventureCaptureResolvedPoints,
-			adventureCaptureScoringTableIndexes);
-		allGainsConverge = AdventureUpgradeEffectService
-			.ResolveAllGainsConverge(
-				GetAdventureUpgradeRunState()
-					?.GetAcquiredUpgradeIds()
-					?? Array.Empty<string>(),
-				new AdventureCaptureDamageInput(
-					BaseDamage: captureFlow.Score.Points,
-					QuestionRewardEchoActive:
-						_adventureMainPlayerQuestionRewardEchoActive,
-					ScoringCardRawPoints:
-						adventureCaptureRawPoints,
-					ScoringCardResolvedPoints:
-						adventureCaptureResolvedPoints,
-					ScoringCardTableIndexes:
-						adventureCaptureScoringTableIndexes,
-					CapturerIsMainPlayer:
-						playerIndex == MainPlayerIndex));
-	}
-	if (allGainsConverge.BonusDamage > 0
-		&& allGainsConverge.ScoringCardTableIndex >= 0)
-	{
-		_ = PlayTableCardPointPopupAsync(
-			allGainsConverge.ScoringCardTableIndex,
-			allGainsConverge.BonusDamage);
-	}
-	commitImmediatelyBeforeApply?.Invoke();
+		AdventureCapturePreparation capturePreparation =
+			BuildAdventureCapturePreparation(
+				playerIndex,
+				captureStartIndex,
+				scorePlayerIndex,
+				capturePlan,
+				prePlayTableCards,
+				adventureFlatDamageDelta,
+				baseCardActionContext,
+				actionSource,
+				matchSource,
+				triggeredAttachedItemCardIds,
+				clubGapRootingTargetTableCard,
+				preserveTailTableCardIndex);
+		adventureCaptureContext = capturePreparation.Context;
+		foreach (AdventureCapturedCardEntry capturedEntry in
+			adventureCaptureContext.CapturedCards)
+		{
+			capturedTraceMark |= ReferenceEquals(
+				capturedEntry.TableCard,
+				_adventureTraceHuntMarkedTableCard);
+			capturedHuntMark |= ReferenceEquals(
+				capturedEntry.TableCard,
+				_adventureHuntOrderMarkedTableCard);
+			if (!questionRewardStartGlobalPosition.HasValue
+				&& IsQuestionTableCard(capturedEntry.TableCard))
+			{
+				questionRewardStartGlobalPosition =
+					_centerArena.GlobalPosition
+					+ GetTableCardPosition(
+						capturedEntry.PreCaptureTableIndex,
+						tableLayoutRect);
+			}
+		}
+
+			resolvedCaptureDamage = ResolveAdventureCaptureDamage(
+				playerIndex,
+				capturePreparation.DamageInput);
+		if (resolvedCaptureDamage.FinalDamage > 0)
+		{
+			AddPlayerScore(scorePlayerIndex, resolvedCaptureDamage.FinalDamage);
+		}
+		if (playerIndex == MainPlayerIndex)
+		{
+			adventurePostCaptureEffects = ResolveAdventurePostCaptureEffects(
+				playerIndex,
+				resolvedCaptureDamage.FinalDamage,
+				_adventureMainPlayerSuccessfulCapturesThisTurn + 1,
+				adventureCaptureContext);
+		}
+		commitImmediatelyBeforeApply?.Invoke();
 	CaptureStateResult captureStateResult =
 		_captureStateService.ApplyCapture(
 			_state,
@@ -283,11 +229,22 @@ public partial class GameBoardScene
 			preservedTableCardIndexes,
 			blackLedgerRedirectTableCardIndex,
 			MainPlayerIndex);
-	collectedCardCount =
-		captureStateResult.CollectedCardCount;
-	removedTableCardCount =
-		captureStateResult.RemovedTableCardCount;
-	await WaitForDebugCaptureAfterApplyBarrierAsync();
+		collectedCardCount =
+			captureStateResult.CollectedCardCount;
+		removedTableCardCount =
+			captureStateResult.RemovedTableCardCount;
+		if (clubGapRootingTargetTableCard != null
+			&& _tableCards.Contains(clubGapRootingTargetTableCard)
+			&& clubGapRootingTargetTableCard.Card.HasValue)
+		{
+			_tableCards.Remove(clubGapRootingTargetTableCard);
+			AddCardToPlayerDeck(
+				playerIndex,
+				clubGapRootingTargetTableCard.Card.Value);
+			collectedCardCount++;
+			removedTableCardCount++;
+		}
+		await WaitForDebugCaptureAfterApplyBarrierAsync();
 	if (turnSequenceGeneration != _turnSequenceGeneration
 		|| _isLeavingGame)
 	{
@@ -338,12 +295,10 @@ public partial class GameBoardScene
 		}
 	}
 
-	await ApplyAdventureClubCaptureReturnsAsync(
-		playerIndex,
-		capturedBaseCards,
-		playedCardForAdventureReturns,
-		playedCardUsedAttachedEffect,
-		turnSequenceGeneration);
+		await ApplyAdventureClubCaptureReturnsAsync(
+			playerIndex,
+			adventureCaptureContext,
+			turnSequenceGeneration);
 	if (turnSequenceGeneration != _turnSequenceGeneration
 		|| _isLeavingGame)
 	{
@@ -362,21 +317,7 @@ public partial class GameBoardScene
 		return BuildAppliedResult(aborted: true);
 	}
 
-	if (clubGapRootingTargetTableCard != null
-		&& _tableCards.Contains(
-			clubGapRootingTargetTableCard)
-		&& clubGapRootingTargetTableCard.Card.HasValue)
-	{
-		_tableCards.Remove(
-			clubGapRootingTargetTableCard);
-		AddCardToPlayerDeck(
-			playerIndex,
-			clubGapRootingTargetTableCard.Card.Value);
-		collectedCardCount++;
-		removedTableCardCount++;
-	}
-
-	RefreshGardenEelBuriedCardIndex();
+		RefreshGardenEelBuriedCardIndex();
 	if (collectedCardCount > 0)
 	{
 		ApplyAdventureEnemyCaptureEffects(playerIndex);
@@ -396,79 +337,6 @@ public partial class GameBoardScene
 				.QuestionCardRefreshAnchorPlayerIndex;
 	}
 
-	if (awardScore)
-	{
-		int adventureOldTableDamageDelta =
-			adventureFlatDamageDelta;
-		if (prePlayTableCards != null
-			&& prePlayTableCards.Count > 0)
-		{
-			adventureOldTableDamageDelta +=
-				AdventureUpgradeEffectService
-					.ResolveOldTableCaptureDamageDelta(
-						GetAdventureUpgradeRunState()
-							?.GetAcquiredUpgradeIds()
-							?? Array.Empty<string>(),
-						playerIndex == MainPlayerIndex,
-						CountCapturedOldScoringTableCards(
-							prePlayTableCards,
-							captureStartIndex,
-							extraTableCardIndexes),
-						capturedTraceMark,
-						capturedHuntMark);
-		}
-
-		bool isFirstCaptureThisBattle =
-			playerIndex == MainPlayerIndex
-			&& _adventureMainPlayerCaptureCountThisBattle
-				== 0;
-		AdventureCaptureDamageResult resolvedCaptureDamage =
-			ResolveAdventureCaptureDamage(
-				playerIndex,
-				new AdventureCaptureDamageInput(
-					BaseDamage:
-						captureFlow.Score.Points,
-					FlatDamageDelta:
-						adventureOldTableDamageDelta,
-					IsFirstCaptureThisBattle:
-						isFirstCaptureThisBattle,
-					IncludesQuestionReward:
-						questionRewardAnimation.HasValue,
-					QuestionRewardEchoActive:
-						_adventureMainPlayerQuestionRewardEchoActive,
-					ScoringCardRawPoints:
-						adventureCaptureRawPoints,
-					ScoringCardResolvedPoints:
-						adventureCaptureResolvedPoints,
-					ScoringCardTableIndexes:
-						adventureCaptureScoringTableIndexes,
-					CapturerIsMainPlayer:
-						playerIndex == MainPlayerIndex));
-		if (resolvedCaptureDamage.FinalDamage > 0)
-		{
-			AddPlayerScore(
-				scorePlayerIndex,
-				resolvedCaptureDamage.FinalDamage);
-		}
-		if (playerIndex == MainPlayerIndex)
-		{
-			adventurePostCaptureEffects =
-				ResolveAdventurePostCaptureEffects(
-					playerIndex,
-					resolvedCaptureDamage.FinalDamage,
-					_adventureMainPlayerSuccessfulCapturesThisTurn
-						+ 1,
-					attachedEffectTriggered:
-						playedCardUsedAttachedEffect,
-					capturedOnlyOuterVisibleCards:
-						prePlayTableCards != null
-						&& CapturedOnlyOuterVisibleCards(
-							prePlayTableCards,
-							captureStartIndex,
-							extraTableCardIndexes));
-		}
-	}
-
 	if (capturedTraceMark)
 	{
 		SetAdventureTraceHuntMarkedTableCard(
@@ -477,7 +345,7 @@ public partial class GameBoardScene
 	}
 
 	if (playerIndex == MainPlayerIndex
-		&& captureStateResult.CollectedCardCount > 0)
+			&& collectedCardCount > 0)
 	{
 		if (capturedHuntMark)
 		{
@@ -522,10 +390,10 @@ public partial class GameBoardScene
 	}
 
 	bool shouldQueueBigCaptureUpgrade =
-		captureFlow.CapturedScoringCards
-		&& ShouldQueueAdventureBigCaptureUpgrade(
-			playerIndex,
-			captureFlow.TotalCapturedCardCount);
+			captureFlow.CapturedScoringCards
+			&& ShouldQueueAdventureBigCaptureUpgrade(
+				playerIndex,
+				adventureCaptureContext.CapturedCards.Count);
 	await CheckForWinnerAsync(
 		turnSequenceGeneration,
 		shouldQueueBigCaptureUpgrade);

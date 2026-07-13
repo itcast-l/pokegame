@@ -67,10 +67,6 @@ func _run() -> void:
 	if not await _wait_for_winner_phase(board):
 		return
 
-	if int(board.call("DebugGetAdventureAcquiredUpgradeCount")) != 2:
-		_fail("Victory display failure should auto-resolve one upgrade before winner phase")
-		return
-
 	if bool(board.call("DebugIsAdventureUpgradeSelectionVisible")):
 		_fail("Victory display failure should not leave the upgrade selection overlay visible")
 		return

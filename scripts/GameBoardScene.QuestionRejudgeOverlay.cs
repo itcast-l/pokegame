@@ -127,9 +127,24 @@ public partial class GameBoardScene
 		AdventureQuestionRejudgePromptResult promptResult = await PromptAdventureQuestionRejudgeOverlayAsync(rewardAnimation.Value.ItemCard);
 		AdventureQuestionRejudgeOverlay? sourceOverlay = promptResult.Overlay;
 		if (turnSequenceGeneration != _turnSequenceGeneration
-			|| IsGameOver()
-			|| promptResult.Choice != AdventureQuestionRejudgeChoice.Reroll
-			|| sourceOverlay == null)
+			|| IsGameOver())
+		{
+			DisposeActiveSelectionOverlay();
+			return;
+		}
+
+		AdventureQuestionRejudgeRuleResult rejudgeResult =
+			AdventureUpgradeEffectService.ResolveQuestionRewardRejudgeChoice(
+				runState.GetAcquiredUpgradeIds(),
+				_adventureQuestionRejudgeUsedThisBattle,
+				promptResult.Choice == AdventureQuestionRejudgeChoice.Reroll
+					? AdventureQuestionRejudgeRuleChoice.Reroll
+					: AdventureQuestionRejudgeRuleChoice.Keep);
+		if (rejudgeResult.ConsumesOpportunity)
+		{
+			_adventureQuestionRejudgeUsedThisBattle = true;
+		}
+		if (!rejudgeResult.ShouldReroll || sourceOverlay == null)
 		{
 			DisposeActiveSelectionOverlay();
 			return;
@@ -185,9 +200,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_adventureQuestionRejudgeUsedThisBattle = true;
 		_debugLastQuestionRewardItemCardId = rerolledItemCardId;
-		await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
 	}

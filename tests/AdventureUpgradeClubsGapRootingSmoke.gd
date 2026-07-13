@@ -38,11 +38,11 @@ func _run() -> void:
 		or not board.has_method("DebugAcquireAdventureUpgrade") \
 		or not board.has_method("DebugConfigureAdventureGapRootingScenario") \
 		or not board.has_method("DebugPlayFirstAvailableLocalMainPlayerHandCard") \
-		or not board.has_method("DebugSetPlayerScore") \
 		or not board.has_method("DebugGetTotalHandCardCountForPlayer") \
 		or not board.has_method("DebugGetHandCardCode") \
 		or not board.has_method("DebugGetDeckCardCountForPlayer") \
 		or not board.has_method("DebugGetDeckCardCode") \
+		or not board.has_method("DebugGetPlayerScoreValue") \
 		or not board.has_method("DebugGetGameLoopPhaseName"):
 		_fail("Missing gap rooting debug hooks")
 		return
@@ -58,16 +58,15 @@ func _run() -> void:
 		_fail("Failed to inject clubs_gap_rooting")
 		return
 
-	if not bool(board.call("DebugSetPlayerScore", 1, 1)):
-		_fail("Failed to lower enemy score for isolated gap rooting verification")
-		return
-
-	var deck_count_before := int(board.call("DebugGetDeckCardCountForPlayer", MAIN_PLAYER_INDEX))
+	var enemy_health_before := int(board.call("DebugGetPlayerScoreValue", 1))
 	if not bool(board.call("DebugPlayFirstAvailableLocalMainPlayerHandCard")):
 		_fail("Failed to play gap rooting setup card")
 		return
 
 	if not await _wait_for_settled_state(board):
+		return
+	if int(board.call("DebugGetPlayerScoreValue", 1)) != enemy_health_before:
+		_fail("Gap Rooting incorrectly scored its 2-point capture extension")
 		return
 
 	var found_gap_rooting_card := false

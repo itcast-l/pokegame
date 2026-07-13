@@ -11,6 +11,14 @@ public partial class GameBoardScene
 		{
 			return new PlayCardResult(false, false);
 		}
+		if (playerIndex == MainPlayerIndex)
+		{
+			await BeginRealMainPlayerTurnIfNeededAsync(turnSequenceGeneration);
+			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			{
+				return new PlayCardResult(false, false);
+			}
+		}
 
 		List<PlayingCard> hand = _playerHands[playerIndex];
 		if (handIndex < 0 || handIndex >= hand.Count)
@@ -19,6 +27,8 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = hand[handIndex];
+		AdventureExtraActionGrant? pendingExtraActionGrant =
+			PeekAdventureExtraActionGrantForAction(playerIndex);
 		var prePlayTableCards = new List<TableCard>(_tableCards);
 		bool narwhalDoubleAbilityTriggered = ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, playedCard);
 		if (narwhalDoubleAbilityTriggered)
@@ -36,7 +46,6 @@ public partial class GameBoardScene
 			playedCard,
 			adventureEnemyNextBaseCardModifiers.TableInsertIndex,
 			adventureEnemyNextBaseCardModifiers.FacesUp);
-		bool playedCardUsedAttachedEffectOnPlan = DidPlayedCardUseAttachedEffectOnPlan(playedCard, cardPlayPlan);
 		bool playedRankCollectsTable = cardPlayPlan.PlayedCardCollectsTable;
 		Control handArea = _playerHandAreas[playerIndex];
 		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
@@ -61,14 +70,35 @@ public partial class GameBoardScene
 		{
 			return new PlayCardResult(false, false);
 		}
+		AdventureExtraActionGrant? acceptedExtraActionGrant =
+			AcceptAdventureExtraActionGrantForAction(
+				playerIndex,
+				pendingExtraActionGrant);
+		BaseCardActionContext baseCardActionContext =
+			CreateBaseCardActionContext(
+				playedCard,
+				acceptedExtraActionGrant);
 
-		ConsumeAdventureBorrowSuitSetAfterPlayIfNeeded(playedCard);
-		ApplyAdventureCanopyRevealToNewTableCard(startResult.PlayedTableCardIndex);
+		try
+		{
+			ConsumeAdventureBorrowSuitSetAfterPlayIfNeeded(playedCard);
+			ApplyAdventureCanopyRevealToNewTableCard(startResult.PlayedTableCardIndex);
 
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
-		int captureStartIndex = startResult.CaptureStartIndex;
-		int playedTableCardIndex = startResult.PlayedTableCardIndex;
-		bool matchedTableCardFlipped = startResult.MatchedTableCardFlipped;
+			int captureStartIndex = startResult.CaptureStartIndex;
+			int playedTableCardIndex = startResult.PlayedTableCardIndex;
+			bool plannedCapturedMiddleCards = captureStartIndex >= 0
+				&& HasCapturedMiddleTableCards(captureStartIndex);
+			baseCardActionContext = baseCardActionContext with
+			{
+				TriggeredAttachedItemCardIds = BuildPlayedCardPlanTriggeredAttachmentIds(
+					playedCard,
+					cardPlayPlan,
+					plannedCapturedMiddleCards),
+			};
+			AdventureCaptureMatchSource captureMatchSource =
+				ResolveAdventureCaptureMatchSource(playedCard, cardPlayPlan);
+			bool matchedTableCardFlipped = startResult.MatchedTableCardFlipped;
 		bool playedTableCardIsFaceUp = _tableCards[playedTableCardIndex].IsFaceUp;
 		if (IsNetworkMultiplayerMode()
 			&& IsNetworkHost()
@@ -95,14 +125,17 @@ public partial class GameBoardScene
 			playedTableCardIndex,
 			playedTableCardIsFaceUp);
 
-		if (turnSequenceGeneration != _turnSequenceGeneration)
-		{
-			return new PlayCardResult(false, false);
-		}
+			if (turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return new PlayCardResult(
+					false,
+					false,
+					ConsumedAdventureExtraActionGrant: acceptedExtraActionGrant,
+					BaseCardActionContext: baseCardActionContext);
+			}
 
-		RenderPlayerHands();
-		RenderTableCards();
-		bool consumedAdventureExtraBaseCardAction = ConsumeAdventureMainPlayerExtraBaseCardActionIfNeeded(playerIndex);
+			RenderPlayerHands();
+			RenderTableCards();
 
 		CardPlayBranchResult branchResult;
 		if (captureStartIndex >= 0)
@@ -114,42 +147,54 @@ public partial class GameBoardScene
 				captureStartIndex,
 				playedTableCardIndex,
 				matchedTableCardFlipped,
-				playedRankCollectsTable,
-				adventureEnemyNextBaseCardModifiers.CaptureDamageDelta,
-				playedCardUsedAttachedEffectOnPlan,
-				turnSequenceGeneration);
+					playedRankCollectsTable,
+					adventureEnemyNextBaseCardModifiers.CaptureDamageDelta,
+					baseCardActionContext,
+					captureMatchSource,
+					turnSequenceGeneration);
 		}
 		else
 		{
-			branchResult = await ResolveMissedPlayedCardAsync(playerIndex, playedCard, prePlayTableCards, playedTableCardIndex, turnSequenceGeneration);
-		}
+				branchResult = await ResolveMissedPlayedCardAsync(
+					playerIndex,
+					playedCard,
+					prePlayTableCards,
+					playedTableCardIndex,
+					baseCardActionContext,
+					turnSequenceGeneration);
+			}
+			baseCardActionContext = branchResult.ResolvedActionContext
+				?? baseCardActionContext;
 
-		if (branchResult.ShouldReturn)
-		{
-			return branchResult.Result;
-		}
+			if (branchResult.ShouldReturn)
+			{
+				return branchResult.Result with
+				{
+					ConsumedAdventureExtraActionGrant = acceptedExtraActionGrant,
+					BaseCardActionContext = baseCardActionContext,
+				};
+			}
 
-		if (playerIndex == MainPlayerIndex
-			&& turnSequenceGeneration == _turnSequenceGeneration
-			&& !IsGameOver())
-		{
-			await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
-		}
-
-		CheckForWinner();
+			CheckForWinner();
 		bool captured = captureStartIndex >= 0;
-		return new PlayCardResult(
-			true,
-			captured,
-			captured,
-			CompletesTurn: !branchResult.OvertimeTriggered,
-			CaptureVisualSync: branchResult.CaptureVisualSync,
-			HandPlayVisualSync: new NetworkHandPlayVisualSync(
-				playedTableCardIndex,
-				cardPlayPlan.MatchingTableCardIndex,
-				cardPlayPlan.MatchedTableCardFlipped,
-				cardPlayPlan.EffectiveRank),
-			AdventureConsumedExtraBaseCardAction: consumedAdventureExtraBaseCardAction);
+			return new PlayCardResult(
+				true,
+				captured,
+				captured,
+				CompletesTurn: !branchResult.OvertimeTriggered,
+				CaptureVisualSync: branchResult.CaptureVisualSync,
+				HandPlayVisualSync: new NetworkHandPlayVisualSync(
+					playedTableCardIndex,
+					cardPlayPlan.MatchingTableCardIndex,
+					cardPlayPlan.MatchedTableCardFlipped,
+					cardPlayPlan.EffectiveRank),
+				ConsumedAdventureExtraActionGrant: acceptedExtraActionGrant,
+				BaseCardActionContext: baseCardActionContext);
+		}
+		finally
+		{
+			CompleteAdventureExtraActionGrantAction(acceptedExtraActionGrant);
+		}
 	}
 
 	private async Task<CardPlayBranchResult> ResolvePlayedCardCaptureAsync(
@@ -159,10 +204,11 @@ public partial class GameBoardScene
 	int captureStartIndex,
 	int playedTableCardIndex,
 	bool matchedTableCardFlipped,
-	bool playedRankCollectsTable,
-	int adventureEnemyCurrentPlayCaptureDamageDelta,
-	bool playedCardUsedAttachedEffectOnPlan,
-	int turnSequenceGeneration)
+		bool playedRankCollectsTable,
+		int adventureEnemyCurrentPlayCaptureDamageDelta,
+		BaseCardActionContext baseCardActionContext,
+		AdventureCaptureMatchSource captureMatchSource,
+		int turnSequenceGeneration)
 {
 	PlayGameSfx(GameSfx.CaptureBite, -1.0f, 0.97f, 1.03f);
 	ClearCardPlayTriggerScratchSets();
@@ -174,8 +220,10 @@ public partial class GameBoardScene
 		_cardPlayMagnetExtraCaptureIndexes;
 	HashSet<int> resolvedDoubleTriggerIndexes =
 		_cardPlayResolvedDoubleTriggerIndexes;
-	HashSet<int> resolvedOvertimeTriggerIndexes =
-		_cardPlayResolvedOvertimeTriggerIndexes;
+		HashSet<int> resolvedOvertimeTriggerIndexes =
+			_cardPlayResolvedOvertimeTriggerIndexes;
+		var triggeredAttachedItemCardIds = new List<string>(
+			baseCardActionContext.TriggeredAttachedItemCardIds);
 	var captureTableReferenceSnapshot =
 		new List<TableCard>(_tableCards);
 	if (captureStartIndex < 0
@@ -209,10 +257,12 @@ public partial class GameBoardScene
 
 	PairCaptureEdgeFloatHold? pairCaptureEdgeFloat = null;
 	bool pairCaptureEdgeFloatHandedToDeck = false;
-	try
-	{
-		captureStartIndex =
-			await TryResolveReverseAnchorCaptureStartAsync(
+		try
+		{
+			int captureStartIndexBeforeReverseAnchor = captureStartIndex;
+			int reverseAnchorSourceIndex = GetCaptureTailTableCardIndex(captureStartIndex);
+			captureStartIndex =
+				await TryResolveReverseAnchorCaptureStartAsync(
 				captureStartIndex,
 				playerIndex,
 				turnSequenceGeneration);
@@ -224,10 +274,19 @@ public partial class GameBoardScene
 			return new CardPlayBranchResult(
 				true,
 				new PlayCardResult(false, false),
-				false);
-		}
+					false);
+			}
+			if (captureStartIndex != captureStartIndexBeforeReverseAnchor
+				&& reverseAnchorSourceIndex >= 0
+				&& reverseAnchorSourceIndex < _tableCards.Count)
+			{
+				AddTriggeredAttachmentIdForEffect(
+					triggeredAttachedItemCardIds,
+					_tableCards[reverseAnchorSourceIndex],
+					CardEffectTypes.ReverseAnchor);
+			}
 
-		CaptureScoringRules.TableCard[] captureScoringTableCards =
+			CaptureScoringRules.TableCard[] captureScoringTableCards =
 			ToCaptureScoringTableCards();
 		int scorePlayerIndex =
 			ScoreService.GetCapturedScorePlayerIndex(
@@ -237,11 +296,10 @@ public partial class GameBoardScene
 				player_count);
 		CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
 			captureScoringTableCards,
-			captureStartIndex,
-			scorePlayerIndex,
-			BuildCaptureScoringContext(scorePlayerIndex),
-			awardScore: true,
-			magnetExtraCaptureIndexes);
+				captureStartIndex,
+				scorePlayerIndex,
+				BuildCaptureScoringContext(scorePlayerIndex),
+				magnetExtraCaptureIndexes);
 		bool capturedMiddleCards =
 			captureFlow.Capture.CapturedMiddleCards;
 		if (ShouldPlayPairCaptureEdgeFloat(
@@ -376,9 +434,22 @@ public partial class GameBoardScene
 			{
 				specialTriggers.Clear();
 			}
-		}
+			}
 
-		int blackLedgerRedirectTableCardIndex =
+			AddTriggeredAttachmentIdsForIndexes(
+				triggeredAttachedItemCardIds,
+				resolvedMagnetTriggerIndexes,
+				CardEffectTypes.MagnetExtraCapture);
+			AddTriggeredAttachmentIdsForIndexes(
+				triggeredAttachedItemCardIds,
+				resolvedDoubleTriggerIndexes,
+				CardEffectTypes.DoubleCollect);
+			AddTriggeredAttachmentIdsForIndexes(
+				triggeredAttachedItemCardIds,
+				resolvedOvertimeTriggerIndexes,
+				CardEffectTypes.ExtraTurn);
+
+			int blackLedgerRedirectTableCardIndex =
 			ResolveBlackLedgerRedirectTableCardIndex(
 				playerIndex,
 				captureStartIndex);
@@ -424,11 +495,27 @@ public partial class GameBoardScene
 				captureStartIndex,
 				scorePlayerIndex,
 				hasDoubleEffect);
-		int midTideUpgradeBonusPoints =
-			GetCaptureEndScoreBonusPoints(
+			int midTideUpgradeBonusPoints =
+				GetCaptureEndScoreBonusPoints(
 				captureStartIndex,
 				scorePlayerIndex,
-				hasDoubleEffect);
+					hasDoubleEffect);
+			if (endpointCrownBonusPoints > 0)
+			{
+				AddTriggeredAttachmentIdsInCapture(
+					triggeredAttachedItemCardIds,
+					captureStartIndex,
+					magnetExtraCaptureIndexes,
+					CardEffectTypes.EndpointCrown);
+			}
+			if (midTideUpgradeBonusPoints > 0)
+			{
+				AddTriggeredAttachmentIdsInCapture(
+					triggeredAttachedItemCardIds,
+					captureStartIndex,
+					magnetExtraCaptureIndexes,
+					CardEffectTypes.MidTideUpgrade);
+			}
 		if (gardenEelSandBiteBonusPoints > 0)
 		{
 			_ = PlayTableCardPointPopupAsync(
@@ -462,79 +549,41 @@ public partial class GameBoardScene
 		bool includeCrownCanopyCaptureEndpoints =
 			playerIndex == MainPlayerIndex
 			&& clubCaptureScoring.IncludeCaptureEndpointsInScoring;
-		int collectedPoints = captureFlow.Score.Points
-			+ gardenEelSandBiteBonusPoints
-			+ endpointCrownBonusPoints
-			+ midTideUpgradeBonusPoints;
-		var adventureCaptureRawPoints = new List<int>();
-		var adventureCaptureResolvedPoints = new List<int>();
-		var adventureCaptureScoringTableIndexes = new List<int>();
-		collectedPoints += BuildAdventureCaptureDamageCardPointLists(
-			captureScoringTableCards,
-			captureStartIndex,
-			scorePlayerIndex,
-			magnetExtraCaptureIndexes,
-			adventureCaptureRawPoints,
-			adventureCaptureResolvedPoints,
-			adventureCaptureScoringTableIndexes,
-			includeCaptureEndpointsInScoring:
-				includeCrownCanopyCaptureEndpoints);
-		int capturedOldTableDamageDelta = prePlayTableCards.Count > 0
-			? AdventureUpgradeEffectService
-				.ResolveOldTableCaptureDamageDelta(
+		bool preserveTailTableCard =
+			IsAdventureEnemyPlayer(playerIndex)
+			&& AdventureUpgradeEffectService
+				.ShouldPreserveEnemyCaptureTailCard(
 					GetAdventureUpgradeRunState()
 						?.GetAcquiredUpgradeIds()
 						?? Array.Empty<string>(),
-					playerIndex == MainPlayerIndex,
-					CountCapturedOldScoringTableCards(
-						prePlayTableCards,
-						captureStartIndex,
-						magnetExtraCaptureIndexes),
-					IsCapturedTableCardReference(
-						_adventureTraceHuntMarkedTableCard,
-						captureStartIndex,
-						magnetExtraCaptureIndexes),
-					IsCapturedTableCardReference(
-						_adventureHuntOrderMarkedTableCard,
-						captureStartIndex,
-						magnetExtraCaptureIndexes))
-			: 0;
-		bool questionRewardWillTrigger = false;
-		if (capturedMiddleCards)
-		{
-			for (int tableCardIndex = captureStartIndex;
-				tableCardIndex < _tableCards.Count;
-				tableCardIndex++)
-			{
-				if (IsQuestionTableCard(_tableCards[tableCardIndex]))
-				{
-					questionRewardWillTrigger = true;
-					break;
-				}
-			}
-		}
-		bool isFirstCaptureThisBattle =
-			playerIndex == MainPlayerIndex
-			&& _adventureMainPlayerCaptureCountThisBattle == 0;
-		var adventureCaptureDamageInput =
-			new AdventureCaptureDamageInput(
-				BaseDamage: collectedPoints,
-				FlatDamageDelta:
-					adventureEnemyCurrentPlayCaptureDamageDelta
-						+ capturedOldTableDamageDelta,
-				IsFirstCaptureThisBattle: isFirstCaptureThisBattle,
-				IncludesQuestionReward: questionRewardWillTrigger,
-				QuestionRewardEchoActive:
-					_adventureMainPlayerQuestionRewardEchoActive,
-				ScoringCardRawPoints: adventureCaptureRawPoints,
-				ScoringCardResolvedPoints:
-					adventureCaptureResolvedPoints,
-				ScoringCardTableIndexes:
-					adventureCaptureScoringTableIndexes,
-				CapturerIsMainPlayer:
-					playerIndex == MainPlayerIndex);
-		AdventurePostCaptureEffectResult?
-			resolvedAdventurePostCaptureEffects = null;
+					captureFlow.TotalCapturedCardCount);
+		int preservedTailTableCardIndex = preserveTailTableCard
+			? playedTableCardIndex
+			: -1;
+		CaptureStatePlan captureStatePlan = _captureStateService.CreatePlan(
+			_state,
+			captureStartIndex,
+			magnetExtraCaptureIndexes);
+		AdventureClubCaptureExtensionPlan previewClubCaptureExtension =
+			BuildAdventureClubCaptureExtensionPlan(
+				playerIndex,
+				captureStartIndex,
+				magnetExtraCaptureIndexes);
+		AdventureCapturePreparation previewCapturePreparation =
+			BuildAdventureCapturePreparation(
+				playerIndex,
+				captureStartIndex,
+				scorePlayerIndex,
+				captureStatePlan,
+				prePlayTableCards,
+				adventureEnemyCurrentPlayCaptureDamageDelta
+					+ gardenEelSandBiteBonusPoints,
+				baseCardActionContext,
+				"base_card",
+				captureMatchSource,
+				triggeredAttachedItemCardIds,
+				previewClubCaptureExtension.GapRootingTarget,
+				preservedTailTableCardIndex);
 		if (capturedMiddleCards
 			&& ShouldPlayCrabScoreReductionAbility(
 				scorePlayerIndex,
@@ -560,14 +609,7 @@ public partial class GameBoardScene
 		AdventureCaptureDamageResult previewCaptureDamage =
 			PreviewAdventureCaptureDamage(
 				playerIndex,
-				adventureCaptureDamageInput);
-		if (previewCaptureDamage.AllGainsConvergeBonusDamage > 0
-			&& previewCaptureDamage.AllGainsConvergeScoringCardTableIndex >= 0)
-		{
-			_ = PlayTableCardPointPopupAsync(
-				previewCaptureDamage.AllGainsConvergeScoringCardTableIndex,
-				previewCaptureDamage.AllGainsConvergeBonusDamage);
-		}
+				previewCapturePreparation.DamageInput);
 
 		if (previewCaptureDamage.FinalDamage > 0)
 		{
@@ -634,41 +676,21 @@ public partial class GameBoardScene
 				false);
 		}
 
-		bool preserveTailTableCard =
-			IsAdventureEnemyPlayer(playerIndex)
-			&& AdventureUpgradeEffectService
-				.ShouldPreserveEnemyCaptureTailCard(
-					GetAdventureUpgradeRunState()
-						?.GetAcquiredUpgradeIds()
-						?? Array.Empty<string>(),
-					captureFlow.TotalCapturedCardCount);
 		TableCard? preservedTailTableCard = preserveTailTableCard
 			? _tableCards[playedTableCardIndex]
 			: null;
 			CaptureTableCardsResult captureResult = await CaptureTableCardsAsync(
 				playerIndex,
 				captureStartIndex,
-				true,
-				false,
-				turnSequenceGeneration,
-				magnetExtraCaptureIndexes,
-				adventureEnemyCurrentPlayCaptureDamageDelta,
-				prePlayTableCards,
-				playedCardUsedAttachedEffectOnPlan
-					|| (capturedMiddleCards
-						&& (IsAttachedEffectType(
-								playedCard,
-								CardEffectTypes.MagnetExtraCapture)
-							|| IsAttachedEffectType(
-								playedCard,
-								CardEffectTypes.DoubleCollect)
-							|| IsAttachedEffectType(
-								playedCard,
-								CardEffectTypes.ExtraTurn))),
-				playedCard,
-				preserveTailTableCard
-					? playedTableCardIndex
-					: -1,
+				reserveReplacementCard: true,
+				turnSequenceGeneration: turnSequenceGeneration,
+				extraTableCardIndexes: magnetExtraCaptureIndexes,
+				adventureFlatDamageDelta:
+					adventureEnemyCurrentPlayCaptureDamageDelta
+						+ gardenEelSandBiteBonusPoints,
+				prePlayTableCards: prePlayTableCards,
+				preserveTailTableCardIndex:
+					preservedTailTableCardIndex,
 				suppressGardenEelCaptureRecord:
 					gardenEelSandBiteBonusPoints > 0,
 				expectedTableCardReferences:
@@ -685,28 +707,7 @@ public partial class GameBoardScene
 							playedRankCollectsTable);
 					}
 
-					AdventureCaptureDamageResult resolvedCaptureDamage =
-						ResolveAdventureCaptureDamage(
-							playerIndex,
-							adventureCaptureDamageInput);
-					if (resolvedCaptureDamage.FinalDamage > 0)
-					{
-						AddPlayerScore(
-							scorePlayerIndex,
-							resolvedCaptureDamage.FinalDamage);
-					}
-
-					if (playerIndex == MainPlayerIndex)
-					{
-						resolvedAdventurePostCaptureEffects =
-							ResolveAdventurePostCaptureEffects(
-								playerIndex,
-								resolvedCaptureDamage.FinalDamage,
-								_adventureMainPlayerSuccessfulCapturesThisTurn
-									+ 1);
-					}
-
-					if (IsNetworkMultiplayerMode()
+						if (IsNetworkMultiplayerMode()
 						&& IsNetworkHost()
 						&& TryGetCurrentAuthoritativeVisualSnapshotId(
 							out int snapshotId))
@@ -717,9 +718,14 @@ public partial class GameBoardScene
 								turnSequenceGeneration,
 								snapshotId);
 					}
-				},
-				blackLedgerRedirectTableCardIndex:
-					blackLedgerRedirectTableCardIndex);
+					},
+					blackLedgerRedirectTableCardIndex:
+						blackLedgerRedirectTableCardIndex,
+				baseCardActionContext: baseCardActionContext,
+				actionSource: "base_card",
+				matchSource: captureMatchSource,
+				triggeredAttachedItemCardIds:
+					triggeredAttachedItemCardIds);
 		if (!captureResult.Applied
 			|| captureResult.Aborted)
 		{
@@ -823,14 +829,10 @@ public partial class GameBoardScene
 				new PlayCardResult(false, false),
 				false);
 		}
-		await ApplyAdventureQuestionRewardEffects(
+		await ApplyAdventureCaptureRewardEffectsAsync(
 			playerIndex,
 			captureResult.AdventureQuestionRewardEffects,
-			turnSequenceGeneration);
-		await ApplyAdventurePostCaptureEffectsAsync(
-			playerIndex,
-			resolvedAdventurePostCaptureEffects
-				?? captureResult.AdventurePostCaptureEffects,
+			captureResult.AdventurePostCaptureEffects,
 			turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
@@ -863,11 +865,12 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerHands();
-		return new CardPlayBranchResult(
-			false,
-			default,
-			resolvedOvertimeTriggerIndexes.Count > 0,
-			captureVisualSync);
+			return new CardPlayBranchResult(
+				false,
+				default,
+				resolvedOvertimeTriggerIndexes.Count > 0,
+				captureVisualSync,
+				captureResult.AdventureCaptureContext?.Action);
 	}
 	finally
 	{
@@ -896,9 +899,12 @@ public partial class GameBoardScene
 		PlayingCard playedCard,
 		IReadOnlyCollection<TableCard> prePlayTableCards,
 		int playedTableCardIndex,
+		BaseCardActionContext baseCardActionContext,
 		int turnSequenceGeneration)
 	{
 		bool overtimeTriggered = false;
+		var triggeredAttachedItemCardIds = new List<string>(
+			baseCardActionContext.TriggeredAttachedItemCardIds);
 		if (IsAttachedEffectType(playedCard, CardEffectTypes.ExtraTurn))
 		{
 			HashSet<int> resolvedOvertimeTriggerIndexes = _cardPlayResolvedOvertimeTriggerIndexes;
@@ -912,6 +918,15 @@ public partial class GameBoardScene
 				}
 
 				overtimeTriggered = resolvedOvertimeTriggerIndexes.Count > 0;
+				if (overtimeTriggered
+					&& TryGetAttachedItemIdByEffectType(
+						playedCard,
+						CardEffectTypes.ExtraTurn,
+						out string overtimeItemCardId)
+					&& !triggeredAttachedItemCardIds.Contains(overtimeItemCardId))
+				{
+					triggeredAttachedItemCardIds.Add(overtimeItemCardId);
+				}
 			}
 			finally
 			{
@@ -925,7 +940,19 @@ public partial class GameBoardScene
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 		}
 
-		await TryResolveEmptyTideContinuationAfterMissAsync(playedTableCardIndex, turnSequenceGeneration);
+		bool emptyTideContinuationTriggered =
+			await TryResolveEmptyTideContinuationAfterMissAsync(
+				playedTableCardIndex,
+				turnSequenceGeneration);
+		if (emptyTideContinuationTriggered
+			&& TryGetAttachedItemIdByEffectType(
+				playedCard,
+				CardEffectTypes.EmptyTideContinuation,
+				out string emptyTideItemCardId)
+			&& !triggeredAttachedItemCardIds.Contains(emptyTideItemCardId))
+		{
+			triggeredAttachedItemCardIds.Add(emptyTideItemCardId);
+		}
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
@@ -938,6 +965,22 @@ public partial class GameBoardScene
 		{
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 		}
+		triggeredAttachedItemCardIds.Sort(StringComparer.Ordinal);
+		baseCardActionContext = baseCardActionContext with
+		{
+			TriggeredAttachedItemCardIds = triggeredAttachedItemCardIds,
+		};
+		await ApplyAdventurePostCaptureEffectsAsync(
+			playerIndex,
+			ResolveAdventureEnchantedRecoveryActionEffects(
+				playerIndex,
+				triggeredAttachedItemCardIds,
+				successfulCapture: false),
+			turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+		}
 		AdventureMainPlayerMissEffectResult mainPlayerMissEffects = ApplyAdventureMainPlayerMissEffects(playerIndex);
 		if (!await ApplyAdventureMainPlayerMissTableEffectsAsync(mainPlayerMissEffects, playedTableCardIndex, turnSequenceGeneration))
 		{
@@ -946,10 +989,15 @@ public partial class GameBoardScene
 		ApplyAdventureEnemyMissEffects(playerIndex, playedTableCardIndex, prePlayTableCards);
 		if (mainPlayerMissEffects.GrantExtraBaseCardAction)
 		{
-			overtimeTriggered = TryGrantAdventureMainPlayerExtraBaseCardAction() || overtimeTriggered;
+			overtimeTriggered = TryGrantAdventureMainPlayerExtraBaseCardAction(
+				AdventureContinueBranchUpgradeId) || overtimeTriggered;
 		}
 
-		return new CardPlayBranchResult(false, default, overtimeTriggered);
+		return new CardPlayBranchResult(
+			false,
+			default,
+			overtimeTriggered,
+			ResolvedActionContext: baseCardActionContext);
 	}
 
 	private static int[] BuildSortedExtraTableCardIndexesArray(IReadOnlyCollection<int> extraTableCardIndexes)
@@ -973,7 +1021,8 @@ public partial class GameBoardScene
 		bool ShouldReturn,
 		PlayCardResult Result,
 		bool OvertimeTriggered,
-		NetworkCaptureVisualSync? CaptureVisualSync = null);
+		NetworkCaptureVisualSync? CaptureVisualSync = null,
+		BaseCardActionContext? ResolvedActionContext = null);
 
 	private void ClearCardPlayTriggerScratchSets()
 	{
@@ -1093,44 +1142,22 @@ public partial class GameBoardScene
 			}
 		}
 
+		bool collectBySuit = ShouldCollectBySuit(playedCard);
+		bool suitMatchIsFallbackOnly = collectBySuit
+			&& !IsAttachedEffectType(playedCard, CardEffectTypes.SuitCollect)
+			&& ShouldAdventureBorrowSuitSetAffectPlayedCard(playedCard);
 		return CardPlayResolver.Resolve(
 			ToCardPlayTableCards(),
 			new CardPlayCard(
 				primaryRank,
 				ShouldPlayedCardCollectTable(playedCard),
 				playedCard.Suit,
-				ShouldCollectBySuit(playedCard)),
+				collectBySuit,
+				suitMatchIsFallbackOnly),
 			alternateRanks.Count > 0 ? alternateRanks : null,
 			insertAtTableStart: ShouldInsertMissedCardAtTableStart(playedCard),
 			tableInsertIndexOverride: tableInsertIndexOverride,
 			playedCardFacesUp: playedCardFacesUp);
-	}
-
-	private bool DidPlayedCardUseAttachedEffectOnPlan(PlayingCard playedCard, CardPlayPlan plan)
-	{
-		if (BorrowTideRules.DidUseBorrowTide(
-			IsAttachedEffectType(playedCard, CardEffectTypes.BorrowTide),
-			playedCard.Rank,
-			plan.EffectiveRank))
-		{
-			return true;
-		}
-
-		if (ShouldCollectBySuit(playedCard)
-			&& !string.IsNullOrWhiteSpace(playedCard.Suit)
-			&& CardPlayResolver.FindFirstMatchingSuitTableCardIndex(ToCardPlayTableCards(), playedCard.Suit) >= 0)
-		{
-			return true;
-		}
-
-		if (ShouldInsertMissedCardAtTableStart(playedCard)
-			&& plan.MatchingTableCardIndex < 0
-			&& !plan.PlayedCardCollectsTable)
-		{
-			return true;
-		}
-
-		return false;
 	}
 
 	private CardPlayTableCard[] ToCardPlayTableCards()

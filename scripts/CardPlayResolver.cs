@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 using System;
 using System.Collections.Generic;
 
@@ -7,7 +5,8 @@ internal readonly record struct CardPlayCard(
 	string Rank,
 	bool CollectsTable,
 	string Suit = "",
-	bool CollectBySuit = false);
+	bool CollectBySuit = false,
+	bool SuitMatchIsFallbackOnly = false);
 
 internal readonly record struct CardPlayTableCard(
 	string? Rank,
@@ -60,7 +59,9 @@ internal static class CardPlayResolver
 			}
 		}
 
-		if (playedCard.CollectBySuit && !string.IsNullOrWhiteSpace(playedCard.Suit))
+		if (playedCard.CollectBySuit
+			&& !string.IsNullOrWhiteSpace(playedCard.Suit)
+			&& (!playedCard.SuitMatchIsFallbackOnly || matchingIndex < 0))
 		{
 			int suitMatchingIndex = FindFirstMatchingSuitTableCardIndex(tableCards, playedCard.Suit);
 			if (suitMatchingIndex >= 0)

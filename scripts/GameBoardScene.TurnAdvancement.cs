@@ -5,19 +5,85 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private void SetCurrentTurnPlayerIndex(int nextTurnPlayerIndex)
+	private void SetCurrentTurnPlayerIndex(
+		int nextTurnPlayerIndex,
+		int? previousTurnPlayerIndexOverride = null)
 	{
-		int previousTurnPlayerIndex = _currentTurnPlayerIndex;
-		if (NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(_currentTurnPlayerIndex, nextTurnPlayerIndex))
+		int previousTurnPlayerIndex = previousTurnPlayerIndexOverride
+			?? _currentTurnPlayerIndex;
+		if (NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(
+			previousTurnPlayerIndex,
+			nextTurnPlayerIndex))
 		{
 			_networkAiBlockedItem = NetworkAiBlockedItemState.None;
 		}
 
-			_currentTurnPlayerIndex = nextTurnPlayerIndex;
+		if (previousTurnPlayerIndex == MainPlayerIndex
+			&& nextTurnPlayerIndex != MainPlayerIndex)
+		{
+			EndRealMainPlayerTurn();
+		}
+
+		_currentTurnPlayerIndex = nextTurnPlayerIndex;
 		if (nextTurnPlayerIndex == MainPlayerIndex && previousTurnPlayerIndex != MainPlayerIndex)
 		{
-			_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
-			RefreshAdventureHuntOrderMarkForMainPlayerTurn();
+			_state.AdventureRealMainPlayerTurnActive = false;
+			_state.AdventureRealMainPlayerTurnStartPending = true;
+		}
+	}
+
+	private async Task BeginRealMainPlayerTurnIfNeededAsync(int turnSequenceGeneration)
+	{
+		if (_currentTurnPlayerIndex != MainPlayerIndex
+			|| _state.AdventureRealMainPlayerTurnActive)
+		{
+			return;
+		}
+
+		AdventureExtraActionQueueState extraActions = _state.AdventureExtraActionQueue;
+		if (extraActions.ActiveRootChainId > 0
+			&& extraActions.RootResumesNormalTurn)
+		{
+			_state.AdventureRealMainPlayerTurnStartPending = true;
+			return;
+		}
+
+		_state.AdventureRealMainPlayerTurnActive = true;
+		_state.AdventureRealMainPlayerTurnStartPending = false;
+		extraActions.BeginRealTurn();
+		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
+		RefreshAdventureHuntOrderMarkForMainPlayerTurn();
+		await ApplyAdventureMainPlayerTurnStartEffectsAsync(
+			MainPlayerIndex,
+			turnSequenceGeneration);
+	}
+
+	private void EndRealMainPlayerTurn()
+	{
+		if (!_state.AdventureRealMainPlayerTurnActive
+			&& !_state.AdventureRealMainPlayerTurnStartPending)
+		{
+			return;
+		}
+
+		bool commitMissBandage = _state.AdventureExtraActionQueue.EndRealTurn();
+		_state.AdventureRealMainPlayerTurnActive = false;
+		_state.AdventureRealMainPlayerTurnStartPending = false;
+		if (commitMissBandage)
+		{
+			CommitPendingAdventureMissBandageAtRealTurnEnd();
+		}
+
+		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
+		_adventureHuntOrderMarkedTableCard = null;
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? runState = store?.GetRunState();
+		if (store != null && runState?.IsActive == true)
+		{
+			AdventureUpgradeEffectService.ClearTurnScopedState(
+				runState.EffectState);
+			store.ReplaceEffectState(runState.EffectState.Clone());
+			MarkActivePlayerStatusTooltipForRefresh();
 		}
 	}
 
@@ -30,11 +96,15 @@ public partial class GameBoardScene
 
 		ClearJellyfishBubbleIfMainPlayerTurnCompleted(playerIndex, result);
 
-		SetCurrentTurnPlayerIndex(_turnAdvancementService.ApplyPlayedResult(
+		int previousTurnPlayerIndex = _currentTurnPlayerIndex;
+		int nextTurnPlayerIndex = _turnAdvancementService.ApplyPlayedResult(
 			_state,
 			playerIndex,
 			result.Captured,
-			GetNextTurnPlayerIndex(playerIndex)));
+			GetNextTurnPlayerIndex(playerIndex));
+		SetCurrentTurnPlayerIndex(
+			nextTurnPlayerIndex,
+			previousTurnPlayerIndex);
 		PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result, _turnSequenceGeneration);
 		if (IsGameOver())
@@ -73,13 +143,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		await ApplyAdventureMainPlayerTurnStartEffectsAsync(_currentTurnPlayerIndex, turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
-		{
-			return;
-		}
-
-		await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
+		await BeginRealMainPlayerTurnIfNeededAsync(turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -137,7 +201,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (playerIndex == MainPlayerIndex && _adventureMainPlayerPendingExtraBaseCardAction)
+		if (playerIndex == MainPlayerIndex && HasPendingAdventureExtraBaseCardAction())
 		{
 			return false;
 		}
@@ -223,7 +287,8 @@ public partial class GameBoardScene
 
 	private bool CanPlayItemCard(int playerIndex, string itemCardId)
 	{
-		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+		if ((playerIndex == MainPlayerIndex && HasPendingAdventureExtraBaseCardAction())
+			|| !_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
 			|| !definition.EnabledInGame
 			|| !definition.PlayableFromHand)
 		{

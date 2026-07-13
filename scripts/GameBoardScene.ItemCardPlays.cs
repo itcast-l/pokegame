@@ -119,8 +119,11 @@ public partial class GameBoardScene
 		{
 			return new PlayCardResult(false, false);
 		}
-		await ApplyAdventureQuestionRewardEffects(playerIndex, result.AdventureQuestionRewardEffects, turnSequenceGeneration);
-		await ApplyAdventurePostCaptureEffectsAsync(playerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
+		await ApplyAdventureCaptureRewardEffectsAsync(
+			playerIndex,
+			result.AdventureQuestionRewardEffects,
+			result.AdventurePostCaptureEffects,
+			turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);

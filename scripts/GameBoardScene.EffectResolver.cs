@@ -114,8 +114,12 @@ public partial class GameBoardScene
 			0,
 			turnSequenceGeneration:
 				turnSequenceGeneration,
+			prePlayTableCards:
+				captureTableReferenceSnapshot,
 			expectedTableCardReferences:
-				captureTableReferenceSnapshot);
+				captureTableReferenceSnapshot,
+			actionSource: $"effect_collect_table:{request.Definition.Id}",
+			matchSource: AdventureCaptureMatchSource.CollectAll);
 	if (captureResult.Aborted)
 	{
 		return new PlayCardResult(false, false);

@@ -14,7 +14,6 @@ public partial class GameBoardScene
 	private Panel? _playerStatusTooltipPanel;
 	private Label? _playerStatusTooltipTitleLabel;
 	private Label? _playerStatusTooltipValueLabel;
-	private Label? _playerStatusTooltipAdventureStatusLabel;
 	private Panel? _playerStatusTooltipBarTrack;
 	private ColorRect? _playerStatusTooltipBarFill;
 	private Godot.Timer? _playerStatusTooltipDelayTimer;
@@ -66,16 +65,6 @@ public partial class GameBoardScene
 		_playerStatusTooltipValueLabel.AddThemeColorOverride("font_color", new Color(0.68f, 0.93f, 1.0f, 0.92f));
 		_playerStatusTooltipValueLabel.AddThemeFontSizeOverride("font_size", 13);
 		content.AddChild(_playerStatusTooltipValueLabel);
-
-		_playerStatusTooltipAdventureStatusLabel = new Label
-		{
-			MouseFilter = MouseFilterEnum.Ignore,
-			ClipText = true,
-			Visible = false,
-		};
-		_playerStatusTooltipAdventureStatusLabel.AddThemeColorOverride("font_color", new Color(0.62f, 0.96f, 0.72f, 0.94f));
-		_playerStatusTooltipAdventureStatusLabel.AddThemeFontSizeOverride("font_size", 13);
-		content.AddChild(_playerStatusTooltipAdventureStatusLabel);
 
 		_playerStatusTooltipBarTrack = new Panel
 		{
@@ -209,8 +198,7 @@ public partial class GameBoardScene
 	{
 		if (_activeStatusTooltipPlayerIndex != playerIndex
 			|| _playerStatusTooltipTitleLabel == null
-			|| _playerStatusTooltipValueLabel == null
-			|| _playerStatusTooltipAdventureStatusLabel == null)
+			|| _playerStatusTooltipValueLabel == null)
 		{
 			return;
 		}
@@ -225,13 +213,6 @@ public partial class GameBoardScene
 		_playerStatusTooltipValueLabel.Text = string.IsNullOrWhiteSpace(seatControlStatusText)
 			? baseValueText
 			: $"{baseValueText}  {seatControlStatusText}";
-		bool hasFlourish = TryGetAdventureClubFlourishStacks(
-			playerIndex,
-			out int flourishStacks);
-		_playerStatusTooltipAdventureStatusLabel.Visible = hasFlourish;
-		_playerStatusTooltipAdventureStatusLabel.Text = hasFlourish
-			? LocalizeFormat("ADVENTURE_STATUS_FLOURISH", flourishStacks)
-			: string.Empty;
 		if (_playerStatusTooltipBarFill != null)
 		{
 			_playerStatusTooltipBarFill.Color = AvatarScoreGlowColors[playerIndex];

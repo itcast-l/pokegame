@@ -170,14 +170,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 				targetHandIndex: targetHandIndex,
 				originGlobalCenter: originGlobalCenter),
 			turnSequenceGeneration);
-		if (ownerPlayerIndex == MainPlayerIndex
-			&& turnSequenceGeneration == _turnSequenceGeneration
-			&& !IsGameOver())
-		{
-			await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
-		}
-
-		return result;
+			return result;
 	}
 
 	private static PlayCardResult MergePlayCardResults(PlayCardResult current, PlayCardResult next)

@@ -8,6 +8,7 @@ public sealed class AdventureSuitUpgradeCatalog
 
 	private readonly List<AdventureSuitUpgradeDefinition> _all = new();
 	private readonly Dictionary<string, AdventureSuitUpgradeDefinition> _byId = new(StringComparer.Ordinal);
+	private AdventureUpgradeManifest? _cachedManifest;
 
 	public IReadOnlyList<AdventureSuitUpgradeDefinition> All => _all;
 
@@ -15,6 +16,7 @@ public sealed class AdventureSuitUpgradeCatalog
 	{
 		var catalog = new AdventureSuitUpgradeCatalog();
 		catalog.LoadFromNode(sceneNode);
+		catalog.PublishManifest(sceneNode);
 		return catalog;
 	}
 
@@ -22,6 +24,7 @@ public sealed class AdventureSuitUpgradeCatalog
 	{
 		_all.Clear();
 		_byId.Clear();
+		_cachedManifest = null;
 
 		Node? pandora = sceneNode.GetNodeOrNull<Node>("/root/Pandora");
 		if (pandora == null || !pandora.Call("is_loaded").AsBool())
@@ -53,17 +56,17 @@ public sealed class AdventureSuitUpgradeCatalog
 				continue;
 			}
 
-				definitions.Add(new AdventureSuitUpgradeDefinition(
-					id,
-					entity.Call("get_entity_name").AsString(),
-					GetEntityString(entity, "suit"),
-					GetEntityString(entity, "rarity"),
-					GetEntityString(entity, "trigger_text"),
-					GetEntityString(entity, "effect_text"),
-					GetEntityString(entity, "description_key", BuildDefaultDescriptionKey(id)),
-					GetEntityString(entity, "notes"),
-					GetEntityBool(entity, "enabled"),
-					GetEntityInt(entity, "sort_order")));
+			definitions.Add(new AdventureSuitUpgradeDefinition(
+				id,
+				entity.Call("get_entity_name").AsString(),
+				GetEntityString(entity, "suit"),
+				GetEntityString(entity, "rarity"),
+				GetEntityString(entity, "trigger_text"),
+				GetEntityString(entity, "effect_text"),
+				GetEntityString(entity, "description_key", BuildDefaultDescriptionKey(id)),
+				GetEntityString(entity, "notes"),
+				GetEntityBool(entity, "enabled"),
+				GetEntityInt(entity, "sort_order")));
 		}
 
 		definitions.Sort((a, b) =>
@@ -115,6 +118,82 @@ public sealed class AdventureSuitUpgradeCatalog
 			: new Godot.Collections.Dictionary();
 	}
 
+	internal bool TryCreateManifest(out AdventureUpgradeManifest manifest)
+	{
+		if (_cachedManifest?.IsReady == true)
+		{
+			manifest = _cachedManifest;
+			return true;
+		}
+
+		var entries = new List<AdventureUpgradeManifestEntry>();
+		var catalogIds = new HashSet<string>(StringComparer.Ordinal);
+		foreach (AdventureSuitUpgradeDefinition definition in _all)
+		{
+			if (!definition.Enabled)
+			{
+				continue;
+			}
+
+			if (!AdventureUpgradeRuntimeContract.TryGetMetadata(
+				definition.Id,
+				out AdventureUpgradeRuntimeMetadata runtimeMetadata))
+			{
+				GD.PushWarning(
+					$"Enabled adventure suit upgrade '{definition.Id}' has no runtime manifest contract.");
+				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+				return false;
+			}
+
+			catalogIds.Add(definition.Id);
+
+			entries.Add(new AdventureUpgradeManifestEntry(
+				definition.Id,
+				definition.Suit,
+				definition.Rarity,
+				Enabled: true,
+				runtimeMetadata.HasRuntimeHandler,
+				runtimeMetadata.StateScope,
+				runtimeMetadata.StackingMode,
+				runtimeMetadata.TriggerPolicy,
+				runtimeMetadata.MaximumValue,
+				runtimeMetadata.ConflictGroup,
+				runtimeMetadata.Priority,
+				DescriptionKey: definition.DescriptionKey));
+		}
+
+		foreach (string runtimeUpgradeId in AdventureUpgradeRuntimeContract.All.Keys)
+		{
+			if (catalogIds.Contains(runtimeUpgradeId))
+			{
+				continue;
+			}
+
+			GD.PushWarning(
+				$"Runtime adventure suit upgrade '{runtimeUpgradeId}' is not present in the enabled Pandora catalog.");
+			manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+			return false;
+		}
+
+		try
+		{
+			manifest = new AdventureUpgradeManifest(entries);
+			if (!manifest.IsReady)
+			{
+				return false;
+			}
+
+			_cachedManifest = manifest;
+			return true;
+		}
+		catch (ArgumentException error)
+		{
+			GD.PushWarning($"Adventure suit upgrade manifest is invalid: {error.Message}");
+			manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+			return false;
+		}
+	}
+
 	private static string GetEntityString(GodotObject entity, string propertyName)
 	{
 		return GetEntityString(entity, propertyName, string.Empty);
@@ -149,6 +228,18 @@ public sealed class AdventureSuitUpgradeCatalog
 		}
 
 		return array;
+	}
+
+	private void PublishManifest(Node sceneNode)
+	{
+		if (!TryCreateManifest(out AdventureUpgradeManifest manifest))
+		{
+			return;
+		}
+
+		sceneNode
+			.GetNodeOrNull<AdventureRunSessionStore>("/root/AdventureRunSessionStore")
+			?.SetManifest(manifest);
 	}
 
 	private static string BuildDefaultDescriptionKey(string id)

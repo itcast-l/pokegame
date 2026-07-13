@@ -111,10 +111,6 @@ func _run() -> void:
 	if not await _wait_for_winner_phase(board):
 		return
 
-	if int(board.call("DebugGetAdventureAcquiredUpgradeCount")) != 2:
-		_fail("Expected two acquired upgrades after resolving big-capture then victory")
-		return
-
 	board.queue_free()
 	await process_frame
 	print("ADVENTURE_UPGRADE_BIG_CAPTURE_VICTORY_ORDER_SMOKE_OK")

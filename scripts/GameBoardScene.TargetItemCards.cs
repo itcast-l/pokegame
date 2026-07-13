@@ -67,15 +67,10 @@ public partial class GameBoardScene
 			if (shouldPlayLocalVisual)
 			{
 				PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
-			}
+				}
 
-			RenderPlayerHands();
-			if (targetPlayerIndex == MainPlayerIndex)
-			{
-				await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
-			}
-
-			return new PlayCardResult(true, false);
+				RenderPlayerHands();
+				return new PlayCardResult(true, false);
 		}
 
 		int itemHandIndex = targetHandIndex - _playerHands[targetPlayerIndex].Count;
@@ -118,15 +113,10 @@ public partial class GameBoardScene
 		if (shouldPlayLocalItemVisual)
 		{
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
-		}
+			}
 
-		RenderPlayerHands();
-		if (targetPlayerIndex == MainPlayerIndex)
-		{
-			await RefillAdventureClubFlourishAsync(turnSequenceGeneration);
-		}
-
-		return new PlayCardResult(true, false);
+			RenderPlayerHands();
+			return new PlayCardResult(true, false);
 	}
 
 	private async Task PlayStealHandCardAnimationAsync(

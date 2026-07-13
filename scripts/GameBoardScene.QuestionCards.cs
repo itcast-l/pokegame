@@ -195,19 +195,29 @@ public partial class GameBoardScene
 		}
 		else if (ShouldAutoResolveAdventureQuestionRejudge())
 		{
-			return originalItemCardId;
+			choice = AdventureQuestionRejudgeChoice.Keep;
 		}
 		else
 		{
 			choice = await PromptAdventureQuestionRejudgeAsync(originalItemCardId);
 		}
 
-		if (choice != AdventureQuestionRejudgeChoice.Reroll)
+		AdventureQuestionRejudgeRuleResult rejudgeResult =
+			AdventureUpgradeEffectService.ResolveQuestionRewardRejudgeChoice(
+				runState.GetAcquiredUpgradeIds(),
+				_adventureQuestionRejudgeUsedThisBattle,
+				choice == AdventureQuestionRejudgeChoice.Reroll
+					? AdventureQuestionRejudgeRuleChoice.Reroll
+					: AdventureQuestionRejudgeRuleChoice.Keep);
+		if (rejudgeResult.ConsumesOpportunity)
+		{
+			_adventureQuestionRejudgeUsedThisBattle = true;
+		}
+		if (!rejudgeResult.ShouldReroll)
 		{
 			return originalItemCardId;
 		}
 
-		_adventureQuestionRejudgeUsedThisBattle = true;
 		return PickQuestionRewardItemCardId();
 	}
 
@@ -246,17 +256,6 @@ public partial class GameBoardScene
 		AdventureQuestionRewardEffectResult effectResult = AdventureUpgradeEffectService.OnQuestionRewardGranted(
 			runState.EffectState,
 			runState.GetAcquiredUpgradeIds());
-		if (!_adventureMainPlayerQuestionRewardEchoActive)
-		{
-			foreach (string upgradeId in runState.GetAcquiredUpgradeIds())
-			{
-				if (upgradeId == "diamonds_question_mark_echo")
-				{
-					_adventureMainPlayerQuestionRewardEchoActive = true;
-					break;
-				}
-			}
-		}
 		store!.ReplaceEffectState(runState.EffectState.Clone());
 		return effectResult;
 	}

@@ -2,18 +2,18 @@ extends SceneTree
 
 const CATEGORY_ID := "adventure_suit_upgrades"
 const VISUAL_CATALOG := preload("res://resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres")
-const EXPECTED_TOTAL := 58
+const EXPECTED_TOTAL := 54
 const EXPECTED_SUIT_COUNTS := {
-	"hearts": 15,
-	"diamonds": 15,
-	"spades": 13,
-	"clubs": 15,
+	"hearts": 14,
+	"diamonds": 14,
+	"spades": 12,
+	"clubs": 14,
 }
-const EXPECTED_LEGENDARY_IDS := {
-	"hearts_blood_tide_resonance": "hearts",
-	"diamonds_all_gains_converge": "diamonds",
-	"spades_black_tide_dominion": "spades",
-	"clubs_lush_growth": "clubs",
+const RETIRED_IDS := {
+	"hearts_blood_tide_resonance": true,
+	"diamonds_all_gains_converge": true,
+	"spades_black_tide_dominion": true,
+	"clubs_lush_growth": true,
 }
 
 var _failed := false
@@ -72,7 +72,7 @@ func _run() -> void:
 		"rare": 0,
 		"legendary": 0,
 	}
-	var found_legendary_ids := {}
+	var enabled_ids := {}
 
 	for definition in all_definitions:
 		var definition_id := String(definition.get("id", ""))
@@ -81,6 +81,7 @@ func _run() -> void:
 		var description_key := String(definition.get("description_key", ""))
 		var effect_text := String(definition.get("effect_text", ""))
 		var enabled := bool(definition.get("enabled", false))
+		enabled_ids[definition_id] = true
 
 		_assert(EXPECTED_SUIT_COUNTS.has(suit), "Definition %s has unexpected suit=%s" % [definition_id, suit])
 		if _failed:
@@ -101,20 +102,16 @@ func _run() -> void:
 		if _failed:
 			return
 
-		if EXPECTED_LEGENDARY_IDS.has(definition_id):
-			_assert(rarity == "legendary", "Definition %s should be legendary" % definition_id)
-			_assert(suit == String(EXPECTED_LEGENDARY_IDS[definition_id]), "Definition %s has wrong suit" % definition_id)
-			_assert(not description_key.is_empty(), "Definition %s should expose a description key" % definition_id)
-			var texture = _resolve_visual_texture(suit, rarity)
-			_assert(texture != null, "Definition %s should resolve a suit legendary card texture" % definition_id)
-			if _failed:
-				return
-			found_legendary_ids[definition_id] = true
+		var texture = _resolve_visual_texture(suit, rarity)
+		_assert(texture != null, "Definition %s should resolve a card texture" % definition_id)
+		if _failed:
+			return
 
 	_assert(rarity_counts["common"] == 24, "Expected 24 common definitions, got %d" % rarity_counts["common"])
 	_assert(rarity_counts["rare"] == 20, "Expected 20 rare definitions, got %d" % rarity_counts["rare"])
-	_assert(rarity_counts["legendary"] == 14, "Expected 14 legendary definitions, got %d" % rarity_counts["legendary"])
-	_assert(found_legendary_ids.size() == EXPECTED_LEGENDARY_IDS.size(), "Expected all four suit legendary definitions")
+	_assert(rarity_counts["legendary"] == 10, "Expected 10 legendary definitions, got %d" % rarity_counts["legendary"])
+	for retired_id in RETIRED_IDS:
+		_assert(not enabled_ids.has(retired_id), "Retired definition %s must not be enabled" % retired_id)
 	if _failed:
 		return
 

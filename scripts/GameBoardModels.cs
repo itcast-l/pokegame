@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Godot;
 
 internal readonly struct PlayingCard
 {
 	public PlayingCard(string suit, string rank, Texture2D texture, string attachedItemCardIdsCsv = "")
 	{
+		InstanceId = Interlocked.Increment(ref _nextInstanceId);
 		Suit = suit;
 		Rank = rank;
 		Texture = texture;
@@ -13,9 +15,15 @@ internal readonly struct PlayingCard
 		_attachedItemCardIds = ParseAttachedItemCardIds(attachedItemCardIdsCsv);
 	}
 
-	private PlayingCard(string suit, string rank, Texture2D texture, string[] attachedItemCardIds)
+	private PlayingCard(
+		long instanceId,
+		string suit,
+		string rank,
+		Texture2D texture,
+		string[] attachedItemCardIds)
 	{
 		string[] normalizedAttachedItemCardIds = NormalizeAttachedItemCardIds(attachedItemCardIds);
+		InstanceId = instanceId;
 		Suit = suit;
 		Rank = rank;
 		Texture = texture;
@@ -23,6 +31,9 @@ internal readonly struct PlayingCard
 		AttachedItemCardIdsCsv = normalizedAttachedItemCardIds.Length == 0 ? string.Empty : string.Join(",", normalizedAttachedItemCardIds);
 	}
 
+	private static long _nextInstanceId;
+
+	public long InstanceId { get; }
 	public string Suit { get; }
 	public string Rank { get; }
 	public Texture2D Texture { get; }
@@ -46,7 +57,7 @@ internal readonly struct PlayingCard
 			return this;
 		}
 
-		return new PlayingCard(Suit, Rank, Texture, new[] { normalizedItemCardId });
+		return new PlayingCard(InstanceId, Suit, Rank, Texture, new[] { normalizedItemCardId });
 	}
 
 	public PlayingCard WithoutAttachedItemEffect(string itemCardId)
@@ -59,7 +70,7 @@ internal readonly struct PlayingCard
 		IReadOnlyList<string> existingIds = AttachedItemCardIds;
 		if (existingIds.Count == 1)
 		{
-			return new PlayingCard(Suit, Rank, Texture);
+			return new PlayingCard(InstanceId, Suit, Rank, Texture, Array.Empty<string>());
 		}
 
 		var remainingIds = new string[existingIds.Count - 1];
@@ -72,7 +83,9 @@ internal readonly struct PlayingCard
 			}
 		}
 
-		return nextIndex == 0 ? new PlayingCard(Suit, Rank, Texture) : new PlayingCard(Suit, Rank, Texture, remainingIds);
+		return nextIndex == 0
+			? new PlayingCard(InstanceId, Suit, Rank, Texture, Array.Empty<string>())
+			: new PlayingCard(InstanceId, Suit, Rank, Texture, remainingIds);
 	}
 
 	public bool HasAttachedItemEffect(string itemCardId)
@@ -109,7 +122,9 @@ internal readonly struct PlayingCard
 
 	public PlayingCard WithoutItemEffects()
 	{
-		return HasItemEffect ? new PlayingCard(Suit, Rank, Texture) : this;
+		return HasItemEffect
+			? new PlayingCard(InstanceId, Suit, Rank, Texture, Array.Empty<string>())
+			: this;
 	}
 
 	private static string[] ParseAttachedItemCardIds(string attachedItemCardIdsCsv)
@@ -134,6 +149,28 @@ internal readonly struct PlayingCard
 	}
 }
 
+internal enum AdventureExtraActionReentryPolicy
+{
+	DisallowSameSource,
+	AllowSameSource,
+}
+
+internal readonly record struct AdventureExtraActionGrant(
+	string SourceUpgradeId,
+	long RootChainId,
+	bool ResumeNormalTurnAfterChain,
+	AdventureExtraActionReentryPolicy ReentryPolicy,
+	int ChainDepth);
+
+internal readonly record struct BaseCardActionContext(
+	long ActionId,
+	long RootChainId,
+	string ActionSource,
+	bool IsExtraAction,
+	long PlayedCardInstanceId,
+	PlayingCard PlayedCard,
+	IReadOnlyList<string> TriggeredAttachedItemCardIds);
+
 internal readonly record struct PlayCardResult(
 	bool Played,
 	bool Captured,
@@ -145,7 +182,11 @@ internal readonly record struct PlayCardResult(
 	NetworkHandPlayVisualSync? HandPlayVisualSync = null,
 	AdventureQuestionRewardEffectResult? AdventureQuestionRewardEffects = null,
 	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null,
-	bool AdventureConsumedExtraBaseCardAction = false);
+	AdventureExtraActionGrant? ConsumedAdventureExtraActionGrant = null,
+	BaseCardActionContext? BaseCardActionContext = null)
+{
+	public bool AdventureConsumedExtraBaseCardAction => ConsumedAdventureExtraActionGrant.HasValue;
+}
 
 internal readonly record struct CapturedTableCardVisual(
 	int TableCardIndex,
@@ -212,7 +253,8 @@ internal readonly record struct CaptureTableCardsResult(
 	int RemovedTableCardCount,
 	QuestionCardRewardAnimation? QuestionRewardAnimation,
 	AdventureQuestionRewardEffectResult? AdventureQuestionRewardEffects = null,
-	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null)
+	AdventurePostCaptureEffectResult? AdventurePostCaptureEffects = null,
+	CaptureResolutionContext? AdventureCaptureContext = null)
 {
 	public bool Completed => Applied && !Aborted;
 
@@ -262,6 +304,7 @@ internal sealed class TableCard
 		int cardOwnerPlayerIndex = -1,
 		bool removeCardOnCapture = false)
 	{
+		InstanceId = Interlocked.Increment(ref _nextInstanceId);
 		Card = card;
 		IsFaceUp = isFaceUp;
 		ItemOverlay = itemOverlay;
@@ -270,6 +313,9 @@ internal sealed class TableCard
 		RemoveCardOnCapture = removeCardOnCapture;
 	}
 
+	private static long _nextInstanceId;
+
+	public long InstanceId { get; }
 	public PlayingCard? Card { get; private set; }
 	public bool IsFaceUp { get; set; }
 	public bool IsHiddenDuringCapture { get; set; }

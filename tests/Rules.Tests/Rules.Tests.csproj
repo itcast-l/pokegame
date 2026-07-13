@@ -5,6 +5,7 @@
     <RollForward>Major</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+	<DefineConstants>$(DefineConstants);RULES_TESTS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,8 +17,13 @@
     <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
     <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />
     <Compile Include="../../scripts/AdventureUpgradeChoiceRules.cs" Link="Rules/AdventureUpgradeChoiceRules.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeEffectState.cs" Link="Rules/AdventureUpgradeEffectState.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeEffectService.cs" Link="Rules/AdventureUpgradeEffectService.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeEffectState.cs" Link="Rules/AdventureUpgradeEffectState.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeEffectService.cs" Link="Rules/AdventureUpgradeEffectService.cs" />
+	<Compile Include="../../scripts/AdventureCaptureContexts.cs" Link="Rules/AdventureCaptureContexts.cs" />
+	<Compile Include="../../scripts/AdventureExtraActionChain.cs" Link="Rules/AdventureExtraActionChain.cs" />
+	<Compile Include="../../scripts/AdventureUpgradeManifest.cs" Link="Rules/AdventureUpgradeManifest.cs" />
+	<Compile Include="../../scripts/AdventureSuitUpgradeDefinition.cs" Link="Rules/AdventureSuitUpgradeDefinition.cs" />
+	<Compile Include="../../scripts/AdventureSuitUpgradeCatalog.cs" Link="Rules/AdventureSuitUpgradeCatalog.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunState.cs" Link="Rules/AdventureUpgradeRunState.cs" />
     <Compile Include="../../scripts/AdventureRunSessionStore.cs" Link="Rules/AdventureRunSessionStore.cs" />

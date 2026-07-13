@@ -115,6 +115,7 @@ public partial class GameBoardScene
 
 	private void DeclareWinner(int playerIndex)
 	{
+		ClearAdventureBattleScopedStateForBattleEnd();
 		_winnerPlayerIndex = playerIndex;
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{

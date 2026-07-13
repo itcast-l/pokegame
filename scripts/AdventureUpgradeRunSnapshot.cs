@@ -1,9 +1,28 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+internal enum AdventureUpgradeRestoreResult
+{
+	NoSnapshot,
+	Restored,
+	Migrated,
+	DeferredManifestUnavailable,
+	InvalidSnapshotPreserved,
+	InvalidJsonPreserved,
+}
+
+internal enum AdventureUpgradeAcquireResult
+{
+	Acquired,
+	AlreadyAcquired,
+	DeferredManifestUnavailable,
+	RejectedUnknownUpgrade,
+}
 
 internal readonly record struct AdventureUpgradeRunSnapshot(
 	int SchemaVersion,
 	int CurrentAvatarStageNumber,
-	int CurrentRunStageIndex,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int CurrentRunStageIndex,
 	bool ShouldGrantRunStartUpgrade,
 	bool ShouldGrantVictoryUpgrade,
 	IReadOnlyList<string> AcquiredUpgradeIds,
@@ -11,17 +30,17 @@ internal readonly record struct AdventureUpgradeRunSnapshot(
 	int MaxHealth = 100,
 	int PermanentCaptureDamageBonus = 0,
 	int QuestionRewardCount = 0,
-	bool FinalDoubleCaptureDamageActive = false,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool FinalDoubleCaptureDamageActive = false,
 	int HealingOverflowRemainder = 0,
-	int NextCaptureDamageBonus = 0,
-	int NextTurnHealAmount = 0,
-	int NextTurnDrawCount = 0,
-	bool ClubShortBranchReturnUsedThisTurn = false,
-	int ClubMissClimbGrowthStacks = 0,
-	bool ClubBorrowSuitSetArmed = false,
-	bool ClubGapRootingUsedThisTurn = false,
-	int FinalDoubleQuestionRewardCountThisBattle = 0,
-	int ClubFlourishStacks = 0)
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int NextCaptureDamageBonus = 0,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int NextTurnHealAmount = 0,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int NextTurnDrawCount = 0,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ClubShortBranchReturnUsedThisTurn = false,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int ClubMissClimbGrowthStacks = 0,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ClubBorrowSuitSetArmed = false,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ClubGapRootingUsedThisTurn = false,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int FinalDoubleQuestionRewardCountThisBattle = 0,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int ClubFlourishStacks = 0)
 {
-	internal const int CurrentSchemaVersion = 4;
+	internal const int CurrentSchemaVersion = 5;
 }

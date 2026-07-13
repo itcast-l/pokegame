@@ -3,50 +3,12 @@
   "source": "rightimage",
   "style": "clean_hd",
   "notes": "Use rolling_path for visible left-to-right table roll motion. After the roll finishes, switch to result_motion_frames/result-N.png for the rolled value.",
-  "pose_frames": {
-    "cell_size": 256,
-    "frame_count": 16,
-    "sheet": "roll_across_table/sheet-transparent.png",
-    "gif_preview": "roll_across_table/animation.gif",
-    "frames": [
-      "roll_across_table/roll-pose-1.png",
-      "roll_across_table/roll-pose-2.png",
-      "roll_across_table/roll-pose-3.png",
-      "roll_across_table/roll-pose-4.png",
-      "roll_across_table/roll-pose-5.png",
-      "roll_across_table/roll-pose-6.png",
-      "roll_across_table/roll-pose-7.png",
-      "roll_across_table/roll-pose-8.png",
-      "roll_across_table/roll-pose-9.png",
-      "roll_across_table/roll-pose-10.png",
-      "roll_across_table/roll-pose-11.png",
-      "roll_across_table/roll-pose-12.png",
-      "roll_across_table/roll-pose-13.png",
-      "roll_across_table/roll-pose-14.png",
-      "roll_across_table/roll-pose-15.png",
-      "roll_across_table/roll-pose-16.png"
-    ]
-  },
   "rolling_path": {
     "cell_size": [512, 320],
     "frame_count": 16,
     "frame_duration_ms": 70,
     "sheet": "rolling_path/sheet-transparent.png",
-    "gif_preview": "rolling_path/animation.gif",
-    "offsets": "motion-meta.json"
-  },
-  "result_faces": {
-    "cell_size": 256,
-    "sheet": "result_faces/sheet-transparent.png",
-    "gif_preview": "result_faces/animation.gif",
-    "faces": {
-      "1": "result_faces/result-1.png",
-      "2": "result_faces/result-2.png",
-      "3": "result_faces/result-3.png",
-      "4": "result_faces/result-4.png",
-      "5": "result_faces/result-5.png",
-      "6": "result_faces/result-6.png"
-    }
+    "gif_preview": "rolling_path/animation.gif"
   },
   "result_motion_frames": {
     "cell_size": [512, 320],
@@ -58,16 +20,5 @@
       "5": "result_motion_frames/result-5.png",
       "6": "result_motion_frames/result-6.png"
     }
-  },
-  "roll_to_result_6_preview": {
-    "cell_size": [512, 320],
-    "frame_count": 24,
-    "sheet": "roll_to_result_6/sheet-transparent.png",
-    "gif_preview": "roll_to_result_6/animation.gif"
-  },
-  "qc": {
-    "roll_pipeline_meta": "roll_across_table/pipeline-meta.json",
-    "result_pipeline_meta": "result_faces/pipeline-meta.json",
-    "motion_meta": "motion-meta.json"
   }
 }

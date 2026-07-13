@@ -25,17 +25,7 @@ public partial class GameBoardScene
 		QuestionCardRefreshState questionCardRefreshState = TurnProgressRules.ResetQuestionCardRefreshTracking();
 		_completedTurnsSinceQuestionCardRefresh = questionCardRefreshState.CompletedTurnsSinceQuestionCardRefresh;
 		_questionCardRefreshAnchorPlayerIndex = questionCardRefreshState.QuestionCardRefreshAnchorPlayerIndex;
-		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
-		_adventureMainPlayerCaptureCountThisBattle = 0;
-		_adventureMainPlayerQuestionRewardEchoActive = false;
-		_adventureMainPlayerPendingExtraBaseCardAction = false;
-		_adventureMainPlayerExtraBaseCardActionKeepsTurn = false;
-		_adventureQuestionRejudgeUsedThisBattle = false;
-		_adventureMainPlayerHalfHealthRescueUsed = false;
-		_adventureMainPlayerQuarterHealthRescueUsed = false;
-		_adventureEnemyNextBaseCardFacesUp = false;
-		_adventureEnemyNextCardInsertMode = AdventureEnemyNextCardInsertMode.None;
-		_adventureEnemyNextCaptureDamageDelta = 0;
+		ResetAdventureBattleScopedStateForNewBattle();
 		_debugQuestionRewardGrantCount = 0;
 		_debugLastQuestionRewardItemCardId = string.Empty;
 		_pendingItemAttachmentRewards.Clear();
@@ -57,11 +47,9 @@ public partial class GameBoardScene
 		_dragonQueenCaptureCountUntilSteal = 0;
 		_bossKCaptureCountUntilSteal = 0;
 		_bossKStealTriggersThisMatch = 0;
-		_bossKActiveControlUsedThisTurn = false;
-		_cardEventBus.Clear();
-			DisposeActiveSelectionOverlay();
-			ResetAdventureUpgradeBoardState();
-		ClearPendingItemSelectionState();
+			_bossKActiveControlUsedThisTurn = false;
+			_cardEventBus.Clear();
+			ClearPendingItemSelectionState();
 		InvalidateRenderCaches();
 		_isResolvingMagnetAttachmentSelection = false;
 		_isResolvingTurnSequence = false;
@@ -122,7 +110,6 @@ public partial class GameBoardScene
 				break;
 			}
 		}
-		ResetAdventureClubFlourishForNewBattle();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();

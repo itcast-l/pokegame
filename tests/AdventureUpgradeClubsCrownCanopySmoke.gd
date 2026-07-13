@@ -56,6 +56,24 @@ func _run() -> void:
 		_fail("Crown Canopy capture did not apply exactly 12 damage")
 		return
 
+	if not bool(with_upgrade.call("DebugConfigureAdventureCrownCanopyScenario")) \
+		or not bool(with_upgrade.call(
+			"DebugAttachItemEffectToMainPlayerHandCard",
+			0,
+			"endpoint_crown"
+		)):
+		_fail("Failed to configure overlapping Crown Canopy and endpoint crown")
+		return
+	enemy_score_before = int(with_upgrade.call("DebugGetPlayerScoreValue", 1))
+	if not bool(with_upgrade.call("DebugPlayFirstAvailableLocalMainPlayerHandCard")):
+		_fail("Failed to play overlapping Crown Canopy endpoint capture")
+		return
+	if not await _wait_for_settled_state(with_upgrade):
+		return
+	if int(with_upgrade.call("DebugGetPlayerScoreValue", 1)) - enemy_score_before != -12:
+		_fail("Crown Canopy double-counted an endpoint already carrying endpoint_crown")
+		return
+
 	# collect_table is deliberately outside the normal base-card path.
 	if not bool(with_upgrade.call("DebugConfigureAdventureCrownCanopyScenario")):
 		_fail("Failed to reset direct collect_table scenario")
@@ -92,7 +110,7 @@ func _create_board() -> Node:
 	board.set("adventure_enemy_avatar_id", "shrimp")
 	root.add_child(board)
 	await process_frame
-	for method in ["DebugConfigureAdventureCrownCanopyScenario", "DebugGetCrownCanopyCaptureProbe", "DebugAcquireAdventureUpgrade", "DebugGetPlayerScoreValue", "DebugStartCollectTableCaptureOwnershipProbe"]:
+	for method in ["DebugConfigureAdventureCrownCanopyScenario", "DebugGetCrownCanopyCaptureProbe", "DebugAcquireAdventureUpgrade", "DebugAttachItemEffectToMainPlayerHandCard", "DebugGetPlayerScoreValue", "DebugStartCollectTableCaptureOwnershipProbe"]:
 		if not board.has_method(method):
 			_fail("Missing Crown Canopy debug hook: %s" % method)
 			return null

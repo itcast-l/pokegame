@@ -18,7 +18,6 @@ internal static class CaptureFlowPlanner
 		int captureStartIndex,
 		int scorePlayerIndex,
 		CaptureScoringRules.Context context,
-		bool awardScore,
 		IReadOnlySet<int>? extraTableCardIndexes = null)
 	{
 		CapturePlan capturePlan = CaptureResolver.Resolve(tableCards, captureStartIndex);
@@ -26,7 +25,7 @@ internal static class CaptureFlowPlanner
 		int extraCaptureCount = extraTableCardIndexes?.Count ?? 0;
 		bool capturedScoringCards = capturePlan.CapturedMiddleCards
 			&& CaptureScoringRules.HasCapturedScoringTableCards(tableCards, captureStartIndex, extraTableCardIndexes);
-		ScoreBreakdown score = awardScore && capturePlan.CapturedMiddleCards
+		ScoreBreakdown score = capturePlan.CapturedMiddleCards
 			? ScoreService.GetCapturedScore(tableCards, captureStartIndex, scorePlayerIndex, context, extraTableCardIndexes)
 			: new ScoreBreakdown(scorePlayerIndex, 0, false);
 

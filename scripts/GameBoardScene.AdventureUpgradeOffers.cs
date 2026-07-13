@@ -160,8 +160,23 @@ public partial class GameBoardScene
 				}
 
 				AdventureSuitUpgradeDefinition selectedDefinition = offer[selectedIndex];
+				AdventureUpgradeAcquireResult acquireResult =
+					RecordAdventureAcquiredUpgrade(selectedDefinition.Id);
+				if (acquireResult == AdventureUpgradeAcquireResult.DeferredManifestUnavailable)
+				{
+					GD.PushWarning(
+						$"Adventure upgrade acquisition deferred because the manifest is unavailable: {selectedDefinition.Id}");
+					return;
+				}
+				if (acquireResult != AdventureUpgradeAcquireResult.Acquired)
+				{
+					GD.PushWarning(
+						$"Adventure upgrade acquisition rejected: id={selectedDefinition.Id} result={acquireResult}");
+					_pendingAdventureUpgradeTriggers.Dequeue();
+					continue;
+				}
+
 				MarkAdventureUpgradeTriggerAsGranted(triggerSource);
-				RecordAdventureAcquiredUpgrade(selectedDefinition.Id);
 				await ApplyAdventureUpgradeAcquisitionEffectsAsync(
 					selectedDefinition.Id,
 					triggerSource,
@@ -225,12 +240,17 @@ public partial class GameBoardScene
 		{
 			return Array.Empty<AdventureSuitUpgradeDefinition>();
 		}
+		if (!_adventureUpgradeCatalog.TryCreateManifest(out AdventureUpgradeManifest manifest))
+		{
+			return Array.Empty<AdventureSuitUpgradeDefinition>();
+		}
 
 		IReadOnlyList<AdventureUpgradeDefinitionModel> offerModels = AdventureUpgradeChoiceRules.BuildOffer(
 			definitions,
 			runState.GetAcquiredUpgradeIds(),
 			Math.Max(1, runState.CurrentRunStageIndex),
-			maxExclusive => _rng.RandiRange(0, maxExclusive - 1));
+			maxExclusive => _rng.RandiRange(0, maxExclusive - 1),
+			manifest);
 
 		if (offerModels.Count == 0)
 		{

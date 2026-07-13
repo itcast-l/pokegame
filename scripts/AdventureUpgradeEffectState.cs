@@ -1,40 +1,136 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
+internal enum AdventureEffectStateScope
+{
+	Action = 0,
+	Turn = 1,
+	NextTurnCarry = 2,
+	Battle = 3,
+	Run = 4,
+}
+
+internal readonly record struct AdventureUpgradeEffectStateFieldMetadata(
+	AdventureEffectStateScope Scope,
+	int MinimumValue,
+	int MaximumValue);
+
 internal sealed class AdventureUpgradeEffectState
 {
+	internal const int MaxQuestionRewardCount = 10;
+	internal const int MaxPermanentCaptureDamageBonus = 5;
+	internal const int MaxHealingOverflowRemainder = 3;
+	internal const int MaxHighReturnCarryBonus = 2;
+	internal const int MaxClubMissClimbGrowthStacks = 9;
+
+	private static readonly IReadOnlyDictionary<string, AdventureUpgradeEffectStateFieldMetadata> Metadata =
+		new ReadOnlyDictionary<string, AdventureUpgradeEffectStateFieldMetadata>(
+			new Dictionary<string, AdventureUpgradeEffectStateFieldMetadata>(StringComparer.Ordinal)
+			{
+				[nameof(PermanentCaptureDamageBonus)] = RunField(MaxPermanentCaptureDamageBonus),
+				[nameof(QuestionRewardCount)] = RunField(MaxQuestionRewardCount),
+				[nameof(FinalDoubleQuestionRewardCountThisBattle)] = BattleField(0),
+				[nameof(FinalDoubleCaptureDamageActive)] = RunField(1),
+				[nameof(HealingOverflowRemainder)] = RunField(MaxHealingOverflowRemainder),
+				[nameof(NextCaptureDamageBonus)] = BattleField(int.MaxValue),
+				[nameof(HighReturnBonusIncludedInNextCaptureDamageBonus)] = BattleField(MaxHighReturnCarryBonus),
+				[nameof(NextTurnHealAmount)] = NextTurnCarryField(int.MaxValue),
+				[nameof(NextTurnDrawCount)] = NextTurnCarryField(int.MaxValue),
+				[nameof(ClubShortBranchReturnUsedThisTurn)] = TurnField(1),
+				[nameof(ClubMissClimbGrowthStacks)] = BattleField(MaxClubMissClimbGrowthStacks),
+				[nameof(ClubBorrowSuitSetArmed)] = TurnField(1),
+				[nameof(ClubGapRootingUsedThisTurn)] = TurnField(1),
+			});
+
+	internal static IReadOnlyDictionary<string, AdventureUpgradeEffectStateFieldMetadata> FieldMetadata => Metadata;
+
 	internal int PermanentCaptureDamageBonus { get; set; }
 	internal int QuestionRewardCount { get; set; }
-	internal int FinalDoubleQuestionRewardCountThisBattle { get; set; }
+
+	// ABI placeholder for v1-v4 snapshots. Final-double progress is derived from the run counter.
+	internal int FinalDoubleQuestionRewardCountThisBattle
+	{
+		get => 0;
+		set { }
+	}
 	internal bool FinalDoubleCaptureDamageActive { get; set; }
 	internal int HealingOverflowRemainder { get; set; }
 	internal int NextCaptureDamageBonus { get; set; }
+	internal int HighReturnBonusIncludedInNextCaptureDamageBonus { get; set; }
 	internal int NextTurnHealAmount { get; set; }
 	internal int NextTurnDrawCount { get; set; }
 	internal bool ClubShortBranchReturnUsedThisTurn { get; set; }
 	internal int ClubMissClimbGrowthStacks { get; set; }
 	internal bool ClubBorrowSuitSetArmed { get; set; }
 	internal bool ClubGapRootingUsedThisTurn { get; set; }
-	internal int ClubFlourishStacks { get; set; }
+
+	internal void Normalize()
+	{
+		PermanentCaptureDamageBonus = Math.Clamp(
+			PermanentCaptureDamageBonus,
+			0,
+			MaxPermanentCaptureDamageBonus);
+		QuestionRewardCount = Math.Clamp(QuestionRewardCount, 0, MaxQuestionRewardCount);
+		FinalDoubleCaptureDamageActive = FinalDoubleCaptureDamageActive
+			&& QuestionRewardCount >= MaxQuestionRewardCount;
+		HealingOverflowRemainder = Math.Clamp(
+			HealingOverflowRemainder,
+			0,
+			MaxHealingOverflowRemainder);
+		NextCaptureDamageBonus = Math.Max(0, NextCaptureDamageBonus);
+		HighReturnBonusIncludedInNextCaptureDamageBonus = Math.Clamp(
+			HighReturnBonusIncludedInNextCaptureDamageBonus,
+			0,
+			Math.Min(MaxHighReturnCarryBonus, NextCaptureDamageBonus));
+		NextTurnHealAmount = Math.Max(0, NextTurnHealAmount);
+		NextTurnDrawCount = Math.Max(0, NextTurnDrawCount);
+		ClubMissClimbGrowthStacks = Math.Clamp(
+			ClubMissClimbGrowthStacks,
+			0,
+			MaxClubMissClimbGrowthStacks);
+	}
+
+	internal void ClearActionScope()
+	{
+	}
+
+	internal void ClearTurnScope()
+	{
+		ClubShortBranchReturnUsedThisTurn = false;
+		ClubBorrowSuitSetArmed = false;
+		ClubGapRootingUsedThisTurn = false;
+	}
+
+	internal void ClearNextTurnCarryScope()
+	{
+		NextTurnHealAmount = 0;
+		NextTurnDrawCount = 0;
+	}
+
+	internal void ClearBattleScope()
+	{
+		ClearActionScope();
+		ClearTurnScope();
+		ClearNextTurnCarryScope();
+		NextCaptureDamageBonus = 0;
+		HighReturnBonusIncludedInNextCaptureDamageBonus = 0;
+		ClubMissClimbGrowthStacks = 0;
+	}
 
 	internal void Clear()
 	{
 		PermanentCaptureDamageBonus = 0;
 		QuestionRewardCount = 0;
-		FinalDoubleQuestionRewardCountThisBattle = 0;
 		FinalDoubleCaptureDamageActive = false;
 		HealingOverflowRemainder = 0;
-		NextCaptureDamageBonus = 0;
-		NextTurnHealAmount = 0;
-		NextTurnDrawCount = 0;
-		ClubShortBranchReturnUsedThisTurn = false;
-		ClubMissClimbGrowthStacks = 0;
-		ClubBorrowSuitSetArmed = false;
-		ClubGapRootingUsedThisTurn = false;
-		ClubFlourishStacks = 0;
+		ClearBattleScope();
 	}
 
 	internal void ResetFinalDoubleProgressForNewEnemy()
 	{
-		FinalDoubleQuestionRewardCountThisBattle = 0;
-		FinalDoubleCaptureDamageActive = false;
+		// Final-double progress is run scoped. Stage changes must not clear it.
+		Normalize();
 	}
 
 	internal void CopyFrom(AdventureUpgradeEffectState? other)
@@ -47,17 +143,17 @@ internal sealed class AdventureUpgradeEffectState
 
 		PermanentCaptureDamageBonus = other.PermanentCaptureDamageBonus;
 		QuestionRewardCount = other.QuestionRewardCount;
-		FinalDoubleQuestionRewardCountThisBattle = other.FinalDoubleQuestionRewardCountThisBattle;
 		FinalDoubleCaptureDamageActive = other.FinalDoubleCaptureDamageActive;
 		HealingOverflowRemainder = other.HealingOverflowRemainder;
 		NextCaptureDamageBonus = other.NextCaptureDamageBonus;
+		HighReturnBonusIncludedInNextCaptureDamageBonus = other.HighReturnBonusIncludedInNextCaptureDamageBonus;
 		NextTurnHealAmount = other.NextTurnHealAmount;
 		NextTurnDrawCount = other.NextTurnDrawCount;
 		ClubShortBranchReturnUsedThisTurn = other.ClubShortBranchReturnUsedThisTurn;
 		ClubMissClimbGrowthStacks = other.ClubMissClimbGrowthStacks;
 		ClubBorrowSuitSetArmed = other.ClubBorrowSuitSetArmed;
 		ClubGapRootingUsedThisTurn = other.ClubGapRootingUsedThisTurn;
-		ClubFlourishStacks = other.ClubFlourishStacks;
+		Normalize();
 	}
 
 	internal AdventureUpgradeEffectState Clone()
@@ -65,5 +161,25 @@ internal sealed class AdventureUpgradeEffectState
 		var copy = new AdventureUpgradeEffectState();
 		copy.CopyFrom(this);
 		return copy;
+	}
+
+	private static AdventureUpgradeEffectStateFieldMetadata RunField(int maximumValue)
+	{
+		return new AdventureUpgradeEffectStateFieldMetadata(AdventureEffectStateScope.Run, 0, maximumValue);
+	}
+
+	private static AdventureUpgradeEffectStateFieldMetadata BattleField(int maximumValue)
+	{
+		return new AdventureUpgradeEffectStateFieldMetadata(AdventureEffectStateScope.Battle, 0, maximumValue);
+	}
+
+	private static AdventureUpgradeEffectStateFieldMetadata TurnField(int maximumValue)
+	{
+		return new AdventureUpgradeEffectStateFieldMetadata(AdventureEffectStateScope.Turn, 0, maximumValue);
+	}
+
+	private static AdventureUpgradeEffectStateFieldMetadata NextTurnCarryField(int maximumValue)
+	{
+		return new AdventureUpgradeEffectStateFieldMetadata(AdventureEffectStateScope.NextTurnCarry, 0, maximumValue);
 	}
 }

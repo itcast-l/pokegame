@@ -317,8 +317,11 @@ public partial class GameBoardScene
 				RenderPlayerHands();
 				return;
 			}
-			await ApplyAdventureQuestionRewardEffects(ownerPlayerIndex, result.AdventureQuestionRewardEffects, turnSequenceGeneration);
-			await ApplyAdventurePostCaptureEffectsAsync(ownerPlayerIndex, result.AdventurePostCaptureEffects, turnSequenceGeneration);
+			await ApplyAdventureCaptureRewardEffectsAsync(
+				ownerPlayerIndex,
+				result.AdventureQuestionRewardEffects,
+				result.AdventurePostCaptureEffects,
+				turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				_isProcessingCardPlay = false;

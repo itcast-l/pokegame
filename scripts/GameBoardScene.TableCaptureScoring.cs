@@ -83,7 +83,9 @@ public partial class GameBoardScene
 		List<int> rawPoints,
 		List<int> resolvedPoints,
 		List<int> tableIndexes,
-		bool includeCaptureEndpointsInScoring = false)
+		bool includeCaptureStartInScoring = false,
+		bool includeCaptureEndInScoring = false,
+		int excludedTableCardIndex = -1)
 	{
 		rawPoints.Clear();
 		resolvedPoints.Clear();
@@ -102,7 +104,9 @@ public partial class GameBoardScene
 
 		int TryAddCardPointValues(int tableCardIndex, bool allowAnyVisibleCapturedCard)
 		{
-			if (tableCardIndex < 0 || tableCardIndex >= tableCards.Count)
+			if (tableCardIndex < 0
+				|| tableCardIndex >= tableCards.Count
+				|| tableCardIndex == excludedTableCardIndex)
 			{
 				return 0;
 			}
@@ -154,7 +158,8 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (!includeCaptureEndpointsInScoring)
+		if (!includeCaptureStartInScoring
+			&& !includeCaptureEndInScoring)
 		{
 			return 0;
 		}
@@ -162,71 +167,26 @@ public partial class GameBoardScene
 		int captureTailTableCardIndex = -1;
 		for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
-			if (!tableCards[tableCardIndex].IsBuriedInSand)
+			if (tableCardIndex != excludedTableCardIndex
+				&& !tableCards[tableCardIndex].IsBuriedInSand)
 			{
 				captureTailTableCardIndex = tableCardIndex;
 				break;
 			}
 		}
 
-		int endpointResolvedPoints = TryAddCardPointValues(
-			captureStartIndex,
-			allowAnyVisibleCapturedCard: true);
-		endpointResolvedPoints += TryAddCardPointValues(
-			captureTailTableCardIndex,
-			allowAnyVisibleCapturedCard: true);
+		int endpointResolvedPoints = includeCaptureStartInScoring
+			? TryAddCardPointValues(
+				captureStartIndex,
+				allowAnyVisibleCapturedCard: true)
+			: 0;
+		if (includeCaptureEndInScoring)
+		{
+			endpointResolvedPoints += TryAddCardPointValues(
+				captureTailTableCardIndex,
+				allowAnyVisibleCapturedCard: true);
+		}
 		return endpointResolvedPoints;
-	}
-
-	private int CountCapturedOldScoringTableCards(
-		IReadOnlyCollection<TableCard> prePlayTableCards,
-		int captureStartIndex,
-		HashSet<int>? extraTableCardIndexes = null)
-	{
-		if (prePlayTableCards.Count == 0)
-		{
-			return 0;
-		}
-
-		var oldTableCards = new HashSet<TableCard>(prePlayTableCards);
-		int count = 0;
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (!oldTableCards.Contains(_tableCards[tableCardIndex])
-				|| !IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
-			{
-				continue;
-			}
-
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue && GetCardScoreValue(tableCard.Card.Value) > 0)
-			{
-				count++;
-			}
-		}
-
-		if (extraTableCardIndexes == null)
-		{
-			return count;
-		}
-
-		foreach (int tableCardIndex in extraTableCardIndexes)
-		{
-			if (tableCardIndex < 0
-				|| tableCardIndex >= _tableCards.Count
-				|| !oldTableCards.Contains(_tableCards[tableCardIndex]))
-			{
-				continue;
-			}
-
-			TableCard tableCard = _tableCards[tableCardIndex];
-			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue && GetCardScoreValue(tableCard.Card.Value) > 0)
-			{
-				count++;
-			}
-		}
-
-		return count;
 	}
 
 	private int ResolveBlackLedgerRedirectTableCardIndex(
@@ -255,42 +215,6 @@ public partial class GameBoardScene
 				playerIndex == MainPlayerIndex,
 				scoreValues,
 				captureStartIndex);
-	}
-
-	private bool IsCapturedTableCardReference(
-		TableCard? target,
-		int captureStartIndex,
-		HashSet<int>? extraTableCardIndexes = null)
-	{
-		if (target == null)
-		{
-			return false;
-		}
-
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (ReferenceEquals(_tableCards[tableCardIndex], target))
-			{
-				return true;
-			}
-		}
-
-		if (extraTableCardIndexes == null)
-		{
-			return false;
-		}
-
-		foreach (int tableCardIndex in extraTableCardIndexes)
-		{
-			if (tableCardIndex >= 0
-				&& tableCardIndex < _tableCards.Count
-				&& ReferenceEquals(_tableCards[tableCardIndex], target))
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	private TableCard? FindRightmostRemainingOldBaseTableCard(IReadOnlyCollection<TableCard> prePlayTableCards)

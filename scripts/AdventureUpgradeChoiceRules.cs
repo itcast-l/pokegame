@@ -61,9 +61,10 @@ internal static class AdventureUpgradeChoiceRules
 		IReadOnlyList<AdventureUpgradeDefinitionModel> allDefinitions,
 		IEnumerable<string> acquiredIds,
 		int runStageIndex,
-		Func<int, int> nextIntExclusive)
+		Func<int, int> nextIntExclusive,
+		AdventureUpgradeManifest? manifest = null)
 	{
-		var available = BuildAvailablePool(allDefinitions, acquiredIds);
+		var available = BuildAvailablePool(allDefinitions, acquiredIds, manifest);
 		if (available.Count <= OfferSize)
 		{
 			return available;
@@ -87,9 +88,19 @@ internal static class AdventureUpgradeChoiceRules
 
 	private static List<AdventureUpgradeDefinitionModel> BuildAvailablePool(
 		IReadOnlyList<AdventureUpgradeDefinitionModel> allDefinitions,
-		IEnumerable<string> acquiredIds)
+		IEnumerable<string> acquiredIds,
+		AdventureUpgradeManifest? manifest)
 	{
 		var acquired = new HashSet<string>(acquiredIds, StringComparer.Ordinal);
+		var acquiredConflictGroups = new HashSet<string>(StringComparer.Ordinal);
+		foreach (string acquiredId in acquired)
+		{
+			if (TryGetConflictGroup(manifest, acquiredId, out string conflictGroup))
+			{
+				acquiredConflictGroups.Add(conflictGroup);
+			}
+		}
+
 		var available = new List<AdventureUpgradeDefinitionModel>();
 		foreach (AdventureUpgradeDefinitionModel definition in allDefinitions)
 		{
@@ -98,10 +109,39 @@ internal static class AdventureUpgradeChoiceRules
 				continue;
 			}
 
+			if (TryGetConflictGroup(manifest, definition.Id, out string conflictGroup)
+				&& acquiredConflictGroups.Contains(conflictGroup))
+			{
+				continue;
+			}
+
 			available.Add(definition);
 		}
 
 		return available;
+	}
+
+	private static bool TryGetConflictGroup(
+		AdventureUpgradeManifest? manifest,
+		string upgradeId,
+		out string conflictGroup)
+	{
+		if (manifest?.TryGetEnabledEntry(upgradeId, out AdventureUpgradeManifestEntry entry) == true)
+		{
+			conflictGroup = entry.ConflictGroup;
+		}
+		else if (AdventureUpgradeRuntimeContract.TryGetMetadata(
+			upgradeId,
+			out AdventureUpgradeRuntimeMetadata metadata))
+		{
+			conflictGroup = metadata.ConflictGroup;
+		}
+		else
+		{
+			conflictGroup = string.Empty;
+		}
+
+		return !string.IsNullOrWhiteSpace(conflictGroup);
 	}
 
 	private static AdventureUpgradeDefinitionModel? TryPickOfferDefinition(

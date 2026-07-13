@@ -86,19 +86,9 @@ public partial class GameBoardScene
 		return completedResult;
 	}
 
-	await ApplyAdventureQuestionRewardEffects(
+	await ApplyAdventureCaptureRewardEffectsAsync(
 		playerIndex,
 		result.AdventureQuestionRewardEffects,
-		turnSequenceGeneration);
-	if (turnSequenceGeneration != _turnSequenceGeneration
-		|| _isLeavingGame
-		|| IsGameOver())
-	{
-		return completedResult;
-	}
-
-	await ApplyAdventurePostCaptureEffectsAsync(
-		playerIndex,
 		result.AdventurePostCaptureEffects,
 		turnSequenceGeneration);
 	if (turnSequenceGeneration != _turnSequenceGeneration
@@ -245,32 +235,35 @@ public partial class GameBoardScene
 		GetCapturedTableScorePlayerIndex(
 			captureStartIndex,
 			playerIndex);
-	CaptureScoringRules.TableCard[] captureScoringTableCards =
-		ToCaptureScoringTableCards();
 	bool capturedMiddleCards =
 		HasCapturedMiddleTableCards(captureStartIndex);
-	int collectedPoints = capturedMiddleCards
-		? GetCapturedTablePoints(
+	BaseCardActionContext dragonCaptureActionContext =
+		CreateSyntheticCaptureActionContext(
+			"dragon_prince_jack_collect");
+	CaptureStatePlan dragonCaptureStatePlan =
+		_captureStateService.CreatePlan(
+			_state,
 			captureStartIndex,
-			scorePlayerIndex)
-		: 0;
-	var adventureCaptureRawPoints = new List<int>();
-	var adventureCaptureResolvedPoints = new List<int>();
-	var adventureCaptureScoringTableIndexes = new List<int>();
-	BuildAdventureCaptureDamageCardPointLists(
-		captureScoringTableCards,
-		captureStartIndex,
-		scorePlayerIndex,
-		null,
-		adventureCaptureRawPoints,
-		adventureCaptureResolvedPoints,
-		adventureCaptureScoringTableIndexes);
-	var adventureCaptureDamageInput = new AdventureCaptureDamageInput(
-		BaseDamage: collectedPoints,
-		ScoringCardRawPoints: adventureCaptureRawPoints,
-		ScoringCardResolvedPoints: adventureCaptureResolvedPoints,
-		ScoringCardTableIndexes: adventureCaptureScoringTableIndexes,
-		CapturerIsMainPlayer: playerIndex == MainPlayerIndex);
+			null);
+	AdventureClubCaptureExtensionPlan dragonClubCaptureExtension =
+		BuildAdventureClubCaptureExtensionPlan(
+			playerIndex,
+			captureStartIndex,
+			null);
+	AdventureCapturePreparation dragonCapturePreparation =
+		BuildAdventureCapturePreparation(
+			playerIndex,
+			captureStartIndex,
+			scorePlayerIndex,
+			dragonCaptureStatePlan,
+			captureTableReferenceSnapshot,
+			adventureFlatDamageDelta: 0,
+			dragonCaptureActionContext,
+			"dragon_prince_jack_collect",
+			AdventureCaptureMatchSource.CollectAll,
+			triggeredAttachedItemCardIds: null,
+			dragonClubCaptureExtension.GapRootingTarget,
+			preservedTableCardIndex: -1);
 	PairCaptureEdgeFloatHold? specialJackFloat = null;
 	bool specialJackFloatHandedToDeck = false;
 	try
@@ -299,17 +292,10 @@ public partial class GameBoardScene
 			}
 		}
 
-		AdventureCaptureDamageResult previewCaptureDamage =
-			PreviewAdventureCaptureDamage(
-				playerIndex,
-				adventureCaptureDamageInput);
-		if (previewCaptureDamage.AllGainsConvergeBonusDamage > 0
-			&& previewCaptureDamage.AllGainsConvergeScoringCardTableIndex >= 0)
-		{
-			_ = PlayTableCardPointPopupAsync(
-				previewCaptureDamage.AllGainsConvergeScoringCardTableIndex,
-				previewCaptureDamage.AllGainsConvergeBonusDamage);
-		}
+			AdventureCaptureDamageResult previewCaptureDamage =
+				PreviewAdventureCaptureDamage(
+					playerIndex,
+					dragonCapturePreparation.DamageInput);
 
 		if (previewCaptureDamage.FinalDamage > 0)
 		{
@@ -356,27 +342,19 @@ public partial class GameBoardScene
 		}
 
 		CaptureTableCardsResult captureResult =
-			await CaptureTableCardsAsync(
-				playerIndex,
-				captureStartIndex,
-				awardScore: false,
-				turnSequenceGeneration:
-					turnSequenceGeneration,
-				expectedTableCardReferences:
-					captureTableReferenceSnapshot,
-				commitImmediatelyBeforeApply: () =>
-				{
-					AdventureCaptureDamageResult resolvedCaptureDamage =
-						ResolveAdventureCaptureDamage(
-							playerIndex,
-							adventureCaptureDamageInput);
-					if (resolvedCaptureDamage.FinalDamage > 0)
-					{
-						AddPlayerScore(
-							scorePlayerIndex,
-							resolvedCaptureDamage.FinalDamage);
-					}
-				});
+				await CaptureTableCardsAsync(
+					playerIndex,
+					captureStartIndex,
+					turnSequenceGeneration:
+						turnSequenceGeneration,
+					prePlayTableCards:
+						captureTableReferenceSnapshot,
+					expectedTableCardReferences:
+						captureTableReferenceSnapshot,
+					baseCardActionContext:
+						dragonCaptureActionContext,
+					actionSource: "dragon_prince_jack_collect",
+					matchSource: AdventureCaptureMatchSource.CollectAll);
 		if (!captureResult.Applied
 			|| captureResult.Aborted)
 		{

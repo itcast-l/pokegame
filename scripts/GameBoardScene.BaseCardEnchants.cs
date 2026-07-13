@@ -153,11 +153,11 @@ public partial class GameBoardScene
 		return newCaptureStartIndex;
 	}
 
-	private async Task TryResolveEmptyTideContinuationAfterMissAsync(int playedTableCardIndex, int turnSequenceGeneration)
+	private async Task<bool> TryResolveEmptyTideContinuationAfterMissAsync(int playedTableCardIndex, int turnSequenceGeneration)
 	{
 		if (playedTableCardIndex < 0 || playedTableCardIndex >= _tableCards.Count)
 		{
-			return;
+			return false;
 		}
 
 		TableCard playedTableCard = _tableCards[playedTableCardIndex];
@@ -165,7 +165,7 @@ public partial class GameBoardScene
 			|| !IsAttachedEffectType(playedTableCard.Card.Value, CardEffectTypes.EmptyTideContinuation)
 			|| _tableCards.Count < 4)
 		{
-			return;
+			return false;
 		}
 
 		int revealTableCardIndex = -1;
@@ -187,17 +187,18 @@ public partial class GameBoardScene
 		Texture2D? revealTexture = revealTableCard.Card?.Texture ?? revealTableCard.ItemOverlay?.Texture;
 		if (revealTexture == null)
 		{
-			return;
+			return false;
 		}
 
 		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
 		await PlayTableCardRevealAnimationAsync(revealTableCardIndex, revealTexture);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
-			return;
+			return false;
 		}
 
 		revealTableCard.IsFaceUp = true;
 		RenderTableCards();
+		return true;
 	}
 }
