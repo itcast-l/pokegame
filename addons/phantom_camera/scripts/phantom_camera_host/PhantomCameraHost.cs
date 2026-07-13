@@ -22,14 +22,15 @@ public static class PhantomCameraHostExtensions
 
 public class PhantomCameraHost()
 {
-    public Node Node { get; } = null!;
+	public Node Node { get; } = null!;
 
-    public PhantomCameraHost(GodotObject node) : this()
-    {
-        Node = node as Node;
+	public PhantomCameraHost(GodotObject node) : this()
+	{
+		Node = node as Node
+			?? throw new ArgumentException("PhantomCameraHost requires a Node.", nameof(node));
 
-        var callablePCamBecameActive = Callable.From<Node>(pCam => PCamBecameActive?.Invoke(pCam));
-        var callablePCamBecameInactive = Callable.From<Node>(pCam => PCamBecameInactive?.Invoke(pCam));
+		var callablePCamBecameActive = Callable.From<Node>(pCam => PCamBecameActive?.Invoke(pCam));
+		var callablePCamBecameInactive = Callable.From<Node>(pCam => PCamBecameInactive?.Invoke(pCam));
 
         Node.Connect(SignalName.PCamBecameActive, callablePCamBecameActive);
         Node.Connect(SignalName.PCamBecameInactive, callablePCamBecameInactive);
@@ -41,11 +42,7 @@ public class PhantomCameraHost()
     public event PCamBecameActiveEventHandler? PCamBecameActive;
     public event PCamBecameInactiveEventHandler? PCamBecameInactive;
 
-
-    private readonly Callable _callablePCamBecameActive;
-    private readonly Callable _callablePCamBecameInactive;
-
-    public int HostLayers
+	public int HostLayers
     {
         get => (int)Node.Call(PhantomCamera.MethodName.GetHostLayers);
         set => Node.Call(PhantomCamera.MethodName.SetHostLayers, value);
