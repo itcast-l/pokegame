@@ -113,15 +113,13 @@ func _run() -> void:
 	for _frame in range(SETTLE_FRAMES):
 		await process_frame
 
-	var ultra_wide_backdrop := board.get_node_or_null("UltraWideBackdrop") as TextureRect
 	var vertical_backdrop := board.get_node_or_null("VerticalBackdrop") as TextureRect
 	var board_art := board.get_node_or_null("BoardArt") as TextureRect
 	var layout_areas := board.get_node_or_null("LayoutAreas") as Control
-	if ultra_wide_backdrop == null or vertical_backdrop == null or board_art == null or layout_areas == null:
-		_fail("Scene missing UltraWideBackdrop, VerticalBackdrop, BoardArt, or LayoutAreas")
+	if vertical_backdrop == null or board_art == null or layout_areas == null:
+		_fail("Scene missing VerticalBackdrop, BoardArt, or LayoutAreas")
 		return
 
-	ultra_wide_backdrop.visible = false
 	vertical_backdrop.visible = true
 	board_art.visible = false
 	for _frame in range(SETTLE_FRAMES):

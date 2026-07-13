@@ -386,7 +386,6 @@ public partial class GameBoardScene : Control
 	private Control _leftPlayerArea = default!;
 	private Control _rightPlayerArea = default!;
 	private Control _questionCardTransformArea = default!;
-	private TextureRect _ultraWideBackdrop = default!;
 	private TextureRect _verticalBackdrop = default!;
 	private TextureRect _boardArt = default!;
 	private Control _layoutAreas = default!;
@@ -411,7 +410,6 @@ public partial class GameBoardScene : Control
 			EnsureItemModeResourcesLoaded();
 		}
 
-		_ultraWideBackdrop = GetNode<TextureRect>("UltraWideBackdrop");
 		_verticalBackdrop = GetNode<TextureRect>("VerticalBackdrop");
 		_boardArt = GetNode<TextureRect>("BoardArt");
 		_layoutAreas = GetNode<Control>("LayoutAreas");

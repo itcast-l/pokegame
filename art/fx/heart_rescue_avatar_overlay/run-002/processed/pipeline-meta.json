@@ -1,0 +1,315 @@
+{
+  "target": "asset",
+  "mode": "fx",
+  "prompt": "Rich avatar overlay VFX only: aqua and seafoam healing energy rises from below and wraps both sides of an invisible centered player portrait, layered water ribbons, bubbles, sparkles, lower-half glow, central portrait area kept readable; exact 3x3 grid; solid #FF00FF background; no character, no text, no UI.",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/fx/heart_rescue_avatar_overlay/run-002/generated/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 220,
+  "duration": 150,
+  "rows": 3,
+  "cols": 3,
+  "cell_size": 256,
+  "fit_scale": 0.78,
+  "trim_border": 4,
+  "edge_clean_depth": 12,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 2,
+  "min_component_area": 4,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "avatar-healing-1",
+    "avatar-healing-2",
+    "avatar-healing-3",
+    "avatar-healing-4",
+    "avatar-healing-5",
+    "avatar-healing-6",
+    "avatar-healing-7",
+    "avatar-healing-8",
+    "avatar-healing-9"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        418,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        80,
+        228,
+        333,
+        358
+      ],
+      "edge_touch": false,
+      "output_size": [
+        149,
+        77
+      ],
+      "paste_position": [
+        53,
+        89
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        418,
+        0,
+        836,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 34,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        71,
+        125,
+        334,
+        366
+      ],
+      "edge_touch": false,
+      "output_size": [
+        155,
+        142
+      ],
+      "paste_position": [
+        50,
+        57
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        836,
+        0,
+        1254,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 43,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        53,
+        130,
+        338,
+        367
+      ],
+      "edge_touch": false,
+      "output_size": [
+        168,
+        140
+      ],
+      "paste_position": [
+        44,
+        58
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        418,
+        418,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 51,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        56,
+        78,
+        352,
+        365
+      ],
+      "edge_touch": false,
+      "output_size": [
+        175,
+        170
+      ],
+      "paste_position": [
+        40,
+        43
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        418,
+        418,
+        836,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 28,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        64,
+        92,
+        334,
+        370
+      ],
+      "edge_touch": false,
+      "output_size": [
+        159,
+        164
+      ],
+      "paste_position": [
+        48,
+        46
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        836,
+        418,
+        1254,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 31,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        56,
+        79,
+        347,
+        375
+      ],
+      "edge_touch": false,
+      "output_size": [
+        172,
+        175
+      ],
+      "paste_position": [
+        42,
+        40
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        836,
+        418,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 53,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        34,
+        36,
+        371,
+        368
+      ],
+      "edge_touch": false,
+      "output_size": [
+        199,
+        196
+      ],
+      "paste_position": [
+        28,
+        30
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        418,
+        836,
+        836,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 41,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        58,
+        96,
+        350,
+        362
+      ],
+      "edge_touch": false,
+      "output_size": [
+        173,
+        157
+      ],
+      "paste_position": [
+        41,
+        49
+      ]
+    },
+    {
+      "grid": [
+        2,
+        2
+      ],
+      "source_box": [
+        836,
+        836,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 12,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        80,
+        114,
+        317,
+        362
+      ],
+      "edge_touch": false,
+      "output_size": [
+        140,
+        146
+      ],
+      "paste_position": [
+        58,
+        55
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

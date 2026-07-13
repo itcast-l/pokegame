@@ -2,7 +2,6 @@ using Godot;
 
 public readonly record struct GameBoardLayoutState(
 	Rect2 VisibleRect,
-	bool ShowUltraWideBackdrop,
 	bool ShowVerticalBackdrop,
 	bool ShowBoardArt);
 
@@ -32,7 +31,6 @@ public static class GameBoardLayoutGeometry
 		bool useVerticalCompositeBackdrop = hasVerticalLetterboxing && !hasHorizontalLetterboxing;
 		return new GameBoardLayoutState(
 			visibleRect,
-			hasHorizontalLetterboxing,
 			useVerticalCompositeBackdrop,
 			!useVerticalCompositeBackdrop);
 	}
@@ -80,7 +78,6 @@ public static class GameBoardLayoutGeometry
 	public static void ApplyLayout(
 		GameBoardLayoutState state,
 		TextureRect? boardArt,
-		TextureRect? ultraWideBackdrop,
 		TextureRect? verticalBackdrop,
 		Control? layoutAreas,
 		Control? questionCardTransformArea)
@@ -88,11 +85,6 @@ public static class GameBoardLayoutGeometry
 		if (layoutAreas == null || !GodotObject.IsInstanceValid(layoutAreas))
 		{
 			return;
-		}
-
-		if (ultraWideBackdrop != null && GodotObject.IsInstanceValid(ultraWideBackdrop))
-		{
-			ultraWideBackdrop.Visible = state.ShowUltraWideBackdrop;
 		}
 
 		if (verticalBackdrop != null && GodotObject.IsInstanceValid(verticalBackdrop))
@@ -113,8 +105,7 @@ public static class GameBoardLayoutGeometry
 
 	public static bool ApproximatelyEquals(GameBoardLayoutState first, GameBoardLayoutState second, float tolerance = 0.05f)
 	{
-		return first.ShowUltraWideBackdrop == second.ShowUltraWideBackdrop
-			&& first.ShowVerticalBackdrop == second.ShowVerticalBackdrop
+		return first.ShowVerticalBackdrop == second.ShowVerticalBackdrop
 			&& first.ShowBoardArt == second.ShowBoardArt
 			&& Mathf.Abs(first.VisibleRect.Position.X - second.VisibleRect.Position.X) <= tolerance
 			&& Mathf.Abs(first.VisibleRect.Position.Y - second.VisibleRect.Position.Y) <= tolerance

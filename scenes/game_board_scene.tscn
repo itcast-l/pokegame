@@ -8,7 +8,6 @@
 [ext_resource type="Script" uid="uid://b3s43m2q8xefy" path="res://scripts/ScoreEffectTarget.cs" id="6_score_effect_target"]
 [ext_resource type="Script" uid="uid://cx5lmatxxhx6d" path="res://scripts/DraggableAvatarArea.cs" id="7_draggable_avatar_area"]
 [ext_resource type="Shader" uid="uid://bypnsrux3irf0" path="res://shaders/board_art_dynamics.gdshader" id="8_board_art_dynamics_shader"]
-[ext_resource type="Texture2D" uid="uid://5nv2x7ygpdhx" path="res://art/maps/underwater_card_table_ultrawide_backdrop_1536x1024.png" id="9_ultrawide_backdrop"]
 [ext_resource type="Texture2D" uid="uid://bluh0ayxp8buw" path="res://art/maps/underwater_card_table_vertical_backdrop_1920x1080.png" id="10_vertical_backdrop"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_board_art_dynamics"]
@@ -49,19 +48,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
 
-[node name="UltraWideBackdrop" type="TextureRect" parent="." unique_id=1523489372]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("9_ultrawide_backdrop")
-expand_mode = 1
-stretch_mode = 6
-
 [node name="VerticalBackdrop" type="TextureRect" parent="." unique_id=1124600215]
 visible = false
 layout_mode = 1
@@ -86,7 +72,7 @@ grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("2_board_texture")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 6
 
 [node name="WaterCausticOverlay" type="ColorRect" parent="." unique_id=2125588406]
 material = SubResource("ShaderMaterial_water_caustic")

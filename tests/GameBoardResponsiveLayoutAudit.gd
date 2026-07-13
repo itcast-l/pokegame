@@ -63,15 +63,18 @@ func _audit_viewport(spec: Dictionary) -> void:
 	await process_frame
 
 	var mode_name := String(spec.get("name", "unknown"))
-	var backdrop := board.get_node_or_null("UltraWideBackdrop") as TextureRect
+	if board.get_node_or_null("UltraWideBackdrop") != null:
+		_fail("%s should not contain the removed UltraWideBackdrop" % mode_name)
+		return
+
 	var vertical_backdrop := board.get_node_or_null("VerticalBackdrop") as TextureRect
 	var board_art := board.get_node_or_null("BoardArt") as TextureRect
 	var layout_areas := board.get_node_or_null("LayoutAreas") as Control
-	if backdrop == null or vertical_backdrop == null or board_art == null or layout_areas == null:
-		_fail("%s missing UltraWideBackdrop, VerticalBackdrop, BoardArt, or LayoutAreas" % mode_name)
+	if vertical_backdrop == null or board_art == null or layout_areas == null:
+		_fail("%s missing VerticalBackdrop, BoardArt, or LayoutAreas" % mode_name)
 		return
-	if backdrop.get_global_rect().size.x <= 0.0 or backdrop.get_global_rect().size.y <= 0.0:
-		_fail("%s backdrop has invalid rect: %s" % [mode_name, str(backdrop.get_global_rect())])
+	if board_art.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_COVERED:
+		_fail("%s expected BoardArt to use aspect-covered rendering" % mode_name)
 		return
 
 	var layout_rect := layout_areas.get_global_rect()
@@ -106,9 +109,6 @@ func _audit_viewport(spec: Dictionary) -> void:
 			return
 
 	if mode_name == "wide":
-		if not backdrop.visible:
-			_fail("%s expected UltraWideBackdrop to be visible" % mode_name)
-			return
 		if vertical_backdrop.visible:
 			_fail("%s expected VerticalBackdrop to be hidden" % mode_name)
 			return

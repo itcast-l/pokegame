@@ -1,0 +1,315 @@
+{
+  "target": "asset",
+  "mode": "fx",
+  "prompt": "Final normalized restorative avatar overlay VFX: warm emerald green, mint, pale gold and white life energy, glowing heart-shaped life motes, leaf-like light particles, gentle vertical recovery rays and soft healing aura; transparent center for avatar; exact 3x3 grid; no character, no text, no UI.",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/fx/heart_rescue_avatar_overlay/run-003/processed-normalized/sheet-transparent.png",
+  "threshold": 100,
+  "edge_threshold": 220,
+  "duration": 150,
+  "rows": 3,
+  "cols": 3,
+  "cell_size": 256,
+  "fit_scale": 0.9,
+  "trim_border": 0,
+  "edge_clean_depth": 0,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 2,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "avatar-healing-1",
+    "avatar-healing-2",
+    "avatar-healing-3",
+    "avatar-healing-4",
+    "avatar-healing-5",
+    "avatar-healing-6",
+    "avatar-healing-7",
+    "avatar-healing-8",
+    "avatar-healing-9"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        85,
+        100,
+        171,
+        156
+      ],
+      "edge_touch": false,
+      "output_size": [
+        99,
+        64
+      ],
+      "paste_position": [
+        78,
+        96
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        256,
+        0,
+        512,
+        256
+      ],
+      "component_mode": "all",
+      "component_count": 18,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        57,
+        82,
+        199,
+        174
+      ],
+      "edge_touch": false,
+      "output_size": [
+        164,
+        106
+      ],
+      "paste_position": [
+        46,
+        75
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        512,
+        0,
+        768,
+        256
+      ],
+      "component_mode": "all",
+      "component_count": 24,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        43,
+        53,
+        212,
+        203
+      ],
+      "edge_touch": false,
+      "output_size": [
+        195,
+        173
+      ],
+      "paste_position": [
+        30,
+        41
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        256,
+        256,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 28,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        43,
+        48,
+        212,
+        207
+      ],
+      "edge_touch": false,
+      "output_size": [
+        195,
+        184
+      ],
+      "paste_position": [
+        30,
+        36
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        256,
+        256,
+        512,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 21,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        33,
+        37,
+        223,
+        219
+      ],
+      "edge_touch": false,
+      "output_size": [
+        219,
+        210
+      ],
+      "paste_position": [
+        18,
+        23
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        512,
+        256,
+        768,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 23,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        32,
+        33,
+        224,
+        223
+      ],
+      "edge_touch": false,
+      "output_size": [
+        222,
+        219
+      ],
+      "paste_position": [
+        17,
+        18
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        256,
+        768
+      ],
+      "component_mode": "all",
+      "component_count": 18,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        31,
+        28,
+        224,
+        227
+      ],
+      "edge_touch": false,
+      "output_size": [
+        223,
+        230
+      ],
+      "paste_position": [
+        16,
+        13
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        256,
+        512,
+        512,
+        768
+      ],
+      "component_mode": "all",
+      "component_count": 31,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        42,
+        46,
+        213,
+        210
+      ],
+      "edge_touch": false,
+      "output_size": [
+        197,
+        189
+      ],
+      "paste_position": [
+        29,
+        33
+      ]
+    },
+    {
+      "grid": [
+        2,
+        2
+      ],
+      "source_box": [
+        512,
+        512,
+        768,
+        768
+      ],
+      "component_mode": "all",
+      "component_count": 19,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        45,
+        63,
+        211,
+        192
+      ],
+      "edge_touch": false,
+      "output_size": [
+        192,
+        149
+      ],
+      "paste_position": [
+        32,
+        53
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

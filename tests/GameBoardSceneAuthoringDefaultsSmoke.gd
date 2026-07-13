@@ -21,16 +21,15 @@ func _run() -> void:
 		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
 		return
 
-	var ultra_wide_backdrop := board.get_node_or_null("UltraWideBackdrop") as TextureRect
+	if board.get_node_or_null("UltraWideBackdrop") != null:
+		_fail("Scene should not contain the removed UltraWideBackdrop")
+		return
+
 	var vertical_backdrop := board.get_node_or_null("VerticalBackdrop") as TextureRect
 	var board_art := board.get_node_or_null("BoardArt") as TextureRect
 	var layout_areas := board.get_node_or_null("LayoutAreas") as Control
-	if ultra_wide_backdrop == null or vertical_backdrop == null or board_art == null or layout_areas == null:
-		_fail("Scene missing UltraWideBackdrop, VerticalBackdrop, BoardArt, or LayoutAreas")
-		return
-
-	if ultra_wide_backdrop.visible:
-		_fail("UltraWideBackdrop should be hidden in the saved scene authoring state")
+	if vertical_backdrop == null or board_art == null or layout_areas == null:
+		_fail("Scene missing VerticalBackdrop, BoardArt, or LayoutAreas")
 		return
 
 	if vertical_backdrop.visible:
@@ -39,6 +38,9 @@ func _run() -> void:
 
 	if not board_art.visible:
 		_fail("BoardArt should be visible in the saved scene authoring state")
+		return
+	if board_art.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_COVERED:
+		_fail("BoardArt should use a single aspect-covered background")
 		return
 
 	if layout_areas.get_script() != null:

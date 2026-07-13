@@ -11,8 +11,6 @@ public partial class GameBoardScene
 	{
 		if (_boardArt == null
 			|| !GodotObject.IsInstanceValid(_boardArt)
-			|| _ultraWideBackdrop == null
-			|| !GodotObject.IsInstanceValid(_ultraWideBackdrop)
 			|| _verticalBackdrop == null
 			|| !GodotObject.IsInstanceValid(_verticalBackdrop)
 			|| _layoutAreas == null
@@ -32,7 +30,6 @@ public partial class GameBoardScene
 		GameBoardLayoutGeometry.ApplyLayout(
 			state,
 			_boardArt,
-			_ultraWideBackdrop,
 			_verticalBackdrop,
 			_layoutAreas,
 			_questionCardTransformArea);

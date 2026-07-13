@@ -1,0 +1,219 @@
+{
+  "target": "asset",
+  "mode": "fx",
+  "prompt": "2D ocean-themed healing and revival VFX animation, exact 2x3 grid, 6 frames: droplets, forming ring, expanding ring, rising restorative energy, bright healing bloom, calm settling ring; cyan aqua seafoam white subtle violet highlights; transparent normalized FX frames; no text or UI; all effects contained in each cell.",
+  "role": "",
+  "input": "/Volumes/KIOXIA11/godotproject/pokegame/art/fx/heart_rescue_healing/run-001/processed-normalized/sheet-transparent.png",
+  "threshold": 100,
+  "edge_threshold": 220,
+  "duration": 180,
+  "rows": 2,
+  "cols": 3,
+  "cell_size": 256,
+  "fit_scale": 0.9,
+  "trim_border": 0,
+  "edge_clean_depth": 0,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 2,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "healing-1",
+    "healing-2",
+    "healing-3",
+    "healing-4",
+    "healing-5",
+    "healing-6"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "component_mode": "all",
+      "component_count": 3,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        79,
+        60,
+        176,
+        196
+      ],
+      "edge_touch": false,
+      "output_size": [
+        121,
+        170
+      ],
+      "paste_position": [
+        67,
+        43
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        256,
+        0,
+        512,
+        256
+      ],
+      "component_mode": "all",
+      "component_count": 4,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        61,
+        62,
+        195,
+        194
+      ],
+      "edge_touch": false,
+      "output_size": [
+        167,
+        165
+      ],
+      "paste_position": [
+        44,
+        45
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        512,
+        0,
+        768,
+        256
+      ],
+      "component_mode": "all",
+      "component_count": 23,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        60,
+        52,
+        195,
+        203
+      ],
+      "edge_touch": false,
+      "output_size": [
+        169,
+        189
+      ],
+      "paste_position": [
+        43,
+        33
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        256,
+        256,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 34,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        62,
+        45,
+        194,
+        208
+      ],
+      "edge_touch": false,
+      "output_size": [
+        165,
+        204
+      ],
+      "paste_position": [
+        45,
+        26
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        256,
+        256,
+        512,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 39,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        62,
+        36,
+        194,
+        220
+      ],
+      "edge_touch": false,
+      "output_size": [
+        165,
+        230
+      ],
+      "paste_position": [
+        45,
+        13
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        512,
+        256,
+        768,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        61,
+        92,
+        195,
+        163
+      ],
+      "edge_touch": false,
+      "output_size": [
+        167,
+        88
+      ],
+      "paste_position": [
+        44,
+        84
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

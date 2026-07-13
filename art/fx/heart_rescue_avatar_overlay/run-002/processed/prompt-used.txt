@@ -1,0 +1,1 @@
+Rich avatar overlay VFX only: aqua and seafoam healing energy rises from below and wraps both sides of an invisible centered player portrait, layered water ribbons, bubbles, sparkles, lower-half glow, central portrait area kept readable; exact 3x3 grid; solid #FF00FF background; no character, no text, no UI.

@@ -1,0 +1,1 @@
+Avatar overlay VFX only: a luminous cyan and seafoam healing halo surrounding an invisible centered player portrait, with empty center for the avatar beneath, small water wisps bubbles and sparkles around the outer perimeter; exact 2x3 grid; solid #FF00FF background; no character, no text, no UI.

@@ -42,24 +42,16 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	var backdrop := board.get_node_or_null("UltraWideBackdrop") as TextureRect
 	var vertical_backdrop := board.get_node_or_null("VerticalBackdrop") as TextureRect
 	var board_art := board.get_node_or_null("BoardArt") as TextureRect
-	if backdrop == null or vertical_backdrop == null or board_art == null:
-		_fail("Scene missing UltraWideBackdrop, VerticalBackdrop, or BoardArt")
+	if vertical_backdrop == null or board_art == null:
+		_fail("Scene missing VerticalBackdrop or BoardArt")
 		return
 
 	var control_rect := board_art.get_global_rect()
 	var visible_rect := _get_visible_rect(board_art)
 	if visible_rect.size.y >= control_rect.size.y - 1.5:
 		_fail("Expected vertical letterboxing in tall viewport control=%s visible=%s" % [
-			str(control_rect),
-			str(visible_rect),
-		])
-		return
-
-	if backdrop.visible:
-		_fail("UltraWideBackdrop should be hidden when BoardArt leaves top/bottom gutters control=%s visible=%s" % [
 			str(control_rect),
 			str(visible_rect),
 		])
