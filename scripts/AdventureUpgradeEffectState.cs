@@ -18,10 +18,14 @@ internal readonly record struct AdventureUpgradeEffectStateFieldMetadata(
 
 internal sealed class AdventureUpgradeEffectState
 {
-	internal const int MaxQuestionRewardCount = 10;
-	internal const int MaxPermanentCaptureDamageBonus = 5;
-	internal const int MaxHealingOverflowRemainder = 3;
-	internal const int MaxClubMissClimbGrowthStacks = 9;
+	internal static int MaxQuestionRewardCount =>
+		AdventureUpgradeRuntimeValues.GetPositiveInt("diamonds_question_mark_windfall", "maximum");
+	internal static int MaxPermanentCaptureDamageBonus =>
+		AdventureUpgradeRuntimeValues.GetPositiveInt("diamonds_question_mark_interest", "maximum");
+	internal static int MaxHealingOverflowRemainder =>
+		AdventureUpgradeRuntimeValues.GetPositiveInt("hearts_overflow_growth", "stack_limit");
+	internal static int MaxClubMissClimbGrowthStacks =>
+		AdventureUpgradeRuntimeValues.GetPositiveInt("clubs_miss_climb_growth", "stack_limit");
 
 	private static readonly IReadOnlyDictionary<string, AdventureUpgradeEffectStateFieldMetadata> Metadata =
 		new ReadOnlyDictionary<string, AdventureUpgradeEffectStateFieldMetadata>(

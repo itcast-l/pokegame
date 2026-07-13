@@ -165,7 +165,9 @@ internal static partial class Program
 				definition.DescriptionKey,
 				definition.Notes,
 				definition.Enabled,
-				definition.SortOrder));
+				definition.SortOrder,
+				definition.EffectValuesRaw,
+				definition.DescriptionValueKeysCsv));
 		}
 
 		var store = new AdventureRunSessionStore();
@@ -201,4 +203,3 @@ internal static partial class Program
 
 
 }
-

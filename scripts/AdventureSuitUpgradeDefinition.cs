@@ -1,4 +1,6 @@
 using Godot;
+using System;
+using System.Collections.Generic;
 
 public readonly struct AdventureSuitUpgradeDefinition
 {
@@ -12,7 +14,9 @@ public readonly struct AdventureSuitUpgradeDefinition
 		string descriptionKey,
 		string notes,
 		bool enabled,
-		int sortOrder)
+		int sortOrder,
+		string effectValuesRaw = "",
+		string descriptionValueKeysCsv = "")
 	{
 		Id = id;
 		DisplayName = displayName;
@@ -24,6 +28,8 @@ public readonly struct AdventureSuitUpgradeDefinition
 		Notes = notes;
 		Enabled = enabled;
 		SortOrder = sortOrder;
+		EffectValuesRaw = effectValuesRaw ?? string.Empty;
+		DescriptionValueKeysCsv = descriptionValueKeysCsv ?? string.Empty;
 	}
 
 	public string Id { get; }
@@ -36,6 +42,8 @@ public readonly struct AdventureSuitUpgradeDefinition
 	public string Notes { get; }
 	public bool Enabled { get; }
 	public int SortOrder { get; }
+	public string EffectValuesRaw { get; }
+	public string DescriptionValueKeysCsv { get; }
 
 	public Godot.Collections.Dictionary ToDictionary()
 	{
@@ -51,6 +59,8 @@ public readonly struct AdventureSuitUpgradeDefinition
 				["notes"] = Notes,
 				["enabled"] = Enabled,
 				["sort_order"] = SortOrder,
+				["effect_values"] = EffectValuesRaw,
+				["description_value_keys"] = DescriptionValueKeysCsv,
 			};
 	}
 }

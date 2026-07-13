@@ -43,8 +43,9 @@ internal readonly record struct AdventureCaptureScoreItem(
 internal static class AdventureCaptureScoreItemRules
 {
 	internal static int ResolveTopPrizeRepeatIndex(
-		IReadOnlyList<AdventureCaptureScoreItem>? scoreItems,
-		IReadOnlyList<int>? preCaptureTableIndexes)
+			IReadOnlyList<AdventureCaptureScoreItem>? scoreItems,
+			IReadOnlyList<int>? preCaptureTableIndexes,
+			int minimumScoreItemCount = 3)
 	{
 		if (scoreItems == null
 			|| preCaptureTableIndexes == null
@@ -78,7 +79,7 @@ internal static class AdventureCaptureScoreItemRules
 			}
 		}
 
-		return normalScoreItemCount >= 3 ? selectedIndex : -1;
+		return normalScoreItemCount >= Math.Max(0, minimumScoreItemCount) ? selectedIndex : -1;
 	}
 }
 

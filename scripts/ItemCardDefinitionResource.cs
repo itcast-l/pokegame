@@ -30,6 +30,7 @@ public partial class ItemCardDefinitionResource : Resource
 	[Export] public string Icon { get; set; } = string.Empty;
 	[Export] public int Weight { get; set; } = 100;
 	[Export(PropertyHint.MultilineText)] public string Description { get; set; } = string.Empty;
+	[Export] public string RewardDelivery { get; set; } = "none";
 
 	public ItemCardDefinition ToDefinition()
 	{
@@ -60,6 +61,7 @@ public partial class ItemCardDefinitionResource : Resource
 			AttachedPriority,
 			Icon,
 			Weight,
-			Description);
+			Description,
+			RewardDeliveryModeRules.ParseOrNone(RewardDelivery));
 	}
 }

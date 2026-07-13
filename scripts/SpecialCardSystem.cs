@@ -95,31 +95,49 @@ public sealed class CardEffectValues
 
 	public static CardEffectValues Parse(string rawValue)
 	{
+		return TryParse(rawValue, out CardEffectValues values)
+			? values
+			: Empty;
+	}
+
+	public static bool TryParse(string rawValue, out CardEffectValues values)
+	{
 		if (string.IsNullOrWhiteSpace(rawValue))
 		{
-			return Empty;
+			values = Empty;
+			return true;
 		}
 
 		string raw = rawValue.Trim();
 		if (raw.StartsWith("{", StringComparison.Ordinal))
 		{
-			return ParseJsonObject(raw);
+			return TryParseJsonObject(raw, out values);
 		}
 
-		var values = new Dictionary<string, string>(StringComparer.Ordinal);
+		var parsedValues = new Dictionary<string, string>(StringComparer.Ordinal);
 		string[] pairs = raw.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		foreach (string pair in pairs)
 		{
 			int separatorIndex = pair.IndexOf('=');
 			if (separatorIndex <= 0 || separatorIndex >= pair.Length - 1)
 			{
-				continue;
+				values = Empty;
+				return false;
 			}
 
-			values[pair[..separatorIndex].Trim()] = pair[(separatorIndex + 1)..].Trim();
+			string key = pair[..separatorIndex].Trim();
+			string value = pair[(separatorIndex + 1)..].Trim();
+			if (key.Length == 0 || value.Length == 0)
+			{
+				values = Empty;
+				return false;
+			}
+
+			parsedValues[key] = value;
 		}
 
-		return values.Count == 0 ? Empty : new CardEffectValues(values);
+		values = parsedValues.Count == 0 ? Empty : new CardEffectValues(parsedValues);
+		return true;
 	}
 
 	public string GetString(string key, string fallback = "")
@@ -159,34 +177,43 @@ public sealed class CardEffectValues
 		return new CardEffectValues(merged);
 	}
 
-	private static CardEffectValues ParseJsonObject(string raw)
+	private static bool TryParseJsonObject(string raw, out CardEffectValues values)
 	{
 		try
 		{
 			using JsonDocument document = JsonDocument.Parse(raw);
 			if (document.RootElement.ValueKind != JsonValueKind.Object)
 			{
-				return Empty;
+				values = Empty;
+				return false;
 			}
 
-			var values = new Dictionary<string, string>(StringComparer.Ordinal);
+			var parsedValues = new Dictionary<string, string>(StringComparer.Ordinal);
 			foreach (JsonProperty property in document.RootElement.EnumerateObject())
 			{
 				if (property.Value.ValueKind == JsonValueKind.Array || property.Value.ValueKind == JsonValueKind.Object)
 				{
-					continue;
+					values = Empty;
+					return false;
 				}
 
-				values[property.Name] = property.Value.ValueKind == JsonValueKind.String
+				parsedValues[property.Name] = property.Value.ValueKind == JsonValueKind.String
 					? property.Value.GetString() ?? string.Empty
 					: property.Value.ToString();
+				if (parsedValues[property.Name].Length == 0)
+				{
+					values = Empty;
+					return false;
+				}
 			}
 
-			return values.Count == 0 ? Empty : new CardEffectValues(values);
+			values = parsedValues.Count == 0 ? Empty : new CardEffectValues(parsedValues);
+			return true;
 		}
 		catch (JsonException)
 		{
-			return Empty;
+			values = Empty;
+			return false;
 		}
 	}
 }

@@ -2271,7 +2271,7 @@ public bool DebugBeginMagnetGenerationOwnershipAnimation()
 {
 	if (_pendingMagnetAttachmentCompletion == null
 		|| _pendingItemSelectionMode
-			!= PendingItemSelectionMode.MagnetHandCard
+			!= PendingItemSelectionMode.AttachmentRewardHandCard
 		|| _isAnimatingMagnetAttachment)
 	{
 		return false;

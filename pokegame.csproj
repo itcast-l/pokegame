@@ -16,6 +16,6 @@
 
   <ItemGroup>
 	<Compile Include="tests/AdventureStageUnlockHarness.cs" />
-    <Compile Include="tests/MainMenuBackgroundAnimatorLifetimeHarness.cs" />
+	<Compile Include="tests/MainMenuBackgroundAnimatorLifetimeHarness.cs" />
   </ItemGroup>
 </Project>

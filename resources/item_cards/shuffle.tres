@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_SHUFFLE"
 EnabledInGame = true
 PlayableFromHand = true
 CanBeQuestionReward = true
+RewardDelivery = "hand"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 80
@@ -24,3 +25,8 @@ Priority = 20
 Icon = ""
 Weight = 60
 Description = ""
+
+AttachedTrigger = ""
+AttachedEffectType = ""
+AttachedEffectValuesRaw = ""
+AttachedPriority = 0

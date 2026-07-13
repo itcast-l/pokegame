@@ -98,7 +98,8 @@ public partial class GameBoardScene
 
 	private bool IsAttachmentItemCard(string itemCardId)
 	{
-		return IsItemEffectType(itemCardId, CardEffectTypes.AttachModifier);
+		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+			&& definition.RewardDelivery == RewardDeliveryMode.ImmediateAttachment;
 	}
 
 	private int GetTotalHandCardCount(int playerIndex)

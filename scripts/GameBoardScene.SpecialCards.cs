@@ -309,6 +309,12 @@ public partial class GameBoardScene : ICardTriggerProvider
 				[CardEffectTypes.GrantReward] = (request, _) => Task.FromResult(_runtime.ResolveGrantRewardEffect(request)),
 				[CardEffectTypes.DestroyCards] = _runtime.ResolveDestroyCardsEffectAsync,
 			};
+			if (!ItemCardEffectContractRegistry.HasExactResolverCoverage(
+				_resolvers.Keys,
+				out string coverageError))
+			{
+				throw new InvalidOperationException(coverageError);
+			}
 		}
 
 		public Task<PlayCardResult> ResolveAsync(CardTriggerRequest request, int turnSequenceGeneration)

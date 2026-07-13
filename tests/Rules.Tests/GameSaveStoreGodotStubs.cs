@@ -532,7 +532,9 @@ namespace Godot
 			string descriptionKey,
 			string notes,
 			bool enabled,
-			int sortOrder)
+			int sortOrder,
+			string effectValuesRaw,
+			string descriptionValueKeysCsv)
 		{
 			_id = id;
 			_displayName = displayName;
@@ -546,6 +548,8 @@ namespace Godot
 				["notes"] = notes,
 				["enabled"] = enabled,
 				["sort_order"] = sortOrder,
+				["effect_values"] = effectValuesRaw,
+				["description_value_keys"] = descriptionValueKeysCsv,
 			};
 		}
 

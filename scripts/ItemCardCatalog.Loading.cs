@@ -7,25 +7,49 @@ public sealed partial class ItemCardCatalog
 {
 	private static List<ItemCardDefinition> LoadDefinitions(Node sceneNode, out bool loadedFromPandora)
 	{
-		var definitionsById = new Dictionary<string, ItemCardDefinition>(StringComparer.Ordinal);
-		foreach (ItemCardDefinition definition in GetResourceDefinitions().Values)
+		bool pandoraIsLoaded = CanReadPandora(sceneNode);
+		if (pandoraIsLoaded)
 		{
-			if (IsRuntimeRuleDefinition(definition))
+			loadedFromPandora = true;
+			if (!TryLoadPandoraDefinitions(sceneNode, out List<ItemCardDefinition> pandoraDefinitions, out string errorMessage))
 			{
-				continue;
+				GD.PushWarning($"Item card Pandora manifest is invalid and will not use .tres gameplay fallback: {errorMessage}");
+				return new List<ItemCardDefinition>();
 			}
 
-			definitionsById[definition.Id] = definition;
+			return SortDefinitions(pandoraDefinitions);
 		}
 
-		List<ItemCardDefinition> pandoraDefinitions = LoadPandoraDefinitions(sceneNode);
-		loadedFromPandora = pandoraDefinitions.Count > 0;
-		foreach (ItemCardDefinition definition in pandoraDefinitions)
+		loadedFromPandora = false;
+		if (!ItemCardManifestValidationRules.ShouldUseFallback(pandoraIsLoaded))
 		{
-			definitionsById[definition.Id] = definition;
+			return new List<ItemCardDefinition>();
+		}
+		var fallbackDefinitions = new List<ItemCardDefinition>();
+		var fallbackIds = new HashSet<string>(StringComparer.Ordinal);
+		foreach (ItemCardDefinition definition in GetResourceDefinitions().Values)
+		{
+			if (!fallbackIds.Add(definition.Id))
+			{
+				GD.PushWarning($"Duplicate item card fallback definition '{definition.Id}'.");
+				return new List<ItemCardDefinition>();
+			}
+
+			ItemCardContractValidationResult validation = ItemCardEffectContractRegistry.Validate(definition);
+			if (!validation.IsValid)
+			{
+				GD.PushWarning($"Invalid item card fallback definition: {validation.ErrorMessage}");
+				return new List<ItemCardDefinition>();
+			}
+
+			fallbackDefinitions.Add(definition);
 		}
 
-		var definitions = new List<ItemCardDefinition>(definitionsById.Values);
+		return SortDefinitions(fallbackDefinitions);
+	}
+
+	private static List<ItemCardDefinition> SortDefinitions(List<ItemCardDefinition> definitions)
+	{
 		definitions.Sort((a, b) =>
 		{
 			int orderComparison = a.SortOrder.CompareTo(b.SortOrder);

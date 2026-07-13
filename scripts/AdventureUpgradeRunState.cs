@@ -5,9 +5,6 @@ internal sealed class AdventureUpgradeRunState
 {
 	private const int DefaultAdventurePlayerHealth = 100;
 	private const int MaximumAdventurePlayerHealth = 150;
-	private const int MaximumQuestionRewardCount = 10;
-	private const int MaximumPermanentCaptureDamageBonus = 5;
-	private const int MaximumHealingOverflowRemainder = 3;
 	private const string QuestionMarkInterestUpgradeId = "diamonds_question_mark_interest";
 	private const string QuestionMarkEchoUpgradeId = "diamonds_question_mark_echo";
 	private const string FinalDoubleUpgradeId = "diamonds_final_double";
@@ -46,6 +43,7 @@ internal sealed class AdventureUpgradeRunState
 		}
 
 		_manifest = manifest;
+		AdventureUpgradeRuntimeValues.SetManifest(manifest);
 		AcquiredUpgradeIds.RemoveWhere(id => !manifest.ContainsEnabledId(id));
 		NormalizePersistentState();
 	}
@@ -228,7 +226,7 @@ internal sealed class AdventureUpgradeRunState
 		_effectState.QuestionRewardCount = Math.Clamp(
 			requestedQuestionRewardCount,
 			0,
-			MaximumQuestionRewardCount);
+			AdventureUpgradeEffectState.MaxQuestionRewardCount);
 		if (_effectState.QuestionRewardCount != requestedQuestionRewardCount)
 		{
 			migrated = true;
@@ -239,7 +237,7 @@ internal sealed class AdventureUpgradeRunState
 			: 0;
 		int maximumPermanentBonus = Math.Min(
 			_effectState.QuestionRewardCount,
-			MaximumPermanentCaptureDamageBonus);
+			AdventureUpgradeEffectState.MaxPermanentCaptureDamageBonus);
 		_effectState.PermanentCaptureDamageBonus = HasAcquiredUpgrade(QuestionMarkInterestUpgradeId)
 			? Math.Clamp(requestedPermanentBonus, 0, maximumPermanentBonus)
 			: 0;
@@ -252,7 +250,7 @@ internal sealed class AdventureUpgradeRunState
 			? snapshot.HealingOverflowRemainder
 			: 0;
 		_effectState.HealingOverflowRemainder = HasAcquiredUpgrade(OverflowGrowthUpgradeId)
-			? Math.Clamp(requestedOverflowRemainder, 0, MaximumHealingOverflowRemainder)
+			? Math.Clamp(requestedOverflowRemainder, 0, AdventureUpgradeEffectState.MaxHealingOverflowRemainder)
 			: 0;
 		if (_effectState.HealingOverflowRemainder != requestedOverflowRemainder)
 		{
@@ -261,7 +259,7 @@ internal sealed class AdventureUpgradeRunState
 
 		_effectState.FinalDoubleCaptureDamageActive =
 			HasAcquiredUpgrade(FinalDoubleUpgradeId)
-			&& _effectState.QuestionRewardCount >= MaximumQuestionRewardCount;
+			&& _effectState.QuestionRewardCount >= AdventureUpgradeEffectState.MaxQuestionRewardCount;
 		if (HasLegacyTransientState(snapshot))
 		{
 			migrated = true;
@@ -292,19 +290,19 @@ internal sealed class AdventureUpgradeRunState
 		_effectState.QuestionRewardCount = Math.Clamp(
 			_effectState.QuestionRewardCount,
 			0,
-			MaximumQuestionRewardCount);
+			AdventureUpgradeEffectState.MaxQuestionRewardCount);
 		int maximumPermanentBonus = Math.Min(
 			_effectState.QuestionRewardCount,
-			MaximumPermanentCaptureDamageBonus);
+			AdventureUpgradeEffectState.MaxPermanentCaptureDamageBonus);
 		_effectState.PermanentCaptureDamageBonus = HasAcquiredUpgrade(QuestionMarkInterestUpgradeId)
 			? Math.Clamp(_effectState.PermanentCaptureDamageBonus, 0, maximumPermanentBonus)
 			: 0;
 		_effectState.HealingOverflowRemainder = HasAcquiredUpgrade(OverflowGrowthUpgradeId)
-			? Math.Clamp(_effectState.HealingOverflowRemainder, 0, MaximumHealingOverflowRemainder)
+			? Math.Clamp(_effectState.HealingOverflowRemainder, 0, AdventureUpgradeEffectState.MaxHealingOverflowRemainder)
 			: 0;
 		_effectState.FinalDoubleCaptureDamageActive =
 			HasAcquiredUpgrade(FinalDoubleUpgradeId)
-			&& _effectState.QuestionRewardCount >= MaximumQuestionRewardCount;
+			&& _effectState.QuestionRewardCount >= AdventureUpgradeEffectState.MaxQuestionRewardCount;
 	}
 
 	private static bool IsSupportedSchemaVersion(int schemaVersion)

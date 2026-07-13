@@ -96,6 +96,154 @@ internal static partial class Program
 		False(ItemCardEffectSupport.IsSupportedEffectType(string.Empty));
 	}
 
+	private static void ItemCardManifestContractsRejectInvalidPandoraData()
+	{
+		ItemCardDefinition validReward = CreateContractTestItemCard(
+			id: "draw_card",
+			effectType: CardEffectTypes.DrawCard,
+			effectValues: "count=1",
+			canBeQuestionReward: true,
+			playableFromHand: true,
+			rewardDelivery: RewardDeliveryMode.Hand);
+		True(ItemCardManifestValidationRules.ValidatePandoraEntries(
+			new[] { CreatePandoraEntry(validReward) },
+			new[] { "draw_card" }).IsValid);
+
+		ItemCardPandoraManifestEntry missingField = new(
+			validReward.Id,
+			new HashSet<string>(ItemCardManifestValidationRules.RequiredGameplayProperties, StringComparer.Ordinal)
+			{
+				"effect_values",
+			},
+			validReward);
+		((HashSet<string>)missingField.PresentGameplayProperties).Remove("effect_values");
+		False(ItemCardManifestValidationRules.ValidatePandoraEntries(
+			new[] { missingField },
+			new[] { validReward.Id }).IsValid);
+
+		ItemCardPandoraManifestEntry duplicate = CreatePandoraEntry(validReward);
+		False(ItemCardManifestValidationRules.ValidatePandoraEntries(
+			new[] { CreatePandoraEntry(validReward), duplicate },
+			new[] { validReward.Id }).IsValid);
+
+		False(ItemCardEffectContractRegistry.Validate(
+			CreateContractTestItemCard(
+				id: "unknown_effect",
+				effectType: "unknown_effect",
+				effectValues: "value=1",
+				canBeQuestionReward: false,
+				playableFromHand: false,
+				rewardDelivery: RewardDeliveryMode.None)).IsValid);
+		False(ItemCardEffectContractRegistry.Validate(
+			CreateContractTestItemCard(
+				id: "unknown_presentation",
+				effectType: CardEffectTypes.DrawCard,
+				effectValues: "count=1",
+				playPresentation: "unknown_presentation",
+				canBeQuestionReward: true,
+				playableFromHand: true,
+				rewardDelivery: RewardDeliveryMode.Hand)).IsValid);
+		False(ItemCardEffectContractRegistry.Validate(
+			CreateContractTestItemCard(
+				id: "unknown_value",
+				effectType: CardEffectTypes.DrawCard,
+				effectValues: "count=1;unknown=2",
+				canBeQuestionReward: true,
+				playableFromHand: true,
+				rewardDelivery: RewardDeliveryMode.Hand)).IsValid);
+		False(ItemCardEffectContractRegistry.Validate(
+			CreateContractTestItemCard(
+				id: "illegal_delivery",
+				effectType: CardEffectTypes.DrawCard,
+				effectValues: "count=1",
+				canBeQuestionReward: true,
+				playableFromHand: true,
+				rewardDelivery: RewardDeliveryMode.ImmediateAttachment)).IsValid);
+
+		ItemCardDefinition attachmentReward = CreateContractTestItemCard(
+			id: "magnet",
+			effectType: CardEffectTypes.AttachModifier,
+			effectValues: "modifier=magnet",
+			canBeQuestionReward: true,
+			playableFromHand: false,
+			rewardDelivery: RewardDeliveryMode.ImmediateAttachment);
+		True(ItemCardEffectContractRegistry.Validate(attachmentReward).IsValid);
+		ItemCardDefinition handAttachmentReward = CreateContractTestItemCard(
+			id: "suit_collect",
+			effectType: CardEffectTypes.AttachModifier,
+			effectValues: "modifier=suit_collect",
+			canBeQuestionReward: true,
+			playableFromHand: true,
+			rewardDelivery: RewardDeliveryMode.Hand);
+		True(ItemCardEffectContractRegistry.Validate(handAttachmentReward).IsValid);
+		False(ItemCardEffectContractRegistry.Validate(
+			CreateContractTestItemCard(
+				id: "playable_immediate_attachment",
+				effectType: CardEffectTypes.AttachModifier,
+				effectValues: "modifier=magnet",
+				canBeQuestionReward: true,
+				playableFromHand: true,
+				rewardDelivery: RewardDeliveryMode.ImmediateAttachment)).IsValid);
+		True(ItemCardManifestValidationRules.ShouldUseFallback(pandoraIsLoaded: false));
+		False(ItemCardManifestValidationRules.ShouldUseFallback(pandoraIsLoaded: true));
+
+		True(ItemCardEffectContractRegistry.HasExactResolverCoverage(
+			ItemCardEffectContractRegistry.ResolverEffectTypes,
+			out _));
+		True(ItemCardEffectContractRegistry.HasExactPresentationCoverage(
+			ItemCardEffectContractRegistry.CustomPresentationTypes,
+			ItemCardEffectContractRegistry.GenericPresentations,
+			out _));
+	}
+
+	private static ItemCardPandoraManifestEntry CreatePandoraEntry(ItemCardDefinition definition)
+	{
+		return new ItemCardPandoraManifestEntry(
+			definition.Id,
+			ItemCardManifestValidationRules.RequiredGameplayProperties,
+			definition);
+	}
+
+	private static ItemCardDefinition CreateContractTestItemCard(
+		string id,
+		string effectType,
+		string effectValues,
+		bool canBeQuestionReward,
+		bool playableFromHand,
+		RewardDeliveryMode rewardDelivery,
+		string playPresentation = CardPlayPresentationTypes.DirectTrigger)
+	{
+		return new ItemCardDefinition(
+			id,
+			id,
+			id,
+			$"ITEM_DESC_{id.ToUpperInvariant()}",
+			enabledInGame: true,
+			playableFromHand,
+			canBeQuestionReward,
+			"run-004",
+			string.Empty,
+			4,
+			1,
+			"common",
+			string.Empty,
+			string.Empty,
+			0,
+			playPresentation,
+			effectType == CardEffectTypes.GrantReward ? CardGameEvents.OnCollect : CardGameEvents.OnPlay,
+			effectType,
+			effectValues,
+			0,
+			string.Empty,
+			CardEffectTypes.None,
+			string.Empty,
+			0,
+			string.Empty,
+			100,
+			string.Empty,
+			rewardDelivery);
+	}
+
 	private static void DrawItemAvailabilityUsesPostUseHandCapacityAndDeckCount()
 	{
 		True(ItemCardEffectSupport.CanFulfillDrawCardEffect(1, 8, 8, 1));
@@ -1180,4 +1328,3 @@ internal static partial class Program
 
 
 }
-

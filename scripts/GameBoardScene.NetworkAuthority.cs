@@ -147,7 +147,7 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard)
 		{
 			if (!IsValidMagnetAttachmentHandIndex(actorSeatIndex, targetHandIndex, _pendingItemCardId)
 				|| _pendingMagnetAttachmentCompletion == null)

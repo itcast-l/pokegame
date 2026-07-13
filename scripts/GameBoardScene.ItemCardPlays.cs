@@ -13,17 +13,26 @@ public partial class GameBoardScene
 
 	private Dictionary<string, PlayItemCardPresentationAsync> CreateItemPlayPresentationHandlers()
 	{
-		return new Dictionary<string, PlayItemCardPresentationAsync>(StringComparer.Ordinal)
+		var handlers = new Dictionary<string, PlayItemCardPresentationAsync>(StringComparer.Ordinal)
 		{
 			[CardPlayPresentationTypes.TableOverlay] = PlayBombCardFromHandAsync,
 			[CardPlayPresentationTypes.LensSplit] = PlayLensCardFromHandAsync,
 			[CardPlayPresentationTypes.TransformAreaTrigger] = PlayTransformAreaItemCardFromHandAsync,
 		};
+		if (!ItemCardEffectContractRegistry.HasExactPresentationCoverage(
+			handlers.Keys,
+			ItemCardEffectContractRegistry.GenericPresentations,
+			out string coverageError))
+		{
+			throw new InvalidOperationException(coverageError);
+		}
+
+		return handlers;
 	}
 
 	private Dictionary<string, CanPlayItemCardPresentation> CreateItemPlayPresentationValidators()
 	{
-		return new Dictionary<string, CanPlayItemCardPresentation>(StringComparer.Ordinal)
+		var validators = new Dictionary<string, CanPlayItemCardPresentation>(StringComparer.Ordinal)
 		{
 			[CardPlayPresentationTypes.TableOverlay] = (_, _) => _tableCards.Count > 0,
 			[CardPlayPresentationTypes.LensSplit] = (playerIndex, definition) => HasLensRevealTargets(playerIndex, definition.EffectValues),
@@ -31,6 +40,15 @@ public partial class GameBoardScene
 				definition.EffectValues.GetString(CardEffectValueKeys.Target) != CardEffectTargets.Table
 				|| GetMovableTableShuffleCardCount() >= 2,
 		};
+		if (!ItemCardEffectContractRegistry.HasExactPresentationCoverage(
+			validators.Keys,
+			ItemCardEffectContractRegistry.GenericPresentations,
+			out string coverageError))
+		{
+			throw new InvalidOperationException(coverageError);
+		}
+
+		return validators;
 	}
 
 	private async Task<PlayCardResult> PlayItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)

@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_DOUBLE"
 EnabledInGame = true
 PlayableFromHand = true
 CanBeQuestionReward = true
+RewardDelivery = "hand"
 ArtRunName = "run-005"
 FrameCount = 4
 SortOrder = 50
@@ -29,3 +30,5 @@ AttachedPriority = 60
 Icon = ""
 Weight = 45
 Description = ""
+
+PlayPresentation = "direct_trigger"

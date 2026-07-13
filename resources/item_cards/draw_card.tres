@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_DRAW_CARD"
 EnabledInGame = true
 PlayableFromHand = true
 CanBeQuestionReward = true
+RewardDelivery = "hand"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 70
@@ -24,3 +25,8 @@ Priority = 30
 Icon = ""
 Weight = 100
 Description = ""
+
+AttachedTrigger = ""
+AttachedEffectType = ""
+AttachedEffectValuesRaw = ""
+AttachedPriority = 0

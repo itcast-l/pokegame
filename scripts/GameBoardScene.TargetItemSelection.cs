@@ -42,7 +42,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard)
 		{
 			ShowMagnetHandSelection();
 			return;
@@ -497,7 +497,7 @@ public partial class GameBoardScene
 		};
 		selectionOverlay.CancelRequested += () =>
 		{
-			if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.MagnetHandCard)
+			if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.AttachmentRewardHandCard)
 			{
 				PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 				return;
@@ -523,7 +523,7 @@ public partial class GameBoardScene
 			},
 			cancel: () =>
 			{
-				if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.MagnetHandCard)
+				if (_pendingItemSelectionMode is PendingItemSelectionMode.HandLimitDiscard or PendingItemSelectionMode.AttachmentRewardHandCard)
 				{
 					PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 					return;

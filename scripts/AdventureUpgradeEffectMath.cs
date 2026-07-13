@@ -38,9 +38,11 @@ internal static AdventureUpgradeEffectState CloneState(AdventureUpgradeEffectSta
 		return state?.Clone() ?? new AdventureUpgradeEffectState();
 	}
 
-internal static long ApplySmallInsurance(long damage)
+	internal static long ApplySmallInsurance(long damage, int threshold = 4, int insuredDamage = 5)
 	{
-		return damage is >= 1 and <= 4 ? 5 : damage;
+		return damage >= 1 && damage <= Math.Max(0, threshold)
+			? Math.Max(0, insuredDamage)
+			: damage;
 	}
 
 internal static long GetDamageEventCap(int targetMaxHealth)

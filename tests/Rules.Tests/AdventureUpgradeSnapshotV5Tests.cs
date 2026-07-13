@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 internal static partial class Program
 {
@@ -632,7 +634,9 @@ internal static partial class Program
 				descriptionKey,
 				properties.GetProperty("notes").GetProperty("value").GetString() ?? string.Empty,
 				enabled: true,
-				sortOrder: properties.GetProperty("sort_order").GetProperty("value").GetInt32()));
+				sortOrder: properties.GetProperty("sort_order").GetProperty("value").GetInt32(),
+				effectValuesRaw: properties.GetProperty("effect_values").GetProperty("value").GetString() ?? string.Empty,
+				descriptionValueKeysCsv: properties.GetProperty("description_value_keys").GetProperty("value").GetString() ?? string.Empty));
 		}
 
 		return definitions;
@@ -786,6 +790,21 @@ internal static partial class Program
 			for (int columnIndex = 1; columnIndex < header.Count; columnIndex++)
 			{
 				True(!string.IsNullOrWhiteSpace(row[columnIndex]));
+			}
+
+			IReadOnlyList<string> expectedValueKeys = entry.DescriptionValueKeys ?? Array.Empty<string>();
+			List<string> baselineTokens = ExtractDescriptionPlaceholders(row[1]);
+			foreach (string valueKey in expectedValueKeys)
+			{
+				True(baselineTokens.Contains(valueKey));
+			}
+			for (int columnIndex = 2; columnIndex < header.Count; columnIndex++)
+			{
+				HashSet<string> expectedTokens = new(baselineTokens, StringComparer.Ordinal);
+				HashSet<string> localizedTokens = new(
+					ExtractDescriptionPlaceholders(row[columnIndex]),
+					StringComparer.Ordinal);
+				True(expectedTokens.SetEquals(localizedTokens));
 			}
 		}
 
@@ -957,22 +976,51 @@ internal static partial class Program
 		True(rowsByKey.TryGetValue(key, out List<string>? row));
 		for (int columnIndex = 1; columnIndex < header.Count; columnIndex++)
 		{
-			switch (header[columnIndex])
-			{
-				case "en":
-					Equal(expectedEnglish, row![columnIndex]);
-					break;
-				case "zh_CN":
-					Equal(expectedSimplifiedChinese, row![columnIndex]);
-					break;
-				case "zh_TW":
-					Equal(expectedTraditionalChinese, row![columnIndex]);
+				switch (header[columnIndex])
+				{
+					case "en":
+						True(NormalizeDescriptionForComparison(row![columnIndex]).Contains(
+							NormalizeDescriptionForComparison(expectedEnglish),
+							StringComparison.Ordinal));
+						break;
+					case "zh_CN":
+						True(NormalizeDescriptionForComparison(row![columnIndex]).Contains(
+							NormalizeDescriptionForComparison(expectedSimplifiedChinese),
+							StringComparison.Ordinal));
+						break;
+					case "zh_TW":
+						True(NormalizeDescriptionForComparison(row![columnIndex]).Contains(
+							NormalizeDescriptionForComparison(expectedTraditionalChinese),
+							StringComparison.Ordinal));
 					break;
 				default:
 					True(!string.IsNullOrWhiteSpace(row![columnIndex]));
 					break;
 			}
 		}
+	}
+
+	private static string NormalizeDescriptionForComparison(string value)
+	{
+		return Regex.Replace(
+			value,
+			"\\{[A-Za-z0-9_]+\\}|[0-9]+",
+			string.Empty,
+			RegexOptions.CultureInvariant);
+	}
+
+	private static List<string> ExtractDescriptionPlaceholders(string value)
+	{
+		var tokens = new List<string>();
+		foreach (Match match in Regex.Matches(
+			value,
+			"\\{(?<key>[A-Za-z0-9_]+)\\}",
+			RegexOptions.CultureInvariant))
+		{
+			tokens.Add(match.Groups["key"].Value);
+		}
+
+		return tokens;
 	}
 
 	private static void AssertCanonicalV5Json(string json)

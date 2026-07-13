@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 internal static class AdventureUpgradeDescriptionRules
@@ -7,30 +8,63 @@ internal static class AdventureUpgradeDescriptionRules
 	internal const string CurrentItemCountToken = "{current_item_count}";
 
 	internal static string Format(
-		string upgradeId,
-		string description,
+		string? upgradeId,
+		string? description,
 		int currentItemCount)
 	{
-		string normalizedDescription = description?.Trim() ?? string.Empty;
-		if (!string.Equals(
+		if (string.Equals(
 			upgradeId?.Trim(),
 			QuestionMarkInterestUpgradeId,
 			StringComparison.Ordinal))
 		{
+			return Format(
+				upgradeId,
+				description,
+				new Dictionary<string, int>(StringComparer.Ordinal)
+				{
+					["current_item_count"] = Math.Max(0, currentItemCount),
+				});
+		}
+
+		return description?.Trim() ?? string.Empty;
+	}
+
+	internal static string Format(
+		string? upgradeId,
+		string? description,
+		IReadOnlyDictionary<string, int>? values)
+	{
+		string normalizedDescription = description?.Trim() ?? string.Empty;
+		bool hadCurrentItemCountToken = normalizedDescription.Contains(
+			CurrentItemCountToken,
+			StringComparison.Ordinal);
+		if (values == null || values.Count == 0)
+		{
 			return normalizedDescription;
 		}
 
-		string countText = Math.Max(0, currentItemCount).ToString(CultureInfo.InvariantCulture);
-		if (normalizedDescription.Contains(CurrentItemCountToken, StringComparison.Ordinal))
+		foreach (KeyValuePair<string, int> pair in values)
 		{
-			return normalizedDescription.Replace(
-				CurrentItemCountToken,
-				countText,
+			string token = $"{{{pair.Key}}}";
+			normalizedDescription = normalizedDescription.Replace(
+				token,
+				Math.Max(0, pair.Value).ToString(CultureInfo.InvariantCulture),
 				StringComparison.Ordinal);
 		}
 
-		return normalizedDescription.Length == 0
-			? countText
-			: $"{normalizedDescription} ({countText})";
+		if (string.Equals(
+			upgradeId?.Trim(),
+			QuestionMarkInterestUpgradeId,
+			StringComparison.Ordinal)
+			&& values.TryGetValue("current_item_count", out int currentItemCount)
+			&& !hadCurrentItemCountToken)
+		{
+			string countText = Math.Max(0, currentItemCount).ToString(CultureInfo.InvariantCulture);
+			return normalizedDescription.Length == 0
+				? countText
+				: $"{normalizedDescription} ({countText})";
+		}
+
+		return normalizedDescription;
 	}
 }

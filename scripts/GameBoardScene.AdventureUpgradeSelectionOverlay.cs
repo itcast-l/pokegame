@@ -219,11 +219,27 @@ public partial class GameBoardScene
 	private string FormatAdventureUpgradeDescription(AdventureSuitUpgradeDefinition definition)
 	{
 		string description = GetAdventureUpgradeDescription(definition.DescriptionKey, definition.EffectText);
-		int currentItemCount = GetAdventureUpgradeRunState()?.EffectState.QuestionRewardCount ?? 0;
-		return AdventureUpgradeDescriptionRules.Format(
+		var values = new Dictionary<string, int>(StringComparer.Ordinal);
+		if (_adventureUpgradeCatalog != null
+			&& _adventureUpgradeCatalog.TryCreateManifest(out AdventureUpgradeManifest manifest)
+			&& manifest.TryGetEnabledEntry(definition.Id, out AdventureUpgradeManifestEntry entry)
+			&& entry.EffectValues != null)
+		{
+			foreach (KeyValuePair<string, int> pair in entry.EffectValues)
+			{
+				values[pair.Key] = pair.Value;
+			}
+		}
+
+		if (string.Equals(
 			definition.Id,
-			description,
-			currentItemCount);
+			AdventureUpgradeDescriptionRules.QuestionMarkInterestUpgradeId,
+			StringComparison.Ordinal))
+		{
+			values["current_item_count"] = GetAdventureUpgradeRunState()?.EffectState.QuestionRewardCount ?? 0;
+		}
+
+		return AdventureUpgradeDescriptionRules.Format(definition.Id, description, values);
 	}
 
 	private void ConfigureAdventureUpgradeSelectionOverlay(

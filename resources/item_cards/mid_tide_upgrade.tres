@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_MID_TIDE_UPGRADE"
 EnabledInGame = true
 PlayableFromHand = true
 CanBeQuestionReward = true
+RewardDelivery = "hand"
 ArtRunName = "run-001"
 FrameCount = 4
 SortOrder = 120
@@ -29,3 +30,5 @@ AttachedPriority = 50
 Icon = ""
 Weight = 40
 Description = ""
+
+PlayPresentation = "direct_trigger"

@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_KING"
 EnabledInGame = false
 PlayableFromHand = false
 CanBeQuestionReward = false
+RewardDelivery = "none"
 ArtRunName = "run-004"
 FramePathPattern = "res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-{0:000}.png"
 FrameCount = 1
@@ -25,3 +26,8 @@ Priority = 30
 Icon = ""
 Weight = 0
 Description = ""
+
+AttachedTrigger = ""
+AttachedEffectType = ""
+AttachedEffectValuesRaw = ""
+AttachedPriority = 0

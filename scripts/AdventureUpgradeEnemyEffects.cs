@@ -16,12 +16,22 @@ internal static AdventureEnemyMissEffectResult ResolveEnemyMissEffects(
 
 		if (acquired.Contains("spades_missed_beat_blunt_hurt"))
 		{
-			nextCaptureDamageDelta -= 3;
+			nextCaptureDamageDelta -= AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"spades_missed_beat_blunt_hurt",
+				"amount",
+				3);
 		}
 
-		if (acquired.Contains("spades_miss_bleed") && tableCardCountAfterMiss >= 6)
+		if (acquired.Contains("spades_miss_bleed")
+			&& tableCardCountAfterMiss >= AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"spades_miss_bleed",
+				"threshold",
+				6))
 		{
-			directDamageToEnemy += 2;
+			directDamageToEnemy += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"spades_miss_bleed",
+				"amount",
+				2);
 		}
 
 		if (acquired.Contains("spades_return_tide_misorder") && hadOldTableCardsBeforeMiss)
@@ -62,12 +72,18 @@ internal static int ResolveOldTableCaptureDamageDelta(
 			int delta = 0;
 			if (capturedTraceMark && acquired.Contains("spades_trace_hunt"))
 			{
-				delta += 4;
+				delta += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"spades_trace_hunt",
+					"amount",
+					4);
 			}
 
 			if (capturedHuntMark && acquired.Contains("spades_hunt_order"))
 			{
-				delta += 6;
+				delta += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"spades_hunt_order",
+					"amount",
+					6);
 			}
 
 			return delta;
@@ -81,12 +97,21 @@ internal static int ResolveOldTableCaptureDamageDelta(
 		int strongestReduction = 0;
 		if (acquired.Contains("spades_exaction"))
 		{
-			strongestReduction = -4;
+			strongestReduction = -AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"spades_exaction",
+				"amount",
+				4);
 		}
 
 		if (acquired.Contains("spades_reverse_capture_tax"))
 		{
-			int reverseCaptureTaxReduction = -Math.Max(0, capturedOldScoringCardCount);
+			int reductionPerCard = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"spades_reverse_capture_tax",
+				"amount",
+				1);
+			int reverseCaptureTaxReduction = -Math.Max(
+				0,
+				capturedOldScoringCardCount * reductionPerCard);
 			strongestReduction = Math.Min(strongestReduction, reverseCaptureTaxReduction);
 		}
 
@@ -98,7 +123,10 @@ internal static bool ShouldPreserveEnemyCaptureTailCard(
 		int totalCapturedCardCount)
 	{
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
-		return acquired.Contains("spades_tail_pressure") && totalCapturedCardCount == 7;
+		return acquired.Contains("spades_tail_pressure")
+			&& totalCapturedCardCount == AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"spades_tail_pressure",
+				"threshold",
+				7);
 	}
 }
-

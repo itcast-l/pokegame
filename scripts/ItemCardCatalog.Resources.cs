@@ -118,7 +118,8 @@ public sealed partial class ItemCardCatalog
 			GetResourceInt(resource, "AttachedPriority"),
 			GetResourceString(resource, "Icon"),
 			GetResourceInt(resource, "Weight", DefaultWeight),
-			GetResourceString(resource, "Description"));
+			GetResourceString(resource, "Description"),
+			RewardDeliveryModeRules.ParseOrNone(GetResourceString(resource, "RewardDelivery", "none")));
 	}
 
 	private static string GetResourceString(Resource resource, string propertyName, string fallback = "")

@@ -50,7 +50,7 @@ func _run_replacement_probe(board: Node) -> bool:
 	# The old continuation must not clear or attach into the replacement selection.
 	if bool(replacement.get("completed", true)) \
 		or not bool(board.call("DebugHasCurrentOwnedMagnetSelection")) \
-		or String(board.call("DebugGetPendingItemSelectionModeName")) != "MagnetHandCard" \
+		or String(board.call("DebugGetPendingItemSelectionModeName")) != "AttachmentRewardHandCard" \
 		or not bool(board.call("DebugIsProcessingCardPlayForOwnershipProbe")) \
 		or int(board.call("DebugCountMainPlayerHandCardsWithAttachment", "magnet")) != 0:
 		_fail("Old magnet continuation mutated replacement selection")

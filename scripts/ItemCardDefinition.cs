@@ -3,6 +3,37 @@ using System.Collections.Generic;
 
 public readonly struct ItemCardDefinition
 {
+	public ItemCardDefinition(string id, string attachedEffectType)
+		: this(
+			id,
+			string.Empty,
+			string.Empty,
+			string.Empty,
+			false,
+			false,
+			false,
+			string.Empty,
+			string.Empty,
+			0,
+			0,
+			string.Empty,
+			string.Empty,
+			string.Empty,
+			0,
+			CardPlayPresentationTypes.DirectTrigger,
+			string.Empty,
+			CardEffectTypes.None,
+			string.Empty,
+			0,
+			string.Empty,
+			attachedEffectType,
+			string.Empty,
+			0,
+			string.Empty,
+			0)
+	{
+	}
+
 	public ItemCardDefinition(
 		string id,
 		string displayName,
@@ -30,7 +61,8 @@ public readonly struct ItemCardDefinition
 		int attachedPriority,
 		string icon,
 		int weight,
-		string description = "")
+		string description = "",
+		RewardDeliveryMode rewardDelivery = RewardDeliveryMode.None)
 	{
 		Id = id;
 		DisplayName = displayName;
@@ -63,6 +95,7 @@ public readonly struct ItemCardDefinition
 		Icon = icon;
 		Weight = weight;
 		Description = description;
+		RewardDelivery = rewardDelivery;
 		Tags = ParseTags(tagsCsv);
 	}
 
@@ -96,6 +129,8 @@ public readonly struct ItemCardDefinition
 	public string Icon { get; }
 	public int Weight { get; }
 	public string Description { get; }
+	public RewardDeliveryMode RewardDelivery { get; }
+	public RewardDeliveryMode Delivery => RewardDelivery;
 
 	public ItemCardEffectRule EffectRule => new(Trigger, EffectType, EffectValues, Priority);
 	public ItemCardEffectRule AttachedEffectRule => new(AttachedTrigger, AttachedEffectType, AttachedEffectValues, AttachedPriority);

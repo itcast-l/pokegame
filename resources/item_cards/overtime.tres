@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_OVERTIME"
 EnabledInGame = true
 PlayableFromHand = true
 CanBeQuestionReward = true
+RewardDelivery = "hand"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 60
@@ -29,3 +30,5 @@ AttachedPriority = 55
 Icon = ""
 Weight = 45
 Description = ""
+
+PlayPresentation = "direct_trigger"

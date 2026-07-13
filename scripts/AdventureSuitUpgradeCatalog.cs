@@ -29,6 +29,7 @@ public sealed class AdventureSuitUpgradeCatalog
 		Node? pandora = sceneNode.GetNodeOrNull<Node>("/root/Pandora");
 		if (pandora == null || !pandora.Call("is_loaded").AsBool())
 		{
+			AdventureUpgradeRuntimeValues.SetManifest(null);
 			GD.PushWarning("Adventure suit upgrades catalog unavailable because Pandora is not loaded.");
 			return;
 		}
@@ -36,24 +37,42 @@ public sealed class AdventureSuitUpgradeCatalog
 		GodotObject? category = pandora.Call("get_category", CategoryId).AsGodotObject();
 		if (category == null)
 		{
+			AdventureUpgradeRuntimeValues.SetManifest(null);
 			GD.PushWarning($"Missing Pandora category: {CategoryId}");
 			return;
 		}
 
 		Godot.Collections.Array entities = pandora.Call("get_all_entities", category).AsGodotArray();
 		var definitions = new List<AdventureSuitUpgradeDefinition>();
+		var definitionIds = new HashSet<string>(StringComparer.Ordinal);
 		foreach (Variant entityVariant in entities)
 		{
 			GodotObject? entity = entityVariant.AsGodotObject();
 			if (entity == null)
 			{
-				continue;
+				InvalidateCatalog("Adventure upgrade category contains a non-object entity.");
+				return;
 			}
 
 			string id = entity.Call("get_entity_id").AsString();
-			if (string.IsNullOrWhiteSpace(id))
+			if (string.IsNullOrWhiteSpace(id) || !definitionIds.Add(id))
 			{
-				continue;
+				InvalidateCatalog($"Adventure upgrade category contains duplicate or empty ID '{id}'.");
+				return;
+			}
+
+		string[] requiredProperties =
+		{
+				"suit", "rarity", "trigger_text", "effect_text", "description_key", "notes",
+				"enabled", "sort_order", "effect_values", "description_value_keys",
+			};
+			foreach (string propertyName in requiredProperties)
+			{
+				if (!entity.Call("has_entity_property", propertyName).AsBool())
+				{
+					InvalidateCatalog($"Adventure upgrade '{id}' is missing property '{propertyName}'.");
+					return;
+				}
 			}
 
 			definitions.Add(new AdventureSuitUpgradeDefinition(
@@ -66,7 +85,9 @@ public sealed class AdventureSuitUpgradeCatalog
 				GetEntityString(entity, "description_key", BuildDefaultDescriptionKey(id)),
 				GetEntityString(entity, "notes"),
 				GetEntityBool(entity, "enabled"),
-				GetEntityInt(entity, "sort_order")));
+				GetEntityInt(entity, "sort_order"),
+				GetEntityString(entity, "effect_values"),
+				GetEntityString(entity, "description_value_keys")));
 		}
 
 		definitions.Sort((a, b) =>
@@ -142,6 +163,28 @@ public sealed class AdventureSuitUpgradeCatalog
 				GD.PushWarning(
 					$"Enabled adventure suit upgrade '{definition.Id}' has no runtime manifest contract.");
 				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+				AdventureUpgradeRuntimeValues.SetManifest(null);
+				return false;
+			}
+
+			string effectValueError = string.Empty;
+			string descriptionKeyError = string.Empty;
+			bool effectValuesValid = AdventureUpgradeRuntimeContract.TryValidateEffectValues(
+					definition.Id,
+					definition.EffectValuesRaw,
+					out IReadOnlyDictionary<string, int> effectValues,
+					out effectValueError);
+			bool descriptionKeysValid = AdventureUpgradeRuntimeContract.TryValidateDescriptionValueKeys(
+					definition.Id,
+					definition.DescriptionValueKeysCsv,
+					out IReadOnlyList<string> descriptionValueKeys,
+					out descriptionKeyError);
+			if (!effectValuesValid || !descriptionKeysValid)
+			{
+				GD.PushWarning(
+					$"Enabled adventure suit upgrade '{definition.Id}' has invalid parameter contract: {effectValueError}{descriptionKeyError}");
+				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+				AdventureUpgradeRuntimeValues.SetManifest(null);
 				return false;
 			}
 
@@ -159,7 +202,9 @@ public sealed class AdventureSuitUpgradeCatalog
 				runtimeMetadata.MaximumValue,
 				runtimeMetadata.ConflictGroup,
 				runtimeMetadata.Priority,
-				DescriptionKey: definition.DescriptionKey));
+				DescriptionKey: definition.DescriptionKey,
+				EffectValues: effectValues,
+				DescriptionValueKeys: descriptionValueKeys));
 		}
 
 		foreach (string runtimeUpgradeId in AdventureUpgradeRuntimeContract.All.Keys)
@@ -171,25 +216,29 @@ public sealed class AdventureSuitUpgradeCatalog
 
 			GD.PushWarning(
 				$"Runtime adventure suit upgrade '{runtimeUpgradeId}' is not present in the enabled Pandora catalog.");
-			manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
-			return false;
+				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+				AdventureUpgradeRuntimeValues.SetManifest(null);
+				return false;
 		}
 
 		try
 		{
 			manifest = new AdventureUpgradeManifest(entries);
-			if (!manifest.IsReady)
-			{
-				return false;
+				if (!manifest.IsReady)
+				{
+					AdventureUpgradeRuntimeValues.SetManifest(null);
+					return false;
 			}
 
 			_cachedManifest = manifest;
+			AdventureUpgradeRuntimeValues.SetManifest(manifest);
 			return true;
 		}
 		catch (ArgumentException error)
 		{
 			GD.PushWarning($"Adventure suit upgrade manifest is invalid: {error.Message}");
 			manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
+			AdventureUpgradeRuntimeValues.SetManifest(null);
 			return false;
 		}
 	}
@@ -247,5 +296,14 @@ public sealed class AdventureSuitUpgradeCatalog
 		return string.IsNullOrWhiteSpace(id)
 			? string.Empty
 			: $"UPGRADE_DESC_{id.Trim().ToUpperInvariant()}";
+	}
+
+	private void InvalidateCatalog(string message)
+	{
+		_all.Clear();
+		_byId.Clear();
+		_cachedManifest = null;
+		AdventureUpgradeRuntimeValues.SetManifest(null);
+		GD.PushWarning($"Adventure suit upgrade catalog is invalid: {message}");
 	}
 }

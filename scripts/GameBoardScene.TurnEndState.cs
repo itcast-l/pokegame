@@ -168,7 +168,7 @@ public partial class GameBoardScene
 		}
 
 		return GetGameLoopPhase() == GameLoopPhase.PendingMainPlayerSelection
-			&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+			&& _pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard
 			&& _pendingItemOwnerIndex == GetPendingSelectionLocalOwnerIndex();
 	}
 

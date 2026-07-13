@@ -115,12 +115,16 @@ internal static AdventureClubPlayAdjustmentResult ResolveClubPlayAdjustments(
 
 		if (acquired.Contains("clubs_cross_graft"))
 		{
-			AddAlternateRank(numericRank - 1L);
-			AddAlternateRank(numericRank + 1L);
+			long graftStep = AdventureUpgradeRuntimeValues.GetPositiveInt(
+				"clubs_cross_graft",
+				"step",
+				1);
+			AddAlternateRank(numericRank - graftStep);
+			AddAlternateRank(numericRank + graftStep);
 			if (hasClimbedRank)
 			{
-				AddAlternateRank(climbedRank - 1L);
-				AddAlternateRank(climbedRank + 1L);
+				AddAlternateRank(climbedRank - graftStep);
+				AddAlternateRank(climbedRank + graftStep);
 			}
 		}
 
@@ -166,7 +170,11 @@ internal static bool ShouldGrantLinkedStemsQuestionReward(
 		int successfulCapturesThisTurn)
 	{
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
-		return acquired.Contains("clubs_linked_stems") && successfulCapturesThisTurn == 2;
+		return acquired.Contains("clubs_linked_stems")
+			&& successfulCapturesThisTurn == AdventureUpgradeRuntimeValues.GetPositiveInt(
+				"clubs_linked_stems",
+				"threshold",
+				2);
 	}
 
 internal static void ConsumeBorrowSuitSetAfterNumericBaseCardPlay(
@@ -225,10 +233,14 @@ internal static AdventureClubCaptureEffectResult ResolveClubCaptureEffects(
 			? normalizedUniqueCombinedReturnCandidateCount
 			: normalizedUniqueShortReturnCandidateCount;
 
+		int shortReturnCardCount = AdventureUpgradeRuntimeValues.GetPositiveInt(
+			"clubs_short_branch_return",
+			"count",
+			2);
 		if (acquired.Contains("clubs_short_branch_return")
 			&& !state.ClubShortBranchReturnUsedThisTurn
-			&& completeBaseCaptureCardCount == 2
-			&& normalizedUniqueShortReturnCandidateCount == 2
+			&& completeBaseCaptureCardCount == shortReturnCardCount
+			&& normalizedUniqueShortReturnCandidateCount == shortReturnCardCount
 			&& requiredShortReturnSlots <= normalizedAvailableHandSlots)
 		{
 			returnTwoCapturedCardsToHand = true;
@@ -316,31 +328,60 @@ internal static AdventureCaptureDamageResult ApplyCaptureDamage(
 			state.NextCaptureDamageBonus = 0;
 			if (input.IsFirstCaptureThisBattle && acquired.Contains("diamonds_first_capture_pressure"))
 			{
-				damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, 2);
+				damage = AdventureUpgradeEffectMath.SaturatingAdd(
+					damage,
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"diamonds_first_capture_pressure",
+					"amount",
+					2));
 			}
 
 			if (input.IncludesQuestionReward && acquired.Contains("diamonds_bounty_amplify"))
 			{
-				damage = AdventureUpgradeEffectMath.SaturatingAdd(damage, 3);
+				damage = AdventureUpgradeEffectMath.SaturatingAdd(
+					damage,
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"diamonds_bounty_amplify",
+					"amount",
+					3));
 			}
 
 			if (acquired.Contains("diamonds_small_insurance"))
 			{
-				damage = AdventureUpgradeEffectMath.ApplySmallInsurance(damage);
+				damage = AdventureUpgradeEffectMath.ApplySmallInsurance(
+					damage,
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"diamonds_small_insurance",
+					"threshold",
+					4),
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"diamonds_small_insurance",
+					"amount",
+					5));
 			}
 
+			int fullPayoutThreshold = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"diamonds_full_payout",
+				"threshold",
+				AdventureUpgradeEffectMath.FullPayoutScoringCardThreshold);
 			if (damage > 0
-				&& scoringCardCount >= AdventureUpgradeEffectMath.FullPayoutScoringCardThreshold
+				&& scoringCardCount >= fullPayoutThreshold
 				&& acquired.Contains("diamonds_full_payout"))
 			{
-				wholeCaptureMultiplier++;
+				wholeCaptureMultiplier += AdventureUpgradeRuntimeValues.GetPositiveInt(
+					"diamonds_full_payout",
+					"multiplier",
+					1);
 			}
 
 			if (damage > 0
 				&& modifierSnapshot.FinalDoubleCaptureDamageActive
 				&& acquired.Contains("diamonds_final_double"))
 			{
-				wholeCaptureMultiplier++;
+				wholeCaptureMultiplier += AdventureUpgradeRuntimeValues.GetPositiveInt(
+					"diamonds_final_double",
+					"multiplier",
+					1);
 			}
 
 			damage = AdventureUpgradeEffectMath.SaturatingMultiply(damage, wholeCaptureMultiplier);
@@ -382,14 +423,23 @@ private static int GetPerCardCapturePointBonus(
 		int scoringCardCount)
 	{
 		int perCardPointBonus = 0;
-		if (scoringCardCount >= 3 && acquired.Contains("diamonds_multi_card_premium"))
+		if (scoringCardCount >= AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			"diamonds_multi_card_premium",
+			"threshold",
+			3) && acquired.Contains("diamonds_multi_card_premium"))
 		{
-			perCardPointBonus++;
+			perCardPointBonus += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"diamonds_multi_card_premium",
+				"amount",
+				1);
 		}
 
 		if (input.QuestionRewardEchoActive && acquired.Contains("diamonds_question_mark_echo"))
 		{
-			perCardPointBonus++;
+			perCardPointBonus += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"diamonds_question_mark_echo",
+				"amount",
+				1);
 		}
 
 		return perCardPointBonus;
@@ -423,9 +473,15 @@ private static AdventurePostCaptureEffectResult ResolveMainPlayerCaptureEffects(
 		int healAmount = 0;
 		int drawCount = 0;
 		bool revealRemainingHiddenCards = false;
-		if (finalDamage >= 6 && acquired.Contains("hearts_long_capture_recovery"))
+		if (finalDamage >= AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			"hearts_long_capture_recovery",
+			"threshold",
+			6) && acquired.Contains("hearts_long_capture_recovery"))
 		{
-			healAmount += 2;
+			healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_long_capture_recovery",
+				"amount",
+				2);
 		}
 
 		AdventurePostCaptureEffectResult enchantedRecovery =
@@ -440,27 +496,48 @@ private static AdventurePostCaptureEffectResult ResolveMainPlayerCaptureEffects(
 		{
 			if (acquired.Contains("hearts_warm_current_supply"))
 			{
-				drawCount++;
+				drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_warm_current_supply",
+					"count",
+					1);
 			}
 
 			if (acquired.Contains("hearts_return_tide_heart"))
 			{
-				drawCount++;
-				healAmount += 2;
+				drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_return_tide_heart",
+					"first_count",
+					1);
+				healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_return_tide_heart",
+					"first_amount",
+					2);
 			}
 		}
 		else if (successfulCapturesThisTurn == 2)
 		{
 			if (acquired.Contains("hearts_chain_tide_breath"))
 			{
-				drawCount++;
-				healAmount += 2;
+				drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_chain_tide_breath",
+					"count",
+					1);
+				healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_chain_tide_breath",
+					"amount",
+					2);
 			}
 
 			if (acquired.Contains("hearts_return_tide_heart"))
 			{
-				drawCount++;
-				healAmount += 3;
+				drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_return_tide_heart",
+					"second_count",
+					1);
+				healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_return_tide_heart",
+					"second_amount",
+					3);
 			}
 		}
 
@@ -488,8 +565,16 @@ internal static AdventurePostCaptureEffectResult ResolveEnchantedRecoveryActionE
 		}
 
 		return new AdventurePostCaptureEffectResult(
-			HealAmount: 3,
-			DrawCount: successfulCapture ? 1 : 0);
+			HealAmount: AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_enchanted_recovery",
+				"amount",
+				3),
+			DrawCount: successfulCapture
+				? AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_enchanted_recovery",
+					"count",
+					1)
+				: 0);
 	}
 
 internal static int ResolveBlackLedgerRedirectTableCardIndex(

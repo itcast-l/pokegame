@@ -34,9 +34,17 @@ internal static AdventureQuestionRewardEffectResult OnQuestionRewardGranted(
 
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
 		state.Normalize();
+		int windfallMaximum = AdventureUpgradeRuntimeValues.GetPositiveInt(
+			"diamonds_question_mark_windfall",
+			"maximum",
+			AdventureUpgradeEffectState.MaxQuestionRewardCount);
+		int questionRewardIncrement = AdventureUpgradeRuntimeValues.GetPositiveInt(
+			"diamonds_question_mark_windfall",
+			"amount",
+			1);
 		state.QuestionRewardCount = Math.Min(
-			AdventureUpgradeEffectState.MaxQuestionRewardCount,
-			state.QuestionRewardCount + 1);
+			windfallMaximum,
+			state.QuestionRewardCount + questionRewardIncrement);
 
 		int bonusDirectDamage = 0;
 		int healAmount = 0;
@@ -44,19 +52,34 @@ internal static AdventureQuestionRewardEffectResult OnQuestionRewardGranted(
 
 		if (acquired.Contains("diamonds_question_mark_windfall"))
 		{
-			bonusDirectDamage = Math.Min(5, state.QuestionRewardCount);
+			int directDamageCap = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"diamonds_question_mark_windfall",
+				"threshold",
+				5);
+			bonusDirectDamage = Math.Min(
+				directDamageCap,
+				AdventureUpgradeRuntimeValues.GetPositiveInt(
+					"diamonds_question_mark_windfall",
+					"amount",
+					1) * state.QuestionRewardCount);
 		}
 
 		if (acquired.Contains("diamonds_question_mark_interest"))
 		{
 			state.PermanentCaptureDamageBonus = Math.Min(
 				AdventureUpgradeEffectState.MaxPermanentCaptureDamageBonus,
-				state.PermanentCaptureDamageBonus + 1);
+				state.PermanentCaptureDamageBonus + AdventureUpgradeRuntimeValues.GetPositiveInt(
+					"diamonds_question_mark_interest",
+					"amount",
+					1));
 		}
 
 		if (acquired.Contains("diamonds_question_mark_raise"))
 		{
-			drawCount++;
+			drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			"diamonds_question_mark_raise",
+			"count",
+			1);
 		}
 
 		if (acquired.Contains("clubs_borrow_suit_set"))
@@ -66,17 +89,29 @@ internal static AdventureQuestionRewardEffectResult OnQuestionRewardGranted(
 
 		if (acquired.Contains("hearts_question_mark_first_aid"))
 		{
-			healAmount += 4;
+			healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_question_mark_first_aid",
+				"amount",
+				4);
 		}
 
 		if (acquired.Contains("hearts_supply_cache_return"))
 		{
-			healAmount += 3;
-			drawCount++;
+			healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_supply_cache_return",
+				"amount",
+				3);
+			drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_supply_cache_return",
+				"count",
+				1);
 		}
 
 		if (acquired.Contains("diamonds_final_double")
-			&& state.QuestionRewardCount >= AdventureUpgradeEffectState.MaxQuestionRewardCount)
+			&& state.QuestionRewardCount >= AdventureUpgradeRuntimeValues.GetPositiveInt(
+				"diamonds_final_double",
+				"threshold",
+				AdventureUpgradeEffectState.MaxQuestionRewardCount))
 		{
 			state.FinalDoubleCaptureDamageActive = true;
 		}
@@ -101,28 +136,46 @@ internal static AdventureUpgradeAcquisitionEffectResult OnUpgradeAcquired(
 		int healAmount = 0;
 		int immediateDrawCount = 0;
 
-		switch (normalizedUpgradeId)
+			switch (normalizedUpgradeId)
 		{
 			case "hearts_thick_blood":
-				maxHealthDelta += 4;
-				healAmount += 4;
+				maxHealthDelta += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_thick_blood",
+					"amount",
+					4);
+				healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_thick_blood",
+					"amount",
+					4);
 				break;
 			case "hearts_deep_tide_lung":
-				maxHealthDelta += 8;
+				maxHealthDelta += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_deep_tide_lung",
+					"amount",
+					8);
 				if (triggerBattleStartBonusImmediately)
 				{
-					immediateDrawCount++;
+					immediateDrawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+						"hearts_deep_tide_lung",
+						"count",
+						1);
 				}
 				break;
 			case "hearts_shoal_preparation":
 				if (triggerBattleStartBonusImmediately)
 				{
-					immediateDrawCount++;
+					immediateDrawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+						"hearts_shoal_preparation",
+						"count",
+						1);
 				}
 				break;
 			case "diamonds_final_double":
 				state.Normalize();
-				if (state.QuestionRewardCount >= AdventureUpgradeEffectState.MaxQuestionRewardCount)
+				if (state.QuestionRewardCount >= AdventureUpgradeRuntimeValues.GetPositiveInt(
+					"diamonds_final_double",
+					"threshold",
+					AdventureUpgradeEffectState.MaxQuestionRewardCount))
 				{
 					state.FinalDoubleCaptureDamageActive = true;
 				}
@@ -135,4 +188,3 @@ internal static AdventureUpgradeAcquisitionEffectResult OnUpgradeAcquired(
 			immediateDrawCount);
 	}
 }
-

@@ -415,15 +415,25 @@ public partial class GameBoardScene
 			&& GetAdventureUpgradeRunState()
 				?.HasAcquiredUpgrade("diamonds_top_prize_repeat") == true)
 		{
+			int topPrizeThreshold = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"diamonds_top_prize_repeat",
+				"threshold");
+			int topPrizeRepeatCount = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"diamonds_top_prize_repeat",
+				"count");
 			int highestScoreItemIndex = AdventureCaptureScoreItemRules
-				.ResolveTopPrizeRepeatIndex(scoreItems, scoreItemTableIndexes);
+				.ResolveTopPrizeRepeatIndex(scoreItems, scoreItemTableIndexes, topPrizeThreshold);
 			if (highestScoreItemIndex >= 0)
 			{
-				scoreItems.Add(scoreItems[highestScoreItemIndex] with
+				AdventureCaptureScoreItem repeatedScoreItem = scoreItems[highestScoreItemIndex] with
 				{
 					IsExplicitDuplicate = true,
 					SourceUpgradeId = "diamonds_top_prize_repeat",
-				});
+				};
+				for (int repeatIndex = 0; repeatIndex < topPrizeRepeatCount; repeatIndex++)
+				{
+					scoreItems.Add(repeatedScoreItem);
+				}
 			}
 		}
 

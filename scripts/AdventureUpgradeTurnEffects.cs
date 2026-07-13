@@ -21,12 +21,18 @@ internal static int GetBattleStartDrawCount(IEnumerable<string> acquiredUpgradeI
 		int drawCount = 0;
 		if (acquired.Contains("hearts_shoal_preparation"))
 		{
-			drawCount++;
+			drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_shoal_preparation",
+				"count",
+				1);
 		}
 
 		if (acquired.Contains("hearts_deep_tide_lung"))
 		{
-			drawCount++;
+			drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_deep_tide_lung",
+				"count",
+				1);
 		}
 
 		return drawCount;
@@ -47,23 +53,50 @@ internal static AdventureMainPlayerMissEffectResult OnMainPlayerMissResolved(
 		bool setCanopyRevealAnchor = acquired.Contains("clubs_canopy_reveal");
 		if (acquired.Contains("hearts_miss_bandage"))
 		{
-			state.NextTurnHealAmount = AdventureUpgradeEffectMath.SaturatingAddToInt(state.NextTurnHealAmount, 3);
-			state.NextTurnDrawCount = AdventureUpgradeEffectMath.SaturatingAddToInt(state.NextTurnDrawCount, 1);
+			state.NextTurnHealAmount = AdventureUpgradeEffectMath.SaturatingAddToInt(
+				state.NextTurnHealAmount,
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_miss_bandage",
+					"amount",
+					3));
+			state.NextTurnDrawCount = AdventureUpgradeEffectMath.SaturatingAddToInt(
+				state.NextTurnDrawCount,
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"hearts_miss_bandage",
+					"count",
+					1));
 		}
 
 		if (acquired.Contains("diamonds_miss_discount"))
 		{
-			state.NextCaptureDamageBonus = AdventureUpgradeEffectMath.SaturatingAddToInt(state.NextCaptureDamageBonus, 1);
+			state.NextCaptureDamageBonus = AdventureUpgradeEffectMath.SaturatingAddToInt(
+				state.NextCaptureDamageBonus,
+				AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+					"diamonds_miss_discount",
+					"amount",
+					1));
 		}
 
 		if (acquired.Contains("clubs_miss_climb_growth"))
 		{
+			int growthAmount = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"clubs_miss_climb_growth",
+				"amount",
+				1);
+			int growthStackLimit = AdventureUpgradeRuntimeValues.GetPositiveInt(
+				"clubs_miss_climb_growth",
+				"stack_limit",
+				AdventureUpgradeEffectState.MaxClubMissClimbGrowthStacks);
 			state.ClubMissClimbGrowthStacks = Math.Min(
-				AdventureUpgradeEffectState.MaxClubMissClimbGrowthStacks,
-				state.ClubMissClimbGrowthStacks + 1);
+				growthStackLimit,
+				state.ClubMissClimbGrowthStacks + growthAmount);
 		}
 
-		if (acquired.Contains("clubs_continue_branch") && tableCardCountAfterMiss >= 6)
+		if (acquired.Contains("clubs_continue_branch")
+			&& tableCardCountAfterMiss >= AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"clubs_continue_branch",
+				"threshold",
+				6))
 		{
 			grantExtraBaseCardAction = true;
 		}
@@ -98,7 +131,13 @@ internal static AdventureHealingResult ApplyHealing(
 		ArgumentNullException.ThrowIfNull(state);
 		state.Normalize();
 
-		int normalizedMaxHealth = Math.Clamp(maxHealth, 1, AdventureUpgradeEffectService.MaxRunHealth);
+		int normalizedMaxHealth = Math.Clamp(
+			maxHealth,
+			1,
+			AdventureUpgradeRuntimeValues.GetPositiveInt(
+				"hearts_overflow_growth",
+				"maximum",
+				AdventureUpgradeEffectService.MaxRunHealth));
 		int normalizedCurrentHealth = Math.Clamp(currentHealth, 0, normalizedMaxHealth);
 		long normalizedHealAmount = Math.Max(0L, healAmount);
 		var acquired = new HashSet<string>(acquiredUpgradeIds ?? Array.Empty<string>(), StringComparer.Ordinal);
@@ -129,9 +168,23 @@ internal static AdventureHealingResult ApplyHealing(
 		long rawHealedHealth = AdventureUpgradeEffectMath.SaturatingAdd(normalizedCurrentHealth, normalizedHealAmount);
 		long overflowAmount = Math.Max(0L, rawHealedHealth - normalizedMaxHealth);
 		long overflowTotal = AdventureUpgradeEffectMath.SaturatingAdd(state.HealingOverflowRemainder, overflowAmount);
-		int availableMaxHealthIncrease = AdventureUpgradeEffectService.MaxRunHealth - normalizedMaxHealth;
-		int maxHealthIncrease = (int)Math.Min(availableMaxHealthIncrease, overflowTotal / 4L);
-		state.HealingOverflowRemainder = (int)(overflowTotal % 4L);
+		int maxHealthLimit = AdventureUpgradeRuntimeValues.GetPositiveInt(
+			"hearts_overflow_growth",
+			"maximum",
+			AdventureUpgradeEffectService.MaxRunHealth);
+		int overflowStep = AdventureUpgradeRuntimeValues.GetPositiveInt(
+			"hearts_overflow_growth",
+			"step",
+			4);
+		int overflowGrowthAmount = AdventureUpgradeRuntimeValues.GetPositiveInt(
+			"hearts_overflow_growth",
+			"amount",
+			1);
+		int availableMaxHealthIncrease = Math.Max(0, maxHealthLimit - normalizedMaxHealth);
+		int maxHealthIncrease = (int)Math.Min(
+			availableMaxHealthIncrease,
+			AdventureUpgradeEffectMath.SaturatingMultiply(overflowTotal / overflowStep, overflowGrowthAmount));
+		state.HealingOverflowRemainder = (int)(overflowTotal % overflowStep);
 
 		int nextMaxHealth = normalizedMaxHealth + maxHealthIncrease;
 		int nextCurrentHealth = (int)Math.Min(rawHealedHealth, nextMaxHealth);
@@ -160,23 +213,43 @@ internal static AdventureLowHealthRescueResult ResolveMainPlayerLowHealthRescue(
 		bool consumedHalfThreshold = false;
 		bool consumedQuarterThreshold = false;
 
+		int halfThresholdPercent = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			"hearts_red_tide_return",
+			"threshold",
+			50);
+		int quarterThresholdPercent = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			"hearts_revival_draw",
+			"threshold",
+			25);
 		if (!halfThresholdUsed
-			&& previousRatio >= 0.5f
-			&& currentRatio < 0.5f
+			&& previousRatio >= halfThresholdPercent / 100.0f
+			&& currentRatio < halfThresholdPercent / 100.0f
 			&& acquired.Contains("hearts_red_tide_return"))
 		{
-			healAmount += 5;
-			drawCount += 2;
+			healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_red_tide_return",
+				"amount",
+				5);
+			drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_red_tide_return",
+				"count",
+				2);
 			consumedHalfThreshold = true;
 		}
 
 		if (!quarterThresholdUsed
-			&& previousRatio >= 0.25f
-			&& currentRatio < 0.25f
+			&& previousRatio >= quarterThresholdPercent / 100.0f
+			&& currentRatio < quarterThresholdPercent / 100.0f
 			&& acquired.Contains("hearts_revival_draw"))
 		{
-			healAmount += 8;
-			drawCount += 2;
+			healAmount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_revival_draw",
+				"amount",
+				8);
+			drawCount += AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+				"hearts_revival_draw",
+				"count",
+				2);
 			consumedQuarterThreshold = true;
 		}
 
@@ -187,4 +260,3 @@ internal static AdventureLowHealthRescueResult ResolveMainPlayerLowHealthRescue(
 			consumedQuarterThreshold);
 	}
 }
-

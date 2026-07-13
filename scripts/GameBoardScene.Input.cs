@@ -128,7 +128,7 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard)
 		{
 			PlayGameSfx(GameSfx.UiInvalid, -4.0f, 0.98f, 1.02f, 0.08);
 			return true;

@@ -58,7 +58,7 @@ public partial class GameBoardScene
 		_pendingItemOwnerIndex = ownerPlayerIndex;
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-		_pendingItemSelectionMode = PendingItemSelectionMode.MagnetHandCard;
+		_pendingItemSelectionMode = PendingItemSelectionMode.AttachmentRewardHandCard;
 		_pendingMagnetAttachmentCompletion = completionSource;
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
@@ -126,7 +126,7 @@ public partial class GameBoardScene
 		return ReferenceEquals(_pendingMagnetAttachmentCompletion, completionSource)
 			&& turnSequenceGeneration == _turnSequenceGeneration
 			&& _pendingItemTurnSequenceGeneration == turnSequenceGeneration
-			&& _pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard
+			&& _pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard
 			&& _pendingItemOwnerIndex == ownerPlayerIndex
 			&& string.Equals(_pendingItemCardId, itemCardId, StringComparison.Ordinal);
 	}

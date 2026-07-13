@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_QUESTION_MARK"
 EnabledInGame = true
 PlayableFromHand = false
 CanBeQuestionReward = false
+RewardDelivery = "none"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 0
@@ -23,3 +24,9 @@ Priority = 100
 Icon = ""
 Weight = 100
 Description = ""
+
+PlayPresentation = "direct_trigger"
+AttachedTrigger = ""
+AttachedEffectType = ""
+AttachedEffectValuesRaw = ""
+AttachedPriority = 0

@@ -28,7 +28,8 @@
 	<Compile Include="../../scripts/AdventureUpgradeEffectMath.cs" Link="Rules/AdventureUpgradeEffectMath.cs" />
 	<Compile Include="../../scripts/AdventureCaptureContexts.cs" Link="Rules/AdventureCaptureContexts.cs" />
 	<Compile Include="../../scripts/AdventureExtraActionChain.cs" Link="Rules/AdventureExtraActionChain.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeManifest.cs" Link="Rules/AdventureUpgradeManifest.cs" />
+    <Compile Include="../../scripts/AdventureUpgradeManifest.cs" Link="Rules/AdventureUpgradeManifest.cs" />
+    <Compile Include="../../scripts/AdventureUpgradeRuntimeValues.cs" Link="Rules/AdventureUpgradeRuntimeValues.cs" />
 	<Compile Include="../../scripts/AdventureSuitUpgradeDefinition.cs" Link="Rules/AdventureSuitUpgradeDefinition.cs" />
 	<Compile Include="../../scripts/AdventureSuitUpgradeCatalog.cs" Link="Rules/AdventureSuitUpgradeCatalog.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
@@ -37,6 +38,10 @@
     <Compile Include="../../scripts/AdventureUpgradeTriggerRules.cs" Link="Rules/AdventureUpgradeTriggerRules.cs" />
     <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
     <Compile Include="../../scripts/CardVisualTuningRules.cs" Link="Rules/CardVisualTuningRules.cs" />
+    <Compile Include="../../scripts/RewardDeliveryMode.cs" Link="Rules/RewardDeliveryMode.cs" />
+    <Compile Include="../../scripts/ItemCardDefinition.cs" Link="Rules/ItemCardDefinition.cs" />
+    <Compile Include="../../scripts/ItemCardEffectContractRegistry.cs" Link="Rules/ItemCardEffectContractRegistry.cs" />
+    <Compile Include="../../scripts/ItemCardManifestValidationRules.cs" Link="Rules/ItemCardManifestValidationRules.cs" />
     <Compile Include="../../scripts/ItemCardEffectSupport.cs" Link="Rules/ItemCardEffectSupport.cs" />
     <Compile Include="../../scripts/AttachmentSelectionPreviewRules.cs" Link="Rules/AttachmentSelectionPreviewRules.cs" />
     <Compile Include="../../scripts/GameSaveStore.cs" Link="Rules/GameSaveStore.cs" />

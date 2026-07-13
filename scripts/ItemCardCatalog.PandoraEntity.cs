@@ -5,47 +5,70 @@ using System.Globalization;
 
 public sealed partial class ItemCardCatalog
 {
-	private static bool TryCreateDefinitionFromPandoraEntity(GodotObject entity, out ItemCardDefinition definition)
+	private static bool TryCreateDefinitionFromPandoraEntity(
+		GodotObject entity,
+		out ItemCardDefinition definition,
+		out string errorMessage)
 	{
-		string id = GetEntityString(entity, "id", "");
-		if (string.IsNullOrWhiteSpace(id))
+		definition = default;
+		errorMessage = string.Empty;
+		foreach (string propertyName in RequiredPandoraGameplayProperties)
 		{
-			id = entity.Call("get_entity_id").AsString();
+			if (!entity.Call("has_entity_property", propertyName).AsBool())
+			{
+				errorMessage = $"Entity '{entity.Call("get_entity_id").AsString()}' is missing gameplay property '{propertyName}'.";
+				return false;
+			}
 		}
 
+		string id = GetRequiredEntityString(entity, "id");
 		if (string.IsNullOrWhiteSpace(id))
 		{
-			definition = default;
+			errorMessage = "Item card entity has an empty id.";
 			return false;
 		}
 
 		GetResourceDefinitions().TryGetValue(id, out ItemCardDefinition defaults);
-		string displayName = GetEntityString(entity, "name", GetEntityName(entity, string.IsNullOrWhiteSpace(defaults.DisplayName) ? ToPascalCase(id) : defaults.DisplayName));
-		string spriteName = GetEntityString(entity, "sprite_name", string.IsNullOrWhiteSpace(defaults.SpriteName) ? ToPascalCase(id) : defaults.SpriteName);
-		string descriptionKey = GetEntityString(entity, "description_key", string.IsNullOrWhiteSpace(defaults.DescriptionKey) ? id : defaults.DescriptionKey);
-		string description = GetEntityString(entity, "description", descriptionKey);
-		string artRunName = GetEntityString(entity, "art_run", string.IsNullOrWhiteSpace(defaults.ArtRunName) ? DefaultArtRunName : defaults.ArtRunName);
-		string framePathPattern = GetEntityString(entity, "frame_path_pattern", defaults.FramePathPattern);
-		int frameCount = GetEntityInt(entity, "frame_count", defaults.FrameCount > 0 ? defaults.FrameCount : DefaultFrameCount);
-		int sortOrder = GetEntityInt(entity, "sort_order", defaults.SortOrder != 0 ? defaults.SortOrder : DefaultSortOrder);
-		bool enabledInGame = GetEntityBool(entity, "enabled_in_game", defaults.EnabledInGame);
-		bool playableFromHand = GetEntityBool(entity, "playable_from_hand", defaults.PlayableFromHand);
-		bool canBeQuestionReward = GetEntityBool(entity, "can_be_question_reward", defaults.CanBeQuestionReward);
-		string rarity = GetEntityString(entity, "rarity", string.IsNullOrWhiteSpace(defaults.Rarity) ? DefaultRarity : defaults.Rarity);
-		string tags = GetEntityString(entity, "tags", defaults.TagsCsv);
-		string attachmentOverlayTexturePath = GetEntityString(entity, "attachment_overlay_texture_path", defaults.AttachmentOverlayTexturePath);
-		int attachmentOverlayPriority = GetEntityInt(entity, "attachment_overlay_priority", defaults.AttachmentOverlayPriority);
-		string playPresentation = GetEntityString(entity, "play_presentation", defaults.PlayPresentation);
-		string trigger = GetEntityString(entity, "trigger", defaults.Trigger);
-		string effectType = GetEntityString(entity, "effect_type", defaults.EffectType);
-		string effectValues = GetEntityString(entity, "effect_values", defaults.EffectValuesRaw);
-		int priority = GetEntityInt(entity, "priority", defaults.Priority);
-		string attachedTrigger = GetEntityString(entity, "attached_trigger", defaults.AttachedTrigger);
-		string attachedEffectType = GetEntityString(entity, "attached_effect_type", defaults.AttachedEffectType);
-		string attachedEffectValues = GetEntityString(entity, "attached_effect_values", defaults.AttachedEffectValuesRaw);
-		int attachedPriority = GetEntityInt(entity, "attached_priority", defaults.AttachedPriority);
-		string icon = GetEntityString(entity, "icon", defaults.Icon);
-		int weight = GetEntityInt(entity, "weight", defaults.Weight != 0 ? defaults.Weight : DefaultWeight);
+		string displayName = GetEntityName(entity, string.IsNullOrWhiteSpace(defaults.DisplayName) ? ToPascalCase(id) : defaults.DisplayName);
+		string spriteName = string.IsNullOrWhiteSpace(defaults.SpriteName) ? ToPascalCase(id) : defaults.SpriteName;
+		string descriptionKey = GetRequiredEntityString(entity, "description_key");
+		string artRunName = string.IsNullOrWhiteSpace(defaults.ArtRunName) ? DefaultArtRunName : defaults.ArtRunName;
+		string framePathPattern = defaults.FramePathPattern;
+		int frameCount = defaults.FrameCount > 0 ? defaults.FrameCount : DefaultFrameCount;
+		int sortOrder = defaults.SortOrder != 0 ? defaults.SortOrder : DefaultSortOrder;
+		string attachmentOverlayTexturePath = defaults.AttachmentOverlayTexturePath;
+		int attachmentOverlayPriority = defaults.AttachmentOverlayPriority;
+		string icon = defaults.Icon;
+		string description = defaults.Description;
+		bool enabledInGame = GetRequiredEntityBool(entity, "enabled_in_game");
+		bool playableFromHand = GetRequiredEntityBool(entity, "playable_from_hand");
+		bool canBeQuestionReward = GetRequiredEntityBool(entity, "can_be_question_reward");
+		string rarity = GetRequiredEntityString(entity, "rarity");
+		string tags = GetRequiredEntityString(entity, "tags");
+		string rewardDeliveryRaw = GetRequiredEntityString(entity, "reward_delivery");
+		if (!RewardDeliveryModeRules.TryParse(rewardDeliveryRaw, out RewardDeliveryMode rewardDelivery)
+			|| string.IsNullOrWhiteSpace(rewardDeliveryRaw))
+		{
+			errorMessage = $"Item card '{id}' has invalid reward delivery '{rewardDeliveryRaw}'.";
+			return false;
+		}
+
+		string playPresentation = GetRequiredEntityString(entity, "play_presentation");
+		string trigger = GetRequiredEntityString(entity, "trigger");
+		string effectType = GetRequiredEntityString(entity, "effect_type");
+		string effectValues = GetRequiredEntityString(entity, "effect_values");
+		int priority = GetRequiredEntityInt(entity, "priority");
+		string attachedTrigger = GetRequiredEntityString(entity, "attached_trigger");
+		string attachedEffectType = GetRequiredEntityString(entity, "attached_effect_type");
+		string attachedEffectValues = GetRequiredEntityString(entity, "attached_effect_values");
+		int attachedPriority = GetRequiredEntityInt(entity, "attached_priority");
+		int weight = GetRequiredEntityInt(entity, "weight");
+		if (!CardEffectValues.TryParse(effectValues, out _)
+			|| !CardEffectValues.TryParse(attachedEffectValues, out _))
+		{
+			errorMessage = $"Item card '{id}' has malformed effect values.";
+			return false;
+		}
 
 		definition = new ItemCardDefinition(
 			id,
@@ -74,8 +97,32 @@ public sealed partial class ItemCardCatalog
 			attachedPriority,
 			icon,
 			weight,
-			description);
+			description,
+			rewardDelivery);
+		ItemCardContractValidationResult validation = ItemCardEffectContractRegistry.Validate(definition);
+		if (!validation.IsValid)
+		{
+			errorMessage = validation.ErrorMessage;
+			definition = default;
+			return false;
+		}
+
 		return true;
+	}
+
+	private static string GetRequiredEntityString(GodotObject entity, string propertyName)
+	{
+		return entity.Call("get_string", propertyName).AsString();
+	}
+
+	private static bool GetRequiredEntityBool(GodotObject entity, string propertyName)
+	{
+		return entity.Call("get_bool", propertyName).AsBool();
+	}
+
+	private static int GetRequiredEntityInt(GodotObject entity, string propertyName)
+	{
+		return entity.Call("get_integer", propertyName).AsInt32();
 	}
 
 	private static string GetEntityString(GodotObject entity, string propertyName, string fallback)

@@ -278,7 +278,7 @@ internal enum PendingItemSelectionMode
 	None,
 	TargetPlayer,
 	TargetHandCard,
-	MagnetHandCard,
+	AttachmentRewardHandCard,
 	HandLimitDiscard,
 }
 

@@ -260,7 +260,7 @@ public partial class GameBoardScene
 			PendingItemSelectionMode.TargetPlayer
 			or PendingItemSelectionMode.TargetHandCard
 			or PendingItemSelectionMode.HandLimitDiscard
-			or PendingItemSelectionMode.MagnetHandCard))
+			or PendingItemSelectionMode.AttachmentRewardHandCard))
 		{
 			return false;
 		}
@@ -315,7 +315,7 @@ public partial class GameBoardScene
 							return true;
 						}
 						break;
-					case PendingItemSelectionMode.MagnetHandCard:
+					case PendingItemSelectionMode.AttachmentRewardHandCard:
 						targetPlayerIndex = -1;
 						targetHandIndex = PickRandomAttachableMagnetHandIndex(ownerSeatIndex, _pendingItemCardId);
 						if (targetHandIndex < 0)
@@ -419,7 +419,7 @@ public partial class GameBoardScene
 						return;
 					}
 					break;
-				case PendingItemSelectionMode.MagnetHandCard:
+				case PendingItemSelectionMode.AttachmentRewardHandCard:
 					targetHandIndex = PickRandomAttachableMagnetHandIndex(ownerSeatIndex, _pendingItemCardId);
 					if (targetHandIndex >= 0
 						&& TryStartNetworkPendingItemSelectionFromHost(

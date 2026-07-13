@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_REVERSE_ANCHOR"
 EnabledInGame = true
 PlayableFromHand = true
 CanBeQuestionReward = true
+RewardDelivery = "hand"
 ArtRunName = "run-001"
 FrameCount = 4
 SortOrder = 110
@@ -29,3 +30,5 @@ AttachedPriority = 50
 Icon = ""
 Weight = 40
 Description = ""
+
+PlayPresentation = "direct_trigger"

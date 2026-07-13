@@ -284,7 +284,7 @@ public partial class GameBoardScene
 					ShowHandDisplaySlot(localPlayerIndex, _networkLocallyCommittedPendingSelectionDisplayIndex);
 				}
 				break;
-			case PendingItemSelectionMode.MagnetHandCard:
+			case PendingItemSelectionMode.AttachmentRewardHandCard:
 				if (_networkLocallyCommittedPendingSelectionHandIndex >= 0
 					&& _networkLocallyCommittedPendingSelectionHandIndex < _playerHands[localPlayerIndex].Count)
 				{
@@ -320,7 +320,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.MagnetHandCard;
+		_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.AttachmentRewardHandCard;
 		_networkLocallyCommittedPendingSelectionHandIndex = handIndex;
 		_networkLocallyCommittedPendingSelectionItemCardId = _pendingItemCardId;
 		_networkLocallyCommittedPendingSelectionOriginalCard = _playerHands[localPlayerIndex][handIndex];

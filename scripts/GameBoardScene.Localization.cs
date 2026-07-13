@@ -191,7 +191,7 @@ public partial class GameBoardScene
 		{
 			ShowHandLimitDiscardSelection();
 		}
-		else if (_pendingItemSelectionMode == PendingItemSelectionMode.MagnetHandCard)
+		else if (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard)
 		{
 			ShowMagnetHandSelection();
 		}

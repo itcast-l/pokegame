@@ -11,6 +11,7 @@ DescriptionKey = "ITEM_DESC_MAGNET"
 EnabledInGame = true
 PlayableFromHand = false
 CanBeQuestionReward = true
+RewardDelivery = "immediate_attachment"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 20
@@ -29,3 +30,5 @@ AttachedPriority = 50
 Icon = ""
 Weight = 70
 Description = ""
+
+PlayPresentation = "direct_trigger"

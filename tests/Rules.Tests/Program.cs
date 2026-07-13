@@ -13,9 +13,17 @@ internal static partial class Program
 
 	public static int Main()
 	{
+		// Pure rules tests run without the Godot Pandora autoload. Install the
+		// same default-valued contract that a valid catalog publishes at runtime.
+		AdventureUpgradeRuntimeValues.SetManifest(
+			AdventureUpgradeManifest.FromEnabledIds(AdventureUpgradeRuntimeContract.All.Keys));
 		RunAdventureUpgradeRemediationTests();
 		RunAdventureUpgradeEffectRemediationTests();
 		RunAdventureUpgradeSnapshotV5Tests();
+		// Contract-drift tests intentionally invalidate a catalog. Restore the
+		// valid test manifest before exercising value-driven effect rules.
+		AdventureUpgradeRuntimeValues.SetManifest(
+			AdventureUpgradeManifest.FromEnabledIds(AdventureUpgradeRuntimeContract.All.Keys));
 		Run("visual update throttle caps 30hz from 60hz input", VisualUpdateThrottleCaps30HzFrom60HzInput);
 		Run("visual update throttle caps 30hz from 120hz input", VisualUpdateThrottleCaps30HzFrom120HzInput);
 		Run("visual update throttle does not catch up multiple frames", VisualUpdateThrottleDoesNotCatchUpMultipleFrames);
@@ -106,6 +114,7 @@ internal static partial class Program
 			Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);
 		Run("item card effect support blocks reserved empty effects", ItemCardEffectSupportBlocksReservedEmptyEffects);
+		Run("item card manifest contracts reject invalid Pandora data", ItemCardManifestContractsRejectInvalidPandoraData);
 		Run("draw item availability uses post-use hand capacity and deck count", DrawItemAvailabilityUsesPostUseHandCapacityAndDeckCount);
 		Run("playing card attachment replaces existing effect", PlayingCardAttachmentReplacesExistingEffect);
 		Run("capture state apply capture clears effects when preserve disabled", CaptureStateApplyCaptureClearsEffectsWhenPreserveDisabled);
