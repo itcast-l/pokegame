@@ -494,14 +494,16 @@ public partial class AdventureAvatarMenuScene
 	private void ContinueSavedAdventureRun()
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		store?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		if (store == null || !store.TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot))
 		{
 			HideRunResumeDialog();
 			return;
 		}
 
-		string savedAvatarId = CharacterAvatarCatalog.GetAdventureAvatarIdForStage(snapshot.CurrentAvatarStageNumber);
-		if (string.IsNullOrWhiteSpace(savedAvatarId) || savedAvatarId == CharacterAvatarCatalog.DefaultAvatarId)
+		string savedAvatarId = snapshot.EnemyAvatarId;
+		if (!AdventureCampaignCatalog.TryGetMainStageIndex(savedAvatarId, out int mainStageIndex)
+			|| mainStageIndex != snapshot.MainStageIndex)
 		{
 			store.ClearRun();
 			HideRunResumeDialog();
@@ -545,6 +547,7 @@ public partial class AdventureAvatarMenuScene
 
 	private void RestartAdventureFromCurrentSelection()
 	{
+		GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		GetAdventureRunSessionStore()?.ClearRun();
 		HideRunResumeDialog();
 

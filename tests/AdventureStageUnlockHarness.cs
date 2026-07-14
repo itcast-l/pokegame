@@ -20,8 +20,72 @@ public partial class AdventureStageUnlockHarness : Node
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
 		return GameSaveStore.SaveActiveProfile(profile with
 		{
-			HighestCompletedStage = stageNumber,
+			HighestCompletedMainAdventureStage = stageNumber,
+			CompletedAdventureTutorialIdsCsv = string.Empty,
+			PendingAvatarUnlockQueue = string.Empty,
 		}) == Error.Ok;
+	}
+
+	public bool ResetProgress()
+	{
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		return GameSaveStore.SaveActiveProfile(profile with
+		{
+			HighestCompletedMainAdventureStage = 0,
+			CompletedAdventureTutorialIdsCsv = string.Empty,
+			PendingAvatarUnlockQueue = string.Empty,
+			PendingAdventureRunJson = string.Empty,
+		}) == Error.Ok;
+	}
+
+	public int GetHighestCompletedMainStage()
+	{
+		return CharacterAvatarCatalog.LoadHighestCompletedAdventureStage();
+	}
+
+	public bool IsTutorialCompleted(string tutorialAvatarId)
+	{
+		return CharacterAvatarCatalog.IsTutorialCompleted(tutorialAvatarId);
+	}
+
+	public bool RecordTutorialVictory(string tutorialAvatarId)
+	{
+		if (!AdventureCampaignCatalog.IsTutorialAvatar(tutorialAvatarId))
+		{
+			return false;
+		}
+
+		CharacterAvatarCatalog.RecordAdventureVictory(tutorialAvatarId);
+		return CharacterAvatarCatalog.IsTutorialCompleted(tutorialAvatarId)
+			&& CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() == 0;
+	}
+
+	public bool NetworkStandardLeavesResidualAdventureRunUntouched()
+	{
+		GameSaveStore.GameProgressData originalProfile = GameSaveStore.LoadActiveProfile();
+		const string residualJson = "{\"SchemaVersion\":6,\"CampaignId\":\"deep_tide_throne\",\"MainStageIndex\":1,\"EnemyAvatarId\":\"shrimp\",\"ShouldGrantRunStartUpgrade\":true,\"ShouldGrantVictoryUpgrade\":true,\"AcquiredUpgradeIds\":[],\"CurrentHealth\":100,\"MaxHealth\":100,\"PermanentCaptureDamageBonus\":0,\"QuestionRewardCount\":0,\"HealingOverflowRemainder\":0}";
+		if (GameSaveStore.SaveActiveProfile(originalProfile with { PendingAdventureRunJson = residualJson }) != Error.Ok)
+		{
+			return false;
+		}
+
+		try
+		{
+			var store = new AdventureRunSessionStore();
+			store.ConfigureForPolicy(GameModePolicy.NetworkStandard);
+			bool blocked = store.ModePolicy.Kind == GameModeKind.NetworkStandard
+				&& store.ReloadFromActiveProfile() == AdventureUpgradeRestoreResult.NoSnapshot
+				&& !store.HasActiveRun
+				&& !store.TryGetSnapshot(out _);
+			store.BeginNewMainRun(1, "shrimp");
+			store.ClearRun();
+			GameSaveStore.GameProgressData unchangedProfile = GameSaveStore.LoadActiveProfile();
+			return blocked && unchangedProfile.PendingAdventureRunJson == residualJson;
+		}
+		finally
+		{
+			GameSaveStore.SaveActiveProfile(originalProfile);
+		}
 	}
 
 	public bool RecordStageVictory(int stageNumber)

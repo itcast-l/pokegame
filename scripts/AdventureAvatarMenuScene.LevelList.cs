@@ -69,7 +69,10 @@ public partial class AdventureAvatarMenuScene
 		Color accentColor = GetAvatarAccentColor(avatarDefinition);
 		frame.AccentColor = accentColor;
 		_avatarFrames[avatarDefinition.Id] = frame;
-		_stageNumbers[avatarDefinition.Id] = avatarDefinition.AdventureStageNumber;
+		string adventureId = GetAdventureIdForAvatar(avatarDefinition.Id);
+		_stageNumbers[avatarDefinition.Id] = GetCampaignStageIndex(
+			new AdventureLevelDefinition(avatarDefinition.Id),
+			adventureId);
 
 		if (frame.GetNodeOrNull<CharacterAvatar>("EntryContent/EntryRow/EntryAvatarAnchor/EntryAvatar") is CharacterAvatar avatar)
 		{

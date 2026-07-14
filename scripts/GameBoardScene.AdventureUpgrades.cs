@@ -9,7 +9,7 @@ public partial class GameBoardScene
 		bool FacesUp,
 		int TableInsertIndex,
 		int CaptureDamageDelta);
-	private const int FirstMainAdventureAvatarStageNumber = 3;
+	private const int FirstMainAdventureStageIndex = 1;
 
 	private AdventureSuitUpgradeCatalog _adventureUpgradeCatalog = default!;
 	private TableCard? _adventureEnemyNextInsertAnchorTableCard;
@@ -1117,31 +1117,38 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int avatarStageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id);
+		if (!AdventureCampaignCatalog.TryGetMainStageIndex(adventure_enemy_avatar_id, out int mainStageIndex))
+		{
+			return;
+		}
+
 		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
-			BeginAdventureUpgradeRun(avatarStageNumber);
+			GetAdventureRunSessionStore()?.BeginNewMainRun(
+				mainStageIndex,
+				adventure_enemy_avatar_id);
 			return;
 		}
 
-		if (runState.CurrentAvatarStageNumber == avatarStageNumber)
+		if (runState.MainStageIndex == mainStageIndex)
 		{
 			return;
 		}
 
-		AdvanceAdventureUpgradeRunToStage(avatarStageNumber);
+		GetAdventureRunSessionStore()?.AdvanceToMainStage(
+			mainStageIndex,
+			adventure_enemy_avatar_id);
 	}
 
 	private bool ShouldUseAdventureUpgradeSystem()
 	{
-		if (!adventure_mode || adventure_tutorial_mode)
+		if (!_gameModePolicy.IsAdventureMain)
 		{
 			return false;
 		}
 
-		int avatarStageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id);
-		return AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber);
+		return AdventureCampaignCatalog.TryGetMainStageIndex(adventure_enemy_avatar_id, out _);
 	}
 
 	private bool ShouldDelayWinnerForAdventureVictoryUpgrade(int winnerPlayerIndex)
@@ -1177,6 +1184,6 @@ public partial class GameBoardScene
 
 	private static string GetFirstMainAdventureAvatarId()
 	{
-		return CharacterAvatarCatalog.GetAdventureAvatarIdForStage(FirstMainAdventureAvatarStageNumber);
+		return AdventureCampaignCatalog.GetMainAvatarId(FirstMainAdventureStageIndex);
 	}
 }

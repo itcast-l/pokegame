@@ -4,9 +4,11 @@ const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const MAX_WAIT_FRAMES := 3600
 
-const EXPECTED_V5_KEYS := [
+const EXPECTED_V6_KEYS := [
 	"SchemaVersion",
-	"CurrentAvatarStageNumber",
+	"CampaignId",
+	"MainStageIndex",
+	"EnemyAvatarId",
 	"ShouldGrantRunStartUpgrade",
 	"ShouldGrantVictoryUpgrade",
 	"AcquiredUpgradeIds",
@@ -104,8 +106,9 @@ func _run() -> void:
 	}
 	var now := int(Time.get_unix_time_from_system())
 	var profile := {
-		"schema_version": 1,
-		"highest_completed_stage": 2,
+		"schema_version": 2,
+		"highest_completed_main_adventure_stage": 0,
+		"completed_adventure_tutorial_ids_csv": "",
 		"selected_avatar_id": "shrimp",
 		"player_name": "Migration Smoke",
 		"pending_avatar_unlock_queue": "",
@@ -148,7 +151,7 @@ func _run() -> void:
 		_fail("Migrated adventure run payload is not valid JSON: %s" % migrated_json)
 		return
 	var migrated := migrated_value as Dictionary
-	if not _assert_canonical_v5(migrated):
+	if not _assert_canonical_v6(migrated):
 		return
 	if _profile_save_started_count != 1 or _profile_save_completed_count != 1:
 		_fail(
@@ -172,11 +175,11 @@ func _run() -> void:
 	var reloaded_profile := save_manager.call("load_from_slot_sync", PROFILE_SLOT) as Dictionary
 	var reloaded_json := String(reloaded_profile.get("pending_adventure_run_json", ""))
 	if reloaded_json != migrated_json:
-		_fail("Reloading canonical v5 rewrote the already migrated payload")
+		_fail("Reloading canonical v6 rewrote the already migrated payload")
 		return
 	if _profile_save_started_count != 1 or _profile_save_completed_count != 1:
 		_fail(
-			"Reloading canonical v5 performed a redundant profile rewrite " \
+				"Reloading canonical v6 performed a redundant profile rewrite " \
 			+ "(started=%d completed=%d)" \
 			% [_profile_save_started_count, _profile_save_completed_count]
 		)
@@ -187,31 +190,33 @@ func _run() -> void:
 	quit(0)
 
 
-func _assert_canonical_v5(snapshot: Dictionary) -> bool:
-	if snapshot.size() != EXPECTED_V5_KEYS.size():
-		_fail("Canonical v5 property count mismatch: %s" % str(snapshot.keys()))
+func _assert_canonical_v6(snapshot: Dictionary) -> bool:
+	if snapshot.size() != EXPECTED_V6_KEYS.size():
+		_fail("Canonical v6 property count mismatch: %s" % str(snapshot.keys()))
 		return false
-	for key in EXPECTED_V5_KEYS:
+	for key in EXPECTED_V6_KEYS:
 		if not snapshot.has(key):
-			_fail("Canonical v5 payload is missing %s" % key)
+			_fail("Canonical v6 payload is missing %s" % key)
 			return false
 	for key in LEGACY_ONLY_KEYS:
 		if snapshot.has(key):
-			_fail("Canonical v5 payload retained transient/legacy field %s" % key)
+			_fail("Canonical v6 payload retained transient/legacy field %s" % key)
 			return false
 
 	var acquired_ids := snapshot.get("AcquiredUpgradeIds", []) as Array
 	if acquired_ids != EXPECTED_UPGRADE_IDS:
 		_fail("v4 migration did not filter and sort upgrade IDs: %s" % str(acquired_ids))
 		return false
-	if int(snapshot.get("SchemaVersion", 0)) != 5 \
-		or int(snapshot.get("CurrentAvatarStageNumber", 0)) != 3 \
+	if int(snapshot.get("SchemaVersion", 0)) != 6 \
+		or String(snapshot.get("CampaignId", "")) != "deep_tide_throne" \
+		or int(snapshot.get("MainStageIndex", 0)) != 1 \
+		or String(snapshot.get("EnemyAvatarId", "")) != "shrimp" \
 		or int(snapshot.get("CurrentHealth", -1)) != 0 \
 		or int(snapshot.get("MaxHealth", -1)) != 150 \
 		or int(snapshot.get("PermanentCaptureDamageBonus", -1)) != 5 \
 		or int(snapshot.get("QuestionRewardCount", -1)) != 10 \
 		or int(snapshot.get("HealingOverflowRemainder", -1)) != 3:
-		_fail("v4 migration did not clamp canonical v5 values: %s" % str(snapshot))
+		_fail("v4 migration did not clamp canonical v6 values: %s" % str(snapshot))
 		return false
 	if bool(snapshot.get("ShouldGrantRunStartUpgrade", true)) \
 		or not bool(snapshot.get("ShouldGrantVictoryUpgrade", false)):

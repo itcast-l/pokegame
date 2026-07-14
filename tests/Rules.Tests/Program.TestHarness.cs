@@ -61,6 +61,7 @@ internal static partial class Program
 		Godot.Engine.MainLoopOverride = new Godot.SceneTree { Root = root };
 		saveManager.SeedValue("migration.settings_cfg.v1", true);
 		saveManager.SeedValue("migration.progress_profile.v1", true);
+		saveManager.SeedValue(GameSaveMigration.ProgressProfileMigrationKey, true);
 		saveManager.SeedValue(GameSaveStore.ActiveProfileSlotKey, activeSlotId);
 		return saveManager;
 	}

@@ -24,7 +24,12 @@ internal static class AdventureUpgradeChoiceRules
 
 	internal static bool IsMainAdventureAvatarStageNumber(int avatarStageNumber)
 	{
-		return avatarStageNumber >= MainAdventureFirstAvatarStage && avatarStageNumber <= MainAdventureLastAvatarStage;
+		return AdventureCampaignCatalog.TryMapLegacyRunStage(avatarStageNumber, out _);
+	}
+
+	internal static bool IsMainAdventureStageIndex(int mainStageIndex)
+	{
+		return mainStageIndex is >= 1 and <= AdventureCampaignCatalog.MainStageCount;
 	}
 
 	internal static int ToRunStageIndex(int avatarStageNumber)
@@ -35,6 +40,11 @@ internal static class AdventureUpgradeChoiceRules
 		}
 
 		return avatarStageNumber - MainAdventureFirstAvatarStage + 1;
+	}
+
+	internal static int ToRunStageIndexFromMainStageIndex(int mainStageIndex)
+	{
+		return IsMainAdventureStageIndex(mainStageIndex) ? mainStageIndex : 0;
 	}
 
 	internal static AdventureUpgradeRarityWeights GetRarityWeights(int runStageIndex)

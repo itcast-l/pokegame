@@ -338,6 +338,7 @@ public partial class GameBoardScene : Control
 	}
 	private bool _itemMode = true;
 	private bool _soloMode;
+	private GameModePolicy _gameModePolicy = GameModePolicy.LocalStandard;
 	private int _soloAiDifficulty = (int)SoloAiRules.Difficulty.Medium;
 	private int _localPlayerIndex;
 	private string _networkSessionId = string.Empty;
@@ -390,8 +391,16 @@ public partial class GameBoardScene : Control
 	private TextureRect _boardArt = default!;
 	private Control _layoutAreas = default!;
 
+	public GameModePolicy ModePolicy => _gameModePolicy;
+
 	public override void _Ready()
 	{
+		_gameModePolicy = GameModePolicy.Derive(
+			!string.IsNullOrWhiteSpace(_networkSessionId),
+			_adventureMode,
+			_adventureTutorialMode,
+			_soloMode);
+		GetAdventureRunSessionStore()?.ConfigureForPolicy(_gameModePolicy);
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();

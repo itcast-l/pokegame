@@ -4,8 +4,11 @@ using Godot;
 
 internal static class GameSaveProfileRepository
 {
-	internal const int CurrentProgressSchemaVersion = 1;
+	internal const int CurrentProgressSchemaVersion = 2;
 	internal const string ProgressSchemaVersionKey = "schema_version";
+	internal const string ProgressHighestCompletedMainAdventureStageKey = "highest_completed_main_adventure_stage";
+	internal const string ProgressCompletedAdventureTutorialIdsCsvKey = "completed_adventure_tutorial_ids_csv";
+	// Kept only for reading v1 profiles and legacy settings migration.
 	internal const string ProgressHighestCompletedStageKey = "highest_completed_stage";
 	internal const string ProgressSelectedAvatarIdKey = "selected_avatar_id";
 	internal const string ProgressPlayerNameKey = "player_name";
@@ -44,7 +47,19 @@ internal static GameSaveStore.GameProgressData LoadProfileRaw(Node saveManager, 
 			return GameSaveStore.GameProgressData.CreateDefault();
 		}
 
-		return GameSaveStore.GameProgressData.FromDictionary(data, GameSaveStore.GameProgressData.CreateDefault());
+		GameSaveStore.GameProgressData progressData = GameSaveStore.GameProgressData.FromDictionary(
+			data,
+			GameSaveStore.GameProgressData.CreateDefault());
+		if (RequiresCanonicalV2Rewrite(data))
+		{
+			Error rewriteResult = SaveProfileRaw(saveManager, slotId, progressData);
+			if (rewriteResult != Error.Ok)
+			{
+				GD.PushWarning($"Failed to rewrite migrated profile slot '{slotId}': {rewriteResult}");
+			}
+		}
+
+		return progressData;
 	}
 
 internal static Error SaveProfileRaw(Node saveManager, string slotId, GameSaveStore.GameProgressData progressData)
@@ -194,6 +209,11 @@ internal static Variant ReadDictionaryValue(Godot.Collections.Dictionary data, s
 		return data.ContainsKey(stringNameKey) ? data[stringNameKey] : defaultValue;
 	}
 
+internal static bool ContainsDictionaryKey(Godot.Collections.Dictionary data, string key)
+	{
+		return data.ContainsKey(key) || data.ContainsKey(new StringName(key));
+	}
+
 internal static string ReadString(Godot.Collections.Dictionary data, string key, string defaultValue)
 	{
 		return ReadDictionaryValue(data, key, defaultValue).AsString();
@@ -212,5 +232,13 @@ internal static long ReadLong(Godot.Collections.Dictionary data, string key, lon
 internal static double ReadDouble(Godot.Collections.Dictionary data, string key, double defaultValue)
 	{
 		return ReadDictionaryValue(data, key, defaultValue).AsDouble();
+	}
+
+private static bool RequiresCanonicalV2Rewrite(Godot.Collections.Dictionary data)
+	{
+		int schemaVersion = ReadInt(data, ProgressSchemaVersionKey, 1);
+		return schemaVersion != CurrentProgressSchemaVersion
+			|| !ContainsDictionaryKey(data, ProgressHighestCompletedMainAdventureStageKey)
+			|| !ContainsDictionaryKey(data, ProgressCompletedAdventureTutorialIdsCsvKey);
 	}
 }

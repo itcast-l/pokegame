@@ -24,11 +24,11 @@ internal static partial class Program
 		Run("adventure upgrade manifest rejects missing runtime and catalog entries", AdventureUpgradeManifestRejectsContractDrift);
 		Run("adventure upgrade acquisition requires a ready manifest whitelist", AdventureUpgradeAcquisitionRequiresReadyManifestWhitelist);
 		Run("question mark interest description shows current item count", QuestionMarkInterestDescriptionShowsCurrentItemCount);
-		Run("adventure upgrade snapshots migrate v1 through v4 into canonical v5", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
-		Run("adventure upgrade v5 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
+		Run("adventure upgrade snapshots migrate v1 through v5 into canonical v6", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
+		Run("adventure upgrade v6 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
 		Run("adventure upgrade snapshots reject invalid schema and stage values", AdventureUpgradeSnapshotsRejectInvalidSchemaAndStageValues);
 		Run("adventure run store defers then automatically retries manifest restore once", AdventureRunStoreDefersThenAutomaticallyRetriesManifestRestoreOnce);
-		Run("adventure run store canonicalizes noncanonical v5 once", AdventureRunStoreCanonicalizesNoncanonicalV5Once);
+		Run("adventure run store canonicalizes noncanonical legacy snapshot once", AdventureRunStoreCanonicalizesNoncanonicalV5Once);
 		Run("adventure run store preserves invalid payloads and deduplicates warnings", AdventureRunStorePreservesInvalidPayloadsAndDeduplicatesWarnings);
 	}
 
@@ -138,7 +138,7 @@ internal static partial class Program
 		Equal(2, manifest.Entries.Count);
 		Equal(2, manifest.EnabledIds.Count);
 		False(manifest.CanRestoreUpgradeId("legacy_discard", sourceSchemaVersion: 4));
-		True(manifest.CanRestoreUpgradeId("legacy_discard", sourceSchemaVersion: 5));
+		False(manifest.CanRestoreUpgradeId("legacy_discard", sourceSchemaVersion: 5));
 		True(manifest.CanRestoreUpgradeId("legacy_keep", sourceSchemaVersion: 4));
 
 		AdventureUpgradeRunSnapshot legacy = CreateSnapshot(
@@ -149,9 +149,14 @@ internal static partial class Program
 		False(migrated.HasAcquiredUpgrade("legacy_discard"));
 		True(migrated.HasAcquiredUpgrade("legacy_keep"));
 
-		AdventureUpgradeRunSnapshot current = CreateSnapshot(
-			schemaVersion: 5,
-			acquiredUpgradeIds: new[] { "legacy_discard", "legacy_keep" });
+		AdventureUpgradeRunSnapshot current = new(
+			AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
+			AdventureCampaignCatalog.MainCampaignId,
+			1,
+			AdventureCampaignCatalog.GetMainAvatarId(1),
+			false,
+			true,
+			new[] { "legacy_discard", "legacy_keep" });
 		var restored = new AdventureUpgradeRunState(manifest);
 		Equal(AdventureUpgradeRestoreResult.Restored, restored.RestoreFromSnapshot(current));
 		True(restored.HasAcquiredUpgrade("legacy_discard"));
@@ -300,13 +305,13 @@ internal static partial class Program
 			}
 
 			AdventureUpgradeRunSnapshot v5 = restored.ToSnapshot();
-			Equal(5, v5.SchemaVersion);
+			Equal(AdventureUpgradeRunSnapshot.CurrentSchemaVersion, v5.SchemaVersion);
 			Equal(0, v5.CurrentRunStageIndex);
 			Equal("diamonds_final_double", v5.AcquiredUpgradeIds[0]);
 			Equal("diamonds_question_mark_interest", v5.AcquiredUpgradeIds[1]);
 			Equal("hearts_overflow_growth", v5.AcquiredUpgradeIds[2]);
 			string json = JsonSerializer.Serialize(v5);
-			AssertCanonicalV5Json(json);
+			AssertCanonicalV6Json(json);
 		}
 	}
 
@@ -345,7 +350,8 @@ internal static partial class Program
 
 		AdventureUpgradeRunSnapshot canonical = restored.ToSnapshot();
 		var roundTrip = new AdventureUpgradeRunState(manifest);
-		Equal(AdventureUpgradeRestoreResult.Restored, roundTrip.RestoreFromSnapshot(canonical));
+		AdventureUpgradeRestoreResult roundTripResult = roundTrip.RestoreFromSnapshot(canonical);
+		Equal(AdventureUpgradeRestoreResult.Restored, roundTripResult);
 		Equal(150, roundTrip.MaxHealth);
 		Equal(150, roundTrip.CurrentHealth);
 		True(roundTrip.EffectState.FinalDoubleCaptureDamageActive);
@@ -401,7 +407,7 @@ internal static partial class Program
 			QuestionRewardCount: 1,
 			HealingOverflowRemainder: 0);
 		var echo = new AdventureUpgradeRunState(manifest);
-		Equal(AdventureUpgradeRestoreResult.Restored, echo.RestoreFromSnapshot(echoSnapshot));
+		Equal(AdventureUpgradeRestoreResult.Migrated, echo.RestoreFromSnapshot(echoSnapshot));
 		True(echo.IsQuestionRewardEchoActive);
 	}
 
@@ -411,15 +417,16 @@ internal static partial class Program
 		foreach (AdventureUpgradeRunSnapshot invalid in new[]
 		{
 			CreateSnapshot(schemaVersion: 0),
-			CreateSnapshot(schemaVersion: 6),
+			CreateSnapshot(schemaVersion: 7),
 			CreateSnapshot(schemaVersion: 5, avatarStageNumber: 2),
 			new AdventureUpgradeRunSnapshot(
-				5,
-				3,
-				CurrentRunStageIndex: 0,
+				AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
+				"unknown_campaign",
+				1,
+				"shrimp",
 				ShouldGrantRunStartUpgrade: false,
 				ShouldGrantVictoryUpgrade: true,
-				AcquiredUpgradeIds: null!),
+				AcquiredUpgradeIds: Array.Empty<string>()),
 		})
 		{
 			var state = new AdventureUpgradeRunState(manifest);
@@ -474,7 +481,7 @@ internal static partial class Program
 		True(store.HasActiveRun);
 		Equal(1, saveManager.SaveToSlotCallCount);
 		string migratedJson = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
-		AssertCanonicalV5Json(migratedJson);
+		AssertCanonicalV6Json(migratedJson);
 		False(migratedJson.Contains("clubs_lush_growth", StringComparison.Ordinal));
 
 		store.SetManifest(CreateFullAdventureUpgradeManifest());
@@ -498,7 +505,7 @@ internal static partial class Program
 		True(store.HasActiveRun);
 		Equal(1, saveManager.SaveToSlotCallCount);
 		string canonicalJson = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
-		AssertCanonicalV5Json(canonicalJson);
+		AssertCanonicalV6Json(canonicalJson);
 		False(canonicalJson.Contains("NextCaptureDamageBonus", StringComparison.Ordinal));
 
 		Equal(AdventureUpgradeRestoreResult.Restored, store.ReloadFromActiveProfile());
@@ -1023,12 +1030,14 @@ internal static partial class Program
 		return tokens;
 	}
 
-	private static void AssertCanonicalV5Json(string json)
+	private static void AssertCanonicalV6Json(string json)
 	{
 		using JsonDocument document = JsonDocument.Parse(json);
 		JsonElement root = document.RootElement;
-		Equal(5, root.GetProperty("SchemaVersion").GetInt32());
-		True(root.TryGetProperty("CurrentAvatarStageNumber", out _));
+		Equal(AdventureUpgradeRunSnapshot.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
+		True(root.TryGetProperty("CampaignId", out _));
+		True(root.TryGetProperty("MainStageIndex", out _));
+		True(root.TryGetProperty("EnemyAvatarId", out _));
 		True(root.TryGetProperty("ShouldGrantRunStartUpgrade", out _));
 		True(root.TryGetProperty("ShouldGrantVictoryUpgrade", out _));
 		True(root.TryGetProperty("AcquiredUpgradeIds", out _));
@@ -1048,5 +1057,10 @@ internal static partial class Program
 		False(root.TryGetProperty("ClubGapRootingUsedThisTurn", out _));
 		False(root.TryGetProperty("FinalDoubleQuestionRewardCountThisBattle", out _));
 		False(root.TryGetProperty("ClubFlourishStacks", out _));
+	}
+
+	private static void AssertCanonicalV5Json(string json)
+	{
+		AssertCanonicalV6Json(json);
 	}
 }

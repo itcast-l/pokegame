@@ -17,13 +17,13 @@ func _run() -> void:
 	root.add_child(harness)
 	await process_frame
 
-	if not bool(harness.call("SetHighestCompletedStage", 0)):
+	if not bool(harness.call("ResetProgress")):
 		_fail("Could not reset active profile adventure progress")
 		return
 
 	var stage_count := int(harness.call("GetStageCount"))
-	if stage_count < 3:
-		_fail("Expected at least three adventure stages")
+	if stage_count != 12:
+		_fail("Expected exactly twelve main adventure stages")
 		return
 	_assert_locked(harness, 0, "stage zero on a clean profile")
 	_assert_unlocked(harness, 1, "stage one on a clean profile")
@@ -31,28 +31,48 @@ func _run() -> void:
 	_assert_locked(harness, stage_count + 1, "stage count plus one on a clean profile")
 	if _failed:
 		return
-	if bool(harness.call("RecordStageVictory", 3)):
-		_fail("A clean profile accepted a victory from a locked later stage")
+
+	if not bool(harness.call("RecordTutorialVictory", "fish")):
+		_fail("Could not complete the fish tutorial")
+		return
+	if not bool(harness.call("IsTutorialCompleted", "fish")) \
+		or bool(harness.call("IsTutorialCompleted", "lanternfish")) \
+		or int(harness.call("GetHighestCompletedMainStage")) != 0:
+		_fail("Fish tutorial completion leaked into the other tutorial or main progress")
+		return
+	if not bool(harness.call("RecordTutorialVictory", "lanternfish")):
+		_fail("Could not complete the lanternfish tutorial")
+		return
+	if not bool(harness.call("IsTutorialCompleted", "fish")) \
+		or not bool(harness.call("IsTutorialCompleted", "lanternfish")) \
+		or int(harness.call("GetHighestCompletedMainStage")) != 0:
+		_fail("Lanternfish tutorial completion did not remain independent")
+		return
+
+	if bool(harness.call("RecordStageVictory", 2)):
+		_fail("A clean main profile accepted a victory from a locked later stage")
 		return
 	_assert_locked(harness, 2, "stage two after rejecting a locked stage three victory")
 	if _failed:
 		return
 
-	if not bool(harness.call("RecordStageVictory", 1)):
-		_fail("Could not record stage one victory")
-		return
-	_assert_unlocked(harness, 1, "completed stage one")
-	_assert_unlocked(harness, 2, "next stage after stage one victory")
-	_assert_locked(harness, 3, "stage three after stage one victory")
-	if _failed:
+	for stage_number in range(1, stage_count + 1):
+		if not bool(harness.call("RecordStageVictory", stage_number)):
+			_fail("Could not record sequential main stage %d victory" % stage_number)
+			return
+		_assert_unlocked(harness, stage_number, "completed sequential main stage")
+		if stage_number < stage_count:
+			_assert_unlocked(harness, stage_number + 1, "next sequential main stage")
+			_assert_locked(harness, stage_number + 2, "stage beyond the next sequential main stage")
+		if _failed:
+			return
+
+	if bool(harness.call("TryStartMenuStage", stage_count + 1)):
+		_fail("Menu accepted an out-of-range main stage")
 		return
 
-	if bool(harness.call("TryStartMenuStage", 3)):
-		_fail("Menu accepted a locked stage instead of rejecting the start request")
-		return
-
-	if not bool(harness.call("SetHighestCompletedStage", stage_count)):
-		_fail("Could not seed full adventure completion")
+	if not bool(harness.call("NetworkStandardLeavesResidualAdventureRunUntouched")):
+		_fail("NetworkStandard touched a residual adventure run")
 		return
 	_assert_locked(harness, 0, "stage zero after full completion")
 	for stage_number in range(1, stage_count + 1):

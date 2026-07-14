@@ -5,7 +5,8 @@ internal static class GameSaveMigration
 {
 	internal const string LegacySettingsConfigPath = "user://settings.cfg";
 	internal const string LegacyMigrationKey = "migration.settings_cfg.v1";
-	internal const string ProgressProfileMigrationKey = "migration.progress_profile.v1";
+	internal const string ProgressProfileMigrationKey = "migration.progress_profile.v2";
+	internal const string LegacyProgressProfileMigrationKey = "migration.progress_profile.v1";
 
 	internal static void EnsureInitialized(Node saveManager)
 	{
@@ -85,7 +86,10 @@ internal static void EnsureProgressProfileMigration(Node? saveManager = null)
 		GameSaveStore.AttemptedProgressProfileMigration = true;
 
 		bool hasActiveProfile = GameSaveLegacyAdapter.HasRawValue(saveManager, GameSaveStore.ActiveProfileSlotKey);
-		bool migrationComplete = GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveMigration.ProgressProfileMigrationKey, false).AsBool();
+		bool migrationComplete = GameSaveLegacyAdapter.GetRawValue(
+			saveManager,
+			GameSaveMigration.ProgressProfileMigrationKey,
+			false).AsBool();
 		if (migrationComplete && hasActiveProfile)
 		{
 			return;
@@ -125,7 +129,10 @@ internal static GameSaveStore.GameProgressData CreateProgressProfileFromLegacyKv
 
 		return new GameSaveStore.GameProgressData(
 			GameSaveProfileRepository.CurrentProgressSchemaVersion,
-			GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveStore.HighestCompletedStageKey, 0).AsInt32(),
+			AdventureCampaignCatalog.MapLegacyCompletedMainStage(
+				GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveStore.HighestCompletedStageKey, 0).AsInt32()),
+			AdventureCampaignCatalog.NormalizeCompletedTutorialIdsCsv(
+				GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveStore.CompletedAdventureTutorialIdsCsvKey, string.Empty).AsString()),
 			GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveStore.SelectedAvatarKey, CharacterAvatarCatalog.DefaultAvatarId).AsString(),
 			GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveStore.PlayerNameKey, PlayerNameRules.DefaultPlayerName).AsString(),
 			pendingQueue,

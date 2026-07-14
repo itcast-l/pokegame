@@ -25,7 +25,10 @@ internal sealed class AdventureUpgradeRunState
 
 	internal bool IsActive { get; private set; }
 	internal bool HasReadyManifest => _manifest?.IsReady == true;
-	internal int CurrentAvatarStageNumber { get; private set; }
+	internal string CampaignId { get; private set; } = string.Empty;
+	internal int MainStageIndex { get; private set; }
+	internal string EnemyAvatarId { get; private set; } = string.Empty;
+	internal int CurrentAvatarStageNumber => AdventureCampaignCatalog.LegacyAvatarStageForMainStage(MainStageIndex);
 	internal int CurrentRunStageIndex { get; private set; }
 	internal bool ShouldGrantRunStartUpgrade { get; private set; }
 	internal bool ShouldGrantVictoryUpgrade { get; private set; }
@@ -50,34 +53,67 @@ internal sealed class AdventureUpgradeRunState
 
 	internal void BeginNewRun(int avatarStageNumber)
 	{
+		if (AdventureCampaignCatalog.TryMapLegacyRunStage(avatarStageNumber, out int mainStageIndex))
+		{
+			BeginNewMainRun(mainStageIndex, AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex));
+			return;
+		}
+
+		BeginNewMainRun(avatarStageNumber, AdventureCampaignCatalog.GetMainAvatarId(avatarStageNumber));
+	}
+
+	internal void BeginNewMainRun(int mainStageIndex, string enemyAvatarId)
+	{
 		Clear();
-		if (!AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber))
+		if (!AdventureUpgradeChoiceRules.IsMainAdventureStageIndex(mainStageIndex))
 		{
 			return;
 		}
 
+		string expectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex);
+		string normalizedEnemyAvatarId = enemyAvatarId?.Trim() ?? string.Empty;
+		if (!string.Equals(normalizedEnemyAvatarId, expectedAvatarId, StringComparison.Ordinal))
+		{
+			normalizedEnemyAvatarId = expectedAvatarId;
+		}
+
 		IsActive = true;
-		CurrentAvatarStageNumber = avatarStageNumber;
-		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndex(avatarStageNumber);
+		CampaignId = AdventureCampaignCatalog.MainCampaignId;
+		MainStageIndex = mainStageIndex;
+		EnemyAvatarId = normalizedEnemyAvatarId;
+		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndexFromMainStageIndex(mainStageIndex);
 		ShouldGrantRunStartUpgrade = CurrentRunStageIndex == 1;
 		ShouldGrantVictoryUpgrade = true;
 	}
 
 	internal void AdvanceToStage(int avatarStageNumber)
 	{
+		if (AdventureCampaignCatalog.TryMapLegacyRunStage(avatarStageNumber, out int mainStageIndex))
+		{
+			AdvanceToMainStage(mainStageIndex, AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex));
+			return;
+		}
+
+		AdvanceToMainStage(avatarStageNumber, AdventureCampaignCatalog.GetMainAvatarId(avatarStageNumber));
+	}
+
+	internal void AdvanceToMainStage(int mainStageIndex, string enemyAvatarId)
+	{
 		if (!IsActive)
 		{
-			BeginNewRun(avatarStageNumber);
+			BeginNewMainRun(mainStageIndex, enemyAvatarId);
 			return;
 		}
 
-		if (!AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber))
+		if (!AdventureUpgradeChoiceRules.IsMainAdventureStageIndex(mainStageIndex))
 		{
 			return;
 		}
 
-		CurrentAvatarStageNumber = avatarStageNumber;
-		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndex(avatarStageNumber);
+		CampaignId = AdventureCampaignCatalog.MainCampaignId;
+		MainStageIndex = mainStageIndex;
+		EnemyAvatarId = AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex);
+		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndexFromMainStageIndex(mainStageIndex);
 		ShouldGrantRunStartUpgrade = false;
 		ShouldGrantVictoryUpgrade = true;
 	}
@@ -144,8 +180,9 @@ internal sealed class AdventureUpgradeRunState
 		sortedUpgradeIds.Sort(StringComparer.Ordinal);
 		return new AdventureUpgradeRunSnapshot(
 			AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
-			CurrentAvatarStageNumber,
-			CurrentRunStageIndex: 0,
+			CampaignId,
+			MainStageIndex,
+			EnemyAvatarId,
 			ShouldGrantRunStartUpgrade,
 			ShouldGrantVictoryUpgrade,
 			sortedUpgradeIds,
@@ -153,7 +190,6 @@ internal sealed class AdventureUpgradeRunState
 			MaxHealth,
 			_effectState.PermanentCaptureDamageBonus,
 			_effectState.QuestionRewardCount,
-			FinalDoubleCaptureDamageActive: false,
 			_effectState.HealingOverflowRemainder);
 	}
 
@@ -166,7 +202,7 @@ internal sealed class AdventureUpgradeRunState
 
 		Clear();
 		if (!IsSupportedSchemaVersion(snapshot.SchemaVersion)
-			|| !AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(snapshot.CurrentAvatarStageNumber)
+			|| !TryResolveSnapshotIdentity(snapshot, out int mainStageIndex, out string enemyAvatarId)
 			|| snapshot.AcquiredUpgradeIds == null)
 		{
 			return AdventureUpgradeRestoreResult.InvalidSnapshotPreserved;
@@ -199,8 +235,10 @@ internal sealed class AdventureUpgradeRunState
 		}
 
 		IsActive = true;
-		CurrentAvatarStageNumber = snapshot.CurrentAvatarStageNumber;
-		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndex(snapshot.CurrentAvatarStageNumber);
+		CampaignId = AdventureCampaignCatalog.MainCampaignId;
+		MainStageIndex = mainStageIndex;
+		EnemyAvatarId = enemyAvatarId;
+		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndexFromMainStageIndex(mainStageIndex);
 		ShouldGrantRunStartUpgrade = snapshot.ShouldGrantRunStartUpgrade;
 		ShouldGrantVictoryUpgrade = snapshot.ShouldGrantVictoryUpgrade;
 		foreach (string upgradeId in sortedUpgradeIds)
@@ -273,7 +311,9 @@ internal sealed class AdventureUpgradeRunState
 	internal void Clear()
 	{
 		IsActive = false;
-		CurrentAvatarStageNumber = 0;
+		CampaignId = string.Empty;
+		MainStageIndex = 0;
+		EnemyAvatarId = string.Empty;
 		CurrentRunStageIndex = 0;
 		ShouldGrantRunStartUpgrade = false;
 		ShouldGrantVictoryUpgrade = false;
@@ -309,6 +349,45 @@ internal sealed class AdventureUpgradeRunState
 	{
 		return schemaVersion >= 1
 			&& schemaVersion <= AdventureUpgradeRunSnapshot.CurrentSchemaVersion;
+	}
+
+	private static bool TryResolveSnapshotIdentity(
+		AdventureUpgradeRunSnapshot snapshot,
+		out int mainStageIndex,
+		out string enemyAvatarId)
+	{
+		mainStageIndex = 0;
+		enemyAvatarId = string.Empty;
+		if (snapshot.SchemaVersion < AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
+		{
+			if (!AdventureCampaignCatalog.TryMapLegacyRunStage(
+				snapshot.LegacyCurrentAvatarStageNumber != 0
+					? snapshot.LegacyCurrentAvatarStageNumber
+					: snapshot.CurrentAvatarStageNumber,
+				out mainStageIndex))
+			{
+				return false;
+			}
+
+			enemyAvatarId = AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex);
+			return true;
+		}
+
+		if (!string.Equals(snapshot.CampaignId, AdventureCampaignCatalog.MainCampaignId, StringComparison.Ordinal)
+			|| !AdventureUpgradeChoiceRules.IsMainAdventureStageIndex(snapshot.MainStageIndex))
+		{
+			return false;
+		}
+
+		string expectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(snapshot.MainStageIndex);
+		if (!string.Equals(snapshot.EnemyAvatarId, expectedAvatarId, StringComparison.Ordinal))
+		{
+			return false;
+		}
+
+		mainStageIndex = snapshot.MainStageIndex;
+		enemyAvatarId = expectedAvatarId;
+		return true;
 	}
 
 	private static bool SequenceMatches(

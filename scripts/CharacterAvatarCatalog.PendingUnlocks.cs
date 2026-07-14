@@ -12,12 +12,10 @@ public static partial class CharacterAvatarCatalog
 
 	private static List<string> ParsePendingAdventureAvatarUnlockQueue(string rawQueue)
 	{
-		if (string.IsNullOrWhiteSpace(rawQueue))
-		{
-			return new List<string>();
-		}
-
-		return new List<string>(rawQueue.Split(new[] { '|', ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+		string normalizedQueue = AdventureCampaignCatalog.NormalizePendingAvatarUnlockQueueCsv(rawQueue);
+		return string.IsNullOrWhiteSpace(normalizedQueue)
+			? new List<string>()
+			: new List<string>(normalizedQueue.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 	}
 
 	private static string FormatPendingAdventureAvatarUnlockQueue(IReadOnlyList<string> queue)

@@ -11,6 +11,10 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		AdventureRunSessionStore? runSessionStore = GetAdventureRunSessionStore();
+		GameModePolicy selectedPolicy = _selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId
+			? GameModePolicy.AdventureTutorial
+			: GameModePolicy.AdventureMain;
+		runSessionStore?.ConfigureForPolicy(selectedPolicy);
 		runSessionStore?.ReloadFromActiveProfile();
 		if (runSessionStore?.HasActiveRun == true)
 		{
@@ -43,14 +47,14 @@ public partial class AdventureAvatarMenuScene
 
 	private async Task StartAdventureWithTransitionAsync(PackedScene gameBoardScene, string selectedAvatarId)
 	{
-		int avatarStageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(selectedAvatarId);
-		if (AdventureUpgradeChoiceRules.IsMainAdventureAvatarStageNumber(avatarStageNumber))
+		if (AdventureCampaignCatalog.TryGetMainStageIndex(selectedAvatarId, out int mainStageIndex))
 		{
-			GetAdventureRunSessionStore()?.BeginNewRun(avatarStageNumber);
+			GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
+			GetAdventureRunSessionStore()?.BeginNewMainRun(mainStageIndex, selectedAvatarId);
 		}
 		else
 		{
-			GetAdventureRunSessionStore()?.ClearRun();
+			GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureTutorial);
 		}
 
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>

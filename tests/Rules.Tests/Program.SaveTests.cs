@@ -171,6 +171,8 @@ internal static partial class Program
 		}
 
 		var store = new AdventureRunSessionStore();
+		store.ConfigureForPolicy(GameModePolicy.AdventureMain);
+		Equal(AdventureUpgradeRestoreResult.DeferredManifestUnavailable, store.ReloadFromActiveProfile());
 		store.AddNamedChild("/root/Pandora", pandora);
 		store.AddNamedChild("/root/AdventureRunSessionStore", store);
 		store._Ready();

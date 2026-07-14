@@ -370,7 +370,7 @@ internal static partial class Program
 		Equal(AdventureUpgradeRestoreResult.Migrated, restored.RestoreFromSnapshot(legacySnapshot));
 		True(restored.HasAcquiredUpgrade("hearts_thick_blood"));
 		Equal(1, restored.GetAcquiredUpgradeIds().Count);
-		Equal(5, restored.ToSnapshot().SchemaVersion);
+		Equal(AdventureUpgradeRunSnapshot.CurrentSchemaVersion, restored.ToSnapshot().SchemaVersion);
 	}
 
 	private static void AdventureQuestionRewardSideEffectsTrackCountPermanentBonusAndFinalDouble()

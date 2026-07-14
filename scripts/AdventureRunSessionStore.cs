@@ -5,11 +5,13 @@ using System.Text.Json;
 
 public sealed partial class AdventureRunSessionStore : Node
 {
-	private static readonly HashSet<string> CanonicalV5PropertyNames = new(
+	private static readonly HashSet<string> CanonicalV6PropertyNames = new(
 		StringComparer.Ordinal)
 	{
 		nameof(AdventureUpgradeRunSnapshot.SchemaVersion),
-		nameof(AdventureUpgradeRunSnapshot.CurrentAvatarStageNumber),
+		nameof(AdventureUpgradeRunSnapshot.CampaignId),
+		nameof(AdventureUpgradeRunSnapshot.MainStageIndex),
+		nameof(AdventureUpgradeRunSnapshot.EnemyAvatarId),
 		nameof(AdventureUpgradeRunSnapshot.ShouldGrantRunStartUpgrade),
 		nameof(AdventureUpgradeRunSnapshot.ShouldGrantVictoryUpgrade),
 		nameof(AdventureUpgradeRunSnapshot.AcquiredUpgradeIds),
@@ -21,12 +23,14 @@ public sealed partial class AdventureRunSessionStore : Node
 	};
 
 	private readonly AdventureUpgradeRunState _runState = new();
+	private GameModePolicy _gameModePolicy = GameModePolicy.AdventureMain;
 	private string? _deferredPayload;
 	private string? _preservedFailurePayload;
 	private string? _lastObservedPayload;
 	private string? _lastWarnedInvalidPayload;
 
 	public bool HasActiveRun => _runState.IsActive;
+	internal GameModePolicy ModePolicy => _gameModePolicy;
 	internal AdventureUpgradeRestoreResult LastRestoreResult { get; private set; } =
 		AdventureUpgradeRestoreResult.NoSnapshot;
 
@@ -49,7 +53,18 @@ public sealed partial class AdventureRunSessionStore : Node
 			}
 		}
 
-		ReloadFromActiveProfile();
+	}
+
+	internal void ConfigureForPolicy(GameModePolicy policy)
+	{
+		_gameModePolicy = policy ?? GameModePolicy.LocalStandard;
+		if (!_gameModePolicy.CanReadAdventureRun)
+		{
+			_runState.Clear();
+			_deferredPayload = null;
+			_preservedFailurePayload = null;
+			LastRestoreResult = AdventureUpgradeRestoreResult.NoSnapshot;
+		}
 	}
 
 	private void OnPandoraDataLoaded()
@@ -64,7 +79,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal bool TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot)
 	{
-		if (!_runState.IsActive)
+		if (!_gameModePolicy.CanReadAdventureRun || !_runState.IsActive)
 		{
 			snapshot = default;
 			return false;
@@ -82,6 +97,10 @@ public sealed partial class AdventureRunSessionStore : Node
 		}
 
 		_runState.SetManifest(manifest);
+		if (!_gameModePolicy.CanReadAdventureRun)
+		{
+			return AdventureUpgradeRestoreResult.NoSnapshot;
+		}
 		if (string.IsNullOrEmpty(_deferredPayload))
 		{
 			return LastRestoreResult;
@@ -99,7 +118,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal void BeginNewRun(int avatarStageNumber)
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return;
 		}
@@ -108,9 +127,20 @@ public sealed partial class AdventureRunSessionStore : Node
 		Persist();
 	}
 
+	internal void BeginNewMainRun(int mainStageIndex, string enemyAvatarId)
+	{
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		{
+			return;
+		}
+
+		_runState.BeginNewMainRun(mainStageIndex, enemyAvatarId);
+		Persist();
+	}
+
 	internal void AdvanceToStage(int avatarStageNumber)
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return;
 		}
@@ -119,9 +149,20 @@ public sealed partial class AdventureRunSessionStore : Node
 		Persist();
 	}
 
+	internal void AdvanceToMainStage(int mainStageIndex, string enemyAvatarId)
+	{
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		{
+			return;
+		}
+
+		_runState.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
+		Persist();
+	}
+
 	internal void MarkRunStartUpgradeGranted()
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return;
 		}
@@ -132,7 +173,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal void MarkVictoryUpgradeGranted()
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return;
 		}
@@ -143,7 +184,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal AdventureUpgradeAcquireResult AcquireUpgrade(string upgradeId)
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return AdventureUpgradeAcquireResult.DeferredManifestUnavailable;
 		}
@@ -159,7 +200,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal void SetHealth(int currentHealth, int maxHealth)
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return;
 		}
@@ -170,7 +211,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal void ReplaceEffectState(AdventureUpgradeEffectState effectState)
 	{
-		if (HasRetainedPayload)
+		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
 		{
 			return;
 		}
@@ -185,11 +226,23 @@ public sealed partial class AdventureRunSessionStore : Node
 		_preservedFailurePayload = null;
 		_runState.Clear();
 		LastRestoreResult = AdventureUpgradeRestoreResult.NoSnapshot;
-		Persist();
+		if (_gameModePolicy.CanWriteAdventureRun)
+		{
+			Persist();
+		}
 	}
 
 	internal AdventureUpgradeRestoreResult ReloadFromActiveProfile()
 	{
+		if (!_gameModePolicy.CanReadAdventureRun)
+		{
+			_runState.Clear();
+			_deferredPayload = null;
+			_preservedFailurePayload = null;
+			LastRestoreResult = AdventureUpgradeRestoreResult.NoSnapshot;
+			return LastRestoreResult;
+		}
+
 		_runState.Clear();
 		_deferredPayload = null;
 		_preservedFailurePayload = null;
@@ -209,11 +262,18 @@ public sealed partial class AdventureRunSessionStore : Node
 		GameSaveStore.GameProgressData profile,
 		string json)
 	{
-		bool requiresCanonicalV5Rewrite;
+		if (!_gameModePolicy.CanReadAdventureRun)
+		{
+			_runState.Clear();
+			return AdventureUpgradeRestoreResult.NoSnapshot;
+		}
+
+		bool requiresCanonicalV6Rewrite;
+		bool migratedBySchema;
 		try
 		{
 			using JsonDocument document = JsonDocument.Parse(json);
-			requiresCanonicalV5Rewrite = RequiresCanonicalV5Rewrite(document.RootElement);
+			requiresCanonicalV6Rewrite = RequiresCanonicalV6Rewrite(document.RootElement);
 		}
 		catch (JsonException error)
 		{
@@ -227,12 +287,11 @@ public sealed partial class AdventureRunSessionStore : Node
 			return LastRestoreResult;
 		}
 
-		AdventureUpgradeRunSnapshot snapshot;
-		try
-		{
-			snapshot = JsonSerializer.Deserialize<AdventureUpgradeRunSnapshot>(json);
-		}
-		catch (Exception error)
+		if (!AdventureUpgradeRunSnapshot.TryDeserialize(
+			json,
+			out AdventureUpgradeRunSnapshot snapshot,
+			out migratedBySchema,
+			out string failure))
 		{
 			_runState.Clear();
 			_deferredPayload = null;
@@ -240,12 +299,13 @@ public sealed partial class AdventureRunSessionStore : Node
 			LastRestoreResult = AdventureUpgradeRestoreResult.InvalidSnapshotPreserved;
 			WarnPreservedPayloadOnce(
 				json,
-				$"Failed to restore adventure upgrade run session snapshot; the original payload was preserved: {error.Message}");
+				$"Failed to restore adventure upgrade run session snapshot; the original payload was preserved: {failure}");
 			return LastRestoreResult;
 		}
 
 		AdventureUpgradeRestoreResult result = _runState.RestoreFromSnapshot(snapshot);
-		if (result == AdventureUpgradeRestoreResult.Restored && requiresCanonicalV5Rewrite)
+		if (result == AdventureUpgradeRestoreResult.Restored
+			&& (requiresCanonicalV6Rewrite || migratedBySchema))
 		{
 			result = AdventureUpgradeRestoreResult.Migrated;
 		}
@@ -282,7 +342,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	private void PersistMigratedSnapshot(GameSaveStore.GameProgressData profile)
 	{
-		if (!_runState.IsActive)
+		if (!_gameModePolicy.CanWriteAdventureRun || !_runState.IsActive)
 		{
 			return;
 		}
@@ -303,6 +363,11 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	private void Persist()
 	{
+		if (!_gameModePolicy.CanWriteAdventureRun)
+		{
+			return;
+		}
+
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
 		string json = _runState.IsActive
 			? JsonSerializer.Serialize(_runState.ToSnapshot())
@@ -346,7 +411,7 @@ public sealed partial class AdventureRunSessionStore : Node
 	private bool HasRetainedPayload =>
 		_deferredPayload != null || _preservedFailurePayload != null;
 
-	private static bool RequiresCanonicalV5Rewrite(JsonElement root)
+	private static bool RequiresCanonicalV6Rewrite(JsonElement root)
 	{
 		if (root.ValueKind != JsonValueKind.Object)
 		{
@@ -366,13 +431,13 @@ public sealed partial class AdventureRunSessionStore : Node
 		var observedPropertyNames = new HashSet<string>(StringComparer.Ordinal);
 		foreach (JsonProperty property in root.EnumerateObject())
 		{
-			if (!CanonicalV5PropertyNames.Contains(property.Name)
+			if (!CanonicalV6PropertyNames.Contains(property.Name)
 				|| !observedPropertyNames.Add(property.Name))
 			{
 				return true;
 			}
 		}
 
-		return observedPropertyNames.Count != CanonicalV5PropertyNames.Count;
+		return observedPropertyNames.Count != CanonicalV6PropertyNames.Count;
 	}
 }

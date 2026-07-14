@@ -299,7 +299,10 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdvanceAdventureUpgradeRunToStage(CharacterAvatarCatalog.GetAdventureStageNumber(nextAvatarId));
+			if (AdventureCampaignCatalog.TryGetMainStageIndex(nextAvatarId, out int nextMainStageIndex))
+			{
+				AdvanceAdventureUpgradeRunToStage(nextMainStageIndex);
+			}
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
 	}
 
@@ -323,7 +326,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		BeginAdventureUpgradeRun(FirstMainAdventureAvatarStageNumber);
+		GetAdventureRunSessionStore()?.BeginNewMainRun(
+			1,
+			GetFirstMainAdventureAvatarId());
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
 	}
 
@@ -380,35 +385,39 @@ public partial class GameBoardScene
 
 	private bool ShouldAdvanceAdventureFromWinner()
 	{
-		return adventure_mode
+		return _gameModePolicy.IsAdventureMain
 			&& _winnerPlayerIndex == MainPlayerIndex
 			&& TryGetNextAdventureStageAvatarId(out _);
 	}
 
 	private bool TryGetNextAdventureStageAvatarId(out string nextAvatarId)
 	{
-		int currentStage = CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id);
+		if (!AdventureCampaignCatalog.TryGetMainStageIndex(adventure_enemy_avatar_id, out int currentStage))
+		{
+			nextAvatarId = string.Empty;
+			return false;
+		}
+
 		int nextStage = currentStage + 1;
-		if (currentStage <= 0
-			|| nextStage > CharacterAvatarCatalog.GetAdventureStageCount()
+		if (nextStage > AdventureCampaignCatalog.MainStageCount
 			|| !CharacterAvatarCatalog.IsAdventureStageUnlocked(nextStage))
 		{
 			nextAvatarId = string.Empty;
 			return false;
 		}
 
-		nextAvatarId = CharacterAvatarCatalog.GetAdventureAvatarIdForStage(nextStage);
-		return nextAvatarId != CharacterAvatarCatalog.DefaultAvatarId;
+		nextAvatarId = AdventureCampaignCatalog.GetMainAvatarId(nextStage);
+		return !string.IsNullOrEmpty(nextAvatarId);
 	}
 
 	private string GetWinnerReturnButtonKey()
 	{
-		return adventure_mode ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
+		return _gameModePolicy.IsAdventure ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
 	}
 
 	private Action GetWinnerReturnAction()
 	{
-		return adventure_mode ? ReturnToAdventureMenu : ReturnToMainMenu;
+		return _gameModePolicy.IsAdventure ? ReturnToAdventureMenu : ReturnToMainMenu;
 	}
 
 	private static Texture2D? LoadTextureWithImageFallback(string path)

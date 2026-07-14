@@ -16,6 +16,9 @@ public static class GameSaveStore
 	public const string InputBindingsKey = "settings.input.bindings";
 	public const string SelectedAvatarKey = "settings.general.avatar";
 	public const string PlayerNameKey = "settings.general.player_name";
+	public const string HighestCompletedMainAdventureStageKey = "adventure.highest_completed_main_adventure_stage";
+	public const string CompletedAdventureTutorialIdsCsvKey = "adventure.completed_adventure_tutorial_ids_csv";
+	// Legacy v1 key. It remains readable but is never written to a v2 profile.
 	public const string HighestCompletedStageKey = "adventure.highest_completed_stage";
 	public const string PendingAvatarUnlockQueueKey = "adventure.pending_avatar_unlock_queue";
 	public const string PendingAvatarUnlockKey = "adventure.pending_avatar_unlock";
@@ -30,7 +33,8 @@ public static class GameSaveStore
 
 public sealed record GameProgressData(
 		int SchemaVersion,
-		int HighestCompletedStage,
+		int HighestCompletedMainAdventureStage,
+		string CompletedAdventureTutorialIdsCsv,
 		string SelectedAvatarId,
 		string PlayerName,
 		string PendingAvatarUnlockQueue,
@@ -45,6 +49,7 @@ public sealed record GameProgressData(
 			return new GameProgressData(
 				GameSaveProfileRepository.CurrentProgressSchemaVersion,
 				0,
+				string.Empty,
 				CharacterAvatarCatalog.DefaultAvatarId,
 				PlayerNameRules.DefaultPlayerName,
 				string.Empty,
@@ -56,9 +61,27 @@ public sealed record GameProgressData(
 
 		public static GameProgressData FromDictionary(Godot.Collections.Dictionary data, GameProgressData fallback)
 		{
+			int schemaVersion = GameSaveProfileRepository.ReadInt(
+				data,
+				GameSaveProfileRepository.ProgressSchemaVersionKey,
+				fallback.SchemaVersion);
+			int legacyHighestStage = GameSaveProfileRepository.ReadInt(
+				data,
+				GameSaveProfileRepository.ProgressHighestCompletedStageKey,
+				0);
+			int mappedMainStage = AdventureCampaignCatalog.MapLegacyCompletedMainStage(legacyHighestStage);
+			int highestMainStage = GameSaveProfileRepository.ReadInt(
+				data,
+				GameSaveProfileRepository.ProgressHighestCompletedMainAdventureStageKey,
+				mappedMainStage);
+
 			return new GameProgressData(
-				GameSaveProfileRepository.ReadInt(data, GameSaveProfileRepository.ProgressSchemaVersionKey, fallback.SchemaVersion),
-				GameSaveProfileRepository.ReadInt(data, GameSaveProfileRepository.ProgressHighestCompletedStageKey, fallback.HighestCompletedStage),
+				schemaVersion,
+				highestMainStage,
+				GameSaveProfileRepository.ReadString(
+					data,
+					GameSaveProfileRepository.ProgressCompletedAdventureTutorialIdsCsvKey,
+					fallback.CompletedAdventureTutorialIdsCsv),
 				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressSelectedAvatarIdKey, fallback.SelectedAvatarId),
 				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPlayerNameKey, fallback.PlayerName),
 				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPendingAvatarUnlockQueueKey, fallback.PendingAvatarUnlockQueue),
@@ -73,7 +96,8 @@ public sealed record GameProgressData(
 			return new Godot.Collections.Dictionary
 			{
 				[GameSaveProfileRepository.ProgressSchemaVersionKey] = SchemaVersion,
-				[GameSaveProfileRepository.ProgressHighestCompletedStageKey] = HighestCompletedStage,
+				[GameSaveProfileRepository.ProgressHighestCompletedMainAdventureStageKey] = HighestCompletedMainAdventureStage,
+				[GameSaveProfileRepository.ProgressCompletedAdventureTutorialIdsCsvKey] = CompletedAdventureTutorialIdsCsv,
 				[GameSaveProfileRepository.ProgressSelectedAvatarIdKey] = SelectedAvatarId,
 				[GameSaveProfileRepository.ProgressPlayerNameKey] = PlayerName,
 				[GameSaveProfileRepository.ProgressPendingAvatarUnlockQueueKey] = PendingAvatarUnlockQueue,
@@ -91,7 +115,7 @@ public sealed record GameProgressData(
 				exists,
 				PlayerName,
 				SelectedAvatarId,
-				HighestCompletedStage,
+				HighestCompletedMainAdventureStage,
 				PlaytimeSeconds,
 				UpdatedUnixTime);
 		}
@@ -107,11 +131,17 @@ public sealed record GameProgressData(
 
 			return this with
 			{
-				SchemaVersion = Math.Max(1, SchemaVersion),
-				HighestCompletedStage = Math.Max(0, HighestCompletedStage),
+				SchemaVersion = Math.Clamp(SchemaVersion, 1, GameSaveProfileRepository.CurrentProgressSchemaVersion),
+				HighestCompletedMainAdventureStage = Math.Clamp(
+					HighestCompletedMainAdventureStage,
+					0,
+					AdventureCampaignCatalog.MainStageCount),
+				CompletedAdventureTutorialIdsCsv = AdventureCampaignCatalog.NormalizeCompletedTutorialIdsCsv(
+					CompletedAdventureTutorialIdsCsv),
 				SelectedAvatarId = selectedAvatarId,
 				PlayerName = PlayerNameRules.Normalize(PlayerName),
-				PendingAvatarUnlockQueue = PendingAvatarUnlockQueue.Trim(),
+				PendingAvatarUnlockQueue = AdventureCampaignCatalog.NormalizePendingAvatarUnlockQueueCsv(
+					PendingAvatarUnlockQueue),
 				PendingAdventureRunJson = string.IsNullOrWhiteSpace(PendingAdventureRunJson)
 					? string.Empty
 					: PendingAdventureRunJson,
@@ -120,6 +150,9 @@ public sealed record GameProgressData(
 				UpdatedUnixTime = updatedUnixTime,
 			};
 		}
+
+		[Obsolete("Use HighestCompletedMainAdventureStage.")]
+		public int HighestCompletedStage => HighestCompletedMainAdventureStage;
 	}
 
 	public readonly record struct SaveSlotMetadata(
@@ -127,7 +160,7 @@ public sealed record GameProgressData(
 		bool Exists,
 		string PlayerName,
 		string SelectedAvatarId,
-		int HighestCompletedStage,
+		int HighestCompletedMainAdventureStage,
 		double PlaytimeSeconds,
 		long UpdatedUnixTime);
 
@@ -230,6 +263,7 @@ public sealed record GameProgressData(
 		var progressData = new GameProgressData(
 			GameSaveProfileRepository.CurrentProgressSchemaVersion,
 			0,
+			string.Empty,
 			selectedAvatarId,
 			playerName,
 			string.Empty,

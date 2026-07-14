@@ -89,8 +89,11 @@ public static partial class CharacterAvatarCatalog
 		int highestCompletedStage = LoadHighestCompletedAdventureStage();
 		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
+			bool isMainAvatar = AdventureCampaignCatalog.TryGetMainStageIndex(
+				avatar.Id,
+				out int mainStageIndex);
 			if (IsStarterAvatar(avatar.Id)
-				|| (IsPlayerObtainableAdventureAvatar(avatar) && avatar.AdventureStageNumber <= highestCompletedStage))
+				|| (isMainAvatar && mainStageIndex <= highestCompletedStage))
 			{
 				unlockedAvatars.Add(avatar);
 			}
@@ -107,43 +110,53 @@ public static partial class CharacterAvatarCatalog
 			return true;
 		}
 
-		int stageNumber = GetAdventureStageNumber(normalized);
-		return IsPlayerObtainableAdventureStage(stageNumber) && stageNumber <= LoadHighestCompletedAdventureStage();
+		return AdventureCampaignCatalog.TryGetMainStageIndex(normalized, out int mainStageIndex)
+			&& IsPlayerObtainableAdventureStage(mainStageIndex)
+			&& mainStageIndex <= LoadHighestCompletedAdventureStage();
 	}
 
 	public static int GetAdventureStageCount()
 	{
-		int stageCount = 0;
-		foreach (CharacterAvatarDefinition avatar in Avatars)
-		{
-			stageCount = Math.Max(stageCount, avatar.AdventureStageNumber);
-		}
-
-		return stageCount;
+		return AdventureCampaignCatalog.MainStageCount;
 	}
 
 	public static bool IsAdventureStageCompleted(int stageNumber)
 	{
-		return stageNumber > 0 && stageNumber <= LoadHighestCompletedAdventureStage();
+		return stageNumber is >= 1 and <= AdventureCampaignCatalog.MainStageCount
+			&& stageNumber <= LoadHighestCompletedAdventureStage();
 	}
 
 	public static bool IsAdventureStageAvailable(int stageNumber)
 	{
-		return stageNumber > 0
-			&& stageNumber <= GetAdventureStageCount()
+		return stageNumber is >= 1 and <= AdventureCampaignCatalog.MainStageCount
 			&& stageNumber == LoadHighestCompletedAdventureStage() + 1;
 	}
 
 	public static bool IsAdventureStageUnlocked(int stageNumber)
 	{
-		return stageNumber > 0
-			&& stageNumber <= GetAdventureStageCount()
+		return stageNumber is >= 1 and <= AdventureCampaignCatalog.MainStageCount
 			&& stageNumber <= LoadHighestCompletedAdventureStage() + 1;
 	}
 
 	public static int GetAdventureStageNumber(string avatarId)
 	{
 		string normalized = NormalizeAvatarId(avatarId);
+		if (AdventureCampaignCatalog.TryGetMainStageIndex(normalized, out int mainStageIndex))
+		{
+			return AdventureCampaignCatalog.LegacyAvatarStageForMainStage(mainStageIndex);
+		}
+
+		for (int tutorialIndex = 0; tutorialIndex < AdventureCampaignCatalog.Tutorial.Count; tutorialIndex++)
+		{
+			if (string.Equals(
+				AdventureCampaignCatalog.Tutorial[tutorialIndex].EnemyAvatarId,
+				normalized,
+				StringComparison.Ordinal))
+			{
+				return tutorialIndex + 1;
+			}
+		}
+
 		foreach (CharacterAvatarDefinition avatar in Avatars)
 		{
 			if (string.Equals(avatar.Id, normalized, StringComparison.Ordinal))
@@ -157,12 +170,22 @@ public static partial class CharacterAvatarCatalog
 
 	public static string GetAdventureAvatarIdForStage(int stageNumber)
 	{
-		foreach (CharacterAvatarDefinition avatar in Avatars)
+		return AdventureCampaignCatalog.GetMainAvatarId(stageNumber) is string avatarId
+			&& !string.IsNullOrEmpty(avatarId)
+			? avatarId
+			: DefaultAvatarId;
+	}
+
+	public static string GetLegacyAdventureAvatarIdForStage(int legacyStageNumber)
+	{
+		if (AdventureCampaignCatalog.TryMapLegacyRunStage(legacyStageNumber, out int mainStageIndex))
 		{
-			if (avatar.AdventureStageNumber == stageNumber)
-			{
-				return avatar.Id;
-			}
+			return AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex);
+		}
+
+		if (legacyStageNumber is 1 or 2)
+		{
+			return AdventureCampaignCatalog.Tutorial[legacyStageNumber - 1].EnemyAvatarId;
 		}
 
 		return DefaultAvatarId;
@@ -170,39 +193,76 @@ public static partial class CharacterAvatarCatalog
 
 	public static int LoadHighestCompletedAdventureStage()
 	{
-		int highestCompletedStage = GameSaveStore.LoadActiveProfile().HighestCompletedStage;
-		return Mathf.Clamp(highestCompletedStage, 0, GetAdventureStageCount());
+		int highestCompletedStage = GameSaveStore.LoadActiveProfile().HighestCompletedMainAdventureStage;
+		return Mathf.Clamp(highestCompletedStage, 0, AdventureCampaignCatalog.MainStageCount);
+	}
+
+	public static bool IsTutorialCompleted(string completedTutorialIdsCsv, string tutorialAvatarId)
+	{
+		return AdventureCampaignCatalog.IsTutorialCompleted(completedTutorialIdsCsv, tutorialAvatarId);
+	}
+
+	public static bool IsTutorialCompleted(string tutorialAvatarId)
+	{
+		return IsTutorialCompleted(
+			GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+			tutorialAvatarId);
 	}
 
 	public static void RecordAdventureVictory(string enemyAvatarId)
 	{
 		string normalizedAvatarId = NormalizeAvatarId(enemyAvatarId);
-		int stageNumber = GetAdventureStageNumber(normalizedAvatarId);
-		if (stageNumber <= 0)
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		if (AdventureCampaignCatalog.IsTutorialAvatar(normalizedAvatarId))
+		{
+			string completedTutorialIds = AdventureCampaignCatalog.AddCompletedTutorialId(
+				profile.CompletedAdventureTutorialIdsCsv,
+				normalizedAvatarId);
+			if (!string.Equals(completedTutorialIds, profile.CompletedAdventureTutorialIdsCsv, StringComparison.Ordinal))
+			{
+				Error tutorialSaveResult = GameSaveStore.SaveActiveProfile(profile with
+				{
+					CompletedAdventureTutorialIdsCsv = completedTutorialIds,
+				});
+				if (tutorialSaveResult != Error.Ok)
+				{
+					GD.PushWarning($"Failed to save adventure tutorial progress: {tutorialSaveResult}");
+				}
+			}
+
+			return;
+		}
+
+	if (!AdventureCampaignCatalog.TryGetMainStageIndex(normalizedAvatarId, out int mainStageIndex))
 		{
 			return;
 		}
 
-		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
-		int previousHighestStage = Mathf.Clamp(profile.HighestCompletedStage, 0, GetAdventureStageCount());
-		if (stageNumber <= previousHighestStage)
+		int previousHighestStage = Mathf.Clamp(
+			profile.HighestCompletedMainAdventureStage,
+			0,
+			AdventureCampaignCatalog.MainStageCount);
+		if (mainStageIndex <= previousHighestStage)
 		{
 			return;
 		}
-		if (stageNumber != previousHighestStage + 1)
+		if (mainStageIndex != previousHighestStage + 1)
 		{
 			return;
 		}
 
 		var pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue();
-		if (IsPlayerObtainableAdventureStage(stageNumber))
+		if (IsPlayerObtainableAdventureStage(mainStageIndex))
 		{
-			pendingUnlocks.Add(normalizedAvatarId);
+			if (!pendingUnlocks.Contains(normalizedAvatarId))
+			{
+				pendingUnlocks.Add(normalizedAvatarId);
+			}
 		}
 
 		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
 		{
-			HighestCompletedStage = stageNumber,
+			HighestCompletedMainAdventureStage = mainStageIndex,
 			PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(pendingUnlocks),
 		});
 		if (saveResult != Error.Ok)
@@ -224,8 +284,9 @@ public static partial class CharacterAvatarCatalog
 			string avatarId = pendingUnlocks[0];
 			pendingUnlocks.RemoveAt(0);
 			string normalizedAvatarId = NormalizeAvatarId(avatarId);
-			int stageNumber = GetAdventureStageNumber(normalizedAvatarId);
-			if (IsPlayerObtainableAdventureStage(stageNumber) && stageNumber <= LoadHighestCompletedAdventureStage())
+			if (AdventureCampaignCatalog.TryGetMainStageIndex(normalizedAvatarId, out int mainStageIndex)
+				&& IsPlayerObtainableAdventureStage(mainStageIndex)
+				&& mainStageIndex <= LoadHighestCompletedAdventureStage())
 			{
 				Error consumeSaveResult = SavePendingAdventureAvatarUnlockQueue(pendingUnlocks);
 				if (consumeSaveResult != Error.Ok)
@@ -258,8 +319,8 @@ public static partial class CharacterAvatarCatalog
 
 	private static bool IsPlayerObtainableAdventureStage(int stageNumber)
 	{
-		// Adventure enemy avatars are no longer unlockable for player use.
-		return false;
+		return AdventureCampaignCatalog.IsMainAvatar(
+			AdventureCampaignCatalog.GetMainAvatarId(stageNumber));
 	}
 
 	public static int GetIdleFrameCount(string avatarRoot)

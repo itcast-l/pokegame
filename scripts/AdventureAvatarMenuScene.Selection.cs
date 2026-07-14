@@ -23,9 +23,9 @@ public partial class AdventureAvatarMenuScene
 		foreach ((string avatarId, OceanMenuButtonFrame frame) in _avatarFrames)
 		{
 			int stageNumber = GetStageNumber(avatarId);
-			bool isUnlocked = IsStageUnlocked(stageNumber);
-			bool isCompleted = CharacterAvatarCatalog.IsAdventureStageCompleted(stageNumber);
-			bool isAvailable = CharacterAvatarCatalog.IsAdventureStageAvailable(stageNumber);
+			bool isUnlocked = IsStageUnlocked(avatarId);
+			bool isCompleted = IsStageCompleted(avatarId);
+			bool isAvailable = IsStageAvailable(avatarId);
 			frame.Selected = avatarId == _selectedAvatarId;
 			frame.Modulate = isUnlocked ? Colors.White : new Color(0.48f, 0.58f, 0.62f, 0.58f);
 			frame.QueueRedraw();
@@ -73,11 +73,11 @@ public partial class AdventureAvatarMenuScene
 
 		_previewStatusLabel.AddThemeColorOverride(
 			"font_color",
-			GetStageStatusColor(
-				CharacterAvatarCatalog.IsAdventureStageCompleted(stageNumber),
-				CharacterAvatarCatalog.IsAdventureStageAvailable(stageNumber),
-				IsStageUnlocked(stageNumber)));
-		_startButton.Disabled = !IsStageUnlocked(stageNumber);
+				GetStageStatusColor(
+					IsStageCompleted(avatarDefinition.Id),
+					IsStageAvailable(avatarDefinition.Id),
+					IsStageUnlocked(avatarDefinition.Id)));
+		_startButton.Disabled = !IsStageUnlocked(avatarDefinition.Id);
 
 		if (_previewAvatar != null && GodotObject.IsInstanceValid(_previewAvatar))
 		{
@@ -90,10 +90,27 @@ public partial class AdventureAvatarMenuScene
 
 	private string GetInitialAvatarId()
 	{
+		if (_selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId)
+		{
+			foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
+			{
+				if (!CharacterAvatarCatalog.IsTutorialCompleted(
+					GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+					avatarDefinition.Id))
+				{
+					return avatarDefinition.Id;
+				}
+			}
+
+			return GetSelectedAdventureEnemyDefinitions().Count > 0
+				? GetSelectedAdventureEnemyDefinitions()[0].Id
+				: CharacterAvatarCatalog.DefaultAvatarId;
+		}
+
 		int nextStage = Mathf.Clamp(
 			CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() + 1,
 			1,
-			CharacterAvatarCatalog.GetAdventureStageCount());
+			AdventureCampaignCatalog.MainStageCount);
 		CharacterAvatarDefinition? nextEnemy = GetSelectedAdventureEnemyForStage(nextStage);
 		if (nextEnemy != null)
 		{
@@ -102,7 +119,7 @@ public partial class AdventureAvatarMenuScene
 
 		foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
 		{
-			if (IsStageUnlocked(avatarDefinition.AdventureStageNumber))
+			if (IsStageUnlocked(avatarDefinition.Id))
 			{
 				return avatarDefinition.Id;
 			}
@@ -158,29 +175,64 @@ public partial class AdventureAvatarMenuScene
 
 	private bool IsStageUnlocked(string avatarId)
 	{
-		return IsStageUnlocked(GetStageNumber(avatarId));
+		if (_selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId)
+		{
+			return AdventureCampaignCatalog.IsTutorialAvatar(avatarId);
+		}
+
+		return CharacterAvatarCatalog.IsAdventureStageUnlocked(GetStageNumber(avatarId));
 	}
 
-	private static bool IsStageUnlocked(int stageNumber)
+	private bool IsStageCompleted(string avatarId)
 	{
-		return CharacterAvatarCatalog.IsAdventureStageUnlocked(stageNumber);
+		if (_selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId)
+		{
+			return CharacterAvatarCatalog.IsTutorialCompleted(
+				GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+				avatarId);
+		}
+
+		return CharacterAvatarCatalog.IsAdventureStageCompleted(GetStageNumber(avatarId));
+	}
+
+	private bool IsStageAvailable(string avatarId)
+	{
+		if (_selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId)
+		{
+			return !IsStageCompleted(avatarId);
+		}
+
+		return CharacterAvatarCatalog.IsAdventureStageAvailable(GetStageNumber(avatarId));
 	}
 
 	private string GetStageStatusText(int stageNumber)
 	{
-		if (CharacterAvatarCatalog.IsAdventureStageCompleted(stageNumber))
+		if (IsStageCompleted(GetAvatarIdForStage(stageNumber)))
 		{
 			return Tr("ADVENTURE_COMPLETED").ToString();
 		}
 
-		if (CharacterAvatarCatalog.IsAdventureStageAvailable(stageNumber))
+		if (IsStageAvailable(GetAvatarIdForStage(stageNumber)))
 		{
 			return Tr("ADVENTURE_AVAILABLE").ToString();
 		}
 
-		return IsStageUnlocked(stageNumber)
+		return IsStageUnlocked(GetAvatarIdForStage(stageNumber))
 			? Tr("ADVENTURE_TEST_AVAILABLE").ToString()
 			: Tr("ADVENTURE_LOCKED").ToString();
+	}
+
+	private string GetAvatarIdForStage(int stageNumber)
+	{
+		foreach (AdventureLevelDefinition level in GetSelectedAdventureDefinition().Levels)
+		{
+			if (GetCampaignStageIndex(level, GetSelectedAdventureDefinition().Id) == stageNumber)
+			{
+				return level.EnemyAvatarId;
+			}
+		}
+
+		return CharacterAvatarCatalog.DefaultAvatarId;
 	}
 
 	private static Color GetStageStatusColor(bool isCompleted, bool isAvailable, bool isUnlocked)

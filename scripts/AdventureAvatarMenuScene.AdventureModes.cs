@@ -1,46 +1,42 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
-	private const string TutorialAdventureId = "tutorial";
-	private const string DeepTideThroneAdventureId = "deep_tide_throne";
+	private const string TutorialAdventureId = AdventureCampaignCatalog.TutorialCampaignId;
+	private const string DeepTideThroneAdventureId = AdventureCampaignCatalog.MainCampaignId;
 
-	private static readonly AdventureLevelDefinition[] TutorialLevels =
-	{
-		new("fish", TutorialGameBoardScenePath),
-		new("lanternfish", ItemTutorialGameBoardScenePath),
-	};
+	private static readonly AdventureModeDefinition[] AdventureModes = BuildAdventureModes();
 
-	private static readonly AdventureLevelDefinition[] DeepTideThroneLevels =
+	private static AdventureModeDefinition[] BuildAdventureModes()
 	{
-		new("shrimp"),
-		new("crab"),
-		new("jellyfish"),
-		new("manta_ray"),
-		new("garden_eel"),
-		new("sea_slug"),
-		new("nautilus"),
-		new("narwhal"),
-		new("leafy_seadragon"),
-		new("dragon_prince_j"),
-		new("dragon_queen_q"),
-		new("boss_k"),
-	};
+		var modes = new AdventureModeDefinition[AdventureCampaignCatalog.All.Count];
+		for (int modeIndex = 0; modeIndex < AdventureCampaignCatalog.All.Count; modeIndex++)
+		{
+			AdventureCampaignDefinition campaign = AdventureCampaignCatalog.All[modeIndex];
+			var levels = new AdventureLevelDefinition[campaign.Levels.Count];
+			for (int levelIndex = 0; levelIndex < campaign.Levels.Count; levelIndex++)
+			{
+				AdventureCampaignLevel level = campaign.Levels[levelIndex];
+				levels[levelIndex] = new AdventureLevelDefinition(
+					level.EnemyAvatarId,
+					level.GameBoardScenePath,
+					level.MainStageIndex);
+			}
 
-	private static readonly AdventureModeDefinition[] AdventureModes =
-	{
-		new(
-			TutorialAdventureId,
-			"ADVENTURE_TUTORIAL",
-			TutorialLevels,
-			new Color(0.82f, 0.97f, 0.66f)),
-		new(
-			DeepTideThroneAdventureId,
-			"ADVENTURE_DEEP_TIDE_THRONE",
-			DeepTideThroneLevels,
-			new Color(0.58f, 0.98f, 1.0f)),
-	};
+			Color accentColor = campaign.Id == AdventureCampaignCatalog.TutorialCampaignId
+				? new Color(0.82f, 0.97f, 0.66f)
+				: new Color(0.58f, 0.98f, 1.0f);
+			modes[modeIndex] = new AdventureModeDefinition(
+				campaign.Id,
+				campaign.NameKey,
+				levels,
+				accentColor);
+		}
+
+		return modes;
+	}
 
 	private void BindAdventureList()
 	{
@@ -110,7 +106,8 @@ public partial class AdventureAvatarMenuScene
 		foreach (AdventureLevelDefinition level in adventureMode.Levels)
 		{
 			CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(level.EnemyAvatarId);
-			if (avatarDefinition.Id == CharacterAvatarCatalog.DefaultAvatarId || avatarDefinition.AdventureStageNumber <= 0)
+			if (avatarDefinition.Id == CharacterAvatarCatalog.DefaultAvatarId
+				|| GetCampaignStageIndex(level, adventureMode.Id) <= 0)
 			{
 				continue;
 			}
@@ -136,7 +133,7 @@ public partial class AdventureAvatarMenuScene
 				continue;
 			}
 
-			if (avatarDefinition.AdventureStageNumber == stageNumber)
+			if (GetCampaignStageIndex(level, GetSelectedAdventureDefinition().Id) == stageNumber)
 			{
 				return avatarDefinition;
 			}
@@ -191,23 +188,17 @@ public partial class AdventureAvatarMenuScene
 
 	private string GetInitialAdventureId()
 	{
-		int nextStage = Mathf.Clamp(
-			CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() + 1,
-			1,
-			CharacterAvatarCatalog.GetAdventureStageCount());
-		foreach (AdventureModeDefinition adventureMode in AdventureModes)
+		if (!CharacterAvatarCatalog.IsTutorialCompleted(
+			GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+			AdventureCampaignCatalog.Tutorial[0].EnemyAvatarId)
+			|| !CharacterAvatarCatalog.IsTutorialCompleted(
+				GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+				AdventureCampaignCatalog.Tutorial[1].EnemyAvatarId))
 		{
-			foreach (AdventureLevelDefinition level in adventureMode.Levels)
-			{
-				CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(level.EnemyAvatarId);
-				if (avatarDefinition.AdventureStageNumber == nextStage)
-				{
-					return adventureMode.Id;
-				}
-			}
+			return TutorialAdventureId;
 		}
 
-		return AdventureModes[0].Id;
+		return DeepTideThroneAdventureId;
 	}
 
 	private static string GetAdventureIdForAvatar(string avatarId)
@@ -254,18 +245,45 @@ public partial class AdventureAvatarMenuScene
 		return AdventureModes[0].Id;
 	}
 
+	private static int GetCampaignStageIndex(AdventureLevelDefinition level, string adventureId)
+	{
+		if (adventureId == AdventureCampaignCatalog.MainCampaignId
+			&& AdventureCampaignCatalog.TryGetMainStageIndex(level.EnemyAvatarId, out int mainStageIndex))
+		{
+			return mainStageIndex;
+		}
+
+		for (int index = 0; index < AdventureCampaignCatalog.Tutorial.Count; index++)
+		{
+			if (string.Equals(
+				AdventureCampaignCatalog.Tutorial[index].EnemyAvatarId,
+				level.EnemyAvatarId,
+				StringComparison.Ordinal))
+			{
+				return index + 1;
+			}
+		}
+
+		return 0;
+	}
+
 	private sealed class AdventureLevelDefinition
 	{
-		public AdventureLevelDefinition(string enemyAvatarId, string? gameBoardScenePath = null)
+		public AdventureLevelDefinition(
+			string enemyAvatarId,
+			string? gameBoardScenePath = null,
+			int mainStageIndex = 0)
 		{
 			EnemyAvatarId = enemyAvatarId;
 			GameBoardScenePath = string.IsNullOrWhiteSpace(gameBoardScenePath)
 				? AdventureAvatarMenuScene.GameBoardScenePath
 				: gameBoardScenePath;
+			MainStageIndex = mainStageIndex;
 		}
 
 		public string EnemyAvatarId { get; }
 		public string GameBoardScenePath { get; }
+		public int MainStageIndex { get; }
 	}
 
 	private sealed class AdventureModeDefinition

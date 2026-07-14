@@ -67,6 +67,7 @@ public partial class AdventureAvatarMenuScene : Control
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		MouseFilter = MouseFilterEnum.Ignore;
+		GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		GetAdventureRunSessionStore()?.ReloadFromActiveProfile();
 
 		BindUi();

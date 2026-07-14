@@ -226,7 +226,7 @@ public partial class GameBoardScene
 
 	private bool IsNetworkMultiplayerMode()
 	{
-		return !string.IsNullOrWhiteSpace(_networkSessionId);
+		return _gameModePolicy.IsNetworkStandard || !string.IsNullOrWhiteSpace(_networkSessionId);
 	}
 
 	private bool IsNetworkHost()
