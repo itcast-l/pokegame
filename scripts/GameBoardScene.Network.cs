@@ -73,9 +73,10 @@ public partial class GameBoardScene
 			_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
 			NetworkManager? networkManager = GetNetworkManager();
 			bool predictionStarted = BeginPredictedNetworkItemCardPlay(itemHandIndex, turnSequenceGeneration);
-			if (predictionStarted)
+			networkManager?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
+			if (!predictionStarted)
 			{
-				networkManager?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
+				return;
 			}
 
 			if (!await CompletePredictedNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration))
@@ -175,9 +176,10 @@ public partial class GameBoardScene
 			_networkPendingTurnSequenceGeneration = turnSequenceGeneration;
 			NetworkManager? networkManager = GetNetworkManager();
 			bool predictionStarted = BeginPredictedNetworkHandCardPlay(handIndex, turnSequenceGeneration);
-			if (predictionStarted)
+			networkManager?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
+			if (!predictionStarted)
 			{
-				networkManager?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
+				return;
 			}
 
 			if (!await CompletePredictedNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration))

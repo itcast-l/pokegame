@@ -35,6 +35,11 @@ public partial class GameBoardScene
 			&& (_networkPendingItemHandIndex >= 0 || handIndex == _networkPendingHandIndex);
 	}
 
+	internal bool IsNetworkGameOver()
+	{
+		return IsGameOver();
+	}
+
 	internal bool IsNetworkItemCardLocked(int playerIndex, int itemHandIndex)
 	{
 		return IsNetworkMultiplayerMode()

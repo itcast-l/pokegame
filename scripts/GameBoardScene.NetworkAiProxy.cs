@@ -109,6 +109,13 @@ public partial class GameBoardScene
 		return GetNetworkManager()?.IsSeatAiControlled(_currentTurnPlayerIndex) ?? false;
 	}
 
+	private bool IsNetworkHumanControlledSeat(int seatIndex)
+	{
+		return IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& !(GetNetworkManager()?.IsSeatAiControlled(seatIndex) ?? false);
+	}
+
 	private async Task ResolveNetworkAiProxyTurnsAsync(int turnSequenceGeneration)
 	{
 		if (_networkAiProxyTurnRunning)

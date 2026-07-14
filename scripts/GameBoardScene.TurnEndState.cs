@@ -142,6 +142,11 @@ public partial class GameBoardScene
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
+		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		{
+			int winnerSnapshotId = CreateNextNetworkSnapshotId();
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, winnerSnapshotId);
+		}
 		ShowWinnerSequence(playerIndex);
 	}
 
@@ -153,6 +158,13 @@ public partial class GameBoardScene
 	private bool CanMainPlayerAct()
 	{
 		if (IsAdventureTutorialBlockingMainPlayerAction())
+		{
+			return false;
+		}
+
+		if (IsNetworkMultiplayerMode()
+			&& !IsNetworkHost()
+			&& NetworkVisualPlayback.IsProcessing)
 		{
 			return false;
 		}

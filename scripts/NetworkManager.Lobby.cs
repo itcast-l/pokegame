@@ -38,7 +38,7 @@ public partial class NetworkManager
 		_config = _config with
 		{
 			MatchId = Guid.NewGuid().ToString("N"),
-			MatchSeed = (long)GD.Randi(),
+			MatchSeed = ResolveMatchSeedForStart(),
 		};
 		InitializeMatchSeatControlStates();
 		SetState(NetworkSessionState.Starting);
@@ -46,6 +46,14 @@ public partial class NetworkManager
 		Godot.Collections.Dictionary bootstrap = BuildMatchBootstrap();
 		Rpc(MethodName.RpcBeginSceneLoad, bootstrap);
 		RpcBeginSceneLoad(bootstrap);
+	}
+
+	private static long ResolveMatchSeedForStart()
+	{
+		string configuredSeed = OS.GetEnvironment("CODEX_LAN_MATCH_SEED").Trim();
+		return long.TryParse(configuredSeed, out long seed) && seed != 0
+			? seed
+			: (long)GD.Randi();
 	}
 
 	public void LeaveSession()
@@ -403,6 +411,7 @@ public partial class NetworkManager
 		EmitSignal(SignalName.BoardInitialize, payload);
 		if (GetTree().CurrentScene is GameBoardScene gameBoard)
 		{
+			gameBoard.Set("local_player_index", LocalSeatIndex);
 			gameBoard.ApplyNetworkBoardInitialize(payload);
 		}
 	}

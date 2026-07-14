@@ -598,8 +598,29 @@ public partial class GameBoardScene
 
 	private Godot.Collections.Array BuildSeatControlStatesArray()
 	{
-		return GetNetworkManager()?.GetSeatControlStatesVariant(includeReconnectTokens: false)
-			?? new Godot.Collections.Array();
+		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
+		{
+			return GetNetworkManager()?.GetSeatControlStatesVariant(includeReconnectTokens: false)
+				?? new Godot.Collections.Array();
+		}
+
+		// A client must fingerprint the states it actually applied from the
+		// authority snapshot. Its NetworkManager owns transport-local state and
+		// may not have the host's roster entries at all.
+		var result = new Godot.Collections.Array();
+		foreach (SeatControlState state in _networkSeatControlStates)
+		{
+			result.Add(new Godot.Collections.Dictionary
+			{
+				["seat_index"] = state.SeatIndex,
+				["mode"] = state.Mode.ToString(),
+				["peer_id"] = state.PeerId,
+				["stable_user_id"] = state.StableUserId,
+				["reconnect_token"] = string.Empty,
+			});
+		}
+
+		return result;
 	}
 
 	private static Godot.Collections.Array BuildIntArray(int[] values, int count)

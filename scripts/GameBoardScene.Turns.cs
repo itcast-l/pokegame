@@ -15,7 +15,10 @@ public partial class GameBoardScene
 		_isResolvingTurnSequence = true;
 		try
 		{
-			while (turnSequenceGeneration == _turnSequenceGeneration && _currentTurnPlayerIndex != MainPlayerIndex && !IsGameOver())
+			while (turnSequenceGeneration == _turnSequenceGeneration
+				&& _currentTurnPlayerIndex != MainPlayerIndex
+				&& !IsGameOver()
+				&& !IsNetworkHumanControlledSeat(_currentTurnPlayerIndex))
 			{
 				int playerIndex = _currentTurnPlayerIndex;
 				if (playerIndex >= player_count)

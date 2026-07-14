@@ -435,7 +435,8 @@ public partial class NetworkManager
 		if (!CanAcceptRemoteBoardActionFromSeat(actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, handIndex);
-			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat)
+			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat
+				&& !gameBoardForRejectedSeat.IsNetworkGameOver())
 			{
 				SendBoardSnapshotToPeerFromHost(
 					gameBoardForRejectedSeat,
@@ -459,7 +460,10 @@ public partial class NetworkManager
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, handIndex);
-			SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+			if (!gameBoard.IsNetworkGameOver())
+			{
+				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+			}
 		}
 	}
 
@@ -481,7 +485,8 @@ public partial class NetworkManager
 		if (!CanAcceptRemoteBoardActionFromSeat(actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, itemHandIndex);
-			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat)
+			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat
+				&& !gameBoardForRejectedSeat.IsNetworkGameOver())
 			{
 				SendBoardSnapshotToPeerFromHost(
 					gameBoardForRejectedSeat,
@@ -505,7 +510,10 @@ public partial class NetworkManager
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, itemHandIndex);
-			SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+			if (!gameBoard.IsNetworkGameOver())
+			{
+				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+			}
 		}
 	}
 
@@ -527,7 +535,8 @@ public partial class NetworkManager
 		if (!CanAcceptRemoteBoardActionFromSeat(actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.ActionInProgress, turnSequenceGeneration, -1);
-			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat)
+			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat
+				&& !gameBoardForRejectedSeat.IsNetworkGameOver())
 			{
 				SendBoardSnapshotToPeerFromHost(
 					gameBoardForRejectedSeat,
@@ -552,7 +561,10 @@ public partial class NetworkManager
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, -1);
-			SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+			if (!gameBoard.IsNetworkGameOver())
+			{
+				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+			}
 		}
 	}
 

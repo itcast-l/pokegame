@@ -31,16 +31,16 @@ public partial class GameBoardScene
 			return;
 		}
 
-			if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent)
-				|| visualEvent.SnapshotId <= _networkLastAppliedSnapshotId)
+		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent)
+			|| visualEvent.SnapshotId <= _networkLastAppliedSnapshotId)
 		{
 			return;
 		}
 
-			NetworkVisualPlayback.Enqueue(visualEvent);
-		}
+		NetworkVisualPlayback.Enqueue(visualEvent);
+	}
 
-		private bool TryDecodeNetworkVisualEvent(Godot.Collections.Dictionary payload, out NetworkVisualEvent visualEvent)
+	private bool TryDecodeNetworkVisualEvent(Godot.Collections.Dictionary payload, out NetworkVisualEvent visualEvent)
 	{
 		visualEvent = default!;
 		EnsureNetworkCardCache();

@@ -211,13 +211,27 @@ public partial class GameBoardScene
 
 		cardVisual.Scale = Vector2.One * ReplacementDrawPeakScale;
 		cardVisual.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.92f);
-		Tween tween = cardVisual.CreateTween();
+		// Bind the visual tween to the board, not the rendered hand node. A
+		// network snapshot or prediction may replace that node while the settle
+		// effect is running; the playback queue still needs a bounded completion.
+		Tween tween = CreateTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Back);
 		tween.SetEase(Tween.EaseType.Out);
 		tween.TweenProperty(cardVisual, "scale", Vector2.One, ReplacementDrawSettleSeconds);
 		tween.TweenProperty(cardVisual, "modulate:a", 1.0f, ReplacementDrawSettleSeconds);
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await ToSignal(
+			GetTree().CreateTimer(ReplacementDrawSettleSeconds),
+			SceneTreeTimer.SignalName.Timeout);
+		if (GodotObject.IsInstanceValid(tween))
+		{
+			tween.Kill();
+		}
+		if (GodotObject.IsInstanceValid(cardVisual))
+		{
+			cardVisual.Scale = Vector2.One;
+			cardVisual.Modulate = Colors.White;
+		}
 	}
 
 	private static void UpdateDrawnCardFlightMotion(
