@@ -1142,6 +1142,28 @@ internal static partial class Program
 		False(text.Contains("if (_activeRenderMode == OceanRenderMode.Procedural)", StringComparison.Ordinal));
 	}
 
+	private static void DynamicEnvironmentLayersShareVisibilityAndThrottleContract()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string[] paths =
+		{
+			Path.Combine(repoRoot, "scripts", "MainMenuOceanDynamics.cs"),
+			Path.Combine(repoRoot, "scripts", "AdventureMapDynamicLayer.cs"),
+			Path.Combine(repoRoot, "scripts", "UnderwaterAmbientLayer.cs"),
+		};
+
+		foreach (string path in paths)
+		{
+			string text = File.ReadAllText(path);
+			True(text.Contains("VisibilityChanged += HandleVisibilityChanged", StringComparison.Ordinal));
+			True(text.Contains("SetProcess(isVisible)", StringComparison.Ordinal));
+			True(text.Contains("if (!IsVisibleInTree())", StringComparison.Ordinal));
+			True(text.Contains("NotificationResized", StringComparison.Ordinal));
+			True(text.Contains("image_update_fps", StringComparison.Ordinal));
+			True(text.Contains("redraw_fps", StringComparison.Ordinal));
+		}
+	}
+
 	private static void GameBoardDefersModeSpecificResourceLoadsUntilNeeded()
 	{
 		string repoRoot = FindRepositoryRoot();

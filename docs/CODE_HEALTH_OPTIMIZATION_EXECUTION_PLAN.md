@@ -916,6 +916,16 @@ bash tests/run_multiplayer_reconnect_smoke_suite.sh
 - 三者的 redraw / visible / rebuild 策略有统一说明
 - 至少没有继续彼此发散
 
+### P2-B Strategy Record (2026-07-15)
+
+三层当前遵循同一运行时约定，保留各自的资源类别和 procedural draw 细节：
+
+- `_Ready()` 和 `VisibilityChanged` 根据 `IsVisibleInTree()` 控制 `SetProcess()`；不可见时不推进 `_time`，也不继续做逐帧 redraw/update。
+- `NotificationResized` 允许触发 rebuild；零尺寸只记录 pending rebuild，尺寸有效后再建立 image instances。
+- procedural 模式只按 `redraw_fps` 节流 `QueueRedraw()`；image 模式只按 `image_update_fps` 更新 image instances。
+- image 模式只有在资源缺失、需要 procedural fallback 时才持续 `QueueRedraw()`；切换或 rebuild 的一次性清理绘制可以保留。
+- 目前不引入公共基类：主菜单气泡、adventure map ribbon、underwater profile 的资源加载和 fallback 组合仍有真实差异。
+
 ## 11. Suggested Work Breakdown By PR
 
 推荐拆成以下 PR 或提交批次：

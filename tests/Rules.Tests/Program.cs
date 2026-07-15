@@ -204,6 +204,7 @@ internal static partial class Program
 		Run("decorative ui art avoids unconditional per frame redraws", DecorativeUiArtAvoidsUnconditionalPerFrameRedraws);
 		Run("dynamic background layers gate image mode redraw to fallback needs", DynamicBackgroundLayersGateImageModeRedrawToFallbackNeeds);
 		Run("main menu ocean dynamics keeps procedural fallback paths in image mode", MainMenuOceanDynamicsKeepsProceduralFallbackPathsInImageMode);
+		Run("dynamic environment layers share visibility and throttle contract", DynamicEnvironmentLayersShareVisibilityAndThrottleContract);
 		Run("game board defers mode specific resource loads until needed", GameBoardDefersModeSpecificResourceLoadsUntilNeeded);
 		Run("game board optional fx resources are no longer statically preloaded", GameBoardOptionalFxResourcesAreNoLongerStaticallyPreloaded);
 		Run("game board warmup includes optional fx resource category", GameBoardWarmupIncludesOptionalFxResources);
