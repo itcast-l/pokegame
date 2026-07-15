@@ -1,7 +1,0 @@
-Use the provided manta ray sprite references as the visual identity reference. Preserve the same character: a cute but fierce magical manta ray named Youyou, blue-cyan body, deep violet crest and horns, glowing cyan freckles, bright expressive eyes, curled tail, compact chibi 2D game avatar silhouette, glossy underwater fantasy lighting, clean HD painterly sprite style with crisp readable edges.
-
-Create a 2x2 sprite animation concept sheet, exactly four equal invisible cells, no visible grid lines, no borders, no text, no labels, no UI. Solid flat #FF00FF magenta background only.
-
-Action: compact tide-surge attack body animation. Frame 1: wind-up, wings fold inward and body coils slightly, eyes focused. Frame 2: strike, wings sweep forward like a manta-fin slash, body lunges but stays centered. Frame 3: follow-through, curled tail and small water ribbon swirl tightly around the body. Frame 4: recovery, body opens back toward the idle pose with a fading small water shimmer.
-
-Keep the body centered in every cell, same character identity, same body scale, stable bottom anchor and same bounding box across all four frames. The full body, wing tips, tail, small water ribbon, and all glow accents must fit fully inside each cell with generous magenta margin. Do not add large detached slash arcs, projectiles, hit sparks, impact bursts, dust clouds, weapons, extra creatures, background scenery, or frame decorations.

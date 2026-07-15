@@ -61,7 +61,7 @@ For local Steam testing, keep `project.godot` `steam/initialization/app_id` on a
 
 ## Documentation
 
-- Roadmap and current sprint: [docs/ROADMAP.md](docs/ROADMAP.md), [docs/HIGH_PRIORITY_2_TO_3_WEEK_SPRINT_PLAN.md](docs/HIGH_PRIORITY_2_TO_3_WEEK_SPRINT_PLAN.md), [docs/HIGH_PRIORITY_SPRINT_TASK_BREAKDOWN.md](docs/HIGH_PRIORITY_SPRINT_TASK_BREAKDOWN.md)
+- Roadmap and current execution plan: [docs/ROADMAP.md](docs/ROADMAP.md), [docs/P0_GAMEPLAY_NETWORK_FOUNDATION_EXECUTION_PLAN.md](docs/P0_GAMEPLAY_NETWORK_FOUNDATION_EXECUTION_PLAN.md)
 - Resource baseline: [docs/RESOURCE_BASELINE.md](docs/RESOURCE_BASELINE.md)
 - Steam reconnect manual regression: [docs/STEAM_RECONNECT_REGRESSION.md](docs/STEAM_RECONNECT_REGRESSION.md)
 - Multiplayer authority model: [docs/NETWORK_AUTHORITY_MODEL.md](docs/NETWORK_AUTHORITY_MODEL.md)

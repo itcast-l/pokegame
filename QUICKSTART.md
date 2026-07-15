@@ -32,5 +32,5 @@ bash tests/run_multiplayer_reconnect_smoke_suite.sh
 - Main menu entry: `scripts/MainMenuScene.cs`
 - Adventure enemy selection: `scripts/AdventureAvatarMenuScene.cs`
 - Item-card catalog: `scripts/ItemCardCatalog.cs`
-- Special-card architecture: `docs/SPECIAL_CARD_SYSTEM.md`
+- Card-effect synchronization contract: `docs/CARD_EFFECT_SYNC_REQUIREMENTS.md`
 - Roadmap: `docs/ROADMAP.md`

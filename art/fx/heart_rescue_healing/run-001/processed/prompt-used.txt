@@ -1,1 +1,0 @@
-2D ocean-themed healing and revival VFX animation, exact 2x3 grid, 6 frames: droplets, forming ring, expanding ring, rising restorative energy, bright healing bloom, calm settling ring; cyan aqua seafoam white subtle violet highlights; transparent normalized FX frames; no text or UI; all effects contained in each cell.

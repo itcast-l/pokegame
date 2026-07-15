@@ -252,6 +252,14 @@ collect_missing_export_excludes() {
   local -a required_patterns=(
     "outputs/**"
     "**/*.debug-sse.log"
+    "art/**/raw/**"
+    "art/**/generated/**"
+    "art/**/raw-sheet.png"
+    "art/**/raw-sheet.png.import"
+    "art/**/raw-sheet-clean.png"
+    "art/**/raw-sheet-clean.png.import"
+    "art/**/sheet-transparent.png"
+    "art/**/sheet-transparent.png.import"
     "generated-images/*.png"
     "generated-images/*.png.import"
     "generated-images/**/debug/**"
@@ -284,6 +292,14 @@ collect_missing_export_excludes() {
 collect_missing_gitignore_patterns() {
   local output=""
   local -a required_patterns=(
+    "/art/**/raw/"
+    "/art/**/generated/"
+    "/art/**/raw-sheet.png"
+    "/art/**/raw-sheet.png.import"
+    "/art/**/raw-sheet-clean.png"
+    "/art/**/raw-sheet-clean.png.import"
+    "/art/**/sheet-transparent.png"
+    "/art/**/sheet-transparent.png.import"
     "/generated-images/upgrade-popup-assets/*/raw/"
     "/generated-images/upgrade-popup-assets/transparent-processing-meta.json"
     "/generated-images/upgrade-popup-assets/*.png"
@@ -346,10 +362,10 @@ fi
 print_section "Gitignore Coverage"
 MISSING_GITIGNORE_PATTERNS="$(collect_missing_gitignore_patterns)"
 if [ -n "$(printf '%s' "$MISSING_GITIGNORE_PATTERNS" | sed '/^$/d')" ]; then
-  print_risk ".gitignore is missing upgrade-popup source-only ignore rules ($(count_non_empty_lines "$MISSING_GITIGNORE_PATTERNS") missing)"
+  print_risk ".gitignore is missing source-only art ignore rules ($(count_non_empty_lines "$MISSING_GITIGNORE_PATTERNS") missing)"
   print_limited_list "$MISSING_GITIGNORE_PATTERNS"
 else
-  print_ok ".gitignore covers upgrade-popup source-only ignore rules"
+  print_ok ".gitignore covers source-only art ignore rules"
 fi
 
 print_section "Summary"

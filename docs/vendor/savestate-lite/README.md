@@ -5,7 +5,7 @@
 
 Godot 4 addon: **atomic** save files, rolling **`.bak`** backups, **schema versioning** with forward merge, and one **`SaveManager`** autoload for key–value data and named slots — without building a custom format from scratch.
 
-**Docs:** [Quick start](QUICKSTART.md) · [Full API](docs/API.md) · [Architecture & threading](docs/ARCHITECTURE.md) · [Migration (incl. `migration_required`)](docs/MIGRATION.md) · [Starter sample](samples/minimal-demo/README.md)
+**Docs:** [Quick start](QUICKSTART.md) · [Full API](API.md) · [Architecture & threading](ARCHITECTURE.md) · [Migration (incl. `migration_required`)](MIGRATION.md) · [Starter sample](../../../samples/minimal-demo/README.md)
 
 **v1.2:** typed `register_key` (with optional Save Browser color hints), `register_editor_hint`, debounced `mark_dirty`, `set_schema_migrations`, JSON export, `SaveComponent` / `CollectionLink` / `SaveStatePickupVacuum`, slot import/export helpers, Save Browser color picker + `SaveStateUnixDisplay`, `save_menu_lite.tscn`, and Pro `templates/save_menu_pro.tscn`.
 
@@ -15,7 +15,7 @@ Godot 4 addon: **atomic** save files, rolling **`.bak`** backups, **schema versi
 
 Godot projects often start with ad-hoc `FileAccess` writes. That becomes painful fast: torn writes after crashes, no backup story, and no clean way to evolve save data when you add fields. SaveState Lite centralizes **atomic commits** (write to temp → validate → rename), **optional `.bak`**, and a **single schema number** with merge-from-defaults for older files.
 
-**Technical challenges baked in:** careful ordering with temp files and rename for atomicity; keeping async Pro saves safe by **snapshotting on the main thread** before `WorkerThreadPool` I/O (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)); and editor/plugin ordering so Lite loads before Pro when both are enabled.
+**Technical challenges baked in:** careful ordering with temp files and rename for atomicity; keeping async Pro saves safe by **snapshotting on the main thread** before `WorkerThreadPool` I/O (see [ARCHITECTURE.md](ARCHITECTURE.md)); and editor/plugin ordering so Lite loads before Pro when both are enabled.
 
 See [CHANGELOG.md](CHANGELOG.md) — each version lists **Lite** (this repo) and **Pro** ([itch.io](https://chuumberry.itch.io/savestate-pro)) separately.
 
@@ -51,7 +51,7 @@ SaveManager.save_to_slot_sync(&"slot_1", {"player_health": 100})
 var data := SaveManager.load_from_slot_sync(&"slot_1")
 ```
 
-More patterns: **[QUICKSTART.md](QUICKSTART.md)**. Full method list: **[docs/API.md](docs/API.md)**.
+More patterns: **[QUICKSTART.md](QUICKSTART.md)**. Full method list: **[API.md](API.md)**.
 
 ---
 

@@ -68,8 +68,8 @@ Drop-in menu: instance `res://addons/savestate/templates/save_menu_lite.tscn`.
 
 ## Starter sample project
 
-Open `samples/minimal-demo/` after copying repo **`addons/savestate`** into `samples/minimal-demo/addons/`. See [samples/minimal-demo/README.md](samples/minimal-demo/README.md).
+Open `samples/minimal-demo/` after copying repo **`addons/savestate`** into `samples/minimal-demo/addons/`. See [samples/minimal-demo/README.md](../../../samples/minimal-demo/README.md).
 
 ## Docs index
 
-- [Full API](docs/API.md) · [Architecture & threading](docs/ARCHITECTURE.md) · [Migration & `migration_required`](docs/MIGRATION.md)
+- [Full API](API.md) · [Architecture & threading](ARCHITECTURE.md) · [Migration & `migration_required`](MIGRATION.md)

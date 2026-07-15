@@ -1,13 +1,12 @@
 # Roadmap
 
-Last updated: 2026-06-17
+Last updated: 2026-07-15
 
 当前项目的优先事项不再靠零散口头同步维护，统一以以下文档为入口。
 
-## Current Priority
+## Current Execution Plan
 
-- [HIGH_PRIORITY_2_TO_3_WEEK_SPRINT_PLAN.md](./HIGH_PRIORITY_2_TO_3_WEEK_SPRINT_PLAN.md)
-- [HIGH_PRIORITY_SPRINT_TASK_BREAKDOWN.md](./HIGH_PRIORITY_SPRINT_TASK_BREAKDOWN.md)
+- [P0_GAMEPLAY_NETWORK_FOUNDATION_EXECUTION_PLAN.md](./P0_GAMEPLAY_NETWORK_FOUNDATION_EXECUTION_PLAN.md)
 
 ## Multiplayer Baseline Docs
 

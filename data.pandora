@@ -32,6 +32,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": false
@@ -39,6 +55,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_QUESTION_MARK"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "grant_reward"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -52,11 +76,15 @@
 						"type": "string",
 						"value": "question_mark"
 					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
 					"playable_from_hand": {
 						"type": "bool",
 						"value": false
 					},
-					"weight": {
+					"priority": {
 						"type": "int",
 						"value": 100
 					},
@@ -64,49 +92,9 @@
 						"type": "string",
 						"value": "common"
 					},
-					"tags": {
-						"type": "string",
-						"value": "fixed,reward"
-					},
 					"reward_delivery": {
 						"type": "string",
 						"value": "none"
-					},
-					"play_presentation": {
-						"type": "string",
-						"value": "direct_trigger"
-					},
-					"trigger": {
-						"type": "string",
-						"value": "on_collect"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "grant_reward"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"priority": {
-						"type": "int",
-						"value": 100
-					},
-					"attached_trigger": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_effect_type": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 0
 					},
 					"sort_order": {
 						"type": "int",
@@ -115,6 +103,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "QuestionMark"
+					},
+					"tags": {
+						"type": "string",
+						"value": "fixed,reward"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
+					"weight": {
+						"type": "int",
+						"value": 100
 					}
 				}
 			},
@@ -129,6 +129,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -136,6 +152,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_BOMB"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "place_table_pair_destroy"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "pair_tag=bomb"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -149,61 +173,25 @@
 						"type": "string",
 						"value": "bomb"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": true
-					},
-					"weight": {
-						"type": "int",
-						"value": 35
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"tags": {
-						"type": "string",
-						"value": "bomb"
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "table_overlay"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "place_table_pair_destroy"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "pair_tag=bomb"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
 					},
 					"priority": {
 						"type": "int",
 						"value": 80
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": ""
+						"value": "rare"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": ""
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 0
+						"value": "hand"
 					},
 					"sort_order": {
 						"type": "int",
@@ -212,6 +200,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "Bomb"
+					},
+					"tags": {
+						"type": "string",
+						"value": "bomb"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 35
 					}
 				}
 			},
@@ -226,6 +226,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": "magnet_extra_capture"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": "target=opponent_table_face_down;count=1"
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -233,6 +249,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_MAGNET"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=magnet"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -246,61 +270,25 @@
 						"type": "string",
 						"value": "magnet"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": false
-					},
-					"weight": {
-						"type": "int",
-						"value": 70
-					},
-					"rarity": {
-						"type": "string",
-						"value": "uncommon"
-					},
-					"tags": {
-						"type": "string",
-						"value": "attachment"
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "immediate_attachment"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "direct_trigger"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "attach_modifier"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "modifier=magnet"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
 					},
 					"priority": {
 						"type": "int",
 						"value": 50
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": "on_collect"
+						"value": "uncommon"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": "magnet_extra_capture"
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": "target=opponent_table_face_down;count=1"
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 50
+						"value": "immediate_attachment"
 					},
 					"sort_order": {
 						"type": "int",
@@ -309,6 +297,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "Magnet"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 70
 					}
 				}
 			},
@@ -323,6 +323,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -330,6 +346,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_GREED"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -343,61 +367,25 @@
 						"type": "string",
 						"value": "greed"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": false
-					},
-					"weight": {
-						"type": "int",
-						"value": 25
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"tags": {
-						"type": "string",
-						"value": ""
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "direct_trigger"
 					},
-					"trigger": {
-						"type": "string",
-						"value": ""
-					},
-					"effect_type": {
-						"type": "string",
-						"value": ""
-					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
 					},
 					"priority": {
 						"type": "int",
 						"value": 10
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": ""
+						"value": "rare"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": ""
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 0
+						"value": "hand"
 					},
 					"sort_order": {
 						"type": "int",
@@ -406,6 +394,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "Greed"
+					},
+					"tags": {
+						"type": "string",
+						"value": ""
+					},
+					"trigger": {
+						"type": "string",
+						"value": ""
+					},
+					"weight": {
+						"type": "int",
+						"value": 25
 					}
 				}
 			},
@@ -420,6 +420,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -427,6 +443,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_LENS"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "reveal_cards"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "target=opponent_table_face_down;count=2"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -440,61 +464,25 @@
 						"type": "string",
 						"value": "lens"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": true
-					},
-					"weight": {
-						"type": "int",
-						"value": 70
-					},
-					"rarity": {
-						"type": "string",
-						"value": "uncommon"
-					},
-					"tags": {
-						"type": "string",
-						"value": ""
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "lens_split"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "reveal_cards"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "target=opponent_table_face_down;count=2"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
 					},
 					"priority": {
 						"type": "int",
 						"value": 40
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": ""
+						"value": "uncommon"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": ""
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 0
+						"value": "hand"
 					},
 					"sort_order": {
 						"type": "int",
@@ -503,6 +491,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "Lens"
+					},
+					"tags": {
+						"type": "string",
+						"value": ""
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 70
 					}
 				}
 			},
@@ -517,6 +517,22 @@
 						"type": "string",
 						"value": "run-005"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": "double_collect"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": "multiplier=2"
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 60
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -524,6 +540,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_DOUBLE"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=double"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -537,61 +561,25 @@
 						"type": "string",
 						"value": "double"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": true
-					},
-					"weight": {
-						"type": "int",
-						"value": 45
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"tags": {
-						"type": "string",
-						"value": "attachment"
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "direct_trigger"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "attach_modifier"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "modifier=double"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
 					},
 					"priority": {
 						"type": "int",
 						"value": 60
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": "on_collect"
+						"value": "rare"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": "double_collect"
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": "multiplier=2"
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 60
+						"value": "hand"
 					},
 					"sort_order": {
 						"type": "int",
@@ -600,6 +588,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "Double"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 45
 					}
 				}
 			},
@@ -614,6 +614,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": "extra_turn"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 55
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -621,6 +637,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_OVERTIME"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=overtime"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -634,61 +658,25 @@
 						"type": "string",
 						"value": "overtime"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": true
-					},
-					"weight": {
-						"type": "int",
-						"value": 45
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"tags": {
-						"type": "string",
-						"value": "attachment"
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "direct_trigger"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "attach_modifier"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "modifier=overtime"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
 					},
 					"priority": {
 						"type": "int",
 						"value": 55
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": "on_collect"
+						"value": "rare"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": "extra_turn"
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 55
+						"value": "hand"
 					},
 					"sort_order": {
 						"type": "int",
@@ -697,6 +685,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "Overtime"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 45
 					}
 				}
 			},
@@ -711,6 +711,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -718,6 +734,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_DRAW_CARD"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "draw_card"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -731,61 +755,25 @@
 						"type": "string",
 						"value": "draw_card"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": true
-					},
-					"weight": {
-						"type": "int",
-						"value": 100
-					},
-					"rarity": {
-						"type": "string",
-						"value": "common"
-					},
-					"tags": {
-						"type": "string",
-						"value": ""
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "transform_area_trigger"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "draw_card"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
 					},
 					"priority": {
 						"type": "int",
 						"value": 30
 					},
-					"attached_trigger": {
+					"rarity": {
 						"type": "string",
-						"value": ""
+						"value": "common"
 					},
-					"attached_effect_type": {
+					"reward_delivery": {
 						"type": "string",
-						"value": ""
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 0
+						"value": "hand"
 					},
 					"sort_order": {
 						"type": "int",
@@ -794,6 +782,18 @@
 					"sprite_name": {
 						"type": "string",
 						"value": "DrawCard"
+					},
+					"tags": {
+						"type": "string",
+						"value": ""
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 100
 					}
 				}
 			},
@@ -808,6 +808,22 @@
 						"type": "string",
 						"value": "run-004"
 					},
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
 					"can_be_question_reward": {
 						"type": "bool",
 						"value": true
@@ -815,6 +831,14 @@
 					"description_key": {
 						"type": "string",
 						"value": "ITEM_DESC_SHUFFLE"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "shuffle_table"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "target=table"
 					},
 					"enabled_in_game": {
 						"type": "bool",
@@ -828,50 +852,622 @@
 						"type": "string",
 						"value": "shuffle"
 					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": true
-					},
-					"weight": {
-						"type": "int",
-						"value": 60
-					},
-					"rarity": {
-						"type": "string",
-						"value": "uncommon"
-					},
-					"tags": {
-						"type": "string",
-						"value": ""
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
 					"play_presentation": {
 						"type": "string",
 						"value": "transform_area_trigger"
 					},
-					"trigger": {
-						"type": "string",
-						"value": "on_play"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": "shuffle_table"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "target=table"
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
 					},
 					"priority": {
 						"type": "int",
 						"value": 20
 					},
-					"attached_trigger": {
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"sort_order": {
+						"type": "int",
+						"value": 80
+					},
+					"sprite_name": {
+						"type": "string",
+						"value": "Shuffle"
+					},
+					"tags": {
 						"type": "string",
 						"value": ""
 					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 60
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "endpoint_crown",
+				"_index": 9,
+				"_name": "Endpoint Crown",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "endpoint_crown"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_ENDPOINT_CROWN"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=endpoint_crown"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "endpoint_crown"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "borrow_tide",
+				"_index": 10,
+				"_name": "Borrow Tide",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "borrow_tide"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_BORROW_TIDE"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=borrow_tide"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "borrow_tide"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "reverse_anchor",
+				"_index": 11,
+				"_name": "Reverse Anchor",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "reverse_anchor"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_REVERSE_ANCHOR"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=reverse_anchor"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "reverse_anchor"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "mid_tide_upgrade",
+				"_index": 12,
+				"_name": "Mid Tide Upgrade",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "mid_tide_upgrade"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_collect"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_MID_TIDE_UPGRADE"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=mid_tide_upgrade"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "mid_tide_upgrade"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "reverse_flow_anchor",
+				"_index": 13,
+				"_name": "Reverse Flow Anchor",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "reverse_flow_anchor"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_miss"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_REVERSE_FLOW_ANCHOR"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=reverse_flow_anchor"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "reverse_flow_anchor"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "empty_tide_continuation",
+				"_index": 14,
+				"_name": "Empty Tide Continuation",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "empty_tide_continuation"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_miss"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_EMPTY_TIDE_CONTINUATION"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=empty_tide_continuation"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "empty_tide_continuation"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "suit_collect",
+				"_index": 15,
+				"_name": "Suit Collect",
+				"_property_overrides": {
+					"attached_effect_type": {
+						"type": "string",
+						"value": "suit_collect"
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 50
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": true
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_SUIT_COLLECT"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "attach_modifier"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "modifier=suit_collect"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": true
+					},
+					"id": {
+						"type": "string",
+						"value": "suit_collect"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": true
+					},
+					"priority": {
+						"type": "int",
+						"value": 50
+					},
+					"rarity": {
+						"type": "string",
+						"value": "uncommon"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "hand"
+					},
+					"tags": {
+						"type": "string",
+						"value": "attachment"
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 40
+					}
+				}
+			},
+			{
+				"_category_id": "item_cards",
+				"_icon_color": "00000000",
+				"_id": "J",
+				"_index": 16,
+				"_name": "Jack",
+				"_property_overrides": {
 					"attached_effect_type": {
 						"type": "string",
 						"value": ""
@@ -884,230 +1480,66 @@
 						"type": "int",
 						"value": 0
 					},
-					"sort_order": {
-						"type": "int",
-						"value": 80
-					},
-					"sprite_name": {
+					"attached_trigger": {
 						"type": "string",
-						"value": "Shuffle"
+						"value": ""
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": false
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_JACK"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "collect_table"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "target=table"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": false
+					},
+					"id": {
+						"type": "string",
+						"value": "J"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "direct_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
+					},
+					"priority": {
+						"type": "int",
+						"value": 30
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legacy"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "none"
+					},
+					"tags": {
+						"type": "string",
+						"value": ""
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 0
 					}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "endpoint_crown",
-				"_index": 9,
-				"_name": "Endpoint Crown",
-				"_property_overrides": {
-					"id":{"type":"string","value":"endpoint_crown"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=endpoint_crown"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_collect"},
-					"attached_effect_type":{"type":"string","value":"endpoint_crown"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_ENDPOINT_CROWN"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "borrow_tide",
-				"_index": 10,
-				"_name": "Borrow Tide",
-				"_property_overrides": {
-					"id":{"type":"string","value":"borrow_tide"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=borrow_tide"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_play"},
-					"attached_effect_type":{"type":"string","value":"borrow_tide"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_BORROW_TIDE"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "reverse_anchor",
-				"_index": 11,
-				"_name": "Reverse Anchor",
-				"_property_overrides": {
-					"id":{"type":"string","value":"reverse_anchor"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=reverse_anchor"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_collect"},
-					"attached_effect_type":{"type":"string","value":"reverse_anchor"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_REVERSE_ANCHOR"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "mid_tide_upgrade",
-				"_index": 12,
-				"_name": "Mid Tide Upgrade",
-				"_property_overrides": {
-					"id":{"type":"string","value":"mid_tide_upgrade"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=mid_tide_upgrade"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_collect"},
-					"attached_effect_type":{"type":"string","value":"mid_tide_upgrade"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_MID_TIDE_UPGRADE"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "reverse_flow_anchor",
-				"_index": 13,
-				"_name": "Reverse Flow Anchor",
-				"_property_overrides": {
-					"id":{"type":"string","value":"reverse_flow_anchor"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=reverse_flow_anchor"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_miss"},
-					"attached_effect_type":{"type":"string","value":"reverse_flow_anchor"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_REVERSE_FLOW_ANCHOR"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "empty_tide_continuation",
-				"_index": 14,
-				"_name": "Empty Tide Continuation",
-				"_property_overrides": {
-					"id":{"type":"string","value":"empty_tide_continuation"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=empty_tide_continuation"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_miss"},
-					"attached_effect_type":{"type":"string","value":"empty_tide_continuation"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_EMPTY_TIDE_CONTINUATION"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "suit_collect",
-				"_index": 15,
-				"_name": "Suit Collect",
-				"_property_overrides": {
-					"id":{"type":"string","value":"suit_collect"},
-					"enabled_in_game":{"type":"bool","value":true},
-					"playable_from_hand":{"type":"bool","value":true},
-					"can_be_question_reward":{"type":"bool","value":true},
-					"weight":{"type":"int","value":40},
-					"rarity":{"type":"string","value":"uncommon"},
-					"tags":{"type":"string","value":"attachment"},
-					"reward_delivery":{"type":"string","value":"hand"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"attach_modifier"},
-					"effect_values":{"type":"string","value":"modifier=suit_collect"},
-					"priority":{"type":"int","value":50},
-					"attached_trigger":{"type":"string","value":"on_play"},
-					"attached_effect_type":{"type":"string","value":"suit_collect"},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":50},
-					"description_key":{"type":"string","value":"ITEM_DESC_SUIT_COLLECT"}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
-				"_id": "J",
-				"_index": 16,
-				"_name": "Jack",
-				"_property_overrides": {
-					"id":{"type":"string","value":"J"},
-					"enabled_in_game":{"type":"bool","value":false},
-					"playable_from_hand":{"type":"bool","value":false},
-					"can_be_question_reward":{"type":"bool","value":false},
-					"weight":{"type":"int","value":0},
-					"rarity":{"type":"string","value":"legacy"},
-					"tags":{"type":"string","value":""},
-					"reward_delivery":{"type":"string","value":"none"},
-					"play_presentation":{"type":"string","value":"direct_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"collect_table"},
-					"effect_values":{"type":"string","value":"target=table"},
-					"priority":{"type":"int","value":30},
-					"attached_trigger":{"type":"string","value":""},
-					"attached_effect_type":{"type":"string","value":""},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":0},
-					"description_key":{"type":"string","value":"ITEM_DESC_JACK"}
 				}
 			},
 			{
@@ -1117,24 +1549,78 @@
 				"_index": 17,
 				"_name": "Queen",
 				"_property_overrides": {
-					"id":{"type":"string","value":"Q"},
-					"enabled_in_game":{"type":"bool","value":false},
-					"playable_from_hand":{"type":"bool","value":false},
-					"can_be_question_reward":{"type":"bool","value":false},
-					"weight":{"type":"int","value":0},
-					"rarity":{"type":"string","value":"legacy"},
-					"tags":{"type":"string","value":""},
-					"reward_delivery":{"type":"string","value":"none"},
-					"play_presentation":{"type":"string","value":"targeted_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"steal_card"},
-					"effect_values":{"type":"string","value":"target=player_hand;count=1"},
-					"priority":{"type":"int","value":30},
-					"attached_trigger":{"type":"string","value":""},
-					"attached_effect_type":{"type":"string","value":""},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":0},
-					"description_key":{"type":"string","value":"ITEM_DESC_QUEEN"}
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": false
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_QUEEN"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "steal_card"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "target=player_hand;count=1"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": false
+					},
+					"id": {
+						"type": "string",
+						"value": "Q"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "targeted_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
+					},
+					"priority": {
+						"type": "int",
+						"value": 30
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legacy"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "none"
+					},
+					"tags": {
+						"type": "string",
+						"value": ""
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 0
+					}
 				}
 			},
 			{
@@ -1144,24 +1630,78 @@
 				"_index": 18,
 				"_name": "King",
 				"_property_overrides": {
-					"id":{"type":"string","value":"K"},
-					"enabled_in_game":{"type":"bool","value":false},
-					"playable_from_hand":{"type":"bool","value":false},
-					"can_be_question_reward":{"type":"bool","value":false},
-					"weight":{"type":"int","value":0},
-					"rarity":{"type":"string","value":"legacy"},
-					"tags":{"type":"string","value":""},
-					"reward_delivery":{"type":"string","value":"none"},
-					"play_presentation":{"type":"string","value":"targeted_trigger"},
-					"trigger":{"type":"string","value":"on_play"},
-					"effect_type":{"type":"string","value":"steal_deck_cards"},
-					"effect_values":{"type":"string","value":"target=player_deck;count=3"},
-					"priority":{"type":"int","value":30},
-					"attached_trigger":{"type":"string","value":""},
-					"attached_effect_type":{"type":"string","value":""},
-					"attached_effect_values":{"type":"string","value":""},
-					"attached_priority":{"type":"int","value":0},
-					"description_key":{"type":"string","value":"ITEM_DESC_KING"}
+					"attached_effect_type": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_effect_values": {
+						"type": "string",
+						"value": ""
+					},
+					"attached_priority": {
+						"type": "int",
+						"value": 0
+					},
+					"attached_trigger": {
+						"type": "string",
+						"value": ""
+					},
+					"can_be_question_reward": {
+						"type": "bool",
+						"value": false
+					},
+					"description_key": {
+						"type": "string",
+						"value": "ITEM_DESC_KING"
+					},
+					"effect_type": {
+						"type": "string",
+						"value": "steal_deck_cards"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "target=player_deck;count=3"
+					},
+					"enabled_in_game": {
+						"type": "bool",
+						"value": false
+					},
+					"id": {
+						"type": "string",
+						"value": "K"
+					},
+					"play_presentation": {
+						"type": "string",
+						"value": "targeted_trigger"
+					},
+					"playable_from_hand": {
+						"type": "bool",
+						"value": false
+					},
+					"priority": {
+						"type": "int",
+						"value": 30
+					},
+					"rarity": {
+						"type": "string",
+						"value": "legacy"
+					},
+					"reward_delivery": {
+						"type": "string",
+						"value": "none"
+					},
+					"tags": {
+						"type": "string",
+						"value": ""
+					},
+					"trigger": {
+						"type": "string",
+						"value": "on_play"
+					},
+					"weight": {
+						"type": "int",
+						"value": 0
+					}
 				}
 			},
 			{
@@ -1175,10 +1715,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_WARM_CURRENT_SUPPLY"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -1186,6 +1722,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "抽 1 张牌。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1224,10 +1764,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_LONG_CAPTURE_RECOVERY"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=6;amount=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,amount"
@@ -1235,6 +1771,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "回复 2 点生命。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=6;amount=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1273,10 +1813,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_MISS_BANDAGE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=3;count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount,count"
@@ -1284,6 +1820,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "登记下个真实回合开始时回复 3 并抽 1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=3;count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1322,10 +1862,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_QUESTION_MARK_FIRST_AID"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=4"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -1333,6 +1869,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "回复 4 点生命。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=4"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1371,10 +1911,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_SHOAL_PREPARATION"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -1382,6 +1918,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "抽 1 张牌。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1420,10 +1960,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_THICK_BLOOD"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=4;maximum=150"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount,maximum"
@@ -1431,6 +1967,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "Max HP +4；回复 4。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=4;maximum=150"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1469,10 +2009,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_CHAIN_TIDE_BREATH"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1;amount=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count,amount"
@@ -1480,6 +2016,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "抽 1；回复 2。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1;amount=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1518,10 +2058,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_RED_TIDE_RETURN"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=50;amount=5;count=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,amount,count"
@@ -1529,6 +2065,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "回复 5；抽 2。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=50;amount=5;count=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1567,10 +2107,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_SUPPLY_CACHE_RETURN"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=3;count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount,count"
@@ -1578,6 +2114,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "回复 3；抽 1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=3;count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1616,10 +2156,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_ENCHANTED_RECOVERY"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=3;count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount,count"
@@ -1627,6 +2163,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "本动作最多治疗 3；若该基础牌成功收牌，再抽 1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=3;count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1665,10 +2205,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_DEEP_TIDE_LUNG"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=8;count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount,count"
@@ -1676,6 +2212,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "Max HP +8；战斗开始时抽 1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=8;count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1714,10 +2254,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_RETURN_TIDE_HEART"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "first_count=1;first_amount=2;second_count=1;second_amount=3"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "first_count,first_amount,second_count,second_amount"
@@ -1725,6 +2261,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "抽 1；回复 2。同一真实回合第二次成功收牌后，再抽 1；再回复 3。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "first_count=1;first_amount=2;second_count=1;second_amount=3"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1763,10 +2303,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_REVIVAL_DRAW"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=25;amount=8;count=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,amount,count"
@@ -1774,6 +2310,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "回复 8；抽 2。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=25;amount=8;count=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1812,10 +2352,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_HEARTS_OVERFLOW_GROWTH"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "step=4;amount=1;maximum=150;stack_limit=3"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "step,amount,maximum,stack_limit"
@@ -1823,6 +2359,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "每 4 点溢出治疗使 Max HP +1（run 内最高 150），当前生命同步抬升；余数最多保留 3。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "step=4;amount=1;maximum=150;stack_limit=3"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1861,10 +2401,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_SMALL_INSURANCE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=4;amount=5"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,amount"
@@ -1872,6 +2408,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "伤害按 5 结算；0 伤害仍为 0。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=4;amount=5"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1910,10 +2450,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_RAISE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -1921,6 +2457,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "抽 1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -1959,10 +2499,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_REJUDGE_ONCE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -1970,6 +2506,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "可保留原奖励或重掷；仅重掷会消耗本战机会。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -2008,10 +2548,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_MISS_DISCOUNT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2019,6 +2555,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "积 1 层；下次收牌伤害+1/层，后清空。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2057,10 +2597,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_FIRST_CAPTURE_PRESSURE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2068,6 +2604,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "本次伤害 +2。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2106,10 +2646,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_WINDFALL"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "maximum=10;amount=1;threshold=5"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "maximum,threshold,amount"
@@ -2117,6 +2653,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "run 内问号计数最多 10；按当前序号立刻直伤，单次最多 5。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "maximum=10;amount=1;threshold=5"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2155,10 +2695,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_BOUNTY_AMPLIFY"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=3"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2166,6 +2702,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "本次伤害 +3。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=3"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2204,10 +2744,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_ECHO"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2215,6 +2751,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "从下一次收牌起，每张计分牌点数 +1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2253,10 +2793,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_MULTI_CARD_PREMIUM"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=3;amount=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,amount"
@@ -2264,6 +2800,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "若计分牌≥3张，这些牌本次点数各 +1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=3;amount=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2302,10 +2842,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_QUESTION_MARK_INTEREST"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=1;maximum=5"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "current_item_count"
@@ -2313,6 +2849,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "每次获得道具，永久+1伤害，当前获得 {current_item_count}。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=1;maximum=5"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2351,10 +2891,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_TOP_PRIZE_REPEAT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=3;count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,count"
@@ -2362,6 +2898,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "最高点数的 1 张计分牌额外结算 1 次；并列取收牌前最左。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=3;count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2400,10 +2940,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_FULL_PAYOUT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=6;multiplier=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,multiplier"
@@ -2411,6 +2947,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "本次整次倍率桶 +1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=6;multiplier=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2449,10 +2989,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_DIAMONDS_FINAL_DOUBLE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=10;multiplier=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,multiplier"
@@ -2460,6 +2996,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "从下一次收牌起，本次整次倍率桶 +1。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=10;multiplier=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2498,10 +3038,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_DARK_HARBOR_REVEAL"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -2509,6 +3045,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "下一张牌正面入桌。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -2547,10 +3087,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_WRONG_SHORE_LINEUP"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -2558,6 +3094,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "下一张牌放最左。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -2596,10 +3136,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_MISSED_BEAT_BLUNT_HURT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=3"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2607,6 +3143,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "下一张牌若成功收牌，伤害 -3。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=3"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2645,10 +3185,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_MISS_BLEED"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=6;amount=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,amount"
@@ -2656,6 +3192,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "敌人-2。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=6;amount=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2694,10 +3234,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_TRACE_HUNT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=4"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2705,6 +3241,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "标记最右旧桌牌；下次收走它时 +4。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=4"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2743,10 +3283,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_REVERSE_CAPTURE_TAX"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2754,6 +3290,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "中间每有 1 张旧桌牌，伤害 -1；与盘剥同时生效时只取较强减伤。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2792,10 +3332,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_TAIL_PRESSURE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "threshold=7"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold"
@@ -2803,6 +3339,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "保持正面回到牌桌。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "threshold=7"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2841,10 +3381,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_RETURN_TIDE_MISORDER"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -2852,6 +3388,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "下一张牌放到最早旧桌牌左侧。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -2890,10 +3430,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_EXACTION"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=4"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2901,6 +3437,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "伤害 -4；与逆收税同时生效时只取较强减伤。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=4"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2939,10 +3479,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_HUNT_ORDER"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=6"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount"
@@ -2950,6 +3486,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "自动标记最早旧桌牌；收走它时 +6。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=6"
 					},
 					"enabled": {
 						"type": "bool",
@@ -2988,10 +3528,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_INTERCEPT_BEAT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -2999,6 +3535,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "你立刻额外打 1 张基础牌；整条派生链结束后仍正常开始真实回合。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3037,10 +3577,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_SPADES_BLACK_LEDGER"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3048,6 +3584,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "敌人收牌后，分值最高的1张桌牌收入你的牌堆，敌人本次伤害照常结算。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3086,10 +3626,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_SHORT_BRANCH_RETURN"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3097,6 +3633,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "若手牌容量足以容纳全部唯一回手候选，这两张牌回手；否则正常进入牌堆。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3135,10 +3675,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_GAP_ROOTING"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3146,6 +3682,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "额外收走收牌区间左侧最近的 1 张基础牌；该牌不计分。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3184,10 +3724,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_PRIMARY_ROOT_RETURN"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3195,6 +3731,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "若手牌有空位，该牌结算后回手；与攀棚同时满足时由主根复返覆盖且只回手一次。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3233,10 +3773,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_MISS_CLIMB_GROWTH"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "amount=1;stack_limit=9"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "amount,stack_limit"
@@ -3244,6 +3780,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "积 1 层攀枝；数字基础牌保留原点数，并额外按原点数 + 层数匹配；成功收牌后清空。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "amount=1;stack_limit=9"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3282,10 +3822,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_BORROW_SUIT_SET"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3293,6 +3829,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "保持 1 次 armed，重复获得只刷新；本真实回合下一张数字基础牌仅在无点数或替代点数候选时按花色兜底，合法出牌后消费；真实回合或战斗结束时清除。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3331,10 +3871,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_HOLLOW_BURST"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -3342,6 +3878,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "将桌面上所有盖牌翻正。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -3380,10 +3920,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_HANGING_REVERSE"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -3391,6 +3927,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "这张牌改为插入桌面最左端。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -3429,10 +3969,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_WILD_BRANCH"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -3440,6 +3976,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "立刻随机重排桌面。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -3478,10 +4018,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_CANOPY_REVEAL"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": ""
@@ -3489,6 +4025,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "直到这张牌离场，之后落在它右侧的牌都正面朝上。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": ""
 					},
 					"enabled": {
 						"type": "bool",
@@ -3527,10 +4067,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_CONTINUE_BRANCH"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1;threshold=6"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "threshold,count"
@@ -3538,6 +4074,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "立刻额外打 1 张基础牌；额外行动不能再次触发续枝。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1;threshold=6"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3576,10 +4116,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_LINKED_STEMS"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1;threshold=2"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count,threshold"
@@ -3587,6 +4123,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "立刻获得 1 次问号奖励。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1;threshold=2"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3625,10 +4165,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_CLIMB_CANOPY"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3636,6 +4172,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "若手牌有空位，该牌结算后回手；主根复返优先且该牌只回手一次。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3674,10 +4214,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_CROSS_GRAFT"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "step=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "step"
@@ -3685,6 +4221,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "你的数字基础牌可按上下相邻点数匹配收牌。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "step=1"
 					},
 					"enabled": {
 						"type": "bool",
@@ -3723,10 +4263,6 @@
 						"type": "string",
 						"value": "UPGRADE_DESC_CLUBS_CROWN_CANOPY"
 					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
 					"description_value_keys": {
 						"type": "string",
 						"value": "count"
@@ -3734,6 +4270,10 @@
 					"effect_text": {
 						"type": "string",
 						"value": "你的基础牌成功收牌时，首尾端点各计分一次，不生成重复普通计分项。"
+					},
+					"effect_values": {
+						"type": "string",
+						"value": "count=1"
 					},
 					"enabled": {
 						"type": "bool",
