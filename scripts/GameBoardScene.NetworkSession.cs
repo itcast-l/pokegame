@@ -72,6 +72,12 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (networkManager.IsMigrationFailureReturnPending)
+		{
+			ShowNetworkNotice(NetworkReconnectPresentationRules.GetMigrationFailureText(UsesChineseLocale()));
+			return;
+		}
+
 		_ = ExitNetworkMatchToMainMenuAsync();
 	}
 

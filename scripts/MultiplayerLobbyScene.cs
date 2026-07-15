@@ -114,6 +114,11 @@ public partial class MultiplayerLobbyScene : Control
 		RefreshState((int)_network.State);
 		RefreshRooms(_network.GetRoomsVariant());
 		RefreshPlayers(_network.GetPlayersVariant());
+		string pendingErrorMessage = _network.ConsumePendingLobbyErrorMessage();
+		if (!string.IsNullOrWhiteSpace(pendingErrorMessage))
+		{
+			ShowToast(pendingErrorMessage);
+		}
 	}
 
 	public override void _Notification(int what)
@@ -539,6 +544,17 @@ public partial class MultiplayerLobbyScene : Control
 		_toastTween = CreateTween();
 		_toastTween.TweenInterval(3.0);
 		_toastTween.TweenCallback(Callable.From(() => ToastLabel.Visible = false));
+	}
+
+	public bool DebugIsMigrationFailureToastVisible()
+	{
+		return ToastLabel.Visible
+			&& ToastLabel.Text.Contains("Host migration failed", System.StringComparison.Ordinal);
+	}
+
+	public string DebugGetMigrationFailureToastText()
+	{
+		return ToastLabel.Visible ? ToastLabel.Text : string.Empty;
 	}
 
 	private void ReturnToMainMenu()

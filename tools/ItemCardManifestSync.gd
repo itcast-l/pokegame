@@ -36,11 +36,14 @@ var _write_mode := false
 
 
 func _initialize() -> void:
-	var args := OS.get_cmdline_args()
+	var args := OS.get_cmdline_user_args()
+	if args.is_empty():
+		args = OS.get_cmdline_args()
 	if args.has("--write"):
 		_write_mode = true
 	elif not args.has("--check"):
 		_fail("Usage: godot --headless --path . --script res://tools/ItemCardManifestSync.gd --check|--write")
+		_quit_failure()
 		return
 	call_deferred("_run")
 
