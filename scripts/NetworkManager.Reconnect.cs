@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 public partial class NetworkManager
@@ -27,6 +29,7 @@ public partial class NetworkManager
 	{
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
+		ResetClientActionIds();
 		foreach (NetworkPlayerPublicState player in _players)
 		{
 			string reconnectToken = Guid.NewGuid().ToString("N");
@@ -39,6 +42,131 @@ public partial class NetworkManager
 			}
 		}
 
+		EmitSeatControlStatesUpdated();
+	}
+
+	private void EnsureLobbySeatControlStates()
+	{
+		if (_state is not (NetworkSessionState.Hosting or NetworkSessionState.Lobby)
+			&& !IsHost)
+		{
+			return;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (_seatControlStates.Any(state => state.SeatIndex == player.SeatIndex))
+			{
+				continue;
+			}
+
+			string reconnectToken = Guid.NewGuid().ToString("N");
+			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
+			_seatControlStates.Add(state);
+			_reconnectClaimsBySeat[player.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
+			if (player.IsLocal)
+			{
+				_localReconnectToken = reconnectToken;
+			}
+		}
+
+		_seatControlStates.Sort((left, right) => left.SeatIndex.CompareTo(right.SeatIndex));
+	}
+
+	private void EnsureSessionMigrationTokensForRoster()
+	{
+		if (!IsHost)
+		{
+			return;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			EnsureSessionMigrationToken(player.SeatIndex);
+		}
+
+		SendSessionMigrationTokensToConnectedPeers();
+	}
+
+	private void EnsureSessionMigrationToken(int seatIndex)
+	{
+		if (seatIndex < 0 || _sessionMigrationTokensBySeat.ContainsKey(seatIndex))
+		{
+			return;
+		}
+
+		string token = Guid.NewGuid().ToString("N");
+		_sessionMigrationTokensBySeat[seatIndex] = token;
+		if (seatIndex == LocalSeatIndex || (IsHost && seatIndex == 0 && _players.Count == 0))
+		{
+			_localSessionMigrationToken = token;
+		}
+	}
+
+	private void SendSessionMigrationTokensToConnectedPeers()
+	{
+		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene or NetworkSessionState.InGame))
+		{
+			return;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (player.IsHost || !player.IsConnected || !_sessionMigrationTokensBySeat.TryGetValue(player.SeatIndex, out string? token))
+			{
+				continue;
+			}
+
+			RpcId(
+				player.PeerId,
+				MethodName.RpcReceiveSessionMigrationToken,
+				_config.SessionId,
+				_config.MatchId,
+				GetCurrentAuthorityEpoch(),
+				player.SeatIndex,
+				token,
+				player.StableUserId);
+		}
+	}
+
+	private void ApplySessionMigrationToken(int seatIndex, string token)
+	{
+		if (seatIndex < 0 || string.IsNullOrWhiteSpace(token) || token.Length > 128)
+		{
+			return;
+		}
+
+		_sessionMigrationTokensBySeat[seatIndex] = token.Trim();
+		if (seatIndex == LocalSeatIndex)
+		{
+			_localSessionMigrationToken = token.Trim();
+		}
+	}
+
+	internal void ApplySeatControlStatesFromAuthoritySnapshot(IReadOnlyList<SeatControlState> states)
+	{
+		if (IsHost || states.Count == 0)
+		{
+			return;
+		}
+
+		var previousTokensBySeat = _seatControlStates
+			.ToDictionary(state => state.SeatIndex, state => state.ReconnectToken);
+		_seatControlStates.Clear();
+		foreach (SeatControlState state in states.OrderBy(state => state.SeatIndex))
+		{
+			string reconnectToken = string.Empty;
+			if (string.Equals(state.StableUserId, GetStableUserId(), StringComparison.Ordinal))
+			{
+				reconnectToken = _localReconnectToken;
+			}
+			else if (previousTokensBySeat.TryGetValue(state.SeatIndex, out string? previousToken))
+			{
+				reconnectToken = previousToken;
+			}
+
+			_seatControlStates.Add(state with { ReconnectToken = reconnectToken });
+		}
 		EmitSeatControlStatesUpdated();
 	}
 
@@ -134,7 +262,9 @@ public partial class NetworkManager
 			RpcId(
 				player.PeerId,
 				MethodName.RpcReceiveReconnectCredentials,
+				_config.SessionId,
 				_config.MatchId,
+				GetCurrentAuthorityEpoch(),
 				seatControlState.SeatIndex,
 				seatControlState.ReconnectToken,
 				seatControlState.StableUserId);
@@ -299,7 +429,7 @@ public partial class NetworkManager
 
 	public void NotifyReconnectSnapshotApplied(string matchId)
 	{
-		if (_state != NetworkSessionState.Reconnecting
+		if (_state is not (NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost)
 			|| !string.Equals(_config.MatchId, matchId, StringComparison.Ordinal))
 		{
 			return;
@@ -307,6 +437,21 @@ public partial class NetworkManager
 
 		_reconnectAttemptInFlight = false;
 		_nextReconnectAttemptAt = 0.0;
+		if (_state == NetworkSessionState.MigratingHost && IsMigrationReadinessFenceActive())
+		{
+			// The hard snapshot is applied before the new Host has proved that every
+			// expected non-source seat has reclaimed. Keep the client in the migration
+			// state until the epoch's readiness broadcast arrives.
+			_migrationPeerAttemptInFlight = false;
+			_migrationPeerAttemptStartedAt = -1.0;
+			GD.Print($"MIGRATION_SNAPSHOT_WAITING_READINESS epoch={_migrationReadyEpoch}");
+			return;
+		}
+		if (_networkMigrationPlan != null)
+		{
+			_networkMigrationPlan = null;
+			_migrationPeerAttemptInFlight = false;
+		}
 		SetState(NetworkSessionState.InGame);
 	}
 }

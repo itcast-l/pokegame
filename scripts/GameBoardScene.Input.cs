@@ -63,6 +63,11 @@ public partial class GameBoardScene
 
 	private bool ShouldBlockBoardControlInput()
 	{
+		if (_networkMigrationInputLocked)
+		{
+			return true;
+		}
+
 		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
 		{
 			return false;

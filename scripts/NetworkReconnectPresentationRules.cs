@@ -28,6 +28,20 @@ internal static class NetworkReconnectPresentationRules
 			: "Reconnected. Control returns on your next turn.";
 	}
 
+	internal static string GetMigrationOverlayText(bool usesChineseLocale)
+	{
+		return usesChineseLocale
+			? "正在迁移房主并恢复战局…"
+			: "Migrating host and restoring match...";
+	}
+
+	internal static string GetMigrationFailureText(bool usesChineseLocale)
+	{
+		return usesChineseLocale
+			? "房主迁移失败，正在返回多人菜单…"
+			: "Host migration failed. Returning to multiplayer menu...";
+	}
+
 	internal static bool ShouldShowOverlay(
 		bool isNetworkMultiplayer,
 		bool isNetworkHost,
@@ -42,6 +56,7 @@ internal static class NetworkReconnectPresentationRules
 
 		return networkWaitForInitialize
 			|| networkState == NetworkSessionState.Reconnecting
+			|| networkState == NetworkSessionState.MigratingHost
 			|| lastAppliedSnapshotId <= 0;
 	}
 }

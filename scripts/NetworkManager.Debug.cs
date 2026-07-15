@@ -11,6 +11,11 @@ public partial class NetworkManager
 		return _steamLobbyId;
 	}
 
+	public bool DebugGetIsHost()
+	{
+		return IsHost;
+	}
+
 	public bool DebugSimulateLocalReconnectDrop()
 	{
 		if (IsHost

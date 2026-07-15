@@ -51,7 +51,7 @@ internal static class NetworkReconnectRules
 		bool hasActivePeer,
 		bool peerIsConnected)
 	{
-		return state == NetworkSessionState.InGame
+		return state is NetworkSessionState.InGame or NetworkSessionState.MigratingHost
 			&& !isHost
 			&& hasActivePeer
 			&& peerIsConnected;
@@ -111,7 +111,7 @@ internal static class NetworkReconnectRules
 	{
 		return isNetworkMultiplayer
 			&& !isNetworkHost
-			&& networkState == NetworkSessionState.Reconnecting;
+			&& networkState is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost;
 	}
 
 	internal static bool ShouldCompleteReconnectCatchupForClient(
@@ -122,7 +122,7 @@ internal static class NetworkReconnectRules
 	{
 		return isNetworkMultiplayer
 			&& !isNetworkHost
-			&& networkState == NetworkSessionState.Reconnecting
+			&& networkState is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost
 			&& !isVisualQueueProcessing;
 	}
 

@@ -198,7 +198,32 @@ public partial class GameBoardScene
 
 	private string GetNetworkReconnectOverlayText()
 	{
+		if (GetNetworkManager()?.State == NetworkSessionState.MigratingHost)
+		{
+			return NetworkReconnectPresentationRules.GetMigrationOverlayText(UsesChineseLocale());
+		}
+
 		return NetworkReconnectPresentationRules.GetReconnectOverlayText(UsesChineseLocale());
+	}
+
+	public bool DebugIsNetworkReconnectOverlayVisible()
+	{
+		return _networkReconnectOverlayPanel?.Visible == true;
+	}
+
+	public string DebugGetNetworkReconnectOverlayText()
+	{
+		return _networkReconnectOverlayLabel?.Text ?? string.Empty;
+	}
+
+	public bool DebugIsNetworkReconnectNoticeVisible()
+	{
+		return _networkReconnectNoticePanel?.Visible == true;
+	}
+
+	public string DebugGetNetworkReconnectNoticeText()
+	{
+		return _networkReconnectNoticeLabel?.Text ?? string.Empty;
 	}
 
 	private string GetNetworkReconnectNoticeText()

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Godot;
@@ -13,13 +14,21 @@ public partial class NetworkManager
 
 		if (!IsHost)
 		{
-			RpcId(1, MethodName.RpcSetReady, isReady);
+			NetworkRpcContext context = GetCurrentRpcContext();
+			RpcId(
+				1,
+				MethodName.RpcSetReady,
+				context.SessionId,
+				context.MatchId,
+				context.AuthorityEpoch,
+				isReady);
 			return;
 		}
 
 		int localPeerId = GetLocalPeerId();
 		SetPlayerReady(localPeerId == 0 ? 1 : localPeerId, isReady);
 		BroadcastPlayerList();
+		CommitAuthorityCheckpointFromLobby();
 	}
 
 	public void StartMatch()
@@ -40,12 +49,25 @@ public partial class NetworkManager
 			MatchId = Guid.NewGuid().ToString("N"),
 			MatchSeed = ResolveMatchSeedForStart(),
 		};
+		SetAuthorityEpoch(_authorityEpoch);
+		EnsureSessionMigrationTokensForRoster();
 		InitializeMatchSeatControlStates();
 		SetState(NetworkSessionState.Starting);
 		SendReconnectCredentialsToConnectedPeers();
+		SendSessionMigrationTokensToConnectedPeers();
 		Godot.Collections.Dictionary bootstrap = BuildMatchBootstrap();
-		Rpc(MethodName.RpcBeginSceneLoad, bootstrap);
-		RpcBeginSceneLoad(bootstrap);
+		NetworkRpcContext context = GetCurrentRpcContext();
+		Rpc(
+			MethodName.RpcBeginSceneLoad,
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			bootstrap);
+		RpcBeginSceneLoad(
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			bootstrap);
 	}
 
 	private static long ResolveMatchSeedForStart()
@@ -60,7 +82,13 @@ public partial class NetworkManager
 	{
 		if (NetworkReconnectRules.ShouldBroadcastHostEndedMatch(IsHost, _state) && !_hostEndedMatchBroadcasted)
 		{
-			Rpc(MethodName.RpcHostEndedMatch, "Host disconnected.");
+			NetworkRpcContext context = GetCurrentRpcContext();
+			Rpc(
+				MethodName.RpcHostEndedMatch,
+				context.SessionId,
+				context.MatchId,
+				context.AuthorityEpoch,
+				"Host disconnected.");
 			_hostEndedMatchBroadcasted = true;
 		}
 
@@ -69,11 +97,43 @@ public partial class NetworkManager
 		_loadHandshake = null;
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
+		_sessionMigrationTokensBySeat.Clear();
 		_localReconnectToken = string.Empty;
+		_localSessionMigrationToken = string.Empty;
 		_lastLanJoinAddress = string.Empty;
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
-		_lobbyRejectPending = false;
+		ResetClientActionIds();
+		_latestAuthorityCheckpoint = Array.Empty<byte>();
+		_latestAuthorityCheckpointHash = string.Empty;
+		_latestAuthorityCheckpointId = 0;
+		_networkMigrationPlan = null;
+		_standbyCheckpoint = null;
+		_standbyCheckpointPayload = Array.Empty<byte>();
+		_standbyCheckpointHash = string.Empty;
+		_standbyCheckpointsById.Clear();
+		_hotStandbySeat = -1;
+		_standbyCheckpointAcked = false;
+		_standbyAckedCheckpointId = -1;
+		_standbyPendingCheckpointId = -1;
+		_standbyCheckpointSentAt = -1.0;
+		_consecutiveUnackedCheckpoints = 0;
+		_failedHotStandbySeats.Clear();
+		_migrationReadyEpoch = -1;
+		_migrationRecoveryReadyForPeers = false;
+		_migrationReadinessSeatIndices.Clear();
+		_authorityEpoch = 0;
+		_migrationStartedAt = -1.0;
+		_migrationServerStarted = false;
+		_migrationPeerAttemptInFlight = false;
+		_migrationPeerAttemptStartedAt = -1.0;
+		_activeMigrationPending = false;
+		_activeMigrationAwaitingSourceClose = false;
+		_activeMigrationDeadline = -1.0;
+			_activeMigrationConfirmedSeats.Clear();
+			_migrationFailureReturnPending = false;
+			_pendingLobbyErrorMessage = string.Empty;
+			_lobbyRejectPending = false;
 		_lobbyRejectMessage = string.Empty;
 		_hostEndedMatchPending = false;
 		_hostEndedMatchMessage = string.Empty;
@@ -158,7 +218,14 @@ public partial class NetworkManager
 			return;
 		}
 
-		RpcId(1, MethodName.RpcClientSceneLoaded, _config.MatchId, LocalSeatIndex);
+		NetworkRpcContext context = GetCurrentRpcContext();
+		RpcId(
+			1,
+			MethodName.RpcClientSceneLoaded,
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			LocalSeatIndex);
 	}
 
 	public async Task NotifyHostEndedMatchIfNeededAsync()
@@ -171,7 +238,13 @@ public partial class NetworkManager
 		}
 
 		_hostEndedMatchBroadcasted = true;
-		Rpc(MethodName.RpcHostEndedMatch, "Host disconnected.");
+		NetworkRpcContext context = GetCurrentRpcContext();
+		Rpc(
+			MethodName.RpcHostEndedMatch,
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			"Host disconnected.");
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (!IsInsideTree())
 		{
@@ -243,12 +316,47 @@ public partial class NetworkManager
 			false,
 			false,
 			true));
+		EnsureSessionMigrationToken(seatIndex);
+		EnsureLobbySeatControlStates();
+		if (_sessionMigrationTokensBySeat.TryGetValue(seatIndex, out string? migrationToken))
+		{
+			RpcId(
+				senderId,
+				MethodName.RpcReceiveSessionMigrationToken,
+				_config.SessionId,
+				_config.MatchId,
+				GetCurrentAuthorityEpoch(),
+				seatIndex,
+				migrationToken,
+				string.IsNullOrWhiteSpace(stableUserId) ? $"peer:{senderId}" : stableUserId);
+		}
 		BroadcastPlayerList();
+		CommitAuthorityCheckpointFromLobby();
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcLobbyRejected(string message)
+	private void RpcLobbyRejected(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		string message)
 	{
+		NetworkRpcContext context = new(sessionId ?? string.Empty, matchId ?? string.Empty, authorityEpoch);
+		if (!context.IsValid
+			|| _state is not (NetworkSessionState.Joining or NetworkSessionState.MigratingHost)
+			|| (_state == NetworkSessionState.MigratingHost
+				&& !MatchesCurrentRpcContext(context.SessionId, context.MatchId, context.AuthorityEpoch, allowHigherEpoch: true)))
+		{
+			return;
+		}
+
+		if (_state == NetworkSessionState.MigratingHost)
+		{
+			SetAuthorityEpoch(context.AuthorityEpoch);
+			FailMigration(ParseMigrationFailureCode(message));
+			return;
+		}
+
 		_lobbyRejectPending = true;
 		_lobbyRejectMessage = string.IsNullOrWhiteSpace(message) ? "Join rejected." : message;
 		if (Multiplayer.MultiplayerPeer != null)
@@ -262,16 +370,30 @@ public partial class NetworkManager
 		CallDeferred(nameof(FinalizeLobbyRejectedJoinIfNeeded));
 	}
 
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcSetReady(bool isReady)
+	private static NetworkMigrationFailureCode ParseMigrationFailureCode(string message)
 	{
-		if (!IsHost || _state != NetworkSessionState.Lobby)
+		return Enum.TryParse(message, ignoreCase: true, out NetworkMigrationFailureCode code)
+			? code
+			: NetworkMigrationFailureCode.OldHostTokenRejected;
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcSetReady(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		bool isReady)
+	{
+		if (!IsHost
+			|| _state != NetworkSessionState.Lobby
+			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
 
 		SetPlayerReady(Multiplayer.GetRemoteSenderId(), isReady);
 		BroadcastPlayerList();
+		CommitAuthorityCheckpointFromLobby();
 	}
 
 	private void SetPlayerReady(int peerId, bool isReady)
@@ -283,6 +405,7 @@ public partial class NetworkManager
 		}
 
 		_players[playerIndex] = _players[playerIndex] with { IsReady = isReady };
+		EnsureLobbySeatControlStates();
 		EmitSignal(SignalName.ReadyChanged, _players[playerIndex].SeatIndex, isReady);
 		EmitPlayerListUpdated();
 	}
@@ -296,13 +419,25 @@ public partial class NetworkManager
 
 		Godot.Collections.Dictionary config = ToDictionary(_config);
 		Godot.Collections.Array players = GetPlayersVariant();
-		Rpc(MethodName.RpcSyncLobby, config, players);
-		RpcSyncLobby(config, players);
+		NetworkRpcContext context = GetCurrentRpcContext();
+		Rpc(MethodName.RpcSyncLobby, context.SessionId, context.MatchId, context.AuthorityEpoch, config, players);
+		RpcSyncLobby(context.SessionId, context.MatchId, context.AuthorityEpoch, config, players);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcSyncLobby(Godot.Collections.Dictionary config, Godot.Collections.Array players)
+	private void RpcSyncLobby(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		Godot.Collections.Dictionary config,
+		Godot.Collections.Array players)
 	{
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true))
+		{
+			return;
+		}
+
+		SetAuthorityEpoch(authorityEpoch);
 		_config = ParseSharedConfig(config);
 		_players.Clear();
 		int localPeerId = GetLocalPeerId();
@@ -317,13 +452,45 @@ public partial class NetworkManager
 			InsertPlayerInSeatOrder(player with { IsLocal = player.PeerId == localPeerId || (localPeerId == 0 && player.IsHost) });
 		}
 
+		if (_state == NetworkSessionState.MigratingHost)
+		{
+			bool isLobbyMigration = _networkMigrationPlan?.Phase == NetworkAuthorityPhase.Lobby;
+			bool localSeatClaimed = _players.Any(player =>
+				player.IsLocal
+				&& player.IsConnected
+				&& string.Equals(player.StableUserId, GetStableUserId(), StringComparison.Ordinal));
+			if (isLobbyMigration && !localSeatClaimed)
+			{
+				// The new host broadcasts its roster before every follower has
+				// claimed a seat. Keep the follower in migration state so a
+				// rejection, such as an old-host token, is still actionable.
+				EmitPlayerListUpdated();
+				return;
+			}
+
+			_networkMigrationPlan = null;
+			_migrationStartedAt = -1.0;
+			_migrationPeerAttemptInFlight = false;
+			_migrationPeerAttemptStartedAt = -1.0;
+		}
 		SetState(NetworkSessionState.Lobby);
 		EmitPlayerListUpdated();
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcBeginSceneLoad(Godot.Collections.Dictionary bootstrap)
+	private void RpcBeginSceneLoad(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		Godot.Collections.Dictionary bootstrap)
 	{
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true)
+			|| !TryReadRpcContext(bootstrap, out NetworkRpcContext payloadContext)
+			|| payloadContext != new NetworkRpcContext(sessionId, matchId, authorityEpoch))
+		{
+			return;
+		}
+
 		_config = ParseSharedConfig(bootstrap);
 		SetState(NetworkSessionState.LoadingScene);
 		EmitSignal(SignalName.BeginSceneLoad, bootstrap);
@@ -336,9 +503,14 @@ public partial class NetworkManager
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcClientSceneLoaded(string matchId, int seatIndex)
+	private void RpcClientSceneLoaded(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		int seatIndex)
 	{
-		if (!IsHost)
+		if (!IsHost
+			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
@@ -399,14 +571,35 @@ public partial class NetworkManager
 		if (_loadHandshake.IsComplete)
 		{
 			Godot.Collections.Dictionary boardInit = BuildBoardInitializePayload();
-			Rpc(MethodName.RpcInitializeBoard, boardInit);
-			RpcInitializeBoard(boardInit);
+			NetworkRpcContext context = GetCurrentRpcContext();
+			Rpc(
+				MethodName.RpcInitializeBoard,
+				context.SessionId,
+				context.MatchId,
+				context.AuthorityEpoch,
+				boardInit);
+			RpcInitializeBoard(
+				context.SessionId,
+				context.MatchId,
+				context.AuthorityEpoch,
+				boardInit);
 		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcInitializeBoard(Godot.Collections.Dictionary payload)
+	private void RpcInitializeBoard(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		Godot.Collections.Dictionary payload)
 	{
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true)
+			|| !TryReadRpcContext(payload, out NetworkRpcContext payloadContext)
+			|| payloadContext != new NetworkRpcContext(sessionId, matchId, authorityEpoch))
+		{
+			return;
+		}
+
 		SetState(NetworkSessionState.InGame);
 		EmitSignal(SignalName.BoardInitialize, payload);
 		if (GetTree().CurrentScene is GameBoardScene gameBoard)
@@ -450,16 +643,29 @@ public partial class NetworkManager
 			_players.Select(player => player.SeatIndex),
 			NetworkSessionDefaults.SceneLoadTimeoutSeconds,
 			Time.GetTicksMsec() / 1000.0);
-		return ToDictionary(_config);
+		Godot.Collections.Dictionary payload = ToDictionary(_config);
+		StampRpcContext(payload, GetCurrentRpcContext());
+		return payload;
 	}
 
 	private Godot.Collections.Dictionary BuildBoardInitializePayload()
 	{
 		Godot.Collections.Dictionary payload = ToDictionary(_config);
+		StampRpcContext(payload, GetCurrentRpcContext());
 		payload["player_names_csv"] = BuildPlayerNamesCsv();
 		payload["player_avatar_ids_csv"] = BuildPlayerAvatarIdsCsv();
 		payload["network_wait_for_initialize"] = false;
 		return payload;
+	}
+
+	private static void StampRpcContext(
+		Godot.Collections.Dictionary payload,
+		NetworkRpcContext context)
+	{
+		payload["protocol_version"] = NetworkProtocol.CurrentVersion;
+		payload["session_id"] = context.SessionId;
+		payload["match_id"] = context.MatchId;
+		payload["authority_epoch"] = context.AuthorityEpoch;
 	}
 
 	private string BuildPlayerNamesCsv()
@@ -495,13 +701,28 @@ public partial class NetworkManager
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
 		_loadHandshake = null;
 		SetState(NetworkSessionState.Lobby);
-		Rpc(MethodName.RpcCancelMatchStart, message);
+		NetworkRpcContext context = GetCurrentRpcContext();
+		Rpc(
+			MethodName.RpcCancelMatchStart,
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			message);
 		ApplyMatchStartCancellation(message, returnGeneration);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcCancelMatchStart(string message)
+	private void RpcCancelMatchStart(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		string message)
 	{
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true))
+		{
+			return;
+		}
+
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
 		ApplyMatchStartCancellation(message, returnGeneration);
 	}
@@ -535,6 +756,7 @@ public partial class NetworkManager
 		SceneTree tree = GetTree();
 		if (tree.CurrentScene is MultiplayerLobbyScene)
 		{
+			_migrationFailureReturnPending = false;
 			return;
 		}
 
@@ -543,7 +765,10 @@ public partial class NetworkManager
 		Error changeSceneError = tree.ChangeSceneToFile(lobbyScenePath);
 		if (changeSceneError != Error.Ok)
 		{
-			Fail($"Failed to return to multiplayer lobby: {changeSceneError}");
+			GD.PushError($"Failed to return to multiplayer lobby: {changeSceneError}");
+			return;
 		}
+
+		_migrationFailureReturnPending = false;
 	}
 }
