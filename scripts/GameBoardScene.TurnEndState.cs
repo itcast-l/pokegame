@@ -162,8 +162,14 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (IsNetworkMultiplayerMode()
-			&& !IsNetworkHost()
+			if (IsNetworkMultiplayerMode()
+				&& _networkMigrationInputLocked)
+			{
+				return false;
+			}
+
+			if (IsNetworkMultiplayerMode()
+				&& !IsNetworkHost()
 			&& NetworkVisualPlayback.IsProcessing)
 		{
 			return false;

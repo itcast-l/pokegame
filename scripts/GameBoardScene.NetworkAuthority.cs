@@ -54,7 +54,28 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		out MultiplayerBoardActionRejectReason rejectReason)
 	{
+		return TryStartNetworkHandCardPlayFromHost(
+			actorSeatIndex,
+			handIndex,
+			turnSequenceGeneration,
+			clientActionId: 0,
+			out rejectReason);
+	}
+
+	internal bool TryStartNetworkHandCardPlayFromHost(
+		int actorSeatIndex,
+		int handIndex,
+		int turnSequenceGeneration,
+		long clientActionId,
+		out MultiplayerBoardActionRejectReason rejectReason)
+	{
 		rejectReason = MultiplayerBoardActionRejectReason.None;
+		if (_networkMigrationInputLocked)
+		{
+			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
+			return false;
+		}
+
 		int handCount = actorSeatIndex >= 0 && actorSeatIndex < _playerHands.Count
 			? _playerHands[actorSeatIndex].Count
 			: 0;
@@ -74,6 +95,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		BeginNetworkAuthorityAction(
+			AuthorityActionKind.BaseCard,
+			actorSeatIndex,
+			turnSequenceGeneration,
+			clientActionId,
+			baseHandIndex: handIndex);
 		_ = PlayNetworkHostHandCardAndBroadcastAsync(actorSeatIndex, handIndex, turnSequenceGeneration);
 		return true;
 	}
@@ -84,7 +111,28 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		out MultiplayerBoardActionRejectReason rejectReason)
 	{
+		return TryStartNetworkItemCardPlayFromHost(
+			actorSeatIndex,
+			itemHandIndex,
+			turnSequenceGeneration,
+			clientActionId: 0,
+			out rejectReason);
+	}
+
+	internal bool TryStartNetworkItemCardPlayFromHost(
+		int actorSeatIndex,
+		int itemHandIndex,
+		int turnSequenceGeneration,
+		long clientActionId,
+		out MultiplayerBoardActionRejectReason rejectReason)
+	{
 		rejectReason = MultiplayerBoardActionRejectReason.None;
+		if (_networkMigrationInputLocked)
+		{
+			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
+			return false;
+		}
+
 		int itemHandCount = actorSeatIndex >= 0 && actorSeatIndex < _playerItemHands.Count
 			? _playerItemHands[actorSeatIndex].Count
 			: 0;
@@ -113,6 +161,13 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		BeginNetworkAuthorityAction(
+			AuthorityActionKind.ItemCard,
+			actorSeatIndex,
+			turnSequenceGeneration,
+			clientActionId,
+			itemHandIndex: itemHandIndex,
+			itemOrRewardId: _playerItemHands[actorSeatIndex][itemHandIndex].Id);
 		_ = PlayNetworkHostItemCardAndBroadcastAsync(actorSeatIndex, itemHandIndex, turnSequenceGeneration);
 		return true;
 	}
@@ -125,6 +180,12 @@ public partial class GameBoardScene
 		out MultiplayerBoardActionRejectReason rejectReason)
 	{
 		rejectReason = MultiplayerBoardActionRejectReason.None;
+		if (_networkMigrationInputLocked)
+		{
+			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
+			return false;
+		}
+
 		if (IsGameOver())
 		{
 			rejectReason = MultiplayerBoardActionRejectReason.GameOver;
@@ -148,6 +209,10 @@ public partial class GameBoardScene
 				return false;
 			}
 
+			SetNetworkAuthorityActionSelection(
+				AuthorityActionPhase.WaitingDiscard,
+				actorSeatIndex,
+				targetHandIndex);
 			_pendingHandLimitDiscardCompletion.TrySetResult(targetHandIndex);
 			return true;
 		}
@@ -161,6 +226,10 @@ public partial class GameBoardScene
 				return false;
 			}
 
+			SetNetworkAuthorityActionSelection(
+				AuthorityActionPhase.WaitingAttachment,
+				actorSeatIndex,
+				targetHandIndex);
 			_ = CompleteMagnetAttachmentSelectionAsync(targetHandIndex);
 			return true;
 		}
@@ -175,6 +244,9 @@ public partial class GameBoardScene
 
 			if (IsPlayerDeckTargetItemCard(_pendingItemCardId))
 			{
+				SetNetworkAuthorityActionSelection(
+					AuthorityActionPhase.WaitingTargetPlayer,
+					targetPlayerIndex);
 				_ = CompletePendingItemSelectionAuthorityAsync(
 					_pendingItemCardId,
 					_pendingItemOwnerIndex,
@@ -187,6 +259,9 @@ public partial class GameBoardScene
 
 			_pendingItemSelectionMode = PendingItemSelectionMode.TargetHandCard;
 			_revealedPlayerHandIndex = targetPlayerIndex;
+			SetNetworkAuthorityActionSelection(
+				AuthorityActionPhase.WaitingTargetHand,
+				targetPlayerIndex);
 			RenderPlayerHands();
 			SendBoardSnapshotIfHost();
 			return true;
@@ -200,6 +275,10 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		SetNetworkAuthorityActionSelection(
+			AuthorityActionPhase.WaitingTargetHand,
+			targetPlayerIndex,
+			targetHandIndex);
 		_ = CompletePendingItemSelectionAuthorityAsync(
 			_pendingItemCardId,
 			_pendingItemOwnerIndex,
@@ -262,6 +341,7 @@ private async Task PlayNetworkHostHandCardAndBroadcastAsync(
 			turnSequenceGeneration,
 			startGlobalPosition);
 		played = result.Played;
+		SetNetworkAuthorityActionMutationResult(result);
 		if (result.Played
 			&& !IsGameOver()
 			&& result.CompletesTurn)
@@ -273,21 +353,29 @@ private async Task PlayNetworkHostHandCardAndBroadcastAsync(
 	}
 	finally
 	{
-		if (CanFinalizeNetworkAuthorityAction(
-			snapshotId,
-			turnSequenceGeneration,
-			played))
-		{
-			if (!IsGameOver())
+			if (CanFinalizeNetworkAuthorityAction(
+				snapshotId,
+				turnSequenceGeneration,
+				played))
 			{
-				_isProcessingCardPlay = false;
-				RenderPlayerHands();
+				bool hasPendingSelection = HasPendingItemSelection();
+				int snapshotToSend = snapshotId;
+				if (!hasPendingSelection)
+				{
+					CompleteNetworkAuthorityAction();
+					snapshotToSend = CreateNextNetworkSnapshotId();
+				}
+
+				if (!IsGameOver())
+				{
+					_isProcessingCardPlay = false;
+					RenderPlayerHands();
 			}
 
-			GetNetworkManager()?.SendBoardSnapshotsFromHost(
-				this,
-				snapshotId);
-			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
+				GetNetworkManager()?.SendBoardSnapshotsFromHost(
+					this,
+					snapshotToSend);
+				ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
 		}
 
 		ClearNetworkAuthoritativeVisualSnapshotIfOwned(snapshotId);
@@ -321,6 +409,8 @@ private async Task PlayNetworkHostItemCardAndBroadcastAsync(
 			itemHandIndex,
 			turnSequenceGeneration);
 		played = result.Played;
+		SetNetworkAuthorityActionMutationResult(result);
+		SyncNetworkAuthorityActionWithPendingSelection();
 		if (result.Played
 			&& !IsGameOver()
 			&& result.CompletesTurn
@@ -333,16 +423,24 @@ private async Task PlayNetworkHostItemCardAndBroadcastAsync(
 	}
 	finally
 	{
-		if (CanFinalizeNetworkAuthorityAction(
-			snapshotId,
-			turnSequenceGeneration,
-			played))
-		{
-			if (!IsGameOver()
-				&& !HasPendingItemSelection())
+			if (CanFinalizeNetworkAuthorityAction(
+				snapshotId,
+				turnSequenceGeneration,
+				played))
 			{
-				_isProcessingCardPlay = false;
-				RenderPlayerHands();
+				bool hasPendingSelection = HasPendingItemSelection();
+				int snapshotToSend = snapshotId;
+				if (!hasPendingSelection)
+				{
+					CompleteNetworkAuthorityAction();
+					snapshotToSend = CreateNextNetworkSnapshotId();
+				}
+
+				if (!IsGameOver()
+					&& !hasPendingSelection)
+				{
+					_isProcessingCardPlay = false;
+					RenderPlayerHands();
 			}
 
 			if (played || HasPendingItemSelection())
@@ -357,12 +455,12 @@ private async Task PlayNetworkHostItemCardAndBroadcastAsync(
 							turnSequenceGeneration,
 							snapshotId);
 				}
-				GetNetworkManager()?.SendBoardSnapshotsFromHost(
-					this,
-					snapshotId);
-			}
+					GetNetworkManager()?.SendBoardSnapshotsFromHost(
+						this,
+						snapshotToSend);
+				}
 
-			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
+				ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
 		}
 
 		ClearNetworkAuthoritativeVisualSnapshotIfOwned(snapshotId);

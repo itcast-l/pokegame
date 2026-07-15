@@ -249,16 +249,45 @@ public partial class GameBoardScene
 		}
 
 		bool targetIsValid = IsPendingItemTargetValid(itemCardId, ownerPlayerIndex, targetPlayerIndex, targetHandIndex);
-		if (!targetIsValid || itemHandIndex < 0 || itemHandIndex >= _playerItemHands[ownerPlayerIndex].Count)
+		bool itemAlreadyConsumed = _networkAuthorityActionState.Kind == AuthorityActionKind.CardTransfer
+			&& _networkAuthorityActionState.PrimaryMutationApplied;
+		if (!targetIsValid
+			|| !itemAlreadyConsumed && (itemHandIndex < 0 || itemHandIndex >= _playerItemHands[ownerPlayerIndex].Count))
 		{
 			CancelPendingItemSelectionForAuthorityFailure(ownerPlayerIndex);
 			return;
 		}
 
-		ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemHandIndex];
-		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(ownerPlayerIndex, itemHandIndex);
-		_playerItemHands[ownerPlayerIndex].RemoveAt(itemHandIndex);
-		ShiftHandDisplayStateAfterRemovedCard(ownerPlayerIndex, _playerHands[ownerPlayerIndex].Count + itemHandIndex);
+		ItemCard itemCard;
+		Vector2? itemGlobalPosition;
+		if (itemAlreadyConsumed)
+		{
+			ItemCard? restoredItemCard = CreateItemCard(itemCardId);
+			if (!restoredItemCard.HasValue)
+			{
+				CancelPendingItemSelectionForAuthorityFailure(ownerPlayerIndex);
+				return;
+			}
+
+			itemCard = restoredItemCard.Value;
+			itemGlobalPosition = null;
+		}
+		else
+		{
+			if (itemHandIndex < 0
+				|| itemHandIndex >= _playerItemHands[ownerPlayerIndex].Count
+				|| !string.Equals(_playerItemHands[ownerPlayerIndex][itemHandIndex].Id, itemCardId, StringComparison.Ordinal))
+			{
+				CancelPendingItemSelectionForAuthorityFailure(ownerPlayerIndex);
+				return;
+			}
+
+			itemCard = _playerItemHands[ownerPlayerIndex][itemHandIndex];
+			itemGlobalPosition = GetHandItemCardGlobalPosition(ownerPlayerIndex, itemHandIndex);
+			_playerItemHands[ownerPlayerIndex].RemoveAt(itemHandIndex);
+			ShiftHandDisplayStateAfterRemovedCard(ownerPlayerIndex, _playerHands[ownerPlayerIndex].Count + itemHandIndex);
+			MarkNetworkAuthorityPrimaryMutationApplied();
+		}
 		DismissActiveSelectionOverlay(invokeCancel: false);
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
@@ -294,15 +323,16 @@ public partial class GameBoardScene
 				return;
 			}
 
-			PlayCardResult result = (await ResolveItemCardOnPlayAsync(
+				PlayCardResult result = (await ResolveItemCardOnPlayAsync(
 				itemCard,
 				ownerPlayerIndex,
 				itemHandIndex,
 				targetPlayerIndex,
 				targetHandIndex,
 				itemGlobalPosition ?? Vector2.Zero,
-				turnSequenceGeneration)) with { CompletesTurn = false };
-			RenderPlayerCardPiles();
+					turnSequenceGeneration)) with { CompletesTurn = false };
+				SetNetworkAuthorityActionMutationResult(result);
+				RenderPlayerCardPiles();
 			if (!QuestionRewardPresentationRules.ShouldDelayTableRenderForQuestionReward(
 				result.QuestionRewardAnimation.HasValue,
 				IsLocalHandPlayer(ownerPlayerIndex)))
@@ -387,6 +417,7 @@ public partial class GameBoardScene
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
+		CompleteNetworkAuthorityAction();
 		if (IsNetworkMultiplayerMode())
 		{
 			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();

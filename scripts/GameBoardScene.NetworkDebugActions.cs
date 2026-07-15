@@ -25,7 +25,8 @@ public partial class GameBoardScene
 			|| localSeat < 0
 			|| localSeat >= player_count
 		|| IsGameOver()
-		|| _isOpeningDealAnimationPlaying
+			|| _isOpeningDealAnimationPlaying
+			|| _networkMigrationInputLocked
 		|| _isProcessingCardPlay
 		|| _isResolvingTurnSequence
 		|| (!IsNetworkHost() && NetworkVisualPlayback.IsProcessing)
@@ -203,6 +204,10 @@ public partial class GameBoardScene
 			["visual_processing"] = NetworkVisualPlayback.IsProcessing,
 			["visual_pending_events"] = NetworkVisualPlayback.PendingEventCount,
 			["visual_fast_forwarding"] = NetworkVisualPlayback.IsFastForwarding,
+			["authority_action_id"] = _networkAuthorityActionState.ActionId,
+			["authority_action_client_id"] = _networkAuthorityActionState.ClientActionId,
+			["authority_action_kind"] = _networkAuthorityActionState.Kind.ToString(),
+			["authority_action_phase"] = _networkAuthorityActionState.Phase.ToString(),
 		};
 	}
 

@@ -1163,8 +1163,8 @@ internal static partial class Program
 		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(partialText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
 		True(partialText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
-		True(partialText.Contains("private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
-		True(partialText.Contains("private void RpcReconnectPlayer(string matchId, string reconnectToken, string stableUserId)", StringComparison.Ordinal));
+		True(partialText.Contains("private void RpcRequestPlayHandCard(", StringComparison.Ordinal));
+		True(partialText.Contains("private void RpcReconnectPlayer(", StringComparison.Ordinal));
 		True(partialText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
 		False(mainText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
 		False(mainText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
@@ -2148,4 +2148,3 @@ internal static partial class Program
 	}
 
 }
-

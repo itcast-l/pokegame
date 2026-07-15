@@ -130,6 +130,7 @@ public partial class GameBoardScene
 		{
 			while (turnSequenceGeneration == _turnSequenceGeneration
 				&& !IsGameOver()
+				&& !_networkMigrationInputLocked
 				&& (ShouldResolvePendingNetworkAiProxySelection()
 					|| (GetNetworkManager()?.IsSeatAiControlled(_currentTurnPlayerIndex) ?? false)))
 			{
@@ -150,7 +151,7 @@ public partial class GameBoardScene
 					}
 
 					await RefillPlayerBaseHandAsync(playerIndex, turnSequenceGeneration);
-					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || _networkMigrationInputLocked)
 					{
 						return;
 					}
@@ -164,13 +165,13 @@ public partial class GameBoardScene
 					}
 
 					await ToSignal(GetTree().CreateTimer(AiTurnDelaySeconds), SceneTreeTimer.SignalName.Timeout);
-					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || _networkMigrationInputLocked)
 					{
 						return;
 					}
 
 					PlayCardResult result = await PlayNetworkAiProxyHandEntryAsync(playerIndex, turnSequenceGeneration);
-					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || _networkMigrationInputLocked)
 					{
 						return;
 					}
@@ -216,6 +217,11 @@ public partial class GameBoardScene
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			IsGameOver()))
+		{
+			return false;
+		}
+
+		if (_networkMigrationInputLocked)
 		{
 			return false;
 		}
@@ -282,8 +288,14 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (_networkMigrationInputLocked)
+		{
+			return false;
+		}
+
 		while (turnSequenceGeneration == _turnSequenceGeneration
 			&& !IsGameOver()
+			&& !_networkMigrationInputLocked
 			&& ShouldResolvePendingNetworkAiProxySelection())
 		{
 			int ownerSeatIndex = _pendingItemOwnerIndex;
@@ -360,6 +372,7 @@ public partial class GameBoardScene
 
 		while (turnSequenceGeneration == _turnSequenceGeneration
 			&& !IsGameOver()
+			&& !_networkMigrationInputLocked
 			&& (_isProcessingCardPlay || HasPendingItemSelection()))
 		{
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -370,7 +383,8 @@ public partial class GameBoardScene
 
 	private async Task ForceResolvePendingNetworkAiProxySelectionAfterFailureAsync(int ownerSeatIndex, int turnSequenceGeneration)
 	{
-		if (!HasPendingItemSelection()
+		if (_networkMigrationInputLocked
+			|| !HasPendingItemSelection()
 			|| turnSequenceGeneration != _turnSequenceGeneration
 			|| ownerSeatIndex != _pendingItemOwnerIndex)
 		{

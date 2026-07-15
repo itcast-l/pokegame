@@ -56,6 +56,7 @@ public partial class GameBoardScene
 		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
 		_pendingItemSelectionMode = PendingItemSelectionMode.TargetPlayer;
 		_revealedPlayerHandIndex = -1;
+		SyncNetworkAuthorityActionWithPendingSelection();
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
 		ShowTargetPlayerSelection();
@@ -164,14 +165,26 @@ public partial class GameBoardScene
 
 	if (IsOfflineSoloAiPlayer(playerIndex))
 	{
-		return RemoveHandCardFromGame(
+		bool removed = RemoveHandCardFromGame(
 			playerIndex,
 			PickOfflineSoloAiDiscardDisplayIndex(playerIndex));
+		if (removed)
+		{
+			CommitNetworkAuthorityDiscardMutation();
+		}
+
+		return removed;
 	}
 
-	return RemoveHandCardFromGame(
+	bool discarded = RemoveHandCardFromGame(
 		playerIndex,
 		PickRandomHandDisplayIndex(playerIndex));
+	if (discarded)
+	{
+		CommitNetworkAuthorityDiscardMutation();
+	}
+
+	return discarded;
 }
 
 	private bool ShouldUseInteractiveHumanItemFollowup(int playerIndex)
@@ -222,9 +235,10 @@ public partial class GameBoardScene
 	_pendingItemHandIndex = -1;
 	_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
 	_pendingItemCardId = string.Empty;
-	_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
-	_pendingHandLimitDiscardCompletion = completionSource;
-	RenderPlayerHands();
+		_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
+		_pendingHandLimitDiscardCompletion = completionSource;
+		SyncNetworkAuthorityActionWithPendingSelection();
+		RenderPlayerHands();
 	SendBoardSnapshotIfHost();
 	ShowHandLimitDiscardSelection();
 	BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
@@ -237,12 +251,13 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (!RemoveHandCardFromGame(ownerPlayerIndex, displayIndex))
-		{
-			return false;
-		}
+			if (!RemoveHandCardFromGame(ownerPlayerIndex, displayIndex))
+			{
+				return false;
+			}
 
-		discarded = true;
+			CommitNetworkAuthorityDiscardMutation();
+			discarded = true;
 		return true;
 	}
 	finally

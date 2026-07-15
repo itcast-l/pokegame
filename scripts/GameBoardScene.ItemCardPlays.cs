@@ -98,6 +98,7 @@ public partial class GameBoardScene
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
 		PlaySpecialItemCardPlaySfx();
 		await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, itemGlobalPosition ?? Vector2.Zero, 0, GetCardRotationDegreesForPlayer(playerIndex));
@@ -244,6 +245,7 @@ public partial class GameBoardScene
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
 		PlaySpecialItemCardPlaySfx();
 

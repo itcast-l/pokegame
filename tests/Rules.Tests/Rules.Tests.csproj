@@ -85,5 +85,10 @@
     <Compile Include="../../scripts/SpecialCardSystem.cs" Link="Rules/SpecialCardSystem.cs" />
     <Compile Include="../../scripts/VisualUpdateThrottle.cs" Link="Rules/VisualUpdateThrottle.cs" />
     <Compile Include="../../scripts/NetworkVisualQueuePolicy.cs" Link="Rules/NetworkVisualQueuePolicy.cs" />
+    <Compile Include="../../scripts/NetworkProtocol.cs" Link="Rules/NetworkProtocol.cs" />
+    <Compile Include="../../scripts/AuthorityActionState.cs" Link="Rules/AuthorityActionState.cs" />
+    <Compile Include="../../scripts/NetworkAuthorityCheckpoint.cs" Link="Rules/NetworkAuthorityCheckpoint.cs" />
+    <Compile Include="../../scripts/NetworkMigrationRules.cs" Link="Rules/NetworkMigrationRules.cs" />
+	<Compile Include="../../scripts/GameplayManifestHashRules.cs" Link="Rules/GameplayManifestHashRules.cs" />
   </ItemGroup>
 </Project>
