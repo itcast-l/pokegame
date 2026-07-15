@@ -20,7 +20,7 @@ internal static class AdventureUpgradeChoiceRules
 	private const int MainAdventureFirstAvatarStage = 3;
 	private const int MainAdventureLastAvatarStage = 14;
 	private const int OfferSize = 3;
-	private const int BigCaptureThreshold = 7;
+	private const int BigCaptureThreshold = 6;
 
 	internal static bool IsMainAdventureAvatarStageNumber(int avatarStageNumber)
 	{

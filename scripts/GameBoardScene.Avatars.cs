@@ -82,7 +82,7 @@ public partial class GameBoardScene
 
 		return playerIndex switch
 		{
-			0 => CharacterAvatarCatalog.Default,
+			0 => playerAvatarDefinition,
 			1 => CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id),
 			_ => playerAvatarDefinition,
 		};
@@ -169,6 +169,19 @@ public partial class GameBoardScene
 
 		PlayPlayerAvatarActionSfx(playerIndex, action);
 		avatar.PlayAction(action);
+	}
+
+	private void ResetPlayerAvatarActions()
+	{
+		foreach (CharacterAvatar? avatar in _playerAvatars)
+		{
+			if (avatar == null || !GodotObject.IsInstanceValid(avatar))
+			{
+				continue;
+			}
+
+			avatar.PlayIdle();
+		}
 	}
 
 	private void UpdatePlayerAvatarTooltip(int playerIndex)

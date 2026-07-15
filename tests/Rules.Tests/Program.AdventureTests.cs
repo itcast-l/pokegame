@@ -33,8 +33,8 @@ internal static partial class Program
 		Equal(45, late.RareWeight);
 		Equal(25, late.LegendaryWeight);
 
-		False(AdventureUpgradeChoiceRules.ShouldGrantBigCapture(6));
-		True(AdventureUpgradeChoiceRules.ShouldGrantBigCapture(7));
+		False(AdventureUpgradeChoiceRules.ShouldGrantBigCapture(5));
+		True(AdventureUpgradeChoiceRules.ShouldGrantBigCapture(6));
 	}
 
 	private static void AdventureUpgradeChoiceSkipsAcquiredIdsAndDeduplicatesOffer()
@@ -154,11 +154,14 @@ internal static partial class Program
 		runState.MarkVictoryUpgradeGranted();
 		False(runState.ShouldGrantVictoryUpgrade);
 
+		runState.SetHealth(41, 108);
 		runState.AdvanceToStage(avatarStageNumber: 4);
 		Equal(2, runState.CurrentRunStageIndex);
 		False(runState.ShouldGrantRunStartUpgrade);
 		True(runState.ShouldGrantVictoryUpgrade);
 		True(runState.HasAcquiredUpgrade("common_a"));
+		Equal(108, runState.CurrentHealth);
+		Equal(108, runState.MaxHealth);
 
 		runState.Clear();
 		False(runState.IsActive);

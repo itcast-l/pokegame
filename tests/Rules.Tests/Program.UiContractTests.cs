@@ -168,14 +168,14 @@ internal static partial class Program
 			playableFromHand: false,
 			rewardDelivery: RewardDeliveryMode.ImmediateAttachment);
 		True(ItemCardEffectContractRegistry.Validate(attachmentReward).IsValid);
-		ItemCardDefinition handAttachmentReward = CreateContractTestItemCard(
+		ItemCardDefinition invalidHandAttachmentReward = CreateContractTestItemCard(
 			id: "suit_collect",
 			effectType: CardEffectTypes.AttachModifier,
 			effectValues: "modifier=suit_collect",
 			canBeQuestionReward: true,
 			playableFromHand: true,
 			rewardDelivery: RewardDeliveryMode.Hand);
-		True(ItemCardEffectContractRegistry.Validate(handAttachmentReward).IsValid);
+		False(ItemCardEffectContractRegistry.Validate(invalidHandAttachmentReward).IsValid);
 		False(ItemCardEffectContractRegistry.Validate(
 			CreateContractTestItemCard(
 				id: "playable_immediate_attachment",
@@ -806,7 +806,7 @@ internal static partial class Program
 			seenSuits.Add(suit);
 			seenTiers.Add(tier);
 
-			True(texturePath.StartsWith("res://generated-images/upgrade-popup-assets/", StringComparison.Ordinal));
+			True(texturePath.StartsWith("res://art/ui/adventure_upgrade_cards/", StringComparison.Ordinal));
 			True(texturePath.Contains("/processed/", StringComparison.Ordinal));
 
 			string[] regionParts = entryBlocks[index].Groups[4].Value.Split(',', StringSplitOptions.TrimEntries);
@@ -896,10 +896,10 @@ internal static partial class Program
 
 		False(text.Contains("GetAdventureUpgradeCardTextureRegion(", StringComparison.Ordinal));
 		False(text.Contains("GetAdventureUpgradeCardTexturePath(", StringComparison.Ordinal));
-		False(text.Contains("res://generated-images/upgrade-popup-assets/hearts/processed/hearts-common.png", StringComparison.Ordinal));
-		False(text.Contains("res://generated-images/upgrade-popup-assets/spades/processed/spades-common.png", StringComparison.Ordinal));
-		False(text.Contains("res://generated-images/upgrade-popup-assets/diamonds/processed/diamonds-common.png", StringComparison.Ordinal));
-		False(text.Contains("res://generated-images/upgrade-popup-assets/clubs/processed/clubs-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://art/ui/adventure_upgrade_cards/hearts/processed/hearts-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://art/ui/adventure_upgrade_cards/spades/processed/spades-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://art/ui/adventure_upgrade_cards/diamonds/processed/diamonds-common.png", StringComparison.Ordinal));
+		False(text.Contains("res://art/ui/adventure_upgrade_cards/clubs/processed/clubs-common.png", StringComparison.Ordinal));
 		False(text.Contains("MapAdventureUpgradeRarityToTextureTier(", StringComparison.Ordinal));
 		False(text.Contains("ApplyAdventureUpgradeChoicePalette(", StringComparison.Ordinal));
 		False(text.Contains("normalizedSuit == ", StringComparison.Ordinal));
@@ -926,7 +926,7 @@ internal static partial class Program
 		string text = File.ReadAllText(overlayScenePath);
 
 		False(text.Contains("AtlasTexture_sample_", StringComparison.Ordinal));
-		False(text.Contains("generated-images/upgrade-popup-assets/", StringComparison.Ordinal));
+		False(text.Contains("art/ui/adventure_upgrade_cards/", StringComparison.Ordinal));
 		True(text.Contains("PreviewSuit = \"diamonds\"", StringComparison.Ordinal));
 		True(text.Contains("PreviewSuit = \"hearts\"", StringComparison.Ordinal));
 		True(text.Contains("PreviewSuit = \"spades\"", StringComparison.Ordinal));

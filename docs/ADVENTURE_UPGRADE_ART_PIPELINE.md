@@ -1,6 +1,6 @@
 # Adventure Upgrade Art Pipeline
 
-Last updated: 2026-07-01
+Last updated: 2026-07-15
 
 ## Purpose
 
@@ -14,8 +14,8 @@ Last updated: 2026-07-01
 
 - `generated-images/upgrade-popup-assets/<suit>/raw/`
   说明：源图，仅供处理流程与人工校对使用
-- `generated-images/upgrade-popup-assets/<suit>/processed/`
-  说明：运行时允许引用的正式 PNG
+- `art/ui/adventure_upgrade_cards/<suit>/processed/`
+  说明：运行时引用并进入正式导出的 PNG
 - `generated-images/upgrade-popup-assets/transparent-processing-meta.json`
   说明：raw -> processed 的处理记录
 - `resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres`
@@ -25,7 +25,7 @@ Last updated: 2026-07-01
 
 运行时代码、运行时资源、运行时场景只允许引用：
 
-- `res://generated-images/upgrade-popup-assets/.../processed/*.png`
+- `res://art/ui/adventure_upgrade_cards/.../processed/*.png`
 - `res://resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres`
 
 当前正式消费者：
@@ -40,7 +40,7 @@ Last updated: 2026-07-01
 
 - `raw/` 保留在仓库内
 - 但 `raw/` 不得被 gameplay code、gameplay scenes、resource catalog 直接引用
-- `generated-images/upgrade-popup-assets-v2/` 是非卡通重绘候选区，只能作为 source-only 草稿使用，直到人工挑选并复制/处理到正式 `upgrade-popup-assets/<suit>/processed/` 路径
+- `generated-images/upgrade-popup-assets-v2/` 是非卡通重绘候选区，只能作为 source-only 草稿使用，直到人工挑选并复制/处理到正式 `art/ui/adventure_upgrade_cards/<suit>/processed/` 路径
 
 允许 `raw/` 的位置：
 
@@ -81,7 +81,7 @@ The script writes candidates under:
 - `generated-images/upgrade-popup-assets-v2/manifest.json`
 
 Do not reference v2 raw candidates from runtime resources. Promote a selected
-candidate by processing it into the governed `upgrade-popup-assets/<suit>/processed/`
+candidate by processing it into the governed `art/ui/adventure_upgrade_cards/<suit>/processed/`
 path and updating `transparent-processing-meta.json` plus the visual catalog.
 
 ## How Crop Regions Are Governed
@@ -98,8 +98,8 @@ path and updating `transparent-processing-meta.json` plus the visual catalog.
 
 ## How To Add A New Suit/Tier Visual
 
-1. 把新源图放入对应 `raw/` 目录
-2. 生成或替换对应 `processed/*.png`
+1. 把新源图放入对应 `generated-images/upgrade-popup-assets/<suit>/raw/` 目录
+2. 生成候选图后，将正式版本写入 `art/ui/adventure_upgrade_cards/<suit>/processed/*.png`
 3. 更新 `transparent-processing-meta.json`
 4. 在 `adventure_upgrade_card_visual_catalog.tres` 中新增或更新对应条目
 5. 运行：

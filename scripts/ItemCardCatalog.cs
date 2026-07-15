@@ -8,7 +8,6 @@ public sealed partial class ItemCardCatalog
 	public const string QuestionMarkItemCardId = "question_mark";
 	public const string BombItemCardId = "bomb";
 	public const string MagnetItemCardId = "magnet";
-	public const string GreedItemCardId = "greed";
 	public const string LensItemCardId = "lens";
 	public const string DoubleItemCardId = "double";
 	public const string OvertimeItemCardId = "overtime";

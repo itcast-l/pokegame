@@ -275,7 +275,7 @@ public static class ItemCardEffectContractRegistry
 		Add(contracts, CardEffectTypes.StealDeckCards, CardGameEvents.OnPlay, new[] { CardEffectValueKeys.Target, CardEffectValueKeys.Count }, new[] { RewardDeliveryMode.None, RewardDeliveryMode.Hand }, requiresResolver: true);
 		Add(contracts, CardEffectTypes.CollectTable, CardGameEvents.OnPlay, new[] { CardEffectValueKeys.Target }, new[] { RewardDeliveryMode.None, RewardDeliveryMode.Hand }, requiresResolver: true);
 		Add(contracts, CardEffectTypes.GrantReward, CardGameEvents.OnCollect, Array.Empty<string>(), new[] { RewardDeliveryMode.None }, requiresResolver: true);
-		Add(contracts, CardEffectTypes.AttachModifier, CardGameEvents.OnPlay, new[] { CardEffectValueKeys.Modifier }, new[] { RewardDeliveryMode.Hand, RewardDeliveryMode.ImmediateAttachment }, requiresResolver: true);
+		Add(contracts, CardEffectTypes.AttachModifier, CardGameEvents.OnPlay, new[] { CardEffectValueKeys.Modifier }, new[] { RewardDeliveryMode.ImmediateAttachment }, requiresResolver: true);
 		Add(contracts, CardEffectTypes.RevealCards, CardGameEvents.OnPlay, new[] { CardEffectValueKeys.Target, CardEffectValueKeys.Count }, new[] { RewardDeliveryMode.Hand }, requiresResolver: true);
 		Add(contracts, CardEffectTypes.MagnetExtraCapture, CardGameEvents.OnCollect, new[] { CardEffectValueKeys.Target, CardEffectValueKeys.Count }, new[] { RewardDeliveryMode.Hand, RewardDeliveryMode.ImmediateAttachment }, new Dictionary<string, ItemCardEffectValueRange> { [CardEffectValueKeys.Count] = new(1, 52) });
 		Add(contracts, CardEffectTypes.ShuffleTable, CardGameEvents.OnPlay, new[] { CardEffectValueKeys.Target }, new[] { RewardDeliveryMode.Hand }, requiresResolver: true);

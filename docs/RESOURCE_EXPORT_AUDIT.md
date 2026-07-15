@@ -24,14 +24,14 @@ bash tools/audit_export_resources.sh
 当前基线：
 
 - 截至 `2026-07-02`，清理完成后的基线运行结果为 `no risk checks`。
-- 当前允许继续被跟踪的生成资产只剩 `generated-images/upgrade-popup-assets/**/processed/*.png` 与对应 `.import`。
+- 正式强化卡图已经迁移到 `art/ui/adventure_upgrade_cards/**/processed/`；`generated-images/**` 不再允许承载运行时正式素材。
 
 当前仓库的特殊说明：
 
-- `generated-images/**` 不能整体排除，因为 `generated-images/upgrade-popup-assets/**/processed/*.png` 目前仍被运行时资源引用。
-- `generated-images/upgrade-popup-assets/**/processed/*.png` 与对应 `.import` 当前属于运行时允许资产。
+- `generated-images/**` 可以作为 source-only 生成区整体排除；运行时正式素材必须进入 `art/`、`asset/`、`assets/` 或 `resources/`。
+- `art/ui/adventure_upgrade_cards/**/processed/*.png` 与对应 `.import` 是当前强化卡图正式资产。
 - `generated-images/upgrade-popup-assets/raw/**`、`generated-images/upgrade-popup-assets/transparent-processing-meta.json`、以及根目录概念图 PNG 属于 source-only 资产，应视为导出风险并被明确排除。
-- 因此审计脚本会把 processed 目录视为 allowlist，把 preview/debug/input/output/final-candidates 与 source-only 资产视为风险，而不是盲目要求整个 `generated-images/**` 被导出排除。
+- 因此审计脚本会把任何被 git 跟踪的 `generated-images/**` 文件视为风险，不再保留运行时 allowlist。
 - `.gitignore` 也应忽略这些 source-only 资产，避免后续继续误加入版本控制。
 
 建议在以下场景运行：

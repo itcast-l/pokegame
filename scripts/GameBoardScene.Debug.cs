@@ -987,7 +987,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		RemoveLeafySeadragonBladeBreakTableCard(markedTableCardIndex);
+		MoveLeafySeadragonBladeBreakTableCardToDeck(1, markedTableCardIndex);
 		RenderTableCards();
 		return true;
 	}

@@ -12,10 +12,6 @@
       "image": "magnet/run-003/processed/frames/frame-001.png",
       "description": "额外吸取轨道上剩余牌中分值最高的一张"
     },
-    "greed": {
-      "image": "greed/run-003/processed/frames/frame-001.png",
-      "description": "收割了超过 10 张牌，将额外获得上家牌库顶部的 3 张牌"
-    },
     "lens": {
       "image": "lens/run-003/processed/frames/frame-001.png",
       "description": "看到轨道上最后 3 张背面牌的点数，打出后消失"

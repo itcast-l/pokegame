@@ -1,6 +1,6 @@
 # Adventure Upgrade Visual Resource Baseline
 
-Last updated: 2026-07-01
+Last updated: 2026-07-15
 
 本基线只冻结 adventure upgrade 弹窗卡面资源治理这一轮，不扩展到其他 UI 或战斗美术问题。
 
@@ -8,7 +8,7 @@ Last updated: 2026-07-01
 
 当前纳入治理范围的资源与消费者如下：
 
-- `res://generated-images/upgrade-popup-assets/<suit>/processed/*.png` 这 12 张已处理卡面 PNG
+- `res://art/ui/adventure_upgrade_cards/<suit>/processed/*.png` 这 12 张正式卡面 PNG
 - `res://scenes/adventure_upgrade_selection_overlay.tscn` 运行时三选一强化覆盖层
 - `res://scenes/upgrade_choice_popup_asset_scene.tscn` 编辑器预览场景
 - `res://scripts/GameBoardScene.AdventureUpgrades.cs` 运行时强化选择逻辑
@@ -63,6 +63,7 @@ wc -c scenes/upgrade_choice_popup_asset_scene.tscn
 - 运行时 overlay 不再从外部 processed PNG 解析卡面
 - 新增卡面资源绕开统一 catalog，重新回到脚本硬编码路径表
 - raw 目录资源被运行时代码直接加载作为正式卡面
+- 正式卡面重新放回 `generated-images/**`，导致被导出排除规则过滤
 
 ## Success Thresholds After Migration
 
@@ -73,6 +74,7 @@ wc -c scenes/upgrade_choice_popup_asset_scene.tscn
 - popup 场景当前 `Image` / `ImageTexture` / `PackedByteArray(...)` 计数均为 `0`
 - runtime overlay 与 editor preview 现在都通过同一份 catalog 元数据解析卡面
 - 12 张 processed 卡面 PNG 仍全部可用，且 suit / tier / region 元数据可审计
+- 12 张正式卡面全部位于 `art/ui/adventure_upgrade_cards/` 并进入 Windows PCK
 - 后续新增或替换卡面时，可通过审计脚本、rules 测试与 smoke 提前拦截回归
 
 ## Current Baseline Result

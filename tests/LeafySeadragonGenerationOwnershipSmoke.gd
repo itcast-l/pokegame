@@ -75,6 +75,7 @@ func _run_trace_hunt_removal() -> bool:
 	var result := {}
 	var target_code := ""
 	var original_count := 0
+	var original_enemy_deck_count := 0
 	if not bool(board.call("DebugConfigureLeafyBladeGenerationOwnershipProbe")) \
 		or not bool(board.call("DebugMarkLeafyBladeTargetForTraceHunt")) \
 		or int(board.call("DebugGetAdventureTraceHuntMarkedTableCardIndex")) < 0 \
@@ -83,15 +84,19 @@ func _run_trace_hunt_removal() -> bool:
 		return false
 	target_code = String(board.call("DebugGetTableCardCode", 0))
 	original_count = int(board.call("DebugGetTableCardCount"))
+	original_enemy_deck_count = int(board.call("DebugGetDeckCardCountForPlayer", 1))
 	if not await _wait_for_result(result):
 		return false
+	var enemy_deck_count := int(board.call("DebugGetDeckCardCountForPlayer", 1))
 	if String(result.get("error", "")) != "" \
 		or int(board.call("DebugGetTableCardCount")) != original_count - 1 \
 		or _table_contains_code(board, target_code) \
+		or enemy_deck_count != original_enemy_deck_count + 1 \
+		or String(board.call("DebugGetDeckCardCode", 1, enemy_deck_count - 1)) != target_code \
 		or int(board.call("DebugGetAdventureTraceHuntMarkedTableCardIndex")) != -1 \
 		or bool(board.call("DebugHasAdventureTraceHuntMarkerOverlay")) \
 		or bool(board.call("DebugHasAdventureTraceHuntMarkerIntro")):
-		_fail("Committed Leafy Blade removal did not clear Trace Hunt marker: %s" % str(result))
+		_fail("Committed Leafy Blade removal did not enter the enemy deck or clear Trace Hunt marker: %s" % str(result))
 		return false
 	board.queue_free()
 	await process_frame
@@ -112,7 +117,7 @@ func _create_board() -> Node:
 	board.set("adventure_enemy_avatar_id", "leafy_seadragon")
 	root.add_child(board)
 	await process_frame
-	for method in ["DebugConfigureLeafyBladeGenerationOwnershipProbe", "DebugStartLeafyBladeGenerationOwnershipProbe", "DebugHasLeafyBladeProjectilePhase", "DebugHasLeafyBladeBombPhase", "DebugRestartMatchForLeafyBladeOwnershipProbe", "DebugReplaceLeafyBladeTargetReference", "DebugLeafyBladeReplacementIsIntact", "DebugGetLeafyBladeBreakCooldownTurns", "DebugMarkLeafyBladeTargetForTraceHunt", "DebugGetTableCardReferenceIdentity"]:
+	for method in ["DebugConfigureLeafyBladeGenerationOwnershipProbe", "DebugStartLeafyBladeGenerationOwnershipProbe", "DebugHasLeafyBladeProjectilePhase", "DebugHasLeafyBladeBombPhase", "DebugRestartMatchForLeafyBladeOwnershipProbe", "DebugReplaceLeafyBladeTargetReference", "DebugLeafyBladeReplacementIsIntact", "DebugGetLeafyBladeBreakCooldownTurns", "DebugMarkLeafyBladeTargetForTraceHunt", "DebugGetTableCardReferenceIdentity", "DebugGetDeckCardCountForPlayer", "DebugGetDeckCardCode"]:
 		if not board.has_method(method):
 			_fail("Missing Leafy Blade ownership hook: %s" % method)
 			return null
@@ -126,9 +131,14 @@ func _state_fingerprint(board: Node) -> String:
 			String(board.call("DebugGetTableCardCode", index)),
 			str(board.call("DebugGetTableCardReferenceIdentity", index)),
 		])
-	return "%s|%s|%s|%s|%s" % [
+	var enemy_deck_codes: Array[String] = []
+	var enemy_deck_count := int(board.call("DebugGetDeckCardCountForPlayer", 1))
+	for index in range(enemy_deck_count):
+		enemy_deck_codes.append(String(board.call("DebugGetDeckCardCode", 1, index)))
+	return "%s|%s|%s|%s|%s|%s" % [
 		str(table_count),
 		",".join(cards),
+		",".join(enemy_deck_codes),
 		str(board.call("DebugGetPlayerScoreValue", 0)),
 		str(board.call("DebugGetPlayerScoreValue", 1)),
 		str(board.call("DebugGetLeafyBladeBreakCooldownTurns")),
@@ -152,7 +162,8 @@ func _wait_for_true(board: Node, method: String) -> bool:
 func _assert_required_source_guards() -> void:
 	var source := FileAccess.get_file_as_string("res://scripts/GameBoardScene.BossTableAbilities.cs")
 	if source.count("IsLeafySeadragonBladeBreakTargetCurrent(") < 4 \
-		or not source.contains("ClearAdventureTraceHuntMarkerIfTableCardRemoved(targetTableCard);\n\t\t_tableCards.RemoveAt(targetTableCardIndex);") \
+		or not source.contains("MoveLeafySeadragonBladeBreakTableCardToDeck(\n\t\t\tplayerIndex,\n\t\t\ttargetTableCardIndex);") \
+		or not source.contains("AddCardToPlayerDeck(playerIndex, destroyedCard);\n\t\tRenderPlayerCardPiles();") \
 		or not source.contains("if (turnSequenceGeneration != _turnSequenceGeneration)\n\t\t{\n\t\t\treturn;\n\t\t}\n\n\t\tCheckForWinner();"):
 		_fail("Leafy Blade generation/reference guards are missing from production resolver")
 

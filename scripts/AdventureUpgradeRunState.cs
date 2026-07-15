@@ -116,6 +116,7 @@ internal sealed class AdventureUpgradeRunState
 		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndexFromMainStageIndex(mainStageIndex);
 		ShouldGrantRunStartUpgrade = false;
 		ShouldGrantVictoryUpgrade = true;
+		CurrentHealth = MaxHealth;
 	}
 
 	internal void MarkRunStartUpgradeGranted()

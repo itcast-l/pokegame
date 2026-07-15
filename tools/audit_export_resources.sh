@@ -75,6 +75,7 @@ files = subprocess.check_output(
     cwd=root,
     text=True,
 ).splitlines()
+files = [path for path in files if (root / path).exists()]
 
 counter = Counter()
 for path in files:
@@ -109,13 +110,6 @@ for key in (
 ):
     print(f'{key}\t{counter.get(key, 0)}')
 PY
-}
-
-is_allowed_runtime_generated_asset() {
-  case "$1" in
-    generated-images/upgrade-popup-assets/*/processed/*.png|generated-images/upgrade-popup-assets/*/processed/*.png.import) return 0 ;;
-    *) return 1 ;;
-  esac
 }
 
 is_source_art_extension() {
@@ -153,6 +147,7 @@ collect_tracked_generated_output_risks() {
   local path output=""
   while IFS= read -r path; do
     [ -z "$path" ] && continue
+    [ -e "$path" ] || continue
 
     case "$path" in
       outputs/*|outputs)
@@ -160,9 +155,7 @@ collect_tracked_generated_output_risks() {
         continue
         ;;
       generated-images/*|generated-images)
-        if ! is_allowed_runtime_generated_asset "$path"; then
-          output+="$path"$'\n'
-        fi
+        output+="$path"$'\n'
         ;;
     esac
   done < <(git ls-files -- generated-images outputs 2>/dev/null || true)

@@ -1,13 +1,13 @@
 # Tracked Generated Asset Inventory
 
-Last updated: 2026-07-02
+Last updated: 2026-07-15
 
 本清单记录当前仓库内“已被 git 跟踪的生成/导出类资产”快照，以及最近一轮手工清理后的结果。
 
 ## Current Category Summary
 
-- `upgrade_popup_processed`: `24`
-  说明：`generated-images/upgrade-popup-assets/*/processed/*.png` 与对应 `.import`
+- `upgrade_popup_processed`: `0`
+  说明：正式卡图及对应 `.import` 已迁移到 `art/ui/adventure_upgrade_cards/*/processed/`
 - `upgrade_popup_raw`: `0`
   说明：source-only raw 图已取消跟踪，仍保留在本地工作区
 - `upgrade_popup_meta`: `0`
@@ -26,8 +26,8 @@ Last updated: 2026-07-02
 ## Tracking Guidance
 
 - `upgrade_popup_processed`
-  结论：保留跟踪
-  原因：这些是当前运行时允许引用的正式 processed 资产
+  结论：生成目录中保持为 `0`
+  原因：正式 processed 资产已迁移到 `art/ui/adventure_upgrade_cards/` 并继续保留跟踪
 
 - `upgrade_popup_raw`
   历史结论：候选取消跟踪
@@ -63,7 +63,7 @@ Last updated: 2026-07-02
 
 当前快照说明：
 
-1. 当前只保留 `upgrade_popup_processed` 为已跟踪状态。
+1. 当前不再保留任何 `generated-images/**` 运行时正式资产；强化卡图在 `art/ui/adventure_upgrade_cards/` 中保留跟踪。
 2. 其他生成/预览/source-only 资产已经取消跟踪，但仍保留在本地工作区，供设计对照或后续再生成使用。
 3. 若未来审计脚本再次报出同类风险，可参考下方批次重新执行人工审查。
 
@@ -165,17 +165,17 @@ git ls-files -- 'generated-images/**'
 git rm --cached -- <reviewed generated misc paths>
 ```
 
-### Batch 0: do not touch upgrade_popup_processed
+### Batch 0: do not touch formal adventure upgrade cards
 
-- 范围：`upgrade_popup_processed`，当前 `24` 个已跟踪文件
-- 说明：这是当前允许进入运行时导出的 processed 正式资产
+- 范围：`art/ui/adventure_upgrade_cards/*/processed/`，共 12 张 PNG 与 12 个 `.import`
+- 说明：这是当前允许进入运行时导出的 processed 正式资产，不属于 generated cleanup 范围
 - 建议：不要把这批混入上面的手工清理命令
 
 保护性审查：
 
 ```bash
-git ls-files -- 'generated-images/upgrade-popup-assets/*/processed/*.png' \
-  'generated-images/upgrade-popup-assets/*/processed/*.png.import'
+git ls-files -- 'art/ui/adventure_upgrade_cards/*/processed/*.png' \
+  'art/ui/adventure_upgrade_cards/*/processed/*.png.import'
 ```
 
 ## Relationship To Audit Script

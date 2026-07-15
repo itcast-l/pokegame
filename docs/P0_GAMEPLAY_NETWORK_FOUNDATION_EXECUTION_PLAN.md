@@ -162,7 +162,7 @@ P0 仅包含玩法数据底座、正式冒险进度、LAN 完整牌局和 LAN �
 
 Item card 的 Pandora/fallback/handler contract 由 `tools/ItemCardManifestSync.gd` 校验，字段为：`id`、`enabled_in_game`、`playable_from_hand`、`can_be_question_reward`、`weight`、`rarity`、`tags`、`reward_delivery`、`play_presentation`、`trigger`、`effect_type`、`effect_values`、`priority`、`attached_trigger`、`attached_effect_type`、`attached_effect_values`、`attached_priority`、`description_key`。`attach_modifier` 使用 `ImmediateAttachment + PlayableFromHand=false`；普通可领取奖励使用 `Hand + PlayableFromHand=true`；非奖励卡使用 `None`。
 
-Adventure upgrade manifest 额外保存 `effect_values`，由 `AdventureUpgradeRuntimeMetadata` 声明允许 key、默认值、范围和 description template；未知/缺失字段、非法 effect、delivery 或 placeholder 会使 manifest 不可用，不从 `.tres` 静默补玩法字段。当前 `--check` 生成的 gameplay manifest hash 为 `0befd69b9b63863172883dee5e7eb743d3806f541c83f4b4a6ad33fe35792d7d`。
+Adventure upgrade manifest 额外保存 `effect_values`，由 `AdventureUpgradeRuntimeMetadata` 声明允许 key、默认值、范围和 description template；未知/缺失字段、非法 effect、delivery 或 placeholder 会使 manifest 不可用，不从 `.tres` 静默补玩法字段。当前 `--check` 生成的 gameplay manifest hash 为 `98ff579f366695008318fc4be231d4d1b43200784c4893f82e1c9b1fc66cd5a9`。
 
 ### 实现索引
 

@@ -140,7 +140,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 
 		if (_cardTexture != null)
 		{
-			Color cardTint = new Color(0.88f, 0.91f, 0.96f, 0.93f).Lerp(
+			Color cardTint = new Color(0.96f, 0.97f, 0.98f, 0.98f).Lerp(
 				new Color(0.98f, 0.99f, 1.0f, 1.0f),
 				highlightAmount);
 			DrawTextureRect(_cardTexture, rect, false, cardTint);
@@ -160,15 +160,14 @@ public partial class AdventureUpgradeChoiceArt : Control
 		Font bodyFont = BodyFont ?? ThemeDB.FallbackFont;
 		int bodyFontSize = GetDescriptionFontSize(bodyFont, _description, descriptionRect.Size, DescriptionLineSpacing);
 
-		DrawDescriptionWell(descriptionRect);
 		DrawEmbossedWrappedCenteredText(
 			bodyFont,
 			bodyFontSize,
 			_description,
 			descriptionRect,
-			new Color(0.97f, 0.99f, 1.0f, 0.96f),
-			new Color(0, 0, 0, 0.76f),
-			new Color(_ruleColor.R, _ruleColor.G, _ruleColor.B, _ruleColor.A),
+			new Color(0.055f, 0.07f, 0.085f, 0.96f),
+			new Color(0, 0, 0, 0.3f),
+			new Color(1.0f, 1.0f, 1.0f, 0.34f),
 			DescriptionLineSpacing);
 	}
 

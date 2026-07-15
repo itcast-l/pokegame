@@ -210,11 +210,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PlayingCard destroyedCard = targetTableCard.Card!.Value;
-		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
-		ClearAdventureTraceHuntMarkerIfTableCardRemoved(targetTableCard);
-		_tableCards.RemoveAt(targetTableCardIndex);
-		RefreshGardenEelBuriedCardIndex();
+		int damagePoints = MoveLeafySeadragonBladeBreakTableCardToDeck(
+			playerIndex,
+			targetTableCardIndex);
 		_leafySeadragonBladeBreakCooldownTurns = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakCooldownTurns, 1);
 		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
@@ -250,7 +248,9 @@ public partial class GameBoardScene
 			&& ReferenceEquals(_tableCards[targetTableCardIndex], targetTableCard);
 	}
 
-	private int RemoveLeafySeadragonBladeBreakTableCard(int tableCardIndex)
+	private int MoveLeafySeadragonBladeBreakTableCardToDeck(
+		int playerIndex,
+		int tableCardIndex)
 	{
 		TableCard destroyedTableCard = _tableCards[tableCardIndex];
 		PlayingCard destroyedCard = destroyedTableCard.Card!.Value;
@@ -258,6 +258,8 @@ public partial class GameBoardScene
 		ClearAdventureTraceHuntMarkerIfTableCardRemoved(destroyedTableCard);
 		_tableCards.RemoveAt(tableCardIndex);
 		RefreshGardenEelBuriedCardIndex();
+		AddCardToPlayerDeck(playerIndex, destroyedCard);
+		RenderPlayerCardPiles();
 		return damagePoints;
 	}
 
