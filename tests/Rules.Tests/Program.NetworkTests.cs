@@ -1150,6 +1150,53 @@ internal static partial class Program
 		False(mainText.Contains("private void PollLoadHandshake(double now)", StringComparison.Ordinal));
 	}
 
+	private static void NetworkManagerP1BOrderingStaysOnHotPaths()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string reconnectText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "NetworkManager.Reconnect.cs"));
+		string authorityText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "NetworkManager.AuthorityActions.cs"));
+
+		int ensureStart = reconnectText.IndexOf("private void EnsureLobbySeatControlStates()", StringComparison.Ordinal);
+		int ensureEnd = reconnectText.IndexOf("private void InsertSeatControlStateInSeatOrder", ensureStart, StringComparison.Ordinal);
+		True(ensureStart >= 0);
+		True(ensureEnd > ensureStart);
+		if (ensureStart < 0 || ensureEnd <= ensureStart)
+		{
+			return;
+		}
+
+		string ensureMethod = reconnectText[ensureStart..ensureEnd];
+		False(ensureMethod.Contains("_seatControlStates.Sort(", StringComparison.Ordinal));
+		True(ensureMethod.Contains("InsertSeatControlStateInSeatOrder(state)", StringComparison.Ordinal));
+
+		int snapshotStart = reconnectText.IndexOf("internal void ApplySeatControlStatesFromAuthoritySnapshot(", StringComparison.Ordinal);
+		int snapshotEnd = reconnectText.IndexOf("private bool TryGetSeatControlState(", snapshotStart, StringComparison.Ordinal);
+		True(snapshotStart >= 0);
+		True(snapshotEnd > snapshotStart);
+		if (snapshotStart < 0 || snapshotEnd <= snapshotStart)
+		{
+			return;
+		}
+
+		string snapshotMethod = reconnectText[snapshotStart..snapshotEnd];
+		False(snapshotMethod.Contains("OrderBy(", StringComparison.Ordinal));
+		True(snapshotMethod.Contains("foreach (SeatControlState state in states)", StringComparison.Ordinal));
+
+		int claimsStart = authorityText.IndexOf("internal List<NetworkAuthorityReconnectClaim> GetCheckpointReconnectClaims()", StringComparison.Ordinal);
+		int claimsEnd = authorityText.IndexOf("internal void ResetClientActionIds()", claimsStart, StringComparison.Ordinal);
+		True(claimsStart >= 0);
+		True(claimsEnd > claimsStart);
+		if (claimsStart < 0 || claimsEnd <= claimsStart)
+		{
+			return;
+		}
+
+		string claimsMethod = authorityText[claimsStart..claimsEnd];
+		True(claimsMethod.Contains("foreach (SeatControlState state in _seatControlStates)", StringComparison.Ordinal));
+		True(claimsMethod.Contains("TryGetValue(state.SeatIndex", StringComparison.Ordinal));
+		True(claimsMethod.Contains("OrderBy(pair => pair.Key)", StringComparison.Ordinal));
+	}
+
 	private static void NetworkManagerBoardSyncHelpersMoveIntoPartialFile()
 	{
 		string repoRoot = FindRepositoryRoot();

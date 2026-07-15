@@ -153,6 +153,34 @@ public partial class NetworkManager
 	internal List<NetworkAuthorityReconnectClaim> GetCheckpointReconnectClaims()
 	{
 		var result = new List<NetworkAuthorityReconnectClaim>(_reconnectClaimsBySeat.Count);
+		bool claimsFollowSeatControlOrder = _seatControlStates.Count == _reconnectClaimsBySeat.Count;
+		foreach (SeatControlState state in _seatControlStates)
+		{
+			if (!_reconnectClaimsBySeat.TryGetValue(state.SeatIndex, out ReconnectClaimRecord claim))
+			{
+				claimsFollowSeatControlOrder = false;
+				break;
+			}
+
+			result.Add(new NetworkAuthorityReconnectClaim
+			{
+				MatchId = claim.MatchId,
+				SeatIndex = claim.SeatIndex,
+				ReconnectToken = claim.ReconnectToken,
+				StableUserId = claim.StableUserId,
+				ClaimedPeerId = claim.ClaimedPeerId,
+				ClaimState = claim.ClaimState.ToString(),
+			});
+		}
+
+		if (claimsFollowSeatControlOrder)
+		{
+			return result;
+		}
+
+		// Keep a defensive path for an invalid/stale in-memory pairing. Normal
+		// checkpoints follow the already ordered seat-control list above.
+		result.Clear();
 		foreach (KeyValuePair<int, ReconnectClaimRecord> pair in _reconnectClaimsBySeat.OrderBy(pair => pair.Key))
 		{
 			ReconnectClaimRecord claim = pair.Value;

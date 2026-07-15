@@ -610,6 +610,21 @@ bash tests/run_multiplayer_reconnect_smoke_suite.sh
 - 明确哪些 `ToArray()/OrderBy()/FirstOrDefault()/Any()` 保留，哪些应收敛
 - 对外行为完全不变
 
+### P1-B Audit Decision (2026-07-15)
+
+本轮只收敛已确认会重复发生的状态排序：
+
+- `EnsureLobbySeatControlStates()` 通过 seat-order 插入保持 `_seatControlStates` 顺序，不再每次调用后全表 `Sort`。
+- 重连快照解码器按 `seat_index` 写入定长数组并拒绝重复/越界 seat，因此 `ApplySeatControlStatesFromAuthoritySnapshot()` 直接消费该顺序，不再重复 `OrderBy`。
+- 检查点的 reconnect claims 正常路径沿已排序的 `_seatControlStates` 读取；仅在内存中的 seat/control 配对失效时保留排序兜底。
+
+以下操作保留，不作为本轮优化目标：
+
+- `GetRoomsVariant()`、`GetPlayersVariant()`、`GetSeatControlStatesVariant()` 的 Godot 容器构造是 UI/信号桥接冷路径，不能通过缓存引入失效状态。
+- 迁移恢复阶段对 checkpoint roster/control 的 `OrderBy` 属于边界恢复冷路径，用于接受外部检查点的任意合法顺序。
+- standby checkpoint 的 `bytes.ToArray()` 用于保留独立 payload 所有权，不能删除。
+- 当前玩家数量上限较小，未观察到足以支持额外索引字典的重复线性查找热点。
+
 ### Implementation Steps
 
 #### Step 1 - Distinguish Hot Path From Cold Path

@@ -34,7 +34,7 @@ public partial class NetworkManager
 		{
 			string reconnectToken = Guid.NewGuid().ToString("N");
 			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
-			_seatControlStates.Add(state);
+			InsertSeatControlStateInSeatOrder(state);
 			_reconnectClaimsBySeat[player.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
 			if (player.IsLocal)
 			{
@@ -55,22 +55,32 @@ public partial class NetworkManager
 
 		foreach (NetworkPlayerPublicState player in _players)
 		{
-			if (_seatControlStates.Any(state => state.SeatIndex == player.SeatIndex))
+			if (TryGetSeatControlState(player.SeatIndex, out _, out _))
 			{
 				continue;
 			}
 
 			string reconnectToken = Guid.NewGuid().ToString("N");
 			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
-			_seatControlStates.Add(state);
+			InsertSeatControlStateInSeatOrder(state);
 			_reconnectClaimsBySeat[player.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
 			if (player.IsLocal)
 			{
 				_localReconnectToken = reconnectToken;
 			}
 		}
+	}
 
-		_seatControlStates.Sort((left, right) => left.SeatIndex.CompareTo(right.SeatIndex));
+	private void InsertSeatControlStateInSeatOrder(SeatControlState state)
+	{
+		int insertIndex = _seatControlStates.FindIndex(candidate => candidate.SeatIndex > state.SeatIndex);
+		if (insertIndex < 0)
+		{
+			_seatControlStates.Add(state);
+			return;
+		}
+
+		_seatControlStates.Insert(insertIndex, state);
 	}
 
 	private void EnsureSessionMigrationTokensForRoster()
@@ -153,7 +163,9 @@ public partial class NetworkManager
 		var previousTokensBySeat = _seatControlStates
 			.ToDictionary(state => state.SeatIndex, state => state.ReconnectToken);
 		_seatControlStates.Clear();
-		foreach (SeatControlState state in states.OrderBy(state => state.SeatIndex))
+		// The network snapshot decoder writes states into a seat-indexed array and
+		// rejects duplicate or out-of-range seat indexes before this method runs.
+		foreach (SeatControlState state in states)
 		{
 			string reconnectToken = string.Empty;
 			if (string.Equals(state.StableUserId, GetStableUserId(), StringComparison.Ordinal))
