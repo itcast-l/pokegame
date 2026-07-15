@@ -177,12 +177,13 @@ Adventure upgrade manifest 额外保存 `effect_values`，由 `AdventureUpgradeR
 在 Godot `4.6.1-stable.mono`、项目 `Deckland` 环境下：
 
 - `dotnet build pokegame.csproj --no-restore`：通过，0 warning，0 error；
-- `dotnet run --project tests/Rules.Tests/Rules.Tests.csproj`：`311 passed, 0 failed`；
+- `dotnet run --project tests/Rules.Tests/Rules.Tests.csproj`：`314 passed, 0 failed`；
 - Godot `ItemCardManifestSync.gd --check`：`ITEM_CARD_MANIFEST_CHECK_OK`；
 - `bash tests/run_multiplayer_reconnect_smoke_suite.sh`：`MULTIPLAYER_RECONNECT_SMOKE_SUITE_OK`；
+- `bash tests/run_lan_full_match_smoke_suite.sh`：2p standard、3p items、4p items 全部通过，最终 `LAN_FULL_MATCH_SMOKE_SUITE_OK`；
 - `bash tests/run_lan_host_migration_smoke.sh`：标准 2p/3p/4p、active lobby、current turn、pending target/discard/attachment、visual kill、stale epoch、old host token、candidate exit、wrong hash、bind timeout 全部通过，最终 `LAN_HOST_MIGRATION_FAILURE_SUITE_OK`；
 - Godot MCP/编辑器连接已验证可用：项目可读，版本 `4.6.1-stable`，编辑器错误为 0。
 
-当前自动化均为同一台机器上的多进程 LAN/ENet 验证；两台真实 LAN 设备之间的 Host `kill -9` 并继续到赢家仍需在现场设备上执行一次，不能用本机多进程结果替代该证据。
+当前自动化均为同一台机器上的多进程 LAN/ENet 验证。按当前执行范围决策，不继续两台真实 LAN 设备之间的 Host `kill -9` 现场验收；该项不影响其余 P0 实现、自动化门禁和文档交付，但不能把本机多进程结果升级为真实设备证据。
 
-真实设备验收命令和强杀/赢家结果断言见 `tests/REAL_LAN_HOST_MIGRATION_MANUAL_CHECKS.md`。该 runbook 只提供可复现的现场步骤，不把同机多进程结果升级为真实设备证据。
+`tests/REAL_LAN_HOST_MIGRATION_MANUAL_CHECKS.md` 保留为后续独立现场参考，不作为本轮执行项；该 runbook 只提供可复现的现场步骤，不把同机多进程结果升级为真实设备证据。
