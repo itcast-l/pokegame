@@ -6,7 +6,7 @@ public partial class GameBoardScene
 
 	private bool TryHandleGameBoardControlInput(InputEvent inputEvent)
 	{
-		if (_isPauseMenuOpen || IsGameOver())
+		if (IsPauseMenuOpen || IsGameOver())
 		{
 			return false;
 		}

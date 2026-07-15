@@ -214,6 +214,7 @@ internal static partial class Program
 		Run("gitignore covers upgrade popup source only assets", GitignoreCoversUpgradePopupSourceOnlyAssets);
 		Run("tracked generated asset inventory doc summarizes current categories", TrackedGeneratedAssetInventoryDocSummarizesCurrentCategories);
 		Run("tracked generated asset inventory doc includes suggested manual cleanup batches", TrackedGeneratedAssetInventoryDocIncludesSuggestedManualCleanupBatches);
+		Run("game board pause menu has extracted controller boundary", GameBoardPauseMenuHasExtractedControllerBoundary);
 		Run("network manager serialization helpers move into partial file", NetworkManagerSerializationHelpersMoveIntoPartialFile);
 		Run("network manager lan discovery helpers move into partial file", NetworkManagerLanDiscoveryHelpersMoveIntoPartialFile);
 		Run("network manager steam helpers move into partial file", NetworkManagerSteamHelpersMoveIntoPartialFile);

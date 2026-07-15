@@ -146,7 +146,7 @@ public partial class GameBoardScene
 			UpdateWinnerReturnButton();
 		}
 
-		_pauseMenuRoot?.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
+		_pauseMenuController?.RefreshLocalizedText();
 
 		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
 		{

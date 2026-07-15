@@ -806,6 +806,14 @@ bash tests/run_multiplayer_reconnect_smoke_suite.sh
 - 对规则与网络权威侵入相对较低
 - 最适合建立第一批稳定边界
 
+#### P2-A Phase 1 Record (2026-07-15)
+
+第一步已选择 pause menu：
+
+- 新增 `GameBoardPauseMenuController`，负责 pause overlay 的懒创建、显示/隐藏、暂停树、焦点、退出确认和本地化刷新。
+- `GameBoardScene` 只保留输入门控以及重启、离场、回菜单等业务回调；没有抽动牌局状态或网络协议。
+- 通过 `EscInputSmoke` 验证 pause menu 仍按需创建并正确显示；后续再评估 reconnect overlay、seat indicator 和 tooltip 是否值得同样抽取。
+
 #### Phase 2 - Extract Visual Presentation Helpers
 
 从动画表现中选一个边界最清晰的模块先拆：

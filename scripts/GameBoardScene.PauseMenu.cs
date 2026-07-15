@@ -6,10 +6,23 @@ public partial class GameBoardScene
 	private const string MainMenuScenePath = "res://scenes/main_menu_scene.tscn";
 	private const string AdventureAvatarMenuScenePath = "res://scenes/adventure_avatar_menu_scene.tscn";
 
-	private CanvasLayer? _pauseMenuLayer;
-	private PauseMenuOverlay? _pauseMenuRoot;
-	private Button? _pauseContinueButton;
-	private bool _isPauseMenuOpen;
+	private GameBoardPauseMenuController? _pauseMenuController;
+
+	private GameBoardPauseMenuController PauseMenu
+		=> _pauseMenuController ??= new GameBoardPauseMenuController(
+			this,
+			Localize,
+			GetPauseReturnButtonKey,
+			CanRestartCurrentMatchFromPauseMenu,
+			ReturnToPauseMenuDestination,
+			RestartCurrentMatchFromPauseMenu,
+			QuitGameFromPauseMenu,
+			ConfirmQuitGameFromPauseMenu,
+			() => PlayGameSfx(GameSfx.UiPauseOpen, -2.0f, 0.98f, 1.02f, 0.08),
+			() => PlayGameSfx(GameSfx.UiPauseClose, -2.0f, 0.98f, 1.02f, 0.08),
+			() => PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08));
+
+	private bool IsPauseMenuOpen => _pauseMenuController?.IsOpen == true;
 
 	public override void _Input(InputEvent inputEvent)
 	{
@@ -35,7 +48,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (_isPauseMenuOpen)
+		if (IsPauseMenuOpen)
 		{
 			return;
 		}
@@ -51,7 +64,7 @@ public partial class GameBoardScene
 
 	private bool TryOpenPauseMenuFromInput(InputEvent inputEvent)
 	{
-		if (_isPauseMenuOpen || !IsPauseMenuRequested(inputEvent))
+		if (IsPauseMenuOpen || !IsPauseMenuRequested(inputEvent))
 		{
 			return false;
 		}
@@ -80,92 +93,14 @@ public partial class GameBoardScene
 		};
 	}
 
-	private void EnsurePauseMenu()
-	{
-		if (_pauseMenuRoot != null)
-		{
-			return;
-		}
-
-		PackedScene? pauseMenuScene = GD.Load<PackedScene>(PauseMenuScenePath);
-		if (pauseMenuScene?.Instantiate() is not PauseMenuOverlay pauseMenu)
-		{
-			GD.PushError($"Missing pause menu scene: {PauseMenuScenePath}");
-			return;
-		}
-
-		_pauseMenuLayer = new CanvasLayer
-		{
-			Name = "PauseMenuLayer",
-			Layer = 60,
-			ProcessMode = ProcessModeEnum.Always,
-		};
-		AddChild(_pauseMenuLayer);
-		_pauseMenuLayer.AddChild(pauseMenu);
-
-		_pauseMenuRoot = pauseMenu;
-		_pauseMenuRoot.CancelPressed = HandlePauseMenuCancelPressed;
-		_pauseContinueButton = pauseMenu.ContinueButton;
-		pauseMenu.ContinueRequested += HidePauseMenu;
-		pauseMenu.ReturnToMainMenuRequested += ReturnToPauseMenuDestination;
-		pauseMenu.RestartRequested += RestartCurrentMatchFromPauseMenu;
-		pauseMenu.QuitRequested += QuitGameFromPauseMenu;
-		pauseMenu.ConfirmQuitRequested += ConfirmQuitGameFromPauseMenu;
-		pauseMenu.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
-		pauseMenu.SetRestartAvailable(CanRestartCurrentMatchFromPauseMenu());
-	}
-
 	private void ShowPauseMenu()
 	{
-		if (_isPauseMenuOpen)
-		{
-			return;
-		}
-
-		EnsurePauseMenu();
-		if (_pauseMenuRoot == null)
-		{
-			return;
-		}
-
-		_isPauseMenuOpen = true;
-		PlayGameSfx(GameSfx.UiPauseOpen, -2.0f, 0.98f, 1.02f, 0.08);
-		_pauseMenuRoot.RefreshLocalizedText(Localize, GetPauseReturnButtonKey());
-		_pauseMenuRoot.SetRestartAvailable(CanRestartCurrentMatchFromPauseMenu());
-		_pauseMenuRoot.Visible = true;
-		_pauseMenuRoot.Modulate = Colors.White;
-		_pauseMenuRoot.HideQuitConfirm();
-
-		GetTree().Paused = true;
-		_pauseContinueButton?.GrabFocus();
-	}
-
-	private void HandlePauseMenuCancelPressed()
-	{
-		if (_pauseMenuRoot?.QuitConfirmRoot.Visible == true)
-		{
-			HidePauseQuitConfirm();
-			return;
-		}
-
-		HidePauseMenu();
+		PauseMenu.Show();
 	}
 
 	private void HidePauseMenu()
 	{
-		if (!_isPauseMenuOpen)
-		{
-			return;
-		}
-
-		_isPauseMenuOpen = false;
-		PlayGameSfx(GameSfx.UiPauseClose, -2.0f, 0.98f, 1.02f, 0.08);
-		GetTree().Paused = false;
-		if (_pauseMenuRoot != null)
-		{
-			_pauseMenuRoot.HideQuitConfirm();
-			_pauseMenuRoot.Visible = false;
-		}
+		PauseMenu.Hide();
 	}
 
 	private async void ReturnToMainMenu()
@@ -209,7 +144,7 @@ public partial class GameBoardScene
 		}
 
 		_isLeavingGame = true;
-		_isPauseMenuOpen = false;
+		_pauseMenuController?.CloseForSceneTransition();
 		GetTree().Paused = false;
 		if (ShouldUseAdventureUpgradeSystem())
 		{
@@ -223,11 +158,6 @@ public partial class GameBoardScene
 					await networkManager.LeaveSessionAfterHostEndedMatchAsync();
 				}
 			}
-
-		if (_pauseMenuRoot != null)
-		{
-			_pauseMenuRoot.MouseFilter = MouseFilterEnum.Ignore;
-		}
 
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
@@ -250,14 +180,12 @@ public partial class GameBoardScene
 			return;
 		}
 
-		EnsurePauseMenu();
-		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
-		_pauseMenuRoot?.ShowQuitConfirm();
+		PauseMenu.ShowQuitConfirmation();
 	}
 
 	private void HidePauseQuitConfirm()
 	{
-		_pauseMenuRoot?.HideQuitConfirm();
+		_pauseMenuController?.HideQuitConfirmation();
 	}
 
 	private bool CanRestartCurrentMatchFromPauseMenu()

@@ -1307,6 +1307,29 @@ internal static partial class Program
 		True(text.Contains("review first", StringComparison.OrdinalIgnoreCase));
 	}
 
+	private static void GameBoardPauseMenuHasExtractedControllerBoundary()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string controllerPath = Path.Combine(repoRoot, "scripts", "GameBoardPauseMenuController.cs");
+		string pauseMenuPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.PauseMenu.cs");
+		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.cs");
+
+		True(File.Exists(controllerPath));
+		string controllerText = File.ReadAllText(controllerPath);
+		string pauseMenuText = File.ReadAllText(pauseMenuPath);
+		string mainText = File.ReadAllText(mainPath);
+
+		True(controllerText.Contains("internal sealed class GameBoardPauseMenuController", StringComparison.Ordinal));
+		True(controllerText.Contains("internal void Show()", StringComparison.Ordinal));
+		True(controllerText.Contains("internal void Hide()", StringComparison.Ordinal));
+		True(controllerText.Contains("internal void RefreshLocalizedText()", StringComparison.Ordinal));
+		True(pauseMenuText.Contains("GameBoardPauseMenuController", StringComparison.Ordinal));
+		False(pauseMenuText.Contains("private CanvasLayer? _pauseMenuLayer", StringComparison.Ordinal));
+		False(pauseMenuText.Contains("private PauseMenuOverlay? _pauseMenuRoot", StringComparison.Ordinal));
+		False(pauseMenuText.Contains("private Button? _pauseContinueButton", StringComparison.Ordinal));
+		False(mainText.Contains("PauseMenuScenePath", StringComparison.Ordinal));
+	}
+
 	private static void NetworkManagerSerializationHelpersMoveIntoPartialFile()
 	{
 		string repoRoot = FindRepositoryRoot();

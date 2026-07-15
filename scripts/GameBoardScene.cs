@@ -8,7 +8,6 @@ public partial class GameBoardScene : Control
 	private const int MaxPlayers = 4;
 	private const string PokerCardsScenePath = "res://scenes/poker_cards_scene.tscn";
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
-	private const string PauseMenuScenePath = "res://scenes/pause_menu.tscn";
 	private const string ResultBannerScenePath = "res://scenes/game_board_result_banner.tscn";
 	private const string DefeatFinisherOverlayScenePath = "res://scenes/game_board_defeat_finisher_overlay.tscn";
 	private const string ItemSelectionOverlayScenePath = "res://scenes/item_selection_overlay.tscn";
