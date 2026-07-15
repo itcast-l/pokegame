@@ -184,3 +184,5 @@ Adventure upgrade manifest 额外保存 `effect_values`，由 `AdventureUpgradeR
 - Godot MCP/编辑器连接已验证可用：项目可读，版本 `4.6.1-stable`，编辑器错误为 0。
 
 当前自动化均为同一台机器上的多进程 LAN/ENet 验证；两台真实 LAN 设备之间的 Host `kill -9` 并继续到赢家仍需在现场设备上执行一次，不能用本机多进程结果替代该证据。
+
+真实设备验收命令和强杀/赢家结果断言见 `tests/REAL_LAN_HOST_MIGRATION_MANUAL_CHECKS.md`。该 runbook 只提供可复现的现场步骤，不把同机多进程结果升级为真实设备证据。
