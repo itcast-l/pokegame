@@ -43,6 +43,7 @@ public partial class GameBoardScene
 
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
+		MarkNetworkAuthorityPrimaryMutationApplied();
 		int tableCardIndex = AddBombCardToTable(bombCard, playerIndex);
 		PlaySpecialItemCardPlaySfx();
 		await PlayItemCardToTableAnimationAsync(playerIndex, bombCard, startGlobalPosition, tableCardIndex, false);

@@ -61,6 +61,9 @@ public sealed partial class ItemCardCatalog
 
 	public IReadOnlyList<string> RewardIds => _rewardIds;
 
+	public string GameplayManifestHash =>
+		GameplayManifestHashRules.ComputeItemCardManifestHash(_definitionsById.Values);
+
 	private bool LoadedFromPandora { get; set; }
 
 	public bool TryGetIdForSpriteName(string spriteName, out string itemCardId)

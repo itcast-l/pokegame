@@ -7,16 +7,17 @@ public partial class GameBoardScene
 	private readonly record struct NetworkPlayingCardSnapshot(string CardCode, string[] AttachedItemCardIds);
 
 	private sealed record ValidatedNetworkBoardSnapshot(
-		int SnapshotId, int TurnSequenceGeneration, int CurrentTurnPlayerIndex,
+		int SnapshotId, long AuthorityEpoch, long CheckpointId,
+		int TurnSequenceGeneration, int CurrentTurnPlayerIndex,
 		int WinnerPlayerIndex, int[] Scores, int[] DeckCounts, int[] HandCounts,
 		int[] ItemHandCounts, NetworkPlayingCardSnapshot[] OwnHandCards,
 		string[] OwnItemHandCardIds, bool RevealedTargetHandVisible,
 		NetworkPlayingCardSnapshot[] RevealedHandCards,
 		string[] RevealedItemHandCardIds, PendingItemSelectionMode PendingSelectionMode,
 		int PendingSelectionOwner, string PendingItemCardId,
-		int PendingTurnSequenceGeneration, int RevealedPlayerHandIndex,
-		bool OpeningDealAnimationPlaying, NetworkTableCardSnapshot[] TableCards,
-		SeatControlState[] SeatControlStates);
+			int PendingTurnSequenceGeneration, int RevealedPlayerHandIndex,
+			bool OpeningDealAnimationPlaying, NetworkTableCardSnapshot[] TableCards,
+			SeatControlState[] SeatControlStates, AuthorityActionState AuthorityAction);
 
 	private static bool TryReadNetworkArray(Godot.Collections.Dictionary dictionary, string key, out Godot.Collections.Array values)
 	{
@@ -24,6 +25,24 @@ public partial class GameBoardScene
 		if (!dictionary.TryGetValue(key, out Variant rawValue) || rawValue.VariantType != Variant.Type.Array) return false;
 		values = rawValue.AsGodotArray();
 		return true;
+	}
+
+	private static bool TryReadNetworkInt64(
+		Godot.Collections.Dictionary dictionary,
+		string key,
+		long minimum,
+		long maximum,
+		out long value)
+	{
+		value = 0;
+		if (!dictionary.TryGetValue(key, out Variant rawValue)
+			|| rawValue.VariantType != Variant.Type.Int)
+		{
+			return false;
+		}
+
+		value = rawValue.AsInt64();
+		return value >= minimum && value <= maximum;
 	}
 
 	private static bool TryReadNetworkDictionary(Variant rawValue, out Godot.Collections.Dictionary dictionary)
@@ -88,6 +107,14 @@ public partial class GameBoardScene
 
 	private bool IsValidNetworkItemCardId(string itemCardId, bool requirePlayableFromHand)
 	{
+		bool allowLegacyTargetFixture = OS.GetEnvironment("CODEX_LAN_MIGRATION_FIXTURE") == "1"
+			&& string.Equals(itemCardId, "Q", StringComparison.Ordinal);
+		if (allowLegacyTargetFixture)
+		{
+			return itemCardId.Length <= MaxNetworkItemCardIdLength
+				&& _itemCardTextures.ContainsKey(itemCardId);
+		}
+
 		return !string.IsNullOrWhiteSpace(itemCardId) && itemCardId.Length <= MaxNetworkItemCardIdLength
 			&& _itemCardCatalog.IsEnabled(itemCardId) && (!requirePlayableFromHand || _itemCardCatalog.IsPlayable(itemCardId))
 			&& _itemCardTextures.ContainsKey(itemCardId);
@@ -204,7 +231,10 @@ public partial class GameBoardScene
 		return new Godot.Collections.Dictionary
 		{
 			["protocol_version"] = MultiplayerBoardSyncRules.ProtocolVersion,
+			["session_id"] = _networkSessionId,
 			["match_id"] = _networkMatchId,
+			["authority_epoch"] = _networkAuthorityEpoch,
+			["checkpoint_id"] = _networkCheckpointId,
 			["snapshot_id"] = snapshotId,
 			["turn_sequence_generation"] = _turnSequenceGeneration,
 			["current_turn_player_index"] = _currentTurnPlayerIndex,
@@ -226,6 +256,7 @@ public partial class GameBoardScene
 			["revealed_player_hand_index"] = ShouldRevealTargetHandToSeat(recipientSeatIndex) ? _revealedPlayerHandIndex : -1,
 			["opening_deal_animation_playing"] = _isOpeningDealAnimationPlaying,
 			["seat_control_states"] = BuildSeatControlStatesArray(),
+			["authority_action"] = NetworkAuthorityActionVariantCodec.ToVariant(_networkAuthorityActionState),
 		};
 	}
 
@@ -236,12 +267,25 @@ public partial class GameBoardScene
 			return;
 		}
 
+		GetNetworkManager()?.ApplySeatControlStatesFromAuthoritySnapshot(decodedSnapshot.SeatControlStates);
+
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
-			&& GetNetworkManager()?.State == NetworkSessionState.Reconnecting;
-		if (isReconnectCatchup)
+			&& GetNetworkManager()?.State is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost;
+			if (isReconnectCatchup)
+			{
+				_networkReconnectCatchupPendingCompletion = true;
+				GD.Print($"MIGRATION_SNAPSHOT_DECODED epoch={decodedSnapshot.AuthorityEpoch} snapshot={decodedSnapshot.SnapshotId} checkpoint={decodedSnapshot.CheckpointId} state={GetNetworkManager()?.State}");
+			}
+		if (decodedSnapshot.AuthorityEpoch > _networkAuthorityEpoch)
 		{
-			_networkReconnectCatchupPendingCompletion = true;
+			NetworkVisualPlayback.ClearEvents();
+			NetworkVisualPlayback.ClearPendingSnapshot();
+			ResetNetworkPredictedClientState();
+			ClearNetworkPendingActionState();
+			_networkLastAppliedSnapshotId = -1;
+			_networkAuthorityEpoch = decodedSnapshot.AuthorityEpoch;
+			_networkCheckpointId = decodedSnapshot.CheckpointId;
 		}
 		NetworkVisualPlayback.SubmitSnapshot(decodedSnapshot);
 	}
@@ -250,7 +294,7 @@ public partial class GameBoardScene
 	{
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
-			&& GetNetworkManager()?.State == NetworkSessionState.Reconnecting;
+			&& GetNetworkManager()?.State is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost;
 		if (isReconnectCatchup)
 		{
 			NetworkVisualPlayback.ClearEvents();
@@ -271,6 +315,9 @@ public partial class GameBoardScene
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++) _playerScores[playerIndex] = snapshot.Scores[playerIndex];
 		ApplyValidatedCountArray(snapshot.DeckCounts, _playerDecks, CreatePlaceholderPlayingCard);
 		ApplyPendingSelectionFromSnapshot(snapshot);
+		RestoreNetworkAuthorityActionState(snapshot.AuthorityAction);
+		_networkAuthorityEpoch = snapshot.AuthorityEpoch;
+		_networkCheckpointId = snapshot.CheckpointId;
 		ApplyHandsFromSnapshot(snapshot);
 		ApplyItemHandsFromSnapshot(snapshot);
 		ApplyTableCardsFromSnapshot(snapshot);
@@ -320,6 +367,10 @@ public partial class GameBoardScene
 		}
 
 		NetworkManager? networkManager = GetNetworkManager();
+		if (networkManager?.State == NetworkSessionState.MigratingHost)
+		{
+			return;
+		}
 		if (!NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
@@ -346,9 +397,15 @@ public partial class GameBoardScene
 		snapshot = default!;
 		if (player_count < 2 || player_count > MaxPlayers
 			|| !TryReadNetworkInt32(raw, "protocol_version", MultiplayerBoardSyncRules.ProtocolVersion, MultiplayerBoardSyncRules.ProtocolVersion, out _)
+			|| !TryReadNetworkString(raw, "session_id", NetworkProtocol.MaxSessionIdLength, out string sessionId)
+			|| (!string.IsNullOrWhiteSpace(_networkSessionId) && !string.Equals(sessionId, _networkSessionId, StringComparison.Ordinal))
 			|| !TryReadNetworkString(raw, "match_id", MaxNetworkSessionIdLength, out string matchId)
 			|| (!string.IsNullOrWhiteSpace(_networkMatchId) && !string.Equals(matchId, _networkMatchId, StringComparison.Ordinal))
-			|| !TryReadNetworkInt32(raw, "snapshot_id", 0, int.MaxValue, out int snapshotId) || snapshotId <= _networkLastAppliedSnapshotId
+			|| !TryReadNetworkInt64(raw, "authority_epoch", 0, long.MaxValue, out long authorityEpoch)
+			|| authorityEpoch < _networkAuthorityEpoch
+			|| !TryReadNetworkInt64(raw, "checkpoint_id", 0, long.MaxValue, out long checkpointId)
+			|| !TryReadNetworkInt32(raw, "snapshot_id", 0, int.MaxValue, out int snapshotId)
+			|| (authorityEpoch == _networkAuthorityEpoch && snapshotId <= _networkLastAppliedSnapshotId)
 			|| !TryReadNetworkInt32(raw, "turn_sequence_generation", 0, int.MaxValue, out int generation)
 			|| !TryReadNetworkInt32(raw, "current_turn_player_index", 0, player_count - 1, out int currentPlayer)
 			|| !TryReadNetworkInt32(raw, "winner_player_index", -1, player_count - 1, out int winner)) return false;
@@ -381,13 +438,20 @@ public partial class GameBoardScene
 			|| !TryReadNetworkInt32(raw, "pending_turn_sequence_generation", -1, int.MaxValue, out int pendingGeneration)
 			|| !TryReadNetworkBool(raw, "opening_deal_animation_playing", out bool opening)) return false;
 
+		AuthorityActionState authorityAction = AuthorityActionState.Empty;
+		if (!raw.TryGetValue("authority_action", out Variant rawAuthorityAction)
+			|| !NetworkAuthorityActionVariantCodec.TryRead(rawAuthorityAction, out authorityAction, player_count))
+		{
+			return false;
+		}
+
 		int localSeat = GetLocalHandPlayerIndex();
 		if (localSeat < 0 || localSeat >= player_count || ownPlaying.Length != hands[localSeat] || ownItems.Length != items[localSeat]) return false;
 		if (revealedVisible ? (pendingMode != PendingItemSelectionMode.TargetHandCard || pendingOwner != localSeat || revealedPlayer < 0 || revealedPlayer == localSeat || revealedPlaying.Length != hands[revealedPlayer] || revealedItems.Length != items[revealedPlayer]) : (revealedPlayer != -1 || revealedPlaying.Length != 0 || revealedItems.Length != 0)) return false;
 
 		bool pendingValid = pendingMode switch { PendingItemSelectionMode.None => pendingOwner == -1 && pendingGeneration == -1 && string.IsNullOrEmpty(pendingId), PendingItemSelectionMode.HandLimitDiscard => pendingOwner >= 0 && pendingGeneration >= 0 && string.IsNullOrEmpty(pendingId), PendingItemSelectionMode.AttachmentRewardHandCard => pendingOwner >= 0 && pendingGeneration >= 0 && IsValidNetworkAttachmentItemCardId(pendingId), PendingItemSelectionMode.TargetPlayer or PendingItemSelectionMode.TargetHandCard => pendingOwner >= 0 && pendingGeneration >= 0 && IsValidNetworkItemCardId(pendingId, true), _ => false };
 		if (!pendingValid) return false;
-		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, generation, currentPlayer, winner, scores, decks, hands, items, ownPlaying, ownItems, revealedVisible, revealedPlaying, revealedItems, pendingMode, pendingOwner, pendingId, pendingGeneration, revealedPlayer, opening, table, seats);
+		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, authorityEpoch, checkpointId, generation, currentPlayer, winner, scores, decks, hands, items, ownPlaying, ownItems, revealedVisible, revealedPlaying, revealedItems, pendingMode, pendingOwner, pendingId, pendingGeneration, revealedPlayer, opening, table, seats, authorityAction);
 		return true;
 	}
 

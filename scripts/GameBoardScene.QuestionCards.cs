@@ -88,6 +88,13 @@ public partial class GameBoardScene
 		return null;
 	}
 
+	BeginNetworkAuthorityQuestionRewardTransaction(
+		playerIndex,
+		itemCardId,
+		IsAttachmentItemCard(itemCardId),
+		reserveReplacementCard,
+		turnSequenceGeneration);
+
 	ItemCard? itemCard = CreateItemCard(itemCardId);
 	if (!itemCard.HasValue)
 	{
@@ -103,6 +110,7 @@ public partial class GameBoardScene
 
 		_pendingItemAttachmentRewards.Enqueue(
 			new PendingItemAttachmentReward(playerIndex, itemCardId));
+		CommitNetworkAuthorityQuestionRewardQueued();
 		_debugQuestionRewardGrantCount++;
 		_debugLastQuestionRewardItemCardId = itemCardId;
 		return new QuestionCardRewardGrant(itemCard.Value, -1, true);
@@ -126,6 +134,7 @@ public partial class GameBoardScene
 
 	int itemHandIndex = _playerItemHands[playerIndex].Count;
 	_playerItemHands[playerIndex].Add(itemCard.Value);
+	CommitNetworkAuthorityQuestionRewardHandMutation(playerIndex, itemHandIndex);
 	_debugQuestionRewardGrantCount++;
 	_debugLastQuestionRewardItemCardId = itemCardId;
 	return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);

@@ -35,7 +35,14 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_ = ResolveHumanHandLimitDiscardAsync(ownerPlayerIndex, _turnSequenceGeneration);
+		int turnGeneration = _turnSequenceGeneration;
+		BeginNetworkAuthorityAction(
+			AuthorityActionKind.QuestionReward,
+			ownerPlayerIndex,
+			turnGeneration,
+			clientActionId: 0,
+			itemOrRewardId: "question_mark");
+		_ = ResolveHumanHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration);
 		return true;
 	}
 
@@ -88,12 +95,20 @@ public partial class GameBoardScene
 		_playerItemHands[ownerPlayerIndex].Add(new ItemCard(
 			DebugPendingTargetHandSelectionItemCardId,
 			placeholderTexture));
+		int turnGeneration = _turnSequenceGeneration;
+		BeginNetworkAuthorityAction(
+			AuthorityActionKind.ItemCard,
+			ownerPlayerIndex,
+			turnGeneration,
+			clientActionId: 0,
+			itemHandIndex: _playerItemHands[ownerPlayerIndex].Count - 1,
+			itemOrRewardId: DebugPendingTargetHandSelectionItemCardId);
 		_isProcessingCardPlay = true;
 		StartPendingItemSelection(
 			DebugPendingTargetHandSelectionItemCardId,
 			ownerPlayerIndex,
 			_playerItemHands[ownerPlayerIndex].Count - 1,
-			_turnSequenceGeneration);
+			turnGeneration);
 		return true;
 	}
 
@@ -2231,7 +2246,7 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 		MagnetItemCardId);
 }
 
-public bool DebugStartMagnetGenerationOwnershipProbe(
+	public bool DebugStartMagnetGenerationOwnershipProbe(
 	Godot.Collections.Dictionary result)
 {
 	if (result == null
@@ -2246,9 +2261,21 @@ public bool DebugStartMagnetGenerationOwnershipProbe(
 
 	result.Clear();
 	result["completed"] = false;
-	result["error"] = string.Empty;
-	result["generation"] = _turnSequenceGeneration;
-	_ = RunDebugMagnetGenerationOwnershipProbeAsync(result);
+		result["error"] = string.Empty;
+		result["generation"] = _turnSequenceGeneration;
+		BeginNetworkAuthorityAction(
+			AuthorityActionKind.QuestionReward,
+			MainPlayerIndex,
+			_turnSequenceGeneration,
+			clientActionId: 0,
+			itemOrRewardId: MagnetItemCardId);
+		BeginNetworkAuthorityQuestionRewardTransaction(
+			MainPlayerIndex,
+			MagnetItemCardId,
+			requiresAttachment: true,
+			reserveReplacement: false,
+			_turnSequenceGeneration);
+		_ = RunDebugMagnetGenerationOwnershipProbeAsync(result);
 	return true;
 }
 

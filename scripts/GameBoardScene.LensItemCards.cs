@@ -50,6 +50,7 @@ public partial class GameBoardScene
 		Vector2 splitGlobalCenter = splitGlobalPosition + CardVisualSize / 2.0f;
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
+		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
 
 		PlaySpecialItemCardPlaySfx();

@@ -9,8 +9,10 @@ public static class NetworkBoardViewFingerprint
 	private static readonly string[] TopLevelKeyOrder =
 	{
 		"protocol_version",
+		"session_id",
 		"match_id",
 		"authority_epoch",
+		"checkpoint_id",
 		"snapshot_id",
 		"turn_sequence_generation",
 		"current_turn_player_index",
@@ -32,6 +34,7 @@ public static class NetworkBoardViewFingerprint
 		"pending_turn_sequence_generation",
 		"opening_deal_animation_playing",
 		"seat_control_states",
+		"authority_action",
 	};
 
 	private static readonly string[] NestedKeyOrder =
@@ -54,6 +57,13 @@ public static class NetworkBoardViewFingerprint
 
 	public static string Compute(Godot.Collections.Dictionary snapshot)
 	{
+		string canonical = Canonicalize(snapshot);
+		byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
+		return Convert.ToHexString(digest).ToLowerInvariant();
+	}
+
+	private static string Canonicalize(Godot.Collections.Dictionary snapshot)
+	{
 		var canonical = new StringBuilder(4096);
 		canonical.Append("network-board-view-v1\n");
 		foreach (string key in TopLevelKeyOrder)
@@ -71,8 +81,7 @@ public static class NetworkBoardViewFingerprint
 			canonical.Append('\n');
 		}
 
-		byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString()));
-		return Convert.ToHexString(digest).ToLowerInvariant();
+		return canonical.ToString();
 	}
 
 	private static void AppendVariant(StringBuilder builder, Variant value, IReadOnlyList<string> nestedKeyOrder)

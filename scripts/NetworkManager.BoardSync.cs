@@ -151,6 +151,7 @@ public partial class NetworkManager
 				payload[NetworkBoardVisualEventTypes.DrawnCardCodeKey] = drawnCardCode;
 			}
 
+			StampBoardVisualEvent(payload);
 			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
 		}
 	}
@@ -248,6 +249,7 @@ public partial class NetworkManager
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
+		StampBoardVisualEvent(payload);
 		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
 	}
 
@@ -329,6 +331,7 @@ public partial class NetworkManager
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
+		StampBoardVisualEvent(payload);
 		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
 	}
 
@@ -350,6 +353,7 @@ public partial class NetworkManager
 				continue;
 			}
 
+			StampBoardVisualEvent(payload);
 			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
 		}
 	}
@@ -366,7 +370,19 @@ public partial class NetworkManager
 			return;
 		}
 
+		StampBoardVisualEvent(payload);
 		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
+	}
+
+	private void StampBoardVisualEvent(Godot.Collections.Dictionary payload)
+	{
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		{
+			payload[NetworkBoardVisualEventTypes.SessionIdKey] = _config.SessionId;
+			payload[NetworkBoardVisualEventTypes.MatchIdKey] = _config.MatchId;
+			payload[NetworkBoardVisualEventTypes.AuthorityEpochKey] = gameBoard.NetworkAuthorityEpoch;
+			payload[NetworkBoardVisualEventTypes.CheckpointIdKey] = gameBoard.NetworkCheckpointId;
+		}
 	}
 
 	public void SendInitialBoardSnapshotsFromHost(GameBoardScene gameBoard)
@@ -386,6 +402,8 @@ public partial class NetworkManager
 		{
 			return;
 		}
+
+		CommitAuthorityCheckpointFromBoard(gameBoard);
 
 		foreach (NetworkPlayerPublicState player in _players)
 		{
@@ -417,10 +435,27 @@ public partial class NetworkManager
 		RpcId(peerId, MethodName.RpcBoardSnapshot, snapshot);
 	}
 
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)
 	{
+		NetworkRpcContext context = GetCurrentRpcContext();
+		RpcRequestPlayHandCard(context.SessionId, context.MatchId, context.AuthorityEpoch, handIndex, turnSequenceGeneration, 0);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcRequestPlayHandCard(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		int handIndex,
+		int turnSequenceGeneration,
+		long clientActionId)
+	{
 		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
@@ -429,6 +464,21 @@ public partial class NetworkManager
 		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, handIndex);
+			return;
+		}
+
+		if (IsDuplicateOrOlderClientAction(actorSeatIndex, clientActionId))
+		{
+			if (GetTree().CurrentScene is GameBoardScene duplicateBoard
+				&& !duplicateBoard.IsNetworkGameOver())
+			{
+				SendBoardSnapshotToPeerFromHost(
+					duplicateBoard,
+					senderPeerId,
+					actorSeatIndex,
+					duplicateBoard.CreateNextNetworkSnapshotId());
+			}
+
 			return;
 		}
 
@@ -457,6 +507,7 @@ public partial class NetworkManager
 			actorSeatIndex,
 			handIndex,
 			turnSequenceGeneration,
+			clientActionId,
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, handIndex);
@@ -465,12 +516,27 @@ public partial class NetworkManager
 				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
 			}
 		}
+		else
+		{
+			TryAcceptClientAction(actorSeatIndex, clientActionId);
+		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcRequestPlayItemCard(int itemHandIndex, int turnSequenceGeneration)
+	private void RpcRequestPlayItemCard(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		int itemHandIndex,
+		int turnSequenceGeneration,
+		long clientActionId)
 	{
 		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
@@ -479,6 +545,21 @@ public partial class NetworkManager
 		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, itemHandIndex);
+			return;
+		}
+
+		if (IsDuplicateOrOlderClientAction(actorSeatIndex, clientActionId))
+		{
+			if (GetTree().CurrentScene is GameBoardScene duplicateBoard
+				&& !duplicateBoard.IsNetworkGameOver())
+			{
+				SendBoardSnapshotToPeerFromHost(
+					duplicateBoard,
+					senderPeerId,
+					actorSeatIndex,
+					duplicateBoard.CreateNextNetworkSnapshotId());
+			}
+
 			return;
 		}
 
@@ -507,6 +588,7 @@ public partial class NetworkManager
 			actorSeatIndex,
 			itemHandIndex,
 			turnSequenceGeneration,
+			clientActionId,
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, itemHandIndex);
@@ -515,12 +597,28 @@ public partial class NetworkManager
 				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
 			}
 		}
+		else
+		{
+			TryAcceptClientAction(actorSeatIndex, clientActionId);
+		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcRequestPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
+	private void RpcRequestPendingItemSelection(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		int targetPlayerIndex,
+		int targetHandIndex,
+		int turnSequenceGeneration,
+		long clientActionId)
 	{
 		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
@@ -529,6 +627,21 @@ public partial class NetworkManager
 		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, -1);
+			return;
+		}
+
+		if (IsDuplicateOrOlderClientAction(actorSeatIndex, clientActionId))
+		{
+			if (GetTree().CurrentScene is GameBoardScene duplicateBoard
+				&& !duplicateBoard.IsNetworkGameOver())
+			{
+				SendBoardSnapshotToPeerFromHost(
+					duplicateBoard,
+					senderPeerId,
+					actorSeatIndex,
+					duplicateBoard.CreateNextNetworkSnapshotId());
+			}
+
 			return;
 		}
 
@@ -566,32 +679,68 @@ public partial class NetworkManager
 				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
 			}
 		}
+		else
+		{
+			TryAcceptClientAction(actorSeatIndex, clientActionId);
+		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcReconnectPlayer(string matchId, string reconnectToken, string stableUserId)
+	private void RpcReconnectPlayer(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		string reconnectToken,
+		string stableUserId)
 	{
+		if (IsHost && (_state == NetworkSessionState.InGame || _state == NetworkSessionState.MigratingHost))
+		{
+			GD.Print($"MIGRATION_RECONNECT_REQUEST sender={Multiplayer.GetRemoteSenderId()} state={_state} epoch={authorityEpoch} stable={stableUserId} token_len={reconnectToken.Length}");
+		}
+
 		if (!IsHost || _state != NetworkSessionState.InGame)
 		{
+			return;
+		}
+
+		if (GetTree().CurrentScene is GameBoardScene migratingBoard
+			&& migratingBoard.IsNetworkMigrationInputLocked
+			&& !IsMigrationReadinessFenceActive())
+		{
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ActionInProgress sender={Multiplayer.GetRemoteSenderId()} lock=true");
+			SendReconnectResult(
+				Multiplayer.GetRemoteSenderId(),
+				false,
+				"ActionInProgress",
+				-1);
+			return;
+		}
+
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
+		{
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ContextMismatch sender={Multiplayer.GetRemoteSenderId()} epoch={authorityEpoch} current={GetCurrentAuthorityEpoch()}");
 			return;
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
 		if (string.IsNullOrWhiteSpace(reconnectToken))
 		{
-			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "TokenMismatch", -1);
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason=TokenMismatch sender={senderPeerId} detail=empty");
+			SendReconnectResult(senderPeerId, false, "TokenMismatch", -1);
 			return;
 		}
 
 		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
 		{
-			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "ActionInProgress", -1);
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ActionInProgress sender={senderPeerId} detail=no_board");
+			SendReconnectResult(senderPeerId, false, "ActionInProgress", -1);
 			return;
 		}
 
 		if (!TryFindSeatControlStateByToken(reconnectToken, out SeatControlState currentSeatState, out int stateIndex))
 		{
-			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "TokenMismatch", -1);
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason=TokenMismatch sender={senderPeerId} detail=unknown_token");
+			SendReconnectResult(senderPeerId, false, "TokenMismatch", -1);
 			return;
 		}
 
@@ -604,7 +753,8 @@ public partial class NetworkManager
 			currentSeatState.StableUserId,
 			stableUserId))
 		{
-			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, "ActionInProgress", currentSeatState.SeatIndex);
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ActionInProgress sender={senderPeerId} seat={currentSeatState.SeatIndex} detail=seat_connected");
+			SendReconnectResult(senderPeerId, false, "ActionInProgress", currentSeatState.SeatIndex);
 			return;
 		}
 
@@ -620,27 +770,42 @@ public partial class NetworkManager
 			senderPeerId);
 		if (!result.Accepted)
 		{
-			RpcId(senderPeerId, MethodName.RpcReconnectResult, false, result.RejectReason.ToString(), currentSeatState.SeatIndex);
+			GD.Print($"MIGRATION_RECONNECT_REJECT reason={result.RejectReason} sender={senderPeerId} seat={currentSeatState.SeatIndex}");
+			SendReconnectResult(senderPeerId, false, result.RejectReason.ToString(), currentSeatState.SeatIndex);
 			return;
 		}
 
-		_seatControlStates[stateIndex] = result.SeatControlState;
+		SeatControlState acceptedSeatControlState = result.SeatControlState;
+		if (IsMigrationReadinessFenceActive()
+			&& acceptedSeatControlState.Mode == SeatControlMode.HumanReclaimPending)
+		{
+			// Migration input remains locked until every expected claimant has a hard
+			// snapshot, so the normal turn-start promotion can happen atomically at
+			// the readiness fence instead of leaving recovery waiting for a turn.
+			acceptedSeatControlState = acceptedSeatControlState with
+			{
+				Mode = SeatControlMode.HumanConnected,
+			};
+		}
+		_seatControlStates[stateIndex] = acceptedSeatControlState;
 		_reconnectClaimsBySeat[currentSeatState.SeatIndex] = result.ClaimRecord;
 		if (currentSeatState.PeerId != senderPeerId)
 		{
 			BindReconnectedPeerToSeat(currentSeatState.SeatIndex, senderPeerId);
 		}
 
-		RpcId(senderPeerId, MethodName.RpcReconnectResult, true, string.Empty, currentSeatState.SeatIndex);
+		SendReconnectResult(senderPeerId, true, string.Empty, currentSeatState.SeatIndex);
+		GD.Print($"MIGRATION_RECONNECT_ACCEPT sender={senderPeerId} seat={currentSeatState.SeatIndex} stable={stableUserId}");
 		if (result.StateChanged)
 		{
 			SendReconnectCredentialsToConnectedPeers();
 		}
 
-		if (result.ShouldSendSnapshot)
-		{
-			SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
-		}
+			if (result.ShouldSendSnapshot)
+			{
+				SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+				TryCompleteMigrationReadiness();
+			}
 	}
 
 	private void SendRejectBoardAction(
@@ -654,12 +819,18 @@ public partial class NetworkManager
 			return;
 		}
 
-		RpcId(peerId, MethodName.RpcRejectBoardAction, reason.ToString(), turnSequenceGeneration, rejectedHandIndex);
+		NetworkRpcContext context = GetCurrentRpcContext();
+		RpcId(peerId, MethodName.RpcRejectBoardAction, context.SessionId, context.MatchId, context.AuthorityEpoch, reason.ToString(), turnSequenceGeneration, rejectedHandIndex);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcRejectBoardAction(string reason, int turnSequenceGeneration, int rejectedHandIndex)
+	private void RpcRejectBoardAction(string sessionId, string matchId, long authorityEpoch, string reason, int turnSequenceGeneration, int rejectedHandIndex)
 	{
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
+		{
+			return;
+		}
+
 		if (GetTree().CurrentScene is GameBoardScene gameBoard)
 		{
 			gameBoard.RejectNetworkBoardAction(reason, turnSequenceGeneration, rejectedHandIndex);
@@ -669,6 +840,15 @@ public partial class NetworkManager
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcCardPlayedEvent(Godot.Collections.Dictionary payload)
 	{
+		if (!TryReadRpcContext(payload, out NetworkRpcContext context)
+			|| !MatchesCurrentRpcContext(
+				context.SessionId,
+				context.MatchId,
+				context.AuthorityEpoch))
+		{
+			return;
+		}
+
 		if (GetTree().CurrentScene is GameBoardScene gameBoard)
 		{
 			gameBoard.QueueNetworkCardPlayedEvent(payload);
@@ -676,18 +856,45 @@ public partial class NetworkManager
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)
+		private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)
 	{
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (!TryReadRpcContext(snapshot, out NetworkRpcContext context)
+			|| !MatchesCurrentRpcContext(
+				context.SessionId,
+				context.MatchId,
+				context.AuthorityEpoch,
+				allowHigherEpoch: true))
 		{
+			return;
+		}
+
+		if (_state == NetworkSessionState.MigratingHost)
+			{
+			GD.Print($"MIGRATION_SNAPSHOT_RECEIVED epoch={context.AuthorityEpoch} snapshot={snapshot.GetValueOrDefault("snapshot_id", -1)} checkpoint={snapshot.GetValueOrDefault("checkpoint_id", -1)}");
+			}
+
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+			{
 			gameBoard.ApplyNetworkBoardSnapshot(snapshot);
 		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcReceiveReconnectCredentials(string matchId, int seatIndex, string reconnectToken, string stableUserId)
+	private void RpcReceiveReconnectCredentials(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		int seatIndex,
+		string reconnectToken,
+		string stableUserId)
 	{
-		if (!string.Equals(GetStableUserId(), stableUserId, StringComparison.Ordinal))
+		bool isInitialMatchCredential = string.IsNullOrWhiteSpace(_config.MatchId)
+			&& !string.IsNullOrWhiteSpace(matchId)
+			&& string.Equals(_config.SessionId, sessionId, StringComparison.Ordinal)
+			&& _state is NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene;
+		if ((!isInitialMatchCredential
+				&& !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
+			|| !string.Equals(GetStableUserId(), stableUserId, StringComparison.Ordinal))
 		{
 			return;
 		}
@@ -701,14 +908,73 @@ public partial class NetworkManager
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcReconnectResult(bool accepted, string reason, int seatIndex)
+	private void RpcReceiveSessionMigrationToken(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		int seatIndex,
+		string sessionMigrationToken,
+		string stableUserId)
 	{
+		bool isInitialLobbyCredential = _state == NetworkSessionState.Joining
+			&& string.IsNullOrWhiteSpace(_config.MatchId)
+			&& string.IsNullOrWhiteSpace(matchId)
+			&& !string.IsNullOrWhiteSpace(sessionId);
+		if ((!isInitialLobbyCredential
+				&& !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
+			|| !string.Equals(GetStableUserId(), stableUserId, StringComparison.Ordinal)
+			|| seatIndex < 0
+			|| seatIndex >= NetworkSessionDefaults.MaxPlayers)
+		{
+			return;
+		}
+
+		if (isInitialLobbyCredential)
+		{
+			_config = _config with { SessionId = sessionId };
+		}
+		ApplySessionMigrationToken(seatIndex, sessionMigrationToken);
+		// Lobby credentials can arrive before RpcSyncLobby establishes the local
+		// seat. Stable identity keeps the local token usable during early
+		// active-lobby migration.
+		if (string.Equals(GetStableUserId(), stableUserId, StringComparison.Ordinal))
+		{
+			_localSessionMigrationToken = sessionMigrationToken.Trim();
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		private void RpcReconnectResult(string sessionId, string matchId, long authorityEpoch, bool accepted, string reason, int seatIndex)
+		{
+		if (_state == NetworkSessionState.MigratingHost)
+		{
+			GD.Print($"MIGRATION_RECONNECT_RESULT accepted={accepted} reason={reason} seat={seatIndex} epoch={authorityEpoch}");
+		}
+
+			bool isMigrationResult = _state == NetworkSessionState.MigratingHost
+				&& _networkMigrationPlan is { } migrationPlan
+				&& authorityEpoch == migrationPlan.TargetEpoch;
+			if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: isMigrationResult))
+			{
+				return;
+			}
+			if (isMigrationResult)
+			{
+				SetAuthorityEpoch(authorityEpoch);
+			}
+
 		_reconnectAttemptInFlight = false;
 		if (!accepted)
 		{
-			if (_state == NetworkSessionState.Reconnecting
+			if ((_state is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost)
 				&& string.Equals(reason, "ActionInProgress", StringComparison.Ordinal))
 			{
+				if (_state == NetworkSessionState.MigratingHost)
+				{
+					HandleMigrationConnectionFailure();
+					return;
+				}
+
 				ScheduleReconnectRetry();
 				return;
 			}
@@ -720,10 +986,21 @@ public partial class NetworkManager
 		UpdateLocalPlayerAfterReconnect(seatIndex);
 	}
 
-	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcHostEndedMatch(string message)
+	private void SendReconnectResult(int peerId, bool accepted, string reason, int seatIndex)
 	{
-		if (IsHost)
+		NetworkRpcContext context = GetCurrentRpcContext();
+		RpcId(peerId, MethodName.RpcReconnectResult, context.SessionId, context.MatchId, context.AuthorityEpoch, accepted, reason, seatIndex);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcHostEndedMatch(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		string message)
+	{
+		if (IsHost
+			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}

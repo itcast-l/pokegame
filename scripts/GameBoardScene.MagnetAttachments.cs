@@ -14,8 +14,10 @@ public partial class GameBoardScene
 			}
 
 			PendingItemAttachmentReward reward = _pendingItemAttachmentRewards.Dequeue();
+			MarkNetworkAuthorityAttachmentRewardInFlight(reward);
 			if (!PlayerHasAttachableMagnetCard(reward.PlayerIndex, reward.ItemCardId))
 			{
+				CommitNetworkAuthorityAttachmentMutation();
 				continue;
 			}
 
@@ -29,6 +31,8 @@ public partial class GameBoardScene
 				{
 					PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
 				}
+
+				CommitNetworkAuthorityAttachmentMutation();
 			}
 
 			RenderPlayerHands();
@@ -60,6 +64,7 @@ public partial class GameBoardScene
 		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
 		_pendingItemSelectionMode = PendingItemSelectionMode.AttachmentRewardHandCard;
 		_pendingMagnetAttachmentCompletion = completionSource;
+		SyncNetworkAuthorityActionWithPendingSelection();
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
 		ShowMagnetHandSelection();
@@ -189,6 +194,7 @@ public partial class GameBoardScene
 			: PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
 		if (attachHandIndex < 0)
 		{
+			CommitNetworkAuthorityAttachmentMutation();
 			DisposeActiveSelectionOverlay();
 			ClearPendingItemSelectionState();
 			RenderPlayerHands();
@@ -212,6 +218,7 @@ public partial class GameBoardScene
 		{
 			AttachMagnetToAutoSelectedHandCard(ownerPlayerIndex, itemCardId);
 		}
+		CommitNetworkAuthorityAttachmentMutation();
 
 		DisposeActiveSelectionOverlay();
 		ClearPendingItemSelectionState();

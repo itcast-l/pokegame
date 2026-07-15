@@ -7,7 +7,7 @@ public partial class GameBoardScene
 {
 	// This is the trust-boundary representation. Godot Variants must not cross into playback.
 	private sealed record NetworkVisualEvent(
-		string Type, int SnapshotId, int Generation, int Actor, int HandIndex, int TargetSeat,
+		string Type, long AuthorityEpoch, long CheckpointId, int SnapshotId, int Generation, int Actor, int HandIndex, int TargetSeat,
 		int TargetHandIndex, int TableIndex, int DisplayIndex, int CaptureStartIndex, int MovedCount,
 		string CardCode, string ItemId, string Presentation, bool FaceUp, bool RequiresMagnet,
 		float FirstFloat, float SecondFloat, int[] Indexes, string[] Strings,
@@ -32,7 +32,9 @@ public partial class GameBoardScene
 		}
 
 		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent)
-			|| visualEvent.SnapshotId <= _networkLastAppliedSnapshotId)
+			|| visualEvent.AuthorityEpoch < _networkAuthorityEpoch
+			|| (visualEvent.AuthorityEpoch == _networkAuthorityEpoch
+				&& visualEvent.SnapshotId <= _networkLastAppliedSnapshotId))
 		{
 			return;
 		}
@@ -46,7 +48,15 @@ public partial class GameBoardScene
 		EnsureNetworkCardCache();
 		if (!TryReadNetworkString(payload, NetworkBoardVisualEventTypes.EventTypeKey, out string type)
 			|| !IsKnownNetworkVisualEventType(type)
+			|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.SessionIdKey, NetworkProtocol.MaxSessionIdLength, out string sessionId)
+			|| !string.Equals(sessionId, _networkSessionId, StringComparison.Ordinal)
+			|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.MatchIdKey, MaxNetworkSessionIdLength, out string matchId)
+			|| !string.Equals(matchId, _networkMatchId, StringComparison.Ordinal)
 			|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.SnapshotIdKey, 0, int.MaxValue, out int snapshotId)
+			|| !TryReadNetworkInt64(payload, NetworkBoardVisualEventTypes.CheckpointIdKey, 0, long.MaxValue, out long checkpointId)
+			|| !TryReadNetworkInt64(payload, NetworkBoardVisualEventTypes.AuthorityEpochKey, 0, long.MaxValue, out long authorityEpoch)
+			|| authorityEpoch != _networkAuthorityEpoch
+			|| checkpointId < _networkCheckpointId
 			|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, 0, int.MaxValue, out int generation)
 			|| generation != _turnSequenceGeneration) return false;
 
@@ -151,7 +161,7 @@ public partial class GameBoardScene
 			default: return false;
 		}
 
-		visualEvent = new(type, snapshotId, generation, actor, handIndex, targetSeat, targetHandIndex, tableIndex, displayIndex, captureStartIndex, movedCount, cardCode, itemId, presentation, faceUp, requiresMagnet, firstFloat, secondFloat, indexes, strings, captureRevealEntries);
+		visualEvent = new(type, authorityEpoch, checkpointId, snapshotId, generation, actor, handIndex, targetSeat, targetHandIndex, tableIndex, displayIndex, captureStartIndex, movedCount, cardCode, itemId, presentation, faceUp, requiresMagnet, firstFloat, secondFloat, indexes, strings, captureRevealEntries);
 		return true;
 	}
 

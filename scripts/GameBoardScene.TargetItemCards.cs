@@ -61,9 +61,10 @@ public partial class GameBoardScene
 				}
 			}
 
-			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
-			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-			_playerHands[ownerPlayerIndex].Add(stolenCard);
+				_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
+				ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
+				_playerHands[ownerPlayerIndex].Add(stolenCard);
+				MarkNetworkAuthorityTransferMutationApplied();
 			if (shouldPlayLocalVisual)
 			{
 				PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
@@ -110,6 +111,7 @@ public partial class GameBoardScene
 		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
 		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
+		MarkNetworkAuthorityTransferMutationApplied();
 		if (shouldPlayLocalItemVisual)
 		{
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
@@ -235,6 +237,10 @@ public partial class GameBoardScene
 			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
 			_playerDecks[targetPlayerIndex].RemoveAt(0);
 			AddCardToPlayerDeck(ownerPlayerIndex, topCard);
+		}
+		if (cardsToMove > 0)
+		{
+			MarkNetworkAuthorityTransferMutationApplied();
 		}
 
 		Shuffle(_playerDecks[ownerPlayerIndex]);

@@ -595,7 +595,7 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 	var table_card := ((matrix_snapshot["table_cards"] as Array)[0] as Dictionary).duplicate(true)
 	var hostile_cases: Array[Dictionary] = []
 
-	for key in ["protocol_version", "match_id", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "revealed_hand_cards", "revealed_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_deal_animation_playing"]:
+	for key in ["protocol_version", "session_id", "match_id", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "revealed_hand_cards", "revealed_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_deal_animation_playing", "authority_action"]:
 		var missing := matrix_snapshot.duplicate(true)
 		missing.erase(key)
 		hostile_cases.append({"name": "snapshot missing " + key, "payload": missing})

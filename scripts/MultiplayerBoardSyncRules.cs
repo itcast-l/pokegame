@@ -29,7 +29,7 @@ internal readonly record struct MultiplayerBoardActionValidation(
 
 internal static class MultiplayerBoardSyncRules
 {
-	internal const int ProtocolVersion = 1;
+	internal const int ProtocolVersion = NetworkProtocol.CurrentVersion;
 
 	internal static bool TryResolveSeatFromPeer(
 		IReadOnlyCollection<NetworkPlayerPublicState> players,

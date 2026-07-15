@@ -12,6 +12,7 @@ public enum NetworkSessionState
 	InGame,
 	Reconnecting,
 	Failed,
+	MigratingHost,
 }
 
 public enum NetworkTransport
@@ -86,7 +87,7 @@ public static class NetworkSessionDefaults
 	public const bool DefaultItemMode = true;
 	public const int LanDiscoveryPort = 37145;
 	public const int LanGamePort = 37146;
-	public const int ProtocolVersion = 3;
+	public const int ProtocolVersion = NetworkProtocol.CurrentVersion;
 	public const double SceneLoadTimeoutSeconds = 30.0;
 
 	public static int ClampPlayerCount(int playerCount)

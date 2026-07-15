@@ -70,6 +70,11 @@ public partial class GameBoardScene
 		{
 			return new PlayCardResult(false, false);
 		}
+
+		// The card is removed and inserted into the table before any visual or
+		// capture await. Persist that mutation immediately so recovery cannot
+		// replay the same hand entry.
+		MarkNetworkAuthorityPrimaryMutationApplied();
 		AdventureExtraActionGrant? acceptedExtraActionGrant =
 			AcceptAdventureExtraActionGrantForAction(
 				playerIndex,

@@ -62,11 +62,11 @@ public partial class GameBoardScene
 		internal int DroppedEventCount { get; private set; }
 		internal int FastForwardCount { get; private set; }
 
-		internal bool HasQueuedEventForSnapshot(int snapshotId)
+		internal bool HasQueuedEventForSnapshot(long authorityEpoch, int snapshotId)
 		{
 			foreach (NetworkVisualEvent visualEvent in _pendingEvents)
 			{
-				if (visualEvent.SnapshotId == snapshotId)
+				if (visualEvent.AuthorityEpoch == authorityEpoch && visualEvent.SnapshotId == snapshotId)
 				{
 					return true;
 				}
@@ -105,7 +105,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			if (IsProcessing || HasQueuedEventForSnapshot(snapshot.SnapshotId))
+			if (IsProcessing || HasQueuedEventForSnapshot(snapshot.AuthorityEpoch, snapshot.SnapshotId))
 			{
 				return;
 			}
@@ -121,6 +121,7 @@ public partial class GameBoardScene
 		internal void ClearEvents()
 		{
 			_pendingEvents.Clear();
+			IsFastForwarding = false;
 		}
 
 		internal void ClearPendingSnapshot()
@@ -130,7 +131,7 @@ public partial class GameBoardScene
 
 		private void StageLatestSnapshot(ValidatedNetworkBoardSnapshot snapshot)
 		{
-			if (_pendingSnapshot == null || _pendingSnapshot.SnapshotId <= snapshot.SnapshotId)
+			if (_pendingSnapshot == null || IsAtOrAfterFence(snapshot.AuthorityEpoch, snapshot.SnapshotId, _pendingSnapshot.AuthorityEpoch, _pendingSnapshot.SnapshotId))
 			{
 				_pendingSnapshot = snapshot;
 			}
@@ -152,7 +153,12 @@ public partial class GameBoardScene
 				while (!IsFastForwarding && _pendingEvents.Count > 0)
 				{
 					NetworkVisualEvent visualEvent = _pendingEvents.Dequeue();
-					if (_pendingSnapshot != null && _pendingSnapshot.SnapshotId > visualEvent.SnapshotId)
+				if (_pendingSnapshot != null
+					&& IsAtOrAfterFence(
+						_pendingSnapshot.AuthorityEpoch,
+						_pendingSnapshot.SnapshotId,
+						visualEvent.AuthorityEpoch,
+						visualEvent.SnapshotId))
 					{
 						continue;
 					}
@@ -184,6 +190,16 @@ public partial class GameBoardScene
 			_pendingSnapshot = null;
 			_pendingEvents.Clear();
 			IsFastForwarding = false;
+		}
+
+		private static bool IsAtOrAfterFence(
+			long leftEpoch,
+			int leftSnapshotId,
+			long rightEpoch,
+			int rightSnapshotId)
+		{
+			return leftEpoch > rightEpoch
+				|| (leftEpoch == rightEpoch && leftSnapshotId >= rightSnapshotId);
 		}
 
 	}
