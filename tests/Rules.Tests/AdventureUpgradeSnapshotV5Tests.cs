@@ -824,8 +824,8 @@ internal static partial class Program
 	{
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_WARM_CURRENT_SUPPLY",
 			"After the first capture each real turn: draw 1.",
-			"首次收牌后，额外抽1。",
-			"首次收牌後，額外抽1。");
+			"每个实际回合首次收牌后，额外抽1。",
+			"每個實際回合首次收牌後，額外抽1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_MISS_BANDAGE",
 			"When a miss truly ends your real turn: at the next real turn start, heal 3 and draw 1.",
 			"未收取时，下个回合治疗3并抽1。",
