@@ -460,18 +460,40 @@ run_candidate_exit_timeout_case() {
 		print_logs "$case_dir"
 		return 1
 	fi
-	kill -9 "${client_pids[0]}"
-	wait "${client_pids[0]}" 2>/dev/null || true
+	if ! wait_for_any_client_marker "$case_dir" "MIGRATION_PLAN_ACCEPTED" 30; then
+		echo "Candidate-exit case did not deliver migration plan to a client" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	local candidate_seat=-1
+	local follower_seat=-1
+	for seat in 1 2; do
+		if grep -Fq "MIGRATION_PLAN_ACCEPTED candidate=lan-migration-${label}-seat-${seat} " "$case_dir/client_${seat}.log"; then
+			candidate_seat="$seat"
+		else
+			follower_seat="$seat"
+		fi
+	done
+	if (( candidate_seat < 1 || follower_seat < 1 )); then
+		echo "Candidate-exit case could not identify candidate process" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	local candidate_index=$((candidate_seat - 1))
+	kill -9 "${client_pids[$candidate_index]}"
+	wait "${client_pids[$candidate_index]}" 2>/dev/null || true
 	kill -9 "$host_pid"
 	wait "$host_pid" 2>/dev/null || true
-	if ! wait_for_processes 30 "${client_pids[1]}"; then
+	local follower_index=$((follower_seat - 1))
+	if ! wait_for_processes 30 "${client_pids[$follower_index]}"; then
 		echo "Follower did not time out after candidate exit" >&2
 		print_logs "$case_dir"
 		return 1
 	fi
-	if ! grep -Fq "MIGRATION_FAILED code=ConnectTimeout" "$case_dir/client_2.log" \
-		|| ! grep -Fq "MIGRATION_FAILURE_UI" "$case_dir/client_2.log" \
-		|| ! grep -Fq "artifacts=false" "$case_dir/client_2.log"; then
+	if ! grep -Fq "MIGRATION_FAILED code=ConnectTimeout" "$case_dir/client_${follower_seat}.log" \
+		|| ! grep -Fq "MIGRATION_FAILURE_UI" "$case_dir/client_${follower_seat}.log" \
+		|| ! grep -Fq "artifacts=false" "$case_dir/client_${follower_seat}.log"; then
 		echo "Candidate-exit timeout assertions failed" >&2
 		print_logs "$case_dir"
 		return 1
