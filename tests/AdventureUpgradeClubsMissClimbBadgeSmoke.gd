@@ -1,7 +1,7 @@
 extends SceneTree
 
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
-const HAND_AREA_PATH := "LayoutAreas/Player1HandArea"
+const HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player1HandArea"
 const BADGE_NODE_NAME := "AdventureMissClimbBadge"
 const UPGRADE_ID := "clubs_miss_climb_growth"
 const MAX_WAIT_FRAMES := 3600

@@ -40,6 +40,11 @@ public partial class MainMenuScene : Control
 			_multiplayerButton.Text = Localize("MENU_MULTIPLAYER");
 		}
 
+		if (_skillCodexButton != null)
+		{
+			_skillCodexButton.Text = Localize("MENU_SKILL_CODEX");
+		}
+
 		if (_settingsButton != null)
 		{
 			_settingsButton.Text = Localize("MENU_SETTINGS");

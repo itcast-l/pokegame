@@ -1,9 +1,10 @@
-[gd_scene format=3 uid="uid://b2hm2exn0xrpk"]
+[gd_scene load_steps=10 format=3 uid="uid://b2hm2exn0xrpk"]
 
 [ext_resource type="Script" uid="uid://btrtisavdhrue" path="res://scripts/AdventureUpgradeChoiceArt.cs" id="1_choice_art_script"]
 [ext_resource type="FontFile" uid="uid://c4mm3of2mc8o5" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="2_title_font"]
 [ext_resource type="FontFile" uid="uid://dve7mgsjik4dg" path="res://addons/phantom_camera/fonts/Nunito-Regular.ttf" id="6_body_font"]
 [ext_resource type="Script" uid="uid://hg356r35wv0p" path="res://scripts/PearlDivider.cs" id="7_pearl_divider_script"]
+[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png" id="8_table_backdrop"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_selection_panel"]
 bg_color = Color(0.02, 0.06, 0.1, 0.08)
@@ -34,14 +35,27 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Backdrop" type="ColorRect" parent="." unique_id=273618682]
+[node name="TableBackdrop" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.01, 0.03, 0.06, 0.88)
+mouse_filter = 2
+texture = ExtResource("8_table_backdrop")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TableDarken" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.005, 0.02, 0.03, 0.30)
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=1559411219]
 layout_mode = 1
@@ -51,16 +65,18 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 56
-theme_override_constants/margin_top = 46
+theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 56
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 30
 
 [node name="SelectionPanel" type="Panel" parent="Margin" unique_id=967659949]
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_selection_panel")
 
 [node name="SelectionHalo" type="TextureRect" parent="Margin" unique_id=1305542296]
+visible = false
 layout_mode = 2
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_selection_halo")
@@ -71,23 +87,26 @@ stretch_mode = 6
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 18
 alignment = 1
 
 [node name="Header" type="VBoxContainer" parent="Margin/Layout" unique_id=1842619040]
-visible = false
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 2
 
 [node name="SelectionTitle" type="Label" parent="Margin/Layout/Header" unique_id=69478911]
-modulate = Color(0.92, 0.88, 0.82, 0.78)
+modulate = Color(0.94, 0.88, 0.72, 1)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_title_font")
-theme_override_font_sizes/font_size = 26
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.9)
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 34
 text = ""
 horizontal_alignment = 1
 
 [node name="SelectionSubtitle" type="Label" parent="Margin/Layout/Header" unique_id=1105060969]
+visible = false
 modulate = Color(0.68, 0.76, 0.84, 0.64)
 layout_mode = 2
 theme_override_font_sizes/font_size = 13
@@ -95,21 +114,21 @@ text = ""
 horizontal_alignment = 1
 
 [node name="HeaderDivider" type="Control" parent="Margin/Layout/Header" unique_id=1084266456]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(420, 14)
 layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("7_pearl_divider_script")
-LineColor = Color(0.46, 0.82, 0.88, 0.22)
-PearlColor = Color(0.9, 0.98, 1, 0.46)
+LineColor = Color(0.58, 0.80, 0.82, 0.48)
+PearlColor = Color(0.96, 0.88, 0.66, 0.92)
 
 [node name="CardsRow" type="HBoxContainer" parent="Margin/Layout" unique_id=1764142347]
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_constants/separation = 24
+theme_override_constants/separation = 28
 alignment = 1
 
 [node name="Option1Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=1914154128]
-custom_minimum_size = Vector2(264, 402)
+custom_minimum_size = Vector2(352, 496)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxEmpty_card_focus")
@@ -142,9 +161,10 @@ PreviewSuit = "diamonds"
 PreviewTier = "uncommon"
 PreviewTitle = "温流补给"
 PreviewDescription = "抽 1 张牌。"
+PreviewRarityLabel = "稀有"
 
 [node name="Option2Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=151630651]
-custom_minimum_size = Vector2(264, 402)
+custom_minimum_size = Vector2(352, 496)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxEmpty_card_focus")
@@ -177,9 +197,10 @@ PreviewSuit = "hearts"
 PreviewTier = "common"
 PreviewTitle = "浅湾整备"
 PreviewDescription = "抽 1 张牌。"
+PreviewRarityLabel = "普通"
 
 [node name="Option3Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=609478708]
-custom_minimum_size = Vector2(264, 402)
+custom_minimum_size = Vector2(352, 496)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxEmpty_card_focus")
@@ -212,3 +233,4 @@ PreviewSuit = "spades"
 PreviewTier = "rare"
 PreviewTitle = "长收回春"
 PreviewDescription = "回复 2 点生命。"
+PreviewRarityLabel = "传说"

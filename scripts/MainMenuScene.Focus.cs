@@ -51,6 +51,7 @@ public partial class MainMenuScene : Control
 	private bool IsMenuOverlayVisible()
 	{
 		return IsVisible(_playerCountDialogRoot)
+			|| _skillCodexOverlay?.IsOpen == true
 			|| IsVisible(_settingsDialogRoot)
 			|| IsVisible(_controlsDialogRoot)
 			|| IsVisible(_exitDialogRoot)
@@ -70,6 +71,7 @@ public partial class MainMenuScene : Control
 		SetFocusModeIfValid(_avatarEntry?.Button, focusMode);
 		SetFocusModeIfValid(_singlePlayerButton, focusMode);
 		SetFocusModeIfValid(_adventureButton, focusMode);
+		SetFocusModeIfValid(_skillCodexButton, focusMode);
 		SetFocusModeIfValid(_settingsButton, focusMode);
 		SetFocusModeIfValid(_exitButton, focusMode);
 		SetFocusModeIfValid(_multiplayerButton, Control.FocusModeEnum.None);
@@ -130,6 +132,7 @@ public partial class MainMenuScene : Control
 			|| control == _singlePlayerButton
 			|| control == _adventureButton
 			|| control == _multiplayerButton
+			|| control == _skillCodexButton
 			|| control == _settingsButton
 			|| control == _exitButton;
 	}

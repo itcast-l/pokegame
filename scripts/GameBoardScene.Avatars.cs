@@ -147,6 +147,7 @@ public partial class GameBoardScene
 
 	private static void FitAvatarToArea(Control avatar)
 	{
+		avatar.CustomMinimumSize = Vector2.Zero;
 		avatar.SetAnchorsPreset(LayoutPreset.FullRect);
 		avatar.OffsetLeft = 0.0f;
 		avatar.OffsetTop = 0.0f;

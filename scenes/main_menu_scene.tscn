@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://c4f3r0g68r5cn"]
+[gd_scene format=3 uid="uid://c4f3r0g68r5cn"]
 
 [ext_resource type="Texture2D" uid="uid://d1okmldodfjwc" path="res://art/menu/main_menu_concept_10.png" id="1_menu_background"]
 [ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="2_water_caustic_shader"]
@@ -45,6 +45,12 @@ shader_parameter/wave_scale = 22.0
 shader_parameter/wave_speed = 0.42
 shader_parameter/edge_boost = 0.74
 shader_parameter/center_glow = 0.12
+shader_parameter/sun_color = Color(1, 0.92, 0.68, 0.22)
+shader_parameter/sun_pulse_strength = 0.0
+shader_parameter/sun_shadow_strength = 0.0
+shader_parameter/sun_pulse_speed = 0.42
+shader_parameter/center_motion_strength = 0.0
+shader_parameter/center_motion_speed = 0.55
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu_panel"]
 bg_color = Color(0.00784314, 0.0862745, 0.117647, 0.3)
@@ -197,14 +203,14 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
 [node name="PanelMargin" type="MarginContainer" parent="MenuSafeArea/MenuPanel" unique_id=1597857359]
 layout_mode = 2
 theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 30
+theme_override_constants/margin_top = 22
 theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 30
+theme_override_constants/margin_bottom = 22
 
 [node name="MenuLayout" type="VBoxContainer" parent="MenuSafeArea/MenuPanel/PanelMargin" unique_id=1669611164]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="Title" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=2101111588]
@@ -224,11 +230,10 @@ theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 18
-text = ""
 horizontal_alignment = 1
 
 [node name="TopSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=26882160]
-custom_minimum_size = Vector2(0, 10)
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
 
 [node name="SinglePlayerFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=96846586]
@@ -322,6 +327,37 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
 text = "MENU_MULTIPLAYER"
 flat = true
 
+[node name="SkillCodexFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=581277997]
+custom_minimum_size = Vector2(374, 64)
+layout_mode = 2
+script = ExtResource("4_ocean_menu_button_frame")
+FrameStyle = 1
+AccentColor = Color(0.72, 0.92, 0.7, 1)
+FlipOrnament = true
+
+[node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SkillCodexFrame" unique_id=2021093117]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 5.0
+offset_right = -8.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.72, 0.94, 1, 1)
+theme_override_colors/font_hover_color = Color(0.95, 1, 1, 1)
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_menu_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_menu_button")
+text = "MENU_SKILL_CODEX"
+flat = true
+
 [node name="SettingsFrame" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=33184418]
 custom_minimum_size = Vector2(374, 64)
 layout_mode = 2
@@ -384,7 +420,7 @@ text = "MENU_EXIT"
 flat = true
 
 [node name="BottomSpacer" type="Control" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=891852030]
-custom_minimum_size = Vector2(0, 8)
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
 
 [node name="Footer" type="Label" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout" unique_id=271465619]

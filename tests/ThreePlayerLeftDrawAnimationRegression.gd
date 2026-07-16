@@ -5,8 +5,8 @@ const TIMEOUT_SECONDS := 12.0
 const LEFT_PLAYER_INDEX := 2
 const MAX_HIDDEN_HAND_SETTLE_SCALE := 1.02
 const MAX_POSITION_OVERSHOOT_PIXELS := 1.5
-const LEFT_PLAYER_HAND_AREA_PATH := "LayoutAreas/Player3HandArea"
-const LEFT_PILE_PATH := "LayoutAreas/Player3CardPileArea/Player3CardPile"
+const LEFT_PLAYER_HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player3HandArea"
+const LEFT_PILE_PATH := "BoardCanvas/LayoutAreas/Player3CardPileArea/Player3CardPile"
 const VIEWPORT_SIZE := Vector2i(616, 888)
 
 var _failed := false

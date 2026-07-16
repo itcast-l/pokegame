@@ -24,7 +24,7 @@ internal enum AdventureUpgradeAcquireResult
 [JsonConverter(typeof(AdventureUpgradeRunSnapshotJsonConverter))]
 internal readonly record struct AdventureUpgradeRunSnapshot
 {
-	internal const int CurrentSchemaVersion = 6;
+	internal const int CurrentSchemaVersion = 7;
 
 	public int SchemaVersion { get; init; }
 	public string CampaignId { get; init; }
@@ -38,6 +38,7 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 	public int PermanentCaptureDamageBonus { get; init; }
 	public int QuestionRewardCount { get; init; }
 	public int HealingOverflowRemainder { get; init; }
+	public bool HasUsedRevive { get; init; }
 
 	[JsonIgnore]
 	public int CurrentAvatarStageNumber => LegacyCurrentAvatarStageNumber != 0
@@ -92,7 +93,8 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 		int MaxHealth = 100,
 		int PermanentCaptureDamageBonus = 0,
 		int QuestionRewardCount = 0,
-		int HealingOverflowRemainder = 0)
+		int HealingOverflowRemainder = 0,
+		bool HasUsedRevive = false)
 	{
 		this.SchemaVersion = SchemaVersion;
 		this.CampaignId = CampaignId ?? string.Empty;
@@ -106,6 +108,7 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 		this.PermanentCaptureDamageBonus = PermanentCaptureDamageBonus;
 		this.QuestionRewardCount = QuestionRewardCount;
 		this.HealingOverflowRemainder = HealingOverflowRemainder;
+		this.HasUsedRevive = HasUsedRevive;
 		this.CurrentRunStageIndex = 0;
 		this.LegacyCurrentAvatarStageNumber = 0;
 	}
@@ -151,6 +154,7 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 		this.PermanentCaptureDamageBonus = PermanentCaptureDamageBonus;
 		this.QuestionRewardCount = QuestionRewardCount;
 		this.HealingOverflowRemainder = HealingOverflowRemainder;
+		this.HasUsedRevive = false;
 		this.CurrentRunStageIndex = CurrentRunStageIndex;
 		this.FinalDoubleCaptureDamageActive = FinalDoubleCaptureDamageActive;
 		this.NextCaptureDamageBonus = NextCaptureDamageBonus;
@@ -211,8 +215,10 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 			int permanentBonus = GetInt(root, nameof(PermanentCaptureDamageBonus), 0);
 			int questionRewardCount = GetInt(root, nameof(QuestionRewardCount), 0);
 			int healingOverflow = GetInt(root, nameof(HealingOverflowRemainder), 0);
+			bool hasUsedRevive = schemaVersion >= 7
+				&& GetBool(root, nameof(HasUsedRevive), false);
 
-			if (schemaVersion < CurrentSchemaVersion)
+			if (schemaVersion < 6)
 			{
 				if (!TryGetInt(root, nameof(CurrentAvatarStageNumber), out int legacyStage))
 				{
@@ -250,7 +256,7 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 				|| !TryGetInt(root, nameof(MainStageIndex), out int mainStageIndex)
 				|| !TryGetString(root, nameof(EnemyAvatarId), out string enemyAvatarId))
 			{
-				failure = "v6 snapshot is missing campaign identity fields.";
+				failure = "Canonical snapshot is missing campaign identity fields.";
 				return false;
 			}
 
@@ -266,7 +272,8 @@ internal readonly record struct AdventureUpgradeRunSnapshot
 				maxHealth,
 				permanentBonus,
 				questionRewardCount,
-				healingOverflow);
+				healingOverflow,
+				hasUsedRevive);
 			return true;
 		}
 	}
@@ -359,11 +366,11 @@ internal sealed class AdventureUpgradeRunSnapshotJsonConverter : JsonConverter<A
 	{
 		writer.WriteStartObject();
 		writer.WriteNumber(nameof(AdventureUpgradeRunSnapshot.SchemaVersion), value.SchemaVersion);
-		if (value.SchemaVersion < AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
+		if (value.SchemaVersion < 6)
 		{
 			// The compatibility constructor is still used by old fixtures and
 			// migration tooling. Preserve its historical wire shape so those
-			// payloads remain valid legacy inputs; all runtime snapshots use v6.
+			// payloads remain valid legacy inputs; all runtime snapshots use the current schema.
 			writer.WriteNumber(
 				nameof(AdventureUpgradeRunSnapshot.CurrentAvatarStageNumber),
 				value.LegacyCurrentAvatarStageNumber != 0
@@ -437,6 +444,10 @@ internal sealed class AdventureUpgradeRunSnapshotJsonConverter : JsonConverter<A
 			value.PermanentCaptureDamageBonus);
 		writer.WriteNumber(nameof(AdventureUpgradeRunSnapshot.QuestionRewardCount), value.QuestionRewardCount);
 		writer.WriteNumber(nameof(AdventureUpgradeRunSnapshot.HealingOverflowRemainder), value.HealingOverflowRemainder);
+		if (value.SchemaVersion >= 7)
+		{
+			writer.WriteBoolean(nameof(AdventureUpgradeRunSnapshot.HasUsedRevive), value.HasUsedRevive);
+		}
 		writer.WriteEndObject();
 	}
 }

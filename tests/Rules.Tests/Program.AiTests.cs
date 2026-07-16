@@ -8,56 +8,31 @@ using System.Text.RegularExpressions;
 
 internal static partial class Program
 {
-	private static void AdventureAiEarlyProfileCanSkipObviousCapture()
+	private static void AdventureAiExposesAllTwelveMainStageProfiles()
 	{
-		var tableCards = new[]
+		var expected = new[]
 		{
-			TableCard("A", 1),
-			TableCard("2", 2),
-		};
-		var handCards = new[]
-		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new EnemyAiRules.AdventureProfile(45, 25, 55, 55, false),
+			new EnemyAiRules.AdventureProfile(55, 25, 65, 55, false),
+			new EnemyAiRules.AdventureProfile(65, 20, 70, 55, false),
+			new EnemyAiRules.AdventureProfile(70, 20, 75, 35, false),
+			new EnemyAiRules.AdventureProfile(75, 15, 80, 35, true),
+			new EnemyAiRules.AdventureProfile(78, 15, 85, 35, true),
+			new EnemyAiRules.AdventureProfile(85, 10, 90, 20, true),
+			new EnemyAiRules.AdventureProfile(90, 5, 92, 20, true),
+			new EnemyAiRules.AdventureProfile(92, 5, 94, 20, true),
+			new EnemyAiRules.AdventureProfile(95, 5, 96, 10, true),
+			new EnemyAiRules.AdventureProfile(97, 3, 98, 10, true),
+			new EnemyAiRules.AdventureProfile(65, 10, 90, 10, true),
 		};
 
-		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
-			tableCards,
-			handCards,
-			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(1),
-			royalCaptureThreshold: int.MaxValue,
-			decisionRollPercent: 90,
-			randomCaptureOrdinal: 0,
-			out _);
-
-		False(picked);
+		for (int stage = 1; stage <= expected.Length; stage++)
+		{
+			Equal(expected[stage - 1], EnemyAiRules.GetAdventureProfile(stage));
+		}
 	}
 
-	private static void AdventureAiEarlyProfileSkipsPairOnlyCapture()
-	{
-		var tableCards = new[]
-		{
-			TableCard("A", 1),
-		};
-		var handCards = new[]
-		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-		};
-
-		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
-			tableCards,
-			handCards,
-			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(1),
-			royalCaptureThreshold: int.MaxValue,
-			decisionRollPercent: 0,
-			randomCaptureOrdinal: 0,
-			out _);
-
-		False(picked);
-	}
-
-	private static void AdventureAiPointScoringStartsAfterEarlyStages()
+	private static void AdventureAiSwitchesFromQuantityToPointsAtStageFive()
 	{
 		var tableCards = new[]
 		{
@@ -71,32 +46,28 @@ internal static partial class Program
 			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: true),
 		};
 
-		bool earlyPicked = EnemyAiRules.TryPickCaptureCardIndex(
+		EnemyAiRules.AdventureSelectionResult stageFour = EnemyAiRules.SelectAdventureCard(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(6),
+			EnemyAiRules.GetAdventureProfile(4),
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 0,
-			randomCaptureOrdinal: 0,
-			out int earlyHandIndex);
-		bool laterPicked = EnemyAiRules.TryPickCaptureCardIndex(
+			randomCandidateOrdinal: 0);
+		EnemyAiRules.AdventureSelectionResult stageFive = EnemyAiRules.SelectAdventureCard(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(7),
+			EnemyAiRules.GetAdventureProfile(5),
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 0,
-			randomCaptureOrdinal: 0,
-			out int laterHandIndex);
+			randomCandidateOrdinal: 0);
 
-		True(earlyPicked);
-		True(laterPicked);
-		Equal(0, earlyHandIndex);
-		Equal(1, laterHandIndex);
+		Equal(0, stageFour.HandIndex);
+		Equal(1, stageFive.HandIndex);
 	}
 
-	private static void AdventureAiRandomCaptureCanPickNonBestCapture()
+	private static void AdventureAiBestCaptureThresholdIsExclusive()
 	{
 		var tableCards = new[]
 		{
@@ -111,110 +82,134 @@ internal static partial class Program
 			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
+		Equal(0, SelectAdventure(tableCards, handCards, 44, 1).HandIndex);
+		Equal(1, SelectAdventure(tableCards, handCards, 45, 1).HandIndex);
+	}
+
+	private static void AdventureAiAnyCaptureThresholdIsExclusive()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		Equal(EnemyAiRules.AdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 69, 0).Kind);
+		Equal(EnemyAiRules.AdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 70, 0).Kind);
+	}
+
+	private static void AdventureAiPairOnlyThresholdIsExclusive()
+	{
+		var tableCards = new[] { TableCard("A", 1) };
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		Equal(EnemyAiRules.AdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 54, 0).Kind);
+		Equal(EnemyAiRules.AdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 55, 0).Kind);
+	}
+
+	private static void AdventureAiPairOnlyOrdinalSelectsAcrossHandPositions()
+	{
+		var tableCards = new[] { TableCard("A", 1) };
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		Equal(2, SelectAdventure(tableCards, handCards, 0, 1).HandIndex);
+	}
+
+	private static void AdventureAiRejectedCaptureNeverFallsThroughToBuild()
+	{
+		var tableCards = new[] { TableCard("A", 1), TableCard("2", 2) };
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		Equal(EnemyAiRules.AdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 99, 1).Kind);
+	}
+
+	private static void AdventureAiBuildsOnlyWithAtMostTwoTableCards()
+	{
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("Q", CollectsTable: false, HasDoubleEffect: false),
+		};
+
+		for (int tableCount = 0; tableCount <= 4; tableCount++)
+		{
+			var tableCards = new List<CaptureScoringRules.TableCard>();
+			for (int index = 0; index < tableCount; index++)
+			{
+				tableCards.Add(TableCard((index + 2).ToString(), index + 2));
+			}
+
+			EnemyAiRules.AdventureSelectionKind expected = tableCount <= 2
+				? EnemyAiRules.AdventureSelectionKind.Build
+				: EnemyAiRules.AdventureSelectionKind.None;
+			Equal(expected, SelectAdventure(tableCards, handCards, 54, 0).Kind);
+		}
+	}
+
+	private static void AdventureAiBossRoyalThresholdWeightingPreservesLeftTieBreak()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 0),
+			TableCard("2", 0),
+			TableCard("3", 0),
+			TableCard("K", 0),
+			TableCard("10", 10),
+			TableCard("Q", 0),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: true),
+		};
+		EnemyAiRules.AdventureProfile pointsProfile = EnemyAiRules.GetAdventureProfile(12);
+
+		EnemyAiRules.AdventureSelectionResult withoutBossThreshold = EnemyAiRules.SelectAdventureCard(
+			tableCards, handCards, DefaultScoringContext, pointsProfile, int.MaxValue, 0, 0);
+		EnemyAiRules.AdventureSelectionResult withBossThreshold = EnemyAiRules.SelectAdventureCard(
+			tableCards, handCards, DefaultScoringContext, pointsProfile, 5, 0, 0);
+		var tiedHandCards = new[]
+		{
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+		};
+		EnemyAiRules.AdventureSelectionResult leftTie = EnemyAiRules.SelectAdventureCard(
+			tableCards, tiedHandCards, DefaultScoringContext, pointsProfile, 5, 0, 0);
+
+		Equal(1, withoutBossThreshold.HandIndex);
+		Equal(0, withBossThreshold.HandIndex);
+		Equal(0, leftTie.HandIndex);
+	}
+
+	private static EnemyAiRules.AdventureSelectionResult SelectAdventure(
+		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
+		IReadOnlyList<PotentialCaptureRules.Card> handCards,
+		int roll,
+		int ordinal)
+	{
+		return EnemyAiRules.SelectAdventureCard(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
 			EnemyAiRules.GetAdventureProfile(1),
 			royalCaptureThreshold: int.MaxValue,
-			decisionRollPercent: 30,
-			randomCaptureOrdinal: 1,
-			out int handIndex);
-
-		True(picked);
-		Equal(1, handIndex);
-	}
-
-	private static void AdventureAiLateBestCaptureSkipsPairOnlyCaptures()
-	{
-		var tableCards = new[]
-		{
-			TableCard("A", 1),
-		};
-		var handCards = new[]
-		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-		};
-
-		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
-			tableCards,
-			handCards,
-			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(10),
-			royalCaptureThreshold: int.MaxValue,
-			decisionRollPercent: 0,
-			randomCaptureOrdinal: 0,
-			out _);
-
-		False(picked);
-	}
-
-	private static void AdventureAiLateRandomCaptureSkipsPairOnlyCaptures()
-	{
-		var tableCards = new[]
-		{
-			TableCard("A", 1),
-			TableCard("2", 2),
-			TableCard("K", 12),
-		};
-		var handCards = new[]
-		{
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-		};
-
-		bool picked = EnemyAiRules.TryPickCaptureCardIndex(
-			tableCards,
-			handCards,
-			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(10),
-			royalCaptureThreshold: int.MaxValue,
-			decisionRollPercent: 92,
-			randomCaptureOrdinal: 7,
-			out int handIndex);
-
-		True(picked);
-		Equal(1, handIndex);
-	}
-
-	private static void AdventureAiFinalProfileCanSkipBestCapture()
-	{
-		var tableCards = new[]
-		{
-			TableCard("A", 1),
-			TableCard("2", 1),
-			TableCard("3", 1),
-			TableCard("K", 12),
-			TableCard("Q", 12),
-		};
-		var handCards = new[]
-		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
-		};
-
-		bool lowRollPicked = EnemyAiRules.TryPickCaptureCardIndex(
-			tableCards,
-			handCards,
-			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(14),
-			royalCaptureThreshold: 5,
-			decisionRollPercent: 64,
-			randomCaptureOrdinal: 0,
-			out int lowRollHandIndex);
-		bool highRollPicked = EnemyAiRules.TryPickCaptureCardIndex(
-			tableCards,
-			handCards,
-			DefaultScoringContext,
-			EnemyAiRules.GetAdventureProfile(14),
-			royalCaptureThreshold: 5,
-			decisionRollPercent: 99,
-			randomCaptureOrdinal: 0,
-			out _);
-
-		True(lowRollPicked);
-		Equal(0, lowRollHandIndex);
-		False(highRollPicked);
+			decisionRollPercent: roll,
+			randomCandidateOrdinal: ordinal);
 	}
 
 	private static void AiEarlyTableNewCardPriorityPicksNonMatchingCardBeforeCapture()
@@ -490,4 +485,3 @@ internal static partial class Program
 
 
 }
-

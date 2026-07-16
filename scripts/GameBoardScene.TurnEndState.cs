@@ -117,6 +117,11 @@ public partial class GameBoardScene
 	{
 		ClearAdventureBattleScopedStateForBattleEnd();
 		_winnerPlayerIndex = playerIndex;
+		if (_gameModePolicy.IsAdventureMain && playerIndex != MainPlayerIndex)
+		{
+			_settledAdventureDefeatResolution =
+				GetAdventureRunSessionStore()?.ResolveMainAdventureDefeat();
+		}
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{
 			CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);

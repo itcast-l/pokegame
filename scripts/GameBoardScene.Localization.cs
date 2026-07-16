@@ -16,7 +16,7 @@ public partial class GameBoardScene
 		else if (what == NotificationResized && IsNodeReady())
 		{
 			RefreshResponsiveBoardLayout();
-			RefreshResponsiveBoardVisuals();
+			MarkResponsiveBoardVisualsDirty();
 			RefreshAdventureTutorialOverlayLayout();
 			MarkSeatControlIndicatorLayoutDirty();
 			MarkActivePlayerStatusTooltipLayoutDirty();

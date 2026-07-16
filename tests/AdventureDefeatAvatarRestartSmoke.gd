@@ -1,7 +1,7 @@
 extends SceneTree
 
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
-const PLAYER_AVATAR_PATH := "LayoutAreas/BottomPlayerArea/Player1AvatarArea/Player1Avatar"
+const PLAYER_AVATAR_PATH := "BoardCanvas/LayoutAreas/BottomPlayerArea/Player1AvatarArea/Player1Avatar"
 const ENEMY_PLAYER_INDEX := 1
 const FORCED_VICTORY_POINTS := 100
 const TIMEOUT_SECONDS := 8.0

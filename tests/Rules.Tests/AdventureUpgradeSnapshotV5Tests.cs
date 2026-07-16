@@ -24,8 +24,10 @@ internal static partial class Program
 		Run("adventure upgrade manifest rejects missing runtime and catalog entries", AdventureUpgradeManifestRejectsContractDrift);
 		Run("adventure upgrade acquisition requires a ready manifest whitelist", AdventureUpgradeAcquisitionRequiresReadyManifestWhitelist);
 		Run("question mark interest description shows current item count", QuestionMarkInterestDescriptionShowsCurrentItemCount);
-		Run("adventure upgrade snapshots migrate v1 through v5 into canonical v6", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
-		Run("adventure upgrade v6 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
+		Run("adventure upgrade snapshots migrate v1 through v5 into canonical v7", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
+		Run("adventure upgrade v7 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
+		Run("adventure upgrade v7 roundtrips revive and migrates canonical v6", AdventureUpgradeV7RoundTripsReviveAndMigratesCanonicalV6);
+		Run("adventure defeat store persists exactly once for main runs", AdventureDefeatStorePersistsExactlyOnceForMainRuns);
 		Run("adventure upgrade snapshots reject invalid schema and stage values", AdventureUpgradeSnapshotsRejectInvalidSchemaAndStageValues);
 		Run("adventure run store defers then automatically retries manifest restore once", AdventureRunStoreDefersThenAutomaticallyRetriesManifestRestoreOnce);
 		Run("adventure run store canonicalizes noncanonical legacy snapshot once", AdventureRunStoreCanonicalizesNoncanonicalV5Once);
@@ -139,6 +141,7 @@ internal static partial class Program
 		Equal(2, manifest.EnabledIds.Count);
 		False(manifest.CanRestoreUpgradeId("legacy_discard", sourceSchemaVersion: 4));
 		False(manifest.CanRestoreUpgradeId("legacy_discard", sourceSchemaVersion: 5));
+		True(manifest.CanRestoreUpgradeId("legacy_discard", sourceSchemaVersion: 6));
 		True(manifest.CanRestoreUpgradeId("legacy_keep", sourceSchemaVersion: 4));
 
 		AdventureUpgradeRunSnapshot legacy = CreateSnapshot(
@@ -417,7 +420,7 @@ internal static partial class Program
 		foreach (AdventureUpgradeRunSnapshot invalid in new[]
 		{
 			CreateSnapshot(schemaVersion: 0),
-			CreateSnapshot(schemaVersion: 7),
+			CreateSnapshot(schemaVersion: 8),
 			CreateSnapshot(schemaVersion: 5, avatarStageNumber: 2),
 			new AdventureUpgradeRunSnapshot(
 				AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
@@ -436,6 +439,63 @@ internal static partial class Program
 				state.RestoreFromSnapshot(invalid));
 			False(state.IsActive);
 		}
+	}
+
+	private static void AdventureUpgradeV7RoundTripsReviveAndMigratesCanonicalV6()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var state = new AdventureUpgradeRunState(manifest);
+		state.BeginNewMainRun(6, "sea_slug");
+		state.SetHealth(92, 108);
+		Equal(AdventureUpgradeAcquireResult.Acquired, state.AcquireUpgrade("hearts_thick_blood"));
+		Equal(AdventureDefeatResolution.RetryCurrentStage, state.ResolveMainAdventureDefeat());
+		AdventureUpgradeRunSnapshot snapshot = state.ToSnapshot();
+		True(snapshot.HasUsedRevive);
+		string json = JsonSerializer.Serialize(snapshot);
+		AssertCanonicalV6Json(json);
+
+		True(AdventureUpgradeRunSnapshot.TryDeserialize(json, out AdventureUpgradeRunSnapshot decoded, out bool migrated, out _));
+		False(migrated);
+		var restored = new AdventureUpgradeRunState(manifest);
+		Equal(AdventureUpgradeRestoreResult.Restored, restored.RestoreFromSnapshot(decoded));
+		True(restored.HasUsedRevive);
+		Equal(54, restored.CurrentHealth);
+		Equal(108, restored.MaxHealth);
+		Equal(6, restored.MainStageIndex);
+		True(restored.HasAcquiredUpgrade("hearts_thick_blood"));
+
+		const string v6Json = "{\"SchemaVersion\":6,\"CampaignId\":\"deep_tide_throne\",\"MainStageIndex\":6,\"EnemyAvatarId\":\"sea_slug\",\"ShouldGrantRunStartUpgrade\":false,\"ShouldGrantVictoryUpgrade\":true,\"AcquiredUpgradeIds\":[\"hearts_thick_blood\"],\"CurrentHealth\":41,\"MaxHealth\":108,\"PermanentCaptureDamageBonus\":0,\"QuestionRewardCount\":0,\"HealingOverflowRemainder\":0}";
+		True(AdventureUpgradeRunSnapshot.TryDeserialize(v6Json, out AdventureUpgradeRunSnapshot v6, out bool v6Migrated, out _));
+		False(v6Migrated);
+		var migratedV6 = new AdventureUpgradeRunState(manifest);
+		Equal(AdventureUpgradeRestoreResult.Migrated, migratedV6.RestoreFromSnapshot(v6));
+		Equal(6, migratedV6.MainStageIndex);
+		Equal("sea_slug", migratedV6.EnemyAvatarId);
+		Equal(41, migratedV6.CurrentHealth);
+		Equal(108, migratedV6.MaxHealth);
+		True(migratedV6.HasAcquiredUpgrade("hearts_thick_blood"));
+		False(migratedV6.HasUsedRevive);
+	}
+
+	private static void AdventureDefeatStorePersistsExactlyOnceForMainRuns()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData("Runner", string.Empty));
+		var store = new AdventureRunSessionStore();
+		store.ConfigureForPolicy(GameModePolicy.AdventureMain);
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		store.BeginNewMainRun(3, "jellyfish");
+		int saveCount = saveManager.SaveToSlotCallCount;
+		Equal(AdventureDefeatResolution.RetryCurrentStage, store.ResolveMainAdventureDefeat());
+		Equal(saveCount + 1, saveManager.SaveToSlotCallCount);
+		True(store.GetRunState().HasUsedRevive);
+
+		store.ConfigureForPolicy(GameModePolicy.AdventureTutorial);
+		saveCount = saveManager.SaveToSlotCallCount;
+		Equal<AdventureDefeatResolution?>(null, store.ResolveMainAdventureDefeat());
+		Equal(saveCount, saveManager.SaveToSlotCallCount);
 	}
 
 	private static void AdventureRunStoreDefersThenAutomaticallyRetriesManifestRestoreOnce()
@@ -1046,6 +1106,7 @@ internal static partial class Program
 		True(root.TryGetProperty("PermanentCaptureDamageBonus", out _));
 		True(root.TryGetProperty("QuestionRewardCount", out _));
 		True(root.TryGetProperty("HealingOverflowRemainder", out _));
+		True(root.TryGetProperty("HasUsedRevive", out _));
 		False(root.TryGetProperty("CurrentRunStageIndex", out _));
 		False(root.TryGetProperty("FinalDoubleCaptureDamageActive", out _));
 		False(root.TryGetProperty("NextCaptureDamageBonus", out _));

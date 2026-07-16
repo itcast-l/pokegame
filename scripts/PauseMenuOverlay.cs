@@ -61,13 +61,16 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		QuitConfirmRoot.ConfirmRequested += () => EmitSignal(SignalName.ConfirmQuitRequested);
 	}
 
-	public void RefreshLocalizedText(Func<string, string> localize, string returnButtonKey = "GAME_RETURN_MAIN_MENU")
+	public void RefreshLocalizedText(
+		Func<string, string> localize,
+		string returnButtonKey = "GAME_RETURN_MAIN_MENU",
+		string restartButtonKey = "GAME_RESTART_MATCH")
 	{
 		_pauseTitleLabel.Text = localize("GAME_PAUSE_TITLE");
 		_pauseMessageLabel.Text = localize("GAME_PAUSE_MESSAGE");
 		_continueLabel.Text = localize("GAME_CONTINUE");
 		_returnToMainMenuLabel.Text = localize(returnButtonKey);
-		_restartLabel.Text = localize("GAME_RESTART_MATCH");
+		_restartLabel.Text = localize(restartButtonKey);
 		string quitText = localize("GAME_QUIT");
 		if (_quitLabel != null && GodotObject.IsInstanceValid(_quitLabel))
 		{

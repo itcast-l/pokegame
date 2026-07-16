@@ -70,7 +70,7 @@ public partial class GameBoardScene
 		store.BeginNewRun(avatarStageNumber);
 	}
 
-	private void AdvanceAdventureUpgradeRunToStage(int avatarStageNumber)
+	private void AdvanceAdventureUpgradeRunToMainStage(int mainStageIndex, string enemyAvatarId)
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		if (store == null)
@@ -79,7 +79,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		store.AdvanceToStage(avatarStageNumber);
+		store.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
 	}
 
 	private void MarkAdventureRunStartUpgradeGranted()

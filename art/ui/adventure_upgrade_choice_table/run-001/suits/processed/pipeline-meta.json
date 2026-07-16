@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "",
+  "role": "",
+  "input": "art/ui/adventure_upgrade_choice_table/run-001/suits/raw/raw-suits-2x2.png",
+  "threshold": 105,
+  "edge_threshold": 190,
+  "duration": 200,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 512,
+  "fit_scale": 0.86,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 6,
+  "min_component_area": 1,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "suit-1",
+    "suit-2",
+    "suit-3",
+    "suit-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        191,
+        180,
+        532,
+        520
+      ],
+      "edge_touch": false,
+      "output_size": [
+        378,
+        377
+      ],
+      "paste_position": [
+        67,
+        67
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        80,
+        137,
+        381,
+        534
+      ],
+      "edge_touch": false,
+      "output_size": [
+        333,
+        440
+      ],
+      "paste_position": [
+        89,
+        36
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 3,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        186,
+        36,
+        528,
+        417
+      ],
+      "edge_touch": false,
+      "output_size": [
+        379,
+        422
+      ],
+      "paste_position": [
+        66,
+        45
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        79,
+        50,
+        388,
+        418
+      ],
+      "edge_touch": false,
+      "output_size": [
+        342,
+        408
+      ],
+      "paste_position": [
+        85,
+        52
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

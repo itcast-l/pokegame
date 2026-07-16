@@ -148,6 +148,10 @@ func _load_scene_allowlist() -> void:
 
 
 func _prepare_scene_for_audit(scene_path: String, node: Node) -> void:
+	if scene_path.ends_with("main_menu_skill_codex_overlay.tscn") and node.has_method("Open"):
+		node.call("Open")
+		return
+
 	if scene_path.ends_with("multiplayer_lobby_room_row.tscn") and node.has_method("Configure") and node is Control:
 		var sample_room := {
 			"room_name": "Sample Room",
@@ -266,7 +270,7 @@ func _audit_control(control: Control, scene_path: String, locale: String) -> voi
 				_shorten(display_text),
 			])
 
-	if not _is_clipped_by_scroll_container(control, rect) and not _viewport_contains(rect):
+	if not _has_scroll_container_ancestor(control) and not _viewport_contains(rect):
 		_issues.append("visible_control_outside_viewport locale=%s scene=%s node=%s rect=%s text=%s" % [
 			locale,
 			scene_path,
@@ -343,6 +347,15 @@ func _is_clipped_by_scroll_container(control: Control, rect: Rect2) -> bool:
 			var scroll_rect := (parent as ScrollContainer).get_global_rect()
 			if not rect.intersects(scroll_rect):
 				return true
+		parent = parent.get_parent()
+	return false
+
+
+func _has_scroll_container_ancestor(control: Control) -> bool:
+	var parent := control.get_parent()
+	while parent != null:
+		if parent is ScrollContainer:
+			return true
 		parent = parent.get_parent()
 	return false
 

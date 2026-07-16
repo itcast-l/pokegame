@@ -26,9 +26,17 @@ cleanup() {
 
 trap cleanup EXIT
 
+set +e
 "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardResponsiveLayoutAudit.gd >"$LOG_FILE" 2>&1
+GODOT_STATUS=$?
+set -e
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if [[ "$GODOT_STATUS" -ne 0 ]]; then
+	cat "$LOG_FILE" >&2
+	exit "$GODOT_STATUS"
+fi
+
+if grep -Eq "SCRIPT ERROR|^ERROR:|Failed to load resource|No loader found" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

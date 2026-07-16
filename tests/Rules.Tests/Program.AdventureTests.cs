@@ -160,13 +160,56 @@ internal static partial class Program
 		False(runState.ShouldGrantRunStartUpgrade);
 		True(runState.ShouldGrantVictoryUpgrade);
 		True(runState.HasAcquiredUpgrade("common_a"));
-		Equal(108, runState.CurrentHealth);
+		Equal(41, runState.CurrentHealth);
 		Equal(108, runState.MaxHealth);
 
 		runState.Clear();
 		False(runState.IsActive);
 		Equal(0, runState.CurrentRunStageIndex);
 		False(runState.HasAcquiredUpgrade("common_a"));
+	}
+
+	private static void AdventureDefeatRetriesOnceThenRestartsJourney()
+	{
+		AdventureUpgradeManifest manifest = AdventureUpgradeManifest.FromEnabledIds(
+			new[] { "hearts_overflow_growth" });
+		var state = new AdventureUpgradeRunState(manifest);
+		state.BeginNewMainRun(4, "manta_ray");
+		state.SetHealth(17, 101);
+		Equal(
+			AdventureUpgradeAcquireResult.Acquired,
+			state.AcquireUpgrade("hearts_overflow_growth"));
+		var effectState = new AdventureUpgradeEffectState
+		{
+			HealingOverflowRemainder = 3,
+		};
+		state.ReplaceEffectState(effectState);
+
+		Equal(AdventureDefeatResolution.RetryCurrentStage, state.ResolveMainAdventureDefeat());
+		True(state.HasUsedRevive);
+		Equal(50, state.CurrentHealth);
+		Equal(101, state.MaxHealth);
+		Equal(4, state.MainStageIndex);
+		Equal("manta_ray", state.EnemyAvatarId);
+		True(state.HasAcquiredUpgrade("hearts_overflow_growth"));
+		Equal(3, state.EffectState.HealingOverflowRemainder);
+
+		Equal(AdventureDefeatResolution.RestartJourney, state.ResolveMainAdventureDefeat());
+		False(state.HasUsedRevive);
+		Equal(1, state.MainStageIndex);
+		Equal("shrimp", state.EnemyAvatarId);
+		Equal(100, state.CurrentHealth);
+		Equal(100, state.MaxHealth);
+		Equal(0, state.GetAcquiredUpgradeIds().Count);
+		Equal(0, state.EffectState.HealingOverflowRemainder);
+
+		state.SetHealth(1, 1);
+		Equal(AdventureDefeatResolution.RetryCurrentStage, state.ResolveMainAdventureDefeat());
+		Equal(1, state.CurrentHealth);
+		state.Clear();
+		False(state.HasUsedRevive);
+		state.BeginNewMainRun(2, "crab");
+		False(state.HasUsedRevive);
 	}
 
 	private static void AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits()

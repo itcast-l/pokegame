@@ -4,7 +4,7 @@ const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const MAX_WAIT_FRAMES := 3600
 
-const EXPECTED_V6_KEYS := [
+const EXPECTED_V7_KEYS := [
 	"SchemaVersion",
 	"CampaignId",
 	"MainStageIndex",
@@ -17,6 +17,7 @@ const EXPECTED_V6_KEYS := [
 	"PermanentCaptureDamageBonus",
 	"QuestionRewardCount",
 	"HealingOverflowRemainder",
+	"HasUsedRevive",
 ]
 const LEGACY_ONLY_KEYS := [
 	"CurrentRunStageIndex",
@@ -151,7 +152,7 @@ func _run() -> void:
 		_fail("Migrated adventure run payload is not valid JSON: %s" % migrated_json)
 		return
 	var migrated := migrated_value as Dictionary
-	if not _assert_canonical_v6(migrated):
+	if not _assert_canonical_v7(migrated):
 		return
 	if _profile_save_started_count != 1 or _profile_save_completed_count != 1:
 		_fail(
@@ -175,11 +176,11 @@ func _run() -> void:
 	var reloaded_profile := save_manager.call("load_from_slot_sync", PROFILE_SLOT) as Dictionary
 	var reloaded_json := String(reloaded_profile.get("pending_adventure_run_json", ""))
 	if reloaded_json != migrated_json:
-		_fail("Reloading canonical v6 rewrote the already migrated payload")
+		_fail("Reloading canonical v7 rewrote the already migrated payload")
 		return
 	if _profile_save_started_count != 1 or _profile_save_completed_count != 1:
 		_fail(
-				"Reloading canonical v6 performed a redundant profile rewrite " \
+				"Reloading canonical v7 performed a redundant profile rewrite " \
 			+ "(started=%d completed=%d)" \
 			% [_profile_save_started_count, _profile_save_completed_count]
 		)
@@ -190,24 +191,24 @@ func _run() -> void:
 	quit(0)
 
 
-func _assert_canonical_v6(snapshot: Dictionary) -> bool:
-	if snapshot.size() != EXPECTED_V6_KEYS.size():
-		_fail("Canonical v6 property count mismatch: %s" % str(snapshot.keys()))
+func _assert_canonical_v7(snapshot: Dictionary) -> bool:
+	if snapshot.size() != EXPECTED_V7_KEYS.size():
+		_fail("Canonical v7 property count mismatch: %s" % str(snapshot.keys()))
 		return false
-	for key in EXPECTED_V6_KEYS:
+	for key in EXPECTED_V7_KEYS:
 		if not snapshot.has(key):
-			_fail("Canonical v6 payload is missing %s" % key)
+			_fail("Canonical v7 payload is missing %s" % key)
 			return false
 	for key in LEGACY_ONLY_KEYS:
 		if snapshot.has(key):
-			_fail("Canonical v6 payload retained transient/legacy field %s" % key)
+			_fail("Canonical v7 payload retained transient/legacy field %s" % key)
 			return false
 
 	var acquired_ids := snapshot.get("AcquiredUpgradeIds", []) as Array
 	if acquired_ids != EXPECTED_UPGRADE_IDS:
 		_fail("v4 migration did not filter and sort upgrade IDs: %s" % str(acquired_ids))
 		return false
-	if int(snapshot.get("SchemaVersion", 0)) != 6 \
+	if int(snapshot.get("SchemaVersion", 0)) != 7 \
 		or String(snapshot.get("CampaignId", "")) != "deep_tide_throne" \
 		or int(snapshot.get("MainStageIndex", 0)) != 1 \
 		or String(snapshot.get("EnemyAvatarId", "")) != "shrimp" \
@@ -216,10 +217,11 @@ func _assert_canonical_v6(snapshot: Dictionary) -> bool:
 		or int(snapshot.get("PermanentCaptureDamageBonus", -1)) != 5 \
 		or int(snapshot.get("QuestionRewardCount", -1)) != 10 \
 		or int(snapshot.get("HealingOverflowRemainder", -1)) != 3:
-		_fail("v4 migration did not clamp canonical v6 values: %s" % str(snapshot))
+		_fail("v4 migration did not clamp canonical v7 values: %s" % str(snapshot))
 		return false
 	if bool(snapshot.get("ShouldGrantRunStartUpgrade", true)) \
-		or not bool(snapshot.get("ShouldGrantVictoryUpgrade", false)):
+		or not bool(snapshot.get("ShouldGrantVictoryUpgrade", false)) \
+		or bool(snapshot.get("HasUsedRevive", true)):
 		_fail("v4 migration changed persisted upgrade grant flags")
 		return false
 	return true

@@ -13,7 +13,13 @@ public partial class MainMenuScene : Control
 
 		_exitDialog = dialog;
 		_exitDialogRoot = dialog;
-		AddChild(dialog);
+		_exitDialogLayer = new CanvasLayer
+		{
+			Name = "ExitDialogLayer",
+			Layer = 10,
+		};
+		AddChild(_exitDialogLayer);
+		_exitDialogLayer.AddChild(dialog);
 		_exitDialogPanel = dialog.DialogPanel;
 		SuppressDefaultPressedSfx(dialog.CancelButton);
 		dialog.CloseRequested += HideExitDialog;

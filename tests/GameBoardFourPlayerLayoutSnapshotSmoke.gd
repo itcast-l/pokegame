@@ -4,22 +4,22 @@ const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const VIEWPORT_SIZE := Vector2i(1080, 720)
 const RECT_TOLERANCE := 0.6
 const EXPECTED_RECTS := {
-	"LayoutAreas/TopPlayerArea/Player2AvatarArea": Rect2(315.375, 49.875, 78.0, 78.0),
-	"LayoutAreas/TopPlayerArea/Player2ScoreMeter": Rect2(308.375, 42.875, 92.0, 92.0),
-	"LayoutAreas/BottomPlayerArea/Player1AvatarArea": Rect2(238.0, 511.0, 78.0, 78.0),
-	"LayoutAreas/BottomPlayerArea/Player1ScoreMeter": Rect2(232.02399, 504.47998, 92.0, 92.0),
-	"LayoutAreas/LeftPlayerArea/Player3AvatarArea": Rect2(119.625, 126.375, 78.0, 78.0),
-	"LayoutAreas/LeftPlayerArea/Player3ScoreMeter": Rect2(112.625, 119.375, 92.0, 92.0),
-	"LayoutAreas/RightPlayerArea/Player4AvatarArea": Rect2(880.125, 126.375, 78.0, 78.0),
-	"LayoutAreas/RightPlayerArea/Player4ScoreMeter": Rect2(873.125, 119.375, 92.0, 92.0),
-	"LayoutAreas/Player1HandArea": Rect2(337.0, 503.0, 360.0, 130.0),
-	"LayoutAreas/Player2HandArea": Rect2(391.0, 83.0, 270.0, 78.0),
-	"LayoutAreas/Player3HandArea": Rect2(95.0, 225.0, 92.0, 266.0),
-	"LayoutAreas/Player4HandArea": Rect2(891.0, 228.0, 92.0, 266.0),
-	"LayoutAreas/Player1CardPileArea": Rect2(706.0, 493.0, 124.0, 128.0),
-	"LayoutAreas/Player2CardPileArea": Rect2(662.0, 46.0, 124.0, 128.0),
-	"LayoutAreas/Player3CardPileArea": Rect2(83.0, 435.0, 124.0, 128.0),
-	"LayoutAreas/Player4CardPileArea": Rect2(878.0, 433.0, 124.0, 128.0),
+	"BoardCanvas/LayoutAreas/TopPlayerArea/Player2AvatarArea": Rect2(281.66666, 70.333336, 78.0, 78.0),
+	"BoardCanvas/LayoutAreas/TopPlayerArea/Player2ScoreMeter": Rect2(274.66666, 63.333336, 92.0, 92.0),
+	"BoardCanvas/LayoutAreas/BottomPlayerArea/Player1AvatarArea": Rect2(185.33334, 524.0, 96.0, 96.0),
+	"BoardCanvas/LayoutAreas/BottomPlayerArea/Player1ScoreMeter": Rect2(187.33334, 526.0, 92.0, 92.0),
+	"BoardCanvas/LayoutAreas/LeftPlayerArea/Player3AvatarArea": Rect2(49.0, 158.33333, 78.0, 78.0),
+	"BoardCanvas/LayoutAreas/LeftPlayerArea/Player3ScoreMeter": Rect2(42.0, 151.33333, 92.0, 92.0),
+	"BoardCanvas/LayoutAreas/RightPlayerArea/Player4AvatarArea": Rect2(951.6666, 158.33333, 78.0, 78.0),
+	"BoardCanvas/LayoutAreas/RightPlayerArea/Player4ScoreMeter": Rect2(944.6666, 151.33333, 92.0, 92.0),
+	"BoardCanvas/LayoutAreas/Player1HandArea": Rect2(337.0, 503.0, 360.0, 130.0),
+	"BoardCanvas/LayoutAreas/Player2HandArea": Rect2(391.0, 83.0, 270.0, 78.0),
+	"BoardCanvas/LayoutAreas/Player3HandArea": Rect2(95.0, 225.0, 92.0, 266.0),
+	"BoardCanvas/LayoutAreas/Player4HandArea": Rect2(891.0, 228.0, 92.0, 266.0),
+	"BoardCanvas/LayoutAreas/Player1CardPileArea": Rect2(706.0, 493.0, 124.0, 128.0),
+	"BoardCanvas/LayoutAreas/Player2CardPileArea": Rect2(662.0, 46.0, 124.0, 128.0),
+	"BoardCanvas/LayoutAreas/Player3CardPileArea": Rect2(83.0, 435.0, 124.0, 128.0),
+	"BoardCanvas/LayoutAreas/Player4CardPileArea": Rect2(878.0, 433.0, 124.0, 128.0),
 }
 
 var _failed := false

@@ -1,6 +1,10 @@
 extends SceneTree
 
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
+const TIMEOUT_FRAMES := 240
+const REST_SCALE := 0.94
+const ACTIVE_SCALE := 1.0
+const ACTIVE_LIFT := 12.0
 
 var _failed := false
 
@@ -10,158 +14,258 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	await process_frame
-
 	var packed_scene := load(SCENE_PATH) as PackedScene
 	if packed_scene == null:
-		_fail("Failed to load scene: %s" % SCENE_PATH)
+		_fail("Failed to load board scene")
 		return
-
 	var board := packed_scene.instantiate()
-	if board == null:
-		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
-		return
-
 	board.set("player_count", 2)
 	board.set("item_mode", true)
 	board.set("winning_score", 100)
 	board.set("solo_mode", true)
 	board.set("adventure_mode", true)
 	board.set("adventure_enemy_avatar_id", "shrimp")
-
 	root.add_child(board)
 	await process_frame
 
-	if not board.has_method("DebugShowAdventureUpgradeSelectionOverlaySample"):
-		_fail("Missing direct adventure upgrade overlay debug hook")
-		return
-	if not board.has_method("DebugSetAdventureUpgradeHoverState"):
-		_fail("Missing direct adventure upgrade hover-state debug hook")
-		return
-
+	for method in [
+		"DebugShowAdventureUpgradeSelectionOverlaySample",
+		"DebugSetAdventureUpgradeHoverState",
+		"DebugSetAdventureUpgradeFocusState",
+		"DebugGetAdventureUpgradeOverlayMotionState",
+	]:
+		if not board.has_method(method):
+			_fail("Missing overlay debug hook: %s" % method)
+			return
 	if not bool(board.call("DebugShowAdventureUpgradeSelectionOverlaySample")):
-		_fail("Failed to show direct adventure upgrade overlay sample")
+		_fail("Failed to show overlay sample")
 		return
 
-	await process_frame
-	await process_frame
-
-	var overlay := board.get_node_or_null("AdventureUpgradeSelectionOverlay")
-	if overlay == null:
-		_fail("Expected direct adventure upgrade overlay scene")
-		return
-
-	var card_frame_y_positions := []
-	var card_frame_rotations := []
-	var option_buttons := []
-	for option_index in range(1, 4):
-		var option_button := overlay.get_node_or_null("Margin/Layout/CardsRow/Option%dButton" % option_index) as Button
-		if option_button == null:
-			_fail("Missing adventure upgrade option button %d" % option_index)
-			return
-
-		option_buttons.append(option_button)
-		var card_frame := option_button.get_node_or_null("CardFrame") as Control
-		if card_frame == null:
-			_fail("Adventure upgrade overlay is missing card frame %d" % option_index)
-			return
-
-		card_frame_y_positions.append(card_frame.position.y)
-		card_frame_rotations.append(card_frame.rotation_degrees)
-
-	if card_frame_y_positions.size() == 3:
-		var left_y := float(card_frame_y_positions[0])
-		var center_y := float(card_frame_y_positions[1])
-		var right_y := float(card_frame_y_positions[2])
-		if not (is_equal_approx(left_y, center_y) and is_equal_approx(center_y, right_y)):
-			_fail("Expected direct adventure upgrade cards to stay parallel instead of pushing the middle card forward")
-			return
-
-		var left_rotation := float(card_frame_rotations[0])
-		var center_rotation := float(card_frame_rotations[1])
-		var right_rotation := float(card_frame_rotations[2])
-		if not (absf(left_rotation) < 0.05 and absf(center_rotation) < 0.05 and absf(right_rotation) < 0.05):
-			_fail("Expected direct adventure upgrade cards to stay flat and parallel")
-			return
-
-	var hover_button := option_buttons[2] as Button
-	var hover_card_frame := hover_button.get_node_or_null("CardFrame") as Control
-	if hover_card_frame == null:
-		_fail("Adventure upgrade hover verification is missing the card frame")
-		return
-
-	var rest_y := float(hover_card_frame.position.y)
-	var rest_scale := float(hover_card_frame.scale.x)
-	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 2, true)):
-		_fail("Failed to force hover state for the third adventure upgrade card")
+	# A hover arriving during reveal must not force completion or unlock interaction.
+	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 0, true)):
+		_fail("Failed to inject pre-unlock hover")
 		return
 	await process_frame
+	var early_state := _motion_state(board, 0)
+	if bool(early_state.get("reveal_completed", true)) \
+			or bool(early_state.get("interaction_unlocked", true)) \
+			or not bool(early_state.get("button_disabled", false)):
+		_fail("Pre-unlock hover skipped or unlocked the reveal")
+		return
+	board.call("DebugSetAdventureUpgradeHoverState", 0, false)
 
-	var hover_step_y := float(hover_card_frame.position.y)
-	var hover_step_scale := float(hover_card_frame.scale.x)
-	if not (hover_step_y < rest_y):
-		_fail("Adventure upgrade hover motion should lift the hovered card")
-		return
-	if not (hover_step_scale > rest_scale):
-		_fail("Adventure upgrade hover motion should enlarge the hovered card")
-		return
-	if hover_step_scale >= 0.995:
-		_fail("Adventure upgrade hover motion should ease toward the target instead of snapping in one frame")
+	if not await _wait_for_reveal_unlock(board):
 		return
 
-	for _hover_frame in range(18):
-		await process_frame
+	# Release the default focus so every card can settle at the shared resting state.
+	board.call("DebugSetAdventureUpgradeFocusState", 1, false)
+	await _wait_frames(24)
+	var baseline_perspective := {}
+	for option_index in range(3):
+		var state := _motion_state(board, option_index)
+		if state.is_empty():
+			_fail("Missing motion state for option %d" % option_index)
+			return
+		var pseudo := state["pseudo_3d"] as Dictionary
+		if not _assert_perspective_state(pseudo):
+			return
+		if option_index == 0:
+			baseline_perspective = _perspective_signature(pseudo)
+		elif _perspective_signature(pseudo) != baseline_perspective:
+			_fail("All three cards must use identical perspective parameters")
+			return
+		if absf((state["scale"] as Vector2).x - REST_SCALE) > 0.015:
+			_fail("Card did not settle to rest scale")
+			return
+		if absf(float(state["current_elevation"])) > 0.02:
+			_fail("Resting card retained elevation")
+			return
 
-	var settled_hover_y := float(hover_card_frame.position.y)
-	var settled_hover_scale := float(hover_card_frame.scale.x)
-	if not (settled_hover_y < hover_step_y):
-		_fail("Adventure upgrade hover motion should continue moving after the first frame")
-		return
-	if settled_hover_scale <= hover_step_scale:
-		_fail("Adventure upgrade hover scale should continue easing after the first frame")
-		return
+	var rest_state := _motion_state(board, 1)
+	var rest_position := rest_state["position"] as Vector2
+	var rest_perspective := _perspective_signature(rest_state["pseudo_3d"] as Dictionary)
 
-	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 2, false)):
-		_fail("Failed to clear hover state for the third adventure upgrade card")
+	# Mouse hover activation.
+	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 1, true)):
+		_fail("Failed to activate hover")
 		return
 	await process_frame
-
-	var exit_step_y := float(hover_card_frame.position.y)
-	var exit_step_scale := float(hover_card_frame.scale.x)
-	if not (exit_step_y > settled_hover_y):
-		_fail("Adventure upgrade hover release should move the card back toward the row")
+	var hover_step := _motion_state(board, 1)
+	if not ((hover_step["position"] as Vector2).y < rest_position.y) \
+			or not ((hover_step["scale"] as Vector2).x > REST_SCALE) \
+			or float(hover_step["current_elevation"]) <= 0.0 \
+			or float(hover_step["current_elevation"]) >= 1.0:
+		_fail("Hover activation did not ease position scale and elevation")
 		return
-	if not (exit_step_scale < settled_hover_scale):
-		_fail("Adventure upgrade hover release should shrink the card back toward its resting scale")
+	await _wait_frames(24)
+	var hover_settled := _motion_state(board, 1)
+	if absf((hover_settled["position"] as Vector2).y - (rest_position.y - ACTIVE_LIFT)) > 0.5:
+		_fail("Hover card did not settle 12px above rest")
+		return
+	if absf((hover_settled["scale"] as Vector2).x - ACTIVE_SCALE) > 0.01:
+		_fail("Hover card did not settle at scale 1.0")
+		return
+	if float(hover_settled["current_elevation"]) < 0.98:
+		_fail("Hover card did not reach full elevation")
+		return
+	if int(hover_settled["frame_z_index"]) <= 0 or int(hover_settled["button_z_index"]) <= 0:
+		_fail("Hover card did not rise above sibling Z indices")
+		return
+	var hover_pseudo := hover_settled["pseudo_3d"] as Dictionary
+	if float(hover_pseudo["shadow_offset_y"]) < 15.5 \
+			or float(hover_pseudo["glow_alpha"]) <= 0.5:
+		_fail("Hover card shadow compensation or glow is incomplete")
+		return
+	if _perspective_signature(hover_pseudo) != rest_perspective:
+		_fail("Hover changed fixed perspective parameters")
 		return
 
-	for _exit_frame in range(18):
-		await process_frame
-
-	if absf(float(hover_card_frame.position.y) - rest_y) > 0.35:
-		_fail("Adventure upgrade hover release should settle back onto the shared row")
+	board.call("DebugSetAdventureUpgradeHoverState", 1, false)
+	if not await _wait_for_restored(board, 1, rest_position):
 		return
-	if absf(float(hover_card_frame.scale.x) - rest_scale) > 0.02:
-		_fail("Adventure upgrade hover release should settle back to the resting card scale")
+
+	# Keyboard/gamepad focus must use the same complete activation state.
+	if not bool(board.call("DebugSetAdventureUpgradeFocusState", 1, true)):
+		_fail("Failed to activate focus")
+		return
+	await _wait_frames(24)
+	var focus_settled := _motion_state(board, 1)
+	if absf((focus_settled["position"] as Vector2).y - (rest_position.y - ACTIVE_LIFT)) > 0.5 \
+			or absf((focus_settled["scale"] as Vector2).x - ACTIVE_SCALE) > 0.01 \
+			or float(focus_settled["current_elevation"]) < 0.98:
+		_fail("Focus does not match hover activation")
+		return
+	var focus_pseudo := focus_settled["pseudo_3d"] as Dictionary
+	if float(focus_pseudo["glow_alpha"]) <= 0.5 \
+			or _perspective_signature(focus_pseudo) != rest_perspective:
+		_fail("Focus glow or perspective does not match hover")
+		return
+
+	board.call("DebugSetAdventureUpgradeFocusState", 1, false)
+	if not await _wait_for_restored(board, 1, rest_position):
 		return
 
 	board.queue_free()
-	for _frame in range(12):
-		await process_frame
-
+	await _wait_frames(8)
 	print("ADVENTURE_UPGRADE_SELECTION_OVERLAY_HOVER_SMOKE_OK")
-	await _dispose_audio_before_quit()
 	quit(0)
 
 
-func _dispose_audio_before_quit() -> void:
-	return
+func _wait_for_reveal_unlock(board: Node) -> bool:
+	for _frame in range(TIMEOUT_FRAMES):
+		await process_frame
+		var all_ready := true
+		for option_index in range(3):
+			var state := _motion_state(board, option_index)
+			if state.is_empty() \
+					or not bool(state.get("reveal_completed", false)) \
+					or not bool(state.get("interaction_unlocked", false)) \
+					or bool(state.get("button_disabled", true)):
+				all_ready = false
+				break
+		if all_ready:
+			return true
+	_fail("Timed out waiting for reveal completion and interaction unlock")
+	return false
+
+
+func _motion_state(board: Node, option_index: int) -> Dictionary:
+	return board.call("DebugGetAdventureUpgradeOverlayMotionState", option_index) as Dictionary
+
+
+func _wait_for_restored(board: Node, option_index: int, rest_position: Vector2) -> bool:
+	for _frame in range(TIMEOUT_FRAMES):
+		await process_frame
+		var state := _motion_state(board, option_index)
+		if state.is_empty():
+			continue
+		var pseudo := state["pseudo_3d"] as Dictionary
+		if (state["position"] as Vector2).distance_to(rest_position) <= 0.5 \
+				and absf((state["scale"] as Vector2).x - REST_SCALE) <= 0.01 \
+				and absf(float(state["current_elevation"])) <= 0.02 \
+				and absf(float(pseudo["shadow_offset_y"]) - 8.0) <= 0.5 \
+				and float(pseudo["glow_alpha"]) <= 0.03:
+			return true
+	return _assert_restored(_motion_state(board, option_index), rest_position)
+
+
+func _assert_perspective_state(pseudo: Dictionary) -> bool:
+	if String(pseudo.get("shader_path", "")) != "res://shaders/adventure_upgrade_card_perspective.gdshader":
+		_fail("Card surface is missing the perspective shader")
+		return false
+	if absf(float(pseudo["vertical_compression"]) - 0.96) > 0.001 \
+			or absf(float(pseudo["top_width_ratio"]) - 0.97) > 0.001 \
+			or absf(float(pseudo["bottom_width_ratio"]) - 1.0) > 0.001 \
+			or absf(float(pseudo["plane_rotation_degrees"])) > 0.001:
+		_fail("Perspective shader parameters do not match the fixed specification")
+		return false
+	if bool(pseudo["description_has_material"]):
+		_fail("Description layer must not inherit perspective material")
+		return false
+	if int(pseudo["thickness_layer_count"]) != 3:
+		_fail("Choice art must expose three thickness layers")
+		return false
+	if int(pseudo["surface_material_id"]) == 0 \
+			or not bool(pseudo.get("glow_uses_outline_panel", false)):
+		_fail("Card surface or outline glow is missing")
+		return false
+	if not bool(pseudo.get("surface_has_texture", false)) \
+			or not bool(pseudo.get("suit_has_texture", false)) \
+			or not bool(pseudo.get("suit_is_separate_layer", false)):
+		_fail("Choice card must compose separate generated base and suit textures")
+		return false
+	if String(pseudo.get("card_texture_path", "")) != \
+			"res://art/ui/adventure_upgrade_choice_table/run-001/base/processed/raw-sheet-clean.png":
+		_fail("Choice card reused the skill-codex atlas instead of its generated table base")
+		return false
+	var suit_texture_path := String(pseudo.get("suit_texture_path", ""))
+	if not suit_texture_path.begins_with(
+			"res://art/ui/adventure_upgrade_choice_table/run-001/suits/processed/suit-"):
+		_fail("Choice suit badge is not loaded from the generated independent suit set")
+		return false
+	if float(pseudo.get("suit_shadow_alpha", 0.0)) < 0.25:
+		_fail("Choice suit badge is missing its independent contact-shadow layer")
+		return false
+	var suit_badge_rect := pseudo.get("suit_badge_rect", {}) as Dictionary
+	if suit_badge_rect.is_empty() \
+			or float(suit_badge_rect.get("width", 0.0)) < 120.0 \
+			or float(suit_badge_rect.get("height", 0.0)) < 140.0:
+		_fail("Choice suit badge is too small to reproduce the raised reference emblem")
+		return false
+	return true
+
+
+func _perspective_signature(pseudo: Dictionary) -> Dictionary:
+	return {
+		"shader_path": pseudo["shader_path"],
+		"vertical_compression": pseudo["vertical_compression"],
+		"top_width_ratio": pseudo["top_width_ratio"],
+		"bottom_width_ratio": pseudo["bottom_width_ratio"],
+		"plane_rotation_degrees": pseudo["plane_rotation_degrees"],
+	}
+
+
+func _assert_restored(state: Dictionary, rest_position: Vector2) -> bool:
+	if (state["position"] as Vector2).distance_to(rest_position) > 0.5 \
+			or absf((state["scale"] as Vector2).x - REST_SCALE) > 0.01 \
+			or absf(float(state["current_elevation"])) > 0.02:
+		_fail("Card did not restore position scale and elevation")
+		return false
+	var pseudo := state["pseudo_3d"] as Dictionary
+	if absf(float(pseudo["shadow_offset_y"]) - 8.0) > 0.5 or float(pseudo["glow_alpha"]) > 0.03:
+		_fail("Card did not restore shadow and glow: shadow=%s glow=%s elevation=%s" % [pseudo["shadow_offset_y"], pseudo["glow_alpha"], state["current_elevation"]])
+		return false
+	return true
+
+
+func _wait_frames(count: int) -> void:
+	for _frame in count:
+		await process_frame
 
 
 func _fail(message: String) -> void:
 	if _failed:
 		return
-
 	_failed = true
 	push_error(message)
 	print("ADVENTURE_UPGRADE_SELECTION_OVERLAY_HOVER_SMOKE_FAIL %s" % message)

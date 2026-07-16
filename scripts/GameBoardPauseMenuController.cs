@@ -8,6 +8,7 @@ internal sealed class GameBoardPauseMenuController
 	private readonly Node _owner;
 	private readonly Func<string, string> _localize;
 	private readonly Func<string> _getReturnButtonKey;
+	private readonly Func<string> _getRestartButtonKey;
 	private readonly Func<bool> _canRestart;
 	private readonly Action _returnToDestination;
 	private readonly Action _restart;
@@ -24,6 +25,7 @@ internal sealed class GameBoardPauseMenuController
 		Node owner,
 		Func<string, string> localize,
 		Func<string> getReturnButtonKey,
+		Func<string> getRestartButtonKey,
 		Func<bool> canRestart,
 		Action returnToDestination,
 		Action restart,
@@ -36,6 +38,7 @@ internal sealed class GameBoardPauseMenuController
 		_owner = owner;
 		_localize = localize;
 		_getReturnButtonKey = getReturnButtonKey;
+		_getRestartButtonKey = getRestartButtonKey;
 		_canRestart = canRestart;
 		_returnToDestination = returnToDestination;
 		_restart = restart;
@@ -66,7 +69,7 @@ internal sealed class GameBoardPauseMenuController
 
 		IsOpen = true;
 		_playOpenSound();
-		_pauseMenuRoot.RefreshLocalizedText(_localize, _getReturnButtonKey());
+		_pauseMenuRoot.RefreshLocalizedText(_localize, _getReturnButtonKey(), _getRestartButtonKey());
 		_pauseMenuRoot.SetRestartAvailable(_canRestart());
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
@@ -118,7 +121,7 @@ internal sealed class GameBoardPauseMenuController
 
 	internal void RefreshLocalizedText()
 	{
-		_pauseMenuRoot?.RefreshLocalizedText(_localize, _getReturnButtonKey());
+		_pauseMenuRoot?.RefreshLocalizedText(_localize, _getReturnButtonKey(), _getRestartButtonKey());
 	}
 
 	internal void CloseForSceneTransition()
@@ -162,7 +165,7 @@ internal sealed class GameBoardPauseMenuController
 		pauseMenu.RestartRequested += () => _restart();
 		pauseMenu.QuitRequested += () => _quit();
 		pauseMenu.ConfirmQuitRequested += () => _confirmQuit();
-		_pauseMenuRoot.RefreshLocalizedText(_localize, _getReturnButtonKey());
+		_pauseMenuRoot.RefreshLocalizedText(_localize, _getReturnButtonKey(), _getRestartButtonKey());
 		_pauseMenuRoot.SetRestartAvailable(_canRestart());
 	}
 }

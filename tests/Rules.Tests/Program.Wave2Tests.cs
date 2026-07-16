@@ -108,7 +108,7 @@ internal static partial class Program
 		store.SetManifest(manifest);
 		Equal(AdventureUpgradeRestoreResult.Migrated, store.ReloadFromActiveProfile());
 		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot));
-		Equal(6, snapshot.SchemaVersion);
+		Equal(AdventureUpgradeRunSnapshot.CurrentSchemaVersion, snapshot.SchemaVersion);
 		Equal(AdventureCampaignCatalog.MainCampaignId, snapshot.CampaignId);
 		Equal(12, snapshot.MainStageIndex);
 		Equal("boss_k", snapshot.EnemyAvatarId);

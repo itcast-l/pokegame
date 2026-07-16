@@ -8,6 +8,7 @@ public partial class GameBoardScene
 	private readonly record struct AdventureUpgradeOverlayOptionModel(
 		string Suit,
 		string Rarity,
+		string Title,
 		string Description);
 
 	private sealed class AdventureUpgradeOverlayCardMotionState
@@ -31,6 +32,8 @@ public partial class GameBoardScene
 			TargetPosition = BasePosition;
 			TargetScale = BaseScale;
 			TargetRotationDegrees = BaseRotationDegrees;
+			CurrentElevation = 0.0f;
+			TargetElevation = 0.0f;
 		}
 
 		internal Button Button { get; }
@@ -52,6 +55,8 @@ public partial class GameBoardScene
 		internal Vector2 TargetScale { get; set; }
 		internal float TargetRotationDegrees { get; set; }
 		internal float TargetHighlightAmount { get; set; }
+		internal float CurrentElevation { get; set; }
+		internal float TargetElevation { get; set; }
 	}
 
 	private sealed class AdventureUpgradeOverlayRevealState
@@ -88,19 +93,18 @@ public partial class GameBoardScene
 	private static readonly Color DefaultAdventureUpgradeTitleColor = new(0.93f, 0.96f, 1.0f, 0.99f);
 	private static readonly Color DefaultAdventureUpgradeGlowColor = new(0.48f, 0.92f, 1.0f, 0.06f);
 	private static readonly Color DefaultAdventureUpgradeRuleColor = new(0.98f, 0.9f, 0.7f, 0.08f);
-	private static readonly int[] AdventureUpgradeOverlayPreferredOrder = { 2, 1, 0 };
+	private static readonly int[] AdventureUpgradeOverlayPreferredOrder = { 1, 0, 2 };
 	private const float AdventureUpgradeOverlayRestScale = 0.94f;
-	private const float AdventureUpgradeOverlayHoverScale = 0.99f;
-	private const float AdventureUpgradeOverlayRevealStartScale = 0.82f;
-	private const float AdventureUpgradeOverlayHoverLift = 8.0f;
-	private const float AdventureUpgradeOverlayRevealStartYOffset = 28.0f;
-	private const float AdventureUpgradeOverlayRevealStaggerSeconds = 0.07f;
-	private const float AdventureUpgradeOverlayRevealDurationSeconds = 0.55f;
+	private const float AdventureUpgradeOverlayHoverScale = 1.0f;
+	private const float AdventureUpgradeOverlayRevealStartScale = 0.88f;
+	private const float AdventureUpgradeOverlayHoverLift = 12.0f;
+	private const float AdventureUpgradeOverlayRevealStartYOffset = 22.0f;
+	private const float AdventureUpgradeOverlayRevealStaggerSeconds = 0.06f;
+	private const float AdventureUpgradeOverlayRevealDurationSeconds = 0.36f;
 	private const float AdventureUpgradeOverlayBackdropFadeDurationSeconds = 0.14f;
 	private const float AdventureUpgradeOverlayPanelFadeDurationSeconds = 0.18f;
 	private const float AdventureUpgradeOverlayMotionSmoothSpeed = 30.0f;
 	private const float AdventureUpgradeOverlayHighlightSmoothSpeed = 10.0f;
-	private const float AdventureUpgradeOverlayFocusHighlightAmount = 0.26f;
 	private const float AdventureUpgradeOverlayHoverHighlightAmount = 1.0f;
 	private const float AdventureUpgradeOverlayMotionSnapDistance = 0.001f;
 
@@ -122,6 +126,7 @@ public partial class GameBoardScene
 			overlayOptions.Add(new AdventureUpgradeOverlayOptionModel(
 				definition.Suit,
 				definition.Rarity,
+				definition.DisplayName,
 				FormatAdventureUpgradeDescription(definition)));
 		}
 
@@ -180,7 +185,13 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AddChild(selectionOverlay);
+		var overlayLayer = new CanvasLayer
+		{
+			Name = "AdventureUpgradeSelectionLayer",
+			Layer = 40,
+		};
+		AddChild(overlayLayer);
+		overlayLayer.AddChild(selectionOverlay);
 		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		ResetAdventureUpgradeOverlayCardMotionStates();
 		ConfigureAdventureUpgradeSelectionOverlay(selectionOverlay, options);
@@ -207,10 +218,9 @@ public partial class GameBoardScene
 			{
 				CancelAdventureUpgradeSelection();
 				ResetAdventureUpgradeOverlayCardMotionStates();
-				if (IsInstanceValid(selectionOverlay))
+				if (IsInstanceValid(overlayLayer))
 				{
-					RemoveChild(selectionOverlay);
-					selectionOverlay.Free();
+					overlayLayer.QueueFree();
 				}
 			}));
 		return true;
@@ -219,27 +229,19 @@ public partial class GameBoardScene
 	private string FormatAdventureUpgradeDescription(AdventureSuitUpgradeDefinition definition)
 	{
 		string description = GetAdventureUpgradeDescription(definition.DescriptionKey, definition.EffectText);
-		var values = new Dictionary<string, int>(StringComparer.Ordinal);
+		AdventureUpgradeManifestEntry? entry = null;
 		if (_adventureUpgradeCatalog != null
 			&& _adventureUpgradeCatalog.TryCreateManifest(out AdventureUpgradeManifest manifest)
-			&& manifest.TryGetEnabledEntry(definition.Id, out AdventureUpgradeManifestEntry entry)
-			&& entry.EffectValues != null)
+			&& manifest.TryGetEnabledEntry(definition.Id, out AdventureUpgradeManifestEntry resolvedEntry))
 		{
-			foreach (KeyValuePair<string, int> pair in entry.EffectValues)
-			{
-				values[pair.Key] = pair.Value;
-			}
+			entry = resolvedEntry;
 		}
 
-		if (string.Equals(
-			definition.Id,
-			AdventureUpgradeDescriptionRules.QuestionMarkInterestUpgradeId,
-			StringComparison.Ordinal))
-		{
-			values["current_item_count"] = GetAdventureUpgradeRunState()?.EffectState.QuestionRewardCount ?? 0;
-		}
-
-		return AdventureUpgradeDescriptionRules.Format(definition.Id, description, values);
+		return AdventureUpgradeDefinitionDescriptionFormatter.Format(
+			definition,
+			entry,
+			description,
+			GetAdventureUpgradeRunState()?.EffectState.QuestionRewardCount ?? 0);
 	}
 
 	private void ConfigureAdventureUpgradeSelectionOverlay(
@@ -249,10 +251,15 @@ public partial class GameBoardScene
 		Control? header = selectionOverlay.GetNodeOrNull<Control>("Margin/Layout/Header");
 		if (header != null)
 		{
-			header.Visible = false;
+			header.Visible = true;
+		}
+		Label? title = selectionOverlay.GetNodeOrNull<Label>("Margin/Layout/Header/SelectionTitle");
+		if (title != null)
+		{
+			title.Text = Localize("GAME_SELECT_UPGRADE");
 		}
 
-		ColorRect backdrop = selectionOverlay.GetNode<ColorRect>("Backdrop");
+		ColorRect backdrop = selectionOverlay.GetNode<ColorRect>("TableDarken");
 		Panel selectionPanel = selectionOverlay.GetNode<Panel>("Margin/SelectionPanel");
 		TextureRect selectionHalo = selectionOverlay.GetNode<TextureRect>("Margin/SelectionHalo");
 		int visibleOptionCount = Mathf.Min(options.Count, 3);
@@ -302,7 +309,7 @@ public partial class GameBoardScene
 			if (!visible)
 			{
 				button.ReleaseFocus();
-				choiceArt.ConfigureChoice(null, string.Empty, string.Empty, false);
+				choiceArt.ConfigureChoice(null, null, string.Empty, string.Empty, false);
 				choiceArt.SetHighlightAmount(0.0f);
 				continue;
 			}
@@ -312,11 +319,13 @@ public partial class GameBoardScene
 
 			AdventureUpgradeOverlayOptionModel option = options[index];
 			AdventureUpgradeCardVisualEntryResource? visualEntry = AdventureUpgradeCardVisualResolver.ResolveEntry(option.Suit, option.Rarity);
-			Texture2D? cardTexture = AdventureUpgradeCardVisualResolver.LoadAtlasTextureForRarity(option.Suit, option.Rarity);
-			choiceArt.ConfigureChoice(cardTexture, string.Empty, option.Description, false);
+			Texture2D? cardTexture = AdventureUpgradeChoiceVisualResolver.LoadCardBaseTexture();
+			Texture2D? suitTexture = AdventureUpgradeChoiceVisualResolver.LoadSuitTexture(option.Suit);
+			choiceArt.ConfigureChoice(cardTexture, suitTexture, option.Title, option.Description, false);
+			choiceArt.SetRarityLabel(Localize(GetAdventureUpgradeRarityKey(option.Rarity)));
 			choiceArt.SetPalette(
 				visualEntry?.TitleColor ?? DefaultAdventureUpgradeTitleColor,
-				visualEntry?.GlowColor ?? DefaultAdventureUpgradeGlowColor,
+				new Color(0.26f, 0.9f, 1.0f, 1.0f),
 				visualEntry?.RuleColor ?? DefaultAdventureUpgradeRuleColor);
 			RefreshAdventureUpgradeOverlayHighlight(button);
 		}
@@ -325,6 +334,16 @@ public partial class GameBoardScene
 		{
 			CallDeferred(nameof(FocusAdventureUpgradeSelectionOverlayDefaultButton));
 		}
+	}
+
+	private static string GetAdventureUpgradeRarityKey(string rarity)
+	{
+		return rarity?.Trim().ToLowerInvariant() switch
+		{
+			"rare" => "SKILL_CODEX_RARITY_RARE",
+			"legendary" => "SKILL_CODEX_RARITY_LEGENDARY",
+			_ => "SKILL_CODEX_RARITY_COMMON",
+		};
 	}
 
 	private void FocusAdventureUpgradeSelectionOverlayDefaultButton()
@@ -365,21 +384,21 @@ public partial class GameBoardScene
 		}
 
 		bool canInteract = state.InteractionUnlocked && button.Visible && !button.Disabled;
-		bool pointerHovered = button.Visible && state.PointerHovered;
+		bool pointerHovered = canInteract && state.PointerHovered;
 		bool focused = canInteract && button.HasFocus();
+		bool active = pointerHovered || focused;
 
-		state.TargetPosition = state.BasePosition + (pointerHovered ? new Vector2(0.0f, -AdventureUpgradeOverlayHoverLift) : Vector2.Zero);
-		state.TargetScale = pointerHovered
+		state.TargetPosition = state.BasePosition + (active ? new Vector2(0.0f, -AdventureUpgradeOverlayHoverLift) : Vector2.Zero);
+		state.TargetScale = active
 			? Vector2.One * AdventureUpgradeOverlayHoverScale
 			: state.BaseScale;
 		state.TargetRotationDegrees = state.BaseRotationDegrees;
-		state.TargetHighlightAmount = pointerHovered
-			? AdventureUpgradeOverlayHoverHighlightAmount
-			: (focused ? AdventureUpgradeOverlayFocusHighlightAmount : 0.0f);
+		state.TargetHighlightAmount = active ? AdventureUpgradeOverlayHoverHighlightAmount : 0.0f;
+		state.TargetElevation = active ? 1.0f : 0.0f;
 
 		state.CardFrame.PivotOffset = button.Size * 0.5f;
-		state.CardFrame.ZIndex = pointerHovered ? 3 : 0;
-		button.ZIndex = pointerHovered ? 2 : 0;
+		state.CardFrame.ZIndex = active ? 3 : 0;
+		button.ZIndex = active ? 2 : 0;
 	}
 
 	private static Vector2 GetAdventureUpgradeCardFrameOffset(int optionIndex)
@@ -416,6 +435,64 @@ public partial class GameBoardScene
 		return false;
 	}
 
+	public Godot.Collections.Dictionary DebugGetAdventureUpgradeOverlayMotionState(int optionIndex)
+	{
+		var result = new Godot.Collections.Dictionary();
+		SelectionOverlaySession? session = GetActiveSelectionOverlaySession(SelectionOverlayKind.AdventureUpgrade);
+		if (session == null || optionIndex < 0 || optionIndex >= session.OptionCount)
+		{
+			return result;
+		}
+
+		Button? button = session.Root.GetNodeOrNull<Button>($"Margin/Layout/CardsRow/Option{optionIndex + 1}Button");
+		if (button == null
+			|| !TryGetAdventureUpgradeOverlayCardMotionState(button, out AdventureUpgradeOverlayCardMotionState state))
+		{
+			return result;
+		}
+
+		result["reveal_completed"] = state.RevealCompleted;
+		result["interaction_unlocked"] = state.InteractionUnlocked;
+		result["pointer_hovered"] = state.PointerHovered;
+		result["position"] = state.CardFrame.Position;
+		result["scale"] = state.CardFrame.Scale;
+		result["rotation_degrees"] = state.CardFrame.RotationDegrees;
+		result["frame_z_index"] = state.CardFrame.ZIndex;
+		result["button_z_index"] = button.ZIndex;
+		result["button_disabled"] = button.Disabled;
+		result["has_focus"] = button.HasFocus();
+		result["current_elevation"] = state.CurrentElevation;
+		result["target_elevation"] = state.TargetElevation;
+		result["pseudo_3d"] = state.ChoiceArt.DebugGetPseudo3DState();
+		return result;
+	}
+
+	public bool DebugSetAdventureUpgradeFocusState(int optionIndex, bool focused)
+	{
+		SelectionOverlaySession? session = GetActiveSelectionOverlaySession(SelectionOverlayKind.AdventureUpgrade);
+		if (session == null || optionIndex < 0 || optionIndex >= session.OptionCount)
+		{
+			return false;
+		}
+
+		Button? button = session.Root.GetNodeOrNull<Button>($"Margin/Layout/CardsRow/Option{optionIndex + 1}Button");
+		if (button == null || button.Disabled || !button.Visible)
+		{
+			return false;
+		}
+
+		if (focused)
+		{
+			button.GrabFocus();
+		}
+		else if (button.HasFocus())
+		{
+			button.ReleaseFocus();
+		}
+		RefreshAdventureUpgradeOverlayHighlight(button);
+		return true;
+	}
+
 	private void SetAdventureUpgradeOverlayPointerHover(Button button, bool hovered)
 	{
 		if (!TryGetAdventureUpgradeOverlayCardMotionState(button, out AdventureUpgradeOverlayCardMotionState state))
@@ -424,17 +501,8 @@ public partial class GameBoardScene
 		}
 
 		state.PointerHovered = hovered;
-		if (hovered && !state.RevealCompleted)
-		{
-			state.RevealCompleted = true;
-			state.InteractionUnlocked = true;
-			state.CardFrame.Position = state.BasePosition;
-			state.CardFrame.Scale = state.BaseScale;
-			state.CardFrame.RotationDegrees = state.BaseRotationDegrees;
-		}
-
 		RefreshAdventureUpgradeOverlayHighlight(button);
-		if (!IsInstanceValid(state.CardFrame))
+		if (!state.RevealCompleted || !state.InteractionUnlocked || !IsInstanceValid(state.CardFrame))
 		{
 			return;
 		}
@@ -485,12 +553,15 @@ public partial class GameBoardScene
 		state.TargetScale = state.BaseScale;
 		state.TargetRotationDegrees = state.BaseRotationDegrees;
 		state.TargetHighlightAmount = 0.0f;
+		state.CurrentElevation = 0.0f;
+		state.TargetElevation = 0.0f;
 		state.CardFrame.Position = state.StartPosition;
 		state.CardFrame.Scale = state.StartScale;
 		state.CardFrame.RotationDegrees = state.StartRotationDegrees;
 		state.CardFrame.Modulate = CreateAdventureUpgradeOverlayAlphaColor(state.BaseModulate, 0.0f);
 		UpdateAdventureUpgradeOverlayCardReveal(state, 0.0);
 		state.ChoiceArt.SetHighlightAmount(0.0f);
+		state.ChoiceArt.SetElevationAmount(0.0f);
 		button.ReleaseFocus();
 		button.Disabled = true;
 		button.FocusMode = Control.FocusModeEnum.None;
@@ -563,6 +634,8 @@ public partial class GameBoardScene
 			state.CardFrame.RotationDegrees = Mathf.Lerp(state.CardFrame.RotationDegrees, state.TargetRotationDegrees, motionWeight);
 			state.CardFrame.Modulate = state.BaseModulate;
 			state.ChoiceArt.SetHighlightAmount(Mathf.Lerp(state.ChoiceArt.HighlightAmount, state.TargetHighlightAmount, highlightWeight));
+			state.CurrentElevation = Mathf.Lerp(state.CurrentElevation, state.TargetElevation, motionWeight);
+			state.ChoiceArt.SetElevationAmount(state.CurrentElevation);
 
 			if (state.CardFrame.Position.DistanceTo(state.TargetPosition) <= AdventureUpgradeOverlayMotionSnapDistance)
 			{
@@ -643,6 +716,7 @@ public partial class GameBoardScene
 			state.CardFrame.RotationDegrees = state.StartRotationDegrees;
 			state.CardFrame.Modulate = CreateAdventureUpgradeOverlayAlphaColor(state.BaseModulate, 0.0f);
 			state.ChoiceArt.SetHighlightAmount(0.0f);
+			state.ChoiceArt.SetElevationAmount(0.0f);
 			return;
 		}
 
@@ -664,6 +738,7 @@ public partial class GameBoardScene
 		state.CardFrame.RotationDegrees = Mathf.Lerp(state.StartRotationDegrees, state.BaseRotationDegrees, easedRevealT);
 		state.CardFrame.Modulate = CreateAdventureUpgradeOverlayAlphaColor(state.BaseModulate, rawRevealT);
 		state.ChoiceArt.SetHighlightAmount(Mathf.Lerp(0.0f, state.TargetHighlightAmount, easedRevealT));
+		state.ChoiceArt.SetElevationAmount(0.0f);
 
 		if (rawRevealT < 1.0f)
 		{
@@ -675,6 +750,8 @@ public partial class GameBoardScene
 		state.CardFrame.Scale = state.BaseScale;
 		state.CardFrame.RotationDegrees = state.BaseRotationDegrees;
 		state.CardFrame.Modulate = state.BaseModulate;
+		state.CurrentElevation = 0.0f;
+		state.ChoiceArt.SetElevationAmount(0.0f);
 	}
 
 	private bool AreAdventureUpgradeOverlayCardsFullyRevealed()

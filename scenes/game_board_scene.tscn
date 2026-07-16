@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://cx5lmatxxhx6d" path="res://scripts/DraggableAvatarArea.cs" id="7_draggable_avatar_area"]
 [ext_resource type="Shader" uid="uid://bypnsrux3irf0" path="res://shaders/board_art_dynamics.gdshader" id="8_board_art_dynamics_shader"]
 [ext_resource type="Texture2D" uid="uid://bluh0ayxp8buw" path="res://art/maps/underwater_card_table_vertical_backdrop_1920x1080.png" id="10_vertical_backdrop"]
+[ext_resource type="Texture2D" uid="uid://b7bspff4jysyi" path="res://art/maps/underwater_board_backdrop_fill_v1_1920x1080.png" id="11_backdrop_fill"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_board_art_dynamics"]
 shader = ExtResource("8_board_art_dynamics_shader")
@@ -39,7 +40,6 @@ shader_parameter/center_motion_strength = 0.62
 shader_parameter/center_motion_speed = 0.72
 
 [node name="GameBoardScene" type="Control" unique_id=459694220]
-clip_contents = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,7 +48,29 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game_board_scene")
 
-[node name="VerticalBackdrop" type="TextureRect" parent="." unique_id=1124600215]
+[node name="BackdropFill" type="TextureRect" parent="." unique_id=1199386796]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("11_backdrop_fill")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BoardCanvas" type="Control" parent="." unique_id=1564038380]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VerticalBackdrop" type="TextureRect" parent="BoardCanvas" unique_id=1124600215]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -61,7 +83,7 @@ texture = ExtResource("10_vertical_backdrop")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="BoardArt" type="TextureRect" parent="." unique_id=1159123309]
+[node name="BoardArt" type="TextureRect" parent="BoardCanvas" unique_id=1159123309]
 material = SubResource("ShaderMaterial_board_art_dynamics")
 layout_mode = 1
 anchors_preset = 15
@@ -74,7 +96,7 @@ texture = ExtResource("2_board_texture")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="WaterCausticOverlay" type="ColorRect" parent="." unique_id=2125588406]
+[node name="WaterCausticOverlay" type="ColorRect" parent="BoardCanvas" unique_id=2125588406]
 material = SubResource("ShaderMaterial_water_caustic")
 layout_mode = 1
 anchors_preset = 15
@@ -84,7 +106,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="UnderwaterAmbientLayer" type="Control" parent="." unique_id=1437166109]
+[node name="UnderwaterAmbientLayer" type="Control" parent="BoardCanvas" unique_id=1437166109]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -103,7 +125,7 @@ sunbeam_intensity = 1.35
 center_caustic_intensity = 0.42
 center_glint_count = 16
 
-[node name="LayoutAreas" type="Control" parent="." unique_id=193865572]
+[node name="LayoutAreas" type="Control" parent="BoardCanvas" unique_id=193865572]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -112,7 +134,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Player1CardPileArea" type="Control" parent="LayoutAreas" unique_id=608670238]
+[node name="Player1CardPileArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=608670238]
 unique_name_in_owner = true
 z_index = 10
 layout_mode = 1
@@ -128,7 +150,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player1CardPileArea" unique_id=954170191]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player1CardPileArea" unique_id=954170191]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -139,7 +161,7 @@ mouse_filter = 2
 border_color = Color(0.95, 0.8, 0.2, 0.85)
 border_width = 3.0
 
-[node name="Player2CardPileArea" type="Control" parent="LayoutAreas" unique_id=1339429899]
+[node name="Player2CardPileArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=1339429899]
 unique_name_in_owner = true
 z_index = 10
 layout_mode = 1
@@ -155,7 +177,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player2CardPileArea" unique_id=262115759]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player2CardPileArea" unique_id=262115759]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -166,7 +188,7 @@ mouse_filter = 2
 border_color = Color(0.95, 0.8, 0.2, 0.85)
 border_width = 3.0
 
-[node name="Player3CardPileArea" type="Control" parent="LayoutAreas" unique_id=721569285]
+[node name="Player3CardPileArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=721569285]
 unique_name_in_owner = true
 z_index = 10
 layout_mode = 1
@@ -182,7 +204,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player3CardPileArea" unique_id=104929323]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player3CardPileArea" unique_id=104929323]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -193,7 +215,7 @@ mouse_filter = 2
 border_color = Color(0.95, 0.8, 0.2, 0.85)
 border_width = 3.0
 
-[node name="Player4CardPileArea" type="Control" parent="LayoutAreas" unique_id=703267268]
+[node name="Player4CardPileArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=703267268]
 unique_name_in_owner = true
 z_index = 10
 layout_mode = 1
@@ -209,7 +231,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player4CardPileArea" unique_id=931667002]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player4CardPileArea" unique_id=931667002]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -220,7 +242,7 @@ mouse_filter = 2
 border_color = Color(0.95, 0.8, 0.2, 0.85)
 border_width = 3.0
 
-[node name="Player1HandArea" type="Control" parent="LayoutAreas" unique_id=2134953298]
+[node name="Player1HandArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=2134953298]
 unique_name_in_owner = true
 z_index = 9
 layout_mode = 1
@@ -236,7 +258,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player1HandArea" unique_id=1341902664]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player1HandArea" unique_id=1341902664]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -247,7 +269,7 @@ mouse_filter = 2
 border_color = Color(0.2, 0.95, 0.45, 0.85)
 border_width = 3.0
 
-[node name="Player2HandArea" type="Control" parent="LayoutAreas" unique_id=499983178]
+[node name="Player2HandArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=499983178]
 unique_name_in_owner = true
 z_index = 9
 layout_mode = 1
@@ -263,7 +285,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player2HandArea" unique_id=1661366538]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player2HandArea" unique_id=1661366538]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -274,7 +296,7 @@ mouse_filter = 2
 border_color = Color(0.2, 0.95, 0.45, 0.85)
 border_width = 3.0
 
-[node name="Player3HandArea" type="Control" parent="LayoutAreas" unique_id=55796883]
+[node name="Player3HandArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=55796883]
 unique_name_in_owner = true
 z_index = 9
 layout_mode = 1
@@ -290,7 +312,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player3HandArea" unique_id=1551443448]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player3HandArea" unique_id=1551443448]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -301,7 +323,7 @@ mouse_filter = 2
 border_color = Color(0.2, 0.95, 0.45, 0.85)
 border_width = 3.0
 
-[node name="Player4HandArea" type="Control" parent="LayoutAreas" unique_id=1509403900]
+[node name="Player4HandArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=1509403900]
 unique_name_in_owner = true
 z_index = 9
 layout_mode = 1
@@ -317,7 +339,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/Player4HandArea" unique_id=232532447]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/Player4HandArea" unique_id=232532447]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -328,7 +350,7 @@ mouse_filter = 2
 border_color = Color(0.2, 0.95, 0.45, 0.85)
 border_width = 3.0
 
-[node name="CenterArena" type="Control" parent="LayoutAreas" unique_id=19923406]
+[node name="CenterArena" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=19923406]
 unique_name_in_owner = true
 layout_mode = 1
 anchor_left = 0.221875
@@ -343,7 +365,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="TableCardLayoutArea" type="Control" parent="LayoutAreas" unique_id=943562731]
+[node name="TableCardLayoutArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=943562731]
 unique_name_in_owner = true
 layout_mode = 1
 anchor_left = 0.3125
@@ -358,7 +380,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EditorGuide" type="ReferenceRect" parent="LayoutAreas/TableCardLayoutArea" unique_id=454487962]
+[node name="EditorGuide" type="ReferenceRect" parent="BoardCanvas/LayoutAreas/TableCardLayoutArea" unique_id=454487962]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -369,7 +391,7 @@ mouse_filter = 2
 border_color = Color(0.24, 0.86, 1, 0.85)
 border_width = 3.0
 
-[node name="QuestionCardTransformArea" type="Panel" parent="LayoutAreas" unique_id=130327200]
+[node name="QuestionCardTransformArea" type="Panel" parent="BoardCanvas/LayoutAreas" unique_id=130327200]
 unique_name_in_owner = true
 z_index = 8
 z_as_relative = false
@@ -388,59 +410,59 @@ grow_vertical = 2
 pivot_offset = Vector2(69, 84)
 mouse_filter = 2
 
-[node name="TopPlayerArea" type="Control" parent="LayoutAreas" unique_id=1388315151]
+[node name="TopPlayerArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=1388315151]
 unique_name_in_owner = true
 layout_mode = 1
 anchor_left = 0.242
 anchor_top = 0.052
 anchor_right = 0.758
 anchor_bottom = 0.205
-offset_left = 1.2399902
-offset_top = 25.559998
-offset_right = 1.2399902
-offset_bottom = 25.559998
+offset_left = 2.2399902
+offset_top = -41.440002
+offset_right = 2.2399902
+offset_bottom = -41.440002
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="TopAvatarAnchor" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=1786079014]
-position = Vector2(107, 8)
+[node name="TopAvatarAnchor" type="Marker2D" parent="BoardCanvas/LayoutAreas/TopPlayerArea" unique_id=1786079014]
+position = Vector2(105, 85)
 
-[node name="Player2AvatarArea" type="Control" parent="LayoutAreas/TopPlayerArea" unique_id=490703162]
+[node name="Player2AvatarArea" type="Control" parent="BoardCanvas/LayoutAreas/TopPlayerArea" unique_id=490703162]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
 anchors_preset = 0
-offset_left = 68.0
-offset_top = -32.0
-offset_right = 224.0
-offset_bottom = 124.0
+offset_left = 67.0
+offset_top = 35.0
+offset_right = 223.0
+offset_bottom = 191.0
 scale = Vector2(0.5, 0.5)
 mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
-[node name="Player2ScoreMeter" type="Control" parent="LayoutAreas/TopPlayerArea" unique_id=2136433309]
+[node name="Player2ScoreMeter" type="Control" parent="BoardCanvas/LayoutAreas/TopPlayerArea" unique_id=2136433309]
 unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
 offset_left = 60.0
-offset_top = -39.0
+offset_top = 28.0
 offset_right = 152.0
-offset_bottom = 53.0
+offset_bottom = 120.0
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
 circle_diameter = 70.0
 
-[node name="Player2ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/TopPlayerArea" unique_id=2097461514]
+[node name="Player2ScoreEffectTarget" type="Marker2D" parent="BoardCanvas/LayoutAreas/TopPlayerArea" unique_id=2097461514]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(106, 7)
+position = Vector2(106, 74)
 script = ExtResource("6_score_effect_target")
 
-[node name="BottomPlayerArea" type="Control" parent="LayoutAreas" unique_id=634798856]
+[node name="BottomPlayerArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=634798856]
 unique_name_in_owner = true
 layout_mode = 1
 anchor_left = 0.242
@@ -455,10 +477,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="BottomAvatarAnchor" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1423675064]
+[node name="BottomAvatarAnchor" type="Marker2D" parent="BoardCanvas/LayoutAreas/BottomPlayerArea" unique_id=1423675064]
 position = Vector2(13, 42)
 
-[node name="Player1AvatarArea" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=299262318]
+[node name="Player1AvatarArea" type="Control" parent="BoardCanvas/LayoutAreas/BottomPlayerArea" unique_id=299262318]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
@@ -472,27 +494,27 @@ mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
-[node name="Player1ScoreMeter" type="Control" parent="LayoutAreas/BottomPlayerArea" unique_id=521986776]
+[node name="Player1ScoreMeter" type="Control" parent="BoardCanvas/LayoutAreas/BottomPlayerArea" unique_id=521986776]
 unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = -36.0
-offset_top = -21.0
-offset_right = 62.976013
-offset_bottom = 78.52002
+offset_left = -36.488007
+offset_top = -22.26001
+offset_right = 62.488007
+offset_bottom = 77.26001
 pivot_offset = Vector2(49.488007, 49.76001)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
 circle_diameter = 82.0
 
-[node name="Player1ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/BottomPlayerArea" unique_id=1708757218]
+[node name="Player1ScoreEffectTarget" type="Marker2D" parent="BoardCanvas/LayoutAreas/BottomPlayerArea" unique_id=1708757218]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(13, 29.00003)
+position = Vector2(13, 27.5)
 script = ExtResource("6_score_effect_target")
 
-[node name="LeftPlayerArea" type="Control" parent="LayoutAreas" unique_id=1085384917]
+[node name="LeftPlayerArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=1085384917]
 unique_name_in_owner = true
 layout_mode = 1
 anchor_left = 0.08
@@ -507,10 +529,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="LeftAvatarAnchor" type="Marker2D" parent="LayoutAreas/LeftPlayerArea" unique_id=539701425]
+[node name="LeftAvatarAnchor" type="Marker2D" parent="BoardCanvas/LayoutAreas/LeftPlayerArea" unique_id=539701425]
 position = Vector2(80.625, 7.375)
 
-[node name="Player3AvatarArea" type="Control" parent="LayoutAreas/LeftPlayerArea" unique_id=1073955881]
+[node name="Player3AvatarArea" type="Control" parent="BoardCanvas/LayoutAreas/LeftPlayerArea" unique_id=1073955881]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
@@ -524,27 +546,27 @@ mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
-[node name="Player3ScoreMeter" type="Control" parent="LayoutAreas/LeftPlayerArea" unique_id=869053579]
+[node name="Player3ScoreMeter" type="Control" parent="BoardCanvas/LayoutAreas/LeftPlayerArea" unique_id=869053579]
 unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
 offset_left = 35.0
-offset_top = -40.0
+offset_top = -41.0
 offset_right = 127.0
-offset_bottom = 52.0
+offset_bottom = 51.0
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
 circle_diameter = 71.0
 
-[node name="Player3ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/LeftPlayerArea" unique_id=1214222107]
+[node name="Player3ScoreEffectTarget" type="Marker2D" parent="BoardCanvas/LayoutAreas/LeftPlayerArea" unique_id=1214222107]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(82, 7)
+position = Vector2(81, 5)
 script = ExtResource("6_score_effect_target")
 
-[node name="RightPlayerArea" type="Control" parent="LayoutAreas" unique_id=513893596]
+[node name="RightPlayerArea" type="Control" parent="BoardCanvas/LayoutAreas" unique_id=513893596]
 unique_name_in_owner = true
 layout_mode = 1
 anchor_left = 0.81
@@ -559,10 +581,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="RightAvatarAnchor" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=381356973]
+[node name="RightAvatarAnchor" type="Marker2D" parent="BoardCanvas/LayoutAreas/RightPlayerArea" unique_id=381356973]
 position = Vector2(54.125, 10.375)
 
-[node name="Player4AvatarArea" type="Control" parent="LayoutAreas/RightPlayerArea" unique_id=1459197906]
+[node name="Player4AvatarArea" type="Control" parent="BoardCanvas/LayoutAreas/RightPlayerArea" unique_id=1459197906]
 unique_name_in_owner = true
 z_index = 3
 custom_minimum_size = Vector2(156, 156)
@@ -576,22 +598,22 @@ mouse_filter = 1
 script = ExtResource("7_draggable_avatar_area")
 drag_enabled = false
 
-[node name="Player4ScoreMeter" type="Control" parent="LayoutAreas/RightPlayerArea" unique_id=806861522]
+[node name="Player4ScoreMeter" type="Control" parent="BoardCanvas/LayoutAreas/RightPlayerArea" unique_id=806861522]
 unique_name_in_owner = true
 z_index = 2
 custom_minimum_size = Vector2(92, 92)
 anchors_preset = 0
-offset_left = 7.0
-offset_top = -38.0
-offset_right = 99.0
-offset_bottom = 54.0
+offset_left = 8.0
+offset_top = -36.0
+offset_right = 100.0
+offset_bottom = 56.0
 pivot_offset = Vector2(46, 46)
 mouse_filter = 2
 script = ExtResource("5_score_avatar_meter")
 circle_diameter = 71.0
 
-[node name="Player4ScoreEffectTarget" type="Marker2D" parent="LayoutAreas/RightPlayerArea" unique_id=369324978]
+[node name="Player4ScoreEffectTarget" type="Marker2D" parent="BoardCanvas/LayoutAreas/RightPlayerArea" unique_id=369324978]
 unique_name_in_owner = true
 z_index = 6
-position = Vector2(54, 9)
+position = Vector2(54, 10)
 script = ExtResource("6_score_effect_target")

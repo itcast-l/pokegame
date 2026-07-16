@@ -165,7 +165,7 @@ func _assert_game_board_layers() -> void:
 		return
 
 	var board := scene["instance"] as Node
-	var ambient_layer := _require_node(board, "UnderwaterAmbientLayer", "game board underwater ambient layer")
+	var ambient_layer := _require_node(board, "BoardCanvas/UnderwaterAmbientLayer", "game board underwater ambient layer")
 	if _failed:
 		_cleanup_scene(scene)
 		return

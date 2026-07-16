@@ -86,6 +86,7 @@ public partial class AdventureAvatarMenuScene : Control
 		FocusDefaultControlDeferred();
 		CallDeferred(nameof(PlayAdventureMenuMusicIfStandalone));
 		CallDeferred(nameof(ShowPendingAdventureAvatarUnlockPrompt));
+		CallDeferred(nameof(ShowRunResumeDialogIfActive));
 	}
 
 	public override void _Notification(int what)

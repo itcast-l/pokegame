@@ -52,7 +52,7 @@ func _run_item_overlay_phase() -> void:
 		_fail("Expected item selection overlay to appear")
 		return
 
-	if board.get_node_or_null("AdventureUpgradeSelectionOverlay") != null:
+	if board.find_child("AdventureUpgradeSelectionOverlay", true, false) != null:
 		_fail("Adventure upgrade overlay should not appear during item selection")
 		return
 
@@ -68,7 +68,7 @@ func _run_item_overlay_phase() -> void:
 		_fail("Expected item selection overlay to remain visible for target-hand selection")
 		return
 
-	if board.get_node_or_null("AdventureUpgradeSelectionOverlay") != null:
+	if board.find_child("AdventureUpgradeSelectionOverlay", true, false) != null:
 		_fail("Adventure upgrade overlay should not appear during target-hand selection")
 		return
 
@@ -98,7 +98,7 @@ func _run_adventure_overlay_phase() -> void:
 	if not await _wait_for_adventure_upgrade_selection(board):
 		return
 
-	var adventure_overlay := board.get_node_or_null("AdventureUpgradeSelectionOverlay")
+	var adventure_overlay := board.find_child("AdventureUpgradeSelectionOverlay", true, false)
 	if adventure_overlay == null:
 		_fail("Expected adventure upgrade selection overlay to appear")
 		return
@@ -222,7 +222,7 @@ func _wait_for_overlay(board: Node, overlay_name: String) -> bool:
 		if not is_instance_valid(board):
 			_fail("Board freed unexpectedly while waiting for %s" % overlay_name)
 			return false
-		if board.get_node_or_null(overlay_name) != null:
+		if board.find_child(overlay_name, true, false) != null:
 			return true
 	_fail("Timed out waiting for %s" % overlay_name)
 	return false

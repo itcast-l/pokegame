@@ -13,6 +13,7 @@ public partial class GameBoardScene
 			this,
 			Localize,
 			GetPauseReturnButtonKey,
+			GetPauseRestartButtonKey,
 			CanRestartCurrentMatchFromPauseMenu,
 			ReturnToPauseMenuDestination,
 			RestartCurrentMatchFromPauseMenu,
@@ -129,6 +130,13 @@ public partial class GameBoardScene
 		return adventure_mode ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
 	}
 
+	private string GetPauseRestartButtonKey()
+	{
+		return ShouldUseAdventureUpgradeSystem()
+			? "GAME_RESTART_ADVENTURE_JOURNEY"
+			: "GAME_RESTART_MATCH";
+	}
+
 	private async Task ReturnToMenuSceneAsync(string scenePath)
 	{
 		if (_isLeavingGame)
@@ -146,10 +154,6 @@ public partial class GameBoardScene
 		_isLeavingGame = true;
 		_pauseMenuController?.CloseForSceneTransition();
 		GetTree().Paused = false;
-		if (ShouldUseAdventureUpgradeSystem())
-		{
-			ClearAdventureUpgradeRun();
-		}
 			if (IsNetworkMultiplayerMode())
 			{
 				NetworkManager? networkManager = GetNetworkManager();
@@ -203,11 +207,25 @@ public partial class GameBoardScene
 		HidePauseMenu();
 		if (ShouldUseAdventureUpgradeSystem())
 		{
-			int avatarStageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id);
-			ClearAdventureUpgradeRun();
-			BeginAdventureUpgradeRun(avatarStageNumber);
+			RestartAdventureJourneyFromPauseMenu();
+			return;
 		}
 		DealCardsToPlayers(playOpeningDealAnimation: true);
+	}
+
+	private void RestartAdventureJourneyFromPauseMenu()
+	{
+		string firstAvatarId = GetFirstMainAdventureAvatarId();
+		string scenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(firstAvatarId);
+		PackedScene? gameBoardScene = GD.Load<PackedScene>(scenePath);
+		if (gameBoardScene == null)
+		{
+			GD.PushError($"Missing game board scene: {scenePath}");
+			return;
+		}
+
+		GetAdventureRunSessionStore()?.BeginNewMainRun(1, firstAvatarId);
+		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
 	}
 
 	private async void ConfirmQuitGameFromPauseMenu()

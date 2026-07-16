@@ -1,15 +1,21 @@
 using System;
-using System.Threading.Tasks;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private static readonly Vector2 OpponentHorizontalHandCardOffset = new(45, 0);
 	private static readonly Vector2 VerticalHandCardOffset = new(0, 35);
+	private GameBoardLayoutVariant? _currentBoardLayoutVariant;
+	private bool _responsiveBoardVisualsDirty;
+	private Rect2[]? _authoredStandardAvatarAreas;
+	private Rect2[]? _authoredStandardScoreMeters;
+	private Vector2[]? _authoredStandardScoreEffectAnchors;
 
 	private void RefreshResponsiveBoardLayout()
 	{
-		if (_boardArt == null
+		if (_boardCanvas == null
+			|| !GodotObject.IsInstanceValid(_boardCanvas)
+			|| _boardArt == null
 			|| !GodotObject.IsInstanceValid(_boardArt)
 			|| _verticalBackdrop == null
 			|| !GodotObject.IsInstanceValid(_verticalBackdrop)
@@ -19,35 +25,142 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!GameBoardLayoutGeometry.TryBuildLayoutState(
-			_boardArt,
-			GameBoardLayoutGeometry.DefaultBoardDesignSize,
-			out GameBoardLayoutState state))
+		CaptureAuthoredStandardAvatarLayout();
+		GameBoardLayoutState state = GameBoardLayoutGeometry.BuildLayoutState(
+			Size,
+			_currentBoardLayoutVariant);
+		_currentBoardLayoutVariant = state.Variant;
+
+		ApplyControlRect(_boardCanvas, state.BoardCanvasRect, clearMinimumSize: true);
+		_boardArt.Visible = state.Variant == GameBoardLayoutVariant.Standard;
+		_verticalBackdrop.Visible = state.Variant == GameBoardLayoutVariant.VerticalComposite;
+
+		_layoutAreas.SetAnchorsPreset(LayoutPreset.TopLeft);
+		_layoutAreas.Position = state.DesignOffset;
+		_layoutAreas.Size = GameBoardLayoutGeometry.DesignSize;
+		_layoutAreas.Scale = Vector2.One * state.DesignScale;
+		ApplyBoardLayoutProfile(state.Profile, state.Variant);
+	}
+
+	private void CaptureAuthoredStandardAvatarLayout()
+	{
+		if (_authoredStandardAvatarAreas != null
+			|| _layoutAreas == null
+			|| !GodotObject.IsInstanceValid(_layoutAreas))
 		{
 			return;
 		}
 
-		GameBoardLayoutGeometry.ApplyLayout(
-			state,
-			_boardArt,
-			_verticalBackdrop,
-			_layoutAreas,
-			_questionCardTransformArea);
+		string[] playerAreaNames = { "BottomPlayerArea", "TopPlayerArea", "LeftPlayerArea", "RightPlayerArea" };
+		string[] avatarAreaNames = { "Player1AvatarArea", "Player2AvatarArea", "Player3AvatarArea", "Player4AvatarArea" };
+		string[] scoreMeterNames = { "Player1ScoreMeter", "Player2ScoreMeter", "Player3ScoreMeter", "Player4ScoreMeter" };
+		string[] scoreEffectNames = { "Player1ScoreEffectTarget", "Player2ScoreEffectTarget", "Player3ScoreEffectTarget", "Player4ScoreEffectTarget" };
+		_authoredStandardAvatarAreas = new Rect2[MaxPlayers];
+		_authoredStandardScoreMeters = new Rect2[MaxPlayers];
+		_authoredStandardScoreEffectAnchors = new Vector2[MaxPlayers];
+
+		Rect2 designRect = new(Vector2.Zero, GameBoardLayoutGeometry.DesignSize);
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			Control playerArea = GetNode<Control>($"%{playerAreaNames[playerIndex]}");
+			Control avatarArea = GetNode<Control>($"%{avatarAreaNames[playerIndex]}");
+			Control scoreMeter = GetNode<Control>($"%{scoreMeterNames[playerIndex]}");
+			Marker2D scoreEffectTarget = GetNode<Marker2D>($"%{scoreEffectNames[playerIndex]}");
+			Rect2 playerRect = GetAuthoredControlRect(playerArea, designRect);
+			_authoredStandardAvatarAreas[playerIndex] = GetAuthoredControlRect(avatarArea, playerRect);
+			_authoredStandardScoreMeters[playerIndex] = GetAuthoredControlRect(scoreMeter, playerRect);
+			_authoredStandardScoreEffectAnchors[playerIndex] = playerRect.Position + scoreEffectTarget.Position;
+		}
 	}
 
-	private Rect2 GetBoardArtVisibleRect()
+	private static Rect2 GetAuthoredControlRect(Control control, Rect2 parentRect)
 	{
-		return GameBoardLayoutGeometry.GetBoardArtVisibleRect(
-			_boardArt,
-			GameBoardLayoutGeometry.DefaultBoardDesignSize,
-			new Rect2(Vector2.Zero, Size));
+		Vector2 topLeft = parentRect.Position
+			+ parentRect.Size * new Vector2(control.AnchorLeft, control.AnchorTop)
+			+ new Vector2(control.OffsetLeft, control.OffsetTop);
+		Vector2 bottomRight = parentRect.Position
+			+ parentRect.Size * new Vector2(control.AnchorRight, control.AnchorBottom)
+			+ new Vector2(control.OffsetRight, control.OffsetBottom);
+		Vector2 unscaledSize = bottomRight - topLeft;
+		Vector2 scaledPosition = topLeft + control.PivotOffset - control.PivotOffset * control.Scale;
+		return new Rect2(scaledPosition, unscaledSize * control.Scale);
 	}
 
-	private Vector2 GetBoardArtTextureSize()
+	private void ApplyBoardLayoutProfile(GameBoardLayoutProfile profile, GameBoardLayoutVariant variant)
 	{
-		return GameBoardLayoutGeometry.ResolveBoardArtTextureSize(
-			_boardArt,
-			GameBoardLayoutGeometry.DefaultBoardDesignSize);
+		string[] playerAreaNames = { "BottomPlayerArea", "TopPlayerArea", "LeftPlayerArea", "RightPlayerArea" };
+		string[] avatarAreaNames = { "Player1AvatarArea", "Player2AvatarArea", "Player3AvatarArea", "Player4AvatarArea" };
+		string[] scoreMeterNames = { "Player1ScoreMeter", "Player2ScoreMeter", "Player3ScoreMeter", "Player4ScoreMeter" };
+		string[] scoreEffectNames = { "Player1ScoreEffectTarget", "Player2ScoreEffectTarget", "Player3ScoreEffectTarget", "Player4ScoreEffectTarget" };
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			Control playerArea = GetNode<Control>($"%{playerAreaNames[playerIndex]}");
+			ApplyControlRect(
+				playerArea,
+				new Rect2(Vector2.Zero, GameBoardLayoutGeometry.DesignSize),
+				clearMinimumSize: true);
+
+			Control avatarArea = GetNode<Control>($"%{avatarAreaNames[playerIndex]}");
+			Rect2 avatarRect = variant == GameBoardLayoutVariant.Standard && _authoredStandardAvatarAreas != null
+				? _authoredStandardAvatarAreas[playerIndex]
+				: profile.AvatarAreas[playerIndex];
+			ApplyControlRect(avatarArea, avatarRect, clearMinimumSize: true);
+			avatarArea.Scale = Vector2.One;
+
+			Control scoreMeter = GetNode<Control>($"%{scoreMeterNames[playerIndex]}");
+			Rect2 scoreMeterRect = variant == GameBoardLayoutVariant.Standard && _authoredStandardScoreMeters != null
+				? _authoredStandardScoreMeters[playerIndex]
+				: profile.ScoreMeters[playerIndex];
+			ApplyControlRect(scoreMeter, scoreMeterRect, clearMinimumSize: false);
+			scoreMeter.PivotOffset = scoreMeter.Size / 2.0f;
+
+			Marker2D scoreEffectTarget = GetNode<Marker2D>($"%{scoreEffectNames[playerIndex]}");
+			scoreEffectTarget.Position = variant == GameBoardLayoutVariant.Standard && _authoredStandardScoreEffectAnchors != null
+				? _authoredStandardScoreEffectAnchors[playerIndex]
+				: profile.ScoreEffectAnchors[playerIndex];
+
+			Control handArea = GetNode<Control>($"%Player{playerIndex + 1}HandArea");
+			ApplyControlRect(handArea, profile.HandAreas[playerIndex], clearMinimumSize: true);
+
+			Control pileArea = GetNode<Control>($"%Player{playerIndex + 1}CardPileArea");
+			ApplyControlRect(pileArea, profile.CardPileAreas[playerIndex], clearMinimumSize: true);
+		}
+
+		ApplyControlRect(GetNode<Control>("%TableCardLayoutArea"), profile.TableCardArea, clearMinimumSize: true);
+		ApplyControlRect(GetNode<Control>("%QuestionCardTransformArea"), profile.QuestionCardArea, clearMinimumSize: true);
+		ApplyControlRect(GetNode<Control>("%CenterArena"), profile.CenterArena, clearMinimumSize: true);
+		if (_questionCardTransformArea != null && GodotObject.IsInstanceValid(_questionCardTransformArea))
+		{
+			_questionCardTransformArea.PivotOffset = _questionCardTransformArea.Size / 2.0f;
+		}
+	}
+
+	private static void ApplyControlRect(Control control, Rect2 rect, bool clearMinimumSize)
+	{
+		control.SetAnchorsPreset(LayoutPreset.TopLeft);
+		control.Position = rect.Position;
+		if (clearMinimumSize)
+		{
+			control.CustomMinimumSize = Vector2.Zero;
+		}
+		control.Size = rect.Size;
+		control.Scale = Vector2.One;
+	}
+
+	private void MarkResponsiveBoardVisualsDirty()
+	{
+		_responsiveBoardVisualsDirty = true;
+	}
+
+	private void FlushResponsiveBoardVisualsIfNeeded()
+	{
+		if (!_responsiveBoardVisualsDirty)
+		{
+			return;
+		}
+
+		_responsiveBoardVisualsDirty = false;
+		RefreshResponsiveBoardVisuals();
 	}
 
 	private void CreatePlayerCardPiles()
@@ -116,365 +229,6 @@ public partial class GameBoardScene
 		{
 			panel.AddThemeStyleboxOverride("panel", styleBox);
 		}
-	}
-
-	private void CreateWinnerLabel()
-	{
-		PackedScene? resultBannerScene = GD.Load<PackedScene>(ResultBannerScenePath);
-		if (resultBannerScene?.Instantiate() is not GameBoardResultBanner resultBanner)
-		{
-			GD.PushError($"Missing result banner scene: {ResultBannerScenePath}");
-			return;
-		}
-
-		AddChild(resultBanner);
-		_winnerBannerRoot = resultBanner;
-		_winnerBannerPanel = resultBanner.BannerPanel;
-		_winnerBannerArt = resultBanner.BannerArt;
-		_winnerLabel = resultBanner.WinnerLabel;
-		_resultAvatar = resultBanner.ResultAvatar;
-		_winnerReplayButton = resultBanner.PrimaryButton;
-		resultBanner.PrimaryPressed += PressWinnerPrimaryButton;
-		resultBanner.ReturnPressed += PressWinnerReturnButton;
-		UpdateWinnerPrimaryButton();
-		UpdateWinnerReturnButton();
-	}
-
-	private void CreateDefeatFinisherOverlay()
-	{
-		PackedScene? defeatFinisherScene = GD.Load<PackedScene>(DefeatFinisherOverlayScenePath);
-		if (defeatFinisherScene?.Instantiate() is not GameBoardDefeatFinisherOverlay defeatFinisher)
-		{
-			GD.PushError($"Missing defeat finisher overlay scene: {DefeatFinisherOverlayScenePath}");
-			return;
-		}
-
-		AddChild(defeatFinisher);
-		_defeatFinisherRoot = defeatFinisher;
-		_defeatFinisherTexture = defeatFinisher.FinisherTexture;
-	}
-
-	private void ShowWinnerBanner(int playerIndex)
-	{
-		_showingDefeatResult = ShouldShowDefeatResult(playerIndex);
-		_winnerLabel.Text = _showingDefeatResult
-			? Localize("GAME_DEFEAT")
-			: GetWinnerText(playerIndex);
-		UpdateWinnerPrimaryButton();
-		UpdateWinnerReturnButton();
-		ApplyWinnerLabelLayout();
-		_winnerLabel.Visible = true;
-		ApplyWinnerBannerArt();
-		UpdateResultAvatar();
-		if (_winnerBannerRoot == null)
-		{
-			return;
-		}
-
-		_winnerBannerRoot.Visible = true;
-		_winnerBannerRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		if (_winnerBannerPanel != null)
-		{
-			_winnerBannerPanel.Scale = new Vector2(0.92f, 0.92f);
-			_winnerBannerPanel.PivotOffset = _winnerBannerPanel.CustomMinimumSize / 2.0f;
-		}
-
-		Tween tween = CreateTween();
-		tween.SetTrans(Tween.TransitionType.Cubic);
-		tween.SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(_winnerBannerRoot, "modulate:a", 1.0f, 0.24f);
-		if (_winnerBannerPanel != null)
-		{
-			tween.Parallel().TweenProperty(_winnerBannerPanel, "scale", Vector2.One, 0.30f);
-		}
-
-		if (_winnerReplayButton != null && !_winnerReplayButton.Disabled)
-		{
-			_winnerReplayButton.GrabFocus();
-		}
-		else
-		{
-			_winnerBannerRoot.ReturnButton.GrabFocus();
-		}
-	}
-
-	private string GetWinnerText(int playerIndex)
-	{
-		string playerDisplayName = GetPlayerDisplayName(playerIndex);
-		string winnerText = LocalizeFormat("GAME_WINNER", playerDisplayName);
-		string legacyPlayerPrefix = LocalizeFormat("GAME_PLAYER", playerDisplayName);
-		return winnerText.StartsWith(legacyPlayerPrefix, StringComparison.Ordinal)
-			? playerDisplayName + winnerText[legacyPlayerPrefix.Length..]
-			: winnerText;
-	}
-
-	private string GetPlayerDisplayName(int playerIndex)
-	{
-		if (!adventure_mode && TryGetNetworkPlayerName(playerIndex, out string networkName))
-		{
-			return networkName;
-		}
-
-		if (!adventure_mode && IsLocalHandPlayer(playerIndex))
-		{
-			return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
-		}
-
-		if (adventure_mode && IsAdventureEnemyPlayer(playerIndex))
-		{
-			return LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(adventure_enemy_avatar_id));
-		}
-
-		return LocalizeFormat("GAME_PLAYER", playerIndex + 1);
-	}
-
-	private void HideWinnerBanner()
-	{
-		if (_winnerBannerRoot != null)
-		{
-			_winnerBannerRoot.Visible = false;
-			_winnerBannerRoot.Modulate = Colors.White;
-		}
-
-		if (_winnerBannerPanel != null)
-		{
-			_winnerBannerPanel.Scale = Vector2.One;
-		}
-
-		if (_resultAvatar != null)
-		{
-			_resultAvatar.Visible = false;
-		}
-
-		_winnerLabel.Visible = false;
-	}
-
-	private void RestartGameFromWinner()
-	{
-		if (ShouldRestartAdventureRunFromWinner())
-		{
-			RestartAdventureRunFromWinner();
-			return;
-		}
-
-		HideWinnerBanner();
-		DealCardsToPlayers(playOpeningDealAnimation: true);
-	}
-
-	private void PressWinnerPrimaryButton()
-	{
-		if (_winnerReplayButton != null && _winnerReplayButton.Disabled)
-		{
-			return;
-		}
-
-		if (ShouldAdvanceAdventureFromWinner())
-		{
-			StartNextAdventureStageFromWinner();
-			return;
-		}
-
-		RestartGameFromWinner();
-	}
-
-	private void PressWinnerReturnButton()
-	{
-		GetWinnerReturnAction().Invoke();
-	}
-
-	private void StartNextAdventureStageFromWinner()
-	{
-		if (!TryGetNextAdventureStageAvatarId(out string nextAvatarId))
-		{
-			RestartGameFromWinner();
-			return;
-		}
-
-		string gameBoardScenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(nextAvatarId);
-		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
-		if (gameBoardScene == null)
-		{
-			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
-			RestartGameFromWinner();
-			return;
-		}
-
-			if (AdventureCampaignCatalog.TryGetMainStageIndex(nextAvatarId, out int nextMainStageIndex))
-			{
-				AdvanceAdventureUpgradeRunToStage(nextMainStageIndex);
-			}
-		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
-	}
-
-	private bool ShouldRestartAdventureRunFromWinner()
-	{
-		return ShouldUseAdventureUpgradeSystem()
-			&& _winnerPlayerIndex >= 0
-			&& (_winnerPlayerIndex != MainPlayerIndex || !TryGetNextAdventureStageAvatarId(out _));
-	}
-
-	private void RestartAdventureRunFromWinner()
-	{
-		string firstAvatarId = GetFirstMainAdventureAvatarId();
-		string gameBoardScenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(firstAvatarId);
-		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
-		if (gameBoardScene == null)
-		{
-			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
-			HideWinnerBanner();
-			DealCardsToPlayers(playOpeningDealAnimation: true);
-			return;
-		}
-
-		GetAdventureRunSessionStore()?.BeginNewMainRun(
-			1,
-			GetFirstMainAdventureAvatarId());
-		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
-	}
-
-	private async Task StartNextAdventureStageWithTransitionAsync(PackedScene gameBoardScene, string nextAvatarId)
-	{
-		if (_isLeavingGame)
-		{
-			return;
-		}
-
-		_isLeavingGame = true;
-		if (_winnerReplayButton != null)
-		{
-			_winnerReplayButton.Disabled = true;
-		}
-
-		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
-		{
-			Node gameBoard = gameBoardScene.Instantiate();
-			gameBoard.Set("player_count", 2);
-			gameBoard.Set("item_mode", true);
-			gameBoard.Set("solo_mode", true);
-			gameBoard.Set("adventure_mode", true);
-			gameBoard.Set("adventure_enemy_avatar_id", nextAvatarId);
-			GetTree().Root.AddChild(gameBoard);
-			GetTree().CurrentScene = gameBoard;
-			QueueFree();
-		});
-	}
-
-	private void UpdateWinnerPrimaryButton()
-	{
-		if (_winnerReplayButton == null || !GodotObject.IsInstanceValid(_winnerReplayButton))
-		{
-			return;
-		}
-
-		bool shouldAdvanceAdventure = ShouldAdvanceAdventureFromWinner();
-		_winnerReplayButton.Disabled = !ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
-			IsNetworkMultiplayerMode(),
-			shouldAdvanceAdventure);
-		_winnerReplayButton.Text = Localize(shouldAdvanceAdventure ? "GAME_NEXT_ADVENTURE_STAGE" : "GAME_REPLAY");
-	}
-
-	private void UpdateWinnerReturnButton()
-	{
-		if (_winnerBannerRoot == null || !GodotObject.IsInstanceValid(_winnerBannerRoot))
-		{
-			return;
-		}
-
-		_winnerBannerRoot.ReturnButton.Text = Localize(GetWinnerReturnButtonKey());
-	}
-
-	private bool ShouldAdvanceAdventureFromWinner()
-	{
-		return _gameModePolicy.IsAdventureMain
-			&& _winnerPlayerIndex == MainPlayerIndex
-			&& TryGetNextAdventureStageAvatarId(out _);
-	}
-
-	private bool TryGetNextAdventureStageAvatarId(out string nextAvatarId)
-	{
-		if (!AdventureCampaignCatalog.TryGetMainStageIndex(adventure_enemy_avatar_id, out int currentStage))
-		{
-			nextAvatarId = string.Empty;
-			return false;
-		}
-
-		int nextStage = currentStage + 1;
-		if (nextStage > AdventureCampaignCatalog.MainStageCount
-			|| !CharacterAvatarCatalog.IsAdventureStageUnlocked(nextStage))
-		{
-			nextAvatarId = string.Empty;
-			return false;
-		}
-
-		nextAvatarId = AdventureCampaignCatalog.GetMainAvatarId(nextStage);
-		return !string.IsNullOrEmpty(nextAvatarId);
-	}
-
-	private string GetWinnerReturnButtonKey()
-	{
-		return _gameModePolicy.IsAdventure ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
-	}
-
-	private Action GetWinnerReturnAction()
-	{
-		return _gameModePolicy.IsAdventure ? ReturnToAdventureMenu : ReturnToMainMenu;
-	}
-
-	private static Texture2D? LoadTextureWithImageFallback(string path)
-	{
-		return FrameAnimationHelpers.LoadTextureResource(path, allowEditorImageFallback: true);
-	}
-
-	private bool ShouldShowDefeatResult(int winnerPlayerIndex)
-	{
-		return ResultPresentationRules.ShouldShowDefeatResult(
-			winnerPlayerIndex,
-			IsNetworkMultiplayerMode() ? GetLocalHandPlayerIndex() : MainPlayerIndex,
-			IsNetworkMultiplayerMode(),
-			adventure_mode,
-			solo_mode);
-	}
-
-	private void ApplyWinnerLabelLayout()
-	{
-		if (_winnerLabel == null || !GodotObject.IsInstanceValid(_winnerLabel))
-		{
-			return;
-		}
-
-		_winnerLabel.OffsetLeft = 76.0f;
-		_winnerLabel.OffsetTop = 86.0f;
-		_winnerLabel.OffsetRight = -76.0f;
-		_winnerLabel.OffsetBottom = -118.0f;
-		_winnerLabel.HorizontalAlignment = HorizontalAlignment.Center;
-	}
-
-	private void ApplyWinnerBannerArt()
-	{
-		if (_winnerBannerArt == null || !GodotObject.IsInstanceValid(_winnerBannerArt))
-		{
-			return;
-		}
-
-		string texturePath = _showingDefeatResult ? DefeatBannerTexturePath : VictoryBannerTexturePath;
-		Texture2D? texture = LoadTextureWithImageFallback(texturePath);
-		if (texture == null)
-		{
-			GD.PushWarning($"Missing result banner texture: {texturePath}");
-			return;
-		}
-
-		_winnerBannerArt.Texture = texture;
-	}
-
-	private void UpdateResultAvatar()
-	{
-		if (_resultAvatar == null || !GodotObject.IsInstanceValid(_resultAvatar))
-		{
-			return;
-		}
-
-		_resultAvatar.Visible = false;
 	}
 
 	private Vector2 GetHandAreaSize(int playerIndex)

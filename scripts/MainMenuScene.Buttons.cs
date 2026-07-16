@@ -32,6 +32,7 @@ public partial class MainMenuScene : Control
 		_singlePlayerButton.Disabled = disabled;
 		_adventureButton.Disabled = disabled;
 		_multiplayerButton.Disabled = disabled;
+		_skillCodexButton.Disabled = disabled;
 		_settingsButton.Disabled = disabled;
 		_exitButton.Disabled = disabled;
 	}

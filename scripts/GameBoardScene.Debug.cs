@@ -172,6 +172,66 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	public Godot.Collections.Dictionary DebugProbeAdventureEnemyLowTableAi(
+		bool includeCaptureCandidate,
+		int tableCardCount,
+		int decisionRollPercent,
+		int randomCandidateOrdinal)
+	{
+		var result = new Godot.Collections.Dictionary
+		{
+			["eligible"] = false,
+			["kind"] = EnemyAiRules.AdventureSelectionKind.None.ToString(),
+			["hand_index"] = -1,
+		};
+		if (tableCardCount < 0
+			|| tableCardCount > 4
+			|| _playerHands.Count <= 1
+			|| _playerDecks.Count <= 1
+			|| _playerItemHands.Count <= 1)
+		{
+			return result;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "2"),
+			("Spades", "3"),
+			("Diamonds", "4"),
+			("Clubs", "5"),
+			("Hearts", "Q"),
+			("Clubs", "K"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return result;
+		}
+
+		_tableCards.Clear();
+		string[] tableCardKeys = { "Hearts:2", "Spades:3", "Diamonds:4", "Clubs:5" };
+		for (int index = 0; index < tableCardCount; index++)
+		{
+			_tableCards.Add(new TableCard(cards[tableCardKeys[index]], true));
+		}
+
+		_playerHands[1].Clear();
+		_playerItemHands[1].Clear();
+		_playerHands[1].Add(includeCaptureCandidate && tableCardCount > 0
+			? cards[tableCardKeys[0]]
+			: cards["Hearts:Q"]);
+		_playerHands[1].Add(cards["Clubs:K"]);
+
+		bool eligible = TrySelectMainAdventureEnemyCard(
+			1,
+			decisionRollPercent,
+			randomCandidateOrdinal,
+			out EnemyAiRules.AdventureSelectionResult selection);
+		result["eligible"] = eligible;
+		result["kind"] = selection.Kind.ToString();
+		result["hand_index"] = selection.HandIndex;
+		return result;
+	}
+
 	public bool DebugRestartWithoutOpeningDealAnimation()
 	{
 		if (!IsInsideTree()
@@ -1598,9 +1658,9 @@ public partial class GameBoardScene
 	{
 		AdventureUpgradeOverlayOptionModel[] options =
 		{
-			new("clubs", "common", "示例强化一。"),
-			new("diamonds", "rare", "示例强化二。"),
-			new("spades", "uncommon", "示例强化三。"),
+			new("hearts", "common", "温流补给", "每个实际回合首次收牌后，额外抽 1 张牌。"),
+			new("diamonds", "rare", "潮汐回响", "获得奖励时，有 30% 概率再次获得 1 次。"),
+			new("clubs", "legendary", "珊瑚冠冕", "连续收牌时，额外获得 3 分。"),
 		};
 		return ShowAdventureUpgradeSelectionOverlay(options);
 	}
@@ -1850,6 +1910,77 @@ public partial class GameBoardScene
 	public int DebugGetAdventureAcquiredUpgradeCount()
 	{
 		return GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds().Count ?? 0;
+	}
+
+	public Godot.Collections.Dictionary DebugGetAdventureRunStateSnapshot()
+	{
+		var result = new Godot.Collections.Dictionary
+		{
+			["active"] = false,
+			["main_stage_index"] = 0,
+			["enemy_avatar_id"] = string.Empty,
+			["current_health"] = 0,
+			["max_health"] = 0,
+			["has_used_revive"] = false,
+			["acquired_upgrade_count"] = 0,
+			["defeat_resolution"] = _settledAdventureDefeatResolution?.ToString() ?? string.Empty,
+		};
+
+		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return result;
+		}
+
+		result["active"] = true;
+		result["main_stage_index"] = runState.MainStageIndex;
+		result["enemy_avatar_id"] = runState.EnemyAvatarId;
+		result["current_health"] = runState.CurrentHealth;
+		result["max_health"] = runState.MaxHealth;
+		result["has_used_revive"] = runState.HasUsedRevive;
+		result["acquired_upgrade_count"] = runState.GetAcquiredUpgradeIds().Count;
+		return result;
+	}
+
+	public bool DebugIsWinnerBannerVisible()
+	{
+		return _winnerBannerRoot != null
+			&& GodotObject.IsInstanceValid(_winnerBannerRoot)
+			&& _winnerBannerRoot.Visible;
+	}
+
+	public string DebugGetWinnerPrimaryButtonText()
+	{
+		return _winnerReplayButton != null && GodotObject.IsInstanceValid(_winnerReplayButton)
+			? _winnerReplayButton.Text
+			: string.Empty;
+	}
+
+	public bool DebugPressWinnerPrimaryButton()
+	{
+		if (!DebugIsWinnerBannerVisible()
+			|| _winnerReplayButton == null
+			|| !GodotObject.IsInstanceValid(_winnerReplayButton)
+			|| _winnerReplayButton.Disabled)
+		{
+			return false;
+		}
+
+		PressWinnerPrimaryButton();
+		return true;
+	}
+
+	public bool DebugPressWinnerReturnButton()
+	{
+		if (!DebugIsWinnerBannerVisible()
+			|| _winnerBannerRoot == null
+			|| !GodotObject.IsInstanceValid(_winnerBannerRoot))
+		{
+			return false;
+		}
+
+		PressWinnerReturnButton();
+		return true;
 	}
 
 	public int DebugGetPendingAdventureUpgradeTriggerCount()

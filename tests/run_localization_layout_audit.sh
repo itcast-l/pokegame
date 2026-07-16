@@ -20,7 +20,7 @@ TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
 LOG_FILE="$TMP_DIR/localization-layout-audit.log"
 LOCALIZATION_LAYOUT_SCENE_ALLOWLIST="$(cat <<'EOF'
-res://scenes/main_menu_scene.tscn;res://scenes/main_menu_player_count_dialog.tscn;res://scenes/main_menu_settings_dialog.tscn;res://scenes/main_menu_controls_dialog.tscn;res://scenes/main_menu_exit_dialog.tscn;res://scenes/main_menu_avatar_entry.tscn;res://scenes/character_avatar_edit_scene.tscn;res://scenes/avatar_unlock_prompt.tscn;res://scenes/multiplayer_lobby_scene.tscn;res://scenes/multiplayer_lobby_room_row.tscn;res://scenes/multiplayer_lobby_player_row.tscn;res://scenes/game_board_result_banner.tscn;res://scenes/pause_menu.tscn;res://scenes/item_selection_overlay.tscn;res://scenes/adventure_avatar_menu_scene.tscn;res://scenes/adventure_level_entry.tscn;res://scenes/adventure_mode_entry.tscn;res://scenes/adventure_upgrade_selection_overlay.tscn
+res://scenes/main_menu_scene.tscn;res://scenes/main_menu_skill_codex_overlay.tscn;res://scenes/main_menu_player_count_dialog.tscn;res://scenes/main_menu_settings_dialog.tscn;res://scenes/main_menu_controls_dialog.tscn;res://scenes/main_menu_exit_dialog.tscn;res://scenes/main_menu_avatar_entry.tscn;res://scenes/character_avatar_edit_scene.tscn;res://scenes/avatar_unlock_prompt.tscn;res://scenes/multiplayer_lobby_scene.tscn;res://scenes/multiplayer_lobby_room_row.tscn;res://scenes/multiplayer_lobby_player_row.tscn;res://scenes/game_board_result_banner.tscn;res://scenes/pause_menu.tscn;res://scenes/item_selection_overlay.tscn;res://scenes/adventure_avatar_menu_scene.tscn;res://scenes/adventure_level_entry.tscn;res://scenes/adventure_mode_entry.tscn;res://scenes/adventure_upgrade_selection_overlay.tscn
 EOF
 )"
 

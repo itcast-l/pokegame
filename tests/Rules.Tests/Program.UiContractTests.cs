@@ -906,18 +906,29 @@ internal static partial class Program
 		False(text.Contains("normalizedRarity == ", StringComparison.Ordinal));
 	}
 
-	private static void AdventureUpgradePreviewScriptReadsPopupArtMetadataFromCatalog()
+	private static void AdventureUpgradePreviewUsesSharedCatalogCardInstances()
 	{
-		string previewScriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "UpgradeChoicePopupPreview.gd");
-		string text = File.ReadAllText(previewScriptPath);
+		string repoRoot = FindRepositoryRoot();
+		string previewScenePath = Path.Combine(repoRoot, "scenes", "upgrade_choice_popup_asset_scene.tscn");
+		string sharedCardScenePath = Path.Combine(repoRoot, "scenes", "adventure_upgrade_catalog_card.tscn");
+		string sharedCardScriptPath = Path.Combine(repoRoot, "scripts", "AdventureUpgradeCatalogCard.cs");
+		string text = File.ReadAllText(previewScenePath);
 
-		True(text.Contains("resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres", StringComparison.Ordinal));
+		True(File.Exists(sharedCardScenePath));
+		True(File.Exists(sharedCardScriptPath));
+		Equal(12, Regex.Matches(text, @"instance=ExtResource\(""2_card""\)").Count);
+		Equal(3, Regex.Matches(text, @"PreviewSuit = ""hearts""").Count);
+		Equal(3, Regex.Matches(text, @"PreviewSuit = ""diamonds""").Count);
+		Equal(3, Regex.Matches(text, @"PreviewSuit = ""spades""").Count);
+		Equal(3, Regex.Matches(text, @"PreviewSuit = ""clubs""").Count);
+		False(text.Contains("AtlasTexture", StringComparison.Ordinal));
+		False(text.Contains("UpgradeChoicePopupPreview.gd", StringComparison.Ordinal));
 		False(text.Contains("hearts-common.png", StringComparison.Ordinal));
 		False(text.Contains("spades-common.png", StringComparison.Ordinal));
 		False(text.Contains("diamonds-common.png", StringComparison.Ordinal));
 		False(text.Contains("clubs-common.png", StringComparison.Ordinal));
-		False(text.Contains("Image.new()", StringComparison.Ordinal));
-		False(text.Contains("ImageTexture.create_from_image", StringComparison.OrdinalIgnoreCase));
+		string cardScript = File.ReadAllText(sharedCardScriptPath);
+		True(cardScript.Contains("LoadAtlasTextureForRarity", StringComparison.Ordinal));
 	}
 
 	private static void AdventureUpgradeOverlaySampleArtUsesCatalogKeysInsteadOfHardcodedAtlasMetadata()

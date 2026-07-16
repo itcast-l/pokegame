@@ -36,7 +36,7 @@ if [[ "$GODOT_STATUS" -ne 0 ]]; then
 	exit "$GODOT_STATUS"
 fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if grep -Eq "SCRIPT ERROR|^ERROR:|Failed to load resource|No loader found" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

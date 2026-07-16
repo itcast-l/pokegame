@@ -22,11 +22,14 @@ internal static class NetworkAiFallbackRules
 		int randomCaptureOrdinal,
 		out int handIndex)
 	{
-		return EnemyAiRules.TryPickCaptureCardIndex(
+		return EnemyAiRules.TryPickLegacyCaptureCardIndex(
 			tableCards,
 			handCards,
 			context,
-			EnemyAiRules.GetAdventureProfile(stageNumber: 1),
+			bestCaptureChancePercent: 25,
+			anyCaptureChancePercent: 15,
+			usePointScoring: false,
+			avoidPairOnlyCaptures: true,
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent,
 			randomCaptureOrdinal,

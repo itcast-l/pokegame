@@ -34,6 +34,7 @@ fi
 
 set +e
 CODEX_VERTICAL_BACKDROP_GUIDE_OUTPUT="$OUTPUT_PATH" \
+	CODEX_VERTICAL_BACKDROP_KEEP_RUNTIME_SCRIPT="1" \
 	"$GODOT_CMD" "${GODOT_ARGS[@]}" >"$LOG_FILE" 2>&1
 GODOT_STATUS=$?
 set -e
@@ -43,7 +44,7 @@ if [[ "$GODOT_STATUS" -ne 0 ]]; then
 	exit "$GODOT_STATUS"
 fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if grep -Eq "SCRIPT ERROR|^ERROR:|Failed to load resource|No loader found" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

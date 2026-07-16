@@ -56,6 +56,7 @@ public partial class GameBoardScene
 		_isProcessingCardPlay = false;
 		_isOpeningDealAnimationPlaying = playOpeningDealAnimation;
 		_winnerPlayerIndex = -1;
+		_settledAdventureDefeatResolution = null;
 		ResetPlayerAvatarActions();
 		ResetPlayerScores();
 		if (_defeatFinisherRoot != null && GodotObject.IsInstanceValid(_defeatFinisherRoot))

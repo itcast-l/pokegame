@@ -386,6 +386,8 @@ public partial class GameBoardScene : Control
 	private Control _leftPlayerArea = default!;
 	private Control _rightPlayerArea = default!;
 	private Control _questionCardTransformArea = default!;
+	private TextureRect _backdropFill = default!;
+	private Control _boardCanvas = default!;
 	private TextureRect _verticalBackdrop = default!;
 	private TextureRect _boardArt = default!;
 	private Control _layoutAreas = default!;
@@ -418,9 +420,11 @@ public partial class GameBoardScene : Control
 			EnsureItemModeResourcesLoaded();
 		}
 
-		_verticalBackdrop = GetNode<TextureRect>("VerticalBackdrop");
-		_boardArt = GetNode<TextureRect>("BoardArt");
-		_layoutAreas = GetNode<Control>("LayoutAreas");
+		_backdropFill = GetNode<TextureRect>("BackdropFill");
+		_boardCanvas = GetNode<Control>("BoardCanvas");
+		_verticalBackdrop = GetNode<TextureRect>("BoardCanvas/VerticalBackdrop");
+		_boardArt = GetNode<TextureRect>("BoardCanvas/BoardArt");
+		_layoutAreas = GetNode<Control>("BoardCanvas/LayoutAreas");
 		RefreshResponsiveBoardLayout();
 		_centerArena = GetNode<Control>("%CenterArena");
 		_tableCardLayoutArea = GetNode<Control>("%TableCardLayoutArea");
@@ -552,6 +556,7 @@ public partial class GameBoardScene : Control
 	{
 		UpdateMagnetAttachmentCountdown(delta);
 		UpdateAdventureUpgradeOverlayCardMotion(delta);
+		FlushResponsiveBoardVisualsIfNeeded();
 		FlushUiDirtyFlagsIfNeeded();
 	}
 

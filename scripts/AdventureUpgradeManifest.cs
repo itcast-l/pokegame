@@ -472,7 +472,7 @@ internal sealed class AdventureUpgradeManifest
 			return false;
 		}
 
-		return sourceSchemaVersion >= AdventureUpgradeRunSnapshot.CurrentSchemaVersion
+		return sourceSchemaVersion >= 6
 			|| entry.LegacyIdMigrationPolicy
 				== AdventureUpgradeLegacyIdMigrationPolicy.KeepWhenEnabled;
 	}

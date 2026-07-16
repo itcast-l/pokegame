@@ -148,7 +148,7 @@ public sealed partial class ItemCardCatalog
 		catalog.LoadedFromPandora = loadedFromPandora;
 		foreach (ItemCardDefinition runtimeRule in GetResourceDefinitions().Values)
 		{
-			if (!loadedFromPandora && IsRuntimeRuleDefinition(runtimeRule))
+			if (IsRuntimeRuleDefinition(runtimeRule))
 			{
 				catalog._runtimeRulesById[runtimeRule.Id] = runtimeRule;
 			}

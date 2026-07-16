@@ -1,19 +1,19 @@
 extends SceneTree
 
 const SCENE_PATH := "res://scenes/upgrade_choice_popup_asset_scene.tscn"
-const TEXTURE_PATHS := [
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/CommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/UncommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/HeartsGroup/HeartsRow/RareCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/CommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/UncommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/SpadesGroup/SpadesRow/RareCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/CommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/UncommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/DiamondsGroup/DiamondsRow/RareCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/CommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/UncommonCard",
-	"Margin/Layout/PreviewPanel/PreviewMargin/PreviewLayout/SuitGroups/ClubsGroup/ClubsRow/RareCard",
+const CARD_PATHS := [
+	"Margin/Layout/SuitGroups/HeartsGroup/HeartsRow/CommonCard",
+	"Margin/Layout/SuitGroups/HeartsGroup/HeartsRow/UncommonCard",
+	"Margin/Layout/SuitGroups/HeartsGroup/HeartsRow/RareCard",
+	"Margin/Layout/SuitGroups/SpadesGroup/SpadesRow/CommonCard",
+	"Margin/Layout/SuitGroups/SpadesGroup/SpadesRow/UncommonCard",
+	"Margin/Layout/SuitGroups/SpadesGroup/SpadesRow/RareCard",
+	"Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow/CommonCard",
+	"Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow/UncommonCard",
+	"Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow/RareCard",
+	"Margin/Layout/SuitGroups/ClubsGroup/ClubsRow/CommonCard",
+	"Margin/Layout/SuitGroups/ClubsGroup/ClubsRow/UncommonCard",
+	"Margin/Layout/SuitGroups/ClubsGroup/ClubsRow/RareCard",
 ]
 const VIEWPORT_SIZE := Vector2i(1920, 1080)
 const EDGE_PADDING_PIXELS := 4
@@ -43,29 +43,33 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	var preview_nodes: Array[TextureRect] = []
-	for texture_path in TEXTURE_PATHS:
-		var texture_rect := instance.get_node_or_null(texture_path) as TextureRect
-		if texture_rect == null:
-			_fail("Missing preview texture node: %s" % texture_path)
+	var preview_cards: Array[Control] = []
+	for card_path in CARD_PATHS:
+		var card := instance.get_node_or_null(card_path) as Control
+		if card == null or not card.has_method("DebugGetCardState"):
+			_fail("Missing shared preview card: %s" % card_path)
 			return
-		preview_nodes.append(texture_rect)
+		preview_cards.append(card)
 
-	if preview_nodes.size() != 12:
-		_fail("Expected 12 preview texture nodes, got %d" % preview_nodes.size())
+	if preview_cards.size() != 12:
+		_fail("Expected 12 shared preview cards, got %d" % preview_cards.size())
 		return
 
-	for texture_rect in preview_nodes:
+	for card in preview_cards:
+		var texture_rect := card.get_node("CardTexture") as TextureRect
 		if texture_rect.texture == null:
 			_fail("Preview texture is null: %s" % texture_rect.get_path())
 			return
 		if not (texture_rect.texture is Texture2D):
 			_fail("Preview texture is not Texture2D: %s" % texture_rect.get_path())
 			return
-		if not _rect_inside_viewport(texture_rect.get_global_rect(), root.size):
-			_fail("Preview texture is clipped by viewport: %s rect=%s viewport=%s" % [
-				texture_rect.get_path(),
-				str(texture_rect.get_global_rect()),
+		if card.scene_file_path != "res://scenes/adventure_upgrade_catalog_card.tscn":
+			_fail("Preview card is not a shared scene instance: %s" % card.get_path())
+			return
+		if not _rect_inside_viewport(card.get_global_rect(), root.size):
+			_fail("Preview card is clipped by viewport: %s rect=%s viewport=%s" % [
+				card.get_path(),
+				str(card.get_global_rect()),
 				str(root.size),
 			])
 			return

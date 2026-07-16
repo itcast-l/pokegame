@@ -1,0 +1,227 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/MainMenuSkillCodexOverlay.cs" id="1_overlay"]
+[ext_resource type="PackedScene" path="res://scenes/adventure_upgrade_catalog_card.tscn" id="2_card"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_toolbar"]
+bg_color = Color(0.015, 0.085, 0.105, 0.96)
+border_width_bottom = 2
+border_color = Color(0.3, 0.82, 0.8, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.035, 0.18, 0.2, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.36, 0.86, 0.84, 0.62)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_focus"]
+bg_color = Color(0.06, 0.28, 0.28, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 1, 0.82, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="MainMenuSkillCodexOverlay" type="CanvasLayer"]
+layer = 9
+script = ExtResource("1_overlay")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Backdrop" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.005, 0.035, 0.055, 0.97)
+
+[node name="SafeMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 24
+
+[node name="Layout" type="VBoxContainer" parent="Root/SafeMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TopBar" type="PanelContainer" parent="Root/SafeMargin/Layout"]
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_toolbar")
+
+[node name="TopBarLayout" type="HBoxContainer" parent="Root/SafeMargin/Layout/TopBar"]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="Root/SafeMargin/Layout/TopBar/TopBarLayout"]
+custom_minimum_size = Vector2(148, 48)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_focus")
+text = "SKILL_CODEX_BACK"
+
+[node name="Title" type="Label" parent="Root/SafeMargin/Layout/TopBar/TopBarLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.92)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 30
+text = "SKILL_CODEX_TITLE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RightSpacer" type="Control" parent="Root/SafeMargin/Layout/TopBar/TopBarLayout"]
+custom_minimum_size = Vector2(148, 48)
+layout_mode = 2
+
+[node name="SuitTabs" type="HBoxContainer" parent="Root/SafeMargin/Layout"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="HeartsButton" type="Button" parent="Root/SafeMargin/Layout/SuitTabs"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+focus_mode = 2
+toggle_mode = true
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_focus")
+
+[node name="DiamondsButton" type="Button" parent="Root/SafeMargin/Layout/SuitTabs"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+focus_mode = 2
+toggle_mode = true
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_focus")
+
+[node name="SpadesButton" type="Button" parent="Root/SafeMargin/Layout/SuitTabs"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+focus_mode = 2
+toggle_mode = true
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_focus")
+
+[node name="ClubsButton" type="Button" parent="Root/SafeMargin/Layout/SuitTabs"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+focus_mode = 2
+toggle_mode = true
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_focus")
+
+[node name="CardScroll" type="ScrollContainer" parent="Root/SafeMargin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="GridCenter" type="CenterContainer" parent="Root/SafeMargin/Layout/CardScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="CardGrid" type="GridContainer" parent="Root/SafeMargin/Layout/CardScroll/GridCenter"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+columns = 4
+
+[node name="EmptyLabel" type="Label" parent="Root/SafeMargin/Layout"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.72, 0.9, 0.9, 0.9)
+theme_override_font_sizes/font_size = 22
+text = "SKILL_CODEX_EMPTY"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="PreviewLayer" type="Control" parent="Root"]
+visible = false
+z_index = 50
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Scrim" type="ColorRect" parent="Root/PreviewLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0.015, 0.025, 0.92)
+
+[node name="PreviewCenter" type="CenterContainer" parent="Root/PreviewLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PreviewCard" parent="Root/PreviewLayer/PreviewCenter" instance=ExtResource("2_card")]
+custom_minimum_size = Vector2(300, 493)
+layout_mode = 2
+
+[node name="PreviewFocusAnchor" type="Control" parent="Root/PreviewLayer"]
+custom_minimum_size = Vector2(1, 1)
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+focus_mode = 2

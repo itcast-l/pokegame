@@ -222,7 +222,7 @@ public partial class AdventureAvatarMenuScene
 		SuppressDefaultPressedSfx(cancelButton);
 
 		continueButton.Pressed += ContinueSavedAdventureRun;
-		restartButton.Pressed += RestartAdventureFromCurrentSelection;
+		restartButton.Pressed += RestartAdventureFromFirstStage;
 		cancelButton.Pressed += HideRunResumeDialog;
 		RefreshRunResumeDialogText();
 	}
@@ -462,6 +462,16 @@ public partial class AdventureAvatarMenuScene
 		}
 	}
 
+	private void ShowRunResumeDialogIfActive()
+	{
+		if (!_isStartingAdventure
+			&& !_isReturningToMainMenu
+			&& GetAdventureRunSessionStore()?.HasActiveRun == true)
+		{
+			ShowRunResumeDialog();
+		}
+	}
+
 	private void HideRunResumeDialog()
 	{
 		if (_runResumeDialogRoot == null || !GodotObject.IsInstanceValid(_runResumeDialogRoot))
@@ -545,13 +555,13 @@ public partial class AdventureAvatarMenuScene
 		});
 	}
 
-	private void RestartAdventureFromCurrentSelection()
+	private void RestartAdventureFromFirstStage()
 	{
 		GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		GetAdventureRunSessionStore()?.ClearRun();
 		HideRunResumeDialog();
 
-		string selectedAvatarId = _selectedAvatarId;
+		string selectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
 		string gameBoardScenePath = GetGameBoardScenePathForAvatar(selectedAvatarId);
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
 		if (gameBoardScene == null)
@@ -627,7 +637,7 @@ public partial class AdventureAvatarMenuScene
 			return false;
 		}
 
-		RestartAdventureFromCurrentSelection();
+		RestartAdventureFromFirstStage();
 		return true;
 	}
 }

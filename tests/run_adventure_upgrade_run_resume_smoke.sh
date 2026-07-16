@@ -26,7 +26,10 @@ cleanup() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureUpgradeRunResumeSmoke.gd >"$LOG_FILE" 2>&1
+if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureUpgradeRunResumeSmoke.gd >"$LOG_FILE" 2>&1; then
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
 
 if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2

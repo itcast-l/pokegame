@@ -3,7 +3,7 @@ extends SceneTree
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const LEFT_PLAYER_INDEX := 2
 const VIEWPORT_SIZE := Vector2i(616, 888)
-const LEFT_PILE_PATH := "LayoutAreas/Player3CardPileArea/Player3CardPile"
+const LEFT_PILE_PATH := "BoardCanvas/LayoutAreas/Player3CardPileArea/Player3CardPile"
 const CARD_VISUAL_SIZE := Vector2(84.0, 112.0)
 const MAX_ALIGNMENT_ERROR_PIXELS := 1.5
 

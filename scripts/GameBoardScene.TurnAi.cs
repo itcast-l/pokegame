@@ -11,6 +11,23 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
+		if (TrySelectMainAdventureEnemyCard(playerIndex, out EnemyAiRules.AdventureSelectionResult adventureSelection))
+		{
+			if (adventureSelection.Kind is EnemyAiRules.AdventureSelectionKind.Capture
+				or EnemyAiRules.AdventureSelectionKind.Build)
+			{
+				PlayCardResult selectedResult = await PlayCardFromHandAsync(
+					playerIndex,
+					adventureSelection.HandIndex,
+					turnSequenceGeneration);
+				return selectedResult.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
+					? selectedResult
+					: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
+			}
+
+			return await PlayRandomPlayableHandEntryWithoutCapturePriorityAsync(playerIndex, turnSequenceGeneration);
+		}
+
 		int playableItemCount = CountPlayableItemIndexes(playerIndex);
 		if (TryPickEarlyTableNewCardHandIndex(playerIndex, out int earlyTableHandIndex))
 		{
@@ -134,20 +151,49 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		int stageNumber = CharacterAvatarCatalog.GetAdventureStageNumber(adventure_enemy_avatar_id);
-		EnemyAiRules.AdventureProfile profile = EnemyAiRules.GetAdventureProfile(stageNumber);
+		return TryPickBestCaptureHandIndex(playerIndex, out handIndex);
+	}
+
+	private bool TrySelectMainAdventureEnemyCard(
+		int playerIndex,
+		out EnemyAiRules.AdventureSelectionResult selection)
+	{
+		return TrySelectMainAdventureEnemyCard(
+			playerIndex,
+			_rng.RandiRange(0, 99),
+			_rng.RandiRange(0, int.MaxValue),
+			out selection);
+	}
+
+	private bool TrySelectMainAdventureEnemyCard(
+		int playerIndex,
+		int decisionRollPercent,
+		int randomCandidateOrdinal,
+		out EnemyAiRules.AdventureSelectionResult selection)
+	{
+		selection = new EnemyAiRules.AdventureSelectionResult(
+			EnemyAiRules.AdventureSelectionKind.None,
+			-1);
+		if (!adventure_mode
+			|| adventure_tutorial_mode
+			|| !IsAdventureEnemyPlayer(playerIndex)
+			|| !AdventureCampaignCatalog.TryGetMainStageIndex(adventure_enemy_avatar_id, out int mainStageIndex))
+		{
+			return false;
+		}
+
 		int royalCaptureThreshold = IsBossKEnemy(playerIndex)
 			? GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
 			: int.MaxValue;
-		return EnemyAiRules.TryPickCaptureCardIndex(
+		selection = EnemyAiRules.SelectAdventureCard(
 			ToCaptureScoringTableCards(),
 			ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
 			BuildCaptureScoringContext(playerIndex),
-			profile,
+			EnemyAiRules.GetAdventureProfile(mainStageIndex),
 			royalCaptureThreshold,
-			_rng.RandiRange(0, 99),
-			_rng.RandiRange(0, 9999),
-			out handIndex);
+			decisionRollPercent,
+			randomCandidateOrdinal);
+		return true;
 	}
 
 	private bool TryPickEarlyTableNewCardHandIndex(int playerIndex, out int handIndex)

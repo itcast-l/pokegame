@@ -5,7 +5,7 @@ using System.Text.Json;
 
 public sealed partial class AdventureRunSessionStore : Node
 {
-	private static readonly HashSet<string> CanonicalV6PropertyNames = new(
+	private static readonly HashSet<string> CanonicalCurrentPropertyNames = new(
 		StringComparer.Ordinal)
 	{
 		nameof(AdventureUpgradeRunSnapshot.SchemaVersion),
@@ -20,6 +20,7 @@ public sealed partial class AdventureRunSessionStore : Node
 		nameof(AdventureUpgradeRunSnapshot.PermanentCaptureDamageBonus),
 		nameof(AdventureUpgradeRunSnapshot.QuestionRewardCount),
 		nameof(AdventureUpgradeRunSnapshot.HealingOverflowRemainder),
+		nameof(AdventureUpgradeRunSnapshot.HasUsedRevive),
 	};
 
 	private readonly AdventureUpgradeRunState _runState = new();
@@ -160,6 +161,21 @@ public sealed partial class AdventureRunSessionStore : Node
 		Persist();
 	}
 
+	internal AdventureDefeatResolution? ResolveMainAdventureDefeat()
+	{
+		if (!_gameModePolicy.IsAdventureMain
+			|| !_gameModePolicy.CanWriteAdventureRun
+			|| HasRetainedPayload
+			|| !_runState.IsActive)
+		{
+			return null;
+		}
+
+		AdventureDefeatResolution resolution = _runState.ResolveMainAdventureDefeat();
+		Persist();
+		return resolution;
+	}
+
 	internal void MarkRunStartUpgradeGranted()
 	{
 		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
@@ -268,12 +284,12 @@ public sealed partial class AdventureRunSessionStore : Node
 			return AdventureUpgradeRestoreResult.NoSnapshot;
 		}
 
-		bool requiresCanonicalV6Rewrite;
+		bool requiresCanonicalCurrentRewrite;
 		bool migratedBySchema;
 		try
 		{
 			using JsonDocument document = JsonDocument.Parse(json);
-			requiresCanonicalV6Rewrite = RequiresCanonicalV6Rewrite(document.RootElement);
+			requiresCanonicalCurrentRewrite = RequiresCanonicalCurrentRewrite(document.RootElement);
 		}
 		catch (JsonException error)
 		{
@@ -305,7 +321,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 		AdventureUpgradeRestoreResult result = _runState.RestoreFromSnapshot(snapshot);
 		if (result == AdventureUpgradeRestoreResult.Restored
-			&& (requiresCanonicalV6Rewrite || migratedBySchema))
+			&& (requiresCanonicalCurrentRewrite || migratedBySchema))
 		{
 			result = AdventureUpgradeRestoreResult.Migrated;
 		}
@@ -411,7 +427,7 @@ public sealed partial class AdventureRunSessionStore : Node
 	private bool HasRetainedPayload =>
 		_deferredPayload != null || _preservedFailurePayload != null;
 
-	private static bool RequiresCanonicalV6Rewrite(JsonElement root)
+	private static bool RequiresCanonicalCurrentRewrite(JsonElement root)
 	{
 		if (root.ValueKind != JsonValueKind.Object)
 		{
@@ -431,13 +447,13 @@ public sealed partial class AdventureRunSessionStore : Node
 		var observedPropertyNames = new HashSet<string>(StringComparer.Ordinal);
 		foreach (JsonProperty property in root.EnumerateObject())
 		{
-			if (!CanonicalV6PropertyNames.Contains(property.Name)
+			if (!CanonicalCurrentPropertyNames.Contains(property.Name)
 				|| !observedPropertyNames.Add(property.Name))
 			{
 				return true;
 			}
 		}
 
-		return observedPropertyNames.Count != CanonicalV6PropertyNames.Count;
+		return observedPropertyNames.Count != CanonicalCurrentPropertyNames.Count;
 	}
 }

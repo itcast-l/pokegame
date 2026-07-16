@@ -1,6 +1,12 @@
 using System;
 using System.Collections.Generic;
 
+internal enum AdventureDefeatResolution
+{
+	RetryCurrentStage,
+	RestartJourney,
+}
+
 internal sealed class AdventureUpgradeRunState
 {
 	private const int DefaultAdventurePlayerHealth = 100;
@@ -34,6 +40,7 @@ internal sealed class AdventureUpgradeRunState
 	internal bool ShouldGrantVictoryUpgrade { get; private set; }
 	internal int CurrentHealth { get; private set; } = DefaultAdventurePlayerHealth;
 	internal int MaxHealth { get; private set; } = DefaultAdventurePlayerHealth;
+	internal bool HasUsedRevive { get; private set; }
 	internal AdventureUpgradeEffectState EffectState => _effectState;
 	internal bool IsQuestionRewardEchoActive =>
 		HasAcquiredUpgrade(QuestionMarkEchoUpgradeId) && _effectState.QuestionRewardCount > 0;
@@ -116,7 +123,25 @@ internal sealed class AdventureUpgradeRunState
 		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndexFromMainStageIndex(mainStageIndex);
 		ShouldGrantRunStartUpgrade = false;
 		ShouldGrantVictoryUpgrade = true;
-		CurrentHealth = MaxHealth;
+	}
+
+	internal AdventureDefeatResolution ResolveMainAdventureDefeat()
+	{
+		if (!IsActive)
+		{
+			BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1));
+			return AdventureDefeatResolution.RestartJourney;
+		}
+
+		if (!HasUsedRevive)
+		{
+			HasUsedRevive = true;
+			CurrentHealth = Math.Max(1, MaxHealth / 2);
+			return AdventureDefeatResolution.RetryCurrentStage;
+		}
+
+		BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1));
+		return AdventureDefeatResolution.RestartJourney;
 	}
 
 	internal void MarkRunStartUpgradeGranted()
@@ -191,7 +216,8 @@ internal sealed class AdventureUpgradeRunState
 			MaxHealth,
 			_effectState.PermanentCaptureDamageBonus,
 			_effectState.QuestionRewardCount,
-			_effectState.HealingOverflowRemainder);
+			_effectState.HealingOverflowRemainder,
+			HasUsedRevive);
 	}
 
 	internal AdventureUpgradeRestoreResult RestoreFromSnapshot(AdventureUpgradeRunSnapshot snapshot)
@@ -242,6 +268,7 @@ internal sealed class AdventureUpgradeRunState
 		CurrentRunStageIndex = AdventureUpgradeChoiceRules.ToRunStageIndexFromMainStageIndex(mainStageIndex);
 		ShouldGrantRunStartUpgrade = snapshot.ShouldGrantRunStartUpgrade;
 		ShouldGrantVictoryUpgrade = snapshot.ShouldGrantVictoryUpgrade;
+		HasUsedRevive = snapshot.SchemaVersion >= 7 && snapshot.HasUsedRevive;
 		foreach (string upgradeId in sortedUpgradeIds)
 		{
 			AcquiredUpgradeIds.Add(upgradeId);
@@ -318,6 +345,7 @@ internal sealed class AdventureUpgradeRunState
 		CurrentRunStageIndex = 0;
 		ShouldGrantRunStartUpgrade = false;
 		ShouldGrantVictoryUpgrade = false;
+		HasUsedRevive = false;
 		CurrentHealth = DefaultAdventurePlayerHealth;
 		MaxHealth = DefaultAdventurePlayerHealth;
 		AcquiredUpgradeIds.Clear();
@@ -359,7 +387,7 @@ internal sealed class AdventureUpgradeRunState
 	{
 		mainStageIndex = 0;
 		enemyAvatarId = string.Empty;
-		if (snapshot.SchemaVersion < AdventureUpgradeRunSnapshot.CurrentSchemaVersion)
+		if (snapshot.SchemaVersion < 6)
 		{
 			if (!AdventureCampaignCatalog.TryMapLegacyRunStage(
 				snapshot.LegacyCurrentAvatarStageNumber != 0

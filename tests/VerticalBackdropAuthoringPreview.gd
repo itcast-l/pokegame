@@ -8,73 +8,73 @@ const DEFAULT_OUTPUT_PATH := "res://generated-images/vertical-backdrop-authoring
 const SETTLE_FRAMES := 2
 const GUIDE_AREAS := [
 	{
-		"path": "LayoutAreas/TopPlayerArea/Player2AvatarArea",
+		"path": "BoardCanvas/LayoutAreas/TopPlayerArea/Player2AvatarArea",
 		"label": "P2 avatar",
 		"border": Color(0.52, 0.98, 1.0, 0.95),
 		"fill": Color(0.52, 0.98, 1.0, 0.16),
 	},
 	{
-		"path": "LayoutAreas/Player2HandArea",
+		"path": "BoardCanvas/LayoutAreas/Player2HandArea",
 		"label": "P2 hand",
 		"border": Color(0.52, 0.98, 1.0, 0.95),
 		"fill": Color(0.52, 0.98, 1.0, 0.10),
 	},
 	{
-		"path": "LayoutAreas/Player2CardPileArea",
+		"path": "BoardCanvas/LayoutAreas/Player2CardPileArea",
 		"label": "P2 pile",
 		"border": Color(0.52, 0.98, 1.0, 0.95),
 		"fill": Color(0.52, 0.98, 1.0, 0.20),
 	},
 	{
-		"path": "LayoutAreas/BottomPlayerArea/Player1AvatarArea",
+		"path": "BoardCanvas/LayoutAreas/BottomPlayerArea/Player1AvatarArea",
 		"label": "P1 avatar",
 		"border": Color(1.0, 0.84, 0.48, 0.95),
 		"fill": Color(1.0, 0.84, 0.48, 0.16),
 	},
 	{
-		"path": "LayoutAreas/Player1HandArea",
+		"path": "BoardCanvas/LayoutAreas/Player1HandArea",
 		"label": "P1 hand",
 		"border": Color(1.0, 0.84, 0.48, 0.95),
 		"fill": Color(1.0, 0.84, 0.48, 0.10),
 	},
 	{
-		"path": "LayoutAreas/Player1CardPileArea",
+		"path": "BoardCanvas/LayoutAreas/Player1CardPileArea",
 		"label": "P1 pile",
 		"border": Color(1.0, 0.84, 0.48, 0.95),
 		"fill": Color(1.0, 0.84, 0.48, 0.20),
 	},
 	{
-		"path": "LayoutAreas/LeftPlayerArea/Player3AvatarArea",
+		"path": "BoardCanvas/LayoutAreas/LeftPlayerArea/Player3AvatarArea",
 		"label": "P3 avatar",
 		"border": Color(0.90, 0.54, 1.0, 0.95),
 		"fill": Color(0.90, 0.54, 1.0, 0.16),
 	},
 	{
-		"path": "LayoutAreas/Player3HandArea",
+		"path": "BoardCanvas/LayoutAreas/Player3HandArea",
 		"label": "P3 hand",
 		"border": Color(0.90, 0.54, 1.0, 0.95),
 		"fill": Color(0.90, 0.54, 1.0, 0.10),
 	},
 	{
-		"path": "LayoutAreas/Player3CardPileArea",
+		"path": "BoardCanvas/LayoutAreas/Player3CardPileArea",
 		"label": "P3 pile",
 		"border": Color(0.90, 0.54, 1.0, 0.95),
 		"fill": Color(0.90, 0.54, 1.0, 0.20),
 	},
 	{
-		"path": "LayoutAreas/RightPlayerArea/Player4AvatarArea",
+		"path": "BoardCanvas/LayoutAreas/RightPlayerArea/Player4AvatarArea",
 		"label": "P4 avatar",
 		"border": Color(0.44, 1.0, 0.66, 0.95),
 		"fill": Color(0.44, 1.0, 0.66, 0.16),
 	},
 	{
-		"path": "LayoutAreas/Player4HandArea",
+		"path": "BoardCanvas/LayoutAreas/Player4HandArea",
 		"label": "P4 hand",
 		"border": Color(0.44, 1.0, 0.66, 0.95),
 		"fill": Color(0.44, 1.0, 0.66, 0.10),
 	},
 	{
-		"path": "LayoutAreas/Player4CardPileArea",
+		"path": "BoardCanvas/LayoutAreas/Player4CardPileArea",
 		"label": "P4 pile",
 		"border": Color(0.44, 1.0, 0.66, 0.95),
 		"fill": Color(0.44, 1.0, 0.66, 0.20),
@@ -113,9 +113,9 @@ func _run() -> void:
 	for _frame in range(SETTLE_FRAMES):
 		await process_frame
 
-	var vertical_backdrop := board.get_node_or_null("VerticalBackdrop") as TextureRect
-	var board_art := board.get_node_or_null("BoardArt") as TextureRect
-	var layout_areas := board.get_node_or_null("LayoutAreas") as Control
+	var vertical_backdrop := board.get_node_or_null("BoardCanvas/VerticalBackdrop") as TextureRect
+	var board_art := board.get_node_or_null("BoardCanvas/BoardArt") as TextureRect
+	var layout_areas := board.get_node_or_null("BoardCanvas/LayoutAreas") as Control
 	if vertical_backdrop == null or board_art == null or layout_areas == null:
 		_fail("Scene missing VerticalBackdrop, BoardArt, or LayoutAreas")
 		return

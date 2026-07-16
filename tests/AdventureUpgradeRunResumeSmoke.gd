@@ -70,11 +70,16 @@ func _run() -> void:
 	if _failed or saved_avatar_restarted_board == null:
 		return
 
-	if String(saved_avatar_restarted_board.get("adventure_enemy_avatar_id")) != SAVED_RUN_AVATAR_ID:
-		_fail("Restart should use the currently highlighted saved avatar when it stays selected")
+	if String(saved_avatar_restarted_board.get("adventure_enemy_avatar_id")) != "shrimp":
+		_fail("Restart should always begin a new journey from the first main stage")
 		return
 
 	if not _assert_no_debug_setup(saved_avatar_restarted_board, "Restart on saved avatar"):
+		return
+	if not await _wait_for_upgrade_selection(saved_avatar_restarted_board):
+		return
+	if int(saved_avatar_restarted_board.call("DebugGetAdventureAcquiredUpgradeCount")) != 0:
+		_fail("Restart on saved avatar should clear previously acquired upgrades")
 		return
 
 	saved_avatar_restarted_board.queue_free()
@@ -96,18 +101,26 @@ func _run() -> void:
 	if _failed or restarted_board == null:
 		return
 
-	if String(restarted_board.get("adventure_enemy_avatar_id")) != RESTART_TARGET_AVATAR_ID:
-		_fail("Restart should start from the currently highlighted adventure selection")
+	if String(restarted_board.get("adventure_enemy_avatar_id")) != "shrimp":
+		_fail("Restart should ignore the highlighted selection and begin at the first main stage")
 		return
 
 	if not _assert_no_debug_setup(restarted_board, "Restart"):
 		return
 
-	if not await _wait_for_actionable_state(restarted_board):
+	if not await _wait_for_upgrade_selection(restarted_board):
 		return
 
 	if int(restarted_board.call("DebugGetAdventureAcquiredUpgradeCount")) != 0:
 		_fail("Restart should clear previously acquired adventure upgrades")
+		return
+	if not bool(restarted_board.call("DebugSelectAdventureUpgradeOption", 0)):
+		_fail("Failed to select the new journey's run-start upgrade")
+		return
+	if not await _wait_for_actionable_state(restarted_board):
+		return
+	if int(restarted_board.call("DebugGetAdventureAcquiredUpgradeCount")) != 1:
+		_fail("New first-stage journey should grant exactly one fresh run-start upgrade")
 		return
 
 	restarted_board.queue_free()

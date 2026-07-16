@@ -110,6 +110,7 @@ public partial class MainMenuScene : Control
 	private Button _controlsButton = default!;
 	private MainMenuAvatarEntry _avatarEntry = default!;
 	private MainMenuExitDialog _exitDialog = default!;
+	private CanvasLayer _exitDialogLayer = default!;
 	private Control _exitDialogRoot = default!;
 	private PanelContainer _exitDialogPanel = default!;
 	private Tween? _exitDialogTween;
@@ -196,6 +197,7 @@ public partial class MainMenuScene : Control
 
 		_multiplayerButton = GetNode<Button>(MultiplayerButtonPath);
 		_multiplayerButton.Pressed += StartMultiplayerLobby;
+		BindSkillCodexButton();
 
 		_settingsButton = GetNode<Button>(SettingsButtonPath);
 		_settingsButton.Pressed += ShowSettingsDialog;
@@ -218,6 +220,7 @@ public partial class MainMenuScene : Control
 		BuildSettingsDialog();
 		BuildControlsDialog();
 		BuildExitDialog();
+		BuildSkillCodexOverlay();
 		ConfigureMainMenuFocus();
 		LoadSettings();
 		ApplySelectedAvatar();
@@ -282,6 +285,13 @@ public partial class MainMenuScene : Control
 	{
 		if (TryHandleControlsBindingCapture(inputEvent))
 		{
+			return;
+		}
+
+		if (_skillCodexOverlay?.IsOpen == true && GameInputActions.IsCancelPressed(inputEvent))
+		{
+			_skillCodexOverlay.HandleCancel();
+			GetViewport().SetInputAsHandled();
 			return;
 		}
 

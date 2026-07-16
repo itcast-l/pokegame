@@ -3,39 +3,145 @@ using System.Collections.Generic;
 
 internal static class EnemyAiRules
 {
+	private static readonly AdventureSelectionResult NoAdventureSelection =
+		new(AdventureSelectionKind.None, -1);
+
 	internal readonly record struct AdventureProfile(
 		int BestCaptureChancePercent,
 		int AnyCaptureChancePercent,
-		bool UsePointScoring,
-		bool AvoidPairOnlyCaptures);
+		int PairOnlyCaptureChancePercent,
+		int EarlyBuildChancePercent,
+		bool UsePointScoring);
 
-	internal static AdventureProfile GetAdventureProfile(int stageNumber)
+	internal enum AdventureSelectionKind
 	{
-		return stageNumber switch
+		None,
+		Capture,
+		Build,
+	}
+
+	internal readonly record struct AdventureSelectionResult(
+		AdventureSelectionKind Kind,
+		int HandIndex);
+
+	internal static AdventureProfile GetAdventureProfile(int mainStageIndex)
+	{
+		return mainStageIndex switch
 		{
-			<= 1 => new AdventureProfile(25, 15, false, true),
-			2 => new AdventureProfile(35, 20, false, true),
-			3 => new AdventureProfile(45, 25, false, true),
-			4 => new AdventureProfile(55, 25, false, true),
-			5 => new AdventureProfile(65, 20, false, true),
-			6 => new AdventureProfile(70, 20, false, true),
-			7 => new AdventureProfile(75, 15, true, true),
-			8 => new AdventureProfile(78, 15, true, true),
-			9 => new AdventureProfile(85, 10, true, true),
-			10 => new AdventureProfile(90, 5, true, true),
-			11 => new AdventureProfile(92, 5, true, true),
-			12 => new AdventureProfile(95, 5, true, true),
-			13 => new AdventureProfile(97, 3, true, true),
-			14 => new AdventureProfile(65, 10, true, true),
-			_ => new AdventureProfile(100, 0, true, true),
+			<= 1 => new AdventureProfile(45, 25, 55, 55, false),
+			2 => new AdventureProfile(55, 25, 65, 55, false),
+			3 => new AdventureProfile(65, 20, 70, 55, false),
+			4 => new AdventureProfile(70, 20, 75, 35, false),
+			5 => new AdventureProfile(75, 15, 80, 35, true),
+			6 => new AdventureProfile(78, 15, 85, 35, true),
+			7 => new AdventureProfile(85, 10, 90, 20, true),
+			8 => new AdventureProfile(90, 5, 92, 20, true),
+			9 => new AdventureProfile(92, 5, 94, 20, true),
+			10 => new AdventureProfile(95, 5, 96, 10, true),
+			11 => new AdventureProfile(97, 3, 98, 10, true),
+			_ => new AdventureProfile(65, 10, 90, 10, true),
 		};
 	}
 
-	internal static bool TryPickCaptureCardIndex(
+	internal static AdventureSelectionResult SelectAdventureCard(
 		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
 		IReadOnlyList<PotentialCaptureRules.Card> handCards,
 		CaptureScoringRules.Context context,
 		AdventureProfile profile,
+		int royalCaptureThreshold,
+		int decisionRollPercent,
+		int randomCandidateOrdinal)
+	{
+		if (handCards.Count == 0)
+		{
+			return NoAdventureSelection;
+		}
+
+		var nonPairCaptureIndexes = new List<int>();
+		var pairOnlyCaptureIndexes = new List<int>();
+		for (int handIndex = 0; handIndex < handCards.Count; handIndex++)
+		{
+			PotentialCaptureRules.Card card = handCards[handIndex];
+			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) <= 0)
+			{
+				continue;
+			}
+
+			if (PotentialCaptureRules.IsPairOnlyCapture(tableCards, card))
+			{
+				pairOnlyCaptureIndexes.Add(handIndex);
+			}
+			else
+			{
+				nonPairCaptureIndexes.Add(handIndex);
+			}
+		}
+
+		int rollPercent = Math.Clamp(decisionRollPercent, 0, 99);
+		if (nonPairCaptureIndexes.Count > 0)
+		{
+			if (rollPercent < profile.BestCaptureChancePercent)
+			{
+				return new AdventureSelectionResult(
+					AdventureSelectionKind.Capture,
+					PickBestCaptureCardIndex(
+						tableCards,
+						handCards,
+						context,
+						profile.UsePointScoring,
+						royalCaptureThreshold,
+						nonPairCaptureIndexes));
+			}
+
+			if (rollPercent < profile.BestCaptureChancePercent + profile.AnyCaptureChancePercent)
+			{
+				return new AdventureSelectionResult(
+					AdventureSelectionKind.Capture,
+					PickCandidateByOrdinal(nonPairCaptureIndexes, randomCandidateOrdinal));
+			}
+
+			return NoAdventureSelection;
+		}
+
+		if (pairOnlyCaptureIndexes.Count > 0)
+		{
+			return rollPercent < profile.PairOnlyCaptureChancePercent
+				? new AdventureSelectionResult(
+					AdventureSelectionKind.Capture,
+					PickCandidateByOrdinal(pairOnlyCaptureIndexes, randomCandidateOrdinal))
+				: NoAdventureSelection;
+		}
+
+		if (tableCards.Count <= 2 && rollPercent < profile.EarlyBuildChancePercent)
+		{
+			var buildIndexes = new List<int>(handCards.Count);
+			for (int handIndex = 0; handIndex < handCards.Count; handIndex++)
+			{
+				if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, handCards[handIndex]) == 0)
+				{
+					buildIndexes.Add(handIndex);
+				}
+			}
+
+			if (buildIndexes.Count > 0)
+			{
+				return new AdventureSelectionResult(
+					AdventureSelectionKind.Build,
+					PickCandidateByOrdinal(buildIndexes, randomCandidateOrdinal));
+			}
+		}
+
+		return NoAdventureSelection;
+	}
+
+	internal static bool TryPickLegacyCaptureCardIndex(
+		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
+		IReadOnlyList<PotentialCaptureRules.Card> handCards,
+		CaptureScoringRules.Context context,
+		int bestCaptureChancePercent,
+		int anyCaptureChancePercent,
+		bool usePointScoring,
+		bool avoidPairOnlyCaptures,
 		int royalCaptureThreshold,
 		int decisionRollPercent,
 		int randomCaptureOrdinal,
@@ -47,53 +153,59 @@ internal static class EnemyAiRules
 			return false;
 		}
 
-		int rollPercent = Math.Clamp(decisionRollPercent, 0, 99);
-		if (rollPercent < profile.BestCaptureChancePercent)
+		var captureIndexes = new List<int>();
+		for (int index = 0; index < handCards.Count; index++)
 		{
-			return TryPickBestCaptureCardIndex(
+			PotentialCaptureRules.Card card = handCards[index];
+			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) > 0
+				&& (!avoidPairOnlyCaptures || !PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
+			{
+				captureIndexes.Add(index);
+			}
+		}
+
+		if (captureIndexes.Count == 0)
+		{
+			return false;
+		}
+
+		int rollPercent = Math.Clamp(decisionRollPercent, 0, 99);
+		if (rollPercent < bestCaptureChancePercent)
+		{
+			handIndex = PickBestCaptureCardIndex(
 				tableCards,
 				handCards,
 				context,
-				profile.UsePointScoring,
-				profile.AvoidPairOnlyCaptures,
+				usePointScoring,
 				royalCaptureThreshold,
-				out handIndex);
+				captureIndexes);
+			return true;
 		}
 
-		if (rollPercent < profile.BestCaptureChancePercent + profile.AnyCaptureChancePercent)
+		if (rollPercent < bestCaptureChancePercent + anyCaptureChancePercent)
 		{
-			return TryPickAnyCaptureCardIndex(
-				tableCards,
-				handCards,
-				profile.AvoidPairOnlyCaptures,
-				randomCaptureOrdinal,
-				out handIndex);
+			handIndex = PickCandidateByOrdinal(captureIndexes, randomCaptureOrdinal);
+			return true;
 		}
 
 		return false;
 	}
 
-	private static bool TryPickBestCaptureCardIndex(
+	private static int PickBestCaptureCardIndex(
 		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
 		IReadOnlyList<PotentialCaptureRules.Card> handCards,
 		CaptureScoringRules.Context context,
 		bool usePointScoring,
-		bool avoidPairOnlyCaptures,
 		int royalCaptureThreshold,
-		out int handIndex)
+		IReadOnlyList<int> candidateIndexes)
 	{
-		handIndex = -1;
-		int bestPrimaryScore = 0;
-		int bestCaptureCount = 0;
-		for (int index = 0; index < handCards.Count; index++)
+		int bestHandIndex = candidateIndexes[0];
+		int bestPrimaryScore = int.MinValue;
+		int bestCaptureCount = int.MinValue;
+		foreach (int handIndex in candidateIndexes)
 		{
-			PotentialCaptureRules.Card card = handCards[index];
+			PotentialCaptureRules.Card card = handCards[handIndex];
 			int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
-			if (captureCount <= 0 || (avoidPairOnlyCaptures && PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
-			{
-				continue;
-			}
-
 			int primaryScore = usePointScoring
 				? PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, context)
 				: captureCount;
@@ -102,64 +214,26 @@ internal static class EnemyAiRules
 				primaryScore += 1000 + captureCount;
 			}
 
-			if (primaryScore > bestPrimaryScore || (primaryScore == bestPrimaryScore && captureCount > bestCaptureCount))
+			if (primaryScore > bestPrimaryScore
+				|| (primaryScore == bestPrimaryScore && captureCount > bestCaptureCount))
 			{
 				bestPrimaryScore = primaryScore;
 				bestCaptureCount = captureCount;
-				handIndex = index;
+				bestHandIndex = handIndex;
 			}
 		}
 
-		return handIndex >= 0;
+		return bestHandIndex;
 	}
 
-	private static bool TryPickAnyCaptureCardIndex(
-		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
-		IReadOnlyList<PotentialCaptureRules.Card> handCards,
-		bool avoidPairOnlyCaptures,
-		int randomCaptureOrdinal,
-		out int handIndex)
+	private static int PickCandidateByOrdinal(IReadOnlyList<int> candidateIndexes, int ordinal)
 	{
-		handIndex = -1;
-		int preferredCaptureCardCount = 0;
-		foreach (PotentialCaptureRules.Card card in handCards)
+		int normalizedOrdinal = ordinal % candidateIndexes.Count;
+		if (normalizedOrdinal < 0)
 		{
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) > 0
-				&& (!avoidPairOnlyCaptures || !PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
-			{
-				preferredCaptureCardCount++;
-			}
+			normalizedOrdinal += candidateIndexes.Count;
 		}
 
-		if (preferredCaptureCardCount == 0)
-		{
-			return false;
-		}
-
-		int targetOrdinal = randomCaptureOrdinal % preferredCaptureCardCount;
-		if (targetOrdinal < 0)
-		{
-			targetOrdinal += preferredCaptureCardCount;
-		}
-
-		int currentOrdinal = 0;
-		for (int index = 0; index < handCards.Count; index++)
-		{
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, handCards[index]) <= 0
-				|| (avoidPairOnlyCaptures && PotentialCaptureRules.IsPairOnlyCapture(tableCards, handCards[index])))
-			{
-				continue;
-			}
-
-			if (currentOrdinal == targetOrdinal)
-			{
-				handIndex = index;
-				return true;
-			}
-
-			currentOrdinal++;
-		}
-
-		return false;
+		return candidateIndexes[normalizedOrdinal];
 	}
 }
