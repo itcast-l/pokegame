@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	if DisplayServer.get_name().to_lower() == "headless":
-		_fail("Pseudo-3D layout audit requires a GUI renderer")
+		_fail("Flat-card layout audit requires a GUI renderer")
 		return
 	for viewport_size in VIEWPORT_SIZES:
 		root.size = viewport_size
@@ -23,7 +23,7 @@ func _run() -> void:
 		if _failed or board == null:
 			return
 		if not bool(board.call("DebugShowAdventureUpgradeSelectionOverlaySample")):
-			_fail("Failed to show pseudo-3D overlay sample")
+			_fail("Failed to show flat-card overlay sample")
 			return
 		if not await _wait_for_unlock(board):
 			return
@@ -35,29 +35,34 @@ func _run() -> void:
 		if not _assert_layout(overlay, viewport_size):
 			return
 
-		board.call("DebugSetAdventureUpgradeFocusState", 1, false)
+		Input.warp_mouse(Vector2.ZERO)
+		await _wait_frames(2)
+		for option_index in range(3):
+			board.call("DebugSetAdventureUpgradeHoverState", option_index, false)
+			board.call("DebugSetAdventureUpgradeFocusState", option_index, false)
 		await _wait_frames(36)
 		var rest_image := root.get_texture().get_image()
 		if not _assert_nonblank_image(rest_image, viewport_size, "rest"):
 			return
 
 		if not bool(board.call("DebugSetAdventureUpgradeFocusState", 2, true)):
-			_fail("Failed to focus the third pseudo-3D card")
+			_fail("Failed to focus the third flat card")
 			return
 		if not await _wait_for_activation(board, 2):
 			return
 		var active_state := board.call("DebugGetAdventureUpgradeOverlayMotionState", 2) as Dictionary
-		var pseudo := active_state["pseudo_3d"] as Dictionary
-		if float(pseudo["shadow_alpha"]) < 0.4 \
-				or float(pseudo["glow_alpha"]) < 0.5 \
-				or float(pseudo["thickness_alpha_1"]) < 0.3 \
-				or float(pseudo["thickness_alpha_2"]) < 0.25 \
-				or float(pseudo["thickness_alpha_3"]) < 0.2 \
-				or not bool(pseudo["surface_has_texture"]) \
-				or not bool(pseudo.get("suit_has_texture", false)) \
-				or not bool(pseudo.get("suit_is_separate_layer", false)) \
-				or float(pseudo.get("suit_shadow_alpha", 0.0)) < 0.4:
-			_fail("Active card is missing independent surface suit shadow thickness or glow layers")
+		var visual := active_state["card_visual"] as Dictionary
+		if not bool(visual.get("surface_is_flat", false)) \
+				or int(visual.get("thickness_layer_count", -1)) != 0 \
+				or not String(visual.get("surface_shader_path", "")).is_empty() \
+				or float(visual["glow_alpha"]) < 0.5 \
+				or not bool(visual["surface_has_texture"]) \
+				or not bool(visual.get("uses_complete_card_texture", false)) \
+				or bool(visual.get("suit_is_separate_layer", true)):
+			_fail("Active card is not using the required flat presentation")
+			return
+		if absf(float(active_state.get("rotation_degrees", 1.0))) > 0.01:
+			_fail("Active card is not front-facing")
 			return
 
 		var active_image := root.get_texture().get_image()
@@ -65,16 +70,17 @@ func _run() -> void:
 			return
 		var third_button := overlay.get_node("Margin/Layout/CardsRow/Option3Button") as Control
 		var pixel_region := _to_pixel_rect(third_button.get_global_rect().grow(20.0), overlay, active_image.get_size())
-		if _count_changed_pixels(rest_image, active_image, pixel_region) < 500:
-			_fail("Active third card did not produce a meaningful pixel change at %s" % viewport_size)
-			return
+		var changed_pixel_count := _count_changed_pixels(rest_image, active_image, pixel_region)
 		if not _save_optional_screenshot(active_image, viewport_size):
+			return
+		if changed_pixel_count < 500:
+			_fail("Active third card changed only %d pixels at %s" % [changed_pixel_count, viewport_size])
 			return
 
 		board.queue_free()
 		await _wait_frames(6)
 
-	print("ADVENTURE_UPGRADE_PSEUDO_3D_LAYOUT_AUDIT_OK")
+	print("ADVENTURE_UPGRADE_FLAT_LAYOUT_AUDIT_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
 
@@ -112,7 +118,7 @@ func _wait_for_unlock(board: Node) -> bool:
 				ready = false
 		if ready:
 			return true
-	_fail("Timed out waiting for pseudo-3D overlay reveal states=%s" % [final_states])
+	_fail("Timed out waiting for flat-card overlay reveal states=%s" % [final_states])
 	return false
 
 
@@ -122,11 +128,10 @@ func _wait_for_activation(board: Node, option_index: int) -> bool:
 	while Time.get_ticks_msec() < deadline_msec:
 		await process_frame
 		final_state = board.call("DebugGetAdventureUpgradeOverlayMotionState", option_index) as Dictionary
-		var pseudo := final_state.get("pseudo_3d", {}) as Dictionary
-		if float(final_state.get("current_elevation", 0.0)) >= 0.99 \
-				and float(pseudo.get("highlight", 0.0)) >= 0.95:
+		var visual := final_state.get("card_visual", {}) as Dictionary
+		if float(visual.get("highlight", 0.0)) >= 0.95:
 			return true
-	_fail("Timed out waiting for pseudo-3D card activation state=%s" % [final_state])
+	_fail("Timed out waiting for flat-card activation state=%s" % [final_state])
 	return false
 
 
@@ -145,11 +150,11 @@ func _assert_layout(overlay: Control, viewport_size: Vector2i) -> bool:
 		var rect := button.get_global_rect()
 		if rect.position.x < overlay_rect.position.x - 1.0 or rect.position.y < overlay_rect.position.y - 1.0 \
 				or rect.end.x > overlay_rect.end.x + 1.0 or rect.end.y > overlay_rect.end.y + 1.0:
-			_fail("Pseudo-3D card leaves viewport at %s" % viewport_size)
+			_fail("Flat card leaves viewport at %s" % viewport_size)
 			return false
 		for existing in button_rects:
 			if rect.intersects(existing):
-				_fail("Pseudo-3D cards overlap at %s" % viewport_size)
+				_fail("Flat cards overlap at %s" % viewport_size)
 				return false
 		button_rects.append(rect)
 
@@ -204,13 +209,13 @@ func _to_pixel_rect(logical_rect: Rect2, overlay: Control, image_size: Vector2i)
 
 
 func _save_optional_screenshot(image: Image, viewport_size: Vector2i) -> bool:
-	var output_dir := OS.get_environment("PSEUDO_3D_SCREENSHOT_DIR").strip_edges()
+	var output_dir := OS.get_environment("FLAT_CARD_SCREENSHOT_DIR").strip_edges()
 	if output_dir.is_empty():
 		return true
-	var output_path := output_dir.path_join("adventure-upgrade-pseudo-3d-%dx%d.png" % [viewport_size.x, viewport_size.y])
+	var output_path := output_dir.path_join("adventure-upgrade-flat-%dx%d.png" % [viewport_size.x, viewport_size.y])
 	var save_error := image.save_png(output_path)
 	if save_error != OK:
-		_fail("Failed to save pseudo-3D screenshot: %s" % error_string(save_error))
+		_fail("Failed to save flat-card screenshot: %s" % error_string(save_error))
 		return false
 	return true
 
@@ -233,5 +238,5 @@ func _fail(message: String) -> void:
 		return
 	_failed = true
 	push_error(message)
-	print("ADVENTURE_UPGRADE_PSEUDO_3D_LAYOUT_AUDIT_FAIL %s" % message)
+	print("ADVENTURE_UPGRADE_FLAT_LAYOUT_AUDIT_FAIL %s" % message)
 	quit(1)

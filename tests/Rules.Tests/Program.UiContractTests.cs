@@ -893,7 +893,16 @@ internal static partial class Program
 	{
 		string runtimePath = Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs");
 		string text = File.ReadAllText(runtimePath);
-
+		string overlayRuntimePath = Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"GameBoardScene.AdventureUpgradeSelectionOverlay.cs");
+		string overlayText = File.ReadAllText(overlayRuntimePath);
+		string choiceArtPath = Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"AdventureUpgradeChoiceArt.cs");
+		string choiceArtText = File.ReadAllText(choiceArtPath);
 		False(text.Contains("GetAdventureUpgradeCardTextureRegion(", StringComparison.Ordinal));
 		False(text.Contains("GetAdventureUpgradeCardTexturePath(", StringComparison.Ordinal));
 		False(text.Contains("res://art/ui/adventure_upgrade_cards/hearts/processed/hearts-common.png", StringComparison.Ordinal));
@@ -904,6 +913,14 @@ internal static partial class Program
 		False(text.Contains("ApplyAdventureUpgradeChoicePalette(", StringComparison.Ordinal));
 		False(text.Contains("normalizedSuit == ", StringComparison.Ordinal));
 		False(text.Contains("normalizedRarity == ", StringComparison.Ordinal));
+		True(overlayText.Contains("AdventureUpgradeCardVisualResolver.LoadAtlasTextureForRarity", StringComparison.Ordinal));
+		False(overlayText.Contains("AdventureUpgradeChoiceVisualResolver.LoadCardBaseTexture", StringComparison.Ordinal));
+		False(overlayText.Contains("AdventureUpgradeChoiceVisualResolver.LoadSuitTexture", StringComparison.Ordinal));
+		False(overlayText.Contains("SetSuitVisualTier", StringComparison.Ordinal));
+		False(choiceArtText.Contains("adventure_upgrade_card_perspective", StringComparison.Ordinal));
+		False(choiceArtText.Contains("ThicknessLayer", StringComparison.Ordinal));
+		False(choiceArtText.Contains("SuitBadgeLayer", StringComparison.Ordinal));
+		False(choiceArtText.Contains("adventure_upgrade_card_cleanup", StringComparison.Ordinal));
 	}
 
 	private static void AdventureUpgradePreviewUsesSharedCatalogCardInstances()
@@ -929,6 +946,8 @@ internal static partial class Program
 		False(text.Contains("clubs-common.png", StringComparison.Ordinal));
 		string cardScript = File.ReadAllText(sharedCardScriptPath);
 		True(cardScript.Contains("LoadAtlasTextureForRarity", StringComparison.Ordinal));
+		False(cardScript.Contains("LoadCardBaseTexture", StringComparison.Ordinal));
+		False(cardScript.Contains("LoadSuitTexture", StringComparison.Ordinal));
 	}
 
 	private static void AdventureUpgradeOverlaySampleArtUsesCatalogKeysInsteadOfHardcodedAtlasMetadata()

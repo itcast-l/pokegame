@@ -66,6 +66,20 @@ func _run() -> void:
 			_fail("Fullscreen-to-windowed transition did not center the selected resolution")
 			return
 
+	# Recreating the menu after a native maximize must not restore the saved windowed size.
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED)
+	await process_frame
+	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MAXIMIZED:
+		menu.queue_free()
+		await process_frame
+		menu = await _instantiate_menu()
+		if menu == null:
+			return
+		await _wait_frames(3)
+		if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_MAXIMIZED:
+			_fail("Recreated main menu discarded the native maximized state")
+			return
+
 	print("MAIN_MENU_WINDOW_SETTINGS_TOKEN_SMOKE_OK")
 	menu.queue_free()
 	await process_frame

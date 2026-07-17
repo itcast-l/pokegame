@@ -2,9 +2,9 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_FRAMES := 240
-const REST_SCALE := 0.94
-const ACTIVE_SCALE := 1.0
-const ACTIVE_LIFT := 12.0
+const REST_SCALE := 0.97
+const ACTIVE_SCALE := 1.015
+const ACTIVE_LIFT := 8.0
 
 var _failed := false
 
@@ -60,30 +60,23 @@ func _run() -> void:
 	# Release the default focus so every card can settle at the shared resting state.
 	board.call("DebugSetAdventureUpgradeFocusState", 1, false)
 	await _wait_frames(24)
-	var baseline_perspective := {}
 	for option_index in range(3):
 		var state := _motion_state(board, option_index)
 		if state.is_empty():
 			_fail("Missing motion state for option %d" % option_index)
 			return
-		var pseudo := state["pseudo_3d"] as Dictionary
-		if not _assert_perspective_state(pseudo):
-			return
-		if option_index == 0:
-			baseline_perspective = _perspective_signature(pseudo)
-		elif _perspective_signature(pseudo) != baseline_perspective:
-			_fail("All three cards must use identical perspective parameters")
+		var visual := state["card_visual"] as Dictionary
+		if not _assert_flat_card_state(visual):
 			return
 		if absf((state["scale"] as Vector2).x - REST_SCALE) > 0.015:
 			_fail("Card did not settle to rest scale")
 			return
-		if absf(float(state["current_elevation"])) > 0.02:
-			_fail("Resting card retained elevation")
+		if absf(float(state["rotation_degrees"])) > 0.01:
+			_fail("Resting card is not front-facing")
 			return
 
 	var rest_state := _motion_state(board, 1)
 	var rest_position := rest_state["position"] as Vector2
-	var rest_perspective := _perspective_signature(rest_state["pseudo_3d"] as Dictionary)
 
 	# Mouse hover activation.
 	if not bool(board.call("DebugSetAdventureUpgradeHoverState", 1, true)):
@@ -92,32 +85,25 @@ func _run() -> void:
 	await process_frame
 	var hover_step := _motion_state(board, 1)
 	if not ((hover_step["position"] as Vector2).y < rest_position.y) \
-			or not ((hover_step["scale"] as Vector2).x > REST_SCALE) \
-			or float(hover_step["current_elevation"]) <= 0.0 \
-			or float(hover_step["current_elevation"]) >= 1.0:
-		_fail("Hover activation did not ease position scale and elevation")
+			or not ((hover_step["scale"] as Vector2).x > REST_SCALE):
+		_fail("Hover activation did not ease position and scale")
 		return
 	await _wait_frames(24)
 	var hover_settled := _motion_state(board, 1)
 	if absf((hover_settled["position"] as Vector2).y - (rest_position.y - ACTIVE_LIFT)) > 0.5:
-		_fail("Hover card did not settle 12px above rest")
+		_fail("Hover card did not settle 8px above rest")
 		return
 	if absf((hover_settled["scale"] as Vector2).x - ACTIVE_SCALE) > 0.01:
-		_fail("Hover card did not settle at scale 1.0")
-		return
-	if float(hover_settled["current_elevation"]) < 0.98:
-		_fail("Hover card did not reach full elevation")
+		_fail("Hover card did not settle at scale 1.015")
 		return
 	if int(hover_settled["frame_z_index"]) <= 0 or int(hover_settled["button_z_index"]) <= 0:
 		_fail("Hover card did not rise above sibling Z indices")
 		return
-	var hover_pseudo := hover_settled["pseudo_3d"] as Dictionary
-	if float(hover_pseudo["shadow_offset_y"]) < 15.5 \
-			or float(hover_pseudo["glow_alpha"]) <= 0.5:
-		_fail("Hover card shadow compensation or glow is incomplete")
-		return
-	if _perspective_signature(hover_pseudo) != rest_perspective:
-		_fail("Hover changed fixed perspective parameters")
+	var hover_visual := hover_settled["card_visual"] as Dictionary
+	if absf(float(hover_visual["shadow_offset_y"]) - 6.0) > 0.5 \
+			or float(hover_visual["glow_alpha"]) <= 0.5 \
+			or not bool(hover_visual.get("surface_is_flat", false)):
+		_fail("Hover card glow or flat presentation is incomplete")
 		return
 
 	board.call("DebugSetAdventureUpgradeHoverState", 1, false)
@@ -131,14 +117,13 @@ func _run() -> void:
 	await _wait_frames(24)
 	var focus_settled := _motion_state(board, 1)
 	if absf((focus_settled["position"] as Vector2).y - (rest_position.y - ACTIVE_LIFT)) > 0.5 \
-			or absf((focus_settled["scale"] as Vector2).x - ACTIVE_SCALE) > 0.01 \
-			or float(focus_settled["current_elevation"]) < 0.98:
+				or absf((focus_settled["scale"] as Vector2).x - ACTIVE_SCALE) > 0.01:
 		_fail("Focus does not match hover activation")
 		return
-	var focus_pseudo := focus_settled["pseudo_3d"] as Dictionary
-	if float(focus_pseudo["glow_alpha"]) <= 0.5 \
-			or _perspective_signature(focus_pseudo) != rest_perspective:
-		_fail("Focus glow or perspective does not match hover")
+	var focus_visual := focus_settled["card_visual"] as Dictionary
+	if float(focus_visual["glow_alpha"]) <= 0.5 \
+			or not bool(focus_visual.get("surface_is_flat", false)):
+		_fail("Focus glow or flat presentation does not match hover")
 		return
 
 	board.call("DebugSetAdventureUpgradeFocusState", 1, false)
@@ -179,81 +164,46 @@ func _wait_for_restored(board: Node, option_index: int, rest_position: Vector2) 
 		var state := _motion_state(board, option_index)
 		if state.is_empty():
 			continue
-		var pseudo := state["pseudo_3d"] as Dictionary
+		var visual := state["card_visual"] as Dictionary
 		if (state["position"] as Vector2).distance_to(rest_position) <= 0.5 \
 				and absf((state["scale"] as Vector2).x - REST_SCALE) <= 0.01 \
-				and absf(float(state["current_elevation"])) <= 0.02 \
-				and absf(float(pseudo["shadow_offset_y"]) - 8.0) <= 0.5 \
-				and float(pseudo["glow_alpha"]) <= 0.03:
+				and absf(float(visual["shadow_offset_y"]) - 6.0) <= 0.5 \
+				and float(visual["glow_alpha"]) <= 0.03:
 			return true
 	return _assert_restored(_motion_state(board, option_index), rest_position)
 
 
-func _assert_perspective_state(pseudo: Dictionary) -> bool:
-	if String(pseudo.get("shader_path", "")) != "res://shaders/adventure_upgrade_card_perspective.gdshader":
-		_fail("Card surface is missing the perspective shader")
+
+func _assert_flat_card_state(visual: Dictionary) -> bool:
+	if not bool(visual.get("surface_is_flat", false)) \
+			or int(visual.get("thickness_layer_count", -1)) != 0 \
+			or not String(visual.get("surface_shader_path", "")).is_empty():
+		_fail("Choice card must remain flat and free of perspective layers")
 		return false
-	if absf(float(pseudo["vertical_compression"]) - 0.96) > 0.001 \
-			or absf(float(pseudo["top_width_ratio"]) - 0.97) > 0.001 \
-			or absf(float(pseudo["bottom_width_ratio"]) - 1.0) > 0.001 \
-			or absf(float(pseudo["plane_rotation_degrees"])) > 0.001:
-		_fail("Perspective shader parameters do not match the fixed specification")
+	if int(visual["surface_material_id"]) != 0 \
+			or not bool(visual.get("glow_uses_outline_panel", false)):
+		_fail("Complete card texture must be unmodified and retain its outline glow")
 		return false
-	if bool(pseudo["description_has_material"]):
-		_fail("Description layer must not inherit perspective material")
+	if not bool(visual.get("surface_has_texture", false)) \
+			or not bool(visual.get("uses_complete_card_texture", false)) \
+			or bool(visual.get("suit_is_separate_layer", true)):
+		_fail("Choice card must use one complete suit-and-rarity texture")
 		return false
-	if int(pseudo["thickness_layer_count"]) != 3:
-		_fail("Choice art must expose three thickness layers")
-		return false
-	if int(pseudo["surface_material_id"]) == 0 \
-			or not bool(pseudo.get("glow_uses_outline_panel", false)):
-		_fail("Card surface or outline glow is missing")
-		return false
-	if not bool(pseudo.get("surface_has_texture", false)) \
-			or not bool(pseudo.get("suit_has_texture", false)) \
-			or not bool(pseudo.get("suit_is_separate_layer", false)):
-		_fail("Choice card must compose separate generated base and suit textures")
-		return false
-	if String(pseudo.get("card_texture_path", "")) != \
-			"res://art/ui/adventure_upgrade_choice_table/run-001/base/processed/raw-sheet-clean.png":
-		_fail("Choice card reused the skill-codex atlas instead of its generated table base")
-		return false
-	var suit_texture_path := String(pseudo.get("suit_texture_path", ""))
-	if not suit_texture_path.begins_with(
-			"res://art/ui/adventure_upgrade_choice_table/run-001/suits/processed/suit-"):
-		_fail("Choice suit badge is not loaded from the generated independent suit set")
-		return false
-	if float(pseudo.get("suit_shadow_alpha", 0.0)) < 0.25:
-		_fail("Choice suit badge is missing its independent contact-shadow layer")
-		return false
-	var suit_badge_rect := pseudo.get("suit_badge_rect", {}) as Dictionary
-	if suit_badge_rect.is_empty() \
-			or float(suit_badge_rect.get("width", 0.0)) < 120.0 \
-			or float(suit_badge_rect.get("height", 0.0)) < 140.0:
-		_fail("Choice suit badge is too small to reproduce the raised reference emblem")
+	if not String(visual.get("card_texture_path", "")).begins_with(
+			"res://art/ui/adventure_upgrade_cards/"):
+		_fail("Choice card did not use the promoted complete-card asset")
 		return false
 	return true
 
 
-func _perspective_signature(pseudo: Dictionary) -> Dictionary:
-	return {
-		"shader_path": pseudo["shader_path"],
-		"vertical_compression": pseudo["vertical_compression"],
-		"top_width_ratio": pseudo["top_width_ratio"],
-		"bottom_width_ratio": pseudo["bottom_width_ratio"],
-		"plane_rotation_degrees": pseudo["plane_rotation_degrees"],
-	}
-
-
 func _assert_restored(state: Dictionary, rest_position: Vector2) -> bool:
 	if (state["position"] as Vector2).distance_to(rest_position) > 0.5 \
-			or absf((state["scale"] as Vector2).x - REST_SCALE) > 0.01 \
-			or absf(float(state["current_elevation"])) > 0.02:
-		_fail("Card did not restore position scale and elevation")
+			or absf((state["scale"] as Vector2).x - REST_SCALE) > 0.01:
+		_fail("Card did not restore position and scale")
 		return false
-	var pseudo := state["pseudo_3d"] as Dictionary
-	if absf(float(pseudo["shadow_offset_y"]) - 8.0) > 0.5 or float(pseudo["glow_alpha"]) > 0.03:
-		_fail("Card did not restore shadow and glow: shadow=%s glow=%s elevation=%s" % [pseudo["shadow_offset_y"], pseudo["glow_alpha"], state["current_elevation"]])
+	var visual := state["card_visual"] as Dictionary
+	if absf(float(visual["shadow_offset_y"]) - 6.0) > 0.5 or float(visual["glow_alpha"]) > 0.03:
+		_fail("Card did not restore shadow and glow: shadow=%s glow=%s" % [visual["shadow_offset_y"], visual["glow_alpha"]])
 		return false
 	return true
 

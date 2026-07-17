@@ -82,6 +82,7 @@ public partial class AdventureAvatarMenuScene
 		string displayName = LocalizeAvatarDisplayName(avatarDefinition);
 		Label nameLabel = frame.GetNode<Label>("EntryContent/EntryRow/EntryName");
 		ApplyStageNameLabelText(nameLabel, displayName);
+		nameLabel.Resized += QueueStageNameSizingRefresh;
 		_stageNameLabels[avatarDefinition.Id] = nameLabel;
 
 		Label statusLabel = frame.GetNode<Label>("EntryContent/EntryRow/EntryStatus");

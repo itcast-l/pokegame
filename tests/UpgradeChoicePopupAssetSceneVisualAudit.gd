@@ -55,6 +55,7 @@ func _run() -> void:
 		_fail("Expected 12 shared preview cards, got %d" % preview_cards.size())
 		return
 
+	var complete_card_paths := {}
 	for card in preview_cards:
 		var texture_rect := card.get_node("CardTexture") as TextureRect
 		if texture_rect.texture == null:
@@ -76,9 +77,39 @@ func _run() -> void:
 		if _texture_touches_crop_edge(texture_rect.texture.get_image()):
 			_fail("Preview texture touches atlas crop edge: %s" % texture_rect.get_path())
 			return
+		var state := card.call("DebugGetCardState") as Dictionary
+		var card_path := String(state.get("card_texture_path", ""))
+		if not bool(state.get("uses_complete_card_texture", false)) \
+				or not card_path.begins_with("res://art/ui/adventure_upgrade_cards/"):
+			_fail("Preview card does not use a complete promoted card texture")
+			return
+		complete_card_paths[card_path] = true
+
+	if complete_card_paths.size() != 12:
+		_fail("Expected 12 distinct complete card textures, got %d" % complete_card_paths.size())
+		return
+	if not _save_optional_screenshot():
+		return
 
 	print("UPGRADE_CHOICE_POPUP_ASSET_SCENE_VISUAL_AUDIT_OK")
 	quit(0)
+
+
+func _save_optional_screenshot() -> bool:
+	var screenshot_dir := OS.get_environment("UPGRADE_CHOICE_SCREENSHOT_DIR")
+	if screenshot_dir.is_empty():
+		return true
+	var error := DirAccess.make_dir_recursive_absolute(screenshot_dir)
+	if error != OK:
+		_fail("Failed to create screenshot directory: %s" % screenshot_dir)
+		return false
+	var image := root.get_texture().get_image()
+	var path := screenshot_dir.path_join("upgrade-choice-12-card-consistency.png")
+	error = image.save_png(path)
+	if error != OK:
+		_fail("Failed to save screenshot: %s" % path)
+		return false
+	return true
 
 
 func _rect_inside_viewport(rect: Rect2, viewport_size: Vector2i) -> bool:

@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://de1hm5bj8p61c"]
+[gd_scene format=3 uid="uid://de1hm5bj8p61c"]
 
 [ext_resource type="FontFile" uid="uid://c4mm3of2mc8o5" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="1_font"]
 [ext_resource type="PackedScene" path="res://scenes/adventure_upgrade_catalog_card.tscn" id="2_card"]
 
-[node name="UpgradeChoicePopupAssetScene" type="Control"]
+[node name="UpgradeChoicePopupAssetScene" type="Control" unique_id=1356682965]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=31327289]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +20,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.015, 0.022, 0.035, 1)
 
-[node name="VignetteTop" type="ColorRect" parent="."]
+[node name="VignetteTop" type="ColorRect" parent="." unique_id=270936080]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -28,7 +28,7 @@ offset_bottom = 220.0
 grow_horizontal = 2
 color = Color(0.02, 0.08, 0.09, 0.35)
 
-[node name="VignetteBottom" type="ColorRect" parent="."]
+[node name="VignetteBottom" type="ColorRect" parent="." unique_id=2017730357]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -39,7 +39,7 @@ grow_horizontal = 2
 grow_vertical = 0
 color = Color(0, 0, 0, 0.45)
 
-[node name="Margin" type="MarginContainer" parent="."]
+[node name="Margin" type="MarginContainer" parent="." unique_id=1349154309]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -51,13 +51,13 @@ theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 24
 
-[node name="Layout" type="VBoxContainer" parent="Margin"]
+[node name="Layout" type="VBoxContainer" parent="Margin" unique_id=76367940]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Margin/Layout"]
+[node name="Title" type="Label" parent="Margin/Layout" unique_id=1530060505]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.92, 0.82, 1)
 theme_override_fonts/font = ExtResource("1_font")
@@ -65,7 +65,7 @@ theme_override_font_sizes/font_size = 34
 text = "Adventure Upgrade Card Catalog"
 horizontal_alignment = 1
 
-[node name="SuitGroups" type="GridContainer" parent="Margin/Layout"]
+[node name="SuitGroups" type="GridContainer" parent="Margin/Layout" unique_id=1953936690]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 3
@@ -73,11 +73,11 @@ theme_override_constants/h_separation = 24
 theme_override_constants/v_separation = 16
 columns = 2
 
-[node name="HeartsGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups"]
+[node name="HeartsGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups" unique_id=1659812554]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="HeartsLabel" type="Label" parent="Margin/Layout/SuitGroups/HeartsGroup"]
+[node name="HeartsLabel" type="Label" parent="Margin/Layout/SuitGroups/HeartsGroup" unique_id=74314972]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.83, 0.83, 1)
 theme_override_fonts/font = ExtResource("1_font")
@@ -85,33 +85,33 @@ theme_override_font_sizes/font_size = 20
 text = "Hearts"
 horizontal_alignment = 1
 
-[node name="HeartsRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/HeartsGroup"]
+[node name="HeartsRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/HeartsGroup" unique_id=277810158]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="CommonCard" parent="Margin/Layout/SuitGroups/HeartsGroup/HeartsRow" instance=ExtResource("2_card")]
+[node name="CommonCard" parent="Margin/Layout/SuitGroups/HeartsGroup/HeartsRow" unique_id=1706354488 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "hearts"
 PreviewRarity = "common"
 
-[node name="UncommonCard" parent="Margin/Layout/SuitGroups/HeartsGroup/HeartsRow" instance=ExtResource("2_card")]
+[node name="UncommonCard" parent="Margin/Layout/SuitGroups/HeartsGroup/HeartsRow" unique_id=1050658638 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "hearts"
 PreviewRarity = "rare"
 
-[node name="RareCard" parent="Margin/Layout/SuitGroups/HeartsGroup/HeartsRow" instance=ExtResource("2_card")]
+[node name="RareCard" parent="Margin/Layout/SuitGroups/HeartsGroup/HeartsRow" unique_id=1064679993 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "hearts"
 PreviewRarity = "legendary"
 
-[node name="SpadesGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups"]
+[node name="SpadesGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups" unique_id=339487710]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="SpadesLabel" type="Label" parent="Margin/Layout/SuitGroups/SpadesGroup"]
+[node name="SpadesLabel" type="Label" parent="Margin/Layout/SuitGroups/SpadesGroup" unique_id=1344656482]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.84, 0.86, 0.98, 1)
 theme_override_fonts/font = ExtResource("1_font")
@@ -119,33 +119,33 @@ theme_override_font_sizes/font_size = 20
 text = "Spades"
 horizontal_alignment = 1
 
-[node name="SpadesRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/SpadesGroup"]
+[node name="SpadesRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/SpadesGroup" unique_id=153281956]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="CommonCard" parent="Margin/Layout/SuitGroups/SpadesGroup/SpadesRow" instance=ExtResource("2_card")]
+[node name="CommonCard" parent="Margin/Layout/SuitGroups/SpadesGroup/SpadesRow" unique_id=39754734 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "spades"
 PreviewRarity = "common"
 
-[node name="UncommonCard" parent="Margin/Layout/SuitGroups/SpadesGroup/SpadesRow" instance=ExtResource("2_card")]
+[node name="UncommonCard" parent="Margin/Layout/SuitGroups/SpadesGroup/SpadesRow" unique_id=1465123451 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "spades"
 PreviewRarity = "rare"
 
-[node name="RareCard" parent="Margin/Layout/SuitGroups/SpadesGroup/SpadesRow" instance=ExtResource("2_card")]
+[node name="RareCard" parent="Margin/Layout/SuitGroups/SpadesGroup/SpadesRow" unique_id=1231761450 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "spades"
 PreviewRarity = "legendary"
 
-[node name="DiamondsGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups"]
+[node name="DiamondsGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups" unique_id=746738904]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="DiamondsLabel" type="Label" parent="Margin/Layout/SuitGroups/DiamondsGroup"]
+[node name="DiamondsLabel" type="Label" parent="Margin/Layout/SuitGroups/DiamondsGroup" unique_id=1583658626]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.88, 0.72, 1)
 theme_override_fonts/font = ExtResource("1_font")
@@ -153,33 +153,33 @@ theme_override_font_sizes/font_size = 20
 text = "Diamonds"
 horizontal_alignment = 1
 
-[node name="DiamondsRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/DiamondsGroup"]
+[node name="DiamondsRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/DiamondsGroup" unique_id=1970855201]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="CommonCard" parent="Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow" instance=ExtResource("2_card")]
+[node name="CommonCard" parent="Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow" unique_id=1063371756 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "diamonds"
 PreviewRarity = "common"
 
-[node name="UncommonCard" parent="Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow" instance=ExtResource("2_card")]
+[node name="UncommonCard" parent="Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow" unique_id=1898414116 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "diamonds"
 PreviewRarity = "rare"
 
-[node name="RareCard" parent="Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow" instance=ExtResource("2_card")]
+[node name="RareCard" parent="Margin/Layout/SuitGroups/DiamondsGroup/DiamondsRow" unique_id=1976181222 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "diamonds"
 PreviewRarity = "legendary"
 
-[node name="ClubsGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups"]
+[node name="ClubsGroup" type="VBoxContainer" parent="Margin/Layout/SuitGroups" unique_id=1774303939]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ClubsLabel" type="Label" parent="Margin/Layout/SuitGroups/ClubsGroup"]
+[node name="ClubsLabel" type="Label" parent="Margin/Layout/SuitGroups/ClubsGroup" unique_id=1307490898]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.78, 0.9, 1, 1)
 theme_override_fonts/font = ExtResource("1_font")
@@ -187,23 +187,23 @@ theme_override_font_sizes/font_size = 20
 text = "Clubs"
 horizontal_alignment = 1
 
-[node name="ClubsRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/ClubsGroup"]
+[node name="ClubsRow" type="HBoxContainer" parent="Margin/Layout/SuitGroups/ClubsGroup" unique_id=1956088911]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="CommonCard" parent="Margin/Layout/SuitGroups/ClubsGroup/ClubsRow" instance=ExtResource("2_card")]
+[node name="CommonCard" parent="Margin/Layout/SuitGroups/ClubsGroup/ClubsRow" unique_id=50731676 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "clubs"
 PreviewRarity = "common"
 
-[node name="UncommonCard" parent="Margin/Layout/SuitGroups/ClubsGroup/ClubsRow" instance=ExtResource("2_card")]
+[node name="UncommonCard" parent="Margin/Layout/SuitGroups/ClubsGroup/ClubsRow" unique_id=1200029098 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "clubs"
 PreviewRarity = "rare"
 
-[node name="RareCard" parent="Margin/Layout/SuitGroups/ClubsGroup/ClubsRow" instance=ExtResource("2_card")]
+[node name="RareCard" parent="Margin/Layout/SuitGroups/ClubsGroup/ClubsRow" unique_id=939400265 instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(150, 246)
 layout_mode = 2
 PreviewSuit = "clubs"

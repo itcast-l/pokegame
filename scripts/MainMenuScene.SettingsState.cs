@@ -278,6 +278,19 @@ public partial class MainMenuScene
 			return;
 		}
 
+		// Native maximize is a windowed state that is not represented by the saved fullscreen setting.
+		// Preserve it when a newly created menu reapplies settings after a scene transition.
+		bool preserveNativeMaximized = !_hasAppliedWindowSettings
+			&& !_fullscreen
+			&& DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Maximized;
+		if (preserveNativeMaximized)
+		{
+			_hasAppliedWindowSettings = true;
+			_lastAppliedFullscreen = false;
+			_lastAppliedResolution = _selectedResolution;
+			return;
+		}
+
 		uint applyToken = ++_windowResolutionApplyToken;
 
 		bool nativeWindowResizeAllowed = IsNativeWindowResizeAllowed(window);

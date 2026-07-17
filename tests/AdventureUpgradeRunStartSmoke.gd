@@ -67,7 +67,6 @@ func _run() -> void:
 		_fail("Expected 1-3 run-start options")
 		return
 	var visible_count := 0
-	var perspective_signature := {}
 	for option_index in range(3):
 		var button := overlay.get_node_or_null("Margin/Layout/CardsRow/Option%dButton" % (option_index + 1)) as Button
 		if button == null:
@@ -76,15 +75,14 @@ func _run() -> void:
 		if not button.visible:
 			continue
 		visible_count += 1
-		if not button.text.is_empty() or button.custom_minimum_size != Vector2(352, 496):
+		if not button.text.is_empty() or button.custom_minimum_size != Vector2(272, 404):
 			_fail("Adventure upgrade option button contract changed")
 			return
 		var art := button.get_node_or_null("CardFrame/ChoiceArt") as Control
 		if art == null \
 				or not art.has_method("ConfigureChoice") \
-				or not art.has_method("SetElevationAmount") \
-				or not art.has_method("DebugGetPseudo3DState"):
-			_fail("Adventure upgrade choice art is missing required pseudo-3D interfaces")
+				or not art.has_method("DebugGetCardVisualState"):
+			_fail("Adventure upgrade choice art is missing required flat-card interfaces")
 			return
 		if String(art.call("DebugGetDescriptionText")).is_empty() \
 				or String(art.call("DebugGetRarityText")).is_empty():
@@ -102,27 +100,15 @@ func _run() -> void:
 			return
 		var top_ratio := (description_y - card_y) / card_height
 		var bottom_ratio := (description_y + description_height - card_y) / card_height
-		if absf(top_ratio - 0.545) > 0.002 or absf(bottom_ratio - 0.75) > 0.002:
+		if absf(top_ratio - 0.545) > 0.002 or absf(bottom_ratio - 0.725) > 0.002:
 			_fail("Description layer must leave room for the rarity footer")
 			return
 		if int(art.call("DebugGetResolvedDescriptionFontSize")) < 10:
 			_fail("Description font fell below the supported minimum")
 			return
 
-		var pseudo := art.call("DebugGetPseudo3DState") as Dictionary
-		if not _assert_pseudo_3d(pseudo):
-			return
-		var signature := {
-			"shader": pseudo["shader_path"],
-			"vertical": pseudo["vertical_compression"],
-			"top": pseudo["top_width_ratio"],
-			"bottom": pseudo["bottom_width_ratio"],
-			"rotation": pseudo["plane_rotation_degrees"],
-		}
-		if perspective_signature.is_empty():
-			perspective_signature = signature
-		elif signature != perspective_signature:
-			_fail("All visible cards must use identical perspective parameters")
+		var visual := art.call("DebugGetCardVisualState") as Dictionary
+		if not _assert_flat_card(visual):
 			return
 
 	if visible_count != option_count:
@@ -147,24 +133,17 @@ func _run() -> void:
 	quit(0)
 
 
-func _assert_pseudo_3d(pseudo: Dictionary) -> bool:
-	if String(pseudo.get("shader_path", "")) != "res://shaders/adventure_upgrade_card_perspective.gdshader" \
-			or absf(float(pseudo.get("vertical_compression", 0.0)) - 0.96) > 0.001 \
-			or absf(float(pseudo.get("top_width_ratio", 0.0)) - 0.97) > 0.001 \
-			or absf(float(pseudo.get("bottom_width_ratio", 0.0)) - 1.0) > 0.001 \
-			or absf(float(pseudo.get("plane_rotation_degrees", 1.0))) > 0.001:
-		_fail("Perspective shader parameters do not match the fixed specification")
+
+func _assert_flat_card(visual: Dictionary) -> bool:
+	if not bool(visual.get("surface_is_flat", false)) \
+			or int(visual.get("thickness_layer_count", -1)) != 0 \
+			or String(visual.get("surface_shader_path", "")) != "res://shaders/adventure_upgrade_card_cleanup.gdshader":
+		_fail("Choice card must use a flat surface without perspective or thickness layers")
 		return false
-	if bool(pseudo.get("description_has_material", true)):
-		_fail("Description layer inherited perspective material")
-		return false
-	if int(pseudo.get("thickness_layer_count", 0)) != 3:
-		_fail("Choice art does not contain three thickness layers")
-		return false
-	if int(pseudo.get("surface_material_id", 0)) == 0 \
-			or not bool(pseudo.get("glow_uses_outline_panel", false)) \
-			or float(pseudo.get("description_panel_alpha", 0.0)) < 0.8:
-		_fail("Card surface outline glow or description panel is incomplete")
+	if int(visual.get("surface_material_id", 0)) == 0 \
+			or not bool(visual.get("glow_uses_outline_panel", false)) \
+			or float(visual.get("description_panel_alpha", 0.0)) < 0.8:
+		_fail("Flat card surface, outline glow, or description panel is incomplete")
 		return false
 	return true
 

@@ -93,6 +93,8 @@ func _run() -> void:
 	if bool(menu.call("DebugAreAdventureMenuBackgroundButtonsDisabled")):
 		_fail("Background should be enabled after both modal layers close")
 		return
+	if not await _assert_stage_name_sizing_recovers_after_layout(menu):
+		return
 
 	_press_escape()
 	if not await _wait_for_menu_exit(menu):
@@ -182,6 +184,33 @@ func _wait_for_menu_exit(menu: Node) -> bool:
 			return true
 	_fail("Third Cancel did not leave the adventure avatar menu")
 	return false
+
+
+func _assert_stage_name_sizing_recovers_after_layout(menu: Control) -> bool:
+	var name_label := menu.get_node_or_null(
+		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList/fishLevelEntry/EntryContent/EntryRow/EntryName"
+	) as Label
+	if name_label == null:
+		_fail("Missing adventure stage name label")
+		return false
+
+	var expected_font_size := name_label.get_theme_font_size("font_size")
+	if expected_font_size <= 16:
+		_fail("Adventure stage name did not reach its fitted size before resize audit")
+		return false
+
+	name_label.add_theme_font_size_override("font_size", 16)
+	var original_size := menu.size
+	menu.size = original_size - Vector2(1.0, 0.0)
+	await process_frame
+	menu.size = original_size
+	await process_frame
+	await process_frame
+
+	if name_label.get_theme_font_size("font_size") != expected_font_size:
+		_fail("Adventure stage name sizing did not recover after the menu layout changed")
+		return false
+	return true
 
 
 func _fail(message: String) -> void:

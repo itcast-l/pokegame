@@ -58,6 +58,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private bool _isStartingAdventure;
 	private bool _isShowingAvatarUnlockPrompt;
 	private bool _isShowingRunResumeDialog;
+	private bool _stageNameSizingRefreshQueued;
 
 	[Export]
 	public string selected_avatar_id { get; set; } = string.Empty;
@@ -83,6 +84,7 @@ public partial class AdventureAvatarMenuScene : Control
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();
 		RefreshLocalizedText();
+		QueueStageNameSizingRefresh();
 		FocusDefaultControlDeferred();
 		CallDeferred(nameof(PlayAdventureMenuMusicIfStandalone));
 		CallDeferred(nameof(ShowPendingAdventureAvatarUnlockPrompt));
@@ -99,6 +101,7 @@ public partial class AdventureAvatarMenuScene : Control
 		{
 			ClampScrollTarget();
 			ScrollSelectedEntryIntoView();
+			QueueStageNameSizingRefresh();
 		}
 		else if (what == NotificationVisibilityChanged && IsNodeReady() && Visible)
 		{

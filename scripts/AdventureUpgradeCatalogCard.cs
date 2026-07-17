@@ -63,11 +63,8 @@ public partial class AdventureUpgradeCatalogCard : Button
 		AdventureUpgradeCardVisualEntryResource? entry =
 			AdventureUpgradeCardVisualResolver.ResolveEntry(_suit, _rarity);
 		_visualTier = entry?.Tier?.Trim().ToLowerInvariant() ?? string.Empty;
-		Texture2D? texture = AdventureUpgradeCardVisualResolver.LoadAtlasTextureForRarity(
-			_suit,
-			_rarity);
-		_cardTexture.Texture = texture;
-		_placeholder.Visible = texture == null;
+		_cardTexture.Texture = AdventureUpgradeCardVisualResolver.LoadAtlasTextureForRarity(_suit, _rarity);
+		_placeholder.Visible = !HasCardTexture;
 
 		_descriptionLabel.Text = description?.Trim() ?? string.Empty;
 		_descriptionLabel.GetParent().GetParent<Control>().Visible = !string.IsNullOrWhiteSpace(_descriptionLabel.Text);
@@ -87,6 +84,9 @@ public partial class AdventureUpgradeCatalogCard : Button
 		Rect2 region = _cardTexture.Texture is AtlasTexture atlasTexture
 			? atlasTexture.Region
 			: default;
+		string texturePath = _cardTexture.Texture is AtlasTexture atlas
+			? atlas.Atlas?.ResourcePath ?? string.Empty
+			: _cardTexture.Texture?.ResourcePath ?? string.Empty;
 		return new Godot.Collections.Dictionary
 		{
 			["suit"] = _suit,
@@ -97,6 +97,8 @@ public partial class AdventureUpgradeCatalogCard : Button
 			["interactive"] = _interactive,
 			["has_texture"] = HasCardTexture,
 			["atlas_region"] = region,
+			["card_texture_path"] = texturePath,
+			["uses_complete_card_texture"] = HasCardTexture,
 			["feedback_visible"] = _feedbackBorder.Visible,
 		};
 	}

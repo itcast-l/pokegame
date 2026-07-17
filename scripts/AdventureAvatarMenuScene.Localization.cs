@@ -66,6 +66,36 @@ public partial class AdventureAvatarMenuScene
 		label.AddThemeFontSizeOverride("font_size", GetFittingStageNameFontSize(label, text));
 	}
 
+	private void QueueStageNameSizingRefresh()
+	{
+		if (_stageNameSizingRefreshQueued || !IsInsideTree())
+		{
+			return;
+		}
+
+		_stageNameSizingRefreshQueued = true;
+		CallDeferred(nameof(RefreshStageNameSizingDeferred));
+	}
+
+	private void RefreshStageNameSizingDeferred()
+	{
+		_stageNameSizingRefreshQueued = false;
+		if (!IsNodeReady())
+		{
+			return;
+		}
+
+		foreach ((string avatarId, Label label) in _stageNameLabels)
+		{
+			if (!GodotObject.IsInstanceValid(label))
+			{
+				continue;
+			}
+
+			ApplyStageNameLabelText(label, LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId)));
+		}
+	}
+
 	private static int GetFittingStageNameFontSize(Label label, string text)
 	{
 		float availableWidth = label.Size.X;
