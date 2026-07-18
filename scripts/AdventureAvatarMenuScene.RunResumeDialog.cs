@@ -272,24 +272,37 @@ public partial class AdventureAvatarMenuScene
 
 	private void RefreshRunResumeDialogText()
 	{
+		bool recoveryMode = _runResumeDialogMode == RunResumeDialogMode.Recovery;
 		if (_runResumeTitleLabel != null && GodotObject.IsInstanceValid(_runResumeTitleLabel))
 		{
-			_runResumeTitleLabel.Text = Localize("ADVENTURE_RESUME_RUN_TITLE");
+			_runResumeTitleLabel.Text = Localize(recoveryMode
+				? "ADVENTURE_RECOVERY_TITLE"
+				: "ADVENTURE_RESUME_RUN_TITLE");
 		}
 
 		if (_runResumeBodyLabel != null && GodotObject.IsInstanceValid(_runResumeBodyLabel))
 		{
-			_runResumeBodyLabel.Text = Localize("ADVENTURE_RESUME_RUN_BODY");
+			_runResumeBodyLabel.Text = Localize(_runRecoverySaveFailed
+				? "ADVENTURE_RECOVERY_SAVE_FAILED"
+				: recoveryMode
+					? "ADVENTURE_RECOVERY_BODY"
+					: "ADVENTURE_RESUME_RUN_BODY");
 		}
 
 		if (_runResumeContinueButton != null && GodotObject.IsInstanceValid(_runResumeContinueButton))
 		{
 			_runResumeContinueButton.Text = Localize("ADVENTURE_CONTINUE_RUN");
+			if (_runResumeContinueButton.GetParent() is Control continueFrame)
+			{
+				continueFrame.Visible = !recoveryMode;
+			}
 		}
 
 		if (_runResumeRestartButton != null && GodotObject.IsInstanceValid(_runResumeRestartButton))
 		{
-			_runResumeRestartButton.Text = Localize("ADVENTURE_RESTART_RUN");
+			_runResumeRestartButton.Text = Localize(recoveryMode
+				? "ADVENTURE_RECOVERY_RESTART"
+				: "ADVENTURE_RESTART_RUN");
 		}
 
 		if (_runResumeCancelButton != null && GodotObject.IsInstanceValid(_runResumeCancelButton))
@@ -439,6 +452,11 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		_runResumeDialogMode = store?.RequiresRunRecovery == true
+			? RunResumeDialogMode.Recovery
+			: RunResumeDialogMode.Resume;
+		_runRecoverySaveFailed = false;
 		EnsureRunResumeDialog();
 		if (_runResumeDialogRoot == null)
 		{
@@ -458,7 +476,9 @@ public partial class AdventureAvatarMenuScene
 		}
 		else
 		{
-			GrabFocusIfAvailable(_runResumeContinueButton);
+			GrabFocusIfAvailable(_runResumeDialogMode == RunResumeDialogMode.Recovery
+				? _runResumeRestartButton
+				: _runResumeContinueButton);
 		}
 	}
 
@@ -466,7 +486,8 @@ public partial class AdventureAvatarMenuScene
 	{
 		if (!_isStartingAdventure
 			&& !_isReturningToMainMenu
-			&& GetAdventureRunSessionStore()?.HasActiveRun == true)
+			&& (GetAdventureRunSessionStore()?.HasActiveRun == true
+				|| GetAdventureRunSessionStore()?.RequiresRunRecovery == true))
 		{
 			ShowRunResumeDialog();
 		}
@@ -515,9 +536,16 @@ public partial class AdventureAvatarMenuScene
 		if (!AdventureCampaignCatalog.TryGetMainStageIndex(savedAvatarId, out int mainStageIndex)
 			|| mainStageIndex != snapshot.MainStageIndex)
 		{
-			store.ClearRun();
-			HideRunResumeDialog();
-			return;
+				if (store.ClearRun() == AdventureRunWriteResult.Succeeded)
+				{
+					HideRunResumeDialog();
+				}
+				else
+				{
+					_runRecoverySaveFailed = true;
+					RefreshRunResumeDialogText();
+				}
+				return;
 		}
 
 		string gameBoardScenePath = GetGameBoardScenePathForAvatar(savedAvatarId);
@@ -557,11 +585,18 @@ public partial class AdventureAvatarMenuScene
 
 	private void RestartAdventureFromFirstStage()
 	{
-		GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
-		GetAdventureRunSessionStore()?.ClearRun();
-		HideRunResumeDialog();
-
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		store?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		string selectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
+		if (store == null
+			|| store.ClearRun() != AdventureRunWriteResult.Succeeded
+			|| store.BeginNewMainRun(1, selectedAvatarId) != AdventureRunWriteResult.Succeeded)
+		{
+			_runRecoverySaveFailed = true;
+			RefreshRunResumeDialogText();
+			return;
+		}
+
 		string gameBoardScenePath = GetGameBoardScenePathForAvatar(selectedAvatarId);
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
 		if (gameBoardScene == null)
@@ -570,11 +605,12 @@ public partial class AdventureAvatarMenuScene
 			return;
 		}
 
+		HideRunResumeDialog();
 		_isStartingAdventure = true;
 		_backButton.Disabled = true;
 		_startButton.Disabled = true;
 		MouseFilter = MouseFilterEnum.Ignore;
-		_ = StartAdventureWithTransitionAsync(gameBoardScene, selectedAvatarId);
+		_ = StartAdventureWithTransitionAsync(gameBoardScene, selectedAvatarId, beginNewRun: false);
 	}
 
 	public bool DebugIsAdventureRunResumeDialogVisible()

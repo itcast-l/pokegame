@@ -67,7 +67,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		store.BeginNewRun(avatarStageNumber);
+		AdventureRunWriteResult result = store.BeginNewRun(avatarStageNumber);
+		if (result != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to begin adventure upgrade run: {result}");
+		}
 	}
 
 	private void AdvanceAdventureUpgradeRunToMainStage(int mainStageIndex, string enemyAvatarId)
@@ -79,7 +83,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		store.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
+		AdventureRunWriteResult result = store.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
+		if (result != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to advance adventure upgrade run: {result}");
+		}
 	}
 
 	private void MarkAdventureRunStartUpgradeGranted()
@@ -1107,7 +1115,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		store.ClearRun();
+		AdventureRunWriteResult result = store.ClearRun();
+		if (result != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to clear adventure upgrade run: {result}");
+		}
 	}
 
 	private void InitializeAdventureUpgradeRunForCurrentBoard()
@@ -1125,9 +1137,13 @@ public partial class GameBoardScene
 		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
-			GetAdventureRunSessionStore()?.BeginNewMainRun(
+			AdventureRunWriteResult result = GetAdventureRunSessionStore()?.BeginNewMainRun(
 				mainStageIndex,
-				adventure_enemy_avatar_id);
+				adventure_enemy_avatar_id) ?? AdventureRunWriteResult.SaveFailed;
+			if (result != AdventureRunWriteResult.Succeeded)
+			{
+				GD.PushWarning($"Failed to initialize adventure run for current board: {result}");
+			}
 			return;
 		}
 
@@ -1136,9 +1152,13 @@ public partial class GameBoardScene
 			return;
 		}
 
-		GetAdventureRunSessionStore()?.AdvanceToMainStage(
+		AdventureRunWriteResult advanceResult = GetAdventureRunSessionStore()?.AdvanceToMainStage(
 			mainStageIndex,
-			adventure_enemy_avatar_id);
+			adventure_enemy_avatar_id) ?? AdventureRunWriteResult.SaveFailed;
+		if (advanceResult != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to align adventure run with current board: {advanceResult}");
+		}
 	}
 
 	private bool ShouldUseAdventureUpgradeSystem()

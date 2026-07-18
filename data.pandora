@@ -315,103 +315,6 @@
 			{
 				"_category_id": "item_cards",
 				"_icon_color": "00000000",
-				"_id": "greed",
-				"_index": 3,
-				"_name": "Greed",
-				"_property_overrides": {
-					"art_run": {
-						"type": "string",
-						"value": "run-004"
-					},
-					"attached_effect_type": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"attached_priority": {
-						"type": "int",
-						"value": 0
-					},
-					"attached_trigger": {
-						"type": "string",
-						"value": ""
-					},
-					"can_be_question_reward": {
-						"type": "bool",
-						"value": true
-					},
-					"description_key": {
-						"type": "string",
-						"value": "ITEM_DESC_GREED"
-					},
-					"effect_type": {
-						"type": "string",
-						"value": ""
-					},
-					"effect_values": {
-						"type": "string",
-						"value": ""
-					},
-					"enabled_in_game": {
-						"type": "bool",
-						"value": false
-					},
-					"frame_count": {
-						"type": "int",
-						"value": 4
-					},
-					"id": {
-						"type": "string",
-						"value": "greed"
-					},
-					"play_presentation": {
-						"type": "string",
-						"value": "direct_trigger"
-					},
-					"playable_from_hand": {
-						"type": "bool",
-						"value": false
-					},
-					"priority": {
-						"type": "int",
-						"value": 10
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"reward_delivery": {
-						"type": "string",
-						"value": "hand"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 30
-					},
-					"sprite_name": {
-						"type": "string",
-						"value": "Greed"
-					},
-					"tags": {
-						"type": "string",
-						"value": ""
-					},
-					"trigger": {
-						"type": "string",
-						"value": ""
-					},
-					"weight": {
-						"type": "int",
-						"value": 25
-					}
-				}
-			},
-			{
-				"_category_id": "item_cards",
-				"_icon_color": "00000000",
 				"_id": "lens",
 				"_index": 4,
 				"_name": "Lens",
@@ -567,7 +470,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -579,7 +482,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"sort_order": {
 						"type": "int",
@@ -664,7 +567,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -676,7 +579,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"sort_order": {
 						"type": "int",
@@ -947,7 +850,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -959,7 +862,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",
@@ -1028,7 +931,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -1040,7 +943,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",
@@ -1109,7 +1012,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -1121,7 +1024,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",
@@ -1190,7 +1093,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -1202,7 +1105,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",
@@ -1271,7 +1174,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -1283,7 +1186,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",
@@ -1352,7 +1255,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -1364,7 +1267,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",
@@ -1433,7 +1336,7 @@
 					},
 					"playable_from_hand": {
 						"type": "bool",
-						"value": true
+						"value": false
 					},
 					"priority": {
 						"type": "int",
@@ -1445,7 +1348,7 @@
 					},
 					"reward_delivery": {
 						"type": "string",
-						"value": "hand"
+						"value": "immediate_attachment"
 					},
 					"tags": {
 						"type": "string",

@@ -58,6 +58,8 @@ public partial class AdventureAvatarMenuScene : Control
 	private bool _isStartingAdventure;
 	private bool _isShowingAvatarUnlockPrompt;
 	private bool _isShowingRunResumeDialog;
+	private RunResumeDialogMode _runResumeDialogMode;
+	private bool _runRecoverySaveFailed;
 	private bool _stageNameSizingRefreshQueued;
 
 	[Export]
@@ -183,4 +185,10 @@ public partial class AdventureAvatarMenuScene : Control
 
 		GameAudio?.PlayMusic(GameMusic.AdventureMenu, 1.2f);
 	}
+}
+
+internal enum RunResumeDialogMode
+{
+	Resume,
+	Recovery,
 }

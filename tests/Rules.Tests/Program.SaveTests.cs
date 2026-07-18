@@ -203,5 +203,143 @@ internal static partial class Program
 		Equal(0, Godot.GD.WarningMessages.Count);
 	}
 
+	private static void AdventureRunTransactionalWritesPreserveMemoryOnSaveFailure()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot before));
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		Equal(AdventureRunWriteResult.SaveFailed, store.AdvanceToMainStage(2, AdventureCampaignCatalog.GetMainAvatarId(2)));
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot after));
+		Equal(before.MainStageIndex, after.MainStageIndex);
+		Equal(before.EnemyAvatarId, after.EnemyAvatarId);
+		Equal(1, ReadStoredRunSnapshot(saveManager, slotId).MainStageIndex);
+	}
+
+	private static void AdventureVictoryCommitsProgressRewardAndNextRunAtomically()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		string firstAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, firstAvatarId));
+
+		Equal(AdventureVictoryCommitResult.Succeeded, store.CommitMainAdventureVictory(firstAvatarId));
+		GameSaveStore.GameProgressData committed = LoadStoredProfile(saveManager, slotId);
+		Equal(1, committed.HighestCompletedMainAdventureStage);
+		True(committed.PendingAvatarUnlockQueue.Contains(firstAvatarId, StringComparison.Ordinal));
+		Equal(2, ReadStoredRunSnapshot(saveManager, slotId).MainStageIndex);
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot memorySnapshot));
+		Equal(2, memorySnapshot.MainStageIndex);
+		int savesAfterCommit = saveManager.SaveToSlotCallCount;
+
+		Equal(AdventureVictoryCommitResult.AlreadyCommitted, store.CommitMainAdventureVictory(firstAvatarId));
+		Equal(savesAfterCommit, saveManager.SaveToSlotCallCount);
+	}
+
+	private static void AdventureVictorySaveFailurePreservesCurrentRun()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		string firstAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, firstAvatarId));
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		Equal(AdventureVictoryCommitResult.SaveFailed, store.CommitMainAdventureVictory(firstAvatarId));
+		Equal(0, LoadStoredProfile(saveManager, slotId).HighestCompletedMainAdventureStage);
+		Equal(1, ReadStoredRunSnapshot(saveManager, slotId).MainStageIndex);
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot memorySnapshot));
+		Equal(1, memorySnapshot.MainStageIndex);
+	}
+
+	private static void AdventureFinalVictoryClearsRunInAtomicCommit()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner") with
+		{
+			HighestCompletedMainAdventureStage = AdventureCampaignCatalog.MainStageCount - 1,
+		});
+		var store = new AdventureRunSessionStore();
+		int finalStage = AdventureCampaignCatalog.MainStageCount;
+		string finalAvatarId = AdventureCampaignCatalog.GetMainAvatarId(finalStage);
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(finalStage, finalAvatarId));
+
+		Equal(AdventureVictoryCommitResult.Succeeded, store.CommitMainAdventureVictory(finalAvatarId));
+		GameSaveStore.GameProgressData committed = LoadStoredProfile(saveManager, slotId);
+		Equal(finalStage, committed.HighestCompletedMainAdventureStage);
+		Equal(string.Empty, committed.PendingAdventureRunJson);
+		False(store.HasActiveRun);
+	}
+
+	private static void AdventureVictoryRejectsOutOfSequenceStage()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		string thirdAvatarId = AdventureCampaignCatalog.GetMainAvatarId(3);
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(3, thirdAvatarId));
+		int savesBeforeCommit = saveManager.SaveToSlotCallCount;
+
+		Equal(AdventureVictoryCommitResult.OutOfSequence, store.CommitMainAdventureVictory(thirdAvatarId));
+		Equal(savesBeforeCommit, saveManager.SaveToSlotCallCount);
+		Equal(0, LoadStoredProfile(saveManager, slotId).HighestCompletedMainAdventureStage);
+	}
+
+	private static void DamagedAdventureRunRecoveryClearsOnlyRunPayload()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		GameSaveStore.GameProgressData original = CreateProgressData("Runner", "{bad json") with
+		{
+			SelectedAvatarId = "fox",
+			HighestCompletedMainAdventureStage = 4,
+			CompletedAdventureTutorialIdsCsv = AdventureCampaignCatalog.Tutorial[0].EnemyAvatarId,
+			PendingAvatarUnlockQueue = "unlock_a|unlock_b",
+		};
+		SeedProfile(saveManager, slotId, original);
+		var store = new AdventureRunSessionStore();
+		Equal(AdventureUpgradeRestoreResult.InvalidJsonPreserved, store.ReloadFromActiveProfile());
+		True(store.RequiresRunRecovery);
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		Equal(AdventureRunWriteResult.SaveFailed, store.ClearRun());
+		True(store.RequiresRunRecovery);
+		Equal("{bad json", LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+
+		Equal(AdventureRunWriteResult.Succeeded, store.ClearRun());
+		False(store.RequiresRunRecovery);
+		GameSaveStore.GameProgressData recovered = LoadStoredProfile(saveManager, slotId);
+		Equal(string.Empty, recovered.PendingAdventureRunJson);
+		Equal(original.SelectedAvatarId, recovered.SelectedAvatarId);
+		Equal(original.HighestCompletedMainAdventureStage, recovered.HighestCompletedMainAdventureStage);
+		Equal(original.CompletedAdventureTutorialIdsCsv, recovered.CompletedAdventureTutorialIdsCsv);
+		Equal(original.PendingAvatarUnlockQueue, recovered.PendingAvatarUnlockQueue);
+	}
+
+	private static AdventureUpgradeRunSnapshot ReadStoredRunSnapshot(
+		Godot.TestSaveManagerNode saveManager,
+		string slotId)
+	{
+		string json = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
+		True(AdventureUpgradeRunSnapshot.TryDeserialize(json, out AdventureUpgradeRunSnapshot snapshot, out _, out _));
+		return snapshot;
+	}
+
 
 }

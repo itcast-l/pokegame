@@ -16,7 +16,7 @@ public partial class AdventureAvatarMenuScene
 			: GameModePolicy.AdventureMain;
 		runSessionStore?.ConfigureForPolicy(selectedPolicy);
 		runSessionStore?.ReloadFromActiveProfile();
-		if (runSessionStore?.HasActiveRun == true)
+		if (runSessionStore?.HasActiveRun == true || runSessionStore?.RequiresRunRecovery == true)
 		{
 			ShowRunResumeDialog();
 			return;
@@ -45,12 +45,27 @@ public partial class AdventureAvatarMenuScene
 		_ = StartAdventureWithTransitionAsync(gameBoardScene, selectedAvatarId);
 	}
 
-	private async Task StartAdventureWithTransitionAsync(PackedScene gameBoardScene, string selectedAvatarId)
+	private async Task StartAdventureWithTransitionAsync(
+		PackedScene gameBoardScene,
+		string selectedAvatarId,
+		bool beginNewRun = true)
 	{
-		if (AdventureCampaignCatalog.TryGetMainStageIndex(selectedAvatarId, out int mainStageIndex))
+		if (beginNewRun && AdventureCampaignCatalog.TryGetMainStageIndex(selectedAvatarId, out int mainStageIndex))
 		{
 			GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
-			GetAdventureRunSessionStore()?.BeginNewMainRun(mainStageIndex, selectedAvatarId);
+			AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
+				mainStageIndex,
+				selectedAvatarId) ?? AdventureRunWriteResult.SaveFailed;
+			if (writeResult != AdventureRunWriteResult.Succeeded)
+			{
+				GD.PushWarning($"Failed to start adventure run: {writeResult}");
+				_isStartingAdventure = false;
+				_backButton.Disabled = false;
+				_startButton.Disabled = false;
+				MouseFilter = MouseFilterEnum.Stop;
+				RefreshSelection();
+				return;
+			}
 		}
 		else
 		{

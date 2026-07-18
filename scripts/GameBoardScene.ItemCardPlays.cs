@@ -89,10 +89,6 @@ public partial class GameBoardScene
 		{
 			targetPlayerIndex = PickItemTargetPlayer(itemCard.Id, playerIndex);
 			targetHandIndex = IsPlayerHandTargetItemCard(itemCard.Id) ? PickTargetHandIndex(targetPlayerIndex) : -1;
-			if (targetPlayerIndex < 0 || (IsPlayerHandTargetItemCard(itemCard.Id) && targetHandIndex < 0))
-			{
-				return new PlayCardResult(false, false);
-			}
 		}
 
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);

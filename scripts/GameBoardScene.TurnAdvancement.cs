@@ -310,12 +310,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (RequiresPlayerTarget(itemCardId) && !HasPlayableTargetForItemCard(itemCardId, playerIndex))
+		if (definition.PlayPresentation == CardPlayPresentationTypes.TargetedTrigger
+			&& RequiresPlayerTarget(itemCardId)
+			&& !HasPlayableTargetForItemCard(itemCardId, playerIndex))
 		{
 			return false;
 		}
 
 		if (definition.EffectValues.GetString(CardEffectValueKeys.Target) == CardEffectTargets.PlayerDeck
+			&& definition.EffectType != CardEffectTypes.StealDeckCards
 			&& (playerIndex < 0 || playerIndex >= _playerDecks.Count || _playerDecks[playerIndex].Count == 0))
 		{
 			return false;

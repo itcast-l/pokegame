@@ -95,6 +95,12 @@ public partial class GameBoardScene
 		{
 			return;
 		}
+		if (_gameModePolicy.IsAdventureMain
+			&& playerIndex == MainPlayerIndex
+			&& !await CommitAdventureVictoryWithRetryAsync())
+		{
+			return;
+		}
 
 		ShowWinnerBanner(playerIndex);
 	}
@@ -124,10 +130,9 @@ public partial class GameBoardScene
 		}
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{
-			CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);
-			if (ShouldUseAdventureUpgradeSystem() && !TryGetNextAdventureStageAvatarId(out _))
+			if (!_gameModePolicy.IsAdventureMain)
 			{
-				ClearAdventureUpgradeRun();
+				CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);
 			}
 		}
 

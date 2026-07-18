@@ -375,6 +375,7 @@ namespace Godot
 		public bool UseJson { get; set; }
 		public Error PersistResult { get; set; } = Error.Ok;
 		public Dictionary<string, Error> SaveSlotResults { get; } = new(StringComparer.Ordinal);
+		public Queue<Error> SaveSlotResultSequence { get; } = new();
 		public List<string> UnregisteredSlots { get; } = new();
 		public int SaveToSlotCallCount { get; private set; }
 
@@ -467,6 +468,14 @@ namespace Godot
 		{
 			SaveToSlotCallCount++;
 			string key = slotId.ToString();
+			if (SaveSlotResultSequence.Count > 0)
+			{
+				Error sequencedResult = SaveSlotResultSequence.Dequeue();
+				if (sequencedResult != Error.Ok)
+				{
+					return sequencedResult;
+				}
+			}
 			if (SaveSlotResults.TryGetValue(key, out Error result) && result != Error.Ok)
 			{
 				return result;

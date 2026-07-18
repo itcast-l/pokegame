@@ -1,6 +1,28 @@
 public static class CharacterAvatarCatalog
 {
 	public const string DefaultAvatarId = "cat";
+
+	internal static GameSaveStore.GameProgressData CreateMainAdventureVictoryProfile(
+		GameSaveStore.GameProgressData profile,
+		int completedStageIndex,
+		string enemyAvatarId,
+		string nextRunJson)
+	{
+		var pendingUnlocks = string.IsNullOrWhiteSpace(profile.PendingAvatarUnlockQueue)
+			? new List<string>()
+			: new List<string>(profile.PendingAvatarUnlockQueue.Split('|'));
+		if (!pendingUnlocks.Contains(enemyAvatarId))
+		{
+			pendingUnlocks.Add(enemyAvatarId);
+		}
+
+		return profile with
+		{
+			HighestCompletedMainAdventureStage = completedStageIndex,
+			PendingAvatarUnlockQueue = string.Join('|', pendingUnlocks),
+			PendingAdventureRunJson = nextRunJson,
+		};
+	}
 }
 
 public static class PlayerNameRules

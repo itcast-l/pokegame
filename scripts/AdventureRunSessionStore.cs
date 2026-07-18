@@ -31,6 +31,7 @@ public sealed partial class AdventureRunSessionStore : Node
 	private string? _lastWarnedInvalidPayload;
 
 	public bool HasActiveRun => _runState.IsActive;
+	public bool RequiresRunRecovery => !string.IsNullOrEmpty(_preservedFailurePayload);
 	internal GameModePolicy ModePolicy => _gameModePolicy;
 	internal AdventureUpgradeRestoreResult LastRestoreResult { get; private set; } =
 		AdventureUpgradeRestoreResult.NoSnapshot;
@@ -117,48 +118,64 @@ public sealed partial class AdventureRunSessionStore : Node
 		return RestorePayload(profile, _deferredPayload);
 	}
 
-	internal void BeginNewRun(int avatarStageNumber)
+	internal AdventureRunWriteResult BeginNewRun(int avatarStageNumber)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		if (!AdventureCampaignCatalog.TryMapLegacyRunStage(avatarStageNumber, out int mainStageIndex))
 		{
-			return;
+			return AdventureRunWriteResult.InvalidStage;
 		}
 
-		_runState.BeginNewRun(avatarStageNumber);
-		Persist();
+		return BeginNewMainRun(mainStageIndex, AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex));
 	}
 
-	internal void BeginNewMainRun(int mainStageIndex, string enemyAvatarId)
+	internal AdventureRunWriteResult BeginNewMainRun(int mainStageIndex, string enemyAvatarId)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateTransactionalWrite(mainStageIndex);
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return;
+			return validation;
+		}
+
+		var candidate = new AdventureUpgradeRunState();
+		candidate.BeginNewMainRun(mainStageIndex, enemyAvatarId);
+		AdventureUpgradeRunSnapshot snapshot = candidate.ToSnapshot();
+		if (!TryPersistRunPayload(JsonSerializer.Serialize(snapshot)))
+		{
+			return AdventureRunWriteResult.SaveFailed;
 		}
 
 		_runState.BeginNewMainRun(mainStageIndex, enemyAvatarId);
-		Persist();
+		return AdventureRunWriteResult.Succeeded;
 	}
 
-	internal void AdvanceToStage(int avatarStageNumber)
+	internal AdventureRunWriteResult AdvanceToStage(int avatarStageNumber)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		if (!AdventureCampaignCatalog.TryMapLegacyRunStage(avatarStageNumber, out int mainStageIndex))
 		{
-			return;
+			return AdventureRunWriteResult.InvalidStage;
 		}
 
-		_runState.AdvanceToStage(avatarStageNumber);
-		Persist();
+		return AdvanceToMainStage(mainStageIndex, AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex));
 	}
 
-	internal void AdvanceToMainStage(int mainStageIndex, string enemyAvatarId)
+	internal AdventureRunWriteResult AdvanceToMainStage(int mainStageIndex, string enemyAvatarId)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateTransactionalWrite(mainStageIndex);
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return;
+			return validation;
+		}
+
+		AdventureUpgradeRunSnapshot snapshot = _runState.IsActive
+			? CreateAdvancedSnapshot(mainStageIndex)
+			: CreateNewRunSnapshot(mainStageIndex, enemyAvatarId);
+		if (!TryPersistRunPayload(JsonSerializer.Serialize(snapshot)))
+		{
+			return AdventureRunWriteResult.SaveFailed;
 		}
 
 		_runState.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
-		Persist();
+		return AdventureRunWriteResult.Succeeded;
 	}
 
 	internal AdventureDefeatResolution? ResolveMainAdventureDefeat()
@@ -236,16 +253,131 @@ public sealed partial class AdventureRunSessionStore : Node
 		Persist();
 	}
 
-	internal void ClearRun()
+	internal AdventureRunWriteResult ClearRun()
 	{
+		if (!_gameModePolicy.CanWriteAdventureRun)
+		{
+			return AdventureRunWriteResult.WriteNotAllowed;
+		}
+		if (!TryPersistRunPayload(string.Empty))
+		{
+			return AdventureRunWriteResult.SaveFailed;
+		}
+
 		_deferredPayload = null;
 		_preservedFailurePayload = null;
 		_runState.Clear();
 		LastRestoreResult = AdventureUpgradeRestoreResult.NoSnapshot;
-		if (_gameModePolicy.CanWriteAdventureRun)
+		return AdventureRunWriteResult.Succeeded;
+	}
+
+	internal AdventureVictoryCommitResult CommitMainAdventureVictory(string enemyAvatarId)
+	{
+		string normalizedEnemyAvatarId = enemyAvatarId?.Trim() ?? string.Empty;
+		if (!AdventureCampaignCatalog.TryGetMainStageIndex(normalizedEnemyAvatarId, out int completedStageIndex))
 		{
-			Persist();
+			return AdventureVictoryCommitResult.InvalidStage;
 		}
+
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		int previousHighestStage = Math.Clamp(
+			profile.HighestCompletedMainAdventureStage,
+			0,
+			AdventureCampaignCatalog.MainStageCount);
+		if (completedStageIndex <= previousHighestStage)
+		{
+			return AlignAlreadyCommittedRunIfNeeded(profile, completedStageIndex, normalizedEnemyAvatarId);
+		}
+		if (!_gameModePolicy.IsAdventureMain
+			|| !_gameModePolicy.CanWriteAdventureRun
+			|| RequiresRunRecovery
+			|| !_runState.IsActive
+			|| _runState.MainStageIndex != completedStageIndex
+			|| !string.Equals(_runState.EnemyAvatarId, normalizedEnemyAvatarId, StringComparison.Ordinal))
+		{
+			return AdventureVictoryCommitResult.InvalidStage;
+		}
+		if (completedStageIndex != previousHighestStage + 1)
+		{
+			return AdventureVictoryCommitResult.OutOfSequence;
+		}
+
+		bool isFinalStage = completedStageIndex >= AdventureCampaignCatalog.MainStageCount;
+		string nextRunJson = string.Empty;
+		if (!isFinalStage)
+		{
+			AdventureUpgradeRunSnapshot nextSnapshot = CreateAdvancedSnapshot(completedStageIndex + 1);
+			nextRunJson = JsonSerializer.Serialize(nextSnapshot);
+		}
+
+		GameSaveStore.GameProgressData committedProfile =
+			CharacterAvatarCatalog.CreateMainAdventureVictoryProfile(
+				profile,
+				completedStageIndex,
+				normalizedEnemyAvatarId,
+				nextRunJson);
+		Error saveResult = GameSaveStore.SaveActiveProfile(committedProfile);
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to atomically commit adventure victory: {saveResult}");
+			return AdventureVictoryCommitResult.SaveFailed;
+		}
+
+		if (isFinalStage)
+		{
+			_runState.Clear();
+		}
+		else
+		{
+			_runState.AdvanceToMainStage(completedStageIndex + 1, AdventureCampaignCatalog.GetMainAvatarId(completedStageIndex + 1));
+		}
+		_deferredPayload = null;
+		_preservedFailurePayload = null;
+		LastRestoreResult = isFinalStage
+			? AdventureUpgradeRestoreResult.NoSnapshot
+			: AdventureUpgradeRestoreResult.Restored;
+		ObservePayload(nextRunJson);
+		return AdventureVictoryCommitResult.Succeeded;
+	}
+
+	private AdventureVictoryCommitResult AlignAlreadyCommittedRunIfNeeded(
+		GameSaveStore.GameProgressData profile,
+		int completedStageIndex,
+		string enemyAvatarId)
+	{
+		if (!_runState.IsActive
+			|| _runState.MainStageIndex != completedStageIndex
+			|| !string.Equals(_runState.EnemyAvatarId, enemyAvatarId, StringComparison.Ordinal))
+		{
+			return AdventureVictoryCommitResult.AlreadyCommitted;
+		}
+
+		bool isFinalStage = completedStageIndex >= AdventureCampaignCatalog.MainStageCount;
+		string nextRunJson = isFinalStage
+			? string.Empty
+			: JsonSerializer.Serialize(CreateAdvancedSnapshot(completedStageIndex + 1));
+		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		{
+			PendingAdventureRunJson = nextRunJson,
+		});
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to align an already committed adventure run: {saveResult}");
+			return AdventureVictoryCommitResult.SaveFailed;
+		}
+
+		if (isFinalStage)
+		{
+			_runState.Clear();
+		}
+		else
+		{
+			_runState.AdvanceToMainStage(
+				completedStageIndex + 1,
+				AdventureCampaignCatalog.GetMainAvatarId(completedStageIndex + 1));
+		}
+		ObservePayload(nextRunJson);
+		return AdventureVictoryCommitResult.AlreadyCommitted;
 	}
 
 	internal AdventureUpgradeRestoreResult ReloadFromActiveProfile()
@@ -399,6 +531,58 @@ public sealed partial class AdventureRunSessionStore : Node
 		}
 
 		ObservePayload(json);
+	}
+
+	private AdventureRunWriteResult ValidateTransactionalWrite(int mainStageIndex)
+	{
+		if (!_gameModePolicy.CanWriteAdventureRun)
+		{
+			return AdventureRunWriteResult.WriteNotAllowed;
+		}
+		if (HasRetainedPayload)
+		{
+			return AdventureRunWriteResult.RecoveryRequired;
+		}
+		return AdventureUpgradeChoiceRules.IsMainAdventureStageIndex(mainStageIndex)
+			? AdventureRunWriteResult.Succeeded
+			: AdventureRunWriteResult.InvalidStage;
+	}
+
+	private AdventureUpgradeRunSnapshot CreateNewRunSnapshot(int mainStageIndex, string enemyAvatarId)
+	{
+		var candidate = new AdventureUpgradeRunState();
+		candidate.BeginNewMainRun(mainStageIndex, enemyAvatarId);
+		return candidate.ToSnapshot();
+	}
+
+	private AdventureUpgradeRunSnapshot CreateAdvancedSnapshot(int mainStageIndex)
+	{
+		AdventureUpgradeRunSnapshot current = _runState.ToSnapshot();
+		return current with
+		{
+			CampaignId = AdventureCampaignCatalog.MainCampaignId,
+			MainStageIndex = mainStageIndex,
+			EnemyAvatarId = AdventureCampaignCatalog.GetMainAvatarId(mainStageIndex),
+			ShouldGrantRunStartUpgrade = false,
+			ShouldGrantVictoryUpgrade = true,
+		};
+	}
+
+	private bool TryPersistRunPayload(string json)
+	{
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		{
+			PendingAdventureRunJson = json,
+		});
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to persist adventure upgrade run session: {saveResult}");
+			return false;
+		}
+
+		ObservePayload(json);
+		return true;
 	}
 
 	private void ObservePayload(string? payload)

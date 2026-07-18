@@ -18,7 +18,7 @@ FrameCount = 1
 SortOrder = 902
 Rarity = "legacy"
 TagsCsv = ""
-PlayPresentation = "targeted_trigger"
+PlayPresentation = "direct_trigger"
 Trigger = "on_play"
 EffectType = "steal_deck_cards"
 EffectValuesRaw = "target=player_deck;count=3"

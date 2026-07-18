@@ -113,6 +113,18 @@ internal static partial class Program
 		Run("delete active profile keeps original slot when active switch fails", DeleteActiveProfileKeepsOriginalSlotWhenActiveSwitchFails);
 			Run("damaged pending adventure run json stays preserved in active profile", DamagedPendingAdventureRunJsonStaysPreservedInActiveProfile);
 			Run("valid pending adventure run json reloads active run", ValidPendingAdventureRunJsonReloadsActiveRun);
+			Run("adventure run transactional writes preserve memory on save failure", AdventureRunTransactionalWritesPreserveMemoryOnSaveFailure);
+			Run("adventure victory commits progress reward and next run atomically", AdventureVictoryCommitsProgressRewardAndNextRunAtomically);
+			Run("adventure victory save failure preserves current run", AdventureVictorySaveFailurePreservesCurrentRun);
+			Run("adventure final victory clears run in atomic commit", AdventureFinalVictoryClearsRunInAtomicCommit);
+			Run("adventure victory rejects out of sequence stage", AdventureVictoryRejectsOutOfSequenceStage);
+			Run("damaged adventure run recovery clears only run payload", DamagedAdventureRunRecoveryClearsOnlyRunPayload);
+			Run("adventure victory retries produce one effective commit", AdventureVictoryRetriesProduceOneEffectiveCommit);
+			Run("direct item target rules cover queen and king candidates", DirectItemTargetRulesCoverQueenAndKingCandidates);
+			Run("queen and king stay disabled direct trigger resources", QueenAndKingStayDisabledDirectTriggerResources);
+			Run("pending target cancellation completes authority before broadcast", PendingTargetCancellationCompletesAuthorityBeforeBroadcast);
+			Run("MCP autoloads use editor gated export safe proxies", McpAutoloadsUseEditorGatedExportSafeProxies);
+			Run("export preset excludes raw generated art patterns", ExportPresetExcludesRawGeneratedArtPatterns);
 			Run("adventure run store retries deferred restore from Pandora data loaded signal once", AdventureRunStoreRetriesDeferredRestoreFromPandoraDataLoadedSignalOnce);
 			Run("capture reveal order opens edges before middle", CaptureRevealOrderOpensEdgesBeforeMiddle);
 		Run("reward resolver uses weighted reservoir selection", RewardResolverUsesWeightedReservoirSelection);

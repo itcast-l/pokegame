@@ -224,7 +224,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		GetAdventureRunSessionStore()?.BeginNewMainRun(1, firstAvatarId);
+		AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
+			1,
+			firstAvatarId) ?? AdventureRunWriteResult.SaveFailed;
+		if (writeResult != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to restart adventure journey: {writeResult}");
+			ShowPauseMenu();
+			return;
+		}
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
 	}
 

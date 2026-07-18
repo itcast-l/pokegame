@@ -2,9 +2,9 @@
 extends EditorPlugin
 
 const _MCP_AUTOLOADS: Array[Array] = [
-	["autoload/MCPScreenshot", "res://addons/godot_mcp/mcp_screenshot_service.gd"],
-	["autoload/MCPInputService", "res://addons/godot_mcp/mcp_input_service.gd"],
-	["autoload/MCPGameInspector", "res://addons/godot_mcp/mcp_game_inspector_service.gd"],
+	["autoload/MCPScreenshot", "res://scripts/dev_mcp/mcp_screenshot_proxy.gd"],
+	["autoload/MCPInputService", "res://scripts/dev_mcp/mcp_input_service_proxy.gd"],
+	["autoload/MCPGameInspector", "res://scripts/dev_mcp/mcp_game_inspector_proxy.gd"],
 ]
 
 const _MCP_TEMP_FILES: Array[String] = [

@@ -65,6 +65,8 @@ public partial class GameBoardScene
 
 	private void CancelPendingItemSelection()
 	{
+		bool hadPendingSelection = HasPendingItemSelection();
+		bool hadAuthorityAction = _networkAuthorityActionState.IsActive;
 		if (ShouldSendNetworkPendingItemSelectionRequest() && _networkPredictedItemVisualActive)
 		{
 			RollbackPredictedNetworkItemCardPlay();
@@ -73,8 +75,19 @@ public partial class GameBoardScene
 
 		DisposeActiveSelectionOverlay();
 		ClearPendingItemSelectionState();
+		ResetNetworkLocallyCommittedPendingSelectionState();
+		ResetNetworkPredictedItemVisualState();
+		ClearNetworkPendingActionState();
 		_isProcessingCardPlay = false;
 		RenderPlayerHands();
+		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
+		{
+			CompleteNetworkAuthorityAction();
+			if (IsNetworkMultiplayerMode() && !hadAuthorityAction && hadPendingSelection)
+			{
+				GetNetworkManager()?.CommitAuthorityCheckpointFromBoard(this);
+			}
+		}
 		SendBoardSnapshotIfHost();
 	}
 

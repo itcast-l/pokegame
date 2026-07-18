@@ -35,6 +35,7 @@
     <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
     <Compile Include="../../scripts/AdventureUpgradeRunState.cs" Link="Rules/AdventureUpgradeRunState.cs" />
     <Compile Include="../../scripts/AdventureRunSessionStore.cs" Link="Rules/AdventureRunSessionStore.cs" />
+	<Compile Include="../../scripts/AdventureRunCommitResults.cs" Link="Rules/AdventureRunCommitResults.cs" />
     <Compile Include="../../scripts/AdventureUpgradeTriggerRules.cs" Link="Rules/AdventureUpgradeTriggerRules.cs" />
     <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
     <Compile Include="../../scripts/CardVisualTuningRules.cs" Link="Rules/CardVisualTuningRules.cs" />
@@ -43,6 +44,7 @@
     <Compile Include="../../scripts/ItemCardEffectContractRegistry.cs" Link="Rules/ItemCardEffectContractRegistry.cs" />
     <Compile Include="../../scripts/ItemCardManifestValidationRules.cs" Link="Rules/ItemCardManifestValidationRules.cs" />
     <Compile Include="../../scripts/ItemCardEffectSupport.cs" Link="Rules/ItemCardEffectSupport.cs" />
+	<Compile Include="../../scripts/DirectItemTargetRules.cs" Link="Rules/DirectItemTargetRules.cs" />
     <Compile Include="../../scripts/AttachmentSelectionPreviewRules.cs" Link="Rules/AttachmentSelectionPreviewRules.cs" />
     <Compile Include="../../scripts/GameSaveStore.cs" Link="Rules/GameSaveStore.cs" />
     <Compile Include="../../scripts/GameSaveProfileRepository.cs" Link="Rules/GameSaveProfileRepository.cs" />

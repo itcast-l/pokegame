@@ -5,6 +5,10 @@ using Godot;
 public partial class GameBoardScene
 {
 	private AdventureDefeatResolution? _settledAdventureDefeatResolution;
+	private bool _adventureVictoryCommitInProgress;
+	private bool _adventureVictoryCommitCompleted;
+	private string _adventureVictoryStatusLocalizationKey = string.Empty;
+	private static readonly double[] AdventureVictorySaveRetryDelays = { 0.5, 1.0, 2.0 };
 
 	private void CreateWinnerLabel()
 	{
@@ -44,6 +48,10 @@ public partial class GameBoardScene
 
 	private void ShowWinnerBanner(int playerIndex)
 	{
+		if (_winnerBannerRoot != null)
+		{
+			_winnerBannerRoot.ReturnButton.Disabled = false;
+		}
 		_showingDefeatResult = ShouldShowDefeatResult(playerIndex);
 		_winnerLabel.Text = _showingDefeatResult
 			? Localize("GAME_DEFEAT")
@@ -83,6 +91,83 @@ public partial class GameBoardScene
 		else
 		{
 			_winnerBannerRoot.ReturnButton.GrabFocus();
+		}
+	}
+
+	private async Task<bool> CommitAdventureVictoryWithRetryAsync()
+	{
+		if (_adventureVictoryCommitCompleted)
+		{
+			return true;
+		}
+		if (_adventureVictoryCommitInProgress || _isLeavingGame)
+		{
+			return false;
+		}
+
+		_adventureVictoryCommitInProgress = true;
+		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVING");
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		for (int attemptIndex = 0; attemptIndex <= AdventureVictorySaveRetryDelays.Length; attemptIndex++)
+		{
+			if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
+			{
+				_adventureVictoryCommitInProgress = false;
+				return false;
+			}
+
+			AdventureVictoryCommitResult result = store?.CommitMainAdventureVictory(adventure_enemy_avatar_id)
+				?? AdventureVictoryCommitResult.SaveFailed;
+			if (result is AdventureVictoryCommitResult.Succeeded or AdventureVictoryCommitResult.AlreadyCommitted)
+			{
+				_adventureVictoryCommitCompleted = true;
+				_adventureVictoryCommitInProgress = false;
+				_adventureVictoryStatusLocalizationKey = string.Empty;
+				return true;
+			}
+			if (result is AdventureVictoryCommitResult.InvalidStage or AdventureVictoryCommitResult.OutOfSequence)
+			{
+				GD.PushError($"Adventure victory commit rejected for '{adventure_enemy_avatar_id}': {result}");
+				break;
+			}
+			if (attemptIndex < AdventureVictorySaveRetryDelays.Length)
+			{
+				ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVE_RETRYING");
+				await ToSignal(GetTree().CreateTimer(AdventureVictorySaveRetryDelays[attemptIndex]), SceneTreeTimer.SignalName.Timeout);
+			}
+		}
+
+		_adventureVictoryCommitInProgress = false;
+		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVE_FAILED_REPLAY");
+		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
+		if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
+		{
+			return false;
+		}
+		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_RETURNING_TO_MENU");
+		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
+		if (!_isLeavingGame && GodotObject.IsInstanceValid(this))
+		{
+			await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
+		}
+		return false;
+	}
+
+	private void ShowAdventureVictorySaveStatus(string localizationKey)
+	{
+		_adventureVictoryStatusLocalizationKey = localizationKey;
+		_winnerLabel.Text = Localize(localizationKey);
+		_winnerLabel.Visible = true;
+		ApplyWinnerLabelLayout();
+		if (_winnerBannerRoot != null)
+		{
+			_winnerBannerRoot.Visible = true;
+			_winnerBannerRoot.Modulate = Colors.White;
+			_winnerBannerRoot.ReturnButton.Disabled = true;
+		}
+		if (_winnerReplayButton != null)
+		{
+			_winnerReplayButton.Disabled = true;
 		}
 	}
 
@@ -200,10 +285,6 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (AdventureCampaignCatalog.TryGetMainStageIndex(nextAvatarId, out int nextMainStageIndex))
-		{
-			AdvanceAdventureUpgradeRunToMainStage(nextMainStageIndex, nextAvatarId);
-		}
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
 	}
 
@@ -229,9 +310,14 @@ public partial class GameBoardScene
 
 		if (beginNewRun)
 		{
-			GetAdventureRunSessionStore()?.BeginNewMainRun(
+			AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
 				1,
-				GetFirstMainAdventureAvatarId());
+				GetFirstMainAdventureAvatarId()) ?? AdventureRunWriteResult.SaveFailed;
+			if (writeResult != AdventureRunWriteResult.Succeeded)
+			{
+				GD.PushWarning($"Failed to start a new adventure run from results: {writeResult}");
+				return;
+			}
 		}
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
 	}
@@ -272,7 +358,8 @@ public partial class GameBoardScene
 
 		bool shouldAdvanceAdventure = ShouldAdvanceAdventureFromWinner();
 		bool hasAdventureDefeatAction = _settledAdventureDefeatResolution.HasValue;
-		_winnerReplayButton.Disabled = !ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
+		_winnerReplayButton.Disabled = !string.IsNullOrEmpty(_adventureVictoryStatusLocalizationKey)
+			|| !ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
 			IsNetworkMultiplayerMode(),
 			shouldAdvanceAdventure || hasAdventureDefeatAction);
 		string buttonKey = _settledAdventureDefeatResolution switch
@@ -293,6 +380,7 @@ public partial class GameBoardScene
 		}
 
 		_winnerBannerRoot.ReturnButton.Text = Localize(GetWinnerReturnButtonKey());
+		_winnerBannerRoot.ReturnButton.Disabled = !string.IsNullOrEmpty(_adventureVictoryStatusLocalizationKey);
 	}
 
 	private bool ShouldAdvanceAdventureFromWinner()

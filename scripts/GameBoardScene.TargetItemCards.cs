@@ -26,7 +26,11 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		if (targetHandIndex < _playerHands[targetPlayerIndex].Count)
+		DirectItemHandCardSource handCardSource = DirectItemTargetRules.ResolveHandCardSource(
+			_playerHands[targetPlayerIndex].Count,
+			_playerItemHands[targetPlayerIndex].Count,
+			targetHandIndex);
+		if (handCardSource == DirectItemHandCardSource.BaseHand)
 		{
 			if (!HasRoomForNewHandCard(ownerPlayerIndex)
 				&& !await DiscardHandCardForNewItemCardAsync(ownerPlayerIndex, turnSequenceGeneration))
@@ -215,7 +219,9 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		int cardsToMove = Math.Min(cardsToMoveLimit, _playerDecks[targetPlayerIndex].Count);
+		int cardsToMove = DirectItemTargetRules.GetDeckTransferCount(
+			_playerDecks[targetPlayerIndex].Count,
+			cardsToMoveLimit);
 		bool shouldPlayLocalVisual = ShouldPlayOwnerOnlyVisualLocally(ownerPlayerIndex);
 		if (cardsToMove > 0)
 		{

@@ -271,6 +271,27 @@ public static partial class CharacterAvatarCatalog
 		}
 	}
 
+	internal static GameSaveStore.GameProgressData CreateMainAdventureVictoryProfile(
+		GameSaveStore.GameProgressData profile,
+		int completedStageIndex,
+		string enemyAvatarId,
+		string nextRunJson)
+	{
+		List<string> pendingUnlocks = ParsePendingAdventureAvatarUnlockQueue(profile.PendingAvatarUnlockQueue);
+		if (IsPlayerObtainableAdventureStage(completedStageIndex)
+			&& !pendingUnlocks.Contains(enemyAvatarId))
+		{
+			pendingUnlocks.Add(enemyAvatarId);
+		}
+
+		return profile with
+		{
+			HighestCompletedMainAdventureStage = completedStageIndex,
+			PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(pendingUnlocks),
+			PendingAdventureRunJson = nextRunJson,
+		};
+	}
+
 	public static string ConsumePendingAdventureAvatarUnlock()
 	{
 		List<string> pendingUnlocks = LoadPendingAdventureAvatarUnlockQueue();
