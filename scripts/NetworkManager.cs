@@ -100,6 +100,7 @@ public partial class NetworkManager : Node
 
 	public override void _Ready()
 	{
+		ProcessMode = ProcessModeEnum.Always;
 		ConnectMultiplayerSignals();
 		TryConnectSteamSignals();
 		RefreshLocalIdentity();

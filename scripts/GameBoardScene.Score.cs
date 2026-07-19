@@ -96,20 +96,31 @@ public partial class GameBoardScene
 			}
 
 			int previousScore = _playerScores[damageTargetPlayerIndex];
-			_playerScores[damageTargetPlayerIndex] = Math.Max(0, previousScore - points);
-			int actualDamage = previousScore - _playerScores[damageTargetPlayerIndex];
+			int damagedScore = Math.Max(0, previousScore - points);
+			int actualDamage = previousScore - damagedScore;
 			if (damageTargetPlayerIndex == MainPlayerIndex && ShouldUseAdventureUpgradeSystem())
 			{
+				AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 				AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
-				if (runState?.IsActive == true)
+				if (store != null && runState?.IsActive == true)
 				{
 					AdventureLowHealthRescueResult rescueResult = AdventureUpgradeEffectService.ResolveMainPlayerLowHealthRescue(
 						previousScore,
-						_playerScores[damageTargetPlayerIndex],
+						damagedScore,
 						runState.MaxHealth,
 						runState.GetAcquiredUpgradeIds(),
 						_adventureMainPlayerHalfHealthRescueUsed,
 						_adventureMainPlayerQuarterHealthRescueUsed);
+					AdventureHealingCommitResult commitResult = store.UpdateHealthAndApplyHealing(
+						damagedScore,
+						rescueResult.HealAmount);
+					if (commitResult.WriteResult != AdventureRunWriteResult.Succeeded)
+					{
+						GD.PushWarning($"Failed to commit adventure damage and recovery: {commitResult.WriteResult}");
+						return;
+					}
+
+					_playerScores[damageTargetPlayerIndex] = commitResult.HealingResult.CurrentHealth;
 					if (rescueResult.ConsumedHalfThreshold)
 					{
 						_adventureMainPlayerHalfHealthRescueUsed = true;
@@ -120,20 +131,19 @@ public partial class GameBoardScene
 						_adventureMainPlayerQuarterHealthRescueUsed = true;
 					}
 
-					if (rescueResult.HealAmount > 0 || rescueResult.DrawCount > 0)
+					if (rescueResult.DrawCount > 0)
 					{
-						PersistAdventureMainPlayerHealthIfNeeded(damageTargetPlayerIndex);
-						if (rescueResult.HealAmount > 0)
-						{
-							ApplyAdventureMainPlayerHealing(rescueResult.HealAmount);
-						}
-
-						if (rescueResult.DrawCount > 0)
-						{
-							DrawCardsFromDeckToHandForAdventureEffect(MainPlayerIndex, rescueResult.DrawCount);
-						}
+						DrawCardsFromDeckToHandForAdventureEffect(MainPlayerIndex, rescueResult.DrawCount);
 					}
 				}
+				else
+				{
+					_playerScores[damageTargetPlayerIndex] = damagedScore;
+				}
+			}
+			else
+			{
+				_playerScores[damageTargetPlayerIndex] = damagedScore;
 			}
 			PlayAvatarDamagePopup(damageTargetPlayerIndex, actualDamage);
 			UpdatePlayerScoreMeter(damageTargetPlayerIndex, true);
@@ -310,7 +320,13 @@ public partial class GameBoardScene
 			return;
 		}
 
-		store!.SetHealth(_playerScores[playerIndex], runState.MaxHealth);
+		AdventureRunWriteResult writeResult = store!.SetHealth(
+			_playerScores[playerIndex],
+			runState.MaxHealth);
+		if (writeResult != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to persist adventure health: {writeResult}");
+		}
 	}
 
 	private bool ApplyAdventureMainPlayerHealing(int healAmount, int maxHealthDelta = 0, bool animate = true)
@@ -321,23 +337,19 @@ public partial class GameBoardScene
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
+		if (store?.HasActiveRun != true)
 		{
 			return false;
 		}
 
-		int nextMaxHealth = Math.Max(1, runState.MaxHealth + Math.Max(0, maxHealthDelta));
-		AdventureHealingResult healingResult = AdventureUpgradeEffectService.ApplyHealing(
-			runState.CurrentHealth,
-			nextMaxHealth,
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			healAmount);
-		store.ReplaceEffectState(runState.EffectState.Clone());
-		store.SetHealth(healingResult.CurrentHealth, healingResult.MaxHealth);
+		AdventureHealingCommitResult commitResult = store.ApplyHealing(healAmount, maxHealthDelta);
+		if (commitResult.WriteResult != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to commit adventure healing: {commitResult.WriteResult}");
+			return false;
+		}
 
-		_playerScores[MainPlayerIndex] = healingResult.CurrentHealth;
+		_playerScores[MainPlayerIndex] = commitResult.HealingResult.CurrentHealth;
 		UpdatePlayerScoreMeter(MainPlayerIndex, animate);
 		RefreshGameplayTensionMusic();
 		return true;

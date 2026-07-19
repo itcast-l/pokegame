@@ -23,6 +23,24 @@ internal static partial class Program
 		Equal(pendingRunJson, roundTripped.PendingAdventureRunJson);
 	}
 
+	private static void BackupOnlyProfileIsTreatedAsExistingAndLoadable()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		saveManager.SeedBackupSlot(slotId, CreateProgressData(playerName: "Backup Player").ToDictionary());
+
+		IReadOnlyList<GameSaveStore.SaveSlotMetadata> profiles = GameSaveStore.ListProfiles();
+		True(profiles[1].Exists);
+		Equal("Backup Player", profiles[1].PlayerName);
+		Equal(slotId, GameSaveProfileRepository.FindFirstExistingProfileSlotId(saveManager));
+		False(string.Equals(slotId, GameSaveProfileRepository.FindFirstEmptyProfileSlotId(saveManager), StringComparison.Ordinal));
+
+		GameSaveStore.GameProgressData loaded = GameSaveStore.LoadProfile(slotId);
+		Equal("Backup Player", loaded.PlayerName);
+		Equal(0, saveManager.SaveToSlotCallCount);
+	}
+
 	private static void DeleteActiveProfileSwitchesReplacementBeforeRemovingOriginalSlot()
 	{
 		ResetGameSaveStoreTestState();
@@ -220,6 +238,150 @@ internal static partial class Program
 		Equal(before.MainStageIndex, after.MainStageIndex);
 		Equal(before.EnemyAvatarId, after.EnemyAvatarId);
 		Equal(1, ReadStoredRunSnapshot(saveManager, slotId).MainStageIndex);
+	}
+
+	private static void AdventureRunSnapshotsCannotMutateStoreState()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
+
+		AdventureUpgradeRunState detached = store.GetRunState();
+		detached.SetHealth(1, 150);
+		detached.EffectState.QuestionRewardCount = 9;
+
+		AdventureUpgradeRunState current = store.GetRunState();
+		Equal(100, current.CurrentHealth);
+		Equal(100, current.MaxHealth);
+		Equal(0, current.EffectState.QuestionRewardCount);
+		Equal(100, ReadStoredRunSnapshot(saveManager, slotId).CurrentHealth);
+	}
+
+	private static void AdventureDefeatTransactionRetriesWithoutDoubleRevive()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		AdventureDefeatCommitResult failed = store.ResolveMainAdventureDefeat();
+		Equal(AdventureRunWriteResult.SaveFailed, failed.WriteResult);
+		False(failed.Resolution.HasValue);
+		False(store.GetRunState().HasUsedRevive);
+		Equal(100, store.GetRunState().CurrentHealth);
+		False(ReadStoredRunSnapshot(saveManager, slotId).HasUsedRevive);
+
+		AdventureDefeatCommitResult retried = store.ResolveMainAdventureDefeat();
+		Equal(AdventureRunWriteResult.Succeeded, retried.WriteResult);
+		Equal(AdventureDefeatResolution.RetryCurrentStage, retried.Resolution);
+		True(store.GetRunState().HasUsedRevive);
+		Equal(50, store.GetRunState().CurrentHealth);
+		True(ReadStoredRunSnapshot(saveManager, slotId).HasUsedRevive);
+	}
+
+	private static void AdventureUpgradeGrantCommitsAllFieldsOnce()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
+		int savesBeforeGrant = saveManager.SaveToSlotCallCount;
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		AdventureUpgradeGrantCommitResult failed = store.GrantUpgrade(
+			"hearts_thick_blood",
+			AdventureUpgradeTriggerSource.RunStart);
+		Equal(AdventureRunWriteResult.SaveFailed, failed.WriteResult);
+		AdventureUpgradeRunState unchanged = store.GetRunState();
+		False(unchanged.HasAcquiredUpgrade("hearts_thick_blood"));
+		True(unchanged.ShouldGrantRunStartUpgrade);
+		Equal(100, unchanged.CurrentHealth);
+		Equal(100, unchanged.MaxHealth);
+
+		AdventureUpgradeGrantCommitResult committed = store.GrantUpgrade(
+			"hearts_thick_blood",
+			AdventureUpgradeTriggerSource.RunStart);
+		Equal(AdventureRunWriteResult.Succeeded, committed.WriteResult);
+		Equal(AdventureUpgradeAcquireResult.Acquired, committed.AcquireResult);
+		AdventureUpgradeRunState current = store.GetRunState();
+		True(current.HasAcquiredUpgrade("hearts_thick_blood"));
+		False(current.ShouldGrantRunStartUpgrade);
+		Equal(104, current.CurrentHealth);
+		Equal(104, current.MaxHealth);
+		Equal(savesBeforeGrant + 2, saveManager.SaveToSlotCallCount);
+		AdventureUpgradeRunSnapshot stored = ReadStoredRunSnapshot(saveManager, slotId);
+		Equal(104, stored.CurrentHealth);
+		False(stored.ShouldGrantRunStartUpgrade);
+		True(stored.AcquiredUpgradeIds.Contains("hearts_thick_blood"));
+	}
+
+	private static void AdventureCompositeTransactionsRollBack()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
+		Equal(AdventureRunWriteResult.Succeeded, store.SetHealth(50, 100));
+		Equal(
+			AdventureRunWriteResult.Succeeded,
+			store.GrantUpgrade("hearts_question_mark_first_aid", AdventureUpgradeTriggerSource.None).WriteResult);
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		AdventureQuestionRewardCommitResult failedQuestion = store.ResolveQuestionReward();
+		Equal(AdventureRunWriteResult.SaveFailed, failedQuestion.WriteResult);
+		Equal(0, store.GetRunState().EffectState.QuestionRewardCount);
+		Equal(50, store.GetRunState().CurrentHealth);
+
+		AdventureQuestionRewardCommitResult committedQuestion = store.ResolveQuestionReward();
+		Equal(AdventureRunWriteResult.Succeeded, committedQuestion.WriteResult);
+		Equal(1, store.GetRunState().EffectState.QuestionRewardCount);
+		True(store.GetRunState().CurrentHealth > 50);
+
+		AdventureUpgradeRunState withCarry = store.GetRunState();
+		withCarry.EffectState.NextTurnHealAmount = 3;
+		withCarry.EffectState.NextTurnDrawCount = 1;
+		int savesBeforeTransientCommit = saveManager.SaveToSlotCallCount;
+		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(withCarry.EffectState));
+		Equal(savesBeforeTransientCommit, saveManager.SaveToSlotCallCount);
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		int healthBeforeTurnStart = store.GetRunState().CurrentHealth;
+		AdventureTurnStartCommitResult failedTurnStart = store.ResolveTurnStartEffects();
+		Equal(AdventureRunWriteResult.SaveFailed, failedTurnStart.WriteResult);
+		Equal(3, store.GetRunState().EffectState.NextTurnHealAmount);
+		Equal(1, store.GetRunState().EffectState.NextTurnDrawCount);
+		Equal(healthBeforeTurnStart, store.GetRunState().CurrentHealth);
+
+		AdventureTurnStartCommitResult committedTurnStart = store.ResolveTurnStartEffects();
+		Equal(AdventureRunWriteResult.Succeeded, committedTurnStart.WriteResult);
+		Equal(0, store.GetRunState().EffectState.NextTurnHealAmount);
+		Equal(0, store.GetRunState().EffectState.NextTurnDrawCount);
+		True(store.GetRunState().CurrentHealth > healthBeforeTurnStart);
+
+		int healthBeforeDamage = store.GetRunState().CurrentHealth;
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+		AdventureHealingCommitResult failedDamageRecovery =
+			store.UpdateHealthAndApplyHealing(healthBeforeDamage - 10, 3);
+		Equal(AdventureRunWriteResult.SaveFailed, failedDamageRecovery.WriteResult);
+		Equal(healthBeforeDamage, store.GetRunState().CurrentHealth);
+
+		AdventureHealingCommitResult committedDamageRecovery =
+			store.UpdateHealthAndApplyHealing(healthBeforeDamage - 10, 3);
+		Equal(AdventureRunWriteResult.Succeeded, committedDamageRecovery.WriteResult);
+		Equal(healthBeforeDamage - 7, store.GetRunState().CurrentHealth);
 	}
 
 	private static void AdventureVictoryCommitsProgressRewardAndNextRunAtomically()

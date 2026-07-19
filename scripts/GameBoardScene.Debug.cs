@@ -5,6 +5,51 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private int _debugAdventureSaveGateProbeAttemptCount;
+	private bool _debugAdventureSaveGateProbeCompleted;
+
+	public bool DebugStartAdventureSaveGateProbe(int failuresBeforeSuccess)
+	{
+		if (_adventureSaveInProgress || _debugAdventureSaveGateProbeCompleted)
+		{
+			return false;
+		}
+
+		_debugAdventureSaveGateProbeAttemptCount = 0;
+		_ = RunDebugAdventureSaveGateProbeAsync(Math.Max(0, failuresBeforeSuccess));
+		return true;
+	}
+
+	private async Task RunDebugAdventureSaveGateProbeAsync(int failuresBeforeSuccess)
+	{
+		AdventureSaveGateResult<AdventureRunWriteResult> gate = await ExecuteAdventureSaveGateAsync(
+			() => ++_debugAdventureSaveGateProbeAttemptCount > failuresBeforeSuccess
+				? AdventureRunWriteResult.Succeeded
+				: AdventureRunWriteResult.SaveFailed,
+			result => result == AdventureRunWriteResult.Succeeded,
+			result => result == AdventureRunWriteResult.SaveFailed);
+		_debugAdventureSaveGateProbeCompleted = gate.Succeeded;
+	}
+
+	public bool DebugIsAdventureSaveInProgress()
+	{
+		return _adventureSaveInProgress;
+	}
+
+	public int DebugGetAdventureSaveGateProbeAttemptCount()
+	{
+		return _debugAdventureSaveGateProbeAttemptCount;
+	}
+
+	public string DebugGetAdventureSaveStatusKey()
+	{
+		return _adventureVictoryStatusLocalizationKey;
+	}
+
+	public bool DebugCanMainPlayerAct()
+	{
+		return CanMainPlayerAct();
+	}
 	private const int DebugTableShuffleRenderSignatureSentinel = unchecked((int)0xA17E5EED);
 	private bool _debugTableShuffleProbeRunning;
 	private ulong _debugTableShuffleProbeStartedUsec;
@@ -258,15 +303,17 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (RecordAdventureAcquiredUpgrade(upgradeId)
-			!= AdventureUpgradeAcquireResult.Acquired)
+		AdventureUpgradeGrantCommitResult grantResult = GrantAdventureUpgrade(
+			upgradeId,
+			AdventureUpgradeTriggerSource.None);
+		if (grantResult.WriteResult != AdventureRunWriteResult.Succeeded
+			|| grantResult.AcquireResult != AdventureUpgradeAcquireResult.Acquired)
 		{
 			return false;
 		}
 
 		_ = ApplyAdventureUpgradeAcquisitionEffectsAsync(
-			upgradeId,
-			AdventureUpgradeTriggerSource.None,
+			grantResult,
 			_turnSequenceGeneration);
 		RenderPlayerHands();
 		return true;
@@ -435,7 +482,7 @@ public partial class GameBoardScene
 		int avatarStageNumber = initialRunState.CurrentAvatarStageNumber;
 		store.BeginNewRun(avatarStageNumber);
 		store.MarkRunStartUpgradeGranted();
-		if (store.AcquireUpgrade("spades_black_ledger")
+		if (store.GrantUpgrade("spades_black_ledger", AdventureUpgradeTriggerSource.None).AcquireResult
 			!= AdventureUpgradeAcquireResult.Acquired)
 		{
 			return false;
@@ -641,9 +688,9 @@ public partial class GameBoardScene
 		int avatarStageNumber = initialRunState.CurrentAvatarStageNumber;
 		store.BeginNewRun(avatarStageNumber);
 		store.MarkRunStartUpgradeGranted();
-		if (store.AcquireUpgrade("diamonds_question_mark_interest")
+		if (store.GrantUpgrade("diamonds_question_mark_interest", AdventureUpgradeTriggerSource.None).AcquireResult
 			!= AdventureUpgradeAcquireResult.Acquired
-			|| store.AcquireUpgrade("diamonds_final_double")
+			|| store.GrantUpgrade("diamonds_final_double", AdventureUpgradeTriggerSource.None).AcquireResult
 				!= AdventureUpgradeAcquireResult.Acquired)
 		{
 			return false;

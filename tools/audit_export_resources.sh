@@ -219,8 +219,11 @@ collect_autoload_export_conflicts() {
   local line name value rel output=""
   while IFS= read -r line; do
     [ -z "$line" ] && continue
-    name="${line%%=*}"
-    value="$(printf '%s\n' "$line" | awk -F'"' '{ print $2 }')"
+	name="${line%%=*}"
+	case "$name" in
+	  MCPScreenshot|MCPInputService|MCPGameInspector) continue ;;
+	esac
+	value="$(printf '%s\n' "$line" | awk -F'"' '{ print $2 }')"
     case "$value" in
       \*res://*) rel="${value#\*res://}" ;;
       res://*) rel="${value#res://}" ;;
@@ -242,10 +245,23 @@ collect_autoload_export_conflicts() {
 
 collect_missing_export_excludes() {
   local required pattern output=""
-  local -a required_patterns=(
-    "outputs/**"
-    "**/*.debug-sse.log"
-    "art/**/raw/**"
+	local -a required_patterns=(
+	  "addons/godot_mcp/**"
+	  "scripts/dev_mcp/**"
+	  "tmp/**"
+	  "generated-images/**"
+	  "current_screen*"
+	  "addons/adventure_suit_upgrades/**"
+	  "scenes/adventure_suit_upgrade_editor_scene.tscn"
+	  "scripts/GameBoardScene.Debug.cs*"
+	  "tests/**"
+	  "tools/**"
+	  "docs/**"
+	  "samples/**"
+	  "outputs/**"
+	  "Library/**"
+	  "**/*.debug-sse.log"
+	  "art/**/raw/**"
     "art/**/generated/**"
     "art/**/raw-sheet.png"
     "art/**/raw-sheet.png.import"
@@ -253,17 +269,7 @@ collect_missing_export_excludes() {
     "art/**/raw-sheet-clean.png.import"
     "art/**/sheet-transparent.png"
     "art/**/sheet-transparent.png.import"
-    "generated-images/*.png"
-    "generated-images/*.png.import"
-    "generated-images/**/debug/**"
-    "generated-images/**/input/**"
-    "generated-images/**/output/**"
-    "generated-images/**/final-candidates/**"
-    "generated-images/upgrade-popup-assets/raw/**"
-    "generated-images/upgrade-popup-assets/*.png"
-    "generated-images/upgrade-popup-assets/*.png.import"
-    "generated-images/upgrade-popup-assets/transparent-processing-meta.json"
-  )
+	)
 
   for required in "${required_patterns[@]}"; do
     local found=0
@@ -349,7 +355,13 @@ if [ -n "$(printf '%s' "$MISSING_EXCLUDES" | sed '/^$/d')" ]; then
   print_risk "export_presets.cfg exclude_filter is missing expected generated/debug excludes ($(count_non_empty_lines "$MISSING_EXCLUDES") missing)"
   print_limited_list "$MISSING_EXCLUDES"
 else
-  print_ok "export_presets.cfg exclude_filter covers generated/debug excludes"
+	print_ok "export_presets.cfg exclude_filter covers generated/debug excludes"
+fi
+
+if python3 tools/release_export.py --static-audit; then
+	print_ok "all release presets satisfy release-package policy"
+else
+	print_risk "one or more release presets violate release-package policy"
 fi
 
 print_section "Gitignore Coverage"

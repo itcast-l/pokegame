@@ -370,6 +370,7 @@ func export_slot_to_json(slot_id: StringName, output_json_path: String) -> Error
 |--------|------|
 | `save_started` / `save_completed` / `save_failed` | Slot save lifecycle |
 | `load_started` / `load_completed` / `load_failed` | Slot load lifecycle |
+| `backup_recovered(slot_id, primary_error, repair_error)` | A failed primary load used a valid `.bak`; `repair_error` reports primary self-repair status |
 | `save_requested` / `load_requested` | KV + saveables flows |
 | `migration_required(old_schema_version, new_schema_version)` | Loaded file schema is older than `savestate/current_version` |
 

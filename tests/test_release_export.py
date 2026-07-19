@@ -1,0 +1,363 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+
+import release_export  # noqa: E402
+
+
+DEFAULT_GODOT = Path("/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot")
+GODOT = Path(os.environ.get("GODOT_BIN", str(DEFAULT_GODOT)))
+
+
+class ReleaseExportUnitTests(unittest.TestCase):
+	def test_static_audit_checks_every_preset_and_unknown_platform(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			(root / "project.godot").write_text(
+				'[autoload]\nMCPScreenshot="*res://mcp.gd"\n'
+				'MCPInputService="*res://mcp.gd"\nMCPGameInspector="*res://mcp.gd"\n'
+				'[editor_plugins]\nenabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg")\n',
+				encoding="utf-8",
+			)
+			required = ",".join(release_export.REQUIRED_EXCLUDES)
+			(root / "export_presets.cfg").write_text(
+				f'''[preset.0]
+name="Windows"
+platform="Windows Desktop"
+export_filter="all_resources"
+exclude_filter="{required}"
+[preset.0.options]
+dotnet/include_scripts_content=false
+dotnet/include_debug_symbols=false
+[preset.1]
+name="Future Linux"
+platform="Linux/X11"
+export_filter="all_resources"
+exclude_filter="{required}"
+[preset.1.options]
+dotnet/include_scripts_content=false
+dotnet/include_debug_symbols=false
+''',
+				encoding="utf-8",
+			)
+			result = release_export.static_audit(root)
+			self.assertFalse(result["ok"])
+			self.assertTrue(any("Future Linux" in issue and "adapter" in issue for issue in result["issues"]))
+
+	def test_staging_copy_omits_development_files_and_preserves_source(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			base = Path(temp)
+			source = base / "source"
+			destination = base / "staging"
+			(source / "addons/godot_mcp").mkdir(parents=True)
+			(source / "scripts/dev_mcp").mkdir(parents=True)
+			(source / "tmp").mkdir()
+			(source / "scripts").mkdir(exist_ok=True)
+			(source / "runtime").mkdir()
+			(source / "addons/godot_mcp/plugin.gd").write_text("extends EditorPlugin\n", encoding="utf-8")
+			(source / "scripts/dev_mcp/proxy.gd").write_text("extends Node\n", encoding="utf-8")
+			(source / "tmp/leak.txt").write_text("leak\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.Debug.cs").write_text("debug\n", encoding="utf-8")
+			(source / "runtime/keep.txt").write_text("keep\n", encoding="utf-8")
+			project = (
+				'[autoload]\nMCPScreenshot="*res://scripts/dev_mcp/proxy.gd"\n'
+				'MCPInputService="*res://scripts/dev_mcp/proxy.gd"\n'
+				'MCPGameInspector="*res://scripts/dev_mcp/proxy.gd"\n'
+				'[editor_plugins]\nenabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg", '
+				'"res://addons/adventure_suit_upgrades/plugin.cfg", "res://addons/pandora/plugin.cfg")\n'
+			)
+			(source / "project.godot").write_text(project, encoding="utf-8")
+			source_hash = release_export._sha256_file(source / "project.godot")
+
+			release_export.create_staging_project(source, destination)
+			release_export.rewrite_staging_project(destination / "project.godot")
+
+			self.assertTrue((destination / "runtime/keep.txt").is_file())
+			self.assertFalse((destination / "addons/godot_mcp").exists())
+			self.assertFalse((destination / "scripts/dev_mcp").exists())
+			self.assertFalse((destination / "tmp").exists())
+			self.assertFalse((destination / "scripts/GameBoardScene.Debug.cs").exists())
+			staged_project = (destination / "project.godot").read_text(encoding="utf-8")
+			self.assertNotIn("MCPScreenshot", staged_project)
+			self.assertNotIn("godot_mcp", staged_project)
+			self.assertIn("addons/pandora/plugin.cfg", staged_project)
+			self.assertEqual(source_hash, release_export._sha256_file(source / "project.godot"))
+
+	def test_utf8_validator_reports_first_invalid_byte(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			(root / "valid.gd").write_text("extends Node\n", encoding="utf-8")
+			(root / "invalid.tscn").write_bytes(b"abc\xffdef")
+			result = release_export.validate_utf8_tree(root)
+			self.assertFalse(result["ok"])
+			self.assertEqual(3, result["issues"][0]["invalid_byte_offset"])
+
+	def test_release_log_blockers_fail_even_if_process_would_succeed(self) -> None:
+		for marker in release_export.LOG_BLOCKERS:
+			with self.subTest(marker=marker):
+				result = release_export.scan_log(f"normal output\n{marker}\n")
+				self.assertFalse(result["ok"])
+				self.assertEqual(1, result["blocker_counts"][marker])
+
+	def test_runtime_smoke_requires_explicit_success_marker(self) -> None:
+		with self.assertRaises(release_export.ReleaseError):
+			release_export._validate_runtime_smoke_result("clean but incomplete\n", "EXPECTED_OK")
+		result = release_export._validate_runtime_smoke_result("EXPECTED_OK\n", "EXPECTED_OK")
+		self.assertTrue(result["ok"])
+
+	def test_missing_release_assembly_is_detected(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			self.assertEqual([], release_export._find_pokegame_assembly(root))
+			(root / "data").mkdir()
+			assembly = root / "data/pokegame.dll"
+			assembly.write_bytes(b"assembly")
+			self.assertEqual([assembly], release_export._find_pokegame_assembly(root))
+
+	def test_size_baseline_warns_and_blocks_at_configured_thresholds(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			baseline_path = Path(temp) / "baseline.json"
+			baseline_path.write_text(
+				json.dumps(
+					{
+						"windows": {
+							"release_directory_size_bytes": 100 * 1024 * 1024,
+							"pck_size_bytes": 100 * 1024 * 1024,
+						}
+					}
+				),
+				encoding="utf-8",
+			)
+			original_path = release_export.BASELINE_PATH
+			try:
+				release_export.BASELINE_PATH = baseline_path
+				warning = release_export._size_baseline(
+					"windows", {"size_bytes": 106 * 1024 * 1024}, 106 * 1024 * 1024
+				)
+				blocked = release_export._size_baseline(
+					"windows", {"size_bytes": 116 * 1024 * 1024}, 116 * 1024 * 1024
+				)
+			finally:
+				release_export.BASELINE_PATH = original_path
+			self.assertEqual("warning", warning["status"])
+			self.assertEqual("blocked", blocked["status"])
+
+
+@unittest.skipUnless(GODOT.is_file(), "Godot 4.6 .NET executable is unavailable")
+class ReleasePackageAuditIntegrationTests(unittest.TestCase):
+	def _write_fixture(
+		self,
+		root: Path,
+		*,
+		include_data: bool = True,
+		csharp_content: str = "",
+		include_csharp_source: bool = False,
+		extra_files: dict[str, str] | None = None,
+		autoload_mcp: bool = False,
+	) -> None:
+		project = '''[application]
+config/name="Release Audit Fixture"
+run/main_scene="res://main.tscn"
+
+[internationalization]
+locale/translations=PackedStringArray("res://localization/ui.en.tres")
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+'''
+		if autoload_mcp:
+			project += '\n[autoload]\nMCPScreenshot="*res://runtime_mcp.gd"\n'
+		(root / "project.godot").write_text(project, encoding="utf-8")
+		(root / "export_presets.cfg").write_text(
+			f'''[preset.0]
+name="Fixture"
+platform="Windows Desktop"
+export_filter="all_resources"
+include_filter="data.pandora,localization/ui.csv,tmp/**,addons/godot_mcp/**,scripts/*.cs"
+exclude_filter=""
+[preset.0.options]
+dotnet/include_scripts_content={str(include_csharp_source).lower()}
+dotnet/include_debug_symbols=false
+''',
+			encoding="utf-8",
+		)
+		(root / "main.tscn").write_text(
+			'[gd_scene format=3]\n\n[node name="Main" type="Node"]\n', encoding="utf-8"
+		)
+		for relative in (
+			"addons/pandora/api.gd",
+			"addons/pandora/backend/entity_backend.gd",
+			"addons/pandora/model/entity.gd",
+			"addons/pandora/model/type.gd",
+		):
+			path = root / relative
+			path.parent.mkdir(parents=True, exist_ok=True)
+			path.write_text("extends Node\n", encoding="utf-8")
+		(root / "localization").mkdir()
+		(root / "localization/ui.en.tres").write_text(
+			'[gd_resource type="Translation" format=3]\n\n[resource]\nlocale = "en"\n', encoding="utf-8"
+		)
+		(root / "localization/ui.csv").write_text("keys,en\nHELLO,Hello\n", encoding="utf-8")
+		if include_data:
+			generator = root / "make_fixture_data.gd"
+			generator.write_text(
+				'''extends SceneTree
+func _initialize() -> void:
+\tvar file := FileAccess.open_compressed("res://data.pandora", FileAccess.WRITE)
+\tfile.store_string("{\\\"fixture\\\":true}")
+\tfile.close()
+\tquit(0)
+''',
+				encoding="utf-8",
+			)
+			result = subprocess.run(
+				[str(GODOT), "--headless", "--path", str(root), "--script", str(generator)],
+				text=True,
+				stdout=subprocess.PIPE,
+				stderr=subprocess.STDOUT,
+				check=False,
+			)
+			self.assertEqual(0, result.returncode, result.stdout)
+			generator.unlink()
+		(root / "scripts").mkdir()
+		(root / "scripts/Runtime.cs").write_text(csharp_content, encoding="utf-8")
+		if autoload_mcp:
+			(root / "runtime_mcp.gd").write_text("extends Node\n", encoding="utf-8")
+		for relative, content in (extra_files or {}).items():
+			path = root / relative
+			path.parent.mkdir(parents=True, exist_ok=True)
+			path.write_text(content, encoding="utf-8")
+
+	def _export_and_audit(self, fixture: Path) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+		pck = fixture.parent / f"{fixture.name}.pck"
+		export = subprocess.run(
+			[str(GODOT), "--headless", "--path", str(fixture), "--export-pack", "Fixture", str(pck)],
+			text=True,
+			stdout=subprocess.PIPE,
+			stderr=subprocess.STDOUT,
+			check=False,
+		)
+		self.assertEqual(0, export.returncode, export.stdout)
+		self.assertTrue(pck.is_file(), export.stdout)
+		harness = fixture.parent / f"{fixture.name}-audit"
+		harness.mkdir()
+		(harness / "project.godot").write_text(
+			'[application]\nconfig/name="Audit Harness"\n', encoding="utf-8"
+		)
+		report_path = fixture.parent / f"{fixture.name}-report.json"
+		command = [
+			str(GODOT),
+			"--headless",
+			"--path",
+			str(harness),
+			"--script",
+			str(ROOT / "tools/export_package_content_audit.gd"),
+			"--",
+			"--artifact",
+			str(pck),
+			"--platform",
+			"windows",
+			"--report",
+			str(report_path),
+			"--main-scene",
+			"res://main.tscn",
+			"--translation",
+			"res://localization/ui.en.tres",
+		]
+		result = subprocess.run(
+			command,
+			cwd=harness,
+			text=True,
+			stdout=subprocess.PIPE,
+			stderr=subprocess.STDOUT,
+			check=False,
+		)
+		self.assertTrue(report_path.is_file(), result.stdout)
+		return result, json.loads(report_path.read_text(encoding="utf-8"))
+
+	def test_clean_package_accepts_empty_csharp_placeholder(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			fixture = Path(temp) / "clean"
+			fixture.mkdir()
+			self._write_fixture(fixture)
+			result, report = self._export_and_audit(fixture)
+			self.assertEqual(0, result.returncode, result.stdout + "\n" + json.dumps(report, indent=2))
+			self.assertTrue(report["ok"])
+			self.assertEqual(0, report["csharp"]["source_content_count"])
+
+	def test_package_blocks_forbidden_paths_and_mcp_autoload(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			fixture = Path(temp) / "forbidden"
+			fixture.mkdir()
+			self._write_fixture(
+				fixture,
+				extra_files={"tmp/leak.txt": "leak\n", "addons/godot_mcp/plugin.gd": "extends Node\n"},
+				autoload_mcp=True,
+			)
+			result, report = self._export_and_audit(fixture)
+			self.assertNotEqual(0, result.returncode, result.stdout)
+			self.assertFalse(report["ok"])
+			self.assertTrue(any(path.startswith("tmp/") for path in report["forbidden_matches"]))
+			self.assertTrue(any("MCP autoload" in issue for issue in report["issues"]))
+
+	def test_package_blocks_recoverable_csharp_source(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			fixture = Path(temp) / "csharp-source"
+			fixture.mkdir()
+			self._write_fixture(
+				fixture,
+				csharp_content="public sealed class LeakedSource {}\n",
+				include_csharp_source=True,
+			)
+			result, report = self._export_and_audit(fixture)
+			self.assertNotEqual(0, result.returncode, result.stdout)
+			self.assertGreater(report["csharp"]["source_content_count"], 0)
+
+	def test_package_blocks_missing_pandora_data(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			fixture = Path(temp) / "missing-data"
+			fixture.mkdir()
+			self._write_fixture(fixture, include_data=False)
+			result, report = self._export_and_audit(fixture)
+			self.assertNotEqual(0, result.returncode, result.stdout)
+			self.assertTrue(any("data.pandora" in issue for issue in report["issues"]))
+
+	def test_auditor_without_actual_pck_fails_instead_of_scanning_workspace(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			harness = Path(temp)
+			(harness / "project.godot").write_text(
+				'[application]\nconfig/name="No Pack"\n', encoding="utf-8"
+			)
+			result = subprocess.run(
+				[
+					str(GODOT),
+					"--headless",
+					"--path",
+					str(harness),
+					"--script",
+					str(ROOT / "tools/export_package_content_audit.gd"),
+				],
+				cwd=harness,
+				text=True,
+				stdout=subprocess.PIPE,
+				stderr=subprocess.STDOUT,
+				check=False,
+			)
+			self.assertNotEqual(0, result.returncode, result.stdout)
+			self.assertIn("Missing required --artifact PCK path", result.stdout)
+
+
+if __name__ == "__main__":
+	unittest.main(verbosity=2)

@@ -183,7 +183,41 @@ internal sealed class AdventureUpgradeRunState
 
 	internal IReadOnlyCollection<string> GetAcquiredUpgradeIds()
 	{
-		return AcquiredUpgradeIds;
+		return new List<string>(AcquiredUpgradeIds);
+	}
+
+	internal AdventureUpgradeRunState DeepClone()
+	{
+		var clone = new AdventureUpgradeRunState();
+		clone.CopyFrom(this);
+		return clone;
+	}
+
+	internal void CopyFrom(AdventureUpgradeRunState? other)
+	{
+		if (other == null)
+		{
+			Clear();
+			return;
+		}
+
+		_manifest = other._manifest;
+		IsActive = other.IsActive;
+		CampaignId = other.CampaignId;
+		MainStageIndex = other.MainStageIndex;
+		EnemyAvatarId = other.EnemyAvatarId;
+		CurrentRunStageIndex = other.CurrentRunStageIndex;
+		ShouldGrantRunStartUpgrade = other.ShouldGrantRunStartUpgrade;
+		ShouldGrantVictoryUpgrade = other.ShouldGrantVictoryUpgrade;
+		CurrentHealth = other.CurrentHealth;
+		MaxHealth = other.MaxHealth;
+		HasUsedRevive = other.HasUsedRevive;
+		AcquiredUpgradeIds.Clear();
+		foreach (string upgradeId in other.AcquiredUpgradeIds)
+		{
+			AcquiredUpgradeIds.Add(upgradeId);
+		}
+		_effectState.CopyFrom(other._effectState);
 	}
 
 	internal void SetHealth(int currentHealth, int maxHealth)

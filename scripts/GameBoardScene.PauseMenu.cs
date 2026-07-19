@@ -15,6 +15,7 @@ public partial class GameBoardScene
 			GetPauseReturnButtonKey,
 			GetPauseRestartButtonKey,
 			CanRestartCurrentMatchFromPauseMenu,
+			() => !IsNetworkMultiplayerMode(),
 			ReturnToPauseMenuDestination,
 			RestartCurrentMatchFromPauseMenu,
 			QuitGameFromPauseMenu,
@@ -153,7 +154,6 @@ public partial class GameBoardScene
 
 		_isLeavingGame = true;
 		_pauseMenuController?.CloseForSceneTransition();
-		GetTree().Paused = false;
 			if (IsNetworkMultiplayerMode())
 			{
 				NetworkManager? networkManager = GetNetworkManager();

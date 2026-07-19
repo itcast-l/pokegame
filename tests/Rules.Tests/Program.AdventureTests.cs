@@ -574,7 +574,7 @@ internal static partial class Program
 	{
 		string source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs"));
 		int methodStart = source.IndexOf("private async Task ApplyAdventureCaptureRewardEffectsAsync(", StringComparison.Ordinal);
-		int methodEnd = source.IndexOf("private async Task ApplyAdventureUpgradeAcquisitionEffectsAsync(", methodStart, StringComparison.Ordinal);
+		int methodEnd = source.IndexOf("private Task ApplyAdventureUpgradeAcquisitionEffectsAsync(", methodStart, StringComparison.Ordinal);
 
 		True(methodStart >= 0);
 		True(methodEnd > methodStart);

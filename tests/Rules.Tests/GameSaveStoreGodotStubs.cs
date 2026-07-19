@@ -420,6 +420,14 @@ namespace Godot
 			FileAccess.SetFileExists(GetSlotPath(slotId), true);
 		}
 
+		public void SeedBackupSlot(string slotId, Godot.Collections.Dictionary data)
+		{
+			_slotData[slotId] = data;
+			string path = GetSlotPath(slotId);
+			FileAccess.SetFileExists(path, false);
+			FileAccess.SetFileExists($"{path}.bak", true);
+		}
+
 		public Godot.Collections.Dictionary GetSlotData(string slotId)
 		{
 			return _slotData.TryGetValue(slotId, out Godot.Collections.Dictionary? data)

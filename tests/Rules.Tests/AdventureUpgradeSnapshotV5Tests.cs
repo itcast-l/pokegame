@@ -488,13 +488,17 @@ internal static partial class Program
 		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		store.BeginNewMainRun(3, "jellyfish");
 		int saveCount = saveManager.SaveToSlotCallCount;
-		Equal(AdventureDefeatResolution.RetryCurrentStage, store.ResolveMainAdventureDefeat());
+		AdventureDefeatCommitResult defeatCommit = store.ResolveMainAdventureDefeat();
+		Equal(AdventureRunWriteResult.Succeeded, defeatCommit.WriteResult);
+		Equal<AdventureDefeatResolution?>(AdventureDefeatResolution.RetryCurrentStage, defeatCommit.Resolution);
 		Equal(saveCount + 1, saveManager.SaveToSlotCallCount);
 		True(store.GetRunState().HasUsedRevive);
 
 		store.ConfigureForPolicy(GameModePolicy.AdventureTutorial);
 		saveCount = saveManager.SaveToSlotCallCount;
-		Equal<AdventureDefeatResolution?>(null, store.ResolveMainAdventureDefeat());
+		AdventureDefeatCommitResult tutorialDefeat = store.ResolveMainAdventureDefeat();
+		Equal(AdventureRunWriteResult.WriteNotAllowed, tutorialDefeat.WriteResult);
+		Equal<AdventureDefeatResolution?>(null, tutorialDefeat.Resolution);
 		Equal(saveCount, saveManager.SaveToSlotCallCount);
 	}
 

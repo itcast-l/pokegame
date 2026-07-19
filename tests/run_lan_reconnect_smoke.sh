@@ -18,8 +18,6 @@ fi
 
 TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
-HOST_LOG="$TMP_DIR/host.log"
-CLIENT_LOG="$TMP_DIR/client.log"
 HOST_PID=""
 CLIENT_PID=""
 
@@ -34,10 +32,12 @@ cleanup() {
 }
 
 print_logs() {
+	local host_log="$1"
+	local client_log="$2"
 	echo "--- host log ---" >&2
-	cat "$HOST_LOG" >&2 || true
+	cat "$host_log" >&2 || true
 	echo "--- client log ---" >&2
-	cat "$CLIENT_LOG" >&2 || true
+	cat "$client_log" >&2 || true
 }
 
 require_log_line() {
@@ -45,8 +45,7 @@ require_log_line() {
 	local needle="$2"
 	if ! grep -Fq "$needle" "$file"; then
 		echo "Missing log marker: $needle" >&2
-		print_logs
-		exit 1
+		return 1
 	fi
 }
 
@@ -55,41 +54,62 @@ reject_log_line() {
 	local needle="$2"
 	if grep -Fq "$needle" "$file"; then
 		echo "Unexpected log marker: $needle" >&2
-		print_logs
-		exit 1
+		return 1
 	fi
 }
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanReconnectSmokeHost.gd >"$HOST_LOG" 2>&1 &
-HOST_PID=$!
-sleep 1
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanReconnectSmokeClient.gd >"$CLIENT_LOG" 2>&1 &
-CLIENT_PID=$!
+run_case() {
+	local label="$1"
+	local paused_client="$2"
+	local case_dir="$TMP_DIR/$label"
+	local host_log="$case_dir/host.log"
+	local client_log="$case_dir/client.log"
+	mkdir -p "$case_dir"
 
-HOST_STATUS=0
-CLIENT_STATUS=0
-wait "$HOST_PID" || HOST_STATUS=$?
-wait "$CLIENT_PID" || CLIENT_STATUS=$?
+	"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanReconnectSmokeHost.gd >"$host_log" 2>&1 &
+	HOST_PID=$!
+	sleep 1
+	if [[ "$paused_client" == "1" ]]; then
+		CODEX_LAN_RECONNECT_PAUSED=1 "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanReconnectSmokeClient.gd >"$client_log" 2>&1 &
+	else
+		"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanReconnectSmokeClient.gd >"$client_log" 2>&1 &
+	fi
+	CLIENT_PID=$!
 
-if [[ "$HOST_STATUS" -ne 0 || "$CLIENT_STATUS" -ne 0 ]]; then
-	echo "LAN reconnect smoke failed: host=$HOST_STATUS client=$CLIENT_STATUS" >&2
-	print_logs
-	exit 1
-fi
+	local host_status=0
+	local client_status=0
+	wait "$HOST_PID" || host_status=$?
+	wait "$CLIENT_PID" || client_status=$?
+	HOST_PID=""
+	CLIENT_PID=""
 
-require_log_line "$HOST_LOG" "HOST_START_MATCH"
-require_log_line "$HOST_LOG" "HOST_BOARD_INIT"
-require_log_line "$HOST_LOG" "HOST_FORCE_DISCONNECT"
-require_log_line "$HOST_LOG" "HOST_SAW_AI"
-require_log_line "$HOST_LOG" "HOST_SAW_RECLAIM"
-require_log_line "$HOST_LOG" "HOST_DONE"
-require_log_line "$CLIENT_LOG" "CLIENT_BOARD_INIT"
-require_log_line "$CLIENT_LOG" "CLIENT_STATE 8"
-require_log_line "$CLIENT_LOG" "CLIENT_RECONNECTED"
-require_log_line "$CLIENT_LOG" "CLIENT_DONE"
-reject_log_line "$HOST_LOG" "The multiplayer instance isn't currently active."
-reject_log_line "$CLIENT_LOG" "The multiplayer instance isn't currently active."
+	if [[ "$host_status" -ne 0 || "$client_status" -ne 0 ]]; then
+		echo "LAN reconnect smoke failed ($label): host=$host_status client=$client_status" >&2
+		print_logs "$host_log" "$client_log"
+		return 1
+	fi
+
+	for marker in HOST_START_MATCH HOST_BOARD_INIT HOST_FORCE_DISCONNECT HOST_SAW_AI HOST_SAW_RECLAIM HOST_DONE; do
+		require_log_line "$host_log" "$marker" || { print_logs "$host_log" "$client_log"; return 1; }
+	done
+	for marker in CLIENT_BOARD_INIT "CLIENT_STATE 8" CLIENT_RECONNECTED CLIENT_DONE; do
+		require_log_line "$client_log" "$marker" || { print_logs "$host_log" "$client_log"; return 1; }
+	done
+	if [[ "$paused_client" == "1" ]]; then
+		for marker in CLIENT_PAUSED_FOR_RECONNECT CLIENT_PAUSE_PRESERVED; do
+			require_log_line "$client_log" "$marker" || { print_logs "$host_log" "$client_log"; return 1; }
+		done
+	fi
+	reject_log_line "$host_log" "The multiplayer instance isn't currently active." || { print_logs "$host_log" "$client_log"; return 1; }
+	reject_log_line "$client_log" "The multiplayer instance isn't currently active." || { print_logs "$host_log" "$client_log"; return 1; }
+	reject_log_line "$host_log" "SCRIPT ERROR" || { print_logs "$host_log" "$client_log"; return 1; }
+	reject_log_line "$client_log" "SCRIPT ERROR" || { print_logs "$host_log" "$client_log"; return 1; }
+	echo "LAN_RECONNECT_CASE_OK $label"
+}
+
+run_case "standard" 0
+run_case "paused_client" 1
 
 echo "LAN_RECONNECT_SMOKE_OK"

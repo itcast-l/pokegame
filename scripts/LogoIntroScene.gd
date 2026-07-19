@@ -3,6 +3,7 @@ extends Control
 const NEXT_SCENE_PATH := "res://scenes/main_menu_scene.tscn"
 const SKIP_DELAY_SECONDS := 0.75
 const CROSSFADE_SECONDS := 0.35
+const RELEASE_PACKAGE_SMOKE_ARGUMENT := "--release-package-smoke"
 
 @onready var _video_player: VideoStreamPlayer = %LogoVideoPlayer
 @onready var _audio_player: AudioStreamPlayer = %LogoAudioPlayer
@@ -13,10 +14,24 @@ var _finishing := false
 
 
 func _ready() -> void:
+	if RELEASE_PACKAGE_SMOKE_ARGUMENT in OS.get_cmdline_user_args():
+		_video_player.autoplay = false
+		_audio_player.autoplay = false
+		_video_player.stream = null
+		_audio_player.stream = null
+		call_deferred("_run_release_package_smoke")
+		return
 	_video_player.finished.connect(_on_video_finished)
 	get_tree().create_timer(SKIP_DELAY_SECONDS).timeout.connect(_enable_skip)
 	_video_player.play()
 	_audio_player.play()
+
+
+func _run_release_package_smoke() -> void:
+	for _frame in range(5):
+		await get_tree().process_frame
+	print("WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK")
+	get_tree().quit(0)
 
 
 func _input(event: InputEvent) -> void:

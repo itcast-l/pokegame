@@ -18,7 +18,11 @@ func _run() -> void:
 	if _failed:
 		return
 
-	await _assert_game_board_responds_to_escape()
+	await _assert_offline_game_board_pause_semantics()
+	if _failed:
+		return
+
+	await _assert_network_game_board_pause_semantics()
 	if _failed:
 		return
 
@@ -32,9 +36,9 @@ func _assert_main_menu_responds_to_escape() -> void:
 	if main_menu == null:
 		return
 
-	var exit_dialog := main_menu.get_node_or_null("ExitDialogRoot")
+	var exit_dialog := main_menu.get_node_or_null("ExitDialogLayer/ExitDialogRoot")
 	if exit_dialog == null:
-		_fail("Main menu is missing ExitDialogRoot")
+		_fail("Main menu is missing ExitDialogLayer/ExitDialogRoot")
 		return
 
 	if exit_dialog.visible:
@@ -53,19 +57,10 @@ func _assert_main_menu_responds_to_escape() -> void:
 	await process_frame
 
 
-func _assert_game_board_responds_to_escape() -> void:
-	var board := await _instantiate_scene(GAME_BOARD_SCENE_PATH)
+func _assert_offline_game_board_pause_semantics() -> void:
+	var board := await _instantiate_game_board("")
 	if board == null:
 		return
-
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", false)
-
-	await process_frame
-	await process_frame
 
 	if board.get_node_or_null("PauseMenuLayer") != null:
 		_fail("Pause menu should not exist before Escape")
@@ -84,9 +79,75 @@ func _assert_game_board_responds_to_escape() -> void:
 	if pause_menu_root == null or not pause_menu_root.visible:
 		_fail("Game board pause menu did not become visible after Escape")
 		return
+	if not paused:
+		_fail("Offline game board did not pause the scene tree after Escape")
+		return
+
+	_press_escape()
+	await process_frame
+	await process_frame
+	if paused:
+		_fail("Offline game board did not resume the scene tree after closing the pause menu")
+		return
+	if pause_menu_root.visible:
+		_fail("Offline game board pause menu remained visible after closing")
+		return
 
 	board.queue_free()
 	await process_frame
+
+
+func _assert_network_game_board_pause_semantics() -> void:
+	var board := await _instantiate_game_board("esc-input-network-session")
+	if board == null:
+		return
+
+	_press_escape()
+	await process_frame
+	await process_frame
+
+	var pause_menu_layer := board.get_node_or_null("PauseMenuLayer")
+	var pause_menu_root := pause_menu_layer.get_node_or_null("PauseMenuRoot") if pause_menu_layer != null else null
+	if pause_menu_root == null or not pause_menu_root.visible:
+		_fail("Network game board pause menu did not become visible after Escape")
+		return
+	if paused:
+		_fail("Network game board pause menu unexpectedly paused the scene tree")
+		return
+
+	_press_escape()
+	await process_frame
+	await process_frame
+	if paused:
+		_fail("Closing the network pause menu changed the scene tree to paused")
+		return
+
+	board.queue_free()
+	await process_frame
+
+
+func _instantiate_game_board(network_session_id: String) -> Node:
+	var packed_scene := load(GAME_BOARD_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		_fail("Failed to load scene: %s" % GAME_BOARD_SCENE_PATH)
+		return null
+
+	var board := packed_scene.instantiate()
+	if board == null:
+		_fail("Failed to instantiate scene: %s" % GAME_BOARD_SCENE_PATH)
+		return null
+
+	board.set("player_count", 2)
+	board.set("item_mode", true)
+	board.set("winning_score", 100)
+	board.set("solo_mode", false)
+	board.set("adventure_mode", false)
+	board.set("network_session_id", network_session_id)
+	root.add_child(board)
+	current_scene = board
+	await process_frame
+	await process_frame
+	return board
 
 
 func _instantiate_scene(scene_path: String) -> Node:

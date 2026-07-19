@@ -1316,10 +1316,7 @@ internal static partial class Program
 	{
 		string text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "export_presets.cfg"));
 
-		True(text.Contains("generated-images/upgrade-popup-assets/raw/**", StringComparison.Ordinal));
-		True(text.Contains("generated-images/upgrade-popup-assets/*.png", StringComparison.Ordinal));
-		True(text.Contains("generated-images/upgrade-popup-assets/*.png.import", StringComparison.Ordinal));
-		True(text.Contains("generated-images/upgrade-popup-assets/transparent-processing-meta.json", StringComparison.Ordinal));
+		True(text.Contains("generated-images/**", StringComparison.Ordinal));
 	}
 
 	private static void GitignoreCoversUpgradePopupSourceOnlyAssets()

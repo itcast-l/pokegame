@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-07-18T17:18:00+08:00",
+  "windows": {
+    "release_directory_size_bytes": 361632291,
+    "pck_size_bytes": 170307784,
+    "source_build_id": "20260718T091521Z-73889",
+    "reason": "First clean Windows release after release-package audit hardening"
+  }
+}

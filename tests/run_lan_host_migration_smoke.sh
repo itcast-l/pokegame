@@ -161,6 +161,69 @@ run_case() {
 	echo "LAN_HOST_MIGRATION_CASE_OK $label"
 }
 
+run_paused_maintenance_case() {
+	local label="paused_maintenance"
+	local case_dir="$TMP_DIR/$label"
+	local result_dir="$case_dir/results"
+	mkdir -p "$result_dir"
+	local host_log="$case_dir/host.log"
+	local client_log="$case_dir/client_1.log"
+	local host_pid
+	local client_pid
+
+	echo "== host migration $label =="
+	CODEX_LAN_MIGRATION_FIXTURE=1 CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-0" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- \
+		--role=host --seat=0 --players=2 --item-mode=0 \
+		--result-dir="$result_dir" --paused-maintenance >"$host_log" 2>&1 &
+	host_pid=$!
+	PIDS+=("$host_pid")
+	sleep 1
+
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-1" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- \
+		--role=client --seat=1 --players=2 --item-mode=0 \
+		--result-dir="$result_dir" --allow-client-result-without-host \
+		--require-all-migration-peers --paused-maintenance >"$client_log" 2>&1 &
+	client_pid=$!
+	PIDS+=("$client_pid")
+
+	if ! wait_for_marker "$host_log" "PAUSED_MAINTENANCE_APPLIED role=host" 90 \
+		|| ! wait_for_marker "$client_log" "PAUSED_MAINTENANCE_APPLIED role=client" 90 \
+		|| ! wait_for_marker "$host_log" "PAUSED_MAINTENANCE_CHECKPOINT_REQUESTED" 90 \
+		|| ! wait_for_marker "$client_log" "STANDBY_ACKED" 90 \
+		|| ! wait_for_marker "$host_log" "PAUSED_MAINTENANCE_PLAN_READY" 90 \
+		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
+		echo "Paused maintenance did not establish standby and migration plan" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	kill -9 "$host_pid"
+	wait "$host_pid" 2>/dev/null || true
+	if ! wait_for_processes 150 "$client_pid"; then
+		echo "Paused maintenance client did not finish migration" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	if ! grep -Fq "PAUSED_MAINTENANCE_MIGRATING" "$client_log" \
+		|| ! grep -Fq "PAUSED_MAINTENANCE_RECOVERED" "$client_log" \
+		|| ! grep -Fq "FULL_MATCH_CLIENT_STATE 10" "$client_log" \
+		|| ! grep -Fq "FULL_MATCH_CLIENT_STATE 7" "$client_log" \
+		|| ! grep -Fq "MIGRATION_UI_STATE visible=true" "$client_log" \
+		|| ! grep -Fq "FULL_MATCH_CLIENT_WINNER" "$client_log" \
+		|| ! grep -Fq "private_leak=false" "$result_dir/client_1.result" \
+		|| grep -Fq "SCRIPT ERROR" "$host_log" \
+		|| grep -Fq "SCRIPT ERROR" "$client_log"; then
+		echo "Paused maintenance migration assertions failed" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	echo "LAN_HOST_MIGRATION_PAUSED_MAINTENANCE_OK"
+}
+
 run_pending_case() {
 	local label="$1"
 	local fixture="$2"
@@ -563,6 +626,9 @@ if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "3p_items" ]]
 fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "4p_items" ]]; then
 	run_case "4p_items" 4 1
+fi
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "paused_maintenance" ]]; then
+	run_paused_maintenance_case
 fi
 echo "LAN_HOST_MIGRATION_SMOKE_OK"
 

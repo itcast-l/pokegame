@@ -76,7 +76,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal AdventureUpgradeRunState GetRunState()
 	{
-		return _runState;
+		return _runState.DeepClone();
 	}
 
 	internal bool TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot)
@@ -136,16 +136,9 @@ public sealed partial class AdventureRunSessionStore : Node
 			return validation;
 		}
 
-		var candidate = new AdventureUpgradeRunState();
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
 		candidate.BeginNewMainRun(mainStageIndex, enemyAvatarId);
-		AdventureUpgradeRunSnapshot snapshot = candidate.ToSnapshot();
-		if (!TryPersistRunPayload(JsonSerializer.Serialize(snapshot)))
-		{
-			return AdventureRunWriteResult.SaveFailed;
-		}
-
-		_runState.BeginNewMainRun(mainStageIndex, enemyAvatarId);
-		return AdventureRunWriteResult.Succeeded;
+		return CommitCandidate(candidate);
 	}
 
 	internal AdventureRunWriteResult AdvanceToStage(int avatarStageNumber)
@@ -166,91 +159,246 @@ public sealed partial class AdventureRunSessionStore : Node
 			return validation;
 		}
 
-		AdventureUpgradeRunSnapshot snapshot = _runState.IsActive
-			? CreateAdvancedSnapshot(mainStageIndex)
-			: CreateNewRunSnapshot(mainStageIndex, enemyAvatarId);
-		if (!TryPersistRunPayload(JsonSerializer.Serialize(snapshot)))
-		{
-			return AdventureRunWriteResult.SaveFailed;
-		}
-
-		_runState.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
-		return AdventureRunWriteResult.Succeeded;
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
+		return CommitCandidate(candidate);
 	}
 
-	internal AdventureDefeatResolution? ResolveMainAdventureDefeat()
+	internal AdventureDefeatCommitResult ResolveMainAdventureDefeat()
 	{
 		if (!_gameModePolicy.IsAdventureMain
 			|| !_gameModePolicy.CanWriteAdventureRun
 			|| HasRetainedPayload
 			|| !_runState.IsActive)
 		{
-			return null;
+			return new AdventureDefeatCommitResult(
+				!_gameModePolicy.IsAdventureMain
+					? AdventureRunWriteResult.WriteNotAllowed
+					: ValidateActiveWrite(),
+				null);
 		}
 
-		AdventureDefeatResolution resolution = _runState.ResolveMainAdventureDefeat();
-		Persist();
-		return resolution;
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		AdventureDefeatResolution resolution = candidate.ResolveMainAdventureDefeat();
+		AdventureRunWriteResult writeResult = CommitCandidate(candidate);
+		return new AdventureDefeatCommitResult(
+			writeResult,
+			writeResult == AdventureRunWriteResult.Succeeded ? resolution : null);
 	}
 
-	internal void MarkRunStartUpgradeGranted()
+	internal AdventureRunWriteResult MarkRunStartUpgradeGranted()
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return;
+			return validation;
 		}
 
-		_runState.MarkRunStartUpgradeGranted();
-		Persist();
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.MarkRunStartUpgradeGranted();
+		return CommitCandidate(candidate);
 	}
 
-	internal void MarkVictoryUpgradeGranted()
+	internal AdventureRunWriteResult MarkVictoryUpgradeGranted()
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return;
+			return validation;
 		}
 
-		_runState.MarkVictoryUpgradeGranted();
-		Persist();
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.MarkVictoryUpgradeGranted();
+		return CommitCandidate(candidate);
 	}
 
-	internal AdventureUpgradeAcquireResult AcquireUpgrade(string upgradeId)
+	internal AdventureUpgradeGrantCommitResult GrantUpgrade(
+		string upgradeId,
+		AdventureUpgradeTriggerSource triggerSource)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return AdventureUpgradeAcquireResult.DeferredManifestUnavailable;
+			return new AdventureUpgradeGrantCommitResult(
+				validation,
+				AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
+				default,
+				null);
 		}
 
-		AdventureUpgradeAcquireResult result = _runState.AcquireUpgrade(upgradeId);
-		if (result == AdventureUpgradeAcquireResult.Acquired)
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		AdventureUpgradeAcquireResult acquireResult = candidate.AcquireUpgrade(upgradeId);
+		if (acquireResult != AdventureUpgradeAcquireResult.Acquired)
 		{
-			Persist();
+			return new AdventureUpgradeGrantCommitResult(
+				AdventureRunWriteResult.Succeeded,
+				acquireResult,
+				default,
+				null);
 		}
 
-		return result;
+		switch (triggerSource)
+		{
+			case AdventureUpgradeTriggerSource.RunStart:
+				candidate.MarkRunStartUpgradeGranted();
+				break;
+			case AdventureUpgradeTriggerSource.Victory:
+				candidate.MarkVictoryUpgradeGranted();
+				break;
+		}
+
+		AdventureUpgradeAcquisitionEffectResult effectResult =
+			AdventureUpgradeEffectService.OnUpgradeAcquired(
+				candidate.EffectState,
+				upgradeId,
+				triggerSource == AdventureUpgradeTriggerSource.RunStart);
+		AdventureHealingResult? healingResult = null;
+		if (effectResult.MaxHealthDelta > 0 || effectResult.HealAmount > 0)
+		{
+			int nextMaxHealth = Math.Max(1, candidate.MaxHealth + Math.Max(0, effectResult.MaxHealthDelta));
+			AdventureHealingResult appliedHealing = AdventureUpgradeEffectService.ApplyHealing(
+				candidate.CurrentHealth,
+				nextMaxHealth,
+				candidate.EffectState,
+				candidate.GetAcquiredUpgradeIds(),
+				effectResult.HealAmount);
+			candidate.SetHealth(appliedHealing.CurrentHealth, appliedHealing.MaxHealth);
+			healingResult = appliedHealing;
+		}
+
+		AdventureRunWriteResult writeResult = CommitCandidate(candidate);
+		return new AdventureUpgradeGrantCommitResult(
+			writeResult,
+			acquireResult,
+			effectResult,
+			writeResult == AdventureRunWriteResult.Succeeded ? healingResult : null);
 	}
 
-	internal void SetHealth(int currentHealth, int maxHealth)
+	internal AdventureRunWriteResult SetHealth(int currentHealth, int maxHealth)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return;
+			return validation;
 		}
 
-		_runState.SetHealth(currentHealth, maxHealth);
-		Persist();
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.SetHealth(currentHealth, maxHealth);
+		return CommitCandidate(candidate);
 	}
 
-	internal void ReplaceEffectState(AdventureUpgradeEffectState effectState)
+	internal AdventureRunWriteResult ReplaceEffectState(AdventureUpgradeEffectState effectState)
 	{
-		if (!_gameModePolicy.CanWriteAdventureRun || HasRetainedPayload)
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
 		{
-			return;
+			return validation;
 		}
 
-		_runState.ReplaceEffectState(effectState);
-		Persist();
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.ReplaceEffectState(effectState);
+		return CommitCandidate(candidate);
+	}
+
+	internal AdventureRunWriteResult UpdateVitalsAndEffects(
+		int currentHealth,
+		int maxHealth,
+		AdventureUpgradeEffectState effectState)
+	{
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
+		{
+			return validation;
+		}
+
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.ReplaceEffectState(effectState);
+		candidate.SetHealth(currentHealth, maxHealth);
+		return CommitCandidate(candidate);
+	}
+
+	internal AdventureHealingCommitResult ApplyHealing(int healAmount, int maxHealthDelta = 0)
+	{
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
+		{
+			return new AdventureHealingCommitResult(validation, default);
+		}
+
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		int nextMaxHealth = Math.Max(1, candidate.MaxHealth + Math.Max(0, maxHealthDelta));
+		AdventureHealingResult healingResult = AdventureUpgradeEffectService.ApplyHealing(
+			candidate.CurrentHealth,
+			nextMaxHealth,
+			candidate.EffectState,
+			candidate.GetAcquiredUpgradeIds(),
+			healAmount);
+		candidate.SetHealth(healingResult.CurrentHealth, healingResult.MaxHealth);
+		return new AdventureHealingCommitResult(CommitCandidate(candidate), healingResult);
+	}
+
+	internal AdventureHealingCommitResult UpdateHealthAndApplyHealing(
+		int currentHealth,
+		int healAmount)
+	{
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
+		{
+			return new AdventureHealingCommitResult(validation, default);
+		}
+
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		candidate.SetHealth(currentHealth, candidate.MaxHealth);
+		AdventureHealingResult healingResult = AdventureUpgradeEffectService.ApplyHealing(
+			candidate.CurrentHealth,
+			candidate.MaxHealth,
+			candidate.EffectState,
+			candidate.GetAcquiredUpgradeIds(),
+			healAmount);
+		candidate.SetHealth(healingResult.CurrentHealth, healingResult.MaxHealth);
+		AdventureRunWriteResult writeResult = CommitCandidate(candidate);
+		return new AdventureHealingCommitResult(
+			writeResult,
+			writeResult == AdventureRunWriteResult.Succeeded ? healingResult : default);
+	}
+
+	internal AdventureQuestionRewardCommitResult ResolveQuestionReward()
+	{
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
+		{
+			return new AdventureQuestionRewardCommitResult(validation, default, null);
+		}
+
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		AdventureQuestionRewardEffectResult effectResult = AdventureUpgradeEffectService.OnQuestionRewardGranted(
+			candidate.EffectState,
+			candidate.GetAcquiredUpgradeIds());
+		AdventureHealingResult? healingResult = ApplyCandidateHealing(candidate, effectResult.HealAmount);
+		AdventureRunWriteResult writeResult = CommitCandidate(candidate);
+		return new AdventureQuestionRewardCommitResult(
+			writeResult,
+			effectResult,
+			writeResult == AdventureRunWriteResult.Succeeded ? healingResult : null);
+	}
+
+	internal AdventureTurnStartCommitResult ResolveTurnStartEffects()
+	{
+		AdventureRunWriteResult validation = ValidateActiveWrite();
+		if (validation != AdventureRunWriteResult.Succeeded)
+		{
+			return new AdventureTurnStartCommitResult(validation, default, null);
+		}
+
+		AdventureUpgradeRunState candidate = _runState.DeepClone();
+		AdventureTurnStartEffectResult effectResult =
+			AdventureUpgradeEffectService.ConsumeMainPlayerTurnStartEffects(candidate.EffectState);
+		AdventureHealingResult? healingResult = ApplyCandidateHealing(candidate, effectResult.HealAmount);
+		AdventureRunWriteResult writeResult = CommitCandidate(candidate);
+		return new AdventureTurnStartCommitResult(
+			writeResult,
+			effectResult,
+			writeResult == AdventureRunWriteResult.Succeeded ? healingResult : null);
 	}
 
 	internal AdventureRunWriteResult ClearRun()
@@ -509,30 +657,6 @@ public sealed partial class AdventureRunSessionStore : Node
 		ObservePayload(json);
 	}
 
-	private void Persist()
-	{
-		if (!_gameModePolicy.CanWriteAdventureRun)
-		{
-			return;
-		}
-
-		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
-		string json = _runState.IsActive
-			? JsonSerializer.Serialize(_runState.ToSnapshot())
-			: string.Empty;
-		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
-		{
-			PendingAdventureRunJson = json,
-		});
-		if (saveResult != Error.Ok)
-		{
-			GD.PushWarning($"Failed to persist adventure upgrade run session: {saveResult}");
-			return;
-		}
-
-		ObservePayload(json);
-	}
-
 	private AdventureRunWriteResult ValidateTransactionalWrite(int mainStageIndex)
 	{
 		if (!_gameModePolicy.CanWriteAdventureRun)
@@ -548,11 +672,56 @@ public sealed partial class AdventureRunSessionStore : Node
 			: AdventureRunWriteResult.InvalidStage;
 	}
 
-	private AdventureUpgradeRunSnapshot CreateNewRunSnapshot(int mainStageIndex, string enemyAvatarId)
+	private AdventureRunWriteResult ValidateActiveWrite()
 	{
-		var candidate = new AdventureUpgradeRunState();
-		candidate.BeginNewMainRun(mainStageIndex, enemyAvatarId);
-		return candidate.ToSnapshot();
+		if (!_gameModePolicy.CanWriteAdventureRun)
+		{
+			return AdventureRunWriteResult.WriteNotAllowed;
+		}
+		if (HasRetainedPayload)
+		{
+			return AdventureRunWriteResult.RecoveryRequired;
+		}
+		return _runState.IsActive
+			? AdventureRunWriteResult.Succeeded
+			: AdventureRunWriteResult.InvalidStage;
+	}
+
+	private AdventureRunWriteResult CommitCandidate(AdventureUpgradeRunState candidate)
+	{
+		string candidatePayload = candidate.IsActive
+			? JsonSerializer.Serialize(candidate.ToSnapshot())
+			: string.Empty;
+		string currentPayload = _runState.IsActive
+			? JsonSerializer.Serialize(_runState.ToSnapshot())
+			: string.Empty;
+		if (!string.Equals(candidatePayload, currentPayload, StringComparison.Ordinal)
+			&& !TryPersistRunPayload(candidatePayload))
+		{
+			return AdventureRunWriteResult.SaveFailed;
+		}
+
+		_runState.CopyFrom(candidate);
+		return AdventureRunWriteResult.Succeeded;
+	}
+
+	private static AdventureHealingResult? ApplyCandidateHealing(
+		AdventureUpgradeRunState candidate,
+		int healAmount)
+	{
+		if (healAmount <= 0)
+		{
+			return null;
+		}
+
+		AdventureHealingResult healingResult = AdventureUpgradeEffectService.ApplyHealing(
+			candidate.CurrentHealth,
+			candidate.MaxHealth,
+			candidate.EffectState,
+			candidate.GetAcquiredUpgradeIds(),
+			healAmount);
+		candidate.SetHealth(healingResult.CurrentHealth, healingResult.MaxHealth);
+		return healingResult;
 	}
 
 	private AdventureUpgradeRunSnapshot CreateAdvancedSnapshot(int mainStageIndex)

@@ -248,7 +248,7 @@ public partial class GameBoardScene
 		return (await PromptAdventureQuestionRejudgeOverlayAsync(rewardItem.Value)).Choice;
 	}
 
-	private AdventureQuestionRewardEffectResult? ResolveAdventureQuestionRewardEffects(int playerIndex)
+	private async Task<AdventureQuestionRewardEffectResult?> ResolveAdventureQuestionRewardEffectsAsync(int playerIndex)
 	{
 		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
 		{
@@ -256,16 +256,28 @@ public partial class GameBoardScene
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (runState?.IsActive != true)
+		if (store?.HasActiveRun != true)
 		{
 			return null;
 		}
 
-		AdventureQuestionRewardEffectResult effectResult = AdventureUpgradeEffectService.OnQuestionRewardGranted(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds());
-		store!.ReplaceEffectState(runState.EffectState.Clone());
-		return effectResult;
+		AdventureSaveGateResult<AdventureQuestionRewardCommitResult> gate =
+			await ExecuteAdventureSaveGateAsync(
+				store.ResolveQuestionReward,
+				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
+				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
+		if (!gate.Succeeded)
+		{
+			GD.PushWarning($"Failed to commit adventure question reward: {gate.Result.WriteResult}");
+			return null;
+		}
+		AdventureQuestionRewardCommitResult commitResult = gate.Result;
+		if (commitResult.HealingResult.HasValue)
+		{
+			_playerScores[MainPlayerIndex] = commitResult.HealingResult.Value.CurrentHealth;
+			UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
+			RefreshGameplayTensionMusic();
+		}
+		return commitResult.EffectResult with { HealAmount = 0 };
 	}
 }

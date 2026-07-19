@@ -160,27 +160,35 @@ public partial class GameBoardScene
 				}
 
 				AdventureSuitUpgradeDefinition selectedDefinition = offer[selectedIndex];
-				AdventureUpgradeAcquireResult acquireResult =
-					RecordAdventureAcquiredUpgrade(selectedDefinition.Id);
-				if (acquireResult == AdventureUpgradeAcquireResult.DeferredManifestUnavailable)
-				{
+					AdventureSaveGateResult<AdventureUpgradeGrantCommitResult> grantGate =
+						await ExecuteAdventureSaveGateAsync(
+							() => GrantAdventureUpgrade(selectedDefinition.Id, triggerSource),
+							result => result.WriteResult == AdventureRunWriteResult.Succeeded,
+							result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
+					if (!grantGate.Succeeded)
+					{
+						GD.PushWarning(
+							$"Adventure upgrade acquisition failed: id={selectedDefinition.Id} result={grantGate.Result.WriteResult}");
+						return;
+					}
+					AdventureUpgradeGrantCommitResult grantResult = grantGate.Result;
+					if (grantResult.AcquireResult == AdventureUpgradeAcquireResult.DeferredManifestUnavailable)
+					{
 					GD.PushWarning(
 						$"Adventure upgrade acquisition deferred because the manifest is unavailable: {selectedDefinition.Id}");
 					return;
 				}
-				if (acquireResult != AdventureUpgradeAcquireResult.Acquired)
-				{
-					GD.PushWarning(
-						$"Adventure upgrade acquisition rejected: id={selectedDefinition.Id} result={acquireResult}");
+					if (grantResult.AcquireResult != AdventureUpgradeAcquireResult.Acquired)
+					{
+						GD.PushWarning(
+							$"Adventure upgrade acquisition rejected: id={selectedDefinition.Id} result={grantResult.AcquireResult}");
 					_pendingAdventureUpgradeTriggers.Dequeue();
 					continue;
 				}
 
-				MarkAdventureUpgradeTriggerAsGranted(triggerSource);
-				await ApplyAdventureUpgradeAcquisitionEffectsAsync(
-					selectedDefinition.Id,
-					triggerSource,
-					turnSequenceGeneration);
+					await ApplyAdventureUpgradeAcquisitionEffectsAsync(
+						grantResult,
+						turnSequenceGeneration);
 				GD.Print($"Adventure upgrade acquired: {selectedDefinition.Id}");
 				_pendingAdventureUpgradeTriggers.Dequeue();
 			}

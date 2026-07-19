@@ -10,6 +10,7 @@ internal sealed class GameBoardPauseMenuController
 	private readonly Func<string> _getReturnButtonKey;
 	private readonly Func<string> _getRestartButtonKey;
 	private readonly Func<bool> _canRestart;
+	private readonly Func<bool> _shouldPauseSceneTree;
 	private readonly Action _returnToDestination;
 	private readonly Action _restart;
 	private readonly Action _quit;
@@ -20,6 +21,7 @@ internal sealed class GameBoardPauseMenuController
 	private CanvasLayer? _pauseMenuLayer;
 	private PauseMenuOverlay? _pauseMenuRoot;
 	private Button? _pauseContinueButton;
+	private bool _ownsSceneTreePause;
 
 	internal GameBoardPauseMenuController(
 		Node owner,
@@ -27,6 +29,7 @@ internal sealed class GameBoardPauseMenuController
 		Func<string> getReturnButtonKey,
 		Func<string> getRestartButtonKey,
 		Func<bool> canRestart,
+		Func<bool> shouldPauseSceneTree,
 		Action returnToDestination,
 		Action restart,
 		Action quit,
@@ -40,6 +43,7 @@ internal sealed class GameBoardPauseMenuController
 		_getReturnButtonKey = getReturnButtonKey;
 		_getRestartButtonKey = getRestartButtonKey;
 		_canRestart = canRestart;
+		_shouldPauseSceneTree = shouldPauseSceneTree;
 		_returnToDestination = returnToDestination;
 		_restart = restart;
 		_quit = quit;
@@ -75,7 +79,12 @@ internal sealed class GameBoardPauseMenuController
 		_pauseMenuRoot.Modulate = Colors.White;
 		_pauseMenuRoot.HideQuitConfirm();
 
-		_owner.GetTree().Paused = true;
+		SceneTree sceneTree = _owner.GetTree();
+		if (_shouldPauseSceneTree() && !sceneTree.Paused)
+		{
+			sceneTree.Paused = true;
+			_ownsSceneTreePause = true;
+		}
 		_pauseContinueButton?.GrabFocus();
 	}
 
@@ -88,7 +97,7 @@ internal sealed class GameBoardPauseMenuController
 
 		IsOpen = false;
 		_playCloseSound();
-		_owner.GetTree().Paused = false;
+		RestoreSceneTreePauseIfOwned();
 		if (_pauseMenuRoot != null)
 		{
 			_pauseMenuRoot.HideQuitConfirm();
@@ -127,11 +136,22 @@ internal sealed class GameBoardPauseMenuController
 	internal void CloseForSceneTransition()
 	{
 		IsOpen = false;
-		_owner.GetTree().Paused = false;
+		RestoreSceneTreePauseIfOwned();
 		if (_pauseMenuRoot != null)
 		{
 			_pauseMenuRoot.MouseFilter = Control.MouseFilterEnum.Ignore;
 		}
+	}
+
+	private void RestoreSceneTreePauseIfOwned()
+	{
+		if (!_ownsSceneTreePause)
+		{
+			return;
+		}
+
+		_ownsSceneTreePause = false;
+		_owner.GetTree().Paused = false;
 	}
 
 	private void EnsurePauseMenu()

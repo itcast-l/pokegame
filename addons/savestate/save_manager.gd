@@ -9,6 +9,8 @@ signal save_failed(slot_id: StringName, error: int)
 signal load_started(slot_id: StringName)
 signal load_completed(slot_id: StringName, data: Dictionary)
 signal load_failed(slot_id: StringName, error: int)
+## Emitted after a failed primary read is recovered from a valid sibling [code].bak[/code]. [param repair_error] reports whether the primary file was rebuilt.
+signal backup_recovered(slot_id: StringName, primary_error: int, repair_error: int)
 ## Emitted before [method persist_including_saveables] / Pro async persist so [Saveable] nodes can react (optional).
 signal save_requested()
 ## Emitted when you call [method load_from_slot_and_apply_saveables] after data is read.
@@ -50,6 +52,8 @@ var _dirty_pending: bool = false
 var _dirty_timer: Timer
 ## Flat key path (e.g. [code]player.tint[/code]) → [constant KV_EDITOR_HINT_COLOR]. Persisted next to saves as [code].savestate_editor_hints.json[/code].
 var _editor_flat_hints: Dictionary = {}
+## Slots whose primary file could not be repaired after backup recovery. Their next successful save must preserve the existing valid backup.
+var _slots_without_trusted_primary: Dictionary = {}
 
 ## After [method mark_dirty], wait this many seconds of silence before [method _execute_debounced_persist] (default sync persist; Pro overrides for async).
 @export var auto_save_debounce_sec: float = 2.0
@@ -228,7 +232,7 @@ func import_slot_into_runtime(slot_id: StringName) -> Error:
 	if slot == null:
 		return ERR_DOES_NOT_EXIST
 	var path := slot.get_file_path(save_root, use_json)
-	if not FileAccess.file_exists(path):
+	if not FileAccess.file_exists(path) and not FileAccess.file_exists(path + ".bak"):
 		return ERR_FILE_NOT_FOUND
 	var inner := load_from_slot_sync(slot_id)
 	var bundle: Variant = inner.get("__saveables", {})
@@ -487,17 +491,15 @@ func _read_slot_inner_silent(slot_id: StringName) -> Dictionary:
 	if slot == null:
 		return {}
 	var path := slot.get_file_path(save_root, use_json)
-	if not FileAccess.file_exists(path):
-		return {}
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return {}
-	var raw := file.get_buffer(file.get_length())
-	file.close()
-	var processed := _post_read_transform(raw)
-	var pr := parse_save_file_buffer(processed)
-	if pr.get("ok", false):
-		return (pr["data"] as Dictionary).duplicate(true)
+	var primary := _read_save_path_silent(path)
+	if primary.get("ok", false):
+		_slots_without_trusted_primary.erase(slot_id)
+		return (primary["data"] as Dictionary).duplicate(true)
+
+	var backup := _read_save_path_silent(path + ".bak")
+	if backup.get("ok", false):
+		_repair_primary_from_backup(slot_id, path, primary, backup, false)
+		return (backup["data"] as Dictionary).duplicate(true)
 	return {}
 
 
@@ -512,6 +514,7 @@ func register_slot(slot: SaveSlot) -> void:
 
 func unregister_slot(slot_id: StringName) -> void:
 	_slots.erase(slot_id)
+	_slots_without_trusted_primary.erase(slot_id)
 
 
 func get_slot(slot_id: StringName) -> SaveSlot:
@@ -541,8 +544,10 @@ func save_to_slot_sync(slot_id: StringName, data: Dictionary) -> Error:
 	var flags := FLAG_JSON if use_json else 0
 	var file_bytes := _compose_file_bytes(FORMAT_VERSION, get_current_schema_version(), flags, payload)
 	var final_bytes := _pre_write_transform(file_bytes)
-	var err := AtomicWriter.write_atomic(path, final_bytes, backup_on_commit)
+	var rotate_backup := backup_on_commit and not _slots_without_trusted_primary.has(slot_id)
+	var err := AtomicWriter.write_atomic(path, final_bytes, rotate_backup)
 	if err == OK:
+		_slots_without_trusted_primary.erase(slot_id)
 		slot.last_modified_unix = int(Time.get_unix_time_from_system())
 		slot.file_schema_version = get_current_schema_version()
 		if slot_id == KV_SLOT_ID:
@@ -563,26 +568,24 @@ func load_from_slot_sync(slot_id: StringName) -> Dictionary:
 		return {}
 
 	var path := slot.get_file_path(save_root, use_json)
-	if not FileAccess.file_exists(path):
-		load_failed.emit(slot_id, ERR_FILE_NOT_FOUND)
-		return {}
+	var primary := _read_save_path_silent(path)
+	var loaded := primary
+	if primary.get("ok", false):
+		_slots_without_trusted_primary.erase(slot_id)
+	else:
+		var backup := _read_save_path_silent(path + ".bak")
+		if backup.get("ok", false):
+			_repair_primary_from_backup(slot_id, path, primary, backup, true)
+			loaded = backup
+		else:
+			var failure_error := int(primary.get("error", ERR_FILE_NOT_FOUND))
+			if not bool(primary.get("exists", false)):
+				failure_error = int(backup.get("error", ERR_FILE_NOT_FOUND))
+			load_failed.emit(slot_id, failure_error)
+			return {}
 
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		var e := FileAccess.get_open_error()
-		load_failed.emit(slot_id, e)
-		return {}
-	var raw := file.get_buffer(file.get_length())
-	file.close()
-
-	var processed := _post_read_transform(raw)
-	var pr := parse_save_file_buffer(processed)
-	if not pr.get("ok", false):
-		load_failed.emit(slot_id, int(pr.get("error", ERR_FILE_CORRUPT)))
-		return {}
-
-	var inner: Dictionary = pr["data"] as Dictionary
-	var file_schema := int(pr.get("schema_version", 0))
+	var inner: Dictionary = loaded["data"] as Dictionary
+	var file_schema := int(loaded.get("schema_version", 0))
 	slot.file_schema_version = file_schema
 	var current_schema := get_current_schema_version()
 	if file_schema < current_schema:
@@ -592,6 +595,79 @@ func load_from_slot_sync(slot_id: StringName) -> Dictionary:
 		_kv_hydrated = true
 	load_completed.emit(slot_id, inner)
 	return inner
+
+
+## Reads and validates one exact path without emitting load or recovery signals.
+func _read_save_path_silent(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {
+			"ok": false,
+			"exists": false,
+			"error": ERR_FILE_NOT_FOUND,
+			"data": {},
+			"raw": PackedByteArray(),
+			"schema_version": 0,
+		}
+
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {
+			"ok": false,
+			"exists": true,
+			"error": FileAccess.get_open_error(),
+			"data": {},
+			"raw": PackedByteArray(),
+			"schema_version": 0,
+		}
+
+	var raw := file.get_buffer(file.get_length())
+	var read_error := file.get_error()
+	file.close()
+	if read_error != OK:
+		return {
+			"ok": false,
+			"exists": true,
+			"error": read_error,
+			"data": {},
+			"raw": raw,
+			"schema_version": 0,
+		}
+
+	var processed := _post_read_transform(raw)
+	var parsed := parse_save_file_buffer(processed)
+	return {
+		"ok": bool(parsed.get("ok", false)),
+		"exists": true,
+		"error": int(parsed.get("error", ERR_FILE_CORRUPT)),
+		"data": parsed.get("data", {}),
+		"raw": raw,
+		"schema_version": int(parsed.get("schema_version", 0)),
+	}
+
+
+func _repair_primary_from_backup(
+		slot_id: StringName,
+		primary_path: String,
+		primary: Dictionary,
+		backup: Dictionary,
+		emit_signal: bool
+	) -> Error:
+	var backup_raw: PackedByteArray = backup.get("raw", PackedByteArray()) as PackedByteArray
+	var repair_error := AtomicWriter.write_atomic(primary_path, backup_raw, false)
+	if repair_error == OK:
+		_slots_without_trusted_primary.erase(slot_id)
+	else:
+		_slots_without_trusted_primary[slot_id] = true
+
+	var primary_error := int(primary.get("error", ERR_FILE_CORRUPT))
+	var repair_result := "succeeded" if repair_error == OK else "failed with error %d" % repair_error
+	push_warning(
+		"SaveState: recovered slot '%s' from backup after primary error %d; primary repair %s."
+		% [str(slot_id), primary_error, repair_result]
+	)
+	if emit_signal:
+		backup_recovered.emit(slot_id, primary_error, repair_error)
+	return repair_error
 
 
 ## Parses decrypted/unwrapped file bytes (SSP1 inner format). Used by async load and tools.

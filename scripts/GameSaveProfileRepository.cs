@@ -151,7 +151,8 @@ internal static string NormalizeProfileSlotId(string slotId)
 internal static bool ProfileSlotFileExists(Node saveManager, string slotId)
 	{
 		EnsureProfileSlot(saveManager, slotId);
-		return Godot.FileAccess.FileExists(GetProfileSlotPath(saveManager, slotId));
+		string path = GetProfileSlotPath(saveManager, slotId);
+		return Godot.FileAccess.FileExists(path) || Godot.FileAccess.FileExists($"{path}.bak");
 	}
 
 internal static void EnsureProfileSlot(Node saveManager, string slotId)

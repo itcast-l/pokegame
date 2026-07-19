@@ -282,9 +282,9 @@ public partial class GameBoardScene
 
 		if (rewardGrant.HasValue)
 		{
-			adventureQuestionRewardEffects =
-				ResolveAdventureQuestionRewardEffects(
-					playerIndex);
+				adventureQuestionRewardEffects =
+					await ResolveAdventureQuestionRewardEffectsAsync(
+						playerIndex);
 			questionRewardAnimation =
 				new QuestionCardRewardAnimation(
 					rewardGrant.Value.ItemCard,

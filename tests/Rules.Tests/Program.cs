@@ -108,12 +108,17 @@ internal static partial class Program
 		Run("adventure clubs borrow suit set arms and is consumed by next numeric base card", AdventureClubsBorrowSuitSetArmsAndIsConsumedByNextNumericBaseCard);
 		Run("adventure disabled upgrade stays out of enabled pool", AdventureDisabledUpgradeStaysOutOfEnabledPool);
 		Run("game save progress roundtrips pending adventure run json", GameSaveProgressRoundTripsPendingAdventureRunJson);
+		Run("backup only profile is treated as existing and loadable", BackupOnlyProfileIsTreatedAsExistingAndLoadable);
 		Run("delete active profile switches replacement before removing original slot", DeleteActiveProfileSwitchesReplacementBeforeRemovingOriginalSlot);
 		Run("delete active profile keeps original slot when replacement creation fails", DeleteActiveProfileKeepsOriginalSlotWhenReplacementCreationFails);
 		Run("delete active profile keeps original slot when active switch fails", DeleteActiveProfileKeepsOriginalSlotWhenActiveSwitchFails);
 			Run("damaged pending adventure run json stays preserved in active profile", DamagedPendingAdventureRunJsonStaysPreservedInActiveProfile);
 			Run("valid pending adventure run json reloads active run", ValidPendingAdventureRunJsonReloadsActiveRun);
 			Run("adventure run transactional writes preserve memory on save failure", AdventureRunTransactionalWritesPreserveMemoryOnSaveFailure);
+			Run("adventure run snapshots cannot mutate store state", AdventureRunSnapshotsCannotMutateStoreState);
+			Run("adventure defeat transaction retries without double revive", AdventureDefeatTransactionRetriesWithoutDoubleRevive);
+			Run("adventure upgrade grant commits all fields once", AdventureUpgradeGrantCommitsAllFieldsOnce);
+			Run("adventure healing question and turn start transactions roll back", AdventureCompositeTransactionsRollBack);
 			Run("adventure victory commits progress reward and next run atomically", AdventureVictoryCommitsProgressRewardAndNextRunAtomically);
 			Run("adventure victory save failure preserves current run", AdventureVictorySaveFailurePreservesCurrentRun);
 			Run("adventure final victory clears run in atomic commit", AdventureFinalVictoryClearsRunInAtomicCommit);

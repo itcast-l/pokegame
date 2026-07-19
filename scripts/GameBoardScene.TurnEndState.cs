@@ -90,6 +90,21 @@ public partial class GameBoardScene
 
 	private async Task ShowWinnerSequenceAsync(int playerIndex)
 	{
+		if (_gameModePolicy.IsAdventureMain && playerIndex != MainPlayerIndex)
+		{
+			AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+			AdventureSaveGateResult<AdventureDefeatCommitResult> gate = await ExecuteAdventureSaveGateAsync(
+				() => store?.ResolveMainAdventureDefeat()
+					?? new AdventureDefeatCommitResult(AdventureRunWriteResult.SaveFailed, null),
+				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
+				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
+			if (!gate.Succeeded)
+			{
+				return;
+			}
+			_settledAdventureDefeatResolution = gate.Result.Resolution;
+		}
+
 		await PlayDefeatFinisherIfNeededAsync(playerIndex);
 		if (_winnerPlayerIndex != playerIndex)
 		{
@@ -123,11 +138,6 @@ public partial class GameBoardScene
 	{
 		ClearAdventureBattleScopedStateForBattleEnd();
 		_winnerPlayerIndex = playerIndex;
-		if (_gameModePolicy.IsAdventureMain && playerIndex != MainPlayerIndex)
-		{
-			_settledAdventureDefeatResolution =
-				GetAdventureRunSessionStore()?.ResolveMainAdventureDefeat();
-		}
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{
 			if (!_gameModePolicy.IsAdventureMain)
@@ -167,6 +177,10 @@ public partial class GameBoardScene
 
 	private bool CanMainPlayerAct()
 	{
+		if (_adventureSaveInProgress)
+		{
+			return false;
+		}
 		if (IsAdventureTutorialBlockingMainPlayerAction())
 		{
 			return false;

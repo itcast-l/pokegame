@@ -5,10 +5,11 @@ using Godot;
 public partial class GameBoardScene
 {
 	private AdventureDefeatResolution? _settledAdventureDefeatResolution;
-	private bool _adventureVictoryCommitInProgress;
+	private bool _adventureSaveInProgress;
 	private bool _adventureVictoryCommitCompleted;
 	private string _adventureVictoryStatusLocalizationKey = string.Empty;
-	private static readonly double[] AdventureVictorySaveRetryDelays = { 0.5, 1.0, 2.0 };
+	private static readonly double[] AdventureSaveRetryDelays = { 0.5, 1.0, 2.0 };
+	private readonly record struct AdventureSaveGateResult<T>(bool Succeeded, T Result);
 
 	private void CreateWinnerLabel()
 	{
@@ -100,49 +101,77 @@ public partial class GameBoardScene
 		{
 			return true;
 		}
-		if (_adventureVictoryCommitInProgress || _isLeavingGame)
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureSaveGateResult<AdventureVictoryCommitResult> gate = await ExecuteAdventureSaveGateAsync(
+			() => store?.CommitMainAdventureVictory(adventure_enemy_avatar_id)
+				?? AdventureVictoryCommitResult.SaveFailed,
+			result => result is AdventureVictoryCommitResult.Succeeded or AdventureVictoryCommitResult.AlreadyCommitted,
+			result => result == AdventureVictoryCommitResult.SaveFailed);
+		if (!gate.Succeeded)
 		{
+			if (gate.Result is AdventureVictoryCommitResult.InvalidStage or AdventureVictoryCommitResult.OutOfSequence)
+			{
+				GD.PushError($"Adventure victory commit rejected for '{adventure_enemy_avatar_id}': {gate.Result}");
+			}
 			return false;
 		}
 
-		_adventureVictoryCommitInProgress = true;
+		_adventureVictoryCommitCompleted = true;
+		return true;
+	}
+
+	private async Task<AdventureSaveGateResult<T>> ExecuteAdventureSaveGateAsync<T>(
+		Func<T> attempt,
+		Func<T, bool> succeeded,
+		Func<T, bool> retryable)
+	{
+		if (_adventureSaveInProgress || _isLeavingGame)
+		{
+			return new AdventureSaveGateResult<T>(false, default!);
+		}
+
+		_adventureSaveInProgress = true;
 		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVING");
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		for (int attemptIndex = 0; attemptIndex <= AdventureVictorySaveRetryDelays.Length; attemptIndex++)
+		T result = default!;
+		for (int attemptIndex = 0; attemptIndex <= AdventureSaveRetryDelays.Length; attemptIndex++)
 		{
 			if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
 			{
-				_adventureVictoryCommitInProgress = false;
-				return false;
+				_adventureSaveInProgress = false;
+				return new AdventureSaveGateResult<T>(false, result);
 			}
 
-			AdventureVictoryCommitResult result = store?.CommitMainAdventureVictory(adventure_enemy_avatar_id)
-				?? AdventureVictoryCommitResult.SaveFailed;
-			if (result is AdventureVictoryCommitResult.Succeeded or AdventureVictoryCommitResult.AlreadyCommitted)
+			result = attempt();
+			if (succeeded(result))
 			{
-				_adventureVictoryCommitCompleted = true;
-				_adventureVictoryCommitInProgress = false;
+				_adventureSaveInProgress = false;
 				_adventureVictoryStatusLocalizationKey = string.Empty;
-				return true;
+				if (_winnerPlayerIndex < 0)
+				{
+					HideWinnerBanner();
+				}
+				return new AdventureSaveGateResult<T>(true, result);
 			}
-			if (result is AdventureVictoryCommitResult.InvalidStage or AdventureVictoryCommitResult.OutOfSequence)
+			if (!retryable(result))
 			{
-				GD.PushError($"Adventure victory commit rejected for '{adventure_enemy_avatar_id}': {result}");
-				break;
+				_adventureSaveInProgress = false;
+				return new AdventureSaveGateResult<T>(false, result);
 			}
-			if (attemptIndex < AdventureVictorySaveRetryDelays.Length)
+			if (attemptIndex < AdventureSaveRetryDelays.Length)
 			{
 				ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVE_RETRYING");
-				await ToSignal(GetTree().CreateTimer(AdventureVictorySaveRetryDelays[attemptIndex]), SceneTreeTimer.SignalName.Timeout);
+				await ToSignal(GetTree().CreateTimer(AdventureSaveRetryDelays[attemptIndex]), SceneTreeTimer.SignalName.Timeout);
 			}
 		}
 
-		_adventureVictoryCommitInProgress = false;
+		_pendingAdventureUpgradeTriggers.Clear();
+		_pendingAdventureWinnerPlayerIndex = -1;
+		CancelAdventureUpgradeSelection();
 		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVE_FAILED_REPLAY");
 		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
 		if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
 		{
-			return false;
+			return new AdventureSaveGateResult<T>(false, result);
 		}
 		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_RETURNING_TO_MENU");
 		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
@@ -150,7 +179,7 @@ public partial class GameBoardScene
 		{
 			await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
 		}
-		return false;
+		return new AdventureSaveGateResult<T>(false, result);
 	}
 
 	private void ShowAdventureVictorySaveStatus(string localizationKey)

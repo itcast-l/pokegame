@@ -23,6 +23,7 @@ var _kill_when := ""
 var _active_lobby_migration := false
 var _active_lobby_keep_open := false
 var _expect_migration_failure := false
+var _paused_maintenance := false
 var _ready_sent := false
 var _started_match := false
 var _board_initialized := false
@@ -44,6 +45,10 @@ var _migration_kill_ready := false
 var _active_lobby_recovery_logged := false
 var _active_lobby_request_sent := false
 var _migration_failure_ui_logged := false
+var _paused_maintenance_apply_pending := false
+var _paused_maintenance_release_pending := false
+var _paused_maintenance_checkpoint_requested := false
+var _paused_maintenance_plan_ready_logged := false
 
 
 func _initialize() -> void:
@@ -74,6 +79,9 @@ func _run() -> void:
 	while not _finished and Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
 		_track_migration_state()
+		_apply_paused_maintenance_after_opening_deal()
+		_track_paused_maintenance_plan()
+		_release_paused_maintenance_after_recovery()
 		_try_start_active_lobby_migration()
 		_track_active_lobby_recovery()
 		if _board_initialized:
@@ -119,12 +127,19 @@ func _parse_arguments() -> void:
 			_active_lobby_keep_open = true
 		elif argument == "--expect-migration-failure":
 			_expect_migration_failure = true
+		elif argument == "--paused-maintenance":
+			_paused_maintenance = true
 
 
 func _on_state_changed(state: int) -> void:
 	_last_state = state
 	print("FULL_MATCH_%s_STATE %d" % [_role.to_upper(), state])
 	if state == MIGRATING_HOST_STATE:
+		if _paused_maintenance and _role == "client":
+			if not paused:
+				_fail("Fixture-owned pause was cleared before host migration")
+				return
+			print("PAUSED_MAINTENANCE_MIGRATING")
 		_migration_started_seen = true
 		_migration_ui_logged = false
 		print("MIGRATION_STATE_ENTERED role=%s" % _role)
@@ -132,6 +147,12 @@ func _on_state_changed(state: int) -> void:
 		_migration_failure_seen = true
 		print("MIGRATION_FAILURE_STATE role=%s" % _role)
 		_log_migration_failure_ui()
+	elif state == IN_GAME_STATE and _paused_maintenance and _role == "client" and _migration_started_seen:
+		if not paused:
+			_fail("Fixture-owned pause was cleared during host migration")
+			return
+		_paused_maintenance_release_pending = true
+		print("PAUSED_MAINTENANCE_INGAME")
 	if _role != "host" and state == LOBBY_STATE and not _ready_sent:
 		_ready_sent = true
 		_network.SetLocalReady(true)
@@ -171,6 +192,57 @@ func _track_migration_state() -> void:
 	print("MIGRATION_UI_STATE visible=%s text=%s" % [
 		str(bool(board.call("DebugIsNetworkReconnectOverlayVisible"))).to_lower(),
 		String(board.call("DebugGetNetworkReconnectOverlayText"))])
+
+
+func _release_paused_maintenance_after_recovery() -> void:
+	if not _paused_maintenance_release_pending or _last_state != IN_GAME_STATE:
+		return
+	if bool(_network.call("DebugHasMigrationPlan")):
+		return
+	if not paused:
+		_fail("Fixture-owned pause was cleared before migration readiness completed")
+		return
+
+	_paused_maintenance_release_pending = false
+	paused = false
+	print("PAUSED_MAINTENANCE_RECOVERED")
+
+
+func _apply_paused_maintenance_after_opening_deal() -> void:
+	if not _paused_maintenance_apply_pending:
+		return
+	var board: Node = current_scene
+	if board == null or String(board.call("DebugGetGameLoopPhaseName")) == "OpeningDeal":
+		return
+	var client_ready_path := "%s/paused_client.ready" % _result_dir
+	if _role == "host" and not FileAccess.file_exists(client_ready_path):
+		return
+
+	_paused_maintenance_apply_pending = false
+	paused = true
+	print("PAUSED_MAINTENANCE_APPLIED role=%s" % _role)
+	if _role == "client":
+		var ready_file := FileAccess.open(client_ready_path, FileAccess.WRITE)
+		if ready_file == null:
+			_fail("Could not create paused maintenance client marker")
+			return
+		ready_file.store_string("ready\n")
+		ready_file.close()
+	else:
+		var snapshot_id := int(board.call("DebugGetNetworkSnapshotId")) + 1
+		_network.call("SendBoardSnapshotsFromHost", board, snapshot_id)
+		_paused_maintenance_checkpoint_requested = true
+		print("PAUSED_MAINTENANCE_CHECKPOINT_REQUESTED snapshot=%d" % snapshot_id)
+
+
+func _track_paused_maintenance_plan() -> void:
+	if _role != "host" or not _paused_maintenance_checkpoint_requested or _paused_maintenance_plan_ready_logged:
+		return
+	if not bool(_network.call("DebugHasMigrationPlan")):
+		return
+
+	_paused_maintenance_plan_ready_logged = true
+	print("PAUSED_MAINTENANCE_PLAN_READY")
 
 
 func _try_start_active_lobby_migration() -> void:
@@ -294,6 +366,8 @@ func _on_board_initialize(_payload: Dictionary) -> void:
 
 	_board_initialized = true
 	print("FULL_MATCH_%s_BOARD_INIT" % _role.to_upper())
+	if _paused_maintenance:
+		_paused_maintenance_apply_pending = true
 
 
 func _on_error(message: String) -> void:
@@ -301,7 +375,7 @@ func _on_error(message: String) -> void:
 
 
 func _drive_local_action() -> void:
-	if _active_lobby_migration or (_migration_fixture_started and _role == "host" and int(_network.call("DebugGetAuthorityEpoch")) == 0) or _migration_kill_ready:
+	if (_paused_maintenance and paused) or _active_lobby_migration or (_migration_fixture_started and _role == "host" and int(_network.call("DebugGetAuthorityEpoch")) == 0) or _migration_kill_ready:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	if now < _next_action_at:
@@ -482,6 +556,7 @@ func _sync_local_seat(board: Node) -> void:
 
 func _fail(message: String) -> void:
 	push_error(message)
+	paused = false
 	if _network != null:
 		_network.LeaveSession()
 	print("FULL_MATCH_%s_FAIL %s" % [_role.to_upper(), message])

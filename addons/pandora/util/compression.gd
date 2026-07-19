@@ -62,7 +62,5 @@ static func _encode_uint32(value: int) -> PackedByteArray:
 
 
 static func _encode_string(value: String) -> PackedByteArray:
-	var arr = PackedByteArray()
-	for char in value:
-		arr.append_array(char.to_ascii_buffer())
-	return arr
+	# Local compatibility patch: Pandora data is UTF-8 and may contain localized text.
+	return value.to_utf8_buffer()
