@@ -4,22 +4,10 @@ using Godot;
 public partial class GameBoardScene
 {
 	private const double AdventureTutorialCalloutReadSeconds = 1.2;
-	private const int AdventureTutorialOverlayZIndex = 3000;
+	private const string AdventureTutorialOverlayScenePath = "res://scenes/adventure_tutorial_overlay.tscn";
 	private const string AdventureTutorialTableHighlightNodeName = "AdventureTutorialTableHighlight";
-	private const float AdventureTutorialCalloutGap = 14.0f;
-	private const float AdventureTutorialViewportPadding = 18.0f;
-	private const float AdventureTutorialCalloutMaxTextWidth = 246.0f;
-	private const float AdventureTutorialPlayCalloutMaxTextWidth = 306.0f;
-	private const float AdventureTutorialCalloutMinTextWidth = 116.0f;
-	private const float AdventureTutorialPlayCalloutMinTextWidth = 286.0f;
-	private const float AdventureTutorialCalloutHorizontalPadding = 12.0f;
-	private const float AdventureTutorialCalloutVerticalPadding = 8.0f;
-	private const float AdventureTutorialCalloutButtonGap = 4.0f;
-	private const float AdventureTutorialCalloutTextLineHeight = 21.0f;
-	private const float AdventureTutorialCalloutButtonHeight = 28.0f;
 	private const string AdventureTutorialFlowBasicCapture = "basic_capture";
 	private const string AdventureTutorialFlowBombItem = "bomb_item";
-	private static readonly Vector2 AdventureTutorialTargetPadding = new(10.0f, 10.0f);
 
 	private static readonly AdventureTutorialTourTarget[] AdventureTutorialTourTargets =
 	{
@@ -34,14 +22,7 @@ public partial class GameBoardScene
 	private int _adventureTutorialTourIndex;
 	private int _adventureTutorialCalloutGeneration;
 	private bool _canAdvanceTutorialCallout;
-	private Control? _adventureTutorialOverlayRoot;
-	private ColorRect? _adventureTutorialInputBlocker;
-	private Panel? _adventureTutorialTargetOutline;
-	private Panel? _adventureTutorialCalloutPanel;
-	private Label? _adventureTutorialCalloutLabel;
-	private Button? _adventureTutorialContinueButton;
-	private Line2D? _adventureTutorialPointerLine;
-	private Tween? _adventureTutorialPulseTween;
+	private AdventureTutorialOverlay? _adventureTutorialOverlay;
 
 	private enum AdventureTutorialPhase
 	{
@@ -64,14 +45,6 @@ public partial class GameBoardScene
 		Hand,
 		Deck,
 		Table,
-	}
-
-	private enum AdventureTutorialCalloutPlacement
-	{
-		Above,
-		Below,
-		Left,
-		Right,
 	}
 
 	private bool IsAdventureTutorialEnabled()
@@ -167,20 +140,13 @@ public partial class GameBoardScene
 		_adventureTutorialTourIndex = 0;
 		_canAdvanceTutorialCallout = false;
 		_adventureTutorialCalloutGeneration++;
-		_adventureTutorialPulseTween?.Kill();
-		_adventureTutorialPulseTween = null;
 
-		if (_adventureTutorialOverlayRoot != null && GodotObject.IsInstanceValid(_adventureTutorialOverlayRoot))
+		if (_adventureTutorialOverlay != null && GodotObject.IsInstanceValid(_adventureTutorialOverlay))
 		{
-			RemoveAndQueueFreeChild(this, _adventureTutorialOverlayRoot);
+			_adventureTutorialOverlay.HideOverlay();
+			RemoveAndQueueFreeChild(this, _adventureTutorialOverlay);
 		}
 
-		_adventureTutorialOverlayRoot = null;
-		_adventureTutorialInputBlocker = null;
-		_adventureTutorialTargetOutline = null;
-		_adventureTutorialCalloutPanel = null;
-		_adventureTutorialCalloutLabel = null;
-		_adventureTutorialContinueButton = null;
-		_adventureTutorialPointerLine = null;
+		_adventureTutorialOverlay = null;
 	}
 }

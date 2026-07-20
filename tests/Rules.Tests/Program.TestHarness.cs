@@ -392,6 +392,8 @@ internal static partial class Program
 		"scenes/adventure_level_entry.tscn",
 		"scenes/adventure_mode_entry.tscn",
 		"scenes/adventure_upgrade_selection_overlay.tscn",
+		"scenes/adventure_run_resume_dialog.tscn",
+		"scenes/adventure_tutorial_overlay.tscn",
 	};
 
 	private readonly record struct LocalizationReference(string RelativePath, int LineNumber, string Key);

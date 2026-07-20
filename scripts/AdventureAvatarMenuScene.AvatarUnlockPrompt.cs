@@ -120,7 +120,7 @@ public partial class AdventureAvatarMenuScene
 
 		if (_isShowingRunResumeDialog)
 		{
-			GrabFocusIfAvailable(_runResumeContinueButton);
+			_runResumeDialog?.FocusContinueButton();
 			return;
 		}
 

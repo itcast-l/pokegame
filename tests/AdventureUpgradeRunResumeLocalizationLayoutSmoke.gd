@@ -439,3 +439,5 @@ func _dispose_audio_before_quit() -> void:
 		return
 
 	game_audio.call("DisposeAllAudioImmediately")
+	for _frame in range(32):
+		await process_frame

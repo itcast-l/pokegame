@@ -45,12 +45,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private Tween? _avatarUnlockPromptTween;
 	private GameAudioManager? _gameAudio;
 	private AdventureRunSessionStore? _adventureRunSessionStore;
-	private Control? _runResumeDialogRoot;
-	private Label? _runResumeTitleLabel;
-	private Label? _runResumeBodyLabel;
-	private Button? _runResumeContinueButton;
-	private Button? _runResumeRestartButton;
-	private Button? _runResumeCancelButton;
+	private AdventureRunResumeDialog? _runResumeDialog;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
 	private string _selectedAdventureId = TutorialAdventureId;

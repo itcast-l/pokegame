@@ -38,10 +38,9 @@ public partial class GameBoardScene
 		RefreshAdventureTutorialOverlayText();
 		RefreshAdventureTutorialOverlayLayout();
 
-		if (_adventureTutorialContinueButton != null && GodotObject.IsInstanceValid(_adventureTutorialContinueButton))
+		if (_adventureTutorialOverlay != null && GodotObject.IsInstanceValid(_adventureTutorialOverlay))
 		{
-			_adventureTutorialContinueButton.Disabled = true;
-			_adventureTutorialContinueButton.FocusMode = Control.FocusModeEnum.None;
+			_adventureTutorialOverlay.SetContinueEnabled(false);
 		}
 
 		if (IsAdventureTutorialContinueCalloutActive())
@@ -55,15 +54,14 @@ public partial class GameBoardScene
 		await WaitForBoardDelayAsync(AdventureTutorialCalloutReadSeconds);
 		if (generation != _adventureTutorialCalloutGeneration
 			|| !IsAdventureTutorialContinueCalloutActive()
-			|| _adventureTutorialContinueButton == null
-			|| !GodotObject.IsInstanceValid(_adventureTutorialContinueButton))
+			|| _adventureTutorialOverlay == null
+			|| !GodotObject.IsInstanceValid(_adventureTutorialOverlay))
 		{
 			return;
 		}
 
 		_canAdvanceTutorialCallout = true;
-		_adventureTutorialContinueButton.Disabled = false;
-		_adventureTutorialContinueButton.FocusMode = Control.FocusModeEnum.None;
+		_adventureTutorialOverlay.SetContinueEnabled(true);
 	}
 
 	private void PressAdventureTutorialContinue()
@@ -80,9 +78,9 @@ public partial class GameBoardScene
 		}
 
 		_canAdvanceTutorialCallout = false;
-		if (_adventureTutorialContinueButton != null && GodotObject.IsInstanceValid(_adventureTutorialContinueButton))
+		if (_adventureTutorialOverlay != null && GodotObject.IsInstanceValid(_adventureTutorialOverlay))
 		{
-			_adventureTutorialContinueButton.Disabled = true;
+			_adventureTutorialOverlay.SetContinueEnabled(false);
 		}
 
 		if (IsAdventureTutorialBombIntroActive())

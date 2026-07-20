@@ -121,6 +121,7 @@ func _run() -> void:
 
 	restarted_board.queue_free()
 	await process_frame
+	await process_frame
 	print("ADVENTURE_UPGRADE_RUN_RESUME_SMOKE_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
@@ -337,5 +338,5 @@ func _dispose_audio_before_quit() -> void:
 		return
 
 	game_audio.call("DisposeAllAudioImmediately")
-	await process_frame
-	await process_frame
+	for _frame in range(32):
+		await process_frame

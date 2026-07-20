@@ -543,8 +543,6 @@ public partial class GameBoardScene : Control
 		_boardAsyncLifetime?.Shutdown();
 		DisconnectNetworkManagerSignalsForBoard();
 		DisposeActiveSelectionOverlay();
-		_adventureTutorialPulseTween?.Kill();
-		_adventureTutorialPulseTween = null;
 		ClearDetachedVisualPools();
 		_animationPresenter?.ClearPools();
 	}

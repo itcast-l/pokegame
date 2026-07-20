@@ -137,10 +137,10 @@ func _run() -> void:
 func _assert_flat_card(visual: Dictionary) -> bool:
 	if not bool(visual.get("surface_is_flat", false)) \
 			or int(visual.get("thickness_layer_count", -1)) != 0 \
-			or String(visual.get("surface_shader_path", "")) != "res://shaders/adventure_upgrade_card_cleanup.gdshader":
+			or not String(visual.get("surface_shader_path", "")).is_empty():
 		_fail("Choice card must use a flat surface without perspective or thickness layers")
 		return false
-	if int(visual.get("surface_material_id", 0)) == 0 \
+	if int(visual.get("surface_material_id", 0)) != 0 \
 			or not bool(visual.get("glow_uses_outline_panel", false)) \
 			or float(visual.get("description_panel_alpha", 0.0)) < 0.8:
 		_fail("Flat card surface, outline glow, or description panel is incomplete")

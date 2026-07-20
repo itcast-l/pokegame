@@ -238,6 +238,7 @@ internal static partial class Program
 		Run("audio disposal forbids synchronous delay and forced GC", AudioDisposalForbidsSynchronousDelayAndForcedGc);
 		Run("game board async work stays behind lifetime boundary", GameBoardAsyncWorkStaysBehindLifetimeBoundary);
 		Run("phase three lifecycle and fallback smokes exist", PhaseThreeLifecycleAndFallbackSmokesExist);
+		Run("phase four fixed ui scenes have extracted controller boundaries", PhaseFourFixedUiScenesHaveExtractedControllerBoundaries);
 		Run("resource export audit script checks tracked assets and export config", ResourceExportAuditScriptChecksTrackedAssetsAndExportConfig);
 		Run("resource export audit doc describes read only command", ResourceExportAuditDocDescribesReadOnlyCommand);
 		Run("export preset excludes upgrade popup source only assets", ExportPresetExcludesUpgradePopupSourceOnlyAssets);
