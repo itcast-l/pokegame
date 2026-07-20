@@ -246,7 +246,7 @@ internal static partial class Program
 		Run("network manager lan discovery helpers move into partial file", NetworkManagerLanDiscoveryHelpersMoveIntoPartialFile);
 		Run("network manager steam helpers move into partial file", NetworkManagerSteamHelpersMoveIntoPartialFile);
 		Run("network manager reconnect helpers move into partial file", NetworkManagerReconnectHelpersMoveIntoPartialFile);
-		Run("network manager lobby helpers move into partial file", NetworkManagerLobbyHelpersMoveIntoPartialFile);
+		Run("network manager lobby responsibilities move into partial files", NetworkManagerLobbyResponsibilitiesMoveIntoPartialFiles);
 		Run("network manager p1b ordering stays on hot paths", NetworkManagerP1BOrderingStaysOnHotPaths);
 		Run("network manager board protocol helpers move into responsibility partials", NetworkManagerBoardProtocolHelpersMoveIntoResponsibilityPartials);
 		Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);

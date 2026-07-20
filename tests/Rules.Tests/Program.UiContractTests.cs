@@ -247,7 +247,13 @@ internal static partial class Program
 		True(adventureResume.IndexOf("EnsureItemCardCatalogReady()", StringComparison.Ordinal)
 			< adventureResume.IndexOf("store.ClearRun()", StringComparison.Ordinal));
 
-		foreach (string networkFile in new[] { "NetworkManager.cs", "NetworkManager.Steam.cs", "NetworkManager.Lobby.cs" })
+		foreach (string networkFile in new[]
+		{
+			"NetworkManager.cs",
+			"NetworkManager.Steam.cs",
+			"NetworkManager.MatchLifecycle.cs",
+			"NetworkManager.SceneLoadHandshake.cs",
+		})
 		{
 			True(File.ReadAllText(Path.Combine(root, "scripts", networkFile))
 				.Contains("EnsureItemCardCatalogReady()", StringComparison.Ordinal));

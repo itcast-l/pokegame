@@ -873,9 +873,9 @@ internal static partial class Program
 		string reconnectSource = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "NetworkManager.Reconnect.cs"));
 		True(reconnectSource.Contains("StartSteamLobbyJoin(_steamLobbyId);", StringComparison.Ordinal));
 		False(reconnectSource.Contains("Call(\"joinLobby\", _steamLobbyId)", StringComparison.Ordinal));
-		string lobbySource = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "NetworkManager.Lobby.cs"));
-		True(lobbySource.Contains("_pendingSteamLobbyJoinId = 0;", StringComparison.Ordinal));
-		True(lobbySource.Contains("_acceptedSteamLobbyJoinId = 0;", StringComparison.Ordinal));
+		string lifecycleSource = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "NetworkManager.MatchLifecycle.cs"));
+		True(lifecycleSource.Contains("_pendingSteamLobbyJoinId = 0;", StringComparison.Ordinal));
+		True(lifecycleSource.Contains("_acceptedSteamLobbyJoinId = 0;", StringComparison.Ordinal));
 		Equal(
 			1,
 			Regex.Matches(
@@ -1225,24 +1225,43 @@ internal static partial class Program
 		False(mainText.Contains("public void NotifyReconnectSnapshotApplied(string matchId)", StringComparison.Ordinal));
 	}
 
-	private static void NetworkManagerLobbyHelpersMoveIntoPartialFile()
+	private static void NetworkManagerLobbyResponsibilitiesMoveIntoPartialFiles()
 	{
 		string repoRoot = FindRepositoryRoot();
 		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
-		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.Lobby.cs");
+		string oldPartialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.Lobby.cs");
+		string membershipPath = Path.Combine(repoRoot, "scripts", "NetworkManager.LobbyMembership.cs");
+		string lifecyclePath = Path.Combine(repoRoot, "scripts", "NetworkManager.MatchLifecycle.cs");
+		string handshakePath = Path.Combine(repoRoot, "scripts", "NetworkManager.SceneLoadHandshake.cs");
 		string mainText = File.ReadAllText(mainPath);
 
-		True(File.Exists(partialPath));
-		string partialText = File.ReadAllText(partialPath);
+		False(File.Exists(oldPartialPath));
+		True(File.Exists(membershipPath));
+		True(File.Exists(lifecyclePath));
+		True(File.Exists(handshakePath));
+		string membershipText = File.ReadAllText(membershipPath);
+		string lifecycleText = File.ReadAllText(lifecyclePath);
+		string handshakeText = File.ReadAllText(handshakePath);
 
-		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
-		True(partialText.Contains("public void SetLocalReady(bool isReady)", StringComparison.Ordinal));
-		True(partialText.Contains("public void StartMatch()", StringComparison.Ordinal));
-		True(partialText.Contains("public void LeaveSession()", StringComparison.Ordinal));
-		True(partialText.Contains("private void RpcRegisterPlayer(", StringComparison.Ordinal));
-		True(partialText.Contains("private void BroadcastPlayerList()", StringComparison.Ordinal));
-		True(partialText.Contains("private void MarkClientSceneLoaded(", StringComparison.Ordinal));
-		True(partialText.Contains("private void PollLoadHandshake(double now)", StringComparison.Ordinal));
+		True(membershipText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(membershipText.Contains("public void SetLocalReady(bool isReady)", StringComparison.Ordinal));
+		True(membershipText.Contains("public Godot.Collections.Array GetRoomsVariant()", StringComparison.Ordinal));
+		True(membershipText.Contains("private void RpcRegisterPlayer(", StringComparison.Ordinal));
+		True(membershipText.Contains("private void BroadcastPlayerList()", StringComparison.Ordinal));
+		True(membershipText.Contains("private void RpcSyncLobby(", StringComparison.Ordinal));
+
+		True(lifecycleText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(lifecycleText.Contains("public void StartMatch()", StringComparison.Ordinal));
+		True(lifecycleText.Contains("public bool RequestReturnToLobbyAfterMatch()", StringComparison.Ordinal));
+		True(lifecycleText.Contains("public void LeaveSession()", StringComparison.Ordinal));
+		True(lifecycleText.Contains("public async Task NotifyHostEndedMatchIfNeededAsync()", StringComparison.Ordinal));
+
+		True(handshakeText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(handshakeText.Contains("public void NotifyLocalBoardReady()", StringComparison.Ordinal));
+		True(handshakeText.Contains("private void MarkClientSceneLoaded(", StringComparison.Ordinal));
+		True(handshakeText.Contains("private Godot.Collections.Dictionary BuildBoardInitializePayload()", StringComparison.Ordinal));
+		True(handshakeText.Contains("private void PollLoadHandshake(double now)", StringComparison.Ordinal));
+		True(handshakeText.Contains("private void ReturnToMultiplayerLobbyScene(", StringComparison.Ordinal));
 		False(mainText.Contains("public void SetLocalReady(bool isReady)", StringComparison.Ordinal));
 		False(mainText.Contains("public void StartMatch()", StringComparison.Ordinal));
 		False(mainText.Contains("public void LeaveSession()", StringComparison.Ordinal));
@@ -1397,7 +1416,7 @@ internal static partial class Program
 	private static void NetworkManagerSceneLoadAckValidatesSenderBeforeMarkingLoaded()
 	{
 		string repoRoot = FindRepositoryRoot();
-		string path = Path.Combine(repoRoot, "scripts", "NetworkManager.Lobby.cs");
+		string path = Path.Combine(repoRoot, "scripts", "NetworkManager.SceneLoadHandshake.cs");
 		string text = File.ReadAllText(path);
 
 		True(text.Contains("int senderPeerId = Multiplayer.GetRemoteSenderId();", StringComparison.Ordinal));
