@@ -50,7 +50,7 @@ public static class NetworkBoardViewFingerprint
 		"seat_index",
 		"mode",
 		"peer_id",
-		"stable_user_id",
+		"player_session_id",
 	};
 
 	public static string Compute(Godot.Collections.Dictionary snapshot)

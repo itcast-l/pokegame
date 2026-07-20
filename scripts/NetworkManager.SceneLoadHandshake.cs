@@ -35,8 +35,21 @@ public partial class NetworkManager
 		long authorityEpoch,
 		Godot.Collections.Dictionary bootstrap)
 	{
-		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true)
-			|| !TryReadRpcContext(bootstrap, out NetworkRpcContext payloadContext)
+		if (sessionId is null || matchId is null)
+		{
+			return;
+		}
+		bool isInitialSceneTransition = _state is NetworkSessionState.Lobby or NetworkSessionState.Starting
+			&& string.Equals(_config.SessionId, sessionId, StringComparison.Ordinal)
+			&& string.IsNullOrEmpty(_config.MatchId)
+			&& !string.IsNullOrWhiteSpace(matchId)
+			&& authorityEpoch == GetCurrentAuthorityEpoch();
+		if (!isInitialSceneTransition
+			&& !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true))
+		{
+			return;
+		}
+		if (!TryReadRpcContext(bootstrap, out NetworkRpcContext payloadContext)
 			|| payloadContext != new NetworkRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
@@ -72,6 +85,10 @@ public partial class NetworkManager
 	{
 		if (!IsHost
 			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
+		{
+			return;
+		}
+		if (!AllowPeerRequest(NetworkRequestCategory.ProtocolAck))
 		{
 			return;
 		}

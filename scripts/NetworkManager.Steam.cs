@@ -6,6 +6,7 @@ public partial class NetworkManager
 {
 	private ulong _pendingSteamLobbyJoinId;
 	private ulong _acceptedSteamLobbyJoinId;
+	private ulong _originalSteamLobbyOwnerId;
 
 	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
@@ -21,6 +22,7 @@ public partial class NetworkManager
 			Fail("Steam is not available.");
 			return;
 		}
+		InitializeLocalHostSessionIdentity();
 
 		SetState(NetworkSessionState.Hosting);
 		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName, roomPassword);
@@ -78,6 +80,7 @@ public partial class NetworkManager
 			RoomNameRules.DefaultRoomName,
 			string.Empty);
 		_steamLobbyId = lobbyId;
+		_originalSteamLobbyOwnerId = GetSteamLobbyOwner(lobbyId);
 		StartSteamLobbyJoin(lobbyId);
 	}
 
@@ -246,15 +249,20 @@ public partial class NetworkManager
 
 	private void CompleteExpectedSteamLobbyJoin(ulong lobbyId)
 	{
+		ulong currentLobbyOwnerId = GetSteamLobbyOwner(lobbyId);
 		if (NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
-			_state,
-			GetOriginalHostStableUserId(),
-			GetSteamLobbyOwner(lobbyId)))
+				_state,
+				_originalSteamLobbyOwnerId,
+				currentLobbyOwnerId))
 		{
 			ClearAcceptedSteamLobbyJoinIfNeeded(lobbyId);
 			LeaveSteamLobbyIfNeeded();
 			Fail("Reconnect failed: original host is no longer available.");
 			return;
+		}
+		if (_state == NetworkSessionState.Joining && currentLobbyOwnerId != 0)
+		{
+			_originalSteamLobbyOwnerId = currentLobbyOwnerId;
 		}
 
 		TryReadSteamLobbyConfig(lobbyId);
@@ -366,11 +374,6 @@ public partial class NetworkManager
 		}
 
 		return unchecked((ulong)steam.Call("getLobbyOwner", lobbyId).AsInt64());
-	}
-
-	private string GetOriginalHostStableUserId()
-	{
-		return _players.FirstOrDefault(player => player.IsHost).StableUserId;
 	}
 
 	private GodotObject? GetSteamSingleton()

@@ -7,9 +7,9 @@ using System.Text.Json.Serialization;
 
 public sealed record NetworkMigrationRosterEntry
 {
-	[JsonPropertyName("stable_user_id")]
+	[JsonPropertyName("player_session_id")]
 	[JsonPropertyOrder(0)]
-	public string StableUserId { get; init; } = string.Empty;
+	public string PlayerSessionId { get; init; } = string.Empty;
 
 	[JsonPropertyName("display_name")]
 	[JsonPropertyOrder(1)]
@@ -38,6 +38,10 @@ public sealed record NetworkMigrationRosterEntry
 	[JsonPropertyName("is_connected")]
 	[JsonPropertyOrder(7)]
 	public bool IsConnected { get; init; }
+
+	[JsonPropertyName("credentials_acknowledged")]
+	[JsonPropertyOrder(8)]
+	public bool CredentialsAcknowledged { get; init; }
 }
 
 public sealed record NetworkAuthoritySeatControl
@@ -54,17 +58,29 @@ public sealed record NetworkAuthoritySeatControl
 	[JsonPropertyOrder(2)]
 	public int PeerId { get; init; }
 
-	[JsonPropertyName("stable_user_id")]
+	[JsonPropertyName("player_session_id")]
 	[JsonPropertyOrder(3)]
-	public string StableUserId { get; init; } = string.Empty;
+	public string PlayerSessionId { get; init; } = string.Empty;
 
-	[JsonPropertyName("reconnect_token")]
+	[JsonPropertyName("credential_verifier")]
 	[JsonPropertyOrder(4)]
-	public string ReconnectToken { get; init; } = string.Empty;
+	public string CredentialVerifier { get; init; } = string.Empty;
 
-	[JsonPropertyName("session_migration_token")]
+	[JsonPropertyName("credential_generation")]
 	[JsonPropertyOrder(5)]
-	public string SessionMigrationToken { get; init; } = string.Empty;
+	public long CredentialGeneration { get; init; }
+
+	[JsonPropertyName("pending_credential_verifier")]
+	[JsonPropertyOrder(6)]
+	public string PendingCredentialVerifier { get; init; } = string.Empty;
+
+	[JsonPropertyName("pending_credential_generation")]
+	[JsonPropertyOrder(7)]
+	public long PendingCredentialGeneration { get; init; }
+
+	[JsonPropertyName("pending_credential_peer_id")]
+	[JsonPropertyOrder(8)]
+	public int PendingCredentialPeerId { get; init; }
 }
 
 public sealed record NetworkAuthorityReconnectClaim
@@ -77,13 +93,13 @@ public sealed record NetworkAuthorityReconnectClaim
 	[JsonPropertyOrder(1)]
 	public int SeatIndex { get; init; }
 
-	[JsonPropertyName("reconnect_token")]
+	[JsonPropertyName("credential_generation")]
 	[JsonPropertyOrder(2)]
-	public string ReconnectToken { get; init; } = string.Empty;
+	public long CredentialGeneration { get; init; }
 
-	[JsonPropertyName("stable_user_id")]
+	[JsonPropertyName("player_session_id")]
 	[JsonPropertyOrder(3)]
-	public string StableUserId { get; init; } = string.Empty;
+	public string PlayerSessionId { get; init; } = string.Empty;
 
 	[JsonPropertyName("claimed_peer_id")]
 	[JsonPropertyOrder(4)]
@@ -166,9 +182,9 @@ public sealed record NetworkMigrationPlan
 	[JsonPropertyOrder(5)]
 	public string CheckpointHash { get; init; } = string.Empty;
 
-	[JsonPropertyName("candidate_stable_user_id")]
+	[JsonPropertyName("candidate_player_session_id")]
 	[JsonPropertyOrder(6)]
-	public string CandidateStableUserId { get; init; } = string.Empty;
+	public string CandidatePlayerSessionId { get; init; } = string.Empty;
 
 	[JsonPropertyName("candidate_seat")]
 	[JsonPropertyOrder(7)]
@@ -186,9 +202,9 @@ public sealed record NetworkMigrationPlan
 	[JsonPropertyOrder(10)]
 	public int Port { get; init; } = NetworkProtocol.LanHostMigrationPort;
 
-	[JsonPropertyName("source_stable_user_id")]
+	[JsonPropertyName("source_player_session_id")]
 	[JsonPropertyOrder(11)]
-	public string SourceStableUserId { get; init; } = string.Empty;
+	public string SourcePlayerSessionId { get; init; } = string.Empty;
 
 	[JsonPropertyName("authority_phase")]
 	[JsonPropertyOrder(12)]
@@ -333,10 +349,6 @@ public sealed record NetworkAuthorityCheckpoint
 	[JsonPropertyOrder(31)]
 	public long CheckpointId { get; init; }
 
-	[JsonPropertyName("session_migration_tokens")]
-	[JsonPropertyOrder(32)]
-	public Dictionary<int, string> SessionMigrationTokens { get; init; } = new();
-
 	[JsonPropertyName("reconnect_claims")]
 	[JsonPropertyOrder(33)]
 	public List<NetworkAuthorityReconnectClaim> ReconnectClaims { get; init; } = new();
@@ -458,9 +470,8 @@ public static class NetworkAuthorityCheckpointCodec
 	{
 		try
 		{
-			if (!ValidateCore(checkpoint))
+			if (!ValidateCore(checkpoint, out error))
 			{
-				error = DecodeInvalidError;
 				return false;
 			}
 
@@ -474,8 +485,9 @@ public static class NetworkAuthorityCheckpointCodec
 		}
 	}
 
-	private static bool ValidateCore(NetworkAuthorityCheckpoint checkpoint)
+	private static bool ValidateCore(NetworkAuthorityCheckpoint checkpoint, out string error)
 	{
+		error = string.Empty;
 		if (checkpoint is null
 			|| checkpoint.SchemaVersion != SchemaVersion
 			|| checkpoint.ProtocolVersion != NetworkProtocol.CurrentVersion
@@ -496,7 +508,6 @@ public static class NetworkAuthorityCheckpointCodec
 			|| checkpoint.Hands is null
 			|| checkpoint.ItemHands is null
 			|| checkpoint.TableCards is null
-			|| checkpoint.SessionMigrationTokens is null
 			|| checkpoint.ReconnectClaims is null
 			|| checkpoint.AuthorityAction is null
 			|| !IsSha256Hash(checkpoint.ManifestHash)
@@ -520,6 +531,7 @@ public static class NetworkAuthorityCheckpointCodec
 			|| !AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount)
 			|| !AuthorityActionStateRules.IsStableCheckpointState(checkpoint.AuthorityAction))
 		{
+			error = "checkpoint_top_level";
 			return false;
 		}
 
@@ -528,7 +540,6 @@ public static class NetworkAuthorityCheckpointCodec
 			|| rosterCount > checkpoint.PlayerCount
 			|| checkpoint.SeatControls.Count != rosterCount
 			|| checkpoint.ReconnectClaims.Count != rosterCount
-			|| checkpoint.SessionMigrationTokens.Count != rosterCount
 			|| checkpoint.Scores.Length != checkpoint.PlayerCount
 			|| checkpoint.Decks.Count != checkpoint.PlayerCount
 			|| checkpoint.Hands.Count != checkpoint.PlayerCount
@@ -536,6 +547,7 @@ public static class NetworkAuthorityCheckpointCodec
 			|| checkpoint.TableCards.Count > MaxTableCardCount
 			|| checkpoint.LastAcceptedClientActionIds.Count > checkpoint.PlayerCount)
 		{
+			error = "checkpoint_collection_shape";
 			return false;
 		}
 
@@ -543,15 +555,18 @@ public static class NetworkAuthorityCheckpointCodec
 		{
 			if (string.IsNullOrWhiteSpace(checkpoint.MatchId)
 				|| rosterCount != checkpoint.PlayerCount
-				|| !checkpoint.OpeningDealCompleted)
-			{
-				return false;
+				|| !checkpoint.OpeningDealCompleted
+				|| checkpoint.Roster.Any(entry => entry is null || !entry.CredentialsAcknowledged))
+				{
+					error = "checkpoint_ingame_phase";
+					return false;
 			}
 		}
 		else if (!string.IsNullOrEmpty(checkpoint.MatchId)
 			|| checkpoint.TableCards.Count != 0
 			|| !IsEmptyAuthorityAction(checkpoint.AuthorityAction))
 		{
+			error = "checkpoint_lobby_phase";
 			return false;
 		}
 
@@ -565,13 +580,14 @@ public static class NetworkAuthorityCheckpointCodec
 				|| entry.SeatIndex < 0
 				|| entry.SeatIndex >= checkpoint.PlayerCount
 				|| rosterBySeat[entry.SeatIndex] is not null
-				|| !IsBoundedString(entry.StableUserId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
+				|| !IsBoundedString(entry.PlayerSessionId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
 				|| !IsBoundedString(entry.DisplayName, 128)
 				|| !IsBoundedString(entry.AvatarId, 128)
 				|| entry.PeerId < 0
-				|| !playerIds.Add(entry.StableUserId))
-			{
-				return false;
+				|| !playerIds.Add(entry.PlayerSessionId))
+				{
+					error = $"checkpoint_roster_{index}";
+					return false;
 			}
 
 			rosterBySeat[entry.SeatIndex] = entry;
@@ -580,13 +596,15 @@ public static class NetworkAuthorityCheckpointCodec
 
 		if (hostCount != 1)
 		{
+			error = "checkpoint_roster_host_count";
 			return false;
 		}
 		for (int seat = 0; seat < rosterCount; seat++)
 		{
 			if (rosterBySeat[seat] is null)
-			{
-				return false;
+				{
+					error = $"checkpoint_roster_missing_seat_{seat}";
+					return false;
 			}
 		}
 
@@ -599,27 +617,19 @@ public static class NetworkAuthorityCheckpointCodec
 				|| controlsBySeat[control.SeatIndex] is not null
 				|| !Enum.IsDefined(control.Mode)
 				|| control.PeerId < 0
-				|| !IsBoundedString(control.StableUserId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
-				|| !IsBoundedString(control.ReconnectToken, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false)
-				|| !IsBoundedString(control.SessionMigrationToken, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false)
-				|| !string.Equals(control.StableUserId, rosterBySeat[control.SeatIndex]!.StableUserId, StringComparison.Ordinal)
-				|| !checkpoint.SessionMigrationTokens.TryGetValue(control.SeatIndex, out string? sessionToken)
-				|| !string.Equals(control.SessionMigrationToken, sessionToken, StringComparison.Ordinal))
-			{
-				return false;
+				|| !IsBoundedString(control.PlayerSessionId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
+				|| !SeatCredentialRules.IsVerifierValid(control.CredentialVerifier)
+				|| control.CredentialGeneration < SeatCredentialRules.InitialGeneration
+				|| control.PendingCredentialGeneration < 0
+				|| control.PendingCredentialPeerId < 0
+				|| !string.Equals(control.PlayerSessionId, rosterBySeat[control.SeatIndex]!.PlayerSessionId, StringComparison.Ordinal)
+				|| !HasValidPendingCredentialState(control))
+				{
+					error = $"checkpoint_control_{control?.SeatIndex ?? -1}";
+					return false;
 			}
 
 			controlsBySeat[control.SeatIndex] = control;
-		}
-
-		foreach (KeyValuePair<int, string> token in checkpoint.SessionMigrationTokens)
-		{
-			if (token.Key < 0
-				|| token.Key >= rosterCount
-				|| !IsBoundedString(token.Value, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false))
-			{
-				return false;
-			}
 		}
 
 		var claimSeen = new bool[rosterCount];
@@ -631,15 +641,16 @@ public static class NetworkAuthorityCheckpointCodec
 				|| claimSeen[claim.SeatIndex]
 				|| !IsBoundedString(claim.MatchId, NetworkProtocol.MaxMatchIdLength)
 				|| !string.Equals(claim.MatchId, checkpoint.MatchId, StringComparison.Ordinal)
-				|| !IsBoundedString(claim.ReconnectToken, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false)
-				|| !IsBoundedString(claim.StableUserId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
-				|| !string.Equals(claim.ReconnectToken, controlsBySeat[claim.SeatIndex]!.ReconnectToken, StringComparison.Ordinal)
-				|| !string.Equals(claim.StableUserId, controlsBySeat[claim.SeatIndex]!.StableUserId, StringComparison.Ordinal)
+				|| claim.CredentialGeneration < SeatCredentialRules.InitialGeneration
+				|| !IsBoundedString(claim.PlayerSessionId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
+				|| claim.CredentialGeneration != controlsBySeat[claim.SeatIndex]!.CredentialGeneration
+				|| !string.Equals(claim.PlayerSessionId, controlsBySeat[claim.SeatIndex]!.PlayerSessionId, StringComparison.Ordinal)
 				|| claim.ClaimedPeerId < 0
 				|| claim.ClaimState is not (nameof(ReconnectClaimState.Unclaimed) or nameof(ReconnectClaimState.Claimed))
 				|| (claim.ClaimState == nameof(ReconnectClaimState.Unclaimed) ? claim.ClaimedPeerId != 0 : claim.ClaimedPeerId <= 0))
-			{
-				return false;
+				{
+					error = $"checkpoint_claim_{claim?.SeatIndex ?? -1}";
+					return false;
 			}
 
 			claimSeen[claim.SeatIndex] = true;
@@ -648,8 +659,9 @@ public static class NetworkAuthorityCheckpointCodec
 		foreach (KeyValuePair<int, long> actionId in checkpoint.LastAcceptedClientActionIds)
 		{
 			if (actionId.Key < 0 || actionId.Key >= checkpoint.PlayerCount || actionId.Value < 0)
-			{
-				return false;
+				{
+					error = $"checkpoint_action_id_{actionId.Key}";
+					return false;
 			}
 		}
 
@@ -670,8 +682,9 @@ public static class NetworkAuthorityCheckpointCodec
 				|| !HasValidCards(deck)
 				|| !HasValidCards(hand)
 				|| !HasValidItemIds(itemHand))
-			{
-				return false;
+				{
+					error = $"checkpoint_pile_{seat}";
+					return false;
 			}
 		}
 
@@ -684,16 +697,17 @@ public static class NetworkAuthorityCheckpointCodec
 				|| tableCard.ItemOwnerPlayerIndex >= checkpoint.PlayerCount
 				|| !IsBoundedString(tableCard.ItemOverlayId, 128)
 				|| (tableCard.Card is not null && !IsValidCard(tableCard.Card))
-				|| (tableCard.Card is null && (tableCard.IsFaceUp
-					|| tableCard.IsBuriedInSand
-					|| tableCard.IsSlimeCoated
-					|| tableCard.CardOwnerPlayerIndex >= 0
-					|| tableCard.RemoveCardOnCapture))
-				|| (string.IsNullOrEmpty(tableCard.ItemOverlayId)
-					? tableCard.ItemOwnerPlayerIndex != -1
-					: tableCard.ItemOwnerPlayerIndex < 0))
-			{
-				return false;
+					|| (tableCard.Card is null && (string.IsNullOrEmpty(tableCard.ItemOverlayId)
+						|| tableCard.IsBuriedInSand
+						|| tableCard.IsSlimeCoated
+						|| tableCard.CardOwnerPlayerIndex >= 0
+						|| tableCard.RemoveCardOnCapture))
+					|| (string.IsNullOrEmpty(tableCard.ItemOverlayId)
+						? tableCard.ItemOwnerPlayerIndex != -1
+						: tableCard.ItemOwnerPlayerIndex < -1))
+				{
+					error = "checkpoint_table_card";
+					return false;
 			}
 		}
 
@@ -731,6 +745,24 @@ public static class NetworkAuthorityCheckpointCodec
 		}
 
 		return true;
+	}
+
+	private static bool HasValidPendingCredentialState(NetworkAuthoritySeatControl control)
+	{
+		bool hasPending = control.PendingCredentialGeneration > 0
+			|| !string.IsNullOrEmpty(control.PendingCredentialVerifier)
+			|| control.PendingCredentialPeerId > 0;
+		if (!hasPending)
+		{
+			return control.PendingCredentialGeneration == 0
+				&& string.IsNullOrEmpty(control.PendingCredentialVerifier)
+				&& control.PendingCredentialPeerId == 0;
+		}
+
+		return control.PendingCredentialGeneration == control.CredentialGeneration + 1
+			&& control.CredentialGeneration < long.MaxValue
+			&& SeatCredentialRules.IsVerifierValid(control.PendingCredentialVerifier)
+			&& control.PendingCredentialPeerId > 0;
 	}
 
 	private static bool HasValidItemIds(List<string> itemIds)

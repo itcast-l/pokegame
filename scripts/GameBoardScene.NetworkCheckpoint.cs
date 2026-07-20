@@ -51,20 +51,25 @@ public partial class GameBoardScene
 	internal bool TryBuildAuthorityCheckpointEnvelope(
 		IReadOnlyDictionary<int, long> lastAcceptedClientActionIds,
 		long candidateCheckpointId,
-		out AuthorityCheckpointEnvelope envelope)
+		out AuthorityCheckpointEnvelope envelope,
+		out string error)
 	{
 		envelope = AuthorityCheckpointEnvelope.Empty;
+		error = string.Empty;
 		NetworkManager? networkManager = GetNetworkManager();
 		if (!IsNetworkMultiplayerMode() || !IsNetworkHost() || networkManager == null)
 		{
+			error = "board_not_authority";
 			return false;
 		}
 		if (!AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState))
 		{
+			error = "authority_action_not_stable";
 			return false;
 		}
 		if (candidateCheckpointId <= _networkCheckpointId)
 		{
+			error = "checkpoint_id_not_monotonic";
 			return false;
 		}
 
@@ -103,11 +108,32 @@ public partial class GameBoardScene
 			SnapshotId = _networkSnapshotId,
 			AuthorityEpoch = _networkAuthorityEpoch,
 			CheckpointId = candidateCheckpointId,
-			SessionMigrationTokens = networkManager.GetSessionMigrationTokensForCheckpoint(),
 			ReconnectClaims = networkManager.GetCheckpointReconnectClaims(),
 		};
 
-		return AuthorityCheckpointEnvelope.TryCreate(checkpoint, out envelope, out _);
+		if (AuthorityCheckpointEnvelope.TryCreate(checkpoint, out envelope, out string encodeError))
+		{
+			return true;
+		}
+
+		NetworkAuthorityCheckpointCodec.Validate(checkpoint, out string validationError);
+		error = string.Join(
+			" ",
+			encodeError,
+			validationError,
+			$"action={checkpoint.AuthorityAction.Kind}/{checkpoint.AuthorityAction.Phase}",
+			$"action_valid={AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount)}",
+			$"outcome={checkpoint.MatchOutcomeKind}/{checkpoint.WinnerPlayerIndex}",
+			$"turn={checkpoint.CurrentTurnPlayerIndex}/{checkpoint.TurnSequenceGeneration}",
+			$"refresh={checkpoint.CompletedTurnsSinceQuestionRefresh}/{checkpoint.QuestionRefreshAnchorPlayerIndex}",
+			$"counts={checkpoint.Roster.Count}/{checkpoint.SeatControls.Count}/{checkpoint.ReconnectClaims.Count}",
+			$"hands={string.Join(',', checkpoint.Hands.Select(hand => hand.Count))}",
+			$"items={string.Join(',', checkpoint.ItemHands.Select(hand => hand.Count))}",
+			$"decks={string.Join(',', checkpoint.Decks.Select(deck => deck.Count))}",
+			$"table={checkpoint.TableCards.Count}",
+			$"controls={string.Join(',', checkpoint.SeatControls.Select(control => $"{control.SeatIndex}:{control.Mode}:{control.PeerId}:{control.CredentialGeneration}:{control.PendingCredentialGeneration}:{control.PendingCredentialPeerId}"))}",
+			$"claims={string.Join(',', checkpoint.ReconnectClaims.Select(claim => $"{claim.SeatIndex}:{claim.CredentialGeneration}:{claim.ClaimState}:{claim.ClaimedPeerId}"))}");
+		return false;
 	}
 
 	internal void CommitNetworkCheckpointEnvelope(AuthorityCheckpointEnvelope envelope)
@@ -262,7 +288,7 @@ public partial class GameBoardScene
 		return activeRoster.Count == checkpoint.Roster.Count
 			&& activeRoster.All(active => checkpoint.Roster.Any(expected =>
 				active.SeatIndex == expected.SeatIndex
-				&& string.Equals(active.StableUserId, expected.StableUserId, StringComparison.Ordinal)
+				&& string.Equals(active.PlayerSessionId, expected.PlayerSessionId, StringComparison.Ordinal)
 				&& string.Equals(active.DisplayName, expected.DisplayName, StringComparison.Ordinal)
 				&& string.Equals(active.AvatarId, expected.AvatarId, StringComparison.Ordinal)));
 	}

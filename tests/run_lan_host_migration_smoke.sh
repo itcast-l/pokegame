@@ -332,7 +332,7 @@ run_current_turn_case() {
 run_active_lobby_case() {
 	local label="$1"
 	local players="$2"
-	local inject_old_token="$3"
+	local inject_expired_credential="$3"
 	local case_dir="$TMP_DIR/$label"
 	local result_dir="$case_dir/results"
 	mkdir -p "$result_dir"
@@ -351,16 +351,18 @@ run_active_lobby_case() {
 
 	for ((seat = 1; seat < players; seat++)); do
 		local client_log="$case_dir/client_${seat}.log"
-		if [[ "$inject_old_token" == "1" && "$seat" -eq 2 ]]; then
-			CODEX_LAN_INJECT_OLD_HOST_TOKEN=1 \
+		if [[ "$inject_expired_credential" == "1" && "$seat" -eq 2 ]]; then
+		CODEX_LAN_INJECT_EXPIRED_HOST_CREDENTIAL=1 \
 			CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-$seat" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
 				--script res://tests/LanFullMatchPeer.gd -- \
 				--role=client --seat="$seat" --players="$players" --item-mode=1 \
 				--result-dir="$result_dir" --active-lobby-migration --expect-migration-failure >"$client_log" 2>&1 &
 		else
 			local keep_open=""
-			if [[ "$inject_old_token" == "1" && "$seat" -eq 1 ]]; then
-				keep_open="--active-lobby-keep-open"
+			if [[ "$inject_expired_credential" == "1" && "$seat" -eq 1 ]]; then
+				keep_open="--active-lobby-keep-open --active-lobby-expected-seats=1"
+			elif [[ "$inject_expired_credential" != "1" ]]; then
+				keep_open="--active-lobby-keep-open --active-lobby-expected-seats=$((players - 1))"
 			fi
 			CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-$seat" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
 				--script res://tests/LanFullMatchPeer.gd -- \
@@ -369,9 +371,9 @@ run_active_lobby_case() {
 		fi
 		client_pids+=("$!")
 		PIDS+=("$!")
-		if [[ "$inject_old_token" == "1" && "$seat" -eq 1 ]] \
+		if [[ "$inject_expired_credential" == "1" && "$seat" -eq 1 ]] \
 			&& ! wait_for_marker "$case_dir/client_1.log" "STANDBY_ACKED" 60; then
-			echo "Old-host token candidate did not reach standby: $label" >&2
+			echo "Expired-credential candidate did not reach standby: $label" >&2
 			print_logs "$case_dir"
 			return 1
 		fi
@@ -382,16 +384,19 @@ run_active_lobby_case() {
 		print_logs "$case_dir"
 		return 1
 	fi
-	if [[ "$inject_old_token" == "1" ]]; then
+	if [[ "$inject_expired_credential" == "1" ]]; then
 		if ! wait_for_processes 60 "$host_pid" "${client_pids[1]}"; then
 			echo "Active lobby migration did not settle: $label" >&2
 			print_logs "$case_dir"
 			return 1
 		fi
-	elif ! wait_for_processes 60 "$host_pid" "${client_pids[@]}"; then
-		echo "Active lobby migration did not settle: $label" >&2
-		print_logs "$case_dir"
-		return 1
+	else
+		if ! wait_for_processes 60 "$host_pid" \
+			|| ! wait_for_any_client_marker "$case_dir" "MIGRATION_LOBBY_RECOVERY_STABLE seats=$((players - 1))" 60; then
+			echo "Active lobby migration did not settle: $label" >&2
+			print_logs "$case_dir"
+			return 1
+		fi
 	fi
 
 	if ! grep -Fq "MIGRATION_FAILURE_STATE" "$host_log"; then
@@ -399,26 +404,107 @@ run_active_lobby_case() {
 		print_logs "$case_dir"
 		return 1
 	fi
-	if [[ "$inject_old_token" == "1" ]]; then
-		if ! grep -Fq "MIGRATION_OLD_HOST_TOKEN_INJECTED" "$case_dir/client_2.log" \
+	if [[ "$inject_expired_credential" == "1" ]]; then
+		if ! grep -Fq "MIGRATION_EXPIRED_HOST_CREDENTIAL_INJECTED" "$case_dir/client_2.log" \
 			|| ! grep -Fq "MIGRATION_FAILURE_STATE" "$case_dir/client_2.log" \
 			|| ! grep -Fq "MIGRATION_FAILURE_UI" "$case_dir/client_2.log"; then
-			echo "Old-host token rejection assertions failed" >&2
+			echo "Expired host credential rejection assertions failed" >&2
 			print_logs "$case_dir"
 			return 1
 		fi
 	else
-		if ! grep -Fq "MIGRATION_LOBBY_RECOVERED" "$case_dir/client_1.log"; then
+		if ! grep -Fq "MIGRATION_LOBBY_RECOVERY_STABLE seats=$((players - 1))" "$case_dir"/client_*.log; then
 			echo "Lobby candidate did not recover" >&2
 			print_logs "$case_dir"
 			return 1
 		fi
 	fi
-	if [[ "$inject_old_token" == "1" ]]; then
+	if [[ "$inject_expired_credential" == "1" ]]; then
 		kill "${client_pids[0]}" 2>/dev/null || true
 		wait "${client_pids[0]}" 2>/dev/null || true
+	else
+		for pid in "${client_pids[@]}"; do
+			kill "$pid" 2>/dev/null || true
+			wait "$pid" 2>/dev/null || true
+		done
 	fi
 	echo "LAN_HOST_MIGRATION_LOBBY_OK $label"
+}
+
+run_lobby_timeout_late_replacement_case() {
+	local label="lobby_timeout_late_replacement"
+	local case_dir="$TMP_DIR/$label"
+	local result_dir="$case_dir/results"
+	mkdir -p "$result_dir"
+	local host_log="$case_dir/host.log"
+	local candidate_log="$case_dir/client_1.log"
+	local late_log="$case_dir/client_2.log"
+	local replacement_log="$case_dir/replacement.log"
+
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-0" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- \
+		--role=host --seat=0 --players=3 --item-mode=1 --result-dir="$result_dir" \
+		--active-lobby-migration --expect-migration-failure >"$host_log" 2>&1 &
+	local host_pid=$!
+	PIDS+=("$host_pid")
+	sleep 1
+
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-1" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- \
+		--role=client --seat=1 --players=3 --item-mode=1 --result-dir="$result_dir" \
+		--active-lobby-migration --active-lobby-keep-open \
+		--active-lobby-expected-seats=1 >"$candidate_log" 2>&1 &
+	local candidate_pid=$!
+	PIDS+=("$candidate_pid")
+	if ! wait_for_marker "$candidate_log" "FULL_MATCH_CLIENT_STATE 4" 60; then
+		echo "Lobby timeout candidate did not enter the lobby" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-2" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- \
+		--role=client --seat=2 --players=3 --item-mode=1 --result-dir="$result_dir" \
+		--active-lobby-migration --pause-lobby-claim --expect-migration-failure >"$late_log" 2>&1 &
+	local late_pid=$!
+	PIDS+=("$late_pid")
+
+	if ! wait_for_marker "$late_log" "MIGRATION_LATE_CLAIM_PAUSED" 90 \
+		|| ! wait_for_marker "$host_log" "MIGRATION_ACTIVE_LOBBY_REQUESTED" 90 \
+		|| ! wait_for_marker "$candidate_log" "MIGRATION_LOBBY_RECOVERY_STABLE seats=1" 35; then
+		echo "Lobby migration timeout fixture did not reach compaction" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	kill -CONT "$late_pid"
+	if ! wait_for_processes 30 "$host_pid" "$late_pid"; then
+		echo "Late lobby claimant did not settle after timeout" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	if ! grep -Fq "MIGRATION_FAILURE_STATE" "$late_log"; then
+		echo "Late lobby claim was not rejected" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-replacement" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- \
+		--role=client --seat=2 --players=3 --item-mode=1 --result-dir="$result_dir" \
+		--lobby-join-only --expected-lobby-seats=2 >"$replacement_log" 2>&1 &
+	local replacement_pid=$!
+	PIDS+=("$replacement_pid")
+	if ! wait_for_processes 30 "$replacement_pid" \
+		|| ! grep -Fq "MIGRATION_LOBBY_REPLACEMENT_JOINED seats=2" "$replacement_log"; then
+		echo "Replacement player could not fill the compacted lobby" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	kill "$candidate_pid" 2>/dev/null || true
+	wait "$candidate_pid" 2>/dev/null || true
+	echo "LAN_HOST_MIGRATION_LOBBY_TIMEOUT_LATE_REPLACEMENT_OK"
 }
 
 run_failure_case() {
@@ -528,11 +614,20 @@ run_candidate_exit_timeout_case() {
 		print_logs "$case_dir"
 		return 1
 	fi
+	for seat in 1 2; do
+		if ! wait_for_marker "$case_dir/client_${seat}.log" "FULL_MATCH_CLIENT_LOCAL_SEAT" 30; then
+			echo "Candidate-exit case did not resolve client seat ownership" >&2
+			print_logs "$case_dir"
+			return 1
+		fi
+	done
 
 	local candidate_seat=-1
 	local follower_seat=-1
+	local planned_candidate_seat
+	planned_candidate_seat="$(sed -n 's/.*MIGRATION_PLAN_READY candidate_seat=\([0-9][0-9]*\).*/\1/p' "$host_log" | tail -n 1)"
 	for seat in 1 2; do
-		if grep -Fq "MIGRATION_PLAN_ACCEPTED candidate=lan-migration-${label}-seat-${seat} " "$case_dir/client_${seat}.log"; then
+		if grep -Fq "FULL_MATCH_CLIENT_LOCAL_SEAT $planned_candidate_seat" "$case_dir/client_${seat}.log"; then
 			candidate_seat="$seat"
 		else
 			follower_seat="$seat"
@@ -632,8 +727,17 @@ if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "paused_maint
 fi
 echo "LAN_HOST_MIGRATION_SMOKE_OK"
 
-if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "active_lobby" ]]; then
-	run_active_lobby_case "active_lobby" 2 0
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "active_lobby" || "${MIGRATION_ONLY_CASE}" == "active_lobby_2p" ]]; then
+	run_active_lobby_case "active_lobby_2p" 2 0
+fi
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "active_lobby_3p" ]]; then
+	run_active_lobby_case "active_lobby_3p" 3 0
+fi
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "active_lobby_4p" ]]; then
+	run_active_lobby_case "active_lobby_4p" 4 0
+fi
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "lobby_timeout_late_replacement" ]]; then
+	run_lobby_timeout_late_replacement_case
 fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "current_turn" ]]; then
 	run_current_turn_case
@@ -650,8 +754,8 @@ fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "stale_epoch" ]]; then
 	run_stale_epoch_case
 fi
-if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "old_host_token" ]]; then
-	run_active_lobby_case "old_host_token" 3 1
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "expired_host_credential" ]]; then
+	run_active_lobby_case "expired_host_credential" 3 1
 fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "candidate_exit" ]]; then
 	run_candidate_exit_timeout_case

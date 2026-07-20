@@ -32,7 +32,10 @@ public static class MultiplayerLobbyRules
 		for (int seatIndex = 0; seatIndex < expectedPlayerCount; seatIndex++)
 		{
 			NetworkPlayerPublicState player = players.FirstOrDefault(candidate => candidate.SeatIndex == seatIndex);
-			if (player.PeerId == 0 || !player.IsConnected || !player.IsReady)
+			if (player.PeerId == 0
+				|| !player.IsConnected
+				|| !player.CredentialsAcknowledged
+				|| !player.IsReady)
 			{
 				return false;
 			}

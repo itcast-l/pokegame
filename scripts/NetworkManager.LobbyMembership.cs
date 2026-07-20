@@ -26,7 +26,10 @@ public partial class NetworkManager
 		}
 
 		int localPeerId = GetLocalPeerId();
-		SetPlayerReady(localPeerId == 0 ? 1 : localPeerId, isReady);
+		if (!SetPlayerReady(localPeerId == 0 ? 1 : localPeerId, isReady))
+		{
+			return;
+		}
 		BroadcastPlayerList();
 		CommitAuthorityCheckpointFromLobby();
 	}
@@ -53,12 +56,12 @@ public partial class NetworkManager
 		return result;
 	}
 
-	public Godot.Collections.Array GetSeatControlStatesVariant(bool includeReconnectTokens = true)
+	public Godot.Collections.Array GetSeatControlStatesVariant(bool includeCredentialVerifiers = true)
 	{
 		var result = new Godot.Collections.Array();
 		foreach (SeatControlState state in _seatControlStates)
 		{
-			result.Add(ToDictionary(includeReconnectTokens ? state : SeatControlRules.RedactReconnectTokenForSharedSnapshot(state)));
+			result.Add(ToDictionary(includeCredentialVerifiers ? state : SeatControlRules.RedactCredentialVerifiersForSharedSnapshot(state)));
 		}
 
 		return result;
@@ -73,13 +76,17 @@ public partial class NetworkManager
 	private void RpcRequestClientInfo()
 	{
 		RefreshLocalIdentity();
-		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, GetStableUserId(), _pendingJoinRoomPassword);
+		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, _localIdentityHint, _pendingJoinRoomPassword);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcRegisterPlayer(string displayName, string avatarId, string stableUserId, string roomPassword)
+	private void RpcRegisterPlayer(string displayName, string avatarId, string identityHint, string roomPassword)
 	{
 		if (!IsHost)
+		{
+			return;
+		}
+		if (!AllowPeerRequest(NetworkRequestCategory.LobbyMutation, requireRegisteredPeer: false))
 		{
 			return;
 		}
@@ -102,6 +109,18 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (displayName is null
+			|| !PlayerNameRules.IsValid(displayName)
+			|| !string.Equals(displayName, displayName.Trim(), StringComparison.Ordinal)
+			|| avatarId is null
+			|| avatarId.Length > 128
+			|| !string.Equals(CharacterAvatarCatalog.NormalizeAvatarId(avatarId), avatarId, StringComparison.Ordinal)
+			|| identityHint is null
+			|| identityHint.Length > NetworkProtocol.MaxPlayerIdLength)
+		{
+			RejectLobbyJoin(senderId, "Invalid player registration.");
+			return;
+		}
 
 		int seatIndex = MultiplayerLobbyRules.GetNextSeatIndex(_players, _config.PlayerCount);
 		if (seatIndex < 0)
@@ -110,30 +129,19 @@ public partial class NetworkManager
 			return;
 		}
 
+		string playerSessionId = SeatCredentialRules.IssuePlayerSessionId();
 		InsertPlayerInSeatOrder(new NetworkPlayerPublicState(
 			senderId,
-			string.IsNullOrWhiteSpace(stableUserId) ? $"peer:{senderId}" : stableUserId,
-			PlayerNameRules.Normalize(displayName),
-			CharacterAvatarCatalog.NormalizeAvatarId(avatarId),
+			playerSessionId,
+			displayName,
+			avatarId,
 			seatIndex,
 			false,
 			false,
 			false,
 			true));
-		EnsureSessionMigrationToken(seatIndex);
 		EnsureLobbySeatControlStates();
-		if (_sessionMigrationTokensBySeat.TryGetValue(seatIndex, out string? migrationToken))
-		{
-			RpcId(
-				senderId,
-				MethodName.RpcReceiveSessionMigrationToken,
-				_config.SessionId,
-				_config.MatchId,
-				GetCurrentAuthorityEpoch(),
-				seatIndex,
-				migrationToken,
-				string.IsNullOrWhiteSpace(stableUserId) ? $"peer:{senderId}" : stableUserId);
-		}
+		SendSeatCredentialsToUnacknowledgedPeers();
 		BroadcastPlayerList();
 		CommitAuthorityCheckpointFromLobby();
 	}
@@ -145,6 +153,7 @@ public partial class NetworkManager
 		long authorityEpoch,
 		string message)
 	{
+		message = (message ?? string.Empty)[..Math.Min(message?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
 		NetworkRpcContext context = new(sessionId ?? string.Empty, matchId ?? string.Empty, authorityEpoch);
 		if (!context.IsValid
 			|| _state is not (NetworkSessionState.Joining or NetworkSessionState.MigratingHost)
@@ -178,7 +187,7 @@ public partial class NetworkManager
 	{
 		return Enum.TryParse(message, ignoreCase: true, out NetworkMigrationFailureCode code)
 			? code
-			: NetworkMigrationFailureCode.OldHostTokenRejected;
+			: NetworkMigrationFailureCode.ExpiredCredential;
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -190,28 +199,38 @@ public partial class NetworkManager
 	{
 		if (!IsHost
 			|| _state != NetworkSessionState.Lobby
-			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
+			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch)
+			|| !AllowPeerRequest(NetworkRequestCategory.LobbyMutation))
 		{
 			return;
 		}
 
-		SetPlayerReady(Multiplayer.GetRemoteSenderId(), isReady);
+		if (!SetPlayerReady(Multiplayer.GetRemoteSenderId(), isReady))
+		{
+			return;
+		}
 		BroadcastPlayerList();
 		CommitAuthorityCheckpointFromLobby();
 	}
 
-	private void SetPlayerReady(int peerId, bool isReady)
+	private bool SetPlayerReady(int peerId, bool isReady)
 	{
 		int playerIndex = _players.FindIndex(player => player.PeerId == peerId);
 		if (playerIndex < 0)
 		{
-			return;
+			return false;
+		}
+		if (!_players[playerIndex].CredentialsAcknowledged
+			|| _players[playerIndex].IsReady == isReady)
+		{
+			return false;
 		}
 
 		_players[playerIndex] = _players[playerIndex] with { IsReady = isReady };
 		EnsureLobbySeatControlStates();
 		EmitSignal(SignalName.ReadyChanged, _players[playerIndex].SeatIndex, isReady);
 		EmitPlayerListUpdated();
+		return true;
 	}
 
 	private void BroadcastPlayerList()
@@ -260,7 +279,7 @@ public partial class NetworkManager
 			bool localSeatClaimed = _players.Any(player =>
 				player.IsLocal
 				&& player.IsConnected
-				&& string.Equals(player.StableUserId, GetStableUserId(), StringComparison.Ordinal));
+				&& string.Equals(player.PlayerSessionId, GetPlayerSessionId(), StringComparison.Ordinal));
 			if (isLobbyMigration && !localSeatClaimed)
 			{
 				// The new host broadcasts its roster before every follower has

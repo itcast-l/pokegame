@@ -20,6 +20,7 @@ internal static partial class Program
 		Run("checkpoint codec roundtrips draw outcome", CheckpointCodecRoundtripsDrawOutcome);
 		Run("checkpoint codec rejects tampered hash and oversized payload", CheckpointCodecRejectsTamperedHashAndOversizedPayload);
 		Run("checkpoint codec rejects malformed object graphs without throwing", CheckpointCodecRejectsMalformedObjectGraphsWithoutThrowing);
+		Run("checkpoint codec accepts ownerless face-up special table cards", CheckpointCodecAcceptsOwnerlessFaceUpSpecialTableCards);
 		Run("checkpoint codec rejects excessive json depth with fixed error", CheckpointCodecRejectsExcessiveJsonDepthWithFixedError);
 		Run("checkpoint envelope keeps the previous atomic value on encode failure", CheckpointEnvelopeKeepsPreviousAtomicValueOnEncodeFailure);
 		Run("network protocol contexts fence epochs and snapshots", NetworkProtocolContextsFenceEpochsAndSnapshots);
@@ -27,7 +28,12 @@ internal static partial class Program
 		Run("multiplayer rematch accepts only completed current-match players", MultiplayerRematchAcceptsOnlyCompletedCurrentMatchPlayers);
 		Run("multiplayer rematch returns connected ready players to preserved lobby", MultiplayerRematchReturnsConnectedReadyPlayersToPreservedLobby);
 		Run("migration plan selects the lowest eligible standby", MigrationPlanSelectsLowestEligibleStandby);
+		Run("standby checkpoint sends are serialized and rate bounded", StandbyCheckpointSendsAreSerializedAndRateBounded);
 		Run("migration plan rejects stale or unsafe endpoints", MigrationPlanRejectsStaleOrUnsafeEndpoints);
+		Run("seat credentials issue verify rotate and reject replay", SeatCredentialsIssueVerifyRotateAndRejectReplay);
+		Run("seat credential pending rotation cancels back to current generation", SeatCredentialPendingRotationCancelsBackToCurrentGeneration);
+		Run("peer rate limiter enforces category isolation refill cleanup and disconnect threshold", PeerRateLimiterEnforcesCategoryIsolationRefillCleanupAndDisconnectThreshold);
+		Run("lobby migration recovery tracks claims and ten second expiry", LobbyMigrationRecoveryTracksClaimsAndTenSecondExpiry);
 	}
 
 	private static void AuthorityActionPhasesAreOrderedAndResumable()
@@ -375,7 +381,7 @@ internal static partial class Program
 		Equal(source.AuthorityEpoch, restored.AuthorityEpoch);
 		Equal(source.CheckpointId, restored.CheckpointId);
 		Equal("secret", restored.RoomPassword);
-		Equal("migration-secret", restored.SeatControls[0].SessionMigrationToken);
+		Equal(SeatCredentialRules.ComputeVerifier("credential-0"), restored.SeatControls[0].CredentialVerifier);
 		Equal(19L, restored.LastAcceptedClientActionIds[1]);
 	}
 
@@ -443,6 +449,38 @@ internal static partial class Program
 		string hash = NetworkAuthorityCheckpointCodec.ComputeHash(payload);
 		False(NetworkAuthorityCheckpointCodec.TryDecode(payload, hash, out _, out string error));
 		Equal(NetworkAuthorityCheckpointCodec.DecodeInvalidError, error);
+	}
+
+	private static void CheckpointCodecAcceptsOwnerlessFaceUpSpecialTableCards()
+	{
+		NetworkAuthorityCheckpoint source = CreateCheckpoint() with
+		{
+			TableCards = new List<NetworkCheckpointTableCard>
+			{
+				new()
+				{
+					Card = null,
+					IsFaceUp = true,
+					CardOwnerPlayerIndex = -1,
+					ItemOverlayId = "question_mark",
+					ItemOwnerPlayerIndex = -1,
+				},
+			},
+		};
+		True(NetworkAuthorityCheckpointCodec.TryEncode(source, out byte[] payload, out string hash, out _));
+		True(NetworkAuthorityCheckpointCodec.TryDecode(payload, hash, out NetworkAuthorityCheckpoint restored, out _));
+		Equal("question_mark", restored.TableCards[0].ItemOverlayId);
+		False(NetworkAuthorityCheckpointCodec.TryEncode(
+			source with
+			{
+				TableCards = new List<NetworkCheckpointTableCard>
+				{
+					new() { Card = null, IsFaceUp = true, ItemOwnerPlayerIndex = -1 },
+				},
+			},
+			out _,
+			out _,
+			out _));
 	}
 
 	private static void CheckpointEnvelopeKeepsPreviousAtomicValueOnEncodeFailure()
@@ -617,7 +655,10 @@ internal static partial class Program
 		Equal(0L, lobbyConfig.MatchSeed);
 		Equal(2, retained.Count);
 		True(retained.All(player => player.IsReady && player.IsConnected));
-		False(retained.Any(player => player.StableUserId == "offline"));
+		Equal(0, retained[0].SeatIndex);
+		Equal(1, retained[1].SeatIndex);
+		Equal("guest", retained[1].PlayerSessionId);
+		False(retained.Any(player => player.PlayerSessionId == "offline"));
 		True(MultiplayerRematchRules.IsValidAuthorityReturn(matchConfig, lobbyConfig, retained));
 		False(MultiplayerRematchRules.IsValidAuthorityReturn(
 			matchConfig,
@@ -629,10 +670,10 @@ internal static partial class Program
 	{
 		var roster = new List<NetworkMigrationRosterEntry>
 		{
-			new() { StableUserId = "host", SeatIndex = 0, IsHost = true, IsConnected = true },
-			new() { StableUserId = "seat-2", SeatIndex = 2, IsConnected = true },
-			new() { StableUserId = "seat-1", SeatIndex = 1, IsConnected = true },
-			new() { StableUserId = "seat-3", SeatIndex = 3, IsConnected = true },
+			new() { PlayerSessionId = "host", SeatIndex = 0, IsHost = true, IsConnected = true, CredentialsAcknowledged = true },
+			new() { PlayerSessionId = "seat-2", SeatIndex = 2, IsConnected = true, CredentialsAcknowledged = true },
+			new() { PlayerSessionId = "seat-1", SeatIndex = 1, IsConnected = true, CredentialsAcknowledged = true },
+			new() { PlayerSessionId = "seat-3", SeatIndex = 3, IsConnected = true, CredentialsAcknowledged = true },
 		};
 		var controls = new List<NetworkAuthoritySeatControl>
 		{
@@ -659,12 +700,12 @@ internal static partial class Program
 			TargetEpoch = 4,
 			CheckpointId = 7,
 			CheckpointHash = new string('a', 64),
-			CandidateStableUserId = "seat-1",
+			CandidatePlayerSessionId = "seat-1",
 			CandidateSeat = 1,
 			ObservedHostAddress = "192.168.1.10",
 			CandidateHostAddress = "192.168.1.11",
 			Port = NetworkProtocol.LanHostMigrationPort,
-			SourceStableUserId = "host",
+			SourcePlayerSessionId = "host",
 			Phase = NetworkAuthorityPhase.InGame,
 		};
 		True(NetworkMigrationRules.IsPlanVisibleToClients(valid));
@@ -675,6 +716,105 @@ internal static partial class Program
 		True(NetworkMigrationRules.CanCandidateStart(valid, "seat-1", NetworkSessionState.MigratingHost, hasCheckpoint: true, isSourceHost: false));
 		False(NetworkMigrationRules.CanCandidateStart(valid, "host", NetworkSessionState.MigratingHost, hasCheckpoint: true, isSourceHost: false));
 		False(NetworkMigrationRules.ShouldFollowerConnect(valid, "seat-1", NetworkSessionState.MigratingHost, isCandidate: true, elapsedTimeout: false));
+	}
+
+	private static void StandbyCheckpointSendsAreSerializedAndRateBounded()
+	{
+		True(NetworkMigrationRules.CanSendStandbyCheckpoint(10.0, -1.0, hasPendingCheckpoint: false));
+		False(NetworkMigrationRules.CanSendStandbyCheckpoint(10.1, 10.0, hasPendingCheckpoint: false));
+		True(NetworkMigrationRules.CanSendStandbyCheckpoint(10.5, 10.0, hasPendingCheckpoint: false));
+		False(NetworkMigrationRules.CanSendStandbyCheckpoint(11.0, 10.0, hasPendingCheckpoint: true));
+		False(NetworkMigrationRules.CanSendStandbyCheckpoint(double.NaN, 10.0, hasPendingCheckpoint: false));
+	}
+
+	private static void SeatCredentialsIssueVerifyRotateAndRejectReplay()
+	{
+		string playerSessionId = SeatCredentialRules.IssuePlayerSessionId();
+		string credential = SeatCredentialRules.IssueCredential();
+		string verifier = SeatCredentialRules.ComputeVerifier(credential);
+		Equal(SeatCredentialRules.PlayerSessionIdBytes * 2, playerSessionId.Length);
+		True(SeatCredentialRules.IsCredentialEncodingValid(credential));
+		True(SeatCredentialRules.IsVerifierValid(verifier));
+		True(SeatCredentialRules.Verify(credential, verifier));
+		False(SeatCredentialRules.Verify(SeatCredentialRules.IssueCredential(), verifier));
+
+		SeatControlState current = new(
+			SeatIndex: 1,
+			Mode: SeatControlMode.AiProxyReclaimable,
+			PeerId: 0,
+			PlayerSessionId: playerSessionId,
+			CredentialVerifier: verifier,
+			CredentialGeneration: SeatCredentialRules.InitialGeneration,
+			PendingCredentialVerifier: string.Empty,
+			PendingCredentialGeneration: 0,
+			PendingCredentialPeerId: 0);
+		True(SeatCredentialRules.TryBeginRotation(current with { PeerId = 42 }, 42, out SeatControlState pending, out string nextCredential));
+		True(SeatCredentialRules.Verify(credential, pending.CredentialVerifier));
+		False(SeatCredentialRules.TryAcknowledge(pending, 43, 2, nextCredential, out _));
+		True(SeatCredentialRules.TryAcknowledge(pending, 42, 2, nextCredential, out SeatControlState committed));
+		Equal(2L, committed.CredentialGeneration);
+		True(SeatCredentialRules.Verify(nextCredential, committed.CredentialVerifier));
+		False(SeatCredentialRules.Verify(credential, committed.CredentialVerifier));
+	}
+
+	private static void SeatCredentialPendingRotationCancelsBackToCurrentGeneration()
+	{
+		string credential = SeatCredentialRules.IssueCredential();
+		SeatControlState current = new(
+			0,
+			SeatControlMode.HumanConnected,
+			10,
+			SeatCredentialRules.IssuePlayerSessionId(),
+			SeatCredentialRules.ComputeVerifier(credential),
+			1,
+			string.Empty,
+			0,
+			0);
+		True(SeatCredentialRules.TryBeginRotation(current, 10, out SeatControlState pending, out _));
+		SeatControlState cancelled = SeatCredentialRules.CancelPendingRotation(pending);
+		Equal(1L, cancelled.CredentialGeneration);
+		Equal(0L, cancelled.PendingCredentialGeneration);
+		True(SeatCredentialRules.Verify(credential, cancelled.CredentialVerifier));
+	}
+
+	private static void PeerRateLimiterEnforcesCategoryIsolationRefillCleanupAndDisconnectThreshold()
+	{
+		var limiter = new NetworkPeerRateLimiter();
+		for (int index = 0; index < 4; index++)
+		{
+			True(limiter.TryConsume(2, NetworkRequestCategory.LobbyMutation, 0, out _));
+		}
+		False(limiter.TryConsume(2, NetworkRequestCategory.LobbyMutation, 0, out bool disconnect));
+		False(disconnect);
+		True(limiter.TryConsume(2, NetworkRequestCategory.BoardAction, 0, out _));
+		True(limiter.TryConsume(3, NetworkRequestCategory.LobbyMutation, 0, out _));
+		True(limiter.TryConsume(2, NetworkRequestCategory.LobbyMutation, 1, out _));
+
+		for (int index = 0; index < 64; index++)
+		{
+			False(limiter.TryConsume(2, NetworkRequestCategory.LobbyMutation, 1, out disconnect));
+		}
+		True(disconnect);
+		limiter.ClearPeer(2);
+		True(limiter.TryConsume(2, NetworkRequestCategory.LobbyMutation, 2, out disconnect));
+		False(disconnect);
+		True(limiter.BucketCount <= 2);
+	}
+
+	private static void LobbyMigrationRecoveryTracksClaimsAndTenSecondExpiry()
+	{
+		var recovery = new LobbyMigrationRecoveryState(
+			targetEpoch: 7,
+			startedAt: 100,
+			timeoutSeconds: NetworkMigrationRules.LobbyRecoveryTimeoutSeconds,
+			expectedPlayerSessionIds: new[] { "p2", "p3" });
+		False(recovery.IsComplete);
+		True(recovery.TryMarkClaimed("p2"));
+		False(recovery.TryMarkClaimed("p2"));
+		False(recovery.HasExpired(109.999));
+		True(recovery.HasExpired(110));
+		True(recovery.TryMarkClaimed("p3"));
+		True(recovery.IsComplete);
 	}
 
 	private static NetworkAuthorityCheckpoint CreateCheckpoint()
@@ -688,21 +828,22 @@ internal static partial class Program
 		{
 			roster.Add(new NetworkMigrationRosterEntry
 			{
-				StableUserId = $"peer:{seat}",
+				PlayerSessionId = $"peer:{seat}",
 				SeatIndex = seat,
 				PeerId = seat + 1,
 				IsHost = seat == 0,
-				IsReady = true,
-				IsConnected = true,
+					IsReady = true,
+					IsConnected = true,
+					CredentialsAcknowledged = true,
 			});
 			controls.Add(new NetworkAuthoritySeatControl
 			{
 				SeatIndex = seat,
 				Mode = SeatControlMode.HumanConnected,
 				PeerId = seat + 1,
-				StableUserId = $"peer:{seat}",
-				ReconnectToken = $"reconnect-{seat}",
-				SessionMigrationToken = seat == 0 ? "migration-secret" : "migration-1",
+				PlayerSessionId = $"peer:{seat}",
+					CredentialVerifier = SeatCredentialRules.ComputeVerifier($"credential-{seat}"),
+					CredentialGeneration = SeatCredentialRules.InitialGeneration,
 			});
 			decks.Add(new List<NetworkCheckpointCard>
 			{
@@ -738,19 +879,14 @@ internal static partial class Program
 			SnapshotId = 11,
 			AuthorityEpoch = 0,
 			CheckpointId = 4,
-			SessionMigrationTokens = new Dictionary<int, string>
-			{
-				[0] = "migration-secret",
-				[1] = "migration-1",
-			},
 			ReconnectClaims = new List<NetworkAuthorityReconnectClaim>
 			{
 				new()
 				{
 					MatchId = "match",
 					SeatIndex = 0,
-					ReconnectToken = "reconnect-0",
-					StableUserId = "peer:0",
+					CredentialGeneration = SeatCredentialRules.InitialGeneration,
+					PlayerSessionId = "peer:0",
 					ClaimedPeerId = 0,
 					ClaimState = nameof(ReconnectClaimState.Unclaimed),
 				},
@@ -758,8 +894,8 @@ internal static partial class Program
 				{
 					MatchId = "match",
 					SeatIndex = 1,
-					ReconnectToken = "reconnect-1",
-					StableUserId = "peer:1",
+					CredentialGeneration = SeatCredentialRules.InitialGeneration,
+					PlayerSessionId = "peer:1",
 					ClaimedPeerId = 0,
 					ClaimState = nameof(ReconnectClaimState.Unclaimed),
 				},

@@ -635,8 +635,8 @@ public partial class GameBoardScene
 				["seat_index"] = seatIndex,
 				["mode"] = "HumanConnected",
 				["peer_id"] = 0,
-				["stable_user_id"] = string.Empty,
-				["reconnect_token"] = string.Empty,
+				["player_session_id"] = string.Empty,
+				["credential_generation"] = SeatCredentialRules.InitialGeneration,
 			});
 		}
 		snapshot["seat_control_states"] = seatStates;

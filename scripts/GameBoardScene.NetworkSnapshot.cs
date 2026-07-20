@@ -203,10 +203,19 @@ public partial class GameBoardScene
 				|| !TryReadNetworkInt32(rawState, "seat_index", 0, playerCount - 1, out int seatIndex) || seen[seatIndex]
 				|| !TryReadNetworkEnum(rawState, "mode", out SeatControlMode mode)
 				|| !TryReadNetworkInt32(rawState, "peer_id", 0, int.MaxValue, out int peerId)
-				|| !TryReadNetworkString(rawState, "stable_user_id", MaxNetworkOpaqueIdentityLength, out string stableUserId)
-				|| !TryReadNetworkString(rawState, "reconnect_token", MaxNetworkOpaqueIdentityLength, out string reconnectToken)) return false;
+				|| !TryReadNetworkString(rawState, "player_session_id", MaxNetworkOpaqueIdentityLength, out string playerSessionId)
+				|| !TryReadNetworkInt64(rawState, "credential_generation", SeatCredentialRules.InitialGeneration, long.MaxValue, out long credentialGeneration)) return false;
 			seen[seatIndex] = true;
-			decoded[seatIndex] = new SeatControlState(seatIndex, mode, peerId, stableUserId, reconnectToken);
+			decoded[seatIndex] = new SeatControlState(
+				seatIndex,
+				mode,
+				peerId,
+				playerSessionId,
+				string.Empty,
+				credentialGeneration,
+				string.Empty,
+				0,
+				0);
 		}
 		states = decoded;
 		return true;
@@ -606,7 +615,7 @@ public partial class GameBoardScene
 	{
 		if (!IsNetworkMultiplayerMode() || IsNetworkHost())
 		{
-			return GetNetworkManager()?.GetSeatControlStatesVariant(includeReconnectTokens: false)
+			return GetNetworkManager()?.GetSeatControlStatesVariant(includeCredentialVerifiers: false)
 				?? new Godot.Collections.Array();
 		}
 
@@ -621,8 +630,8 @@ public partial class GameBoardScene
 				["seat_index"] = state.SeatIndex,
 				["mode"] = state.Mode.ToString(),
 				["peer_id"] = state.PeerId,
-				["stable_user_id"] = state.StableUserId,
-				["reconnect_token"] = string.Empty,
+				["player_session_id"] = state.PlayerSessionId,
+					["credential_generation"] = state.CredentialGeneration,
 			});
 		}
 

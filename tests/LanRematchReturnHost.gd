@@ -12,7 +12,7 @@ const LOBBY_SCENE_SUFFIX := "scenes/multiplayer_lobby_scene.tscn"
 var _network: Node
 var _initial_session_id := ""
 var _first_match_id := ""
-var _first_reconnect_tokens_by_seat: Dictionary = {}
+var _first_credentials_by_seat: Dictionary = {}
 var _board_initialize_count := 0
 var _forced_first_winner := false
 var _returned_to_lobby := false
@@ -61,8 +61,11 @@ func _on_board_initialize(payload: Dictionary) -> void:
 			return
 		for raw_state in _network.GetSeatControlStatesVariant(true):
 			var state: Dictionary = raw_state
-			_first_reconnect_tokens_by_seat[int(state.get("seat_index", -1))] = String(
-				state.get("reconnect_token", ""))
+			_first_credentials_by_seat[int(state.get("seat_index", -1))] = {
+				"player_session_id": String(state.get("player_session_id", "")),
+				"credential_verifier": String(state.get("credential_verifier", "")),
+				"credential_generation": int(state.get("credential_generation", 0)),
+			}
 		print("HOST_FIRST_BOARD_INIT match=%s" % _first_match_id)
 		return
 
@@ -142,7 +145,9 @@ func _track_returned_lobby() -> void:
 		_fail("Returned lobby roster size changed")
 		return
 	for player in players:
-		if not bool(player.get("is_connected", false)) or not bool(player.get("is_ready", false)):
+		if not bool(player.get("is_connected", false)) \
+				or not bool(player.get("is_ready", false)) \
+				or not bool(player.get("credentials_acknowledged", false)):
 			_fail("Returned lobby did not preserve connected ready players")
 			return
 	var seat_states: Array = _network.GetSeatControlStatesVariant(true)
@@ -152,11 +157,13 @@ func _track_returned_lobby() -> void:
 	for raw_state in seat_states:
 		var state: Dictionary = raw_state
 		var seat_index := int(state.get("seat_index", -1))
-		var reconnect_token := String(state.get("reconnect_token", ""))
+		var first: Dictionary = _first_credentials_by_seat.get(seat_index, {})
 		if String(state.get("mode", "")) != "HumanConnected" \
-				or reconnect_token.is_empty() \
-				or reconnect_token == String(_first_reconnect_tokens_by_seat.get(seat_index, "")):
-			_fail("Returned lobby did not regenerate seat credentials")
+				or String(state.get("player_session_id", "")) != String(first.get("player_session_id", "")) \
+				or String(state.get("credential_verifier", "")).is_empty() \
+				or String(state.get("credential_verifier", "")) != String(first.get("credential_verifier", "")) \
+				or int(state.get("credential_generation", 0)) != int(first.get("credential_generation", -1)):
+			_fail("Returned lobby did not preserve committed seat credentials")
 			return
 	_returned_to_lobby = true
 	print("HOST_RETURNED_LOBBY_OK")

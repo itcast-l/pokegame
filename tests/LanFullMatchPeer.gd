@@ -22,6 +22,10 @@ var _migration_fixture := ""
 var _kill_when := ""
 var _active_lobby_migration := false
 var _active_lobby_keep_open := false
+var _active_lobby_expected_seats := -1
+var _lobby_join_only := false
+var _expected_lobby_seats := -1
+var _pause_lobby_claim := false
 var _expect_migration_failure := false
 var _paused_maintenance := false
 var _ready_sent := false
@@ -84,6 +88,7 @@ func _run() -> void:
 		_release_paused_maintenance_after_recovery()
 		_try_start_active_lobby_migration()
 		_track_active_lobby_recovery()
+		_track_lobby_join_only()
 		if _board_initialized:
 			_start_migration_fixture_if_needed()
 			_drive_local_action()
@@ -125,6 +130,14 @@ func _parse_arguments() -> void:
 			_active_lobby_migration = true
 		elif argument == "--active-lobby-keep-open":
 			_active_lobby_keep_open = true
+		elif argument.begins_with("--active-lobby-expected-seats="):
+			_active_lobby_expected_seats = int(argument.trim_prefix("--active-lobby-expected-seats="))
+		elif argument == "--lobby-join-only":
+			_lobby_join_only = true
+		elif argument.begins_with("--expected-lobby-seats="):
+			_expected_lobby_seats = int(argument.trim_prefix("--expected-lobby-seats="))
+		elif argument == "--pause-lobby-claim":
+			_pause_lobby_claim = true
 		elif argument == "--expect-migration-failure":
 			_expect_migration_failure = true
 		elif argument == "--paused-maintenance":
@@ -135,6 +148,9 @@ func _on_state_changed(state: int) -> void:
 	_last_state = state
 	print("FULL_MATCH_%s_STATE %d" % [_role.to_upper(), state])
 	if state == MIGRATING_HOST_STATE:
+		if _pause_lobby_claim:
+			print("MIGRATION_LATE_CLAIM_PAUSED")
+			OS.execute("/bin/kill", ["-STOP", str(OS.get_process_id())])
 		if _paused_maintenance and _role == "client":
 			if not paused:
 				_fail("Fixture-owned pause was cleared before host migration")
@@ -156,6 +172,18 @@ func _on_state_changed(state: int) -> void:
 	if _role != "host" and state == LOBBY_STATE and not _ready_sent:
 		_ready_sent = true
 		_network.SetLocalReady(true)
+
+
+func _track_lobby_join_only() -> void:
+	if not _lobby_join_only or _last_state != LOBBY_STATE or _finished:
+		return
+	var players: Array = _network.GetPlayersVariant()
+	if _expected_lobby_seats > 0 and players.size() != _expected_lobby_seats:
+		return
+	print("MIGRATION_LOBBY_REPLACEMENT_JOINED seats=%d" % players.size())
+	_finished = true
+	_network.LeaveSession()
+	quit(0)
 
 
 func _log_migration_failure_ui() -> void:
@@ -238,7 +266,7 @@ func _apply_paused_maintenance_after_opening_deal() -> void:
 func _track_paused_maintenance_plan() -> void:
 	if _role != "host" or not _paused_maintenance_checkpoint_requested or _paused_maintenance_plan_ready_logged:
 		return
-	if not bool(_network.call("DebugHasMigrationPlan")):
+	if not bool(_network.call("DebugCanRequestActiveHostMigration")):
 		return
 
 	_paused_maintenance_plan_ready_logged = true
@@ -252,7 +280,7 @@ func _try_start_active_lobby_migration() -> void:
 		return
 	if int(_network.call("DebugGetAuthorityEpoch")) > 0:
 		return
-	if not bool(_network.call("DebugHasMigrationPlan")):
+	if not bool(_network.call("DebugCanRequestActiveHostMigration")):
 		return
 	var players: Array = _network.GetPlayersVariant()
 	if players.size() < _player_count:
@@ -278,10 +306,21 @@ func _track_active_lobby_recovery() -> void:
 	if _role == "client":
 		if _expect_migration_failure:
 			return
+		if _active_lobby_keep_open:
+			var players: Array = _network.GetPlayersVariant()
+			if _active_lobby_expected_seats > 0 \
+					and (players.size() != _active_lobby_expected_seats \
+						or bool(_network.call("DebugIsLobbyMigrationRecoveryActive"))):
+				return
+			for raw_player in players:
+				var player: Dictionary = raw_player
+				if not bool(player.get("is_connected", false)):
+					return
+			_active_lobby_recovery_logged = true
+			print("MIGRATION_LOBBY_RECOVERY_STABLE seats=%d" % players.size())
+			return
 		_active_lobby_recovery_logged = true
 		print("MIGRATION_LOBBY_RECOVERED role=client")
-		if _active_lobby_keep_open:
-			return
 		_finished = true
 		_network.LeaveSession()
 		quit(0)
@@ -364,6 +403,14 @@ func _on_board_initialize(_payload: Dictionary) -> void:
 
 	_board_initialized = true
 	print("FULL_MATCH_%s_BOARD_INIT" % _role.to_upper())
+	if _role == "client":
+		var local_seat := -1
+		for raw_player in _network.GetPlayersVariant():
+			var player: Dictionary = raw_player
+			if bool(player.get("is_local", false)):
+				local_seat = int(player.get("seat_index", -1))
+				break
+		print("FULL_MATCH_CLIENT_LOCAL_SEAT %d" % local_seat)
 	if _paused_maintenance:
 		_paused_maintenance_apply_pending = true
 

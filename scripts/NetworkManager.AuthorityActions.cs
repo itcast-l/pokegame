@@ -117,14 +117,15 @@ public partial class NetworkManager
 		{
 			result.Add(new NetworkMigrationRosterEntry
 			{
-				StableUserId = player.StableUserId,
+				PlayerSessionId = player.PlayerSessionId,
 				DisplayName = player.DisplayName,
 				AvatarId = player.AvatarId,
 				SeatIndex = player.SeatIndex,
 				PeerId = player.PeerId,
 				IsHost = player.IsHost,
-				IsReady = player.IsReady,
-				IsConnected = player.IsConnected,
+					IsReady = player.IsReady,
+					IsConnected = player.IsConnected,
+					CredentialsAcknowledged = player.CredentialsAcknowledged,
 			});
 		}
 
@@ -141,20 +142,16 @@ public partial class NetworkManager
 				SeatIndex = state.SeatIndex,
 				Mode = state.Mode,
 				PeerId = state.PeerId,
-				StableUserId = state.StableUserId,
-				ReconnectToken = state.ReconnectToken,
-				SessionMigrationToken = _sessionMigrationTokensBySeat.TryGetValue(state.SeatIndex, out string? migrationToken)
-					? migrationToken
-					: string.Empty,
+				PlayerSessionId = state.PlayerSessionId,
+					CredentialVerifier = state.CredentialVerifier,
+					CredentialGeneration = state.CredentialGeneration,
+					PendingCredentialVerifier = state.PendingCredentialVerifier,
+					PendingCredentialGeneration = state.PendingCredentialGeneration,
+					PendingCredentialPeerId = state.PendingCredentialPeerId,
 			});
 		}
 
 		return result;
-	}
-
-	internal Dictionary<int, string> GetSessionMigrationTokensForCheckpoint()
-	{
-		return new Dictionary<int, string>(_sessionMigrationTokensBySeat);
 	}
 
 	internal List<NetworkAuthorityReconnectClaim> GetCheckpointReconnectClaims()
@@ -173,8 +170,8 @@ public partial class NetworkManager
 			{
 				MatchId = claim.MatchId,
 				SeatIndex = claim.SeatIndex,
-				ReconnectToken = claim.ReconnectToken,
-				StableUserId = claim.StableUserId,
+					CredentialGeneration = claim.CredentialGeneration,
+				PlayerSessionId = claim.PlayerSessionId,
 				ClaimedPeerId = claim.ClaimedPeerId,
 				ClaimState = claim.ClaimState.ToString(),
 			});
@@ -195,8 +192,8 @@ public partial class NetworkManager
 			{
 				MatchId = claim.MatchId,
 				SeatIndex = claim.SeatIndex,
-				ReconnectToken = claim.ReconnectToken,
-				StableUserId = claim.StableUserId,
+					CredentialGeneration = claim.CredentialGeneration,
+				PlayerSessionId = claim.PlayerSessionId,
 				ClaimedPeerId = claim.ClaimedPeerId,
 				ClaimState = claim.ClaimState.ToString(),
 			});
@@ -251,11 +248,12 @@ public partial class NetworkManager
 		}
 
 		if (!gameBoard.TryBuildAuthorityCheckpointEnvelope(
-			_lastAcceptedClientActionIds,
-			candidateCheckpointId,
-			out AuthorityCheckpointEnvelope envelope))
+				_lastAcceptedClientActionIds,
+				candidateCheckpointId,
+				out AuthorityCheckpointEnvelope envelope,
+				out string buildError))
 		{
-			RecordAuthorityCheckpointCommitFailure();
+			RecordAuthorityCheckpointCommitFailure(buildError);
 			return;
 		}
 
@@ -319,13 +317,21 @@ public partial class NetworkManager
 			SnapshotId = 0,
 			AuthorityEpoch = _authorityEpoch,
 			CheckpointId = candidateCheckpointId,
-			SessionMigrationTokens = GetSessionMigrationTokensForCheckpoint(),
 			ReconnectClaims = GetCheckpointReconnectClaims(),
 		};
 
-		if (!AuthorityCheckpointEnvelope.TryCreate(checkpoint, out AuthorityCheckpointEnvelope envelope, out _))
+		if (!AuthorityCheckpointEnvelope.TryCreate(checkpoint, out AuthorityCheckpointEnvelope envelope, out string encodeError))
 		{
-			RecordAuthorityCheckpointCommitFailure();
+			NetworkAuthorityCheckpointCodec.Validate(checkpoint, out string validationError);
+			RecordAuthorityCheckpointCommitFailure(string.Join(
+				" ",
+				encodeError,
+				validationError,
+				$"phase={checkpoint.Phase}",
+				$"counts={checkpoint.Roster.Count}/{checkpoint.SeatControls.Count}/{checkpoint.ReconnectClaims.Count}",
+				$"roster={string.Join(',', checkpoint.Roster.Select(player => $"{player.SeatIndex}:{player.PeerId}:{player.CredentialsAcknowledged}"))}",
+				$"controls={string.Join(',', checkpoint.SeatControls.Select(control => $"{control.SeatIndex}:{control.Mode}:{control.PeerId}:{control.CredentialGeneration}"))}",
+				$"claims={string.Join(',', checkpoint.ReconnectClaims.Select(claim => $"{claim.SeatIndex}:{claim.CredentialGeneration}:{claim.ClaimState}:{claim.ClaimedPeerId}"))}"));
 			return;
 		}
 
@@ -333,7 +339,7 @@ public partial class NetworkManager
 		SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
 	}
 
-	private void RecordAuthorityCheckpointCommitFailure()
+	private void RecordAuthorityCheckpointCommitFailure(string localDetail = "")
 	{
 		_authorityCheckpointCommitFailureCount++;
 		if (_authorityCheckpointCommitFailureReported)
@@ -342,6 +348,10 @@ public partial class NetworkManager
 		}
 
 		_authorityCheckpointCommitFailureReported = true;
+		if (!string.IsNullOrWhiteSpace(localDetail))
+		{
+			GD.PrintErr($"AUTHORITY_CHECKPOINT_LOCAL_DIAGNOSTIC {localDetail}");
+		}
 		GD.PushError("Authority checkpoint commit rejected.");
 		EmitSignal(SignalName.ErrorRaised, "checkpoint_commit_failed");
 	}

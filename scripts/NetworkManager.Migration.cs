@@ -15,7 +15,9 @@ public partial class NetworkManager
 	private bool _standbyCheckpointAcked;
 	private long _standbyAckedCheckpointId = -1;
 	private long _standbyPendingCheckpointId = -1;
+	private AuthorityCheckpointEnvelope _standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 	private double _standbyCheckpointSentAt = -1.0;
+	private double _lastStandbyCheckpointSentAt = -1.0;
 	private int _consecutiveUnackedCheckpoints;
 	private readonly HashSet<int> _failedHotStandbySeats = new();
 	private double _migrationStartedAt = -1.0;
@@ -34,6 +36,7 @@ public partial class NetworkManager
 	private long _migrationReadyEpoch = -1;
 	private bool _migrationRecoveryReadyForPeers;
 	private readonly HashSet<int> _migrationReadinessSeatIndices = new();
+	private LobbyMigrationRecoveryState? _lobbyMigrationRecoveryState;
 
 	public NetworkMigrationPlan? CurrentMigrationPlan => _networkMigrationPlan;
 	public bool IsMigratingHost => _state == NetworkSessionState.MigratingHost;
@@ -48,13 +51,31 @@ public partial class NetworkManager
 		return _networkMigrationPlan != null;
 	}
 
+	public bool DebugCanRequestActiveHostMigration()
+	{
+		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
+		{
+			return false;
+		}
+
+		NetworkAuthorityPhase phase = _state == NetworkSessionState.Lobby
+			? NetworkAuthorityPhase.Lobby
+			: NetworkAuthorityPhase.InGame;
+		return HasCurrentActiveMigrationPlan(phase);
+	}
+
+	public bool DebugIsLobbyMigrationRecoveryActive()
+	{
+		return _lobbyMigrationRecoveryState is not null;
+	}
+
 	public bool DebugHasMigrationArtifacts()
 	{
 		return _networkMigrationPlan != null
 			|| _latestAuthorityCheckpointEnvelope.HasPayload
 			|| _standbyCheckpointPayload.Length > 0
-			|| _sessionMigrationTokensBySeat.Count > 0
-			|| !string.IsNullOrEmpty(_localSessionMigrationToken);
+			|| _issuedSeatCredentialsBySeat.Count > 0
+			|| !string.IsNullOrEmpty(_localSeatCredential);
 	}
 
 	public bool DebugSendStaleMigrationPlan()
@@ -89,26 +110,10 @@ public partial class NetworkManager
 		NetworkAuthorityPhase phase = _state == NetworkSessionState.Lobby
 			? NetworkAuthorityPhase.Lobby
 			: NetworkAuthorityPhase.InGame;
-		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
-		if (!_standbyCheckpointAcked
-			|| _standbyAckedCheckpointId != latestEnvelope.CheckpointId
-			|| string.IsNullOrWhiteSpace(_standbyCandidateHostAddress))
+		if (!HasCurrentActiveMigrationPlan(phase)
+			|| _networkMigrationPlan is not { } plan)
 		{
-			GD.Print($"MIGRATION_ACTIVE_REJECT reason=CandidateUnavailable acked={_standbyCheckpointAcked} acked_id={_standbyAckedCheckpointId} latest_id={latestEnvelope.CheckpointId} address={_standbyCandidateHostAddress}");
-			EmitSignal(SignalName.ErrorRaised, NetworkMigrationFailureCode.CandidateUnavailable.ToString());
-			return false;
-		}
-
-		if (_networkMigrationPlan is not { } plan
-			|| plan.Phase != phase
-			|| plan.CheckpointId != latestEnvelope.CheckpointId)
-		{
-			BroadcastMigrationPlanIfReady(_hotStandbySeat, _standbyCandidateHostAddress);
-			plan = _networkMigrationPlan;
-		}
-
-		if (plan is null || !NetworkMigrationRules.IsPlanVisibleToClients(plan))
-		{
+			GD.Print($"MIGRATION_ACTIVE_REJECT reason=CandidateUnavailable acked={_standbyCheckpointAcked} acked_id={_standbyAckedCheckpointId} plan_id={_networkMigrationPlan?.CheckpointId ?? -1} latest_id={_latestAuthorityCheckpointEnvelope.CheckpointId} address={_standbyCandidateHostAddress}");
 			EmitSignal(SignalName.ErrorRaised, NetworkMigrationFailureCode.CandidateUnavailable.ToString());
 			return false;
 		}
@@ -142,13 +147,26 @@ public partial class NetworkManager
 		return true;
 	}
 
+	private bool HasCurrentActiveMigrationPlan(NetworkAuthorityPhase phase)
+	{
+		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
+		return _standbyCheckpointAcked
+			&& latestEnvelope.HasPayload
+			&& _networkMigrationPlan is { } plan
+			&& NetworkMigrationRules.IsPlanVisibleToClients(plan)
+			&& plan.Phase == phase
+			&& plan.CheckpointId == _standbyAckedCheckpointId
+			&& plan.CheckpointId == latestEnvelope.CheckpointId
+			&& string.Equals(plan.CheckpointHash, latestEnvelope.Hash, StringComparison.Ordinal)
+			&& !string.IsNullOrWhiteSpace(_standbyCandidateHostAddress);
+	}
+
 	private void PollActiveHostMigration(double now)
 	{
 		if (!IsHost || !_activeMigrationPending)
 		{
 			return;
 		}
-
 		int expectedConfirmationCount = _players.Count(player => player.IsConnected && !player.IsHost);
 		if (now < _activeMigrationDeadline && _activeMigrationConfirmedSeats.Count < expectedConfirmationCount)
 		{
@@ -168,19 +186,23 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (_lobbyMigrationRecoveryState is not null)
+		{
+			return;
+		}
 
 		if (IsMigrationReadinessFenceActive())
 		{
 			return;
 		}
 
+		SendCheckpointToHotStandbyIfNeeded(now);
 		if (_hotStandbySeat < 0)
 		{
-			SendCheckpointToHotStandbyIfNeeded(now);
 			return;
 		}
 
-		if (_standbyCheckpointAcked || _standbyCheckpointSentAt < 0.0)
+		if (!_standbyPendingCheckpointEnvelope.HasPayload || _standbyCheckpointSentAt < 0.0)
 		{
 			return;
 		}
@@ -191,15 +213,15 @@ public partial class NetworkManager
 		}
 
 		_consecutiveUnackedCheckpoints++;
-		_standbyCheckpointSentAt = -1.0;
-			_standbyPendingCheckpointId = -1;
-			_standbyCheckpointAcked = false;
-			_standbyAckedCheckpointId = -1;
+		ClearPendingStandbyCheckpoint();
 		if (NetworkMigrationRules.ShouldSwitchToNextCandidate(true, _consecutiveUnackedCheckpoints))
 		{
 			_failedHotStandbySeats.Add(_hotStandbySeat);
 			_hotStandbySeat = -1;
 			_networkMigrationPlan = null;
+			_standbyCheckpointAcked = false;
+			_standbyAckedCheckpointId = -1;
+			_lastStandbyCheckpointSentAt = -1.0;
 			_consecutiveUnackedCheckpoints = 0;
 		}
 
@@ -266,7 +288,7 @@ public partial class NetworkManager
 
 	private bool IsLocalMigrationCandidate(NetworkMigrationPlan plan)
 	{
-		return string.Equals(plan.CandidateStableUserId, GetStableUserId(), StringComparison.Ordinal);
+		return string.Equals(plan.CandidatePlayerSessionId, GetPlayerSessionId(), StringComparison.Ordinal);
 	}
 
 	private void ConfigureLanPeerTimeout(int peerId)
@@ -316,7 +338,9 @@ public partial class NetworkManager
 			_standbyCheckpointAcked = false;
 			_standbyAckedCheckpointId = -1;
 			_standbyPendingCheckpointId = -1;
+			_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 			_standbyCheckpointSentAt = -1.0;
+			_lastStandbyCheckpointSentAt = -1.0;
 			return;
 		}
 
@@ -326,7 +350,9 @@ public partial class NetworkManager
 			_standbyCheckpointAcked = false;
 			_standbyAckedCheckpointId = -1;
 			_standbyPendingCheckpointId = -1;
+			_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 			_standbyCheckpointSentAt = -1.0;
+			_lastStandbyCheckpointSentAt = -1.0;
 			_consecutiveUnackedCheckpoints = 0;
 			_networkMigrationPlan = null;
 		}
@@ -337,19 +363,18 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (_standbyPendingCheckpointId == latestEnvelope.CheckpointId
-			&& _standbyCheckpointSentAt >= 0.0)
+		if (!NetworkMigrationRules.CanSendStandbyCheckpoint(
+			now,
+			_lastStandbyCheckpointSentAt,
+			_standbyPendingCheckpointEnvelope.HasPayload))
 		{
 			return;
 		}
 
-		if (_standbyPendingCheckpointId != latestEnvelope.CheckpointId)
-		{
-			_networkMigrationPlan = null;
-			_standbyCheckpointAcked = false;
-			_standbyAckedCheckpointId = -1;
-		}
-
+		_standbyPendingCheckpointId = latestEnvelope.CheckpointId;
+		_standbyPendingCheckpointEnvelope = latestEnvelope;
+		_standbyCheckpointSentAt = now;
+		_lastStandbyCheckpointSentAt = now;
 		RpcId(
 				standby.PeerId,
 				MethodName.RpcStandbyCheckpoint,
@@ -360,8 +385,6 @@ public partial class NetworkManager
 				latestEnvelope.Hash,
 				latestEnvelope.CheckpointId
 				);
-		_standbyPendingCheckpointId = latestEnvelope.CheckpointId;
-		_standbyCheckpointSentAt = now;
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -384,7 +407,7 @@ public partial class NetworkManager
 			|| !NetworkAuthorityCheckpointCodec.TryDecode(bytes, hash, out NetworkAuthorityCheckpoint checkpoint, out error)
 			|| checkpoint.CheckpointId != checkpointId
 			|| checkpoint.AuthorityEpoch != authorityEpoch
-			|| !checkpoint.Roster.Any(entry => entry.StableUserId == GetStableUserId() && entry.IsConnected))
+			|| !checkpoint.Roster.Any(entry => entry.PlayerSessionId == GetPlayerSessionId() && entry.IsConnected))
 		{
 			RpcId(
 				1,
@@ -404,10 +427,7 @@ public partial class NetworkManager
 		_standbyCheckpointPayload = bytes;
 		_standbyCheckpointHash = hash;
 		_standbyCheckpointsById[checkpointId] = (checkpoint, bytes.ToArray(), hash);
-		while (_standbyCheckpointsById.Count > 8)
-		{
-			_standbyCheckpointsById.Remove(_standbyCheckpointsById.Keys.Min());
-		}
+		PruneStandbyCheckpoints();
 		RpcId(
 			1,
 			MethodName.RpcStandbyCheckpointAck,
@@ -437,36 +457,43 @@ public partial class NetworkManager
 		{
 			return;
 		}
-
 		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
-		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!TryResolveSeatFromPeer(senderPeerId, out int senderSeat)
 			|| senderSeat != _hotStandbySeat
-			|| !accepted
-			|| checkpointId != latestEnvelope.CheckpointId
-			|| !string.Equals(hash, latestEnvelope.Hash, StringComparison.Ordinal)
-			|| string.IsNullOrWhiteSpace(candidateHostAddress))
+			|| !_standbyPendingCheckpointEnvelope.HasPayload
+			|| checkpointId != _standbyPendingCheckpointEnvelope.CheckpointId
+			|| !string.Equals(hash, _standbyPendingCheckpointEnvelope.Hash, StringComparison.Ordinal))
 		{
-			if (!accepted)
-			{
-				GD.PushWarning($"Standby checkpoint rejected: {error}");
-			}
-
+			return;
+		}
+		if (!AllowPeerRequest(NetworkRequestCategory.ProtocolAck))
+		{
+			return;
+		}
+		if (!accepted)
+		{
+			string boundedError = (error ?? string.Empty)[..Math.Min(error?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
+			GD.PushWarning($"Standby checkpoint rejected: {boundedError}");
+			return;
+		}
+		if (string.IsNullOrWhiteSpace(candidateHostAddress)
+			|| candidateHostAddress.Length > NetworkProtocol.MaxAddressLength)
+		{
 			return;
 		}
 
+		AuthorityCheckpointEnvelope acknowledgedEnvelope = _standbyPendingCheckpointEnvelope;
 		_standbyCheckpointAcked = true;
 		_standbyAckedCheckpointId = checkpointId;
-		_standbyPendingCheckpointId = -1;
-		_standbyCheckpointSentAt = -1.0;
+		ClearPendingStandbyCheckpoint();
 		_standbyCandidateHostAddress = candidateHostAddress.Trim();
 		_consecutiveUnackedCheckpoints = 0;
-		BroadcastMigrationPlanIfReady(senderSeat, candidateHostAddress.Trim());
+		BroadcastMigrationPlanIfReady(senderSeat, candidateHostAddress.Trim(), acknowledgedEnvelope);
 	}
 
 	private void HandleHotStandbyDisconnected(int seatIndex)
@@ -483,7 +510,9 @@ public partial class NetworkManager
 		_standbyCheckpointAcked = false;
 		_standbyAckedCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
+		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 		_standbyCheckpointSentAt = -1.0;
+		_lastStandbyCheckpointSentAt = -1.0;
 		_consecutiveUnackedCheckpoints = 0;
 		_networkMigrationPlan = null;
 	}
@@ -523,7 +552,7 @@ public partial class NetworkManager
 			sourceEpoch,
 			plan.TargetEpoch,
 			plan.CheckpointId,
-			GetStableUserId());
+			GetPlayerSessionId());
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -533,8 +562,12 @@ public partial class NetworkManager
 		long sourceEpoch,
 		long targetEpoch,
 		long checkpointId,
-		string stableUserId)
+		string playerSessionId)
 	{
+		if (!AllowPeerRequest(NetworkRequestCategory.ProtocolAck))
+		{
+			return;
+		}
 		if (!IsHost
 			|| !_activeMigrationPending
 			|| _networkMigrationPlan is not { } plan
@@ -548,7 +581,7 @@ public partial class NetworkManager
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
 		if (!TryResolveSeatFromPeer(senderPeerId, out int senderSeat)
 			|| !TryGetPlayerBySeat(senderSeat, out NetworkPlayerPublicState sender)
-			|| !string.Equals(sender.StableUserId, stableUserId, StringComparison.Ordinal)
+			|| !string.Equals(sender.PlayerSessionId, playerSessionId, StringComparison.Ordinal)
 			|| sender.IsHost)
 		{
 			return;
@@ -586,8 +619,9 @@ public partial class NetworkManager
 	private void RpcClaimMigratedLobbySeat(
 		string sessionId,
 		long authorityEpoch,
-		string sessionMigrationToken,
-		string stableUserId)
+		string playerSessionId,
+		long credentialGeneration,
+		string credential)
 	{
 		if (!IsHost
 			|| _state != NetworkSessionState.Lobby
@@ -597,9 +631,13 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (!AllowPeerRequest(NetworkRequestCategory.Recovery, requireRegisteredPeer: false))
+		{
+			return;
+		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
-		if (string.Equals(stableUserId, migrationPlan.SourceStableUserId, StringComparison.Ordinal))
+		if (string.Equals(playerSessionId, migrationPlan.SourcePlayerSessionId, StringComparison.Ordinal))
 		{
 			NetworkRpcContext context = GetCurrentRpcContext();
 			RpcId(
@@ -608,20 +646,17 @@ public partial class NetworkManager
 				context.SessionId,
 				context.MatchId,
 				context.AuthorityEpoch,
-				NetworkMigrationFailureCode.OldHostTokenRejected.ToString());
+				NetworkMigrationFailureCode.ExpiredCredential.ToString());
 			return;
 		}
 
 		int playerIndex = _players.FindIndex(player =>
-			string.Equals(player.StableUserId, stableUserId, StringComparison.Ordinal));
-		string? resolvedToken = null;
-		bool hasExpectedToken = playerIndex >= 0
-			&& _sessionMigrationTokensBySeat.TryGetValue(_players[playerIndex].SeatIndex, out resolvedToken);
-		string expectedToken = resolvedToken ?? string.Empty;
+			string.Equals(player.PlayerSessionId, playerSessionId, StringComparison.Ordinal));
 		if (playerIndex < 0
-			|| !hasExpectedToken
-			|| string.IsNullOrWhiteSpace(sessionMigrationToken)
-			|| !string.Equals(expectedToken, sessionMigrationToken, StringComparison.Ordinal))
+			|| !TryGetSeatControlState(_players[playerIndex].SeatIndex, out SeatControlState control, out int controlIndex)
+			|| credentialGeneration != control.CredentialGeneration
+			|| !SeatCredentialRules.Verify(credential, control.CredentialVerifier)
+			|| (control.PendingCredentialGeneration > 0 && control.PendingCredentialPeerId != senderPeerId))
 		{
 			NetworkRpcContext context = GetCurrentRpcContext();
 			RpcId(
@@ -630,7 +665,7 @@ public partial class NetworkManager
 				context.SessionId,
 				context.MatchId,
 				context.AuthorityEpoch,
-				NetworkMigrationFailureCode.OldHostTokenRejected.ToString());
+				NetworkMigrationFailureCode.ExpiredCredential.ToString());
 			return;
 		}
 
@@ -642,30 +677,53 @@ public partial class NetworkManager
 			IsLocal = false,
 			IsConnected = true,
 		};
-		if (TryGetSeatControlState(player.SeatIndex, out SeatControlState control, out int controlIndex))
+		SeatControlState boundControl = control with
 		{
-			_seatControlStates[controlIndex] = control with
+			Mode = SeatControlMode.HumanConnected,
+			PeerId = senderPeerId,
+		};
+		string credentialToSend = string.Empty;
+		if (control.PendingCredentialGeneration == 0)
+		{
+			if (!SeatCredentialRules.TryBeginRotation(
+				boundControl,
+				senderPeerId,
+				out boundControl,
+				out string nextCredential))
 			{
-				Mode = SeatControlMode.HumanConnected,
-				PeerId = senderPeerId,
-			};
+				return;
+			}
+			_issuedSeatCredentialsBySeat[player.SeatIndex] = nextCredential;
+			credentialToSend = nextCredential;
+		}
+		else if (_issuedSeatCredentialsBySeat.TryGetValue(player.SeatIndex, out string? pendingCredential))
+		{
+			credentialToSend = pendingCredential;
+		}
+		_seatControlStates[controlIndex] = boundControl;
+		if (!string.IsNullOrEmpty(credentialToSend))
+		{
+			SendSeatCredentialToPeer(senderPeerId, boundControl, credentialToSend);
 		}
 
 		BroadcastPlayerList();
+		CommitAuthorityCheckpointFromLobby();
 	}
 
-	private void BroadcastMigrationPlanIfReady(int candidateSeat, string candidateHostAddress)
+	private void BroadcastMigrationPlanIfReady(
+		int candidateSeat,
+		string candidateHostAddress,
+		AuthorityCheckpointEnvelope acknowledgedEnvelope)
 	{
-		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!IsHost
 			|| IsMigrationReadinessFenceActive()
-			|| !latestEnvelope.HasPayload
+			|| !acknowledgedEnvelope.HasPayload
 			|| !TryGetPlayerBySeat(candidateSeat, out NetworkPlayerPublicState candidate))
 		{
 			return;
 		}
 
-		string advertisedCheckpointHash = latestEnvelope.Hash;
+		string advertisedCheckpointHash = acknowledgedEnvelope.Hash;
 		if (OS.GetEnvironment("CODEX_LAN_MIGRATION_CORRUPT_HASH") == "1")
 		{
 			advertisedCheckpointHash = new string('0', 64);
@@ -677,14 +735,14 @@ public partial class NetworkManager
 			MatchId = _config.MatchId,
 			SourceEpoch = GetCurrentAuthorityEpoch(),
 			TargetEpoch = GetCurrentAuthorityEpoch() + 1,
-			CheckpointId = latestEnvelope.CheckpointId,
+			CheckpointId = acknowledgedEnvelope.CheckpointId,
 			CheckpointHash = advertisedCheckpointHash,
-			CandidateStableUserId = candidate.StableUserId,
+			CandidatePlayerSessionId = candidate.PlayerSessionId,
 			CandidateSeat = candidate.SeatIndex,
 			ObservedHostAddress = GetObservedLanAddress(),
 			CandidateHostAddress = candidateHostAddress,
 			Port = NetworkProtocol.LanHostMigrationPort,
-			SourceStableUserId = GetStableUserIdForSeat(LocalSeatIndex),
+			SourcePlayerSessionId = GetPlayerSessionIdForSeat(LocalSeatIndex),
 			Phase = _state == NetworkSessionState.Lobby
 				? NetworkAuthorityPhase.Lobby
 				: NetworkAuthorityPhase.InGame,
@@ -695,6 +753,7 @@ public partial class NetworkManager
 		}
 
 		_networkMigrationPlan = plan;
+		PruneStandbyCheckpoints();
 		Godot.Collections.Dictionary payload = ToMigrationPlanVariant(plan);
 		foreach (NetworkPlayerPublicState player in _players)
 		{
@@ -716,7 +775,7 @@ public partial class NetworkManager
 		}
 		if (!NetworkMigrationRules.IsPlanVisibleToClients(plan))
 		{
-			GD.Print($"MIGRATION_PLAN_REJECT reason=Visibility source_epoch={plan.SourceEpoch} target_epoch={plan.TargetEpoch} candidate={plan.CandidateStableUserId}");
+			GD.Print($"MIGRATION_PLAN_REJECT reason=Visibility source_epoch={plan.SourceEpoch} target_epoch={plan.TargetEpoch} candidate={plan.CandidatePlayerSessionId}");
 			return;
 		}
 		if (!MatchesCurrentRpcContext(plan.SessionId, plan.MatchId, plan.SourceEpoch, allowHigherEpoch: false))
@@ -742,7 +801,7 @@ public partial class NetworkManager
 			|| (plan.TargetEpoch == _networkMigrationPlan.TargetEpoch && plan.CheckpointId > _networkMigrationPlan.CheckpointId))
 		{
 			_networkMigrationPlan = plan;
-			GD.Print($"MIGRATION_PLAN_ACCEPTED candidate={plan.CandidateStableUserId} seat={plan.CandidateSeat} target_epoch={plan.TargetEpoch}");
+			GD.Print($"MIGRATION_PLAN_ACCEPTED candidate={plan.CandidatePlayerSessionId} seat={plan.CandidateSeat} target_epoch={plan.TargetEpoch}");
 		}
 	}
 
@@ -782,7 +841,7 @@ public partial class NetworkManager
 		_migrationServerStarted = false;
 		_migrationPeerAttemptInFlight = false;
 		_migrationPeerAttemptStartedAt = -1.0;
-		GD.Print($"MIGRATION_BEGIN match={_config.MatchId.Length} token={_localReconnectToken.Length} address={_lastLanJoinAddress}");
+		GD.Print($"MIGRATION_BEGIN match={_config.MatchId.Length} credential_generation={_localSeatCredentialGeneration} address={_lastLanJoinAddress}");
 		SetState(NetworkSessionState.MigratingHost);
 		if (GetTree().CurrentScene is GameBoardScene gameBoard)
 		{
@@ -802,6 +861,7 @@ public partial class NetworkManager
 		_enetPeer = null;
 		_steamPeer = null;
 		_reconnectAttemptInFlight = false;
+		_reconnectAttemptStartedAt = -1.0;
 	}
 
 	private void HandleMigrationConnectionFailure()
@@ -894,9 +954,12 @@ public partial class NetworkManager
 		if (migrationPlan.Phase == NetworkAuthorityPhase.Lobby)
 		{
 			SetAuthorityEpoch(migrationPlan.TargetEpoch);
-			MarkCandidateAsNewLobbyHost(migrationPlan.CandidateSeat, migrationPlan.SourceStableUserId);
+			MarkCandidateAsNewLobbyHost(migrationPlan.CandidateSeat, migrationPlan.SourcePlayerSessionId);
 			SetState(NetworkSessionState.Lobby);
+			BeginLobbyMigrationRecovery(migrationPlan.TargetEpoch, now);
+			CommitAuthorityCheckpointFromLobby();
 			BroadcastPlayerList();
+			TryFinalizeLobbyMigrationRecovery(now);
 			GD.Print($"MIGRATION_LOBBY_HOST_READY seat={migrationPlan.CandidateSeat} epoch={migrationPlan.TargetEpoch}");
 			return;
 		}
@@ -914,7 +977,7 @@ public partial class NetworkManager
 				standbyCheckpointPayload,
 				standbyCheckpointHash);
 			BeginMigrationReadinessFence(migrationPlan, checkpoint.SeatControls);
-			MarkCandidateAsNewHost(migrationPlan.CandidateSeat, migrationPlan.SourceStableUserId);
+			MarkCandidateAsNewHost(migrationPlan.CandidateSeat, migrationPlan.SourcePlayerSessionId);
 			SetState(NetworkSessionState.InGame);
 			// The restored board stays input-locked until the first hard snapshot has
 			// reached followers and the serialized authority action has resumed.
@@ -1036,32 +1099,34 @@ public partial class NetworkManager
 		{
 			_players.Add(new NetworkPlayerPublicState(
 				entry.PeerId,
-				entry.StableUserId,
+				entry.PlayerSessionId,
 				entry.DisplayName,
 				entry.AvatarId,
 				entry.SeatIndex,
 				entry.IsHost,
-				string.Equals(entry.StableUserId, GetStableUserId(), StringComparison.Ordinal),
+				string.Equals(entry.PlayerSessionId, GetPlayerSessionId(), StringComparison.Ordinal),
 				entry.IsReady,
-				entry.IsConnected));
+				entry.IsConnected)
+			{
+				CredentialsAcknowledged = entry.CredentialsAcknowledged,
+			});
 		}
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
-		_sessionMigrationTokensBySeat.Clear();
-		_localSessionMigrationToken = string.Empty;
+		_issuedSeatCredentialsBySeat.Clear();
 		foreach (NetworkAuthoritySeatControl control in checkpoint.SeatControls.OrderBy(control => control.SeatIndex))
 		{
 			var state = new SeatControlState(
 				control.SeatIndex,
 				control.Mode,
 				control.PeerId,
-				control.StableUserId,
-				control.ReconnectToken);
+				control.PlayerSessionId,
+				control.CredentialVerifier,
+				control.CredentialGeneration,
+				control.PendingCredentialVerifier,
+				control.PendingCredentialGeneration,
+				control.PendingCredentialPeerId);
 			_seatControlStates.Add(state);
-			if (!string.IsNullOrWhiteSpace(control.SessionMigrationToken))
-			{
-				ApplySessionMigrationToken(control.SeatIndex, control.SessionMigrationToken);
-			}
 			NetworkAuthorityReconnectClaim? serializedClaim = checkpoint.ReconnectClaims
 				.FirstOrDefault(claim => claim.SeatIndex == control.SeatIndex);
 			if (serializedClaim != null
@@ -1070,8 +1135,8 @@ public partial class NetworkManager
 				_reconnectClaimsBySeat[control.SeatIndex] = new ReconnectClaimRecord(
 					serializedClaim.MatchId,
 					serializedClaim.SeatIndex,
-					serializedClaim.ReconnectToken,
-					serializedClaim.StableUserId,
+					serializedClaim.CredentialGeneration,
+					serializedClaim.PlayerSessionId,
 					serializedClaim.ClaimedPeerId,
 					claimState);
 			}
@@ -1079,14 +1144,6 @@ public partial class NetworkManager
 			{
 				_reconnectClaimsBySeat[control.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
 			}
-			if (state.StableUserId == GetStableUserId())
-			{
-				_localReconnectToken = state.ReconnectToken;
-			}
-		}
-		foreach (KeyValuePair<int, string> pair in checkpoint.SessionMigrationTokens)
-		{
-			ApplySessionMigrationToken(pair.Key, pair.Value);
 		}
 		_lastAcceptedClientActionIds.Clear();
 		foreach (KeyValuePair<int, long> pair in checkpoint.LastAcceptedClientActionIds)
@@ -1095,7 +1152,7 @@ public partial class NetworkManager
 		}
 	}
 
-	private void MarkCandidateAsNewHost(int candidateSeat, string sourceStableUserId)
+	private void MarkCandidateAsNewHost(int candidateSeat, string sourcePlayerSessionId)
 	{
 		int localPeerId = 1;
 		for (int index = 0; index < _players.Count; index++)
@@ -1121,8 +1178,7 @@ public partial class NetworkManager
 			else
 			{
 				// The old peer ids are invalid on the new ENet server. Treat every
-				// remote seat as reclaimable until its stable id and reconnect token
-				// are presented on the new connection.
+				// remote seat as reclaimable until its session credential is presented.
 				_seatControlStates[index] = state with
 				{
 					Mode = SeatControlMode.AiProxyReclaimable,
@@ -1134,20 +1190,12 @@ public partial class NetworkManager
 		GD.Print($"MIGRATION_HOST_ROSTER candidate_seat={candidateSeat} controls={GetSeatControlStatesVariant(false)}");
 	}
 
-	private void MarkCandidateAsNewLobbyHost(int candidateSeat, string sourceStableUserId)
+	private void MarkCandidateAsNewLobbyHost(int candidateSeat, string sourcePlayerSessionId)
 	{
-		var oldControlsByStableId = _seatControlStates
-			.ToDictionary(state => state.StableUserId, StringComparer.Ordinal);
-		var oldTokensByStableId = _players
-			.ToDictionary(
-				player => player.StableUserId,
-				player => _sessionMigrationTokensBySeat.TryGetValue(player.SeatIndex, out string? token)
-					? token
-					: string.Empty,
-				StringComparer.Ordinal);
-
+		var oldControlsByPlayerSessionId = _seatControlStates
+			.ToDictionary(state => state.PlayerSessionId, StringComparer.Ordinal);
 		List<NetworkPlayerPublicState> remainingPlayers = _players
-			.Where(player => !string.Equals(player.StableUserId, sourceStableUserId, StringComparison.Ordinal))
+			.Where(player => !string.Equals(player.PlayerSessionId, sourcePlayerSessionId, StringComparison.Ordinal))
 			.OrderBy(player => player.SeatIndex)
 			.ToList();
 		if (!remainingPlayers.Any(player => player.SeatIndex == candidateSeat))
@@ -1159,13 +1207,12 @@ public partial class NetworkManager
 		_players.Clear();
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
-		_sessionMigrationTokensBySeat.Clear();
-		_localSessionMigrationToken = string.Empty;
+		_issuedSeatCredentialsBySeat.Clear();
 
 		for (int newSeat = 0; newSeat < remainingPlayers.Count; newSeat++)
 		{
 			NetworkPlayerPublicState oldPlayer = remainingPlayers[newSeat];
-			bool isLocalCandidate = string.Equals(oldPlayer.StableUserId, GetStableUserId(), StringComparison.Ordinal);
+			bool isLocalCandidate = string.Equals(oldPlayer.PlayerSessionId, GetPlayerSessionId(), StringComparison.Ordinal);
 			NetworkPlayerPublicState player = oldPlayer with
 			{
 				PeerId = isLocalCandidate ? 1 : 0,
@@ -1173,12 +1220,17 @@ public partial class NetworkManager
 				IsHost = isLocalCandidate,
 				IsLocal = isLocalCandidate,
 				IsConnected = isLocalCandidate,
+				CredentialsAcknowledged = isLocalCandidate || oldPlayer.CredentialsAcknowledged,
 			};
 			_players.Add(player);
 
-			if (!oldControlsByStableId.TryGetValue(oldPlayer.StableUserId, out SeatControlState oldControl))
+			if (!oldControlsByPlayerSessionId.TryGetValue(oldPlayer.PlayerSessionId, out SeatControlState oldControl))
 			{
-				oldControl = SeatControlRules.CreateInitialState(oldPlayer, Guid.NewGuid().ToString("N"));
+				string replacementCredential = SeatCredentialRules.IssueCredential();
+				oldControl = SeatControlRules.CreateInitialState(
+					oldPlayer,
+					SeatCredentialRules.ComputeVerifier(replacementCredential));
+				_issuedSeatCredentialsBySeat[newSeat] = replacementCredential;
 			}
 
 			SeatControlState control = oldControl with
@@ -1189,21 +1241,153 @@ public partial class NetworkManager
 			};
 			_seatControlStates.Add(control);
 			_reconnectClaimsBySeat[newSeat] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, control);
-			string token = oldTokensByStableId.TryGetValue(oldPlayer.StableUserId, out string? oldToken)
-				? oldToken
-				: string.Empty;
-			if (!string.IsNullOrWhiteSpace(token))
-			{
-				_sessionMigrationTokensBySeat[newSeat] = token;
-				if (isLocalCandidate)
-				{
-					_localSessionMigrationToken = token;
-				}
-			}
 		}
 
 		EmitPlayerListUpdated();
 		EmitSeatControlStatesUpdated();
+	}
+
+	private void BeginLobbyMigrationRecovery(long targetEpoch, double now)
+	{
+		_lobbyMigrationRecoveryState = new LobbyMigrationRecoveryState(
+			targetEpoch,
+			now,
+			NetworkMigrationRules.LobbyRecoveryTimeoutSeconds,
+			_players
+				.Where(player => !player.IsLocal)
+				.Select(player => player.PlayerSessionId));
+	}
+
+	private void PollLobbyMigrationRecovery(double now)
+	{
+		if (!IsHost
+			|| _state != NetworkSessionState.Lobby
+			|| _lobbyMigrationRecoveryState is not { } recovery)
+		{
+			return;
+		}
+
+		if (recovery.IsComplete)
+		{
+			TryFinalizeLobbyMigrationRecovery(now);
+			return;
+		}
+		if (!recovery.HasExpired(now))
+		{
+			return;
+		}
+
+		CompactLobbyAfterMigrationTimeout(recovery);
+		BroadcastPlayerList();
+		EmitSeatControlStatesUpdated();
+		CommitAuthorityCheckpointFromLobby();
+		TryFinalizeLobbyMigrationRecovery(now, force: true);
+	}
+
+	private void TryFinalizeLobbyMigrationRecovery(double now, bool force = false)
+	{
+		if (_lobbyMigrationRecoveryState is not { } recovery
+			|| (!force && !recovery.IsComplete))
+		{
+			return;
+		}
+
+		_lobbyMigrationRecoveryState = null;
+		_networkMigrationPlan = null;
+		_hotStandbySeat = -1;
+		_standbyCheckpointAcked = false;
+		_standbyAckedCheckpointId = -1;
+		_standbyPendingCheckpointId = -1;
+		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyCheckpointSentAt = -1.0;
+		_lastStandbyCheckpointSentAt = -1.0;
+		_failedHotStandbySeats.Clear();
+		CommitAuthorityCheckpointFromLobby();
+		SendCheckpointToHotStandbyIfNeeded(now);
+	}
+
+	private void ClearPendingStandbyCheckpoint()
+	{
+		_standbyPendingCheckpointId = -1;
+		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyCheckpointSentAt = -1.0;
+	}
+
+	private void PruneStandbyCheckpoints()
+	{
+		long protectedCheckpointId = _networkMigrationPlan?.CheckpointId ?? -1;
+		while (_standbyCheckpointsById.Count > 8)
+		{
+			long removableCheckpointId = _standbyCheckpointsById.Keys
+				.Where(checkpointId => checkpointId != protectedCheckpointId)
+				.DefaultIfEmpty(-1)
+				.Min();
+			if (removableCheckpointId < 0)
+			{
+				break;
+			}
+			_standbyCheckpointsById.Remove(removableCheckpointId);
+		}
+	}
+
+	private void CompactLobbyAfterMigrationTimeout(LobbyMigrationRecoveryState recovery)
+	{
+		List<NetworkPlayerPublicState> keptPlayers = _players
+			.Where(player => player.IsLocal
+				|| !recovery.ExpectedPlayerSessionIds.Contains(player.PlayerSessionId)
+				|| recovery.IsClaimed(player.PlayerSessionId))
+			.OrderBy(player => player.SeatIndex)
+			.ToList();
+		CompactLobbySeatMappings(keptPlayers);
+	}
+
+	private void CompactLobbySeatMappings(IReadOnlyList<NetworkPlayerPublicState> keptPlayers)
+	{
+		var controlsByPlayerSessionId = _seatControlStates.ToDictionary(
+			state => state.PlayerSessionId,
+			StringComparer.Ordinal);
+		var claimsByPlayerSessionId = _reconnectClaimsBySeat.Values.ToDictionary(
+			claim => claim.PlayerSessionId,
+			StringComparer.Ordinal);
+		var oldSeatByPlayerSessionId = _players.ToDictionary(
+			player => player.PlayerSessionId,
+			player => player.SeatIndex,
+			StringComparer.Ordinal);
+		var compactPlayers = new List<NetworkPlayerPublicState>(keptPlayers.Count);
+		var compactControls = new List<SeatControlState>(keptPlayers.Count);
+		var compactClaims = new Dictionary<int, ReconnectClaimRecord>();
+		var compactIssuedCredentials = new Dictionary<int, string>();
+		for (int newSeat = 0; newSeat < keptPlayers.Count; newSeat++)
+		{
+			NetworkPlayerPublicState player = keptPlayers[newSeat] with { SeatIndex = newSeat };
+			SeatControlState control = controlsByPlayerSessionId[player.PlayerSessionId] with { SeatIndex = newSeat };
+			ReconnectClaimRecord claim = claimsByPlayerSessionId.TryGetValue(player.PlayerSessionId, out ReconnectClaimRecord existingClaim)
+				? existingClaim with { SeatIndex = newSeat }
+				: SeatControlRules.CreateInitialClaimRecord(string.Empty, control);
+			compactPlayers.Add(player);
+			compactControls.Add(control);
+			compactClaims[newSeat] = claim;
+			if (oldSeatByPlayerSessionId.TryGetValue(player.PlayerSessionId, out int oldSeat)
+				&& _issuedSeatCredentialsBySeat.TryGetValue(oldSeat, out string? credential))
+			{
+				compactIssuedCredentials[newSeat] = credential;
+			}
+		}
+
+		_players.Clear();
+		_players.AddRange(compactPlayers);
+		_seatControlStates.Clear();
+		_seatControlStates.AddRange(compactControls);
+		_reconnectClaimsBySeat.Clear();
+		foreach (KeyValuePair<int, ReconnectClaimRecord> pair in compactClaims)
+		{
+			_reconnectClaimsBySeat[pair.Key] = pair.Value;
+		}
+		_issuedSeatCredentialsBySeat.Clear();
+		foreach (KeyValuePair<int, string> pair in compactIssuedCredentials)
+		{
+			_issuedSeatCredentialsBySeat[pair.Key] = pair.Value;
+		}
 	}
 
 	private bool TryResolveSeatFromPeer(int peerId, out int seatIndex)
@@ -1216,12 +1400,12 @@ public partial class NetworkManager
 	private bool TryGetPlayerBySeat(int seatIndex, out NetworkPlayerPublicState player)
 	{
 		player = _players.FirstOrDefault(candidate => candidate.SeatIndex == seatIndex);
-		return player.PeerId != 0 || player.StableUserId.Length > 0;
+		return player.PeerId != 0 || player.PlayerSessionId.Length > 0;
 	}
 
-	private string GetStableUserIdForSeat(int seatIndex)
+	private string GetPlayerSessionIdForSeat(int seatIndex)
 	{
-		return _players.FirstOrDefault(player => player.SeatIndex == seatIndex).StableUserId;
+		return _players.FirstOrDefault(player => player.SeatIndex == seatIndex).PlayerSessionId;
 	}
 
 	private long GetCurrentAuthorityEpoch()
@@ -1272,12 +1456,12 @@ public partial class NetworkManager
 			["target_epoch"] = plan.TargetEpoch,
 			["checkpoint_id"] = plan.CheckpointId,
 			["checkpoint_hash"] = plan.CheckpointHash,
-			["candidate_stable_user_id"] = plan.CandidateStableUserId,
+			["candidate_player_session_id"] = plan.CandidatePlayerSessionId,
 				["candidate_seat"] = plan.CandidateSeat,
 				["observed_host_address"] = plan.ObservedHostAddress,
 				["candidate_host_address"] = plan.CandidateHostAddress,
 			["port"] = plan.Port,
-			["source_stable_user_id"] = plan.SourceStableUserId,
+			["source_player_session_id"] = plan.SourcePlayerSessionId,
 			["authority_phase"] = plan.Phase.ToString(),
 		};
 	}
@@ -1293,12 +1477,12 @@ public partial class NetworkManager
 			|| !NetworkVariantReader.TryReadInt64(raw, "target_epoch", 0, long.MaxValue, out long targetEpoch)
 			|| !NetworkVariantReader.TryReadInt64(raw, "checkpoint_id", 0, long.MaxValue, out long checkpointId)
 			|| !NetworkVariantReader.TryReadString(raw, "checkpoint_hash", 64, out string checkpointHash, allowEmpty: false)
-			|| !NetworkVariantReader.TryReadString(raw, "candidate_stable_user_id", NetworkProtocol.MaxPlayerIdLength, out string candidateStableUserId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(raw, "candidate_player_session_id", NetworkProtocol.MaxPlayerIdLength, out string candidatePlayerSessionId, allowEmpty: false)
 			|| !NetworkVariantReader.TryReadInt32(raw, "candidate_seat", 0, NetworkSessionDefaults.MaxPlayers - 1, out int candidateSeat)
 			|| !NetworkVariantReader.TryReadString(raw, "observed_host_address", NetworkProtocol.MaxAddressLength, out string observedHostAddress, allowEmpty: false)
 			|| !NetworkVariantReader.TryReadString(raw, "candidate_host_address", NetworkProtocol.MaxAddressLength, out string candidateHostAddress, allowEmpty: false)
 			|| !NetworkVariantReader.TryReadInt32(raw, "port", 1, ushort.MaxValue, out int port)
-			|| !NetworkVariantReader.TryReadString(raw, "source_stable_user_id", NetworkProtocol.MaxPlayerIdLength, out string sourceStableUserId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(raw, "source_player_session_id", NetworkProtocol.MaxPlayerIdLength, out string sourcePlayerSessionId, allowEmpty: false)
 			|| !NetworkVariantReader.TryReadEnum(raw, "authority_phase", out NetworkAuthorityPhase phase))
 		{
 			return false;
@@ -1312,12 +1496,12 @@ public partial class NetworkManager
 			TargetEpoch = targetEpoch,
 			CheckpointId = checkpointId,
 			CheckpointHash = checkpointHash,
-			CandidateStableUserId = candidateStableUserId,
+			CandidatePlayerSessionId = candidatePlayerSessionId,
 			CandidateSeat = candidateSeat,
 			ObservedHostAddress = observedHostAddress,
 			CandidateHostAddress = candidateHostAddress,
 			Port = port,
-			SourceStableUserId = sourceStableUserId,
+			SourcePlayerSessionId = sourcePlayerSessionId,
 			Phase = phase,
 		};
 		return NetworkMigrationRules.IsPlanVisibleToClients(plan);
@@ -1338,7 +1522,7 @@ public partial class NetworkManager
 		foreach (SeatControlState state in _seatControlStates)
 		{
 			if (state.Mode == SeatControlMode.HumanConnected
-				&& !string.Equals(state.StableUserId, plan.SourceStableUserId, StringComparison.Ordinal))
+				&& !string.Equals(state.PlayerSessionId, plan.SourcePlayerSessionId, StringComparison.Ordinal))
 			{
 				_migrationReadinessSeatIndices.Add(state.SeatIndex);
 			}
@@ -1355,7 +1539,7 @@ public partial class NetworkManager
 		foreach (NetworkAuthoritySeatControl control in checkpointControls)
 		{
 			if (control.Mode == SeatControlMode.HumanConnected
-				&& !string.Equals(control.StableUserId, plan.SourceStableUserId, StringComparison.Ordinal))
+				&& !string.Equals(control.PlayerSessionId, plan.SourcePlayerSessionId, StringComparison.Ordinal))
 			{
 				_migrationReadinessSeatIndices.Add(control.SeatIndex);
 			}

@@ -42,14 +42,17 @@ public readonly record struct NetworkSessionConfig(
 
 public readonly record struct NetworkPlayerPublicState(
 	int PeerId,
-	string StableUserId,
+	string PlayerSessionId,
 	string DisplayName,
 	string AvatarId,
 	int SeatIndex,
 	bool IsHost,
 	bool IsLocal,
 	bool IsReady,
-	bool IsConnected);
+	bool IsConnected)
+{
+	public bool CredentialsAcknowledged { get; init; }
+}
 
 public enum SeatControlMode
 {
@@ -62,8 +65,32 @@ public readonly record struct SeatControlState(
 	int SeatIndex,
 	SeatControlMode Mode,
 	int PeerId,
-	string StableUserId,
-	string ReconnectToken);
+	string PlayerSessionId,
+	string CredentialVerifier,
+	long CredentialGeneration,
+	string PendingCredentialVerifier,
+	long PendingCredentialGeneration,
+	int PendingCredentialPeerId)
+{
+	public SeatControlState(
+		int SeatIndex,
+		SeatControlMode Mode,
+		int PeerId,
+		string PlayerSessionId,
+		string Credential)
+		: this(
+			SeatIndex,
+			Mode,
+			PeerId,
+			PlayerSessionId,
+			SeatCredentialRules.ComputeVerifier(Credential),
+			SeatCredentialRules.InitialGeneration,
+			string.Empty,
+			0,
+			0)
+	{
+	}
+}
 
 public readonly record struct NetworkRoomInfo(
 	string SessionId,

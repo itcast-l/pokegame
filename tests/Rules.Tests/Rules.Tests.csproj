@@ -90,6 +90,9 @@
     <Compile Include="../../scripts/VisualUpdateThrottle.cs" Link="Rules/VisualUpdateThrottle.cs" />
     <Compile Include="../../scripts/NetworkVisualQueuePolicy.cs" Link="Rules/NetworkVisualQueuePolicy.cs" />
     <Compile Include="../../scripts/NetworkProtocol.cs" Link="Rules/NetworkProtocol.cs" />
+	<Compile Include="../../scripts/SeatCredentialRules.cs" Link="Rules/SeatCredentialRules.cs" />
+	<Compile Include="../../scripts/NetworkPeerRateLimiter.cs" Link="Rules/NetworkPeerRateLimiter.cs" />
+	<Compile Include="../../scripts/LobbyMigrationRecoveryState.cs" Link="Rules/LobbyMigrationRecoveryState.cs" />
 	<Compile Include="../../scripts/MultiplayerRematchRules.cs" Link="Rules/MultiplayerRematchRules.cs" />
     <Compile Include="../../scripts/AuthorityActionState.cs" Link="Rules/AuthorityActionState.cs" />
     <Compile Include="../../scripts/NetworkAuthorityCheckpoint.cs" Link="Rules/NetworkAuthorityCheckpoint.cs" />

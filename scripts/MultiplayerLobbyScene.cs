@@ -496,7 +496,7 @@ public partial class MultiplayerLobbyScene : Control
 			Godot.Collections.Dictionary player = variant.AsGodotDictionary();
 			result.Add(new NetworkPlayerPublicState(
 				ReadDictionaryInt(player, "peer_id", 0),
-				ReadDictionaryString(player, "stable_user_id", string.Empty),
+				ReadDictionaryString(player, "player_session_id", string.Empty),
 				ReadDictionaryString(player, "display_name", "Player"),
 				ReadDictionaryString(player, "avatar_id", string.Empty),
 				ReadDictionaryInt(player, "seat_index", 0),

@@ -28,11 +28,11 @@ public partial class NetworkManager
 			MatchSeed = ResolveMatchSeedForStart(),
 		};
 		SetAuthorityEpoch(_authorityEpoch);
-		EnsureSessionMigrationTokensForRoster();
+		EnsureSeatCredentialsForRoster();
 		InitializeMatchSeatControlStates();
 		SetState(NetworkSessionState.Starting);
 		SendReconnectCredentialsToConnectedPeers();
-		SendSessionMigrationTokensToConnectedPeers();
+		SendSeatCredentialsToUnacknowledgedPeers();
 		Godot.Collections.Dictionary bootstrap = BuildMatchBootstrap();
 		NetworkRpcContext context = GetCurrentRpcContext();
 		Rpc(
@@ -86,6 +86,10 @@ public partial class NetworkManager
 		long authorityEpoch)
 	{
 		if (!IsHost)
+		{
+			return;
+		}
+		if (!AllowPeerRequest(NetworkRequestCategory.LobbyMutation))
 		{
 			return;
 		}
@@ -184,14 +188,14 @@ public partial class NetworkManager
 		{
 			foreach (NetworkPlayerPublicState player in _players)
 			{
-				EnsureSessionMigrationToken(player.SeatIndex);
+				EnsureSeatCredential(player.SeatIndex);
 			}
 			EnsureLobbySeatControlStates();
 		}
 		SetState(NetworkSessionState.Lobby);
 		if (IsHost)
 		{
-			SendSessionMigrationTokensToConnectedPeers();
+			SendSeatCredentialsToUnacknowledgedPeers();
 			CommitAuthorityCheckpointFromLobby();
 		}
 		EmitPlayerListUpdated();
@@ -205,11 +209,36 @@ public partial class NetworkManager
 	private void ResetCompletedMatchState()
 	{
 		_loadHandshake = null;
+		var previousSeatControlsByPlayerSessionId = _seatControlStates
+			.GroupBy(state => state.PlayerSessionId, StringComparer.Ordinal)
+			.ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
-		_localReconnectToken = string.Empty;
+		foreach (NetworkPlayerPublicState player in _players.OrderBy(player => player.SeatIndex))
+		{
+			SeatControlState state;
+			if (previousSeatControlsByPlayerSessionId.TryGetValue(player.PlayerSessionId, out SeatControlState previous))
+			{
+				state = SeatCredentialRules.CancelPendingRotation(previous) with
+				{
+					SeatIndex = player.SeatIndex,
+					Mode = SeatControlMode.HumanConnected,
+					PeerId = player.PeerId,
+				};
+			}
+			else
+			{
+				state = IsHost
+					? IssueInitialSeatCredential(player)
+					: SeatControlRules.CreateInitialState(player, string.Empty);
+			}
+
+			_seatControlStates.Add(state);
+			_reconnectClaimsBySeat[state.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(string.Empty, state);
+		}
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
+		_reconnectAttemptStartedAt = -1.0;
 		ResetClientActionIds();
 
 		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
@@ -224,7 +253,9 @@ public partial class NetworkManager
 		_standbyCheckpointAcked = false;
 		_standbyAckedCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
+		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 		_standbyCheckpointSentAt = -1.0;
+		_lastStandbyCheckpointSentAt = -1.0;
 		_consecutiveUnackedCheckpoints = 0;
 		_failedHotStandbySeats.Clear();
 		_migrationStartedAt = -1.0;
@@ -240,9 +271,11 @@ public partial class NetworkManager
 		_migrationReadyEpoch = -1;
 		_migrationRecoveryReadyForPeers = false;
 		_migrationReadinessSeatIndices.Clear();
+		_lobbyMigrationRecoveryState = null;
 
-		_sessionMigrationTokensBySeat.Clear();
-		_localSessionMigrationToken = string.Empty;
+		_issuedSeatCredentialsBySeat.Clear();
+		_peerRateLimiter.Clear();
+		_lastCorrectiveSnapshotAtByPeer.Clear();
 		_migrationFailureReturnPending = false;
 		_pendingLobbyErrorMessage = string.Empty;
 		_hostEndedMatchPending = false;
@@ -277,12 +310,18 @@ public partial class NetworkManager
 		_loadHandshake = null;
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
-		_sessionMigrationTokensBySeat.Clear();
-		_localReconnectToken = string.Empty;
-		_localSessionMigrationToken = string.Empty;
+		_issuedSeatCredentialsBySeat.Clear();
+		_localPlayerSessionId = string.Empty;
+		_peerRateLimiter.Clear();
+		_lastCorrectiveSnapshotAtByPeer.Clear();
+		_localSeatCredential = string.Empty;
+		_localSeatCredentialGeneration = 0;
+		_pendingLocalSeatCredential = string.Empty;
+		_pendingLocalSeatCredentialGeneration = 0;
 		_lastLanJoinAddress = string.Empty;
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
+		_reconnectAttemptStartedAt = -1.0;
 		ResetClientActionIds();
 		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 		_authorityCheckpointCommitFailureCount = 0;
@@ -296,12 +335,15 @@ public partial class NetworkManager
 		_standbyCheckpointAcked = false;
 		_standbyAckedCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
+		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 		_standbyCheckpointSentAt = -1.0;
+		_lastStandbyCheckpointSentAt = -1.0;
 		_consecutiveUnackedCheckpoints = 0;
 		_failedHotStandbySeats.Clear();
 		_migrationReadyEpoch = -1;
 		_migrationRecoveryReadyForPeers = false;
 		_migrationReadinessSeatIndices.Clear();
+		_lobbyMigrationRecoveryState = null;
 		_authorityEpoch = 0;
 		_migrationStartedAt = -1.0;
 		_migrationServerStarted = false;
@@ -331,6 +373,7 @@ public partial class NetworkManager
 		_steamLobbyId = 0;
 		_pendingSteamLobbyJoinId = 0;
 		_acceptedSteamLobbyJoinId = 0;
+		_originalSteamLobbyOwnerId = 0;
 		_pendingSteamHostLobby = false;
 		_players.Clear();
 		_rooms.Clear();

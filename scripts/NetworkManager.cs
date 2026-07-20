@@ -41,7 +41,9 @@ public partial class NetworkManager : Node
 	private readonly Dictionary<string, double> _roomLastSeenAt = new();
 	private readonly List<SeatControlState> _seatControlStates = new();
 	private readonly Dictionary<int, ReconnectClaimRecord> _reconnectClaimsBySeat = new();
-	private readonly Dictionary<int, string> _sessionMigrationTokensBySeat = new();
+	private readonly Dictionary<int, string> _issuedSeatCredentialsBySeat = new();
+	private readonly NetworkPeerRateLimiter _peerRateLimiter = new();
+	private readonly Dictionary<int, double> _lastCorrectiveSnapshotAtByPeer = new();
 	private PacketPeerUdp? _lanDiscoveryResponder;
 	private PacketPeerUdp? _lanDiscoveryBrowser;
 	private ENetMultiplayerPeer? _enetPeer;
@@ -62,8 +64,12 @@ public partial class NetworkManager : Node
 	private double _lastDiscoveryBroadcastAt;
 	private string _localDisplayName = PlayerNameRules.DefaultPlayerName;
 	private string _localAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
-	private string _localReconnectToken = string.Empty;
-	private string _localSessionMigrationToken = string.Empty;
+	private string _localIdentityHint = string.Empty;
+	private string _localPlayerSessionId = string.Empty;
+	private string _localSeatCredential = string.Empty;
+	private long _localSeatCredentialGeneration;
+	private string _pendingLocalSeatCredential = string.Empty;
+	private long _pendingLocalSeatCredentialGeneration;
 	private string _lastLanJoinAddress = string.Empty;
 	private string _pendingJoinRoomPassword = string.Empty;
 	private ulong _steamLobbyId;
@@ -72,6 +78,7 @@ public partial class NetworkManager : Node
 	private bool _pendingSteamHostLobby;
 	private double _nextReconnectAttemptAt;
 	private bool _reconnectAttemptInFlight;
+	private double _reconnectAttemptStartedAt = -1.0;
 	private bool _lobbyRejectPending;
 	private string _lobbyRejectMessage = string.Empty;
 	private bool _hostEndedMatchPending;
@@ -120,6 +127,7 @@ public partial class NetworkManager : Node
 		PollLoadHandshake(now);
 		PollReconnect(now);
 		PollActiveHostMigration(now);
+		PollLobbyMigrationRecovery(now);
 		PollHotStandby(now);
 		PollHostMigration(now);
 	}
@@ -133,6 +141,7 @@ public partial class NetworkManager : Node
 
 		RefreshLocalIdentity();
 		LeaveSession();
+		InitializeLocalHostSessionIdentity();
 		SetState(NetworkSessionState.Hosting);
 		_config = CreateConfig(NetworkTransport.Lan, playerCount, itemMode, winningScore, roomName, roomPassword);
 
@@ -147,7 +156,6 @@ public partial class NetworkManager : Node
 		Multiplayer.MultiplayerPeer = _enetPeer;
 		_players.Clear();
 		InsertPlayerInSeatOrder(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
-		EnsureSessionMigrationToken(0);
 		EnsureLobbySeatControlStates();
 		StartLanDiscoveryResponder();
 		SetState(NetworkSessionState.Lobby);
@@ -304,28 +312,51 @@ public partial class NetworkManager : Node
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
 		_localDisplayName = PlayerNameRules.Normalize(profile.PlayerName);
 		_localAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(profile.SelectedAvatarId);
+		_localIdentityHint = BuildIdentityHint();
+	}
+
+	private void InitializeLocalHostSessionIdentity()
+	{
+		string testSessionId = OS.GetEnvironment("CODEX_TEST_PLAYER_SESSION_ID").Trim();
+		_localPlayerSessionId = !string.IsNullOrWhiteSpace(testSessionId)
+			&& testSessionId.Length <= NetworkProtocol.MaxPlayerIdLength
+			? testSessionId
+			: SeatCredentialRules.IssuePlayerSessionId();
+		_localSeatCredential = SeatCredentialRules.IssueCredential();
+		_localSeatCredentialGeneration = SeatCredentialRules.InitialGeneration;
+		_pendingLocalSeatCredential = string.Empty;
+		_pendingLocalSeatCredentialGeneration = 0;
+		_issuedSeatCredentialsBySeat[0] = _localSeatCredential;
 	}
 
 	private NetworkPlayerPublicState CreateLocalPlayer(int peerId, int seatIndex, bool isHost)
 	{
 		return new NetworkPlayerPublicState(
 			peerId,
-			GetStableUserId(),
+			GetPlayerSessionId(),
 			_localDisplayName,
 			_localAvatarId,
 			seatIndex,
 			isHost,
 			true,
 			isHost,
-			true);
+			true)
+		{
+			CredentialsAcknowledged = isHost,
+		};
 	}
 
-	private string GetStableUserId()
+	private string GetPlayerSessionId()
 	{
-		string testStableUserId = OS.GetEnvironment("CODEX_TEST_STABLE_USER_ID").Trim();
-		if (!string.IsNullOrWhiteSpace(testStableUserId))
+		return _localPlayerSessionId;
+	}
+
+	private string BuildIdentityHint()
+	{
+		string testIdentityHint = OS.GetEnvironment("CODEX_TEST_STABLE_USER_ID").Trim();
+		if (!string.IsNullOrWhiteSpace(testIdentityHint))
 		{
-			return testStableUserId;
+			return testIdentityHint[..Math.Min(testIdentityHint.Length, NetworkProtocol.MaxPlayerIdLength)];
 		}
 
 		if (SteamAvailable)
@@ -352,7 +383,10 @@ public partial class NetworkManager : Node
 		localPlayer = _players.FirstOrDefault(player => player.PeerId == peerId);
 		return localPlayer.PeerId != 0
 			? localPlayer
-			: new NetworkPlayerPublicState(peerId == 0 ? 1 : peerId, GetStableUserId(), _localDisplayName, _localAvatarId, 0, TryGetCachedLocalIsHost(out bool isHost) && isHost, true, false, true);
+			: new NetworkPlayerPublicState(peerId == 0 ? 1 : peerId, GetPlayerSessionId(), _localDisplayName, _localAvatarId, 0, TryGetCachedLocalIsHost(out bool isHost) && isHost, true, false, true)
+			{
+				CredentialsAcknowledged = isHost,
+			};
 	}
 
 	private bool TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer)
@@ -435,18 +469,20 @@ public partial class NetworkManager : Node
 		{
 			return;
 		}
-		if (_networkMigrationPlan?.Phase == NetworkAuthorityPhase.Lobby)
-		{
-			// Migrated lobby peers authenticate with their session migration
-			// token; do not race that claim with a fresh join request.
-			return;
-		}
+			if (_lobbyMigrationRecoveryState is not null)
+			{
+				// Migrated lobby peers authenticate through the recovery claim path;
+				// do not race that claim with a fresh join request.
+				return;
+			}
 
 		RpcId((int)peerId, MethodName.RpcRequestClientInfo);
 	}
 
 	private void OnPeerDisconnected(long peerId)
 	{
+		_peerRateLimiter.ClearPeer((int)peerId);
+		_lastCorrectiveSnapshotAtByPeer.Remove((int)peerId);
 		if (_state == NetworkSessionState.MigratingHost
 			|| (IsHost && _state == NetworkSessionState.InGame))
 		{
@@ -485,6 +521,35 @@ public partial class NetworkManager : Node
 			_players.RemoveAt(playerIndex);
 			CancelMatchStart("A player disconnected while loading.");
 		}
+		else if (_state == NetworkSessionState.Lobby
+			&& _lobbyMigrationRecoveryState is not null)
+		{
+			int seatIndex = _players[playerIndex].SeatIndex;
+			_players[playerIndex] = _players[playerIndex] with
+			{
+				PeerId = 0,
+				IsConnected = false,
+			};
+			if (TryGetSeatControlState(seatIndex, out SeatControlState control, out int controlIndex))
+			{
+				_seatControlStates[controlIndex] = SeatCredentialRules.CancelPendingRotation(control) with
+				{
+					Mode = SeatControlMode.HumanReclaimPending,
+					PeerId = 0,
+				};
+			}
+			_issuedSeatCredentialsBySeat.Remove(seatIndex);
+			CommitAuthorityCheckpointFromLobby();
+		}
+		else if (_state == NetworkSessionState.Lobby && IsHost)
+		{
+			HandleHotStandbyDisconnected(_players[playerIndex].SeatIndex);
+			_players.RemoveAt(playerIndex);
+			CompactLobbySeatMappings(_players);
+			EmitPlayerListUpdated();
+			EmitSeatControlStatesUpdated();
+			CommitAuthorityCheckpointFromLobby();
+		}
 		else
 		{
 			_players.RemoveAt(playerIndex);
@@ -503,7 +568,7 @@ public partial class NetworkManager : Node
 		ConfigureLanPeerTimeout(1);
 		if (_state == NetworkSessionState.MigratingHost)
 		{
-			GD.Print($"MIGRATION_CONNECTED_TO_SERVER peer={GetLocalPeerId()} stable={GetStableUserId()} token_len={_localReconnectToken.Length} session_token_len={_localSessionMigrationToken.Length} target_epoch={_networkMigrationPlan?.TargetEpoch}");
+			GD.Print($"MIGRATION_CONNECTED_TO_SERVER peer={GetLocalPeerId()} player_session={GetPlayerSessionId().Length} credential_generation={_localSeatCredentialGeneration} target_epoch={_networkMigrationPlan?.TargetEpoch}");
 			_migrationPeerAttemptInFlight = false;
 			_migrationPeerAttemptStartedAt = -1.0;
 		}
@@ -511,16 +576,17 @@ public partial class NetworkManager : Node
 		if (_state == NetworkSessionState.MigratingHost
 			&& _networkMigrationPlan is { Phase: NetworkAuthorityPhase.Lobby } lobbyPlan)
 		{
-			if (OS.GetEnvironment("CODEX_LAN_INJECT_OLD_HOST_TOKEN") == "1")
+				if (OS.GetEnvironment("CODEX_LAN_INJECT_EXPIRED_HOST_CREDENTIAL") == "1")
 			{
 				RpcId(
 					1,
 					MethodName.RpcClaimMigratedLobbySeat,
 					lobbyPlan.SessionId,
 					lobbyPlan.TargetEpoch,
-					string.Empty,
-					lobbyPlan.SourceStableUserId);
-				GD.Print("MIGRATION_OLD_HOST_TOKEN_INJECTED");
+					lobbyPlan.SourcePlayerSessionId,
+					_localSeatCredentialGeneration,
+					string.Empty);
+					GD.Print("MIGRATION_EXPIRED_HOST_CREDENTIAL_INJECTED");
 				return;
 			}
 
@@ -529,8 +595,9 @@ public partial class NetworkManager : Node
 				MethodName.RpcClaimMigratedLobbySeat,
 				lobbyPlan.SessionId,
 				lobbyPlan.TargetEpoch,
-				_localSessionMigrationToken,
-				GetStableUserId());
+				GetPlayerSessionId(),
+				_localSeatCredentialGeneration,
+				_localSeatCredential);
 			return;
 		}
 
@@ -538,6 +605,7 @@ public partial class NetworkManager : Node
 			&& CanAttemptReconnectClaim())
 		{
 			_reconnectAttemptInFlight = false;
+			_reconnectAttemptStartedAt = -1.0;
 			long reconnectEpoch = GetCurrentAuthorityEpoch();
 				if (_state == NetworkSessionState.MigratingHost
 					&& _networkMigrationPlan is { } migrationPlan)
@@ -555,16 +623,17 @@ public partial class NetworkManager : Node
 				_config.SessionId,
 				_config.MatchId,
 				reconnectEpoch,
-				_localReconnectToken,
-				GetStableUserId());
+				GetPlayerSessionId(),
+				_localSeatCredentialGeneration,
+				_localSeatCredential);
 			return;
 		}
 
-		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, GetStableUserId(), _pendingJoinRoomPassword);
+		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, _localIdentityHint, _pendingJoinRoomPassword);
 	}
 
-	private void OnConnectionFailed()
-	{
+		private void OnConnectionFailed()
+		{
 		if (_state == NetworkSessionState.MigratingHost)
 		{
 			GD.Print($"MIGRATION_CONNECTION_FAILED address={_networkMigrationPlan?.CandidateHostAddress ?? string.Empty} port={_networkMigrationPlan?.Port}");
@@ -572,9 +641,16 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		if (_state == NetworkSessionState.Reconnecting)
-		{
-			ScheduleReconnectRetry();
+			if (_state == NetworkSessionState.Reconnecting)
+			{
+				if (_config.Transport == NetworkTransport.Lan
+					&& _networkMigrationPlan is { } migrationPlan
+					&& NetworkMigrationRules.IsPlanVisibleToClients(migrationPlan))
+				{
+					StartMigrationAttemptsAfterHostDisconnect(migrationPlan);
+					return;
+				}
+				ScheduleReconnectRetry();
 			return;
 		}
 
@@ -594,7 +670,7 @@ public partial class NetworkManager : Node
 			int localPeerId = connectionStatus == MultiplayerPeer.ConnectionStatus.Disconnected
 				? 0
 				: GetLocalPeerId();
-			GD.Print($"MIGRATION_SERVER_DISCONNECTED peer={localPeerId} state={_state} connection={connectionStatus} plan={_networkMigrationPlan?.CandidateStableUserId ?? string.Empty}");
+			GD.Print($"MIGRATION_SERVER_DISCONNECTED peer={localPeerId} state={_state} connection={connectionStatus} plan={_networkMigrationPlan?.CandidatePlayerSessionId ?? string.Empty}");
 		}
 
 		if (_lobbyRejectPending)
@@ -634,6 +710,7 @@ public partial class NetworkManager : Node
 		if (_hostEndedMatchPending)
 		{
 			_reconnectAttemptInFlight = false;
+			_reconnectAttemptStartedAt = -1.0;
 			_nextReconnectAttemptAt = 0.0;
 			return;
 		}
@@ -645,12 +722,19 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		if (_state == NetworkSessionState.InGame
-			&& _networkMigrationPlan is { } migrationPlan
-			&& NetworkMigrationRules.IsPlanVisibleToClients(migrationPlan))
-		{
-			BeginMigrationAfterHostDisconnect();
-			return;
+			if (_state == NetworkSessionState.InGame
+				&& _networkMigrationPlan is { } migrationPlan
+				&& NetworkMigrationRules.IsPlanVisibleToClients(migrationPlan))
+			{
+				if (_config.Transport == NetworkTransport.Lan && CanAttemptReconnectClaim())
+				{
+					EnterReconnectState();
+				}
+				else
+				{
+					BeginMigrationAfterHostDisconnect();
+				}
+				return;
 		}
 
 		MultiplayerPeer? activePeer = Multiplayer.MultiplayerPeer;
@@ -827,6 +911,26 @@ public partial class NetworkManager : Node
 	private void EmitSeatControlStatesUpdated()
 	{
 		EmitSignal(SignalName.SeatControlStatesUpdated);
+	}
+
+	private bool AllowPeerRequest(NetworkRequestCategory category, bool requireRegisteredPeer = true)
+	{
+		int peerId = Multiplayer.GetRemoteSenderId();
+		double now = Time.GetTicksMsec() / 1000.0;
+		if (!_peerRateLimiter.TryConsume(peerId, category, now, out bool shouldDisconnect))
+		{
+			if (shouldDisconnect)
+			{
+				Multiplayer.MultiplayerPeer?.DisconnectPeer(peerId);
+			}
+			else if (_peerRateLimiter.ShouldLogWarning(peerId, category, now))
+			{
+				GD.PushWarning($"Network request rate limit exceeded for peer {peerId}, category {category}.");
+			}
+			return false;
+		}
+
+		return !requireRegisteredPeer || TryGetPlayerIndexByPeerId(peerId, out _);
 	}
 
 }

@@ -61,13 +61,16 @@ internal static class NetworkReconnectRules
 		SeatControlMode currentMode,
 		int currentPeerId,
 		int requestPeerId,
-		string currentReconnectToken,
-		string requestReconnectToken,
-		string currentStableUserId,
-		string requestStableUserId)
+		long currentCredentialGeneration,
+		long requestCredentialGeneration,
+		string currentCredentialVerifier,
+		string requestCredential,
+		string currentPlayerSessionId,
+		string requestPlayerSessionId)
 	{
-		if (!string.Equals(currentReconnectToken, requestReconnectToken, System.StringComparison.Ordinal)
-			|| !string.Equals(currentStableUserId, requestStableUserId, System.StringComparison.Ordinal))
+		if (currentCredentialGeneration != requestCredentialGeneration
+			|| !SeatCredentialRules.Verify(requestCredential, currentCredentialVerifier)
+			|| !string.Equals(currentPlayerSessionId, requestPlayerSessionId, System.StringComparison.Ordinal))
 		{
 			return false;
 		}
@@ -221,31 +224,12 @@ internal static class NetworkReconnectRules
 
 	internal static bool ShouldAbortSteamReconnectForLobbyOwnerChange(
 		NetworkSessionState state,
-		string originalHostStableUserId,
+		ulong originalLobbyOwnerSteamId,
 		ulong currentLobbyOwnerSteamId)
 	{
-		if (state != NetworkSessionState.Reconnecting
-			|| currentLobbyOwnerSteamId == 0
-			|| !TryParseSteamStableUserId(originalHostStableUserId, out ulong originalHostSteamId))
-		{
-			return false;
-		}
-
-		return currentLobbyOwnerSteamId != originalHostSteamId;
-	}
-
-	private static bool TryParseSteamStableUserId(string stableUserId, out ulong steamId)
-	{
-		steamId = 0;
-		const string prefix = "steam:";
-		if (string.IsNullOrWhiteSpace(stableUserId)
-			|| !stableUserId.StartsWith(prefix, StringComparison.Ordinal)
-			|| !ulong.TryParse(stableUserId[prefix.Length..], out ulong parsed))
-		{
-			return false;
-		}
-
-		steamId = parsed;
-		return true;
+		return state == NetworkSessionState.Reconnecting
+			&& originalLobbyOwnerSteamId != 0
+			&& currentLobbyOwnerSteamId != 0
+			&& currentLobbyOwnerSteamId != originalLobbyOwnerSteamId;
 	}
 }

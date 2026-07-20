@@ -292,7 +292,7 @@ internal static partial class Program
 		Run("seat control allows reclaim again after reclaim pending disconnect", SeatControlAllowsReclaimAgainAfterReclaimPendingDisconnect);
 		Run("seat control rejects invalid reconnect metadata", SeatControlRejectsInvalidReconnectMetadata);
 		Run("seat control rejects reconnect claim after match end", SeatControlRejectsReconnectClaimAfterMatchEnd);
-		Run("seat control shared snapshot redacts reconnect token", SeatControlSharedSnapshotRedactsReconnectToken);
+		Run("seat control shared snapshot redacts credential verifier", SeatControlSharedSnapshotRedactsCredentialVerifier);
 		Run("scene load handshake completes and times out", SceneLoadHandshakeCompletesAndTimesOut);
 		Run("lan discovery parses valid messages and drops dirty data", LanDiscoveryParsesValidMessagesAndDropsDirtyData);
 		Run("local seat board controls block until human control is restored", LocalSeatBoardControlsBlockUntilHumanControlIsRestored);

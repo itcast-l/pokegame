@@ -11,8 +11,9 @@ public partial class NetworkManager
 			["seat_index"] = state.SeatIndex,
 			["mode"] = state.Mode.ToString(),
 			["peer_id"] = state.PeerId,
-			["stable_user_id"] = state.StableUserId,
-			["reconnect_token"] = state.ReconnectToken,
+			["player_session_id"] = state.PlayerSessionId,
+			["credential_verifier"] = state.CredentialVerifier,
+			["credential_generation"] = state.CredentialGeneration,
 		};
 	}
 
@@ -38,7 +39,7 @@ public partial class NetworkManager
 		return new Godot.Collections.Dictionary
 		{
 			["peer_id"] = player.PeerId,
-			["stable_user_id"] = player.StableUserId,
+			["player_session_id"] = player.PlayerSessionId,
 			["display_name"] = player.DisplayName,
 			["avatar_id"] = player.AvatarId,
 			["seat_index"] = player.SeatIndex,
@@ -46,6 +47,7 @@ public partial class NetworkManager
 			["is_local"] = player.IsLocal,
 			["is_ready"] = player.IsReady,
 			["is_connected"] = player.IsConnected,
+			["credentials_acknowledged"] = player.CredentialsAcknowledged,
 		};
 	}
 
@@ -117,7 +119,7 @@ public partial class NetworkManager
 	{
 		player = default;
 		if (!NetworkVariantReader.TryReadInt32(dictionary, "peer_id", 0, int.MaxValue, out int peerId)
-			|| !NetworkVariantReader.TryReadString(dictionary, "stable_user_id", NetworkProtocol.MaxPlayerIdLength, out string stableUserId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(dictionary, "player_session_id", NetworkProtocol.MaxPlayerIdLength, out string playerSessionId, allowEmpty: false)
 			|| !NetworkVariantReader.TryReadString(dictionary, "display_name", PlayerNameRules.MaxLength, out string displayName, allowEmpty: false)
 			|| !PlayerNameRules.IsValid(displayName)
 			|| !string.Equals(displayName, displayName.Trim(), StringComparison.Ordinal)
@@ -132,16 +134,24 @@ public partial class NetworkManager
 			return false;
 		}
 
+		if (!NetworkVariantReader.TryReadBool(dictionary, "credentials_acknowledged", out bool credentialsAcknowledged))
+		{
+			return false;
+		}
+
 		player = new NetworkPlayerPublicState(
 			peerId,
-			stableUserId,
+			playerSessionId,
 			displayName,
 			avatarId,
 			seatIndex,
 			isHost,
 			isLocal,
 			isReady,
-			isConnected);
+			isConnected)
+		{
+			CredentialsAcknowledged = credentialsAcknowledged,
+		};
 		return true;
 	}
 
@@ -173,7 +183,7 @@ public partial class NetworkManager
 				|| !TryParsePlayer(rawPlayer, out NetworkPlayerPublicState player)
 				|| player.SeatIndex >= rawPlayers.Count
 				|| seenSeats[player.SeatIndex]
-				|| !playerIds.Add(player.StableUserId)
+				|| !playerIds.Add(player.PlayerSessionId)
 				|| (player.PeerId > 0 && !positivePeerIds.Add(player.PeerId)))
 			{
 				players.Clear();

@@ -12,7 +12,6 @@ public static class NetworkProtocol
 	public const int MaxAddressLength = 64;
 	public const int MaxRemoteErrorLength = 160;
 	public const int MaxCredentialEncodedLength = 128;
-	public const int MaxMigrationTokenLength = 128;
 }
 
 public readonly record struct NetworkRpcContext(
@@ -81,6 +80,6 @@ public enum NetworkMigrationFailureCode
 	BindTimeout,
 	ConnectTimeout,
 	CandidateUnavailable,
-	OldHostTokenRejected,
+	ExpiredCredential,
 	ConcurrentCandidateExit,
 }

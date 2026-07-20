@@ -11,8 +11,8 @@ internal enum ReconnectClaimRejectReason
 	None,
 	MatchEnded,
 	MatchMismatch,
-	TokenMismatch,
-	StableUserIdMismatch,
+	CredentialMismatch,
+	PlayerSessionIdMismatch,
 	SeatNotReclaimable,
 	AlreadyClaimedByDifferentPeer,
 }
@@ -20,10 +20,28 @@ internal enum ReconnectClaimRejectReason
 internal readonly record struct ReconnectClaimRecord(
 	string MatchId,
 	int SeatIndex,
-	string ReconnectToken,
-	string StableUserId,
+	long CredentialGeneration,
+	string PlayerSessionId,
 	int ClaimedPeerId,
-	ReconnectClaimState ClaimState);
+	ReconnectClaimState ClaimState)
+{
+	public ReconnectClaimRecord(
+		string MatchId,
+		int SeatIndex,
+		string Credential,
+		string PlayerSessionId,
+		int ClaimedPeerId,
+		ReconnectClaimState ClaimState)
+		: this(
+			MatchId,
+			SeatIndex,
+			SeatCredentialRules.InitialGeneration,
+			PlayerSessionId,
+			ClaimedPeerId,
+			ClaimState)
+	{
+	}
+}
 
 internal readonly record struct ReconnectClaimResult(
 	bool Accepted,
@@ -35,14 +53,21 @@ internal readonly record struct ReconnectClaimResult(
 
 internal static class SeatControlRules
 {
-	internal static SeatControlState CreateInitialState(NetworkPlayerPublicState player, string reconnectToken)
+	internal static SeatControlState CreateInitialState(
+		NetworkPlayerPublicState player,
+		string credentialVerifier,
+		long credentialGeneration = SeatCredentialRules.InitialGeneration)
 	{
 		return new SeatControlState(
 			player.SeatIndex,
 			SeatControlMode.HumanConnected,
 			player.PeerId,
-			player.StableUserId,
-			reconnectToken);
+			player.PlayerSessionId,
+			credentialVerifier,
+			credentialGeneration,
+			string.Empty,
+			0,
+			0);
 	}
 
 	internal static ReconnectClaimRecord CreateInitialClaimRecord(string matchId, SeatControlState state)
@@ -50,8 +75,8 @@ internal static class SeatControlRules
 		return new ReconnectClaimRecord(
 			matchId,
 			state.SeatIndex,
-			state.ReconnectToken,
-			state.StableUserId,
+			state.CredentialGeneration,
+			state.PlayerSessionId,
 			0,
 			ReconnectClaimState.Unclaimed);
 	}
@@ -104,9 +129,15 @@ internal static class SeatControlRules
 		return true;
 	}
 
-	internal static SeatControlState RedactReconnectTokenForSharedSnapshot(SeatControlState current)
+	internal static SeatControlState RedactCredentialVerifiersForSharedSnapshot(SeatControlState current)
 	{
-		return current with { ReconnectToken = string.Empty };
+		return current with
+		{
+			CredentialVerifier = string.Empty,
+			PendingCredentialVerifier = string.Empty,
+			PendingCredentialGeneration = 0,
+			PendingCredentialPeerId = 0,
+		};
 	}
 
 	internal static ReconnectClaimResult ApplyReconnectClaim(
@@ -115,8 +146,31 @@ internal static class SeatControlRules
 		SeatControlState current,
 		ReconnectClaimRecord? currentClaim,
 		string requestMatchId,
-		string reconnectToken,
-		string stableUserId,
+		string credential,
+		string playerSessionId,
+		int senderPeerId)
+	{
+		return ApplyReconnectClaim(
+			activeMatchId,
+			isMatchActive,
+			current,
+			currentClaim,
+			requestMatchId,
+			current.CredentialGeneration,
+			credential,
+			playerSessionId,
+			senderPeerId);
+	}
+
+	internal static ReconnectClaimResult ApplyReconnectClaim(
+		string activeMatchId,
+		bool isMatchActive,
+		SeatControlState current,
+		ReconnectClaimRecord? currentClaim,
+		string requestMatchId,
+		long credentialGeneration,
+		string credential,
+		string playerSessionId,
 		int senderPeerId)
 	{
 		ReconnectClaimRecord claimRecord = currentClaim ?? CreateInitialClaimRecord(activeMatchId, current);
@@ -130,14 +184,25 @@ internal static class SeatControlRules
 			return Reject(current, claimRecord, ReconnectClaimRejectReason.MatchMismatch);
 		}
 
-		if (!string.Equals(current.ReconnectToken, reconnectToken, StringComparison.Ordinal))
+		if (credentialGeneration != current.CredentialGeneration
+			|| !SeatCredentialRules.Verify(credential, current.CredentialVerifier))
 		{
-			return Reject(current, claimRecord, ReconnectClaimRejectReason.TokenMismatch);
+			return Reject(current, claimRecord, ReconnectClaimRejectReason.CredentialMismatch);
 		}
 
-		if (!string.Equals(current.StableUserId, stableUserId, StringComparison.Ordinal))
+		if (!string.Equals(current.PlayerSessionId, playerSessionId, StringComparison.Ordinal))
 		{
-			return Reject(current, claimRecord, ReconnectClaimRejectReason.StableUserIdMismatch);
+			return Reject(current, claimRecord, ReconnectClaimRejectReason.PlayerSessionIdMismatch);
+		}
+		if (current.PendingCredentialGeneration > 0)
+		{
+			if (current.PeerId == senderPeerId
+				&& current.Mode == SeatControlMode.HumanReclaimPending)
+			{
+				return Accept(current, claimRecord, stateChanged: false, shouldSendSnapshot: false);
+			}
+
+			return Reject(current, claimRecord, ReconnectClaimRejectReason.AlreadyClaimedByDifferentPeer);
 		}
 
 		if (current.Mode == SeatControlMode.HumanReclaimPending)

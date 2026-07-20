@@ -23,6 +23,10 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (!AllowPeerRequest(NetworkRequestCategory.BoardAction))
+		{
+			return;
+		}
 
 		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
@@ -41,11 +45,7 @@ public partial class NetworkManager
 			if (GetTree().CurrentScene is GameBoardScene duplicateBoard
 				&& !duplicateBoard.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(
-					duplicateBoard,
-					senderPeerId,
-					actorSeatIndex,
-					duplicateBoard.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(duplicateBoard, senderPeerId, actorSeatIndex);
 			}
 
 			return;
@@ -57,11 +57,7 @@ public partial class NetworkManager
 			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat
 				&& !gameBoardForRejectedSeat.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(
-					gameBoardForRejectedSeat,
-					senderPeerId,
-					actorSeatIndex,
-					gameBoardForRejectedSeat.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(gameBoardForRejectedSeat, senderPeerId, actorSeatIndex);
 			}
 			return;
 		}
@@ -82,7 +78,7 @@ public partial class NetworkManager
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, handIndex);
 			if (!gameBoard.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(gameBoard, senderPeerId, actorSeatIndex);
 			}
 		}
 	}
@@ -97,6 +93,10 @@ public partial class NetworkManager
 		long clientActionId)
 	{
 		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+		if (!AllowPeerRequest(NetworkRequestCategory.BoardAction))
 		{
 			return;
 		}
@@ -118,11 +118,7 @@ public partial class NetworkManager
 			if (GetTree().CurrentScene is GameBoardScene duplicateBoard
 				&& !duplicateBoard.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(
-					duplicateBoard,
-					senderPeerId,
-					actorSeatIndex,
-					duplicateBoard.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(duplicateBoard, senderPeerId, actorSeatIndex);
 			}
 
 			return;
@@ -134,11 +130,7 @@ public partial class NetworkManager
 			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat
 				&& !gameBoardForRejectedSeat.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(
-					gameBoardForRejectedSeat,
-					senderPeerId,
-					actorSeatIndex,
-					gameBoardForRejectedSeat.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(gameBoardForRejectedSeat, senderPeerId, actorSeatIndex);
 			}
 			return;
 		}
@@ -159,7 +151,7 @@ public partial class NetworkManager
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, itemHandIndex);
 			if (!gameBoard.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(gameBoard, senderPeerId, actorSeatIndex);
 			}
 		}
 	}
@@ -174,6 +166,10 @@ public partial class NetworkManager
 		long clientActionId)
 	{
 		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+		if (!AllowPeerRequest(NetworkRequestCategory.BoardAction))
 		{
 			return;
 		}
@@ -195,11 +191,7 @@ public partial class NetworkManager
 			if (GetTree().CurrentScene is GameBoardScene duplicateBoard
 				&& !duplicateBoard.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(
-					duplicateBoard,
-					senderPeerId,
-					actorSeatIndex,
-					duplicateBoard.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(duplicateBoard, senderPeerId, actorSeatIndex);
 			}
 
 			return;
@@ -211,11 +203,7 @@ public partial class NetworkManager
 			if (GetTree().CurrentScene is GameBoardScene gameBoardForRejectedSeat
 				&& !gameBoardForRejectedSeat.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(
-					gameBoardForRejectedSeat,
-					senderPeerId,
-					actorSeatIndex,
-					gameBoardForRejectedSeat.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(gameBoardForRejectedSeat, senderPeerId, actorSeatIndex);
 			}
 			return;
 		}
@@ -236,9 +224,29 @@ public partial class NetworkManager
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, -1);
 			if (!gameBoard.IsNetworkGameOver())
 			{
-				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
+				SendCorrectiveBoardSnapshotIfAllowed(gameBoard, senderPeerId, actorSeatIndex);
 			}
 		}
+	}
+
+	private void SendCorrectiveBoardSnapshotIfAllowed(
+		GameBoardScene gameBoard,
+		int peerId,
+		int seatIndex)
+	{
+		double now = Time.GetTicksMsec() / 1000.0;
+		if (_lastCorrectiveSnapshotAtByPeer.TryGetValue(peerId, out double lastSentAt)
+			&& now - lastSentAt < 0.5)
+		{
+			return;
+		}
+
+		_lastCorrectiveSnapshotAtByPeer[peerId] = now;
+		SendBoardSnapshotToPeerFromHost(
+			gameBoard,
+			peerId,
+			seatIndex,
+			gameBoard.CreateNextNetworkSnapshotId());
 	}
 
 	private void SendRejectBoardAction(

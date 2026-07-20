@@ -12,12 +12,41 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (Multiplayer.MultiplayerPeer != null)
+		if (_reconnectAttemptInFlight)
 		{
+			if (_reconnectAttemptStartedAt < 0.0)
+			{
+				_reconnectAttemptStartedAt = now;
+			}
+			if (_config.Transport == NetworkTransport.Lan
+				&& _networkMigrationPlan is { } plan
+				&& NetworkMigrationRules.IsPlanVisibleToClients(plan)
+				&& now - _reconnectAttemptStartedAt >= NetworkMigrationRules.FollowerConnectionAttemptTimeoutSeconds)
+			{
+				GD.Print($"MIGRATION_ORIGINAL_HOST_RECONNECT_TIMEOUT elapsed={now - _reconnectAttemptStartedAt:0.00}");
+				Multiplayer.MultiplayerPeer?.Close();
+				Multiplayer.MultiplayerPeer = null;
+				_enetPeer = null;
+				_reconnectAttemptInFlight = false;
+				_reconnectAttemptStartedAt = -1.0;
+				StartMigrationAttemptsAfterHostDisconnect(plan);
+			}
 			return;
 		}
 
-		if (_reconnectAttemptInFlight || now < _nextReconnectAttemptAt)
+		if (Multiplayer.MultiplayerPeer is { } currentPeer)
+		{
+			if (currentPeer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Disconnected)
+			{
+				return;
+			}
+
+			Multiplayer.MultiplayerPeer = null;
+			_enetPeer = null;
+			_steamPeer = null;
+		}
+
+		if (now < _nextReconnectAttemptAt)
 		{
 			return;
 		}
@@ -27,19 +56,29 @@ public partial class NetworkManager
 
 	private void InitializeMatchSeatControlStates()
 	{
+		var previousByPlayerSessionId = _seatControlStates
+			.ToDictionary(state => state.PlayerSessionId, StringComparer.Ordinal);
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
 		ResetClientActionIds();
 		foreach (NetworkPlayerPublicState player in _players)
 		{
-			string reconnectToken = Guid.NewGuid().ToString("N");
-			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
+			SeatControlState state;
+			if (previousByPlayerSessionId.TryGetValue(player.PlayerSessionId, out SeatControlState previous))
+			{
+				state = SeatCredentialRules.CancelPendingRotation(previous) with
+				{
+					SeatIndex = player.SeatIndex,
+					Mode = SeatControlMode.HumanConnected,
+					PeerId = player.PeerId,
+				};
+			}
+			else
+			{
+				state = IssueInitialSeatCredential(player);
+			}
 			InsertSeatControlStateInSeatOrder(state);
 			_reconnectClaimsBySeat[player.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
-			if (player.IsLocal)
-			{
-				_localReconnectToken = reconnectToken;
-			}
 		}
 
 		EmitSeatControlStatesUpdated();
@@ -53,6 +92,22 @@ public partial class NetworkManager
 			return;
 		}
 
+		for (int index = _seatControlStates.Count - 1; index >= 0; index--)
+		{
+			SeatControlState state = _seatControlStates[index];
+			bool matchesRoster = _players.Any(player =>
+				player.SeatIndex == state.SeatIndex
+				&& string.Equals(player.PlayerSessionId, state.PlayerSessionId, StringComparison.Ordinal));
+			if (matchesRoster)
+			{
+				continue;
+			}
+
+			_seatControlStates.RemoveAt(index);
+			_reconnectClaimsBySeat.Remove(state.SeatIndex);
+			_issuedSeatCredentialsBySeat.Remove(state.SeatIndex);
+		}
+
 		foreach (NetworkPlayerPublicState player in _players)
 		{
 			if (TryGetSeatControlState(player.SeatIndex, out _, out _))
@@ -60,15 +115,28 @@ public partial class NetworkManager
 				continue;
 			}
 
-			string reconnectToken = Guid.NewGuid().ToString("N");
-			SeatControlState state = SeatControlRules.CreateInitialState(player, reconnectToken);
+			SeatControlState state = IssueInitialSeatCredential(player);
 			InsertSeatControlStateInSeatOrder(state);
 			_reconnectClaimsBySeat[player.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
-			if (player.IsLocal)
-			{
-				_localReconnectToken = reconnectToken;
-			}
 		}
+	}
+
+	private SeatControlState IssueInitialSeatCredential(NetworkPlayerPublicState player)
+	{
+		string credential;
+		if (player.IsLocal && !string.IsNullOrEmpty(_localSeatCredential))
+		{
+			credential = _localSeatCredential;
+		}
+		else
+		{
+			credential = SeatCredentialRules.IssueCredential();
+		}
+
+		_issuedSeatCredentialsBySeat[player.SeatIndex] = credential;
+		return SeatControlRules.CreateInitialState(
+			player,
+			SeatCredentialRules.ComputeVerifier(credential));
 	}
 
 	private void InsertSeatControlStateInSeatOrder(SeatControlState state)
@@ -83,7 +151,7 @@ public partial class NetworkManager
 		_seatControlStates.Insert(insertIndex, state);
 	}
 
-	private void EnsureSessionMigrationTokensForRoster()
+	private void EnsureSeatCredentialsForRoster()
 	{
 		if (!IsHost)
 		{
@@ -92,28 +160,25 @@ public partial class NetworkManager
 
 		foreach (NetworkPlayerPublicState player in _players)
 		{
-			EnsureSessionMigrationToken(player.SeatIndex);
+			EnsureSeatCredential(player.SeatIndex);
 		}
 
-		SendSessionMigrationTokensToConnectedPeers();
+		SendSeatCredentialsToUnacknowledgedPeers();
 	}
 
-	private void EnsureSessionMigrationToken(int seatIndex)
+	private void EnsureSeatCredential(int seatIndex)
 	{
-		if (seatIndex < 0 || _sessionMigrationTokensBySeat.ContainsKey(seatIndex))
+		if (seatIndex < 0 || TryGetSeatControlState(seatIndex, out _, out _))
 		{
 			return;
 		}
-
-		string token = Guid.NewGuid().ToString("N");
-		_sessionMigrationTokensBySeat[seatIndex] = token;
-		if (seatIndex == LocalSeatIndex || (IsHost && seatIndex == 0 && _players.Count == 0))
+		if (TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
 		{
-			_localSessionMigrationToken = token;
+			InsertSeatControlStateInSeatOrder(IssueInitialSeatCredential(_players[playerIndex]));
 		}
 	}
 
-	private void SendSessionMigrationTokensToConnectedPeers()
+	private void SendSeatCredentialsToUnacknowledgedPeers()
 	{
 		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene or NetworkSessionState.InGame))
 		{
@@ -122,34 +187,24 @@ public partial class NetworkManager
 
 		foreach (NetworkPlayerPublicState player in _players)
 		{
-			if (player.IsHost || !player.IsConnected || !_sessionMigrationTokensBySeat.TryGetValue(player.SeatIndex, out string? token))
+			if (player.IsHost
+				|| !player.IsConnected
+				|| player.CredentialsAcknowledged
+				|| !_issuedSeatCredentialsBySeat.TryGetValue(player.SeatIndex, out string? credential)
+				|| !TryGetSeatControlState(player.SeatIndex, out SeatControlState state, out _))
 			{
 				continue;
 			}
 
 			RpcId(
 				player.PeerId,
-				MethodName.RpcReceiveSessionMigrationToken,
+				MethodName.RpcReceiveSeatCredential,
 				_config.SessionId,
 				_config.MatchId,
 				GetCurrentAuthorityEpoch(),
-				player.SeatIndex,
-				token,
-				player.StableUserId);
-		}
-	}
-
-	private void ApplySessionMigrationToken(int seatIndex, string token)
-	{
-		if (seatIndex < 0 || string.IsNullOrWhiteSpace(token) || token.Length > 128)
-		{
-			return;
-		}
-
-		_sessionMigrationTokensBySeat[seatIndex] = token.Trim();
-		if (seatIndex == LocalSeatIndex)
-		{
-			_localSessionMigrationToken = token.Trim();
+				player.PlayerSessionId,
+				state.CredentialGeneration,
+				credential);
 		}
 	}
 
@@ -160,24 +215,17 @@ public partial class NetworkManager
 			return;
 		}
 
-		var previousTokensBySeat = _seatControlStates
-			.ToDictionary(state => state.SeatIndex, state => state.ReconnectToken);
+		var previousStatesBySeat = _seatControlStates
+			.ToDictionary(state => state.SeatIndex);
 		_seatControlStates.Clear();
 		// The network snapshot decoder writes states into a seat-indexed array and
 		// rejects duplicate or out-of-range seat indexes before this method runs.
 		foreach (SeatControlState state in states)
 		{
-			string reconnectToken = string.Empty;
-			if (string.Equals(state.StableUserId, GetStableUserId(), StringComparison.Ordinal))
-			{
-				reconnectToken = _localReconnectToken;
-			}
-			else if (previousTokensBySeat.TryGetValue(state.SeatIndex, out string? previousToken))
-			{
-				reconnectToken = previousToken;
-			}
-
-			_seatControlStates.Add(state with { ReconnectToken = reconnectToken });
+			string verifier = previousStatesBySeat.TryGetValue(state.SeatIndex, out SeatControlState previous)
+				? previous.CredentialVerifier
+				: string.Empty;
+			_seatControlStates.Add(state with { CredentialVerifier = verifier });
 		}
 		EmitSeatControlStatesUpdated();
 	}
@@ -204,9 +252,9 @@ public partial class NetworkManager
 		return true;
 	}
 
-	private bool TryFindSeatControlStateByToken(string reconnectToken, out SeatControlState state, out int stateIndex)
+	private bool TryFindSeatControlStateByPlayerSessionId(string playerSessionId, out SeatControlState state, out int stateIndex)
 	{
-		stateIndex = _seatControlStates.FindIndex(candidate => string.Equals(candidate.ReconnectToken, reconnectToken, StringComparison.Ordinal));
+		stateIndex = _seatControlStates.FindIndex(candidate => string.Equals(candidate.PlayerSessionId, playerSessionId, StringComparison.Ordinal));
 		if (stateIndex < 0)
 		{
 			state = default;
@@ -238,6 +286,11 @@ public partial class NetworkManager
 		}
 
 		_seatControlStates[stateIndex] = next;
+		if (next.PendingCredentialGeneration > 0)
+		{
+			_seatControlStates[stateIndex] = SeatCredentialRules.CancelPendingRotation(next);
+			_issuedSeatCredentialsBySeat.Remove(seatIndex);
+		}
 		if (updatedClaim.HasValue)
 		{
 			_reconnectClaimsBySeat[seatIndex] = updatedClaim.Value;
@@ -266,27 +319,20 @@ public partial class NetworkManager
 				continue;
 			}
 
-			if (!TryGetSeatControlState(player.SeatIndex, out SeatControlState seatControlState, out _))
+			if (!player.CredentialsAcknowledged)
 			{
-				continue;
+				SendSeatCredentialsToUnacknowledgedPeers();
+				break;
 			}
-
-			RpcId(
-				player.PeerId,
-				MethodName.RpcReceiveReconnectCredentials,
-				_config.SessionId,
-				_config.MatchId,
-				GetCurrentAuthorityEpoch(),
-				seatControlState.SeatIndex,
-				seatControlState.ReconnectToken,
-				seatControlState.StableUserId);
 		}
 	}
 
 	private bool CanAttemptReconnectClaim()
 	{
 		return !string.IsNullOrWhiteSpace(_config.MatchId)
-			&& !string.IsNullOrWhiteSpace(_localReconnectToken)
+			&& !string.IsNullOrWhiteSpace(_localPlayerSessionId)
+			&& SeatCredentialRules.IsCredentialEncodingValid(_localSeatCredential)
+			&& _localSeatCredentialGeneration >= SeatCredentialRules.InitialGeneration
 			&& (!string.IsNullOrWhiteSpace(_lastLanJoinAddress) || _steamLobbyId != 0);
 	}
 
@@ -301,6 +347,7 @@ public partial class NetworkManager
 		_enetPeer = null;
 		_steamPeer = null;
 		_reconnectAttemptInFlight = false;
+		_reconnectAttemptStartedAt = -1.0;
 		_nextReconnectAttemptAt = 0.0;
 		MarkLocalPlayerConnection(isConnected: false);
 		SetState(NetworkSessionState.Reconnecting);
@@ -317,6 +364,7 @@ public partial class NetworkManager
 		_enetPeer = null;
 		_steamPeer = null;
 		_reconnectAttemptInFlight = false;
+		_reconnectAttemptStartedAt = -1.0;
 		_nextReconnectAttemptAt = Time.GetTicksMsec() / 1000.0 + ReconnectRetrySeconds;
 	}
 
@@ -340,6 +388,7 @@ public partial class NetworkManager
 			}
 
 			_reconnectAttemptInFlight = true;
+			_reconnectAttemptStartedAt = now;
 			Multiplayer.MultiplayerPeer = _enetPeer;
 			return;
 		}
@@ -353,6 +402,7 @@ public partial class NetworkManager
 			}
 
 			_reconnectAttemptInFlight = true;
+			_reconnectAttemptStartedAt = now;
 			StartSteamLobbyJoin(_steamLobbyId);
 			return;
 		}
@@ -466,6 +516,7 @@ public partial class NetworkManager
 		}
 
 		_reconnectAttemptInFlight = false;
+		_reconnectAttemptStartedAt = -1.0;
 		_nextReconnectAttemptAt = 0.0;
 		if (_state == NetworkSessionState.MigratingHost && IsMigrationReadinessFenceActive())
 		{

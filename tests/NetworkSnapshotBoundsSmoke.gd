@@ -35,8 +35,8 @@ func _run() -> void:
 			"seat_index": seat_index,
 			"mode": "HumanConnected",
 			"peer_id": 0,
-			"stable_user_id": "",
-			"reconnect_token": "",
+			"player_session_id": "",
+			"credential_generation": 1,
 		})
 	valid_snapshot["seat_control_states"] = seat_states
 	if bool(board.call("DebugRejectsNetworkSnapshotPayload", valid_snapshot)):

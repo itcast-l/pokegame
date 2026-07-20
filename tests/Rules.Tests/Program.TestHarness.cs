@@ -110,7 +110,10 @@ internal static partial class Program
 			isHost,
 			IsLocal: peerId == 1,
 			isReady,
-			IsConnected: true);
+			IsConnected: true)
+		{
+			CredentialsAcknowledged = true,
+		};
 	}
 
 	private static string ReadTresString(string tresText, string propertyName)

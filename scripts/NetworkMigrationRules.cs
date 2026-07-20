@@ -11,6 +11,7 @@ public readonly record struct NetworkMigrationRetryWindow(
 public static class NetworkMigrationRules
 {
 	public const double StandbyCheckpointAckTimeoutSeconds = 1.0;
+	public const double StandbyCheckpointMinimumSendIntervalSeconds = 0.5;
 	public const int ConsecutiveUnackedCheckpointsBeforeSwitch = 2;
 	public const double CandidateStartDelaySeconds = 0.25;
 	public const double CandidateRetryIntervalSeconds = 0.25;
@@ -24,6 +25,7 @@ public static class NetworkMigrationRules
 	public const int LanPeerTimeoutMaximumMilliseconds = 2500;
 	public const double ActiveMigrationConfirmationTimeoutSeconds = 2.0;
 	public const double ActiveLeaveConfirmationTimeoutSeconds = 2.0;
+	public const double LobbyRecoveryTimeoutSeconds = 10.0;
 
 	public static readonly NetworkMigrationRetryWindow CandidateRetryWindow = new(
 		CandidateStartDelaySeconds,
@@ -58,6 +60,7 @@ public static class NetworkMigrationRules
 			.ToHashSet();
 		return roster
 			.Where(entry => entry.IsConnected
+				&& entry.CredentialsAcknowledged
 				&& entry.SeatIndex != hostSeat
 				&& !excluded.Contains(entry.SeatIndex)
 				&& humanSeats.Contains(entry.SeatIndex))
@@ -74,6 +77,18 @@ public static class NetworkMigrationRules
 			|| consecutiveUnackedCheckpoints >= ConsecutiveUnackedCheckpointsBeforeSwitch;
 	}
 
+	public static bool CanSendStandbyCheckpoint(
+		double now,
+		double lastSentAt,
+		bool hasPendingCheckpoint)
+	{
+		return double.IsFinite(now)
+			&& now >= 0.0
+			&& !hasPendingCheckpoint
+			&& (lastSentAt < 0.0
+				|| now - lastSentAt >= StandbyCheckpointMinimumSendIntervalSeconds);
+	}
+
 	public static bool IsPlanVisibleToClients(NetworkMigrationPlan plan)
 	{
 		return plan is not null
@@ -85,7 +100,7 @@ public static class NetworkMigrationRules
 			&& plan.CheckpointId >= 0
 			&& plan.CheckpointHash.Length == 64
 			&& plan.CandidateSeat >= 0
-			&& !string.IsNullOrWhiteSpace(plan.CandidateStableUserId)
+			&& !string.IsNullOrWhiteSpace(plan.CandidatePlayerSessionId)
 			&& !string.IsNullOrWhiteSpace(plan.ObservedHostAddress)
 			&& IsValidHostAddress(plan.ObservedHostAddress)
 			&& !string.IsNullOrWhiteSpace(plan.CandidateHostAddress)
@@ -96,7 +111,7 @@ public static class NetworkMigrationRules
 
 	public static bool CanCandidateStart(
 		NetworkMigrationPlan plan,
-		string localStableUserId,
+		string localPlayerSessionId,
 		NetworkSessionState currentState,
 		bool hasCheckpoint,
 		bool isSourceHost)
@@ -105,12 +120,12 @@ public static class NetworkMigrationRules
 			&& currentState == NetworkSessionState.MigratingHost
 			&& hasCheckpoint
 			&& IsPlanVisibleToClients(plan)
-			&& string.Equals(plan.CandidateStableUserId, localStableUserId, StringComparison.Ordinal);
+			&& string.Equals(plan.CandidatePlayerSessionId, localPlayerSessionId, StringComparison.Ordinal);
 	}
 
 	public static bool ShouldFollowerConnect(
 		NetworkMigrationPlan plan,
-		string localStableUserId,
+		string localPlayerSessionId,
 		NetworkSessionState currentState,
 		bool isCandidate,
 		bool elapsedTimeout)
@@ -119,7 +134,7 @@ public static class NetworkMigrationRules
 			&& !elapsedTimeout
 			&& currentState == NetworkSessionState.MigratingHost
 			&& IsPlanVisibleToClients(plan)
-			&& !string.Equals(plan.CandidateStableUserId, localStableUserId, StringComparison.Ordinal);
+			&& !string.Equals(plan.CandidatePlayerSessionId, localPlayerSessionId, StringComparison.Ordinal);
 	}
 
 	public static bool ShouldFailMigration(

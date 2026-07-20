@@ -52,6 +52,7 @@ internal static class MultiplayerRematchRules
 		return players
 			.Where(player => player.IsConnected)
 			.OrderBy(player => player.SeatIndex)
+			.Select((player, seatIndex) => player with { SeatIndex = seatIndex })
 			.ToList();
 	}
 
@@ -77,7 +78,7 @@ internal static class MultiplayerRematchRules
 					|| player.PeerId <= 0
 					|| player.SeatIndex < 0
 					|| player.SeatIndex >= returnedLobbyConfig.PlayerCount
-					|| string.IsNullOrWhiteSpace(player.StableUserId)))
+					|| string.IsNullOrWhiteSpace(player.PlayerSessionId)))
 		{
 			return false;
 		}

@@ -580,64 +580,78 @@ internal static partial class Program
 			SeatControlMode.HumanConnected,
 			currentPeerId: 22,
 			requestPeerId: 33,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-1",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-1"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-1",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-1"));
 
 		True(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
 			SeatControlMode.HumanConnected,
 			currentPeerId: 22,
 			requestPeerId: 22,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-1",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-1"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-1",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-1"));
 
 		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
 			SeatControlMode.AiProxyReclaimable,
 			currentPeerId: 0,
 			requestPeerId: 33,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-1",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-1"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-1",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-1"));
 
 		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
 			SeatControlMode.HumanConnected,
 			currentPeerId: 22,
 			requestPeerId: 33,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-2",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-1"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-2",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-1"));
 
 		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
 			SeatControlMode.HumanConnected,
 			currentPeerId: 22,
 			requestPeerId: 33,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-1",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-2"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-1",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-2"));
 
 		True(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
 			SeatControlMode.HumanReclaimPending,
 			currentPeerId: 44,
 			requestPeerId: 55,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-1",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-1"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-1",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-1"));
 
 		False(NetworkReconnectRules.ShouldDeferReconnectClaimWhileSeatStillConnected(
 			SeatControlMode.HumanReclaimPending,
 			currentPeerId: 44,
 			requestPeerId: 44,
-			currentReconnectToken: "token-1",
-			requestReconnectToken: "token-1",
-			currentStableUserId: "stable-1",
-			requestStableUserId: "stable-1"));
+			currentCredentialGeneration: 1,
+			requestCredentialGeneration: 1,
+			currentCredentialVerifier: SeatCredentialRules.ComputeVerifier("token-1"),
+			requestCredential: "token-1",
+			currentPlayerSessionId: "stable-1",
+			requestPlayerSessionId: "stable-1"));
 	}
 
 	private static void NetworkReconnectRulesScopeRealtimeBoardEventsToActiveInGameClients()
@@ -894,27 +908,27 @@ internal static partial class Program
 	{
 		True(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
 			NetworkSessionState.Reconnecting,
-			originalHostStableUserId: "steam:123",
+			originalLobbyOwnerSteamId: 123,
 			currentLobbyOwnerSteamId: 456));
 
 		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
 			NetworkSessionState.Joining,
-			originalHostStableUserId: "steam:123",
+			originalLobbyOwnerSteamId: 123,
 			currentLobbyOwnerSteamId: 456));
 
 		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
 			NetworkSessionState.Reconnecting,
-			originalHostStableUserId: "steam:123",
+			originalLobbyOwnerSteamId: 123,
 			currentLobbyOwnerSteamId: 123));
 
 		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
 			NetworkSessionState.Reconnecting,
-			originalHostStableUserId: "peer:abc",
+			originalLobbyOwnerSteamId: 0,
 			currentLobbyOwnerSteamId: 456));
 
 		False(NetworkReconnectRules.ShouldAbortSteamReconnectForLobbyOwnerChange(
 			NetworkSessionState.Reconnecting,
-			originalHostStableUserId: "steam:123",
+			originalLobbyOwnerSteamId: 123,
 			currentLobbyOwnerSteamId: 0));
 	}
 
@@ -1350,14 +1364,14 @@ internal static partial class Program
 
 		True(recoveryText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(recoveryText.Contains("private void RpcReconnectPlayer(", StringComparison.Ordinal));
-		True(recoveryText.Contains("private void RpcReceiveReconnectCredentials(", StringComparison.Ordinal));
-		True(recoveryText.Contains("private void RpcReceiveSessionMigrationToken(", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcReceiveSeatCredential(", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcSeatCredentialAck(", StringComparison.Ordinal));
 		True(recoveryText.Contains("private void RpcReconnectResult(", StringComparison.Ordinal));
 		True(recoveryText.Contains("private void RpcHostEndedMatch(", StringComparison.Ordinal));
 		False(mainText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
 		False(mainText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
 		False(mainText.Contains("private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
-		False(mainText.Contains("private void RpcReconnectPlayer(string matchId, string reconnectToken, string stableUserId)", StringComparison.Ordinal));
+		False(mainText.Contains("private void RpcReconnectPlayer(string matchId, string reconnectToken, string playerSessionId)", StringComparison.Ordinal));
 		False(mainText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
 	}
 
@@ -1789,8 +1803,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.HumanConnected,
 			PeerId: 20,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
 
 		True(SeatControlRules.TryMarkDisconnected(state, 20, out SeatControlState next, out ReconnectClaimRecord? updatedClaim, claim));
@@ -1808,8 +1822,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.HumanReclaimPending,
 			PeerId: 33,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claim = new(
 			"match-1",
 			1,
@@ -1833,8 +1847,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.AiProxyReclaimable,
 			PeerId: 0,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
 
 		ReconnectClaimResult first = SeatControlRules.ApplyReconnectClaim(
@@ -1873,8 +1887,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.HumanReclaimPending,
 			PeerId: 33,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claim = new(
 			"match-1",
 			1,
@@ -1902,8 +1916,8 @@ internal static partial class Program
 			SeatIndex: 2,
 			Mode: SeatControlMode.HumanReclaimPending,
 			PeerId: 55,
-			StableUserId: "stable-55",
-			ReconnectToken: "token-2");
+			PlayerSessionId: "stable-55",
+			Credential: "token-2");
 
 		True(SeatControlRules.TryPromoteAtTurnStart(state, 2, out SeatControlState next));
 		Equal(SeatControlMode.HumanConnected, next.Mode);
@@ -1917,8 +1931,8 @@ internal static partial class Program
 			SeatIndex: 2,
 			Mode: SeatControlMode.HumanReclaimPending,
 			PeerId: 55,
-			StableUserId: "stable-55",
-			ReconnectToken: "token-2");
+			PlayerSessionId: "stable-55",
+			Credential: "token-2");
 
 		False(SeatControlRules.TryPromoteAtTurnStart(state, 1, out SeatControlState next));
 		Equal(state, next);
@@ -1930,8 +1944,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.HumanReclaimPending,
 			PeerId: 33,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claimed = new(
 			"match-1",
 			1,
@@ -1971,8 +1985,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.AiProxyReclaimable,
 			PeerId: 0,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
 
 		ReconnectClaimResult wrongMatch = SeatControlRules.ApplyReconnectClaim(
@@ -1997,7 +2011,7 @@ internal static partial class Program
 			"stable-20",
 			senderPeerId: 33);
 		False(wrongToken.Accepted);
-		Equal(ReconnectClaimRejectReason.TokenMismatch, wrongToken.RejectReason);
+		Equal(ReconnectClaimRejectReason.CredentialMismatch, wrongToken.RejectReason);
 
 		ReconnectClaimResult wrongUser = SeatControlRules.ApplyReconnectClaim(
 			"match-1",
@@ -2009,7 +2023,7 @@ internal static partial class Program
 			"other",
 			senderPeerId: 33);
 		False(wrongUser.Accepted);
-		Equal(ReconnectClaimRejectReason.StableUserIdMismatch, wrongUser.RejectReason);
+		Equal(ReconnectClaimRejectReason.PlayerSessionIdMismatch, wrongUser.RejectReason);
 	}
 
 	private static void SeatControlRejectsReconnectClaimAfterMatchEnd()
@@ -2018,8 +2032,8 @@ internal static partial class Program
 			SeatIndex: 1,
 			Mode: SeatControlMode.AiProxyReclaimable,
 			PeerId: 0,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 		ReconnectClaimRecord claim = SeatControlRules.CreateInitialClaimRecord("match-1", state);
 
 		ReconnectClaimResult result = SeatControlRules.ApplyReconnectClaim(
@@ -2035,22 +2049,22 @@ internal static partial class Program
 		Equal(ReconnectClaimRejectReason.MatchEnded, result.RejectReason);
 	}
 
-	private static void SeatControlSharedSnapshotRedactsReconnectToken()
+	private static void SeatControlSharedSnapshotRedactsCredentialVerifier()
 	{
 		SeatControlState state = new(
 			SeatIndex: 1,
 			Mode: SeatControlMode.HumanReclaimPending,
 			PeerId: 33,
-			StableUserId: "stable-20",
-			ReconnectToken: "token-1");
+			PlayerSessionId: "stable-20",
+			Credential: "token-1");
 
-		SeatControlState shared = SeatControlRules.RedactReconnectTokenForSharedSnapshot(state);
+		SeatControlState shared = SeatControlRules.RedactCredentialVerifiersForSharedSnapshot(state);
 
 		Equal(state.SeatIndex, shared.SeatIndex);
 		Equal(state.Mode, shared.Mode);
 		Equal(state.PeerId, shared.PeerId);
-		Equal(state.StableUserId, shared.StableUserId);
-		Equal(string.Empty, shared.ReconnectToken);
+		Equal(state.PlayerSessionId, shared.PlayerSessionId);
+		Equal(string.Empty, shared.CredentialVerifier);
 	}
 
 	private static void AssertRejected(
