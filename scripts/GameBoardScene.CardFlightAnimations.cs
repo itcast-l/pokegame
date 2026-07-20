@@ -48,7 +48,7 @@ public partial class GameBoardScene
 		TextureRect? attachmentOverlay = null;
 		Texture2D? attachmentOverlayTexture = GetCardAttachmentOverlayTexture(playedCard);
 		bool startShowsAttachmentOverlay = attachmentOverlayTexture != null
-			&& (isLocalHandPlayer || playerIndex == _revealedPlayerHandIndex || _cardBackTexture == null);
+			&& (isLocalHandPlayer || _cardBackTexture == null);
 		if (startShowsAttachmentOverlay)
 		{
 			attachmentOverlay = _animationPresenter.RentTextureRect(
@@ -203,7 +203,7 @@ public partial class GameBoardScene
 
 	private Texture2D? GetVisibleHandCardTexture(int playerIndex, PlayingCard playedCard)
 	{
-		if (!IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
+		if (!IsLocalHandPlayer(playerIndex) && _cardBackTexture != null)
 		{
 			return _cardBackTexture;
 		}
@@ -213,7 +213,7 @@ public partial class GameBoardScene
 
 	private Texture2D? GetVisibleHandItemCardTexture(int playerIndex, ItemCard itemCard)
 	{
-		if (!IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null)
+		if (!IsLocalHandPlayer(playerIndex) && _cardBackTexture != null)
 		{
 			return _cardBackTexture;
 		}

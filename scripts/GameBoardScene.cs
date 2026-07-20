@@ -267,11 +267,6 @@ public partial class GameBoardScene : Control
 		get => _state.AdventureEnemyNextCaptureDamageDelta;
 		set => _state.AdventureEnemyNextCaptureDamageDelta = value;
 	}
-	private int _revealedPlayerHandIndex
-	{
-		get => _state.RevealedPlayerHandIndex;
-		set => _state.RevealedPlayerHandIndex = value;
-	}
 	private PendingItemSelectionMode _pendingItemSelectionMode
 	{
 		get => _state.PendingItemSelectionMode;
@@ -378,6 +373,11 @@ public partial class GameBoardScene : Control
 			get => _state.WinnerPlayerIndex;
 			set => _state.WinnerPlayerIndex = value;
 		}
+		private MatchOutcomeKind _matchOutcomeKind
+		{
+			get => _state.MatchOutcomeKind;
+			set => _state.MatchOutcomeKind = value;
+		}
 
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
@@ -407,7 +407,7 @@ public partial class GameBoardScene : Control
 		ApplySavedLanguagePreference();
 		_rng.Randomize();
 		_animationPresenter = new GameBoardAnimationPresenter();
-		_itemCardCatalog = ItemCardCatalog.Load(this);
+		_itemCardCatalog = ItemCardCatalog.LoadRequired(this);
 		_effectResolver = new SpecialCardEffectResolver(this);
 		_itemPlayPresentationHandlers = CreateItemPlayPresentationHandlers();
 		_itemPlayPresentationValidators = CreateItemPlayPresentationValidators();
@@ -488,6 +488,11 @@ public partial class GameBoardScene : Control
 
 	private void InitializeBoard(bool playOpeningIntroAnimation)
 	{
+		_ = InitializeBoardAsync(playOpeningIntroAnimation);
+	}
+
+	private async Task InitializeBoardAsync(bool playOpeningIntroAnimation)
+	{
 		if (_networkBoardInitialized)
 		{
 			return;
@@ -495,7 +500,11 @@ public partial class GameBoardScene : Control
 
 		_networkBoardInitialized = true;
 		ApplyMatchSeed();
-		InitializeAdventureUpgradeRunForCurrentBoard();
+		if (!await InitializeAdventureUpgradeRunForCurrentBoardAsync()
+			|| !await PrepareAdventureBattleForDealAsync())
+		{
+			return;
+		}
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true, playOpeningIntroAnimation: playOpeningIntroAnimation);
 	}

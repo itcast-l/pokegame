@@ -45,7 +45,7 @@ internal static class ItemCardManifestValidationRules
 
 	internal static ItemCardManifestValidationResult ValidatePandoraEntries(
 		IEnumerable<ItemCardPandoraManifestEntry>? entries,
-		IEnumerable<string>? fallbackIds)
+		IEnumerable<string>? visualIds)
 	{
 		if (entries == null)
 		{
@@ -82,18 +82,13 @@ internal static class ItemCardManifestValidationRules
 			}
 		}
 
-		var expectedIds = new HashSet<string>(fallbackIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		var expectedIds = new HashSet<string>(visualIds ?? Array.Empty<string>(), StringComparer.Ordinal);
 		if (!ids.SetEquals(expectedIds))
 		{
 			return ItemCardManifestValidationResult.Invalid(
-				$"Pandora/fallback item ID set differs: Pandora={ids.Count}, fallback={expectedIds.Count}.");
+				$"Pandora/visual item ID set differs: Pandora={ids.Count}, visual={expectedIds.Count}.");
 		}
 
 		return ItemCardManifestValidationResult.Valid;
-	}
-
-	internal static bool ShouldUseFallback(bool pandoraIsLoaded)
-	{
-		return !pandoraIsLoaded;
 	}
 }

@@ -139,8 +139,8 @@ public partial class GameBoardScene
 
 		if (_winnerLabel != null && GodotObject.IsInstanceValid(_winnerLabel) && _winnerPlayerIndex >= 0)
 		{
-			_winnerLabel.Text = !string.IsNullOrEmpty(_adventureVictoryStatusLocalizationKey)
-				? Localize(_adventureVictoryStatusLocalizationKey)
+			_winnerLabel.Text = !string.IsNullOrEmpty(_adventureSaveStatusLocalizationKey)
+				? Localize(_adventureSaveStatusLocalizationKey)
 				: _showingDefeatResult
 					? Localize("GAME_DEFEAT")
 					: GetWinnerText(_winnerPlayerIndex);
@@ -181,15 +181,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (_pendingItemSelectionMode == PendingItemSelectionMode.TargetPlayer)
-		{
-			ShowTargetPlayerSelection();
-		}
-		else if (_pendingItemSelectionMode == PendingItemSelectionMode.TargetHandCard)
-		{
-			ShowTargetHandSelection(_revealedPlayerHandIndex);
-		}
-		else if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
+		if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
 		{
 			ShowHandLimitDiscardSelection();
 		}

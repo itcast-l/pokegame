@@ -15,9 +15,8 @@ public enum AuthorityActionKind
 
 public enum AuthorityActionPhase
 {
+	Prepared,
 	Applying,
-	WaitingTargetPlayer,
-	WaitingTargetHand,
 	WaitingDiscard,
 	WaitingAttachment,
 	Finalizing,
@@ -167,20 +166,17 @@ public sealed record AuthorityActionState
 	[JsonPropertyOrder(28)]
 	public bool AttachmentMutationApplied { get; init; }
 
-	// A targeted item can open a nested hand-limit discard before its target
-	// mutation completes. Keep that target across the nested selection so a
-	// restored transaction can resume the resolver without replaying the item.
-	[JsonPropertyName("deferred_target_seat")]
+	[JsonPropertyName("selection_index")]
 	[JsonPropertyOrder(29)]
-	public int DeferredTargetSeat { get; init; } = -1;
+	public int SelectionIndex { get; init; } = -1;
 
-	[JsonPropertyName("deferred_target_hand_index")]
+	[JsonPropertyName("base_card_code")]
 	[JsonPropertyOrder(30)]
-	public int DeferredTargetHandIndex { get; init; } = -1;
+	public string BaseCardCode { get; init; } = string.Empty;
 
-	[JsonPropertyName("deferred_target_phase")]
+	[JsonPropertyName("rng_state_before_action")]
 	[JsonPropertyOrder(31)]
-	public AuthorityActionPhase DeferredTargetPhase { get; init; } = AuthorityActionPhase.Applying;
+	public string RngStateBeforeAction { get; init; } = string.Empty;
 
 	[JsonIgnore]
 	public bool IsActive => Kind != AuthorityActionKind.None && ActionId > 0;
@@ -194,14 +190,12 @@ public sealed record AuthorityActionState
 
 	public AuthorityActionState WithSelection(
 		AuthorityActionPhase phase,
-		int targetSeat,
-		int targetHandIndex = -1)
+		int selectionIndex = -1)
 	{
 		return this with
 		{
 			Phase = phase,
-			TargetSeat = targetSeat,
-			TargetHandIndex = targetHandIndex,
+			SelectionIndex = selectionIndex,
 		};
 	}
 
@@ -235,16 +229,6 @@ public sealed record AuthorityActionState
 
 public static class AuthorityActionStateRules
 {
-	private static readonly AuthorityActionPhase[] OrderedPhases =
-	{
-		AuthorityActionPhase.Applying,
-		AuthorityActionPhase.WaitingTargetPlayer,
-		AuthorityActionPhase.WaitingTargetHand,
-		AuthorityActionPhase.WaitingDiscard,
-		AuthorityActionPhase.WaitingAttachment,
-		AuthorityActionPhase.Finalizing,
-	};
-
 	public static bool IsKnownKind(AuthorityActionKind kind)
 	{
 		return Enum.IsDefined(kind) && kind != AuthorityActionKind.None;
@@ -270,7 +254,9 @@ public static class AuthorityActionStateRules
 		if (state.RemainingAttachmentRewardQueue is null
 			|| state.RemainingAttachmentRewardQueueSeats is null
 			|| state.ItemOrRewardId is null
-			|| state.PendingRewardItemId is null)
+			|| state.PendingRewardItemId is null
+			|| state.BaseCardCode is null
+			|| state.RngStateBeforeAction is null)
 		{
 			return false;
 		}
@@ -286,7 +272,7 @@ public static class AuthorityActionStateRules
 					&& state.TargetSeat == -1
 					&& state.TargetHandIndex == -1
 					&& string.IsNullOrEmpty(state.ItemOrRewardId)
-					&& state.Phase == AuthorityActionPhase.Applying
+					&& state.Phase == AuthorityActionPhase.Prepared
 					&& !state.ReserveReplacement
 					&& !state.Played
 					&& !state.Captured
@@ -305,9 +291,9 @@ public static class AuthorityActionStateRules
 					&& !state.QuestionRewardMutationApplied
 					&& !state.DiscardMutationApplied
 					&& !state.AttachmentMutationApplied
-					&& state.DeferredTargetSeat == -1
-					&& state.DeferredTargetHandIndex == -1
-					&& state.DeferredTargetPhase == AuthorityActionPhase.Applying;
+					&& state.SelectionIndex == -1
+					&& string.IsNullOrEmpty(state.BaseCardCode)
+					&& string.IsNullOrEmpty(state.RngStateBeforeAction);
 		}
 
 		if (!IsKnownKind(state.Kind)
@@ -321,9 +307,10 @@ public static class AuthorityActionStateRules
 			|| state.ItemHandIndex < -1
 			|| state.TargetSeat < -1
 			|| state.TargetHandIndex < -1
-			|| state.DeferredTargetSeat < -1
-			|| state.DeferredTargetHandIndex < -1
+			|| state.SelectionIndex < -1
 			|| state.ItemOrRewardId.Length > 128
+			|| state.BaseCardCode.Length > 32
+			|| state.RngStateBeforeAction.Length > 32
 			|| state.RemainingAttachmentRewardQueue.Length > 64
 			|| state.RemainingAttachmentRewardQueueSeats.Length > 64
 			|| !Enum.IsDefined(state.ContinuationStep)
@@ -335,18 +322,7 @@ public static class AuthorityActionStateRules
 			|| (state.DeckCollected && !state.Captured)
 			|| (state.TransferMutationApplied && !state.PrimaryMutationApplied)
 			|| (state.QuestionRewardMutationApplied && state.Kind != AuthorityActionKind.QuestionReward)
-			|| (state.TurnAdvanceApplied && state.Phase != AuthorityActionPhase.Finalizing)
-			|| (state.DeferredTargetSeat == -1
-				&& (state.DeferredTargetHandIndex != -1
-					|| state.DeferredTargetPhase != AuthorityActionPhase.Applying))
-			|| (state.DeferredTargetSeat >= playerCount)
-			|| (state.DeferredTargetSeat >= 0
-				&& (state.Kind != AuthorityActionKind.CardTransfer
-					|| state.Phase != AuthorityActionPhase.WaitingDiscard
-					|| state.DeferredTargetPhase is not (AuthorityActionPhase.WaitingTargetPlayer or AuthorityActionPhase.WaitingTargetHand)
-					|| (state.DeferredTargetPhase == AuthorityActionPhase.WaitingTargetPlayer
-						? state.DeferredTargetHandIndex != -1
-						: state.DeferredTargetHandIndex < -1))))
+			|| (state.TurnAdvanceApplied && state.Phase != AuthorityActionPhase.Finalizing))
 		{
 			return false;
 		}
@@ -384,35 +360,33 @@ public static class AuthorityActionStateRules
 			return false;
 		}
 
-		if (state.Phase is AuthorityActionPhase.WaitingTargetPlayer or AuthorityActionPhase.WaitingTargetHand)
-		{
-			if (state.Kind != AuthorityActionKind.CardTransfer
-				|| string.IsNullOrWhiteSpace(state.ItemOrRewardId)
-				|| (state.Phase == AuthorityActionPhase.WaitingTargetPlayer
-					? state.TargetHandIndex != -1
-					: state.TargetSeat < 0)
-				|| state.TargetSeat < -1
-				|| (state.Phase == AuthorityActionPhase.WaitingTargetHand
-					&& state.TargetHandIndex < -1)
-				|| state.ContinuationStep != AuthorityActionContinuationStep.CardTransfer)
-			{
-				return false;
-			}
-		}
-
 		if (state.Phase == AuthorityActionPhase.WaitingDiscard
 			&& (state.Kind is not (AuthorityActionKind.QuestionReward or AuthorityActionKind.CardTransfer)
-				|| state.TargetSeat < 0
-				|| state.TargetHandIndex < -1
 				|| state.ContinuationStep is not (AuthorityActionContinuationStep.QuestionRewardDelivery or AuthorityActionContinuationStep.CardTransfer)))
+		{
+			return false;
+		}
+
+		if (state.Phase == AuthorityActionPhase.Prepared
+			&& (state.Played
+				|| state.Captured
+				|| state.CompletesTurn
+				|| state.DeckCollected
+				|| state.PrimaryMutationApplied
+				|| state.TransferMutationApplied
+				|| state.QuestionRewardMutationApplied
+				|| state.DiscardMutationApplied
+				|| state.AttachmentMutationApplied
+				|| state.TurnAdvanceApplied
+				|| state.ContinuationStep != AuthorityActionContinuationStep.PrimaryMutation
+				|| string.IsNullOrWhiteSpace(state.RngStateBeforeAction)
+				|| !ulong.TryParse(state.RngStateBeforeAction, out _)))
 		{
 			return false;
 		}
 
 		if (state.Phase == AuthorityActionPhase.WaitingAttachment
 			&& (state.Kind is not (AuthorityActionKind.QuestionReward or AuthorityActionKind.BaseCard or AuthorityActionKind.ItemCard)
-				|| state.TargetSeat < 0
-				|| state.TargetHandIndex < -1
 				|| string.IsNullOrWhiteSpace(state.PendingRewardItemId)
 				|| state.ContinuationStep != AuthorityActionContinuationStep.AttachmentQueue))
 		{
@@ -421,16 +395,24 @@ public static class AuthorityActionStateRules
 
 		if (state.Phase is AuthorityActionPhase.Applying or AuthorityActionPhase.Finalizing)
 		{
-			if (state.TargetSeat != -1 || state.TargetHandIndex != -1)
+			if (state.Kind != AuthorityActionKind.CardTransfer
+				&& (state.TargetSeat != -1 || state.TargetHandIndex != -1))
 			{
 				return false;
 			}
+		}
+		if (state.Phase is not (AuthorityActionPhase.WaitingDiscard or AuthorityActionPhase.WaitingAttachment)
+			&& state.SelectionIndex != -1)
+		{
+			return false;
 		}
 
 		if (state.Kind == AuthorityActionKind.BaseCard
 			&& (state.BaseHandIndex < 0
 				|| state.ItemHandIndex != -1
-				|| !string.IsNullOrEmpty(state.ItemOrRewardId)))
+				|| !string.IsNullOrEmpty(state.ItemOrRewardId)
+				|| (state.Phase == AuthorityActionPhase.Prepared
+					&& string.IsNullOrWhiteSpace(state.BaseCardCode))))
 		{
 			return false;
 		}
@@ -439,6 +421,11 @@ public static class AuthorityActionStateRules
 			&& (state.BaseHandIndex != -1
 				|| state.ItemHandIndex < 0
 				|| string.IsNullOrWhiteSpace(state.ItemOrRewardId)))
+		{
+			return false;
+		}
+		if (state.Kind == AuthorityActionKind.CardTransfer
+			&& (state.TargetSeat < 0 || state.TargetSeat == state.ActorSeat))
 		{
 			return false;
 		}
@@ -457,6 +444,16 @@ public static class AuthorityActionStateRules
 		}
 
 		return true;
+	}
+
+	public static bool IsStableCheckpointState(AuthorityActionState state)
+	{
+		ArgumentNullException.ThrowIfNull(state);
+		return !state.IsActive
+			|| state.Phase is AuthorityActionPhase.Prepared
+				or AuthorityActionPhase.WaitingDiscard
+				or AuthorityActionPhase.WaitingAttachment
+				or AuthorityActionPhase.Finalizing;
 	}
 
 	public static bool IsMutationApplied(
@@ -510,26 +507,18 @@ public static class AuthorityActionStateRules
 			return state;
 		}
 
-		bool resumesDeferredTarget = state.Kind == AuthorityActionKind.CardTransfer
-			&& state.DeferredTargetSeat >= 0;
 		AuthorityActionState marked = MarkMutationApplied(
 			state,
 			AuthorityActionMutationKind.Discard);
 		return marked with
 		{
-			Phase = resumesDeferredTarget
-				? state.DeferredTargetPhase
-				: state.Kind is AuthorityActionKind.QuestionReward or AuthorityActionKind.CardTransfer
+			Phase = state.Kind is AuthorityActionKind.QuestionReward or AuthorityActionKind.CardTransfer
 					? AuthorityActionPhase.Applying
 					: AuthorityActionPhase.Finalizing,
 			ContinuationStep = state.Kind == AuthorityActionKind.CardTransfer
 				? AuthorityActionContinuationStep.CardTransfer
 				: AuthorityActionContinuationStep.QuestionRewardDelivery,
-			TargetSeat = resumesDeferredTarget ? state.DeferredTargetSeat : -1,
-			TargetHandIndex = resumesDeferredTarget ? state.DeferredTargetHandIndex : -1,
-			DeferredTargetSeat = -1,
-			DeferredTargetHandIndex = -1,
-			DeferredTargetPhase = AuthorityActionPhase.Applying,
+			SelectionIndex = -1,
 		};
 	}
 
@@ -547,22 +536,22 @@ public static class AuthorityActionStateRules
 			return false;
 		}
 
-		int currentIndex = Array.IndexOf(OrderedPhases, current);
-		int nextIndex = Array.IndexOf(OrderedPhases, next);
-		if (nextIndex == currentIndex || nextIndex == currentIndex + 1)
+		if (current == next)
 		{
 			return true;
 		}
 
-		// A single action can require more than one independent user choice.
-		// These transitions are still monotonic and are the only legal branches.
 		return (current, next) switch
 		{
-			(AuthorityActionPhase.WaitingTargetPlayer, AuthorityActionPhase.WaitingDiscard) => true,
-			(AuthorityActionPhase.WaitingTargetHand, AuthorityActionPhase.WaitingDiscard) => true,
+			(AuthorityActionPhase.Prepared, AuthorityActionPhase.Applying) => true,
+			(AuthorityActionPhase.Applying, AuthorityActionPhase.WaitingDiscard) => true,
+			(AuthorityActionPhase.Applying, AuthorityActionPhase.WaitingAttachment) => true,
+			(AuthorityActionPhase.Applying, AuthorityActionPhase.Finalizing) => true,
+			(AuthorityActionPhase.WaitingDiscard, AuthorityActionPhase.Applying) => true,
 			(AuthorityActionPhase.WaitingDiscard, AuthorityActionPhase.WaitingAttachment) => true,
-			(AuthorityActionPhase.WaitingTargetPlayer, AuthorityActionPhase.WaitingAttachment) => true,
-			(AuthorityActionPhase.WaitingTargetHand, AuthorityActionPhase.WaitingAttachment) => true,
+			(AuthorityActionPhase.WaitingDiscard, AuthorityActionPhase.Finalizing) => true,
+			(AuthorityActionPhase.WaitingAttachment, AuthorityActionPhase.Applying) => true,
+			(AuthorityActionPhase.WaitingAttachment, AuthorityActionPhase.Finalizing) => true,
 			_ => false,
 		};
 	}
@@ -572,10 +561,8 @@ public static class AuthorityActionStateRules
 		ArgumentNullException.ThrowIfNull(state);
 		return state.Phase switch
 		{
-			AuthorityActionPhase.WaitingTargetPlayer => state.TargetSeat >= 0,
-			AuthorityActionPhase.WaitingTargetHand => state.TargetSeat >= 0 && state.TargetHandIndex >= 0,
-			AuthorityActionPhase.WaitingDiscard => state.TargetHandIndex >= 0,
-			AuthorityActionPhase.WaitingAttachment => state.TargetHandIndex >= 0,
+			AuthorityActionPhase.WaitingDiscard => state.SelectionIndex >= 0,
+			AuthorityActionPhase.WaitingAttachment => state.SelectionIndex >= 0,
 			_ => false,
 		};
 	}

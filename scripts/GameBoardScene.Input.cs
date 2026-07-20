@@ -63,7 +63,7 @@ public partial class GameBoardScene
 
 	private bool ShouldBlockBoardControlInput()
 	{
-		if (_networkMigrationInputLocked)
+		if (IsAdventureSaveGateBlocking() || _networkMigrationInputLocked)
 		{
 			return true;
 		}

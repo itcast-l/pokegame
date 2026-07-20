@@ -11,38 +11,49 @@ const PRESENTATION_PATH := "res://scripts/GameBoardScene.ItemCardPlays.cs"
 const LOCALIZATION_PATH := "res://localization/ui.csv"
 
 const GAMEPLAY_FIELDS := [
-	{"pandora": "id", "fallback": "Id", "kind": "string"},
-	{"pandora": "enabled_in_game", "fallback": "EnabledInGame", "kind": "bool"},
-	{"pandora": "playable_from_hand", "fallback": "PlayableFromHand", "kind": "bool"},
-	{"pandora": "can_be_question_reward", "fallback": "CanBeQuestionReward", "kind": "bool"},
-	{"pandora": "weight", "fallback": "Weight", "kind": "int"},
-	{"pandora": "rarity", "fallback": "Rarity", "kind": "string"},
-	{"pandora": "tags", "fallback": "TagsCsv", "kind": "string"},
-	{"pandora": "reward_delivery", "fallback": "RewardDelivery", "kind": "string"},
-	{"pandora": "play_presentation", "fallback": "PlayPresentation", "kind": "string"},
-	{"pandora": "trigger", "fallback": "Trigger", "kind": "string"},
-	{"pandora": "effect_type", "fallback": "EffectType", "kind": "string"},
-	{"pandora": "effect_values", "fallback": "EffectValuesRaw", "kind": "string"},
-	{"pandora": "priority", "fallback": "Priority", "kind": "int"},
-	{"pandora": "attached_trigger", "fallback": "AttachedTrigger", "kind": "string"},
-	{"pandora": "attached_effect_type", "fallback": "AttachedEffectType", "kind": "string"},
-	{"pandora": "attached_effect_values", "fallback": "AttachedEffectValuesRaw", "kind": "string"},
-	{"pandora": "attached_priority", "fallback": "AttachedPriority", "kind": "int"},
-	{"pandora": "description_key", "fallback": "DescriptionKey", "kind": "string"},
+	{"pandora": "id", "resource": "Id", "kind": "string"},
+	{"pandora": "enabled_in_game", "resource": "EnabledInGame", "kind": "bool"},
+	{"pandora": "playable_from_hand", "resource": "PlayableFromHand", "kind": "bool"},
+	{"pandora": "can_be_question_reward", "resource": "CanBeQuestionReward", "kind": "bool"},
+	{"pandora": "weight", "resource": "Weight", "kind": "int"},
+	{"pandora": "rarity", "resource": "Rarity", "kind": "string"},
+	{"pandora": "tags", "resource": "TagsCsv", "kind": "string"},
+	{"pandora": "reward_delivery", "resource": "RewardDelivery", "kind": "string"},
+	{"pandora": "play_presentation", "resource": "PlayPresentation", "kind": "string"},
+	{"pandora": "trigger", "resource": "Trigger", "kind": "string"},
+	{"pandora": "effect_type", "resource": "EffectType", "kind": "string"},
+	{"pandora": "effect_values", "resource": "EffectValuesRaw", "kind": "string"},
+	{"pandora": "priority", "resource": "Priority", "kind": "int"},
+	{"pandora": "attached_trigger", "resource": "AttachedTrigger", "kind": "string"},
+	{"pandora": "attached_effect_type", "resource": "AttachedEffectType", "kind": "string"},
+	{"pandora": "attached_effect_values", "resource": "AttachedEffectValuesRaw", "kind": "string"},
+	{"pandora": "attached_priority", "resource": "AttachedPriority", "kind": "int"},
+	{"pandora": "description_key", "resource": "DescriptionKey", "kind": "string"},
 ]
 
+const VISUAL_FIELDS := [
+	"Id",
+	"SpriteName",
+	"ArtRunName",
+	"FramePathPattern",
+	"FrameCount",
+	"SortOrder",
+	"AttachmentOverlayTexturePath",
+	"AttachmentOverlayPriority",
+	"Icon",
+]
+
+const EXTRA_FORBIDDEN_VISUAL_FIELDS := ["DisplayName", "Description"]
+
 var _failed := false
-var _write_mode := false
 
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.is_empty():
 		args = OS.get_cmdline_args()
-	if args.has("--write"):
-		_write_mode = true
-	elif not args.has("--check"):
-		_fail("Usage: godot --headless --path . --script res://tools/ItemCardManifestSync.gd --check|--write")
+	if not args.has("--check"):
+		_fail("Usage: godot --headless --path . --script res://tools/ItemCardManifestSync.gd --check")
 		_quit_failure()
 		return
 	call_deferred("_run")
@@ -80,19 +91,16 @@ func _run() -> void:
 				values[field_name] = found.value
 		pandora_by_id[id] = values
 
-	var fallback_by_id := _read_fallbacks()
-	if fallback_by_id.is_empty():
-		_fail("No item card .tres fallbacks were found")
-	elif not _write_mode:
-		_compare_fallbacks(pandora_by_id, fallback_by_id)
+	var visuals_by_id := _read_visuals()
+	if visuals_by_id.is_empty():
+		_fail("No item card visual resources were found")
+	else:
+		_compare_visual_ids(pandora_by_id, visuals_by_id)
 
 	_check_contract_sources(pandora_by_id)
+	_check_manifest_value_shapes(pandora_by_id)
+	_check_item_localization(pandora_by_id)
 	_check_localization_placeholders(pandora_root)
-
-	if _write_mode and not _failed:
-		_write_fallbacks(pandora_by_id, fallback_by_id)
-		fallback_by_id = _read_fallbacks()
-		_compare_fallbacks(pandora_by_id, fallback_by_id)
 
 	var hash_lines: Array[String] = []
 	for id in pandora_by_id.keys():
@@ -107,7 +115,7 @@ func _run() -> void:
 	if _failed:
 		_quit_failure()
 	else:
-		print("ITEM_CARD_MANIFEST_%s_OK" % ("WRITE" if _write_mode else "CHECK"))
+		print("ITEM_CARD_MANIFEST_CHECK_OK")
 		quit(0)
 
 
@@ -161,11 +169,11 @@ func _normalize_value(value, kind: String):
 			return String(value if value != null else "").strip_edges()
 
 
-func _read_fallbacks() -> Dictionary:
+func _read_visuals() -> Dictionary:
 	var result := {}
 	var directory := DirAccess.open(ITEM_RESOURCE_DIR)
 	if directory == null:
-		_fail("Missing fallback directory %s" % ITEM_RESOURCE_DIR)
+		_fail("Missing visual resource directory %s" % ITEM_RESOURCE_DIR)
 		return result
 	directory.list_dir_begin()
 	while true:
@@ -178,12 +186,13 @@ func _read_fallbacks() -> Dictionary:
 		var parsed := _parse_tres(path)
 		if parsed.is_empty():
 			continue
+		_check_visual_fields(path, parsed)
 		var id := String(parsed.get("Id", "")).strip_edges()
 		if id.is_empty():
-			_fail("Fallback %s is missing Id" % path)
+			_fail("Visual resource %s is missing Id" % path)
 			continue
 		if result.has(id):
-			_fail("Fallback contains duplicate item ID %s" % id)
+			_fail("Visual resources contain duplicate item ID %s" % id)
 			continue
 		parsed["__path"] = path
 		result[id] = parsed
@@ -194,7 +203,7 @@ func _read_fallbacks() -> Dictionary:
 func _parse_tres(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		_fail("Unable to read fallback %s" % path)
+		_fail("Unable to read visual resource %s" % path)
 		return {}
 	var result := {}
 	for line in file.get_as_text().split("\n"):
@@ -220,69 +229,31 @@ func _parse_tres_value(raw: String):
 	return raw
 
 
-func _compare_fallbacks(pandora_by_id: Dictionary, fallback_by_id: Dictionary) -> void:
-	for id in pandora_by_id.keys():
-		if not fallback_by_id.has(id):
-			_fail("Fallback is missing Pandora item %s" % id)
+func _check_visual_fields(path: String, visual: Dictionary) -> void:
+	var forbidden_fields: Array[String] = []
+	for field in GAMEPLAY_FIELDS:
+		var resource_field: String = field.resource
+		if resource_field != "Id":
+			forbidden_fields.append(resource_field)
+	for field in EXTRA_FORBIDDEN_VISUAL_FIELDS:
+		forbidden_fields.append(field)
+	for field in forbidden_fields:
+		if visual.has(field):
+			_fail("Visual resource %s contains forbidden gameplay field %s" % [path, field])
+	for field in visual.keys():
+		if String(field).begins_with("__") or field == "script":
 			continue
-		var pandora_values: Dictionary = pandora_by_id[id]
-		var fallback_values: Dictionary = fallback_by_id[id]
-		for field in GAMEPLAY_FIELDS:
-			var fallback_key: String = field.fallback
-			if not fallback_values.has(fallback_key):
-				_fail("Fallback %s is missing gameplay field %s" % [id, fallback_key])
-				continue
-			var expected = pandora_values.get(field.pandora)
-			var actual = _normalize_value(fallback_values.get(fallback_key), field.kind)
-			if _canonical_value(expected) != _canonical_value(actual):
-				_fail("Fallback %s field %s differs: expected=%s actual=%s" % [id, fallback_key, expected, actual])
-	for id in fallback_by_id.keys():
+		if not VISUAL_FIELDS.has(field):
+			_fail("Visual resource %s contains unsupported field %s" % [path, field])
+
+
+func _compare_visual_ids(pandora_by_id: Dictionary, visuals_by_id: Dictionary) -> void:
+	for id in pandora_by_id.keys():
+		if not visuals_by_id.has(id):
+			_fail("Visual resources are missing Pandora item %s" % id)
+	for id in visuals_by_id.keys():
 		if not pandora_by_id.has(id):
-			_fail("Fallback contains item not present in Pandora: %s" % id)
-
-
-func _write_fallbacks(pandora_by_id: Dictionary, fallback_by_id: Dictionary) -> void:
-	for id in pandora_by_id.keys():
-		if not fallback_by_id.has(id):
-			continue
-		var fallback: Dictionary = fallback_by_id[id]
-		var path: String = fallback.get("__path", "")
-		var file := FileAccess.open(path, FileAccess.READ)
-		if file == null:
-			_fail("Unable to open fallback for write: %s" % path)
-			continue
-		var lines := file.get_as_text().split("\n")
-		var values: Dictionary = pandora_by_id[id]
-		for field in GAMEPLAY_FIELDS:
-			var property_name: String = field.fallback
-			var replacement := "%s = %s" % [property_name, _encode_tres_value(values.get(field.pandora), field.kind)]
-			var replaced := false
-			for index in lines.size():
-				var trimmed := lines[index].strip_edges()
-				if trimmed.begins_with(property_name + " ") or trimmed.begins_with(property_name + "="):
-					lines[index] = replacement
-					replaced = true
-					break
-			if not replaced:
-				lines.append(replacement)
-		var output := "\n".join(lines)
-		if not output.ends_with("\n"):
-			output += "\n"
-		var write_file := FileAccess.open(path, FileAccess.WRITE)
-		if write_file == null:
-			_fail("Unable to write fallback: %s" % path)
-			continue
-		write_file.store_string(output)
-
-
-func _encode_tres_value(value, kind: String) -> String:
-	match kind:
-		"bool":
-			return "true" if bool(value) else "false"
-		"int":
-			return str(int(value))
-		_:
-			return JSON.stringify(String(value))
+			_fail("Visual resources contain item not present in Pandora: %s" % id)
 
 
 func _check_contract_sources(pandora_by_id: Dictionary) -> void:
@@ -317,10 +288,71 @@ func _check_contract_sources(pandora_by_id: Dictionary) -> void:
 		var name: String = match.get_string(1)
 		if presentation_constants.has(name):
 			actual_presentations[presentation_constants[name]] = true
-	for presentation in ["direct_trigger", "targeted_trigger"]:
-		actual_presentations[presentation] = true
+	actual_presentations["direct_trigger"] = true
 	_compare_set("presentation handler", known_presentations, _presentations_in_manifest(pandora_by_id))
 	_compare_set("presentation implementation", known_presentations, actual_presentations)
+
+
+func _check_manifest_value_shapes(pandora_by_id: Dictionary) -> void:
+	for id in pandora_by_id.keys():
+		var values: Dictionary = pandora_by_id[id]
+		var reward_delivery := String(values.get("reward_delivery", ""))
+		if reward_delivery not in ["none", "hand", "immediate_attachment"]:
+			_fail("Item %s has invalid reward_delivery %s" % [id, reward_delivery])
+		if int(values.get("weight", -1)) < 0:
+			_fail("Item %s has negative weight" % id)
+		if String(values.get("trigger", "")).is_empty():
+			_fail("Item %s has an empty trigger" % id)
+		if String(values.get("effect_type", "")).is_empty():
+			_fail("Item %s has an empty effect_type" % id)
+		if not _has_valid_effect_values(String(values.get("effect_values", ""))):
+			_fail("Item %s has malformed effect_values" % id)
+		if not _has_valid_effect_values(String(values.get("attached_effect_values", ""))):
+			_fail("Item %s has malformed attached_effect_values" % id)
+		var attached_trigger := String(values.get("attached_trigger", ""))
+		var attached_effect := String(values.get("attached_effect_type", ""))
+		if attached_trigger.is_empty() != attached_effect.is_empty():
+			_fail("Item %s has an incomplete attached effect contract" % id)
+		if String(values.get("description_key", "")).is_empty():
+			_fail("Item %s has an empty description_key" % id)
+
+
+func _has_valid_effect_values(raw: String) -> bool:
+	if raw.is_empty():
+		return true
+	var seen := {}
+	for segment in raw.split(";"):
+		var separator := segment.find("=")
+		if separator <= 0 or separator == segment.length() - 1 or segment.find("=", separator + 1) >= 0:
+			return false
+		var key := segment.substr(0, separator).strip_edges()
+		var value := segment.substr(separator + 1).strip_edges()
+		if key.is_empty() or value.is_empty() or seen.has(key):
+			return false
+		seen[key] = true
+	return true
+
+
+func _check_item_localization(pandora_by_id: Dictionary) -> void:
+	var file := FileAccess.open(LOCALIZATION_PATH, FileAccess.READ)
+	if file == null:
+		_fail("Unable to read localization source %s" % LOCALIZATION_PATH)
+		return
+	var expected := {}
+	for values in pandora_by_id.values():
+		expected[String(values.get("description_key", ""))] = true
+	var seen := {}
+	for line in file.get_as_text().split("\n"):
+		var columns := _parse_csv_line(line)
+		if columns.is_empty() or not expected.has(columns[0]):
+			continue
+		seen[columns[0]] = true
+		for column_index in range(1, columns.size()):
+			if columns[column_index].strip_edges().is_empty():
+				_fail("Localization %s has an empty column %d" % [columns[0], column_index])
+	for key in expected.keys():
+		if not seen.has(key):
+			_fail("Localization is missing item description %s" % key)
 
 
 func _effects_in_manifest(pandora_by_id: Dictionary) -> Dictionary:

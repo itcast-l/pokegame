@@ -8,7 +8,7 @@ public partial class GameBoardScene
 	private GameLoopPhaseState BuildGameLoopPhaseState()
 	{
 		return new GameLoopPhaseState(
-			_isLeavingGame,
+			_isLeavingGame || IsAdventureSaveGateBlocking(),
 			IsGameOver(),
 			_isOpeningDealAnimationPlaying,
 			HasPendingItemSelection(),

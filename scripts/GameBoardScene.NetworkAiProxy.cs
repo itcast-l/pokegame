@@ -82,7 +82,9 @@ public partial class GameBoardScene
 
 	private bool ShouldRunNetworkAiProxyTurn()
 	{
-		if (!IsNetworkMultiplayerMode()
+		if (OS.GetEnvironment("CODEX_AUTHORITY_TRANSACTION_FIXTURE") == "1"
+			|| OS.GetEnvironment("CODEX_OPENING_MIGRATION_FIXTURE") == "1"
+			|| !IsNetworkMultiplayerMode()
 			|| !IsNetworkHost()
 			|| _networkAiProxyTurnRunning
 			|| IsGameOver()
@@ -137,6 +139,8 @@ public partial class GameBoardScene
 				int failedSeatIndex = ShouldResolvePendingNetworkAiProxySelection()
 					? _pendingItemOwnerIndex
 					: _currentTurnPlayerIndex;
+				int previousPlayerIndex = _currentTurnPlayerIndex;
+				long previousProgressSignature = GetTurnLoopProgressSignature();
 				try
 				{
 					if (await TryResolvePendingNetworkAiProxySelectionAsync(turnSequenceGeneration))
@@ -158,7 +162,15 @@ public partial class GameBoardScene
 
 					if (!PlayerHasPlayableHandCards(playerIndex))
 					{
-						SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+						if (!TryGetNextTurnPlayerIndex(playerIndex, out int nextPlayerIndex))
+							{
+								SettleStalledMatch();
+								return;
+							}
+						if (!await SetCurrentTurnPlayerIndexAsync(nextPlayerIndex))
+						{
+							return;
+						}
 						PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 						await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 						continue;
@@ -178,16 +190,21 @@ public partial class GameBoardScene
 
 					if (!result.Played)
 					{
-						SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+						if (!TryGetNextTurnPlayerIndex(playerIndex, out int nextPlayerIndex))
+							{
+								SettleStalledMatch();
+								return;
+							}
+						if (!await SetCurrentTurnPlayerIndexAsync(nextPlayerIndex))
+						{
+							return;
+						}
 						PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 						await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 						continue;
 					}
 
-					if (result.CompletesTurn)
-					{
-						await AdvanceTurnAfterPlayedResultAsync(playerIndex, result);
-					}
+					await ResolveActionCompletionAsync(playerIndex, result);
 				}
 				catch (Exception ex)
 				{
@@ -196,6 +213,13 @@ public partial class GameBoardScene
 					{
 						return;
 					}
+				}
+				finally
+				{
+					EnsureTurnLoopMadeProgress(
+						previousProgressSignature,
+						previousPlayerIndex,
+						turnSequenceGeneration);
 				}
 			}
 		}
@@ -245,7 +269,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(failedSeatIndex));
+		if (!TryGetNextTurnPlayerIndex(failedSeatIndex, out int nextPlayerIndex))
+		{
+			SettleStalledMatch();
+			return false;
+		}
+		if (!await SetCurrentTurnPlayerIndexAsync(nextPlayerIndex))
+			{
+				return false;
+			}
 		PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 		try
 		{
@@ -264,15 +296,15 @@ public partial class GameBoardScene
 		if (!HasPendingItemSelection()
 			|| _pendingItemTurnSequenceGeneration != _turnSequenceGeneration
 			|| _pendingItemOwnerIndex < 0
-			|| _pendingItemOwnerIndex >= player_count)
+			|| _pendingItemOwnerIndex >= player_count
+			|| (_networkAuthorityActionState.IsActive
+				&& AuthorityActionStateRules.HasCommittedSelection(_networkAuthorityActionState)))
 		{
 			return false;
 		}
 
 		if (_pendingItemSelectionMode is not (
-			PendingItemSelectionMode.TargetPlayer
-			or PendingItemSelectionMode.TargetHandCard
-			or PendingItemSelectionMode.HandLimitDiscard
+			PendingItemSelectionMode.HandLimitDiscard
 			or PendingItemSelectionMode.AttachmentRewardHandCard))
 		{
 			return false;
@@ -301,33 +333,12 @@ public partial class GameBoardScene
 			int ownerSeatIndex = _pendingItemOwnerIndex;
 			try
 			{
-				int targetPlayerIndex;
-				int targetHandIndex = -1;
+				int selectionIndex;
 				switch (_pendingItemSelectionMode)
 				{
-					case PendingItemSelectionMode.TargetPlayer:
-						targetPlayerIndex = PickPendingItemTargetPlayerForNetworkAiProxy();
-						if (targetPlayerIndex < 0)
-						{
-							GD.PushWarning($"AI proxy could not find a legal target player for pending item '{_pendingItemCardId}'.");
-							await ForceResolvePendingNetworkAiProxySelectionAfterFailureAsync(ownerSeatIndex, turnSequenceGeneration);
-							return true;
-						}
-						break;
-					case PendingItemSelectionMode.TargetHandCard:
-						targetPlayerIndex = _revealedPlayerHandIndex;
-						targetHandIndex = PickPendingItemTargetHandIndexForNetworkAiProxy(targetPlayerIndex);
-						if (targetHandIndex < 0)
-						{
-							GD.PushWarning($"AI proxy could not find a legal target hand index for pending item '{_pendingItemCardId}'.");
-							await ForceResolvePendingNetworkAiProxySelectionAfterFailureAsync(ownerSeatIndex, turnSequenceGeneration);
-							return true;
-						}
-						break;
 					case PendingItemSelectionMode.HandLimitDiscard:
-						targetPlayerIndex = -1;
-						targetHandIndex = PickPendingHandLimitDiscardIndexForNetworkAiProxy(ownerSeatIndex);
-						if (targetHandIndex < 0)
+						selectionIndex = PickPendingHandLimitDiscardIndexForNetworkAiProxy(ownerSeatIndex);
+						if (selectionIndex < 0)
 						{
 							GD.PushWarning($"AI proxy could not find a legal discard index for seat {ownerSeatIndex}.");
 							await ForceResolvePendingNetworkAiProxySelectionAfterFailureAsync(ownerSeatIndex, turnSequenceGeneration);
@@ -335,9 +346,8 @@ public partial class GameBoardScene
 						}
 						break;
 					case PendingItemSelectionMode.AttachmentRewardHandCard:
-						targetPlayerIndex = -1;
-						targetHandIndex = PickRandomAttachableMagnetHandIndex(ownerSeatIndex, _pendingItemCardId);
-						if (targetHandIndex < 0)
+						selectionIndex = PickRandomAttachableMagnetHandIndex(ownerSeatIndex, _pendingItemCardId);
+						if (selectionIndex < 0)
 						{
 							await CompleteMagnetAttachmentSelectionAsync(-1);
 							await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -350,8 +360,7 @@ public partial class GameBoardScene
 
 				if (!TryStartNetworkPendingItemSelectionFromHost(
 					ownerSeatIndex,
-					targetPlayerIndex,
-					targetHandIndex,
+					selectionIndex,
 					turnSequenceGeneration,
 					out MultiplayerBoardActionRejectReason rejectReason))
 				{
@@ -393,46 +402,15 @@ public partial class GameBoardScene
 
 		try
 		{
-			int targetPlayerIndex;
-			int targetHandIndex;
+			int selectionIndex;
 			switch (_pendingItemSelectionMode)
 			{
-				case PendingItemSelectionMode.TargetPlayer:
-					targetPlayerIndex = PickRandomLegalPendingItemTargetPlayer(ownerSeatIndex);
-					if (targetPlayerIndex >= 0
-						&& TryStartNetworkPendingItemSelectionFromHost(
-							ownerSeatIndex,
-							targetPlayerIndex,
-							-1,
-							turnSequenceGeneration,
-							out _))
-					{
-						await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-						return;
-					}
-					break;
-				case PendingItemSelectionMode.TargetHandCard:
-					targetPlayerIndex = _revealedPlayerHandIndex;
-					targetHandIndex = PickRandomLegalPendingItemTargetHandIndex(ownerSeatIndex, targetPlayerIndex);
-					if (targetHandIndex >= 0
-						&& TryStartNetworkPendingItemSelectionFromHost(
-							ownerSeatIndex,
-							targetPlayerIndex,
-							targetHandIndex,
-							turnSequenceGeneration,
-							out _))
-					{
-						await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-						return;
-					}
-					break;
 				case PendingItemSelectionMode.HandLimitDiscard:
-					targetHandIndex = PickPendingHandLimitDiscardIndexForNetworkAiProxy(ownerSeatIndex);
-					if (targetHandIndex >= 0
+					selectionIndex = PickPendingHandLimitDiscardIndexForNetworkAiProxy(ownerSeatIndex);
+					if (selectionIndex >= 0
 						&& TryStartNetworkPendingItemSelectionFromHost(
 							ownerSeatIndex,
-							-1,
-							targetHandIndex,
+							selectionIndex,
 							turnSequenceGeneration,
 							out _))
 					{
@@ -441,12 +419,11 @@ public partial class GameBoardScene
 					}
 					break;
 				case PendingItemSelectionMode.AttachmentRewardHandCard:
-					targetHandIndex = PickRandomAttachableMagnetHandIndex(ownerSeatIndex, _pendingItemCardId);
-					if (targetHandIndex >= 0
+					selectionIndex = PickRandomAttachableMagnetHandIndex(ownerSeatIndex, _pendingItemCardId);
+					if (selectionIndex >= 0
 						&& TryStartNetworkPendingItemSelectionFromHost(
 							ownerSeatIndex,
-							-1,
-							targetHandIndex,
+							selectionIndex,
 							turnSequenceGeneration,
 							out _))
 					{
@@ -539,52 +516,6 @@ public partial class GameBoardScene
 		}
 	}
 
-	private int PickPendingItemTargetPlayerForNetworkAiProxy()
-	{
-		try
-		{
-			if (ConsumeDebugForceNextPendingTargetPlayerHeuristicFailure())
-			{
-				throw new InvalidOperationException("debug forced target-player heuristic failure");
-			}
-
-			int targetPlayerIndex = PickItemTargetPlayer(_pendingItemCardId, _pendingItemOwnerIndex);
-			if (IsItemTargetPlayerCandidate(_pendingItemCardId, _pendingItemOwnerIndex, targetPlayerIndex))
-			{
-				return targetPlayerIndex;
-			}
-		}
-		catch (Exception ex)
-		{
-			GD.PushWarning($"AI proxy target-player heuristic failed for pending item '{_pendingItemCardId}': {ex.Message}");
-		}
-
-		return PickRandomLegalPendingItemTargetPlayer(_pendingItemOwnerIndex);
-	}
-
-	private int PickPendingItemTargetHandIndexForNetworkAiProxy(int targetPlayerIndex)
-	{
-		try
-		{
-			if (ConsumeDebugForceNextPendingTargetHandHeuristicFailure())
-			{
-				throw new InvalidOperationException("debug forced target-hand heuristic failure");
-			}
-
-			int targetHandIndex = PickTargetHandIndex(targetPlayerIndex);
-			if (IsPendingItemTargetValid(_pendingItemCardId, _pendingItemOwnerIndex, targetPlayerIndex, targetHandIndex))
-			{
-				return targetHandIndex;
-			}
-		}
-		catch (Exception ex)
-		{
-			GD.PushWarning($"AI proxy target-hand heuristic failed for pending item '{_pendingItemCardId}': {ex.Message}");
-		}
-
-		return PickRandomLegalPendingItemTargetHandIndex(_pendingItemOwnerIndex, targetPlayerIndex);
-	}
-
 	private int PickPendingHandLimitDiscardIndexForNetworkAiProxy(int ownerSeatIndex)
 	{
 		if (ownerSeatIndex < 0
@@ -619,20 +550,4 @@ public partial class GameBoardScene
 			_rng.RandiRange(0, int.MaxValue));
 	}
 
-	private int PickRandomLegalPendingItemTargetPlayer(int ownerSeatIndex)
-	{
-		return NetworkAiFallbackRules.PickRandomLegalCandidate(
-			player_count,
-			targetPlayerIndex => IsItemTargetPlayerCandidate(_pendingItemCardId, ownerSeatIndex, targetPlayerIndex),
-			_rng.RandiRange(0, int.MaxValue));
-	}
-
-	private int PickRandomLegalPendingItemTargetHandIndex(int ownerSeatIndex, int targetPlayerIndex)
-	{
-		int totalHandCardCount = GetTotalHandCardCount(targetPlayerIndex);
-		return NetworkAiFallbackRules.PickRandomLegalCandidate(
-			totalHandCardCount,
-			handIndex => IsPendingItemTargetValid(_pendingItemCardId, ownerSeatIndex, targetPlayerIndex, handIndex),
-			_rng.RandiRange(0, int.MaxValue));
-	}
 }

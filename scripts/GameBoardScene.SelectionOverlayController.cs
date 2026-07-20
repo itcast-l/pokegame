@@ -18,7 +18,8 @@ public partial class GameBoardScene
 			int optionCount,
 			Func<int, bool> trySelect,
 			Action cancel,
-			Action dispose)
+			Action dispose,
+			Action abnormalRelease)
 		{
 			Kind = kind;
 			Root = root;
@@ -26,6 +27,7 @@ public partial class GameBoardScene
 			TrySelect = trySelect;
 			Cancel = cancel;
 			Dispose = dispose;
+			AbnormalRelease = abnormalRelease;
 		}
 
 		internal SelectionOverlayKind Kind { get; }
@@ -34,6 +36,9 @@ public partial class GameBoardScene
 		internal Func<int, bool> TrySelect { get; }
 		internal Action Cancel { get; }
 		internal Action Dispose { get; }
+		internal Action AbnormalRelease { get; }
+		internal bool ExpectedRelease { get; set; }
+		internal bool AbnormalReleaseHandled { get; set; }
 	}
 
 	private bool HasVisibleSelectionOverlay()
@@ -79,6 +84,7 @@ public partial class GameBoardScene
 
 		if (ReferenceEquals(_activeSelectionOverlaySession, session))
 		{
+			session.ExpectedRelease = true;
 			_activeSelectionOverlaySession = null;
 			session.Dispose();
 		}
@@ -93,6 +99,29 @@ public partial class GameBoardScene
 	{
 		DisposeActiveSelectionOverlay();
 		_activeSelectionOverlaySession = session;
+		session.Root.TreeExiting += () => HandleSelectionOverlayTreeExiting(session);
+	}
+
+	private void HandleSelectionOverlayTreeExiting(SelectionOverlaySession session)
+	{
+		if (IsQueuedForDeletion() || _isLeavingGame || _networkMigrationInputLocked)
+		{
+			session.ExpectedRelease = true;
+			return;
+		}
+
+		if (session.ExpectedRelease
+			|| session.AbnormalReleaseHandled
+			|| !ReferenceEquals(_activeSelectionOverlaySession, session))
+		{
+			return;
+		}
+
+		session.AbnormalReleaseHandled = true;
+		session.ExpectedRelease = true;
+		_activeSelectionOverlaySession = null;
+		session.AbnormalRelease();
+		Callable.From(session.Dispose).CallDeferred();
 	}
 
 	private SelectionOverlaySession? GetActiveSelectionOverlaySession(SelectionOverlayKind expectedKind)

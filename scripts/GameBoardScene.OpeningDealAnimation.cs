@@ -5,6 +5,35 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private TaskCompletionSource<bool>? _debugOpeningDealFaultWaiter;
+	private bool _debugOpeningDealFaultReleasedCallbackReturned;
+
+	private async Task WaitForOpeningDealMigrationFaultAsync(
+		string point,
+		int turnSequenceGeneration)
+	{
+		string requestedPoint = OS.GetEnvironment("CODEX_OPENING_DEAL_FAULT_POINT");
+		if (string.IsNullOrWhiteSpace(requestedPoint)
+			|| !string.Equals(requestedPoint.Trim(), point, StringComparison.Ordinal)
+			|| !IsNetworkMultiplayerMode()
+			|| turnSequenceGeneration != _turnSequenceGeneration)
+		{
+			return;
+		}
+
+		if (_debugOpeningDealFaultWaiter == null)
+		{
+			_debugOpeningDealFaultWaiter = new TaskCompletionSource<bool>(
+				TaskCreationOptions.RunContinuationsAsynchronously);
+			GD.Print(
+				$"OPENING_DEAL_FAULT_REACHED point={point} generation={turnSequenceGeneration} "
+				+ $"host={IsNetworkHost().ToString().ToLowerInvariant()}");
+		}
+
+		await _debugOpeningDealFaultWaiter.Task;
+		_debugOpeningDealFaultReleasedCallbackReturned = true;
+	}
+
 	private async Task PlayOpeningIntroThenDealSequenceAsync(int turnSequenceGeneration)
 	{
 		await PlayOpeningIntroAnimationAsync(turnSequenceGeneration);
@@ -247,6 +276,7 @@ public partial class GameBoardScene
 		{
 			return;
 		}
+		await WaitForOpeningDealMigrationFaultAsync("hands_start", turnSequenceGeneration);
 
 		int maxHandCards = 0;
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
@@ -274,6 +304,10 @@ public partial class GameBoardScene
 				await PlayOpeningDealCardFlightAsync(startGlobalPosition, targetGlobalPosition, playerIndex, dealNumber, targetVisualScale);
 				ShowOpeningHandCard(playerIndex, handIndex + 1);
 				dealNumber++;
+				if (dealNumber == 1)
+				{
+					await WaitForOpeningDealMigrationFaultAsync("hands_mid", turnSequenceGeneration);
+				}
 			}
 		}
 	}
@@ -284,6 +318,7 @@ public partial class GameBoardScene
 		{
 			return;
 		}
+		await WaitForOpeningDealMigrationFaultAsync("piles_start", turnSequenceGeneration);
 
 		List<int> activePlayerIndexes = BuildOpeningPileDealPlayerIndexes();
 		if (activePlayerIndexes.Count == 0)

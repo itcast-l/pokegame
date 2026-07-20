@@ -62,10 +62,10 @@ reject_log_line() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanPendingTargetHost.gd >"$HOST_LOG" 2>&1 &
+"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanRematchReturnHost.gd >"$HOST_LOG" 2>&1 &
 HOST_PID=$!
 sleep 1
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanPendingTargetClient.gd >"$CLIENT_LOG" 2>&1 &
+"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanRematchReturnClient.gd >"$CLIENT_LOG" 2>&1 &
 CLIENT_PID=$!
 
 HOST_STATUS=0
@@ -74,28 +74,24 @@ wait "$HOST_PID" || HOST_STATUS=$?
 wait "$CLIENT_PID" || CLIENT_STATUS=$?
 
 if [[ "$HOST_STATUS" -ne 0 || "$CLIENT_STATUS" -ne 0 ]]; then
-	echo "LAN pending-target smoke failed: host=$HOST_STATUS client=$CLIENT_STATUS" >&2
+	echo "LAN rematch return-to-lobby smoke failed: host=$HOST_STATUS client=$CLIENT_STATUS" >&2
 	print_logs
 	exit 1
 fi
 
-require_log_line "$HOST_LOG" "HOST_START_MATCH"
-require_log_line "$HOST_LOG" "HOST_BOARD_INIT"
-require_log_line "$HOST_LOG" "HOST_STARTED_PENDING_TARGET"
-require_log_line "$HOST_LOG" "HOST_FORCE_DISCONNECT"
-require_log_line "$HOST_LOG" "HOST_SAW_AI"
-require_log_line "$HOST_LOG" "HOST_SAW_TARGET_HAND"
-require_log_line "$HOST_LOG" "HOST_TARGET_RESOLVED"
+require_log_line "$HOST_LOG" "HOST_START_FIRST_MATCH"
+require_log_line "$HOST_LOG" "HOST_FORCED_FIRST_WINNER"
+require_log_line "$HOST_LOG" "HOST_RETURNED_LOBBY_OK"
+require_log_line "$HOST_LOG" "HOST_START_SECOND_MATCH"
+require_log_line "$HOST_LOG" "HOST_SECOND_MATCH_RESET_OK"
 require_log_line "$HOST_LOG" "HOST_DONE"
-if [[ "${CODEX_FORCE_AI_FALLBACK:-}" == "1" ]]; then
-	require_log_line "$HOST_LOG" "HOST_FORCED_TARGET_FALLBACK"
-	require_log_line "$HOST_LOG" "AI proxy target-player heuristic failed"
-	require_log_line "$HOST_LOG" "AI proxy target-hand heuristic failed"
-fi
-require_log_line "$CLIENT_LOG" "CLIENT_BOARD_INIT"
-require_log_line "$CLIENT_LOG" "CLIENT_RECONNECTING"
+require_log_line "$CLIENT_LOG" "CLIENT_REQUESTED_RETURN"
+require_log_line "$CLIENT_LOG" "CLIENT_RETURNED_LOBBY_OK"
+require_log_line "$CLIENT_LOG" "CLIENT_SECOND_MATCH_RESET_OK"
 require_log_line "$CLIENT_LOG" "CLIENT_DONE"
+reject_log_line "$HOST_LOG" "HOST_FAIL"
+reject_log_line "$CLIENT_LOG" "CLIENT_FAIL"
 reject_log_line "$HOST_LOG" "The multiplayer instance isn't currently active."
 reject_log_line "$CLIENT_LOG" "The multiplayer instance isn't currently active."
 
-echo "LAN_PENDING_TARGET_SMOKE_OK"
+echo "LAN_REMATCH_RETURN_TO_LOBBY_SMOKE_OK"

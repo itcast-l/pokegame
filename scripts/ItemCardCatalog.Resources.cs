@@ -1,24 +1,20 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 public sealed partial class ItemCardCatalog
 {
-	private static IReadOnlyDictionary<string, ItemCardDefinition> GetResourceDefinitions()
+	private static bool TryLoadVisualDefinitions(
+		out IReadOnlyDictionary<string, ItemCardVisualDefinition> visualsById,
+		out string errorMessage)
 	{
-		if (_resourceDefinitionsById != null)
-		{
-			return _resourceDefinitionsById;
-		}
-
-		var definitionsById = new Dictionary<string, ItemCardDefinition>(StringComparer.Ordinal);
+		var loadedVisuals = new Dictionary<string, ItemCardVisualDefinition>(StringComparer.Ordinal);
 		using DirAccess? directory = DirAccess.Open(ItemCardResourceDirectory);
 		if (directory == null)
 		{
-			GD.PushWarning($"Missing item card resource directory: {ItemCardResourceDirectory}");
-			_resourceDefinitionsById = definitionsById;
-			return _resourceDefinitionsById;
+			visualsById = loadedVisuals;
+			errorMessage = $"Missing item card visual resource directory: {ItemCardResourceDirectory}.";
+			return false;
 		}
 
 		directory.ListDirBegin();
@@ -36,25 +32,44 @@ public sealed partial class ItemCardCatalog
 			}
 
 			string path = $"{ItemCardResourceDirectory}/{resourceFileName}";
-			ItemCardDefinition? definition = LoadItemCardDefinition(path);
-			if (definition == null)
+			Resource? resource = GD.Load(path);
+			if (resource is not ItemCardVisualDefinitionResource visualResource)
 			{
-				GD.PushWarning($"Invalid item card definition resource: {path}");
-				continue;
+				visualsById = loadedVisuals;
+				errorMessage = $"Invalid item card visual resource: {path}.";
+				return false;
 			}
 
-			ItemCardDefinition value = definition.Value;
-			if (string.IsNullOrWhiteSpace(value.Id))
+			ItemCardVisualDefinition visual = visualResource.ToDefinition();
+			if (string.IsNullOrWhiteSpace(visual.Id)
+				|| string.IsNullOrWhiteSpace(visual.SpriteName)
+				|| string.IsNullOrWhiteSpace(visual.ArtRunName)
+				|| visual.FrameCount <= 0)
 			{
-				GD.PushWarning($"Item card definition resource is missing an id: {path}");
-				continue;
+				visualsById = loadedVisuals;
+				errorMessage = $"Item card visual resource has invalid required fields: {path}.";
+				return false;
 			}
 
-			definitionsById[value.Id] = value;
+			if (!loadedVisuals.TryAdd(visual.Id, visual))
+			{
+				visualsById = loadedVisuals;
+				errorMessage = $"Duplicate item card visual ID '{visual.Id}'.";
+				return false;
+			}
+		}
+		directory.ListDirEnd();
+
+		if (loadedVisuals.Count == 0)
+		{
+			visualsById = loadedVisuals;
+			errorMessage = "The item card visual resource directory is empty.";
+			return false;
 		}
 
-		_resourceDefinitionsById = definitionsById;
-		return _resourceDefinitionsById;
+		visualsById = loadedVisuals;
+		errorMessage = string.Empty;
+		return true;
 	}
 
 	private static bool TryGetResourceFileName(string fileName, out string resourceFileName)
@@ -76,67 +91,5 @@ public sealed partial class ItemCardCatalog
 
 		resourceFileName = string.Empty;
 		return false;
-	}
-
-	private static ItemCardDefinition? LoadItemCardDefinition(string path)
-	{
-		Resource? resource = GD.Load(path);
-		if (resource is ItemCardDefinitionResource itemCardResource)
-		{
-			return itemCardResource.ToDefinition();
-		}
-
-		if (resource == null)
-		{
-			return null;
-		}
-
-		return new ItemCardDefinition(
-			GetResourceString(resource, "Id"),
-			GetResourceString(resource, "DisplayName"),
-			GetResourceString(resource, "SpriteName"),
-			GetResourceString(resource, "DescriptionKey"),
-			GetResourceBool(resource, "EnabledInGame", true),
-			GetResourceBool(resource, "PlayableFromHand", true),
-			GetResourceBool(resource, "CanBeQuestionReward", true),
-			GetResourceString(resource, "ArtRunName", DefaultArtRunName),
-			GetResourceString(resource, "FramePathPattern"),
-			GetResourceInt(resource, "FrameCount", DefaultFrameCount),
-			GetResourceInt(resource, "SortOrder", DefaultSortOrder),
-			GetResourceString(resource, "Rarity", DefaultRarity),
-			GetResourceString(resource, "TagsCsv"),
-			GetResourceString(resource, "AttachmentOverlayTexturePath"),
-			GetResourceInt(resource, "AttachmentOverlayPriority"),
-			GetResourceString(resource, "PlayPresentation", CardPlayPresentationTypes.DirectTrigger),
-			GetResourceString(resource, "Trigger", CardGameEvents.OnPlay),
-			GetResourceString(resource, "EffectType", CardEffectTypes.None),
-			GetResourceString(resource, "EffectValuesRaw"),
-			GetResourceInt(resource, "Priority"),
-			GetResourceString(resource, "AttachedTrigger"),
-			GetResourceString(resource, "AttachedEffectType", CardEffectTypes.None),
-			GetResourceString(resource, "AttachedEffectValuesRaw"),
-			GetResourceInt(resource, "AttachedPriority"),
-			GetResourceString(resource, "Icon"),
-			GetResourceInt(resource, "Weight", DefaultWeight),
-			GetResourceString(resource, "Description"),
-			RewardDeliveryModeRules.ParseOrNone(GetResourceString(resource, "RewardDelivery", "none")));
-	}
-
-	private static string GetResourceString(Resource resource, string propertyName, string fallback = "")
-	{
-		Variant value = resource.Get(propertyName);
-		return value.VariantType == Variant.Type.Nil ? fallback : value.AsString();
-	}
-
-	private static int GetResourceInt(Resource resource, string propertyName, int fallback = 0)
-	{
-		Variant value = resource.Get(propertyName);
-		return value.VariantType == Variant.Type.Nil ? fallback : value.AsInt32();
-	}
-
-	private static bool GetResourceBool(Resource resource, string propertyName, bool fallback = false)
-	{
-		Variant value = resource.Get(propertyName);
-		return value.VariantType == Variant.Type.Nil ? fallback : value.AsBool();
 	}
 }

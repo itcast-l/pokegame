@@ -1,32 +1,12 @@
-[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ItemCardVisualDefinitionResource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+[ext_resource type="Script" path="res://scripts/ItemCardVisualDefinitionResource.cs" id="1_item_card_visual"]
 
 [resource]
-script = ExtResource("1_item_card_definition")
+script = ExtResource("1_item_card_visual")
 Id = "question_mark"
-DisplayName = "Question Mark"
 SpriteName = "QuestionMark"
-DescriptionKey = "ITEM_DESC_QUESTION_MARK"
-EnabledInGame = true
-PlayableFromHand = false
-CanBeQuestionReward = false
-RewardDelivery = "none"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 0
-Rarity = "common"
-TagsCsv = "fixed,reward"
-Trigger = "on_collect"
-EffectType = "grant_reward"
-EffectValuesRaw = ""
-Priority = 100
 Icon = ""
-Weight = 100
-Description = ""
-
-PlayPresentation = "direct_trigger"
-AttachedTrigger = ""
-AttachedEffectType = ""
-AttachedEffectValuesRaw = ""
-AttachedPriority = 0

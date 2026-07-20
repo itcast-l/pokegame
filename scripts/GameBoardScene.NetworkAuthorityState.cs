@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using Godot;
 
@@ -6,8 +7,40 @@ public partial class GameBoardScene
 {
 	private AuthorityActionState _networkAuthorityActionState = AuthorityActionState.Empty;
 	private long _nextNetworkAuthorityActionId;
+	private TaskCompletionSource<bool>? _authorityTransactionFaultWaiter;
 
 	internal AuthorityActionState NetworkAuthorityActionState => _networkAuthorityActionState;
+	internal bool CanPublishNetworkBoardSnapshot =>
+		AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState);
+
+	private Task WaitForAuthorityTransactionFaultAsync(string point)
+	{
+		string requestedPoint = OS.GetEnvironment("CODEX_AUTHORITY_FAULT_POINT");
+		if (string.IsNullOrWhiteSpace(requestedPoint)
+			|| !string.Equals(requestedPoint.Trim(), point, StringComparison.Ordinal)
+			|| !IsNetworkMultiplayerMode()
+			|| !IsNetworkHost()
+			|| _networkAuthorityEpoch != 0
+			|| !_networkAuthorityActionState.IsActive)
+		{
+			return Task.CompletedTask;
+		}
+
+		if (_authorityTransactionFaultWaiter != null)
+		{
+			return _authorityTransactionFaultWaiter.Task;
+		}
+
+		_authorityTransactionFaultWaiter = new TaskCompletionSource<bool>(
+			TaskCreationOptions.RunContinuationsAsynchronously);
+		GD.Print(
+			$"AUTHORITY_FAULT_REACHED point={point} checkpoint={_networkCheckpointId} "
+			+ $"action={_networkAuthorityActionState.ActionId} "
+			+ $"client_action={_networkAuthorityActionState.ClientActionId} "
+			+ $"generation={_turnSequenceGeneration} "
+			+ $"phase={_networkAuthorityActionState.Phase}");
+		return _authorityTransactionFaultWaiter.Task;
+	}
 
 	internal AuthorityActionState BeginNetworkAuthorityAction(
 		AuthorityActionKind kind,
@@ -17,6 +50,7 @@ public partial class GameBoardScene
 		int baseHandIndex = -1,
 		int itemHandIndex = -1,
 		string itemOrRewardId = "",
+		string baseCardCode = "",
 		bool reserveReplacement = false)
 	{
 		_nextNetworkAuthorityActionId++;
@@ -25,14 +59,17 @@ public partial class GameBoardScene
 			ActionId = _nextNetworkAuthorityActionId,
 			ClientActionId = Math.Max(0, clientActionId),
 			Kind = kind,
-			Phase = AuthorityActionPhase.Applying,
+			Phase = AuthorityActionPhase.Prepared,
 			ActorSeat = actorSeat,
 			TurnGeneration = turnGeneration,
 			BaseHandIndex = baseHandIndex,
 			ItemHandIndex = itemHandIndex,
 			ItemOrRewardId = itemOrRewardId ?? string.Empty,
+			BaseCardCode = baseCardCode ?? string.Empty,
+			RngStateBeforeAction = _rng.State.ToString(CultureInfo.InvariantCulture),
 			TargetSeat = -1,
 			TargetHandIndex = -1,
+			SelectionIndex = -1,
 			ReserveReplacement = reserveReplacement,
 			QuestionRewardMutationApplied = false,
 			DiscardMutationApplied = false,
@@ -42,6 +79,20 @@ public partial class GameBoardScene
 		};
 		CommitNetworkAuthorityActionCheckpoint();
 		return _networkAuthorityActionState;
+	}
+
+	internal void MarkNetworkAuthorityActionApplying()
+	{
+		if (_networkAuthorityActionState.IsActive
+			&& AuthorityActionStateRules.CanAdvancePhase(
+				_networkAuthorityActionState.Phase,
+				AuthorityActionPhase.Applying))
+		{
+			_networkAuthorityActionState = _networkAuthorityActionState with
+			{
+				Phase = AuthorityActionPhase.Applying,
+			};
+		}
 	}
 
 	internal void BeginNetworkAuthorityQuestionRewardTransaction(
@@ -143,8 +194,7 @@ public partial class GameBoardScene
 
 	internal void SetNetworkAuthorityActionSelection(
 		AuthorityActionPhase phase,
-		int targetSeat,
-		int targetHandIndex = -1)
+		int selectionIndex = -1)
 	{
 		if (!_networkAuthorityActionState.IsActive)
 		{
@@ -157,28 +207,16 @@ public partial class GameBoardScene
 		}
 
 		AuthorityActionState currentState = _networkAuthorityActionState;
-		bool preserveTargetForNestedDiscard = phase == AuthorityActionPhase.WaitingDiscard
-			&& currentState.Kind == AuthorityActionKind.CardTransfer
-			&& currentState.TargetSeat >= 0
-			&& currentState.Phase is AuthorityActionPhase.WaitingTargetPlayer or AuthorityActionPhase.WaitingTargetHand;
-		AuthorityActionKind selectionKind = phase is AuthorityActionPhase.WaitingTargetPlayer or AuthorityActionPhase.WaitingTargetHand
-			? AuthorityActionKind.CardTransfer
-			: currentState.Kind;
 		_networkAuthorityActionState = currentState.WithSelection(
 			phase,
-			targetSeat,
-			targetHandIndex);
+			selectionIndex);
 		_networkAuthorityActionState = _networkAuthorityActionState with
 		{
-			Kind = selectionKind,
-			DeferredTargetSeat = preserveTargetForNestedDiscard ? currentState.TargetSeat : -1,
-			DeferredTargetHandIndex = preserveTargetForNestedDiscard ? currentState.TargetHandIndex : -1,
-			DeferredTargetPhase = preserveTargetForNestedDiscard ? currentState.Phase : AuthorityActionPhase.Applying,
 			ContinuationStep = phase == AuthorityActionPhase.WaitingAttachment
 				? AuthorityActionContinuationStep.AttachmentQueue
-					: phase == AuthorityActionPhase.WaitingDiscard
-						? AuthorityActionContinuationStep.QuestionRewardDelivery
-						: AuthorityActionContinuationStep.CardTransfer,
+				: currentState.Kind == AuthorityActionKind.CardTransfer
+					? AuthorityActionContinuationStep.CardTransfer
+					: AuthorityActionContinuationStep.QuestionRewardDelivery,
 			DiscardMutationApplied = phase == AuthorityActionPhase.WaitingDiscard
 				? false
 				: currentState.DiscardMutationApplied,
@@ -187,6 +225,50 @@ public partial class GameBoardScene
 				: currentState.AttachmentMutationApplied,
 		};
 		CommitNetworkAuthorityActionCheckpoint();
+	}
+
+	internal void CommitNetworkAuthorityCardTransferTarget(int targetSeat, int targetHandIndex)
+	{
+		if (!_networkAuthorityActionState.IsActive
+			|| targetSeat < 0)
+		{
+			return;
+		}
+
+		_networkAuthorityActionState = _networkAuthorityActionState with
+		{
+			Kind = AuthorityActionKind.CardTransfer,
+			Phase = AuthorityActionPhase.Applying,
+			TargetSeat = targetSeat,
+			TargetHandIndex = targetHandIndex,
+			SelectionIndex = -1,
+			ContinuationStep = AuthorityActionContinuationStep.CardTransfer,
+			TransferMutationApplied = false,
+		};
+		CommitNetworkAuthorityActionCheckpoint();
+	}
+
+	private bool TryGetRecordedNetworkAuthorityCardTransferTarget(
+		string itemCardId,
+		int actorSeat,
+		out int targetSeat,
+		out int targetHandIndex)
+	{
+		AuthorityActionState state = _networkAuthorityActionState;
+		if (state.IsActive
+			&& state.Kind == AuthorityActionKind.CardTransfer
+			&& state.ActorSeat == actorSeat
+			&& string.Equals(state.ItemOrRewardId, itemCardId, StringComparison.Ordinal)
+			&& state.TargetSeat >= 0)
+		{
+			targetSeat = state.TargetSeat;
+			targetHandIndex = state.TargetHandIndex;
+			return true;
+		}
+
+		targetSeat = -1;
+		targetHandIndex = -1;
+		return false;
 	}
 
 	internal void CommitNetworkAuthorityAttachmentMutation()
@@ -206,6 +288,7 @@ public partial class GameBoardScene
 				: AuthorityActionContinuationStep.TurnAdvancement,
 			TargetSeat = -1,
 			TargetHandIndex = -1,
+			SelectionIndex = -1,
 			RemainingAttachmentRewardQueue = GetRemainingAttachmentRewardIds(),
 			RemainingAttachmentRewardQueueSeats = GetRemainingAttachmentRewardQueueSeats(),
 			PendingRewardItemId = string.Empty,
@@ -249,7 +332,9 @@ public partial class GameBoardScene
 			ContinuationStep = pendingSelection
 				? (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard
 					? AuthorityActionContinuationStep.AttachmentQueue
-					: AuthorityActionContinuationStep.QuestionRewardDelivery)
+					: _networkAuthorityActionState.Kind == AuthorityActionKind.CardTransfer
+						? AuthorityActionContinuationStep.CardTransfer
+						: AuthorityActionContinuationStep.QuestionRewardDelivery)
 				: (result.CompletesTurn
 					? AuthorityActionContinuationStep.TurnAdvancement
 					: AuthorityActionContinuationStep.Complete),
@@ -258,8 +343,6 @@ public partial class GameBoardScene
 				: AuthorityActionPhase.Finalizing,
 			RemainingAttachmentRewardQueue = GetRemainingAttachmentRewardIds(),
 			RemainingAttachmentRewardQueueSeats = GetRemainingAttachmentRewardQueueSeats(),
-			TargetSeat = pendingSelection ? _networkAuthorityActionState.TargetSeat : -1,
-			TargetHandIndex = pendingSelection ? _networkAuthorityActionState.TargetHandIndex : -1,
 		};
 		CommitNetworkAuthorityActionCheckpoint();
 	}
@@ -273,20 +356,11 @@ public partial class GameBoardScene
 
 		AuthorityActionPhase phase = _pendingItemSelectionMode switch
 		{
-			PendingItemSelectionMode.TargetPlayer => AuthorityActionPhase.WaitingTargetPlayer,
-			PendingItemSelectionMode.TargetHandCard => AuthorityActionPhase.WaitingTargetHand,
 			PendingItemSelectionMode.HandLimitDiscard => AuthorityActionPhase.WaitingDiscard,
 			PendingItemSelectionMode.AttachmentRewardHandCard => AuthorityActionPhase.WaitingAttachment,
 			_ => AuthorityActionPhase.Applying,
 		};
-		SetNetworkAuthorityActionSelection(
-			phase,
-			phase == AuthorityActionPhase.WaitingTargetPlayer
-				? -1
-				: _pendingItemOwnerIndex,
-			_pendingItemSelectionMode == PendingItemSelectionMode.TargetHandCard
-				? _revealedPlayerHandIndex
-				: -1);
+		SetNetworkAuthorityActionSelection(phase);
 	}
 
 	internal void MarkNetworkAuthorityAttachmentRewardInFlight(PendingItemAttachmentReward reward)
@@ -347,8 +421,6 @@ public partial class GameBoardScene
 	{
 		return _pendingItemSelectionMode switch
 		{
-			PendingItemSelectionMode.TargetPlayer => AuthorityActionPhase.WaitingTargetPlayer,
-			PendingItemSelectionMode.TargetHandCard => AuthorityActionPhase.WaitingTargetHand,
 			PendingItemSelectionMode.HandLimitDiscard => AuthorityActionPhase.WaitingDiscard,
 			PendingItemSelectionMode.AttachmentRewardHandCard => AuthorityActionPhase.WaitingAttachment,
 			_ => AuthorityActionPhase.Applying,
@@ -386,8 +458,32 @@ public partial class GameBoardScene
 		}
 
 		AuthorityActionState state = _networkAuthorityActionState;
+		if (state.Phase == AuthorityActionPhase.Prepared)
+		{
+			if (!ulong.TryParse(
+					state.RngStateBeforeAction,
+					NumberStyles.None,
+					CultureInfo.InvariantCulture,
+					out ulong rngState)
+				|| rngState == 0)
+			{
+				GD.PushError($"Prepared authority action {state.ActionId} has invalid RNG state.");
+				CompleteNetworkAuthorityAction();
+				return;
+			}
+
+			_rng.State = rngState;
+			MarkNetworkAuthorityActionApplying();
+			await ResumeApplyingAuthorityActionAsync(_networkAuthorityActionState);
+			return;
+		}
 		if (state.Phase == AuthorityActionPhase.Applying && state.PrimaryMutationApplied)
 		{
+			if (state.Kind == AuthorityActionKind.CardTransfer && !state.TransferMutationApplied)
+			{
+				await ResumeCardTransferAuthorityActionAsync(state);
+				return;
+			}
 			if (HasPendingItemSelection())
 			{
 				SyncNetworkAuthorityActionWithPendingSelection();
@@ -419,9 +515,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (state.Phase is AuthorityActionPhase.WaitingTargetPlayer
-			or AuthorityActionPhase.WaitingTargetHand
-			or AuthorityActionPhase.WaitingDiscard
+		if (state.Phase is AuthorityActionPhase.WaitingDiscard
 			or AuthorityActionPhase.WaitingAttachment)
 		{
 			EnsurePendingSelectionWaiterFromAuthorityAction();
@@ -446,7 +540,11 @@ public partial class GameBoardScene
 		if (state.Kind == AuthorityActionKind.BaseCard
 			&& state.BaseHandIndex >= 0
 			&& state.ActorSeat < _playerHands.Count
-			&& state.BaseHandIndex < _playerHands[state.ActorSeat].Count)
+			&& state.BaseHandIndex < _playerHands[state.ActorSeat].Count
+			&& string.Equals(
+				state.BaseCardCode,
+				ToNetworkCardCode(_playerHands[state.ActorSeat][state.BaseHandIndex]),
+				StringComparison.Ordinal))
 		{
 			await PlayNetworkHostHandCardAndBroadcastAsync(
 				state.ActorSeat,
@@ -455,7 +553,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (state.Kind == AuthorityActionKind.ItemCard
+		if (state.Kind is AuthorityActionKind.ItemCard or AuthorityActionKind.CardTransfer
 			&& state.ItemHandIndex >= 0
 			&& state.ActorSeat < _playerItemHands.Count
 			&& state.ItemHandIndex < _playerItemHands[state.ActorSeat].Count
@@ -479,47 +577,71 @@ public partial class GameBoardScene
 		await ResumeFinalizingAuthorityActionAsync(_networkAuthorityActionState);
 	}
 
-	private async Task ResumeCommittedAuthoritySelectionAsync(AuthorityActionState state)
+	private async Task ResumeCardTransferAuthorityActionAsync(AuthorityActionState state)
 	{
-		if (state.Phase is AuthorityActionPhase.WaitingTargetPlayer or AuthorityActionPhase.WaitingTargetHand)
+		if (state.TransferMutationApplied)
 		{
-			if (state.Kind == AuthorityActionKind.CardTransfer && state.PrimaryMutationApplied)
-			{
-					if (state.TransferMutationApplied)
-					{
-						_networkAuthorityActionState = state with
-					{
-						Phase = AuthorityActionPhase.Finalizing,
-						TargetSeat = -1,
-							TargetHandIndex = -1,
-						};
-						CommitNetworkAuthorityActionCheckpoint();
-						await ResumeFinalizingAuthorityActionAsync(_networkAuthorityActionState);
-					return;
-				}
-
-				// The item card was consumed before the checkpoint. Re-enter the
-				// resolver with the recorded target instead of consuming it again.
-				await CompletePendingItemSelectionAuthorityAsync(
-					state.ItemOrRewardId,
-					state.ActorSeat,
-					state.ItemHandIndex,
-					state.TargetSeat,
-					state.Phase == AuthorityActionPhase.WaitingTargetHand ? state.TargetHandIndex : -1,
-					state.TurnGeneration);
-				return;
-			}
-
-			await CompletePendingItemSelectionAuthorityAsync(
-				state.ItemOrRewardId,
-				state.ActorSeat,
-				state.ItemHandIndex,
-				state.TargetSeat,
-				state.Phase == AuthorityActionPhase.WaitingTargetHand ? state.TargetHandIndex : -1,
-				state.TurnGeneration);
+			_networkAuthorityActionState = state with { Phase = AuthorityActionPhase.Finalizing };
+			CommitNetworkAuthorityActionCheckpoint();
+			await ResumeFinalizingAuthorityActionAsync(_networkAuthorityActionState);
 			return;
 		}
 
+		ItemCard? restoredItemCard = CreateItemCard(state.ItemOrRewardId);
+		if (!restoredItemCard.HasValue)
+		{
+			CompleteNetworkAuthorityAction();
+			return;
+		}
+
+		PlayCardResult result = (await ResolveItemCardOnPlayAsync(
+			restoredItemCard.Value,
+			state.ActorSeat,
+			state.ItemHandIndex,
+			state.TargetSeat,
+			state.TargetHandIndex,
+			Vector2.Zero,
+			state.TurnGeneration)) with { CompletesTurn = false };
+		SetNetworkAuthorityActionMutationResult(result);
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		CheckForWinner();
+		await FinishPendingItemCardAsync(result, state.ActorSeat, state.TurnGeneration);
+	}
+
+	private async Task FinishPendingItemCardAsync(
+		PlayCardResult result,
+		int ownerPlayerIndex,
+		int turnSequenceGeneration)
+	{
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+		{
+			_isProcessingCardPlay = false;
+			RenderPlayerHands();
+			return;
+		}
+
+		await ResolveActionCompletionAsync(ownerPlayerIndex, result);
+
+		_isProcessingCardPlay = false;
+		RenderPlayerHands();
+		SendBoardSnapshotIfHost();
+		CompleteNetworkAuthorityAction();
+		if (IsNetworkMultiplayerMode())
+		{
+			ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
+			return;
+		}
+
+		if (result.CompletesTurn && !result.Captured)
+		{
+			await ResolveOpponentTurnsAsync(turnSequenceGeneration);
+		}
+	}
+
+	private async Task ResumeCommittedAuthoritySelectionAsync(AuthorityActionState state)
+	{
 		if (state.Phase == AuthorityActionPhase.WaitingAttachment)
 		{
 			if (state.AttachmentMutationApplied)
@@ -529,7 +651,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			await CompleteMagnetAttachmentSelectionAsync(state.TargetHandIndex);
+			await CompleteMagnetAttachmentSelectionAsync(state.SelectionIndex);
 			return;
 		}
 
@@ -541,7 +663,7 @@ public partial class GameBoardScene
 			{
 				CommitNetworkAuthorityDiscardMutation();
 			}
-			else if (RemoveHandCardFromGame(state.ActorSeat, state.TargetHandIndex))
+			else if (RemoveHandCardFromGame(state.ActorSeat, state.SelectionIndex))
 			{
 				CommitNetworkAuthorityDiscardMutation();
 			}
@@ -550,12 +672,16 @@ public partial class GameBoardScene
 				CompleteNetworkAuthorityAction();
 			}
 
+			DisposeActiveSelectionOverlay();
+			ClearPendingItemSelectionState();
+			RenderPlayerHands();
+
 			if (_networkAuthorityActionState.IsActive
 				&& _networkAuthorityActionState.Kind == AuthorityActionKind.CardTransfer
-				&& _networkAuthorityActionState.Phase is AuthorityActionPhase.WaitingTargetPlayer or AuthorityActionPhase.WaitingTargetHand
-				&& AuthorityActionStateRules.HasCommittedSelection(_networkAuthorityActionState))
+				&& _networkAuthorityActionState.Phase == AuthorityActionPhase.Applying
+				&& !_networkAuthorityActionState.TransferMutationApplied)
 			{
-				await ResumeCommittedAuthoritySelectionAsync(_networkAuthorityActionState);
+				await ResumeCardTransferAuthorityActionAsync(_networkAuthorityActionState);
 				return;
 			}
 
@@ -580,6 +706,14 @@ public partial class GameBoardScene
 		if (state.Phase == AuthorityActionPhase.WaitingDiscard)
 		{
 			EnsurePendingSelectionWaiterFromAuthorityAction();
+			if (AuthorityActionStateRules.HasCommittedSelection(_networkAuthorityActionState))
+			{
+				await ResumeCommittedAuthoritySelectionAsync(_networkAuthorityActionState);
+				return;
+			}
+
+			RefreshNetworkPendingSelectionOverlay();
+			BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
 			return;
 		}
 
@@ -597,8 +731,12 @@ public partial class GameBoardScene
 				EnsurePendingSelectionWaiterFromAuthorityAction();
 				if (AuthorityActionStateRules.HasCommittedSelection(_networkAuthorityActionState))
 				{
-					await CompleteMagnetAttachmentSelectionAsync(_networkAuthorityActionState.TargetHandIndex);
+					await CompleteMagnetAttachmentSelectionAsync(_networkAuthorityActionState.SelectionIndex);
+					return;
 				}
+
+				RefreshNetworkPendingSelectionOverlay();
+				BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
 				return;
 			}
 
@@ -671,17 +809,19 @@ public partial class GameBoardScene
 	private async Task ResumeFinalizingAuthorityActionAsync(AuthorityActionState state)
 	{
 		if (!state.TurnAdvanceApplied
-			&& state.CompletesTurn
 			&& !IsGameOver()
 			&& _currentTurnPlayerIndex == state.ActorSeat)
 		{
-			await AdvanceTurnAfterPlayedResultAsync(
+			await WaitForAuthorityTransactionFaultAsync("before_turn_advance");
+			_networkAuthorityActionState = state with { Phase = AuthorityActionPhase.Applying };
+			await ResolveActionCompletionAsync(
 				state.ActorSeat,
 				new PlayCardResult(
 					state.Played,
 					state.Captured,
 					state.DeckCollected,
-					CompletesTurn: true));
+					CompletesTurn: state.CompletesTurn));
+			await WaitForAuthorityTransactionFaultAsync("after_turn_advance");
 		}
 
 		if (!_networkAuthorityActionState.IsActive)
@@ -691,6 +831,7 @@ public partial class GameBoardScene
 
 		_networkAuthorityActionState = _networkAuthorityActionState with
 		{
+			Phase = AuthorityActionPhase.Finalizing,
 			TurnAdvanceApplied = true,
 			ContinuationStep = AuthorityActionContinuationStep.Complete,
 		};
@@ -726,29 +867,89 @@ public partial class GameBoardScene
 		_pendingItemTurnSequenceGeneration = state.TurnGeneration;
 		_pendingItemSelectionMode = state.Phase switch
 		{
-			AuthorityActionPhase.WaitingTargetPlayer => PendingItemSelectionMode.TargetPlayer,
-			AuthorityActionPhase.WaitingTargetHand => PendingItemSelectionMode.TargetHandCard,
 			AuthorityActionPhase.WaitingDiscard => PendingItemSelectionMode.HandLimitDiscard,
 			AuthorityActionPhase.WaitingAttachment => PendingItemSelectionMode.AttachmentRewardHandCard,
 			_ => PendingItemSelectionMode.None,
 		};
-		_revealedPlayerHandIndex = state.TargetSeat;
-		if (state.Phase == AuthorityActionPhase.WaitingTargetPlayer)
-		{
-			_revealedPlayerHandIndex = -1;
-		}
 		_isProcessingCardPlay = true;
 
 		if (state.Phase == AuthorityActionPhase.WaitingDiscard && _pendingHandLimitDiscardCompletion == null)
 		{
-			_pendingHandLimitDiscardCompletion = new TaskCompletionSource<int>(
+			var completionSource = new TaskCompletionSource<int>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
+			_pendingHandLimitDiscardCompletion = completionSource;
+			_ = ResumeRestoredHandLimitDiscardSelectionAsync(
+				completionSource,
+				state.ActionId,
+				state.TurnGeneration);
 		}
 
 		if (state.Phase == AuthorityActionPhase.WaitingAttachment && _pendingMagnetAttachmentCompletion == null)
 		{
-			_pendingMagnetAttachmentCompletion = new TaskCompletionSource<bool>(
+			var completionSource = new TaskCompletionSource<bool>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
+			_pendingMagnetAttachmentCompletion = completionSource;
+			_ = ResumeRestoredAttachmentSelectionAsync(
+				completionSource,
+				state.ActionId,
+				state.TurnGeneration);
+		}
+	}
+
+	private async Task ResumeRestoredHandLimitDiscardSelectionAsync(
+		TaskCompletionSource<int> completionSource,
+		long actionId,
+		int turnGeneration)
+	{
+		try
+		{
+			int selectionIndex = await completionSource.Task;
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			AuthorityActionState state = _networkAuthorityActionState;
+			if (!IsNetworkHost()
+				|| !ReferenceEquals(_pendingHandLimitDiscardCompletion, completionSource)
+				|| selectionIndex < 0
+				|| state.ActionId != actionId
+				|| state.TurnGeneration != turnGeneration
+				|| state.Phase != AuthorityActionPhase.WaitingDiscard
+				|| state.SelectionIndex != selectionIndex
+				|| !AuthorityActionStateRules.HasCommittedSelection(state))
+			{
+				return;
+			}
+
+			await ResumeCommittedAuthoritySelectionAsync(state);
+		}
+		catch (Exception ex)
+		{
+			GD.PushError($"Restored hand-limit discard resume failed: {ex}");
+		}
+	}
+
+	private async Task ResumeRestoredAttachmentSelectionAsync(
+		TaskCompletionSource<bool> completionSource,
+		long actionId,
+		int turnGeneration)
+	{
+		try
+		{
+			await completionSource.Task;
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			AuthorityActionState state = _networkAuthorityActionState;
+			if (!IsNetworkHost()
+				|| state.ActionId != actionId
+				|| state.TurnGeneration != turnGeneration
+				|| !state.AttachmentMutationApplied
+				|| state.Phase == AuthorityActionPhase.WaitingAttachment)
+			{
+				return;
+			}
+
+			await ResumeAuthorityActionAsync();
+		}
+		catch (Exception ex)
+		{
+			GD.PushError($"Restored attachment selection resume failed: {ex}");
 		}
 	}
 
@@ -812,7 +1013,9 @@ public partial class GameBoardScene
 
 	private void CommitNetworkAuthorityActionCheckpoint()
 	{
-		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		if (IsNetworkMultiplayerMode()
+			&& IsNetworkHost()
+			&& AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState))
 		{
 			GetNetworkManager()?.CommitAuthorityCheckpointFromBoard(this);
 		}

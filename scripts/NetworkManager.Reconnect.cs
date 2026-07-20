@@ -439,6 +439,24 @@ public partial class NetworkManager
 		return state.Mode != SeatControlMode.HumanConnected;
 	}
 
+	public bool DebugSetSeatAiProxyForCoreTurnProbe(int seatIndex)
+	{
+		if (!IsHost
+			|| _state != NetworkSessionState.InGame
+			|| !TryGetSeatControlState(seatIndex, out SeatControlState state, out int stateIndex))
+		{
+			return false;
+		}
+
+		_seatControlStates[stateIndex] = state with
+		{
+			Mode = SeatControlMode.AiProxyReclaimable,
+			PeerId = 0,
+		};
+		EmitSeatControlStatesUpdated();
+		return true;
+	}
+
 	public void NotifyReconnectSnapshotApplied(string matchId)
 	{
 		if (_state is not (NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost)

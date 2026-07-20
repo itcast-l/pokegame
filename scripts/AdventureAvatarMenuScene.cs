@@ -70,8 +70,6 @@ public partial class AdventureAvatarMenuScene : Control
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		MouseFilter = MouseFilterEnum.Ignore;
-		GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
-		GetAdventureRunSessionStore()?.ReloadFromActiveProfile();
 
 		BindUi();
 		_levelScrollTarget = 0;
@@ -81,6 +79,12 @@ public partial class AdventureAvatarMenuScene : Control
 		_selectedAvatarId = string.IsNullOrWhiteSpace(selected_avatar_id)
 			? GetInitialAvatarId()
 			: NormalizeAdventureAvatarId(selected_avatar_id);
+		AdventureRunSessionStore? runSessionStore = GetAdventureRunSessionStore();
+		runSessionStore?.ConfigureForPolicy(
+			_selectedAdventureId == AdventureCampaignCatalog.MainCampaignId
+				? GameModePolicy.AdventureMain
+				: GameModePolicy.AdventureTutorial);
+		runSessionStore?.ReloadFromActiveProfile();
 		RebuildLevelList();
 		RefreshSelection();
 		ClampScrollTarget();

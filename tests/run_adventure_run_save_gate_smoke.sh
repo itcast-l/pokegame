@@ -20,16 +20,36 @@ TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
 trap 'rm -rf "$TMP_DIR"' EXIT
 LOG_FILE="$TMP_DIR/adventure-run-save-gate.log"
+	OPENING_LOG_FILE="$TMP_DIR/adventure-run-save-gate-opening.log"
 
-if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureRunSaveGateSmoke.gd >"$LOG_FILE" 2>&1; then
-	cat "$LOG_FILE" >&2
+if [[ "${ADVENTURE_SAVE_GATE_OPENING_ONLY:-0}" != "1" ]]; then
+	if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureRunSaveGateSmoke.gd >"$LOG_FILE" 2>&1; then
+		cat "$LOG_FILE" >&2
+		exit 1
+	fi
+
+	if grep -Fq "SCRIPT ERROR" "$LOG_FILE" \
+			|| ! grep -Fq "ADVENTURE_RUN_SAVE_GATE_CORE_SMOKE_OK" "$LOG_FILE"; then
+		cat "$LOG_FILE" >&2
+		exit 1
+	fi
+fi
+
+if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/AdventureRunSaveGateSmoke.gd \
+		-- opening-only >"$OPENING_LOG_FILE" 2>&1; then
+	cat "$OPENING_LOG_FILE" >&2
 	exit 1
 fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE" \
-		|| ! grep -Fq "ADVENTURE_RUN_SAVE_GATE_SMOKE_OK" "$LOG_FILE"; then
-	cat "$LOG_FILE" >&2
+if grep -Fq "SCRIPT ERROR" "$OPENING_LOG_FILE" \
+		|| ! grep -Fq "ADVENTURE_RUN_SAVE_GATE_OPENING_SMOKE_OK" "$OPENING_LOG_FILE"; then
+	cat "$OPENING_LOG_FILE" >&2
 	exit 1
 fi
 
-cat "$LOG_FILE"
+if [[ -f "$LOG_FILE" ]]; then
+	cat "$LOG_FILE"
+fi
+cat "$OPENING_LOG_FILE"
+echo "ADVENTURE_RUN_SAVE_GATE_SMOKE_OK"

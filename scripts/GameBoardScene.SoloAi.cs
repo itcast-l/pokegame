@@ -40,31 +40,6 @@ public partial class GameBoardScene
 			out handIndex);
 	}
 
-	private int PickOfflineSoloAiTargetPlayer(string target, int ownerPlayerIndex)
-	{
-		var candidates = new List<SoloAiRules.PlayerTargetCandidate>();
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			if (!IsResolvedItemTargetPlayerCandidate(target, ownerPlayerIndex, playerIndex))
-			{
-				continue;
-			}
-
-			candidates.Add(new SoloAiRules.PlayerTargetCandidate(
-				PlayerIndex: playerIndex,
-				TotalHandCardCount: GetTotalHandCardCount(playerIndex),
-				DeckCount: playerIndex >= 0 && playerIndex < _playerDecks.Count ? _playerDecks[playerIndex].Count : 0,
-				Score: playerIndex >= 0 && playerIndex < _playerScores.Length ? _playerScores[playerIndex] : 0));
-		}
-
-		return SoloAiRules.PickItemTargetPlayer(
-			GetSoloAiDifficulty(),
-			MapSoloAiTargetPreference(target),
-			candidates,
-			strategyRollPercent: _rng.RandiRange(0, 99),
-			tieBreakOrdinal: _rng.RandiRange(0, int.MaxValue));
-	}
-
 	private int PickOfflineSoloAiDiscardDisplayIndex(int playerIndex)
 	{
 		var candidates = new List<SoloAiRules.HandCardDecisionCandidate>();
@@ -107,13 +82,4 @@ public partial class GameBoardScene
 			_rng.RandiRange(0, int.MaxValue));
 	}
 
-	private static SoloAiRules.TargetPreferenceKind MapSoloAiTargetPreference(string target)
-	{
-		return target switch
-		{
-			CardEffectTargets.PlayerHand => SoloAiRules.TargetPreferenceKind.PlayerHand,
-			CardEffectTargets.PlayerDeck => SoloAiRules.TargetPreferenceKind.PlayerDeck,
-			_ => SoloAiRules.TargetPreferenceKind.PlayerScore,
-		};
-	}
 }

@@ -78,21 +78,25 @@ public partial class GameBoardScene
 			return await presentationHandler(playerIndex, itemHandIndex, turnSequenceGeneration);
 		}
 
-		if (TryStartPendingTargetedItemSelection(itemCard, playerIndex, itemHandIndex, turnSequenceGeneration, out PlayCardResult pendingSelectionResult))
-		{
-			return pendingSelectionResult;
-		}
-
 		int targetPlayerIndex = -1;
 		int targetHandIndex = -1;
 		if (RequiresPlayerTarget(itemCard.Id))
 		{
-			targetPlayerIndex = PickItemTargetPlayer(itemCard.Id, playerIndex);
-			targetHandIndex = IsPlayerHandTargetItemCard(itemCard.Id) ? PickTargetHandIndex(targetPlayerIndex) : -1;
+			if (!TryGetRecordedNetworkAuthorityCardTransferTarget(
+				itemCard.Id,
+				playerIndex,
+				out targetPlayerIndex,
+				out targetHandIndex))
+			{
+				targetPlayerIndex = PickItemTargetPlayer(itemCard.Id, playerIndex);
+				targetHandIndex = IsPlayerHandTargetItemCard(itemCard.Id) ? PickTargetHandIndex(targetPlayerIndex) : -1;
+				CommitNetworkAuthorityCardTransferTarget(targetPlayerIndex, targetHandIndex);
+			}
 		}
 
 		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
 		itemHand.RemoveAt(itemHandIndex);
+		await WaitForAuthorityTransactionFaultAsync("after_item_remove");
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
@@ -172,46 +176,6 @@ public partial class GameBoardScene
 		};
 	}
 
-	private bool TryStartPendingTargetedItemSelection(
-		ItemCard itemCard,
-		int playerIndex,
-		int itemHandIndex,
-		int turnSequenceGeneration,
-		out PlayCardResult result)
-	{
-		result = new PlayCardResult(false, false);
-		if (!_itemCardCatalog.TryGetDefinition(itemCard.Id, out ItemCardDefinition definition)
-			|| definition.PlayPresentation != CardPlayPresentationTypes.TargetedTrigger
-			|| !RequiresPlayerTarget(itemCard.Id))
-		{
-			return false;
-		}
-
-		if (!HasPlayableTargetForItemCard(itemCard.Id, playerIndex))
-		{
-			return true;
-		}
-
-		if (!ShouldUseInteractiveTargetedItemSelection(playerIndex))
-		{
-			return false;
-		}
-
-		StartPendingItemSelection(itemCard.Id, playerIndex, itemHandIndex, turnSequenceGeneration);
-		result = new PlayCardResult(true, false, CompletesTurn: false);
-		return true;
-	}
-
-	private bool ShouldUseInteractiveTargetedItemSelection(int playerIndex)
-	{
-		if (!IsNetworkMultiplayerMode())
-		{
-			return playerIndex == MainPlayerIndex;
-		}
-
-		return !(GetNetworkManager()?.IsSeatAiControlled(playerIndex) ?? false);
-	}
-
 	private async Task<PlayCardResult> PlayTransformAreaItemCardFromHandAsync(int playerIndex, int itemHandIndex, int turnSequenceGeneration)
 	{
 		if (playerIndex < 0
@@ -240,6 +204,7 @@ public partial class GameBoardScene
 
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		itemHand.RemoveAt(itemHandIndex);
+		await WaitForAuthorityTransactionFaultAsync("after_item_remove");
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
@@ -269,6 +234,7 @@ public partial class GameBoardScene
 			-1,
 			transformAreaGlobalPosition,
 			turnSequenceGeneration);
+		await WaitForAuthorityTransactionFaultAsync("before_effect_complete");
 		return result with
 		{
 			CompletesTurn = false,

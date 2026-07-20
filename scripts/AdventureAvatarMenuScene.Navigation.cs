@@ -9,6 +9,10 @@ public partial class AdventureAvatarMenuScene
 		{
 			return;
 		}
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
 
 		AdventureRunSessionStore? runSessionStore = GetAdventureRunSessionStore();
 		GameModePolicy selectedPolicy = _selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId
@@ -16,7 +20,9 @@ public partial class AdventureAvatarMenuScene
 			: GameModePolicy.AdventureMain;
 		runSessionStore?.ConfigureForPolicy(selectedPolicy);
 		runSessionStore?.ReloadFromActiveProfile();
-		if (runSessionStore?.HasActiveRun == true || runSessionStore?.RequiresRunRecovery == true)
+		if (_selectedAdventureId == AdventureCampaignCatalog.MainCampaignId
+			&& (runSessionStore?.HasActiveRun == true
+				|| runSessionStore?.RequiresRunRecovery == true))
 		{
 			ShowRunResumeDialog();
 			return;
@@ -50,21 +56,33 @@ public partial class AdventureAvatarMenuScene
 		string selectedAvatarId,
 		bool beginNewRun = true)
 	{
-		if (beginNewRun && AdventureCampaignCatalog.TryGetMainStageIndex(selectedAvatarId, out int mainStageIndex))
+		if (!EnsureItemCardCatalogReady())
+		{
+			_isStartingAdventure = false;
+			_backButton.Disabled = false;
+			_startButton.Disabled = false;
+			MouseFilter = MouseFilterEnum.Stop;
+			return;
+		}
+
+		if (AdventureCampaignCatalog.TryGetMainStageIndex(selectedAvatarId, out int mainStageIndex))
 		{
 			GetAdventureRunSessionStore()?.ConfigureForPolicy(GameModePolicy.AdventureMain);
-			AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
-				mainStageIndex,
-				selectedAvatarId) ?? AdventureRunWriteResult.SaveFailed;
-			if (writeResult != AdventureRunWriteResult.Succeeded)
+			if (beginNewRun)
 			{
-				GD.PushWarning($"Failed to start adventure run: {writeResult}");
-				_isStartingAdventure = false;
-				_backButton.Disabled = false;
-				_startButton.Disabled = false;
-				MouseFilter = MouseFilterEnum.Stop;
-				RefreshSelection();
-				return;
+				AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
+					mainStageIndex,
+					selectedAvatarId) ?? AdventureRunWriteResult.SaveFailed;
+				if (writeResult != AdventureRunWriteResult.Succeeded)
+				{
+					GD.PushWarning($"Failed to start adventure run: {writeResult}");
+					_isStartingAdventure = false;
+					_backButton.Disabled = false;
+					_startButton.Disabled = false;
+					MouseFilter = MouseFilterEnum.Stop;
+					RefreshSelection();
+					return;
+				}
 			}
 		}
 		else
@@ -90,6 +108,17 @@ public partial class AdventureAvatarMenuScene
 
 			QueueFree();
 		});
+	}
+
+	private bool EnsureItemCardCatalogReady()
+	{
+		if (ItemCardCatalogPreflight.TryValidate(this, out _))
+		{
+			return true;
+		}
+
+		ItemCardCatalogPreflight.ShowErrorDialog(this);
+		return false;
 	}
 
 	private void ReturnToMainMenu()

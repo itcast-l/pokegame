@@ -15,8 +15,7 @@ public partial class GameBoardScene
 			["seat"] = GetLocalHandPlayerIndex(),
 			["hand_index"] = -1,
 			["item_hand_index"] = -1,
-			["target_player_index"] = -1,
-			["target_hand_index"] = -1,
+			["selection_index"] = -1,
 			["turn_sequence_generation"] = _turnSequenceGeneration,
 		};
 
@@ -24,11 +23,11 @@ public partial class GameBoardScene
 		if (!IsNetworkMultiplayerMode()
 			|| localSeat < 0
 			|| localSeat >= player_count
-		|| IsGameOver()
+			|| IsGameOver()
 			|| _isOpeningDealAnimationPlaying
 			|| _networkMigrationInputLocked
-		|| _isProcessingCardPlay
-		|| _isResolvingTurnSequence
+			|| (_isProcessingCardPlay && !HasPendingItemSelection())
+			|| (_isResolvingTurnSequence && !HasPendingItemSelection())
 		|| (!IsNetworkHost() && NetworkVisualPlayback.IsProcessing)
 		|| _networkPendingHandIndex >= 0
 		|| _networkPendingItemHandIndex >= 0
@@ -46,38 +45,13 @@ public partial class GameBoardScene
 
 			switch (_pendingItemSelectionMode)
 			{
-				case PendingItemSelectionMode.TargetPlayer:
-					for (int targetPlayerIndex = 0; targetPlayerIndex < player_count; targetPlayerIndex++)
-					{
-						if (!IsItemTargetPlayerCandidate(_pendingItemCardId, localSeat, targetPlayerIndex))
-						{
-							continue;
-						}
-
-						return WithAction(action, NetworkDebugActionPendingSelection, targetPlayerIndex, -1, -1);
-					}
-					break;
-				case PendingItemSelectionMode.TargetHandCard:
-					if (_revealedPlayerHandIndex >= 0)
-					{
-						int targetPlayerIndex = _revealedPlayerHandIndex;
-						int targetCount = GetTotalHandCardCount(targetPlayerIndex);
-						for (int targetHandIndex = 0; targetHandIndex < targetCount; targetHandIndex++)
-						{
-							if (IsPendingItemTargetValid(_pendingItemCardId, localSeat, targetPlayerIndex, targetHandIndex))
-							{
-								return WithAction(action, NetworkDebugActionPendingSelection, targetPlayerIndex, targetHandIndex, -1);
-							}
-						}
-					}
-					break;
 				case PendingItemSelectionMode.HandLimitDiscard:
 					int totalHandCards = GetTotalHandCardCount(localSeat);
 					for (int displayIndex = 0; displayIndex < totalHandCards; displayIndex++)
 					{
 						if (IsValidHandLimitDiscardSelection(localSeat, displayIndex))
 						{
-							return WithAction(action, NetworkDebugActionPendingSelection, -1, displayIndex, -1);
+							return WithAction(action, NetworkDebugActionPendingSelection, displayIndex, -1);
 						}
 					}
 					break;
@@ -88,7 +62,7 @@ public partial class GameBoardScene
 						{
 							if (IsValidMagnetAttachmentHandIndex(localSeat, handIndex, _pendingItemCardId))
 							{
-								return WithAction(action, NetworkDebugActionPendingSelection, -1, handIndex, -1);
+								return WithAction(action, NetworkDebugActionPendingSelection, handIndex, -1);
 							}
 						}
 					}
@@ -110,7 +84,7 @@ public partial class GameBoardScene
 			{
 				if (CanPlayItemCard(localSeat, _playerItemHands[localSeat][itemHandIndex].Id))
 				{
-					return WithAction(action, NetworkDebugActionItemCard, -1, -1, itemHandIndex);
+					return WithAction(action, NetworkDebugActionItemCard, -1, itemHandIndex);
 				}
 			}
 		}
@@ -119,7 +93,7 @@ public partial class GameBoardScene
 		{
 			if (_playerHands[localSeat].Count > 0)
 			{
-				return WithAction(action, NetworkDebugActionBaseCard, -1, -1, -1, 0);
+				return WithAction(action, NetworkDebugActionBaseCard, -1, -1, 0);
 			}
 		}
 
@@ -133,9 +107,24 @@ public partial class GameBoardScene
 		int generation = action["turn_sequence_generation"].AsInt32();
 		if (kind == NetworkDebugActionPendingSelection)
 		{
+			int selectionIndex = action["selection_index"].AsInt32();
+			if (IsNetworkHost())
+			{
+				switch (_pendingItemSelectionMode)
+				{
+					case PendingItemSelectionMode.HandLimitDiscard:
+						CompleteHandLimitDiscardSelection(selectionIndex);
+						return true;
+					case PendingItemSelectionMode.AttachmentRewardHandCard:
+						ConfirmMainPlayerMagnetAttachment(selectionIndex);
+						return true;
+				}
+
+				return false;
+			}
+
 			RequestNetworkPendingItemSelection(
-				action["target_player_index"].AsInt32(),
-				action["target_hand_index"].AsInt32(),
+				selectionIndex,
 				generation);
 			return true;
 		}
@@ -185,6 +174,43 @@ public partial class GameBoardScene
 		return IsNetworkHost() ? _networkSnapshotId : _networkLastAppliedSnapshotId;
 	}
 
+	public bool DebugConfigureInactiveHumanTurnSkipScenario()
+	{
+		const int inactivePlayerIndex = 2;
+		const int remainingOpponentIndex = 1;
+		if (!IsNetworkMultiplayerMode()
+			|| !IsNetworkHost()
+			|| player_count != 3
+			|| _currentTurnPlayerIndex != MainPlayerIndex
+			|| _isOpeningDealAnimationPlaying
+			|| _isProcessingCardPlay
+			|| _isResolvingTurnSequence
+			|| HasPendingItemSelection()
+			|| _playerHands.Count <= inactivePlayerIndex
+			|| _playerDecks.Count <= inactivePlayerIndex
+			|| _playerItemHands.Count <= inactivePlayerIndex
+			|| _playerHands[MainPlayerIndex].Count == 0
+			|| _playerDecks[MainPlayerIndex].Count == 0
+			|| (_playerHands[remainingOpponentIndex].Count == 0
+				&& _playerDecks[remainingOpponentIndex].Count == 0)
+			|| !TryGetSeatControlStateForUi(inactivePlayerIndex, out SeatControlState inactiveSeat)
+			|| inactiveSeat.Mode != SeatControlMode.HumanConnected)
+		{
+			return false;
+		}
+
+		_playerHands[inactivePlayerIndex].Clear();
+		_playerDecks[inactivePlayerIndex].Clear();
+		_playerItemHands[inactivePlayerIndex].Clear();
+		_tableCards.Clear();
+		InvalidateRenderCaches();
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		SendBoardSnapshotIfHost();
+		return true;
+	}
+
 	public Godot.Collections.Dictionary DebugGetNetworkActionState()
 	{
 		return new Godot.Collections.Dictionary
@@ -230,14 +256,12 @@ public partial class GameBoardScene
 	private static Godot.Collections.Dictionary WithAction(
 		Godot.Collections.Dictionary action,
 		string kind,
-		int targetPlayerIndex,
-		int targetHandIndex,
+		int selectionIndex,
 		int itemHandIndex,
 		int handIndex = -1)
 	{
 		action["kind"] = kind;
-		action["target_player_index"] = targetPlayerIndex;
-		action["target_hand_index"] = targetHandIndex;
+		action["selection_index"] = selectionIndex;
 		action["item_hand_index"] = itemHandIndex;
 		action["hand_index"] = handIndex;
 		return action;

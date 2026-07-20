@@ -55,6 +55,7 @@ public partial class GameBoardScene
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
 		_isOpeningDealAnimationPlaying = playOpeningDealAnimation;
+		_matchOutcomeKind = MatchOutcomeKind.InProgress;
 		_winnerPlayerIndex = -1;
 		_settledAdventureDefeatResolution = null;
 		ResetPlayerAvatarActions();

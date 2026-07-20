@@ -7,6 +7,15 @@ internal enum DirectItemHandCardSource
 
 internal static class DirectItemTargetRules
 {
+	internal static int PickUniformCandidate(
+		System.Collections.Generic.IReadOnlyList<int> candidates,
+		int randomIndex)
+	{
+		return randomIndex >= 0 && randomIndex < candidates.Count
+			? candidates[randomIndex]
+			: -1;
+	}
+
 	internal static bool IsEligibleOpponent(
 		int ownerPlayerIndex,
 		int targetPlayerIndex,

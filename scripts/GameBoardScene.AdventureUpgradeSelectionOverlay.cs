@@ -218,6 +218,14 @@ public partial class GameBoardScene
 				{
 					overlayLayer.QueueFree();
 				}
+			},
+			abnormalRelease: () =>
+			{
+				ResolveAdventureUpgradeSelection(
+					new AdventureUpgradeSelectionResult(
+						AdventureUpgradeSelectionOutcome.Confirmed,
+						0),
+					clearOverlay: false);
 			}));
 		return true;
 	}

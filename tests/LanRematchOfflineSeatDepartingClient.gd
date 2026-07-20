@@ -1,13 +1,11 @@
 extends SceneTree
 
 const HOST_ADDRESS := "127.0.0.1"
-const TIMEOUT_SECONDS := 20.0
+const TIMEOUT_SECONDS := 25.0
 const LOBBY_STATE := 4
-const RECONNECTING_STATE := 8
 
 var _network: Node
 var _ready_sent := false
-var _board_initialized := false
 var _finished := false
 
 
@@ -19,41 +17,34 @@ func _run() -> void:
 	_network = root.get_node("/root/NetworkManager")
 	_network.connect("StateChanged", Callable(self, "_on_state_changed"))
 	_network.connect("BoardInitialize", Callable(self, "_on_board_initialize"))
-	print("CLIENT_START")
+	print("DEPARTING_START")
 	await process_frame
 	_network.JoinLan(HOST_ADDRESS, "")
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
 	while not _finished and Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
-
 	if not _finished:
-		_fail("Client timed out")
+		_fail("Departing client timed out")
 
 
 func _on_state_changed(state: int) -> void:
-	print("CLIENT_STATE %d" % state)
 	if state == LOBBY_STATE and not _ready_sent:
 		_ready_sent = true
-		print("CLIENT_READY")
 		_network.SetLocalReady(true)
-	elif state == RECONNECTING_STATE:
-		print("CLIENT_RECONNECTING")
-		_finish()
 
 
 func _on_board_initialize(_payload: Dictionary) -> void:
-	if _board_initialized:
+	_disconnect_after_settle()
+
+
+func _disconnect_after_settle() -> void:
+	await create_timer(0.5).timeout
+	if _finished:
 		return
-
-	_board_initialized = true
-	print("CLIENT_BOARD_INIT")
-
-
-func _finish() -> void:
 	_finished = true
-	if _network != null:
-		_network.LeaveSession()
-	print("CLIENT_DONE")
+	print("DEPARTING_DISCONNECT")
+	_network.LeaveSession()
+	print("DEPARTING_DONE")
 	quit(0)
 
 
@@ -61,5 +52,5 @@ func _fail(message: String) -> void:
 	push_error(message)
 	if _network != null:
 		_network.LeaveSession()
-	print("CLIENT_FAIL %s" % message)
+	print("DEPARTING_FAIL %s" % message)
 	quit(1)

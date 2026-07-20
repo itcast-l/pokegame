@@ -286,7 +286,7 @@ public partial class GameBoardScene
 			for (int cardIndex = 0; cardIndex < visibleHandCount; cardIndex++)
 			{
 				PlayingCard card = hand[cardIndex];
-				bool showCardBack = !isLocalHandPlayer && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+				bool showCardBack = !isLocalHandPlayer && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
 				bool showMagnetSelectionHighlight = isMagnetSelectionActive
 					&& isLocalHandPlayer
@@ -326,7 +326,7 @@ public partial class GameBoardScene
 			for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 			{
 				ItemCard itemCard = itemHand[itemIndex];
-				bool showCardBack = !isLocalHandPlayer && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+				bool showCardBack = !isLocalHandPlayer && _cardBackTexture != null;
 				Texture2D? texture = showCardBack ? _cardBackTexture : itemCard.Texture;
 				float visualScale = showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id);
 				int displayIndex = hand.Count + itemIndex;
@@ -553,7 +553,7 @@ public partial class GameBoardScene
 		bool isLocalHandPlayer = IsLocalHandPlayer(playerIndex);
 		bool isMagnetSelectionActive = IsMainPlayerMagnetSelectionActive();
 		bool isHandLimitDiscardSelectionActive = IsMainPlayerHandLimitDiscardSelectionActive();
-		bool showCardBack = !isLocalHandPlayer && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+		bool showCardBack = !isLocalHandPlayer && _cardBackTexture != null;
 
 		signature.Add(handArea.Size.X);
 		signature.Add(handArea.Size.Y);
@@ -564,7 +564,6 @@ public partial class GameBoardScene
 		signature.Add(canMainPlayerAct);
 		signature.Add(isMagnetSelectionActive);
 		signature.Add(isHandLimitDiscardSelectionActive);
-		signature.Add(_revealedPlayerHandIndex);
 		signature.Add(_pendingItemSelectionMode);
 		signature.Add(_pendingItemOwnerIndex);
 		signature.Add(_pendingItemCardId);

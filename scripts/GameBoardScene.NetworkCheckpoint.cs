@@ -62,6 +62,10 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (!AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState))
+		{
+			return false;
+		}
 
 		EnsureNetworkCardCache();
 		NetworkSessionConfig config = networkManager.CurrentConfig;
@@ -87,7 +91,9 @@ public partial class GameBoardScene
 			ItemHands = ExportItemHands(),
 			TableCards = ExportTableCards(),
 			Scores = _playerScores.Take(player_count).ToArray(),
+			MatchOutcomeKind = _matchOutcomeKind,
 			WinnerPlayerIndex = _winnerPlayerIndex,
+			OpeningDealCompleted = true,
 			CurrentTurnPlayerIndex = _currentTurnPlayerIndex,
 			TurnSequenceGeneration = _turnSequenceGeneration,
 			CompletedTurnsSinceQuestionRefresh = _completedTurnsSinceQuestionCardRefresh,
@@ -133,6 +139,14 @@ public partial class GameBoardScene
 
 		EnsureNetworkStateLists();
 		EnsureNetworkCardCache();
+		if (!TurnGenerationRules.TryGetNextAfterRestore(
+				_turnSequenceGeneration,
+				checkpoint.TurnSequenceGeneration,
+				out int restoredTurnGeneration))
+		{
+			error = "checkpoint turn generation cannot advance monotonically";
+			return false;
+		}
 		if (!TryBuildRestoredState(
 			checkpoint,
 			out List<List<PlayingCard>> restoredDecks,
@@ -155,6 +169,7 @@ public partial class GameBoardScene
 		_isProcessingCardPlay = false;
 		_isResolvingMagnetAttachmentSelection = false;
 		_isResolvingTurnSequence = false;
+		_isOpeningDealAnimationPlaying = false;
 
 		// All validation and resource construction happens above. Only now mutate
 		// the live board, so a rejected checkpoint cannot leave a half-restored game.
@@ -171,12 +186,16 @@ public partial class GameBoardScene
 				_rng.State = rngState;
 			}
 		}
-		_turnSequenceGeneration = checkpoint.TurnSequenceGeneration;
+		_turnSequenceGeneration = restoredTurnGeneration;
 		_turnStateMachine.SyncGeneration(_turnSequenceGeneration);
 		_currentTurnPlayerIndex = checkpoint.CurrentTurnPlayerIndex;
 		_completedTurnsSinceQuestionCardRefresh = checkpoint.CompletedTurnsSinceQuestionRefresh;
 		_questionCardRefreshAnchorPlayerIndex = checkpoint.QuestionRefreshAnchorPlayerIndex;
+		_matchOutcomeKind = checkpoint.MatchOutcomeKind;
 		_winnerPlayerIndex = checkpoint.WinnerPlayerIndex;
+		AuthorityActionState restoredAuthorityAction = checkpoint.AuthorityAction.IsActive
+			? checkpoint.AuthorityAction with { TurnGeneration = _turnSequenceGeneration }
+			: checkpoint.AuthorityAction;
 		for (int seat = 0; seat < player_count; seat++)
 		{
 			_playerScores[seat] = checkpoint.Scores[seat];
@@ -190,7 +209,9 @@ public partial class GameBoardScene
 
 		_tableCards.Clear();
 		_tableCards.AddRange(restoredTableCards);
-		RestoreNetworkAuthorityActionState(checkpoint.AuthorityAction);
+		ShowAllOpeningHandCards();
+		ShowAllOpeningPileCards();
+		RestoreNetworkAuthorityActionState(restoredAuthorityAction);
 		networkManager?.RestoreLastAcceptedClientActionIds(checkpoint.LastAcceptedClientActionIds);
 		InvalidateRenderCaches();
 		RenderPlayerCardPiles();

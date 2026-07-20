@@ -5,9 +5,19 @@ using Godot;
 public partial class GameBoardScene
 {
 	private AdventureDefeatResolution? _settledAdventureDefeatResolution;
+	private enum AdventureSaveGateState
+	{
+		Idle,
+		Saving,
+		Retrying,
+		Aborting,
+	}
+
 	private bool _adventureSaveInProgress;
+	private AdventureSaveGateState _adventureSaveGateState;
 	private bool _adventureVictoryCommitCompleted;
-	private string _adventureVictoryStatusLocalizationKey = string.Empty;
+	private bool _networkReturnToLobbyRequested;
+	private string _adventureSaveStatusLocalizationKey = string.Empty;
 	private static readonly double[] AdventureSaveRetryDelays = { 0.5, 1.0, 2.0 };
 	private readonly record struct AdventureSaveGateResult<T>(bool Succeeded, T Result);
 
@@ -49,12 +59,15 @@ public partial class GameBoardScene
 
 	private void ShowWinnerBanner(int playerIndex)
 	{
+		bool isDraw = _matchOutcomeKind == MatchOutcomeKind.Draw;
 		if (_winnerBannerRoot != null)
 		{
 			_winnerBannerRoot.ReturnButton.Disabled = false;
 		}
-		_showingDefeatResult = ShouldShowDefeatResult(playerIndex);
-		_winnerLabel.Text = _showingDefeatResult
+		_showingDefeatResult = !isDraw && ShouldShowDefeatResult(playerIndex);
+		_winnerLabel.Text = isDraw
+			? Localize("GAME_DRAW")
+			: _showingDefeatResult
 			? Localize("GAME_DEFEAT")
 			: GetWinnerText(playerIndex);
 		UpdateWinnerPrimaryButton();
@@ -125,18 +138,20 @@ public partial class GameBoardScene
 		Func<T, bool> succeeded,
 		Func<T, bool> retryable)
 	{
-		if (_adventureSaveInProgress || _isLeavingGame)
+		if (IsAdventureSaveGateBlocking() || _isLeavingGame)
 		{
 			return new AdventureSaveGateResult<T>(false, default!);
 		}
 
+		_adventureSaveGateState = AdventureSaveGateState.Saving;
 		_adventureSaveInProgress = true;
-		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVING");
+		ShowAdventureSaveStatus("GAME_ADVENTURE_SAVING");
 		T result = default!;
 		for (int attemptIndex = 0; attemptIndex <= AdventureSaveRetryDelays.Length; attemptIndex++)
 		{
 			if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
 			{
+				_adventureSaveGateState = AdventureSaveGateState.Idle;
 				_adventureSaveInProgress = false;
 				return new AdventureSaveGateResult<T>(false, result);
 			}
@@ -144,8 +159,9 @@ public partial class GameBoardScene
 			result = attempt();
 			if (succeeded(result))
 			{
+				_adventureSaveGateState = AdventureSaveGateState.Idle;
 				_adventureSaveInProgress = false;
-				_adventureVictoryStatusLocalizationKey = string.Empty;
+				_adventureSaveStatusLocalizationKey = string.Empty;
 				if (_winnerPlayerIndex < 0)
 				{
 					HideWinnerBanner();
@@ -154,37 +170,62 @@ public partial class GameBoardScene
 			}
 			if (!retryable(result))
 			{
-				_adventureSaveInProgress = false;
+				await AbortAdventureSaveGateAsync();
 				return new AdventureSaveGateResult<T>(false, result);
 			}
 			if (attemptIndex < AdventureSaveRetryDelays.Length)
 			{
-				ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVE_RETRYING");
+				_adventureSaveGateState = AdventureSaveGateState.Retrying;
+				ShowAdventureSaveStatus("GAME_ADVENTURE_SAVE_RETRYING");
 				await ToSignal(GetTree().CreateTimer(AdventureSaveRetryDelays[attemptIndex]), SceneTreeTimer.SignalName.Timeout);
+				_adventureSaveGateState = AdventureSaveGateState.Saving;
 			}
 		}
 
+		await AbortAdventureSaveGateAsync();
+		return new AdventureSaveGateResult<T>(false, result);
+	}
+
+	private bool IsAdventureSaveGateBlocking()
+	{
+		return _adventureSaveGateState != AdventureSaveGateState.Idle;
+	}
+
+	private async Task AbortAdventureSaveGateAsync()
+	{
+		_adventureSaveGateState = AdventureSaveGateState.Aborting;
+		_adventureSaveInProgress = true;
+		AdvanceTurnSequenceGeneration();
 		_pendingAdventureUpgradeTriggers.Clear();
 		_pendingAdventureWinnerPlayerIndex = -1;
 		CancelAdventureUpgradeSelection();
-		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_SAVE_FAILED_REPLAY");
+		if (_playerHands.Count >= MaxPlayers
+			&& _playerItemHands.Count >= MaxPlayers)
+		{
+			CancelPendingItemSelection();
+		}
+		else
+		{
+			ClearPendingItemSelectionState();
+		}
+		ClearAdventureInteractionStateForBattleEnd();
+		ShowAdventureSaveStatus("GAME_ADVENTURE_SAVE_FAILED_REPLAY");
 		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
 		if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
 		{
-			return new AdventureSaveGateResult<T>(false, result);
+			return;
 		}
-		ShowAdventureVictorySaveStatus("GAME_ADVENTURE_RETURNING_TO_MENU");
+		ShowAdventureSaveStatus("GAME_ADVENTURE_RETURNING_TO_MENU");
 		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
 		if (!_isLeavingGame && GodotObject.IsInstanceValid(this))
 		{
 			await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
 		}
-		return new AdventureSaveGateResult<T>(false, result);
 	}
 
-	private void ShowAdventureVictorySaveStatus(string localizationKey)
+	private void ShowAdventureSaveStatus(string localizationKey)
 	{
-		_adventureVictoryStatusLocalizationKey = localizationKey;
+		_adventureSaveStatusLocalizationKey = localizationKey;
 		_winnerLabel.Text = Localize(localizationKey);
 		_winnerLabel.Visible = true;
 		ApplyWinnerLabelLayout();
@@ -256,19 +297,19 @@ public partial class GameBoardScene
 		if (_settledAdventureDefeatResolution == AdventureDefeatResolution.RetryCurrentStage)
 		{
 			HideWinnerBanner();
-			DealCardsToPlayers(playOpeningDealAnimation: true);
+			_ = DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true);
 			return;
 		}
 
 		if (_settledAdventureDefeatResolution == AdventureDefeatResolution.RestartJourney)
 		{
-			RestartAdventureRunFromWinner(beginNewRun: false);
+			_ = RestartAdventureRunFromWinnerAsync(beginNewRun: false);
 			return;
 		}
 
 		if (ShouldRestartAdventureRunFromWinner())
 		{
-			RestartAdventureRunFromWinner(beginNewRun: true);
+			_ = RestartAdventureRunFromWinnerAsync(beginNewRun: true);
 			return;
 		}
 
@@ -286,6 +327,17 @@ public partial class GameBoardScene
 		if (ShouldAdvanceAdventureFromWinner())
 		{
 			StartNextAdventureStageFromWinner();
+			return;
+		}
+		if (IsNetworkMultiplayerMode())
+		{
+			_networkReturnToLobbyRequested = true;
+			UpdateWinnerPrimaryButton();
+			if (GetNetworkManager()?.RequestReturnToLobbyAfterMatch() != true)
+			{
+				_networkReturnToLobbyRequested = false;
+				UpdateWinnerPrimaryButton();
+			}
 			return;
 		}
 
@@ -324,7 +376,7 @@ public partial class GameBoardScene
 			&& (_winnerPlayerIndex != MainPlayerIndex || !TryGetNextAdventureStageAvatarId(out _));
 	}
 
-	private void RestartAdventureRunFromWinner(bool beginNewRun)
+	private async Task RestartAdventureRunFromWinnerAsync(bool beginNewRun)
 	{
 		string firstAvatarId = GetFirstMainAdventureAvatarId();
 		string gameBoardScenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(firstAvatarId);
@@ -333,18 +385,22 @@ public partial class GameBoardScene
 		{
 			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
 			HideWinnerBanner();
-			DealCardsToPlayers(playOpeningDealAnimation: true);
+			await DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true);
 			return;
 		}
 
 		if (beginNewRun)
 		{
-			AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
-				1,
-				GetFirstMainAdventureAvatarId()) ?? AdventureRunWriteResult.SaveFailed;
-			if (writeResult != AdventureRunWriteResult.Succeeded)
+			AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+			AdventureSaveGateResult<AdventureRunWriteResult> gate =
+				await ExecuteAdventureSaveGateAsync(
+					() => store?.BeginNewMainRun(1, GetFirstMainAdventureAvatarId())
+						?? AdventureRunWriteResult.SaveFailed,
+					result => result == AdventureRunWriteResult.Succeeded,
+					result => result == AdventureRunWriteResult.SaveFailed);
+			if (!gate.Succeeded)
 			{
-				GD.PushWarning($"Failed to start a new adventure run from results: {writeResult}");
+				GD.PushWarning($"Failed to start a new adventure run from results: {gate.Result}");
 				return;
 			}
 		}
@@ -387,7 +443,8 @@ public partial class GameBoardScene
 
 		bool shouldAdvanceAdventure = ShouldAdvanceAdventureFromWinner();
 		bool hasAdventureDefeatAction = _settledAdventureDefeatResolution.HasValue;
-		_winnerReplayButton.Disabled = !string.IsNullOrEmpty(_adventureVictoryStatusLocalizationKey)
+		_winnerReplayButton.Disabled = _networkReturnToLobbyRequested
+			|| !string.IsNullOrEmpty(_adventureSaveStatusLocalizationKey)
 			|| !ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
 			IsNetworkMultiplayerMode(),
 			shouldAdvanceAdventure || hasAdventureDefeatAction);
@@ -409,7 +466,8 @@ public partial class GameBoardScene
 		}
 
 		_winnerBannerRoot.ReturnButton.Text = Localize(GetWinnerReturnButtonKey());
-		_winnerBannerRoot.ReturnButton.Disabled = !string.IsNullOrEmpty(_adventureVictoryStatusLocalizationKey);
+		_winnerBannerRoot.ReturnButton.Disabled = !ResultPresentationRules.ShouldEnableWinnerReturnAction(
+			!string.IsNullOrEmpty(_adventureSaveStatusLocalizationKey));
 	}
 
 	private bool ShouldAdvanceAdventureFromWinner()
@@ -485,6 +543,13 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (_matchOutcomeKind == MatchOutcomeKind.Draw)
+		{
+			_winnerBannerArt.Visible = false;
+			return;
+		}
+
+		_winnerBannerArt.Visible = true;
 		string texturePath = _showingDefeatResult ? DefeatBannerTexturePath : VictoryBannerTexturePath;
 		Texture2D? texture = LoadTextureWithImageFallback(texturePath);
 		if (texture == null)

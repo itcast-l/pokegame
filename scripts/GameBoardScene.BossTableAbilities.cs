@@ -223,11 +223,17 @@ public partial class GameBoardScene
 		}
 
 		int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(playerIndex);
+		AdventureDirectDamageSceneCommit damageCommit =
+			await CommitAdventureDirectDamageAsync(damagePoints);
+		if (!damageCommit.Succeeded)
+		{
+			return;
+		}
 		await PlayAdventureAvatarAttackAsync(
 			playerIndex,
 			damageTargetPlayerIndex,
 			turnSequenceGeneration,
-			() => AddPlayerScore(playerIndex, damagePoints));
+			() => ApplyCommittedAdventureDirectDamage(playerIndex, damageCommit.CommitResult));
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return;

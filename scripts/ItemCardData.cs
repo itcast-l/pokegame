@@ -17,7 +17,7 @@ public partial class ItemCardData : Node2D
 
 	public override void _Ready()
 	{
-		_catalog = ItemCardCatalog.Load(this);
+		_catalog = ItemCardCatalog.LoadRequired(this);
 		_animatedSprite = FindAnimatedSprite();
 		if (_animatedSprite == null)
 		{
@@ -44,7 +44,7 @@ public partial class ItemCardData : Node2D
 	public bool TryGetItemCardId(out string itemCardId)
 	{
 		itemCardId = "";
-		_catalog ??= ItemCardCatalog.Load(this);
+		_catalog ??= ItemCardCatalog.LoadRequired(this);
 		Sprite2D? sprite = FindAnimatedSprite();
 		if (sprite == null)
 		{
@@ -62,7 +62,7 @@ public partial class ItemCardData : Node2D
 
 	private Sprite2D? FindAnimatedSprite()
 	{
-		_catalog ??= ItemCardCatalog.Load(this);
+		_catalog ??= ItemCardCatalog.LoadRequired(this);
 		for (int childIndex = 0; childIndex < GetChildCount(); childIndex++)
 		{
 			Node child = GetChild(childIndex);

@@ -23,7 +23,6 @@ public partial class GameBoardScene
 
 	private void ResetNetworkLocallyCommittedPendingSelectionState()
 	{
-		_networkLocallyAdvancedPendingTargetSelection = false;
 		_networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.None;
 		_networkLocallyCommittedPendingSelectionDisplayIndex = -1;
 		_networkLocallyCommittedPendingSelectionHandIndex = -1;
@@ -206,9 +205,6 @@ public partial class GameBoardScene
 					GetCardRotationDegreesForPlayer(localPlayerIndex));
 				await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
 				break;
-			case CardPlayPresentationTypes.TargetedTrigger:
-				StartPendingItemSelection(itemCard.Id, localPlayerIndex, itemHandIndex, turnSequenceGeneration);
-				break;
 			default:
 				await PlaySpecialCardTriggerEffectAsync(
 					itemCard.Texture,
@@ -223,10 +219,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (definition.PlayPresentation != CardPlayPresentationTypes.TargetedTrigger)
-		{
-			RenderTableCards();
-		}
+		RenderTableCards();
 
 		return true;
 	}
@@ -263,17 +256,6 @@ public partial class GameBoardScene
 			&& _networkPredictedItemTargetTableCardIndex < _tableCards.Count)
 		{
 			_tableCards.RemoveAt(_networkPredictedItemTargetTableCardIndex);
-		}
-
-		if (_networkPredictedItemVisualActive
-			&& _networkPredictedItemPlayPresentation == CardPlayPresentationTypes.TargetedTrigger
-			&& HasPendingItemSelection()
-			&& _pendingItemOwnerIndex == localPlayerIndex
-			&& _pendingItemCardId == _networkPredictedItemCardId)
-		{
-			DisposeActiveSelectionOverlay();
-			ClearPendingItemSelectionState();
-			_isProcessingCardPlay = false;
 		}
 
 		switch (_networkLocallyCommittedPendingSelectionMode)
@@ -339,22 +321,4 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task BeginPredictedNetworkTargetedItemCommitAsync()
-	{
-		if (!_networkPredictedItemVisualActive
-			|| _networkPredictedItemPlayPresentation != CardPlayPresentationTypes.TargetedTrigger)
-		{
-			return;
-		}
-
-		int localPlayerIndex = GetLocalHandPlayerIndex();
-		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(localPlayerIndex, _networkPendingItemHandIndex)
-			?? GetVisibleCardPileTopGlobalPosition(localPlayerIndex);
-		ItemCard itemCard = CreateNetworkVisualItemCard(_networkPredictedItemCardId);
-		await PlaySpecialCardTriggerEffectAsync(
-			itemCard.Texture,
-			startGlobalPosition,
-			0,
-			GetCardRotationDegreesForPlayer(localPlayerIndex));
-	}
 }

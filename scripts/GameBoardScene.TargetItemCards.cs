@@ -199,7 +199,7 @@ public partial class GameBoardScene
 
 	private bool IsPlayerHandHidden(int playerIndex)
 	{
-		return !IsLocalHandPlayer(playerIndex) && playerIndex != _revealedPlayerHandIndex && _cardBackTexture != null;
+		return !IsLocalHandPlayer(playerIndex) && _cardBackTexture != null;
 	}
 
 	private Task<PlayCardResult> ResolveKingEffectAsync(int ownerPlayerIndex, int targetPlayerIndex, int turnSequenceGeneration)

@@ -209,19 +209,6 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void MarkAdventureUpgradeTriggerAsGranted(AdventureUpgradeTriggerSource triggerSource)
-	{
-		switch (triggerSource)
-		{
-			case AdventureUpgradeTriggerSource.RunStart:
-				MarkAdventureRunStartUpgradeGranted();
-				break;
-			case AdventureUpgradeTriggerSource.Victory:
-				MarkAdventureVictoryUpgradeGranted();
-				break;
-		}
-	}
-
 	private IReadOnlyList<AdventureSuitUpgradeDefinition> BuildAdventureUpgradeOffer()
 	{
 		EnsureAdventureUpgradeCatalogLoaded();

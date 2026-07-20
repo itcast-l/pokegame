@@ -43,16 +43,6 @@ public partial class GameBoardScene
 		};
 	}
 
-	private bool ShouldRevealTargetHandToSeat(int recipientSeatIndex)
-	{
-		return _pendingItemSelectionMode == PendingItemSelectionMode.TargetHandCard
-			&& recipientSeatIndex == _pendingItemOwnerIndex
-			&& TryGetSeatControlStateForUi(recipientSeatIndex, out SeatControlState state)
-			&& NetworkSeatControlRules.CanRevealPendingTargetHand(state.Mode)
-			&& _revealedPlayerHandIndex >= 0
-			&& _revealedPlayerHandIndex != _pendingItemOwnerIndex;
-	}
-
 	private PlayingCard CreatePlaceholderPlayingCard()
 	{
 		return new PlayingCard(string.Empty, string.Empty, GetNetworkPlaceholderTexture());

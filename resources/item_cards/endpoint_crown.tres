@@ -1,34 +1,14 @@
-[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ItemCardVisualDefinitionResource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+[ext_resource type="Script" path="res://scripts/ItemCardVisualDefinitionResource.cs" id="1_item_card_visual"]
 
 [resource]
-script = ExtResource("1_item_card_definition")
+script = ExtResource("1_item_card_visual")
 Id = "endpoint_crown"
-DisplayName = "Endpoint Crown"
 SpriteName = "EndpointCrown"
-DescriptionKey = "ITEM_DESC_ENDPOINT_CROWN"
-EnabledInGame = true
-PlayableFromHand = false
-CanBeQuestionReward = true
-RewardDelivery = "immediate_attachment"
 ArtRunName = "run-001"
 FrameCount = 4
 SortOrder = 90
-Rarity = "uncommon"
-TagsCsv = "attachment"
 AttachmentOverlayTexturePath = "res://art/fx/endpoint_crown_card_overlay/run-001/processed/card-aspect.png"
 AttachmentOverlayPriority = 20
-Trigger = "on_play"
-EffectType = "attach_modifier"
-EffectValuesRaw = "modifier=endpoint_crown"
-Priority = 50
-AttachedTrigger = "on_collect"
-AttachedEffectType = "endpoint_crown"
-AttachedEffectValuesRaw = ""
-AttachedPriority = 50
 Icon = ""
-Weight = 40
-Description = ""
-
-PlayPresentation = "direct_trigger"

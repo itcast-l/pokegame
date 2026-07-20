@@ -1,32 +1,12 @@
-[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ItemCardVisualDefinitionResource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+[ext_resource type="Script" path="res://scripts/ItemCardVisualDefinitionResource.cs" id="1_item_card_visual"]
 
 [resource]
-script = ExtResource("1_item_card_definition")
+script = ExtResource("1_item_card_visual")
 Id = "draw_card"
-DisplayName = "Draw Card"
 SpriteName = "DrawCard"
-DescriptionKey = "ITEM_DESC_DRAW_CARD"
-EnabledInGame = true
-PlayableFromHand = true
-CanBeQuestionReward = true
-RewardDelivery = "hand"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 70
-Rarity = "common"
-TagsCsv = ""
-PlayPresentation = "transform_area_trigger"
-Trigger = "on_play"
-EffectType = "draw_card"
-EffectValuesRaw = "count=1"
-Priority = 30
 Icon = ""
-Weight = 100
-Description = ""
-
-AttachedTrigger = ""
-AttachedEffectType = ""
-AttachedEffectValuesRaw = ""
-AttachedPriority = 0

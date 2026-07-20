@@ -72,27 +72,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Task timeoutTask = WaitForMagnetAttachmentTimeoutAsync();
-			await Task.WhenAny(completionSource.Task, timeoutTask);
-			if (!OwnsPendingMagnetAttachmentSelection(
-				completionSource,
-				ownerPlayerIndex,
-				itemCardId,
-				turnSequenceGeneration))
-			{
-				return;
-			}
-
-			await CompleteMagnetAttachmentSelectionAsync(PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId));
-			while (OwnsPendingMagnetAttachmentSelection(
-					completionSource,
-					ownerPlayerIndex,
-					itemCardId,
-					turnSequenceGeneration)
-				&& !IsGameOver())
-			{
-				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-			}
+			await completionSource.Task;
 		}
 		finally
 		{
@@ -136,11 +116,6 @@ public partial class GameBoardScene
 			&& string.Equals(_pendingItemCardId, itemCardId, StringComparison.Ordinal);
 	}
 
-	private async System.Threading.Tasks.Task WaitForMagnetAttachmentTimeoutAsync()
-	{
-		await ToSignal(GetTree().CreateTimer(MagnetAttachmentSelectionSeconds), SceneTreeTimer.SignalName.Timeout);
-	}
-
 	private void ShowMagnetHandSelection()
 	{
 		DisposeActiveSelectionOverlay();
@@ -166,7 +141,6 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerHands();
-		ShowMagnetAttachmentCountdown();
 	}
 
 	private async Task CompleteMagnetAttachmentSelectionAsync(int handIndex)

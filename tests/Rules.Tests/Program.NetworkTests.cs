@@ -70,31 +70,140 @@ internal static partial class Program
 		False(stateMachine.CanBeginOpponentSequence(opponentTurn with { IsResolvingTurnSequence = true }));
 	}
 
-	private static void TurnRulesSkipInactivePlayers()
+	private static void TurnRulesSkipOutOfRangeSeats()
 	{
 		int[] turnOrder = { 0, 2, 1, 3 };
 
-		Equal(1, GameTurnRules.GetNextTurnPlayerIndex(turnOrder, currentPlayerIndex: 2, playerCount: 2, fallbackPlayerIndex: 0));
-		Equal(0, GameTurnRules.GetNextTurnPlayerIndex(turnOrder, currentPlayerIndex: 7, playerCount: 2, fallbackPlayerIndex: 0));
+		Equal(1, GameTurnRules.GetNextPlayerIndex(
+			turnOrder,
+			currentPlayerIndex: 2,
+			playerCount: 2,
+			fallbackPlayerIndex: 0));
 	}
 
-	private static void TurnRulesFindSingleRemainingPlayer()
+	private static void TurnRulesSkipPlayersWithoutCards()
 	{
-		var singleRemaining = new[]
+		int[] turnOrder = { 0, 2, 1, 3 };
+		var threePlayerStates = new[]
 		{
-			new GameTurnRules.PlayerCardState(0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, true),
-			new GameTurnRules.PlayerCardState(0, 0, false),
+			new GameTurnRules.PlayerCardState(1, 0, 0, false),
+			new GameTurnRules.PlayerCardState(1, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
 		};
-		var multipleRemaining = new[]
+		var fourPlayerStates = new[]
 		{
-			new GameTurnRules.PlayerCardState(1, 0, false),
-			new GameTurnRules.PlayerCardState(0, 1, false),
+			new GameTurnRules.PlayerCardState(1, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnRules.PlayerCardState(1, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
 		};
 
-		True(GameTurnRules.TryGetSingleRemainingPlayer(singleRemaining, playerCount: 3, out int remainingPlayerIndex));
-		Equal(1, remainingPlayerIndex);
-		False(GameTurnRules.TryGetSingleRemainingPlayer(multipleRemaining, playerCount: 2, out _));
+		True(GameTurnRules.TryGetNextTurnPlayerIndex(
+			turnOrder,
+			threePlayerStates,
+			currentPlayerIndex: 0,
+			playerCount: 3,
+			out int nextPlayerIndex));
+		Equal(1, nextPlayerIndex);
+		True(GameTurnRules.TryGetNextTurnPlayerIndex(
+			turnOrder,
+			threePlayerStates,
+			currentPlayerIndex: 1,
+			playerCount: 3,
+			out nextPlayerIndex));
+		Equal(0, nextPlayerIndex);
+		True(GameTurnRules.TryGetNextTurnPlayerIndex(
+			turnOrder,
+			fourPlayerStates,
+			currentPlayerIndex: 2,
+			playerCount: 4,
+			out nextPlayerIndex));
+		Equal(0, nextPlayerIndex);
+	}
+
+	private static void TurnRulesSeparateResourcesFromImmediateActions()
+	{
+		int[] turnOrder = { 0, 2, 1, 3 };
+		var playerStates = new[]
+		{
+			new GameTurnRules.PlayerCardState(1, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 1, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 1, true),
+		};
+
+		True(playerStates[1].HasResources);
+		False(playerStates[1].CanActNow);
+		True(playerStates[2].HasResources);
+		True(playerStates[2].CanActNow);
+		True(GameTurnRules.TryGetNextTurnPlayerIndex(
+			turnOrder,
+			playerStates,
+			currentPlayerIndex: 0,
+			playerCount: 3,
+			out int nextPlayerIndex));
+		Equal(2, nextPlayerIndex);
+	}
+
+	private static void TurnRulesReportNoEligibleNextPlayer()
+	{
+		int[] turnOrder = { 0, 2, 1, 3 };
+		var playerStates = new[]
+		{
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 1, false),
+			new GameTurnRules.PlayerCardState(0, 1, 0, false),
+		};
+
+		False(GameTurnRules.TryGetNextTurnPlayerIndex(
+			turnOrder,
+			playerStates,
+			currentPlayerIndex: 0,
+			playerCount: 3,
+			out int nextPlayerIndex));
+		Equal(-1, nextPlayerIndex);
+		False(GameTurnRules.TryGetNextTurnPlayerIndex(
+			turnOrder,
+			playerStates,
+			currentPlayerIndex: 7,
+			playerCount: 3,
+			out nextPlayerIndex));
+	}
+
+	private static void MatchOutcomeRulesCoverResourcesBlocksAndDraws()
+	{
+		var zeroResources = new[]
+		{
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+		};
+		MatchOutcome tiedEmpty = MatchOutcomeRules.Evaluate(zeroResources, new[] { 12, 12 }, 2);
+		Equal(MatchOutcomeKind.Draw, tiedEmpty.Kind);
+		Equal(-1, tiedEmpty.WinnerPlayerIndex);
+
+		var singleResourceOwner = new[]
+		{
+			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnRules.PlayerCardState(0, 0, 1, false),
+		};
+		MatchOutcome resourceWinner = MatchOutcomeRules.Evaluate(singleResourceOwner, new[] { 99, 1 }, 2);
+		Equal(MatchOutcomeKind.Winner, resourceWinner.Kind);
+		Equal(1, resourceWinner.WinnerPlayerIndex);
+
+		var blockedWithTemporaryItem = new[]
+		{
+			new GameTurnRules.PlayerCardState(0, 0, 1, false),
+			new GameTurnRules.PlayerCardState(0, 1, 0, false),
+		};
+		MatchOutcome blockedWinner = MatchOutcomeRules.Evaluate(blockedWithTemporaryItem, new[] { 5, 8 }, 2);
+		Equal(MatchOutcomeKind.Winner, blockedWinner.Kind);
+		Equal(1, blockedWinner.WinnerPlayerIndex);
+
+		MatchOutcome scorePriority = MatchOutcomeRules.Evaluate(singleResourceOwner, new[] { 1, 99 }, 2, 0);
+		Equal(0, scorePriority.WinnerPlayerIndex);
+		True(MatchOutcomeRules.IsSerializedOutcomeValid(MatchOutcomeKind.Draw, -1, 2));
+		False(MatchOutcomeRules.IsSerializedOutcomeValid(MatchOutcomeKind.Draw, 0, 2));
+		True(MatchOutcomeRules.IsSerializedOutcomeValid(MatchOutcomeKind.Winner, 1, 2));
+
 	}
 
 	private static void TurnProgressStartsAndResetsQuestionCardTracking()
@@ -1013,13 +1122,6 @@ internal static partial class Program
 		False(NetworkSeatControlRules.CanAcceptRemotePlayerAction(SeatControlMode.HumanReclaimPending));
 	}
 
-	private static void NetworkSeatControlRevealsPendingTargetHandOnlyForConnectedHumans()
-	{
-		True(NetworkSeatControlRules.CanRevealPendingTargetHand(SeatControlMode.HumanConnected));
-		False(NetworkSeatControlRules.CanRevealPendingTargetHand(SeatControlMode.AiProxyReclaimable));
-		False(NetworkSeatControlRules.CanRevealPendingTargetHand(SeatControlMode.HumanReclaimPending));
-	}
-
 	private static void NetworkSeatControlSendsPendingSelectionRequestsOnlyWhenClientIsReady()
 	{
 		True(NetworkSeatControlRules.CanSendPendingSelectionRequest(
@@ -1259,15 +1361,17 @@ internal static partial class Program
 		True(text.Contains("private async Task RequestNetworkHandCardPlayAsync(", StringComparison.Ordinal));
 	}
 
-	private static void TargetItemSelectionCompletionAvoidsAsyncVoid()
+	private static void TargetItemSelectionCapabilityIsRemoved()
 	{
 		string repoRoot = FindRepositoryRoot();
 		string path = Path.Combine(repoRoot, "scripts", "GameBoardScene.TargetItemSelection.cs");
 		string text = File.ReadAllText(path);
 
-		False(text.Contains("private async void CompletePendingItemSelection(", StringComparison.Ordinal));
-		True(text.Contains("private void CompletePendingItemSelection(", StringComparison.Ordinal));
-		True(text.Contains("private async Task CompletePendingItemSelectionAsync(", StringComparison.Ordinal));
+		False(text.Contains("CompletePendingItemSelection", StringComparison.Ordinal));
+		False(text.Contains("ShowTargetPlayerSelection", StringComparison.Ordinal));
+		False(text.Contains("ShowTargetHandSelection", StringComparison.Ordinal));
+		True(text.Contains("PendingItemSelectionMode.HandLimitDiscard", StringComparison.Ordinal));
+		True(text.Contains("PendingItemSelectionMode.AttachmentRewardHandCard", StringComparison.Ordinal));
 	}
 
 	private static void NetworkManagerSceneLoadAckValidatesSenderBeforeMarkingLoaded()

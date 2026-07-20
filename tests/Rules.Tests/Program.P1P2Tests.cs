@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Text.Json;
 
 internal static partial class Program
 {
@@ -32,6 +34,12 @@ internal static partial class Program
 		False(DirectItemTargetRules.IsEligibleOpponent(0, 4, 4, 3));
 		False(DirectItemTargetRules.IsEligibleOpponent(0, 2, 4, 0));
 		True(DirectItemTargetRules.IsEligibleOpponent(0, 2, 4, 1));
+		int[] candidates = { 1, 2, 3 };
+		Equal(1, DirectItemTargetRules.PickUniformCandidate(candidates, 0));
+		Equal(2, DirectItemTargetRules.PickUniformCandidate(candidates, 1));
+		Equal(3, DirectItemTargetRules.PickUniformCandidate(candidates, 2));
+		Equal(-1, DirectItemTargetRules.PickUniformCandidate(candidates, -1));
+		Equal(-1, DirectItemTargetRules.PickUniformCandidate(Array.Empty<int>(), 0));
 
 		Equal(DirectItemHandCardSource.BaseHand, DirectItemTargetRules.ResolveHandCardSource(2, 3, 0));
 		Equal(DirectItemHandCardSource.BaseHand, DirectItemTargetRules.ResolveHandCardSource(2, 3, 1));
@@ -46,36 +54,63 @@ internal static partial class Program
 		Equal(3, DirectItemTargetRules.GetDeckTransferCount(8, 3));
 	}
 
-	private static void QueenAndKingStayDisabledDirectTriggerResources()
+	private static void QueenAndKingStayDisabledDirectTriggerPandoraEntries()
 	{
 		string root = FindRepositoryRoot();
-		foreach (string fileName in new[] { "queen_runtime.tres", "king_runtime.tres" })
+		using JsonDocument document = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "data.pandora")));
+		var pandoraIds = new HashSet<string>(StringComparer.Ordinal);
+		var checkedRoyalIds = new HashSet<string>(StringComparer.Ordinal);
+		foreach (JsonElement entity in document.RootElement
+			.GetProperty("_entity_data")
+			.GetProperty("_entities")
+			.EnumerateArray())
 		{
-			string text = File.ReadAllText(Path.Combine(root, "resources", "item_cards", fileName));
-			True(text.Contains("EnabledInGame = false", StringComparison.Ordinal));
-			True(text.Contains("PlayableFromHand = false", StringComparison.Ordinal));
-			True(text.Contains("PlayPresentation = \"direct_trigger\"", StringComparison.Ordinal));
-			False(text.Contains("PlayPresentation = \"targeted_trigger\"", StringComparison.Ordinal));
-		}
-	}
+			if (entity.GetProperty("_category_id").GetString() != "item_cards")
+			{
+				continue;
+			}
 
-	private static void PendingTargetCancellationCompletesAuthorityBeforeBroadcast()
-	{
-		string source = File.ReadAllText(Path.Combine(
-			FindRepositoryRoot(),
-			"scripts",
-			"GameBoardScene.ItemCards.cs"));
-		int methodStart = source.IndexOf("private void CancelPendingItemSelection()", StringComparison.Ordinal);
-		int methodEnd = source.IndexOf("private void ClearPendingItemSelectionState()", methodStart, StringComparison.Ordinal);
-		True(methodStart >= 0 && methodEnd > methodStart);
-		string method = source[methodStart..methodEnd];
-		int clearIndex = method.IndexOf("ClearPendingItemSelectionState();", StringComparison.Ordinal);
-		int completeIndex = method.IndexOf("CompleteNetworkAuthorityAction();", StringComparison.Ordinal);
-		int broadcastIndex = method.IndexOf("SendBoardSnapshotIfHost();", StringComparison.Ordinal);
-		True(clearIndex >= 0 && completeIndex > clearIndex && broadcastIndex > completeIndex);
-		True(method.Contains("ResetNetworkLocallyCommittedPendingSelectionState();", StringComparison.Ordinal));
-		True(method.Contains("ResetNetworkPredictedItemVisualState();", StringComparison.Ordinal));
-		True(method.Contains("ClearNetworkPendingActionState();", StringComparison.Ordinal));
+			string id = entity.GetProperty("_id").GetString() ?? string.Empty;
+			True(pandoraIds.Add(id));
+			if (id is not ("Q" or "K"))
+			{
+				continue;
+			}
+
+			JsonElement properties = entity.GetProperty("_property_overrides");
+			False(properties.GetProperty("enabled_in_game").GetProperty("value").GetBoolean());
+			False(properties.GetProperty("playable_from_hand").GetProperty("value").GetBoolean());
+			False(properties.GetProperty("can_be_question_reward").GetProperty("value").GetBoolean());
+			Equal("direct_trigger", properties.GetProperty("play_presentation").GetProperty("value").GetString());
+			checkedRoyalIds.Add(id);
+		}
+		True(checkedRoyalIds.SetEquals(new[] { "Q", "K" }));
+
+		string visualDirectory = Path.Combine(root, "resources", "item_cards");
+		string[] visualFiles = Directory.GetFiles(visualDirectory, "*.tres");
+		var visualIds = new HashSet<string>(StringComparer.Ordinal);
+		string[] forbiddenFields =
+		{
+			"DisplayName", "DescriptionKey", "EnabledInGame", "PlayableFromHand",
+			"CanBeQuestionReward", "RewardDelivery", "Rarity", "TagsCsv",
+			"PlayPresentation", "Trigger", "EffectType", "EffectValuesRaw",
+			"Priority", "AttachedTrigger", "AttachedEffectType",
+			"AttachedEffectValuesRaw", "AttachedPriority", "Weight", "Description",
+		};
+		foreach (string visualFile in visualFiles)
+		{
+			string text = File.ReadAllText(visualFile);
+			True(visualIds.Add(ReadTresString(text, "Id")));
+			True(text.Contains("ItemCardVisualDefinitionResource", StringComparison.Ordinal));
+			foreach (string forbiddenField in forbiddenFields)
+			{
+				False(text.Contains($"\n{forbiddenField} =", StringComparison.Ordinal));
+			}
+		}
+		True(pandoraIds.SetEquals(visualIds));
+		True(File.Exists(Path.Combine(visualDirectory, "jack.tres")));
+		True(File.Exists(Path.Combine(visualDirectory, "queen.tres")));
+		True(File.Exists(Path.Combine(visualDirectory, "king.tres")));
 	}
 
 	private static void McpAutoloadsUseEditorGatedExportSafeProxies()

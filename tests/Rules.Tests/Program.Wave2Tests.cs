@@ -12,6 +12,8 @@ internal static partial class Program
 		Run("wave 2 tutorial ids are independent and never enter main progress", Wave2TutorialIdsAreIndependentAndNeverEnterMainProgress);
 		Run("wave 2 v5 run migrates only valid legacy stages", Wave2V5RunMigratesOnlyValidLegacyStages);
 		Run("wave 2 network standard cannot touch adventure run", Wave2NetworkStandardCannotTouchAdventureRun);
+		Run("wave 2 tutorial isolates valid main adventure run", Wave2TutorialIsolatesValidMainAdventureRun);
+		Run("wave 2 tutorial isolates damaged main adventure run", Wave2TutorialIsolatesDamagedMainAdventureRun);
 	}
 
 	private static void Wave2GameModePolicyUsesNetworkFirstPrecedence()
@@ -23,7 +25,9 @@ internal static partial class Program
 		Equal(GameModeKind.LocalStandard, GameModePolicy.Derive(false, false, false, false).Kind);
 		False(GameModePolicy.NetworkStandard.CanReadAdventureRun);
 		True(GameModePolicy.AdventureMain.CanReadAdventureRun);
-		True(GameModePolicy.AdventureTutorial.CanWriteAdventureRun);
+		True(GameModePolicy.AdventureMain.CanWriteAdventureRun);
+		False(GameModePolicy.AdventureTutorial.CanReadAdventureRun);
+		False(GameModePolicy.AdventureTutorial.CanWriteAdventureRun);
 	}
 
 	private static void Wave2CampaignCatalogIsTheSingleStageContract()
@@ -145,5 +149,75 @@ internal static partial class Program
 		store.ClearRun();
 		Equal(0, saveManager.SaveToSlotCallCount);
 		Equal(residualJson, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+	}
+
+	private static void Wave2TutorialIsolatesValidMainAdventureRun()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData("Runner"));
+		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		store.ConfigureForPolicy(GameModePolicy.AdventureMain);
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(3, "jellyfish"));
+		Equal(
+			AdventureRunWriteResult.Succeeded,
+			store.GrantUpgrade("clubs_borrow_suit_set", AdventureUpgradeTriggerSource.None).WriteResult);
+		Equal(AdventureRunWriteResult.Succeeded, store.SetHealth(63, 110));
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot original));
+		string originalPayload = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
+		int saveCount = saveManager.SaveToSlotCallCount;
+
+		store.ConfigureForPolicy(GameModePolicy.AdventureTutorial);
+		False(store.HasActiveRun);
+		False(store.RequiresRunRecovery);
+		False(store.TryGetSnapshot(out _));
+		Equal(AdventureUpgradeRestoreResult.NoSnapshot, store.ReloadFromActiveProfile());
+		Equal(AdventureRunWriteResult.WriteNotAllowed, store.BeginNewMainRun(1, "shrimp"));
+		Equal(AdventureRunWriteResult.WriteNotAllowed, store.AdvanceToMainStage(4, "manta_ray"));
+		Equal(AdventureRunWriteResult.WriteNotAllowed, store.SetHealth(1, 1));
+		Equal(AdventureRunWriteResult.WriteNotAllowed, store.ClearRun());
+		Equal(saveCount, saveManager.SaveToSlotCallCount);
+		Equal(originalPayload, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+
+		store.ConfigureForPolicy(GameModePolicy.AdventureMain);
+		Equal(AdventureUpgradeRestoreResult.Restored, store.ReloadFromActiveProfile());
+		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot restored));
+		Equal(original.MainStageIndex, restored.MainStageIndex);
+		Equal(original.EnemyAvatarId, restored.EnemyAvatarId);
+		Equal(original.CurrentHealth, restored.CurrentHealth);
+		Equal(original.MaxHealth, restored.MaxHealth);
+		Equal(original.AcquiredUpgradeIds.Count, restored.AcquiredUpgradeIds.Count);
+		True(store.GetRunState().HasAcquiredUpgrade("clubs_borrow_suit_set"));
+		Equal(originalPayload, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+	}
+
+	private static void Wave2TutorialIsolatesDamagedMainAdventureRun()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		const string damagedPayload = "{damaged main adventure run";
+		SeedProfile(saveManager, slotId, CreateProgressData("Runner", damagedPayload));
+		var store = new AdventureRunSessionStore();
+		store.ConfigureForPolicy(GameModePolicy.AdventureMain);
+		Equal(AdventureUpgradeRestoreResult.InvalidJsonPreserved, store.ReloadFromActiveProfile());
+		True(store.RequiresRunRecovery);
+		int saveCount = saveManager.SaveToSlotCallCount;
+
+		store.ConfigureForPolicy(GameModePolicy.AdventureTutorial);
+		False(store.HasActiveRun);
+		False(store.RequiresRunRecovery);
+		Equal(AdventureUpgradeRestoreResult.NoSnapshot, store.ReloadFromActiveProfile());
+		Equal(AdventureRunWriteResult.WriteNotAllowed, store.ClearRun());
+		Equal(saveCount, saveManager.SaveToSlotCallCount);
+		Equal(damagedPayload, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+
+		store.ConfigureForPolicy(GameModePolicy.AdventureMain);
+		Equal(AdventureUpgradeRestoreResult.InvalidJsonPreserved, store.ReloadFromActiveProfile());
+		False(store.HasActiveRun);
+		True(store.RequiresRunRecovery);
+		Equal(damagedPayload, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
 	}
 }

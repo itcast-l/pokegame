@@ -36,6 +36,7 @@ public sealed partial class ItemCardCatalog
 
 	private static bool TryLoadPandoraDefinitions(
 		Node sceneNode,
+		IReadOnlyDictionary<string, ItemCardVisualDefinition> visualsById,
 		out List<ItemCardDefinition> definitions,
 		out string errorMessage)
 	{
@@ -73,7 +74,14 @@ public sealed partial class ItemCardCatalog
 				return false;
 			}
 
-			if (!TryCreateDefinitionFromPandoraEntity(entity, out ItemCardDefinition definition, out errorMessage))
+			string entityId = entity.Call("get_entity_id").AsString();
+			if (!visualsById.TryGetValue(entityId, out ItemCardVisualDefinition visual))
+			{
+				errorMessage = $"Missing visual resource for Pandora item card '{entityId}'.";
+				return false;
+			}
+
+			if (!TryCreateDefinitionFromPandoraEntity(entity, visual, out ItemCardDefinition definition, out errorMessage))
 			{
 				return false;
 			}
@@ -91,9 +99,8 @@ public sealed partial class ItemCardCatalog
 			definitions.Add(definition);
 		}
 
-		IReadOnlyDictionary<string, ItemCardDefinition> resourceDefinitions = GetResourceDefinitions();
 		ItemCardManifestValidationResult manifestValidation =
-			ItemCardManifestValidationRules.ValidatePandoraEntries(manifestEntries, resourceDefinitions.Keys);
+			ItemCardManifestValidationRules.ValidatePandoraEntries(manifestEntries, visualsById.Keys);
 		if (!manifestValidation.IsValid)
 		{
 			errorMessage = manifestValidation.ErrorMessage;

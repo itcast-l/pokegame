@@ -5,23 +5,23 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private void SetCurrentTurnPlayerIndex(
+	private async Task<bool> SetCurrentTurnPlayerIndexAsync(
 		int nextTurnPlayerIndex,
 		int? previousTurnPlayerIndexOverride = null)
 	{
 		int previousTurnPlayerIndex = previousTurnPlayerIndexOverride
 			?? _currentTurnPlayerIndex;
+		if (previousTurnPlayerIndex == MainPlayerIndex
+			&& nextTurnPlayerIndex != MainPlayerIndex
+			&& !await EndRealMainPlayerTurnAsync())
+		{
+			return false;
+		}
 		if (NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(
 			previousTurnPlayerIndex,
 			nextTurnPlayerIndex))
 		{
 			_networkAiBlockedItem = NetworkAiBlockedItemState.None;
-		}
-
-		if (previousTurnPlayerIndex == MainPlayerIndex
-			&& nextTurnPlayerIndex != MainPlayerIndex)
-		{
-			EndRealMainPlayerTurn();
 		}
 
 		_currentTurnPlayerIndex = nextTurnPlayerIndex;
@@ -30,6 +30,7 @@ public partial class GameBoardScene
 			_state.AdventureRealMainPlayerTurnActive = false;
 			_state.AdventureRealMainPlayerTurnStartPending = true;
 		}
+		return true;
 	}
 
 	private async Task BeginRealMainPlayerTurnIfNeededAsync(int turnSequenceGeneration)
@@ -58,55 +59,89 @@ public partial class GameBoardScene
 			turnSequenceGeneration);
 	}
 
-	private void EndRealMainPlayerTurn()
+	private async Task<bool> EndRealMainPlayerTurnAsync()
 	{
 		if (!_state.AdventureRealMainPlayerTurnActive
 			&& !_state.AdventureRealMainPlayerTurnStartPending)
 		{
-			return;
+			return true;
 		}
 
-		bool commitMissBandage = _state.AdventureExtraActionQueue.EndRealTurn();
+		bool commitMissBandage =
+			_state.AdventureExtraActionQueue.PendingMissBandageRegistration;
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (ShouldUseAdventureUpgradeSystem() && store?.HasActiveRun == true)
+		{
+			AdventureSaveGateResult<AdventureRunWriteResult> gate =
+				await ExecuteAdventureSaveGateAsync(
+					() => store.ResolveRealTurnEnd(commitMissBandage),
+					result => result == AdventureRunWriteResult.Succeeded,
+					result => result == AdventureRunWriteResult.SaveFailed);
+			if (!gate.Succeeded)
+			{
+				GD.PushWarning($"Failed to commit adventure real turn end: {gate.Result}");
+				return false;
+			}
+		}
+
+		_state.AdventureExtraActionQueue.EndRealTurn();
 		_state.AdventureRealMainPlayerTurnActive = false;
 		_state.AdventureRealMainPlayerTurnStartPending = false;
-		if (commitMissBandage)
-		{
-			CommitPendingAdventureMissBandageAtRealTurnEnd();
-		}
-
 		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
 		_adventureHuntOrderMarkedTableCard = null;
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store != null && runState?.IsActive == true)
+		if (store?.HasActiveRun == true)
 		{
-			AdventureUpgradeEffectService.ClearTurnScopedState(
-				runState.EffectState);
-			store.ReplaceEffectState(runState.EffectState.Clone());
 			MarkActivePlayerStatusTooltipForRefresh();
 		}
+		return true;
 	}
 
-	private async Task AdvanceTurnAfterPlayedResultAsync(int playerIndex, PlayCardResult result)
+	private async Task ResolveActionCompletionAsync(int playerIndex, PlayCardResult result)
 	{
-		if (!result.CompletesTurn)
+		int turnSequenceGeneration = _turnSequenceGeneration;
+		await CheckForWinnerAsync(turnSequenceGeneration);
+		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
 		}
 
-		ClearJellyfishBubbleIfMainPlayerTurnCompleted(playerIndex, result);
+		bool shouldAdvance = result.CompletesTurn || !PlayerHasPlayableHandCards(playerIndex);
+		if (!shouldAdvance)
+		{
+			return;
+		}
+
+		PlayCardResult completedResult = result.CompletesTurn
+			? result
+			: result with { Captured = false, CompletesTurn = true };
+		ClearJellyfishBubbleIfMainPlayerTurnCompleted(playerIndex, completedResult);
 
 		int previousTurnPlayerIndex = _currentTurnPlayerIndex;
+		int candidateNextPlayerIndex = playerIndex;
+		if (!completedResult.Captured
+			&& !TryGetNextTurnPlayerIndex(playerIndex, out candidateNextPlayerIndex))
+		{
+			await CheckForWinnerAsync(turnSequenceGeneration);
+			if (!IsGameOver())
+			{
+				SettleStalledMatch();
+			}
+			return;
+		}
+
 		int nextTurnPlayerIndex = _turnAdvancementService.ApplyPlayedResult(
 			_state,
 			playerIndex,
-			result.Captured,
-			GetNextTurnPlayerIndex(playerIndex));
-		SetCurrentTurnPlayerIndex(
-			nextTurnPlayerIndex,
-			previousTurnPlayerIndex);
+			completedResult.Captured,
+			candidateNextPlayerIndex);
+		if (!await SetCurrentTurnPlayerIndexAsync(
+				nextTurnPlayerIndex,
+				previousTurnPlayerIndex))
+		{
+			return;
+		}
 		PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
-		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, result, _turnSequenceGeneration);
+		await ResolveAdventureEnemyTurnEndAbilityAsync(playerIndex, completedResult, _turnSequenceGeneration);
 		if (IsGameOver())
 		{
 			return;
@@ -114,7 +149,7 @@ public partial class GameBoardScene
 
 		ResetMantaRayTideShiftTurnStateIfNeeded(playerIndex);
 		ResetJellyfishBubbleTurnStateIfNeeded(playerIndex);
-		if (!result.Captured)
+		if (!completedResult.Captured)
 		{
 			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter(_currentTurnPlayerIndex);
 			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
@@ -132,7 +167,56 @@ public partial class GameBoardScene
 		}
 
 		await RefillCurrentTurnPlayerBaseHandAsync(_turnSequenceGeneration);
+		if (!IsGameOver() && !PlayerHasPlayableHandCards(_currentTurnPlayerIndex))
+		{
+			await ResolveActionCompletionAsync(
+				_currentTurnPlayerIndex,
+				new PlayCardResult(false, false, CompletesTurn: false));
+		}
+		if (IsGameOver())
+		{
+			return;
+		}
 		BeginNetworkAiProxyTurnIfNeeded();
+	}
+
+	private long GetTurnLoopProgressSignature()
+	{
+		var hash = new HashCode();
+		hash.Add(_currentTurnPlayerIndex);
+		hash.Add(_matchOutcomeKind);
+		hash.Add(_pendingItemSelectionMode);
+		hash.Add(_pendingItemOwnerIndex);
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			hash.Add(_playerScores[playerIndex]);
+			foreach (PlayingCard card in _playerDecks[playerIndex]) hash.Add(card.InstanceId);
+			foreach (PlayingCard card in _playerHands[playerIndex]) hash.Add(card.InstanceId);
+			foreach (ItemCard card in _playerItemHands[playerIndex]) hash.Add(card.Id);
+		}
+		foreach (TableCard card in _tableCards)
+		{
+			hash.Add(card.InstanceId);
+			hash.Add(card.IsFaceUp);
+			hash.Add(card.IsBuriedInSand);
+			hash.Add(card.IsSlimeCoated);
+		}
+		return hash.ToHashCode();
+	}
+
+	private void EnsureTurnLoopMadeProgress(
+		long previousSignature,
+		int previousPlayerIndex,
+		int turnSequenceGeneration)
+	{
+		if (turnSequenceGeneration == _turnSequenceGeneration
+			&& !_networkMigrationInputLocked
+			&& !IsGameOver()
+			&& previousPlayerIndex == _currentTurnPlayerIndex
+			&& previousSignature == GetTurnLoopProgressSignature())
+		{
+			SettleStalledMatch();
+		}
 	}
 
 	private async Task RefillCurrentTurnPlayerBaseHandAsync(int turnSequenceGeneration)
@@ -310,8 +394,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (definition.PlayPresentation == CardPlayPresentationTypes.TargetedTrigger
-			&& RequiresPlayerTarget(itemCardId)
+		if (RequiresPlayerTarget(itemCardId)
 			&& !HasPlayableTargetForItemCard(itemCardId, playerIndex))
 		{
 			return false;

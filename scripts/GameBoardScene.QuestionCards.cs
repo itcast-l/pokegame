@@ -11,6 +11,20 @@ public partial class GameBoardScene
 		Reroll = 1,
 	}
 
+	private readonly record struct QuestionCardRewardPlan(
+		ItemCard ItemCard,
+		bool RequiresMagnetAttachment,
+		int DiscardDisplayIndex,
+		bool ReserveReplacementCard,
+		bool ConsumeRejudgeOpportunity,
+		bool RejudgeResolvedForReward);
+
+	private readonly record struct QuestionRewardItemPlan(
+		string ItemCardId,
+		bool ConsumeRejudgeOpportunity,
+		bool RejudgeResolvedForReward);
+	private readonly HashSet<int> _plannedQuestionRewardDiscardExclusions = new();
+
 	private int AdvanceQuestionCardRefreshTurnCounter(int nextTurnPlayerIndex)
 	{
 		QuestionCardRefreshAdvanceResult refreshResult = _turnAdvancementService.AdvanceQuestionCardRefresh(
@@ -58,87 +72,133 @@ public partial class GameBoardScene
 		return false;
 	}
 
-	private async Task<QuestionCardRewardGrant?> GrantQuestionCardRewardAsync(
-	int playerIndex,
-	bool reserveReplacementCard,
-	int turnSequenceGeneration,
-	Func<bool>? canCommit = null)
-{
-	bool CanCommitReward()
+	private async Task<QuestionCardRewardPlan?> PlanQuestionCardRewardAsync(
+		int playerIndex,
+		bool reserveReplacementCard,
+		int turnSequenceGeneration,
+		Func<bool>? canPlan = null,
+		int previouslyPlannedHandCardDelta = 0,
+		IReadOnlySet<int>? excludedDiscardDisplayIndexes = null,
+		bool rejudgeOpportunityAlreadyPlanned = false)
 	{
-		return turnSequenceGeneration == _turnSequenceGeneration
-			&& !_isLeavingGame
-			&& !IsGameOver()
-			&& (canCommit?.Invoke() ?? true);
-	}
+		bool CanPlanReward()
+		{
+			return turnSequenceGeneration == _turnSequenceGeneration
+				&& !_isLeavingGame
+				&& !IsGameOver()
+				&& (canPlan?.Invoke() ?? true);
+		}
 
-	if (!CanCommitReward() || !item_mode)
-	{
-		return null;
-	}
-
-	if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
-	{
-		return null;
-	}
-
-	string itemCardId = PickQuestionRewardItemCardId();
-	if (string.IsNullOrEmpty(itemCardId))
-	{
-		return null;
-	}
-
-	BeginNetworkAuthorityQuestionRewardTransaction(
-		playerIndex,
-		itemCardId,
-		IsAttachmentItemCard(itemCardId),
-		reserveReplacementCard,
-		turnSequenceGeneration);
-
-	ItemCard? itemCard = CreateItemCard(itemCardId);
-	if (!itemCard.HasValue)
-	{
-		return null;
-	}
-
-	if (IsAttachmentItemCard(itemCardId))
-	{
-		if (!CanCommitReward())
+		if (!CanPlanReward()
+			|| !item_mode
+			|| playerIndex < 0
+			|| playerIndex >= _playerItemHands.Count)
 		{
 			return null;
 		}
 
-		_pendingItemAttachmentRewards.Enqueue(
-			new PendingItemAttachmentReward(playerIndex, itemCardId));
-		CommitNetworkAuthorityQuestionRewardQueued();
+		string originalItemCardId = PickQuestionRewardItemCardId();
+		if (string.IsNullOrEmpty(originalItemCardId))
+		{
+			return null;
+		}
+
+		QuestionRewardItemPlan rewardItemPlan =
+			await PlanQuestionRewardItemCardIdAsync(
+				originalItemCardId,
+				playerIndex,
+				rejudgeOpportunityAlreadyPlanned: rejudgeOpportunityAlreadyPlanned);
+		if (!CanPlanReward())
+		{
+			return null;
+		}
+		ItemCard? itemCard = CreateItemCard(rewardItemPlan.ItemCardId);
+		if (!itemCard.HasValue)
+		{
+			return null;
+		}
+
+		bool requiresAttachment = IsAttachmentItemCard(rewardItemPlan.ItemCardId);
+		int discardDisplayIndex = -1;
+		if (!requiresAttachment
+			&& !HasRoomForNewHandCard(
+				playerIndex,
+				(reserveReplacementCard ? 1 : 0) + Math.Max(0, previouslyPlannedHandCardDelta)))
+		{
+			int? plannedDiscard = await PlanHandLimitDiscardForQuestionRewardAsync(
+				playerIndex,
+				turnSequenceGeneration,
+				excludedDiscardDisplayIndexes);
+			if (!plannedDiscard.HasValue || !CanPlanReward())
+			{
+				return null;
+			}
+			discardDisplayIndex = plannedDiscard.Value;
+		}
+
+		return new QuestionCardRewardPlan(
+			itemCard.Value,
+			requiresAttachment,
+			discardDisplayIndex,
+			reserveReplacementCard,
+			rewardItemPlan.ConsumeRejudgeOpportunity,
+			rewardItemPlan.RejudgeResolvedForReward);
+	}
+
+	private QuestionCardRewardGrant? ApplyQuestionCardRewardPlan(
+		int playerIndex,
+		QuestionCardRewardPlan plan)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+		{
+			return null;
+		}
+
+		BeginNetworkAuthorityQuestionRewardTransaction(
+			playerIndex,
+			plan.ItemCard.Id,
+			plan.RequiresMagnetAttachment,
+			reserveReplacement: plan.ReserveReplacementCard,
+			_turnSequenceGeneration);
+		if (plan.DiscardDisplayIndex >= 0
+			&& !RemoveHandCardFromGame(playerIndex, plan.DiscardDisplayIndex))
+		{
+			return null;
+		}
+		if (plan.DiscardDisplayIndex >= 0)
+		{
+			CommitNetworkAuthorityDiscardMutation();
+		}
+		if (plan.ConsumeRejudgeOpportunity)
+		{
+			_adventureQuestionRejudgeUsedThisBattle = true;
+		}
+
+		if (plan.RequiresMagnetAttachment)
+		{
+			_pendingItemAttachmentRewards.Enqueue(
+				new PendingItemAttachmentReward(playerIndex, plan.ItemCard.Id));
+			CommitNetworkAuthorityQuestionRewardQueued();
+			_debugQuestionRewardGrantCount++;
+			_debugLastQuestionRewardItemCardId = plan.ItemCard.Id;
+			return new QuestionCardRewardGrant(
+				plan.ItemCard,
+				-1,
+				true,
+				plan.RejudgeResolvedForReward);
+		}
+
+		int itemHandIndex = _playerItemHands[playerIndex].Count;
+		_playerItemHands[playerIndex].Add(plan.ItemCard);
+		CommitNetworkAuthorityQuestionRewardHandMutation(playerIndex, itemHandIndex);
 		_debugQuestionRewardGrantCount++;
-		_debugLastQuestionRewardItemCardId = itemCardId;
-		return new QuestionCardRewardGrant(itemCard.Value, -1, true);
+		_debugLastQuestionRewardItemCardId = plan.ItemCard.Id;
+		return new QuestionCardRewardGrant(
+			plan.ItemCard,
+			itemHandIndex,
+			false,
+			plan.RejudgeResolvedForReward);
 	}
-
-	if (!HasRoomForNewHandCard(
-			playerIndex,
-			reserveReplacementCard ? 1 : 0)
-		&& !await DiscardHandCardForNewItemCardAsync(
-			playerIndex,
-			turnSequenceGeneration,
-			CanCommitReward))
-	{
-		return null;
-	}
-
-	if (!CanCommitReward())
-	{
-		return null;
-	}
-
-	int itemHandIndex = _playerItemHands[playerIndex].Count;
-	_playerItemHands[playerIndex].Add(itemCard.Value);
-	CommitNetworkAuthorityQuestionRewardHandMutation(playerIndex, itemHandIndex);
-	_debugQuestionRewardGrantCount++;
-	_debugLastQuestionRewardItemCardId = itemCardId;
-	return new QuestionCardRewardGrant(itemCard.Value, itemHandIndex);
-}
 
 	private string PickQuestionRewardItemCardId()
 {
@@ -180,12 +240,30 @@ public partial class GameBoardScene
 		int playerIndex,
 		AdventureQuestionRejudgeChoice? forcedChoice = null)
 	{
+		QuestionRewardItemPlan plan = await PlanQuestionRewardItemCardIdAsync(
+			originalItemCardId,
+			playerIndex,
+			forcedChoice);
+		if (plan.ConsumeRejudgeOpportunity)
+		{
+			_adventureQuestionRejudgeUsedThisBattle = true;
+		}
+		return plan.ItemCardId;
+	}
+
+	private async Task<QuestionRewardItemPlan> PlanQuestionRewardItemCardIdAsync(
+		string originalItemCardId,
+		int playerIndex,
+		AdventureQuestionRejudgeChoice? forcedChoice = null,
+		bool rejudgeOpportunityAlreadyPlanned = false)
+	{
 		if (string.IsNullOrEmpty(originalItemCardId)
 			|| !ShouldUseAdventureUpgradeSystem()
 			|| playerIndex != MainPlayerIndex
-			|| _adventureQuestionRejudgeUsedThisBattle)
+			|| _adventureQuestionRejudgeUsedThisBattle
+			|| rejudgeOpportunityAlreadyPlanned)
 		{
-			return originalItemCardId;
+			return new QuestionRewardItemPlan(originalItemCardId, false, false);
 		}
 
 		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
@@ -194,7 +272,7 @@ public partial class GameBoardScene
 				runState.GetAcquiredUpgradeIds(),
 				_adventureQuestionRejudgeUsedThisBattle))
 		{
-			return originalItemCardId;
+			return new QuestionRewardItemPlan(originalItemCardId, false, false);
 		}
 
 		AdventureQuestionRejudgeChoice choice;
@@ -218,16 +296,18 @@ public partial class GameBoardScene
 				choice == AdventureQuestionRejudgeChoice.Reroll
 					? AdventureQuestionRejudgeRuleChoice.Reroll
 					: AdventureQuestionRejudgeRuleChoice.Keep);
-		if (rejudgeResult.ConsumesOpportunity)
-		{
-			_adventureQuestionRejudgeUsedThisBattle = true;
-		}
 		if (!rejudgeResult.ShouldReroll)
 		{
-			return originalItemCardId;
+			return new QuestionRewardItemPlan(
+				originalItemCardId,
+				false,
+				RejudgeResolvedForReward: rejudgeResult.Offered);
 		}
 
-		return PickQuestionRewardItemCardId();
+		return new QuestionRewardItemPlan(
+			PickQuestionRewardItemCardId(),
+			rejudgeResult.ConsumesOpportunity,
+			RejudgeResolvedForReward: true);
 	}
 
 	private bool ShouldAutoResolveAdventureQuestionRejudge()
@@ -248,36 +328,4 @@ public partial class GameBoardScene
 		return (await PromptAdventureQuestionRejudgeOverlayAsync(rewardItem.Value)).Choice;
 	}
 
-	private async Task<AdventureQuestionRewardEffectResult?> ResolveAdventureQuestionRewardEffectsAsync(int playerIndex)
-	{
-		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
-		{
-			return null;
-		}
-
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store?.HasActiveRun != true)
-		{
-			return null;
-		}
-
-		AdventureSaveGateResult<AdventureQuestionRewardCommitResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				store.ResolveQuestionReward,
-				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
-				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
-		if (!gate.Succeeded)
-		{
-			GD.PushWarning($"Failed to commit adventure question reward: {gate.Result.WriteResult}");
-			return null;
-		}
-		AdventureQuestionRewardCommitResult commitResult = gate.Result;
-		if (commitResult.HealingResult.HasValue)
-		{
-			_playerScores[MainPlayerIndex] = commitResult.HealingResult.Value.CurrentHealth;
-			UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
-			RefreshGameplayTensionMusic();
-		}
-		return commitResult.EffectResult with { HealAmount = 0 };
-	}
 }

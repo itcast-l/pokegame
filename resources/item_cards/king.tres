@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemCardVisualDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ItemCardVisualDefinitionResource.cs" id="1_item_card_visual"]
+
+[resource]
+script = ExtResource("1_item_card_visual")
+Id = "K"
+SpriteName = "King"
+ArtRunName = "run-004"
+FramePathPattern = "res://art/cards/ocean_animated_deck/court/K/processed/frames/frame-{0:000}.png"
+FrameCount = 1
+SortOrder = 902
+Icon = ""

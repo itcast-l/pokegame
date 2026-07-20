@@ -5,47 +5,19 @@ using System.Globalization;
 
 public sealed partial class ItemCardCatalog
 {
-	private static List<ItemCardDefinition> LoadDefinitions(Node sceneNode, out bool loadedFromPandora)
+	private static bool TryLoadDefinitions(
+		Node sceneNode,
+		IReadOnlyDictionary<string, ItemCardVisualDefinition> visualsById,
+		out List<ItemCardDefinition> definitions,
+		out string errorMessage)
 	{
-		bool pandoraIsLoaded = CanReadPandora(sceneNode);
-		if (pandoraIsLoaded)
+		if (!TryLoadPandoraDefinitions(sceneNode, visualsById, out definitions, out errorMessage))
 		{
-			loadedFromPandora = true;
-			if (!TryLoadPandoraDefinitions(sceneNode, out List<ItemCardDefinition> pandoraDefinitions, out string errorMessage))
-			{
-				GD.PushWarning($"Item card Pandora manifest is invalid and will not use .tres gameplay fallback: {errorMessage}");
-				return new List<ItemCardDefinition>();
-			}
-
-			return SortDefinitions(pandoraDefinitions);
+			return false;
 		}
 
-		loadedFromPandora = false;
-		if (!ItemCardManifestValidationRules.ShouldUseFallback(pandoraIsLoaded))
-		{
-			return new List<ItemCardDefinition>();
-		}
-		var fallbackDefinitions = new List<ItemCardDefinition>();
-		var fallbackIds = new HashSet<string>(StringComparer.Ordinal);
-		foreach (ItemCardDefinition definition in GetResourceDefinitions().Values)
-		{
-			if (!fallbackIds.Add(definition.Id))
-			{
-				GD.PushWarning($"Duplicate item card fallback definition '{definition.Id}'.");
-				return new List<ItemCardDefinition>();
-			}
-
-			ItemCardContractValidationResult validation = ItemCardEffectContractRegistry.Validate(definition);
-			if (!validation.IsValid)
-			{
-				GD.PushWarning($"Invalid item card fallback definition: {validation.ErrorMessage}");
-				return new List<ItemCardDefinition>();
-			}
-
-			fallbackDefinitions.Add(definition);
-		}
-
-		return SortDefinitions(fallbackDefinitions);
+		definitions = SortDefinitions(definitions);
+		return true;
 	}
 
 	private static List<ItemCardDefinition> SortDefinitions(List<ItemCardDefinition> definitions)
@@ -58,8 +30,4 @@ public sealed partial class ItemCardCatalog
 		return definitions;
 	}
 
-	private static bool IsRuntimeRuleDefinition(ItemCardDefinition definition)
-	{
-		return !definition.EnabledInGame && !definition.PlayableFromHand && !definition.CanBeQuestionReward;
-	}
 }

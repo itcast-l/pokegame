@@ -14,8 +14,8 @@ public sealed class GameModePolicy
 	public bool IsAdventure => IsAdventureTutorial || IsAdventureMain;
 	public bool IsSoloStandard => Kind == GameModeKind.SoloStandard;
 	public bool IsLocalStandard => Kind == GameModeKind.LocalStandard;
-	public bool CanReadAdventureRun => IsAdventure;
-	public bool CanWriteAdventureRun => IsAdventure;
+	public bool CanReadAdventureRun => IsAdventureMain;
+	public bool CanWriteAdventureRun => IsAdventureMain;
 
 	public static GameModePolicy LocalStandard { get; } = new(GameModeKind.LocalStandard);
 	public static GameModePolicy SoloStandard { get; } = new(GameModeKind.SoloStandard);

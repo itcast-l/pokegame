@@ -285,6 +285,14 @@ public sealed record NetworkAuthorityCheckpoint
 	[JsonPropertyOrder(21)]
 	public int WinnerPlayerIndex { get; init; } = -1;
 
+	[JsonPropertyName("match_outcome_kind")]
+	[JsonPropertyOrder(34)]
+	public MatchOutcomeKind MatchOutcomeKind { get; init; } = MatchOutcomeKind.InProgress;
+
+	[JsonPropertyName("opening_deal_completed")]
+	[JsonPropertyOrder(35)]
+	public bool OpeningDealCompleted { get; init; } = true;
+
 	[JsonPropertyName("current_turn_player_index")]
 	[JsonPropertyOrder(22)]
 	public int CurrentTurnPlayerIndex { get; init; }
@@ -475,14 +483,21 @@ public static class NetworkAuthorityCheckpointCodec
 			|| checkpoint.CheckpointId < 0
 			|| checkpoint.WinnerPlayerIndex < -1
 			|| checkpoint.WinnerPlayerIndex >= checkpoint.PlayerCount
+			|| !MatchOutcomeRules.IsSerializedOutcomeValid(
+				checkpoint.MatchOutcomeKind,
+				checkpoint.WinnerPlayerIndex,
+				checkpoint.PlayerCount)
 			|| checkpoint.CurrentTurnPlayerIndex < 0
 			|| checkpoint.CurrentTurnPlayerIndex >= checkpoint.PlayerCount
 			|| checkpoint.TurnSequenceGeneration < 0
+			|| checkpoint.TurnSequenceGeneration == int.MaxValue
+			|| (checkpoint.Phase == NetworkAuthorityPhase.InGame && !checkpoint.OpeningDealCompleted)
 			|| (checkpoint.Phase == NetworkAuthorityPhase.Lobby
 				&& (!string.IsNullOrEmpty(checkpoint.MatchId)
 					|| checkpoint.TableCards.Count != 0
 					|| !IsEmptyAuthorityAction(checkpoint.AuthorityAction)))
-			|| !AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount))
+			|| !AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount)
+			|| !AuthorityActionStateRules.IsStableCheckpointState(checkpoint.AuthorityAction))
 		{
 			error = "checkpoint semantic bounds are invalid";
 			return false;

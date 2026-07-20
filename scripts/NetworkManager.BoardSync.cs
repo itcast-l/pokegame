@@ -398,7 +398,9 @@ public partial class NetworkManager
 
 	public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)
 	{
-		if (!IsHost || _state != NetworkSessionState.InGame)
+		if (!IsHost
+			|| _state != NetworkSessionState.InGame
+			|| !gameBoard.CanPublishNetworkBoardSnapshot)
 		{
 			return;
 		}
@@ -425,6 +427,7 @@ public partial class NetworkManager
 	{
 		if (!IsHost
 			|| _state != NetworkSessionState.InGame
+			|| !gameBoard.CanPublishNetworkBoardSnapshot
 			|| peerId <= 0
 			|| seatIndex < 0)
 		{
@@ -516,10 +519,6 @@ public partial class NetworkManager
 				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
 			}
 		}
-		else
-		{
-			TryAcceptClientAction(actorSeatIndex, clientActionId);
-		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -597,10 +596,6 @@ public partial class NetworkManager
 				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
 			}
 		}
-		else
-		{
-			TryAcceptClientAction(actorSeatIndex, clientActionId);
-		}
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -608,8 +603,7 @@ public partial class NetworkManager
 		string sessionId,
 		string matchId,
 		long authorityEpoch,
-		int targetPlayerIndex,
-		int targetHandIndex,
+		int selectionIndex,
 		int turnSequenceGeneration,
 		long clientActionId)
 	{
@@ -668,9 +662,9 @@ public partial class NetworkManager
 
 		if (!gameBoard.TryStartNetworkPendingItemSelectionFromHost(
 			actorSeatIndex,
-			targetPlayerIndex,
-			targetHandIndex,
+			selectionIndex,
 			turnSequenceGeneration,
+			clientActionId,
 			out MultiplayerBoardActionRejectReason rejectReason))
 		{
 			SendRejectBoardAction(senderPeerId, rejectReason, turnSequenceGeneration, -1);
@@ -678,10 +672,6 @@ public partial class NetworkManager
 			{
 				SendBoardSnapshotToPeerFromHost(gameBoard, senderPeerId, actorSeatIndex, gameBoard.CreateNextNetworkSnapshotId());
 			}
-		}
-		else
-		{
-			TryAcceptClientAction(actorSeatIndex, clientActionId);
 		}
 	}
 

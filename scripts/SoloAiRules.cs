@@ -10,24 +10,11 @@ internal static class SoloAiRules
 		High = 2,
 	}
 
-	internal enum TargetPreferenceKind
-	{
-		PlayerHand,
-		PlayerDeck,
-		PlayerScore,
-	}
-
 	internal readonly record struct Profile(
 		int BestCaptureChancePercent,
 		int AnyCaptureChancePercent,
 		bool UsePointScoring,
 		bool AvoidPairOnlyCaptures);
-
-	internal readonly record struct PlayerTargetCandidate(
-		int PlayerIndex,
-		int TotalHandCardCount,
-		int DeckCount,
-		int Score);
 
 	internal readonly record struct HandCardDecisionCandidate(
 		int Index,
@@ -94,56 +81,6 @@ internal static class SoloAiRules
 		}
 
 		return false;
-	}
-
-	internal static int PickItemTargetPlayer(
-		Difficulty difficulty,
-		TargetPreferenceKind targetKind,
-		IReadOnlyList<PlayerTargetCandidate> candidates,
-		int strategyRollPercent,
-		int tieBreakOrdinal)
-	{
-		if (candidates.Count == 0)
-		{
-			return -1;
-		}
-
-		if (difficulty == Difficulty.Low)
-		{
-			return candidates[NormalizeOrdinal(tieBreakOrdinal, candidates.Count)].PlayerIndex;
-		}
-
-		if (difficulty == Difficulty.Medium && Math.Clamp(strategyRollPercent, 0, 99) >= 50)
-		{
-			return candidates[NormalizeOrdinal(tieBreakOrdinal, candidates.Count)].PlayerIndex;
-		}
-
-		int bestMetric = int.MinValue;
-		var bestIndexes = new List<int>();
-		for (int index = 0; index < candidates.Count; index++)
-		{
-			PlayerTargetCandidate candidate = candidates[index];
-			int metric = targetKind switch
-			{
-				TargetPreferenceKind.PlayerHand => candidate.TotalHandCardCount,
-				TargetPreferenceKind.PlayerDeck => candidate.DeckCount,
-				_ => candidate.Score,
-			};
-
-			if (metric > bestMetric)
-			{
-				bestMetric = metric;
-				bestIndexes.Clear();
-				bestIndexes.Add(index);
-			}
-			else if (metric == bestMetric)
-			{
-				bestIndexes.Add(index);
-			}
-		}
-
-		int bestIndex = bestIndexes[NormalizeOrdinal(tieBreakOrdinal, bestIndexes.Count)];
-		return candidates[bestIndex].PlayerIndex;
 	}
 
 	internal static int PickDiscardDisplayIndex(

@@ -17,6 +17,7 @@ var _saw_ai := false
 var _saw_reclaim := false
 var _saw_human_restored := false
 var _advanced_after_reclaim := false
+var _handoff_action_submitted := false
 var _client_peer_id := 0
 var _finished := false
 
@@ -108,10 +109,11 @@ func _track_progress() -> void:
 			_finish_after_settle()
 		break
 
-	if _saw_reclaim and not _advanced_after_reclaim and current_turn == 0:
-		if bool(board.call("DebugPlayFirstAvailableNetworkHostHandCard")):
-			_advanced_after_reclaim = true
-			print("HOST_ADVANCED_AFTER_RECLAIM")
+	if _saw_reclaim and not _advanced_after_reclaim and current_turn == 0 and not _handoff_action_submitted:
+		_handoff_action_submitted = bool(board.call("DebugPlayFirstNonCapturingNetworkHostHandCard"))
+	elif _saw_reclaim and _handoff_action_submitted and not _advanced_after_reclaim and current_turn == 1:
+		_advanced_after_reclaim = true
+		print("HOST_ADVANCED_AFTER_RECLAIM")
 
 
 func _schedule_disconnect() -> void:

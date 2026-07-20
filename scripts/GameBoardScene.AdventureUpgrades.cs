@@ -58,62 +58,6 @@ public partial class GameBoardScene
 		return GetAdventureRunSessionStore()?.GetRunState();
 	}
 
-	private void BeginAdventureUpgradeRun(int avatarStageNumber)
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("begin the adventure upgrade run");
-			return;
-		}
-
-		AdventureRunWriteResult result = store.BeginNewRun(avatarStageNumber);
-		if (result != AdventureRunWriteResult.Succeeded)
-		{
-			GD.PushWarning($"Failed to begin adventure upgrade run: {result}");
-		}
-	}
-
-	private void AdvanceAdventureUpgradeRunToMainStage(int mainStageIndex, string enemyAvatarId)
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("advance the adventure upgrade run");
-			return;
-		}
-
-		AdventureRunWriteResult result = store.AdvanceToMainStage(mainStageIndex, enemyAvatarId);
-		if (result != AdventureRunWriteResult.Succeeded)
-		{
-			GD.PushWarning($"Failed to advance adventure upgrade run: {result}");
-		}
-	}
-
-	private void MarkAdventureRunStartUpgradeGranted()
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("mark the run-start upgrade as granted");
-			return;
-		}
-
-		store.MarkRunStartUpgradeGranted();
-	}
-
-	private void MarkAdventureVictoryUpgradeGranted()
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("mark the victory upgrade as granted");
-			return;
-		}
-
-		store.MarkVictoryUpgradeGranted();
-	}
-
 	private AdventureUpgradeGrantCommitResult GrantAdventureUpgrade(
 		string upgradeId,
 		AdventureUpgradeTriggerSource triggerSource)
@@ -130,18 +74,6 @@ public partial class GameBoardScene
 		}
 
 		return store.GrantUpgrade(upgradeId, triggerSource);
-	}
-
-	private void PersistAdventureEffectState(AdventureUpgradeEffectState effectState)
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("persist adventure upgrade effect state");
-			return;
-		}
-
-		store.ReplaceEffectState(effectState);
 	}
 
 	private int DrawCardsFromDeckToHandForAdventureEffect(int playerIndex, int drawCount)
@@ -194,21 +126,44 @@ public partial class GameBoardScene
 			ClearAdventureInteractionStateForBattleEnd();
 		}
 
+		MarkActivePlayerStatusTooltipForRefresh();
+	}
+
+	private async Task<bool> PrepareAdventureBattleForDealAsync()
+	{
 		if (!ShouldUseAdventureUpgradeSystem())
 		{
-			return;
+			return true;
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
+		if (store?.HasActiveRun != true)
 		{
-			return;
+			return false;
 		}
+		AdventureSaveGateResult<AdventureRunWriteResult> gate =
+			await ExecuteAdventureSaveGateAsync(
+				store.ResetBattleScopedEffects,
+				result => result == AdventureRunWriteResult.Succeeded,
+				result => result == AdventureRunWriteResult.SaveFailed);
+		if (!gate.Succeeded)
+		{
+			GD.PushWarning($"Failed to reset adventure battle effects: {gate.Result}");
+			return false;
+		}
+		return true;
+	}
 
-		AdventureUpgradeEffectService.ClearBattleScopedState(runState.EffectState);
-		store.ReplaceEffectState(runState.EffectState.Clone());
-		MarkActivePlayerStatusTooltipForRefresh();
+	private async Task<bool> DealCardsToPlayersWithAdventureGateAsync(
+		bool playOpeningDealAnimation = false,
+		bool playOpeningIntroAnimation = false)
+	{
+		if (!await PrepareAdventureBattleForDealAsync())
+		{
+			return false;
+		}
+		DealCardsToPlayers(playOpeningDealAnimation, playOpeningIntroAnimation);
+		return true;
 	}
 
 	private async Task TryResolveAdventurePendingExtraBaseCardActionForAiAsync(int turnSequenceGeneration)
@@ -496,7 +451,10 @@ public partial class GameBoardScene
 				_playerDecks[playerIndex].Count);
 		if (plan.HealAmount > 0)
 		{
-			ApplyAdventureMainPlayerHealing(plan.HealAmount);
+			if (!await ApplyAdventureMainPlayerHealingAsync(plan.HealAmount))
+			{
+				return;
+			}
 		}
 
 		bool drewAny = false;
@@ -574,34 +532,6 @@ public partial class GameBoardScene
 		return Task.CompletedTask;
 	}
 
-	private AdventureCaptureDamageResult ResolveAdventureCaptureDamage(
-		int playerIndex,
-		AdventureCaptureDamageInput damageInput)
-	{
-		AdventureCaptureDamageInput normalizedInput =
-			FreezeAdventureCaptureDamageInput(playerIndex, damageInput);
-		if (!ShouldUseAdventureUpgradeSystem())
-		{
-			return new AdventureCaptureDamageResult(
-				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
-		}
-
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
-		{
-			return new AdventureCaptureDamageResult(
-				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
-		}
-
-		AdventureCaptureDamageResult result = AdventureUpgradeEffectService.ApplyCaptureDamage(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			normalizedInput);
-		store.ReplaceEffectState(runState.EffectState.Clone());
-		return result;
-	}
-
 	private AdventureCaptureDamageResult PreviewAdventureCaptureDamage(
 		int playerIndex,
 		AdventureCaptureDamageInput damageInput)
@@ -661,100 +591,57 @@ public partial class GameBoardScene
 			: normalizedInput;
 	}
 
-	private AdventurePostCaptureEffectResult? ResolveAdventurePostCaptureEffects(
+	private readonly record struct AdventureMissSceneResolution(
+		bool Succeeded,
+		AdventureMainPlayerMissEffectResult EffectResult,
+		AdventurePostCaptureEffectResult RecoveryEffectResult);
+
+	private async Task<AdventureMissSceneResolution> ResolveAdventureMissActionAsync(
 		int playerIndex,
-		int finalDamage,
-		int successfulCapturesThisTurn,
-		CaptureResolutionContext captureContext)
+		string playedCardRank,
+		IReadOnlyCollection<string> triggeredAttachedItemCardIds)
 	{
 		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
 		{
-			return null;
-		}
-
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
-		if (runState?.IsActive != true)
-		{
-			return null;
-		}
-
-		return AdventureUpgradeEffectService.OnMainPlayerCaptureResolved(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			finalDamage,
-			successfulCapturesThisTurn,
-			captureContext);
-	}
-
-	private AdventurePostCaptureEffectResult? ResolveAdventureEnchantedRecoveryActionEffects(
-		int playerIndex,
-		IReadOnlyCollection<string> triggeredAttachedItemCardIds,
-		bool successfulCapture)
-	{
-		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
-		{
-			return null;
-		}
-
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
-		return runState?.IsActive == true
-			? AdventureUpgradeEffectService.ResolveEnchantedRecoveryActionEffects(
-				runState.GetAcquiredUpgradeIds(),
-				triggeredAttachedItemCardIds,
-				successfulCapture)
-			: null;
-	}
-
-	private AdventureMainPlayerMissEffectResult ApplyAdventureMainPlayerMissEffects(int playerIndex)
-	{
-		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
-		{
-			return new AdventureMainPlayerMissEffectResult(false);
+			return new AdventureMissSceneResolution(true, default, default);
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
+		if (store?.HasActiveRun != true)
 		{
-			return new AdventureMainPlayerMissEffectResult(false);
+			return new AdventureMissSceneResolution(false, default, default);
 		}
 
-		int nextTurnHealBeforeMiss = runState.EffectState.NextTurnHealAmount;
-		int nextTurnDrawBeforeMiss = runState.EffectState.NextTurnDrawCount;
-		AdventureMainPlayerMissEffectResult result = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			_tableCards.Count);
-		if (runState.HasAcquiredUpgrade("hearts_miss_bandage"))
+		AdventureSaveGateResult<AdventureMissCommitResult> gate =
+			await ExecuteAdventureSaveGateAsync(
+				() => store.ResolveMissAction(new AdventureMissCommitInput(
+					playedCardRank,
+					_tableCards.Count,
+					triggeredAttachedItemCardIds)),
+				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
+				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
+		if (!gate.Succeeded)
 		{
-			runState.EffectState.NextTurnHealAmount = nextTurnHealBeforeMiss;
-			runState.EffectState.NextTurnDrawCount = nextTurnDrawBeforeMiss;
+			GD.PushWarning($"Failed to commit adventure miss action: {gate.Result.WriteResult}");
+			return new AdventureMissSceneResolution(false, default, default);
+		}
+
+		AdventureMissCommitResult commitResult = gate.Result;
+		if (commitResult.HealingResult.HasValue)
+		{
+			_playerScores[MainPlayerIndex] = commitResult.HealingResult.Value.CurrentHealth;
+			UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
+			RefreshGameplayTensionMusic();
+		}
+		if (commitResult.CommitBandageAtRealTurnEnd)
+		{
 			_state.AdventureExtraActionQueue.RegisterMissBandageForRealTurnEnd();
 		}
-
-		store.ReplaceEffectState(runState.EffectState.Clone());
 		RenderPlayerHands();
-		return result;
-	}
-
-	private void CommitPendingAdventureMissBandageAtRealTurnEnd()
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null
-			|| runState?.IsActive != true
-			|| !runState.HasAcquiredUpgrade("hearts_miss_bandage"))
-		{
-			return;
-		}
-
-		runState.EffectState.NextTurnHealAmount = runState.EffectState.NextTurnHealAmount > int.MaxValue - 3
-			? int.MaxValue
-			: runState.EffectState.NextTurnHealAmount + 3;
-		runState.EffectState.NextTurnDrawCount = runState.EffectState.NextTurnDrawCount == int.MaxValue
-			? int.MaxValue
-			: runState.EffectState.NextTurnDrawCount + 1;
-		store.ReplaceEffectState(runState.EffectState.Clone());
+		return new AdventureMissSceneResolution(
+			true,
+			commitResult.EffectResult,
+			commitResult.RecoveryEffectResult);
 	}
 
 	private async Task ApplyAdventureMainPlayerTurnStartEffectsAsync(int playerIndex, int turnSequenceGeneration)
@@ -856,19 +743,50 @@ public partial class GameBoardScene
 		}
 	}
 
-	private async Task ApplyAdventureClubCaptureReturnsAsync(
+	private AdventureClubCaptureCommitInput BuildAdventureClubCaptureCommitInput(
 		int playerIndex,
-		CaptureResolutionContext captureContext,
-		int turnSequenceGeneration)
+		CaptureResolutionContext captureContext)
 	{
 		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
 		{
-			return;
+			return default;
 		}
 
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
+		var shortReturnCandidateIds = new HashSet<long>();
+		foreach (AdventureCapturedCardEntry entry in captureContext.CapturedCards)
+		{
+			if (entry.BaseCardInstanceId > 0)
+			{
+				shortReturnCandidateIds.Add(entry.BaseCardInstanceId);
+			}
+			if (shortReturnCandidateIds.Count == 2)
+			{
+				break;
+			}
+		}
+		bool playedCardWasBaseCard = captureContext.Action.PlayedCardInstanceId > 0;
+		var combinedReturnCandidateIds = new HashSet<long>(shortReturnCandidateIds);
+		if (playedCardWasBaseCard)
+		{
+			combinedReturnCandidateIds.Add(captureContext.Action.PlayedCardInstanceId);
+		}
+
+		return new AdventureClubCaptureCommitInput(
+			captureContext.CompleteBaseCardCount,
+			shortReturnCandidateIds.Count,
+			combinedReturnCandidateIds.Count,
+			Math.Max(0, MaxTotalHandCards - GetTotalHandCardCount(playerIndex)),
+			captureContext.HasAnyTriggeredAttachedItem,
+			playedCardWasBaseCard);
+	}
+
+	private async Task ApplyAdventureClubCaptureReturnsAsync(
+		int playerIndex,
+		CaptureResolutionContext captureContext,
+		AdventureClubCaptureEffectResult effectResult,
+		int turnSequenceGeneration)
+	{
+		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
 		{
 			return;
 		}
@@ -900,16 +818,6 @@ public partial class GameBoardScene
 			combinedReturnCandidateIds.Add(playedCardForReturn.Value.InstanceId);
 		}
 
-		AdventureClubCaptureEffectResult effectResult = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			captureContext.CompleteBaseCardCount,
-			shortReturnCandidateIds.Count,
-			combinedReturnCandidateIds.Count,
-			Math.Max(0, MaxTotalHandCards - GetTotalHandCardCount(playerIndex)),
-			playUsedAttachedEffect: captureContext.HasAnyTriggeredAttachedItem,
-			playedCardWasBaseCard: playedCardForReturn.HasValue);
-		store.ReplaceEffectState(runState.EffectState.Clone());
 		if (!effectResult.ReturnPlayedCardToHand && !effectResult.ReturnTwoCapturedCardsToHand)
 		{
 			return;
@@ -1027,65 +935,6 @@ public partial class GameBoardScene
 			&& runState.EffectState.ClubBorrowSuitSetArmed;
 	}
 
-	private void ConsumeAdventureBorrowSuitSetAfterPlayIfNeeded(PlayingCard playedCard)
-	{
-		if (!ShouldAdventureBorrowSuitSetAffectPlayedCard(playedCard))
-		{
-			return;
-		}
-
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
-		{
-			return;
-		}
-
-		AdventureUpgradeEffectService.ConsumeBorrowSuitSetAfterNumericBaseCardPlay(runState.EffectState, playedCard.Rank);
-		store.ReplaceEffectState(runState.EffectState.Clone());
-	}
-
-	private async Task ApplyAdventureLinkedStemsQuestionRewardIfNeededAsync(int playerIndex, int turnSequenceGeneration)
-	{
-		if (!ShouldUseAdventureUpgradeSystem() || playerIndex != MainPlayerIndex)
-		{
-			return;
-		}
-
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
-		if (store == null || runState?.IsActive != true)
-		{
-			return;
-		}
-
-		if (!AdventureUpgradeEffectService.ShouldGrantLinkedStemsQuestionReward(
-			runState.GetAcquiredUpgradeIds(),
-			_adventureMainPlayerSuccessfulCapturesThisTurn))
-		{
-			return;
-		}
-
-		QuestionCardRewardGrant? rewardGrant = await GrantQuestionCardRewardAsync(
-			playerIndex,
-			reserveReplacementCard: false,
-			turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !rewardGrant.HasValue)
-		{
-			return;
-		}
-
-		AdventureQuestionRewardEffectResult? rewardEffects =
-			await ResolveAdventureQuestionRewardEffectsAsync(playerIndex);
-		if (!rewardEffects.HasValue)
-		{
-			return;
-		}
-		await ApplyAdventureQuestionRewardEffects(playerIndex, rewardEffects, turnSequenceGeneration);
-		RenderPlayerCardPiles();
-		RenderPlayerHands();
-	}
-
 	private int FindLastPlayerDeckCardIndex(int playerIndex, PlayingCard card)
 	{
 		if (playerIndex < 0 || playerIndex >= _playerDecks.Count)
@@ -1139,43 +988,55 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void InitializeAdventureUpgradeRunForCurrentBoard()
+	private async Task<bool> InitializeAdventureUpgradeRunForCurrentBoardAsync()
 	{
 		if (!ShouldUseAdventureUpgradeSystem())
 		{
-			return;
+			return true;
 		}
 
 		if (!AdventureCampaignCatalog.TryGetMainStageIndex(adventure_enemy_avatar_id, out int mainStageIndex))
 		{
-			return;
+			return false;
 		}
 
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (store == null)
+		{
+			return false;
+		}
 		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
-			AdventureRunWriteResult result = GetAdventureRunSessionStore()?.BeginNewMainRun(
-				mainStageIndex,
-				adventure_enemy_avatar_id) ?? AdventureRunWriteResult.SaveFailed;
-			if (result != AdventureRunWriteResult.Succeeded)
+			AdventureSaveGateResult<AdventureRunWriteResult> gate =
+				await ExecuteAdventureSaveGateAsync(
+					() => store.BeginNewMainRun(mainStageIndex, adventure_enemy_avatar_id),
+					result => result == AdventureRunWriteResult.Succeeded,
+					result => result == AdventureRunWriteResult.SaveFailed);
+			if (!gate.Succeeded)
 			{
-				GD.PushWarning($"Failed to initialize adventure run for current board: {result}");
+				GD.PushWarning($"Failed to initialize adventure run for current board: {gate.Result}");
+				return false;
 			}
-			return;
+			return true;
 		}
 
 		if (runState.MainStageIndex == mainStageIndex)
 		{
-			return;
+			return true;
 		}
 
-		AdventureRunWriteResult advanceResult = GetAdventureRunSessionStore()?.AdvanceToMainStage(
-			mainStageIndex,
-			adventure_enemy_avatar_id) ?? AdventureRunWriteResult.SaveFailed;
-		if (advanceResult != AdventureRunWriteResult.Succeeded)
+		AdventureSaveGateResult<AdventureRunWriteResult> advanceGate =
+			await ExecuteAdventureSaveGateAsync(
+				() => store.AdvanceToMainStage(mainStageIndex, adventure_enemy_avatar_id),
+				result => result == AdventureRunWriteResult.Succeeded,
+				result => result == AdventureRunWriteResult.SaveFailed);
+		if (!advanceGate.Succeeded)
 		{
-			GD.PushWarning($"Failed to align adventure run with current board: {advanceResult}");
+			GD.PushWarning($"Failed to align adventure run with current board: {advanceGate.Result}");
+			return false;
 		}
+		return true;
 	}
 
 	private bool ShouldUseAdventureUpgradeSystem()

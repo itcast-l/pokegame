@@ -67,7 +67,8 @@ public partial class GameBoardScene
 					RemoveChild(overlay);
 					overlay.CallDeferred(Node.MethodName.QueueFree);
 				}
-			}));
+			},
+			abnormalRelease: () => Resolve(AdventureQuestionRejudgeChoice.Keep)));
 		return true;
 	}
 
@@ -107,6 +108,7 @@ public partial class GameBoardScene
 		int turnSequenceGeneration)
 	{
 		if (!rewardAnimation.HasValue
+			|| rewardAnimation.Value.RejudgeResolvedForReward
 			|| playerIndex != MainPlayerIndex
 			|| !ShouldUseAdventureUpgradeSystem()
 			|| _adventureQuestionRejudgeUsedThisBattle)

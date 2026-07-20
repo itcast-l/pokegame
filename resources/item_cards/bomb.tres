@@ -1,32 +1,12 @@
-[gd_resource type="Resource" script_class="ItemCardDefinitionResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ItemCardVisualDefinitionResource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ItemCardDefinitionResource.cs" id="1_item_card_definition"]
+[ext_resource type="Script" path="res://scripts/ItemCardVisualDefinitionResource.cs" id="1_item_card_visual"]
 
 [resource]
-script = ExtResource("1_item_card_definition")
+script = ExtResource("1_item_card_visual")
 Id = "bomb"
-DisplayName = "Bomb"
 SpriteName = "Bomb"
-DescriptionKey = "ITEM_DESC_BOMB"
-EnabledInGame = true
-PlayableFromHand = true
-CanBeQuestionReward = true
-RewardDelivery = "hand"
 ArtRunName = "run-004"
 FrameCount = 4
 SortOrder = 10
-Rarity = "rare"
-TagsCsv = "bomb"
-PlayPresentation = "table_overlay"
-Trigger = "on_play"
-EffectType = "place_table_pair_destroy"
-EffectValuesRaw = "pair_tag=bomb"
-Priority = 80
 Icon = ""
-Weight = 35
-Description = ""
-
-AttachedTrigger = ""
-AttachedEffectType = ""
-AttachedEffectValuesRaw = ""
-AttachedPriority = 0

@@ -29,54 +29,72 @@ func _run() -> void:
 
 
 func _run_item_overlay_phase() -> void:
+	await _run_item_overlay_terminal("select")
+	await _run_item_overlay_terminal("display_failure")
+	await _run_item_overlay_terminal("unexpected_release")
+
+
+func _run_item_overlay_terminal(terminal: String) -> void:
+	if _failed:
+		return
+
 	var board := await _instantiate_board(false)
 	if board == null:
 		return
 
-	if not board.has_method("DebugStartPendingTargetHandSelectionForSeat") \
-		or not board.has_method("DebugGetPendingItemSelectionModeName"):
+	if not board.has_method("DebugStartPendingHandLimitDiscardForSeat") \
+		or not board.has_method("DebugGetPendingItemSelectionModeName") \
+		or not board.has_method("DebugGetTotalHandCardCountForPlayer") \
+		or not board.has_method("DebugForceNextRequiredItemSelectionOverlayDisplayFailure") \
+		or not board.has_method("DebugUnexpectedlyReleaseActiveSelectionOverlay"):
 		_fail("Missing item overlay debug hooks")
 		return
 
 	if not await _wait_for_actionable_state(board):
 		return
 
-	if not bool(board.call("DebugStartPendingTargetHandSelectionForSeat", 0)):
-		_fail("Failed to start local pending target-hand selection")
+	var initial_hand_count := int(board.call("DebugGetTotalHandCardCountForPlayer", 0))
+	if terminal == "display_failure":
+		board.call("DebugForceNextRequiredItemSelectionOverlayDisplayFailure")
+
+	if not bool(board.call("DebugStartPendingHandLimitDiscardForSeat", 0)):
+		_fail("Failed to start local pending hand-limit discard")
 		return
 
 	await process_frame
 
-	var item_overlay := board.get_node_or_null("ItemSelectionOverlay")
-	if item_overlay == null:
-		_fail("Expected item selection overlay to appear")
-		return
+	if terminal == "select" or terminal == "unexpected_release":
+		var item_overlay := board.get_node_or_null("ItemSelectionOverlay")
+		if item_overlay == null:
+			_fail("Expected item selection overlay to appear for %s" % terminal)
+			return
 
-	if board.find_child("AdventureUpgradeSelectionOverlay", true, false) != null:
-		_fail("Adventure upgrade overlay should not appear during item selection")
-		return
+		if board.find_child("AdventureUpgradeSelectionOverlay", true, false) != null:
+			_fail("Adventure upgrade overlay should not appear during item selection")
+			return
 
-	if not _press_first_item_option(item_overlay):
-		_fail("Failed to press first item selection option")
-		return
-
-	if not await _wait_for_pending_item_selection_mode(board, "TargetHandCard"):
-		return
-
-	item_overlay = board.get_node_or_null("ItemSelectionOverlay")
-	if item_overlay == null:
-		_fail("Expected item selection overlay to remain visible for target-hand selection")
-		return
-
-	if board.find_child("AdventureUpgradeSelectionOverlay", true, false) != null:
-		_fail("Adventure upgrade overlay should not appear during target-hand selection")
-		return
-
-	if not _press_first_item_option(item_overlay):
-		_fail("Failed to press first target-hand selection option")
+		if terminal == "select":
+			if not _press_first_item_option(item_overlay):
+				_fail("Failed to press first item selection option")
+				return
+		elif not bool(board.call("DebugUnexpectedlyReleaseActiveSelectionOverlay")):
+			_fail("Failed to release item selection overlay unexpectedly")
+			return
+	elif board.get_node_or_null("ItemSelectionOverlay") != null:
+		_fail("Display-failure case unexpectedly created an item overlay")
 		return
 
 	if not await _wait_for_pending_item_selection_mode(board, "None"):
+		return
+	if not await _wait_for_actionable_state(board):
+		return
+	if int(board.call("DebugGetTotalHandCardCountForPlayer", 0)) != initial_hand_count - 1:
+		_fail("Item selection %s did not submit exactly one discard" % terminal)
+		return
+	for _frame in range(3):
+		await process_frame
+	if int(board.call("DebugGetTotalHandCardCountForPlayer", 0)) != initial_hand_count - 1:
+		_fail("Item selection %s submitted more than once" % terminal)
 		return
 
 	board.queue_free()

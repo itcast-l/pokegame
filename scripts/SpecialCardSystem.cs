@@ -67,7 +67,6 @@ public static class CardPlayPresentationTypes
 	public const string TableOverlay = "table_overlay";
 	public const string TransformAreaTrigger = "transform_area_trigger";
 	public const string LensSplit = "lens_split";
-	public const string TargetedTrigger = "targeted_trigger";
 }
 
 public static class CardTags

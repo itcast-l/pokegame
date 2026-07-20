@@ -76,16 +76,17 @@ public partial class GameBoardScene
 	int collectedCardCount = 0;
 	int removedTableCardCount = 0;
 	QuestionCardRewardAnimation? questionRewardAnimation = null;
-	AdventureQuestionRewardEffectResult? adventureQuestionRewardEffects = null;
+		AdventureQuestionRewardEffectResult? adventureQuestionRewardEffects = null;
 		AdventurePostCaptureEffectResult? adventurePostCaptureEffects = null;
 		CaptureResolutionContext? adventureCaptureContext = null;
 		AdventureCaptureDamageResult resolvedCaptureDamage = default;
-	bool capturedTraceMark = false;
-	bool capturedHuntMark = false;
-	TableCard? clubGapRootingTargetTableCard = null;
-	AdventureUpgradeEffectState?
-		plannedClubCaptureEffectState = null;
-	Vector2? questionRewardStartGlobalPosition = null;
+		AdventureClubCaptureEffectResult committedClubCaptureEffects = default;
+		bool capturedTraceMark = false;
+		bool capturedHuntMark = false;
+		TableCard? clubGapRootingTargetTableCard = null;
+		Vector2? questionRewardStartGlobalPosition = null;
+		QuestionCardRewardPlan? capturedQuestionRewardPlan = null;
+		QuestionCardRewardPlan? linkedStemsRewardPlan = null;
 
 	CaptureTableCardsResult BuildAppliedResult(bool aborted)
 	{
@@ -142,8 +143,6 @@ public partial class GameBoardScene
 				extraTableCardIndexes);
 		clubGapRootingTargetTableCard =
 			clubCaptureExtensionPlan.GapRootingTarget;
-		plannedClubCaptureEffectState =
-			clubCaptureExtensionPlan.PlannedEffectState;
 
 	HashSet<int>? preservedTableCardIndexes =
 		preserveTailTableCardIndex >= 0
@@ -164,11 +163,6 @@ public partial class GameBoardScene
 		return CaptureTableCardsResult.AbortedBeforeApply;
 	}
 
-	if (plannedClubCaptureEffectState != null)
-	{
-		GetAdventureRunSessionStore()?.ReplaceEffectState(
-			plannedClubCaptureEffectState.Clone());
-	}
 		AdventureCapturePreparation capturePreparation =
 			BuildAdventureCapturePreparation(
 				playerIndex,
@@ -204,21 +198,151 @@ public partial class GameBoardScene
 			}
 		}
 
-			resolvedCaptureDamage = ResolveAdventureCaptureDamage(
+			if (questionRewardStartGlobalPosition.HasValue)
+			{
+				capturedQuestionRewardPlan = await PlanQuestionCardRewardAsync(
+				playerIndex,
+				reserveReplacementCard,
+					turnSequenceGeneration);
+			}
+			int previouslyPlannedRewardHandCardDelta =
+				capturedQuestionRewardPlan is QuestionCardRewardPlan capturedPlan
+					&& !capturedPlan.RequiresMagnetAttachment
+					&& capturedPlan.DiscardDisplayIndex < 0
+						? 1
+						: 0;
+			HashSet<int>? excludedRewardDiscardIndexes =
+				capturedQuestionRewardPlan is QuestionCardRewardPlan capturedDiscardPlan
+					&& capturedDiscardPlan.DiscardDisplayIndex >= 0
+						? new HashSet<int> { capturedDiscardPlan.DiscardDisplayIndex }
+						: null;
+			AdventureUpgradeRunState? rewardRunState = GetAdventureUpgradeRunState();
+		if (playerIndex == MainPlayerIndex
+			&& rewardRunState?.IsActive == true
+			&& AdventureUpgradeEffectService.ShouldGrantLinkedStemsQuestionReward(
+				rewardRunState.GetAcquiredUpgradeIds(),
+				_adventureMainPlayerSuccessfulCapturesThisTurn + 1))
+		{
+				linkedStemsRewardPlan = await PlanQuestionCardRewardAsync(
+					playerIndex,
+					reserveReplacementCard: false,
+					turnSequenceGeneration,
+					previouslyPlannedHandCardDelta: previouslyPlannedRewardHandCardDelta,
+					excludedDiscardDisplayIndexes: excludedRewardDiscardIndexes,
+					rejudgeOpportunityAlreadyPlanned:
+						capturedQuestionRewardPlan?.ConsumeRejudgeOpportunity == true);
+		}
+		if (_isLeavingGame
+			|| IsGameOver()
+			|| !IsCaptureTableReferenceSnapshotCurrent(
+				turnSequenceGeneration,
+				expectedTableCardReferences))
+		{
+			return CaptureTableCardsResult.AbortedBeforeApply;
+		}
+
+			if (ShouldUseAdventureUpgradeSystem())
+			{
+				AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+				var candidateTableCards = new List<TableCard>(_tableCards);
+				if (prePlayTableCards != null)
+				{
+					_tableCards.Clear();
+					_tableCards.AddRange(prePlayTableCards);
+					RenderTableCards();
+				}
+				AdventureClubCaptureCommitInput clubCaptureInput =
+				BuildAdventureClubCaptureCommitInput(playerIndex, adventureCaptureContext);
+			int plannedQuestionRewardCount = playerIndex == MainPlayerIndex
+				? (capturedQuestionRewardPlan.HasValue ? 1 : 0)
+					+ (linkedStemsRewardPlan.HasValue ? 1 : 0)
+				: 0;
+			AdventureSaveGateResult<AdventureCaptureCommitResult> gate =
+				await ExecuteAdventureSaveGateAsync(
+					() => store?.ResolveCaptureAction(new AdventureCaptureCommitInput(
+						CapturerIsMainPlayer: playerIndex == MainPlayerIndex,
+						PlayedCardRank: adventureCaptureContext.Action.PlayedCard.Rank,
+						ConsumeBorrowSuitSet: adventureCaptureContext.Action.PlayedCardInstanceId > 0
+							&& ShouldAdventureBorrowSuitSetAffectPlayedCard(
+								adventureCaptureContext.Action.PlayedCard),
+						ConsumeGapRooting: clubGapRootingTargetTableCard != null,
+						capturePreparation.DamageInput,
+						SuccessfulCapturesThisTurn: _adventureMainPlayerSuccessfulCapturesThisTurn + 1,
+						adventureCaptureContext,
+						clubCaptureInput,
+						plannedQuestionRewardCount,
+						_adventureMainPlayerHalfHealthRescueUsed,
+						_adventureMainPlayerQuarterHealthRescueUsed))
+						?? new AdventureCaptureCommitResult(
+							AdventureRunWriteResult.SaveFailed,
+							default,
+							default,
+							default,
+							default,
+							null,
+							default,
+							0,
+							false,
+							false),
+					result => result.WriteResult == AdventureRunWriteResult.Succeeded,
+					result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
+				if (!gate.Succeeded)
+				{
+					GD.PushWarning($"Failed to commit adventure capture action: {gate.Result.WriteResult}");
+					return CaptureTableCardsResult.AbortedBeforeApply;
+				}
+				_tableCards.Clear();
+				_tableCards.AddRange(candidateTableCards);
+
+				AdventureCaptureCommitResult commitResult = gate.Result;
+			resolvedCaptureDamage = commitResult.DamageResult;
+			committedClubCaptureEffects = commitResult.ClubCaptureEffectResult;
+			adventurePostCaptureEffects = commitResult.PostCaptureEffectResult with { HealAmount = 0 };
+			if (plannedQuestionRewardCount > 0)
+			{
+				adventureQuestionRewardEffects = commitResult.QuestionRewardEffectResult with { HealAmount = 0 };
+			}
+
+			int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(scorePlayerIndex);
+			if (damageTargetPlayerIndex == MainPlayerIndex)
+			{
+				ApplyCommittedAdventurePlayerVitals(
+					scorePlayerIndex,
+					resolvedCaptureDamage.FinalDamage,
+					commitResult.CurrentHealth,
+					commitResult.RescueResult,
+					commitResult.ConsumedHalfHealthRescue,
+					commitResult.ConsumedQuarterHealthRescue);
+			}
+			else
+			{
+				ApplyAdventureDamageInMemory(
+					scorePlayerIndex,
+					damageTargetPlayerIndex,
+					resolvedCaptureDamage.FinalDamage);
+				if (commitResult.HealingResult.HasValue)
+				{
+					ApplyCommittedAdventurePlayerVitals(
+						MainPlayerIndex,
+						rawDamage: 0,
+						commitResult.CurrentHealth,
+						default,
+						false,
+						false);
+				}
+			}
+		}
+		else
+		{
+			resolvedCaptureDamage = PreviewAdventureCaptureDamage(
 				playerIndex,
 				capturePreparation.DamageInput);
-		if (resolvedCaptureDamage.FinalDamage > 0)
-		{
-			AddPlayerScore(scorePlayerIndex, resolvedCaptureDamage.FinalDamage);
+			if (resolvedCaptureDamage.FinalDamage > 0)
+			{
+				AddPlayerScore(scorePlayerIndex, resolvedCaptureDamage.FinalDamage);
+			}
 		}
-		if (playerIndex == MainPlayerIndex)
-		{
-			adventurePostCaptureEffects = ResolveAdventurePostCaptureEffects(
-				playerIndex,
-				resolvedCaptureDamage.FinalDamage,
-				_adventureMainPlayerSuccessfulCapturesThisTurn + 1,
-				adventureCaptureContext);
-		}
+		await WaitForAuthorityTransactionFaultAsync("after_score");
 		commitImmediatelyBeforeApply?.Invoke();
 	CaptureStateResult captureStateResult =
 		_captureStateService.ApplyCapture(
@@ -229,6 +353,7 @@ public partial class GameBoardScene
 			preservedTableCardIndexes,
 			blackLedgerRedirectTableCardIndex,
 			MainPlayerIndex);
+		await WaitForAuthorityTransactionFaultAsync("after_capture");
 		collectedCardCount =
 			captureStateResult.CollectedCardCount;
 		removedTableCardCount =
@@ -258,47 +383,44 @@ public partial class GameBoardScene
 
 	var postApplyTableCardReferences =
 		new List<TableCard>(_tableCards);
-	bool CanCommitQuestionReward()
-	{
-		return !_isLeavingGame
-			&& !IsGameOver()
-			&& IsCaptureTableReferenceSnapshotCurrent(
-				turnSequenceGeneration,
-				postApplyTableCardReferences);
-	}
-
-	if (questionRewardStartGlobalPosition.HasValue)
-	{
-		QuestionCardRewardGrant? rewardGrant =
-			await GrantQuestionCardRewardAsync(
+		if (capturedQuestionRewardPlan.HasValue
+			&& questionRewardStartGlobalPosition.HasValue)
+		{
+			QuestionCardRewardGrant? rewardGrant = ApplyQuestionCardRewardPlan(
 				playerIndex,
-				reserveReplacementCard,
-				turnSequenceGeneration,
-				CanCommitQuestionReward);
-		if (!CanCommitQuestionReward())
-		{
-			return BuildAppliedResult(aborted: true);
-		}
-
-		if (rewardGrant.HasValue)
-		{
-				adventureQuestionRewardEffects =
-					await ResolveAdventureQuestionRewardEffectsAsync(
-						playerIndex);
-			questionRewardAnimation =
+				capturedQuestionRewardPlan.Value);
+			if (rewardGrant.HasValue)
+			{
+				questionRewardAnimation =
 				new QuestionCardRewardAnimation(
 					rewardGrant.Value.ItemCard,
 					rewardGrant.Value.ItemHandIndex,
 					questionRewardStartGlobalPosition.Value,
-					rewardGrant.Value
-						.RequiresMagnetAttachment);
+						rewardGrant.Value
+							.RequiresMagnetAttachment,
+						rewardGrant.Value.RejudgeResolvedForReward);
+			}
 		}
-	}
+			if (linkedStemsRewardPlan.HasValue)
+			{
+				QuestionCardRewardPlan linkedPlan = linkedStemsRewardPlan.Value;
+				if (capturedQuestionRewardPlan?.DiscardDisplayIndex >= 0
+					&& linkedPlan.DiscardDisplayIndex
+						> capturedQuestionRewardPlan.Value.DiscardDisplayIndex)
+				{
+					linkedPlan = linkedPlan with
+					{
+						DiscardDisplayIndex = linkedPlan.DiscardDisplayIndex - 1,
+					};
+				}
+				_ = ApplyQuestionCardRewardPlan(playerIndex, linkedPlan);
+			}
 
 		await ApplyAdventureClubCaptureReturnsAsync(
-			playerIndex,
-			adventureCaptureContext,
-			turnSequenceGeneration);
+				playerIndex,
+				adventureCaptureContext,
+				committedClubCaptureEffects,
+				turnSequenceGeneration);
 	if (turnSequenceGeneration != _turnSequenceGeneration
 		|| _isLeavingGame)
 	{
@@ -359,35 +481,9 @@ public partial class GameBoardScene
 		}
 
 		RefreshAdventureCanopyAnchorAfterTableMutation();
-		AdventureUpgradeRunState? runState =
-			GetAdventureUpgradeRunState();
-		if (runState?.IsActive == true
-			&& runState.EffectState
-				.ClubMissClimbGrowthStacks > 0)
-		{
-			runState.EffectState
-				.ClubMissClimbGrowthStacks = 0;
-			GetAdventureRunSessionStore()
-				?.ReplaceEffectState(
-					runState.EffectState.Clone());
+			_adventureMainPlayerSuccessfulCapturesThisTurn++;
+			_adventureMainPlayerCaptureCountThisBattle++;
 			RenderPlayerHands();
-		}
-
-		_adventureMainPlayerSuccessfulCapturesThisTurn++;
-		_adventureMainPlayerCaptureCountThisBattle++;
-		await ApplyAdventureLinkedStemsQuestionRewardIfNeededAsync(
-			playerIndex,
-			turnSequenceGeneration);
-		if (turnSequenceGeneration != _turnSequenceGeneration
-			|| _isLeavingGame)
-		{
-			return BuildAppliedResult(aborted: true);
-		}
-
-		if (IsGameOver())
-		{
-			return BuildAppliedResult(aborted: false);
-		}
 	}
 
 	bool shouldQueueBigCaptureUpgrade =

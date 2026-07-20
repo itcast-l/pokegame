@@ -15,6 +15,7 @@ internal enum AdventureUpgradeRestoreResult
 
 internal enum AdventureUpgradeAcquireResult
 {
+	None,
 	Acquired,
 	AlreadyAcquired,
 	DeferredManifestUnavailable,

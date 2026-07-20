@@ -638,9 +638,6 @@ fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "current_turn" ]]; then
 	run_current_turn_case
 fi
-if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "pending_target" ]]; then
-	run_pending_case "pending_target" "target" "MIGRATION_PENDING_READY mode=TargetPlayer"
-fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "pending_discard" ]]; then
 	run_pending_case "pending_discard" "discard" "MIGRATION_PENDING_READY mode=HandLimitDiscard"
 fi

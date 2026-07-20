@@ -392,10 +392,10 @@ internal static partial class Program
 			"scripts",
 			"GameBoardScene.TurnAdvancement.cs"));
 		int methodStart = source.IndexOf(
-			"private void EndRealMainPlayerTurn()",
+			"private async Task<bool> EndRealMainPlayerTurnAsync()",
 			StringComparison.Ordinal);
 		int methodEnd = source.IndexOf(
-			"private async Task AdvanceTurnAfterPlayedResultAsync(",
+			"private async Task ResolveActionCompletionAsync(",
 			methodStart,
 			StringComparison.Ordinal);
 		True(methodStart >= 0);
@@ -405,15 +405,16 @@ internal static partial class Program
 		int queueEndIndex = method.IndexOf(
 			"AdventureExtraActionQueue.EndRealTurn()",
 			StringComparison.Ordinal);
+		int transactionIndex = method.IndexOf(
+			"store.ResolveRealTurnEnd(commitMissBandage)",
+			StringComparison.Ordinal);
 		int captureOrdinalResetIndex = method.IndexOf(
 			"_adventureMainPlayerSuccessfulCapturesThisTurn = 0",
 			StringComparison.Ordinal);
-		int turnScopeClearIndex = method.IndexOf(
-			"AdventureUpgradeEffectService.ClearTurnScopedState(",
-			StringComparison.Ordinal);
+		True(transactionIndex >= 0);
 		True(queueEndIndex >= 0);
+		True(queueEndIndex > transactionIndex);
 		True(captureOrdinalResetIndex > queueEndIndex);
-		True(turnScopeClearIndex > queueEndIndex);
 	}
 
 	private static void HollowBurstEvaluatesCompleteCaptureSet()

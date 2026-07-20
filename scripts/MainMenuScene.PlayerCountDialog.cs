@@ -122,6 +122,11 @@ public partial class MainMenuScene : Control
 		{
 			return;
 		}
+		if (!ItemCardCatalogPreflight.TryValidate(this, out _))
+		{
+			ItemCardCatalogPreflight.ShowErrorDialog(this);
+			return;
+		}
 
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
 		if (gameBoardScene == null)

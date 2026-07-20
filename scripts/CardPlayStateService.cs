@@ -27,13 +27,43 @@ internal sealed class CardPlayStateService
 			return CardPlayStartResult.NotPlayed;
 		}
 
-		List<PlayingCard> hand = state.PlayerHands[playerIndex];
-		if (handIndex < 0 || handIndex >= hand.Count)
+		if (!TryRemoveCardFromHand(state, playerIndex, handIndex, out PlayingCard removedCard))
 		{
 			return CardPlayStartResult.NotPlayed;
 		}
 
+		return CompletePlayFromRemovedHandCard(state, playerIndex, removedCard, plan);
+	}
+
+	internal bool TryRemoveCardFromHand(
+		GameBoardState state,
+		int playerIndex,
+		int handIndex,
+		out PlayingCard playedCard)
+	{
+		playedCard = default;
+		if (playerIndex < 0 || playerIndex >= state.PlayerHands.Count)
+		{
+			return false;
+		}
+
+		List<PlayingCard> hand = state.PlayerHands[playerIndex];
+		if (handIndex < 0 || handIndex >= hand.Count)
+		{
+			return false;
+		}
+
+		playedCard = hand[handIndex];
 		hand.RemoveAt(handIndex);
+		return true;
+	}
+
+	internal CardPlayStartResult CompletePlayFromRemovedHandCard(
+		GameBoardState state,
+		int playerIndex,
+		PlayingCard playedCard,
+		CardPlayPlan plan)
+	{
 		int captureStartIndex = AddPlayedCardToTable(
 			state,
 			playerIndex,

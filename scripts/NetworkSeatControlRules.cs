@@ -5,11 +5,6 @@ internal static class NetworkSeatControlRules
 		return mode == SeatControlMode.HumanConnected;
 	}
 
-	internal static bool CanRevealPendingTargetHand(SeatControlMode mode)
-	{
-		return mode == SeatControlMode.HumanConnected;
-	}
-
 	internal static bool CanSendPendingSelectionRequest(
 		bool isNetworkMultiplayer,
 		bool isNetworkHost,

@@ -126,6 +126,11 @@ public partial class NetworkManager : Node
 
 	public void HostLan(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
+
 		RefreshLocalIdentity();
 		LeaveSession();
 		SetState(NetworkSessionState.Hosting);
@@ -187,6 +192,10 @@ public partial class NetworkManager : Node
 			Fail("LAN address is empty.");
 			return;
 		}
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
 
 		RefreshLocalIdentity();
 		LeaveSession();
@@ -243,12 +252,12 @@ public partial class NetworkManager : Node
 		RpcId(1, MethodName.RpcRequestPlayItemCard, context.SessionId, context.MatchId, context.AuthorityEpoch, itemHandIndex, turnSequenceGeneration, clientActionId);
 	}
 
-	public void RequestPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
+	public void RequestPendingItemSelection(int selectionIndex, int turnSequenceGeneration)
 	{
-		RequestPendingItemSelection(targetPlayerIndex, targetHandIndex, turnSequenceGeneration, NextClientActionId());
+		RequestPendingItemSelection(selectionIndex, turnSequenceGeneration, NextClientActionId());
 	}
 
-	public void RequestPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration, long clientActionId)
+	public void RequestPendingItemSelection(int selectionIndex, int turnSequenceGeneration, long clientActionId)
 	{
 		if (_state != NetworkSessionState.InGame || IsHost)
 		{
@@ -256,7 +265,7 @@ public partial class NetworkManager : Node
 		}
 
 		NetworkRpcContext context = GetCurrentRpcContext();
-		RpcId(1, MethodName.RpcRequestPendingItemSelection, context.SessionId, context.MatchId, context.AuthorityEpoch, targetPlayerIndex, targetHandIndex, turnSequenceGeneration, clientActionId);
+		RpcId(1, MethodName.RpcRequestPendingItemSelection, context.SessionId, context.MatchId, context.AuthorityEpoch, selectionIndex, turnSequenceGeneration, clientActionId);
 	}
 
 	private void ConnectMultiplayerSignals()

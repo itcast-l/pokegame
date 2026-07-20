@@ -17,6 +17,8 @@ public static class NetworkAuthorityActionVariantCodec
 			["base_hand_index"] = state.BaseHandIndex,
 			["item_hand_index"] = state.ItemHandIndex,
 			["item_or_reward_id"] = state.ItemOrRewardId,
+			["base_card_code"] = state.BaseCardCode,
+			["rng_state_before_action"] = state.RngStateBeforeAction,
 			["target_seat"] = state.TargetSeat,
 			["target_hand_index"] = state.TargetHandIndex,
 			["reserve_replacement"] = state.ReserveReplacement,
@@ -34,9 +36,10 @@ public static class NetworkAuthorityActionVariantCodec
 			["pending_reward_hand_index"] = state.PendingRewardHandIndex,
 			["pending_reward_requires_attachment"] = state.PendingRewardRequiresAttachment,
 			["transfer_mutation_applied"] = state.TransferMutationApplied,
-			["deferred_target_seat"] = state.DeferredTargetSeat,
-			["deferred_target_hand_index"] = state.DeferredTargetHandIndex,
-			["deferred_target_phase"] = state.DeferredTargetPhase.ToString(),
+			["question_reward_mutation_applied"] = state.QuestionRewardMutationApplied,
+			["discard_mutation_applied"] = state.DiscardMutationApplied,
+			["attachment_mutation_applied"] = state.AttachmentMutationApplied,
+			["selection_index"] = state.SelectionIndex,
 		};
 	}
 
@@ -61,6 +64,8 @@ public static class NetworkAuthorityActionVariantCodec
 			|| !TryReadInt32(dictionary, "base_hand_index", out int baseHandIndex)
 			|| !TryReadInt32(dictionary, "item_hand_index", out int itemHandIndex)
 			|| !TryReadString(dictionary, "item_or_reward_id", out string itemOrRewardId)
+			|| !TryReadString(dictionary, "base_card_code", out string baseCardCode)
+			|| !TryReadString(dictionary, "rng_state_before_action", out string rngStateBeforeAction)
 			|| !TryReadInt32(dictionary, "target_seat", out int targetSeat)
 			|| !TryReadInt32(dictionary, "target_hand_index", out int targetHandIndex)
 			|| !TryReadBool(dictionary, "reserve_replacement", out bool reserveReplacement)
@@ -89,9 +94,10 @@ public static class NetworkAuthorityActionVariantCodec
 		int pendingRewardHandIndex = -1;
 		bool pendingRewardRequiresAttachment = false;
 		bool transferMutationApplied = false;
-		int deferredTargetSeat = -1;
-		int deferredTargetHandIndex = -1;
-		AuthorityActionPhase deferredTargetPhase = AuthorityActionPhase.Applying;
+		bool questionRewardMutationApplied = false;
+		bool discardMutationApplied = false;
+		bool attachmentMutationApplied = false;
+		int selectionIndex = -1;
 		if (dictionary.ContainsKey("continuation_step")
 			&& (!TryReadEnum(dictionary, "continuation_step", out continuationStep)
 				|| !TryReadBool(dictionary, "primary_mutation_applied", out primaryMutationApplied)
@@ -105,18 +111,15 @@ public static class NetworkAuthorityActionVariantCodec
 		}
 
 		if (dictionary.ContainsKey("transfer_mutation_applied")
-			&& !TryReadBool(dictionary, "transfer_mutation_applied", out transferMutationApplied))
+			&& (!TryReadBool(dictionary, "transfer_mutation_applied", out transferMutationApplied)
+				|| !TryReadBool(dictionary, "question_reward_mutation_applied", out questionRewardMutationApplied)
+				|| !TryReadBool(dictionary, "discard_mutation_applied", out discardMutationApplied)
+				|| !TryReadBool(dictionary, "attachment_mutation_applied", out attachmentMutationApplied)))
 		{
 			return false;
 		}
 
-		bool hasDeferredTarget = dictionary.ContainsKey("deferred_target_seat")
-			|| dictionary.ContainsKey("deferred_target_hand_index")
-			|| dictionary.ContainsKey("deferred_target_phase");
-		if (hasDeferredTarget
-			&& (!TryReadInt32(dictionary, "deferred_target_seat", out deferredTargetSeat)
-				|| !TryReadInt32(dictionary, "deferred_target_hand_index", out deferredTargetHandIndex)
-				|| !TryReadEnum(dictionary, "deferred_target_phase", out deferredTargetPhase)))
+		if (!TryReadInt32(dictionary, "selection_index", out selectionIndex))
 		{
 			return false;
 		}
@@ -137,6 +140,8 @@ public static class NetworkAuthorityActionVariantCodec
 			BaseHandIndex = baseHandIndex,
 			ItemHandIndex = itemHandIndex,
 			ItemOrRewardId = itemOrRewardId,
+			BaseCardCode = baseCardCode,
+			RngStateBeforeAction = rngStateBeforeAction,
 			TargetSeat = targetSeat,
 			TargetHandIndex = targetHandIndex,
 			ReserveReplacement = reserveReplacement,
@@ -154,9 +159,10 @@ public static class NetworkAuthorityActionVariantCodec
 			PendingRewardHandIndex = pendingRewardHandIndex,
 			PendingRewardRequiresAttachment = pendingRewardRequiresAttachment,
 			TransferMutationApplied = transferMutationApplied,
-			DeferredTargetSeat = deferredTargetSeat,
-			DeferredTargetHandIndex = deferredTargetHandIndex,
-			DeferredTargetPhase = deferredTargetPhase,
+			QuestionRewardMutationApplied = questionRewardMutationApplied,
+			DiscardMutationApplied = discardMutationApplied,
+			AttachmentMutationApplied = attachmentMutationApplied,
+			SelectionIndex = selectionIndex,
 		};
 		if (!AuthorityActionStateRules.IsValid(decoded, playerCount))
 		{

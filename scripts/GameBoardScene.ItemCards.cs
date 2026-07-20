@@ -48,21 +48,6 @@ public partial class GameBoardScene
 		return false;
 	}
 
-	private void StartPendingItemSelection(string itemCardId, int ownerPlayerIndex, int itemHandIndex, int turnSequenceGeneration)
-	{
-		_pendingItemCardId = itemCardId;
-		_pendingItemOwnerIndex = ownerPlayerIndex;
-		_pendingItemHandIndex = itemHandIndex;
-		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-		_pendingItemSelectionMode = PendingItemSelectionMode.TargetPlayer;
-		_revealedPlayerHandIndex = -1;
-		SyncNetworkAuthorityActionWithPendingSelection();
-		RenderPlayerHands();
-		SendBoardSnapshotIfHost();
-		ShowTargetPlayerSelection();
-		BeginNetworkAiProxyTurnForPendingSelectionIfNeeded();
-	}
-
 	private void CancelPendingItemSelection()
 	{
 		bool hadPendingSelection = HasPendingItemSelection();
@@ -105,7 +90,6 @@ public partial class GameBoardScene
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = -1;
 		_pendingItemCardId = string.Empty;
-		_revealedPlayerHandIndex = -1;
 		magnetAttachmentCompletion?.TrySetResult(true);
 		handLimitDiscardCompletion?.TrySetResult(-1);
 	}
@@ -197,8 +181,85 @@ public partial class GameBoardScene
 		CommitNetworkAuthorityDiscardMutation();
 	}
 
-	return discarded;
-}
+		return discarded;
+	}
+
+	private async Task<int?> PlanHandLimitDiscardForQuestionRewardAsync(
+		int playerIndex,
+		int turnSequenceGeneration,
+		IReadOnlySet<int>? excludedDisplayIndexes = null)
+	{
+		if (turnSequenceGeneration != _turnSequenceGeneration
+			|| _isLeavingGame
+			|| IsGameOver()
+			|| playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| !HasAnyHandCard(playerIndex)
+			|| GetTotalHandCardCount(playerIndex) <= (excludedDisplayIndexes?.Count ?? 0))
+		{
+			return null;
+		}
+
+		if (!ShouldUseInteractiveHumanItemFollowup(playerIndex))
+		{
+			int preferredDisplayIndex = IsOfflineSoloAiPlayer(playerIndex)
+				? PickOfflineSoloAiDiscardDisplayIndex(playerIndex)
+				: PickRandomHandDisplayIndex(playerIndex);
+			if (preferredDisplayIndex >= 0
+				&& !(excludedDisplayIndexes?.Contains(preferredDisplayIndex) ?? false))
+			{
+				return preferredDisplayIndex;
+			}
+
+			for (int displayIndex = 0; displayIndex < GetTotalHandCardCount(playerIndex); displayIndex++)
+			{
+				if (!(excludedDisplayIndexes?.Contains(displayIndex) ?? false))
+				{
+					return displayIndex;
+				}
+			}
+			return null;
+		}
+
+		bool wasProcessingCardPlay = _isProcessingCardPlay;
+		var completionSource = new TaskCompletionSource<int>();
+		_isProcessingCardPlay = true;
+		_pendingItemOwnerIndex = playerIndex;
+		_pendingItemHandIndex = -1;
+		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
+		_pendingItemCardId = string.Empty;
+		_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
+		_pendingHandLimitDiscardCompletion = completionSource;
+		_plannedQuestionRewardDiscardExclusions.Clear();
+		if (excludedDisplayIndexes != null)
+		{
+			_plannedQuestionRewardDiscardExclusions.UnionWith(excludedDisplayIndexes);
+		}
+		RenderPlayerHands();
+		ShowHandLimitDiscardSelection();
+		try
+		{
+			int displayIndex = await completionSource.Task;
+			return turnSequenceGeneration == _turnSequenceGeneration
+				&& !_isLeavingGame
+				&& !IsGameOver()
+				&& IsValidHandLimitDiscardSelection(playerIndex, displayIndex)
+					? displayIndex
+					: null;
+		}
+		finally
+		{
+			if (ReferenceEquals(_pendingHandLimitDiscardCompletion, completionSource))
+			{
+				DisposeActiveSelectionOverlay();
+				ClearPendingItemSelectionState();
+				_plannedQuestionRewardDiscardExclusions.Clear();
+				_isProcessingCardPlay = wasProcessingCardPlay;
+				RenderPlayerHands();
+			}
+		}
+	}
 
 	private bool ShouldUseInteractiveHumanItemFollowup(int playerIndex)
 	{
@@ -313,6 +374,10 @@ public partial class GameBoardScene
 		var options = new List<(string Text, Action Action)>();
 		for (int handIndex = 0; handIndex < _playerHands[ownerPlayerIndex].Count; handIndex++)
 		{
+			if (_plannedQuestionRewardDiscardExclusions.Contains(handIndex))
+			{
+				continue;
+			}
 			PlayingCard card = _playerHands[ownerPlayerIndex][handIndex];
 			int selectedDisplayIndex = handIndex;
 			options.Add(($"{card.Suit} {card.Rank}", () => CompleteHandLimitDiscardSelection(selectedDisplayIndex)));
@@ -320,12 +385,20 @@ public partial class GameBoardScene
 
 		for (int itemIndex = 0; itemIndex < _playerItemHands[ownerPlayerIndex].Count; itemIndex++)
 		{
-			ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemIndex];
 			int selectedDisplayIndex = _playerHands[ownerPlayerIndex].Count + itemIndex;
+			if (_plannedQuestionRewardDiscardExclusions.Contains(selectedDisplayIndex))
+			{
+				continue;
+			}
+			ItemCard itemCard = _playerItemHands[ownerPlayerIndex][itemIndex];
 			options.Add((GetSpecialCardSelectionLabel(itemCard.Id), () => CompleteHandLimitDiscardSelection(selectedDisplayIndex)));
 		}
 
-		ShowSelectionOverlay(Localize("GAME_SELECT_DISCARD_CARD"), options, showCancel: false);
+		SelectionOverlayCreationResult creationResult = ShowSelectionOverlay(
+			Localize("GAME_SELECT_DISCARD_CARD"),
+			options,
+			showCancel: false);
+		ResolveRequiredItemSelectionCreationFailure(creationResult, options);
 	}
 
 	private void CompleteHandLimitDiscardSelection(int displayIndex)
@@ -345,7 +418,7 @@ public partial class GameBoardScene
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
 			BeginPredictedNetworkHandLimitDiscardSelection(displayIndex);
-			RequestNetworkPendingItemSelection(-1, displayIndex, _pendingItemTurnSequenceGeneration);
+			RequestNetworkPendingItemSelection(displayIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}
 
@@ -358,7 +431,8 @@ public partial class GameBoardScene
 			&& playerIndex < _playerHands.Count
 			&& playerIndex < _playerItemHands.Count
 			&& displayIndex >= 0
-			&& displayIndex < GetTotalHandCardCount(playerIndex);
+			&& displayIndex < GetTotalHandCardCount(playerIndex)
+			&& !_plannedQuestionRewardDiscardExclusions.Contains(displayIndex);
 	}
 
 	private int PickRandomHandDisplayIndex(int playerIndex)

@@ -24,17 +24,8 @@ public sealed partial class ItemCardCatalog
 	private const string ItemCardCategoryId = "item_cards";
 	private const string ItemCardResourceDirectory = "res://resources/item_cards";
 	private const string ItemCardRootPath = "res://art/cards/item_cards";
-	private const string DefaultArtRunName = "run-004";
-	private const int DefaultFrameCount = 4;
-	private const int DefaultSortOrder = 1000;
-	private const string DefaultRarity = "common";
-	private const int DefaultWeight = 100;
-
 	private static ItemCardCatalog? _cached;
-	private static IReadOnlyDictionary<string, ItemCardDefinition>? _resourceDefinitionsById;
-
 	private readonly Dictionary<string, ItemCardDefinition> _definitionsById = new(StringComparer.Ordinal);
-	private readonly Dictionary<string, ItemCardDefinition> _runtimeRulesById = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, string> _idsBySpriteName = new(StringComparer.Ordinal);
 	private readonly List<string> _allIds = new();
 	private readonly List<string> _rewardIds = new();
@@ -46,14 +37,32 @@ public sealed partial class ItemCardCatalog
 	{
 	}
 
-	public static ItemCardCatalog Load(Node sceneNode)
+	public static bool TryLoad(Node sceneNode, out ItemCardCatalog catalog, out string errorMessage)
 	{
-		if (_cached == null || !_cached.LoadedFromPandora && CanReadPandora(sceneNode))
+		if (_cached != null)
 		{
-			_cached = Build(sceneNode);
+			catalog = _cached;
+			errorMessage = string.Empty;
+			return true;
 		}
 
-		return _cached;
+		if (!TryBuild(sceneNode, out catalog, out errorMessage))
+		{
+			return false;
+		}
+
+		_cached = catalog;
+		return true;
+	}
+
+	public static ItemCardCatalog LoadRequired(Node sceneNode)
+	{
+		if (TryLoad(sceneNode, out ItemCardCatalog catalog, out string errorMessage))
+		{
+			return catalog;
+		}
+
+		throw new InvalidOperationException($"Item card catalog preflight failed: {errorMessage}");
 	}
 
 	public IReadOnlyList<string> AllIds => _allIds;
@@ -62,8 +71,6 @@ public sealed partial class ItemCardCatalog
 
 	public string GameplayManifestHash =>
 		GameplayManifestHashRules.ComputeItemCardManifestHash(_definitionsById.Values);
-
-	private bool LoadedFromPandora { get; set; }
 
 	public bool TryGetIdForSpriteName(string spriteName, out string itemCardId)
 	{
@@ -96,7 +103,8 @@ public sealed partial class ItemCardCatalog
 			return true;
 		}
 
-		return _runtimeRulesById.TryGetValue(itemCardId, out definition);
+		definition = default;
+		return false;
 	}
 
 	public bool HasEffectType(string itemCardId, string effectType)
@@ -141,28 +149,31 @@ public sealed partial class ItemCardCatalog
 		return false;
 	}
 
-	private static ItemCardCatalog Build(Node sceneNode)
+	private static bool TryBuild(Node sceneNode, out ItemCardCatalog catalog, out string errorMessage)
 	{
-		var catalog = new ItemCardCatalog();
-		List<ItemCardDefinition> definitions = LoadDefinitions(sceneNode, out bool loadedFromPandora);
-		catalog.LoadedFromPandora = loadedFromPandora;
-		foreach (ItemCardDefinition runtimeRule in GetResourceDefinitions().Values)
+		catalog = new ItemCardCatalog();
+		if (!TryLoadVisualDefinitions(out IReadOnlyDictionary<string, ItemCardVisualDefinition> visualsById, out errorMessage)
+			|| !TryLoadDefinitions(sceneNode, visualsById, out List<ItemCardDefinition> definitions, out errorMessage))
 		{
-			if (IsRuntimeRuleDefinition(runtimeRule))
-			{
-				catalog._runtimeRulesById[runtimeRule.Id] = runtimeRule;
-			}
+			catalog = default!;
+			return false;
 		}
 
 		foreach (ItemCardDefinition definition in definitions)
 		{
-			if (string.IsNullOrWhiteSpace(definition.Id) || catalog._definitionsById.ContainsKey(definition.Id))
+			if (!catalog._definitionsById.TryAdd(definition.Id, definition))
 			{
-				continue;
+				errorMessage = $"Duplicate item card definition '{definition.Id}'.";
+				catalog = default!;
+				return false;
 			}
 
-			catalog._definitionsById[definition.Id] = definition;
-			catalog._idsBySpriteName[definition.SpriteName] = definition.Id;
+			if (!catalog._idsBySpriteName.TryAdd(definition.SpriteName, definition.Id))
+			{
+				errorMessage = $"Duplicate item card sprite name '{definition.SpriteName}'.";
+				catalog = default!;
+				return false;
+			}
 			catalog._allIds.Add(definition.Id);
 			if (definition.EnabledInGame && !ItemCardEffectSupport.IsSupportedEffectType(definition.EffectType))
 			{
@@ -192,7 +203,8 @@ public sealed partial class ItemCardCatalog
 			catalog._firstFrameTextures[definition.Id] = frames[0];
 		}
 
-		return catalog;
+		errorMessage = string.Empty;
+		return true;
 	}
 
 }

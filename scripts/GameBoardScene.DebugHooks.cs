@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -10,36 +11,12 @@ public partial class GameBoardScene
 	private Tween? _debugSpecialCardProbeTween;
 	private Control? _debugSpecialCardProbeEffectRoot;
 	private double _debugSpecialCardProbeElapsedSeconds;
-	private bool _debugForceNextPendingTargetPlayerHeuristicFailure;
-	private bool _debugForceNextPendingTargetHandHeuristicFailure;
 	private bool _debugForceNextPendingHandLimitDiscardHeuristicFailure;
 	private bool _debugForceNextAdventureUpgradeOverlayDisplayFailure;
 	private double _debugNetworkVisualPlaybackDelaySeconds;
 	private int _debugQuestionRewardGrantCount;
 	private string _debugLastQuestionRewardItemCardId = string.Empty;
-	private string _debugForcedNextQuestionRewardItemCardId = string.Empty;
-
-	private bool ConsumeDebugForceNextPendingTargetPlayerHeuristicFailure()
-	{
-		if (!_debugForceNextPendingTargetPlayerHeuristicFailure)
-		{
-			return false;
-		}
-
-		_debugForceNextPendingTargetPlayerHeuristicFailure = false;
-		return true;
-	}
-
-	private bool ConsumeDebugForceNextPendingTargetHandHeuristicFailure()
-	{
-		if (!_debugForceNextPendingTargetHandHeuristicFailure)
-		{
-			return false;
-		}
-
-		_debugForceNextPendingTargetHandHeuristicFailure = false;
-		return true;
-	}
+	private readonly Queue<string> _debugForcedQuestionRewardItemCardIds = new();
 
 	private bool ConsumeDebugForceNextPendingHandLimitDiscardHeuristicFailure()
 	{
@@ -70,9 +47,9 @@ public partial class GameBoardScene
 
 	private string ConsumeDebugForcedNextQuestionRewardItemCardId()
 	{
-		string itemCardId = _debugForcedNextQuestionRewardItemCardId;
-		_debugForcedNextQuestionRewardItemCardId = string.Empty;
-		return itemCardId;
+		return _debugForcedQuestionRewardItemCardIds.Count > 0
+			? _debugForcedQuestionRewardItemCardIds.Dequeue()
+			: string.Empty;
 	}
 
 	private TaskCompletionSource<bool>? _debugCaptureBeforeApplyBarrier = null;

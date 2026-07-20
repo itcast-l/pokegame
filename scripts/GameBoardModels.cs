@@ -213,9 +213,18 @@ internal readonly record struct TableSpecialCardTrigger(int TableCardIndex, Text
 
 internal readonly record struct PendingItemAttachmentReward(int PlayerIndex, string ItemCardId);
 
-internal readonly record struct QuestionCardRewardGrant(ItemCard ItemCard, int ItemHandIndex, bool RequiresMagnetAttachment = false);
+internal readonly record struct QuestionCardRewardGrant(
+	ItemCard ItemCard,
+	int ItemHandIndex,
+	bool RequiresMagnetAttachment = false,
+	bool RejudgeResolvedForReward = false);
 
-internal readonly record struct QuestionCardRewardAnimation(ItemCard ItemCard, int ItemHandIndex, Vector2 StartGlobalPosition, bool RequiresMagnetAttachment = false);
+internal readonly record struct QuestionCardRewardAnimation(
+	ItemCard ItemCard,
+	int ItemHandIndex,
+	Vector2 StartGlobalPosition,
+	bool RequiresMagnetAttachment = false,
+	bool RejudgeResolvedForReward = false);
 
 internal readonly record struct DrawnHandCard(PlayingCard Card, int HandIndex);
 
@@ -276,8 +285,6 @@ internal readonly record struct CaptureTableCardsResult(
 internal enum PendingItemSelectionMode
 {
 	None,
-	TargetPlayer,
-	TargetHandCard,
 	AttachmentRewardHandCard,
 	HandLimitDiscard,
 }

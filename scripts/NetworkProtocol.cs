@@ -1,7 +1,7 @@
 public static class NetworkProtocol
 {
-	public const int CurrentVersion = 4;
-	public const int AuthorityCheckpointSchemaVersion = 1;
+	public const int CurrentVersion = 7;
+	public const int AuthorityCheckpointSchemaVersion = 2;
 	public const int MaxAuthorityCheckpointBytes = 256 * 1024;
 	public const int MaxAuthorityCheckpointPlayers = 4;
 	public const int LanHostMigrationPort = 37146;

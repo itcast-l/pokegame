@@ -56,9 +56,19 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (TryGetSingleRemainingPlayerIndex(out int remainingPlayerIndex))
+		var playerStates = new GameTurnRules.PlayerCardState[MaxPlayers];
+		BuildPlayerCardStates(playerStates);
+		MatchOutcome outcome = MatchOutcomeRules.Evaluate(
+			playerStates,
+			_playerScores,
+			player_count);
+		if (outcome.Kind == MatchOutcomeKind.Winner)
 		{
-			DeclareWinner(remainingPlayerIndex);
+			DeclareWinner(outcome.WinnerPlayerIndex);
+		}
+		else if (outcome.Kind == MatchOutcomeKind.Draw)
+		{
+			DeclareDraw();
 		}
 
 		return false;
@@ -72,16 +82,10 @@ public partial class GameBoardScene
 				playerStates[playerIndex] = new GameTurnRules.PlayerCardState(
 					_playerHands[playerIndex].Count,
 					_playerDecks[playerIndex].Count,
+					_playerItemHands[playerIndex].Count,
 					HasPlayableItemCard(playerIndex));
 			}
 		}
-
-	private bool TryGetSingleRemainingPlayerIndex(out int remainingPlayerIndex)
-	{
-		Span<GameTurnRules.PlayerCardState> playerStates = stackalloc GameTurnRules.PlayerCardState[MaxPlayers];
-		BuildPlayerCardStates(playerStates);
-		return GameTurnRules.TryGetSingleRemainingPlayer(playerStates, player_count, out remainingPlayerIndex);
-	}
 
 	private void ShowWinnerSequence(int playerIndex)
 	{
@@ -137,6 +141,7 @@ public partial class GameBoardScene
 	private void DeclareWinner(int playerIndex)
 	{
 		ClearAdventureBattleScopedStateForBattleEnd();
+		_matchOutcomeKind = MatchOutcomeKind.Winner;
 		_winnerPlayerIndex = playerIndex;
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{
@@ -170,9 +175,52 @@ public partial class GameBoardScene
 		ShowWinnerSequence(playerIndex);
 	}
 
+	private void DeclareDraw()
+	{
+		ClearAdventureBattleScopedStateForBattleEnd();
+		_matchOutcomeKind = MatchOutcomeKind.Draw;
+		_winnerPlayerIndex = -1;
+		AdvanceTurnSequenceGeneration();
+		_isResolvingTurnSequence = false;
+		_isProcessingCardPlay = false;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		{
+			int drawSnapshotId = CreateNextNetworkSnapshotId();
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, drawSnapshotId);
+		}
+		ShowDrawSequence();
+	}
+
+	private void SettleStalledMatch()
+	{
+		if (IsGameOver())
+		{
+			return;
+		}
+
+		MatchOutcome outcome = MatchOutcomeRules.ResolveStalemate(_playerScores, player_count);
+		GD.PushError("Turn resolution stalled without changing the board or active seat; settling the match.");
+		if (outcome.Kind == MatchOutcomeKind.Winner)
+		{
+			DeclareWinner(outcome.WinnerPlayerIndex);
+		}
+		else
+		{
+			DeclareDraw();
+		}
+	}
+
+	private void ShowDrawSequence()
+	{
+		ShowWinnerBanner(-1);
+	}
+
 	private bool IsGameOver()
 	{
-		return _winnerPlayerIndex >= 0;
+		return _matchOutcomeKind != MatchOutcomeKind.InProgress;
 	}
 
 	private bool CanMainPlayerAct()
@@ -226,8 +274,15 @@ public partial class GameBoardScene
 			&& _pendingItemOwnerIndex == GetPendingSelectionLocalOwnerIndex();
 	}
 
-	private int GetNextTurnPlayerIndex(int currentPlayerIndex)
+	private bool TryGetNextTurnPlayerIndex(int currentPlayerIndex, out int nextPlayerIndex)
 	{
-		return GameTurnRules.GetNextTurnPlayerIndex(ClockwiseTurnOrder, currentPlayerIndex, player_count, MainPlayerIndex);
+		Span<GameTurnRules.PlayerCardState> playerStates = stackalloc GameTurnRules.PlayerCardState[MaxPlayers];
+		BuildPlayerCardStates(playerStates);
+		return GameTurnRules.TryGetNextTurnPlayerIndex(
+			ClockwiseTurnOrder,
+			playerStates,
+			currentPlayerIndex,
+			player_count,
+			out nextPlayerIndex);
 	}
 }

@@ -60,6 +60,7 @@
     <Compile Include="../../scripts/SoloAiRules.cs" Link="Rules/SoloAiRules.cs" />
     <Compile Include="../../scripts/GameLoopPhaseRules.cs" Link="Rules/GameLoopPhaseRules.cs" />
     <Compile Include="../../scripts/GameTurnRules.cs" Link="Rules/GameTurnRules.cs" />
+	<Compile Include="../../scripts/MatchOutcomeRules.cs" Link="Rules/MatchOutcomeRules.cs" />
     <Compile Include="../../scripts/TurnProgressRules.cs" Link="Rules/TurnProgressRules.cs" />
     <Compile Include="../../scripts/RewardResolver.cs" Link="Rules/RewardResolver.cs" />
     <Compile Include="../../scripts/QuestionRewardPresentationRules.cs" Link="Rules/QuestionRewardPresentationRules.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="../../scripts/DiceRollPresentationRules.cs" Link="Rules/DiceRollPresentationRules.cs" />
     <Compile Include="../../scripts/ScoreService.cs" Link="Rules/ScoreService.cs" />
     <Compile Include="../../scripts/TurnStateMachine.cs" Link="Rules/TurnStateMachine.cs" />
+	<Compile Include="../../scripts/TurnGenerationRules.cs" Link="Rules/TurnGenerationRules.cs" />
     <Compile Include="../../scripts/NetworkSessionModels.cs" Link="Rules/NetworkSessionModels.cs" />
     <Compile Include="../../scripts/RoomNameRules.cs" Link="Rules/RoomNameRules.cs" />
     <Compile Include="../../scripts/RoomPasswordRules.cs" Link="Rules/RoomPasswordRules.cs" />
@@ -88,6 +90,7 @@
     <Compile Include="../../scripts/VisualUpdateThrottle.cs" Link="Rules/VisualUpdateThrottle.cs" />
     <Compile Include="../../scripts/NetworkVisualQueuePolicy.cs" Link="Rules/NetworkVisualQueuePolicy.cs" />
     <Compile Include="../../scripts/NetworkProtocol.cs" Link="Rules/NetworkProtocol.cs" />
+	<Compile Include="../../scripts/MultiplayerRematchRules.cs" Link="Rules/MultiplayerRematchRules.cs" />
     <Compile Include="../../scripts/AuthorityActionState.cs" Link="Rules/AuthorityActionState.cs" />
     <Compile Include="../../scripts/NetworkAuthorityCheckpoint.cs" Link="Rules/NetworkAuthorityCheckpoint.cs" />
     <Compile Include="../../scripts/NetworkMigrationRules.cs" Link="Rules/NetworkMigrationRules.cs" />

@@ -396,47 +396,6 @@ internal static partial class Program
 		Equal(0, lowHandIndex);
 	}
 
-	private static void SoloAiTargetPlayerStrategyPicksLargestRelevantOpponent()
-	{
-		var candidates = new[]
-		{
-			new SoloAiRules.PlayerTargetCandidate(PlayerIndex: 1, TotalHandCardCount: 5, DeckCount: 2, Score: 14),
-			new SoloAiRules.PlayerTargetCandidate(PlayerIndex: 2, TotalHandCardCount: 7, DeckCount: 8, Score: 12),
-			new SoloAiRules.PlayerTargetCandidate(PlayerIndex: 3, TotalHandCardCount: 6, DeckCount: 8, Score: 18),
-		};
-
-		Equal(2, SoloAiRules.PickItemTargetPlayer(
-			SoloAiRules.Difficulty.High,
-			SoloAiRules.TargetPreferenceKind.PlayerHand,
-			candidates,
-			strategyRollPercent: 0,
-			tieBreakOrdinal: 0));
-		Equal(3, SoloAiRules.PickItemTargetPlayer(
-			SoloAiRules.Difficulty.High,
-			SoloAiRules.TargetPreferenceKind.PlayerScore,
-			candidates,
-			strategyRollPercent: 0,
-			tieBreakOrdinal: 0));
-		Equal(2, SoloAiRules.PickItemTargetPlayer(
-			SoloAiRules.Difficulty.High,
-			SoloAiRules.TargetPreferenceKind.PlayerDeck,
-			candidates,
-			strategyRollPercent: 0,
-			tieBreakOrdinal: 0));
-		Equal(1, SoloAiRules.PickItemTargetPlayer(
-			SoloAiRules.Difficulty.Low,
-			SoloAiRules.TargetPreferenceKind.PlayerScore,
-			candidates,
-			strategyRollPercent: 0,
-			tieBreakOrdinal: 0));
-		Equal(1, SoloAiRules.PickItemTargetPlayer(
-			SoloAiRules.Difficulty.Medium,
-			SoloAiRules.TargetPreferenceKind.PlayerScore,
-			candidates,
-			strategyRollPercent: 95,
-			tieBreakOrdinal: 0));
-	}
-
 	private static void SoloAiDiscardAndMagnetHeuristicsKeepImmediateCapturesWhenPossible()
 	{
 		var discardCandidates = new[]

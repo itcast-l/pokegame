@@ -21,9 +21,20 @@ public partial class GameBoardScene
 				&& !IsNetworkHumanControlledSeat(_currentTurnPlayerIndex))
 			{
 				int playerIndex = _currentTurnPlayerIndex;
+				long previousProgressSignature = GetTurnLoopProgressSignature();
+				try
+				{
 				if (playerIndex >= player_count)
 				{
-					SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+					if (!TryGetNextTurnPlayerIndex(playerIndex, out int nextPlayerIndex))
+						{
+							SettleStalledMatch();
+							return;
+						}
+					if (!await SetCurrentTurnPlayerIndexAsync(nextPlayerIndex))
+					{
+						return;
+					}
 					PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
@@ -49,17 +60,21 @@ public partial class GameBoardScene
 
 				if (turnStartResult.Played)
 				{
-					if (turnStartResult.CompletesTurn)
-					{
-						await AdvanceTurnAfterPlayedResultAsync(playerIndex, turnStartResult);
-					}
-
+					await ResolveActionCompletionAsync(playerIndex, turnStartResult);
 					continue;
 				}
 
 				if (!PlayerHasPlayableHandCards(playerIndex))
 				{
-					SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+					if (!TryGetNextTurnPlayerIndex(playerIndex, out int nextPlayerIndex))
+						{
+							SettleStalledMatch();
+							return;
+						}
+					if (!await SetCurrentTurnPlayerIndexAsync(nextPlayerIndex))
+					{
+						return;
+					}
 					PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
@@ -74,7 +89,15 @@ public partial class GameBoardScene
 				PlayCardResult result = await PlayRandomHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 				if (!result.Played)
 				{
-					SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(playerIndex));
+					if (!TryGetNextTurnPlayerIndex(playerIndex, out int nextPlayerIndex))
+						{
+							SettleStalledMatch();
+							return;
+						}
+					if (!await SetCurrentTurnPlayerIndexAsync(nextPlayerIndex))
+					{
+						return;
+					}
 					PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
 					await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 					continue;
@@ -90,9 +113,14 @@ public partial class GameBoardScene
 					return;
 				}
 
-				if (result.CompletesTurn)
+				await ResolveActionCompletionAsync(playerIndex, result);
+				}
+				finally
 				{
-					await AdvanceTurnAfterPlayedResultAsync(playerIndex, result);
+					EnsureTurnLoopMadeProgress(
+						previousProgressSignature,
+						playerIndex,
+						turnSequenceGeneration);
 				}
 			}
 		}
@@ -182,18 +210,14 @@ public partial class GameBoardScene
 				}
 			}
 
-			if (result.CompletesTurn)
+			await ResolveActionCompletionAsync(MainPlayerIndex, result);
+			_isProcessingCardPlay = false;
+			if (!IsGameOver() && _currentTurnPlayerIndex != MainPlayerIndex)
 			{
-				await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
-				_isProcessingCardPlay = false;
-				if (!result.Captured)
-				{
-					await ResolveOpponentTurnsAsync(turnSequenceGeneration);
-				}
+				await ResolveOpponentTurnsAsync(turnSequenceGeneration);
 			}
-			else
+			else if (!IsGameOver() && !result.CompletesTurn)
 			{
-				_isProcessingCardPlay = false;
 				await TryResolveAdventurePendingExtraBaseCardActionForAiAsync(turnSequenceGeneration);
 			}
 		}
@@ -242,18 +266,11 @@ public partial class GameBoardScene
 				return;
 			}
 
-			if (result.CompletesTurn)
+			await ResolveActionCompletionAsync(MainPlayerIndex, result);
+			_isProcessingCardPlay = false;
+			if (!IsGameOver() && _currentTurnPlayerIndex != MainPlayerIndex)
 			{
-				await AdvanceTurnAfterPlayedResultAsync(MainPlayerIndex, result);
-				_isProcessingCardPlay = false;
-				if (!result.Captured)
-				{
-					await ResolveOpponentTurnsAsync(turnSequenceGeneration);
-				}
-			}
-			else
-			{
-				_isProcessingCardPlay = false;
+				await ResolveOpponentTurnsAsync(turnSequenceGeneration);
 			}
 		}
 		finally

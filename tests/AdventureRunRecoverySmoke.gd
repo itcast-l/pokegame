@@ -4,6 +4,8 @@ const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const DAMAGED_RUN_JSON := "{damaged adventure run"
 const TIMEOUT_SECONDS := 20.0
+const TUTORIAL_AVATAR_ID := "fish"
+const MAIN_FIRST_AVATAR_ID := "shrimp"
 
 var _failed := false
 
@@ -49,15 +51,50 @@ func _run() -> void:
 	if menu == null:
 		_fail("Failed to instantiate adventure menu")
 		return
+	menu.set("selected_avatar_id", TUTORIAL_AVATAR_ID)
 	root.add_child(menu)
-	if not await _wait_for_dialog(menu):
+	for _frame_index in range(12):
+		await process_frame
+	if bool(menu.call("DebugIsAdventureRunResumeDialogVisible")):
+		_fail("Damaged main payload should not show recovery while the tutorial is selected")
 		return
 
-	var dialog := menu.get_node_or_null("AdventureRunResumeDialog") as Control
+	var start_button := menu.get_node_or_null("%StartButton") as Button
+	if start_button == null:
+		_fail("Tutorial menu is missing StartButton")
+		return
+	start_button.emit_signal("pressed")
+	var tutorial_board := await _wait_for_board()
+	if _failed or tutorial_board == null:
+		return
+	if not bool(tutorial_board.get("adventure_tutorial_mode")) \
+		or String(tutorial_board.get("adventure_enemy_avatar_id")) != TUTORIAL_AVATAR_ID:
+		_fail("Damaged main payload prevented the selected fish tutorial from starting")
+		return
+
+	var preserved := save_manager.call("load_from_slot_sync", PROFILE_SLOT) as Dictionary
+	if String(preserved.get("pending_adventure_run_json", "")) != DAMAGED_RUN_JSON:
+		_fail("Starting the tutorial overwrote the damaged main payload")
+		return
+
+	tutorial_board.queue_free()
+	await process_frame
+	await process_frame
+
+	var main_menu := packed_menu.instantiate()
+	if main_menu == null:
+		_fail("Failed to instantiate the main adventure menu")
+		return
+	main_menu.set("selected_avatar_id", MAIN_FIRST_AVATAR_ID)
+	root.add_child(main_menu)
+	if not await _wait_for_dialog(main_menu):
+		return
+
+	var dialog := main_menu.get_node_or_null("AdventureRunResumeDialog") as Control
 	var continue_frame := dialog.get_node_or_null("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/ContinueFrame") as Control if dialog != null else null
 	var panel := dialog.get_node_or_null("DialogMotion/Panel") as Control if dialog != null else null
 	if dialog == null or continue_frame == null or panel == null or continue_frame.visible:
-		_fail("Recovery mode must show the dialog and hide Continue")
+		_fail("Returning to the main campaign must show recovery and hide Continue")
 		return
 	var viewport_rect := root.get_visible_rect()
 	var panel_rect := panel.get_global_rect()
@@ -65,18 +102,14 @@ func _run() -> void:
 		_fail("Recovery dialog overflows the minimum viewport")
 		return
 
-	var preserved := save_manager.call("load_from_slot_sync", PROFILE_SLOT) as Dictionary
-	if String(preserved.get("pending_adventure_run_json", "")) != DAMAGED_RUN_JSON:
-		_fail("Opening recovery mode overwrote the damaged payload")
-		return
-
-	if not bool(menu.call("DebugSelectAdventureRunResumeRestart")):
+	if not bool(main_menu.call("DebugSelectAdventureRunResumeRestart")):
 		_fail("Failed to confirm adventure recovery")
 		return
 	var board := await _wait_for_board()
 	if _failed or board == null:
 		return
-	if String(board.get("adventure_enemy_avatar_id")) != "shrimp":
+	if bool(board.get("adventure_tutorial_mode")) \
+		or String(board.get("adventure_enemy_avatar_id")) != MAIN_FIRST_AVATAR_ID:
 		_fail("Recovery did not restart from the first main stage")
 		return
 

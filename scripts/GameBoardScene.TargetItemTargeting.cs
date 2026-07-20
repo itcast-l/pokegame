@@ -36,39 +36,10 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		string target = definition.EffectValues.GetString(CardEffectValueKeys.Target);
-		if (IsOfflineSoloAiPlayer(ownerPlayerIndex)
-			&& definition.PlayPresentation != CardPlayPresentationTypes.DirectTrigger)
-		{
-			return PickOfflineSoloAiTargetPlayer(target, ownerPlayerIndex);
-		}
-
-		int selectedPlayerIndex = -1;
-		int candidateCount = 0;
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			if (!IsResolvedItemTargetPlayerCandidate(target, ownerPlayerIndex, playerIndex))
-			{
-				continue;
-			}
-
-			candidateCount++;
-			if (_rng.RandiRange(1, candidateCount) == 1)
-			{
-				selectedPlayerIndex = playerIndex;
-			}
-		}
-
-		return selectedPlayerIndex;
-	}
-
-	private bool IsItemTargetPlayerCandidate(string itemCardId, int ownerPlayerIndex, int targetPlayerIndex)
-	{
-		return _itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
-			&& IsResolvedItemTargetPlayerCandidate(
-				definition.EffectValues.GetString(CardEffectValueKeys.Target),
-				ownerPlayerIndex,
-				targetPlayerIndex);
+		List<int> candidates = BuildItemTargetPlayerCandidates(itemCardId, ownerPlayerIndex);
+		return candidates.Count == 0 ? -1 : DirectItemTargetRules.PickUniformCandidate(
+			candidates,
+			_rng.RandiRange(0, candidates.Count - 1));
 	}
 
 	private bool IsResolvedItemTargetPlayerCandidate(string target, int ownerPlayerIndex, int targetPlayerIndex)

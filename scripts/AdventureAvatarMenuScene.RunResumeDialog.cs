@@ -486,6 +486,7 @@ public partial class AdventureAvatarMenuScene
 	{
 		if (!_isStartingAdventure
 			&& !_isReturningToMainMenu
+			&& _selectedAdventureId == AdventureCampaignCatalog.MainCampaignId
 			&& (GetAdventureRunSessionStore()?.HasActiveRun == true
 				|| GetAdventureRunSessionStore()?.RequiresRunRecovery == true))
 		{
@@ -524,6 +525,11 @@ public partial class AdventureAvatarMenuScene
 
 	private void ContinueSavedAdventureRun()
 	{
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
+
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		store?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		if (store == null || !store.TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot))
@@ -585,6 +591,11 @@ public partial class AdventureAvatarMenuScene
 
 	private void RestartAdventureFromFirstStage()
 	{
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
+
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		store?.ConfigureForPolicy(GameModePolicy.AdventureMain);
 		string selectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);

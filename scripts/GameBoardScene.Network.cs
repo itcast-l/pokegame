@@ -24,7 +24,6 @@ public partial class GameBoardScene
 	private string _networkPredictedItemCardId = string.Empty;
 	private string _networkPredictedItemPlayPresentation = string.Empty;
 	private int _networkPredictedItemTargetTableCardIndex = -1;
-	private bool _networkLocallyAdvancedPendingTargetSelection;
 	private PendingItemSelectionMode _networkLocallyCommittedPendingSelectionMode = PendingItemSelectionMode.None;
 	private int _networkLocallyCommittedPendingSelectionDisplayIndex = -1;
 	private int _networkLocallyCommittedPendingSelectionHandIndex = -1;
@@ -122,7 +121,7 @@ public partial class GameBoardScene
 		}
 	}
 
-	internal void RequestNetworkPendingItemSelection(int targetPlayerIndex, int targetHandIndex, int turnSequenceGeneration)
+	internal void RequestNetworkPendingItemSelection(int selectionIndex, int turnSequenceGeneration)
 	{
 		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager == null)
@@ -130,10 +129,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool allowImmediateFollowupSelection = _networkLocallyAdvancedPendingTargetSelection
-			&& _pendingItemSelectionMode == PendingItemSelectionMode.TargetHandCard
-			&& targetHandIndex >= 0;
-		if (!allowImmediateFollowupSelection && !NetworkSeatControlRules.CanSendPendingSelectionRequest(
+		if (!NetworkSeatControlRules.CanSendPendingSelectionRequest(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			networkManager.State,
@@ -148,7 +144,7 @@ public partial class GameBoardScene
 
 		_networkPendingSelectionRequestInFlight = true;
 		DisposeActiveSelectionOverlay();
-		networkManager.RequestPendingItemSelection(targetPlayerIndex, targetHandIndex, turnSequenceGeneration);
+		networkManager.RequestPendingItemSelection(selectionIndex, turnSequenceGeneration);
 	}
 
 	internal void RequestNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)

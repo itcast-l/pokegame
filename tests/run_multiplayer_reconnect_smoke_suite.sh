@@ -38,6 +38,8 @@ run_step "game board mode regression smoke" \
 	bash "$ROOT_DIR/tests/run_game_board_mode_regression_smoke.sh"
 run_step "lan basic turn sync smoke" \
 	bash "$ROOT_DIR/tests/run_lan_basic_turn_sync_smoke.sh"
+run_step "lan inactive human turn skip smoke" \
+	bash "$ROOT_DIR/tests/run_lan_inactive_human_turn_skip_smoke.sh"
 run_step "lan reconnect smoke" \
 	bash "$ROOT_DIR/tests/run_lan_reconnect_smoke.sh"
 run_step "lan own-turn reconnect smoke" \
@@ -50,15 +52,15 @@ run_step "lan host ended match smoke" \
 	bash "$ROOT_DIR/tests/run_lan_host_ended_match_smoke.sh"
 run_step "lan no-reconnect until match end smoke" \
 	bash "$ROOT_DIR/tests/run_lan_no_reconnect_until_match_end_smoke.sh"
+run_step "lan rematch return-to-lobby smoke" \
+	bash "$ROOT_DIR/tests/run_lan_rematch_return_to_lobby_smoke.sh"
+run_step "lan rematch offline-seat smoke" \
+	bash "$ROOT_DIR/tests/run_lan_rematch_offline_seat_smoke.sh"
 run_step "lan three-player disconnect smoke" \
 	bash "$ROOT_DIR/tests/run_lan_three_player_disconnect_smoke.sh"
 run_step "lan pending discard smoke" \
 	bash "$ROOT_DIR/tests/run_lan_pending_discard_smoke.sh"
-run_step "lan pending target smoke" \
-	bash "$ROOT_DIR/tests/run_lan_pending_target_smoke.sh"
 run_step "lan pending discard fallback smoke" \
 	bash "$ROOT_DIR/tests/run_lan_pending_discard_fallback_smoke.sh"
-run_step "lan pending target fallback smoke" \
-	bash "$ROOT_DIR/tests/run_lan_pending_target_fallback_smoke.sh"
 
 echo "MULTIPLAYER_RECONNECT_SMOKE_SUITE_OK"

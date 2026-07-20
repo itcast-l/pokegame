@@ -166,7 +166,7 @@ public partial class GameBoardScene
 	}
 
 	private static bool IsKnownNetworkVisualEventType(string value) => value is NetworkBoardVisualEventTypes.PlayHandCard or NetworkBoardVisualEventTypes.PlayItemCard or NetworkBoardVisualEventTypes.CaptureReveal or NetworkBoardVisualEventTypes.CaptureToDeck or NetworkBoardVisualEventTypes.DrawCard or NetworkBoardVisualEventTypes.DeckShuffle or NetworkBoardVisualEventTypes.StealHandCard or NetworkBoardVisualEventTypes.StealDeckCards or NetworkBoardVisualEventTypes.LensReveal or NetworkBoardVisualEventTypes.TableShuffle or NetworkBoardVisualEventTypes.QuestionRefresh or NetworkBoardVisualEventTypes.QuestionReward or NetworkBoardVisualEventTypes.BombPair or NetworkBoardVisualEventTypes.MantaTideShift;
-	private static bool IsKnownCardPlayPresentation(string value) => value is CardPlayPresentationTypes.DirectTrigger or CardPlayPresentationTypes.TableOverlay or CardPlayPresentationTypes.TransformAreaTrigger or CardPlayPresentationTypes.LensSplit or CardPlayPresentationTypes.TargetedTrigger;
+	private static bool IsKnownCardPlayPresentation(string value) => value is CardPlayPresentationTypes.DirectTrigger or CardPlayPresentationTypes.TableOverlay or CardPlayPresentationTypes.TransformAreaTrigger or CardPlayPresentationTypes.LensSplit;
 	private bool HasCurrentNetworkTableIndexes(int[] indexes, int minimumCount, int maximumCount)
 	{
 		if (indexes.Length < minimumCount
@@ -353,8 +353,7 @@ public partial class GameBoardScene
 		ItemCard itemCard = CreateNetworkVisualItemCard(itemCardId);
 		bool matchesLocalPrediction = actorSeatIndex == GetLocalHandPlayerIndex()
 			&& itemHandIndex == _networkPendingItemHandIndex
-			&& _networkPredictedItemVisualActive
-			&& playPresentation != CardPlayPresentationTypes.TargetedTrigger;
+			&& _networkPredictedItemVisualActive;
 		if (!matchesLocalPrediction
 			&& actorSeatIndex == GetLocalHandPlayerIndex()
 			&& itemHandIndex == _networkPendingItemHandIndex)
@@ -370,26 +369,6 @@ public partial class GameBoardScene
 			ResetNetworkLocallyCommittedPendingSelectionState();
 			RenderTableCards();
 			return;
-		}
-
-		if (actorSeatIndex == GetLocalHandPlayerIndex()
-			&& itemHandIndex == _networkPendingItemHandIndex
-			&& _networkPredictedItemVisualActive
-			&& playPresentation == CardPlayPresentationTypes.TargetedTrigger)
-		{
-			DisposeActiveSelectionOverlay();
-			ClearPendingItemSelectionState();
-			ClearNetworkPendingActionState();
-			ResetNetworkPredictedItemVisualState();
-			RenderPlayerHands();
-		}
-
-		bool matchesLocalCommittedSelection = actorSeatIndex == GetLocalHandPlayerIndex()
-			&& _networkLocallyCommittedPendingSelectionMode != PendingItemSelectionMode.None
-			&& playPresentation == CardPlayPresentationTypes.TargetedTrigger;
-		if (matchesLocalCommittedSelection)
-		{
-			ResetNetworkLocallyCommittedPendingSelectionState();
 		}
 
 		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(actorSeatIndex, itemHandIndex)
@@ -409,7 +388,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (playPresentation == CardPlayPresentationTypes.TargetedTrigger)
+		if (playPresentation == CardPlayPresentationTypes.DirectTrigger)
 		{
 			await PlaySpecialCardTriggerEffectAsync(
 				itemCard.Texture,

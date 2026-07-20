@@ -17,8 +17,13 @@ func _run() -> void:
 	if not _support.require_methods(board, [
 		"DebugConfigureAdventureQuestionRewardTimingScenario",
 		"DebugConfigureAdventureQuestionRewardTimingFollowUpCapture",
+		"DebugConfigureAdventureDoubleQuestionRewardCapacityScenario",
 		"DebugGetAdventureQuestionRewardTimingState",
 		"DebugGetPlayerScoreValue",
+		"DebugGetQuestionRewardGrantCount",
+		"DebugGetTotalHandCardCountForPlayer",
+		"DebugGetPendingItemSelectionModeName",
+		"DebugCompletePendingHandLimitDiscard",
 		"DebugPlayFirstAvailableLocalMainPlayerHandCard",
 		"DebugGetGameLoopPhaseName",
 	], "question reward timing"):
@@ -71,6 +76,31 @@ func _run() -> void:
 	if not _assert_progress(board, 10, 5, true, "after the follow-up capture"):
 		return
 
+	var grants_before := int(board.call("DebugGetQuestionRewardGrantCount"))
+	if not bool(board.call("DebugConfigureAdventureDoubleQuestionRewardCapacityScenario")):
+		_fail("Failed to configure the double question reward capacity scenario")
+		return
+	if int(board.call("DebugGetTotalHandCardCountForPlayer", 0)) != 8:
+		_fail("Double question reward scenario did not begin with a full hand")
+		return
+	if not bool(board.call("DebugPlayFirstAvailableLocalMainPlayerHandCard")):
+		_fail("Failed to play the double question reward capture")
+		return
+	if not await _wait_for_hand_limit_discard(board):
+		return
+	if not bool(board.call("DebugCompletePendingHandLimitDiscard", 0)):
+		_fail("Failed to complete the planned double-reward hand discard")
+		return
+	if not await _support.wait_for_actionable(board, "the double question reward capture"):
+		return
+	var final_hand_count := int(board.call("DebugGetTotalHandCardCountForPlayer", 0))
+	if final_hand_count > 8:
+		_fail("Double question rewards exceeded the hand limit: %d" % final_hand_count)
+		return
+	if int(board.call("DebugGetQuestionRewardGrantCount")) != grants_before + 2:
+		_fail("Double question reward capture did not grant exactly two planned rewards")
+		return
+
 	print("ADVENTURE_UPGRADE_QUESTION_REWARD_TIMING_SMOKE_OK")
 	await _support.dispose_audio()
 	quit(0)
@@ -93,6 +123,18 @@ func _assert_progress(
 		_fail("Unexpected question reward timing state %s: %s" % [label, str(state)])
 		return false
 	return true
+
+
+func _wait_for_hand_limit_discard(board: Node) -> bool:
+	for _frame_index in range(3600):
+		await process_frame
+		if not is_instance_valid(board):
+			_fail("Board disappeared while planning the double-reward discard")
+			return false
+		if String(board.call("DebugGetPendingItemSelectionModeName")) == "HandLimitDiscard":
+			return true
+	_fail("Timed out waiting for the double-reward hand discard plan")
+	return false
 
 
 func _fail(message: String) -> void:

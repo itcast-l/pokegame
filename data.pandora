@@ -1494,7 +1494,7 @@
 					},
 					"play_presentation": {
 						"type": "string",
-						"value": "targeted_trigger"
+						"value": "direct_trigger"
 					},
 					"playable_from_hand": {
 						"type": "bool",
@@ -1575,7 +1575,7 @@
 					},
 					"play_presentation": {
 						"type": "string",
-						"value": "targeted_trigger"
+						"value": "direct_trigger"
 					},
 					"playable_from_hand": {
 						"type": "bool",

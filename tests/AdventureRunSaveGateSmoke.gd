@@ -2,7 +2,8 @@ extends SceneTree
 
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
-const TIMEOUT_SECONDS := 20.0
+const TIMEOUT_SECONDS := 25.0
+const EXHAUSTED_SAVE_ATTEMPTS := 4
 
 var _failed := false
 
@@ -12,45 +13,176 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var board := await _create_actionable_board()
-	if _failed or board == null:
+	if OS.get_cmdline_user_args().has("opening-only"):
+		if not await _test_opening_stage_alignment_exhaustion():
+			return
+		print("ADVENTURE_RUN_SAVE_GATE_OPENING_SMOKE_OK")
+		await _dispose_audio_before_quit()
+		quit(0)
 		return
 
-	if not bool(board.call("DebugStartAdventureSaveGateProbe", 1)):
-		_fail("Failed to start retry-success save gate probe")
+	if not await _test_capture_retry_success():
 		return
-	await process_frame
-	if not bool(board.call("DebugIsAdventureSaveInProgress")):
-		_fail("Save gate did not enter the in-progress state")
+	if not await _test_direct_damage_exhaustion():
 		return
-	if bool(board.call("DebugCanMainPlayerAct")):
-		_fail("Main-player input stayed enabled while save retry was active")
+	if not await _test_real_turn_end_exhaustion():
 		return
-	if not await _wait_for_probe_success(board):
-		return
-
-	board.queue_free()
-	await process_frame
-	board = await _create_actionable_board()
-	if _failed or board == null:
-		return
-	if not bool(board.call("DebugStartAdventureSaveGateProbe", 10)):
-		_fail("Failed to start exhausted save gate probe")
-		return
-	await process_frame
-	if not bool(board.call("DebugIsAdventureSaveInProgress")) \
-			or bool(board.call("DebugCanMainPlayerAct")):
-		_fail("Exhausted probe did not lock input during retries")
-		return
-	if not await _wait_for_adventure_menu():
-		return
-
-	print("ADVENTURE_RUN_SAVE_GATE_SMOKE_OK")
+	print("ADVENTURE_RUN_SAVE_GATE_CORE_SMOKE_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
 
 
-func _create_actionable_board() -> Node:
+func _test_capture_retry_success() -> bool:
+	var board := await _create_actionable_board("shrimp")
+	if _failed or board == null:
+		return false
+	if not bool(board.call("DebugConfigureAdventureQuestionRewardTimingScenario")):
+		_fail("Failed to configure the real capture save-gate scenario")
+		return false
+
+	var table_before := int(board.call("DebugGetTableCardCount"))
+	var player_health_before := int(board.call("DebugGetPlayerScoreValue", 0))
+	var enemy_health_before := int(board.call("DebugGetPlayerScoreValue", 1))
+	var turn_before := int(board.call("DebugGetCurrentTurnPlayerIndex"))
+	if not bool(board.call("DebugConfigureAdventurePersistFailures", 1)) \
+			or not bool(board.call("DebugPlayFirstAvailableLocalMainPlayerHandCard")):
+		_fail("Failed to start the real capture retry-success probe")
+		return false
+	if not await _wait_for_persist_attempt(board, 1, "capture first failure"):
+		return false
+	if not _assert_gate_locked(board, "capture retry"):
+		return false
+	if int(board.call("DebugGetTableCardCount")) != table_before \
+			or int(board.call("DebugGetPlayerScoreValue", 0)) != player_health_before \
+			or int(board.call("DebugGetPlayerScoreValue", 1)) != enemy_health_before \
+			or int(board.call("DebugGetCurrentTurnPlayerIndex")) != turn_before:
+		_fail(
+			"Capture mutated before persistence succeeded: table %d/%d player %d/%d enemy %d/%d turn %d/%d attempts=%d"
+			% [
+				int(board.call("DebugGetTableCardCount")),
+				table_before,
+				int(board.call("DebugGetPlayerScoreValue", 0)),
+				player_health_before,
+				int(board.call("DebugGetPlayerScoreValue", 1)),
+				enemy_health_before,
+				int(board.call("DebugGetCurrentTurnPlayerIndex")),
+				turn_before,
+				int(board.call("DebugGetAdventurePersistAttemptCount")),
+			]
+		)
+		return false
+
+	if not await _wait_for_actionable(board, "capture retry success"):
+		return false
+	if int(board.call("DebugGetAdventurePersistAttemptCount")) != 2:
+		_fail("Capture did not retry exactly once before succeeding")
+		return false
+	if int(board.call("DebugGetTableCardCount")) >= table_before \
+			or int(board.call("DebugGetPlayerScoreValue", 1)) >= enemy_health_before:
+		_fail("Committed capture did not apply table and enemy-health effects")
+		return false
+	if not bool(board.call("DebugCanMainPlayerAct")):
+		_fail("Input did not resume after the real capture retry succeeded")
+		return false
+	await _dispose_board(board)
+	return true
+
+
+func _test_direct_damage_exhaustion() -> bool:
+	var board := await _create_actionable_board("shrimp")
+	if _failed or board == null:
+		return false
+	var health_before := int(board.call("DebugGetPlayerScoreValue", 0))
+	var table_before := int(board.call("DebugGetTableCardCount"))
+	if not bool(board.call(
+			"DebugConfigureAdventurePersistFailures",
+			EXHAUSTED_SAVE_ATTEMPTS
+	)) or not bool(board.call("DebugStartAdventureDirectDamageSaveGateProbe", 17)):
+		_fail("Failed to start the real direct-damage exhaustion probe")
+		return false
+	if not await _wait_for_persist_attempt(board, 1, "direct damage first failure"):
+		return false
+	if not _assert_gate_locked(board, "direct damage retry"):
+		return false
+	if int(board.call("DebugGetPlayerScoreValue", 0)) != health_before \
+			or int(board.call("DebugGetTableCardCount")) != table_before \
+			or bool(board.call("DebugWasAdventureDirectDamageSaveGateProbeApplied")):
+		_fail("Direct damage applied before persistence succeeded")
+		return false
+	if not await _wait_for_exhaustion_before_menu(
+		board,
+		"direct damage",
+		Callable(self, "_assert_direct_damage_unchanged").bind(health_before, table_before)
+	):
+		return false
+	return await _wait_for_adventure_menu("direct damage exhaustion")
+
+
+func _test_real_turn_end_exhaustion() -> bool:
+	var board := await _create_actionable_board("shrimp")
+	if _failed or board == null:
+		return false
+	var turn_before := int(board.call("DebugGetCurrentTurnPlayerIndex"))
+	if turn_before != 0:
+		_fail("Real-turn-end probe did not begin on the main player")
+		return false
+	if not bool(board.call(
+			"DebugConfigureAdventurePersistFailures",
+			EXHAUSTED_SAVE_ATTEMPTS
+	)) or not bool(board.call("DebugStartAdventureRealTurnEndSaveGateProbe")):
+		_fail("Failed to start the real turn-end exhaustion probe")
+		return false
+	if not await _wait_for_persist_attempt(board, 1, "real turn end first failure"):
+		return false
+	if not _assert_gate_locked(board, "real turn end retry"):
+		return false
+	if int(board.call("DebugGetCurrentTurnPlayerIndex")) != turn_before:
+		_fail("Current player changed before real-turn-end persistence succeeded")
+		return false
+	if not await _wait_for_exhaustion_before_menu(
+		board,
+		"real turn end",
+		Callable(self, "_assert_current_turn_unchanged").bind(turn_before)
+	):
+		return false
+	return await _wait_for_adventure_menu("real turn end exhaustion")
+
+
+func _test_opening_stage_alignment_exhaustion() -> bool:
+	var seed_board := await _create_actionable_board("shrimp")
+	if _failed or seed_board == null:
+		return false
+	if not bool(seed_board.call("DebugResetAdventureRunToFirstStage")) \
+			or not bool(seed_board.call("DebugConfigureAdventureNextStageWriteAsInvalid")):
+		_fail("Failed to arm the invalid opening stage-alignment write")
+		return false
+	if int(seed_board.call("DebugGetAdventureRunMainStageIndex")) != 1 \
+			or not bool(seed_board.call("DebugHasAdventureNextStageWriteOverride")):
+		_fail("Opening stage-alignment precondition was not retained on the seed board")
+		return false
+	await _dispose_board(seed_board)
+
+	var board := await _create_board("crab")
+	if _failed or board == null:
+		return false
+	if not await _wait_for_nonretryable_opening_abort(board):
+		return false
+	if not _assert_opening_deal_not_applied(board):
+		return false
+	return await _wait_for_adventure_menu("opening alignment exhaustion")
+
+
+func _create_actionable_board(enemy_avatar_id: String) -> Node:
+	var board := await _create_board(enemy_avatar_id)
+	if _failed or board == null:
+		return null
+	if not await _wait_for_actionable(board, "opening %s board" % enemy_avatar_id):
+		return null
+	return board
+
+
+func _create_board(enemy_avatar_id: String) -> Node:
+	await _dispose_current_scene()
 	var packed_scene := load(BOARD_SCENE_PATH) as PackedScene
 	if packed_scene == null:
 		_fail("Failed to load board scene")
@@ -61,62 +193,189 @@ func _create_actionable_board() -> Node:
 	board.set("winning_score", 100)
 	board.set("solo_mode", true)
 	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", "shrimp")
+	board.set("adventure_enemy_avatar_id", enemy_avatar_id)
 	root.add_child(board)
 	current_scene = board
 	await process_frame
 	for method in [
-		"DebugStartAdventureSaveGateProbe",
+		"DebugConfigureAdventurePersistFailures",
+		"DebugConfigureAdventureNextStageWriteAsInvalid",
+		"DebugResetAdventureRunToFirstStage",
+		"DebugGetAdventureRunMainStageIndex",
+		"DebugHasAdventureNextStageWriteOverride",
+		"DebugGetAdventurePersistAttemptCount",
 		"DebugIsAdventureSaveInProgress",
-		"DebugGetAdventureSaveGateProbeAttemptCount",
 		"DebugCanMainPlayerAct",
+		"DebugGetAdventureSaveStatusKey",
+		"DebugGetGameLoopPhaseName",
+		"DebugGetCurrentTurnPlayerIndex",
+		"DebugGetTableCardCount",
+		"DebugGetTotalHandCardCountForPlayer",
+		"DebugGetPlayerScoreValue",
 		"DebugIsAdventureUpgradeSelectionVisible",
 		"DebugSelectAdventureUpgradeOption",
-		"DebugGetGameLoopPhaseName",
+		"DebugConfigureAdventureQuestionRewardTimingScenario",
+		"DebugPlayFirstAvailableLocalMainPlayerHandCard",
+		"DebugStartAdventureDirectDamageSaveGateProbe",
+		"DebugWasAdventureDirectDamageSaveGateProbeApplied",
+		"DebugStartAdventureRealTurnEndSaveGateProbe",
 	]:
 		if not board.has_method(method):
 			_fail("Missing save gate debug hook: %s" % method)
 			return null
-
-	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
-	while Time.get_ticks_msec() / 1000.0 < deadline:
-		await process_frame
-		if bool(board.call("DebugIsAdventureUpgradeSelectionVisible")):
-			if not bool(board.call("DebugSelectAdventureUpgradeOption", 0)):
-				_fail("Failed to resolve run-start upgrade")
-				return null
-		elif String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
-			return board
-	_fail("Timed out waiting for actionable board")
-	return null
+	return board
 
 
-func _wait_for_probe_success(board: Node) -> bool:
+func _wait_for_actionable(board: Node, label: String) -> bool:
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
 	while Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
 		if not is_instance_valid(board):
-			_fail("Board disappeared during retry-success probe")
+			_fail("Board disappeared while waiting for %s" % label)
 			return false
-		if int(board.call("DebugGetAdventureSaveGateProbeAttemptCount")) >= 2 \
-				and not bool(board.call("DebugIsAdventureSaveInProgress")):
-			if not bool(board.call("DebugCanMainPlayerAct")):
-				_fail("Input did not resume after a successful retry")
+		if bool(board.call("DebugIsAdventureUpgradeSelectionVisible")):
+			if not bool(board.call("DebugSelectAdventureUpgradeOption", 0)):
+				_fail("Failed to resolve run-start upgrade while waiting for %s" % label)
 				return false
+		elif String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
 			return true
-	_fail("Save gate did not continue after retry success")
+	_fail("Timed out waiting for %s" % label)
 	return false
 
 
-func _wait_for_adventure_menu() -> bool:
+func _wait_for_persist_attempt(board: Node, expected_attempts: int, label: String) -> bool:
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
 	while Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
-		var scene := current_scene
-		if scene != null and is_instance_valid(scene) and scene.scene_file_path == MENU_SCENE_PATH:
+		if not is_instance_valid(board):
+			_fail("Board disappeared before %s" % label)
+			return false
+		if int(board.call("DebugGetAdventurePersistAttemptCount")) >= expected_attempts:
 			return true
-	_fail("Save retry exhaustion did not return to adventure menu")
+	_fail("Timed out waiting for %s" % label)
 	return false
+
+
+func _wait_for_exhaustion_before_menu(
+	board: Node,
+	label: String,
+	assert_unchanged: Callable
+) -> bool:
+	if not await _wait_for_persist_attempt(board, EXHAUSTED_SAVE_ATTEMPTS, "%s exhaustion" % label):
+		return false
+	if not is_instance_valid(board):
+		_fail("Board disappeared before %s exhaustion could be inspected" % label)
+		return false
+	if not bool(assert_unchanged.call(board)):
+		return false
+	if bool(board.call("DebugCanMainPlayerAct")):
+		_fail("Input resumed after %s exhausted all retries" % label)
+		return false
+	return true
+
+
+func _wait_for_nonretryable_opening_abort(board: Node) -> bool:
+	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	var last_status := ""
+	while Time.get_ticks_msec() / 1000.0 < deadline:
+		await process_frame
+		if not is_instance_valid(board):
+			_fail("Opening board disappeared before its invalid-stage abort was inspected")
+			return false
+		var status := String(board.call("DebugGetAdventureSaveStatusKey"))
+		last_status = status
+		if status == "GAME_ADVENTURE_SAVE_FAILED_REPLAY" \
+				or status == "GAME_ADVENTURE_RETURNING_TO_MENU":
+			if bool(board.call("DebugCanMainPlayerAct")):
+				_fail("Input resumed after the invalid opening stage alignment")
+				return false
+			return _assert_opening_deal_not_applied(board)
+	_fail(
+		"Invalid opening stage alignment did not enter the abort state (status=%s stage=%d override=%s table=%d hand=%d)"
+		% [
+			last_status,
+			int(board.call("DebugGetAdventureRunMainStageIndex")),
+			str(bool(board.call("DebugHasAdventureNextStageWriteOverride"))),
+			int(board.call("DebugGetTableCardCount")),
+			int(board.call("DebugGetTotalHandCardCountForPlayer", 0)),
+		]
+	)
+	return false
+
+
+func _assert_gate_locked(board: Node, label: String) -> bool:
+	if not bool(board.call("DebugIsAdventureSaveInProgress")):
+		_fail("Save gate was not active during %s" % label)
+		return false
+	if bool(board.call("DebugCanMainPlayerAct")):
+		_fail("Main-player input stayed enabled during %s" % label)
+		return false
+	return true
+
+
+func _assert_direct_damage_unchanged(board: Node, health_before: int, table_before: int) -> bool:
+	if int(board.call("DebugGetPlayerScoreValue", 0)) != health_before \
+			or int(board.call("DebugGetTableCardCount")) != table_before \
+			or bool(board.call("DebugWasAdventureDirectDamageSaveGateProbeApplied")):
+		_fail("Direct damage changed health or table after retry exhaustion")
+		return false
+	return true
+
+
+func _assert_current_turn_unchanged(board: Node, turn_before: int) -> bool:
+	if int(board.call("DebugGetCurrentTurnPlayerIndex")) != turn_before:
+		_fail("Current player changed after real-turn-end retry exhaustion")
+		return false
+	return true
+
+
+func _assert_opening_deal_not_applied(board: Node) -> bool:
+	if int(board.call("DebugGetTableCardCount")) != 0 \
+			or int(board.call("DebugGetTotalHandCardCountForPlayer", 0)) != 0 \
+			or int(board.call("DebugGetTotalHandCardCountForPlayer", 1)) != 0:
+		_fail("Opening cards were dealt before stage alignment persisted")
+		return false
+	return true
+
+
+func _wait_for_adventure_menu(label: String) -> bool:
+	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	var last_scene_path := "<null>"
+	var last_scene_name := "<null>"
+	var last_save_status := ""
+	while Time.get_ticks_msec() / 1000.0 < deadline:
+		await process_frame
+		var scene := current_scene
+		if scene != null and is_instance_valid(scene):
+			last_scene_path = scene.scene_file_path
+			last_scene_name = String(scene.name)
+			if scene.has_method("DebugGetAdventureSaveStatusKey"):
+				last_save_status = String(scene.call("DebugGetAdventureSaveStatusKey"))
+			if scene.scene_file_path == MENU_SCENE_PATH:
+				return true
+	_fail(
+		"%s did not return to the adventure menu (scene=%s path=%s save_status=%s)"
+		% [label, last_scene_name, last_scene_path, last_save_status]
+	)
+	return false
+
+
+func _dispose_board(board: Node) -> void:
+	if is_instance_valid(board):
+		if current_scene == board:
+			current_scene = null
+		board.queue_free()
+	await process_frame
+	await process_frame
+
+
+func _dispose_current_scene() -> void:
+	var scene := current_scene
+	if scene != null and is_instance_valid(scene):
+		current_scene = null
+		scene.queue_free()
+		await process_frame
+		await process_frame
 
 
 func _fail(message: String) -> void:

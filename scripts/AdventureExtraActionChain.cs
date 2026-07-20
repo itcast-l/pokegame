@@ -493,7 +493,10 @@ public partial class GameBoardScene
 		{
 			if (_currentTurnPlayerIndex != MainPlayerIndex)
 			{
-				SetCurrentTurnPlayerIndex(MainPlayerIndex);
+					if (!await SetCurrentTurnPlayerIndexAsync(MainPlayerIndex))
+					{
+						return;
+					}
 			}
 
 			await BeginRealMainPlayerTurnIfNeededAsync(turnSequenceGeneration);
@@ -505,9 +508,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		SetCurrentTurnPlayerIndex(GetNextTurnPlayerIndex(MainPlayerIndex));
-		PromoteReclaimedSeatAtCurrentTurnStartIfNeeded();
-		await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
+		await ResolveActionCompletionAsync(
+			MainPlayerIndex,
+			new PlayCardResult(false, false, CompletesTurn: true));
 		if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 		{
 			await ResolveOpponentTurnsAsync(turnSequenceGeneration);

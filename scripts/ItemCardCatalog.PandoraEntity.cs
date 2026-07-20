@@ -7,6 +7,7 @@ public sealed partial class ItemCardCatalog
 {
 	private static bool TryCreateDefinitionFromPandoraEntity(
 		GodotObject entity,
+		ItemCardVisualDefinition visual,
 		out ItemCardDefinition definition,
 		out string errorMessage)
 	{
@@ -28,18 +29,22 @@ public sealed partial class ItemCardCatalog
 			return false;
 		}
 
-		GetResourceDefinitions().TryGetValue(id, out ItemCardDefinition defaults);
-		string displayName = GetEntityName(entity, string.IsNullOrWhiteSpace(defaults.DisplayName) ? ToPascalCase(id) : defaults.DisplayName);
-		string spriteName = string.IsNullOrWhiteSpace(defaults.SpriteName) ? ToPascalCase(id) : defaults.SpriteName;
+		if (!string.Equals(id, visual.Id, StringComparison.Ordinal))
+		{
+			errorMessage = $"Pandora item card ID '{id}' differs from visual ID '{visual.Id}'.";
+			return false;
+		}
+
+		string displayName = GetEntityName(entity, ToPascalCase(id));
+		string spriteName = visual.SpriteName;
 		string descriptionKey = GetRequiredEntityString(entity, "description_key");
-		string artRunName = string.IsNullOrWhiteSpace(defaults.ArtRunName) ? DefaultArtRunName : defaults.ArtRunName;
-		string framePathPattern = defaults.FramePathPattern;
-		int frameCount = defaults.FrameCount > 0 ? defaults.FrameCount : DefaultFrameCount;
-		int sortOrder = defaults.SortOrder != 0 ? defaults.SortOrder : DefaultSortOrder;
-		string attachmentOverlayTexturePath = defaults.AttachmentOverlayTexturePath;
-		int attachmentOverlayPriority = defaults.AttachmentOverlayPriority;
-		string icon = defaults.Icon;
-		string description = defaults.Description;
+		string artRunName = visual.ArtRunName;
+		string framePathPattern = visual.FramePathPattern;
+		int frameCount = visual.FrameCount;
+		int sortOrder = visual.SortOrder;
+		string attachmentOverlayTexturePath = visual.AttachmentOverlayTexturePath;
+		int attachmentOverlayPriority = visual.AttachmentOverlayPriority;
+		string icon = visual.Icon;
 		bool enabledInGame = GetRequiredEntityBool(entity, "enabled_in_game");
 		bool playableFromHand = GetRequiredEntityBool(entity, "playable_from_hand");
 		bool canBeQuestionReward = GetRequiredEntityBool(entity, "can_be_question_reward");
@@ -97,7 +102,7 @@ public sealed partial class ItemCardCatalog
 			attachedPriority,
 			icon,
 			weight,
-			description,
+			string.Empty,
 			rewardDelivery);
 		ItemCardContractValidationResult validation = ItemCardEffectContractRegistry.Validate(definition);
 		if (!validation.IsValid)
@@ -123,31 +128,6 @@ public sealed partial class ItemCardCatalog
 	private static int GetRequiredEntityInt(GodotObject entity, string propertyName)
 	{
 		return entity.Call("get_integer", propertyName).AsInt32();
-	}
-
-	private static string GetEntityString(GodotObject entity, string propertyName, string fallback)
-	{
-		if (!(bool)entity.Call("has_entity_property", propertyName))
-		{
-			return fallback;
-		}
-
-		string value = entity.Call("get_string", propertyName).AsString();
-		return string.IsNullOrWhiteSpace(value) ? fallback : value;
-	}
-
-	private static bool GetEntityBool(GodotObject entity, string propertyName, bool fallback)
-	{
-		return (bool)entity.Call("has_entity_property", propertyName)
-			? entity.Call("get_bool", propertyName).AsBool()
-			: fallback;
-	}
-
-	private static int GetEntityInt(GodotObject entity, string propertyName, int fallback)
-	{
-		return (bool)entity.Call("has_entity_property", propertyName)
-			? entity.Call("get_integer", propertyName).AsInt32()
-			: fallback;
 	}
 
 	private static string GetEntityName(GodotObject entity, string fallback)

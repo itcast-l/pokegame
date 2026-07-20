@@ -60,20 +60,24 @@ public partial class GameBoardScene
 			sourceCardSlot.Visible = false;
 		}
 
-		CardPlayStartResult startResult = _cardPlayStateService.TryStartPlayFromHand(
+		if (!_cardPlayStateService.TryRemoveCardFromHand(
 			_state,
 			playerIndex,
 			handIndex,
-			playedCard,
-			cardPlayPlan);
-		if (!startResult.Played)
+			out PlayingCard removedCard))
 		{
 			return new PlayCardResult(false, false);
 		}
+		await WaitForAuthorityTransactionFaultAsync("after_move");
+		CardPlayStartResult startResult = _cardPlayStateService.CompletePlayFromRemovedHandCard(
+			_state,
+			playerIndex,
+			removedCard,
+			cardPlayPlan);
+		await WaitForAuthorityTransactionFaultAsync("after_insert");
 
-		// The card is removed and inserted into the table before any visual or
-		// capture await. Persist that mutation immediately so recovery cannot
-		// replay the same hand entry.
+		// The live board is now transient Applying state. The last publishable
+		// checkpoint remains Prepared until the complete result is finalized.
 		MarkNetworkAuthorityPrimaryMutationApplied();
 		AdventureExtraActionGrant? acceptedExtraActionGrant =
 			AcceptAdventureExtraActionGrantForAction(
@@ -86,7 +90,6 @@ public partial class GameBoardScene
 
 		try
 		{
-			ConsumeAdventureBorrowSuitSetAfterPlayIfNeeded(playedCard);
 			ApplyAdventureCanopyRevealToNewTableCard(startResult.PlayedTableCardIndex);
 
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
@@ -143,9 +146,10 @@ public partial class GameBoardScene
 			RenderTableCards();
 
 		CardPlayBranchResult branchResult;
-		if (captureStartIndex >= 0)
-		{
-			branchResult = await ResolvePlayedCardCaptureAsync(
+			if (captureStartIndex >= 0)
+			{
+				await WaitForAuthorityTransactionFaultAsync("before_capture");
+				branchResult = await ResolvePlayedCardCaptureAsync(
 				playerIndex,
 				playedCard,
 				prePlayTableCards,
@@ -277,18 +281,26 @@ public partial class GameBoardScene
 		{
 			TriggeredAttachedItemCardIds = triggeredAttachedItemCardIds,
 		};
+		AdventureMissSceneResolution missResolution =
+			await ResolveAdventureMissActionAsync(
+				playerIndex,
+				playedCard.Rank,
+				triggeredAttachedItemCardIds);
+		if (!missResolution.Succeeded
+			|| turnSequenceGeneration != _turnSequenceGeneration
+			|| IsGameOver())
+		{
+			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
+		}
 		await ApplyAdventurePostCaptureEffectsAsync(
 			playerIndex,
-			ResolveAdventureEnchantedRecoveryActionEffects(
-				playerIndex,
-				triggeredAttachedItemCardIds,
-				successfulCapture: false),
+			missResolution.RecoveryEffectResult with { HealAmount = 0 },
 			turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);
 		}
-		AdventureMainPlayerMissEffectResult mainPlayerMissEffects = ApplyAdventureMainPlayerMissEffects(playerIndex);
+		AdventureMainPlayerMissEffectResult mainPlayerMissEffects = missResolution.EffectResult;
 		if (!await ApplyAdventureMainPlayerMissTableEffectsAsync(mainPlayerMissEffects, playedTableCardIndex, turnSequenceGeneration))
 		{
 			return new CardPlayBranchResult(true, new PlayCardResult(false, false), false);

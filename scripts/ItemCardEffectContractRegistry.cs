@@ -46,14 +46,12 @@ public static class ItemCardEffectContractRegistry
 			CardPlayPresentationTypes.TableOverlay,
 			CardPlayPresentationTypes.TransformAreaTrigger,
 			CardPlayPresentationTypes.LensSplit,
-			CardPlayPresentationTypes.TargetedTrigger,
 		};
 
 	private static readonly IReadOnlySet<string> GenericPresentationTypes =
 		new HashSet<string>(StringComparer.Ordinal)
 		{
 			CardPlayPresentationTypes.DirectTrigger,
-			CardPlayPresentationTypes.TargetedTrigger,
 		};
 
 	public static IReadOnlyDictionary<string, ItemCardEffectContract> All => Contracts;

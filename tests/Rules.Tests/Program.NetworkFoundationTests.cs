@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 internal static partial class Program
 {
@@ -14,18 +15,37 @@ internal static partial class Program
 		Run("authority action dedupe is isolated per seat", AuthorityActionDedupeIsIsolatedPerSeat);
 		Run("authority action json roundtrip keeps fixed fields", AuthorityActionJsonRoundtripKeepsFixedFields);
 		Run("checkpoint codec roundtrips private deterministic state", CheckpointCodecRoundtripsPrivateDeterministicState);
+		Run("checkpoint codec roundtrips draw outcome", CheckpointCodecRoundtripsDrawOutcome);
 		Run("checkpoint codec rejects tampered hash and oversized payload", CheckpointCodecRejectsTamperedHashAndOversizedPayload);
 		Run("network protocol contexts fence epochs and snapshots", NetworkProtocolContextsFenceEpochsAndSnapshots);
+		Run("migration restore generation is strictly monotonic", MigrationRestoreGenerationIsStrictlyMonotonic);
+		Run("multiplayer rematch accepts only completed current-match players", MultiplayerRematchAcceptsOnlyCompletedCurrentMatchPlayers);
+		Run("multiplayer rematch returns connected ready players to preserved lobby", MultiplayerRematchReturnsConnectedReadyPlayersToPreservedLobby);
 		Run("migration plan selects the lowest eligible standby", MigrationPlanSelectsLowestEligibleStandby);
 		Run("migration plan rejects stale or unsafe endpoints", MigrationPlanRejectsStaleOrUnsafeEndpoints);
 	}
 
 	private static void AuthorityActionPhasesAreOrderedAndResumable()
 	{
-		True(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.Applying, AuthorityActionPhase.WaitingTargetPlayer));
-		True(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.WaitingTargetPlayer, AuthorityActionPhase.WaitingTargetHand));
+		True(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.Prepared, AuthorityActionPhase.Applying));
+		True(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.Applying, AuthorityActionPhase.WaitingDiscard));
+		True(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.WaitingDiscard, AuthorityActionPhase.Applying));
 		True(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.WaitingAttachment, AuthorityActionPhase.Finalizing));
 		False(AuthorityActionStateRules.CanAdvancePhase(AuthorityActionPhase.Finalizing, AuthorityActionPhase.Applying));
+		AuthorityActionState prepared = new()
+		{
+			ActionId = 6,
+			ClientActionId = 1,
+			Kind = AuthorityActionKind.BaseCard,
+			Phase = AuthorityActionPhase.Prepared,
+			ActorSeat = 0,
+			TurnGeneration = 4,
+			BaseHandIndex = 1,
+			BaseCardCode = "Hearts:5",
+			RngStateBeforeAction = "123456",
+		};
+		True(AuthorityActionStateRules.IsValid(prepared, 2));
+		True(AuthorityActionStateRules.IsStableCheckpointState(prepared));
 
 		AuthorityActionState state = new()
 		{
@@ -39,48 +59,56 @@ internal static partial class Program
 			ItemOrRewardId = "lens",
 		};
 		True(AuthorityActionStateRules.IsValid(state, 2));
+		False(AuthorityActionStateRules.IsStableCheckpointState(state));
 		AuthorityActionState transfer = state with
 		{
 			Kind = AuthorityActionKind.CardTransfer,
+			TargetSeat = 1,
+			TargetHandIndex = 2,
 			ContinuationStep = AuthorityActionContinuationStep.CardTransfer,
 		};
-		Equal(AuthorityActionPhase.WaitingTargetHand, transfer.WithSelection(AuthorityActionPhase.WaitingTargetHand, 1).Phase);
+		AuthorityActionState waitingDiscard = transfer.WithSelection(AuthorityActionPhase.WaitingDiscard, 1);
+		Equal(AuthorityActionPhase.WaitingDiscard, waitingDiscard.Phase);
+		Equal(1, waitingDiscard.SelectionIndex);
+		Equal(1, waitingDiscard.TargetSeat);
+		Equal(2, waitingDiscard.TargetHandIndex);
 	}
 
 	private static void AuthorityActionValidationUsesKindPhaseAndPlayerCountSemantics()
 	{
-		AuthorityActionState targetPlayer = new()
+		AuthorityActionState transfer = new()
 		{
 			ActionId = 1,
 			ClientActionId = 1,
 			Kind = AuthorityActionKind.CardTransfer,
-			Phase = AuthorityActionPhase.WaitingTargetPlayer,
+			Phase = AuthorityActionPhase.Applying,
 			ActorSeat = 0,
 			TurnGeneration = 1,
 			ItemHandIndex = 0,
-			ItemOrRewardId = "queen",
+			ItemOrRewardId = "Q",
+			TargetSeat = 1,
+			TargetHandIndex = 2,
 			ContinuationStep = AuthorityActionContinuationStep.CardTransfer,
 		};
-		True(AuthorityActionStateRules.IsValid(targetPlayer, 2));
-		False(AuthorityActionStateRules.IsValid(targetPlayer, 1));
-		False(AuthorityActionStateRules.IsValid(targetPlayer, 5));
+		True(AuthorityActionStateRules.IsValid(transfer, 2));
+		False(AuthorityActionStateRules.IsValid(transfer, 1));
+		False(AuthorityActionStateRules.IsValid(transfer, 5));
 
-		False(AuthorityActionStateRules.IsValid(targetPlayer with
+		False(AuthorityActionStateRules.IsValid(transfer with
 		{
 			Kind = AuthorityActionKind.ItemCard,
 		}, 2));
-		False(AuthorityActionStateRules.IsValid(targetPlayer with
+		False(AuthorityActionStateRules.IsValid(transfer with
 		{
-			Phase = AuthorityActionPhase.WaitingTargetHand,
 			TargetSeat = -1,
 		}, 2));
-		False(AuthorityActionStateRules.IsValid(targetPlayer with
+		False(AuthorityActionStateRules.IsValid(transfer with
 		{
 			TransferMutationApplied = true,
 			PrimaryMutationApplied = false,
 		}, 2));
 
-		AuthorityActionState reward = targetPlayer with
+		AuthorityActionState reward = transfer with
 		{
 			Kind = AuthorityActionKind.QuestionReward,
 			Phase = AuthorityActionPhase.Applying,
@@ -98,33 +126,26 @@ internal static partial class Program
 
 	private static void AuthorityActionMutationRecoveryIsIdempotent()
 	{
-		AuthorityActionState targetPlayer = new()
+		AuthorityActionState transfer = new()
 		{
 			ActionId = 21,
 			ClientActionId = 7,
 			Kind = AuthorityActionKind.CardTransfer,
-			Phase = AuthorityActionPhase.WaitingTargetPlayer,
+			Phase = AuthorityActionPhase.Applying,
 			ActorSeat = 0,
 			TurnGeneration = 3,
 			ItemHandIndex = 0,
-			ItemOrRewardId = "queen",
+			ItemOrRewardId = "Q",
 			TargetSeat = 1,
+			TargetHandIndex = 2,
 			ContinuationStep = AuthorityActionContinuationStep.CardTransfer,
 			PrimaryMutationApplied = true,
 		};
-		True(AuthorityActionStateRules.IsValid(targetPlayer, 2));
-		False(AuthorityActionStateRules.ShouldApplyMutation(targetPlayer, AuthorityActionMutationKind.Primary));
-
-		AuthorityActionState targetHand = targetPlayer with
-		{
-			Phase = AuthorityActionPhase.WaitingTargetHand,
-			TargetHandIndex = 2,
-		};
-		True(AuthorityActionStateRules.IsValid(targetHand, 2));
-		False(AuthorityActionStateRules.ShouldApplyMutation(targetHand, AuthorityActionMutationKind.Primary));
+		True(AuthorityActionStateRules.IsValid(transfer, 2));
+		False(AuthorityActionStateRules.ShouldApplyMutation(transfer, AuthorityActionMutationKind.Primary));
 
 		AuthorityActionState transferApplied = AuthorityActionStateRules.MarkMutationApplied(
-			targetHand,
+			transfer,
 			AuthorityActionMutationKind.CardTransfer);
 		False(AuthorityActionStateRules.ShouldApplyMutation(transferApplied, AuthorityActionMutationKind.CardTransfer));
 		AuthorityActionState transferAppliedAgain = AuthorityActionStateRules.MarkMutationApplied(
@@ -165,8 +186,7 @@ internal static partial class Program
 			ActorSeat = 0,
 			TurnGeneration = 3,
 			ItemOrRewardId = "magnet",
-			TargetSeat = 0,
-			TargetHandIndex = 1,
+			SelectionIndex = 1,
 			PendingRewardItemId = "magnet",
 			PendingRewardSeat = 0,
 			PendingRewardRequiresAttachment = true,
@@ -189,12 +209,10 @@ internal static partial class Program
 			ActorSeat = 0,
 			TurnGeneration = 3,
 			ItemHandIndex = 0,
-			ItemOrRewardId = "queen",
+			ItemOrRewardId = "Q",
 			TargetSeat = 1,
-			TargetHandIndex = 3,
-			DeferredTargetSeat = 1,
-			DeferredTargetHandIndex = 2,
-			DeferredTargetPhase = AuthorityActionPhase.WaitingTargetHand,
+			TargetHandIndex = 2,
+			SelectionIndex = 3,
 			ContinuationStep = AuthorityActionContinuationStep.CardTransfer,
 			PrimaryMutationApplied = true,
 		};
@@ -202,10 +220,10 @@ internal static partial class Program
 
 		AuthorityActionState resumed = AuthorityActionStateRules.AdvanceAfterDiscardMutation(nestedDiscard);
 		True(AuthorityActionStateRules.IsValid(resumed, 2));
-		Equal(AuthorityActionPhase.WaitingTargetHand, resumed.Phase);
+		Equal(AuthorityActionPhase.Applying, resumed.Phase);
 		Equal(1, resumed.TargetSeat);
 		Equal(2, resumed.TargetHandIndex);
-		Equal(-1, resumed.DeferredTargetSeat);
+		Equal(-1, resumed.SelectionIndex);
 		False(AuthorityActionStateRules.ShouldApplyMutation(resumed, AuthorityActionMutationKind.Discard));
 	}
 
@@ -284,6 +302,8 @@ internal static partial class Program
 			ContinuationStep = AuthorityActionContinuationStep.CardTransfer,
 			PrimaryMutationApplied = true,
 			DiscardMutationApplied = true,
+			BaseCardCode = string.Empty,
+			RngStateBeforeAction = "987654321",
 		};
 		string json = AuthorityActionStateRules.Serialize(source);
 		True(AuthorityActionStateRules.TryDeserialize(json, out AuthorityActionState restored));
@@ -295,6 +315,7 @@ internal static partial class Program
 		Equal(source.TargetHandIndex, restored.TargetHandIndex);
 		Equal(source.RemainingAttachmentRewardQueue[0], restored.RemainingAttachmentRewardQueue[0]);
 		Equal(source.DiscardMutationApplied, restored.DiscardMutationApplied);
+		Equal(source.RngStateBeforeAction, restored.RngStateBeforeAction);
 	}
 
 	private static void CheckpointCodecRoundtripsPrivateDeterministicState()
@@ -329,8 +350,26 @@ internal static partial class Program
 		True(error.Contains("size", StringComparison.OrdinalIgnoreCase));
 	}
 
+	private static void CheckpointCodecRoundtripsDrawOutcome()
+	{
+		NetworkAuthorityCheckpoint source = CreateCheckpoint() with
+		{
+			MatchOutcomeKind = MatchOutcomeKind.Draw,
+			WinnerPlayerIndex = -1,
+		};
+		True(NetworkAuthorityCheckpointCodec.TryEncode(source, out byte[] payload, out string hash, out _));
+		True(NetworkAuthorityCheckpointCodec.TryDecode(payload, hash, out NetworkAuthorityCheckpoint restored, out _));
+		Equal(MatchOutcomeKind.Draw, restored.MatchOutcomeKind);
+		Equal(-1, restored.WinnerPlayerIndex);
+		False(NetworkAuthorityCheckpointCodec.Validate(
+			source with { WinnerPlayerIndex = 0 },
+			out _));
+	}
+
 	private static void NetworkProtocolContextsFenceEpochsAndSnapshots()
 	{
+		Equal(7, NetworkProtocol.CurrentVersion);
+		Equal(2, NetworkProtocol.AuthorityCheckpointSchemaVersion);
 		NetworkRpcContext current = new("session", "match", 3);
 		True(current.IsValid);
 		True(NetworkProtocolRules.Matches(current, "session", "match", 3, allowHigherEpoch: false));
@@ -342,6 +381,128 @@ internal static partial class Program
 		True(NetworkProtocolRules.IsNewerFence(3, 100, 3, 99));
 		False(NetworkProtocolRules.IsNewerFence(3, 99, 3, 99));
 		False(NetworkProtocolRules.IsNewerFence(2, 100, 3, 99));
+	}
+
+	private static void MigrationRestoreGenerationIsStrictlyMonotonic()
+	{
+		True(TurnGenerationRules.TryGetNextAfterRestore(8, 3, out int fromNewerLocal));
+		Equal(9, fromNewerLocal);
+		True(TurnGenerationRules.TryGetNextAfterRestore(3, 8, out int fromNewerCheckpoint));
+		Equal(9, fromNewerCheckpoint);
+		False(TurnGenerationRules.TryGetNextAfterRestore(int.MaxValue, 8, out _));
+	}
+
+	private static void MultiplayerRematchAcceptsOnlyCompletedCurrentMatchPlayers()
+	{
+		NetworkSessionConfig config = new(
+			"session",
+			"room",
+			"secret",
+			"match",
+			123,
+			NetworkTransport.Lan,
+			2,
+			true,
+			100,
+			LobbyVisibility.FriendsOnly);
+		var players = new List<NetworkPlayerPublicState>
+		{
+			new(1, "host", "Host", "dolphin", 0, true, true, true, true),
+			new(42, "guest", "Guest", "turtle", 1, false, false, true, true),
+		};
+		NetworkRpcContext current = new("session", "match", 3);
+
+		True(MultiplayerRematchRules.CanHostAcceptReturnRequest(
+			NetworkSessionState.InGame,
+			current,
+			config,
+			3,
+			players,
+			42,
+			hasWinner: true));
+		False(MultiplayerRematchRules.CanHostAcceptReturnRequest(
+			NetworkSessionState.InGame,
+			current,
+			config,
+			3,
+			players,
+			42,
+			hasWinner: false));
+		False(MultiplayerRematchRules.CanHostAcceptReturnRequest(
+			NetworkSessionState.Lobby,
+			current,
+			config,
+			3,
+			players,
+			42,
+			hasWinner: true));
+		False(MultiplayerRematchRules.CanHostAcceptReturnRequest(
+			NetworkSessionState.InGame,
+			new NetworkRpcContext("session", "old-match", 3),
+			config,
+			3,
+			players,
+			42,
+			hasWinner: true));
+		False(MultiplayerRematchRules.CanHostAcceptReturnRequest(
+			NetworkSessionState.InGame,
+			current,
+			config,
+			3,
+			players,
+			99,
+			hasWinner: true));
+		players[1] = players[1] with { IsConnected = false };
+		False(MultiplayerRematchRules.CanHostAcceptReturnRequest(
+			NetworkSessionState.InGame,
+			current,
+			config,
+			3,
+			players,
+			42,
+			hasWinner: true));
+	}
+
+	private static void MultiplayerRematchReturnsConnectedReadyPlayersToPreservedLobby()
+	{
+		NetworkSessionConfig matchConfig = new(
+			"session",
+			"room",
+			"secret",
+			"match",
+			987,
+			NetworkTransport.Steam,
+			4,
+			false,
+			200,
+			LobbyVisibility.Private);
+		var players = new List<NetworkPlayerPublicState>
+		{
+			new(1, "host", "Host", "dolphin", 0, true, true, true, true),
+			new(20, "offline", "Offline", "turtle", 1, false, false, true, false),
+			new(30, "guest", "Guest", "whale", 2, false, false, true, true),
+		};
+
+		NetworkSessionConfig lobbyConfig = MultiplayerRematchRules.CreateReturnedLobbyConfig(matchConfig);
+		List<NetworkPlayerPublicState> retained = MultiplayerRematchRules.RetainConnectedPlayers(players);
+
+		Equal(matchConfig.SessionId, lobbyConfig.SessionId);
+		Equal(matchConfig.RoomName, lobbyConfig.RoomName);
+		Equal(matchConfig.RoomPassword, lobbyConfig.RoomPassword);
+		Equal(matchConfig.Transport, lobbyConfig.Transport);
+		Equal(matchConfig.PlayerCount, lobbyConfig.PlayerCount);
+		Equal(matchConfig.ItemMode, lobbyConfig.ItemMode);
+		Equal(matchConfig.WinningScore, lobbyConfig.WinningScore);
+		Equal(string.Empty, lobbyConfig.MatchId);
+		Equal(0L, lobbyConfig.MatchSeed);
+		Equal(2, retained.Count);
+		True(retained.All(player => player.IsReady && player.IsConnected));
+		False(retained.Any(player => player.StableUserId == "offline"));
+		True(MultiplayerRematchRules.IsValidAuthorityReturn(matchConfig, lobbyConfig, retained));
+		False(MultiplayerRematchRules.IsValidAuthorityReturn(
+			matchConfig,
+			lobbyConfig with { WinningScore = 50 },
+			retained));
 	}
 
 	private static void MigrationPlanSelectsLowestEligibleStandby()

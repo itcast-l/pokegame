@@ -30,6 +30,7 @@ internal sealed class GameBoardState
 	public bool AdventureEnemyNextBaseCardFacesUp { get; set; }
 	public AdventureEnemyNextCardInsertMode AdventureEnemyNextCardInsertMode { get; set; } = AdventureEnemyNextCardInsertMode.None;
 	public int AdventureEnemyNextCaptureDamageDelta { get; set; }
+	public MatchOutcomeKind MatchOutcomeKind { get; set; } = MatchOutcomeKind.InProgress;
 	public int WinnerPlayerIndex { get; set; } = -1;
 	public bool IsLeavingGame { get; set; }
 	public bool IsProcessingCardPlay { get; set; }
@@ -37,7 +38,6 @@ internal sealed class GameBoardState
 	public bool IsOpeningDealAnimationPlaying { get; set; }
 	public bool IsResolvingMagnetAttachmentSelection { get; set; }
 	public bool IsAnimatingMagnetAttachment { get; set; }
-	public int RevealedPlayerHandIndex { get; set; } = -1;
 	public PendingItemSelectionMode PendingItemSelectionMode { get; set; } = PendingItemSelectionMode.None;
 	public int PendingItemOwnerIndex { get; set; } = -1;
 	public int PendingItemHandIndex { get; set; } = -1;

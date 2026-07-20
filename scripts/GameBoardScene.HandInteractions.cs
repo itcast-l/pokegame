@@ -69,7 +69,7 @@ public partial class GameBoardScene
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
 			_ = BeginPredictedNetworkMagnetAttachmentSelectionAsync(handIndex);
-			RequestNetworkPendingItemSelection(-1, handIndex, _pendingItemTurnSequenceGeneration);
+			RequestNetworkPendingItemSelection(handIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}
 

@@ -56,9 +56,9 @@ internal static partial class Program
 			soloMode: true));
 	}
 
-	private static void ResultPresentationDisablesNetworkReplayPrimaryAction()
+	private static void ResultPresentationEnablesNetworkReturnPrimaryAction()
 	{
-		False(ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
+		True(ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
 			isNetworkMultiplayer: true,
 			shouldAdvanceAdventure: false));
 
@@ -69,6 +69,10 @@ internal static partial class Program
 		True(ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
 			isNetworkMultiplayer: true,
 			shouldAdvanceAdventure: true));
+		True(ResultPresentationRules.ShouldEnableWinnerReturnAction(
+			isAdventureSaveBlocking: false));
+		False(ResultPresentationRules.ShouldEnableWinnerReturnAction(
+			isAdventureSaveBlocking: true));
 	}
 
 	private static void RewardResolverUsesWeightedReservoirSelection()
@@ -125,6 +129,12 @@ internal static partial class Program
 		False(ItemCardManifestValidationRules.ValidatePandoraEntries(
 			new[] { CreatePandoraEntry(validReward), duplicate },
 			new[] { validReward.Id }).IsValid);
+		False(ItemCardManifestValidationRules.ValidatePandoraEntries(
+			new[] { CreatePandoraEntry(validReward) },
+			Array.Empty<string>()).IsValid);
+		False(ItemCardManifestValidationRules.ValidatePandoraEntries(
+			new[] { CreatePandoraEntry(validReward) },
+			new[] { validReward.Id, "extra_visual" }).IsValid);
 
 		False(ItemCardEffectContractRegistry.Validate(
 			CreateContractTestItemCard(
@@ -184,8 +194,15 @@ internal static partial class Program
 				canBeQuestionReward: true,
 				playableFromHand: true,
 				rewardDelivery: RewardDeliveryMode.ImmediateAttachment)).IsValid);
-		True(ItemCardManifestValidationRules.ShouldUseFallback(pandoraIsLoaded: false));
-		False(ItemCardManifestValidationRules.ShouldUseFallback(pandoraIsLoaded: true));
+		string root = FindRepositoryRoot();
+		string catalogSource = File.ReadAllText(Path.Combine(root, "scripts", "ItemCardCatalog.cs"));
+		string loadingSource = File.ReadAllText(Path.Combine(root, "scripts", "ItemCardCatalog.Loading.cs"));
+		string syncTool = File.ReadAllText(Path.Combine(root, "tools", "ItemCardManifestSync.gd"));
+		True(catalogSource.Contains("public static bool TryLoad", StringComparison.Ordinal));
+		True(catalogSource.Contains("public static ItemCardCatalog LoadRequired", StringComparison.Ordinal));
+		False(catalogSource.Contains("LoadedFromPandora", StringComparison.Ordinal));
+		False(loadingSource.Contains("ShouldUseFallback", StringComparison.Ordinal));
+		False(syncTool.Contains("args.has(\"--write\")", StringComparison.Ordinal));
 
 		True(ItemCardEffectContractRegistry.HasExactResolverCoverage(
 			ItemCardEffectContractRegistry.ResolverEffectTypes,
@@ -202,6 +219,39 @@ internal static partial class Program
 			definition.Id,
 			ItemCardManifestValidationRules.RequiredGameplayProperties,
 			definition);
+	}
+
+	private static void ItemCardCatalogPreflightFailuresRemainRetryableAndGateStarts()
+	{
+		string root = FindRepositoryRoot();
+		string catalog = File.ReadAllText(Path.Combine(root, "scripts", "ItemCardCatalog.cs"));
+		int failedBuild = catalog.IndexOf("if (!TryBuild(", StringComparison.Ordinal);
+		int cacheSuccess = catalog.IndexOf("_cached = catalog;", StringComparison.Ordinal);
+		True(failedBuild >= 0 && cacheSuccess > failedBuild);
+		False(catalog[..cacheSuccess].Contains("_cached = default", StringComparison.Ordinal));
+
+		string pandora = File.ReadAllText(Path.Combine(root, "scripts", "ItemCardCatalog.Pandora.cs"));
+		True(pandora.Contains("Pandora is not loaded.", StringComparison.Ordinal));
+		True(pandora.Contains("Missing Pandora category", StringComparison.Ordinal));
+		True(pandora.Contains("category is empty", StringComparison.Ordinal));
+		string visuals = File.ReadAllText(Path.Combine(root, "scripts", "ItemCardCatalog.Resources.cs"));
+		True(visuals.Contains("Duplicate item card visual ID", StringComparison.Ordinal));
+		True(visuals.Contains("Invalid item card visual resource", StringComparison.Ordinal));
+
+		string mainMenu = File.ReadAllText(Path.Combine(root, "scripts", "MainMenuScene.PlayerCountDialog.cs"));
+		string adventure = File.ReadAllText(Path.Combine(root, "scripts", "AdventureAvatarMenuScene.Navigation.cs"));
+		string adventureResume = File.ReadAllText(Path.Combine(root, "scripts", "AdventureAvatarMenuScene.RunResumeDialog.cs"));
+		True(mainMenu.Contains("ItemCardCatalogPreflight.TryValidate", StringComparison.Ordinal));
+		True(adventure.IndexOf("EnsureItemCardCatalogReady()", StringComparison.Ordinal)
+			< adventure.IndexOf("BeginNewMainRun(", StringComparison.Ordinal));
+		True(adventureResume.IndexOf("EnsureItemCardCatalogReady()", StringComparison.Ordinal)
+			< adventureResume.IndexOf("store.ClearRun()", StringComparison.Ordinal));
+
+		foreach (string networkFile in new[] { "NetworkManager.cs", "NetworkManager.Steam.cs", "NetworkManager.Lobby.cs" })
+		{
+			True(File.ReadAllText(Path.Combine(root, "scripts", networkFile))
+				.Contains("EnsureItemCardCatalogReady()", StringComparison.Ordinal));
+		}
 	}
 
 	private static ItemCardDefinition CreateContractTestItemCard(

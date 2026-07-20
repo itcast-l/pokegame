@@ -5,6 +5,17 @@ using Godot;
 
 public partial class NetworkManager
 {
+	private bool EnsureItemCardCatalogReady()
+	{
+		if (ItemCardCatalogPreflight.TryValidate(this, out _))
+		{
+			return true;
+		}
+
+		EmitSignal(SignalName.ErrorRaised, ItemCardCatalogPreflight.ErrorBodyKey);
+		return false;
+	}
+
 	private readonly Dictionary<int, long> _lastAcceptedClientActionIds = new();
 	private long _nextClientActionId;
 	private byte[] _latestAuthorityCheckpoint = Array.Empty<byte>();
@@ -254,6 +265,13 @@ public partial class NetworkManager
 		}
 
 		EnsureLobbySeatControlStates();
+		string manifestHash = GetLobbyGameplayManifestHash();
+		if (string.IsNullOrWhiteSpace(manifestHash))
+		{
+			EmitSignal(SignalName.ErrorRaised, ItemCardCatalogPreflight.ErrorBodyKey);
+			return;
+		}
+
 		_latestAuthorityCheckpointId++;
 		int playerCount = _config.PlayerCount;
 		var checkpoint = new NetworkAuthorityCheckpoint
@@ -268,7 +286,7 @@ public partial class NetworkManager
 			ItemMode = _config.ItemMode,
 			WinningScore = _config.WinningScore,
 			Transport = _config.Transport,
-			ManifestHash = GetLobbyGameplayManifestHash(),
+			ManifestHash = manifestHash,
 			Roster = GetCheckpointRoster(),
 			SeatControls = GetCheckpointSeatControls(),
 			LastAcceptedClientActionIds = new Dictionary<int, long>(_lastAcceptedClientActionIds),
@@ -299,14 +317,12 @@ public partial class NetworkManager
 
 	private string GetLobbyGameplayManifestHash()
 	{
-		try
+		if (ItemCardCatalog.TryLoad(this, out ItemCardCatalog catalog, out string errorMessage))
 		{
-			return ItemCardCatalog.Load(this).GameplayManifestHash;
+			return catalog.GameplayManifestHash;
 		}
-		catch (Exception exception)
-		{
-			GD.PushWarning($"Unable to load lobby gameplay manifest: {exception.Message}");
-			return new string('0', 64);
-		}
+
+		GD.PushError($"Unable to load lobby gameplay manifest: {errorMessage}");
+		return string.Empty;
 	}
 }

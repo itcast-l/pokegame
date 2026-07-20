@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Godot;
 
@@ -7,6 +10,12 @@ public partial class GameBoardScene
 {
 	private int _debugAdventureSaveGateProbeAttemptCount;
 	private bool _debugAdventureSaveGateProbeCompleted;
+	private bool _debugAdventureDirectDamageProbeRunning;
+	private bool _debugAdventureDirectDamageProbeCompleted;
+	private bool _debugAdventureDirectDamageProbeApplied;
+	private bool _debugAdventureRealTurnEndProbeRunning;
+	private bool _debugAdventureRealTurnEndProbeCompleted;
+	private bool _debugAdventureRealTurnEndProbeSucceeded;
 
 	public bool DebugStartAdventureSaveGateProbe(int failuresBeforeSuccess)
 	{
@@ -43,7 +52,158 @@ public partial class GameBoardScene
 
 	public string DebugGetAdventureSaveStatusKey()
 	{
-		return _adventureVictoryStatusLocalizationKey;
+		return _adventureSaveStatusLocalizationKey;
+	}
+
+	public bool DebugConfigureAdventurePersistFailures(int failureCount)
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (store == null || failureCount < 0 || IsAdventureSaveGateBlocking())
+		{
+			return false;
+		}
+
+		store.ConfigurePersistFailuresForDebug(failureCount);
+		return true;
+	}
+
+	public int DebugGetAdventurePersistAttemptCount()
+	{
+		return GetAdventureRunSessionStore()?.GetPersistAttemptCountForDebug() ?? 0;
+	}
+
+	public bool DebugConfigureAdventureNextStageWriteAsInvalid()
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (store == null || IsAdventureSaveGateBlocking())
+		{
+			return false;
+		}
+
+		store.ConfigureNextTransactionalWriteResultForDebug(
+			AdventureRunWriteResult.InvalidStage);
+		return true;
+	}
+
+	public bool DebugResetAdventureRunToFirstStage()
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		return store != null
+			&& !IsAdventureSaveGateBlocking()
+			&& store.BeginNewMainRun(
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1))
+				== AdventureRunWriteResult.Succeeded;
+	}
+
+	public int DebugGetAdventureRunMainStageIndex()
+	{
+		return GetAdventureRunSessionStore()?.GetRunState().MainStageIndex ?? 0;
+	}
+
+	public bool DebugHasAdventureNextStageWriteOverride()
+	{
+		return GetAdventureRunSessionStore()
+			?.HasNextTransactionalWriteResultForDebug() == true;
+	}
+
+	public bool DebugStartAdventureDirectDamageSaveGateProbe(int damageAmount)
+	{
+		if (damageAmount <= 0
+			|| _debugAdventureDirectDamageProbeRunning
+			|| IsAdventureSaveGateBlocking())
+		{
+			return false;
+		}
+
+		_debugAdventureDirectDamageProbeRunning = true;
+		_debugAdventureDirectDamageProbeCompleted = false;
+		_debugAdventureDirectDamageProbeApplied = false;
+		_ = RunDebugAdventureDirectDamageSaveGateProbeAsync(damageAmount);
+		return true;
+	}
+
+	private async Task RunDebugAdventureDirectDamageSaveGateProbeAsync(int damageAmount)
+	{
+		try
+		{
+			AdventureDirectDamageSceneCommit damageCommit =
+				await CommitAdventureDirectDamageAsync(damageAmount);
+			if (!damageCommit.Succeeded)
+			{
+				return;
+			}
+
+			int turnSequenceGeneration = _turnSequenceGeneration;
+			await PlayAdventureAvatarAttackAsync(
+				AdventureEnemyPlayerIndex,
+				MainPlayerIndex,
+				turnSequenceGeneration,
+				() =>
+				{
+					ApplyCommittedAdventureDirectDamage(
+						AdventureEnemyPlayerIndex,
+						damageCommit.CommitResult);
+					_debugAdventureDirectDamageProbeApplied = true;
+				});
+		}
+		finally
+		{
+			_debugAdventureDirectDamageProbeRunning = false;
+			_debugAdventureDirectDamageProbeCompleted = true;
+		}
+	}
+
+	public bool DebugIsAdventureDirectDamageSaveGateProbeCompleted()
+	{
+		return _debugAdventureDirectDamageProbeCompleted;
+	}
+
+	public bool DebugWasAdventureDirectDamageSaveGateProbeApplied()
+	{
+		return _debugAdventureDirectDamageProbeApplied;
+	}
+
+	public bool DebugStartAdventureRealTurnEndSaveGateProbe()
+	{
+		if (_debugAdventureRealTurnEndProbeRunning
+			|| IsAdventureSaveGateBlocking()
+			|| _currentTurnPlayerIndex != MainPlayerIndex)
+		{
+			return false;
+		}
+
+		_state.AdventureRealMainPlayerTurnActive = true;
+		_state.AdventureRealMainPlayerTurnStartPending = false;
+		_debugAdventureRealTurnEndProbeRunning = true;
+		_debugAdventureRealTurnEndProbeCompleted = false;
+		_debugAdventureRealTurnEndProbeSucceeded = false;
+		_ = RunDebugAdventureRealTurnEndSaveGateProbeAsync();
+		return true;
+	}
+
+	private async Task RunDebugAdventureRealTurnEndSaveGateProbeAsync()
+	{
+		try
+		{
+			_debugAdventureRealTurnEndProbeSucceeded =
+				await SetCurrentTurnPlayerIndexAsync(AdventureEnemyPlayerIndex);
+		}
+		finally
+		{
+			_debugAdventureRealTurnEndProbeRunning = false;
+			_debugAdventureRealTurnEndProbeCompleted = true;
+		}
+	}
+
+	public bool DebugIsAdventureRealTurnEndSaveGateProbeCompleted()
+	{
+		return _debugAdventureRealTurnEndProbeCompleted;
+	}
+
+	public bool DebugDidAdventureRealTurnEndSaveGateProbeSucceed()
+	{
+		return _debugAdventureRealTurnEndProbeSucceeded;
 	}
 
 	public bool DebugCanMainPlayerAct()
@@ -60,7 +220,6 @@ public partial class GameBoardScene
 	private ulong _debugTableShuffleVortexInstanceId;
 	private TextureRect? _debugTableShuffleReusedVortex;
 	private Texture2D? _debugTableShuffleReuseSentinelTexture;
-	private const string DebugPendingTargetHandSelectionItemCardId = "Q";
 	private bool _debugLeafyBladeProbeRunning;
 	private bool _debugBlackLedgerProbeRunning;
 	private int _debugBlackLedgerExpectedDamage;
@@ -87,79 +246,122 @@ public partial class GameBoardScene
 			turnGeneration,
 			clientActionId: 0,
 			itemOrRewardId: "question_mark");
-		_ = ResolveHumanHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration);
+		MarkNetworkAuthorityActionApplying();
+		_ = RunDebugPendingHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration);
 		return true;
 	}
 
-	public bool DebugStartPendingTargetHandSelectionForSeat(int ownerPlayerIndex)
+	private async Task RunDebugPendingHandLimitDiscardAsync(
+		int ownerPlayerIndex,
+		int turnGeneration)
 	{
-		if (!item_mode
-			|| ownerPlayerIndex < 0
-			|| ownerPlayerIndex >= player_count
-			|| HasPendingItemSelection()
-			|| _pendingHandLimitDiscardCompletion != null
-			|| _pendingMagnetAttachmentCompletion != null
-			|| !_itemCardCatalog.TryGetDefinition(DebugPendingTargetHandSelectionItemCardId, out _))
+		bool discarded = false;
+		try
 		{
-			return false;
-		}
-
-		int targetPlayerIndex = -1;
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			if (IsItemTargetPlayerCandidate(DebugPendingTargetHandSelectionItemCardId, ownerPlayerIndex, playerIndex))
+			discarded = await ResolveHumanHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration);
+			if (!discarded
+				&& turnGeneration == _turnSequenceGeneration
+				&& !IsGameOver())
 			{
-				targetPlayerIndex = playerIndex;
-				break;
+				await ResolveActionCompletionAsync(
+					ownerPlayerIndex,
+					new PlayCardResult(false, false, CompletesTurn: false));
 			}
 		}
-
-		if (targetPlayerIndex < 0)
+		finally
 		{
-			return false;
-		}
-
-		Texture2D? placeholderTexture = _cardBackTexture;
-		if (placeholderTexture == null)
-		{
-			for (int playerIndex = 0; playerIndex < _playerHands.Count && placeholderTexture == null; playerIndex++)
+			if (_networkAuthorityActionState.IsActive
+				&& _networkAuthorityActionState.ActorSeat == ownerPlayerIndex)
 			{
-				if (_playerHands[playerIndex].Count > 0)
-				{
-					placeholderTexture = _playerHands[playerIndex][0].Texture;
-				}
+				CompleteNetworkAuthorityAction();
 			}
+			_isProcessingCardPlay = false;
+			RenderPlayerHands();
+			SendBoardSnapshotIfHost();
 		}
-
-		if (placeholderTexture == null
-			|| ownerPlayerIndex >= _playerItemHands.Count)
-		{
-			return false;
-		}
-
-		_playerItemHands[ownerPlayerIndex].Add(new ItemCard(
-			DebugPendingTargetHandSelectionItemCardId,
-			placeholderTexture));
-		int turnGeneration = _turnSequenceGeneration;
-		BeginNetworkAuthorityAction(
-			AuthorityActionKind.ItemCard,
-			ownerPlayerIndex,
-			turnGeneration,
-			clientActionId: 0,
-			itemHandIndex: _playerItemHands[ownerPlayerIndex].Count - 1,
-			itemOrRewardId: DebugPendingTargetHandSelectionItemCardId);
-		_isProcessingCardPlay = true;
-		StartPendingItemSelection(
-			DebugPendingTargetHandSelectionItemCardId,
-			ownerPlayerIndex,
-			_playerItemHands[ownerPlayerIndex].Count - 1,
-			turnGeneration);
-		return true;
 	}
 
 	public string DebugGetPendingItemSelectionModeName()
 	{
 		return _pendingItemSelectionMode.ToString();
+	}
+
+	public void DebugForceNextRequiredItemSelectionOverlayDisplayFailure()
+	{
+		_debugForceNextRequiredItemSelectionOverlayDisplayFailure = true;
+	}
+
+	public void DebugForceNextRequiredItemSelectionOverlayResourceFailure()
+	{
+		_debugForceNextRequiredItemSelectionOverlayDisplayFailure = true;
+	}
+
+	public void DebugForceNextRequiredItemSelectionOverlayInstantiationFailure()
+	{
+		_debugForceNextRequiredItemSelectionOverlayInstantiationFailure = true;
+	}
+
+	public bool DebugForcePendingRequiredSelectionZeroCandidateRecovery()
+	{
+		if (!IsNetworkHost()
+			|| _pendingItemSelectionMode != PendingItemSelectionMode.HandLimitDiscard
+			|| _pendingItemOwnerIndex < 0
+			|| _pendingItemOwnerIndex >= player_count
+			|| _pendingHandLimitDiscardCompletion == null)
+		{
+			return false;
+		}
+
+		int ownerPlayerIndex = _pendingItemOwnerIndex;
+		_playerHands[ownerPlayerIndex].Clear();
+		_playerDecks[ownerPlayerIndex].Clear();
+		_playerItemHands[ownerPlayerIndex].Clear();
+		RenderPlayerHands();
+		_pendingHandLimitDiscardCompletion.TrySetResult(-1);
+		return true;
+	}
+
+	public bool DebugUnexpectedlyReleaseActiveSelectionOverlay()
+	{
+		SelectionOverlaySession? session = _activeSelectionOverlaySession;
+		if (session == null || !IsInstanceValid(session.Root))
+		{
+			return false;
+		}
+
+		session.Root.QueueFree();
+		return true;
+	}
+
+	public bool DebugReleaseOpeningDealMigrationFault()
+	{
+		TaskCompletionSource<bool>? waiter = _debugOpeningDealFaultWaiter;
+		if (waiter == null || waiter.Task.IsCompleted)
+		{
+			return false;
+		}
+
+		waiter.TrySetResult(true);
+		return true;
+	}
+
+	public bool DebugDidOpeningDealFaultCallbackReturn()
+	{
+		return _debugOpeningDealFaultReleasedCallbackReturned;
+	}
+
+	public bool DebugCompletePendingHandLimitDiscard(int displayIndex)
+	{
+		if (_pendingItemSelectionMode != PendingItemSelectionMode.HandLimitDiscard
+			|| !IsValidHandLimitDiscardSelection(
+				_pendingItemOwnerIndex,
+				displayIndex))
+		{
+			return false;
+		}
+
+		CompleteHandLimitDiscardSelection(displayIndex);
+		return true;
 	}
 
 	public bool DebugPlayFirstAvailableNetworkHostHandCard()
@@ -188,6 +390,44 @@ public partial class GameBoardScene
 			0,
 			_turnSequenceGeneration,
 			out _);
+	}
+
+	public bool DebugPlayFirstNonCapturingNetworkHostHandCard()
+	{
+		if (!IsNetworkMultiplayerMode()
+			|| !IsNetworkHost()
+			|| _isOpeningDealAnimationPlaying
+			|| _isProcessingCardPlay
+			|| _isResolvingTurnSequence
+			|| HasPendingItemSelection())
+		{
+			return false;
+		}
+
+		int localPlayerIndex = GetLocalHandPlayerIndex();
+		if (localPlayerIndex != _currentTurnPlayerIndex
+			|| localPlayerIndex < 0
+			|| localPlayerIndex >= _playerHands.Count)
+		{
+			return false;
+		}
+
+		for (int handIndex = 0; handIndex < _playerHands[localPlayerIndex].Count; handIndex++)
+		{
+			CardPlayPlan plan = ResolveCardPlayPlan(_playerHands[localPlayerIndex][handIndex]);
+			if (plan.CaptureStartIndex >= 0)
+			{
+				continue;
+			}
+
+			return TryStartNetworkHandCardPlayFromHost(
+				localPlayerIndex,
+				handIndex,
+				_turnSequenceGeneration,
+				out _);
+		}
+
+		return false;
 	}
 
 	public bool DebugPlayFirstAvailableLocalMainPlayerHandCard()
@@ -286,8 +526,23 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (!DebugPrepareAdventureBattleForDeal())
+		{
+			return false;
+		}
 		DealCardsToPlayers(playOpeningDealAnimation: false);
 		return !_isOpeningDealAnimationPlaying;
+	}
+
+	private bool DebugPrepareAdventureBattleForDeal()
+	{
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			return true;
+		}
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		return store?.HasActiveRun == true
+			&& store.ResetBattleScopedEffects() == AdventureRunWriteResult.Succeeded;
 	}
 
 	public bool DebugAcquireAdventureUpgrade(string upgradeId)
@@ -375,7 +630,11 @@ public partial class GameBoardScene
 		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
 
 		runState.EffectState.ClubMissClimbGrowthStacks = growthStacks;
-		store.ReplaceEffectState(runState.EffectState.Clone());
+		if (store.ConfigureEffectStateForDebug(runState.EffectState.Clone())
+			!= AdventureRunWriteResult.Succeeded)
+		{
+			return false;
+		}
 		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
@@ -480,10 +739,15 @@ public partial class GameBoardScene
 			return false;
 		}
 		int avatarStageNumber = initialRunState.CurrentAvatarStageNumber;
-		store.BeginNewRun(avatarStageNumber);
-		store.MarkRunStartUpgradeGranted();
-		if (store.GrantUpgrade("spades_black_ledger", AdventureUpgradeTriggerSource.None).AcquireResult
-			!= AdventureUpgradeAcquireResult.Acquired)
+		if (store.BeginNewRun(avatarStageNumber) != AdventureRunWriteResult.Succeeded)
+		{
+			return false;
+		}
+		AdventureUpgradeGrantCommitResult blackLedgerGrant = store.GrantUpgrade(
+			"spades_black_ledger",
+			AdventureUpgradeTriggerSource.RunStart);
+		if (blackLedgerGrant.WriteResult != AdventureRunWriteResult.Succeeded
+			|| blackLedgerGrant.AcquireResult != AdventureUpgradeAcquireResult.Acquired)
 		{
 			return false;
 		}
@@ -686,12 +950,20 @@ public partial class GameBoardScene
 		}
 
 		int avatarStageNumber = initialRunState.CurrentAvatarStageNumber;
-		store.BeginNewRun(avatarStageNumber);
-		store.MarkRunStartUpgradeGranted();
-		if (store.GrantUpgrade("diamonds_question_mark_interest", AdventureUpgradeTriggerSource.None).AcquireResult
-			!= AdventureUpgradeAcquireResult.Acquired
-			|| store.GrantUpgrade("diamonds_final_double", AdventureUpgradeTriggerSource.None).AcquireResult
-				!= AdventureUpgradeAcquireResult.Acquired)
+		if (store.BeginNewRun(avatarStageNumber) != AdventureRunWriteResult.Succeeded)
+		{
+			return false;
+		}
+		AdventureUpgradeGrantCommitResult interestGrant = store.GrantUpgrade(
+			"diamonds_question_mark_interest",
+			AdventureUpgradeTriggerSource.RunStart);
+		AdventureUpgradeGrantCommitResult finalDoubleGrant = store.GrantUpgrade(
+			"diamonds_final_double",
+			AdventureUpgradeTriggerSource.None);
+		if (interestGrant.WriteResult != AdventureRunWriteResult.Succeeded
+			|| interestGrant.AcquireResult != AdventureUpgradeAcquireResult.Acquired
+			|| finalDoubleGrant.WriteResult != AdventureRunWriteResult.Succeeded
+			|| finalDoubleGrant.AcquireResult != AdventureUpgradeAcquireResult.Acquired)
 		{
 			return false;
 		}
@@ -700,7 +972,11 @@ public partial class GameBoardScene
 		runState.EffectState.QuestionRewardCount = 9;
 		runState.EffectState.PermanentCaptureDamageBonus = 4;
 		runState.EffectState.FinalDoubleCaptureDamageActive = false;
-		store.ReplaceEffectState(runState.EffectState.Clone());
+		if (store.ConfigureEffectStateForDebug(runState.EffectState.Clone())
+			!= AdventureRunWriteResult.Succeeded)
+		{
+			return false;
+		}
 		return ConfigureAdventureQuestionRewardTimingCapture(includeQuestionReward: true);
 	}
 
@@ -718,6 +994,81 @@ public partial class GameBoardScene
 		}
 
 		return ConfigureAdventureQuestionRewardTimingCapture(includeQuestionReward: false);
+	}
+
+	public bool DebugConfigureAdventureDoubleQuestionRewardCapacityScenario()
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureUpgradeRunState? initialRunState = store?.GetRunState();
+		if (!adventure_mode
+			|| player_count != 2
+			|| store == null
+			|| initialRunState?.IsActive != true
+			|| store.BeginNewRun(initialRunState.CurrentAvatarStageNumber)
+				!= AdventureRunWriteResult.Succeeded)
+		{
+			return false;
+		}
+
+		AdventureUpgradeGrantCommitResult linkedStemsGrant = store.GrantUpgrade(
+			"clubs_linked_stems",
+			AdventureUpgradeTriggerSource.RunStart);
+		if (linkedStemsGrant.WriteResult != AdventureRunWriteResult.Succeeded
+			|| linkedStemsGrant.AcquireResult != AdventureUpgradeAcquireResult.Acquired)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "5"),
+			("Clubs", "5"),
+			("Diamonds", "3"),
+			("Spades", "A"),
+			("Diamonds", "9"),
+		};
+		if (!TryLoadAdventureTutorialCards(
+			requiredCards,
+			out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		ItemCard? questionMark = CreateItemCard(QuestionMarkItemCardId);
+		if (!questionMark.HasValue
+			|| !DebugForceNextQuestionRewardItemCardId("bomb")
+			|| !DebugForceNextQuestionRewardItemCardId("lens"))
+		{
+			return false;
+		}
+
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			_playerDecks[playerIndex].Clear();
+			_playerHands[playerIndex].Clear();
+			_playerItemHands[playerIndex].Clear();
+		}
+		_tableCards.Clear();
+		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		for (int handIndex = 1; handIndex < MaxTotalHandCards; handIndex++)
+		{
+			_playerHands[MainPlayerIndex].Add(cards["Spades:A"]);
+		}
+		_playerHands[1].Add(cards["Diamonds:9"]);
+		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+		_tableCards.Add(new TableCard(null, true, questionMark));
+		_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
+		_adventureMainPlayerSuccessfulCapturesThisTurn = 1;
+		_pendingItemAttachmentRewards.Clear();
+		_currentTurnPlayerIndex = MainPlayerIndex;
+		_isOpeningDealAnimationPlaying = false;
+		_isProcessingCardPlay = false;
+		_isResolvingTurnSequence = false;
+		_winnerPlayerIndex = -1;
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
 	}
 
 	public Godot.Collections.Dictionary DebugGetAdventureQuestionRewardTimingState()
@@ -1186,22 +1537,21 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		int nextTurnHealBeforeMiss = runState.EffectState.NextTurnHealAmount;
-		int nextTurnDrawBeforeMiss = runState.EffectState.NextTurnDrawCount;
-		AdventureMainPlayerMissEffectResult result = AdventureUpgradeEffectService.OnMainPlayerMissResolved(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			tableCardCountAfterMiss);
-		if (runState.HasAcquiredUpgrade("hearts_miss_bandage"))
+		AdventureMissCommitResult commitResult = store!.ResolveMissAction(
+			new AdventureMissCommitInput(
+				string.Empty,
+				tableCardCountAfterMiss,
+				Array.Empty<string>()));
+		if (commitResult.WriteResult != AdventureRunWriteResult.Succeeded)
 		{
-			runState.EffectState.NextTurnHealAmount = nextTurnHealBeforeMiss;
-			runState.EffectState.NextTurnDrawCount = nextTurnDrawBeforeMiss;
+			return false;
+		}
+		if (commitResult.CommitBandageAtRealTurnEnd)
+		{
 			_state.AdventureExtraActionQueue.RegisterMissBandageForRealTurnEnd();
 		}
-
-		store!.ReplaceEffectState(runState.EffectState.Clone());
 		RenderPlayerHands();
-		if (result.GrantExtraBaseCardAction)
+		if (commitResult.EffectResult.GrantExtraBaseCardAction)
 		{
 			TryGrantAdventureMainPlayerExtraBaseCardAction(
 				AdventureContinueBranchUpgradeId);
@@ -1262,12 +1612,6 @@ public partial class GameBoardScene
 		return _adventureQuestionRejudgeUsedThisBattle;
 	}
 
-	public void DebugForceNextPendingTargetSelectionAiFallback()
-	{
-		_debugForceNextPendingTargetPlayerHeuristicFailure = true;
-		_debugForceNextPendingTargetHandHeuristicFailure = true;
-	}
-
 	public void DebugForceNextPendingHandLimitDiscardAiFallback()
 	{
 		_debugForceNextPendingHandLimitDiscardHeuristicFailure = true;
@@ -1323,6 +1667,370 @@ public partial class GameBoardScene
 		}
 
 		return _playerItemHands[playerIndex].Count;
+	}
+
+	public string DebugGetMatchOutcomeKindName()
+	{
+		return _matchOutcomeKind.ToString();
+	}
+
+	public bool DebugConfigureAuthorityTransactionFixture(string fixture)
+	{
+		if (!IsNetworkMultiplayerMode()
+			|| !IsNetworkHost()
+			|| player_count != 2
+			|| _isOpeningDealAnimationPlaying
+			|| _isProcessingCardPlay
+			|| _isResolvingTurnSequence
+			|| HasPendingItemSelection()
+			|| _networkAuthorityActionState.IsActive)
+		{
+			return false;
+		}
+
+		var requiredCards = new (string Suit, string Rank)[]
+		{
+			("Hearts", "2"),
+			("Hearts", "5"),
+			("Hearts", "6"),
+			("Spades", "9"),
+			("Spades", "8"),
+			("Diamonds", "3"),
+			("Diamonds", "4"),
+			("Clubs", "5"),
+			("Clubs", "7"),
+		};
+		if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+		{
+			return false;
+		}
+
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
+			_playerHands[playerIndex].Clear();
+			_playerDecks[playerIndex].Clear();
+			_playerItemHands[playerIndex].Clear();
+			_playerScores[playerIndex] = 0;
+		}
+		_tableCards.Clear();
+		ClearPendingItemSelectionState();
+		ClearNetworkPendingActionState();
+		ResetNetworkPredictedClientState();
+		_matchOutcomeKind = MatchOutcomeKind.InProgress;
+		_winnerPlayerIndex = -1;
+		_currentTurnPlayerIndex = 1;
+		_completedTurnsSinceQuestionCardRefresh = 0;
+		_questionCardRefreshAnchorPlayerIndex = -1;
+		_rng.Seed = 20260720;
+
+		switch (fixture)
+		{
+			case "base_capture":
+				_playerHands[1].Add(cards["Hearts:5"]);
+				_playerHands[0].Add(cards["Spades:9"]);
+				_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+				_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
+				break;
+			case "item_shuffle":
+				ItemCard? shuffle = CreateItemCard(ItemCardCatalog.ShuffleItemCardId);
+				if (!shuffle.HasValue)
+				{
+					return false;
+				}
+				_playerItemHands[1].Add(shuffle.Value);
+				_playerDecks[1].Add(cards["Spades:9"]);
+				_playerHands[0].Add(cards["Hearts:6"]);
+				_tableCards.Add(new TableCard(cards["Hearts:2"], true));
+				_tableCards.Add(new TableCard(cards["Clubs:7"], true));
+				_tableCards.Add(new TableCard(cards["Diamonds:4"], true));
+				_tableCards.Add(new TableCard(cards["Spades:8"], true));
+				break;
+			default:
+				return false;
+		}
+
+		InvalidateRenderCaches();
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		SendBoardSnapshotIfHost();
+		return true;
+	}
+
+	public bool DebugIsAuthorityTransactionFixtureCompleted(string fixture)
+	{
+		if (_nextNetworkAuthorityActionId != 1
+			|| _networkAuthorityActionState.IsActive
+			|| _isProcessingCardPlay
+			|| HasPendingItemSelection())
+		{
+			return false;
+		}
+
+		return fixture switch
+		{
+			"base_capture" => _playerScores[1] > 0 && _tableCards.Count == 0,
+			"item_shuffle" => _playerItemHands[1].Count == 0
+				&& _tableCards.Count == 4
+				&& _currentTurnPlayerIndex == 0,
+			_ => false,
+		};
+	}
+
+	public string DebugGetAuthorityTransactionStableFingerprint()
+	{
+		var canonical = new StringBuilder(2048);
+		canonical.Append("authority-transaction-board-v1\n");
+		canonical.Append("turn=").Append(_currentTurnPlayerIndex).Append('\n');
+		canonical.Append("outcome=").Append(_matchOutcomeKind).Append(':').Append(_winnerPlayerIndex).Append('\n');
+		canonical.Append("question=").Append(_completedTurnsSinceQuestionCardRefresh)
+			.Append(':').Append(_questionCardRefreshAnchorPlayerIndex).Append('\n');
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+		{
+			canonical.Append("player=").Append(playerIndex).Append(" score=")
+				.Append(_playerScores[playerIndex]).Append('\n');
+			AppendPlayingCards(canonical, "deck", _playerDecks[playerIndex]);
+			AppendPlayingCards(canonical, "hand", _playerHands[playerIndex]);
+			canonical.Append("items=");
+			foreach (ItemCard itemCard in _playerItemHands[playerIndex])
+			{
+				AppendLengthPrefixed(canonical, itemCard.Id);
+			}
+			canonical.Append('\n');
+		}
+		canonical.Append("table=");
+		foreach (TableCard tableCard in _tableCards)
+		{
+			AppendLengthPrefixed(
+				canonical,
+				tableCard.Card.HasValue ? ToNetworkCardCode(tableCard.Card.Value) : string.Empty);
+			AppendLengthPrefixed(
+				canonical,
+				tableCard.Card.HasValue ? tableCard.Card.Value.AttachedItemCardIdsCsv : string.Empty);
+			AppendLengthPrefixed(canonical, tableCard.ItemOverlay?.Id ?? string.Empty);
+			canonical.Append(tableCard.IsFaceUp ? '1' : '0')
+				.Append(tableCard.IsBuriedInSand ? '1' : '0')
+				.Append(tableCard.IsSlimeCoated ? '1' : '0')
+				.Append(':').Append(tableCard.CardOwnerPlayerIndex)
+				.Append(':').Append(tableCard.ItemOwnerPlayerIndex).Append(';');
+		}
+
+		return Convert.ToHexString(
+			SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())))
+			.ToLowerInvariant();
+
+		void AppendPlayingCards(StringBuilder builder, string label, IReadOnlyList<PlayingCard> playingCards)
+		{
+			builder.Append(label).Append('=');
+			foreach (PlayingCard card in playingCards)
+			{
+				AppendLengthPrefixed(builder, ToNetworkCardCode(card));
+				AppendLengthPrefixed(builder, card.AttachedItemCardIdsCsv);
+			}
+			builder.Append('\n');
+		}
+
+		static void AppendLengthPrefixed(StringBuilder builder, string value)
+		{
+			string normalized = value ?? string.Empty;
+			builder.Append(normalized.Length).Append(':').Append(normalized).Append(';');
+		}
+	}
+
+	public string DebugGetAuthorityTransactionRngState()
+	{
+		return _rng.State.ToString(CultureInfo.InvariantCulture);
+	}
+
+	public long DebugGetNextNetworkAuthorityActionId()
+	{
+		return _nextNetworkAuthorityActionId;
+	}
+
+	public bool DebugSubmitAuthorityTransactionFixtureAction(string fixture)
+	{
+		if (!IsNetworkMultiplayerMode()
+			|| GetLocalHandPlayerIndex() != 1
+			|| _currentTurnPlayerIndex != 1
+			|| _networkMigrationInputLocked
+			|| _isProcessingCardPlay
+			|| _isResolvingTurnSequence
+			|| _networkPendingHandIndex >= 0
+			|| _networkPendingItemHandIndex >= 0)
+		{
+			return false;
+		}
+
+		if (fixture == "base_capture"
+			&& _playerHands[1].Count == 1
+			&& string.Equals(ToNetworkCardCode(_playerHands[1][0]), "Hearts:5", StringComparison.Ordinal))
+		{
+			RequestNetworkHandCardPlay(0, _turnSequenceGeneration);
+			return true;
+		}
+
+		if (fixture == "item_shuffle"
+			&& _playerItemHands[1].Count == 1
+			&& string.Equals(
+				_playerItemHands[1][0].Id,
+				ItemCardCatalog.ShuffleItemCardId,
+				StringComparison.Ordinal))
+		{
+			RequestNetworkItemCardPlay(0, _turnSequenceGeneration);
+			return true;
+		}
+
+		return false;
+	}
+
+	public bool DebugStartCoreTurnResolutionProbe(
+		string scenario,
+		Godot.Collections.Dictionary result)
+	{
+		if (result == null
+			|| player_count < 3
+			|| player_count > 4
+			|| _isProcessingCardPlay
+			|| _isResolvingTurnSequence
+			|| HasPendingItemSelection())
+		{
+			return false;
+		}
+
+		result.Clear();
+		result["completed"] = false;
+		result["error"] = string.Empty;
+		_ = RunCoreTurnResolutionProbeAsync(scenario, result);
+		return true;
+	}
+
+	private async Task RunCoreTurnResolutionProbeAsync(
+		string scenario,
+		Godot.Collections.Dictionary result)
+	{
+		try
+		{
+			var requiredCards = new (string Suit, string Rank)[]
+			{
+				("Hearts", "2"),
+				("Spades", "3"),
+				("Diamonds", "4"),
+				("Clubs", "5"),
+			};
+			if (!TryLoadAdventureTutorialCards(requiredCards, out Dictionary<string, PlayingCard> cards))
+			{
+				throw new InvalidOperationException("Core turn probe could not load fixed playing cards.");
+			}
+			var availableCards = new List<PlayingCard>
+			{
+				cards["Hearts:2"],
+				cards["Spades:3"],
+				cards["Diamonds:4"],
+				cards["Clubs:5"],
+			};
+			for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+			{
+				_playerHands[playerIndex].Clear();
+				_playerDecks[playerIndex].Clear();
+				_playerItemHands[playerIndex].Clear();
+				_playerScores[playerIndex] = 0;
+			}
+			if (availableCards.Count < player_count)
+			{
+				throw new InvalidOperationException("Core turn probe has too few playing cards.");
+			}
+
+			_tableCards.Clear();
+			_matchOutcomeKind = MatchOutcomeKind.InProgress;
+			_winnerPlayerIndex = -1;
+			_isOpeningDealAnimationPlaying = false;
+			_isProcessingCardPlay = false;
+			_isResolvingTurnSequence = false;
+			AdvanceTurnSequenceGeneration();
+
+			int actorPlayerIndex;
+			int expectedTurnPlayerIndex = -1;
+			switch (scenario)
+			{
+				case "human_last_noncompleting_item":
+					actorPlayerIndex = MainPlayerIndex;
+					for (int playerIndex = 1; playerIndex < player_count; playerIndex++)
+					{
+						_playerHands[playerIndex].Add(availableCards[playerIndex]);
+					}
+					expectedTurnPlayerIndex = player_count >= 3 ? 2 : 1;
+					break;
+				case "ai_last_noncompleting_item":
+					actorPlayerIndex = 2;
+					for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+					{
+						if (playerIndex != actorPlayerIndex)
+						{
+							_playerHands[playerIndex].Add(availableCards[playerIndex]);
+						}
+					}
+					expectedTurnPlayerIndex = 1;
+					break;
+				case "consecutive_skips":
+					actorPlayerIndex = MainPlayerIndex;
+					expectedTurnPlayerIndex = player_count == 4 ? 3 : 1;
+					_playerHands[expectedTurnPlayerIndex].Add(availableCards[expectedTurnPlayerIndex]);
+					for (int playerIndex = 1; playerIndex < player_count; playerIndex++)
+					{
+						if (playerIndex != expectedTurnPlayerIndex)
+						{
+							ItemCard? blockedItem = CreateItemCard("draw_card");
+							if (blockedItem.HasValue)
+							{
+								_playerItemHands[playerIndex].Add(blockedItem.Value);
+							}
+						}
+					}
+					break;
+				case "all_blocked":
+					actorPlayerIndex = MainPlayerIndex;
+					for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+					{
+						ItemCard? blockedItem = CreateItemCard("draw_card");
+						if (!blockedItem.HasValue)
+						{
+							throw new InvalidOperationException("Core turn probe could not create draw_card.");
+						}
+						_playerItemHands[playerIndex].Add(blockedItem.Value);
+						_playerScores[playerIndex] = 10;
+					}
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown core turn probe scenario.");
+			}
+
+			_currentTurnPlayerIndex = actorPlayerIndex;
+			InvalidateRenderCaches();
+			RenderPlayerCardPiles();
+			RenderPlayerHands();
+			RenderTableCards();
+			await ResolveActionCompletionAsync(
+				actorPlayerIndex,
+				new PlayCardResult(true, false, CompletesTurn: false));
+			SendBoardSnapshotIfHost();
+
+			result["scenario"] = scenario;
+			result["actor"] = actorPlayerIndex;
+			result["actor_ai_controlled"] = IsNetworkMultiplayerMode()
+				? GetNetworkManager()?.IsSeatAiControlled(actorPlayerIndex) == true
+				: actorPlayerIndex != MainPlayerIndex;
+			result["expected_turn"] = expectedTurnPlayerIndex;
+			result["current_turn"] = _currentTurnPlayerIndex;
+			result["outcome"] = _matchOutcomeKind.ToString();
+			result["winner"] = _winnerPlayerIndex;
+			result["pending_selection"] = HasPendingItemSelection();
+			result["completed"] = true;
+		}
+		catch (Exception exception)
+		{
+			result["error"] = exception.ToString();
+			result["completed"] = true;
+		}
 	}
 
 	public bool DebugConfigureDrawCardItemAvailabilityScenario(
@@ -1435,7 +2143,33 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AddPlayerScore(playerIndex, points);
+		int targetPlayerIndex = adventure_mode
+			? GetAdventureDamageTargetPlayerIndex(playerIndex)
+			: playerIndex;
+		if (targetPlayerIndex == MainPlayerIndex && ShouldUseAdventureUpgradeSystem())
+		{
+			AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+			AdventureDirectDamageCommitResult commitResult = store?.ApplyDirectDamage(
+				new AdventureDirectDamageCommitInput(
+					points,
+					_adventureMainPlayerHalfHealthRescueUsed,
+					_adventureMainPlayerQuarterHealthRescueUsed))
+				?? new AdventureDirectDamageCommitResult(
+					AdventureRunWriteResult.SaveFailed,
+					0,
+					0,
+					default,
+					default);
+			if (commitResult.WriteResult != AdventureRunWriteResult.Succeeded)
+			{
+				return false;
+			}
+			ApplyCommittedAdventureDirectDamage(playerIndex, commitResult);
+		}
+		else
+		{
+			AddPlayerScore(playerIndex, points);
+		}
 		CheckForWinner();
 		SendBoardSnapshotIfHost();
 		return true;
@@ -1905,6 +2639,10 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		if (!DebugPrepareAdventureBattleForDeal())
+		{
+			return false;
+		}
 		DealCardsToPlayers(playOpeningDealAnimation: false);
 		return true;
 	}
@@ -2087,7 +2825,7 @@ public bool DebugForceNextQuestionRewardItemCardId(
 		return false;
 	}
 
-	_debugForcedNextQuestionRewardItemCardId = itemCardId;
+	_debugForcedQuestionRewardItemCardIds.Enqueue(itemCardId);
 	return true;
 }
 
@@ -2148,7 +2886,7 @@ public bool DebugConfigureDragonQuestionCaptureOwnershipProbe()
 	_playerHands[1].Clear();
 	_playerHands[1].Add(cards["Spades:A"]);
 	_pendingItemAttachmentRewards.Clear();
-	_debugForcedNextQuestionRewardItemCardId = string.Empty;
+	_debugForcedQuestionRewardItemCardIds.Clear();
 	_dragonPrinceJackUsed = false;
 	_winnerPlayerIndex = -1;
 	RenderPlayerHands();
@@ -2350,6 +3088,10 @@ public bool DebugRestartMatchForCaptureOwnershipProbe()
 	}
 
 	int previousGeneration = _turnSequenceGeneration;
+	if (!DebugPrepareAdventureBattleForDeal())
+	{
+		return false;
+	}
 	DealCardsToPlayers(playOpeningDealAnimation: false);
 	return _turnSequenceGeneration != previousGeneration;
 }
@@ -2447,6 +3189,7 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 			_turnSequenceGeneration,
 			clientActionId: 0,
 			itemOrRewardId: MagnetItemCardId);
+		MarkNetworkAuthorityActionApplying();
 		BeginNetworkAuthorityQuestionRewardTransaction(
 			MainPlayerIndex,
 			MagnetItemCardId,
@@ -2514,6 +3257,10 @@ public int DebugGetMagnetAttachmentAnimationNodeCount()
 public bool DebugRestartMatchForMagnetGenerationOwnershipProbe()
 {
 	int previousGeneration = _turnSequenceGeneration;
+	if (!DebugPrepareAdventureBattleForDeal())
+	{
+		return false;
+	}
 	DealCardsToPlayers(playOpeningDealAnimation: false);
 	return _turnSequenceGeneration != previousGeneration
 		&& MainPlayerIndex < _playerHands.Count
@@ -2707,6 +3454,10 @@ public bool DebugRestartMatchForLeafyBladeOwnershipProbe()
 	}
 
 	int previousGeneration = _turnSequenceGeneration;
+	if (!DebugPrepareAdventureBattleForDeal())
+	{
+		return false;
+	}
 	DealCardsToPlayers(playOpeningDealAnimation: false);
 	return _turnSequenceGeneration != previousGeneration;
 }

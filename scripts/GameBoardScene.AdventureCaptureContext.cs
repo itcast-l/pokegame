@@ -4,8 +4,7 @@ using System.Collections.Generic;
 public partial class GameBoardScene
 {
 	private readonly record struct AdventureClubCaptureExtensionPlan(
-		TableCard? GapRootingTarget,
-		AdventureUpgradeEffectState? PlannedEffectState);
+		TableCard? GapRootingTarget);
 
 	private readonly record struct AdventureCapturePreparation(
 		CaptureResolutionContext Context,
@@ -227,9 +226,7 @@ public partial class GameBoardScene
 		TableCard? gapRootingTarget = result.CaptureLeftAdjacentBaseCard
 			? _tableCards[captureStartIndex - 1]
 			: null;
-		return new AdventureClubCaptureExtensionPlan(
-			gapRootingTarget,
-			plannedEffectState);
+		return new AdventureClubCaptureExtensionPlan(gapRootingTarget);
 	}
 
 	private CaptureResolutionContext BuildAdventureCaptureResolutionContext(

@@ -3,6 +3,7 @@ extends SceneTree
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 
 var _failed := false
+var _visual_event_context: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -22,6 +23,12 @@ func _run() -> void:
 	if valid_snapshot == null:
 		_fail("Could not build valid network snapshot baseline")
 		return
+	_visual_event_context = {
+		"session_id": valid_snapshot["session_id"],
+		"match_id": valid_snapshot["match_id"],
+		"authority_epoch": valid_snapshot["authority_epoch"],
+		"checkpoint_id": valid_snapshot["checkpoint_id"],
+	}
 	var seat_states: Array = []
 	for seat_index in range(int(board.get("player_count"))):
 		seat_states.append({
@@ -80,7 +87,7 @@ func _run() -> void:
 		"actor_seat_index": 0,
 		"display_index": 4294967296,
 	}
-	if not bool(board.call("DebugRejectsNetworkVisualEventPayload", overflow_event)):
+	if not _rejects_visual_event(board, overflow_event):
 		_fail("Accepted visual event with overflowing display index")
 		return
 	if str(board.call("DebugGetNetworkStateFingerprint")) != baseline_state:
@@ -89,7 +96,7 @@ func _run() -> void:
 
 	var negative_event := overflow_event.duplicate()
 	negative_event["display_index"] = -1
-	if not bool(board.call("DebugRejectsNetworkVisualEventPayload", negative_event)):
+	if not _rejects_visual_event(board, negative_event):
 		_fail("Accepted visual event with negative display index")
 		return
 	if str(board.call("DebugGetNetworkStateFingerprint")) != baseline_state:
@@ -109,7 +116,7 @@ func _run() -> void:
 			"display_index": int(current_hand_counts[0]),
 			"drawn_card_code": "",
 		}
-		if bool(board.call("DebugRejectsNetworkVisualEventPayload", legal_draw_boundary_event)):
+		if _rejects_visual_event(board, legal_draw_boundary_event):
 			_fail("Rejected maximum legal draw display index")
 			return
 		if str(board.call("DebugGetNetworkStateFingerprint")) != baseline_state:
@@ -127,17 +134,17 @@ func _run() -> void:
 			"split_center_y": 0.0,
 			"target_table_card_indexes": [0],
 		}
-		if bool(board.call("DebugRejectsNetworkVisualEventPayload", legal_lens_event)):
+		if _rejects_visual_event(board, legal_lens_event):
 			_fail("Rejected legal Lens visual event")
 			return
 		var overflowing_lens_event := legal_lens_event.duplicate(true)
 		overflowing_lens_event["target_table_card_indexes"] = [baseline_table_cards.size()]
-		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", overflowing_lens_event)):
+		if not _rejects_visual_event(board, overflowing_lens_event):
 			_fail("Accepted Lens event with out-of-range table index")
 			return
 		var duplicate_lens_event := legal_lens_event.duplicate(true)
 		duplicate_lens_event["target_table_card_indexes"] = [0, 0]
-		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", duplicate_lens_event)):
+		if not _rejects_visual_event(board, duplicate_lens_event):
 			_fail("Accepted Lens event with duplicate table indexes")
 			return
 
@@ -150,22 +157,22 @@ func _run() -> void:
 			"extra_table_card_indexes": [],
 			"flight_stagger_seconds": 0.0,
 		}
-		if bool(board.call("DebugRejectsNetworkVisualEventPayload", legal_capture_event)):
+		if _rejects_visual_event(board, legal_capture_event):
 			_fail("Rejected legal Capture visual event")
 			return
 		var overflowing_capture_event := legal_capture_event.duplicate(true)
 		overflowing_capture_event["capture_start_index"] = baseline_table_cards.size()
-		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", overflowing_capture_event)):
+		if not _rejects_visual_event(board, overflowing_capture_event):
 			_fail("Accepted Capture event with out-of-range start index")
 			return
 		var duplicate_capture_event := legal_capture_event.duplicate(true)
 		duplicate_capture_event["extra_table_card_indexes"] = [0, 0]
-		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", duplicate_capture_event)):
+		if not _rejects_visual_event(board, duplicate_capture_event):
 			_fail("Accepted Capture event with duplicate extra indexes")
 			return
 		var non_finite_capture_event := legal_capture_event.duplicate(true)
 		non_finite_capture_event["flight_stagger_seconds"] = INF
-		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", non_finite_capture_event)):
+		if not _rejects_visual_event(board, non_finite_capture_event):
 			_fail("Accepted Capture event with non-finite animation delay")
 			return
 
@@ -225,17 +232,21 @@ func _run() -> void:
 				delayed_event["moved_card_count"] = 1
 		var replacement_snapshot := queue_fixture.duplicate(true)
 		replacement_snapshot["snapshot_id"] = fixture_snapshot_id + 3
-		if bool(board.call("DebugRejectsNetworkVisualEventPayload", delayed_blocker)):
+		if _rejects_visual_event(board, delayed_blocker):
 			_fail("Delayed queue blocker is not a legal event for %s" % delayed_event_type)
 			return
-		if bool(board.call("DebugRejectsNetworkVisualEventPayload", delayed_event)):
+		if _rejects_visual_event(board, delayed_event):
 			_fail("Delayed queue target is not a legal event for %s" % delayed_event_type)
 			return
 		if bool(board.call("DebugRejectsNetworkSnapshotPayload", replacement_snapshot)):
 			_fail("Delayed queue replacement snapshot is invalid for %s" % delayed_event_type)
 			return
 		board.call("DebugSetNetworkVisualPlaybackDelaySeconds", 0.05)
-		if not bool(board.call("DebugQueueDelayedNetworkVisualEventWithSnapshotFence", delayed_blocker, delayed_event, replacement_snapshot)):
+		if not bool(board.call(
+			"DebugQueueDelayedNetworkVisualEventWithSnapshotFence",
+			_with_visual_event_context(delayed_blocker),
+			_with_visual_event_context(delayed_event),
+			replacement_snapshot)):
 			_fail("Could not stage delayed queue fence for %s" % delayed_event_type)
 			return
 		for frame_index in range(240):
@@ -280,7 +291,10 @@ func _run() -> void:
 		}
 		var fenced_reconnect_snapshot := valid_snapshot.duplicate(true)
 		fenced_reconnect_snapshot["snapshot_id"] = int(valid_snapshot["snapshot_id"]) + 21
-		if not bool(board.call("DebugQueueDecodedNetworkVisualEventWithSnapshotFence", fenced_hand_event, fenced_reconnect_snapshot)):
+		if not bool(board.call(
+			"DebugQueueDecodedNetworkVisualEventWithSnapshotFence",
+			_with_visual_event_context(fenced_hand_event),
+			fenced_reconnect_snapshot)):
 			_fail("Could not stage real queued hand-play snapshot fence")
 			return
 		await process_frame
@@ -328,7 +342,10 @@ func _run() -> void:
 		var empty_hand_counts: Array = empty_hand_snapshot["hand_counts"] as Array
 		empty_hand_counts[0] = 0
 		empty_hand_snapshot["own_hand_cards"] = []
-		if not bool(board.call("DebugPlayDecodedNetworkVisualEventAfterSnapshot", stale_hand_event, empty_hand_snapshot)):
+		if not bool(board.call(
+			"DebugPlayDecodedNetworkVisualEventAfterSnapshot",
+			_with_visual_event_context(stale_hand_event),
+			empty_hand_snapshot)):
 			_fail("Could not stage stale hand-play event")
 			return
 		await process_frame
@@ -356,7 +373,10 @@ func _run() -> void:
 		var empty_draw_counts: Array = empty_draw_snapshot["hand_counts"] as Array
 		empty_draw_counts[0] = 0
 		empty_draw_snapshot["own_hand_cards"] = []
-		if not bool(board.call("DebugPlayDecodedNetworkVisualEventAfterSnapshot", stale_draw_event, empty_draw_snapshot)):
+		if not bool(board.call(
+			"DebugPlayDecodedNetworkVisualEventAfterSnapshot",
+			_with_visual_event_context(stale_draw_event),
+			empty_draw_snapshot)):
 			_fail("Could not stage stale draw event")
 			return
 		var stale_draw_state := str(board.call("DebugGetNetworkStateFingerprint"))
@@ -390,7 +410,10 @@ func _run() -> void:
 	}
 	var empty_item_snapshot := valid_snapshot.duplicate(true)
 	empty_item_snapshot["snapshot_id"] = int(valid_snapshot["snapshot_id"]) + 105
-	if not bool(board.call("DebugPlayDecodedNetworkVisualEventAfterSnapshot", stale_item_event, empty_item_snapshot)):
+	if not bool(board.call(
+		"DebugPlayDecodedNetworkVisualEventAfterSnapshot",
+		_with_visual_event_context(stale_item_event),
+		empty_item_snapshot)):
 		_fail("Could not stage stale table-overlay event")
 		return
 	var stale_item_state := str(board.call("DebugGetNetworkStateFingerprint"))
@@ -418,7 +441,10 @@ func _run() -> void:
 		empty_deck_snapshot["snapshot_id"] = int(valid_snapshot["snapshot_id"]) + 108
 		var empty_deck_counts: Array = empty_deck_snapshot["deck_counts"] as Array
 		empty_deck_counts[1] = 0
-		if not bool(board.call("DebugPlayDecodedNetworkVisualEventAfterSnapshot", stale_deck_event, empty_deck_snapshot)):
+		if not bool(board.call(
+			"DebugPlayDecodedNetworkVisualEventAfterSnapshot",
+			_with_visual_event_context(stale_deck_event),
+			empty_deck_snapshot)):
 			_fail("Could not stage stale deck-theft event")
 			return
 		var stale_deck_state := str(board.call("DebugGetNetworkStateFingerprint"))
@@ -595,7 +621,7 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 	var table_card := ((matrix_snapshot["table_cards"] as Array)[0] as Dictionary).duplicate(true)
 	var hostile_cases: Array[Dictionary] = []
 
-	for key in ["protocol_version", "session_id", "match_id", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "revealed_hand_cards", "revealed_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_deal_animation_playing", "authority_action"]:
+	for key in ["protocol_version", "session_id", "match_id", "match_outcome_kind", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_deal_animation_playing", "opening_deal_completed", "authority_action"]:
 		var missing := matrix_snapshot.duplicate(true)
 		missing.erase(key)
 		hostile_cases.append({"name": "snapshot missing " + key, "payload": missing})
@@ -700,7 +726,7 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 
 
 func _assert_visual_boundary(board: Node, baseline: String, payload: Dictionary, label: String) -> bool:
-	if bool(board.call("DebugRejectsNetworkVisualEventPayload", payload)):
+	if _rejects_visual_event(board, payload):
 		_fail("Rejected legal visual event: " + label)
 		return false
 	if str(board.call("DebugGetNetworkStateFingerprint")) != baseline:
@@ -710,13 +736,25 @@ func _assert_visual_boundary(board: Node, baseline: String, payload: Dictionary,
 
 
 func _assert_visual_rejected(board: Node, baseline: String, payload: Dictionary, label: String) -> bool:
-	if not bool(board.call("DebugRejectsNetworkVisualEventPayload", payload)):
+	if not _rejects_visual_event(board, payload):
 		_fail("Accepted hostile visual event: " + label)
 		return false
 	if str(board.call("DebugGetNetworkStateFingerprint")) != baseline:
 		_fail("Hostile visual event mutated state: " + label)
 		return false
 	return true
+
+
+func _rejects_visual_event(board: Node, payload: Dictionary) -> bool:
+	return bool(board.call(
+		"DebugRejectsNetworkVisualEventPayload",
+		_with_visual_event_context(payload)))
+
+
+func _with_visual_event_context(payload: Dictionary) -> Dictionary:
+	for key in _visual_event_context:
+		payload[key] = _visual_event_context[key]
+	return payload
 
 
 func _assert_snapshot_rejected(board: Node, baseline: String, payload: Dictionary, label: String) -> bool:

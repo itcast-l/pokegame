@@ -9,6 +9,11 @@ public partial class NetworkManager
 
 	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
+
 		RefreshLocalIdentity();
 		LeaveSession();
 		if (!SteamAvailable)
@@ -43,6 +48,11 @@ public partial class NetworkManager
 
 	public void JoinSteamLobby(ulong lobbyId, string roomPassword)
 	{
+		if (!EnsureItemCardCatalogReady())
+		{
+			return;
+		}
+
 		RefreshLocalIdentity();
 		if (!SteamAvailable || lobbyId == 0)
 		{

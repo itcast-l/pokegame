@@ -207,13 +207,13 @@ public partial class GameBoardScene
 		HidePauseMenu();
 		if (ShouldUseAdventureUpgradeSystem())
 		{
-			RestartAdventureJourneyFromPauseMenu();
+			_ = RestartAdventureJourneyFromPauseMenuAsync();
 			return;
 		}
 		DealCardsToPlayers(playOpeningDealAnimation: true);
 	}
 
-	private void RestartAdventureJourneyFromPauseMenu()
+	private async Task RestartAdventureJourneyFromPauseMenuAsync()
 	{
 		string firstAvatarId = GetFirstMainAdventureAvatarId();
 		string scenePath = AdventureAvatarMenuScene.GetGameBoardScenePathForAdventureAvatar(firstAvatarId);
@@ -224,13 +224,16 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdventureRunWriteResult writeResult = GetAdventureRunSessionStore()?.BeginNewMainRun(
-			1,
-			firstAvatarId) ?? AdventureRunWriteResult.SaveFailed;
-		if (writeResult != AdventureRunWriteResult.Succeeded)
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureSaveGateResult<AdventureRunWriteResult> gate =
+			await ExecuteAdventureSaveGateAsync(
+				() => store?.BeginNewMainRun(1, firstAvatarId)
+					?? AdventureRunWriteResult.SaveFailed,
+				result => result == AdventureRunWriteResult.Succeeded,
+				result => result == AdventureRunWriteResult.SaveFailed);
+		if (!gate.Succeeded)
 		{
-			GD.PushWarning($"Failed to restart adventure journey: {writeResult}");
-			ShowPauseMenu();
+			GD.PushWarning($"Failed to restart adventure journey: {gate.Result}");
 			return;
 		}
 		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);

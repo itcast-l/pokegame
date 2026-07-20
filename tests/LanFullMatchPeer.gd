@@ -313,8 +313,6 @@ func _start_migration_fixture_if_needed() -> void:
 
 	var started := false
 	match _migration_fixture:
-		"target":
-			started = bool(board.call("DebugStartPendingTargetHandSelectionForSeat", 0))
 		"discard":
 			started = bool(board.call("DebugStartPendingHandLimitDiscardForSeat", 0))
 		"attachment", "visual":
