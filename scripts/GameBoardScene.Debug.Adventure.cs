@@ -41,9 +41,9 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_ = ApplyAdventureUpgradeAcquisitionEffectsAsync(
+		TrackBoardTask(ApplyAdventureUpgradeAcquisitionEffectsAsync(
 			grantResult,
-			_turnSequenceGeneration);
+			_turnSequenceGeneration), nameof(ApplyAdventureUpgradeAcquisitionEffectsAsync));
 		RenderPlayerHands();
 		return true;
 	}
@@ -281,7 +281,7 @@ public partial class GameBoardScene
 		result["completed"] = false;
 		result["error"] = string.Empty;
 		_debugBlackLedgerProbeRunning = true;
-		_ = RunDebugBlackLedgerCaptureProbeAsync(result);
+		TrackBoardTask(RunDebugBlackLedgerCaptureProbeAsync(result), nameof(RunDebugBlackLedgerCaptureProbeAsync));
 		return true;
 	}
 
@@ -308,7 +308,7 @@ public partial class GameBoardScene
 			result["enemy_has_ten"] = _playerDecks[1]
 				.Exists(card => string.Equals(card.Rank, "10", StringComparison.Ordinal));
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			result["error"] = exception.ToString();
 		}

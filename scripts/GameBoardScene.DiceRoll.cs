@@ -40,7 +40,9 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_ = _diceRollOverlay.PlayRollAsync(result);
+		TrackBoardTask(
+			_diceRollOverlay.PlayRollAsync(result),
+			nameof(DiceRollOverlay.PlayRollAsync));
 		return true;
 	}
 

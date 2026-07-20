@@ -2,9 +2,69 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private int _debugResourceLoadCount;
+
 	private ulong BeginPerformanceSample(string category = "")
 	{
+		if (string.Equals(category, "ResourceLoad", System.StringComparison.Ordinal))
+		{
+			_debugResourceLoadCount++;
+		}
+
 		return debug_performance_trace ? Time.GetTicksUsec() : 0UL;
+	}
+
+	public int DebugGetResourceLoadCount()
+	{
+		return _debugResourceLoadCount;
+	}
+
+	public int DebugGetDynamicBackgroundResourceLoadCount()
+	{
+		int resourceLoadCount = 0;
+		int rebuildCount = 0;
+		AccumulateDynamicBackgroundCounters(this, ref resourceLoadCount, ref rebuildCount);
+		return resourceLoadCount;
+	}
+
+	public int DebugGetDynamicBackgroundRebuildCount()
+	{
+		int resourceLoadCount = 0;
+		int rebuildCount = 0;
+		AccumulateDynamicBackgroundCounters(this, ref resourceLoadCount, ref rebuildCount);
+		return rebuildCount;
+	}
+
+	public long DebugGetCurrentThreadAllocatedBytes()
+	{
+		return System.GC.GetAllocatedBytesForCurrentThread();
+	}
+
+	private static void AccumulateDynamicBackgroundCounters(
+		Node node,
+		ref int resourceLoadCount,
+		ref int rebuildCount)
+	{
+		switch (node)
+		{
+			case AdventureMapDynamicLayer adventureMapLayer:
+				resourceLoadCount += adventureMapLayer.DebugGetResourceLoadCount();
+				rebuildCount += adventureMapLayer.DebugGetRebuildCount();
+				break;
+			case UnderwaterAmbientLayer underwaterLayer:
+				resourceLoadCount += underwaterLayer.DebugGetResourceLoadCount();
+				rebuildCount += underwaterLayer.DebugGetRebuildCount();
+				break;
+			case MainMenuOceanDynamics oceanDynamics:
+				resourceLoadCount += oceanDynamics.DebugGetResourceLoadCount();
+				rebuildCount += oceanDynamics.DebugGetRebuildCount();
+				break;
+		}
+
+		foreach (Node child in node.GetChildren())
+		{
+			AccumulateDynamicBackgroundCounters(child, ref resourceLoadCount, ref rebuildCount);
+		}
 	}
 
 	private void EndPerformanceSample(string label, ulong startUsec)

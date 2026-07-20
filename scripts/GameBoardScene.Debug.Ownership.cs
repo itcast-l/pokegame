@@ -125,7 +125,7 @@ public bool DebugStartDragonQuestionCaptureOwnershipProbe(
 	result["completed"] = false;
 	result["error"] = string.Empty;
 	_debugDragonCaptureProbeRunning = true;
-	_ = RunDebugDragonQuestionCaptureOwnershipProbeAsync(result);
+	TrackBoardTask(RunDebugDragonQuestionCaptureOwnershipProbeAsync(result), nameof(RunDebugDragonQuestionCaptureOwnershipProbeAsync));
 	return true;
 }
 
@@ -167,7 +167,7 @@ private async Task RunDebugDragonQuestionCaptureOwnershipProbeAsync(
 		result["enemy_magnet_attachment_count"] =
 			enemyAttachmentCount;
 	}
-	catch (Exception exception)
+	catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 	{
 		result["error"] = exception.ToString();
 	}
@@ -192,7 +192,7 @@ public bool DebugStartCollectTableCaptureOwnershipProbe(
 	result["completed"] = false;
 	result["error"] = string.Empty;
 	_debugCollectTableCaptureProbeRunning = true;
-	_ = RunDebugCollectTableCaptureOwnershipProbeAsync(result);
+	TrackBoardTask(RunDebugCollectTableCaptureOwnershipProbeAsync(result), nameof(RunDebugCollectTableCaptureOwnershipProbeAsync));
 	return true;
 }
 
@@ -217,7 +217,7 @@ private async Task RunDebugCollectTableCaptureOwnershipProbeAsync(
 		result["deck_collected"] =
 			playResult.DeckCollected;
 	}
-	catch (Exception exception)
+	catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 	{
 		result["error"] = exception.ToString();
 	}
@@ -413,7 +413,7 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 			requiresAttachment: true,
 			reserveReplacement: false,
 			_turnSequenceGeneration);
-		_ = RunDebugMagnetGenerationOwnershipProbeAsync(result);
+		TrackBoardTask(RunDebugMagnetGenerationOwnershipProbeAsync(result), nameof(RunDebugMagnetGenerationOwnershipProbeAsync));
 	return true;
 }
 
@@ -427,7 +427,7 @@ private async Task RunDebugMagnetGenerationOwnershipProbeAsync(
 			MagnetItemCardId,
 			_turnSequenceGeneration);
 	}
-	catch (Exception exception)
+	catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 	{
 		result["error"] = exception.ToString();
 	}
@@ -447,7 +447,7 @@ public bool DebugBeginMagnetGenerationOwnershipAnimation()
 		return false;
 	}
 
-	_ = CompleteMagnetAttachmentSelectionAsync(0);
+	TrackBoardTask(CompleteMagnetAttachmentSelectionAsync(0), nameof(CompleteMagnetAttachmentSelectionAsync));
 	return true;
 }
 
@@ -615,9 +615,9 @@ public bool DebugStartLeafyBladeGenerationOwnershipProbe(
 	result["error"] = string.Empty;
 	result["generation"] = _turnSequenceGeneration;
 	_debugLeafyBladeProbeRunning = true;
-	_ = RunDebugLeafyBladeGenerationOwnershipProbeAsync(
+	TrackBoardTask(RunDebugLeafyBladeGenerationOwnershipProbeAsync(
 		playResult,
-		result);
+		result), nameof(RunDebugLeafyBladeGenerationOwnershipProbeAsync));
 	return true;
 }
 
@@ -632,7 +632,7 @@ private async Task RunDebugLeafyBladeGenerationOwnershipProbeAsync(
 			playResult,
 			_turnSequenceGeneration);
 	}
-	catch (Exception exception)
+	catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 	{
 		result["error"] = exception.ToString();
 	}
@@ -784,7 +784,7 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 	_debugSpecialCardProbeTween = null;
 	_debugSpecialCardProbeEffectRoot = null;
 	_debugSpecialCardProbeElapsedSeconds = 0.0;
-	_ = RunDebugSpecialCardTriggerTimelineProbeAsync(texture, result);
+	TrackBoardTask(RunDebugSpecialCardTriggerTimelineProbeAsync(texture, result), nameof(RunDebugSpecialCardTriggerTimelineProbeAsync));
 		return true;
 	}
 
@@ -794,7 +794,7 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 		{
 			await PlaySpecialCardTriggerEffectAsync(texture, _centerArena.GlobalPosition, zIndex: 0);
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			result["error"] = exception.ToString();
 		}
@@ -864,7 +864,7 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 		result["error"] = string.Empty;
 		_debugTableShuffleProbeRunning = true;
 		_debugTableShuffleProbeStartedUsec = Time.GetTicksUsec();
-		_ = RunDebugTableShuffleOwnershipProbeAsync(caller, result);
+		TrackBoardTask(RunDebugTableShuffleOwnershipProbeAsync(caller, result), nameof(RunDebugTableShuffleOwnershipProbeAsync));
 		return true;
 	}
 
@@ -885,7 +885,7 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 			}
 			result["caller_succeeded"] = succeeded;
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			result["error"] = exception.ToString();
 		}

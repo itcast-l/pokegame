@@ -235,6 +235,9 @@ internal static partial class Program
 		Run("game board optional fx resources are no longer statically preloaded", GameBoardOptionalFxResourcesAreNoLongerStaticallyPreloaded);
 		Run("game board warmup includes optional fx resource category", GameBoardWarmupIncludesOptionalFxResources);
 		Run("game board idle performance trace smoke exists", GameBoardIdlePerformanceTraceSmokeExists);
+		Run("audio disposal forbids synchronous delay and forced GC", AudioDisposalForbidsSynchronousDelayAndForcedGc);
+		Run("game board async work stays behind lifetime boundary", GameBoardAsyncWorkStaysBehindLifetimeBoundary);
+		Run("phase three lifecycle and fallback smokes exist", PhaseThreeLifecycleAndFallbackSmokesExist);
 		Run("resource export audit script checks tracked assets and export config", ResourceExportAuditScriptChecksTrackedAssetsAndExportConfig);
 		Run("resource export audit doc describes read only command", ResourceExportAuditDocDescribesReadOnlyCommand);
 		Run("export preset excludes upgrade popup source only assets", ExportPresetExcludesUpgradePopupSourceOnlyAssets);

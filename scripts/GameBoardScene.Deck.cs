@@ -120,11 +120,11 @@ public partial class GameBoardScene
 		{
 			if (playOpeningIntroAnimation)
 			{
-				_ = PlayOpeningIntroThenDealSequenceAsync(_turnSequenceGeneration);
+				TrackBoardTask(PlayOpeningIntroThenDealSequenceAsync(_turnSequenceGeneration), nameof(PlayOpeningIntroThenDealSequenceAsync));
 			}
 			else
 			{
-				_ = PlayOpeningDealAnimationAsync(_turnSequenceGeneration);
+				TrackBoardTask(PlayOpeningDealAnimationAsync(_turnSequenceGeneration), nameof(PlayOpeningDealAnimationAsync));
 			}
 		}
 	}

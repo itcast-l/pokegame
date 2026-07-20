@@ -119,7 +119,7 @@ public partial class GameBoardScene
 			CompletesTurn = false,
 			ItemPlayVisualSync = new NetworkItemPlayVisualSync(itemCard.Id, definition.PlayPresentation, itemHandIndex),
 		};
-		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await WaitForNextBoardFrameAsync();
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);

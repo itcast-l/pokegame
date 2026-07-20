@@ -8,7 +8,12 @@ internal static class FrameAnimationHelpers
 {
 	private static readonly Dictionary<string, Texture2D?> TextureCache = new();
 
-	public static Texture2D[] LoadTextureFrames(string framePattern, int frameCount, string warningLabel, bool preferImageFile = false)
+	public static Texture2D[] LoadTextureFrames(
+		string framePattern,
+		int frameCount,
+		string warningLabel,
+		bool preferImageFile = false,
+		bool warnMissingFrames = true)
 	{
 		var frames = new List<Texture2D>(frameCount);
 		for (int frameIndex = 1; frameIndex <= frameCount; frameIndex++)
@@ -17,7 +22,10 @@ internal static class FrameAnimationHelpers
 			Texture2D? texture = LoadTextureResource(path, preferImageFile);
 			if (texture == null)
 			{
-				GD.PushWarning($"Missing {warningLabel} frame: {path}");
+				if (warnMissingFrames)
+				{
+					GD.PushWarning($"Missing {warningLabel} frame: {path}");
+				}
 				continue;
 			}
 

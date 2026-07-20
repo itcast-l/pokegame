@@ -91,7 +91,7 @@ public partial class GameBoardScene
 			selectionOverlay.OptionSelected += optionIndex => InvokeOption(optionIndex, optionActions);
 			selectionOverlay.CancelRequested += RejectRequiredSelectionCancel;
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushError($"Item selection overlay creation failed: {exception}");
 			if (selectionOverlay != null && IsInstanceValid(selectionOverlay))
@@ -151,7 +151,7 @@ public partial class GameBoardScene
 		}
 		else if (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard)
 		{
-			_ = CompleteMagnetAttachmentSelectionAsync(-1);
+			TrackBoardTask(CompleteMagnetAttachmentSelectionAsync(-1), nameof(CompleteMagnetAttachmentSelectionAsync));
 		}
 	}
 

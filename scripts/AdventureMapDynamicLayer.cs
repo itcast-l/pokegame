@@ -28,6 +28,9 @@ public partial class AdventureMapDynamicLayer : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int image_update_fps = 30;
 
+	[Export]
+	public bool debug_force_missing_image_assets;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<CurrentRibbon> _ribbons = new();
 	private readonly List<Sparkle> _sparkles = new();
@@ -37,8 +40,10 @@ public partial class AdventureMapDynamicLayer : Control
 	private double _time;
 	private double _redrawAccumulator;
 	private VisualUpdateThrottle _imageUpdateThrottle;
-	private bool _imageAssetsLoaded;
+	private DynamicImageAssetState _imageAssetState;
 	private bool _pendingImageRebuild;
+	private int _resourceLoadCount;
+	private int _rebuildCount;
 	private DynamicRenderMode _activeRenderMode = (DynamicRenderMode)(-1);
 	private Texture2D[] _currentRibbonFrames = System.Array.Empty<Texture2D>();
 	private Texture2D[] _sparkleFrames = System.Array.Empty<Texture2D>();
@@ -93,7 +98,7 @@ public partial class AdventureMapDynamicLayer : Control
 		_time += delta * MotionScale;
 			if (_activeRenderMode == DynamicRenderMode.ImageBased)
 			{
-				if (HasNoImageInstances())
+				if (_imageAssetState != DynamicImageAssetState.PermanentFallback && HasNoImageInstances())
 				{
 					EnsureImageAssetsLoaded(retryIfAllMissing: true);
 					RebuildImageInstances();
@@ -197,7 +202,10 @@ public partial class AdventureMapDynamicLayer : Control
 
 		if (Size.X > 0.0f
 			&& Size.Y > 0.0f
-			&& (_pendingImageRebuild || (_activeRenderMode == DynamicRenderMode.ImageBased && HasNoImageInstances())))
+			&& (_pendingImageRebuild
+				|| (_activeRenderMode == DynamicRenderMode.ImageBased
+					&& _imageAssetState != DynamicImageAssetState.PermanentFallback
+					&& HasNoImageInstances())))
 			{
 				Rebuild();
 			}
@@ -212,6 +220,7 @@ public partial class AdventureMapDynamicLayer : Control
 		}
 
 		_pendingImageRebuild = false;
+		_rebuildCount++;
 		_ribbons.Clear();
 		_sparkles.Clear();
 
@@ -251,23 +260,60 @@ public partial class AdventureMapDynamicLayer : Control
 
 	private void EnsureImageAssetsLoaded(bool retryIfAllMissing = false)
 	{
-		if (_imageAssetsLoaded && !(retryIfAllMissing && AllImageFramesMissing()))
+		if (_imageAssetState != DynamicImageAssetState.Uninitialized)
 		{
 			return;
 		}
 
-		_currentRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(
-			"res://art/fx/environment/adventure_map_dynamic/current_ribbon/run-001/processed/fx-{0}.png",
-			CurrentRibbonFrameCount,
-			"adventure map dynamic current ribbon",
-			preferImageFile: true);
-		_sparkleFrames = FrameAnimationHelpers.LoadTextureFrames(
-			"res://art/fx/environment/adventure_map_dynamic/sparkle/run-001/processed/fx-{0}.png",
-			SparkleFrameCount,
-			"adventure map dynamic sparkle",
-			preferImageFile: true);
-		_imageAssetsLoaded = true;
+		_resourceLoadCount++;
+		if (debug_force_missing_image_assets)
+		{
+			_currentRibbonFrames = System.Array.Empty<Texture2D>();
+			_sparkleFrames = System.Array.Empty<Texture2D>();
+		}
+		else
+		{
+			_currentRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(
+				"res://art/fx/environment/adventure_map_dynamic/current_ribbon/run-001/processed/fx-{0}.png",
+				CurrentRibbonFrameCount,
+				"adventure map dynamic current ribbon",
+				preferImageFile: true,
+				warnMissingFrames: false);
+			_sparkleFrames = FrameAnimationHelpers.LoadTextureFrames(
+				"res://art/fx/environment/adventure_map_dynamic/sparkle/run-001/processed/fx-{0}.png",
+				SparkleFrameCount,
+				"adventure map dynamic sparkle",
+				preferImageFile: true,
+				warnMissingFrames: false);
+		}
+
+		_imageAssetState = AllImageFramesMissing()
+			? DynamicImageAssetState.PermanentFallback
+			: DynamicImageAssetState.Ready;
+		if (_imageAssetState == DynamicImageAssetState.PermanentFallback)
+		{
+			GD.PushWarning("Dynamic background image assets unavailable: AdventureMapDynamicLayer. Using permanent procedural fallback.");
+		}
 	}
+
+	public void ReloadImageAssets()
+	{
+		if (!Engine.IsEditorHint() && !OS.IsDebugBuild())
+		{
+			return;
+		}
+
+		_imageAssetState = DynamicImageAssetState.Uninitialized;
+		_currentRibbonFrames = System.Array.Empty<Texture2D>();
+		_sparkleFrames = System.Array.Empty<Texture2D>();
+		ClearImageInstances();
+		EnsureImageAssetsLoaded();
+		Rebuild();
+	}
+
+	public int DebugGetResourceLoadCount() => _resourceLoadCount;
+	public int DebugGetRebuildCount() => _rebuildCount;
+	public string DebugGetImageAssetStateName() => _imageAssetState.ToString();
 
 	private bool AllImageFramesMissing()
 	{

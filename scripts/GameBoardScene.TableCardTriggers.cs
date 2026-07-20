@@ -225,7 +225,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
 		int popupPoints = GetCapturedCardScoreValueForPlayer(tableCard.Card.Value, scorePlayerIndex, hasDoubleEffect);
-		_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
+		TrackBoardTask(PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect), nameof(PlayTableCardPointPopupAsync));
 		if (IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture))
 		{
 			await ResolveMagnetTableCardTriggerAsync(
@@ -261,7 +261,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 	}
 
 	private int PickRandomMagnetExtraRevealIndex(int captureStartIndex, HashSet<int> magnetExtraCaptureIndexes)

@@ -33,7 +33,7 @@ public partial class GameBoardScene
 			baseScale * CatAdventureScratchStartScale,
 			Colors.White);
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
@@ -55,7 +55,7 @@ public partial class GameBoardScene
 			}
 		};
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
 	private async Task PlayCrabAdventurePincerAttackAsync(
@@ -86,7 +86,7 @@ public partial class GameBoardScene
 			baseScale * 0.92f,
 			Colors.White);
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
@@ -109,7 +109,7 @@ public partial class GameBoardScene
 			}
 		};
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
 	private async Task PlayJellyfishAdventureTentacleAttackAsync(
@@ -145,7 +145,7 @@ public partial class GameBoardScene
 			Colors.White,
 			rotation);
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
@@ -170,7 +170,7 @@ public partial class GameBoardScene
 			}
 		};
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
 	private async Task PlaySeaSlugHitMarkerAttackAsync(
@@ -219,7 +219,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
@@ -246,7 +246,7 @@ public partial class GameBoardScene
 				SeaSlugHitMarkerTotalSeconds);
 			tween.TweenCallback(Callable.From(InvokeHitOnce)).SetDelay(SeaSlugHitMarkerHitDelaySeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

@@ -71,6 +71,9 @@ public partial class UnderwaterAmbientLayer : Control
 	[Export(PropertyHint.Range, "0,80,1")]
 	public int center_glint_count = 0;
 
+	[Export]
+	public bool debug_force_missing_image_assets;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Mote> _motes = new();
 	private readonly List<SeagrassBlade> _seagrassBlades = new();
@@ -93,8 +96,10 @@ public partial class UnderwaterAmbientLayer : Control
 	private double _time;
 	private double _redrawAccumulator;
 	private VisualUpdateThrottle _imageUpdateThrottle;
-	private bool _imageAssetsLoaded;
+	private DynamicImageAssetState _imageAssetState;
 	private bool _pendingImageRebuild;
+	private int _resourceLoadCount;
+	private int _rebuildCount;
 	private AmbientRenderMode _activeRenderMode = (AmbientRenderMode)(-1);
 	private AmbientVisualProfile _activeVisualProfile = (AmbientVisualProfile)(-1);
 
@@ -158,7 +163,7 @@ public partial class UnderwaterAmbientLayer : Control
 		_time += delta * motion_scale;
 		if (_activeRenderMode == AmbientRenderMode.ImageBased)
 		{
-			if (HasNoImageInstances())
+			if (_imageAssetState != DynamicImageAssetState.PermanentFallback && HasNoImageInstances())
 				{
 					EnsureImageAssetsLoaded(retryIfAllMissing: true);
 					RebuildImageInstances();
@@ -244,6 +249,17 @@ public partial class UnderwaterAmbientLayer : Control
 		{
 			return;
 		}
+		if (VisualProfile != _activeVisualProfile)
+		{
+			_imageAssetState = DynamicImageAssetState.Uninitialized;
+			_seagrassFrames = Array.Empty<Texture2D>();
+			_centerCausticFrames = Array.Empty<Texture2D>();
+			_centerGlintFrames = Array.Empty<Texture2D>();
+			_sunbeamFrames = Array.Empty<Texture2D>();
+			_waterCurrentFrames = Array.Empty<Texture2D>();
+			_moteFrames = Array.Empty<Texture2D>();
+			ClearImageInstances();
+		}
 
 		_activeRenderMode = RenderMode;
 		_activeVisualProfile = VisualProfile;
@@ -287,7 +303,10 @@ public partial class UnderwaterAmbientLayer : Control
 
 		if (Size.X > 0.0f
 			&& Size.Y > 0.0f
-			&& (_pendingImageRebuild || (_activeRenderMode == AmbientRenderMode.ImageBased && HasNoImageInstances())))
+			&& (_pendingImageRebuild
+				|| (_activeRenderMode == AmbientRenderMode.ImageBased
+					&& _imageAssetState != DynamicImageAssetState.PermanentFallback
+					&& HasNoImageInstances())))
 			{
 				RebuildAmbient();
 			}
@@ -302,6 +321,7 @@ public partial class UnderwaterAmbientLayer : Control
 		}
 
 		_pendingImageRebuild = false;
+		_rebuildCount++;
 		_motes.Clear();
 		_seagrassBlades.Clear();
 		_centerGlints.Clear();

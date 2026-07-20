@@ -24,7 +24,7 @@ public partial class GameBoardScene
 		ClearAdventureTraceHuntMarkerIntro();
 		if (target != null && playIntro)
 		{
-			_ = PlayAdventureTraceHuntMarkerIntroAsync(target, _adventureTraceHuntMarkerIntroGeneration);
+			TrackBoardTask(PlayAdventureTraceHuntMarkerIntroAsync(target, _adventureTraceHuntMarkerIntroGeneration), nameof(PlayAdventureTraceHuntMarkerIntroAsync));
 		}
 	}
 
@@ -65,7 +65,7 @@ public partial class GameBoardScene
 		marker.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
 		_adventureTraceHuntMarkerIntro = intro;
 
-		Tween frameTween = marker.CreateTween();
+		Tween frameTween = CreateBoardTween(marker);
 		_adventureTraceHuntMarkerIntroTween = frameTween;
 		frameTween.SetParallel(true);
 		for (int frameIndex = 0; frameIndex < _adventureTraceHuntMarkerFrames.Count; frameIndex++)
@@ -79,9 +79,7 @@ public partial class GameBoardScene
 				}
 			})).SetDelay(frameIndex * AdventureTraceHuntMarkerFrameSeconds);
 		}
-		await ToSignal(
-			GetTree().CreateTimer(AdventureTraceHuntMarkerFrameSeconds * _adventureTraceHuntMarkerFrames.Count),
-			SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(AdventureTraceHuntMarkerFrameSeconds * _adventureTraceHuntMarkerFrames.Count);
 
 		if (introGeneration != _adventureTraceHuntMarkerIntroGeneration
 			|| !ReferenceEquals(_adventureTraceHuntMarkerIntro, intro))

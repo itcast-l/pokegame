@@ -21,7 +21,7 @@ public partial class GameBoardScene
 				MarkSeatControlIndicatorsDirty();
 				MarkSeatControlIndicatorLayoutDirty();
 				MarkActivePlayerStatusTooltipForRefresh();
-				_ = DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true);
+				TrackBoardTask(DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true), nameof(DealCardsToPlayersWithAdventureGateAsync));
 			}
 		}
 	}
@@ -46,7 +46,7 @@ public partial class GameBoardScene
 			if (IsInsideTree() && !_networkWaitForInitialize)
 			{
 				LoadItemCardEnabledStates();
-				_ = DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true);
+				TrackBoardTask(DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true), nameof(DealCardsToPlayersWithAdventureGateAsync));
 			}
 		}
 	}

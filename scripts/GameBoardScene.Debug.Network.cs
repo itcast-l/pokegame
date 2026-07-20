@@ -286,7 +286,7 @@ public partial class GameBoardScene
 		result.Clear();
 		result["completed"] = false;
 		result["error"] = string.Empty;
-		_ = RunCoreTurnResolutionProbeAsync(scenario, result);
+		TrackBoardTask(RunCoreTurnResolutionProbeAsync(scenario, result), nameof(RunCoreTurnResolutionProbeAsync));
 		return true;
 	}
 
@@ -412,7 +412,7 @@ public partial class GameBoardScene
 			result["pending_selection"] = HasPendingItemSelection();
 			result["completed"] = true;
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			result["error"] = exception.ToString();
 			result["completed"] = true;
@@ -583,6 +583,11 @@ public partial class GameBoardScene
 		return NetworkVisualPlayback.PendingEventCount;
 	}
 
+	public int DebugGetNetworkVisualActivityCount()
+	{
+		return NetworkVisualPlayback.ActivityCount;
+	}
+
 	public int DebugGetNetworkLastAppliedSnapshotId()
 	{
 		return _networkLastAppliedSnapshotId;
@@ -710,7 +715,7 @@ public partial class GameBoardScene
 		}
 
 		ApplyNetworkBoardSnapshotNow(snapshot);
-		_ = PlayNetworkCardPlayedEventAsync(visualEvent);
+		TrackBoardTask(PlayNetworkCardPlayedEventAsync(visualEvent), nameof(PlayNetworkCardPlayedEventAsync));
 		return true;
 	}
 

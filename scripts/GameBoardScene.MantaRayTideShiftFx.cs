@@ -77,7 +77,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
@@ -101,7 +101,7 @@ public partial class GameBoardScene
 			1.0f,
 			MantaRayTideShiftCycloneSeconds);
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 		InvokeHitOnce();
 		if (!cycloneQueued)
 		{

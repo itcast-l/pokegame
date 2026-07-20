@@ -91,7 +91,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			visibilityTween = badge.CreateTween();
+			visibilityTween = CreateBoardTween(badge);
 			visibilityTween.SetParallel(true);
 			visibilityTween.SetTrans(visible ? Tween.TransitionType.Cubic : Tween.TransitionType.Sine);
 			visibilityTween.SetEase(visible ? Tween.EaseType.Out : Tween.EaseType.InOut);

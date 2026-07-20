@@ -18,7 +18,7 @@ public partial class GameBoardScene
 		double debugPlaybackDelaySeconds = GetDebugNetworkVisualPlaybackDelaySeconds();
 		if (debugPlaybackDelaySeconds > 0.0)
 		{
-			await ToSignal(GetTree().CreateTimer(debugPlaybackDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(debugPlaybackDelaySeconds);
 		}
 
 		await PlayNetworkCardPlayedEventAsync(visualEvent);
@@ -45,6 +45,7 @@ public partial class GameBoardScene
 		private readonly Func<ValidatedNetworkBoardSnapshot, bool> _applySnapshot;
 		private readonly Action _onQueueStable;
 		private ValidatedNetworkBoardSnapshot? _pendingSnapshot;
+		private bool _shutdown;
 
 		internal NetworkVisualPlaybackController(
 			Func<NetworkVisualEvent, Task> playEventAsync,
@@ -61,9 +62,14 @@ public partial class GameBoardScene
 		internal bool IsFastForwarding { get; private set; }
 		internal int DroppedEventCount { get; private set; }
 		internal int FastForwardCount { get; private set; }
+		internal int ActivityCount { get; private set; }
 
 		internal bool HasQueuedEventForSnapshot(long authorityEpoch, int snapshotId)
 		{
+			if (_shutdown)
+			{
+				return false;
+			}
 			foreach (NetworkVisualEvent visualEvent in _pendingEvents)
 			{
 				if (visualEvent.AuthorityEpoch == authorityEpoch && visualEvent.SnapshotId == snapshotId)
@@ -77,6 +83,12 @@ public partial class GameBoardScene
 
 		internal void Enqueue(NetworkVisualEvent visualEvent)
 		{
+			if (_shutdown)
+			{
+				return;
+			}
+
+			ActivityCount = NetworkVisualQueuePolicy.SaturatingAdd(ActivityCount, 1);
 			switch (NetworkVisualQueuePolicy.ClassifyAdmission(_pendingEvents.Count, IsFastForwarding))
 			{
 				case NetworkVisualQueueAdmission.DropWhileFastForwarding:
@@ -98,6 +110,12 @@ public partial class GameBoardScene
 
 		internal void SubmitSnapshot(ValidatedNetworkBoardSnapshot snapshot)
 		{
+			if (_shutdown)
+			{
+				return;
+			}
+
+			ActivityCount = NetworkVisualQueuePolicy.SaturatingAdd(ActivityCount, 1);
 			StageLatestSnapshot(snapshot);
 			if (IsFastForwarding)
 			{
@@ -115,6 +133,10 @@ public partial class GameBoardScene
 
 		internal void StagePendingSnapshot(ValidatedNetworkBoardSnapshot snapshot)
 		{
+			if (_shutdown)
+			{
+				return;
+			}
 			StageLatestSnapshot(snapshot);
 		}
 
@@ -129,6 +151,14 @@ public partial class GameBoardScene
 			_pendingSnapshot = null;
 		}
 
+		internal void Shutdown()
+		{
+			_shutdown = true;
+			_pendingEvents.Clear();
+			_pendingSnapshot = null;
+			IsFastForwarding = false;
+		}
+
 		private void StageLatestSnapshot(ValidatedNetworkBoardSnapshot snapshot)
 		{
 			if (_pendingSnapshot == null || IsAtOrAfterFence(snapshot.AuthorityEpoch, snapshot.SnapshotId, _pendingSnapshot.AuthorityEpoch, _pendingSnapshot.SnapshotId))
@@ -139,7 +169,7 @@ public partial class GameBoardScene
 
 		private void StartProcessingIfNeeded()
 		{
-			if (!IsProcessing)
+			if (!_shutdown && !IsProcessing)
 			{
 				_ = ProcessAsync();
 			}
@@ -150,7 +180,7 @@ public partial class GameBoardScene
 			IsProcessing = true;
 			try
 			{
-				while (!IsFastForwarding && _pendingEvents.Count > 0)
+				while (!_shutdown && !IsFastForwarding && _pendingEvents.Count > 0)
 				{
 					NetworkVisualEvent visualEvent = _pendingEvents.Dequeue();
 				if (_pendingSnapshot != null
@@ -166,17 +196,33 @@ public partial class GameBoardScene
 					await _playEventAsync(visualEvent);
 				}
 			}
+			catch (OperationCanceledException) when (_shutdown)
+			{
+			}
+			catch (Exception error)
+			{
+				if (!_shutdown)
+				{
+					GD.PushError($"Network visual playback failed: {error}");
+				}
+			}
 			finally
 			{
-				ApplyPendingSnapshotIfIdle(allowWhileProcessing: true);
+				if (!_shutdown)
+				{
+					ApplyPendingSnapshotIfIdle(allowWhileProcessing: true);
+				}
 				IsProcessing = false;
-				_onQueueStable();
+				if (!_shutdown)
+				{
+					_onQueueStable();
+				}
 			}
 		}
 
 		private void ApplyPendingSnapshotIfIdle(bool allowWhileProcessing = false)
 		{
-			if ((!allowWhileProcessing && IsProcessing) || _pendingSnapshot == null)
+			if (_shutdown || (!allowWhileProcessing && IsProcessing) || _pendingSnapshot == null)
 			{
 				return;
 			}

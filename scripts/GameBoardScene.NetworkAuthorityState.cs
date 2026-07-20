@@ -845,7 +845,7 @@ public partial class GameBoardScene
 		CompleteNetworkAuthorityAction();
 		SendBoardSnapshotIfHost();
 		ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded();
-		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await WaitForNextBoardFrameAsync();
 	}
 
 	private void EnsurePendingSelectionWaiterFromAuthorityAction()
@@ -878,10 +878,10 @@ public partial class GameBoardScene
 			var completionSource = new TaskCompletionSource<int>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
 			_pendingHandLimitDiscardCompletion = completionSource;
-			_ = ResumeRestoredHandLimitDiscardSelectionAsync(
+			TrackBoardTask(ResumeRestoredHandLimitDiscardSelectionAsync(
 				completionSource,
 				state.ActionId,
-				state.TurnGeneration);
+				state.TurnGeneration), nameof(ResumeRestoredHandLimitDiscardSelectionAsync));
 		}
 
 		if (state.Phase == AuthorityActionPhase.WaitingAttachment && _pendingMagnetAttachmentCompletion == null)
@@ -889,10 +889,10 @@ public partial class GameBoardScene
 			var completionSource = new TaskCompletionSource<bool>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
 			_pendingMagnetAttachmentCompletion = completionSource;
-			_ = ResumeRestoredAttachmentSelectionAsync(
+			TrackBoardTask(ResumeRestoredAttachmentSelectionAsync(
 				completionSource,
 				state.ActionId,
-				state.TurnGeneration);
+				state.TurnGeneration), nameof(ResumeRestoredAttachmentSelectionAsync));
 		}
 	}
 
@@ -904,7 +904,7 @@ public partial class GameBoardScene
 		try
 		{
 			int selectionIndex = await completionSource.Task;
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await WaitForNextBoardFrameAsync();
 			AuthorityActionState state = _networkAuthorityActionState;
 			if (!IsNetworkHost()
 				|| !ReferenceEquals(_pendingHandLimitDiscardCompletion, completionSource)
@@ -920,7 +920,7 @@ public partial class GameBoardScene
 
 			await ResumeCommittedAuthoritySelectionAsync(state);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushError($"Restored hand-limit discard resume failed: {ex}");
 		}
@@ -934,7 +934,7 @@ public partial class GameBoardScene
 		try
 		{
 			await completionSource.Task;
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await WaitForNextBoardFrameAsync();
 			AuthorityActionState state = _networkAuthorityActionState;
 			if (!IsNetworkHost()
 				|| state.ActionId != actionId
@@ -947,7 +947,7 @@ public partial class GameBoardScene
 
 			await ResumeAuthorityActionAsync();
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushError($"Restored attachment selection resume failed: {ex}");
 		}

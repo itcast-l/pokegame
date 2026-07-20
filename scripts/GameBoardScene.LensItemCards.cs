@@ -242,7 +242,7 @@ public partial class GameBoardScene
 
 		tableCard.IsFaceUp = true;
 		RenderTableCards();
-		_ = PlayTableCardPointPopupAsync(tableCardIndex, GetCardScoreValue(tableCard.Card.Value));
-		await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+		TrackBoardTask(PlayTableCardPointPopupAsync(tableCardIndex, GetCardScoreValue(tableCard.Card.Value)), nameof(PlayTableCardPointPopupAsync));
+		await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 	}
 }

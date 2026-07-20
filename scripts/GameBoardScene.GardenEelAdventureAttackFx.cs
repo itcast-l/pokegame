@@ -64,7 +64,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
@@ -82,7 +82,7 @@ public partial class GameBoardScene
 			PlayGardenEelBurrowAmbushFrames(ambush, frames, startCenter, ambushCenter, baseScale);
 			tween.TweenCallback(Callable.From(InvokeHitOnce)).SetDelay(GardenEelBurrowAmbushHitDelaySeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{
@@ -98,7 +98,7 @@ public partial class GameBoardScene
 		}
 	}
 
-	private static void PlayGardenEelBurrowAmbushFrames(
+	private void PlayGardenEelBurrowAmbushFrames(
 		Sprite2D ambush,
 		IReadOnlyList<Texture2D> frames,
 		Vector2 startCenter,
@@ -110,7 +110,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Tween frameTween = ambush.CreateTween();
+		Tween frameTween = CreateBoardTween(ambush);
 		frameTween.SetParallel(true);
 		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 0, 0.0d, startCenter, baseScale * GardenEelBurrowAmbushStartScale);
 		TweenGardenEelBurrowAmbushFrame(frameTween, ambush, frames, 1, GardenEelBurrowAmbushFrameSeconds, startCenter, baseScale * 0.94f);

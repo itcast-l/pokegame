@@ -6,33 +6,97 @@ public partial class UnderwaterAmbientLayer
 {
 	private void EnsureImageAssetsLoaded(bool retryIfAllMissing = false)
 	{
-		if (_imageAssetsLoaded && !(retryIfAllMissing && AllImageFramesMissing()))
+		if (_imageAssetState != DynamicImageAssetState.Uninitialized)
 		{
 			return;
 		}
 
 		_missingCategoryWarnings.Clear();
-		_seagrassFrames = LoadProfileFrames("seagrass", SeagrassFrameCount, "underwater seagrass");
-		_centerCausticFrames = LoadProfileFrames("center_caustic", CenterCausticFrameCount, "underwater center caustic");
-		_centerGlintFrames = LoadProfileFrames("center_glint", CenterGlintFrameCount, "underwater center glint");
-		_sunbeamFrames = LoadProfileFrames("sunbeam", SunbeamFrameCount, "underwater sunbeam");
-		_waterCurrentFrames = LoadProfileFrames("water_current", WaterCurrentFrameCount, "underwater water current");
-		_moteFrames = LoadProfileFrames("mote", MoteFrameCount, "underwater mote");
-		_imageAssetsLoaded = true;
+		_resourceLoadCount++;
+		if (debug_force_missing_image_assets)
+		{
+			_seagrassFrames = Array.Empty<Texture2D>();
+			_centerCausticFrames = Array.Empty<Texture2D>();
+			_centerGlintFrames = Array.Empty<Texture2D>();
+			_sunbeamFrames = Array.Empty<Texture2D>();
+			_waterCurrentFrames = Array.Empty<Texture2D>();
+			_moteFrames = Array.Empty<Texture2D>();
+		}
+		else
+		{
+			_seagrassFrames = LoadProfileFrames("seagrass", SeagrassFrameCount, "underwater seagrass");
+			_centerCausticFrames = LoadProfileFrames("center_caustic", CenterCausticFrameCount, "underwater center caustic");
+			_centerGlintFrames = LoadProfileFrames("center_glint", CenterGlintFrameCount, "underwater center glint");
+			_sunbeamFrames = LoadProfileFrames("sunbeam", SunbeamFrameCount, "underwater sunbeam");
+			_waterCurrentFrames = LoadProfileFrames("water_current", WaterCurrentFrameCount, "underwater water current");
+			_moteFrames = LoadProfileFrames("mote", MoteFrameCount, "underwater mote");
+		}
+
+		_imageAssetState = AllImageFramesMissing()
+			? DynamicImageAssetState.PermanentFallback
+			: DynamicImageAssetState.Ready;
+		if (_imageAssetState == DynamicImageAssetState.PermanentFallback)
+		{
+			GD.PushWarning($"Dynamic background image assets unavailable: UnderwaterAmbientLayer/{_activeVisualProfile}. Using permanent procedural fallback.");
+			return;
+		}
+
+		WarnMissingProfileCategories();
 	}
 
 	private Texture2D[] LoadProfileFrames(string category, int frameCount, string warningLabel)
 	{
 		string profileSlug = GetProfileSlug(_activeVisualProfile);
 		string framePattern = $"res://art/fx/environment/underwater_ambient/{profileSlug}/{category}/run-001/processed/fx-{{0}}.png";
-		Texture2D[] frames = FrameAnimationHelpers.LoadTextureFrames(framePattern, frameCount, warningLabel, preferImageFile: true);
+		return FrameAnimationHelpers.LoadTextureFrames(
+			framePattern,
+			frameCount,
+			warningLabel,
+			preferImageFile: true,
+			warnMissingFrames: false);
+	}
+
+	private void WarnMissingProfileCategories()
+	{
+		string profileSlug = GetProfileSlug(_activeVisualProfile);
+		WarnMissingCategoryIfEmpty("seagrass", _seagrassFrames, profileSlug);
+		WarnMissingCategoryIfEmpty("center_caustic", _centerCausticFrames, profileSlug);
+		WarnMissingCategoryIfEmpty("center_glint", _centerGlintFrames, profileSlug);
+		WarnMissingCategoryIfEmpty("sunbeam", _sunbeamFrames, profileSlug);
+		WarnMissingCategoryIfEmpty("water_current", _waterCurrentFrames, profileSlug);
+		WarnMissingCategoryIfEmpty("mote", _moteFrames, profileSlug);
+	}
+
+	private void WarnMissingCategoryIfEmpty(string category, Texture2D[] frames, string profileSlug)
+	{
 		if (frames.Length == 0)
 		{
-			WarnMissingCategory(category, framePattern);
+			WarnMissingCategory(category, $"res://art/fx/environment/underwater_ambient/{profileSlug}/{category}/run-001/processed/fx-{{0}}.png");
+		}
+	}
+
+	public void ReloadImageAssets()
+	{
+		if (!Engine.IsEditorHint() && !OS.IsDebugBuild())
+		{
+			return;
 		}
 
-		return frames;
+		_imageAssetState = DynamicImageAssetState.Uninitialized;
+		_seagrassFrames = Array.Empty<Texture2D>();
+		_centerCausticFrames = Array.Empty<Texture2D>();
+		_centerGlintFrames = Array.Empty<Texture2D>();
+		_sunbeamFrames = Array.Empty<Texture2D>();
+		_waterCurrentFrames = Array.Empty<Texture2D>();
+		_moteFrames = Array.Empty<Texture2D>();
+		ClearImageInstances();
+		EnsureImageAssetsLoaded();
+		RebuildAmbient();
 	}
+
+	public int DebugGetResourceLoadCount() => _resourceLoadCount;
+	public int DebugGetRebuildCount() => _rebuildCount;
+	public string DebugGetImageAssetStateName() => _imageAssetState.ToString();
 
 	private void WarnMissingCategory(string category, string path)
 	{

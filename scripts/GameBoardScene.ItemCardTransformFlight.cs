@@ -28,7 +28,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween flightTween = CreateTween();
+			Tween flightTween = CreateBoardTween();
 			flightTween.SetParallel(true);
 			flightTween.SetTrans(Tween.TransitionType.Sine);
 			flightTween.SetEase(Tween.EaseType.InOut);
@@ -50,7 +50,7 @@ public partial class GameBoardScene
 					_animationPresenter.Release(flightCard);
 				}
 			};
-			await ToSignal(flightTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(flightTween);
 		}
 		finally
 		{

@@ -117,7 +117,7 @@ public partial class GameBoardScene
 		return new Vector2(x, y);
 	}
 
-	private static void AddMagnetSelectionPulse(Control parent, Vector2 position, Vector2 size, float rotationDegrees)
+	private void AddMagnetSelectionPulse(Control parent, Vector2 position, Vector2 size, float rotationDegrees)
 	{
 		Vector2 glowInset = new(7.0f, 8.0f);
 		Vector2 glowSize = size + glowInset * 2.0f;
@@ -136,7 +136,7 @@ public partial class GameBoardScene
 		glow.AddThemeStyleboxOverride("panel", MagnetSelectionPulseStyle);
 		parent.AddChild(glow);
 
-		Tween tween = glow.CreateTween();
+		Tween tween = CreateBoardTween(glow);
 		tween.SetLoops();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
@@ -147,9 +147,9 @@ public partial class GameBoardScene
 		tween.TweenProperty(glow, "scale", Vector2.One * 0.98f, 0.48f);
 	}
 
-	private static void StartMagnetSelectionBounce(Control cardSlot, Vector2 basePosition)
+	private void StartMagnetSelectionBounce(Control cardSlot, Vector2 basePosition)
 	{
-		Tween tween = cardSlot.CreateTween();
+		Tween tween = CreateBoardTween(cardSlot);
 		tween.SetLoops();
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.InOut);

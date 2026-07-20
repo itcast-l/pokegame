@@ -133,14 +133,14 @@ public partial class GameBoardScene
 		{
 			if (startDelaySeconds > 0.0f)
 			{
-				await ToSignal(GetTree().CreateTimer(startDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+				await WaitForBoardDelayAsync(startDelaySeconds);
 				if (!GodotObject.IsInstanceValid(flightCard))
 				{
 					return;
 				}
 			}
 
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
@@ -168,7 +168,7 @@ public partial class GameBoardScene
 				}
 			};
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

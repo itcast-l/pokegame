@@ -89,7 +89,7 @@ public partial class GameBoardScene
 			_winnerBannerPanel.PivotOffset = _winnerBannerPanel.CustomMinimumSize / 2.0f;
 		}
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetTrans(Tween.TransitionType.Cubic);
 		tween.SetEase(Tween.EaseType.Out);
 		tween.TweenProperty(_winnerBannerRoot, "modulate:a", 1.0f, 0.24f);
@@ -177,7 +177,7 @@ public partial class GameBoardScene
 			{
 				_adventureSaveGateState = AdventureSaveGateState.Retrying;
 				ShowAdventureSaveStatus("GAME_ADVENTURE_SAVE_RETRYING");
-				await ToSignal(GetTree().CreateTimer(AdventureSaveRetryDelays[attemptIndex]), SceneTreeTimer.SignalName.Timeout);
+				await WaitForBoardDelayAsync(AdventureSaveRetryDelays[attemptIndex]);
 				_adventureSaveGateState = AdventureSaveGateState.Saving;
 			}
 		}
@@ -210,13 +210,13 @@ public partial class GameBoardScene
 		}
 		ClearAdventureInteractionStateForBattleEnd();
 		ShowAdventureSaveStatus("GAME_ADVENTURE_SAVE_FAILED_REPLAY");
-		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(0.75);
 		if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
 		{
 			return;
 		}
 		ShowAdventureSaveStatus("GAME_ADVENTURE_RETURNING_TO_MENU");
-		await ToSignal(GetTree().CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(0.75);
 		if (!_isLeavingGame && GodotObject.IsInstanceValid(this))
 		{
 			await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
@@ -297,19 +297,19 @@ public partial class GameBoardScene
 		if (_settledAdventureDefeatResolution == AdventureDefeatResolution.RetryCurrentStage)
 		{
 			HideWinnerBanner();
-			_ = DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true);
+			TrackBoardTask(DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true), nameof(DealCardsToPlayersWithAdventureGateAsync));
 			return;
 		}
 
 		if (_settledAdventureDefeatResolution == AdventureDefeatResolution.RestartJourney)
 		{
-			_ = RestartAdventureRunFromWinnerAsync(beginNewRun: false);
+			TrackBoardTask(RestartAdventureRunFromWinnerAsync(beginNewRun: false), nameof(RestartAdventureRunFromWinnerAsync));
 			return;
 		}
 
 		if (ShouldRestartAdventureRunFromWinner())
 		{
-			_ = RestartAdventureRunFromWinnerAsync(beginNewRun: true);
+			TrackBoardTask(RestartAdventureRunFromWinnerAsync(beginNewRun: true), nameof(RestartAdventureRunFromWinnerAsync));
 			return;
 		}
 
@@ -366,7 +366,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId);
+		TrackBoardTask(StartNextAdventureStageWithTransitionAsync(gameBoardScene, nextAvatarId), nameof(StartNextAdventureStageWithTransitionAsync));
 	}
 
 	private bool ShouldRestartAdventureRunFromWinner()
@@ -404,7 +404,7 @@ public partial class GameBoardScene
 				return;
 			}
 		}
-		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
+		TrackBoardTask(StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId), nameof(StartNextAdventureStageWithTransitionAsync));
 	}
 
 	private async Task StartNextAdventureStageWithTransitionAsync(PackedScene gameBoardScene, string nextAvatarId)

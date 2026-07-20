@@ -170,7 +170,7 @@ public partial class GameBoardScene
 								? Vector2.One * 1.035f
 								: Vector2.One;
 							float duration = hovered ? HandCardHoverInTweenTime : HandCardHoverOutTweenTime;
-							hoverTween = cardVisual.CreateTween();
+							hoverTween = CreateBoardTween(cardVisual);
 							hoverTween.SetParallel(true);
 							hoverTween.SetTrans(hovered ? Tween.TransitionType.Cubic : Tween.TransitionType.Sine);
 							hoverTween.SetEase(hovered ? Tween.EaseType.Out : Tween.EaseType.InOut);

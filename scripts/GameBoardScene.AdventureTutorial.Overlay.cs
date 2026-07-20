@@ -686,7 +686,7 @@ public partial class GameBoardScene
 
 		_adventureTutorialPulseTween?.Kill();
 		_adventureTutorialCalloutPanel.Modulate = Colors.White;
-		_adventureTutorialPulseTween = _adventureTutorialCalloutPanel.CreateTween();
+		_adventureTutorialPulseTween = CreateBoardTween(_adventureTutorialCalloutPanel);
 		_adventureTutorialPulseTween.SetTrans(Tween.TransitionType.Sine);
 		_adventureTutorialPulseTween.SetEase(Tween.EaseType.InOut);
 		_adventureTutorialPulseTween.TweenProperty(_adventureTutorialCalloutPanel, "modulate", new Color(1.0f, 0.92f, 0.52f, 1.0f), 0.10f);

@@ -80,7 +80,7 @@ public partial class GameBoardScene
 					continue;
 				}
 
-				await ToSignal(GetTree().CreateTimer(AiTurnDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+				await WaitForBoardDelayAsync(AiTurnDelaySeconds);
 				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 				{
 					return;

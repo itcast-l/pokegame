@@ -33,7 +33,7 @@ public partial class GameBoardScene
 		Vector2 splitGlobalPosition = splitGlobalCenter - CardVisualSize / 2.0f;
 		try
 		{
-			Tween flightTween = CreateTween();
+			Tween flightTween = CreateBoardTween();
 			flightTween.SetParallel(true);
 			flightTween.SetTrans(Tween.TransitionType.Sine);
 			flightTween.SetEase(Tween.EaseType.InOut);
@@ -48,14 +48,14 @@ public partial class GameBoardScene
 				1.0f,
 				LensCardFlightSeconds);
 			TweenFlightPulseScale(flightTween, flightCard, LensCardFlightSeconds, 1.12f);
-			await ToSignal(flightTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(flightTween);
 
 			if (!GodotObject.IsInstanceValid(flightCard))
 			{
 				return;
 			}
 
-			Tween splitTween = CreateTween();
+			Tween splitTween = CreateBoardTween();
 			splitTween.SetParallel(true);
 			splitTween.SetTrans(Tween.TransitionType.Cubic);
 			splitTween.SetEase(Tween.EaseType.In);
@@ -63,7 +63,7 @@ public partial class GameBoardScene
 			flightCard.Modulate = new Color(0.7f, 1.0f, 0.96f, 1.0f);
 			splitTween.TweenProperty(flightCard, "modulate:a", 0.0f, LensCardSplitSeconds);
 			splitTween.TweenProperty(flightCard, "rotation_degrees", 0.0f, LensCardSplitSeconds);
-			await ToSignal(splitTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(splitTween);
 		}
 		finally
 		{
@@ -105,7 +105,7 @@ public partial class GameBoardScene
 
 		if (targetNumber > 0)
 		{
-			await ToSignal(GetTree().CreateTimer(LensRevealWispStaggerSeconds * targetNumber), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(LensRevealWispStaggerSeconds * targetNumber);
 		}
 
 		TextureRect wisp = _animationPresenter.RentTextureRect(
@@ -123,7 +123,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
@@ -162,7 +162,7 @@ public partial class GameBoardScene
 					_animationPresenter.Release(wisp);
 				}
 			};
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

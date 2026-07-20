@@ -229,9 +229,7 @@ public partial class GameBoardScene
 			}
 		}
 
-		await ToSignal(
-			GetTree().CreateTimer(TableCaptureDelaySeconds),
-			SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(TableCaptureDelaySeconds);
 		if (!IsCaptureTableReferenceSnapshotCurrent(
 				turnSequenceGeneration,
 				captureTableReferenceSnapshot)
@@ -424,17 +422,17 @@ public partial class GameBoardScene
 			}
 		if (gardenEelSandBiteBonusPoints > 0)
 		{
-			_ = PlayTableCardPointPopupAsync(
+			TrackBoardTask(PlayTableCardPointPopupAsync(
 				captureStartIndex,
 				gardenEelSandBiteBonusPoints,
-				hasDoubleEffect);
+				hasDoubleEffect), nameof(PlayTableCardPointPopupAsync));
 		}
 		if (endpointCrownBonusPoints > 0)
 		{
-			_ = PlayTableCardPointPopupAsync(
+			TrackBoardTask(PlayTableCardPointPopupAsync(
 				captureStartIndex,
 				endpointCrownBonusPoints,
-				hasDoubleEffect);
+				hasDoubleEffect), nameof(PlayTableCardPointPopupAsync));
 		}
 
 		int captureTailTableCardIndex =
@@ -442,10 +440,10 @@ public partial class GameBoardScene
 		if (midTideUpgradeBonusPoints > 0
 			&& captureTailTableCardIndex >= 0)
 		{
-			_ = PlayTableCardPointPopupAsync(
+			TrackBoardTask(PlayTableCardPointPopupAsync(
 				captureTailTableCardIndex,
 				midTideUpgradeBonusPoints,
-				hasDoubleEffect);
+				hasDoubleEffect), nameof(PlayTableCardPointPopupAsync));
 		}
 
 		AdventureClubCaptureScoringResult clubCaptureScoring =
@@ -800,4 +798,3 @@ public partial class GameBoardScene
 	}
 	}
 }
-

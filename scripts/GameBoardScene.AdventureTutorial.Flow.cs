@@ -46,13 +46,13 @@ public partial class GameBoardScene
 
 		if (IsAdventureTutorialContinueCalloutActive())
 		{
-			_ = EnableAdventureTutorialContinueAfterDelayAsync(_adventureTutorialCalloutGeneration);
+			TrackBoardTask(EnableAdventureTutorialContinueAfterDelayAsync(_adventureTutorialCalloutGeneration), nameof(EnableAdventureTutorialContinueAfterDelayAsync));
 		}
 	}
 
 	private async Task EnableAdventureTutorialContinueAfterDelayAsync(int generation)
 	{
-		await ToSignal(GetTree().CreateTimer(AdventureTutorialCalloutReadSeconds), SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(AdventureTutorialCalloutReadSeconds);
 		if (generation != _adventureTutorialCalloutGeneration
 			|| !IsAdventureTutorialContinueCalloutActive()
 			|| _adventureTutorialContinueButton == null

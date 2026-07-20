@@ -735,7 +735,7 @@ public partial class GameBoardScene
 
 			tableCard.IsFaceUp = true;
 			RenderTableCards();
-			await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;

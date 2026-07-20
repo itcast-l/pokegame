@@ -166,7 +166,7 @@ public partial class GameBoardScene
 		shuffleRoot.RotationDegrees = baseRotationDegrees;
 		shuffleRoot.Scale = Vector2.One;
 		shuffleRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Cubic);
 		tween.SetEase(Tween.EaseType.Out);
@@ -196,10 +196,10 @@ public partial class GameBoardScene
 			currentSprite.Modulate = Colors.White;
 			nextSprite.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		};
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
-	private static void PlayDeckShuffleFramePairs(
+	private void PlayDeckShuffleFramePairs(
 		Control shuffleRoot,
 		TextureRect currentSprite,
 		TextureRect nextSprite,
@@ -213,7 +213,7 @@ public partial class GameBoardScene
 		}
 
 		int totalSlots = repeatCount * shuffleFrames.Count;
-		Tween frameTween = shuffleRoot.CreateTween();
+		Tween frameTween = CreateBoardTween(shuffleRoot);
 		frameTween.SetParallel(true);
 		for (int slotIndex = 0; slotIndex < totalSlots; slotIndex++)
 		{

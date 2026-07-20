@@ -180,7 +180,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -188,7 +188,7 @@ public partial class GameBoardScene
 			tween.TweenProperty(spawnCard, "scale", Vector2.One * 1.10f, DragonPrinceSpecialJackSpawnSeconds);
 			tween.Chain().SetParallel(true);
 			tween.TweenProperty(spawnCard, "scale", Vector2.One, DragonPrinceSpecialJackSpawnSettleSeconds);
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{
@@ -427,7 +427,7 @@ public partial class GameBoardScene
 		_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
 		RenderTableCards();
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
@@ -441,7 +441,7 @@ public partial class GameBoardScene
 			"scale",
 			Vector2.One * DragonPrinceSpecialJackFloatScale,
 			DragonPrinceSpecialJackFloatSeconds);
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 		return new PairCaptureEdgeFloatHold(tableCardIndex, overlay);
 	}
 

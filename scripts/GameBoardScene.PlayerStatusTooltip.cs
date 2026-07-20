@@ -166,7 +166,7 @@ public partial class GameBoardScene
 		_playerStatusTooltipPanel.Visible = true;
 
 		_playerStatusTooltipTween?.Kill();
-		_playerStatusTooltipTween = CreateTween();
+		_playerStatusTooltipTween = CreateBoardTween();
 		_playerStatusTooltipTween.SetTrans(Tween.TransitionType.Cubic);
 		_playerStatusTooltipTween.SetEase(Tween.EaseType.Out);
 		_playerStatusTooltipTween.TweenProperty(_playerStatusTooltipPanel, "modulate:a", 1.0f, PlayerStatusTooltipFadeSeconds);
@@ -181,7 +181,7 @@ public partial class GameBoardScene
 
 		_activeStatusTooltipPlayerIndex = -1;
 		_playerStatusTooltipTween?.Kill();
-		_playerStatusTooltipTween = CreateTween();
+		_playerStatusTooltipTween = CreateBoardTween();
 		_playerStatusTooltipTween.SetTrans(Tween.TransitionType.Cubic);
 		_playerStatusTooltipTween.SetEase(Tween.EaseType.Out);
 		_playerStatusTooltipTween.TweenProperty(_playerStatusTooltipPanel, "modulate:a", 0.0f, PlayerStatusTooltipFadeSeconds);

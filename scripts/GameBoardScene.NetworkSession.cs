@@ -78,7 +78,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_ = ExitNetworkMatchToMainMenuAsync();
+		TrackBoardTask(ExitNetworkMatchToMainMenuAsync(), nameof(ExitNetworkMatchToMainMenuAsync));
 	}
 
 	private void HandleNetworkManagerSeatControlStatesUpdated()

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -31,10 +30,6 @@ public partial class GameAudioManager
 		_sfxFinishedHandlers.Clear();
 		_currentMusicId = string.Empty;
 		_currentMusicSpec = null;
-		WaitForAudioServerFlush();
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
-		GC.Collect();
 	}
 
 	private static bool IsLive(AudioStreamPlayer? player)
@@ -76,12 +71,6 @@ public partial class GameAudioManager
 		}
 
 		_ownedAudioTweens.Clear();
-	}
-
-	private static void WaitForAudioServerFlush()
-	{
-		double flushSeconds = Math.Max(0.1, AudioServer.GetTimeToNextMix() + AudioServer.GetOutputLatency() + 0.02);
-		OS.DelayMsec((int)Math.Ceiling(flushSeconds * 1000.0));
 	}
 
 	private void DisposeAudioPlayerById(ulong playerId)

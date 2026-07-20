@@ -62,7 +62,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween flightTween = CreateTween();
+			Tween flightTween = CreateBoardTween();
 			flightTween.SetParallel(true);
 			flightTween.SetTrans(Tween.TransitionType.Cubic);
 			flightTween.SetEase(Tween.EaseType.Out);
@@ -99,7 +99,7 @@ public partial class GameBoardScene
 				1.0f,
 				DragonPrinceDamageHitFlightSeconds);
 
-			await ToSignal(flightTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(flightTween);
 		}
 		finally
 		{
@@ -143,7 +143,7 @@ public partial class GameBoardScene
 			Vector2 baseScale = GetSpriteScaleForVisualSize(impactFrames[0], DragonPrinceDamageHitImpactVisualSize);
 			impact.Scale = baseScale * 0.78f;
 
-			Tween impactTween = CreateTween();
+			Tween impactTween = CreateBoardTween();
 			impactTween.SetParallel(true);
 			impactTween.SetTrans(Tween.TransitionType.Sine);
 			impactTween.SetEase(Tween.EaseType.Out);
@@ -167,7 +167,7 @@ public partial class GameBoardScene
 			impactTween.TweenCallback(Callable.From(InvokeHitOnce))
 				.SetDelay(DragonPrinceDamageHitImpactHitDelaySeconds);
 
-			await ToSignal(impactTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(impactTween);
 			InvokeHitOnce();
 		}
 		finally
@@ -228,7 +228,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
@@ -252,7 +252,7 @@ public partial class GameBoardScene
 				DragonQueenJawSlashTotalSeconds);
 			tween.TweenCallback(Callable.From(InvokeHitOnce)).SetDelay(DragonQueenJawSlashHitDelaySeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 			InvokeHitOnce();
 		}
 		finally

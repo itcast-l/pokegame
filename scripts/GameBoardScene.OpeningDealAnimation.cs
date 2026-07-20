@@ -53,7 +53,7 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.OpeningIntro, -1.5f, 0.98f, 1.02f);
-		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await WaitForNextBoardFrameAsync();
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
 			return;
@@ -92,7 +92,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween flyInTween = CreateTween();
+			Tween flyInTween = CreateBoardTween();
 			flyInTween.SetParallel(true);
 			flyInTween.SetTrans(Tween.TransitionType.Cubic);
 			flyInTween.SetEase(Tween.EaseType.Out);
@@ -100,26 +100,26 @@ public partial class GameBoardScene
 			flyInTween.TweenProperty(rightLabel, "position", rightEnd, OpeningIntroFlyInSeconds);
 			flyInTween.TweenProperty(leftLabel, "modulate:a", 1.0f, OpeningIntroFlyInSeconds * 0.72f);
 			flyInTween.TweenProperty(rightLabel, "modulate:a", 1.0f, OpeningIntroFlyInSeconds * 0.72f);
-			await ToSignal(flyInTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(flyInTween);
 
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
 			}
 
-			await ToSignal(GetTree().CreateTimer(OpeningIntroHoldSeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(OpeningIntroHoldSeconds);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
 			}
 
-			Tween fadeOutTween = CreateTween();
+			Tween fadeOutTween = CreateBoardTween();
 			fadeOutTween.SetParallel(true);
 			fadeOutTween.SetTrans(Tween.TransitionType.Sine);
 			fadeOutTween.SetEase(Tween.EaseType.In);
 			fadeOutTween.TweenProperty(leftLabel, "modulate:a", 0.0f, OpeningIntroFadeOutSeconds);
 			fadeOutTween.TweenProperty(rightLabel, "modulate:a", 0.0f, OpeningIntroFadeOutSeconds);
-			await ToSignal(fadeOutTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(fadeOutTween);
 		}
 		finally
 		{
@@ -182,7 +182,7 @@ public partial class GameBoardScene
 		bool shouldResolveRunStartUpgrade = false;
 		try
 		{
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await WaitForNextBoardFrameAsync();
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
@@ -345,7 +345,7 @@ public partial class GameBoardScene
 			ShowOpeningPileCards(playerIndex, Math.Max(1, targetVisibleCardCount));
 			if (dealIndex < visualDealCount - 1 && dealIntervalSeconds > flightSeconds)
 			{
-				await ToSignal(GetTree().CreateTimer(dealIntervalSeconds - flightSeconds), SceneTreeTimer.SignalName.Timeout);
+				await WaitForBoardDelayAsync(dealIntervalSeconds - flightSeconds);
 			}
 		}
 

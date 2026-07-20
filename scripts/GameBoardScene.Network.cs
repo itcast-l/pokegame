@@ -44,12 +44,12 @@ public partial class GameBoardScene
 
 	internal void ConfirmLocalHandCardPlay(int handIndex, int turnSequenceGeneration, Vector2? startGlobalPosition)
 	{
-		_ = PlayMainPlayerCardAndAdvanceAsync(handIndex, turnSequenceGeneration, startGlobalPosition);
+		TrackBoardTask(PlayMainPlayerCardAndAdvanceAsync(handIndex, turnSequenceGeneration, startGlobalPosition), nameof(PlayMainPlayerCardAndAdvanceAsync));
 	}
 
 	internal void RequestNetworkItemCardPlay(int itemHandIndex, int turnSequenceGeneration)
 	{
-		_ = RequestNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration);
+		TrackBoardTask(RequestNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration), nameof(RequestNetworkItemCardPlayAsync));
 	}
 
 	private async Task RequestNetworkItemCardPlayAsync(int itemHandIndex, int turnSequenceGeneration)
@@ -87,7 +87,7 @@ public partial class GameBoardScene
 				return;
 			}
 		}
-		catch (Exception error)
+		catch (Exception error) when (error is not OperationCanceledException || !IsBoardStopping)
 		{
 			if (IsInsideTree())
 			{
@@ -149,7 +149,7 @@ public partial class GameBoardScene
 
 	internal void RequestNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)
 	{
-		_ = RequestNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration);
+		TrackBoardTask(RequestNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration), nameof(RequestNetworkHandCardPlayAsync));
 	}
 
 	private async Task RequestNetworkHandCardPlayAsync(int handIndex, int turnSequenceGeneration)
@@ -187,7 +187,7 @@ public partial class GameBoardScene
 				return;
 			}
 		}
-		catch (Exception error)
+		catch (Exception error) when (error is not OperationCanceledException || !IsBoardStopping)
 		{
 			if (IsInsideTree())
 			{

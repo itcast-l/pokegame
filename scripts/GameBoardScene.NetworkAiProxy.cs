@@ -50,7 +50,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_ = ResolveNetworkAiProxyTurnsAsync(_turnSequenceGeneration);
+		TrackBoardTask(ResolveNetworkAiProxyTurnsAsync(_turnSequenceGeneration), nameof(ResolveNetworkAiProxyTurnsAsync));
 	}
 
 	private void ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded()
@@ -176,7 +176,7 @@ public partial class GameBoardScene
 						continue;
 					}
 
-					await ToSignal(GetTree().CreateTimer(AiTurnDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+					await WaitForBoardDelayAsync(AiTurnDelaySeconds);
 					if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || _networkMigrationInputLocked)
 					{
 						return;
@@ -206,7 +206,7 @@ public partial class GameBoardScene
 
 					await ResolveActionCompletionAsync(playerIndex, result);
 				}
-				catch (Exception ex)
+				catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 				{
 					GD.PushWarning($"AI proxy turn loop failed for seat {failedSeatIndex}: {ex.Message}");
 					if (!await RecoverNetworkAiProxyTurnAfterFailureAsync(failedSeatIndex, turnSequenceGeneration))
@@ -259,7 +259,7 @@ public partial class GameBoardScene
 		{
 			int ownerSeatIndex = _pendingItemOwnerIndex;
 			CancelPendingNetworkAiProxySelectionForFailedItem(ownerSeatIndex);
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await WaitForNextBoardFrameAsync();
 			return true;
 		}
 
@@ -283,7 +283,7 @@ public partial class GameBoardScene
 		{
 			await RefillCurrentTurnPlayerBaseHandAsync(turnSequenceGeneration);
 		}
-		catch (Exception recoveryEx)
+		catch (Exception recoveryEx) when (recoveryEx is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushWarning($"AI proxy turn recovery refill failed after seat {failedSeatIndex}: {recoveryEx.Message}");
 		}
@@ -350,7 +350,7 @@ public partial class GameBoardScene
 						if (selectionIndex < 0)
 						{
 							await CompleteMagnetAttachmentSelectionAsync(-1);
-							await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+							await WaitForNextBoardFrameAsync();
 							continue;
 						}
 						break;
@@ -369,9 +369,9 @@ public partial class GameBoardScene
 					return true;
 				}
 
-				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+				await WaitForNextBoardFrameAsync();
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 			{
 				GD.PushWarning($"AI proxy pending item selection failed for seat {ownerSeatIndex}: {ex.Message}");
 				await ForceResolvePendingNetworkAiProxySelectionAfterFailureAsync(ownerSeatIndex, turnSequenceGeneration);
@@ -384,7 +384,7 @@ public partial class GameBoardScene
 			&& !_networkMigrationInputLocked
 			&& (_isProcessingCardPlay || HasPendingItemSelection()))
 		{
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await WaitForNextBoardFrameAsync();
 		}
 
 		return true;
@@ -414,7 +414,7 @@ public partial class GameBoardScene
 							turnSequenceGeneration,
 							out _))
 					{
-						await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+						await WaitForNextBoardFrameAsync();
 						return;
 					}
 					break;
@@ -427,16 +427,16 @@ public partial class GameBoardScene
 							turnSequenceGeneration,
 							out _))
 					{
-						await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+						await WaitForNextBoardFrameAsync();
 						return;
 					}
 
 					await CompleteMagnetAttachmentSelectionAsync(-1);
-					await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+					await WaitForNextBoardFrameAsync();
 					return;
 			}
 		}
-		catch (Exception fallbackEx)
+		catch (Exception fallbackEx) when (fallbackEx is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushWarning($"AI proxy pending item fallback failed for seat {ownerSeatIndex}: {fallbackEx.Message}");
 		}
@@ -500,7 +500,7 @@ public partial class GameBoardScene
 
 			return await PlayRandomPlayableHandEntryWithoutCapturePriorityAsync(playerIndex, turnSequenceGeneration);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushWarning($"AI proxy turn heuristic failed for seat {playerIndex}: {ex.Message}");
 		}
@@ -509,7 +509,7 @@ public partial class GameBoardScene
 		{
 			return await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushWarning($"AI proxy fallback action failed for seat {playerIndex}: {ex.Message}");
 			return new PlayCardResult(false, false);
@@ -538,7 +538,7 @@ public partial class GameBoardScene
 				return targetHandIndex;
 			}
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !IsBoardStopping)
 		{
 			GD.PushWarning($"AI proxy discard heuristic failed for seat {ownerSeatIndex}: {ex.Message}");
 		}

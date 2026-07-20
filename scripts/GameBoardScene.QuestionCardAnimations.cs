@@ -63,7 +63,7 @@ public partial class GameBoardScene
 				transformAreaGlobalPosition,
 				0.0f);
 
-			Tween areaFlightTween = CreateTween();
+			Tween areaFlightTween = CreateBoardTween();
 			areaFlightTween.SetParallel(true);
 			areaFlightTween.SetTrans(Tween.TransitionType.Sine);
 			areaFlightTween.SetEase(Tween.EaseType.InOut);
@@ -93,7 +93,7 @@ public partial class GameBoardScene
 				QuestionCardToTransformAreaFlightSeconds / Math.Max(1, _questionCardTransformFrames.Count),
 				QuestionCardToTransformAreaFlightSeconds);
 
-			await ToSignal(areaFlightTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(areaFlightTween);
 			if (!GodotObject.IsInstanceValid(animationRoot) || turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -101,7 +101,7 @@ public partial class GameBoardScene
 
 			animationRoot.GlobalPosition = transformAreaGlobalPosition;
 			PlayGameSfx(GameSfx.QuestionRewardTransform, -1.0f, 0.97f, 1.03f, 0.08);
-			Tween transformTween = CreateTween();
+			Tween transformTween = CreateBoardTween();
 			transformTween.SetParallel(true);
 			transformTween.SetTrans(Tween.TransitionType.Sine);
 			transformTween.SetEase(Tween.EaseType.InOut);
@@ -144,7 +144,7 @@ public partial class GameBoardScene
 				QuestionCardTransformSeconds / Math.Max(1, _questionCardTransformFrames.Count),
 				QuestionCardTransformSeconds);
 
-			await ToSignal(transformTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(transformTween);
 			if (!GodotObject.IsInstanceValid(animationRoot) || turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -167,7 +167,7 @@ public partial class GameBoardScene
 			animationRoot.Scale = Vector2.One * 1.04f;
 			fx.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.75f);
 			PlayGameSfx(GameSfx.QuestionRewardInsert, -2.0f, 0.97f, 1.04f, 0.08);
-			Tween insertTween = CreateTween();
+			Tween insertTween = CreateBoardTween();
 			insertTween.SetParallel(true);
 			insertTween.SetTrans(Tween.TransitionType.Sine);
 			insertTween.SetEase(Tween.EaseType.Out);
@@ -193,7 +193,7 @@ public partial class GameBoardScene
 				QuestionCardRewardInsertSeconds / Math.Max(1, _questionCardTransformFrames.Count),
 				QuestionCardRewardInsertSeconds);
 
-			await ToSignal(insertTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(insertTween);
 		}
 		finally
 		{
@@ -367,7 +367,7 @@ public partial class GameBoardScene
 			card.Scale = Vector2.One * 0.82f;
 			card.RotationDegrees = -5.0f;
 			fx.Scale = Vector2.One * 0.9f;
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -388,7 +388,7 @@ public partial class GameBoardScene
 				QuestionCardRefreshFrames,
 				QuestionCardRefreshSeconds / Math.Max(1, QuestionCardRefreshFrames.Length),
 				QuestionCardRefreshSeconds);
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

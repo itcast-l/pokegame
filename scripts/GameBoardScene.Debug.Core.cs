@@ -25,7 +25,7 @@ public partial class GameBoardScene
 		}
 
 		_debugAdventureSaveGateProbeAttemptCount = 0;
-		_ = RunDebugAdventureSaveGateProbeAsync(Math.Max(0, failuresBeforeSuccess));
+		TrackBoardTask(RunDebugAdventureSaveGateProbeAsync(Math.Max(0, failuresBeforeSuccess)), nameof(RunDebugAdventureSaveGateProbeAsync));
 		return true;
 	}
 
@@ -119,7 +119,7 @@ public partial class GameBoardScene
 		_debugAdventureDirectDamageProbeRunning = true;
 		_debugAdventureDirectDamageProbeCompleted = false;
 		_debugAdventureDirectDamageProbeApplied = false;
-		_ = RunDebugAdventureDirectDamageSaveGateProbeAsync(damageAmount);
+		TrackBoardTask(RunDebugAdventureDirectDamageSaveGateProbeAsync(damageAmount), nameof(RunDebugAdventureDirectDamageSaveGateProbeAsync));
 		return true;
 	}
 
@@ -178,7 +178,7 @@ public partial class GameBoardScene
 		_debugAdventureRealTurnEndProbeRunning = true;
 		_debugAdventureRealTurnEndProbeCompleted = false;
 		_debugAdventureRealTurnEndProbeSucceeded = false;
-		_ = RunDebugAdventureRealTurnEndSaveGateProbeAsync();
+		TrackBoardTask(RunDebugAdventureRealTurnEndSaveGateProbeAsync(), nameof(RunDebugAdventureRealTurnEndSaveGateProbeAsync));
 		return true;
 	}
 
@@ -230,7 +230,7 @@ public partial class GameBoardScene
 			clientActionId: 0,
 			itemOrRewardId: "question_mark");
 		MarkNetworkAuthorityActionApplying();
-		_ = RunDebugPendingHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration);
+		TrackBoardTask(RunDebugPendingHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration), nameof(RunDebugPendingHandLimitDiscardAsync));
 		return true;
 	}
 

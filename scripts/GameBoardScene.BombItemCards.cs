@@ -190,7 +190,7 @@ public partial class GameBoardScene
 		firstBomb.IsFaceUp = true;
 		secondBomb.IsFaceUp = true;
 		RenderTableCards();
-		await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 	}
 
 	private async Task PlayBombPairTriggerEffectsAsync(int firstBombIndex, int secondBombIndex, int turnSequenceGeneration)
@@ -278,7 +278,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			await ToSignal(GetTree().CreateTimer(BombDestroyCardStaggerSeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(BombDestroyCardStaggerSeconds);
 		}
 	}
 
@@ -317,7 +317,7 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.BombDestroyCard, -2.0f, 0.95f, 1.06f, 0.03);
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Cubic);
 		tween.SetEase(Tween.EaseType.Out);
@@ -332,7 +332,7 @@ public partial class GameBoardScene
 			}
 		};
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
 	private TextureRect? CreateBombPairDestroyFx(Vector2 localCenter, int tableCardIndex)

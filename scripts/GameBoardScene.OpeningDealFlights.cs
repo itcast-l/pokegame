@@ -41,7 +41,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
@@ -56,8 +56,8 @@ public partial class GameBoardScene
 				0.0f,
 				1.0f,
 				OpeningDealCardFlightSeconds);
-			await ToSignal(tween, Tween.SignalName.Finished);
-			await ToSignal(GetTree().CreateTimer(OpeningDealCardStaggerSeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardTweenAsync(tween);
+			await WaitForBoardDelayAsync(OpeningDealCardStaggerSeconds);
 		}
 		finally
 		{
@@ -95,7 +95,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
 			tween.TweenMethod(
@@ -110,7 +110,7 @@ public partial class GameBoardScene
 				0.0f,
 				1.0f,
 				flightSeconds);
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

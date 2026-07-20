@@ -396,6 +396,7 @@ public partial class GameBoardScene : Control
 
 	public override void _Ready()
 	{
+		_boardAsyncLifetime = new BoardAsyncLifetime(this);
 		_gameModePolicy = GameModePolicy.Derive(
 			!string.IsNullOrWhiteSpace(_networkSessionId),
 			_adventureMode,
@@ -458,7 +459,7 @@ public partial class GameBoardScene : Control
 			InitializeBoard(playOpeningIntroAnimation: true);
 		}
 		PlayBoardMusic();
-		_ = WarmupGameplayResourcesAsync(GetCurrentTurnContext());
+		TrackBoardTask(WarmupGameplayResourcesAsync(GetCurrentTurnContext()), nameof(WarmupGameplayResourcesAsync));
 	}
 
 	public bool TryApplyNetworkBoardInitialize(Godot.Collections.Dictionary payload)
@@ -504,7 +505,7 @@ public partial class GameBoardScene : Control
 
 	private void InitializeBoard(bool playOpeningIntroAnimation)
 	{
-		_ = InitializeBoardAsync(playOpeningIntroAnimation);
+		TrackBoardTask(InitializeBoardAsync(playOpeningIntroAnimation), nameof(InitializeBoardAsync));
 	}
 
 	private async Task InitializeBoardAsync(bool playOpeningIntroAnimation)
@@ -537,8 +538,13 @@ public partial class GameBoardScene : Control
 
 	public override void _ExitTree()
 	{
+		_boardAsyncLifetime?.BeginStopping();
+		_networkVisualPlaybackController?.Shutdown();
+		_boardAsyncLifetime?.Shutdown();
 		DisconnectNetworkManagerSignalsForBoard();
 		DisposeActiveSelectionOverlay();
+		_adventureTutorialPulseTween?.Kill();
+		_adventureTutorialPulseTween = null;
 		ClearDetachedVisualPools();
 		_animationPresenter?.ClearPools();
 	}

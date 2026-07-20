@@ -130,7 +130,7 @@ public partial class GameBoardScene
 		{
 			if (!ShouldSendNetworkPendingItemSelectionRequest())
 			{
-				_ = CompleteMagnetAttachmentSelectionAsync(-1);
+				TrackBoardTask(CompleteMagnetAttachmentSelectionAsync(-1), nameof(CompleteMagnetAttachmentSelectionAsync));
 			}
 			else
 			{

@@ -41,6 +41,11 @@ if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	exit 1
 fi
 
+if grep -Eiq "ObjectDB instances leaked|resources still in use|orphan StringName|unobserved task|TaskScheduler.UnobservedTaskException" "$LOG_FILE"; then
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
+
 grep -Fq "IDLE_WINDOW_BEGIN" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 grep -Fq "IDLE_WINDOW_END" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 grep -Fq "GAME_BOARD_IDLE_PERFORMANCE_TRACE_SMOKE_OK" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }

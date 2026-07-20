@@ -46,7 +46,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -74,7 +74,7 @@ public partial class GameBoardScene
 				1.0f,
 				FishAdventureAttackBeamSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 			{
 				onHit?.Invoke();

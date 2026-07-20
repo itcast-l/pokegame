@@ -48,7 +48,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
@@ -76,7 +76,7 @@ public partial class GameBoardScene
 				1.0f,
 				EnemySpecialAbilityAvatarFxTotalSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 			if (bossKBorrowedAvatarFxTask != null)
 			{
 				await bossKBorrowedAvatarFxTask;
@@ -155,17 +155,20 @@ public partial class GameBoardScene
 		{
 			if (!borrowedAvatar.IsNodeReady())
 			{
-				await ToSignal(borrowedAvatar, Node.SignalName.Ready);
+				await WaitForNextBoardFrameAsync();
 			}
 
-			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			if (!GodotObject.IsInstanceValid(borrowedAvatar)
+				|| !borrowedAvatar.IsInsideTree()
+				|| turnSequenceGeneration != _turnSequenceGeneration
+				|| IsGameOver())
 			{
 				return;
 			}
 
 			borrowedAvatar.PlayAction(CharacterAvatar.AvatarAction.Score);
 
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
@@ -197,7 +200,7 @@ public partial class GameBoardScene
 				1.0f,
 				BossKBorrowedAbilityAvatarFxTotalSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

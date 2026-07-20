@@ -108,7 +108,7 @@ public partial class GameBoardScene
 			baseHandIndex: handIndex,
 			baseCardCode: ToNetworkCardCode(_playerHands[actorSeatIndex][handIndex]));
 		MarkNetworkAuthorityActionApplying();
-		_ = PlayNetworkHostHandCardAndBroadcastAsync(actorSeatIndex, handIndex, turnSequenceGeneration);
+		TrackBoardTask(PlayNetworkHostHandCardAndBroadcastAsync(actorSeatIndex, handIndex, turnSequenceGeneration), nameof(PlayNetworkHostHandCardAndBroadcastAsync));
 		return true;
 	}
 
@@ -181,7 +181,7 @@ public partial class GameBoardScene
 			itemHandIndex: itemHandIndex,
 			itemOrRewardId: _playerItemHands[actorSeatIndex][itemHandIndex].Id);
 		MarkNetworkAuthorityActionApplying();
-		_ = PlayNetworkHostItemCardAndBroadcastAsync(actorSeatIndex, itemHandIndex, turnSequenceGeneration);
+		TrackBoardTask(PlayNetworkHostItemCardAndBroadcastAsync(actorSeatIndex, itemHandIndex, turnSequenceGeneration), nameof(PlayNetworkHostItemCardAndBroadcastAsync));
 		return true;
 	}
 
@@ -283,7 +283,7 @@ public partial class GameBoardScene
 			SetNetworkAuthorityActionSelection(
 				AuthorityActionPhase.WaitingAttachment,
 				selectionIndex);
-			_ = CompleteMagnetAttachmentSelectionAsync(selectionIndex);
+			TrackBoardTask(CompleteMagnetAttachmentSelectionAsync(selectionIndex), nameof(CompleteMagnetAttachmentSelectionAsync));
 			return true;
 		}
 

@@ -73,7 +73,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween flightTween = CreateTween();
+			Tween flightTween = CreateBoardTween();
 			flightTween.SetParallel(true);
 			flightTween.SetTrans(Tween.TransitionType.Cubic);
 			flightTween.SetEase(Tween.EaseType.Out);
@@ -96,7 +96,7 @@ public partial class GameBoardScene
 				1.0f,
 				LeafySeadragonCollectAttackFlightSeconds);
 
-			await ToSignal(flightTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(flightTween);
 			InvokeHitOnce();
 			if (turnSequenceGeneration != _turnSequenceGeneration
 				|| IsGameOver()
@@ -116,7 +116,7 @@ public partial class GameBoardScene
 				dissolveFrame,
 				LeafySeadragonCollectAttackDissolveFrameDelaySeconds);
 
-			Tween impactTween = CreateTween();
+			Tween impactTween = CreateBoardTween();
 			impactTween.SetParallel(true);
 			impactTween.SetTrans(Tween.TransitionType.Sine);
 			impactTween.SetEase(Tween.EaseType.Out);
@@ -131,7 +131,7 @@ public partial class GameBoardScene
 				}
 			})).SetDelay(LeafySeadragonCollectAttackImpactSeconds * 0.44f);
 
-			await ToSignal(impactTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(impactTween);
 		}
 		finally
 		{
@@ -206,7 +206,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -233,7 +233,7 @@ public partial class GameBoardScene
 				1.0f,
 				BossKRoyalSeizureLanceFlightSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 			{
 				onTouchTarget?.Invoke();

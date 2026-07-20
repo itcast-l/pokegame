@@ -49,9 +49,7 @@ public partial class GameBoardScene
 	{
 		if (projectileIndex > 0)
 		{
-			await ToSignal(
-				GetTree().CreateTimer(LeafySeadragonBladeProjectileStaggerSeconds * projectileIndex),
-				SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(LeafySeadragonBladeProjectileStaggerSeconds * projectileIndex);
 		}
 
 		if (turnSequenceGeneration != _turnSequenceGeneration
@@ -124,7 +122,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -178,7 +176,7 @@ public partial class GameBoardScene
 				1.0f,
 				LeafySeadragonBladeProjectileFlightSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

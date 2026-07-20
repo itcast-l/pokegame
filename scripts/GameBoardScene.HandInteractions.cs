@@ -68,12 +68,12 @@ public partial class GameBoardScene
 		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
 		if (ShouldSendNetworkPendingItemSelectionRequest())
 		{
-			_ = BeginPredictedNetworkMagnetAttachmentSelectionAsync(handIndex);
+			TrackBoardTask(BeginPredictedNetworkMagnetAttachmentSelectionAsync(handIndex), nameof(BeginPredictedNetworkMagnetAttachmentSelectionAsync));
 			RequestNetworkPendingItemSelection(handIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}
 
-		_ = CompleteMagnetAttachmentSelectionAsync(handIndex);
+		TrackBoardTask(CompleteMagnetAttachmentSelectionAsync(handIndex), nameof(CompleteMagnetAttachmentSelectionAsync));
 	}
 
 	private void TryCompleteMainPlayerHandLimitDiscard(InputEvent inputEvent, int displayIndex)
@@ -143,7 +143,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_ = PlayMainPlayerItemCardAndAdvanceAsync(itemHandIndex, _turnSequenceGeneration);
+		TrackBoardTask(PlayMainPlayerItemCardAndAdvanceAsync(itemHandIndex, _turnSequenceGeneration), nameof(PlayMainPlayerItemCardAndAdvanceAsync));
 	}
 
 	private Vector2? TryGetHandCardStartGlobalPosition(int playerIndex, int handIndex)

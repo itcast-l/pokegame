@@ -110,7 +110,7 @@ public partial class GameBoardScene
 		_magnetAttachmentCountdownLabel = countdownLabel;
 		_magnetAttachmentCountdownHintLabel = hintLabel;
 
-		Tween introTween = CreateTween();
+		Tween introTween = CreateBoardTween();
 		introTween.SetTrans(Tween.TransitionType.Cubic);
 		introTween.SetEase(Tween.EaseType.Out);
 		introTween.TweenProperty(root, "modulate:a", 1.0f, 0.16f);
@@ -190,7 +190,7 @@ public partial class GameBoardScene
 		}
 
 		_magnetAttachmentCountdownHintLabel.Modulate = Colors.White;
-		Tween pulseTween = CreateTween();
+		Tween pulseTween = CreateBoardTween();
 		pulseTween.SetLoops();
 		pulseTween.SetTrans(Tween.TransitionType.Cubic);
 		pulseTween.SetEase(Tween.EaseType.InOut);

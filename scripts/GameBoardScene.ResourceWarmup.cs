@@ -210,10 +210,7 @@ public partial class GameBoardScene
 
 	private async Task<bool> WaitForWarmupFrameAsync(TurnContext turnContext)
 	{
-		return await ResourcePreloadService.WaitForNextFrameAsync(
-			this,
-			turnContext,
-			IsCurrentTurnContext,
-			IsGameOver);
+		await WaitForNextBoardFrameAsync();
+		return IsCurrentTurnContext(turnContext) && !IsGameOver();
 	}
 }

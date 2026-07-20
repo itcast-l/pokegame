@@ -352,7 +352,7 @@ public partial class GameBoardScene
 
 		if (shouldResumeOpeningDealAnimation)
 		{
-			_ = PlayOpeningDealAnimationAsync(_turnSequenceGeneration);
+			TrackBoardTask(PlayOpeningDealAnimationAsync(_turnSequenceGeneration), nameof(PlayOpeningDealAnimationAsync));
 		}
 	}
 

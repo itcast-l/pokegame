@@ -67,7 +67,7 @@ public partial class GameBoardScene
 			DisposeActiveSelectionOverlay();
 
 			PlayGameSfx(GameSfx.QuestionRewardInsert, -2.0f, 0.97f, 1.04f, 0.08);
-			Tween moveToTransformTween = CreateTween();
+			Tween moveToTransformTween = CreateBoardTween();
 			moveToTransformTween.SetParallel(true);
 			moveToTransformTween.SetTrans(Tween.TransitionType.Cubic);
 			moveToTransformTween.SetEase(Tween.EaseType.Out);
@@ -93,7 +93,7 @@ public partial class GameBoardScene
 				QuestionCardToTransformAreaFlightSeconds);
 			moveToTransformTween.TweenProperty(fx, "modulate:a", 0.42f, QuestionCardToTransformAreaFlightSeconds);
 
-			await ToSignal(moveToTransformTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(moveToTransformTween);
 			if (!GodotObject.IsInstanceValid(animationRoot) || turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -106,7 +106,7 @@ public partial class GameBoardScene
 			card.PivotOffset = CardVisualSize / 2.0f;
 			PlayGameSfx(GameSfx.QuestionRewardTransform, -1.0f, 0.97f, 1.03f, 0.08);
 
-			Tween transformTween = CreateTween();
+			Tween transformTween = CreateBoardTween();
 			transformTween.SetParallel(true);
 			transformTween.SetTrans(Tween.TransitionType.Sine);
 			transformTween.SetEase(Tween.EaseType.InOut);
@@ -127,7 +127,7 @@ public partial class GameBoardScene
 				.SetEase(Tween.EaseType.Out);
 			transformTween.TweenProperty(fx, "modulate:a", 1.0f, QuestionCardTransformSeconds);
 
-			await ToSignal(transformTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(transformTween);
 			if (!GodotObject.IsInstanceValid(animationRoot) || turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;
@@ -146,7 +146,7 @@ public partial class GameBoardScene
 			animationRoot.Size = rewardVisualSize;
 			PlayGameSfx(GameSfx.QuestionRewardInsert, -2.0f, 0.97f, 1.04f, 0.08);
 
-			Tween insertTween = CreateTween();
+			Tween insertTween = CreateBoardTween();
 			insertTween.SetParallel(true);
 			insertTween.SetTrans(Tween.TransitionType.Sine);
 			insertTween.SetEase(Tween.EaseType.Out);
@@ -162,7 +162,7 @@ public partial class GameBoardScene
 			insertTween.TweenProperty(animationRoot, "scale", Vector2.One, QuestionCardRewardInsertSeconds);
 			insertTween.TweenProperty(fx, "modulate:a", 0.0f, QuestionCardRewardInsertSeconds);
 
-			await ToSignal(insertTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(insertTween);
 		}
 		finally
 		{

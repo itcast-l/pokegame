@@ -105,14 +105,18 @@ public partial class GameBoardScene
 		PauseMenu.Hide();
 	}
 
-	private async void ReturnToMainMenu()
+	private void ReturnToMainMenu()
 	{
-		await ReturnToMenuSceneAsync(MainMenuScenePath);
+		TrackBoardTask(
+			ReturnToMenuSceneAsync(MainMenuScenePath),
+			"ReturnToMainMenu");
 	}
 
-	private async void ReturnToAdventureMenu()
+	private void ReturnToAdventureMenu()
 	{
-		await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
+		TrackBoardTask(
+			ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath),
+			"ReturnToAdventureMenu");
 	}
 
 	private void ReturnToPauseMenuDestination()
@@ -207,7 +211,7 @@ public partial class GameBoardScene
 		HidePauseMenu();
 		if (ShouldUseAdventureUpgradeSystem())
 		{
-			_ = RestartAdventureJourneyFromPauseMenuAsync();
+			TrackBoardTask(RestartAdventureJourneyFromPauseMenuAsync(), nameof(RestartAdventureJourneyFromPauseMenuAsync));
 			return;
 		}
 		DealCardsToPlayers(playOpeningDealAnimation: true);
@@ -236,10 +240,17 @@ public partial class GameBoardScene
 			GD.PushWarning($"Failed to restart adventure journey: {gate.Result}");
 			return;
 		}
-		_ = StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId);
+		TrackBoardTask(StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId), nameof(StartNextAdventureStageWithTransitionAsync));
 	}
 
-	private async void ConfirmQuitGameFromPauseMenu()
+	private void ConfirmQuitGameFromPauseMenu()
+	{
+		TrackBoardTask(
+			ConfirmQuitGameFromPauseMenuAsync(),
+			nameof(ConfirmQuitGameFromPauseMenuAsync));
+	}
+
+	private async Task ConfirmQuitGameFromPauseMenuAsync()
 	{
 		if (_isLeavingGame)
 		{

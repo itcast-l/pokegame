@@ -7,7 +7,7 @@ public partial class GameBoardScene
 {
 	private void CheckForWinner()
 	{
-		_ = CheckForWinnerAsync(_turnSequenceGeneration);
+		TrackBoardTask(CheckForWinnerAsync(_turnSequenceGeneration), nameof(CheckForWinnerAsync));
 	}
 
 	private async Task<bool> CheckForWinnerAsync(int turnSequenceGeneration, bool bigCaptureTriggered = false)
@@ -89,7 +89,7 @@ public partial class GameBoardScene
 
 	private void ShowWinnerSequence(int playerIndex)
 	{
-		_ = ShowWinnerSequenceAsync(playerIndex);
+		TrackBoardTask(ShowWinnerSequenceAsync(playerIndex), nameof(ShowWinnerSequenceAsync));
 	}
 
 	private async Task ShowWinnerSequenceAsync(int playerIndex)

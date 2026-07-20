@@ -64,6 +64,9 @@ public partial class MainMenuOceanDynamics : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int image_update_fps = 30;
 
+	[Export]
+	public bool debug_force_missing_image_assets;
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Glint> _glints = new();
 	private readonly Vector2[] _sunbeamPoints = new Vector2[4];
@@ -82,8 +85,10 @@ public partial class MainMenuOceanDynamics : Control
 	private double _time;
 	private double _redrawAccumulator;
 	private VisualUpdateThrottle _imageUpdateThrottle;
-	private bool _imageAssetsLoaded;
+	private DynamicImageAssetState _imageAssetState;
 	private bool _pendingImageRebuild;
+	private int _resourceLoadCount;
+	private int _rebuildCount;
 	private OceanRenderMode _activeRenderMode = (OceanRenderMode)(-1);
 
 	private Texture2D[] _sunbeamFrames = Array.Empty<Texture2D>();
@@ -149,7 +154,7 @@ public partial class MainMenuOceanDynamics : Control
 		_time += delta * motion_scale;
 		if (_activeRenderMode == OceanRenderMode.ImageBased)
 		{
-			if (HasNoImageInstances())
+			if (_imageAssetState != DynamicImageAssetState.PermanentFallback && HasNoImageInstances())
 			{
 				EnsureImageAssetsLoaded(retryIfAllMissing: true);
 				RebuildImageInstances();
@@ -191,7 +196,10 @@ public partial class MainMenuOceanDynamics : Control
 
 		if (Size.X > 0.0f
 			&& Size.Y > 0.0f
-			&& (_pendingImageRebuild || (_activeRenderMode == OceanRenderMode.ImageBased && HasNoImageInstances())))
+			&& (_pendingImageRebuild
+				|| (_activeRenderMode == OceanRenderMode.ImageBased
+					&& _imageAssetState != DynamicImageAssetState.PermanentFallback
+					&& HasNoImageInstances())))
 		{
 			Rebuild();
 		}
@@ -284,6 +292,7 @@ public partial class MainMenuOceanDynamics : Control
 		}
 
 		_pendingImageRebuild = false;
+		_rebuildCount++;
 		RebuildParticleData();
 		if (_activeRenderMode == OceanRenderMode.ImageBased)
 		{

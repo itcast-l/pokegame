@@ -123,7 +123,7 @@ public partial class GameBoardScene
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees)
 	{
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Cubic);
 		tween.SetEase(Tween.EaseType.Out);
@@ -133,7 +133,7 @@ public partial class GameBoardScene
 		tween.TweenProperty(cardVisual, "modulate", Colors.White, 0.24f);
 		tween.TweenProperty(ring, "modulate:a", 0.75f, 0.18f);
 		FrameAnimationHelpers.TweenTextureFramesForDuration(tween, ring, _magnetAttachmentApplyRingFrames, 0.04f, 0.24f);
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
 	private async Task TweenMagnetAttachmentApplyAsync(
@@ -142,7 +142,7 @@ public partial class GameBoardScene
 		TextureRect? magnetOverlay,
 		TextureRect ring)
 	{
-		Tween closeTween = CreateTween();
+		Tween closeTween = CreateBoardTween();
 		closeTween.SetParallel(true);
 		closeTween.SetTrans(Tween.TransitionType.Cubic);
 		closeTween.SetEase(Tween.EaseType.In);
@@ -150,7 +150,7 @@ public partial class GameBoardScene
 		closeTween.TweenProperty(cardVisual, "modulate", new Color(0.82f, 1.0f, 0.98f, 1.0f), 0.18f);
 		closeTween.TweenProperty(ring, "modulate:a", 1.0f, 0.12f);
 		FrameAnimationHelpers.TweenTextureFramesForDuration(closeTween, ring, _magnetAttachmentApplyRingFrames, 0.03f, 0.18f);
-		await ToSignal(closeTween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(closeTween);
 
 		if (magnetOverlay != null)
 		{
@@ -158,7 +158,7 @@ public partial class GameBoardScene
 			magnetOverlay.Scale = Vector2.One;
 		}
 
-		Tween openTween = CreateTween();
+		Tween openTween = CreateBoardTween();
 		openTween.SetParallel(true);
 		openTween.SetTrans(Tween.TransitionType.Cubic);
 		openTween.SetEase(Tween.EaseType.Out);
@@ -167,7 +167,7 @@ public partial class GameBoardScene
 		openTween.TweenProperty(ring, "scale", Vector2.One * 1.18f, 0.28f);
 		openTween.TweenProperty(ring, "modulate:a", 0.0f, 0.28f);
 		FrameAnimationHelpers.TweenTextureFramesForDuration(openTween, ring, _magnetAttachmentApplyRingFrames, 0.045f, 0.28f);
-		await ToSignal(openTween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(openTween);
 	}
 
 	private async Task TweenMagnetAttachmentCardBackAsync(
@@ -177,7 +177,7 @@ public partial class GameBoardScene
 		Vector2 startGlobalPosition,
 		float startRotationDegrees)
 	{
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.InOut);
@@ -189,7 +189,7 @@ public partial class GameBoardScene
 			tween.TweenProperty(magnetOverlay, "modulate", Colors.White, 0.16f);
 		}
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 	}
 
 	private Vector2 GetHandCardGlobalPosition(int playerIndex, int handIndex)

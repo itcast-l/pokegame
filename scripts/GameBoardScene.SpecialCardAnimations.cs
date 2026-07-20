@@ -66,7 +66,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			if (_debugSpecialCardProbeRunning)
 			{
 				_debugSpecialCardProbeTween = tween;
@@ -105,7 +105,7 @@ public partial class GameBoardScene
 					_animationPresenter.Release(effectRoot);
 				}
 			};
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

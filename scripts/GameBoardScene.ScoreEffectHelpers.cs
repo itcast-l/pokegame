@@ -93,7 +93,7 @@ public partial class GameBoardScene
 			avatarRect.Position.Y - AvatarDamagePopupTopOffset);
 		Vector2 endPosition = damageLabel.Position + new Vector2(0.0f, -AvatarDamagePopupRise);
 
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Back);
 		tween.SetEase(Tween.EaseType.Out);
@@ -178,7 +178,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -206,7 +206,7 @@ public partial class GameBoardScene
 				1.0f,
 				flightSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 			if (turnSequenceGeneration == _turnSequenceGeneration && !IsGameOver())
 			{
 				onTouchTarget?.Invoke();
@@ -245,13 +245,13 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(pulse, "scale", baseScale * 1.34f, 0.22f);
 			tween.TweenProperty(pulse, "modulate:a", 0.0f, 0.22f);
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{
@@ -272,7 +272,7 @@ public partial class GameBoardScene
 	{
 		if (startDelaySeconds > 0.0f)
 		{
-			await ToSignal(GetTree().CreateTimer(startDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(startDelaySeconds);
 		}
 
 		PlayGameSfx(GameSfx.ScoreFlight, -5.0f, 0.96f, 1.06f, 0.08);
@@ -297,7 +297,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);
@@ -328,7 +328,7 @@ public partial class GameBoardScene
 				1.0f,
 				ScoreFillEffectFlightSeconds);
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 			onTouchTarget.Invoke();
 		}
 		finally
@@ -361,13 +361,13 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(pulse, "scale", baseScale * 1.22f, 0.18f);
 			tween.TweenProperty(pulse, "modulate:a", 0.0f, 0.18f);
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

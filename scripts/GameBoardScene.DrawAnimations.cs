@@ -49,7 +49,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await WaitForNextBoardFrameAsync();
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
@@ -139,7 +139,7 @@ public partial class GameBoardScene
 				showFaceOnLanding,
 				0.0f);
 
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
@@ -172,7 +172,7 @@ public partial class GameBoardScene
 					_animationPresenter.Release(flightCard);
 				}
 			};
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{
@@ -214,15 +214,13 @@ public partial class GameBoardScene
 		// Bind the visual tween to the board, not the rendered hand node. A
 		// network snapshot or prediction may replace that node while the settle
 		// effect is running; the playback queue still needs a bounded completion.
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Back);
 		tween.SetEase(Tween.EaseType.Out);
 		tween.TweenProperty(cardVisual, "scale", Vector2.One, ReplacementDrawSettleSeconds);
 		tween.TweenProperty(cardVisual, "modulate:a", 1.0f, ReplacementDrawSettleSeconds);
-		await ToSignal(
-			GetTree().CreateTimer(ReplacementDrawSettleSeconds),
-			SceneTreeTimer.SignalName.Timeout);
+		await WaitForBoardDelayAsync(ReplacementDrawSettleSeconds);
 		if (GodotObject.IsInstanceValid(tween))
 		{
 			tween.Kill();

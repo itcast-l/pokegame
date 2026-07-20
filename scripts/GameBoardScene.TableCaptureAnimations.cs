@@ -28,7 +28,7 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween revealTween = CreateTween();
+			Tween revealTween = CreateBoardTween();
 			revealTween.SetParallel(true);
 			revealTween.SetTrans(Tween.TransitionType.Cubic);
 			revealTween.SetEase(Tween.EaseType.Out);
@@ -50,7 +50,7 @@ public partial class GameBoardScene
 					_animationPresenter.Release(revealCard);
 				}
 			};
-			await ToSignal(revealTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(revealTween);
 		}
 		finally
 		{
@@ -93,13 +93,13 @@ public partial class GameBoardScene
 
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.Out);
 			tween.TweenProperty(pointLabel, "position", endPosition, TableCardPointPopupSeconds);
 			tween.TweenProperty(pointLabel, "modulate:a", 0.0f, TableCardPointPopupSeconds);
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{
@@ -258,7 +258,7 @@ public partial class GameBoardScene
 
 		PlayGameSfx(GameSfx.CaptureLift, -2.0f, 0.98f, 1.02f);
 		RenderTableCards();
-		Tween tween = CreateTween();
+		Tween tween = CreateBoardTween();
 		tween.SetParallel(true);
 		tween.SetTrans(Tween.TransitionType.Sine);
 		tween.SetEase(Tween.EaseType.Out);
@@ -276,7 +276,7 @@ public partial class GameBoardScene
 			TweenOverlay(secondOverlay);
 		}
 
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(tween);
 		return new PairCaptureEdgeFloatHold(firstTableCardIndex, firstOverlay, secondTableCardIndex, secondOverlay);
 	}
 
@@ -292,7 +292,7 @@ public partial class GameBoardScene
 
 		Vector2 settledScale = overlay.Scale;
 		Vector2 flippedScale = new(TableCardRevealMinScaleX * settledScale.X, settledScale.Y);
-		Tween revealTween = CreateTween();
+		Tween revealTween = CreateBoardTween();
 		revealTween.SetParallel(true);
 		revealTween.SetTrans(Tween.TransitionType.Cubic);
 		revealTween.SetEase(Tween.EaseType.Out);
@@ -307,7 +307,7 @@ public partial class GameBoardScene
 		})).SetDelay(TableCardRevealHalfFlipSeconds);
 		revealTween.TweenProperty(overlay, "scale", settledScale, TableCardRevealHalfFlipSeconds)
 			.SetDelay(TableCardRevealHalfFlipSeconds);
-		await ToSignal(revealTween, Tween.SignalName.Finished);
+		await WaitForBoardTweenAsync(revealTween);
 		return true;
 	}
 

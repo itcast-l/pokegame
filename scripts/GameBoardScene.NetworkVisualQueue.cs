@@ -799,10 +799,10 @@ public partial class GameBoardScene
 			if (points > 0 && _tableCards[tableCardIndex].Card.HasValue)
 			{
 				bool isDouble = entry.PointDoubleFlag;
-				_ = PlayTableCardPointPopupAsync(tableCardIndex, points, isDouble);
+				TrackBoardTask(PlayTableCardPointPopupAsync(tableCardIndex, points, isDouble), nameof(PlayTableCardPointPopupAsync));
 			}
 
-			await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 		}
 	}
 }

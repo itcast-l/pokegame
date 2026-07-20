@@ -61,7 +61,7 @@ public partial class GameBoardScene
 			RenderTableCards();
 
 			vortex = CreateTableShuffleVortex(GetQuestionCardTransformAreaCardGlobalPosition(Vector2.Zero) + CardVisualSize / 2.0f);
-			gatherTween = CreateTween();
+			gatherTween = CreateBoardTween();
 			gatherTween.SetParallel(true);
 			gatherTween.SetTrans(Tween.TransitionType.Sine);
 			gatherTween.SetEase(Tween.EaseType.InOut);
@@ -81,7 +81,7 @@ public partial class GameBoardScene
 			}
 			gatherTween.TweenProperty(vortex, "modulate:a", 1.0f, TableShuffleGatherSeconds * 0.55f);
 			gatherTween.TweenProperty(vortex, "scale", Vector2.One * 1.08f, TableShuffleGatherSeconds);
-			vortexFrameTween = CreateTween();
+			vortexFrameTween = CreateBoardTween();
 			vortexFrameTween.SetParallel(true);
 			FrameAnimationHelpers.TweenTextureFramesForDuration(
 				vortexFrameTween,
@@ -90,13 +90,13 @@ public partial class GameBoardScene
 				(TableShuffleGatherSeconds + TableShuffleScatterSeconds) / Mathf.Max(1, _tableShuffleVortexFrames.Count),
 				TableShuffleGatherSeconds + TableShuffleScatterSeconds);
 
-			await ToSignal(gatherTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(gatherTween);
 			if (!OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards))
 			{
 				return false;
 			}
 
-			scatterTween = CreateTween();
+			scatterTween = CreateBoardTween();
 			scatterTween.SetParallel(true);
 			scatterTween.SetTrans(Tween.TransitionType.Sine);
 			scatterTween.SetEase(Tween.EaseType.InOut);
@@ -121,7 +121,7 @@ public partial class GameBoardScene
 			scatterTween.TweenProperty(vortex, "modulate:a", 0.0f, TableShuffleScatterSeconds);
 			scatterTween.TweenProperty(vortex, "scale", Vector2.One * 1.22f, TableShuffleScatterSeconds);
 
-			await ToSignal(scatterTween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(scatterTween);
 			return OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards);
 		}
 		finally
@@ -215,7 +215,7 @@ public partial class GameBoardScene
 		Control?[] flightCards = new Control?[tideShiftVisuals.Count];
 		try
 		{
-			Tween tween = CreateTween();
+			Tween tween = CreateBoardTween();
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Sine);
 			tween.SetEase(Tween.EaseType.InOut);
@@ -247,7 +247,7 @@ public partial class GameBoardScene
 					.SetDelay(delay);
 			}
 
-			await ToSignal(tween, Tween.SignalName.Finished);
+			await WaitForBoardTweenAsync(tween);
 		}
 		finally
 		{

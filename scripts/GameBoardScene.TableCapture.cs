@@ -112,7 +112,7 @@ public partial class GameBoardScene
 			{
 				bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
 				int popupPoints = GetCapturedTableCardScoreValueForPlayer(tableCard, scorePlayerIndex, hasDoubleEffect);
-				_ = PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect);
+				TrackBoardTask(PlayTableCardPointPopupAsync(tableCardIndex, popupPoints, hasDoubleEffect), nameof(PlayTableCardPointPopupAsync));
 			}
 
 			if (shouldResolveAttachedTableCardTriggers && tableCard.Card.HasValue && IsAttachedEffectType(tableCard.Card.Value, CardEffectTypes.MagnetExtraCapture))
@@ -150,7 +150,7 @@ public partial class GameBoardScene
 				}
 			}
 
-			await ToSignal(GetTree().CreateTimer(TableCardRevealPauseSeconds), SceneTreeTimer.SignalName.Timeout);
+			await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
 				return;

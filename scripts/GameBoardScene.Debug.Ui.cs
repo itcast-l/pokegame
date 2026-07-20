@@ -96,7 +96,7 @@ public partial class GameBoardScene
 		}
 
 		ResetDebugAwaitProbeResult(result);
-		_ = RunDebugAdventureUpgradeSelectionAwaitProbeAsync(result);
+		TrackBoardTask(RunDebugAdventureUpgradeSelectionAwaitProbeAsync(result), nameof(RunDebugAdventureUpgradeSelectionAwaitProbeAsync));
 		return true;
 	}
 
@@ -112,7 +112,7 @@ public partial class GameBoardScene
 			result["outcome"] = selection.Outcome.ToString();
 			result["selected_index"] = selection.SelectedIndex;
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			result["error"] = exception.ToString();
 		}
@@ -162,7 +162,7 @@ public partial class GameBoardScene
 		}
 
 		ResetDebugAwaitProbeResult(result);
-		_ = RunDebugAdventureQuestionRejudgeAwaitProbeAsync(rewardItem.Value, result);
+		TrackBoardTask(RunDebugAdventureQuestionRejudgeAwaitProbeAsync(rewardItem.Value, result), nameof(RunDebugAdventureQuestionRejudgeAwaitProbeAsync));
 		return true;
 	}
 
@@ -178,7 +178,7 @@ public partial class GameBoardScene
 			result["rect_is_empty"] = prompt.PreviewGlobalRect == new Rect2();
 			result["overlay_is_null"] = prompt.Overlay == null;
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !IsBoardStopping)
 		{
 			result["error"] = exception.ToString();
 		}

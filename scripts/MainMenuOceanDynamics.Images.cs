@@ -5,7 +5,7 @@ using Godot;
 
 public partial class MainMenuOceanDynamics
 {
-	private Texture2D? GetBubbleTexture()
+	private Texture2D? GetBubbleTexture(bool warnIfMissing = true)
 	{
 		if (_bubbleTextureLoadAttempted)
 		{
@@ -29,7 +29,7 @@ public partial class MainMenuOceanDynamics
 			}
 		}
 
-		if (_bubbleTexture == null)
+		if (_bubbleTexture == null && warnIfMissing)
 		{
 			GD.PushWarning($"Missing main menu bubble texture: {BubbleTexturePath}");
 		}
@@ -39,19 +39,64 @@ public partial class MainMenuOceanDynamics
 
 	private void EnsureImageAssetsLoaded(bool retryIfAllMissing = false)
 	{
-		if (_imageAssetsLoaded && !(retryIfAllMissing && AllImageFramesMissing()))
+		if (_imageAssetState != DynamicImageAssetState.Uninitialized)
 		{
 			return;
 		}
 
-		_sunbeamFrames = FrameAnimationHelpers.LoadTextureFrames(SunbeamFramePattern, SunbeamFrameCount, "main menu sunbeam", preferImageFile: true);
-		_surfaceWakeFrames = FrameAnimationHelpers.LoadTextureFrames(SurfaceWakeFramePattern, SurfaceWakeFrameCount, "main menu surface wake", preferImageFile: true);
-		_currentRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(CurrentRibbonFramePattern, CurrentRibbonFrameCount, "main menu current ribbon", preferImageFile: true);
-		_causticRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(CausticRibbonFramePattern, CausticRibbonFrameCount, "main menu caustic ribbon", preferImageFile: true);
-		_glintFrames = FrameAnimationHelpers.LoadTextureFrames(GlintFramePattern, GlintFrameCount, "main menu glint", preferImageFile: true);
-		_ = GetBubbleTexture();
-		_imageAssetsLoaded = true;
+		_resourceLoadCount++;
+		if (debug_force_missing_image_assets)
+		{
+			_sunbeamFrames = Array.Empty<Texture2D>();
+			_surfaceWakeFrames = Array.Empty<Texture2D>();
+			_currentRibbonFrames = Array.Empty<Texture2D>();
+			_causticRibbonFrames = Array.Empty<Texture2D>();
+			_glintFrames = Array.Empty<Texture2D>();
+			_bubbleTexture = null;
+			_bubbleTextureLoadAttempted = true;
+		}
+		else
+		{
+			_sunbeamFrames = FrameAnimationHelpers.LoadTextureFrames(SunbeamFramePattern, SunbeamFrameCount, "main menu sunbeam", preferImageFile: true, warnMissingFrames: false);
+			_surfaceWakeFrames = FrameAnimationHelpers.LoadTextureFrames(SurfaceWakeFramePattern, SurfaceWakeFrameCount, "main menu surface wake", preferImageFile: true, warnMissingFrames: false);
+			_currentRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(CurrentRibbonFramePattern, CurrentRibbonFrameCount, "main menu current ribbon", preferImageFile: true, warnMissingFrames: false);
+			_causticRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(CausticRibbonFramePattern, CausticRibbonFrameCount, "main menu caustic ribbon", preferImageFile: true, warnMissingFrames: false);
+			_glintFrames = FrameAnimationHelpers.LoadTextureFrames(GlintFramePattern, GlintFrameCount, "main menu glint", preferImageFile: true, warnMissingFrames: false);
+			_ = GetBubbleTexture(warnIfMissing: false);
+		}
+
+		_imageAssetState = AllImageFramesMissing()
+			? DynamicImageAssetState.PermanentFallback
+			: DynamicImageAssetState.Ready;
+		if (_imageAssetState == DynamicImageAssetState.PermanentFallback)
+		{
+			GD.PushWarning("Dynamic background image assets unavailable: MainMenuOceanDynamics. Using permanent procedural fallback.");
+		}
 	}
+
+	public void ReloadImageAssets()
+	{
+		if (!Engine.IsEditorHint() && !OS.IsDebugBuild())
+		{
+			return;
+		}
+
+		_imageAssetState = DynamicImageAssetState.Uninitialized;
+		_sunbeamFrames = Array.Empty<Texture2D>();
+		_surfaceWakeFrames = Array.Empty<Texture2D>();
+		_currentRibbonFrames = Array.Empty<Texture2D>();
+		_causticRibbonFrames = Array.Empty<Texture2D>();
+		_glintFrames = Array.Empty<Texture2D>();
+		_bubbleTexture = null;
+		_bubbleTextureLoadAttempted = false;
+		ClearImageInstances();
+		EnsureImageAssetsLoaded();
+		Rebuild();
+	}
+
+	public int DebugGetResourceLoadCount() => _resourceLoadCount;
+	public int DebugGetRebuildCount() => _rebuildCount;
+	public string DebugGetImageAssetStateName() => _imageAssetState.ToString();
 
 	private bool AllImageFramesMissing()
 	{
