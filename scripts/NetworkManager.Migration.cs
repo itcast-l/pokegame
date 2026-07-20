@@ -51,7 +51,7 @@ public partial class NetworkManager
 	public bool DebugHasMigrationArtifacts()
 	{
 		return _networkMigrationPlan != null
-			|| _latestAuthorityCheckpoint.Length > 0
+			|| _latestAuthorityCheckpointEnvelope.HasPayload
 			|| _standbyCheckpointPayload.Length > 0
 			|| _sessionMigrationTokensBySeat.Count > 0
 			|| !string.IsNullOrEmpty(_localSessionMigrationToken);
@@ -89,18 +89,19 @@ public partial class NetworkManager
 		NetworkAuthorityPhase phase = _state == NetworkSessionState.Lobby
 			? NetworkAuthorityPhase.Lobby
 			: NetworkAuthorityPhase.InGame;
+		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!_standbyCheckpointAcked
-			|| _standbyAckedCheckpointId != _latestAuthorityCheckpointId
+			|| _standbyAckedCheckpointId != latestEnvelope.CheckpointId
 			|| string.IsNullOrWhiteSpace(_standbyCandidateHostAddress))
 		{
-			GD.Print($"MIGRATION_ACTIVE_REJECT reason=CandidateUnavailable acked={_standbyCheckpointAcked} acked_id={_standbyAckedCheckpointId} latest_id={_latestAuthorityCheckpointId} address={_standbyCandidateHostAddress}");
+			GD.Print($"MIGRATION_ACTIVE_REJECT reason=CandidateUnavailable acked={_standbyCheckpointAcked} acked_id={_standbyAckedCheckpointId} latest_id={latestEnvelope.CheckpointId} address={_standbyCandidateHostAddress}");
 			EmitSignal(SignalName.ErrorRaised, NetworkMigrationFailureCode.CandidateUnavailable.ToString());
 			return false;
 		}
 
 		if (_networkMigrationPlan is not { } plan
 			|| plan.Phase != phase
-			|| plan.CheckpointId != _latestAuthorityCheckpointId)
+			|| plan.CheckpointId != latestEnvelope.CheckpointId)
 		{
 			BroadcastMigrationPlanIfReady(_hotStandbySeat, _standbyCandidateHostAddress);
 			plan = _networkMigrationPlan;
@@ -289,10 +290,11 @@ public partial class NetworkManager
 
 	private void SendCheckpointToHotStandbyIfNeeded(double now = -1.0)
 	{
+		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
 			|| IsMigrationReadinessFenceActive()
-			|| _latestAuthorityCheckpoint.Length == 0)
+			|| !latestEnvelope.HasPayload)
 		{
 			return;
 		}
@@ -330,18 +332,18 @@ public partial class NetworkManager
 		}
 
 		if (_standbyCheckpointAcked
-			&& _standbyAckedCheckpointId == _latestAuthorityCheckpointId)
+			&& _standbyAckedCheckpointId == latestEnvelope.CheckpointId)
 		{
 			return;
 		}
 
-		if (_standbyPendingCheckpointId == _latestAuthorityCheckpointId
+		if (_standbyPendingCheckpointId == latestEnvelope.CheckpointId
 			&& _standbyCheckpointSentAt >= 0.0)
 		{
 			return;
 		}
 
-		if (_standbyPendingCheckpointId != _latestAuthorityCheckpointId)
+		if (_standbyPendingCheckpointId != latestEnvelope.CheckpointId)
 		{
 			_networkMigrationPlan = null;
 			_standbyCheckpointAcked = false;
@@ -354,11 +356,11 @@ public partial class NetworkManager
 				_config.SessionId,
 				_config.MatchId,
 				GetCurrentAuthorityEpoch(),
-				_latestAuthorityCheckpoint,
-				_latestAuthorityCheckpointHash,
-				_latestAuthorityCheckpointId
+				latestEnvelope.GetPayloadCopy(),
+				latestEnvelope.Hash,
+				latestEnvelope.CheckpointId
 				);
-		_standbyPendingCheckpointId = _latestAuthorityCheckpointId;
+		_standbyPendingCheckpointId = latestEnvelope.CheckpointId;
 		_standbyCheckpointSentAt = now;
 	}
 
@@ -442,11 +444,12 @@ public partial class NetworkManager
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
+		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!TryResolveSeatFromPeer(senderPeerId, out int senderSeat)
 			|| senderSeat != _hotStandbySeat
 			|| !accepted
-			|| checkpointId != _latestAuthorityCheckpointId
-			|| !string.Equals(hash, _latestAuthorityCheckpointHash, StringComparison.Ordinal)
+			|| checkpointId != latestEnvelope.CheckpointId
+			|| !string.Equals(hash, latestEnvelope.Hash, StringComparison.Ordinal)
 			|| string.IsNullOrWhiteSpace(candidateHostAddress))
 		{
 			if (!accepted)
@@ -653,15 +656,16 @@ public partial class NetworkManager
 
 	private void BroadcastMigrationPlanIfReady(int candidateSeat, string candidateHostAddress)
 	{
+		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!IsHost
 			|| IsMigrationReadinessFenceActive()
-			|| _latestAuthorityCheckpoint.Length == 0
+			|| !latestEnvelope.HasPayload
 			|| !TryGetPlayerBySeat(candidateSeat, out NetworkPlayerPublicState candidate))
 		{
 			return;
 		}
 
-		string advertisedCheckpointHash = _latestAuthorityCheckpointHash;
+		string advertisedCheckpointHash = latestEnvelope.Hash;
 		if (OS.GetEnvironment("CODEX_LAN_MIGRATION_CORRUPT_HASH") == "1")
 		{
 			advertisedCheckpointHash = new string('0', 64);
@@ -673,7 +677,7 @@ public partial class NetworkManager
 			MatchId = _config.MatchId,
 			SourceEpoch = GetCurrentAuthorityEpoch(),
 			TargetEpoch = GetCurrentAuthorityEpoch() + 1,
-			CheckpointId = _latestAuthorityCheckpointId,
+			CheckpointId = latestEnvelope.CheckpointId,
 			CheckpointHash = advertisedCheckpointHash,
 			CandidateStableUserId = candidate.StableUserId,
 			CandidateSeat = candidate.SeatIndex,
@@ -904,9 +908,11 @@ public partial class NetworkManager
 			GD.Print($"MIGRATION_CHECKPOINT_RESTORED checkpoint={migrationPlan.CheckpointId} at={Time.GetTicksMsec() / 1000.0:0.000}");
 			gameBoard.AdvanceNetworkAuthorityEpoch(migrationPlan.TargetEpoch);
 			_authorityEpoch = migrationPlan.TargetEpoch;
-			_latestAuthorityCheckpoint = standbyCheckpointPayload;
-			_latestAuthorityCheckpointHash = standbyCheckpointHash;
-			_latestAuthorityCheckpointId = checkpoint.CheckpointId;
+			_latestAuthorityCheckpointEnvelope = new AuthorityCheckpointEnvelope(
+				checkpoint.AuthorityEpoch,
+				checkpoint.CheckpointId,
+				standbyCheckpointPayload,
+				standbyCheckpointHash);
 			BeginMigrationReadinessFence(migrationPlan, checkpoint.SeatControls);
 			MarkCandidateAsNewHost(migrationPlan.CandidateSeat, migrationPlan.SourceStableUserId);
 			SetState(NetworkSessionState.InGame);
@@ -1280,21 +1286,39 @@ public partial class NetworkManager
 		Godot.Collections.Dictionary raw,
 		out NetworkMigrationPlan plan)
 	{
+		plan = new NetworkMigrationPlan();
+		if (!NetworkVariantReader.TryReadString(raw, "session_id", NetworkProtocol.MaxSessionIdLength, out string sessionId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(raw, "match_id", NetworkProtocol.MaxMatchIdLength, out string matchId)
+			|| !NetworkVariantReader.TryReadInt64(raw, "source_epoch", 0, long.MaxValue, out long sourceEpoch)
+			|| !NetworkVariantReader.TryReadInt64(raw, "target_epoch", 0, long.MaxValue, out long targetEpoch)
+			|| !NetworkVariantReader.TryReadInt64(raw, "checkpoint_id", 0, long.MaxValue, out long checkpointId)
+			|| !NetworkVariantReader.TryReadString(raw, "checkpoint_hash", 64, out string checkpointHash, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(raw, "candidate_stable_user_id", NetworkProtocol.MaxPlayerIdLength, out string candidateStableUserId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadInt32(raw, "candidate_seat", 0, NetworkSessionDefaults.MaxPlayers - 1, out int candidateSeat)
+			|| !NetworkVariantReader.TryReadString(raw, "observed_host_address", NetworkProtocol.MaxAddressLength, out string observedHostAddress, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(raw, "candidate_host_address", NetworkProtocol.MaxAddressLength, out string candidateHostAddress, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadInt32(raw, "port", 1, ushort.MaxValue, out int port)
+			|| !NetworkVariantReader.TryReadString(raw, "source_stable_user_id", NetworkProtocol.MaxPlayerIdLength, out string sourceStableUserId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadEnum(raw, "authority_phase", out NetworkAuthorityPhase phase))
+		{
+			return false;
+		}
+
 		plan = new NetworkMigrationPlan
 		{
-			SessionId = ReadString(raw, "session_id"),
-			MatchId = ReadString(raw, "match_id"),
-			SourceEpoch = ReadLong(raw, "source_epoch"),
-			TargetEpoch = ReadLong(raw, "target_epoch"),
-			CheckpointId = ReadLong(raw, "checkpoint_id"),
-			CheckpointHash = ReadString(raw, "checkpoint_hash"),
-			CandidateStableUserId = ReadString(raw, "candidate_stable_user_id"),
-			CandidateSeat = ReadInt(raw, "candidate_seat", -1),
-			ObservedHostAddress = ReadString(raw, "observed_host_address"),
-			CandidateHostAddress = ReadString(raw, "candidate_host_address"),
-			Port = ReadInt(raw, "port", 0),
-			SourceStableUserId = ReadString(raw, "source_stable_user_id"),
-			Phase = ReadEnum(raw, "authority_phase", NetworkAuthorityPhase.InGame),
+			SessionId = sessionId,
+			MatchId = matchId,
+			SourceEpoch = sourceEpoch,
+			TargetEpoch = targetEpoch,
+			CheckpointId = checkpointId,
+			CheckpointHash = checkpointHash,
+			CandidateStableUserId = candidateStableUserId,
+			CandidateSeat = candidateSeat,
+			ObservedHostAddress = observedHostAddress,
+			CandidateHostAddress = candidateHostAddress,
+			Port = port,
+			SourceStableUserId = sourceStableUserId,
+			Phase = phase,
 		};
 		return NetworkMigrationRules.IsPlanVisibleToClients(plan);
 	}

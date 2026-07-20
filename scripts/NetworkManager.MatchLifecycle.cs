@@ -163,21 +163,10 @@ public partial class NetworkManager
 			return;
 		}
 
-		NetworkSessionConfig lobbyConfig = ParseSharedConfig(config);
-		var connectedPlayers = new List<NetworkPlayerPublicState>();
 		int localPeerId = GetLocalPeerId();
-		foreach (Variant variant in players)
+		if (!TryDecodeLobbyState(config, players, localPeerId, out NetworkSessionConfig lobbyConfig, out List<NetworkPlayerPublicState> connectedPlayers))
 		{
-			if (variant.AsGodotDictionary() is not { } playerDictionary)
-			{
-				return;
-			}
-
-			NetworkPlayerPublicState player = ParsePlayer(playerDictionary);
-			connectedPlayers.Add(player with
-			{
-				IsLocal = player.PeerId == localPeerId || (localPeerId == 0 && player.IsHost),
-			});
+			return;
 		}
 		bool validReturn = MultiplayerRematchRules.IsValidAuthorityReturn(_config, lobbyConfig, connectedPlayers);
 		if (!validReturn)
@@ -188,10 +177,7 @@ public partial class NetworkManager
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
 		_config = lobbyConfig;
 		_players.Clear();
-		foreach (NetworkPlayerPublicState player in connectedPlayers)
-		{
-			InsertPlayerInSeatOrder(player);
-		}
+		_players.AddRange(connectedPlayers);
 
 		ResetCompletedMatchState();
 		if (IsHost)
@@ -226,9 +212,9 @@ public partial class NetworkManager
 		_reconnectAttemptInFlight = false;
 		ResetClientActionIds();
 
-		_latestAuthorityCheckpoint = Array.Empty<byte>();
-		_latestAuthorityCheckpointHash = string.Empty;
-		_latestAuthorityCheckpointId = 0;
+		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_authorityCheckpointCommitFailureCount = 0;
+		_authorityCheckpointCommitFailureReported = false;
 		_networkMigrationPlan = null;
 		_standbyCheckpoint = null;
 		_standbyCheckpointPayload = Array.Empty<byte>();
@@ -298,9 +284,9 @@ public partial class NetworkManager
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
 		ResetClientActionIds();
-		_latestAuthorityCheckpoint = Array.Empty<byte>();
-		_latestAuthorityCheckpointHash = string.Empty;
-		_latestAuthorityCheckpointId = 0;
+		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_authorityCheckpointCommitFailureCount = 0;
+		_authorityCheckpointCommitFailureReported = false;
 		_networkMigrationPlan = null;
 		_standbyCheckpoint = null;
 		_standbyCheckpointPayload = Array.Empty<byte>();

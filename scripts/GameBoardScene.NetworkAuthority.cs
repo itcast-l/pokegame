@@ -236,7 +236,13 @@ public partial class GameBoardScene
 
 		if (_pendingItemSelectionMode == PendingItemSelectionMode.HandLimitDiscard)
 		{
-			if (!IsValidHandLimitDiscardSelection(actorSeatIndex, selectionIndex) || _pendingHandLimitDiscardCompletion == null)
+			if (!IsValidHandLimitDiscardSelection(actorSeatIndex, selectionIndex)
+				|| _pendingHandLimitDiscardCompletion == null
+				|| _pendingHandLimitDiscardCompletion.Task.IsCompleted
+				|| !CanCommitPendingNetworkSelection(
+					AuthorityActionPhase.WaitingDiscard,
+					actorSeatIndex,
+					turnSequenceGeneration))
 			{
 				rejectReason = MultiplayerBoardActionRejectReason.InvalidHandIndex;
 				return false;
@@ -257,7 +263,13 @@ public partial class GameBoardScene
 		if (_pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard)
 		{
 			if (!IsValidMagnetAttachmentHandIndex(actorSeatIndex, selectionIndex, _pendingItemCardId)
-				|| _pendingMagnetAttachmentCompletion == null)
+				|| _pendingMagnetAttachmentCompletion == null
+				|| _pendingMagnetAttachmentCompletion.Task.IsCompleted
+				|| _isAnimatingMagnetAttachment
+				|| !CanCommitPendingNetworkSelection(
+					AuthorityActionPhase.WaitingAttachment,
+					actorSeatIndex,
+					turnSequenceGeneration))
 			{
 				rejectReason = MultiplayerBoardActionRejectReason.InvalidHandIndex;
 				return false;
@@ -277,6 +289,18 @@ public partial class GameBoardScene
 
 		rejectReason = MultiplayerBoardActionRejectReason.InvalidHandIndex;
 		return false;
+	}
+
+	private bool CanCommitPendingNetworkSelection(
+		AuthorityActionPhase expectedPhase,
+		int actorSeatIndex,
+		int turnSequenceGeneration)
+	{
+		return AuthorityActionStateRules.CanCommitPendingSelection(
+			_networkAuthorityActionState,
+			expectedPhase,
+			actorSeatIndex,
+			turnSequenceGeneration);
 	}
 
 	private bool CanFinalizeNetworkAuthorityAction(

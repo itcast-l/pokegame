@@ -28,13 +28,12 @@ public partial class GameBoardScene
 
 	private static bool TryReadNetworkInt32(Godot.Collections.Dictionary payload, string key, out int value)
 	{
-		value = 0;
-		return payload.TryGetValue(key, out Variant rawValue) && TryConvertNetworkInt32(rawValue, out value);
+		return NetworkVariantReader.TryReadInt32(payload, key, int.MinValue, int.MaxValue, out value);
 	}
 
 	private static bool TryReadNetworkInt32(Godot.Collections.Dictionary payload, string key, int minimum, int maximum, out int value)
 	{
-		return TryReadNetworkInt32(payload, key, out value) && value >= minimum && value <= maximum;
+		return NetworkVariantReader.TryReadInt32(payload, key, minimum, maximum, out value);
 	}
 
 	private static bool TryReadOptionalNetworkInt32(
@@ -45,58 +44,32 @@ public partial class GameBoardScene
 		int maximum,
 		out int value)
 	{
-		if (!payload.ContainsKey(key))
-		{
-			value = fallback;
-			return true;
-		}
-
-		return TryReadNetworkInt32(payload, key, minimum, maximum, out value);
+		return NetworkVariantReader.TryReadOptionalInt32(payload, key, fallback, minimum, maximum, out value);
 	}
 
 	private static bool TryReadNetworkString(Godot.Collections.Dictionary payload, string key, out string value)
 	{
-		value = string.Empty;
-		if (!payload.TryGetValue(key, out Variant rawValue) || rawValue.VariantType != Variant.Type.String)
-		{
-			return false;
-		}
-		value = rawValue.AsString();
-		return true;
+		return NetworkVariantReader.TryReadString(payload, key, int.MaxValue, out value);
 	}
 
 	private static bool TryReadNetworkString(Godot.Collections.Dictionary payload, string key, int maximumLength, out string value)
 	{
-		return TryReadNetworkString(payload, key, out value) && value.Length <= maximumLength;
+		return NetworkVariantReader.TryReadString(payload, key, maximumLength, out value);
 	}
 
 	private static bool TryReadOptionalNetworkString(Godot.Collections.Dictionary payload, string key, out string value)
 	{
-		value = string.Empty;
-		return !payload.ContainsKey(key) || TryReadNetworkString(payload, key, out value);
+		return NetworkVariantReader.TryReadOptionalString(payload, key, int.MaxValue, string.Empty, out value);
 	}
 
 	private static bool TryReadNetworkBool(Godot.Collections.Dictionary payload, string key, out bool value)
 	{
-		value = false;
-		if (!payload.TryGetValue(key, out Variant rawValue) || rawValue.VariantType != Variant.Type.Bool) return false;
-		value = rawValue.AsBool();
-		return true;
+		return NetworkVariantReader.TryReadBool(payload, key, out value);
 	}
 
 	private static bool TryReadNetworkFiniteFloat(Godot.Collections.Dictionary payload, string key, out float value)
 	{
-		value = 0.0f;
-		if (!payload.TryGetValue(key, out Variant rawValue) || rawValue.VariantType != Variant.Type.Float) return false;
-		double raw = rawValue.AsDouble();
-		if (!double.IsFinite(raw) || raw < -float.MaxValue || raw > float.MaxValue) return false;
-		value = (float)raw;
-		return true;
+		return NetworkVariantReader.TryReadFiniteFloat(payload, key, -float.MaxValue, float.MaxValue, out value);
 	}
 
-	private static string ReadNetworkString(Godot.Collections.Dictionary payload, string key, string fallback) => TryReadNetworkString(payload, key, out string value) ? value : fallback;
-	private static int ReadNetworkInt(Godot.Collections.Dictionary payload, string key, int fallback) => TryReadNetworkInt32(payload, key, out int value) ? value : fallback;
-	private static long ReadNetworkLong(Godot.Collections.Dictionary payload, string key, long fallback) => payload.TryGetValue(key, out Variant value) && value.VariantType == Variant.Type.Int ? value.AsInt64() : fallback;
-	private static bool ReadNetworkBool(Godot.Collections.Dictionary payload, string key, bool fallback) => TryReadNetworkBool(payload, key, out bool value) ? value : fallback;
-	private static float ReadNetworkFloat(Godot.Collections.Dictionary payload, string key, float fallback) => TryReadNetworkFiniteFloat(payload, key, out float value) ? value : fallback;
 }

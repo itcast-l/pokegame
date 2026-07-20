@@ -1,12 +1,17 @@
 public static class NetworkProtocol
 {
-	public const int CurrentVersion = 7;
-	public const int AuthorityCheckpointSchemaVersion = 2;
+	public const int CurrentVersion = 8;
+	public const int AuthorityCheckpointSchemaVersion = 3;
 	public const int MaxAuthorityCheckpointBytes = 256 * 1024;
 	public const int MaxAuthorityCheckpointPlayers = 4;
+	public const int MaxAuthorityActionQueueCount = 64;
 	public const int LanHostMigrationPort = 37146;
 	public const int MaxSessionIdLength = 128;
 	public const int MaxMatchIdLength = 128;
+	public const int MaxPlayerIdLength = 128;
+	public const int MaxAddressLength = 64;
+	public const int MaxRemoteErrorLength = 160;
+	public const int MaxCredentialEncodedLength = 128;
 	public const int MaxMigrationTokenLength = 128;
 }
 

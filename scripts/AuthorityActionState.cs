@@ -556,6 +556,21 @@ public static class AuthorityActionStateRules
 		};
 	}
 
+	public static bool CanCommitPendingSelection(
+		AuthorityActionState? state,
+		AuthorityActionPhase expectedPhase,
+		int actorSeat,
+		int turnGeneration)
+	{
+		return state is not null
+			&& state.IsActive
+			&& expectedPhase is AuthorityActionPhase.WaitingDiscard or AuthorityActionPhase.WaitingAttachment
+			&& state.Phase == expectedPhase
+			&& state.SelectionIndex == -1
+			&& state.ActorSeat == actorSeat
+			&& state.TurnGeneration == turnGeneration;
+	}
+
 	public static bool HasCommittedSelection(AuthorityActionState state)
 	{
 		ArgumentNullException.ThrowIfNull(state);

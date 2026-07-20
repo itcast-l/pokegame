@@ -829,17 +829,4 @@ public partial class NetworkManager : Node
 		EmitSignal(SignalName.SeatControlStatesUpdated);
 	}
 
-	private NetworkSessionConfig ParseSharedConfig(Godot.Collections.Dictionary dictionary)
-	{
-		NetworkSessionConfig parsed = ParseConfig(dictionary);
-		if (IsHost
-			&& RoomPasswordRules.HasPassword(_config.RoomPassword)
-			&& !RoomPasswordRules.HasPassword(parsed.RoomPassword))
-		{
-			return parsed with { RoomPassword = _config.RoomPassword };
-		}
-
-		return parsed;
-	}
-
 }

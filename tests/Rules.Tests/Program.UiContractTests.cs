@@ -1447,10 +1447,10 @@ internal static partial class Program
 
 		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(partialText.Contains("private static Godot.Collections.Dictionary ToDictionary(NetworkSessionConfig config)", StringComparison.Ordinal));
-		True(partialText.Contains("private static NetworkSessionConfig ParseConfig(Godot.Collections.Dictionary dictionary)", StringComparison.Ordinal));
-		True(partialText.Contains("private static NetworkPlayerPublicState ParsePlayer(Godot.Collections.Dictionary dictionary)", StringComparison.Ordinal));
+		True(partialText.Contains("private bool TryParseSharedConfig(", StringComparison.Ordinal));
+		True(partialText.Contains("private static bool TryParsePlayer(", StringComparison.Ordinal));
 		False(mainText.Contains("private static Godot.Collections.Dictionary ToDictionary(NetworkSessionConfig config)", StringComparison.Ordinal));
-		False(mainText.Contains("private static NetworkPlayerPublicState ParsePlayer(Godot.Collections.Dictionary dictionary)", StringComparison.Ordinal));
+		False(mainText.Contains("private static bool TryParsePlayer(", StringComparison.Ordinal));
 		False(mainText.Contains("private static TEnum ReadEnum<TEnum>", StringComparison.Ordinal));
 	}
 

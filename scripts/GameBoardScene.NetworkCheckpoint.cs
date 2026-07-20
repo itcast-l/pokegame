@@ -48,15 +48,12 @@ public partial class GameBoardScene
 		ResetNetworkPredictedClientState();
 	}
 
-	internal bool TryExportAuthorityCheckpoint(
+	internal bool TryBuildAuthorityCheckpointEnvelope(
 		IReadOnlyDictionary<int, long> lastAcceptedClientActionIds,
-		out byte[] payload,
-		out string hash,
-		out long checkpointId)
+		long candidateCheckpointId,
+		out AuthorityCheckpointEnvelope envelope)
 	{
-		payload = Array.Empty<byte>();
-		hash = string.Empty;
-		checkpointId = _networkCheckpointId;
+		envelope = AuthorityCheckpointEnvelope.Empty;
 		NetworkManager? networkManager = GetNetworkManager();
 		if (!IsNetworkMultiplayerMode() || !IsNetworkHost() || networkManager == null)
 		{
@@ -66,11 +63,13 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (candidateCheckpointId <= _networkCheckpointId)
+		{
+			return false;
+		}
 
 		EnsureNetworkCardCache();
 		NetworkSessionConfig config = networkManager.CurrentConfig;
-		_networkCheckpointId++;
-		checkpointId = _networkCheckpointId;
 		var checkpoint = new NetworkAuthorityCheckpoint
 		{
 			SessionId = config.SessionId,
@@ -103,12 +102,24 @@ public partial class GameBoardScene
 			RngState = _rng.State.ToString(CultureInfo.InvariantCulture),
 			SnapshotId = _networkSnapshotId,
 			AuthorityEpoch = _networkAuthorityEpoch,
-			CheckpointId = checkpointId,
+			CheckpointId = candidateCheckpointId,
 			SessionMigrationTokens = networkManager.GetSessionMigrationTokensForCheckpoint(),
 			ReconnectClaims = networkManager.GetCheckpointReconnectClaims(),
 		};
 
-		return NetworkAuthorityCheckpointCodec.TryEncode(checkpoint, out payload, out hash, out _);
+		return AuthorityCheckpointEnvelope.TryCreate(checkpoint, out envelope, out _);
+	}
+
+	internal void CommitNetworkCheckpointEnvelope(AuthorityCheckpointEnvelope envelope)
+	{
+		if (envelope is null
+			|| !envelope.HasPayload
+			|| envelope.CheckpointId <= _networkCheckpointId)
+		{
+			return;
+		}
+
+		_networkCheckpointId = envelope.CheckpointId;
 	}
 
 	internal bool TryRestoreAuthorityCheckpoint(

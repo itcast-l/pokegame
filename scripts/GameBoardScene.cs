@@ -461,22 +461,37 @@ public partial class GameBoardScene : Control
 		_ = WarmupGameplayResourcesAsync(GetCurrentTurnContext());
 	}
 
-	public void ApplyNetworkBoardInitialize(Godot.Collections.Dictionary payload)
+	public bool TryApplyNetworkBoardInitialize(Godot.Collections.Dictionary payload)
 	{
-		player_count = ReadNetworkInt(payload, "player_count", player_count);
-		item_mode = ReadNetworkBool(payload, "item_mode", item_mode);
-		winning_score = ReadNetworkInt(payload, "winning_score", winning_score);
-		network_session_id = ReadNetworkString(payload, "session_id", network_session_id);
-		match_seed = ReadNetworkLong(payload, "match_seed", match_seed);
-		player_names_csv = ReadNetworkString(payload, "player_names_csv", player_names_csv);
-		player_avatar_ids_csv = ReadNetworkString(payload, "player_avatar_ids_csv", player_avatar_ids_csv);
-		network_match_id = ReadNetworkString(payload, "match_id", network_match_id);
+		if (!NetworkVariantReader.TryReadInt32(payload, "player_count", NetworkSessionDefaults.MinPlayers, NetworkSessionDefaults.MaxPlayers, out int decodedPlayerCount)
+			|| !NetworkVariantReader.TryReadBool(payload, "item_mode", out bool decodedItemMode)
+			|| !NetworkVariantReader.TryReadInt32(payload, "winning_score", 50, 200, out int decodedWinningScore)
+			|| decodedWinningScore is not (50 or 100 or 200)
+			|| !NetworkVariantReader.TryReadString(payload, "session_id", NetworkProtocol.MaxSessionIdLength, out string decodedSessionId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadInt64(payload, "match_seed", long.MinValue, long.MaxValue, out long decodedMatchSeed)
+			|| !NetworkVariantReader.TryReadString(payload, "player_names_csv", 1024, out string decodedPlayerNames)
+			|| !NetworkVariantReader.TryReadString(payload, "player_avatar_ids_csv", 1024, out string decodedAvatarIds)
+			|| !NetworkVariantReader.TryReadString(payload, "match_id", NetworkProtocol.MaxMatchIdLength, out string decodedMatchId, allowEmpty: false)
+			|| decodedPlayerNames.Split(',').Length != decodedPlayerCount
+			|| decodedAvatarIds.Split(',').Length != decodedPlayerCount)
+		{
+			return false;
+		}
+
+		player_count = decodedPlayerCount;
+		item_mode = decodedItemMode;
+		winning_score = decodedWinningScore;
+		network_session_id = decodedSessionId;
+		match_seed = decodedMatchSeed;
+		player_names_csv = decodedPlayerNames;
+		player_avatar_ids_csv = decodedAvatarIds;
+		network_match_id = decodedMatchId;
 		network_wait_for_initialize = false;
 		RefreshNetworkReconnectOverlayIfNeeded();
 		if (IsNetworkMultiplayerMode() && !IsNetworkHost())
 		{
 			InitializeNetworkClientBoardShell();
-			return;
+			return true;
 		}
 
 		InitializeBoard(playOpeningIntroAnimation: true);
@@ -484,6 +499,7 @@ public partial class GameBoardScene : Control
 		{
 			GetNetworkManager()?.SendInitialBoardSnapshotsFromHost(this);
 		}
+		return true;
 	}
 
 	private void InitializeBoard(bool playOpeningIntroAnimation)

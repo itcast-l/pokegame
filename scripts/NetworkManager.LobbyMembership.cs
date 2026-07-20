@@ -241,20 +241,18 @@ public partial class NetworkManager
 			return;
 		}
 
-		SetAuthorityEpoch(authorityEpoch);
-		_config = ParseSharedConfig(config);
-		_players.Clear();
 		int localPeerId = GetLocalPeerId();
-		foreach (Variant variant in players)
+		if (!TryDecodeLobbyState(config, players, localPeerId, out NetworkSessionConfig decodedConfig, out List<NetworkPlayerPublicState> decodedPlayers)
+			|| !string.Equals(decodedConfig.SessionId, sessionId, StringComparison.Ordinal)
+			|| !string.Equals(decodedConfig.MatchId, matchId, StringComparison.Ordinal))
 		{
-			if (variant.AsGodotDictionary() is not { } playerDictionary)
-			{
-				continue;
-			}
-
-			NetworkPlayerPublicState player = ParsePlayer(playerDictionary);
-			InsertPlayerInSeatOrder(player with { IsLocal = player.PeerId == localPeerId || (localPeerId == 0 && player.IsHost) });
+			return;
 		}
+
+		SetAuthorityEpoch(authorityEpoch);
+		_config = decodedConfig;
+		_players.Clear();
+		_players.AddRange(decodedPlayers);
 
 		if (_state == NetworkSessionState.MigratingHost)
 		{

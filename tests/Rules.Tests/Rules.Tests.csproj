@@ -93,6 +93,7 @@
 	<Compile Include="../../scripts/MultiplayerRematchRules.cs" Link="Rules/MultiplayerRematchRules.cs" />
     <Compile Include="../../scripts/AuthorityActionState.cs" Link="Rules/AuthorityActionState.cs" />
     <Compile Include="../../scripts/NetworkAuthorityCheckpoint.cs" Link="Rules/NetworkAuthorityCheckpoint.cs" />
+	<Compile Include="../../scripts/AuthorityCheckpointEnvelope.cs" Link="Rules/AuthorityCheckpointEnvelope.cs" />
     <Compile Include="../../scripts/NetworkMigrationRules.cs" Link="Rules/NetworkMigrationRules.cs" />
 	<Compile Include="../../scripts/GameplayManifestHashRules.cs" Link="Rules/GameplayManifestHashRules.cs" />
   </ItemGroup>

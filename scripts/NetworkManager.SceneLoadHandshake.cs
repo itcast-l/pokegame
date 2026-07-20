@@ -45,8 +45,14 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (!TryParseSharedConfig(bootstrap, out NetworkSessionConfig decodedConfig)
+			|| !string.Equals(decodedConfig.SessionId, sessionId, StringComparison.Ordinal)
+			|| !string.Equals(decodedConfig.MatchId, matchId, StringComparison.Ordinal))
+		{
+			return;
+		}
 
-		_config = ParseSharedConfig(bootstrap);
+		_config = decodedConfig;
 		SetState(NetworkSessionState.LoadingScene);
 		EmitSignal(SignalName.BeginSceneLoad, bootstrap);
 		if (GetTree().CurrentScene is GameBoardScene)
@@ -150,18 +156,45 @@ public partial class NetworkManager
 	{
 		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true)
 			|| !TryReadRpcContext(payload, out NetworkRpcContext payloadContext)
-			|| payloadContext != new NetworkRpcContext(sessionId, matchId, authorityEpoch))
+			|| payloadContext != new NetworkRpcContext(sessionId, matchId, authorityEpoch)
+			|| !TryParseSharedConfig(payload, out NetworkSessionConfig decodedConfig)
+			|| decodedConfig != _config
+			|| !TryValidateBoardInitializePayload(payload, decodedConfig.PlayerCount))
 		{
 			return;
 		}
 
-		SetState(NetworkSessionState.InGame);
-		EmitSignal(SignalName.BoardInitialize, payload);
 		if (GetTree().CurrentScene is GameBoardScene gameBoard)
 		{
 			gameBoard.Set("local_player_index", LocalSeatIndex);
-			gameBoard.ApplyNetworkBoardInitialize(payload);
+			if (!gameBoard.TryApplyNetworkBoardInitialize(payload))
+			{
+				return;
+			}
 		}
+
+		SetState(NetworkSessionState.InGame);
+		EmitSignal(SignalName.BoardInitialize, payload);
+		if (IsHost && GetTree().CurrentScene is GameBoardScene initializedBoard)
+		{
+			SendInitialBoardSnapshotsFromHost(initializedBoard);
+		}
+	}
+
+	private static bool TryValidateBoardInitializePayload(
+		Godot.Collections.Dictionary payload,
+		int playerCount)
+	{
+		if (!NetworkVariantReader.TryReadString(payload, "player_names_csv", 1024, out string playerNames)
+			|| !NetworkVariantReader.TryReadString(payload, "player_avatar_ids_csv", 1024, out string avatarIds)
+			|| !NetworkVariantReader.TryReadBool(payload, "network_wait_for_initialize", out bool waitForInitialize)
+			|| waitForInitialize)
+		{
+			return false;
+		}
+
+		return playerNames.Split(',').Length == playerCount
+			&& avatarIds.Split(',').Length == playerCount;
 	}
 
 	private void LoadGameBoardScene(Godot.Collections.Dictionary bootstrap)

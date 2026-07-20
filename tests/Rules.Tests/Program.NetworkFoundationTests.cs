@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 internal static partial class Program
 {
@@ -13,10 +14,14 @@ internal static partial class Program
 		Run("authority action finalizing phase can resume", AuthorityActionFinalizingPhaseCanResume);
 		Run("authority action dedupe accepts only newer client ids", AuthorityActionDedupeAcceptsOnlyNewerClientIds);
 		Run("authority action dedupe is isolated per seat", AuthorityActionDedupeIsIsolatedPerSeat);
+		Run("authority pending selection can commit only once", AuthorityPendingSelectionCanCommitOnlyOnce);
 		Run("authority action json roundtrip keeps fixed fields", AuthorityActionJsonRoundtripKeepsFixedFields);
 		Run("checkpoint codec roundtrips private deterministic state", CheckpointCodecRoundtripsPrivateDeterministicState);
 		Run("checkpoint codec roundtrips draw outcome", CheckpointCodecRoundtripsDrawOutcome);
 		Run("checkpoint codec rejects tampered hash and oversized payload", CheckpointCodecRejectsTamperedHashAndOversizedPayload);
+		Run("checkpoint codec rejects malformed object graphs without throwing", CheckpointCodecRejectsMalformedObjectGraphsWithoutThrowing);
+		Run("checkpoint codec rejects excessive json depth with fixed error", CheckpointCodecRejectsExcessiveJsonDepthWithFixedError);
+		Run("checkpoint envelope keeps the previous atomic value on encode failure", CheckpointEnvelopeKeepsPreviousAtomicValueOnEncodeFailure);
 		Run("network protocol contexts fence epochs and snapshots", NetworkProtocolContextsFenceEpochsAndSnapshots);
 		Run("migration restore generation is strictly monotonic", MigrationRestoreGenerationIsStrictlyMonotonic);
 		Run("multiplayer rematch accepts only completed current-match players", MultiplayerRematchAcceptsOnlyCompletedCurrentMatchPlayers);
@@ -318,6 +323,41 @@ internal static partial class Program
 		Equal(source.RngStateBeforeAction, restored.RngStateBeforeAction);
 	}
 
+	private static void AuthorityPendingSelectionCanCommitOnlyOnce()
+	{
+		AuthorityActionState waiting = new()
+		{
+			ActionId = 10,
+			ClientActionId = 2,
+			Kind = AuthorityActionKind.ItemCard,
+			Phase = AuthorityActionPhase.WaitingAttachment,
+			ActorSeat = 1,
+			TurnGeneration = 7,
+			ItemHandIndex = 0,
+			ItemOrRewardId = "magnet",
+			ContinuationStep = AuthorityActionContinuationStep.AttachmentQueue,
+		};
+		True(AuthorityActionStateRules.CanCommitPendingSelection(
+			waiting,
+			AuthorityActionPhase.WaitingAttachment,
+			actorSeat: 1,
+			turnGeneration: 7));
+
+		AuthorityActionState committed = waiting.WithSelection(
+			AuthorityActionPhase.WaitingAttachment,
+			selectionIndex: 3);
+		False(AuthorityActionStateRules.CanCommitPendingSelection(
+			committed,
+			AuthorityActionPhase.WaitingAttachment,
+			actorSeat: 1,
+			turnGeneration: 7));
+		False(AuthorityActionStateRules.CanCommitPendingSelection(
+			waiting,
+			AuthorityActionPhase.WaitingDiscard,
+			actorSeat: 1,
+			turnGeneration: 7));
+	}
+
 	private static void CheckpointCodecRoundtripsPrivateDeterministicState()
 	{
 		NetworkAuthorityCheckpoint source = CreateCheckpoint();
@@ -350,6 +390,86 @@ internal static partial class Program
 		True(error.Contains("size", StringComparison.OrdinalIgnoreCase));
 	}
 
+	private static void CheckpointCodecRejectsMalformedObjectGraphsWithoutThrowing()
+	{
+		NetworkAuthorityCheckpoint source = CreateCheckpoint();
+		var duplicateRoster = source.Roster.ToList();
+		duplicateRoster[1] = duplicateRoster[1] with { SeatIndex = 0 };
+		var nullDecks = source.Decks.ToList();
+		nullDecks[0] = null!;
+
+		NetworkAuthorityCheckpoint[] malformed =
+		{
+			source with { Roster = null! },
+			source with { Roster = new List<NetworkMigrationRosterEntry> { null! } },
+			source with { Roster = duplicateRoster },
+			source with { Decks = nullDecks },
+			source with { Transport = (NetworkTransport)99 },
+			source with { WinningScore = 75 },
+			source with { CompletedTurnsSinceQuestionRefresh = -1 },
+			source with
+			{
+				TableCards = new List<NetworkCheckpointTableCard>
+				{
+					new()
+					{
+						Card = new NetworkCheckpointCard { Code = null!, AttachedItemCardIds = Array.Empty<string>() },
+					},
+				},
+			},
+			source with
+			{
+				Hands = new List<List<NetworkCheckpointCard>>
+				{
+					new() { new NetworkCheckpointCard { Code = "card", AttachedItemCardIds = null! } },
+					new(),
+				},
+			},
+		};
+
+		foreach (NetworkAuthorityCheckpoint checkpoint in malformed)
+		{
+			False(NetworkAuthorityCheckpointCodec.TryEncode(checkpoint, out _, out _, out string error));
+			Equal(NetworkAuthorityCheckpointCodec.EncodeInvalidError, error);
+		}
+	}
+
+	private static void CheckpointCodecRejectsExcessiveJsonDepthWithFixedError()
+	{
+		string json = string.Concat(Enumerable.Repeat("{\"nested\":", 70))
+			+ "0"
+			+ new string('}', 70);
+		byte[] payload = Encoding.UTF8.GetBytes(json);
+		string hash = NetworkAuthorityCheckpointCodec.ComputeHash(payload);
+		False(NetworkAuthorityCheckpointCodec.TryDecode(payload, hash, out _, out string error));
+		Equal(NetworkAuthorityCheckpointCodec.DecodeInvalidError, error);
+	}
+
+	private static void CheckpointEnvelopeKeepsPreviousAtomicValueOnEncodeFailure()
+	{
+		NetworkAuthorityCheckpoint source = CreateCheckpoint();
+		True(AuthorityCheckpointEnvelope.TryCreate(source, out AuthorityCheckpointEnvelope committed, out _));
+		byte[] exposedPayload = committed.GetPayloadCopy();
+		exposedPayload[0] ^= 0xff;
+		False(exposedPayload.SequenceEqual(committed.GetPayloadCopy()));
+
+		AuthorityCheckpointEnvelope current = committed;
+		NetworkAuthorityCheckpoint invalid = source with
+		{
+			CheckpointId = source.CheckpointId + 1,
+			Roster = null!,
+		};
+		if (AuthorityCheckpointEnvelope.TryCreate(invalid, out AuthorityCheckpointEnvelope candidate, out _))
+		{
+			current = candidate;
+		}
+
+		True(ReferenceEquals(committed, current));
+		Equal(source.CheckpointId, current.CheckpointId);
+		Equal(committed.Hash, current.Hash);
+		True(committed.GetPayloadCopy().SequenceEqual(current.GetPayloadCopy()));
+	}
+
 	private static void CheckpointCodecRoundtripsDrawOutcome()
 	{
 		NetworkAuthorityCheckpoint source = CreateCheckpoint() with
@@ -368,8 +488,8 @@ internal static partial class Program
 
 	private static void NetworkProtocolContextsFenceEpochsAndSnapshots()
 	{
-		Equal(7, NetworkProtocol.CurrentVersion);
-		Equal(2, NetworkProtocol.AuthorityCheckpointSchemaVersion);
+		Equal(8, NetworkProtocol.CurrentVersion);
+		Equal(3, NetworkProtocol.AuthorityCheckpointSchemaVersion);
 		NetworkRpcContext current = new("session", "match", 3);
 		True(current.IsValid);
 		True(NetworkProtocolRules.Matches(current, "session", "match", 3, allowHigherEpoch: false));

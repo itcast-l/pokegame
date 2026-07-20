@@ -349,6 +349,17 @@ public static class NetworkAuthorityCheckpointCodec
 {
 	public const int SchemaVersion = NetworkProtocol.AuthorityCheckpointSchemaVersion;
 	public const int MaxPayloadBytes = NetworkProtocol.MaxAuthorityCheckpointBytes;
+	public const string EncodeInvalidError = "checkpoint_encode_invalid";
+	public const string EncodeFailedError = "checkpoint_encode_failed";
+	public const string PayloadSizeError = "checkpoint_payload_size";
+	public const string HashMismatchError = "checkpoint_hash_mismatch";
+	public const string DecodeInvalidError = "checkpoint_decode_invalid";
+	private const int MaxJsonDepth = 64;
+	private const int MaxCardPileCount = 208;
+	private const int MaxHandCount = 8;
+	private const int MaxTableCardCount = 256;
+	private const int MaxScore = 1_000_000;
+	private const int MaxRefreshTurnCount = 1_000_000;
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
@@ -356,6 +367,7 @@ public static class NetworkAuthorityCheckpointCodec
 		PropertyNamingPolicy = null,
 		WriteIndented = false,
 		DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+		MaxDepth = MaxJsonDepth,
 	};
 
 	public static bool TryEncode(
@@ -367,17 +379,18 @@ public static class NetworkAuthorityCheckpointCodec
 		payload = Array.Empty<byte>();
 		hash = string.Empty;
 		error = string.Empty;
-		if (!Validate(checkpoint, out error))
-		{
-			return false;
-		}
-
 		try
 		{
+			if (!Validate(checkpoint, out _))
+			{
+				error = EncodeInvalidError;
+				return false;
+			}
+
 			payload = JsonSerializer.SerializeToUtf8Bytes(checkpoint with { PayloadHash = string.Empty }, JsonOptions);
 			if (payload.Length > MaxPayloadBytes)
 			{
-				error = "checkpoint payload exceeds 256KB";
+				error = PayloadSizeError;
 				payload = Array.Empty<byte>();
 				return false;
 			}
@@ -385,9 +398,11 @@ public static class NetworkAuthorityCheckpointCodec
 			hash = ComputeHash(payload);
 			return true;
 		}
-		catch (JsonException exception)
+		catch (Exception)
 		{
-			error = exception.Message;
+			payload = Array.Empty<byte>();
+			hash = string.Empty;
+			error = EncodeFailedError;
 			return false;
 		}
 	}
@@ -402,32 +417,34 @@ public static class NetworkAuthorityCheckpointCodec
 		error = string.Empty;
 		if (payload.Length == 0 || payload.Length > MaxPayloadBytes)
 		{
-			error = "checkpoint payload size is invalid";
-			return false;
-		}
-
-		string actualHash = ComputeHash(payload);
-		if (!IsSha256Hash(expectedHash)
-			|| !string.Equals(actualHash, expectedHash, StringComparison.Ordinal))
-		{
-			error = "checkpoint hash mismatch";
+			error = PayloadSizeError;
 			return false;
 		}
 
 		try
 		{
-			NetworkAuthorityCheckpoint? decoded = JsonSerializer.Deserialize<NetworkAuthorityCheckpoint>(payload, JsonOptions);
-			if (decoded is null || !Validate(decoded, out error))
+			string actualHash = ComputeHash(payload);
+			if (!IsSha256Hash(expectedHash)
+				|| !string.Equals(actualHash, expectedHash, StringComparison.Ordinal))
 			{
+				error = HashMismatchError;
+				return false;
+			}
+
+			NetworkAuthorityCheckpoint? decoded = JsonSerializer.Deserialize<NetworkAuthorityCheckpoint>(payload, JsonOptions);
+			if (decoded is null || !Validate(decoded, out _))
+			{
+				error = DecodeInvalidError;
 				return false;
 			}
 
 			checkpoint = decoded with { PayloadHash = actualHash };
 			return true;
 		}
-		catch (JsonException exception)
+		catch (Exception)
 		{
-			error = exception.Message;
+			checkpoint = new NetworkAuthorityCheckpoint();
+			error = DecodeInvalidError;
 			return false;
 		}
 	}
@@ -439,21 +456,38 @@ public static class NetworkAuthorityCheckpointCodec
 
 	public static bool Validate(NetworkAuthorityCheckpoint checkpoint, out string error)
 	{
-		error = string.Empty;
+		try
+		{
+			if (!ValidateCore(checkpoint))
+			{
+				error = DecodeInvalidError;
+				return false;
+			}
+
+			error = string.Empty;
+			return true;
+		}
+		catch (Exception)
+		{
+			error = DecodeInvalidError;
+			return false;
+		}
+	}
+
+	private static bool ValidateCore(NetworkAuthorityCheckpoint checkpoint)
+	{
 		if (checkpoint is null
 			|| checkpoint.SchemaVersion != SchemaVersion
 			|| checkpoint.ProtocolVersion != NetworkProtocol.CurrentVersion
 			|| checkpoint.Phase is not (NetworkAuthorityPhase.Lobby or NetworkAuthorityPhase.InGame)
-			|| checkpoint.PlayerCount < 2
+			|| checkpoint.PlayerCount < NetworkSessionDefaults.MinPlayers
 			|| checkpoint.PlayerCount > NetworkProtocol.MaxAuthorityCheckpointPlayers
-			|| string.IsNullOrWhiteSpace(checkpoint.SessionId)
-			|| (checkpoint.Phase == NetworkAuthorityPhase.InGame && string.IsNullOrWhiteSpace(checkpoint.MatchId))
-			|| checkpoint.SessionId.Length > 128
-			|| checkpoint.MatchId.Length > 128
-			|| checkpoint.RoomName is null
-			|| checkpoint.RoomPassword is null
-			|| checkpoint.RoomName.Length > 128
-			|| checkpoint.RoomPassword.Length > 128
+			|| !IsBoundedString(checkpoint.SessionId, NetworkProtocol.MaxSessionIdLength, allowEmpty: false)
+			|| !IsBoundedString(checkpoint.MatchId, NetworkProtocol.MaxMatchIdLength)
+			|| !IsBoundedString(checkpoint.RoomName, 128)
+			|| !IsBoundedString(checkpoint.RoomPassword, 128)
+			|| !Enum.IsDefined(checkpoint.Transport)
+			|| checkpoint.WinningScore is not (50 or 100 or 200)
 			|| checkpoint.Scores is null
 			|| checkpoint.Roster is null
 			|| checkpoint.SeatControls is null
@@ -464,94 +498,203 @@ public static class NetworkAuthorityCheckpointCodec
 			|| checkpoint.TableCards is null
 			|| checkpoint.SessionMigrationTokens is null
 			|| checkpoint.ReconnectClaims is null
-			|| string.IsNullOrWhiteSpace(checkpoint.ManifestHash)
-			|| checkpoint.ManifestHash.Length != 64
-			|| !checkpoint.ManifestHash.All(char.IsAsciiHexDigit)
-			|| string.IsNullOrWhiteSpace(checkpoint.RngState)
-			|| checkpoint.RngState.Length > 32
-			|| !ulong.TryParse(checkpoint.RngState, out _)
-			|| checkpoint.Scores.Length != checkpoint.PlayerCount
-			|| checkpoint.Roster.Count < 1
-			|| checkpoint.Roster.Count > checkpoint.PlayerCount
-			|| checkpoint.SeatControls.Count != checkpoint.Roster.Count
-			|| checkpoint.Decks.Count != checkpoint.PlayerCount
-			|| checkpoint.Hands.Count != checkpoint.PlayerCount
-			|| checkpoint.ItemHands.Count != checkpoint.PlayerCount
-			|| checkpoint.ReconnectClaims.Count != checkpoint.Roster.Count
+			|| checkpoint.AuthorityAction is null
+			|| !IsSha256Hash(checkpoint.ManifestHash)
+			|| !IsBoundedString(checkpoint.RngState, 32, allowEmpty: false)
+			|| !ulong.TryParse(checkpoint.RngState, out ulong rngState)
+			|| rngState == 0
 			|| checkpoint.AuthorityEpoch < 0
 			|| checkpoint.SnapshotId < 0
 			|| checkpoint.CheckpointId < 0
-			|| checkpoint.WinnerPlayerIndex < -1
-			|| checkpoint.WinnerPlayerIndex >= checkpoint.PlayerCount
-			|| !MatchOutcomeRules.IsSerializedOutcomeValid(
-				checkpoint.MatchOutcomeKind,
-				checkpoint.WinnerPlayerIndex,
-				checkpoint.PlayerCount)
 			|| checkpoint.CurrentTurnPlayerIndex < 0
 			|| checkpoint.CurrentTurnPlayerIndex >= checkpoint.PlayerCount
 			|| checkpoint.TurnSequenceGeneration < 0
 			|| checkpoint.TurnSequenceGeneration == int.MaxValue
-			|| (checkpoint.Phase == NetworkAuthorityPhase.InGame && !checkpoint.OpeningDealCompleted)
-			|| (checkpoint.Phase == NetworkAuthorityPhase.Lobby
-				&& (!string.IsNullOrEmpty(checkpoint.MatchId)
-					|| checkpoint.TableCards.Count != 0
-					|| !IsEmptyAuthorityAction(checkpoint.AuthorityAction)))
+			|| checkpoint.CompletedTurnsSinceQuestionRefresh < 0
+			|| checkpoint.CompletedTurnsSinceQuestionRefresh > MaxRefreshTurnCount
+			|| checkpoint.QuestionRefreshAnchorPlayerIndex < -1
+			|| checkpoint.QuestionRefreshAnchorPlayerIndex >= checkpoint.PlayerCount
+			|| checkpoint.WinnerPlayerIndex < -1
+			|| checkpoint.WinnerPlayerIndex >= checkpoint.PlayerCount
+			|| !MatchOutcomeRules.IsSerializedOutcomeValid(checkpoint.MatchOutcomeKind, checkpoint.WinnerPlayerIndex, checkpoint.PlayerCount)
 			|| !AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount)
 			|| !AuthorityActionStateRules.IsStableCheckpointState(checkpoint.AuthorityAction))
 		{
-			error = "checkpoint semantic bounds are invalid";
 			return false;
 		}
 
-		if (!HasValidRoster(checkpoint)
-			|| !HasValidSeatControls(checkpoint)
-			|| !HasUniqueSeatIndexes(checkpoint.Roster.Select(entry => entry.SeatIndex), checkpoint.Roster.Count)
-			|| !HasUniqueSeatIndexes(checkpoint.SeatControls.Select(entry => entry.SeatIndex), checkpoint.Roster.Count)
-			|| checkpoint.LastAcceptedClientActionIds.Any(pair => pair.Key < 0 || pair.Key >= checkpoint.PlayerCount || pair.Value < 0)
-			|| checkpoint.LastAcceptedClientActionIds.Count > checkpoint.PlayerCount
-			|| checkpoint.SessionMigrationTokens.Count != checkpoint.Roster.Count
-			|| checkpoint.SessionMigrationTokens.Any(pair => pair.Key < 0 || pair.Key >= checkpoint.PlayerCount || string.IsNullOrWhiteSpace(pair.Value) || pair.Value.Length > 128))
+		int rosterCount = checkpoint.Roster.Count;
+		if (rosterCount < 1
+			|| rosterCount > checkpoint.PlayerCount
+			|| checkpoint.SeatControls.Count != rosterCount
+			|| checkpoint.ReconnectClaims.Count != rosterCount
+			|| checkpoint.SessionMigrationTokens.Count != rosterCount
+			|| checkpoint.Scores.Length != checkpoint.PlayerCount
+			|| checkpoint.Decks.Count != checkpoint.PlayerCount
+			|| checkpoint.Hands.Count != checkpoint.PlayerCount
+			|| checkpoint.ItemHands.Count != checkpoint.PlayerCount
+			|| checkpoint.TableCards.Count > MaxTableCardCount
+			|| checkpoint.LastAcceptedClientActionIds.Count > checkpoint.PlayerCount)
 		{
-			error = "checkpoint seat indexes or action ids are invalid";
 			return false;
 		}
 
-		if (!HasValidReconnectClaims(checkpoint))
+		if (checkpoint.Phase == NetworkAuthorityPhase.InGame)
 		{
-			error = "checkpoint reconnect claims are invalid";
-			return false;
-		}
-
-		for (int seat = 0; seat < checkpoint.PlayerCount; seat++)
-		{
-			if (checkpoint.Scores[seat] < 0
-				|| checkpoint.Decks[seat].Count > 208
-				|| checkpoint.Hands[seat].Count > 8
-				|| checkpoint.ItemHands[seat].Count > 8
-				|| checkpoint.Hands[seat].Count + checkpoint.ItemHands[seat].Count > 8
-				|| checkpoint.Decks[seat].Any(card => !IsValidCard(card))
-				|| checkpoint.Hands[seat].Any(card => !IsValidCard(card))
-				|| checkpoint.ItemHands[seat].Any(item => item.Length == 0 || item.Length > 128))
+			if (string.IsNullOrWhiteSpace(checkpoint.MatchId)
+				|| rosterCount != checkpoint.PlayerCount
+				|| !checkpoint.OpeningDealCompleted)
 			{
-				error = "checkpoint card collections are invalid";
+				return false;
+			}
+		}
+		else if (!string.IsNullOrEmpty(checkpoint.MatchId)
+			|| checkpoint.TableCards.Count != 0
+			|| !IsEmptyAuthorityAction(checkpoint.AuthorityAction))
+		{
+			return false;
+		}
+
+		var rosterBySeat = new NetworkMigrationRosterEntry?[checkpoint.PlayerCount];
+		var playerIds = new HashSet<string>(StringComparer.Ordinal);
+		int hostCount = 0;
+		for (int index = 0; index < rosterCount; index++)
+		{
+			NetworkMigrationRosterEntry? entry = checkpoint.Roster[index];
+			if (entry is null
+				|| entry.SeatIndex < 0
+				|| entry.SeatIndex >= checkpoint.PlayerCount
+				|| rosterBySeat[entry.SeatIndex] is not null
+				|| !IsBoundedString(entry.StableUserId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
+				|| !IsBoundedString(entry.DisplayName, 128)
+				|| !IsBoundedString(entry.AvatarId, 128)
+				|| entry.PeerId < 0
+				|| !playerIds.Add(entry.StableUserId))
+			{
+				return false;
+			}
+
+			rosterBySeat[entry.SeatIndex] = entry;
+			hostCount += entry.IsHost ? 1 : 0;
+		}
+
+		if (hostCount != 1)
+		{
+			return false;
+		}
+		for (int seat = 0; seat < rosterCount; seat++)
+		{
+			if (rosterBySeat[seat] is null)
+			{
 				return false;
 			}
 		}
 
-		if (checkpoint.TableCards.Count > 256 || checkpoint.TableCards.Any(card => card is null))
+		var controlsBySeat = new NetworkAuthoritySeatControl?[checkpoint.PlayerCount];
+		foreach (NetworkAuthoritySeatControl? control in checkpoint.SeatControls)
 		{
-			error = "checkpoint table cards are invalid";
-			return false;
+			if (control is null
+				|| control.SeatIndex < 0
+				|| control.SeatIndex >= rosterCount
+				|| controlsBySeat[control.SeatIndex] is not null
+				|| !Enum.IsDefined(control.Mode)
+				|| control.PeerId < 0
+				|| !IsBoundedString(control.StableUserId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
+				|| !IsBoundedString(control.ReconnectToken, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false)
+				|| !IsBoundedString(control.SessionMigrationToken, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false)
+				|| !string.Equals(control.StableUserId, rosterBySeat[control.SeatIndex]!.StableUserId, StringComparison.Ordinal)
+				|| !checkpoint.SessionMigrationTokens.TryGetValue(control.SeatIndex, out string? sessionToken)
+				|| !string.Equals(control.SessionMigrationToken, sessionToken, StringComparison.Ordinal))
+			{
+				return false;
+			}
+
+			controlsBySeat[control.SeatIndex] = control;
 		}
 
-		if (checkpoint.TableCards.Any(card =>
-			(card.CardOwnerPlayerIndex < -1 || card.CardOwnerPlayerIndex >= checkpoint.PlayerCount)
-			|| (card.ItemOwnerPlayerIndex < -1 || card.ItemOwnerPlayerIndex >= checkpoint.PlayerCount)
-			|| (!string.IsNullOrEmpty(card.ItemOverlayId) && card.ItemOverlayId.Length > 128)
-			|| (card.Card is null && (card.IsFaceUp || card.IsBuriedInSand || card.IsSlimeCoated || card.CardOwnerPlayerIndex >= 0))))
+		foreach (KeyValuePair<int, string> token in checkpoint.SessionMigrationTokens)
 		{
-			error = "checkpoint table card ownership is invalid";
-			return false;
+			if (token.Key < 0
+				|| token.Key >= rosterCount
+				|| !IsBoundedString(token.Value, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false))
+			{
+				return false;
+			}
+		}
+
+		var claimSeen = new bool[rosterCount];
+		foreach (NetworkAuthorityReconnectClaim? claim in checkpoint.ReconnectClaims)
+		{
+			if (claim is null
+				|| claim.SeatIndex < 0
+				|| claim.SeatIndex >= rosterCount
+				|| claimSeen[claim.SeatIndex]
+				|| !IsBoundedString(claim.MatchId, NetworkProtocol.MaxMatchIdLength)
+				|| !string.Equals(claim.MatchId, checkpoint.MatchId, StringComparison.Ordinal)
+				|| !IsBoundedString(claim.ReconnectToken, NetworkProtocol.MaxCredentialEncodedLength, allowEmpty: false)
+				|| !IsBoundedString(claim.StableUserId, NetworkProtocol.MaxPlayerIdLength, allowEmpty: false)
+				|| !string.Equals(claim.ReconnectToken, controlsBySeat[claim.SeatIndex]!.ReconnectToken, StringComparison.Ordinal)
+				|| !string.Equals(claim.StableUserId, controlsBySeat[claim.SeatIndex]!.StableUserId, StringComparison.Ordinal)
+				|| claim.ClaimedPeerId < 0
+				|| claim.ClaimState is not (nameof(ReconnectClaimState.Unclaimed) or nameof(ReconnectClaimState.Claimed))
+				|| (claim.ClaimState == nameof(ReconnectClaimState.Unclaimed) ? claim.ClaimedPeerId != 0 : claim.ClaimedPeerId <= 0))
+			{
+				return false;
+			}
+
+			claimSeen[claim.SeatIndex] = true;
+		}
+
+		foreach (KeyValuePair<int, long> actionId in checkpoint.LastAcceptedClientActionIds)
+		{
+			if (actionId.Key < 0 || actionId.Key >= checkpoint.PlayerCount || actionId.Value < 0)
+			{
+				return false;
+			}
+		}
+
+		for (int seat = 0; seat < checkpoint.PlayerCount; seat++)
+		{
+			List<NetworkCheckpointCard>? deck = checkpoint.Decks[seat];
+			List<NetworkCheckpointCard>? hand = checkpoint.Hands[seat];
+			List<string>? itemHand = checkpoint.ItemHands[seat];
+			if (deck is null
+				|| hand is null
+				|| itemHand is null
+				|| checkpoint.Scores[seat] < 0
+				|| checkpoint.Scores[seat] > MaxScore
+				|| deck.Count > MaxCardPileCount
+				|| hand.Count > MaxHandCount
+				|| itemHand.Count > MaxHandCount
+				|| hand.Count + itemHand.Count > MaxHandCount
+				|| !HasValidCards(deck)
+				|| !HasValidCards(hand)
+				|| !HasValidItemIds(itemHand))
+			{
+				return false;
+			}
+		}
+
+		foreach (NetworkCheckpointTableCard? tableCard in checkpoint.TableCards)
+		{
+			if (tableCard is null
+				|| tableCard.CardOwnerPlayerIndex < -1
+				|| tableCard.CardOwnerPlayerIndex >= checkpoint.PlayerCount
+				|| tableCard.ItemOwnerPlayerIndex < -1
+				|| tableCard.ItemOwnerPlayerIndex >= checkpoint.PlayerCount
+				|| !IsBoundedString(tableCard.ItemOverlayId, 128)
+				|| (tableCard.Card is not null && !IsValidCard(tableCard.Card))
+				|| (tableCard.Card is null && (tableCard.IsFaceUp
+					|| tableCard.IsBuriedInSand
+					|| tableCard.IsSlimeCoated
+					|| tableCard.CardOwnerPlayerIndex >= 0
+					|| tableCard.RemoveCardOnCapture))
+				|| (string.IsNullOrEmpty(tableCard.ItemOverlayId)
+					? tableCard.ItemOwnerPlayerIndex != -1
+					: tableCard.ItemOwnerPlayerIndex < 0))
+			{
+				return false;
+			}
 		}
 
 		return true;
@@ -570,34 +713,18 @@ public static class NetworkAuthorityCheckpointCodec
 			&& AuthorityActionStateRules.IsValid(state);
 	}
 
-	private static bool HasValidRoster(NetworkAuthorityCheckpoint checkpoint)
+	private static bool IsBoundedString(string? value, int maximumLength, bool allowEmpty = true)
 	{
-		return checkpoint.Roster.Count >= 1
-			&& checkpoint.Roster.Count(entry => entry.IsHost) == 1
-			&& checkpoint.Roster.All(entry =>
-				!string.IsNullOrWhiteSpace(entry.StableUserId)
-				&& entry.StableUserId.Length <= 128
-				&& entry.DisplayName.Length <= 128
-				&& entry.AvatarId.Length <= 128
-				&& entry.PeerId >= 0)
-			&& checkpoint.Roster.Select(entry => entry.StableUserId).Distinct(StringComparer.Ordinal).Count() == checkpoint.Roster.Count;
+		return value is not null
+			&& value.Length <= maximumLength
+			&& (allowEmpty || !string.IsNullOrWhiteSpace(value));
 	}
 
-	private static bool HasValidSeatControls(NetworkAuthorityCheckpoint checkpoint)
+	private static bool HasValidCards(List<NetworkCheckpointCard> cards)
 	{
-		var rosterBySeat = checkpoint.Roster.ToDictionary(entry => entry.SeatIndex);
-		foreach (NetworkAuthoritySeatControl control in checkpoint.SeatControls)
+		foreach (NetworkCheckpointCard? card in cards)
 		{
-			if (!rosterBySeat.TryGetValue(control.SeatIndex, out NetworkMigrationRosterEntry? rosterEntry)
-				|| !Enum.IsDefined(control.Mode)
-				|| control.PeerId < 0
-				|| !string.Equals(control.StableUserId, rosterEntry.StableUserId, StringComparison.Ordinal)
-				|| string.IsNullOrWhiteSpace(control.ReconnectToken)
-				|| control.ReconnectToken.Length > 128
-				|| string.IsNullOrWhiteSpace(control.SessionMigrationToken)
-				|| control.SessionMigrationToken.Length > 128
-				|| !checkpoint.SessionMigrationTokens.TryGetValue(control.SeatIndex, out string? sessionToken)
-				|| !string.Equals(control.SessionMigrationToken, sessionToken, StringComparison.Ordinal))
+			if (!IsValidCard(card))
 			{
 				return false;
 			}
@@ -606,28 +733,11 @@ public static class NetworkAuthorityCheckpointCodec
 		return true;
 	}
 
-	private static bool HasValidReconnectClaims(NetworkAuthorityCheckpoint checkpoint)
+	private static bool HasValidItemIds(List<string> itemIds)
 	{
-		var controlsBySeat = checkpoint.SeatControls.ToDictionary(control => control.SeatIndex);
-		if (checkpoint.ReconnectClaims.Count != checkpoint.Roster.Count
-			|| checkpoint.ReconnectClaims.Select(claim => claim.SeatIndex).Distinct().Count() != checkpoint.Roster.Count)
+		foreach (string? itemId in itemIds)
 		{
-			return false;
-		}
-
-		foreach (NetworkAuthorityReconnectClaim claim in checkpoint.ReconnectClaims)
-		{
-			if (claim.SeatIndex < 0
-				|| claim.SeatIndex >= checkpoint.Roster.Count
-				|| !string.Equals(claim.MatchId, checkpoint.MatchId, StringComparison.Ordinal)
-				|| !controlsBySeat.TryGetValue(claim.SeatIndex, out NetworkAuthoritySeatControl? control)
-				|| !string.Equals(claim.ReconnectToken, control.ReconnectToken, StringComparison.Ordinal)
-				|| !string.Equals(claim.StableUserId, control.StableUserId, StringComparison.Ordinal)
-				|| claim.ClaimedPeerId < 0
-				|| claim.ClaimState is not (nameof(ReconnectClaimState.Unclaimed) or nameof(ReconnectClaimState.Claimed))
-				|| (claim.ClaimState == nameof(ReconnectClaimState.Unclaimed)
-					? claim.ClaimedPeerId != 0
-					: claim.ClaimedPeerId <= 0))
+			if (!IsBoundedString(itemId, 128, allowEmpty: false))
 			{
 				return false;
 			}
@@ -636,21 +746,25 @@ public static class NetworkAuthorityCheckpointCodec
 		return true;
 	}
 
-	private static bool IsValidCard(NetworkCheckpointCard card)
+	private static bool IsValidCard(NetworkCheckpointCard? card)
 	{
 		return card is not null
-			&& !string.IsNullOrWhiteSpace(card.Code)
-			&& card.Code.Length <= 64
+			&& IsBoundedString(card.Code, 64, allowEmpty: false)
 			&& card.AttachedItemCardIds is not null
 			&& card.AttachedItemCardIds.Length <= 1
-			&& card.AttachedItemCardIds.All(item => !string.IsNullOrWhiteSpace(item) && item.Length <= 128);
+			&& HasValidAttachmentIds(card.AttachedItemCardIds);
 	}
 
-	private static bool HasUniqueSeatIndexes(IEnumerable<int> seatIndexes, int playerCount)
+	private static bool HasValidAttachmentIds(string[] attachmentIds)
 	{
-		int[] indexes = seatIndexes.ToArray();
-		return indexes.Length == playerCount
-			&& indexes.Distinct().Count() == playerCount
-			&& indexes.All(index => index >= 0 && index < playerCount);
+		foreach (string? attachmentId in attachmentIds)
+		{
+			if (!IsBoundedString(attachmentId, 128, allowEmpty: false))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

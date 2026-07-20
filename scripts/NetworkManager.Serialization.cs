@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class NetworkManager
@@ -66,63 +67,134 @@ public partial class NetworkManager
 		};
 	}
 
-	private static NetworkSessionConfig ParseConfig(Godot.Collections.Dictionary dictionary)
+	private bool TryParseSharedConfig(
+		Godot.Collections.Dictionary dictionary,
+		out NetworkSessionConfig config)
 	{
-		return new NetworkSessionConfig(
-			ReadString(dictionary, "session_id"),
-			RoomNameRules.Normalize(ReadString(dictionary, "room_name")),
-			RoomPasswordRules.Normalize(ReadString(dictionary, "room_password")),
-			ReadString(dictionary, "match_id"),
-			ReadLong(dictionary, "match_seed"),
-			ReadEnum(dictionary, "transport", NetworkTransport.Lan),
-			NetworkSessionDefaults.ClampPlayerCount(ReadInt(dictionary, "player_count", NetworkSessionDefaults.DefaultPlayerCount)),
-			ReadBool(dictionary, "item_mode", NetworkSessionDefaults.DefaultItemMode),
-			NetworkSessionDefaults.NormalizeWinningScore(ReadInt(dictionary, "winning_score", NetworkSessionDefaults.DefaultWinningScore)),
-			ReadEnum(dictionary, "lobby_visibility", LobbyVisibility.FriendsOnly));
-	}
-
-	private static NetworkPlayerPublicState ParsePlayer(Godot.Collections.Dictionary dictionary)
-	{
-		return new NetworkPlayerPublicState(
-			ReadInt(dictionary, "peer_id", 0),
-			ReadString(dictionary, "stable_user_id"),
-			PlayerNameRules.Normalize(ReadString(dictionary, "display_name")),
-			CharacterAvatarCatalog.NormalizeAvatarId(ReadString(dictionary, "avatar_id")),
-			ReadInt(dictionary, "seat_index", 0),
-			ReadBool(dictionary, "is_host", false),
-			ReadBool(dictionary, "is_local", false),
-			ReadBool(dictionary, "is_ready", false),
-			ReadBool(dictionary, "is_connected", true));
-	}
-
-	private static string ReadString(Godot.Collections.Dictionary dictionary, string key)
-	{
-		return dictionary.TryGetValue(key, out Variant value) ? value.AsString() : string.Empty;
-	}
-
-	private static int ReadInt(Godot.Collections.Dictionary dictionary, string key, int fallback)
-	{
-		return dictionary.TryGetValue(key, out Variant value) ? (int)value.AsInt64() : fallback;
-	}
-
-	private static long ReadLong(Godot.Collections.Dictionary dictionary, string key)
-	{
-		return dictionary.TryGetValue(key, out Variant value) ? value.AsInt64() : 0;
-	}
-
-	private static bool ReadBool(Godot.Collections.Dictionary dictionary, string key, bool fallback)
-	{
-		return dictionary.TryGetValue(key, out Variant value) ? value.AsBool() : fallback;
-	}
-
-	private static TEnum ReadEnum<TEnum>(Godot.Collections.Dictionary dictionary, string key, TEnum fallback)
-		where TEnum : struct, Enum
-	{
-		if (!dictionary.TryGetValue(key, out Variant value))
+		config = default;
+		if (!NetworkVariantReader.TryReadString(dictionary, "session_id", NetworkProtocol.MaxSessionIdLength, out string sessionId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(dictionary, "room_name", RoomNameRules.MaxLength, out string roomName, allowEmpty: false)
+			|| !RoomNameRules.IsValid(roomName)
+			|| !string.Equals(roomName, roomName.Trim(), StringComparison.Ordinal)
+			|| !NetworkVariantReader.TryReadString(dictionary, "room_password", RoomPasswordRules.MaxLength, out string roomPassword)
+			|| !string.Equals(roomPassword, roomPassword.Trim(), StringComparison.Ordinal)
+			|| !NetworkVariantReader.TryReadString(dictionary, "match_id", NetworkProtocol.MaxMatchIdLength, out string matchId)
+			|| !NetworkVariantReader.TryReadInt64(dictionary, "match_seed", long.MinValue, long.MaxValue, out long matchSeed)
+			|| !NetworkVariantReader.TryReadEnum(dictionary, "transport", out NetworkTransport transport)
+			|| !NetworkVariantReader.TryReadInt32(dictionary, "player_count", NetworkSessionDefaults.MinPlayers, NetworkSessionDefaults.MaxPlayers, out int playerCount)
+			|| !NetworkVariantReader.TryReadBool(dictionary, "item_mode", out bool itemMode)
+			|| !NetworkVariantReader.TryReadInt32(dictionary, "winning_score", 50, 200, out int winningScore)
+			|| winningScore is not (50 or 100 or 200)
+			|| !NetworkVariantReader.TryReadEnum(dictionary, "lobby_visibility", out LobbyVisibility lobbyVisibility))
 		{
-			return fallback;
+			return false;
 		}
 
-		return Enum.TryParse(value.AsString(), ignoreCase: true, out TEnum parsed) ? parsed : fallback;
+		if (IsHost
+			&& RoomPasswordRules.HasPassword(_config.RoomPassword)
+			&& string.IsNullOrEmpty(roomPassword))
+		{
+			roomPassword = _config.RoomPassword;
+		}
+
+		config = new NetworkSessionConfig(
+			sessionId,
+			roomName,
+			roomPassword,
+			matchId,
+			matchSeed,
+			transport,
+			playerCount,
+			itemMode,
+			winningScore,
+			lobbyVisibility);
+		return true;
+	}
+
+	private static bool TryParsePlayer(
+		Godot.Collections.Dictionary dictionary,
+		out NetworkPlayerPublicState player)
+	{
+		player = default;
+		if (!NetworkVariantReader.TryReadInt32(dictionary, "peer_id", 0, int.MaxValue, out int peerId)
+			|| !NetworkVariantReader.TryReadString(dictionary, "stable_user_id", NetworkProtocol.MaxPlayerIdLength, out string stableUserId, allowEmpty: false)
+			|| !NetworkVariantReader.TryReadString(dictionary, "display_name", PlayerNameRules.MaxLength, out string displayName, allowEmpty: false)
+			|| !PlayerNameRules.IsValid(displayName)
+			|| !string.Equals(displayName, displayName.Trim(), StringComparison.Ordinal)
+			|| !NetworkVariantReader.TryReadString(dictionary, "avatar_id", 128, out string avatarId, allowEmpty: false)
+			|| !string.Equals(CharacterAvatarCatalog.NormalizeAvatarId(avatarId), avatarId, StringComparison.Ordinal)
+			|| !NetworkVariantReader.TryReadInt32(dictionary, "seat_index", 0, NetworkSessionDefaults.MaxPlayers - 1, out int seatIndex)
+			|| !NetworkVariantReader.TryReadBool(dictionary, "is_host", out bool isHost)
+			|| !NetworkVariantReader.TryReadBool(dictionary, "is_local", out bool isLocal)
+			|| !NetworkVariantReader.TryReadBool(dictionary, "is_ready", out bool isReady)
+			|| !NetworkVariantReader.TryReadBool(dictionary, "is_connected", out bool isConnected))
+		{
+			return false;
+		}
+
+		player = new NetworkPlayerPublicState(
+			peerId,
+			stableUserId,
+			displayName,
+			avatarId,
+			seatIndex,
+			isHost,
+			isLocal,
+			isReady,
+			isConnected);
+		return true;
+	}
+
+	private bool TryDecodeLobbyState(
+		Godot.Collections.Dictionary rawConfig,
+		Godot.Collections.Array rawPlayers,
+		int localPeerId,
+		out NetworkSessionConfig config,
+		out List<NetworkPlayerPublicState> players)
+	{
+		config = default;
+		players = new List<NetworkPlayerPublicState>();
+		if (!TryParseSharedConfig(rawConfig, out config)
+			|| rawPlayers is null
+			|| rawPlayers.Count < 1
+			|| rawPlayers.Count > NetworkProtocol.MaxAuthorityCheckpointPlayers
+			|| rawPlayers.Count > config.PlayerCount)
+		{
+			return false;
+		}
+
+		var seenSeats = new bool[config.PlayerCount];
+		var playerIds = new HashSet<string>(StringComparer.Ordinal);
+		var positivePeerIds = new HashSet<int>();
+		int hostCount = 0;
+		for (int index = 0; index < rawPlayers.Count; index++)
+		{
+			if (!NetworkVariantReader.TryConvertDictionary(rawPlayers[index], out Godot.Collections.Dictionary rawPlayer)
+				|| !TryParsePlayer(rawPlayer, out NetworkPlayerPublicState player)
+				|| player.SeatIndex >= rawPlayers.Count
+				|| seenSeats[player.SeatIndex]
+				|| !playerIds.Add(player.StableUserId)
+				|| (player.PeerId > 0 && !positivePeerIds.Add(player.PeerId)))
+			{
+				players.Clear();
+				return false;
+			}
+
+			seenSeats[player.SeatIndex] = true;
+			hostCount += player.IsHost ? 1 : 0;
+			players.Add(player with
+			{
+				IsLocal = player.PeerId == localPeerId || (localPeerId == 0 && player.IsHost),
+			});
+		}
+
+		if (hostCount != 1)
+		{
+			players.Clear();
+			return false;
+		}
+
+		players.Sort((left, right) => left.SeatIndex.CompareTo(right.SeatIndex));
+		return true;
 	}
 }

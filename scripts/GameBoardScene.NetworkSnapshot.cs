@@ -21,10 +21,7 @@ public partial class GameBoardScene
 
 	private static bool TryReadNetworkArray(Godot.Collections.Dictionary dictionary, string key, out Godot.Collections.Array values)
 	{
-		values = default!;
-		if (!dictionary.TryGetValue(key, out Variant rawValue) || rawValue.VariantType != Variant.Type.Array) return false;
-		values = rawValue.AsGodotArray();
-		return true;
+		return NetworkVariantReader.TryReadArray(dictionary, key, 0, NetworkProtocol.MaxAuthorityActionQueueCount * 4, out values);
 	}
 
 	private static bool TryReadNetworkInt64(
@@ -34,23 +31,12 @@ public partial class GameBoardScene
 		long maximum,
 		out long value)
 	{
-		value = 0;
-		if (!dictionary.TryGetValue(key, out Variant rawValue)
-			|| rawValue.VariantType != Variant.Type.Int)
-		{
-			return false;
-		}
-
-		value = rawValue.AsInt64();
-		return value >= minimum && value <= maximum;
+		return NetworkVariantReader.TryReadInt64(dictionary, key, minimum, maximum, out value);
 	}
 
 	private static bool TryReadNetworkDictionary(Variant rawValue, out Godot.Collections.Dictionary dictionary)
 	{
-		dictionary = default!;
-		if (rawValue.VariantType != Variant.Type.Dictionary) return false;
-		dictionary = rawValue.AsGodotDictionary();
-		return true;
+		return NetworkVariantReader.TryConvertDictionary(rawValue, out dictionary);
 	}
 
 	private static bool TryReadBoundedNetworkIntArray(Godot.Collections.Dictionary dictionary, string key, int minimumCount, int maximumCount, int minimumValue, int maximumValue, out int[] values)
@@ -85,8 +71,7 @@ public partial class GameBoardScene
 
 	private static bool TryReadNetworkEnum<TEnum>(Godot.Collections.Dictionary dictionary, string key, out TEnum value) where TEnum : struct, Enum
 	{
-		value = default;
-		return TryReadNetworkString(dictionary, key, out string rawValue) && Enum.TryParse(rawValue, true, out value) && Enum.IsDefined(typeof(TEnum), value);
+		return NetworkVariantReader.TryReadEnum(dictionary, key, out value);
 	}
 
 	private static bool TryReadExactNetworkBoolArray(Godot.Collections.Dictionary dictionary, string key, int expectedCount, out bool[] values)
