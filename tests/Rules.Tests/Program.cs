@@ -248,7 +248,7 @@ internal static partial class Program
 		Run("network manager reconnect helpers move into partial file", NetworkManagerReconnectHelpersMoveIntoPartialFile);
 		Run("network manager lobby helpers move into partial file", NetworkManagerLobbyHelpersMoveIntoPartialFile);
 		Run("network manager p1b ordering stays on hot paths", NetworkManagerP1BOrderingStaysOnHotPaths);
-		Run("network manager board sync helpers move into partial file", NetworkManagerBoardSyncHelpersMoveIntoPartialFile);
+		Run("network manager board protocol helpers move into responsibility partials", NetworkManagerBoardProtocolHelpersMoveIntoResponsibilityPartials);
 		Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
 		Run("game board network request entry points avoid async void", GameBoardNetworkRequestEntryPointsAvoidAsyncVoid);
 		Run("target item selection capability is removed", TargetItemSelectionCapabilityIsRemoved);

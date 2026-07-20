@@ -1299,22 +1299,42 @@ internal static partial class Program
 		True(claimsMethod.Contains("OrderBy(pair => pair.Key)", StringComparison.Ordinal));
 	}
 
-	private static void NetworkManagerBoardSyncHelpersMoveIntoPartialFile()
+	private static void NetworkManagerBoardProtocolHelpersMoveIntoResponsibilityPartials()
 	{
 		string repoRoot = FindRepositoryRoot();
 		string mainPath = Path.Combine(repoRoot, "scripts", "NetworkManager.cs");
-		string partialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.BoardSync.cs");
+		string oldPartialPath = Path.Combine(repoRoot, "scripts", "NetworkManager.BoardSync.cs");
+		string replicationPath = Path.Combine(repoRoot, "scripts", "NetworkManager.BoardReplication.cs");
+		string requestsPath = Path.Combine(repoRoot, "scripts", "NetworkManager.BoardRequests.cs");
+		string recoveryPath = Path.Combine(repoRoot, "scripts", "NetworkManager.SessionRecoveryRpc.cs");
 		string mainText = File.ReadAllText(mainPath);
 
-		True(File.Exists(partialPath));
-		string partialText = File.ReadAllText(partialPath);
+		False(File.Exists(oldPartialPath));
+		True(File.Exists(replicationPath));
+		True(File.Exists(requestsPath));
+		True(File.Exists(recoveryPath));
+		string replicationText = File.ReadAllText(replicationPath);
+		string requestsText = File.ReadAllText(requestsPath);
+		string recoveryText = File.ReadAllText(recoveryPath);
 
-		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
-		True(partialText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
-		True(partialText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
-		True(partialText.Contains("private void RpcRequestPlayHandCard(", StringComparison.Ordinal));
-		True(partialText.Contains("private void RpcReconnectPlayer(", StringComparison.Ordinal));
-		True(partialText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
+		True(replicationText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(replicationText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
+		True(replicationText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
+		True(replicationText.Contains("private void RpcCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
+		True(replicationText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
+
+		True(requestsText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(requestsText.Contains("private void RpcRequestPlayHandCard(", StringComparison.Ordinal));
+		True(requestsText.Contains("private void RpcRequestPlayItemCard(", StringComparison.Ordinal));
+		True(requestsText.Contains("private void RpcRequestPendingItemSelection(", StringComparison.Ordinal));
+		True(requestsText.Contains("private void RpcRejectBoardAction(", StringComparison.Ordinal));
+
+		True(recoveryText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcReconnectPlayer(", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcReceiveReconnectCredentials(", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcReceiveSessionMigrationToken(", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcReconnectResult(", StringComparison.Ordinal));
+		True(recoveryText.Contains("private void RpcHostEndedMatch(", StringComparison.Ordinal));
 		False(mainText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
 		False(mainText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
 		False(mainText.Contains("private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
