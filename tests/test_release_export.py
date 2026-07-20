@@ -70,6 +70,12 @@ dotnet/include_debug_symbols=false
 			(source / "scripts/dev_mcp/proxy.gd").write_text("extends Node\n", encoding="utf-8")
 			(source / "tmp/leak.txt").write_text("leak\n", encoding="utf-8")
 			(source / "scripts/GameBoardScene.Debug.cs").write_text("debug\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.Debug.Core.cs").write_text("debug core\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.Debug.Core.cs.uid").write_text("uid://debug-core\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.Debug.Network.cs").write_text("debug network\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.Debug.Network.cs.uid").write_text("uid://debug-network\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.DebugHooks.cs").write_text("debug hooks\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.DebugRecording.cs").write_text("debug recording\n", encoding="utf-8")
 			(source / "runtime/keep.txt").write_text("keep\n", encoding="utf-8")
 			project = (
 				'[autoload]\nMCPScreenshot="*res://scripts/dev_mcp/proxy.gd"\n'
@@ -89,6 +95,12 @@ dotnet/include_debug_symbols=false
 			self.assertFalse((destination / "scripts/dev_mcp").exists())
 			self.assertFalse((destination / "tmp").exists())
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.cs").exists())
+			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Core.cs").exists())
+			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Core.cs.uid").exists())
+			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Network.cs").exists())
+			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Network.cs.uid").exists())
+			self.assertTrue((destination / "scripts/GameBoardScene.DebugHooks.cs").is_file())
+			self.assertTrue((destination / "scripts/GameBoardScene.DebugRecording.cs").is_file())
 			staged_project = (destination / "project.godot").read_text(encoding="utf-8")
 			self.assertNotIn("MCPScreenshot", staged_project)
 			self.assertNotIn("godot_mcp", staged_project)
@@ -303,13 +315,24 @@ func _initialize() -> void:
 			fixture.mkdir()
 			self._write_fixture(
 				fixture,
-				extra_files={"tmp/leak.txt": "leak\n", "addons/godot_mcp/plugin.gd": "extends Node\n"},
+				extra_files={
+					"tmp/leak.txt": "leak\n",
+					"addons/godot_mcp/plugin.gd": "extends Node\n",
+					"scripts/GameBoardScene.Debug.Network.cs": "debug network\n",
+					"scripts/GameBoardScene.DebugHooks.cs": "debug hooks\n",
+					"scripts/GameBoardScene.DebugRecording.cs": "debug recording\n",
+				},
 				autoload_mcp=True,
 			)
 			result, report = self._export_and_audit(fixture)
 			self.assertNotEqual(0, result.returncode, result.stdout)
 			self.assertFalse(report["ok"])
 			self.assertTrue(any(path.startswith("tmp/") for path in report["forbidden_matches"]))
+			self.assertIn("scripts/GameBoardScene.Debug.Network.cs", report["forbidden_matches"])
+			self.assertNotIn("scripts/GameBoardScene.DebugHooks.cs", report["forbidden_matches"])
+			self.assertNotIn("scripts/GameBoardScene.DebugRecording.cs", report["forbidden_matches"])
+			self.assertIn("scripts/GameBoardScene.DebugHooks.cs", report["file_entries"])
+			self.assertIn("scripts/GameBoardScene.DebugRecording.cs", report["file_entries"])
 			self.assertTrue(any("MCP autoload" in issue for issue in report["issues"]))
 
 	def test_package_blocks_recoverable_csharp_source(self) -> None:

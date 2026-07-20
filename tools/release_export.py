@@ -51,6 +51,9 @@ STAGING_EXCLUDED_FILES = (
 	"scripts/GameBoardScene.Debug.cs",
 	"scripts/GameBoardScene.Debug.cs.uid",
 )
+STAGING_EXCLUDED_FILE_PREFIXES = (
+	"scripts/GameBoardScene.Debug.",
+)
 REQUIRED_EXCLUDES = (
 	"addons/godot_mcp/**",
 	"scripts/dev_mcp/**",
@@ -60,6 +63,7 @@ REQUIRED_EXCLUDES = (
 	"addons/adventure_suit_upgrades/**",
 	"scenes/adventure_suit_upgrade_editor_scene.tscn",
 	"scripts/GameBoardScene.Debug.cs*",
+	"scripts/GameBoardScene.Debug.*.cs*",
 	"tests/**",
 	"tools/**",
 	"docs/**",
@@ -219,6 +223,8 @@ def static_audit(root: Path = ROOT) -> dict[str, Any]:
 def _should_exclude(relative_path: str) -> bool:
 	path = relative_path.strip("/")
 	if path in STAGING_EXCLUDED_FILES:
+		return True
+	if any(path.startswith(prefix) for prefix in STAGING_EXCLUDED_FILE_PREFIXES):
 		return True
 	return any(path == prefix or path.startswith(prefix + "/") for prefix in STAGING_EXCLUDED_DIRS)
 

@@ -3,6 +3,7 @@ extends SceneTree
 const FORBIDDEN_PATH_PREFIXES := [
 	"addons/godot_mcp/",
 	"scripts/dev_mcp/",
+	"scripts/GameBoardScene.Debug.",
 	"tmp/",
 	"generated-images/",
 	"addons/adventure_suit_upgrades/",

@@ -12,6 +12,7 @@
     <Compile Remove="outputs/**/*.cs" />
     <Compile Remove="**/node_modules/**/*.cs" />
 	<Compile Remove="scripts/GameBoardScene.Debug.cs" Condition="'$(Configuration)' == 'Release'" />
+	<Compile Remove="scripts/GameBoardScene.Debug.*.cs" Condition="'$(Configuration)' == 'Release'" />
   </ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Release' and Exists('tests/AdventureStageUnlockHarness.cs') and Exists('tests/MainMenuBackgroundAnimatorLifetimeHarness.cs')">
