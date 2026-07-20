@@ -253,7 +253,6 @@ collect_missing_export_excludes() {
 	  "current_screen*"
 	  "addons/adventure_suit_upgrades/**"
 	  "scenes/adventure_suit_upgrade_editor_scene.tscn"
-	  "scripts/GameBoardScene.Debug.cs*"
 	  "scripts/GameBoardScene.Debug.*.cs*"
 	  "tests/**"
 	  "tools/**"

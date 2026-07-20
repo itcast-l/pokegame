@@ -48,8 +48,6 @@ STAGING_EXCLUDED_FILES = (
 	"current_screen.png",
 	"current_screen.png.import",
 	"scenes/adventure_suit_upgrade_editor_scene.tscn",
-	"scripts/GameBoardScene.Debug.cs",
-	"scripts/GameBoardScene.Debug.cs.uid",
 )
 STAGING_EXCLUDED_FILE_PREFIXES = (
 	"scripts/GameBoardScene.Debug.",
@@ -62,7 +60,6 @@ REQUIRED_EXCLUDES = (
 	"current_screen*",
 	"addons/adventure_suit_upgrades/**",
 	"scenes/adventure_suit_upgrade_editor_scene.tscn",
-	"scripts/GameBoardScene.Debug.cs*",
 	"scripts/GameBoardScene.Debug.*.cs*",
 	"tests/**",
 	"tools/**",

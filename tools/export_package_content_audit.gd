@@ -16,8 +16,6 @@ const FORBIDDEN_PATH_PREFIXES := [
 ]
 const FORBIDDEN_EXACT_PATHS := [
 	"scenes/adventure_suit_upgrade_editor_scene.tscn",
-	"scripts/GameBoardScene.Debug.cs",
-	"scripts/GameBoardScene.Debug.cs.uid",
 ]
 const MCP_AUTOLOADS := [
 	"MCPScreenshot",
