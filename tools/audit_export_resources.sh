@@ -243,6 +243,71 @@ collect_autoload_export_conflicts() {
   printf '%s' "$output"
 }
 
+collect_runtime_export_excluded_resource_refs() {
+  rg -n --no-heading \
+    --glob '*.cs' \
+    --glob '*.gd' \
+    --glob '*.tscn' \
+    --glob '*.tres' \
+    --glob '*.godot' \
+    --glob '!scripts/GameBoardScene.Debug.*.cs' \
+    --glob '!scripts/dev_mcp/**' \
+    'res://(generated-images/|tmp/|outputs/|current_screen[^"[:space:]]*|art/[^"[:space:]]+/(raw|generated)/|art/[^"[:space:]]+/(raw-sheet(-clean)?|sheet-transparent)\.(png|jpg|jpeg|webp|svg|bmp|tga|gif))' \
+    scripts scenes resources project.godot 2>/dev/null || true
+}
+
+collect_missing_tracked_manifest_image_refs() {
+  python3 - <<'PY'
+import json
+from pathlib import Path
+import re
+import subprocess
+
+root = Path.cwd()
+tracked = subprocess.check_output(
+    ["git", "ls-files", "-z", "--", "art", "asset", "assets", "resources"],
+    cwd=root,
+).decode("utf-8").split("\0")
+image_extensions = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".bmp", ".tga", ".gif"}
+
+
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            yield from strings(item)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from strings(item)
+
+
+for relative in tracked:
+    if not relative.endswith(".json"):
+        continue
+
+    path = root / relative
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        continue
+
+    for value in strings(data):
+        if not value.startswith("res://"):
+            continue
+
+        resource_path = value.removeprefix("res://")
+        if Path(resource_path).suffix.lower() not in image_extensions:
+            continue
+        if "{" in resource_path and "}" in resource_path:
+            glob_path = re.sub(r"\{[^{}]+\}", "*", resource_path)
+            if any(root.glob(glob_path)):
+                continue
+        if not (root / resource_path).is_file():
+            print(f"{relative} -> {value}")
+PY
+}
+
 collect_missing_export_excludes() {
   local required pattern output=""
 	local -a required_patterns=(
@@ -338,6 +403,24 @@ if [ -n "$(printf '%s' "$RAW_SOURCE_MATCHES" | sed '/^$/d')" ]; then
   print_limited_list "$RAW_SOURCE_MATCHES"
 else
   print_ok "git-tracked raw/source large images or source-art files"
+fi
+
+print_section "Runtime References Into Export-Excluded Paths"
+RUNTIME_EXCLUDED_RESOURCE_REFS="$(collect_runtime_export_excluded_resource_refs)"
+if [ -n "$(printf '%s' "$RUNTIME_EXCLUDED_RESOURCE_REFS" | sed '/^$/d')" ]; then
+  print_risk "runtime project files reference export-excluded resources ($(count_non_empty_lines "$RUNTIME_EXCLUDED_RESOURCE_REFS") references)"
+  print_limited_list "$RUNTIME_EXCLUDED_RESOURCE_REFS"
+else
+  print_ok "runtime project files reference export-excluded resources"
+fi
+
+print_section "Missing Tracked Manifest Image References"
+MISSING_MANIFEST_IMAGE_REFS="$(collect_missing_tracked_manifest_image_refs)"
+if [ -n "$(printf '%s' "$MISSING_MANIFEST_IMAGE_REFS" | sed '/^$/d')" ]; then
+  print_risk "tracked JSON manifests reference missing images ($(count_non_empty_lines "$MISSING_MANIFEST_IMAGE_REFS") references)"
+  print_limited_list "$MISSING_MANIFEST_IMAGE_REFS"
+else
+  print_ok "tracked JSON manifests reference missing images"
 fi
 
 print_section "Autoload Export Conflicts"

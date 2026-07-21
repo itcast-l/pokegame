@@ -11,6 +11,8 @@ bash tools/audit_export_resources.sh
 - 快速发现被 git 跟踪的 `generated-images/**`、`outputs/**` 文件。
 - 快速发现被 git 跟踪的 `*.debug-sse.log`。
 - 快速发现被 git 跟踪的 raw/source 大图和源文件。
+- 检查运行时脚本、场景和资源是否引用了导出排除路径。
+- 检查已跟踪 JSON 清单中的图片路径是否真实存在。
 - 检查 `project.godot` autoload 是否指向 `export_presets.cfg` 的 `exclude_filter` 排除路径。
 - 检查 `export_presets.cfg` 是否遗漏生成目录和 debug 目录排除规则。
 

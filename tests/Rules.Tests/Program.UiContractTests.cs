@@ -947,18 +947,21 @@ internal static partial class Program
 
 	private static void AdventureUpgradeRuntimeNoLongerHardcodesPopupArtSwitchTables()
 	{
-		string runtimePath = Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs");
+		string repoRoot = FindRepositoryRoot();
+		string runtimePath = Path.Combine(repoRoot, "scripts", "GameBoardScene.AdventureUpgrades.cs");
 		string text = File.ReadAllText(runtimePath);
 		string overlayRuntimePath = Path.Combine(
-			FindRepositoryRoot(),
+			repoRoot,
 			"scripts",
 			"GameBoardScene.AdventureUpgradeSelectionOverlay.cs");
 		string overlayText = File.ReadAllText(overlayRuntimePath);
 		string choiceArtPath = Path.Combine(
-			FindRepositoryRoot(),
+			repoRoot,
 			"scripts",
 			"AdventureUpgradeChoiceArt.cs");
 		string choiceArtText = File.ReadAllText(choiceArtPath);
+		string obsoleteResolverPath = Path.Combine(repoRoot, "scripts", "AdventureUpgradeChoiceVisualResolver.cs");
+		False(File.Exists(obsoleteResolverPath));
 		False(text.Contains("GetAdventureUpgradeCardTextureRegion(", StringComparison.Ordinal));
 		False(text.Contains("GetAdventureUpgradeCardTexturePath(", StringComparison.Ordinal));
 		False(text.Contains("res://art/ui/adventure_upgrade_cards/hearts/processed/hearts-common.png", StringComparison.Ordinal));
@@ -1351,6 +1354,10 @@ internal static partial class Program
 		True(text.Contains("Category Summary", StringComparison.Ordinal));
 		True(text.Contains("upgrade_popup_processed", StringComparison.Ordinal));
 		True(text.Contains("board_top_preview", StringComparison.Ordinal));
+		True(text.Contains("Runtime References Into Export-Excluded Paths", StringComparison.Ordinal));
+		True(text.Contains("Missing Tracked Manifest Image References", StringComparison.Ordinal));
+		True(text.Contains("collect_runtime_export_excluded_resource_refs", StringComparison.Ordinal));
+		True(text.Contains("collect_missing_tracked_manifest_image_refs", StringComparison.Ordinal));
 		False(text.Contains("git rm", StringComparison.Ordinal));
 		False(text.Contains("rm -rf", StringComparison.Ordinal));
 	}

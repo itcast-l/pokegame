@@ -14,80 +14,68 @@
     "Q",
     "K"
   ],
-  "frame_count": 4,
+  "frame_count": 1,
   "single_size": 128,
   "cards": [
     {
       "suit": "spades",
       "rank": "J",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/J/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/J/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/J/processed/frames/frame-001.png"
     },
     {
       "suit": "spades",
       "rank": "Q",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/Q/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/Q/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/Q/processed/frames/frame-001.png"
     },
     {
       "suit": "spades",
       "rank": "K",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/K/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/K/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/spades/K/processed/frames/frame-001.png"
     },
     {
       "suit": "hearts",
       "rank": "J",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/J/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/J/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/J/processed/frames/frame-001.png"
     },
     {
       "suit": "hearts",
       "rank": "Q",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/Q/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/Q/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/Q/processed/frames/frame-001.png"
     },
     {
       "suit": "hearts",
       "rank": "K",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/K/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/K/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/hearts/K/processed/frames/frame-001.png"
     },
     {
       "suit": "diamonds",
       "rank": "J",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/J/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/J/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/J/processed/frames/frame-001.png"
     },
     {
       "suit": "diamonds",
       "rank": "Q",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/Q/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/Q/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/Q/processed/frames/frame-001.png"
     },
     {
       "suit": "diamonds",
       "rank": "K",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/K/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/K/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/diamonds/K/processed/frames/frame-001.png"
     },
     {
       "suit": "clubs",
       "rank": "J",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/J/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/J/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/J/processed/frames/frame-001.png"
     },
     {
       "suit": "clubs",
       "rank": "Q",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/Q/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/Q/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/Q/processed/frames/frame-001.png"
     },
     {
       "suit": "clubs",
       "rank": "K",
-      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/K/processed/frames/frame-001.png",
-      "sheet": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/K/processed/sheet-transparent.png"
+      "frame_001": "res://art/cards/ocean_animated_deck/suited_jqk_backup/clubs/K/processed/frames/frame-001.png"
     }
   ]
 }
