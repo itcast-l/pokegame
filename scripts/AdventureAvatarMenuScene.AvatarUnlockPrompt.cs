@@ -7,7 +7,11 @@ public partial class AdventureAvatarMenuScene
 
 	private void ShowPendingAdventureAvatarUnlockPrompt()
 	{
-		if (_isShowingAvatarUnlockPrompt || _isStartingAdventure || _isReturningToMainMenu || !Visible)
+		if (_isEmbeddedVisualWarmup
+			|| _isShowingAvatarUnlockPrompt
+			|| _isStartingAdventure
+			|| _isReturningToMainMenu
+			|| !IsVisibleInTree())
 		{
 			return;
 		}

@@ -50,9 +50,19 @@ public partial class MainMenuScene : Control
 		return await CompleteMenuCameraTransition();
 	}
 
-	private async Task<bool> CompleteMenuCameraAdventureDive()
+	private void ScheduleMenuCameraAdventureDiveCompletion()
 	{
-		return await CompleteMenuCameraTransition();
+		SceneTreeTimer timer = GetTree().CreateTimer(GetMenuCameraTransitionRemainingSeconds());
+		timer.Timeout += () =>
+		{
+			if (!GodotObject.IsInstanceValid(this))
+			{
+				return;
+			}
+
+			SetMainMenuButtonsDisabled(false);
+			_isMenuCameraTransitioning = false;
+		};
 	}
 
 	private async Task<bool> CompleteMenuCameraTransition()

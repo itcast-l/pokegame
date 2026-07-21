@@ -56,6 +56,7 @@ public partial class AdventureAvatarMenuScene : Control
 	private RunResumeDialogMode _runResumeDialogMode;
 	private bool _runRecoverySaveFailed;
 	private bool _stageNameSizingRefreshQueued;
+	private bool _isEmbeddedVisualWarmup;
 
 	[Export]
 	public string selected_avatar_id { get; set; } = string.Empty;
@@ -104,7 +105,10 @@ public partial class AdventureAvatarMenuScene : Control
 			ScrollSelectedEntryIntoView();
 			QueueStageNameSizingRefresh();
 		}
-		else if (what == NotificationVisibilityChanged && IsNodeReady() && Visible)
+		else if (what == NotificationVisibilityChanged
+			&& IsNodeReady()
+			&& Visible
+			&& !_isEmbeddedVisualWarmup)
 		{
 			ShowPendingAdventureAvatarUnlockPrompt();
 		}

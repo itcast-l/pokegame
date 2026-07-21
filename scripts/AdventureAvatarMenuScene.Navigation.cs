@@ -3,6 +3,24 @@ using Godot;
 
 public partial class AdventureAvatarMenuScene
 {
+	public void SetEmbeddedVisualWarmup(bool enabled)
+	{
+		_isEmbeddedVisualWarmup = enabled;
+	}
+
+	public void PrepareForEmbeddedDisplay()
+	{
+		_isReturningToMainMenu = false;
+		_backButton.Disabled = false;
+		MouseFilter = MouseFilterEnum.Ignore;
+		ZIndex = 0;
+		Modulate = Colors.White;
+		Scale = Vector2.One;
+		_startButton.Disabled = false;
+		ShowRunResumeDialogIfActive();
+		ShowPendingAdventureAvatarUnlockPrompt();
+	}
+
 	private void StartAdventure()
 	{
 		if (_isStartingAdventure || _isReturningToMainMenu || _isShowingRunResumeDialog)

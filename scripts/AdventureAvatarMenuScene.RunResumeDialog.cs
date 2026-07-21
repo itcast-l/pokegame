@@ -93,7 +93,9 @@ public partial class AdventureAvatarMenuScene
 
 	private void ShowRunResumeDialogIfActive()
 	{
-		if (!_isStartingAdventure
+		if (!_isEmbeddedVisualWarmup
+			&& IsVisibleInTree()
+			&& !_isStartingAdventure
 			&& !_isReturningToMainMenu
 			&& _selectedAdventureId == AdventureCampaignCatalog.MainCampaignId
 			&& (GetAdventureRunSessionStore()?.HasActiveRun == true
