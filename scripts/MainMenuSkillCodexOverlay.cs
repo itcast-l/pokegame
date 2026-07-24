@@ -9,13 +9,19 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private const float CatalogCardHeight = 322.0f;
 	private const float CatalogCardGap = 16.0f;
 	private static readonly string[] SuitOrder = { "hearts", "diamonds", "spades", "clubs" };
+	private static readonly StyleBoxFlat HiddenFocusStyle = new() { BgColor = Colors.Transparent };
 
 	public event Action? CloseRequested;
+
+	[ExportGroup("Testing")]
+	[Export]
+	public bool UnlockAllForTesting { get; set; }
 
 	private Button _backButton = default!;
 	private Control _root = default!;
 	private Label _titleLabel = default!;
 	private readonly Dictionary<string, Button> _suitButtons = new(StringComparer.Ordinal);
+	private readonly Dictionary<Button, StyleBox> _buttonFocusStyles = new();
 	private ScrollContainer _scrollContainer = default!;
 	private GridContainer _grid = default!;
 	private Label _emptyLabel = default!;
@@ -25,14 +31,19 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private PackedScene? _cardScene;
 	private AdventureSuitUpgradeCatalog? _catalog;
 	private AdventureUpgradeManifest? _manifest;
+	private readonly HashSet<string> _unlockedUpgradeIds = new(StringComparer.Ordinal);
 	private readonly List<AdventureUpgradeCatalogCard> _visibleCards = new();
 	private readonly List<AdventureSuitUpgradeDefinition> _visibleDefinitions = new();
 	private string _currentSuit = "hearts";
 	private string _previewUpgradeId = string.Empty;
 	private Control? _focusBeforePreview;
+	private bool _acceptInput;
+	private bool _inputFocusVisible;
+	private bool _lastInputWasKeyboardOrJoypad;
 
 	public bool IsOpen => Visible;
 	public bool IsPreviewOpen => _previewLayer.Visible;
+	public Control TransitionRoot => _root;
 
 	public override void _Ready()
 	{
@@ -53,6 +64,11 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			string capturedSuit = suit;
 			button.Pressed += () => SelectSuit(capturedSuit, focusFirstCard: true);
 		}
+		RememberButtonFocusStyle(_backButton);
+		foreach (Button button in _suitButtons.Values)
+		{
+			RememberButtonFocusStyle(button);
+		}
 
 		_backButton.Pressed += RequestClose;
 		_root.Resized += () => CallDeferred(nameof(RefreshGridColumns));
@@ -62,6 +78,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		RefreshLocalizedText();
 		Visible = false;
 		SetProcessUnhandledInput(false);
+		SetInputFocusVisible(false);
 	}
 
 	public override void _Notification(int what)
@@ -83,11 +100,43 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		GetViewport().SetInputAsHandled();
 	}
 
+	public override void _Input(InputEvent inputEvent)
+	{
+		TrackInputMode(inputEvent);
+	}
+
+	public void TrackInputMode(InputEvent inputEvent)
+	{
+		if (IsMouseInput(inputEvent))
+		{
+			_lastInputWasKeyboardOrJoypad = false;
+			if (Visible && _acceptInput)
+			{
+				SetInputFocusVisible(false);
+			}
+			return;
+		}
+
+		if (IsKeyboardOrJoypadNavigationInput(inputEvent))
+		{
+			_lastInputWasKeyboardOrJoypad = true;
+			if (Visible && _acceptInput)
+			{
+				SetInputFocusVisible(true);
+			}
+		}
+	}
+
 	public void Open()
 	{
 		LoadCatalog();
+		LoadUnlockedUpgradeIds();
 		Visible = true;
+		_acceptInput = true;
+		_root.MouseFilter = Control.MouseFilterEnum.Stop;
 		SetProcessUnhandledInput(true);
+		SetInputFocusVisible(
+			_lastInputWasKeyboardOrJoypad || IsKeyboardOrJoypadActionPressedNow());
 		ClosePreview();
 		SelectSuit("hearts", focusFirstCard: false);
 		CallDeferred(nameof(RefreshGridColumns));
@@ -96,14 +145,27 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	public void Close()
 	{
-		ClosePreview();
+		BeginClose();
 		Visible = false;
+	}
+
+	public void BeginClose()
+	{
+		if (!Visible || !_acceptInput)
+		{
+			return;
+		}
+
+		ClosePreview();
+		_acceptInput = false;
+		_root.MouseFilter = Control.MouseFilterEnum.Ignore;
 		SetProcessUnhandledInput(false);
+		GetViewport().GuiReleaseFocus();
 	}
 
 	public bool HandleCancel()
 	{
-		if (!Visible)
+		if (!Visible || !_acceptInput)
 		{
 			return false;
 		}
@@ -141,21 +203,53 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	public string DebugGetCurrentSuit() => _currentSuit;
 	public int DebugGetGridColumns() => _grid.Columns;
 	public bool DebugIsPreviewVisible() => _previewLayer.Visible;
+	public bool DebugIsInputFocusVisible() => _inputFocusVisible;
 
 	public bool DebugSelectSuit(string suit)
 	{
-		return SelectSuit(suit, focusFirstCard: false);
+		return SelectSuit(suit, focusFirstCard: true);
 	}
 
 	public bool DebugActivateVisibleCard(int index)
 	{
-		if (index < 0 || index >= _visibleCards.Count)
+		if (index < 0 || index >= _visibleCards.Count || _visibleCards[index].IsLocked)
 		{
 			return false;
 		}
 
 		OpenPreview(_visibleDefinitions[index], _visibleCards[index]);
 		return true;
+	}
+
+	public int DebugGetCurrentSuitUnlockedCardCount()
+	{
+		int count = 0;
+		foreach (AdventureUpgradeCatalogCard card in _visibleCards)
+		{
+			if (!card.IsLocked)
+			{
+				count++;
+			}
+		}
+		return count;
+	}
+
+	public int DebugGetTotalUnlockedCardCount()
+	{
+		int count = 0;
+		if (_catalog == null)
+		{
+			return count;
+		}
+
+		foreach (AdventureSuitUpgradeDefinition definition in _catalog.All)
+		{
+			if (definition.Enabled && _unlockedUpgradeIds.Contains(definition.Id))
+			{
+				count++;
+			}
+		}
+		return count;
 	}
 
 	public Godot.Collections.Array DebugGetVisibleCardStates()
@@ -187,8 +281,36 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			: null;
 	}
 
+	private void LoadUnlockedUpgradeIds()
+	{
+		_unlockedUpgradeIds.Clear();
+		if (UnlockAllForTesting && OS.IsDebugBuild() && _catalog != null)
+		{
+			foreach (AdventureSuitUpgradeDefinition definition in _catalog.All)
+			{
+				if (definition.Enabled)
+				{
+					_unlockedUpgradeIds.Add(definition.Id);
+				}
+			}
+			return;
+		}
+
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		foreach (string upgradeId in SkillCodexUnlockRules.ParseUpgradeIds(
+			profile.UnlockedSkillCodexUpgradeIdsCsv))
+		{
+			_unlockedUpgradeIds.Add(upgradeId);
+		}
+	}
+
 	private bool SelectSuit(string suit, bool focusFirstCard)
 	{
+		if (!_acceptInput)
+		{
+			return false;
+		}
+
 		string normalizedSuit = suit?.Trim().ToLowerInvariant() ?? string.Empty;
 		if (Array.IndexOf(SuitOrder, normalizedSuit) < 0)
 		{
@@ -239,16 +361,24 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			card.Name = $"UpgradeCard_{definition.Id}";
 			card.CustomMinimumSize = new Vector2(CatalogCardWidth, CatalogCardHeight);
 			_grid.AddChild(card);
-			string description = FormatDescription(definition);
-			card.ConfigureCard(
-				definition.Suit,
-				definition.Rarity,
-				description,
-				Localize(GetRarityKey(definition.Rarity)),
-				interactive: true);
-			AdventureSuitUpgradeDefinition capturedDefinition = definition;
-			card.Pressed += () => OpenPreview(capturedDefinition, card);
-			card.FocusEntered += () => _scrollContainer.EnsureControlVisible(card);
+			bool unlocked = _unlockedUpgradeIds.Contains(definition.Id);
+			if (unlocked)
+			{
+				card.ConfigureCard(
+					definition.Suit,
+					definition.Rarity,
+					FormatDescription(definition),
+					Localize(GetRarityKey(definition.Rarity)),
+					interactive: true);
+				AdventureSuitUpgradeDefinition capturedDefinition = definition;
+				card.Pressed += () => OpenPreview(capturedDefinition, card);
+				card.FocusEntered += () => _scrollContainer.EnsureControlVisible(card);
+			}
+			else
+			{
+				card.ConfigureLockedCard(Localize("SKILL_CODEX_LOCKED"));
+			}
+			card.SetFocusHighlightEnabled(_inputFocusVisible);
 			_visibleCards.Add(card);
 			_visibleDefinitions.Add(definition);
 		}
@@ -285,6 +415,13 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		AdventureSuitUpgradeDefinition definition,
 		AdventureUpgradeCatalogCard sourceCard)
 	{
+		if (!_acceptInput
+			|| sourceCard.IsLocked
+			|| !_unlockedUpgradeIds.Contains(definition.Id))
+		{
+			return;
+		}
+
 		_focusBeforePreview = sourceCard;
 		_previewUpgradeId = definition.Id;
 		_previewCard.ConfigureCard(
@@ -317,7 +454,10 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	private void RequestClose()
 	{
-		CloseRequested?.Invoke();
+		if (_acceptInput)
+		{
+			CloseRequested?.Invoke();
+		}
 	}
 
 	private void RefreshLocalizedText()
@@ -327,7 +467,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		_emptyLabel.Text = Localize("SKILL_CODEX_EMPTY");
 		foreach (string suit in SuitOrder)
 		{
-			_suitButtons[suit].Text = Localize($"SKILL_CODEX_SUIT_{suit.ToUpperInvariant()}");
+			_suitButtons[suit].Text = $"{GetSuitSymbol(suit)} {Localize($"SKILL_CODEX_SUIT_{suit.ToUpperInvariant()}")}";
 		}
 
 		string previewId = _previewUpgradeId;
@@ -376,15 +516,82 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			return;
 		}
 
-		if (_visibleCards.Count > 0)
+		foreach (AdventureUpgradeCatalogCard card in _visibleCards)
 		{
-			_visibleCards[0].GrabFocus();
-			_scrollContainer.EnsureControlVisible(_visibleCards[0]);
+			if (!card.IsLocked)
+			{
+				card.GrabFocus();
+				_scrollContainer.EnsureControlVisible(card);
+				return;
+			}
 		}
-		else
+
+		_backButton.GrabFocus();
+	}
+
+	private void RememberButtonFocusStyle(Button button)
+	{
+		_buttonFocusStyles[button] = button.GetThemeStylebox("focus");
+	}
+
+	private void SetInputFocusVisible(bool visible)
+	{
+		_inputFocusVisible = visible;
+		foreach (KeyValuePair<Button, StyleBox> pair in _buttonFocusStyles)
 		{
-			_backButton.GrabFocus();
+			if (GodotObject.IsInstanceValid(pair.Key))
+			{
+				pair.Key.AddThemeStyleboxOverride("focus", visible ? pair.Value : HiddenFocusStyle);
+			}
 		}
+
+		foreach (AdventureUpgradeCatalogCard card in _visibleCards)
+		{
+			if (GodotObject.IsInstanceValid(card))
+			{
+				card.SetFocusHighlightEnabled(visible);
+			}
+		}
+	}
+
+	private static bool IsMouseInput(InputEvent inputEvent)
+	{
+		return inputEvent is InputEventMouseButton or InputEventMouseMotion;
+	}
+
+	private static bool IsKeyboardOrJoypadNavigationInput(InputEvent inputEvent)
+	{
+		if (inputEvent.IsActionPressed(GameInputActions.GameConfirm)
+			|| inputEvent.IsActionPressed(GameInputActions.GameCancel)
+			|| inputEvent.IsActionPressed(GameInputActions.HandPrevious)
+			|| inputEvent.IsActionPressed(GameInputActions.HandNext)
+			|| inputEvent.IsActionPressed("ui_accept")
+			|| inputEvent.IsActionPressed("ui_cancel")
+			|| inputEvent.IsActionPressed("ui_up")
+			|| inputEvent.IsActionPressed("ui_down")
+			|| inputEvent.IsActionPressed("ui_left")
+			|| inputEvent.IsActionPressed("ui_right"))
+		{
+			return true;
+		}
+
+		return inputEvent is InputEventJoypadButton { Pressed: true }
+			|| inputEvent is InputEventJoypadMotion joypadMotion
+				&& Mathf.Abs(joypadMotion.AxisValue) > 0.45f;
+	}
+
+	private static bool IsKeyboardOrJoypadActionPressedNow()
+	{
+		return Input.IsActionPressed(GameInputActions.GameConfirm)
+			|| Input.IsActionPressed(GameInputActions.GameCancel)
+			|| Input.IsActionPressed(GameInputActions.HandPrevious)
+			|| Input.IsActionPressed(GameInputActions.HandNext)
+			|| Input.IsActionPressed("ui_accept")
+			|| Input.IsActionPressed("ui_cancel")
+			|| Input.IsActionPressed("ui_up")
+			|| Input.IsActionPressed("ui_down")
+			|| Input.IsActionPressed("ui_left")
+			|| Input.IsActionPressed("ui_right");
 	}
 
 	private string Localize(string key)
@@ -400,6 +607,18 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			"rare" => "SKILL_CODEX_RARITY_RARE",
 			"legendary" => "SKILL_CODEX_RARITY_LEGENDARY",
 			_ => "SKILL_CODEX_RARITY_COMMON",
+		};
+	}
+
+	private static string GetSuitSymbol(string suit)
+	{
+		return suit switch
+		{
+			"hearts" => "\u2665",
+			"diamonds" => "\u2666",
+			"spades" => "\u2660",
+			"clubs" => "\u2663",
+			_ => string.Empty,
 		};
 	}
 

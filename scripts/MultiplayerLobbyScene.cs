@@ -91,6 +91,7 @@ public partial class MultiplayerLobbyScene : Control
 	private Godot.Collections.Array _latestPlayers = new();
 	private bool _localReady;
 	private bool _buttonSignalsConnected;
+	private bool _isReturningToMainMenu;
 	private Tween? _toastTween;
 
 	public override void _Ready()
@@ -108,6 +109,7 @@ public partial class MultiplayerLobbyScene : Control
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(PlayerCountOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(ItemModeOption);
 		MainMenuInteractiveStyle.ApplyOptionLikeButton(WinningScoreOption);
+		SuppressDefaultPressedSfx(BackButton);
 		ConnectButtonSignals();
 		ConnectNetworkSignals();
 		RefreshLocalizedText();
@@ -557,10 +559,68 @@ public partial class MultiplayerLobbyScene : Control
 		return ToastLabel.Visible ? ToastLabel.Text : string.Empty;
 	}
 
-	private void ReturnToMainMenu()
+	private async void ReturnToMainMenu()
 	{
-		_network.LeaveSession();
-		GetTree().ChangeSceneToFile(MainMenuScenePath);
+		if (_isReturningToMainMenu)
+		{
+			return;
+		}
+
+		PackedScene? mainMenuScene = GD.Load<PackedScene>(MainMenuScenePath);
+		if (mainMenuScene == null)
+		{
+			GD.PushError($"Missing main menu scene: {MainMenuScenePath}");
+			return;
+		}
+
+		_isReturningToMainMenu = true;
+		LockLobbyInteractionForSceneTransition();
+		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
+		{
+			_network.LeaveSession();
+			Node mainMenu = mainMenuScene.Instantiate();
+			GetTree().Root.AddChild(mainMenu);
+			GetTree().CurrentScene = mainMenu;
+			QueueFree();
+		});
+
+		if (GodotObject.IsInstanceValid(this) && IsInsideTree())
+		{
+			_isReturningToMainMenu = false;
+			BackButton.Disabled = false;
+			RefreshState((int)_network.State);
+		}
+	}
+
+	public bool DebugIsReturningToMainMenu()
+	{
+		return _isReturningToMainMenu;
+	}
+
+	private static void SuppressDefaultPressedSfx(BaseButton? button)
+	{
+		if (button != null && GodotObject.IsInstanceValid(button))
+		{
+			button.SetMeta(GameAudioManager.UiSuppressPressedSfxMeta, true);
+		}
+	}
+
+	private void LockLobbyInteractionForSceneTransition()
+	{
+		GetViewport().GuiReleaseFocus();
+		BackButton.Disabled = true;
+		LanHostButton.Disabled = true;
+		LanSearchButton.Disabled = true;
+		SteamHostButton.Disabled = true;
+		SteamRefreshButton.Disabled = true;
+		ReadyButton.Disabled = true;
+		StartButton.Disabled = true;
+		LeaveSessionButton.Disabled = true;
+		PlayerCountOption.Disabled = true;
+		ItemModeOption.Disabled = true;
+		WinningScoreOption.Disabled = true;
+		RoomNameInput.Editable = false;
+		RoomPasswordInput.Editable = false;
 	}
 
 	private static string ReadDictionaryString(Godot.Collections.Dictionary dictionary, string key, string fallback)

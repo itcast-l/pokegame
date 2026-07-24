@@ -325,7 +325,6 @@ public partial class GameBoardScene
 			AdventureUpgradeCardVisualEntryResource? visualEntry = AdventureUpgradeCardVisualResolver.ResolveEntry(option.Suit, option.Rarity);
 			Texture2D? cardTexture = AdventureUpgradeCardVisualResolver.LoadAtlasTextureForRarity(option.Suit, option.Rarity);
 			choiceArt.ConfigureChoice(cardTexture, option.Title, option.Description, false);
-			choiceArt.SetRarityLabel(Localize(GetAdventureUpgradeRarityKey(option.Rarity)));
 			choiceArt.SetPalette(
 				visualEntry?.TitleColor ?? DefaultAdventureUpgradeTitleColor,
 				visualEntry?.GlowColor ?? DefaultAdventureUpgradeGlowColor,
@@ -337,16 +336,6 @@ public partial class GameBoardScene
 		{
 			CallDeferred(nameof(FocusAdventureUpgradeSelectionOverlayDefaultButton));
 		}
-	}
-
-	private static string GetAdventureUpgradeRarityKey(string rarity)
-	{
-		return rarity?.Trim().ToLowerInvariant() switch
-		{
-			"rare" => "SKILL_CODEX_RARITY_RARE",
-			"legendary" => "SKILL_CODEX_RARITY_LEGENDARY",
-			_ => "SKILL_CODEX_RARITY_COMMON",
-		};
 	}
 
 	private void FocusAdventureUpgradeSelectionOverlayDefaultButton()

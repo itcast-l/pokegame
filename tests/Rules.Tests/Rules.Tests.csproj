@@ -50,6 +50,7 @@
     <Compile Include="../../scripts/GameSaveProfileRepository.cs" Link="Rules/GameSaveProfileRepository.cs" />
     <Compile Include="../../scripts/GameSaveMigration.cs" Link="Rules/GameSaveMigration.cs" />
     <Compile Include="../../scripts/GameSaveLegacyAdapter.cs" Link="Rules/GameSaveLegacyAdapter.cs" />
+    <Compile Include="../../scripts/SkillCodexUnlockRules.cs" Link="Rules/SkillCodexUnlockRules.cs" />
     <Compile Include="../../scripts/GameModeKind.cs" Link="Rules/GameModeKind.cs" />
     <Compile Include="../../scripts/GameModePolicy.cs" Link="Rules/GameModePolicy.cs" />
     <Compile Include="../../scripts/AdventureCampaignCatalog.cs" Link="Rules/AdventureCampaignCatalog.cs" />

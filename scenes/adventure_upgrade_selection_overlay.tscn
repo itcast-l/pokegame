@@ -161,7 +161,6 @@ PreviewSuit = "diamonds"
 PreviewTier = "uncommon"
 PreviewTitle = "温流补给"
 PreviewDescription = "抽 1 张牌。"
-PreviewRarityLabel = "稀有"
 
 [node name="Option2Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=151630651]
 custom_minimum_size = Vector2(272, 404)
@@ -197,7 +196,6 @@ PreviewSuit = "hearts"
 PreviewTier = "common"
 PreviewTitle = "浅湾整备"
 PreviewDescription = "抽 1 张牌。"
-PreviewRarityLabel = "普通"
 
 [node name="Option3Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=609478708]
 custom_minimum_size = Vector2(272, 404)
@@ -233,4 +231,3 @@ PreviewSuit = "spades"
 PreviewTier = "rare"
 PreviewTitle = "长收回春"
 PreviewDescription = "回复 2 点生命。"
-PreviewRarityLabel = "传说"

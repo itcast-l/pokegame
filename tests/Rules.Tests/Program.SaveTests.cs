@@ -310,6 +310,7 @@ internal static partial class Program
 		True(unchanged.ShouldGrantRunStartUpgrade);
 		Equal(100, unchanged.CurrentHealth);
 		Equal(100, unchanged.MaxHealth);
+		Equal(string.Empty, LoadStoredProfile(saveManager, slotId).UnlockedSkillCodexUpgradeIdsCsv);
 
 		AdventureUpgradeGrantCommitResult committed = store.GrantUpgrade(
 			"hearts_thick_blood",
@@ -322,10 +323,32 @@ internal static partial class Program
 		Equal(104, current.CurrentHealth);
 		Equal(104, current.MaxHealth);
 		Equal(savesBeforeGrant + 2, saveManager.SaveToSlotCallCount);
+		GameSaveStore.GameProgressData committedProfile = LoadStoredProfile(saveManager, slotId);
+		Equal("hearts_thick_blood", committedProfile.UnlockedSkillCodexUpgradeIdsCsv);
 		AdventureUpgradeRunSnapshot stored = ReadStoredRunSnapshot(saveManager, slotId);
 		Equal(104, stored.CurrentHealth);
 		False(stored.ShouldGrantRunStartUpgrade);
 		True(stored.AcquiredUpgradeIds.Contains("hearts_thick_blood"));
+
+		int savesBeforeDuplicate = saveManager.SaveToSlotCallCount;
+		AdventureUpgradeGrantCommitResult duplicate = store.GrantUpgrade(
+			"hearts_thick_blood",
+			AdventureUpgradeTriggerSource.None);
+		Equal(AdventureRunWriteResult.Succeeded, duplicate.WriteResult);
+		Equal(AdventureUpgradeAcquireResult.AlreadyAcquired, duplicate.AcquireResult);
+		Equal(savesBeforeDuplicate, saveManager.SaveToSlotCallCount);
+		Equal("hearts_thick_blood", LoadStoredProfile(saveManager, slotId).UnlockedSkillCodexUpgradeIdsCsv);
+
+		foreach (string rejectedUpgradeId in new[] { "hearts_forged_unknown", "hearts_blood_tide_resonance" })
+		{
+			AdventureUpgradeGrantCommitResult rejected = store.GrantUpgrade(
+				rejectedUpgradeId,
+				AdventureUpgradeTriggerSource.None);
+			Equal(AdventureRunWriteResult.Succeeded, rejected.WriteResult);
+			Equal(AdventureUpgradeAcquireResult.RejectedUnknownUpgrade, rejected.AcquireResult);
+		}
+		Equal(savesBeforeDuplicate, saveManager.SaveToSlotCallCount);
+		Equal("hearts_thick_blood", LoadStoredProfile(saveManager, slotId).UnlockedSkillCodexUpgradeIdsCsv);
 	}
 
 	private static void AdventureCompositeTransactionsRollBack()

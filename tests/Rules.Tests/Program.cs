@@ -20,8 +20,9 @@ internal static partial class Program
 		RunAdventureUpgradeRemediationTests();
 		RunAdventureUpgradeEffectRemediationTests();
 		RunAdventureUpgradeSnapshotV5Tests();
-		RunWave2Tests();
-		RunNetworkFoundationTests();
+			RunWave2Tests();
+			RunNetworkFoundationTests();
+			RunSkillCodexTests();
 		// Contract-drift tests intentionally invalidate a catalog. Restore the
 		// valid test manifest before exercising value-driven effect rules.
 		AdventureUpgradeRuntimeValues.SetManifest(

@@ -9,8 +9,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 	private static readonly Rect2 TitlePanelNormalizedRect = new(0.12f, 0.43f, 0.76f, 0.075f);
 	private static readonly Rect2 TitleBandNormalizedRect = new(0.15f, 0.435f, 0.70f, 0.057f);
 	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.14f, 0.545f, 0.72f, 0.18f);
-	private static readonly Rect2 RarityPanelNormalizedRect = new(0.25f, 0.79f, 0.50f, 0.06f);
-	private static readonly Rect2 RarityBandNormalizedRect = new(0.28f, 0.798f, 0.44f, 0.045f);
 
 	[Export] public FontFile? HeadingFont { get; set; }
 	[Export] public FontFile? BodyFont { get; set; }
@@ -19,7 +17,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 	[Export] public string PreviewTier { get; set; } = string.Empty;
 	[Export] public string PreviewTitle { get; set; } = string.Empty;
 	[Export(PropertyHint.MultilineText)] public string PreviewDescription { get; set; } = string.Empty;
-	[Export] public string PreviewRarityLabel { get; set; } = string.Empty;
 	[Export] public Color PreviewTitleColor { get; set; } = new(0.93f, 0.96f, 1.0f, 0.99f);
 	[Export] public Color PreviewGlowColor { get; set; } = new(0.34f, 0.92f, 1.0f, 1.0f);
 	[Export] public Color PreviewRuleColor { get; set; } = new(0.98f, 0.9f, 0.7f, 0.08f);
@@ -31,17 +28,13 @@ public partial class AdventureUpgradeChoiceArt : Control
 	private Panel _titlePanel = default!;
 	private Label _titleLayer = default!;
 	private Label _descriptionLayer = default!;
-	private Panel _rarityPanel = default!;
-	private Label _rarityLayer = default!;
 	private StyleBoxFlat _groundShadowStyle = default!;
 	private StyleBoxFlat _selectionGlowStyle = default!;
 	private StyleBoxFlat _descriptionPanelStyle = default!;
 	private StyleBoxFlat _titlePanelStyle = default!;
-	private StyleBoxFlat _rarityPanelStyle = default!;
 	private Texture2D? _cardTexture;
 	private string _title = string.Empty;
 	private string _description = string.Empty;
-	private string _rarityLabel = string.Empty;
 	private float _highlightAmount;
 	private Color _accentColor = new(0.52f, 0.93f, 1.0f, 1.0f);
 	private Color _glowColor = new(0.34f, 0.92f, 1.0f, 1.0f);
@@ -70,7 +63,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 			_cardTexture = ResolvePreviewCardTexture();
 			_title = PreviewTitle.Trim();
 			_description = PreviewDescription.Trim();
-			_rarityLabel = PreviewRarityLabel.Trim();
 		}
 		_accentColor = PreviewTitleColor;
 		_glowColor = PreviewGlowColor;
@@ -94,15 +86,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		HighlightAmount = highlighted ? 1.0f : 0.0f;
 	}
 
-	public void SetRarityLabel(string rarityLabel)
-	{
-		_rarityLabel = rarityLabel?.Trim() ?? string.Empty;
-		if (_rarityLayer != null)
-		{
-			_rarityLayer.Text = _rarityLabel;
-		}
-	}
-
 	public void SetHighlighted(bool highlighted) => HighlightAmount = highlighted ? 1.0f : 0.0f;
 	public void SetHighlightAmount(float amount) => HighlightAmount = amount;
 
@@ -117,7 +100,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 	public Godot.Collections.Dictionary DebugGetCardDrawRect() => RectToDictionary(GetCardDrawRect());
 	public string DebugGetTitleText() => _title;
 	public string DebugGetDescriptionText() => _description;
-	public string DebugGetRarityText() => _rarityLabel;
 	public int DebugGetResolvedDescriptionFontSize() => ResolveDescriptionFontSize();
 
 	public Godot.Collections.Dictionary DebugGetCardVisualState()
@@ -186,13 +168,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_descriptionLayer.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.015f, 0.02f, 0.9f));
 		_descriptionLayer.AddThemeConstantOverride("shadow_offset_y", 1);
 
-		_rarityPanelStyle = CreateRoundedStyle(new Color(0.025f, 0.05f, 0.055f, 0.94f), 3);
-		_rarityPanelStyle.BorderColor = new Color(0.65f, 0.62f, 0.48f, 0.58f);
-		_rarityPanelStyle.SetBorderWidthAll(1);
-		_rarityPanel = CreatePanelLayer("RarityPanel", 3, _rarityPanelStyle);
-		_rarityLayer = CreateTextLayer("RarityLayer", 4, HeadingFont ?? BodyFont, HorizontalAlignment.Center);
-		_rarityLayer.VerticalAlignment = VerticalAlignment.Center;
-		_rarityLayer.AddThemeFontSizeOverride("font_size", 13);
 	}
 
 	private Panel CreatePanelLayer(string name, int zIndex, StyleBoxFlat style)
@@ -256,7 +231,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_cardSurfaceLayer.Texture = _cardTexture;
 		_titleLayer.Text = _title;
 		_descriptionLayer.Text = _description;
-		_rarityLayer.Text = _rarityLabel;
 	}
 
 	private void LayoutLayers()
@@ -292,12 +266,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_descriptionLayer.Position = descriptionRect.Position;
 		_descriptionLayer.Size = descriptionRect.Size;
 		_descriptionLayer.AddThemeFontSizeOverride("font_size", ResolveDescriptionFontSize());
-		Rect2 rarityPanelRect = GetNormalizedRect(cardRect, RarityPanelNormalizedRect);
-		_rarityPanel.Position = rarityPanelRect.Position;
-		_rarityPanel.Size = rarityPanelRect.Size;
-		Rect2 rarityRect = GetNormalizedRect(cardRect, RarityBandNormalizedRect);
-		_rarityLayer.Position = rarityRect.Position;
-		_rarityLayer.Size = rarityRect.Size;
 	}
 
 	private void UpdateVisualState()
@@ -314,8 +282,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_selectionGlowStyle.BorderColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, glowAlpha);
 		_selectionGlowStyle.ShadowColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, glowAlpha * 0.24f);
 		_selectionGlowLayer.Visible = glowAlpha > 0.001f;
-		_rarityLayer.AddThemeColorOverride("font_color", new Color(_accentColor.R, _accentColor.G, _accentColor.B, 0.96f));
-		_rarityPanelStyle.BorderColor = new Color(_accentColor.R, _accentColor.G, _accentColor.B, 0.72f);
 	}
 
 	private Rect2 GetCardDrawRect()

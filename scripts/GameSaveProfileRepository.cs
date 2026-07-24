@@ -4,7 +4,7 @@ using Godot;
 
 internal static class GameSaveProfileRepository
 {
-	internal const int CurrentProgressSchemaVersion = 2;
+	internal const int CurrentProgressSchemaVersion = 3;
 	internal const string ProgressSchemaVersionKey = "schema_version";
 	internal const string ProgressHighestCompletedMainAdventureStageKey = "highest_completed_main_adventure_stage";
 	internal const string ProgressCompletedAdventureTutorialIdsCsvKey = "completed_adventure_tutorial_ids_csv";
@@ -14,6 +14,7 @@ internal static class GameSaveProfileRepository
 	internal const string ProgressPlayerNameKey = "player_name";
 	internal const string ProgressPendingAvatarUnlockQueueKey = "pending_avatar_unlock_queue";
 	internal const string ProgressPendingAdventureRunJsonKey = "pending_adventure_run_json";
+	internal const string ProgressUnlockedSkillCodexUpgradeIdsCsvKey = "unlocked_skill_codex_upgrade_ids_csv";
 	internal const string ProgressPlaytimeSecondsKey = "playtime_seconds";
 	internal const string ProgressCreatedUnixTimeKey = "created_unix_time";
 	internal const string ProgressUpdatedUnixTimeKey = "updated_unix_time";
@@ -50,8 +51,9 @@ internal static GameSaveStore.GameProgressData LoadProfileRaw(Node saveManager, 
 		GameSaveStore.GameProgressData progressData = GameSaveStore.GameProgressData.FromDictionary(
 			data,
 			GameSaveStore.GameProgressData.CreateDefault());
-		if (RequiresCanonicalV2Rewrite(data))
+		if (RequiresCanonicalV3Rewrite(data))
 		{
+			progressData = progressData with { SchemaVersion = CurrentProgressSchemaVersion };
 			Error rewriteResult = SaveProfileRaw(saveManager, slotId, progressData);
 			if (rewriteResult != Error.Ok)
 			{
@@ -235,11 +237,12 @@ internal static double ReadDouble(Godot.Collections.Dictionary data, string key,
 		return ReadDictionaryValue(data, key, defaultValue).AsDouble();
 	}
 
-private static bool RequiresCanonicalV2Rewrite(Godot.Collections.Dictionary data)
+private static bool RequiresCanonicalV3Rewrite(Godot.Collections.Dictionary data)
 	{
 		int schemaVersion = ReadInt(data, ProgressSchemaVersionKey, 1);
 		return schemaVersion != CurrentProgressSchemaVersion
 			|| !ContainsDictionaryKey(data, ProgressHighestCompletedMainAdventureStageKey)
-			|| !ContainsDictionaryKey(data, ProgressCompletedAdventureTutorialIdsCsvKey);
+			|| !ContainsDictionaryKey(data, ProgressCompletedAdventureTutorialIdsCsvKey)
+			|| !ContainsDictionaryKey(data, ProgressUnlockedSkillCodexUpgradeIdsCsvKey);
 	}
 }

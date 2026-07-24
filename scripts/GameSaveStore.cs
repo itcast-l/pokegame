@@ -18,7 +18,7 @@ public static class GameSaveStore
 	public const string PlayerNameKey = "settings.general.player_name";
 	public const string HighestCompletedMainAdventureStageKey = "adventure.highest_completed_main_adventure_stage";
 	public const string CompletedAdventureTutorialIdsCsvKey = "adventure.completed_adventure_tutorial_ids_csv";
-	// Legacy v1 key. It remains readable but is never written to a v2 profile.
+	// Legacy v1 key. It remains readable but is never written to a current profile.
 	public const string HighestCompletedStageKey = "adventure.highest_completed_stage";
 	public const string PendingAvatarUnlockQueueKey = "adventure.pending_avatar_unlock_queue";
 	public const string PendingAvatarUnlockKey = "adventure.pending_avatar_unlock";
@@ -39,6 +39,7 @@ public sealed record GameProgressData(
 		string PlayerName,
 		string PendingAvatarUnlockQueue,
 		string PendingAdventureRunJson,
+		string UnlockedSkillCodexUpgradeIdsCsv,
 		double PlaytimeSeconds,
 		long CreatedUnixTime,
 		long UpdatedUnixTime)
@@ -54,6 +55,7 @@ public sealed record GameProgressData(
 				PlayerNameRules.DefaultPlayerName,
 				string.Empty,
 				string.Empty,
+				string.Empty,
 				0.0,
 				now,
 				now);
@@ -64,7 +66,7 @@ public sealed record GameProgressData(
 			int schemaVersion = GameSaveProfileRepository.ReadInt(
 				data,
 				GameSaveProfileRepository.ProgressSchemaVersionKey,
-				fallback.SchemaVersion);
+				1);
 			int legacyHighestStage = GameSaveProfileRepository.ReadInt(
 				data,
 				GameSaveProfileRepository.ProgressHighestCompletedStageKey,
@@ -86,6 +88,12 @@ public sealed record GameProgressData(
 				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPlayerNameKey, fallback.PlayerName),
 				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPendingAvatarUnlockQueueKey, fallback.PendingAvatarUnlockQueue),
 				GameSaveProfileRepository.ReadString(data, GameSaveProfileRepository.ProgressPendingAdventureRunJsonKey, fallback.PendingAdventureRunJson),
+				schemaVersion >= 3
+					? GameSaveProfileRepository.ReadString(
+						data,
+						GameSaveProfileRepository.ProgressUnlockedSkillCodexUpgradeIdsCsvKey,
+						fallback.UnlockedSkillCodexUpgradeIdsCsv)
+					: string.Empty,
 				GameSaveProfileRepository.ReadDouble(data, GameSaveProfileRepository.ProgressPlaytimeSecondsKey, fallback.PlaytimeSeconds),
 				GameSaveProfileRepository.ReadLong(data, GameSaveProfileRepository.ProgressCreatedUnixTimeKey, fallback.CreatedUnixTime),
 				GameSaveProfileRepository.ReadLong(data, GameSaveProfileRepository.ProgressUpdatedUnixTimeKey, fallback.UpdatedUnixTime)).Normalize();
@@ -102,6 +110,7 @@ public sealed record GameProgressData(
 				[GameSaveProfileRepository.ProgressPlayerNameKey] = PlayerName,
 				[GameSaveProfileRepository.ProgressPendingAvatarUnlockQueueKey] = PendingAvatarUnlockQueue,
 				[GameSaveProfileRepository.ProgressPendingAdventureRunJsonKey] = PendingAdventureRunJson,
+				[GameSaveProfileRepository.ProgressUnlockedSkillCodexUpgradeIdsCsvKey] = UnlockedSkillCodexUpgradeIdsCsv,
 				[GameSaveProfileRepository.ProgressPlaytimeSecondsKey] = PlaytimeSeconds,
 				[GameSaveProfileRepository.ProgressCreatedUnixTimeKey] = CreatedUnixTime,
 				[GameSaveProfileRepository.ProgressUpdatedUnixTimeKey] = UpdatedUnixTime,
@@ -145,6 +154,8 @@ public sealed record GameProgressData(
 				PendingAdventureRunJson = string.IsNullOrWhiteSpace(PendingAdventureRunJson)
 					? string.Empty
 					: PendingAdventureRunJson,
+				UnlockedSkillCodexUpgradeIdsCsv = SkillCodexUnlockRules.NormalizeUpgradeIdsCsv(
+					UnlockedSkillCodexUpgradeIdsCsv),
 				PlaytimeSeconds = Math.Max(0.0, PlaytimeSeconds),
 				CreatedUnixTime = createdUnixTime,
 				UpdatedUnixTime = updatedUnixTime,
@@ -266,6 +277,7 @@ public sealed record GameProgressData(
 			string.Empty,
 			selectedAvatarId,
 			playerName,
+			string.Empty,
 			string.Empty,
 			string.Empty,
 			0.0,

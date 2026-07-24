@@ -6,6 +6,8 @@ const SHARED_CARD_SCENE_PATH := "res://scenes/adventure_upgrade_catalog_card.tsc
 const MENU_LAYOUT_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"
 const SKILL_BUTTON_PATH := MENU_LAYOUT_PATH + "/SkillCodexFrame/Button"
 const OVERLAY_PATH := "MainMenuSkillCodexOverlay"
+const EMPTY_PROFILE_SLOT := &"profile_0"
+const UNLOCKED_PROFILE_SLOT := &"profile_1"
 const VIEWPORT_SIZES := [Vector2i(960, 540), Vector2i(1280, 720), Vector2i(1920, 1080)]
 const EXPECTED_COUNTS := {
 	"hearts": 14,
@@ -18,6 +20,12 @@ const EXPECTED_TIERS := {
 	"rare": "uncommon",
 	"legendary": "rare",
 }
+const UNLOCKED_BY_SUIT := {
+	"hearts": "hearts_thick_blood",
+	"diamonds": "diamonds_question_mark_interest",
+	"spades": "spades_dark_harbor_reveal",
+	"clubs": "clubs_gap_rooting",
+}
 
 var _failed := false
 
@@ -28,6 +36,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	root.size = Vector2i(1280, 720)
+	var save_manager := await _configure_profiles()
+	if _failed or save_manager == null:
+		return
 	var menu := await _instantiate_scene(MAIN_MENU_SCENE_PATH)
 	if _failed or menu == null:
 		return
@@ -36,6 +47,10 @@ func _run() -> void:
 	if skill_button == null or overlay == null:
 		_fail("Main menu skill codex integration nodes are missing")
 		return
+	if not bool(overlay.get("UnlockAllForTesting")):
+		_fail("Skill codex testing unlock parameter is not enabled in the scene")
+		return
+	overlay.set("UnlockAllForTesting", false)
 	var avatar_layer := menu.get_node_or_null("AvatarEntryLayer") as CanvasLayer
 	var exit_layer := menu.get_node_or_null("ExitDialogLayer") as CanvasLayer
 	if avatar_layer == null or exit_layer == null \
@@ -46,11 +61,36 @@ func _run() -> void:
 	if not _assert_menu_entry_order(menu):
 		return
 
-	# Mouse command path.
+	var popup_regions := await _build_popup_region_map()
+	if _failed:
+		return
+
+	# A new profile must expose all 53 fixed slots without revealing any skill.
 	skill_button.emit_signal("pressed")
-	await _wait_frames(3)
 	if not bool(menu.call("DebugIsSkillCodexVisible")):
 		_fail("Skill codex did not open from the main-menu button")
+		return
+	if not bool(menu.call("DebugIsSkillCodexTransitioning")):
+		_fail("Skill codex entrance did not acquire its transition lock")
+		return
+	if bool(menu.call("DebugIsMainMenuAvatarVisible")):
+		_fail("Main-menu avatar remained visible during the skill codex entrance")
+		return
+	if not bool(menu.call("DebugAreMainMenuButtonsDisabled")):
+		_fail("Main-menu buttons were not locked during the skill codex entrance")
+		return
+	if not bool(overlay.get("follow_viewport_enabled")):
+		_fail("Skill codex CanvasLayer is not following the viewport")
+		return
+	var push_camera := menu.get_node_or_null("MenuCameraPushIn")
+	if push_camera == null or int(push_camera.call("get_priority")) != 20:
+		_fail("Skill codex entrance did not activate the push-in camera")
+		return
+	if not await _wait_for_skill_transition(menu, true):
+		return
+	var transition_root := overlay.get_node("Root") as Control
+	if not is_equal_approx(transition_root.modulate.a, 1.0):
+		_fail("Skill codex did not finish fading in")
 		return
 	if String(overlay.call("DebugGetCurrentSuit")) != "hearts":
 		_fail("Skill codex did not default to hearts")
@@ -58,9 +98,8 @@ func _run() -> void:
 	if int(overlay.call("DebugGetTotalEnabledCardCount")) != 53:
 		_fail("Skill codex total enabled count is not 53")
 		return
-
-	var popup_regions := await _build_popup_region_map()
-	if _failed:
+	if int(overlay.call("DebugGetTotalUnlockedCardCount")) != 0:
+		_fail("New profile skill codex is not fully locked")
 		return
 	for suit in EXPECTED_COUNTS:
 		if not bool(overlay.call("DebugSelectSuit", suit)):
@@ -70,7 +109,73 @@ func _run() -> void:
 		if int(overlay.call("DebugGetVisibleCardCount")) != int(EXPECTED_COUNTS[suit]):
 			_fail("Unexpected %s card count" % suit)
 			return
-		if not _assert_visible_cards(overlay, suit, popup_regions):
+		if int(overlay.call("DebugGetCurrentSuitUnlockedCardCount")) != 0:
+			_fail("New profile unexpectedly unlocked a %s card" % suit)
+			return
+		if not _assert_locked_cards(overlay):
+			return
+		if root.gui_get_focus_owner() != overlay.get_node("Root/SafeMargin/Layout/TopBar/TopBarLayout/BackButton"):
+			_fail("All-locked %s page did not focus the back button" % suit)
+			return
+	if bool(overlay.call("DebugActivateVisibleCard", 0)) \
+			or bool(overlay.call("DebugIsPreviewVisible")):
+		_fail("Locked skill card accepted activation or opened a preview")
+		return
+	if not bool(menu.call("DebugHandleSkillCodexCancel")) \
+			or not await _wait_for_skill_transition(menu, false):
+		return
+	if root.gui_get_focus_owner() != skill_button:
+		_fail("Focus did not return after closing the all-locked codex")
+		return
+
+	# Opening after an active-profile switch must reload the four persisted unlocks.
+	if not _set_active_profile(save_manager, UNLOCKED_PROFILE_SLOT):
+		return
+	skill_button.emit_signal("pressed")
+	if not await _wait_for_skill_transition(menu, true):
+		return
+	if int(overlay.call("DebugGetTotalUnlockedCardCount")) != UNLOCKED_BY_SUIT.size():
+		_fail("Unlocked profile did not refresh all persisted codex entries")
+		return
+	if bool(overlay.call("DebugIsInputFocusVisible")):
+		_fail("Pointer-opened skill codex showed keyboard focus before navigation input")
+		return
+	if not _assert_card_focus_highlight_state(overlay, false):
+		return
+
+	var navigation_press := InputEventKey.new()
+	navigation_press.keycode = KEY_RIGHT
+	navigation_press.pressed = true
+	Input.parse_input_event(navigation_press)
+	await _wait_frames(2)
+	if not bool(overlay.call("DebugIsInputFocusVisible")):
+		_fail("Keyboard navigation did not reveal skill codex focus feedback")
+		return
+	if not _assert_card_focus_highlight_state(overlay, true):
+		return
+	var navigation_release := InputEventKey.new()
+	navigation_release.keycode = KEY_RIGHT
+	navigation_release.pressed = false
+	Input.parse_input_event(navigation_release)
+
+	var pointer_motion := InputEventMouseMotion.new()
+	pointer_motion.relative = Vector2(1.0, 0.0)
+	Input.parse_input_event(pointer_motion)
+	await _wait_frames(2)
+	if bool(overlay.call("DebugIsInputFocusVisible")):
+		_fail("Pointer input did not hide skill codex keyboard focus feedback")
+		return
+	if not _assert_card_focus_highlight_state(overlay, false):
+		return
+	for suit in EXPECTED_COUNTS:
+		if not bool(overlay.call("DebugSelectSuit", suit)):
+			_fail("Failed to select unlocked profile suit tab %s" % suit)
+			return
+		await _wait_frames(2)
+		if int(overlay.call("DebugGetVisibleCardCount")) != int(EXPECTED_COUNTS[suit]):
+			_fail("Unlocked profile changed the fixed %s card count" % suit)
+			return
+		if not _assert_mixed_cards(overlay, suit, String(UNLOCKED_BY_SUIT[suit]), popup_regions):
 			return
 
 	if not bool(overlay.call("DebugSelectSuit", "diamonds")):
@@ -90,15 +195,18 @@ func _run() -> void:
 		_fail("Question-mark interest entry is missing from the diamonds page")
 		return
 
-	if not bool(overlay.call("DebugActivateVisibleCard", 0)):
+	var interest_index := _find_visible_card_index(overlay, "diamonds_question_mark_interest")
+	if interest_index < 0 or not bool(overlay.call("DebugActivateVisibleCard", interest_index)):
 		_fail("Failed to open enlarged card preview")
 		return
 	if not bool(overlay.call("DebugIsPreviewVisible")):
 		_fail("Enlarged card preview is not visible")
 		return
 	var preview_state := overlay.call("DebugGetPreviewCardState") as Dictionary
-	if bool(preview_state["interactive"]):
-		_fail("Enlarged preview card must be non-interactive")
+	if bool(preview_state["interactive"]) or bool(preview_state["locked"]) \
+			or not bool(preview_state["has_texture"]) \
+			or String(preview_state["rarity_label"]).is_empty():
+		_fail("Enlarged preview did not preserve unlocked card content as non-interactive")
 		return
 	if not bool(menu.call("DebugHandleSkillCodexCancel")):
 		_fail("First cancel was not handled by the enlarged preview")
@@ -110,15 +218,34 @@ func _run() -> void:
 	if not bool(menu.call("DebugHandleSkillCodexCancel")):
 		_fail("Second cancel was not handled by the codex")
 		return
-	await _wait_frames(2)
-	if bool(menu.call("DebugIsSkillCodexVisible")):
-		_fail("Second cancel did not close the codex")
+	await process_frame
+	if not bool(menu.call("DebugIsSkillCodexTransitioning")) \
+			or not bool(menu.call("DebugIsSkillCodexVisible")):
+		_fail("Skill codex exit did not remain visible under its transition lock")
+		return
+	if not bool(menu.call("DebugIsMainMenuAvatarVisible")):
+		_fail("Main-menu avatar was not restored during the skill codex exit")
+		return
+	if bool(menu.call("DebugHandleSkillCodexCancel")):
+		_fail("Repeated cancel was accepted during the skill codex exit")
+		return
+	var home_camera := menu.get_node_or_null("MenuCameraHome")
+	if home_camera == null or int(home_camera.call("get_priority")) != 10 \
+			or int(push_camera.call("get_priority")) != 0:
+		_fail("Skill codex exit did not restore the main-menu camera")
+		return
+	if not await _wait_for_skill_transition(menu, false):
 		return
 	if root.gui_get_focus_owner() != skill_button:
 		_fail("Focus did not return to the skill codex button")
 		return
+	if bool(menu.call("DebugAreMainMenuButtonsDisabled")):
+		_fail("Main-menu buttons remained disabled after the skill codex exit")
+		return
 
-	# Keyboard confirm path.
+	# Keyboard open reloads the empty active profile.
+	if not _set_active_profile(save_manager, EMPTY_PROFILE_SLOT):
+		return
 	skill_button.grab_focus()
 	var key_press := InputEventKey.new()
 	key_press.keycode = KEY_ENTER
@@ -129,14 +256,24 @@ func _run() -> void:
 	key_release.keycode = KEY_ENTER
 	key_release.pressed = false
 	Input.parse_input_event(key_release)
-	await process_frame
+	if not await _wait_for_skill_transition(menu, true):
+		return
 	if not bool(menu.call("DebugIsSkillCodexVisible")):
 		_fail("Keyboard confirm did not open the codex")
 		return
+	if int(overlay.call("DebugGetTotalUnlockedCardCount")) != 0:
+		_fail("Keyboard reopen did not refresh the empty active profile")
+		return
+	if not bool(overlay.call("DebugIsInputFocusVisible")):
+		_fail("Keyboard-opened skill codex did not show focus feedback")
+		return
 	menu.call("DebugHandleSkillCodexCancel")
-	await _wait_frames(2)
+	if not await _wait_for_skill_transition(menu, false):
+		return
 
-	# Gamepad confirm path.
+	# Gamepad open reloads the unlocked active profile.
+	if not _set_active_profile(save_manager, UNLOCKED_PROFILE_SLOT):
+		return
 	skill_button.grab_focus()
 	var joy_press := InputEventJoypadButton.new()
 	joy_press.button_index = JOY_BUTTON_A
@@ -147,9 +284,16 @@ func _run() -> void:
 	joy_release.button_index = JOY_BUTTON_A
 	joy_release.pressed = false
 	Input.parse_input_event(joy_release)
-	await process_frame
+	if not await _wait_for_skill_transition(menu, true):
+		return
 	if not bool(menu.call("DebugIsSkillCodexVisible")):
 		_fail("Gamepad confirm did not open the codex")
+		return
+	if int(overlay.call("DebugGetTotalUnlockedCardCount")) != UNLOCKED_BY_SUIT.size():
+		_fail("Gamepad reopen did not refresh the unlocked active profile")
+		return
+	if not bool(overlay.call("DebugIsInputFocusVisible")):
+		_fail("Gamepad-opened skill codex did not show focus feedback")
 		return
 
 	for viewport_size in VIEWPORT_SIZES:
@@ -161,6 +305,35 @@ func _run() -> void:
 			return
 
 	menu.call("DebugHandleSkillCodexCancel")
+	if not await _wait_for_skill_transition(menu, false):
+		return
+
+	# The scene-level testing parameter reveals every enabled entry without changing save data.
+	if not _set_active_profile(save_manager, EMPTY_PROFILE_SLOT):
+		return
+	overlay.set("UnlockAllForTesting", true)
+	skill_button.emit_signal("pressed")
+	if not await _wait_for_skill_transition(menu, true):
+		return
+	if int(overlay.call("DebugGetTotalUnlockedCardCount")) \
+			!= int(overlay.call("DebugGetTotalEnabledCardCount")):
+		_fail("Testing unlock parameter did not reveal every enabled codex entry")
+		return
+	for suit in EXPECTED_COUNTS:
+		if not bool(overlay.call("DebugSelectSuit", suit)):
+			_fail("Failed to select %s while testing unlock-all" % suit)
+			return
+		await _wait_frames(2)
+		if int(overlay.call("DebugGetCurrentSuitUnlockedCardCount")) != int(EXPECTED_COUNTS[suit]):
+			_fail("Testing unlock parameter left a locked %s entry" % suit)
+			return
+	if not bool(overlay.call("DebugActivateVisibleCard", 0)):
+		_fail("Testing unlock parameter did not make codex cards interactive")
+		return
+	menu.call("DebugHandleSkillCodexCancel")
+	menu.call("DebugHandleSkillCodexCancel")
+	if not await _wait_for_skill_transition(menu, false):
+		return
 	menu.queue_free()
 	await process_frame
 	print("MAIN_MENU_SKILL_CODEX_SMOKE_OK")
@@ -178,6 +351,59 @@ func _instantiate_scene(path: String) -> Node:
 	current_scene = scene
 	await _wait_frames(3)
 	return scene
+
+
+func _configure_profiles() -> Node:
+	await process_frame
+	var save_manager := root.get_node_or_null("SaveManager")
+	if save_manager == null:
+		_fail("SaveManager autoload is missing")
+		return null
+	save_manager.call("set_value", &"migration.settings_cfg.v1", true)
+	save_manager.call("set_value", &"migration.progress_profile.v1", true)
+	save_manager.call("set_value", &"migration.progress_profile.v2", true)
+	if not _seed_profile(save_manager, EMPTY_PROFILE_SLOT, ""):
+		return null
+	var unlocked_ids := "|".join([
+		UNLOCKED_BY_SUIT["hearts"],
+		UNLOCKED_BY_SUIT["diamonds"],
+		UNLOCKED_BY_SUIT["spades"],
+		UNLOCKED_BY_SUIT["clubs"],
+		"temporarily_retired_history_id",
+	])
+	if not _seed_profile(save_manager, UNLOCKED_PROFILE_SLOT, unlocked_ids):
+		return null
+	return save_manager if _set_active_profile(save_manager, EMPTY_PROFILE_SLOT) else null
+
+
+func _seed_profile(save_manager: Node, slot_id: StringName, unlocked_ids: String) -> bool:
+	save_manager.call("ensure_slot_for_file_base", slot_id, String(slot_id))
+	var now := int(Time.get_unix_time_from_system())
+	var profile := {
+		"schema_version": 3,
+		"highest_completed_main_adventure_stage": 0,
+		"completed_adventure_tutorial_ids_csv": "",
+		"selected_avatar_id": "fox",
+		"player_name": "Codex Smoke",
+		"pending_avatar_unlock_queue": "",
+		"pending_adventure_run_json": "",
+		"unlocked_skill_codex_upgrade_ids_csv": unlocked_ids,
+		"playtime_seconds": 0.0,
+		"created_unix_time": now,
+		"updated_unix_time": now,
+	}
+	if int(save_manager.call("save_to_slot_sync", slot_id, profile)) != OK:
+		_fail("Failed to seed skill codex profile %s" % slot_id)
+		return false
+	return true
+
+
+func _set_active_profile(save_manager: Node, slot_id: StringName) -> bool:
+	save_manager.call("set_value", &"progress.active_profile_slot", String(slot_id))
+	if int(save_manager.call("persist")) != OK:
+		_fail("Failed to activate skill codex profile %s" % slot_id)
+		return false
+	return true
 
 
 func _assert_menu_entry_order(menu: Node) -> bool:
@@ -218,54 +444,134 @@ func _build_popup_region_map() -> Dictionary:
 		var state := card.call("DebugGetCardState") as Dictionary
 		var key := "%s::%s" % [state["suit"], state["visual_tier"]]
 		regions[key] = state["atlas_region"]
-		if bool(state["interactive"]):
-			_fail("Popup preview cards must be non-interactive")
+		if bool(state["interactive"]) or bool(state["locked"]) \
+				or not bool(state["has_texture"]) \
+				or String(state["rarity_label"]).is_empty():
+			_fail("Popup preview cards must be complete non-interactive unlocked cards")
 			return {}
 	preview.queue_free()
 	await process_frame
 	return regions
 
 
-func _assert_visible_cards(overlay: Node, suit: String, popup_regions: Dictionary) -> bool:
+func _assert_locked_cards(overlay: Node) -> bool:
 	var states := overlay.call("DebugGetVisibleCardStates") as Array
 	var previous_sort_order := -2147483648
 	for state_variant in states:
 		var state := state_variant as Dictionary
-		if String(state["suit"]) != suit:
-			_fail("Codex page contains a card from the wrong suit")
-			return false
 		var sort_order := int(state["sort_order"])
 		if sort_order < previous_sort_order:
 			_fail("Codex cards are not sorted by SortOrder")
 			return false
 		previous_sort_order = sort_order
-		var rarity := String(state["rarity"])
-		if not EXPECTED_TIERS.has(rarity) or String(state["visual_tier"]) != String(EXPECTED_TIERS[rarity]):
-			_fail("Rarity-to-visual-tier mapping is incorrect for %s" % state["id"])
+		if not _assert_locked_state(overlay, state):
 			return false
-		if String(state["rarity_label"]).begins_with("SKILL_CODEX_"):
-			_fail("Rarity label was not localized for %s" % state["id"])
+	return true
+
+
+func _assert_mixed_cards(overlay: Node, suit: String, unlocked_id: String, popup_regions: Dictionary) -> bool:
+	var states := overlay.call("DebugGetVisibleCardStates") as Array
+	var previous_sort_order := -2147483648
+	var unlocked_count := 0
+	for state_variant in states:
+		var state := state_variant as Dictionary
+		var sort_order := int(state["sort_order"])
+		if sort_order < previous_sort_order:
+			_fail("Codex cards are not sorted by SortOrder")
 			return false
-		var description := String(state["description"])
-		if description.is_empty() or description.contains("{") or description.begins_with("UPGRADE_DESC_"):
-			_fail("Invalid formatted description for %s: %s" % [state["id"], description])
-			return false
+		previous_sort_order = sort_order
 		if String(state["scene_file_path"]) != SHARED_CARD_SCENE_PATH:
 			_fail("Codex entry is not an instance of the shared card scene")
 			return false
+		var card := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Control
+		if String(state["id"]) != unlocked_id:
+			if not _assert_locked_state(overlay, state):
+				return false
+			continue
+
+		unlocked_count += 1
+		var rarity := String(state["rarity"])
+		var description := String(state["description"])
+		if bool(state["locked"]) or not bool(state["interactive"]) \
+				or not bool(state["has_texture"]) or String(state["suit"]) != suit \
+				or not EXPECTED_TIERS.has(rarity) \
+				or String(state["visual_tier"]) != String(EXPECTED_TIERS[rarity]) \
+				or String(state["rarity_label"]).is_empty() \
+				or description.is_empty() or description.contains("{") \
+				or description.begins_with("UPGRADE_DESC_"):
+			_fail("Unlocked codex card content is invalid for %s" % state["id"])
+			return false
 		var popup_key := "%s::%s" % [suit, state["visual_tier"]]
-		if not popup_regions.has(popup_key) or not (state["atlas_region"] as Rect2).is_equal_approx(popup_regions[popup_key] as Rect2):
+		if not popup_regions.has(popup_key) \
+				or not (state["atlas_region"] as Rect2).is_equal_approx(popup_regions[popup_key] as Rect2):
 			_fail("Codex and popup AtlasTexture regions differ for %s" % popup_key)
 			return false
 		var region := state["atlas_region"] as Rect2
-		var card := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Control
-		if region.size.y <= 0.0 or absf(card.size.x / card.size.y - region.size.x / region.size.y) > 0.005:
-			_fail("Catalog card does not preserve AtlasTexture aspect ratio for %s card=%s region=%s" % [state["id"], card.size, region.size])
+		if card.focus_mode != Control.FOCUS_ALL \
+				or region.size.y <= 0.0 \
+				or absf(card.size.x / card.size.y - region.size.x / region.size.y) > 0.005:
+			_fail("Unlocked catalog card layout is invalid for %s" % state["id"])
+			return false
+	if unlocked_count != 1 or int(overlay.call("DebugGetCurrentSuitUnlockedCardCount")) != 1:
+		_fail("Expected exactly one unlocked %s card" % suit)
+		return false
+	var focused := root.gui_get_focus_owner()
+	if focused == null or String(focused.name) != "UpgradeCard_%s" % unlocked_id:
+		_fail("Suit tab did not focus its first unlocked card: expected=%s actual=%s" % [
+			unlocked_id,
+			"<none>" if focused == null else String(focused.name),
+		])
+		return false
+	return true
+
+
+func _assert_locked_state(overlay: Node, state: Dictionary) -> bool:
+	if not bool(state["locked"]) or bool(state["interactive"]) \
+			or bool(state["has_texture"]) or bool(state["feedback_visible"]) \
+			or bool(state["missing_texture_placeholder_visible"]) \
+			or not String(state["suit"]).is_empty() \
+			or not String(state["rarity"]).is_empty() \
+			or not String(state["visual_tier"]).is_empty() \
+			or not String(state["description"]).is_empty() \
+			or not String(state["rarity_label"]).is_empty() \
+			or String(state["locked_label"]).is_empty() \
+			or String(state["locked_label"]) == "SKILL_CODEX_LOCKED":
+		_fail("Locked card leaked content or interaction for %s" % state["id"])
+		return false
+	if String(state["scene_file_path"]) != SHARED_CARD_SCENE_PATH:
+		_fail("Locked entry is not an instance of the shared card scene")
+		return false
+	var card := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Button
+	if card.focus_mode != Control.FOCUS_NONE or not card.disabled \
+			or absf(card.size.x / card.size.y - 196.0 / 322.0) > 0.005:
+		_fail("Locked card focus or fixed aspect contract failed for %s" % state["id"])
+		return false
+	return true
+
+
+func _find_visible_card_index(overlay: Node, upgrade_id: String) -> int:
+	var states := overlay.call("DebugGetVisibleCardStates") as Array
+	for index in states.size():
+		if String((states[index] as Dictionary)["id"]) == upgrade_id:
+			return index
+	return -1
+
+
+func _assert_card_focus_highlight_state(overlay: Node, expected: bool) -> bool:
+	var states := overlay.call("DebugGetVisibleCardStates") as Array
+	for state_variant in states:
+		var state := state_variant as Dictionary
+		if bool(state["focus_highlight_enabled"]) != expected:
+			_fail("Card focus visibility did not match input mode for %s" % state["id"])
+			return false
+		if not expected and bool(state["feedback_visible"]):
+			_fail("Card retained focus feedback before keyboard or gamepad navigation: %s" % state["id"])
 			return false
 	return true
 
 
 func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
+	var transition_root := overlay.get_node("Root") as Control
 	var scroll := overlay.get_node("Root/SafeMargin/Layout/CardScroll") as ScrollContainer
 	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
 	var available_width := maxf(0.0, scroll.size.x - 48.0)
@@ -282,6 +588,34 @@ func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 	if scroll.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
 		_fail("Skill codex horizontal scrolling is enabled")
 		return false
+	var canvas_transform := transition_root.get_global_transform_with_canvas()
+	var screen_top_left := canvas_transform * Vector2.ZERO
+	var screen_bottom_right := canvas_transform * transition_root.size
+	var visible_viewport_size := transition_root.get_viewport_rect().size
+	if screen_top_left.distance_to(Vector2.ZERO) > 2.0 \
+			or screen_bottom_right.distance_to(visible_viewport_size) > 2.0:
+		_fail("Skill codex transition root does not cover the viewport at %s: %s -> %s" \
+				% [viewport_size, screen_top_left, screen_bottom_right])
+		return false
+	return true
+
+
+func _wait_for_skill_transition(menu: Node, expected_visible: bool) -> bool:
+	var deadline := Time.get_ticks_msec() + 3000
+	if expected_visible:
+		while not bool(menu.call("DebugIsSkillCodexVisible")) \
+				and not bool(menu.call("DebugIsSkillCodexTransitioning")) \
+				and Time.get_ticks_msec() < deadline:
+			await process_frame
+	while bool(menu.call("DebugIsSkillCodexTransitioning")) and Time.get_ticks_msec() < deadline:
+		await process_frame
+	if bool(menu.call("DebugIsSkillCodexTransitioning")):
+		_fail("Skill codex transition timed out")
+		return false
+	if bool(menu.call("DebugIsSkillCodexVisible")) != expected_visible:
+		_fail("Skill codex visibility did not settle to %s" % expected_visible)
+		return false
+	await process_frame
 	return true
 
 

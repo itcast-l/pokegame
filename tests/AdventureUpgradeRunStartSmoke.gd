@@ -84,9 +84,12 @@ func _run() -> void:
 				or not art.has_method("DebugGetCardVisualState"):
 			_fail("Adventure upgrade choice art is missing required flat-card interfaces")
 			return
-		if String(art.call("DebugGetDescriptionText")).is_empty() \
-				or String(art.call("DebugGetRarityText")).is_empty():
-			_fail("Choice art must show description and localized rarity")
+		if String(art.call("DebugGetDescriptionText")).is_empty():
+			_fail("Choice art must show its description")
+			return
+		if art.get_node_or_null("RarityPanel") != null \
+				or art.get_node_or_null("RarityLayer") != null:
+			_fail("Choice art must not show a rarity field")
 			return
 
 		var card_rect := art.call("DebugGetCardDrawRect") as Dictionary
@@ -101,7 +104,7 @@ func _run() -> void:
 		var top_ratio := (description_y - card_y) / card_height
 		var bottom_ratio := (description_y + description_height - card_y) / card_height
 		if absf(top_ratio - 0.545) > 0.002 or absf(bottom_ratio - 0.725) > 0.002:
-			_fail("Description layer must leave room for the rarity footer")
+			_fail("Description layer moved outside its supported card band")
 			return
 		if int(art.call("DebugGetResolvedDescriptionFontSize")) < 10:
 			_fail("Description font fell below the supported minimum")

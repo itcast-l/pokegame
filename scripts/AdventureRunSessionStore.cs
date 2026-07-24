@@ -266,7 +266,7 @@ public sealed partial class AdventureRunSessionStore : Node
 			healingResult = appliedHealing;
 		}
 
-		AdventureRunWriteResult writeResult = CommitCandidate(candidate);
+		AdventureRunWriteResult writeResult = CommitCandidate(candidate, unlockedUpgradeId: upgradeId);
 		return writeResult == AdventureRunWriteResult.Succeeded
 			? new AdventureUpgradeGrantCommitResult(
 				writeResult,
@@ -956,7 +956,8 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	private AdventureRunWriteResult CommitCandidate(
 		AdventureUpgradeRunState candidate,
-		bool forcePersist = false)
+		bool forcePersist = false,
+		string? unlockedUpgradeId = null)
 	{
 		string candidatePayload = candidate.IsActive
 			? JsonSerializer.Serialize(candidate.ToSnapshot())
@@ -965,7 +966,7 @@ public sealed partial class AdventureRunSessionStore : Node
 			? JsonSerializer.Serialize(_runState.ToSnapshot())
 			: string.Empty;
 		if ((forcePersist || !string.Equals(candidatePayload, currentPayload, StringComparison.Ordinal))
-			&& !TryPersistRunPayload(candidatePayload))
+			&& !TryPersistRunPayload(candidatePayload, unlockedUpgradeId))
 		{
 			return AdventureRunWriteResult.SaveFailed;
 		}
@@ -1022,7 +1023,7 @@ public sealed partial class AdventureRunSessionStore : Node
 		};
 	}
 
-	private bool TryPersistRunPayload(string json)
+	private bool TryPersistRunPayload(string json, string? unlockedUpgradeId = null)
 	{
 		_debugPersistAttemptCount++;
 		if (_debugPersistFailuresRemaining > 0)
@@ -1036,6 +1037,9 @@ public sealed partial class AdventureRunSessionStore : Node
 		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
 		{
 			PendingAdventureRunJson = json,
+			UnlockedSkillCodexUpgradeIdsCsv = SkillCodexUnlockRules.AddUnlockedUpgradeId(
+				profile.UnlockedSkillCodexUpgradeIdsCsv,
+				unlockedUpgradeId),
 		});
 		if (saveResult != Error.Ok)
 		{

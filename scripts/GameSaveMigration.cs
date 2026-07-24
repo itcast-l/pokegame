@@ -137,6 +137,7 @@ internal static GameSaveStore.GameProgressData CreateProgressProfileFromLegacyKv
 			GameSaveLegacyAdapter.GetRawValue(saveManager, GameSaveStore.PlayerNameKey, PlayerNameRules.DefaultPlayerName).AsString(),
 			pendingQueue,
 			string.Empty,
+			string.Empty,
 			0.0,
 			now,
 			now).Normalize();

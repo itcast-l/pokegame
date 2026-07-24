@@ -107,13 +107,14 @@ func _run() -> void:
 	}
 	var now := int(Time.get_unix_time_from_system())
 	var profile := {
-		"schema_version": 2,
+		"schema_version": 3,
 		"highest_completed_main_adventure_stage": 0,
 		"completed_adventure_tutorial_ids_csv": "",
 		"selected_avatar_id": "shrimp",
 		"player_name": "Migration Smoke",
 		"pending_avatar_unlock_queue": "",
 		"pending_adventure_run_json": JSON.stringify(legacy_snapshot),
+		"unlocked_skill_codex_upgrade_ids_csv": "",
 		"playtime_seconds": 0.0,
 		"created_unix_time": now,
 		"updated_unix_time": now,

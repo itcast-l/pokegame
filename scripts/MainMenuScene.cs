@@ -197,6 +197,7 @@ public partial class MainMenuScene : Control
 
 		_multiplayerButton = GetNode<Button>(MultiplayerButtonPath);
 		_multiplayerButton.Pressed += StartMultiplayerLobby;
+		SuppressDefaultPressedSfx(_multiplayerButton);
 		BindSkillCodexButton();
 
 		_settingsButton = GetNode<Button>(SettingsButtonPath);
@@ -261,6 +262,7 @@ public partial class MainMenuScene : Control
 			UpdateExitDialogPosition();
 			UpdateAvatarEditorPosition();
 			UpdateAdventureTransitionPosition();
+		UpdateSkillCodexTransitionPosition();
 		}
 	}
 
@@ -278,6 +280,7 @@ public partial class MainMenuScene : Control
 
 	public override void _Input(InputEvent inputEvent)
 	{
+		_skillCodexOverlay?.TrackInputMode(inputEvent);
 		TryHandleControlsBindingCapture(inputEvent);
 	}
 
