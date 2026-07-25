@@ -19,7 +19,7 @@ corner_radius_bottom_left = 8
 
 [node name="AdventureLevelEntry" type="Control" unique_id=260516966]
 custom_minimum_size = Vector2(392, 68)
-layout_mode = 3
+layout_mode = 2
 anchors_preset = 0
 mouse_filter = 1
 script = ExtResource("1_frame")

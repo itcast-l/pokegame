@@ -12,8 +12,14 @@ public partial class MainMenuScene : Control
 		}
 
 		_settingsDialog = dialog;
+		_settingsDialogLayer = new CanvasLayer
+		{
+			Name = "SettingsDialogLayer",
+			Layer = 10,
+		};
+		AddChild(_settingsDialogLayer);
 		_settingsDialogRoot = dialog;
-		AddChild(dialog);
+		_settingsDialogLayer.AddChild(dialog);
 		_settingsDialogPanel = dialog.DialogPanel;
 		_masterVolumeSlider = dialog.MasterVolumeSlider;
 		_musicVolumeSlider = dialog.MusicVolumeSlider;
@@ -142,7 +148,7 @@ public partial class MainMenuScene : Control
 
 		_controlsDialog = dialog;
 		_controlsDialogRoot = dialog;
-		AddChild(dialog);
+		_settingsDialogLayer.AddChild(dialog);
 		_controlsDialogPanel = dialog.DialogPanel;
 		SuppressDefaultPressedSfx(dialog.DoneButton);
 		dialog.CloseRequested += HideControlsDialog;

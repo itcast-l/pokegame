@@ -33,10 +33,15 @@ public partial class MainMenuScene : Control
 		avatarEditor.CurrentAvatarId = _selectedAvatarId;
 		avatarEditor.CurrentPlayerName = _playerName;
 		avatarEditor.ProfileSaved += OnProfileSaved;
+		_avatarEditDialogLayer = new CanvasLayer
+		{
+			Name = "AvatarEditDialogLayer",
+			Layer = AvatarEditDialogLayer,
+		};
+		AddChild(_avatarEditDialogLayer);
 		_avatarEditDialogRoot = avatarEditor;
+		_avatarEditDialogLayer.AddChild(avatarEditor);
 		_avatarEditDialogPanel = avatarEditor.DialogPanel;
-
-		AddChild(avatarEditor);
 		_avatarEntry.Visible = false;
 		avatarEditor.CloseRequested += CloseAvatarEditor;
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
@@ -44,7 +49,6 @@ public partial class MainMenuScene : Control
 		SyncPrimaryMenuFocusState();
 		avatarEditor.MouseFilter = MouseFilterEnum.Stop;
 		avatarEditor.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		UpdateAvatarEditorPosition();
 		if (_avatarEditDialogPanel != null)
 		{
 			_avatarEditDialogPanel.Scale = new Vector2(0.94f, 0.94f);
@@ -72,6 +76,7 @@ public partial class MainMenuScene : Control
 		_avatarEntry.Visible = true;
 		if (_avatarEditDialogRoot == null || !GodotObject.IsInstanceValid(_avatarEditDialogRoot))
 		{
+			ReleaseAvatarEditorLayer();
 			_avatarEditDialogRoot = null;
 			_avatarEditDialogPanel = null;
 			_avatarEditDialogTween = null;
@@ -81,6 +86,7 @@ public partial class MainMenuScene : Control
 		}
 
 		CharacterAvatarEditScene avatarEditor = _avatarEditDialogRoot;
+		CanvasLayer? avatarEditorLayer = _avatarEditDialogLayer;
 		PanelContainer? dialogPanel = _avatarEditDialogPanel;
 		avatarEditor.MouseFilter = MouseFilterEnum.Ignore;
 		ResetMenuCamera();
@@ -103,9 +109,14 @@ public partial class MainMenuScene : Control
 				avatarEditor.Visible = false;
 				avatarEditor.QueueFree();
 			}
+			if (avatarEditorLayer != null && GodotObject.IsInstanceValid(avatarEditorLayer))
+			{
+				avatarEditorLayer.QueueFree();
+			}
 
 			if (_avatarEditDialogRoot == avatarEditor)
 			{
+				_avatarEditDialogLayer = null;
 				_avatarEditDialogRoot = null;
 				_avatarEditDialogPanel = null;
 				_avatarEditDialogTween = null;
@@ -116,13 +127,14 @@ public partial class MainMenuScene : Control
 		};
 	}
 
-	private void UpdateAvatarEditorPosition()
+	private void ReleaseAvatarEditorLayer()
 	{
-		if (_avatarEditDialogRoot != null && GodotObject.IsInstanceValid(_avatarEditDialogRoot) && _avatarEditDialogRoot.Visible)
+		if (_avatarEditDialogLayer != null && GodotObject.IsInstanceValid(_avatarEditDialogLayer))
 		{
-			_avatarEditDialogRoot.Position = GetSecondaryMenuDepthPosition();
-			_avatarEditDialogRoot.Scale = GetSecondaryMenuWorldScale();
+			_avatarEditDialogLayer.QueueFree();
 		}
+
+		_avatarEditDialogLayer = null;
 	}
 
 	private void OnProfileSaved(string avatarId, string playerName)

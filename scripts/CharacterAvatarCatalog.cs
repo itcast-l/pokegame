@@ -122,19 +122,19 @@ public static partial class CharacterAvatarCatalog
 
 	public static bool IsAdventureStageCompleted(int stageNumber)
 	{
-		return stageNumber is >= 1 and <= AdventureCampaignCatalog.MainStageCount
+		return stageNumber >= 1 && stageNumber <= AdventureCampaignCatalog.MainStageCount
 			&& stageNumber <= LoadHighestCompletedAdventureStage();
 	}
 
 	public static bool IsAdventureStageAvailable(int stageNumber)
 	{
-		return stageNumber is >= 1 and <= AdventureCampaignCatalog.MainStageCount
+		return stageNumber >= 1 && stageNumber <= AdventureCampaignCatalog.MainStageCount
 			&& stageNumber == LoadHighestCompletedAdventureStage() + 1;
 	}
 
 	public static bool IsAdventureStageUnlocked(int stageNumber)
 	{
-		return stageNumber is >= 1 and <= AdventureCampaignCatalog.MainStageCount
+		return stageNumber >= 1 && stageNumber <= AdventureCampaignCatalog.MainStageCount
 			&& stageNumber <= LoadHighestCompletedAdventureStage() + 1;
 	}
 

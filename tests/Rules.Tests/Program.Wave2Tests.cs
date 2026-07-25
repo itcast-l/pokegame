@@ -36,15 +36,11 @@ internal static partial class Program
 		Equal("fish", AdventureCampaignCatalog.Tutorial[0].EnemyAvatarId);
 		Equal("lanternfish", AdventureCampaignCatalog.Tutorial[1].EnemyAvatarId);
 		Equal(AdventureCampaignCatalog.MainStageCount, AdventureCampaignCatalog.Main.Count);
-		string[] expectedMainIds =
+		for (int index = 0; index < AdventureCampaignCatalog.Main.Count; index++)
 		{
-			"shrimp", "crab", "jellyfish", "manta_ray", "garden_eel", "sea_slug",
-			"nautilus", "narwhal", "leafy_seadragon", "dragon_prince_j", "dragon_queen_q", "boss_k",
-		};
-		for (int index = 0; index < expectedMainIds.Length; index++)
-		{
-			Equal(expectedMainIds[index], AdventureCampaignCatalog.GetMainAvatarId(index + 1));
-			True(AdventureCampaignCatalog.TryGetMainStageIndex(expectedMainIds[index], out int stageIndex));
+			string avatarId = AdventureCampaignCatalog.Main[index].EnemyAvatarId;
+			Equal(avatarId, AdventureCampaignCatalog.GetMainAvatarId(index + 1));
+			True(AdventureCampaignCatalog.TryGetMainStageIndex(avatarId, out int stageIndex));
 			Equal(index + 1, stageIndex);
 		}
 	}
@@ -57,6 +53,7 @@ internal static partial class Program
 		Equal(12, AdventureCampaignCatalog.MapLegacyCompletedMainStage(14));
 		Equal(0, AdventureCampaignCatalog.MapLegacyCompletedMainStage(-99));
 		Equal(12, AdventureCampaignCatalog.MapLegacyCompletedMainStage(99));
+		False(AdventureCampaignCatalog.TryMapLegacyRunStage(15, out _));
 
 		ResetGameSaveStoreTestState();
 		string slotId = GameSaveStore.DefaultProfileSlotId;

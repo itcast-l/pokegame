@@ -90,6 +90,7 @@ public partial class MainMenuScene : Control
 	private OptionButton _itemModeOption = default!;
 	private OptionButton _winningScoreOption = default!;
 	private MainMenuSettingsDialog _settingsDialog = default!;
+	private CanvasLayer _settingsDialogLayer = default!;
 	private Control _settingsDialogRoot = default!;
 	private Control _settingsDialogPanel = default!;
 	private Tween? _settingsDialogTween;
@@ -114,6 +115,7 @@ public partial class MainMenuScene : Control
 	private Control _exitDialogRoot = default!;
 	private PanelContainer _exitDialogPanel = default!;
 	private Tween? _exitDialogTween;
+	private CanvasLayer? _avatarEditDialogLayer;
 	private CharacterAvatarEditScene? _avatarEditDialogRoot;
 	private PanelContainer? _avatarEditDialogPanel;
 	private Tween? _avatarEditDialogTween;
@@ -257,12 +259,8 @@ public partial class MainMenuScene : Control
 		{
 			SyncMenuCameraToViewport();
 			UpdatePlayerCountDialogPanelPosition();
-			UpdateSettingsDialogPosition();
-			UpdateControlsDialogPosition();
 			UpdateExitDialogPosition();
-			UpdateAvatarEditorPosition();
 			UpdateAdventureTransitionPosition();
-		UpdateSkillCodexTransitionPosition();
 		}
 	}
 

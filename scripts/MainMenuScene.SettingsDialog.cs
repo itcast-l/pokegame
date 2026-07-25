@@ -16,7 +16,6 @@ public partial class MainMenuScene
 		SyncPrimaryMenuFocusState();
 		_settingsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_settingsDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		UpdateSettingsDialogPosition();
 		_settingsDialogPanel.Scale = Vector2.One;
 		_settingsDialogPanel.PivotOffset = Vector2.Zero;
 		SyncSettingsControls();
@@ -46,12 +45,4 @@ public partial class MainMenuScene
 		};
 	}
 
-	private void UpdateSettingsDialogPosition()
-	{
-		if (_settingsDialogRoot != null && _settingsDialogRoot.Visible)
-		{
-			_settingsDialogRoot.Position = GetSecondaryMenuDepthPosition();
-			_settingsDialogRoot.Scale = GetSecondaryMenuWorldScale();
-		}
-	}
 }

@@ -21,8 +21,7 @@ public partial class AdventureAvatarMenuScene
 				AdventureCampaignLevel level = campaign.Levels[levelIndex];
 				levels[levelIndex] = new AdventureLevelDefinition(
 					level.EnemyAvatarId,
-					level.GameBoardScenePath,
-					level.MainStageIndex);
+					level.GameBoardScenePath);
 			}
 
 			Color accentColor = campaign.Id == AdventureCampaignCatalog.TutorialCampaignId
@@ -74,12 +73,13 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		_selectedAdventureId = normalized;
+		_selectedAvatarId = GetInitialAvatarId();
 		RefreshAdventureModeSelection();
 		RebuildLevelList();
-		_selectedAvatarId = GetInitialAvatarId();
 		RefreshSelection();
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();
+		FocusDefaultControlDeferred();
 	}
 
 	private void RefreshAdventureModeSelection()
@@ -271,19 +271,16 @@ public partial class AdventureAvatarMenuScene
 	{
 		public AdventureLevelDefinition(
 			string enemyAvatarId,
-			string? gameBoardScenePath = null,
-			int mainStageIndex = 0)
+			string? gameBoardScenePath = null)
 		{
 			EnemyAvatarId = enemyAvatarId;
 			GameBoardScenePath = string.IsNullOrWhiteSpace(gameBoardScenePath)
 				? AdventureAvatarMenuScene.GameBoardScenePath
 				: gameBoardScenePath;
-			MainStageIndex = mainStageIndex;
 		}
 
 		public string EnemyAvatarId { get; }
 		public string GameBoardScenePath { get; }
-		public int MainStageIndex { get; }
 	}
 
 	private sealed class AdventureModeDefinition

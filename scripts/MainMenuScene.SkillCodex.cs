@@ -52,7 +52,6 @@ public partial class MainMenuScene
 		_skillCodexOverlay.Open();
 		Control transitionRoot = _skillCodexOverlay.TransitionRoot;
 		transitionRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-		UpdateSkillCodexTransitionPosition();
 		SyncPrimaryMenuFocusState();
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 
@@ -125,26 +124,6 @@ public partial class MainMenuScene
 		SetMainMenuButtonsDisabled(false);
 		SyncPrimaryMenuFocusState();
 		CallDeferred(nameof(FocusSkillCodexButton));
-	}
-
-	private void UpdateSkillCodexTransitionPosition()
-	{
-		if (_skillCodexOverlay == null
-			|| !GodotObject.IsInstanceValid(_skillCodexOverlay)
-			|| !_skillCodexOverlay.IsOpen)
-		{
-			return;
-		}
-
-		Control transitionRoot = _skillCodexOverlay.TransitionRoot;
-		Vector2 contentSize = transitionRoot.Size;
-		if (contentSize.X <= 0.0f || contentSize.Y <= 0.0f)
-		{
-			contentSize = GetViewportRect().Size;
-		}
-
-		transitionRoot.Position = GetSecondaryMenuDepthPosition(contentSize);
-		transitionRoot.Scale = GetSecondaryMenuWorldScale(contentSize);
 	}
 
 	private void FocusSkillCodexButton()

@@ -15,7 +15,6 @@ public partial class MainMenuScene : Control
 		_controlsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_controlsDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		_controlsDialogPanel.Scale = new Vector2(0.98f, 0.98f);
-		UpdateControlsDialogPosition();
 		RefreshControlsDialogText();
 
 		_controlsDialogTween = CreateTween();
@@ -49,15 +48,6 @@ public partial class MainMenuScene : Control
 			SyncPrimaryMenuFocusState();
 			_controlsButton?.GrabFocus();
 		};
-	}
-
-	private void UpdateControlsDialogPosition()
-	{
-		if (_controlsDialogRoot != null && _controlsDialogRoot.Visible)
-		{
-			_controlsDialogRoot.Position = GetSecondaryMenuDepthPosition();
-			_controlsDialogRoot.Scale = GetSecondaryMenuWorldScale();
-		}
 	}
 
 	private void RefreshControlsDialogText()

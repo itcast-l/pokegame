@@ -29,7 +29,7 @@ internal static class AdventureUpgradeChoiceRules
 
 	internal static bool IsMainAdventureStageIndex(int mainStageIndex)
 	{
-		return mainStageIndex is >= 1 and <= AdventureCampaignCatalog.MainStageCount;
+		return mainStageIndex >= 1 && mainStageIndex <= AdventureCampaignCatalog.MainStageCount;
 	}
 
 	internal static int ToRunStageIndex(int avatarStageNumber)

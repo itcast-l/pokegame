@@ -85,6 +85,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_adventure_avatar_menu_scene")
+LevelEntryScene = ExtResource("4_level_entry")
 
 [node name="StandaloneBackground" type="ColorRect" parent="." unique_id=833063308]
 unique_name_in_owner = true
@@ -296,62 +297,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 8
-
-[node name="fishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1909553925 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="lanternfishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=934999577 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="shrimpLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=2140470963 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="crabLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=101602566 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="jellyfishLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1782634048 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="manta_rayLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=349343043 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="garden_eelLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1454591923 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="sea_slugLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1071280417 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="nautilusLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=312625615 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="narwhalLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=628650306 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="leafy_seadragonLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=358269066 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="dragon_prince_jLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=788998392 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="dragon_queen_qLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1296542463 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="boss_kLevelEntry" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList" unique_id=1182186470 instance=ExtResource("4_level_entry")]
-unique_name_in_owner = true
-layout_mode = 2
 
 [node name="EnemyPreviewPanel" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body" unique_id=1113797449]
 custom_minimum_size = Vector2(320, 0)

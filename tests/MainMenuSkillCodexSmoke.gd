@@ -79,12 +79,14 @@ func _run() -> void:
 	if not bool(menu.call("DebugAreMainMenuButtonsDisabled")):
 		_fail("Main-menu buttons were not locked during the skill codex entrance")
 		return
-	if not bool(overlay.get("follow_viewport_enabled")):
-		_fail("Skill codex CanvasLayer is not following the viewport")
+	if bool(overlay.get("follow_viewport_enabled")):
+		_fail("Skill codex CanvasLayer must remain screen-space during the camera transition")
 		return
 	var push_camera := menu.get_node_or_null("MenuCameraPushIn")
 	if push_camera == null or int(push_camera.call("get_priority")) != 20:
 		_fail("Skill codex entrance did not activate the push-in camera")
+		return
+	if not await _assert_skill_codex_transition_geometry(menu, overlay):
 		return
 	if not await _wait_for_skill_transition(menu, true):
 		return
@@ -598,6 +600,49 @@ func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 				% [viewport_size, screen_top_left, screen_bottom_right])
 		return false
 	return true
+
+
+func _assert_skill_codex_transition_geometry(menu: Node, overlay: Node) -> bool:
+	var transition_root := overlay.get_node("Root") as Control
+	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
+	if transition_root == null or grid == null:
+		_fail("Skill codex transition geometry nodes are missing")
+		return false
+	if not transition_root.position.is_zero_approx() \
+			or not transition_root.scale.is_equal_approx(Vector2.ONE):
+		_fail("Skill codex transition root must use its default screen-space transform")
+		return false
+
+	await _wait_frames(2)
+	if grid.get_child_count() == 0:
+		_fail("Skill codex did not build cards before its entrance transition")
+		return false
+	var first_card := grid.get_child(0) as Control
+	if first_card == null:
+		_fail("Skill codex first card is not a control")
+		return false
+
+	var root_rect := _get_canvas_rect(transition_root)
+	var card_rect := _get_canvas_rect(first_card)
+	while bool(menu.call("DebugIsSkillCodexTransitioning")):
+		await process_frame
+		if not _rect_is_equal_approx(root_rect, _get_canvas_rect(transition_root)) \
+				or not _rect_is_equal_approx(card_rect, _get_canvas_rect(first_card)):
+			_fail("Skill codex geometry changed while only the background camera was moving")
+			return false
+	return true
+
+
+func _get_canvas_rect(control: Control) -> Rect2:
+	var canvas_transform := control.get_global_transform_with_canvas()
+	var top_left := canvas_transform * Vector2.ZERO
+	var bottom_right := canvas_transform * control.size
+	return Rect2(top_left, bottom_right - top_left)
+
+
+func _rect_is_equal_approx(left: Rect2, right: Rect2) -> bool:
+	return left.position.is_equal_approx(right.position) \
+			and left.size.is_equal_approx(right.size)
 
 
 func _wait_for_skill_transition(menu: Node, expected_visible: bool) -> bool:

@@ -34,7 +34,6 @@ corner_radius_bottom_left = 4
 
 [node name="MainMenuSkillCodexOverlay" type="CanvasLayer"]
 layer = 9
-follow_viewport_enabled = true
 script = ExtResource("1_overlay")
 UnlockAllForTesting = true
 

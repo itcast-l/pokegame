@@ -10,6 +10,27 @@ public partial class AdventureStageUnlockHarness : Node
 		return CharacterAvatarCatalog.GetAdventureStageCount();
 	}
 
+	public string[] GetCampaignEnemyAvatarIds(string campaignId)
+	{
+		foreach (AdventureCampaignDefinition campaign in AdventureCampaignCatalog.All)
+		{
+			if (!string.Equals(campaign.Id, campaignId, System.StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			var avatarIds = new string[campaign.Levels.Count];
+			for (int index = 0; index < campaign.Levels.Count; index++)
+			{
+				avatarIds[index] = campaign.Levels[index].EnemyAvatarId;
+			}
+
+			return avatarIds;
+		}
+
+		return System.Array.Empty<string>();
+	}
+
 	public bool IsStageUnlocked(int stageNumber)
 	{
 		return CharacterAvatarCatalog.IsAdventureStageUnlocked(stageNumber);

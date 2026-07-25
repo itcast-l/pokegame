@@ -61,6 +61,9 @@ public partial class AdventureAvatarMenuScene : Control
 	[Export]
 	public string selected_avatar_id { get; set; } = string.Empty;
 
+	[Export]
+	public PackedScene? LevelEntryScene { get; set; }
+
 	public override void _Ready()
 	{
 		GameInputActions.EnsureRegistered();

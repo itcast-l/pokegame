@@ -3,8 +3,7 @@ using System.Collections.Generic;
 
 public sealed record AdventureCampaignLevel(
 	string EnemyAvatarId,
-	string GameBoardScenePath,
-	int MainStageIndex = 0);
+	string GameBoardScenePath);
 
 public sealed record AdventureCampaignDefinition(
 	string Id,
@@ -15,10 +14,12 @@ public static class AdventureCampaignCatalog
 {
 	public const string TutorialCampaignId = "tutorial";
 	public const string MainCampaignId = "deep_tide_throne";
-	public const int MainStageCount = 12;
 	public const string TutorialGameBoardScenePath = "res://scenes/adventure_tutorial_game_board_scene.tscn";
 	public const string ItemTutorialGameBoardScenePath = "res://scenes/adventure_item_tutorial_game_board_scene.tscn";
 	public const string MainGameBoardScenePath = "res://scenes/game_board_scene.tscn";
+	private const int LegacyMainStageCount = 12;
+	private const int LegacyFirstMainAvatarStageNumber = 3;
+	private const int LegacyLastMainAvatarStageNumber = LegacyFirstMainAvatarStageNumber + LegacyMainStageCount - 1;
 
 	private static readonly IReadOnlyList<AdventureCampaignLevel> TutorialLevels =
 		Array.AsReadOnly(new[]
@@ -30,18 +31,18 @@ public static class AdventureCampaignCatalog
 	private static readonly IReadOnlyList<AdventureCampaignLevel> MainLevels =
 		Array.AsReadOnly(new[]
 		{
-			new AdventureCampaignLevel("shrimp", MainGameBoardScenePath, 1),
-			new AdventureCampaignLevel("crab", MainGameBoardScenePath, 2),
-			new AdventureCampaignLevel("jellyfish", MainGameBoardScenePath, 3),
-			new AdventureCampaignLevel("manta_ray", MainGameBoardScenePath, 4),
-			new AdventureCampaignLevel("garden_eel", MainGameBoardScenePath, 5),
-			new AdventureCampaignLevel("sea_slug", MainGameBoardScenePath, 6),
-			new AdventureCampaignLevel("nautilus", MainGameBoardScenePath, 7),
-			new AdventureCampaignLevel("narwhal", MainGameBoardScenePath, 8),
-			new AdventureCampaignLevel("leafy_seadragon", MainGameBoardScenePath, 9),
-			new AdventureCampaignLevel("dragon_prince_j", MainGameBoardScenePath, 10),
-			new AdventureCampaignLevel("dragon_queen_q", MainGameBoardScenePath, 11),
-			new AdventureCampaignLevel("boss_k", MainGameBoardScenePath, 12),
+			new AdventureCampaignLevel("shrimp", MainGameBoardScenePath),
+			new AdventureCampaignLevel("crab", MainGameBoardScenePath),
+			new AdventureCampaignLevel("jellyfish", MainGameBoardScenePath),
+			new AdventureCampaignLevel("manta_ray", MainGameBoardScenePath),
+			new AdventureCampaignLevel("garden_eel", MainGameBoardScenePath),
+			new AdventureCampaignLevel("sea_slug", MainGameBoardScenePath),
+			new AdventureCampaignLevel("nautilus", MainGameBoardScenePath),
+			new AdventureCampaignLevel("narwhal", MainGameBoardScenePath),
+			new AdventureCampaignLevel("leafy_seadragon", MainGameBoardScenePath),
+			new AdventureCampaignLevel("dragon_prince_j", MainGameBoardScenePath),
+			new AdventureCampaignLevel("dragon_queen_q", MainGameBoardScenePath),
+			new AdventureCampaignLevel("boss_k", MainGameBoardScenePath),
 		});
 
 	private static readonly IReadOnlyList<AdventureCampaignDefinition> Campaigns =
@@ -54,6 +55,7 @@ public static class AdventureCampaignCatalog
 	public static IReadOnlyList<AdventureCampaignDefinition> All => Campaigns;
 	public static IReadOnlyList<AdventureCampaignLevel> Tutorial => TutorialLevels;
 	public static IReadOnlyList<AdventureCampaignLevel> Main => MainLevels;
+	public static int MainStageCount => MainLevels.Count;
 
 	public static bool IsTutorialAvatar(string avatarId)
 	{
@@ -72,10 +74,14 @@ public static class AdventureCampaignCatalog
 
 	public static bool TryGetMainStageIndex(string avatarId, out int mainStageIndex)
 	{
-		if (TryFindLevel(MainLevels, avatarId, out AdventureCampaignLevel level))
+		string normalized = avatarId?.Trim() ?? string.Empty;
+		for (int index = 0; index < MainLevels.Count; index++)
 		{
-			mainStageIndex = level.MainStageIndex;
-			return true;
+			if (string.Equals(MainLevels[index].EnemyAvatarId, normalized, StringComparison.Ordinal))
+			{
+				mainStageIndex = index + 1;
+				return true;
+			}
 		}
 
 		mainStageIndex = 0;
@@ -109,14 +115,14 @@ public static class AdventureCampaignCatalog
 			return 0;
 		}
 
-		return Math.Clamp(legacyHighestCompletedStage - 2, 0, MainStageCount);
+		return Math.Clamp(legacyHighestCompletedStage - 2, 0, LegacyMainStageCount);
 	}
 
 	public static bool TryMapLegacyRunStage(int legacyAvatarStage, out int mainStageIndex)
 	{
-		if (legacyAvatarStage is >= 3 and <= 14)
+		if (legacyAvatarStage is >= LegacyFirstMainAvatarStageNumber and <= LegacyLastMainAvatarStageNumber)
 		{
-			mainStageIndex = legacyAvatarStage - 2;
+			mainStageIndex = legacyAvatarStage - LegacyFirstMainAvatarStageNumber + 1;
 			return true;
 		}
 
@@ -126,7 +132,9 @@ public static class AdventureCampaignCatalog
 
 	public static int LegacyAvatarStageForMainStage(int mainStageIndex)
 	{
-		return mainStageIndex is >= 1 and <= MainStageCount ? mainStageIndex + 2 : 0;
+		return mainStageIndex >= 1 && mainStageIndex <= MainStageCount
+			? mainStageIndex + LegacyFirstMainAvatarStageNumber - 1
+			: 0;
 	}
 
 	public static bool IsTutorialCompleted(string completedTutorialIdsCsv, string avatarId)
