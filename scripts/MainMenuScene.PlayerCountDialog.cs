@@ -86,7 +86,7 @@ public partial class MainMenuScene : Control
 		_playerCountDialogTween?.Kill();
 		_avatarEntry.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
-		ResetMenuCamera();
+		CancelMenuCameraPushIn();
 
 		_playerCountDialogTween = CreateTween();
 		_playerCountDialogTween.TweenProperty(_playerCountDialogRoot, "modulate:a", 0.0f, PlayerCountDialogHideSeconds);

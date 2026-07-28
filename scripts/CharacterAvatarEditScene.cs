@@ -20,6 +20,7 @@ public partial class CharacterAvatarEditScene : Control
 	private ColorRect _scrim = default!;
 	private Button _backButton = default!;
 	private Button _confirmButton = default!;
+	private Label _titleLabel = default!;
 	private CharacterAvatar _previewAvatar = default!;
 	private Label _previewKickerLabel = default!;
 	private Label _playerNameKickerLabel = default!;
@@ -41,10 +42,11 @@ public partial class CharacterAvatarEditScene : Control
 		_scrim = GetNode<ColorRect>("Scrim");
 		_scrim.GuiInput += OnScrimGuiInput;
 		DialogPanel = GetNode<PanelContainer>("DialogCenter/DialogPanel");
-		_backButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackButton");
+		_backButton = GetNode<Button>("%BackButton");
 		_backButton.FocusMode = Control.FocusModeEnum.All;
 		_backButton.Pressed += RequestClose;
 
+		_titleLabel = GetNode<Label>("%Title");
 		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
 		_previewKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PreviewKicker");
 		_playerNameKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameKicker");
@@ -54,13 +56,23 @@ public partial class CharacterAvatarEditScene : Control
 		_playerNameInput.GuiInput += OnPlayerNameInputGuiInput;
 		_playerNameInput.TextChanged += OnPlayerNameTextChanged;
 		_playerNameInput.TextSubmitted += OnPlayerNameTextSubmitted;
-		_confirmButton = GetNode<Button>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ConfirmButton");
+		_confirmButton = GetNode<Button>("%ConfirmButton");
 		_confirmButton.FocusMode = Control.FocusModeEnum.All;
 		_confirmButton.Pressed += ConfirmSelection;
 
-		_avatarGrid = GetNode<GridContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid");
-		_avatarGridScroll = GetNode<ScrollContainer>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll");
+		_avatarGrid = GetNode<GridContainer>("%AvatarGrid");
+		_avatarGridScroll = GetNode<ScrollContainer>("%GridScroll");
 		_avatarGridScroll.FollowFocus = true;
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
+		MainMenuInteractiveStyle.ApplyActionButton(_confirmButton, 17);
+		SecondaryMenuGlassStyle.StyleScrollBar(_avatarGridScroll.GetVScrollBar());
+		SecondaryMenuGlassStyle.Attach(
+			this,
+			DialogPanel,
+			_scrim,
+			new Vector2(760.0f, 600.0f),
+			GetNode<PanelContainer>("%PreviewPanel"),
+			GetNode<PanelContainer>("%AvatarListPanel"));
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
 		RefreshLocalizedText();
@@ -345,6 +357,7 @@ public partial class CharacterAvatarEditScene : Control
 	private void RefreshLocalizedText()
 	{
 		_backButton.Text = Localize("ADVENTURE_BACK");
+		_titleLabel.Text = Localize("AVATAR_EDIT_CURRENT_AVATAR");
 		_previewKickerLabel.Text = Localize("AVATAR_EDIT_CURRENT_AVATAR");
 		_playerNameKickerLabel.Text = Localize("AVATAR_EDIT_PLAYER_NAME_LABEL");
 		_playerNameInput.PlaceholderText = Localize("AVATAR_EDIT_PLAYER_NAME_PLACEHOLDER");

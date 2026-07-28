@@ -18,6 +18,7 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _mainMenuMusicTrackLabel = default!;
 	private Label _controlsLabel = default!;
 	private Button _controlsButton = default!;
+	private Button _backButton = default!;
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
 	private ColorRect _scrim = default!;
@@ -38,6 +39,13 @@ public partial class MainMenuSettingsDialog : Control
 	public Button ControlsButton => _controlsButton;
 	public Button ResetDefaultsButton => _resetButton;
 	public Button DoneButton => _doneButton;
+
+	public void FocusDefaultControl()
+	{
+		_settingsScroll.ScrollVertical = 0;
+		MasterVolumeSlider.GrabFocus();
+		CallDeferred(nameof(ResetSettingsScrollToTop));
+	}
 
 	public override void _Ready()
 	{
@@ -65,23 +73,27 @@ public partial class MainMenuSettingsDialog : Control
 		_controlsLabel = GetNode<Label>("%ControlsLabel");
 		_settingsScroll = GetNode<ScrollContainer>("%SettingsScroll");
 		_controlsButton = GetNode<Button>("%ControlsButton");
+		_backButton = GetNode<Button>("%BackButton");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		_scrim.GuiInput += OnScrimGuiInput;
-		MainMenuInteractiveStyle.ApplyToggleButton(MuteBgmToggle);
-		MainMenuInteractiveStyle.ApplyToggleButton(MuteSfxToggle);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(WindowModeOption);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(ResolutionOption);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(LanguageOption);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(MainMenuMusicTrackOption);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(_controlsButton);
+		_backButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
+		MainMenuInteractiveStyle.ApplyGlassToggleButton(MuteBgmToggle);
+		MainMenuInteractiveStyle.ApplyGlassToggleButton(MuteSfxToggle);
+		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(WindowModeOption);
+		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(ResolutionOption);
+		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(LanguageOption);
+		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(MainMenuMusicTrackOption);
+		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(_controlsButton);
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
 		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20);
 		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20);
 		MuteBgmToggle.Toggled += _ => UpdateToggleText(MuteBgmToggle);
 		MuteSfxToggle.Toggled += _ => UpdateToggleText(MuteSfxToggle);
 		EnableKeyboardFocus(
+			_backButton,
 			MasterVolumeSlider,
 			MusicVolumeSlider,
 			MuteBgmToggle,
@@ -93,13 +105,30 @@ public partial class MainMenuSettingsDialog : Control
 			_controlsButton,
 			_resetButton,
 			_doneButton);
-		StyleScrollBar(_settingsScroll.GetVScrollBar());
+		ConfigureSettingsFocusScrolling(
+			MasterVolumeSlider,
+			MusicVolumeSlider,
+			MuteBgmToggle,
+			MuteSfxToggle,
+			WindowModeOption,
+			ResolutionOption,
+			LanguageOption,
+			MainMenuMusicTrackOption,
+			_controlsButton);
+		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar());
+		SecondaryMenuGlassStyle.Attach(
+			this,
+			DialogPanel,
+			_scrim,
+			new Vector2(620.0f, 580.0f),
+			GetNode<PanelContainer>("%SettingsContentPanel"));
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize)
 	{
 		_localize = localize;
 		_titleLabel.Text = localize("SETTINGS_TITLE");
+		_backButton.Text = localize("ADVENTURE_BACK");
 		_messageLabel.Text = localize("SETTINGS_MESSAGE");
 		_masterVolumeLabel.Text = localize("SETTINGS_MASTER_VOLUME");
 		_musicVolumeLabel.Text = localize("SETTINGS_MUSIC_VOLUME");
@@ -146,53 +175,46 @@ public partial class MainMenuSettingsDialog : Control
 		toggle.Text = _localize(toggle.ButtonPressed ? "PLAYER_COUNT_ITEM_MODE_ON" : "PLAYER_COUNT_ITEM_MODE_OFF");
 	}
 
-	private static void StyleScrollBar(ScrollBar scrollBar)
+	private void ResetSettingsScrollToTop()
 	{
-		scrollBar.CustomMinimumSize = new Vector2(10.0f, 0.0f);
-		scrollBar.AddThemeConstantOverride("padding_left", 2);
-		scrollBar.AddThemeConstantOverride("padding_right", 2);
-
-		var track = new StyleBoxFlat
-		{
-			BgColor = new Color(0.03f, 0.14f, 0.18f, 0.82f),
-			CornerRadiusTopLeft = 6,
-			CornerRadiusTopRight = 6,
-			CornerRadiusBottomLeft = 6,
-			CornerRadiusBottomRight = 6,
-			ContentMarginTop = 4.0f,
-			ContentMarginBottom = 4.0f,
-		};
-		var grabber = new StyleBoxFlat
-		{
-			BgColor = new Color(0.78f, 1.0f, 0.96f, 0.68f),
-			BorderColor = new Color(0.18f, 0.64f, 0.68f, 0.92f),
-			BorderWidthLeft = 1,
-			BorderWidthTop = 1,
-			BorderWidthRight = 1,
-			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 6,
-			CornerRadiusTopRight = 6,
-			CornerRadiusBottomLeft = 6,
-			CornerRadiusBottomRight = 6,
-		};
-		var grabberHighlight = new StyleBoxFlat
-		{
-			BgColor = new Color(0.94f, 1.0f, 0.98f, 0.86f),
-			BorderColor = new Color(0.30f, 0.88f, 0.86f, 1.0f),
-			BorderWidthLeft = 1,
-			BorderWidthTop = 1,
-			BorderWidthRight = 1,
-			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 6,
-			CornerRadiusTopRight = 6,
-			CornerRadiusBottomLeft = 6,
-			CornerRadiusBottomRight = 6,
-		};
-
-		scrollBar.AddThemeStyleboxOverride("scroll", track);
-		scrollBar.AddThemeStyleboxOverride("scroll_focus", track);
-		scrollBar.AddThemeStyleboxOverride("grabber", grabber);
-		scrollBar.AddThemeStyleboxOverride("grabber_highlight", grabberHighlight);
-		scrollBar.AddThemeStyleboxOverride("grabber_pressed", grabberHighlight);
+		_settingsScroll.ScrollVertical = 0;
 	}
+
+	private void ConfigureSettingsFocusScrolling(params Control[] controls)
+	{
+		_settingsScroll.FollowFocus = false;
+		foreach (Control control in controls)
+		{
+			control.FocusEntered += () => CallDeferred(nameof(EnsureSettingControlVisible), control);
+		}
+	}
+
+	private void EnsureSettingControlVisible(Control control)
+	{
+		if (!GodotObject.IsInstanceValid(control) || !control.IsVisibleInTree())
+		{
+			return;
+		}
+
+		const float padding = 8.0f;
+		Rect2 viewportRect = _settingsScroll.GetGlobalRect();
+		Rect2 controlRect = control.GetGlobalRect();
+		float delta = 0.0f;
+		if (controlRect.Position.Y < viewportRect.Position.Y + padding)
+		{
+			delta = controlRect.Position.Y - viewportRect.Position.Y - padding;
+		}
+		else if (controlRect.End.Y > viewportRect.End.Y - padding)
+		{
+			delta = controlRect.End.Y - viewportRect.End.Y + padding;
+		}
+
+		if (!Mathf.IsZeroApprox(delta))
+		{
+			_settingsScroll.ScrollVertical = Mathf.Max(
+				0,
+				_settingsScroll.ScrollVertical + Mathf.RoundToInt(delta));
+		}
+	}
+
 }

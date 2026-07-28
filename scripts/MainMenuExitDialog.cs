@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 public partial class MainMenuExitDialog : Control
@@ -13,8 +12,7 @@ public partial class MainMenuExitDialog : Control
 	private Label _hintLabel = default!;
 	private Button _cancelButton = default!;
 	private Button _confirmButton = default!;
-	private PlayerCountDialogFrameArt _cancelFrame = default!;
-	private PlayerCountDialogFrameArt _confirmFrame = default!;
+	private Button _backButton = default!;
 	private ColorRect _scrim = default!;
 
 	public PanelContainer DialogPanel { get; private set; } = default!;
@@ -28,19 +26,25 @@ public partial class MainMenuExitDialog : Control
 		_hintLabel = GetNode<Label>("%ExitHint");
 		_cancelButton = GetNode<Button>("%CancelButton");
 		_confirmButton = GetNode<Button>("%ConfirmButton");
-		_cancelFrame = _cancelButton.GetParent() as PlayerCountDialogFrameArt
-			?? throw new InvalidOperationException("Exit cancel button must be wrapped by PlayerCountDialogFrameArt.");
-		_confirmFrame = _confirmButton.GetParent() as PlayerCountDialogFrameArt
-			?? throw new InvalidOperationException("Exit confirm button must be wrapped by PlayerCountDialogFrameArt.");
+		_backButton = GetNode<Button>("%BackButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		_scrim.GuiInput += OnScrimGuiInput;
 		_cancelButton.FocusMode = Control.FocusModeEnum.All;
 		_confirmButton.FocusMode = Control.FocusModeEnum.All;
+		_backButton.FocusMode = Control.FocusModeEnum.All;
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
 		MainMenuInteractiveStyle.ApplyActionButton(_cancelButton, 20);
 		MainMenuInteractiveStyle.ApplyActionButton(_confirmButton, 20);
+		_backButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_cancelButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_confirmButton.Pressed += () => EmitSignal(SignalName.ConfirmRequested);
+		SecondaryMenuGlassStyle.Attach(
+			this,
+			DialogPanel,
+			_scrim,
+			new Vector2(560.0f, 360.0f),
+			GetNode<PanelContainer>("%PromptPanel"));
 	}
 
 	public override void _Input(InputEvent inputEvent)
@@ -65,6 +69,7 @@ public partial class MainMenuExitDialog : Control
 	public void RefreshLocalizedText(Func<string, string> localize)
 	{
 		_titleLabel.Text = localize("EXIT_TITLE");
+		_backButton.Text = localize("ADVENTURE_BACK");
 		_hintLabel.Text = localize("EXIT_HINT");
 		_cancelButton.Text = localize("EXIT_CANCEL");
 		_confirmButton.Text = localize("EXIT_CONFIRM");
@@ -88,8 +93,6 @@ public partial class MainMenuExitDialog : Control
 
 	private void SetActionFocusHighlightEnabled(bool enabled)
 	{
-		_cancelFrame.HighlightFocus = enabled;
-		_confirmFrame.HighlightFocus = enabled;
 		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(_cancelButton, enabled);
 		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(_confirmButton, enabled);
 	}

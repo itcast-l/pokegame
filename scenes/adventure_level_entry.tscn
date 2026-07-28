@@ -23,6 +23,7 @@ layout_mode = 2
 anchors_preset = 0
 mouse_filter = 1
 script = ExtResource("1_frame")
+FrameStyle = 2
 AccentColor = Color(0.62, 1, 0.92, 1)
 
 [node name="EntryContent" type="MarginContainer" parent="." unique_id=508362906]

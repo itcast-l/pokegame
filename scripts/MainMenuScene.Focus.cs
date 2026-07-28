@@ -30,12 +30,12 @@ public partial class MainMenuScene : Control
 
 	private void FocusPlayerCountDialogDefault()
 	{
-		GrabFocusIfAvailable(_playerCountOption);
+		_playerCountDialog?.FocusDefaultControl();
 	}
 
 	private void FocusSettingsDialogDefault()
 	{
-		GrabFocusIfAvailable(_masterVolumeSlider);
+		_settingsDialog?.FocusDefaultControl();
 	}
 
 	private void FocusControlsDialogDefault()
@@ -57,7 +57,8 @@ public partial class MainMenuScene : Control
 			|| IsVisible(_exitDialogRoot)
 			|| IsVisible(_avatarEditDialogRoot)
 			|| IsVisible(_avatarUnlockPromptRoot)
-			|| IsVisible(_adventureTransitionRoot);
+			|| (_adventureTransitionRoot?.ProcessMode != ProcessModeEnum.Disabled
+				&& IsVisible(_adventureTransitionRoot));
 	}
 
 	private void SyncPrimaryMenuFocusState()

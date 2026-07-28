@@ -2,12 +2,18 @@ extends SceneTree
 
 const MAIN_MENU_SCENE_PATH := "res://scenes/main_menu_scene.tscn"
 const SETTINGS_BUTTON_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame/Button"
+const SINGLE_PLAYER_BUTTON_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame/Button"
+const EXIT_BUTTON_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame/Button"
 const AVATAR_BUTTON_PATH := "AvatarEntryLayer/MainMenuAvatarEntry/Button"
 const SETTINGS_LAYER_PATH := "SettingsDialogLayer"
 const SETTINGS_ROOT_PATH := SETTINGS_LAYER_PATH + "/SettingsDialogRoot"
 const CONTROLS_ROOT_PATH := SETTINGS_LAYER_PATH + "/ControlsDialogRoot"
 const PUSH_CAMERA_PATH := "MenuCameraPushIn"
 const AVATAR_LAYER_PATH := "AvatarEditDialogLayer"
+const PLAYER_COUNT_LAYER_PATH := "PlayerCountDialogLayer"
+const PLAYER_COUNT_ROOT_PATH := PLAYER_COUNT_LAYER_PATH + "/PlayerCountDialogRoot"
+const EXIT_LAYER_PATH := "ExitDialogLayer"
+const EXIT_ROOT_PATH := EXIT_LAYER_PATH + "/ExitDialogRoot"
 const SCREEN_SPACE_SAMPLE_FRAMES := 10
 
 var _failed := false
@@ -59,6 +65,30 @@ func _run() -> void:
 		_fail("Main-menu camera transition lock did not release after closing settings")
 		return
 
+	var single_player_button := menu.get_node_or_null(SINGLE_PLAYER_BUTTON_PATH) as Button
+	var player_count_layer := menu.get_node_or_null(PLAYER_COUNT_LAYER_PATH) as CanvasLayer
+	var player_count_root := menu.get_node_or_null(PLAYER_COUNT_ROOT_PATH) as Control
+	if single_player_button == null or player_count_layer == null or player_count_root == null:
+		_fail("Single-player modal nodes are missing")
+		return
+	if bool(player_count_layer.get("follow_viewport_enabled")):
+		_fail("Single-player layer must remain screen-space")
+		return
+	single_player_button.emit_signal("pressed")
+	if not await _assert_screen_space_during_push(player_count_root, push_camera, "single-player"):
+		return
+	var player_count_back := player_count_root.find_child("BackButton", true, false) as Button
+	if player_count_back == null:
+		_fail("Single-player title-bar back control is missing")
+		return
+	player_count_back.emit_signal("pressed")
+	if not await _wait_for_hidden(player_count_root, 120):
+		_fail("Single-player dialog did not close")
+		return
+	if not await _wait_for_menu_buttons_enabled(menu, 120):
+		_fail("Main-menu camera transition lock did not release after closing single-player")
+		return
+
 	var avatar_button := menu.get_node_or_null(AVATAR_BUTTON_PATH) as Button
 	if avatar_button == null:
 		_fail("Main-menu avatar button is missing")
@@ -83,6 +113,30 @@ func _run() -> void:
 	avatar_back_button.emit_signal("pressed")
 	if not await _wait_for_node_removed(menu, AVATAR_LAYER_PATH, 120):
 		_fail("Avatar editor screen-space layer was not released on close")
+		return
+	if not await _wait_for_menu_buttons_enabled(menu, 120):
+		_fail("Main-menu camera transition lock did not release after closing avatar editor")
+		return
+
+	var exit_button := menu.get_node_or_null(EXIT_BUTTON_PATH) as Button
+	var exit_layer := menu.get_node_or_null(EXIT_LAYER_PATH) as CanvasLayer
+	var exit_root := menu.get_node_or_null(EXIT_ROOT_PATH) as Control
+	if exit_button == null or exit_layer == null or exit_root == null:
+		_fail("Exit modal nodes are missing")
+		return
+	if bool(exit_layer.get("follow_viewport_enabled")):
+		_fail("Exit layer must remain screen-space")
+		return
+	exit_button.emit_signal("pressed")
+	if not await _assert_screen_space_during_push(exit_root, push_camera, "exit"):
+		return
+	var exit_back := exit_root.find_child("BackButton", true, false) as Button
+	if exit_back == null:
+		_fail("Exit title-bar back control is missing")
+		return
+	exit_back.emit_signal("pressed")
+	if not await _wait_for_hidden(exit_root, 120):
+		_fail("Exit dialog did not close")
 		return
 
 	print("MAIN_MENU_MODAL_SCREEN_SPACE_SMOKE_OK")

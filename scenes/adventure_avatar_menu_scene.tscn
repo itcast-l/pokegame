@@ -6,69 +6,105 @@
 [ext_resource type="PackedScene" uid="uid://dmujoh6slohou" path="res://scenes/adventure_level_entry.tscn" id="4_level_entry"]
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="5_character_avatar"]
 [ext_resource type="PackedScene" path="res://scenes/avatar_unlock_prompt.tscn" id="6_avatar_unlock_prompt"]
+[ext_resource type="Texture2D" uid="uid://dv1cdai300fmf" path="res://art/maps/adventure_map_base_with_route_v1.png" id="7_adventure_map"]
+[ext_resource type="Shader" path="res://shaders/adventure_menu_glass.gdshader" id="8_glass_shader"]
+[ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="9_caustic_shader"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu_panel"]
-bg_color = Color(0.008, 0.13, 0.16, 0.92)
-border_width_left = 2
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_backdrop_caustic"]
+shader = ExtResource("9_caustic_shader")
+shader_parameter/shimmer_color = Color(0.48, 0.98, 1, 0.13)
+shader_parameter/shimmer_strength = 0.24
+shader_parameter/wave_scale = 25.0
+shader_parameter/wave_speed = 0.28
+shader_parameter/edge_boost = 0.46
+shader_parameter/center_glow = 0.12
+shader_parameter/sun_color = Color(1, 0.92, 0.68, 0.12)
+shader_parameter/sun_pulse_strength = 0.0
+shader_parameter/sun_shadow_strength = 0.0
+shader_parameter/sun_pulse_speed = 0.42
+shader_parameter/center_motion_strength = 0.0
+shader_parameter/center_motion_speed = 0.55
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_menu_glass"]
+shader = ExtResource("8_glass_shader")
+shader_parameter/corner_radius = 8.0
+shader_parameter/blur_lod = 2.8
+shader_parameter/tint_color = Color(0.004, 0.12, 0.15, 0.68)
+shader_parameter/edge_light_color = Color(0.52, 1, 0.94, 0.12)
+shader_parameter/surface_opacity = 0.92
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_content_pane_glass"]
+shader = ExtResource("8_glass_shader")
+shader_parameter/corner_radius = 8.0
+shader_parameter/blur_lod = 2.4
+shader_parameter/tint_color = Color(0.004, 0.105, 0.125, 0.32)
+shader_parameter/edge_light_color = Color(0.52, 1, 0.94, 0.16)
+shader_parameter/surface_opacity = 0.56
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_menu_panel"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass_frame"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
 border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.62, 1, 0.94, 0.58)
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.56, 1, 0.94, 0.62)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.02, 0.04, 0.72)
-shadow_size = 22
-shadow_offset = Vector2(0, 8)
+shadow_color = Color(0, 0.02, 0.04, 0.7)
+shadow_size = 24
+shadow_offset = Vector2(0, 9)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.005, 0.105, 0.13, 0.58)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_content_pane"]
+bg_color = Color(0.005, 0.08, 0.1, 0.07)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.62, 1, 0.94, 0.3)
+border_color = Color(0.62, 1, 0.94, 0.36)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-shadow_color = Color(0, 0, 0, 0.28)
-shadow_size = 6
+shadow_color = Color(0, 0.02, 0.04, 0.24)
+shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
-bg_color = Color(0.108, 0.141, 0.0896, 0.88)
+bg_color = Color(0.108, 0.141, 0.0896, 0.46)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.9, 0.94, 0.56, 0.58)
+border_color = Color(0.9, 0.94, 0.56, 0.5)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_frame"]
-bg_color = Color(0, 0.06, 0.075, 0.32)
+bg_color = Color(0, 0.06, 0.075, 0.18)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.62, 1, 0.94, 0.24)
+border_color = Color(0.62, 1, 0.94, 0.2)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ability"]
-bg_color = Color(0.018, 0.14, 0.16, 0.58)
+bg_color = Color(0.018, 0.14, 0.16, 0.34)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.98, 0.92, 0.46, 0.28)
+border_color = Color(0.98, 0.92, 0.46, 0.46)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -87,7 +123,19 @@ mouse_filter = 2
 script = ExtResource("1_adventure_avatar_menu_scene")
 LevelEntryScene = ExtResource("4_level_entry")
 
-[node name="StandaloneBackground" type="ColorRect" parent="." unique_id=833063308]
+[node name="StandaloneBackground" type="Control" parent="." unique_id=833063308]
+unique_name_in_owner = true
+z_index = 1
+top_level = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MapBackdrop" type="TextureRect" parent="StandaloneBackground"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -96,9 +144,34 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.004, 0.055, 0.078, 1)
+texture = ExtResource("7_adventure_map")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="MapCausticOverlay" type="ColorRect" parent="StandaloneBackground"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_backdrop_caustic")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ReadabilityVeil" type="ColorRect" parent="StandaloneBackground"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0.035, 0.052, 0.34)
 
 [node name="SafeArea" type="MarginContainer" parent="." unique_id=387012257]
+z_index = 2
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -119,7 +192,19 @@ mouse_filter = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(1160, 620)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_menu_panel")
+
+[node name="GlassSurface" type="ColorRect" parent="SafeArea/MenuCenter/AdventureMenuPanel"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_menu_glass")
+layout_mode = 2
+mouse_filter = 2
+
+[node name="GlassFrame" type="Panel" parent="SafeArea/MenuCenter/AdventureMenuPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass_frame")
 
 [node name="AdventureMenuMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel" unique_id=1933191062]
 layout_mode = 2
@@ -142,6 +227,7 @@ theme_override_constants/separation = 12
 custom_minimum_size = Vector2(126, 56)
 layout_mode = 2
 script = ExtResource("2_button_frame")
+FrameStyle = 2
 AccentColor = Color(0.72, 0.88, 1, 1)
 
 [node name="BackButton" type="Button" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/BackFrame" unique_id=1799324681]
@@ -217,7 +303,13 @@ custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxFlat_content_pane")
+
+[node name="AdventureListGlassSurface" type="ColorRect" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_content_pane_glass")
+layout_mode = 2
+mouse_filter = 2
 
 [node name="AdventureListMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel" unique_id=1400726546]
 layout_mode = 2
@@ -258,7 +350,13 @@ custom_minimum_size = Vector2(420, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxFlat_content_pane")
+
+[node name="LevelListGlassSurface" type="ColorRect" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_content_pane_glass")
+layout_mode = 2
+mouse_filter = 2
 
 [node name="LevelListMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel" unique_id=547006277]
 layout_mode = 2
@@ -304,7 +402,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxFlat_content_pane")
+
+[node name="EnemyPreviewGlassSurface" type="ColorRect" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_content_pane_glass")
+layout_mode = 2
+mouse_filter = 2
 
 [node name="EnemyPreviewMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel" unique_id=1012752199]
 layout_mode = 2
@@ -452,7 +556,8 @@ mouse_filter = 2
 custom_minimum_size = Vector2(224, 56)
 layout_mode = 2
 script = ExtResource("2_button_frame")
-AccentColor = Color(0.98, 0.92, 0.46, 1)
+FrameStyle = 2
+AccentColor = Color(0.48, 0.98, 1, 1)
 FlipOrnament = true
 
 [node name="StartButton" type="Button" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap/StartFrame" unique_id=948802280]

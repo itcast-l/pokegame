@@ -72,6 +72,14 @@ public partial class MainMenuScene : Control
 			return false;
 		}
 
+		if (GameInputActions.IsCancelPressed(inputEvent))
+		{
+			ClearPendingBindingCapture();
+			RefreshControlsDialogText();
+			GetViewport().SetInputAsHandled();
+			return true;
+		}
+
 		_pendingBindingActionId = _controlsDialog.CaptureActionId;
 		_pendingBindingSlot = _controlsDialog.CaptureSlot;
 		_bindingCaptureEarliestFrame = _controlsDialog.CaptureEarliestFrame;

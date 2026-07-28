@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" path="res://scripts/MainMenuSettingsDialog.cs" id="1_dialog"]
 [ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
-[ext_resource type="Texture2D" path="res://art/ui/settings_menu/run-002/processed/clean.png" id="3_frame_texture"]
 [ext_resource type="Script" path="res://scripts/OceanDialogPanelArt.cs" id="4_panel_art"]
 [ext_resource type="Script" path="res://scripts/PlayerCountDialogFrameArt.cs" id="5_frame_art"]
 
@@ -51,16 +50,16 @@ content_margin_top = 6
 content_margin_bottom = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slider"]
-bg_color = Color(0, 0.08, 0.12, 0.72)
+bg_color = Color(0, 0.08, 0.12, 0.42)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.62, 1, 0.94, 0.22)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 content_margin_top = 5
 content_margin_bottom = 5
 
@@ -130,11 +129,12 @@ mouse_filter = 2
 
 [node name="SettingsDialogPanel" type="Control" parent="DialogCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(744, 664)
+custom_minimum_size = Vector2(620, 580)
 layout_mode = 2
 mouse_filter = 0
 
 [node name="GeneratedSettingsFrame" type="Control" parent="DialogCenter/SettingsDialogPanel"]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -158,27 +158,69 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 82
-theme_override_constants/margin_top = 62
-theme_override_constants/margin_right = 82
-theme_override_constants/margin_bottom = 46
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
 
 [node name="SettingsDialogLayout" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin"]
 layout_mode = 2
-theme_override_constants/separation = 12
-alignment = 1
+theme_override_constants/separation = 10
 
-[node name="SettingsTitle" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+[node name="Header" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="BackFrame" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header"]
+custom_minimum_size = Vector2(126, 56)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_button_frame")
+FrameStyle = 2
+AccentColor = Color(0.48, 0.98, 1, 1)
+
+[node name="BackButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header/BackFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+flat = true
+
+[node name="TitleStack" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SettingsTitle" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header/TitleStack"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.9, 1, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 34
+theme_override_font_sizes/font_size = 30
 text = "SETTINGS_TITLE"
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 2
+
+[node name="TitleUnderline" type="ColorRect" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header/TitleStack"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.48, 0.98, 1, 0.52)
+
+[node name="HeaderRightPlaceholder" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header"]
+custom_minimum_size = Vector2(126, 56)
+layout_mode = 2
 
 [node name="SettingsMessage" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
 unique_name_in_owner = true
@@ -192,7 +234,13 @@ text = "SETTINGS_MESSAGE"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="SettingsScroll" type="ScrollContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+[node name="SettingsContentPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+
+[node name="SettingsScroll" type="ScrollContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
@@ -200,40 +248,49 @@ size_flags_vertical = 3
 follow_focus = true
 horizontal_scroll_mode = 0
 
-[node name="SettingsList" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll"]
+[node name="SettingsList" type="GridContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/v_separation = 10
+columns = 1
+
+[node name="MasterVolumeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
+script = ExtResource("2_button_frame")
+FrameStyle = 2
+
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MasterVolumeRowPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
+
+[node name="RowLayout" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HeaderLine" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="MasterVolumeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
-
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MasterVolumeRowPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
-
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="MasterVolumeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+[node name="MasterVolumeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout/HeaderLine"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_MASTER_VOLUME"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="MasterVolumeSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+[node name="MasterVolumeSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/slider = SubResource("StyleBoxFlat_slider")
@@ -242,9 +299,9 @@ theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_slider_
 theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
 theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber")
 
-[node name="MasterVolumeValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout"]
+[node name="MasterVolumeValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MasterVolumeRowPanel/RowMargin/RowLayout/HeaderLine"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(58, 0)
+custom_minimum_size = Vector2(58, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.92)
 theme_override_font_sizes/font_size = 16
@@ -252,35 +309,43 @@ text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="MusicVolumeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="MusicVolumeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MusicVolumeRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MusicVolumeRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin"]
+[node name="RowLayout" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 4
 
-[node name="MusicVolumeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+[node name="HeaderLine" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MusicVolumeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout/HeaderLine"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_MUSIC_VOLUME"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="MusicVolumeSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+[node name="MusicVolumeSlider" type="HSlider" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/slider = SubResource("StyleBoxFlat_slider")
@@ -289,9 +354,9 @@ theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_slider_
 theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
 theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber")
 
-[node name="MusicVolumeValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout"]
+[node name="MusicVolumeValue" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MusicVolumeRowPanel/RowMargin/RowLayout/HeaderLine"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(58, 0)
+custom_minimum_size = Vector2(58, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.92)
 theme_override_font_sizes/font_size = 16
@@ -299,40 +364,42 @@ text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="MuteBgmRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="MuteBgmRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteBgmRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteBgmRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="MuteBgmLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
+[node name="MuteBgmLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_MUTE_BGM"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="MuteBgmSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
+[node name="MuteBgmSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MuteBgmToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
+[node name="MuteBgmToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteBgmRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 40)
+custom_minimum_size = Vector2(132, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -346,40 +413,42 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "PLAYER_COUNT_ITEM_MODE_OFF"
 
-[node name="MuteSfxRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="MuteSfxRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteSfxRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteSfxRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="MuteSfxLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
+[node name="MuteSfxLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_MUTE_SFX"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="MuteSfxSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
+[node name="MuteSfxSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MuteSfxToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
+[node name="MuteSfxToggle" type="CheckButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MuteSfxRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 40)
+custom_minimum_size = Vector2(132, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -393,40 +462,42 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "PLAYER_COUNT_ITEM_MODE_OFF"
 
-[node name="WindowModeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="WindowModeRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/WindowModeRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/WindowModeRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="WindowModeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
+[node name="WindowModeLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_WINDOW_MODE"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="WindowSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
+[node name="WindowSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="WindowModeOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
+[node name="WindowModeOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/WindowModeRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 40)
+custom_minimum_size = Vector2(200, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -442,40 +513,42 @@ popup/item_0/id = 0
 popup/item_1/text = ""
 popup/item_1/id = 1
 
-[node name="ResolutionRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="ResolutionRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ResolutionRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ResolutionRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ResolutionLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
+[node name="ResolutionLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_RESOLUTION"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="ResolutionSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
+[node name="ResolutionSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ResolutionOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
+[node name="ResolutionOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ResolutionRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 40)
+custom_minimum_size = Vector2(200, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -501,40 +574,42 @@ popup/item_5/id = 5
 popup/item_6/text = "2560 x 1440"
 popup/item_6/id = 6
 
-[node name="LanguageRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="LanguageRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/LanguageRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/LanguageRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="LanguageLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
+[node name="LanguageLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_LANGUAGE"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="LanguageSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
+[node name="LanguageSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="LanguageOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
+[node name="LanguageOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/LanguageRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 40)
+custom_minimum_size = Vector2(220, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -608,40 +683,42 @@ popup/item_29/id = 29
 popup/item_30/text = ""
 popup/item_30/id = 30
 
-[node name="MainMenuMusicTrackRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="MainMenuMusicTrackRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="MainMenuMusicTrackLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
+[node name="MainMenuMusicTrackLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_BACKGROUND_MUSIC"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="MainMenuMusicTrackSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
+[node name="MainMenuMusicTrackSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MainMenuMusicTrackOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
+[node name="MainMenuMusicTrackOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 40)
+custom_minimum_size = Vector2(220, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -651,40 +728,42 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
 theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 
-[node name="ControlsRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 56)
+[node name="ControlsRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("5_frame_art")
-Kind = 0
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ControlsRowPanel"]
+[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ControlsRowPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 7
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin"]
+[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ControlsLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin/RowLayout"]
+[node name="ControlsLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 38)
+custom_minimum_size = Vector2(104, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 18
 text = "SETTINGS_CONTROLS"
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="ControlsSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin/RowLayout"]
+[node name="ControlsSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin/RowLayout"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ControlsButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin/RowLayout"]
+[node name="ControlsButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/ControlsRowPanel/RowMargin/RowLayout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 40)
+custom_minimum_size = Vector2(200, 44)
 layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
@@ -703,8 +782,8 @@ alignment = 1
 [node name="ResetDefaultsFrame" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions"]
 custom_minimum_size = Vector2(248, 48)
 layout_mode = 2
-script = ExtResource("5_frame_art")
-Kind = 1
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
 [node name="ResetDefaultsButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions/ResetDefaultsFrame"]
 unique_name_in_owner = true
@@ -727,8 +806,8 @@ flat = true
 [node name="DoneFrame" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions"]
 custom_minimum_size = Vector2(248, 48)
 layout_mode = 2
-script = ExtResource("5_frame_art")
-Kind = 1
+script = ExtResource("2_button_frame")
+FrameStyle = 2
 
 [node name="DoneButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsActions/DoneFrame"]
 unique_name_in_owner = true

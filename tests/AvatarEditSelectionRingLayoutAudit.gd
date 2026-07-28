@@ -29,12 +29,12 @@ func _run() -> void:
 	for _frame in range(SETTLE_FRAMES):
 		await process_frame
 
-	var scroll := node.get_node_or_null("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll") as ScrollContainer
+	var scroll := node.get_node_or_null("%GridScroll") as ScrollContainer
 	if scroll == null:
 		_fail("Missing avatar grid scroll container")
 		return
 
-	var avatar_grid := node.get_node_or_null("DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid") as GridContainer
+	var avatar_grid := node.get_node_or_null("%AvatarGrid") as GridContainer
 	if avatar_grid == null:
 		_fail("Missing avatar grid")
 		return

@@ -25,6 +25,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private Label _pauseTitleLabel = default!;
 	private Label _pauseMessageLabel = default!;
 	private Control _restartFrame = default!;
+	private Button _backButton = default!;
+	private ColorRect _scrim = default!;
 
 	public Control PauseMenuPanel { get; private set; } = default!;
 	public MainMenuExitDialog QuitConfirmRoot { get; private set; } = default!;
@@ -48,17 +50,28 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		_restartLabel = GetNode<Label>("%RestartLabel");
 		_quitLabel = GetNodeOrNull<Label>("%QuitLabel");
 		_restartFrame = GetNode<Control>("%RestartFrame");
+		_backButton = GetNode<Button>("%BackButton");
+		_scrim = GetNode<ColorRect>("%Scrim");
 
 		PrepareRowButton(ContinueButton);
 		PrepareRowButton(ReturnToMainMenuButton);
 		PrepareRowButton(RestartButton);
 		PrepareRowButton(QuitButton);
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
+		_backButton.Pressed += () => EmitSignal(SignalName.ContinueRequested);
 		ContinueButton.Pressed += () => EmitSignal(SignalName.ContinueRequested);
 		ReturnToMainMenuButton.Pressed += () => EmitSignal(SignalName.ReturnToMainMenuRequested);
 		RestartButton.Pressed += () => EmitSignal(SignalName.RestartRequested);
 		QuitButton.Pressed += () => EmitSignal(SignalName.QuitRequested);
 		QuitConfirmRoot.CloseRequested += HideQuitConfirm;
 		QuitConfirmRoot.ConfirmRequested += () => EmitSignal(SignalName.ConfirmQuitRequested);
+		SecondaryMenuGlassStyle.StyleScrollBar(GetNode<ScrollContainer>("%ActionsScroll").GetVScrollBar());
+		SecondaryMenuGlassStyle.Attach(
+			this,
+			PauseMenuPanel,
+			_scrim,
+			new Vector2(600.0f, 500.0f),
+			GetNode<PanelContainer>("%PauseActionsPanel"));
 	}
 
 	public void RefreshLocalizedText(
@@ -67,6 +80,7 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		string restartButtonKey = "GAME_RESTART_MATCH")
 	{
 		_pauseTitleLabel.Text = localize("GAME_PAUSE_TITLE");
+		_backButton.Text = localize("ADVENTURE_BACK");
 		_pauseMessageLabel.Text = localize("GAME_PAUSE_MESSAGE");
 		_continueLabel.Text = localize("GAME_CONTINUE");
 		_returnToMainMenuLabel.Text = localize(returnButtonKey);

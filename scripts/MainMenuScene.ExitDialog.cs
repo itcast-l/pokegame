@@ -81,8 +81,8 @@ public partial class MainMenuScene : Control
 	{
 		if (_exitDialogRoot != null && _exitDialogRoot.Visible)
 		{
-			_exitDialogRoot.Position = GetSecondaryMenuDepthPosition();
-			_exitDialogRoot.Scale = GetSecondaryMenuWorldScale();
+			_exitDialogRoot.Position = Vector2.Zero;
+			_exitDialogRoot.Scale = Vector2.One;
 		}
 	}
 

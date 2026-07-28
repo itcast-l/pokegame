@@ -3,9 +3,10 @@
 [ext_resource type="Script" uid="uid://dgi8um8a80l70" path="res://scripts/CharacterAvatarEditScene.cs" id="1_avatar_edit_scene"]
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="2_character_avatar"]
 [ext_resource type="PackedScene" path="res://scenes/character_avatar_option.tscn" id="3_avatar_option"]
+[ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="4_button_frame"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog_panel"]
-bg_color = Color(0.006, 0.074, 0.098, 0.94)
+bg_color = Color(0, 0, 0, 0)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -84,7 +85,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_panel"]
-bg_color = Color(0.013, 0.126, 0.14, 0.82)
+bg_color = Color(0.013, 0.126, 0.14, 0.07)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -100,7 +101,7 @@ content_margin_left = 12.0
 content_margin_top = 7.0
 content_margin_right = 12.0
 content_margin_bottom = 7.0
-bg_color = Color(0.006, 0.074, 0.098, 0.88)
+bg_color = Color(0.006, 0.074, 0.098, 0.48)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -116,7 +117,7 @@ content_margin_left = 12.0
 content_margin_top = 7.0
 content_margin_right = 12.0
 content_margin_bottom = 7.0
-bg_color = Color(0.01, 0.12, 0.14, 0.96)
+bg_color = Color(0.01, 0.12, 0.14, 0.66)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -193,15 +194,16 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="DialogPanel" type="PanelContainer" parent="DialogCenter" unique_id=554305713]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(760, 600)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dialog_panel")
 
 [node name="DialogMargin" type="MarginContainer" parent="DialogCenter/DialogPanel" unique_id=1887076904]
 layout_mode = 2
-theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 22
-theme_override_constants/margin_right = 28
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 24
 
 [node name="DialogLayout" type="VBoxContainer" parent="DialogCenter/DialogPanel/DialogMargin" unique_id=1837791019]
@@ -222,33 +224,61 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="BackButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout" unique_id=821361251]
-custom_minimum_size = Vector2(104, 44)
+[node name="BackFrame" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout"]
+custom_minimum_size = Vector2(126, 56)
 layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_button_frame")
+FrameStyle = 2
+AccentColor = Color(0.48, 0.98, 1, 1)
+
+[node name="BackButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout/BackFrame" unique_id=821361251]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_back_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_back_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_back_button_hover")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_avatar_button")
 text = ""
+flat = true
 
 [node name="Title" type="Label" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout" unique_id=1020255827]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 30
 text = ""
+horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="HeaderRightPlaceholder" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header/HeaderLayout"]
+custom_minimum_size = Vector2(126, 56)
+layout_mode = 2
+
+[node name="TitleUnderline" type="ColorRect" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Header"]
+layout_mode = 1
+anchors_preset = 12
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0.48, 0.98, 1, 0.52)
+
 [node name="PreviewPanel" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=61674980]
-custom_minimum_size = Vector2(0, 232)
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 190)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_preview_panel")
@@ -337,76 +367,95 @@ text = ""
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ConfirmButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls" unique_id=1930066289]
+[node name="ConfirmFrame" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls"]
 custom_minimum_size = Vector2(168, 44)
 layout_mode = 2
 size_flags_horizontal = 0
-focus_mode = 0
-theme_override_colors/font_color = Color(1, 1, 0.9, 1)
-theme_override_colors/font_pressed_color = Color(0.78, 1, 0.96, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 17
-theme_override_styles/normal = SubResource("StyleBoxFlat_confirm_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_confirm_button_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_confirm_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_confirm_button_hover")
-text = ""
+mouse_filter = 2
+script = ExtResource("4_button_frame")
+FrameStyle = 2
+AccentColor = Color(0.48, 0.98, 1, 1)
 
-[node name="GridScroll" type="ScrollContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout" unique_id=988066240]
-custom_minimum_size = Vector2(0, 230)
+[node name="ConfirmButton" type="Button" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/ConfirmFrame" unique_id=1930066289]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_avatar_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_avatar_button")
+text = ""
+flat = true
+
+[node name="AvatarListPanel" type="PanelContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_avatar_button")
+
+[node name="GridScroll" type="ScrollContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel" unique_id=988066240]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="AvatarGrid" type="GridContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll" unique_id=1323517439]
+[node name="AvatarGrid" type="GridContainer" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll" unique_id=1323517439]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 14
-columns = 6
+columns = 5
 
-[node name="AvatarOption1" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption1" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption2" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption2" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption3" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption3" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption4" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption4" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption5" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption5" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption6" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption6" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption7" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption7" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption8" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption8" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption9" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption9" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption10" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption10" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption11" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption11" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption12" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption12" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption13" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption13" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption14" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption14" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2
 
-[node name="AvatarOption15" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
+[node name="AvatarOption15" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/AvatarListPanel/GridScroll/AvatarGrid" instance=ExtResource("3_avatar_option")]
 layout_mode = 2

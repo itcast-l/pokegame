@@ -4,11 +4,6 @@ public partial class AdventureAvatarMenuScene
 {
 	private void BindUi()
 	{
-		if (GetNodeOrNull<CanvasItem>("%StandaloneBackground") is CanvasItem background)
-		{
-			background.Visible = GetEmbeddedMainMenuParent() == null;
-		}
-
 		_backButton = GetNode<Button>("%BackButton");
 		_startButton = GetNode<Button>("%StartButton");
 		SuppressDefaultPressedSfx(_backButton);
