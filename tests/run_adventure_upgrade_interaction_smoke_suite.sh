@@ -19,7 +19,6 @@ run_step "continue/short return cycle guard" run_adventure_upgrade_continue_shor
 run_step "intercept then continue" run_adventure_upgrade_intercept_continue_smoke.sh
 run_step "real turn scope" run_adventure_upgrade_real_turn_scope_smoke.sh
 run_step "gap rooting" run_adventure_upgrade_clubs_gap_rooting_smoke.sh
-run_step "climb canopy" run_adventure_upgrade_clubs_climb_canopy_smoke.sh
 run_step "crown canopy" run_adventure_upgrade_clubs_crown_canopy_smoke.sh
 run_step "attached capture context" run_adventure_upgrade_attached_capture_context_smoke.sh
 run_step "complete capture context" run_adventure_upgrade_complete_capture_context_smoke.sh

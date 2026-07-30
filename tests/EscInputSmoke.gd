@@ -135,37 +135,55 @@ func _assert_offline_game_board_pause_semantics() -> void:
 		_fail("Offline game board did not pause the scene tree after Escape")
 		return
 
-	var quit_button := pause_menu_root.find_child("QuitButton", true, false) as Button
-	var quit_confirm := pause_menu_root.get_node_or_null("PauseQuitConfirmRoot") as Control
-	if quit_button == null or quit_confirm == null:
-		_fail("Offline pause quit confirmation nodes are missing")
+	if pause_menu_root.find_child("QuitButton", true, false) != null \
+			or pause_menu_root.get_node_or_null("PauseQuitConfirmRoot") != null:
+		_fail("Offline pause menu still exposes the removed quit flow")
 		return
-	quit_button.emit_signal("pressed")
-	await process_frame
-	if not quit_confirm.visible:
-		_fail("Offline pause quit confirmation did not open")
+	var continue_button := pause_menu_root.find_child("ContinueButton", true, false) as Button
+	var return_button := pause_menu_root.find_child("ReturnToMainMenuButton", true, false) as Button
+	var restart_button := pause_menu_root.find_child("RestartButton", true, false) as Button
+	if continue_button == null or return_button == null or restart_button == null:
+		_fail("Offline pause menu is missing one or more required actions")
 		return
-	_press_escape()
+
+	continue_button.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	if quit_confirm.visible:
-		_fail("Escape did not close pause quit confirmation first")
-		return
-	if not pause_menu_root.visible or not paused:
-		_fail("Closing pause quit confirmation also closed or resumed the pause menu")
+	if paused or pause_menu_root.visible:
+		_fail("Continue action did not resume the current game")
 		return
 
 	_press_escape()
 	await process_frame
 	await process_frame
-	if paused:
-		_fail("Offline game board did not resume the scene tree after closing the pause menu")
+	if not paused or not pause_menu_root.visible:
+		_fail("Pause menu did not reopen after the continue action")
 		return
-	if pause_menu_root.visible:
-		_fail("Offline game board pause menu remained visible after closing")
+	restart_button.emit_signal("pressed")
+	await process_frame
+	await process_frame
+	if paused or pause_menu_root.visible:
+		_fail("Restart action did not close the pause menu and resume the match")
 		return
 
-	board.queue_free()
+	_press_escape()
+	await process_frame
+	await process_frame
+	if not paused or not pause_menu_root.visible:
+		_fail("Pause menu did not reopen after the restart action")
+		return
+	return_button.emit_signal("pressed")
+	if not await _wait_for_scene_replaced(board, 180):
+		_fail("Return-to-main-menu action did not replace the game board")
+		return
+	var returned_scene := current_scene
+	if returned_scene == null or returned_scene == board:
+		_fail("Return-to-main-menu action did not activate a menu scene")
+		return
+	for _frame in 60:
+		await process_frame
+	returned_scene.queue_free()
+	await process_frame
 	await process_frame
 
 
@@ -269,6 +287,14 @@ func _wait_for_menu_buttons_enabled(menu: Node, max_frames: int) -> bool:
 			return true
 		await process_frame
 	return not bool(menu.call("DebugAreMainMenuButtonsDisabled"))
+
+
+func _wait_for_scene_replaced(previous_scene: Node, max_frames: int) -> bool:
+	for _frame in max_frames:
+		if not is_instance_valid(previous_scene) or current_scene != previous_scene:
+			return true
+		await process_frame
+	return not is_instance_valid(previous_scene) or current_scene != previous_scene
 
 
 func _fail(message: String) -> void:

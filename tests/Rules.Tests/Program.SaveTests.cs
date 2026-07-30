@@ -591,7 +591,7 @@ internal static partial class Program
 			new AdventureCaptureDamageInput(BaseDamage: 5, CaptureContext: context),
 			SuccessfulCapturesThisTurn: 1,
 			context,
-			new AdventureClubCaptureCommitInput(0, 0, 0, 4, false, true));
+			new AdventureClubCaptureCommitInput(0, 0, 0, 4, true));
 	}
 
 	private static void AdventureProductionTransactionSourceContractStaysAtomic()

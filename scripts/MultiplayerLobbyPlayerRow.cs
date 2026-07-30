@@ -16,6 +16,13 @@ public partial class MultiplayerLobbyPlayerRow : PanelContainer
 
 	private Godot.Collections.Dictionary _player = new();
 
+	public override void _Ready()
+	{
+		SeatLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SpadePalette.ActiveBorder);
+		PlayerNameLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.95f, 0.96f, 1.0f));
+		AddThemeStyleboxOverride("panel", CreateRowStyle(new Color(0.48f, 0.56f, 0.60f, 0.34f)));
+	}
+
 	public void Configure(Godot.Collections.Dictionary player)
 	{
 		_player = player.Duplicate();
@@ -56,8 +63,47 @@ public partial class MultiplayerLobbyPlayerRow : PanelContainer
 		ReadyLabel.Text = !isConnected
 			? Localize("MULTIPLAYER_LOBBY_PLAYER_OFFLINE")
 			: isReady
-				? Localize("MULTIPLAYER_LOBBY_PLAYER_READY")
-				: Localize("MULTIPLAYER_LOBBY_PLAYER_WAITING");
+					? Localize("MULTIPLAYER_LOBBY_PLAYER_READY")
+					: Localize("MULTIPLAYER_LOBBY_PLAYER_WAITING");
+		RoleLabel.AddThemeColorOverride(
+			"font_color",
+			isHost ? MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder : MainMenuInteractiveStyle.SpadePalette.Text);
+		ReadyLabel.AddThemeColorOverride(
+			"font_color",
+			!isConnected
+				? MainMenuInteractiveStyle.DangerPalette.Text
+				: isReady
+					? MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder
+					: MainMenuInteractiveStyle.SpadePalette.Text);
+		Color rowBorder = !isConnected
+			? MainMenuInteractiveStyle.DangerPalette.Border
+			: isReady
+				? MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.Border
+				: isLocal
+					? MainMenuInteractiveStyle.SecondaryMenuPalette.Border
+					: new Color(0.48f, 0.56f, 0.60f, 0.34f);
+		AddThemeStyleboxOverride("panel", CreateRowStyle(rowBorder));
+	}
+
+	private static StyleBoxFlat CreateRowStyle(Color border)
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.11f, 0.15f, 0.17f, 0.76f),
+			BorderColor = border,
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginLeft = 10.0f,
+			ContentMarginTop = 7.0f,
+			ContentMarginRight = 10.0f,
+			ContentMarginBottom = 7.0f,
+		};
 	}
 
 	private string Localize(string key)

@@ -107,7 +107,6 @@ public partial class MainMenuScene : Control
 	private OptionButton _windowModeOption = default!;
 	private OptionButton _resolutionOption = default!;
 	private OptionButton _languageOption = default!;
-	private OptionButton _mainMenuMusicTrackOption = default!;
 	private Button _controlsButton = default!;
 	private MainMenuAvatarEntry _avatarEntry = default!;
 	private MainMenuExitDialog _exitDialog = default!;
@@ -278,6 +277,7 @@ public partial class MainMenuScene : Control
 
 	public override void _Input(InputEvent inputEvent)
 	{
+		TrackPrimaryMenuInputMode(inputEvent);
 		_skillCodexOverlay?.TrackInputMode(inputEvent);
 		TryHandleControlsBindingCapture(inputEvent);
 	}

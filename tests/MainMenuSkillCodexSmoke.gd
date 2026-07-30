@@ -13,7 +13,7 @@ const EXPECTED_COUNTS := {
 	"hearts": 14,
 	"diamonds": 13,
 	"spades": 12,
-	"clubs": 14,
+	"clubs": 13,
 }
 const EXPECTED_TIERS := {
 	"common": "common",
@@ -25,6 +25,18 @@ const UNLOCKED_BY_SUIT := {
 	"diamonds": "diamonds_question_mark_interest",
 	"spades": "spades_dark_harbor_reveal",
 	"clubs": "clubs_gap_rooting",
+}
+const SUIT_BUTTON_NAMES := {
+	"hearts": "HeartsButton",
+	"diamonds": "DiamondsButton",
+	"spades": "SpadesButton",
+	"clubs": "ClubsButton",
+}
+const SUIT_BORDER_COLORS := {
+	"hearts": Color(0.76, 0.27, 0.43, 0.42),
+	"diamonds": Color(0.35, 0.76, 0.84, 0.42),
+	"spades": Color(0.57, 0.68, 0.82, 0.42),
+	"clubs": Color(0.30, 0.72, 0.49, 0.42),
 }
 
 var _failed := false
@@ -65,7 +77,7 @@ func _run() -> void:
 	if _failed:
 		return
 
-	# A new profile must expose all 53 fixed slots without revealing any skill.
+	# A new profile must expose all 52 fixed slots without revealing any skill.
 	skill_button.emit_signal("pressed")
 	if not bool(menu.call("DebugIsSkillCodexVisible")):
 		_fail("Skill codex did not open from the main-menu button")
@@ -97,8 +109,10 @@ func _run() -> void:
 	if String(overlay.call("DebugGetCurrentSuit")) != "hearts":
 		_fail("Skill codex did not default to hearts")
 		return
-	if int(overlay.call("DebugGetTotalEnabledCardCount")) != 53:
-		_fail("Skill codex total enabled count is not 53")
+	if not await _assert_unified_visual_style(overlay):
+		return
+	if int(overlay.call("DebugGetTotalEnabledCardCount")) != 52:
+		_fail("Skill codex total enabled count is not 52")
 		return
 	if int(overlay.call("DebugGetTotalUnlockedCardCount")) != 0:
 		_fail("New profile skill codex is not fully locked")
@@ -207,7 +221,7 @@ func _run() -> void:
 	var preview_state := overlay.call("DebugGetPreviewCardState") as Dictionary
 	if bool(preview_state["interactive"]) or bool(preview_state["locked"]) \
 			or not bool(preview_state["has_texture"]) \
-			or String(preview_state["rarity_label"]).is_empty():
+			or not String(preview_state["rarity_label"]).is_empty():
 		_fail("Enlarged preview did not preserve unlocked card content as non-interactive")
 		return
 	if not bool(menu.call("DebugHandleSkillCodexCancel")):
@@ -498,7 +512,7 @@ func _assert_mixed_cards(overlay: Node, suit: String, unlocked_id: String, popup
 				or not bool(state["has_texture"]) or String(state["suit"]) != suit \
 				or not EXPECTED_TIERS.has(rarity) \
 				or String(state["visual_tier"]) != String(EXPECTED_TIERS[rarity]) \
-				or String(state["rarity_label"]).is_empty() \
+				or not String(state["rarity_label"]).is_empty() \
 				or description.is_empty() or description.contains("{") \
 				or description.begins_with("UPGRADE_DESC_"):
 			_fail("Unlocked codex card content is invalid for %s" % state["id"])
@@ -569,6 +583,48 @@ func _assert_card_focus_highlight_state(overlay: Node, expected: bool) -> bool:
 		if not expected and bool(state["feedback_visible"]):
 			_fail("Card retained focus feedback before keyboard or gamepad navigation: %s" % state["id"])
 			return false
+	return true
+
+
+func _assert_unified_visual_style(overlay: Node) -> bool:
+	if not overlay.has_meta("secondary_menu_visual_profile") \
+			or str(overlay.get_meta("secondary_menu_visual_profile")) != "secondary-menu-unified":
+		_fail("Skill codex does not expose the unified secondary-menu visual profile")
+		return false
+	for path in ["Root/Backdrop", "Root/PreviewLayer/Scrim"]:
+		var veil := overlay.get_node_or_null(path) as ColorRect
+		var veil_material := veil.material as ShaderMaterial if veil != null else null
+		if veil_material == null or veil_material.shader == null \
+				or veil_material.shader.resource_path != "res://shaders/menu_blur_scrim.gdshader":
+			_fail("Skill codex blur veil is missing at %s" % path)
+			return false
+	var preview_surface := overlay.get_node_or_null(
+		"Root/PreviewLayer/PreviewCenter/PreviewGlassSurface") as ColorRect
+	var preview_frame := overlay.get_node_or_null(
+		"Root/PreviewLayer/PreviewCenter/PreviewGlassFrame") as Panel
+	var preview_material := preview_surface.material as ShaderMaterial if preview_surface != null else null
+	if preview_material == null or preview_material.shader == null \
+			or preview_material.shader.resource_path != "res://shaders/adventure_menu_glass.gdshader" \
+			or preview_frame == null:
+		_fail("Skill codex preview is missing its glass focus layer")
+		return false
+
+	for suit in SUIT_BUTTON_NAMES:
+		if not bool(overlay.call("DebugSelectSuit", suit)):
+			_fail("Failed to select %s while auditing suit theme" % suit)
+			return false
+		await _wait_frames(2)
+		var button := overlay.get_node(
+			"Root/SafeMargin/Layout/SuitTabs/%s" % SUIT_BUTTON_NAMES[suit]) as Button
+		var style := button.get_theme_stylebox("normal") as StyleBoxFlat
+		if not button.button_pressed or style == null \
+				or not style.border_color.is_equal_approx(SUIT_BORDER_COLORS[suit]):
+			_fail("Selected %s tab does not use its individual suit theme" % suit)
+			return false
+	if not bool(overlay.call("DebugSelectSuit", "hearts")):
+		_fail("Failed to restore hearts after suit theme audit")
+		return false
+	await _wait_frames(2)
 	return true
 
 

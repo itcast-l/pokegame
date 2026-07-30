@@ -30,7 +30,6 @@ public partial class MainMenuScene : Control
 		_windowModeOption = dialog.WindowModeOption;
 		_resolutionOption = dialog.ResolutionOption;
 		_languageOption = dialog.LanguageOption;
-		_mainMenuMusicTrackOption = dialog.MainMenuMusicTrackOption;
 		_controlsButton = dialog.ControlsButton;
 		SuppressDefaultPressedSfx(dialog.DoneButton);
 		SuppressDefaultPressedSfx(_controlsButton);
@@ -118,21 +117,6 @@ public partial class MainMenuScene : Control
 			}
 
 			_languagePreference = Localization.SupportedLanguages[(int)index].Preference;
-			OnSettingsChanged();
-		};
-		_mainMenuMusicTrackOption.ItemSelected += index =>
-		{
-			if (_isSyncingSettingsControls)
-			{
-				return;
-			}
-
-			if (index < 0 || index >= _mainMenuMusicOptions.Count)
-			{
-				return;
-			}
-
-			_selectedMainMenuMusicTrack = _mainMenuMusicOptions[(int)index].Id;
 			OnSettingsChanged();
 		};
 	}

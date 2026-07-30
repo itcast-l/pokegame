@@ -41,6 +41,19 @@ func _run() -> void:
 	if difficulty_row == null or difficulty_option == null or difficulty_label == null:
 		_fail("Difficulty row controls are missing")
 		return
+	for option_name in ["PlayerCountOption", "DifficultyOption", "ItemModeOption", "WinningScoreOption"]:
+		var option := dialog_root.find_child(option_name, true, false) as OptionButton
+		if option == null:
+			_fail("Configuration option is missing: %s" % option_name)
+			return
+		var arrow_icon := option.get_theme_icon("arrow")
+		if arrow_icon == null or arrow_icon.get_width() > 1 or arrow_icon.get_height() > 1:
+			_fail("Configuration option still exposes a duplicate native arrow: %s" % option_name)
+			return
+		var option_style := option.get_theme_stylebox("normal")
+		if option_style == null or option_style.get_content_margin(SIDE_RIGHT) < 44.0:
+			_fail("Configuration option does not reserve space for its custom chevron: %s" % option_name)
+			return
 	var difficulty_row_rect := difficulty_row.get_global_rect()
 	var difficulty_option_rect := difficulty_option.get_global_rect()
 	if not difficulty_row_rect.encloses(difficulty_option_rect) \
@@ -81,6 +94,10 @@ func _run() -> void:
 		if popup_icon != null and (popup_icon.get_width() > 1 or popup_icon.get_height() > 1):
 			_fail("Difficulty popup unexpectedly shows a prefix icon: %s" % icon_name)
 			return
+	var popup_panel_style := difficulty_popup.get_theme_stylebox("panel", "PopupMenu") as StyleBoxFlat
+	if popup_panel_style == null or popup_panel_style.shadow_size != 0:
+		_fail("Difficulty popup reserves horizontal shadow space instead of matching the selector width")
+		return
 	var difficulty_popup_rect := Rect2(Vector2(difficulty_popup.position), Vector2(difficulty_popup.size))
 	if absf(difficulty_popup_rect.position.x - difficulty_option_rect.position.x) > 3.0 \
 			or absf(difficulty_popup_rect.size.x - difficulty_option_rect.size.x) > 3.0:

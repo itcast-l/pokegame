@@ -9,7 +9,6 @@ public static class DiceRollPresentationRules
 	public const double ResultHoldSeconds = 0.64;
 	public const string RollingPathFramePattern = "res://art/props/dice/neutral_tabletop/run-002/rolling_path/frame-{0:000}.png";
 	public const string ResultMotionFramePattern = "res://art/props/dice/neutral_tabletop/run-002/result_motion_frames/result-{0}.png";
-	public const string RollingPathPreviewGifPath = "res://art/props/dice/neutral_tabletop/run-002/rolling_path/animation.gif";
 
 	public static bool IsValidResult(int result)
 	{

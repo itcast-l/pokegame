@@ -2,9 +2,101 @@ using Godot;
 
 public static class MainMenuInteractiveStyle
 {
+	public sealed class Palette
+	{
+		public Palette(
+			Color surface,
+			Color activeSurface,
+			Color border,
+			Color activeBorder,
+			Color text,
+			Color focusText,
+			Color disabledText)
+		{
+			Surface = surface;
+			ActiveSurface = activeSurface;
+			Border = border;
+			ActiveBorder = activeBorder;
+			Text = text;
+			FocusText = focusText;
+			DisabledText = disabledText;
+		}
+
+		public Color Surface { get; }
+		public Color ActiveSurface { get; }
+		public Color Border { get; }
+		public Color ActiveBorder { get; }
+		public Color Text { get; }
+		public Color FocusText { get; }
+		public Color DisabledText { get; }
+	}
+
+	public static readonly Palette SecondaryMenuPalette = new(
+		new Color(0.025f, 0.15f, 0.18f, 0.72f),
+		new Color(0.035f, 0.25f, 0.28f, 0.88f),
+		new Color(0.35f, 0.72f, 0.73f, 0.48f),
+		new Color(0.62f, 1.0f, 0.94f, 0.84f),
+		new Color(0.92f, 0.98f, 0.97f, 1.0f),
+		new Color(0.98f, 1.0f, 0.98f, 1.0f),
+		new Color(0.50f, 0.62f, 0.62f, 0.68f));
+	public static readonly Palette SecondaryMenuPrimaryPalette = new(
+		new Color(0.03f, 0.25f, 0.28f, 0.88f),
+		new Color(0.04f, 0.36f, 0.38f, 0.95f),
+		new Color(0.28f, 0.78f, 0.82f, 0.68f),
+		new Color(0.42f, 0.92f, 0.94f, 0.96f),
+		new Color(0.95f, 1.0f, 0.98f, 1.0f),
+		new Color(1.0f, 1.0f, 0.94f, 1.0f),
+		new Color(0.48f, 0.66f, 0.62f, 0.68f));
+
+	public static readonly Palette UtilityPalette = new(
+		new Color(0.20f, 0.24f, 0.24f, 0.58f),
+		new Color(0.24f, 0.34f, 0.30f, 0.78f),
+		new Color(0.58f, 0.69f, 0.65f, 0.38f),
+		new Color(0.63f, 0.88f, 0.75f, 0.76f),
+		new Color(0.94f, 0.97f, 0.96f, 1.0f),
+		new Color(0.90f, 1.0f, 0.94f, 1.0f),
+		new Color(0.62f, 0.68f, 0.66f, 0.68f));
+	public static readonly Palette NeutralPalette = new(
+		new Color(0.16f, 0.18f, 0.19f, 0.64f),
+		new Color(0.24f, 0.27f, 0.28f, 0.82f),
+		new Color(0.55f, 0.60f, 0.60f, 0.40f),
+		new Color(0.76f, 0.82f, 0.81f, 0.72f),
+		new Color(0.94f, 0.96f, 0.96f, 1.0f),
+		new Color(1.0f, 1.0f, 1.0f, 1.0f),
+		new Color(0.58f, 0.62f, 0.62f, 0.66f));
+	public static readonly Palette EmeraldPalette = new(
+		new Color(0.08f, 0.30f, 0.22f, 0.78f),
+		new Color(0.10f, 0.42f, 0.29f, 0.90f),
+		new Color(0.34f, 0.76f, 0.57f, 0.54f),
+		new Color(0.62f, 0.96f, 0.76f, 0.88f),
+		new Color(0.92f, 1.0f, 0.96f, 1.0f),
+		new Color(0.97f, 1.0f, 0.98f, 1.0f),
+		new Color(0.47f, 0.64f, 0.56f, 0.64f));
+	public static readonly Palette DangerPalette = new(
+		new Color(0.30f, 0.10f, 0.12f, 0.76f),
+		new Color(0.42f, 0.13f, 0.15f, 0.88f),
+		new Color(0.70f, 0.31f, 0.34f, 0.56f),
+		new Color(0.90f, 0.52f, 0.54f, 0.84f),
+		new Color(1.0f, 0.93f, 0.93f, 1.0f),
+		new Color(1.0f, 0.98f, 0.98f, 1.0f),
+		new Color(0.62f, 0.48f, 0.49f, 0.66f));
+	public static readonly Palette IcePalette = new(
+		new Color(0.10f, 0.23f, 0.27f, 0.72f),
+		new Color(0.12f, 0.34f, 0.40f, 0.86f),
+		new Color(0.37f, 0.67f, 0.74f, 0.50f),
+		new Color(0.64f, 0.90f, 0.96f, 0.84f),
+		new Color(0.91f, 0.98f, 1.0f, 1.0f),
+		new Color(0.96f, 1.0f, 1.0f, 1.0f),
+		new Color(0.48f, 0.60f, 0.63f, 0.66f));
+	public static readonly Palette HeartPalette = CreateAccentPalette(new Color(0.76f, 0.27f, 0.43f));
+	public static readonly Palette DiamondPalette = CreateAccentPalette(new Color(0.35f, 0.76f, 0.84f));
+	public static readonly Palette SpadePalette = CreateAccentPalette(new Color(0.57f, 0.68f, 0.82f));
+	public static readonly Palette ClubPalette = CreateAccentPalette(new Color(0.30f, 0.72f, 0.49f));
+
 	private static readonly Color ActionButtonFontColor = new(0.95f, 1.0f, 0.97f, 1.0f);
 	private static readonly Color ActionButtonPressedFontColor = new(0.92f, 1.0f, 0.98f, 1.0f);
 	private static readonly Color ActionButtonHighlightFontColor = new(1.0f, 1.0f, 0.84f, 1.0f);
+	private const int ThemedPopupShadowSize = 12;
 	private static Texture2D? _popupDiamondSelectedIcon;
 	private static Texture2D? _popupDiamondIdleIcon;
 	private static Texture2D? _transparentOptionArrow;
@@ -49,6 +141,94 @@ public static class MainMenuInteractiveStyle
 			option.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
 			ApplyOptionPopup(option);
 		}
+	}
+
+	public static void ApplyThemedControl(BaseButton button, Palette palette, int fontSize = 18)
+	{
+		Vector2 minimumSize = button.CustomMinimumSize;
+		button.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
+		button.AddThemeColorOverride("font_color", palette.Text);
+		button.AddThemeColorOverride("font_pressed_color", palette.FocusText);
+		button.AddThemeColorOverride("font_hover_color", palette.FocusText);
+		button.AddThemeColorOverride("font_focus_color", palette.FocusText);
+		button.AddThemeColorOverride("font_disabled_color", palette.DisabledText);
+		button.AddThemeFontSizeOverride("font_size", fontSize);
+		button.AddThemeStyleboxOverride("normal", CreateThemedControlStyle(palette, active: false));
+		button.AddThemeStyleboxOverride("pressed", CreateThemedControlStyle(palette, active: true));
+		button.AddThemeStyleboxOverride("hover", CreateThemedControlStyle(palette, active: true));
+		button.AddThemeStyleboxOverride("focus", CreateThemedControlStyle(palette, active: true));
+
+		if (button is OptionButton option)
+		{
+			option.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+			ApplyThemedOptionPopup(option, palette);
+		}
+	}
+
+	public static void ApplySecondaryMenuGameConfigurationOption(OptionButton option)
+	{
+		ApplyThemedControl(option, SecondaryMenuPalette, 20);
+		option.AddThemeStyleboxOverride("normal", CreateSecondaryMenuGameConfigurationOptionStyle(active: false));
+		option.AddThemeStyleboxOverride("pressed", CreateSecondaryMenuGameConfigurationOptionStyle(active: true));
+		option.AddThemeStyleboxOverride("hover", CreateSecondaryMenuGameConfigurationOptionStyle(active: true));
+		option.AddThemeStyleboxOverride("focus", CreateSecondaryMenuGameConfigurationOptionStyle(active: true));
+		option.AddThemeIconOverride("arrow", GetTransparentOptionArrow());
+		option.AddThemeConstantOverride("arrow_margin", 0);
+		option.Alignment = HorizontalAlignment.Right;
+		option.ClipText = true;
+		option.GetPopup().Theme = BuildThemedPopupTheme(
+			SecondaryMenuPalette,
+			showSelectionIcons: false,
+			popupShadowSize: 0);
+	}
+
+	public static void ApplyThemedToggle(CheckButton toggle, Palette palette, int fontSize = 18)
+	{
+		ApplyThemedControl(toggle, palette, fontSize);
+		EnsurePopupIcons();
+		toggle.Set("theme_override_icons/checked", _popupDiamondSelectedIcon!);
+		toggle.Set("theme_override_icons/unchecked", _popupDiamondIdleIcon!);
+	}
+
+	public static void ApplyThemedSlider(HSlider slider, Palette palette)
+	{
+		slider.CustomMinimumSize = new Vector2(slider.CustomMinimumSize.X, Mathf.Max(20.0f, slider.CustomMinimumSize.Y));
+		slider.AddThemeStyleboxOverride("slider", CreateSliderTrackStyle(palette));
+		slider.AddThemeStyleboxOverride("grabber_area", CreateSliderFillStyle(palette, active: false));
+		slider.AddThemeStyleboxOverride("grabber_area_highlight", CreateSliderFillStyle(palette, active: true));
+		slider.AddThemeStyleboxOverride("grabber", CreateSliderGrabberStyle(palette, active: false));
+		slider.AddThemeStyleboxOverride("grabber_highlight", CreateSliderGrabberStyle(palette, active: true));
+	}
+
+	public static void ApplyThemedLineEdit(LineEdit input, Palette palette, int fontSize = 18)
+	{
+		Vector2 minimumSize = input.CustomMinimumSize;
+		input.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
+		input.AddThemeColorOverride("font_color", palette.Text);
+		input.AddThemeColorOverride("font_placeholder_color", new Color(
+			palette.DisabledText.R,
+			palette.DisabledText.G,
+			palette.DisabledText.B,
+			Mathf.Max(0.72f, palette.DisabledText.A)));
+		input.AddThemeColorOverride("font_uneditable_color", palette.DisabledText);
+		input.AddThemeColorOverride("caret_color", palette.ActiveBorder);
+		input.AddThemeColorOverride("selection_color", new Color(
+			palette.ActiveBorder.R,
+			palette.ActiveBorder.G,
+			palette.ActiveBorder.B,
+			0.38f));
+		input.AddThemeFontSizeOverride("font_size", fontSize);
+		input.AddThemeStyleboxOverride("normal", CreateThemedControlStyle(palette, active: false));
+		input.AddThemeStyleboxOverride("focus", CreateThemedControlStyle(palette, active: true));
+		input.AddThemeStyleboxOverride("read_only", CreateThemedControlStyle(NeutralPalette, active: false));
+	}
+
+	public static void ApplyThemedTab(Button button, Palette palette, bool selected, int fontSize = 18)
+	{
+		ApplyThemedControl(button, selected ? palette : NeutralPalette, fontSize);
+		button.ButtonPressed = selected;
+		button.AddThemeStyleboxOverride("pressed", CreateThemedControlStyle(palette, active: true));
+		button.AddThemeColorOverride("font_pressed_color", palette.FocusText);
 	}
 
 	public static void ApplyGameConfigurationOption(OptionButton option)
@@ -112,10 +292,19 @@ public static class MainMenuInteractiveStyle
 
 	public static void ApplyActionButton(Button button, int fontSize)
 	{
-		button.AddThemeColorOverride("font_color", ActionButtonFontColor);
-		button.AddThemeColorOverride("font_pressed_color", ActionButtonPressedFontColor);
-		button.AddThemeColorOverride("font_hover_color", ActionButtonHighlightFontColor);
-		SetActionButtonFocusHighlight(button, true);
+		ApplyActionButton(button, fontSize, null);
+	}
+
+	public static void ApplyActionButton(Button button, int fontSize, Palette? palette)
+	{
+		Color fontColor = palette?.Text ?? ActionButtonFontColor;
+		Color pressedColor = palette?.FocusText ?? ActionButtonPressedFontColor;
+		Color highlightColor = palette?.FocusText ?? ActionButtonHighlightFontColor;
+		button.AddThemeColorOverride("font_color", fontColor);
+		button.AddThemeColorOverride("font_pressed_color", pressedColor);
+		button.AddThemeColorOverride("font_hover_color", highlightColor);
+		button.AddThemeColorOverride("font_disabled_color", palette?.DisabledText ?? new Color(fontColor.R, fontColor.G, fontColor.B, 0.54f));
+		SetActionButtonFocusHighlight(button, true, palette);
 		button.AddThemeFontSizeOverride("font_size", fontSize);
 		button.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
 		button.AddThemeStyleboxOverride("pressed", new StyleBoxEmpty());
@@ -126,7 +315,14 @@ public static class MainMenuInteractiveStyle
 
 	public static void SetActionButtonFocusHighlight(Button button, bool enabled)
 	{
-		button.AddThemeColorOverride("font_focus_color", enabled ? ActionButtonHighlightFontColor : ActionButtonFontColor);
+		SetActionButtonFocusHighlight(button, enabled, null);
+	}
+
+	public static void SetActionButtonFocusHighlight(Button button, bool enabled, Palette? palette)
+	{
+		Color normal = palette?.Text ?? ActionButtonFontColor;
+		Color highlighted = palette?.FocusText ?? ActionButtonHighlightFontColor;
+		button.AddThemeColorOverride("font_focus_color", enabled ? highlighted : normal);
 	}
 
 	public static void ApplyOptionPopup(OptionButton option)
@@ -137,6 +333,129 @@ public static class MainMenuInteractiveStyle
 		popup.ShrinkHeight = true;
 		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
 		popup.Theme = BuildPopupTheme();
+	}
+
+	private static void ApplyThemedOptionPopup(OptionButton option, Palette palette)
+	{
+		PopupMenu popup = option.GetPopup();
+		popup.PreferNativeMenu = false;
+		popup.ShrinkWidth = false;
+		popup.ShrinkHeight = true;
+		popup.MinSize = new Vector2I(Mathf.RoundToInt(option.CustomMinimumSize.X), 0);
+		popup.Theme = BuildThemedPopupTheme(palette);
+		popup.AboutToPopup += () => AlignThemedPopup(option, popup);
+	}
+
+	private static void AlignThemedPopup(OptionButton option, PopupMenu popup)
+	{
+		if (!GodotObject.IsInstanceValid(option) || !GodotObject.IsInstanceValid(popup))
+		{
+			return;
+		}
+
+		Rect2 optionRect = option.GetGlobalRect();
+		int width = Mathf.RoundToInt(optionRect.Size.X);
+		popup.MinSize = new Vector2I(Mathf.Max(1, width - 24), 0);
+		popup.Size = new Vector2I(width, popup.Size.Y);
+		popup.Position = new Vector2I(Mathf.RoundToInt(optionRect.Position.X), popup.Position.Y);
+		Callable.From(() =>
+		{
+			if (GodotObject.IsInstanceValid(option) && GodotObject.IsInstanceValid(popup))
+			{
+				Rect2 deferredRect = option.GetGlobalRect();
+				int deferredWidth = Mathf.RoundToInt(deferredRect.Size.X);
+				popup.MinSize = new Vector2I(Mathf.Max(1, deferredWidth - 24), 0);
+				popup.Size = new Vector2I(deferredWidth, popup.Size.Y);
+				popup.Position = new Vector2I(Mathf.RoundToInt(deferredRect.Position.X), popup.Position.Y);
+			}
+		}).CallDeferred();
+	}
+
+	private static StyleBoxFlat CreateThemedControlStyle(Palette palette, bool active)
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = active ? palette.ActiveSurface : palette.Surface,
+			BorderColor = active ? palette.ActiveBorder : palette.Border,
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginLeft = 12.0f,
+			ContentMarginTop = 6.0f,
+			ContentMarginRight = 12.0f,
+			ContentMarginBottom = 6.0f,
+		};
+	}
+
+	private static StyleBoxFlat CreateSecondaryMenuGameConfigurationOptionStyle(bool active)
+	{
+		StyleBoxFlat style = CreateThemedControlStyle(SecondaryMenuPalette, active);
+		style.ContentMarginRight = 48.0f;
+		return style;
+	}
+
+	private static StyleBoxFlat CreateSliderTrackStyle(Palette palette)
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = palette.Surface,
+			BorderColor = palette.Border,
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginTop = 4.0f,
+			ContentMarginBottom = 4.0f,
+		};
+	}
+
+	private static StyleBoxFlat CreateSliderFillStyle(Palette palette, bool active)
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = active ? palette.ActiveBorder : new Color(palette.ActiveBorder.R, palette.ActiveBorder.G, palette.ActiveBorder.B, 0.54f),
+			BorderColor = active ? palette.FocusText : palette.ActiveBorder,
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginTop = 4.0f,
+			ContentMarginBottom = 4.0f,
+		};
+	}
+
+	private static StyleBoxFlat CreateSliderGrabberStyle(Palette palette, bool active)
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = active ? palette.FocusText : palette.Text,
+			BorderColor = active ? palette.ActiveBorder : palette.Border,
+			BorderWidthLeft = 2,
+			BorderWidthTop = 2,
+			BorderWidthRight = 2,
+			BorderWidthBottom = 2,
+			CornerRadiusTopLeft = 7,
+			CornerRadiusTopRight = 7,
+			CornerRadiusBottomLeft = 7,
+			CornerRadiusBottomRight = 7,
+			ContentMarginLeft = 7.0f,
+			ContentMarginTop = 7.0f,
+			ContentMarginRight = 7.0f,
+			ContentMarginBottom = 7.0f,
+		};
 	}
 
 	private static StyleBoxFlat CreateOptionStyle(bool hovered)
@@ -240,6 +559,56 @@ public static class MainMenuInteractiveStyle
 		popup.Position = new Vector2I(
 			Mathf.RoundToInt(optionRect.Position.X),
 			popup.Position.Y);
+	}
+
+	private static Theme BuildThemedPopupTheme(
+		Palette palette,
+		bool showSelectionIcons = true,
+		int popupShadowSize = ThemedPopupShadowSize)
+	{
+		EnsurePopupIcons();
+		Theme theme = new();
+		StyleBoxFlat popupStyle = CreateThemedControlStyle(palette, active: false);
+		popupStyle.BgColor = new Color(palette.Surface.R, palette.Surface.G, palette.Surface.B, 0.98f);
+		popupStyle.ContentMarginLeft = 10.0f;
+		popupStyle.ContentMarginTop = 10.0f;
+		popupStyle.ContentMarginRight = 10.0f;
+		popupStyle.ContentMarginBottom = 10.0f;
+		popupStyle.ShadowColor = new Color(0.01f, 0.02f, 0.025f, 0.42f);
+		popupStyle.ShadowSize = popupShadowSize;
+		popupStyle.ShadowOffset = new Vector2(0.0f, 5.0f);
+		StyleBoxFlat hoverStyle = CreateThemedControlStyle(palette, active: true);
+		StyleBoxLine separatorStyle = new()
+		{
+			Color = new Color(palette.Border.R, palette.Border.G, palette.Border.B, 0.34f),
+			Thickness = 1,
+			GrowBegin = 8.0f,
+			GrowEnd = 8.0f,
+		};
+
+		theme.SetStylebox("panel", "PopupMenu", popupStyle);
+		theme.SetStylebox("hover", "PopupMenu", hoverStyle);
+		theme.SetStylebox("focus", "PopupMenu", hoverStyle);
+		theme.SetStylebox("separator", "PopupMenu", separatorStyle);
+		theme.SetColor("font_color", "PopupMenu", palette.Text);
+		theme.SetColor("font_hover_color", "PopupMenu", palette.FocusText);
+		theme.SetColor("font_focus_color", "PopupMenu", palette.FocusText);
+		theme.SetColor("font_disabled_color", "PopupMenu", palette.DisabledText);
+		theme.SetColor("font_outline_color", "PopupMenu", new Color(0.01f, 0.02f, 0.025f, 0.80f));
+		theme.SetFontSize("font_size", "PopupMenu", 18);
+		theme.SetConstant("h_separation", "PopupMenu", 8);
+		theme.SetConstant("item_start_padding", "PopupMenu", 10);
+		theme.SetConstant("item_end_padding", "PopupMenu", 10);
+		theme.SetConstant("icon_max_width", "PopupMenu", showSelectionIcons ? 16 : 1);
+		theme.SetConstant("outline_size", "PopupMenu", 1);
+		theme.SetConstant("v_separation", "PopupMenu", 4);
+		Texture2D selectedIcon = showSelectionIcons ? _popupDiamondSelectedIcon! : GetTransparentOptionArrow();
+		Texture2D idleIcon = showSelectionIcons ? _popupDiamondIdleIcon! : GetTransparentOptionArrow();
+		theme.SetIcon("checked", "PopupMenu", selectedIcon);
+		theme.SetIcon("radio_checked", "PopupMenu", selectedIcon);
+		theme.SetIcon("unchecked", "PopupMenu", idleIcon);
+		theme.SetIcon("radio_unchecked", "PopupMenu", idleIcon);
+		return theme;
 	}
 
 	private static Theme BuildPopupTheme()
@@ -386,6 +755,18 @@ public static class MainMenuInteractiveStyle
 		theme.SetIcon("unchecked", "PopupMenu", transparentIcon);
 		theme.SetIcon("radio_unchecked", "PopupMenu", transparentIcon);
 		return theme;
+	}
+
+	private static Palette CreateAccentPalette(Color accent)
+	{
+		return new Palette(
+			new Color(accent.R * 0.16f, accent.G * 0.16f, accent.B * 0.16f, 0.62f),
+			new Color(accent.R * 0.34f, accent.G * 0.34f, accent.B * 0.34f, 0.84f),
+			new Color(accent.R, accent.G, accent.B, 0.42f),
+			new Color(accent.R, accent.G, accent.B, 0.86f),
+			new Color(0.88f, 0.91f, 0.92f, 0.96f),
+			new Color(0.97f, 1.0f, 1.0f, 1.0f),
+			new Color(0.52f, 0.56f, 0.58f, 0.66f));
 	}
 
 	private static void EnsurePopupIcons()

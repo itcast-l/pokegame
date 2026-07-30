@@ -15,10 +15,8 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _windowModeLabel = default!;
 	private Label _resolutionLabel = default!;
 	private Label _languageLabel = default!;
-	private Label _mainMenuMusicTrackLabel = default!;
 	private Label _controlsLabel = default!;
 	private Button _controlsButton = default!;
-	private Button _backButton = default!;
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
 	private ColorRect _scrim = default!;
@@ -35,7 +33,6 @@ public partial class MainMenuSettingsDialog : Control
 	public OptionButton WindowModeOption { get; private set; } = default!;
 	public OptionButton ResolutionOption { get; private set; } = default!;
 	public OptionButton LanguageOption { get; private set; } = default!;
-	public OptionButton MainMenuMusicTrackOption { get; private set; } = default!;
 	public Button ControlsButton => _controlsButton;
 	public Button ResetDefaultsButton => _resetButton;
 	public Button DoneButton => _doneButton;
@@ -59,7 +56,6 @@ public partial class MainMenuSettingsDialog : Control
 		WindowModeOption = GetNode<OptionButton>("%WindowModeOption");
 		ResolutionOption = GetNode<OptionButton>("%ResolutionOption");
 		LanguageOption = GetNode<OptionButton>("%LanguageOption");
-		MainMenuMusicTrackOption = GetNode<OptionButton>("%MainMenuMusicTrackOption");
 		_titleLabel = GetNode<Label>("%SettingsTitle");
 		_messageLabel = GetNode<Label>("%SettingsMessage");
 		_masterVolumeLabel = GetNode<Label>("%MasterVolumeLabel");
@@ -69,31 +65,28 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel = GetNode<Label>("%WindowModeLabel");
 		_resolutionLabel = GetNode<Label>("%ResolutionLabel");
 		_languageLabel = GetNode<Label>("%LanguageLabel");
-		_mainMenuMusicTrackLabel = GetNode<Label>("%MainMenuMusicTrackLabel");
 		_controlsLabel = GetNode<Label>("%ControlsLabel");
 		_settingsScroll = GetNode<ScrollContainer>("%SettingsScroll");
 		_controlsButton = GetNode<Button>("%ControlsButton");
-		_backButton = GetNode<Button>("%BackButton");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		_scrim.GuiInput += OnScrimGuiInput;
-		_backButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
-		MainMenuInteractiveStyle.ApplyGlassToggleButton(MuteBgmToggle);
-		MainMenuInteractiveStyle.ApplyGlassToggleButton(MuteSfxToggle);
-		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(WindowModeOption);
-		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(ResolutionOption);
-		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(LanguageOption);
-		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(MainMenuMusicTrackOption);
-		MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(_controlsButton);
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
-		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20);
-		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20);
+		MainMenuInteractiveStyle.ApplyThemedSlider(MasterVolumeSlider, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedSlider(MusicVolumeSlider, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedToggle(MuteBgmToggle, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedToggle(MuteSfxToggle, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(WindowModeOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(ResolutionOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(LanguageOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(_controlsButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		ConfigureUnifiedVisualStyle();
 		MuteBgmToggle.Toggled += _ => UpdateToggleText(MuteBgmToggle);
 		MuteSfxToggle.Toggled += _ => UpdateToggleText(MuteSfxToggle);
 		EnableKeyboardFocus(
-			_backButton,
 			MasterVolumeSlider,
 			MusicVolumeSlider,
 			MuteBgmToggle,
@@ -101,7 +94,6 @@ public partial class MainMenuSettingsDialog : Control
 			WindowModeOption,
 			ResolutionOption,
 			LanguageOption,
-			MainMenuMusicTrackOption,
 			_controlsButton,
 			_resetButton,
 			_doneButton);
@@ -113,22 +105,81 @@ public partial class MainMenuSettingsDialog : Control
 			WindowModeOption,
 			ResolutionOption,
 			LanguageOption,
-			MainMenuMusicTrackOption,
 			_controlsButton);
-		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar());
+		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.UnifiedVisual);
 		SecondaryMenuGlassStyle.Attach(
 			this,
 			DialogPanel,
 			_scrim,
 			new Vector2(620.0f, 580.0f),
+			SecondaryMenuGlassStyle.UnifiedVisual,
 			GetNode<PanelContainer>("%SettingsContentPanel"));
+	}
+
+	private void ConfigureUnifiedVisualStyle()
+	{
+		Color utilityAccent = MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder;
+		foreach (string frameName in new[]
+		{
+			"MasterVolumeRowPanel",
+			"MusicVolumeRowPanel",
+			"MuteBgmRowPanel",
+			"MuteSfxRowPanel",
+			"WindowModeRowPanel",
+			"ResolutionRowPanel",
+			"LanguageRowPanel",
+			"ControlsRowPanel",
+		})
+		{
+			ConfigureFrame(frameName, OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow, utilityAccent);
+		}
+
+		ConfigureFrame("ResetDefaultsFrame", OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction, MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureFrame("DoneFrame", OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+
+		_titleLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.98f, 0.97f));
+		_messageLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.96f, 0.92f));
+		foreach (Label label in new[]
+		{
+			_masterVolumeLabel,
+			_musicVolumeLabel,
+			_muteBgmLabel,
+			_muteSfxLabel,
+			_windowModeLabel,
+			_resolutionLabel,
+			_languageLabel,
+			_controlsLabel,
+		})
+		{
+			label.AddThemeColorOverride("font_color", new Color(0.84f, 0.96f, 0.94f));
+		}
+		MasterVolumeValue.AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f));
+		MusicVolumeValue.AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f));
+		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
+		{
+			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
+		}
+	}
+
+	private void ConfigureFrame(
+		string frameName,
+		OceanMenuButtonFrame.ButtonFrameStyle style,
+		Color accent)
+	{
+		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
+		{
+			return;
+		}
+
+		frame.FrameStyle = style;
+		frame.AccentColor = accent;
+		frame.QueueRedraw();
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize)
 	{
 		_localize = localize;
 		_titleLabel.Text = localize("SETTINGS_TITLE");
-		_backButton.Text = localize("ADVENTURE_BACK");
 		_messageLabel.Text = localize("SETTINGS_MESSAGE");
 		_masterVolumeLabel.Text = localize("SETTINGS_MASTER_VOLUME");
 		_musicVolumeLabel.Text = localize("SETTINGS_MUSIC_VOLUME");
@@ -137,7 +188,6 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel.Text = localize("SETTINGS_WINDOW_MODE");
 		_resolutionLabel.Text = localize("SETTINGS_RESOLUTION");
 		_languageLabel.Text = localize("SETTINGS_LANGUAGE");
-		_mainMenuMusicTrackLabel.Text = localize("SETTINGS_BACKGROUND_MUSIC");
 		_controlsLabel.Text = localize("SETTINGS_CONTROLS");
 		_controlsButton.Text = localize("SETTINGS_CONTROLS_EDIT");
 		_resetButton.Text = localize("SETTINGS_RESET_DEFAULTS");

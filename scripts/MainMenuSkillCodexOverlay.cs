@@ -64,6 +64,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			string capturedSuit = suit;
 			button.Pressed += () => SelectSuit(capturedSuit, focusFirstCard: true);
 		}
+		ConfigureUnifiedVisualStyle();
 		RememberButtonFocusStyle(_backButton);
 		foreach (Button button in _suitButtons.Values)
 		{
@@ -368,8 +369,8 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 					definition.Suit,
 					definition.Rarity,
 					FormatDescription(definition),
-					Localize(GetRarityKey(definition.Rarity)),
-					interactive: true);
+					interactive: true,
+					showRarityLabel: false);
 				AdventureSuitUpgradeDefinition capturedDefinition = definition;
 				card.Pressed += () => OpenPreview(capturedDefinition, card);
 				card.FocusEntered += () => _scrollContainer.EnsureControlVisible(card);
@@ -428,8 +429,8 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			definition.Suit,
 			definition.Rarity,
 			FormatDescription(definition),
-			Localize(GetRarityKey(definition.Rarity)),
-			interactive: false);
+			interactive: false,
+			showRarityLabel: false);
 		_previewLayer.Visible = true;
 		_previewFocusAnchor.GrabFocus();
 	}
@@ -491,13 +492,54 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		foreach (KeyValuePair<string, Button> pair in _suitButtons)
 		{
 			bool selected = string.Equals(pair.Key, _currentSuit, StringComparison.Ordinal);
-			pair.Value.ButtonPressed = selected;
-			pair.Value.AddThemeColorOverride(
-				"font_color",
-				selected
-					? new Color(1.0f, 0.93f, 0.68f, 1.0f)
-					: new Color(0.72f, 0.94f, 0.94f, 0.94f));
+			MainMenuInteractiveStyle.ApplyThemedTab(pair.Value, GetSuitPalette(pair.Key), selected, 18);
+			_buttonFocusStyles[pair.Value] = pair.Value.GetThemeStylebox("focus");
+			if (!_inputFocusVisible)
+			{
+				pair.Value.AddThemeStyleboxOverride("focus", HiddenFocusStyle);
+			}
 		}
+	}
+
+	private void ConfigureUnifiedVisualStyle()
+	{
+		SetMeta(SecondaryMenuGlassStyle.VisualProfileMetadata, SecondaryMenuGlassStyle.UnifiedVisual.Id);
+		_root.SetMeta(SecondaryMenuGlassStyle.VisualProfileMetadata, SecondaryMenuGlassStyle.UnifiedVisual.Id);
+		SecondaryMenuGlassStyle.ApplyReadabilityVeil(
+			GetNode<ColorRect>("Root/Backdrop"),
+			SecondaryMenuGlassStyle.UnifiedVisual);
+
+		PanelContainer topBar = GetNode<PanelContainer>("Root/SafeMargin/Layout/TopBar");
+		topBar.AddThemeStyleboxOverride(
+			"panel",
+			SecondaryMenuGlassStyle.CreateFrameStyle(contentPane: true, SecondaryMenuGlassStyle.UnifiedVisual));
+		MainMenuInteractiveStyle.ApplyThemedControl(_backButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 20);
+		_titleLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.94f, 0.97f, 1.0f));
+		_emptyLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.72f, 0.77f, 0.92f));
+		SecondaryMenuGlassStyle.StyleScrollBar(
+			_scrollContainer.GetVScrollBar(),
+			SecondaryMenuGlassStyle.UnifiedVisual);
+
+		ColorRect previewScrim = GetNode<ColorRect>("Root/PreviewLayer/Scrim");
+		SecondaryMenuGlassStyle.ApplyReadabilityVeil(previewScrim, SecondaryMenuGlassStyle.UnifiedVisual);
+		GetNode<ColorRect>("Root/PreviewLayer/PreviewCenter/PreviewGlassSurface").Material =
+			SecondaryMenuGlassStyle.CreateGlassMaterial(contentPane: false, SecondaryMenuGlassStyle.UnifiedVisual);
+		GetNode<Panel>("Root/PreviewLayer/PreviewCenter/PreviewGlassFrame").AddThemeStyleboxOverride(
+			"panel",
+			SecondaryMenuGlassStyle.CreateFrameStyle(contentPane: false, SecondaryMenuGlassStyle.UnifiedVisual));
+
+		RefreshSuitTabs();
+	}
+
+	private static MainMenuInteractiveStyle.Palette GetSuitPalette(string suit)
+	{
+		return suit switch
+		{
+			"diamonds" => MainMenuInteractiveStyle.DiamondPalette,
+			"spades" => MainMenuInteractiveStyle.SpadePalette,
+			"clubs" => MainMenuInteractiveStyle.ClubPalette,
+			_ => MainMenuInteractiveStyle.HeartPalette,
+		};
 	}
 
 	private void RefreshGridColumns()
@@ -598,16 +640,6 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	{
 		string text = Tr(key).ToString();
 		return text == key ? key : text;
-	}
-
-	private static string GetRarityKey(string rarity)
-	{
-		return rarity?.Trim().ToLowerInvariant() switch
-		{
-			"rare" => "SKILL_CODEX_RARITY_RARE",
-			"legendary" => "SKILL_CODEX_RARITY_LEGENDARY",
-			_ => "SKILL_CODEX_RARITY_COMMON",
-		};
 	}
 
 	private static string GetSuitSymbol(string suit)

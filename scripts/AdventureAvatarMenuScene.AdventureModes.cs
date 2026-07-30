@@ -25,8 +25,8 @@ public partial class AdventureAvatarMenuScene
 			}
 
 			Color accentColor = campaign.Id == AdventureCampaignCatalog.TutorialCampaignId
-				? new Color(0.82f, 0.97f, 0.66f)
-				: new Color(0.58f, 0.98f, 1.0f);
+				? new Color(0.42f, 0.88f, 0.60f)
+				: new Color(0.32f, 0.72f, 0.50f);
 			modes[modeIndex] = new AdventureModeDefinition(
 				campaign.Id,
 				campaign.NameKey,
@@ -50,6 +50,7 @@ public partial class AdventureAvatarMenuScene
 				continue;
 			}
 
+			frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
 			frame.AccentColor = adventureMode.AccentColor;
 			_adventureFrames[adventureMode.Id] = frame;
 			Label nameLabel = frame.GetNode<Label>("AdventureEntryContent/AdventureName");

@@ -13,7 +13,6 @@ public partial class MainMenuScene
 		using DirAccess? directory = DirAccess.Open(MainMenuCustomMusicDirectory);
 		if (directory == null)
 		{
-			RefreshMainMenuMusicTrackOptions();
 			return;
 		}
 
@@ -64,8 +63,6 @@ public partial class MainMenuScene
 				? _mainMenuMusicOptions[0].Id
 				: string.Empty;
 		}
-
-		RefreshMainMenuMusicTrackOptions();
 	}
 
 	private void ApplyMainMenuMusicSelection()

@@ -60,28 +60,6 @@ custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="BackFrame" type="Control" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/Header"]
-custom_minimum_size = Vector2(126, 56)
-layout_mode = 2
-mouse_filter = 2
-script = ExtResource("2_button_frame")
-FrameStyle = 2
-AccentColor = Color(0.48, 0.98, 1, 1)
-
-[node name="BackButton" type="Button" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/Header/BackFrame"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-flat = true
-
 [node name="TitleStack" type="VBoxContainer" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -105,10 +83,6 @@ custom_minimum_size = Vector2(0, 2)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.48, 0.98, 1, 0.52)
-
-[node name="HeaderRightPlaceholder" type="Control" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/Header"]
-custom_minimum_size = Vector2(126, 56)
-layout_mode = 2
 
 [node name="PromptPanel" type="PanelContainer" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
@@ -146,7 +120,8 @@ custom_minimum_size = Vector2(220, 56)
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-FrameStyle = 2
+FrameStyle = 12
+AccentColor = Color(0.62, 1, 0.94, 0.84)
 AccentColor = Color(0.48, 0.98, 1, 1)
 
 [node name="CancelButton" type="Button" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/DialogActions/CancelFrame"]
@@ -170,8 +145,8 @@ custom_minimum_size = Vector2(220, 56)
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-FrameStyle = 2
-AccentColor = Color(1, 0.88, 0.5, 1)
+FrameStyle = 12
+AccentColor = Color(0.9, 0.52, 0.54, 0.84)
 FlipOrnament = true
 
 [node name="ConfirmButton" type="Button" parent="DialogCenter/ExitDialogPanel/DialogMargin/DialogLayout/DialogActions/ConfirmFrame"]

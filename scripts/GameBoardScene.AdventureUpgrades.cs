@@ -776,7 +776,6 @@ public partial class GameBoardScene
 			shortReturnCandidateIds.Count,
 			combinedReturnCandidateIds.Count,
 			Math.Max(0, MaxTotalHandCards - GetTotalHandCardCount(playerIndex)),
-			captureContext.HasAnyTriggeredAttachedItem,
 			playedCardWasBaseCard);
 	}
 

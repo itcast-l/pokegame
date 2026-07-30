@@ -53,6 +53,7 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		_avatarFrames.Clear();
+		_stageAvatars.Clear();
 		_displayStageNumbers.Clear();
 		_stageNumbers.Clear();
 		_stageButtons.Clear();
@@ -84,7 +85,8 @@ public partial class AdventureAvatarMenuScene
 		int displayStageNumber)
 	{
 		string avatarId = avatarDefinition.Id;
-		Color accentColor = GetAvatarAccentColor(avatarDefinition);
+		Color accentColor = AdventureRouteAccent;
+		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
 		frame.AccentColor = accentColor;
 		_avatarFrames[avatarId] = frame;
 		_displayStageNumbers[avatarId] = displayStageNumber;
@@ -98,9 +100,11 @@ public partial class AdventureAvatarMenuScene
 		if (frame.GetNodeOrNull<CharacterAvatar>("EntryContent/EntryRow/EntryAvatarAnchor/EntryAvatar") is CharacterAvatar avatar)
 		{
 			ConfigureAvatarView(avatar, avatarDefinition, 0.74f);
+			avatar.Visible = IsStageUnlocked(avatarId);
+			_stageAvatars[avatarId] = avatar;
 		}
 
-		string displayName = LocalizeAvatarDisplayName(avatarDefinition);
+		string displayName = GetStageDisplayName(avatarId);
 		Label nameLabel = frame.GetNode<Label>("EntryContent/EntryRow/EntryName");
 		ApplyStageNameLabelText(nameLabel, displayName);
 		nameLabel.Resized += QueueStageNameSizingRefresh;
@@ -114,7 +118,9 @@ public partial class AdventureAvatarMenuScene
 
 		Button button = frame.GetNode<Button>("Button");
 		button.FocusMode = Control.FocusModeEnum.All;
-		button.TooltipText = displayName;
+		button.TooltipText = IsStageUnlocked(avatarId)
+			? LocalizeAvatarDisplayName(avatarDefinition)
+			: Tr("ADVENTURE_LOCKED").ToString();
 		button.Pressed += () => SelectAvatar(avatarId);
 		button.FocusEntered += () =>
 		{
@@ -122,5 +128,6 @@ public partial class AdventureAvatarMenuScene
 			ScrollSelectedEntryIntoView();
 		};
 		_stageButtons[avatarId] = button;
+		ApplyResponsiveAdventureLayout();
 	}
 }

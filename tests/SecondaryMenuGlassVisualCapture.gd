@@ -201,7 +201,7 @@ func _capture_main_menu_states(viewport_spec: Dictionary) -> bool:
 	if not await _wait_for_hidden(controls_root):
 		_fail("Controls dialog did not close cleanly")
 		return false
-	(settings_root.find_child("BackButton", true, false) as Button).emit_signal("pressed")
+	(settings_root.find_child("DoneButton", true, false) as Button).emit_signal("pressed")
 	if not await _wait_for_hidden(settings_root) or not await _wait_for_menu_buttons_enabled(menu):
 		_fail("Settings dialog did not close cleanly")
 		return false
@@ -214,7 +214,7 @@ func _capture_main_menu_states(viewport_spec: Dictionary) -> bool:
 		return false
 	if not await _save_viewport(viewport, "exit", viewport_spec.name):
 		return false
-	(exit_root.find_child("BackButton", true, false) as Button).emit_signal("pressed")
+	(exit_root.find_child("CancelButton", true, false) as Button).emit_signal("pressed")
 	await _wait_for_hidden(exit_root)
 
 	menu.queue_free()
@@ -260,22 +260,16 @@ func _capture_pause_states(viewport_spec: Dictionary) -> bool:
 		_fail("Pause menu was visible in the scene tree but was not rendered into the viewport")
 		return false
 
-	var quit_button := pause_root.find_child("QuitButton", true, false) as Button
-	quit_button.emit_signal("pressed")
-	var quit_confirm := pause_root.get_node_or_null("PauseQuitConfirmRoot") as Control
-	if quit_confirm == null or not await _wait_for_opaque(quit_confirm):
-		_fail("Pause quit confirmation did not open")
+	var restart_button := pause_root.find_child("RestartButton", true, false) as Button
+	var restart_frame := pause_root.find_child("RestartFrame", true, false) as Control
+	if restart_button == null or restart_frame == null:
+		_fail("Pause restart row is missing")
 		return false
-	var quit_panel := quit_confirm.find_child("ExitDialogPanel", true, false) as Control
-	await _wait_frames(4)
-	if quit_panel == null or not _is_rect_inside(quit_panel.get_global_rect(), Rect2(Vector2.ZERO, Vector2(viewport.size))):
-		_fail("Pause quit confirmation was not laid out inside the viewport")
+	restart_button.grab_focus()
+	if not await _wait_for_glow(restart_frame, 0.35):
+		_fail("Pause restart row did not enter its focused state")
 		return false
-	if not await _save_viewport(viewport, "pause-exit", viewport_spec.name):
-		return false
-	var quit_image := viewport.get_texture().get_image()
-	if not _has_visible_change(pause_image, quit_image, quit_panel.get_global_rect()):
-		_fail("Pause quit confirmation was visible in the scene tree but was not rendered into the viewport")
+	if not await _save_viewport(viewport, "pause-row-focus", viewport_spec.name):
 		return false
 
 	paused = false

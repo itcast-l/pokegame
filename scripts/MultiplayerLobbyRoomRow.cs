@@ -21,6 +21,8 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 
 	public override void _Ready()
 	{
+		MainMenuInteractiveStyle.ApplyThemedControl(JoinButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 15);
+		JoinButton.ClipText = true;
 		JoinButton.Pressed += OnJoinButtonPressed;
 	}
 
@@ -71,9 +73,15 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 
 		RoomNameLabel.Text = roomName;
 		DetailsLabel.Text = LocalizeFormat("MULTIPLAYER_LOBBY_DETAILS_FORMAT", GetTransportDisplayText(transport), playerCountText, itemModeText, winningScoreText, privacy);
+		bool canJoin = MultiplayerLobbyRules.CanJoinListedRoom(status);
 		StatusLabel.Text = localizedStatus;
+		StatusLabel.Visible = true;
+		StatusLabel.AddThemeColorOverride(
+			"font_color",
+			canJoin ? MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder : MainMenuInteractiveStyle.DangerPalette.Text);
 		JoinButton.Text = Localize("MULTIPLAYER_LOBBY_JOIN");
-		JoinButton.Disabled = !MultiplayerLobbyRules.CanJoinListedRoom(status);
+		JoinButton.Disabled = !canJoin;
+		AddThemeStyleboxOverride("panel", CreateRowStyle(canJoin));
 
 		var tooltipParts = new System.Collections.Generic.List<string>();
 		if (!string.IsNullOrWhiteSpace(hostName))
@@ -99,6 +107,30 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 		string tooltipText = string.Join(" / ", tooltipParts);
 		JoinButton.TooltipText = tooltipText;
 		TooltipText = tooltipText;
+	}
+
+	private static StyleBoxFlat CreateRowStyle(bool canJoin)
+	{
+		Color border = canJoin
+			? MainMenuInteractiveStyle.SecondaryMenuPalette.Border
+			: new Color(0.48f, 0.52f, 0.54f, 0.32f);
+		return new StyleBoxFlat
+		{
+			BgColor = new Color(0.11f, 0.15f, 0.17f, 0.78f),
+			BorderColor = border,
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginLeft = 10.0f,
+			ContentMarginTop = 7.0f,
+			ContentMarginRight = 10.0f,
+			ContentMarginBottom = 7.0f,
+		};
 	}
 
 	private string Localize(string key)

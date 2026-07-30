@@ -15,9 +15,11 @@ public partial class AdventureAvatarMenuScene : Control
 	private const int StageNameBaseFontSize = 24;
 	private const int StageNameMinFontSize = 16;
 	private const float StageNameWidthTolerance = 2.0f;
+	private const string LockedStageNamePlaceholder = "???";
 	private readonly Dictionary<string, OceanMenuButtonFrame> _adventureFrames = new();
 	private readonly Dictionary<string, Button> _adventureButtons = new();
 	private readonly Dictionary<string, OceanMenuButtonFrame> _avatarFrames = new();
+	private readonly Dictionary<string, CharacterAvatar> _stageAvatars = new();
 	private readonly Dictionary<string, int> _displayStageNumbers = new();
 	private readonly Dictionary<string, int> _stageNumbers = new();
 	private readonly Dictionary<string, Button> _stageButtons = new();
@@ -104,6 +106,7 @@ public partial class AdventureAvatarMenuScene : Control
 		}
 		else if (what == NotificationResized && IsNodeReady())
 		{
+			ApplyResponsiveAdventureLayout();
 			ClampScrollTarget();
 			ScrollSelectedEntryIntoView();
 			QueueStageNameSizingRefresh();

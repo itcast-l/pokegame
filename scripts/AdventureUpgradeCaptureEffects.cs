@@ -199,7 +199,6 @@ internal static AdventureClubCaptureEffectResult ResolveClubCaptureEffects(
 		int uniqueShortReturnCandidateCount,
 		int uniqueCombinedReturnCandidateCount,
 		int availableHandSlots,
-		bool playUsedAttachedEffect,
 		bool playedCardWasBaseCard)
 	{
 		ArgumentNullException.ThrowIfNull(state);
@@ -217,12 +216,6 @@ internal static AdventureClubCaptureEffectResult ResolveClubCaptureEffects(
 		if (playedCardWasBaseCard && acquired.Contains("clubs_primary_root_return"))
 		{
 			playedCardReturnSourceUpgradeId = "clubs_primary_root_return";
-		}
-		else if (playedCardWasBaseCard
-			&& playUsedAttachedEffect
-			&& acquired.Contains("clubs_climb_canopy"))
-		{
-			playedCardReturnSourceUpgradeId = "clubs_climb_canopy";
 		}
 
 		bool playedCardReturnEligible = playedCardReturnSourceUpgradeId.Length > 0;

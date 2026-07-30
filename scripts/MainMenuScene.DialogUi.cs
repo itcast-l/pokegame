@@ -61,7 +61,6 @@ public partial class MainMenuScene : Control
 		RefreshWindowModeOptions();
 		RefreshResolutionOptions();
 		RefreshLanguageOptions();
-		RefreshMainMenuMusicTrackOptions();
 		RefreshPlayerCountDialogOptions();
 		RefreshAvatarUnlockPromptText();
 	}

@@ -3633,7 +3633,7 @@
 					},
 					"effect_text": {
 						"type": "string",
-						"value": "若手牌有空位，该牌结算后回手；与攀棚同时满足时由主根复返覆盖且只回手一次。"
+						"value": "若手牌有空位，该牌结算后回手。"
 					},
 					"effect_values": {
 						"type": "string",
@@ -4054,55 +4054,6 @@
 					"trigger_text": {
 						"type": "string",
 						"value": "同一真实回合第二次成功收牌时"
-					}
-				}
-			},
-			{
-				"_category_id": "adventure_suit_upgrades",
-				"_icon_color": "00000000",
-				"_id": "clubs_climb_canopy",
-				"_index": 54,
-				"_name": "攀棚",
-				"_property_overrides": {
-					"description_key": {
-						"type": "string",
-						"value": "UPGRADE_DESC_CLUBS_CLIMB_CANOPY"
-					},
-					"description_value_keys": {
-						"type": "string",
-						"value": "count"
-					},
-					"effect_text": {
-						"type": "string",
-						"value": "若手牌有空位，该牌结算后回手；主根复返优先且该牌只回手一次。"
-					},
-					"effect_values": {
-						"type": "string",
-						"value": "count=1"
-					},
-					"enabled": {
-						"type": "bool",
-						"value": true
-					},
-					"notes": {
-						"type": "string",
-						"value": "附着回枝"
-					},
-					"rarity": {
-						"type": "string",
-						"value": "rare"
-					},
-					"sort_order": {
-						"type": "int",
-						"value": 120
-					},
-					"suit": {
-						"type": "string",
-						"value": "clubs"
-					},
-					"trigger_text": {
-						"type": "string",
-						"value": "本动作真实附着道具效果生效且打出的基础牌成功收牌时"
 					}
 				}
 			},

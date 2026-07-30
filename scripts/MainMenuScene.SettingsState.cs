@@ -140,35 +140,8 @@ public partial class MainMenuScene
 		RefreshResolutionOptions();
 		_resolutionOption.Select(GetResolutionOptionIndex(_selectedResolution));
 		_languageOption.Select(Localization.GetPreferenceIndex(_languagePreference));
-		RefreshMainMenuMusicTrackOptions();
 		_isSyncingSettingsControls = false;
 		UpdateSettingsLabels();
-	}
-
-	private void RefreshMainMenuMusicTrackOptions()
-	{
-		if (_mainMenuMusicTrackOption == null)
-		{
-			return;
-		}
-
-		_mainMenuMusicTrackOption.Clear();
-		for (int index = 0; index < _mainMenuMusicOptions.Count; index++)
-		{
-			MainMenuMusicOption option = _mainMenuMusicOptions[index];
-			_mainMenuMusicTrackOption.AddItem(option.DisplayName, index);
-		}
-
-		int selectedIndex = GetMainMenuMusicOptionIndex(_selectedMainMenuMusicTrack);
-		if (selectedIndex < 0 && _mainMenuMusicOptions.Count > 0)
-		{
-			selectedIndex = 0;
-		}
-
-		if (selectedIndex >= 0 && selectedIndex < _mainMenuMusicTrackOption.ItemCount)
-		{
-			_mainMenuMusicTrackOption.Select(selectedIndex);
-		}
 	}
 
 	private void UpdateSettingsLabels()

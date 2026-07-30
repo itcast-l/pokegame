@@ -137,10 +137,9 @@ internal static AdventureClubCaptureEffectResult ResolveClubCaptureEffects(
 		int uniqueShortReturnCandidateCount,
 		int uniqueCombinedReturnCandidateCount,
 		int availableHandSlots,
-		bool playUsedAttachedEffect,
 		bool playedCardWasBaseCard)
 {
-		return AdventureUpgradeCaptureEffects.ResolveClubCaptureEffects(state, acquiredUpgradeIds, completeBaseCaptureCardCount, uniqueShortReturnCandidateCount, uniqueCombinedReturnCandidateCount, availableHandSlots, playUsedAttachedEffect, playedCardWasBaseCard);
+		return AdventureUpgradeCaptureEffects.ResolveClubCaptureEffects(state, acquiredUpgradeIds, completeBaseCaptureCardCount, uniqueShortReturnCandidateCount, uniqueCombinedReturnCandidateCount, availableHandSlots, playedCardWasBaseCard);
 	}
 
 internal static AdventureTurnStartEffectResult ConsumeMainPlayerTurnStartEffects(AdventureUpgradeEffectState state)

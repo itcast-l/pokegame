@@ -6,9 +6,7 @@
   "rolling_path": {
     "cell_size": [512, 320],
     "frame_count": 16,
-    "frame_duration_ms": 70,
-    "sheet": "rolling_path/sheet-transparent.png",
-    "gif_preview": "rolling_path/animation.gif"
+    "frame_duration_ms": 70
   },
   "result_motion_frames": {
     "cell_size": [512, 320],

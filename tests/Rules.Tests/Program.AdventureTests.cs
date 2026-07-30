@@ -220,7 +220,7 @@ internal static partial class Program
 		string text = File.ReadAllText(idsPath);
 
 		MatchCollection constants = Regex.Matches(text, @"(?m)^const ([A-Z0-9_]+) = ""([a-z0-9_]+)""$");
-		Equal(53, constants.Count);
+		Equal(52, constants.Count);
 
 		var activePerSuit = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
@@ -240,7 +240,7 @@ internal static partial class Program
 		Equal(14, activePerSuit["hearts"]);
 		Equal(13, activePerSuit["diamonds"]);
 		Equal(12, activePerSuit["spades"]);
-		Equal(14, activePerSuit["clubs"]);
+		Equal(13, activePerSuit["clubs"]);
 	}
 
 	private static void AdventureSuitUpgradeCatalogExposesOnlyActiveUpgrades()
@@ -297,19 +297,20 @@ internal static partial class Program
 			enabledIds.Add(entity.GetProperty("_id").GetString() ?? string.Empty);
 		}
 
-		Equal(53, enabledCount);
+		Equal(52, enabledCount);
 		Equal(14, suitCounts["hearts"]);
 		Equal(13, suitCounts["diamonds"]);
 		Equal(12, suitCounts["spades"]);
-		Equal(14, suitCounts["clubs"]);
+		Equal(13, suitCounts["clubs"]);
 		Equal(24, rarityCounts["common"]);
-		Equal(19, rarityCounts["rare"]);
+		Equal(18, rarityCounts["rare"]);
 		Equal(10, rarityCounts["legendary"]);
 		False(enabledIds.Contains("hearts_blood_tide_resonance"));
 		False(enabledIds.Contains("diamonds_all_gains_converge"));
 		False(enabledIds.Contains("diamonds_high_return_bonus"));
 		False(enabledIds.Contains("spades_black_tide_dominion"));
 		False(enabledIds.Contains("clubs_lush_growth"));
+		False(enabledIds.Contains("clubs_climb_canopy"));
 	}
 
 	private static void AdventureSuitCountingDeduplicatesActiveIds()
@@ -1114,7 +1115,6 @@ internal static partial class Program
 			uniqueShortReturnCandidateCount: 0,
 			uniqueCombinedReturnCandidateCount: 1,
 			availableHandSlots: 6,
-			playUsedAttachedEffect: false,
 			playedCardWasBaseCard: true);
 
 		True(result.ReturnPlayedCardToHand);
@@ -1131,7 +1131,6 @@ internal static partial class Program
 			uniqueShortReturnCandidateCount: 2,
 			uniqueCombinedReturnCandidateCount: 2,
 			availableHandSlots: 6,
-			playUsedAttachedEffect: false,
 			playedCardWasBaseCard: true);
 		AdventureClubCaptureEffectResult second = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
 			state,
@@ -1140,26 +1139,10 @@ internal static partial class Program
 			uniqueShortReturnCandidateCount: 2,
 			uniqueCombinedReturnCandidateCount: 2,
 			availableHandSlots: 6,
-			playUsedAttachedEffect: false,
 			playedCardWasBaseCard: true);
 
 		True(first.ReturnTwoCapturedCardsToHand);
 		False(second.ReturnTwoCapturedCardsToHand);
-	}
-
-	private static void AdventureClubsClimbCanopyReturnsPlayedBaseCardAfterAttachedEffectTrigger()
-	{
-		AdventureClubCaptureEffectResult result = AdventureUpgradeEffectService.ResolveClubCaptureEffects(
-			new AdventureUpgradeEffectState(),
-			new[] { "clubs_climb_canopy" },
-			completeBaseCaptureCardCount: 3,
-			uniqueShortReturnCandidateCount: 0,
-			uniqueCombinedReturnCandidateCount: 1,
-			availableHandSlots: 6,
-			playUsedAttachedEffect: true,
-			playedCardWasBaseCard: true);
-
-		True(result.ReturnPlayedCardToHand);
 	}
 
 	private static void AdventureClubsCrownCanopyIncludesCaptureEndpointsInScoring()

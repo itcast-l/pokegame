@@ -106,9 +106,7 @@ public partial class MultiplayerLobbyScene : Control
 		_network = EnsureNetworkManager();
 		BindStaticLabels();
 		InitializeSceneDefaults();
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(PlayerCountOption);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(ItemModeOption);
-		MainMenuInteractiveStyle.ApplyOptionLikeButton(WinningScoreOption);
+		ConfigureUnifiedVisualStyle();
 		SuppressDefaultPressedSfx(BackButton);
 		ConnectButtonSignals();
 		ConnectNetworkSignals();
@@ -218,6 +216,132 @@ public partial class MultiplayerLobbyScene : Control
 		string roomName = RoomNameInput.Text.Trim();
 		RoomNameInput.Text = RoomNameRules.IsValid(roomName) ? roomName : string.Empty;
 		RoomPasswordInput.Text = RoomPasswordRules.Normalize(RoomPasswordInput.Text);
+	}
+
+	private void ConfigureUnifiedVisualStyle()
+	{
+		SetMeta(SecondaryMenuGlassStyle.VisualProfileMetadata, SecondaryMenuGlassStyle.UnifiedVisual.Id);
+		SecondaryMenuGlassStyle.ApplyReadabilityVeil(
+			GetNode<ColorRect>("ReadabilityVeil"),
+			SecondaryMenuGlassStyle.UnifiedVisual);
+
+		foreach (string panelName in new[] { "ModeRail", "RoomBrowser", "LobbyPanel", "FriendsPanel" })
+		{
+			SecondaryMenuGlassStyle.StyleGlassPanel(
+				GetNode<PanelContainer>($"SafeArea/MainLayout/BodyScroll/Body/{panelName}"),
+				SecondaryMenuGlassStyle.UnifiedVisual);
+		}
+
+		MainMenuInteractiveStyle.ApplyThemedLineEdit(RoomNameInput, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
+		MainMenuInteractiveStyle.ApplyThemedLineEdit(RoomPasswordInput, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
+		foreach (OptionButton option in new[] { PlayerCountOption, ItemModeOption, WinningScoreOption })
+		{
+			MainMenuInteractiveStyle.ApplyThemedControl(option, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
+			option.ClipText = true;
+		}
+
+		StyleButton(BackButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		StyleButton(LanHostButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		StyleButton(LanSearchButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		StyleButton(SteamHostButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		StyleButton(SteamRefreshButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		StyleButton(ReadyButton, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		StyleButton(StartButton, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		StyleButton(LeaveSessionButton, MainMenuInteractiveStyle.DangerPalette);
+
+		_titleLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.95f, 0.97f, 1.0f));
+		StatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.65f, 0.82f, 0.86f, 0.94f));
+		SteamStatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.Text);
+		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.72f, 0.75f, 0.94f));
+		foreach (Label sectionTitle in new[]
+		{
+			_modeTitleLabel,
+			_roomTitleLabel,
+			_playerTitleLabel,
+			GetNode<Label>("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamTitle"),
+		})
+		{
+			sectionTitle.AddThemeColorOverride("font_color", new Color(0.89f, 0.94f, 0.96f, 1.0f));
+		}
+
+		foreach (string scrollPath in new[]
+		{
+			"SafeArea/MainLayout/BodyScroll",
+			"SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll",
+			"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll",
+		})
+		{
+			ScrollContainer scroll = GetNode<ScrollContainer>(scrollPath);
+			scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+			SecondaryMenuGlassStyle.StyleScrollBar(scroll.GetVScrollBar(), SecondaryMenuGlassStyle.UnifiedVisual);
+		}
+
+		Resized += () => CallDeferred(nameof(ApplyResponsiveLayout));
+		CallDeferred(nameof(ApplyResponsiveLayout));
+	}
+
+	private static void StyleButton(Button button, MainMenuInteractiveStyle.Palette palette)
+	{
+		MainMenuInteractiveStyle.ApplyThemedControl(button, palette, 16);
+		button.ClipText = true;
+	}
+
+	private void ApplyResponsiveLayout()
+	{
+		if (!IsNodeReady())
+		{
+			return;
+		}
+
+		Vector2 viewportSize = Size;
+		if (viewportSize.X <= 0.0f || viewportSize.Y <= 0.0f)
+		{
+			viewportSize = GetViewportRect().Size;
+		}
+		bool compact = viewportSize.X < 1180.0f || viewportSize.Y < 640.0f;
+		GridContainer body = GetNode<GridContainer>("SafeArea/MainLayout/BodyScroll/Body");
+		body.Columns = compact ? 2 : 4;
+		body.AddThemeConstantOverride("h_separation", compact ? 10 : 16);
+		body.AddThemeConstantOverride("v_separation", compact ? 10 : 16);
+
+		MarginContainer safeArea = GetNode<MarginContainer>("SafeArea");
+		SetMargins(safeArea, compact ? 18 : 38, compact ? 14 : 30, compact ? 18 : 38, compact ? 14 : 30);
+		GetNode<VBoxContainer>("SafeArea/MainLayout").AddThemeConstantOverride("separation", compact ? 10 : 16);
+		GetNode<HBoxContainer>("SafeArea/MainLayout/Header").AddThemeConstantOverride("separation", compact ? 10 : 14);
+		_titleLabel.AddThemeFontSizeOverride("font_size", compact ? 28 : 34);
+		StatusLabel.CustomMinimumSize = new Vector2(compact ? 104.0f : 130.0f, 0.0f);
+
+		var panelWidths = new Dictionary<string, float>
+		{
+			["ModeRail"] = 220.0f,
+			["RoomBrowser"] = 280.0f,
+			["LobbyPanel"] = 300.0f,
+			["FriendsPanel"] = 190.0f,
+		};
+		foreach (KeyValuePair<string, float> pair in panelWidths)
+		{
+			PanelContainer panel = GetNode<PanelContainer>($"SafeArea/MainLayout/BodyScroll/Body/{pair.Key}");
+			panel.CustomMinimumSize = new Vector2(compact ? 0.0f : pair.Value, 0.0f);
+			SetMargins(
+				panel.GetNode<MarginContainer>("PanelMargin"),
+				compact ? 12 : 16,
+				compact ? 10 : 14,
+				compact ? 12 : 16,
+				compact ? 10 : 14);
+		}
+
+		ToastLabel.OffsetLeft = compact ? 72.0f : 300.0f;
+		ToastLabel.OffsetRight = compact ? -72.0f : -300.0f;
+		GetNode<ScrollContainer>("SafeArea/MainLayout/BodyScroll").ScrollHorizontal = 0;
+	}
+
+	private static void SetMargins(MarginContainer margin, int left, int top, int right, int bottom)
+	{
+		margin.AddThemeConstantOverride("margin_left", left);
+		margin.AddThemeConstantOverride("margin_top", top);
+		margin.AddThemeConstantOverride("margin_right", right);
+		margin.AddThemeConstantOverride("margin_bottom", bottom);
 	}
 
 	private void ConnectButtonSignals()

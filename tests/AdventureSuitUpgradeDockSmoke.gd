@@ -3,7 +3,7 @@ extends SceneTree
 const DOCK_SCENE := preload("res://addons/adventure_suit_upgrades/adventure_suit_upgrades_dock.tscn")
 const DATA_PATH := "res://data.pandora"
 const CATEGORY_ID := "adventure_suit_upgrades"
-const EXPECTED_ROW_COUNT := 53
+const EXPECTED_ROW_COUNT := 52
 const STATUS_PATH := "StatusLabel"
 const ROWS_PATH := "RowsScroll/RowsContainer"
 const SMOKE_SUFFIX := " [smoke]"

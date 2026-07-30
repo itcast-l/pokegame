@@ -78,8 +78,8 @@ public partial class MainMenuControlsDialog : Control
 			Label label = GetNode<Label>($"{rowLayoutPath}/ActionLabel");
 			Button keyboardButton = GetNode<Button>($"{rowLayoutPath}/KeyboardButton");
 			Button gamepadButton = GetNode<Button>($"{rowLayoutPath}/GamepadButton");
-			MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(keyboardButton, 16);
-			MainMenuInteractiveStyle.ApplyGlassOptionLikeButton(gamepadButton, 16);
+			MainMenuInteractiveStyle.ApplyThemedControl(keyboardButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
+			MainMenuInteractiveStyle.ApplyThemedControl(gamepadButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
 			keyboardButton.FocusMode = FocusModeEnum.All;
 			gamepadButton.FocusMode = FocusModeEnum.All;
 			string actionId = action.Id;
@@ -94,19 +94,54 @@ public partial class MainMenuControlsDialog : Control
 				BeginBindingCapture(actionId, GameInputActions.BindingSlot.Gamepad);
 			};
 			_rows.Add(new RowWidgets(actionId, label, keyboardButton, gamepadButton));
+			if (GetNodeOrNull<OceanMenuButtonFrame>(rowPath) is { } rowFrame)
+			{
+				rowFrame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
+				rowFrame.AccentColor = MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder;
+			}
 		}
 
 		EnableKeyboardFocus(_backButton, _resetButton, _doneButton);
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
-		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20);
-		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20);
-		SecondaryMenuGlassStyle.StyleScrollBar(_rowsScroll.GetVScrollBar());
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		ConfigureUnifiedVisualStyle();
+		SecondaryMenuGlassStyle.StyleScrollBar(_rowsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.UnifiedVisual);
 		SecondaryMenuGlassStyle.Attach(
 			this,
 			DialogPanel,
 			_scrim,
 			new Vector2(720.0f, 580.0f),
+			SecondaryMenuGlassStyle.UnifiedVisual,
 			GetNode<PanelContainer>("%ControlsContentPanel"));
+	}
+
+	private void ConfigureUnifiedVisualStyle()
+	{
+		ConfigureFrame("BackFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureFrame("ResetDefaultsFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureFrame("DoneFrame", MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		_titleLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.98f, 0.97f));
+		_messageLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.96f, 0.92f));
+		_keyboardHeader.AddThemeColorOverride("font_color", new Color(0.78f, 0.94f, 0.91f));
+		_gamepadHeader.AddThemeColorOverride("font_color", new Color(0.78f, 0.94f, 0.91f));
+		_captureHintLabel.AddThemeColorOverride("font_color", new Color(0.72f, 0.96f, 0.91f));
+		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
+		{
+			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
+		}
+	}
+
+	private void ConfigureFrame(string frameName, Color accent)
+	{
+		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
+		{
+			return;
+		}
+
+		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
+		frame.AccentColor = accent;
+		frame.QueueRedraw();
 	}
 
 	public override void _Input(InputEvent inputEvent)

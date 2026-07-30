@@ -18,11 +18,8 @@ public partial class GameBoardScene
 			() => !IsNetworkMultiplayerMode(),
 			ReturnToPauseMenuDestination,
 			RestartCurrentMatchFromPauseMenu,
-			QuitGameFromPauseMenu,
-			ConfirmQuitGameFromPauseMenu,
 			() => PlayGameSfx(GameSfx.UiPauseOpen, -2.0f, 0.98f, 1.02f, 0.08),
-			() => PlayGameSfx(GameSfx.UiPauseClose, -2.0f, 0.98f, 1.02f, 0.08),
-			() => PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08));
+			() => PlayGameSfx(GameSfx.UiPauseClose, -2.0f, 0.98f, 1.02f, 0.08));
 
 	private bool IsPauseMenuOpen => _pauseMenuController?.IsOpen == true;
 
@@ -176,26 +173,6 @@ public partial class GameBoardScene
 		});
 	}
 
-	private void QuitGameFromPauseMenu()
-	{
-		ShowPauseQuitConfirm();
-	}
-
-	private void ShowPauseQuitConfirm()
-	{
-		if (_isLeavingGame)
-		{
-			return;
-		}
-
-		PauseMenu.ShowQuitConfirmation();
-	}
-
-	private void HidePauseQuitConfirm()
-	{
-		_pauseMenuController?.HideQuitConfirmation();
-	}
-
 	private bool CanRestartCurrentMatchFromPauseMenu()
 	{
 		return !IsNetworkMultiplayerMode();
@@ -243,31 +220,4 @@ public partial class GameBoardScene
 		TrackBoardTask(StartNextAdventureStageWithTransitionAsync(gameBoardScene, firstAvatarId), nameof(StartNextAdventureStageWithTransitionAsync));
 	}
 
-	private void ConfirmQuitGameFromPauseMenu()
-	{
-		TrackBoardTask(
-			ConfirmQuitGameFromPauseMenuAsync(),
-			nameof(ConfirmQuitGameFromPauseMenuAsync));
-	}
-
-	private async Task ConfirmQuitGameFromPauseMenuAsync()
-	{
-		if (_isLeavingGame)
-		{
-			return;
-		}
-
-		_isLeavingGame = true;
-		GetTree().Paused = false;
-			if (IsNetworkMultiplayerMode())
-			{
-				NetworkManager? networkManager = GetNetworkManager();
-				if (networkManager != null)
-				{
-					await networkManager.LeaveSessionAfterHostEndedMatchAsync();
-				}
-			}
-
-		GetTree().Quit();
-	}
 }

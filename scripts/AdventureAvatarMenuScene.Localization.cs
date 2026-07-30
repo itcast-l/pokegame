@@ -92,7 +92,7 @@ public partial class AdventureAvatarMenuScene
 				continue;
 			}
 
-			ApplyStageNameLabelText(label, LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId)));
+			ApplyStageNameLabelText(label, GetStageDisplayName(avatarId));
 		}
 	}
 

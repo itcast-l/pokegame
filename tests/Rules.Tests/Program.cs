@@ -56,7 +56,7 @@ internal static partial class Program
 		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
 		Run("adventure defeat retries once then restarts the journey", AdventureDefeatRetriesOnceThenRestartsJourney);
 		Run("adventure upgrade ids expose current active upgrades across suits", AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits);
-		Run("adventure suit upgrade catalog exposes only 53 active upgrades", AdventureSuitUpgradeCatalogExposesOnlyActiveUpgrades);
+		Run("adventure suit upgrade catalog exposes only 52 active upgrades", AdventureSuitUpgradeCatalogExposesOnlyActiveUpgrades);
 		Run("adventure suit counting deduplicates active ids", AdventureSuitCountingDeduplicatesActiveIds);
 		Run("adventure upgrade run snapshot v5 restores legacy v1 saves", AdventureUpgradeRunSnapshotV3RestoresLegacyV1Saves);
 		Run("adventure upgrade run snapshot v4 filters retired flourish state", AdventureUpgradeRunSnapshotV4FiltersRetiredFlourishState);
@@ -97,7 +97,6 @@ internal static partial class Program
 		Run("adventure old table damage delta applies enemy tax and exaction", AdventureOldTableDamageDeltaAppliesEnemyTaxAndExaction);
 		Run("adventure clubs primary root return gives played base card back", AdventureClubsPrimaryRootReturnGivesPlayedBaseCardBack);
 		Run("adventure clubs short branch return only applies to two-card capture once", AdventureClubsShortBranchReturnOnlyAppliesToTwoCardCaptureOnce);
-		Run("adventure clubs climb canopy returns played base card after attached effect trigger", AdventureClubsClimbCanopyReturnsPlayedBaseCardAfterAttachedEffectTrigger);
 		Run("adventure clubs crown canopy includes capture endpoints in scoring", AdventureClubsCrownCanopyIncludesCaptureEndpointsInScoring);
 			Run("adventure clubs gap rooting captures left adjacent base once per real turn", AdventureClubsGapRootingCapturesLeftAdjacentBaseOncePerTurn);
 		Run("adventure clubs linked stems grants question reward on second capture", AdventureClubsLinkedStemsGrantsQuestionRewardOnSecondCapture);

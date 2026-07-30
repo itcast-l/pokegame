@@ -22,6 +22,7 @@ public partial class AdventureAvatarMenuScene
 
 		foreach ((string avatarId, OceanMenuButtonFrame frame) in _avatarFrames)
 		{
+			CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(avatarId);
 			int stageNumber = GetStageNumber(avatarId);
 			bool isUnlocked = IsStageUnlocked(avatarId);
 			bool isCompleted = IsStageCompleted(avatarId);
@@ -35,13 +36,18 @@ public partial class AdventureAvatarMenuScene
 				button.Disabled = !isUnlocked;
 				button.MouseFilter = isUnlocked ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
 				button.TooltipText = isUnlocked
-					? LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId))
+					? LocalizeAvatarDisplayName(avatarDefinition)
 					: Tr("ADVENTURE_LOCKED").ToString();
+			}
+
+			if (_stageAvatars.TryGetValue(avatarId, out CharacterAvatar? avatar))
+			{
+				avatar.Visible = isUnlocked;
 			}
 
 			if (_stageNameLabels.TryGetValue(avatarId, out Label? nameLabel))
 			{
-				ApplyStageNameLabelText(nameLabel, LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId)));
+				ApplyStageNameLabelText(nameLabel, GetStageDisplayName(avatarId));
 			}
 
 			if (_stageStatusLabels.TryGetValue(avatarId, out Label? statusLabel))
@@ -52,6 +58,13 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		UpdatePreview();
+	}
+
+	private string GetStageDisplayName(string avatarId)
+	{
+		return IsStageUnlocked(avatarId)
+			? LocalizeAvatarDisplayName(CharacterAvatarCatalog.GetById(avatarId))
+			: LockedStageNamePlaceholder;
 	}
 
 	private void UpdatePreview()
@@ -244,7 +257,7 @@ public partial class AdventureAvatarMenuScene
 
 		if (isAvailable)
 		{
-			return new Color(1.0f, 0.92f, 0.48f);
+			return new Color(0.58f, 0.96f, 0.70f);
 		}
 
 		return isUnlocked

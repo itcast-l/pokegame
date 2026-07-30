@@ -18,7 +18,9 @@ public partial class OceanMenuButtonFrame : Control
 		FirstVersionPrimary,
 		NeutralSmokeRow,
 		NeutralSmokeBack,
-		NeutralSmokePrimary
+		NeutralSmokePrimary,
+		IndividualToolRow,
+		IndividualAction
 	}
 
 	[Export]
@@ -34,6 +36,18 @@ public partial class OceanMenuButtonFrame : Control
 	public bool Selected { get; set; }
 
 	[Export]
+	public bool HighlightFocus { get; set; } = true;
+
+	[Export]
+	public bool UsePlaqueGlowBackdrop { get; set; } = true;
+
+	[Export]
+	public bool UseToolRowIdleBackdrop { get; set; } = true;
+
+	[Export]
+	public bool ShowIdleTexture { get; set; } = true;
+
+	[Export]
 	public Texture2D? OceanPlaqueTexture { get; set; }
 
 	[Export]
@@ -44,6 +58,12 @@ public partial class OceanMenuButtonFrame : Control
 
 	[Export]
 	public Texture2D? SelectionGlowTexture { get; set; }
+
+	[Export]
+	public Texture2D? FocusTexture { get; set; }
+
+	[Export]
+	public Texture2D? PressedTexture { get; set; }
 
 	[Export(PropertyHint.Range, "0.5,3.0,0.05")]
 	public float SelectionGlowStrength { get; set; } = 1.0f;
@@ -102,7 +122,7 @@ public partial class OceanMenuButtonFrame : Control
 			Rect2 buttonRect = _button.GetGlobalRect();
 			bool hovered = buttonRect.HasPoint(GetGlobalMousePosition());
 			target = Mathf.Max(target, hovered ? 1.0f : 0.0f);
-			target = Mathf.Max(target, _button.HasFocus() ? 1.0f : 0.0f);
+			target = Mathf.Max(target, HighlightFocus && _button.HasFocus() ? 1.0f : 0.0f);
 			if (_button.ButtonPressed)
 			{
 				target = 0.62f;
@@ -113,7 +133,9 @@ public partial class OceanMenuButtonFrame : Control
 			target = Mathf.Max(target, EvaluateDescendantInteraction());
 		}
 
-		float nextGlow = Mathf.Lerp(_glow, target, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		float nextGlow = !ShowIdleTexture && target <= GlowEpsilon
+			? 0.0f
+			: Mathf.Lerp(_glow, target, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
 		bool glowChanged = Mathf.Abs(nextGlow - _glow) > GlowEpsilon;
 		_glow = nextGlow;
 		if (glowChanged)
@@ -151,7 +173,7 @@ public partial class OceanMenuButtonFrame : Control
 			}
 
 			hovered |= control.GetGlobalRect().HasPoint(mousePosition);
-			focused |= control.HasFocus();
+			focused |= HighlightFocus && control.HasFocus();
 			pressed |= control is BaseButton { ButtonPressed: true };
 		}
 
@@ -165,7 +187,7 @@ public partial class OceanMenuButtonFrame : Control
 
 	public override void _Draw()
 	{
-		Rect2 rect = FrameStyle == ButtonFrameStyle.NeutralSmokeRow
+		Rect2 rect = FrameStyle is ButtonFrameStyle.NeutralSmokeRow or ButtonFrameStyle.IndividualToolRow
 			? new Rect2(Vector2.Zero, Size)
 			: _button != null
 			? new Rect2(_button.Position, _button.Size)
@@ -231,6 +253,16 @@ public partial class OceanMenuButtonFrame : Control
 		if (FrameStyle == ButtonFrameStyle.NeutralSmokePrimary)
 		{
 			DrawNeutralSmokePrimary(rect);
+			return;
+		}
+		if (FrameStyle == ButtonFrameStyle.IndividualToolRow)
+		{
+			DrawIndividualToolRow(rect);
+			return;
+		}
+		if (FrameStyle == ButtonFrameStyle.IndividualAction)
+		{
+			DrawIndividualAction(rect);
 			return;
 		}
 
@@ -300,6 +332,8 @@ public partial class OceanMenuButtonFrame : Control
 			ButtonFrameStyle.FirstVersionRow => null,
 			ButtonFrameStyle.FirstVersionBack => null,
 			ButtonFrameStyle.FirstVersionPrimary => null,
+			ButtonFrameStyle.IndividualToolRow => null,
+			ButtonFrameStyle.IndividualAction => null,
 			_ => FlipOrnament && OceanPlaqueFlippedTexture != null
 				? OceanPlaqueFlippedTexture
 				: OceanPlaqueTexture,
@@ -309,8 +343,22 @@ public partial class OceanMenuButtonFrame : Control
 			return false;
 		}
 
-		DrawTextureRect(texture, rect, false);
-		if (SelectionGlowTexture != null && (_glow > 0.01f || Selected))
+		bool pressed = _button?.ButtonPressed == true;
+		bool focused = Selected || _glow > 0.08f;
+		if (!pressed && !focused && !ShowIdleTexture)
+		{
+			return true;
+		}
+
+		Texture2D stateTexture = pressed && PressedTexture != null
+			? PressedTexture
+			: focused && FocusTexture != null
+				? FocusTexture
+				: texture;
+		DrawTextureRect(stateTexture, rect, false);
+		if (stateTexture == texture
+			&& SelectionGlowTexture != null
+			&& (_glow > 0.01f || Selected))
 		{
 			float alpha = (Selected
 				? 0.56f + _glow * 0.08f
@@ -357,7 +405,7 @@ public partial class OceanMenuButtonFrame : Control
 			_shadowPoints,
 			new Color(0.0f, 0.02f, 0.035f, 0.24f + interaction * 0.08f));
 
-		if (Selected || _glow > 0.04f)
+		if (UsePlaqueGlowBackdrop && (Selected || _glow > 0.04f))
 		{
 			ConfigureAdventureGlassGlowStyle(_glassGlowStyle, interaction);
 			DrawStyleBox(_glassGlowStyle, rect.Grow(Selected ? 4.0f : 2.0f));
@@ -715,6 +763,74 @@ public partial class OceanMenuButtonFrame : Control
 			new Vector2(origin.X + bevel + 10.0f, origin.Y + 4.0f),
 			new Vector2(origin.X + w - bevel - 10.0f, origin.Y + 4.0f),
 			new Color(0.90f, 0.96f, 0.93f, 0.34f + interaction * 0.18f),
+			1.0f,
+			true);
+	}
+
+	private void DrawIndividualToolRow(Rect2 rect)
+	{
+		float interaction = Mathf.Max(_glow, Selected ? 0.76f : 0.0f);
+		Color accent = AccentColor.Lerp(Colors.White, interaction * 0.12f);
+		float idleBackdrop = UseToolRowIdleBackdrop ? 1.0f : 0.0f;
+		float activeBackdrop = UseToolRowIdleBackdrop ? 0.12f : 0.18f;
+		float activeBorder = UseToolRowIdleBackdrop ? 0.34f : 0.52f;
+		_glassGlowStyle.BgColor = new Color(
+			accent.R * 0.10f,
+			accent.G * 0.11f,
+			accent.B * 0.10f,
+			0.18f * idleBackdrop + interaction * activeBackdrop);
+		_glassGlowStyle.BorderColor = new Color(
+			accent.R,
+			accent.G,
+			accent.B,
+			0.15f * idleBackdrop + interaction * activeBorder);
+		_glassGlowStyle.BorderWidthLeft = 0;
+		_glassGlowStyle.BorderWidthTop = 0;
+		_glassGlowStyle.BorderWidthRight = 0;
+		_glassGlowStyle.BorderWidthBottom = 1;
+		_glassGlowStyle.CornerRadiusTopLeft = 5;
+		_glassGlowStyle.CornerRadiusTopRight = 5;
+		_glassGlowStyle.CornerRadiusBottomLeft = 5;
+		_glassGlowStyle.CornerRadiusBottomRight = 5;
+		_glassGlowStyle.ShadowColor = Colors.Transparent;
+		_glassGlowStyle.ShadowSize = 0;
+		_glassGlowStyle.ShadowOffset = Vector2.Zero;
+		DrawStyleBox(_glassGlowStyle, rect);
+
+		DrawLine(
+			new Vector2(rect.Position.X + 12.0f, rect.Position.Y + 1.0f),
+			new Vector2(rect.End.X - 12.0f, rect.Position.Y + 1.0f),
+			new Color(accent.R, accent.G, accent.B, 0.04f * idleBackdrop + interaction * 0.10f),
+			1.0f,
+			true);
+	}
+
+	private void DrawIndividualAction(Rect2 rect)
+	{
+		float interaction = Mathf.Max(_glow, Selected ? 0.76f : 0.0f);
+		Color accent = AccentColor.Lerp(Colors.White, 0.05f + interaction * 0.12f);
+		_selectionGlowStyle.BgColor = new Color(
+			accent.R * (0.25f + interaction * 0.06f),
+			accent.G * (0.25f + interaction * 0.06f),
+			accent.B * (0.25f + interaction * 0.06f),
+			0.78f + interaction * 0.12f);
+		_selectionGlowStyle.BorderColor = new Color(accent.R, accent.G, accent.B, 0.46f + interaction * 0.38f);
+		_selectionGlowStyle.BorderWidthLeft = 1;
+		_selectionGlowStyle.BorderWidthTop = 1;
+		_selectionGlowStyle.BorderWidthRight = 1;
+		_selectionGlowStyle.BorderWidthBottom = 1;
+		_selectionGlowStyle.CornerRadiusTopLeft = 6;
+		_selectionGlowStyle.CornerRadiusTopRight = 6;
+		_selectionGlowStyle.CornerRadiusBottomLeft = 6;
+		_selectionGlowStyle.CornerRadiusBottomRight = 6;
+		_selectionGlowStyle.ShadowColor = new Color(accent.R, accent.G, accent.B, 0.05f + interaction * 0.08f);
+		_selectionGlowStyle.ShadowSize = 5;
+		_selectionGlowStyle.ShadowOffset = new Vector2(0.0f, 2.0f);
+		DrawStyleBox(_selectionGlowStyle, rect);
+		DrawLine(
+			new Vector2(rect.Position.X + 12.0f, rect.Position.Y + 2.0f),
+			new Vector2(rect.End.X - 12.0f, rect.Position.Y + 2.0f),
+			new Color(accent.R, accent.G, accent.B, 0.18f + interaction * 0.16f),
 			1.0f,
 			true);
 	}

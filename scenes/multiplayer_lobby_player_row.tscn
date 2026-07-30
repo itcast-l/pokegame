@@ -34,7 +34,7 @@ theme_override_constants/separation = 10
 [node name="SeatLabel" type="Label" parent="RowLayout"]
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.95, 0.7, 1)
+theme_override_colors/font_color = Color(0.57, 0.68, 0.82, 1)
 theme_override_font_sizes/font_size = 17
 text = "1"
 horizontal_alignment = 1

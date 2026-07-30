@@ -65,9 +65,10 @@ public partial class AdventureUpgradeCatalogCard : Button
 		string suit,
 		string rarity,
 		string description,
-		bool interactive)
+		bool interactive,
+		bool showRarityLabel = true)
 	{
-		ConfigureCard(suit, rarity, description, string.Empty, interactive);
+		ConfigureCard(suit, rarity, description, string.Empty, interactive, showRarityLabel);
 	}
 
 	public void ConfigureCard(
@@ -75,7 +76,8 @@ public partial class AdventureUpgradeCatalogCard : Button
 		string rarity,
 		string description,
 		string rarityLabel,
-		bool interactive)
+		bool interactive,
+		bool showRarityLabel = true)
 	{
 		_isLocked = false;
 		_suit = Normalize(suit);
@@ -92,9 +94,11 @@ public partial class AdventureUpgradeCatalogCard : Button
 
 		_descriptionLabel.Text = description?.Trim() ?? string.Empty;
 		_descriptionLabel.GetParent().GetParent<Control>().Visible = !string.IsNullOrWhiteSpace(_descriptionLabel.Text);
-		_rarityLabel.Text = string.IsNullOrWhiteSpace(rarityLabel)
-			? GetDefaultRarityLabel(_rarity)
-			: rarityLabel.Trim();
+		_rarityLabel.Text = showRarityLabel
+			? string.IsNullOrWhiteSpace(rarityLabel)
+				? GetDefaultRarityLabel(_rarity)
+				: rarityLabel.Trim()
+			: string.Empty;
 		_rarityLabel.Visible = !string.IsNullOrWhiteSpace(_rarityLabel.Text);
 		RefreshDescriptionFontSize();
 		FocusMode = interactive ? FocusModeEnum.All : FocusModeEnum.None;

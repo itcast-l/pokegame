@@ -230,7 +230,7 @@ internal static class AdventureUpgradeRuntimeContract
 
 		Add(metadata, "clubs_short_branch_return", AdventureUpgradeStateScope.Turn, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerTurn, 1);
 		Add(metadata, "clubs_gap_rooting", AdventureUpgradeStateScope.Turn, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerTurn, 1);
-		Add(metadata, "clubs_primary_root_return", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 1, "played_card_return", 30);
+		Add(metadata, "clubs_primary_root_return", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 1);
 		Add(metadata, "clubs_miss_climb_growth", AdventureUpgradeStateScope.Battle, AdventureUpgradeStackingMode.Additive, AdventureUpgradeTriggerPolicy.None, 9);
 		Add(metadata, "clubs_borrow_suit_set", AdventureUpgradeStateScope.Turn, AdventureUpgradeStackingMode.Refresh, AdventureUpgradeTriggerPolicy.OncePerTurn, 1);
 		Add(metadata, "clubs_hollow_burst", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 1);
@@ -239,7 +239,6 @@ internal static class AdventureUpgradeRuntimeContract
 		Add(metadata, "clubs_canopy_reveal", AdventureUpgradeStateScope.Battle, AdventureUpgradeStackingMode.Refresh, AdventureUpgradeTriggerPolicy.None, 1);
 		Add(metadata, "clubs_continue_branch", AdventureUpgradeStateScope.RootChain, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerTurn, 1);
 		Add(metadata, "clubs_linked_stems", AdventureUpgradeStateScope.Turn, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerTurn, 1);
-		Add(metadata, "clubs_climb_canopy", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 1, "played_card_return", 20);
 		Add(metadata, "clubs_cross_graft", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.None, 1);
 		Add(metadata, "clubs_crown_canopy", AdventureUpgradeStateScope.Action, AdventureUpgradeStackingMode.Unique, AdventureUpgradeTriggerPolicy.OncePerAction, 1);
 
@@ -329,7 +328,6 @@ internal static class AdventureUpgradeRuntimeContract
 		AddValues(values, "clubs_canopy_reveal");
 		AddValues(values, "clubs_continue_branch", Value("count", 1, 0, 52), Value("threshold", 6, 0, 52));
 		AddValues(values, "clubs_linked_stems", Value("count", 1, 0, 52), Value("threshold", 2, 0, 52));
-		AddValues(values, "clubs_climb_canopy", Value("count", 1, 0, 52));
 		AddValues(values, "clubs_cross_graft", Value("step", 1, 0, 52));
 		AddValues(values, "clubs_crown_canopy", Value("count", 1, 0, 52));
 		return values;

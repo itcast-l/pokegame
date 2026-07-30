@@ -1149,7 +1149,6 @@ internal static partial class Program
 		False(DiceRollPresentationRules.TryGetResultMotionFramePath(0, out _));
 		False(DiceRollPresentationRules.TryGetResultMotionFramePath(7, out _));
 		AssertFramePatternExists(repoRoot, DiceRollPresentationRules.RollingPathFramePattern, DiceRollPresentationRules.RollingPathFrameCount);
-		AssertResPathExists(repoRoot, DiceRollPresentationRules.RollingPathPreviewGifPath);
 	}
 
 

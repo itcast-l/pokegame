@@ -13,11 +13,8 @@ internal sealed class GameBoardPauseMenuController
 	private readonly Func<bool> _shouldPauseSceneTree;
 	private readonly Action _returnToDestination;
 	private readonly Action _restart;
-	private readonly Action _quit;
-	private readonly Action _confirmQuit;
 	private readonly Action _playOpenSound;
 	private readonly Action _playCloseSound;
-	private readonly Action _playPanelOpenSound;
 	private CanvasLayer? _pauseMenuLayer;
 	private PauseMenuOverlay? _pauseMenuRoot;
 	private Button? _pauseContinueButton;
@@ -32,11 +29,8 @@ internal sealed class GameBoardPauseMenuController
 		Func<bool> shouldPauseSceneTree,
 		Action returnToDestination,
 		Action restart,
-		Action quit,
-		Action confirmQuit,
 		Action playOpenSound,
-		Action playCloseSound,
-		Action playPanelOpenSound)
+		Action playCloseSound)
 	{
 		_owner = owner;
 		_localize = localize;
@@ -46,17 +40,11 @@ internal sealed class GameBoardPauseMenuController
 		_shouldPauseSceneTree = shouldPauseSceneTree;
 		_returnToDestination = returnToDestination;
 		_restart = restart;
-		_quit = quit;
-		_confirmQuit = confirmQuit;
 		_playOpenSound = playOpenSound;
 		_playCloseSound = playCloseSound;
-		_playPanelOpenSound = playPanelOpenSound;
 	}
 
 	internal bool IsOpen { get; private set; }
-
-	internal bool HasVisibleQuitConfirmation
-		=> _pauseMenuRoot?.QuitConfirmRoot.Visible == true;
 
 	internal void Show()
 	{
@@ -77,7 +65,6 @@ internal sealed class GameBoardPauseMenuController
 		_pauseMenuRoot.SetRestartAvailable(_canRestart());
 		_pauseMenuRoot.Visible = true;
 		_pauseMenuRoot.Modulate = Colors.White;
-		_pauseMenuRoot.HideQuitConfirm();
 
 		SceneTree sceneTree = _owner.GetTree();
 		if (_shouldPauseSceneTree() && !sceneTree.Paused)
@@ -100,32 +87,13 @@ internal sealed class GameBoardPauseMenuController
 		RestoreSceneTreePauseIfOwned();
 		if (_pauseMenuRoot != null)
 		{
-			_pauseMenuRoot.HideQuitConfirm();
 			_pauseMenuRoot.Visible = false;
 		}
 	}
 
 	internal void HandleCancel()
 	{
-		if (HasVisibleQuitConfirmation)
-		{
-			HideQuitConfirmation();
-			return;
-		}
-
 		Hide();
-	}
-
-	internal void ShowQuitConfirmation()
-	{
-		EnsurePauseMenu();
-		_playPanelOpenSound();
-		_pauseMenuRoot?.ShowQuitConfirm();
-	}
-
-	internal void HideQuitConfirmation()
-	{
-		_pauseMenuRoot?.HideQuitConfirm();
 	}
 
 	internal void RefreshLocalizedText()
@@ -183,8 +151,6 @@ internal sealed class GameBoardPauseMenuController
 		pauseMenu.ContinueRequested += Hide;
 		pauseMenu.ReturnToMainMenuRequested += () => _returnToDestination();
 		pauseMenu.RestartRequested += () => _restart();
-		pauseMenu.QuitRequested += () => _quit();
-		pauseMenu.ConfirmQuitRequested += () => _confirmQuit();
 		_pauseMenuRoot.RefreshLocalizedText(_localize, _getReturnButtonKey(), _getRestartButtonKey());
 		_pauseMenuRoot.SetRestartAvailable(_canRestart());
 	}

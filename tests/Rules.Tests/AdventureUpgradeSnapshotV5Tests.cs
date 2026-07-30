@@ -15,6 +15,7 @@ internal static partial class Program
 		"diamonds_high_return_bonus",
 		"spades_black_tide_dominion",
 		"clubs_lush_growth",
+		"clubs_climb_canopy",
 	};
 
 	private static void RunAdventureUpgradeSnapshotV5Tests()
@@ -59,15 +60,15 @@ internal static partial class Program
 	private static void AdventureUpgradeManifestMatchesPandoraAndLocalizationBidirectionally()
 	{
 		List<AdventureSuitUpgradeDefinition> definitions = ReadEnabledAdventureUpgradeDefinitions();
-		Equal(53, definitions.Count);
-		Equal(53, AdventureUpgradeRuntimeContract.All.Count);
+		Equal(52, definitions.Count);
+		Equal(52, AdventureUpgradeRuntimeContract.All.Count);
 
 		var catalog = new AdventureSuitUpgradeCatalog();
 		GetCatalogDefinitionList(catalog).AddRange(definitions);
 		True(catalog.TryCreateManifest(out AdventureUpgradeManifest manifest));
 		True(manifest.IsReady);
-		Equal(53, manifest.EnabledIds.Count);
-		Equal(53, manifest.Entries.Count);
+		Equal(52, manifest.EnabledIds.Count);
+		Equal(52, manifest.Entries.Count);
 		var suitCounts = new Dictionary<string, int>(StringComparer.Ordinal)
 		{
 			["hearts"] = 0,
@@ -107,9 +108,9 @@ internal static partial class Program
 		Equal(14, suitCounts["hearts"]);
 		Equal(13, suitCounts["diamonds"]);
 		Equal(12, suitCounts["spades"]);
-		Equal(14, suitCounts["clubs"]);
+		Equal(13, suitCounts["clubs"]);
 		Equal(24, rarityCounts["common"]);
-		Equal(19, rarityCounts["rare"]);
+		Equal(18, rarityCounts["rare"]);
 		Equal(10, rarityCounts["legendary"]);
 		True(catalog.TryCreateManifest(out AdventureUpgradeManifest cachedManifest));
 		True(ReferenceEquals(manifest, cachedManifest));
@@ -252,6 +253,7 @@ internal static partial class Program
 					"diamonds_all_gains_converge",
 					"spades_black_tide_dominion",
 					"clubs_lush_growth",
+					"clubs_climb_canopy",
 					"hearts_forged_unknown",
 					string.Empty,
 				},
@@ -279,6 +281,7 @@ internal static partial class Program
 			True(restored.HasAcquiredUpgrade("diamonds_question_mark_interest"));
 			True(restored.HasAcquiredUpgrade("hearts_overflow_growth"));
 			False(restored.HasAcquiredUpgrade("clubs_lush_growth"));
+			False(restored.HasAcquiredUpgrade("clubs_climb_canopy"));
 			False(restored.HasAcquiredUpgrade("hearts_forged_unknown"));
 			Equal(0, restored.EffectState.NextCaptureDamageBonus);
 			Equal(0, restored.EffectState.NextTurnHealAmount);
@@ -517,6 +520,7 @@ internal static partial class Program
 			{
 				"hearts_thick_blood",
 				"clubs_lush_growth",
+				"clubs_climb_canopy",
 			},
 			CurrentHealth: 75,
 			MaxHealth: 120,
@@ -547,6 +551,7 @@ internal static partial class Program
 		string migratedJson = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
 		AssertCanonicalV6Json(migratedJson);
 		False(migratedJson.Contains("clubs_lush_growth", StringComparison.Ordinal));
+		False(migratedJson.Contains("clubs_climb_canopy", StringComparison.Ordinal));
 
 		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(1, saveManager.SaveToSlotCallCount);
@@ -796,7 +801,7 @@ internal static partial class Program
 			"额外收走收牌区间左侧最近的 1 张基础牌；该牌不计分。");
 		AssertPandoraCopy(definitionsById, "clubs_primary_root_return",
 			"本次打出的基础牌成功收牌时",
-			"若手牌有空位，该牌结算后回手；与攀棚同时满足时由主根复返覆盖且只回手一次。");
+			"若手牌有空位，该牌结算后回手。");
 		AssertPandoraCopy(definitionsById, "clubs_miss_climb_growth",
 			"每次空打时",
 			"积 1 层攀枝；数字基础牌保留原点数，并额外按原点数 + 层数匹配；成功收牌后清空。");
@@ -809,9 +814,6 @@ internal static partial class Program
 		AssertPandoraCopy(definitionsById, "clubs_linked_stems",
 			"同一真实回合第二次成功收牌时",
 			"立刻获得 1 次问号奖励。");
-		AssertPandoraCopy(definitionsById, "clubs_climb_canopy",
-			"本动作真实附着道具效果生效且打出的基础牌成功收牌时",
-			"若手牌有空位，该牌结算后回手；主根复返优先且该牌只回手一次。");
 		AssertPandoraCopy(definitionsById, "clubs_crown_canopy",
 			"持续生效",
 			"你的基础牌成功收牌时，首尾端点各计分一次，不生成重复普通计分项。");
@@ -1007,7 +1009,7 @@ internal static partial class Program
 			"收取并且没有记分时，额外收走相邻牌。",
 			"收取並且沒有記分時，額外收走相鄰牌。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_PRIMARY_ROOT_RETURN",
-			"When the played base card captures: return it after resolution if hand space allows; with Climb Canopy, Primary Root returns it only once.",
+			"When the played base card captures: return it after resolution if hand space allows.",
 			"收牌后，打出的牌回手。",
 			"收牌後，打出的牌回手。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_MISS_CLIMB_GROWTH",
@@ -1026,10 +1028,6 @@ internal static partial class Program
 			"On your second capture in the same real turn: immediately gain 1 question-mark reward.",
 			"同一真实回合第二次收牌时：立刻获得1次问号奖励。",
 			"同一真實回合第二次收牌時：立刻獲得1次問號獎勵。");
-		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_CLIMB_CANOPY",
-			"When a real attached item effect triggers and the played base card captures: return it after resolution if hand space allows; Primary Root takes precedence and it returns only once.",
-			"本动作真实附着道具效果生效且打出的基础牌成功收牌时，手牌有空位则结算后回手；主根复返优先且只回手一次。",
-			"本動作真實附著道具效果生效且打出的基礎牌成功收牌時，手牌有空位則結算後回手；主根復返優先且只回手一次。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_CROWN_CANOPY",
 			"Passive: when your base card captures, the first and last endpoints each score once; no duplicate normal score item is added.",
 			"持续生效：你的基础牌成功收牌时，首尾端点各计分一次，不生成重复普通计分项。",

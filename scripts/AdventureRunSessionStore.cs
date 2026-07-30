@@ -569,7 +569,6 @@ public sealed partial class AdventureRunSessionStore : Node
 				input.ClubCapture.UniqueShortReturnCandidateCount,
 				input.ClubCapture.UniqueCombinedReturnCandidateCount,
 				input.ClubCapture.AvailableHandSlots,
-				input.ClubCapture.PlayUsedAttachedEffect,
 				input.ClubCapture.PlayedCardWasBaseCard);
 			candidate.EffectState.ClubMissClimbGrowthStacks = 0;
 		}

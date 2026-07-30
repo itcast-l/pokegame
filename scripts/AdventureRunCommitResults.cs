@@ -71,7 +71,6 @@ internal readonly record struct AdventureClubCaptureCommitInput(
 	int UniqueShortReturnCandidateCount,
 	int UniqueCombinedReturnCandidateCount,
 	int AvailableHandSlots,
-	bool PlayUsedAttachedEffect,
 	bool PlayedCardWasBaseCard);
 
 internal readonly record struct AdventureCaptureCommitInput(

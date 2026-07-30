@@ -1,11 +1,96 @@
+using System.Collections.Generic;
 using Godot;
 
 public partial class MainMenuScene : Control
 {
+	private readonly List<OceanMenuButtonFrame> _primaryMenuFrames = new();
+	private bool _primaryMenuFocusHighlightVisible = true;
+
 	private void ConfigureMainMenuFocus()
 	{
 		ConfigureAvatarEntryFocus();
+		ConfigurePrimaryMenuFocusHighlights();
 		SetPrimaryMenuFocusEnabled(true);
+	}
+
+	private void ConfigurePrimaryMenuFocusHighlights()
+	{
+		_primaryMenuFrames.Clear();
+		AddPrimaryMenuFrame(_singlePlayerButton);
+		AddPrimaryMenuFrame(_adventureButton);
+		AddPrimaryMenuFrame(_multiplayerButton);
+		AddPrimaryMenuFrame(_skillCodexButton);
+		AddPrimaryMenuFrame(_settingsButton);
+		AddPrimaryMenuFrame(_exitButton);
+		SetPrimaryMenuFocusHighlightVisible(false);
+	}
+
+	private void TrackPrimaryMenuInputMode(InputEvent inputEvent)
+	{
+		if (inputEvent is InputEventMouseButton or InputEventMouseMotion)
+		{
+			SetPrimaryMenuFocusHighlightVisible(false);
+			return;
+		}
+
+		if (IsPrimaryMenuNavigationInput(inputEvent))
+		{
+			SetPrimaryMenuFocusHighlightVisible(true);
+		}
+	}
+
+	private void SetPrimaryMenuFocusHighlightVisible(bool visible)
+	{
+		if (_primaryMenuFocusHighlightVisible == visible)
+		{
+			return;
+		}
+
+		_primaryMenuFocusHighlightVisible = visible;
+		foreach (OceanMenuButtonFrame frame in _primaryMenuFrames)
+		{
+			if (!GodotObject.IsInstanceValid(frame))
+			{
+				continue;
+			}
+
+			frame.HighlightFocus = visible;
+			frame.QueueRedraw();
+		}
+	}
+
+	private void AddPrimaryMenuFrame(Button button)
+	{
+		if (button.GetParent() is OceanMenuButtonFrame frame)
+		{
+			_primaryMenuFrames.Add(frame);
+		}
+	}
+
+	private static bool IsPrimaryMenuNavigationInput(InputEvent inputEvent)
+	{
+		if (inputEvent.IsActionPressed(GameInputActions.GameConfirm)
+			|| inputEvent.IsActionPressed(GameInputActions.GameCancel)
+			|| inputEvent.IsActionPressed(GameInputActions.HandPrevious)
+			|| inputEvent.IsActionPressed(GameInputActions.HandNext)
+			|| inputEvent.IsActionPressed("ui_accept")
+			|| inputEvent.IsActionPressed("ui_cancel")
+			|| inputEvent.IsActionPressed("ui_up")
+			|| inputEvent.IsActionPressed("ui_down")
+			|| inputEvent.IsActionPressed("ui_left")
+			|| inputEvent.IsActionPressed("ui_right"))
+		{
+			return true;
+		}
+
+		return inputEvent is InputEventJoypadButton { Pressed: true }
+			|| inputEvent is InputEventJoypadMotion joypadMotion
+				&& Mathf.Abs(joypadMotion.AxisValue) > 0.45f;
+	}
+
+	public bool DebugIsPrimaryMenuFocusHighlightVisible()
+	{
+		return _primaryMenuFocusHighlightVisible;
 	}
 
 	private void FocusInitialMainMenuButton()

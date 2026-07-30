@@ -216,6 +216,17 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[node name="PreviewGlassSurface" type="ColorRect" parent="Root/PreviewLayer/PreviewCenter"]
+custom_minimum_size = Vector2(332, 525)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="PreviewGlassFrame" type="Panel" parent="Root/PreviewLayer/PreviewCenter"]
+custom_minimum_size = Vector2(332, 525)
+layout_mode = 2
+mouse_filter = 2
+
 [node name="PreviewCard" parent="Root/PreviewLayer/PreviewCenter" instance=ExtResource("2_card")]
 custom_minimum_size = Vector2(300, 493)
 layout_mode = 2

@@ -172,28 +172,6 @@ custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="BackFrame" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header"]
-custom_minimum_size = Vector2(126, 56)
-layout_mode = 2
-mouse_filter = 2
-script = ExtResource("2_button_frame")
-FrameStyle = 2
-AccentColor = Color(0.48, 0.98, 1, 1)
-
-[node name="BackButton" type="Button" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header/BackFrame"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-flat = true
-
 [node name="TitleStack" type="VBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -217,10 +195,6 @@ custom_minimum_size = Vector2(0, 2)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.48, 0.98, 1, 0.52)
-
-[node name="HeaderRightPlaceholder" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/Header"]
-custom_minimum_size = Vector2(126, 56)
-layout_mode = 2
 
 [node name="SettingsMessage" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout"]
 unique_name_in_owner = true
@@ -682,51 +656,6 @@ popup/item_29/text = ""
 popup/item_29/id = 29
 popup/item_30/text = ""
 popup/item_30/id = 30
-
-[node name="MainMenuMusicTrackRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxEmpty_button")
-script = ExtResource("2_button_frame")
-FrameStyle = 2
-
-[node name="RowMargin" type="MarginContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 8
-
-[node name="RowLayout" type="HBoxContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="MainMenuMusicTrackLabel" type="Label" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(104, 44)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
-theme_override_font_sizes/font_size = 18
-text = "SETTINGS_BACKGROUND_MUSIC"
-vertical_alignment = 1
-autowrap_mode = 2
-
-[node name="MainMenuMusicTrackSpacer" type="Control" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="MainMenuMusicTrackOption" type="OptionButton" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList/MainMenuMusicTrackRowPanel/RowMargin/RowLayout"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 44)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
-theme_override_font_sizes/font_size = 17
-theme_override_styles/normal = SubResource("StyleBoxFlat_option")
-theme_override_styles/hover = SubResource("StyleBoxFlat_option_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_option")
-theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 
 [node name="ControlsRowPanel" type="PanelContainer" parent="DialogCenter/SettingsDialogPanel/SettingsDialogMargin/SettingsDialogLayout/SettingsContentPanel/SettingsScroll/SettingsList"]
 custom_minimum_size = Vector2(0, 72)

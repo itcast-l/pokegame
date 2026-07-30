@@ -2,12 +2,12 @@ extends SceneTree
 
 const CATEGORY_ID := "adventure_suit_upgrades"
 const VISUAL_CATALOG := preload("res://resources/adventure_upgrades/visuals/adventure_upgrade_card_visual_catalog.tres")
-const EXPECTED_TOTAL := 53
+const EXPECTED_TOTAL := 52
 const EXPECTED_SUIT_COUNTS := {
 	"hearts": 14,
 	"diamonds": 13,
 	"spades": 12,
-	"clubs": 14,
+	"clubs": 13,
 }
 const RETIRED_IDS := {
 	"hearts_blood_tide_resonance": true,
@@ -15,6 +15,7 @@ const RETIRED_IDS := {
 	"diamonds_high_return_bonus": true,
 	"spades_black_tide_dominion": true,
 	"clubs_lush_growth": true,
+	"clubs_climb_canopy": true,
 }
 
 var _failed := false
@@ -109,7 +110,7 @@ func _run() -> void:
 			return
 
 	_assert(rarity_counts["common"] == 24, "Expected 24 common definitions, got %d" % rarity_counts["common"])
-	_assert(rarity_counts["rare"] == 19, "Expected 19 rare definitions, got %d" % rarity_counts["rare"])
+	_assert(rarity_counts["rare"] == 18, "Expected 18 rare definitions, got %d" % rarity_counts["rare"])
 	_assert(rarity_counts["legendary"] == 10, "Expected 10 legendary definitions, got %d" % rarity_counts["legendary"])
 	for retired_id in RETIRED_IDS:
 		_assert(not enabled_ids.has(retired_id), "Retired definition %s must not be enabled" % retired_id)

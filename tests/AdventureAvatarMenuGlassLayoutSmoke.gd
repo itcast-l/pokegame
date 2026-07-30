@@ -6,6 +6,7 @@ const MAP_TEXTURE_PATH := "res://art/maps/adventure_map_base_with_route_v1.png"
 const GLASS_SHADER_PATH := "res://shaders/adventure_menu_glass.gdshader"
 const MAIN_MENU_ADVENTURE_BUTTON_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureFrame/Button"
 const VIEWPORT_SPECS := [
+	{"name": "960x540", "size": Vector2i(960, 540)},
 	{"name": "1280x720", "size": Vector2i(1280, 720)},
 	{"name": "1920x1080", "size": Vector2i(1920, 1080)},
 ]
@@ -69,6 +70,10 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 	await process_frame
 
 	var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_size))
+	if not _menu.has_meta("secondary_menu_visual_profile") \
+			or str(_menu.get_meta("secondary_menu_visual_profile")) != "secondary-menu-unified":
+		_fail("%s is missing the unified secondary-menu visual profile" % context)
+		return false
 	var background := _menu.get_node_or_null("StandaloneBackground") as Control
 	var map_backdrop := _menu.get_node_or_null("StandaloneBackground/MapBackdrop") as TextureRect
 	var readability_veil := _menu.get_node_or_null("StandaloneBackground/ReadabilityVeil") as ColorRect
@@ -140,6 +145,18 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 		return false
 	if not _assert_content_pane_style(shared_style, context):
 		return false
+	for entry_name in ["tutorialAdventureEntry", "deep_tide_throneAdventureEntry"]:
+		var adventure_entry := _menu.find_child(entry_name, true, false) as Control
+		if not _assert_unified_list_entry(adventure_entry, "%s adventure entry %s" % [context, entry_name]):
+			return false
+	var level_list := _menu.get_node_or_null(
+		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList") as VBoxContainer
+	if level_list == null or level_list.get_child_count() == 0:
+		_fail("%s is missing generated enemy entries" % context)
+		return false
+	for child in level_list.get_children():
+		if not _assert_unified_list_entry(child as Control, "%s enemy entry" % context):
+			return false
 
 	var start_frame := _menu.get_node_or_null("SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap/StartFrame") as Control
 	var start_button := _menu.get_node_or_null("%StartButton") as Button
@@ -149,10 +166,22 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 	if start_button.size.x < 44.0 or start_button.size.y < 44.0:
 		_fail("%s primary action is below the minimum target size: %s" % [context, start_button.size])
 		return false
-	if int(start_frame.get("FrameStyle")) != 2:
-		_fail("%s primary action does not use the adventure glass plaque" % context)
+	var start_accent: Color = start_frame.get("AccentColor")
+	if int(start_frame.get("FrameStyle")) != 12 \
+			or not start_accent.is_equal_approx(Color(0.42, 0.92, 0.94, 0.96)):
+		_fail("%s primary action does not use the unified secondary-menu accent" % context)
 		return false
 
+	return true
+
+
+func _assert_unified_list_entry(entry: Control, context: String) -> bool:
+	if entry == null or int(entry.get("FrameStyle")) != 11:
+		_fail("%s does not use the unified individual tool-row frame" % context)
+		return false
+	if entry.size.x < 44.0 or entry.size.y < 44.0:
+		_fail("%s is below the minimum interaction size: %s" % [context, entry.size])
+		return false
 	return true
 
 
@@ -227,7 +256,7 @@ func _assert_content_pane_glass_material(material: ShaderMaterial, context: Stri
 	var surface_opacity := float(material.get_shader_parameter("surface_opacity"))
 	var tint_color: Color = material.get_shader_parameter("tint_color")
 	var blur_lod := float(material.get_shader_parameter("blur_lod"))
-	if surface_opacity < 0.48 or surface_opacity > 0.58 \
+	if surface_opacity < 0.38 or surface_opacity > 0.48 \
 			or tint_color.a < 0.24 or tint_color.a > 0.34 \
 			or blur_lod < 1.8 or blur_lod > 2.4:
 		_fail("%s content pane glass is outside the translucent design range: surface=%s tint=%s blur=%s" % [context, surface_opacity, tint_color.a, blur_lod])

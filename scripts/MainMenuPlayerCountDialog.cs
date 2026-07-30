@@ -79,27 +79,64 @@ public partial class MainMenuPlayerCountDialog : Control
 		_backButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_startButton.Pressed += EmitStartGameRequested;
 		EnableKeyboardFocus(_backButton, PlayerCountOption, DifficultyOption, ItemModeOption, WinningScoreOption, _startButton);
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 20);
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
 		ApplyBackActionText(_backButton);
-		MainMenuInteractiveStyle.ApplyNeutralSmokeGameConfigurationOption(PlayerCountOption);
-		MainMenuInteractiveStyle.ApplyNeutralSmokeGameConfigurationOption(DifficultyOption);
-		MainMenuInteractiveStyle.ApplyNeutralSmokeGameConfigurationOption(ItemModeOption);
-		MainMenuInteractiveStyle.ApplyNeutralSmokeGameConfigurationOption(WinningScoreOption);
-		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 24);
+		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(PlayerCountOption);
+		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(DifficultyOption);
+		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(ItemModeOption);
+		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(WinningScoreOption);
+		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 24, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
 		ApplyPrimaryActionText(_startButton);
+		ConfigureUnifiedVisualStyle();
 		ConfigureConfigurationFocusScrolling(
 			PlayerCountOption,
 			DifficultyOption,
 			ItemModeOption,
 			WinningScoreOption);
-		SecondaryMenuGlassStyle.AttachNeutralSmoke(
+		SecondaryMenuGlassStyle.Attach(
 			this,
 			DialogPanel,
 			_scrim,
-			new Vector2(860.0f, 560.0f));
-		SecondaryMenuGlassStyle.StyleScrollBar(_configurationScroll.GetVScrollBar());
+			new Vector2(860.0f, 560.0f),
+			SecondaryMenuGlassStyle.UnifiedVisual);
+		SecondaryMenuGlassStyle.StyleScrollBar(
+			_configurationScroll.GetVScrollBar(),
+			SecondaryMenuGlassStyle.UnifiedVisual);
 		Resized += ApplyResponsiveDensity;
 		ApplyResponsiveDensity();
+	}
+
+	private void ConfigureUnifiedVisualStyle()
+	{
+		Color secondaryAccent = MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder;
+		foreach (Control row in _configurationRowPanels)
+		{
+			if (row is OceanMenuButtonFrame frame)
+			{
+				frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
+				frame.AccentColor = secondaryAccent;
+				frame.QueueRedraw();
+			}
+		}
+
+		ConfigureFrame("BackFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureFrame("StartGameFrame", MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
+		{
+			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
+		}
+	}
+
+	private void ConfigureFrame(string frameName, Color accent)
+	{
+		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
+		{
+			return;
+		}
+
+		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
+		frame.AccentColor = accent;
+		frame.QueueRedraw();
 	}
 
 	private void ApplyResponsiveDensity()

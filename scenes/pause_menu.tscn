@@ -1,11 +1,35 @@
-[gd_scene format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/PauseMenuOverlay.cs" id="1_pause_menu"]
 [ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
-[ext_resource type="Script" path="res://scripts/MainMenuPlayerCountIconBadge.cs" id="3_icon_badge"]
-[ext_resource type="PackedScene" path="res://scenes/main_menu_exit_dialog.tscn" id="4_exit_dialog"]
+[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_panel.png" id="3_panel"]
+[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_button_idle.png" id="4_button_idle"]
+[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_button_focus.png" id="5_button_focus"]
+[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_button_pressed.png" id="6_button_pressed"]
+[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_divider.png" id="7_divider"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel"]
+atlas = ExtResource("3_panel")
+region = Rect2(41, 180, 942, 664)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_button_idle"]
+atlas = ExtResource("4_button_idle")
+region = Rect2(41, 438, 942, 148)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_button_focus"]
+atlas = ExtResource("5_button_focus")
+region = Rect2(41, 428, 942, 167)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_button_pressed"]
+atlas = ExtResource("6_button_pressed")
+region = Rect2(41, 426, 942, 172)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_divider"]
+atlas = ExtResource("7_divider")
+region = Rect2(20, 249, 471, 14)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_panel"]
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
 
 [node name="PauseMenuRoot" type="Control"]
@@ -42,140 +66,101 @@ mouse_filter = 2
 
 [node name="PauseMenuPanel" type="PanelContainer" parent="PauseMenuCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(600, 500)
+custom_minimum_size = Vector2(620, 436)
 process_mode = 3
 layout_mode = 2
 mouse_filter = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_panel")
+
+[node name="PauseMenuArtwork" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_panel")
+expand_mode = 1
+stretch_mode = 0
 
 [node name="DialogMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_bottom = 32
 
 [node name="DialogLayout" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
-[node name="Header" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout"]
-custom_minimum_size = Vector2(0, 56)
+[node name="Header" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout"]
+custom_minimum_size = Vector2(0, 88)
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 0
 
-[node name="BackFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header"]
-custom_minimum_size = Vector2(126, 56)
-process_mode = 3
-layout_mode = 2
-mouse_filter = 2
-script = ExtResource("2_button_frame")
-FrameStyle = 2
-AccentColor = Color(0.48, 0.98, 1, 1)
-
-[node name="BackButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header/BackFrame"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-flat = true
-
-[node name="TitleStack" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header"]
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="PauseMenuTitle" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header/TitleStack"]
+[node name="PauseMenuTitle" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.93, 1, 0.97, 0.98)
-theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.88)
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.96, 0.99, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.72)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 36
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="TitleUnderline" type="ColorRect" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header/TitleStack"]
-custom_minimum_size = Vector2(0, 2)
+[node name="TitleDividerCenter" type="CenterContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header"]
+custom_minimum_size = Vector2(0, 18)
 process_mode = 3
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.48, 0.98, 1, 0.52)
 
-[node name="HeaderRightPlaceholder" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header"]
-custom_minimum_size = Vector2(126, 56)
+[node name="PauseDivider" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/Header/TitleDividerCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(168, 4)
 process_mode = 3
 layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_divider")
+expand_mode = 1
+stretch_mode = 0
 
-[node name="PauseMenuMessage" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 24)
-process_mode = 3
-layout_mode = 2
-theme_override_colors/font_color = Color(0.68, 0.96, 0.93, 0.94)
-theme_override_font_sizes/font_size = 17
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 2
-
-[node name="PauseActionsPanel" type="PanelContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout"]
-unique_name_in_owner = true
+[node name="ActionsCenter" type="CenterContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout"]
 process_mode = 3
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxEmpty_panel")
+mouse_filter = 2
 
-[node name="ActionsMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel"]
+[node name="Actions" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter"]
+custom_minimum_size = Vector2(532, 0)
 process_mode = 3
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 8
+theme_override_constants/separation = 5
+alignment = 1
 
-[node name="ActionsScroll" type="ScrollContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin"]
+[node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(532, 66)
 process_mode = 3
 layout_mode = 2
-size_flags_vertical = 3
-follow_focus = true
-horizontal_scroll_mode = 0
-
-[node name="Actions" type="GridContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll"]
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/v_separation = 10
-columns = 1
-
-[node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 76)
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_horizontal = 4
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-FrameStyle = 2
+AccentColor = Color(0.62, 1, 0.94, 0.84)
+UsePlaqueGlowBackdrop = false
+ShowIdleTexture = false
+OceanPlaqueTexture = SubResource("AtlasTexture_button_idle")
+FocusTexture = SubResource("AtlasTexture_button_focus")
+PressedTexture = SubResource("AtlasTexture_button_pressed")
 
-[node name="RowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ContinueFrame"]
+[node name="ContinueLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/ContinueFrame"]
+unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
 anchors_preset = 15
@@ -183,34 +168,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 8
-
-[node name="RowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ContinueFrame/RowMargin"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="ContinueIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ContinueFrame/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(36, 36)
-process_mode = 3
-layout_mode = 2
-script = ExtResource("3_icon_badge")
-IconType = 3
-
-[node name="ContinueLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ContinueFrame/RowMargin/RowLayout"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
+mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
-theme_override_font_sizes/font_size = 19
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.9)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 23
 text = "GAME_CONTINUE"
+horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ContinueButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ContinueFrame"]
+[node name="ContinueButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/ContinueFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -226,18 +193,39 @@ theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 flat = true
 
-[node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 76)
+[node name="PauseRowDividerOneCenter" type="CenterContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
+custom_minimum_size = Vector2(0, 10)
 process_mode = 3
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="PauseRowDividerOne" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/PauseRowDividerOneCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(448, 3)
+process_mode = 3
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_divider")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(532, 66)
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 4
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-FrameStyle = 2
+AccentColor = Color(0.62, 1, 0.94, 0.84)
+UsePlaqueGlowBackdrop = false
+ShowIdleTexture = false
+OceanPlaqueTexture = SubResource("AtlasTexture_button_idle")
+FocusTexture = SubResource("AtlasTexture_button_focus")
+PressedTexture = SubResource("AtlasTexture_button_pressed")
 
-[node name="RowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ReturnToMainMenuFrame"]
+[node name="ReturnToMainMenuLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/ReturnToMainMenuFrame"]
+unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
 anchors_preset = 15
@@ -245,34 +233,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 8
-
-[node name="RowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ReturnToMainMenuFrame/RowMargin"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="ReturnIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ReturnToMainMenuFrame/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(36, 36)
-process_mode = 3
-layout_mode = 2
-script = ExtResource("3_icon_badge")
-IconType = 4
-
-[node name="ReturnToMainMenuLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ReturnToMainMenuFrame/RowMargin/RowLayout"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
+mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
-theme_override_font_sizes/font_size = 19
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.9)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 23
 text = "GAME_RETURN_MAIN_MENU"
+horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="ReturnToMainMenuButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/ReturnToMainMenuFrame"]
+[node name="ReturnToMainMenuButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/ReturnToMainMenuFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -288,18 +259,39 @@ theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 flat = true
 
-[node name="RestartFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 76)
+[node name="PauseRowDividerTwoCenter" type="CenterContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
+custom_minimum_size = Vector2(0, 10)
 process_mode = 3
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="PauseRowDividerTwo" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/PauseRowDividerTwoCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(448, 3)
+process_mode = 3
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_divider")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="RestartFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(532, 66)
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 4
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-FrameStyle = 2
+AccentColor = Color(0.62, 1, 0.94, 0.84)
+UsePlaqueGlowBackdrop = false
+ShowIdleTexture = false
+OceanPlaqueTexture = SubResource("AtlasTexture_button_idle")
+FocusTexture = SubResource("AtlasTexture_button_focus")
+PressedTexture = SubResource("AtlasTexture_button_pressed")
 
-[node name="RowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/RestartFrame"]
+[node name="RestartLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/RestartFrame"]
+unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
 anchors_preset = 15
@@ -307,34 +299,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 8
-
-[node name="RowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/RestartFrame/RowMargin"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="RestartIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/RestartFrame/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(36, 36)
-process_mode = 3
-layout_mode = 2
-script = ExtResource("3_icon_badge")
-IconType = 5
-
-[node name="RestartLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/RestartFrame/RowMargin/RowLayout"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
+mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
-theme_override_font_sizes/font_size = 19
+theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.9)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 23
 text = "GAME_RESTART_MATCH"
+horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 2
 
-[node name="RestartButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/RestartFrame"]
+[node name="RestartButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/RestartFrame"]
 unique_name_in_owner = true
 process_mode = 3
 layout_mode = 1
@@ -349,79 +324,3 @@ theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 flat = true
-
-[node name="QuitFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 76)
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-mouse_filter = 2
-script = ExtResource("2_button_frame")
-FrameStyle = 2
-AccentColor = Color(1, 0.88, 0.5, 1)
-FlipOrnament = true
-
-[node name="RowMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/QuitFrame"]
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 8
-
-[node name="RowLayout" type="HBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/QuitFrame/RowMargin"]
-process_mode = 3
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="QuitIcon" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/QuitFrame/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(36, 36)
-process_mode = 3
-layout_mode = 2
-script = ExtResource("3_icon_badge")
-IconType = 6
-
-[node name="QuitLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/QuitFrame/RowMargin/RowLayout"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.98, 0.94, 0.78, 0.98)
-theme_override_font_sizes/font_size = 19
-text = "GAME_QUIT"
-vertical_alignment = 1
-
-[node name="QuitButton" type="Button" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/PauseActionsPanel/ActionsMargin/ActionsScroll/Actions/QuitFrame"]
-unique_name_in_owner = true
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-focus_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
-flat = true
-
-[node name="PauseQuitConfirmRoot" parent="." unique_name_in_owner = true instance=ExtResource("4_exit_dialog")]
-visible = false
-modulate = Color(1, 1, 1, 0)
-process_mode = 3
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 0

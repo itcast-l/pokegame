@@ -19,7 +19,6 @@ internal static partial class Program
 		Run("adventure borrow suit set expires at real turn end", BorrowSuitSetExpiresAtRealTurnEnd);
 		Run("adventure borrow suit set refreshes without stacking", BorrowSuitSetRefreshesWithoutStacking);
 		Run("adventure rejudge keep preserves opportunity until reroll", RejudgeKeepPreservesOpportunityUntilReroll);
-		Run("PrimaryRootAndClimbCanopyAreMutuallyExclusiveCandidates", PrimaryRootAndClimbCanopyAreMutuallyExclusiveCandidates);
 		Run("adventure short return capacity uses unique cards", ShortReturnCapacityUsesUniqueCards);
 		Run("adventure short return counts capture extensions", ShortReturnCountsCaptureExtensions);
 		Run("adventure post capture effects consume the resolution context", PostCaptureEffectsConsumeResolutionContext);
@@ -203,63 +202,6 @@ internal static partial class Program
 
 		Equal(1, sameCapture.FinalDamage);
 		Equal(3, nextCapture.FinalDamage);
-	}
-
-	private static void PrimaryRootAndClimbCanopyAreMutuallyExclusiveCandidates()
-	{
-		var manifest = new AdventureUpgradeManifest(new[]
-		{
-			CreateManifestEntry("clubs_primary_root_return") with
-			{
-				ConflictGroup = "played_card_return",
-				Priority = 30,
-			},
-			CreateManifestEntry("clubs_climb_canopy") with
-			{
-				ConflictGroup = "played_card_return",
-				Priority = 20,
-			},
-			CreateManifestEntry("clubs_hollow_burst"),
-		});
-		var definitions = new[]
-		{
-			Upgrade("clubs_primary_root_return", "rare"),
-			Upgrade("clubs_climb_canopy", "rare"),
-			Upgrade("clubs_hollow_burst", "rare"),
-		};
-
-		IReadOnlyList<AdventureUpgradeDefinitionModel> afterPrimaryRoot =
-			AdventureUpgradeChoiceRules.BuildOffer(
-				definitions,
-				new[] { "clubs_primary_root_return" },
-				runStageIndex: 5,
-				nextIntExclusive: _ => 0,
-				manifest);
-		IReadOnlyList<AdventureUpgradeDefinitionModel> afterClimbCanopy =
-			AdventureUpgradeChoiceRules.BuildOffer(
-				definitions,
-				new[] { "clubs_climb_canopy" },
-				runStageIndex: 5,
-				nextIntExclusive: _ => 0,
-				manifest);
-
-		False(ContainsUpgradeId(afterPrimaryRoot, "clubs_climb_canopy"));
-		False(ContainsUpgradeId(afterClimbCanopy, "clubs_primary_root_return"));
-		True(ContainsUpgradeId(afterPrimaryRoot, "clubs_hollow_burst"));
-		True(ContainsUpgradeId(afterClimbCanopy, "clubs_hollow_burst"));
-
-		AdventureClubCaptureEffectResult legacyCombination =
-			AdventureUpgradeEffectService.ResolveClubCaptureEffects(
-				new AdventureUpgradeEffectState(),
-				new[] { "clubs_primary_root_return", "clubs_climb_canopy" },
-				completeBaseCaptureCardCount: 3,
-				uniqueShortReturnCandidateCount: 0,
-				uniqueCombinedReturnCandidateCount: 1,
-				availableHandSlots: 1,
-				playUsedAttachedEffect: true,
-				playedCardWasBaseCard: true);
-		True(legacyCombination.ReturnPlayedCardToHand);
-		Equal("clubs_primary_root_return", legacyCombination.PlayedCardReturnSourceUpgradeId);
 	}
 
 	private static void SaturatingArithmetic()
@@ -519,7 +461,6 @@ internal static partial class Program
 				uniqueShortReturnCandidateCount: 2,
 				uniqueCombinedReturnCandidateCount: 2,
 				availableHandSlots: 2,
-				playUsedAttachedEffect: false,
 				playedCardWasBaseCard: true);
 		True(deduplicated.ReturnPlayedCardToHand);
 		True(deduplicated.ReturnTwoCapturedCardsToHand);
@@ -533,7 +474,6 @@ internal static partial class Program
 				uniqueShortReturnCandidateCount: 2,
 				uniqueCombinedReturnCandidateCount: 3,
 				availableHandSlots: 2,
-				playUsedAttachedEffect: false,
 				playedCardWasBaseCard: true);
 		True(insufficient.ReturnPlayedCardToHand);
 		False(insufficient.ReturnTwoCapturedCardsToHand);
@@ -550,7 +490,6 @@ internal static partial class Program
 				uniqueShortReturnCandidateCount: 2,
 				uniqueCombinedReturnCandidateCount: 2,
 				availableHandSlots: 2,
-				playUsedAttachedEffect: false,
 				playedCardWasBaseCard: true);
 		False(result.ReturnTwoCapturedCardsToHand);
 	}

@@ -9,7 +9,7 @@ custom_minimum_size = Vector2(316, 64)
 layout_mode = 2
 mouse_filter = 1
 script = ExtResource("1_frame")
-FrameStyle = 2
+FrameStyle = 11
 AccentColor = Color(0.58, 0.98, 1, 1)
 
 [node name="AdventureEntryContent" type="MarginContainer" parent="."]
@@ -17,7 +17,7 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 32.0
+offset_left = 16.0
 offset_top = 8.0
 offset_right = -16.0
 offset_bottom = -8.0

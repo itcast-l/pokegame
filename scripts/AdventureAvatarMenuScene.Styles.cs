@@ -79,8 +79,8 @@ public partial class AdventureAvatarMenuScene
 	{
 		return new StyleBoxFlat
 		{
-			BgColor = new Color(0.018f, 0.14f, 0.16f, 0.58f),
-			BorderColor = new Color(0.98f, 0.92f, 0.46f, 0.28f),
+			BgColor = new Color(0.16f, 0.19f, 0.20f, 0.42f),
+			BorderColor = new Color(0.72f, 0.80f, 0.82f, 0.42f),
 			BorderWidthLeft = 1,
 			BorderWidthTop = 1,
 			BorderWidthRight = 1,

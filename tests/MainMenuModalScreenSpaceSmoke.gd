@@ -53,8 +53,12 @@ func _run() -> void:
 
 	var controls_done_button := controls_root.find_child("DoneButton", true, false) as Button
 	var settings_done_button := settings_root.find_child("DoneButton", true, false) as Button
+	var settings_back_button := settings_root.find_child("BackButton", true, false) as Button
 	if controls_done_button == null or settings_done_button == null:
 		_fail("Main-menu modal close controls are missing")
+		return
+	if settings_back_button != null:
+		_fail("Settings dialog still exposes the removed title-bar back control")
 		return
 	controls_done_button.emit_signal("pressed")
 	settings_done_button.emit_signal("pressed")
@@ -131,10 +135,14 @@ func _run() -> void:
 	if not await _assert_screen_space_during_push(exit_root, push_camera, "exit"):
 		return
 	var exit_back := exit_root.find_child("BackButton", true, false) as Button
-	if exit_back == null:
-		_fail("Exit title-bar back control is missing")
+	var exit_cancel := exit_root.find_child("CancelButton", true, false) as Button
+	if exit_back != null:
+		_fail("Exit dialog still exposes the removed title-bar back control")
 		return
-	exit_back.emit_signal("pressed")
+	if exit_cancel == null:
+		_fail("Exit dialog continue control is missing")
+		return
+	exit_cancel.emit_signal("pressed")
 	if not await _wait_for_hidden(exit_root, 120):
 		_fail("Exit dialog did not close")
 		return
