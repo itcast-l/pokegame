@@ -69,12 +69,18 @@ func _assert_main_menu_responds_to_escape() -> void:
 		return
 	settings_button.emit_signal("pressed")
 	await process_frame
-	var controls_button := settings_root.find_child("ControlsButton", true, false) as Button
-	if controls_button == null:
-		_fail("Settings controls button is missing")
+	var controls_category_button := settings_root.find_child("ControlsCategoryButton", true, false) as Button
+	if controls_category_button == null:
+		_fail("Settings controls entry is missing")
 		return
-	controls_button.emit_signal("pressed")
+	if settings_root.find_child("ControlsButton", true, false) != null:
+		_fail("Settings still requires the legacy controls edit step")
+		return
+	controls_category_button.emit_signal("pressed")
 	await process_frame
+	if not controls_root.visible:
+		_fail("Settings controls entry did not open key mapping directly")
+		return
 	var binding_button := controls_root.find_child("KeyboardButton", true, false) as Button
 	if binding_button == null:
 		_fail("Controls binding button is missing")
@@ -99,6 +105,9 @@ func _assert_main_menu_responds_to_escape() -> void:
 		return
 	if not settings_root.visible:
 		_fail("Settings closed while returning from controls")
+		return
+	if main_menu.get_viewport().gui_get_focus_owner() != controls_category_button:
+		_fail("Controls did not return focus to the direct settings entry")
 		return
 	_press_escape()
 	if not await _wait_for_hidden(settings_root, 120):
@@ -212,8 +221,10 @@ func _assert_network_game_board_pause_semantics() -> void:
 		_fail("Closing the network pause menu changed the scene tree to paused")
 		return
 
+	if current_scene == board:
+		current_scene = null
 	board.queue_free()
-	await process_frame
+	await _wait_frames(60)
 
 
 func _instantiate_game_board(network_session_id: String) -> Node:
@@ -279,6 +290,11 @@ func _wait_for_hidden(control: Control, max_frames: int) -> bool:
 			return true
 		await process_frame
 	return not control.visible
+
+
+func _wait_frames(count: int) -> void:
+	for _frame in count:
+		await process_frame
 
 
 func _wait_for_menu_buttons_enabled(menu: Node, max_frames: int) -> bool:

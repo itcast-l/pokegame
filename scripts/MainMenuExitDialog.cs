@@ -13,6 +13,7 @@ public partial class MainMenuExitDialog : Control
 	private Button _cancelButton = default!;
 	private Button _confirmButton = default!;
 	private ColorRect _scrim = default!;
+	private PanelContainer _promptPanel = default!;
 
 	public PanelContainer DialogPanel { get; private set; } = default!;
 	public Button CancelButton => _cancelButton;
@@ -26,46 +27,47 @@ public partial class MainMenuExitDialog : Control
 		_cancelButton = GetNode<Button>("%CancelButton");
 		_confirmButton = GetNode<Button>("%ConfirmButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
+		_promptPanel = GetNode<PanelContainer>("%PromptPanel");
 
 		_scrim.GuiInput += OnScrimGuiInput;
 		_cancelButton.FocusMode = Control.FocusModeEnum.All;
 		_confirmButton.FocusMode = Control.FocusModeEnum.All;
-		MainMenuInteractiveStyle.ApplyActionButton(_cancelButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_confirmButton, 20, MainMenuInteractiveStyle.DangerPalette);
-		ConfigureUnifiedVisualStyle();
+		MainMenuInteractiveStyle.ApplyActionButton(_cancelButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_confirmButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
 		_cancelButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_confirmButton.Pressed += () => EmitSignal(SignalName.ConfirmRequested);
-		SecondaryMenuGlassStyle.Attach(
+		SecondaryMenuGlassStyle.AttachPauseDerived(
 			this,
 			DialogPanel,
 			_scrim,
-			new Vector2(520.0f, 320.0f),
-			SecondaryMenuGlassStyle.UnifiedVisual,
-			GetNode<PanelContainer>("%PromptPanel"));
+			SecondaryMenuGlassStyle.PauseDerivedExitDesignSize,
+			_promptPanel);
+		ConfigurePauseDerivedVisualStyle();
 	}
 
-	private void ConfigureUnifiedVisualStyle()
+	private void ConfigurePauseDerivedVisualStyle()
 	{
-		ConfigureFrame("CancelFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
-		ConfigureFrame("ConfirmFrame", MainMenuInteractiveStyle.DangerPalette.ActiveBorder);
-		_titleLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.97f, 0.97f));
-		_hintLabel.AddThemeColorOverride("font_color", new Color(0.89f, 0.92f, 0.92f));
-		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
+		ConfigureFrame("CancelFrame");
+		ConfigureFrame("ConfirmFrame");
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		_hintLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		if (FindChild("TitleUnderline", true, false) is Control underline)
 		{
-			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
+			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(underline);
 		}
 	}
 
-	private void ConfigureFrame(string frameName, Color accent)
+	private void ConfigureFrame(string frameName)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
 			return;
 		}
 
-		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
-		frame.AccentColor = accent;
-		frame.QueueRedraw();
+		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+			frame,
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.PauseDerivedCyan);
 	}
 
 	public override void _Input(InputEvent inputEvent)
@@ -113,8 +115,8 @@ public partial class MainMenuExitDialog : Control
 
 	private void SetActionFocusHighlightEnabled(bool enabled)
 	{
-		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(_cancelButton, enabled, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(_confirmButton, enabled, MainMenuInteractiveStyle.DangerPalette);
+		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(_cancelButton, enabled, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.SetActionButtonFocusHighlight(_confirmButton, enabled, MainMenuInteractiveStyle.PauseDerivedPalette);
 	}
 
 	private static bool IsPointerInput(InputEvent inputEvent)

@@ -63,9 +63,18 @@ public static class SecondaryMenuGlassStyle
 	}
 
 	public static readonly Vector2 DefaultDesignSize = new(1160.0f, 620.0f);
+	public static readonly Vector2 PauseDerivedCoreDesignSize = new(840.0f, 592.0f);
+	public static readonly Vector2 PauseDerivedExitDesignSize = new(620.0f, 340.0f);
 	public const float SafePadding = 24.0f;
 	public const string GlassShaderPath = "res://shaders/adventure_menu_glass.gdshader";
 	public const string VisualProfileMetadata = "secondary_menu_visual_profile";
+	public const string PauseDerivedPanelArtworkName = "PauseDerivedPanelArtwork";
+	public const string PauseDerivedCenterOrnamentsRemovedMetadata = "pause_derived_center_ornaments_removed";
+	public const string PauseDerivedPanelTexturePath = "res://art/ui/pause_menu/pause_panel.png";
+	public const string PauseDerivedButtonIdleTexturePath = "res://art/ui/pause_menu/pause_button_idle.png";
+	public const string PauseDerivedButtonFocusTexturePath = "res://art/ui/pause_menu/pause_button_focus.png";
+	public const string PauseDerivedButtonPressedTexturePath = "res://art/ui/pause_menu/pause_button_pressed.png";
+	public const string PauseDerivedDividerTexturePath = "res://art/ui/pause_menu/pause_divider.png";
 
 	private static readonly Color MainTint = new(0.004f, 0.12f, 0.15f, 0.68f);
 	private static readonly Color ContentTint = new(0.004f, 0.105f, 0.125f, 0.30f);
@@ -106,8 +115,33 @@ public static class SecondaryMenuGlassStyle
 		new Color(0.01f, 0.09f, 0.12f, 0.44f),
 		new Color(0.48f, 0.90f, 0.86f, 0.70f),
 		new Color(0.84f, 1.0f, 0.96f, 0.94f));
+	public static readonly VisualConfig PauseDerivedVisual = new(
+		"pause-derived-core-menu",
+		new Color(0.027f, 0.122f, 0.176f, 1.0f),
+		new Color(0.027f, 0.122f, 0.176f, 0.34f),
+		new Color(0.133f, 0.725f, 0.753f, 0.22f),
+		new Color(0.133f, 0.725f, 0.753f, 0.82f),
+		new Color(0.831f, 0.702f, 0.310f, 0.42f),
+		new Color(0.0f, 0.024f, 0.040f, 1.0f),
+		0.50f,
+		2.8f,
+		0.0f,
+		1.0f,
+		0.0f,
+		new Color(0.0f, 0.012f, 0.024f, 0.72f),
+		24,
+		new Color(0.027f, 0.122f, 0.176f, 0.78f),
+		new Color(0.133f, 0.725f, 0.753f, 0.76f),
+		new Color(0.831f, 0.702f, 0.310f, 0.96f));
 	private static Shader? _glassShader;
 	private static Shader? _scrimShader;
+	private static Texture2D? _pauseDerivedPanelTexture;
+	private static Texture2D? _pauseDerivedPanelLeftTexture;
+	private static Texture2D? _pauseDerivedPanelRightTexture;
+	private static Texture2D? _pauseDerivedButtonIdleTexture;
+	private static Texture2D? _pauseDerivedButtonFocusTexture;
+	private static Texture2D? _pauseDerivedButtonPressedTexture;
+	private static Texture2D? _pauseDerivedDividerTexture;
 
 	public static void Attach(
 		Control root,
@@ -170,6 +204,335 @@ public static class SecondaryMenuGlassStyle
 		root.SetMeta(VisualProfileMetadata, visualConfig.Id);
 		ApplyReadabilityVeil(scrim, visualConfig);
 		InstallResponsiveSizing(root, mainPanel, designSize);
+	}
+
+	public static void AttachPauseDerived(
+		Control root,
+		Control mainPanel,
+		ColorRect? scrim,
+		Vector2 designSize,
+		params PanelContainer[] contentSections)
+	{
+		AttachPauseDerived(
+			root,
+			mainPanel,
+			scrim,
+			designSize,
+			removeCenterOrnaments: false,
+			contentSections);
+	}
+
+	public static void AttachPauseDerived(
+		Control root,
+		Control mainPanel,
+		ColorRect? scrim,
+		Vector2 designSize,
+		bool removeCenterOrnaments,
+		params PanelContainer[] contentSections)
+	{
+		root.SetMeta(VisualProfileMetadata, PauseDerivedVisual.Id);
+		mainPanel.SetMeta("pause_derived_design_size", designSize);
+		mainPanel.SetMeta(PauseDerivedCenterOrnamentsRemovedMetadata, removeCenterOrnaments);
+		ApplyReadabilityVeil(scrim, PauseDerivedVisual);
+		InstallPauseDerivedPanelArtwork(mainPanel, removeCenterOrnaments);
+		if (mainPanel is PanelContainer panelContainer)
+		{
+			panelContainer.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+		}
+
+		foreach (PanelContainer contentSection in contentSections)
+		{
+			contentSection.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+		}
+
+		InstallPauseDerivedResponsiveSizing(root, mainPanel, designSize);
+	}
+
+	public static void ConfigurePauseDerivedFrame(
+		OceanMenuButtonFrame frame,
+		bool selected = false,
+		bool showIdleTexture = false,
+		bool installDivider = true)
+	{
+		EnsurePauseDerivedTextures();
+		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.OceanPlaque;
+		frame.AccentColor = new Color(0.831f, 0.702f, 0.310f, 1.0f);
+		frame.Selected = selected;
+		frame.UsePlaqueGlowBackdrop = false;
+		frame.ShowIdleTexture = showIdleTexture;
+		frame.OceanPlaqueTexture = _pauseDerivedButtonIdleTexture;
+		frame.FocusTexture = _pauseDerivedButtonFocusTexture;
+		frame.PressedTexture = _pauseDerivedButtonPressedTexture;
+		frame.UseNinePatchTexture = true;
+		frame.TexturePatchMarginHorizontal = 24.0f;
+		frame.TexturePatchMarginVertical = 18.0f;
+		frame.CustomMinimumSize = new Vector2(
+			frame.CustomMinimumSize.X,
+			Mathf.Max(54.0f, frame.CustomMinimumSize.Y));
+		for (int childIndex = 0; childIndex < frame.GetChildCount(); childIndex++)
+		{
+			if (frame.GetChild(childIndex) is Button button && button is not OptionButton)
+			{
+				button.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+			}
+		}
+		if (installDivider)
+		{
+			InstallPauseDerivedRowDivider(frame);
+		}
+		frame.QueueRedraw();
+	}
+
+	public static void ConfigurePauseDerivedMinimalFrame(
+		OceanMenuButtonFrame frame,
+		OceanMenuButtonFrame.ButtonFrameStyle frameStyle,
+		Color? accent = null)
+	{
+		frame.FrameStyle = frameStyle;
+		frame.AccentColor = accent ?? MainMenuInteractiveStyle.PauseDerivedPalette.ActiveBorder;
+		frame.Selected = false;
+		frame.UsePlaqueGlowBackdrop = false;
+		frame.UseToolRowIdleBackdrop = false;
+		frame.ShowIdleTexture = false;
+		frame.SuppressVisuals = frameStyle == OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
+		frame.UseNinePatchTexture = false;
+		frame.OceanPlaqueTexture = null;
+		frame.FocusTexture = null;
+		frame.PressedTexture = null;
+		frame.CustomMinimumSize = new Vector2(
+			frame.CustomMinimumSize.X,
+			Mathf.Max(54.0f, frame.CustomMinimumSize.Y));
+		frame.QueueRedraw();
+	}
+
+	public static TextureRect InstallPauseDerivedDivider(Control host, string name = "PauseDerivedDivider")
+	{
+		EnsurePauseDerivedTextures();
+		if (host is ColorRect colorRect)
+		{
+			colorRect.Color = Colors.Transparent;
+		}
+
+		TextureRect divider = host.GetNodeOrNull<TextureRect>(name) ?? new TextureRect
+		{
+			Name = name,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.Scale,
+		};
+		if (divider.GetParent() == null)
+		{
+			host.AddChild(divider);
+		}
+		divider.Texture = _pauseDerivedDividerTexture;
+		divider.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		return divider;
+	}
+
+	public static TextureRect InstallPauseDerivedRowDivider(
+		Control host,
+		string name = "PauseDerivedRowDivider",
+		float horizontalInset = 18.0f)
+	{
+		EnsurePauseDerivedTextures();
+		Control dividerHost = host;
+		if (host is Container || host.IsClass("Container"))
+		{
+			string layerName = $"{name}Layer";
+			dividerHost = host.GetNodeOrNull<Control>(layerName) ?? new Control
+			{
+				Name = layerName,
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+			};
+			if (dividerHost.GetParent() == null)
+			{
+				host.AddChild(dividerHost);
+			}
+		}
+
+		TextureRect divider = dividerHost.GetNodeOrNull<TextureRect>(name) ?? new TextureRect
+		{
+			Name = name,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.Scale,
+		};
+		if (divider.GetParent() == null)
+		{
+			dividerHost.AddChild(divider);
+		}
+		divider.Texture = _pauseDerivedDividerTexture;
+		divider.AnchorLeft = 0.0f;
+		divider.AnchorTop = 1.0f;
+		divider.AnchorRight = 1.0f;
+		divider.AnchorBottom = 1.0f;
+		divider.OffsetLeft = horizontalInset;
+		divider.OffsetTop = -3.0f;
+		divider.OffsetRight = -horizontalInset;
+		divider.OffsetBottom = 0.0f;
+		return divider;
+	}
+
+	private static void InstallPauseDerivedPanelArtwork(Control mainPanel, bool removeCenterOrnaments)
+	{
+		EnsurePauseDerivedTextures();
+		TextureRect artwork = mainPanel.GetNodeOrNull<TextureRect>(PauseDerivedPanelArtworkName) ?? new TextureRect
+		{
+			Name = PauseDerivedPanelArtworkName,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.Scale,
+		};
+		if (artwork.GetParent() == null)
+		{
+			mainPanel.AddChild(artwork);
+		}
+		artwork.Texture = _pauseDerivedPanelTexture;
+		artwork.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		artwork.SelfModulate = removeCenterOrnaments
+			? new Color(1.0f, 1.0f, 1.0f, 0.0f)
+			: Colors.White;
+		if (removeCenterOrnaments)
+		{
+			InstallPauseDerivedPanelSlice(
+				artwork,
+				"PauseDerivedPanelLeft",
+				_pauseDerivedPanelLeftTexture,
+				0.0f,
+				0.5f);
+			InstallPauseDerivedPanelSlice(
+				artwork,
+				"PauseDerivedPanelRight",
+				_pauseDerivedPanelRightTexture,
+				0.5f,
+				1.0f);
+		}
+		mainPanel.MoveChild(artwork, 0);
+	}
+
+	private static void InstallPauseDerivedPanelSlice(
+		TextureRect artwork,
+		string name,
+		Texture2D? texture,
+		float anchorLeft,
+		float anchorRight)
+	{
+		TextureRect slice = artwork.GetNodeOrNull<TextureRect>(name) ?? new TextureRect
+		{
+			Name = name,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.Scale,
+		};
+		if (slice.GetParent() == null)
+		{
+			artwork.AddChild(slice);
+		}
+		slice.Texture = texture;
+		slice.AnchorLeft = anchorLeft;
+		slice.AnchorTop = 0.0f;
+		slice.AnchorRight = anchorRight;
+		slice.AnchorBottom = 1.0f;
+		slice.OffsetLeft = 0.0f;
+		slice.OffsetTop = 0.0f;
+		slice.OffsetRight = 0.0f;
+		slice.OffsetBottom = 0.0f;
+	}
+
+	private static void InstallPauseDerivedResponsiveSizing(
+		Control root,
+		Control mainPanel,
+		Vector2 designSize)
+	{
+		Viewport viewport = root.GetViewport();
+		Control transformRoot = mainPanel.GetParentOrNull<Control>() ?? mainPanel;
+		float desiredLocalScale = 1.0f;
+
+		void ApplyPanelTransform()
+		{
+			if (!GodotObject.IsInstanceValid(mainPanel)
+				|| !GodotObject.IsInstanceValid(transformRoot))
+			{
+				return;
+			}
+
+			mainPanel.Scale = Vector2.One;
+			transformRoot.PivotOffset = transformRoot.Size * 0.5f;
+			transformRoot.Scale = Vector2.One * desiredLocalScale;
+		}
+
+		void ResizeWindow()
+		{
+			if (!GodotObject.IsInstanceValid(root)
+				|| !GodotObject.IsInstanceValid(mainPanel)
+				|| !GodotObject.IsInstanceValid(transformRoot)
+				|| !GodotObject.IsInstanceValid(viewport))
+			{
+				return;
+			}
+
+			Vector2 viewportSize = viewport.GetVisibleRect().Size;
+			if (viewportSize.X <= 0.0f || viewportSize.Y <= 0.0f)
+			{
+				viewportSize = root.Size;
+			}
+
+			Vector2 available = new(
+				Mathf.Max(1.0f, viewportSize.X - SafePadding * 2.0f),
+				Mathf.Max(1.0f, viewportSize.Y - SafePadding * 2.0f));
+			float screenScale = Mathf.Min(
+				1.0f,
+				Mathf.Min(available.X / designSize.X, available.Y / designSize.Y));
+			Vector2 canvasScale = root.GetGlobalTransformWithCanvas().Scale.Abs();
+			float canvasUniformScale = Mathf.Max(0.001f, Mathf.Min(canvasScale.X, canvasScale.Y));
+			desiredLocalScale = screenScale / canvasUniformScale;
+			mainPanel.CustomMinimumSize = designSize;
+			mainPanel.SetMeta("pause_derived_scale", screenScale);
+			ApplyPanelTransform();
+			Callable.From(ApplyPanelTransform).CallDeferred();
+		}
+
+		root.Resized += ResizeWindow;
+		viewport.SizeChanged += ResizeWindow;
+		root.TreeExiting += () => viewport.SizeChanged -= ResizeWindow;
+		transformRoot.Resized += () => Callable.From(ApplyPanelTransform).CallDeferred();
+		ResizeWindow();
+		Callable.From(ResizeWindow).CallDeferred();
+	}
+
+	private static void EnsurePauseDerivedTextures()
+	{
+		_pauseDerivedPanelTexture ??= CreateAtlasTexture(
+			PauseDerivedPanelTexturePath,
+			new Rect2(41.0f, 180.0f, 942.0f, 664.0f));
+		_pauseDerivedPanelLeftTexture ??= CreateAtlasTexture(
+			PauseDerivedPanelTexturePath,
+			new Rect2(41.0f, 180.0f, 445.0f, 664.0f));
+		_pauseDerivedPanelRightTexture ??= CreateAtlasTexture(
+			PauseDerivedPanelTexturePath,
+			new Rect2(538.0f, 180.0f, 445.0f, 664.0f));
+		_pauseDerivedButtonIdleTexture ??= CreateAtlasTexture(
+			PauseDerivedButtonIdleTexturePath,
+			new Rect2(41.0f, 438.0f, 942.0f, 148.0f));
+		_pauseDerivedButtonFocusTexture ??= CreateAtlasTexture(
+			PauseDerivedButtonFocusTexturePath,
+			new Rect2(41.0f, 428.0f, 942.0f, 167.0f));
+		_pauseDerivedButtonPressedTexture ??= CreateAtlasTexture(
+			PauseDerivedButtonPressedTexturePath,
+			new Rect2(41.0f, 426.0f, 942.0f, 172.0f));
+		_pauseDerivedDividerTexture ??= CreateAtlasTexture(
+			PauseDerivedDividerTexturePath,
+			new Rect2(20.0f, 249.0f, 471.0f, 14.0f));
+	}
+
+	private static AtlasTexture CreateAtlasTexture(string path, Rect2 region)
+	{
+		return new AtlasTexture
+		{
+			Atlas = GD.Load<Texture2D>(path),
+			Region = region,
+			FilterClip = true,
+		};
 	}
 
 	public static void AttachNeutralSmoke(

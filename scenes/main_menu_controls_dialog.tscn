@@ -39,10 +39,10 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.71, 0.91, 0.84, 0.34)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 content_margin_left = 18
 content_margin_right = 18
 content_margin_top = 6
@@ -55,10 +55,10 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.88, 1, 0.94, 0.54)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 content_margin_left = 18
 content_margin_right = 18
 content_margin_top = 6
@@ -191,11 +191,8 @@ layout_mode = 2
 [node name="ControlsMessage" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.9)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.9)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.76)
+theme_override_font_sizes/font_size = 16
 text = "SETTINGS_CONTROLS_MESSAGE"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -219,19 +216,20 @@ theme_override_constants/separation = 8
 
 [node name="HeaderRow" type="HBoxContainer" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout"]
 layout_mode = 2
-theme_override_constants/separation = 24
-alignment = 1
+theme_override_constants/separation = 8
+alignment = 0
 
 [node name="HeaderSpacer" type="Control" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/HeaderRow"]
-visible = false
+custom_minimum_size = Vector2(196, 28)
 layout_mode = 2
 
 [node name="KeyboardHeader" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/HeaderRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 28)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.76)
-theme_override_font_sizes/font_size = 16
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.92)
+theme_override_font_sizes/font_size = 15
 text = "SETTINGS_CONTROLS_KEYBOARD_HEADER"
 horizontal_alignment = 1
 
@@ -239,10 +237,15 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 28)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.76)
-theme_override_font_sizes/font_size = 16
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.92)
+theme_override_font_sizes/font_size = 15
 text = "SETTINGS_CONTROLS_GAMEPAD_HEADER"
 horizontal_alignment = 1
+
+[node name="HeaderRightSpacer" type="Control" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/HeaderRow"]
+custom_minimum_size = Vector2(8, 28)
+layout_mode = 2
 
 [node name="RowsScroll" type="ScrollContainer" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout"]
 unique_name_in_owner = true
@@ -279,7 +282,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveUpRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -288,8 +291,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveUpRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -299,8 +305,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "Up"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveUpRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -330,7 +339,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveDownRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -339,8 +348,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveDownRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -350,8 +362,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "Down"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveDownRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -381,7 +396,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveLeftRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -390,8 +405,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveLeftRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -401,8 +419,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "Left"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveLeftRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -432,7 +453,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveRightRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -441,8 +462,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveRightRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -452,8 +476,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "Right"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/MoveRightRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -483,7 +510,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/ConfirmRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -492,8 +519,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/ConfirmRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -503,8 +533,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "Enter"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/ConfirmRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -534,7 +567,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/CancelRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -543,8 +576,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/CancelRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -554,8 +590,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "Escape"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/CancelRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -585,7 +624,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ActionLabel" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/PauseRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(108, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 1, 0.96, 0.96)
 theme_override_font_sizes/font_size = 16
@@ -594,8 +633,11 @@ vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="KeyboardButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/PauseRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -605,8 +647,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_option_hover")
 text = "P"
 
 [node name="GamepadButton" type="Button" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout/ControlsContentPanel/ContentMargin/ContentLayout/RowsScroll/Rows/PauseRow/RowMargin/RowLayout"]
-custom_minimum_size = Vector2(112, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.92, 1, 0.97, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_option")
@@ -618,8 +663,8 @@ text = "Start"
 [node name="CaptureHint" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.84, 0.58, 0.76)
-theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.78)
+theme_override_font_sizes/font_size = 15
 text = "SETTINGS_CONTROLS_HINT_IDLE"
 horizontal_alignment = 1
 autowrap_mode = 2

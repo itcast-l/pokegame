@@ -5,9 +5,10 @@ public partial class GameAudioManager
 {
 	public override void _ExitTree()
 	{
-		if (GetTree() != null)
+		if (_uiBindingActive && GetTree() != null)
 		{
-			GetTree().NodeAdded -= BindUiAudioRecursive;
+			GetTree().NodeAdded -= BindUiBehaviorRecursive;
+			_uiBindingActive = false;
 		}
 
 		DisposeAllAudioImmediately();

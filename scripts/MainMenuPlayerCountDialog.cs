@@ -64,7 +64,7 @@ public partial class MainMenuPlayerCountDialog : Control
 		_dialogLayout = _dialogMargin.GetNode<VBoxContainer>("DialogLayout");
 		_header = _dialogLayout.GetNode<HBoxContainer>("Header");
 		_configurationScroll = GetNode<ScrollContainer>("%ConfigurationScroll");
-		_configurationRows = _configurationScroll.GetNode<GridContainer>("ConfigurationRows");
+		_configurationRows = GetNode<GridContainer>("%ConfigurationRows");
 		_startGameWrap = _dialogLayout.GetNode<HBoxContainer>("StartGameWrap");
 		_startGameFrame = _startGameWrap.GetNode<Control>("StartGameFrame");
 		_configurationRowPanels = new Control[]
@@ -79,79 +79,104 @@ public partial class MainMenuPlayerCountDialog : Control
 		_backButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_startButton.Pressed += EmitStartGameRequested;
 		EnableKeyboardFocus(_backButton, PlayerCountOption, DifficultyOption, ItemModeOption, WinningScoreOption, _startButton);
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		ApplyBackActionText(_backButton);
-		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(PlayerCountOption);
-		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(DifficultyOption);
-		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(ItemModeOption);
-		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(WinningScoreOption);
-		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 24, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
-		ApplyPrimaryActionText(_startButton);
-		ConfigureUnifiedVisualStyle();
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(PlayerCountOption);
+		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(DifficultyOption);
+		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(ItemModeOption);
+		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(WinningScoreOption);
+		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 24, MainMenuInteractiveStyle.PauseDerivedPalette);
+		ConfigurePauseDerivedVisualStyle();
 		ConfigureConfigurationFocusScrolling(
 			PlayerCountOption,
 			DifficultyOption,
 			ItemModeOption,
 			WinningScoreOption);
-		SecondaryMenuGlassStyle.Attach(
+		SecondaryMenuGlassStyle.AttachPauseDerived(
 			this,
 			DialogPanel,
 			_scrim,
-			new Vector2(860.0f, 560.0f),
-			SecondaryMenuGlassStyle.UnifiedVisual);
+			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
+			removeCenterOrnaments: true);
 		SecondaryMenuGlassStyle.StyleScrollBar(
 			_configurationScroll.GetVScrollBar(),
-			SecondaryMenuGlassStyle.UnifiedVisual);
+			SecondaryMenuGlassStyle.PauseDerivedVisual);
 		Resized += ApplyResponsiveDensity;
 		ApplyResponsiveDensity();
 	}
 
-	private void ConfigureUnifiedVisualStyle()
+	private void ConfigurePauseDerivedVisualStyle()
 	{
-		Color secondaryAccent = MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder;
 		foreach (Control row in _configurationRowPanels)
 		{
 			if (row is OceanMenuButtonFrame frame)
 			{
-				frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
-				frame.AccentColor = secondaryAccent;
-				frame.QueueRedraw();
+				SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+					frame,
+					OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow);
 			}
 		}
 
-		ConfigureFrame("BackFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
-		ConfigureFrame("StartGameFrame", MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
-		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
+		ConfigureFrame("BackFrame");
+		ConfigurePrimaryActionFrame();
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+		foreach (Label label in new[] { _playersLabel, _difficultyLabel, _itemModeLabel, _winningScoreLabel })
 		{
-			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
+			Color secondary = MainMenuInteractiveStyle.PauseDerivedSecondaryText;
+			label.AddThemeColorOverride("font_color", new Color(secondary.R, secondary.G, secondary.B, 0.78f));
+		}
+		foreach (Node chevron in FindChildren("Chevron", "Label", true, false))
+		{
+			if (chevron is Label label)
+			{
+				label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+			}
+		}
+		if (FindChild("TitleUnderline", true, false) is Control underline)
+		{
+			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(underline);
 		}
 	}
 
-	private void ConfigureFrame(string frameName, Color accent)
+	private void ConfigureFrame(string frameName)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
 			return;
 		}
 
-		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
-		frame.AccentColor = accent;
-		frame.QueueRedraw();
+		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+			frame,
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.PauseDerivedCyan);
+	}
+
+	private void ConfigurePrimaryActionFrame()
+	{
+		if (_startGameFrame is not OceanMenuButtonFrame frame)
+		{
+			return;
+		}
+
+		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+			frame,
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.PauseDerivedCyan);
 	}
 
 	private void ApplyResponsiveDensity()
 	{
 		float viewportHeight = Size.Y > 0.0f ? Size.Y : GetViewportRect().Size.Y;
 		bool compact = viewportHeight <= 600.0f;
-		float margin = compact ? 24.0f : 28.0f;
-		float rowHeight = compact ? 60.0f : 62.0f;
-		float optionHeight = rowHeight - 16.0f;
+		float margin = 22.0f;
+		float rowHeight = 89.0f;
+		float optionHeight = 54.0f;
 
 		_dialogMargin.OffsetTop = margin;
 		_dialogMargin.OffsetBottom = -margin;
 		_dialogLayout.AddThemeConstantOverride("separation", compact ? 10 : 12);
 		_header.CustomMinimumSize = new Vector2(0.0f, compact ? 72.0f : 76.0f);
-		_configurationRows.AddThemeConstantOverride("v_separation", compact ? 10 : 12);
+		_configurationRows.AddThemeConstantOverride("v_separation", 6);
 
 		for (int index = 0; index < _configurationRowPanels.Length; index++)
 		{
@@ -165,26 +190,6 @@ public partial class MainMenuPlayerCountDialog : Control
 		_startGameFrame.CustomMinimumSize = new Vector2(330.0f, compact ? 60.0f : 64.0f);
 	}
 
-	private static void ApplyBackActionText(Button button)
-	{
-		Color idle = new(0.94f, 0.96f, 0.96f, 1.0f);
-		Color active = new(0.91f, 1.0f, 0.96f, 1.0f);
-		button.AddThemeColorOverride("font_color", idle);
-		button.AddThemeColorOverride("font_pressed_color", active);
-		button.AddThemeColorOverride("font_hover_color", active);
-		button.AddThemeColorOverride("font_focus_color", active);
-	}
-
-	private static void ApplyPrimaryActionText(Button button)
-	{
-		Color idle = new(0.96f, 1.0f, 0.99f, 1.0f);
-		Color active = Colors.White;
-		button.AddThemeColorOverride("font_color", idle);
-		button.AddThemeColorOverride("font_pressed_color", active);
-		button.AddThemeColorOverride("font_hover_color", active);
-		button.AddThemeColorOverride("font_focus_color", active);
-	}
-
 	public void RefreshLocalizedText(
 		Func<string, string> localize,
 		Func<int, string> getPlayerCountText,
@@ -193,7 +198,7 @@ public partial class MainMenuPlayerCountDialog : Control
 	{
 		_titleLabel.Text = localize("MENU_SINGLE_PLAYER");
 		_backButton.Text = localize("ADVENTURE_BACK");
-		_backButton.TooltipText = localize("ADVENTURE_BACK");
+		_backButton.TooltipText = string.Empty;
 		_messageLabel.Text = localize("PLAYER_COUNT_MESSAGE");
 		_playersLabel.Text = localize("PLAYER_COUNT_PLAYERS");
 		_difficultyLabel.Text = localize("PLAYER_COUNT_DIFFICULTY");

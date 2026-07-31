@@ -4,7 +4,7 @@ public partial class GameAudioManager
 {
 	public void PlayMusic(string musicId, float fadeSeconds = 1.5f, bool restartIfSame = false)
 	{
-		if (string.IsNullOrWhiteSpace(musicId))
+		if (_suppressPlayback || string.IsNullOrWhiteSpace(musicId))
 		{
 			return;
 		}
@@ -61,7 +61,7 @@ public partial class GameAudioManager
 		float fadeSeconds = 1.5f,
 		bool restartIfSame = false)
 	{
-		if (string.IsNullOrWhiteSpace(musicId) || string.IsNullOrWhiteSpace(absolutePath))
+		if (_suppressPlayback || string.IsNullOrWhiteSpace(musicId) || string.IsNullOrWhiteSpace(absolutePath))
 		{
 			return;
 		}
@@ -134,7 +134,9 @@ public partial class GameAudioManager
 
 	public void WarmupMusic(string musicId)
 	{
-		if (!string.IsNullOrWhiteSpace(musicId) && MusicPaths.TryGetValue(musicId, out MusicTrackSpec? spec))
+		if (!_suppressPlayback
+			&& !string.IsNullOrWhiteSpace(musicId)
+			&& MusicPaths.TryGetValue(musicId, out MusicTrackSpec? spec))
 		{
 			_ = GetMusicStream(musicId, spec);
 		}

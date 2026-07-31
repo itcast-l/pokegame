@@ -3,9 +3,6 @@ using Godot;
 
 public partial class PauseMenuOverlay : PauseMenuInputCatcher
 {
-	private static readonly Color IdleTextColor = new(0.95f, 0.95f, 0.90f, 1.0f);
-	private static readonly Color ActiveTextColor = new(1.0f, 0.96f, 0.84f, 1.0f);
-	private static readonly Color RestartIdleTextColor = new(1.0f, 0.82f, 0.58f, 1.0f);
 	private static readonly Color TitleTextColor = new(1.0f, 0.96f, 0.86f, 1.0f);
 
 	[Signal]
@@ -66,20 +63,17 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 
 	private void ConfigureGeneratedVisualStyle()
 	{
-		ConfigureAction(ContinueButton, _continueLabel, IdleTextColor);
-		ConfigureAction(ReturnToMainMenuButton, _returnToMainMenuLabel, IdleTextColor);
-		ConfigureAction(RestartButton, _restartLabel, RestartIdleTextColor);
+		ConfigureAction(ContinueButton, _continueLabel);
+		ConfigureAction(ReturnToMainMenuButton, _returnToMainMenuLabel);
+		ConfigureAction(RestartButton, _restartLabel);
 		_pauseTitleLabel.AddThemeColorOverride("font_color", TitleTextColor);
 	}
 
-	private void ConfigureAction(Button button, Label label, Color idleTextColor)
+	private void ConfigureAction(Button button, Label label)
 	{
 		void RefreshLabelColor()
 		{
-			bool active = _inputFocusVisible && button.HasFocus()
-				|| button.ButtonPressed
-				|| button.GetGlobalRect().HasPoint(button.GetGlobalMousePosition());
-			label.AddThemeColorOverride("font_color", active ? ActiveTextColor : idleTextColor);
+			label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
 		}
 
 		button.FocusEntered += RefreshLabelColor;
@@ -126,17 +120,14 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 			frame.QueueRedraw();
 		}
 
-		RefreshActionLabelColor(ContinueButton, _continueLabel, IdleTextColor);
-		RefreshActionLabelColor(ReturnToMainMenuButton, _returnToMainMenuLabel, IdleTextColor);
-		RefreshActionLabelColor(RestartButton, _restartLabel, RestartIdleTextColor);
+		RefreshActionLabelColor(_continueLabel);
+		RefreshActionLabelColor(_returnToMainMenuLabel);
+		RefreshActionLabelColor(_restartLabel);
 	}
 
-	private void RefreshActionLabelColor(Button button, Label label, Color idleTextColor)
+	private static void RefreshActionLabelColor(Label label)
 	{
-		bool active = _inputFocusVisible && button.HasFocus()
-			|| button.ButtonPressed
-			|| button.GetGlobalRect().HasPoint(button.GetGlobalMousePosition());
-		label.AddThemeColorOverride("font_color", active ? ActiveTextColor : idleTextColor);
+		label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
 	}
 
 	private static bool IsKeyboardOrJoypadNavigationInput(InputEvent inputEvent)

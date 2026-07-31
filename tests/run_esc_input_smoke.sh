@@ -27,13 +27,13 @@ cleanup() {
 trap cleanup EXIT
 
 status=0
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/EscInputSmoke.gd >"$LOG_FILE" 2>&1 || status=$?
+DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" --script res://tests/EscInputSmoke.gd >"$LOG_FILE" 2>&1 || status=$?
 if [[ "$status" -ne 0 ]]; then
 	cat "$LOG_FILE" >&2
 	exit "$status"
 fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if grep -Eq "SCRIPT ERROR|^ERROR:" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

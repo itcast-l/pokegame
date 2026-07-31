@@ -155,14 +155,23 @@ size_flags_vertical = 3
 follow_focus = false
 horizontal_scroll_mode = 0
 
-[node name="ConfigurationRows" type="GridContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll"]
+[node name="ConfigurationCenter" type="CenterContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/v_separation = 12
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="ConfigurationRows" type="GridContainer" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/v_separation = 6
 columns = 1
 
-[node name="PlayersRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows"]
-custom_minimum_size = Vector2(0, 62)
+[node name="PlayersRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows"]
+custom_minimum_size = Vector2(0, 89)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -170,17 +179,32 @@ script = ExtResource("2_button_frame")
 FrameStyle = 8
 AccentColor = Color(0.68, 0.76, 0.76, 1)
 
-[node name="PlayerCountOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/PlayersRowPanel"]
+[node name="LabelAccent" type="ColorRect" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/PlayersRowPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -41.0
+offset_right = 11.0
+offset_bottom = -21.0
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.133, 0.725, 0.753, 0.9)
+
+[node name="PlayerCountOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/PlayersRowPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.54
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 8.0
-offset_right = -12.0
-offset_bottom = -8.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -10.0
+offset_right = -8.0
+offset_bottom = 44.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -193,42 +217,50 @@ popup/item_1/id = 3
 popup/item_2/text = "PLAYER_COUNT_4_TITLE"
 popup/item_2/id = 4
 
-[node name="PlayersLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/PlayersRowPanel"]
+[node name="PlayersLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/PlayersRowPanel"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
-anchor_right = 0.48
-anchor_bottom = 1.0
-offset_left = 24.0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 22.0
+offset_top = -43.0
+offset_right = -12.0
+offset_bottom = -19.0
+grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 0.96, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0.02, 0.03, 0.035, 0.64)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 16
 text = "PLAYER_COUNT_PLAYERS"
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/PlayersRowPanel"]
+[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/PlayersRowPanel"]
 layout_mode = 1
 anchor_left = 1.0
+anchor_top = 0.5
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.5
 offset_left = -52.0
+offset_top = -10.0
 offset_right = -20.0
+offset_bottom = 44.0
 grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.76, 0.82, 0.81, 0.9)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "⌄"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="DifficultyRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows"]
-custom_minimum_size = Vector2(0, 62)
+[node name="DifficultyRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows"]
+custom_minimum_size = Vector2(0, 89)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -236,17 +268,32 @@ script = ExtResource("2_button_frame")
 FrameStyle = 8
 AccentColor = Color(0.68, 0.76, 0.76, 1)
 
-[node name="DifficultyOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/DifficultyRowPanel"]
+[node name="LabelAccent" type="ColorRect" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/DifficultyRowPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -41.0
+offset_right = 11.0
+offset_bottom = -21.0
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.133, 0.725, 0.753, 0.9)
+
+[node name="DifficultyOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/DifficultyRowPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.54
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 8.0
-offset_right = -12.0
-offset_bottom = -8.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -10.0
+offset_right = -8.0
+offset_bottom = 44.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -259,42 +306,50 @@ popup/item_1/id = 1
 popup/item_2/text = "PLAYER_COUNT_DIFFICULTY_HIGH"
 popup/item_2/id = 2
 
-[node name="DifficultyLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/DifficultyRowPanel"]
+[node name="DifficultyLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/DifficultyRowPanel"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
-anchor_right = 0.48
-anchor_bottom = 1.0
-offset_left = 24.0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 22.0
+offset_top = -43.0
+offset_right = -12.0
+offset_bottom = -19.0
+grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 0.96, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0.02, 0.03, 0.035, 0.64)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 16
 text = "PLAYER_COUNT_DIFFICULTY"
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/DifficultyRowPanel"]
+[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/DifficultyRowPanel"]
 layout_mode = 1
 anchor_left = 1.0
+anchor_top = 0.5
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.5
 offset_left = -52.0
+offset_top = -10.0
 offset_right = -20.0
+offset_bottom = 44.0
 grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.76, 0.82, 0.81, 0.9)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "⌄"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ItemModeRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows"]
-custom_minimum_size = Vector2(0, 62)
+[node name="ItemModeRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows"]
+custom_minimum_size = Vector2(0, 89)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -302,17 +357,32 @@ script = ExtResource("2_button_frame")
 FrameStyle = 8
 AccentColor = Color(0.68, 0.76, 0.76, 1)
 
-[node name="ItemModeOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/ItemModeRowPanel"]
+[node name="LabelAccent" type="ColorRect" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/ItemModeRowPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -41.0
+offset_right = 11.0
+offset_bottom = -21.0
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.133, 0.725, 0.753, 0.9)
+
+[node name="ItemModeOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/ItemModeRowPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.54
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 8.0
-offset_right = -12.0
-offset_bottom = -8.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -10.0
+offset_right = -8.0
+offset_bottom = 44.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -323,42 +393,50 @@ popup/item_0/id = 1
 popup/item_1/text = "PLAYER_COUNT_ITEM_MODE_OFF"
 popup/item_1/id = 0
 
-[node name="ItemModeLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/ItemModeRowPanel"]
+[node name="ItemModeLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/ItemModeRowPanel"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
-anchor_right = 0.48
-anchor_bottom = 1.0
-offset_left = 24.0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 22.0
+offset_top = -43.0
+offset_right = -12.0
+offset_bottom = -19.0
+grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 0.96, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0.02, 0.03, 0.035, 0.64)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 16
 text = "PLAYER_COUNT_ITEM_MODE"
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/ItemModeRowPanel"]
+[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/ItemModeRowPanel"]
 layout_mode = 1
 anchor_left = 1.0
+anchor_top = 0.5
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.5
 offset_left = -52.0
+offset_top = -10.0
 offset_right = -20.0
+offset_bottom = 44.0
 grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.76, 0.82, 0.81, 0.9)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "⌄"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="WinningScoreRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows"]
-custom_minimum_size = Vector2(0, 62)
+[node name="WinningScoreRowPanel" type="Control" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows"]
+custom_minimum_size = Vector2(0, 89)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -366,17 +444,32 @@ script = ExtResource("2_button_frame")
 FrameStyle = 8
 AccentColor = Color(0.68, 0.76, 0.76, 1)
 
-[node name="WinningScoreOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/WinningScoreRowPanel"]
+[node name="LabelAccent" type="ColorRect" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/WinningScoreRowPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -41.0
+offset_right = 11.0
+offset_bottom = -21.0
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.133, 0.725, 0.753, 0.9)
+
+[node name="WinningScoreOption" type="OptionButton" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/WinningScoreRowPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.54
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 8.0
-offset_right = -12.0
-offset_bottom = -8.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -10.0
+offset_right = -8.0
+offset_bottom = 44.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -389,36 +482,44 @@ popup/item_1/id = 100
 popup/item_2/text = "200"
 popup/item_2/id = 200
 
-[node name="WinningScoreLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/WinningScoreRowPanel"]
+[node name="WinningScoreLabel" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/WinningScoreRowPanel"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
-anchor_right = 0.48
-anchor_bottom = 1.0
-offset_left = 24.0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 22.0
+offset_top = -43.0
+offset_right = -12.0
+offset_bottom = -19.0
+grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 0.96, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0.02, 0.03, 0.035, 0.64)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 16
 text = "PLAYER_COUNT_WINNING_SCORE"
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationRows/WinningScoreRowPanel"]
+[node name="Chevron" type="Label" parent="DialogMotion/DialogCenter/PlayerCountDialogPanel/DialogMargin/DialogLayout/ConfigurationPanel/ConfigurationScroll/ConfigurationCenter/ConfigurationRows/WinningScoreRowPanel"]
 layout_mode = 1
 anchor_left = 1.0
+anchor_top = 0.5
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.5
 offset_left = -52.0
+offset_top = -10.0
 offset_right = -20.0
+offset_bottom = 44.0
 grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.76, 0.82, 0.81, 0.9)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "⌄"
 horizontal_alignment = 1
 vertical_alignment = 1

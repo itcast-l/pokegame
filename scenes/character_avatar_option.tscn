@@ -3,44 +3,33 @@
 [ext_resource type="PackedScene" path="res://scenes/character_avatar.tscn" id="1_character_avatar"]
 [ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_option"]
-bg_color = Color(0.0156863, 0.117647, 0.133333, 0.12)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.58, 1, 0.92, 0.42)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.035, 0.055, 0.18)
-shadow_size = 10
-shadow_offset = Vector2(0, 3)
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar_slot"]
-bg_color = Color(0.04, 0.17, 0.18, 0.48)
+bg_color = Color(0.018, 0.115, 0.14, 0.68)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.48, 1, 0.92, 0.24)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+border_color = Color(0.133, 0.725, 0.753, 0.28)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avatar_button"]
 
 [node name="CharacterAvatarOption" type="Control" unique_id=1601523940]
-custom_minimum_size = Vector2(112, 104)
+custom_minimum_size = Vector2(104, 104)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 112.0
+offset_right = 104.0
 offset_bottom = 104.0
 mouse_filter = 2
 script = ExtResource("2_button_frame")
 FrameStyle = 2
+HighlightFocus = false
+UsePlaqueGlowBackdrop = false
+ShowIdleTexture = false
+SuppressVisuals = true
 
 [node name="OptionPanel" type="PanelContainer" parent="." unique_id=430056988]
 layout_mode = 1
@@ -50,24 +39,24 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_avatar_option")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_avatar_button")
 
 [node name="OptionMargin" type="MarginContainer" parent="OptionPanel" unique_id=1749151276]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
 [node name="OptionLayout" type="VBoxContainer" parent="OptionPanel/OptionMargin" unique_id=1809395239]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="AvatarSlot" type="Control" parent="OptionPanel/OptionMargin/OptionLayout" unique_id=540312194]
-custom_minimum_size = Vector2(78, 78)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 mouse_filter = 2
 
@@ -87,10 +76,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 4.0
-offset_right = -4.0
-offset_bottom = -4.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 2
 ShowFrame = false

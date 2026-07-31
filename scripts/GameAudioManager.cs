@@ -70,6 +70,7 @@ public partial class GameAudioManager : Node
 	private const string PreferredMusicBus = "Music";
 	private const string FallbackSoundBus = "Master";
 	private const string FallbackMusicBus = "Master";
+	private const string SuppressAudioEnvironmentVariable = "DECKLAND_TEST_MUTE_AUDIO";
 	private const float MutedVolumeDb = -80.0f;
 	private const float DefaultMusicLinearVolume = 0.76f;
 	private const float AmbienceRelativeVolumeDb = -12.0f;
@@ -165,6 +166,8 @@ public partial class GameAudioManager : Node
 	private readonly Stack<AudioStreamPlayer> _sfxPlayerPool = new();
 	private readonly List<Tween> _ownedAudioTweens = new();
 	private readonly RandomNumberGenerator _rng = new();
+	private bool _suppressPlayback;
+	private bool _uiBindingActive;
 	private string _soundBus = FallbackSoundBus;
 	private string _musicBus = FallbackMusicBus;
 	private string _currentMusicId = string.Empty;
@@ -177,11 +180,13 @@ public partial class GameAudioManager : Node
 
 	public override void _Ready()
 	{
+		_suppressPlayback = OS.GetEnvironment(SuppressAudioEnvironmentVariable) == "1";
 		_rng.Randomize();
 		_soundBus = AudioServer.GetBusIndex(PreferredSoundBus) >= 0 ? PreferredSoundBus : FallbackSoundBus;
 		_musicBus = AudioServer.GetBusIndex(PreferredMusicBus) >= 0 ? PreferredMusicBus : FallbackMusicBus;
 		_musicVolumeDb = LoadSavedMusicVolumeDb();
-		BindUiAudioRecursive(GetTree().Root);
-		GetTree().NodeAdded += BindUiAudioRecursive;
+		BindUiBehaviorRecursive(GetTree().Root);
+		GetTree().NodeAdded += BindUiBehaviorRecursive;
+		_uiBindingActive = true;
 	}
 }

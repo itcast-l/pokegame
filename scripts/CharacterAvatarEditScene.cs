@@ -13,9 +13,12 @@ public partial class CharacterAvatarEditScene : Control
 	public string CurrentPlayerName { get; set; } = PlayerNameRules.DefaultPlayerName;
 	public PanelContainer DialogPanel { get; private set; } = default!;
 
-	private static readonly Color SelectedOptionModulate = new(1.0f, 1.0f, 0.78f, 1.0f);
-	private static readonly Color ValidNameHintColor = new(0.62f, 1.0f, 0.92f, 0.76f);
-	private static readonly Color EmptyNameHintColor = new(1.0f, 0.72f, 0.58f, 0.92f);
+	private static readonly Color ValidNameHintColor = new(
+		MainMenuInteractiveStyle.PauseDerivedSecondaryText.R,
+		MainMenuInteractiveStyle.PauseDerivedSecondaryText.G,
+		MainMenuInteractiveStyle.PauseDerivedSecondaryText.B,
+		0.88f);
+	private static readonly Color EmptyNameHintColor = MainMenuInteractiveStyle.PauseDerivedGold;
 
 	private ColorRect _scrim = default!;
 	private Button _backButton = default!;
@@ -23,13 +26,17 @@ public partial class CharacterAvatarEditScene : Control
 	private Label _titleLabel = default!;
 	private CharacterAvatar _previewAvatar = default!;
 	private Label _previewKickerLabel = default!;
+	private Label _avatarListKickerLabel = default!;
 	private Label _playerNameKickerLabel = default!;
 	private LineEdit _playerNameInput = default!;
 	private Label _playerNameHint = default!;
 	private GridContainer _avatarGrid = default!;
 	private ScrollContainer _avatarGridScroll = default!;
 	private readonly Dictionary<string, PanelContainer> _optionPanels = new();
+	private readonly Dictionary<string, PanelContainer> _optionBackdrops = new();
 	private readonly Dictionary<string, Button> _optionButtons = new();
+	private readonly Dictionary<string, OceanMenuButtonFrame> _optionFrames = new();
+	private readonly HashSet<string> _hoveredAvatarIds = new();
 	private readonly List<AvatarOptionSlot> _avatarOptionSlots = new();
 
 	public override void _Ready()
@@ -47,12 +54,13 @@ public partial class CharacterAvatarEditScene : Control
 		_backButton.Pressed += RequestClose;
 
 		_titleLabel = GetNode<Label>("%Title");
-		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
-		_previewKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PreviewKicker");
-		_playerNameKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameKicker");
-		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
+		_previewAvatar = GetNode<CharacterAvatar>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewAvatarAnchor/PreviewAvatar");
+		_previewKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewKicker");
+		_avatarListKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/AvatarListPanel/AvatarListMargin/AvatarListLayout/AvatarListHeader/AvatarListKicker");
+		_playerNameKickerLabel = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameKicker");
+		_playerNameInput = GetNode<LineEdit>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameInput");
 		_playerNameInput.FocusMode = Control.FocusModeEnum.All;
-		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
+		_playerNameHint = GetNode<Label>("DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint");
 		_playerNameInput.GuiInput += OnPlayerNameInputGuiInput;
 		_playerNameInput.TextChanged += OnPlayerNameTextChanged;
 		_playerNameInput.TextSubmitted += OnPlayerNameTextSubmitted;
@@ -63,16 +71,30 @@ public partial class CharacterAvatarEditScene : Control
 		_avatarGrid = GetNode<GridContainer>("%AvatarGrid");
 		_avatarGridScroll = GetNode<ScrollContainer>("%GridScroll");
 		_avatarGridScroll.FollowFocus = true;
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18);
-		MainMenuInteractiveStyle.ApplyActionButton(_confirmButton, 17);
-		SecondaryMenuGlassStyle.StyleScrollBar(_avatarGridScroll.GetVScrollBar());
-		SecondaryMenuGlassStyle.Attach(
+		MainMenuInteractiveStyle.ApplyActionButton(
+			_backButton,
+			18,
+			MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(
+			_confirmButton,
+			17,
+			MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedLineEdit(
+			_playerNameInput,
+			MainMenuInteractiveStyle.PauseDerivedPalette,
+			18);
+		SecondaryMenuGlassStyle.StyleScrollBar(
+			_avatarGridScroll.GetVScrollBar(),
+			SecondaryMenuGlassStyle.PauseDerivedVisual);
+		SecondaryMenuGlassStyle.AttachPauseDerived(
 			this,
 			DialogPanel,
 			_scrim,
-			new Vector2(760.0f, 600.0f),
+			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
+			true,
 			GetNode<PanelContainer>("%PreviewPanel"),
 			GetNode<PanelContainer>("%AvatarListPanel"));
+		ConfigurePauseDerivedVisualStyle();
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
 		RefreshLocalizedText();
@@ -124,7 +146,7 @@ public partial class CharacterAvatarEditScene : Control
 		_avatarOptionSlots.Clear();
 		for (int optionIndex = 1; optionIndex <= 15; optionIndex++)
 		{
-			if (_avatarGrid.GetNodeOrNull<Control>($"AvatarOption{optionIndex}") is not Control root)
+			if (_avatarGrid.GetNodeOrNull<OceanMenuButtonFrame>($"AvatarOption{optionIndex}") is not OceanMenuButtonFrame root)
 			{
 				continue;
 			}
@@ -132,6 +154,7 @@ public partial class CharacterAvatarEditScene : Control
 			_avatarOptionSlots.Add(new AvatarOptionSlot(
 				root,
 				root.GetNode<PanelContainer>("OptionPanel"),
+				root.GetNode<PanelContainer>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/SlotBackdrop"),
 				root.GetNode<CharacterAvatar>("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/CharacterAvatar"),
 				root.GetNode<Button>("SelectButton")));
 		}
@@ -140,7 +163,10 @@ public partial class CharacterAvatarEditScene : Control
 	private void ConfigureAvatarOptions()
 	{
 		_optionPanels.Clear();
+		_optionBackdrops.Clear();
 		_optionButtons.Clear();
+		_optionFrames.Clear();
+		_hoveredAvatarIds.Clear();
 		foreach (AvatarOptionSlot optionSlot in _avatarOptionSlots)
 		{
 			optionSlot.Root.Visible = false;
@@ -163,12 +189,17 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Avatar.AudioConfig = avatarDefinition.AudioConfig;
 			optionSlot.Avatar.PlayIdle();
 			optionSlot.Panel.Modulate = Colors.White;
+			ConfigureAvatarOptionFrame(optionSlot.Root);
 			optionSlot.Button.TooltipText = Localize("AVATAR_EDIT_OPTION_TOOLTIP");
 			optionSlot.Button.FocusMode = Control.FocusModeEnum.All;
 			optionSlot.Button.FocusEntered += () => SelectAvatar(avatarDefinition.Id);
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
+			optionSlot.Button.MouseEntered += () => SetAvatarHovered(avatarDefinition.Id, true);
+			optionSlot.Button.MouseExited += () => SetAvatarHovered(avatarDefinition.Id, false);
 			_optionPanels[avatarDefinition.Id] = optionSlot.Panel;
+			_optionBackdrops[avatarDefinition.Id] = optionSlot.Backdrop;
 			_optionButtons[avatarDefinition.Id] = optionSlot.Button;
+			_optionFrames[avatarDefinition.Id] = optionSlot.Root;
 		}
 
 		RefreshOptionSelection();
@@ -206,7 +237,145 @@ public partial class CharacterAvatarEditScene : Control
 	{
 		foreach ((string avatarId, PanelContainer panel) in _optionPanels)
 		{
-			panel.Modulate = avatarId == CurrentAvatarId ? SelectedOptionModulate : Colors.White;
+			panel.Modulate = Colors.White;
+			if (_optionBackdrops.TryGetValue(avatarId, out PanelContainer? backdrop))
+			{
+				backdrop.AddThemeStyleboxOverride(
+					"panel",
+					CreateAvatarSlotStyle(
+						avatarId == CurrentAvatarId,
+						_hoveredAvatarIds.Contains(avatarId)));
+			}
+			if (_optionFrames.TryGetValue(avatarId, out OceanMenuButtonFrame? frame))
+			{
+				frame.Selected = avatarId == CurrentAvatarId;
+				frame.QueueRedraw();
+			}
+		}
+	}
+
+	private void SetAvatarHovered(string avatarId, bool hovered)
+	{
+		if (hovered)
+		{
+			_hoveredAvatarIds.Add(avatarId);
+		}
+		else
+		{
+			_hoveredAvatarIds.Remove(avatarId);
+		}
+
+		RefreshOptionSelection();
+	}
+
+	private void ConfigurePauseDerivedVisualStyle()
+	{
+		ConfigureFrame("BackFrame");
+		ConfigureFrame("ConfirmFrame");
+		ConfigureSectionPanels();
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		_previewKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
+		_avatarListKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		_playerNameKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
+		if (FindChild("TitleUnderline", true, false) is Control titleDivider)
+		{
+			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(titleDivider);
+		}
+		if (FindChild("PreviewGlow", true, false) is PanelContainer previewGlow)
+		{
+			previewGlow.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+		}
+	}
+
+	private void ConfigureAvatarOptionFrame(OceanMenuButtonFrame frame)
+	{
+		frame.SuppressVisuals = true;
+		frame.Selected = false;
+		frame.HighlightFocus = false;
+		frame.UsePlaqueGlowBackdrop = false;
+		frame.ShowIdleTexture = false;
+		frame.UseNinePatchTexture = false;
+		frame.QueueRedraw();
+	}
+
+	private static StyleBoxFlat CreateAvatarSlotStyle(bool selected, bool hovered)
+	{
+		Color border = selected
+			? MainMenuInteractiveStyle.PauseDerivedGold
+			: MainMenuInteractiveStyle.PauseDerivedCyan;
+		float borderAlpha = selected ? 0.96f : hovered ? 0.66f : 0.28f;
+		int borderWidth = selected ? 2 : 1;
+		return new StyleBoxFlat
+		{
+			BgColor = selected
+				? new Color(0.035f, 0.22f, 0.22f, 0.80f)
+				: hovered
+					? new Color(0.025f, 0.18f, 0.20f, 0.76f)
+					: new Color(0.018f, 0.115f, 0.14f, 0.68f),
+			BorderColor = new Color(
+				border.R,
+				border.G,
+				border.B,
+				borderAlpha),
+			BorderWidthLeft = borderWidth,
+			BorderWidthTop = borderWidth,
+			BorderWidthRight = borderWidth,
+			BorderWidthBottom = borderWidth,
+			CornerRadiusTopLeft = 10,
+			CornerRadiusTopRight = 10,
+			CornerRadiusBottomLeft = 10,
+			CornerRadiusBottomRight = 10,
+			ShadowColor = new Color(0.0f, 0.012f, 0.024f, selected ? 0.56f : 0.0f),
+			ShadowSize = selected ? 8 : 0,
+			ShadowOffset = new Vector2(0.0f, 3.0f),
+		};
+	}
+
+	private void ConfigureSectionPanels()
+	{
+		PanelContainer previewPanel = GetNode<PanelContainer>("%PreviewPanel");
+		PanelContainer avatarListPanel = GetNode<PanelContainer>("%AvatarListPanel");
+		previewPanel.AddThemeStyleboxOverride("panel", CreateSectionStyle(
+			new Color(0.027f, 0.122f, 0.176f, 0.78f),
+			new Color(MainMenuInteractiveStyle.PauseDerivedGold.R,
+				MainMenuInteractiveStyle.PauseDerivedGold.G,
+				MainMenuInteractiveStyle.PauseDerivedGold.B,
+				0.36f)));
+		avatarListPanel.AddThemeStyleboxOverride("panel", CreateSectionStyle(
+			new Color(0.008f, 0.050f, 0.074f, 0.74f),
+			new Color(MainMenuInteractiveStyle.PauseDerivedCyan.R,
+				MainMenuInteractiveStyle.PauseDerivedCyan.G,
+				MainMenuInteractiveStyle.PauseDerivedCyan.B,
+				0.34f)));
+	}
+
+	private static StyleBoxFlat CreateSectionStyle(Color background, Color border)
+	{
+		return new StyleBoxFlat
+		{
+			BgColor = background,
+			BorderColor = border,
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 8,
+			CornerRadiusTopRight = 8,
+			CornerRadiusBottomLeft = 8,
+			CornerRadiusBottomRight = 8,
+			ShadowColor = Colors.Transparent,
+			ShadowSize = 0,
+		};
+	}
+
+	private void ConfigureFrame(string frameName)
+	{
+		if (FindChild(frameName, true, false) is OceanMenuButtonFrame frame)
+		{
+			SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+				frame,
+				OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+				MainMenuInteractiveStyle.PauseDerivedCyan);
 		}
 	}
 
@@ -359,6 +528,7 @@ public partial class CharacterAvatarEditScene : Control
 		_backButton.Text = Localize("ADVENTURE_BACK");
 		_titleLabel.Text = Localize("AVATAR_EDIT_CURRENT_AVATAR");
 		_previewKickerLabel.Text = Localize("AVATAR_EDIT_CURRENT_AVATAR");
+		_avatarListKickerLabel.Text = Localize("AVATAR_EDIT_OPTION_TOOLTIP");
 		_playerNameKickerLabel.Text = Localize("AVATAR_EDIT_PLAYER_NAME_LABEL");
 		_playerNameInput.PlaceholderText = Localize("AVATAR_EDIT_PLAYER_NAME_PLACEHOLDER");
 		_confirmButton.Text = Localize("AVATAR_EDIT_SAVE");
@@ -385,8 +555,9 @@ public partial class CharacterAvatarEditScene : Control
 	}
 
 	private sealed record AvatarOptionSlot(
-		Control Root,
+		OceanMenuButtonFrame Root,
 		PanelContainer Panel,
+		PanelContainer Backdrop,
 		CharacterAvatar Avatar,
 		Button Button);
 

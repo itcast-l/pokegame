@@ -10,7 +10,7 @@ public partial class GameAudioManager
 		float pitchMax = 1.02f,
 		double cooldownSeconds = 0.0)
 	{
-		if (string.IsNullOrWhiteSpace(sfxId))
+		if (_suppressPlayback || string.IsNullOrWhiteSpace(sfxId))
 		{
 			return;
 		}
@@ -21,7 +21,7 @@ public partial class GameAudioManager
 		}
 
 		AudioStream? stream = GetSfxStream(sfxId);
-		if (stream == null)
+		if (_suppressPlayback || stream == null)
 		{
 			return;
 		}
@@ -106,7 +106,7 @@ public partial class GameAudioManager
 
 	public void WarmupSfx(string sfxId)
 	{
-		if (!string.IsNullOrWhiteSpace(sfxId))
+		if (!_suppressPlayback && !string.IsNullOrWhiteSpace(sfxId))
 		{
 			_ = GetSfxStream(sfxId);
 		}
@@ -114,7 +114,7 @@ public partial class GameAudioManager
 
 	public void WarmupSfx(AudioStream? stream)
 	{
-		if (stream != null)
+		if (!_suppressPlayback && stream != null)
 		{
 			_ = GetStreamCooldownKey(stream);
 		}
@@ -122,7 +122,7 @@ public partial class GameAudioManager
 
 	public void WarmupCharacterAudioConfig(CharacterAudioConfig? audioConfig)
 	{
-		if (audioConfig == null)
+		if (_suppressPlayback || audioConfig == null)
 		{
 			return;
 		}

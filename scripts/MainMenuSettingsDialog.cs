@@ -3,6 +3,13 @@ using Godot;
 
 public partial class MainMenuSettingsDialog : Control
 {
+	private enum SettingsCategory
+	{
+		Audio,
+		Display,
+		Language,
+	}
+
 	[Signal]
 	public delegate void CloseRequestedEventHandler();
 
@@ -15,13 +22,26 @@ public partial class MainMenuSettingsDialog : Control
 	private Label _windowModeLabel = default!;
 	private Label _resolutionLabel = default!;
 	private Label _languageLabel = default!;
-	private Label _controlsLabel = default!;
-	private Button _controlsButton = default!;
+	private Label _audioVolumeSectionLabel = default!;
+	private Label _audioMuteSectionLabel = default!;
+	private Button _audioCategoryButton = default!;
+	private Button _displayCategoryButton = default!;
+	private Button _languageCategoryButton = default!;
+	private Button _controlsCategoryButton = default!;
 	private Button _resetButton = default!;
 	private Button _doneButton = default!;
 	private ColorRect _scrim = default!;
 	private ScrollContainer _settingsScroll = default!;
+	private PanelContainer _categoryPanel = default!;
+	private Control _masterVolumeRow = default!;
+	private Control _musicVolumeRow = default!;
+	private Control _muteBgmRow = default!;
+	private Control _muteSfxRow = default!;
+	private Control _windowModeRow = default!;
+	private Control _resolutionRow = default!;
+	private Control _languageRow = default!;
 	private Func<string, string>? _localize;
+	private SettingsCategory _activeCategory = SettingsCategory.Audio;
 
 	public Control DialogPanel { get; private set; } = default!;
 	public HSlider MasterVolumeSlider { get; private set; } = default!;
@@ -33,13 +53,13 @@ public partial class MainMenuSettingsDialog : Control
 	public OptionButton WindowModeOption { get; private set; } = default!;
 	public OptionButton ResolutionOption { get; private set; } = default!;
 	public OptionButton LanguageOption { get; private set; } = default!;
-	public Button ControlsButton => _controlsButton;
+	public Button ControlsButton => _controlsCategoryButton;
 	public Button ResetDefaultsButton => _resetButton;
 	public Button DoneButton => _doneButton;
 
 	public void FocusDefaultControl()
 	{
-		_settingsScroll.ScrollVertical = 0;
+		ShowCategory(SettingsCategory.Audio, focusContent: false);
 		MasterVolumeSlider.GrabFocus();
 		CallDeferred(nameof(ResetSettingsScrollToTop));
 	}
@@ -65,28 +85,48 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel = GetNode<Label>("%WindowModeLabel");
 		_resolutionLabel = GetNode<Label>("%ResolutionLabel");
 		_languageLabel = GetNode<Label>("%LanguageLabel");
-		_controlsLabel = GetNode<Label>("%ControlsLabel");
+		_audioVolumeSectionLabel = GetNode<Label>("%AudioVolumeSectionLabel");
+		_audioMuteSectionLabel = GetNode<Label>("%AudioMuteSectionLabel");
+		_audioCategoryButton = GetNode<Button>("%AudioCategoryButton");
+		_displayCategoryButton = GetNode<Button>("%DisplayCategoryButton");
+		_languageCategoryButton = GetNode<Button>("%LanguageCategoryButton");
+		_controlsCategoryButton = GetNode<Button>("%ControlsCategoryButton");
 		_settingsScroll = GetNode<ScrollContainer>("%SettingsScroll");
-		_controlsButton = GetNode<Button>("%ControlsButton");
+		_categoryPanel = GetNode<PanelContainer>("%CategoryPanel");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
+		_masterVolumeRow = FindRequiredControl("MasterVolumeRowPanel");
+		_musicVolumeRow = FindRequiredControl("MusicVolumeRowPanel");
+		_muteBgmRow = FindRequiredControl("MuteBgmRowPanel");
+		_muteSfxRow = FindRequiredControl("MuteSfxRowPanel");
+		_windowModeRow = FindRequiredControl("WindowModeRowPanel");
+		_resolutionRow = FindRequiredControl("ResolutionRowPanel");
+		_languageRow = FindRequiredControl("LanguageRowPanel");
 
 		_scrim.GuiInput += OnScrimGuiInput;
-		MainMenuInteractiveStyle.ApplyThemedSlider(MasterVolumeSlider, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedSlider(MusicVolumeSlider, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedToggle(MuteBgmToggle, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedToggle(MuteSfxToggle, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(WindowModeOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(ResolutionOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(LanguageOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(_controlsButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
-		ConfigureUnifiedVisualStyle();
+		MainMenuInteractiveStyle.ApplyThemedSlider(MasterVolumeSlider, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedSlider(MusicVolumeSlider, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MasterVolumeSlider.CustomMinimumSize = new Vector2(MasterVolumeSlider.CustomMinimumSize.X, 18.0f);
+		MusicVolumeSlider.CustomMinimumSize = new Vector2(MusicVolumeSlider.CustomMinimumSize.X, 18.0f);
+		MainMenuInteractiveStyle.ApplyThemedToggle(MuteBgmToggle, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedToggle(MuteSfxToggle, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(WindowModeOption, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(ResolutionOption, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(LanguageOption, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
+		ConfigurePauseDerivedVisualStyle();
+		_audioCategoryButton.Pressed += () => ShowCategory(SettingsCategory.Audio);
+		_displayCategoryButton.Pressed += () => ShowCategory(SettingsCategory.Display);
+		_languageCategoryButton.Pressed += () => ShowCategory(SettingsCategory.Language);
 		MuteBgmToggle.Toggled += _ => UpdateToggleText(MuteBgmToggle);
 		MuteSfxToggle.Toggled += _ => UpdateToggleText(MuteSfxToggle);
 		EnableKeyboardFocus(
+			_audioCategoryButton,
+			_displayCategoryButton,
+			_languageCategoryButton,
+			_controlsCategoryButton,
 			MasterVolumeSlider,
 			MusicVolumeSlider,
 			MuteBgmToggle,
@@ -94,7 +134,6 @@ public partial class MainMenuSettingsDialog : Control
 			WindowModeOption,
 			ResolutionOption,
 			LanguageOption,
-			_controlsButton,
 			_resetButton,
 			_doneButton);
 		ConfigureSettingsFocusScrolling(
@@ -104,21 +143,20 @@ public partial class MainMenuSettingsDialog : Control
 			MuteSfxToggle,
 			WindowModeOption,
 			ResolutionOption,
-			LanguageOption,
-			_controlsButton);
-		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.UnifiedVisual);
-		SecondaryMenuGlassStyle.Attach(
+			LanguageOption);
+		ShowCategory(SettingsCategory.Audio, focusContent: false);
+		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.PauseDerivedVisual);
+		SecondaryMenuGlassStyle.AttachPauseDerived(
 			this,
 			DialogPanel,
 			_scrim,
-			new Vector2(620.0f, 580.0f),
-			SecondaryMenuGlassStyle.UnifiedVisual,
+			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
+			true,
 			GetNode<PanelContainer>("%SettingsContentPanel"));
 	}
 
-	private void ConfigureUnifiedVisualStyle()
+	private void ConfigurePauseDerivedVisualStyle()
 	{
-		Color utilityAccent = MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder;
 		foreach (string frameName in new[]
 		{
 			"MasterVolumeRowPanel",
@@ -128,17 +166,30 @@ public partial class MainMenuSettingsDialog : Control
 			"WindowModeRowPanel",
 			"ResolutionRowPanel",
 			"LanguageRowPanel",
-			"ControlsRowPanel",
 		})
 		{
-			ConfigureFrame(frameName, OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow, utilityAccent);
+			ConfigureMinimalFrame(
+				frameName,
+				OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow);
 		}
 
-		ConfigureFrame("ResetDefaultsFrame", OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction, MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
-		ConfigureFrame("DoneFrame", OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		ConfigureMinimalFrame(
+			"ResetDefaultsFrame",
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.PauseDerivedCyan);
+		ConfigureMinimalFrame(
+			"DoneFrame",
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.PauseDerivedCyan);
 
-		_titleLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.98f, 0.97f));
-		_messageLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.96f, 0.92f));
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedCyan);
+		_audioVolumeSectionLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
+		_audioMuteSectionLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
+		_categoryPanel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+		{
+			BgColor = new Color(0.01f, 0.08f, 0.13f, 0.34f),
+		});
 		foreach (Label label in new[]
 		{
 			_masterVolumeLabel,
@@ -148,39 +199,41 @@ public partial class MainMenuSettingsDialog : Control
 			_windowModeLabel,
 			_resolutionLabel,
 			_languageLabel,
-			_controlsLabel,
 		})
 		{
-			label.AddThemeColorOverride("font_color", new Color(0.84f, 0.96f, 0.94f));
+			label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
 		}
-		MasterVolumeValue.AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f));
-		MusicVolumeValue.AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f));
-		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
+		MasterVolumeValue.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+		MusicVolumeValue.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+		if (FindChild("TitleUnderline", true, false) is Control underline)
 		{
-			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
+			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(underline);
 		}
 	}
 
-	private void ConfigureFrame(
+	private void ConfigureMinimalFrame(
 		string frameName,
-		OceanMenuButtonFrame.ButtonFrameStyle style,
-		Color accent)
+		OceanMenuButtonFrame.ButtonFrameStyle frameStyle,
+		Color? accent = null)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
 			return;
 		}
 
-		frame.FrameStyle = style;
-		frame.AccentColor = accent;
-		frame.QueueRedraw();
+		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(frame, frameStyle, accent);
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize)
 	{
 		_localize = localize;
 		_titleLabel.Text = localize("SETTINGS_TITLE");
-		_messageLabel.Text = localize("SETTINGS_MESSAGE");
+		_audioCategoryButton.Text = localize("SETTINGS_AUDIO");
+		_displayCategoryButton.Text = localize("SETTINGS_DISPLAY");
+		_languageCategoryButton.Text = localize("SETTINGS_LANGUAGE");
+		_controlsCategoryButton.Text = localize("SETTINGS_CONTROLS");
+		_audioVolumeSectionLabel.Text = localize("SETTINGS_VOLUME");
+		_audioMuteSectionLabel.Text = localize("SETTINGS_MUTE");
 		_masterVolumeLabel.Text = localize("SETTINGS_MASTER_VOLUME");
 		_musicVolumeLabel.Text = localize("SETTINGS_MUSIC_VOLUME");
 		_muteBgmLabel.Text = localize("SETTINGS_MUTE_BGM");
@@ -188,12 +241,108 @@ public partial class MainMenuSettingsDialog : Control
 		_windowModeLabel.Text = localize("SETTINGS_WINDOW_MODE");
 		_resolutionLabel.Text = localize("SETTINGS_RESOLUTION");
 		_languageLabel.Text = localize("SETTINGS_LANGUAGE");
-		_controlsLabel.Text = localize("SETTINGS_CONTROLS");
-		_controlsButton.Text = localize("SETTINGS_CONTROLS_EDIT");
 		_resetButton.Text = localize("SETTINGS_RESET_DEFAULTS");
 		_doneButton.Text = localize("SETTINGS_DONE");
 		UpdateToggleText(MuteBgmToggle);
 		UpdateToggleText(MuteSfxToggle);
+		UpdateCategoryVisualState();
+	}
+
+	private Control FindRequiredControl(string name)
+	{
+		return FindChild(name, recursive: true, owned: false) as Control
+			?? throw new InvalidOperationException($"Settings dialog is missing {name}.");
+	}
+
+	private void ShowCategory(SettingsCategory category, bool focusContent = true)
+	{
+		_activeCategory = category;
+		bool showAudio = category == SettingsCategory.Audio;
+		_audioVolumeSectionLabel.Visible = showAudio;
+		_audioMuteSectionLabel.Visible = showAudio;
+		_masterVolumeRow.Visible = showAudio;
+		_musicVolumeRow.Visible = showAudio;
+		_muteBgmRow.Visible = showAudio;
+		_muteSfxRow.Visible = showAudio;
+		_windowModeRow.Visible = category == SettingsCategory.Display;
+		_resolutionRow.Visible = category == SettingsCategory.Display;
+		_languageRow.Visible = category == SettingsCategory.Language;
+		_settingsScroll.ScrollVertical = 0;
+		UpdateCategoryVisualState();
+		if (focusContent)
+		{
+			CallDeferred(nameof(FocusActiveCategoryContent));
+		}
+	}
+
+	private void FocusActiveCategoryContent()
+	{
+		Control target = _activeCategory switch
+		{
+			SettingsCategory.Display => WindowModeOption,
+			SettingsCategory.Language => LanguageOption,
+			_ => MasterVolumeSlider,
+		};
+		target.GrabFocus();
+	}
+
+	private void UpdateCategoryVisualState()
+	{
+		_messageLabel.Text = _localize?.Invoke(GetCategoryLabelKey(_activeCategory))
+			?? GetCategoryLabelKey(_activeCategory);
+		StyleCategoryButton(_audioCategoryButton, _activeCategory == SettingsCategory.Audio);
+		StyleCategoryButton(_displayCategoryButton, _activeCategory == SettingsCategory.Display);
+		StyleCategoryButton(_languageCategoryButton, _activeCategory == SettingsCategory.Language);
+		StyleCategoryButton(_controlsCategoryButton, selected: false);
+	}
+
+	private static string GetCategoryLabelKey(SettingsCategory category)
+	{
+		return category switch
+		{
+			SettingsCategory.Display => "SETTINGS_DISPLAY",
+			SettingsCategory.Language => "SETTINGS_LANGUAGE",
+			_ => "SETTINGS_AUDIO",
+		};
+	}
+
+	private static void StyleCategoryButton(Button button, bool selected)
+	{
+		button.SetPressedNoSignal(selected);
+		button.Alignment = HorizontalAlignment.Left;
+		button.AddThemeFontSizeOverride("font_size", 19);
+		MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
+		button.AddThemeStyleboxOverride("normal", CreateCategoryButtonStyle(selected, highlighted: false));
+		button.AddThemeStyleboxOverride("hover", CreateCategoryButtonStyle(selected, highlighted: true));
+		button.AddThemeStyleboxOverride("focus", CreateCategoryButtonStyle(selected, highlighted: true));
+		button.AddThemeStyleboxOverride("pressed", CreateCategoryButtonStyle(true, highlighted: true));
+	}
+
+	private static StyleBoxFlat CreateCategoryButtonStyle(bool selected, bool highlighted)
+	{
+		Color cyan = MainMenuInteractiveStyle.PauseDerivedCyan;
+		Color gold = MainMenuInteractiveStyle.PauseDerivedGold;
+		return new StyleBoxFlat
+		{
+			BgColor = selected
+				? new Color(cyan.R * 0.22f, cyan.G * 0.34f, cyan.B * 0.38f, highlighted ? 0.62f : 0.48f)
+				: highlighted
+					? new Color(0.03f, 0.22f, 0.27f, 0.42f)
+					: Colors.Transparent,
+			BorderColor = selected ? gold : new Color(cyan.R, cyan.G, cyan.B, 0.52f),
+			BorderWidthLeft = highlighted && !selected ? 1 : 0,
+			BorderWidthTop = highlighted && !selected ? 1 : 0,
+			BorderWidthRight = selected ? 3 : highlighted ? 1 : 0,
+			BorderWidthBottom = highlighted && !selected ? 1 : 0,
+			CornerRadiusTopLeft = 4,
+			CornerRadiusTopRight = 4,
+			CornerRadiusBottomLeft = 4,
+			CornerRadiusBottomRight = 4,
+			ContentMarginLeft = 18.0f,
+			ContentMarginTop = 8.0f,
+			ContentMarginRight = 18.0f,
+			ContentMarginBottom = 8.0f,
+		};
 	}
 
 	private void OnScrimGuiInput(InputEvent inputEvent)

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/tests/godot_test_env.sh"
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
 
 if [[ -n "${GODOT_BIN:-}" ]]; then
@@ -15,16 +16,18 @@ else
 	exit 1
 fi
 
-LOG_FILE="$(mktemp -t main_menu_player_count_pointer_interaction_smoke)"
+TMP_DIR="$(mktemp -d)"
+codex_setup_godot_test_home "$TMP_DIR"
+LOG_FILE="$TMP_DIR/main_menu_player_count_pointer_interaction_smoke.log"
 
 cleanup() {
-	rm -f "$LOG_FILE"
+	rm -rf "$TMP_DIR"
 }
 
 trap cleanup EXIT
 
 set +e
-"$GODOT_CMD" --path "$ROOT_DIR" --script res://tests/MainMenuPlayerCountPointerInteractionSmoke.gd >"$LOG_FILE" 2>&1
+DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --audio-driver Dummy --path "$ROOT_DIR" --script res://tests/MainMenuPlayerCountPointerInteractionSmoke.gd >"$LOG_FILE" 2>&1
 GODOT_STATUS=$?
 set -e
 
@@ -33,7 +36,7 @@ if [[ "$GODOT_STATUS" -ne 0 ]]; then
 	exit "$GODOT_STATUS"
 fi
 
-if grep -Eq "SCRIPT ERROR|Failed to load resource|No loader found|MAIN_MENU_PLAYER_COUNT_POINTER_INTERACTION_SMOKE_FAIL" "$LOG_FILE"; then
+if grep -Eq "SCRIPT ERROR|^ERROR:|Failed to load resource|No loader found|MAIN_MENU_PLAYER_COUNT_POINTER_INTERACTION_SMOKE_FAIL" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

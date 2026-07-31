@@ -176,24 +176,16 @@ func _capture_main_menu_states(viewport_spec: Dictionary) -> bool:
 		return false
 	if not await _save_viewport(viewport, "settings", viewport_spec.name):
 		return false
-	var controls_button := settings_root.find_child("ControlsButton", true, false) as Button
-	var settings_scroll_bar := settings_scroll.get_v_scroll_bar()
-	var settings_has_overflow := settings_scroll_bar.max_value > settings_scroll_bar.page + 1.0
-	controls_button.grab_focus()
-	await process_frame
-	await process_frame
-	var settings_viewport_rect := settings_scroll.get_global_rect()
-	var controls_button_rect := controls_button.get_global_rect()
-	if settings_has_overflow and settings_scroll.scroll_vertical <= 2:
-		_fail("Settings focus did not scroll the compact grid to its final control")
+	var controls_category_button := settings_root.find_child("ControlsCategoryButton", true, false) as Button
+	if controls_category_button == null:
+		_fail("Settings controls entry is missing")
 		return false
-	if controls_button_rect.position.y < settings_viewport_rect.position.y - 2.0 \
-			or controls_button_rect.end.y > settings_viewport_rect.end.y + 2.0:
-		_fail("Settings focus target was not fully visible after manual focus scrolling")
+	if settings_root.find_child("ControlsButton", true, false) != null:
+		_fail("Settings still exposes the redundant controls edit button")
 		return false
-	controls_button.emit_signal("pressed")
+	controls_category_button.emit_signal("pressed")
 	if not await _wait_for_opaque(controls_root):
-		_fail("Controls dialog did not open")
+		_fail("Settings controls entry did not open key mapping directly")
 		return false
 	if not await _save_viewport(viewport, "controls", viewport_spec.name):
 		return false

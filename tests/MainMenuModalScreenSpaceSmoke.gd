@@ -33,11 +33,15 @@ func _run() -> void:
 	var settings_root := menu.get_node_or_null(SETTINGS_ROOT_PATH) as Control
 	var controls_root := menu.get_node_or_null(CONTROLS_ROOT_PATH) as Control
 	var settings_button := menu.get_node_or_null(SETTINGS_BUTTON_PATH) as Button
-	var controls_button := settings_root.find_child("ControlsButton", true, false) as Button if settings_root != null else null
+	var controls_category_button := settings_root.find_child("ControlsCategoryButton", true, false) as Button if settings_root != null else null
 	var push_camera := menu.get_node_or_null(PUSH_CAMERA_PATH)
 	if settings_layer == null or settings_root == null or controls_root == null \
-			or settings_button == null or controls_button == null or push_camera == null:
+			or settings_button == null or controls_category_button == null \
+			or push_camera == null:
 		_fail("Main-menu settings modal nodes are missing")
+		return
+	if settings_root.find_child("ControlsButton", true, false) != null:
+		_fail("Settings still exposes the redundant controls edit button")
 		return
 	if bool(settings_layer.get("follow_viewport_enabled")):
 		_fail("Settings and controls layer must remain screen-space")
@@ -47,7 +51,7 @@ func _run() -> void:
 	if not await _assert_screen_space_during_push(settings_root, push_camera, "settings"):
 		return
 
-	controls_button.emit_signal("pressed")
+	controls_category_button.emit_signal("pressed")
 	if not await _assert_screen_space_during_push(controls_root, push_camera, "controls"):
 		return
 
@@ -148,9 +152,12 @@ func _run() -> void:
 		return
 
 	print("MAIN_MENU_MODAL_SCREEN_SPACE_SMOKE_OK")
+	if current_scene == menu:
+		current_scene = null
 	menu.queue_free()
-	await process_frame
+	await _wait_frames(8)
 	await _dispose_audio_before_quit()
+	await _wait_frames(60)
 	quit(0)
 
 

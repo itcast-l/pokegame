@@ -3,21 +3,35 @@ using Godot;
 
 public partial class GameAudioManager
 {
-	private void BindUiAudioRecursive(Node node)
+	private void BindUiBehaviorRecursive(Node node)
 	{
 		if (node is BaseButton button)
 		{
-			BindButtonAudio(button);
+			button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+			MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
+			CallDeferred(nameof(ApplyUnifiedButtonTextDeferred), button);
+			if (!_suppressPlayback)
+			{
+				BindButtonAudio(button);
+			}
 		}
 
-		if (node is Godot.Range range && node is not SpinBox)
+		if (!_suppressPlayback && node is Godot.Range range && node is not SpinBox)
 		{
 			BindRangeAudio(range);
 		}
 
 		foreach (Node child in node.GetChildren())
 		{
-			BindUiAudioRecursive(child);
+			BindUiBehaviorRecursive(child);
+		}
+	}
+
+	private void ApplyUnifiedButtonTextDeferred(BaseButton button)
+	{
+		if (GodotObject.IsInstanceValid(button))
+		{
+			MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
 		}
 	}
 

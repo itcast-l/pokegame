@@ -21,13 +21,14 @@ codex_setup_godot_test_home "$TMP_DIR"
 trap 'rm -rf "$TMP_DIR"' EXIT
 LOG_FILE="$TMP_DIR/main-menu-focus-visibility.log"
 
-if ! "$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
+if ! DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
 		--script res://tests/MainMenuFocusVisibilitySmoke.gd >"$LOG_FILE" 2>&1; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi
 
 if grep -Fq "SCRIPT ERROR" "$LOG_FILE" \
+		|| grep -Fq "ERROR:" "$LOG_FILE" \
 		|| grep -Fq "ERROR: Failed to load" "$LOG_FILE" \
 		|| grep -Fq "ERROR: Cannot open" "$LOG_FILE" \
 		|| ! grep -Fq "MAIN_MENU_FOCUS_VISIBILITY_SMOKE_OK" "$LOG_FILE"; then

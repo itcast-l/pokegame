@@ -4,7 +4,6 @@ const SCENE_PATH := "res://scenes/character_avatar_edit_scene.tscn"
 const VIEWPORT_SIZE := Vector2i(1280, 720)
 const SETTLE_FRAMES := 6
 const TOLERANCE := 0.5
-const SELECTED_MODULATE := Color(1.0, 1.0, 0.78, 1.0)
 
 
 func _initialize() -> void:
@@ -40,6 +39,7 @@ func _run() -> void:
 		return
 
 	var visible_option_count := 0
+	var selected_option_count := 0
 	var scroll_rect := scroll.get_global_rect()
 	for child in avatar_grid.get_children():
 		if child is not Control:
@@ -51,20 +51,26 @@ func _run() -> void:
 
 		var button := option_root.get_node_or_null("SelectButton") as Button
 		var panel := option_root.get_node_or_null("OptionPanel") as PanelContainer
-		if button == null or panel == null:
-			_fail("Avatar option is missing SelectButton or OptionPanel: %s" % option_root.get_path())
+		var backdrop := option_root.get_node_or_null("OptionPanel/OptionMargin/OptionLayout/AvatarSlot/SlotBackdrop") as PanelContainer
+		if button == null or panel == null or backdrop == null:
+			_fail("Avatar option is missing its single-slot selection surface: %s" % option_root.get_path())
+			return
+		if not bool(option_root.get("SuppressVisuals")) \
+				or not panel.get_theme_stylebox("panel") is StyleBoxEmpty:
+			_fail("Avatar option still renders stacked outer frame visuals: %s" % option_root.get_path())
 			return
 
 		visible_option_count += 1
 		button.emit_signal("pressed")
 		await process_frame
 
-		if not _color_is_close(panel.modulate, SELECTED_MODULATE):
-			_fail("Selected avatar option did not apply expected highlight: %s modulate=%s" % [
-				panel.get_path(),
-				str(panel.modulate),
-			])
+		var slot_style := backdrop.get_theme_stylebox("panel") as StyleBoxFlat
+		if not bool(option_root.get("Selected")) or slot_style == null \
+				or slot_style.border_width_left < 2 \
+				or not _color_is_close(panel.modulate, Color.WHITE):
+			_fail("Selected avatar option did not apply the single-slot highlight: %s" % option_root.get_path())
 			return
+		selected_option_count += 1
 
 		var visual_rect := panel.get_global_rect()
 		if not _rect_is_inside(visual_rect, scroll_rect):
@@ -77,6 +83,32 @@ func _run() -> void:
 
 	if visible_option_count == 0:
 		_fail("No visible avatar options found")
+		return
+	if selected_option_count != visible_option_count:
+		_fail("Every avatar selection did not receive a stable single-slot highlight")
+		return
+
+	var current_selection_count := 0
+	for child in avatar_grid.get_children():
+		var option_root := child as Control
+		if option_root == null or not option_root.visible:
+			continue
+		var backdrop := option_root.get_node_or_null(
+			"OptionPanel/OptionMargin/OptionLayout/AvatarSlot/SlotBackdrop") as PanelContainer
+		var slot_style := backdrop.get_theme_stylebox("panel") as StyleBoxFlat if backdrop != null else null
+		if slot_style == null:
+			_fail("Avatar option is missing its final slot style: %s" % option_root.get_path())
+			return
+		if bool(option_root.get("Selected")):
+			current_selection_count += 1
+			continue
+		if slot_style.border_width_left != 1 \
+				or slot_style.border_color.a < 0.20 \
+				or slot_style.bg_color.a < 0.55:
+			_fail("Unselected avatar option lacks a visible single-layer separator: %s" % option_root.get_path())
+			return
+	if current_selection_count != 1:
+		_fail("Avatar grid must expose exactly one selected option")
 		return
 
 	print("AVATAR_EDIT_SELECTION_RING_LAYOUT_AUDIT_OK")

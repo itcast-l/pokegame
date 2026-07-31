@@ -193,19 +193,6 @@ public partial class AdventureRunResumeDialog : Control
 	private void ApplyButtonSizing()
 	{
 		Button[] buttons = { _continueButton, _restartButton, _cancelButton };
-		Color[] baseColors =
-		{
-			new(0.96f, 1.0f, 0.98f, 1.0f),
-			new(0.78f, 0.96f, 0.96f, 0.98f),
-			new(0.84f, 0.90f, 0.92f, 0.92f),
-		};
-		Color[] hoverColors =
-		{
-			new(1.0f, 0.98f, 0.84f, 1.0f),
-			new(0.96f, 1.0f, 0.90f, 1.0f),
-			new(0.96f, 1.0f, 0.94f, 1.0f),
-		};
-
 		int widestTextWidth = 0;
 		int resolvedFontSize = ButtonFontSize;
 		foreach (Button candidate in buttons)
@@ -229,15 +216,8 @@ public partial class AdventureRunResumeDialog : Control
 		for (int index = 0; index < buttons.Length; index++)
 		{
 			Button button = buttons[index];
-			Color baseFontColor = baseColors[index];
-			Color hoverFontColor = hoverColors[index];
 			button.AddThemeFontSizeOverride("font_size", resolvedFontSize);
-			button.AddThemeColorOverride("font_color", baseFontColor);
-			button.AddThemeColorOverride(
-				"font_pressed_color",
-				baseFontColor.Lerp(Colors.White, index == 0 ? 0.10f : 0.05f));
-			button.AddThemeColorOverride("font_hover_color", hoverFontColor);
-			button.AddThemeColorOverride("font_focus_color", hoverFontColor);
+			MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
 			button.CustomMinimumSize = minimumSize;
 			if (button.GetParent() is Control frame)
 			{

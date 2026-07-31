@@ -2,6 +2,12 @@ using Godot;
 
 public static class MainMenuInteractiveStyle
 {
+	public static readonly Color PauseDerivedBodyText = new(243.0f / 255.0f, 247.0f / 255.0f, 244.0f / 255.0f, 1.0f);
+	public static readonly Color PauseDerivedSecondaryText = new(158.0f / 255.0f, 219.0f / 255.0f, 213.0f / 255.0f, 1.0f);
+	public static readonly Color PauseDerivedCyan = new(34.0f / 255.0f, 185.0f / 255.0f, 192.0f / 255.0f, 1.0f);
+	public static readonly Color PauseDerivedGold = new(212.0f / 255.0f, 179.0f / 255.0f, 79.0f / 255.0f, 1.0f);
+	public static readonly Color PauseDerivedControlSurface = new(7.0f / 255.0f, 31.0f / 255.0f, 45.0f / 255.0f, 1.0f);
+
 	public sealed class Palette
 	{
 		public Palette(
@@ -47,6 +53,14 @@ public static class MainMenuInteractiveStyle
 		new Color(0.95f, 1.0f, 0.98f, 1.0f),
 		new Color(1.0f, 1.0f, 0.94f, 1.0f),
 		new Color(0.48f, 0.66f, 0.62f, 0.68f));
+	public static readonly Palette PauseDerivedPalette = new(
+		PauseDerivedControlSurface,
+		new Color(0.027f, 0.220f, 0.255f, 0.98f),
+		new Color(PauseDerivedCyan.R, PauseDerivedCyan.G, PauseDerivedCyan.B, 0.56f),
+		PauseDerivedGold,
+		PauseDerivedBodyText,
+		PauseDerivedBodyText,
+		new Color(PauseDerivedSecondaryText.R, PauseDerivedSecondaryText.G, PauseDerivedSecondaryText.B, 0.62f));
 
 	public static readonly Palette UtilityPalette = new(
 		new Color(0.20f, 0.24f, 0.24f, 0.58f),
@@ -93,22 +107,31 @@ public static class MainMenuInteractiveStyle
 	public static readonly Palette SpadePalette = CreateAccentPalette(new Color(0.57f, 0.68f, 0.82f));
 	public static readonly Palette ClubPalette = CreateAccentPalette(new Color(0.30f, 0.72f, 0.49f));
 
-	private static readonly Color ActionButtonFontColor = new(0.95f, 1.0f, 0.97f, 1.0f);
-	private static readonly Color ActionButtonPressedFontColor = new(0.92f, 1.0f, 0.98f, 1.0f);
-	private static readonly Color ActionButtonHighlightFontColor = new(1.0f, 1.0f, 0.84f, 1.0f);
+	private static readonly Color UnifiedDisabledButtonText = new(
+		PauseDerivedSecondaryText.R,
+		PauseDerivedSecondaryText.G,
+		PauseDerivedSecondaryText.B,
+		0.62f);
 	private const int ThemedPopupShadowSize = 12;
 	private static Texture2D? _popupDiamondSelectedIcon;
 	private static Texture2D? _popupDiamondIdleIcon;
 	private static Texture2D? _transparentOptionArrow;
 
+	public static void ApplyUnifiedButtonText(BaseButton button)
+	{
+		button.AddThemeColorOverride("font_color", PauseDerivedBodyText);
+		button.AddThemeColorOverride("font_pressed_color", PauseDerivedBodyText);
+		button.AddThemeColorOverride("font_hover_color", PauseDerivedBodyText);
+		button.AddThemeColorOverride("font_hover_pressed_color", PauseDerivedBodyText);
+		button.AddThemeColorOverride("font_focus_color", PauseDerivedBodyText);
+		button.AddThemeColorOverride("font_disabled_color", UnifiedDisabledButtonText);
+	}
+
 	public static void ApplyOptionLikeButton(BaseButton button)
 	{
 		Vector2 minimumSize = button.CustomMinimumSize;
 		button.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 42.0f));
-		button.AddThemeColorOverride("font_color", new Color(0.94f, 1.0f, 0.97f, 1.0f));
-		button.AddThemeColorOverride("font_pressed_color", new Color(0.94f, 1.0f, 0.97f, 1.0f));
-		button.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.84f, 1.0f));
-		button.AddThemeColorOverride("font_focus_color", new Color(1.0f, 1.0f, 0.84f, 1.0f));
+		ApplyUnifiedButtonText(button);
 		button.AddThemeFontSizeOverride("font_size", 18);
 		button.AddThemeStyleboxOverride("normal", CreateOptionStyle(false));
 		button.AddThemeStyleboxOverride("pressed", CreateOptionStyle(false));
@@ -126,10 +149,7 @@ public static class MainMenuInteractiveStyle
 	{
 		Vector2 minimumSize = button.CustomMinimumSize;
 		button.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
-		button.AddThemeColorOverride("font_color", new Color(0.94f, 1.0f, 0.97f, 1.0f));
-		button.AddThemeColorOverride("font_pressed_color", new Color(0.92f, 1.0f, 0.98f, 1.0f));
-		button.AddThemeColorOverride("font_hover_color", new Color(1.0f, 1.0f, 0.84f, 1.0f));
-		button.AddThemeColorOverride("font_focus_color", new Color(1.0f, 1.0f, 0.84f, 1.0f));
+		ApplyUnifiedButtonText(button);
 		button.AddThemeFontSizeOverride("font_size", fontSize);
 		button.AddThemeStyleboxOverride("normal", CreateGlassOptionStyle(false));
 		button.AddThemeStyleboxOverride("pressed", CreateGlassOptionStyle(true));
@@ -146,12 +166,9 @@ public static class MainMenuInteractiveStyle
 	public static void ApplyThemedControl(BaseButton button, Palette palette, int fontSize = 18)
 	{
 		Vector2 minimumSize = button.CustomMinimumSize;
-		button.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
-		button.AddThemeColorOverride("font_color", palette.Text);
-		button.AddThemeColorOverride("font_pressed_color", palette.FocusText);
-		button.AddThemeColorOverride("font_hover_color", palette.FocusText);
-		button.AddThemeColorOverride("font_focus_color", palette.FocusText);
-		button.AddThemeColorOverride("font_disabled_color", palette.DisabledText);
+		float targetHeight = ReferenceEquals(palette, PauseDerivedPalette) ? 54.0f : 44.0f;
+		button.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, targetHeight));
+		ApplyUnifiedButtonText(button);
 		button.AddThemeFontSizeOverride("font_size", fontSize);
 		button.AddThemeStyleboxOverride("normal", CreateThemedControlStyle(palette, active: false));
 		button.AddThemeStyleboxOverride("pressed", CreateThemedControlStyle(palette, active: true));
@@ -182,6 +199,26 @@ public static class MainMenuInteractiveStyle
 			popupShadowSize: 0);
 	}
 
+	public static void ApplyPauseDerivedGameConfigurationOption(OptionButton option)
+	{
+		ApplyThemedControl(option, PauseDerivedPalette, 21);
+		option.AddThemeStyleboxOverride("normal", CreatePauseDerivedGameConfigurationOptionStyle(active: false));
+		option.AddThemeStyleboxOverride("pressed", CreatePauseDerivedGameConfigurationOptionStyle(active: true));
+		option.AddThemeStyleboxOverride("hover", CreatePauseDerivedGameConfigurationOptionStyle(active: true));
+		option.AddThemeStyleboxOverride("focus", CreatePauseDerivedGameConfigurationOptionStyle(active: true));
+		option.AddThemeIconOverride("arrow", GetTransparentOptionArrow());
+		option.AddThemeConstantOverride("arrow_margin", 0);
+		option.Alignment = HorizontalAlignment.Left;
+		option.ClipText = true;
+		option.Flat = false;
+		PopupMenu popup = option.GetPopup();
+		popup.Theme = BuildThemedPopupTheme(
+			PauseDerivedPalette,
+			showSelectionIcons: false,
+			popupShadowSize: 0);
+		popup.AboutToPopup += () => AlignThemedPopup(option, popup);
+	}
+
 	public static void ApplyThemedToggle(CheckButton toggle, Palette palette, int fontSize = 18)
 	{
 		ApplyThemedControl(toggle, palette, fontSize);
@@ -192,7 +229,8 @@ public static class MainMenuInteractiveStyle
 
 	public static void ApplyThemedSlider(HSlider slider, Palette palette)
 	{
-		slider.CustomMinimumSize = new Vector2(slider.CustomMinimumSize.X, Mathf.Max(20.0f, slider.CustomMinimumSize.Y));
+		float targetHeight = ReferenceEquals(palette, PauseDerivedPalette) ? 54.0f : 20.0f;
+		slider.CustomMinimumSize = new Vector2(slider.CustomMinimumSize.X, Mathf.Max(targetHeight, slider.CustomMinimumSize.Y));
 		slider.AddThemeStyleboxOverride("slider", CreateSliderTrackStyle(palette));
 		slider.AddThemeStyleboxOverride("grabber_area", CreateSliderFillStyle(palette, active: false));
 		slider.AddThemeStyleboxOverride("grabber_area_highlight", CreateSliderFillStyle(palette, active: true));
@@ -203,7 +241,8 @@ public static class MainMenuInteractiveStyle
 	public static void ApplyThemedLineEdit(LineEdit input, Palette palette, int fontSize = 18)
 	{
 		Vector2 minimumSize = input.CustomMinimumSize;
-		input.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
+		float targetHeight = ReferenceEquals(palette, PauseDerivedPalette) ? 54.0f : 44.0f;
+		input.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, targetHeight));
 		input.AddThemeColorOverride("font_color", palette.Text);
 		input.AddThemeColorOverride("font_placeholder_color", new Color(
 			palette.DisabledText.R,
@@ -228,17 +267,13 @@ public static class MainMenuInteractiveStyle
 		ApplyThemedControl(button, selected ? palette : NeutralPalette, fontSize);
 		button.ButtonPressed = selected;
 		button.AddThemeStyleboxOverride("pressed", CreateThemedControlStyle(palette, active: true));
-		button.AddThemeColorOverride("font_pressed_color", palette.FocusText);
 	}
 
 	public static void ApplyGameConfigurationOption(OptionButton option)
 	{
 		Vector2 minimumSize = option.CustomMinimumSize;
 		option.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
-		option.AddThemeColorOverride("font_color", new Color(0.96f, 1.0f, 0.98f, 1.0f));
-		option.AddThemeColorOverride("font_pressed_color", new Color(0.98f, 1.0f, 0.97f, 1.0f));
-		option.AddThemeColorOverride("font_hover_color", new Color(0.98f, 1.0f, 0.97f, 1.0f));
-		option.AddThemeColorOverride("font_focus_color", new Color(0.98f, 1.0f, 0.97f, 1.0f));
+		ApplyUnifiedButtonText(option);
 		option.AddThemeFontSizeOverride("font_size", 19);
 		option.AddThemeStyleboxOverride("normal", CreateGameConfigurationOptionContentStyle());
 		option.AddThemeStyleboxOverride("pressed", CreateGameConfigurationOptionContentStyle());
@@ -256,10 +291,7 @@ public static class MainMenuInteractiveStyle
 	{
 		Vector2 minimumSize = option.CustomMinimumSize;
 		option.CustomMinimumSize = new Vector2(minimumSize.X, Mathf.Max(minimumSize.Y, 44.0f));
-		option.AddThemeColorOverride("font_color", new Color(0.95f, 0.97f, 0.97f, 1.0f));
-		option.AddThemeColorOverride("font_pressed_color", new Color(0.94f, 1.0f, 0.97f, 1.0f));
-		option.AddThemeColorOverride("font_hover_color", new Color(0.94f, 1.0f, 0.97f, 1.0f));
-		option.AddThemeColorOverride("font_focus_color", new Color(0.94f, 1.0f, 0.97f, 1.0f));
+		ApplyUnifiedButtonText(option);
 		option.AddThemeFontSizeOverride("font_size", 20);
 		option.AddThemeStyleboxOverride("normal", CreateNeutralSmokeConfigurationOptionContentStyle());
 		option.AddThemeStyleboxOverride("pressed", CreateNeutralSmokeConfigurationOptionContentStyle());
@@ -297,13 +329,7 @@ public static class MainMenuInteractiveStyle
 
 	public static void ApplyActionButton(Button button, int fontSize, Palette? palette)
 	{
-		Color fontColor = palette?.Text ?? ActionButtonFontColor;
-		Color pressedColor = palette?.FocusText ?? ActionButtonPressedFontColor;
-		Color highlightColor = palette?.FocusText ?? ActionButtonHighlightFontColor;
-		button.AddThemeColorOverride("font_color", fontColor);
-		button.AddThemeColorOverride("font_pressed_color", pressedColor);
-		button.AddThemeColorOverride("font_hover_color", highlightColor);
-		button.AddThemeColorOverride("font_disabled_color", palette?.DisabledText ?? new Color(fontColor.R, fontColor.G, fontColor.B, 0.54f));
+		ApplyUnifiedButtonText(button);
 		SetActionButtonFocusHighlight(button, true, palette);
 		button.AddThemeFontSizeOverride("font_size", fontSize);
 		button.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
@@ -320,9 +346,7 @@ public static class MainMenuInteractiveStyle
 
 	public static void SetActionButtonFocusHighlight(Button button, bool enabled, Palette? palette)
 	{
-		Color normal = palette?.Text ?? ActionButtonFontColor;
-		Color highlighted = palette?.FocusText ?? ActionButtonHighlightFontColor;
-		button.AddThemeColorOverride("font_focus_color", enabled ? highlighted : normal);
+		ApplyUnifiedButtonText(button);
 	}
 
 	public static void ApplyOptionPopup(OptionButton option)
@@ -355,7 +379,8 @@ public static class MainMenuInteractiveStyle
 
 		Rect2 optionRect = option.GetGlobalRect();
 		int width = Mathf.RoundToInt(optionRect.Size.X);
-		popup.MinSize = new Vector2I(Mathf.Max(1, width - 24), 0);
+		int shadowReserve = GetPopupHorizontalShadowReserve(popup);
+		popup.MinSize = new Vector2I(Mathf.Max(1, width - shadowReserve), 0);
 		popup.Size = new Vector2I(width, popup.Size.Y);
 		popup.Position = new Vector2I(Mathf.RoundToInt(optionRect.Position.X), popup.Position.Y);
 		Callable.From(() =>
@@ -364,11 +389,19 @@ public static class MainMenuInteractiveStyle
 			{
 				Rect2 deferredRect = option.GetGlobalRect();
 				int deferredWidth = Mathf.RoundToInt(deferredRect.Size.X);
-				popup.MinSize = new Vector2I(Mathf.Max(1, deferredWidth - 24), 0);
+				int deferredShadowReserve = GetPopupHorizontalShadowReserve(popup);
+				popup.MinSize = new Vector2I(Mathf.Max(1, deferredWidth - deferredShadowReserve), 0);
 				popup.Size = new Vector2I(deferredWidth, popup.Size.Y);
 				popup.Position = new Vector2I(Mathf.RoundToInt(deferredRect.Position.X), popup.Position.Y);
 			}
 		}).CallDeferred();
+	}
+
+	private static int GetPopupHorizontalShadowReserve(PopupMenu popup)
+	{
+		return popup.GetThemeStylebox("panel", "PopupMenu") is StyleBoxFlat panel
+			? panel.ShadowSize * 2
+			: 0;
 	}
 
 	private static StyleBoxFlat CreateThemedControlStyle(Palette palette, bool active)
@@ -395,6 +428,14 @@ public static class MainMenuInteractiveStyle
 	private static StyleBoxFlat CreateSecondaryMenuGameConfigurationOptionStyle(bool active)
 	{
 		StyleBoxFlat style = CreateThemedControlStyle(SecondaryMenuPalette, active);
+		style.ContentMarginRight = 48.0f;
+		return style;
+	}
+
+	private static StyleBoxFlat CreatePauseDerivedGameConfigurationOptionStyle(bool active)
+	{
+		StyleBoxFlat style = CreateThemedControlStyle(PauseDerivedPalette, active);
+		style.ContentMarginLeft = 14.0f;
 		style.ContentMarginRight = 48.0f;
 		return style;
 	}

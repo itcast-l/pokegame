@@ -48,6 +48,18 @@ public partial class OceanMenuButtonFrame : Control
 	public bool ShowIdleTexture { get; set; } = true;
 
 	[Export]
+	public bool SuppressVisuals { get; set; }
+
+	[Export]
+	public bool UseNinePatchTexture { get; set; }
+
+	[Export(PropertyHint.Range, "0,128,1")]
+	public float TexturePatchMarginHorizontal { get; set; } = 24.0f;
+
+	[Export(PropertyHint.Range, "0,128,1")]
+	public float TexturePatchMarginVertical { get; set; } = 18.0f;
+
+	[Export]
 	public Texture2D? OceanPlaqueTexture { get; set; }
 
 	[Export]
@@ -187,8 +199,15 @@ public partial class OceanMenuButtonFrame : Control
 
 	public override void _Draw()
 	{
-		Rect2 rect = FrameStyle is ButtonFrameStyle.NeutralSmokeRow or ButtonFrameStyle.IndividualToolRow
+		if (SuppressVisuals)
+		{
+			return;
+		}
+
+		Rect2 rect = UseNinePatchTexture
 			? new Rect2(Vector2.Zero, Size)
+			: FrameStyle is ButtonFrameStyle.NeutralSmokeRow or ButtonFrameStyle.IndividualToolRow
+				? new Rect2(Vector2.Zero, Size)
 			: _button != null
 			? new Rect2(_button.Position, _button.Size)
 			: new Rect2(Vector2.Zero, Size);
@@ -343,7 +362,7 @@ public partial class OceanMenuButtonFrame : Control
 			return false;
 		}
 
-		bool pressed = _button?.ButtonPressed == true;
+		bool pressed = _button?.ButtonPressed == true || HasPressedInteractiveDescendant();
 		bool focused = Selected || _glow > 0.08f;
 		if (!pressed && !focused && !ShowIdleTexture)
 		{
@@ -355,7 +374,7 @@ public partial class OceanMenuButtonFrame : Control
 			: focused && FocusTexture != null
 				? FocusTexture
 				: texture;
-		DrawTextureRect(stateTexture, rect, false);
+		DrawTexturedState(stateTexture, rect);
 		if (stateTexture == texture
 			&& SelectionGlowTexture != null
 			&& (_glow > 0.01f || Selected))
@@ -371,6 +390,43 @@ public partial class OceanMenuButtonFrame : Control
 		}
 
 		return true;
+	}
+
+	private bool HasPressedInteractiveDescendant()
+	{
+		foreach (Control control in _interactiveDescendants)
+		{
+			if (GodotObject.IsInstanceValid(control)
+				&& control.IsVisibleInTree()
+				&& control is BaseButton { ButtonPressed: true })
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private void DrawTexturedState(Texture2D texture, Rect2 rect)
+	{
+		if (!UseNinePatchTexture)
+		{
+			DrawTextureRect(texture, rect, false);
+			return;
+		}
+
+		StyleBoxTexture style = new()
+		{
+			Texture = texture,
+			TextureMarginLeft = TexturePatchMarginHorizontal,
+			TextureMarginTop = TexturePatchMarginVertical,
+			TextureMarginRight = TexturePatchMarginHorizontal,
+			TextureMarginBottom = TexturePatchMarginVertical,
+			AxisStretchHorizontal = StyleBoxTexture.AxisStretchMode.Stretch,
+			AxisStretchVertical = StyleBoxTexture.AxisStretchMode.Stretch,
+			DrawCenter = true,
+		};
+		DrawStyleBox(style, rect);
 	}
 
 	private void DrawAdventureGlassPlaqueFrame(Rect2 rect)

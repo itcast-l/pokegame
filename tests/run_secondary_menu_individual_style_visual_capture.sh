@@ -32,7 +32,7 @@ cleanup() {
 trap cleanup EXIT
 
 set +e
-"$GODOT_CMD" --path "$ROOT_DIR" --script res://tests/SecondaryMenuIndividualStyleVisualCapture.gd >"$LOG_FILE" 2>&1
+DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --audio-driver Dummy --path "$ROOT_DIR" --script res://tests/SecondaryMenuIndividualStyleVisualCapture.gd >"$LOG_FILE" 2>&1
 GODOT_STATUS=$?
 set -e
 
@@ -41,7 +41,7 @@ if [[ "$GODOT_STATUS" -ne 0 ]]; then
 	exit "$GODOT_STATUS"
 fi
 
-if grep -Eq "SCRIPT ERROR|Failed to load resource|No loader found|SECONDARY_MENU_INDIVIDUAL_VISUAL_CAPTURE_FAIL" "$LOG_FILE"; then
+if grep -Eq "SCRIPT ERROR|^ERROR:|Failed to load resource|No loader found|SECONDARY_MENU_INDIVIDUAL_VISUAL_CAPTURE_FAIL" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi
