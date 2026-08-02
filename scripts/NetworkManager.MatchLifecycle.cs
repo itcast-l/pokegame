@@ -22,6 +22,9 @@ public partial class NetworkManager
 			return;
 		}
 
+		_pendingLobbyReadyByPeerId.Clear();
+		ClearPendingLocalReadyIntent();
+		ResetMigrationArtifactsForNewMatch();
 		_config = _config with
 		{
 			MatchId = Guid.NewGuid().ToString("N"),
@@ -209,6 +212,8 @@ public partial class NetworkManager
 	private void ResetCompletedMatchState()
 	{
 		_loadHandshake = null;
+		_pendingLobbyReadyByPeerId.Clear();
+		ClearPendingLocalReadyIntent();
 		var previousSeatControlsByPlayerSessionId = _seatControlStates
 			.GroupBy(state => state.PlayerSessionId, StringComparer.Ordinal)
 			.ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
@@ -244,18 +249,19 @@ public partial class NetworkManager
 		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 		_authorityCheckpointCommitFailureCount = 0;
 		_authorityCheckpointCommitFailureReported = false;
-		_networkMigrationPlan = null;
-		_standbyCheckpoint = null;
-		_standbyCheckpointPayload = Array.Empty<byte>();
-		_standbyCheckpointHash = string.Empty;
-		_standbyCheckpointsById.Clear();
+			_networkMigrationPlan = null;
+			ClearPendingMigrationPlan();
+		ClearLocalStandbyCheckpointCache();
+		_issuedStandbyCheckpointNonces.Reset();
 		_hotStandbySeat = -1;
-		_standbyCheckpointAcked = false;
 		_standbyAckedCheckpointId = -1;
+		_migrationEligibleCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
 		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyPendingEncryptedCheckpoint = null;
 		_standbyCheckpointSentAt = -1.0;
 		_lastStandbyCheckpointSentAt = -1.0;
+		_lastStandbyCheckpointAckedAt = -1.0;
 		_consecutiveUnackedCheckpoints = 0;
 		_failedHotStandbySeats.Clear();
 		_migrationStartedAt = -1.0;
@@ -269,9 +275,19 @@ public partial class NetworkManager
 		_activeMigrationDeadline = -1.0;
 		_activeMigrationConfirmedSeats.Clear();
 		_migrationReadyEpoch = -1;
+		_lastCompletedMigrationReadyEpoch = -1;
 		_migrationRecoveryReadyForPeers = false;
-		_migrationReadinessSeatIndices.Clear();
+		_gameMigrationRecoveryState = null;
 		_lobbyMigrationRecoveryState = null;
+		_migrationCoordinatorState = NetworkMigrationCoordinatorState.Disabled;
+		_lastObservedMigrationPlanRevision = 0;
+		_pendingMigrationPlanRevocationRevision = -1;
+		ResetMigrationTransportState();
+		_migrationLatencyMillisecondsByPeerId.Clear();
+		_pendingMigrationLatencyProbesByPeerId.Clear();
+		_lastMigrationLatencyProbeAt = -1.0;
+		_nextMigrationLatencyProbeSequence = 0;
+		_lastObservedSteamLobbyOwnerId = 0;
 
 		_issuedSeatCredentialsBySeat.Clear();
 		_peerRateLimiter.Clear();
@@ -281,6 +297,7 @@ public partial class NetworkManager
 		_hostEndedMatchPending = false;
 		_hostEndedMatchMessage = string.Empty;
 		_hostEndedMatchBroadcasted = false;
+		ResetMigrationSecurityAfterCompletedMatch();
 	}
 
 	private static long ResolveMatchSeedForStart()
@@ -308,6 +325,9 @@ public partial class NetworkManager
 		StopLanDiscoveryResponder();
 		StopLanDiscoveryBrowser();
 		_loadHandshake = null;
+		_pendingLobbyReadyByPeerId.Clear();
+		ClearPendingLocalReadyIntent();
+		_lastSeatCredentialRetryAt = -1.0;
 		_seatControlStates.Clear();
 		_reconnectClaimsBySeat.Clear();
 		_issuedSeatCredentialsBySeat.Clear();
@@ -318,6 +338,7 @@ public partial class NetworkManager
 		_localSeatCredentialGeneration = 0;
 		_pendingLocalSeatCredential = string.Empty;
 		_pendingLocalSeatCredentialGeneration = 0;
+		DisposeMigrationSecurity();
 		_lastLanJoinAddress = string.Empty;
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
@@ -326,24 +347,35 @@ public partial class NetworkManager
 		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
 		_authorityCheckpointCommitFailureCount = 0;
 		_authorityCheckpointCommitFailureReported = false;
-		_networkMigrationPlan = null;
-		_standbyCheckpoint = null;
-		_standbyCheckpointPayload = Array.Empty<byte>();
-		_standbyCheckpointHash = string.Empty;
-		_standbyCheckpointsById.Clear();
+			_networkMigrationPlan = null;
+			ClearPendingMigrationPlan();
+		ClearLocalStandbyCheckpointCache();
+		_issuedStandbyCheckpointNonces.Reset();
 		_hotStandbySeat = -1;
-		_standbyCheckpointAcked = false;
 		_standbyAckedCheckpointId = -1;
+		_migrationEligibleCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
 		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyPendingEncryptedCheckpoint = null;
 		_standbyCheckpointSentAt = -1.0;
 		_lastStandbyCheckpointSentAt = -1.0;
+		_lastStandbyCheckpointAckedAt = -1.0;
 		_consecutiveUnackedCheckpoints = 0;
 		_failedHotStandbySeats.Clear();
 		_migrationReadyEpoch = -1;
+		_lastCompletedMigrationReadyEpoch = -1;
 		_migrationRecoveryReadyForPeers = false;
-		_migrationReadinessSeatIndices.Clear();
+		_gameMigrationRecoveryState = null;
 		_lobbyMigrationRecoveryState = null;
+		_migrationCoordinatorState = NetworkMigrationCoordinatorState.Disabled;
+		_lastObservedMigrationPlanRevision = 0;
+		_pendingMigrationPlanRevocationRevision = -1;
+		ResetMigrationTransportState();
+		_migrationLatencyMillisecondsByPeerId.Clear();
+		_pendingMigrationLatencyProbesByPeerId.Clear();
+		_lastMigrationLatencyProbeAt = -1.0;
+		_nextMigrationLatencyProbeSequence = 0;
+		_lastObservedSteamLobbyOwnerId = 0;
 		_authorityEpoch = 0;
 		_migrationStartedAt = -1.0;
 		_migrationServerStarted = false;

@@ -38,7 +38,14 @@ public readonly record struct NetworkSessionConfig(
 	int PlayerCount,
 	bool ItemMode,
 	int WinningScore,
-	LobbyVisibility LobbyVisibility);
+	LobbyVisibility LobbyVisibility)
+{
+	public RoomPasswordVerifier RoomPasswordVerifier { get; init; } = RoomPasswordVerifier.Empty;
+	public bool RoomPasswordRequired { get; init; }
+	public bool HasRoomPassword => RoomPasswordRequired
+		|| RoomPasswordVerifier.HasPassword
+		|| RoomPasswordRules.HasPassword(RoomPassword);
+}
 
 public readonly record struct NetworkPlayerPublicState(
 	int PeerId,

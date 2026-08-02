@@ -134,7 +134,7 @@ public partial class GameBoardScene
 		float visualScale,
 		int targetHandDisplayIndex)
 	{
-		if (cardTexture == null || !IsInsideTree())
+		if (_networkAuthorityRuleTransactionActive || cardTexture == null || !IsInsideTree())
 		{
 			return;
 		}
@@ -269,7 +269,7 @@ public partial class GameBoardScene
 		int cardsToMove,
 		int turnSequenceGeneration)
 	{
-		if (cardsToMove <= 0 || !IsInsideTree())
+		if (_networkAuthorityRuleTransactionActive || cardsToMove <= 0 || !IsInsideTree())
 		{
 			return;
 		}
@@ -294,7 +294,8 @@ public partial class GameBoardScene
 
 	private bool ShouldPlayOwnerOnlyVisualLocally(int ownerPlayerIndex)
 	{
-		return !IsNetworkMultiplayerMode() || IsLocalHandPlayer(ownerPlayerIndex);
+		return !_networkAuthorityRuleTransactionActive
+			&& (!IsNetworkMultiplayerMode() || IsLocalHandPlayer(ownerPlayerIndex));
 	}
 
 	private void TryBroadcastStealHandCardVisualEventFromHost(

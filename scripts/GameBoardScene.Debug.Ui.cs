@@ -362,24 +362,9 @@ public partial class GameBoardScene
 		return _isResolvingAdventureUpgradeSelection;
 	}
 
-	public int DebugGetPlayerScoreValue(int playerIndex)
-	{
-		if (playerIndex < 0 || playerIndex >= _playerScores.Length)
-		{
-			return -1;
-		}
-
-		return _playerScores[playerIndex];
-	}
-
 public int DebugGetPendingItemAttachmentRewardCount()
 {
 	return _pendingItemAttachmentRewards.Count;
-}
-
-public int DebugGetWinnerPlayerIndex()
-{
-	return _winnerPlayerIndex;
 }
 
 public int DebugGetNetworkAuthoritativeVisualSnapshotId()

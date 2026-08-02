@@ -49,7 +49,9 @@ public partial class GameBoardScene
 
 	private async Task PlayMagnetTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
 	{
-		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (_networkAuthorityRuleTransactionActive
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -99,7 +101,9 @@ public partial class GameBoardScene
 
 	private async Task PlayDoubleTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
 	{
-		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (_networkAuthorityRuleTransactionActive
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -160,7 +164,9 @@ public partial class GameBoardScene
 
 	private async Task PlayOvertimeTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
 	{
-		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (_networkAuthorityRuleTransactionActive
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -302,24 +308,37 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Rect2 tableLayoutRect = GetTableCardLayoutRect();
+		Rect2 tableLayoutRect = GetAuthorityRuleSafeTableLayoutRect();
+		Vector2 centerArenaGlobalPosition = GetAuthorityRuleSafeCenterArenaGlobalPosition();
 		for (int tableCardIndex = _tableCards.Count - 1; tableCardIndex >= captureStartIndex; tableCardIndex--)
 		{
-			AddCapturedSpecialCardTrigger(tableCardIndex, tableLayoutRect, triggers);
+			AddCapturedSpecialCardTrigger(
+				tableCardIndex,
+				tableLayoutRect,
+				centerArenaGlobalPosition,
+				triggers);
 		}
 
 		if (extraTableCardIndexes != null)
 		{
 			foreach (int tableCardIndex in extraTableCardIndexes)
 			{
-				AddCapturedSpecialCardTrigger(tableCardIndex, tableLayoutRect, triggers);
+				AddCapturedSpecialCardTrigger(
+					tableCardIndex,
+					tableLayoutRect,
+					centerArenaGlobalPosition,
+					triggers);
 			}
 		}
 
 		triggers.Sort(TableSpecialCardTriggerComparer.Instance);
 	}
 
-	private void AddCapturedSpecialCardTrigger(int tableCardIndex, Rect2 tableLayoutRect, List<TableSpecialCardTrigger> triggers)
+	private void AddCapturedSpecialCardTrigger(
+		int tableCardIndex,
+		Rect2 tableLayoutRect,
+		Vector2 centerArenaGlobalPosition,
+		List<TableSpecialCardTrigger> triggers)
 	{
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
@@ -340,7 +359,7 @@ public partial class GameBoardScene
 		triggers.Add(new TableSpecialCardTrigger(
 			tableCardIndex,
 			tableCard.ItemOverlay.Value.Texture,
-			_centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect) + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
+			centerArenaGlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect) + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
 			tableCardIndex * 2 + 1,
 			GetTableTriggerPriority(tableCardIndex)));
 	}
@@ -379,7 +398,9 @@ public partial class GameBoardScene
 
 	private async Task PlayTableSpecialCardTriggerEffectAsync(TableSpecialCardTrigger trigger)
 	{
-		if (trigger.TableCardIndex < 0 || trigger.TableCardIndex >= _tableCards.Count)
+		if (_networkAuthorityRuleTransactionActive
+			|| trigger.TableCardIndex < 0
+			|| trigger.TableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}

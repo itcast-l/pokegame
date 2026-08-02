@@ -5,6 +5,7 @@ internal static class NetworkBoardVisualEventTypes
 	public const string MatchIdKey = "match_id";
 	public const string SnapshotIdKey = "snapshot_id";
 	public const string CheckpointIdKey = "checkpoint_id";
+	public const string ActionIdKey = "action_id";
 	public const string ActorSeatIndexKey = "actor_seat_index";
 	public const string HandIndexKey = "hand_index";
 	public const string TurnSequenceGenerationKey = "turn_sequence_generation";

@@ -27,18 +27,26 @@ public partial class GameBoardScene
 		}
 
 		ItemCard bombCard = itemHand[itemHandIndex];
-		int displayCardCount = _playerHands[playerIndex].Count + itemHand.Count;
 		int displayIndex = _playerHands[playerIndex].Count + itemHandIndex;
-		Control handArea = _playerHandAreas[playerIndex];
-		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
-		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
-		Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{displayIndex}");
-		TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
-		Vector2 startGlobalPosition = sourceCardVisual?.GlobalPosition
-			?? handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
-		if (sourceCardSlot != null)
+		Vector2 startGlobalPosition;
+		if (_networkAuthorityRuleTransactionActive)
 		{
-			sourceCardSlot.Visible = false;
+			startGlobalPosition = GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero);
+		}
+		else
+		{
+			int displayCardCount = _playerHands[playerIndex].Count + itemHand.Count;
+			Control handArea = _playerHandAreas[playerIndex];
+			Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
+			Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
+			Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{displayIndex}");
+			TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
+			startGlobalPosition = sourceCardVisual?.GlobalPosition
+				?? handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
+			if (sourceCardSlot != null)
+			{
+				sourceCardSlot.Visible = false;
+			}
 		}
 
 		itemHand.RemoveAt(itemHandIndex);
@@ -148,6 +156,13 @@ public partial class GameBoardScene
 
 		TableCard firstBomb = _tableCards[firstBombIndex];
 		TableCard secondBomb = _tableCards[secondBombIndex];
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			firstBomb.IsFaceUp = true;
+			secondBomb.IsFaceUp = true;
+			return;
+		}
+
 		Texture2D? firstTexture = firstBomb.ItemOverlay?.Texture;
 		Texture2D? secondTexture = secondBomb.ItemOverlay?.Texture;
 		Task? firstRevealTask = null;
@@ -207,6 +222,11 @@ public partial class GameBoardScene
 
 	private async Task PlayBombTableCardTriggerEffectAsync(int tableCardIndex, int turnSequenceGeneration)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
 			return;
@@ -248,6 +268,11 @@ public partial class GameBoardScene
 
 	private async Task PlayBombPairDestroySequenceAsync(int firstBombIndex, int secondBombIndex, int turnSequenceGeneration)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (firstBombIndex < 0 || secondBombIndex >= _tableCards.Count || firstBombIndex >= secondBombIndex)
 		{
 			return;

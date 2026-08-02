@@ -4,6 +4,9 @@ const NEXT_SCENE_PATH := "res://scenes/main_menu_scene.tscn"
 const SKIP_DELAY_SECONDS := 0.75
 const CROSSFADE_SECONDS := 0.35
 const RELEASE_PACKAGE_SMOKE_ARGUMENT := "--release-package-smoke"
+const RELEASE_EXECUTABLE_SMOKE_MARKER := "RELEASE_EXECUTABLE_SMOKE_OK"
+const RELEASE_BUILD_ID_SETTING := "deckland_release/build_id"
+const RELEASE_PROTOCOL_SETTING := "deckland_release/network_protocol"
 
 @onready var _video_player: VideoStreamPlayer = %LogoVideoPlayer
 @onready var _audio_player: AudioStreamPlayer = %LogoAudioPlayer
@@ -14,6 +17,7 @@ var _finishing := false
 
 
 func _ready() -> void:
+	_print_release_build_info()
 	if RELEASE_PACKAGE_SMOKE_ARGUMENT in OS.get_cmdline_user_args():
 		_video_player.autoplay = false
 		_audio_player.autoplay = false
@@ -27,10 +31,20 @@ func _ready() -> void:
 	_audio_player.play()
 
 
+func _print_release_build_info() -> void:
+	var build_id := str(ProjectSettings.get_setting(RELEASE_BUILD_ID_SETTING, "")).strip_edges()
+	var network_protocol := int(ProjectSettings.get_setting(RELEASE_PROTOCOL_SETTING, -1))
+	if build_id.is_empty() or network_protocol <= 0:
+		return
+	print("RELEASE_BUILD_INFO build_id=%s protocol=%d platform=%s" % [build_id, network_protocol, OS.get_name()])
+
+
 func _run_release_package_smoke() -> void:
 	for _frame in range(5):
 		await get_tree().process_frame
-	print("WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK")
+	print("%s platform=%s" % [RELEASE_EXECUTABLE_SMOKE_MARKER, OS.get_name()])
+	if OS.get_name() == "Windows":
+		print("WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK")
 	get_tree().quit(0)
 
 

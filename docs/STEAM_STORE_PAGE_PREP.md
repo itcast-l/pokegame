@@ -1,6 +1,6 @@
 # Steam Store Page Prep
 
-Last updated: 2026-06-17
+Last updated: 2026-08-01
 
 本文件用于整理 `Deckland` 的 Steam 商店页准备项，并提供一版可直接继续打磨的首版文案。目标不是立即执行发售，而是把 `Coming Soon` 页面所需的材料、当前仓库事实、承诺边界和缺口一次性写清楚，避免后续在平台、语言、玩法卖点和素材使用上出现口径漂移。
 
@@ -46,13 +46,13 @@ Last updated: 2026-06-17
 - 冒险模式当前是线性敌人阶梯推进
 - 角色头像选择和冒险解锁进度会写入存档
 - `project.godot` 当前启用了 `zh_CN`、`zh_TW`、`en` 三个翻译资源
-- `export_presets.cfg` 当前只存在 `Windows Desktop` 导出预设
+- `export_presets.cfg` 当前存在 `Windows Desktop`、`Linux` 和 `macOS` 导出预设
 - 仓库中存在 `asset/video/logo_video.mp4`，但当前尚未确认它可直接作为 Steam 预告片使用
 
 这些事实意味着：
 
 - 商店页可以稳定宣传“海洋主题卡牌对战 + 冒险推进 + 本地/Steam 多人入口”
-- 商店页当前不应直接宣传“已完成三平台发售支持”
+- 商店页当前不应直接宣传“已完成三平台发售支持”；macOS 原生启动已验证，Linux 和三平台同 build ID 联机矩阵仍未完成
 - 商店页当前不应直接宣传“游戏内已完成多语种支持”，除非后续做完单独审计和实机校对
 
 ## Store Positioning Draft
@@ -161,10 +161,12 @@ The current game structure already supports:
 
 如果后续坚持公开 `Windows + macOS + Linux`，则必须把以下工作改成上架前置条件：
 
-- 新增对应导出预设
+- 使用同一 `--build-id` 生成三平台正式候选
 - 各平台真机启动验证
 - 输入、字体、分辨率、Steam 初始化路径验证
 - 至少一次各平台基础联机或单机冒烟验证
+
+截至 2026-08-01，三平台导出适配器和包审计已经就绪，当前统一候选为 `deckland-rc-20260801-host-migration-5`。macOS universal 候选已通过原生 executable smoke、独立哈希证据和直接挂载 Release PCK 的三玩家 Host 硬杀迁移门禁；Windows 候选通过 CrossOver smoke，但仍等待 Windows 原生证据；Linux x86_64 候选完成静态与 PCK 审计，但仍等待 Linux 目标机运行。该进展不改变首版公开平台边界；本地单设备回环门禁不能替代双实机 LAN，只有统一候选完成 Windows/Linux/macOS 目标机证据和双实机 LAN 矩阵后，才能修改商店声明。
 
 如果后续坚持公开更多游戏内语言，则必须把以下工作改成上架前置条件：
 

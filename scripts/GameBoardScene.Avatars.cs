@@ -157,6 +157,11 @@ public partial class GameBoardScene
 
 	private void PlayPlayerAvatarAction(int playerIndex, CharacterAvatar.AvatarAction action)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (playerIndex < 0 || playerIndex >= _playerAvatars.Length)
 		{
 			return;

@@ -5,8 +5,24 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private async Task PlayPhysicalDeckShuffleAsync(int playerIndex)
+	private async Task PlayPhysicalDeckShuffleAsync(
+		int playerIndex,
+		bool broadcastNetworkVisualEvent = true)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			if (broadcastNetworkVisualEvent
+				&& playerIndex >= 0
+				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int transactionSnapshotId))
+			{
+				GetNetworkManager()?.BroadcastDeckShuffleVisualEventFromHost(
+					playerIndex,
+					_turnSequenceGeneration,
+					transactionSnapshotId);
+			}
+			return;
+		}
+
 		if (playerIndex < 0 || _playerCardPiles.Count <= playerIndex)
 		{
 			return;
@@ -29,7 +45,8 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (IsNetworkMultiplayerMode()
+		if (broadcastNetworkVisualEvent
+			&& IsNetworkMultiplayerMode()
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{

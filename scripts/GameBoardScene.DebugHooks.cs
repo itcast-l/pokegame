@@ -14,6 +14,7 @@ public partial class GameBoardScene
 	private bool _debugForceNextPendingHandLimitDiscardHeuristicFailure;
 	private bool _debugForceNextAdventureUpgradeOverlayDisplayFailure;
 	private double _debugNetworkVisualPlaybackDelaySeconds;
+	private int _debugNetworkVisualPlaybackFailuresToInject;
 	private int _debugQuestionRewardGrantCount;
 	private string _debugLastQuestionRewardItemCardId = string.Empty;
 	private readonly Queue<string> _debugForcedQuestionRewardItemCardIds = new();
@@ -43,6 +44,17 @@ public partial class GameBoardScene
 	private double GetDebugNetworkVisualPlaybackDelaySeconds()
 	{
 		return _debugNetworkVisualPlaybackDelaySeconds;
+	}
+
+	private bool ConsumeDebugNetworkVisualPlaybackFailure()
+	{
+		if (_debugNetworkVisualPlaybackFailuresToInject <= 0)
+		{
+			return false;
+		}
+
+		_debugNetworkVisualPlaybackFailuresToInject--;
+		return true;
 	}
 
 	private string ConsumeDebugForcedNextQuestionRewardItemCardId()

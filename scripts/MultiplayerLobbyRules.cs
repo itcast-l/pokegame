@@ -1,8 +1,34 @@
 using System.Collections.Generic;
 using System.Linq;
 
+public enum LobbyReadyIntentDisposition
+{
+	Reject,
+	DeferUntilCredentialsAcknowledged,
+	Apply,
+	NoChange,
+}
+
 public static class MultiplayerLobbyRules
 {
+	public static LobbyReadyIntentDisposition EvaluateReadyIntent(
+		NetworkPlayerPublicState player,
+		bool isReady)
+	{
+		if (player.PeerId <= 0 || !player.IsConnected)
+		{
+			return LobbyReadyIntentDisposition.Reject;
+		}
+		if (!player.CredentialsAcknowledged)
+		{
+			return LobbyReadyIntentDisposition.DeferUntilCredentialsAcknowledged;
+		}
+
+		return player.IsReady == isReady
+			? LobbyReadyIntentDisposition.NoChange
+			: LobbyReadyIntentDisposition.Apply;
+	}
+
 	public static bool CanAcceptJoinRequest(NetworkSessionState state)
 	{
 		return state == NetworkSessionState.Lobby;

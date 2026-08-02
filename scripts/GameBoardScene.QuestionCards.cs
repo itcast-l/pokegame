@@ -125,6 +125,16 @@ public partial class GameBoardScene
 				playerIndex,
 				(reserveReplacementCard ? 1 : 0) + Math.Max(0, previouslyPlannedHandCardDelta)))
 		{
+			if (_networkAuthorityRuleTransactionActive
+				&& ShouldUseInteractiveHumanItemFollowup(playerIndex))
+			{
+				BeginNetworkAuthorityQuestionRewardTransaction(
+					playerIndex,
+					rewardItemPlan.ItemCardId,
+					requiresAttachment: false,
+					reserveReplacement: reserveReplacementCard,
+					turnSequenceGeneration);
+			}
 			int? plannedDiscard = await PlanHandLimitDiscardForQuestionRewardAsync(
 				playerIndex,
 				turnSequenceGeneration,

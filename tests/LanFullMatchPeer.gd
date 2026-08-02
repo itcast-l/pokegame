@@ -61,6 +61,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_parse_arguments()
+	_emit_release_build_info()
 	if _seat < 0 or _seat >= _player_count or _result_dir.is_empty():
 		_fail("invalid peer arguments")
 		return
@@ -102,6 +103,21 @@ func _run() -> void:
 
 	if not _finished:
 		_fail("full match timed out")
+
+
+func _emit_release_build_info() -> void:
+	if not ProjectSettings.has_setting("deckland_release/build_id") \
+			or not ProjectSettings.has_setting("deckland_release/network_protocol"):
+		return
+	var build_id := String(ProjectSettings.get_setting("deckland_release/build_id"))
+	var network_protocol := int(ProjectSettings.get_setting("deckland_release/network_protocol"))
+	if build_id.is_empty() or network_protocol <= 0:
+		return
+	print("RELEASE_BUILD_INFO build_id=%s protocol=%d platform=%s" % [
+		build_id,
+		network_protocol,
+		OS.get_name(),
+	])
 
 
 func _parse_arguments() -> void:
@@ -148,6 +164,10 @@ func _on_state_changed(state: int) -> void:
 	_last_state = state
 	print("FULL_MATCH_%s_STATE %d" % [_role.to_upper(), state])
 	if state == MIGRATING_HOST_STATE:
+		var pause_game_migration_path := "%s/pause_game_migration_%d.flag" % [_result_dir, _seat]
+		if FileAccess.file_exists(pause_game_migration_path):
+			print("MIGRATION_GAME_FOLLOWER_PAUSED seat=%d" % _seat)
+			OS.execute("/bin/kill", ["-STOP", str(OS.get_process_id())])
 		if _pause_lobby_claim:
 			print("MIGRATION_LATE_CLAIM_PAUSED")
 			OS.execute("/bin/kill", ["-STOP", str(OS.get_process_id())])
@@ -389,7 +409,8 @@ func _on_player_list_updated(players: Array) -> void:
 		return
 
 	for player in players:
-		if not bool(player.get("is_ready", false)):
+		if not bool(player.get("is_ready", false)) \
+				or not bool(player.get("credentials_acknowledged", false)):
 			return
 
 	_started_match = true
@@ -410,6 +431,8 @@ func _on_board_initialize(_payload: Dictionary) -> void:
 			if bool(player.get("is_local", false)):
 				local_seat = int(player.get("seat_index", -1))
 				break
+		if local_seat >= 0:
+			_seat = local_seat
 		print("FULL_MATCH_CLIENT_LOCAL_SEAT %d" % local_seat)
 	if _paused_maintenance:
 		_paused_maintenance_apply_pending = true
@@ -511,6 +534,17 @@ func _track_finished() -> void:
 	_finished = true
 	_network.LeaveSession()
 	print("FULL_MATCH_%s_DONE" % _role.to_upper())
+	call_deferred("_quit_after_network_teardown")
+
+
+func _quit_after_network_teardown() -> void:
+	if current_scene != null:
+		current_scene.queue_free()
+	if _network != null:
+		_network.queue_free()
+		_network = null
+	for _frame in range(4):
+		await process_frame
 	quit(0)
 
 

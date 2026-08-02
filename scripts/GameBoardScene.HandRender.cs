@@ -14,6 +14,11 @@ public partial class GameBoardScene
 
 	private void RenderPlayerHands()
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		RefreshMainPlayerHandSelection();
 		ulong sampleStart = BeginPerformanceSample();
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)

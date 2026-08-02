@@ -63,7 +63,7 @@ internal static class MultiplayerRematchRules
 	{
 		if (!string.Equals(returnedLobbyConfig.SessionId, completedMatchConfig.SessionId, StringComparison.Ordinal)
 			|| !string.Equals(returnedLobbyConfig.RoomName, completedMatchConfig.RoomName, StringComparison.Ordinal)
-			|| !string.Equals(returnedLobbyConfig.RoomPassword, completedMatchConfig.RoomPassword, StringComparison.Ordinal)
+			|| returnedLobbyConfig.RoomPasswordVerifier != completedMatchConfig.RoomPasswordVerifier
 			|| !string.IsNullOrEmpty(returnedLobbyConfig.MatchId)
 			|| returnedLobbyConfig.MatchSeed != 0
 			|| returnedLobbyConfig.Transport != completedMatchConfig.Transport

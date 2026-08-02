@@ -65,6 +65,10 @@ public partial class NetworkManager
 			return;
 		}
 
+		if (isInitialSceneTransition)
+		{
+			ResetMigrationArtifactsForNewMatch();
+		}
 		_config = decodedConfig;
 		SetState(NetworkSessionState.LoadingScene);
 		EmitSignal(SignalName.BeginSceneLoad, bootstrap);

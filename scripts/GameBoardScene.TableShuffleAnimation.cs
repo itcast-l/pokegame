@@ -7,6 +7,26 @@ public partial class GameBoardScene
 {
 	private async Task<bool> PlayTableCardsShuffleAnimationAsync(IReadOnlyList<TableCard> shuffledTableCards, int turnSequenceGeneration)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			if (turnSequenceGeneration == _turnSequenceGeneration
+				&& shuffledTableCards.Count > 1
+				&& shuffledTableCards.Count == _tableCards.Count
+				&& IsNetworkMultiplayerMode()
+				&& IsNetworkHost()
+				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int transactionSnapshotId))
+			{
+				GetNetworkManager()?.BroadcastTableShuffleVisualEventFromHost(
+					_currentTurnPlayerIndex,
+					BuildShuffleTargetIndexes(shuffledTableCards),
+					turnSequenceGeneration,
+					transactionSnapshotId);
+			}
+			return turnSequenceGeneration == _turnSequenceGeneration
+				&& shuffledTableCards.Count > 1
+				&& shuffledTableCards.Count == _tableCards.Count;
+		}
+
 		EnsureItemModeOptionalFxResourcesLoaded();
 
 		if (!IsInsideTree()
@@ -183,6 +203,21 @@ public partial class GameBoardScene
 
 	private async Task PlayMantaRayTideShiftTableMoveAnimationAsync(int turnSequenceGeneration)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			if (_tableCards.Count > 1
+				&& IsNetworkMultiplayerMode()
+				&& IsNetworkHost()
+				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int transactionSnapshotId))
+			{
+				GetNetworkManager()?.BroadcastMantaTideShiftVisualEventFromHost(
+					_currentTurnPlayerIndex,
+					turnSequenceGeneration,
+					transactionSnapshotId);
+			}
+			return;
+		}
+
 		if (!IsInsideTree() || _tableCards.Count <= 1)
 		{
 			return;

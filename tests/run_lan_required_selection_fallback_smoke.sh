@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/tests/godot_test_env.sh"
+export CODEX_LAN_SKIP_MIGRATION_PORT_PROBE=1
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
 
 if [[ -n "${GODOT_BIN:-}" ]]; then

@@ -209,6 +209,11 @@ public partial class GameBoardScene
 
 	private void UpdatePlayerScoreMeter(int playerIndex, bool animate)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (playerIndex < 0 || playerIndex >= _playerScoreMeters.Length)
 		{
 			return;

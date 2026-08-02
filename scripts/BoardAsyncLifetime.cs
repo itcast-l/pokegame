@@ -65,34 +65,67 @@ public sealed class BoardAsyncLifetime : IDisposable
 
 	public Task WaitForTweenAsync(Tween tween)
 	{
-		if (_stopping || !GodotObject.IsInstanceValid(tween))
+		if (_stopping
+			|| !GodotObject.IsInstanceValid(tween)
+			|| !tween.IsValid()
+			|| !GodotObject.IsInstanceValid(_owner)
+			|| !_owner.IsInsideTree())
 		{
 			return Task.FromCanceled(new CancellationToken(canceled: true));
 		}
 
 		var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		SceneTree tree = _owner.GetTree();
 		CancellationTokenRegistration registration = default;
 		Action? finished = null;
-		finished = () =>
+		Action? processFrame = null;
+		void Complete(bool canceled)
 		{
 			if (GodotObject.IsInstanceValid(tween))
 			{
 				tween.Finished -= finished;
 			}
+			tree.ProcessFrame -= processFrame;
 			registration.Dispose();
-			completion.TrySetResult();
+			if (canceled)
+			{
+				completion.TrySetCanceled(Token);
+			}
+			else
+			{
+				completion.TrySetResult();
+			}
+		}
+		finished = () => Complete(canceled: false);
+		processFrame = () =>
+		{
+			if (!GodotObject.IsInstanceValid(tween) || !tween.IsValid())
+			{
+				Complete(canceled: false);
+			}
 		};
 		tween.Finished += finished;
+		tree.ProcessFrame += processFrame;
 		registration = Token.Register(() =>
 		{
 			if (GodotObject.IsInstanceValid(tween))
 			{
-				tween.Finished -= finished;
 				tween.Kill();
 			}
-			completion.TrySetCanceled(Token);
+			Complete(canceled: true);
 		});
 		return completion.Task;
+	}
+
+	public void DebugKillTrackedTweens()
+	{
+		foreach (Tween tween in new List<Tween>(_tweens))
+		{
+			if (GodotObject.IsInstanceValid(tween) && tween.IsValid())
+			{
+				tween.Kill();
+			}
+		}
 	}
 
 	public Task DelayAsync(double seconds, bool processAlways = true)

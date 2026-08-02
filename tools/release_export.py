@@ -23,7 +23,18 @@ AUDIT_SCRIPT = ROOT / "tools" / "export_package_content_audit.gd"
 RUNTIME_SMOKE_SCRIPT = ROOT / "tools" / "release_runtime_smoke.gd"
 
 MCP_AUTOLOADS = ("MCPScreenshot", "MCPInputService", "MCPGameInspector")
-SUPPORTED_ADAPTERS = {"Windows Desktop": "windows"}
+SUPPORTED_ADAPTERS = {
+	"Windows Desktop": "windows",
+	"Linux": "linux",
+	"macOS": "macos",
+}
+GODOT_PLATFORM_NAMES = {"windows": "Windows", "linux": "Linux", "macos": "macOS"}
+STEAM_RUNTIME_EXCLUDES = {
+	"windows": "addons/godotsteam/win64/**",
+	"linux": "addons/godotsteam/linux64/**",
+	"macos": "addons/godotsteam/osx/**",
+}
+RELEASE_EXECUTABLE_SMOKE_MARKER = "RELEASE_EXECUTABLE_SMOKE_OK"
 
 STAGING_EXCLUDED_DIRS = (
 	".git",
@@ -132,6 +143,15 @@ def capture_source_hashes(root: Path = ROOT) -> dict[str, str]:
 	}
 
 
+def _network_protocol_version(root: Path = ROOT) -> int:
+	path = root / "scripts" / "NetworkProtocol.cs"
+	text = path.read_text(encoding="utf-8")
+	matches = re.findall(r"public\s+const\s+int\s+CurrentVersion\s*=\s*([0-9]+)\s*;", text)
+	if len(matches) != 1 or int(matches[0]) <= 0:
+		raise ReleaseError(f"Unable to resolve one positive NetworkProtocol.CurrentVersion from {path}")
+	return int(matches[0])
+
+
 def _parse_cfg_sections(text: str) -> dict[str, dict[str, str]]:
 	sections: dict[str, dict[str, str]] = {}
 	current: dict[str, str] | None = None
@@ -183,7 +203,8 @@ def static_audit(root: Path = ROOT) -> dict[str, Any]:
 		issues.append("No export presets were found")
 	for preset in presets:
 		label = preset["name"] or f"preset.{preset['index']}"
-		if preset["platform"] not in SUPPORTED_ADAPTERS:
+		platform = SUPPORTED_ADAPTERS.get(preset["platform"])
+		if platform is None:
 			issues.append(f"{label}: no actual-package adapter for platform {preset['platform']!r}")
 		if preset["export_filter"] != "all_resources":
 			issues.append(f"{label}: export_filter must remain all_resources")
@@ -195,6 +216,13 @@ def static_audit(root: Path = ROOT) -> dict[str, Any]:
 			issues.append(f"{label}: dotnet/include_scripts_content must be false")
 		if preset["options"].get("dotnet/include_debug_symbols") != "false":
 			issues.append(f"{label}: dotnet/include_debug_symbols must be false")
+		if platform is not None:
+			selected_runtime = STEAM_RUNTIME_EXCLUDES[platform]
+			if selected_runtime in excludes:
+				issues.append(f"{label}: target GodotSteam runtime is excluded: {selected_runtime}")
+			for other_platform, runtime_path in STEAM_RUNTIME_EXCLUDES.items():
+				if other_platform != platform and runtime_path not in excludes:
+					issues.append(f"{label}: non-target GodotSteam runtime is not excluded: {runtime_path}")
 
 	project_text = (root / "project.godot").read_text(encoding="utf-8")
 	if '"res://addons/godot_mcp/plugin.cfg"' not in project_text:
@@ -240,7 +268,11 @@ def create_staging_project(source: Path, destination: Path) -> None:
 		raise ReleaseError("Staging invariant failed: MCP addon was copied")
 
 
-def rewrite_staging_project(path: Path) -> None:
+def rewrite_staging_project(
+	path: Path,
+	build_id: str | None = None,
+	network_protocol: int | None = None,
+) -> None:
 	text = path.read_text(encoding="utf-8")
 	for autoload in MCP_AUTOLOADS:
 		text = re.sub(rf"(?m)^{re.escape(autoload)}=.*(?:\n|$)", "", text)
@@ -260,6 +292,14 @@ def rewrite_staging_project(path: Path) -> None:
 		'enabled=PackedStringArray("res://addons/pandora/plugin.cfg")',
 		text,
 	)
+	if (build_id is None) != (network_protocol is None):
+		raise ReleaseError("Staging build ID and network protocol must be provided together")
+	if build_id is not None and network_protocol is not None:
+		if "[deckland_release]" in text:
+			raise ReleaseError("Source project unexpectedly defines deckland_release settings")
+		text = text.rstrip() + (
+			f'\n\n[deckland_release]\n\nbuild_id="{build_id}"\nnetwork_protocol={network_protocol}\n'
+		)
 	path.write_text(text, encoding="utf-8")
 	for forbidden in (*MCP_AUTOLOADS, "res://addons/godot_mcp/plugin.cfg"):
 		if forbidden in text:
@@ -363,6 +403,7 @@ def _sentinel_arguments(main_scene: str, translations: Sequence[str]) -> list[st
 def _run_package_audit(
 	godot: Path,
 	pck: Path,
+	platform: str,
 	work_dir: Path,
 	log_path: Path,
 	main_scene: str,
@@ -381,7 +422,7 @@ def _run_package_audit(
 		"--artifact",
 		str(pck),
 		"--platform",
-		"windows",
+		platform,
 		"--report",
 		str(result_path),
 		*_sentinel_arguments(main_scene, translations),
@@ -400,27 +441,21 @@ def _runtime_smoke(
 	godot: Path,
 	executable: Path,
 	pck: Path,
+	platform: str,
 	work_dir: Path,
 	log_path: Path,
 	main_scene: str,
 	translations: Sequence[str],
+	allow_target_runtime_pending: bool,
+	build_id: str,
+	network_protocol: int,
 ) -> dict[str, Any]:
-	if os.name == "nt":
-		command = [str(executable), "--headless", "--", "--release-package-smoke"]
-		success_marker = "WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK"
-		result = _run(command, cwd=work_dir, log_path=log_path, timeout=180)
-		log_audit = _validate_runtime_smoke_result(result.stdout, success_marker)
-		return {
-			"ok": True,
-			"method": "windows_executable",
-			"success_marker": success_marker,
-			"log": log_audit,
-		}
-
 	_write_audit_harness(work_dir)
 	harness_command = [
 		str(godot),
 		"--headless",
+		"--audio-driver",
+		"Dummy",
 		"--path",
 		str(work_dir),
 		"--script",
@@ -432,33 +467,120 @@ def _runtime_smoke(
 	]
 	harness_result = _run(harness_command, cwd=work_dir, log_path=log_path, timeout=180)
 	harness_log = _validate_runtime_smoke_result(harness_result.stdout, "RELEASE_RUNTIME_SMOKE_OK")
-	windows_result = _run_windows_executable_on_host(executable, work_dir, log_path.parent)
+	if platform == "windows":
+		target_result = _run_windows_executable_on_host(
+			executable, work_dir, log_path.parent, build_id, network_protocol
+		)
+	elif _host_platform() == platform:
+		target_result = _run_native_executable(
+			executable, platform, log_path.parent, build_id, network_protocol
+		)
+	elif allow_target_runtime_pending:
+		target_result = {
+			"ok": False,
+			"status": "pending_target_host",
+			"platform": platform,
+			"reason": f"Target executable cannot run on {_host_platform()} host",
+			"build_marker": _release_build_marker(build_id, network_protocol, platform),
+			"log": {"ok": True, "blocker_counts": {marker: 0 for marker in LOG_BLOCKERS}},
+		}
+	else:
+		raise ReleaseError(
+			f"{platform} executable smoke requires a {platform} host; "
+			"use --allow-target-runtime-pending only to create a non-publishable candidate"
+		)
 	aggregate_counts = {
 		marker: harness_log["blocker_counts"].get(marker, 0)
-		+ windows_result["log"]["blocker_counts"].get(marker, 0)
+		+ target_result["log"]["blocker_counts"].get(marker, 0)
 		for marker in LOG_BLOCKERS
 	}
 	return {
-		"ok": True,
-		"method": "pack_harness_and_windows_executable",
+		"ok": target_result["ok"],
+		"method": "pack_harness_and_target_executable",
 		"success_marker": "RELEASE_RUNTIME_SMOKE_OK",
 		"pack_harness": {"ok": True, "log": harness_log},
-		"actual_windows_executable": windows_result,
+		"target_executable": target_result,
+		"target_runtime_pending": not target_result["ok"],
 		"log": {"ok": not any(aggregate_counts.values()), "blocker_counts": aggregate_counts},
 	}
 
 
-def _validate_runtime_smoke_result(text: str, success_marker: str) -> dict[str, Any]:
+def _validate_runtime_smoke_result(
+	text: str,
+	success_marker: str,
+	*,
+	required_exact_markers: Sequence[str] = (),
+) -> dict[str, Any]:
 	log_audit = scan_log(text)
 	if not log_audit["ok"]:
 		raise ReleaseError(f"Runtime smoke log contains blocking errors: {log_audit['blocker_counts']}")
 	if success_marker not in text:
 		raise ReleaseError(f"Runtime smoke did not reach success marker: {success_marker}")
+	lines = text.splitlines()
+	for marker in required_exact_markers:
+		if marker not in lines:
+			raise ReleaseError(f"Runtime smoke did not reach exact marker: {marker}")
 	return log_audit
 
 
-def _run_windows_executable_on_host(executable: Path, work_dir: Path, logs_dir: Path) -> dict[str, Any]:
-	win_args = [str(executable), "--headless", "--", "--release-package-smoke"]
+def _host_platform() -> str:
+	if os.name == "nt":
+		return "windows"
+	if sys.platform == "darwin":
+		return "macos"
+	if sys.platform.startswith("linux"):
+		return "linux"
+	return "unknown"
+
+
+def _release_build_marker(build_id: str, network_protocol: int, platform: str) -> str:
+	return (
+		f"RELEASE_BUILD_INFO build_id={build_id} protocol={network_protocol} "
+		f"platform={GODOT_PLATFORM_NAMES[platform]}"
+	)
+
+
+def _run_native_executable(
+	executable: Path,
+	platform: str,
+	logs_dir: Path,
+	build_id: str,
+	network_protocol: int,
+) -> dict[str, Any]:
+	result = _run(
+		[str(executable), "--headless", "--audio-driver", "Dummy", "--", "--release-package-smoke"],
+		cwd=executable.parent,
+		log_path=logs_dir / f"{platform}-executable-smoke.log",
+		timeout=180,
+	)
+	build_marker = _release_build_marker(build_id, network_protocol, platform)
+	log_audit = _validate_runtime_smoke_result(
+		result.stdout,
+		RELEASE_EXECUTABLE_SMOKE_MARKER,
+		required_exact_markers=(build_marker,),
+	)
+	return {
+		"ok": True,
+		"status": "passed",
+		"platform": platform,
+		"method": "native_target_executable",
+		"success_marker": RELEASE_EXECUTABLE_SMOKE_MARKER,
+		"build_marker": build_marker,
+		"log": log_audit,
+	}
+
+
+def _run_windows_executable_on_host(
+	executable: Path,
+	work_dir: Path,
+	logs_dir: Path,
+	build_id: str,
+	network_protocol: int,
+) -> dict[str, Any]:
+	win_args = [str(executable), "--headless", "--audio-driver", "Dummy", "--", "--release-package-smoke"]
+	if os.name == "nt":
+		return _run_native_executable(executable, "windows", logs_dir, build_id, network_protocol)
+	build_marker = _release_build_marker(build_id, network_protocol, "windows")
 	wine = shutil.which("wine64") or shutil.which("wine")
 	if wine:
 		result = _run(
@@ -467,11 +589,18 @@ def _run_windows_executable_on_host(executable: Path, work_dir: Path, logs_dir: 
 			log_path=logs_dir / "windows-executable-smoke.log",
 			timeout=180,
 		)
-		log_audit = _validate_runtime_smoke_result(result.stdout, "WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK")
+		log_audit = _validate_runtime_smoke_result(
+			result.stdout,
+			RELEASE_EXECUTABLE_SMOKE_MARKER,
+			required_exact_markers=(build_marker,),
+		)
 		return {
 			"ok": True,
+			"status": "passed",
+			"platform": "windows",
 			"method": "wine",
-			"success_marker": "WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK",
+			"success_marker": RELEASE_EXECUTABLE_SMOKE_MARKER,
+			"build_marker": build_marker,
 			"log": log_audit,
 		}
 
@@ -517,7 +646,11 @@ def _run_windows_executable_on_host(executable: Path, work_dir: Path, logs_dir: 
 			log_path=logs_dir / "windows-executable-smoke.log",
 			timeout=180,
 		)
-		log_audit = _validate_runtime_smoke_result(result.stdout, "WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK")
+		log_audit = _validate_runtime_smoke_result(
+			result.stdout,
+			RELEASE_EXECUTABLE_SMOKE_MARKER,
+			required_exact_markers=(build_marker,),
+		)
 	finally:
 		delete_result = subprocess.run(
 			[str(cxbottle), "--bottle", bottle, "--delete", "--force"],
@@ -532,8 +665,11 @@ def _run_windows_executable_on_host(executable: Path, work_dir: Path, logs_dir: 
 		raise ReleaseError(f"Temporary CrossOver audit bottle could not be deleted: {bottle}")
 	return {
 		"ok": True,
+		"status": "passed",
+		"platform": "windows",
 		"method": "CrossOver Windows 10 64-bit temporary bottle",
-		"success_marker": "WINDOWS_RELEASE_EXECUTABLE_SMOKE_OK",
+		"success_marker": RELEASE_EXECUTABLE_SMOKE_MARKER,
+		"build_marker": build_marker,
 		"temporary_bottle_deleted": True,
 		"log": log_audit,
 	}
@@ -585,7 +721,34 @@ def _artifact_name(preset: dict[str, Any]) -> str:
 	name = Path(preset["export_path"]).name
 	if preset["platform"] == "Windows Desktop":
 		return name if name.lower().endswith(".exe") else "Deckland.exe"
+	if preset["platform"] == "Linux":
+		return name if name.lower().endswith(".x86_64") else "Deckland.x86_64"
+	if preset["platform"] == "macOS":
+		return name if name.lower().endswith(".app") else "Deckland.app"
 	raise ReleaseError(f"No artifact naming adapter for {preset['platform']}")
+
+
+def _single_artifact_file(paths: Iterable[Path], label: str) -> Path:
+	matches = sorted(path for path in paths if path.is_file())
+	if len(matches) != 1:
+		raise ReleaseError(f"Expected exactly one {label}, found {len(matches)}")
+	return matches[0]
+
+
+def _resolve_export_artifacts(platform: str, export_target: Path) -> tuple[Path, Path]:
+	if platform in {"windows", "linux"}:
+		executable = export_target
+		pck = export_target.with_suffix(".pck")
+		if not executable.is_file() or not pck.is_file():
+			raise ReleaseError(f"{platform} adapter did not find executable and PCK: {executable}, {pck}")
+		return executable, pck
+	if platform == "macos":
+		if not export_target.is_dir() or export_target.suffix.lower() != ".app":
+			raise ReleaseError(f"macOS adapter did not find application bundle: {export_target}")
+		executable = _single_artifact_file((export_target / "Contents" / "MacOS").iterdir(), "macOS executable")
+		pck = _single_artifact_file((export_target / "Contents" / "Resources").glob("*.pck"), "macOS PCK")
+		return executable, pck
+	raise ReleaseError(f"No export artifact resolver for {platform}")
 
 
 def _prepare_output(path: Path) -> None:
@@ -600,13 +763,13 @@ def run_release(args: argparse.Namespace) -> Path:
 		raise ReleaseError("Static release audit failed:\n" + "\n".join(static_result["issues"]))
 	preset = _select_preset(args.preset, load_presets(ROOT / "export_presets.cfg"))
 	platform = SUPPORTED_ADAPTERS[preset["platform"]]
-	if platform != "windows":
-		raise ReleaseError(f"Adapter is registered but not implemented: {platform}")
 
 	output_root = args.output.resolve()
 	_prepare_output(output_root)
-	build_id = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
-	staging = STAGING_ROOT / build_id
+	build_id = args.build_id or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
+	if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", build_id) is None:
+		raise ReleaseError("Build ID must use 1-128 ASCII letters, digits, periods, underscores, or hyphens")
+	staging = STAGING_ROOT / f"{build_id}-{platform}-{os.getpid()}"
 	project_dir = staging / "project"
 	artifact_dir = staging / "artifact"
 	logs_dir = staging / "logs"
@@ -620,6 +783,7 @@ def run_release(args: argparse.Namespace) -> Path:
 		"schema_version": 1,
 		"status": "failed",
 		"build_id": build_id,
+		"network_protocol": _network_protocol_version(),
 		"preset": args.preset,
 		"platform": platform,
 		"source_root": str(ROOT),
@@ -634,7 +798,11 @@ def run_release(args: argparse.Namespace) -> Path:
 		report["preflight"]["resource_audit_log"] = str(resource_log)
 
 		create_staging_project(ROOT, project_dir)
-		rewrite_staging_project(project_dir / "project.godot")
+		rewrite_staging_project(
+			project_dir / "project.godot",
+			build_id,
+			report["network_protocol"],
+		)
 		utf8_result = validate_utf8_tree(project_dir)
 		report["preflight"]["utf8"] = utf8_result
 		if not utf8_result["ok"]:
@@ -661,9 +829,9 @@ def run_release(args: argparse.Namespace) -> Path:
 			log_path=logs_dir / "staging-dotnet-editor-build.log",
 		)
 
-		executable = artifact_dir / _artifact_name(preset)
+		export_target = artifact_dir / _artifact_name(preset)
 		export_result = _run(
-			[str(args.godot.resolve()), "--headless", "--path", str(project_dir), "--export-release", args.preset, str(executable)],
+			[str(args.godot.resolve()), "--headless", "--path", str(project_dir), "--export-release", args.preset, str(export_target)],
 			cwd=project_dir,
 			log_path=logs_dir / "godot-export.log",
 			timeout=args.export_timeout,
@@ -673,9 +841,7 @@ def run_release(args: argparse.Namespace) -> Path:
 		if not export_log["ok"]:
 			raise ReleaseError(f"Export log contains blocking errors: {export_log['blocker_counts']}")
 
-		pck = executable.with_suffix(".pck")
-		if not executable.is_file() or not pck.is_file():
-			raise ReleaseError(f"Windows adapter did not find expected executable and PCK: {executable}, {pck}")
+		executable, pck = _resolve_export_artifacts(platform, export_target)
 		assemblies = _find_pokegame_assembly(artifact_dir)
 		if not assemblies:
 			raise ReleaseError("Release directory does not contain pokegame.dll")
@@ -685,11 +851,21 @@ def run_release(args: argparse.Namespace) -> Path:
 
 		main_scene, translations = _package_sentinels(project_dir / "project.godot")
 		package_audit = _run_package_audit(
-			args.godot.resolve(), pck, audit_dir, logs_dir / "package-content-audit.log", main_scene, translations
+			args.godot.resolve(), pck, platform, audit_dir, logs_dir / "package-content-audit.log", main_scene, translations
 		)
 		report["package_audit"] = package_audit
 		runtime = _runtime_smoke(
-			args.godot.resolve(), executable, pck, audit_dir, logs_dir / "runtime-smoke.log", main_scene, translations
+			args.godot.resolve(),
+			executable,
+			pck,
+			platform,
+			audit_dir,
+			logs_dir / "runtime-smoke.log",
+			main_scene,
+			translations,
+			args.allow_target_runtime_pending,
+			build_id,
+			report["network_protocol"],
 		)
 		report["runtime_smoke"] = runtime
 
@@ -709,8 +885,8 @@ def run_release(args: argparse.Namespace) -> Path:
 		final_logs_dir = output_root / "audit-logs"
 		shutil.copytree(artifact_dir, package_dir)
 		shutil.copytree(logs_dir, final_logs_dir)
-		final_executable = package_dir / executable.name
-		final_pck = package_dir / pck.name
+		final_executable = package_dir / executable.relative_to(artifact_dir)
+		final_pck = package_dir / pck.relative_to(artifact_dir)
 		final_metrics = _directory_metrics(package_dir)
 		report["package_audit"]["content"]["artifact_path"] = str(final_pck)
 		report["logs"] = {
@@ -732,16 +908,19 @@ def run_release(args: argparse.Namespace) -> Path:
 		report["preflight"]["resource_audit_log"] = str(final_logs_dir / resource_log.name)
 		report["artifact"] = {
 			"release_directory": str(package_dir),
+			"release_directory_relative_path": package_dir.relative_to(output_root).as_posix(),
 			"release_directory_size_bytes": final_metrics["size_bytes"],
 			"release_directory_file_count": final_metrics["file_count"],
 			"executable_path": str(final_executable),
+			"executable_relative_path": final_executable.relative_to(output_root).as_posix(),
 			"executable_sha256": _sha256_file(final_executable),
 			"pck_path": str(final_pck),
+			"pck_relative_path": final_pck.relative_to(output_root).as_posix(),
 			"pck_size_bytes": final_pck.stat().st_size,
 			"pck_sha256": _sha256_file(final_pck),
 			"assembly_paths": [str(path.relative_to(artifact_dir)) for path in assemblies],
 		}
-		report["status"] = "passed"
+		report["status"] = "target_runtime_pending" if runtime["target_runtime_pending"] else "passed"
 		report["completed_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
 		report_path = output_root / "release-audit.json"
 		_write_json(report_path, report)
@@ -770,6 +949,15 @@ def build_parser() -> argparse.ArgumentParser:
 	)
 	parser.add_argument("--static-audit", action="store_true", help="Only validate release preset and development MCP invariants")
 	parser.add_argument("--keep-staging", action="store_true", help="Keep staging files after a successful release")
+	parser.add_argument(
+		"--build-id",
+		help="Shared release-candidate build ID; use the same value for Windows, Linux, and macOS exports",
+	)
+	parser.add_argument(
+		"--allow-target-runtime-pending",
+		action="store_true",
+		help="Create a non-publishable cross-platform candidate when its executable cannot run on this host",
+	)
 	parser.add_argument("--export-timeout", type=int, default=1800, help="Godot export timeout in seconds")
 	return parser
 
@@ -786,7 +974,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 	if not args.godot.is_file():
 		raise ReleaseError(f"Godot executable does not exist: {args.godot}")
 	report = run_release(args)
-	print(f"RELEASE_EXPORT_OK {report}")
+	status = _read_json(report).get("status")
+	marker = "RELEASE_EXPORT_OK" if status == "passed" else "RELEASE_EXPORT_CANDIDATE_OK"
+	print(f"{marker} {report}")
 	return 0
 
 

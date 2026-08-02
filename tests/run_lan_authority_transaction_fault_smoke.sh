@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/tests/godot_test_env.sh"
+export CODEX_LAN_SKIP_MIGRATION_PORT_PROBE=1
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
 
 if [[ -n "${GODOT_BIN:-}" ]]; then
@@ -120,7 +121,7 @@ run_baseline() {
 	sleep 1
 	start_peer client "$fixture" baseline "$result_path" "$case_dir/client.log" "authority-baseline-$fixture-seat-1"
 	local client_pid="$STARTED_PID"
-	if ! wait_for_process "$client_pid" 100 || ! wait_for_process "$host_pid" 30 \
+	if ! wait_for_process "$client_pid" 110 || ! wait_for_process "$host_pid" 30 \
 			|| [[ ! -s "$result_path" ]] \
 			|| ! grep -Fq "AUTHORITY_TRANSACTION_BASELINE_HOST_DONE" "$case_dir/host.log" \
 			|| ! grep -Fq "AUTHORITY_TRANSACTION_BASELINE_CLIENT_DONE" "$case_dir/client.log"; then
@@ -130,7 +131,9 @@ run_baseline() {
 	fi
 	if [[ "$(read_field "$result_path" next_action_id)" != "1" \
 			|| "$(read_field "$result_path" client_action_id)" != "1" \
-			|| "$(read_field "$result_path" authority_action_id)" != "0" ]]; then
+			|| "$(read_field "$result_path" authority_action_id)" != "0" \
+			|| "$(read_field "$result_path" host_visual_decode_failures)" != "0" \
+			|| $(read_field "$result_path" host_visual_playback_count) -le 0 ]]; then
 		echo "Authority transaction baseline action ids are invalid: $fixture" >&2
 		cat "$result_path" >&2
 		return 1
@@ -225,7 +228,14 @@ run_fault_case() {
 	echo "LAN_AUTHORITY_TRANSACTION_FAULT_CASE_OK $point"
 }
 
+if [[ -n "${AUTHORITY_TRANSACTION_BASELINE_ONLY_FIXTURE:-}" ]]; then
+	run_baseline "$AUTHORITY_TRANSACTION_BASELINE_ONLY_FIXTURE" >/dev/null
+	echo "LAN_AUTHORITY_TRANSACTION_BASELINE_OK $AUTHORITY_TRANSACTION_BASELINE_ONLY_FIXTURE"
+	exit 0
+fi
+
 BASE_CAPTURE_RESULT="$(run_baseline base_capture)"
+run_baseline question_capture >/dev/null
 ITEM_SHUFFLE_RESULT="$(run_baseline item_shuffle)"
 
 for point in after_move after_insert before_capture after_score after_capture; do

@@ -3,8 +3,32 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private async Task PlayReplacementDrawAnimationAsync(int playerIndex, DrawnHandCard? drawnCard, int turnSequenceGeneration)
+	private async Task PlayReplacementDrawAnimationAsync(
+		int playerIndex,
+		DrawnHandCard? drawnCard,
+		int turnSequenceGeneration,
+		bool broadcastNetworkVisualEvent = true)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			if (broadcastNetworkVisualEvent
+				&& drawnCard.HasValue
+				&& playerIndex >= 0
+				&& playerIndex < _playerHands.Count
+				&& drawnCard.Value.HandIndex >= 0
+				&& drawnCard.Value.HandIndex < _playerHands[playerIndex].Count
+				&& TryGetCurrentAuthoritativeVisualSnapshotId(out int transactionSnapshotId))
+			{
+				GetNetworkManager()?.BroadcastDrawCardVisualEventFromHost(
+					playerIndex,
+					drawnCard.Value.HandIndex,
+					ToNetworkCardCode(drawnCard.Value.Card),
+					turnSequenceGeneration,
+					transactionSnapshotId);
+			}
+			return;
+		}
+
 		if (!IsInsideTree())
 		{
 			return;
@@ -30,7 +54,8 @@ public partial class GameBoardScene
 		}
 
 		int displayIndex = drawnCard.Value.HandIndex;
-		if (IsNetworkMultiplayerMode()
+		if (broadcastNetworkVisualEvent
+			&& IsNetworkMultiplayerMode()
 			&& IsNetworkHost()
 			&& TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{

@@ -7,11 +7,13 @@ public partial class GameBoardScene
 {
 	// This is the trust-boundary representation. Godot Variants must not cross into playback.
 	private sealed record NetworkVisualEvent(
-		string Type, long AuthorityEpoch, long CheckpointId, int SnapshotId, int Generation, int Actor, int HandIndex, int TargetSeat,
+		string Type, long AuthorityEpoch, long CheckpointId, long ActionId, int SnapshotId, int Generation, int Actor, int HandIndex, int TargetSeat,
 		int TargetHandIndex, int TableIndex, int DisplayIndex, int CaptureStartIndex, int MovedCount,
 		string CardCode, string ItemId, string Presentation, bool FaceUp, bool RequiresMagnet,
 		float FirstFloat, float SecondFloat, int[] Indexes, string[] Strings,
-		NetworkCaptureRevealEntry[] CaptureRevealEntries);
+		NetworkCaptureRevealEntry[] CaptureRevealEntries,
+		bool IsAuthorityHostVisualOnly = false,
+		Vector2 AuthorityHostStartGlobalPosition = default);
 
 	private readonly record struct NetworkCaptureRevealEntry(
 		int TableCardIndex,
@@ -42,7 +44,10 @@ public partial class GameBoardScene
 		NetworkVisualPlayback.Enqueue(visualEvent);
 	}
 
-	private bool TryDecodeNetworkVisualEvent(Godot.Collections.Dictionary payload, out NetworkVisualEvent visualEvent)
+	private bool TryDecodeNetworkVisualEvent(
+		Godot.Collections.Dictionary payload,
+		out NetworkVisualEvent visualEvent,
+		bool authorityHostVisualOnly = false)
 	{
 		visualEvent = default!;
 		EnsureNetworkCardCache();
@@ -57,6 +62,7 @@ public partial class GameBoardScene
 			|| !TryReadNetworkInt64(payload, NetworkBoardVisualEventTypes.AuthorityEpochKey, 0, long.MaxValue, out long authorityEpoch)
 			|| authorityEpoch != _networkAuthorityEpoch
 			|| checkpointId < _networkCheckpointId
+			|| !TryReadNetworkInt64(payload, NetworkBoardVisualEventTypes.ActionIdKey, 0, long.MaxValue, out long actionId)
 			|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TurnSequenceGenerationKey, 0, int.MaxValue, out int generation)
 			|| generation != _turnSequenceGeneration) return false;
 
@@ -73,29 +79,30 @@ public partial class GameBoardScene
 		{
 			case NetworkBoardVisualEventTypes.PlayHandCard:
 				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor >= _playerHands.Count
-					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, _playerHands[actor].Count - 1, out handIndex)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, authorityHostVisualOnly ? MaxTotalHandCards - 1 : _playerHands[actor].Count - 1, out handIndex)
 					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayedCardCodeKey, MaxNetworkCardCodeLength, out cardCode) || !_networkCardsByCode.ContainsKey(cardCode)
 					|| !TryReadNetworkBool(payload, NetworkBoardVisualEventTypes.PlayedCardIsFaceUpKey, out faceUp)
 					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TableCardIndexKey, 0, _tableCards.Count, out tableIndex)
 					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.BorrowTideAdjustedRankKey, MaxNetworkCardCodeLength, out string rank)) return false;
-				if (_networkPredictedHandVisualActive && actor == GetLocalHandPlayerIndex()
+				if (!authorityHostVisualOnly
+					&& _networkPredictedHandVisualActive && actor == GetLocalHandPlayerIndex()
 					&& (handIndex != _networkPendingHandIndex || tableIndex != _networkPredictedHandTableCardIndex
 						|| !string.Equals(rank, _networkPredictedHandBorrowTideAdjustedRank, StringComparison.Ordinal))) return false;
 				strings = new[] { rank };
 				break;
 			case NetworkBoardVisualEventTypes.PlayItemCard:
 				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor >= _playerItemHands.Count
-					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, _playerItemHands[actor].Count - 1, out handIndex)
+					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, authorityHostVisualOnly ? MaxTotalHandCards - 1 : _playerItemHands[actor].Count - 1, out handIndex)
 					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.ItemCardIdKey, MaxNetworkItemCardIdLength, out itemId) || !IsValidNetworkItemCardId(itemId, true)
 					|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.PlayPresentationKey, out presentation) || !IsKnownCardPlayPresentation(presentation)
 					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.TargetTableCardIndexKey, -1, _tableCards.Count, out tableIndex)
-					|| (_networkPredictedItemVisualActive && actor == GetLocalHandPlayerIndex() && !MatchesNetworkPredictedItemVisual(actor, handIndex, itemId, presentation, tableIndex))
-					|| (presentation == CardPlayPresentationTypes.TableOverlay ? !CanApplyNetworkTableOverlay(actor, tableIndex, itemId) : actor != GetLocalHandPlayerIndex() || tableIndex != -1)) return false;
+					|| (!authorityHostVisualOnly && _networkPredictedItemVisualActive && actor == GetLocalHandPlayerIndex() && !MatchesNetworkPredictedItemVisual(actor, handIndex, itemId, presentation, tableIndex))
+					|| (!authorityHostVisualOnly && (presentation == CardPlayPresentationTypes.TableOverlay ? !CanApplyNetworkTableOverlay(actor, tableIndex, itemId) : actor != GetLocalHandPlayerIndex() || tableIndex != -1))) return false;
 				break;
 			case NetworkBoardVisualEventTypes.DrawCard:
 				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor)
 					|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.DisplayIndexKey, 0, MaxTotalHandCards - 1, out displayIndex)
-					|| !CanExpandNetworkPlayingHandToIndex(actor, displayIndex)
+					|| (!authorityHostVisualOnly && !CanExpandNetworkPlayingHandToIndex(actor, displayIndex))
 					|| !TryReadOptionalNetworkString(payload, NetworkBoardVisualEventTypes.DrawnCardCodeKey, out cardCode)
 					|| (cardCode.Length > MaxNetworkCardCodeLength || (cardCode.Length > 0 && !_networkCardsByCode.ContainsKey(cardCode)))) return false;
 				break;
@@ -131,7 +138,10 @@ public partial class GameBoardScene
 					|| (!requiresMagnet && !_itemCardCatalog.IsPlayable(itemId))
 					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.StartGlobalXKey, out firstFloat)
 					|| !TryReadNetworkFiniteFloat(payload, NetworkBoardVisualEventTypes.StartGlobalYKey, out secondFloat)
-					|| !(requiresMagnet ? TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1, -1, out handIndex) : TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, MaxTotalHandCards - 1, out handIndex) && CanExpandNetworkItemHandToIndex(actor, handIndex))) return false;
+					|| !(requiresMagnet
+						? TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, -1, -1, out handIndex)
+						: TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.HandIndexKey, 0, MaxTotalHandCards - 1, out handIndex)
+							&& (authorityHostVisualOnly || CanExpandNetworkItemHandToIndex(actor, handIndex)))) return false;
 				break;
 			case NetworkBoardVisualEventTypes.StealDeckCards:
 				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex() || !seat(NetworkBoardVisualEventTypes.TargetSeatIndexKey, out targetSeat) || targetSeat == actor || targetSeat >= _playerDecks.Count || !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.MovedCardCountKey, 1, _playerDecks[targetSeat].Count, out movedCount)) return false;
@@ -161,7 +171,7 @@ public partial class GameBoardScene
 			default: return false;
 		}
 
-		visualEvent = new(type, authorityEpoch, checkpointId, snapshotId, generation, actor, handIndex, targetSeat, targetHandIndex, tableIndex, displayIndex, captureStartIndex, movedCount, cardCode, itemId, presentation, faceUp, requiresMagnet, firstFloat, secondFloat, indexes, strings, captureRevealEntries);
+		visualEvent = new(type, authorityEpoch, checkpointId, actionId, snapshotId, generation, actor, handIndex, targetSeat, targetHandIndex, tableIndex, displayIndex, captureStartIndex, movedCount, cardCode, itemId, presentation, faceUp, requiresMagnet, firstFloat, secondFloat, indexes, strings, captureRevealEntries);
 		return true;
 	}
 
@@ -336,6 +346,115 @@ public partial class GameBoardScene
 			ResetNetworkPredictedHandVisualState();
 		}
 		RenderTableCards();
+	}
+
+	private async Task PlayNetworkAuthorityHostVisualEventAsync(NetworkVisualEvent payload)
+	{
+		_networkAuthorityHostVisualPlaybackCount = NetworkVisualQueuePolicy.SaturatingAdd(
+			_networkAuthorityHostVisualPlaybackCount,
+			1);
+		Vector2 startGlobalPosition = payload.AuthorityHostStartGlobalPosition;
+		if (startGlobalPosition == Vector2.Zero && payload.Actor >= 0 && payload.Actor < player_count)
+		{
+			startGlobalPosition = GetVisibleCardPileTopGlobalPosition(payload.Actor);
+		}
+
+		switch (payload.Type)
+		{
+			case NetworkBoardVisualEventTypes.PlayHandCard:
+				if (payload.Actor >= 0
+					&& payload.Actor < player_count
+					&& payload.TableIndex >= 0
+					&& payload.TableIndex < _tableCards.Count)
+				{
+					await PlayCardToTableAnimationAsync(
+						payload.Actor,
+						CreateNetworkPlayingCard(payload.CardCode),
+						startGlobalPosition,
+						payload.TableIndex,
+						payload.FaceUp);
+				}
+				return;
+			case NetworkBoardVisualEventTypes.PlayItemCard:
+				await PlayNetworkAuthorityHostItemCardVisualOnlyAsync(payload, startGlobalPosition);
+				return;
+			case NetworkBoardVisualEventTypes.DrawCard:
+				if (payload.Actor >= 0
+					&& payload.Actor < _playerHands.Count
+					&& payload.DisplayIndex >= 0
+					&& payload.DisplayIndex < _playerHands[payload.Actor].Count)
+				{
+					PlayingCard drawnCard = string.IsNullOrWhiteSpace(payload.CardCode)
+						? _playerHands[payload.Actor][payload.DisplayIndex]
+						: CreateNetworkPlayingCard(payload.CardCode);
+					await PlayReplacementDrawAnimationAsync(
+						payload.Actor,
+						new DrawnHandCard(drawnCard, payload.DisplayIndex),
+						_turnSequenceGeneration,
+						broadcastNetworkVisualEvent: false);
+				}
+				return;
+			case NetworkBoardVisualEventTypes.DeckShuffle:
+				await PlayPhysicalDeckShuffleAsync(
+					payload.Actor,
+					broadcastNetworkVisualEvent: false);
+				return;
+			case NetworkBoardVisualEventTypes.StealDeckCards:
+				await PlayStealDeckCardsAnimationAsync(
+					payload.Actor,
+					payload.TargetSeat,
+					payload.MovedCount,
+					_turnSequenceGeneration);
+				return;
+			default:
+				return;
+		}
+	}
+
+	private async Task PlayNetworkAuthorityHostItemCardVisualOnlyAsync(
+		NetworkVisualEvent payload,
+		Vector2 startGlobalPosition)
+	{
+		if (payload.Actor < 0 || payload.Actor >= player_count)
+		{
+			return;
+		}
+
+		ItemCard itemCard = CreateNetworkVisualItemCard(payload.ItemId);
+		if (payload.Presentation == CardPlayPresentationTypes.TableOverlay)
+		{
+			if (payload.TableIndex >= 0 && payload.TableIndex < _tableCards.Count)
+			{
+				await PlayItemCardToTableAnimationAsync(
+					payload.Actor,
+					itemCard,
+					startGlobalPosition,
+					payload.TableIndex,
+					tableCardIsFaceUp: false);
+			}
+			return;
+		}
+
+		if (payload.Presentation == CardPlayPresentationTypes.DirectTrigger)
+		{
+			await PlaySpecialCardTriggerEffectAsync(
+				itemCard.Texture,
+				startGlobalPosition,
+				0,
+				GetCardRotationDegreesForPlayer(payload.Actor));
+			return;
+		}
+
+		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		await PlayItemCardToTransformAreaAnimationAsync(
+			itemCard.Texture,
+			startGlobalPosition,
+			transformAreaGlobalPosition,
+			GetCardRotationDegreesForPlayer(payload.Actor));
+		if (payload.Actor == GetLocalHandPlayerIndex())
+		{
+			await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
+		}
 	}
 
 	private async Task PlayNetworkItemCardVisualEventAsync(NetworkVisualEvent payload)

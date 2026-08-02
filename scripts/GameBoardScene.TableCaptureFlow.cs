@@ -126,7 +126,8 @@ public partial class GameBoardScene
 		}
 	}
 
-	Rect2 tableLayoutRect = GetTableCardLayoutRect();
+	Rect2 tableLayoutRect = GetAuthorityRuleSafeTableLayoutRect();
+	Vector2 centerArenaGlobalPosition = GetAuthorityRuleSafeCenterArenaGlobalPosition();
 	foreach (int tableCardIndex in capturePlan.BaseTableCardIndexes)
 	{
 		if (tableCardIndex < 0
@@ -191,7 +192,7 @@ public partial class GameBoardScene
 				&& IsQuestionTableCard(capturedEntry.TableCard))
 			{
 				questionRewardStartGlobalPosition =
-					_centerArena.GlobalPosition
+					centerArenaGlobalPosition
 					+ GetTableCardPosition(
 						capturedEntry.PreCaptureTableIndex,
 						tableLayoutRect);

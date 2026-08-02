@@ -10,6 +10,11 @@ public partial class GameBoardScene
 		QuestionCardRewardAnimation? rewardAnimation,
 		int turnSequenceGeneration)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		EnsureItemModeOptionalFxResourcesLoaded();
 
 		if (!rewardAnimation.HasValue
@@ -303,7 +308,7 @@ public partial class GameBoardScene
 
 	private async Task PlayQuestionCardRefreshAnimationAsync(int tableCardIndex)
 	{
-		if (!IsInsideTree() || tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -316,7 +321,11 @@ public partial class GameBoardScene
 				_currentTurnPlayerIndex,
 				tableCardIndex,
 				_turnSequenceGeneration,
-				snapshotId);
+					snapshotId);
+		}
+		if (_networkAuthorityRuleTransactionActive || !IsInsideTree())
+		{
+			return;
 		}
 
 		TableCard tableCard = _tableCards[tableCardIndex];

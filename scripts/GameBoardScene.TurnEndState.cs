@@ -89,6 +89,11 @@ public partial class GameBoardScene
 
 	private void ShowWinnerSequence(int playerIndex)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		TrackBoardTask(ShowWinnerSequenceAsync(playerIndex), nameof(ShowWinnerSequenceAsync));
 	}
 
@@ -167,7 +172,9 @@ public partial class GameBoardScene
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
-		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		if (!_networkAuthorityRuleTransactionActive
+			&& IsNetworkMultiplayerMode()
+			&& IsNetworkHost())
 		{
 			int winnerSnapshotId = CreateNextNetworkSnapshotId();
 			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, winnerSnapshotId);
@@ -186,7 +193,9 @@ public partial class GameBoardScene
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
-		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		if (!_networkAuthorityRuleTransactionActive
+			&& IsNetworkMultiplayerMode()
+			&& IsNetworkHost())
 		{
 			int drawSnapshotId = CreateNextNetworkSnapshotId();
 			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, drawSnapshotId);
@@ -216,6 +225,27 @@ public partial class GameBoardScene
 	private void ShowDrawSequence()
 	{
 		ShowWinnerBanner(-1);
+	}
+
+	private void PresentCommittedNetworkAuthorityMatchOutcome()
+	{
+		if (_matchOutcomeKind == MatchOutcomeKind.Winner)
+		{
+			PlayResultMusic(_winnerPlayerIndex);
+			for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+			{
+				PlayPlayerAvatarAction(
+					playerIndex,
+					playerIndex == _winnerPlayerIndex
+						? CharacterAvatar.AvatarAction.Victory
+						: CharacterAvatar.AvatarAction.Defeat);
+			}
+			ShowWinnerSequence(_winnerPlayerIndex);
+		}
+		else if (_matchOutcomeKind == MatchOutcomeKind.Draw)
+		{
+			ShowDrawSequence();
+		}
 	}
 
 	private bool IsGameOver()

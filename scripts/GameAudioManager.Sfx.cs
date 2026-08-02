@@ -36,7 +36,7 @@ public partial class GameAudioManager
 		float pitchMax = 1.02f,
 		double cooldownSeconds = 0.0)
 	{
-		if (stream == null)
+		if (_suppressPlayback || stream == null)
 		{
 			return;
 		}
@@ -140,6 +140,11 @@ public partial class GameAudioManager
 		float pitchMin,
 		float pitchMax)
 	{
+		if (_suppressPlayback)
+		{
+			return;
+		}
+
 		float safePitchMin = Mathf.Max(0.01f, Mathf.Min(pitchMin, pitchMax));
 		float safePitchMax = Mathf.Max(safePitchMin, Mathf.Max(pitchMin, pitchMax));
 		AudioStreamPlayer player = RentSfxPlayer();

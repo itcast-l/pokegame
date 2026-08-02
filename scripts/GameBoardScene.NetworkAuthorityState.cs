@@ -13,7 +13,9 @@ public partial class GameBoardScene
 	internal bool CanPublishNetworkBoardSnapshot =>
 		AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState);
 
-	private Task WaitForAuthorityTransactionFaultAsync(string point)
+	private Task WaitForAuthorityTransactionFaultAsync(
+		string point,
+		bool requireActiveAction = true)
 	{
 		string requestedPoint = OS.GetEnvironment("CODEX_AUTHORITY_FAULT_POINT");
 		if (string.IsNullOrWhiteSpace(requestedPoint)
@@ -21,8 +23,13 @@ public partial class GameBoardScene
 			|| !IsNetworkMultiplayerMode()
 			|| !IsNetworkHost()
 			|| _networkAuthorityEpoch != 0
-			|| !_networkAuthorityActionState.IsActive)
+			|| requireActiveAction && !_networkAuthorityActionState.IsActive)
 		{
+			return Task.CompletedTask;
+		}
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			_networkAuthorityDeferredFaultPoint = point;
 			return Task.CompletedTask;
 		}
 
@@ -438,15 +445,21 @@ public partial class GameBoardScene
 		CommitNetworkAuthorityActionCheckpoint();
 	}
 
-	internal void RestoreNetworkAuthorityActionState(AuthorityActionState state)
+	internal void RestoreNetworkAuthorityActionState(
+		AuthorityActionState state,
+		long lastAuthorityActionId = 0)
 	{
-		if (!AuthorityActionStateRules.IsValid(state, player_count))
+		if (!AuthorityActionStateRules.IsValid(state, player_count)
+			|| lastAuthorityActionId < 0
+			|| lastAuthorityActionId < state.ActionId)
 		{
 			return;
 		}
 
 		_networkAuthorityActionState = state;
-		_nextNetworkAuthorityActionId = Math.Max(_nextNetworkAuthorityActionId, state.ActionId);
+		_nextNetworkAuthorityActionId = Math.Max(
+			_nextNetworkAuthorityActionId,
+			Math.Max(state.ActionId, lastAuthorityActionId));
 		RestoreNetworkAuthorityAttachmentQueue(state);
 	}
 
@@ -652,6 +665,20 @@ public partial class GameBoardScene
 			}
 
 			await CompleteMagnetAttachmentSelectionAsync(state.SelectionIndex);
+			if (_networkAuthorityRuleTransactionActive
+				&& _networkAuthorityActionState.IsActive
+				&& !HasPendingItemSelection())
+			{
+				if (_networkAuthorityActionState.Kind == AuthorityActionKind.QuestionReward
+					&& _networkAuthorityActionState.Phase == AuthorityActionPhase.Applying)
+				{
+					await ResumeQuestionRewardAuthorityActionAsync(_networkAuthorityActionState);
+				}
+				else if (_networkAuthorityActionState.Phase == AuthorityActionPhase.Finalizing)
+				{
+					await ResumeFinalizingAuthorityActionAsync(_networkAuthorityActionState);
+				}
+			}
 			return;
 		}
 
@@ -1013,7 +1040,8 @@ public partial class GameBoardScene
 
 	private void CommitNetworkAuthorityActionCheckpoint()
 	{
-		if (IsNetworkMultiplayerMode()
+		if (!_networkAuthorityRuleTransactionActive
+			&& IsNetworkMultiplayerMode()
 			&& IsNetworkHost()
 			&& AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState))
 		{

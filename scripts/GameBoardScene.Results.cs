@@ -59,6 +59,11 @@ public partial class GameBoardScene
 
 	private void ShowWinnerBanner(int playerIndex)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		bool isDraw = _matchOutcomeKind == MatchOutcomeKind.Draw;
 		if (_winnerBannerRoot != null)
 		{

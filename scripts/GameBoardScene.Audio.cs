@@ -13,6 +13,11 @@ public partial class GameBoardScene
 		float pitchMax = 1.02f,
 		double cooldownSeconds = 0.0)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		GameAudio?.PlaySfx(sfxId, volumeDb, pitchMin, pitchMax, cooldownSeconds);
 	}
 
@@ -25,6 +30,11 @@ public partial class GameBoardScene
 
 	private void PlayResultMusic(int winnerPlayerIndex)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		GameAudio?.PlayMusic(
 			IsLocalHandPlayer(winnerPlayerIndex) ? GameMusic.Victory : GameMusic.Defeat,
 			0.8f,

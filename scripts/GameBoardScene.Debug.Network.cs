@@ -8,16 +8,6 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	public string DebugGetGameLoopPhaseName()
-	{
-		return GetGameLoopPhase().ToString();
-	}
-
-	public int DebugGetCurrentTurnPlayerIndex()
-	{
-		return _currentTurnPlayerIndex;
-	}
-
 	public int DebugGetLocalPlayerViewSlotIndex()
 	{
 		return GetPlayerViewSlotIndex(GetLocalHandPlayerIndex());
@@ -40,19 +30,9 @@ public partial class GameBoardScene
 		_debugNetworkVisualPlaybackDelaySeconds = Math.Max(0.0, seconds);
 	}
 
-	public int DebugGetTotalHandCardCountForPlayer(int playerIndex)
+	public void DebugInjectNetworkVisualPlaybackFailures(int count)
 	{
-		return GetTotalHandCardCount(playerIndex);
-	}
-
-	public int DebugGetTotalItemHandCardCountForPlayer(int playerIndex)
-	{
-		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
-		{
-			return 0;
-		}
-
-		return _playerItemHands[playerIndex].Count;
+		_debugNetworkVisualPlaybackFailuresToInject = Math.Max(0, count);
 	}
 
 	public string DebugGetMatchOutcomeKindName()
@@ -117,6 +97,18 @@ public partial class GameBoardScene
 				_tableCards.Add(new TableCard(cards["Clubs:5"], true));
 				_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
 				break;
+			case "question_capture":
+				ItemCard? questionMark = CreateItemCard(QuestionMarkItemCardId);
+				if (!questionMark.HasValue
+					|| !DebugForceNextQuestionRewardItemCardId(ItemCardCatalog.DrawCardItemCardId))
+				{
+					return false;
+				}
+				_playerHands[1].Add(cards["Hearts:5"]);
+				_playerHands[0].Add(cards["Spades:9"]);
+				_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+				_tableCards.Add(new TableCard(null, true, questionMark));
+				break;
 			case "item_shuffle":
 				ItemCard? shuffle = CreateItemCard(ItemCardCatalog.ShuffleItemCardId);
 				if (!shuffle.HasValue)
@@ -156,6 +148,13 @@ public partial class GameBoardScene
 		return fixture switch
 		{
 			"base_capture" => _playerScores[1] > 0 && _tableCards.Count == 0,
+			"question_capture" => _tableCards.Count == 0
+				&& _playerItemHands[1].Count == 1
+				&& string.Equals(
+					_playerItemHands[1][0].Id,
+					ItemCardCatalog.DrawCardItemCardId,
+					StringComparison.Ordinal)
+				&& _currentTurnPlayerIndex == 1,
 			"item_shuffle" => _playerItemHands[1].Count == 0
 				&& _tableCards.Count == 4
 				&& _currentTurnPlayerIndex == 0,
@@ -247,7 +246,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (fixture == "base_capture"
+		if ((fixture == "base_capture" || fixture == "question_capture")
 			&& _playerHands[1].Count == 1
 			&& string.Equals(ToNetworkCardCode(_playerHands[1][0]), "Hearts:5", StringComparison.Ordinal))
 		{
@@ -588,6 +587,26 @@ public partial class GameBoardScene
 		return NetworkVisualPlayback.ActivityCount;
 	}
 
+	public int DebugGetNetworkVisualPlaybackFailureCount()
+	{
+		return NetworkVisualPlayback.PlaybackFailureCount;
+	}
+
+	public bool DebugIsNetworkVisualFastForwarding()
+	{
+		return NetworkVisualPlayback.IsFastForwarding;
+	}
+
+	public int DebugGetNetworkAuthorityHostVisualDecodeFailureCount()
+	{
+		return _networkAuthorityHostVisualDecodeFailureCount;
+	}
+
+	public int DebugGetNetworkAuthorityHostVisualPlaybackCount()
+	{
+		return _networkAuthorityHostVisualPlaybackCount;
+	}
+
 	public int DebugGetNetworkLastAppliedSnapshotId()
 	{
 		return _networkLastAppliedSnapshotId;
@@ -736,6 +755,53 @@ public partial class GameBoardScene
 			NetworkVisualPlayback.StagePendingSnapshot(snapshot);
 			NetworkVisualPlayback.Enqueue(visualEvent);
 			return true;
+	}
+
+	public bool DebugQueueDecodedNetworkVisualEvent(
+		Godot.Collections.Dictionary payload)
+	{
+		if (!TryDecodeNetworkVisualEvent(payload, out NetworkVisualEvent visualEvent))
+		{
+			return false;
+		}
+
+		NetworkVisualPlayback.Enqueue(visualEvent);
+		return true;
+	}
+
+	public bool DebugSubmitNetworkVisualSnapshot(
+		Godot.Collections.Dictionary payload)
+	{
+		if (!TryDecodeNetworkBoardSnapshot(payload, out ValidatedNetworkBoardSnapshot snapshot))
+		{
+			return false;
+		}
+
+		NetworkVisualPlayback.SubmitSnapshot(snapshot);
+		return true;
+	}
+
+	public bool DebugQueueDecodedNetworkAuthorityHostVisualEvent(
+		Godot.Collections.Dictionary payload)
+	{
+		if (!TryDecodeNetworkVisualEvent(
+			payload,
+			out NetworkVisualEvent visualEvent,
+			authorityHostVisualOnly: true))
+		{
+			return false;
+		}
+
+		Vector2 startGlobalPosition = visualEvent.Actor >= 0 && visualEvent.Actor < player_count
+			? TryGetHandCardStartGlobalPosition(visualEvent.Actor, visualEvent.HandIndex)
+				?? GetVisibleCardPileTopGlobalPosition(visualEvent.Actor)
+			: Vector2.Zero;
+		NetworkVisualPlayback.Enqueue(visualEvent with
+		{
+			IsAuthorityHostVisualOnly = true,
+			AuthorityHostStartGlobalPosition = startGlobalPosition,
+		});
+		return true;
 	}
 
 	public bool DebugQueueDelayedNetworkVisualEventWithSnapshotFence(

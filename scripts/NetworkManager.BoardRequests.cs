@@ -278,5 +278,37 @@ public partial class NetworkManager
 		}
 	}
 
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RpcBoardActionCommitted(
+		string sessionId,
+		string matchId,
+		long authorityEpoch,
+		long actionId,
+		long clientActionId,
+		long checkpointId,
+		int snapshotId,
+		int turnSequenceGeneration)
+	{
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch)
+			|| actionId <= 0
+			|| clientActionId <= 0
+			|| checkpointId < 0
+			|| snapshotId < 0
+			|| turnSequenceGeneration < 0)
+		{
+			return;
+		}
+
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		{
+			gameBoard.ConfirmNetworkBoardActionCommitted(
+				actionId,
+				clientActionId,
+				checkpointId,
+				snapshotId,
+				turnSequenceGeneration);
+		}
+	}
+
 
 }

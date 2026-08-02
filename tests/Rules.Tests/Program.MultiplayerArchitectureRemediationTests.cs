@@ -18,6 +18,39 @@ internal static partial class Program
 		False(Regex.IsMatch(audioProductionText, @"\bGC\s*\.\s*WaitForPendingFinalizers\s*\(", RegexOptions.CultureInvariant));
 	}
 
+	private static void TestMuteAudioBlocksDirectStreamPlayerCreation()
+	{
+		string scriptsDirectory = Path.Combine(FindRepositoryRoot(), "scripts");
+		string sfxText = File.ReadAllText(Path.Combine(scriptsDirectory, "GameAudioManager.Sfx.cs"));
+		int directStreamOverloadStart = sfxText.IndexOf(
+			"public void PlaySfx(\n\t\tAudioStream? stream,",
+			StringComparison.Ordinal);
+		int characterActionStart = sfxText.IndexOf(
+			"public void PlayCharacterActionSfx(",
+			directStreamOverloadStart,
+			StringComparison.Ordinal);
+		True(directStreamOverloadStart >= 0);
+		True(characterActionStart > directStreamOverloadStart);
+
+		string directStreamOverload = sfxText[directStreamOverloadStart..characterActionStart];
+		True(directStreamOverload.Contains("if (_suppressPlayback || stream == null)", StringComparison.Ordinal));
+
+		int sharedPlaybackStart = sfxText.IndexOf(
+			"private void PlaySfxStream(",
+			StringComparison.Ordinal);
+		int suppressionGuard = sfxText.IndexOf(
+			"if (_suppressPlayback)",
+			sharedPlaybackStart,
+			StringComparison.Ordinal);
+		int playerRental = sfxText.IndexOf(
+			"AudioStreamPlayer player = RentSfxPlayer();",
+			sharedPlaybackStart,
+			StringComparison.Ordinal);
+		True(sharedPlaybackStart >= 0);
+		True(suppressionGuard > sharedPlaybackStart);
+		True(playerRental > suppressionGuard);
+	}
+
 	private static void GameBoardAsyncWorkStaysBehindLifetimeBoundary()
 	{
 		string scriptsDirectory = Path.Combine(FindRepositoryRoot(), "scripts");

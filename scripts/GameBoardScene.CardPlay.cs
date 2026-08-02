@@ -47,17 +47,26 @@ public partial class GameBoardScene
 			adventureEnemyNextBaseCardModifiers.TableInsertIndex,
 			adventureEnemyNextBaseCardModifiers.FacesUp);
 		bool playedRankCollectsTable = cardPlayPlan.PlayedCardCollectsTable;
-		Control handArea = _playerHandAreas[playerIndex];
-		Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
-		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, hand.Count, handArea.Size, cardOffset);
-		Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{handIndex}");
-		TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
-		Vector2 startGlobalPosition = startGlobalPositionOverride
-			?? sourceCardVisual?.GlobalPosition
-			?? handArea.GlobalPosition + firstCardPosition + handIndex * cardOffset;
-		if (sourceCardSlot != null)
+		Vector2 startGlobalPosition;
+		if (_networkAuthorityRuleTransactionActive)
 		{
-			sourceCardSlot.Visible = false;
+			startGlobalPosition = GetNetworkAuthorityRuleVisualStartGlobalPosition(
+				startGlobalPositionOverride ?? Vector2.Zero);
+		}
+		else
+		{
+			Control handArea = _playerHandAreas[playerIndex];
+			Vector2 cardOffset = GetHandCardOffset(playerIndex, hand.Count, handArea.Size);
+			Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, hand.Count, handArea.Size, cardOffset);
+			Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{handIndex}");
+			TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
+			startGlobalPosition = startGlobalPositionOverride
+				?? sourceCardVisual?.GlobalPosition
+				?? handArea.GlobalPosition + firstCardPosition + handIndex * cardOffset;
+			if (sourceCardSlot != null)
+			{
+				sourceCardSlot.Visible = false;
+			}
 		}
 
 		if (!_cardPlayStateService.TryRemoveCardFromHand(

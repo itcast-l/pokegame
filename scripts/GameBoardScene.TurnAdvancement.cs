@@ -154,15 +154,18 @@ public partial class GameBoardScene
 			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter(_currentTurnPlayerIndex);
 			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
 			{
-				_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = true;
-			}
-
-			RenderTableCards();
-			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
-			{
-				_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = false;
-				await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
-				RenderTableCards();
+				if (_networkAuthorityRuleTransactionActive)
+				{
+					await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
+				}
+				else
+				{
+					_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = true;
+					RenderTableCards();
+					_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = false;
+					await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
+					RenderTableCards();
+				}
 			}
 		}
 

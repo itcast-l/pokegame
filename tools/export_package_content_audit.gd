@@ -29,6 +29,7 @@ const PANDORA_RUNTIME_SENTINELS := [
 	"res://addons/pandora/model/entity.gd",
 	"res://addons/pandora/model/type.gd",
 ]
+const SUPPORTED_PLATFORMS := ["windows", "linux", "macos"]
 
 var _issues: Array[String] = []
 var _entries: Array[String] = []
@@ -48,7 +49,7 @@ func _initialize() -> void:
 		_fail("Missing required --artifact PCK path")
 	if _report_path.is_empty():
 		_fail("Missing required --report path")
-	if _platform != "windows":
+	if _platform not in SUPPORTED_PLATFORMS:
 		_fail("Unsupported or missing package audit platform: %s" % _platform)
 	if not _artifact_path.is_absolute_path() or _artifact_path.get_extension().to_lower() != "pck":
 		_fail("Artifact must be an absolute .pck path: %s" % _artifact_path)

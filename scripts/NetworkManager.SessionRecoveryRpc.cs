@@ -90,6 +90,11 @@ public partial class NetworkManager
 				&& SeatCredentialRules.Verify(credential, currentSeatState.CredentialVerifier))
 			{
 				SendReconnectResult(senderPeerId, true, string.Empty, currentSeatState.SeatIndex);
+				if (IsMigrationReadinessFenceActive()
+					|| _lastCompletedMigrationReadyEpoch == authorityEpoch)
+				{
+					SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+				}
 				return;
 			}
 
@@ -160,7 +165,6 @@ public partial class NetworkManager
 			if (result.ShouldSendSnapshot)
 			{
 				SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
-				TryCompleteMigrationReadiness();
 			}
 	}
 
@@ -192,8 +196,7 @@ public partial class NetworkManager
 		long credentialGeneration,
 		string credential)
 	{
-		bool isInitialCredential = _state == NetworkSessionState.Joining
-			&& string.IsNullOrEmpty(_localPlayerSessionId);
+		bool isInitialCredential = CanAcceptInitialSeatCredential(playerSessionId);
 		if ((!isInitialCredential && !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: _state == NetworkSessionState.MigratingHost))
 			|| !NetworkProtocolRules.IsValidContext(new NetworkRpcContext(sessionId, matchId, authorityEpoch))
 			|| string.IsNullOrWhiteSpace(playerSessionId)
@@ -222,6 +225,23 @@ public partial class NetworkManager
 			playerSessionId,
 			credentialGeneration,
 			credential);
+	}
+
+	private bool CanAcceptInitialSeatCredential(string playerSessionId)
+	{
+		if (!string.IsNullOrEmpty(_localPlayerSessionId)
+			|| _state is not (NetworkSessionState.Joining or NetworkSessionState.Lobby))
+		{
+			return false;
+		}
+		if (_state == NetworkSessionState.Joining)
+		{
+			return true;
+		}
+
+		return TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer)
+			&& localPlayer.IsConnected
+			&& string.Equals(localPlayer.PlayerSessionId, playerSessionId, StringComparison.Ordinal);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -275,6 +295,7 @@ public partial class NetworkManager
 			authorityEpoch,
 			playerSessionId,
 			credentialGeneration);
+		TryApplyPendingPlayerReadyIntent(senderPeerId);
 		if (_state == NetworkSessionState.Lobby)
 		{
 			_lobbyMigrationRecoveryState?.TryMarkClaimed(playerSessionId);
@@ -321,9 +342,10 @@ public partial class NetworkManager
 
 			if (_state == NetworkSessionState.Reconnecting
 				&& !accepted
-				&& string.Equals(reason, MigrationRequiredReconnectReason, StringComparison.Ordinal)
-				&& _networkMigrationPlan is { } redirectPlan
-				&& authorityEpoch == redirectPlan.TargetEpoch
+					&& string.Equals(reason, MigrationRequiredReconnectReason, StringComparison.Ordinal)
+					&& _networkMigrationPlan is { } redirectPlan
+					&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
+					&& authorityEpoch == redirectPlan.TargetEpoch
 				&& string.Equals(sessionId, redirectPlan.SessionId, StringComparison.Ordinal)
 				&& string.Equals(matchId, redirectPlan.MatchId, StringComparison.Ordinal))
 			{
@@ -361,7 +383,16 @@ public partial class NetworkManager
 				return;
 			}
 
-			Fail(string.IsNullOrWhiteSpace(reason) ? "Reconnect rejected." : $"Reconnect rejected: {reason}");
+			string failureMessage = string.IsNullOrWhiteSpace(reason)
+				? "Reconnect rejected."
+				: $"Reconnect rejected: {reason}";
+			if (_state == NetworkSessionState.MigratingHost)
+			{
+				ReturnToMultiplayerLobbyAfterMigrationFailure(failureMessage);
+				return;
+			}
+
+			Fail(failureMessage);
 			return;
 		}
 
@@ -393,6 +424,12 @@ public partial class NetworkManager
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
 		_nextReconnectAttemptAt = 0.0;
+		if (_state == NetworkSessionState.MigratingHost)
+		{
+			ReturnToMultiplayerLobbyAfterMigrationFailure(_hostEndedMatchMessage);
+			return;
+		}
+
 		Fail(_hostEndedMatchMessage);
 	}
 

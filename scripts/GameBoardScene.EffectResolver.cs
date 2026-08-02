@@ -68,7 +68,9 @@ public partial class GameBoardScene
 		}
 
 		Vector2 splitGlobalCenter = request.Event.OriginGlobalCenter
-			?? GetLensRevealFallbackGlobalCenter(ownerPlayerIndex);
+			?? (_networkAuthorityRuleTransactionActive
+				? GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero) + CardVisualSize / 2.0f
+				: GetLensRevealFallbackGlobalCenter(ownerPlayerIndex));
 		await RevealLensTargetCardsAsync(targetIndexes, splitGlobalCenter, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{

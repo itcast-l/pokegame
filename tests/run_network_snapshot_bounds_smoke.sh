@@ -20,5 +20,10 @@ TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/NetworkSnapshotBoundsSmoke.gd 2>&1 | tee "$TMP_DIR/network_snapshot_bounds.log"
+DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" \
+	--headless \
+	--audio-driver Dummy \
+	--path "$ROOT_DIR" \
+	--script res://tests/NetworkSnapshotBoundsSmoke.gd \
+	2>&1 | tee "$TMP_DIR/network_snapshot_bounds.log"
 grep -Fq "NETWORK_SNAPSHOT_BOUNDS_SMOKE_OK" "$TMP_DIR/network_snapshot_bounds.log"

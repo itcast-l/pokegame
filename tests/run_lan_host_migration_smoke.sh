@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/tests/godot_test_env.sh"
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
 MIGRATION_ADDRESS="${CODEX_LAN_MIGRATION_ADDRESS:-127.0.0.1}"
+export CODEX_LAN_SKIP_MIGRATION_PORT_PROBE=1
 
 if [[ -n "${GODOT_BIN:-}" ]]; then
 	GODOT_CMD="$GODOT_BIN"
@@ -53,6 +54,25 @@ wait_for_marker() {
 		if [[ ! -e "$file" ]]; then
 			sleep 0.25
 			continue
+		fi
+		sleep 0.25
+	done
+	return 1
+}
+
+wait_for_marker_after() {
+	local file="$1"
+	local preceding_marker="$2"
+	local marker="$3"
+	local timeout_seconds="$4"
+	local deadline=$((SECONDS + timeout_seconds))
+	while (( SECONDS < deadline )); do
+		if awk -v preceding_marker="$preceding_marker" -v marker="$marker" '
+			index($0, preceding_marker) { preceding_seen = 1; next }
+			preceding_seen && index($0, marker) { found = 1; exit }
+			END { exit found ? 0 : 1 }
+		' "$file" 2>/dev/null; then
+			return 0
 		fi
 		sleep 0.25
 	done
@@ -127,8 +147,9 @@ run_case() {
 	done
 
 	if ! wait_for_any_client_marker "$case_dir" "STANDBY_ACKED" 60 \
-		|| ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY" 60 \
-		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 60; then
+		|| ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY phase=InGame" 60 \
+		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 60 \
+		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_STATE 7" 60; then
 		echo "Host did not reach an ACKed, started match before migration: $label" >&2
 		print_logs "$case_dir"
 		return 1
@@ -252,8 +273,7 @@ run_pending_case() {
 	client_pids+=("$!")
 	PIDS+=("$!")
 
-	if ! wait_for_marker "$host_log" "$pending_marker" 90 \
-		|| ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY" 90 \
+	if ! wait_for_marker_after "$host_log" "$pending_marker" "MIGRATION_PLAN_READY phase=InGame" 90 \
 		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
 		echo "Migration fixture did not reach its kill point: $label" >&2
 		print_logs "$case_dir"
@@ -307,8 +327,7 @@ run_current_turn_case() {
 	client_pids+=("$!")
 	PIDS+=("$!")
 
-	if ! wait_for_marker "$host_log" "MIGRATION_KILL_READY current_turn=0" 90 \
-		|| ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY" 90; then
+	if ! wait_for_marker_after "$host_log" "MIGRATION_KILL_READY current_turn=0" "MIGRATION_PLAN_READY phase=InGame" 90; then
 		echo "Current-turn migration did not reach kill point" >&2
 		print_logs "$case_dir"
 		return 1
@@ -550,7 +569,7 @@ run_failure_case() {
 		PIDS+=("$!")
 	done
 
-	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY" 90 \
+	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY phase=InGame" 90 \
 		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
 		echo "Failure case did not reach migration plan: $label" >&2
 		print_logs "$case_dir"
@@ -603,7 +622,7 @@ run_candidate_exit_timeout_case() {
 		client_pids+=("$!")
 		PIDS+=("$!")
 	done
-	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY" 90 \
+	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY phase=InGame" 90 \
 		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
 		echo "Candidate-exit case did not reach migration plan" >&2
 		print_logs "$case_dir"
@@ -625,7 +644,7 @@ run_candidate_exit_timeout_case() {
 	local candidate_seat=-1
 	local follower_seat=-1
 	local planned_candidate_seat
-	planned_candidate_seat="$(sed -n 's/.*MIGRATION_PLAN_READY candidate_seat=\([0-9][0-9]*\).*/\1/p' "$host_log" | tail -n 1)"
+	planned_candidate_seat="$(sed -n 's/.*MIGRATION_PLAN_READY phase=InGame candidate_seat=\([0-9][0-9]*\).*/\1/p' "$host_log" | tail -n 1)"
 	for seat in 1 2; do
 		if grep -Fq "FULL_MATCH_CLIENT_LOCAL_SEAT $planned_candidate_seat" "$case_dir/client_${seat}.log"; then
 			candidate_seat="$seat"
@@ -682,7 +701,7 @@ run_stale_epoch_case() {
 		client_pids+=("$!")
 		PIDS+=("$!")
 	done
-	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY" 90 \
+	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY phase=InGame" 90 \
 		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
 		echo "Stale-epoch case did not reach migration plan" >&2
 		print_logs "$case_dir"
@@ -711,6 +730,183 @@ run_stale_epoch_case() {
 		return 1
 	fi
 	echo "LAN_HOST_MIGRATION_STALE_EPOCH_OK"
+}
+
+run_missing_follower_late_reclaim_case() {
+	local label="missing_follower_late_reclaim"
+	local case_dir="$TMP_DIR/$label"
+	local result_dir="$case_dir/results"
+	mkdir -p "$result_dir"
+	local host_log="$case_dir/host.log"
+	local host_pid
+	local -a client_pids=()
+
+	echo "== host migration $label =="
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-0" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- --role=host --seat=0 --players=3 --item-mode=1 --result-dir="$result_dir" >"$host_log" 2>&1 &
+	host_pid=$!
+	PIDS+=("$host_pid")
+	sleep 1
+
+	for seat in 1 2; do
+		local client_log="$case_dir/client_${seat}.log"
+		CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-$seat" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+			--script res://tests/LanFullMatchPeer.gd -- --role=client --seat="$seat" --players=3 --item-mode=1 \
+			--result-dir="$result_dir" --allow-client-result-without-host >"$client_log" 2>&1 &
+		client_pids+=("$!")
+		PIDS+=("$!")
+	done
+
+	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY phase=InGame" 90 \
+		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
+		echo "Missing-follower case did not reach migration plan" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	for seat in 1 2; do
+		if ! wait_for_marker "$case_dir/client_${seat}.log" "FULL_MATCH_CLIENT_LOCAL_SEAT" 30; then
+			echo "Missing-follower case did not resolve client seat ownership" >&2
+			print_logs "$case_dir"
+			return 1
+		fi
+	done
+
+	local planned_candidate_seat
+	planned_candidate_seat="$(sed -n 's/.*MIGRATION_PLAN_READY phase=InGame candidate_seat=\([0-9][0-9]*\).*/\1/p' "$host_log" | tail -n 1)"
+	local candidate_process_seat=-1
+	local follower_process_seat=-1
+	local follower_local_seat=-1
+	for seat in 1 2; do
+		if grep -Fq "FULL_MATCH_CLIENT_LOCAL_SEAT $planned_candidate_seat" "$case_dir/client_${seat}.log"; then
+			candidate_process_seat="$seat"
+		else
+			follower_process_seat="$seat"
+			follower_local_seat="$(sed -n 's/.*FULL_MATCH_CLIENT_LOCAL_SEAT \([0-9][0-9]*\).*/\1/p' "$case_dir/client_${seat}.log" | tail -n 1)"
+		fi
+	done
+	if (( candidate_process_seat < 1 || follower_process_seat < 1 || follower_local_seat < 1 )); then
+		echo "Missing-follower case could not identify migration roles" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	: >"$result_dir/pause_game_migration_${follower_local_seat}.flag"
+	kill -9 "$host_pid"
+	wait "$host_pid" 2>/dev/null || true
+	local candidate_log="$case_dir/client_${candidate_process_seat}.log"
+	local follower_log="$case_dir/client_${follower_process_seat}.log"
+	local follower_index=$((follower_process_seat - 1))
+	if ! wait_for_marker "$follower_log" "MIGRATION_GAME_FOLLOWER_PAUSED seat=$follower_local_seat" 30 \
+		|| ! wait_for_marker "$candidate_log" "MIGRATION_RECOVERY_TIMEOUT" 30 \
+		|| ! wait_for_marker "$candidate_log" "timed_out=true" 10; then
+		echo "Missing follower did not trigger bounded readiness timeout" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	if ! grep -Fq "missing=1" "$candidate_log"; then
+		echo "Missing follower was not retained as reclaimable at timeout" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	kill -CONT "${client_pids[$follower_index]}"
+	if ! wait_for_marker "$candidate_log" "MIGRATION_LATE_FOLLOWER_READY" 30 \
+		|| ! wait_for_marker "$follower_log" "MIGRATION_READY_APPLIED" 30 \
+		|| ! wait_for_processes 150 "${client_pids[@]}"; then
+		echo "Late follower did not reclaim and finish after timeout" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	if ! grep -Fq "FULL_MATCH_CLIENT_STATE 7" "$follower_log" \
+		|| ! grep -Fq "FULL_MATCH_CLIENT_WINNER" "$follower_log"; then
+		echo "Late follower did not return to the active match" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	echo "LAN_HOST_MIGRATION_MISSING_FOLLOWER_LATE_RECLAIM_OK"
+}
+
+run_follower_disconnect_during_recovery_case() {
+	local label="follower_disconnect_during_recovery"
+	local case_dir="$TMP_DIR/$label"
+	local result_dir="$case_dir/results"
+	mkdir -p "$result_dir"
+	local host_log="$case_dir/host.log"
+	local host_pid
+	local -a client_pids=()
+
+	echo "== host migration $label =="
+	CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-0" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+		--script res://tests/LanFullMatchPeer.gd -- --role=host --seat=0 --players=3 --item-mode=1 --result-dir="$result_dir" >"$host_log" 2>&1 &
+	host_pid=$!
+	PIDS+=("$host_pid")
+	sleep 1
+
+	for seat in 1 2; do
+		local client_log="$case_dir/client_${seat}.log"
+		CODEX_LAN_SUPPRESS_MIGRATION_SNAPSHOT_ACK=1 \
+		CODEX_LAN_MATCH_SEED=20260714 CODEX_LAN_MIGRATION_ADDRESS="$MIGRATION_ADDRESS" CODEX_TEST_STABLE_USER_ID="lan-migration-$label-seat-$seat" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+			--script res://tests/LanFullMatchPeer.gd -- --role=client --seat="$seat" --players=3 --item-mode=1 \
+			--result-dir="$result_dir" --allow-client-result-without-host >"$client_log" 2>&1 &
+		client_pids+=("$!")
+		PIDS+=("$!")
+	done
+
+	if ! wait_for_marker "$host_log" "MIGRATION_PLAN_READY phase=InGame" 90 \
+		|| ! wait_for_marker "$host_log" "FULL_MATCH_HOST_START_MATCH" 90; then
+		echo "Recovery-disconnect case did not reach migration plan" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	local planned_candidate_seat
+	planned_candidate_seat="$(sed -n 's/.*MIGRATION_PLAN_READY phase=InGame candidate_seat=\([0-9][0-9]*\).*/\1/p' "$host_log" | tail -n 1)"
+	local candidate_process_seat=-1
+	local follower_process_seat=-1
+	for seat in 1 2; do
+		if ! wait_for_marker "$case_dir/client_${seat}.log" "FULL_MATCH_CLIENT_LOCAL_SEAT" 30; then
+			echo "Recovery-disconnect case did not resolve client seat ownership" >&2
+			print_logs "$case_dir"
+			return 1
+		fi
+		if grep -Fq "FULL_MATCH_CLIENT_LOCAL_SEAT $planned_candidate_seat" "$case_dir/client_${seat}.log"; then
+			candidate_process_seat="$seat"
+		else
+			follower_process_seat="$seat"
+		fi
+	done
+	if (( candidate_process_seat < 1 || follower_process_seat < 1 )); then
+		echo "Recovery-disconnect case could not identify migration roles" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+
+	kill -9 "$host_pid"
+	wait "$host_pid" 2>/dev/null || true
+	local candidate_log="$case_dir/client_${candidate_process_seat}.log"
+	local follower_log="$case_dir/client_${follower_process_seat}.log"
+	local follower_index=$((follower_process_seat - 1))
+	if ! wait_for_marker "$follower_log" "MIGRATION_SNAPSHOT_ACK_SUPPRESSED" 30; then
+		echo "Follower did not reach the pre-ACK recovery point" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	kill -9 "${client_pids[$follower_index]}"
+	wait "${client_pids[$follower_index]}" 2>/dev/null || true
+	if ! wait_for_marker "$candidate_log" "MIGRATION_RECOVERY_DISCONNECTED" 15 \
+		|| ! wait_for_marker "$candidate_log" "timed_out=false" 15; then
+		echo "Disconnected follower did not leave the required recovery set immediately" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	if grep -Fq "MIGRATION_RECOVERY_TIMEOUT" "$candidate_log"; then
+		echo "Follower disconnect incorrectly extended recovery to the deadline" >&2
+		print_logs "$case_dir"
+		return 1
+	fi
+	kill "${client_pids[$((candidate_process_seat - 1))]}" 2>/dev/null || true
+	wait "${client_pids[$((candidate_process_seat - 1))]}" 2>/dev/null || true
+	echo "LAN_HOST_MIGRATION_FOLLOWER_DISCONNECT_RECOVERY_OK"
 }
 
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "2p_standard" ]]; then
@@ -753,6 +949,12 @@ if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "visual_kill"
 fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "stale_epoch" ]]; then
 	run_stale_epoch_case
+fi
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "missing_follower_late_reclaim" ]]; then
+	run_missing_follower_late_reclaim_case
+fi
+if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "follower_disconnect_during_recovery" ]]; then
+	run_follower_disconnect_during_recovery_case
 fi
 if [[ -z "${MIGRATION_ONLY_CASE:-}" || "${MIGRATION_ONLY_CASE}" == "expired_host_credential" ]]; then
 	run_active_lobby_case "expired_host_credential" 3 1

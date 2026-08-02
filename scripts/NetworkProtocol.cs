@@ -1,7 +1,7 @@
 public static class NetworkProtocol
 {
-	public const int CurrentVersion = 8;
-	public const int AuthorityCheckpointSchemaVersion = 3;
+	public const int CurrentVersion = 11;
+	public const int AuthorityCheckpointSchemaVersion = 5;
 	public const int MaxAuthorityCheckpointBytes = 256 * 1024;
 	public const int MaxAuthorityCheckpointPlayers = 4;
 	public const int MaxAuthorityActionQueueCount = 64;
@@ -82,4 +82,7 @@ public enum NetworkMigrationFailureCode
 	CandidateUnavailable,
 	ExpiredCredential,
 	ConcurrentCandidateExit,
+	TransportUnavailable,
+	SteamOwnerTimeout,
+	SteamMetadataUpdateFailed,
 }

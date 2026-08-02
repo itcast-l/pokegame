@@ -12,6 +12,38 @@ public partial class NetworkManager
 			return;
 		}
 
+		_pendingLocalReadyIntent = isReady;
+		TrySendLocalReadyIntent(Time.GetTicksMsec() / 1000.0);
+	}
+
+	private void PollLocalReadyIntent(double now)
+	{
+		if (_state != NetworkSessionState.Lobby || !_pendingLocalReadyIntent.HasValue)
+		{
+			return;
+		}
+		if (_lastLocalReadyIntentSentAt >= 0.0
+			&& now - _lastLocalReadyIntentSentAt < LocalReadyIntentRetrySeconds)
+		{
+			return;
+		}
+
+		TrySendLocalReadyIntent(now);
+	}
+
+	private void TrySendLocalReadyIntent(double now)
+	{
+		if (_state != NetworkSessionState.Lobby
+			|| _pendingLocalReadyIntent is not bool isReady)
+		{
+			return;
+		}
+		if (IsLocalReadyIntentSatisfied(isReady))
+		{
+			ClearPendingLocalReadyIntent();
+			return;
+		}
+
 		if (!IsHost)
 		{
 			NetworkRpcContext context = GetCurrentRpcContext();
@@ -22,16 +54,36 @@ public partial class NetworkManager
 				context.MatchId,
 				context.AuthorityEpoch,
 				isReady);
+			_lastLocalReadyIntentSentAt = now;
 			return;
 		}
 
 		int localPeerId = GetLocalPeerId();
-		if (!SetPlayerReady(localPeerId == 0 ? 1 : localPeerId, isReady))
+		if (!TryProcessPlayerReadyIntent(localPeerId == 0 ? 1 : localPeerId, isReady, out bool changed))
 		{
 			return;
 		}
-		BroadcastPlayerList();
-		CommitAuthorityCheckpointFromLobby();
+		if (changed)
+		{
+			BroadcastPlayerList();
+			CommitAuthorityCheckpointFromLobby();
+		}
+		if (IsLocalReadyIntentSatisfied(isReady))
+		{
+			ClearPendingLocalReadyIntent();
+		}
+	}
+
+	private bool IsLocalReadyIntentSatisfied(bool isReady)
+	{
+		return TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer)
+			&& localPlayer.IsReady == isReady;
+	}
+
+	private void ClearPendingLocalReadyIntent()
+	{
+		_pendingLocalReadyIntent = null;
+		_lastLocalReadyIntentSentAt = -1.0;
 	}
 
 	public Godot.Collections.Array GetRoomsVariant()
@@ -76,11 +128,11 @@ public partial class NetworkManager
 	private void RpcRequestClientInfo()
 	{
 		RefreshLocalIdentity();
-		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, _localIdentityHint, _pendingJoinRoomPassword);
+		ContinueClientAuthenticationAfterSecurityHandshake();
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RpcRegisterPlayer(string displayName, string avatarId, string identityHint, string roomPassword)
+	private void RpcRegisterPlayer(string displayName, string avatarId, string identityHint)
 	{
 		if (!IsHost)
 		{
@@ -92,16 +144,14 @@ public partial class NetworkManager
 		}
 
 		int senderId = Multiplayer.GetRemoteSenderId();
+		if (!IsPeerSecurityAuthenticated(senderId))
+		{
+			RejectLobbyJoin(senderId, "房间认证失败");
+			return;
+		}
 		if (!MultiplayerLobbyRules.CanAcceptJoinRequest(_state))
 		{
 			RejectLobbyJoin(senderId, "当前房间不可加入");
-			return;
-		}
-
-		if (RoomPasswordRules.HasPassword(_config.RoomPassword)
-			&& !string.Equals(_config.RoomPassword, RoomPasswordRules.Normalize(roomPassword), StringComparison.Ordinal))
-		{
-			RejectLobbyJoin(senderId, "房间密码错误");
 			return;
 		}
 
@@ -205,7 +255,8 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (!SetPlayerReady(Multiplayer.GetRemoteSenderId(), isReady))
+		if (!TryProcessPlayerReadyIntent(Multiplayer.GetRemoteSenderId(), isReady, out bool changed)
+			|| !changed)
 		{
 			return;
 		}
@@ -213,24 +264,51 @@ public partial class NetworkManager
 		CommitAuthorityCheckpointFromLobby();
 	}
 
-	private bool SetPlayerReady(int peerId, bool isReady)
+	private bool TryProcessPlayerReadyIntent(int peerId, bool isReady, out bool changed)
 	{
+		changed = false;
 		int playerIndex = _players.FindIndex(player => player.PeerId == peerId);
 		if (playerIndex < 0)
 		{
 			return false;
 		}
-		if (!_players[playerIndex].CredentialsAcknowledged
-			|| _players[playerIndex].IsReady == isReady)
+
+		LobbyReadyIntentDisposition disposition = MultiplayerLobbyRules.EvaluateReadyIntent(
+			_players[playerIndex],
+			isReady);
+		if (disposition == LobbyReadyIntentDisposition.Reject)
 		{
 			return false;
+		}
+		if (disposition == LobbyReadyIntentDisposition.DeferUntilCredentialsAcknowledged)
+		{
+			_pendingLobbyReadyByPeerId[peerId] = isReady;
+			return true;
+		}
+
+		_pendingLobbyReadyByPeerId.Remove(peerId);
+		if (disposition == LobbyReadyIntentDisposition.NoChange)
+		{
+			return true;
 		}
 
 		_players[playerIndex] = _players[playerIndex] with { IsReady = isReady };
 		EnsureLobbySeatControlStates();
 		EmitSignal(SignalName.ReadyChanged, _players[playerIndex].SeatIndex, isReady);
 		EmitPlayerListUpdated();
+		changed = true;
 		return true;
+	}
+
+	private bool TryApplyPendingPlayerReadyIntent(int peerId)
+	{
+		if (!_pendingLobbyReadyByPeerId.Remove(peerId, out bool isReady))
+		{
+			return false;
+		}
+
+		return TryProcessPlayerReadyIntent(peerId, isReady, out bool changed)
+			&& changed;
 	}
 
 	private void BroadcastPlayerList()
@@ -293,6 +371,7 @@ public partial class NetworkManager
 			_migrationStartedAt = -1.0;
 			_migrationPeerAttemptInFlight = false;
 			_migrationPeerAttemptStartedAt = -1.0;
+			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Completed);
 		}
 		SetState(NetworkSessionState.Lobby);
 		EmitPlayerListUpdated();

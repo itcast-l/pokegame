@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 internal static partial class Program
 {
@@ -28,12 +31,36 @@ internal static partial class Program
 		Run("multiplayer rematch accepts only completed current-match players", MultiplayerRematchAcceptsOnlyCompletedCurrentMatchPlayers);
 		Run("multiplayer rematch returns connected ready players to preserved lobby", MultiplayerRematchReturnsConnectedReadyPlayersToPreservedLobby);
 		Run("migration plan selects the lowest eligible standby", MigrationPlanSelectsLowestEligibleStandby);
+		Run("migration candidate score prefers stable acknowledgements then latency", MigrationCandidateScorePrefersStableAcknowledgementsThenLatency);
 		Run("standby checkpoint sends are serialized and rate bounded", StandbyCheckpointSendsAreSerializedAndRateBounded);
+		Run("migration coordinator permits only ordered recovery transitions", MigrationCoordinatorPermitsOnlyOrderedRecoveryTransitions);
+		Run("checkpoint commit results classify local and migration failures", CheckpointCommitResultsClassifyLocalAndMigrationFailures);
+		Run("migration plan revocation is signed and tamper evident", MigrationPlanRevocationIsSignedAndTamperEvident);
+		Run("revocation blocks plan replay and stale checkpoint eligibility", RevocationBlocksPlanReplayAndStaleCheckpointEligibility);
 		Run("migration plan rejects stale or unsafe endpoints", MigrationPlanRejectsStaleOrUnsafeEndpoints);
+		Run("Steam owner convergence follows the signed candidate", SteamOwnerConvergenceFollowsSignedCandidate);
+		Run("migration peer rebuild waits for source disconnect", MigrationPeerRebuildWaitsForSourceDisconnect);
+		Run("migration checkpoint chain is scoped to session match and epoch", MigrationCheckpointChainIsScopedToSessionMatchAndEpoch);
+		Run("migration rekey handshake continues into seat authentication", MigrationRekeyHandshakeContinuesIntoSeatAuthentication);
+		Run("room password challenge rejects plaintext replay substitutes", RoomPasswordChallengeRejectsPlaintextReplaySubstitutes);
+		Run("migration key agreement derives peer unique session keys", MigrationKeyAgreementDerivesPeerUniqueSessionKeys);
+		Run("encrypted migration checkpoint rejects tampering and wrong identities", EncryptedMigrationCheckpointRejectsTamperingAndWrongIdentities);
+		Run("migration nonce replay guard rejects duplicates and resets per epoch", MigrationNonceReplayGuardRejectsDuplicatesAndResetsPerEpoch);
+		Run("migration serialization excludes raw secrets", MigrationSerializationExcludesRawSecrets);
+		Run("release debug api surface cannot export migration secrets", ReleaseDebugApiSurfaceCannotExportMigrationSecrets);
+		Run("lobby migration trust controls are explicit and locked", LobbyMigrationTrustControlsAreExplicitAndLocked);
+		Run("lobby ready intent is consumed after credential acknowledgement", LobbyReadyIntentIsConsumedAfterCredentialAcknowledgement);
+		Run("local lobby ready intent retries until authority echo", LocalLobbyReadyIntentRetriesUntilAuthorityEcho);
+		Run("lobby initial seat credential delivery retries across sync ordering", LobbyInitialSeatCredentialDeliveryRetriesAcrossSyncOrdering);
+		Run("client board fingerprint preserves redacted seat shape", ClientBoardFingerprintPreservesRedactedSeatShape);
 		Run("seat credentials issue verify rotate and reject replay", SeatCredentialsIssueVerifyRotateAndRejectReplay);
 		Run("seat credential pending rotation cancels back to current generation", SeatCredentialPendingRotationCancelsBackToCurrentGeneration);
 		Run("peer rate limiter enforces category isolation refill cleanup and disconnect threshold", PeerRateLimiterEnforcesCategoryIsolationRefillCleanupAndDisconnectThreshold);
 		Run("lobby migration recovery tracks claims and ten second expiry", LobbyMigrationRecoveryTracksClaimsAndTenSecondExpiry);
+		Run("game migration recovery waits for snapshot acknowledgements", GameMigrationRecoveryWaitsForSnapshotAcknowledgements);
+		Run("game migration recovery removes disconnected seats without extending deadline", GameMigrationRecoveryRemovesDisconnectedSeatsWithoutExtendingDeadline);
+		Run("game migration recovery expires after fixed ten seconds", GameMigrationRecoveryExpiresAfterFixedTenSeconds);
+		Run("late game migration readiness matches only the completed current epoch", LateGameMigrationReadinessMatchesOnlyTheCompletedCurrentEpoch);
 	}
 
 	private static void AuthorityActionPhasesAreOrderedAndResumable()
@@ -375,12 +402,15 @@ internal static partial class Program
 		True(string.IsNullOrEmpty(error));
 		Equal(source.SessionId, restored.SessionId);
 		Equal(source.MatchId, restored.MatchId);
-		Equal(source.RoomPassword, restored.RoomPassword);
+		Equal(source.RoomPasswordVerifierVersion, restored.RoomPasswordVerifierVersion);
+		Equal(source.RoomPasswordVerifierIterations, restored.RoomPasswordVerifierIterations);
+		Equal(source.RoomPasswordVerifierSalt, restored.RoomPasswordVerifierSalt);
+		Equal(source.RoomPasswordVerifier, restored.RoomPasswordVerifier);
 		Equal(source.PlayerCount, restored.PlayerCount);
 		Equal(source.SnapshotId, restored.SnapshotId);
 		Equal(source.AuthorityEpoch, restored.AuthorityEpoch);
 		Equal(source.CheckpointId, restored.CheckpointId);
-		Equal("secret", restored.RoomPassword);
+		False(Encoding.UTF8.GetString(payload).Contains("secret", StringComparison.Ordinal));
 		Equal(SeatCredentialRules.ComputeVerifier("credential-0"), restored.SeatControls[0].CredentialVerifier);
 		Equal(19L, restored.LastAcceptedClientActionIds[1]);
 	}
@@ -526,8 +556,8 @@ internal static partial class Program
 
 	private static void NetworkProtocolContextsFenceEpochsAndSnapshots()
 	{
-		Equal(8, NetworkProtocol.CurrentVersion);
-		Equal(3, NetworkProtocol.AuthorityCheckpointSchemaVersion);
+		Equal(11, NetworkProtocol.CurrentVersion);
+		Equal(5, NetworkProtocol.AuthorityCheckpointSchemaVersion);
 		NetworkRpcContext current = new("session", "match", 3);
 		True(current.IsValid);
 		True(NetworkProtocolRules.Matches(current, "session", "match", 3, allowHigherEpoch: false));
@@ -690,32 +720,244 @@ internal static partial class Program
 		False(NetworkMigrationRules.ShouldSwitchToNextCandidate(true, 1));
 	}
 
+	private static void MigrationCandidateScorePrefersStableAcknowledgementsThenLatency()
+	{
+		var roster = new List<NetworkMigrationRosterEntry>
+		{
+			new() { PlayerSessionId = "host", SeatIndex = 0, IsHost = true, IsConnected = true, CredentialsAcknowledged = true },
+			new() { PlayerSessionId = "seat-1", SeatIndex = 1, IsConnected = true, CredentialsAcknowledged = true },
+			new() { PlayerSessionId = "seat-2", SeatIndex = 2, IsConnected = true, CredentialsAcknowledged = true },
+		};
+		var controls = new List<NetworkAuthoritySeatControl>
+		{
+			new() { SeatIndex = 0, Mode = SeatControlMode.HumanConnected },
+			new() { SeatIndex = 1, Mode = SeatControlMode.HumanConnected },
+			new() { SeatIndex = 2, Mode = SeatControlMode.HumanConnected },
+		};
+		var latencyBySeat = new Dictionary<int, double>
+		{
+			[1] = 80.0,
+			[2] = 20.0,
+		};
+
+		Equal(2, NetworkMigrationRules.SelectHotStandbySeat(
+			roster,
+			controls,
+			hostSeat: 0,
+			excludedSeats: Array.Empty<int>(),
+			stableAcknowledgedSeat: -1,
+			latencyMillisecondsBySeat: latencyBySeat));
+		Equal(1, NetworkMigrationRules.SelectHotStandbySeat(
+			roster,
+			controls,
+			hostSeat: 0,
+			excludedSeats: Array.Empty<int>(),
+			stableAcknowledgedSeat: 1,
+			latencyMillisecondsBySeat: latencyBySeat));
+	}
+
 	private static void MigrationPlanRejectsStaleOrUnsafeEndpoints()
 	{
-		NetworkMigrationPlan valid = new()
+		using ECDsa sourceSigner = HostMigrationSecurity.CreateSigner();
+		using ECDsa successorSigner = HostMigrationSecurity.CreateSigner();
+		byte[] sourcePublicKey = HostMigrationSecurity.ExportPublicKey(sourceSigner);
+		byte[] successorPublicKey = HostMigrationSecurity.ExportPublicKey(successorSigner);
+		NetworkMigrationPlan unsigned = new()
 		{
+			ProtocolVersion = NetworkProtocol.CurrentVersion,
+			PlanRevision = 1,
 			SessionId = "session",
 			MatchId = "match",
 			SourceEpoch = 3,
 			TargetEpoch = 4,
 			CheckpointId = 7,
 			CheckpointHash = new string('a', 64),
+			CheckpointCiphertextHash = new string('b', 64),
 			CandidatePlayerSessionId = "seat-1",
 			CandidateSeat = 1,
-			ObservedHostAddress = "192.168.1.10",
-			CandidateHostAddress = "192.168.1.11",
-			Port = NetworkProtocol.LanHostMigrationPort,
+			CandidateSuccessorPublicKey = HostMigrationSecurity.EncodeBytes(successorPublicKey),
+			CandidateSuccessorKeyId = HostMigrationSecurity.ComputeKeyId(successorPublicKey),
 			SourcePlayerSessionId = "host",
+			SourceAuthorityKeyId = HostMigrationSecurity.ComputeKeyId(sourcePublicKey),
+			Transport = NetworkTransport.Lan,
+			TransportDescriptor = new NetworkMigrationTransportDescriptor
+			{
+				Lan = new NetworkLanMigrationDescriptor
+				{
+					ObservedHostAddress = "192.168.1.10",
+					CandidateHostAddress = "192.168.1.11",
+					Port = NetworkProtocol.LanHostMigrationPort,
+					MaxClients = NetworkSessionDefaults.MaxPlayers - 1,
+					PeerRebuildMode = NetworkMigrationPeerRebuildMode.EnetServer,
+				},
+			},
 			Phase = NetworkAuthorityPhase.InGame,
 		};
+		True(HostMigrationSecurity.TrySignMigrationPlan(unsigned, sourceSigner, out NetworkMigrationPlan valid));
 		True(NetworkMigrationRules.IsPlanVisibleToClients(valid));
+		True(HostMigrationSecurity.VerifyMigrationPlan(valid, sourcePublicKey));
 		False(NetworkMigrationRules.IsPlanVisibleToClients(valid with { TargetEpoch = 3 }));
 		False(NetworkMigrationRules.IsPlanVisibleToClients(valid with { CheckpointHash = new string('A', 64) }));
-		False(NetworkMigrationRules.IsPlanVisibleToClients(valid with { CandidateHostAddress = "bad address" }));
-		False(NetworkMigrationRules.IsPlanVisibleToClients(valid with { Port = NetworkSessionDefaults.LanGamePort + 1 }));
+		False(NetworkMigrationRules.IsPlanVisibleToClients(valid with
+		{
+			TransportDescriptor = valid.TransportDescriptor with
+			{
+				Lan = valid.TransportDescriptor.Lan! with { CandidateHostAddress = "bad address" },
+			},
+		}));
+		False(NetworkMigrationRules.IsPlanVisibleToClients(valid with
+		{
+			TransportDescriptor = valid.TransportDescriptor with
+			{
+				Lan = valid.TransportDescriptor.Lan! with { Port = NetworkSessionDefaults.LanGamePort + 1 },
+			},
+		}));
+		False(HostMigrationSecurity.VerifyMigrationPlan(valid with { CandidateSeat = 2 }, sourcePublicKey));
+		NetworkMigrationPlan steamUnsigned = unsigned with
+		{
+			Transport = NetworkTransport.Steam,
+			TransportDescriptor = new NetworkMigrationTransportDescriptor
+			{
+				Steam = new NetworkSteamMigrationDescriptor
+				{
+					LobbyId = 109775241000000001,
+					SourceLobbyOwnerSteamId = 76561198000000001,
+					CandidateSteamId = 76561198000000002,
+					ExpectedLobbyOwnerSteamId = 76561198000000002,
+					PeerRebuildMode = NetworkMigrationPeerRebuildMode.SteamLobby,
+				},
+			},
+		};
+		True(HostMigrationSecurity.TrySignMigrationPlan(steamUnsigned, sourceSigner, out NetworkMigrationPlan steamPlan));
+		True(NetworkMigrationRules.IsPlanVisibleToClients(steamPlan));
+		True(HostMigrationSecurity.VerifyMigrationPlan(steamPlan, sourcePublicKey));
+		string steamJson = JsonSerializer.Serialize(steamPlan);
+		NetworkMigrationPlan? steamRoundtrip = JsonSerializer.Deserialize<NetworkMigrationPlan>(steamJson);
+		True(steamRoundtrip is not null);
+		True(steamRoundtrip!.TransportDescriptor.Lan is null);
+		Equal(steamPlan.TransportDescriptor.Steam, steamRoundtrip.TransportDescriptor.Steam);
+		True(HostMigrationSecurity.VerifyMigrationPlan(steamRoundtrip, sourcePublicKey));
+		False(NetworkMigrationRules.IsPlanVisibleToClients(steamPlan with
+		{
+			TransportDescriptor = steamPlan.TransportDescriptor with
+			{
+				Steam = steamPlan.TransportDescriptor.Steam! with
+				{
+					ExpectedLobbyOwnerSteamId = 76561198000000003,
+				},
+			},
+		}));
+		False(HostMigrationSecurity.VerifyMigrationPlan(steamPlan with
+		{
+			TransportDescriptor = steamPlan.TransportDescriptor with
+			{
+				Steam = steamPlan.TransportDescriptor.Steam! with
+				{
+					CandidateSteamId = 76561198000000003,
+					ExpectedLobbyOwnerSteamId = 76561198000000003,
+				},
+			},
+			}, sourcePublicKey));
+		False(HostMigrationSecurity.VerifyMigrationPlan(steamPlan with
+		{
+			TransportDescriptor = steamPlan.TransportDescriptor with
+			{
+				Steam = steamPlan.TransportDescriptor.Steam! with
+				{
+					LobbyId = 109775241000000002,
+					SourceLobbyOwnerSteamId = 76561198000000004,
+				},
+			},
+		}, sourcePublicKey));
+		NetworkMigrationPlan mismatchedCandidateKey = unsigned with
+		{
+			CandidateSuccessorKeyId = new string('c', 64),
+		};
+		False(NetworkMigrationRules.IsUnsignedPlanValid(mismatchedCandidateKey));
+		False(HostMigrationSecurity.TrySignMigrationPlan(mismatchedCandidateKey, sourceSigner, out _));
+		False(HostMigrationSecurity.TrySignMigrationPlan(
+			unsigned with { SourceAuthorityKeyId = new string('d', 64) },
+			sourceSigner,
+			out _));
+		True(NetworkMigrationRules.ShouldAcceptPlanUpdate(null, valid));
+		True(NetworkMigrationRules.ShouldAcceptPlanUpdate(valid, valid with { PlanRevision = 2 }));
+		True(NetworkMigrationRules.ShouldAcceptPlanUpdate(valid, valid with { TargetEpoch = 5, PlanRevision = 1 }));
+		False(NetworkMigrationRules.ShouldAcceptPlanUpdate(valid, valid));
+		False(NetworkMigrationRules.ShouldAcceptPlanUpdate(valid, valid with { PlanRevision = 0 }));
+		False(NetworkMigrationRules.ShouldAcceptPlanUpdate(valid, valid with { TargetEpoch = 3, PlanRevision = 99 }));
 		True(NetworkMigrationRules.CanCandidateStart(valid, "seat-1", NetworkSessionState.MigratingHost, hasCheckpoint: true, isSourceHost: false));
 		False(NetworkMigrationRules.CanCandidateStart(valid, "host", NetworkSessionState.MigratingHost, hasCheckpoint: true, isSourceHost: false));
 		False(NetworkMigrationRules.ShouldFollowerConnect(valid, "seat-1", NetworkSessionState.MigratingHost, isCandidate: true, elapsedTimeout: false));
+	}
+
+	private static void SteamOwnerConvergenceFollowsSignedCandidate()
+	{
+		var descriptor = new NetworkSteamMigrationDescriptor
+		{
+			LobbyId = 109775241000000001,
+			SourceLobbyOwnerSteamId = 76561198000000001,
+			CandidateSteamId = 76561198000000002,
+			ExpectedLobbyOwnerSteamId = 76561198000000002,
+		};
+
+		Equal(
+			SteamLobbyOwnerConvergenceAction.Ready,
+			NetworkMigrationRules.GetSteamLobbyOwnerConvergenceAction(
+				descriptor,
+				localSteamId: 76561198000000003,
+				currentLobbyOwnerSteamId: descriptor.ExpectedLobbyOwnerSteamId,
+				timedOut: false));
+		Equal(
+			SteamLobbyOwnerConvergenceAction.RequestTransfer,
+			NetworkMigrationRules.GetSteamLobbyOwnerConvergenceAction(
+				descriptor,
+				localSteamId: 76561198000000003,
+				currentLobbyOwnerSteamId: 76561198000000003,
+				timedOut: false));
+		Equal(
+			SteamLobbyOwnerConvergenceAction.Wait,
+			NetworkMigrationRules.GetSteamLobbyOwnerConvergenceAction(
+				descriptor,
+				localSteamId: 76561198000000004,
+				currentLobbyOwnerSteamId: 76561198000000003,
+				timedOut: false));
+		Equal(
+			SteamLobbyOwnerConvergenceAction.Fail,
+			NetworkMigrationRules.GetSteamLobbyOwnerConvergenceAction(
+				descriptor,
+				localSteamId: 76561198000000004,
+				currentLobbyOwnerSteamId: 76561198000000003,
+				timedOut: true));
+		Equal(
+			SteamLobbyOwnerConvergenceAction.Wait,
+			NetworkMigrationRules.GetSteamLobbyOwnerConvergenceAction(
+				descriptor,
+				localSteamId: descriptor.CandidateSteamId,
+				currentLobbyOwnerSteamId: 0,
+				timedOut: false));
+		Equal(
+			SteamLobbyOwnerConvergenceAction.Fail,
+			NetworkMigrationRules.GetSteamLobbyOwnerConvergenceAction(
+				descriptor,
+				localSteamId: descriptor.CandidateSteamId,
+				currentLobbyOwnerSteamId: 0,
+				timedOut: true));
+	}
+
+	private static void MigrationPeerRebuildWaitsForSourceDisconnect()
+	{
+		False(NetworkMigrationRules.CanRebuildMigrationPeer(
+			transportPrepared: false,
+			awaitingSourceDisconnect: true));
+		False(NetworkMigrationRules.CanRebuildMigrationPeer(
+			transportPrepared: true,
+			awaitingSourceDisconnect: true));
+		False(NetworkMigrationRules.CanRebuildMigrationPeer(
+			transportPrepared: false,
+			awaitingSourceDisconnect: false));
+		True(NetworkMigrationRules.CanRebuildMigrationPeer(
+			transportPrepared: true,
+			awaitingSourceDisconnect: false));
 	}
 
 	private static void StandbyCheckpointSendsAreSerializedAndRateBounded()
@@ -725,6 +967,565 @@ internal static partial class Program
 		True(NetworkMigrationRules.CanSendStandbyCheckpoint(10.5, 10.0, hasPendingCheckpoint: false));
 		False(NetworkMigrationRules.CanSendStandbyCheckpoint(11.0, 10.0, hasPendingCheckpoint: true));
 		False(NetworkMigrationRules.CanSendStandbyCheckpoint(double.NaN, 10.0, hasPendingCheckpoint: false));
+	}
+
+	private static void MigrationCoordinatorPermitsOnlyOrderedRecoveryTransitions()
+	{
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.Disabled,
+			NetworkMigrationCoordinatorState.SelectingCandidate));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.SelectingCandidate,
+			NetworkMigrationCoordinatorState.KeyAgreement));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.KeyAgreement,
+			NetworkMigrationCoordinatorState.AwaitingCheckpointAcknowledgement));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.AwaitingCheckpointAcknowledgement,
+			NetworkMigrationCoordinatorState.AwaitingPlanAcknowledgement));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.AwaitingPlanAcknowledgement,
+			NetworkMigrationCoordinatorState.Ready));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.Ready,
+			NetworkMigrationCoordinatorState.SourceHostLost));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.SourceHostLost,
+			NetworkMigrationCoordinatorState.CandidateStarting));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.CandidateStarting,
+			NetworkMigrationCoordinatorState.FollowersRecovering));
+		True(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.FollowersRecovering,
+			NetworkMigrationCoordinatorState.Completed));
+		False(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.Disabled,
+			NetworkMigrationCoordinatorState.Ready));
+		False(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.SelectingCandidate,
+			NetworkMigrationCoordinatorState.Completed));
+		False(NetworkMigrationRules.CanTransitionCoordinatorState(
+			NetworkMigrationCoordinatorState.FollowersRecovering,
+			NetworkMigrationCoordinatorState.Ready));
+		True(NetworkMigrationRules.IsReadyForMigration(NetworkMigrationCoordinatorState.Ready));
+		False(NetworkMigrationRules.IsReadyForMigration(NetworkMigrationCoordinatorState.AwaitingCheckpointAcknowledgement));
+		False(NetworkMigrationRules.IsReadyForMigration(NetworkMigrationCoordinatorState.AwaitingPlanAcknowledgement));
+		True(NetworkMigrationRules.ArePlanAcknowledgementsComplete(new[] { 1, 2 }, new[] { 1, 2 }));
+		False(NetworkMigrationRules.ArePlanAcknowledgementsComplete(new[] { 1, 2 }, new[] { 1 }));
+	}
+
+	private static void CheckpointCommitResultsClassifyLocalAndMigrationFailures()
+	{
+		AuthorityCheckpointCommitResult committed = AuthorityCheckpointCommitResult.Committed(
+			12,
+			MigrationCheckpointDispatchStatus.CandidateUnavailable);
+		AuthorityCheckpointCommitResult signingFailed = AuthorityCheckpointCommitResult.Rejected(
+			AuthorityCheckpointCommitStatus.SigningFailed,
+			"revocation_signing_failed");
+		True(committed.IsCheckpointCommitted);
+		False(committed.IsMigrationReady);
+		Equal(12L, committed.CheckpointId);
+		Equal(MigrationCheckpointDispatchStatus.CandidateUnavailable, committed.DispatchStatus);
+		False(signingFailed.IsCheckpointCommitted);
+		Equal(AuthorityCheckpointCommitStatus.SigningFailed, signingFailed.CommitStatus);
+		Equal(MigrationCheckpointDispatchStatus.NotRequested, signingFailed.DispatchStatus);
+		Equal(
+			AuthorityCheckpointCommitStatus.PayloadTooLarge,
+			NetworkMigrationRules.ClassifyCheckpointBuildFailure(NetworkAuthorityCheckpointCodec.PayloadSizeError));
+		Equal(
+			AuthorityCheckpointCommitStatus.EncodingFailed,
+			NetworkMigrationRules.ClassifyCheckpointBuildFailure(NetworkAuthorityCheckpointCodec.EncodeFailedError));
+		Equal(
+			AuthorityCheckpointCommitStatus.RulesStateUnavailable,
+			NetworkMigrationRules.ClassifyCheckpointBuildFailure("authority_action_not_stable action=ItemCard"));
+		Equal(
+			AuthorityCheckpointCommitStatus.DataValidationFailed,
+			NetworkMigrationRules.ClassifyCheckpointBuildFailure(NetworkAuthorityCheckpointCodec.EncodeInvalidError));
+	}
+
+	private static void MigrationPlanRevocationIsSignedAndTamperEvident()
+	{
+		using ECDsa sourceSigner = HostMigrationSecurity.CreateSigner();
+		byte[] sourcePublicKey = HostMigrationSecurity.ExportPublicKey(sourceSigner);
+		NetworkMigrationPlanRevocation unsigned = new()
+		{
+			ProtocolVersion = NetworkProtocol.CurrentVersion,
+			PlanRevision = 8,
+			RevokedPlanRevision = 7,
+			RevokedCheckpointId = 21,
+			SessionId = "session",
+			MatchId = "match",
+			SourceEpoch = 4,
+			SourceAuthorityKeyId = HostMigrationSecurity.ComputeKeyId(sourcePublicKey),
+		};
+
+		True(HostMigrationSecurity.TrySignMigrationPlanRevocation(unsigned, sourceSigner, out NetworkMigrationPlanRevocation signed));
+		True(NetworkMigrationRules.IsPlanRevocationVisibleToClients(signed));
+		True(HostMigrationSecurity.VerifyMigrationPlanRevocation(signed, sourcePublicKey));
+		False(HostMigrationSecurity.VerifyMigrationPlanRevocation(
+			signed with { RevokedCheckpointId = 22 },
+			sourcePublicKey));
+		False(NetworkMigrationRules.IsPlanRevocationVisibleToClients(signed with { PlanRevision = signed.RevokedPlanRevision }));
+	}
+
+	private static void RevocationBlocksPlanReplayAndStaleCheckpointEligibility()
+	{
+		NetworkMigrationPlan stalePlan = new() { PlanRevision = 7 };
+		NetworkMigrationPlan replacementPlan = new() { PlanRevision = 8 };
+		NetworkMigrationPlan newerPlan = new() { PlanRevision = 9 };
+		False(NetworkMigrationRules.CanAcceptPlanRevisionAfterRevocation(8, 8, stalePlan));
+		True(NetworkMigrationRules.CanAcceptPlanRevisionAfterRevocation(8, 8, replacementPlan));
+		True(NetworkMigrationRules.CanAcceptPlanRevisionAfterRevocation(8, 8, newerPlan));
+		False(NetworkMigrationRules.CanDispatchMigrationCheckpoint(21, -1));
+		False(NetworkMigrationRules.CanDispatchMigrationCheckpoint(21, 20));
+		True(NetworkMigrationRules.CanDispatchMigrationCheckpoint(22, 22));
+		True(NetworkMigrationRules.CanAcceptCheckpointChainAdvance(
+			"confirmed",
+			"confirmed",
+			22,
+			21,
+			9,
+			8));
+		False(NetworkMigrationRules.CanAcceptCheckpointChainAdvance(
+			"speculative",
+			"confirmed",
+			22,
+			21,
+			9,
+			8));
+		False(NetworkMigrationRules.CanAcceptCheckpointChainAdvance(
+			"confirmed",
+			"confirmed",
+			21,
+			21,
+			9,
+			8));
+		False(NetworkMigrationRules.CanAcceptCheckpointChainAdvance(
+			"confirmed",
+			"confirmed",
+			22,
+			21,
+			8,
+			8));
+	}
+
+	private static void MigrationCheckpointChainIsScopedToSessionMatchAndEpoch()
+	{
+		NetworkAuthorityCheckpoint checkpoint = CreateCheckpoint() with
+		{
+			SessionId = "session-a",
+			MatchId = "match-a",
+			AuthorityEpoch = 4,
+		};
+		True(NetworkMigrationRules.IsSameCheckpointChain(checkpoint, "session-a", "match-a", 4));
+		False(NetworkMigrationRules.IsSameCheckpointChain(checkpoint, "session-b", "match-a", 4));
+		False(NetworkMigrationRules.IsSameCheckpointChain(checkpoint, "session-a", "match-b", 4));
+		False(NetworkMigrationRules.IsSameCheckpointChain(checkpoint, "session-a", "match-a", 5));
+		False(NetworkMigrationRules.IsSameCheckpointChain(null, "session-a", "match-a", 4));
+	}
+
+	private static void MigrationRekeyHandshakeContinuesIntoSeatAuthentication()
+	{
+		True(NetworkMigrationRules.ShouldContinueAuthenticationAfterSecurityHandshake(
+			NetworkSessionState.Reconnecting,
+			localHandshakeIsRekey: true,
+			authorityHandshakeIsRekey: true));
+		True(NetworkMigrationRules.ShouldContinueAuthenticationAfterSecurityHandshake(
+			NetworkSessionState.MigratingHost,
+			localHandshakeIsRekey: true,
+			authorityHandshakeIsRekey: true));
+		False(NetworkMigrationRules.ShouldContinueAuthenticationAfterSecurityHandshake(
+			NetworkSessionState.Lobby,
+			localHandshakeIsRekey: true,
+			authorityHandshakeIsRekey: true));
+		True(NetworkMigrationRules.ShouldContinueAuthenticationAfterSecurityHandshake(
+			NetworkSessionState.Joining,
+			localHandshakeIsRekey: false,
+			authorityHandshakeIsRekey: false));
+	}
+
+	private static void RoomPasswordChallengeRejectsPlaintextReplaySubstitutes()
+	{
+		RoomPasswordVerifier verifier = RoomPasswordRules.CreateVerifier(" trusted-room ");
+		byte[] challenge = RoomPasswordRules.CreateChallenge();
+		True(verifier.HasPassword);
+		True(RoomPasswordRules.IsVerifierValid(verifier));
+		True(RoomPasswordRules.TryComputeChallengeProof(
+			"trusted-room",
+			verifier,
+			challenge,
+			"session-a",
+			out byte[] proof));
+		True(RoomPasswordRules.TryComputeChallengeProof(
+			"trusted-room",
+			verifier.Version,
+			verifier.Iterations,
+			verifier.Salt,
+			challenge,
+			"session-a",
+			out byte[] parameterProof));
+		True(proof.SequenceEqual(parameterProof));
+		False(RoomPasswordRules.TryComputeChallengeProof(
+			"trusted-room",
+			verifier.Version + 1,
+			verifier.Iterations,
+			verifier.Salt,
+			challenge,
+			"session-a",
+			out _));
+		True(RoomPasswordRules.VerifyChallengeProof(verifier, challenge, "session-a", proof));
+		False(RoomPasswordRules.VerifyChallengeProof(verifier, RoomPasswordRules.CreateChallenge(), "session-a", proof));
+		False(RoomPasswordRules.VerifyChallengeProof(verifier, challenge, "session-b", proof));
+		True(RoomPasswordRules.TryComputeChallengeProof(
+			"wrong-password",
+			verifier,
+			challenge,
+			"session-a",
+			out byte[] wrongProof));
+		False(RoomPasswordRules.VerifyChallengeProof(verifier, challenge, "session-a", wrongProof));
+		False(Encoding.UTF8.GetString(proof).Contains("trusted-room", StringComparison.Ordinal));
+	}
+
+	private static void MigrationKeyAgreementDerivesPeerUniqueSessionKeys()
+	{
+		using ECDiffieHellman host = HostMigrationSecurity.CreateKeyAgreement();
+		using ECDiffieHellman candidate = HostMigrationSecurity.CreateKeyAgreement();
+		using ECDiffieHellman follower = HostMigrationSecurity.CreateKeyAgreement();
+		True(HostMigrationSecurity.TryDeriveSessionKey(
+			host,
+			HostMigrationSecurity.ExportPublicKey(candidate),
+			"session-a",
+			out byte[] hostCandidateKey));
+		True(HostMigrationSecurity.TryDeriveSessionKey(
+			candidate,
+			HostMigrationSecurity.ExportPublicKey(host),
+			"session-a",
+			out byte[] candidateKey));
+		True(HostMigrationSecurity.TryDeriveSessionKey(
+			host,
+			HostMigrationSecurity.ExportPublicKey(follower),
+			"session-a",
+			out byte[] hostFollowerKey));
+		True(hostCandidateKey.SequenceEqual(candidateKey));
+		False(hostCandidateKey.SequenceEqual(hostFollowerKey));
+	}
+
+	private static void EncryptedMigrationCheckpointRejectsTamperingAndWrongIdentities()
+	{
+		using ECDiffieHellman hostAgreement = HostMigrationSecurity.CreateKeyAgreement();
+		using ECDiffieHellman candidateAgreement = HostMigrationSecurity.CreateKeyAgreement();
+		using ECDiffieHellman otherAgreement = HostMigrationSecurity.CreateKeyAgreement();
+		using ECDsa sourceSigner = HostMigrationSecurity.CreateSigner();
+		using ECDsa wrongSigner = HostMigrationSecurity.CreateSigner();
+		True(HostMigrationSecurity.TryDeriveSessionKey(
+			hostAgreement,
+			HostMigrationSecurity.ExportPublicKey(candidateAgreement),
+			"session-a",
+			out byte[] hostSessionKey));
+		True(HostMigrationSecurity.TryDeriveSessionKey(
+			candidateAgreement,
+			HostMigrationSecurity.ExportPublicKey(hostAgreement),
+			"session-a",
+			out byte[] candidateSessionKey));
+		True(HostMigrationSecurity.TryDeriveSessionKey(
+			otherAgreement,
+			HostMigrationSecurity.ExportPublicKey(hostAgreement),
+			"session-a",
+			out byte[] wrongSessionKey));
+
+		byte[] payload = Encoding.UTF8.GetBytes("private checkpoint payload");
+		string payloadHash = NetworkAuthorityCheckpointCodec.ComputeHash(payload);
+		var context = new MigrationCheckpointSecurityContext(
+			"session-a",
+			"match-a",
+			4,
+			9,
+			"candidate-a",
+			3,
+			NetworkProtocol.CurrentVersion);
+		True(HostMigrationSecurity.TryEncryptCheckpoint(
+			payload,
+			payloadHash,
+			hostSessionKey,
+			context,
+			new string('a', 64),
+			sourceSigner,
+			out EncryptedAuthorityCheckpointEnvelope envelope,
+			out _));
+		True(HostMigrationSecurity.TryDecryptCheckpoint(
+			envelope,
+			candidateSessionKey,
+			HostMigrationSecurity.ExportPublicKey(sourceSigner),
+			out byte[] decrypted,
+			out _));
+		True(payload.SequenceEqual(decrypted));
+		False(HostMigrationSecurity.TryDecryptCheckpoint(
+			envelope,
+			wrongSessionKey,
+			HostMigrationSecurity.ExportPublicKey(sourceSigner),
+			out _,
+			out _));
+		False(HostMigrationSecurity.TryDecryptCheckpoint(
+			envelope,
+			candidateSessionKey,
+			HostMigrationSecurity.ExportPublicKey(wrongSigner),
+			out _,
+			out _));
+
+		byte[] tamperedCiphertext = envelope.GetCiphertextCopy();
+		tamperedCiphertext[0] ^= 0x40;
+		var tampered = new EncryptedAuthorityCheckpointEnvelope(
+			envelope.Context,
+			envelope.GetNonceCopy(),
+			tamperedCiphertext,
+			envelope.GetTagCopy(),
+			envelope.PlaintextHash,
+			envelope.CiphertextHash,
+			envelope.PreviousCheckpointHash,
+			envelope.SourceAuthorityKeyId,
+			envelope.GetSignatureCopy());
+		False(HostMigrationSecurity.TryDecryptCheckpoint(
+			tampered,
+			candidateSessionKey,
+			HostMigrationSecurity.ExportPublicKey(sourceSigner),
+			out _,
+			out _));
+
+		byte[] tamperedTag = envelope.GetTagCopy();
+		tamperedTag[^1] ^= 0x01;
+		var tagTampered = new EncryptedAuthorityCheckpointEnvelope(
+			envelope.Context,
+			envelope.GetNonceCopy(),
+			envelope.GetCiphertextCopy(),
+			tamperedTag,
+			envelope.PlaintextHash,
+			envelope.CiphertextHash,
+			envelope.PreviousCheckpointHash,
+			envelope.SourceAuthorityKeyId,
+			envelope.GetSignatureCopy());
+		False(HostMigrationSecurity.TryDecryptCheckpoint(
+			tagTampered,
+			candidateSessionKey,
+			HostMigrationSecurity.ExportPublicKey(sourceSigner),
+			out _,
+			out _));
+
+		var wrongCandidate = new EncryptedAuthorityCheckpointEnvelope(
+			envelope.Context with { CandidatePlayerSessionId = "candidate-b" },
+			envelope.GetNonceCopy(),
+			envelope.GetCiphertextCopy(),
+			envelope.GetTagCopy(),
+			envelope.PlaintextHash,
+			envelope.CiphertextHash,
+			envelope.PreviousCheckpointHash,
+			envelope.SourceAuthorityKeyId,
+			envelope.GetSignatureCopy());
+		False(HostMigrationSecurity.TryDecryptCheckpoint(
+			wrongCandidate,
+			candidateSessionKey,
+			HostMigrationSecurity.ExportPublicKey(sourceSigner),
+			out _,
+			out _));
+	}
+
+	private static void MigrationNonceReplayGuardRejectsDuplicatesAndResetsPerEpoch()
+	{
+		var guard = new MigrationNonceReplayGuard();
+		byte[] firstNonce = Enumerable.Range(0, HostMigrationSecurity.AesNonceBytes)
+			.Select(value => (byte)value)
+			.ToArray();
+		byte[] secondNonce = Enumerable.Range(1, HostMigrationSecurity.AesNonceBytes)
+			.Select(value => (byte)value)
+			.ToArray();
+
+		False(guard.HasSeen(4, firstNonce));
+		True(guard.TryRegister(4, firstNonce));
+		True(guard.HasSeen(4, firstNonce));
+		False(guard.TryRegister(4, firstNonce));
+		True(guard.TryRegister(4, secondNonce));
+		Equal(2, guard.Count);
+		True(guard.TryRegister(5, firstNonce));
+		Equal(1, guard.Count);
+		False(guard.HasSeen(4, firstNonce));
+		True(guard.HasSeen(5, firstNonce));
+		False(guard.TryRegister(5, firstNonce[..^1]));
+		guard.Reset();
+		Equal(0, guard.Count);
+		False(guard.HasSeen(5, firstNonce));
+	}
+
+	private static void MigrationSerializationExcludesRawSecrets()
+	{
+		const string rawPassword = "raw-password-never-serialize";
+		const string rawCredential = "raw-seat-credential-never-serialize";
+		byte[] sessionKey = Enumerable.Repeat((byte)0x5a, HostMigrationSecurity.SessionKeyBytes).ToArray();
+		string encodedSessionKey = HostMigrationSecurity.EncodeBytes(sessionKey);
+		RoomPasswordVerifier passwordVerifier = RoomPasswordRules.CreateVerifier(rawPassword);
+		NetworkAuthorityCheckpoint baseline = CreateCheckpoint();
+		NetworkAuthorityCheckpoint checkpoint = baseline with
+		{
+			RoomPasswordVerifierVersion = passwordVerifier.Version,
+			RoomPasswordVerifierIterations = passwordVerifier.Iterations,
+			RoomPasswordVerifierSalt = passwordVerifier.Salt,
+			RoomPasswordVerifier = passwordVerifier.Verifier,
+			SeatControls = baseline.SeatControls
+				.Select((control, index) => control with
+				{
+					CredentialVerifier = index == 0
+						? SeatCredentialRules.ComputeVerifier(rawCredential)
+						: control.CredentialVerifier,
+				})
+				.ToList(),
+		};
+
+		True(NetworkAuthorityCheckpointCodec.TryEncode(checkpoint, out byte[] payload, out _, out _));
+		string checkpointJson = Encoding.UTF8.GetString(payload);
+		string planJson = JsonSerializer.Serialize(new NetworkMigrationPlan());
+		string serialized = checkpointJson + planJson;
+		False(serialized.Contains(rawPassword, StringComparison.Ordinal));
+		False(serialized.Contains(rawCredential, StringComparison.Ordinal));
+		False(serialized.Contains(encodedSessionKey, StringComparison.Ordinal));
+		False(serialized.Contains("\"room_password\"", StringComparison.Ordinal));
+		False(serialized.Contains("\"credential\"", StringComparison.Ordinal));
+		False(serialized.Contains("\"session_key\"", StringComparison.Ordinal));
+		True(checkpointJson.Contains("\"room_password_verifier\"", StringComparison.Ordinal));
+		True(checkpointJson.Contains("\"credential_verifier\"", StringComparison.Ordinal));
+		False(typeof(NetworkMigrationPlan).GetProperties().Any(property =>
+			property.Name is "RoomPassword" or "Credential" or "SessionKey"));
+	}
+
+	private static void ReleaseDebugApiSurfaceCannotExportMigrationSecrets()
+	{
+		string root = FindRepositoryRoot();
+		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string debugSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Debug.cs"));
+		string source = migrationSource + debugSource;
+		False(Regex.IsMatch(
+			source,
+			@"public\s+(?:byte\[\]|string|NetworkAuthorityCheckpoint\??|EncryptedAuthorityCheckpointEnvelope\??|AuthorityCheckpointEnvelope)\s+Debug[A-Za-z0-9_]*\s*\(",
+			RegexOptions.CultureInvariant));
+		False(Regex.IsMatch(
+			source,
+			@"public\s+[^\r\n{]+\s+Debug[A-Za-z0-9_]*(?:CheckpointPayload|SessionKey|Credential|Password)\s*\(",
+			RegexOptions.CultureInvariant));
+
+		string serializationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Serialization.cs"));
+		int sharedConfigStart = serializationSource.IndexOf("ToDictionary(NetworkSessionConfig config)", StringComparison.Ordinal);
+		int sharedConfigEnd = serializationSource.IndexOf("ToDictionary(NetworkPlayerPublicState player)", sharedConfigStart, StringComparison.Ordinal);
+		True(sharedConfigStart >= 0 && sharedConfigEnd > sharedConfigStart);
+		string sharedConfigSerializer = serializationSource[sharedConfigStart..sharedConfigEnd];
+		False(sharedConfigSerializer.Contains("config.RoomPassword", StringComparison.Ordinal));
+		False(sharedConfigSerializer.Contains("RoomPasswordVerifier", StringComparison.Ordinal));
+		False(sharedConfigSerializer.Contains("Credential", StringComparison.Ordinal));
+		False(sharedConfigSerializer.Contains("SessionKey", StringComparison.Ordinal));
+	}
+
+	private static void LobbyMigrationTrustControlsAreExplicitAndLocked()
+	{
+		string root = FindRepositoryRoot();
+		string scene = File.ReadAllText(Path.Combine(root, "scenes", "multiplayer_lobby_scene.tscn"));
+		string source = File.ReadAllText(Path.Combine(root, "scripts", "MultiplayerLobbyScene.cs"));
+		int hostStart = scene.IndexOf("[node name=\"HostMigrationToggle\"", StringComparison.Ordinal);
+		int hostEnd = scene.IndexOf("\n[node", hostStart + 1, StringComparison.Ordinal);
+		int standbyStart = scene.IndexOf("[node name=\"TrustedHotStandbyToggle\"", StringComparison.Ordinal);
+		int standbyEnd = scene.IndexOf("\n[node", standbyStart + 1, StringComparison.Ordinal);
+		True(hostStart >= 0 && hostEnd > hostStart);
+		True(standbyStart >= 0 && standbyEnd > standbyStart);
+		string hostBlock = scene[hostStart..hostEnd];
+		string standbyBlock = scene[standbyStart..standbyEnd];
+		True(hostBlock.Contains("type=\"CheckButton\"", StringComparison.Ordinal));
+		True(hostBlock.Contains("custom_minimum_size = Vector2(0, 44)", StringComparison.Ordinal));
+		True(hostBlock.Contains("button_pressed = true", StringComparison.Ordinal));
+		True(standbyBlock.Contains("type=\"CheckButton\"", StringComparison.Ordinal));
+		True(standbyBlock.Contains("custom_minimum_size = Vector2(0, 44)", StringComparison.Ordinal));
+		False(standbyBlock.Contains("button_pressed = true", StringComparison.Ordinal));
+		True(scene.Contains("[node name=\"MigrationTrustNoticeLabel\" type=\"Label\"", StringComparison.Ordinal));
+		True(scene.Contains("autowrap_mode = 2", StringComparison.Ordinal));
+		True(source.Contains("ConfigureHostMigration(", StringComparison.Ordinal));
+		True(source.Contains("HostMigrationToggle.Disabled = !canConfigureSession;", StringComparison.Ordinal));
+		True(source.Contains("TrustedHotStandbyToggle.Disabled = !canConfigureSession;", StringComparison.Ordinal));
+		True(source.Contains("state is NetworkSessionState.Idle or NetworkSessionState.Searching or NetworkSessionState.Failed", StringComparison.Ordinal));
+
+		Dictionary<string, List<string>> rows = ReadLocalizationRowsByKey(
+			Path.Combine(root, "localization", "ui.csv"),
+			out List<string> header);
+		foreach (string key in new[]
+		{
+			"MULTIPLAYER_LOBBY_HOST_MIGRATION_TOGGLE",
+			"MULTIPLAYER_LOBBY_TRUSTED_STANDBY_TOGGLE",
+			"MULTIPLAYER_LOBBY_MIGRATION_TRUST_NOTICE",
+		})
+		{
+			True(rows.TryGetValue(key, out List<string>? row));
+			Equal(header.Count, row!.Count);
+			True(row.All(value => !string.IsNullOrWhiteSpace(value)));
+		}
+	}
+
+	private static void LobbyReadyIntentIsConsumedAfterCredentialAcknowledgement()
+	{
+		string root = FindRepositoryRoot();
+		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string lobbySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.LobbyMembership.cs"));
+		string recoverySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
+		string lifecycleSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.MatchLifecycle.cs"));
+
+		True(managerSource.Contains("Dictionary<int, bool> _pendingLobbyReadyByPeerId", StringComparison.Ordinal));
+		True(lobbySource.Contains("LobbyReadyIntentDisposition.DeferUntilCredentialsAcknowledged", StringComparison.Ordinal));
+		True(lobbySource.Contains("_pendingLobbyReadyByPeerId[peerId] = isReady;", StringComparison.Ordinal));
+		int credentialsCommitted = recoverySource.IndexOf("CredentialsAcknowledged = true", StringComparison.Ordinal);
+		int credentialCommitRpc = recoverySource.IndexOf("MethodName.RpcSeatCredentialCommitted", StringComparison.Ordinal);
+		int pendingReadyApplied = recoverySource.IndexOf("TryApplyPendingPlayerReadyIntent(senderPeerId);", StringComparison.Ordinal);
+		True(credentialsCommitted >= 0
+			&& credentialCommitRpc > credentialsCommitted
+			&& pendingReadyApplied > credentialCommitRpc);
+		True(managerSource.Contains("_pendingLobbyReadyByPeerId.Remove((int)peerId);", StringComparison.Ordinal));
+		True(lifecycleSource.Contains("_pendingLobbyReadyByPeerId.Clear();", StringComparison.Ordinal));
+	}
+
+	private static void LocalLobbyReadyIntentRetriesUntilAuthorityEcho()
+	{
+		string root = FindRepositoryRoot();
+		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string lobbySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.LobbyMembership.cs"));
+		string lifecycleSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.MatchLifecycle.cs"));
+
+		True(managerSource.Contains("LocalReadyIntentRetrySeconds = 1.0", StringComparison.Ordinal));
+		True(managerSource.Contains("PollLocalReadyIntent(now);", StringComparison.Ordinal));
+		True(lobbySource.Contains("private void PollLocalReadyIntent(double now)", StringComparison.Ordinal));
+		True(lobbySource.Contains("RpcId(\n\t\t\t\t1,\n\t\t\t\tMethodName.RpcSetReady", StringComparison.Ordinal));
+		True(lobbySource.Contains("IsLocalReadyIntentSatisfied(isReady)", StringComparison.Ordinal));
+		True(lifecycleSource.Contains("ClearPendingLocalReadyIntent();", StringComparison.Ordinal));
+	}
+
+	private static void LobbyInitialSeatCredentialDeliveryRetriesAcrossSyncOrdering()
+	{
+		string root = FindRepositoryRoot();
+		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
+		string recoverySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
+
+		True(managerSource.Contains("PollSeatCredentialDelivery(now);", StringComparison.Ordinal));
+		True(managerSource.Contains("SeatCredentialRetrySeconds = 1.0", StringComparison.Ordinal));
+		True(reconnectSource.Contains("private void PollSeatCredentialDelivery(double now)", StringComparison.Ordinal));
+		True(reconnectSource.Contains("SendSeatCredentialsToUnacknowledgedPeers();", StringComparison.Ordinal));
+		True(recoverySource.Contains("NetworkSessionState.Joining or NetworkSessionState.Lobby", StringComparison.Ordinal));
+		True(recoverySource.Contains("TryGetCachedLocalPlayer(out NetworkPlayerPublicState localPlayer)", StringComparison.Ordinal));
+		True(recoverySource.Contains("string.Equals(localPlayer.PlayerSessionId, playerSessionId, StringComparison.Ordinal)", StringComparison.Ordinal));
+	}
+
+	private static void ClientBoardFingerprintPreservesRedactedSeatShape()
+	{
+		string source = File.ReadAllText(Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"GameBoardScene.NetworkSnapshot.cs"));
+		int methodStart = source.IndexOf("private Godot.Collections.Array BuildSeatControlStatesArray()", StringComparison.Ordinal);
+		int methodEnd = source.IndexOf("private static Godot.Collections.Array BuildIntArray", methodStart, StringComparison.Ordinal);
+		True(methodStart >= 0 && methodEnd > methodStart);
+		string method = source[methodStart..methodEnd];
+		True(method.Contains("[\"credential_verifier\"] = string.Empty", StringComparison.Ordinal));
+		False(method.Contains("state.CredentialVerifier", StringComparison.Ordinal));
 	}
 
 	private static void SeatCredentialsIssueVerifyRotateAndRejectReplay()
@@ -817,8 +1618,65 @@ internal static partial class Program
 		True(recovery.IsComplete);
 	}
 
+	private static void GameMigrationRecoveryWaitsForSnapshotAcknowledgements()
+	{
+		var recovery = new GameMigrationRecoveryState(
+			targetEpoch: 8,
+			startedAt: 100,
+			expectedSeatIndices: new[] { 1, 2, 2, -1 });
+		Equal(8L, recovery.TargetEpoch);
+		Equal(2, recovery.ExpectedSeatCount);
+		Equal(2, recovery.PendingSeatCount);
+		False(recovery.IsComplete);
+		True(recovery.TryMarkSnapshotApplied(1));
+		False(recovery.TryMarkSnapshotApplied(1));
+		False(recovery.TryMarkSnapshotApplied(3));
+		Equal(1, recovery.RecoveredSeatCount);
+		True(recovery.TryMarkSnapshotApplied(2));
+		True(recovery.IsComplete);
+	}
+
+	private static void GameMigrationRecoveryRemovesDisconnectedSeatsWithoutExtendingDeadline()
+	{
+		var recovery = new GameMigrationRecoveryState(
+			targetEpoch: 3,
+			startedAt: 25,
+			expectedSeatIndices: new[] { 1, 2 });
+		double deadline = recovery.Deadline;
+		True(recovery.TryMarkSnapshotApplied(1));
+		True(recovery.TryRemoveDisconnectedSeat(2));
+		False(recovery.TryRemoveDisconnectedSeat(2));
+		Equal(deadline, recovery.Deadline);
+		Equal(1, recovery.RecoveredSeatCount);
+		Equal(1, recovery.DisconnectedSeatCount);
+		True(recovery.IsComplete);
+	}
+
+	private static void GameMigrationRecoveryExpiresAfterFixedTenSeconds()
+	{
+		var recovery = new GameMigrationRecoveryState(
+			targetEpoch: 5,
+			startedAt: 40,
+			expectedSeatIndices: new[] { 1, 2 });
+		Equal(50.0, recovery.Deadline);
+		False(recovery.HasExpired(49.999));
+		False(recovery.TryExpire(49.999));
+		True(recovery.TryExpire(50.0));
+		True(recovery.IsComplete);
+	}
+
+	private static void LateGameMigrationReadinessMatchesOnlyTheCompletedCurrentEpoch()
+	{
+		True(NetworkMigrationRules.IsCompletedGameRecoveryEpoch(7, 7, 7));
+		False(NetworkMigrationRules.IsCompletedGameRecoveryEpoch(6, 7, 7));
+		False(NetworkMigrationRules.IsCompletedGameRecoveryEpoch(7, 6, 7));
+		False(NetworkMigrationRules.IsCompletedGameRecoveryEpoch(7, 7, 8));
+		False(NetworkMigrationRules.IsCompletedGameRecoveryEpoch(-1, -1, -1));
+	}
+
 	private static NetworkAuthorityCheckpoint CreateCheckpoint()
 	{
+		RoomPasswordVerifier passwordVerifier = RoomPasswordRules.CreateVerifier("secret");
 		var roster = new List<NetworkMigrationRosterEntry>();
 		var controls = new List<NetworkAuthoritySeatControl>();
 		var decks = new List<List<NetworkCheckpointCard>>();
@@ -858,7 +1716,10 @@ internal static partial class Program
 			SessionId = "session",
 			MatchId = "match",
 			RoomName = "room",
-			RoomPassword = "secret",
+			RoomPasswordVerifierVersion = passwordVerifier.Version,
+			RoomPasswordVerifierIterations = passwordVerifier.Iterations,
+			RoomPasswordVerifierSalt = passwordVerifier.Salt,
+			RoomPasswordVerifier = passwordVerifier.Verifier,
 			MatchSeed = 20260714,
 			PlayerCount = 2,
 			ItemMode = true,

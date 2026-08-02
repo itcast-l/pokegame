@@ -90,8 +90,9 @@ public partial class GameBoardScene
 		_pendingItemHandIndex = -1;
 		_pendingItemTurnSequenceGeneration = -1;
 		_pendingItemCardId = string.Empty;
-		magnetAttachmentCompletion?.TrySetResult(true);
-		handLimitDiscardCompletion?.TrySetResult(-1);
+		DeferNetworkAuthoritySelectionWaiters(
+			magnetAttachmentCompletion,
+			handLimitDiscardCompletion);
 	}
 
 	private bool IsAttachmentItemCard(string itemCardId)
@@ -221,9 +222,27 @@ public partial class GameBoardScene
 			}
 			return null;
 		}
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			_isProcessingCardPlay = true;
+			_pendingItemOwnerIndex = playerIndex;
+			_pendingItemHandIndex = -1;
+			_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
+			_pendingItemCardId = string.Empty;
+			_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
+			_pendingHandLimitDiscardCompletion = null;
+			_plannedQuestionRewardDiscardExclusions.Clear();
+			if (excludedDisplayIndexes != null)
+			{
+				_plannedQuestionRewardDiscardExclusions.UnionWith(excludedDisplayIndexes);
+			}
+			SyncNetworkAuthorityActionWithPendingSelection();
+			return null;
+		}
 
 		bool wasProcessingCardPlay = _isProcessingCardPlay;
-		var completionSource = new TaskCompletionSource<int>();
+		var completionSource = new TaskCompletionSource<int>(
+			TaskCreationOptions.RunContinuationsAsynchronously);
 		_isProcessingCardPlay = true;
 		_pendingItemOwnerIndex = playerIndex;
 		_pendingItemHandIndex = -1;
@@ -294,7 +313,7 @@ public partial class GameBoardScene
 			&& (canCommit?.Invoke() ?? true);
 	}
 
-	if (!CanCommitDiscard()
+		if (!CanCommitDiscard()
 		|| _pendingHandLimitDiscardCompletion != null
 		|| !HasAnyHandCard(ownerPlayerIndex))
 	{
@@ -302,7 +321,8 @@ public partial class GameBoardScene
 	}
 
 	bool wasProcessingCardPlay = _isProcessingCardPlay;
-	var completionSource = new TaskCompletionSource<int>();
+	var completionSource = new TaskCompletionSource<int>(
+		TaskCreationOptions.RunContinuationsAsynchronously);
 	bool discarded = false;
 	_isProcessingCardPlay = true;
 	_pendingItemOwnerIndex = ownerPlayerIndex;
@@ -322,6 +342,18 @@ public partial class GameBoardScene
 		int displayIndex = await completionSource.Task;
 		if (!CanCommitDiscard())
 		{
+			return false;
+		}
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			_isProcessingCardPlay = true;
+			_pendingItemOwnerIndex = ownerPlayerIndex;
+			_pendingItemHandIndex = -1;
+			_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
+			_pendingItemCardId = string.Empty;
+			_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
+			_pendingHandLimitDiscardCompletion = null;
+			SyncNetworkAuthorityActionWithPendingSelection();
 			return false;
 		}
 
@@ -419,6 +451,15 @@ public partial class GameBoardScene
 		{
 			BeginPredictedNetworkHandLimitDiscardSelection(displayIndex);
 			RequestNetworkPendingItemSelection(displayIndex, _pendingItemTurnSequenceGeneration);
+			return;
+		}
+		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		{
+			TryStartNetworkPendingItemSelectionFromHost(
+				_pendingItemOwnerIndex,
+				displayIndex,
+				_pendingItemTurnSequenceGeneration,
+				out _);
 			return;
 		}
 

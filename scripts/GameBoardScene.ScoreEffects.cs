@@ -151,6 +151,12 @@ public partial class GameBoardScene
 		int turnSequenceGeneration,
 		Action? onArrival = null)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			onArrival?.Invoke();
+			return;
+		}
+
 		if (adventure_mode)
 		{
 			await PlayAdventureScoreAttackSequenceAsync(

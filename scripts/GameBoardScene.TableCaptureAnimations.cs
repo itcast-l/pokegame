@@ -7,7 +7,10 @@ public partial class GameBoardScene
 {
 	private async Task PlayTableCardRevealAnimationAsync(int tableCardIndex, Texture2D faceTexture)
 	{
-		if (_cardBackTexture == null || tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (_networkAuthorityRuleTransactionActive
+			|| _cardBackTexture == null
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -63,7 +66,9 @@ public partial class GameBoardScene
 
 	private async Task PlayTableCardPointPopupAsync(int tableCardIndex, int points, bool isDoubleScore = false, bool isDamage = false)
 	{
-		if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+		if (_networkAuthorityRuleTransactionActive
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _tableCards.Count)
 		{
 			return;
 		}
@@ -204,6 +209,11 @@ public partial class GameBoardScene
 
 	private async Task<PairCaptureEdgeFloatHold?> PlayPairCaptureEdgeFloatHoldAnimationAsync(int captureStartIndex, int playedTableCardIndex)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return null;
+		}
+
 		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 		int firstTableCardIndex = -1;
 		int secondTableCardIndex = -1;
@@ -285,6 +295,11 @@ public partial class GameBoardScene
 		int tableCardIndex,
 		Texture2D faceTexture)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return false;
+		}
+
 		if (!hold.TryGetOverlay(tableCardIndex, out TextureRect? overlay) || overlay == null)
 		{
 			return false;

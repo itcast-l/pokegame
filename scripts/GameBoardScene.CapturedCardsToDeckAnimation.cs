@@ -14,7 +14,8 @@ public partial class GameBoardScene
 		float flightStaggerSeconds = TableCaptureFlightStaggerSeconds,
 		int redirectedTableCardIndex = -1)
 	{
-		if (_cardBackTexture == null
+		if (_networkAuthorityRuleTransactionActive
+			|| _cardBackTexture == null
 			|| playerIndex < 0
 			|| playerIndex >= _playerCardPiles.Count
 			|| captureStartIndex < 0
@@ -107,6 +108,11 @@ public partial class GameBoardScene
 		int playerIndex,
 		float startDelaySeconds)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		TextureRect flightCard = _animationPresenter.RentTextureRect(
 			this,
 			"CapturedCardFlight",

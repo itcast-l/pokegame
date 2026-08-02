@@ -22,6 +22,83 @@ GODOT = Path(os.environ.get("GODOT_BIN", str(DEFAULT_GODOT)))
 
 
 class ReleaseExportUnitTests(unittest.TestCase):
+	def test_network_protocol_version_requires_one_positive_constant(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			(root / "scripts").mkdir()
+			protocol = root / "scripts/NetworkProtocol.cs"
+			protocol.write_text("public const int CurrentVersion = 11;\n", encoding="utf-8")
+			self.assertEqual(11, release_export._network_protocol_version(root))
+			protocol.write_text("public const int CurrentVersion = 0;\n", encoding="utf-8")
+			with self.assertRaises(release_export.ReleaseError):
+				release_export._network_protocol_version(root)
+
+	def test_static_audit_accepts_three_platform_specific_steam_runtimes(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			(root / "project.godot").write_text(
+				'[autoload]\nMCPScreenshot="*res://mcp.gd"\n'
+				'MCPInputService="*res://mcp.gd"\nMCPGameInspector="*res://mcp.gd"\n'
+				'[editor_plugins]\nenabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg")\n',
+				encoding="utf-8",
+			)
+			sections = []
+			platforms = (("Windows", "Windows Desktop", "windows"), ("Linux", "Linux", "linux"), ("macOS", "macOS", "macos"))
+			for index, (name, platform_name, adapter) in enumerate(platforms):
+				excludes = set(release_export.REQUIRED_EXCLUDES)
+				excludes.update(
+					path
+					for other_adapter, path in release_export.STEAM_RUNTIME_EXCLUDES.items()
+					if other_adapter != adapter
+				)
+				sections.append(
+					f'''[preset.{index}]
+name="{name}"
+platform="{platform_name}"
+export_filter="all_resources"
+exclude_filter="{','.join(sorted(excludes))}"
+[preset.{index}.options]
+dotnet/include_scripts_content=false
+dotnet/include_debug_symbols=false
+'''
+				)
+			(root / "export_presets.cfg").write_text("\n".join(sections), encoding="utf-8")
+			result = release_export.static_audit(root)
+			self.assertTrue(result["ok"], result["issues"])
+			self.assertEqual(["windows", "linux", "macos"], [preset["adapter"] for preset in result["presets"]])
+
+	def test_export_artifact_resolvers_cover_windows_linux_and_macos(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			windows_executable = root / "Deckland.exe"
+			windows_pck = root / "Deckland.pck"
+			windows_executable.write_bytes(b"exe")
+			windows_pck.write_bytes(b"pck")
+			self.assertEqual(
+				(windows_executable, windows_pck),
+				release_export._resolve_export_artifacts("windows", windows_executable),
+			)
+
+			linux_executable = root / "Deckland.x86_64"
+			linux_pck = root / "Deckland.pck"
+			linux_executable.write_bytes(b"elf")
+			self.assertEqual(
+				(linux_executable, linux_pck),
+				release_export._resolve_export_artifacts("linux", linux_executable),
+			)
+
+			app = root / "Deckland.app"
+			macos_executable = app / "Contents/MacOS/Deckland"
+			macos_pck = app / "Contents/Resources/Deckland.pck"
+			macos_executable.parent.mkdir(parents=True)
+			macos_pck.parent.mkdir(parents=True)
+			macos_executable.write_bytes(b"mach-o")
+			macos_pck.write_bytes(b"pck")
+			self.assertEqual(
+				(macos_executable, macos_pck),
+				release_export._resolve_export_artifacts("macos", app),
+			)
+
 	def test_static_audit_checks_every_preset_and_unknown_platform(self) -> None:
 		with tempfile.TemporaryDirectory() as temp:
 			root = Path(temp)
@@ -76,6 +153,7 @@ dotnet/include_debug_symbols=false
 			(source / "scripts/GameBoardScene.Debug.Network.cs.uid").write_text("uid://debug-network\n", encoding="utf-8")
 			(source / "scripts/GameBoardScene.DebugHooks.cs").write_text("debug hooks\n", encoding="utf-8")
 			(source / "scripts/GameBoardScene.DebugRecording.cs").write_text("debug recording\n", encoding="utf-8")
+			(source / "scripts/GameBoardScene.NetworkDebugActions.cs").write_text("release QA surface\n", encoding="utf-8")
 			(source / "runtime/keep.txt").write_text("keep\n", encoding="utf-8")
 			project = (
 				'[autoload]\nMCPScreenshot="*res://scripts/dev_mcp/proxy.gd"\n'
@@ -88,7 +166,7 @@ dotnet/include_debug_symbols=false
 			source_hash = release_export._sha256_file(source / "project.godot")
 
 			release_export.create_staging_project(source, destination)
-			release_export.rewrite_staging_project(destination / "project.godot")
+			release_export.rewrite_staging_project(destination / "project.godot", "release-fixture", 11)
 
 			self.assertTrue((destination / "runtime/keep.txt").is_file())
 			self.assertFalse((destination / "addons/godot_mcp").exists())
@@ -101,10 +179,13 @@ dotnet/include_debug_symbols=false
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Network.cs.uid").exists())
 			self.assertTrue((destination / "scripts/GameBoardScene.DebugHooks.cs").is_file())
 			self.assertTrue((destination / "scripts/GameBoardScene.DebugRecording.cs").is_file())
+			self.assertTrue((destination / "scripts/GameBoardScene.NetworkDebugActions.cs").is_file())
 			staged_project = (destination / "project.godot").read_text(encoding="utf-8")
 			self.assertNotIn("MCPScreenshot", staged_project)
 			self.assertNotIn("godot_mcp", staged_project)
 			self.assertIn("addons/pandora/plugin.cfg", staged_project)
+			self.assertIn('build_id="release-fixture"', staged_project)
+			self.assertIn("network_protocol=11", staged_project)
 			self.assertEqual(source_hash, release_export._sha256_file(source / "project.godot"))
 
 	def test_utf8_validator_reports_first_invalid_byte(self) -> None:
@@ -126,7 +207,17 @@ dotnet/include_debug_symbols=false
 	def test_runtime_smoke_requires_explicit_success_marker(self) -> None:
 		with self.assertRaises(release_export.ReleaseError):
 			release_export._validate_runtime_smoke_result("clean but incomplete\n", "EXPECTED_OK")
-		result = release_export._validate_runtime_smoke_result("EXPECTED_OK\n", "EXPECTED_OK")
+		with self.assertRaises(release_export.ReleaseError):
+			release_export._validate_runtime_smoke_result(
+				"EXPECTED_OK\nWRONG_BUILD\n",
+				"EXPECTED_OK",
+				required_exact_markers=("EXPECTED_BUILD",),
+			)
+		result = release_export._validate_runtime_smoke_result(
+			"EXPECTED_BUILD\nEXPECTED_OK\n",
+			"EXPECTED_OK",
+			required_exact_markers=("EXPECTED_BUILD",),
+		)
 		self.assertTrue(result["ok"])
 
 	def test_missing_release_assembly_is_detected(self) -> None:

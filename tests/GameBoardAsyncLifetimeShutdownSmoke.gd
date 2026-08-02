@@ -92,6 +92,7 @@ func _stage_network_visual_fixture(board: Node) -> bool:
 		"match_id": fixture["match_id"],
 		"authority_epoch": fixture["authority_epoch"],
 		"checkpoint_id": fixture["checkpoint_id"],
+		"action_id": 0,
 		"event_type": "play_hand_card",
 		"snapshot_id": int(fixture["snapshot_id"]) + 1,
 		"turn_sequence_generation": fixture["turn_sequence_generation"],

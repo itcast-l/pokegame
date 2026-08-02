@@ -28,6 +28,7 @@ func _run() -> void:
 		"match_id": valid_snapshot["match_id"],
 		"authority_epoch": valid_snapshot["authority_epoch"],
 		"checkpoint_id": valid_snapshot["checkpoint_id"],
+		"action_id": 0,
 	}
 	var seat_states: Array = []
 	for seat_index in range(int(board.get("player_count"))):
@@ -121,6 +122,30 @@ func _run() -> void:
 			return
 		if str(board.call("DebugGetNetworkStateFingerprint")) != baseline_state:
 			_fail("Legal draw boundary probe changed board state")
+			return
+
+		var maximum_action_id_event := _with_visual_event_context(legal_draw_boundary_event.duplicate(true))
+		maximum_action_id_event["action_id"] = 9223372036854775807
+		if bool(board.call("DebugRejectsNetworkVisualEventPayload", maximum_action_id_event)):
+			_fail("Rejected maximum legal visual event action ID")
+			return
+		var missing_action_id_event := maximum_action_id_event.duplicate(true)
+		missing_action_id_event.erase("action_id")
+		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", missing_action_id_event)):
+			_fail("Accepted visual event without action ID")
+			return
+		var negative_action_id_event := maximum_action_id_event.duplicate(true)
+		negative_action_id_event["action_id"] = -1
+		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", negative_action_id_event)):
+			_fail("Accepted visual event with negative action ID")
+			return
+		var wrong_type_action_id_event := maximum_action_id_event.duplicate(true)
+		wrong_type_action_id_event["action_id"] = "1"
+		if not bool(board.call("DebugRejectsNetworkVisualEventPayload", wrong_type_action_id_event)):
+			_fail("Accepted visual event with non-integer action ID")
+			return
+		if str(board.call("DebugGetNetworkStateFingerprint")) != baseline_state:
+			_fail("Visual event action ID boundary probes changed board state")
 			return
 
 	var baseline_table_cards: Array = valid_snapshot["table_cards"] as Array

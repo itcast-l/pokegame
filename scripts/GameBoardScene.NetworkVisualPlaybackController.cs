@@ -11,17 +11,43 @@ public partial class GameBoardScene
 		=> _networkVisualPlaybackController ??= new NetworkVisualPlaybackController(
 			PlayNetworkVisualEventFromPlaybackControllerAsync,
 			ApplyNetworkBoardSnapshotFromPlaybackController,
+			RecoverNetworkVisualPlaybackFailure,
 			CompleteReconnectCatchupIfReady);
 
 	private async Task PlayNetworkVisualEventFromPlaybackControllerAsync(NetworkVisualEvent visualEvent)
 	{
+		if (ConsumeDebugNetworkVisualPlaybackFailure())
+		{
+			throw new InvalidOperationException("Injected network visual playback failure.");
+		}
+
 		double debugPlaybackDelaySeconds = GetDebugNetworkVisualPlaybackDelaySeconds();
 		if (debugPlaybackDelaySeconds > 0.0)
 		{
 			await WaitForBoardDelayAsync(debugPlaybackDelaySeconds);
 		}
 
+		if (visualEvent.IsAuthorityHostVisualOnly)
+		{
+			await PlayNetworkAuthorityHostVisualEventAsync(visualEvent);
+			return;
+		}
+
 		await PlayNetworkCardPlayedEventAsync(visualEvent);
+	}
+
+	private bool RecoverNetworkVisualPlaybackFailure(NetworkVisualEvent visualEvent)
+	{
+		if (!visualEvent.IsAuthorityHostVisualOnly || IsBoardStopping || !IsInsideTree())
+		{
+			return false;
+		}
+
+		InvalidateRenderCaches();
+		RenderPlayerCardPiles();
+		RenderPlayerHands();
+		RenderTableCards();
+		return true;
 	}
 
 	private bool ApplyNetworkBoardSnapshotFromPlaybackController(ValidatedNetworkBoardSnapshot snapshot)
@@ -43,6 +69,7 @@ public partial class GameBoardScene
 		private readonly Queue<NetworkVisualEvent> _pendingEvents = new();
 		private readonly Func<NetworkVisualEvent, Task> _playEventAsync;
 		private readonly Func<ValidatedNetworkBoardSnapshot, bool> _applySnapshot;
+		private readonly Func<NetworkVisualEvent, bool> _recoverPlaybackFailure;
 		private readonly Action _onQueueStable;
 		private ValidatedNetworkBoardSnapshot? _pendingSnapshot;
 		private bool _shutdown;
@@ -50,10 +77,12 @@ public partial class GameBoardScene
 		internal NetworkVisualPlaybackController(
 			Func<NetworkVisualEvent, Task> playEventAsync,
 			Func<ValidatedNetworkBoardSnapshot, bool> applySnapshot,
+			Func<NetworkVisualEvent, bool> recoverPlaybackFailure,
 			Action onQueueStable)
 		{
 			_playEventAsync = playEventAsync;
 			_applySnapshot = applySnapshot;
+			_recoverPlaybackFailure = recoverPlaybackFailure;
 			_onQueueStable = onQueueStable;
 		}
 
@@ -62,6 +91,7 @@ public partial class GameBoardScene
 		internal bool IsFastForwarding { get; private set; }
 		internal int DroppedEventCount { get; private set; }
 		internal int FastForwardCount { get; private set; }
+		internal int PlaybackFailureCount { get; private set; }
 		internal int ActivityCount { get; private set; }
 
 		internal bool HasQueuedEventForSnapshot(long authorityEpoch, int snapshotId)
@@ -183,17 +213,53 @@ public partial class GameBoardScene
 				while (!_shutdown && !IsFastForwarding && _pendingEvents.Count > 0)
 				{
 					NetworkVisualEvent visualEvent = _pendingEvents.Dequeue();
-				if (_pendingSnapshot != null
-					&& IsAtOrAfterFence(
-						_pendingSnapshot.AuthorityEpoch,
-						_pendingSnapshot.SnapshotId,
-						visualEvent.AuthorityEpoch,
-						visualEvent.SnapshotId))
+					if (_pendingSnapshot != null
+						&& IsAtOrAfterFence(
+							_pendingSnapshot.AuthorityEpoch,
+							_pendingSnapshot.SnapshotId,
+							visualEvent.AuthorityEpoch,
+							visualEvent.SnapshotId))
 					{
 						continue;
 					}
 
-					await _playEventAsync(visualEvent);
+					try
+					{
+						await _playEventAsync(visualEvent);
+					}
+					catch (OperationCanceledException) when (_shutdown)
+					{
+						return;
+					}
+					catch (Exception error)
+					{
+						PlaybackFailureCount = NetworkVisualQueuePolicy.SaturatingAdd(PlaybackFailureCount, 1);
+						DroppedEventCount = NetworkVisualQueuePolicy.SaturatingAdd(
+							DroppedEventCount,
+							_pendingEvents.Count + 1);
+						_pendingEvents.Clear();
+						IsFastForwarding = true;
+						GD.PushWarning(
+							$"Network visual event '{visualEvent.Type}' was skipped after a playback failure: {error.Message}");
+						bool recovered = false;
+						try
+						{
+							recovered = _recoverPlaybackFailure(visualEvent);
+						}
+						catch (Exception recoveryError)
+						{
+							GD.PushWarning(
+								$"Network visual recovery failed after '{visualEvent.Type}': {recoveryError.Message}");
+						}
+						if (recovered)
+						{
+							IsFastForwarding = false;
+						}
+						else
+						{
+							ApplyPendingSnapshotIfIdle(allowWhileProcessing: true);
+						}
+					}
 				}
 			}
 			catch (OperationCanceledException) when (_shutdown)

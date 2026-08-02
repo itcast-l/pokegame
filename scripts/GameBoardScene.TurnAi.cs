@@ -284,7 +284,8 @@ public partial class GameBoardScene
 		Texture2D? triggerTexture = GetVisibleTableCardTexture(tideShiftedCard);
 		if (triggerTexture != null)
 		{
-			if (TryGetTableCardPosition(0, out Vector2 cardPosition))
+			if (!_networkAuthorityRuleTransactionActive
+				&& TryGetTableCardPosition(0, out Vector2 cardPosition))
 			{
 				await PlaySpecialCardTriggerEffectAsync(triggerTexture, _centerArena.GlobalPosition + cardPosition, 0);
 				if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver() || !ShouldResolveMantaRayTideShift(playerIndex))

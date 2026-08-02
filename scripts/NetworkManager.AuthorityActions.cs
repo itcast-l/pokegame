@@ -229,11 +229,22 @@ public partial class NetworkManager
 	internal string GetLatestAuthorityCheckpointHash() => _latestAuthorityCheckpointEnvelope.Hash;
 	internal long GetLatestAuthorityCheckpointId() => _latestAuthorityCheckpointEnvelope.CheckpointId;
 
-	internal void CommitAuthorityCheckpointFromBoard(GameBoardScene gameBoard)
+	internal AuthorityCheckpointCommitResult CommitAuthorityCheckpointFromBoard(GameBoardScene gameBoard)
 	{
 		if (!IsHost || _state != NetworkSessionState.InGame)
 		{
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
+				"board_checkpoint_not_authority");
+		}
+
+		if (!TryInvalidateMigrationAvailability(out MigrationCheckpointDispatchStatus invalidationStatus))
+		{
+			AuthorityCheckpointCommitStatus status = invalidationStatus == MigrationCheckpointDispatchStatus.SendFailed
+				? AuthorityCheckpointCommitStatus.SendFailed
+				: AuthorityCheckpointCommitStatus.SigningFailed;
+			RecordAuthorityCheckpointCommitFailure($"migration_invalidation_failed status={invalidationStatus}");
+			return AuthorityCheckpointCommitResult.Rejected(status, invalidationStatus.ToString());
 		}
 
 		long candidateCheckpointId;
@@ -244,7 +255,9 @@ public partial class NetworkManager
 		catch (OverflowException)
 		{
 			RecordAuthorityCheckpointCommitFailure();
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.EncodingFailed,
+				"checkpoint_id_overflow");
 		}
 
 		if (!gameBoard.TryBuildAuthorityCheckpointEnvelope(
@@ -254,19 +267,34 @@ public partial class NetworkManager
 				out string buildError))
 		{
 			RecordAuthorityCheckpointCommitFailure(buildError);
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				NetworkMigrationRules.ClassifyCheckpointBuildFailure(buildError),
+				buildError);
 		}
 
 		_latestAuthorityCheckpointEnvelope = envelope;
 		gameBoard.CommitNetworkCheckpointEnvelope(envelope);
-		SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
+		_migrationEligibleCheckpointId = envelope.CheckpointId;
+		MigrationCheckpointDispatchStatus dispatchStatus = SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
+		return AuthorityCheckpointCommitResult.Committed(envelope.CheckpointId, dispatchStatus);
 	}
 
-	internal void CommitAuthorityCheckpointFromLobby()
+	internal AuthorityCheckpointCommitResult CommitAuthorityCheckpointFromLobby()
 	{
 		if (!IsHost || _state != NetworkSessionState.Lobby || _players.Count == 0)
 		{
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
+				"lobby_checkpoint_not_authority");
+		}
+
+		if (!TryInvalidateMigrationAvailability(out MigrationCheckpointDispatchStatus invalidationStatus))
+		{
+			AuthorityCheckpointCommitStatus status = invalidationStatus == MigrationCheckpointDispatchStatus.SendFailed
+				? AuthorityCheckpointCommitStatus.SendFailed
+				: AuthorityCheckpointCommitStatus.SigningFailed;
+			RecordAuthorityCheckpointCommitFailure($"migration_invalidation_failed status={invalidationStatus}");
+			return AuthorityCheckpointCommitResult.Rejected(status, invalidationStatus.ToString());
 		}
 
 		EnsureLobbySeatControlStates();
@@ -274,7 +302,9 @@ public partial class NetworkManager
 		if (string.IsNullOrWhiteSpace(manifestHash))
 		{
 			EmitSignal(SignalName.ErrorRaised, ItemCardCatalogPreflight.ErrorBodyKey);
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
+				"manifest_unavailable");
 		}
 
 		long candidateCheckpointId;
@@ -285,7 +315,9 @@ public partial class NetworkManager
 		catch (OverflowException)
 		{
 			RecordAuthorityCheckpointCommitFailure();
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.EncodingFailed,
+				"checkpoint_id_overflow");
 		}
 		int playerCount = _config.PlayerCount;
 		var checkpoint = new NetworkAuthorityCheckpoint
@@ -294,7 +326,10 @@ public partial class NetworkManager
 			SessionId = _config.SessionId,
 			MatchId = string.Empty,
 			RoomName = _config.RoomName,
-			RoomPassword = _config.RoomPassword,
+			RoomPasswordVerifierVersion = _config.RoomPasswordVerifier.Version,
+			RoomPasswordVerifierIterations = _config.RoomPasswordVerifier.Iterations,
+			RoomPasswordVerifierSalt = _config.RoomPasswordVerifier.Salt,
+			RoomPasswordVerifier = _config.RoomPasswordVerifier.Verifier,
 			MatchSeed = _config.MatchSeed,
 			PlayerCount = playerCount,
 			ItemMode = _config.ItemMode,
@@ -311,6 +346,7 @@ public partial class NetworkManager
 			CurrentTurnPlayerIndex = 0,
 			WinnerPlayerIndex = -1,
 			TurnSequenceGeneration = 0,
+			LastAuthorityActionId = 0,
 			AuthorityAction = AuthorityActionState.Empty,
 			RngSeed = _config.MatchSeed,
 			RngState = "1",
@@ -332,11 +368,15 @@ public partial class NetworkManager
 				$"roster={string.Join(',', checkpoint.Roster.Select(player => $"{player.SeatIndex}:{player.PeerId}:{player.CredentialsAcknowledged}"))}",
 				$"controls={string.Join(',', checkpoint.SeatControls.Select(control => $"{control.SeatIndex}:{control.Mode}:{control.PeerId}:{control.CredentialGeneration}"))}",
 				$"claims={string.Join(',', checkpoint.ReconnectClaims.Select(claim => $"{claim.SeatIndex}:{claim.CredentialGeneration}:{claim.ClaimState}:{claim.ClaimedPeerId}"))}"));
-			return;
+			return AuthorityCheckpointCommitResult.Rejected(
+				NetworkMigrationRules.ClassifyCheckpointBuildFailure(encodeError),
+				encodeError);
 		}
 
 		_latestAuthorityCheckpointEnvelope = envelope;
-		SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
+		_migrationEligibleCheckpointId = envelope.CheckpointId;
+		MigrationCheckpointDispatchStatus dispatchStatus = SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
+		return AuthorityCheckpointCommitResult.Committed(envelope.CheckpointId, dispatchStatus);
 	}
 
 	private void RecordAuthorityCheckpointCommitFailure(string localDetail = "")

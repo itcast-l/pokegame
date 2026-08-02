@@ -24,6 +24,10 @@ public partial class GameBoardScene
 			if (ShouldUseInteractiveHumanItemFollowup(reward.PlayerIndex))
 			{
 				await ResolveHumanMagnetAttachmentAsync(reward.PlayerIndex, reward.ItemCardId, turnSequenceGeneration);
+				if (HasPendingItemSelection())
+				{
+					return;
+				}
 			}
 			else
 			{
@@ -50,6 +54,19 @@ public partial class GameBoardScene
 			|| _isResolvingMagnetAttachmentSelection
 			|| !PlayerHasAttachableMagnetCard(ownerPlayerIndex, itemCardId))
 		{
+			return;
+		}
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			_isResolvingMagnetAttachmentSelection = false;
+			_isProcessingCardPlay = true;
+			_pendingItemCardId = itemCardId;
+			_pendingItemOwnerIndex = ownerPlayerIndex;
+			_pendingItemHandIndex = -1;
+			_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
+			_pendingItemSelectionMode = PendingItemSelectionMode.AttachmentRewardHandCard;
+			_pendingMagnetAttachmentCompletion = null;
+			SyncNetworkAuthorityActionWithPendingSelection();
 			return;
 		}
 
@@ -149,12 +166,18 @@ public partial class GameBoardScene
 		int ownerPlayerIndex = _pendingItemOwnerIndex;
 		string itemCardId = _pendingItemCardId;
 		int turnSequenceGeneration = _pendingItemTurnSequenceGeneration;
-		if (completionSource == null
-			|| !OwnsPendingMagnetAttachmentSelection(
-				completionSource,
-				ownerPlayerIndex,
-				itemCardId,
-				turnSequenceGeneration)
+		bool transactionOwnsSelection = _networkAuthorityRuleTransactionActive
+			&& turnSequenceGeneration == _turnSequenceGeneration
+			&& _pendingItemSelectionMode == PendingItemSelectionMode.AttachmentRewardHandCard
+			&& ownerPlayerIndex >= 0
+			&& !string.IsNullOrWhiteSpace(itemCardId);
+		if (!transactionOwnsSelection
+			&& (completionSource == null
+				|| !OwnsPendingMagnetAttachmentSelection(
+					completionSource,
+					ownerPlayerIndex,
+					itemCardId,
+					turnSequenceGeneration))
 			|| _isAnimatingMagnetAttachment)
 		{
 			return;
@@ -179,11 +202,12 @@ public partial class GameBoardScene
 		_isAnimatingMagnetAttachment = true;
 		ClearMagnetAttachmentCountdown();
 		await PlayMagnetAttachmentToHandCardAnimationAsync(ownerPlayerIndex, attachHandIndex, itemCardId);
-		if (!OwnsPendingMagnetAttachmentSelection(
-			completionSource,
-			ownerPlayerIndex,
-			itemCardId,
-			turnSequenceGeneration))
+		if (!transactionOwnsSelection
+			&& !OwnsPendingMagnetAttachmentSelection(
+				completionSource!,
+				ownerPlayerIndex,
+				itemCardId,
+				turnSequenceGeneration))
 		{
 			return;
 		}

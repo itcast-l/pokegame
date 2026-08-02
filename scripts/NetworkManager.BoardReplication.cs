@@ -63,7 +63,11 @@ public partial class NetworkManager
 			return;
 		}
 
-		SendBoardVisualEventToSeatFromHost(actorSeatIndex, payload);
+		StageBoardVisualEventForLocalHost(payload);
+		if (LocalSeatIndex != actorSeatIndex)
+		{
+			SendBoardVisualEventToSeatFromHost(actorSeatIndex, payload);
+		}
 	}
 
 	internal void BroadcastCaptureVisualEventFromHost(
@@ -127,6 +131,20 @@ public partial class NetworkManager
 			return;
 		}
 
+		var hostPayload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.DrawCard,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = playerIndex,
+			[NetworkBoardVisualEventTypes.DisplayIndexKey] = displayIndex,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		if (LocalSeatIndex == playerIndex && !string.IsNullOrWhiteSpace(drawnCardCode))
+		{
+			hostPayload[NetworkBoardVisualEventTypes.DrawnCardCodeKey] = drawnCardCode;
+		}
+		StageBoardVisualEventForLocalHost(hostPayload);
+
 		foreach (NetworkPlayerPublicState player in _players)
 		{
 			if (!NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
@@ -151,8 +169,7 @@ public partial class NetworkManager
 				payload[NetworkBoardVisualEventTypes.DrawnCardCodeKey] = drawnCardCode;
 			}
 
-			StampBoardVisualEvent(payload);
-			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
+			DispatchBoardVisualEventToPeer(player.PeerId, payload);
 		}
 	}
 
@@ -234,11 +251,6 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (!TryGetConnectedRemotePlayerBySeatIndex(ownerPlayerIndex, out NetworkPlayerPublicState recipient))
-		{
-			return;
-		}
-
 		var payload = new Godot.Collections.Dictionary
 		{
 			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.LensReveal,
@@ -249,8 +261,7 @@ public partial class NetworkManager
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
-		StampBoardVisualEvent(payload);
-		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
+		SendBoardVisualEventToSeatFromHost(ownerPlayerIndex, payload);
 	}
 
 	internal void BroadcastTableShuffleVisualEventFromHost(
@@ -314,11 +325,6 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (!TryGetConnectedRemotePlayerBySeatIndex(ownerSeatIndex, out NetworkPlayerPublicState recipient))
-		{
-			return;
-		}
-
 		var payload = new Godot.Collections.Dictionary
 		{
 			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.QuestionReward,
@@ -331,8 +337,7 @@ public partial class NetworkManager
 			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
 			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
 		};
-		StampBoardVisualEvent(payload);
-		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
+		SendBoardVisualEventToSeatFromHost(ownerSeatIndex, payload);
 	}
 
 	private void BroadcastBoardVisualEventFromHost(Godot.Collections.Dictionary payload)
@@ -341,6 +346,8 @@ public partial class NetworkManager
 		{
 			return;
 		}
+
+		StageBoardVisualEventForLocalHost(payload);
 
 		foreach (NetworkPlayerPublicState player in _players)
 		{
@@ -353,8 +360,7 @@ public partial class NetworkManager
 				continue;
 			}
 
-			StampBoardVisualEvent(payload);
-			RpcId(player.PeerId, MethodName.RpcCardPlayedEvent, payload);
+			DispatchBoardVisualEventToPeer(player.PeerId, payload);
 		}
 	}
 
@@ -365,13 +371,46 @@ public partial class NetworkManager
 			return;
 		}
 
+		if (LocalSeatIndex == seatIndex)
+		{
+			StageBoardVisualEventForLocalHost(payload);
+			return;
+		}
+
 		if (!TryGetConnectedRemotePlayerBySeatIndex(seatIndex, out NetworkPlayerPublicState recipient))
 		{
 			return;
 		}
 
+		DispatchBoardVisualEventToPeer(recipient.PeerId, payload);
+	}
+
+	private void StageBoardVisualEventForLocalHost(
+		Godot.Collections.Dictionary payload)
+	{
+		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		{
+			gameBoard.TryStageNetworkAuthorityHostVisualEvent(payload);
+		}
+	}
+
+	private void DispatchBoardVisualEventToPeer(
+		int peerId,
+		Godot.Collections.Dictionary payload)
+	{
+		if (peerId <= 0)
+		{
+			return;
+		}
+
+		if (GetTree().CurrentScene is GameBoardScene gameBoard
+			&& gameBoard.TryStageNetworkAuthorityVisualDispatch(peerId, payload))
+		{
+			return;
+		}
+
 		StampBoardVisualEvent(payload);
-		RpcId(recipient.PeerId, MethodName.RpcCardPlayedEvent, payload);
+		RpcId(peerId, MethodName.RpcCardPlayedEvent, payload);
 	}
 
 	private void StampBoardVisualEvent(Godot.Collections.Dictionary payload)
@@ -382,7 +421,56 @@ public partial class NetworkManager
 			payload[NetworkBoardVisualEventTypes.MatchIdKey] = _config.MatchId;
 			payload[NetworkBoardVisualEventTypes.AuthorityEpochKey] = gameBoard.NetworkAuthorityEpoch;
 			payload[NetworkBoardVisualEventTypes.CheckpointIdKey] = gameBoard.NetworkCheckpointId;
+			payload[NetworkBoardVisualEventTypes.ActionIdKey] = gameBoard.CurrentNetworkAuthorityActionId;
 		}
+	}
+
+	internal void PublishCommittedBoardActionFromHost(
+		GameBoardScene gameBoard,
+		int actorSeatIndex,
+		AuthorityRuleTransactionResult transaction)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame || !transaction.Committed)
+		{
+			return;
+		}
+
+		if (transaction.ClientActionId > 0
+			&& TryGetConnectedRemotePlayerBySeatIndex(actorSeatIndex, out NetworkPlayerPublicState actor))
+		{
+			RpcId(
+				actor.PeerId,
+				MethodName.RpcBoardActionCommitted,
+				_config.SessionId,
+				_config.MatchId,
+				transaction.AuthorityEpoch,
+				transaction.ActionId,
+				transaction.ClientActionId,
+				transaction.CheckpointId,
+				transaction.SnapshotId,
+				transaction.TurnSequenceGeneration);
+		}
+
+		foreach (ImmutableNetworkVisualDispatch dispatch in transaction.VisualEvents)
+		{
+			Godot.Collections.Dictionary payload = dispatch.CreatePayloadCopy();
+			StampCommittedBoardVisualEvent(payload, transaction);
+			RpcId(dispatch.PeerId, MethodName.RpcCardPlayedEvent, payload);
+		}
+
+		SendCommittedBoardSnapshotsFromHost(gameBoard, transaction.SnapshotId);
+	}
+
+	private void StampCommittedBoardVisualEvent(
+		Godot.Collections.Dictionary payload,
+		AuthorityRuleTransactionResult transaction)
+	{
+		payload[NetworkBoardVisualEventTypes.SessionIdKey] = _config.SessionId;
+		payload[NetworkBoardVisualEventTypes.MatchIdKey] = _config.MatchId;
+		payload[NetworkBoardVisualEventTypes.AuthorityEpochKey] = transaction.AuthorityEpoch;
+		payload[NetworkBoardVisualEventTypes.CheckpointIdKey] = transaction.CheckpointId;
+		payload[NetworkBoardVisualEventTypes.ActionIdKey] = transaction.ActionId;
+		payload[NetworkBoardVisualEventTypes.SnapshotIdKey] = transaction.SnapshotId;
 	}
 
 	public void SendInitialBoardSnapshotsFromHost(GameBoardScene gameBoard)
@@ -407,6 +495,11 @@ public partial class NetworkManager
 
 		CommitAuthorityCheckpointFromBoard(gameBoard);
 
+		SendCommittedBoardSnapshotsFromHost(gameBoard, snapshotId);
+	}
+
+	private void SendCommittedBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)
+	{
 		foreach (NetworkPlayerPublicState player in _players)
 		{
 			if (!player.IsConnected)

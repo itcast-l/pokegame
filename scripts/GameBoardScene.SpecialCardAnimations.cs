@@ -7,6 +7,11 @@ public partial class GameBoardScene
 {
 	private async Task PlaySpecialCardTriggerEffectAsync(Texture2D cardTexture, Vector2 globalPosition, int zIndex, float rotationDegrees = 0.0f)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		EnsureCommonGameplayFxResourcesLoaded();
 
 		if (!IsInsideTree())

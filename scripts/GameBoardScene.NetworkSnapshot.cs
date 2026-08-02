@@ -366,6 +366,7 @@ public partial class GameBoardScene
 		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager?.State == NetworkSessionState.MigratingHost)
 		{
+			networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);
 			return;
 		}
 		if (!NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
@@ -631,7 +632,8 @@ public partial class GameBoardScene
 				["mode"] = state.Mode.ToString(),
 				["peer_id"] = state.PeerId,
 				["player_session_id"] = state.PlayerSessionId,
-					["credential_generation"] = state.CredentialGeneration,
+				["credential_verifier"] = string.Empty,
+				["credential_generation"] = state.CredentialGeneration,
 			});
 		}
 

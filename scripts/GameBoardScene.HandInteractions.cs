@@ -72,6 +72,15 @@ public partial class GameBoardScene
 			RequestNetworkPendingItemSelection(handIndex, _pendingItemTurnSequenceGeneration);
 			return;
 		}
+		if (IsNetworkMultiplayerMode() && IsNetworkHost())
+		{
+			TryStartNetworkPendingItemSelectionFromHost(
+				_pendingItemOwnerIndex,
+				handIndex,
+				_pendingItemTurnSequenceGeneration,
+				out _);
+			return;
+		}
 
 		TrackBoardTask(CompleteMagnetAttachmentSelectionAsync(handIndex), nameof(CompleteMagnetAttachmentSelectionAsync));
 	}

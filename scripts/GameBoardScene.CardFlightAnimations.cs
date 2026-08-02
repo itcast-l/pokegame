@@ -12,6 +12,11 @@ public partial class GameBoardScene
 		bool tableCardIsFaceUp,
 		Texture2D? visibleTextureOverride = null)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (!IsInsideTree() || tableCardIndex < 0)
 		{
 			return;
@@ -120,6 +125,11 @@ public partial class GameBoardScene
 		int tableCardIndex,
 		bool tableCardIsFaceUp)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (!IsInsideTree() || tableCardIndex < 0)
 		{
 			return;

@@ -156,8 +156,79 @@ public sealed record NetworkCheckpointTableCard
 	public int ItemOwnerPlayerIndex { get; init; } = -1;
 }
 
+public enum NetworkMigrationPeerRebuildMode
+{
+	EnetServer,
+	SteamLobby,
+}
+
+public sealed record NetworkLanMigrationDescriptor
+{
+	[JsonPropertyName("observed_host_address")]
+	[JsonPropertyOrder(0)]
+	public string ObservedHostAddress { get; init; } = string.Empty;
+
+	[JsonPropertyName("candidate_host_address")]
+	[JsonPropertyOrder(1)]
+	public string CandidateHostAddress { get; init; } = string.Empty;
+
+	[JsonPropertyName("port")]
+	[JsonPropertyOrder(2)]
+	public int Port { get; init; } = NetworkProtocol.LanHostMigrationPort;
+
+	[JsonPropertyName("max_clients")]
+	[JsonPropertyOrder(3)]
+	public int MaxClients { get; init; } = NetworkSessionDefaults.MaxPlayers - 1;
+
+	[JsonPropertyName("peer_rebuild_mode")]
+	[JsonPropertyOrder(4)]
+	public NetworkMigrationPeerRebuildMode PeerRebuildMode { get; init; } = NetworkMigrationPeerRebuildMode.EnetServer;
+}
+
+public sealed record NetworkSteamMigrationDescriptor
+{
+	[JsonPropertyName("lobby_id")]
+	[JsonPropertyOrder(0)]
+	public long LobbyId { get; init; }
+
+	[JsonPropertyName("source_lobby_owner_steam_id")]
+	[JsonPropertyOrder(1)]
+	public long SourceLobbyOwnerSteamId { get; init; }
+
+	[JsonPropertyName("candidate_steam_id")]
+	[JsonPropertyOrder(2)]
+	public long CandidateSteamId { get; init; }
+
+	[JsonPropertyName("expected_lobby_owner_steam_id")]
+	[JsonPropertyOrder(3)]
+	public long ExpectedLobbyOwnerSteamId { get; init; }
+
+	[JsonPropertyName("peer_rebuild_mode")]
+	[JsonPropertyOrder(4)]
+	public NetworkMigrationPeerRebuildMode PeerRebuildMode { get; init; } = NetworkMigrationPeerRebuildMode.SteamLobby;
+}
+
+public sealed record NetworkMigrationTransportDescriptor
+{
+	[JsonPropertyName("lan")]
+	[JsonPropertyOrder(0)]
+	public NetworkLanMigrationDescriptor? Lan { get; init; }
+
+	[JsonPropertyName("steam")]
+	[JsonPropertyOrder(1)]
+	public NetworkSteamMigrationDescriptor? Steam { get; init; }
+}
+
 public sealed record NetworkMigrationPlan
 {
+	[JsonPropertyName("protocol_version")]
+	[JsonPropertyOrder(-2)]
+	public int ProtocolVersion { get; init; } = NetworkProtocol.CurrentVersion;
+
+	[JsonPropertyName("plan_revision")]
+	[JsonPropertyOrder(-1)]
+	public long PlanRevision { get; init; }
+
 	[JsonPropertyName("session_id")]
 	[JsonPropertyOrder(0)]
 	public string SessionId { get; init; } = string.Empty;
@@ -182,33 +253,92 @@ public sealed record NetworkMigrationPlan
 	[JsonPropertyOrder(5)]
 	public string CheckpointHash { get; init; } = string.Empty;
 
-	[JsonPropertyName("candidate_player_session_id")]
+	[JsonPropertyName("checkpoint_ciphertext_hash")]
 	[JsonPropertyOrder(6)]
+	public string CheckpointCiphertextHash { get; init; } = string.Empty;
+
+	[JsonPropertyName("previous_checkpoint_hash")]
+	[JsonPropertyOrder(7)]
+	public string PreviousCheckpointHash { get; init; } = string.Empty;
+
+	[JsonPropertyName("candidate_player_session_id")]
+	[JsonPropertyOrder(8)]
 	public string CandidatePlayerSessionId { get; init; } = string.Empty;
 
 	[JsonPropertyName("candidate_seat")]
-	[JsonPropertyOrder(7)]
+	[JsonPropertyOrder(9)]
 	public int CandidateSeat { get; init; } = -1;
 
-	[JsonPropertyName("observed_host_address")]
-	[JsonPropertyOrder(8)]
-	public string ObservedHostAddress { get; init; } = string.Empty;
-
-	[JsonPropertyName("candidate_host_address")]
-	[JsonPropertyOrder(9)]
-	public string CandidateHostAddress { get; init; } = string.Empty;
-
-	[JsonPropertyName("port")]
+	[JsonPropertyName("candidate_successor_public_key")]
 	[JsonPropertyOrder(10)]
-	public int Port { get; init; } = NetworkProtocol.LanHostMigrationPort;
+	public string CandidateSuccessorPublicKey { get; init; } = string.Empty;
+
+	[JsonPropertyName("candidate_successor_key_id")]
+	[JsonPropertyOrder(11)]
+	public string CandidateSuccessorKeyId { get; init; } = string.Empty;
+
+	[JsonPropertyName("transport")]
+	[JsonPropertyOrder(12)]
+	public NetworkTransport Transport { get; init; } = NetworkTransport.Lan;
+
+	[JsonPropertyName("transport_descriptor")]
+	[JsonPropertyOrder(13)]
+	public NetworkMigrationTransportDescriptor TransportDescriptor { get; init; } = new();
 
 	[JsonPropertyName("source_player_session_id")]
-	[JsonPropertyOrder(11)]
+	[JsonPropertyOrder(14)]
 	public string SourcePlayerSessionId { get; init; } = string.Empty;
 
+	[JsonPropertyName("source_authority_key_id")]
+	[JsonPropertyOrder(15)]
+	public string SourceAuthorityKeyId { get; init; } = string.Empty;
+
 	[JsonPropertyName("authority_phase")]
-	[JsonPropertyOrder(12)]
+	[JsonPropertyOrder(16)]
 	public NetworkAuthorityPhase Phase { get; init; } = NetworkAuthorityPhase.InGame;
+
+	[JsonPropertyName("source_signature")]
+	[JsonPropertyOrder(17)]
+	public string SourceSignature { get; init; } = string.Empty;
+}
+
+public sealed record NetworkMigrationPlanRevocation
+{
+	[JsonPropertyName("protocol_version")]
+	[JsonPropertyOrder(0)]
+	public int ProtocolVersion { get; init; } = NetworkProtocol.CurrentVersion;
+
+	[JsonPropertyName("plan_revision")]
+	[JsonPropertyOrder(1)]
+	public long PlanRevision { get; init; }
+
+	[JsonPropertyName("revoked_plan_revision")]
+	[JsonPropertyOrder(2)]
+	public long RevokedPlanRevision { get; init; }
+
+	[JsonPropertyName("revoked_checkpoint_id")]
+	[JsonPropertyOrder(3)]
+	public long RevokedCheckpointId { get; init; }
+
+	[JsonPropertyName("session_id")]
+	[JsonPropertyOrder(4)]
+	public string SessionId { get; init; } = string.Empty;
+
+	[JsonPropertyName("match_id")]
+	[JsonPropertyOrder(5)]
+	public string MatchId { get; init; } = string.Empty;
+
+	[JsonPropertyName("source_epoch")]
+	[JsonPropertyOrder(6)]
+	public long SourceEpoch { get; init; }
+
+	[JsonPropertyName("source_authority_key_id")]
+	[JsonPropertyOrder(7)]
+	public string SourceAuthorityKeyId { get; init; } = string.Empty;
+
+	[JsonPropertyName("source_signature")]
+	[JsonPropertyOrder(8)]
+	public string SourceSignature { get; init; } = string.Empty;
 }
 
 public sealed record NetworkAuthorityCheckpoint
@@ -233,124 +363,140 @@ public sealed record NetworkAuthorityCheckpoint
 	[JsonPropertyOrder(4)]
 	public string RoomName { get; init; } = string.Empty;
 
-	[JsonPropertyName("room_password")]
+	[JsonPropertyName("room_password_verifier_version")]
 	[JsonPropertyOrder(5)]
-	public string RoomPassword { get; init; } = string.Empty;
+	public int RoomPasswordVerifierVersion { get; init; }
+
+	[JsonPropertyName("room_password_verifier_iterations")]
+	[JsonPropertyOrder(6)]
+	public int RoomPasswordVerifierIterations { get; init; }
+
+	[JsonPropertyName("room_password_verifier_salt")]
+	[JsonPropertyOrder(7)]
+	public string RoomPasswordVerifierSalt { get; init; } = string.Empty;
+
+	[JsonPropertyName("room_password_verifier")]
+	[JsonPropertyOrder(8)]
+	public string RoomPasswordVerifier { get; init; } = string.Empty;
 
 	[JsonPropertyName("match_seed")]
-	[JsonPropertyOrder(6)]
+	[JsonPropertyOrder(9)]
 	public long MatchSeed { get; init; }
 
 	[JsonPropertyName("player_count")]
-	[JsonPropertyOrder(7)]
+	[JsonPropertyOrder(10)]
 	public int PlayerCount { get; init; }
 
 	[JsonPropertyName("item_mode")]
-	[JsonPropertyOrder(8)]
+	[JsonPropertyOrder(11)]
 	public bool ItemMode { get; init; }
 
 	[JsonPropertyName("winning_score")]
-	[JsonPropertyOrder(9)]
+	[JsonPropertyOrder(12)]
 	public int WinningScore { get; init; }
 
 	[JsonPropertyName("transport")]
-	[JsonPropertyOrder(10)]
+	[JsonPropertyOrder(13)]
 	public NetworkTransport Transport { get; init; }
 
 	[JsonPropertyName("authority_phase")]
-	[JsonPropertyOrder(11)]
+	[JsonPropertyOrder(14)]
 	public NetworkAuthorityPhase Phase { get; init; } = NetworkAuthorityPhase.InGame;
 
 	[JsonPropertyName("manifest_hash")]
-	[JsonPropertyOrder(12)]
+	[JsonPropertyOrder(15)]
 	public string ManifestHash { get; init; } = string.Empty;
 
 	[JsonPropertyName("roster")]
-	[JsonPropertyOrder(13)]
+	[JsonPropertyOrder(16)]
 	public List<NetworkMigrationRosterEntry> Roster { get; init; } = new();
 
 	[JsonPropertyName("seat_controls")]
-	[JsonPropertyOrder(14)]
+	[JsonPropertyOrder(17)]
 	public List<NetworkAuthoritySeatControl> SeatControls { get; init; } = new();
 
 	[JsonPropertyName("last_accepted_client_action_ids")]
-	[JsonPropertyOrder(15)]
+	[JsonPropertyOrder(18)]
 	public Dictionary<int, long> LastAcceptedClientActionIds { get; init; } = new();
 
 	[JsonPropertyName("decks")]
-	[JsonPropertyOrder(16)]
+	[JsonPropertyOrder(19)]
 	public List<List<NetworkCheckpointCard>> Decks { get; init; } = new();
 
 	[JsonPropertyName("hands")]
-	[JsonPropertyOrder(17)]
+	[JsonPropertyOrder(20)]
 	public List<List<NetworkCheckpointCard>> Hands { get; init; } = new();
 
 	[JsonPropertyName("item_hands")]
-	[JsonPropertyOrder(18)]
+	[JsonPropertyOrder(21)]
 	public List<List<string>> ItemHands { get; init; } = new();
 
 	[JsonPropertyName("table_cards")]
-	[JsonPropertyOrder(19)]
+	[JsonPropertyOrder(22)]
 	public List<NetworkCheckpointTableCard> TableCards { get; init; } = new();
 
 	[JsonPropertyName("scores")]
-	[JsonPropertyOrder(20)]
+	[JsonPropertyOrder(23)]
 	public int[] Scores { get; init; } = Array.Empty<int>();
 
 	[JsonPropertyName("winner_player_index")]
-	[JsonPropertyOrder(21)]
+	[JsonPropertyOrder(24)]
 	public int WinnerPlayerIndex { get; init; } = -1;
 
 	[JsonPropertyName("match_outcome_kind")]
-	[JsonPropertyOrder(34)]
+	[JsonPropertyOrder(25)]
 	public MatchOutcomeKind MatchOutcomeKind { get; init; } = MatchOutcomeKind.InProgress;
 
 	[JsonPropertyName("opening_deal_completed")]
-	[JsonPropertyOrder(35)]
+	[JsonPropertyOrder(26)]
 	public bool OpeningDealCompleted { get; init; } = true;
 
 	[JsonPropertyName("current_turn_player_index")]
-	[JsonPropertyOrder(22)]
+	[JsonPropertyOrder(27)]
 	public int CurrentTurnPlayerIndex { get; init; }
 
 	[JsonPropertyName("turn_sequence_generation")]
-	[JsonPropertyOrder(23)]
+	[JsonPropertyOrder(28)]
 	public int TurnSequenceGeneration { get; init; }
 
 	[JsonPropertyName("completed_turns_since_question_refresh")]
-	[JsonPropertyOrder(24)]
+	[JsonPropertyOrder(29)]
 	public int CompletedTurnsSinceQuestionRefresh { get; init; }
 
 	[JsonPropertyName("question_refresh_anchor_player_index")]
-	[JsonPropertyOrder(25)]
+	[JsonPropertyOrder(30)]
 	public int QuestionRefreshAnchorPlayerIndex { get; init; } = -1;
 
+	[JsonPropertyName("last_authority_action_id")]
+	[JsonPropertyOrder(31)]
+	public long LastAuthorityActionId { get; init; }
+
 	[JsonPropertyName("authority_action")]
-	[JsonPropertyOrder(26)]
+	[JsonPropertyOrder(32)]
 	public AuthorityActionState AuthorityAction { get; init; } = AuthorityActionState.Empty;
 
 	[JsonPropertyName("rng_seed")]
-	[JsonPropertyOrder(27)]
+	[JsonPropertyOrder(33)]
 	public long RngSeed { get; init; }
 
 	[JsonPropertyName("rng_state")]
-	[JsonPropertyOrder(28)]
+	[JsonPropertyOrder(34)]
 	public string RngState { get; init; } = string.Empty;
 
 	[JsonPropertyName("snapshot_id")]
-	[JsonPropertyOrder(29)]
+	[JsonPropertyOrder(35)]
 	public int SnapshotId { get; init; }
 
 	[JsonPropertyName("authority_epoch")]
-	[JsonPropertyOrder(30)]
+	[JsonPropertyOrder(36)]
 	public long AuthorityEpoch { get; init; }
 
 	[JsonPropertyName("checkpoint_id")]
-	[JsonPropertyOrder(31)]
+	[JsonPropertyOrder(37)]
 	public long CheckpointId { get; init; }
 
 	[JsonPropertyName("reconnect_claims")]
-	[JsonPropertyOrder(33)]
+	[JsonPropertyOrder(38)]
 	public List<NetworkAuthorityReconnectClaim> ReconnectClaims { get; init; } = new();
 
 	[JsonIgnore]
@@ -497,7 +643,13 @@ public static class NetworkAuthorityCheckpointCodec
 			|| !IsBoundedString(checkpoint.SessionId, NetworkProtocol.MaxSessionIdLength, allowEmpty: false)
 			|| !IsBoundedString(checkpoint.MatchId, NetworkProtocol.MaxMatchIdLength)
 			|| !IsBoundedString(checkpoint.RoomName, 128)
-			|| !IsBoundedString(checkpoint.RoomPassword, 128)
+			|| !RoomPasswordRules.IsVerifierValid(new RoomPasswordVerifier
+			{
+				Version = checkpoint.RoomPasswordVerifierVersion,
+				Iterations = checkpoint.RoomPasswordVerifierIterations,
+				Salt = checkpoint.RoomPasswordVerifierSalt,
+				Verifier = checkpoint.RoomPasswordVerifier,
+			})
 			|| !Enum.IsDefined(checkpoint.Transport)
 			|| checkpoint.WinningScore is not (50 or 100 or 200)
 			|| checkpoint.Scores is null
@@ -515,6 +667,8 @@ public static class NetworkAuthorityCheckpointCodec
 			|| !ulong.TryParse(checkpoint.RngState, out ulong rngState)
 			|| rngState == 0
 			|| checkpoint.AuthorityEpoch < 0
+			|| checkpoint.LastAuthorityActionId < 0
+			|| checkpoint.LastAuthorityActionId < checkpoint.AuthorityAction.ActionId
 			|| checkpoint.SnapshotId < 0
 			|| checkpoint.CheckpointId < 0
 			|| checkpoint.CurrentTurnPlayerIndex < 0
@@ -564,6 +718,7 @@ public static class NetworkAuthorityCheckpointCodec
 		}
 		else if (!string.IsNullOrEmpty(checkpoint.MatchId)
 			|| checkpoint.TableCards.Count != 0
+			|| checkpoint.LastAuthorityActionId != 0
 			|| !IsEmptyAuthorityAction(checkpoint.AuthorityAction))
 		{
 			error = "checkpoint_lobby_phase";

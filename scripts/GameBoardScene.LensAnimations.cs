@@ -11,6 +11,11 @@ public partial class GameBoardScene
 		Vector2 splitGlobalCenter,
 		float startRotationDegrees)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		EnsureItemModeOptionalFxResourcesLoaded();
 
 		if (!IsInsideTree())

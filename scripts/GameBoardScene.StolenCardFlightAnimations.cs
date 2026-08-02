@@ -14,7 +14,7 @@ public partial class GameBoardScene
 		float visualScale,
 		float targetVisualScale)
 	{
-		if (!IsInsideTree())
+		if (_networkAuthorityRuleTransactionActive || !IsInsideTree())
 		{
 			return;
 		}

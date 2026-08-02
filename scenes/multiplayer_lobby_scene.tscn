@@ -117,7 +117,7 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="MultiplayerLobbyScene" type="Control" unique_id=848036090 node_paths=PackedStringArray("StatusLabel", "ToastLabel", "RoomNameInput", "RoomPasswordInput", "LanHostInfoLabel", "SteamStatusLabel", "PlayerCountOption", "ItemModeOption", "WinningScoreOption", "RoomListContainer", "PlayerListContainer", "EmptyRoomsLabel", "EmptyPlayersLabel", "LanHostButton", "LanSearchButton", "SteamHostButton", "SteamRefreshButton", "ReadyButton", "StartButton", "LeaveSessionButton", "BackButton")]
+[node name="MultiplayerLobbyScene" type="Control" unique_id=848036090 node_paths=PackedStringArray("StatusLabel", "ToastLabel", "RoomNameInput", "RoomPasswordInput", "HostMigrationToggle", "TrustedHotStandbyToggle", "LanHostInfoLabel", "SteamStatusLabel", "PlayerCountOption", "ItemModeOption", "WinningScoreOption", "RoomListContainer", "PlayerListContainer", "EmptyRoomsLabel", "EmptyPlayersLabel", "LanHostButton", "LanSearchButton", "SteamHostButton", "SteamRefreshButton", "ReadyButton", "StartButton", "LeaveSessionButton", "BackButton")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -131,6 +131,8 @@ StatusLabel = NodePath("SafeArea/MainLayout/Header/StatusLabel")
 ToastLabel = NodePath("ToastLayer/Toast")
 RoomNameInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput")
 RoomPasswordInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput")
+HostMigrationToggle = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/HostMigrationToggle")
+TrustedHotStandbyToggle = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/TrustedHotStandbyToggle")
 LanHostInfoLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostInfoLabel")
 SteamStatusLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamStatusLabel")
 PlayerCountOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/PlayerCountOption")
@@ -333,6 +335,24 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 placeholder_text = ""
 max_length = 24
 secret = true
+
+[node name="HostMigrationToggle" type="CheckButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+button_pressed = true
+text = ""
+
+[node name="TrustedHotStandbyToggle" type="CheckButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = ""
+
+[node name="MigrationTrustNoticeLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.78, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+autowrap_mode = 2
 
 [node name="PlayerCountOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=820987182]
 custom_minimum_size = Vector2(0, 42)

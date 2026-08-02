@@ -7,6 +7,46 @@ public partial class GameBoardScene
 	private const string NetworkDebugActionItemCard = "ItemCard";
 	private const string NetworkDebugActionPendingSelection = "PendingSelection";
 
+	public string DebugGetGameLoopPhaseName()
+	{
+		return GetGameLoopPhase().ToString();
+	}
+
+	public int DebugGetCurrentTurnPlayerIndex()
+	{
+		return _currentTurnPlayerIndex;
+	}
+
+	public int DebugGetWinnerPlayerIndex()
+	{
+		return _winnerPlayerIndex;
+	}
+
+	public int DebugGetPlayerScoreValue(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerScores.Length)
+		{
+			return -1;
+		}
+
+		return _playerScores[playerIndex];
+	}
+
+	public int DebugGetTotalHandCardCountForPlayer(int playerIndex)
+	{
+		return GetTotalHandCardCount(playerIndex);
+	}
+
+	public int DebugGetTotalItemHandCardCountForPlayer(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerItemHands.Count)
+		{
+			return 0;
+		}
+
+		return _playerItemHands[playerIndex].Count;
+	}
+
 	public Godot.Collections.Dictionary DebugGetFirstLegalNetworkAction()
 	{
 		var action = new Godot.Collections.Dictionary
@@ -234,6 +274,11 @@ public partial class GameBoardScene
 			["authority_action_client_id"] = _networkAuthorityActionState.ClientActionId,
 			["authority_action_kind"] = _networkAuthorityActionState.Kind.ToString(),
 			["authority_action_phase"] = _networkAuthorityActionState.Phase.ToString(),
+			["last_committed_action_id"] = _networkLastCommittedActionId,
+			["last_committed_client_action_id"] = _networkLastCommittedClientActionId,
+			["last_committed_checkpoint_id"] = _networkLastCommittedCheckpointId,
+			["last_committed_snapshot_id"] = _networkLastCommittedSnapshotId,
+			["last_committed_generation"] = _networkLastCommittedTurnSequenceGeneration,
 		};
 	}
 

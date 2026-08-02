@@ -18,9 +18,10 @@ public partial class NetworkManager
 			{
 				_reconnectAttemptStartedAt = now;
 			}
-			if (_config.Transport == NetworkTransport.Lan
-				&& _networkMigrationPlan is { } plan
-				&& NetworkMigrationRules.IsPlanVisibleToClients(plan)
+				if (_config.Transport == NetworkTransport.Lan
+					&& _networkMigrationPlan is { } plan
+					&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
+					&& NetworkMigrationRules.IsPlanVisibleToClients(plan)
 				&& now - _reconnectAttemptStartedAt >= NetworkMigrationRules.FollowerConnectionAttemptTimeoutSeconds)
 			{
 				GD.Print($"MIGRATION_ORIGINAL_HOST_RECONNECT_TIMEOUT elapsed={now - _reconnectAttemptStartedAt:0.00}");
@@ -206,6 +207,33 @@ public partial class NetworkManager
 				state.CredentialGeneration,
 				credential);
 		}
+	}
+
+	private void PollSeatCredentialDelivery(double now)
+	{
+		if (!IsHost || _state != NetworkSessionState.Lobby)
+		{
+			_lastSeatCredentialRetryAt = -1.0;
+			return;
+		}
+
+		bool hasUnacknowledgedPeer = _players.Any(player =>
+			!player.IsHost
+			&& player.IsConnected
+			&& !player.CredentialsAcknowledged);
+		if (!hasUnacknowledgedPeer)
+		{
+			_lastSeatCredentialRetryAt = -1.0;
+			return;
+		}
+		if (_lastSeatCredentialRetryAt >= 0.0
+			&& now - _lastSeatCredentialRetryAt < SeatCredentialRetrySeconds)
+		{
+			return;
+		}
+
+		_lastSeatCredentialRetryAt = now;
+		SendSeatCredentialsToUnacknowledgedPeers();
 	}
 
 	internal void ApplySeatControlStatesFromAuthoritySnapshot(IReadOnlyList<SeatControlState> states)
@@ -520,11 +548,22 @@ public partial class NetworkManager
 		_nextReconnectAttemptAt = 0.0;
 		if (_state == NetworkSessionState.MigratingHost && IsMigrationReadinessFenceActive())
 		{
-			// The hard snapshot is applied before the new Host has proved that every
-			// expected non-source seat has reclaimed. Keep the client in the migration
-			// state until the epoch's readiness broadcast arrives.
+			NetworkMigrationPlan migrationPlan = _networkMigrationPlan!;
 			_migrationPeerAttemptInFlight = false;
 			_migrationPeerAttemptStartedAt = -1.0;
+			if (OS.GetEnvironment("CODEX_LAN_SUPPRESS_MIGRATION_SNAPSHOT_ACK") == "1")
+			{
+				GD.Print($"MIGRATION_SNAPSHOT_ACK_SUPPRESSED epoch={migrationPlan.TargetEpoch} seat={LocalSeatIndex}");
+				return;
+			}
+			RpcId(
+				1,
+				MethodName.RpcMigrationFollowerSnapshotApplied,
+				migrationPlan.SessionId,
+				migrationPlan.MatchId,
+				migrationPlan.TargetEpoch,
+				LocalSeatIndex,
+				GetPlayerSessionId());
 			GD.Print($"MIGRATION_SNAPSHOT_WAITING_READINESS epoch={_migrationReadyEpoch}");
 			return;
 		}
@@ -532,6 +571,10 @@ public partial class NetworkManager
 		{
 			_networkMigrationPlan = null;
 			_migrationPeerAttemptInFlight = false;
+		}
+		if (_state == NetworkSessionState.MigratingHost)
+		{
+			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Completed);
 		}
 		SetState(NetworkSessionState.InGame);
 	}

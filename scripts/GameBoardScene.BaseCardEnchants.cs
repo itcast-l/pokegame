@@ -143,7 +143,8 @@ public partial class GameBoardScene
 		PlayGameSfx(GameSfx.EnchantTargetSelect, -1.5f, 0.97f, 1.04f, 0.08);
 		await PlaySpecialCardTriggerEffectAsync(
 			GetAttachedTriggerTexture(tailTableCard.Card.Value, CardEffectTypes.ReverseAnchor),
-			_centerArena.GlobalPosition + GetTableCardPosition(tailTableCardIndex, GetTableCardLayoutRect()),
+			GetAuthorityRuleSafeCenterArenaGlobalPosition()
+				+ GetTableCardPosition(tailTableCardIndex, GetAuthorityRuleSafeTableLayoutRect()),
 			tailTableCardIndex * 2 + 1);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{

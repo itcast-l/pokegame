@@ -12,8 +12,15 @@ public static class SteamLobbyMetadata
 	public const string WinningScoreKey = "winning_score";
 	public const string HasPasswordKey = "has_password";
 	public const string StatusKey = "status";
+	public const string AuthorityEpochKey = "authority_epoch";
+	public const string AuthorityHostSteamIdKey = "authority_host_steam_id";
 
-	public static Dictionary<string, string> Build(NetworkSessionConfig config, string hostName, string status)
+	public static Dictionary<string, string> Build(
+		NetworkSessionConfig config,
+		string hostName,
+		string status,
+		long authorityEpoch = 0,
+		long authorityHostSteamId = 0)
 	{
 		return new Dictionary<string, string>
 		{
@@ -24,8 +31,10 @@ public static class SteamLobbyMetadata
 			[PlayerCountKey] = config.PlayerCount.ToString(),
 			[ItemModeKey] = config.ItemMode ? "true" : "false",
 			[WinningScoreKey] = config.WinningScore.ToString(),
-			[HasPasswordKey] = RoomPasswordRules.HasPassword(config.RoomPassword) ? "true" : "false",
+			[HasPasswordKey] = config.HasRoomPassword ? "true" : "false",
 			[StatusKey] = status,
+			[AuthorityEpochKey] = Math.Max(0, authorityEpoch).ToString(),
+			[AuthorityHostSteamIdKey] = Math.Max(0, authorityHostSteamId).ToString(),
 		};
 	}
 

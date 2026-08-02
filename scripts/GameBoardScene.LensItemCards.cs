@@ -32,21 +32,31 @@ public partial class GameBoardScene
 		}
 
 		ItemCard lensCard = itemHand[itemHandIndex];
-		int displayCardCount = _playerHands[playerIndex].Count + itemHand.Count;
 		int displayIndex = _playerHands[playerIndex].Count + itemHandIndex;
-		Control handArea = _playerHandAreas[playerIndex];
-		Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
-		Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
-		Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{displayIndex}");
-		TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
-		Vector2 startGlobalPosition = sourceCardVisual?.GlobalPosition
-			?? handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
-		if (sourceCardSlot != null)
+		Vector2 startGlobalPosition;
+		Vector2 splitGlobalPosition;
+		if (_networkAuthorityRuleTransactionActive)
 		{
-			sourceCardSlot.Visible = false;
+			startGlobalPosition = GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero);
+			splitGlobalPosition = startGlobalPosition;
 		}
+		else
+		{
+			int displayCardCount = _playerHands[playerIndex].Count + itemHand.Count;
+			Control handArea = _playerHandAreas[playerIndex];
+			Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
+			Vector2 firstCardPosition = GetHandFirstCardPosition(playerIndex, displayCardCount, handArea.Size, cardOffset);
+			Control? sourceCardSlot = handArea.GetNodeOrNull<Control>($"HandCard_{displayIndex}");
+			TextureRect? sourceCardVisual = FindHandCardVisual(sourceCardSlot);
+			startGlobalPosition = sourceCardVisual?.GlobalPosition
+				?? handArea.GlobalPosition + firstCardPosition + displayIndex * cardOffset;
+			if (sourceCardSlot != null)
+			{
+				sourceCardSlot.Visible = false;
+			}
 
-		Vector2 splitGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+			splitGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		}
 		Vector2 splitGlobalCenter = splitGlobalPosition + CardVisualSize / 2.0f;
 		itemHand.RemoveAt(itemHandIndex);
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
@@ -161,6 +171,19 @@ public partial class GameBoardScene
 				targetIndexes,
 				turnSequenceGeneration,
 				snapshotId);
+		}
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			foreach (int tableCardIndex in targetIndexes)
+			{
+				if (tableCardIndex >= 0
+					&& tableCardIndex < _tableCards.Count
+					&& _tableCards[tableCardIndex].Card.HasValue)
+				{
+					_tableCards[tableCardIndex].IsFaceUp = true;
+				}
+			}
+			return;
 		}
 
 		Task[] wispTasks = new Task[targetIndexes.Count];

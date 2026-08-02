@@ -20,7 +20,7 @@ public sealed class NetworkPeerRateLimiter
 			[NetworkRequestCategory.LobbyMutation] = new(4, 1),
 			[NetworkRequestCategory.BoardAction] = new(12, 6),
 			[NetworkRequestCategory.Recovery] = new(4, 1),
-			[NetworkRequestCategory.ProtocolAck] = new(8, 2),
+			[NetworkRequestCategory.ProtocolAck] = new(16, 4),
 		};
 
 	private readonly Dictionary<(int PeerId, NetworkRequestCategory Category), BucketState> _buckets = new();

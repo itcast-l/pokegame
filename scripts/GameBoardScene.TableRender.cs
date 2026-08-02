@@ -9,6 +9,11 @@ public partial class GameBoardScene
 
 	private void RenderTableCards()
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		ulong sampleStart = BeginPerformanceSample();
 		int renderSignature = BuildTableRenderSignature();
 		if (_tableRenderSignatureInitialized

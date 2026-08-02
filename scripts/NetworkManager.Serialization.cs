@@ -23,7 +23,7 @@ public partial class NetworkManager
 		{
 			["session_id"] = config.SessionId,
 			["room_name"] = config.RoomName,
-			["room_password"] = string.Empty,
+			["has_password"] = config.HasRoomPassword,
 			["match_id"] = config.MatchId,
 			["match_seed"] = config.MatchSeed,
 			["transport"] = config.Transport.ToString(),
@@ -78,8 +78,7 @@ public partial class NetworkManager
 			|| !NetworkVariantReader.TryReadString(dictionary, "room_name", RoomNameRules.MaxLength, out string roomName, allowEmpty: false)
 			|| !RoomNameRules.IsValid(roomName)
 			|| !string.Equals(roomName, roomName.Trim(), StringComparison.Ordinal)
-			|| !NetworkVariantReader.TryReadString(dictionary, "room_password", RoomPasswordRules.MaxLength, out string roomPassword)
-			|| !string.Equals(roomPassword, roomPassword.Trim(), StringComparison.Ordinal)
+			|| !NetworkVariantReader.TryReadBool(dictionary, "has_password", out bool hasPassword)
 			|| !NetworkVariantReader.TryReadString(dictionary, "match_id", NetworkProtocol.MaxMatchIdLength, out string matchId)
 			|| !NetworkVariantReader.TryReadInt64(dictionary, "match_seed", long.MinValue, long.MaxValue, out long matchSeed)
 			|| !NetworkVariantReader.TryReadEnum(dictionary, "transport", out NetworkTransport transport)
@@ -92,24 +91,21 @@ public partial class NetworkManager
 			return false;
 		}
 
-		if (IsHost
-			&& RoomPasswordRules.HasPassword(_config.RoomPassword)
-			&& string.IsNullOrEmpty(roomPassword))
-		{
-			roomPassword = _config.RoomPassword;
-		}
-
 		config = new NetworkSessionConfig(
 			sessionId,
 			roomName,
-			roomPassword,
+			string.Empty,
 			matchId,
 			matchSeed,
 			transport,
 			playerCount,
 			itemMode,
 			winningScore,
-			lobbyVisibility);
+			lobbyVisibility)
+		{
+			RoomPasswordVerifier = IsHost ? _config.RoomPasswordVerifier : RoomPasswordVerifier.Empty,
+			RoomPasswordRequired = hasPassword,
+		};
 		return true;
 	}
 

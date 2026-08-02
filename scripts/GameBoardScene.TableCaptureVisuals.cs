@@ -14,9 +14,11 @@ public partial class GameBoardScene
 	bool includeCaptureStartScoring = false,
 	bool includeCaptureEndScoring = false,
 	int scorePlayerIndex = -1)
-{
-	var visuals = new List<CapturedTableCardVisual>();
-	if (captureStartIndex < 0 || captureStartIndex >= _tableCards.Count)
+	{
+		var visuals = new List<CapturedTableCardVisual>();
+		if (_networkAuthorityRuleTransactionActive
+			|| captureStartIndex < 0
+			|| captureStartIndex >= _tableCards.Count)
 	{
 		return visuals;
 	}

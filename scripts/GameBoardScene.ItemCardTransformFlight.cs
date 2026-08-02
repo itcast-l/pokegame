@@ -10,6 +10,11 @@ public partial class GameBoardScene
 		Vector2 targetGlobalPosition,
 		float startRotationDegrees)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		if (!IsInsideTree())
 		{
 			return;

@@ -329,6 +329,36 @@ internal static partial class Program
 		Equal(10UL, room.SteamLobbyId);
 	}
 
+	private static void SteamMetadataPublishesMigrationAuthority()
+	{
+		NetworkSessionConfig config = new(
+			"session",
+			"Steam Room",
+			string.Empty,
+			"match",
+			1234,
+			NetworkTransport.Steam,
+			3,
+			true,
+			150,
+			LobbyVisibility.FriendsOnly);
+		Dictionary<string, string> metadata = SteamLobbyMetadata.Build(
+			config,
+			"host",
+			NetworkSessionState.InGame.ToString(),
+			authorityEpoch: 7,
+			authorityHostSteamId: 76561198000000002);
+
+		Equal("7", metadata[SteamLobbyMetadata.AuthorityEpochKey]);
+		Equal("76561198000000002", metadata[SteamLobbyMetadata.AuthorityHostSteamIdKey]);
+		Equal("0", SteamLobbyMetadata.Build(
+			config,
+			"host",
+			NetworkSessionState.Lobby.ToString(),
+			authorityEpoch: -1,
+			authorityHostSteamId: -1)[SteamLobbyMetadata.AuthorityEpochKey]);
+	}
+
 	private static void SteamMetadataKeepsActiveMatchLobbyJoinableForReconnect()
 	{
 		False(SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(NetworkSessionState.Idle));
@@ -366,6 +396,28 @@ internal static partial class Program
 		False(MultiplayerLobbyRules.CanStart(missingSeat, 2));
 		Equal(1, MultiplayerLobbyRules.GetNextSeatIndex(new[] { readyPlayers[0] }, 2));
 		Equal(-1, MultiplayerLobbyRules.GetNextSeatIndex(readyPlayers, 2));
+	}
+
+	private static void MultiplayerLobbyReadyIntentWaitsForCredentialAcknowledgement()
+	{
+		NetworkPlayerPublicState pendingCredential = Player(peerId: 2, seatIndex: 1, isHost: false, isReady: false) with
+		{
+			CredentialsAcknowledged = false,
+		};
+		Equal(
+			LobbyReadyIntentDisposition.DeferUntilCredentialsAcknowledged,
+			MultiplayerLobbyRules.EvaluateReadyIntent(pendingCredential, isReady: true));
+
+		NetworkPlayerPublicState acknowledged = pendingCredential with { CredentialsAcknowledged = true };
+		Equal(
+			LobbyReadyIntentDisposition.Apply,
+			MultiplayerLobbyRules.EvaluateReadyIntent(acknowledged, isReady: true));
+		Equal(
+			LobbyReadyIntentDisposition.NoChange,
+			MultiplayerLobbyRules.EvaluateReadyIntent(acknowledged, isReady: false));
+		Equal(
+			LobbyReadyIntentDisposition.Reject,
+			MultiplayerLobbyRules.EvaluateReadyIntent(acknowledged with { IsConnected = false }, isReady: true));
 	}
 
 	private static void MultiplayerLobbyOnlyAcceptsJoinRequestsInLobbyState()
@@ -1519,6 +1571,96 @@ internal static partial class Program
 		True(NetworkVisualQueuePolicy.SaturatingAdd(0, int.MaxValue) >= 0);
 	}
 
+	private static void NetworkVisualPlaybackFailuresStayIsolatedFromAuthority()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string controllerText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkVisualPlaybackController.cs"));
+		string queueText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkVisualQueue.cs"));
+		string transactionText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkAuthorityTransaction.cs"));
+		string replicationText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"NetworkManager.BoardReplication.cs"));
+		string lifetimeText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"BoardAsyncLifetime.cs"));
+		string tableCaptureFlowText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.TableCaptureFlow.cs"));
+		string tableCardTriggersText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.TableCardTriggers.cs"));
+		string baseCardEnchantsText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.BaseCardEnchants.cs"));
+		string turnEndText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.TurnEndState.cs"));
+		string resultsText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.Results.cs"));
+		string smokePath = Path.Combine(
+			repoRoot,
+			"tests",
+			"NetworkVisualFailureIsolationSmoke.gd");
+		string boundsSmokePath = Path.Combine(
+			repoRoot,
+			"tests",
+			"NetworkSnapshotBoundsSmoke.gd");
+
+		True(controllerText.Contains("PlaybackFailureCount", StringComparison.Ordinal));
+		True(controllerText.Contains("catch (Exception error)", StringComparison.Ordinal));
+		True(controllerText.Contains("_recoverPlaybackFailure(visualEvent)", StringComparison.Ordinal));
+		True(controllerText.Contains("IsFastForwarding = true", StringComparison.Ordinal));
+		True(queueText.Contains("ActionIdKey", StringComparison.Ordinal));
+		True(queueText.Contains("IsAuthorityHostVisualOnly", StringComparison.Ordinal));
+		True(queueText.Contains("PlayNetworkAuthorityHostVisualEventAsync", StringComparison.Ordinal));
+		True(transactionText.Contains("_networkAuthorityStagedHostVisualEvents", StringComparison.Ordinal));
+		True(transactionText.Contains("QueueCommittedNetworkAuthorityHostVisualEvents", StringComparison.Ordinal));
+		True(transactionText.Contains("_networkAuthorityRuleCenterArenaGlobalPosition = _centerArena.GlobalPosition", StringComparison.Ordinal));
+		True(transactionText.Contains("_networkAuthorityRuleTableLayoutRect = GetTableCardLayoutRect()", StringComparison.Ordinal));
+		True(transactionText.Contains("PresentCommittedNetworkAuthorityMatchOutcome();", StringComparison.Ordinal));
+		True(replicationText.Contains("StageBoardVisualEventForLocalHost", StringComparison.Ordinal));
+		True(replicationText.Contains("if (LocalSeatIndex != actorSeatIndex)", StringComparison.Ordinal));
+		True(lifetimeText.Contains("!tween.IsValid()", StringComparison.Ordinal));
+		True(tableCaptureFlowText.Contains("GetAuthorityRuleSafeTableLayoutRect()", StringComparison.Ordinal));
+		False(tableCaptureFlowText.Contains("_centerArena.GlobalPosition", StringComparison.Ordinal));
+		True(tableCardTriggersText.Contains("centerArenaGlobalPosition + GetTableCardPosition", StringComparison.Ordinal));
+		False(baseCardEnchantsText.Contains("_centerArena.GlobalPosition + GetTableCardPosition", StringComparison.Ordinal));
+		True(turnEndText.Contains("PresentCommittedNetworkAuthorityMatchOutcome()", StringComparison.Ordinal));
+		True(turnEndText.Contains("if (!_networkAuthorityRuleTransactionActive", StringComparison.Ordinal));
+		True(resultsText.Contains("if (_networkAuthorityRuleTransactionActive)", StringComparison.Ordinal));
+		True(File.Exists(smokePath));
+		string smokeText = File.ReadAllText(smokePath);
+		True(smokeText.Contains("DebugInjectNetworkVisualPlaybackFailures", StringComparison.Ordinal));
+		True(smokeText.Contains("DebugKillTrackedBoardTweens", StringComparison.Ordinal));
+		True(smokeText.Contains("queue_free()", StringComparison.Ordinal));
+		True(File.Exists(boundsSmokePath));
+		string boundsSmokeText = File.ReadAllText(boundsSmokePath);
+		True(boundsSmokeText.Contains("Accepted visual event without action ID", StringComparison.Ordinal));
+		True(boundsSmokeText.Contains("Accepted visual event with negative action ID", StringComparison.Ordinal));
+		True(boundsSmokeText.Contains("Accepted visual event with non-integer action ID", StringComparison.Ordinal));
+		True(File.Exists(Path.Combine(
+			repoRoot,
+			"tests",
+			"run_network_visual_failure_isolation_smoke.sh")));
+	}
+
 	private static void GameBoardNetworkPredictionHelpersMoveIntoPartialFile()
 	{
 		string repoRoot = FindRepositoryRoot();
@@ -2349,6 +2491,76 @@ internal static partial class Program
 			method,
 			@"try\s*\{[\s\S]*?_cardEventBus\.Publish\(dispatchId,[\s\S]*?\}\s*finally\s*\{\s*_cardEventBus\.EndDispatch\(dispatchId\);\s*\}",
 			RegexOptions.CultureInvariant));
+	}
+
+	private static void NetworkMigrationCoreUsesTransportAdapters()
+	{
+		string migrationPath = Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"NetworkManager.Migration.cs");
+		string migrationSource = File.ReadAllText(migrationPath);
+		string transportSource = File.ReadAllText(Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"HostMigrationTransport.cs"));
+
+		Equal(1, Regex.Matches(
+			migrationSource,
+			@"new LanHostMigrationTransport\(\)",
+			RegexOptions.CultureInvariant).Count);
+		False(migrationSource.Contains("migrationPlan.CandidateHostAddress", StringComparison.Ordinal));
+		False(migrationSource.Contains("plan.CandidateHostAddress", StringComparison.Ordinal));
+		True(migrationSource.Contains("PrepareMigrationTransport(plan, now", StringComparison.Ordinal));
+		True(migrationSource.Contains("CanRebuildMigrationPeer(", StringComparison.Ordinal));
+		True(migrationSource.Contains("ArmMigrationAttemptsAfterSourceDisconnect(", StringComparison.Ordinal));
+		True(migrationSource.Contains("FinishFailedActiveHostMigrationAsync(", StringComparison.Ordinal));
+		True(migrationSource.Contains("MethodName.RpcHostEndedMatch", StringComparison.Ordinal));
+		True(migrationSource.Contains("[\"transport_descriptor\"]", StringComparison.Ordinal));
+		True(migrationSource.Contains("\"expected_lobby_owner_steam_id\"", StringComparison.Ordinal));
+		True(transportSource.Contains("setLobbyOwner", StringComparison.Ordinal));
+		True(transportSource.Contains("_getObservedLobbyOwnerSteamId()", StringComparison.Ordinal));
+		True(transportSource.Contains("host_with_lobby", StringComparison.Ordinal));
+		True(transportSource.Contains("connect_to_lobby", StringComparison.Ordinal));
+	}
+
+	private static void GameMigrationRecoveryRuntimeKeepsBoundedSnapshotAckWiring()
+	{
+		string root = FindRepositoryRoot();
+		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
+		string recoveryRpcSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
+		string snapshotSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.NetworkSnapshot.cs"));
+		string smokeSource = File.ReadAllText(Path.Combine(root, "tests", "run_lan_host_migration_smoke.sh"));
+
+		True(managerSource.Contains("PollMigrationReadiness(now);", StringComparison.Ordinal));
+		True(managerSource.Contains("RemoveMigrationRecoverySeatAfterDisconnect(", StringComparison.Ordinal));
+		True(migrationSource.Contains("private void RpcMigrationFollowerSnapshotApplied(", StringComparison.Ordinal));
+		True(migrationSource.Contains("NetworkMigrationRules.GameRecoveryTimeoutSeconds", StringComparison.Ordinal)
+			|| File.ReadAllText(Path.Combine(root, "scripts", "GameMigrationRecoveryState.cs"))
+				.Contains("NetworkMigrationRules.GameRecoveryTimeoutSeconds", StringComparison.Ordinal));
+		True(reconnectSource.Contains("MethodName.RpcMigrationFollowerSnapshotApplied", StringComparison.Ordinal));
+		True(snapshotSource.Contains("networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);", StringComparison.Ordinal));
+		False(recoveryRpcSource.Contains("TryCompleteMigrationReadiness();", StringComparison.Ordinal));
+		True(Regex.Matches(
+			recoveryRpcSource,
+			@"ReturnToMultiplayerLobbyAfterMigrationFailure\(",
+			RegexOptions.CultureInvariant).Count >= 2);
+
+		int cleanupStart = migrationSource.IndexOf(
+			"private void ReturnToMultiplayerLobbyAfterMigrationFailure(string message)",
+			StringComparison.Ordinal);
+		int cleanupEnd = migrationSource.IndexOf(
+			"private void ApplyCheckpointMetadataForMigration(",
+			cleanupStart,
+			StringComparison.Ordinal);
+		True(cleanupStart >= 0 && cleanupEnd > cleanupStart);
+		string cleanupMethod = migrationSource[cleanupStart..cleanupEnd];
+		True(cleanupMethod.Contains("CompleteNetworkHostMigrationVisualState();", StringComparison.Ordinal));
+		False(cleanupMethod.Contains("BeginNetworkHostMigrationVisualState();", StringComparison.Ordinal));
+		True(smokeSource.Contains("missing_follower_late_reclaim", StringComparison.Ordinal));
+		True(smokeSource.Contains("follower_disconnect_during_recovery", StringComparison.Ordinal));
 	}
 
 }

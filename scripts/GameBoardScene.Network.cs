@@ -12,6 +12,11 @@ public partial class GameBoardScene
 	private int _networkPendingHandIndex = -1;
 	private int _networkPendingItemHandIndex = -1;
 	private int _networkPendingTurnSequenceGeneration = -1;
+	private long _networkLastCommittedActionId;
+	private long _networkLastCommittedClientActionId;
+	private long _networkLastCommittedCheckpointId = -1;
+	private int _networkLastCommittedSnapshotId = -1;
+	private int _networkLastCommittedTurnSequenceGeneration = -1;
 	private bool _networkPendingSelectionRequestInFlight;
 	private bool _networkAiProxyTurnRunning;
 	private bool _networkPredictedHandVisualActive;
@@ -145,6 +150,26 @@ public partial class GameBoardScene
 		_networkPendingSelectionRequestInFlight = true;
 		DisposeActiveSelectionOverlay();
 		networkManager.RequestPendingItemSelection(selectionIndex, turnSequenceGeneration);
+	}
+
+	internal void ConfirmNetworkBoardActionCommitted(
+		long actionId,
+		long clientActionId,
+		long checkpointId,
+		int snapshotId,
+		int turnSequenceGeneration)
+	{
+		if (actionId <= _networkLastCommittedActionId
+			|| clientActionId <= _networkLastCommittedClientActionId)
+		{
+			return;
+		}
+
+		_networkLastCommittedActionId = actionId;
+		_networkLastCommittedClientActionId = clientActionId;
+		_networkLastCommittedCheckpointId = checkpointId;
+		_networkLastCommittedSnapshotId = snapshotId;
+		_networkLastCommittedTurnSequenceGeneration = turnSequenceGeneration;
 	}
 
 	internal void RequestNetworkHandCardPlay(int handIndex, int turnSequenceGeneration)

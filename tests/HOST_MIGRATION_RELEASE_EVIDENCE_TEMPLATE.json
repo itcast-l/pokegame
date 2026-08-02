@@ -1,0 +1,31 @@
+{
+	"schema_version": 1,
+	"release_id": "replace-with-release-candidate-id",
+	"evidence_root": "replace-with-evidence-directory",
+	"build": {
+		"build_id": "replace-with-build-id",
+		"git_commit": "replace-with-git-commit",
+		"configuration": "Release",
+		"network_protocol": 11
+	},
+	"accounts": [],
+	"steam_cases": [
+		{"id": "active_owner_transfer", "status": "pending"},
+		{"id": "source_crash", "status": "pending"},
+		{"id": "automatic_owner_second_transfer", "status": "pending"},
+		{"id": "owner_timeout", "status": "pending"},
+		{"id": "candidate_exit", "status": "pending"}
+	],
+	"real_lan_runs": [
+		{"id": "windows", "status": "pending", "release_audit": "", "target_runtime_evidence": ""},
+		{"id": "linux", "status": "pending", "release_audit": "", "target_runtime_evidence": ""},
+		{"id": "macos", "status": "pending", "release_audit": "", "target_runtime_evidence": ""}
+	],
+	"network_impairment_cases": [
+		{"id": "latency", "status": "pending"},
+		{"id": "packet_loss", "status": "pending"},
+		{"id": "duplicate_packet", "status": "pending"},
+		{"id": "short_disconnect", "status": "pending"},
+		{"id": "host_candidate_simultaneous_loss", "status": "pending"}
+	]
+}

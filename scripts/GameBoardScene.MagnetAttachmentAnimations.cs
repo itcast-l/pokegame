@@ -5,6 +5,11 @@ public partial class GameBoardScene
 {
 	private async Task PlayMagnetAttachmentToHandCardAnimationAsync(int playerIndex, int handIndex, string itemCardId)
 	{
+		if (_networkAuthorityRuleTransactionActive)
+		{
+			return;
+		}
+
 		EnsureItemModeOptionalFxResourcesLoaded();
 
 		if (!IsInsideTree() || !IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))

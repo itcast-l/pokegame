@@ -211,8 +211,10 @@ internal static partial class Program
 		Run("room name rules restrict special symbols", RoomNameRulesRestrictSpecialSymbols);
 		Run("steam metadata rejects dirty values", SteamMetadataRejectsDirtyValues);
 		Run("steam metadata parses valid values defensively", SteamMetadataParsesValidValuesDefensively);
+		Run("steam metadata publishes migration authority", SteamMetadataPublishesMigrationAuthority);
 		Run("steam metadata keeps active match lobby joinable for reconnect", SteamMetadataKeepsActiveMatchLobbyJoinableForReconnect);
 		Run("multiplayer lobby start requires filled ready seats", MultiplayerLobbyStartRequiresFilledReadySeats);
+		Run("multiplayer lobby ready intent waits for credential acknowledgement", MultiplayerLobbyReadyIntentWaitsForCredentialAcknowledgement);
 		Run("multiplayer lobby only accepts join requests in lobby state", MultiplayerLobbyOnlyAcceptsJoinRequestsInLobbyState);
 		Run("multiplayer lobby room list only allows joining lobby rooms", MultiplayerLobbyRoomListOnlyAllowsJoiningLobbyRooms);
 		Run("multiplayer lobby only auto accepts steam invites from safe states", MultiplayerLobbyOnlyAutoAcceptsSteamInvitesFromSafeStates);
@@ -236,6 +238,7 @@ internal static partial class Program
 		Run("game board warmup includes optional fx resource category", GameBoardWarmupIncludesOptionalFxResources);
 		Run("game board idle performance trace smoke exists", GameBoardIdlePerformanceTraceSmokeExists);
 		Run("audio disposal forbids synchronous delay and forced GC", AudioDisposalForbidsSynchronousDelayAndForcedGc);
+		Run("test mute audio blocks direct stream player creation", TestMuteAudioBlocksDirectStreamPlayerCreation);
 		Run("game board async work stays behind lifetime boundary", GameBoardAsyncWorkStaysBehindLifetimeBoundary);
 		Run("phase three lifecycle and fallback smokes exist", PhaseThreeLifecycleAndFallbackSmokesExist);
 		Run("phase four fixed ui scenes have extracted controller boundaries", PhaseFourFixedUiScenesHaveExtractedControllerBoundaries);
@@ -253,6 +256,8 @@ internal static partial class Program
 		Run("network manager lobby responsibilities move into partial files", NetworkManagerLobbyResponsibilitiesMoveIntoPartialFiles);
 		Run("network manager p1b ordering stays on hot paths", NetworkManagerP1BOrderingStaysOnHotPaths);
 		Run("network manager board protocol helpers move into responsibility partials", NetworkManagerBoardProtocolHelpersMoveIntoResponsibilityPartials);
+		Run("network migration core uses transport adapters", NetworkMigrationCoreUsesTransportAdapters);
+		Run("game migration recovery runtime keeps bounded snapshot ack wiring", GameMigrationRecoveryRuntimeKeepsBoundedSnapshotAckWiring);
 		Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
 		Run("game board network request entry points avoid async void", GameBoardNetworkRequestEntryPointsAvoidAsyncVoid);
 		Run("target item selection capability is removed", TargetItemSelectionCapabilityIsRemoved);
@@ -261,6 +266,7 @@ internal static partial class Program
 		Run("network visual queue admits only bounded pending events", NetworkVisualQueueAdmitsOnlyBoundedPendingEvents);
 		Run("network visual queue enters and remains in fast forward", NetworkVisualQueueEntersAndRemainsInFastForward);
 		Run("network visual queue saturating counters stay nonnegative", NetworkVisualQueueSaturatingCountersStayNonnegative);
+		Run("network visual playback failures stay isolated from authority", NetworkVisualPlaybackFailuresStayIsolatedFromAuthority);
 		Run("game board network prediction helpers move into partial file", GameBoardNetworkPredictionHelpersMoveIntoPartialFile);
 		Run("game board network authority helpers move into partial file", GameBoardNetworkAuthorityHelpersMoveIntoPartialFile);
 		Run("game board network ai proxy helpers move into partial file", GameBoardNetworkAiProxyHelpersMoveIntoPartialFile);

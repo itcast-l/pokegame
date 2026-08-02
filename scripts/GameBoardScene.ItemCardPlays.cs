@@ -94,7 +94,9 @@ public partial class GameBoardScene
 			}
 		}
 
-		Vector2? itemGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
+		Vector2? itemGlobalPosition = _networkAuthorityRuleTransactionActive
+			? GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero)
+			: GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
 		itemHand.RemoveAt(itemHandIndex);
 		await WaitForAuthorityTransactionFaultAsync("after_item_remove");
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
@@ -194,15 +196,25 @@ public partial class GameBoardScene
 
 		ItemCard itemCard = itemHand[itemHandIndex];
 
-		Vector2 startGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex)
-			?? _playerHandAreas[playerIndex].GlobalPosition + (_playerHandAreas[playerIndex].Size - CardVisualSize) / 2.0f;
-		Control? sourceCardSlot = _playerHandAreas[playerIndex].GetNodeOrNull<Control>($"HandCard_{_playerHands[playerIndex].Count + itemHandIndex}");
-		if (sourceCardSlot != null)
+		Vector2 startGlobalPosition;
+		Vector2 transformAreaGlobalPosition;
+		if (_networkAuthorityRuleTransactionActive)
 		{
-			sourceCardSlot.Visible = false;
+			startGlobalPosition = GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero);
+			transformAreaGlobalPosition = startGlobalPosition;
 		}
+		else
+		{
+			startGlobalPosition = GetHandItemCardGlobalPosition(playerIndex, itemHandIndex)
+				?? _playerHandAreas[playerIndex].GlobalPosition + (_playerHandAreas[playerIndex].Size - CardVisualSize) / 2.0f;
+			Control? sourceCardSlot = _playerHandAreas[playerIndex].GetNodeOrNull<Control>($"HandCard_{_playerHands[playerIndex].Count + itemHandIndex}");
+			if (sourceCardSlot != null)
+			{
+				sourceCardSlot.Visible = false;
+			}
 
-		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+			transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
+		}
 		itemHand.RemoveAt(itemHandIndex);
 		await WaitForAuthorityTransactionFaultAsync("after_item_remove");
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);

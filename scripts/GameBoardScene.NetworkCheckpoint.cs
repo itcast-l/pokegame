@@ -80,7 +80,10 @@ public partial class GameBoardScene
 			SessionId = config.SessionId,
 			MatchId = config.MatchId,
 			RoomName = config.RoomName,
-			RoomPassword = config.RoomPassword,
+			RoomPasswordVerifierVersion = config.RoomPasswordVerifier.Version,
+			RoomPasswordVerifierIterations = config.RoomPasswordVerifier.Iterations,
+			RoomPasswordVerifierSalt = config.RoomPasswordVerifier.Salt,
+			RoomPasswordVerifier = config.RoomPasswordVerifier.Verifier,
 			MatchSeed = config.MatchSeed,
 			PlayerCount = player_count,
 			ItemMode = item_mode,
@@ -102,6 +105,7 @@ public partial class GameBoardScene
 			TurnSequenceGeneration = _turnSequenceGeneration,
 			CompletedTurnsSinceQuestionRefresh = _completedTurnsSinceQuestionCardRefresh,
 			QuestionRefreshAnchorPlayerIndex = _questionCardRefreshAnchorPlayerIndex,
+			LastAuthorityActionId = _nextNetworkAuthorityActionId,
 			AuthorityAction = _networkAuthorityActionState,
 			RngSeed = _matchSeed,
 			RngState = _rng.State.ToString(CultureInfo.InvariantCulture),
@@ -248,7 +252,9 @@ public partial class GameBoardScene
 		_tableCards.AddRange(restoredTableCards);
 		ShowAllOpeningHandCards();
 		ShowAllOpeningPileCards();
-		RestoreNetworkAuthorityActionState(restoredAuthorityAction);
+		RestoreNetworkAuthorityActionState(
+			restoredAuthorityAction,
+			checkpoint.LastAuthorityActionId);
 		networkManager?.RestoreLastAcceptedClientActionIds(checkpoint.LastAcceptedClientActionIds);
 		InvalidateRenderCaches();
 		RenderPlayerCardPiles();
@@ -262,7 +268,13 @@ public partial class GameBoardScene
 		return string.IsNullOrWhiteSpace(activeConfig.SessionId)
 			|| (string.Equals(activeConfig.SessionId, checkpoint.SessionId, StringComparison.Ordinal)
 				&& string.Equals(activeConfig.RoomName, checkpoint.RoomName, StringComparison.Ordinal)
-				&& string.Equals(activeConfig.RoomPassword, checkpoint.RoomPassword, StringComparison.Ordinal)
+				&& activeConfig.RoomPasswordVerifier == new RoomPasswordVerifier
+				{
+					Version = checkpoint.RoomPasswordVerifierVersion,
+					Iterations = checkpoint.RoomPasswordVerifierIterations,
+					Salt = checkpoint.RoomPasswordVerifierSalt,
+					Verifier = checkpoint.RoomPasswordVerifier,
+				}
 				&& string.Equals(activeConfig.MatchId, checkpoint.MatchId, StringComparison.Ordinal)
 				&& activeConfig.MatchSeed == checkpoint.MatchSeed
 				&& activeConfig.Transport == checkpoint.Transport

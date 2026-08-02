@@ -19,6 +19,7 @@ var _action_seen := false
 var _migration_seen := false
 var _result_written := false
 var _finished := false
+var _host_visual_playback_before := 0
 
 
 func _initialize() -> void:
@@ -27,7 +28,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_parse_arguments()
-	if _result_path.is_empty() or _fixture not in ["base_capture", "item_shuffle"]:
+	if _result_path.is_empty() or _fixture not in ["base_capture", "question_capture", "item_shuffle"]:
 		_fail("invalid transaction fixture arguments")
 		return
 
@@ -42,11 +43,16 @@ func _run() -> void:
 	else:
 		_network.JoinLan("127.0.0.1", "")
 
-	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	var timeout_seconds := TIMEOUT_SECONDS
+	var configured_timeout := OS.get_environment("CODEX_AUTHORITY_TRANSACTION_TIMEOUT_SECONDS")
+	if configured_timeout.is_valid_float():
+		timeout_seconds = maxf(1.0, configured_timeout.to_float())
+	var deadline := Time.get_ticks_msec() / 1000.0 + timeout_seconds
 	while not _finished and Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
 		_track()
 	if not _finished:
+		_print_timeout_diagnostics()
 		_fail("transaction peer timed out")
 
 
@@ -99,6 +105,7 @@ func _track() -> void:
 			_fail("could not configure authority transaction fixture")
 			return
 		_fixture_configured = true
+		_host_visual_playback_before = int(board.call("DebugGetNetworkAuthorityHostVisualPlaybackCount"))
 		print("AUTHORITY_TRANSACTION_FIXTURE_READY fixture=%s" % _fixture)
 
 	var action_state: Dictionary = board.call("DebugGetNetworkActionState")
@@ -106,7 +113,7 @@ func _track() -> void:
 		_action_seen = true
 
 	if _role == "client" and not _action_submitted and not _migration_seen:
-		var expected_kind := "BaseCard" if _fixture == "base_capture" else "ItemCard"
+		var expected_kind := "ItemCard" if _fixture == "item_shuffle" else "BaseCard"
 		_action_submitted = bool(board.call("DebugSubmitAuthorityTransactionFixtureAction", _fixture))
 		if _action_submitted:
 			print("AUTHORITY_TRANSACTION_CLIENT_SUBMITTED fixture=%s kind=%s" % [_fixture, expected_kind])
@@ -120,6 +127,13 @@ func _track() -> void:
 func _track_baseline(board: Node) -> void:
 	if _role == "host" and _action_seen and not _result_written \
 			and bool(board.call("DebugIsAuthorityTransactionFixtureCompleted", _fixture)):
+		if int(board.call("DebugGetNetworkAuthorityHostVisualDecodeFailureCount")) != 0:
+			_fail("Host visual event decode failed")
+			return
+		if int(board.call("DebugGetNetworkAuthorityHostVisualPlaybackCount")) <= _host_visual_playback_before \
+				or bool(board.call("DebugIsNetworkVisualQueueProcessing")) \
+				or int(board.call("DebugGetNetworkVisualEventQueueCount")) != 0:
+			return
 		_write_result(board)
 		_result_written = true
 		print("AUTHORITY_TRANSACTION_BASELINE_RESULT fixture=%s" % _fixture)
@@ -151,6 +165,35 @@ func _track_fault_recovery(board: Node, action_state: Dictionary) -> void:
 	_finish("AUTHORITY_TRANSACTION_FAULT_CLIENT_DONE")
 
 
+func _print_timeout_diagnostics() -> void:
+	var board := current_scene
+	if board == null or not board.has_method("DebugGetNetworkActionState"):
+		print("AUTHORITY_TRANSACTION_TIMEOUT role=%s board=unavailable" % _role)
+		return
+	var action_state: Dictionary = board.call("DebugGetNetworkActionState")
+	print(
+		"AUTHORITY_TRANSACTION_TIMEOUT role=%s fixture=%s completed=%s action=%s next_action=%d turn=%d table=%d score_0=%d score_1=%d item_hand=%d reward_count=%d reward_id=%s visual_processing=%s visual_pending=%d host_visual_playback_before=%d host_visual_playback=%d host_visual_decode_failures=%d" % [
+			_role,
+			_fixture,
+			bool(board.call("DebugIsAuthorityTransactionFixtureCompleted", _fixture)),
+			JSON.stringify(action_state),
+			int(board.call("DebugGetNextNetworkAuthorityActionId")),
+			int(board.call("DebugGetCurrentTurnPlayerIndex")),
+			int(board.call("DebugGetTableCardCount")),
+			int(board.call("DebugGetPlayerScoreValue", 0)),
+			int(board.call("DebugGetPlayerScoreValue", 1)),
+			int(board.call("DebugGetTotalItemHandCardCountForPlayer", 1)),
+			int(board.call("DebugGetQuestionRewardGrantCount")),
+			String(board.call("DebugGetLastQuestionRewardItemCardId")),
+			bool(board.call("DebugIsNetworkVisualQueueProcessing")),
+			int(board.call("DebugGetNetworkVisualEventQueueCount")),
+			_host_visual_playback_before,
+			int(board.call("DebugGetNetworkAuthorityHostVisualPlaybackCount")),
+			int(board.call("DebugGetNetworkAuthorityHostVisualDecodeFailureCount")),
+		]
+	)
+
+
 func _write_result(board: Node) -> void:
 	var action_state: Dictionary = board.call("DebugGetNetworkActionState")
 	var accepted_ids: Dictionary = _network.GetLastAcceptedClientActionIdsVariant()
@@ -166,6 +209,8 @@ func _write_result(board: Node) -> void:
 	lines.append("outcome=%s" % String(board.call("DebugGetMatchOutcomeKindName")))
 	lines.append("authority_action_id=%d" % int(action_state.get("authority_action_id", -1)))
 	lines.append("authority_epoch=%d" % int(_network.call("DebugGetAuthorityEpoch")))
+	lines.append("host_visual_playback_count=%d" % int(board.call("DebugGetNetworkAuthorityHostVisualPlaybackCount")))
+	lines.append("host_visual_decode_failures=%d" % int(board.call("DebugGetNetworkAuthorityHostVisualDecodeFailureCount")))
 	var file := FileAccess.open(_result_path, FileAccess.WRITE)
 	if file == null:
 		_fail("could not write transaction result")
