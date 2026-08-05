@@ -15,12 +15,19 @@ public partial class GameBoardScene
 
 	private void SetAdventureTraceHuntMarkedTableCard(TableCard? target, bool playIntro)
 	{
-		if (ReferenceEquals(_adventureTraceHuntMarkedTableCard, target))
+		long targetRuntimeId = target?.InstanceId ?? 0;
+		if (CurrentMatchFlowState.CaptureMarkRuntimeId == targetRuntimeId)
 		{
 			return;
 		}
 
-		_adventureTraceHuntMarkedTableCard = target;
+		if (!TryUpdateMatchFlowState(state => state with
+		{
+			CaptureMarkRuntimeId = targetRuntimeId,
+		}))
+		{
+			return;
+		}
 		ClearAdventureTraceHuntMarkerIntro();
 		if (target != null && playIntro)
 		{
@@ -30,7 +37,7 @@ public partial class GameBoardScene
 
 	private void ClearAdventureTraceHuntMarkerIfTableCardRemoved(TableCard removedTableCard)
 	{
-		if (!ReferenceEquals(_adventureTraceHuntMarkedTableCard, removedTableCard))
+		if (CurrentMatchFlowState.CaptureMarkRuntimeId != removedTableCard.InstanceId)
 		{
 			return;
 		}
@@ -43,7 +50,7 @@ public partial class GameBoardScene
 		EnsureAdventureTraceHuntMarkerTexturesLoaded();
 		if (_adventureTraceHuntMarkerFrames.Count == 0
 			|| introGeneration != _adventureTraceHuntMarkerIntroGeneration
-			|| !ReferenceEquals(_adventureTraceHuntMarkedTableCard, target)
+			|| !ReferenceEquals(GetAdventureTraceHuntMarkedTableCard(), target)
 			|| !TryGetTraceHuntMarkerGlobalPosition(target, out Vector2 globalPosition))
 		{
 			return;
@@ -154,7 +161,7 @@ public partial class GameBoardScene
 	{
 		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
-			if (ReferenceEquals(_tableCards[tableCardIndex], _adventureTraceHuntMarkedTableCard))
+			if (ReferenceEquals(_tableCards[tableCardIndex], GetAdventureTraceHuntMarkedTableCard()))
 			{
 				return tableCardIndex;
 			}

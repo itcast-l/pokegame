@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 
 [Flags]
@@ -31,57 +32,6 @@ internal readonly record struct AdventureCapturedCardEntry(
 	bool WasBuried,
 	bool IsPlayedCard,
 	AdventureCaptureEntrySource Source);
-
-internal readonly record struct AdventureCaptureScoreItem(
-	long TableCardInstanceId,
-	long BaseCardInstanceId,
-	int RawPoints,
-	int ResolvedPoints,
-	bool IsExplicitDuplicate,
-	string SourceUpgradeId);
-
-internal static class AdventureCaptureScoreItemRules
-{
-	internal static int ResolveTopPrizeRepeatIndex(
-			IReadOnlyList<AdventureCaptureScoreItem>? scoreItems,
-			IReadOnlyList<int>? preCaptureTableIndexes,
-			int minimumScoreItemCount = 3)
-	{
-		if (scoreItems == null
-			|| preCaptureTableIndexes == null
-			|| scoreItems.Count != preCaptureTableIndexes.Count)
-		{
-			return -1;
-		}
-
-		int selectedIndex = -1;
-		int selectedTableIndex = int.MaxValue;
-		int normalScoreItemCount = 0;
-		for (int index = 0; index < scoreItems.Count; index++)
-		{
-			AdventureCaptureScoreItem candidate = scoreItems[index];
-			if (candidate.IsExplicitDuplicate)
-			{
-				continue;
-			}
-
-			normalScoreItemCount++;
-			int candidateTableIndex = preCaptureTableIndexes[index] >= 0
-				? preCaptureTableIndexes[index]
-				: int.MaxValue;
-			if (selectedIndex < 0
-				|| candidate.ResolvedPoints > scoreItems[selectedIndex].ResolvedPoints
-				|| (candidate.ResolvedPoints == scoreItems[selectedIndex].ResolvedPoints
-					&& candidateTableIndex < selectedTableIndex))
-			{
-				selectedIndex = index;
-				selectedTableIndex = candidateTableIndex;
-			}
-		}
-
-		return normalScoreItemCount >= Math.Max(0, minimumScoreItemCount) ? selectedIndex : -1;
-	}
-}
 
 internal sealed class CaptureResolutionContext
 {
@@ -264,6 +214,15 @@ internal sealed class CaptureResolutionContext
 			&& !first.WasBuried
 			&& !last.WasBuried
 			&& first.PreCaptureTableIndex < last.PreCaptureTableIndex;
+	}
+
+	internal AdventureCaptureResolutionFacts ToRuleFacts()
+	{
+		return new AdventureCaptureResolutionFacts(
+			_normalScoreItems.ToImmutableArray(),
+			_explicitDuplicateScoreItems.ToImmutableArray(),
+			_triggeredAttachedItemCardIds.ToImmutableArray(),
+			CapturedOnlyTwoVisibleEndpoints());
 	}
 
 	private static int CompareScoreItems(

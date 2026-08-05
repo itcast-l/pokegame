@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rules.Tests", "tests\Rules.Tests\Rules.Tests.csproj", "{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deckland.Rules", "src\Deckland.Rules\Deckland.Rules.csproj", "{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +30,12 @@ Global
 		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
 		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
 		{4F21CA1D-BA41-4713-9228-AC1CC0DCC724}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{9FA79F52-57EF-48E7-98A8-3A8A80126CB4}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -88,24 +90,37 @@ public bool DebugConfigureDragonQuestionCaptureOwnershipProbe()
 	}
 
 	item_mode = true;
-	_tableCards.Clear();
+	DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
+	fixture.TableCards.Clear();
 	for (int index = 0; index < captureThreshold - 1; index++)
 	{
 		(string suit, string rank) = requiredCards[index];
-		_tableCards.Add(new TableCard(
+		fixture.TableCards.Add(new TableCard(
 			cards[$"{suit}:{rank}"],
 			isFaceUp: true));
 	}
-	_tableCards.Add(new TableCard(
+	fixture.TableCards.Add(new TableCard(
 		null,
 		isFaceUp: true,
 		itemOverlay: questionMark));
-	_playerHands[1].Clear();
-	_playerHands[1].Add(cards["Spades:A"]);
-	_pendingItemAttachmentRewards.Clear();
+	fixture.PlayerHands[1].Clear();
+	fixture.PlayerHands[1].Add(cards["Spades:A"]);
+	fixture.CurrentTurnSeat = 1;
+	if (!CommitDebugRuleFixture(fixture))
+	{
+		return false;
+	}
+	if (!TrySubmitSetPendingAttachmentRewardsRuleCommand(
+		ImmutableArray<PendingAttachmentRewardState>.Empty,
+		_turnSequenceGeneration))
+	{
+		return false;
+	}
 	_debugForcedQuestionRewardItemCardIds.Clear();
-	_dragonPrinceJackUsed = false;
-	_winnerPlayerIndex = -1;
+	TryUpdateMatchFlowState(state => state with
+	{
+		OneShotCardReplacementUsed = false,
+	});
 	RenderPlayerHands();
 	RenderTableCards();
 	return ShouldResolveDragonPrinceJack(1);
@@ -147,7 +162,7 @@ private async Task RunDebugDragonQuestionCaptureOwnershipProbeAsync(
 					.ItemCard.Id
 				: string.Empty;
 		result["pending_attachment_count"] =
-			_pendingItemAttachmentRewards.Count;
+			GetPendingAttachmentRewards().Length;
 		int enemyAttachmentCount = 0;
 		foreach (PlayingCard card in _playerHands[1])
 		{
@@ -202,7 +217,7 @@ private async Task RunDebugCollectTableCaptureOwnershipProbeAsync(
 	try
 	{
 		var request = new CardTriggerRequest(
-			Definition: default!,
+			DefinitionId: "debug_collect_table_probe",
 			Rule: default,
 			Event: new CardGameEvent(
 				"debug_collect_table_probe",
@@ -322,20 +337,20 @@ public bool DebugReplaceTableCardReference(int tableCardIndex)
 	}
 
 	TableCard source = _tableCards[tableCardIndex];
-	_tableCards[tableCardIndex] = new TableCard(
+	TableCard replacement = TableCard.Restore(
+		source.InstanceId,
 		source.Card,
 		source.IsFaceUp,
 		source.ItemOverlay,
 		source.ItemOwnerPlayerIndex,
 		source.CardOwnerPlayerIndex,
-		source.RemoveCardOnCapture)
-	{
-		IsHiddenDuringCapture =
-			source.IsHiddenDuringCapture,
-		IsBuriedInSand = source.IsBuriedInSand,
-		IsSlimeCoated = source.IsSlimeCoated,
-	};
-	return true;
+		source.RemoveCardOnCapture);
+	replacement.IsHiddenDuringCapture = source.IsHiddenDuringCapture;
+	replacement.IsBuriedInSand = source.IsBuriedInSand;
+	replacement.IsSlimeCoated = source.IsSlimeCoated;
+	return TryReplaceDebugTableCardPresentationReference(
+		tableCardIndex,
+		replacement);
 }
 
 public bool DebugWasCaptureOwnershipResultObserved()
@@ -373,9 +388,23 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 		return false;
 	}
 
-	_playerHands[MainPlayerIndex].Clear();
-	_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-	_winnerPlayerIndex = -1;
+	var players = ImmutableArray.CreateBuilder<PlayerStateSnapshot>(player_count);
+	for (int seat = 0; seat < player_count; seat++)
+	{
+		players.Add(CreateScriptedPlayerState(
+			seat,
+			Array.Empty<PlayingCard>(),
+			seat == MainPlayerIndex
+				? new[] { cards["Hearts:5"] }
+				: Array.Empty<PlayingCard>()));
+	}
+	if (!TryInitializeScriptedRuleMatch(
+			players.MoveToImmutable(),
+			ImmutableArray<TableCardState>.Empty))
+	{
+		return false;
+	}
+
 	_isProcessingCardPlay = false;
 	RenderPlayerHands();
 	return PlayerHasAttachableMagnetCard(
@@ -384,7 +413,7 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 }
 
 	public bool DebugStartMagnetGenerationOwnershipProbe(
-	Godot.Collections.Dictionary result)
+		Godot.Collections.Dictionary result)
 {
 	if (result == null
 		|| _isResolvingMagnetAttachmentSelection
@@ -398,9 +427,10 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 
 	result.Clear();
 	result["completed"] = false;
-		result["error"] = string.Empty;
-		result["generation"] = _turnSequenceGeneration;
-		BeginNetworkAuthorityAction(
+	result["error"] = string.Empty;
+	result["generation"] = _turnSequenceGeneration;
+	RecordDebugMagnetOwnershipState(result, "before");
+	BeginNetworkAuthorityAction(
 			AuthorityActionKind.QuestionReward,
 			MainPlayerIndex,
 			_turnSequenceGeneration,
@@ -413,7 +443,9 @@ public bool DebugConfigureMagnetGenerationOwnershipProbe()
 			requiresAttachment: true,
 			reserveReplacement: false,
 			_turnSequenceGeneration);
-		TrackBoardTask(RunDebugMagnetGenerationOwnershipProbeAsync(result), nameof(RunDebugMagnetGenerationOwnershipProbeAsync));
+	Task probeTask = RunDebugMagnetGenerationOwnershipProbeAsync(result);
+	RecordDebugMagnetOwnershipState(result, "after_start");
+	TrackBoardTask(probeTask, nameof(RunDebugMagnetGenerationOwnershipProbeAsync));
 	return true;
 }
 
@@ -433,8 +465,25 @@ private async Task RunDebugMagnetGenerationOwnershipProbeAsync(
 	}
 	finally
 	{
+		RecordDebugMagnetOwnershipState(result, "completed");
 		result["completed"] = true;
 	}
+}
+
+private void RecordDebugMagnetOwnershipState(
+	Godot.Collections.Dictionary result,
+	string prefix)
+{
+	result[$"{prefix}_scene_generation"] = _turnSequenceGeneration;
+	result[$"{prefix}_rule_generation"] =
+		_authorityRuleSession?.ReadModel.TurnGeneration ?? -1;
+	result[$"{prefix}_current_turn"] = _currentTurnPlayerIndex;
+	result[$"{prefix}_rule_session"] = _authorityRuleSession != null;
+	result[$"{prefix}_resolving"] = _isResolvingMagnetAttachmentSelection;
+	result[$"{prefix}_attachable"] = PlayerHasAttachableMagnetCard(
+		MainPlayerIndex,
+		MagnetItemCardId);
+	result[$"{prefix}_selection"] = CurrentMandatorySelection.Kind.ToString();
 }
 
 public bool DebugBeginMagnetGenerationOwnershipAnimation()
@@ -572,16 +621,24 @@ public bool DebugConfigureLeafyBladeGenerationOwnershipProbe()
 		return false;
 	}
 
-	_tableCards.Clear();
+	DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
+	fixture.TableCards.Clear();
 	for (int index = 0; index < requiredTableCardCount; index++)
 	{
 		(string suit, string rank) = requiredCards[index];
-		_tableCards.Add(new TableCard(
+		fixture.TableCards.Add(new TableCard(
 			cards[$"{suit}:{rank}"],
 			isFaceUp: true));
 	}
-	_leafySeadragonBladeBreakCooldownTurns = 0;
-	_winnerPlayerIndex = -1;
+	fixture.CurrentTurnSeat = 1;
+	if (!CommitDebugRuleFixture(fixture))
+	{
+		return false;
+	}
+	TryUpdateMatchFlowState(state => state with
+	{
+		DestructiveEffectCooldownTurns = 0,
+	});
 	_debugLeafyBladeTargetTableCardIndex =
 		PickLeafySeadragonBladeBreakTargetIndex();
 	_debugLeafyBladeReplacementTableCard = null;
@@ -692,22 +749,21 @@ public bool DebugReplaceLeafyBladeTargetReference()
 	TableCard source = _tableCards[tableCardIndex];
 	_debugLeafyBladeReplacementHiddenSentinel =
 		source.IsHiddenDuringCapture;
-	_debugLeafyBladeReplacementTableCard = new TableCard(
+	_debugLeafyBladeReplacementTableCard = TableCard.Restore(
+		source.InstanceId,
 		source.Card,
 		source.IsFaceUp,
 		source.ItemOverlay,
 		source.ItemOwnerPlayerIndex,
 		source.CardOwnerPlayerIndex,
-		source.RemoveCardOnCapture)
-	{
-		IsBuriedInSand = source.IsBuriedInSand,
-		IsSlimeCoated = source.IsSlimeCoated,
-		IsHiddenDuringCapture =
-			_debugLeafyBladeReplacementHiddenSentinel,
-	};
-	_tableCards[tableCardIndex] =
-		_debugLeafyBladeReplacementTableCard;
-	return true;
+		source.RemoveCardOnCapture);
+	_debugLeafyBladeReplacementTableCard.IsBuriedInSand = source.IsBuriedInSand;
+	_debugLeafyBladeReplacementTableCard.IsSlimeCoated = source.IsSlimeCoated;
+	_debugLeafyBladeReplacementTableCard.IsHiddenDuringCapture =
+		_debugLeafyBladeReplacementHiddenSentinel;
+	return TryReplaceDebugTableCardPresentationReference(
+		tableCardIndex,
+		_debugLeafyBladeReplacementTableCard);
 }
 
 public bool DebugLeafyBladeReplacementIsIntact()
@@ -726,7 +782,7 @@ public bool DebugLeafyBladeReplacementIsIntact()
 
 public int DebugGetLeafyBladeBreakCooldownTurns()
 {
-	return _leafySeadragonBladeBreakCooldownTurns;
+	return CurrentMatchFlowState.DestructiveEffectCooldownTurns;
 }
 
 public bool DebugMarkLeafyBladeTargetForTraceHunt()
@@ -754,12 +810,12 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 		}
 		foreach (TableCard tableCard in _tableCards)
 		{
-			if (tableCard.Card.HasValue) return tableCard.Card.Value.Texture;
-			if (tableCard.ItemOverlay.HasValue) return tableCard.ItemOverlay.Value.Texture;
+			if (tableCard.Card.HasValue) return GetPlayingCardTexture(tableCard.Card.Value);
+			if (tableCard.ItemOverlay.HasValue) return GetItemCardTexture(tableCard.ItemOverlay.Value);
 		}
 		foreach (List<PlayingCard> hand in _playerHands)
 		{
-			if (hand.Count > 0) return hand[0].Texture;
+			if (hand.Count > 0) return GetPlayingCardTexture(hand[0]);
 		}
 		return null;
 	}
@@ -841,12 +897,14 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 		var originallyHidden = new TableCard(cards["Clubs:2"], true) { IsHiddenDuringCapture = true };
 		var fixedCard = new TableCard(cards["Diamonds:7"], false) { IsBuriedInSand = true, IsHiddenDuringCapture = false };
 		var ordinaryCard = new TableCard(cards["Hearts:5"], true) { IsHiddenDuringCapture = false };
-		_tableCards.Clear();
-		_tableCards.Add(originallyHidden);
-		_tableCards.Add(fixedCard);
-		_tableCards.Add(ordinaryCard);
-		_winnerPlayerIndex = -1;
-		_debugTableShuffleOriginalCards = new[] { originallyHidden, fixedCard, ordinaryCard };
+		DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
+		fixture.TableCards.Clear();
+		fixture.TableCards.Add(originallyHidden);
+		fixture.TableCards.Add(fixedCard);
+		fixture.TableCards.Add(ordinaryCard);
+		if (!CommitDebugRuleFixture(fixture)) return false;
+		_debugTableShuffleOriginalCards = new TableCard[_tableCards.Count];
+		_tableCards.CopyTo(_debugTableShuffleOriginalCards);
 		_debugTableShuffleOriginalHiddenStates = new[] { true, false, false };
 		_debugTableShuffleSentinelCards = Array.Empty<TableCard>();
 		_debugTableShuffleSentinelHiddenStates = Array.Empty<bool>();
@@ -896,14 +954,17 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 		}
 	}
 
-	private static TableCard CloneDebugTableShuffleCard(TableCard source) => new(
-		source.Card, source.IsFaceUp, source.ItemOverlay, source.ItemOwnerPlayerIndex,
-		source.CardOwnerPlayerIndex, source.RemoveCardOnCapture)
+	private static TableCard CloneDebugTableShuffleCard(TableCard source)
 	{
-		IsBuriedInSand = source.IsBuriedInSand,
-		IsSlimeCoated = source.IsSlimeCoated,
-		IsHiddenDuringCapture = source.IsHiddenDuringCapture,
-	};
+		TableCard clone = TableCard.Restore(
+			source.InstanceId, source.Card, source.IsFaceUp, source.ItemOverlay,
+			source.ItemOwnerPlayerIndex, source.CardOwnerPlayerIndex,
+			source.RemoveCardOnCapture);
+		clone.IsBuriedInSand = source.IsBuriedInSand;
+		clone.IsSlimeCoated = source.IsSlimeCoated;
+		clone.IsHiddenDuringCapture = source.IsHiddenDuringCapture;
+		return clone;
+	}
 
 	public double DebugGetTableShuffleOwnershipProbeElapsedSeconds() => _debugTableShuffleProbeStartedUsec == 0 ? 0.0 : (Time.GetTicksUsec() - _debugTableShuffleProbeStartedUsec) / 1_000_000.0;
 
@@ -920,9 +981,16 @@ public bool DebugMarkLeafyBladeTargetForTraceHunt()
 		_debugTableShuffleVortexInstanceId = vortex.GetInstanceId();
 		if (replaceAllReferences)
 		{
-			for (int index = 0; index < _tableCards.Count; index++) _tableCards[index] = CloneDebugTableShuffleCard(_tableCards[index]);
+			for (int index = 0; index < _tableCards.Count; index++)
+			{
+				if (!TryReplaceDebugTableCardPresentationReference(
+					index,
+					CloneDebugTableShuffleCard(_tableCards[index]))) return false;
+			}
 		}
-		else _tableCards[0] = CloneDebugTableShuffleCard(_tableCards[0]);
+		else if (!TryReplaceDebugTableCardPresentationReference(
+			0,
+			CloneDebugTableShuffleCard(_tableCards[0]))) return false;
 		_debugTableShuffleSentinelCards = new TableCard[_tableCards.Count];
 		_tableCards.CopyTo(_debugTableShuffleSentinelCards);
 		_debugTableShuffleSentinelHiddenStates = new bool[_tableCards.Count];

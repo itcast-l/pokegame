@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
-using System.Globalization;
+using Deckland.Rules;
 
 public partial class GameBoardScene
 {
@@ -72,48 +73,61 @@ public partial class GameBoardScene
 			error = "checkpoint_id_not_monotonic";
 			return false;
 		}
+		if (!TryCaptureAuthorityRuleSnapshot(out MatchStateSnapshot ruleSnapshot, out error))
+		{
+			return false;
+		}
 
 		EnsureNetworkCardCache();
-		NetworkSessionConfig config = networkManager.CurrentConfig;
-		var checkpoint = new NetworkAuthorityCheckpoint
+		long projectionAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		long projectionStartedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+		int projectedEntryCount = 0;
+		NetworkAuthorityCheckpoint checkpoint;
+		try
 		{
-			SessionId = config.SessionId,
-			MatchId = config.MatchId,
-			RoomName = config.RoomName,
-			RoomPasswordVerifierVersion = config.RoomPasswordVerifier.Version,
-			RoomPasswordVerifierIterations = config.RoomPasswordVerifier.Iterations,
-			RoomPasswordVerifierSalt = config.RoomPasswordVerifier.Salt,
-			RoomPasswordVerifier = config.RoomPasswordVerifier.Verifier,
-			MatchSeed = config.MatchSeed,
-			PlayerCount = player_count,
-			ItemMode = item_mode,
-			WinningScore = winning_score,
-			Transport = config.Transport,
-			ManifestHash = _itemCardCatalog.GameplayManifestHash,
-			Roster = networkManager.GetCheckpointRoster(),
-			SeatControls = networkManager.GetCheckpointSeatControls(),
-			LastAcceptedClientActionIds = new Dictionary<int, long>(lastAcceptedClientActionIds),
-			Decks = ExportCardLists(_playerDecks),
-			Hands = ExportCardLists(_playerHands),
-			ItemHands = ExportItemHands(),
-			TableCards = ExportTableCards(),
-			Scores = _playerScores.Take(player_count).ToArray(),
-			MatchOutcomeKind = _matchOutcomeKind,
-			WinnerPlayerIndex = _winnerPlayerIndex,
-			OpeningDealCompleted = true,
-			CurrentTurnPlayerIndex = _currentTurnPlayerIndex,
-			TurnSequenceGeneration = _turnSequenceGeneration,
-			CompletedTurnsSinceQuestionRefresh = _completedTurnsSinceQuestionCardRefresh,
-			QuestionRefreshAnchorPlayerIndex = _questionCardRefreshAnchorPlayerIndex,
-			LastAuthorityActionId = _nextNetworkAuthorityActionId,
-			AuthorityAction = _networkAuthorityActionState,
-			RngSeed = _matchSeed,
-			RngState = _rng.State.ToString(CultureInfo.InvariantCulture),
-			SnapshotId = _networkSnapshotId,
-			AuthorityEpoch = _networkAuthorityEpoch,
-			CheckpointId = candidateCheckpointId,
-			ReconnectClaims = networkManager.GetCheckpointReconnectClaims(),
-		};
+			NetworkSessionConfig config = networkManager.CurrentConfig;
+			checkpoint = NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(
+				new NetworkAuthorityCheckpoint
+				{
+					SessionId = config.SessionId,
+					MatchId = config.MatchId,
+					RoomName = config.RoomName,
+					RoomPasswordVerifierVersion = config.RoomPasswordVerifier.Version,
+					RoomPasswordVerifierIterations = config.RoomPasswordVerifier.Iterations,
+					RoomPasswordVerifierSalt = config.RoomPasswordVerifier.Salt,
+					RoomPasswordVerifier = config.RoomPasswordVerifier.Verifier,
+					MatchSeed = config.MatchSeed,
+					ItemMode = item_mode,
+					Transport = config.Transport,
+					ManifestHash = _itemCardCatalog.GameplayManifestHash,
+					Roster = networkManager.GetCheckpointRoster(),
+					SeatControls = networkManager.GetCheckpointSeatControls(),
+					LastAcceptedClientActionIds =
+						new Dictionary<int, long>(lastAcceptedClientActionIds),
+					OpeningDealCompleted = true,
+					LastAuthorityActionId = _nextNetworkAuthorityActionId,
+					AuthorityAction = _networkAuthorityActionState,
+					SnapshotId = _networkSnapshotId,
+					AuthorityEpoch = _networkAuthorityEpoch,
+					CheckpointId = candidateCheckpointId,
+					ReconnectClaims = networkManager.GetCheckpointReconnectClaims(),
+				},
+				ruleSnapshot,
+				recordTelemetry: false);
+			projectedEntryCount =
+				NetworkAuthorityCheckpointRuleAdapter.CountProjectedEntries(checkpoint);
+		}
+		finally
+		{
+			long projectionElapsedTicks =
+				System.Diagnostics.Stopwatch.GetTimestamp() - projectionStartedAt;
+			long projectionAllocatedBytes =
+				GC.GetAllocatedBytesForCurrentThread() - projectionAllocatedBefore;
+			AuthorityCheckpointTelemetry.RecordProjection(
+				projectedEntryCount,
+				projectionAllocatedBytes,
+				projectionElapsedTicks);
+		}
 
 		if (AuthorityCheckpointEnvelope.TryCreate(checkpoint, out envelope, out string encodeError))
 		{
@@ -152,6 +166,14 @@ public partial class GameBoardScene
 		_networkCheckpointId = envelope.CheckpointId;
 	}
 
+	internal void AdvanceNetworkCheckpointSequence(long checkpointId)
+	{
+		if (checkpointId > _networkCheckpointId)
+		{
+			_networkCheckpointId = checkpointId;
+		}
+	}
+
 	internal bool TryRestoreAuthorityCheckpoint(
 		ReadOnlySpan<byte> payload,
 		string expectedHash,
@@ -180,7 +202,7 @@ public partial class GameBoardScene
 
 		EnsureNetworkStateLists();
 		EnsureNetworkCardCache();
-		if (!TurnGenerationRules.TryGetNextAfterRestore(
+		if (!MatchReadModel.TryGetNextTurnGenerationAfterRestore(
 				_turnSequenceGeneration,
 				checkpoint.TurnSequenceGeneration,
 				out int restoredTurnGeneration))
@@ -198,6 +220,19 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (!TryBuildAuthorityRuleSnapshotFromCheckpoint(
+				checkpoint,
+				restoredTurnGeneration,
+				restoredDecks,
+				restoredHands,
+				restoredItemHands,
+				restoredTableCards,
+				out MatchStateSnapshot restoredRuleSnapshot,
+				out error)
+			|| !TryRestoreAuthorityRuleSnapshot(restoredRuleSnapshot, out error))
+		{
+			return false;
+		}
 
 		// A reconnecting client can still hold the previous host's pending-choice
 		// presentation while the authority checkpoint is being restored. Clear
@@ -212,44 +247,15 @@ public partial class GameBoardScene
 		_isResolvingTurnSequence = false;
 		_isOpeningDealAnimationPlaying = false;
 
-		// All validation and resource construction happens above. Only now mutate
-		// the live board, so a rejected checkpoint cannot leave a half-restored game.
+		// The rule session was replaced atomically above. Apply presentation and
+		// transport metadata only after every checkpoint field has been validated.
 		_networkAuthorityEpoch = checkpoint.AuthorityEpoch;
 		_networkCheckpointId = checkpoint.CheckpointId;
 		_networkSnapshotId = checkpoint.SnapshotId;
 		_networkLastAppliedSnapshotId = checkpoint.SnapshotId;
-		if (checkpoint.RngSeed != 0)
-		{
-			_rng.Seed = unchecked((ulong)checkpoint.RngSeed);
-			if (ulong.TryParse(checkpoint.RngState, NumberStyles.None, CultureInfo.InvariantCulture, out ulong rngState)
-				&& rngState != 0)
-			{
-				_rng.State = rngState;
-			}
-		}
-		_turnSequenceGeneration = restoredTurnGeneration;
-		_turnStateMachine.SyncGeneration(_turnSequenceGeneration);
-		_currentTurnPlayerIndex = checkpoint.CurrentTurnPlayerIndex;
-		_completedTurnsSinceQuestionCardRefresh = checkpoint.CompletedTurnsSinceQuestionRefresh;
-		_questionCardRefreshAnchorPlayerIndex = checkpoint.QuestionRefreshAnchorPlayerIndex;
-		_matchOutcomeKind = checkpoint.MatchOutcomeKind;
-		_winnerPlayerIndex = checkpoint.WinnerPlayerIndex;
 		AuthorityActionState restoredAuthorityAction = checkpoint.AuthorityAction.IsActive
 			? checkpoint.AuthorityAction with { TurnGeneration = _turnSequenceGeneration }
 			: checkpoint.AuthorityAction;
-		for (int seat = 0; seat < player_count; seat++)
-		{
-			_playerScores[seat] = checkpoint.Scores[seat];
-			_playerDecks[seat].Clear();
-			_playerDecks[seat].AddRange(restoredDecks[seat]);
-			_playerHands[seat].Clear();
-			_playerHands[seat].AddRange(restoredHands[seat]);
-			_playerItemHands[seat].Clear();
-			_playerItemHands[seat].AddRange(restoredItemHands[seat]);
-		}
-
-		_tableCards.Clear();
-		_tableCards.AddRange(restoredTableCards);
 		ShowAllOpeningHandCards();
 		ShowAllOpeningPileCards();
 		RestoreNetworkAuthorityActionState(
@@ -261,6 +267,104 @@ public partial class GameBoardScene
 		RenderPlayerHands();
 		RenderTableCards();
 		return true;
+	}
+
+	private bool TryBuildAuthorityRuleSnapshotFromCheckpoint(
+		NetworkAuthorityCheckpoint checkpoint,
+		int restoredTurnGeneration,
+		IReadOnlyList<List<PlayingCard>> restoredDecks,
+		IReadOnlyList<List<PlayingCard>> restoredHands,
+		IReadOnlyList<List<ItemCard>> restoredItemHands,
+		IReadOnlyList<TableCard> restoredTableCards,
+		out MatchStateSnapshot snapshot,
+		out string error)
+	{
+		snapshot = null!;
+		error = string.Empty;
+		RuleRandomState fallbackRandomState = _ruleRandomSource.CaptureState();
+
+		int lifecycleGeneration = 1;
+		if (_authorityRuleSession?.ReadModel.IsInitialized == true)
+		{
+			if (_authorityRuleSession.ReadModel.LifecycleGeneration == int.MaxValue)
+			{
+				error = "checkpoint lifecycle generation cannot advance";
+				return false;
+			}
+
+			lifecycleGeneration =
+				_authorityRuleSession.ReadModel.LifecycleGeneration + 1;
+		}
+		else if (checkpoint.AuthorityEpoch > 0)
+		{
+			lifecycleGeneration = checkpoint.AuthorityEpoch >= int.MaxValue
+				? int.MaxValue
+				: checked((int)checkpoint.AuthorityEpoch + 1);
+		}
+
+		long nextRuntimeInstanceId = 1;
+		var players = ImmutableArray.CreateBuilder<PlayerStateSnapshot>(checkpoint.PlayerCount);
+		for (int seat = 0; seat < checkpoint.PlayerCount; seat++)
+		{
+			players.Add(new PlayerStateSnapshot(
+				seat,
+				ToRuleCards(restoredDecks[seat], ref nextRuntimeInstanceId),
+				ToRuleCards(restoredHands[seat], ref nextRuntimeInstanceId),
+				restoredItemHands[seat]
+					.Select(item => new LogicalItemState(item.Id))
+					.ToImmutableArray(),
+				checkpoint.Scores[seat]));
+		}
+
+		var tableCards = ImmutableArray.CreateBuilder<TableCardState>(restoredTableCards.Count);
+		foreach (TableCard tableCard in restoredTableCards)
+		{
+			LogicalCardState? logicalCard = tableCard.Card.HasValue
+				? ToRuleCardState(tableCard.Card.Value) with
+				{
+					RuntimeInstanceId = nextRuntimeInstanceId++,
+				}
+				: null;
+			tableCards.Add(new TableCardState(
+				nextRuntimeInstanceId++,
+				logicalCard,
+				tableCard.IsFaceUp,
+				IsHiddenDuringCapture: false,
+				tableCard.IsBuriedInSand,
+				tableCard.IsSlimeCoated,
+				tableCard.ItemOverlay.HasValue
+					? new LogicalItemState(tableCard.ItemOverlay.Value.Id)
+					: null,
+				tableCard.ItemOwnerPlayerIndex,
+				tableCard.CardOwnerPlayerIndex,
+				tableCard.RemoveCardOnCapture));
+		}
+
+		return NetworkAuthorityCheckpointRuleAdapter.TryCreateRuleSnapshot(
+			checkpoint,
+			lifecycleGeneration,
+			restoredTurnGeneration,
+			players.MoveToImmutable(),
+			tableCards.MoveToImmutable(),
+			fallbackRandomState,
+			BuildPendingAttachmentRewardsFromAuthorityAction(checkpoint.AuthorityAction),
+			out snapshot,
+			out error);
+	}
+
+	private static ImmutableArray<LogicalCardState> ToRuleCards(
+		IReadOnlyList<PlayingCard> cards,
+		ref long nextRuntimeInstanceId)
+	{
+		var result = ImmutableArray.CreateBuilder<LogicalCardState>(cards.Count);
+		foreach (PlayingCard card in cards)
+		{
+			result.Add(ToRuleCardState(card) with
+			{
+				RuntimeInstanceId = nextRuntimeInstanceId++,
+			});
+		}
+		return result.MoveToImmutable();
 	}
 
 	private bool MatchesCheckpointConfig(NetworkSessionConfig activeConfig, NetworkAuthorityCheckpoint checkpoint)
@@ -336,9 +440,9 @@ public partial class GameBoardScene
 		foreach (NetworkCheckpointTableCard tableCard in checkpoint.TableCards)
 		{
 			PlayingCard? card = null;
-			if (tableCard.Card != null)
+			if (tableCard.Card is { } checkpointCard)
 			{
-				if (!TryBuildRestoredCard(tableCard.Card, out PlayingCard restoredCard, out error))
+				if (!TryBuildRestoredCard(checkpointCard, out PlayingCard restoredCard, out error))
 				{
 					return false;
 				}
@@ -400,12 +504,13 @@ public partial class GameBoardScene
 	{
 		card = default;
 		error = string.Empty;
-		if (source == null
+		if (string.IsNullOrEmpty(source.Code)
+			|| source.AttachedItemCardIds.IsDefault
 			|| !_networkCardsByCode.ContainsKey(source.Code)
 			|| source.AttachedItemCardIds.Length > 1
 			|| source.AttachedItemCardIds.Any(itemId => !IsValidNetworkAttachmentItemCardId(itemId)))
 		{
-			error = $"checkpoint card cannot be rebuilt: {source?.Code}";
+			error = $"checkpoint card cannot be rebuilt: {source.Code}";
 			return false;
 		}
 
@@ -447,50 +552,9 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private List<List<NetworkCheckpointCard>> ExportCardLists(List<List<PlayingCard>> source)
+	private static MatchOutcomeKind ToNetworkMatchOutcome(Deckland.Rules.MatchOutcome outcome)
 	{
-		var result = new List<List<NetworkCheckpointCard>>(player_count);
-		for (int seat = 0; seat < player_count; seat++)
-		{
-			result.Add(source[seat].Select(ToCheckpointCard).ToList());
-		}
-
-		return result;
-	}
-
-	private List<List<string>> ExportItemHands()
-	{
-		var result = new List<List<string>>(player_count);
-		for (int seat = 0; seat < player_count; seat++)
-		{
-			result.Add(_playerItemHands[seat].Select(item => item.Id).ToList());
-		}
-
-		return result;
-	}
-
-	private NetworkCheckpointCard ToCheckpointCard(PlayingCard card)
-	{
-		return new NetworkCheckpointCard
-		{
-			Code = ToNetworkCardCode(card),
-			AttachedItemCardIds = card.GetAttachedItemCardIds().ToArray(),
-		};
-	}
-
-	private List<NetworkCheckpointTableCard> ExportTableCards()
-	{
-		return _tableCards.Select(tableCard => new NetworkCheckpointTableCard
-		{
-			Card = tableCard.Card.HasValue ? ToCheckpointCard(tableCard.Card.Value) : null,
-			IsFaceUp = tableCard.IsFaceUp,
-			IsBuriedInSand = tableCard.IsBuriedInSand,
-			IsSlimeCoated = tableCard.IsSlimeCoated,
-			CardOwnerPlayerIndex = tableCard.CardOwnerPlayerIndex,
-			RemoveCardOnCapture = tableCard.RemoveCardOnCapture,
-			ItemOverlayId = tableCard.ItemOverlay?.Id ?? string.Empty,
-			ItemOwnerPlayerIndex = tableCard.ItemOwnerPlayerIndex,
-		}).ToList();
+		return NetworkAuthorityCheckpointRuleAdapter.ToNetworkMatchOutcome(outcome);
 	}
 
 }

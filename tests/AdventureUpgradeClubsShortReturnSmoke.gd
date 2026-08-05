@@ -37,10 +37,10 @@ func _run() -> void:
 		or not board.has_method("DebugSelectAdventureUpgradeOption") \
 		or not board.has_method("DebugAcquireAdventureUpgrade") \
 		or not board.has_method("DebugConfigureAdventurePairCaptureReturnScenario") \
-		or not board.has_method("DebugPlayFirstAvailableLocalMainPlayerHandCard") \
-		or not board.has_method("DebugGetTotalHandCardCountForPlayer") \
-		or not board.has_method("DebugGetHandCardCode") \
-		or not board.has_method("DebugGetGameLoopPhaseName"):
+			or not board.has_method("DebugPlayFirstAvailableLocalMainPlayerHandCard") \
+			or not board.has_method("DebugGetTotalHandCardCountForPlayer") \
+			or not board.has_method("DebugGetHandCardCode") \
+			or not board.has_method("DebugGetGameLoopPhaseName"):
 		_fail("Missing clubs short return debug hooks")
 		return
 
@@ -96,7 +96,7 @@ func _wait_for_actionable_state(board: Node) -> bool:
 		if String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
 			return true
 
-	_fail("Timed out waiting for actionable state")
+	_fail("Timed out waiting for actionable state (phase=%s)" % String(board.call("DebugGetGameLoopPhaseName")))
 	return false
 
 

@@ -72,14 +72,14 @@ public partial class GameBoardScene
 		if (tableCard.Card.HasValue)
 		{
 			startTexture = tableCard.IsFaceUp || _cardBackTexture == null
-				? tableCard.Card.Value.Texture
+				? GetPlayingCardTexture(tableCard.Card.Value)
 				: _cardBackTexture;
 		}
 		else if (tableCard.ItemOverlay.HasValue)
 		{
 			startTexture = !tableCard.IsFaceUp && _cardBackTexture != null
 				? _cardBackTexture
-				: tableCard.ItemOverlay.Value.Texture;
+				: GetItemCardTexture(tableCard.ItemOverlay.Value);
 		}
 
 		if (startTexture == null)
@@ -96,7 +96,7 @@ public partial class GameBoardScene
 			&& tableCard.ItemOverlay.HasValue
 			&& (includeQuestionCard || !isQuestionCard))
 		{
-			itemOverlayTexture = tableCard.ItemOverlay.Value.Texture;
+			itemOverlayTexture = GetItemCardTexture(tableCard.ItemOverlay.Value);
 		}
 		else if (tableCard.Card.HasValue && tableCard.IsFaceUp)
 		{

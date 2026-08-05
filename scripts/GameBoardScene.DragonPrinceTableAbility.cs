@@ -22,7 +22,10 @@ public partial class GameBoardScene
 		return new PlayCardResult(false, false);
 	}
 
-	_dragonPrinceJackUsed = true;
+	TryUpdateMatchFlowState(state => state with
+	{
+		OneShotCardReplacementUsed = true,
+	});
 	await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(
 		playerIndex,
 		turnSequenceGeneration,
@@ -139,9 +142,23 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		PlayingCard specialJack = new(string.Empty, _dragonPrinceSpecialJackRank, _dragonPrinceSpecialJackTexture);
-		_tableCards.Add(new TableCard(specialJack, true, cardOwnerPlayerIndex: playerIndex, removeCardOnCapture: true));
-		int tableCardIndex = _tableCards.Count - 1;
+			PlayingCard specialJack = CreatePlayingCardWithTexture(
+				string.Empty,
+				_dragonPrinceSpecialJackRank,
+				_dragonPrinceSpecialJackTexture);
+		int tableCardIndex = _tableCards.Count;
+		if (!TrySubmitPlaceTableCardRuleCommand(
+			playerIndex,
+			specialJack,
+			tableCardIndex,
+			isFaceUp: true,
+			cardOwnerPlayerIndex: playerIndex,
+			removeOnCapture: true,
+			turnSequenceGeneration,
+			out _))
+		{
+			return -1;
+		}
 		await PlayCardToTableAnimationAsync(
 			playerIndex,
 			specialJack,
@@ -241,8 +258,7 @@ public partial class GameBoardScene
 		CreateSyntheticCaptureActionContext(
 			"dragon_prince_jack_collect");
 	CaptureStatePlan dragonCaptureStatePlan =
-		_captureStateService.CreatePlan(
-			_state,
+		CreateAuthorityCapturePlan(
 			captureStartIndex,
 			null);
 	AdventureClubCaptureExtensionPlan dragonClubCaptureExtension =
@@ -325,11 +341,15 @@ public partial class GameBoardScene
 				flightStartOverrides:
 					specialJackFloat);
 		if (capturedCardVisuals.Count > 0)
-		{
-			specialJackFloat?.QueueFreeOverlays(
-				_animationPresenter);
-			specialJackFloatHandedToDeck =
-				specialJackFloat != null;
+			{
+				if (specialJackFloat != null)
+				{
+					specialJackFloat.RestorePresentationHiddenTableCards(
+						_presentationHiddenTableCardRuntimeInstanceIds);
+					specialJackFloat.QueueFreeOverlays(_animationPresenter);
+				}
+				specialJackFloatHandedToDeck =
+					specialJackFloat != null;
 			await PlayCapturedCardsToDeckAnimationAsync(
 				playerIndex,
 				captureStartIndex,
@@ -361,11 +381,14 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		if (!IsGameOver())
-		{
-			Shuffle(_playerDecks[playerIndex]);
-			Cut(_playerDecks[playerIndex]);
-		}
+			if (!IsGameOver())
+			{
+				TrySubmitShuffleDeckRuleCommand(
+					playerIndex,
+					playerIndex,
+					cutAfterShuffle: true,
+					turnSequenceGeneration);
+			}
 
 		return new PlayCardResult(
 			true,
@@ -391,10 +414,12 @@ public partial class GameBoardScene
 				RestorePairCaptureEdgeFloatHold(
 					specialJackFloat);
 			}
-			else
-			{
-				specialJackFloat.QueueFreeOverlays(
-					_animationPresenter);
+				else
+				{
+					specialJackFloat.RestorePresentationHiddenTableCards(
+						_presentationHiddenTableCardRuntimeInstanceIds);
+					specialJackFloat.QueueFreeOverlays(
+						_animationPresenter);
 			}
 		}
 	}
@@ -424,25 +449,54 @@ public partial class GameBoardScene
 			CanvasItem.TextureFilterEnum.Nearest,
 			zAsRelative: false);
 		overlay.GlobalPosition = _centerArena.GlobalPosition + cardPosition;
-		_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
-		RenderTableCards();
+		TableCard tableCard = _tableCards[tableCardIndex];
+		bool presentationHideAdded = false;
+		bool holdReturned = false;
+		try
+		{
+			presentationHideAdded =
+				_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId);
+			RenderTableCards();
 
-		Tween tween = CreateBoardTween();
-		tween.SetParallel(true);
-		tween.SetTrans(Tween.TransitionType.Sine);
-		tween.SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(
-			overlay,
-			"global_position",
-			overlay.GlobalPosition + new Vector2(0.0f, -DragonPrinceSpecialJackFloatRise),
-			DragonPrinceSpecialJackFloatSeconds);
-		tween.TweenProperty(
-			overlay,
-			"scale",
-			Vector2.One * DragonPrinceSpecialJackFloatScale,
-			DragonPrinceSpecialJackFloatSeconds);
-		await WaitForBoardTweenAsync(tween);
-		return new PairCaptureEdgeFloatHold(tableCardIndex, overlay);
+			Tween tween = CreateBoardTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
+			tween.TweenProperty(
+				overlay,
+				"global_position",
+				overlay.GlobalPosition + new Vector2(0.0f, -DragonPrinceSpecialJackFloatRise),
+				DragonPrinceSpecialJackFloatSeconds);
+			tween.TweenProperty(
+				overlay,
+				"scale",
+				Vector2.One * DragonPrinceSpecialJackFloatScale,
+				DragonPrinceSpecialJackFloatSeconds);
+			await WaitForBoardTweenAsync(tween);
+			holdReturned = true;
+			return new PairCaptureEdgeFloatHold(
+				tableCardIndex,
+				tableCard.InstanceId,
+				overlay);
+		}
+		finally
+		{
+			if (!holdReturned)
+			{
+				if (presentationHideAdded)
+				{
+					_presentationHiddenTableCardRuntimeInstanceIds.Remove(tableCard.InstanceId);
+				}
+				if (GodotObject.IsInstanceValid(overlay))
+				{
+					_animationPresenter.Release(overlay);
+				}
+				if (IsInsideTree())
+				{
+					RenderTableCards();
+				}
+			}
+		}
 	}
 
 	private bool ShouldResolveDragonPrinceJack(int playerIndex)
@@ -450,7 +504,7 @@ public partial class GameBoardScene
 		return adventure_mode
 			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.DragonPrince)
 			&& playerIndex == 1
-			&& !_dragonPrinceJackUsed
+			&& !CurrentMatchFlowState.OneShotCardReplacementUsed
 			&& _tableCards.Count >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
 			&& (!IsBossKEnemy(playerIndex) || ShouldResolveBossKDragonPrinceJack(playerIndex));
 	}
@@ -458,7 +512,7 @@ public partial class GameBoardScene
 	private bool ShouldResolveBossKDragonPrinceJack(int playerIndex)
 	{
 		return BossKCanUseActiveControl(playerIndex)
-			&& GetBestPotentialNormalCaptureCount(playerIndex, _tableCards) < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5);
+			&& GetBestPotentialNormalCaptureCount(playerIndex) < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5);
 	}
 
 }

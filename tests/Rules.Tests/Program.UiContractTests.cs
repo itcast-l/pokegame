@@ -358,9 +358,9 @@ internal static partial class Program
 		var state = new GameBoardState();
 		state.PlayerDecks.Add(new List<PlayingCard>());
 		state.PlayerDecks.Add(new List<PlayingCard>());
-		PlayingCard left = new("hearts", "2", new Godot.Texture2D());
-		PlayingCard redirected = new("spades", "10", new Godot.Texture2D());
-		PlayingCard right = new("clubs", "3", new Godot.Texture2D());
+			PlayingCard left = new("hearts", "2");
+			PlayingCard redirected = new("spades", "10");
+			PlayingCard right = new("clubs", "3");
 		state.TableCards.Add(new TableCard(left, isFaceUp: true));
 		state.TableCards.Add(new TableCard(redirected, isFaceUp: true));
 		state.TableCards.Add(new TableCard(right, isFaceUp: true));
@@ -413,8 +413,8 @@ internal static partial class Program
 
 		string method = source[methodStart..methodEnd];
 		int captureApplyIndex = method.IndexOf("CaptureTableCardsResult captureResult = await CaptureTableCardsAsync", StringComparison.Ordinal);
-		int shuffleIndex = method.IndexOf("Shuffle(_playerDecks[playerIndex]);", captureApplyIndex, StringComparison.Ordinal);
-		int cutIndex = method.IndexOf("Cut(_playerDecks[playerIndex]);", shuffleIndex, StringComparison.Ordinal);
+		int shuffleIndex = method.IndexOf("TrySubmitShuffleDeckRuleCommand(", captureApplyIndex, StringComparison.Ordinal);
+		int cutIndex = method.IndexOf("cutAfterShuffle: true", shuffleIndex, StringComparison.Ordinal);
 		int shuffleAnimationIndex = method.IndexOf("await PlayPhysicalDeckShuffleAsync(playerIndex);", cutIndex, StringComparison.Ordinal);
 		int drawReplacementIndex = method.IndexOf("DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);", cutIndex, StringComparison.Ordinal);
 		int drawAnimationIndex = method.IndexOf("await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);", drawReplacementIndex, StringComparison.Ordinal);
@@ -442,7 +442,7 @@ internal static partial class Program
 			TableCard("A", 3),
 			TableCard("Q", 4),
 		};
-		var card = new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false);
+		var card = new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false);
 
 		int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
 		int points = PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, DefaultScoringContext);
@@ -460,7 +460,7 @@ internal static partial class Program
 			TableCard("6", 5, suit: "spades"),
 			TableCard("8", 6, suit: "hearts"),
 		};
-		var card = new PotentialCaptureRules.Card("8", CollectsTable: false, HasDoubleEffect: false, Suit: "hearts", CollectBySuit: true);
+		var card = new PotentialCaptureCard("8", CollectsTable: false, HasDoubleEffect: false, Suit: "hearts", CollectBySuit: true);
 
 		int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
 		int points = PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, DefaultScoringContext);
@@ -477,7 +477,7 @@ internal static partial class Program
 			TableCard("7", 4),
 			TableCard("9", 6),
 		};
-		var card = new PotentialCaptureRules.Card(
+		var card = new PotentialCaptureCard(
 			"6",
 			CollectsTable: false,
 			HasDoubleEffect: false,
@@ -504,8 +504,8 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: false),
 		};
 
 		bool picked = PotentialCaptureRules.TryPickBestCaptureCardIndex(
@@ -525,7 +525,7 @@ internal static partial class Program
 		{
 			TableCard("A", 1),
 		};
-		var card = new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false);
+		var card = new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false);
 
 		True(PotentialCaptureRules.IsPairOnlyCapture(tableCards, card));
 	}
@@ -1330,6 +1330,144 @@ internal static partial class Program
 		True(runnerText.Contains("RenderTableCards", StringComparison.Ordinal));
 		True(runnerText.Contains("IDLE_WINDOW_BEGIN", StringComparison.Ordinal));
 		True(runnerText.Contains("IDLE_WINDOW_END", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardFrameSchedulerReleasesInactiveControllers()
+	{
+		using var scheduler = new GameBoardFrameScheduler();
+		int persistentTicks = 0;
+		int oneShotTicks = 0;
+		using IDisposable persistent = scheduler.Register(_ => persistentTicks++);
+		IDisposable? oneShot = null;
+		oneShot = scheduler.Register(_ =>
+		{
+			oneShotTicks++;
+			oneShot!.Dispose();
+		});
+
+		True(scheduler.HasActiveRegistrations);
+		scheduler.Tick(1.0 / 60.0);
+		Equal(1, persistentTicks);
+		Equal(1, oneShotTicks);
+		scheduler.Tick(1.0 / 60.0);
+		Equal(2, persistentTicks);
+		Equal(1, oneShotTicks);
+
+		persistent.Dispose();
+		False(scheduler.HasActiveRegistrations);
+	}
+
+	private static void GameBoardLifecycleCoordinatorOrdersStartupAndShutdown()
+	{
+		var coordinator = new GameBoardLifecycleCoordinator();
+		var calls = new List<string>();
+		coordinator.Start(
+			() => calls.Add("create_rules"),
+			() => calls.Add("bind_nodes"),
+			() => calls.Add("create_controllers"),
+			() => calls.Add("register_endpoint"),
+			() => calls.Add("start_match"));
+		coordinator.Stop(
+			() => calls.Add("stop_input_and_network"),
+			() => calls.Add("unregister_endpoint"),
+			() => calls.Add("cancel_async"),
+			() => calls.Add("release_controllers"),
+			() => calls.Add("clear_presentation"));
+		coordinator.Stop(
+			() => calls.Add("unexpected"),
+			() => calls.Add("unexpected"),
+			() => calls.Add("unexpected"),
+			() => calls.Add("unexpected"),
+			() => calls.Add("unexpected"));
+
+		Equal(
+			string.Join(',', new[]
+			{
+				"create_rules",
+				"bind_nodes",
+				"create_controllers",
+				"register_endpoint",
+				"start_match",
+				"stop_input_and_network",
+				"unregister_endpoint",
+				"cancel_async",
+				"release_controllers",
+				"clear_presentation",
+			}),
+			string.Join(',', calls));
+
+		string root = FindRepositoryRoot();
+		string boardSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.cs"));
+		True(boardSource.Contains("_lifecycleCoordinator.Start(", StringComparison.Ordinal));
+		True(boardSource.Contains("_lifecycleCoordinator.Stop(", StringComparison.Ordinal));
+	}
+
+	private static void GameBoardHotPathsUseCachedNodeBindings()
+	{
+		string root = FindRepositoryRoot();
+		string boardSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.cs"));
+		string countdownSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"GameBoardScene.MagnetAttachmentCountdown.cs"));
+		string upgradeSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"GameBoardScene.AdventureUpgradeSelectionOverlay.cs"));
+		string bindingsSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardNodeBindings.cs"));
+		string layoutSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.Layout.cs"));
+		string renderSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.Render.cs"));
+		string avatarSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.Avatars.cs"));
+		string resultSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.Results.cs"));
+		string architectureRunner = File.ReadAllText(Path.Combine(
+			root,
+			"tests",
+			"run_runtime_architecture_smoke_case.sh"));
+
+		True(boardSource.Contains("_frameScheduler.Tick(delta);", StringComparison.Ordinal));
+		True(boardSource.Contains("_frameScheduler.HasActiveRegistrations", StringComparison.Ordinal));
+		False(boardSource.Contains("UpdateMandatoryActionCountdown(delta);", StringComparison.Ordinal));
+		False(boardSource.Contains("UpdateAdventureUpgradeOverlayCardMotion(delta);", StringComparison.Ordinal));
+		True(countdownSource.Contains(
+			"_frameScheduler.Register(UpdateMandatoryActionCountdown)",
+			StringComparison.Ordinal));
+		True(countdownSource.Contains(
+			"_mandatoryActionCountdownFrameRegistration?.Dispose();",
+			StringComparison.Ordinal));
+		True(upgradeSource.Contains(
+			"_frameScheduler.Register(UpdateAdventureUpgradeOverlayCardMotion)",
+			StringComparison.Ordinal));
+		True(upgradeSource.Contains(
+			"_adventureUpgradeOverlayFrameRegistration?.Dispose();",
+			StringComparison.Ordinal));
+
+		foreach (string requiredBinding in new[]
+		{
+			"PlayerAreas",
+			"AvatarAreas",
+			"ScoreMeters",
+			"ScoreEffectTargets",
+			"HandAreas",
+			"CardPileAreas",
+			"QuestionCardTransformArea",
+		})
+		{
+			True(bindingsSource.Contains(requiredBinding, StringComparison.Ordinal));
+		}
+
+		foreach (string hotPathSource in new[] { layoutSource, renderSource })
+		{
+			False(hotPathSource.Contains("GetNode", StringComparison.Ordinal));
+			False(hotPathSource.Contains("FindChild", StringComparison.Ordinal));
+		}
+		True(renderSource.Contains(
+			"PlayerCardPileVisualBinding",
+			StringComparison.Ordinal));
+		True(boardSource.Contains("LoadCachedCoreScene", StringComparison.Ordinal));
+		True(avatarSource.Contains("ref _cachedCharacterAvatarScene", StringComparison.Ordinal));
+		True(resultSource.Contains("ref _cachedResultBannerScene", StringComparison.Ordinal));
+		True(resultSource.Contains("ref _cachedDefeatFinisherOverlayScene", StringComparison.Ordinal));
+		True(architectureRunner.Contains("^ERROR:", StringComparison.Ordinal));
 	}
 
 	private static void ResourceExportAuditScriptChecksTrackedAssetsAndExportConfig()

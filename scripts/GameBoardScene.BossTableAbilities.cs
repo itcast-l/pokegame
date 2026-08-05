@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -19,30 +21,50 @@ public partial class GameBoardScene
 			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.DragonQueen)
 			&& removedTableCardCount >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.DragonQueenCaptureThreshold, 1))
 		{
-			_dragonQueenCaptureCountUntilSteal++;
-			if (_dragonQueenCaptureCountUntilSteal < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSteal, 3))
+			int nextStealProgress = CurrentMatchFlowState.StealThresholdProgress == int.MaxValue
+				? int.MaxValue
+				: CurrentMatchFlowState.StealThresholdProgress + 1;
+			bool triggerSteal = nextStealProgress >= GetAdventureEnemyAbilityValue(
+				AdventureEnemyAbilityValueKeys.CapturesBeforeSteal,
+				3);
+			TryUpdateMatchFlowState(state => state with
+			{
+				StealThresholdProgress = triggerSteal ? 0 : nextStealProgress,
+			});
+			if (!triggerSteal)
 			{
 				return;
 			}
-
-			_dragonQueenCaptureCountUntilSteal = 0;
 			await StealRandomMainPlayerHandCardForEnemyAsync(playerIndex, turnSequenceGeneration);
 		}
 		else if (IsBossKEnemy(playerIndex) && removedTableCardCount > 0)
 		{
-			if (_bossKStealTriggersThisMatch >= MaxBossKStealTriggersPerMatch)
+			if (CurrentMatchFlowState.LimitedStealActivationsThisMatch >= MaxBossKStealTriggersPerMatch)
 			{
 				return;
 			}
 
-			_bossKCaptureCountUntilSteal++;
-			if (_bossKCaptureCountUntilSteal < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSteal, 3))
+			int nextLimitedStealProgress = CurrentMatchFlowState.LimitedStealThresholdProgress == int.MaxValue
+				? int.MaxValue
+				: CurrentMatchFlowState.LimitedStealThresholdProgress + 1;
+			bool triggerLimitedSteal = nextLimitedStealProgress >= GetAdventureEnemyAbilityValue(
+				AdventureEnemyAbilityValueKeys.CapturesBeforeSteal,
+				3);
+			TryUpdateMatchFlowState(state => state with
+			{
+				LimitedStealThresholdProgress = triggerLimitedSteal
+					? 0
+					: nextLimitedStealProgress,
+				LimitedStealActivationsThisMatch = triggerLimitedSteal
+					? state.LimitedStealActivationsThisMatch == int.MaxValue
+						? int.MaxValue
+						: state.LimitedStealActivationsThisMatch + 1
+					: state.LimitedStealActivationsThisMatch,
+			});
+			if (!triggerLimitedSteal)
 			{
 				return;
 			}
-
-			_bossKCaptureCountUntilSteal = 0;
-			_bossKStealTriggersThisMatch++;
 			await ApplyBossKRandomStealAfterCaptureAsync(playerIndex, turnSequenceGeneration);
 		}
 	}
@@ -56,8 +78,22 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if ((canStealDeck && canStealHand && _rng.RandiRange(0, 1) == 0)
-			|| (canStealDeck && !canStealHand))
+		bool chooseDeck = canStealDeck && !canStealHand;
+		if (canStealDeck && canStealHand)
+		{
+			if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				minimumInclusive: 0,
+				maximumInclusive: 1,
+				turnSequenceGeneration,
+				out int stealChoice))
+			{
+				return;
+			}
+			chooseDeck = stealChoice == 0;
+		}
+
+		if (chooseDeck)
 		{
 			await StealMainPlayerTopDeckCardForEnemyAsync(playerIndex, turnSequenceGeneration);
 			return;
@@ -101,7 +137,15 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int targetHandIndex = _rng.RandiRange(0, targetHandCount - 1);
+		if (!TrySubmitChooseRandomHandDisplayIndexRuleCommand(
+			enemyPlayerIndex,
+			MainPlayerIndex,
+			ImmutableArray<int>.Empty,
+			turnSequenceGeneration,
+			out int targetHandIndex))
+		{
+			return;
+		}
 		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(enemyPlayerIndex, turnSequenceGeneration, AdventureEnemyAbilities.DragonQueen);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
@@ -148,8 +192,16 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard stolenCard = _playerDecks[MainPlayerIndex][0];
-		_playerDecks[MainPlayerIndex].RemoveAt(0);
-		AddCardToPlayerDeck(enemyPlayerIndex, stolenCard);
+		if (!TrySubmitTransferTopDeckCardRuleCommand(
+			enemyPlayerIndex,
+			MainPlayerIndex,
+			stolenCard.InstanceId,
+			ShouldPreserveCardEffectsWhenEnteringDeck(),
+			turnSequenceGeneration,
+			out _))
+		{
+			return;
+		}
 		PlayPlayerAvatarAction(MainPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 		RenderPlayerCardPiles();
 	}
@@ -194,28 +246,51 @@ public partial class GameBoardScene
 			return;
 		}
 
-		targetTableCard.IsHiddenDuringCapture = true;
-		RenderTableCards();
-		if (!TryGetTableCardPosition(targetTableCardIndex, out Vector2 targetCardPosition))
+		bool presentationHideAdded =
+			_presentationHiddenTableCardRuntimeInstanceIds.Add(targetTableCard.InstanceId);
+		int damagePoints;
+		try
 		{
-			return;
-		}
+			RenderTableCards();
+			if (!TryGetTableCardPosition(targetTableCardIndex, out Vector2 targetCardPosition))
+			{
+				return;
+			}
 
-		await PlayBombPairDestroyCardAsync(targetTableCardIndex, targetCardPosition);
-		if (!IsLeafySeadragonBladeBreakTargetCurrent(
-			turnSequenceGeneration,
-			targetTableCardIndex,
-			targetTableCard))
+			await PlayBombPairDestroyCardAsync(targetTableCardIndex, targetCardPosition);
+			if (!IsLeafySeadragonBladeBreakTargetCurrent(
+				turnSequenceGeneration,
+				targetTableCardIndex,
+				targetTableCard))
+			{
+				return;
+			}
+
+			damagePoints = MoveLeafySeadragonBladeBreakTableCardToDeck(
+				playerIndex,
+				targetTableCardIndex,
+				turnSequenceGeneration);
+			int cooldownTurns = GetAdventureEnemyAbilityValue(
+				AdventureEnemyAbilityValueKeys.BladeBreakCooldownTurns,
+				1);
+			TryUpdateMatchFlowState(state => state with
+			{
+				DestructiveEffectCooldownTurns = cooldownTurns,
+			});
+			MarkBossKActiveControlUsedIfNeeded(playerIndex);
+			RenderTableCards();
+		}
+		finally
 		{
-			return;
+			if (presentationHideAdded)
+			{
+				_presentationHiddenTableCardRuntimeInstanceIds.Remove(targetTableCard.InstanceId);
+				if (IsInsideTree())
+				{
+					RenderTableCards();
+				}
+			}
 		}
-
-		int damagePoints = MoveLeafySeadragonBladeBreakTableCardToDeck(
-			playerIndex,
-			targetTableCardIndex);
-		_leafySeadragonBladeBreakCooldownTurns = GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakCooldownTurns, 1);
-		MarkBossKActiveControlUsedIfNeeded(playerIndex);
-		RenderTableCards();
 
 		if (damagePoints <= 0)
 		{
@@ -256,15 +331,24 @@ public partial class GameBoardScene
 
 	private int MoveLeafySeadragonBladeBreakTableCardToDeck(
 		int playerIndex,
-		int tableCardIndex)
+		int tableCardIndex,
+		int turnSequenceGeneration)
 	{
 		TableCard destroyedTableCard = _tableCards[tableCardIndex];
 		PlayingCard destroyedCard = destroyedTableCard.Card!.Value;
 		int damagePoints = Mathf.CeilToInt(GetCardScoreValue(destroyedCard) / 2.0f);
+		if (!TrySubmitMoveTableCardToDeckRuleCommand(
+			playerIndex,
+			tableCardIndex,
+			destroyedTableCard.InstanceId,
+			playerIndex,
+			ShouldPreserveCardEffectsWhenEnteringDeck(),
+			turnSequenceGeneration,
+			out _))
+		{
+			return 0;
+		}
 		ClearAdventureTraceHuntMarkerIfTableCardRemoved(destroyedTableCard);
-		_tableCards.RemoveAt(tableCardIndex);
-		RefreshGardenEelBuriedCardIndex();
-		AddCardToPlayerDeck(playerIndex, destroyedCard);
 		RenderPlayerCardPiles();
 		return damagePoints;
 	}
@@ -275,7 +359,7 @@ public partial class GameBoardScene
 			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.LeafyMirage)
 			&& playerIndex == 1
 			&& !result.Captured
-			&& _leafySeadragonBladeBreakCooldownTurns <= 0
+			&& CurrentMatchFlowState.DestructiveEffectCooldownTurns <= 0
 			&& _tableCards.Count >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.BladeBreakTableCardThreshold, 5)
 			&& PickLeafySeadragonBladeBreakTargetIndex() >= 0
 			&& (!IsBossKEnemy(playerIndex) || BossKCanUseActiveControl(playerIndex));
@@ -286,12 +370,15 @@ public partial class GameBoardScene
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.LeafyMirage)
 			|| playerIndex != 1
-			|| _leafySeadragonBladeBreakCooldownTurns <= 0)
+			|| CurrentMatchFlowState.DestructiveEffectCooldownTurns <= 0)
 		{
 			return;
 		}
 
-		_leafySeadragonBladeBreakCooldownTurns--;
+		TryUpdateMatchFlowState(state => state with
+		{
+			DestructiveEffectCooldownTurns = state.DestructiveEffectCooldownTurns - 1,
+		});
 	}
 
 	private int PickLeafySeadragonBladeBreakTargetIndex()

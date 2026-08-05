@@ -34,7 +34,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int originalCardMask = GetVisiblePileCardMask(pile);
+		int originalCardMask = GetVisiblePileCardMask(playerIndex);
 		if (originalCardMask == 0)
 		{
 			return;
@@ -62,9 +62,9 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.DeckShuffle, -2.5f, 0.96f, 1.04f, 0.12);
-		Label? countLabel = pile.GetNodeOrNull<Label>(CardCountLabelNodeName);
+		Label? countLabel = GetPlayerCardPileCountLabel(playerIndex);
 		bool countLabelVisible = countLabel != null && countLabel.Visible;
-		SetOriginalPileVisualsVisible(pile, originalCardMask, countLabel, false);
+		SetOriginalPileVisualsVisible(playerIndex, originalCardMask, countLabel, false);
 
 		Vector2 shuffleBasePosition = (CardPileSize - DeckShuffleVisualSize) / 2.0f;
 		float shuffleBaseRotation = GetCardRotationDegreesForPlayer(playerIndex);
@@ -97,7 +97,7 @@ public partial class GameBoardScene
 				shuffleRoot.QueueFree();
 			}
 
-			SetOriginalPileVisualsVisible(pile, originalCardMask, countLabel, true);
+			SetOriginalPileVisualsVisible(playerIndex, originalCardMask, countLabel, true);
 			if (countLabel != null)
 			{
 				countLabel.Visible = countLabelVisible;
@@ -122,12 +122,12 @@ public partial class GameBoardScene
 		};
 	}
 
-	private static int GetVisiblePileCardMask(Control pile)
+	private int GetVisiblePileCardMask(int playerIndex)
 	{
 		int cardMask = 0;
 		for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 		{
-			if (pile.GetNodeOrNull<TextureRect>(PileCardNodeNames[cardIndex]) is TextureRect textureRect
+			if (GetPlayerCardPileBack(playerIndex, cardIndex) is TextureRect textureRect
 				&& textureRect.Visible
 				&& textureRect.HasMeta(CardBackAnimatedMeta))
 			{
@@ -138,12 +138,16 @@ public partial class GameBoardScene
 		return cardMask;
 	}
 
-	private static void SetOriginalPileVisualsVisible(Control pile, int originalCardMask, Label? countLabel, bool visible)
+	private void SetOriginalPileVisualsVisible(
+		int playerIndex,
+		int originalCardMask,
+		Label? countLabel,
+		bool visible)
 	{
 		for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 		{
 			if ((originalCardMask & (1 << cardIndex)) == 0
-				|| pile.GetNodeOrNull<TextureRect>(PileCardNodeNames[cardIndex]) is not TextureRect card)
+				|| GetPlayerCardPileBack(playerIndex, cardIndex) is not TextureRect card)
 			{
 				continue;
 			}

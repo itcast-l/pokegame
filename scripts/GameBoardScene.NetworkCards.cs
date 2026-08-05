@@ -4,9 +4,122 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private sealed class NetworkReplicaPresentationState
+	{
+		private NetworkReplicaPresentationState(
+			List<List<PlayingCard>> playerDecks,
+			List<List<PlayingCard>> playerHands,
+			List<List<ItemCard>> playerItemHands,
+			List<TableCard> tableCards)
+		{
+			PlayerDecks = playerDecks;
+			PlayerHands = playerHands;
+			PlayerItemHands = playerItemHands;
+			TableCards = tableCards;
+		}
+
+		internal List<List<PlayingCard>> PlayerDecks { get; }
+		internal List<List<PlayingCard>> PlayerHands { get; }
+		internal List<List<ItemCard>> PlayerItemHands { get; }
+		internal List<TableCard> TableCards { get; }
+
+			internal static NetworkReplicaPresentationState CloneFrom(
+				IReadOnlyList<IReadOnlyList<PlayingCard>> playerDeckSource,
+				IReadOnlyList<IReadOnlyList<PlayingCard>> playerHandSource,
+				IReadOnlyList<IReadOnlyList<ItemCard>> playerItemHandSource,
+				IReadOnlyList<TableCard> tableCardSource)
+			{
+				var playerDecks = CloneNestedLists(playerDeckSource);
+				var playerHands = CloneNestedLists(playerHandSource);
+				var playerItemHands = CloneNestedLists(playerItemHandSource);
+				var tableCards = new List<TableCard>(tableCardSource.Count);
+				foreach (TableCard sourceCard in tableCardSource)
+			{
+				TableCard clone = TableCard.Restore(
+					sourceCard.InstanceId,
+					sourceCard.Card,
+					sourceCard.IsFaceUp,
+					sourceCard.ItemOverlay,
+					sourceCard.ItemOwnerPlayerIndex,
+					sourceCard.CardOwnerPlayerIndex,
+					sourceCard.RemoveCardOnCapture);
+				clone.IsHiddenDuringCapture = sourceCard.IsHiddenDuringCapture;
+				clone.IsBuriedInSand = sourceCard.IsBuriedInSand;
+				clone.IsSlimeCoated = sourceCard.IsSlimeCoated;
+				tableCards.Add(clone);
+			}
+
+			return new NetworkReplicaPresentationState(
+				playerDecks,
+				playerHands,
+				playerItemHands,
+				tableCards);
+		}
+
+		internal void EnsureSeatCapacity(int capacity)
+		{
+			EnsureNestedListCount(PlayerDecks, capacity);
+			EnsureNestedListCount(PlayerHands, capacity);
+			EnsureNestedListCount(PlayerItemHands, capacity);
+		}
+
+			private static List<List<T>> CloneNestedLists<T>(IReadOnlyList<IReadOnlyList<T>> source)
+			{
+				var result = new List<List<T>>(source.Count);
+				foreach (IReadOnlyList<T> items in source)
+			{
+				result.Add(new List<T>(items));
+			}
+
+			return result;
+		}
+
+		private static void EnsureNestedListCount<T>(List<List<T>> target, int count)
+		{
+			while (target.Count < count)
+			{
+				target.Add(new List<T>());
+			}
+		}
+	}
+
+	private bool EnsureNetworkReplicaPresentationState()
+	{
+		if (_networkReplicaPresentationState != null)
+		{
+			return true;
+		}
+
+		if (_replicaRuleSession == null || IsNetworkHost())
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState = NetworkReplicaPresentationState.CloneFrom(
+			_playerDecks,
+			_playerHands,
+			_playerItemHands,
+			_tableCards);
+		_networkReplicaPresentationState.EnsureSeatCapacity(MaxPlayers);
+		InvalidateRenderCaches();
+		return true;
+	}
+
+	private void DiscardNetworkReplicaPresentationState()
+	{
+		if (_networkReplicaPresentationState == null)
+		{
+			return;
+		}
+
+		_networkReplicaPresentationState = null;
+		_presentationHiddenTableCardRuntimeInstanceIds.Clear();
+		InvalidateRenderCaches();
+	}
+
 	private string ToNetworkCardCode(PlayingCard card)
 	{
-		return $"{card.Suit}:{card.Rank}";
+		return card.Code;
 	}
 
 	private PlayingCard CreateNetworkPlayingCard(string cardCode)
@@ -45,18 +158,18 @@ public partial class GameBoardScene
 
 	private PlayingCard CreatePlaceholderPlayingCard()
 	{
-		return new PlayingCard(string.Empty, string.Empty, GetNetworkPlaceholderTexture());
+		return new PlayingCard(string.Empty, string.Empty);
 	}
 
 	private ItemCard CreatePlaceholderItemCard()
 	{
-		return new ItemCard(string.Empty, GetNetworkPlaceholderTexture());
+		return new ItemCard(string.Empty);
 	}
 
 	private ItemCard CreateNetworkVisualItemCard(string itemCardId)
 	{
 		ItemCard? itemCard = CreateItemCard(itemCardId);
-		return itemCard ?? new ItemCard(itemCardId, GetNetworkPlaceholderTexture());
+		return itemCard ?? new ItemCard(itemCardId);
 	}
 
 	private bool CanExpandNetworkPlayingHandToIndex(int playerIndex, int handIndex)
@@ -79,33 +192,85 @@ public partial class GameBoardScene
 		return GetTotalHandCardCount(playerIndex) + added <= MaxTotalHandCards;
 	}
 
-	private bool EnsureNetworkQuestionRewardItem(int playerIndex, int itemHandIndex, ItemCard item)
+	private static bool MatchesVisibleNetworkPlayingCardIdentity(
+		PlayingCard card,
+		string expectedCardCode,
+		string expectedAttachedItemCardIdsCsv)
 	{
-		if (!CanExpandNetworkItemHandToIndex(playerIndex, itemHandIndex)) return false;
-		if (itemHandIndex == _playerItemHands[playerIndex].Count) _playerItemHands[playerIndex].Add(item);
-		return true;
+		return string.IsNullOrEmpty(card.Code)
+			|| card.Code.StartsWith("redacted:", StringComparison.Ordinal)
+			|| string.Equals(card.Code, expectedCardCode, StringComparison.Ordinal)
+				&& string.Equals(
+					card.AttachedItemCardIdsCsv,
+					expectedAttachedItemCardIdsCsv,
+					StringComparison.Ordinal);
 	}
 
-	private bool EnsureNetworkHandCardPlaceholder(int playerIndex, int handIndex, string cardCode)
+	private static bool MatchesVisibleNetworkItemCardIdentity(
+		ItemCard itemCard,
+		string expectedItemCardId)
 	{
-		if (!CanExpandNetworkPlayingHandToIndex(playerIndex, handIndex))
+		return string.IsNullOrEmpty(itemCard.Id)
+			|| itemCard.Id.StartsWith("redacted:", StringComparison.Ordinal)
+			|| string.Equals(itemCard.Id, expectedItemCardId, StringComparison.Ordinal);
+	}
+
+	private bool TryAddNetworkQuestionRewardPresentationItem(
+		int playerIndex,
+		int itemHandIndex,
+		ItemCard item)
+	{
+		if (!EnsureNetworkReplicaPresentationState()
+			|| !CanExpandNetworkItemHandToIndex(playerIndex, itemHandIndex))
 		{
 			return false;
 		}
 
-		if (handIndex == _playerHands[playerIndex].Count)
+		List<ItemCard> itemHand = _networkReplicaPresentationState!.PlayerItemHands[playerIndex];
+		if (itemHandIndex == itemHand.Count)
 		{
-			_playerHands[playerIndex].Add(string.IsNullOrWhiteSpace(cardCode)
+			itemHand.Add(item);
+		}
+		return true;
+	}
+
+	private bool TryAddNetworkHandCardPresentationPlaceholder(
+		int playerIndex,
+		int handIndex,
+		string cardCode)
+	{
+		if (!EnsureNetworkReplicaPresentationState()
+			|| !CanExpandNetworkPlayingHandToIndex(playerIndex, handIndex))
+		{
+			return false;
+		}
+
+		List<PlayingCard> hand = _networkReplicaPresentationState!.PlayerHands[playerIndex];
+		if (handIndex == hand.Count)
+		{
+			hand.Add(string.IsNullOrWhiteSpace(cardCode)
 				? CreatePlaceholderPlayingCard()
 				: CreateNetworkPlayingCard(cardCode));
 		}
 		return true;
 	}
 
-	private bool InsertNetworkTableOverlayIfMissing(int actorSeatIndex, int targetTableCardIndex, ItemCard itemCard)
+	private bool TryAddNetworkTableOverlayPresentation(
+		int actorSeatIndex,
+		int targetTableCardIndex,
+		ItemCard itemCard)
 	{
-		if (!CanApplyNetworkTableOverlay(actorSeatIndex, targetTableCardIndex, itemCard.Id)) return false;
-		if (targetTableCardIndex == _tableCards.Count) _tableCards.Add(new TableCard(null, false, itemCard, actorSeatIndex));
+		if (!EnsureNetworkReplicaPresentationState()
+			|| !CanApplyNetworkTableOverlay(actorSeatIndex, targetTableCardIndex, itemCard.Id))
+		{
+			return false;
+		}
+
+		List<TableCard> tableCards = _networkReplicaPresentationState!.TableCards;
+		if (targetTableCardIndex == tableCards.Count)
+		{
+			tableCards.Add(new TableCard(null, false, itemCard, actorSeatIndex));
+		}
 		return true;
 	}
 
@@ -127,12 +292,210 @@ public partial class GameBoardScene
 			&& targetTableCardIndex == _networkPredictedItemTargetTableCardIndex;
 	}
 
-	private bool EnsureNetworkQuestionTableCard(int tableCardIndex)
+	private bool TryAddNetworkQuestionTablePresentationCard(int tableCardIndex)
 	{
-		if (tableCardIndex < 0 || tableCardIndex > _tableCards.Count) return false;
-		if (tableCardIndex < _tableCards.Count) return true;
+		if (!EnsureNetworkReplicaPresentationState()
+			|| tableCardIndex < 0
+			|| tableCardIndex > _tableCards.Count)
+		{
+			return false;
+		}
+		if (tableCardIndex < _tableCards.Count)
+		{
+			return true;
+		}
+
 		ItemCard questionMarkCard = CreateNetworkVisualItemCard(QuestionMarkItemCardId);
-		_tableCards.Add(new TableCard(null, true, questionMarkCard));
+		_networkReplicaPresentationState!.TableCards.Add(new TableCard(null, true, questionMarkCard));
+		return true;
+	}
+
+	private bool TryInsertNetworkPresentationTableCard(int tableCardIndex, TableCard tableCard)
+	{
+		if (!EnsureNetworkReplicaPresentationState()
+			|| tableCardIndex < 0
+			|| tableCardIndex > _networkReplicaPresentationState!.TableCards.Count)
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState.TableCards.Insert(tableCardIndex, tableCard);
+		return true;
+	}
+
+	private bool TryRemoveNetworkPresentationTableCard(int tableCardIndex)
+	{
+		if (_networkReplicaPresentationState == null
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _networkReplicaPresentationState.TableCards.Count)
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState.TableCards.RemoveAt(tableCardIndex);
+		return true;
+	}
+
+	private bool TryReplaceNetworkPresentationTableCard(int tableCardIndex, TableCard tableCard)
+	{
+		if (_networkReplicaPresentationState == null
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _networkReplicaPresentationState.TableCards.Count)
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState.TableCards[tableCardIndex] = tableCard;
+		return true;
+	}
+
+	private bool TrySetNetworkPresentationTableCardFaceUp(int tableCardIndex, bool faceUp)
+	{
+		if (_networkReplicaPresentationState == null
+			|| tableCardIndex < 0
+			|| tableCardIndex >= _networkReplicaPresentationState.TableCards.Count)
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState.TableCards[tableCardIndex].IsFaceUp = faceUp;
+		return true;
+	}
+
+	private bool TryMoveFirstNetworkPresentationTableCardToEnd()
+	{
+		if (_networkReplicaPresentationState == null
+			|| _networkReplicaPresentationState.TableCards.Count <= 1)
+		{
+			return false;
+		}
+
+		TableCard tableCard = _networkReplicaPresentationState.TableCards[0];
+		_networkReplicaPresentationState.TableCards.RemoveAt(0);
+		_networkReplicaPresentationState.TableCards.Add(tableCard);
+		return true;
+	}
+
+	private bool TryRemoveNetworkPresentationTableCardRange(int startIndex, int count)
+	{
+		if (_networkReplicaPresentationState == null
+			|| startIndex < 0
+			|| count < 0
+			|| startIndex > _networkReplicaPresentationState.TableCards.Count - count)
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState.TableCards.RemoveRange(startIndex, count);
+		return true;
+	}
+
+	private bool TrySetNetworkPresentationHandCard(
+		int playerIndex,
+		int handIndex,
+		PlayingCard card)
+	{
+		if (_networkReplicaPresentationState == null
+			|| playerIndex < 0
+			|| playerIndex >= _networkReplicaPresentationState.PlayerHands.Count
+			|| handIndex < 0
+			|| handIndex >= _networkReplicaPresentationState.PlayerHands[playerIndex].Count)
+		{
+			return false;
+		}
+
+		_networkReplicaPresentationState.PlayerHands[playerIndex][handIndex] = card;
+		return true;
+	}
+
+	private bool TryAttachNetworkPresentationItemToHandCard(
+		int playerIndex,
+		int handIndex,
+		string itemCardId)
+	{
+		if (!EnsureNetworkReplicaPresentationState()
+			|| !IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))
+		{
+			return false;
+		}
+
+		PlayingCard card = _networkReplicaPresentationState!.PlayerHands[playerIndex][handIndex];
+		_networkReplicaPresentationState.PlayerHands[playerIndex][handIndex] =
+			card.WithAttachedItemEffect(itemCardId);
+		return true;
+	}
+
+	private bool TryTransferNetworkPresentationHandCard(
+		int sourcePlayerIndex,
+		int sourceHandIndex,
+		int targetPlayerIndex,
+		PlayingCard transferredCard)
+	{
+		if (_networkReplicaPresentationState == null
+			|| sourcePlayerIndex < 0
+			|| sourcePlayerIndex >= _networkReplicaPresentationState.PlayerHands.Count
+			|| targetPlayerIndex < 0
+			|| targetPlayerIndex >= _networkReplicaPresentationState.PlayerHands.Count
+			|| sourceHandIndex < 0
+			|| sourceHandIndex >= _networkReplicaPresentationState.PlayerHands[sourcePlayerIndex].Count
+			|| GetTotalHandCardCount(targetPlayerIndex) >= MaxTotalHandCards)
+		{
+			return false;
+		}
+
+		List<PlayingCard> sourceHand = _networkReplicaPresentationState.PlayerHands[sourcePlayerIndex];
+		sourceHand.RemoveAt(sourceHandIndex);
+		_networkReplicaPresentationState.PlayerHands[targetPlayerIndex].Add(transferredCard);
+		return true;
+	}
+
+	private bool TryTransferNetworkPresentationItemCard(
+		int sourcePlayerIndex,
+		int sourceItemHandIndex,
+		int targetPlayerIndex,
+		ItemCard transferredCard)
+	{
+		if (_networkReplicaPresentationState == null
+			|| sourcePlayerIndex < 0
+			|| sourcePlayerIndex >= _networkReplicaPresentationState.PlayerItemHands.Count
+			|| targetPlayerIndex < 0
+			|| targetPlayerIndex >= _networkReplicaPresentationState.PlayerItemHands.Count
+			|| sourceItemHandIndex < 0
+			|| sourceItemHandIndex >= _networkReplicaPresentationState.PlayerItemHands[sourcePlayerIndex].Count
+			|| GetTotalHandCardCount(targetPlayerIndex) >= MaxTotalHandCards)
+		{
+			return false;
+		}
+
+		List<ItemCard> sourceHand = _networkReplicaPresentationState.PlayerItemHands[sourcePlayerIndex];
+		sourceHand.RemoveAt(sourceItemHandIndex);
+		_networkReplicaPresentationState.PlayerItemHands[targetPlayerIndex].Add(transferredCard);
+		return true;
+	}
+
+	private bool TryTransferNetworkPresentationDeckCards(
+		int sourcePlayerIndex,
+		int targetPlayerIndex,
+		int count)
+	{
+		if (_networkReplicaPresentationState == null
+			|| sourcePlayerIndex < 0
+			|| sourcePlayerIndex >= _networkReplicaPresentationState.PlayerDecks.Count
+			|| targetPlayerIndex < 0
+			|| targetPlayerIndex >= _networkReplicaPresentationState.PlayerDecks.Count
+			|| count <= 0
+			|| count > _networkReplicaPresentationState.PlayerDecks[sourcePlayerIndex].Count)
+		{
+			return false;
+		}
+
+		List<PlayingCard> sourceDeck = _networkReplicaPresentationState.PlayerDecks[sourcePlayerIndex];
+		List<PlayingCard> targetDeck = _networkReplicaPresentationState.PlayerDecks[targetPlayerIndex];
+		for (int cardIndex = 0; cardIndex < count; cardIndex++)
+		{
+			targetDeck.Add(sourceDeck[cardIndex]);
+		}
+		sourceDeck.RemoveRange(0, count);
 		return true;
 	}
 
@@ -184,9 +547,9 @@ public partial class GameBoardScene
 		}
 
 		EnsureNetworkCardCache();
-		foreach (PlayingCard card in _networkCardsByCode.Values)
+		foreach (Texture2D texture in _playingCardTexturesByCode.Values)
 		{
-			return card.Texture;
+			return texture;
 		}
 
 		return null!;

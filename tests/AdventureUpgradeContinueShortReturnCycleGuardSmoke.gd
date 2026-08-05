@@ -48,12 +48,15 @@ func _run() -> void:
 		board,
 		"Short Branch return before refill"
 	)
-	if pre_refill_hand_count != 1:
-		_fail("Short Branch did not begin returning the captured pair before refill")
+	if pre_refill_hand_count != 2:
+		_fail("Short Branch did not atomically return the captured pair before refill (hand=%d)" % pre_refill_hand_count)
 		return
-	var first_hand_code := String(board.call("DebugGetHandCardCode", MAIN_PLAYER_INDEX, 0))
-	if first_hand_code != "Clubs:5":
-		_fail("Short Branch returned an unexpected first captured card: %s" % first_hand_code)
+	var returned_hand_codes := [
+		String(board.call("DebugGetHandCardCode", MAIN_PLAYER_INDEX, 0)),
+		String(board.call("DebugGetHandCardCode", MAIN_PLAYER_INDEX, 1)),
+	]
+	if returned_hand_codes != ["Clubs:5", "Hearts:5"]:
+		_fail("Short Branch returned an unexpected captured pair: %s" % str(returned_hand_codes))
 		return
 	if not await _support.wait_for_actionable_table_count(board, 0, "short-return capture settlement"):
 		return

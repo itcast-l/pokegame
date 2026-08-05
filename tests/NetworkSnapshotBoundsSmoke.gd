@@ -23,6 +23,19 @@ func _run() -> void:
 	if valid_snapshot == null:
 		_fail("Could not build valid network snapshot baseline")
 		return
+	if not _assert_snapshot_contract(valid_snapshot, int(board.get("player_count")), 0):
+		return
+	for recipient_seat in range(1, int(board.get("player_count"))):
+		var recipient_snapshot := board.call(
+			"BuildNetworkBoardSnapshotForSeat",
+			recipient_seat,
+			recipient_seat + 1) as Dictionary
+		if recipient_snapshot == null \
+				or not _assert_snapshot_contract(
+					recipient_snapshot,
+					int(board.get("player_count")),
+					recipient_seat):
+			return
 	_visual_event_context = {
 		"session_id": valid_snapshot["session_id"],
 		"match_id": valid_snapshot["match_id"],
@@ -789,6 +802,109 @@ func _assert_snapshot_rejected(board: Node, baseline: String, payload: Dictionar
 	if str(board.call("DebugGetNetworkStateFingerprint")) != baseline:
 		_fail("Hostile snapshot mutated state: " + label)
 		return false
+	return true
+
+
+func _assert_snapshot_contract(snapshot: Dictionary, player_count: int, recipient_seat: int) -> bool:
+	var expected_keys := [
+		"protocol_version",
+		"session_id",
+		"match_id",
+		"authority_epoch",
+		"checkpoint_id",
+		"snapshot_id",
+		"turn_sequence_generation",
+		"current_turn_player_index",
+		"match_outcome_kind",
+		"winner_player_index",
+		"scores",
+		"deck_counts",
+		"hand_counts",
+		"item_hand_counts",
+		"own_item_hand_cards",
+		"table_cards",
+		"own_hand_cards",
+		"pending_selection_mode",
+		"pending_selection_owner",
+		"pending_item_card_id",
+		"pending_turn_sequence_generation",
+		"opening_deal_animation_playing",
+		"opening_deal_completed",
+		"seat_control_states",
+		"authority_action",
+	]
+	if snapshot.size() != expected_keys.size():
+		_fail("Network snapshot key count changed for seat %d" % recipient_seat)
+		return false
+	for key in expected_keys:
+		if not snapshot.has(key):
+			_fail("Network snapshot omitted key %s for seat %d" % [key, recipient_seat])
+			return false
+
+	var integer_keys := [
+		"protocol_version",
+		"authority_epoch",
+		"checkpoint_id",
+		"snapshot_id",
+		"turn_sequence_generation",
+		"current_turn_player_index",
+		"winner_player_index",
+		"pending_selection_owner",
+		"pending_turn_sequence_generation",
+	]
+	for key in integer_keys:
+		if typeof(snapshot[key]) != TYPE_INT:
+			_fail("Network snapshot key %s changed integer type" % key)
+			return false
+	for key in ["session_id", "match_id", "match_outcome_kind", "pending_selection_mode", "pending_item_card_id"]:
+		if typeof(snapshot[key]) != TYPE_STRING:
+			_fail("Network snapshot key %s changed string type" % key)
+			return false
+	for key in ["scores", "deck_counts", "hand_counts", "item_hand_counts", "own_item_hand_cards", "table_cards", "own_hand_cards", "seat_control_states"]:
+		if typeof(snapshot[key]) != TYPE_ARRAY:
+			_fail("Network snapshot key %s changed array type" % key)
+			return false
+	for key in ["opening_deal_animation_playing", "opening_deal_completed"]:
+		if typeof(snapshot[key]) != TYPE_BOOL:
+			_fail("Network snapshot key %s changed boolean type" % key)
+			return false
+	if typeof(snapshot["authority_action"]) != TYPE_DICTIONARY:
+		_fail("Network snapshot authority action changed dictionary type")
+		return false
+
+	var hand_counts := snapshot["hand_counts"] as Array
+	var item_counts := snapshot["item_hand_counts"] as Array
+	var own_hand := snapshot["own_hand_cards"] as Array
+	var own_items := snapshot["own_item_hand_cards"] as Array
+	if hand_counts.size() != player_count \
+			or item_counts.size() != player_count \
+			or own_hand.size() != int(hand_counts[recipient_seat]) \
+			or own_items.size() != int(item_counts[recipient_seat]):
+		_fail("Network snapshot own-hand privacy shape changed for seat %d" % recipient_seat)
+		return false
+	for raw_card in own_hand:
+		if typeof(raw_card) != TYPE_DICTIONARY \
+				or typeof((raw_card as Dictionary).get("code")) != TYPE_STRING \
+				or typeof((raw_card as Dictionary).get("attached_item_card_ids")) != TYPE_ARRAY:
+			_fail("Network snapshot own hand card value types changed")
+			return false
+	for raw_item in own_items:
+		if typeof(raw_item) != TYPE_DICTIONARY \
+				or typeof((raw_item as Dictionary).get("id")) != TYPE_STRING:
+			_fail("Network snapshot own item card value types changed")
+			return false
+
+	for raw_table_card in snapshot["table_cards"] as Array:
+		if typeof(raw_table_card) != TYPE_DICTIONARY:
+			_fail("Network snapshot table card changed dictionary type")
+			return false
+		var table_card := raw_table_card as Dictionary
+		if not bool(table_card.get("is_face_up", false)) \
+				and int(table_card.get("card_owner_player_index", -1)) != recipient_seat \
+				and (not String(table_card.get("code", "")).is_empty() \
+					or not (table_card.get("attached_item_card_ids", []) as Array).is_empty()):
+			_fail("Network snapshot exposed a hidden table card to seat %d" % recipient_seat)
+			return false
 	return true
 
 

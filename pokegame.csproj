@@ -5,13 +5,19 @@
     <RootNamespace>pokegame</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DefineConstants>$(DefineConstants);DECKLAND_RULES_REFERENCE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
     <Compile Remove="outputs/**/*.cs" />
+    <Compile Remove="src/Deckland.Rules/**/*.cs" />
     <Compile Remove="**/node_modules/**/*.cs" />
 	<Compile Remove="scripts/GameBoardScene.Debug.*.cs" Condition="'$(Configuration)' == 'Release'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src/Deckland.Rules/Deckland.Rules.csproj" />
   </ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Release' and Exists('tests/AdventureStageUnlockHarness.cs') and Exists('tests/MainMenuBackgroundAnimatorLifetimeHarness.cs')">

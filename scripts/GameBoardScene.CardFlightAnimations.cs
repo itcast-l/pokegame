@@ -218,7 +218,7 @@ public partial class GameBoardScene
 			return _cardBackTexture;
 		}
 
-		return playedCard.Texture;
+		return GetPlayingCardTexture(playedCard);
 	}
 
 	private Texture2D? GetVisibleHandItemCardTexture(int playerIndex, ItemCard itemCard)
@@ -228,7 +228,7 @@ public partial class GameBoardScene
 			return _cardBackTexture;
 		}
 
-		return itemCard.Texture;
+		return GetItemCardTexture(itemCard);
 	}
 
 	private bool TryGetTableCardAnimationPosition(int tableCardIndex, out Vector2 position)

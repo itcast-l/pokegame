@@ -388,9 +388,9 @@ public partial class NetworkManager
 	private void StageBoardVisualEventForLocalHost(
 		Godot.Collections.Dictionary payload)
 	{
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
 		{
-			gameBoard.TryStageNetworkAuthorityHostVisualEvent(payload);
+			gameBoard.TryStageHostVisualEvent(payload);
 		}
 	}
 
@@ -403,8 +403,11 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (GetTree().CurrentScene is GameBoardScene gameBoard
-			&& gameBoard.TryStageNetworkAuthorityVisualDispatch(peerId, payload))
+		if (!TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
+		{
+			return;
+		}
+		if (gameBoard.TryStageVisualDispatch(peerId, payload))
 		{
 			return;
 		}
@@ -415,22 +418,22 @@ public partial class NetworkManager
 
 	private void StampBoardVisualEvent(Godot.Collections.Dictionary payload)
 	{
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
 		{
 			payload[NetworkBoardVisualEventTypes.SessionIdKey] = _config.SessionId;
 			payload[NetworkBoardVisualEventTypes.MatchIdKey] = _config.MatchId;
-			payload[NetworkBoardVisualEventTypes.AuthorityEpochKey] = gameBoard.NetworkAuthorityEpoch;
-			payload[NetworkBoardVisualEventTypes.CheckpointIdKey] = gameBoard.NetworkCheckpointId;
-			payload[NetworkBoardVisualEventTypes.ActionIdKey] = gameBoard.CurrentNetworkAuthorityActionId;
+			payload[NetworkBoardVisualEventTypes.AuthorityEpochKey] = gameBoard.AuthorityEpoch;
+			payload[NetworkBoardVisualEventTypes.CheckpointIdKey] = gameBoard.CheckpointId;
+			payload[NetworkBoardVisualEventTypes.ActionIdKey] = gameBoard.CurrentAuthorityActionId;
 		}
 	}
 
 	internal void PublishCommittedBoardActionFromHost(
-		GameBoardScene gameBoard,
 		int actorSeatIndex,
 		AuthorityRuleTransactionResult transaction)
 	{
-		if (!IsHost || _state != NetworkSessionState.InGame || !transaction.Committed)
+		if (!IsHost || _state != NetworkSessionState.InGame || !transaction.Committed
+			|| !TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
 		{
 			return;
 		}
@@ -473,32 +476,34 @@ public partial class NetworkManager
 		payload[NetworkBoardVisualEventTypes.SnapshotIdKey] = transaction.SnapshotId;
 	}
 
-	public void SendInitialBoardSnapshotsFromHost(GameBoardScene gameBoard)
+	public void SendInitialBoardSnapshotsFromHost()
 	{
-		if (!IsHost || _state != NetworkSessionState.InGame)
+		if (!IsHost || _state != NetworkSessionState.InGame
+			|| !TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
 		{
 			return;
 		}
 
 		SendReconnectCredentialsToConnectedPeers();
-		SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+		SendBoardSnapshotsFromHost(gameBoard.CreateNextSnapshotId());
 	}
 
-	public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)
+	public void SendBoardSnapshotsFromHost(int snapshotId)
 	{
 		if (!IsHost
 			|| _state != NetworkSessionState.InGame
-			|| !gameBoard.CanPublishNetworkBoardSnapshot)
+			|| !TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard)
+			|| !gameBoard.CanPublishSnapshot)
 		{
 			return;
 		}
 
-		CommitAuthorityCheckpointFromBoard(gameBoard);
+		CommitAuthorityCheckpointFromBoard();
 
 		SendCommittedBoardSnapshotsFromHost(gameBoard, snapshotId);
 	}
 
-	private void SendCommittedBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)
+	private void SendCommittedBoardSnapshotsFromHost(INetworkAuthorityEndpoint gameBoard, int snapshotId)
 	{
 		foreach (NetworkPlayerPublicState player in _players)
 		{
@@ -516,18 +521,18 @@ public partial class NetworkManager
 		}
 	}
 
-	private void SendBoardSnapshotToPeerFromHost(GameBoardScene gameBoard, int peerId, int seatIndex, int snapshotId)
+	private void SendBoardSnapshotToPeerFromHost(INetworkAuthorityEndpoint gameBoard, int peerId, int seatIndex, int snapshotId)
 	{
 		if (!IsHost
 			|| _state != NetworkSessionState.InGame
-			|| !gameBoard.CanPublishNetworkBoardSnapshot
+			|| !gameBoard.CanPublishSnapshot
 			|| peerId <= 0
 			|| seatIndex < 0)
 		{
 			return;
 		}
 
-		Godot.Collections.Dictionary snapshot = gameBoard.BuildNetworkBoardSnapshotForSeat(seatIndex, snapshotId);
+		Godot.Collections.Dictionary snapshot = gameBoard.BuildSnapshotForSeat(seatIndex, snapshotId);
 		RpcId(peerId, MethodName.RpcBoardSnapshot, snapshot);
 	}
 
@@ -543,9 +548,9 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetReplicaEndpoint(out INetworkReplicaEndpoint gameBoard))
 		{
-			gameBoard.QueueNetworkCardPlayedEvent(payload);
+			gameBoard.QueueVisualEvent(payload);
 		}
 	}
 
@@ -562,14 +567,14 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (_state == NetworkSessionState.MigratingHost)
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 			{
 			GD.Print($"MIGRATION_SNAPSHOT_RECEIVED epoch={context.AuthorityEpoch} snapshot={snapshot.GetValueOrDefault("snapshot_id", -1)} checkpoint={snapshot.GetValueOrDefault("checkpoint_id", -1)}");
 			}
 
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetReplicaEndpoint(out INetworkReplicaEndpoint gameBoard))
 			{
-			gameBoard.ApplyNetworkBoardSnapshot(snapshot);
+			gameBoard.ApplySnapshot(snapshot);
 		}
 	}
 

@@ -6,6 +6,7 @@ source "$ROOT_DIR/tests/godot_test_env.sh"
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
 MIGRATION_ADDRESS="${CODEX_LAN_MIGRATION_ADDRESS:-127.0.0.1}"
 export CODEX_LAN_SKIP_MIGRATION_PORT_PROBE=1
+export CODEX_LAN_MIGRATION_FIXTURE=1
 
 if [[ -n "${GODOT_BIN:-}" ]]; then
 	GODOT_CMD="$GODOT_BIN"
@@ -17,6 +18,14 @@ else
 	echo "Missing Godot binary. Set GODOT_BIN." >&2
 	exit 1
 fi
+
+GODOT_EXECUTABLE="$GODOT_CMD"
+codex_run_muted_godot() {
+	# Every peer launch is backgrounded; exec keeps $! bound to the Godot PID.
+	exec "$GODOT_EXECUTABLE" --audio-driver Dummy "$@"
+}
+GODOT_CMD=codex_run_muted_godot
+export DECKLAND_TEST_MUTE_AUDIO=1
 
 TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"

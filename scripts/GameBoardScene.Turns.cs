@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private async Task ResolveOpponentTurnsAsync(int turnSequenceGeneration)
 	{
-		if (!_turnStateMachine.CanBeginOpponentSequence(BuildGameLoopPhaseState()))
+		if (!MatchReadModel.CanBeginOpponentSequence(BuildGameLoopPhaseState()))
 		{
 			return;
 		}
@@ -136,7 +137,7 @@ public partial class GameBoardScene
 
 	private async Task PlayMainPlayerCardAndAdvanceAsync(int handIndex, int turnSequenceGeneration, Vector2? startGlobalPositionOverride = null)
 	{
-		if (!_turnStateMachine.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
+		if (!MatchReadModel.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
 		{
 			return;
 		}
@@ -169,11 +170,11 @@ public partial class GameBoardScene
 				return;
 			}
 
-			if (result.ConsumedAdventureExtraActionGrant is AdventureExtraActionGrant consumedGrant)
+			if (result.ConsumedAdventureExtraActionGrant is ExtraActionGrantState consumedGrant)
 			{
-				AdventureExtraActionCompletionResult completion =
+				ExtraActionCommandOutcome completion =
 					CompleteConsumedAdventureExtraActionGrant(consumedGrant);
-				if (completion.Kind == AdventureExtraActionCompletionKind.ContinueChain)
+				if (completion.CompletionKind == ExtraActionCompletionKind.ContinueChain)
 				{
 					_isProcessingCardPlay = false;
 					await RefillPlayerBaseHandAsync(MainPlayerIndex, turnSequenceGeneration);
@@ -196,7 +197,7 @@ public partial class GameBoardScene
 					return;
 				}
 
-				if (completion.Kind == AdventureExtraActionCompletionKind.ResumeNormalTurn)
+				if (completion.CompletionKind == ExtraActionCompletionKind.ResumeNormalTurn)
 				{
 					_isProcessingCardPlay = false;
 					await RefillPlayerBaseHandAsync(MainPlayerIndex, turnSequenceGeneration);
@@ -233,7 +234,7 @@ public partial class GameBoardScene
 
 	private async Task PlayMainPlayerItemCardAndAdvanceAsync(int itemHandIndex, int turnSequenceGeneration)
 	{
-		if (!_turnStateMachine.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
+		if (!MatchReadModel.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
 		{
 			return;
 		}

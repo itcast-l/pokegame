@@ -33,6 +33,8 @@ func _run() -> void:
 		"DebugSetAdventureUpgradeHoverState",
 		"DebugSetAdventureUpgradeFocusState",
 		"DebugGetAdventureUpgradeOverlayMotionState",
+		"DebugGetAdventureUpgradeOverlayEventMetrics",
+		"DebugDisposeActiveSelectionOverlayForAwaitProbe",
 	]:
 		if not board.has_method(method):
 			_fail("Missing overlay debug hook: %s" % method)
@@ -128,6 +130,37 @@ func _run() -> void:
 
 	board.call("DebugSetAdventureUpgradeFocusState", 1, false)
 	if not await _wait_for_restored(board, 1, rest_position):
+		return
+
+	# One emitted mouse signal must invoke exactly one strongly typed callback.
+	var overlay := board.find_child("AdventureUpgradeSelectionOverlay", true, false)
+	var event_button := overlay.get_node("Margin/Layout/CardsRow/Option2Button") as Button
+	var metrics_before := board.call("DebugGetAdventureUpgradeOverlayEventMetrics") as Dictionary
+	event_button.emit_signal("mouse_entered")
+	await process_frame
+	var metrics_entered := board.call("DebugGetAdventureUpgradeOverlayEventMetrics") as Dictionary
+	if int(metrics_entered["pointer_entered_callbacks"]) != int(metrics_before["pointer_entered_callbacks"]) + 1:
+		_fail("One mouse-enter signal invoked more than one callback")
+		return
+	event_button.emit_signal("mouse_exited")
+	await process_frame
+	var metrics_exited := board.call("DebugGetAdventureUpgradeOverlayEventMetrics") as Dictionary
+	if int(metrics_exited["pointer_exited_callbacks"]) != int(metrics_before["pointer_exited_callbacks"]) + 1:
+		_fail("One mouse-exit signal invoked more than one callback")
+		return
+
+	# Disposal must detach callbacks before the overlay is queued for release.
+	if not bool(board.call("DebugDisposeActiveSelectionOverlayForAwaitProbe")):
+		_fail("Could not dispose the upgrade overlay")
+		return
+	var callbacks_before_release_emit := board.call("DebugGetAdventureUpgradeOverlayEventMetrics") as Dictionary
+	event_button.emit_signal("mouse_entered")
+	event_button.emit_signal("mouse_exited")
+	var callbacks_after_release_emit := board.call("DebugGetAdventureUpgradeOverlayEventMetrics") as Dictionary
+	if int(callbacks_after_release_emit["active_subscription_groups"]) != 0 \
+			or int(callbacks_after_release_emit["pointer_entered_callbacks"]) != int(callbacks_before_release_emit["pointer_entered_callbacks"]) \
+			or int(callbacks_after_release_emit["pointer_exited_callbacks"]) != int(callbacks_before_release_emit["pointer_exited_callbacks"]):
+		_fail("Upgrade overlay retained event subscriptions after disposal")
 		return
 
 	board.queue_free()

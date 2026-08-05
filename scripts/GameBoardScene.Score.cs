@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -11,20 +13,6 @@ public partial class GameBoardScene
 	private const int AdventureEnemyRoyalStartingHealth = 100;
 	private const int AdventureEnemyBossStartingHealth = 100;
 	private const int AdventureEnemyPlayerIndex = 1;
-	private static readonly string[] ScoreMeterNodeNames =
-	{
-		"Player1ScoreMeter",
-		"Player2ScoreMeter",
-		"Player3ScoreMeter",
-		"Player4ScoreMeter",
-	};
-	private static readonly string[] ScoreEffectTargetNodeNames =
-	{
-		"Player1ScoreEffectTarget",
-		"Player2ScoreEffectTarget",
-		"Player3ScoreEffectTarget",
-		"Player4ScoreEffectTarget",
-	};
 	private static readonly Color[] AvatarScoreFillColors =
 	{
 		new(0.94f, 0.74f, 0.36f, 0.52f),
@@ -40,32 +28,23 @@ public partial class GameBoardScene
 		new(0.82f, 1.0f, 0.90f, 0.34f),
 	};
 
-	private int[] _playerScores => _state.PlayerScores;
+	private IReadOnlyList<int> _playerScores => CurrentRuleProjection.PlayerScores;
 	private readonly ScoreAvatarMeter?[] _playerScoreMeters = new ScoreAvatarMeter?[MaxPlayers];
 	private readonly ScoreEffectTarget?[] _playerScoreEffectTargets = new ScoreEffectTarget?[MaxPlayers];
-	private int _winningScore
-	{
-		get => _state.WinningScore;
-		set => _state.WinningScore = value;
-	}
+	private int _winningScore = DefaultWinningScore;
 
 	private void BindPlayerScoreMeters()
 	{
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
-			ScoreAvatarMeter? meter = GetNodeOrNull<ScoreAvatarMeter>($"%{ScoreMeterNodeNames[viewSlotIndex]}");
-			if (meter == null)
-			{
-				GD.PushWarning($"Missing score meter node: {ScoreMeterNodeNames[viewSlotIndex]}.");
-				continue;
-			}
+			ScoreAvatarMeter meter = _nodeBindings.ScoreMeters[viewSlotIndex];
 
 				BindPlayerStatusTooltipHover(meter, playerIndex);
 				meter.Configure(AvatarScoreFillColors[playerIndex], AvatarScoreGlowColors[playerIndex]);
 				meter.SetScore(GetStartingPlayerScore(playerIndex), GetScoreLimit(playerIndex), false);
 				_playerScoreMeters[playerIndex] = meter;
-				_playerScoreEffectTargets[playerIndex] = GetNodeOrNull<ScoreEffectTarget>($"%{ScoreEffectTargetNodeNames[viewSlotIndex]}");
+				_playerScoreEffectTargets[playerIndex] = _nodeBindings.ScoreEffectTargets[viewSlotIndex];
 			}
 	}
 
@@ -73,7 +52,18 @@ public partial class GameBoardScene
 	{
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			_playerScores[playerIndex] = GetStartingPlayerScore(playerIndex);
+			ScoreAvatarMeter? meter = _playerScoreMeters[playerIndex];
+			meter?.SetScore(
+				GetStartingPlayerScore(playerIndex),
+				GetScoreLimit(playerIndex),
+				false);
+		}
+	}
+
+	private void RefreshPlayerScorePresentation()
+	{
+		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		{
 			UpdatePlayerScoreMeter(playerIndex, false);
 		}
 
@@ -82,29 +72,43 @@ public partial class GameBoardScene
 
 	private void AddPlayerScore(int playerIndex, int points)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerScores.Length || points <= 0)
+		if (playerIndex < 0 || playerIndex >= _playerScores.Count || points <= 0)
+		{
+			return;
+		}
+
+		int targetPlayerIndex = playerIndex;
+		RuleScoreMutationKind mutationKind = RuleScoreMutationKind.Add;
+		if (adventure_mode)
+		{
+			targetPlayerIndex = GetAdventureDamageTargetPlayerIndex(playerIndex);
+			if (targetPlayerIndex < 0 || targetPlayerIndex >= _playerScores.Count)
+			{
+				return;
+			}
+
+			if (targetPlayerIndex == MainPlayerIndex && ShouldUseAdventureUpgradeSystem())
+			{
+				GD.PushError("Adventure player damage must be committed through the adventure save gate.");
+				return;
+			}
+			mutationKind = RuleScoreMutationKind.Subtract;
+		}
+
+		int previousScore = _playerScores[targetPlayerIndex];
+		if (!TrySubmitScoreMutationsRuleCommand(
+			ImmutableArray.Create(new RuleScoreMutation(targetPlayerIndex, mutationKind, points)),
+			out _))
 		{
 			return;
 		}
 
 		if (adventure_mode)
 		{
-			int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(playerIndex);
-			if (damageTargetPlayerIndex < 0 || damageTargetPlayerIndex >= _playerScores.Length)
-			{
-				return;
-			}
-
-			if (damageTargetPlayerIndex == MainPlayerIndex && ShouldUseAdventureUpgradeSystem())
-			{
-				GD.PushError("Adventure player damage must be committed through the adventure save gate.");
-				return;
-			}
-			ApplyAdventureDamageInMemory(playerIndex, damageTargetPlayerIndex, points);
+			PresentAdventureDamageInMemory(playerIndex, targetPlayerIndex, previousScore);
 			return;
 		}
 
-		_playerScores[playerIndex] += points;
 		UpdatePlayerScoreMeter(playerIndex, true);
 		PlayPlayerAvatarAction(playerIndex, CharacterAvatar.AvatarAction.Score);
 		RefreshGameplayTensionMusic();
@@ -116,16 +120,33 @@ public partial class GameBoardScene
 		int points)
 	{
 		if (targetPlayerIndex < 0
-			|| targetPlayerIndex >= _playerScores.Length
+			|| targetPlayerIndex >= _playerScores.Count
 			|| points <= 0)
 		{
 			return;
 		}
 
 		int previousScore = _playerScores[targetPlayerIndex];
-		int damagedScore = Math.Max(0, previousScore - points);
-		_playerScores[targetPlayerIndex] = damagedScore;
-		PlayAvatarDamagePopup(targetPlayerIndex, previousScore - damagedScore);
+		if (!TrySubmitScoreMutationsRuleCommand(
+			ImmutableArray.Create(new RuleScoreMutation(
+				targetPlayerIndex,
+				RuleScoreMutationKind.Subtract,
+				points)),
+			out _))
+		{
+			return;
+		}
+
+		PresentAdventureDamageInMemory(sourcePlayerIndex, targetPlayerIndex, previousScore);
+	}
+
+	private void PresentAdventureDamageInMemory(
+		int sourcePlayerIndex,
+		int targetPlayerIndex,
+		int previousScore)
+	{
+		int damagedScore = _playerScores[targetPlayerIndex];
+		PlayAvatarDamagePopup(targetPlayerIndex, Math.Max(0, previousScore - damagedScore));
 		UpdatePlayerScoreMeter(targetPlayerIndex, true);
 		PlayPlayerAvatarAction(sourcePlayerIndex, CharacterAvatar.AvatarAction.Score);
 		if (targetPlayerIndex != sourcePlayerIndex)
@@ -144,7 +165,33 @@ public partial class GameBoardScene
 		bool consumedQuarterHealthRescue)
 	{
 		int previousHealth = _playerScores[MainPlayerIndex];
-		_playerScores[MainPlayerIndex] = currentHealth;
+		if (!TrySubmitScoreMutationsRuleCommand(
+			ImmutableArray.Create(new RuleScoreMutation(
+				MainPlayerIndex,
+				RuleScoreMutationKind.Set,
+				currentHealth)),
+			out _))
+		{
+			return;
+		}
+
+		PresentCommittedAdventurePlayerVitals(
+			sourcePlayerIndex,
+			rawDamage,
+			previousHealth,
+			rescueResult,
+			consumedHalfHealthRescue,
+			consumedQuarterHealthRescue);
+	}
+
+	private void PresentCommittedAdventurePlayerVitals(
+		int sourcePlayerIndex,
+		int rawDamage,
+		int previousHealth,
+		AdventureLowHealthRescueResult rescueResult,
+		bool consumedHalfHealthRescue,
+		bool consumedQuarterHealthRescue)
+	{
 		if (rawDamage > 0)
 		{
 			PlayAvatarDamagePopup(MainPlayerIndex, Math.Min(previousHealth, rawDamage));
@@ -154,14 +201,35 @@ public partial class GameBoardScene
 				PlayPlayerAvatarAction(MainPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 			}
 		}
-		_adventureMainPlayerHalfHealthRescueUsed |= consumedHalfHealthRescue;
-		_adventureMainPlayerQuarterHealthRescueUsed |= consumedQuarterHealthRescue;
+		TryUpdateMatchFlowState(state => state with
+		{
+			HalfHealthRescueUsed = state.HalfHealthRescueUsed || consumedHalfHealthRescue,
+			QuarterHealthRescueUsed =
+				state.QuarterHealthRescueUsed || consumedQuarterHealthRescue,
+		});
 		if (rescueResult.DrawCount > 0)
 		{
 			DrawCardsFromDeckToHandForAdventureEffect(MainPlayerIndex, rescueResult.DrawCount);
 		}
 		UpdatePlayerScoreMeter(MainPlayerIndex, true);
 		RefreshGameplayTensionMusic();
+	}
+
+	private bool TrySynchronizeCommittedAdventurePlayerHealth(int currentHealth)
+	{
+		if (!TrySubmitScoreMutationsRuleCommand(
+			ImmutableArray.Create(new RuleScoreMutation(
+				MainPlayerIndex,
+				RuleScoreMutationKind.Set,
+				currentHealth)),
+			out _))
+		{
+			return false;
+		}
+
+		UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
+		RefreshGameplayTensionMusic();
+		return true;
 	}
 
 	private readonly record struct AdventureDirectDamageSceneCommit(
@@ -181,8 +249,8 @@ public partial class GameBoardScene
 			await ExecuteAdventureSaveGateAsync(
 				() => store.ApplyDirectDamage(new AdventureDirectDamageCommitInput(
 					damageAmount,
-					_adventureMainPlayerHalfHealthRescueUsed,
-					_adventureMainPlayerQuarterHealthRescueUsed)),
+					CurrentMatchFlowState.HalfHealthRescueUsed,
+					CurrentMatchFlowState.QuarterHealthRescueUsed)),
 				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)
@@ -316,7 +384,7 @@ public partial class GameBoardScene
 			return sourcePlayerIndex;
 		}
 
-		return GameTurnRules.GetNextPlayerIndex(
+		return MatchReadModel.GetNextPlayerIndex(
 			ClockwiseTurnOrder,
 			sourcePlayerIndex,
 			player_count,
@@ -348,7 +416,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return false;
@@ -387,7 +455,15 @@ public partial class GameBoardScene
 		}
 		AdventureHealingCommitResult commitResult = gate.Result;
 
-		_playerScores[MainPlayerIndex] = commitResult.HealingResult.CurrentHealth;
+			if (!TrySubmitScoreMutationsRuleCommand(
+				ImmutableArray.Create(new RuleScoreMutation(
+					MainPlayerIndex,
+					RuleScoreMutationKind.Set,
+					commitResult.HealingResult.CurrentHealth)),
+				out _))
+			{
+				return false;
+			}
 		UpdatePlayerScoreMeter(MainPlayerIndex, animate);
 		RefreshGameplayTensionMusic();
 		return true;
@@ -411,7 +487,7 @@ public partial class GameBoardScene
 
 	private int ApplyCapturedCardScoreModifiers(int points, int scorePlayerIndex, bool hasDoubleEffect)
 	{
-		return CaptureScoringRules.ApplyCapturedCardScoreModifiers(
+		return MatchReadModel.ApplyCapturedCardScoreModifiers(
 			points,
 			BuildCaptureScoringContext(scorePlayerIndex),
 			hasDoubleEffect);

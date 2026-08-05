@@ -186,7 +186,7 @@ internal static partial class Program
 		Equal(original.CurrentHealth, restored.CurrentHealth);
 		Equal(original.MaxHealth, restored.MaxHealth);
 		Equal(original.AcquiredUpgradeIds.Count, restored.AcquiredUpgradeIds.Count);
-		True(store.GetRunState().HasAcquiredUpgrade("clubs_borrow_suit_set"));
+		True(store.GetReadModel().HasAcquiredUpgrade("clubs_borrow_suit_set"));
 		Equal(originalPayload, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
 	}
 

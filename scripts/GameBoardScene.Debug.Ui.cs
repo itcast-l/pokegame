@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -273,7 +274,7 @@ public partial class GameBoardScene
 
 	public int DebugGetAdventureAcquiredUpgradeCount()
 	{
-		return GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds().Count ?? 0;
+		return GetAdventureUpgradeRunState()?.AcquiredUpgradeIds.Length ?? 0;
 	}
 
 	public Godot.Collections.Dictionary DebugGetAdventureRunStateSnapshot()
@@ -290,7 +291,7 @@ public partial class GameBoardScene
 			["defeat_resolution"] = _settledAdventureDefeatResolution?.ToString() ?? string.Empty,
 		};
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return result;
@@ -302,7 +303,7 @@ public partial class GameBoardScene
 		result["current_health"] = runState.CurrentHealth;
 		result["max_health"] = runState.MaxHealth;
 		result["has_used_revive"] = runState.HasUsedRevive;
-		result["acquired_upgrade_count"] = runState.GetAcquiredUpgradeIds().Count;
+		result["acquired_upgrade_count"] = runState.AcquiredUpgradeIds.Length;
 		return result;
 	}
 
@@ -349,12 +350,12 @@ public partial class GameBoardScene
 
 	public int DebugGetPendingAdventureUpgradeTriggerCount()
 	{
-		return _pendingAdventureUpgradeTriggers.Count;
+		return PendingAdventureUpgradeTriggerCount;
 	}
 
 	public int DebugGetPendingAdventureWinnerPlayerIndex()
 	{
-		return _pendingAdventureWinnerPlayerIndex;
+		return CurrentMatchFlowState.PendingWinnerSeat;
 	}
 
 	public bool DebugIsAdventureUpgradeResolverBusy()
@@ -364,7 +365,7 @@ public partial class GameBoardScene
 
 public int DebugGetPendingItemAttachmentRewardCount()
 {
-	return _pendingItemAttachmentRewards.Count;
+	return GetPendingAttachmentRewards().Length;
 }
 
 public int DebugGetNetworkAuthoritativeVisualSnapshotId()

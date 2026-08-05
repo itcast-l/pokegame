@@ -49,6 +49,23 @@ internal static partial class Program
 		True(sharedPlaybackStart >= 0);
 		True(suppressionGuard > sharedPlaybackStart);
 		True(playerRental > suppressionGuard);
+
+		string testsDirectory = Path.Combine(FindRepositoryRoot(), "tests");
+		string testEnvironment = File.ReadAllText(Path.Combine(testsDirectory, "godot_test_env.sh"));
+		True(testEnvironment.Contains(
+			"export DECKLAND_TEST_MUTE_AUDIO=1",
+			StringComparison.Ordinal));
+		foreach (string runnerPath in Directory.GetFiles(testsDirectory, "run_*_smoke.sh"))
+		{
+			string runner = File.ReadAllText(runnerPath);
+			if (!runner.Contains("--script res://tests/", StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			True(runner.Contains("godot_test_env.sh", StringComparison.Ordinal)
+				|| runner.Contains("DECKLAND_TEST_MUTE_AUDIO=1", StringComparison.Ordinal));
+		}
 	}
 
 	private static void GameBoardAsyncWorkStaysBehindLifetimeBoundary()

@@ -41,7 +41,7 @@ public partial class GameBoardScene
 		Vector2 projectileEnd = targetCenter - direction * DragonPrinceDamageHitTargetInset;
 		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
 			+ new Vector2(0.0f, -30.0f)
-			+ side * _rng.RandfRange(-14.0f, 14.0f);
+			+ side * _presentationRng.RandfRange(-14.0f, 14.0f);
 		IReadOnlyList<Texture2D> flightFrames = _dragonPrinceDamageHitFlightFrames.Count > 0
 			? _dragonPrinceDamageHitFlightFrames
 			: frames;

@@ -23,7 +23,9 @@ public partial class GameBoardScene
 
 	private void CreateWinnerLabel()
 	{
-		PackedScene? resultBannerScene = GD.Load<PackedScene>(ResultBannerScenePath);
+		PackedScene? resultBannerScene = LoadCachedCoreScene(
+			ref _cachedResultBannerScene,
+			ResultBannerScenePath);
 		if (resultBannerScene?.Instantiate() is not GameBoardResultBanner resultBanner)
 		{
 			GD.PushError($"Missing result banner scene: {ResultBannerScenePath}");
@@ -45,7 +47,9 @@ public partial class GameBoardScene
 
 	private void CreateDefeatFinisherOverlay()
 	{
-		PackedScene? defeatFinisherScene = GD.Load<PackedScene>(DefeatFinisherOverlayScenePath);
+		PackedScene? defeatFinisherScene = LoadCachedCoreScene(
+			ref _cachedDefeatFinisherOverlayScene,
+			DefeatFinisherOverlayScenePath);
 		if (defeatFinisherScene?.Instantiate() is not GameBoardDefeatFinisherOverlay defeatFinisher)
 		{
 			GD.PushError($"Missing defeat finisher overlay scene: {DefeatFinisherOverlayScenePath}");
@@ -201,8 +205,7 @@ public partial class GameBoardScene
 		_adventureSaveGateState = AdventureSaveGateState.Aborting;
 		_adventureSaveInProgress = true;
 		AdvanceTurnSequenceGeneration();
-		_pendingAdventureUpgradeTriggers.Clear();
-		_pendingAdventureWinnerPlayerIndex = -1;
+		ClearPendingAdventureUpgradeFlow();
 		CancelAdventureUpgradeSelection();
 		if (_playerHands.Count >= MaxPlayers
 			&& _playerItemHands.Count >= MaxPlayers)

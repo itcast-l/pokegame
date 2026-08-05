@@ -1,18 +1,22 @@
+using System;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private void ShowMagnetAttachmentCountdown()
 	{
-		EnsureItemModeOptionalFxResourcesLoaded();
+		ShowMandatoryActionCountdown(
+			MagnetAttachmentSelectionSeconds,
+			IsMainPlayerMagnetSelectionActive);
+	}
 
+	private void ShowMandatoryActionCountdown(double durationSeconds, Func<bool> isActionActive)
+	{
+		EnsureItemModeOptionalFxResourcesLoaded();
 		ClearMagnetAttachmentCountdown();
 
 		const float countdownWidth = 176.0f;
 		const float countdownHeight = 172.0f;
-		_magnetAttachmentCountdownRemainingSeconds = MagnetAttachmentSelectionSeconds;
-		_magnetAttachmentCountdownHintIsUrgent = false;
-
 		var root = new Control
 		{
 			Name = "MagnetAttachmentCountdown",
@@ -72,7 +76,7 @@ public partial class GameBoardScene
 		var countdownLabel = new Label
 		{
 			Name = "MagnetAttachmentCountdownLabel",
-			Text = Mathf.CeilToInt((float)MagnetAttachmentSelectionSeconds).ToString(),
+			Text = Math.Max(0, (int)Math.Ceiling(durationSeconds)).ToString(),
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = MouseFilterEnum.Ignore,
@@ -106,107 +110,82 @@ public partial class GameBoardScene
 		root.AddChild(hintLabel);
 
 		AddChild(root);
-		_magnetAttachmentCountdownRoot = root;
-		_magnetAttachmentCountdownLabel = countdownLabel;
-		_magnetAttachmentCountdownHintLabel = hintLabel;
-
-		Tween introTween = CreateBoardTween();
-		introTween.SetTrans(Tween.TransitionType.Cubic);
-		introTween.SetEase(Tween.EaseType.Out);
-		introTween.TweenProperty(root, "modulate:a", 1.0f, 0.16f);
+		_mandatoryActionCountdownController = new MandatoryActionCountdownController(
+			root,
+			countdownLabel,
+			hintLabel,
+			durationSeconds,
+			urgentProgressThreshold: 0.35,
+			isActionActive);
+		_mandatoryActionCountdownFrameRegistration =
+			_frameScheduler.Register(UpdateMandatoryActionCountdown);
+		_mandatoryActionCountdownController.StartIntro();
+		RequestBoardFrameUpdate();
 	}
 
-	private void UpdateMagnetAttachmentCountdown(double delta)
+	private void UpdateMandatoryActionCountdown(double delta)
 	{
-		if (_magnetAttachmentCountdownRoot == null || !GodotObject.IsInstanceValid(_magnetAttachmentCountdownRoot))
+		MandatoryActionCountdownController? controller = _mandatoryActionCountdownController;
+		if (controller == null)
 		{
 			return;
 		}
 
-		if (!IsMainPlayerMagnetSelectionActive())
+		if (!controller.Update(delta) && ReferenceEquals(_mandatoryActionCountdownController, controller))
 		{
-			ClearMagnetAttachmentCountdown();
-			return;
+			_mandatoryActionCountdownController = null;
+			_mandatoryActionCountdownFrameRegistration?.Dispose();
+			_mandatoryActionCountdownFrameRegistration = null;
 		}
-
-		_magnetAttachmentCountdownRemainingSeconds = Mathf.Max(
-			0.0f,
-			(float)(_magnetAttachmentCountdownRemainingSeconds - delta));
-		float progress = Mathf.Clamp(
-			(float)(_magnetAttachmentCountdownRemainingSeconds / MagnetAttachmentSelectionSeconds),
-			0.0f,
-			1.0f);
-		int displaySeconds = progress <= 0.0f
-			? 0
-			: Mathf.CeilToInt((float)_magnetAttachmentCountdownRemainingSeconds);
-
-		if (_magnetAttachmentCountdownLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownLabel))
-		{
-			_magnetAttachmentCountdownLabel.Text = displaySeconds.ToString();
-			_magnetAttachmentCountdownLabel.AddThemeColorOverride(
-				"font_color",
-				progress <= 0.35f ? new Color(1.0f, 0.86f, 0.42f) : Colors.White);
-		}
-
-		UpdateMagnetAttachmentCountdownHintPulse(progress <= 0.35f);
-
 	}
 
 	private void ClearMagnetAttachmentCountdown()
 	{
-		KillMagnetAttachmentCountdownHintTween();
-
-		if (_magnetAttachmentCountdownRoot != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownRoot))
-		{
-			RemoveChild(_magnetAttachmentCountdownRoot);
-			_magnetAttachmentCountdownRoot.QueueFree();
-		}
-
-		_magnetAttachmentCountdownRoot = null;
-		_magnetAttachmentCountdownLabel = null;
-		_magnetAttachmentCountdownHintLabel = null;
-		_magnetAttachmentCountdownRemainingSeconds = 0.0;
-		_magnetAttachmentCountdownHintIsUrgent = false;
+		_mandatoryActionCountdownFrameRegistration?.Dispose();
+		_mandatoryActionCountdownFrameRegistration = null;
+		_mandatoryActionCountdownController?.Dispose();
+		_mandatoryActionCountdownController = null;
+		_debugMandatoryActionCountdownProbeActive = false;
+		RefreshBoardProcessState();
 	}
 
-	private void UpdateMagnetAttachmentCountdownHintPulse(bool isUrgent)
+	public bool DebugStartMandatoryActionCountdownProbe(double durationSeconds = 1.0)
 	{
-		if (_magnetAttachmentCountdownHintLabel == null || !GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
+		if (durationSeconds < 0.25 || durationSeconds > 5.0)
 		{
-			return;
+			return false;
 		}
 
-		if (_magnetAttachmentCountdownHintIsUrgent == isUrgent)
-		{
-			return;
-		}
-
-		KillMagnetAttachmentCountdownHintTween();
-		_magnetAttachmentCountdownHintIsUrgent = isUrgent;
-		if (!isUrgent)
-		{
-			_magnetAttachmentCountdownHintLabel.Modulate = Colors.White;
-			return;
-		}
-
-		_magnetAttachmentCountdownHintLabel.Modulate = Colors.White;
-		Tween pulseTween = CreateBoardTween();
-		pulseTween.SetLoops();
-		pulseTween.SetTrans(Tween.TransitionType.Cubic);
-		pulseTween.SetEase(Tween.EaseType.InOut);
-		pulseTween.TweenProperty(_magnetAttachmentCountdownHintLabel, "modulate:a", 0.78f, 0.16f);
-		pulseTween.TweenProperty(_magnetAttachmentCountdownHintLabel, "modulate:a", 1.0f, 0.16f);
-		_magnetAttachmentCountdownHintTween = pulseTween;
+		ShowMandatoryActionCountdown(durationSeconds, IsDebugMandatoryActionCountdownProbeActive);
+		_debugMandatoryActionCountdownProbeActive = true;
+		RequestBoardFrameUpdate();
+		return _mandatoryActionCountdownController?.IsActive == true;
 	}
 
-	private void KillMagnetAttachmentCountdownHintTween()
+	public void DebugStopMandatoryActionCountdownProbe()
 	{
-		if (_magnetAttachmentCountdownHintTween != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintTween))
-		{
-			_magnetAttachmentCountdownHintTween.Kill();
-		}
+		ClearMagnetAttachmentCountdown();
+	}
 
-		_magnetAttachmentCountdownHintTween = null;
+	private bool IsDebugMandatoryActionCountdownProbeActive()
+	{
+		return _debugMandatoryActionCountdownProbeActive;
+	}
+
+	public Godot.Collections.Dictionary DebugGetMandatoryActionCountdownState()
+	{
+		MandatoryActionCountdownController? controller = _mandatoryActionCountdownController;
+		return new Godot.Collections.Dictionary
+		{
+			["active"] = controller?.IsActive == true,
+			["display_seconds"] = controller?.DisplaySeconds ?? -1,
+			["rendered_text"] = controller?.RenderedText ?? string.Empty,
+			["urgent"] = controller?.IsUrgent == true,
+			["text_write_count"] = controller?.TextWriteCount ?? 0,
+			["urgent_state_write_count"] = controller?.UrgentStateWriteCount ?? 0,
+			["last_tick_allocated_bytes"] = controller?.LastTickManagedAllocationBytes ?? 0L,
+			["max_stable_tick_allocated_bytes"] = controller?.MaxStableTickManagedAllocationBytes ?? 0L,
+		};
 	}
 
 	private Texture2D? GetAttachmentSelectionPreviewTexture()

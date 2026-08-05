@@ -13,6 +13,7 @@ public enum NetworkSessionState
 	Reconnecting,
 	Failed,
 	MigratingHost,
+	Leaving,
 }
 
 public enum NetworkTransport

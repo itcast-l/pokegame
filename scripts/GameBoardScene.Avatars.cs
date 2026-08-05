@@ -2,13 +2,6 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private static readonly string[] PlayerAvatarAreaNodeNames =
-	{
-		"Player1AvatarArea",
-		"Player2AvatarArea",
-		"Player3AvatarArea",
-		"Player4AvatarArea",
-	};
 	private static readonly Color[] PlayerAvatarAccentColors =
 	{
 		new(1.0f, 0.84f, 0.48f, 1.0f),
@@ -25,12 +18,7 @@ public partial class GameBoardScene
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
-			DraggableAvatarArea? area = GetNodeOrNull<DraggableAvatarArea>($"%{PlayerAvatarAreaNodeNames[viewSlotIndex]}");
-			if (area == null)
-			{
-				GD.PushWarning($"Missing avatar area node: {PlayerAvatarAreaNodeNames[viewSlotIndex]}.");
-				continue;
-			}
+			DraggableAvatarArea area = _nodeBindings.AvatarAreas[viewSlotIndex];
 
 			_playerAvatarAreas[playerIndex] = area;
 			BindPlayerStatusTooltipHover(area, playerIndex);
@@ -39,7 +27,9 @@ public partial class GameBoardScene
 
 	private void CreatePlayerAvatars()
 	{
-		PackedScene? avatarScene = GD.Load<PackedScene>(CharacterAvatarScenePath);
+		PackedScene? avatarScene = LoadCachedCoreScene(
+			ref _cachedCharacterAvatarScene,
+			CharacterAvatarScenePath);
 		if (avatarScene == null)
 		{
 			GD.PushError($"Missing avatar scene: {CharacterAvatarScenePath}");

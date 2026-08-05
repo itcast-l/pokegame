@@ -87,7 +87,11 @@ func _run_dragon_reference_abort_and_reward() -> bool:
 		return false
 	var abort_result := {}
 	var dragon_started := bool(board.call("DebugStartDragonQuestionCaptureOwnershipProbe", abort_result))
-	if not dragon_started or not await _wait_for_barrier(board, "DebugHasEnteredCaptureBeforeApplyBarrier"):
+	if not dragon_started or not await _wait_for_barrier(
+		board,
+		"DebugHasEnteredCaptureBeforeApplyBarrier",
+		abort_result
+	):
 		return false
 	board.call("DebugReplaceTableCardReference", 0)
 	board.call("DebugReleaseCaptureBeforeApplyBarrier")
@@ -157,12 +161,15 @@ func _wait_for_actionable(board: Node) -> bool:
 	_fail("Timed out waiting for actionable state")
 	return false
 
-func _wait_for_barrier(board: Node, method: String) -> bool:
+func _wait_for_barrier(board: Node, method: String, result: Dictionary = {}) -> bool:
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
 	while Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
 		if bool(board.call(method)):
 			return true
+		if not result.is_empty() and bool(result.get("completed", false)):
+			_fail("Probe completed before capture barrier %s: %s" % [method, str(result)])
+			return false
 	_fail("Timed out waiting for capture barrier %s" % method)
 	return false
 
@@ -190,12 +197,16 @@ func _assert_required_source_guards() -> void:
 	var coordinator := FileAccess.get_file_as_string("res://scripts/GameBoardScene.CaptureResolutionCoordinator.cs")
 	var dragon := FileAccess.get_file_as_string("res://scripts/GameBoardScene.DragonPrinceTableAbility.cs")
 	var effects := FileAccess.get_file_as_string("res://scripts/GameBoardScene.EffectResolver.cs")
-	var commit_apply := "commitImmediatelyBeforeApply?.Invoke();\n\tCaptureStateResult captureStateResult =\n\t\t_captureStateService.ApplyCapture"
+	var commit_index := flow.find("commitImmediatelyBeforeApply?.Invoke();")
+	var capture_submit_index := flow.find("TrySubmitCaptureCardsRuleCommand(", commit_index)
 	if not card_play.contains("ResolvePlayedCardCaptureAsync(") \
 		or coordinator.count("expectedTableCardReferences:") < 1 \
 		or dragon.count("expectedTableCardReferences:") < 1 \
 		or effects.count("expectedTableCardReferences:") < 1 \
-		or not flow.contains(commit_apply) \
+		or commit_index < 0 \
+		or capture_submit_index < 0 \
+		or capture_submit_index - commit_index > 128 \
+		or flow.contains("_captureStateService.ApplyCapture") \
 		or not coordinator.contains("captureResult.Aborted") \
 		or not dragon.contains("captureResult.Aborted") \
 		or not effects.contains("captureResult.Aborted"):

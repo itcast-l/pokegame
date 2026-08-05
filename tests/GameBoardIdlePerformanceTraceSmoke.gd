@@ -4,7 +4,8 @@ const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 25.0
 const IDLE_SETTLE_FRAMES := 20
 const IDLE_OBSERVE_FRAMES := 300
-const MAX_CSHARP_ALLOCATION_GROWTH_BYTES := 8 * 1024 * 1024
+# 2026-08-04 reference run: 10/10 samples were 0 bytes, so P95 was 0 bytes.
+const MAX_CSHARP_ALLOCATION_GROWTH_BYTES := 1 * 1024 * 1024
 
 var _failed := false
 

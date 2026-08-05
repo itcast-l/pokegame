@@ -12,6 +12,7 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		string avatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, avatarId));
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);

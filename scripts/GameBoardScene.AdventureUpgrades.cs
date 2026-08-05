@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -12,14 +14,46 @@ public partial class GameBoardScene
 	private const int FirstMainAdventureStageIndex = 1;
 
 	private AdventureSuitUpgradeCatalog _adventureUpgradeCatalog = default!;
-	private TableCard? _adventureEnemyNextInsertAnchorTableCard;
-	private TableCard? _adventureTraceHuntMarkedTableCard;
-	private TableCard? _adventureHuntOrderMarkedTableCard;
-	private TableCard? _adventureCanopyRevealAnchorTableCard;
+	private TableCard? GetPendingAdventureEnemyInsertAnchor() =>
+		FindCurrentTableCard(CurrentMatchFlowState.PendingPlacementAnchorRuntimeId);
+	private TableCard? GetAdventureTraceHuntMarkedTableCard() =>
+		FindCurrentTableCard(CurrentMatchFlowState.CaptureMarkRuntimeId);
+	private TableCard? GetAdventureHuntOrderMarkedTableCard() =>
+		FindCurrentTableCard(CurrentMatchFlowState.TurnCaptureMarkRuntimeId);
+	private TableCard? GetAdventureCanopyRevealAnchorTableCard() =>
+		FindCurrentTableCard(CurrentMatchFlowState.SequentialRevealAnchorRuntimeId);
+	private AdventureEnemyNextCardInsertMode GetPendingAdventureEnemyCardInsertMode() =>
+		(AdventureEnemyNextCardInsertMode)(int)CurrentMatchFlowState.PendingCardPlacement;
+
+	private TableCard? FindCurrentTableCard(long runtimeInstanceId)
+	{
+		if (runtimeInstanceId <= 0)
+		{
+			return null;
+		}
+
+		foreach (TableCard tableCard in _tableCards)
+		{
+			if (tableCard.InstanceId == runtimeInstanceId)
+			{
+				return tableCard;
+			}
+		}
+
+		return null;
+	}
 
 	private void LoadAdventureUpgradeCatalog()
 	{
 		_adventureUpgradeCatalog = AdventureSuitUpgradeCatalog.Load(this);
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (_gameModePolicy.CanReadAdventureRun
+			&& _authorityRuleSession != null
+			&& store != null
+			&& !store.BindAuthorityRuleSession(_authorityRuleSession))
+		{
+			GD.PushWarning("Failed to bind the adventure run to the board authority session.");
+		}
 	}
 
 	private void EnsureAdventureUpgradeCatalogLoaded()
@@ -34,14 +68,8 @@ public partial class GameBoardScene
 
 	private void ResetAdventureUpgradeBoardState()
 	{
-		_pendingAdventureUpgradeTriggers.Clear();
-		_pendingAdventureWinnerPlayerIndex = -1;
 		_isResolvingAdventureUpgradeSelection = false;
-		ResetAdventureEnemyMissPendingState();
-		_adventureTraceHuntMarkedTableCard = null;
 		ClearAdventureTraceHuntMarkerIntro();
-		_adventureHuntOrderMarkedTableCard = null;
-		_adventureCanopyRevealAnchorTableCard = null;
 		_adventureUpgradeResolutionTask = Task.CompletedTask;
 		ResetAdventureUpgradeOverlayCardMotionStates();
 		CancelAdventureUpgradeSelection();
@@ -53,9 +81,9 @@ public partial class GameBoardScene
 		GD.PushWarning($"AdventureRunSessionStore autoload is missing; cannot {action}.");
 	}
 
-	private AdventureUpgradeRunState? GetAdventureUpgradeRunState()
+	private AdventureRunReadModel? GetAdventureUpgradeRunState()
 	{
-		return GetAdventureRunSessionStore()?.GetRunState();
+		return GetAdventureRunSessionStore()?.GetReadModel();
 	}
 
 	private AdventureUpgradeGrantCommitResult GrantAdventureUpgrade(
@@ -111,11 +139,25 @@ public partial class GameBoardScene
 
 	private void ClearAdventureBattleScopedState(bool prepareNewBoard)
 	{
-		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
-		_adventureMainPlayerCaptureCountThisBattle = 0;
-		_adventureQuestionRejudgeUsedThisBattle = false;
-		_adventureMainPlayerHalfHealthRescueUsed = false;
-		_adventureMainPlayerQuarterHealthRescueUsed = false;
+		TryUpdateMatchFlowState(state => state with
+		{
+			SuccessfulCapturesThisTurn = 0,
+			MainPlayerCapturesThisBattle = 0,
+			QuestionRejudgeUsedThisBattle = false,
+			HalfHealthRescueUsed = false,
+			QuarterHealthRescueUsed = false,
+			MainPlayerRealTurnActive = prepareNewBoard,
+			MainPlayerRealTurnStartPending = false,
+			PendingBaseCardFacesUp = false,
+			PendingCardPlacement = PendingCardPlacementMode.None,
+			PendingCaptureDamageDelta = 0,
+			PendingPlacementAnchorRuntimeId = 0,
+			CaptureMarkRuntimeId = 0,
+			TurnCaptureMarkRuntimeId = 0,
+			SequentialRevealAnchorRuntimeId = 0,
+			PendingProgressionChoices = default,
+			PendingWinnerSeat = -1,
+		});
 		ResetAdventureUpgradeBoardState();
 		if (prepareNewBoard)
 		{
@@ -189,27 +231,45 @@ public partial class GameBoardScene
 
 	private void ResetAdventureEnemyMissPendingState()
 	{
-		_adventureEnemyNextBaseCardFacesUp = false;
-		_adventureEnemyNextCardInsertMode = AdventureEnemyNextCardInsertMode.None;
-		_adventureEnemyNextCaptureDamageDelta = 0;
-		_adventureEnemyNextInsertAnchorTableCard = null;
+		TryUpdateMatchFlowState(state => state with
+		{
+			PendingBaseCardFacesUp = false,
+			PendingCardPlacement = PendingCardPlacementMode.None,
+			PendingCaptureDamageDelta = 0,
+			PendingPlacementAnchorRuntimeId = 0,
+		});
 	}
 
 	private bool HasAdventureUpgrade(string upgradeId)
 	{
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		return runState?.IsActive == true && runState.HasAcquiredUpgrade(upgradeId);
+	}
+
+	private void MarkAdventureQuestionRejudgeUsed()
+	{
+		TryUpdateMatchFlowState(state => state with
+		{
+			QuestionRejudgeUsedThisBattle = true,
+		});
 	}
 
 	private void RefreshAdventureHuntOrderMarkForMainPlayerTurn()
 	{
 		if (!ShouldUseAdventureUpgradeSystem() || !HasAdventureUpgrade("spades_hunt_order"))
 		{
-			_adventureHuntOrderMarkedTableCard = null;
+			TryUpdateMatchFlowState(state => state with
+			{
+				TurnCaptureMarkRuntimeId = 0,
+			});
 			return;
 		}
 
-		_adventureHuntOrderMarkedTableCard = FindLeftmostCurrentBaseTableCard();
+		TableCard? target = FindLeftmostCurrentBaseTableCard();
+		TryUpdateMatchFlowState(state => state with
+		{
+			TurnCaptureMarkRuntimeId = target?.InstanceId ?? 0,
+		});
 	}
 
 	private void RefreshAdventureTraceHuntMarkAfterMainPlayerCapture(IReadOnlyCollection<TableCard> prePlayTableCards)
@@ -239,13 +299,25 @@ public partial class GameBoardScene
 		if (effectResult.ShuffleTableAfterMiss && GetMovableTableShuffleCardCount() >= 2)
 		{
 			List<TableCard> shuffledTableCards = BuildShuffledTableCards();
-			bool shuffleCompleted = await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
-			if (!shuffleCompleted || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
+			if (shuffledTableCards.Count != _tableCards.Count)
 			{
 				return false;
 			}
 
-			ApplyShuffledTableCards(shuffledTableCards);
+			bool animationCompleted = await PlayTableCardsShuffleAnimationAsync(
+				shuffledTableCards,
+				turnSequenceGeneration);
+			if (!animationCompleted
+				|| turnSequenceGeneration != _turnSequenceGeneration)
+			{
+				return false;
+			}
+
+			bool appliedShuffle = ApplyShuffledTableCards(shuffledTableCards);
+			if (!appliedShuffle || IsGameOver())
+			{
+				return false;
+			}
 		}
 
 		if (effectResult.InsertPlayedCardAtLeftmost)
@@ -254,15 +326,26 @@ public partial class GameBoardScene
 				_tableCards.IndexOf(playedTableCard);
 			if (currentPlayedTableCardIndex > 0)
 			{
-				_tableCards.RemoveAt(currentPlayedTableCardIndex);
-				_tableCards.Insert(0, playedTableCard);
+				if (!TrySubmitMoveTableCardRuleCommand(
+					_currentTurnPlayerIndex,
+					currentPlayedTableCardIndex,
+					targetIndex: 0,
+					playedTableCard.InstanceId,
+					turnSequenceGeneration,
+					out _))
+				{
+					return false;
+				}
 			}
 		}
 		RenderTableCards();
 
 		if (effectResult.SetCanopyRevealAnchor)
 		{
-			_adventureCanopyRevealAnchorTableCard = playedTableCard;
+			TryUpdateMatchFlowState(state => state with
+			{
+				SequentialRevealAnchorRuntimeId = playedTableCard.InstanceId,
+			});
 		}
 
 		return true;
@@ -270,15 +353,19 @@ public partial class GameBoardScene
 
 	private void ApplyAdventureCanopyRevealToNewTableCard(int playedTableCardIndex)
 	{
-		if (_adventureCanopyRevealAnchorTableCard == null)
+		TableCard? revealAnchor = GetAdventureCanopyRevealAnchorTableCard();
+		if (revealAnchor == null)
 		{
 			return;
 		}
 
-		int anchorIndex = _tableCards.IndexOf(_adventureCanopyRevealAnchorTableCard);
+		int anchorIndex = _tableCards.IndexOf(revealAnchor);
 		if (anchorIndex < 0)
 		{
-			_adventureCanopyRevealAnchorTableCard = null;
+			TryUpdateMatchFlowState(state => state with
+			{
+				SequentialRevealAnchorRuntimeId = 0,
+			});
 			return;
 		}
 
@@ -286,16 +373,28 @@ public partial class GameBoardScene
 			&& playedTableCardIndex >= 0
 			&& playedTableCardIndex < _tableCards.Count)
 		{
-			_tableCards[playedTableCardIndex].IsFaceUp = true;
+			TableCard playedTableCard = _tableCards[playedTableCardIndex];
+			TrySubmitSetTableCardsFaceUpRuleCommand(
+				_currentTurnPlayerIndex,
+				ImmutableArray.Create(new RuleTableCardReference(
+					playedTableCardIndex,
+					playedTableCard.InstanceId)),
+				playedTableCard.IsFaceUp,
+				faceUp: true,
+				_turnSequenceGeneration,
+				out _);
 		}
 	}
 
 	private void RefreshAdventureCanopyAnchorAfterTableMutation()
 	{
-		if (_adventureCanopyRevealAnchorTableCard != null
-			&& _tableCards.IndexOf(_adventureCanopyRevealAnchorTableCard) < 0)
+		long anchorRuntimeId = CurrentMatchFlowState.SequentialRevealAnchorRuntimeId;
+		if (anchorRuntimeId > 0 && FindCurrentTableCard(anchorRuntimeId) == null)
 		{
-			_adventureCanopyRevealAnchorTableCard = null;
+			TryUpdateMatchFlowState(state => state with
+			{
+				SequentialRevealAnchorRuntimeId = 0,
+			});
 		}
 	}
 
@@ -309,23 +408,26 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return;
 		}
 
 		bool hadOldTableCardsBeforeMiss = prePlayTableCards.Count > 0;
-		AdventureEnemyMissEffectResult effectResult = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
-			runState.GetAcquiredUpgradeIds(),
+		AdventureEnemyMissEffectResult effectResult = runState.ResolveEnemyMissEffects(
 			_tableCards.Count,
 			hadOldTableCardsBeforeMiss);
-		_adventureEnemyNextBaseCardFacesUp = effectResult.NextCardFacesUp;
-		_adventureEnemyNextCardInsertMode = effectResult.InsertMode;
-		_adventureEnemyNextCaptureDamageDelta = effectResult.NextCaptureDamageDelta;
-		_adventureEnemyNextInsertAnchorTableCard = ResolveAdventureEnemyNextInsertAnchorAfterMiss(
+		TableCard? insertionAnchor = ResolveAdventureEnemyNextInsertAnchorAfterMiss(
 			effectResult.InsertMode,
 			playedTableCardIndex);
+		TryUpdateMatchFlowState(state => state with
+		{
+			PendingBaseCardFacesUp = effectResult.NextCardFacesUp,
+			PendingCardPlacement = (PendingCardPlacementMode)(int)effectResult.InsertMode,
+			PendingCaptureDamageDelta = effectResult.NextCaptureDamageDelta,
+			PendingPlacementAnchorRuntimeId = insertionAnchor?.InstanceId ?? 0,
+		});
 		if (effectResult.DirectDamageToEnemy > 0)
 		{
 			AddPlayerScore(MainPlayerIndex, effectResult.DirectDamageToEnemy);
@@ -346,22 +448,24 @@ public partial class GameBoardScene
 			return;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return;
 		}
 
-		AdventureEnemyCaptureEffectResult effectResult = AdventureUpgradeEffectService.ResolveEnemyCaptureEffects(
-			runState.GetAcquiredUpgradeIds());
+		AdventureEnemyCaptureEffectResult effectResult = runState.ResolveEnemyCaptureEffects();
 		if (!effectResult.NextCardFacesUp && effectResult.InsertMode == AdventureEnemyNextCardInsertMode.None)
 		{
 			return;
 		}
 
-		_adventureEnemyNextBaseCardFacesUp = effectResult.NextCardFacesUp;
-		_adventureEnemyNextCardInsertMode = effectResult.InsertMode;
-		_adventureEnemyNextInsertAnchorTableCard = null;
+		TryUpdateMatchFlowState(state => state with
+		{
+			PendingBaseCardFacesUp = effectResult.NextCardFacesUp,
+			PendingCardPlacement = (PendingCardPlacementMode)(int)effectResult.InsertMode,
+			PendingPlacementAnchorRuntimeId = 0,
+		});
 	}
 
 	private TableCard? ResolveAdventureEnemyNextInsertAnchorAfterMiss(
@@ -393,14 +497,15 @@ public partial class GameBoardScene
 		}
 
 		int tableInsertIndex = -1;
-		switch (_adventureEnemyNextCardInsertMode)
+		switch (GetPendingAdventureEnemyCardInsertMode())
 		{
 			case AdventureEnemyNextCardInsertMode.Leftmost:
 				tableInsertIndex = 0;
 				break;
 			case AdventureEnemyNextCardInsertMode.BeforeTrackedOldest:
-				tableInsertIndex = _adventureEnemyNextInsertAnchorTableCard != null
-					? _tableCards.IndexOf(_adventureEnemyNextInsertAnchorTableCard)
+				TableCard? insertionAnchor = GetPendingAdventureEnemyInsertAnchor();
+				tableInsertIndex = insertionAnchor != null
+					? _tableCards.IndexOf(insertionAnchor)
 					: -1;
 				if (tableInsertIndex < 0 && _tableCards.Count > 0)
 				{
@@ -410,9 +515,9 @@ public partial class GameBoardScene
 		}
 
 		AdventureEnemyNextBaseCardModifiers modifiers = new(
-			_adventureEnemyNextBaseCardFacesUp,
+			CurrentMatchFlowState.PendingBaseCardFacesUp,
 			tableInsertIndex,
-			_adventureEnemyNextCaptureDamageDelta);
+			CurrentMatchFlowState.PendingCaptureDamageDelta);
 		ResetAdventureEnemyMissPendingState();
 		return modifiers;
 	}
@@ -443,7 +548,8 @@ public partial class GameBoardScene
 		}
 
 		AdventureCaptureRewardApplicationPlan plan =
-			AdventureUpgradeEffectService.BuildCaptureRewardApplicationPlan(
+			(GetAdventureUpgradeRunState() ?? AdventureRunReadModel.Empty)
+			.BuildCaptureRewardApplicationPlan(
 				questionRewardEffects,
 				postCaptureEffects,
 				GetTotalHandCardCount(playerIndex),
@@ -517,9 +623,8 @@ public partial class GameBoardScene
 
 		if (commitResult.HealingResult.HasValue)
 		{
-			_playerScores[MainPlayerIndex] = commitResult.HealingResult.Value.CurrentHealth;
-			UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
-			RefreshGameplayTensionMusic();
+			TrySynchronizeCommittedAdventurePlayerHealth(
+				commitResult.HealingResult.Value.CurrentHealth);
 		}
 
 		if (commitResult.EffectResult.ImmediateDrawCount > 0)
@@ -544,17 +649,14 @@ public partial class GameBoardScene
 				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return new AdventureCaptureDamageResult(
 				Math.Max(0, normalizedInput.BaseDamage + normalizedInput.FlatDamageDelta));
 		}
 
-		return AdventureUpgradeEffectService.ApplyCaptureDamage(
-			runState.EffectState.Clone(),
-			runState.GetAcquiredUpgradeIds(),
-			normalizedInput);
+		return runState.PreviewCaptureDamage(normalizedInput);
 	}
 
 	private AdventureCaptureDamageInput FreezeAdventureCaptureDamageInput(
@@ -566,7 +668,7 @@ public partial class GameBoardScene
 			: playerIndex;
 		int targetMaxHealth = damageInput.TargetMaxHealth > 0
 			? damageInput.TargetMaxHealth
-			: targetPlayerIndex >= 0 && targetPlayerIndex < _playerScores.Length
+			: targetPlayerIndex >= 0 && targetPlayerIndex < _playerScores.Count
 				? Math.Max(1, GetScoreLimit(targetPlayerIndex))
 				: 1;
 		AdventureCaptureDamageInput normalizedInput = damageInput with
@@ -579,14 +681,11 @@ public partial class GameBoardScene
 			return normalizedInput;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		return runState?.IsActive == true
 			? normalizedInput with
 			{
-				FrozenModifiers = AdventureUpgradeEffectService
-					.FreezeCaptureDamageModifiers(
-						runState.EffectState,
-						runState.GetAcquiredUpgradeIds()),
+				FrozenModifiers = runState.FreezeCaptureDamageModifiers(),
 			}
 			: normalizedInput;
 	}
@@ -629,13 +728,21 @@ public partial class GameBoardScene
 		AdventureMissCommitResult commitResult = gate.Result;
 		if (commitResult.HealingResult.HasValue)
 		{
-			_playerScores[MainPlayerIndex] = commitResult.HealingResult.Value.CurrentHealth;
-			UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
-			RefreshGameplayTensionMusic();
+			TrySynchronizeCommittedAdventurePlayerHealth(
+				commitResult.HealingResult.Value.CurrentHealth);
 		}
 		if (commitResult.CommitBandageAtRealTurnEnd)
 		{
-			_state.AdventureExtraActionQueue.RegisterMissBandageForRealTurnEnd();
+			if (!TrySubmitRegisterRealTurnEndMarkerRuleCommand(
+				MainPlayerIndex,
+				AdventureMissBandageRealTurnEndMarkerId,
+				_turnSequenceGeneration))
+			{
+				return new AdventureMissSceneResolution(
+					false,
+					default,
+					default);
+			}
 		}
 		RenderPlayerHands();
 		return new AdventureMissSceneResolution(
@@ -670,9 +777,8 @@ public partial class GameBoardScene
 		AdventureTurnStartCommitResult commitResult = gate.Result;
 		if (commitResult.HealingResult.HasValue)
 		{
-			_playerScores[MainPlayerIndex] = commitResult.HealingResult.Value.CurrentHealth;
-			UpdatePlayerScoreMeter(MainPlayerIndex, animate: true);
-			RefreshGameplayTensionMusic();
+			TrySynchronizeCommittedAdventurePlayerHealth(
+				commitResult.HealingResult.Value.CurrentHealth);
 		}
 
 		bool drewAny = false;
@@ -721,7 +827,9 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			Texture2D? revealTexture = tableCard.Card?.Texture ?? tableCard.ItemOverlay?.Texture;
+			Texture2D? revealTexture = tableCard.Card.HasValue
+				? GetPlayingCardTexture(tableCard.Card.Value)
+				: tableCard.ItemOverlay.HasValue ? GetItemCardTexture(tableCard.ItemOverlay.Value) : null;
 			if (revealTexture == null)
 			{
 				continue;
@@ -733,7 +841,18 @@ public partial class GameBoardScene
 				return;
 			}
 
-			tableCard.IsFaceUp = true;
+			if (!TrySubmitSetTableCardsFaceUpRuleCommand(
+				_currentTurnPlayerIndex,
+				ImmutableArray.Create(new RuleTableCardReference(
+					tableCardIndex,
+					tableCard.InstanceId)),
+				tableCard.IsFaceUp,
+				faceUp: true,
+				turnSequenceGeneration,
+				out _))
+			{
+				return;
+			}
 			RenderTableCards();
 			await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
@@ -842,18 +961,41 @@ public partial class GameBoardScene
 			cardsToReturn.Add(playedCardForReturn.Value);
 		}
 
+		int availableHandSlots = Math.Max(
+			0,
+			MaxTotalHandCards - GetTotalHandCardCount(playerIndex));
+		var returnedCards = new List<PlayingCard>(Math.Min(cardsToReturn.Count, availableHandSlots));
+		var returnedCardIds = ImmutableArray.CreateBuilder<long>(
+			Math.Min(cardsToReturn.Count, availableHandSlots));
 		foreach (PlayingCard card in cardsToReturn)
 		{
 			int deckIndex = FindLastPlayerDeckCardIndex(playerIndex, card);
-			if (deckIndex < 0 || GetTotalHandCardCount(playerIndex) >= MaxTotalHandCards)
+			if (deckIndex < 0 || returnedCards.Count >= availableHandSlots)
 			{
 				continue;
 			}
 
-			_playerDecks[playerIndex].RemoveAt(deckIndex);
-			int handIndex = _playerHands[playerIndex].Count;
-			_playerHands[playerIndex].Add(card);
-			await PlayReplacementDrawAnimationAsync(playerIndex, new DrawnHandCard(card, handIndex), turnSequenceGeneration);
+			returnedCards.Add(card);
+			returnedCardIds.Add(card.InstanceId);
+		}
+
+		if (returnedCards.Count == 0
+			|| !TrySubmitReturnCardsToHandRuleCommand(
+				playerIndex,
+				returnedCardIds.ToImmutable(),
+				MaxTotalHandCards,
+				out RuleCommandResult returnResult))
+		{
+			return;
+		}
+
+		int firstHandIndex = returnResult.Mutation.TargetIndex;
+		for (int returnedIndex = 0; returnedIndex < returnedCards.Count; returnedIndex++)
+		{
+			await PlayReplacementDrawAnimationAsync(
+				playerIndex,
+				new DrawnHandCard(returnedCards[returnedIndex], firstHandIndex + returnedIndex),
+				turnSequenceGeneration);
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
@@ -873,16 +1015,13 @@ public partial class GameBoardScene
 			return playedCard.Rank;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return playedCard.Rank;
 		}
 
-		return AdventureUpgradeEffectService.ResolveClubPlayAdjustments(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			playedCard.Rank).PrimaryRank;
+		return runState.ResolveClubPlayAdjustments(playedCard.Rank).PrimaryRank;
 	}
 
 	private List<string>? BuildAdventureMainPlayerAlternateRanks(PlayingCard playedCard)
@@ -894,16 +1033,14 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return null;
 		}
 
-		IReadOnlyList<string> alternateRanks = AdventureUpgradeEffectService.ResolveClubPlayAdjustments(
-			runState.EffectState,
-			runState.GetAcquiredUpgradeIds(),
-			playedCard.Rank).AlternateRanks;
+		IReadOnlyList<string> alternateRanks =
+			runState.ResolveClubPlayAdjustments(playedCard.Rank).AlternateRanks;
 		if (alternateRanks.Count == 0)
 		{
 			return null;
@@ -928,10 +1065,10 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		return runState?.IsActive == true
 			&& runState.HasAcquiredUpgrade("clubs_borrow_suit_set")
-			&& runState.EffectState.ClubBorrowSuitSetArmed;
+			&& runState.Effects.ClubBorrowSuitSetArmed;
 	}
 
 	private int FindLastPlayerDeckCardIndex(int playerIndex, PlayingCard card)
@@ -941,7 +1078,7 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		List<PlayingCard> deck = _playerDecks[playerIndex];
+		IReadOnlyList<PlayingCard> deck = _playerDecks[playerIndex];
 		for (int index = deck.Count - 1; index >= 0; index--)
 		{
 			if (deck[index].InstanceId == card.InstanceId)
@@ -960,13 +1097,13 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return 0;
 		}
 
-		return AdventureUpgradeEffectService.GetBattleStartDrawCount(runState.GetAcquiredUpgradeIds());
+		return runState.GetBattleStartDrawCount();
 	}
 
 	private void ClearAdventureUpgradeRun()
@@ -1004,7 +1141,7 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			AdventureSaveGateResult<AdventureRunWriteResult> gate =
@@ -1050,7 +1187,7 @@ public partial class GameBoardScene
 
 	private bool ShouldDelayWinnerForAdventureVictoryUpgrade(int winnerPlayerIndex)
 	{
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (!ShouldUseAdventureUpgradeSystem()
 			|| winnerPlayerIndex != MainPlayerIndex
 			|| runState?.ShouldGrantVictoryUpgrade != true)
@@ -1058,20 +1195,23 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (_pendingAdventureWinnerPlayerIndex == winnerPlayerIndex)
+		if (CurrentMatchFlowState.PendingWinnerSeat == winnerPlayerIndex)
 		{
 			return true;
 		}
 
-		_pendingAdventureWinnerPlayerIndex = winnerPlayerIndex;
-		return true;
+		return TryUpdateMatchFlowState(state => state with
+		{
+			PendingWinnerSeat = winnerPlayerIndex,
+		});
 	}
 
 	private bool ShouldQueueAdventureBigCaptureUpgrade(int playerIndex, int totalCapturedCardCount)
 	{
 		if (!ShouldUseAdventureUpgradeSystem()
 			|| playerIndex != MainPlayerIndex
-			|| !AdventureUpgradeChoiceRules.ShouldGrantBigCapture(totalCapturedCardCount))
+			|| GetAdventureUpgradeRunState()
+				?.ShouldGrantBigCaptureUpgrade(totalCapturedCardCount) != true)
 		{
 			return false;
 		}

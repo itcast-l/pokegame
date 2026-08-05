@@ -48,8 +48,8 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			List<PlayingCard> hand = _playerHands[playerIndex];
-			List<ItemCard> itemHand = _playerItemHands[playerIndex];
+			IReadOnlyList<PlayingCard> hand = _playerHands[playerIndex];
+			IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 			int visibleHandCount = GetVisibleHandCardCountForRender(playerIndex, hand.Count);
 			int displayCardCount = hand.Count + itemHand.Count;
 			Vector2 cardOffset = GetHandCardOffset(playerIndex, displayCardCount, handArea.Size);
@@ -292,7 +292,7 @@ public partial class GameBoardScene
 			{
 				PlayingCard card = hand[cardIndex];
 				bool showCardBack = !isLocalHandPlayer && _cardBackTexture != null;
-				Texture2D? texture = showCardBack ? _cardBackTexture : card.Texture;
+				Texture2D? texture = showCardBack ? _cardBackTexture : GetPlayingCardTexture(card);
 				bool showMagnetSelectionHighlight = isMagnetSelectionActive
 					&& isLocalHandPlayer
 					&& IsAttachableMagnetCard(card, _pendingItemCardId);
@@ -332,7 +332,7 @@ public partial class GameBoardScene
 			{
 				ItemCard itemCard = itemHand[itemIndex];
 				bool showCardBack = !isLocalHandPlayer && _cardBackTexture != null;
-				Texture2D? texture = showCardBack ? _cardBackTexture : itemCard.Texture;
+				Texture2D? texture = showCardBack ? _cardBackTexture : GetItemCardTexture(itemCard);
 				float visualScale = showCardBack ? 1.0f : GetItemCardVisualScale(itemCard.Id);
 				int displayIndex = hand.Count + itemIndex;
 				bool isJellyfishDisabled = !isHandLimitDiscardSelectionActive
@@ -476,9 +476,13 @@ public partial class GameBoardScene
 
 	private TextureRect GetOrCreateHandCardVisual(Control cardSlot)
 	{
-		if (cardSlot.GetNodeOrNull<TextureRect>(HandCardVisualNodeName) is TextureRect existingVisual)
+		for (int childIndex = 0; childIndex < cardSlot.GetChildCount(); childIndex++)
 		{
-			return existingVisual;
+			if (cardSlot.GetChild(childIndex) is TextureRect existingVisual
+				&& existingVisual.Name == HandCardVisualNodeName)
+			{
+				return existingVisual;
+			}
 		}
 
 		TextureRect visual = CreateHandCardVisual();
@@ -551,8 +555,8 @@ public partial class GameBoardScene
 			return signature.ToHashCode();
 		}
 
-		List<PlayingCard> hand = _playerHands[playerIndex];
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<PlayingCard> hand = _playerHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		int visibleHandCount = GetVisibleHandCardCountForRender(playerIndex, hand.Count);
 		bool canMainPlayerAct = CanMainPlayerAct();
 		bool isLocalHandPlayer = IsLocalHandPlayer(playerIndex);
@@ -616,7 +620,7 @@ public partial class GameBoardScene
 			signature.Add(isJellyfishDisabled);
 			signature.Add(IsHandDisplaySlotHidden(playerIndex, cardIndex));
 			signature.Add(!showCardBack && ShouldPlayedCardCollectTable(card));
-			AddTextureSignature(ref signature, showCardBack ? _cardBackTexture : card.Texture);
+			AddTextureSignature(ref signature, showCardBack ? _cardBackTexture : GetPlayingCardTexture(card));
 			AddTextureSignature(ref signature, showCardBack ? null : GetCardAttachmentOverlayTexture(card));
 		}
 
@@ -648,7 +652,7 @@ public partial class GameBoardScene
 				signature.Add(isJellyfishDisabled || isLocked);
 				signature.Add(IsHandDisplaySlotHidden(playerIndex, displayIndex));
 				signature.Add(!showCardBack && _itemCardDescriptions.ContainsKey(itemCard.Id));
-				AddTextureSignature(ref signature, showCardBack ? _cardBackTexture : itemCard.Texture);
+				AddTextureSignature(ref signature, showCardBack ? _cardBackTexture : GetItemCardTexture(itemCard));
 		}
 
 		return signature.ToHashCode();

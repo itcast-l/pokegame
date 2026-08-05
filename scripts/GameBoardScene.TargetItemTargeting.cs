@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -31,15 +33,20 @@ public partial class GameBoardScene
 		{
 			return -1;
 		}
-		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition))
+		if (!_itemCardCatalog.TryGetDefinition(itemCardId, out _))
 		{
 			return -1;
 		}
 
 		List<int> candidates = BuildItemTargetPlayerCandidates(itemCardId, ownerPlayerIndex);
-		return candidates.Count == 0 ? -1 : DirectItemTargetRules.PickUniformCandidate(
-			candidates,
-			_rng.RandiRange(0, candidates.Count - 1));
+		return candidates.Count > 0
+			&& TrySubmitChooseRandomTargetSeatRuleCommand(
+				ownerPlayerIndex,
+				candidates.ToImmutableArray(),
+				_turnSequenceGeneration,
+				out int targetPlayerIndex)
+				? targetPlayerIndex
+				: -1;
 	}
 
 	private bool IsResolvedItemTargetPlayerCandidate(string target, int ownerPlayerIndex, int targetPlayerIndex)
@@ -75,7 +82,7 @@ public partial class GameBoardScene
 			&& targetPlayerIndex != ownerPlayerIndex;
 	}
 
-	private int PickTargetHandIndex(int targetPlayerIndex)
+	private int PickTargetHandIndex(int ownerPlayerIndex, int targetPlayerIndex)
 	{
 		if (IsNetworkMultiplayerMode() && !IsNetworkHost())
 		{
@@ -86,12 +93,13 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		int totalHandCards = GetTotalHandCardCount(targetPlayerIndex);
-		if (totalHandCards == 0)
-		{
-			return -1;
-		}
-
-		return _rng.RandiRange(0, totalHandCards - 1);
+		return TrySubmitChooseRandomHandDisplayIndexRuleCommand(
+			ownerPlayerIndex,
+			targetPlayerIndex,
+			ImmutableArray<int>.Empty,
+			_turnSequenceGeneration,
+			out int targetHandIndex)
+				? targetHandIndex
+				: -1;
 	}
 }

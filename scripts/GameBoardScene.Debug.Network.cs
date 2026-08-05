@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -71,31 +73,20 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-		{
-			_playerHands[playerIndex].Clear();
-			_playerDecks[playerIndex].Clear();
-			_playerItemHands[playerIndex].Clear();
-			_playerScores[playerIndex] = 0;
-		}
-		_tableCards.Clear();
+		DebugRuleFixture ruleFixture = CreateEmptyDebugRuleFixture();
 		ClearPendingItemSelectionState();
 		ClearNetworkPendingActionState();
 		ResetNetworkPredictedClientState();
-		_matchOutcomeKind = MatchOutcomeKind.InProgress;
-		_winnerPlayerIndex = -1;
-		_currentTurnPlayerIndex = 1;
-		_completedTurnsSinceQuestionCardRefresh = 0;
-		_questionCardRefreshAnchorPlayerIndex = -1;
+		ruleFixture.CurrentTurnSeat = 1;
 		_rng.Seed = 20260720;
 
 		switch (fixture)
 		{
 			case "base_capture":
-				_playerHands[1].Add(cards["Hearts:5"]);
-				_playerHands[0].Add(cards["Spades:9"]);
-				_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-				_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
+				ruleFixture.PlayerHands[1].Add(cards["Hearts:5"]);
+				ruleFixture.PlayerHands[0].Add(cards["Spades:9"]);
+				ruleFixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+				ruleFixture.TableCards.Add(new TableCard(cards["Diamonds:3"], true));
 				break;
 			case "question_capture":
 				ItemCard? questionMark = CreateItemCard(QuestionMarkItemCardId);
@@ -104,10 +95,10 @@ public partial class GameBoardScene
 				{
 					return false;
 				}
-				_playerHands[1].Add(cards["Hearts:5"]);
-				_playerHands[0].Add(cards["Spades:9"]);
-				_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-				_tableCards.Add(new TableCard(null, true, questionMark));
+				ruleFixture.PlayerHands[1].Add(cards["Hearts:5"]);
+				ruleFixture.PlayerHands[0].Add(cards["Spades:9"]);
+				ruleFixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+				ruleFixture.TableCards.Add(new TableCard(null, true, questionMark));
 				break;
 			case "item_shuffle":
 				ItemCard? shuffle = CreateItemCard(ItemCardCatalog.ShuffleItemCardId);
@@ -115,16 +106,20 @@ public partial class GameBoardScene
 				{
 					return false;
 				}
-				_playerItemHands[1].Add(shuffle.Value);
-				_playerDecks[1].Add(cards["Spades:9"]);
-				_playerHands[0].Add(cards["Hearts:6"]);
-				_tableCards.Add(new TableCard(cards["Hearts:2"], true));
-				_tableCards.Add(new TableCard(cards["Clubs:7"], true));
-				_tableCards.Add(new TableCard(cards["Diamonds:4"], true));
-				_tableCards.Add(new TableCard(cards["Spades:8"], true));
+				ruleFixture.PlayerItemHands[1].Add(shuffle.Value);
+				ruleFixture.PlayerDecks[1].Add(cards["Spades:9"]);
+				ruleFixture.PlayerHands[0].Add(cards["Hearts:6"]);
+				ruleFixture.TableCards.Add(new TableCard(cards["Hearts:2"], true));
+				ruleFixture.TableCards.Add(new TableCard(cards["Clubs:7"], true));
+				ruleFixture.TableCards.Add(new TableCard(cards["Diamonds:4"], true));
+				ruleFixture.TableCards.Add(new TableCard(cards["Spades:8"], true));
 				break;
 			default:
 				return false;
+		}
+		if (!CommitDebugRuleFixture(ruleFixture))
+		{
+			return false;
 		}
 
 		InvalidateRenderCaches();
@@ -313,25 +308,15 @@ public partial class GameBoardScene
 				cards["Diamonds:4"],
 				cards["Clubs:5"],
 			};
-			for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-			{
-				_playerHands[playerIndex].Clear();
-				_playerDecks[playerIndex].Clear();
-				_playerItemHands[playerIndex].Clear();
-				_playerScores[playerIndex] = 0;
-			}
+			DebugRuleFixture ruleFixture = CreateEmptyDebugRuleFixture();
 			if (availableCards.Count < player_count)
 			{
 				throw new InvalidOperationException("Core turn probe has too few playing cards.");
 			}
 
-			_tableCards.Clear();
-			_matchOutcomeKind = MatchOutcomeKind.InProgress;
-			_winnerPlayerIndex = -1;
 			_isOpeningDealAnimationPlaying = false;
 			_isProcessingCardPlay = false;
 			_isResolvingTurnSequence = false;
-			AdvanceTurnSequenceGeneration();
 
 			int actorPlayerIndex;
 			int expectedTurnPlayerIndex = -1;
@@ -341,7 +326,7 @@ public partial class GameBoardScene
 					actorPlayerIndex = MainPlayerIndex;
 					for (int playerIndex = 1; playerIndex < player_count; playerIndex++)
 					{
-						_playerHands[playerIndex].Add(availableCards[playerIndex]);
+						ruleFixture.PlayerHands[playerIndex].Add(availableCards[playerIndex]);
 					}
 					expectedTurnPlayerIndex = player_count >= 3 ? 2 : 1;
 					break;
@@ -351,7 +336,7 @@ public partial class GameBoardScene
 					{
 						if (playerIndex != actorPlayerIndex)
 						{
-							_playerHands[playerIndex].Add(availableCards[playerIndex]);
+							ruleFixture.PlayerHands[playerIndex].Add(availableCards[playerIndex]);
 						}
 					}
 					expectedTurnPlayerIndex = 1;
@@ -359,7 +344,7 @@ public partial class GameBoardScene
 				case "consecutive_skips":
 					actorPlayerIndex = MainPlayerIndex;
 					expectedTurnPlayerIndex = player_count == 4 ? 3 : 1;
-					_playerHands[expectedTurnPlayerIndex].Add(availableCards[expectedTurnPlayerIndex]);
+					ruleFixture.PlayerHands[expectedTurnPlayerIndex].Add(availableCards[expectedTurnPlayerIndex]);
 					for (int playerIndex = 1; playerIndex < player_count; playerIndex++)
 					{
 						if (playerIndex != expectedTurnPlayerIndex)
@@ -367,7 +352,7 @@ public partial class GameBoardScene
 							ItemCard? blockedItem = CreateItemCard("draw_card");
 							if (blockedItem.HasValue)
 							{
-								_playerItemHands[playerIndex].Add(blockedItem.Value);
+								ruleFixture.PlayerItemHands[playerIndex].Add(blockedItem.Value);
 							}
 						}
 					}
@@ -381,15 +366,19 @@ public partial class GameBoardScene
 						{
 							throw new InvalidOperationException("Core turn probe could not create draw_card.");
 						}
-						_playerItemHands[playerIndex].Add(blockedItem.Value);
-						_playerScores[playerIndex] = 10;
+						ruleFixture.PlayerItemHands[playerIndex].Add(blockedItem.Value);
+						ruleFixture.PlayerScores[playerIndex] = 10;
 					}
 					break;
 				default:
 					throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown core turn probe scenario.");
 			}
 
-			_currentTurnPlayerIndex = actorPlayerIndex;
+			ruleFixture.CurrentTurnSeat = actorPlayerIndex;
+			if (!CommitDebugRuleFixture(ruleFixture))
+			{
+				throw new InvalidOperationException("Core turn probe could not commit its rule fixture.");
+			}
 			InvalidateRenderCaches();
 			RenderPlayerCardPiles();
 			RenderPlayerHands();
@@ -436,40 +425,48 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard sourceCard = cards["Hearts:5"];
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		var players = ImmutableArray.CreateBuilder<PlayerStateSnapshot>(player_count);
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			var deck = ImmutableArray.CreateBuilder<LogicalCardState>();
+			var hand = ImmutableArray.CreateBuilder<LogicalCardState>();
+			var itemHand = ImmutableArray.CreateBuilder<LogicalItemState>();
+			if (playerIndex == MainPlayerIndex)
+			{
+				for (int handIndex = 1; handIndex < totalHandCardCountBeforeUse; handIndex++)
+				{
+					hand.Add(ToRuleCardState(sourceCard.CloneWithNewRuntimeInstanceId()));
+				}
+
+				for (int deckIndex = 0; deckIndex < deckCardCount; deckIndex++)
+				{
+					deck.Add(ToRuleCardState(sourceCard.CloneWithNewRuntimeInstanceId()));
+				}
+
+				itemHand.Add(new LogicalItemState(ItemCardCatalog.DrawCardItemCardId));
+			}
+			else
+			{
+				hand.Add(ToRuleCardState(sourceCard.CloneWithNewRuntimeInstanceId()));
+			}
+
+			players.Add(new PlayerStateSnapshot(
+				playerIndex,
+				deck.ToImmutable(),
+				hand.ToImmutable(),
+				itemHand.ToImmutable(),
+				Score: 0));
+		}
+		if (!TryInitializeScriptedRuleMatch(
+			players.MoveToImmutable(),
+			ImmutableArray<TableCardState>.Empty))
+		{
+			return false;
 		}
 
-		for (int handIndex = 1; handIndex < totalHandCardCountBeforeUse; handIndex++)
-		{
-			_playerHands[MainPlayerIndex].Add(sourceCard);
-		}
-	for (int deckIndex = 0; deckIndex < deckCardCount; deckIndex++)
-	{
-		_playerDecks[MainPlayerIndex].Add(sourceCard);
-	}
-	_playerItemHands[MainPlayerIndex].Add(new ItemCard(
-		ItemCardCatalog.DrawCardItemCardId,
-		sourceCard.Texture));
-	for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-	{
-		if (playerIndex != MainPlayerIndex)
-		{
-			_playerHands[playerIndex].Add(sourceCard);
-		}
-	}
-	_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -496,11 +493,17 @@ public partial class GameBoardScene
 
 	public bool DebugNetworkAuthorityAcceptsDrawCardItem()
 	{
-		return TryStartNetworkItemCardPlayFromHost(
+		if (!TryValidateNetworkItemCardPlayFromHost(
 			MainPlayerIndex,
 			0,
 			_turnSequenceGeneration,
-			out _);
+			out _))
+		{
+			return false;
+		}
+
+		ConfirmMainPlayerItemCard(0);
+		return true;
 	}
 
 	public int DebugGetQuestionRewardGrantCount()
@@ -537,8 +540,8 @@ public partial class GameBoardScene
 			AdventureDirectDamageCommitResult commitResult = store?.ApplyDirectDamage(
 				new AdventureDirectDamageCommitInput(
 					points,
-					_adventureMainPlayerHalfHealthRescueUsed,
-					_adventureMainPlayerQuarterHealthRescueUsed))
+					CurrentMatchFlowState.HalfHealthRescueUsed,
+					CurrentMatchFlowState.QuarterHealthRescueUsed))
 				?? new AdventureDirectDamageCommitResult(
 					AdventureRunWriteResult.SaveFailed,
 					0,
@@ -567,7 +570,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerScores[playerIndex] = score;
+		if (!TrySubmitScoreMutationsRuleCommand(
+			ImmutableArray.Create(new RuleScoreMutation(
+				playerIndex,
+				RuleScoreMutationKind.Set,
+				score)),
+			out _))
+		{
+			return false;
+		}
 		UpdatePlayerScoreMeter(playerIndex, false);
 		return true;
 	}
@@ -631,24 +642,71 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		EnsureNetworkStateLists();
+		DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			_playerDecks[playerIndex].Clear();
-			_playerHands[playerIndex].Clear();
-			_playerItemHands[playerIndex].Clear();
-			_playerDecks[playerIndex].Add(CreateNetworkPlayingCard(cardCode));
-			_playerHands[playerIndex].Add(CreateNetworkPlayingCard(cardCode));
+			fixture.PlayerDecks[playerIndex].Clear();
+			fixture.PlayerHands[playerIndex].Clear();
+			fixture.PlayerItemHands[playerIndex].Clear();
+			fixture.PlayerDecks[playerIndex].Add(
+				CreateNetworkPlayingCard(cardCode).CloneWithNewRuntimeInstanceId());
+			fixture.PlayerHands[playerIndex].Add(
+				CreateNetworkPlayingCard(cardCode).CloneWithNewRuntimeInstanceId());
 		}
-		_tableCards.Clear();
-		_tableCards.Add(new TableCard(CreateNetworkPlayingCard(cardCode), true));
-		_tableCards.Add(new TableCard(CreateNetworkPlayingCard(cardCode), true));
-		_winnerPlayerIndex = -1;
+		fixture.TableCards.Clear();
+		fixture.TableCards.Add(new TableCard(
+			CreateNetworkPlayingCard(cardCode).CloneWithNewRuntimeInstanceId(),
+			true));
+		fixture.TableCards.Add(new TableCard(
+			CreateNetworkPlayingCard(cardCode).CloneWithNewRuntimeInstanceId(),
+			true));
+		if (_authorityRuleSession != null)
+		{
+			if (!CommitDebugRuleFixture(fixture))
+			{
+				return null;
+			}
+		}
+		else if (_replicaRuleSession != null)
+		{
+			NetworkReplicaPresentationState presentation =
+				NetworkReplicaPresentationState.CloneFrom(
+					_playerDecks,
+					_playerHands,
+					_playerItemHands,
+					_tableCards);
+			presentation.EnsureSeatCapacity(MaxPlayers);
+			for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
+			{
+				presentation.PlayerDecks[playerIndex].Clear();
+				presentation.PlayerDecks[playerIndex].AddRange(
+					fixture.PlayerDecks[playerIndex]);
+				presentation.PlayerHands[playerIndex].Clear();
+				presentation.PlayerHands[playerIndex].AddRange(
+					fixture.PlayerHands[playerIndex]);
+				presentation.PlayerItemHands[playerIndex].Clear();
+				presentation.PlayerItemHands[playerIndex].AddRange(
+					fixture.PlayerItemHands[playerIndex]);
+			}
+			presentation.TableCards.Clear();
+			presentation.TableCards.AddRange(fixture.TableCards);
+			_networkReplicaPresentationState = presentation;
+			InvalidateRenderCaches();
+		}
+		else
+		{
+			return null;
+		}
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
 		_isOpeningDealAnimationPlaying = false;
 
-		Godot.Collections.Dictionary snapshot = BuildNetworkBoardSnapshotForSeat(
+		if (!TryCreateDebugNetworkSnapshotReadModel(out MatchReadModel snapshotReadModel))
+		{
+			return null;
+		}
+		Godot.Collections.Dictionary snapshot = BuildNetworkBoardSnapshotFromReadModelForSeat(
+			snapshotReadModel,
 			GetLocalHandPlayerIndex(),
 			_networkLastAppliedSnapshotId + 1);
 		var seatStates = new Godot.Collections.Array();
@@ -665,10 +723,96 @@ public partial class GameBoardScene
 		}
 		snapshot["seat_control_states"] = seatStates;
 		snapshot["debug_target_hand_card_code"] = cardCode;
+		bool switchedToReplicaRuleSession = _replicaRuleSession == null;
+		DebugUseReplicaRuleSession(preserveCurrentStateForPresentation: true);
+		if (switchedToReplicaRuleSession
+			&& (!TryDecodeNetworkBoardSnapshot(snapshot, out ValidatedNetworkBoardSnapshot validatedSnapshot)
+				|| !TryApplyReplicaRuleSnapshot(validatedSnapshot)))
+		{
+			return null;
+		}
 		return snapshot;
 	}
 
-	// Smoke-only trust-boundary probes. They do not apply or enqueue data.
+	private bool TryCreateDebugNetworkSnapshotReadModel(out MatchReadModel readModel)
+	{
+		MatchReadModel? current = _authorityRuleSession?.ReadModel
+			?? _replicaRuleSession?.ReadModel;
+		if (current?.IsInitialized != true
+			|| current.Players.Length != player_count
+			|| _playerDecks.Count < player_count
+			|| _playerHands.Count < player_count
+			|| _playerItemHands.Count < player_count)
+		{
+			readModel = null!;
+			return false;
+		}
+
+		var players = ImmutableArray.CreateBuilder<PlayerStateSnapshot>(player_count);
+		for (int seat = 0; seat < player_count; seat++)
+		{
+			var items = ImmutableArray.CreateBuilder<LogicalItemState>(
+				_playerItemHands[seat].Count);
+			foreach (ItemCard item in _playerItemHands[seat])
+			{
+				items.Add(new LogicalItemState(item.Id));
+			}
+			players.Add(new PlayerStateSnapshot(
+				seat,
+				DebugSnapshotRuleCards(_playerDecks[seat]),
+				DebugSnapshotRuleCards(_playerHands[seat]),
+				items.MoveToImmutable(),
+				current.Players[seat].Score));
+		}
+
+		var tableCards = ImmutableArray.CreateBuilder<TableCardState>(_tableCards.Count);
+		foreach (TableCard tableCard in _tableCards)
+		{
+			tableCards.Add(ToRuleTableCardState(tableCard));
+		}
+
+		readModel = current with
+		{
+			Players = players.MoveToImmutable(),
+			TableCards = tableCards.MoveToImmutable(),
+		};
+		return true;
+	}
+
+	private static ImmutableArray<LogicalCardState> DebugSnapshotRuleCards(
+		IReadOnlyList<PlayingCard> cards)
+	{
+		var result = ImmutableArray.CreateBuilder<LogicalCardState>(cards.Count);
+		foreach (PlayingCard card in cards)
+		{
+			result.Add(ToRuleCardState(card));
+		}
+		return result.MoveToImmutable();
+	}
+
+	private void DebugUseReplicaRuleSession(bool preserveCurrentStateForPresentation = false)
+	{
+		if (_replicaRuleSession != null)
+		{
+			return;
+		}
+
+		NetworkReplicaPresentationState? preservedPresentation =
+			preserveCurrentStateForPresentation
+				? NetworkReplicaPresentationState.CloneFrom(
+					_playerDecks,
+					_playerHands,
+					_playerItemHands,
+					_tableCards)
+				: null;
+		DiscardNetworkReplicaPresentationState();
+		_replicaRuleSession = new ReplicaRuleSession();
+		_authorityRuleSession = null;
+		_networkReplicaPresentationState = preservedPresentation;
+		_networkReplicaPresentationState?.EnsureSeatCapacity(MaxPlayers);
+	}
+
+	// Smoke-only trust-boundary probes.
 	public bool DebugRejectsNetworkSnapshotPayload(
 		Godot.Collections.Dictionary payload)
 	{
@@ -683,6 +827,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		DebugUseReplicaRuleSession();
 		ApplyNetworkBoardSnapshotNow(snapshot);
 		return true;
 	}
@@ -733,6 +878,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		DebugUseReplicaRuleSession();
 		ApplyNetworkBoardSnapshotNow(snapshot);
 		TrackBoardTask(PlayNetworkCardPlayedEventAsync(visualEvent), nameof(PlayNetworkCardPlayedEventAsync));
 		return true;
@@ -752,9 +898,10 @@ public partial class GameBoardScene
 			return false;
 		}
 
-			NetworkVisualPlayback.StagePendingSnapshot(snapshot);
-			NetworkVisualPlayback.Enqueue(visualEvent);
-			return true;
+		DebugUseReplicaRuleSession();
+		NetworkVisualPlayback.StagePendingSnapshot(snapshot);
+		NetworkVisualPlayback.Enqueue(visualEvent);
+		return true;
 	}
 
 	public bool DebugQueueDecodedNetworkVisualEvent(
@@ -777,6 +924,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		DebugUseReplicaRuleSession();
 		NetworkVisualPlayback.SubmitSnapshot(snapshot);
 		return true;
 	}
@@ -851,7 +999,7 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		int scorePlayerIndex = ScoreService.GetCapturedScorePlayerIndex(
+		int scorePlayerIndex = MatchReadModel.GetCapturedScorePlayerIndex(
 			ToCaptureScoringTableCards(),
 			plan.CaptureStartIndex,
 			playerIndex,
@@ -878,7 +1026,7 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		int scorePlayerIndex = ScoreService.GetCapturedScorePlayerIndex(
+		int scorePlayerIndex = MatchReadModel.GetCapturedScorePlayerIndex(
 			ToCaptureScoringTableCards(),
 			plan.CaptureStartIndex,
 			playerIndex,

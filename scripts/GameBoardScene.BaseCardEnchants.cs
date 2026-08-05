@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Collections.Immutable;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -78,7 +80,7 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		if (!CaptureScoringRules.HasCapturedMiddleTableCards(ToCaptureScoringTableCards(), captureStartIndex))
+		if (!MatchReadModel.HasCapturedMiddleTableCards(ToCaptureScoringTableCards(), captureStartIndex))
 		{
 			return 0;
 		}
@@ -185,7 +187,9 @@ public partial class GameBoardScene
 		}
 
 		TableCard revealTableCard = _tableCards[revealTableCardIndex];
-		Texture2D? revealTexture = revealTableCard.Card?.Texture ?? revealTableCard.ItemOverlay?.Texture;
+		Texture2D? revealTexture = revealTableCard.Card.HasValue
+			? GetPlayingCardTexture(revealTableCard.Card.Value)
+			: revealTableCard.ItemOverlay.HasValue ? GetItemCardTexture(revealTableCard.ItemOverlay.Value) : null;
 		if (revealTexture == null)
 		{
 			return false;
@@ -198,7 +202,18 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		revealTableCard.IsFaceUp = true;
+		if (!TrySubmitSetTableCardsFaceUpRuleCommand(
+			_currentTurnPlayerIndex,
+			ImmutableArray.Create(new RuleTableCardReference(
+				revealTableCardIndex,
+				revealTableCard.InstanceId)),
+			expectedFaceUp: false,
+			faceUp: true,
+			turnSequenceGeneration,
+			out _))
+		{
+			return false;
+		}
 		RenderTableCards();
 		return true;
 	}

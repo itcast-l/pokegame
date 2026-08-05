@@ -31,58 +31,69 @@ public partial class GameBoardScene
 			return;
 		}
 
-		for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		var ownedPresentationHiddenRuntimeIds = new List<long>();
+		try
 		{
-			if (_tableCards[tableCardIndex].IsBuriedInSand)
+			for (int tableCardIndex = captureStartIndex; tableCardIndex < _tableCards.Count; tableCardIndex++)
 			{
-				continue;
-			}
-
-			if (IsQuestionOnlyTableCard(_tableCards[tableCardIndex]))
-			{
-				continue;
-			}
-
-			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
-		}
-		if (extraTableCardIndexes != null)
-		{
-			foreach (int tableCardIndex in extraTableCardIndexes)
-			{
-				if (tableCardIndex >= 0 && tableCardIndex < _tableCards.Count)
+				TableCard tableCard = _tableCards[tableCardIndex];
+				if (tableCard.IsBuriedInSand || IsQuestionOnlyTableCard(tableCard))
 				{
-					if (_tableCards[tableCardIndex].IsBuriedInSand)
-					{
-						continue;
-					}
+					continue;
+				}
 
-					if (IsQuestionOnlyTableCard(_tableCards[tableCardIndex]))
-					{
-						continue;
-					}
-
-					_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
+				if (_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId))
+				{
+					ownedPresentationHiddenRuntimeIds.Add(tableCard.InstanceId);
 				}
 			}
-		}
-		RenderTableCards();
+			if (extraTableCardIndexes != null)
+			{
+				foreach (int tableCardIndex in extraTableCardIndexes)
+				{
+					if (tableCardIndex < 0 || tableCardIndex >= _tableCards.Count)
+					{
+						continue;
+					}
 
-		PlayGameSfx(GameSfx.CaptureCollect, -1.0f, 0.96f, 1.04f, 0.08);
-		Task[] flightTasks = new Task[capturedCardVisuals.Count];
-		for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count; visualIndex++)
+					TableCard tableCard = _tableCards[tableCardIndex];
+					if (tableCard.IsBuriedInSand || IsQuestionOnlyTableCard(tableCard))
+					{
+						continue;
+					}
+
+					if (_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId))
+					{
+						ownedPresentationHiddenRuntimeIds.Add(tableCard.InstanceId);
+					}
+				}
+			}
+			RenderTableCards();
+
+			PlayGameSfx(GameSfx.CaptureCollect, -1.0f, 0.96f, 1.04f, 0.08);
+			Task[] flightTasks = new Task[capturedCardVisuals.Count];
+			for (int visualIndex = 0; visualIndex < capturedCardVisuals.Count; visualIndex++)
+			{
+				int targetPlayerIndex = capturedCardVisuals[visualIndex].TableCardIndex
+					== redirectedTableCardIndex
+					? MainPlayerIndex
+					: playerIndex;
+				flightTasks[visualIndex] = PlayCapturedCardFlightAsync(
+					capturedCardVisuals[visualIndex],
+					GetCardPileCaptureTargetGlobalPosition(targetPlayerIndex),
+					targetPlayerIndex,
+					visualIndex * flightStaggerSeconds);
+			}
+
+			await Task.WhenAll(flightTasks);
+		}
+		finally
 		{
-			int targetPlayerIndex = capturedCardVisuals[visualIndex].TableCardIndex
-				== redirectedTableCardIndex
-				? MainPlayerIndex
-				: playerIndex;
-			flightTasks[visualIndex] = PlayCapturedCardFlightAsync(
-				capturedCardVisuals[visualIndex],
-				GetCardPileCaptureTargetGlobalPosition(targetPlayerIndex),
-				targetPlayerIndex,
-				visualIndex * flightStaggerSeconds);
+			foreach (long runtimeInstanceId in ownedPresentationHiddenRuntimeIds)
+			{
+				_presentationHiddenTableCardRuntimeInstanceIds.Remove(runtimeInstanceId);
+			}
 		}
-
-		await Task.WhenAll(flightTasks);
 	}
 
 	private bool IsQuestionOnlyTableCard(TableCard tableCard)

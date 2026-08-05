@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Deckland.Rules;
 
 public sealed record NetworkMigrationRosterEntry
 {
@@ -110,19 +114,140 @@ public sealed record NetworkAuthorityReconnectClaim
 	public string ClaimState { get; init; } = nameof(ReconnectClaimState.Unclaimed);
 }
 
-public sealed record NetworkCheckpointCard
+[JsonConverter(typeof(NetworkCheckpointCardJsonConverter))]
+public readonly record struct NetworkCheckpointCard
 {
+	public NetworkCheckpointCard()
+	{
+		Code = string.Empty;
+		AttachedItemCardIds = ImmutableArray<string>.Empty;
+	}
+
 	[JsonPropertyName("code")]
 	[JsonPropertyOrder(0)]
-	public string Code { get; init; } = string.Empty;
+	public string Code { get; init; }
 
 	[JsonPropertyName("attached_item_card_ids")]
 	[JsonPropertyOrder(1)]
-	public string[] AttachedItemCardIds { get; init; } = Array.Empty<string>();
+	public ImmutableArray<string> AttachedItemCardIds { get; init; }
 }
 
-public sealed record NetworkCheckpointTableCard
+public sealed class NetworkCheckpointCardJsonConverter : JsonConverter<NetworkCheckpointCard>
 {
+	private static readonly JsonEncodedText CodeProperty = JsonEncodedText.Encode("code");
+	private static readonly JsonEncodedText AttachedItemsProperty =
+		JsonEncodedText.Encode("attached_item_card_ids");
+
+	public override NetworkCheckpointCard Read(
+		ref Utf8JsonReader reader,
+		Type typeToConvert,
+		JsonSerializerOptions options)
+	{
+		if (reader.TokenType != JsonTokenType.StartObject)
+		{
+			throw new JsonException();
+		}
+
+		string? code = null;
+		ImmutableArray<string> attachedItemCardIds = default;
+		while (reader.Read())
+		{
+			if (reader.TokenType == JsonTokenType.EndObject)
+			{
+				return new NetworkCheckpointCard
+				{
+					Code = code!,
+					AttachedItemCardIds = attachedItemCardIds,
+				};
+			}
+			if (reader.TokenType != JsonTokenType.PropertyName)
+			{
+				throw new JsonException();
+			}
+
+			if (reader.ValueTextEquals("code"))
+			{
+				reader.Read();
+				code = reader.TokenType == JsonTokenType.Null
+					? null
+					: reader.GetString();
+				continue;
+			}
+			if (reader.ValueTextEquals("attached_item_card_ids"))
+			{
+				reader.Read();
+				attachedItemCardIds = ReadAttachedItemCardIds(ref reader);
+				continue;
+			}
+
+			reader.Read();
+			reader.Skip();
+		}
+
+		throw new JsonException();
+	}
+
+	public override void Write(
+		Utf8JsonWriter writer,
+		NetworkCheckpointCard value,
+		JsonSerializerOptions options)
+	{
+		writer.WriteStartObject();
+		writer.WriteString(CodeProperty, value.Code);
+		writer.WritePropertyName(AttachedItemsProperty);
+		writer.WriteStartArray();
+		foreach (string itemCardId in value.AttachedItemCardIds)
+		{
+			writer.WriteStringValue(itemCardId);
+		}
+		writer.WriteEndArray();
+		writer.WriteEndObject();
+	}
+
+	private static ImmutableArray<string> ReadAttachedItemCardIds(
+		ref Utf8JsonReader reader)
+	{
+		if (reader.TokenType == JsonTokenType.Null)
+		{
+			return default;
+		}
+		if (reader.TokenType != JsonTokenType.StartArray)
+		{
+			throw new JsonException();
+		}
+
+		var builder = ImmutableArray.CreateBuilder<string>();
+		while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+		{
+			if (reader.TokenType is not (JsonTokenType.String or JsonTokenType.Null))
+			{
+				throw new JsonException();
+			}
+			builder.Add(reader.GetString()!);
+		}
+		if (reader.TokenType != JsonTokenType.EndArray)
+		{
+			throw new JsonException();
+		}
+		return builder.ToImmutable();
+	}
+}
+
+[JsonConverter(typeof(NetworkCheckpointTableCardJsonConverter))]
+public readonly record struct NetworkCheckpointTableCard
+{
+	public NetworkCheckpointTableCard()
+	{
+		Card = null;
+		IsFaceUp = false;
+		IsBuriedInSand = false;
+		IsSlimeCoated = false;
+		CardOwnerPlayerIndex = -1;
+		RemoveCardOnCapture = false;
+		ItemOverlayId = string.Empty;
+		ItemOwnerPlayerIndex = -1;
+	}
+
 	[JsonPropertyName("card")]
 	[JsonPropertyOrder(0)]
 	public NetworkCheckpointCard? Card { get; init; }
@@ -141,7 +266,7 @@ public sealed record NetworkCheckpointTableCard
 
 	[JsonPropertyName("card_owner_player_index")]
 	[JsonPropertyOrder(4)]
-	public int CardOwnerPlayerIndex { get; init; } = -1;
+	public int CardOwnerPlayerIndex { get; init; }
 
 	[JsonPropertyName("remove_card_on_capture")]
 	[JsonPropertyOrder(5)]
@@ -149,11 +274,141 @@ public sealed record NetworkCheckpointTableCard
 
 	[JsonPropertyName("item_overlay_id")]
 	[JsonPropertyOrder(6)]
-	public string ItemOverlayId { get; init; } = string.Empty;
+	public string ItemOverlayId { get; init; }
 
 	[JsonPropertyName("item_owner_player_index")]
 	[JsonPropertyOrder(7)]
-	public int ItemOwnerPlayerIndex { get; init; } = -1;
+	public int ItemOwnerPlayerIndex { get; init; }
+}
+
+public sealed class NetworkCheckpointTableCardJsonConverter : JsonConverter<NetworkCheckpointTableCard>
+{
+	private static readonly JsonEncodedText CardProperty = JsonEncodedText.Encode("card");
+	private static readonly JsonEncodedText FaceUpProperty = JsonEncodedText.Encode("is_face_up");
+	private static readonly JsonEncodedText BuriedProperty = JsonEncodedText.Encode("is_buried_in_sand");
+	private static readonly JsonEncodedText SlimeProperty = JsonEncodedText.Encode("is_slime_coated");
+	private static readonly JsonEncodedText CardOwnerProperty = JsonEncodedText.Encode("card_owner_player_index");
+	private static readonly JsonEncodedText RemoveOnCaptureProperty = JsonEncodedText.Encode("remove_card_on_capture");
+	private static readonly JsonEncodedText ItemOverlayProperty = JsonEncodedText.Encode("item_overlay_id");
+	private static readonly JsonEncodedText ItemOwnerProperty = JsonEncodedText.Encode("item_owner_player_index");
+
+	public override NetworkCheckpointTableCard Read(
+		ref Utf8JsonReader reader,
+		Type typeToConvert,
+		JsonSerializerOptions options)
+	{
+		if (reader.TokenType != JsonTokenType.StartObject)
+		{
+			throw new JsonException();
+		}
+
+		NetworkCheckpointCard? card = null;
+		bool isFaceUp = false;
+		bool isBuried = false;
+		bool isSlimeCoated = false;
+		int cardOwner = -1;
+		bool removeOnCapture = false;
+		string? itemOverlayId = string.Empty;
+		int itemOwner = -1;
+		while (reader.Read())
+		{
+			if (reader.TokenType == JsonTokenType.EndObject)
+			{
+				return new NetworkCheckpointTableCard
+				{
+					Card = card,
+					IsFaceUp = isFaceUp,
+					IsBuriedInSand = isBuried,
+					IsSlimeCoated = isSlimeCoated,
+					CardOwnerPlayerIndex = cardOwner,
+					RemoveCardOnCapture = removeOnCapture,
+					ItemOverlayId = itemOverlayId!,
+					ItemOwnerPlayerIndex = itemOwner,
+				};
+			}
+			if (reader.TokenType != JsonTokenType.PropertyName)
+			{
+				throw new JsonException();
+			}
+
+			if (reader.ValueTextEquals("card"))
+			{
+				reader.Read();
+				card = reader.TokenType == JsonTokenType.Null
+					? null
+					: JsonSerializer.Deserialize<NetworkCheckpointCard>(ref reader, options);
+			}
+			else if (reader.ValueTextEquals("is_face_up"))
+			{
+				reader.Read();
+				isFaceUp = reader.GetBoolean();
+			}
+			else if (reader.ValueTextEquals("is_buried_in_sand"))
+			{
+				reader.Read();
+				isBuried = reader.GetBoolean();
+			}
+			else if (reader.ValueTextEquals("is_slime_coated"))
+			{
+				reader.Read();
+				isSlimeCoated = reader.GetBoolean();
+			}
+			else if (reader.ValueTextEquals("card_owner_player_index"))
+			{
+				reader.Read();
+				cardOwner = reader.GetInt32();
+			}
+			else if (reader.ValueTextEquals("remove_card_on_capture"))
+			{
+				reader.Read();
+				removeOnCapture = reader.GetBoolean();
+			}
+			else if (reader.ValueTextEquals("item_overlay_id"))
+			{
+				reader.Read();
+				itemOverlayId = reader.TokenType == JsonTokenType.Null
+					? null
+					: reader.GetString();
+			}
+			else if (reader.ValueTextEquals("item_owner_player_index"))
+			{
+				reader.Read();
+				itemOwner = reader.GetInt32();
+			}
+			else
+			{
+				reader.Read();
+				reader.Skip();
+			}
+		}
+
+		throw new JsonException();
+	}
+
+	public override void Write(
+		Utf8JsonWriter writer,
+		NetworkCheckpointTableCard value,
+		JsonSerializerOptions options)
+	{
+		writer.WriteStartObject();
+		writer.WritePropertyName(CardProperty);
+		if (value.Card.HasValue)
+		{
+			JsonSerializer.Serialize(writer, value.Card.Value, options);
+		}
+		else
+		{
+			writer.WriteNullValue();
+		}
+		writer.WriteBoolean(FaceUpProperty, value.IsFaceUp);
+		writer.WriteBoolean(BuriedProperty, value.IsBuriedInSand);
+		writer.WriteBoolean(SlimeProperty, value.IsSlimeCoated);
+		writer.WriteNumber(CardOwnerProperty, value.CardOwnerPlayerIndex);
+		writer.WriteBoolean(RemoveOnCaptureProperty, value.RemoveCardOnCapture);
+		writer.WriteString(ItemOverlayProperty, value.ItemOverlayId);
+		writer.WriteNumber(ItemOwnerProperty, value.ItemOwnerPlayerIndex);
+		writer.WriteEndObject();
+	}
 }
 
 public enum NetworkMigrationPeerRebuildMode
@@ -503,6 +758,285 @@ public sealed record NetworkAuthorityCheckpoint
 	public string PayloadHash { get; init; } = string.Empty;
 }
 
+internal static class NetworkAuthorityCheckpointRuleAdapter
+{
+	internal static NetworkAuthorityCheckpoint ApplyRuleSnapshot(
+		NetworkAuthorityCheckpoint checkpoint,
+		MatchStateSnapshot snapshot,
+		bool recordTelemetry = true)
+	{
+		ArgumentNullException.ThrowIfNull(checkpoint);
+		ArgumentNullException.ThrowIfNull(snapshot);
+		if (!recordTelemetry)
+		{
+			return ApplyRuleSnapshotCore(checkpoint, snapshot, out _);
+		}
+
+		long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		long startedAt = Stopwatch.GetTimestamp();
+		int projectedEntryCount = 0;
+		try
+		{
+			return ApplyRuleSnapshotCore(
+				checkpoint,
+				snapshot,
+				out projectedEntryCount);
+		}
+		finally
+		{
+			long elapsedTicks = Stopwatch.GetTimestamp() - startedAt;
+			long allocatedBytes =
+				GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+			AuthorityCheckpointTelemetry.RecordProjection(
+				projectedEntryCount,
+				allocatedBytes,
+				elapsedTicks);
+		}
+	}
+
+	private static NetworkAuthorityCheckpoint ApplyRuleSnapshotCore(
+		NetworkAuthorityCheckpoint checkpoint,
+		MatchStateSnapshot snapshot,
+		out int projectedEntryCount)
+	{
+		List<List<NetworkCheckpointCard>> decks =
+			ExportCardLists(snapshot.Players, exportDecks: true);
+		List<List<NetworkCheckpointCard>> hands =
+			ExportCardLists(snapshot.Players, exportDecks: false);
+		List<List<string>> itemHands = ExportItemHands(snapshot.Players);
+		List<NetworkCheckpointTableCard> tableCards =
+			ExportTableCards(snapshot.TableCards);
+		projectedEntryCount = CountProjectedEntries(
+			decks,
+			hands,
+			itemHands,
+			tableCards.Count);
+		return checkpoint with
+		{
+			PlayerCount = snapshot.PlayerCount,
+			WinningScore = snapshot.WinningScore,
+			Decks = decks,
+			Hands = hands,
+			ItemHands = itemHands,
+			TableCards = tableCards,
+			Scores = ExportScores(snapshot.Players),
+			MatchOutcomeKind = ToNetworkMatchOutcome(snapshot.Outcome),
+			WinnerPlayerIndex = snapshot.WinnerSeat,
+			CurrentTurnPlayerIndex = snapshot.CurrentTurnSeat,
+			TurnSequenceGeneration = snapshot.TurnGeneration,
+			CompletedTurnsSinceQuestionRefresh =
+				snapshot.CompletedTurnsSinceQuestionRefresh,
+			QuestionRefreshAnchorPlayerIndex = snapshot.QuestionRefreshAnchorSeat,
+			RngSeed = unchecked((long)snapshot.RandomState.Seed),
+			RngState = snapshot.RandomState.State.ToString(CultureInfo.InvariantCulture),
+		};
+	}
+
+	internal static int CountProjectedEntries(NetworkAuthorityCheckpoint checkpoint)
+	{
+		ArgumentNullException.ThrowIfNull(checkpoint);
+		return CountProjectedEntries(
+			checkpoint.Decks,
+			checkpoint.Hands,
+			checkpoint.ItemHands,
+			checkpoint.TableCards.Count);
+	}
+
+	private static int CountProjectedEntries(
+		IReadOnlyList<List<NetworkCheckpointCard>> decks,
+		IReadOnlyList<List<NetworkCheckpointCard>> hands,
+		IReadOnlyList<List<string>> itemHands,
+		int tableCardCount)
+	{
+		int count = tableCardCount;
+		for (int seat = 0; seat < decks.Count; seat++)
+		{
+			count = checked(
+				count
+				+ decks[seat].Count
+				+ hands[seat].Count
+				+ itemHands[seat].Count);
+		}
+		return count;
+	}
+
+	internal static bool TryCreateRuleSnapshot(
+		NetworkAuthorityCheckpoint checkpoint,
+		int lifecycleGeneration,
+		int turnGeneration,
+		ImmutableArray<PlayerStateSnapshot> players,
+		ImmutableArray<TableCardState> tableCards,
+		RuleRandomState fallbackRandomState,
+		ImmutableArray<PendingAttachmentRewardState> pendingAttachmentRewards,
+		out MatchStateSnapshot snapshot,
+		out string error)
+	{
+		snapshot = null!;
+		error = string.Empty;
+		if (checkpoint is null
+			|| lifecycleGeneration <= 0
+			|| turnGeneration <= 0
+			|| players.IsDefault
+			|| players.Length != checkpoint.PlayerCount
+			|| tableCards.IsDefault
+			|| pendingAttachmentRewards.IsDefault)
+		{
+			error = "checkpoint rule state is invalid";
+			return false;
+		}
+
+		RuleRandomState randomState = fallbackRandomState;
+		if (checkpoint.RngSeed != 0)
+		{
+			if (!ulong.TryParse(
+					checkpoint.RngState,
+					NumberStyles.None,
+					CultureInfo.InvariantCulture,
+					out ulong rngState)
+				|| rngState == 0)
+			{
+				error = "checkpoint RNG state is invalid";
+				return false;
+			}
+
+			randomState = new RuleRandomState(
+				unchecked((ulong)checkpoint.RngSeed),
+				rngState);
+		}
+
+		if (randomState.State == 0)
+		{
+			error = "checkpoint RNG state is invalid";
+			return false;
+		}
+
+		snapshot = new MatchStateSnapshot(
+			MatchStateSnapshot.CurrentSchemaVersion,
+			checkpoint.CheckpointId,
+			lifecycleGeneration,
+			turnGeneration,
+			checkpoint.PlayerCount,
+			checkpoint.WinningScore,
+			checkpoint.CurrentTurnPlayerIndex,
+			ToRuleMatchOutcome(checkpoint.MatchOutcomeKind),
+			checkpoint.WinnerPlayerIndex,
+			players,
+			tableCards,
+			randomState,
+			PendingPresentationBarrierId: 0,
+			AppliedActionIds: ImmutableArray<long>.Empty,
+			PendingAttachmentRewards: pendingAttachmentRewards,
+			CompletedTurnsSinceQuestionRefresh:
+				checkpoint.CompletedTurnsSinceQuestionRefresh,
+			QuestionRefreshAnchorSeat:
+				checkpoint.QuestionRefreshAnchorPlayerIndex);
+		return true;
+	}
+
+	internal static MatchOutcomeKind ToNetworkMatchOutcome(
+		Deckland.Rules.MatchOutcome outcome)
+	{
+		return outcome switch
+		{
+			Deckland.Rules.MatchOutcome.Won => MatchOutcomeKind.Winner,
+			Deckland.Rules.MatchOutcome.Draw => MatchOutcomeKind.Draw,
+			_ => MatchOutcomeKind.InProgress,
+		};
+	}
+
+	private static Deckland.Rules.MatchOutcome ToRuleMatchOutcome(
+		MatchOutcomeKind outcome)
+	{
+		return outcome switch
+		{
+			MatchOutcomeKind.Winner => Deckland.Rules.MatchOutcome.Won,
+			MatchOutcomeKind.Draw => Deckland.Rules.MatchOutcome.Draw,
+			_ => Deckland.Rules.MatchOutcome.InProgress,
+		};
+	}
+
+	private static List<List<NetworkCheckpointCard>> ExportCardLists(
+		ImmutableArray<PlayerStateSnapshot> players,
+		bool exportDecks)
+	{
+		var result = new List<List<NetworkCheckpointCard>>(players.Length);
+		foreach (PlayerStateSnapshot player in players)
+		{
+			ImmutableArray<LogicalCardState> source = exportDecks
+				? player.Deck
+				: player.Hand;
+			var cards = new List<NetworkCheckpointCard>(source.Length);
+			foreach (LogicalCardState card in source)
+			{
+				cards.Add(ToCheckpointCard(card));
+			}
+			result.Add(cards);
+		}
+
+		return result;
+	}
+
+	private static List<List<string>> ExportItemHands(
+		ImmutableArray<PlayerStateSnapshot> players)
+	{
+		var result = new List<List<string>>(players.Length);
+		foreach (PlayerStateSnapshot player in players)
+		{
+			var items = new List<string>(player.ItemHand.Length);
+			foreach (LogicalItemState item in player.ItemHand)
+			{
+				items.Add(item.Id);
+			}
+			result.Add(items);
+		}
+
+		return result;
+	}
+
+	private static int[] ExportScores(ImmutableArray<PlayerStateSnapshot> players)
+	{
+		var scores = new int[players.Length];
+		for (int seat = 0; seat < players.Length; seat++)
+		{
+			scores[seat] = players[seat].Score;
+		}
+		return scores;
+	}
+
+	private static NetworkCheckpointCard ToCheckpointCard(LogicalCardState card)
+	{
+		return new NetworkCheckpointCard
+		{
+			Code = card.Code,
+			AttachedItemCardIds = card.NormalizedAttachedEffectIds,
+		};
+	}
+
+	private static List<NetworkCheckpointTableCard> ExportTableCards(
+		ImmutableArray<TableCardState> tableCards)
+	{
+		var result = new List<NetworkCheckpointTableCard>(tableCards.Length);
+		foreach (TableCardState tableCard in tableCards)
+		{
+			result.Add(new NetworkCheckpointTableCard
+			{
+				Card = tableCard.Card.HasValue
+					? ToCheckpointCard(tableCard.Card.Value)
+					: null,
+				IsFaceUp = tableCard.IsFaceUp,
+				IsBuriedInSand = tableCard.IsBuried,
+				IsSlimeCoated = tableCard.IsScoreSuppressed,
+				CardOwnerPlayerIndex = tableCard.CardOwnerSeat,
+				RemoveCardOnCapture = tableCard.RemoveOnCapture,
+				ItemOverlayId = tableCard.ItemOverlay?.Id ?? string.Empty,
+				ItemOwnerPlayerIndex = tableCard.ItemOwnerSeat,
+			});
+		}
+
+		return result;
+	}
+}
+
 public static class NetworkAuthorityCheckpointCodec
 {
 	public const int SchemaVersion = NetworkProtocol.AuthorityCheckpointSchemaVersion;
@@ -537,6 +1071,9 @@ public static class NetworkAuthorityCheckpointCodec
 		payload = Array.Empty<byte>();
 		hash = string.Empty;
 		error = string.Empty;
+		long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		long startedAt = Stopwatch.GetTimestamp();
+		int encodedBytes = 0;
 		try
 		{
 			if (!Validate(checkpoint, out _))
@@ -545,7 +1082,7 @@ public static class NetworkAuthorityCheckpointCodec
 				return false;
 			}
 
-			payload = JsonSerializer.SerializeToUtf8Bytes(checkpoint with { PayloadHash = string.Empty }, JsonOptions);
+			payload = JsonSerializer.SerializeToUtf8Bytes(checkpoint, JsonOptions);
 			if (payload.Length > MaxPayloadBytes)
 			{
 				error = PayloadSizeError;
@@ -554,6 +1091,7 @@ public static class NetworkAuthorityCheckpointCodec
 			}
 
 			hash = ComputeHash(payload);
+			encodedBytes = payload.Length;
 			return true;
 		}
 		catch (Exception)
@@ -562,6 +1100,16 @@ public static class NetworkAuthorityCheckpointCodec
 			hash = string.Empty;
 			error = EncodeFailedError;
 			return false;
+		}
+		finally
+		{
+			long elapsedTicks = Stopwatch.GetTimestamp() - startedAt;
+			long allocatedBytes =
+				GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+			AuthorityCheckpointTelemetry.RecordEncoding(
+				encodedBytes,
+				allocatedBytes,
+				elapsedTicks);
 		}
 	}
 
@@ -681,7 +1229,7 @@ public static class NetworkAuthorityCheckpointCodec
 			|| checkpoint.QuestionRefreshAnchorPlayerIndex >= checkpoint.PlayerCount
 			|| checkpoint.WinnerPlayerIndex < -1
 			|| checkpoint.WinnerPlayerIndex >= checkpoint.PlayerCount
-			|| !MatchOutcomeRules.IsSerializedOutcomeValid(checkpoint.MatchOutcomeKind, checkpoint.WinnerPlayerIndex, checkpoint.PlayerCount)
+			|| !MatchReadModel.IsSerializedOutcomeValid(checkpoint.MatchOutcomeKind, checkpoint.WinnerPlayerIndex, checkpoint.PlayerCount)
 			|| !AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount)
 			|| !AuthorityActionStateRules.IsStableCheckpointState(checkpoint.AuthorityAction))
 		{
@@ -843,10 +1391,9 @@ public static class NetworkAuthorityCheckpointCodec
 			}
 		}
 
-		foreach (NetworkCheckpointTableCard? tableCard in checkpoint.TableCards)
+		foreach (NetworkCheckpointTableCard tableCard in checkpoint.TableCards)
 		{
-			if (tableCard is null
-				|| tableCard.CardOwnerPlayerIndex < -1
+			if (tableCard.CardOwnerPlayerIndex < -1
 				|| tableCard.CardOwnerPlayerIndex >= checkpoint.PlayerCount
 				|| tableCard.ItemOwnerPlayerIndex < -1
 				|| tableCard.ItemOwnerPlayerIndex >= checkpoint.PlayerCount
@@ -935,14 +1482,19 @@ public static class NetworkAuthorityCheckpointCodec
 
 	private static bool IsValidCard(NetworkCheckpointCard? card)
 	{
-		return card is not null
-			&& IsBoundedString(card.Code, 64, allowEmpty: false)
-			&& card.AttachedItemCardIds is not null
-			&& card.AttachedItemCardIds.Length <= 1
-			&& HasValidAttachmentIds(card.AttachedItemCardIds);
+		if (!card.HasValue)
+		{
+			return false;
+		}
+
+		NetworkCheckpointCard value = card.Value;
+		return IsBoundedString(value.Code, 64, allowEmpty: false)
+			&& !value.AttachedItemCardIds.IsDefault
+			&& value.AttachedItemCardIds.Length <= 1
+			&& HasValidAttachmentIds(value.AttachedItemCardIds);
 	}
 
-	private static bool HasValidAttachmentIds(string[] attachmentIds)
+	private static bool HasValidAttachmentIds(ImmutableArray<string> attachmentIds)
 	{
 		foreach (string? attachmentId in attachmentIds)
 		{

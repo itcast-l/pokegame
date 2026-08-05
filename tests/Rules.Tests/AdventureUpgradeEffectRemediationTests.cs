@@ -54,7 +54,7 @@ internal static partial class Program
 		AdventureCaptureDamageResult damage = AdventureUpgradeEffectService.ApplyCaptureDamage(
 			new AdventureUpgradeEffectState(),
 			new[] { "clubs_crown_canopy", "diamonds_top_prize_repeat" },
-			new AdventureCaptureDamageInput(BaseDamage: 6, CaptureContext: context));
+			new AdventureCaptureDamageInput(BaseDamage: 6, CaptureContext: context.ToRuleFacts()));
 		Equal(12, damage.FinalDamage);
 	}
 
@@ -522,7 +522,7 @@ internal static partial class Program
 				},
 				finalDamage: 6,
 				successfulCapturesThisTurn: 1,
-				context);
+				context.ToRuleFacts());
 		Equal(5, result.HealAmount);
 		Equal(1, result.DrawCount);
 		True(result.RevealRemainingHiddenCards);
@@ -539,10 +539,10 @@ internal static partial class Program
 		AdventurePostCaptureEffectResult noFakeAttachment =
 			AdventureUpgradeEffectService.OnMainPlayerCaptureResolved(
 				new AdventureUpgradeEffectState(),
-				new[] { "hearts_enchanted_recovery" },
-				finalDamage: 0,
-				successfulCapturesThisTurn: 1,
-				fallbackOnly);
+					new[] { "hearts_enchanted_recovery" },
+					finalDamage: 0,
+					successfulCapturesThisTurn: 1,
+					fallbackOnly.ToRuleFacts());
 		Equal(0, noFakeAttachment.HealAmount);
 		Equal(0, noFakeAttachment.DrawCount);
 	}

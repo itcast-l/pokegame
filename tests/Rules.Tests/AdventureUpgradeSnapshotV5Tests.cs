@@ -495,7 +495,7 @@ internal static partial class Program
 		Equal(AdventureRunWriteResult.Succeeded, defeatCommit.WriteResult);
 		Equal<AdventureDefeatResolution?>(AdventureDefeatResolution.RetryCurrentStage, defeatCommit.Resolution);
 		Equal(saveCount + 1, saveManager.SaveToSlotCallCount);
-		True(store.GetRunState().HasUsedRevive);
+		True(store.GetReadModel().HasUsedRevive);
 
 		store.ConfigureForPolicy(GameModePolicy.AdventureTutorial);
 		saveCount = saveManager.SaveToSlotCallCount;

@@ -1,4 +1,5 @@
 using System;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -153,7 +154,7 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true
 			|| !runState.HasAcquiredUpgrade(AdventureMissClimbGrowthUpgradeId))
 		{
@@ -161,9 +162,9 @@ public partial class GameBoardScene
 		}
 
 		return Math.Clamp(
-			runState.EffectState.ClubMissClimbGrowthStacks,
+			runState.Effects.ClubMissClimbGrowthStacks,
 			0,
-			AdventureUpgradeEffectState.MaxClubMissClimbGrowthStacks);
+			AdventureRunReadModel.MaxClubMissClimbGrowthStacks);
 	}
 
 	private static StyleBoxFlat CreateAdventureMissClimbBadgeStyle()

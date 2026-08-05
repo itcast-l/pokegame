@@ -9,35 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/Deckland.Rules/Deckland.Rules.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="../../scripts/GameBoardModels.cs" Link="Rules/GameBoardModels.cs" />
-    <Compile Include="../../scripts/GameBoardScene.State.cs" Link="Rules/GameBoardScene.State.cs" />
-    <Compile Include="../../scripts/CaptureStateService.cs" Link="Rules/CaptureStateService.cs" />
-    <Compile Include="../../scripts/CaptureRevealOrder.cs" Link="Rules/CaptureRevealOrder.cs" />
-    <Compile Include="../../scripts/CaptureScoringRules.cs" Link="Rules/CaptureScoringRules.cs" />
-    <Compile Include="../../scripts/CaptureResolver.cs" Link="Rules/CaptureResolver.cs" />
-    <Compile Include="../../scripts/CaptureFlowPlanner.cs" Link="Rules/CaptureFlowPlanner.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeChoiceRules.cs" Link="Rules/AdventureUpgradeChoiceRules.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeDescriptionRules.cs" Link="Rules/AdventureUpgradeDescriptionRules.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeEffectState.cs" Link="Rules/AdventureUpgradeEffectState.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeEffectService.cs" Link="Rules/AdventureUpgradeEffectService.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeEffectModels.cs" Link="Rules/AdventureUpgradeEffectModels.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeQuestionEffects.cs" Link="Rules/AdventureUpgradeQuestionEffects.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeTurnEffects.cs" Link="Rules/AdventureUpgradeTurnEffects.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeCaptureEffects.cs" Link="Rules/AdventureUpgradeCaptureEffects.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeEnemyEffects.cs" Link="Rules/AdventureUpgradeEnemyEffects.cs" />
-	<Compile Include="../../scripts/AdventureUpgradeEffectMath.cs" Link="Rules/AdventureUpgradeEffectMath.cs" />
 	<Compile Include="../../scripts/AdventureCaptureContexts.cs" Link="Rules/AdventureCaptureContexts.cs" />
-	<Compile Include="../../scripts/AdventureExtraActionChain.cs" Link="Rules/AdventureExtraActionChain.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeManifest.cs" Link="Rules/AdventureUpgradeManifest.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeRuntimeValues.cs" Link="Rules/AdventureUpgradeRuntimeValues.cs" />
 	<Compile Include="../../scripts/AdventureSuitUpgradeDefinition.cs" Link="Rules/AdventureSuitUpgradeDefinition.cs" />
 	<Compile Include="../../scripts/AdventureSuitUpgradeCatalog.cs" Link="Rules/AdventureSuitUpgradeCatalog.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeRunSnapshot.cs" Link="Rules/AdventureUpgradeRunSnapshot.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeRunState.cs" Link="Rules/AdventureUpgradeRunState.cs" />
     <Compile Include="../../scripts/AdventureRunSessionStore.cs" Link="Rules/AdventureRunSessionStore.cs" />
-	<Compile Include="../../scripts/AdventureRunCommitResults.cs" Link="Rules/AdventureRunCommitResults.cs" />
-    <Compile Include="../../scripts/AdventureUpgradeTriggerRules.cs" Link="Rules/AdventureUpgradeTriggerRules.cs" />
-    <Compile Include="../../scripts/CardPlayResolver.cs" Link="Rules/CardPlayResolver.cs" />
     <Compile Include="../../scripts/CardVisualTuningRules.cs" Link="Rules/CardVisualTuningRules.cs" />
     <Compile Include="../../scripts/RewardDeliveryMode.cs" Link="Rules/RewardDeliveryMode.cs" />
     <Compile Include="../../scripts/ItemCardDefinition.cs" Link="Rules/ItemCardDefinition.cs" />
@@ -53,24 +33,12 @@
     <Compile Include="../../scripts/SkillCodexUnlockRules.cs" Link="Rules/SkillCodexUnlockRules.cs" />
     <Compile Include="../../scripts/GameModeKind.cs" Link="Rules/GameModeKind.cs" />
     <Compile Include="../../scripts/GameModePolicy.cs" Link="Rules/GameModePolicy.cs" />
-    <Compile Include="../../scripts/AdventureCampaignCatalog.cs" Link="Rules/AdventureCampaignCatalog.cs" />
     <Compile Include="../../scripts/MainMenuBubbleMotionRules.cs" Link="Rules/MainMenuBubbleMotionRules.cs" />
-    <Compile Include="../../scripts/PotentialCaptureRules.cs" Link="Rules/PotentialCaptureRules.cs" />
-    <Compile Include="../../scripts/AiCardSelectionRules.cs" Link="Rules/AiCardSelectionRules.cs" />
-    <Compile Include="../../scripts/EnemyAiRules.cs" Link="Rules/EnemyAiRules.cs" />
-    <Compile Include="../../scripts/SoloAiRules.cs" Link="Rules/SoloAiRules.cs" />
-    <Compile Include="../../scripts/GameLoopPhaseRules.cs" Link="Rules/GameLoopPhaseRules.cs" />
-    <Compile Include="../../scripts/GameTurnRules.cs" Link="Rules/GameTurnRules.cs" />
-	<Compile Include="../../scripts/MatchOutcomeRules.cs" Link="Rules/MatchOutcomeRules.cs" />
-    <Compile Include="../../scripts/TurnProgressRules.cs" Link="Rules/TurnProgressRules.cs" />
     <Compile Include="../../scripts/RewardResolver.cs" Link="Rules/RewardResolver.cs" />
     <Compile Include="../../scripts/QuestionRewardPresentationRules.cs" Link="Rules/QuestionRewardPresentationRules.cs" />
     <Compile Include="../../scripts/BorrowTideRules.cs" Link="Rules/BorrowTideRules.cs" />
     <Compile Include="../../scripts/ResultPresentationRules.cs" Link="Rules/ResultPresentationRules.cs" />
     <Compile Include="../../scripts/DiceRollPresentationRules.cs" Link="Rules/DiceRollPresentationRules.cs" />
-    <Compile Include="../../scripts/ScoreService.cs" Link="Rules/ScoreService.cs" />
-    <Compile Include="../../scripts/TurnStateMachine.cs" Link="Rules/TurnStateMachine.cs" />
-	<Compile Include="../../scripts/TurnGenerationRules.cs" Link="Rules/TurnGenerationRules.cs" />
     <Compile Include="../../scripts/NetworkSessionModels.cs" Link="Rules/NetworkSessionModels.cs" />
     <Compile Include="../../scripts/RoomNameRules.cs" Link="Rules/RoomNameRules.cs" />
     <Compile Include="../../scripts/RoomPasswordRules.cs" Link="Rules/RoomPasswordRules.cs" />
@@ -79,7 +47,6 @@
     <Compile Include="../../scripts/MultiplayerLobbyRules.cs" Link="Rules/MultiplayerLobbyRules.cs" />
     <Compile Include="../../scripts/MultiplayerBoardSyncRules.cs" Link="Rules/MultiplayerBoardSyncRules.cs" />
     <Compile Include="../../scripts/LocalSeatControlRules.cs" Link="Rules/LocalSeatControlRules.cs" />
-    <Compile Include="../../scripts/NetworkAiFallbackRules.cs" Link="Rules/NetworkAiFallbackRules.cs" />
     <Compile Include="../../scripts/NetworkReconnectRules.cs" Link="Rules/NetworkReconnectRules.cs" />
     <Compile Include="../../scripts/NetworkSeatControlRules.cs" Link="Rules/NetworkSeatControlRules.cs" />
     <Compile Include="../../scripts/NetworkReconnectPresentationRules.cs" Link="Rules/NetworkReconnectPresentationRules.cs" />
@@ -89,6 +56,8 @@
     <Compile Include="../../scripts/NetworkTableCardSnapshotCodec.cs" Link="Rules/NetworkTableCardSnapshotCodec.cs" />
     <Compile Include="../../scripts/SpecialCardSystem.cs" Link="Rules/SpecialCardSystem.cs" />
     <Compile Include="../../scripts/VisualUpdateThrottle.cs" Link="Rules/VisualUpdateThrottle.cs" />
+	<Compile Include="../../scripts/GameBoardFrameScheduler.cs" Link="Rules/GameBoardFrameScheduler.cs" />
+	<Compile Include="../../scripts/GameBoardLifecycleCoordinator.cs" Link="Rules/GameBoardLifecycleCoordinator.cs" />
     <Compile Include="../../scripts/NetworkVisualQueuePolicy.cs" Link="Rules/NetworkVisualQueuePolicy.cs" />
     <Compile Include="../../scripts/NetworkProtocol.cs" Link="Rules/NetworkProtocol.cs" />
 	<Compile Include="../../scripts/SeatCredentialRules.cs" Link="Rules/SeatCredentialRules.cs" />
@@ -100,6 +69,10 @@
     <Compile Include="../../scripts/AuthorityActionState.cs" Link="Rules/AuthorityActionState.cs" />
     <Compile Include="../../scripts/NetworkAuthorityCheckpoint.cs" Link="Rules/NetworkAuthorityCheckpoint.cs" />
 	<Compile Include="../../scripts/AuthorityCheckpointEnvelope.cs" Link="Rules/AuthorityCheckpointEnvelope.cs" />
+	<Compile Include="../../scripts/AuthorityCheckpointTelemetry.cs" Link="Rules/AuthorityCheckpointTelemetry.cs" />
+	<Compile Include="../../scripts/NetworkMaintenanceScheduleRules.cs" Link="Rules/NetworkMaintenanceScheduleRules.cs" />
+	<Compile Include="../../scripts/NetworkMatchEndpoints.cs" Link="Rules/NetworkMatchEndpoints.cs" />
+	<Compile Include="../../scripts/NetworkSessionClose.cs" Link="Rules/NetworkSessionClose.cs" />
     <Compile Include="../../scripts/NetworkMigrationRules.cs" Link="Rules/NetworkMigrationRules.cs" />
 	<Compile Include="../../scripts/GameplayManifestHashRules.cs" Link="Rules/GameplayManifestHashRules.cs" />
   </ItemGroup>

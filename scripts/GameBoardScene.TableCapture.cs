@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -22,7 +24,7 @@ public partial class GameBoardScene
 		}
 
 		bool shouldResolveAttachedTableCardTriggers = HasCapturedMiddleTableCards(captureStartIndex);
-		foreach (int tableCardIndex in CaptureRevealOrder.BuildBaseRevealIndexes(captureStartIndex, _tableCards.Count))
+		foreach (int tableCardIndex in MatchReadModel.BuildBaseCaptureRevealIndexes(captureStartIndex, _tableCards.Count))
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.IsBuriedInSand)
@@ -74,12 +76,12 @@ public partial class GameBoardScene
 			PlayingCard? revealedCard = null;
 			if (tableCard.Card.HasValue)
 			{
-				revealTexture = tableCard.Card.Value.Texture;
+				revealTexture = GetPlayingCardTexture(tableCard.Card.Value);
 				revealedCard = tableCard.Card.Value;
 			}
 			else if (tableCard.ItemOverlay.HasValue)
 			{
-				revealTexture = tableCard.ItemOverlay.Value.Texture;
+				revealTexture = GetItemCardTexture(tableCard.ItemOverlay.Value);
 			}
 
 			if (revealTexture == null)
@@ -89,7 +91,16 @@ public partial class GameBoardScene
 
 			if (ShouldSkipOwnerPreviewRevealAnimation(tableCard))
 			{
-				tableCard.IsFaceUp = true;
+				if (!TrySubmitSetTableCardsFaceUpRuleCommand(
+					scorePlayerIndex,
+					ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
+					expectedFaceUp: false,
+					faceUp: true,
+					turnSequenceGeneration,
+					out _))
+				{
+					return;
+				}
 				RenderTableCards();
 			}
 			else
@@ -105,7 +116,16 @@ public partial class GameBoardScene
 					return;
 				}
 
-				tableCard.IsFaceUp = true;
+				if (!TrySubmitSetTableCardsFaceUpRuleCommand(
+					scorePlayerIndex,
+					ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
+					expectedFaceUp: false,
+					faceUp: true,
+					turnSequenceGeneration,
+					out _))
+				{
+					return;
+				}
 				RenderTableCards();
 			}
 			if (revealedCard.HasValue && IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex))
@@ -190,7 +210,7 @@ public partial class GameBoardScene
 
 	private bool HasCapturedMiddleTableCards(int captureStartIndex)
 	{
-		return CaptureResolver.Resolve(ToCaptureScoringTableCards(), captureStartIndex).CapturedMiddleCards;
+		return MatchReadModel.ResolveCapture(ToCaptureScoringTableCards(), captureStartIndex).CapturedMiddleCards;
 	}
 
 }

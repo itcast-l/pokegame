@@ -161,9 +161,16 @@ func _wait_for_true(board: Node, method: String) -> bool:
 
 func _assert_required_source_guards() -> void:
 	var source := FileAccess.get_file_as_string("res://scripts/GameBoardScene.BossTableAbilities.cs")
+	var move_submit_index := source.find("TrySubmitMoveTableCardToDeckRuleCommand(")
+	var marker_clear_index := source.find(
+		"ClearAdventureTraceHuntMarkerIfTableCardRemoved(",
+		move_submit_index
+	)
 	if source.count("IsLeafySeadragonBladeBreakTargetCurrent(") < 4 \
-		or not source.contains("MoveLeafySeadragonBladeBreakTableCardToDeck(\n\t\t\tplayerIndex,\n\t\t\ttargetTableCardIndex);") \
-		or not source.contains("AddCardToPlayerDeck(playerIndex, destroyedCard);\n\t\tRenderPlayerCardPiles();") \
+		or not source.contains("MoveLeafySeadragonBladeBreakTableCardToDeck(") \
+		or move_submit_index < 0 \
+		or marker_clear_index < move_submit_index \
+		or source.contains("AddCardToPlayerDeck(playerIndex, destroyedCard);") \
 		or not source.contains("if (turnSequenceGeneration != _turnSequenceGeneration)\n\t\t{\n\t\t\treturn;\n\t\t}\n\n\t\tCheckForWinner();"):
 		_fail("Leafy Blade generation/reference guards are missing from production resolver")
 

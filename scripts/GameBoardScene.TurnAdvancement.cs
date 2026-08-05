@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private async Task<bool> SetCurrentTurnPlayerIndexAsync(
 		int nextTurnPlayerIndex,
-		int? previousTurnPlayerIndexOverride = null)
+		int? previousTurnPlayerIndexOverride = null,
+		bool captured = false,
+		int? actingPlayerIndexOverride = null,
+		bool advanceQuestionRefresh = false,
+		Action<RuleCommandResult>? onApplied = null)
 	{
 		int previousTurnPlayerIndex = previousTurnPlayerIndexOverride
 			?? _currentTurnPlayerIndex;
@@ -17,18 +22,32 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
-		if (NetworkAiFallbackRules.ShouldClearBlockedItemForTurnChange(
-			previousTurnPlayerIndex,
-			nextTurnPlayerIndex))
+		int actingPlayerIndex = actingPlayerIndexOverride ?? previousTurnPlayerIndex;
+		if (!TrySubmitAdvanceTurnRuleCommand(
+			actingPlayerIndex,
+			captured,
+			nextTurnPlayerIndex,
+			advanceQuestionRefresh,
+			HasTableSpecialCard(),
+			out RuleCommandResult result))
 		{
-			_networkAiBlockedItem = NetworkAiBlockedItemState.None;
+			return false;
 		}
-
-		_currentTurnPlayerIndex = nextTurnPlayerIndex;
+		onApplied?.Invoke(result);
+		if (result.ReadModel.CurrentTurnSeat != nextTurnPlayerIndex)
+		{
+			GD.PushError(
+				$"Turn rule command selected seat {result.ReadModel.CurrentTurnSeat}, "
+				+ $"but the scene expected {nextTurnPlayerIndex}.");
+			return false;
+		}
 		if (nextTurnPlayerIndex == MainPlayerIndex && previousTurnPlayerIndex != MainPlayerIndex)
 		{
-			_state.AdventureRealMainPlayerTurnActive = false;
-			_state.AdventureRealMainPlayerTurnStartPending = true;
+			TryUpdateMatchFlowState(state => state with
+			{
+				MainPlayerRealTurnActive = false,
+				MainPlayerRealTurnStartPending = true,
+			});
 		}
 		return true;
 	}
@@ -36,23 +55,53 @@ public partial class GameBoardScene
 	private async Task BeginRealMainPlayerTurnIfNeededAsync(int turnSequenceGeneration)
 	{
 		if (_currentTurnPlayerIndex != MainPlayerIndex
-			|| _state.AdventureRealMainPlayerTurnActive)
+			|| CurrentMatchFlowState.MainPlayerRealTurnActive)
 		{
 			return;
 		}
 
-		AdventureExtraActionQueueState extraActions = _state.AdventureExtraActionQueue;
+		if (!ShouldUseAdventureUpgradeSystem())
+		{
+			TryUpdateMatchFlowState(state => state with
+			{
+				MainPlayerRealTurnActive = true,
+				MainPlayerRealTurnStartPending = false,
+			});
+			return;
+		}
+
+		ExtraActionQueueSnapshot extraActions = GetExtraActionReadModel();
 		if (extraActions.ActiveRootChainId > 0
 			&& extraActions.RootResumesNormalTurn)
 		{
-			_state.AdventureRealMainPlayerTurnStartPending = true;
+			TryUpdateMatchFlowState(state => state with
+			{
+				MainPlayerRealTurnActive = false,
+				MainPlayerRealTurnStartPending = true,
+			});
 			return;
 		}
 
-		_state.AdventureRealMainPlayerTurnActive = true;
-		_state.AdventureRealMainPlayerTurnStartPending = false;
-		extraActions.BeginRealTurn();
-		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
+		TryUpdateMatchFlowState(state => state with
+		{
+			MainPlayerRealTurnActive = true,
+			MainPlayerRealTurnStartPending = false,
+		});
+		if (!TrySubmitBeginRealTurnRuleCommand(
+			MainPlayerIndex,
+			turnSequenceGeneration))
+		{
+			TryUpdateMatchFlowState(state => state with
+			{
+				MainPlayerRealTurnActive = false,
+				MainPlayerRealTurnStartPending = true,
+			});
+			return;
+		}
+		TryUpdateMatchFlowState(state => state with
+		{
+			SuccessfulCapturesThisTurn = 0,
+		});
 		RefreshAdventureHuntOrderMarkForMainPlayerTurn();
 		await ApplyAdventureMainPlayerTurnStartEffectsAsync(
 			MainPlayerIndex,
@@ -61,14 +110,15 @@ public partial class GameBoardScene
 
 	private async Task<bool> EndRealMainPlayerTurnAsync()
 	{
-		if (!_state.AdventureRealMainPlayerTurnActive
-			&& !_state.AdventureRealMainPlayerTurnStartPending)
+		if (!CurrentMatchFlowState.MainPlayerRealTurnActive
+			&& !CurrentMatchFlowState.MainPlayerRealTurnStartPending)
 		{
 			return true;
 		}
 
-		bool commitMissBandage =
-			_state.AdventureExtraActionQueue.PendingMissBandageRegistration;
+		bool commitMissBandage = GetExtraActionReadModel()
+			.HasPendingRealTurnEndMarker(
+				AdventureMissBandageRealTurnEndMarkerId);
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		if (ShouldUseAdventureUpgradeSystem() && store?.HasActiveRun == true)
 		{
@@ -84,11 +134,21 @@ public partial class GameBoardScene
 			}
 		}
 
-		_state.AdventureExtraActionQueue.EndRealTurn();
-		_state.AdventureRealMainPlayerTurnActive = false;
-		_state.AdventureRealMainPlayerTurnStartPending = false;
-		_adventureMainPlayerSuccessfulCapturesThisTurn = 0;
-		_adventureHuntOrderMarkedTableCard = null;
+		if (ShouldUseAdventureUpgradeSystem()
+			&& !TrySubmitEndRealTurnRuleCommand(
+				MainPlayerIndex,
+				_turnSequenceGeneration,
+				out ExtraActionCommandOutcome endOutcome))
+		{
+			return false;
+		}
+		TryUpdateMatchFlowState(state => state with
+		{
+			MainPlayerRealTurnActive = false,
+			MainPlayerRealTurnStartPending = false,
+			SuccessfulCapturesThisTurn = 0,
+			TurnCaptureMarkRuntimeId = 0,
+		});
 		if (store?.HasActiveRun == true)
 		{
 			MarkActivePlayerStatusTooltipForRefresh();
@@ -129,14 +189,17 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int nextTurnPlayerIndex = _turnAdvancementService.ApplyPlayedResult(
-			_state,
-			playerIndex,
-			completedResult.Captured,
-			candidateNextPlayerIndex);
-		if (!await SetCurrentTurnPlayerIndexAsync(
-				nextTurnPlayerIndex,
-				previousTurnPlayerIndex))
+		int nextTurnPlayerIndex = completedResult.Captured
+			? playerIndex
+			: candidateNextPlayerIndex;
+			RuleCommandResult? turnAdvanceResult = null;
+			if (!await SetCurrentTurnPlayerIndexAsync(
+					nextTurnPlayerIndex,
+					previousTurnPlayerIndex,
+					completedResult.Captured,
+					playerIndex,
+					advanceQuestionRefresh: !completedResult.Captured,
+					onApplied: result => turnAdvanceResult = result))
 		{
 			return;
 		}
@@ -149,22 +212,33 @@ public partial class GameBoardScene
 
 		ResetMantaRayTideShiftTurnStateIfNeeded(playerIndex);
 		ResetJellyfishBubbleTurnStateIfNeeded(playerIndex);
-		if (!completedResult.Captured)
+		if (!completedResult.Captured
+			&& turnAdvanceResult?.Mutation.ShouldRefreshQuestionCard == true)
 		{
-			int refreshedQuestionCardIndex = AdvanceQuestionCardRefreshTurnCounter(_currentTurnPlayerIndex);
+			int refreshedQuestionCardIndex = PlaceQuestionCardOnNextTableSlot();
 			if (refreshedQuestionCardIndex >= 0 && refreshedQuestionCardIndex < _tableCards.Count)
 			{
 				if (_networkAuthorityRuleTransactionActive)
 				{
 					await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
-				}
-				else
-				{
-					_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = true;
-					RenderTableCards();
-					_tableCards[refreshedQuestionCardIndex].IsHiddenDuringCapture = false;
-					await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
-					RenderTableCards();
+					}
+					else
+					{
+						long refreshedRuntimeInstanceId =
+							_tableCards[refreshedQuestionCardIndex].InstanceId;
+						try
+						{
+							_presentationHiddenTableCardRuntimeInstanceIds.Add(
+								refreshedRuntimeInstanceId);
+							RenderTableCards();
+						}
+						finally
+						{
+							_presentationHiddenTableCardRuntimeInstanceIds.Remove(
+								refreshedRuntimeInstanceId);
+						}
+						await PlayQuestionCardRefreshAnimationAsync(refreshedQuestionCardIndex);
+						RenderTableCards();
 				}
 			}
 		}
@@ -276,7 +350,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return NetworkAiFallbackRules.HasPlayableAiTurnAction(
+		return MatchReadModel.HasPlayableAiTurnAction(
 			_playerHands[playerIndex].Count,
 			CountPlayableItemIndexes(playerIndex));
 	}
@@ -293,7 +367,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
 			if (CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
@@ -313,7 +387,7 @@ public partial class GameBoardScene
 		}
 
 		int playableCount = 0;
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
 			if (ShouldSkipNetworkAiBlockedItem(playerIndex, itemIndex, itemHand[itemIndex].Id))
@@ -322,6 +396,26 @@ public partial class GameBoardScene
 			}
 
 			if (CanPlayItemCard(playerIndex, itemHand[itemIndex].Id))
+			{
+				playableCount++;
+			}
+		}
+
+		return playableCount;
+	}
+
+	private int CountPlayableItemIndexes(int playerIndex, PlayerStateSnapshot player)
+	{
+		int playableCount = 0;
+		for (int itemIndex = 0; itemIndex < player.ItemHand.Length; itemIndex++)
+		{
+			string itemCardId = player.ItemHand[itemIndex].Id;
+			if (ShouldSkipNetworkAiBlockedItem(playerIndex, itemIndex, itemCardId))
+			{
+				continue;
+			}
+
+			if (CanPlayItemCard(playerIndex, itemCardId))
 			{
 				playableCount++;
 			}
@@ -339,7 +433,7 @@ public partial class GameBoardScene
 		}
 
 		int currentOrdinal = 0;
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		for (int itemIndex = 0; itemIndex < itemHand.Count; itemIndex++)
 		{
 			if (ShouldSkipNetworkAiBlockedItem(playerIndex, itemIndex, itemHand[itemIndex].Id))
@@ -364,10 +458,44 @@ public partial class GameBoardScene
 		return false;
 	}
 
+	private bool TryGetPlayableItemIndexAt(
+		int playerIndex,
+		PlayerStateSnapshot player,
+		int playableOrdinal,
+		out int itemHandIndex)
+	{
+		itemHandIndex = -1;
+		if (playableOrdinal < 0)
+		{
+			return false;
+		}
+
+		int currentOrdinal = 0;
+		for (int itemIndex = 0; itemIndex < player.ItemHand.Length; itemIndex++)
+		{
+			string itemCardId = player.ItemHand[itemIndex].Id;
+			if (ShouldSkipNetworkAiBlockedItem(playerIndex, itemIndex, itemCardId)
+				|| !CanPlayItemCard(playerIndex, itemCardId))
+			{
+				continue;
+			}
+
+			if (currentOrdinal == playableOrdinal)
+			{
+				itemHandIndex = itemIndex;
+				return true;
+			}
+
+			currentOrdinal++;
+		}
+
+		return false;
+	}
+
 	private bool ShouldSkipNetworkAiBlockedItem(int playerIndex, int itemHandIndex, string itemCardId)
 	{
-		return NetworkAiFallbackRules.ShouldSkipBlockedItem(
-			_networkAiBlockedItem,
+		return MatchReadModel.ShouldSkipBlockedItem(
+			CurrentNetworkAiBlockedItem,
 			playerIndex,
 			itemCardId);
 	}

@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Linq;
 using System.Text;
 using Godot;
 
 public partial class NetworkManager
 {
-	private const int MaxLanDiscoveryPacketsPerFrame = 32;
+	private const int MaxLanDiscoveryPacketsPerMaintenanceTick = 32;
 	private const int MaxLanDiscoveryPacketBytes = 1024;
 	private const int MaxLanDiscoverySources = 256;
 	private readonly Dictionary<string, (double Tokens, double UpdatedAt)> _lanDiscoveryReplyBuckets = new(StringComparer.Ordinal);
+	private readonly List<string> _staleLanDiscoverySources = new();
 	private long _lanDiscoveryDroppedPacketCount;
 	private long _lanDiscoveryRateLimitedSourceCount;
 	private long _lanDiscoveryParseFailureCount;
@@ -29,14 +31,23 @@ public partial class NetworkManager
 		_lanDiscoveryLastResponderProcessedPacketCount = 0;
 		_lanDiscoveryMaximumResponderProcessedPacketCount = 0;
 		_lanDiscoveryResponderBudgetExhaustionCount = 0;
-		_lanDiscoveryResponder = new PacketPeerUdp();
-		Error bindError = _lanDiscoveryResponder.Bind(NetworkSessionDefaults.LanDiscoveryPort);
-		if (bindError != Error.Ok)
+		if (!LanDiscoverySocket.TryBind(
+			NetworkSessionDefaults.LanDiscoveryPort,
+			MaxLanDiscoveryPacketBytes,
+			out _lanDiscoveryResponder,
+			out string bindError))
 		{
 			GD.PushWarning($"LAN discovery responder failed: {bindError}");
-			_lanDiscoveryResponder.Close();
+			_lanDiscoveryResponder?.Dispose();
 			_lanDiscoveryResponder = null;
+			return;
 		}
+
+		RefreshLanDiscoveryBroadcastAddresses();
+		_lanRoomAdvertisementPayload = Encoding.UTF8.GetBytes(LanDiscoveryMessage.Build(
+			_config,
+			_localDisplayName,
+			NetworkSessionState.Lobby.ToString()));
 	}
 
 	private void StopLanDiscoveryResponder()
@@ -46,9 +57,10 @@ public partial class NetworkManager
 			return;
 		}
 
-		_lanDiscoveryResponder.Close();
+		_lanDiscoveryResponder.Dispose();
 		_lanDiscoveryResponder = null;
 		_lanDiscoveryReplyBuckets.Clear();
+		_lanRoomAdvertisementPayload = Array.Empty<byte>();
 	}
 
 	private void StopLanDiscoveryBrowser()
@@ -58,7 +70,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		_lanDiscoveryBrowser.Close();
+		_lanDiscoveryBrowser.Dispose();
 		_lanDiscoveryBrowser = null;
 	}
 
@@ -72,19 +84,17 @@ public partial class NetworkManager
 
 		EvictStaleLanDiscoverySources(now);
 		int processedPacketCount = 0;
-		while (processedPacketCount < MaxLanDiscoveryPacketsPerFrame
-			&& _lanDiscoveryResponder.GetAvailablePacketCount() > 0)
+		while (processedPacketCount < MaxLanDiscoveryPacketsPerMaintenanceTick
+			&& _lanDiscoveryResponder.TryReceive(out ReadOnlyMemory<byte> packet, out IPEndPoint sender))
 		{
-			byte[] packet = _lanDiscoveryResponder.GetPacket();
 			processedPacketCount++;
-			string senderIp = _lanDiscoveryResponder.GetPacketIP();
-			int senderPort = _lanDiscoveryResponder.GetPacketPort();
+			string senderIp = sender.Address.ToString();
 			if (packet.Length > MaxLanDiscoveryPacketBytes)
 			{
 				_lanDiscoveryDroppedPacketCount++;
 				continue;
 			}
-			string message = Encoding.UTF8.GetString(packet);
+			string message = Encoding.UTF8.GetString(packet.Span);
 			if (!string.Equals(message, "deckland_discover", StringComparison.Ordinal))
 			{
 				_lanDiscoveryParseFailureCount++;
@@ -96,15 +106,14 @@ public partial class NetworkManager
 				continue;
 			}
 			string payload = LanDiscoveryMessage.Build(_config, _localDisplayName, _state.ToString());
-			_lanDiscoveryResponder.SetDestAddress(senderIp, senderPort);
-			_lanDiscoveryResponder.PutPacket(Encoding.UTF8.GetBytes(payload));
+			_lanDiscoveryResponder.TrySend(Encoding.UTF8.GetBytes(payload), sender);
 		}
 		_lanDiscoveryLastResponderProcessedPacketCount = processedPacketCount;
 		_lanDiscoveryMaximumResponderProcessedPacketCount = Math.Max(
 			_lanDiscoveryMaximumResponderProcessedPacketCount,
 			processedPacketCount);
-		if (processedPacketCount == MaxLanDiscoveryPacketsPerFrame
-			&& _lanDiscoveryResponder.GetAvailablePacketCount() > 0)
+		if (processedPacketCount == MaxLanDiscoveryPacketsPerMaintenanceTick
+			&& _lanDiscoveryResponder.HasAvailablePacket())
 		{
 			_lanDiscoveryResponderBudgetExhaustionCount++;
 		}
@@ -123,12 +132,12 @@ public partial class NetworkManager
 			return;
 		}
 
-		_lanDiscoveryBrowser.SetBroadcastEnabled(true);
-		byte[] payload = Encoding.UTF8.GetBytes("deckland_discover");
-		foreach (string broadcastAddress in LanAddressHelper.GetBroadcastAddresses())
+		foreach (string broadcastAddress in _lanDiscoveryBroadcastAddresses)
 		{
-			_lanDiscoveryBrowser.SetDestAddress(broadcastAddress, NetworkSessionDefaults.LanDiscoveryPort);
-			_lanDiscoveryBrowser.PutPacket(payload);
+			_lanDiscoveryBrowser.TrySend(
+				LanDiscoveryPingPayload,
+				broadcastAddress,
+				NetworkSessionDefaults.LanDiscoveryPort);
 		}
 	}
 
@@ -139,12 +148,12 @@ public partial class NetworkManager
 			return;
 		}
 
-		_lanDiscoveryResponder.SetBroadcastEnabled(true);
-		byte[] payload = Encoding.UTF8.GetBytes(LanDiscoveryMessage.Build(_config, _localDisplayName, _state.ToString()));
-		foreach (string broadcastAddress in LanAddressHelper.GetBroadcastAddresses())
+		foreach (string broadcastAddress in _lanDiscoveryBroadcastAddresses)
 		{
-			_lanDiscoveryResponder.SetDestAddress(broadcastAddress, NetworkSessionDefaults.LanDiscoveryPort);
-			_lanDiscoveryResponder.PutPacket(payload);
+			_lanDiscoveryResponder.TrySend(
+				_lanRoomAdvertisementPayload,
+				broadcastAddress,
+				NetworkSessionDefaults.LanDiscoveryPort);
 		}
 	}
 
@@ -154,27 +163,24 @@ public partial class NetworkManager
 		{
 			return;
 		}
-
 		if (now - _lastDiscoveryBroadcastAt >= DiscoveryBroadcastSeconds)
 		{
 			_lastDiscoveryBroadcastAt = now;
 			SendLanDiscoveryPing();
 		}
-
 		bool changed = false;
 		int processedPacketCount = 0;
-		while (processedPacketCount < MaxLanDiscoveryPacketsPerFrame
-			&& _lanDiscoveryBrowser.GetAvailablePacketCount() > 0)
+		while (processedPacketCount < MaxLanDiscoveryPacketsPerMaintenanceTick
+			&& _lanDiscoveryBrowser.TryReceive(out ReadOnlyMemory<byte> packet, out IPEndPoint sender))
 		{
-			byte[] packet = _lanDiscoveryBrowser.GetPacket();
 			processedPacketCount++;
-			string senderIp = _lanDiscoveryBrowser.GetPacketIP();
+			string senderIp = sender.Address.ToString();
 			if (packet.Length > MaxLanDiscoveryPacketBytes)
 			{
 				_lanDiscoveryDroppedPacketCount++;
 				continue;
 			}
-			string payload = Encoding.UTF8.GetString(packet);
+			string payload = Encoding.UTF8.GetString(packet.Span);
 			if (!LanDiscoveryMessage.TryParse(payload, senderIp, out NetworkRoomInfo room))
 			{
 				_lanDiscoveryParseFailureCount++;
@@ -202,6 +208,15 @@ public partial class NetworkManager
 		if (changed)
 		{
 			EmitRoomListUpdated();
+		}
+	}
+
+	private void RefreshLanDiscoveryBroadcastAddresses()
+	{
+		_lanDiscoveryBroadcastAddresses.Clear();
+		foreach (string address in LanAddressHelper.GetBroadcastAddresses())
+		{
+			_lanDiscoveryBroadcastAddresses.Add(address);
 		}
 	}
 
@@ -235,13 +250,20 @@ public partial class NetworkManager
 
 	private void EvictStaleLanDiscoverySources(double now)
 	{
-		foreach (string sourceIp in _lanDiscoveryReplyBuckets
-			.Where(pair => now - pair.Value.UpdatedAt > 10.0)
-			.Select(pair => pair.Key)
-			.ToArray())
+		_staleLanDiscoverySources.Clear();
+		foreach (KeyValuePair<string, (double Tokens, double UpdatedAt)> pair in _lanDiscoveryReplyBuckets)
+		{
+			if (now - pair.Value.UpdatedAt > 10.0)
+			{
+				_staleLanDiscoverySources.Add(pair.Key);
+			}
+		}
+
+		foreach (string sourceIp in _staleLanDiscoverySources)
 		{
 			_lanDiscoveryReplyBuckets.Remove(sourceIp);
 		}
+		_staleLanDiscoverySources.Clear();
 	}
 
 	private void UpsertRoom(NetworkRoomInfo room)

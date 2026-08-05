@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -15,7 +17,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
 		{
 			return new PlayCardResult(false, false);
@@ -58,14 +60,25 @@ public partial class GameBoardScene
 			splitGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		}
 		Vector2 splitGlobalCenter = splitGlobalPosition + CardVisualSize / 2.0f;
-		itemHand.RemoveAt(itemHandIndex);
+		if (!TrySubmitPlayItemFromHandRuleCommand(
+			playerIndex,
+			itemHandIndex,
+			lensCard.Id,
+			turnSequenceGeneration,
+			RuleItemPlayDestination.Consume,
+			tableIndex: -1,
+			tableItemFacesUp: false,
+			out _))
+		{
+			return new PlayCardResult(false, false);
+		}
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
 		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
 
 		PlaySpecialItemCardPlaySfx();
 		await PlayLensCardSplitAnimationAsync(
-			lensCard.Texture,
+			GetItemCardTexture(lensCard),
 			startGlobalPosition,
 			splitGlobalCenter,
 			GetCardRotationDegreesForPlayer(playerIndex));
@@ -103,8 +116,7 @@ public partial class GameBoardScene
 	{
 		string target = effectValues.GetString(CardEffectValueKeys.Target, CardEffectTargets.OpponentTableFaceDown);
 		int targetLimit = Mathf.Max(1, effectValues.GetInt(CardEffectValueKeys.Count, LensRevealMaxCards));
-		var targets = new List<int>(Math.Min(targetLimit, _tableCards.Count));
-		int candidateCount = 0;
+		var candidates = ImmutableArray.CreateBuilder<RuleTableCardReference>();
 		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
@@ -113,31 +125,20 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			candidateCount++;
-			if (targets.Count < targetLimit)
-			{
-				targets.Add(tableCardIndex);
-				continue;
-			}
-
-			int replacementIndex = _rng.RandiRange(0, candidateCount - 1);
-			if (replacementIndex < targetLimit)
-			{
-				targets[replacementIndex] = tableCardIndex;
-			}
+			candidates.Add(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId));
 		}
 
-		ShuffleLensRevealTargetCandidates(targets);
-		return targets;
-	}
-
-	private void ShuffleLensRevealTargetCandidates(List<int> candidates)
-	{
-		for (int index = candidates.Count - 1; index > 0; index--)
+		if (!TrySubmitChooseTableCardsRuleCommand(
+			ownerPlayerIndex,
+			candidates.ToImmutable(),
+			targetLimit,
+			_turnSequenceGeneration,
+			out ImmutableArray<int> selectedIndexes))
 		{
-			int swapIndex = _rng.RandiRange(0, index);
-			(candidates[index], candidates[swapIndex]) = (candidates[swapIndex], candidates[index]);
+			return new List<int>();
 		}
+
+		return new List<int>(selectedIndexes);
 	}
 
 	private static bool IsLensRevealTargetCandidate(TableCard tableCard, string target, int ownerPlayerIndex)
@@ -174,14 +175,27 @@ public partial class GameBoardScene
 		}
 		if (_networkAuthorityRuleTransactionActive)
 		{
+			var references = ImmutableArray.CreateBuilder<RuleTableCardReference>(targetIndexes.Count);
 			foreach (int tableCardIndex in targetIndexes)
 			{
 				if (tableCardIndex >= 0
 					&& tableCardIndex < _tableCards.Count
 					&& _tableCards[tableCardIndex].Card.HasValue)
 				{
-					_tableCards[tableCardIndex].IsFaceUp = true;
+					references.Add(new RuleTableCardReference(
+						tableCardIndex,
+						_tableCards[tableCardIndex].InstanceId));
 				}
+			}
+			if (references.Count > 0)
+			{
+					TrySubmitSetTableCardsFaceUpRuleCommand(
+						_currentTurnPlayerIndex,
+						references.ToImmutable(),
+						expectedFaceUp: false,
+					faceUp: true,
+					turnSequenceGeneration,
+					out _);
 			}
 			return;
 		}
@@ -257,13 +271,28 @@ public partial class GameBoardScene
 		}
 
 		PlayGameSfx(GameSfx.LensReveal, -1.5f, 0.97f, 1.04f, 0.06);
-		await PlayTableCardRevealAnimationAsync(tableCardIndex, tableCard.Card.Value.Texture);
+		await PlayTableCardRevealAnimationAsync(tableCardIndex, GetPlayingCardTexture(tableCard.Card.Value));
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return;
 		}
 
-		tableCard.IsFaceUp = true;
+		if (_authorityRuleSession != null
+			&& !TrySubmitSetTableCardsFaceUpRuleCommand(
+				_currentTurnPlayerIndex,
+				ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
+				expectedFaceUp: false,
+				faceUp: true,
+				turnSequenceGeneration,
+				out _))
+		{
+			return;
+		}
+		if (_authorityRuleSession == null && _replicaRuleSession != null
+			&& !TrySetNetworkPresentationTableCardFaceUp(tableCardIndex, true))
+		{
+			return;
+		}
 		RenderTableCards();
 		TrackBoardTask(PlayTableCardPointPopupAsync(tableCardIndex, GetCardScoreValue(tableCard.Card.Value)), nameof(PlayTableCardPointPopupAsync));
 		await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);

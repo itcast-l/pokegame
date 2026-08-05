@@ -51,10 +51,6 @@ public partial class GameBoardScene
 			return;
 		}
 
-		string[] playerAreaNames = { "BottomPlayerArea", "TopPlayerArea", "LeftPlayerArea", "RightPlayerArea" };
-		string[] avatarAreaNames = { "Player1AvatarArea", "Player2AvatarArea", "Player3AvatarArea", "Player4AvatarArea" };
-		string[] scoreMeterNames = { "Player1ScoreMeter", "Player2ScoreMeter", "Player3ScoreMeter", "Player4ScoreMeter" };
-		string[] scoreEffectNames = { "Player1ScoreEffectTarget", "Player2ScoreEffectTarget", "Player3ScoreEffectTarget", "Player4ScoreEffectTarget" };
 		_authoredStandardAvatarAreas = new Rect2[MaxPlayers];
 		_authoredStandardScoreMeters = new Rect2[MaxPlayers];
 		_authoredStandardScoreEffectAnchors = new Vector2[MaxPlayers];
@@ -62,10 +58,10 @@ public partial class GameBoardScene
 		Rect2 designRect = new(Vector2.Zero, GameBoardLayoutGeometry.DesignSize);
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			Control playerArea = GetNode<Control>($"%{playerAreaNames[playerIndex]}");
-			Control avatarArea = GetNode<Control>($"%{avatarAreaNames[playerIndex]}");
-			Control scoreMeter = GetNode<Control>($"%{scoreMeterNames[playerIndex]}");
-			Marker2D scoreEffectTarget = GetNode<Marker2D>($"%{scoreEffectNames[playerIndex]}");
+			Control playerArea = _nodeBindings.PlayerAreas[playerIndex];
+			Control avatarArea = _nodeBindings.AvatarAreas[playerIndex];
+			Control scoreMeter = _nodeBindings.ScoreMeters[playerIndex];
+			Marker2D scoreEffectTarget = _nodeBindings.ScoreEffectTargets[playerIndex];
 			Rect2 playerRect = GetAuthoredControlRect(playerArea, designRect);
 			_authoredStandardAvatarAreas[playerIndex] = GetAuthoredControlRect(avatarArea, playerRect);
 			_authoredStandardScoreMeters[playerIndex] = GetAuthoredControlRect(scoreMeter, playerRect);
@@ -88,47 +84,43 @@ public partial class GameBoardScene
 
 	private void ApplyBoardLayoutProfile(GameBoardLayoutProfile profile, GameBoardLayoutVariant variant)
 	{
-		string[] playerAreaNames = { "BottomPlayerArea", "TopPlayerArea", "LeftPlayerArea", "RightPlayerArea" };
-		string[] avatarAreaNames = { "Player1AvatarArea", "Player2AvatarArea", "Player3AvatarArea", "Player4AvatarArea" };
-		string[] scoreMeterNames = { "Player1ScoreMeter", "Player2ScoreMeter", "Player3ScoreMeter", "Player4ScoreMeter" };
-		string[] scoreEffectNames = { "Player1ScoreEffectTarget", "Player2ScoreEffectTarget", "Player3ScoreEffectTarget", "Player4ScoreEffectTarget" };
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			Control playerArea = GetNode<Control>($"%{playerAreaNames[playerIndex]}");
+			Control playerArea = _nodeBindings.PlayerAreas[playerIndex];
 			ApplyControlRect(
 				playerArea,
 				new Rect2(Vector2.Zero, GameBoardLayoutGeometry.DesignSize),
 				clearMinimumSize: true);
 
-			Control avatarArea = GetNode<Control>($"%{avatarAreaNames[playerIndex]}");
+			Control avatarArea = _nodeBindings.AvatarAreas[playerIndex];
 			Rect2 avatarRect = variant == GameBoardLayoutVariant.Standard && _authoredStandardAvatarAreas != null
 				? _authoredStandardAvatarAreas[playerIndex]
 				: profile.AvatarAreas[playerIndex];
 			ApplyControlRect(avatarArea, avatarRect, clearMinimumSize: true);
 			avatarArea.Scale = Vector2.One;
 
-			Control scoreMeter = GetNode<Control>($"%{scoreMeterNames[playerIndex]}");
+			Control scoreMeter = _nodeBindings.ScoreMeters[playerIndex];
 			Rect2 scoreMeterRect = variant == GameBoardLayoutVariant.Standard && _authoredStandardScoreMeters != null
 				? _authoredStandardScoreMeters[playerIndex]
 				: profile.ScoreMeters[playerIndex];
 			ApplyControlRect(scoreMeter, scoreMeterRect, clearMinimumSize: false);
 			scoreMeter.PivotOffset = scoreMeter.Size / 2.0f;
 
-			Marker2D scoreEffectTarget = GetNode<Marker2D>($"%{scoreEffectNames[playerIndex]}");
+			Marker2D scoreEffectTarget = _nodeBindings.ScoreEffectTargets[playerIndex];
 			scoreEffectTarget.Position = variant == GameBoardLayoutVariant.Standard && _authoredStandardScoreEffectAnchors != null
 				? _authoredStandardScoreEffectAnchors[playerIndex]
 				: profile.ScoreEffectAnchors[playerIndex];
 
-			Control handArea = GetNode<Control>($"%Player{playerIndex + 1}HandArea");
+			Control handArea = _nodeBindings.HandAreas[playerIndex];
 			ApplyControlRect(handArea, profile.HandAreas[playerIndex], clearMinimumSize: true);
 
-			Control pileArea = GetNode<Control>($"%Player{playerIndex + 1}CardPileArea");
+			Control pileArea = _nodeBindings.CardPileAreas[playerIndex];
 			ApplyControlRect(pileArea, profile.CardPileAreas[playerIndex], clearMinimumSize: true);
 		}
 
-		ApplyControlRect(GetNode<Control>("%TableCardLayoutArea"), profile.TableCardArea, clearMinimumSize: true);
-		ApplyControlRect(GetNode<Control>("%QuestionCardTransformArea"), profile.QuestionCardArea, clearMinimumSize: true);
-		ApplyControlRect(GetNode<Control>("%CenterArena"), profile.CenterArena, clearMinimumSize: true);
+		ApplyControlRect(_nodeBindings.TableCardLayoutArea, profile.TableCardArea, clearMinimumSize: true);
+		ApplyControlRect(_nodeBindings.QuestionCardTransformArea, profile.QuestionCardArea, clearMinimumSize: true);
+		ApplyControlRect(_nodeBindings.CenterArena, profile.CenterArena, clearMinimumSize: true);
 		if (_questionCardTransformArea != null && GodotObject.IsInstanceValid(_questionCardTransformArea))
 		{
 			_questionCardTransformArea.PivotOffset = _questionCardTransformArea.Size / 2.0f;
@@ -150,6 +142,7 @@ public partial class GameBoardScene
 	private void MarkResponsiveBoardVisualsDirty()
 	{
 		_responsiveBoardVisualsDirty = true;
+		RequestBoardFrameUpdate();
 	}
 
 	private void FlushResponsiveBoardVisualsIfNeeded()
@@ -166,11 +159,12 @@ public partial class GameBoardScene
 	private void CreatePlayerCardPiles()
 	{
 		_playerCardPiles.Clear();
+		Array.Clear(_playerCardPileVisualBindings);
 
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
-			Control pileArea = GetNode<Control>($"%Player{viewSlotIndex + 1}CardPileArea");
+			Control pileArea = _nodeBindings.CardPileAreas[viewSlotIndex];
 			var pile = new Control
 			{
 				Name = $"Player{playerIndex + 1}CardPile",
@@ -184,11 +178,13 @@ public partial class GameBoardScene
 				OffsetRight = CardPileSize.X / 2.0f,
 				OffsetBottom = CardPileSize.Y / 2.0f,
 			};
-			pile.MouseEntered += () => SetCardPileCountVisible(pile, true);
-			pile.MouseExited += () => SetCardPileCountVisible(pile, false);
+			int capturedPlayerIndex = playerIndex;
+			pile.MouseEntered += () => SetCardPileCountVisible(capturedPlayerIndex, true);
+			pile.MouseExited += () => SetCardPileCountVisible(capturedPlayerIndex, false);
 
 			pileArea.AddChild(pile);
 			_playerCardPiles.Add(pile);
+			GetOrCreatePlayerCardPileVisuals(playerIndex, pile);
 		}
 	}
 
@@ -199,14 +195,14 @@ public partial class GameBoardScene
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
 			int viewSlotIndex = GetPlayerViewSlotIndex(playerIndex);
-			Control handArea = GetNode<Control>($"%Player{viewSlotIndex + 1}HandArea");
+			Control handArea = _nodeBindings.HandAreas[viewSlotIndex];
 			_playerHandAreas.Add(handArea);
 		}
 	}
 
 	private void BindQuestionCardTransformArea()
 	{
-		_questionCardTransformArea = GetNode<Control>("%QuestionCardTransformArea");
+		_questionCardTransformArea = _nodeBindings.QuestionCardTransformArea;
 		_questionCardTransformArea.PivotOffset = _questionCardTransformArea.Size / 2.0f;
 		_questionCardTransformArea.Visible = false;
 
@@ -297,9 +293,10 @@ public partial class GameBoardScene
 		return startPosition;
 	}
 
-	private void SetCardPileCountVisible(Control pile, bool visible)
+	private void SetCardPileCountVisible(int playerIndex, bool visible)
 	{
-		if (pile.GetNodeOrNull<Label>(CardCountLabelNodeName) is Label countLabel)
+		Label? countLabel = GetPlayerCardPileCountLabel(playerIndex);
+		if (countLabel != null)
 		{
 			countLabel.Visible = visible;
 		}

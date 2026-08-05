@@ -2,11 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/tests/godot_test_env.sh"
 GODOT_CMD="${GODOT_BIN:-/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+codex_setup_godot_test_home "$TMP_DIR"
 
-HOME="$TMP_DIR/home" "$GODOT_CMD" --headless --path "$ROOT_DIR" \
+"$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
 	--script res://tests/PandoraCompressionUtf8Smoke.gd >"$TMP_DIR/smoke.log" 2>&1
 
 cat "$TMP_DIR/smoke.log"

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -16,21 +18,22 @@ public partial class GameBoardScene
 		AdventureUpgradeSelectionOutcome Outcome,
 		int SelectedIndex);
 
-	private readonly Queue<AdventureUpgradeTriggerSource> _pendingAdventureUpgradeTriggers = new();
 	private Task _adventureUpgradeResolutionTask = Task.CompletedTask;
-	private int _pendingAdventureWinnerPlayerIndex = -1;
 	private bool _isResolvingAdventureUpgradeSelection;
+
+	private ImmutableArray<PendingProgressionChoiceKind> PendingProgressionChoices =>
+		CurrentMatchFlowState.NormalizedPendingProgressionChoices;
 
 	private void QueueAdventureRunStartUpgradeIfNeeded()
 	{
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (!ShouldUseAdventureUpgradeSystem() || runState?.ShouldGrantRunStartUpgrade != true)
 		{
 			return;
 		}
 
 		EnqueueAdventureUpgradeTriggers(
-			AdventureUpgradeTriggerRules.BuildTriggerOrder(
+			runState.BuildUpgradeTriggerOrder(
 				runStartTriggered: true,
 				bigCaptureTriggered: false,
 				victoryTriggered: false));
@@ -43,28 +46,104 @@ public partial class GameBoardScene
 			return;
 		}
 
+		ImmutableArray<PendingProgressionChoiceKind> pending = PendingProgressionChoices;
+		var next = pending.ToBuilder();
 		foreach (AdventureUpgradeTriggerSource triggerSource in triggerSources)
 		{
-			if (triggerSource == AdventureUpgradeTriggerSource.None || HasPendingAdventureUpgradeTrigger(triggerSource))
+			PendingProgressionChoiceKind choice = ToPendingProgressionChoice(triggerSource);
+			if (choice == PendingProgressionChoiceKind.None
+				|| next.Contains(choice))
 			{
 				continue;
 			}
 
-			_pendingAdventureUpgradeTriggers.Enqueue(triggerSource);
+			next.Add(choice);
+		}
+
+		if (next.Count != pending.Length)
+		{
+			ImmutableArray<PendingProgressionChoiceKind> updated = next.ToImmutable();
+			TryUpdateMatchFlowState(state => state with
+			{
+				PendingProgressionChoices = updated,
+			});
 		}
 	}
 
 	private bool HasPendingAdventureUpgradeTrigger(AdventureUpgradeTriggerSource triggerSource)
 	{
-		foreach (AdventureUpgradeTriggerSource pendingTrigger in _pendingAdventureUpgradeTriggers)
-		{
-			if (pendingTrigger == triggerSource)
-			{
-				return true;
-			}
-		}
+		PendingProgressionChoiceKind choice = ToPendingProgressionChoice(triggerSource);
+		return choice != PendingProgressionChoiceKind.None
+			&& PendingProgressionChoices.Contains(choice);
+	}
 
-		return false;
+	private int PendingAdventureUpgradeTriggerCount => PendingProgressionChoices.Length;
+
+	private AdventureUpgradeTriggerSource PeekPendingAdventureUpgradeTrigger()
+	{
+		return PendingProgressionChoices is { IsEmpty: false } pending
+			? FromPendingProgressionChoice(pending[0])
+			: AdventureUpgradeTriggerSource.None;
+	}
+
+	private bool TryDequeuePendingAdventureUpgradeTrigger(
+		AdventureUpgradeTriggerSource expectedTrigger)
+	{
+		PendingProgressionChoiceKind expected = ToPendingProgressionChoice(expectedTrigger);
+		bool removed = false;
+		bool updated = TryUpdateMatchFlowState(state =>
+		{
+			ImmutableArray<PendingProgressionChoiceKind> pending =
+				state.NormalizedPendingProgressionChoices;
+			if (expected == PendingProgressionChoiceKind.None
+				|| pending.IsEmpty
+				|| pending[0] != expected)
+			{
+				return state;
+			}
+
+			removed = true;
+			return state with
+			{
+				PendingProgressionChoices = pending.Length == 1
+					? default
+					: pending.RemoveAt(0),
+			};
+		});
+		return updated && removed;
+	}
+
+	private void ClearPendingAdventureUpgradeFlow()
+	{
+		TryUpdateMatchFlowState(state => state with
+		{
+			PendingProgressionChoices = default,
+			PendingWinnerSeat = -1,
+		});
+	}
+
+	private static PendingProgressionChoiceKind ToPendingProgressionChoice(
+		AdventureUpgradeTriggerSource triggerSource)
+	{
+		return triggerSource switch
+		{
+			AdventureUpgradeTriggerSource.RunStart => PendingProgressionChoiceKind.SessionStart,
+			AdventureUpgradeTriggerSource.BigCapture => PendingProgressionChoiceKind.Milestone,
+			AdventureUpgradeTriggerSource.Victory => PendingProgressionChoiceKind.Victory,
+			_ => PendingProgressionChoiceKind.None,
+		};
+	}
+
+	private static AdventureUpgradeTriggerSource FromPendingProgressionChoice(
+		PendingProgressionChoiceKind choice)
+	{
+		return choice switch
+		{
+			PendingProgressionChoiceKind.SessionStart => AdventureUpgradeTriggerSource.RunStart,
+			PendingProgressionChoiceKind.Milestone => AdventureUpgradeTriggerSource.BigCapture,
+			PendingProgressionChoiceKind.Victory => AdventureUpgradeTriggerSource.Victory,
+			_ => AdventureUpgradeTriggerSource.None,
+		};
 	}
 
 	private IReadOnlyList<AdventureUpgradeTriggerSource> BuildAdventureUpgradeTriggerOrder(
@@ -72,10 +151,11 @@ public partial class GameBoardScene
 		bool bigCaptureTriggered,
 		bool victoryTriggered)
 	{
-		return AdventureUpgradeTriggerRules.BuildTriggerOrder(
-			runStartTriggered,
-			bigCaptureTriggered,
-			victoryTriggered);
+		return GetAdventureUpgradeRunState()?.BuildUpgradeTriggerOrder(
+				runStartTriggered,
+				bigCaptureTriggered,
+				victoryTriggered)
+			?? Array.Empty<AdventureUpgradeTriggerSource>();
 	}
 
 	private async Task QueueAndResolveAdventureUpgradeTriggersAsync(
@@ -89,7 +169,7 @@ public partial class GameBoardScene
 			bigCaptureTriggered,
 			victoryTriggered);
 		EnqueueAdventureUpgradeTriggers(triggerOrder);
-		if (_pendingAdventureUpgradeTriggers.Count == 0)
+		if (PendingAdventureUpgradeTriggerCount == 0)
 		{
 			return;
 		}
@@ -118,16 +198,19 @@ public partial class GameBoardScene
 		_isResolvingAdventureUpgradeSelection = true;
 		try
 		{
-			while (_pendingAdventureUpgradeTriggers.Count > 0
+			while (PendingAdventureUpgradeTriggerCount > 0
 				&& turnSequenceGeneration == _turnSequenceGeneration
 				&& !_isLeavingGame
 				&& !IsGameOver())
 			{
-				AdventureUpgradeTriggerSource triggerSource = _pendingAdventureUpgradeTriggers.Peek();
+				AdventureUpgradeTriggerSource triggerSource = PeekPendingAdventureUpgradeTrigger();
 				IReadOnlyList<AdventureSuitUpgradeDefinition> offer = BuildAdventureUpgradeOffer();
 				if (offer.Count == 0)
 				{
-					_pendingAdventureUpgradeTriggers.Dequeue();
+					if (!TryDequeuePendingAdventureUpgradeTrigger(triggerSource))
+					{
+						return;
+					}
 					continue;
 				}
 
@@ -182,7 +265,10 @@ public partial class GameBoardScene
 					{
 						GD.PushWarning(
 							$"Adventure upgrade acquisition rejected: id={selectedDefinition.Id} result={grantResult.AcquireResult}");
-					_pendingAdventureUpgradeTriggers.Dequeue();
+					if (!TryDequeuePendingAdventureUpgradeTrigger(triggerSource))
+					{
+						return;
+					}
 					continue;
 				}
 
@@ -190,7 +276,10 @@ public partial class GameBoardScene
 						grantResult,
 						turnSequenceGeneration);
 				GD.Print($"Adventure upgrade acquired: {selectedDefinition.Id}");
-				_pendingAdventureUpgradeTriggers.Dequeue();
+				if (!TryDequeuePendingAdventureUpgradeTrigger(triggerSource))
+				{
+					return;
+				}
 			}
 		}
 		finally
@@ -198,13 +287,19 @@ public partial class GameBoardScene
 			_isResolvingAdventureUpgradeSelection = false;
 		}
 
-		if (_pendingAdventureWinnerPlayerIndex >= 0
-			&& _pendingAdventureUpgradeTriggers.Count == 0
+		if (CurrentMatchFlowState.PendingWinnerSeat >= 0
+			&& PendingAdventureUpgradeTriggerCount == 0
 			&& turnSequenceGeneration == _turnSequenceGeneration
 			&& !IsGameOver())
 		{
-			int winnerPlayerIndex = _pendingAdventureWinnerPlayerIndex;
-			_pendingAdventureWinnerPlayerIndex = -1;
+			int winnerPlayerIndex = CurrentMatchFlowState.PendingWinnerSeat;
+			if (!TryUpdateMatchFlowState(state => state with
+				{
+					PendingWinnerSeat = -1,
+				}))
+			{
+				return;
+			}
 			DeclareWinner(winnerPlayerIndex);
 		}
 	}
@@ -230,7 +325,7 @@ public partial class GameBoardScene
 				definition.Enabled));
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return Array.Empty<AdventureSuitUpgradeDefinition>();
@@ -240,14 +335,30 @@ public partial class GameBoardScene
 			return Array.Empty<AdventureSuitUpgradeDefinition>();
 		}
 
-		IReadOnlyList<AdventureUpgradeDefinitionModel> offerModels = AdventureUpgradeChoiceRules.BuildOffer(
+		bool randomSelectionFailed = false;
+		int NextOfferRandomIndex(int maxExclusive)
+		{
+			if (maxExclusive > 0
+				&& TrySubmitChooseRandomIndexRuleCommand(
+					_currentTurnPlayerIndex,
+					minimumInclusive: 0,
+					maximumInclusive: maxExclusive - 1,
+					_turnSequenceGeneration,
+					out int selectedIndex))
+			{
+				return selectedIndex;
+			}
+
+			randomSelectionFailed = true;
+			return 0;
+		}
+
+		IReadOnlyList<AdventureUpgradeDefinitionModel> offerModels = runState.BuildUpgradeOffer(
 			definitions,
-			runState.GetAcquiredUpgradeIds(),
-			Math.Max(1, runState.CurrentRunStageIndex),
-			maxExclusive => _rng.RandiRange(0, maxExclusive - 1),
+			NextOfferRandomIndex,
 			manifest);
 
-		if (offerModels.Count == 0)
+		if (randomSelectionFailed || offerModels.Count == 0)
 		{
 			return Array.Empty<AdventureSuitUpgradeDefinition>();
 		}

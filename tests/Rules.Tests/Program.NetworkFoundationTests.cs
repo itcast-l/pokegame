@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Deckland.Rules;
 
 internal static partial class Program
 {
@@ -20,6 +22,11 @@ internal static partial class Program
 		Run("authority pending selection can commit only once", AuthorityPendingSelectionCanCommitOnlyOnce);
 		Run("authority action json roundtrip keeps fixed fields", AuthorityActionJsonRoundtripKeepsFixedFields);
 		Run("checkpoint codec roundtrips private deterministic state", CheckpointCodecRoundtripsPrivateDeterministicState);
+		Run("checkpoint rule adapter roundtrips fields bytes hash and random continuation", CheckpointRuleAdapterRoundtripsFieldsBytesHashAndRandomContinuation);
+		Run("checkpoint four player high load benchmark", CheckpointFourPlayerHighLoadBenchmark);
+		Run("checkpoint telemetry bookkeeping is allocation free", CheckpointTelemetryBookkeepingIsAllocationFree);
+		Run("checkpoint rule adapter rejects invalid state without mutation", CheckpointRuleAdapterRejectsInvalidStateWithoutMutation);
+		Run("checkpoint restore source uses atomic rule session boundary", CheckpointRestoreSourceUsesAtomicRuleSessionBoundary);
 		Run("checkpoint codec roundtrips draw outcome", CheckpointCodecRoundtripsDrawOutcome);
 		Run("checkpoint codec rejects tampered hash and oversized payload", CheckpointCodecRejectsTamperedHashAndOversizedPayload);
 		Run("checkpoint codec rejects malformed object graphs without throwing", CheckpointCodecRejectsMalformedObjectGraphsWithoutThrowing);
@@ -34,6 +41,7 @@ internal static partial class Program
 		Run("migration candidate score prefers stable acknowledgements then latency", MigrationCandidateScorePrefersStableAcknowledgementsThenLatency);
 		Run("standby checkpoint sends are serialized and rate bounded", StandbyCheckpointSendsAreSerializedAndRateBounded);
 		Run("migration coordinator permits only ordered recovery transitions", MigrationCoordinatorPermitsOnlyOrderedRecoveryTransitions);
+		Run("active host migration freezes checkpoint and standby maintenance", ActiveHostMigrationFreezesCheckpointAndStandbyMaintenance);
 		Run("checkpoint commit results classify local and migration failures", CheckpointCommitResultsClassifyLocalAndMigrationFailures);
 		Run("migration plan revocation is signed and tamper evident", MigrationPlanRevocationIsSignedAndTamperEvident);
 		Run("revocation blocks plan replay and stale checkpoint eligibility", RevocationBlocksPlanReplayAndStaleCheckpointEligibility);
@@ -48,7 +56,7 @@ internal static partial class Program
 		Run("migration nonce replay guard rejects duplicates and resets per epoch", MigrationNonceReplayGuardRejectsDuplicatesAndResetsPerEpoch);
 		Run("migration serialization excludes raw secrets", MigrationSerializationExcludesRawSecrets);
 		Run("release debug api surface cannot export migration secrets", ReleaseDebugApiSurfaceCannotExportMigrationSecrets);
-		Run("lobby migration trust controls are explicit and locked", LobbyMigrationTrustControlsAreExplicitAndLocked);
+		Run("host migration capability is release-disabled with an isolated debug fixture", HostMigrationCapabilityIsReleaseDisabledWithDebugFixture);
 		Run("lobby ready intent is consumed after credential acknowledgement", LobbyReadyIntentIsConsumedAfterCredentialAcknowledgement);
 		Run("local lobby ready intent retries until authority echo", LocalLobbyReadyIntentRetriesUntilAuthorityEcho);
 		Run("lobby initial seat credential delivery retries across sync ordering", LobbyInitialSeatCredentialDeliveryRetriesAcrossSyncOrdering);
@@ -415,6 +423,216 @@ internal static partial class Program
 		Equal(19L, restored.LastAcceptedClientActionIds[1]);
 	}
 
+	private static void CheckpointRuleAdapterRoundtripsFieldsBytesHashAndRandomContinuation()
+	{
+		var sourceRandom = new TestRuleRandomSource(20260804);
+		var sourceSession = new AuthorityRuleSession(sourceRandom, MatchRuleProfile.Empty);
+		True(sourceSession.Submit(CreateInitializeCommand(actionId: 7001)).Accepted);
+		MatchStateSnapshot sourceSnapshot = sourceSession.CaptureSnapshot() with
+		{
+			CompletedTurnsSinceQuestionRefresh = 4,
+			QuestionRefreshAnchorSeat = 1,
+		};
+		NetworkAuthorityCheckpoint template = CreateCheckpoint() with
+		{
+			RoomPasswordVerifierVersion = 0,
+			RoomPasswordVerifierIterations = 0,
+			RoomPasswordVerifierSalt = string.Empty,
+			RoomPasswordVerifier = string.Empty,
+			CheckpointId = 19,
+			SnapshotId = 23,
+		};
+
+		NetworkAuthorityCheckpoint first =
+			NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(
+				template,
+				sourceSnapshot);
+		Equal(sourceSnapshot.PlayerCount, first.PlayerCount);
+		Equal(sourceSnapshot.WinningScore, first.WinningScore);
+		Equal(sourceSnapshot.CurrentTurnSeat, first.CurrentTurnPlayerIndex);
+		Equal(sourceSnapshot.TurnGeneration, first.TurnSequenceGeneration);
+		Equal(
+			sourceSnapshot.CompletedTurnsSinceQuestionRefresh,
+			first.CompletedTurnsSinceQuestionRefresh);
+		Equal(sourceSnapshot.QuestionRefreshAnchorSeat, first.QuestionRefreshAnchorPlayerIndex);
+		Equal(unchecked((long)sourceSnapshot.RandomState.Seed), first.RngSeed);
+		Equal(
+			sourceSnapshot.RandomState.State.ToString(System.Globalization.CultureInfo.InvariantCulture),
+			first.RngState);
+		Equal(sourceSnapshot.Players.Length, first.Decks.Count);
+		for (int seat = 0; seat < sourceSnapshot.Players.Length; seat++)
+		{
+			PlayerStateSnapshot expectedPlayer = sourceSnapshot.Players[seat];
+			Equal(expectedPlayer.Deck.Length, first.Decks[seat].Count);
+			Equal(expectedPlayer.Hand.Length, first.Hands[seat].Count);
+			Equal(expectedPlayer.ItemHand.Length, first.ItemHands[seat].Count);
+			Equal(expectedPlayer.Score, first.Scores[seat]);
+			for (int index = 0; index < expectedPlayer.Deck.Length; index++)
+			{
+				Equal(expectedPlayer.Deck[index].Code, first.Decks[seat][index].Code);
+				True(expectedPlayer.Deck[index].NormalizedAttachedEffectIds.SequenceEqual(
+					first.Decks[seat][index].AttachedItemCardIds));
+			}
+			for (int index = 0; index < expectedPlayer.Hand.Length; index++)
+			{
+				Equal(expectedPlayer.Hand[index].Code, first.Hands[seat][index].Code);
+				True(expectedPlayer.Hand[index].NormalizedAttachedEffectIds.SequenceEqual(
+					first.Hands[seat][index].AttachedItemCardIds));
+			}
+		}
+
+		True(NetworkAuthorityCheckpointRuleAdapter.TryCreateRuleSnapshot(
+			first,
+			sourceSnapshot.LifecycleGeneration,
+			sourceSnapshot.TurnGeneration,
+			sourceSnapshot.Players,
+			sourceSnapshot.TableCards,
+			new RuleRandomState(9, 9),
+			ImmutableArray<PendingAttachmentRewardState>.Empty,
+			out MatchStateSnapshot restoredSnapshot,
+			out string restoreError));
+		True(string.IsNullOrEmpty(restoreError));
+		Equal(sourceSnapshot.PlayerCount, restoredSnapshot.PlayerCount);
+		Equal(sourceSnapshot.WinningScore, restoredSnapshot.WinningScore);
+		Equal(sourceSnapshot.CurrentTurnSeat, restoredSnapshot.CurrentTurnSeat);
+		Equal(sourceSnapshot.TurnGeneration, restoredSnapshot.TurnGeneration);
+		Equal(sourceSnapshot.Outcome, restoredSnapshot.Outcome);
+		Equal(sourceSnapshot.WinnerSeat, restoredSnapshot.WinnerSeat);
+		Equal(sourceSnapshot.RandomState, restoredSnapshot.RandomState);
+		Equal(
+			sourceSnapshot.CompletedTurnsSinceQuestionRefresh,
+			restoredSnapshot.CompletedTurnsSinceQuestionRefresh);
+		Equal(sourceSnapshot.QuestionRefreshAnchorSeat, restoredSnapshot.QuestionRefreshAnchorSeat);
+
+		NetworkAuthorityCheckpoint second =
+			NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(
+				template,
+				restoredSnapshot);
+		True(NetworkAuthorityCheckpointCodec.TryEncode(
+			first,
+			out byte[] firstPayload,
+			out string firstHash,
+			out string firstEncodeError));
+		True(string.IsNullOrEmpty(firstEncodeError));
+		True(NetworkAuthorityCheckpointCodec.TryEncode(
+			second,
+			out byte[] secondPayload,
+			out string secondHash,
+			out string secondEncodeError));
+		True(string.IsNullOrEmpty(secondEncodeError));
+		True(firstPayload.AsSpan().SequenceEqual(secondPayload));
+		Equal(firstHash, secondHash);
+		Equal("51f4591f32a6f583d3c7ecb3214f655f80f0a6dd9d38d5ac194219bf3ecc8999", firstHash);
+
+		int[] expectedContinuation =
+		{
+			sourceRandom.NextIntInclusive(0, 10_000),
+			sourceRandom.NextIntInclusive(0, 10_000),
+			sourceRandom.NextIntInclusive(0, 10_000),
+		};
+		var restoredRandom = new TestRuleRandomSource(1);
+		AuthorityRuleSession restoredSession = AuthorityRuleSession.Restore(
+			restoredSnapshot,
+			restoredRandom,
+			MatchRuleProfile.Empty);
+		True(restoredSession.ReadModel.IsInitialized);
+		foreach (int expected in expectedContinuation)
+		{
+			Equal(expected, restoredRandom.NextIntInclusive(0, 10_000));
+		}
+	}
+
+	private static void CheckpointRuleAdapterRejectsInvalidStateWithoutMutation()
+	{
+		var protectedRandom = new TestRuleRandomSource(8102);
+		var protectedSession = new AuthorityRuleSession(
+			protectedRandom,
+			MatchRuleProfile.Empty);
+		True(protectedSession.Submit(CreateInitializeCommand(actionId: 7101)).Accepted);
+		MatchReadModel readModelBefore = protectedSession.ReadModel;
+		RuleRandomState randomBefore = protectedRandom.CaptureState();
+		MatchStateSnapshot currentSnapshot = protectedSession.CaptureSnapshot();
+		NetworkAuthorityCheckpoint checkpoint =
+			NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(
+				CreateCheckpoint(),
+				currentSnapshot) with
+			{
+				RngState = "0",
+			};
+
+		False(NetworkAuthorityCheckpointRuleAdapter.TryCreateRuleSnapshot(
+			checkpoint,
+			currentSnapshot.LifecycleGeneration + 1,
+			currentSnapshot.TurnGeneration + 1,
+			currentSnapshot.Players,
+			currentSnapshot.TableCards,
+			randomBefore,
+			ImmutableArray<PendingAttachmentRewardState>.Empty,
+			out _,
+			out string error));
+		Equal("checkpoint RNG state is invalid", error);
+		Equal(randomBefore, protectedRandom.CaptureState());
+		AssertReadModelsEquivalent(readModelBefore, protectedSession.ReadModel);
+
+		False(NetworkAuthorityCheckpointRuleAdapter.TryCreateRuleSnapshot(
+			checkpoint with { RngState = currentSnapshot.RandomState.State.ToString() },
+			currentSnapshot.LifecycleGeneration + 1,
+			currentSnapshot.TurnGeneration + 1,
+			default,
+			currentSnapshot.TableCards,
+			randomBefore,
+			ImmutableArray<PendingAttachmentRewardState>.Empty,
+			out _,
+			out _));
+		Equal(randomBefore, protectedRandom.CaptureState());
+		AssertReadModelsEquivalent(readModelBefore, protectedSession.ReadModel);
+	}
+
+	private static void CheckpointRestoreSourceUsesAtomicRuleSessionBoundary()
+	{
+		string root = FindRepositoryRoot();
+		string checkpointSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"GameBoardScene.NetworkCheckpoint.cs"));
+		string adapterSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"GameBoardScene.RuleSessionAdapter.cs"));
+		int restoreStart = checkpointSource.IndexOf(
+			"internal bool TryRestoreAuthorityCheckpoint(",
+			StringComparison.Ordinal);
+		int restoreEnd = checkpointSource.IndexOf(
+			"private bool TryBuildAuthorityRuleSnapshotFromCheckpoint(",
+			restoreStart,
+			StringComparison.Ordinal);
+		True(restoreStart >= 0 && restoreEnd > restoreStart);
+		string restoreBody = checkpointSource[restoreStart..restoreEnd];
+		True(restoreBody.Contains("TryBuildRestoredState(", StringComparison.Ordinal));
+		True(restoreBody.Contains("TryRestoreAuthorityRuleSnapshot(", StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			restoreBody,
+			@"_(?:playerDecks|playerHands|playerItemHands|tableCards)\s*(?:\[[^\]]+\])?\s*\.\s*(?:Clear|Add|AddRange|Insert|Remove|RemoveAt|RemoveRange)\s*\("));
+		True(checkpointSource.Contains(
+			"NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(",
+			StringComparison.Ordinal));
+		True(checkpointSource.Contains(
+			"NetworkAuthorityCheckpointRuleAdapter.TryCreateRuleSnapshot(",
+			StringComparison.Ordinal));
+
+		int createRestored = adapterSource.IndexOf(
+			"AuthorityRuleSession restored = AuthorityRuleSession.Restore(",
+			StringComparison.Ordinal);
+		int commitRestored = adapterSource.IndexOf(
+			"_authorityRuleSession = restored;",
+			createRestored,
+			StringComparison.Ordinal);
+		True(createRestored >= 0 && commitRestored > createRestored);
+		True(adapterSource.Contains(
+			"_ruleRandomSource.RestoreState(previousRandomState);",
+			StringComparison.Ordinal));
+	}
+
 	private static void CheckpointCodecRejectsTamperedHashAndOversizedPayload()
 	{
 		NetworkAuthorityCheckpoint source = CreateCheckpoint();
@@ -449,7 +667,7 @@ internal static partial class Program
 				{
 					new()
 					{
-						Card = new NetworkCheckpointCard { Code = null!, AttachedItemCardIds = Array.Empty<string>() },
+							Card = new NetworkCheckpointCard { Code = null!, AttachedItemCardIds = ImmutableArray<string>.Empty },
 					},
 				},
 			},
@@ -457,7 +675,7 @@ internal static partial class Program
 			{
 				Hands = new List<List<NetworkCheckpointCard>>
 				{
-					new() { new NetworkCheckpointCard { Code = "card", AttachedItemCardIds = null! } },
+					new() { new NetworkCheckpointCard { Code = "card", AttachedItemCardIds = default } },
 					new(),
 				},
 			},
@@ -517,9 +735,7 @@ internal static partial class Program
 	{
 		NetworkAuthorityCheckpoint source = CreateCheckpoint();
 		True(AuthorityCheckpointEnvelope.TryCreate(source, out AuthorityCheckpointEnvelope committed, out _));
-		byte[] exposedPayload = committed.GetPayloadCopy();
-		exposedPayload[0] ^= 0xff;
-		False(exposedPayload.SequenceEqual(committed.GetPayloadCopy()));
+		byte committedFirstByte = committed.PayloadSpan[0];
 
 		AuthorityCheckpointEnvelope current = committed;
 		NetworkAuthorityCheckpoint invalid = source with
@@ -535,7 +751,8 @@ internal static partial class Program
 		True(ReferenceEquals(committed, current));
 		Equal(source.CheckpointId, current.CheckpointId);
 		Equal(committed.Hash, current.Hash);
-		True(committed.GetPayloadCopy().SequenceEqual(current.GetPayloadCopy()));
+		Equal(committedFirstByte, current.PayloadSpan[0]);
+		True(committed.PayloadSpan.SequenceEqual(current.PayloadSpan));
 	}
 
 	private static void CheckpointCodecRoundtripsDrawOutcome()
@@ -1014,6 +1231,54 @@ internal static partial class Program
 		False(NetworkMigrationRules.ArePlanAcknowledgementsComplete(new[] { 1, 2 }, new[] { 1 }));
 	}
 
+	private static void ActiveHostMigrationFreezesCheckpointAndStandbyMaintenance()
+	{
+		string root = FindRepositoryRoot();
+		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string authoritySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.AuthorityActions.cs"));
+		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
+
+		int handoffStart = migrationSource.IndexOf("private bool IsActiveMigrationHandoffInProgress()", StringComparison.Ordinal);
+		int handoffEnd = migrationSource.IndexOf("private bool IsMigrationRecoveryHandoffInProgress()", handoffStart, StringComparison.Ordinal);
+		True(handoffStart >= 0 && handoffEnd > handoffStart);
+		string handoffBlock = migrationSource[handoffStart..handoffEnd];
+		True(handoffBlock.Contains("_activeMigrationPending || _activeMigrationAwaitingSourceClose", StringComparison.Ordinal));
+
+		int boardStart = authoritySource.IndexOf("CommitAuthorityCheckpointFromBoard()", StringComparison.Ordinal);
+		int lobbyStart = authoritySource.IndexOf("CommitAuthorityCheckpointFromLobby()", boardStart, StringComparison.Ordinal);
+		int lobbyEnd = authoritySource.IndexOf("private AuthorityCheckpointCommitResult CommitAuthoritySequence", lobbyStart, StringComparison.Ordinal);
+		True(boardStart >= 0 && lobbyStart > boardStart && lobbyEnd > lobbyStart);
+		string boardCommitBlock = authoritySource[boardStart..lobbyStart];
+		string lobbyCommitBlock = authoritySource[lobbyStart..lobbyEnd];
+		foreach (string commitBlock in new[] { boardCommitBlock, lobbyCommitBlock })
+		{
+			int freezeCheck = commitBlock.IndexOf("if (IsActiveMigrationHandoffInProgress())", StringComparison.Ordinal);
+			int invalidation = commitBlock.IndexOf("TryInvalidateMigrationAvailability", StringComparison.Ordinal);
+			True(freezeCheck >= 0 && invalidation > freezeCheck);
+			True(commitBlock.Contains("active_migration_handoff_in_progress", StringComparison.Ordinal));
+		}
+
+		int pollStart = migrationSource.IndexOf("private void PollHotStandby", StringComparison.Ordinal);
+		int pollEnd = migrationSource.IndexOf("private bool HasEligibleHotStandbyPeer", pollStart, StringComparison.Ordinal);
+		True(pollStart >= 0 && pollEnd > pollStart);
+		True(migrationSource[pollStart..pollEnd].Contains("IsActiveMigrationHandoffInProgress()", StringComparison.Ordinal));
+
+		int invalidationStart = migrationSource.IndexOf("private bool TryInvalidateMigrationAvailability", StringComparison.Ordinal);
+		int invalidationEnd = migrationSource.IndexOf("private MigrationCheckpointDispatchStatus TryBroadcastMigrationPlanRevocation", invalidationStart, StringComparison.Ordinal);
+		True(invalidationStart >= 0 && invalidationEnd > invalidationStart);
+		True(migrationSource[invalidationStart..invalidationEnd].Contains("if (IsActiveMigrationHandoffInProgress())", StringComparison.Ordinal));
+
+		int revocationStart = migrationSource.IndexOf("private void RpcMigrationPlanRevoked", StringComparison.Ordinal);
+		int revocationEnd = migrationSource.IndexOf("private void RpcDebugStaleMigrationPlan", revocationStart, StringComparison.Ordinal);
+		True(revocationStart >= 0 && revocationEnd > revocationStart);
+		True(migrationSource[revocationStart..revocationEnd].Contains("if (IsMigrationRecoveryHandoffInProgress())", StringComparison.Ordinal));
+
+		int maintenanceStart = maintenanceSource.IndexOf("private bool IsHotStandbyMaintenanceActive", StringComparison.Ordinal);
+		int maintenanceEnd = maintenanceSource.IndexOf("private static void ConsiderDeadline", maintenanceStart, StringComparison.Ordinal);
+		True(maintenanceStart >= 0 && maintenanceEnd > maintenanceStart);
+		True(maintenanceSource[maintenanceStart..maintenanceEnd].Contains("&& !IsActiveMigrationHandoffInProgress()", StringComparison.Ordinal));
+	}
+
 	private static void CheckpointCommitResultsClassifyLocalAndMigrationFailures()
 	{
 		AuthorityCheckpointCommitResult committed = AuthorityCheckpointCommitResult.Committed(
@@ -1420,35 +1685,55 @@ internal static partial class Program
 		False(sharedConfigSerializer.Contains("SessionKey", StringComparison.Ordinal));
 	}
 
-	private static void LobbyMigrationTrustControlsAreExplicitAndLocked()
+	private static void HostMigrationCapabilityIsReleaseDisabledWithDebugFixture()
 	{
 		string root = FindRepositoryRoot();
 		string scene = File.ReadAllText(Path.Combine(root, "scenes", "multiplayer_lobby_scene.tscn"));
-		string source = File.ReadAllText(Path.Combine(root, "scripts", "MultiplayerLobbyScene.cs"));
-		int hostStart = scene.IndexOf("[node name=\"HostMigrationToggle\"", StringComparison.Ordinal);
-		int hostEnd = scene.IndexOf("\n[node", hostStart + 1, StringComparison.Ordinal);
-		int standbyStart = scene.IndexOf("[node name=\"TrustedHotStandbyToggle\"", StringComparison.Ordinal);
-		int standbyEnd = scene.IndexOf("\n[node", standbyStart + 1, StringComparison.Ordinal);
-		True(hostStart >= 0 && hostEnd > hostStart);
-		True(standbyStart >= 0 && standbyEnd > standbyStart);
-		string hostBlock = scene[hostStart..hostEnd];
-		string standbyBlock = scene[standbyStart..standbyEnd];
-		True(hostBlock.Contains("type=\"CheckButton\"", StringComparison.Ordinal));
-		True(hostBlock.Contains("custom_minimum_size = Vector2(0, 44)", StringComparison.Ordinal));
-		True(hostBlock.Contains("button_pressed = true", StringComparison.Ordinal));
-		True(standbyBlock.Contains("type=\"CheckButton\"", StringComparison.Ordinal));
-		True(standbyBlock.Contains("custom_minimum_size = Vector2(0, 44)", StringComparison.Ordinal));
-		False(standbyBlock.Contains("button_pressed = true", StringComparison.Ordinal));
-		True(scene.Contains("[node name=\"MigrationTrustNoticeLabel\" type=\"Label\"", StringComparison.Ordinal));
-		True(scene.Contains("autowrap_mode = 2", StringComparison.Ordinal));
-		True(source.Contains("ConfigureHostMigration(", StringComparison.Ordinal));
-		True(source.Contains("HostMigrationToggle.Disabled = !canConfigureSession;", StringComparison.Ordinal));
-		True(source.Contains("TrustedHotStandbyToggle.Disabled = !canConfigureSession;", StringComparison.Ordinal));
-		True(source.Contains("state is NetworkSessionState.Idle or NetworkSessionState.Searching or NetworkSessionState.Failed", StringComparison.Ordinal));
+		string lobbySource = File.ReadAllText(Path.Combine(root, "scripts", "MultiplayerLobbyScene.cs"));
+		string securitySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Security.cs"));
+		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
+		string authoritySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.AuthorityActions.cs"));
+		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
+		string recoverySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
+		string steamSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Steam.cs"));
+		string boardSessionSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.NetworkSession.cs"));
+
+		int capabilityStart = securitySource.IndexOf("private static bool HostMigrationCapabilityAvailable", StringComparison.Ordinal);
+		int capabilityEnd = securitySource.IndexOf("private readonly HashSet<int> _authenticatedPeerIds", capabilityStart, StringComparison.Ordinal);
+		True(capabilityStart >= 0 && capabilityEnd > capabilityStart);
+		string capabilityBlock = securitySource[capabilityStart..capabilityEnd];
+		True(capabilityBlock.Contains("#if DEBUG", StringComparison.Ordinal));
+		True(capabilityBlock.Contains("OS.GetEnvironment(\"CODEX_LAN_MIGRATION_FIXTURE\") == \"1\"", StringComparison.Ordinal));
+		True(capabilityBlock.Contains("#else", StringComparison.Ordinal));
+		True(capabilityBlock.Contains("return false;", StringComparison.Ordinal));
+		True(capabilityBlock.Contains("#endif", StringComparison.Ordinal));
+		True(securitySource.Contains("public bool HostMigrationEnabled => HostMigrationCapabilityAvailable;", StringComparison.Ordinal));
+		True(securitySource.Contains("public bool TrustedHotStandbyAccepted => HostMigrationCapabilityAvailable;", StringComparison.Ordinal));
+		int configureStart = securitySource.IndexOf("public void ConfigureHostMigration", StringComparison.Ordinal);
+		int configureEnd = securitySource.IndexOf("private void InitializeHostMigrationSecurity", configureStart, StringComparison.Ordinal);
+		True(configureStart >= 0 && configureEnd > configureStart);
+		string configureBlock = securitySource[configureStart..configureEnd];
+		True(configureBlock.Contains("_ = enabled;", StringComparison.Ordinal));
+		True(configureBlock.Contains("_ = trustedHotStandbyAccepted;", StringComparison.Ordinal));
+		False(configureBlock.Contains("HostMigrationCapabilityAvailable =", StringComparison.Ordinal));
+
+		foreach (string removedControl in new[]
+		{
+			"HostMigrationToggle",
+			"TrustedHotStandbyToggle",
+			"MigrationTrustNoticeLabel",
+		})
+		{
+			False(scene.Contains(removedControl, StringComparison.Ordinal));
+			False(lobbySource.Contains(removedControl, StringComparison.Ordinal));
+		}
+		False(lobbySource.Contains("ConfigureHostMigration(", StringComparison.Ordinal));
 
 		Dictionary<string, List<string>> rows = ReadLocalizationRowsByKey(
 			Path.Combine(root, "localization", "ui.csv"),
-			out List<string> header);
+			out _);
 		foreach (string key in new[]
 		{
 			"MULTIPLAYER_LOBBY_HOST_MIGRATION_TOGGLE",
@@ -1456,10 +1741,64 @@ internal static partial class Program
 			"MULTIPLAYER_LOBBY_MIGRATION_TRUST_NOTICE",
 		})
 		{
-			True(rows.TryGetValue(key, out List<string>? row));
-			Equal(header.Count, row!.Count);
-			True(row.All(value => !string.IsNullOrWhiteSpace(value)));
+			False(rows.ContainsKey(key));
 		}
+
+		True(maintenanceSource.Contains("HostMigrationCapabilityAvailable && IsHost && _activeMigrationPending", StringComparison.Ordinal));
+		True(maintenanceSource.Contains("return HostMigrationCapabilityAvailable", StringComparison.Ordinal));
+		True(authoritySource.Contains("if (!HostMigrationCapabilityAvailable)", StringComparison.Ordinal));
+		True(authoritySource.Contains("return CommitAuthoritySequence(authority);", StringComparison.Ordinal));
+		True(authoritySource.Contains("return CommitAuthoritySequence();", StringComparison.Ordinal));
+		True(migrationSource.Contains("private IHostMigrationTransport? CreateMigrationTransport", StringComparison.Ordinal));
+		True(migrationSource.Contains("return null;", StringComparison.Ordinal));
+		True(migrationSource.Contains("TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Disabled);", StringComparison.Ordinal));
+		int artifactStart = migrationSource.IndexOf("public bool DebugHasMigrationArtifacts", StringComparison.Ordinal);
+		int artifactEnd = migrationSource.IndexOf("public int DebugGetLocalStandbyCheckpointCacheCount", artifactStart, StringComparison.Ordinal);
+		True(artifactStart >= 0 && artifactEnd > artifactStart);
+		string artifactBlock = migrationSource[artifactStart..artifactEnd];
+		False(artifactBlock.Contains("_issuedSeatCredentialsBySeat", StringComparison.Ordinal));
+		False(artifactBlock.Contains("_localSeatCredential", StringComparison.Ordinal));
+
+		True(managerSource.Contains("private const double ClientReconnectWindowSeconds = 10.0;", StringComparison.Ordinal));
+		int disconnectStart = managerSource.IndexOf("private void OnServerDisconnected()", StringComparison.Ordinal);
+		int disconnectEnd = managerSource.IndexOf("private void InsertPlayerInSeatOrder", disconnectStart, StringComparison.Ordinal);
+		True(disconnectStart >= 0 && disconnectEnd > disconnectStart);
+		string disconnectBlock = managerSource[disconnectStart..disconnectEnd];
+		True(disconnectBlock.Contains("EnterReconnectState();", StringComparison.Ordinal));
+		True(disconnectBlock.Contains("HandleHostDisconnected();", StringComparison.Ordinal));
+		True(disconnectBlock.Contains("TryAdvancePlannedMigrationAfterSourceDisconnect()", StringComparison.Ordinal));
+		False(disconnectBlock.Contains("BeginMigrationAfterHostDisconnect", StringComparison.Ordinal));
+		False(disconnectBlock.Contains("StartMigrationAttemptsAfterHostDisconnect", StringComparison.Ordinal));
+		True(managerSource.Contains(
+			"bool resumesAuthenticatedSeat = _state == NetworkSessionState.InGame",
+			StringComparison.Ordinal));
+		True(reconnectSource.Contains("now - _reconnectWindowStartedAt >= ClientReconnectWindowSeconds", StringComparison.Ordinal));
+		True(maintenanceSource.Contains("_reconnectWindowStartedAt + ClientReconnectWindowSeconds", StringComparison.Ordinal));
+		int handlerStart = reconnectSource.IndexOf("private void HandleHostDisconnected()", StringComparison.Ordinal);
+		int handlerEnd = reconnectSource.IndexOf("private void TryStartReconnectAttempt", handlerStart, StringComparison.Ordinal);
+		True(handlerStart >= 0 && handlerEnd > handlerStart);
+		string handlerBlock = reconnectSource[handlerStart..handlerEnd];
+		True(handlerBlock.Contains("_hostDisconnectReturnPending", StringComparison.Ordinal));
+		True(handlerBlock.Contains("_hostDisconnectErrorPublished", StringComparison.Ordinal));
+		True(handlerBlock.Contains("RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure)", StringComparison.Ordinal));
+		True(handlerBlock.Contains("_pendingLobbyErrorMessage = needsLobbySceneChange ? message : string.Empty;", StringComparison.Ordinal));
+		True(handlerBlock.Contains("nameof(ReturnToMultiplayerLobbyScene)", StringComparison.Ordinal));
+		Equal(1, Regex.Matches(handlerBlock, "Host disconnected\\.", RegexOptions.CultureInvariant).Count);
+		True(boardSessionSource.Contains("if (networkManager.IsHostDisconnectReturnPending)", StringComparison.Ordinal));
+		True(recoverySource.Contains(
+			"const string hostEndedMatchMessage = \"Host disconnected.\";",
+			StringComparison.Ordinal));
+		True(recoverySource.Contains(
+			"_hostEndedMatchMessage = hostEndedMatchMessage;",
+			StringComparison.Ordinal));
+		True(recoverySource.Contains(
+			"ReturnToMultiplayerLobbyAfterMigrationFailure(hostEndedMatchMessage);",
+			StringComparison.Ordinal));
+		True(recoverySource.Contains(
+			"RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure)",
+			StringComparison.Ordinal));
+		True(recoverySource.Contains("Fail(hostEndedMatchMessage);", StringComparison.Ordinal));
+		True(steamSource.Contains("_lastObservedSteamLobbyOwnerId != _originalSteamLobbyOwnerId", StringComparison.Ordinal));
 	}
 
 	private static void LobbyReadyIntentIsConsumedAfterCredentialAcknowledgement()
@@ -1487,11 +1826,12 @@ internal static partial class Program
 	{
 		string root = FindRepositoryRoot();
 		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
 		string lobbySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.LobbyMembership.cs"));
 		string lifecycleSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.MatchLifecycle.cs"));
 
 		True(managerSource.Contains("LocalReadyIntentRetrySeconds = 1.0", StringComparison.Ordinal));
-		True(managerSource.Contains("PollLocalReadyIntent(now);", StringComparison.Ordinal));
+		True(maintenanceSource.Contains("PollLocalReadyIntent(now);", StringComparison.Ordinal));
 		True(lobbySource.Contains("private void PollLocalReadyIntent(double now)", StringComparison.Ordinal));
 		True(lobbySource.Contains("RpcId(\n\t\t\t\t1,\n\t\t\t\tMethodName.RpcSetReady", StringComparison.Ordinal));
 		True(lobbySource.Contains("IsLocalReadyIntentSatisfied(isReady)", StringComparison.Ordinal));
@@ -1502,10 +1842,11 @@ internal static partial class Program
 	{
 		string root = FindRepositoryRoot();
 		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
 		string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
 		string recoverySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
 
-		True(managerSource.Contains("PollSeatCredentialDelivery(now);", StringComparison.Ordinal));
+		True(maintenanceSource.Contains("PollSeatCredentialDelivery(now);", StringComparison.Ordinal));
 		True(managerSource.Contains("SeatCredentialRetrySeconds = 1.0", StringComparison.Ordinal));
 		True(reconnectSource.Contains("private void PollSeatCredentialDelivery(double now)", StringComparison.Ordinal));
 		True(reconnectSource.Contains("SendSeatCredentialsToUnacknowledgedPeers();", StringComparison.Ordinal));
@@ -1521,7 +1862,10 @@ internal static partial class Program
 			"scripts",
 			"GameBoardScene.NetworkSnapshot.cs"));
 		int methodStart = source.IndexOf("private Godot.Collections.Array BuildSeatControlStatesArray()", StringComparison.Ordinal);
-		int methodEnd = source.IndexOf("private static Godot.Collections.Array BuildIntArray", methodStart, StringComparison.Ordinal);
+		int methodEnd = source.IndexOf(
+			"private static Godot.Collections.Array BuildRuleScoresArray",
+			methodStart,
+			StringComparison.Ordinal);
 		True(methodStart >= 0 && methodEnd > methodStart);
 		string method = source[methodStart..methodEnd];
 		True(method.Contains("[\"credential_verifier\"] = string.Empty", StringComparison.Ordinal));
@@ -1705,7 +2049,7 @@ internal static partial class Program
 			});
 			decks.Add(new List<NetworkCheckpointCard>
 			{
-				new() { Code = $"card-{seat}", AttachedItemCardIds = Array.Empty<string>() },
+					new() { Code = $"card-{seat}", AttachedItemCardIds = ImmutableArray<string>.Empty },
 			});
 			hands.Add(new List<NetworkCheckpointCard>());
 			items.Add(new List<string>());

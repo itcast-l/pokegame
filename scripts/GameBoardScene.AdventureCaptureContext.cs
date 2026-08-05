@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Deckland.Rules;
 
 public partial class GameBoardScene
 {
@@ -12,8 +13,8 @@ public partial class GameBoardScene
 
 	private BaseCardActionContext CreateSyntheticCaptureActionContext(string actionSource)
 	{
-		long actionId = _state.AdventureNextBaseCardActionId;
-		_state.AdventureNextBaseCardActionId = actionId == long.MaxValue ? 1 : actionId + 1;
+		long actionId = _adventureNextBaseCardActionId;
+		_adventureNextBaseCardActionId = actionId == long.MaxValue ? 1 : actionId + 1;
 		return new BaseCardActionContext(
 			actionId,
 			RootChainId: 0,
@@ -209,20 +210,15 @@ public partial class GameBoardScene
 		bool leftAdjacentBaseCardAvailable = captureStartIndex > 0
 			&& !_tableCards[captureStartIndex - 1].IsBuriedInSand
 			&& _tableCards[captureStartIndex - 1].Card.HasValue;
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return default;
 		}
 
-		AdventureUpgradeEffectState plannedEffectState =
-			runState.EffectState.Clone();
-		AdventureClubCaptureExtensionResult result =
-			AdventureUpgradeEffectService.ResolveClubCaptureExtensions(
-				plannedEffectState,
-				runState.GetAcquiredUpgradeIds(),
-				hasScoringCaptureCard,
-				leftAdjacentBaseCardAvailable);
+		AdventureClubCaptureExtensionResult result = runState.ResolveClubCaptureExtensions(
+			hasScoringCaptureCard,
+			leftAdjacentBaseCardAvailable);
 		TableCard? gapRootingTarget = result.CaptureLeftAdjacentBaseCard
 			? _tableCards[captureStartIndex - 1]
 			: null;
@@ -346,9 +342,7 @@ public partial class GameBoardScene
 		bool hasCompleteMiddleCapture = visibleCapturedCardCount > 2;
 		bool includeCrownCanopyEndpoints = playerIndex == MainPlayerIndex
 			&& normalizedAction.PlayedCardInstanceId > 0
-			&& AdventureUpgradeEffectService.ResolveClubCaptureScoring(
-				GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds()
-					?? Array.Empty<string>())
+			&& (GetAdventureUpgradeRunState()?.ResolveClubCaptureScoring() ?? default)
 				.IncludeCaptureEndpointsInScoring;
 		bool includeCaptureStartInScoring =
 			includeCrownCanopyEndpoints
@@ -412,14 +406,17 @@ public partial class GameBoardScene
 			&& GetAdventureUpgradeRunState()
 				?.HasAcquiredUpgrade("diamonds_top_prize_repeat") == true)
 		{
-			int topPrizeThreshold = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			AdventureRunReadModel runState = GetAdventureUpgradeRunState()!;
+			int topPrizeThreshold = runState.GetUpgradeNonNegativeInt(
 				"diamonds_top_prize_repeat",
 				"threshold");
-			int topPrizeRepeatCount = AdventureUpgradeRuntimeValues.GetNonNegativeInt(
+			int topPrizeRepeatCount = runState.GetUpgradeNonNegativeInt(
 				"diamonds_top_prize_repeat",
 				"count");
-			int highestScoreItemIndex = AdventureCaptureScoreItemRules
-				.ResolveTopPrizeRepeatIndex(scoreItems, scoreItemTableIndexes, topPrizeThreshold);
+			int highestScoreItemIndex = MatchReadModel.ResolveAdventureTopPrizeRepeatIndex(
+				scoreItems,
+				scoreItemTableIndexes,
+				topPrizeThreshold);
 			if (highestScoreItemIndex >= 0)
 			{
 				AdventureCaptureScoreItem repeatedScoreItem = scoreItems[highestScoreItemIndex] with
@@ -528,20 +525,18 @@ public partial class GameBoardScene
 			{
 				capturedTraceMark |= ReferenceEquals(
 					capturedEntry.TableCard,
-					_adventureTraceHuntMarkedTableCard);
+					GetAdventureTraceHuntMarkedTableCard());
 				capturedHuntMark |= ReferenceEquals(
 					capturedEntry.TableCard,
-					_adventureHuntOrderMarkedTableCard);
+					GetAdventureHuntOrderMarkedTableCard());
 			}
 
-			int resolvedOldTableDelta = AdventureUpgradeEffectService
-				.ResolveOldTableCaptureDamageDelta(
-					GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds()
-						?? Array.Empty<string>(),
+			int resolvedOldTableDelta = GetAdventureUpgradeRunState()
+				?.ResolveOldTableCaptureDamageDelta(
 					playerIndex == MainPlayerIndex,
 					capturedOldScoringCardCount,
 					capturedTraceMark,
-					capturedHuntMark);
+					capturedHuntMark) ?? 0;
 			oldTableDamageDelta = (int)Math.Clamp(
 				(long)oldTableDamageDelta + resolvedOldTableDelta,
 				int.MinValue,
@@ -556,7 +551,7 @@ public partial class GameBoardScene
 					FlatDamageDelta: oldTableDamageDelta,
 					IsFirstCaptureThisBattle:
 						playerIndex == MainPlayerIndex
-						&& _adventureMainPlayerCaptureCountThisBattle == 0,
+						&& CurrentMatchFlowState.MainPlayerCapturesThisBattle == 0,
 					IncludesQuestionReward: context.IncludesQuestionReward,
 					QuestionRewardEchoActive:
 						GetAdventureUpgradeRunState()
@@ -565,7 +560,7 @@ public partial class GameBoardScene
 					ScoringCardResolvedPoints: resolvedPoints,
 					ScoringCardTableIndexes: tableIndexes,
 					CapturerIsMainPlayer: playerIndex == MainPlayerIndex,
-					CaptureContext: context));
+					CaptureContext: context.ToRuleFacts()));
 		return new AdventureCapturePreparation(context, damageInput);
 	}
 }

@@ -54,14 +54,12 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		var ownedTableCards = new TableCard[_tableCards.Count];
-		var originalHiddenStates = new bool[_tableCards.Count];
-		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			TableCard tableCard = _tableCards[tableCardIndex];
-			ownedTableCards[tableCardIndex] = tableCard;
-			originalHiddenStates[tableCardIndex] = tableCard.IsHiddenDuringCapture;
-		}
+			var ownedTableCards = new TableCard[_tableCards.Count];
+			for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+			{
+				TableCard tableCard = _tableCards[tableCardIndex];
+				ownedTableCards[tableCardIndex] = tableCard;
+			}
 
 		PlayGameSfx(GameSfx.TableShuffle, -1.5f, 0.97f, 1.03f, 0.12);
 		Control?[] flightCards = new Control?[shuffledVisuals.Count];
@@ -71,12 +69,12 @@ public partial class GameBoardScene
 		Tween? vortexFrameTween = null;
 		try
 		{
-			foreach (TableCard tableCard in ownedTableCards)
-			{
-				if (!IsFixedDuringTableShuffle(tableCard))
+				foreach (TableCard tableCard in ownedTableCards)
 				{
-					tableCard.IsHiddenDuringCapture = true;
-				}
+					if (!IsFixedDuringTableShuffle(tableCard))
+					{
+						_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId);
+					}
 			}
 			RenderTableCards();
 
@@ -172,14 +170,14 @@ public partial class GameBoardScene
 				_animationPresenter.Release(vortex);
 			}
 
-			if (OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards))
-			{
-				for (int tableCardIndex = 0; tableCardIndex < ownedTableCards.Length; tableCardIndex++)
+				foreach (TableCard tableCard in ownedTableCards)
 				{
-					ownedTableCards[tableCardIndex].IsHiddenDuringCapture = originalHiddenStates[tableCardIndex];
+					_presentationHiddenTableCardRuntimeInstanceIds.Remove(tableCard.InstanceId);
 				}
-				RenderTableCards();
-			}
+				if (OwnsTableShuffleState(turnSequenceGeneration, ownedTableCards))
+				{
+					RenderTableCards();
+				}
 		}
 	}
 
@@ -239,12 +237,13 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool[] hiddenStates = new bool[_tableCards.Count];
-		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			hiddenStates[tableCardIndex] = _tableCards[tableCardIndex].IsHiddenDuringCapture;
-			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
-		}
+			var ownedTableCards = new TableCard[_tableCards.Count];
+			for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+			{
+				TableCard tableCard = _tableCards[tableCardIndex];
+				ownedTableCards[tableCardIndex] = tableCard;
+				_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId);
+			}
 		RenderTableCards();
 
 		Control?[] flightCards = new Control?[tideShiftVisuals.Count];
@@ -286,11 +285,10 @@ public partial class GameBoardScene
 		}
 		finally
 		{
-			int restoreCount = Math.Min(hiddenStates.Length, _tableCards.Count);
-			for (int index = 0; index < restoreCount; index++)
-			{
-				_tableCards[index].IsHiddenDuringCapture = hiddenStates[index];
-			}
+				foreach (TableCard tableCard in ownedTableCards)
+				{
+					_presentationHiddenTableCardRuntimeInstanceIds.Remove(tableCard.InstanceId);
+				}
 
 			foreach (Control? flightCard in flightCards)
 			{
@@ -409,8 +407,8 @@ public partial class GameBoardScene
 		{
 			animateCardBack = !showMainPlayerPreview && !tableCard.IsFaceUp && _cardBackTexture != null;
 			mainTexture = showMainPlayerPreview
-				? tableCard.Card.Value.Texture
-				: tableCard.IsFaceUp ? tableCard.Card.Value.Texture : _cardBackTexture;
+				? GetPlayingCardTexture(tableCard.Card.Value)
+				: tableCard.IsFaceUp ? GetPlayingCardTexture(tableCard.Card.Value) : _cardBackTexture;
 			alpha = showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f;
 		}
 		else if (tableCard.ItemOverlay.HasValue && !tableCard.IsFaceUp && _cardBackTexture != null)
@@ -421,7 +419,7 @@ public partial class GameBoardScene
 		}
 		else if (tableCard.ItemOverlay.HasValue)
 		{
-			mainTexture = tableCard.ItemOverlay.Value.Texture;
+			mainTexture = GetItemCardTexture(tableCard.ItemOverlay.Value);
 		}
 
 		if (mainTexture == null)
@@ -445,7 +443,7 @@ public partial class GameBoardScene
 		if (itemOverlayTexture == null && tableCard.Card.HasValue && tableCard.ItemOverlay.HasValue && !hideItemOverlay)
 		{
 			ItemCard itemOverlay = tableCard.ItemOverlay.Value;
-			itemOverlayTexture = itemOverlay.Texture;
+			itemOverlayTexture = GetItemCardTexture(itemOverlay);
 			itemOverlayPosition = GetItemCardVisualPosition(itemOverlay.Id);
 			itemOverlaySize = GetItemCardVisualSize(itemOverlay.Id);
 		}

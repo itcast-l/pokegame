@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene : ICardTriggerProvider
@@ -16,7 +17,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 				continue;
 			}
 
-			yield return new CardTriggerRequest(definition, rule, gameEvent, sequence++);
+			yield return new CardTriggerRequest(definition.Id, rule, gameEvent, sequence++);
 		}
 	}
 
@@ -53,7 +54,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 				}
 			}
 
-			if (gameEvent.ExtraTableCardIndexes.Count == 0)
+			if (gameEvent.ExtraTableCardIndexes.IsEmpty)
 			{
 				yield break;
 			}
@@ -112,7 +113,13 @@ public partial class GameBoardScene : ICardTriggerProvider
 
 	private async Task<PlayCardResult> PublishAndResolveCardEventAsync(CardGameEvent gameEvent, int turnSequenceGeneration)
 	{
-		long dispatchId = _cardEventBus.BeginDispatch();
+		AuthorityRuleSession? ruleSession = _authorityRuleSession;
+		if (ruleSession == null)
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		long dispatchId = ruleSession.BeginCardTriggerDispatch();
 		try
 		{
 			if (turnSequenceGeneration != _turnSequenceGeneration
@@ -121,12 +128,12 @@ public partial class GameBoardScene : ICardTriggerProvider
 				return new PlayCardResult(false, false);
 			}
 
-			_cardEventBus.Publish(dispatchId, gameEvent, this);
+			ruleSession.PublishCardTriggerEvent(dispatchId, gameEvent, this);
 			PlayCardResult finalResult = new(false, false);
 			var resolved = new HashSet<CardTriggerResolutionKey>();
 			while (turnSequenceGeneration == _turnSequenceGeneration
 				&& !IsGameOver()
-				&& _cardEventBus.TryDequeue(
+				&& ruleSession.TryTakeCardTrigger(
 					dispatchId,
 					out CardTriggerRequest request))
 			{
@@ -147,7 +154,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 		}
 		finally
 		{
-			_cardEventBus.EndDispatch(dispatchId);
+			ruleSession.EndCardTriggerDispatch(dispatchId);
 		}
 	}
 
@@ -168,7 +175,9 @@ public partial class GameBoardScene : ICardTriggerProvider
 				sourceHandIndex,
 				targetPlayerIndex: targetPlayerIndex,
 				targetHandIndex: targetHandIndex,
-				originGlobalCenter: originGlobalCenter),
+				originGlobalCenter: new CardEventPosition(
+					originGlobalCenter.X,
+					originGlobalCenter.Y)),
 			turnSequenceGeneration);
 			return result;
 	}
@@ -193,7 +202,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 	private static CardTriggerResolutionKey BuildRuntimeResolutionKey(CardTriggerRequest request)
 	{
 		return new CardTriggerResolutionKey(
-			request.Definition.Id,
+			request.DefinitionId,
 			request.Rule.Trigger,
 			request.Rule.EffectType,
 			request.Event.SourceTableCardIndex,
@@ -326,7 +335,7 @@ public partial class GameBoardScene : ICardTriggerProvider
 
 		private static Task<PlayCardResult> ResolveUnsupportedEffectAsync(CardTriggerRequest request)
 		{
-			GD.PushWarning($"Unsupported item card effect type '{request.Rule.EffectType}' for card '{request.Definition.Id}'.");
+			GD.PushWarning($"Unsupported item card effect type '{request.Rule.EffectType}' for card '{request.DefinitionId}'.");
 			return Task.FromResult(new PlayCardResult(false, false));
 		}
 	}

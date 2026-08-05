@@ -45,7 +45,7 @@ public partial class GameBoardScene
 		Vector2 projectileEnd = targetCenter - direction * 28.0f;
 		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
 			+ new Vector2(0.0f, -34.0f)
-			+ side * _rng.RandfRange(-18.0f, 18.0f);
+			+ side * _presentationRng.RandfRange(-18.0f, 18.0f);
 		Vector2 bladeScale = GetSpriteScaleForVisualSize(bladeFrame, LeafySeadragonCollectAttackVisualSize);
 		Sprite2D blade = RentSpriteFx(
 			"LeafySeadragonCollectAttackBlade",
@@ -127,7 +127,7 @@ public partial class GameBoardScene
 			{
 				if (GodotObject.IsInstanceValid(blade))
 				{
-					blade.Rotation = _rng.RandfRange(-0.35f, 0.35f);
+					blade.Rotation = _presentationRng.RandfRange(-0.35f, 0.35f);
 				}
 			})).SetDelay(LeafySeadragonCollectAttackImpactSeconds * 0.44f);
 
@@ -192,7 +192,7 @@ public partial class GameBoardScene
 		Vector2 projectileEnd = targetCenter - direction * BossKRoyalSeizureLanceTargetInset;
 		Vector2 controlCenter = (projectileStart + projectileEnd) / 2.0f
 			+ new Vector2(0.0f, -BossKRoyalSeizureLanceArcHeight)
-			+ side * _rng.RandfRange(-14.0f, 14.0f);
+			+ side * _presentationRng.RandfRange(-14.0f, 14.0f);
 		Texture2D firstFrame = _bossKRoyalSeizureLanceFrames[0];
 		Vector2 baseScale = GetSpriteScaleForVisualSize(firstFrame, BossKRoyalSeizureLanceVisualSize);
 		Sprite2D lance = RentSpriteFx(

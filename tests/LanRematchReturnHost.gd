@@ -151,7 +151,9 @@ func _track_returned_lobby() -> void:
 			_fail("Returned lobby did not preserve connected ready players")
 			return
 	var seat_states: Array = _network.GetSeatControlStatesVariant(true)
-	if seat_states.size() != PLAYER_COUNT or not bool(_network.call("DebugHasMigrationArtifacts")):
+	var migration_enabled := bool(_network.get("HostMigrationEnabled"))
+	var has_migration_artifacts := bool(_network.call("DebugHasMigrationArtifacts"))
+	if seat_states.size() != PLAYER_COUNT or has_migration_artifacts != migration_enabled:
 		_fail("Returned lobby did not rebuild seat control and migration state")
 		return
 	for raw_state in seat_states:

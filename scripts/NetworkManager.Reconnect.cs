@@ -11,6 +11,15 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (_reconnectWindowStartedAt < 0.0)
+		{
+			_reconnectWindowStartedAt = now;
+		}
+		if (now - _reconnectWindowStartedAt >= ClientReconnectWindowSeconds)
+		{
+			HandleHostDisconnected();
+			return;
+		}
 
 		if (_reconnectAttemptInFlight)
 		{
@@ -18,10 +27,11 @@ public partial class NetworkManager
 			{
 				_reconnectAttemptStartedAt = now;
 			}
-				if (_config.Transport == NetworkTransport.Lan
-					&& _networkMigrationPlan is { } plan
-					&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
-					&& NetworkMigrationRules.IsPlanVisibleToClients(plan)
+			if (HostMigrationCapabilityAvailable
+				&& _config.Transport == NetworkTransport.Lan
+				&& _networkMigrationPlan is { } plan
+				&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
+				&& NetworkMigrationRules.IsPlanVisibleToClients(plan)
 				&& now - _reconnectAttemptStartedAt >= NetworkMigrationRules.FollowerConnectionAttemptTimeoutSeconds)
 			{
 				GD.Print($"MIGRATION_ORIGINAL_HOST_RECONNECT_TIMEOUT elapsed={now - _reconnectAttemptStartedAt:0.00}");
@@ -376,6 +386,7 @@ public partial class NetworkManager
 		_steamPeer = null;
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
+		_reconnectWindowStartedAt = Time.GetTicksMsec() / 1000.0;
 		_nextReconnectAttemptAt = 0.0;
 		MarkLocalPlayerConnection(isConnected: false);
 		SetState(NetworkSessionState.Reconnecting);
@@ -396,13 +407,43 @@ public partial class NetworkManager
 		_nextReconnectAttemptAt = Time.GetTicksMsec() / 1000.0 + ReconnectRetrySeconds;
 	}
 
+	private void HandleHostDisconnected()
+	{
+		if (IsHost
+			|| _hostDisconnectReturnPending
+			|| _state is NetworkSessionState.Idle
+				or NetworkSessionState.Leaving
+				or NetworkSessionState.Failed)
+		{
+			return;
+		}
+
+		const string message = "Host disconnected.";
+		_hostDisconnectReturnPending = true;
+		bool publishError = !_hostDisconnectErrorPublished;
+		_hostDisconnectErrorPublished = true;
+		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure);
+		bool needsLobbySceneChange = IsInsideTree()
+			&& GetTree().CurrentScene is not MultiplayerLobbyScene;
+		_pendingLobbyErrorMessage = needsLobbySceneChange ? message : string.Empty;
+		SetState(NetworkSessionState.Failed);
+		if (publishError)
+		{
+			EmitSignal(SignalName.ErrorRaised, message);
+		}
+		CallDeferred(
+			nameof(ReturnToMultiplayerLobbyScene),
+			(int)NetworkSessionState.Failed,
+			_stateGeneration);
+	}
+
 	private void TryStartReconnectAttempt(double now)
 	{
 		if (_config.Transport == NetworkTransport.Lan)
 		{
 			if (string.IsNullOrWhiteSpace(_lastLanJoinAddress))
 			{
-				Fail("Reconnect failed: LAN host address is missing.");
+				HandleHostDisconnected();
 				return;
 			}
 
@@ -425,7 +466,7 @@ public partial class NetworkManager
 		{
 			if (!SteamAvailable || _steamLobbyId == 0)
 			{
-				Fail("Reconnect failed: Steam lobby is not available.");
+				HandleHostDisconnected();
 				return;
 			}
 
@@ -435,7 +476,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		Fail("Reconnect failed: unsupported transport.");
+		HandleHostDisconnected();
 	}
 
 	private void BindReconnectedPeerToSeat(int seatIndex, int senderPeerId)
@@ -537,7 +578,8 @@ public partial class NetworkManager
 
 	public void NotifyReconnectSnapshotApplied(string matchId)
 	{
-		if (_state is not (NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost)
+		if ((_state != NetworkSessionState.Reconnecting
+				&& (!HostMigrationCapabilityAvailable || _state != NetworkSessionState.MigratingHost))
 			|| !string.Equals(_config.MatchId, matchId, StringComparison.Ordinal))
 		{
 			return;
@@ -545,8 +587,11 @@ public partial class NetworkManager
 
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
+		_reconnectWindowStartedAt = -1.0;
 		_nextReconnectAttemptAt = 0.0;
-		if (_state == NetworkSessionState.MigratingHost && IsMigrationReadinessFenceActive())
+		if (HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.MigratingHost
+			&& IsMigrationReadinessFenceActive())
 		{
 			NetworkMigrationPlan migrationPlan = _networkMigrationPlan!;
 			_migrationPeerAttemptInFlight = false;
@@ -572,7 +617,7 @@ public partial class NetworkManager
 			_networkMigrationPlan = null;
 			_migrationPeerAttemptInFlight = false;
 		}
-		if (_state == NetworkSessionState.MigratingHost)
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
 			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Completed);
 		}

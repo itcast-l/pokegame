@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Deckland.Rules;
 
 public readonly struct ItemCardDefinition
 {

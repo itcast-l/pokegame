@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -10,13 +12,15 @@ public partial class GameBoardScene
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.BubbleCover)
 			|| playerIndex != 1
-			|| _jellyfishBubbleTriggeredThisTurn
-			|| _jellyfishDisabledMainPlayerHandSlotIndex >= 0)
+			|| CurrentMatchFlowState.HandDisableTriggeredThisTurn
+			|| CurrentMatchFlowState.DisabledMainPlayerHandDisplayIndex >= 0)
 		{
 			return;
 		}
 
-		int handSlotIndex = PickVisibleMainPlayerHandSlotIndex();
+		int handSlotIndex = PickVisibleMainPlayerHandSlotIndex(
+			playerIndex,
+			turnSequenceGeneration);
 		if (handSlotIndex < 0)
 		{
 			return;
@@ -28,8 +32,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_jellyfishBubbleTriggeredThisTurn = true;
-		_jellyfishDisabledMainPlayerHandSlotIndex = handSlotIndex;
+		TryUpdateMatchFlowState(state => state with
+		{
+			HandDisableTriggeredThisTurn = true,
+			DisabledMainPlayerHandDisplayIndex = handSlotIndex,
+		});
 		RenderPlayerHands();
 	}
 
@@ -38,7 +45,7 @@ public partial class GameBoardScene
 		return adventure_mode
 			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.SandAmbush)
 			&& playerIndex == 1
-			&& _gardenEelSandBiteReady
+			&& CurrentMatchFlowState.CaptureThresholdReady
 			&& !playedRankCollectsTable
 			&& captureStartIndex >= 0
 			&& captureStartIndex < _tableCards.Count
@@ -58,8 +65,11 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		_gardenEelSandBiteReady = false;
-		_gardenEelCaptureCountUntilSandBite = 0;
+		TryUpdateMatchFlowState(state => state with
+		{
+			CaptureThresholdReady = false,
+			CaptureThresholdProgress = 0,
+		});
 		return GetHalfCapturedCardScoreValueForPlayer(_tableCards[captureStartIndex].Card!.Value, scorePlayerIndex, hasDoubleEffect);
 	}
 
@@ -68,17 +78,26 @@ public partial class GameBoardScene
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.SandAmbush)
 			|| playerIndex != 1
-			|| _gardenEelSandBiteReady)
+			|| CurrentMatchFlowState.CaptureThresholdReady)
 		{
 			return;
 		}
 
-		_gardenEelCaptureCountUntilSandBite++;
-		if (_gardenEelCaptureCountUntilSandBite >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeSandBite, 2))
+		int threshold = GetAdventureEnemyAbilityValue(
+			AdventureEnemyAbilityValueKeys.CapturesBeforeSandBite,
+			2);
+		TryUpdateMatchFlowState(state =>
 		{
-			_gardenEelCaptureCountUntilSandBite = 0;
-			_gardenEelSandBiteReady = true;
-		}
+			int nextProgress = state.CaptureThresholdProgress == int.MaxValue
+				? int.MaxValue
+				: state.CaptureThresholdProgress + 1;
+			bool ready = nextProgress >= threshold;
+			return state with
+			{
+				CaptureThresholdProgress = ready ? 0 : nextProgress,
+				CaptureThresholdReady = ready,
+			};
+		});
 	}
 
 	private async Task ApplySeaSlugSlimeCoatAfterMissAsync(int playerIndex, int playedTableCardIndex, int turnSequenceGeneration)
@@ -94,13 +113,21 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_seaSlugMissCountUntilSlime++;
-		if (_seaSlugMissCountUntilSlime < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.MissesBeforeSlimeCoat, 2))
+		int missThreshold = GetAdventureEnemyAbilityValue(
+			AdventureEnemyAbilityValueKeys.MissesBeforeSlimeCoat,
+			2);
+		int nextMissProgress = CurrentMatchFlowState.MissThresholdProgress == int.MaxValue
+			? int.MaxValue
+			: CurrentMatchFlowState.MissThresholdProgress + 1;
+		bool shouldTrigger = nextMissProgress >= missThreshold;
+		TryUpdateMatchFlowState(state => state with
+		{
+			MissThresholdProgress = shouldTrigger ? 0 : nextMissProgress,
+		});
+		if (!shouldTrigger)
 		{
 			return;
 		}
-
-		_seaSlugMissCountUntilSlime = 0;
 		await PlayEnemySpecialAbilityAvatarFxForAbilityAsync(playerIndex, turnSequenceGeneration, AdventureEnemyAbilities.ColorCurrent);
 		if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 		{
@@ -115,7 +142,19 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_tableCards[playedTableCardIndex].IsSlimeCoated = true;
+		TableCard playedTableCard = _tableCards[playedTableCardIndex];
+		if (!TrySubmitSetTableCardsScoreSuppressedRuleCommand(
+			playerIndex,
+			ImmutableArray.Create(new RuleTableCardReference(
+				playedTableCardIndex,
+				playedTableCard.InstanceId)),
+			expectedScoreSuppressed: false,
+			scoreSuppressed: true,
+			turnSequenceGeneration,
+			out _))
+		{
+			return;
+		}
 		RenderTableCards();
 	}
 
@@ -137,13 +176,19 @@ public partial class GameBoardScene
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.SpiralShell)
 			|| playerIndex != MainPlayerIndex
-			|| _nautilusBombInsertionsThisMatch >= GetNautilusBombInsertionLimit())
+			|| CurrentMatchFlowState.PeriodicItemActivationsThisMatch >= GetNautilusBombInsertionLimit())
 		{
 			return;
 		}
 
-		_nautilusMainPlayerCaptureCountUntilBomb++;
-		if (_nautilusMainPlayerCaptureCountUntilBomb < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeBomb, 3))
+		int nextItemProgress = CurrentMatchFlowState.PeriodicItemProgress == int.MaxValue
+			? int.MaxValue
+			: CurrentMatchFlowState.PeriodicItemProgress + 1;
+		TryUpdateMatchFlowState(state => state with
+		{
+			PeriodicItemProgress = nextItemProgress,
+		});
+		if (nextItemProgress < GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeBomb, 3))
 		{
 			return;
 		}
@@ -165,7 +210,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		int insertionIndex = PickNautilusBombInsertionIndex();
+		int insertionIndex = PickNautilusBombInsertionIndex(
+			playerIndex,
+			turnSequenceGeneration);
 		if (insertionIndex < 0)
 		{
 			return;
@@ -178,8 +225,14 @@ public partial class GameBoardScene
 		}
 
 		InsertBombCardIntoTable(bombCard.Value, 1, insertionIndex);
-		_nautilusBombInsertionsThisMatch++;
-		_nautilusMainPlayerCaptureCountUntilBomb = 0;
+		TryUpdateMatchFlowState(state => state with
+		{
+			PeriodicItemActivationsThisMatch =
+				state.PeriodicItemActivationsThisMatch == int.MaxValue
+					? int.MaxValue
+					: state.PeriodicItemActivationsThisMatch + 1,
+			PeriodicItemProgress = 0,
+		});
 		RenderTableCards();
 		await ResolveBombPairAsync(turnSequenceGeneration);
 		RenderTableCards();
@@ -195,18 +248,28 @@ public partial class GameBoardScene
 		if (!adventure_mode
 			|| !AdventureEnemyHasAbility(AdventureEnemyAbilities.TuskBreak)
 			|| playerIndex != 1
-			|| _narwhalDoubleReady
-			|| (IsBossKEnemy(playerIndex) && _bossKDoubleCollectTriggersThisMatch >= MaxBossKDoubleCollectTriggersPerMatch))
+			|| CurrentMatchFlowState.DoubleEffectReady
+			|| (IsBossKEnemy(playerIndex)
+				&& CurrentMatchFlowState.LimitedDoubleEffectActivationsThisMatch >= MaxBossKDoubleCollectTriggersPerMatch))
 		{
 			return;
 		}
 
-		_narwhalCaptureCountUntilDouble++;
-		if (_narwhalCaptureCountUntilDouble >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.CapturesBeforeDouble, 2))
+		int doubleThreshold = GetAdventureEnemyAbilityValue(
+			AdventureEnemyAbilityValueKeys.CapturesBeforeDouble,
+			2);
+		TryUpdateMatchFlowState(state =>
 		{
-			_narwhalCaptureCountUntilDouble = 0;
-			_narwhalDoubleReady = true;
-		}
+			int nextProgress = state.DoubleEffectProgress == int.MaxValue
+				? int.MaxValue
+				: state.DoubleEffectProgress + 1;
+			bool ready = nextProgress >= doubleThreshold;
+			return state with
+			{
+				DoubleEffectProgress = ready ? 0 : nextProgress,
+				DoubleEffectReady = ready,
+			};
+		});
 	}
 
 }

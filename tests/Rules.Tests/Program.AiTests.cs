@@ -12,18 +12,18 @@ internal static partial class Program
 	{
 		var expected = new[]
 		{
-			new EnemyAiRules.AdventureProfile(45, 25, 55, 55, false),
-			new EnemyAiRules.AdventureProfile(55, 25, 65, 55, false),
-			new EnemyAiRules.AdventureProfile(65, 20, 70, 55, false),
-			new EnemyAiRules.AdventureProfile(70, 20, 75, 35, false),
-			new EnemyAiRules.AdventureProfile(75, 15, 80, 35, true),
-			new EnemyAiRules.AdventureProfile(78, 15, 85, 35, true),
-			new EnemyAiRules.AdventureProfile(85, 10, 90, 20, true),
-			new EnemyAiRules.AdventureProfile(90, 5, 92, 20, true),
-			new EnemyAiRules.AdventureProfile(92, 5, 94, 20, true),
-			new EnemyAiRules.AdventureProfile(95, 5, 96, 10, true),
-			new EnemyAiRules.AdventureProfile(97, 3, 98, 10, true),
-			new EnemyAiRules.AdventureProfile(65, 10, 90, 10, true),
+			new EnemyAiAdventureProfile(45, 25, 55, 55, false),
+			new EnemyAiAdventureProfile(55, 25, 65, 55, false),
+			new EnemyAiAdventureProfile(65, 20, 70, 55, false),
+			new EnemyAiAdventureProfile(70, 20, 75, 35, false),
+			new EnemyAiAdventureProfile(75, 15, 80, 35, true),
+			new EnemyAiAdventureProfile(78, 15, 85, 35, true),
+			new EnemyAiAdventureProfile(85, 10, 90, 20, true),
+			new EnemyAiAdventureProfile(90, 5, 92, 20, true),
+			new EnemyAiAdventureProfile(92, 5, 94, 20, true),
+			new EnemyAiAdventureProfile(95, 5, 96, 10, true),
+			new EnemyAiAdventureProfile(97, 3, 98, 10, true),
+			new EnemyAiAdventureProfile(65, 10, 90, 10, true),
 		};
 
 		for (int stage = 1; stage <= expected.Length; stage++)
@@ -42,11 +42,11 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: true),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: true),
 		};
 
-		EnemyAiRules.AdventureSelectionResult stageFour = EnemyAiRules.SelectAdventureCard(
+		EnemyAiAdventureSelectionResult stageFour = EnemyAiRules.SelectAdventureCard(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
@@ -54,7 +54,7 @@ internal static partial class Program
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 0,
 			randomCandidateOrdinal: 0);
-		EnemyAiRules.AdventureSelectionResult stageFive = EnemyAiRules.SelectAdventureCard(
+		EnemyAiAdventureSelectionResult stageFive = EnemyAiRules.SelectAdventureCard(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
@@ -78,8 +78,8 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: false),
 		};
 
 		Equal(0, SelectAdventure(tableCards, handCards, 44, 1).HandIndex);
@@ -95,11 +95,11 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		Equal(EnemyAiRules.AdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 69, 0).Kind);
-		Equal(EnemyAiRules.AdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 70, 0).Kind);
+		Equal(EnemyAiAdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 69, 0).Kind);
+		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 70, 0).Kind);
 	}
 
 	private static void AdventureAiPairOnlyThresholdIsExclusive()
@@ -107,11 +107,11 @@ internal static partial class Program
 		var tableCards = new[] { TableCard("A", 1) };
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		Equal(EnemyAiRules.AdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 54, 0).Kind);
-		Equal(EnemyAiRules.AdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 55, 0).Kind);
+		Equal(EnemyAiAdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 54, 0).Kind);
+		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 55, 0).Kind);
 	}
 
 	private static void AdventureAiPairOnlyOrdinalSelectsAcrossHandPositions()
@@ -119,9 +119,9 @@ internal static partial class Program
 		var tableCards = new[] { TableCard("A", 1) };
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
 
 		Equal(2, SelectAdventure(tableCards, handCards, 0, 1).HandIndex);
@@ -132,31 +132,31 @@ internal static partial class Program
 		var tableCards = new[] { TableCard("A", 1), TableCard("2", 2) };
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		Equal(EnemyAiRules.AdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 99, 1).Kind);
+		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 99, 1).Kind);
 	}
 
 	private static void AdventureAiBuildsOnlyWithAtMostTwoTableCards()
 	{
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("Q", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("Q", CollectsTable: false, HasDoubleEffect: false),
 		};
 
 		for (int tableCount = 0; tableCount <= 4; tableCount++)
 		{
-			var tableCards = new List<CaptureScoringRules.TableCard>();
+			var tableCards = new List<CaptureScoringTableCard>();
 			for (int index = 0; index < tableCount; index++)
 			{
 				tableCards.Add(TableCard((index + 2).ToString(), index + 2));
 			}
 
-			EnemyAiRules.AdventureSelectionKind expected = tableCount <= 2
-				? EnemyAiRules.AdventureSelectionKind.Build
-				: EnemyAiRules.AdventureSelectionKind.None;
+			EnemyAiAdventureSelectionKind expected = tableCount <= 2
+				? EnemyAiAdventureSelectionKind.Build
+				: EnemyAiAdventureSelectionKind.None;
 			Equal(expected, SelectAdventure(tableCards, handCards, 54, 0).Kind);
 		}
 	}
@@ -174,21 +174,21 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: true),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: true),
 		};
-		EnemyAiRules.AdventureProfile pointsProfile = EnemyAiRules.GetAdventureProfile(12);
+		EnemyAiAdventureProfile pointsProfile = EnemyAiRules.GetAdventureProfile(12);
 
-		EnemyAiRules.AdventureSelectionResult withoutBossThreshold = EnemyAiRules.SelectAdventureCard(
+		EnemyAiAdventureSelectionResult withoutBossThreshold = EnemyAiRules.SelectAdventureCard(
 			tableCards, handCards, DefaultScoringContext, pointsProfile, int.MaxValue, 0, 0);
-		EnemyAiRules.AdventureSelectionResult withBossThreshold = EnemyAiRules.SelectAdventureCard(
+		EnemyAiAdventureSelectionResult withBossThreshold = EnemyAiRules.SelectAdventureCard(
 			tableCards, handCards, DefaultScoringContext, pointsProfile, 5, 0, 0);
 		var tiedHandCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
-		EnemyAiRules.AdventureSelectionResult leftTie = EnemyAiRules.SelectAdventureCard(
+		EnemyAiAdventureSelectionResult leftTie = EnemyAiRules.SelectAdventureCard(
 			tableCards, tiedHandCards, DefaultScoringContext, pointsProfile, 5, 0, 0);
 
 		Equal(1, withoutBossThreshold.HandIndex);
@@ -196,9 +196,9 @@ internal static partial class Program
 		Equal(0, leftTie.HandIndex);
 	}
 
-	private static EnemyAiRules.AdventureSelectionResult SelectAdventure(
-		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
-		IReadOnlyList<PotentialCaptureRules.Card> handCards,
+	private static EnemyAiAdventureSelectionResult SelectAdventure(
+		IReadOnlyList<CaptureScoringTableCard> tableCards,
+		IReadOnlyList<PotentialCaptureCard> handCards,
 		int roll,
 		int ordinal)
 	{
@@ -284,9 +284,9 @@ internal static partial class Program
 
 	private static void SoloAiDifficultyProfilesExposeExpectedValues()
 	{
-		SoloAiRules.Profile low = SoloAiRules.GetProfile(SoloAiRules.Difficulty.Low);
-		SoloAiRules.Profile medium = SoloAiRules.GetProfile(SoloAiRules.Difficulty.Medium);
-		SoloAiRules.Profile high = SoloAiRules.GetProfile(SoloAiRules.Difficulty.High);
+		SoloAiProfile low = SoloAiRules.GetProfile(SoloAiDifficulty.Low);
+		SoloAiProfile medium = SoloAiRules.GetProfile(SoloAiDifficulty.Medium);
+		SoloAiProfile high = SoloAiRules.GetProfile(SoloAiDifficulty.High);
 
 		Equal(25, low.BestCaptureChancePercent);
 		Equal(25, low.AnyCaptureChancePercent);
@@ -317,15 +317,15 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: true),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: true),
 		};
 
 		bool mediumPicked = SoloAiRules.TryPickCaptureCardIndex(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			SoloAiRules.Difficulty.Medium,
+			SoloAiDifficulty.Medium,
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 0,
 			randomCaptureOrdinal: 0,
@@ -334,7 +334,7 @@ internal static partial class Program
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			SoloAiRules.Difficulty.High,
+			SoloAiDifficulty.High,
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 0,
 			randomCaptureOrdinal: 0,
@@ -356,15 +356,15 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
 
 		bool mediumPicked = SoloAiRules.TryPickCaptureCardIndex(
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			SoloAiRules.Difficulty.Medium,
+			SoloAiDifficulty.Medium,
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 60,
 			randomCaptureOrdinal: 7,
@@ -373,7 +373,7 @@ internal static partial class Program
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			SoloAiRules.Difficulty.High,
+			SoloAiDifficulty.High,
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 80,
 			randomCaptureOrdinal: 7,
@@ -382,7 +382,7 @@ internal static partial class Program
 			tableCards,
 			handCards,
 			DefaultScoringContext,
-			SoloAiRules.Difficulty.Low,
+			SoloAiDifficulty.Low,
 			royalCaptureThreshold: int.MaxValue,
 			decisionRollPercent: 30,
 			randomCaptureOrdinal: 0,
@@ -400,44 +400,44 @@ internal static partial class Program
 	{
 		var discardCandidates = new[]
 		{
-			new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true),
-			new SoloAiRules.HandCardDecisionCandidate(Index: 1, ScoreValue: 3, CanCaptureNow: false),
-			new SoloAiRules.HandCardDecisionCandidate(Index: 2, ScoreValue: 2, CanCaptureNow: false),
+			new SoloAiHandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true),
+			new SoloAiHandCardDecisionCandidate(Index: 1, ScoreValue: 3, CanCaptureNow: false),
+			new SoloAiHandCardDecisionCandidate(Index: 2, ScoreValue: 2, CanCaptureNow: false),
 		};
 
 		Equal(0, SoloAiRules.PickDiscardDisplayIndex(
-			SoloAiRules.Difficulty.Low,
+			SoloAiDifficulty.Low,
 			discardCandidates,
 			totalDisplayCount: 4,
 			tieBreakOrdinal: 0));
 		Equal(0, SoloAiRules.PickDiscardDisplayIndex(
-			SoloAiRules.Difficulty.Medium,
-			new[] { new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true) },
+			SoloAiDifficulty.Medium,
+			new[] { new SoloAiHandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true) },
 			totalDisplayCount: 3,
 			tieBreakOrdinal: 0));
 		Equal(2, SoloAiRules.PickDiscardDisplayIndex(
-			SoloAiRules.Difficulty.High,
+			SoloAiDifficulty.High,
 			discardCandidates,
 			totalDisplayCount: 4,
 			tieBreakOrdinal: 0));
 
 		var magnetCandidates = new[]
 		{
-			new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true),
-			new SoloAiRules.HandCardDecisionCandidate(Index: 1, ScoreValue: 3, CanCaptureNow: false),
-			new SoloAiRules.HandCardDecisionCandidate(Index: 2, ScoreValue: 2, CanCaptureNow: false),
+			new SoloAiHandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true),
+			new SoloAiHandCardDecisionCandidate(Index: 1, ScoreValue: 3, CanCaptureNow: false),
+			new SoloAiHandCardDecisionCandidate(Index: 2, ScoreValue: 2, CanCaptureNow: false),
 		};
 
 		Equal(0, SoloAiRules.PickMagnetHandIndex(
-			SoloAiRules.Difficulty.Low,
+			SoloAiDifficulty.Low,
 			magnetCandidates,
 			tieBreakOrdinal: 0));
 		Equal(0, SoloAiRules.PickMagnetHandIndex(
-			SoloAiRules.Difficulty.Medium,
-			new[] { new SoloAiRules.HandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true) },
+			SoloAiDifficulty.Medium,
+			new[] { new SoloAiHandCardDecisionCandidate(Index: 0, ScoreValue: 1, CanCaptureNow: true) },
 			tieBreakOrdinal: 0));
 		Equal(2, SoloAiRules.PickMagnetHandIndex(
-			SoloAiRules.Difficulty.High,
+			SoloAiDifficulty.High,
 			magnetCandidates,
 			tieBreakOrdinal: 0));
 	}

@@ -72,12 +72,12 @@ public partial class NetworkManager
 		_config = decodedConfig;
 		SetState(NetworkSessionState.LoadingScene);
 		EmitSignal(SignalName.BeginSceneLoad, bootstrap);
-		if (GetTree().CurrentScene is GameBoardScene)
+		if (TryGetActiveEndpointRegistration(out _))
 		{
 			return;
 		}
 
-		LoadGameBoardScene(bootstrap);
+		LoadGameBoardScene();
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -180,32 +180,31 @@ public partial class NetworkManager
 			|| payloadContext != new NetworkRpcContext(sessionId, matchId, authorityEpoch)
 			|| !TryParseSharedConfig(payload, out NetworkSessionConfig decodedConfig)
 			|| decodedConfig != _config
-			|| !TryValidateBoardInitializePayload(payload, decodedConfig.PlayerCount))
+			|| !TryDecodeBoardInitialization(payload, decodedConfig, authorityEpoch, out NetworkBoardInitialization initialization))
 		{
 			return;
 		}
 
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (!TryGetReplicaEndpoint(out INetworkReplicaEndpoint replica))
 		{
-			gameBoard.Set("local_player_index", LocalSeatIndex);
-			if (!gameBoard.TryApplyNetworkBoardInitialize(payload))
-			{
-				return;
-			}
+			RetainPendingBoardInitialization(initialization);
+			return;
+		}
+		if (!replica.TryInitialize(initialization))
+		{
+			return;
 		}
 
-		SetState(NetworkSessionState.InGame);
-		EmitSignal(SignalName.BoardInitialize, payload);
-		if (IsHost && GetTree().CurrentScene is GameBoardScene initializedBoard)
-		{
-			SendInitialBoardSnapshotsFromHost(initializedBoard);
-		}
+		CompleteBoardInitialization(initialization);
 	}
 
-	private static bool TryValidateBoardInitializePayload(
+	private bool TryDecodeBoardInitialization(
 		Godot.Collections.Dictionary payload,
-		int playerCount)
+		NetworkSessionConfig config,
+		long authorityEpoch,
+		out NetworkBoardInitialization initialization)
 	{
+		initialization = default!;
 		if (!NetworkVariantReader.TryReadString(payload, "player_names_csv", 1024, out string playerNames)
 			|| !NetworkVariantReader.TryReadString(payload, "player_avatar_ids_csv", 1024, out string avatarIds)
 			|| !NetworkVariantReader.TryReadBool(payload, "network_wait_for_initialize", out bool waitForInitialize)
@@ -214,11 +213,36 @@ public partial class NetworkManager
 			return false;
 		}
 
-		return playerNames.Split(',').Length == playerCount
-			&& avatarIds.Split(',').Length == playerCount;
+		string[] decodedPlayerNames = playerNames.Split(',');
+		string[] decodedAvatarIds = avatarIds.Split(',');
+		if (decodedPlayerNames.Length != config.PlayerCount
+			|| decodedAvatarIds.Length != config.PlayerCount
+			|| LocalSeatIndex < 0
+			|| LocalSeatIndex >= config.PlayerCount)
+		{
+			return false;
+		}
+
+		initialization = new NetworkBoardInitialization(
+			config,
+			authorityEpoch,
+			LocalSeatIndex,
+			decodedPlayerNames,
+			decodedAvatarIds);
+		return true;
 	}
 
-	private void LoadGameBoardScene(Godot.Collections.Dictionary bootstrap)
+	private void CompleteBoardInitialization(NetworkBoardInitialization initialization)
+	{
+		SetState(NetworkSessionState.InGame);
+		EmitSignal(SignalName.BoardInitialize, initialization.ToVariant());
+		if (IsHost)
+		{
+			SendInitialBoardSnapshotsFromHost();
+		}
+	}
+
+	private void LoadGameBoardScene()
 	{
 		if (!EnsureItemCardCatalogReady())
 		{
@@ -370,7 +394,10 @@ public partial class NetworkManager
 		SceneTree tree = GetTree();
 		if (tree.CurrentScene is MultiplayerLobbyScene)
 		{
+			_pendingLobbyErrorMessage = string.Empty;
 			_migrationFailureReturnPending = false;
+			_hostDisconnectReturnPending = false;
+			_hostDisconnectErrorPublished = false;
 			return;
 		}
 
@@ -384,6 +411,8 @@ public partial class NetworkManager
 		}
 
 		_migrationFailureReturnPending = false;
+		_hostDisconnectReturnPending = false;
+		_hostDisconnectErrorPublished = false;
 	}
 
 }

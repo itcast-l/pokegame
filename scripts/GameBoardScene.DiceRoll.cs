@@ -50,7 +50,9 @@ public partial class GameBoardScene
 	{
 		if (result == 0)
 		{
-			result = _rng.RandiRange(DiceRollPresentationRules.MinResult, DiceRollPresentationRules.MaxResult);
+			result = _presentationRng.RandiRange(
+				DiceRollPresentationRules.MinResult,
+				DiceRollPresentationRules.MaxResult);
 		}
 
 		return TryPlayDiceRoll(result);

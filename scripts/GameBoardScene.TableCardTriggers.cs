@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -157,7 +159,16 @@ public partial class GameBoardScene
 		if (tableCard.Card.HasValue
 			&& TryGetAttachedItemIdByEffectType(tableCard.Card.Value, CardEffectTypes.ExtraTurn, out string itemCardId))
 		{
-			tableCard.ClearAttachedItemEffect(itemCardId);
+			if (!TrySubmitRemoveTableCardAttachmentRuleCommand(
+				_currentTurnPlayerIndex,
+				tableCardIndex,
+				tableCard.InstanceId,
+				itemCardId,
+				turnSequenceGeneration,
+				out _))
+			{
+				return;
+			}
 		}
 		RenderTableCards();
 	}
@@ -195,7 +206,7 @@ public partial class GameBoardScene
 		return TryGetAttachedItemIdByEffectType(card, effectType, out string itemCardId)
 			&& _itemCardTextures.TryGetValue(itemCardId, out Texture2D? itemTexture)
 				? itemTexture
-				: card.Texture;
+				: GetPlayingCardTexture(card);
 	}
 
 	private async Task RevealRandomMagnetExtraTableCardAsync(
@@ -207,7 +218,11 @@ public partial class GameBoardScene
 		HashSet<int> resolvedDoubleTriggerIndexes,
 		HashSet<int> resolvedOvertimeTriggerIndexes)
 	{
-		int tableCardIndex = PickRandomMagnetExtraRevealIndex(captureStartIndex, magnetExtraCaptureIndexes);
+		int tableCardIndex = PickRandomMagnetExtraRevealIndex(
+			scorePlayerIndex,
+			captureStartIndex,
+			magnetExtraCaptureIndexes,
+			turnSequenceGeneration);
 		if (tableCardIndex < 0)
 		{
 			return;
@@ -219,14 +234,23 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Texture2D revealTexture = tableCard.Card.Value.Texture;
+		Texture2D revealTexture = GetPlayingCardTexture(tableCard.Card.Value);
 		await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return;
 		}
 
-		tableCard.IsFaceUp = true;
+		if (!TrySubmitSetTableCardsFaceUpRuleCommand(
+			scorePlayerIndex,
+			ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
+			expectedFaceUp: false,
+			faceUp: true,
+			turnSequenceGeneration,
+			out _))
+		{
+			return;
+		}
 		magnetExtraCaptureIndexes.Add(tableCardIndex);
 		RenderTableCards();
 		bool hasDoubleEffect = HasCapturedDoubleScoreEffect(captureStartIndex, magnetExtraCaptureIndexes);
@@ -270,10 +294,13 @@ public partial class GameBoardScene
 		await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 	}
 
-	private int PickRandomMagnetExtraRevealIndex(int captureStartIndex, HashSet<int> magnetExtraCaptureIndexes)
+	private int PickRandomMagnetExtraRevealIndex(
+		int actingPlayerIndex,
+		int captureStartIndex,
+		HashSet<int> magnetExtraCaptureIndexes,
+		int turnSequenceGeneration)
 	{
-		int selectedTableCardIndex = -1;
-		int candidateCount = 0;
+		var candidates = ImmutableArray.CreateBuilder<RuleTableCardReference>();
 		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
 		{
 			if (tableCardIndex >= captureStartIndex)
@@ -289,15 +316,17 @@ public partial class GameBoardScene
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (!tableCard.IsBuriedInSand && !tableCard.IsFaceUp && tableCard.Card.HasValue)
 			{
-				candidateCount++;
-				if (_rng.RandiRange(1, candidateCount) == 1)
-				{
-					selectedTableCardIndex = tableCardIndex;
-				}
+				candidates.Add(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId));
 			}
 		}
 
-		return selectedTableCardIndex;
+		return TrySubmitChooseRandomTableCardIndexRuleCommand(
+			actingPlayerIndex,
+			candidates.ToImmutable(),
+			turnSequenceGeneration,
+			out int selectedTableCardIndex)
+				? selectedTableCardIndex
+				: -1;
 	}
 
 	private void BuildCapturedSpecialCardTriggers(int captureStartIndex, HashSet<int>? extraTableCardIndexes, List<TableSpecialCardTrigger> triggers)
@@ -358,7 +387,7 @@ public partial class GameBoardScene
 
 		triggers.Add(new TableSpecialCardTrigger(
 			tableCardIndex,
-			tableCard.ItemOverlay.Value.Texture,
+			GetItemCardTexture(tableCard.ItemOverlay.Value),
 			centerArenaGlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect) + GetItemCardVisualPosition(tableCard.ItemOverlay.Value.Id),
 			tableCardIndex * 2 + 1,
 			GetTableTriggerPriority(tableCardIndex)));
@@ -390,7 +419,7 @@ public partial class GameBoardScene
 
 		return new TableSpecialCardTrigger(
 			tableCardIndex,
-			itemOverlay.Texture,
+			GetItemCardTexture(itemOverlay),
 			_centerArena.GlobalPosition + cardPosition + GetItemCardVisualPosition(itemOverlay.Id),
 			tableCardIndex * 2 + 1,
 			GetTableTriggerPriority(tableCardIndex));
@@ -406,8 +435,8 @@ public partial class GameBoardScene
 		}
 
 		TableCard tableCard = _tableCards[trigger.TableCardIndex];
-		bool wasHidden = tableCard.IsHiddenDuringCapture;
-		tableCard.IsHiddenDuringCapture = true;
+		bool presentationHideAdded =
+			_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId);
 		RenderTableCards();
 		try
 		{
@@ -415,9 +444,9 @@ public partial class GameBoardScene
 		}
 		finally
 		{
-			if (trigger.TableCardIndex >= 0 && trigger.TableCardIndex < _tableCards.Count)
+			if (presentationHideAdded)
 			{
-				_tableCards[trigger.TableCardIndex].IsHiddenDuringCapture = wasHidden;
+				_presentationHiddenTableCardRuntimeInstanceIds.Remove(tableCard.InstanceId);
 				RenderTableCards();
 			}
 		}

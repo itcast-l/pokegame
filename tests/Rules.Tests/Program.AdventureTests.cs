@@ -748,7 +748,7 @@ internal static partial class Program
 			new[] { "diamonds_multi_card_premium", "diamonds_top_prize_repeat" },
 			new AdventureCaptureDamageInput(
 				BaseDamage: 12,
-				CaptureContext: captureContext));
+				CaptureContext: captureContext.ToRuleFacts()));
 
 		Equal(21, result.FinalDamage);
 	}

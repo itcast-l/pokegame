@@ -93,7 +93,7 @@ internal static partial class Program
 			TableCard("3", 4),
 			TableCard("4", 9),
 		};
-		var context = new CaptureScoringRules.Context(
+		var context = new CaptureScoringContext(
 			SuppressSlimeCoatedScore: true,
 			ApplyScoreReductionPerCard: false,
 			ScoreReductionPerCard: 0);

@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using Deckland.Rules;
 
 public partial class GameBoardScene
 {
 	private int GetCapturedTablePoints(int captureStartIndex, int scorePlayerIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		return ScoreService.GetCapturedScore(
+		return MatchReadModel.GetCapturedScore(
 			ToCaptureScoringTableCards(),
 			captureStartIndex,
 			scorePlayerIndex,
@@ -14,16 +16,16 @@ public partial class GameBoardScene
 
 	private int GetCapturedTableCardScoreValueForPlayer(TableCard tableCard, int scorePlayerIndex, bool hasDoubleEffect)
 	{
-		return CaptureScoringRules.GetCapturedTableCardScoreValue(
+		return MatchReadModel.GetCapturedTableCardScoreValue(
 			ToCaptureScoringTableCard(tableCard),
 			BuildCaptureScoringContext(scorePlayerIndex),
 			hasDoubleEffect);
 	}
 
-	private CaptureScoringRules.Context BuildCaptureScoringContext(int scorePlayerIndex)
+	private CaptureScoringContext BuildCaptureScoringContext(int scorePlayerIndex)
 	{
 		bool applyScoreReduction = ShouldApplyCrabScoreReduction(scorePlayerIndex);
-		return new CaptureScoringRules.Context(
+		return new CaptureScoringContext(
 			SuppressSlimeCoatedScore: ShouldSuppressSlimeCoatedCapturedScore(scorePlayerIndex),
 			ApplyScoreReductionPerCard: applyScoreReduction,
 			ScoreReductionPerCard: applyScoreReduction
@@ -40,14 +42,14 @@ public partial class GameBoardScene
 
 	private bool IsSeaSlugSlimeScoreSuppressed(TableCard tableCard, int scorePlayerIndex)
 	{
-		return CaptureScoringRules.IsSlimeScoreSuppressed(
+		return MatchReadModel.IsSlimeScoreSuppressed(
 			tableCard.IsSlimeCoated,
 			BuildCaptureScoringContext(scorePlayerIndex));
 	}
 
 	private bool HasCapturedDoubleScoreEffect(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		return CaptureScoringRules.HasCapturedDoubleScoreEffect(
+		return MatchReadModel.HasCapturedDoubleScoreEffect(
 			ToCaptureScoringTableCards(),
 			captureStartIndex,
 			extraTableCardIndexes);
@@ -55,7 +57,7 @@ public partial class GameBoardScene
 
 	private int GetCapturedTableScorePlayerIndex(int captureStartIndex, int fallbackPlayerIndex)
 	{
-		return ScoreService.GetCapturedScorePlayerIndex(
+		return MatchReadModel.GetCapturedScorePlayerIndex(
 			ToCaptureScoringTableCards(),
 			captureStartIndex,
 			fallbackPlayerIndex,
@@ -64,19 +66,19 @@ public partial class GameBoardScene
 
 	private bool IsCapturedTableCardScoringIndex(int tableCardIndex, int captureStartIndex)
 	{
-		return CaptureScoringRules.IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex, _tableCards.Count);
+		return MatchReadModel.IsCapturedTableCardScoringIndex(tableCardIndex, captureStartIndex, _tableCards.Count);
 	}
 
 	private bool HasCapturedScoringTableCards(int captureStartIndex, HashSet<int>? extraTableCardIndexes = null)
 	{
-		return CaptureScoringRules.HasCapturedScoringTableCards(
+		return MatchReadModel.HasCapturedScoringTableCards(
 			ToCaptureScoringTableCards(),
 			captureStartIndex,
 			extraTableCardIndexes);
 	}
 
 	private int BuildAdventureCaptureDamageCardPointLists(
-		IReadOnlyList<CaptureScoringRules.TableCard> tableCards,
+		IReadOnlyList<CaptureScoringTableCard> tableCards,
 		int captureStartIndex,
 		int scorePlayerIndex,
 		IReadOnlySet<int>? extraTableCardIndexes,
@@ -95,11 +97,11 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		bool hasDoubleEffect = CaptureScoringRules.HasCapturedDoubleScoreEffect(
+		bool hasDoubleEffect = MatchReadModel.HasCapturedDoubleScoreEffect(
 			tableCards,
 			captureStartIndex,
 			extraTableCardIndexes);
-		CaptureScoringRules.Context context = BuildCaptureScoringContext(scorePlayerIndex);
+		CaptureScoringContext context = BuildCaptureScoringContext(scorePlayerIndex);
 		var addedIndexes = new HashSet<int>();
 
 		int TryAddCardPointValues(int tableCardIndex, bool allowAnyVisibleCapturedCard)
@@ -111,14 +113,14 @@ public partial class GameBoardScene
 				return 0;
 			}
 
-			CaptureScoringRules.TableCard tableCard = tableCards[tableCardIndex];
+			CaptureScoringTableCard tableCard = tableCards[tableCardIndex];
 			if (tableCard.IsBuriedInSand || !tableCard.Card.HasValue)
 			{
 				return 0;
 			}
 
 			if (!allowAnyVisibleCapturedCard
-				&& !CaptureScoringRules.IsCapturedTableCardScoringIndex(
+				&& !MatchReadModel.IsCapturedTableCardScoringIndex(
 					tableCardIndex,
 					captureStartIndex,
 					tableCards.Count))
@@ -132,7 +134,7 @@ public partial class GameBoardScene
 				return 0;
 			}
 
-			int resolvedPoint = CaptureScoringRules.GetCapturedTableCardScoreValue(
+			int resolvedPoint = MatchReadModel.GetCapturedTableCardScoreValue(
 				tableCard,
 				context,
 				hasDoubleEffect);
@@ -206,15 +208,11 @@ public partial class GameBoardScene
 				: 0;
 		}
 
-		return AdventureUpgradeEffectService
-			.ResolveBlackLedgerRedirectTableCardIndex(
-				AdventureUpgradeEffectService.HasBlackLedger(
-					GetAdventureUpgradeRunState()
-						?.GetAcquiredUpgradeIds()
-						?? Array.Empty<string>()),
+		return GetAdventureUpgradeRunState()
+			?.ResolveBlackLedgerRedirectTableCardIndex(
 				playerIndex == MainPlayerIndex,
 				scoreValues,
-				captureStartIndex);
+				captureStartIndex) ?? -1;
 	}
 
 	private TableCard? FindRightmostRemainingOldBaseTableCard(IReadOnlyCollection<TableCard> prePlayTableCards)
@@ -297,14 +295,14 @@ public partial class GameBoardScene
 		return visibleCapturedCount == 2;
 	}
 
-	private CaptureScoringRules.TableCard[] ToCaptureScoringTableCards()
+	private CaptureScoringTableCard[] ToCaptureScoringTableCards()
 	{
 		return ToCaptureScoringTableCards(_tableCards);
 	}
 
-	private CaptureScoringRules.TableCard[] ToCaptureScoringTableCards(IReadOnlyList<TableCard> sourceTableCards)
+	private CaptureScoringTableCard[] ToCaptureScoringTableCards(IReadOnlyList<TableCard> sourceTableCards)
 	{
-		var tableCards = new CaptureScoringRules.TableCard[sourceTableCards.Count];
+		var tableCards = new CaptureScoringTableCard[sourceTableCards.Count];
 		for (int index = 0; index < sourceTableCards.Count; index++)
 		{
 			tableCards[index] = ToCaptureScoringTableCard(sourceTableCards[index]);
@@ -313,13 +311,25 @@ public partial class GameBoardScene
 		return tableCards;
 	}
 
-	private CaptureScoringRules.TableCard ToCaptureScoringTableCard(TableCard tableCard)
+	private CaptureScoringTableCard[] ToCaptureScoringTableCards(
+		ImmutableArray<TableCardState> sourceTableCards)
 	{
-		CaptureScoringRules.Card? card = tableCard.Card.HasValue
+		var tableCards = new CaptureScoringTableCard[sourceTableCards.Length];
+		for (int index = 0; index < sourceTableCards.Length; index++)
+		{
+			tableCards[index] = ToCaptureScoringTableCard(sourceTableCards[index]);
+		}
+
+		return tableCards;
+	}
+
+	private CaptureScoringTableCard ToCaptureScoringTableCard(TableCard tableCard)
+	{
+		CaptureScoringCard? card = tableCard.Card.HasValue
 			? ToCaptureScoringCard(tableCard.Card.Value)
 			: null;
 
-		return new CaptureScoringRules.TableCard(
+		return new CaptureScoringTableCard(
 			card,
 			tableCard.IsBuriedInSand,
 			tableCard.IsSlimeCoated,
@@ -328,12 +338,35 @@ public partial class GameBoardScene
 			tableCard.ItemOwnerPlayerIndex);
 	}
 
-	private CaptureScoringRules.Card ToCaptureScoringCard(PlayingCard card)
+	private CaptureScoringTableCard ToCaptureScoringTableCard(TableCardState tableCard)
 	{
-		return new CaptureScoringRules.Card(
+		CaptureScoringCard? card = tableCard.Card.HasValue
+			? ToCaptureScoringCard(tableCard.Card.Value)
+			: null;
+
+		return new CaptureScoringTableCard(
+			card,
+			tableCard.IsBuried,
+			tableCard.IsScoreSuppressed,
+			tableCard.ItemOverlay.HasValue
+				&& IsItemEffectType(tableCard.ItemOverlay.Value.Id, CardEffectTypes.DoubleCollect),
+			tableCard.ItemOverlay.HasValue
+				&& IsItemEffectType(tableCard.ItemOverlay.Value.Id, CardEffectTypes.PlaceTablePairDestroy),
+			tableCard.ItemOwnerSeat);
+	}
+
+	private CaptureScoringCard ToCaptureScoringCard(PlayingCard card)
+	{
+		return new CaptureScoringCard(
 			card.Rank,
 			GetCardScoreValue(card),
 			IsAttachedEffectType(card, CardEffectTypes.DoubleCollect),
 			card.Suit);
+	}
+
+	private CaptureScoringCard ToCaptureScoringCard(LogicalCardState card)
+	{
+		PlayingCard restoredCard = FromRuleCardState(card);
+		return ToCaptureScoringCard(restoredCard);
 	}
 }

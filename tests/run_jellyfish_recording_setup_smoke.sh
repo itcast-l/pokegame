@@ -26,9 +26,9 @@ cleanup() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/JellyfishRecordingSetupSmoke.gd >"$LOG_FILE" 2>&1
+DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" --script res://tests/JellyfishRecordingSetupSmoke.gd >"$LOG_FILE" 2>&1
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if grep -Fq "SCRIPT ERROR" "$LOG_FILE" || grep -Fq "ERROR: System." "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

@@ -1,8 +1,10 @@
 using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Diagnostics;
 
 public readonly record struct MigrationCheckpointSecurityContext(
 	string SessionId,
@@ -29,26 +31,37 @@ public sealed class EncryptedAuthorityCheckpointEnvelope
 	private readonly byte[] _tag;
 	private readonly byte[] _signature;
 
+	public static EncryptedAuthorityCheckpointEnvelope Empty { get; } = new(
+		default,
+		Array.Empty<byte>(),
+		Array.Empty<byte>(),
+		Array.Empty<byte>(),
+		string.Empty,
+		string.Empty,
+		string.Empty,
+		string.Empty,
+		Array.Empty<byte>());
+
 	public EncryptedAuthorityCheckpointEnvelope(
 		MigrationCheckpointSecurityContext context,
-		ReadOnlySpan<byte> nonce,
-		ReadOnlySpan<byte> ciphertext,
-		ReadOnlySpan<byte> tag,
+		byte[] ownedNonce,
+		byte[] ownedCiphertext,
+		byte[] ownedTag,
 		string plaintextHash,
 		string ciphertextHash,
 		string previousCheckpointHash,
 		string sourceAuthorityKeyId,
-		ReadOnlySpan<byte> signature)
+		byte[] ownedSignature)
 	{
 		Context = context;
-		_nonce = nonce.ToArray();
-		_ciphertext = ciphertext.ToArray();
-		_tag = tag.ToArray();
+		_nonce = ownedNonce ?? throw new ArgumentNullException(nameof(ownedNonce));
+		_ciphertext = ownedCiphertext ?? throw new ArgumentNullException(nameof(ownedCiphertext));
+		_tag = ownedTag ?? throw new ArgumentNullException(nameof(ownedTag));
 		PlaintextHash = plaintextHash ?? string.Empty;
 		CiphertextHash = ciphertextHash ?? string.Empty;
 		PreviousCheckpointHash = previousCheckpointHash ?? string.Empty;
 		SourceAuthorityKeyId = sourceAuthorityKeyId ?? string.Empty;
-		_signature = signature.ToArray();
+		_signature = ownedSignature ?? throw new ArgumentNullException(nameof(ownedSignature));
 	}
 
 	public MigrationCheckpointSecurityContext Context { get; }
@@ -56,6 +69,10 @@ public sealed class EncryptedAuthorityCheckpointEnvelope
 	public string CiphertextHash { get; }
 	public string PreviousCheckpointHash { get; }
 	public string SourceAuthorityKeyId { get; }
+	public ReadOnlyMemory<byte> NonceMemory => _nonce;
+	public ReadOnlyMemory<byte> CiphertextMemory => _ciphertext;
+	public ReadOnlyMemory<byte> TagMemory => _tag;
+	public ReadOnlyMemory<byte> SignatureMemory => _signature;
 	public byte[] GetNonceCopy() => (byte[])_nonce.Clone();
 	public byte[] GetCiphertextCopy() => (byte[])_ciphertext.Clone();
 	public byte[] GetTagCopy() => (byte[])_tag.Clone();
@@ -369,16 +386,7 @@ public static class HostMigrationSecurity
 		out EncryptedAuthorityCheckpointEnvelope envelope,
 		out string error)
 	{
-		envelope = new EncryptedAuthorityCheckpointEnvelope(
-			default,
-			Array.Empty<byte>(),
-			Array.Empty<byte>(),
-			Array.Empty<byte>(),
-			string.Empty,
-			string.Empty,
-			string.Empty,
-			string.Empty,
-			Array.Empty<byte>());
+		envelope = EncryptedAuthorityCheckpointEnvelope.Empty;
 		error = string.Empty;
 		if (plaintext.IsEmpty
 			|| sessionKey.Length != SessionKeyBytes
@@ -391,12 +399,22 @@ public static class HostMigrationSecurity
 			return false;
 		}
 
+		long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		long startedAt = Stopwatch.GetTimestamp();
+		int ciphertextBytes = 0;
+		bool envelopeOwnsEncryptedBuffers = false;
+		byte[] nonce = Array.Empty<byte>();
+		byte[] ciphertext = Array.Empty<byte>();
+		byte[] tag = Array.Empty<byte>();
+		byte[] signature = Array.Empty<byte>();
+		byte[] aad = Array.Empty<byte>();
+		byte[] signaturePayload = Array.Empty<byte>();
 		try
 		{
-			byte[] nonce = RandomNumberGenerator.GetBytes(AesNonceBytes);
-			byte[] ciphertext = new byte[plaintext.Length];
-			byte[] tag = new byte[AesTagBytes];
-			byte[] aad = BuildCheckpointContextBytes(context);
+			nonce = RandomNumberGenerator.GetBytes(AesNonceBytes);
+			ciphertext = new byte[plaintext.Length];
+			tag = new byte[AesTagBytes];
+			aad = BuildCheckpointContextBytes(context);
 			using (var aes = new AesGcm(sessionKey, AesTagBytes))
 			{
 				aes.Encrypt(nonce, plaintext, ciphertext, tag, aad);
@@ -405,15 +423,17 @@ public static class HostMigrationSecurity
 			string ciphertextHash = ComputeCiphertextHash(nonce, ciphertext, tag);
 			byte[] sourcePublicKey = ExportPublicKey(sourceAuthoritySigner);
 			string sourceKeyId = ComputeKeyId(sourcePublicKey);
-			byte[] signaturePayload = BuildEnvelopeSignatureBytes(
-				context,
+			signaturePayload = BuildEnvelopeSignatureBytes(
+				aad,
 				nonce,
 				tag,
 				plaintextHash,
 				ciphertextHash,
 				previousCheckpointHash,
 				sourceKeyId);
-			byte[] signature = sourceAuthoritySigner.SignData(signaturePayload, HashAlgorithmName.SHA256);
+			signature = sourceAuthoritySigner.SignData(
+				signaturePayload,
+				HashAlgorithmName.SHA256);
 			envelope = new EncryptedAuthorityCheckpointEnvelope(
 				context,
 				nonce,
@@ -424,12 +444,33 @@ public static class HostMigrationSecurity
 				previousCheckpointHash,
 				sourceKeyId,
 				signature);
+			envelopeOwnsEncryptedBuffers = true;
+			ciphertextBytes = ciphertext.Length;
 			return true;
 		}
 		catch (CryptographicException)
 		{
 			error = "migration_checkpoint_encrypt_failed";
 			return false;
+		}
+		finally
+		{
+			if (!envelopeOwnsEncryptedBuffers)
+			{
+				CryptographicOperations.ZeroMemory(nonce);
+				CryptographicOperations.ZeroMemory(ciphertext);
+				CryptographicOperations.ZeroMemory(tag);
+				CryptographicOperations.ZeroMemory(signature);
+			}
+			CryptographicOperations.ZeroMemory(signaturePayload);
+			CryptographicOperations.ZeroMemory(aad);
+			long elapsedTicks = Stopwatch.GetTimestamp() - startedAt;
+			long allocatedBytes =
+				GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+			AuthorityCheckpointTelemetry.RecordEncryption(
+				ciphertextBytes,
+				allocatedBytes,
+				elapsedTicks);
 		}
 	}
 
@@ -458,10 +499,10 @@ public static class HostMigrationSecurity
 			return false;
 		}
 
-		byte[] nonce = envelope.GetNonceCopy();
-		byte[] ciphertext = envelope.GetCiphertextCopy();
-		byte[] tag = envelope.GetTagCopy();
-		byte[] signature = envelope.GetSignatureCopy();
+		ReadOnlySpan<byte> nonce = envelope.NonceMemory.Span;
+		ReadOnlySpan<byte> ciphertext = envelope.CiphertextMemory.Span;
+		ReadOnlySpan<byte> tag = envelope.TagMemory.Span;
+		ReadOnlySpan<byte> signature = envelope.SignatureMemory.Span;
 		if (nonce.Length != AesNonceBytes
 			|| ciphertext.Length == 0
 			|| tag.Length != AesTagBytes
@@ -475,20 +516,25 @@ public static class HostMigrationSecurity
 			return false;
 		}
 
+		byte[] aad = Array.Empty<byte>();
+		byte[] signaturePayload = Array.Empty<byte>();
+		bool plaintextOwnershipTransferred = false;
 		try
 		{
+			aad = BuildCheckpointContextBytes(envelope.Context);
+			signaturePayload = BuildEnvelopeSignatureBytes(
+				aad,
+				nonce,
+				tag,
+				envelope.PlaintextHash,
+				envelope.CiphertextHash,
+				envelope.PreviousCheckpointHash,
+				envelope.SourceAuthorityKeyId);
 			using ECDsa verifier = CreateSigner();
 			verifier.ImportSubjectPublicKeyInfo(sourceAuthorityPublicKey, out int bytesRead);
 			if (bytesRead != sourceAuthorityPublicKey.Length
 				|| !verifier.VerifyData(
-					BuildEnvelopeSignatureBytes(
-						envelope.Context,
-						nonce,
-						tag,
-						envelope.PlaintextHash,
-						envelope.CiphertextHash,
-						envelope.PreviousCheckpointHash,
-						envelope.SourceAuthorityKeyId),
+					signaturePayload,
 					signature,
 					HashAlgorithmName.SHA256))
 			{
@@ -499,12 +545,7 @@ public static class HostMigrationSecurity
 			plaintext = new byte[ciphertext.Length];
 			using (var aes = new AesGcm(sessionKey, AesTagBytes))
 			{
-				aes.Decrypt(
-					nonce,
-					ciphertext,
-					tag,
-					plaintext,
-					BuildCheckpointContextBytes(envelope.Context));
+				aes.Decrypt(nonce, ciphertext, tag, plaintext, aad);
 			}
 
 			if (!string.Equals(
@@ -518,6 +559,7 @@ public static class HostMigrationSecurity
 				return false;
 			}
 
+			plaintextOwnershipTransferred = true;
 			return true;
 		}
 		catch (CryptographicException)
@@ -530,22 +572,40 @@ public static class HostMigrationSecurity
 			error = "migration_checkpoint_decrypt_failed";
 			return false;
 		}
+		finally
+		{
+			if (!plaintextOwnershipTransferred && plaintext.Length > 0)
+			{
+				CryptographicOperations.ZeroMemory(plaintext);
+				plaintext = Array.Empty<byte>();
+			}
+			CryptographicOperations.ZeroMemory(signaturePayload);
+			CryptographicOperations.ZeroMemory(aad);
+		}
 	}
 
 	private static byte[] BuildCheckpointContextBytes(MigrationCheckpointSecurityContext context)
 	{
-		using var stream = new MemoryStream();
-		using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
-		WriteString(writer, EncryptionAlgorithm);
-		WriteString(writer, context.SessionId);
-		WriteString(writer, context.MatchId);
-		writer.Write(context.AuthorityEpoch);
-		writer.Write(context.CheckpointId);
-		WriteString(writer, context.CandidatePlayerSessionId);
-		writer.Write(context.PlanRevision);
-		writer.Write(context.ProtocolVersion);
-		writer.Flush();
-		return stream.ToArray();
+		int length = checked(
+			GetEncodedStringSize(EncryptionAlgorithm)
+			+ GetEncodedStringSize(context.SessionId)
+			+ GetEncodedStringSize(context.MatchId)
+			+ sizeof(long)
+			+ sizeof(long)
+			+ GetEncodedStringSize(context.CandidatePlayerSessionId)
+			+ sizeof(long)
+			+ sizeof(int));
+		byte[] result = new byte[length];
+		var writer = new ExactBufferWriter(result);
+		writer.WriteString(EncryptionAlgorithm);
+		writer.WriteString(context.SessionId);
+		writer.WriteString(context.MatchId);
+		writer.WriteInt64(context.AuthorityEpoch);
+		writer.WriteInt64(context.CheckpointId);
+		writer.WriteString(context.CandidatePlayerSessionId);
+		writer.WriteInt64(context.PlanRevision);
+		writer.WriteInt32(context.ProtocolVersion);
+		return result;
 	}
 
 	private static byte[] BuildMigrationPlanSignatureBytes(NetworkMigrationPlan plan)
@@ -615,7 +675,7 @@ public static class HostMigrationSecurity
 	}
 
 	private static byte[] BuildEnvelopeSignatureBytes(
-		MigrationCheckpointSecurityContext context,
+		ReadOnlySpan<byte> checkpointContextBytes,
 		ReadOnlySpan<byte> nonce,
 		ReadOnlySpan<byte> tag,
 		string plaintextHash,
@@ -623,17 +683,24 @@ public static class HostMigrationSecurity
 		string previousCheckpointHash,
 		string sourceAuthorityKeyId)
 	{
-		using var stream = new MemoryStream();
-		using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
-		writer.Write(BuildCheckpointContextBytes(context));
-		WriteBytes(writer, nonce);
-		WriteBytes(writer, tag);
-		WriteString(writer, plaintextHash);
-		WriteString(writer, ciphertextHash);
-		WriteString(writer, previousCheckpointHash);
-		WriteString(writer, sourceAuthorityKeyId);
-		writer.Flush();
-		return stream.ToArray();
+		int length = checked(
+			checkpointContextBytes.Length
+			+ sizeof(int) + nonce.Length
+			+ sizeof(int) + tag.Length
+			+ GetEncodedStringSize(plaintextHash)
+			+ GetEncodedStringSize(ciphertextHash)
+			+ GetEncodedStringSize(previousCheckpointHash)
+			+ GetEncodedStringSize(sourceAuthorityKeyId));
+		byte[] result = new byte[length];
+		var writer = new ExactBufferWriter(result);
+		writer.WriteRawBytes(checkpointContextBytes);
+		writer.WriteBytes(nonce);
+		writer.WriteBytes(tag);
+		writer.WriteString(plaintextHash);
+		writer.WriteString(ciphertextHash);
+		writer.WriteString(previousCheckpointHash);
+		writer.WriteString(sourceAuthorityKeyId);
+		return result;
 	}
 
 	private static string ComputeCiphertextHash(
@@ -641,11 +708,11 @@ public static class HostMigrationSecurity
 		ReadOnlySpan<byte> ciphertext,
 		ReadOnlySpan<byte> tag)
 	{
-		byte[] bytes = new byte[nonce.Length + ciphertext.Length + tag.Length];
-		nonce.CopyTo(bytes);
-		ciphertext.CopyTo(bytes.AsSpan(nonce.Length));
-		tag.CopyTo(bytes.AsSpan(nonce.Length + ciphertext.Length));
-		return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+		using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+		hash.AppendData(nonce);
+		hash.AppendData(ciphertext);
+		hash.AppendData(tag);
+		return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
 	}
 
 	private static bool IsSha256Hash(string value)
@@ -676,5 +743,53 @@ public static class HostMigrationSecurity
 	{
 		writer.Write(bytes.Length);
 		writer.Write(bytes);
+	}
+
+	private static int GetEncodedStringSize(string? value)
+	{
+		return checked(sizeof(int) + Encoding.UTF8.GetByteCount(value ?? string.Empty));
+	}
+
+	private ref struct ExactBufferWriter
+	{
+		private readonly Span<byte> _buffer;
+		private int _offset;
+
+		internal ExactBufferWriter(Span<byte> buffer)
+		{
+			_buffer = buffer;
+			_offset = 0;
+		}
+
+		internal void WriteInt32(int value)
+		{
+			BinaryPrimitives.WriteInt32LittleEndian(_buffer[_offset..], value);
+			_offset += sizeof(int);
+		}
+
+		internal void WriteInt64(long value)
+		{
+			BinaryPrimitives.WriteInt64LittleEndian(_buffer[_offset..], value);
+			_offset += sizeof(long);
+		}
+
+		internal void WriteString(string value)
+		{
+			int byteCount = Encoding.UTF8.GetByteCount(value);
+			WriteInt32(byteCount);
+			_offset += Encoding.UTF8.GetBytes(value, _buffer[_offset..]);
+		}
+
+		internal void WriteBytes(ReadOnlySpan<byte> bytes)
+		{
+			WriteInt32(bytes.Length);
+			WriteRawBytes(bytes);
+		}
+
+		internal void WriteRawBytes(ReadOnlySpan<byte> bytes)
+		{
+			bytes.CopyTo(_buffer[_offset..]);
+			_offset += bytes.Length;
+		}
 	}
 }

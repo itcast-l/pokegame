@@ -20,7 +20,7 @@ public partial class NetworkManager
 	private long _standbyAckedCheckpointId = -1;
 	private long _migrationEligibleCheckpointId = -1;
 	private long _standbyPendingCheckpointId = -1;
-	private AuthorityCheckpointEnvelope _standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+	private string _standbyPendingCheckpointHash = string.Empty;
 	private EncryptedAuthorityCheckpointEnvelope? _standbyPendingEncryptedCheckpoint;
 	private double _standbyCheckpointSentAt = -1.0;
 	private double _lastStandbyCheckpointSentAt = -1.0;
@@ -44,7 +44,8 @@ public partial class NetworkManager
 
 	internal bool IsStandbyCheckpointAcknowledged(long checkpointId)
 	{
-		return checkpointId >= 0 && _standbyAckedCheckpointId == checkpointId;
+		return !HostMigrationCapabilityAvailable
+			|| (checkpointId >= 0 && _standbyAckedCheckpointId == checkpointId);
 	}
 	private bool _migrationRecoveryReadyForPeers;
 	private GameMigrationRecoveryState? _gameMigrationRecoveryState;
@@ -62,11 +63,15 @@ public partial class NetworkManager
 	private double _lastStandbyCheckpointAckedAt = -1.0;
 	private readonly Dictionary<int, double> _migrationLatencyMillisecondsByPeerId = new();
 	private readonly Dictionary<int, (long Sequence, double SentAt)> _pendingMigrationLatencyProbesByPeerId = new();
+	private readonly List<int> _expiredMigrationLatencyProbePeerIds = new();
 	private double _lastMigrationLatencyProbeAt = -1.0;
 	private long _nextMigrationLatencyProbeSequence;
 
-	public NetworkMigrationPlan? CurrentMigrationPlan => _networkMigrationPlan;
-	public bool IsMigratingHost => _state == NetworkSessionState.MigratingHost;
+	public NetworkMigrationPlan? CurrentMigrationPlan => HostMigrationCapabilityAvailable
+		? _networkMigrationPlan
+		: null;
+	public bool IsMigratingHost => HostMigrationCapabilityAvailable
+		&& _state == NetworkSessionState.MigratingHost;
 
 	public long DebugGetAuthorityEpoch()
 	{
@@ -75,12 +80,14 @@ public partial class NetworkManager
 
 	public bool DebugHasMigrationPlan()
 	{
-		return _networkMigrationPlan != null;
+		return HostMigrationCapabilityAvailable && _networkMigrationPlan != null;
 	}
 
 	public bool DebugCanRequestActiveHostMigration()
 	{
-		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
+			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
 		{
 			return false;
 		}
@@ -93,21 +100,74 @@ public partial class NetworkManager
 
 	public bool DebugIsLobbyMigrationRecoveryActive()
 	{
-		return _lobbyMigrationRecoveryState is not null;
+		return HostMigrationCapabilityAvailable && _lobbyMigrationRecoveryState is not null;
 	}
 
 	public bool DebugHasMigrationArtifacts()
 	{
-		return _networkMigrationPlan != null
+		return HostMigrationCapabilityAvailable
+			&& (_networkMigrationPlan != null
 			|| _latestAuthorityCheckpointEnvelope.HasPayload
-			|| _standbyCheckpointPayload.Length > 0
-			|| _issuedSeatCredentialsBySeat.Count > 0
-			|| !string.IsNullOrEmpty(_localSeatCredential);
+			|| _standbyCheckpointPayload.Length > 0);
+	}
+
+	public int DebugGetLocalStandbyCheckpointCacheCount()
+	{
+		return HostMigrationCapabilityAvailable ? _standbyCheckpointsById.Count : 0;
+	}
+
+	public long DebugGetLocalStandbyCheckpointId()
+	{
+		return HostMigrationCapabilityAvailable ? _standbyCheckpoint?.CheckpointId ?? -1 : -1;
+	}
+
+	public long DebugGetLocalStandbyCheckpointFingerprint()
+	{
+		return !HostMigrationCapabilityAvailable || _standbyCheckpointHash.Length < 16
+			? 0
+			: unchecked((long)Convert.ToUInt64(_standbyCheckpointHash[..16], 16));
+	}
+
+	public long DebugGetLocalMigrationFingerprint()
+	{
+		if (!HostMigrationCapabilityAvailable || _localMigrationSessionKey.Length == 0)
+		{
+			return 0;
+		}
+
+		Span<byte> fingerprint = stackalloc byte[SHA256.HashSizeInBytes];
+		SHA256.HashData(_localMigrationSessionKey, fingerprint);
+		return BitConverter.ToInt64(fingerprint);
+	}
+
+	public int DebugGetHotStandbySeat()
+	{
+		return HostMigrationCapabilityAvailable ? _hotStandbySeat : -1;
+	}
+
+	public bool DebugRotateHotStandbyCandidate()
+	{
+		if (!HostMigrationCapabilityAvailable
+			|| OS.GetEnvironment("CODEX_LAN_MIGRATION_FIXTURE") != "1"
+			|| !IsHost
+			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
+			|| _hotStandbySeat < 0)
+		{
+			return false;
+		}
+
+		int formerCandidateSeat = _hotStandbySeat;
+		_failedHotStandbySeats.Add(formerCandidateSeat);
+		ReleaseHotStandbyCandidate(rekeyFormerCandidate: true);
+		_migrationEligibleCheckpointId = _latestAuthorityCheckpointEnvelope.CheckpointId;
+		SendCheckpointToHotStandbyIfNeeded();
+		return true;
 	}
 
 	public bool DebugSendStaleMigrationPlan()
 	{
-		if (_state != NetworkSessionState.MigratingHost
+		if (!HostMigrationCapabilityAvailable
+			|| _state != NetworkSessionState.MigratingHost
 			|| _networkMigrationPlan is not { } activePlan
 			|| activePlan.TargetEpoch <= 0)
 		{
@@ -129,7 +189,9 @@ public partial class NetworkManager
 
 	public bool RequestActiveHostMigration()
 	{
-		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
+			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
 		{
 			return false;
 		}
@@ -178,16 +240,22 @@ public partial class NetworkManager
 			}
 		}
 
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetPresentationEndpoint(out INetworkPresentationEndpoint gameBoard))
 		{
-			gameBoard.BeginNetworkHostMigrationVisualState();
+			gameBoard.BeginHostMigration();
 		}
 		GD.Print($"MIGRATION_ACTIVE_BEGIN checkpoint={plan.CheckpointId} target_epoch={plan.TargetEpoch}");
+		RescheduleNetworkMaintenance(immediate: true);
 		return true;
 	}
 
 	private bool HasCurrentActiveMigrationPlan(NetworkAuthorityPhase phase)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return false;
+		}
+
 		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		return NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
 			&& latestEnvelope.HasPayload
@@ -199,9 +267,21 @@ public partial class NetworkManager
 			&& string.Equals(plan.CheckpointHash, latestEnvelope.Hash, StringComparison.Ordinal);
 	}
 
+	private bool IsActiveMigrationHandoffInProgress()
+	{
+		return _activeMigrationPending || _activeMigrationAwaitingSourceClose;
+	}
+
+	private bool IsMigrationRecoveryHandoffInProgress()
+	{
+		return _migrationCoordinatorState is NetworkMigrationCoordinatorState.SourceHostLost
+			or NetworkMigrationCoordinatorState.CandidateStarting
+			or NetworkMigrationCoordinatorState.FollowersRecovering;
+	}
+
 	private void PollActiveHostMigration(double now)
 	{
-		if (!IsHost || !_activeMigrationPending)
+		if (!HostMigrationCapabilityAvailable || !IsHost || !_activeMigrationPending)
 		{
 			return;
 		}
@@ -237,7 +317,10 @@ public partial class NetworkManager
 
 	private void PollHotStandby(double now)
 	{
-		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
+			|| IsActiveMigrationHandoffInProgress()
+			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
 		{
 			return;
 		}
@@ -250,6 +333,18 @@ public partial class NetworkManager
 		{
 			return;
 		}
+		if (!HasEligibleHotStandbyPeer())
+		{
+			if (_hotStandbySeat >= 0 || _networkMigrationPlan is not null)
+			{
+				ReleaseHotStandbyCandidate(rekeyFormerCandidate: _hotStandbySeat >= 0);
+			}
+			else
+			{
+				TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.SelectingCandidate);
+			}
+			return;
+		}
 
 		SendCheckpointToHotStandbyIfNeeded(now);
 		if (_hotStandbySeat < 0)
@@ -257,7 +352,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (!_standbyPendingCheckpointEnvelope.HasPayload || _standbyCheckpointSentAt < 0.0)
+		if (_standbyPendingCheckpointId < 0 || _standbyCheckpointSentAt < 0.0)
 		{
 			return;
 		}
@@ -278,9 +373,28 @@ public partial class NetworkManager
 		SendCheckpointToHotStandbyIfNeeded(now);
 	}
 
+	private bool HasEligibleHotStandbyPeer()
+	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return false;
+		}
+
+		foreach (NetworkPlayerPublicState player in _players)
+		{
+			if (!player.IsHost
+				&& player.IsConnected
+				&& CanPeerActAsHotStandby(player.PeerId))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private void PollHostMigration(double now)
 	{
-		if (_state != NetworkSessionState.MigratingHost)
+		if (!HostMigrationCapabilityAvailable || _state != NetworkSessionState.MigratingHost)
 		{
 			return;
 		}
@@ -375,6 +489,12 @@ public partial class NetworkManager
 
 	private MigrationCheckpointDispatchStatus SendCheckpointToHotStandbyIfNeeded(double now = -1.0)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Disabled);
+			return MigrationCheckpointDispatchStatus.NotRequested;
+		}
+
 		AuthorityCheckpointEnvelope latestEnvelope = _latestAuthorityCheckpointEnvelope;
 		if (!IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
@@ -386,12 +506,6 @@ public partial class NetworkManager
 		{
 			return MigrationCheckpointDispatchStatus.NotRequested;
 		}
-		if (!_hostMigrationEnabled)
-		{
-			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Disabled);
-			return MigrationCheckpointDispatchStatus.NotRequested;
-		}
-
 		int hostSeat = LocalSeatIndex;
 		if (now < 0.0)
 		{
@@ -498,7 +612,7 @@ public partial class NetworkManager
 
 			if (_issuedStandbyCheckpointNonces.TryRegister(
 				securityContext.AuthorityEpoch,
-				candidateEnvelope.GetNonceCopy()))
+				candidateEnvelope.NonceMemory.Span))
 			{
 				encryptedEnvelope = candidateEnvelope;
 				break;
@@ -512,7 +626,7 @@ public partial class NetworkManager
 		}
 
 		_standbyPendingCheckpointId = latestEnvelope.CheckpointId;
-		_standbyPendingCheckpointEnvelope = latestEnvelope;
+		_standbyPendingCheckpointHash = latestEnvelope.Hash;
 		_standbyPendingEncryptedCheckpoint = encryptedEnvelope;
 		_standbyCheckpointSentAt = now;
 		_lastStandbyCheckpointSentAt = now;
@@ -566,7 +680,9 @@ public partial class NetworkManager
 		string sourceAuthorityKeyId,
 		byte[] signature)
 	{
-		if (IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
+		if (!HostMigrationCapabilityAvailable
+			|| IsHost
+			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
 		{
 			return;
 		}
@@ -740,7 +856,9 @@ public partial class NetworkManager
 		string error,
 		string candidateHostAddress)
 	{
-		if (!IsHost || _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
+			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame))
 		{
 			return;
 		}
@@ -752,9 +870,9 @@ public partial class NetworkManager
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
 		if (!TryResolveSeatFromPeer(senderPeerId, out int senderSeat)
 			|| senderSeat != _hotStandbySeat
-			|| !_standbyPendingCheckpointEnvelope.HasPayload
+			|| _standbyPendingCheckpointId < 0
 			|| _standbyPendingEncryptedCheckpoint is not { } pendingEncrypted
-			|| checkpointId != _standbyPendingCheckpointEnvelope.CheckpointId
+			|| checkpointId != _standbyPendingCheckpointId
 			|| planRevision != pendingEncrypted.Context.PlanRevision
 			|| !string.Equals(ciphertextHash, pendingEncrypted.CiphertextHash, StringComparison.Ordinal))
 		{
@@ -777,7 +895,8 @@ public partial class NetworkManager
 			return;
 		}
 
-		AuthorityCheckpointEnvelope acknowledgedEnvelope = _standbyPendingCheckpointEnvelope;
+		long acknowledgedCheckpointId = _standbyPendingCheckpointId;
+		string acknowledgedCheckpointHash = _standbyPendingCheckpointHash;
 		EncryptedAuthorityCheckpointEnvelope acknowledgedEncryptedEnvelope = pendingEncrypted;
 		_standbyAckedCheckpointId = checkpointId;
 		_lastStandbyCheckpointAckedAt = Time.GetTicksMsec() / 1000.0;
@@ -790,7 +909,8 @@ public partial class NetworkManager
 		MigrationCheckpointDispatchStatus dispatchStatus = BroadcastMigrationPlanIfReady(
 			senderSeat,
 			candidateHostAddress.Trim(),
-			acknowledgedEnvelope,
+			acknowledgedCheckpointId,
+			acknowledgedCheckpointHash,
 			acknowledgedEncryptedEnvelope);
 		if (dispatchStatus is not (MigrationCheckpointDispatchStatus.AwaitingAcknowledgement
 			or MigrationCheckpointDispatchStatus.Ready))
@@ -801,7 +921,8 @@ public partial class NetworkManager
 
 	private void HandleHotStandbyDisconnected(int seatIndex)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
 			|| seatIndex != _hotStandbySeat)
 		{
@@ -821,7 +942,8 @@ public partial class NetworkManager
 		long checkpointId,
 		string checkpointHash)
 	{
-		if (IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
 			|| !MatchesCurrentRpcContext(sessionId, matchId, sourceEpoch)
 			|| !NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
@@ -848,9 +970,9 @@ public partial class NetworkManager
 		_migrationPeerAttemptInFlight = false;
 		_migrationPeerAttemptStartedAt = -1.0;
 		SetState(NetworkSessionState.MigratingHost);
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetPresentationEndpoint(out INetworkPresentationEndpoint gameBoard))
 		{
-			gameBoard.BeginNetworkHostMigrationVisualState();
+			gameBoard.BeginHostMigration();
 		}
 
 		RpcId(
@@ -873,7 +995,8 @@ public partial class NetworkManager
 		long checkpointId,
 		string playerSessionId)
 	{
-		if (!AllowPeerRequest(NetworkRequestCategory.ProtocolAck))
+		if (!HostMigrationCapabilityAvailable
+			|| !AllowPeerRequest(NetworkRequestCategory.ProtocolAck))
 		{
 			return;
 		}
@@ -902,7 +1025,8 @@ public partial class NetworkManager
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcMigrationReady(string sessionId, string matchId, long authorityEpoch)
 	{
-		if (IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| IsHost
 			|| _state != NetworkSessionState.MigratingHost
 			|| _networkMigrationPlan is not { } migrationPlan
 			|| authorityEpoch != migrationPlan.TargetEpoch
@@ -918,9 +1042,9 @@ public partial class NetworkManager
 		_migrationPeerAttemptInFlight = false;
 		_migrationPeerAttemptStartedAt = -1.0;
 		SetState(NetworkSessionState.InGame);
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetPresentationEndpoint(out INetworkPresentationEndpoint gameBoard))
 		{
-			gameBoard.CompleteNetworkHostMigrationVisualState();
+			gameBoard.CompleteHostMigration();
 		}
 		GD.Print($"MIGRATION_READY_APPLIED epoch={authorityEpoch}");
 	}
@@ -933,7 +1057,7 @@ public partial class NetworkManager
 		int seatIndex,
 		string playerSessionId)
 	{
-		if (!IsHost || _state != NetworkSessionState.InGame)
+		if (!HostMigrationCapabilityAvailable || !IsHost || _state != NetworkSessionState.InGame)
 		{
 			return;
 		}
@@ -988,7 +1112,8 @@ public partial class NetworkManager
 		long credentialGeneration,
 		string credential)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| _state != NetworkSessionState.Lobby
 			|| _networkMigrationPlan is not { Phase: NetworkAuthorityPhase.Lobby } migrationPlan
 			|| !MatchesCurrentRpcContext(sessionId, string.Empty, authorityEpoch)
@@ -1078,12 +1203,18 @@ public partial class NetworkManager
 	private MigrationCheckpointDispatchStatus BroadcastMigrationPlanIfReady(
 		int candidateSeat,
 		string candidateHostAddress,
-		AuthorityCheckpointEnvelope acknowledgedEnvelope,
+		long acknowledgedCheckpointId,
+		string acknowledgedCheckpointHash,
 		EncryptedAuthorityCheckpointEnvelope acknowledgedEncryptedEnvelope)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return MigrationCheckpointDispatchStatus.NotRequested;
+		}
 		if (!IsHost
 			|| IsMigrationReadinessFenceActive()
-			|| !acknowledgedEnvelope.HasPayload
+			|| acknowledgedCheckpointId < 0
+			|| string.IsNullOrWhiteSpace(acknowledgedCheckpointHash)
 			|| !TryGetPlayerBySeat(candidateSeat, out NetworkPlayerPublicState candidate)
 			|| !TryGetPeerMigrationSecurity(candidate.PeerId, out PeerMigrationSecurityState security)
 			|| _authorityMigrationSigner is null)
@@ -1093,7 +1224,7 @@ public partial class NetworkManager
 				: MigrationCheckpointDispatchStatus.CandidateUnavailable;
 		}
 
-		string advertisedCheckpointHash = acknowledgedEnvelope.Hash;
+		string advertisedCheckpointHash = acknowledgedCheckpointHash;
 		if (OS.GetEnvironment("CODEX_LAN_MIGRATION_CORRUPT_HASH") == "1")
 		{
 			advertisedCheckpointHash = new string('0', 64);
@@ -1114,7 +1245,7 @@ public partial class NetworkManager
 			MatchId = _config.MatchId,
 			SourceEpoch = GetCurrentAuthorityEpoch(),
 			TargetEpoch = GetCurrentAuthorityEpoch() + 1,
-			CheckpointId = acknowledgedEnvelope.CheckpointId,
+			CheckpointId = acknowledgedCheckpointId,
 			CheckpointHash = advertisedCheckpointHash,
 			CheckpointCiphertextHash = acknowledgedEncryptedEnvelope.CiphertextHash,
 			PreviousCheckpointHash = acknowledgedEncryptedEnvelope.PreviousCheckpointHash,
@@ -1161,14 +1292,26 @@ public partial class NetworkManager
 
 	private void PollMigrationCandidateLatency(double now)
 	{
-		foreach (int peerId in _pendingMigrationLatencyProbesByPeerId
-			.Where(entry => now - entry.Value.SentAt >= NetworkMigrationRules.MigrationLatencyProbeTimeoutSeconds)
-			.Select(entry => entry.Key)
-			.ToArray())
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
+		_expiredMigrationLatencyProbePeerIds.Clear();
+		foreach (KeyValuePair<int, (long Sequence, double SentAt)> entry in _pendingMigrationLatencyProbesByPeerId)
+		{
+			if (now - entry.Value.SentAt >= NetworkMigrationRules.MigrationLatencyProbeTimeoutSeconds)
+			{
+				_expiredMigrationLatencyProbePeerIds.Add(entry.Key);
+			}
+		}
+
+		foreach (int peerId in _expiredMigrationLatencyProbePeerIds)
 		{
 			_pendingMigrationLatencyProbesByPeerId.Remove(peerId);
 			_migrationLatencyMillisecondsByPeerId.Remove(peerId);
 		}
+		_expiredMigrationLatencyProbePeerIds.Clear();
 
 		if (!IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
@@ -1206,7 +1349,8 @@ public partial class NetworkManager
 		long authorityEpoch,
 		long sequence)
 	{
-		if (IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
 			|| sequence <= 0
 			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
@@ -1230,6 +1374,11 @@ public partial class NetworkManager
 		long authorityEpoch,
 		long sequence)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
 		if (!IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
@@ -1255,6 +1404,11 @@ public partial class NetworkManager
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcMigrationPlan(Godot.Collections.Dictionary rawPlan)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		if (!TryParseMigrationPlan(rawPlan, out NetworkMigrationPlan plan))
 		{
 			GD.Print("MIGRATION_PLAN_REJECT reason=Decode");
@@ -1310,32 +1464,32 @@ public partial class NetworkManager
 			if (IsLocalMigrationCandidate(plan))
 			{
 				_standbyConfirmedCheckpointCiphertextHash = plan.CheckpointCiphertextHash;
-				}
-				_lastObservedMigrationPlanRevision = plan.PlanRevision;
-				_pendingMigrationPlanRevocationRevision = -1;
-				TransitionMigrationCoordinatorToReady();
-				GD.Print($"MIGRATION_PLAN_ACCEPTED candidate={plan.CandidatePlayerSessionId} seat={plan.CandidateSeat} target_epoch={plan.TargetEpoch}");
-				try
-				{
-					RpcId(
-						1,
-						MethodName.RpcMigrationPlanAck,
-						plan.SessionId,
-						plan.MatchId,
-						plan.SourceEpoch,
-						plan.TargetEpoch,
-						plan.PlanRevision,
-						plan.CheckpointId,
-						plan.CheckpointCiphertextHash,
-						plan.CandidatePlayerSessionId,
-						plan.CandidateSuccessorKeyId);
-				}
-				catch (Exception exception)
-				{
-					GD.PushWarning($"Migration plan acknowledgement send failed: {exception.GetType().Name}");
-				}
+			}
+			_lastObservedMigrationPlanRevision = plan.PlanRevision;
+			_pendingMigrationPlanRevocationRevision = -1;
+			TransitionMigrationCoordinatorToReady();
+			GD.Print($"MIGRATION_PLAN_ACCEPTED candidate={plan.CandidatePlayerSessionId} seat={plan.CandidateSeat} target_epoch={plan.TargetEpoch}");
+			try
+			{
+				RpcId(
+					1,
+					MethodName.RpcMigrationPlanAck,
+					plan.SessionId,
+					plan.MatchId,
+					plan.SourceEpoch,
+					plan.TargetEpoch,
+					plan.PlanRevision,
+					plan.CheckpointId,
+					plan.CheckpointCiphertextHash,
+					plan.CandidatePlayerSessionId,
+					plan.CandidateSuccessorKeyId);
+			}
+			catch (Exception exception)
+			{
+				GD.PushWarning($"Migration plan acknowledgement send failed: {exception.GetType().Name}");
 			}
 		}
+	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcMigrationPlanAck(
@@ -1349,7 +1503,8 @@ public partial class NetworkManager
 		string candidatePlayerSessionId,
 		string candidateSuccessorKeyId)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| _state is not (NetworkSessionState.Lobby or NetworkSessionState.InGame)
 			|| _migrationCoordinatorState != NetworkMigrationCoordinatorState.AwaitingPlanAcknowledgement
 			|| _pendingNetworkMigrationPlan is not { } plan
@@ -1398,7 +1553,8 @@ public partial class NetworkManager
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcMigrationPlanRevoked(Godot.Collections.Dictionary rawRevocation)
 	{
-		if (!TryParseMigrationPlanRevocation(rawRevocation, out NetworkMigrationPlanRevocation revocation)
+		if (!HostMigrationCapabilityAvailable
+			|| !TryParseMigrationPlanRevocation(rawRevocation, out NetworkMigrationPlanRevocation revocation)
 			|| !HostMigrationSecurity.VerifyMigrationPlanRevocation(revocation, _boundAuthorityMigrationPublicKey)
 			|| !MatchesCurrentRpcContext(
 				revocation.SessionId,
@@ -1406,6 +1562,10 @@ public partial class NetworkManager
 				revocation.SourceEpoch,
 				allowHigherEpoch: false)
 			|| revocation.PlanRevision <= _lastObservedMigrationPlanRevision)
+		{
+			return;
+		}
+		if (IsMigrationRecoveryHandoffInProgress())
 		{
 			return;
 		}
@@ -1427,7 +1587,9 @@ public partial class NetworkManager
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcDebugStaleMigrationPlan(Godot.Collections.Dictionary rawPlan)
 	{
-		if (!IsHost || OS.GetEnvironment("CODEX_LAN_INJECT_OLD_EPOCH") != "1")
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
+			|| OS.GetEnvironment("CODEX_LAN_INJECT_OLD_EPOCH") != "1")
 		{
 			return;
 		}
@@ -1439,6 +1601,12 @@ public partial class NetworkManager
 
 	private void BeginMigrationAfterHostDisconnect()
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			HandleHostDisconnected();
+			return;
+		}
+
 		if (!NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
 			|| _networkMigrationPlan is not { } plan
 			|| !NetworkMigrationRules.IsPlanVisibleToClients(plan))
@@ -1450,8 +1618,37 @@ public partial class NetworkManager
 		StartMigrationAttemptsAfterHostDisconnect(plan);
 	}
 
+	private bool TryAdvancePlannedMigrationAfterSourceDisconnect()
+	{
+		if (!HostMigrationCapabilityAvailable
+			|| _state != NetworkSessionState.MigratingHost
+			|| !_migrationAwaitingSourceDisconnect)
+		{
+			return false;
+		}
+		if (_networkMigrationPlan is not { } plan
+			|| !NetworkMigrationRules.IsPlanVisibleToClients(plan))
+		{
+			FailMigration(NetworkMigrationFailureCode.NoPlan);
+			return true;
+		}
+
+		CloseActivePeerForMigration();
+		ArmMigrationAttemptsAfterSourceDisconnect(
+			plan,
+			Time.GetTicksMsec() / 1000.0);
+		RescheduleNetworkMaintenance(immediate: true);
+		return true;
+	}
+
 	private void StartMigrationAttemptsAfterHostDisconnect(NetworkMigrationPlan plan)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			HandleHostDisconnected();
+			return;
+		}
+
 		if (_migrationCoordinatorState is not (NetworkMigrationCoordinatorState.Ready or NetworkMigrationCoordinatorState.SourceHostLost))
 		{
 			FailMigration(NetworkMigrationFailureCode.NoPlan);
@@ -1475,15 +1672,22 @@ public partial class NetworkManager
 		ArmMigrationAttemptsAfterSourceDisconnect(plan, now);
 		GD.Print($"MIGRATION_BEGIN match={_config.MatchId.Length} credential_generation={_localSeatCredentialGeneration} address={_lastLanJoinAddress}");
 		SetState(NetworkSessionState.MigratingHost);
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetPresentationEndpoint(out INetworkPresentationEndpoint gameBoard))
 		{
-			gameBoard.BeginNetworkHostMigrationVisualState();
+			gameBoard.BeginHostMigration();
 		}
 	}
 
 	private void FinishActiveMigrationSource()
 	{
-		ReturnToMultiplayerLobbyAfterMigrationFailure("Active host migration handed off.");
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
+		ReturnToMultiplayerLobbyAfterMigrationFailure(
+			"Active host migration handed off.",
+			NetworkSessionCloseReason.MigrationHandoff);
 	}
 
 	private void CloseActivePeerForMigration()
@@ -1506,6 +1710,11 @@ public partial class NetworkManager
 
 	private void HandleMigrationConnectionFailure()
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_migrationPeerAttemptInFlight = false;
 		_migrationPeerAttemptStartedAt = -1.0;
 		MultiplayerPeer? peer = Multiplayer.MultiplayerPeer;
@@ -1527,6 +1736,11 @@ public partial class NetworkManager
 
 	private void TryStartMigratedHost(double now)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.CandidateStarting);
 		if (_networkMigrationPlan is not { } migrationPlan)
 		{
@@ -1627,18 +1841,20 @@ public partial class NetworkManager
 		}
 
 		string restoreError = string.Empty;
-		if (GetTree().CurrentScene is GameBoardScene gameBoard
-				&& gameBoard.TryRestoreAuthorityCheckpoint(standbyCheckpointPayload, standbyCheckpointHash, out restoreError))
+		if (TryGetReplicaEndpoint(out INetworkReplicaEndpoint replica)
+			&& TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard)
+			&& replica.TryRestoreCheckpoint(standbyCheckpointPayload, standbyCheckpointHash, out restoreError))
 		{
 			GD.Print($"MIGRATION_CHECKPOINT_RESTORED checkpoint={migrationPlan.CheckpointId} at={Time.GetTicksMsec() / 1000.0:0.000}");
-			gameBoard.AdvanceNetworkAuthorityEpoch(migrationPlan.TargetEpoch);
-				_authorityEpoch = migrationPlan.TargetEpoch;
-			_latestAuthorityCheckpointEnvelope = new AuthorityCheckpointEnvelope(
+			replica.AdvanceAuthorityEpoch(migrationPlan.TargetEpoch);
+			_authorityEpoch = migrationPlan.TargetEpoch;
+			TransferStandbyCheckpointPayloadOwnership(migrationPlan.CheckpointId, standbyCheckpointPayload);
+			ReplaceLatestAuthorityCheckpointEnvelope(new AuthorityCheckpointEnvelope(
 				checkpoint.AuthorityEpoch,
 				checkpoint.CheckpointId,
 				standbyCheckpointPayload,
-				standbyCheckpointHash);
-				BeginMigrationReadinessFence(migrationPlan, checkpoint.SeatControls, now);
+				standbyCheckpointHash));
+			BeginMigrationReadinessFence(migrationPlan, checkpoint.SeatControls, now);
 			MarkCandidateAsNewHost(migrationPlan.CandidateSeat, migrationPlan.SourcePlayerSessionId);
 			SetState(NetworkSessionState.InGame);
 			if (!UpdateMigratedHostMetadata(migrationPlan))
@@ -1648,7 +1864,7 @@ public partial class NetworkManager
 			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.FollowersRecovering);
 			// The restored board stays input-locked until the first hard snapshot has
 			// reached followers and the serialized authority action has resumed.
-			SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+			SendBoardSnapshotsFromHost(gameBoard.CreateNextSnapshotId());
 			_ = ResumeMigratedHostAfterSnapshotAsync(gameBoard, migrationPlan);
 			GD.Print($"MIGRATION_HOST_SNAPSHOT_READY seat={migrationPlan.CandidateSeat} epoch={migrationPlan.TargetEpoch}");
 		}
@@ -1660,13 +1876,18 @@ public partial class NetworkManager
 	}
 
 	private async Task ResumeMigratedHostAfterSnapshotAsync(
-		GameBoardScene gameBoard,
+		INetworkAuthorityEndpoint gameBoard,
 		NetworkMigrationPlan migrationPlan)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		try
 		{
 			await gameBoard.ResumeAuthorityActionAsync();
-			if (!GodotObject.IsInstanceValid(gameBoard)
+			if (!gameBoard.IsAlive
 				|| _state != NetworkSessionState.InGame
 				|| _networkMigrationPlan is not { } activePlan
 				|| activePlan.TargetEpoch != migrationPlan.TargetEpoch)
@@ -1674,10 +1895,10 @@ public partial class NetworkManager
 				return;
 			}
 
-				SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
-				_migrationRecoveryReadyForPeers = true;
-				TryCompleteMigrationReadiness();
-				GD.Print($"MIGRATION_RECOVERY_READY epoch={migrationPlan.TargetEpoch}");
+			SendBoardSnapshotsFromHost(gameBoard.CreateNextSnapshotId());
+			_migrationRecoveryReadyForPeers = true;
+			TryCompleteMigrationReadiness();
+			GD.Print($"MIGRATION_RECOVERY_READY epoch={migrationPlan.TargetEpoch}");
 		}
 		catch (Exception exception)
 		{
@@ -1688,6 +1909,11 @@ public partial class NetworkManager
 
 	private void TryConnectToMigratedHost(double now)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		if (_networkMigrationPlan is not { } plan)
 		{
 			return;
@@ -1722,6 +1948,12 @@ public partial class NetworkManager
 
 	private void FailMigration(NetworkMigrationFailureCode code)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			HandleHostDisconnected();
+			return;
+		}
+
 		if (_state != NetworkSessionState.MigratingHost
 			&& _migrationCoordinatorState is not (NetworkMigrationCoordinatorState.CandidateStarting
 				or NetworkMigrationCoordinatorState.FollowersRecovering))
@@ -1734,19 +1966,21 @@ public partial class NetworkManager
 		ReturnToMultiplayerLobbyAfterMigrationFailure($"Host migration failed: {code}");
 	}
 
-	private void ReturnToMultiplayerLobbyAfterMigrationFailure(string message)
+	private void ReturnToMultiplayerLobbyAfterMigrationFailure(
+		string message,
+		NetworkSessionCloseReason closeReason = NetworkSessionCloseReason.InternalFailure)
 	{
 		if (_migrationFailureReturnPending)
 		{
 			return;
 		}
 
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetPresentationEndpoint(out INetworkPresentationEndpoint gameBoard))
 		{
-			gameBoard.CompleteNetworkHostMigrationVisualState();
+			gameBoard.CompleteHostMigration();
 		}
 
-		LeaveSession();
+		_ = RequestSessionCloseAsync(closeReason);
 		_pendingLobbyErrorMessage = message;
 		_migrationFailureReturnPending = true;
 		SetState(NetworkSessionState.Failed);
@@ -1759,6 +1993,11 @@ public partial class NetworkManager
 
 	private void ApplyCheckpointMetadataForMigration(NetworkAuthorityCheckpoint checkpoint)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_config = new NetworkSessionConfig(
 			checkpoint.SessionId,
 			checkpoint.RoomName,
@@ -1840,6 +2079,11 @@ public partial class NetworkManager
 
 	private void MarkCandidateAsNewHost(int candidateSeat, string sourcePlayerSessionId)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		int localPeerId = 1;
 		for (int index = 0; index < _players.Count; index++)
 		{
@@ -1878,6 +2122,11 @@ public partial class NetworkManager
 
 	private void MarkCandidateAsNewLobbyHost(int candidateSeat, string sourcePlayerSessionId)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		var oldControlsByPlayerSessionId = _seatControlStates
 			.ToDictionary(state => state.PlayerSessionId, StringComparer.Ordinal);
 		List<NetworkPlayerPublicState> remainingPlayers = _players
@@ -1935,6 +2184,11 @@ public partial class NetworkManager
 
 	private void BeginLobbyMigrationRecovery(long targetEpoch, double now)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_lobbyMigrationRecoveryState = new LobbyMigrationRecoveryState(
 			targetEpoch,
 			now,
@@ -1946,7 +2200,8 @@ public partial class NetworkManager
 
 	private void PollLobbyMigrationRecovery(double now)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| _state != NetworkSessionState.Lobby
 			|| _lobbyMigrationRecoveryState is not { } recovery)
 		{
@@ -1972,7 +2227,8 @@ public partial class NetworkManager
 
 	private void TryFinalizeLobbyMigrationRecovery(double now, bool force = false)
 	{
-		if (_lobbyMigrationRecoveryState is not { } recovery
+		if (!HostMigrationCapabilityAvailable
+			|| _lobbyMigrationRecoveryState is not { } recovery
 			|| (!force && !recovery.IsComplete))
 		{
 			return;
@@ -1990,13 +2246,19 @@ public partial class NetworkManager
 	private void ClearPendingStandbyCheckpoint()
 	{
 		_standbyPendingCheckpointId = -1;
-		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyPendingCheckpointHash = string.Empty;
 		_standbyPendingEncryptedCheckpoint = null;
 		_standbyCheckpointSentAt = -1.0;
 	}
 
 	private void TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState nextState)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			_migrationCoordinatorState = NetworkMigrationCoordinatorState.Disabled;
+			return;
+		}
+
 		if (_migrationCoordinatorState == nextState)
 		{
 			return;
@@ -2013,6 +2275,12 @@ public partial class NetworkManager
 
 	private void TransitionMigrationCoordinatorToReady()
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Disabled);
+			return;
+		}
+
 		if (_migrationCoordinatorState is NetworkMigrationCoordinatorState.Disabled
 			or NetworkMigrationCoordinatorState.Completed
 			or NetworkMigrationCoordinatorState.Failed)
@@ -2040,6 +2308,21 @@ public partial class NetworkManager
 	private bool TryInvalidateMigrationAvailability(out MigrationCheckpointDispatchStatus dispatchStatus)
 	{
 		dispatchStatus = MigrationCheckpointDispatchStatus.NotRequested;
+		if (!HostMigrationCapabilityAvailable)
+		{
+			_networkMigrationPlan = null;
+			ClearPendingMigrationPlan();
+			_standbyAckedCheckpointId = -1;
+			_migrationEligibleCheckpointId = -1;
+			ClearPendingStandbyCheckpoint();
+			TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Disabled);
+			return true;
+		}
+		if (IsActiveMigrationHandoffInProgress())
+		{
+			return true;
+		}
+
 		NetworkMigrationPlan? revokedPlan = _networkMigrationPlan ?? _pendingNetworkMigrationPlan;
 		bool isRecoveringSourcePlan = revokedPlan is not null
 			&& revokedPlan.SourceEpoch != GetCurrentAuthorityEpoch()
@@ -2078,14 +2361,17 @@ public partial class NetworkManager
 			}
 		}
 
-		TransitionMigrationCoordinatorState(_hostMigrationEnabled
-			? NetworkMigrationCoordinatorState.SelectingCandidate
-			: NetworkMigrationCoordinatorState.Disabled);
+		TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.SelectingCandidate);
 		return true;
 	}
 
 	private MigrationCheckpointDispatchStatus TryBroadcastMigrationPlanRevocation(NetworkMigrationPlan revokedPlan)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return MigrationCheckpointDispatchStatus.NotRequested;
+		}
+
 		if (_authorityMigrationSigner is null)
 		{
 			GD.PrintErr("Migration plan revocation signing failed: signer_unavailable");
@@ -2169,7 +2455,7 @@ public partial class NetworkManager
 			&& (_networkMigrationPlan is not null
 				|| _pendingNetworkMigrationPlan is not null
 				|| _standbyAckedCheckpointId >= 0
-				|| _standbyPendingCheckpointEnvelope.HasPayload
+				|| _standbyPendingCheckpointId >= 0
 				|| NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)))
 		{
 			TryInvalidateMigrationAvailability(out _);
@@ -2188,6 +2474,7 @@ public partial class NetworkManager
 		_lastStandbyCheckpointSentAt = -1.0;
 		_consecutiveUnackedCheckpoints = 0;
 		_standbyCandidateHostAddress = string.Empty;
+		_lastConfirmedCheckpointCiphertextHash = string.Empty;
 		ClearLocalStandbyCheckpointCache();
 		_networkMigrationPlan = null;
 		ClearPendingMigrationPlan();
@@ -2213,6 +2500,28 @@ public partial class NetworkManager
 		_standbyCheckpointCiphertextHash = string.Empty;
 		_standbyConfirmedCheckpointCiphertextHash = string.Empty;
 		_standbyCheckpointsById.Clear();
+		_acceptedStandbyCheckpointNonces.Reset();
+	}
+
+	private void TransferStandbyCheckpointPayloadOwnership(long checkpointId, byte[] payload)
+	{
+		if (ReferenceEquals(_standbyCheckpointPayload, payload))
+		{
+			_standbyCheckpointPayload = Array.Empty<byte>();
+		}
+		_standbyCheckpointsById.Remove(checkpointId);
+		foreach (var cached in _standbyCheckpointsById.Values)
+		{
+			if (!ReferenceEquals(cached.Payload, payload) && cached.Payload.Length > 0)
+			{
+				CryptographicOperations.ZeroMemory(cached.Payload);
+			}
+		}
+		_standbyCheckpointsById.Clear();
+		_standbyCheckpoint = null;
+		_standbyCheckpointHash = string.Empty;
+		_standbyCheckpointCiphertextHash = string.Empty;
+		_standbyConfirmedCheckpointCiphertextHash = string.Empty;
 		_acceptedStandbyCheckpointNonces.Reset();
 	}
 
@@ -2317,10 +2626,10 @@ public partial class NetworkManager
 
 	private long GetCurrentAuthorityEpoch()
 	{
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
 		{
-			_authorityEpoch = Math.Max(_authorityEpoch, gameBoard.NetworkAuthorityEpoch);
-			return gameBoard.NetworkAuthorityEpoch;
+			_authorityEpoch = Math.Max(_authorityEpoch, gameBoard.AuthorityEpoch);
+			return gameBoard.AuthorityEpoch;
 		}
 
 		return _authorityEpoch;
@@ -2334,9 +2643,9 @@ public partial class NetworkManager
 		}
 
 		_authorityEpoch = authorityEpoch;
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetReplicaEndpoint(out INetworkReplicaEndpoint gameBoard))
 		{
-			gameBoard.AdvanceNetworkAuthorityEpoch(authorityEpoch);
+			gameBoard.AdvanceAuthorityEpoch(authorityEpoch);
 		}
 	}
 
@@ -2355,7 +2664,7 @@ public partial class NetworkManager
 
 	private bool CanLocalTransportTakeOver()
 	{
-		if (!_hostMigrationEnabled
+		if (!HostMigrationCapabilityAvailable
 			|| !TryBuildLocalMigrationProbeDescriptor(out NetworkMigrationTransportDescriptor descriptor)
 			|| CreateMigrationTransport(_config.Transport) is not { } transport)
 		{
@@ -2375,6 +2684,11 @@ public partial class NetworkManager
 	private bool TryBuildLocalMigrationProbeDescriptor(out NetworkMigrationTransportDescriptor descriptor)
 	{
 		descriptor = new NetworkMigrationTransportDescriptor();
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return false;
+		}
+
 		if (_config.Transport == NetworkTransport.Lan)
 		{
 			string address = GetObservedLanAddress();
@@ -2421,6 +2735,11 @@ public partial class NetworkManager
 		out NetworkMigrationTransportDescriptor descriptor)
 	{
 		descriptor = new NetworkMigrationTransportDescriptor();
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return false;
+		}
+
 		if (_config.Transport == NetworkTransport.Lan)
 		{
 			var lan = new NetworkLanMigrationDescriptor
@@ -2462,11 +2781,16 @@ public partial class NetworkManager
 
 	private IHostMigrationTransport? CreateMigrationTransport(NetworkTransport transport)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return null;
+		}
+
 		return transport switch
 		{
 			NetworkTransport.Lan => new LanHostMigrationTransport(),
 			NetworkTransport.Steam => new SteamHostMigrationTransport(
-				GetSteamSingleton(),
+				_steamPlatform,
 				GetLastObservedSteamLobbyOwnerId,
 				TryRefreshSteamLobbyAdvertisedState),
 			_ => null,
@@ -2475,6 +2799,12 @@ public partial class NetworkManager
 
 	private void InitializeMigrationTransportState(NetworkMigrationPlan plan, double now)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			ResetMigrationTransportState();
+			return;
+		}
+
 		if (_migrationTransportAdapter is not null
 			&& _migrationTransportAdapter.Transport == plan.Transport
 			&& _migrationTransportPlanRevision == plan.PlanRevision)
@@ -2493,6 +2823,12 @@ public partial class NetworkManager
 		double now,
 		out string error)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			error = "migration_capability_unavailable";
+			return HostMigrationTransportResult.Failed;
+		}
+
 		InitializeMigrationTransportState(plan, now);
 		if (_migrationTransportAdapter is not { } transport)
 		{
@@ -2519,6 +2855,11 @@ public partial class NetworkManager
 
 	private void ArmMigrationAttemptsAfterSourceDisconnect(NetworkMigrationPlan plan, double now)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_migrationAwaitingSourceDisconnect = false;
 		_migrationStartedAt = now;
 		_nextMigrationAttemptAt = now + (IsLocalMigrationCandidate(plan)
@@ -2550,6 +2891,11 @@ public partial class NetworkManager
 
 	private void FailActiveHostMigration(NetworkMigrationFailureCode code, string error)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_activeMigrationPending = false;
 		_activeMigrationAwaitingSourceClose = true;
 		_activeMigrationDeadline = -1.0;
@@ -2576,6 +2922,11 @@ public partial class NetworkManager
 
 	private async Task FinishFailedActiveHostMigrationAsync(string message)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (!IsInsideTree())
 		{
@@ -2593,6 +2944,11 @@ public partial class NetworkManager
 
 	private bool UpdateMigratedHostMetadata(NetworkMigrationPlan plan)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return false;
+		}
+
 		string error = "migration_transport_unavailable";
 		if (_migrationTransportAdapter is { } transport
 			&& transport.UpdateMetadata(plan, out error) == HostMigrationTransportResult.Ready)
@@ -2852,13 +3208,19 @@ public partial class NetworkManager
 
 	private bool IsMigrationReadinessFenceActive()
 	{
-		return _migrationReadyEpoch >= 0
+		return HostMigrationCapabilityAvailable
+			&& _migrationReadyEpoch >= 0
 			&& _networkMigrationPlan is { } plan
 			&& plan.TargetEpoch == _migrationReadyEpoch;
 	}
 
 	private void BeginMigrationReadinessFence(NetworkMigrationPlan plan)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_migrationReadyEpoch = plan.TargetEpoch;
 		_lastCompletedMigrationReadyEpoch = -1;
 		_migrationRecoveryReadyForPeers = false;
@@ -2870,6 +3232,11 @@ public partial class NetworkManager
 		IReadOnlyCollection<NetworkAuthoritySeatControl> checkpointControls,
 		double startedAt)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		_migrationReadyEpoch = plan.TargetEpoch;
 		_lastCompletedMigrationReadyEpoch = -1;
 		_migrationRecoveryReadyForPeers = false;
@@ -2886,7 +3253,8 @@ public partial class NetworkManager
 
 	private void TryCompleteMigrationReadiness()
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| !IsMigrationReadinessFenceActive()
 			|| !_migrationRecoveryReadyForPeers
 			|| _networkMigrationPlan is not { } plan
@@ -2905,7 +3273,8 @@ public partial class NetworkManager
 
 	private void PollMigrationReadiness(double now)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| _gameMigrationRecoveryState is not { } recovery
 			|| recovery.TargetEpoch != _migrationReadyEpoch
 			|| _networkMigrationPlan is not { } plan
@@ -2937,7 +3306,8 @@ public partial class NetworkManager
 		bool timedOut,
 		IReadOnlyCollection<int> missingSeatIndices)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| !IsMigrationReadinessFenceActive()
 			|| recovery.TargetEpoch != plan.TargetEpoch
 			|| (!timedOut && (!_migrationRecoveryReadyForPeers || !recovery.IsComplete)))
@@ -2964,16 +3334,24 @@ public partial class NetworkManager
 		TransitionMigrationCoordinatorState(NetworkMigrationCoordinatorState.Completed);
 		_migrationPeerAttemptInFlight = false;
 		_migrationPeerAttemptStartedAt = -1.0;
-		if (GetTree().CurrentScene is GameBoardScene gameBoard)
+		if (TryGetPresentationEndpoint(out INetworkPresentationEndpoint gameBoard))
 		{
-			gameBoard.CompleteNetworkHostMigrationVisualState();
-			gameBoard.BeginNetworkAiProxyTurnIfNeeded();
+			gameBoard.CompleteHostMigration();
+		}
+		if (TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint authorityEndpoint))
+		{
+			authorityEndpoint.BeginAiProxyTurnIfNeeded();
 		}
 		GD.Print($"MIGRATION_READY epoch={context.AuthorityEpoch} peers={readinessPeerCount} recovered={recovery.RecoveredSeatCount} disconnected={recovery.DisconnectedSeatCount} missing={missingSeats.Count} timed_out={timedOut.ToString().ToLowerInvariant()}");
 	}
 
 	private void SendMigrationReadyToPeer(int peerId, NetworkRpcContext context)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		RpcId(
 			peerId,
 			MethodName.RpcMigrationReady,
@@ -2984,7 +3362,8 @@ public partial class NetworkManager
 
 	private void RemoveMigrationRecoverySeatAfterDisconnect(int seatIndex)
 	{
-		if (_gameMigrationRecoveryState is not { } recovery
+		if (!HostMigrationCapabilityAvailable
+			|| _gameMigrationRecoveryState is not { } recovery
 			|| recovery.TargetEpoch != _migrationReadyEpoch
 			|| !recovery.TryRemoveDisconnectedSeat(seatIndex))
 		{
@@ -2997,6 +3376,11 @@ public partial class NetworkManager
 
 	private void MarkMigrationRecoverySeatsUnavailable(IReadOnlyCollection<int> missingSeatIndices)
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
 		foreach (int seatIndex in missingSeatIndices)
 		{
 			if (!TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))

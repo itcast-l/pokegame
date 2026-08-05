@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -16,7 +18,17 @@ public partial class GameBoardScene
 		}
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		return store?.HasActiveRun == true
-			&& store.ResetBattleScopedEffects() == AdventureRunWriteResult.Succeeded;
+				&& store.ResetBattleScopedEffects() == AdventureRunWriteResult.Succeeded;
+	}
+
+	private DebugRuleFixture CreateNonTerminalAdventureDebugRuleFixture()
+	{
+		DebugRuleFixture fixture = CreateEmptyDebugRuleFixture();
+		for (int playerIndex = 0; playerIndex < fixture.PlayerScores.Count; playerIndex++)
+		{
+			fixture.PlayerScores[playerIndex] = 100;
+		}
+		return fixture;
 	}
 
 	public bool DebugAcquireAdventureUpgrade(string upgradeId)
@@ -26,7 +38,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true || runState.HasAcquiredUpgrade(upgradeId))
 		{
 			return false;
@@ -51,13 +63,13 @@ public partial class GameBoardScene
 	public bool DebugConfigureAdventureMissClimbBadgeScenario(int growthStacks)
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
+		AdventureRunReadModel? runState = store?.GetReadModel();
 		if (!ShouldUseAdventureUpgradeSystem()
 			|| player_count != 2
 			|| store == null
 			|| runState?.IsActive != true
 			|| growthStacks < 0
-			|| growthStacks > AdventureUpgradeEffectState.MaxClubMissClimbGrowthStacks)
+			|| growthStacks > AdventureRunReadModel.MaxClubMissClimbGrowthStacks)
 		{
 			return false;
 		}
@@ -81,39 +93,35 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:4"]);
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Spades:6"]);
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Diamonds:10"]);
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Clubs:J"]);
+		fixture.PlayerItemHands[MainPlayerIndex].Add(itemCard.Value);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerHands[1].Add(cards["Diamonds:9"]);
+		fixture.PlayerDecks[1].Add(cards["Clubs:8"]);
+		fixture.TableCards.Add(new TableCard(cards["Clubs:4"], true));
+
+		AdventureEffectStateSnapshot effectState = runState.Effects with
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
-		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:4"]);
-		_playerHands[MainPlayerIndex].Add(cards["Spades:6"]);
-		_playerHands[MainPlayerIndex].Add(cards["Diamonds:10"]);
-		_playerHands[MainPlayerIndex].Add(cards["Clubs:J"]);
-		_playerItemHands[MainPlayerIndex].Add(itemCard.Value);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerHands[1].Add(cards["Diamonds:9"]);
-		_playerDecks[1].Add(cards["Clubs:8"]);
-		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
-
-		runState.EffectState.ClubMissClimbGrowthStacks = growthStacks;
-		if (store.ConfigureEffectStateForDebug(runState.EffectState.Clone())
+			ClubMissClimbGrowthStacks = growthStacks,
+		};
+		if (store.ConfigureEffectStateForDebug(effectState)
 			!= AdventureRunWriteResult.Succeeded)
 		{
 			return false;
 		}
-		_currentTurnPlayerIndex = MainPlayerIndex;
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
+		{
+			return false;
+		}
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		_mainPlayerHandSelectionInputEnabled = false;
 		_selectedMainPlayerHandDisplayIndex = -1;
 		RenderPlayerCardPiles();
@@ -124,7 +132,7 @@ public partial class GameBoardScene
 
 	public int DebugGetAdventureMissClimbGrowthStacks()
 	{
-		return GetAdventureUpgradeRunState()?.EffectState.ClubMissClimbGrowthStacks ?? 0;
+		return GetAdventureUpgradeRunState()?.Effects.ClubMissClimbGrowthStacks ?? 0;
 	}
 
 	public int DebugGetAdventureMissClimbBadgeCount()
@@ -203,7 +211,7 @@ public partial class GameBoardScene
 	public bool DebugConfigureBlackLedgerCaptureProbe()
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? initialRunState = store?.GetRunState();
+		AdventureRunReadModel? initialRunState = store?.GetReadModel();
 		if (_debugBlackLedgerProbeRunning
 			|| !adventure_mode
 			|| player_count != 2
@@ -240,23 +248,20 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_tableCards.Clear();
-		_tableCards.Add(new TableCard(cards["Hearts:5"], true));
-		_tableCards.Add(new TableCard(cards["Spades:10"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			_playerDecks[playerIndex].Clear();
-			_playerHands[playerIndex].Clear();
-			_playerItemHands[playerIndex].Clear();
-		}
-		_playerHands[1].Add(cards["Diamonds:5"]);
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.TableCards.Add(new TableCard(cards["Hearts:5"], true));
+		fixture.TableCards.Add(new TableCard(cards["Spades:10"], true));
+		fixture.TableCards.Add(new TableCard(cards["Clubs:4"], true));
+		fixture.PlayerHands[1].Add(cards["Diamonds:5"]);
 		// Adventure capture damage for this fixed 10-and-4 middle-card setup.
 		_debugBlackLedgerExpectedDamage = 14;
-		_playerScores[MainPlayerIndex] = 100;
-		_playerScores[1] = 100;
-		_winnerPlayerIndex = -1;
-		_currentTurnPlayerIndex = 1;
+		fixture.PlayerScores[MainPlayerIndex] = 100;
+		fixture.PlayerScores[1] = 100;
+		fixture.CurrentTurnSeat = 1;
+		if (!CommitDebugRuleFixture(fixture))
+		{
+			return false;
+		}
 		_isOpeningDealAnimationPlaying = false;
 		RenderPlayerHands();
 		RenderPlayerCardPiles();
@@ -338,26 +343,19 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		fixture.PlayerHands[1].Add(cards["Diamonds:9"]);
+		fixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			return false;
 		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Diamonds:9"]);
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -384,27 +382,20 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		fixture.PlayerHands[1].Add(cards["Diamonds:9"]);
+		fixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+		fixture.TableCards.Add(new TableCard(cards["Clubs:2"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			return false;
 		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Diamonds:9"]);
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -414,7 +405,7 @@ public partial class GameBoardScene
 	public bool DebugConfigureAdventureQuestionRewardTimingScenario()
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? initialRunState = store?.GetRunState();
+		AdventureRunReadModel? initialRunState = store?.GetReadModel();
 		if (!adventure_mode
 			|| player_count != 2
 			|| store == null
@@ -442,11 +433,14 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AdventureUpgradeRunState runState = store.GetRunState();
-		runState.EffectState.QuestionRewardCount = 9;
-		runState.EffectState.PermanentCaptureDamageBonus = 4;
-		runState.EffectState.FinalDoubleCaptureDamageActive = false;
-		if (store.ConfigureEffectStateForDebug(runState.EffectState.Clone())
+		AdventureRunReadModel runState = store.GetReadModel();
+		AdventureEffectStateSnapshot timingEffectState = runState.Effects with
+		{
+			QuestionRewardCount = 9,
+			PermanentCaptureDamageBonus = 4,
+			FinalDoubleCaptureDamageActive = false,
+		};
+		if (store.ConfigureEffectStateForDebug(timingEffectState)
 			!= AdventureRunWriteResult.Succeeded)
 		{
 			return false;
@@ -456,13 +450,13 @@ public partial class GameBoardScene
 
 	public bool DebugConfigureAdventureQuestionRewardTimingFollowUpCapture()
 	{
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true
 			|| !runState.HasAcquiredUpgrade("diamonds_question_mark_interest")
 			|| !runState.HasAcquiredUpgrade("diamonds_final_double")
-			|| runState.EffectState.QuestionRewardCount != 10
-			|| runState.EffectState.PermanentCaptureDamageBonus != 5
-			|| !runState.EffectState.FinalDoubleCaptureDamageActive)
+		|| runState.Effects.QuestionRewardCount != 10
+			|| runState.Effects.PermanentCaptureDamageBonus != 5
+			|| !runState.Effects.FinalDoubleCaptureDamageActive)
 		{
 			return false;
 		}
@@ -473,7 +467,7 @@ public partial class GameBoardScene
 	public bool DebugConfigureAdventureDoubleQuestionRewardCapacityScenario()
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? initialRunState = store?.GetRunState();
+		AdventureRunReadModel? initialRunState = store?.GetReadModel();
 		if (!adventure_mode
 			|| player_count != 2
 			|| store == null
@@ -516,29 +510,28 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			_playerDecks[playerIndex].Clear();
-			_playerHands[playerIndex].Clear();
-			_playerItemHands[playerIndex].Clear();
-		}
-		_tableCards.Clear();
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
 		for (int handIndex = 1; handIndex < MaxTotalHandCards; handIndex++)
 		{
-			_playerHands[MainPlayerIndex].Add(cards["Spades:A"]);
+			fixture.PlayerHands[MainPlayerIndex].Add(cards["Spades:A"]);
 		}
-		_playerHands[1].Add(cards["Diamonds:9"]);
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-		_tableCards.Add(new TableCard(null, true, questionMark));
-		_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
-		_adventureMainPlayerSuccessfulCapturesThisTurn = 1;
-		_pendingItemAttachmentRewards.Clear();
-		_currentTurnPlayerIndex = MainPlayerIndex;
+		fixture.PlayerHands[1].Add(cards["Diamonds:9"]);
+		fixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+		fixture.TableCards.Add(new TableCard(null, true, questionMark));
+		fixture.TableCards.Add(new TableCard(cards["Diamonds:3"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
+		{
+			return false;
+		}
+		TryUpdateMatchFlowState(state => state with
+		{
+			SuccessfulCapturesThisTurn = 1,
+		});
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -548,15 +541,15 @@ public partial class GameBoardScene
 	public Godot.Collections.Dictionary DebugGetAdventureQuestionRewardTimingState()
 	{
 		var result = new Godot.Collections.Dictionary();
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return result;
 		}
 
-		result["question_reward_count"] = runState.EffectState.QuestionRewardCount;
-		result["permanent_capture_damage_bonus"] = runState.EffectState.PermanentCaptureDamageBonus;
-		result["final_double_capture_damage_active"] = runState.EffectState.FinalDoubleCaptureDamageActive;
+		result["question_reward_count"] = runState.Effects.QuestionRewardCount;
+		result["permanent_capture_damage_bonus"] = runState.Effects.PermanentCaptureDamageBonus;
+		result["final_double_capture_damage_active"] = runState.Effects.FinalDoubleCaptureDamageActive;
 		return result;
 	}
 
@@ -585,32 +578,24 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
-		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Diamonds:9"]);
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		fixture.PlayerHands[1].Add(cards["Diamonds:9"]);
+		fixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
 		if (questionMark.HasValue)
 		{
-			_tableCards.Add(new TableCard(null, true, questionMark));
+			fixture.TableCards.Add(new TableCard(null, true, questionMark));
 		}
-		_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
-		_pendingItemAttachmentRewards.Clear();
-		_currentTurnPlayerIndex = MainPlayerIndex;
+		fixture.TableCards.Add(new TableCard(cards["Diamonds:3"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
+		{
+			return false;
+		}
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -627,15 +612,14 @@ public partial class GameBoardScene
 			return result;
 		}
 
-		var tableCards = new List<CaptureScoringRules.TableCard>(ToCaptureScoringTableCards())
+		var tableCards = new List<CaptureScoringTableCard>(ToCaptureScoringTableCards())
 		{
 			ToCaptureScoringTableCard(new TableCard(_playerHands[MainPlayerIndex][0], true)),
 		};
 		var rawPoints = new List<int>();
 		var resolvedPoints = new List<int>();
 		var scoringTableIndexes = new List<int>();
-		bool includeEndpoints = AdventureUpgradeEffectService.ResolveClubCaptureScoring(
-			GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds() ?? Array.Empty<string>())
+		bool includeEndpoints = (GetAdventureUpgradeRunState()?.ResolveClubCaptureScoring() ?? default)
 			.IncludeCaptureEndpointsInScoring;
 		int endpointPoints = BuildAdventureCaptureDamageCardPointLists(
 			tableCards,
@@ -689,27 +673,20 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Diamonds:8"]);
+		fixture.PlayerHands[1].Add(cards["Spades:7"]);
+		fixture.TableCards.Add(new TableCard(cards["Hearts:9"], true));
+		fixture.TableCards.Add(new TableCard(cards["Clubs:2"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			return false;
 		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Diamonds:8"]);
-		_playerHands[1].Add(cards["Spades:7"]);
-		_tableCards.Add(new TableCard(cards["Hearts:9"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -737,28 +714,21 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		fixture.PlayerHands[1].Add(cards["Diamonds:10"]);
+		fixture.TableCards.Add(new TableCard(cards["Spades:2"], true));
+		fixture.TableCards.Add(new TableCard(cards["Diamonds:7"], false));
+		fixture.TableCards.Add(new TableCard(cards["Clubs:9"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			return false;
 		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Diamonds:10"]);
-		_tableCards.Add(new TableCard(cards["Spades:2"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:7"], false));
-		_tableCards.Add(new TableCard(cards["Clubs:9"], true));
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -785,27 +755,20 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
+		fixture.PlayerHands[1].Add(cards["Diamonds:9"]);
+		fixture.TableCards.Add(new TableCard(cards["Clubs:2"], true));
+		fixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			return false;
 		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Diamonds:9"]);
-		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -834,29 +797,22 @@ public partial class GameBoardScene
 		}
 
 		ClearAdventureTraceHuntMarkerIntro();
-		_adventureTraceHuntMarkedTableCard = null;
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
-		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+		SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
+		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
+		fixture.PlayerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
+		fixture.PlayerDecks[MainPlayerIndex].Add(cards["Hearts:7"]);
+		fixture.PlayerHands[1].Add(cards["Clubs:A"]);
+		fixture.TableCards.Add(new TableCard(cards["Spades:2"], true));
+		fixture.TableCards.Add(new TableCard(cards["Diamonds:7"], false));
+		fixture.TableCards.Add(new TableCard(cards["Clubs:5"], true));
+		fixture.CurrentTurnSeat = MainPlayerIndex;
+		if (!CommitDebugRuleFixture(fixture))
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
+			return false;
 		}
-
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Hearts:7"]);
-		_playerHands[1].Add(cards["Clubs:A"]);
-		_tableCards.Add(new TableCard(cards["Spades:2"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:7"], false));
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
-		_winnerPlayerIndex = -1;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -919,7 +875,10 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		MoveLeafySeadragonBladeBreakTableCardToDeck(1, markedTableCardIndex);
+		MoveLeafySeadragonBladeBreakTableCardToDeck(
+			1,
+			markedTableCardIndex,
+			_turnSequenceGeneration);
 		RenderTableCards();
 		return true;
 	}
@@ -940,7 +899,16 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerHands[MainPlayerIndex][handIndex] = _playerHands[MainPlayerIndex][handIndex].WithAttachedItemEffect(itemCardId.Trim());
+		if (!TrySubmitAttachItemToHandCardRuleCommand(
+			MainPlayerIndex,
+			handIndex,
+			itemCardId.Trim(),
+			ImmutableArray<int>.Empty,
+			_turnSequenceGeneration,
+			out _))
+		{
+			return false;
+		}
 		RenderPlayerHands();
 		return true;
 	}
@@ -952,19 +920,21 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return false;
 		}
 
-		AdventureEnemyMissEffectResult effectResult = AdventureUpgradeEffectService.ResolveEnemyMissEffects(
-			runState.GetAcquiredUpgradeIds(),
+		AdventureEnemyMissEffectResult effectResult = runState.ResolveEnemyMissEffects(
 			tableCardCountAfterMiss,
 			hadOldTableCardsBeforeMiss);
-		_adventureEnemyNextBaseCardFacesUp = effectResult.NextCardFacesUp;
-		_adventureEnemyNextCardInsertMode = effectResult.InsertMode;
-		_adventureEnemyNextCaptureDamageDelta = effectResult.NextCaptureDamageDelta;
+		TryUpdateMatchFlowState(state => state with
+		{
+			PendingBaseCardFacesUp = effectResult.NextCardFacesUp,
+			PendingCardPlacement = (PendingCardPlacementMode)(int)effectResult.InsertMode,
+			PendingCaptureDamageDelta = effectResult.NextCaptureDamageDelta,
+		});
 		if (effectResult.GrantMainPlayerExtraBaseAction)
 		{
 			TryGrantAdventureMainPlayerExtraBaseCardAction(
@@ -987,7 +957,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
 			return false;
@@ -1005,7 +975,7 @@ public partial class GameBoardScene
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureUpgradeRunState? runState = store?.GetRunState();
+		AdventureRunReadModel? runState = store?.GetReadModel();
 		if (runState?.IsActive != true)
 		{
 			return false;
@@ -1022,7 +992,10 @@ public partial class GameBoardScene
 		}
 		if (commitResult.CommitBandageAtRealTurnEnd)
 		{
-			_state.AdventureExtraActionQueue.RegisterMissBandageForRealTurnEnd();
+			TrySubmitRegisterRealTurnEndMarkerRuleCommand(
+				MainPlayerIndex,
+				AdventureMissBandageRealTurnEndMarkerId,
+				_turnSequenceGeneration);
 		}
 		RenderPlayerHands();
 		if (commitResult.EffectResult.GrantExtraBaseCardAction)
@@ -1036,17 +1009,17 @@ public partial class GameBoardScene
 
 	public bool DebugGetAdventureEnemyNextCardFacesUp()
 	{
-		return _adventureEnemyNextBaseCardFacesUp;
+		return CurrentMatchFlowState.PendingBaseCardFacesUp;
 	}
 
 	public string DebugGetAdventureEnemyNextCardInsertModeName()
 	{
-		return _adventureEnemyNextCardInsertMode.ToString();
+		return GetPendingAdventureEnemyCardInsertMode().ToString();
 	}
 
 	public int DebugGetAdventureEnemyNextCaptureDamageDelta()
 	{
-		return _adventureEnemyNextCaptureDamageDelta;
+		return CurrentMatchFlowState.PendingCaptureDamageDelta;
 	}
 
 	public bool DebugHasAdventurePendingExtraBaseCardAction()
@@ -1083,7 +1056,7 @@ public partial class GameBoardScene
 
 	public bool DebugHasAdventureQuestionRejudgeUsed()
 	{
-		return _adventureQuestionRejudgeUsedThisBattle;
+		return CurrentMatchFlowState.QuestionRejudgeUsedThisBattle;
 	}
 
 	public void DebugForceNextPendingHandLimitDiscardAiFallback()

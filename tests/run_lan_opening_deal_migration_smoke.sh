@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/tests/godot_test_env.sh"
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
+export CODEX_LAN_SKIP_MIGRATION_PORT_PROBE=1
 
 if [[ -n "${GODOT_BIN:-}" ]]; then
 	GODOT_CMD="$GODOT_BIN"
@@ -37,17 +38,17 @@ run_case() {
 	codex_setup_godot_test_home "$tmp_dir"
 	local host_log="$tmp_dir/host.log"
 	local client_log="$tmp_dir/client.log"
-	CODEX_OPENING_MIGRATION_FIXTURE=1 CODEX_OPENING_DEAL_FAULT_POINT="$point" \
+	CODEX_LAN_MIGRATION_FIXTURE=1 CODEX_OPENING_MIGRATION_FIXTURE=1 CODEX_OPENING_DEAL_FAULT_POINT="$point" \
 	CODEX_LAN_MATCH_SEED=20260720 CODEX_LAN_MIGRATION_ADDRESS=127.0.0.1 \
-	CODEX_TEST_STABLE_USER_ID="opening-$point-seat-0" \
-	"$GODOT_CMD" --headless --path "$ROOT_DIR" \
+	CODEX_TEST_STABLE_USER_ID="opening-$point-seat-0" DECKLAND_TEST_MUTE_AUDIO=1 \
+	"$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
 		--script res://tests/LanOpeningDealMigrationHost.gd >"$host_log" 2>&1 &
 	local host_pid=$!
 	sleep 1
-	CODEX_OPENING_MIGRATION_FIXTURE=1 CODEX_OPENING_DEAL_FAULT_POINT="$point" \
+	CODEX_LAN_MIGRATION_FIXTURE=1 CODEX_OPENING_MIGRATION_FIXTURE=1 CODEX_OPENING_DEAL_FAULT_POINT="$point" \
 	CODEX_LAN_MATCH_SEED=20260720 CODEX_LAN_MIGRATION_ADDRESS=127.0.0.1 \
-	CODEX_TEST_STABLE_USER_ID="opening-$point-seat-1" \
-	"$GODOT_CMD" --headless --path "$ROOT_DIR" \
+	CODEX_TEST_STABLE_USER_ID="opening-$point-seat-1" DECKLAND_TEST_MUTE_AUDIO=1 \
+	"$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
 		--script res://tests/LanOpeningDealMigrationClient.gd -- --point="$point" >"$client_log" 2>&1 &
 	local client_pid=$!
 
@@ -72,7 +73,8 @@ run_case() {
 	if [[ "$status" -ne 0 ]] \
 			|| ! grep -Fq "OPENING_DEAL_STALE_CALLBACK_RELEASED point=$point" "$client_log" \
 			|| ! grep -Fq "OPENING_DEAL_MIGRATION_CLIENT_DONE point=$point" "$client_log" \
-			|| grep -Fq "SCRIPT ERROR" "$client_log"; then
+			|| grep -Fq "SCRIPT ERROR" "$client_log" \
+			|| grep -Fq "ERROR: System." "$client_log"; then
 		echo "Opening-deal migration assertions failed: $point" >&2
 		cat "$host_log" >&2 || true
 		cat "$client_log" >&2 || true

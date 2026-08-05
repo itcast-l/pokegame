@@ -121,7 +121,7 @@ public partial class GameBoardScene
 	public int solo_ai_difficulty
 	{
 		get => _soloAiDifficulty;
-		set => _soloAiDifficulty = Mathf.Clamp(value, (int)SoloAiRules.Difficulty.Low, (int)SoloAiRules.Difficulty.High);
+		set => _soloAiDifficulty = Mathf.Clamp(value, (int)SoloAiDifficulty.Low, (int)SoloAiDifficulty.High);
 	}
 
 	[Export(PropertyHint.Range, "0,3,1")]

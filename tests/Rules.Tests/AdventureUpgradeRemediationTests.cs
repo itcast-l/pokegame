@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Deckland.Rules;
 
 internal static partial class Program
 {
@@ -27,165 +29,165 @@ internal static partial class Program
 
 	private static void ExtraActionGrantIsConsumedOnlyWhenActionIsAccepted()
 	{
-		var queue = new AdventureExtraActionQueueState();
-		AdventureExtraActionGrantResult granted = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("source_a", ResumeNormalTurnAfterChain: false));
+		var queue = new ExtraActionQueueState();
+		ExtraActionGrantResult granted = queue.TryGrant(
+			new ExtraActionGrantRequest("source_a", ResumeNormalTurnAfterChain: false));
 		True(granted.Granted);
 		Equal(0, queue.ExtraActionsExecutedThisRealTurn);
 		Equal(1, queue.QueuedGrantCount);
 
-		AdventureExtraActionAcceptResult noGrant = queue.TryAccept(null);
-		Equal(AdventureExtraActionAcceptStatus.NoGrant, noGrant.Status);
+		ExtraActionAcceptResult noGrant = queue.TryAccept(null);
+		Equal(ExtraActionAcceptStatus.NoGrant, noGrant.Status);
 		Equal(0, queue.ExtraActionsExecutedThisRealTurn);
 		Equal(1, queue.QueuedGrantCount);
 
-		AdventureExtraActionGrant expected = granted.Grant!.Value;
-		var mismatched = expected with { SourceUpgradeId = "other_source" };
-		AdventureExtraActionAcceptResult mismatch = queue.TryAccept(mismatched);
-		Equal(AdventureExtraActionAcceptStatus.QueueMismatch, mismatch.Status);
+		ExtraActionGrantState expected = granted.Grant!.Value;
+		var mismatched = expected with { SourceId = "other_source" };
+		ExtraActionAcceptResult mismatch = queue.TryAccept(mismatched);
+		Equal(ExtraActionAcceptStatus.QueueMismatch, mismatch.Status);
 		Equal(0, queue.ExtraActionsExecutedThisRealTurn);
 		Equal(1, queue.QueuedGrantCount);
 
-		AdventureExtraActionAcceptResult accepted = queue.TryAccept(expected);
+		ExtraActionAcceptResult accepted = queue.TryAccept(expected);
 		True(accepted.Accepted);
 		Equal(1, queue.ExtraActionsExecutedThisRealTurn);
 		Equal(0, queue.QueuedGrantCount);
 		queue.FinishActionExecution(accepted.Grant);
-		AdventureExtraActionCompletionResult completion = queue.Complete(expected);
-		Equal(AdventureExtraActionCompletionKind.FollowActionResult, completion.Kind);
+		ExtraActionCompletionResult completion = queue.Complete(expected);
+		Equal(ExtraActionCompletionKind.FollowActionResult, completion.Kind);
 		Equal(0L, queue.ActiveRootChainId);
 	}
 
 	private static void ExtraActionQueueEnforcesEightActionsPerRealTurn()
 	{
-		var queue = new AdventureExtraActionQueueState();
+		var queue = new ExtraActionQueueState();
 		for (int actionIndex = 0;
-			actionIndex < AdventureExtraActionQueueState.DefaultMaxExtraActionsPerRealTurn;
+			actionIndex < ExtraActionQueueState.DefaultMaxExtraActionsPerRealTurn;
 			actionIndex++)
 		{
-			AdventureExtraActionGrantResult granted = queue.TryGrant(
-				new AdventureExtraActionGrantRequest(
+			ExtraActionGrantResult granted = queue.TryGrant(
+				new ExtraActionGrantRequest(
 					$"budget_source_{actionIndex}",
 					ResumeNormalTurnAfterChain: false));
 			True(granted.Granted);
-			AdventureExtraActionAcceptResult accepted = queue.TryAccept(granted.Grant);
+			ExtraActionAcceptResult accepted = queue.TryAccept(granted.Grant);
 			True(accepted.Accepted);
 			queue.FinishActionExecution(accepted.Grant);
 			Equal(
-				AdventureExtraActionCompletionKind.FollowActionResult,
+				ExtraActionCompletionKind.FollowActionResult,
 				queue.Complete(accepted.Grant!.Value).Kind);
 		}
 
 		Equal(8, queue.ExtraActionsExecutedThisRealTurn);
-		AdventureExtraActionGrantResult exhausted = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("ninth_source", ResumeNormalTurnAfterChain: false));
-		Equal(AdventureExtraActionGrantStatus.ExtraActionBudgetExhausted, exhausted.Status);
+		ExtraActionGrantResult exhausted = queue.TryGrant(
+			new ExtraActionGrantRequest("ninth_source", ResumeNormalTurnAfterChain: false));
+		Equal(ExtraActionGrantStatus.ExtraActionBudgetExhausted, exhausted.Status);
 		False(queue.HasPendingGrant);
 
 		queue.BeginRealTurn();
-		AdventureExtraActionGrantResult nextTurn = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("next_turn_source", ResumeNormalTurnAfterChain: false));
+		ExtraActionGrantResult nextTurn = queue.TryGrant(
+			new ExtraActionGrantRequest("next_turn_source", ResumeNormalTurnAfterChain: false));
 		True(nextTurn.Granted);
 	}
 
 	private static void ExtraActionRootChainEnforcesThirtyTwoEvents()
 	{
-		var queue = new AdventureExtraActionQueueState(
+		var queue = new ExtraActionQueueState(
 			maxExtraActionsPerRealTurn: 64,
 			maxEventsPerRootChain: 32);
-		AdventureExtraActionGrantResult root = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("root_source", ResumeNormalTurnAfterChain: true));
-		AdventureExtraActionAcceptResult acceptedRoot = queue.TryAccept(root.Grant);
+		ExtraActionGrantResult root = queue.TryGrant(
+			new ExtraActionGrantRequest("root_source", ResumeNormalTurnAfterChain: true));
+		ExtraActionAcceptResult acceptedRoot = queue.TryAccept(root.Grant);
 		True(acceptedRoot.Accepted);
 
 		for (int eventIndex = 1; eventIndex < 32; eventIndex++)
 		{
 			True(queue.TryGrant(
-				new AdventureExtraActionGrantRequest(
+				new ExtraActionGrantRequest(
 					$"root_event_{eventIndex}",
 					ResumeNormalTurnAfterChain: false)).Granted);
 		}
 
-		AdventureExtraActionGrantResult exhausted = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("root_event_32", ResumeNormalTurnAfterChain: false));
-		Equal(AdventureExtraActionGrantStatus.RootEventBudgetExhausted, exhausted.Status);
+		ExtraActionGrantResult exhausted = queue.TryGrant(
+			new ExtraActionGrantRequest("root_event_32", ResumeNormalTurnAfterChain: false));
+		Equal(ExtraActionGrantStatus.RootEventBudgetExhausted, exhausted.Status);
 		Equal(32, exhausted.RootEventCount);
 		False(queue.HasPendingGrant);
 		queue.FinishActionExecution(acceptedRoot.Grant);
-		AdventureExtraActionCompletionResult completion = queue.Complete(acceptedRoot.Grant!.Value);
-		Equal(AdventureExtraActionCompletionKind.ResumeNormalTurn, completion.Kind);
+		ExtraActionCompletionResult completion = queue.Complete(acceptedRoot.Grant!.Value);
+		Equal(ExtraActionCompletionKind.ResumeNormalTurn, completion.Kind);
 		Equal(0L, queue.ActiveRootChainId);
 	}
 
 	private static void ExtraActionRootChainBlocksSourceReentryAndInheritsResume()
 	{
-		var queue = new AdventureExtraActionQueueState();
-		AdventureExtraActionGrantResult root = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: true));
-		AdventureExtraActionAcceptResult acceptedRoot = queue.TryAccept(root.Grant);
+		var queue = new ExtraActionQueueState();
+		ExtraActionGrantResult root = queue.TryGrant(
+			new ExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: true));
+		ExtraActionAcceptResult acceptedRoot = queue.TryAccept(root.Grant);
 		True(acceptedRoot.Accepted);
 
-		AdventureExtraActionGrantResult reentry = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: false));
-		Equal(AdventureExtraActionGrantStatus.ReentryBlocked, reentry.Status);
+		ExtraActionGrantResult reentry = queue.TryGrant(
+			new ExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: false));
+		Equal(ExtraActionGrantStatus.ReentryBlocked, reentry.Status);
 
-		AdventureExtraActionGrantResult derived = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("continue", ResumeNormalTurnAfterChain: false));
+		ExtraActionGrantResult derived = queue.TryGrant(
+			new ExtraActionGrantRequest("continue", ResumeNormalTurnAfterChain: false));
 		True(derived.Granted);
 		True(derived.Grant!.Value.ResumeNormalTurnAfterChain);
 		Equal(root.RootChainId, derived.RootChainId);
-		AdventureExtraActionAcceptResult duplicateCallback = queue.TryAccept(derived.Grant);
-		Equal(AdventureExtraActionAcceptStatus.ActionInProgress, duplicateCallback.Status);
+		ExtraActionAcceptResult duplicateCallback = queue.TryAccept(derived.Grant);
+		Equal(ExtraActionAcceptStatus.ActionInProgress, duplicateCallback.Status);
 		Equal(1, queue.QueuedGrantCount);
 
 		queue.FinishActionExecution(acceptedRoot.Grant);
 		Equal(
-			AdventureExtraActionCompletionKind.ContinueChain,
+			ExtraActionCompletionKind.ContinueChain,
 			queue.Complete(acceptedRoot.Grant!.Value).Kind);
-		AdventureExtraActionAcceptResult acceptedDerived = queue.TryAccept(derived.Grant);
+		ExtraActionAcceptResult acceptedDerived = queue.TryAccept(derived.Grant);
 		True(acceptedDerived.Accepted);
 		queue.FinishActionExecution(acceptedDerived.Grant);
 		Equal(
-			AdventureExtraActionCompletionKind.ResumeNormalTurn,
+			ExtraActionCompletionKind.ResumeNormalTurn,
 			queue.Complete(acceptedDerived.Grant!.Value).Kind);
 	}
 
 	private static void ExtraActionAbortClearsChainAndPreservesNormalTurnPromise()
 	{
-		var queue = new AdventureExtraActionQueueState();
-		AdventureExtraActionGrantResult first = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: true));
+		var queue = new ExtraActionQueueState();
+		ExtraActionGrantResult first = queue.TryGrant(
+			new ExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: true));
 		True(first.Granted);
 		True(queue.TryGrant(
-			new AdventureExtraActionGrantRequest("derived", ResumeNormalTurnAfterChain: false)).Granted);
+			new ExtraActionGrantRequest("derived", ResumeNormalTurnAfterChain: false)).Granted);
 
-		AdventureExtraActionAbortResult aborted = queue.Abort();
+		ExtraActionAbortResult aborted = queue.Abort();
 		True(aborted.HadActiveRootChain);
 		True(aborted.ResumeNormalTurn);
 		Equal(2, aborted.ClearedGrantCount);
 		False(queue.HasPendingGrant);
 		Equal(0L, queue.ActiveRootChainId);
 
-		AdventureExtraActionGrantResult nextRoot = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("later", ResumeNormalTurnAfterChain: false));
+		ExtraActionGrantResult nextRoot = queue.TryGrant(
+			new ExtraActionGrantRequest("later", ResumeNormalTurnAfterChain: false));
 		True(nextRoot.Granted);
 		False(first.RootChainId == nextRoot.RootChainId);
 	}
 
 	private static void ContinueBranchIsLimitedOncePerRealTurn()
 	{
-		var queue = new AdventureExtraActionQueueState();
-		AdventureExtraActionGrantRequest request = new(
+		var queue = new ExtraActionQueueState();
+		ExtraActionGrantRequest request = new(
 			"clubs_continue_branch",
 			ResumeNormalTurnAfterChain: false,
 			OncePerRealTurn: true);
-		AdventureExtraActionGrantResult first = queue.TryGrant(request);
-		AdventureExtraActionAcceptResult accepted = queue.TryAccept(first.Grant);
+		ExtraActionGrantResult first = queue.TryGrant(request);
+		ExtraActionAcceptResult accepted = queue.TryAccept(first.Grant);
 		queue.FinishActionExecution(accepted.Grant);
 		queue.Complete(accepted.Grant!.Value);
 
 		Equal(
-			AdventureExtraActionGrantStatus.OncePerRealTurnBlocked,
+			ExtraActionGrantStatus.OncePerRealTurnBlocked,
 			queue.TryGrant(request).Status);
 		queue.BeginRealTurn();
 		True(queue.TryGrant(request).Granted);
@@ -193,25 +195,26 @@ internal static partial class Program
 
 	private static void MissBandageCommitsOnlyAtRealTurnEnd()
 	{
-		var queue = new AdventureExtraActionQueueState();
-		queue.RegisterMissBandageForRealTurnEnd();
-		True(queue.PendingMissBandageRegistration);
+		const string markerId = "adventure.miss_bandage";
+		var queue = new ExtraActionQueueState();
+		True(queue.RegisterRealTurnEndMarker(markerId));
+		True(queue.HasPendingRealTurnEndMarker(markerId));
 
 		queue.BeginRealTurn();
-		True(queue.PendingMissBandageRegistration);
-		AdventureExtraActionGrantResult intercept = queue.TryGrant(
-			new AdventureExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: true));
+		True(queue.HasPendingRealTurnEndMarker(markerId));
+		ExtraActionGrantResult intercept = queue.TryGrant(
+			new ExtraActionGrantRequest("intercept", ResumeNormalTurnAfterChain: true));
 		True(intercept.Granted);
 		True(queue.Abort().ResumeNormalTurn);
-		True(queue.PendingMissBandageRegistration);
+		True(queue.HasPendingRealTurnEndMarker(markerId));
 
-		True(queue.EndRealTurn());
-		False(queue.PendingMissBandageRegistration);
-		False(queue.EndRealTurn());
+		Equal(markerId, queue.EndRealTurn().Single());
+		False(queue.HasPendingRealTurnEndMarker(markerId));
+		True(queue.EndRealTurn().IsEmpty);
 
-		queue.RegisterMissBandageForRealTurnEnd();
+		queue.RegisterRealTurnEndMarker(markerId);
 		queue.Reset();
-		False(queue.EndRealTurn());
+		True(queue.EndRealTurn().IsEmpty);
 	}
 
 	private static void CaptureResolutionContextDeduplicatesExtensionsByStableIdentity()
@@ -378,7 +381,7 @@ internal static partial class Program
 			"ApplyShuffledTableCards(shuffledTableCards)",
 			StringComparison.Ordinal);
 		int hangLeftIndex = method.IndexOf(
-			"_tableCards.Insert(0, playedTableCard)",
+			"TrySubmitMoveTableCardRuleCommand(",
 			StringComparison.Ordinal);
 		True(stableReferenceIndex >= 0);
 		True(shuffledApplyIndex > stableReferenceIndex);
@@ -403,13 +406,13 @@ internal static partial class Program
 
 		string method = source[methodStart..methodEnd];
 		int queueEndIndex = method.IndexOf(
-			"AdventureExtraActionQueue.EndRealTurn()",
+			"TrySubmitEndRealTurnRuleCommand(",
 			StringComparison.Ordinal);
 		int transactionIndex = method.IndexOf(
 			"store.ResolveRealTurnEnd(commitMissBandage)",
 			StringComparison.Ordinal);
 		int captureOrdinalResetIndex = method.IndexOf(
-			"_adventureMainPlayerSuccessfulCapturesThisTurn = 0",
+			"SuccessfulCapturesThisTurn = 0",
 			StringComparison.Ordinal);
 		True(transactionIndex >= 0);
 		True(queueEndIndex >= 0);
@@ -535,7 +538,7 @@ internal static partial class Program
 			SourceUpgradeId: string.Empty);
 	}
 
-	private static CaptureResolutionContext CreatePostCaptureTestContext(
+	private static AdventureCaptureResolutionFacts CreatePostCaptureTestContext(
 		bool capturedOnlyVisibleEndpoints = false,
 		bool triggeredAttachment = false)
 	{
@@ -564,6 +567,6 @@ internal static partial class Program
 			AdventureCaptureMatchSource.Rank,
 			triggeredAttachment
 				? new[] { "double" }
-				: Array.Empty<string>());
+				: Array.Empty<string>()).ToRuleFacts();
 	}
 }

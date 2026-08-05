@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -105,13 +107,22 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Diamonds:9"]);
+		ImmutableArray<PlayerStateSnapshot> players = ImmutableArray.Create(
+			CreateScriptedPlayerState(
+				MainPlayerIndex,
+				new[] { cards["Spades:A"] },
+				new[] { cards["Hearts:5"] }),
+			CreateScriptedPlayerState(
+				1,
+				Array.Empty<PlayingCard>(),
+				new[] { cards["Diamonds:9"] }));
+		ImmutableArray<TableCardState> tableCards = ImmutableArray.Create(
+			ToRuleTableCardState(new TableCard(cards["Clubs:5"], true)));
+		if (!TryInitializeScriptedRuleMatch(players, tableCards))
+		{
+			return false;
+		}
 
-		_tableCards.Add(new TableCard(cards["Clubs:5"], true));
-
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		return true;
 	}
@@ -145,25 +156,46 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:10"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Spades:A"]);
-		_playerHands[1].Add(cards["Clubs:3"]);
-		_playerDecks[1].Add(cards["Diamonds:4"]);
+		ImmutableArray<PlayerStateSnapshot> players = ImmutableArray.Create(
+			CreateScriptedPlayerState(
+				MainPlayerIndex,
+				new[] { cards["Spades:A"] },
+				new[] { cards["Hearts:10"] }),
+			CreateScriptedPlayerState(
+				1,
+				new[] { cards["Diamonds:4"] },
+				new[] { cards["Clubs:3"] }));
+		ImmutableArray<TableCardState> tableCards = ImmutableArray.Create(
+			ToRuleTableCardState(new TableCard(cards["Clubs:10"], true)),
+			ToRuleTableCardState(new TableCard(cards["Diamonds:3"], false)),
+			ToRuleTableCardState(new TableCard(cards["Spades:4"], true)),
+			ToRuleTableCardState(new TableCard(cards["Hearts:5"], false)),
+			ToRuleTableCardState(new TableCard(cards["Clubs:6"], true)),
+			ToRuleTableCardState(new TableCard(cards["Diamonds:8"], false)),
+			ToRuleTableCardState(new TableCard(cards["Spades:7"], true)),
+			ToRuleTableCardState(new TableCard(cards["Hearts:9"], false)),
+			ToRuleTableCardState(new TableCard(cards["Clubs:2"], true)),
+			ToRuleTableCardState(new TableCard(cards["Clubs:A"], false)));
+		if (!TryInitializeScriptedRuleMatch(players, tableCards))
+		{
+			return false;
+		}
 
-		_tableCards.Add(new TableCard(cards["Clubs:10"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:3"], false));
-		_tableCards.Add(new TableCard(cards["Spades:4"], true));
-		_tableCards.Add(new TableCard(cards["Hearts:5"], false));
-		_tableCards.Add(new TableCard(cards["Clubs:6"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:8"], false));
-		_tableCards.Add(new TableCard(cards["Spades:7"], true));
-		_tableCards.Add(new TableCard(cards["Hearts:9"], false));
-		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:A"], false));
-
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		return true;
+	}
+
+	private static PlayerStateSnapshot CreateScriptedPlayerState(
+		int seat,
+		IReadOnlyList<PlayingCard> deck,
+		IReadOnlyList<PlayingCard> hand)
+	{
+		return new PlayerStateSnapshot(
+			seat,
+			deck.Select(ToRuleCardState).ToImmutableArray(),
+			hand.Select(ToRuleCardState).ToImmutableArray(),
+			ImmutableArray<LogicalItemState>.Empty,
+			Score: 0);
 	}
 
 	public int DebugGetTableCardCount()
@@ -223,7 +255,7 @@ public partial class GameBoardScene
 			return 0;
 		}
 
-		return PotentialCaptureRules.GetPotentialNormalCaptureCount(
+		return MatchReadModel.GetPotentialNormalCaptureCount(
 			ToCaptureScoringTableCards(),
 			ToPotentialCaptureCard(playerIndex, _playerHands[playerIndex][handIndex]));
 	}

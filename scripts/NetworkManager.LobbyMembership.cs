@@ -14,6 +14,7 @@ public partial class NetworkManager
 
 		_pendingLocalReadyIntent = isReady;
 		TrySendLocalReadyIntent(Time.GetTicksMsec() / 1000.0);
+		RescheduleNetworkMaintenance();
 	}
 
 	private void PollLocalReadyIntent(double now)
@@ -206,14 +207,16 @@ public partial class NetworkManager
 		message = (message ?? string.Empty)[..Math.Min(message?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
 		NetworkRpcContext context = new(sessionId ?? string.Empty, matchId ?? string.Empty, authorityEpoch);
 		if (!context.IsValid
-			|| _state is not (NetworkSessionState.Joining or NetworkSessionState.MigratingHost)
-			|| (_state == NetworkSessionState.MigratingHost
+			|| (_state != NetworkSessionState.Joining
+				&& (!HostMigrationCapabilityAvailable || _state != NetworkSessionState.MigratingHost))
+			|| (HostMigrationCapabilityAvailable
+				&& _state == NetworkSessionState.MigratingHost
 				&& !MatchesCurrentRpcContext(context.SessionId, context.MatchId, context.AuthorityEpoch, allowHigherEpoch: true)))
 		{
 			return;
 		}
 
-		if (_state == NetworkSessionState.MigratingHost)
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
 			SetAuthorityEpoch(context.AuthorityEpoch);
 			FailMigration(ParseMigrationFailureCode(message));
@@ -351,9 +354,18 @@ public partial class NetworkManager
 		_players.Clear();
 		_players.AddRange(decodedPlayers);
 
-		if (_state == NetworkSessionState.MigratingHost)
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
-			bool isLobbyMigration = _networkMigrationPlan?.Phase == NetworkAuthorityPhase.Lobby;
+			if (_networkMigrationPlan is not { } migrationPlan
+				|| authorityEpoch != migrationPlan.TargetEpoch)
+			{
+				// A candidate can receive the source host's final lobby broadcast after
+				// migration has begun. Only the target authority epoch may complete it.
+				EmitPlayerListUpdated();
+				return;
+			}
+
+			bool isLobbyMigration = migrationPlan.Phase == NetworkAuthorityPhase.Lobby;
 			bool localSeatClaimed = _players.Any(player =>
 				player.IsLocal
 				&& player.IsConnected

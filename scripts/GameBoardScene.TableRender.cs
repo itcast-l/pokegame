@@ -37,7 +37,7 @@ public partial class GameBoardScene
 		for (int cardIndex = 0; cardIndex < _tableCards.Count; cardIndex++)
 		{
 			TableCard tableCardData = _tableCards[cardIndex];
-			if (tableCardData.IsHiddenDuringCapture)
+			if (IsTableCardHiddenForPresentation(tableCardData))
 			{
 				continue;
 			}
@@ -53,8 +53,8 @@ public partial class GameBoardScene
 				animateCardBack = cardIndex >= oldestAnimatedTableCardBackIndex
 					&& CanAnimateTableCardBack(tableCardData);
 				tableCardTexture = showMainPlayerPreview
-					? tableCardData.Card.Value.Texture
-					: tableCardData.IsFaceUp ? tableCardData.Card.Value.Texture : _cardBackTexture;
+					? GetPlayingCardTexture(tableCardData.Card.Value)
+					: tableCardData.IsFaceUp ? GetPlayingCardTexture(tableCardData.Card.Value) : _cardBackTexture;
 			}
 			else if (tableCardData.ItemOverlay.HasValue && !tableCardData.IsFaceUp && _cardBackTexture != null)
 			{
@@ -137,7 +137,7 @@ public partial class GameBoardScene
 						showMainPlayerPreview ? MainPlayerTablePreviewAlpha : 1.0f);
 				}
 
-				if (ReferenceEquals(tableCardData, _adventureTraceHuntMarkedTableCard))
+				if (ReferenceEquals(tableCardData, GetAdventureTraceHuntMarkedTableCard()))
 				{
 					AddAdventureTraceHuntMarkerOverlay(cardPosition, baseZIndex + 1);
 				}
@@ -151,7 +151,7 @@ public partial class GameBoardScene
 			string itemCardId = tableCardData.ItemOverlay.Value.Id;
 			Vector2 itemVisualSize = GetItemCardVisualSize(itemCardId);
 			TextureRect itemOverlay = RentTableRenderTextureRect("TableItemOverlay");
-			itemOverlay.Texture = tableCardData.ItemOverlay.Value.Texture;
+			itemOverlay.Texture = GetItemCardTexture(tableCardData.ItemOverlay.Value);
 			itemOverlay.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
 			itemOverlay.Position = cardPosition + GetItemCardVisualPosition(itemCardId);
 			itemOverlay.Size = itemVisualSize;
@@ -184,9 +184,10 @@ public partial class GameBoardScene
 		{
 			TableCard tableCard = _tableCards[cardIndex];
 			signature.Add(cardIndex);
-			signature.Add(ReferenceEquals(tableCard, _adventureTraceHuntMarkedTableCard));
+			signature.Add(ReferenceEquals(tableCard, GetAdventureTraceHuntMarkedTableCard()));
 			signature.Add(tableCard.IsFaceUp);
 			signature.Add(tableCard.IsHiddenDuringCapture);
+			signature.Add(_presentationHiddenTableCardRuntimeInstanceIds.Contains(tableCard.InstanceId));
 			signature.Add(tableCard.IsBuriedInSand);
 			signature.Add(tableCard.IsSlimeCoated);
 			signature.Add(tableCard.ItemOwnerPlayerIndex);
@@ -198,7 +199,7 @@ public partial class GameBoardScene
 				signature.Add(card.Suit);
 				signature.Add(card.Rank);
 				signature.Add(card.AttachedItemCardIdsCsv);
-				AddTextureSignature(ref signature, card.Texture);
+				AddTextureSignature(ref signature, GetPlayingCardTexture(card));
 				AddTextureSignature(ref signature, GetCardAttachmentOverlayTexture(card));
 			}
 			else
@@ -214,7 +215,7 @@ public partial class GameBoardScene
 			{
 				ItemCard itemOverlay = tableCard.ItemOverlay.Value;
 				signature.Add(itemOverlay.Id);
-				AddTextureSignature(ref signature, itemOverlay.Texture);
+				AddTextureSignature(ref signature, GetItemCardTexture(itemOverlay));
 			}
 			else
 			{
@@ -253,7 +254,7 @@ public partial class GameBoardScene
 		for (int cardIndex = _tableCards.Count - 1; cardIndex >= 0; cardIndex--)
 		{
 			TableCard tableCard = _tableCards[cardIndex];
-			if (tableCard.IsHiddenDuringCapture || !CanAnimateTableCardBack(tableCard))
+				if (IsTableCardHiddenForPresentation(tableCard) || !CanAnimateTableCardBack(tableCard))
 			{
 				continue;
 			}
@@ -274,6 +275,12 @@ public partial class GameBoardScene
 			&& !tableCard.IsFaceUp
 			&& !ShouldShowMainPlayerTablePreview(tableCard)
 			&& (tableCard.Card.HasValue || tableCard.ItemOverlay.HasValue);
+	}
+
+	private bool IsTableCardHiddenForPresentation(TableCard tableCard)
+	{
+		return tableCard.IsHiddenDuringCapture
+			|| _presentationHiddenTableCardRuntimeInstanceIds.Contains(tableCard.InstanceId);
 	}
 
 	private void AddSandBurialOverlay(Vector2 cardPosition, int zIndex)

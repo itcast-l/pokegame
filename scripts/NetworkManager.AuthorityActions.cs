@@ -19,6 +19,7 @@ public partial class NetworkManager
 	private readonly Dictionary<int, long> _lastAcceptedClientActionIds = new();
 	private long _nextClientActionId;
 	private AuthorityCheckpointEnvelope _latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+	private long _authorityCommitSequence;
 	private int _authorityCheckpointCommitFailureCount;
 	private bool _authorityCheckpointCommitFailureReported;
 
@@ -225,17 +226,42 @@ public partial class NetworkManager
 	}
 
 	internal AuthorityCheckpointEnvelope GetLatestAuthorityCheckpointEnvelope() => _latestAuthorityCheckpointEnvelope;
-	internal byte[] GetLatestAuthorityCheckpoint() => _latestAuthorityCheckpointEnvelope.GetPayloadCopy();
+	internal ReadOnlyMemory<byte> GetLatestAuthorityCheckpoint() => _latestAuthorityCheckpointEnvelope.PayloadMemory;
 	internal string GetLatestAuthorityCheckpointHash() => _latestAuthorityCheckpointEnvelope.Hash;
 	internal long GetLatestAuthorityCheckpointId() => _latestAuthorityCheckpointEnvelope.CheckpointId;
+	public AuthorityCheckpointTelemetrySnapshot DebugGetAuthorityCheckpointTelemetry() => AuthorityCheckpointTelemetry.GetSnapshot();
 
-	internal AuthorityCheckpointCommitResult CommitAuthorityCheckpointFromBoard(GameBoardScene gameBoard)
+	private void ReplaceLatestAuthorityCheckpointEnvelope(AuthorityCheckpointEnvelope replacement)
 	{
-		if (!IsHost || _state != NetworkSessionState.InGame)
+		ArgumentNullException.ThrowIfNull(replacement);
+		AuthorityCheckpointEnvelope previous = _latestAuthorityCheckpointEnvelope;
+		if (ReferenceEquals(previous, replacement))
+		{
+			return;
+		}
+
+		_latestAuthorityCheckpointEnvelope = replacement;
+		previous.Dispose();
+	}
+
+	internal AuthorityCheckpointCommitResult CommitAuthorityCheckpointFromBoard()
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame
+			|| !TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint authority))
 		{
 			return AuthorityCheckpointCommitResult.Rejected(
 				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
 				"board_checkpoint_not_authority");
+		}
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return CommitAuthoritySequence(authority);
+		}
+		if (IsActiveMigrationHandoffInProgress())
+		{
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
+				"active_migration_handoff_in_progress");
 		}
 
 		if (!TryInvalidateMigrationAvailability(out MigrationCheckpointDispatchStatus invalidationStatus))
@@ -260,7 +286,7 @@ public partial class NetworkManager
 				"checkpoint_id_overflow");
 		}
 
-		if (!gameBoard.TryBuildAuthorityCheckpointEnvelope(
+		if (!authority.TryBuildCheckpoint(
 				_lastAcceptedClientActionIds,
 				candidateCheckpointId,
 				out AuthorityCheckpointEnvelope envelope,
@@ -272,8 +298,8 @@ public partial class NetworkManager
 				buildError);
 		}
 
-		_latestAuthorityCheckpointEnvelope = envelope;
-		gameBoard.CommitNetworkCheckpointEnvelope(envelope);
+		ReplaceLatestAuthorityCheckpointEnvelope(envelope);
+		authority.CommitCheckpoint(envelope);
 		_migrationEligibleCheckpointId = envelope.CheckpointId;
 		MigrationCheckpointDispatchStatus dispatchStatus = SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
 		return AuthorityCheckpointCommitResult.Committed(envelope.CheckpointId, dispatchStatus);
@@ -286,6 +312,16 @@ public partial class NetworkManager
 			return AuthorityCheckpointCommitResult.Rejected(
 				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
 				"lobby_checkpoint_not_authority");
+		}
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return CommitAuthoritySequence();
+		}
+		if (IsActiveMigrationHandoffInProgress())
+		{
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.RulesStateUnavailable,
+				"active_migration_handoff_in_progress");
 		}
 
 		if (!TryInvalidateMigrationAvailability(out MigrationCheckpointDispatchStatus invalidationStatus))
@@ -318,45 +354,75 @@ public partial class NetworkManager
 			return AuthorityCheckpointCommitResult.Rejected(
 				AuthorityCheckpointCommitStatus.EncodingFailed,
 				"checkpoint_id_overflow");
-		}
-		int playerCount = _config.PlayerCount;
-		var checkpoint = new NetworkAuthorityCheckpoint
-		{
-			Phase = NetworkAuthorityPhase.Lobby,
-			SessionId = _config.SessionId,
-			MatchId = string.Empty,
-			RoomName = _config.RoomName,
-			RoomPasswordVerifierVersion = _config.RoomPasswordVerifier.Version,
-			RoomPasswordVerifierIterations = _config.RoomPasswordVerifier.Iterations,
-			RoomPasswordVerifierSalt = _config.RoomPasswordVerifier.Salt,
-			RoomPasswordVerifier = _config.RoomPasswordVerifier.Verifier,
-			MatchSeed = _config.MatchSeed,
-			PlayerCount = playerCount,
-			ItemMode = _config.ItemMode,
-			WinningScore = _config.WinningScore,
-			Transport = _config.Transport,
-			ManifestHash = manifestHash,
-			Roster = GetCheckpointRoster(),
-			SeatControls = GetCheckpointSeatControls(),
-			LastAcceptedClientActionIds = new Dictionary<int, long>(_lastAcceptedClientActionIds),
-			Decks = Enumerable.Range(0, playerCount).Select(_ => new List<NetworkCheckpointCard>()).ToList(),
-			Hands = Enumerable.Range(0, playerCount).Select(_ => new List<NetworkCheckpointCard>()).ToList(),
-			ItemHands = Enumerable.Range(0, playerCount).Select(_ => new List<string>()).ToList(),
-			Scores = new int[playerCount],
-			CurrentTurnPlayerIndex = 0,
-			WinnerPlayerIndex = -1,
-			TurnSequenceGeneration = 0,
-			LastAuthorityActionId = 0,
-			AuthorityAction = AuthorityActionState.Empty,
-			RngSeed = _config.MatchSeed,
-			RngState = "1",
-			SnapshotId = 0,
-			AuthorityEpoch = _authorityEpoch,
-			CheckpointId = candidateCheckpointId,
-			ReconnectClaims = GetCheckpointReconnectClaims(),
-		};
+			}
+			int playerCount = _config.PlayerCount;
+			long projectionAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+			long projectionStartedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+			int projectedEntryCount = 0;
+			NetworkAuthorityCheckpoint checkpoint;
+			try
+			{
+				var decks = new List<List<NetworkCheckpointCard>>(playerCount);
+				var hands = new List<List<NetworkCheckpointCard>>(playerCount);
+				var itemHands = new List<List<string>>(playerCount);
+				for (int seat = 0; seat < playerCount; seat++)
+				{
+					decks.Add(new List<NetworkCheckpointCard>());
+					hands.Add(new List<NetworkCheckpointCard>());
+					itemHands.Add(new List<string>());
+				}
 
-		if (!AuthorityCheckpointEnvelope.TryCreate(checkpoint, out AuthorityCheckpointEnvelope envelope, out string encodeError))
+				checkpoint = new NetworkAuthorityCheckpoint
+				{
+					Phase = NetworkAuthorityPhase.Lobby,
+					SessionId = _config.SessionId,
+					MatchId = string.Empty,
+					RoomName = _config.RoomName,
+					RoomPasswordVerifierVersion = _config.RoomPasswordVerifier.Version,
+					RoomPasswordVerifierIterations = _config.RoomPasswordVerifier.Iterations,
+					RoomPasswordVerifierSalt = _config.RoomPasswordVerifier.Salt,
+					RoomPasswordVerifier = _config.RoomPasswordVerifier.Verifier,
+					MatchSeed = _config.MatchSeed,
+					PlayerCount = playerCount,
+					ItemMode = _config.ItemMode,
+					WinningScore = _config.WinningScore,
+					Transport = _config.Transport,
+					ManifestHash = manifestHash,
+					Roster = GetCheckpointRoster(),
+					SeatControls = GetCheckpointSeatControls(),
+					LastAcceptedClientActionIds =
+						new Dictionary<int, long>(_lastAcceptedClientActionIds),
+					Decks = decks,
+					Hands = hands,
+					ItemHands = itemHands,
+					Scores = new int[playerCount],
+					CurrentTurnPlayerIndex = 0,
+					WinnerPlayerIndex = -1,
+					TurnSequenceGeneration = 0,
+					LastAuthorityActionId = 0,
+					AuthorityAction = AuthorityActionState.Empty,
+					RngSeed = _config.MatchSeed,
+					RngState = "1",
+					SnapshotId = 0,
+					AuthorityEpoch = _authorityEpoch,
+					CheckpointId = candidateCheckpointId,
+					ReconnectClaims = GetCheckpointReconnectClaims(),
+				};
+				projectedEntryCount = playerCount;
+			}
+			finally
+			{
+				long projectionElapsedTicks =
+					System.Diagnostics.Stopwatch.GetTimestamp() - projectionStartedAt;
+				long projectionAllocatedBytes =
+					GC.GetAllocatedBytesForCurrentThread() - projectionAllocatedBefore;
+				AuthorityCheckpointTelemetry.RecordProjection(
+					projectedEntryCount,
+					projectionAllocatedBytes,
+					projectionElapsedTicks);
+			}
+
+			if (!AuthorityCheckpointEnvelope.TryCreate(checkpoint, out AuthorityCheckpointEnvelope envelope, out string encodeError))
 		{
 			NetworkAuthorityCheckpointCodec.Validate(checkpoint, out string validationError);
 			RecordAuthorityCheckpointCommitFailure(string.Join(
@@ -373,10 +439,33 @@ public partial class NetworkManager
 				encodeError);
 		}
 
-		_latestAuthorityCheckpointEnvelope = envelope;
+		ReplaceLatestAuthorityCheckpointEnvelope(envelope);
 		_migrationEligibleCheckpointId = envelope.CheckpointId;
 		MigrationCheckpointDispatchStatus dispatchStatus = SendCheckpointToHotStandbyIfNeeded(Time.GetTicksMsec() / 1000.0);
 		return AuthorityCheckpointCommitResult.Committed(envelope.CheckpointId, dispatchStatus);
+	}
+
+	private AuthorityCheckpointCommitResult CommitAuthoritySequence(INetworkAuthorityEndpoint? authority = null)
+	{
+		long checkpointId;
+		try
+		{
+			checkpointId = checked(Math.Max(
+				_authorityCommitSequence,
+				_latestAuthorityCheckpointEnvelope.CheckpointId) + 1);
+		}
+		catch (OverflowException)
+		{
+			return AuthorityCheckpointCommitResult.Rejected(
+				AuthorityCheckpointCommitStatus.EncodingFailed,
+				"checkpoint_id_overflow");
+		}
+
+		_authorityCommitSequence = checkpointId;
+		authority?.AdvanceCheckpointSequence(checkpointId);
+		return AuthorityCheckpointCommitResult.Committed(
+			checkpointId,
+			MigrationCheckpointDispatchStatus.NotRequested);
 	}
 
 	private void RecordAuthorityCheckpointCommitFailure(string localDetail = "")

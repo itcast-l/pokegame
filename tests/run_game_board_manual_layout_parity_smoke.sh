@@ -27,7 +27,11 @@ cleanup() {
 trap cleanup EXIT
 
 set +e
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardManualLayoutParitySmoke.gd >"$LOG_FILE" 2>&1
+DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" \
+	--headless \
+	--audio-driver Dummy \
+	--path "$ROOT_DIR" \
+	--script res://tests/GameBoardManualLayoutParitySmoke.gd >"$LOG_FILE" 2>&1
 GODOT_STATUS=$?
 set -e
 

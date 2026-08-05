@@ -5,6 +5,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Deckland.Rules;
 
 internal static partial class Program
 {
@@ -86,16 +87,16 @@ internal static partial class Program
 		int[] turnOrder = { 0, 2, 1, 3 };
 		var threePlayerStates = new[]
 		{
-			new GameTurnRules.PlayerCardState(1, 0, 0, false),
-			new GameTurnRules.PlayerCardState(1, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(1, 0, 0, false),
+			new GameTurnPlayerCardState(1, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
 		};
 		var fourPlayerStates = new[]
 		{
-			new GameTurnRules.PlayerCardState(1, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
-			new GameTurnRules.PlayerCardState(1, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(1, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(1, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
 		};
 
 		True(GameTurnRules.TryGetNextTurnPlayerIndex(
@@ -126,9 +127,9 @@ internal static partial class Program
 		int[] turnOrder = { 0, 2, 1, 3 };
 		var playerStates = new[]
 		{
-			new GameTurnRules.PlayerCardState(1, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 1, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 1, true),
+			new GameTurnPlayerCardState(1, 0, 0, false),
+			new GameTurnPlayerCardState(0, 1, 0, false),
+			new GameTurnPlayerCardState(0, 0, 1, true),
 		};
 
 		True(playerStates[1].HasResources);
@@ -149,9 +150,9 @@ internal static partial class Program
 		int[] turnOrder = { 0, 2, 1, 3 };
 		var playerStates = new[]
 		{
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 1, false),
-			new GameTurnRules.PlayerCardState(0, 1, 0, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 1, false),
+			new GameTurnPlayerCardState(0, 1, 0, false),
 		};
 
 		False(GameTurnRules.TryGetNextTurnPlayerIndex(
@@ -173,8 +174,8 @@ internal static partial class Program
 	{
 		var zeroResources = new[]
 		{
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
 		};
 		MatchOutcome tiedEmpty = MatchOutcomeRules.Evaluate(zeroResources, new[] { 12, 12 }, 2);
 		Equal(MatchOutcomeKind.Draw, tiedEmpty.Kind);
@@ -182,8 +183,8 @@ internal static partial class Program
 
 		var singleResourceOwner = new[]
 		{
-			new GameTurnRules.PlayerCardState(0, 0, 0, false),
-			new GameTurnRules.PlayerCardState(0, 0, 1, false),
+			new GameTurnPlayerCardState(0, 0, 0, false),
+			new GameTurnPlayerCardState(0, 0, 1, false),
 		};
 		MatchOutcome resourceWinner = MatchOutcomeRules.Evaluate(singleResourceOwner, new[] { 99, 1 }, 2);
 		Equal(MatchOutcomeKind.Winner, resourceWinner.Kind);
@@ -191,8 +192,8 @@ internal static partial class Program
 
 		var blockedWithTemporaryItem = new[]
 		{
-			new GameTurnRules.PlayerCardState(0, 0, 1, false),
-			new GameTurnRules.PlayerCardState(0, 1, 0, false),
+			new GameTurnPlayerCardState(0, 0, 1, false),
+			new GameTurnPlayerCardState(0, 1, 0, false),
 		};
 		MatchOutcome blockedWinner = MatchOutcomeRules.Evaluate(blockedWithTemporaryItem, new[] { 5, 8 }, 2);
 		Equal(MatchOutcomeKind.Winner, blockedWinner.Kind);
@@ -929,7 +930,7 @@ internal static partial class Program
 		True(callbackMethod.Contains("_acceptedSteamLobbyJoinId = lobbyId;", StringComparison.Ordinal));
 		False(callbackMethod.Contains("TryCreateSteamPeer(", StringComparison.Ordinal));
 		True(beginMethod.Contains("_pendingSteamLobbyJoinId = lobbyId;", StringComparison.Ordinal));
-		True(beginMethod.Contains("steam?.Call(\"joinLobby\", lobbyId);", StringComparison.Ordinal));
+			True(beginMethod.Contains("_steamPlatform?.JoinLobby(lobbyId)", StringComparison.Ordinal));
 		Equal(
 			2,
 			Regex.Matches(
@@ -1256,15 +1257,17 @@ internal static partial class Program
 		True(partialText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(partialText.Contains("public void HostSteam(", StringComparison.Ordinal));
 		True(partialText.Contains("private void TryConnectSteamSignals()", StringComparison.Ordinal));
-		True(partialText.Contains("private void OnSteamLobbyJoined(", StringComparison.Ordinal));
-		True(partialText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
-		True(partialText.Contains("private GodotObject? GetSteamSingleton()", StringComparison.Ordinal));
-		True(partialText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
+			True(partialText.Contains("private void OnSteamLobbyJoined(", StringComparison.Ordinal));
+			True(partialText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
+			True(partialText.Contains("private void InitializeSteamPlatformAdapter()", StringComparison.Ordinal));
+			True(File.ReadAllText(Path.Combine(repoRoot, "scripts", "SteamPlatformAdapter.cs"))
+				.Contains("public sealed class SteamPlatformAdapter : ISteamPlatformAdapter", StringComparison.Ordinal));
+			True(partialText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
 		False(mainText.Contains("public void HostSteam(", StringComparison.Ordinal));
 		False(mainText.Contains("private void TryConnectSteamSignals()", StringComparison.Ordinal));
 		False(mainText.Contains("private void OnSteamLobbyJoined(", StringComparison.Ordinal));
 		False(mainText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
-		False(mainText.Contains("private GodotObject? GetSteamSingleton()", StringComparison.Ordinal));
+			False(mainText.Contains("GetSteamSingleton()", StringComparison.Ordinal));
 		False(mainText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
 	}
 
@@ -1315,12 +1318,15 @@ internal static partial class Program
 		True(membershipText.Contains("private void RpcRegisterPlayer(", StringComparison.Ordinal));
 		True(membershipText.Contains("private void BroadcastPlayerList()", StringComparison.Ordinal));
 		True(membershipText.Contains("private void RpcSyncLobby(", StringComparison.Ordinal));
+		True(membershipText.Contains(
+			"authorityEpoch != migrationPlan.TargetEpoch",
+			StringComparison.Ordinal));
 
 		True(lifecycleText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(lifecycleText.Contains("public void StartMatch()", StringComparison.Ordinal));
 		True(lifecycleText.Contains("public bool RequestReturnToLobbyAfterMatch()", StringComparison.Ordinal));
 		True(lifecycleText.Contains("public void LeaveSession()", StringComparison.Ordinal));
-		True(lifecycleText.Contains("public async Task NotifyHostEndedMatchIfNeededAsync()", StringComparison.Ordinal));
+			True(lifecycleText.Contains("public Task RequestSessionCloseAsync(NetworkSessionCloseReason reason)", StringComparison.Ordinal));
 
 		True(handshakeText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(handshakeText.Contains("public void NotifyLocalBoardReady()", StringComparison.Ordinal));
@@ -1404,7 +1410,9 @@ internal static partial class Program
 
 		True(replicationText.Contains("public partial class NetworkManager", StringComparison.Ordinal));
 		True(replicationText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
-		True(replicationText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
+			True(replicationText.Contains("public void SendBoardSnapshotsFromHost(int snapshotId)", StringComparison.Ordinal));
+			True(replicationText.Contains("INetworkAuthorityEndpoint", StringComparison.Ordinal));
+			True(replicationText.Contains("INetworkReplicaEndpoint", StringComparison.Ordinal));
 		True(replicationText.Contains("private void RpcCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
 		True(replicationText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
 
@@ -1421,7 +1429,7 @@ internal static partial class Program
 		True(recoveryText.Contains("private void RpcReconnectResult(", StringComparison.Ordinal));
 		True(recoveryText.Contains("private void RpcHostEndedMatch(", StringComparison.Ordinal));
 		False(mainText.Contains("internal void BroadcastCardPlayedEventFromHost(", StringComparison.Ordinal));
-		False(mainText.Contains("public void SendBoardSnapshotsFromHost(GameBoardScene gameBoard, int snapshotId)", StringComparison.Ordinal));
+			False(mainText.Contains("public void SendBoardSnapshotsFromHost(", StringComparison.Ordinal));
 		False(mainText.Contains("private void RpcRequestPlayHandCard(int handIndex, int turnSequenceGeneration)", StringComparison.Ordinal));
 		False(mainText.Contains("private void RpcReconnectPlayer(string matchId, string reconnectToken, string playerSessionId)", StringComparison.Ordinal));
 		False(mainText.Contains("private void RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
@@ -1432,24 +1440,317 @@ internal static partial class Program
 		string repoRoot = FindRepositoryRoot();
 		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
 		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkSnapshot.cs");
+		string adapterPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.RuleSessionAdapter.cs");
 		string mainText = File.ReadAllText(mainPath);
 
 		True(File.Exists(partialPath));
 		string partialText = File.ReadAllText(partialPath);
+		string adapterText = File.ReadAllText(adapterPath);
 
 		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
 		True(partialText.Contains("internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat", StringComparison.Ordinal));
 		True(partialText.Contains("internal void ApplyNetworkBoardSnapshot(Godot.Collections.Dictionary snapshot)", StringComparison.Ordinal));
 		True(partialText.Contains("private void ApplyNetworkBoardSnapshotNow(", StringComparison.Ordinal));
-		True(partialText.Contains("private void ApplyHandsFromSnapshot(", StringComparison.Ordinal));
-		True(partialText.Contains("private void ApplyItemHandsFromSnapshot(", StringComparison.Ordinal));
-		True(partialText.Contains("private void ApplyTableCardsFromSnapshot(", StringComparison.Ordinal));
-		True(partialText.Contains("private void ApplyPendingSelectionFromSnapshot(", StringComparison.Ordinal));
+		False(partialText.Contains("private void ApplyHandsFromSnapshot(", StringComparison.Ordinal));
+		False(partialText.Contains("private void ApplyItemHandsFromSnapshot(", StringComparison.Ordinal));
+		False(partialText.Contains("private void ApplyTableCardsFromSnapshot(", StringComparison.Ordinal));
+		False(partialText.Contains("private void ApplyPendingSelectionFromSnapshot(", StringComparison.Ordinal));
+		False(partialText.Contains("_pendingItemSelectionMode =", StringComparison.Ordinal));
+		False(partialText.Contains("_pendingItemOwnerIndex =", StringComparison.Ordinal));
+		True(adapterText.Contains("private static MandatorySelectionState CreateReplicaMandatorySelection(", StringComparison.Ordinal));
+		True(adapterText.Contains("MandatorySelection: mandatorySelection", StringComparison.Ordinal));
+		True(adapterText.Contains("_replicaRuleSession.ApplyAuthoritySnapshot(ruleSnapshot)", StringComparison.Ordinal));
 		True(partialText.Contains("private void ApplySeatControlStatesFromSnapshot(", StringComparison.Ordinal));
 		False(mainText.Contains("internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat", StringComparison.Ordinal));
 		False(mainText.Contains("private void ApplyNetworkBoardSnapshotNow(", StringComparison.Ordinal));
 		False(mainText.Contains("private void ApplyHandsFromSnapshot(", StringComparison.Ordinal));
 		False(mainText.Contains("private void ApplySeatControlStatesFromSnapshot(", StringComparison.Ordinal));
+	}
+
+	private static void NetworkReplicaVisualsDoNotMutateRuleCollections()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string boardText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.cs"));
+		string cardsText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkCards.cs"));
+		string predictionText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkPrediction.cs"));
+		string visualQueueText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkVisualQueue.cs"));
+		string snapshotText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkSnapshot.cs"));
+		string controllerText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkVisualPlaybackController.cs"));
+		string debugText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.Debug.Network.cs"));
+		string authorityStateText = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"scripts",
+			"GameBoardScene.NetworkAuthorityState.cs"));
+
+		True(boardText.Contains(
+			"private IReadOnlyList<IReadOnlyList<PlayingCard>> _playerHands =>",
+			StringComparison.Ordinal));
+		True(boardText.Contains(
+			"? presentation.PlayerHands",
+			StringComparison.Ordinal));
+		True(boardText.Contains(
+			": CurrentRuleProjection.PlayerHands;",
+			StringComparison.Ordinal));
+		True(boardText.Contains(
+			"private IReadOnlyList<TableCard> _tableCards =>",
+			StringComparison.Ordinal));
+		True(boardText.Contains(
+			": CurrentRuleProjection.TableCards;",
+			StringComparison.Ordinal));
+		False(boardText.Contains("GameBoardState _state", StringComparison.Ordinal));
+		True(cardsText.Contains(
+			"private sealed class NetworkReplicaPresentationState",
+			StringComparison.Ordinal));
+		True(cardsText.Contains(
+			"IReadOnlyList<IReadOnlyList<PlayingCard>> playerDeckSource",
+			StringComparison.Ordinal));
+		True(cardsText.Contains(
+			"TableCard.Restore(",
+			StringComparison.Ordinal));
+		True(controllerText.Contains(
+			"if (!EnsureNetworkReplicaPresentationState())",
+			StringComparison.Ordinal));
+		True(snapshotText.Contains(
+			"if (!TryApplyReplicaRuleSnapshot(snapshot))",
+			StringComparison.Ordinal));
+		True(debugText.Contains(
+			"DebugUseReplicaRuleSession(preserveCurrentStateForPresentation: true);",
+			StringComparison.Ordinal));
+		True(debugText.Contains(
+			"TryApplyReplicaRuleSnapshot(validatedSnapshot)",
+			StringComparison.Ordinal));
+		True(authorityStateText.Contains(
+			"TrySubmitGrantItemToHandRuleCommand(",
+			StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			authorityStateText,
+			@"_playerItemHands\s*\[[^\r\n;]+\]\s*\.(?:Add|AddRange|Insert|Remove|RemoveAt|RemoveRange|Clear)\s*\("));
+
+		string replicaMutationSources = string.Concat(
+			predictionText,
+			visualQueueText,
+			snapshotText);
+		foreach (string forbiddenMutation in new[]
+		{
+			"_tableCards.Add(",
+			"_tableCards.AddRange(",
+			"_tableCards.Insert(",
+			"_tableCards.RemoveAt(",
+			"_tableCards.RemoveRange(",
+			"_tableCards.Clear(",
+			"_playerDecks[",
+			"_playerHands[",
+			"_playerItemHands[",
+		})
+		{
+			if (forbiddenMutation is "_playerDecks[" or "_playerHands[" or "_playerItemHands[")
+			{
+				continue;
+			}
+			False(replicaMutationSources.Contains(forbiddenMutation, StringComparison.Ordinal));
+		}
+
+		False(Regex.IsMatch(
+			predictionText + visualQueueText,
+			@"_(?:playerDecks|playerHands|playerItemHands)\s*\[[^\r\n;]+\]\s*\.(?:Add|AddRange|Insert|Remove|RemoveAt|RemoveRange|Clear)\s*\("));
+		False(Regex.IsMatch(
+			predictionText + visualQueueText,
+			@"_(?:playerHands|playerItemHands|tableCards)\s*\[[^\r\n;]+\]\s*="));
+		False(snapshotText.Contains("ApplyValidatedCountArray(", StringComparison.Ordinal));
+		False(snapshotText.Contains("ApplyHandsFromSnapshot(", StringComparison.Ordinal));
+		False(snapshotText.Contains("ApplyItemHandsFromSnapshot(", StringComparison.Ordinal));
+		False(snapshotText.Contains("ApplyTableCardsFromSnapshot(", StringComparison.Ordinal));
+		False(predictionText.Contains("AttachMagnetToHandCard(", StringComparison.Ordinal));
+		False(visualQueueText.Contains("Shuffle(_player", StringComparison.Ordinal));
+	}
+
+	private static void NetworkRpcSignaturesRemainProtocolV11Compatible()
+	{
+		string root = FindRepositoryRoot();
+		string networkSources = string.Join(
+			'\n',
+			Directory.GetFiles(Path.Combine(root, "scripts"), "NetworkManager*.cs")
+				.OrderBy(path => path, StringComparer.Ordinal)
+				.Select(File.ReadAllText));
+		string[] actual = Regex.Matches(
+				networkSources,
+				@"\bprivate\s+void\s+(Rpc[A-Za-z0-9_]+)\s*\((.*?)\)\s*\{",
+				RegexOptions.Singleline | RegexOptions.CultureInvariant)
+			.Select(match =>
+			{
+				string parameters = Regex.Replace(match.Groups[2].Value, @"\s+", " ").Trim();
+				parameters = Regex.Replace(parameters, @"\s*,\s*", ",");
+				return $"{match.Groups[1].Value}({parameters})";
+			})
+			.OrderBy(signature => signature, StringComparer.Ordinal)
+			.ToArray();
+		string[] expected =
+		{
+			"RpcBeginHostMigration(string sessionId,string matchId,long sourceEpoch,long targetEpoch,long checkpointId,string checkpointHash)",
+			"RpcBeginSceneLoad(string sessionId,string matchId,long authorityEpoch,Godot.Collections.Dictionary bootstrap)",
+			"RpcBeginSecurityHandshake(string sessionId,int protocolVersion,byte[] hostKeyAgreementPublicKey,byte[] sourceAuthorityPublicKey,int passwordVerifierVersion,int passwordVerifierIterations,string passwordVerifierSalt,byte[] passwordChallenge,bool hostMigrationEnabled,bool rekeyExistingPeer)",
+			"RpcBoardActionCommitted(string sessionId,string matchId,long authorityEpoch,long actionId,long clientActionId,long checkpointId,int snapshotId,int turnSequenceGeneration)",
+			"RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)",
+			"RpcCancelMatchStart(string sessionId,string matchId,long authorityEpoch,string message)",
+			"RpcCardPlayedEvent(Godot.Collections.Dictionary payload)",
+			"RpcClaimMigratedLobbySeat(string sessionId,long authorityEpoch,string playerSessionId,long credentialGeneration,string credential)",
+			"RpcClientSceneLoaded(string sessionId,string matchId,long authorityEpoch,int seatIndex)",
+			"RpcCompleteSecurityHandshake(string sessionId,int protocolVersion,byte[] clientKeyAgreementPublicKey,byte[] successorPublicKey,byte[] passwordChallenge,byte[] passwordProof,bool trustedHotStandbyAccepted,bool transportTakeoverCapable)",
+			"RpcConfirmHostMigration(string sessionId,string matchId,long sourceEpoch,long targetEpoch,long checkpointId,string playerSessionId)",
+			"RpcDebugStaleMigrationPlan(Godot.Collections.Dictionary rawPlan)",
+			"RpcHostEndedMatch(string sessionId,string matchId,long authorityEpoch,string message)",
+			"RpcInitializeBoard(string sessionId,string matchId,long authorityEpoch,Godot.Collections.Dictionary payload)",
+			"RpcLobbyRejected(string sessionId,string matchId,long authorityEpoch,string message)",
+			"RpcMigrationFollowerSnapshotApplied(string sessionId,string matchId,long authorityEpoch,int seatIndex,string playerSessionId)",
+			"RpcMigrationLatencyProbe(string sessionId,string matchId,long authorityEpoch,long sequence)",
+			"RpcMigrationLatencyProbeAck(string sessionId,string matchId,long authorityEpoch,long sequence)",
+			"RpcMigrationPlan(Godot.Collections.Dictionary rawPlan)",
+			"RpcMigrationPlanAck(string sessionId,string matchId,long sourceEpoch,long targetEpoch,long planRevision,long checkpointId,string checkpointCiphertextHash,string candidatePlayerSessionId,string candidateSuccessorKeyId)",
+			"RpcMigrationPlanRevoked(Godot.Collections.Dictionary rawRevocation)",
+			"RpcMigrationReady(string sessionId,string matchId,long authorityEpoch)",
+			"RpcReceiveSeatCredential(string sessionId,string matchId,long authorityEpoch,string playerSessionId,long credentialGeneration,string credential)",
+			"RpcReconnectPlayer(string sessionId,string matchId,long authorityEpoch,string playerSessionId,long credentialGeneration,string credential)",
+			"RpcReconnectResult(string sessionId,string matchId,long authorityEpoch,bool accepted,string reason,int seatIndex)",
+			"RpcRegisterPlayer(string displayName,string avatarId,string identityHint)",
+			"RpcRejectBoardAction(string sessionId,string matchId,long authorityEpoch,string reason,int turnSequenceGeneration,int rejectedHandIndex)",
+			"RpcRequestClientInfo()",
+			"RpcRequestPendingItemSelection(string sessionId,string matchId,long authorityEpoch,int selectionIndex,int turnSequenceGeneration,long clientActionId)",
+			"RpcRequestPlayHandCard(int handIndex,int turnSequenceGeneration)",
+			"RpcRequestPlayHandCard(string sessionId,string matchId,long authorityEpoch,int handIndex,int turnSequenceGeneration,long clientActionId)",
+			"RpcRequestPlayItemCard(string sessionId,string matchId,long authorityEpoch,int itemHandIndex,int turnSequenceGeneration,long clientActionId)",
+			"RpcRequestReturnToLobbyAfterMatch(string sessionId,string matchId,long authorityEpoch)",
+			"RpcReturnToLobbyAfterMatch(string completedSessionId,string completedMatchId,long completedAuthorityEpoch,Godot.Collections.Dictionary config,Godot.Collections.Array players)",
+			"RpcRevokeHotStandby(string sessionId,string matchId,long authorityEpoch,string candidatePlayerSessionId)",
+			"RpcSeatCredentialAck(string sessionId,string matchId,long authorityEpoch,string playerSessionId,long credentialGeneration,string credential)",
+			"RpcSeatCredentialCommitted(string sessionId,string matchId,long authorityEpoch,string playerSessionId,long credentialGeneration)",
+			"RpcSecurityHandshakeAccepted(string sessionId,int protocolVersion,bool hostMigrationEnabled,bool rekeyExistingPeer)",
+			"RpcSetReady(string sessionId,string matchId,long authorityEpoch,bool isReady)",
+			"RpcStandbyCheckpoint(string sessionId,string matchId,long authorityEpoch,long checkpointId,long planRevision,string candidatePlayerSessionId,byte[] nonce,byte[] ciphertext,byte[] tag,string plaintextHash,string ciphertextHash,string previousCheckpointHash,string sourceAuthorityKeyId,byte[] signature)",
+			"RpcStandbyCheckpointAck(string sessionId,string matchId,long authorityEpoch,bool accepted,long checkpointId,long planRevision,string ciphertextHash,string error,string candidateHostAddress)",
+			"RpcSyncLobby(string sessionId,string matchId,long authorityEpoch,Godot.Collections.Dictionary config,Godot.Collections.Array players)",
+		};
+
+		Equal(string.Join('\n', expected), string.Join('\n', actual));
+	}
+
+	private static void NetworkSnapshotRuleProjectionPreservesCompatibilityAndPrivacy()
+	{
+		string root = FindRepositoryRoot();
+		string snapshotSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"GameBoardScene.NetworkSnapshot.cs"));
+		string adapterSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"GameBoardScene.RuleSessionAdapter.cs"));
+		int authorityBuildStart = snapshotSource.IndexOf(
+			"internal Godot.Collections.Dictionary BuildNetworkBoardSnapshotForSeat(",
+			StringComparison.Ordinal);
+		int buildStart = snapshotSource.IndexOf(
+			"private Godot.Collections.Dictionary BuildNetworkBoardSnapshotFromReadModelForSeat(",
+			authorityBuildStart,
+			StringComparison.Ordinal);
+		int buildEnd = snapshotSource.IndexOf(
+			"private enum RulePlayerZone",
+			buildStart,
+			StringComparison.Ordinal);
+		True(authorityBuildStart >= 0 && buildStart > authorityBuildStart && buildEnd > buildStart);
+		string authorityBuildBody = snapshotSource[authorityBuildStart..buildStart];
+		string buildBody = snapshotSource[buildStart..buildEnd];
+		string[] actualKeys = Regex.Matches(buildBody, "\\[\"([^\"]+)\"\\]\\s*=")
+			.Select(match => match.Groups[1].Value)
+			.ToArray();
+		string[] expectedKeys =
+		{
+			"protocol_version",
+			"session_id",
+			"match_id",
+			"authority_epoch",
+			"checkpoint_id",
+			"snapshot_id",
+			"turn_sequence_generation",
+			"current_turn_player_index",
+			"match_outcome_kind",
+			"winner_player_index",
+			"scores",
+			"deck_counts",
+			"hand_counts",
+			"item_hand_counts",
+			"own_item_hand_cards",
+			"table_cards",
+			"own_hand_cards",
+			"pending_selection_mode",
+			"pending_selection_owner",
+			"pending_item_card_id",
+			"pending_turn_sequence_generation",
+			"opening_deal_animation_playing",
+			"opening_deal_completed",
+			"seat_control_states",
+			"authority_action",
+		};
+		True(expectedKeys.SequenceEqual(actualKeys, StringComparer.Ordinal));
+
+		True(authorityBuildBody.Contains(
+			"CurrentRuleReadModel is not { IsInitialized: true } readModel",
+			StringComparison.Ordinal));
+		True(buildBody.Contains(
+			"BuildOwnHandCardsArray(readModel, recipientSeatIndex)",
+			StringComparison.Ordinal));
+		True(buildBody.Contains(
+			"BuildOwnItemHandCardsArray(readModel, recipientSeatIndex)",
+			StringComparison.Ordinal));
+		True(buildBody.Contains(
+			"BuildTableCardsArray(readModel.TableCards, recipientSeatIndex)",
+			StringComparison.Ordinal));
+		False(buildBody.Contains("_playerDecks", StringComparison.Ordinal));
+		False(buildBody.Contains("_playerHands", StringComparison.Ordinal));
+		False(buildBody.Contains("_playerItemHands", StringComparison.Ordinal));
+		False(buildBody.Contains("_tableCards", StringComparison.Ordinal));
+		False(buildBody.Contains("RandomState", StringComparison.Ordinal));
+
+		True(snapshotSource.Contains(
+			"tableCard.IsFaceUp || tableCard.CardOwnerSeat == recipientSeatIndex",
+			StringComparison.Ordinal));
+		True(snapshotSource.Contains(
+			"canSeeCard ? tableCard.Card!.Value.Code : string.Empty",
+			StringComparison.Ordinal));
+		True(snapshotSource.Contains(
+			"GetCompatiblePendingItemCardId(",
+			StringComparison.Ordinal));
+		True(snapshotSource.Contains(
+			"MatchesCompatiblePendingDiscardItemId(",
+			StringComparison.Ordinal));
+		True(snapshotSource.Contains(
+			"NetworkAuthorityActionVariantCodec.ToVariant(_networkAuthorityActionState)",
+			StringComparison.Ordinal));
+		True(adapterSource.Contains(
+			"kind == MandatorySelectionKind.HandLimitDiscard",
+			StringComparison.Ordinal));
+		True(adapterSource.Contains(
+			"? string.Empty",
+			StringComparison.Ordinal));
 	}
 
 	private static void GameBoardNetworkRequestEntryPointsAvoidAsyncVoid()
@@ -1783,8 +2084,8 @@ internal static partial class Program
 		};
 		var handCards = new[]
 		{
-			new PotentialCaptureRules.Card("A", CollectsTable: false, HasDoubleEffect: false),
-			new PotentialCaptureRules.Card("K", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
+			new PotentialCaptureCard("K", CollectsTable: false, HasDoubleEffect: false),
 		};
 
 		bool picked = NetworkAiFallbackRules.TryPickCaptureHandIndexForNetworkAiProxy(
@@ -2307,50 +2608,50 @@ internal static partial class Program
 
 	private static void CardEventBusScopesTriggerLimitsToOneDispatch()
 	{
-		var bus = new CardEventBus();
+		var bus = CreateCardTriggerDispatchSession();
 		var gameEvent = new CardGameEvent(
 			CardGameEvents.OnPlay,
 			sourceTableCardIndex: 3);
 
-		long firstDispatchId = bus.BeginDispatch();
-		bus.Publish(
+		long firstDispatchId = bus.BeginCardTriggerDispatch();
+		bus.PublishCardTriggerEvent(
 			firstDispatchId,
 			gameEvent,
 			new FixedCardTriggerProvider(5));
 		int firstDispatchCount = 0;
-		while (bus.TryDequeue(firstDispatchId, out _))
+		while (bus.TryTakeCardTrigger(firstDispatchId, out _))
 		{
 			firstDispatchCount++;
 		}
 		Equal(4, firstDispatchCount);
-		True(bus.EndDispatch(firstDispatchId));
+		True(bus.EndCardTriggerDispatch(firstDispatchId));
 
 		for (int dispatchIndex = 0; dispatchIndex < 5; dispatchIndex++)
 		{
-			long dispatchId = bus.BeginDispatch();
-			bus.Publish(
+			long dispatchId = bus.BeginCardTriggerDispatch();
+			bus.PublishCardTriggerEvent(
 				dispatchId,
 				gameEvent,
 				new FixedCardTriggerProvider(1));
-			True(bus.TryDequeue(
+			True(bus.TryTakeCardTrigger(
 				dispatchId,
 				out CardTriggerRequest request));
 			Equal(0, request.Sequence);
-			False(bus.TryDequeue(dispatchId, out _));
-			True(bus.EndDispatch(dispatchId));
+			False(bus.TryTakeCardTrigger(dispatchId, out _));
+			True(bus.EndCardTriggerDispatch(dispatchId));
 		}
 
-		long drainedDispatchId = bus.BeginDispatch();
-		bus.Publish(
+		long drainedDispatchId = bus.BeginCardTriggerDispatch();
+		bus.PublishCardTriggerEvent(
 			drainedDispatchId,
 			gameEvent,
 			new FixedCardTriggerProvider(1));
-		True(bus.TryDequeue(drainedDispatchId, out _));
-		Equal(0, bus.PendingCount);
+		True(bus.TryTakeCardTrigger(drainedDispatchId, out _));
+		Equal(0, bus.PendingCardTriggerCount);
 		bool beginThrew = false;
 		try
 		{
-			bus.BeginDispatch();
+			bus.BeginCardTriggerDispatch();
 		}
 		catch (InvalidOperationException)
 		{
@@ -2358,46 +2659,46 @@ internal static partial class Program
 		}
 
 		True(beginThrew);
-		True(bus.EndDispatch(drainedDispatchId));
+		True(bus.EndCardTriggerDispatch(drainedDispatchId));
 	}
 
 	private static void CardEventBusEndsAbortedAndFailedDispatches()
 	{
-		var bus = new CardEventBus();
+		var bus = CreateCardTriggerDispatchSession();
 		var gameEvent = new CardGameEvent(CardGameEvents.OnPlay);
 
-		long abortedDispatchId = bus.BeginDispatch();
+		long abortedDispatchId = bus.BeginCardTriggerDispatch();
 		try
 		{
-			bus.Publish(
+			bus.PublishCardTriggerEvent(
 				abortedDispatchId,
 				gameEvent,
 				new FixedCardTriggerProvider(3));
-			True(bus.TryDequeue(abortedDispatchId, out _));
+			True(bus.TryTakeCardTrigger(abortedDispatchId, out _));
 		}
 		finally
 		{
-			True(bus.EndDispatch(abortedDispatchId));
+			True(bus.EndCardTriggerDispatch(abortedDispatchId));
 		}
-		Equal(0, bus.PendingCount);
+		Equal(0, bus.PendingCardTriggerCount);
 
 		bool resolverThrew = false;
-		long failedDispatchId = bus.BeginDispatch();
+		long failedDispatchId = bus.BeginCardTriggerDispatch();
 		try
 		{
 			try
 			{
-				bus.Publish(
+				bus.PublishCardTriggerEvent(
 					failedDispatchId,
 					gameEvent,
 					new FixedCardTriggerProvider(3));
-				True(bus.TryDequeue(failedDispatchId, out _));
+				True(bus.TryTakeCardTrigger(failedDispatchId, out _));
 				throw new InvalidOperationException(
 					"simulated resolver failure");
 			}
 			finally
 			{
-				True(bus.EndDispatch(failedDispatchId));
+				True(bus.EndCardTriggerDispatch(failedDispatchId));
 			}
 		}
 		catch (InvalidOperationException exception)
@@ -2406,41 +2707,41 @@ internal static partial class Program
 			resolverThrew = true;
 		}
 		True(resolverThrew);
-		Equal(0, bus.PendingCount);
+		Equal(0, bus.PendingCardTriggerCount);
 
-		long replacementDispatchId = bus.BeginDispatch();
-		bus.Publish(
+		long replacementDispatchId = bus.BeginCardTriggerDispatch();
+		bus.PublishCardTriggerEvent(
 			replacementDispatchId,
 			gameEvent,
 			new FixedCardTriggerProvider(1));
-		True(bus.TryDequeue(
+		True(bus.TryTakeCardTrigger(
 			replacementDispatchId,
 			out CardTriggerRequest replacementRequest));
 		Equal(0, replacementRequest.Sequence);
-		True(bus.EndDispatch(replacementDispatchId));
+		True(bus.EndCardTriggerDispatch(replacementDispatchId));
 	}
 
 	private static void CardEventBusRejectsStaleDispatchOwnership()
 	{
-		var bus = new CardEventBus();
+		var bus = CreateCardTriggerDispatchSession();
 		var gameEvent = new CardGameEvent(CardGameEvents.OnPlay);
-		long staleDispatchId = bus.BeginDispatch();
-		bus.Publish(
+		long staleDispatchId = bus.BeginCardTriggerDispatch();
+		bus.PublishCardTriggerEvent(
 			staleDispatchId,
 			gameEvent,
 			new FixedCardTriggerProvider(2));
-		bus.Clear();
-		Equal(0, bus.PendingCount);
+		bus.ClearCardTriggerDispatch();
+		Equal(0, bus.PendingCardTriggerCount);
 
-		long currentDispatchId = bus.BeginDispatch();
-		bus.Publish(
+		long currentDispatchId = bus.BeginCardTriggerDispatch();
+		bus.PublishCardTriggerEvent(
 			currentDispatchId,
 			gameEvent,
 			new FixedCardTriggerProvider(1));
 		bool stalePublishThrew = false;
 		try
 		{
-			bus.Publish(
+			bus.PublishCardTriggerEvent(
 				staleDispatchId,
 				gameEvent,
 				new FixedCardTriggerProvider(1));
@@ -2454,19 +2755,19 @@ internal static partial class Program
 		bool staleDequeueThrew = false;
 		try
 		{
-			bus.TryDequeue(staleDispatchId, out _);
+			bus.TryTakeCardTrigger(staleDispatchId, out _);
 		}
 		catch (InvalidOperationException)
 		{
 			staleDequeueThrew = true;
 		}
 		True(staleDequeueThrew);
-		False(bus.EndDispatch(staleDispatchId));
-		True(bus.TryDequeue(
+		False(bus.EndCardTriggerDispatch(staleDispatchId));
+		True(bus.TryTakeCardTrigger(
 			currentDispatchId,
 			out CardTriggerRequest currentRequest));
 		Equal(0, currentRequest.Sequence);
-		True(bus.EndDispatch(currentDispatchId));
+		True(bus.EndCardTriggerDispatch(currentDispatchId));
 	}
 
 	private static void CardEventResolverEndsItsOwnedDispatchInFinally()
@@ -2489,7 +2790,7 @@ internal static partial class Program
 		string method = source[start..end];
 		True(Regex.IsMatch(
 			method,
-			@"try\s*\{[\s\S]*?_cardEventBus\.Publish\(dispatchId,[\s\S]*?\}\s*finally\s*\{\s*_cardEventBus\.EndDispatch\(dispatchId\);\s*\}",
+			@"try\s*\{[\s\S]*?ruleSession\.PublishCardTriggerEvent\(dispatchId,[\s\S]*?\}\s*finally\s*\{\s*ruleSession\.EndCardTriggerDispatch\(dispatchId\);\s*\}",
 			RegexOptions.CultureInvariant));
 	}
 
@@ -2518,49 +2819,42 @@ internal static partial class Program
 		True(migrationSource.Contains("MethodName.RpcHostEndedMatch", StringComparison.Ordinal));
 		True(migrationSource.Contains("[\"transport_descriptor\"]", StringComparison.Ordinal));
 		True(migrationSource.Contains("\"expected_lobby_owner_steam_id\"", StringComparison.Ordinal));
-		True(transportSource.Contains("setLobbyOwner", StringComparison.Ordinal));
+			True(transportSource.Contains("SetLobbyOwner", StringComparison.Ordinal));
 		True(transportSource.Contains("_getObservedLobbyOwnerSteamId()", StringComparison.Ordinal));
 		True(transportSource.Contains("host_with_lobby", StringComparison.Ordinal));
 		True(transportSource.Contains("connect_to_lobby", StringComparison.Ordinal));
 	}
 
-	private static void GameMigrationRecoveryRuntimeKeepsBoundedSnapshotAckWiring()
-	{
-		string root = FindRepositoryRoot();
-		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
-		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
-		string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
-		string recoveryRpcSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
-		string snapshotSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.NetworkSnapshot.cs"));
-		string smokeSource = File.ReadAllText(Path.Combine(root, "tests", "run_lan_host_migration_smoke.sh"));
+		private static void GameMigrationRecoveryRuntimeIsFencedByDisabledCapability()
+		{
+			string root = FindRepositoryRoot();
+			string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+			string securitySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Security.cs"));
+			string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
+			string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+			string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
+			string snapshotSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.NetworkSnapshot.cs"));
 
-		True(managerSource.Contains("PollMigrationReadiness(now);", StringComparison.Ordinal));
-		True(managerSource.Contains("RemoveMigrationRecoverySeatAfterDisconnect(", StringComparison.Ordinal));
-		True(migrationSource.Contains("private void RpcMigrationFollowerSnapshotApplied(", StringComparison.Ordinal));
-		True(migrationSource.Contains("NetworkMigrationRules.GameRecoveryTimeoutSeconds", StringComparison.Ordinal)
-			|| File.ReadAllText(Path.Combine(root, "scripts", "GameMigrationRecoveryState.cs"))
-				.Contains("NetworkMigrationRules.GameRecoveryTimeoutSeconds", StringComparison.Ordinal));
-		True(reconnectSource.Contains("MethodName.RpcMigrationFollowerSnapshotApplied", StringComparison.Ordinal));
-		True(snapshotSource.Contains("networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);", StringComparison.Ordinal));
-		False(recoveryRpcSource.Contains("TryCompleteMigrationReadiness();", StringComparison.Ordinal));
-		True(Regex.Matches(
-			recoveryRpcSource,
-			@"ReturnToMultiplayerLobbyAfterMigrationFailure\(",
-			RegexOptions.CultureInvariant).Count >= 2);
-
-		int cleanupStart = migrationSource.IndexOf(
-			"private void ReturnToMultiplayerLobbyAfterMigrationFailure(string message)",
-			StringComparison.Ordinal);
-		int cleanupEnd = migrationSource.IndexOf(
-			"private void ApplyCheckpointMetadataForMigration(",
-			cleanupStart,
-			StringComparison.Ordinal);
-		True(cleanupStart >= 0 && cleanupEnd > cleanupStart);
-		string cleanupMethod = migrationSource[cleanupStart..cleanupEnd];
-		True(cleanupMethod.Contains("CompleteNetworkHostMigrationVisualState();", StringComparison.Ordinal));
-		False(cleanupMethod.Contains("BeginNetworkHostMigrationVisualState();", StringComparison.Ordinal));
-		True(smokeSource.Contains("missing_follower_late_reclaim", StringComparison.Ordinal));
-		True(smokeSource.Contains("follower_disconnect_during_recovery", StringComparison.Ordinal));
-	}
+			True(securitySource.Contains("#if DEBUG", StringComparison.Ordinal));
+			True(securitySource.Contains("OS.GetEnvironment(\"CODEX_LAN_MIGRATION_FIXTURE\") == \"1\"", StringComparison.Ordinal));
+			True(securitySource.Contains("#else\n\t\t\treturn false;\n#endif", StringComparison.Ordinal));
+			True(maintenanceSource.Contains(
+				"ExecuteMaintenanceTask(NetworkMaintenanceTaskKind.MigrationReadiness, HostMigrationCapabilityAvailable",
+				StringComparison.Ordinal));
+			True(maintenanceSource.Contains(
+				"HostMigrationCapabilityAvailable && IsHost && _gameMigrationRecoveryState",
+				StringComparison.Ordinal));
+			int rpcStart = migrationSource.IndexOf("private void RpcMigrationFollowerSnapshotApplied(", StringComparison.Ordinal);
+			int rpcEnd = migrationSource.IndexOf("private void RpcClaimMigratedLobbySeat(", rpcStart, StringComparison.Ordinal);
+			True(rpcStart >= 0 && rpcEnd > rpcStart);
+			True(migrationSource[rpcStart..rpcEnd].Contains("if (!HostMigrationCapabilityAvailable", StringComparison.Ordinal));
+			True(reconnectSource.Contains("HostMigrationCapabilityAvailable", StringComparison.Ordinal));
+			True(reconnectSource.Contains("MethodName.RpcMigrationFollowerSnapshotApplied", StringComparison.Ordinal));
+			True(snapshotSource.Contains("networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);", StringComparison.Ordinal));
+			int disconnectStart = managerSource.IndexOf("private void OnServerDisconnected()", StringComparison.Ordinal);
+			int disconnectEnd = managerSource.IndexOf("private void InsertPlayerInSeatOrder", disconnectStart, StringComparison.Ordinal);
+			True(disconnectStart >= 0 && disconnectEnd > disconnectStart);
+			False(managerSource[disconnectStart..disconnectEnd].Contains("BeginMigrationAfterHostDisconnect", StringComparison.Ordinal));
+		}
 
 }

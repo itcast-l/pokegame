@@ -117,26 +117,41 @@ public partial class GameBoardScene
 
 	private sealed class PairCaptureEdgeFloatHold
 	{
-		public PairCaptureEdgeFloatHold(int firstTableCardIndex, TextureRect firstOverlay)
-			: this(firstTableCardIndex, firstOverlay, -1, null)
+		public PairCaptureEdgeFloatHold(
+			int firstTableCardIndex,
+			long firstTableCardRuntimeInstanceId,
+			TextureRect firstOverlay)
+			: this(
+				firstTableCardIndex,
+				firstTableCardRuntimeInstanceId,
+				firstOverlay,
+				-1,
+				0,
+				null)
 		{
 		}
 
 		public PairCaptureEdgeFloatHold(
 			int firstTableCardIndex,
+			long firstTableCardRuntimeInstanceId,
 			TextureRect firstOverlay,
 			int secondTableCardIndex,
+			long secondTableCardRuntimeInstanceId,
 			TextureRect? secondOverlay)
 		{
 			_firstTableCardIndex = firstTableCardIndex;
+			_firstTableCardRuntimeInstanceId = firstTableCardRuntimeInstanceId;
 			_firstOverlay = firstOverlay;
 			_secondTableCardIndex = secondTableCardIndex;
+			_secondTableCardRuntimeInstanceId = secondTableCardRuntimeInstanceId;
 			_secondOverlay = secondOverlay;
 		}
 
 		private readonly int _firstTableCardIndex;
+		private readonly long _firstTableCardRuntimeInstanceId;
 		private readonly TextureRect _firstOverlay;
 		private readonly int _secondTableCardIndex;
+		private readonly long _secondTableCardRuntimeInstanceId;
 		private readonly TextureRect? _secondOverlay;
 
 		public bool TryGetFlightStartPositionOverride(int tableCardIndex, out Vector2 globalPosition)
@@ -179,10 +194,13 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		public void RestoreHiddenTableCards(IReadOnlyList<TableCard> tableCards)
+		public void RestorePresentationHiddenTableCards(HashSet<long> hiddenRuntimeInstanceIds)
 		{
-			RestoreHiddenTableCard(tableCards, _firstTableCardIndex);
-			RestoreHiddenTableCard(tableCards, _secondTableCardIndex);
+			hiddenRuntimeInstanceIds.Remove(_firstTableCardRuntimeInstanceId);
+			if (_secondTableCardRuntimeInstanceId > 0)
+			{
+				hiddenRuntimeInstanceIds.Remove(_secondTableCardRuntimeInstanceId);
+			}
 		}
 
 		public void QueueFreeOverlays(IGameBoardAnimationPresenter animationPresenter)
@@ -198,13 +216,6 @@ public partial class GameBoardScene
 			}
 		}
 
-		private static void RestoreHiddenTableCard(IReadOnlyList<TableCard> tableCards, int tableCardIndex)
-		{
-			if (tableCardIndex >= 0 && tableCardIndex < tableCards.Count)
-			{
-				tableCards[tableCardIndex].IsHiddenDuringCapture = false;
-			}
-		}
 	}
 
 	private async Task<PairCaptureEdgeFloatHold?> PlayPairCaptureEdgeFloatHoldAnimationAsync(int captureStartIndex, int playedTableCardIndex)
@@ -217,6 +228,8 @@ public partial class GameBoardScene
 		Rect2 tableLayoutRect = GetTableCardLayoutRect();
 		int firstTableCardIndex = -1;
 		int secondTableCardIndex = -1;
+		long firstTableCardRuntimeInstanceId = 0;
+		long secondTableCardRuntimeInstanceId = 0;
 		TextureRect? firstOverlay = null;
 		TextureRect? secondOverlay = null;
 
@@ -242,15 +255,18 @@ public partial class GameBoardScene
 				CanvasItem.TextureFilterEnum.Nearest,
 				zAsRelative: false);
 			overlay.GlobalPosition = _centerArena.GlobalPosition + GetTableCardPosition(tableCardIndex, tableLayoutRect);
-			_tableCards[tableCardIndex].IsHiddenDuringCapture = true;
+			TableCard tableCard = _tableCards[tableCardIndex];
+			_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId);
 			if (firstOverlay == null)
 			{
 				firstTableCardIndex = tableCardIndex;
+				firstTableCardRuntimeInstanceId = tableCard.InstanceId;
 				firstOverlay = overlay;
 			}
 			else
 			{
 				secondTableCardIndex = tableCardIndex;
+				secondTableCardRuntimeInstanceId = tableCard.InstanceId;
 				secondOverlay = overlay;
 			}
 		}
@@ -266,28 +282,47 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		PlayGameSfx(GameSfx.CaptureLift, -2.0f, 0.98f, 1.02f);
-		RenderTableCards();
-		Tween tween = CreateBoardTween();
-		tween.SetParallel(true);
-		tween.SetTrans(Tween.TransitionType.Sine);
-		tween.SetEase(Tween.EaseType.Out);
-
-		void TweenOverlay(TextureRect overlay)
+		var hold = new PairCaptureEdgeFloatHold(
+			firstTableCardIndex,
+			firstTableCardRuntimeInstanceId,
+			firstOverlay,
+			secondTableCardIndex,
+			secondTableCardRuntimeInstanceId,
+			secondOverlay);
+		bool holdReturned = false;
+		try
 		{
-			Vector2 startGlobalPosition = overlay.GlobalPosition;
-			tween.TweenProperty(overlay, "global_position", startGlobalPosition + new Vector2(0.0f, -PairCaptureEdgeFloatRise), PairCaptureEdgeFloatSeconds);
-			tween.TweenProperty(overlay, "scale", Vector2.One * PairCaptureEdgeFloatScale, PairCaptureEdgeFloatSeconds);
-		}
+			PlayGameSfx(GameSfx.CaptureLift, -2.0f, 0.98f, 1.02f);
+			RenderTableCards();
+			Tween tween = CreateBoardTween();
+			tween.SetParallel(true);
+			tween.SetTrans(Tween.TransitionType.Sine);
+			tween.SetEase(Tween.EaseType.Out);
 
-		TweenOverlay(firstOverlay);
-		if (secondOverlay != null)
+			void TweenOverlay(TextureRect overlay)
+			{
+				Vector2 startGlobalPosition = overlay.GlobalPosition;
+				tween.TweenProperty(overlay, "global_position", startGlobalPosition + new Vector2(0.0f, -PairCaptureEdgeFloatRise), PairCaptureEdgeFloatSeconds);
+				tween.TweenProperty(overlay, "scale", Vector2.One * PairCaptureEdgeFloatScale, PairCaptureEdgeFloatSeconds);
+			}
+
+			TweenOverlay(firstOverlay);
+			if (secondOverlay != null)
+			{
+				TweenOverlay(secondOverlay);
+			}
+
+			await WaitForBoardTweenAsync(tween);
+			holdReturned = true;
+			return hold;
+		}
+		finally
 		{
-			TweenOverlay(secondOverlay);
+			if (!holdReturned)
+			{
+				RestorePairCaptureEdgeFloatHold(hold);
+			}
 		}
-
-		await WaitForBoardTweenAsync(tween);
-		return new PairCaptureEdgeFloatHold(firstTableCardIndex, firstOverlay, secondTableCardIndex, secondOverlay);
 	}
 
 	private async Task<bool> PlayPairCaptureEdgeFloatRevealAnimationAsync(
@@ -328,7 +363,8 @@ public partial class GameBoardScene
 
 	private void RestorePairCaptureEdgeFloatHold(PairCaptureEdgeFloatHold hold)
 	{
-		hold.RestoreHiddenTableCards(_tableCards);
+		hold.RestorePresentationHiddenTableCards(
+			_presentationHiddenTableCardRuntimeInstanceIds);
 		hold.QueueFreeOverlays(_animationPresenter);
 		RenderTableCards();
 	}

@@ -1,6 +1,11 @@
 extends Node
 
 signal steam_ready
+signal lobby_created(connect: int, lobby_id: int)
+signal lobby_joined(lobby_id: int, permissions: int, locked: bool, response: int)
+signal lobby_match_list(lobbies: Array)
+signal join_requested(lobby_id: int, friend_id: int)
+signal lobby_data_update(success: int, lobby_id: int, member_id: int)
 
 var is_available := false
 var is_initialized := false
@@ -12,6 +17,12 @@ var current_game_language := ""
 var steam_ui_language := ""
 var available_game_languages := ""
 var preferred_godot_locale := ""
+var singleton_lookup_count := 0
+var capability_query_count := 0
+var process_call_count := 0
+
+var _steam: Object
+var _capabilities: Dictionary = {}
 
 const _STEAM_LANGUAGE_FALLBACKS := {
 	"arabic": "ar",
@@ -48,43 +59,43 @@ const _STEAM_LANGUAGE_FALLBACKS := {
 
 
 func _ready() -> void:
+	set_process(false)
 	_initialize_steam()
 
 
 func _process(_delta: float) -> void:
+	process_call_count += 1
 	if not is_initialized:
 		return
 
-	var steam := _get_steam()
-	if steam == null:
+	if _steam == null:
 		return
 
-	steam.run_callbacks()
-	if steam.has_method("runNetworkingCallbacks"):
-		steam.runNetworkingCallbacks()
+	_steam.run_callbacks()
+	if _has_capability("runNetworkingCallbacks"):
+		_steam.runNetworkingCallbacks()
 
 
 func _exit_tree() -> void:
 	if is_initialized:
-		var steam := _get_steam()
-		if steam != null and steam.has_method("steamShutdown"):
-			steam.steamShutdown()
+		if _steam != null and _has_capability("steamShutdown"):
+			_steam.steamShutdown()
+	set_process(false)
 
 
 func refresh_languages() -> void:
 	if not is_initialized:
 		return
 
-	var steam := _get_steam()
-	if steam == null or not is_initialized:
+	if _steam == null or not is_initialized:
 		return
 
-	if steam.has_method("isSteamRunning") and not bool(steam.isSteamRunning()):
+	if _has_capability("isSteamRunning") and not bool(_steam.isSteamRunning()):
 		return
 
-	current_game_language = str(steam.getCurrentGameLanguage()).strip_edges() if steam.has_method("getCurrentGameLanguage") else ""
-	steam_ui_language = str(steam.getSteamUILanguage()).strip_edges() if steam.has_method("getSteamUILanguage") else ""
-	available_game_languages = str(steam.getAvailableGameLanguages()).strip_edges() if steam.has_method("getAvailableGameLanguages") else ""
+	current_game_language = str(_steam.getCurrentGameLanguage()).strip_edges() if _has_capability("getCurrentGameLanguage") else ""
+	steam_ui_language = str(_steam.getSteamUILanguage()).strip_edges() if _has_capability("getSteamUILanguage") else ""
+	available_game_languages = str(_steam.getAvailableGameLanguages()).strip_edges() if _has_capability("getAvailableGameLanguages") else ""
 	preferred_godot_locale = _map_steam_language_to_locale(current_game_language)
 	if preferred_godot_locale.is_empty():
 		preferred_godot_locale = _map_steam_language_to_locale(steam_ui_language)
@@ -101,13 +112,24 @@ func get_steam_language() -> String:
 
 
 func _initialize_steam() -> void:
-	var steam := _get_steam()
-	if steam == null:
+	singleton_lookup_count += 1
+	if OS.get_environment("DECKLAND_DISABLE_STEAM") == "1":
+		init_message = "Steam is disabled by the runtime environment."
+		set_process(false)
+		return
+	_steam = Engine.get_singleton("Steam") if Engine.has_singleton("Steam") else null
+	if _steam == null:
 		init_message = "GodotSteam singleton is not available."
+		set_process(false)
 		return
 
+	_cache_capabilities()
 	is_available = true
-	var result = steam.steamInitEx()
+	if not _has_capability("steamInitEx"):
+		init_message = "GodotSteam initialization method is not available."
+		set_process(false)
+		return
+	var result = _steam.steamInitEx()
 	if typeof(result) == TYPE_DICTIONARY:
 		init_status = int(result.get("status", -1))
 		init_message = str(result.get("verbal", ""))
@@ -118,21 +140,155 @@ func _initialize_steam() -> void:
 		init_message = "" if is_initialized else "Steam initialization failed."
 
 	if not is_initialized:
+		set_process(false)
 		return
 
-	steam_id = int(steam.getSteamID())
-	persona_name = str(steam.getPersonaName())
+	steam_id = int(_steam.getSteamID()) if _has_capability("getSteamID") else 0
+	persona_name = str(_steam.getPersonaName()) if _has_capability("getPersonaName") else ""
 	refresh_languages()
-	if steam.has_method("initRelayNetworkAccess"):
-		steam.initRelayNetworkAccess()
+	if _has_capability("initRelayNetworkAccess"):
+		_steam.initRelayNetworkAccess()
 
+	_connect_forwarded_signals()
+	set_process(true)
 	steam_ready.emit()
 
 
-func _get_steam() -> Object:
-	if not Engine.has_singleton("Steam"):
-		return null
-	return Engine.get_singleton("Steam")
+func _cache_capabilities() -> void:
+	for method_name in [
+		"steamInitEx",
+		"run_callbacks",
+		"runNetworkingCallbacks",
+		"steamShutdown",
+		"isSteamRunning",
+		"getSteamID",
+		"getPersonaName",
+		"getCurrentGameLanguage",
+		"getSteamUILanguage",
+		"getAvailableGameLanguages",
+		"initRelayNetworkAccess",
+		"requestLobbyList",
+		"inviteUserToLobby",
+		"activateGameOverlayInviteDialog",
+		"createLobby",
+		"joinLobby",
+		"getLobbyData",
+		"getLobbyOwner",
+		"setLobbyJoinable",
+		"setLobbyData",
+		"setLobbyOwner",
+		"leaveLobby",
+	]:
+		_capabilities[method_name] = _steam.has_method(method_name)
+		capability_query_count += 1
+
+
+func _has_capability(method_name: String) -> bool:
+	return bool(_capabilities.get(method_name, false))
+
+
+func _connect_forwarded_signals() -> void:
+	_connect_signal_if_available("lobby_created", _on_lobby_created)
+	_connect_signal_if_available("lobby_joined", _on_lobby_joined)
+	_connect_signal_if_available("lobby_match_list", _on_lobby_match_list)
+	_connect_signal_if_available("join_requested", _on_join_requested)
+	_connect_signal_if_available("lobby_data_update", _on_lobby_data_update)
+
+
+func _connect_signal_if_available(signal_name: String, callback: Callable) -> void:
+	if _steam.has_signal(signal_name) and not _steam.is_connected(signal_name, callback):
+		_steam.connect(signal_name, callback)
+
+
+func _on_lobby_created(connect: int, lobby_id: int) -> void:
+	lobby_created.emit(connect, lobby_id)
+
+
+func _on_lobby_joined(lobby_id: int, permissions: int, locked: bool, response: int) -> void:
+	lobby_joined.emit(lobby_id, permissions, locked, response)
+
+
+func _on_lobby_match_list(lobbies: Array) -> void:
+	lobby_match_list.emit(lobbies)
+
+
+func _on_join_requested(lobby_id: int, friend_id: int) -> void:
+	join_requested.emit(lobby_id, friend_id)
+
+
+func _on_lobby_data_update(success: int, lobby_id: int, member_id: int) -> void:
+	lobby_data_update.emit(success, lobby_id, member_id)
+
+
+func request_lobby_list() -> bool:
+	if not is_initialized or not _has_capability("requestLobbyList"):
+		return false
+	_steam.requestLobbyList()
+	return true
+
+
+func invite_user_to_lobby(lobby_id: int, user_id: int) -> bool:
+	return bool(_steam.inviteUserToLobby(lobby_id, user_id)) \
+		if is_initialized and _has_capability("inviteUserToLobby") else false
+
+
+func activate_lobby_invite_dialog(lobby_id: int) -> bool:
+	if not is_initialized or not _has_capability("activateGameOverlayInviteDialog"):
+		return false
+	_steam.activateGameOverlayInviteDialog(lobby_id)
+	return true
+
+
+func create_lobby(lobby_type: int, player_count: int) -> bool:
+	if not is_initialized or not _has_capability("createLobby"):
+		return false
+	_steam.createLobby(lobby_type, player_count)
+	return true
+
+
+func join_lobby(lobby_id: int) -> bool:
+	if not is_initialized or not _has_capability("joinLobby"):
+		return false
+	_steam.joinLobby(lobby_id)
+	return true
+
+
+func get_lobby_data(lobby_id: int, key: String) -> String:
+	return str(_steam.getLobbyData(lobby_id, key)) \
+		if is_initialized and _has_capability("getLobbyData") else ""
+
+
+func get_lobby_owner(lobby_id: int) -> int:
+	return int(_steam.getLobbyOwner(lobby_id)) \
+		if is_initialized and _has_capability("getLobbyOwner") else 0
+
+
+func set_lobby_joinable(lobby_id: int, joinable: bool) -> bool:
+	return bool(_steam.setLobbyJoinable(lobby_id, joinable)) \
+		if is_initialized and _has_capability("setLobbyJoinable") else false
+
+
+func set_lobby_data(lobby_id: int, key: String, value: String) -> bool:
+	return bool(_steam.setLobbyData(lobby_id, key, value)) \
+		if is_initialized and _has_capability("setLobbyData") else false
+
+
+func set_lobby_owner(lobby_id: int, owner_id: int) -> bool:
+	return bool(_steam.setLobbyOwner(lobby_id, owner_id)) \
+		if is_initialized and _has_capability("setLobbyOwner") else false
+
+
+func leave_lobby(lobby_id: int) -> bool:
+	if not is_initialized or not _has_capability("leaveLobby"):
+		return false
+	_steam.leaveLobby(lobby_id)
+	return true
+
+
+func get_steam_id_for_peer(peer: MultiplayerPeer, peer_id: int) -> int:
+	if peer == null or peer_id <= 0 or not peer.has_method("get_steam_id_for_peer_id"):
+		return 0
+	return int(peer.call("get_steam_id_for_peer_id", peer_id))
 
 
 func _map_steam_language_to_locale(language_key: String) -> String:

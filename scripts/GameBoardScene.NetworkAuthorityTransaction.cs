@@ -151,7 +151,7 @@ public partial class GameBoardScene
 			return AuthorityRuleTransactionResult.Rejected;
 		}
 
-		AuthorityCheckpointCommitResult checkpoint = networkManager.CommitAuthorityCheckpointFromBoard(this);
+		AuthorityCheckpointCommitResult checkpoint = networkManager.CommitAuthorityCheckpointFromBoard();
 		if (!checkpoint.IsCheckpointCommitted)
 		{
 			return AuthorityRuleTransactionResult.Rejected;
@@ -186,7 +186,7 @@ public partial class GameBoardScene
 		RenderTableCards();
 
 		NetworkManager? networkManager = GetNetworkManager();
-		networkManager?.PublishCommittedBoardActionFromHost(this, actorSeatIndex, transaction);
+		networkManager?.PublishCommittedBoardActionFromHost(actorSeatIndex, transaction);
 		QueueCommittedNetworkAuthorityHostVisualEvents(transaction, hostVisualEvents);
 		PresentCommittedNetworkAuthorityMatchOutcome();
 		ReleaseDeferredNetworkAuthoritySelectionWaiters();

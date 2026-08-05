@@ -154,9 +154,21 @@ public partial class GameBoardScene
 					|| !TryReadBoundedNetworkStringArray(payload, NetworkBoardVisualEventTypes.AttachedItemCardIdsKey, 0, 1, MaxNetworkItemCardIdLength, out strings) || !HasValidNetworkAttachedItemCardIds(strings)) return false;
 				if (itemId.Length == 0)
 				{
-					if (!_networkCardsByCode.ContainsKey(cardCode) || targetHandIndex >= _playerHands[targetSeat].Count || !string.Equals(ToNetworkCardCode(_playerHands[targetSeat][targetHandIndex]), cardCode, StringComparison.Ordinal) || !string.Equals(_playerHands[targetSeat][targetHandIndex].AttachedItemCardIdsCsv, strings.Length == 0 ? string.Empty : strings[0], StringComparison.Ordinal)) return false;
+					if (!_networkCardsByCode.ContainsKey(cardCode)
+						|| targetHandIndex >= _playerHands[targetSeat].Count
+						|| !MatchesVisibleNetworkPlayingCardIdentity(
+							_playerHands[targetSeat][targetHandIndex],
+							cardCode,
+							strings.Length == 0 ? string.Empty : strings[0])) return false;
 				}
-				else if (!IsValidNetworkItemCardId(itemId, true) || cardCode.Length != 0 || strings.Length != 0 || targetHandIndex - _playerHands[targetSeat].Count < 0 || targetHandIndex - _playerHands[targetSeat].Count >= _playerItemHands[targetSeat].Count || !string.Equals(_playerItemHands[targetSeat][targetHandIndex - _playerHands[targetSeat].Count].Id, itemId, StringComparison.Ordinal)) return false;
+				else if (!IsValidNetworkItemCardId(itemId, true)
+					|| cardCode.Length != 0
+					|| strings.Length != 0
+					|| targetHandIndex - _playerHands[targetSeat].Count < 0
+					|| targetHandIndex - _playerHands[targetSeat].Count >= _playerItemHands[targetSeat].Count
+					|| !MatchesVisibleNetworkItemCardIdentity(
+						_playerItemHands[targetSeat][targetHandIndex - _playerHands[targetSeat].Count],
+						itemId)) return false;
 				break;
 			case NetworkBoardVisualEventTypes.CaptureReveal:
 				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor) || actor != GetLocalHandPlayerIndex() || !TryDecodeNetworkCaptureRevealEntries(payload, out captureRevealEntries)) return false;
@@ -326,7 +338,15 @@ public partial class GameBoardScene
 		}
 		if (!matchesLocalPrediction)
 		{
-			_tableCards.Insert(clampedTableCardIndex, new TableCard(playedCard, playedCardIsFaceUp, cardOwnerPlayerIndex: actorSeatIndex));
+			if (!TryInsertNetworkPresentationTableCard(
+				clampedTableCardIndex,
+				new TableCard(
+					playedCard,
+					playedCardIsFaceUp,
+					cardOwnerPlayerIndex: actorSeatIndex)))
+			{
+				return;
+			}
 			if (actorSeatIndex == GetLocalHandPlayerIndex()
 				&& handIndex == _networkPendingHandIndex)
 			{
@@ -438,7 +458,7 @@ public partial class GameBoardScene
 		if (payload.Presentation == CardPlayPresentationTypes.DirectTrigger)
 		{
 			await PlaySpecialCardTriggerEffectAsync(
-				itemCard.Texture,
+				GetItemCardTexture(itemCard),
 				startGlobalPosition,
 				0,
 				GetCardRotationDegreesForPlayer(payload.Actor));
@@ -447,13 +467,13 @@ public partial class GameBoardScene
 
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		await PlayItemCardToTransformAreaAnimationAsync(
-			itemCard.Texture,
+			GetItemCardTexture(itemCard),
 			startGlobalPosition,
 			transformAreaGlobalPosition,
 			GetCardRotationDegreesForPlayer(payload.Actor));
 		if (payload.Actor == GetLocalHandPlayerIndex())
 		{
-			await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
+			await PlaySpecialCardTriggerEffectAsync(GetItemCardTexture(itemCard), transformAreaGlobalPosition, 0);
 		}
 	}
 
@@ -498,7 +518,7 @@ public partial class GameBoardScene
 				|| itemHandIndex < 0
 				|| itemHandIndex >= _playerItemHands[actorSeatIndex].Count
 				|| !string.Equals(_playerItemHands[actorSeatIndex][itemHandIndex].Id, itemCardId, StringComparison.Ordinal)
-				|| !InsertNetworkTableOverlayIfMissing(actorSeatIndex, targetTableCardIndex, itemCard))
+				|| !TryAddNetworkTableOverlayPresentation(actorSeatIndex, targetTableCardIndex, itemCard))
 			{
 				return;
 			}
@@ -510,7 +530,7 @@ public partial class GameBoardScene
 		if (playPresentation == CardPlayPresentationTypes.DirectTrigger)
 		{
 			await PlaySpecialCardTriggerEffectAsync(
-				itemCard.Texture,
+				GetItemCardTexture(itemCard),
 				startGlobalPosition,
 				0,
 				GetCardRotationDegreesForPlayer(actorSeatIndex));
@@ -519,13 +539,13 @@ public partial class GameBoardScene
 
 		Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		await PlayItemCardToTransformAreaAnimationAsync(
-			itemCard.Texture,
+			GetItemCardTexture(itemCard),
 			startGlobalPosition,
 			transformAreaGlobalPosition,
 			GetCardRotationDegreesForPlayer(actorSeatIndex));
 		if (actorSeatIndex == GetLocalHandPlayerIndex())
 		{
-			await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
+			await PlaySpecialCardTriggerEffectAsync(GetItemCardTexture(itemCard), transformAreaGlobalPosition, 0);
 		}
 	}
 
@@ -539,7 +559,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!EnsureNetworkHandCardPlaceholder(playerIndex, displayIndex, drawnCardCode))
+		if (!TryAddNetworkHandCardPresentationPlaceholder(playerIndex, displayIndex, drawnCardCode))
 		{
 			return;
 		}
@@ -585,8 +605,10 @@ public partial class GameBoardScene
 		{
 			int sourceItemHandIndex = targetHandIndex - _playerHands[targetPlayerIndex].Count;
 			if (sourceItemHandIndex < 0 || sourceItemHandIndex >= _playerItemHands[targetPlayerIndex].Count
-				|| !string.Equals(_playerItemHands[targetPlayerIndex][sourceItemHandIndex].Id, itemCardId, StringComparison.Ordinal)) return;
-			ItemCard stolenItemCard = _playerItemHands[targetPlayerIndex][sourceItemHandIndex];
+				|| !MatchesVisibleNetworkItemCardIdentity(
+					_playerItemHands[targetPlayerIndex][sourceItemHandIndex],
+					itemCardId)) return;
+			ItemCard stolenItemCard = CreateNetworkVisualItemCard(itemCardId);
 			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 			await PlayStealHandCardAnimationAsync(
 				ownerPlayerIndex,
@@ -606,18 +628,24 @@ public partial class GameBoardScene
 			if (GetTotalHandCardCount(ownerPlayerIndex) >= MaxTotalHandCards
 				|| sourceItemHandIndex < 0
 				|| sourceItemHandIndex >= _playerItemHands[targetPlayerIndex].Count
-				|| !string.Equals(_playerItemHands[targetPlayerIndex][sourceItemHandIndex].Id, itemCardId, StringComparison.Ordinal)) return;
-			_playerItemHands[targetPlayerIndex].RemoveAt(sourceItemHandIndex);
+				|| !MatchesVisibleNetworkItemCardIdentity(
+					_playerItemHands[targetPlayerIndex][sourceItemHandIndex],
+					itemCardId)
+				|| !TryTransferNetworkPresentationItemCard(
+					targetPlayerIndex,
+					sourceItemHandIndex,
+					ownerPlayerIndex,
+					stolenItemCard)) return;
 			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-
-			_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
 		}
 		else
 		{
 			if (targetHandIndex < 0 || targetHandIndex >= _playerHands[targetPlayerIndex].Count
-				|| !string.Equals(ToNetworkCardCode(_playerHands[targetPlayerIndex][targetHandIndex]), stolenCardCode, StringComparison.Ordinal)
-				|| !string.Equals(_playerHands[targetPlayerIndex][targetHandIndex].AttachedItemCardIdsCsv, attachedItemCardIds.Length == 0 ? string.Empty : attachedItemCardIds[0], StringComparison.Ordinal)) return;
-			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
+				|| !MatchesVisibleNetworkPlayingCardIdentity(
+					_playerHands[targetPlayerIndex][targetHandIndex],
+					stolenCardCode,
+					attachedItemCardIds.Length == 0 ? string.Empty : attachedItemCardIds[0])) return;
+			PlayingCard stolenCard = CreateNetworkPlayingCard(stolenCardCode, attachedItemCardIds);
 			PlayGameSfx(GameSfx.StealCard, -1.5f, 0.97f, 1.04f, 0.08);
 			await PlayStealHandCardAnimationAsync(
 				ownerPlayerIndex,
@@ -637,12 +665,16 @@ public partial class GameBoardScene
 			if (GetTotalHandCardCount(ownerPlayerIndex) >= MaxTotalHandCards
 				|| targetHandIndex < 0
 				|| targetHandIndex >= _playerHands[targetPlayerIndex].Count
-				|| !string.Equals(ToNetworkCardCode(_playerHands[targetPlayerIndex][targetHandIndex]), stolenCardCode, StringComparison.Ordinal)
-				|| !string.Equals(_playerHands[targetPlayerIndex][targetHandIndex].AttachedItemCardIdsCsv, attachedItemCardIds.Length == 0 ? string.Empty : attachedItemCardIds[0], StringComparison.Ordinal)) return;
-			_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
+				|| !MatchesVisibleNetworkPlayingCardIdentity(
+					_playerHands[targetPlayerIndex][targetHandIndex],
+					stolenCardCode,
+					attachedItemCardIds.Length == 0 ? string.Empty : attachedItemCardIds[0])
+				|| !TryTransferNetworkPresentationHandCard(
+					targetPlayerIndex,
+					targetHandIndex,
+					ownerPlayerIndex,
+					stolenCard)) return;
 			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-
-			_playerHands[ownerPlayerIndex].Add(stolenCard);
 		}
 
 		PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
@@ -698,17 +730,11 @@ public partial class GameBoardScene
 			RenderPlayerCardPiles();
 			return;
 		}
-		for (int cardIndex = 0; cardIndex < appliedMoveCount; cardIndex++)
+		if (TryTransferNetworkPresentationDeckCards(
+			targetPlayerIndex,
+			ownerPlayerIndex,
+			appliedMoveCount))
 		{
-			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
-			_playerDecks[targetPlayerIndex].RemoveAt(0);
-			AddCardToPlayerDeck(ownerPlayerIndex, topCard);
-		}
-
-		if (appliedMoveCount > 0)
-		{
-			Shuffle(_playerDecks[ownerPlayerIndex]);
-			Shuffle(_playerDecks[targetPlayerIndex]);
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
 		}
 
@@ -757,7 +783,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!EnsureNetworkQuestionTableCard(tableCardIndex))
+		if (!TryAddNetworkQuestionTablePresentationCard(tableCardIndex))
 		{
 			return;
 		}
@@ -781,7 +807,7 @@ public partial class GameBoardScene
 		ItemCard rewardItem = CreateValidatedNetworkItemCard(itemCardId);
 		if (!requiresMagnetAttachment)
 		{
-			if (!EnsureNetworkQuestionRewardItem(playerIndex, itemHandIndex, rewardItem)) return;
+			if (!TryAddNetworkQuestionRewardPresentationItem(playerIndex, itemHandIndex, rewardItem)) return;
 			HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 			RenderPlayerHands();
 		}
@@ -812,10 +838,10 @@ public partial class GameBoardScene
 		await PlayMantaRayTideShiftTableMoveAnimationAsync(_turnSequenceGeneration);
 		if (_turnSequenceGeneration == payload.Generation && !IsGameOver() && _tableCards.Count > 1)
 		{
-			TableCard tideShiftedCard = _tableCards[0];
-			_tableCards.RemoveAt(0);
-			_tableCards.Add(tideShiftedCard);
-			RenderTableCards();
+			if (TryMoveFirstNetworkPresentationTableCardToEnd())
+			{
+				RenderTableCards();
+			}
 		}
 	}
 
@@ -894,12 +920,15 @@ public partial class GameBoardScene
 					IsSlimeCoated = tableCard.IsSlimeCoated,
 					IsHiddenDuringCapture = tableCard.IsHiddenDuringCapture,
 				};
-				_tableCards[tableCardIndex] = tableCard;
+				if (!TryReplaceNetworkPresentationTableCard(tableCardIndex, tableCard))
+				{
+					return;
+				}
 			}
 
 			Texture2D? revealTexture = tableCard.Card.HasValue
-				? tableCard.Card.Value.Texture
-				: tableCard.ItemOverlay?.Texture;
+				? GetPlayingCardTexture(tableCard.Card.Value)
+				: tableCard.ItemOverlay.HasValue ? GetItemCardTexture(tableCard.ItemOverlay.Value) : null;
 			if (revealTexture == null)
 			{
 				return;
@@ -912,7 +941,10 @@ public partial class GameBoardScene
 				return;
 			}
 
-			_tableCards[tableCardIndex].IsFaceUp = true;
+			if (!TrySetNetworkPresentationTableCardFaceUp(tableCardIndex, true))
+			{
+				return;
+			}
 			RenderTableCards();
 			int points = entry.PointValue;
 			if (points > 0 && _tableCards[tableCardIndex].Card.HasValue)

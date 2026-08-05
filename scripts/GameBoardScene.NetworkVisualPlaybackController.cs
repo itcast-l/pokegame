@@ -33,12 +33,23 @@ public partial class GameBoardScene
 			return;
 		}
 
+		if (!EnsureNetworkReplicaPresentationState())
+		{
+			return;
+		}
+
 		await PlayNetworkCardPlayedEventAsync(visualEvent);
 	}
 
 	private bool RecoverNetworkVisualPlaybackFailure(NetworkVisualEvent visualEvent)
 	{
-		if (!visualEvent.IsAuthorityHostVisualOnly || IsBoardStopping || !IsInsideTree())
+		if (!visualEvent.IsAuthorityHostVisualOnly)
+		{
+			DiscardNetworkReplicaPresentationState();
+			return false;
+		}
+
+		if (IsBoardStopping || !IsInsideTree())
 		{
 			return false;
 		}

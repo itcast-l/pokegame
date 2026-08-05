@@ -54,8 +54,8 @@ public partial class NetworkManager
 	public bool RequestReturnToLobbyAfterMatch()
 	{
 		NetworkRpcContext context = GetCurrentRpcContext();
-		bool hasWinner = GetTree().CurrentScene is GameBoardScene gameBoard
-			&& gameBoard.IsNetworkGameOver();
+		bool hasWinner = TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard)
+			&& gameBoard.IsGameOver;
 		if (!MultiplayerRematchRules.CanIssueReturnRequest(_state, context, hasWinner))
 		{
 			return false;
@@ -104,8 +104,8 @@ public partial class NetworkManager
 
 	private bool TryReturnToLobbyAfterMatch(NetworkRpcContext completedMatchContext, int requesterPeerId)
 	{
-		bool hasWinner = GetTree().CurrentScene is GameBoardScene gameBoard
-			&& gameBoard.IsNetworkGameOver();
+		bool hasWinner = TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard)
+			&& gameBoard.IsGameOver;
 		bool canAccept = MultiplayerRematchRules.CanHostAcceptReturnRequest(
 			_state,
 			completedMatchContext,
@@ -211,6 +211,7 @@ public partial class NetworkManager
 
 	private void ResetCompletedMatchState()
 	{
+		ClearMatchEndpointRegistration();
 		_loadHandshake = null;
 		_pendingLobbyReadyByPeerId.Clear();
 		ClearPendingLocalReadyIntent();
@@ -244,20 +245,22 @@ public partial class NetworkManager
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
+		_reconnectWindowStartedAt = -1.0;
 		ResetClientActionIds();
 
-		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		ReplaceLatestAuthorityCheckpointEnvelope(AuthorityCheckpointEnvelope.Empty);
+		_authorityCommitSequence = 0;
 		_authorityCheckpointCommitFailureCount = 0;
 		_authorityCheckpointCommitFailureReported = false;
-			_networkMigrationPlan = null;
-			ClearPendingMigrationPlan();
+		_networkMigrationPlan = null;
+		ClearPendingMigrationPlan();
 		ClearLocalStandbyCheckpointCache();
 		_issuedStandbyCheckpointNonces.Reset();
 		_hotStandbySeat = -1;
 		_standbyAckedCheckpointId = -1;
 		_migrationEligibleCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
-		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyPendingCheckpointHash = string.Empty;
 		_standbyPendingEncryptedCheckpoint = null;
 		_standbyCheckpointSentAt = -1.0;
 		_lastStandbyCheckpointSentAt = -1.0;
@@ -297,6 +300,8 @@ public partial class NetworkManager
 		_hostEndedMatchPending = false;
 		_hostEndedMatchMessage = string.Empty;
 		_hostEndedMatchBroadcasted = false;
+		_hostDisconnectReturnPending = false;
+		_hostDisconnectErrorPublished = false;
 		ResetMigrationSecurityAfterCompletedMatch();
 	}
 
@@ -308,20 +313,10 @@ public partial class NetworkManager
 			: (long)GD.Randi();
 	}
 
-	public void LeaveSession()
+	private void PerformImmediateSessionCleanup(NetworkSessionCloseReason reason)
 	{
-		if (NetworkReconnectRules.ShouldBroadcastHostEndedMatch(IsHost, _state) && !_hostEndedMatchBroadcasted)
-		{
-			NetworkRpcContext context = GetCurrentRpcContext();
-			Rpc(
-				MethodName.RpcHostEndedMatch,
-				context.SessionId,
-				context.MatchId,
-				context.AuthorityEpoch,
-				"Host disconnected.");
-			_hostEndedMatchBroadcasted = true;
-		}
-
+		_ = reason;
+		ClearMatchEndpointRegistration();
 		StopLanDiscoveryResponder();
 		StopLanDiscoveryBrowser();
 		_loadHandshake = null;
@@ -343,19 +338,21 @@ public partial class NetworkManager
 		_nextReconnectAttemptAt = 0.0;
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
+		_reconnectWindowStartedAt = -1.0;
 		ResetClientActionIds();
-		_latestAuthorityCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		ReplaceLatestAuthorityCheckpointEnvelope(AuthorityCheckpointEnvelope.Empty);
+		_authorityCommitSequence = 0;
 		_authorityCheckpointCommitFailureCount = 0;
 		_authorityCheckpointCommitFailureReported = false;
-			_networkMigrationPlan = null;
-			ClearPendingMigrationPlan();
+		_networkMigrationPlan = null;
+		ClearPendingMigrationPlan();
 		ClearLocalStandbyCheckpointCache();
 		_issuedStandbyCheckpointNonces.Reset();
 		_hotStandbySeat = -1;
 		_standbyAckedCheckpointId = -1;
 		_migrationEligibleCheckpointId = -1;
 		_standbyPendingCheckpointId = -1;
-		_standbyPendingCheckpointEnvelope = AuthorityCheckpointEnvelope.Empty;
+		_standbyPendingCheckpointHash = string.Empty;
 		_standbyPendingEncryptedCheckpoint = null;
 		_standbyCheckpointSentAt = -1.0;
 		_lastStandbyCheckpointSentAt = -1.0;
@@ -384,10 +381,10 @@ public partial class NetworkManager
 		_activeMigrationPending = false;
 		_activeMigrationAwaitingSourceClose = false;
 		_activeMigrationDeadline = -1.0;
-			_activeMigrationConfirmedSeats.Clear();
-			_migrationFailureReturnPending = false;
-			_pendingLobbyErrorMessage = string.Empty;
-			_lobbyRejectPending = false;
+		_activeMigrationConfirmedSeats.Clear();
+		_migrationFailureReturnPending = false;
+		_pendingLobbyErrorMessage = string.Empty;
+		_lobbyRejectPending = false;
 		_lobbyRejectMessage = string.Empty;
 		_hostEndedMatchPending = false;
 		_hostEndedMatchMessage = string.Empty;
@@ -422,36 +419,143 @@ public partial class NetworkManager
 		EmitRoomListUpdated();
 	}
 
-	public async Task NotifyHostEndedMatchIfNeededAsync()
+	private bool _isSessionCloseInProgress;
+	private long _sessionCloseGeneration;
+	private Task? _sessionCloseTask;
+	private NetworkSessionCloseReason _activeSessionCloseReason;
+	private long _sessionCloseExecutionCount;
+	private long _sessionLeaveCompletionCount;
+	private long _hostEndedMatchCloseBroadcastCount;
+
+	public Task RequestSessionCloseAsync(NetworkSessionCloseReason reason)
 	{
-		if (!NetworkReconnectRules.ShouldBroadcastHostEndedMatch(IsHost, _state)
-			|| _hostEndedMatchBroadcasted
-			|| !IsInsideTree())
+		if (_isSessionCloseInProgress && _sessionCloseTask != null)
 		{
-			return;
+			return _sessionCloseTask;
 		}
 
-		_hostEndedMatchBroadcasted = true;
-		NetworkRpcContext context = GetCurrentRpcContext();
-		Rpc(
-			MethodName.RpcHostEndedMatch,
-			context.SessionId,
-			context.MatchId,
-			context.AuthorityEpoch,
-			"Host disconnected.");
-		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-		if (!IsInsideTree())
-		{
-			return;
-		}
-
-		await ToSignal(GetTree().CreateTimer(HostEndedMatchBroadcastGraceSeconds), SceneTreeTimer.SignalName.Timeout);
+		bool shouldBroadcast = NetworkReconnectRules.ShouldBroadcastHostEndedMatch(IsHost, _state)
+			&& !_hostEndedMatchBroadcasted;
+		NetworkSessionClosePolicy policy = NetworkSessionClosePolicy.Resolve(reason, shouldBroadcast);
+		long generation = ++_sessionCloseGeneration;
+		var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_sessionCloseTask = completion.Task;
+		_isSessionCloseInProgress = true;
+		_activeSessionCloseReason = reason;
+		_sessionCloseExecutionCount++;
+		SetState(NetworkSessionState.Leaving);
+		_ = ExecuteSessionCloseAsync(reason, policy, generation, completion);
+		return _sessionCloseTask;
 	}
+
+	public void LeaveSession()
+	{
+		_ = RequestSessionCloseAsync(IsHost
+			? NetworkSessionCloseReason.UserRequested
+			: NetworkSessionCloseReason.ClientRequested);
+	}
+
+	private void CloseSessionAndFail(NetworkSessionCloseReason reason, string message)
+	{
+		_ = RequestSessionCloseAsync(reason);
+		Fail(message);
+	}
+
+	private async Task ExecuteSessionCloseAsync(
+		NetworkSessionCloseReason reason,
+		NetworkSessionClosePolicy policy,
+		long generation,
+		TaskCompletionSource<bool> completion)
+	{
+		try
+		{
+			if (policy.BroadcastHostEndedMatch && !_hostEndedMatchBroadcasted && Multiplayer.MultiplayerPeer != null)
+			{
+				NetworkRpcContext context = GetCurrentRpcContext();
+				Rpc(
+					MethodName.RpcHostEndedMatch,
+					context.SessionId,
+					context.MatchId,
+					context.AuthorityEpoch,
+					"Host disconnected.");
+				_hostEndedMatchBroadcasted = true;
+				_hostEndedMatchCloseBroadcastCount++;
+			}
+
+			if (policy.WaitOneProcessFrame && IsInsideTree())
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			}
+			if (policy.ReliablePacketGraceSeconds > 0.0 && IsInsideTree())
+			{
+				await ToSignal(
+					GetTree().CreateTimer(policy.ReliablePacketGraceSeconds, processAlways: true),
+					SceneTreeTimer.SignalName.Timeout);
+			}
+
+			if (generation == _sessionCloseGeneration)
+			{
+				PerformImmediateSessionCleanup(reason);
+				_sessionLeaveCompletionCount++;
+				EmitSignal(SignalName.SessionLeaveCompleted, (int)reason);
+			}
+		}
+		catch (Exception error)
+		{
+			GD.PushWarning($"Session close failed over to immediate cleanup: {error.GetType().Name}");
+			if (generation == _sessionCloseGeneration)
+			{
+				PerformImmediateSessionCleanup(NetworkSessionCloseReason.InternalFailure);
+				_sessionLeaveCompletionCount++;
+				EmitSignal(SignalName.SessionLeaveCompleted, (int)NetworkSessionCloseReason.InternalFailure);
+			}
+		}
+		finally
+		{
+			if (generation == _sessionCloseGeneration)
+			{
+				_isSessionCloseInProgress = false;
+			}
+			completion.TrySetResult(true);
+		}
+	}
+
+	private void AbortSessionCloseAndCleanup(NetworkSessionCloseReason reason)
+	{
+		_sessionCloseGeneration++;
+		_isSessionCloseInProgress = false;
+		PerformImmediateSessionCleanup(reason);
+	}
+
+	private bool PrepareForNewSessionStart()
+	{
+		if (_state == NetworkSessionState.Leaving || _isSessionCloseInProgress)
+		{
+			return false;
+		}
+		if (_state is NetworkSessionState.Idle)
+		{
+			return true;
+		}
+		if (_state is NetworkSessionState.Searching or NetworkSessionState.Failed)
+		{
+			AbortSessionCloseAndCleanup(NetworkSessionCloseReason.SessionReplacement);
+			return true;
+		}
+
+		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.SessionReplacement);
+		return false;
+	}
+
+	public NetworkSessionCloseReason DebugGetActiveSessionCloseReason() => _activeSessionCloseReason;
+	public bool DebugIsSessionCloseInProgress() => _isSessionCloseInProgress;
+	public long DebugGetSessionCloseExecutionCount() => _sessionCloseExecutionCount;
+	public long DebugGetSessionLeaveCompletionCount() => _sessionLeaveCompletionCount;
+	public long DebugGetHostEndedMatchCloseBroadcastCount() => _hostEndedMatchCloseBroadcastCount;
 
 	public async Task LeaveSessionAfterHostEndedMatchAsync()
 	{
-		await NotifyHostEndedMatchIfNeededAsync();
-		LeaveSession();
+		await RequestSessionCloseAsync(NetworkSessionCloseReason.UserRequested);
 	}
 
 	public void LeaveSessionAfterHostEndedMatch()

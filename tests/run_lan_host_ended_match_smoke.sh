@@ -82,6 +82,7 @@ fi
 require_log_line "$HOST_LOG" "HOST_START_MATCH"
 require_log_line "$HOST_LOG" "HOST_BOARD_INIT"
 require_log_line "$HOST_LOG" "HOST_END_MATCH"
+require_log_line "$HOST_LOG" "HOST_CLOSE_METRICS"
 require_log_line "$HOST_LOG" "HOST_DONE"
 require_log_line "$CLIENT_LOG" "CLIENT_BOARD_INIT"
 require_log_line "$CLIENT_LOG" "CLIENT_ERROR Host disconnected."

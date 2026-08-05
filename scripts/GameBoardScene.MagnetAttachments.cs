@@ -1,29 +1,37 @@
 using System;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private async Task ResolvePendingMagnetAttachmentsAsync(int turnSequenceGeneration)
 	{
-		while (_pendingItemAttachmentRewards.Count > 0)
+		while (!GetPendingAttachmentRewards().IsEmpty)
 		{
 			if (turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
 			{
 				return;
 			}
 
-			PendingItemAttachmentReward reward = _pendingItemAttachmentRewards.Dequeue();
+			if (!TryTakePendingAttachmentReward(
+				turnSequenceGeneration,
+				out PendingAttachmentRewardState reward))
+			{
+				return;
+			}
 			MarkNetworkAuthorityAttachmentRewardInFlight(reward);
-			if (!PlayerHasAttachableMagnetCard(reward.PlayerIndex, reward.ItemCardId))
+			if (!PlayerHasAttachableMagnetCard(reward.Seat, reward.ItemId))
 			{
 				CommitNetworkAuthorityAttachmentMutation();
 				continue;
 			}
 
-			if (ShouldUseInteractiveHumanItemFollowup(reward.PlayerIndex))
+			if (ShouldUseInteractiveHumanItemFollowup(reward.Seat))
 			{
-				await ResolveHumanMagnetAttachmentAsync(reward.PlayerIndex, reward.ItemCardId, turnSequenceGeneration);
+				await ResolveHumanMagnetAttachmentAsync(reward.Seat, reward.ItemId, turnSequenceGeneration);
 				if (HasPendingItemSelection())
 				{
 					return;
@@ -31,7 +39,7 @@ public partial class GameBoardScene
 			}
 			else
 			{
-				if (AttachMagnetToAutoSelectedHandCard(reward.PlayerIndex, reward.ItemCardId))
+				if (AttachMagnetToAutoSelectedHandCard(reward.Seat, reward.ItemId))
 				{
 					PlayGameSfx(GameSfx.MagnetAttach, -1.0f, 0.97f, 1.03f, 0.08);
 				}
@@ -52,7 +60,11 @@ public partial class GameBoardScene
 	{
 		if (turnSequenceGeneration != _turnSequenceGeneration
 			|| _isResolvingMagnetAttachmentSelection
-			|| !PlayerHasAttachableMagnetCard(ownerPlayerIndex, itemCardId))
+			|| !PlayerHasAttachableMagnetCard(ownerPlayerIndex, itemCardId)
+			|| !TryBeginAttachmentMandatorySelection(
+				ownerPlayerIndex,
+				itemCardId,
+				turnSequenceGeneration))
 		{
 			return;
 		}
@@ -60,11 +72,6 @@ public partial class GameBoardScene
 		{
 			_isResolvingMagnetAttachmentSelection = false;
 			_isProcessingCardPlay = true;
-			_pendingItemCardId = itemCardId;
-			_pendingItemOwnerIndex = ownerPlayerIndex;
-			_pendingItemHandIndex = -1;
-			_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-			_pendingItemSelectionMode = PendingItemSelectionMode.AttachmentRewardHandCard;
 			_pendingMagnetAttachmentCompletion = null;
 			SyncNetworkAuthorityActionWithPendingSelection();
 			return;
@@ -75,11 +82,6 @@ public partial class GameBoardScene
 			TaskCreationOptions.RunContinuationsAsynchronously);
 		_isResolvingMagnetAttachmentSelection = true;
 		_isProcessingCardPlay = true;
-		_pendingItemCardId = itemCardId;
-		_pendingItemOwnerIndex = ownerPlayerIndex;
-		_pendingItemHandIndex = -1;
-		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-		_pendingItemSelectionMode = PendingItemSelectionMode.AttachmentRewardHandCard;
 		_pendingMagnetAttachmentCompletion = completionSource;
 		SyncNetworkAuthorityActionWithPendingSelection();
 		RenderPlayerHands();
@@ -158,6 +160,7 @@ public partial class GameBoardScene
 		}
 
 		RenderPlayerHands();
+		ShowMagnetAttachmentCountdown();
 	}
 
 	private async Task CompleteMagnetAttachmentSelectionAsync(int handIndex)
@@ -191,9 +194,9 @@ public partial class GameBoardScene
 			: PickAutoAttachableMagnetHandIndex(ownerPlayerIndex, itemCardId);
 		if (attachHandIndex < 0)
 		{
-			CommitNetworkAuthorityAttachmentMutation();
 			DisposeActiveSelectionOverlay();
 			ClearPendingItemSelectionState();
+			CommitNetworkAuthorityAttachmentMutation();
 			RenderPlayerHands();
 			SendBoardSnapshotIfHost();
 			return;
@@ -212,9 +215,17 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (!AttachMagnetToHandCard(ownerPlayerIndex, attachHandIndex, itemCardId))
+		if (!TryResolveAttachmentMandatorySelection(
+				ownerPlayerIndex,
+				attachHandIndex,
+				itemCardId,
+				turnSequenceGeneration))
 		{
-			AttachMagnetToAutoSelectedHandCard(ownerPlayerIndex, itemCardId);
+			DisposeActiveSelectionOverlay();
+			ClearPendingItemSelectionState();
+			RenderPlayerHands();
+			SendBoardSnapshotIfHost();
+			return;
 		}
 		CommitNetworkAuthorityAttachmentMutation();
 
@@ -222,6 +233,66 @@ public partial class GameBoardScene
 		ClearPendingItemSelectionState();
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
+	}
+
+	private bool TryBeginAttachmentMandatorySelection(
+		int playerIndex,
+		string itemCardId,
+		int turnSequenceGeneration)
+	{
+		var legalIndexes = ImmutableArray.CreateBuilder<int>();
+		if (playerIndex >= 0 && playerIndex < _playerHands.Count)
+		{
+			for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+			{
+				if (IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId))
+				{
+					legalIndexes.Add(handIndex);
+				}
+			}
+		}
+
+		ImmutableArray<int> candidates = legalIndexes.ToImmutable();
+		MandatorySelectionState pending = CurrentMandatorySelection;
+		if (pending.Kind == MandatorySelectionKind.AttachmentHandCard
+			&& pending.Seat == playerIndex
+			&& pending.TurnGeneration == turnSequenceGeneration
+			&& string.Equals(pending.ItemId, itemCardId, StringComparison.Ordinal)
+			&& pending.NormalizedLegalSelectionIndexes.SequenceEqual(candidates))
+		{
+			return true;
+		}
+
+		return candidates.Length > 0
+			&& TrySubmitBeginMandatorySelectionRuleCommand(
+				playerIndex,
+				MandatorySelectionKind.AttachmentHandCard,
+				sourceHandIndex: -1,
+				itemCardId,
+				candidates,
+				turnSequenceGeneration,
+				out _);
+	}
+
+	private bool TryResolveAttachmentMandatorySelection(
+		int playerIndex,
+		int handIndex,
+		string itemCardId,
+		int turnSequenceGeneration)
+	{
+		if (!IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))
+		{
+			return false;
+		}
+
+		return TrySubmitResolveMandatorySelectionRuleCommand(
+			playerIndex,
+			MandatorySelectionKind.AttachmentHandCard,
+			handIndex,
+			_playerHands[playerIndex][handIndex].InstanceId,
+			string.Empty,
+			turnSequenceGeneration,
+			out _);
 	}
 
 	private bool PlayerHasAttachableMagnetCard(int playerIndex, string itemCardId)
@@ -249,21 +320,32 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		PlayingCard card = _playerHands[playerIndex][handIndex];
-		_playerHands[playerIndex][handIndex] = card.WithAttachedItemEffect(itemCardId);
-		return true;
+		return TrySubmitAttachItemToHandCardRuleCommand(
+			playerIndex,
+			handIndex,
+			itemCardId,
+			ImmutableArray<int>.Empty,
+			_turnSequenceGeneration,
+			out _);
 	}
 
 	private bool AttachMagnetToRandomHandCard(int playerIndex, string itemCardId)
 	{
-		int handIndex = PickRandomAttachableMagnetHandIndex(playerIndex, itemCardId);
-		return AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
+		return AttachMagnetToRandomCandidateHandCard(playerIndex, itemCardId);
 	}
 
 	private bool AttachMagnetToAutoSelectedHandCard(int playerIndex, string itemCardId)
 	{
-		int handIndex = PickAutoAttachableMagnetHandIndex(playerIndex, itemCardId);
-		return AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
+		if (IsOfflineSoloAiPlayer(playerIndex))
+		{
+			int handIndex = PickOfflineSoloAiMagnetHandIndex(playerIndex, itemCardId);
+			if (IsValidMagnetAttachmentHandIndex(playerIndex, handIndex, itemCardId))
+			{
+				return AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
+			}
+		}
+
+		return AttachMagnetToRandomCandidateHandCard(playerIndex, itemCardId);
 	}
 
 	private int PickAutoAttachableMagnetHandIndex(int playerIndex, string itemCardId)
@@ -287,10 +369,33 @@ public partial class GameBoardScene
 			return -1;
 		}
 
-		return NetworkAiFallbackRules.PickRandomLegalCandidate(
-			_playerHands[playerIndex].Count,
-			handIndex => IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId),
-			_rng.RandiRange(0, int.MaxValue));
+		var candidateIndexes = ImmutableArray.CreateBuilder<int>();
+		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+		{
+			if (IsAttachableMagnetCard(_playerHands[playerIndex][handIndex], itemCardId))
+			{
+				candidateIndexes.Add(handIndex);
+			}
+		}
+
+		if (candidateIndexes.Count == 0
+			|| !TrySubmitChooseRandomHandCardIndexRuleCommand(
+				playerIndex,
+				candidateIndexes.ToImmutable(),
+				_turnSequenceGeneration,
+				out int selectedHandIndex))
+		{
+			return -1;
+		}
+
+		return selectedHandIndex;
+	}
+
+	private bool AttachMagnetToRandomCandidateHandCard(int playerIndex, string itemCardId)
+	{
+		int handIndex = PickRandomAttachableMagnetHandIndex(playerIndex, itemCardId);
+		return handIndex >= 0
+			&& AttachMagnetToHandCard(playerIndex, handIndex, itemCardId);
 	}
 
 	private bool IsValidMagnetAttachmentHandIndex(int playerIndex, int handIndex, string itemCardId)

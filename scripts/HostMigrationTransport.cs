@@ -146,7 +146,7 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 {
 	private const double OwnerTransferRetrySeconds = 0.5;
 
-	private readonly GodotObject? _steam;
+	private readonly ISteamPlatformAdapter? _steam;
 	private readonly Func<long> _getObservedLobbyOwnerSteamId;
 	private readonly Func<bool> _updateMetadata;
 	private double _nextOwnerTransferAttemptAt;
@@ -154,7 +154,7 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 	public NetworkTransport Transport => NetworkTransport.Steam;
 
 	public SteamHostMigrationTransport(
-		GodotObject? steam,
+		ISteamPlatformAdapter? steam,
 		Func<long> getObservedLobbyOwnerSteamId,
 		Func<bool> updateMetadata)
 	{
@@ -171,7 +171,7 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 		if (_steam is null
 			|| descriptor?.Steam is not { } steam
 			|| !NetworkMigrationRules.IsSteamMigrationDescriptorValid(steam)
-			|| !TryGetSteamId("getSteamID", out long localSteamId)
+				|| !_steam.TryGetLocalSteamId(out long localSteamId)
 			|| localSteamId != steam.CandidateSteamId
 			|| !TryInstantiatePeer(out MultiplayerPeer? peer)
 			|| peer is null)
@@ -203,7 +203,7 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 			|| plan.Transport != NetworkTransport.Steam
 			|| plan.TransportDescriptor.Steam is not { } steam
 			|| !NetworkMigrationRules.IsSteamMigrationDescriptorValid(steam)
-			|| !TryGetSteamId("getSteamID", out long localSteamId))
+			|| !_steam.TryGetLocalSteamId(out long localSteamId))
 		{
 			error = "steam_migration_transport_unavailable";
 			return HostMigrationTransportResult.Failed;
@@ -240,11 +240,10 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 					return HostMigrationTransportResult.Waiting;
 				}
 				_nextOwnerTransferAttemptAt = now + OwnerTransferRetrySeconds;
-				Variant transferResult = _steam.Call(
-					"setLobbyOwner",
-					unchecked((ulong)steam.LobbyId),
-					unchecked((ulong)steam.ExpectedLobbyOwnerSteamId));
-				error = transferResult.VariantType == Variant.Type.Bool && transferResult.AsBool()
+					bool transferRequested = _steam.SetLobbyOwner(
+						steam.LobbyId,
+						steam.ExpectedLobbyOwnerSteamId);
+					error = transferRequested
 					? "steam_migration_owner_transfer_requested"
 					: "steam_migration_owner_transfer_rejected";
 				return HostMigrationTransportResult.Waiting;
@@ -263,8 +262,10 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 		out string error)
 	{
 		peer = null;
-		if (!TryGetReadySteamDescriptor(plan, out NetworkSteamMigrationDescriptor descriptor, out error)
-			|| !TryGetSteamId("getSteamID", out long localSteamId)
+		error = string.Empty;
+		if (_steam is null
+			|| !TryGetReadySteamDescriptor(plan, out NetworkSteamMigrationDescriptor descriptor, out error)
+			|| !_steam.TryGetLocalSteamId(out long localSteamId)
 			|| localSteamId != descriptor.CandidateSteamId)
 		{
 			return HostMigrationTransportResult.Failed;
@@ -368,27 +369,12 @@ public sealed class SteamHostMigrationTransport : IHostMigrationTransport
 	private bool TryGetLobbyOwner(long lobbyId, out long ownerSteamId)
 	{
 		ownerSteamId = 0;
-		if (_steam is null || lobbyId <= 0 || !_steam.HasMethod("getLobbyOwner"))
+		if (_steam is null || lobbyId <= 0)
 		{
 			return false;
 		}
 
-		Variant raw = _steam.Call("getLobbyOwner", unchecked((ulong)lobbyId));
-		ownerSteamId = raw.VariantType == Variant.Type.Int ? raw.AsInt64() : 0;
-		return ownerSteamId > 0;
-	}
-
-	private bool TryGetSteamId(string method, out long steamId)
-	{
-		steamId = 0;
-		if (_steam is null || !_steam.HasMethod(method))
-		{
-			return false;
-		}
-
-		Variant raw = _steam.Call(method);
-		steamId = raw.VariantType == Variant.Type.Int ? raw.AsInt64() : 0;
-		return steamId > 0;
+		return _steam.TryGetLobbyOwner(lobbyId, out ownerSteamId);
 	}
 
 	private static bool TryInstantiatePeer(out MultiplayerPeer? peer)

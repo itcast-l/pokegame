@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -16,70 +17,118 @@ public partial class GameBoardScene
 			&& playerIndex < player_count;
 	}
 
-	private SoloAiRules.Difficulty GetSoloAiDifficulty()
+	private SoloAiDifficulty GetSoloAiDifficulty()
 	{
-		return SoloAiRules.NormalizeDifficulty(solo_ai_difficulty);
+		return MatchReadModel.NormalizeSoloAiDifficulty(solo_ai_difficulty);
 	}
 
 	private bool TryPickSoloAiCaptureHandIndex(int playerIndex, out int handIndex)
 	{
 		handIndex = -1;
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
+		{
+			return false;
+		}
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				99,
+				_turnSequenceGeneration,
+				out int decisionRollPercent)
+			|| !TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				int.MaxValue,
+				_turnSequenceGeneration,
+				out int randomCaptureOrdinal))
 		{
 			return false;
 		}
 
-		return SoloAiRules.TryPickCaptureCardIndex(
-			ToCaptureScoringTableCards(),
-			ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
+		return MatchReadModel.TryPickSoloAiCaptureCardIndex(
+			ToCaptureScoringTableCards(readModel.TableCards),
+			ToPotentialCaptureCards(playerIndex, player.Hand),
 			BuildCaptureScoringContext(playerIndex),
 			GetSoloAiDifficulty(),
 			royalCaptureThreshold: int.MaxValue,
-			decisionRollPercent: _rng.RandiRange(0, 99),
-			randomCaptureOrdinal: _rng.RandiRange(0, int.MaxValue),
+			decisionRollPercent,
+			randomCaptureOrdinal,
 			out handIndex);
 	}
 
 	private int PickOfflineSoloAiDiscardDisplayIndex(int playerIndex)
 	{
-		var candidates = new List<SoloAiRules.HandCardDecisionCandidate>();
-		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
 		{
-			PlayingCard card = _playerHands[playerIndex][handIndex];
-			candidates.Add(new SoloAiRules.HandCardDecisionCandidate(
-				Index: handIndex,
-				ScoreValue: GetCardScoreValue(card),
-				CanCaptureNow: GetPotentialNormalCaptureCount(card) > 0));
+			return -1;
 		}
 
-		return SoloAiRules.PickDiscardDisplayIndex(
+		var candidates = new List<SoloAiHandCardDecisionCandidate>();
+		for (int handIndex = 0; handIndex < player.Hand.Length; handIndex++)
+		{
+			PlayingCard card = FromRuleCardState(player.Hand[handIndex]);
+			candidates.Add(new SoloAiHandCardDecisionCandidate(
+				Index: handIndex,
+				ScoreValue: GetCardScoreValue(card),
+				CanCaptureNow: GetPotentialNormalCaptureCount(readModel, card) > 0));
+		}
+
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				int.MaxValue,
+				_turnSequenceGeneration,
+				out int tieBreakOrdinal))
+		{
+			return -1;
+		}
+
+		return MatchReadModel.PickSoloAiDiscardDisplayIndex(
 			GetSoloAiDifficulty(),
 			candidates,
-			GetTotalHandCardCount(playerIndex),
-			_rng.RandiRange(0, int.MaxValue));
+			player.Hand.Length + player.ItemHand.Length,
+			tieBreakOrdinal);
 	}
 
 	private int PickOfflineSoloAiMagnetHandIndex(int playerIndex, string itemCardId)
 	{
-		var candidates = new List<SoloAiRules.HandCardDecisionCandidate>();
-		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
 		{
-			PlayingCard card = _playerHands[playerIndex][handIndex];
+			return -1;
+		}
+
+		var candidates = new List<SoloAiHandCardDecisionCandidate>();
+		for (int handIndex = 0; handIndex < player.Hand.Length; handIndex++)
+		{
+			PlayingCard card = FromRuleCardState(player.Hand[handIndex]);
 			if (!IsAttachableMagnetCard(card, itemCardId))
 			{
 				continue;
 			}
 
-			candidates.Add(new SoloAiRules.HandCardDecisionCandidate(
+			candidates.Add(new SoloAiHandCardDecisionCandidate(
 				Index: handIndex,
 				ScoreValue: GetCardScoreValue(card),
-				CanCaptureNow: GetPotentialNormalCaptureCount(card) > 0));
+				CanCaptureNow: GetPotentialNormalCaptureCount(readModel, card) > 0));
 		}
 
-		return SoloAiRules.PickMagnetHandIndex(
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				int.MaxValue,
+				_turnSequenceGeneration,
+				out int tieBreakOrdinal))
+		{
+			return -1;
+		}
+
+		return MatchReadModel.PickSoloAiMagnetHandIndex(
 			GetSoloAiDifficulty(),
 			candidates,
-			_rng.RandiRange(0, int.MaxValue));
+			tieBreakOrdinal);
 	}
 
 }

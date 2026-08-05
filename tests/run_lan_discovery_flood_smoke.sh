@@ -22,7 +22,9 @@ LOG_FILE="$TMP_DIR/lan_discovery_flood_smoke.log"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 set +e
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanDiscoveryFloodSmoke.gd >"$LOG_FILE" 2>&1
+CODEX_LAN_MIGRATION_FIXTURE=1 DECKLAND_TEST_MUTE_AUDIO=1 \
+	"$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
+	--script res://tests/LanDiscoveryFloodSmoke.gd >"$LOG_FILE" 2>&1
 GODOT_STATUS=$?
 set -e
 

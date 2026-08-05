@@ -35,6 +35,7 @@ public partial class GameBoardScene
 		ResetNetworkPredictedHandVisualState();
 		ResetNetworkPredictedItemVisualState();
 		ResetNetworkLocallyCommittedPendingSelectionState();
+		DiscardNetworkReplicaPresentationState();
 	}
 
 	private void ClearNetworkPendingActionState()
@@ -89,7 +90,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_tableCards.Insert(tableCardIndex, new TableCard(playedCard, tableCardIsFaceUp, cardOwnerPlayerIndex: localPlayerIndex));
+		if (!TryInsertNetworkPresentationTableCard(
+			tableCardIndex,
+			new TableCard(
+				playedCard,
+				tableCardIsFaceUp,
+				cardOwnerPlayerIndex: localPlayerIndex)))
+		{
+			return false;
+		}
 		HideHandDisplaySlot(localPlayerIndex, handIndex);
 		RenderPlayerHands();
 		_networkPredictedHandVisualActive = true;
@@ -140,7 +149,8 @@ public partial class GameBoardScene
 		if (!_itemCardCatalog.TryGetDefinition(itemCard.Id, out ItemCardDefinition definition)
 			|| !definition.PlayableFromHand
 			|| !definition.EnabledInGame
-			|| !CanPlayItemCard(localPlayerIndex, itemCard.Id))
+			|| !CanPlayItemCard(localPlayerIndex, itemCard.Id)
+			|| !EnsureNetworkReplicaPresentationState())
 		{
 			return false;
 		}
@@ -186,12 +196,15 @@ public partial class GameBoardScene
 			case CardPlayPresentationTypes.TableOverlay:
 				_networkPredictedItemTargetTableCardIndex = _tableCards.Count;
 				await PlayItemCardToTableAnimationAsync(localPlayerIndex, itemCard, startGlobalPosition, _networkPredictedItemTargetTableCardIndex, false);
-				InsertNetworkTableOverlayIfMissing(localPlayerIndex, _networkPredictedItemTargetTableCardIndex, itemCard);
+				TryAddNetworkTableOverlayPresentation(
+					localPlayerIndex,
+					_networkPredictedItemTargetTableCardIndex,
+					itemCard);
 				break;
 			case CardPlayPresentationTypes.LensSplit:
 				Vector2 splitGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 				await PlayLensCardSplitAnimationAsync(
-					itemCard.Texture,
+					GetItemCardTexture(itemCard),
 					startGlobalPosition,
 					splitGlobalPosition + CardVisualSize / 2.0f,
 					GetCardRotationDegreesForPlayer(localPlayerIndex));
@@ -199,15 +212,15 @@ public partial class GameBoardScene
 			case CardPlayPresentationTypes.TransformAreaTrigger:
 				Vector2 transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 				await PlayItemCardToTransformAreaAnimationAsync(
-					itemCard.Texture,
+					GetItemCardTexture(itemCard),
 					startGlobalPosition,
 					transformAreaGlobalPosition,
 					GetCardRotationDegreesForPlayer(localPlayerIndex));
-				await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
+				await PlaySpecialCardTriggerEffectAsync(GetItemCardTexture(itemCard), transformAreaGlobalPosition, 0);
 				break;
 			default:
 				await PlaySpecialCardTriggerEffectAsync(
-					itemCard.Texture,
+					GetItemCardTexture(itemCard),
 					startGlobalPosition,
 					0,
 					GetCardRotationDegreesForPlayer(localPlayerIndex));
@@ -232,11 +245,8 @@ public partial class GameBoardScene
 			ShowHandDisplaySlot(localPlayerIndex, _networkPendingHandIndex);
 		}
 
-		if (_networkPredictedHandTableCardIndex >= 0
-			&& _networkPredictedHandTableCardIndex < _tableCards.Count)
-		{
-			_tableCards.RemoveAt(_networkPredictedHandTableCardIndex);
-		}
+		TryRemoveNetworkPresentationTableCard(_networkPredictedHandTableCardIndex);
+		DiscardNetworkReplicaPresentationState();
 
 		RenderPlayerHands();
 		RenderTableCards();
@@ -251,13 +261,6 @@ public partial class GameBoardScene
 			ShowHandDisplaySlot(localPlayerIndex, _networkPredictedItemDisplayIndex);
 		}
 
-		if (_networkPredictedItemPlayPresentation == CardPlayPresentationTypes.TableOverlay
-			&& _networkPredictedItemTargetTableCardIndex >= 0
-			&& _networkPredictedItemTargetTableCardIndex < _tableCards.Count)
-		{
-			_tableCards.RemoveAt(_networkPredictedItemTargetTableCardIndex);
-		}
-
 		switch (_networkLocallyCommittedPendingSelectionMode)
 		{
 			case PendingItemSelectionMode.HandLimitDiscard:
@@ -270,10 +273,14 @@ public partial class GameBoardScene
 				if (_networkLocallyCommittedPendingSelectionHandIndex >= 0
 					&& _networkLocallyCommittedPendingSelectionHandIndex < _playerHands[localPlayerIndex].Count)
 				{
-					_playerHands[localPlayerIndex][_networkLocallyCommittedPendingSelectionHandIndex] = _networkLocallyCommittedPendingSelectionOriginalCard;
+					TrySetNetworkPresentationHandCard(
+						localPlayerIndex,
+						_networkLocallyCommittedPendingSelectionHandIndex,
+						_networkLocallyCommittedPendingSelectionOriginalCard);
 				}
 				break;
 		}
+		DiscardNetworkReplicaPresentationState();
 
 		RenderPlayerHands();
 		RenderTableCards();
@@ -297,7 +304,8 @@ public partial class GameBoardScene
 		if (localPlayerIndex < 0
 			|| localPlayerIndex >= _playerHands.Count
 			|| handIndex < 0
-			|| handIndex >= _playerHands[localPlayerIndex].Count)
+			|| handIndex >= _playerHands[localPlayerIndex].Count
+			|| !EnsureNetworkReplicaPresentationState())
 		{
 			return;
 		}
@@ -312,7 +320,10 @@ public partial class GameBoardScene
 		try
 		{
 			await PlayMagnetAttachmentToHandCardAnimationAsync(localPlayerIndex, handIndex, _pendingItemCardId);
-			AttachMagnetToHandCard(localPlayerIndex, handIndex, _pendingItemCardId);
+			TryAttachNetworkPresentationItemToHandCard(
+				localPlayerIndex,
+				handIndex,
+				_pendingItemCardId);
 		}
 		finally
 		{

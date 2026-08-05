@@ -8,19 +8,39 @@ public partial class NetworkManager
 	private ulong _acceptedSteamLobbyJoinId;
 	private ulong _originalSteamLobbyOwnerId;
 	private ulong _lastObservedSteamLobbyOwnerId;
+	private static readonly string[] SteamLobbyMetadataKeys =
+	{
+		SteamLobbyMetadata.ProtocolKey,
+		SteamLobbyMetadata.SessionIdKey,
+		SteamLobbyMetadata.RoomNameKey,
+		SteamLobbyMetadata.HostNameKey,
+		SteamLobbyMetadata.PlayerCountKey,
+		SteamLobbyMetadata.ItemModeKey,
+		SteamLobbyMetadata.WinningScoreKey,
+		SteamLobbyMetadata.HasPasswordKey,
+		SteamLobbyMetadata.StatusKey,
+	};
+
+	private void InitializeSteamPlatformAdapter()
+	{
+		_steamPlatform = new SteamPlatformAdapter(GetNodeOrNull<Node>("/root/SteamManager"));
+	}
 
 	public void HostSteam(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
+		if (!PrepareForNewSessionStart())
+		{
+			return;
+		}
 		if (!EnsureItemCardCatalogReady())
 		{
 			return;
 		}
 
 		RefreshLocalIdentity();
-		LeaveSession();
 		if (!SteamAvailable)
 		{
-			Fail("Steam is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam is not available.");
 			return;
 		}
 		InitializeLocalHostSessionIdentity();
@@ -44,13 +64,16 @@ public partial class NetworkManager
 			return;
 		}
 
-		GodotObject? steam = GetSteamSingleton();
-		steam?.Call("requestLobbyList");
+		_steamPlatform?.RequestLobbyList();
 		EmitRoomListUpdated();
 	}
 
 	public void JoinSteamLobby(ulong lobbyId, string roomPassword)
 	{
+		if (!PrepareForNewSessionStart())
+		{
+			return;
+		}
 		if (!EnsureItemCardCatalogReady())
 		{
 			return;
@@ -59,7 +82,7 @@ public partial class NetworkManager
 		RefreshLocalIdentity();
 		if (!SteamAvailable || lobbyId == 0)
 		{
-			Fail("Steam lobby is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam lobby is not available.");
 			return;
 		}
 
@@ -70,7 +93,6 @@ public partial class NetworkManager
 			return;
 		}
 
-		LeaveSession();
 		SetState(NetworkSessionState.Joining);
 		_pendingJoinRoomPassword = RoomPasswordRules.Normalize(roomPassword);
 		_config = CreateConfig(
@@ -92,14 +114,12 @@ public partial class NetworkManager
 			return;
 		}
 
-		GodotObject? steam = GetSteamSingleton();
-		Variant result = steam?.Call("inviteUserToLobby", _steamLobbyId, steamId) ?? default;
-		if (result.VariantType == Variant.Type.Bool && result.AsBool())
+		if (_steamPlatform?.InviteUserToLobby(_steamLobbyId, steamId) == true)
 		{
 			return;
 		}
 
-		steam?.Call("activateGameOverlayInviteDialog", _steamLobbyId);
+		_steamPlatform?.ActivateLobbyInviteDialog(_steamLobbyId);
 	}
 
 	private void TryConnectSteamSignals()
@@ -109,28 +129,18 @@ public partial class NetworkManager
 			return;
 		}
 
-		GodotObject? steam = GetSteamSingleton();
-		if (steam == null)
+		if (_steamPlatform == null)
 		{
-			Node? steamManager = GetNodeOrNull<Node>("/root/SteamManager");
-			steamManager?.Connect("steam_ready", Callable.From(TryConnectSteamSignals));
 			return;
 		}
 
-		ConnectSignalIfAvailable(steam, "lobby_created", Callable.From<int, ulong>(OnSteamLobbyCreated));
-		ConnectSignalIfAvailable(steam, "lobby_joined", Callable.From<ulong, int, bool, int>(OnSteamLobbyJoined));
-		ConnectSignalIfAvailable(steam, "lobby_match_list", Callable.From<Godot.Collections.Array>(OnSteamLobbyMatchList));
-		ConnectSignalIfAvailable(steam, "join_requested", Callable.From<ulong, ulong>(OnSteamJoinRequested));
-		ConnectSignalIfAvailable(steam, "lobby_data_update", Callable.From<int, ulong, ulong>(OnSteamLobbyDataUpdate));
+		_steamPlatform.ConnectSignal("steam_ready", Callable.From(TryConnectSteamSignals));
+		_steamPlatform.ConnectSignal("lobby_created", Callable.From<int, ulong>(OnSteamLobbyCreated));
+		_steamPlatform.ConnectSignal("lobby_joined", Callable.From<ulong, int, bool, int>(OnSteamLobbyJoined));
+		_steamPlatform.ConnectSignal("lobby_match_list", Callable.From<Godot.Collections.Array>(OnSteamLobbyMatchList));
+		_steamPlatform.ConnectSignal("join_requested", Callable.From<ulong, ulong>(OnSteamJoinRequested));
+		_steamPlatform.ConnectSignal("lobby_data_update", Callable.From<int, ulong, ulong>(OnSteamLobbyDataUpdate));
 		_steamSignalsConnected = true;
-	}
-
-	private static void ConnectSignalIfAvailable(GodotObject target, string signalName, Callable callable)
-	{
-		if (target.HasSignal(signalName))
-		{
-			target.Connect(signalName, callable);
-		}
 	}
 
 	private bool TryCreateSteamPeer(bool server, ulong lobbyId, out MultiplayerPeer? peer)
@@ -146,13 +156,10 @@ public partial class NetworkManager
 
 	private void TryCreateSteamLobby()
 	{
-		GodotObject? steam = GetSteamSingleton();
-		if (steam == null)
+		if (_steamPlatform?.CreateLobby(1, _config.PlayerCount) != true)
 		{
-			return;
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam lobby creation is unavailable.");
 		}
-
-		steam.Call("createLobby", 1, _config.PlayerCount);
 	}
 
 	private void OnSteamLobbyCreated(int connect, ulong lobbyId)
@@ -165,7 +172,7 @@ public partial class NetworkManager
 		_pendingSteamHostLobby = false;
 		if (connect != 1 || lobbyId == 0)
 		{
-			Fail("Steam lobby creation failed.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam lobby creation failed.");
 			return;
 		}
 
@@ -175,7 +182,7 @@ public partial class NetworkManager
 		if (!TryCreateSteamPeer(server: true, lobbyId, out MultiplayerPeer? steamPeer))
 		{
 			LeaveSteamLobbyIfNeeded();
-			Fail("Steam multiplayer peer is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam multiplayer peer is not available.");
 			return;
 		}
 
@@ -205,9 +212,14 @@ public partial class NetworkManager
 			() =>
 			{
 				_pendingSteamLobbyJoinId = 0;
-				Fail(callbackState == NetworkSessionState.Reconnecting
-					? "Reconnect failed: Steam lobby join was denied."
-					: "Steam lobby join failed.");
+				if (callbackState == NetworkSessionState.Reconnecting)
+				{
+					HandleHostDisconnected();
+					return;
+				}
+				CloseSessionAndFail(
+					NetworkSessionCloseReason.ConnectionCreationFailed,
+					"Steam lobby join failed.");
 			},
 			() =>
 			{
@@ -221,8 +233,18 @@ public partial class NetworkManager
 	{
 		_pendingSteamLobbyJoinId = lobbyId;
 		_acceptedSteamLobbyJoinId = 0;
-		GodotObject? steam = GetSteamSingleton();
-		steam?.Call("joinLobby", lobbyId);
+		if (_steamPlatform?.JoinLobby(lobbyId) != true)
+		{
+			_pendingSteamLobbyJoinId = 0;
+			if (_state == NetworkSessionState.Reconnecting)
+			{
+				ScheduleReconnectRetry();
+				return;
+			}
+			CloseSessionAndFail(
+				NetworkSessionCloseReason.ConnectionCreationFailed,
+				"Steam lobby join is unavailable.");
+		}
 	}
 
 	private void CompleteExpectedSteamLobbyJoin(ulong lobbyId)
@@ -235,7 +257,7 @@ public partial class NetworkManager
 		{
 			ClearAcceptedSteamLobbyJoinIfNeeded(lobbyId);
 			LeaveSteamLobbyIfNeeded();
-			Fail("Reconnect failed: original host is no longer available.");
+			HandleHostDisconnected();
 			return;
 		}
 		if (_state == NetworkSessionState.Joining && currentLobbyOwnerId != 0)
@@ -255,7 +277,7 @@ public partial class NetworkManager
 				return;
 			}
 
-			Fail("Steam multiplayer peer is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam multiplayer peer is not available.");
 			return;
 		}
 
@@ -276,6 +298,10 @@ public partial class NetworkManager
 		_rooms.RemoveAll(room => room.Transport == NetworkTransport.Steam);
 		foreach (Variant lobbyVariant in lobbies)
 		{
+			if (lobbyVariant.VariantType != Variant.Type.Int || lobbyVariant.AsInt64() <= 0)
+			{
+				continue;
+			}
 			ulong lobbyId = unchecked((ulong)lobbyVariant.AsInt64());
 			if (TryReadSteamRoom(lobbyId, out NetworkRoomInfo room))
 			{
@@ -305,7 +331,21 @@ public partial class NetworkManager
 		}
 
 		_lastObservedSteamLobbyOwnerId = GetSteamLobbyOwner(lobbyId);
-		if (_activeMigrationPending || _state == NetworkSessionState.MigratingHost)
+		if (!IsHost
+			&& _originalSteamLobbyOwnerId != 0
+			&& _lastObservedSteamLobbyOwnerId != 0
+			&& _lastObservedSteamLobbyOwnerId != _originalSteamLobbyOwnerId
+			&& _state is NetworkSessionState.Lobby
+				or NetworkSessionState.Starting
+				or NetworkSessionState.LoadingScene
+				or NetworkSessionState.InGame
+				or NetworkSessionState.Reconnecting)
+		{
+			HandleHostDisconnected();
+			return;
+		}
+		if (HostMigrationCapabilityAvailable
+			&& (_activeMigrationPending || _state == NetworkSessionState.MigratingHost))
 		{
 			GD.Print($"MIGRATION_STEAM_OWNER_UPDATE lobby={lobbyId} member={memberId} owner={_lastObservedSteamLobbyOwnerId}");
 		}
@@ -332,27 +372,19 @@ public partial class NetworkManager
 	private bool TryReadSteamRoom(ulong lobbyId, out NetworkRoomInfo room)
 	{
 		room = default;
-		GodotObject? steam = GetSteamSingleton();
-		if (steam == null || lobbyId == 0)
+		if (_steamPlatform == null || lobbyId == 0)
 		{
 			return false;
 		}
 
 		var metadata = new Dictionary<string, string>();
-		foreach (string key in new[]
+		foreach (string key in SteamLobbyMetadataKeys)
 		{
-			SteamLobbyMetadata.ProtocolKey,
-			SteamLobbyMetadata.SessionIdKey,
-			SteamLobbyMetadata.RoomNameKey,
-			SteamLobbyMetadata.HostNameKey,
-			SteamLobbyMetadata.PlayerCountKey,
-			SteamLobbyMetadata.ItemModeKey,
-			SteamLobbyMetadata.WinningScoreKey,
-			SteamLobbyMetadata.HasPasswordKey,
-			SteamLobbyMetadata.StatusKey,
-		})
-		{
-			metadata[key] = steam.Call("getLobbyData", lobbyId, key).AsString();
+			if (!_steamPlatform.TryGetLobbyData(lobbyId, key, out string value))
+			{
+				return false;
+			}
+			metadata[key] = value;
 		}
 
 		return SteamLobbyMetadata.TryReadRoom(metadata, lobbyId, out room);
@@ -360,13 +392,13 @@ public partial class NetworkManager
 
 	private ulong GetSteamLobbyOwner(ulong lobbyId)
 	{
-		GodotObject? steam = GetSteamSingleton();
-		if (steam == null || lobbyId == 0 || !steam.HasMethod("getLobbyOwner"))
+		if (lobbyId == 0 || lobbyId > (ulong)long.MaxValue
+			|| _steamPlatform?.TryGetLobbyOwner((long)lobbyId, out long owner) != true)
 		{
 			return 0;
 		}
 
-		return unchecked((ulong)steam.Call("getLobbyOwner", lobbyId).AsInt64());
+		return (ulong)owner;
 	}
 
 	private long GetLastObservedSteamLobbyOwnerId()
@@ -379,50 +411,14 @@ public partial class NetworkManager
 	private bool TryGetLocalSteamId(out long steamId)
 	{
 		steamId = 0;
-		GodotObject? steam = GetSteamSingleton();
-		if (steam is null || !steam.HasMethod("getSteamID"))
-		{
-			return false;
-		}
-
-		Variant raw = steam.Call("getSteamID");
-		steamId = raw.VariantType == Variant.Type.Int ? raw.AsInt64() : 0;
-		return steamId > 0;
+		return _steamPlatform?.TryGetLocalSteamId(out steamId) == true;
 	}
 
 	private bool TryGetSteamIdForPeer(int peerId, out long steamId)
 	{
 		steamId = 0;
 		MultiplayerPeer? peer = _steamPeer ?? Multiplayer.MultiplayerPeer;
-		if (peer is null || peerId <= 0 || !peer.HasMethod("get_steam_id_for_peer_id"))
-		{
-			return false;
-		}
-
-		Variant raw = peer.Call("get_steam_id_for_peer_id", peerId);
-		steamId = raw.VariantType == Variant.Type.Int ? raw.AsInt64() : 0;
-		return steamId > 0;
-	}
-
-	private GodotObject? GetSteamSingleton()
-	{
-		return Engine.HasSingleton("Steam") ? Engine.GetSingleton("Steam") : null;
-	}
-
-	private bool IsSteamInitialized()
-	{
-		Node? steamManager = GetNodeOrNull<Node>("/root/SteamManager");
-		if (steamManager != null)
-		{
-			Variant initialized = steamManager.Get("is_initialized");
-			if (initialized.VariantType == Variant.Type.Bool)
-			{
-				return initialized.AsBool();
-			}
-		}
-
-		GodotObject? steam = GetSteamSingleton();
-		return steam != null && steam.HasMethod("isSteamRunning") && steam.Call("isSteamRunning").AsBool();
+		return _steamPlatform?.TryGetSteamIdForPeer(peer, peerId, out steamId) == true;
 	}
 
 	private void RefreshSteamLobbyAdvertisedState()
@@ -441,17 +437,14 @@ public partial class NetworkManager
 			return false;
 		}
 
-		GodotObject? steam = GetSteamSingleton();
-		if (steam == null)
+		if (_steamPlatform == null)
 		{
 			return false;
 		}
 
-		Variant joinableResult = steam.Call(
-			"setLobbyJoinable",
+		bool updated = _steamPlatform.SetLobbyJoinable(
 			_steamLobbyId,
 			SteamLobbyMetadata.ShouldSteamLobbyStayJoinable(_state));
-		bool updated = joinableResult.VariantType == Variant.Type.Bool && joinableResult.AsBool();
 		TryGetLocalSteamId(out long localSteamId);
 		Dictionary<string, string> metadata = SteamLobbyMetadata.Build(
 			_config,
@@ -461,8 +454,7 @@ public partial class NetworkManager
 			localSteamId);
 		foreach (KeyValuePair<string, string> entry in metadata)
 		{
-			Variant result = steam.Call("setLobbyData", _steamLobbyId, entry.Key, entry.Value);
-			updated &= result.VariantType == Variant.Type.Bool && result.AsBool();
+			updated &= _steamPlatform.SetLobbyData(_steamLobbyId, entry.Key, entry.Value);
 		}
 
 		return updated;
@@ -475,13 +467,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		GodotObject? steam = GetSteamSingleton();
-		if (steam == null || !steam.HasMethod("leaveLobby"))
-		{
-			return;
-		}
-
-		steam.Call("leaveLobby", lobbyId);
+		_steamPlatform?.LeaveLobby(lobbyId);
 	}
 
 	private void LeaveSteamLobbyIfNeeded()

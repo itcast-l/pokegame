@@ -14,52 +14,16 @@ public partial class GameBoardScene
 		List<PlayingCard> deck = BuildDeckForPlayerCount(player_count);
 		ResetAdventureTutorialState();
 
-		_playerDecks.Clear();
-		_playerHands.Clear();
-		_playerItemHands.Clear();
-		_tableCards.Clear();
 		_openingVisibleHandCardCounts.Clear();
 		_openingVisiblePileCardCounts.Clear();
-		AdvanceTurnSequenceGeneration();
-		_currentTurnPlayerIndex = MainPlayerIndex;
-		QuestionCardRefreshState questionCardRefreshState = TurnProgressRules.ResetQuestionCardRefreshTracking();
-		_completedTurnsSinceQuestionCardRefresh = questionCardRefreshState.CompletedTurnsSinceQuestionCardRefresh;
-		_questionCardRefreshAnchorPlayerIndex = questionCardRefreshState.QuestionCardRefreshAnchorPlayerIndex;
 		ResetAdventureBattleScopedStateForNewBattle();
 		_debugQuestionRewardGrantCount = 0;
 		_debugLastQuestionRewardItemCardId = string.Empty;
-		_pendingItemAttachmentRewards.Clear();
 		_hiddenHandDisplaySlots.Clear();
-		_mantaRayTideShiftCheckedThisTurn = false;
-		_jellyfishBubbleTriggeredThisTurn = false;
-		_jellyfishDisabledMainPlayerHandSlotIndex = -1;
-		_gardenEelCaptureCountUntilSandBite = 0;
-		_gardenEelSandBiteReady = false;
-		_gardenEelBuriedTableCardIndex = -1;
-		_nautilusMainPlayerCaptureCountUntilBomb = 0;
-		_nautilusBombInsertionsThisMatch = 0;
-		_narwhalCaptureCountUntilDouble = 0;
-		_narwhalDoubleReady = false;
-		_bossKDoubleCollectTriggersThisMatch = 0;
-		_leafySeadragonBladeBreakCooldownTurns = 0;
-		_seaSlugMissCountUntilSlime = 0;
-		_dragonPrinceJackUsed = false;
-		_dragonQueenCaptureCountUntilSteal = 0;
-		_bossKCaptureCountUntilSteal = 0;
-		_bossKStealTriggersThisMatch = 0;
-			_bossKActiveControlUsedThisTurn = false;
-			_cardEventBus.Clear();
-			ClearPendingItemSelectionState();
+		_authorityRuleSession?.ClearCardTriggerDispatch();
 		InvalidateRenderCaches();
-		_isResolvingMagnetAttachmentSelection = false;
-		_isResolvingTurnSequence = false;
-		_isProcessingCardPlay = false;
-		_isOpeningDealAnimationPlaying = playOpeningDealAnimation;
-		_matchOutcomeKind = MatchOutcomeKind.InProgress;
-		_winnerPlayerIndex = -1;
 		_settledAdventureDefeatResolution = null;
 		ResetPlayerAvatarActions();
-		ResetPlayerScores();
 		if (_defeatFinisherRoot != null && GodotObject.IsInstanceValid(_defeatFinisherRoot))
 		{
 			_defeatFinisherRoot.Visible = false;
@@ -76,15 +40,14 @@ public partial class GameBoardScene
 		}
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			_playerDecks.Add(new List<PlayingCard>());
-			_playerHands.Add(new List<PlayingCard>());
-			_playerItemHands.Add(new List<ItemCard>());
 			_openingVisibleHandCardCounts.Add(0);
 			_openingVisiblePileCardCounts.Add(0);
 		}
 
 		if (TrySetupAdventureTutorialDeal())
 		{
+			ReleasePendingItemSelectionPresentation();
+			RefreshPlayerScorePresentation();
 			RenderPlayerCardPiles();
 			RenderPlayerHands();
 			RenderTableCards();
@@ -94,25 +57,22 @@ public partial class GameBoardScene
 
 		if (TrySetupDebugRecordingDeal())
 		{
+			ReleasePendingItemSelectionPresentation();
+			RefreshPlayerScorePresentation();
 			RenderPlayerCardPiles();
 			RenderPlayerHands();
 			RenderTableCards();
 			return;
 		}
 
-		DealDeckToPlayerDecks(deck);
-
-		DrawStartingHands();
-		ApplyDebugMainPlayerOneCardHand();
-		ApplyDebugOpponentOneCardHand();
-		int adventureBattleStartDrawCount = GetAdventureBattleStartDrawCount();
-		for (int drawIndex = 0; drawIndex < adventureBattleStartDrawCount; drawIndex++)
+		if (!TryInitializeRuleMatch(deck, playOpeningDealAnimation))
 		{
-			if (!DrawCardFromDeckToHand(MainPlayerIndex).HasValue)
-			{
-				break;
-			}
+			return;
 		}
+		_isOpeningDealAnimationPlaying = playOpeningDealAnimation;
+
+		ReleasePendingItemSelectionPresentation();
+		RefreshPlayerScorePresentation();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -129,99 +89,6 @@ public partial class GameBoardScene
 		}
 	}
 
-	private void DealDeckToPlayerDecks(List<PlayingCard> deck)
-	{
-		if (TryDealEqualRankDecks(deck, player_count))
-		{
-			ShufflePlayerDecks();
-			return;
-		}
-
-		Shuffle(deck);
-		Cut(deck);
-		for (int cardIndex = 0; cardIndex < deck.Count; cardIndex++)
-		{
-			int playerIndex = cardIndex % player_count;
-			AddCardToPlayerDeck(playerIndex, deck[cardIndex]);
-		}
-	}
-
-	private bool TryDealEqualRankDecks(List<PlayingCard> deck, int playerCount)
-	{
-		if (playerCount <= 0)
-		{
-			return false;
-		}
-
-		var cardsByRank = new Dictionary<string, List<PlayingCard>>();
-		foreach (PlayingCard card in deck)
-		{
-			if (!cardsByRank.TryGetValue(card.Rank, out List<PlayingCard>? rankCards))
-			{
-				rankCards = new List<PlayingCard>();
-				cardsByRank[card.Rank] = rankCards;
-			}
-
-			rankCards.Add(card);
-		}
-
-		var remainingCards = new List<PlayingCard>();
-		foreach (List<PlayingCard> rankCards in cardsByRank.Values)
-		{
-			Shuffle(rankCards);
-			int cardsPerPlayer = rankCards.Count / playerCount;
-			for (int playerIndex = 0; playerIndex < playerCount; playerIndex++)
-			{
-				for (int cardOffset = 0; cardOffset < cardsPerPlayer; cardOffset++)
-				{
-					int rankCardIndex = playerIndex * cardsPerPlayer + cardOffset;
-					AddCardToPlayerDeck(playerIndex, rankCards[rankCardIndex]);
-				}
-			}
-
-			for (int rankCardIndex = cardsPerPlayer * playerCount; rankCardIndex < rankCards.Count; rankCardIndex++)
-			{
-				remainingCards.Add(rankCards[rankCardIndex]);
-			}
-		}
-
-		Shuffle(remainingCards);
-		foreach (PlayingCard card in remainingCards)
-		{
-			AddCardToPlayerDeck(_rng.RandiRange(0, playerCount - 1), card);
-		}
-
-		return true;
-	}
-
-	private void ShufflePlayerDecks()
-	{
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			Shuffle(_playerDecks[playerIndex]);
-			Cut(_playerDecks[playerIndex]);
-		}
-	}
-
-	private void DrawStartingHands()
-	{
-		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
-		{
-			int cardsToDraw = Math.Min(StartingHandCards, _playerDecks[playerIndex].Count);
-			for (int cardIndex = 0; cardIndex < cardsToDraw; cardIndex++)
-			{
-				PlayingCard topCard = _playerDecks[playerIndex][0];
-				_playerDecks[playerIndex].RemoveAt(0);
-				_playerHands[playerIndex].Add(topCard);
-			}
-		}
-	}
-
-	private void AddCardToPlayerDeck(int playerIndex, PlayingCard card)
-	{
-		_playerDecks[playerIndex].Add(PrepareCardForPlayerDeck(card));
-	}
-
 	private PlayingCard PrepareCardForPlayerDeck(PlayingCard card)
 	{
 		if (ShouldPreserveCardEffectsWhenEnteringDeck())
@@ -235,33 +102,6 @@ public partial class GameBoardScene
 	private bool ShouldPreserveCardEffectsWhenEnteringDeck()
 	{
 		return true;
-	}
-
-	private void ApplyDebugOpponentOneCardHand()
-	{
-		const int opponentPlayerIndex = 1;
-		if (!debug_opponent_has_one_card || player_count != 2 || _playerHands[opponentPlayerIndex].Count == 0)
-		{
-			return;
-		}
-
-		PlayingCard onlyCard = _playerHands[opponentPlayerIndex][0];
-		_playerHands[opponentPlayerIndex].Clear();
-		_playerHands[opponentPlayerIndex].Add(onlyCard);
-		_playerDecks[opponentPlayerIndex].Clear();
-	}
-
-	private void ApplyDebugMainPlayerOneCardHand()
-	{
-		if (!debug_main_player_has_one_card || player_count != 2 || _playerHands[MainPlayerIndex].Count == 0)
-		{
-			return;
-		}
-
-		PlayingCard onlyCard = _playerHands[MainPlayerIndex][0];
-		_playerHands[MainPlayerIndex].Clear();
-		_playerHands[MainPlayerIndex].Add(onlyCard);
-		_playerDecks[MainPlayerIndex].Clear();
 	}
 
 	private List<PlayingCard> LoadDeckCards()
@@ -310,7 +150,7 @@ public partial class GameBoardScene
 					continue;
 				}
 
-				deck.Add(new PlayingCard(suit, rank, cardSprite.Texture));
+				deck.Add(CreatePlayingCardWithTexture(suit, rank, cardSprite.Texture));
 			}
 		}
 
@@ -323,7 +163,7 @@ public partial class GameBoardScene
 		return deck;
 	}
 
-	private static void AddSuitedJqkBackupCards(Node standardCards, List<PlayingCard> deck)
+	private void AddSuitedJqkBackupCards(Node standardCards, List<PlayingCard> deck)
 	{
 		Node? suitedJqkBackupCards = standardCards.GetNodeOrNull<Node>(SuitedJqkBackupCardsNodeName);
 		if (suitedJqkBackupCards == null)
@@ -346,7 +186,7 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			deck.Add(new PlayingCard(suit, rank, cardSprite.Texture));
+			deck.Add(CreatePlayingCardWithTexture(suit, rank, cardSprite.Texture));
 		}
 	}
 
@@ -375,32 +215,13 @@ public partial class GameBoardScene
 			return baseDeck;
 		}
 
-		var doubledDeck = new List<PlayingCard>(baseDeck.Count * 2);
-		doubledDeck.AddRange(baseDeck);
-		doubledDeck.AddRange(baseDeck);
-		return doubledDeck;
-	}
-
-	private void Shuffle(List<PlayingCard> deck)
-	{
-		for (int index = deck.Count - 1; index > 0; index--)
-		{
-			int swapIndex = _rng.RandiRange(0, index);
-			(deck[index], deck[swapIndex]) = (deck[swapIndex], deck[index]);
-		}
-	}
-
-	private void Cut(List<PlayingCard> deck)
-	{
-		if (deck.Count < 2)
-		{
-			return;
-		}
-
-		int cutIndex = _rng.RandiRange(1, deck.Count - 1);
-		deck.Reverse(0, cutIndex);
-		deck.Reverse(cutIndex, deck.Count - cutIndex);
-		deck.Reverse();
+			var doubledDeck = new List<PlayingCard>(baseDeck.Count * 2);
+			doubledDeck.AddRange(baseDeck);
+			foreach (PlayingCard card in baseDeck)
+			{
+				doubledDeck.Add(card.CloneWithNewRuntimeInstanceId());
+			}
+			return doubledDeck;
 	}
 
 	private DrawnHandCard? DrawReplacementCard(int playerIndex)
@@ -419,8 +240,14 @@ public partial class GameBoardScene
 
 		int handIndex = _playerHands[playerIndex].Count;
 		PlayingCard drawnCard = _playerDecks[playerIndex][0];
-		_playerHands[playerIndex].Add(drawnCard);
-		_playerDecks[playerIndex].RemoveAt(0);
+		if (!TrySubmitDrawCardsRuleCommand(
+			playerIndex,
+			drawCount: 1,
+			MaxTotalHandCards,
+			out _))
+		{
+			return null;
+		}
 		return new DrawnHandCard(drawnCard, handIndex);
 	}
 
@@ -438,8 +265,14 @@ public partial class GameBoardScene
 
 		int handIndex = _playerHands[playerIndex].Count;
 		PlayingCard drawnCard = _playerDecks[playerIndex][0];
-		_playerHands[playerIndex].Add(drawnCard);
-		_playerDecks[playerIndex].RemoveAt(0);
+		if (!TrySubmitDrawCardsRuleCommand(
+			playerIndex,
+			drawCount: 1,
+			MaxTotalHandCards,
+			out _))
+		{
+			return null;
+		}
 		return new DrawnHandCard(drawnCard, handIndex);
 	}
 }

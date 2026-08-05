@@ -79,6 +79,12 @@ func _run() -> void:
 		return
 
 	print("GAME_BOARD_MANUAL_LAYOUT_PARITY_SMOKE_OK")
+	viewport.queue_free()
+	await process_frame
+	await process_frame
+	board = null
+	packed_scene = null
+	viewport = null
 	await _dispose_audio_before_quit()
 	quit(0)
 

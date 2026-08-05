@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -70,7 +73,7 @@ public partial class GameBoardScene
 			CompleteNetworkAuthorityAction();
 			if (IsNetworkMultiplayerMode() && !hadAuthorityAction && hadPendingSelection)
 			{
-				GetNetworkManager()?.CommitAuthorityCheckpointFromBoard(this);
+				GetNetworkManager()?.CommitAuthorityCheckpointFromBoard();
 			}
 		}
 		SendBoardSnapshotIfHost();
@@ -78,18 +81,27 @@ public partial class GameBoardScene
 
 	private void ClearPendingItemSelectionState()
 	{
+		MandatorySelectionState pending = CurrentMandatorySelection;
+		if (pending.Kind != MandatorySelectionKind.None && _authorityRuleSession != null)
+		{
+			TrySubmitClearMandatorySelectionRuleCommand(
+				pending.Seat,
+				pending.Kind,
+				pending.TurnGeneration,
+				out _);
+		}
+		ReleasePendingItemSelectionPresentation();
+		_isAnimatingMagnetAttachment = false;
+	}
+
+	private void ReleasePendingItemSelectionPresentation()
+	{
 		TaskCompletionSource<bool>? magnetAttachmentCompletion = _pendingMagnetAttachmentCompletion;
 		TaskCompletionSource<int>? handLimitDiscardCompletion = _pendingHandLimitDiscardCompletion;
 		_pendingMagnetAttachmentCompletion = null;
 		_pendingHandLimitDiscardCompletion = null;
 		ClearMagnetAttachmentCountdown();
-		_isAnimatingMagnetAttachment = false;
 		_networkPendingSelectionRequestInFlight = false;
-		_pendingItemSelectionMode = PendingItemSelectionMode.None;
-		_pendingItemOwnerIndex = -1;
-		_pendingItemHandIndex = -1;
-		_pendingItemTurnSequenceGeneration = -1;
-		_pendingItemCardId = string.Empty;
 		DeferNetworkAuthoritySelectionWaiters(
 			magnetAttachmentCompletion,
 			handLimitDiscardCompletion);
@@ -124,6 +136,68 @@ public partial class GameBoardScene
 	private bool HasAnyHandCard(int playerIndex)
 	{
 		return GetTotalHandCardCount(playerIndex) > 0;
+	}
+
+	private bool TryBeginHandLimitMandatorySelection(
+		int playerIndex,
+		int turnSequenceGeneration,
+		IReadOnlySet<int>? excludedDisplayIndexes = null)
+	{
+		var legalIndexes = ImmutableArray.CreateBuilder<int>();
+		for (int displayIndex = 0; displayIndex < GetTotalHandCardCount(playerIndex); displayIndex++)
+		{
+			if (!(excludedDisplayIndexes?.Contains(displayIndex) ?? false))
+			{
+				legalIndexes.Add(displayIndex);
+			}
+		}
+
+		ImmutableArray<int> candidates = legalIndexes.ToImmutable();
+		MandatorySelectionState pending = CurrentMandatorySelection;
+		if (pending.Kind == MandatorySelectionKind.HandLimitDiscard
+			&& pending.Seat == playerIndex
+			&& pending.TurnGeneration == turnSequenceGeneration
+			&& (excludedDisplayIndexes == null
+				|| pending.NormalizedLegalSelectionIndexes.SequenceEqual(candidates)))
+		{
+			return true;
+		}
+
+		return candidates.Length > 0
+			&& TrySubmitBeginMandatorySelectionRuleCommand(
+				playerIndex,
+				MandatorySelectionKind.HandLimitDiscard,
+				sourceHandIndex: -1,
+				itemId: string.Empty,
+				candidates,
+				turnSequenceGeneration,
+				out _);
+	}
+
+	private bool TryResolveHandLimitMandatorySelection(
+		int playerIndex,
+		int displayIndex,
+		int turnSequenceGeneration)
+	{
+		if (!TryGetHandDisplayIdentity(
+				playerIndex,
+				displayIndex,
+				out long expectedCardRuntimeInstanceId,
+				out string expectedItemId)
+			|| !TrySubmitResolveMandatorySelectionRuleCommand(
+				playerIndex,
+				MandatorySelectionKind.HandLimitDiscard,
+				displayIndex,
+				expectedCardRuntimeInstanceId,
+				expectedItemId,
+				turnSequenceGeneration,
+				out RuleCommandResult result))
+		{
+			return false;
+		}
+
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, result.Mutation.SourceIndex);
+		return true;
 	}
 
 	private async Task<bool> DiscardHandCardForNewItemCardAsync(
@@ -206,7 +280,7 @@ public partial class GameBoardScene
 		{
 			int preferredDisplayIndex = IsOfflineSoloAiPlayer(playerIndex)
 				? PickOfflineSoloAiDiscardDisplayIndex(playerIndex)
-				: PickRandomHandDisplayIndex(playerIndex);
+				: PickRandomHandDisplayIndex(playerIndex, excludedDisplayIndexes);
 			if (preferredDisplayIndex >= 0
 				&& !(excludedDisplayIndexes?.Contains(preferredDisplayIndex) ?? false))
 			{
@@ -222,20 +296,17 @@ public partial class GameBoardScene
 			}
 			return null;
 		}
+		if (!TryBeginHandLimitMandatorySelection(
+				playerIndex,
+				turnSequenceGeneration,
+				excludedDisplayIndexes))
+		{
+			return null;
+		}
 		if (_networkAuthorityRuleTransactionActive)
 		{
 			_isProcessingCardPlay = true;
-			_pendingItemOwnerIndex = playerIndex;
-			_pendingItemHandIndex = -1;
-			_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-			_pendingItemCardId = string.Empty;
-			_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
 			_pendingHandLimitDiscardCompletion = null;
-			_plannedQuestionRewardDiscardExclusions.Clear();
-			if (excludedDisplayIndexes != null)
-			{
-				_plannedQuestionRewardDiscardExclusions.UnionWith(excludedDisplayIndexes);
-			}
 			SyncNetworkAuthorityActionWithPendingSelection();
 			return null;
 		}
@@ -244,17 +315,7 @@ public partial class GameBoardScene
 		var completionSource = new TaskCompletionSource<int>(
 			TaskCreationOptions.RunContinuationsAsynchronously);
 		_isProcessingCardPlay = true;
-		_pendingItemOwnerIndex = playerIndex;
-		_pendingItemHandIndex = -1;
-		_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-		_pendingItemCardId = string.Empty;
-		_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
 		_pendingHandLimitDiscardCompletion = completionSource;
-		_plannedQuestionRewardDiscardExclusions.Clear();
-		if (excludedDisplayIndexes != null)
-		{
-			_plannedQuestionRewardDiscardExclusions.UnionWith(excludedDisplayIndexes);
-		}
 		RenderPlayerHands();
 		ShowHandLimitDiscardSelection();
 		try
@@ -273,7 +334,6 @@ public partial class GameBoardScene
 			{
 				DisposeActiveSelectionOverlay();
 				ClearPendingItemSelectionState();
-				_plannedQuestionRewardDiscardExclusions.Clear();
 				_isProcessingCardPlay = wasProcessingCardPlay;
 				RenderPlayerHands();
 			}
@@ -313,9 +373,10 @@ public partial class GameBoardScene
 			&& (canCommit?.Invoke() ?? true);
 	}
 
-		if (!CanCommitDiscard()
+	if (!CanCommitDiscard()
 		|| _pendingHandLimitDiscardCompletion != null
-		|| !HasAnyHandCard(ownerPlayerIndex))
+		|| !HasAnyHandCard(ownerPlayerIndex)
+		|| !TryBeginHandLimitMandatorySelection(ownerPlayerIndex, turnSequenceGeneration))
 	{
 		return false;
 	}
@@ -325,11 +386,6 @@ public partial class GameBoardScene
 		TaskCreationOptions.RunContinuationsAsynchronously);
 	bool discarded = false;
 	_isProcessingCardPlay = true;
-	_pendingItemOwnerIndex = ownerPlayerIndex;
-	_pendingItemHandIndex = -1;
-	_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-	_pendingItemCardId = string.Empty;
-		_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
 		_pendingHandLimitDiscardCompletion = completionSource;
 		SyncNetworkAuthorityActionWithPendingSelection();
 		RenderPlayerHands();
@@ -347,17 +403,14 @@ public partial class GameBoardScene
 		if (_networkAuthorityRuleTransactionActive)
 		{
 			_isProcessingCardPlay = true;
-			_pendingItemOwnerIndex = ownerPlayerIndex;
-			_pendingItemHandIndex = -1;
-			_pendingItemTurnSequenceGeneration = turnSequenceGeneration;
-			_pendingItemCardId = string.Empty;
-			_pendingItemSelectionMode = PendingItemSelectionMode.HandLimitDiscard;
 			_pendingHandLimitDiscardCompletion = null;
-			SyncNetworkAuthorityActionWithPendingSelection();
 			return false;
 		}
 
-			if (!RemoveHandCardFromGame(ownerPlayerIndex, displayIndex))
+			if (!TryResolveHandLimitMandatorySelection(
+					ownerPlayerIndex,
+					displayIndex,
+					turnSequenceGeneration))
 			{
 				return false;
 			}
@@ -406,7 +459,7 @@ public partial class GameBoardScene
 		var options = new List<(string Text, Action Action)>();
 		for (int handIndex = 0; handIndex < _playerHands[ownerPlayerIndex].Count; handIndex++)
 		{
-			if (_plannedQuestionRewardDiscardExclusions.Contains(handIndex))
+			if (!IsValidHandLimitDiscardSelection(ownerPlayerIndex, handIndex))
 			{
 				continue;
 			}
@@ -418,7 +471,7 @@ public partial class GameBoardScene
 		for (int itemIndex = 0; itemIndex < _playerItemHands[ownerPlayerIndex].Count; itemIndex++)
 		{
 			int selectedDisplayIndex = _playerHands[ownerPlayerIndex].Count + itemIndex;
-			if (_plannedQuestionRewardDiscardExclusions.Contains(selectedDisplayIndex))
+			if (!IsValidHandLimitDiscardSelection(ownerPlayerIndex, selectedDisplayIndex))
 			{
 				continue;
 			}
@@ -473,13 +526,51 @@ public partial class GameBoardScene
 			&& playerIndex < _playerItemHands.Count
 			&& displayIndex >= 0
 			&& displayIndex < GetTotalHandCardCount(playerIndex)
-			&& !_plannedQuestionRewardDiscardExclusions.Contains(displayIndex);
+			&& IsCurrentHandLimitDiscardCandidate(playerIndex, displayIndex);
 	}
 
-	private int PickRandomHandDisplayIndex(int playerIndex)
+	private bool IsValidHandLimitDiscardSelection(
+		PlayerStateSnapshot player,
+		int displayIndex)
 	{
-		int totalHandCards = GetTotalHandCardCount(playerIndex);
-		return totalHandCards <= 0 ? -1 : _rng.RandiRange(0, totalHandCards - 1);
+		return displayIndex >= 0
+			&& displayIndex < player.Hand.Length + player.ItemHand.Length
+			&& IsCurrentHandLimitDiscardCandidate(player.Seat, displayIndex);
+	}
+
+	private bool IsCurrentHandLimitDiscardCandidate(
+		int playerIndex,
+		int displayIndex)
+	{
+		MandatorySelectionState pending = CurrentMandatorySelection;
+		return pending.Kind == MandatorySelectionKind.HandLimitDiscard
+			&& pending.Seat == playerIndex
+			&& pending.TurnGeneration == _turnSequenceGeneration
+			&& pending.NormalizedLegalSelectionIndexes.Contains(displayIndex);
+	}
+
+	private int PickRandomHandDisplayIndex(
+		int playerIndex,
+		IReadOnlySet<int>? excludedDisplayIndexes = null)
+	{
+		var excludedIndexes = ImmutableArray.CreateBuilder<int>(
+			excludedDisplayIndexes?.Count ?? 0);
+		if (excludedDisplayIndexes != null)
+		{
+			foreach (int excludedIndex in excludedDisplayIndexes)
+			{
+				excludedIndexes.Add(excludedIndex);
+			}
+		}
+
+		return TrySubmitChooseRandomHandDisplayIndexRuleCommand(
+			playerIndex,
+			playerIndex,
+			excludedIndexes.MoveToImmutable(),
+			_turnSequenceGeneration,
+			out int displayIndex)
+				? displayIndex
+				: -1;
 	}
 
 	private bool RemoveHandCardFromGame(int playerIndex, int displayIndex)
@@ -493,17 +584,60 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		long expectedCardRuntimeInstanceId = 0;
+		string expectedItemId = string.Empty;
 		if (displayIndex < _playerHands[playerIndex].Count)
 		{
-			_playerHands[playerIndex].RemoveAt(displayIndex);
+			expectedCardRuntimeInstanceId = _playerHands[playerIndex][displayIndex].InstanceId;
 		}
 		else
 		{
 			int itemHandIndex = displayIndex - _playerHands[playerIndex].Count;
-			_playerItemHands[playerIndex].RemoveAt(itemHandIndex);
+			expectedItemId = _playerItemHands[playerIndex][itemHandIndex].Id;
 		}
 
-		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
+		if (!TrySubmitDiscardHandCardRuleCommand(
+			playerIndex,
+			displayIndex,
+			expectedCardRuntimeInstanceId,
+			expectedItemId,
+			_turnSequenceGeneration,
+			out RuleCommandResult result))
+		{
+			return false;
+		}
+
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, result.Mutation.SourceIndex);
+		return true;
+	}
+
+	private bool TryGetHandDisplayIdentity(
+		int playerIndex,
+		int displayIndex,
+		out long cardRuntimeInstanceId,
+		out string itemId)
+	{
+		cardRuntimeInstanceId = 0;
+		itemId = string.Empty;
+		if (playerIndex < 0
+			|| playerIndex >= _playerHands.Count
+			|| playerIndex >= _playerItemHands.Count
+			|| displayIndex < 0
+			|| displayIndex >= GetTotalHandCardCount(playerIndex))
+		{
+			return false;
+		}
+
+		if (displayIndex < _playerHands[playerIndex].Count)
+		{
+			cardRuntimeInstanceId = _playerHands[playerIndex][displayIndex].InstanceId;
+		}
+		else
+		{
+			int itemHandIndex = displayIndex - _playerHands[playerIndex].Count;
+			itemId = _playerItemHands[playerIndex][itemHandIndex].Id;
+		}
+
 		return true;
 	}
 

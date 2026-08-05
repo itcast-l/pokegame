@@ -28,13 +28,13 @@ trap cleanup EXIT
 for mode in solo_low solo_high solo_high_four_player adventure; do
 	MODE_TMP_DIR="$TMP_DIR/$mode"
 	codex_setup_godot_test_home "$MODE_TMP_DIR"
-	if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/GameBoardModeRegressionSmoke.gd -- --mode="$mode" >>"$LOG_FILE" 2>&1; then
+	if ! DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" --script res://tests/GameBoardModeRegressionSmoke.gd -- --mode="$mode" >>"$LOG_FILE" 2>&1; then
 		cat "$LOG_FILE" >&2
 		exit 1
 	fi
 done
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if grep -Fq "SCRIPT ERROR" "$LOG_FILE" || grep -Fq "ERROR: System." "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

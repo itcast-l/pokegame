@@ -46,7 +46,7 @@ public partial class GameBoardScene
 		var cardVisual = new TextureRect
 		{
 			Name = "MagnetAttachmentCardVisual",
-			Texture = card.Texture,
+			Texture = GetPlayingCardTexture(card),
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,

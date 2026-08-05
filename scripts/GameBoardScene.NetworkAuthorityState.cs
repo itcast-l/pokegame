@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -285,12 +287,13 @@ public partial class GameBoardScene
 			return;
 		}
 
+		bool hasPendingAttachmentRewards = !GetPendingAttachmentRewards().IsEmpty;
 		_networkAuthorityActionState = _networkAuthorityActionState with
 		{
-			Phase = _pendingItemAttachmentRewards.Count > 0
+			Phase = hasPendingAttachmentRewards
 				? AuthorityActionPhase.Applying
 				: AuthorityActionPhase.Finalizing,
-			ContinuationStep = _pendingItemAttachmentRewards.Count > 0
+			ContinuationStep = hasPendingAttachmentRewards
 				? AuthorityActionContinuationStep.AttachmentQueue
 				: AuthorityActionContinuationStep.TurnAdvancement,
 			TargetSeat = -1,
@@ -370,7 +373,7 @@ public partial class GameBoardScene
 		SetNetworkAuthorityActionSelection(phase);
 	}
 
-	internal void MarkNetworkAuthorityAttachmentRewardInFlight(PendingItemAttachmentReward reward)
+	internal void MarkNetworkAuthorityAttachmentRewardInFlight(PendingAttachmentRewardState reward)
 	{
 		if (!_networkAuthorityActionState.IsActive)
 		{
@@ -380,8 +383,8 @@ public partial class GameBoardScene
 		_networkAuthorityActionState = _networkAuthorityActionState with
 		{
 			ContinuationStep = AuthorityActionContinuationStep.AttachmentQueue,
-			PendingRewardItemId = reward.ItemCardId,
-			PendingRewardSeat = reward.PlayerIndex,
+			PendingRewardItemId = reward.ItemId,
+			PendingRewardSeat = reward.Seat,
 			PendingRewardHandIndex = -1,
 			PendingRewardRequiresAttachment = true,
 			AttachmentMutationApplied = false,
@@ -690,7 +693,10 @@ public partial class GameBoardScene
 			{
 				CommitNetworkAuthorityDiscardMutation();
 			}
-			else if (RemoveHandCardFromGame(state.ActorSeat, state.SelectionIndex))
+			else if (TryResolveHandLimitMandatorySelection(
+				state.ActorSeat,
+				state.SelectionIndex,
+				state.TurnGeneration))
 			{
 				CommitNetworkAuthorityDiscardMutation();
 			}
@@ -744,7 +750,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		if (state.PendingRewardRequiresAttachment || _pendingItemAttachmentRewards.Count > 0)
+		if (state.PendingRewardRequiresAttachment || !GetPendingAttachmentRewards().IsEmpty)
 		{
 			if (state.Phase == AuthorityActionPhase.WaitingAttachment)
 			{
@@ -770,7 +776,7 @@ public partial class GameBoardScene
 			await ResolvePendingMagnetAttachmentsAsync(state.TurnGeneration);
 			if (_networkAuthorityActionState.IsActive
 				&& !HasPendingItemSelection()
-				&& _pendingItemAttachmentRewards.Count == 0)
+				&& GetPendingAttachmentRewards().IsEmpty)
 			{
 				_networkAuthorityActionState = _networkAuthorityActionState with
 				{
@@ -819,8 +825,21 @@ public partial class GameBoardScene
 				return;
 			}
 
-			int handIndex = _playerItemHands[state.PendingRewardSeat].Count;
-			_playerItemHands[state.PendingRewardSeat].Add(rewardCard.Value);
+			if (!TrySubmitGrantItemToHandRuleCommand(
+				state.PendingRewardSeat,
+				rewardCard.Value.Id,
+				MaxTotalHandCards,
+				discardDisplayIndex: -1,
+				expectedDiscardCardRuntimeInstanceId: 0,
+				expectedDiscardItemId: string.Empty,
+				state.TurnGeneration,
+				out RuleCommandResult grantResult))
+			{
+				CompleteNetworkAuthorityAction();
+				return;
+			}
+
+			int handIndex = grantResult.Mutation.TargetIndex;
 			CommitNetworkAuthorityQuestionRewardHandMutation(state.PendingRewardSeat, handIndex);
 		}
 
@@ -884,20 +903,27 @@ public partial class GameBoardScene
 
 		AuthorityActionState state = _networkAuthorityActionState;
 		bool isAttachmentReward = state.Phase == AuthorityActionPhase.WaitingAttachment;
-		_pendingItemOwnerIndex = isAttachmentReward && state.PendingRewardSeat >= 0
+		int pendingOwnerIndex = isAttachmentReward && state.PendingRewardSeat >= 0
 			? state.PendingRewardSeat
 			: state.ActorSeat;
-		_pendingItemHandIndex = state.ItemHandIndex;
-		_pendingItemCardId = isAttachmentReward && !string.IsNullOrEmpty(state.PendingRewardItemId)
+		string pendingItemCardId = isAttachmentReward && !string.IsNullOrEmpty(state.PendingRewardItemId)
 			? state.PendingRewardItemId
 			: state.ItemOrRewardId;
-		_pendingItemTurnSequenceGeneration = state.TurnGeneration;
-		_pendingItemSelectionMode = state.Phase switch
+		bool pendingStateReady = state.Phase switch
 		{
-			AuthorityActionPhase.WaitingDiscard => PendingItemSelectionMode.HandLimitDiscard,
-			AuthorityActionPhase.WaitingAttachment => PendingItemSelectionMode.AttachmentRewardHandCard,
-			_ => PendingItemSelectionMode.None,
+			AuthorityActionPhase.WaitingDiscard => TryBeginHandLimitMandatorySelection(
+				pendingOwnerIndex,
+				state.TurnGeneration),
+			AuthorityActionPhase.WaitingAttachment => TryBeginAttachmentMandatorySelection(
+				pendingOwnerIndex,
+				pendingItemCardId,
+				state.TurnGeneration),
+			_ => false,
 		};
+		if (!pendingStateReady)
+		{
+			return;
+		}
 		_isProcessingCardPlay = true;
 
 		if (state.Phase == AuthorityActionPhase.WaitingDiscard && _pendingHandLimitDiscardCompletion == null)
@@ -982,40 +1008,63 @@ public partial class GameBoardScene
 
 	private void RestoreNetworkAuthorityAttachmentQueue(AuthorityActionState state)
 	{
-		_pendingItemAttachmentRewards.Clear();
-		if (state is null)
+		if (_authorityRuleSession == null
+			|| !_authorityRuleSession.Capabilities.Contains(MatchCapability.ItemRules))
 		{
 			return;
 		}
 
-		if (!string.IsNullOrWhiteSpace(state.PendingRewardItemId) && state.PendingRewardSeat >= 0)
+		TrySubmitSetPendingAttachmentRewardsRuleCommand(
+			BuildPendingAttachmentRewardsFromAuthorityAction(state),
+			_turnSequenceGeneration);
+	}
+
+	private static ImmutableArray<PendingAttachmentRewardState>
+		BuildPendingAttachmentRewardsFromAuthorityAction(AuthorityActionState state)
+	{
+		if (state is null)
 		{
-			_pendingItemAttachmentRewards.Enqueue(
-				new PendingItemAttachmentReward(state.PendingRewardSeat, state.PendingRewardItemId));
+			return ImmutableArray<PendingAttachmentRewardState>.Empty;
+		}
+
+		bool hasPendingReward = !string.IsNullOrWhiteSpace(state.PendingRewardItemId)
+			&& state.PendingRewardSeat >= 0;
+		var rewards = ImmutableArray.CreateBuilder<PendingAttachmentRewardState>(
+			state.RemainingAttachmentRewardQueue.Length + (hasPendingReward ? 1 : 0));
+		if (hasPendingReward)
+		{
+			rewards.Add(new PendingAttachmentRewardState(
+				state.PendingRewardSeat,
+				state.PendingRewardItemId));
 		}
 
 		for (int index = 0; index < state.RemainingAttachmentRewardQueue.Length; index++)
 		{
-			int seat = state.RemainingAttachmentRewardQueueSeats.Length == state.RemainingAttachmentRewardQueue.Length
+			int seat = state.RemainingAttachmentRewardQueueSeats.Length
+				== state.RemainingAttachmentRewardQueue.Length
 				? state.RemainingAttachmentRewardQueueSeats[index]
 				: state.ActorSeat;
-			_pendingItemAttachmentRewards.Enqueue(
-				new PendingItemAttachmentReward(seat, state.RemainingAttachmentRewardQueue[index]));
+			rewards.Add(new PendingAttachmentRewardState(
+				seat,
+				state.RemainingAttachmentRewardQueue[index]));
 		}
+
+		return rewards.MoveToImmutable();
 	}
 
 	private string[] GetRemainingAttachmentRewardIds()
 	{
-		if (_pendingItemAttachmentRewards.Count == 0)
+		ImmutableArray<PendingAttachmentRewardState> rewards = GetPendingAttachmentRewards();
+		if (rewards.IsEmpty)
 		{
 			return Array.Empty<string>();
 		}
 
-		var result = new string[_pendingItemAttachmentRewards.Count];
+		var result = new string[rewards.Length];
 		int index = 0;
-		foreach (PendingItemAttachmentReward reward in _pendingItemAttachmentRewards)
+		foreach (PendingAttachmentRewardState reward in rewards)
 		{
-			result[index++] = reward.ItemCardId;
+			result[index++] = reward.ItemId;
 		}
 
 		return result;
@@ -1023,16 +1072,17 @@ public partial class GameBoardScene
 
 	private int[] GetRemainingAttachmentRewardQueueSeats()
 	{
-		if (_pendingItemAttachmentRewards.Count == 0)
+		ImmutableArray<PendingAttachmentRewardState> rewards = GetPendingAttachmentRewards();
+		if (rewards.IsEmpty)
 		{
 			return Array.Empty<int>();
 		}
 
-		var result = new int[_pendingItemAttachmentRewards.Count];
+		var result = new int[rewards.Length];
 		int index = 0;
-		foreach (PendingItemAttachmentReward reward in _pendingItemAttachmentRewards)
+		foreach (PendingAttachmentRewardState reward in rewards)
 		{
-			result[index++] = reward.PlayerIndex;
+			result[index++] = reward.Seat;
 		}
 
 		return result;
@@ -1045,7 +1095,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost()
 			&& AuthorityActionStateRules.IsStableCheckpointState(_networkAuthorityActionState))
 		{
-			GetNetworkManager()?.CommitAuthorityCheckpointFromBoard(this);
+			GetNetworkManager()?.CommitAuthorityCheckpointFromBoard();
 		}
 	}
 }

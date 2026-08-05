@@ -80,15 +80,15 @@ public partial class GameBoardScene
 			networkManager?.RequestPlayItemCard(itemHandIndex, turnSequenceGeneration);
 			if (!predictionStarted)
 			{
+				ClearNetworkPendingActionState();
+				DiscardNetworkReplicaPresentationState();
 				return;
 			}
 
 			if (!await CompletePredictedNetworkItemCardPlayAsync(itemHandIndex, turnSequenceGeneration))
 			{
+				RollbackPredictedNetworkItemCardPlay();
 				ClearNetworkPendingActionState();
-				ResetNetworkPredictedItemVisualState();
-				RenderPlayerHands();
-				RenderTableCards();
 				return;
 			}
 		}
@@ -106,14 +106,16 @@ public partial class GameBoardScene
 				{
 					ResetNetworkPredictedItemVisualState();
 					ResetNetworkLocallyCommittedPendingSelectionState();
+					DiscardNetworkReplicaPresentationState();
 					RenderPlayerHands();
 					RenderTableCards();
 				}
 			}
 			else
 			{
-				ResetNetworkPredictedItemVisualState();
-				ResetNetworkLocallyCommittedPendingSelectionState();
+					ResetNetworkPredictedItemVisualState();
+					ResetNetworkLocallyCommittedPendingSelectionState();
+					DiscardNetworkReplicaPresentationState();
 				if (HasPendingItemSelection())
 				{
 					ClearPendingItemSelectionState();
@@ -200,15 +202,15 @@ public partial class GameBoardScene
 			networkManager?.RequestPlayHandCard(handIndex, turnSequenceGeneration);
 			if (!predictionStarted)
 			{
+				ClearNetworkPendingActionState();
+				DiscardNetworkReplicaPresentationState();
 				return;
 			}
 
 			if (!await CompletePredictedNetworkHandCardPlayAsync(handIndex, turnSequenceGeneration))
 			{
+				RollbackPredictedNetworkHandCardPlay();
 				ClearNetworkPendingActionState();
-				ResetNetworkPredictedHandVisualState();
-				RenderPlayerHands();
-				RenderTableCards();
 				return;
 			}
 		}
@@ -223,6 +225,7 @@ public partial class GameBoardScene
 				else
 				{
 					ResetNetworkPredictedHandVisualState();
+					DiscardNetworkReplicaPresentationState();
 					RenderPlayerHands();
 					RenderTableCards();
 				}
@@ -230,6 +233,7 @@ public partial class GameBoardScene
 			else
 			{
 				ResetNetworkPredictedHandVisualState();
+				DiscardNetworkReplicaPresentationState();
 			}
 
 			ClearNetworkPendingActionState();

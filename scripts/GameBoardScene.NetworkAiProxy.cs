@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -39,7 +40,7 @@ public partial class GameBoardScene
 		{
 			MarkSeatControlIndicatorsDirty();
 			MarkActivePlayerStatusTooltipForRefresh();
-			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(CreateNextNetworkSnapshotId());
 		}
 	}
 
@@ -55,7 +56,7 @@ public partial class GameBoardScene
 
 	private void ResumeNetworkAiProxyTurnAfterAuthorityActionIfNeeded()
 	{
-		if (!NetworkAiFallbackRules.ShouldResumeAiProxyTurnAfterAuthorityAction(
+		if (!MatchReadModel.ShouldResumeAiProxyTurnAfterAuthorityAction(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			IsGameOver(),
@@ -69,7 +70,7 @@ public partial class GameBoardScene
 
 	private void BeginNetworkAiProxyTurnForPendingSelectionIfNeeded()
 	{
-		if (!NetworkAiFallbackRules.ShouldStartAiProxyForPendingSelection(
+		if (!MatchReadModel.ShouldStartAiProxyForPendingSelection(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			ShouldResolvePendingNetworkAiProxySelection()))
@@ -230,14 +231,14 @@ public partial class GameBoardScene
 			RenderPlayerHands();
 			if (IsNetworkHost())
 			{
-				GetNetworkManager()?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
+				GetNetworkManager()?.SendBoardSnapshotsFromHost(CreateNextNetworkSnapshotId());
 			}
 		}
 	}
 
 	private async Task<bool> RecoverNetworkAiProxyTurnAfterFailureAsync(int failedSeatIndex, int turnSequenceGeneration)
 	{
-		if (!NetworkAiFallbackRules.ShouldRecoverFromUnhandledAiTurnFailure(
+		if (!MatchReadModel.ShouldRecoverFromUnhandledAiTurnFailure(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
 			IsGameOver()))
@@ -451,9 +452,11 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_networkAiBlockedItem = new NetworkAiBlockedItemState(
-			ownerSeatIndex,
-			_pendingItemCardId);
+		TryUpdateMatchFlowState(state => state with
+		{
+			BlockedAutomatedItemSeat = ownerSeatIndex,
+			BlockedAutomatedItemId = _pendingItemCardId,
+		});
 	}
 
 	private void CancelPendingNetworkAiProxySelectionForFailedItem(int ownerSeatIndex)
@@ -485,17 +488,37 @@ public partial class GameBoardScene
 				return await PlayCardFromHandAsync(playerIndex, earlyTableHandIndex, turnSequenceGeneration);
 			}
 
-			if (playerIndex >= 0
-				&& playerIndex < _playerHands.Count
-				&& NetworkAiFallbackRules.TryPickCaptureHandIndexForNetworkAiProxy(
-					ToCaptureScoringTableCards(),
-					ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
-					BuildCaptureScoringContext(playerIndex),
-					_rng.RandiRange(0, 99),
-					_rng.RandiRange(0, 9999),
-					out int captureHandIndex))
+			if (TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+				&& TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
 			{
-				return await PlayCardFromHandAsync(playerIndex, captureHandIndex, turnSequenceGeneration);
+				CaptureScoringTableCard[] tableCards = ToCaptureScoringTableCards(
+					readModel.TableCards);
+				PotentialCaptureCard[] handCards = ToPotentialCaptureCards(
+					playerIndex,
+					player.Hand);
+				CaptureScoringContext scoringContext = BuildCaptureScoringContext(playerIndex);
+				if (TrySubmitChooseRandomIndexRuleCommand(
+						playerIndex,
+						0,
+						99,
+						turnSequenceGeneration,
+						out int decisionRollPercent)
+					&& TrySubmitChooseRandomIndexRuleCommand(
+						playerIndex,
+						0,
+						9999,
+						turnSequenceGeneration,
+						out int randomCaptureOrdinal)
+					&& MatchReadModel.TryPickCaptureHandIndexForNetworkAiProxy(
+						tableCards,
+						handCards,
+						scoringContext,
+						decisionRollPercent,
+						randomCaptureOrdinal,
+						out int captureHandIndex))
+				{
+					return await PlayCardFromHandAsync(playerIndex, captureHandIndex, turnSequenceGeneration);
+				}
 			}
 
 			return await PlayRandomPlayableHandEntryWithoutCapturePriorityAsync(playerIndex, turnSequenceGeneration);
@@ -518,9 +541,8 @@ public partial class GameBoardScene
 
 	private int PickPendingHandLimitDiscardIndexForNetworkAiProxy(int ownerSeatIndex)
 	{
-		if (ownerSeatIndex < 0
-			|| ownerSeatIndex >= _playerHands.Count
-			|| ownerSeatIndex >= _playerItemHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, ownerSeatIndex, out PlayerStateSnapshot player))
 		{
 			return -1;
 		}
@@ -533,7 +555,7 @@ public partial class GameBoardScene
 			}
 
 			int targetHandIndex = PickRandomHandDisplayIndex(ownerSeatIndex);
-			if (IsValidHandLimitDiscardSelection(ownerSeatIndex, targetHandIndex))
+			if (IsValidHandLimitDiscardSelection(player, targetHandIndex))
 			{
 				return targetHandIndex;
 			}
@@ -543,11 +565,29 @@ public partial class GameBoardScene
 			GD.PushWarning($"AI proxy discard heuristic failed for seat {ownerSeatIndex}: {ex.Message}");
 		}
 
-		int totalHandCardCount = GetTotalHandCardCount(ownerSeatIndex);
-		return NetworkAiFallbackRules.PickRandomLegalCandidate(
+		int totalHandCardCount = player.Hand.Length + player.ItemHand.Length;
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				ownerSeatIndex,
+				0,
+				int.MaxValue,
+				_turnSequenceGeneration,
+				out int randomOrdinal))
+		{
+			for (int displayIndex = 0; displayIndex < totalHandCardCount; displayIndex++)
+			{
+				if (IsValidHandLimitDiscardSelection(player, displayIndex))
+				{
+					return displayIndex;
+				}
+			}
+
+			return -1;
+		}
+
+		return MatchReadModel.PickRandomLegalCandidate(
 			totalHandCardCount,
-			displayIndex => IsValidHandLimitDiscardSelection(ownerSeatIndex, displayIndex),
-			_rng.RandiRange(0, int.MaxValue));
+			displayIndex => IsValidHandLimitDiscardSelection(player, displayIndex),
+			randomOrdinal);
 	}
 
 }

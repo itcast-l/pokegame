@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export DECKLAND_TEST_MUTE_AUDIO=1
+
 codex_setup_godot_test_home() {
 	local base_dir="$1"
 	local home_dir="$base_dir/home"

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Deckland.Rules</AssemblyName>
+    <RootNamespace>Deckland.Rules</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DefineConstants>$(DefineConstants);DECKLAND_RULES_CORE</DefineConstants>
+  </PropertyGroup>
+</Project>

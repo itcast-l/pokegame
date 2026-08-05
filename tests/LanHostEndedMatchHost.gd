@@ -11,6 +11,9 @@ var _network: Node
 var _started_match := false
 var _board_initialized := false
 var _finished := false
+var _close_started_at := 0
+var _close_execution_baseline := 0
+var _close_broadcast_baseline := 0
 
 
 func _initialize() -> void:
@@ -21,6 +24,7 @@ func _run() -> void:
 	_network = root.get_node("/root/NetworkManager")
 	_network.connect("PlayerListUpdated", Callable(self, "_on_player_list_updated"))
 	_network.connect("BoardInitialize", Callable(self, "_on_board_initialize"))
+	_network.connect("SessionLeaveCompleted", Callable(self, "_on_session_leave_completed"))
 	print("HOST_START")
 	await process_frame
 	_network.HostLan(PLAYER_COUNT, ITEM_MODE, WINNING_SCORE, ROOM_NAME, "")
@@ -64,8 +68,33 @@ func _end_match() -> void:
 		return
 
 	print("HOST_END_MATCH")
+	_close_started_at = Time.get_ticks_msec()
+	_close_execution_baseline = int(_network.call("DebugGetSessionCloseExecutionCount"))
+	_close_broadcast_baseline = int(_network.call("DebugGetHostEndedMatchCloseBroadcastCount"))
 	_network.LeaveSessionAfterHostEndedMatch()
-	await create_timer(0.4).timeout
+	_network.LeaveSessionAfterHostEndedMatch()
+
+
+func _on_session_leave_completed(_reason: int) -> void:
+	if _finished or _close_started_at <= 0:
+		return
+	var elapsed_seconds := (Time.get_ticks_msec() - _close_started_at) / 1000.0
+	var execution_delta := int(_network.call("DebugGetSessionCloseExecutionCount")) - _close_execution_baseline
+	var broadcast_delta := int(_network.call("DebugGetHostEndedMatchCloseBroadcastCount")) - _close_broadcast_baseline
+	if elapsed_seconds < 0.15 or elapsed_seconds >= 0.5:
+		_fail("Host close grace was outside [150ms, 500ms): %.3f" % elapsed_seconds)
+		return
+	if execution_delta != 1 or broadcast_delta != 1:
+		_fail("Repeated close was not idempotent: executions=%d broadcasts=%d" % [execution_delta, broadcast_delta])
+		return
+	if int(_network.get("State")) != 0:
+		_fail("Host close did not settle in Idle")
+		return
+	print("HOST_CLOSE_METRICS elapsed=%.3f executions=%d broadcasts=%d" % [
+		elapsed_seconds,
+		execution_delta,
+		broadcast_delta,
+	])
 	_finished = true
 	print("HOST_DONE")
 	quit(0)

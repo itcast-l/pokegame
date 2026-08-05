@@ -1,67 +1,88 @@
 using System.Collections.Generic;
-using Godot;
+using System.Collections.Immutable;
+using Deckland.Rules;
 
 public partial class GameBoardScene
 {
 	private List<TableCard> BuildShuffledTableCards()
 	{
-		var shuffledTableCards = new List<TableCard>(_tableCards);
-		_tableShuffleIndexes.Clear();
-		_tableShuffleMovableCards.Clear();
+		var tableCardReferences = ImmutableArray.CreateBuilder<RuleTableCardReference>(_tableCards.Count);
+		var fixedTableIndexes = ImmutableArray.CreateBuilder<int>();
 		for (int index = 0; index < _tableCards.Count; index++)
 		{
+			tableCardReferences.Add(new RuleTableCardReference(index, _tableCards[index].InstanceId));
 			if (IsFixedDuringTableShuffle(_tableCards[index]))
 			{
-				continue;
+				fixedTableIndexes.Add(index);
 			}
-
-			_tableShuffleIndexes.Add(index);
-			_tableShuffleMovableCards.Add(_tableCards[index]);
 		}
 
-		for (int index = _tableShuffleMovableCards.Count - 1; index > 0; index--)
+		if (!TrySubmitPlanTableShuffleRuleCommand(
+			_currentTurnPlayerIndex,
+			tableCardReferences.MoveToImmutable(),
+			fixedTableIndexes.ToImmutable(),
+			_turnSequenceGeneration,
+			out RuleCommandResult result))
 		{
-			int swapIndex = _rng.RandiRange(0, index);
-			(_tableShuffleMovableCards[index], _tableShuffleMovableCards[swapIndex]) = (_tableShuffleMovableCards[swapIndex], _tableShuffleMovableCards[index]);
+			return new List<TableCard>();
 		}
 
-		if (IsSameMovableTableCardOrder(_tableShuffleIndexes, _tableShuffleMovableCards) && _tableShuffleMovableCards.Count > 1)
+		ImmutableArray<long> plannedOrder = result.ReadModel.NormalizedPendingTableOrderRuntimeInstanceIds;
+		if (plannedOrder.Length != _tableCards.Count)
 		{
-			(_tableShuffleMovableCards[^1], _tableShuffleMovableCards[^2]) = (_tableShuffleMovableCards[^2], _tableShuffleMovableCards[^1]);
+			TryCompleteRulePresentationBarrier(
+				_turnSequenceGeneration,
+				"Invalid table-shuffle plan recovery");
+			return new List<TableCard>();
 		}
 
-		for (int index = 0; index < _tableShuffleIndexes.Count; index++)
+		var tableCardsById = new Dictionary<long, TableCard>(_tableCards.Count);
+		foreach (TableCard tableCard in _tableCards)
 		{
-			shuffledTableCards[_tableShuffleIndexes[index]] = _tableShuffleMovableCards[index];
+			if (!tableCardsById.TryAdd(tableCard.InstanceId, tableCard))
+			{
+				TryCompleteRulePresentationBarrier(
+					_turnSequenceGeneration,
+					"Duplicate table-card shuffle identity recovery");
+				return new List<TableCard>();
+			}
 		}
 
-		_tableShuffleIndexes.Clear();
-		_tableShuffleMovableCards.Clear();
+		var shuffledTableCards = new List<TableCard>(plannedOrder.Length);
+		foreach (long runtimeInstanceId in plannedOrder)
+		{
+			if (!tableCardsById.TryGetValue(runtimeInstanceId, out TableCard? tableCard))
+			{
+				TryCompleteRulePresentationBarrier(
+					_turnSequenceGeneration,
+					"Missing table-card shuffle identity recovery");
+				return new List<TableCard>();
+			}
+			shuffledTableCards.Add(tableCard);
+		}
+
 		return shuffledTableCards;
 	}
 
-	private bool IsSameMovableTableCardOrder(IReadOnlyList<int> shuffleIndexes, IReadOnlyList<TableCard> movableCards)
+	private bool ApplyShuffledTableCards(IReadOnlyList<TableCard> shuffledTableCards)
 	{
-		if (shuffleIndexes.Count != movableCards.Count)
+		if (_authorityRuleSession == null)
 		{
 			return false;
 		}
 
-		for (int index = 0; index < shuffleIndexes.Count; index++)
+		ImmutableArray<long> pendingOrder = _authorityRuleSession.ReadModel
+			.NormalizedPendingTableOrderRuntimeInstanceIds;
+		bool matchesPlan = pendingOrder.Length == shuffledTableCards.Count;
+		for (int index = 0; matchesPlan && index < pendingOrder.Length; index++)
 		{
-			if (!ReferenceEquals(movableCards[index], _tableCards[shuffleIndexes[index]]))
-			{
-				return false;
-			}
+			matchesPlan = shuffledTableCards[index].InstanceId == pendingOrder[index];
 		}
 
-		return true;
-	}
-
-	private void ApplyShuffledTableCards(IReadOnlyList<TableCard> shuffledTableCards)
-	{
-		_tableCards.Clear();
-		_tableCards.AddRange(shuffledTableCards);
+		bool completed = TryCompleteRulePresentationBarrier(
+			_turnSequenceGeneration,
+			"Table-shuffle presentation barrier completion");
+		return matchesPlan && completed;
 	}
 
 	private bool IsFixedDuringTableShuffle(TableCard tableCard)

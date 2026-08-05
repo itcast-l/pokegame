@@ -150,10 +150,7 @@ public partial class GameBoardScene
 
 		_pauseMenuController?.RefreshLocalizedText();
 
-		if (_magnetAttachmentCountdownHintLabel != null && GodotObject.IsInstanceValid(_magnetAttachmentCountdownHintLabel))
-		{
-			_magnetAttachmentCountdownHintLabel.Text = GetMagnetAttachmentCountdownHint();
-		}
+		_mandatoryActionCountdownController?.RefreshHintText(GetMagnetAttachmentCountdownHint());
 
 		RefreshItemCardDescriptions();
 		RefreshScoreTooltips();

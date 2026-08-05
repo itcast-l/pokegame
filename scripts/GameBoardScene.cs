@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene : Control
@@ -10,6 +12,9 @@ public partial class GameBoardScene : Control
 	private const string CharacterAvatarScenePath = "res://scenes/character_avatar.tscn";
 	private const string ResultBannerScenePath = "res://scenes/game_board_result_banner.tscn";
 	private const string DefeatFinisherOverlayScenePath = "res://scenes/game_board_defeat_finisher_overlay.tscn";
+	private static PackedScene? _cachedCharacterAvatarScene;
+	private static PackedScene? _cachedResultBannerScene;
+	private static PackedScene? _cachedDefeatFinisherOverlayScene;
 	private const string ItemSelectionOverlayScenePath = "res://scenes/item_selection_overlay.tscn";
 	private const string AdventureUpgradeSelectionOverlayScenePath = "res://scenes/adventure_upgrade_selection_overlay.tscn";
 	private const string AdventureQuestionRejudgeOverlayScenePath = "res://scenes/adventure_question_rejudge_overlay.tscn";
@@ -120,24 +125,35 @@ public partial class GameBoardScene : Control
 	private static readonly float TableCardHorizontalStep = CardVisualSize.X + 18.0f;
 	private static readonly float TableCardRowGap = CardVisualSize.Y * 0.62f;
 	private static readonly Vector2 HorizontalHandCardOffset = new(62, 0);
-	private readonly GameBoardState _state = new();
-	private readonly CardPlayStateService _cardPlayStateService = new();
-	private readonly CaptureStateService _captureStateService = new();
-	private readonly TurnAdvancementService _turnAdvancementService = new();
+			private AuthorityRuleSession? _authorityRuleSession;
+			private ReplicaRuleSession? _replicaRuleSession;
+	private readonly GameBoardRuleReadProjection _ruleReadProjection = new();
+		private readonly GodotRuleRandomSource _ruleRandomSource;
 	private IPlayerInputHandler _playerInputHandler = default!;
-	private int _playerCount
-	{
-		get => _state.PlayerCount;
-		set => _state.PlayerCount = value;
-	}
-	private readonly RandomNumberGenerator _rng = new();
-	private List<List<PlayingCard>> _playerDecks => _state.PlayerDecks;
-	private List<List<PlayingCard>> _playerHands => _state.PlayerHands;
-	private List<List<ItemCard>> _playerItemHands => _state.PlayerItemHands;
-	private List<TableCard> _tableCards => _state.TableCards;
+		private int _playerCount = MinPlayers;
+			private readonly RandomNumberGenerator _rng = new();
+		private readonly RandomNumberGenerator _presentationRng = new();
+	private NetworkReplicaPresentationState? _networkReplicaPresentationState;
+	private IReadOnlyList<IReadOnlyList<PlayingCard>> _playerDecks =>
+		_networkReplicaPresentationState is { } presentation
+			? presentation.PlayerDecks
+			: CurrentRuleProjection.PlayerDecks;
+	private IReadOnlyList<IReadOnlyList<PlayingCard>> _playerHands =>
+		_networkReplicaPresentationState is { } presentation
+			? presentation.PlayerHands
+			: CurrentRuleProjection.PlayerHands;
+	private IReadOnlyList<IReadOnlyList<ItemCard>> _playerItemHands =>
+		_networkReplicaPresentationState is { } presentation
+			? presentation.PlayerItemHands
+			: CurrentRuleProjection.PlayerItemHands;
+	private IReadOnlyList<TableCard> _tableCards =>
+		_networkReplicaPresentationState is { } presentation
+			? presentation.TableCards
+			: CurrentRuleProjection.TableCards;
 	private readonly List<Control> _playerCardPiles = new();
 	private readonly List<Control> _playerHandAreas = new();
 	private readonly Dictionary<string, Texture2D> _itemCardTextures = new();
+	private readonly Dictionary<string, Texture2D> _playingCardTexturesByCode = new(StringComparer.Ordinal);
 	private readonly List<Texture2D> _scoreFillEffectFrames = new();
 	private readonly List<Texture2D> _enemySpecialAbilityAvatarFxFrames = new();
 	private readonly List<Texture2D> _mantaRayTideShiftCycloneFxFrames = new();
@@ -166,14 +182,13 @@ public partial class GameBoardScene : Control
 	private readonly Dictionary<string, ItemAttachmentOverlay> _itemAttachmentOverlaysById = new();
 	private readonly HashSet<string> _hiddenHandDisplaySlots = new();
 	private readonly HashSet<string> _shiftedHiddenHandDisplaySlots = new();
-	private readonly CardEventBus _cardEventBus = new();
 	private readonly List<TextureRect> _tableRenderTexturePool = new();
 	private readonly List<Panel> _tableRenderPanelPool = new();
+	private readonly HashSet<long> _presentationHiddenTableCardRuntimeInstanceIds = new();
 	private IGameBoardAnimationPresenter _animationPresenter = default!;
 	private SpecialCardEffectResolver _effectResolver = default!;
 	private ItemCardCatalog _itemCardCatalog = default!;
 	private Dictionary<string, AdventureAttackEffectHandler> _adventureAttackEffectHandlers = default!;
-	private readonly Queue<PendingItemAttachmentReward> _pendingItemAttachmentRewards = new();
 	private readonly List<SeatControlState> _networkSeatControlStates = new();
 	private readonly Panel?[] _playerSeatControlIndicatorPanels = new Panel?[MaxPlayers];
 	private readonly Label?[] _playerSeatControlIndicatorLabels = new Label?[MaxPlayers];
@@ -182,7 +197,6 @@ public partial class GameBoardScene : Control
 	private bool _seatControlIndicatorLayoutDirty;
 	private bool _activePlayerTooltipContentDirty;
 	private bool _activePlayerTooltipLayoutDirty;
-	private NetworkAiBlockedItemState _networkAiBlockedItem = NetworkAiBlockedItemState.None;
 	private AdventureRunSessionStore? _adventureRunSessionStore;
 	private SelectionOverlaySession? _activeSelectionOverlaySession;
 	private Panel? _networkReconnectOverlayPanel;
@@ -208,132 +222,66 @@ public partial class GameBoardScene : Control
 	private bool _mainPlayerHandSelectionInputEnabled;
 	private int _currentTurnPlayerIndex
 	{
-		get => _state.CurrentTurnPlayerIndex;
-		set => _state.CurrentTurnPlayerIndex = value;
+		get => CurrentRuleReadModel?.CurrentTurnSeat ?? MainPlayerIndex;
 	}
 	private int _turnSequenceGeneration
 	{
-		get => _state.TurnSequenceGeneration;
-		set => _state.TurnSequenceGeneration = value;
+		get => _replicaTurnSequenceGenerationOverride >= 0
+			? _replicaTurnSequenceGenerationOverride
+			: CurrentRuleReadModel?.TurnGeneration ?? 0;
 	}
-	private readonly TurnStateMachine _turnStateMachine = new();
+	private int _replicaTurnSequenceGenerationOverride = -1;
 	private int _completedTurnsSinceQuestionCardRefresh
 	{
-		get => _state.CompletedTurnsSinceQuestionCardRefresh;
-		set => _state.CompletedTurnsSinceQuestionCardRefresh = value;
+		get => CurrentRuleReadModel?.CompletedTurnsSinceQuestionRefresh ?? 0;
 	}
 	private int _questionCardRefreshAnchorPlayerIndex
 	{
-		get => _state.QuestionCardRefreshAnchorPlayerIndex;
-		set => _state.QuestionCardRefreshAnchorPlayerIndex = value;
+		get => CurrentRuleReadModel?.QuestionRefreshAnchorSeat ?? -1;
 	}
-	private int _adventureMainPlayerSuccessfulCapturesThisTurn
-	{
-		get => _state.AdventureMainPlayerSuccessfulCapturesThisTurn;
-		set => _state.AdventureMainPlayerSuccessfulCapturesThisTurn = value;
-	}
-	private int _adventureMainPlayerCaptureCountThisBattle
-	{
-		get => _state.AdventureMainPlayerCaptureCountThisBattle;
-		set => _state.AdventureMainPlayerCaptureCountThisBattle = value;
-	}
-	private bool _adventureQuestionRejudgeUsedThisBattle
-	{
-		get => _state.AdventureQuestionRejudgeUsedThisBattle;
-		set => _state.AdventureQuestionRejudgeUsedThisBattle = value;
-	}
-	private bool _adventureMainPlayerHalfHealthRescueUsed
-	{
-		get => _state.AdventureMainPlayerHalfHealthRescueUsed;
-		set => _state.AdventureMainPlayerHalfHealthRescueUsed = value;
-	}
-	private bool _adventureMainPlayerQuarterHealthRescueUsed
-	{
-		get => _state.AdventureMainPlayerQuarterHealthRescueUsed;
-		set => _state.AdventureMainPlayerQuarterHealthRescueUsed = value;
-	}
-	private bool _adventureEnemyNextBaseCardFacesUp
-	{
-		get => _state.AdventureEnemyNextBaseCardFacesUp;
-		set => _state.AdventureEnemyNextBaseCardFacesUp = value;
-	}
-	private AdventureEnemyNextCardInsertMode _adventureEnemyNextCardInsertMode
-	{
-		get => _state.AdventureEnemyNextCardInsertMode;
-		set => _state.AdventureEnemyNextCardInsertMode = value;
-	}
-	private int _adventureEnemyNextCaptureDamageDelta
-	{
-		get => _state.AdventureEnemyNextCaptureDamageDelta;
-		set => _state.AdventureEnemyNextCaptureDamageDelta = value;
-	}
-	private PendingItemSelectionMode _pendingItemSelectionMode
-	{
-		get => _state.PendingItemSelectionMode;
-		set => _state.PendingItemSelectionMode = value;
-	}
-	private int _pendingItemOwnerIndex
-	{
-		get => _state.PendingItemOwnerIndex;
-		set => _state.PendingItemOwnerIndex = value;
-	}
-	private int _pendingItemHandIndex
-	{
-		get => _state.PendingItemHandIndex;
-		set => _state.PendingItemHandIndex = value;
-	}
-	private int _pendingItemTurnSequenceGeneration
-	{
-		get => _state.PendingItemTurnSequenceGeneration;
-		set => _state.PendingItemTurnSequenceGeneration = value;
-	}
-	private string _pendingItemCardId
-	{
-		get => _state.PendingItemCardId;
-		set => _state.PendingItemCardId = value;
-	}
+		private long _adventureNextBaseCardActionId = 1;
+	private MandatorySelectionState CurrentMandatorySelection =>
+		CurrentRuleReadModel?.NormalizedMandatorySelection ?? MandatorySelectionState.None;
+	private PendingItemSelectionMode _pendingItemSelectionMode =>
+		CurrentMandatorySelection.Kind switch
+		{
+			MandatorySelectionKind.HandLimitDiscard => PendingItemSelectionMode.HandLimitDiscard,
+			MandatorySelectionKind.AttachmentHandCard => PendingItemSelectionMode.AttachmentRewardHandCard,
+			_ => PendingItemSelectionMode.None,
+		};
+	private int _pendingItemOwnerIndex =>
+		CurrentMandatorySelection.Kind == MandatorySelectionKind.None
+			? -1
+			: CurrentMandatorySelection.Seat;
+	private int _pendingItemHandIndex =>
+		CurrentMandatorySelection.Kind == MandatorySelectionKind.None
+			? -1
+			: CurrentMandatorySelection.SourceHandIndex;
+	private int _pendingItemTurnSequenceGeneration =>
+		CurrentMandatorySelection.Kind == MandatorySelectionKind.None
+			? -1
+			: CurrentMandatorySelection.TurnGeneration;
+	private string _pendingItemCardId =>
+		CurrentMandatorySelection.Kind == MandatorySelectionKind.None
+			? string.Empty
+			: CurrentMandatorySelection.ItemId;
 	private TaskCompletionSource<bool>? _pendingMagnetAttachmentCompletion;
 	private TaskCompletionSource<int>? _pendingHandLimitDiscardCompletion;
-	private Control? _magnetAttachmentCountdownRoot;
-	private Label? _magnetAttachmentCountdownLabel;
-	private Label? _magnetAttachmentCountdownHintLabel;
-	private Tween? _magnetAttachmentCountdownHintTween;
-	private double _magnetAttachmentCountdownRemainingSeconds;
-	private bool _magnetAttachmentCountdownHintIsUrgent;
-	private bool _isResolvingMagnetAttachmentSelection
-	{
-		get => _state.IsResolvingMagnetAttachmentSelection;
-		set => _state.IsResolvingMagnetAttachmentSelection = value;
-	}
-	private bool _isAnimatingMagnetAttachment
-	{
-		get => _state.IsAnimatingMagnetAttachment;
-		set => _state.IsAnimatingMagnetAttachment = value;
-	}
-	private bool _isResolvingTurnSequence
-	{
-		get => _state.IsResolvingTurnSequence;
-		set => _state.IsResolvingTurnSequence = value;
-	}
-	private bool _isProcessingCardPlay
-	{
-		get => _state.IsProcessingCardPlay;
-		set => _state.IsProcessingCardPlay = value;
-	}
-	private bool _isOpeningDealAnimationPlaying
-	{
-		get => _state.IsOpeningDealAnimationPlaying;
-		set => _state.IsOpeningDealAnimationPlaying = value;
-	}
-	private bool _isLeavingGame
-	{
-		get => _state.IsLeavingGame;
-		set => _state.IsLeavingGame = value;
-	}
+	private readonly GameBoardFrameScheduler _frameScheduler = new();
+	private readonly GameBoardLifecycleCoordinator _lifecycleCoordinator = new();
+	private MandatoryActionCountdownController? _mandatoryActionCountdownController;
+	private IDisposable? _mandatoryActionCountdownFrameRegistration;
+	private bool _debugMandatoryActionCountdownProbeActive;
+	private bool _isResolvingMagnetAttachmentSelection;
+	private bool _isAnimatingMagnetAttachment;
+	private bool _isResolvingTurnSequence;
+	private bool _isProcessingCardPlay;
+	private bool _isOpeningDealAnimationPlaying;
+	private bool _isLeavingGame;
 	private bool _itemMode = true;
 	private bool _soloMode;
 	private GameModePolicy _gameModePolicy = GameModePolicy.LocalStandard;
-	private int _soloAiDifficulty = (int)SoloAiRules.Difficulty.Medium;
+	private int _soloAiDifficulty = (int)SoloAiDifficulty.Medium;
 	private int _localPlayerIndex;
 	private string _networkSessionId = string.Empty;
 	private long _matchSeed;
@@ -346,38 +294,15 @@ public partial class GameBoardScene : Control
 	private bool _adventureTutorialMode;
 	private string _adventureTutorialFlow = "basic_capture";
 	private string _adventureEnemyAvatarId = "fish";
-	private bool _mantaRayTideShiftCheckedThisTurn;
-	private bool _jellyfishBubbleTriggeredThisTurn;
-	private int _jellyfishDisabledMainPlayerHandSlotIndex = -1;
-	private int _gardenEelCaptureCountUntilSandBite;
-	private bool _gardenEelSandBiteReady;
-	private int _gardenEelBuriedTableCardIndex = -1;
-	private int _nautilusMainPlayerCaptureCountUntilBomb;
-	private int _nautilusBombInsertionsThisMatch;
-	private int _narwhalCaptureCountUntilDouble;
-	private bool _narwhalDoubleReady;
-	private int _bossKDoubleCollectTriggersThisMatch;
-	private int _leafySeadragonBladeBreakCooldownTurns;
-	private int _seaSlugMissCountUntilSlime;
-	private bool _dragonPrinceJackUsed;
-	private int _dragonQueenCaptureCountUntilSteal;
-	private int _bossKCaptureCountUntilSteal;
-	private int _bossKStealTriggersThisMatch;
-	private bool _bossKActiveControlUsedThisTurn;
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
-		private readonly List<int> _tableShuffleIndexes = new();
-		private readonly List<TableCard> _tableShuffleMovableCards = new();
-		private int _winnerPlayerIndex
-		{
-			get => _state.WinnerPlayerIndex;
-			set => _state.WinnerPlayerIndex = value;
-		}
-		private MatchOutcomeKind _matchOutcomeKind
-		{
-			get => _state.MatchOutcomeKind;
-			set => _state.MatchOutcomeKind = value;
-		}
+	private int _winnerPlayerIndex => CurrentRuleReadModel?.WinnerSeat ?? -1;
+	private MatchOutcomeKind _matchOutcomeKind => CurrentRuleReadModel?.Outcome switch
+	{
+		Deckland.Rules.MatchOutcome.Won => MatchOutcomeKind.Winner,
+		Deckland.Rules.MatchOutcome.Draw => MatchOutcomeKind.Draw,
+		_ => MatchOutcomeKind.InProgress,
+	};
 
 	private Control _centerArena = default!;
 	private Control _tableCardLayoutArea = default!;
@@ -391,10 +316,37 @@ public partial class GameBoardScene : Control
 	private TextureRect _verticalBackdrop = default!;
 	private TextureRect _boardArt = default!;
 	private Control _layoutAreas = default!;
+	private GameBoardNodeBindings _nodeBindings = default!;
 
 	public GameModePolicy ModePolicy => _gameModePolicy;
 
+	public GameBoardScene()
+	{
+		_ruleRandomSource = new GodotRuleRandomSource(_rng);
+	}
+
+	private static PackedScene? LoadCachedCoreScene(ref PackedScene? cachedScene, string path)
+	{
+		if (cachedScene != null && GodotObject.IsInstanceValid(cachedScene))
+		{
+			return cachedScene;
+		}
+
+		cachedScene = GD.Load<PackedScene>(path);
+		return cachedScene;
+	}
+
 	public override void _Ready()
+	{
+		_lifecycleCoordinator.Start(
+			CreateRuleSessionAndFoundation,
+			BindBoardNodes,
+			CreateBoardControllers,
+			RegisterBoardNetworkEndpoint,
+			StartBoardMatch);
+	}
+
+	private void CreateRuleSessionAndFoundation()
 	{
 		_boardAsyncLifetime = new BoardAsyncLifetime(this);
 		_gameModePolicy = GameModePolicy.Derive(
@@ -402,11 +354,13 @@ public partial class GameBoardScene : Control
 			_adventureMode,
 			_adventureTutorialMode,
 			_soloMode);
+		InitializeRuleSessionForCurrentMode();
 		GetAdventureRunSessionStore()?.ConfigureForPolicy(_gameModePolicy);
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();
 		_rng.Randomize();
+		_presentationRng.Randomize();
 		_animationPresenter = new GameBoardAnimationPresenter();
 		_itemCardCatalog = ItemCardCatalog.LoadRequired(this);
 		_effectResolver = new SpecialCardEffectResolver(this);
@@ -420,20 +374,27 @@ public partial class GameBoardScene : Control
 		{
 			EnsureItemModeResourcesLoaded();
 		}
+	}
 
-		_backdropFill = GetNode<TextureRect>("BackdropFill");
-		_boardCanvas = GetNode<Control>("BoardCanvas");
-		_verticalBackdrop = GetNode<TextureRect>("BoardCanvas/VerticalBackdrop");
-		_boardArt = GetNode<TextureRect>("BoardCanvas/BoardArt");
-		_layoutAreas = GetNode<Control>("BoardCanvas/LayoutAreas");
+	private void BindBoardNodes()
+	{
+		_nodeBindings = GameBoardNodeBindings.BindRequired(this);
+		_backdropFill = _nodeBindings.BackdropFill;
+		_boardCanvas = _nodeBindings.BoardCanvas;
+		_verticalBackdrop = _nodeBindings.VerticalBackdrop;
+		_boardArt = _nodeBindings.BoardArt;
+		_layoutAreas = _nodeBindings.LayoutAreas;
 		RefreshResponsiveBoardLayout();
-		_centerArena = GetNode<Control>("%CenterArena");
-		_tableCardLayoutArea = GetNode<Control>("%TableCardLayoutArea");
-		_topPlayerArea = GetNode<Control>("%TopPlayerArea");
-		_bottomPlayerArea = GetNode<Control>("%BottomPlayerArea");
-		_leftPlayerArea = GetNode<Control>("%LeftPlayerArea");
-		_rightPlayerArea = GetNode<Control>("%RightPlayerArea");
+		_centerArena = _nodeBindings.CenterArena;
+		_tableCardLayoutArea = _nodeBindings.TableCardLayoutArea;
+		_topPlayerArea = _nodeBindings.TopPlayerArea;
+		_bottomPlayerArea = _nodeBindings.BottomPlayerArea;
+		_leftPlayerArea = _nodeBindings.LeftPlayerArea;
+		_rightPlayerArea = _nodeBindings.RightPlayerArea;
+	}
 
+	private void CreateBoardControllers()
+	{
 		CreatePlayerStatusTooltip();
 		CreatePlayerCardPiles();
 		CreatePlayerHandAreas();
@@ -450,6 +411,15 @@ public partial class GameBoardScene : Control
 		ConnectNetworkManagerSignalsForBoard();
 		RefreshNetworkReconnectOverlayIfNeeded();
 		UpdatePlayerVisibility();
+	}
+
+	private void RegisterBoardNetworkEndpoint()
+	{
+		RegisterNetworkMatchEndpoint();
+	}
+
+	private void StartBoardMatch()
+	{
 		if (_networkWaitForInitialize)
 		{
 			GetNetworkManager()?.NotifyLocalBoardReady();
@@ -460,33 +430,33 @@ public partial class GameBoardScene : Control
 		}
 		PlayBoardMusic();
 		TrackBoardTask(WarmupGameplayResourcesAsync(GetCurrentTurnContext()), nameof(WarmupGameplayResourcesAsync));
+		RefreshBoardProcessState();
 	}
 
-	public bool TryApplyNetworkBoardInitialize(Godot.Collections.Dictionary payload)
+	internal bool TryApplyNetworkBoardInitialize(NetworkBoardInitialization initialization)
 	{
-		if (!NetworkVariantReader.TryReadInt32(payload, "player_count", NetworkSessionDefaults.MinPlayers, NetworkSessionDefaults.MaxPlayers, out int decodedPlayerCount)
-			|| !NetworkVariantReader.TryReadBool(payload, "item_mode", out bool decodedItemMode)
-			|| !NetworkVariantReader.TryReadInt32(payload, "winning_score", 50, 200, out int decodedWinningScore)
-			|| decodedWinningScore is not (50 or 100 or 200)
-			|| !NetworkVariantReader.TryReadString(payload, "session_id", NetworkProtocol.MaxSessionIdLength, out string decodedSessionId, allowEmpty: false)
-			|| !NetworkVariantReader.TryReadInt64(payload, "match_seed", long.MinValue, long.MaxValue, out long decodedMatchSeed)
-			|| !NetworkVariantReader.TryReadString(payload, "player_names_csv", 1024, out string decodedPlayerNames)
-			|| !NetworkVariantReader.TryReadString(payload, "player_avatar_ids_csv", 1024, out string decodedAvatarIds)
-			|| !NetworkVariantReader.TryReadString(payload, "match_id", NetworkProtocol.MaxMatchIdLength, out string decodedMatchId, allowEmpty: false)
-			|| decodedPlayerNames.Split(',').Length != decodedPlayerCount
-			|| decodedAvatarIds.Split(',').Length != decodedPlayerCount)
+		NetworkSessionConfig config = initialization.Config;
+		if (config.PlayerCount is < NetworkSessionDefaults.MinPlayers or > NetworkSessionDefaults.MaxPlayers
+			|| config.WinningScore is not (50 or 100 or 200)
+			|| string.IsNullOrWhiteSpace(config.SessionId)
+			|| string.IsNullOrWhiteSpace(config.MatchId)
+			|| initialization.PlayerNames.Length != config.PlayerCount
+			|| initialization.PlayerAvatarIds.Length != config.PlayerCount
+			|| initialization.LocalPlayerIndex < 0
+			|| initialization.LocalPlayerIndex >= config.PlayerCount)
 		{
 			return false;
 		}
 
-		player_count = decodedPlayerCount;
-		item_mode = decodedItemMode;
-		winning_score = decodedWinningScore;
-		network_session_id = decodedSessionId;
-		match_seed = decodedMatchSeed;
-		player_names_csv = decodedPlayerNames;
-		player_avatar_ids_csv = decodedAvatarIds;
-		network_match_id = decodedMatchId;
+		player_count = config.PlayerCount;
+		item_mode = config.ItemMode;
+		winning_score = config.WinningScore;
+		network_session_id = config.SessionId;
+		network_match_id = config.MatchId;
+		match_seed = config.MatchSeed;
+		local_player_index = initialization.LocalPlayerIndex;
+		player_names_csv = string.Join(',', initialization.PlayerNames);
+		player_avatar_ids_csv = string.Join(',', initialization.PlayerAvatarIds);
 		network_wait_for_initialize = false;
 		RefreshNetworkReconnectOverlayIfNeeded();
 		if (IsNetworkMultiplayerMode() && !IsNetworkHost())
@@ -498,7 +468,7 @@ public partial class GameBoardScene : Control
 		InitializeBoard(playOpeningIntroAnimation: true);
 		if (IsNetworkHost())
 		{
-			GetNetworkManager()?.SendInitialBoardSnapshotsFromHost(this);
+			GetNetworkManager()?.SendInitialBoardSnapshotsFromHost();
 		}
 		return true;
 	}
@@ -538,11 +508,41 @@ public partial class GameBoardScene : Control
 
 	public override void _ExitTree()
 	{
-		_boardAsyncLifetime?.BeginStopping();
+		_lifecycleCoordinator.Stop(
+			StopBoardInputAndNetworkRequests,
+			StopAndUnregisterNetworkMatchEndpoint,
+			CancelBoardAsyncLifetime,
+			ReleaseBoardControllers,
+			ClearBoardPresentationState);
+	}
+
+	private void StopBoardInputAndNetworkRequests()
+	{
+		_isLeavingGame = true;
+		ClearMagnetAttachmentCountdown();
 		_networkVisualPlaybackController?.Shutdown();
+	}
+
+	private void CancelBoardAsyncLifetime()
+	{
+		_boardAsyncLifetime?.BeginStopping();
 		_boardAsyncLifetime?.Shutdown();
+	}
+
+	private void ReleaseBoardControllers()
+	{
 		DisconnectNetworkManagerSignalsForBoard();
 		DisposeActiveSelectionOverlay();
+		_frameScheduler.Dispose();
+	}
+
+	private void ClearBoardPresentationState()
+	{
+		if (_authorityRuleSession != null)
+		{
+			GetAdventureRunSessionStore()?.UnbindAuthorityRuleSession(_authorityRuleSession);
+		}
+		DiscardNetworkReplicaPresentationState();
 		ClearDetachedVisualPools();
 		_animationPresenter?.ClearPools();
 	}
@@ -583,30 +583,72 @@ public partial class GameBoardScene : Control
 
 	public override void _Process(double delta)
 	{
-		UpdateMagnetAttachmentCountdown(delta);
-		UpdateAdventureUpgradeOverlayCardMotion(delta);
+		_frameScheduler.Tick(delta);
 		FlushResponsiveBoardVisualsIfNeeded();
 		FlushUiDirtyFlagsIfNeeded();
+		RefreshBoardProcessState();
+	}
+
+	private void RequestBoardFrameUpdate()
+	{
+		if (!GodotObject.IsInstanceValid(this))
+		{
+			return;
+		}
+
+		if (!IsProcessing())
+		{
+			SetProcess(true);
+		}
+	}
+
+	private void RefreshBoardProcessState()
+	{
+		if (!GodotObject.IsInstanceValid(this))
+		{
+			return;
+		}
+
+		bool hasTooltipWork = _activeStatusTooltipPlayerIndex >= 0
+			&& (_activePlayerTooltipContentDirty || _activePlayerTooltipLayoutDirty);
+		bool shouldProcess = _frameScheduler.HasActiveRegistrations
+			|| _responsiveBoardVisualsDirty
+			|| _seatControlIndicatorsDirty
+			|| _seatControlIndicatorLayoutDirty
+			|| hasTooltipWork;
+		if (IsProcessing() != shouldProcess)
+		{
+			SetProcess(shouldProcess);
+		}
+	}
+
+	public bool DebugIsBoardFrameProcessing()
+	{
+		return IsProcessing();
 	}
 
 	private void MarkSeatControlIndicatorsDirty()
 	{
 		_seatControlIndicatorsDirty = true;
+		RequestBoardFrameUpdate();
 	}
 
 	private void MarkSeatControlIndicatorLayoutDirty()
 	{
 		_seatControlIndicatorLayoutDirty = true;
+		RequestBoardFrameUpdate();
 	}
 
 	private void MarkActivePlayerStatusTooltipContentDirty()
 	{
 		_activePlayerTooltipContentDirty = true;
+		RequestBoardFrameUpdate();
 	}
 
 	private void MarkActivePlayerStatusTooltipLayoutDirty()
 	{
 		_activePlayerTooltipLayoutDirty = true;
+		RequestBoardFrameUpdate();
 	}
 
 	private void FlushUiDirtyFlagsIfNeeded()

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -20,14 +22,14 @@ public partial class GameBoardScene
 			}
 		}
 
-		List<PlayingCard> hand = _playerHands[playerIndex];
+		IReadOnlyList<PlayingCard> hand = _playerHands[playerIndex];
 		if (handIndex < 0 || handIndex >= hand.Count)
 		{
 			return new PlayCardResult(false, false);
 		}
 
 		PlayingCard playedCard = hand[handIndex];
-		AdventureExtraActionGrant? pendingExtraActionGrant =
+		ExtraActionGrantState? pendingExtraActionGrant =
 			PeekAdventureExtraActionGrantForAction(playerIndex);
 		var prePlayTableCards = new List<TableCard>(_tableCards);
 		bool narwhalDoubleAbilityTriggered = ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, playedCard);
@@ -42,8 +44,9 @@ public partial class GameBoardScene
 
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, playedCard);
 		AdventureEnemyNextBaseCardModifiers adventureEnemyNextBaseCardModifiers = ConsumeAdventureEnemyNextBaseCardModifiers(playerIndex);
+		CardPlayRuleOptions ruleOptions = BuildCardPlayRuleOptions(playedCard);
 		CardPlayPlan cardPlayPlan = ResolveCardPlayPlan(
-			playedCard,
+			ruleOptions,
 			adventureEnemyNextBaseCardModifiers.TableInsertIndex,
 			adventureEnemyNextBaseCardModifiers.FacesUp);
 		bool playedRankCollectsTable = cardPlayPlan.PlayedCardCollectsTable;
@@ -69,26 +72,34 @@ public partial class GameBoardScene
 			}
 		}
 
-		if (!_cardPlayStateService.TryRemoveCardFromHand(
-			_state,
+		if (!TrySubmitPlayCardFromHandRuleCommand(
 			playerIndex,
 			handIndex,
-			out PlayingCard removedCard))
+			turnSequenceGeneration,
+			ruleOptions,
+			adventureEnemyNextBaseCardModifiers.TableInsertIndex,
+			adventureEnemyNextBaseCardModifiers.FacesUp,
+			out RuleCommandResult rulePlayResult))
 		{
 			return new PlayCardResult(false, false);
 		}
 		await WaitForAuthorityTransactionFaultAsync("after_move");
-		CardPlayStartResult startResult = _cardPlayStateService.CompletePlayFromRemovedHandCard(
-			_state,
-			playerIndex,
-			removedCard,
-			cardPlayPlan);
 		await WaitForAuthorityTransactionFaultAsync("after_insert");
+		int playedTableCardIndex = rulePlayResult.Mutation.TargetIndex;
+		int captureStartIndex = rulePlayResult.Mutation.CaptureStartIndex;
+		if (playedTableCardIndex < 0
+			|| playedTableCardIndex >= _tableCards.Count
+			|| playedTableCardIndex != cardPlayPlan.TableInsertIndex
+			|| captureStartIndex != cardPlayPlan.CaptureStartIndex)
+		{
+			GD.PushError("The rule card-play result diverged from the scene presentation plan.");
+			return new PlayCardResult(false, false);
+		}
 
 		// The live board is now transient Applying state. The last publishable
 		// checkpoint remains Prepared until the complete result is finalized.
 		MarkNetworkAuthorityPrimaryMutationApplied();
-		AdventureExtraActionGrant? acceptedExtraActionGrant =
+		ExtraActionGrantState? acceptedExtraActionGrant =
 			AcceptAdventureExtraActionGrantForAction(
 				playerIndex,
 				pendingExtraActionGrant);
@@ -99,12 +110,10 @@ public partial class GameBoardScene
 
 		try
 		{
-			ApplyAdventureCanopyRevealToNewTableCard(startResult.PlayedTableCardIndex);
+				ApplyAdventureCanopyRevealToNewTableCard(playedTableCardIndex);
 
-		ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
-			int captureStartIndex = startResult.CaptureStartIndex;
-			int playedTableCardIndex = startResult.PlayedTableCardIndex;
-			bool plannedCapturedMiddleCards = captureStartIndex >= 0
+			ShiftHandDisplayStateAfterRemovedCard(playerIndex, handIndex);
+				bool plannedCapturedMiddleCards = captureStartIndex >= 0
 				&& HasCapturedMiddleTableCards(captureStartIndex);
 			baseCardActionContext = baseCardActionContext with
 			{
@@ -115,7 +124,7 @@ public partial class GameBoardScene
 			};
 			AdventureCaptureMatchSource captureMatchSource =
 				ResolveAdventureCaptureMatchSource(playedCard, cardPlayPlan);
-			bool matchedTableCardFlipped = startResult.MatchedTableCardFlipped;
+				bool matchedTableCardFlipped = cardPlayPlan.MatchedTableCardFlipped;
 		bool playedTableCardIsFaceUp = _tableCards[playedTableCardIndex].IsFaceUp;
 		if (IsNetworkMultiplayerMode()
 			&& IsNetworkHost()
@@ -369,7 +378,7 @@ public partial class GameBoardScene
 		var revealAttachedItemCardIdsCsv = new List<string>();
 		var revealPointValues = new List<int>();
 		var revealPointDoubleFlags = new List<bool>();
-		foreach (int tableCardIndex in CaptureRevealOrder.BuildBaseRevealIndexes(captureStartIndex, _tableCards.Count))
+		foreach (int tableCardIndex in MatchReadModel.BuildBaseCaptureRevealIndexes(captureStartIndex, _tableCards.Count))
 		{
 			TableCard tableCard = _tableCards[tableCardIndex];
 			if (tableCard.IsBuriedInSand
@@ -382,11 +391,11 @@ public partial class GameBoardScene
 			Texture2D? revealTexture = null;
 			if (tableCard.Card.HasValue)
 			{
-				revealTexture = tableCard.Card.Value.Texture;
+				revealTexture = GetPlayingCardTexture(tableCard.Card.Value);
 			}
 			else if (tableCard.ItemOverlay.HasValue)
 			{
-				revealTexture = tableCard.ItemOverlay.Value.Texture;
+				revealTexture = GetItemCardTexture(tableCard.ItemOverlay.Value);
 			}
 
 			if (revealTexture == null)
@@ -422,7 +431,7 @@ public partial class GameBoardScene
 
 	private int FindMatchingTableCardIndex(PlayingCard playedCard)
 	{
-		return CardPlayResolver.FindMatchingTableCardIndex(ToCardPlayTableCards(), playedCard.Rank);
+		return MatchReadModel.FindMatchingTableCardIndex(ToCardPlayTableCards(), playedCard.Rank);
 	}
 
 	private bool ShouldPlayedCardCollectTable(PlayingCard playedCard)
@@ -435,14 +444,62 @@ public partial class GameBoardScene
 		int tableInsertIndexOverride = -1,
 		bool playedCardFacesUp = false)
 	{
+		return ResolveCardPlayPlan(
+			BuildCardPlayRuleOptions(playedCard),
+			tableInsertIndexOverride,
+			playedCardFacesUp);
+	}
+
+	private CardPlayPlan ResolveCardPlayPlan(
+		ImmutableArray<TableCardState> tableCards,
+		PlayingCard playedCard)
+	{
+		CardPlayRuleOptions options = BuildCardPlayRuleOptions(playedCard);
+		return MatchReadModel.ResolveCardPlay(
+			ToCardPlayTableCards(tableCards),
+			new CardPlayCard(
+				options.PrimaryMatchRank,
+				options.CollectEntireTable,
+				options.Suit,
+				options.CollectBySuit,
+				options.SuitMatchIsFallbackOnly),
+			options.AlternateMatchRanks.IsDefaultOrEmpty
+				? null
+				: options.AlternateMatchRanks,
+			insertAtTableStart: options.InsertAtTableStart);
+	}
+
+	private CardPlayPlan ResolveCardPlayPlan(
+		CardPlayRuleOptions options,
+		int tableInsertIndexOverride = -1,
+		bool playedCardFacesUp = false)
+	{
+		return MatchReadModel.ResolveCardPlay(
+			ToCardPlayTableCards(),
+			new CardPlayCard(
+				options.PrimaryMatchRank,
+				options.CollectEntireTable,
+				options.Suit,
+				options.CollectBySuit,
+				options.SuitMatchIsFallbackOnly),
+			options.AlternateMatchRanks.IsDefaultOrEmpty
+				? null
+				: options.AlternateMatchRanks,
+			insertAtTableStart: options.InsertAtTableStart,
+			tableInsertIndexOverride: tableInsertIndexOverride,
+			playedCardFacesUp: playedCardFacesUp);
+	}
+
+	private CardPlayRuleOptions BuildCardPlayRuleOptions(PlayingCard playedCard)
+	{
 		string primaryRank = ResolveAdventureMainPlayerPrimaryMatchRank(playedCard);
-		var alternateRanks = new List<string>();
+		var alternateRanks = ImmutableArray.CreateBuilder<string>();
 		List<string>? clubAlternateRanks = BuildAdventureMainPlayerAlternateRanks(playedCard);
 		if (clubAlternateRanks != null)
 		{
 			foreach (string alternateRank in clubAlternateRanks)
 			{
-				if (!alternateRanks.Contains(alternateRank))
+				if (!alternateRanks.Contains(alternateRank, StringComparer.Ordinal))
 				{
 					alternateRanks.Add(alternateRank);
 				}
@@ -454,7 +511,7 @@ public partial class GameBoardScene
 		{
 			foreach (string alternateRank in borrowTideAlternateRanks)
 			{
-				if (!alternateRanks.Contains(alternateRank))
+				if (!alternateRanks.Contains(alternateRank, StringComparer.Ordinal))
 				{
 					alternateRanks.Add(alternateRank);
 				}
@@ -465,19 +522,24 @@ public partial class GameBoardScene
 		bool suitMatchIsFallbackOnly = collectBySuit
 			&& !IsAttachedEffectType(playedCard, CardEffectTypes.SuitCollect)
 			&& ShouldAdventureBorrowSuitSetAffectPlayedCard(playedCard);
-		return CardPlayResolver.Resolve(
-			ToCardPlayTableCards(),
-			new CardPlayCard(
-				primaryRank,
-				ShouldPlayedCardCollectTable(playedCard),
-				playedCard.Suit,
-				collectBySuit,
-				suitMatchIsFallbackOnly),
-			alternateRanks.Count > 0 ? alternateRanks : null,
-			insertAtTableStart: ShouldInsertMissedCardAtTableStart(playedCard),
-			tableInsertIndexOverride: tableInsertIndexOverride,
-			playedCardFacesUp: playedCardFacesUp);
+		return new CardPlayRuleOptions(
+			primaryRank,
+			alternateRanks.ToImmutable(),
+			playedCard.Suit,
+			ShouldPlayedCardCollectTable(playedCard),
+			collectBySuit,
+			suitMatchIsFallbackOnly,
+			ShouldInsertMissedCardAtTableStart(playedCard));
 	}
+
+	private readonly record struct CardPlayRuleOptions(
+		string PrimaryMatchRank,
+		ImmutableArray<string> AlternateMatchRanks,
+		string Suit,
+		bool CollectEntireTable,
+		bool CollectBySuit,
+		bool SuitMatchIsFallbackOnly,
+		bool InsertAtTableStart);
 
 	private CardPlayTableCard[] ToCardPlayTableCards()
 	{
@@ -489,6 +551,23 @@ public partial class GameBoardScene
 				tableCard.Card?.Rank,
 				tableCard.IsFaceUp,
 				tableCard.IsBuriedInSand,
+				tableCard.Card?.Suit);
+		}
+
+		return tableCards;
+	}
+
+	private static CardPlayTableCard[] ToCardPlayTableCards(
+		ImmutableArray<TableCardState> sourceTableCards)
+	{
+		var tableCards = new CardPlayTableCard[sourceTableCards.Length];
+		for (int tableCardIndex = 0; tableCardIndex < sourceTableCards.Length; tableCardIndex++)
+		{
+			TableCardState tableCard = sourceTableCards[tableCardIndex];
+			tableCards[tableCardIndex] = new CardPlayTableCard(
+				tableCard.Card?.Rank,
+				tableCard.IsFaceUp,
+				tableCard.IsBuried,
 				tableCard.Card?.Suit);
 		}
 

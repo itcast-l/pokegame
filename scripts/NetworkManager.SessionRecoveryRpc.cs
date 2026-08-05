@@ -15,7 +15,9 @@ public partial class NetworkManager
 		long credentialGeneration,
 		string credential)
 	{
-		if (IsHost && (_state == NetworkSessionState.InGame || _state == NetworkSessionState.MigratingHost))
+		if (HostMigrationCapabilityAvailable
+			&& IsHost
+			&& (_state == NetworkSessionState.InGame || _state == NetworkSessionState.MigratingHost))
 		{
 			GD.Print($"MIGRATION_RECONNECT_REQUEST sender={Multiplayer.GetRemoteSenderId()} state={_state} epoch={authorityEpoch} player_session={playerSessionId.Length} credential_generation={credentialGeneration}");
 		}
@@ -29,11 +31,11 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (GetTree().CurrentScene is GameBoardScene migratingBoard
-			&& migratingBoard.IsNetworkMigrationInputLocked
+		if (TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint migratingBoard)
+			&& migratingBoard.IsMigrationInputLocked
 			&& !IsMigrationReadinessFenceActive())
 		{
-			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ActionInProgress sender={Multiplayer.GetRemoteSenderId()} lock=true");
+			GD.Print($"NETWORK_RECONNECT_REJECT reason=ActionInProgress sender={Multiplayer.GetRemoteSenderId()} lock=true");
 			SendReconnectResult(
 				Multiplayer.GetRemoteSenderId(),
 				false,
@@ -44,8 +46,9 @@ public partial class NetworkManager
 
 		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
-			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ContextMismatch sender={Multiplayer.GetRemoteSenderId()} epoch={authorityEpoch} current={GetCurrentAuthorityEpoch()}");
-			if (_networkMigrationPlan is { } migrationPlan
+			GD.Print($"NETWORK_RECONNECT_REJECT reason=ContextMismatch sender={Multiplayer.GetRemoteSenderId()} epoch={authorityEpoch} current={GetCurrentAuthorityEpoch()}");
+			if (HostMigrationCapabilityAvailable
+				&& _networkMigrationPlan is { } migrationPlan
 				&& string.Equals(sessionId, migrationPlan.SessionId, StringComparison.Ordinal)
 				&& string.Equals(matchId, migrationPlan.MatchId, StringComparison.Ordinal)
 				&& authorityEpoch == migrationPlan.SourceEpoch
@@ -70,9 +73,9 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (GetTree().CurrentScene is not GameBoardScene gameBoard)
+		if (!TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
 		{
-			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ActionInProgress sender={senderPeerId} detail=no_board");
+			GD.Print($"NETWORK_RECONNECT_REJECT reason=ActionInProgress sender={senderPeerId} detail=no_board");
 			SendReconnectResult(senderPeerId, false, "ActionInProgress", -1);
 			return;
 		}
@@ -93,12 +96,12 @@ public partial class NetworkManager
 				if (IsMigrationReadinessFenceActive()
 					|| _lastCompletedMigrationReadyEpoch == authorityEpoch)
 				{
-					SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
+					SendBoardSnapshotsFromHost(gameBoard.CreateNextSnapshotId());
 				}
 				return;
 			}
 
-			GD.Print($"MIGRATION_RECONNECT_REJECT reason=ActionInProgress sender={senderPeerId} seat={currentSeatState.SeatIndex} detail=seat_connected");
+			GD.Print($"NETWORK_RECONNECT_REJECT reason=ActionInProgress sender={senderPeerId} seat={currentSeatState.SeatIndex} detail=seat_connected");
 			SendReconnectResult(senderPeerId, false, "ActionInProgress", currentSeatState.SeatIndex);
 			return;
 		}
@@ -106,7 +109,7 @@ public partial class NetworkManager
 		_reconnectClaimsBySeat.TryGetValue(currentSeatState.SeatIndex, out ReconnectClaimRecord existingClaim);
 		ReconnectClaimResult result = SeatControlRules.ApplyReconnectClaim(
 			_config.MatchId,
-			gameBoard.IsNetworkMatchClaimable(),
+			gameBoard.IsMatchClaimable,
 			currentSeatState,
 			existingClaim,
 			matchId,
@@ -116,7 +119,7 @@ public partial class NetworkManager
 			senderPeerId);
 		if (!result.Accepted)
 		{
-			GD.Print($"MIGRATION_RECONNECT_REJECT reason={result.RejectReason} sender={senderPeerId} seat={currentSeatState.SeatIndex}");
+			GD.Print($"NETWORK_RECONNECT_REJECT reason={result.RejectReason} sender={senderPeerId} seat={currentSeatState.SeatIndex}");
 			SendReconnectResult(senderPeerId, false, result.RejectReason.ToString(), currentSeatState.SeatIndex);
 			return;
 		}
@@ -156,16 +159,16 @@ public partial class NetworkManager
 		}
 
 		SendReconnectResult(senderPeerId, true, string.Empty, currentSeatState.SeatIndex);
-		GD.Print($"MIGRATION_RECONNECT_ACCEPT sender={senderPeerId} seat={currentSeatState.SeatIndex} player_session={playerSessionId.Length}");
+		GD.Print($"NETWORK_RECONNECT_ACCEPT sender={senderPeerId} seat={currentSeatState.SeatIndex} player_session={playerSessionId.Length}");
 		if (result.StateChanged)
 		{
 			SendSeatCredentialToPeer(senderPeerId, acceptedSeatControlState, nextCredential);
 		}
 
-			if (result.ShouldSendSnapshot)
-			{
-				SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
-			}
+		if (result.ShouldSendSnapshot)
+		{
+			SendBoardSnapshotsFromHost(gameBoard.CreateNextSnapshotId());
+		}
 	}
 
 	private void SendSeatCredentialToPeer(
@@ -197,7 +200,11 @@ public partial class NetworkManager
 		string credential)
 	{
 		bool isInitialCredential = CanAcceptInitialSeatCredential(playerSessionId);
-		if ((!isInitialCredential && !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: _state == NetworkSessionState.MigratingHost))
+		if ((!isInitialCredential && !MatchesCurrentRpcContext(
+				sessionId,
+				matchId,
+				authorityEpoch,
+				allowHigherEpoch: HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost))
 			|| !NetworkProtocolRules.IsValidContext(new NetworkRpcContext(sessionId, matchId, authorityEpoch))
 			|| string.IsNullOrWhiteSpace(playerSessionId)
 			|| playerSessionId.Length > NetworkProtocol.MaxPlayerIdLength
@@ -304,9 +311,9 @@ public partial class NetworkManager
 			TryFinalizeLobbyMigrationRecovery(Time.GetTicksMsec() / 1000.0);
 		}
 		else if (_state == NetworkSessionState.InGame
-			&& GetTree().CurrentScene is GameBoardScene board)
+			&& TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint board))
 		{
-			SendBoardSnapshotsFromHost(board, board.CreateNextNetworkSnapshotId());
+			SendBoardSnapshotsFromHost(board.CreateNextSnapshotId());
 		}
 	}
 
@@ -318,7 +325,11 @@ public partial class NetworkManager
 		string playerSessionId,
 		long credentialGeneration)
 	{
-		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: _state == NetworkSessionState.MigratingHost)
+		if (!MatchesCurrentRpcContext(
+				sessionId,
+				matchId,
+				authorityEpoch,
+				allowHigherEpoch: HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 			|| !string.Equals(playerSessionId, _localPlayerSessionId, StringComparison.Ordinal)
 			|| credentialGeneration != _pendingLocalSeatCredentialGeneration
 			|| !SeatCredentialRules.IsCredentialEncodingValid(_pendingLocalSeatCredential))
@@ -334,46 +345,49 @@ public partial class NetworkManager
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RpcReconnectResult(string sessionId, string matchId, long authorityEpoch, bool accepted, string reason, int seatIndex)
-		{
-		if (_state == NetworkSessionState.MigratingHost)
+	{
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
 			GD.Print($"MIGRATION_RECONNECT_RESULT accepted={accepted} reason={reason} seat={seatIndex} epoch={authorityEpoch}");
 		}
 
-			if (_state == NetworkSessionState.Reconnecting
-				&& !accepted
-					&& string.Equals(reason, MigrationRequiredReconnectReason, StringComparison.Ordinal)
-					&& _networkMigrationPlan is { } redirectPlan
-					&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
-					&& authorityEpoch == redirectPlan.TargetEpoch
-				&& string.Equals(sessionId, redirectPlan.SessionId, StringComparison.Ordinal)
-				&& string.Equals(matchId, redirectPlan.MatchId, StringComparison.Ordinal))
-			{
-				GD.Print($"MIGRATION_RECONNECT_REDIRECT target_epoch={authorityEpoch}");
-				StartMigrationAttemptsAfterHostDisconnect(redirectPlan);
-				return;
-			}
+		if (HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.Reconnecting
+			&& !accepted
+			&& string.Equals(reason, MigrationRequiredReconnectReason, StringComparison.Ordinal)
+			&& _networkMigrationPlan is { } redirectPlan
+			&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
+			&& authorityEpoch == redirectPlan.TargetEpoch
+			&& string.Equals(sessionId, redirectPlan.SessionId, StringComparison.Ordinal)
+			&& string.Equals(matchId, redirectPlan.MatchId, StringComparison.Ordinal))
+		{
+			GD.Print($"MIGRATION_RECONNECT_REDIRECT target_epoch={authorityEpoch}");
+			StartMigrationAttemptsAfterHostDisconnect(redirectPlan);
+			return;
+		}
 
-			bool isMigrationResult = _state == NetworkSessionState.MigratingHost
-				&& _networkMigrationPlan is { } migrationPlan
-				&& authorityEpoch == migrationPlan.TargetEpoch;
-			if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: isMigrationResult))
-			{
-				return;
-			}
-			if (isMigrationResult)
-			{
-				SetAuthorityEpoch(authorityEpoch);
-			}
+		bool isMigrationResult = HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.MigratingHost
+			&& _networkMigrationPlan is { } migrationPlan
+			&& authorityEpoch == migrationPlan.TargetEpoch;
+		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: isMigrationResult))
+		{
+			return;
+		}
+		if (isMigrationResult)
+		{
+			SetAuthorityEpoch(authorityEpoch);
+		}
 
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
 		if (!accepted)
 		{
-			if ((_state is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost)
+			if ((_state == NetworkSessionState.Reconnecting
+					|| (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost))
 				&& string.Equals(reason, "ActionInProgress", StringComparison.Ordinal))
 			{
-				if (_state == NetworkSessionState.MigratingHost)
+				if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 				{
 					HandleMigrationConnectionFailure();
 					return;
@@ -386,7 +400,7 @@ public partial class NetworkManager
 			string failureMessage = string.IsNullOrWhiteSpace(reason)
 				? "Reconnect rejected."
 				: $"Reconnect rejected: {reason}";
-			if (_state == NetworkSessionState.MigratingHost)
+			if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 			{
 				ReturnToMultiplayerLobbyAfterMigrationFailure(failureMessage);
 				return;
@@ -419,18 +433,21 @@ public partial class NetworkManager
 			return;
 		}
 
+		const string hostEndedMatchMessage = "Host disconnected.";
 		_hostEndedMatchPending = true;
-		_hostEndedMatchMessage = string.IsNullOrWhiteSpace(message) ? "Host disconnected." : message;
+		_hostEndedMatchMessage = hostEndedMatchMessage;
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
 		_nextReconnectAttemptAt = 0.0;
-		if (_state == NetworkSessionState.MigratingHost)
+		if (HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.MigratingHost)
 		{
-			ReturnToMultiplayerLobbyAfterMigrationFailure(_hostEndedMatchMessage);
+			ReturnToMultiplayerLobbyAfterMigrationFailure(hostEndedMatchMessage);
 			return;
 		}
 
-		Fail(_hostEndedMatchMessage);
+		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure);
+		Fail(hostEndedMatchMessage);
 	}
 
 }

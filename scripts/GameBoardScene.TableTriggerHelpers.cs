@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Godot;
 
@@ -18,11 +19,16 @@ public partial class GameBoardScene
 			return card;
 		}
 
-		_narwhalDoubleReady = false;
-		if (IsBossKEnemy(playerIndex))
+		bool countLimitedActivation = IsBossKEnemy(playerIndex);
+		TryUpdateMatchFlowState(state => state with
 		{
-			_bossKDoubleCollectTriggersThisMatch++;
-		}
+			DoubleEffectReady = false,
+			LimitedDoubleEffectActivationsThisMatch = countLimitedActivation
+				? state.LimitedDoubleEffectActivationsThisMatch == int.MaxValue
+					? int.MaxValue
+					: state.LimitedDoubleEffectActivationsThisMatch + 1
+				: state.LimitedDoubleEffectActivationsThisMatch,
+		});
 
 		return card.WithAttachedItemEffect(doubleItemCardId);
 	}
@@ -32,10 +38,11 @@ public partial class GameBoardScene
 		return adventure_mode
 			&& AdventureEnemyHasAbility(AdventureEnemyAbilities.TuskBreak)
 			&& playerIndex == 1
-			&& _narwhalDoubleReady
+			&& CurrentMatchFlowState.DoubleEffectReady
 			&& !card.HasItemEffect
 			&& !IsExcludedDeckRank(card.Rank)
-			&& (!IsBossKEnemy(playerIndex) || _bossKDoubleCollectTriggersThisMatch < MaxBossKDoubleCollectTriggersPerMatch)
+			&& (!IsBossKEnemy(playerIndex)
+				|| CurrentMatchFlowState.LimitedDoubleEffectActivationsThisMatch < MaxBossKDoubleCollectTriggersPerMatch)
 			&& (!IsBossKEnemy(playerIndex) || FindMatchingTableCardIndex(card) >= 0);
 	}
 
@@ -45,7 +52,9 @@ public partial class GameBoardScene
 			&& string.Equals(definition.AttachedEffectType, effectType, StringComparison.Ordinal);
 	}
 
-	private int PickNautilusBombInsertionIndex()
+	private int PickNautilusBombInsertionIndex(
+		int actingPlayerIndex,
+		int turnSequenceGeneration)
 	{
 		if (_tableCards.Count < 2)
 		{
@@ -57,7 +66,14 @@ public partial class GameBoardScene
 			return 1;
 		}
 
-		return _rng.RandiRange(1, _tableCards.Count - 1);
+		return TrySubmitChooseRandomIndexRuleCommand(
+			actingPlayerIndex,
+			minimumInclusive: 1,
+			maximumInclusive: _tableCards.Count - 1,
+			turnSequenceGeneration,
+			out int insertionIndex)
+			? insertionIndex
+			: -1;
 	}
 
 	private bool IsBossKEnemy(int playerIndex)
@@ -69,60 +85,71 @@ public partial class GameBoardScene
 
 	private bool BossKCanUseActiveControl(int playerIndex)
 	{
-		return IsBossKEnemy(playerIndex) && !_bossKActiveControlUsedThisTurn;
+		return IsBossKEnemy(playerIndex) && !CurrentMatchFlowState.ActiveControlUsedThisTurn;
 	}
 
 	private void MarkBossKActiveControlUsedIfNeeded(int playerIndex)
 	{
 		if (IsBossKEnemy(playerIndex))
 		{
-			_bossKActiveControlUsedThisTurn = true;
-		}
-	}
-
-	private void RefreshGardenEelBuriedCardIndex()
-	{
-		_gardenEelBuriedTableCardIndex = -1;
-		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
-		{
-			if (_tableCards[tableCardIndex].IsBuriedInSand)
+			TryUpdateMatchFlowState(state => state with
 			{
-				_gardenEelBuriedTableCardIndex = tableCardIndex;
-				return;
-			}
+				ActiveControlUsedThisTurn = true,
+			});
 		}
 	}
 
-	private int PickVisibleMainPlayerHandSlotIndex()
+	private int PickVisibleMainPlayerHandSlotIndex(
+		int actingPlayerIndex,
+		int turnSequenceGeneration)
 	{
 		int totalHandCardCount = GetTotalHandCardCount(MainPlayerIndex);
-		int selectedDisplayIndex = -1;
-		int candidateCount = 0;
+		var candidates = ImmutableArray.CreateBuilder<int>(totalHandCardCount);
 		for (int displayIndex = 0; displayIndex < totalHandCardCount; displayIndex++)
 		{
 			if (!IsHandDisplaySlotHidden(MainPlayerIndex, displayIndex))
 			{
-				candidateCount++;
-				if (_rng.RandiRange(1, candidateCount) == 1)
-				{
-					selectedDisplayIndex = displayIndex;
-				}
+				candidates.Add(displayIndex);
 			}
 		}
 
-		return candidateCount <= 1 ? -1 : selectedDisplayIndex;
+		if (candidates.Count <= 1)
+		{
+			if (candidates.Count == 1)
+			{
+				TrySubmitChooseReservoirHandDisplayIndexRuleCommand(
+					actingPlayerIndex,
+					MainPlayerIndex,
+					candidates.ToImmutable(),
+					turnSequenceGeneration,
+					out _);
+			}
+			return -1;
+		}
+
+		return TrySubmitChooseReservoirHandDisplayIndexRuleCommand(
+			actingPlayerIndex,
+			MainPlayerIndex,
+			candidates.ToImmutable(),
+			turnSequenceGeneration,
+			out int selectedDisplayIndex)
+			? selectedDisplayIndex
+			: -1;
 	}
 
 	private void ClearJellyfishBubbleIfMainPlayerTurnCompleted(int playerIndex, PlayCardResult result)
 	{
 		if (playerIndex != MainPlayerIndex
 			|| result.Captured
-			|| _jellyfishDisabledMainPlayerHandSlotIndex < 0)
+			|| CurrentMatchFlowState.DisabledMainPlayerHandDisplayIndex < 0)
 		{
 			return;
 		}
 
-		_jellyfishDisabledMainPlayerHandSlotIndex = -1;
+		TryUpdateMatchFlowState(state => state with
+		{
+			DisabledMainPlayerHandDisplayIndex = -1,
+		});
 		RenderPlayerHands();
 	}
 
@@ -136,7 +163,10 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_jellyfishBubbleTriggeredThisTurn = false;
+		TryUpdateMatchFlowState(state => state with
+		{
+			HandDisableTriggeredThisTurn = false,
+		});
 	}
 
 	private void ShiftHandDisplayStateAfterRemovedCard(int playerIndex, int removedDisplayIndex)
@@ -207,24 +237,31 @@ public partial class GameBoardScene
 	private void ShiftJellyfishDisabledHandSlotAfterRemovedCard(int playerIndex, int removedDisplayIndex)
 	{
 		if (playerIndex != MainPlayerIndex
-			|| _jellyfishDisabledMainPlayerHandSlotIndex < 0
-			|| removedDisplayIndex > _jellyfishDisabledMainPlayerHandSlotIndex)
+			|| CurrentMatchFlowState.DisabledMainPlayerHandDisplayIndex < 0
+			|| removedDisplayIndex > CurrentMatchFlowState.DisabledMainPlayerHandDisplayIndex)
 		{
 			return;
 		}
 
-		if (removedDisplayIndex == _jellyfishDisabledMainPlayerHandSlotIndex)
+		if (removedDisplayIndex == CurrentMatchFlowState.DisabledMainPlayerHandDisplayIndex)
 		{
-			_jellyfishDisabledMainPlayerHandSlotIndex = -1;
+			TryUpdateMatchFlowState(state => state with
+			{
+				DisabledMainPlayerHandDisplayIndex = -1,
+			});
 			return;
 		}
 
-		_jellyfishDisabledMainPlayerHandSlotIndex--;
+		TryUpdateMatchFlowState(state => state with
+		{
+			DisabledMainPlayerHandDisplayIndex =
+				state.DisabledMainPlayerHandDisplayIndex - 1,
+		});
 	}
 
 	private bool IsJellyfishDisabledHandDisplaySlot(int playerIndex, int displayIndex)
 	{
 		return playerIndex == MainPlayerIndex
-			&& displayIndex == _jellyfishDisabledMainPlayerHandSlotIndex;
+			&& displayIndex == CurrentMatchFlowState.DisabledMainPlayerHandDisplayIndex;
 	}
 }

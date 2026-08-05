@@ -71,6 +71,10 @@ public partial class GameBoardScene
 			ShowNetworkNotice(message);
 			return;
 		}
+		if (networkManager.IsHostDisconnectReturnPending)
+		{
+			return;
+		}
 
 		if (networkManager.IsMigrationFailureReturnPending)
 		{

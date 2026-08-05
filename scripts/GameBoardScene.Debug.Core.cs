@@ -98,7 +98,7 @@ public partial class GameBoardScene
 
 	public int DebugGetAdventureRunMainStageIndex()
 	{
-		return GetAdventureRunSessionStore()?.GetRunState().MainStageIndex ?? 0;
+		return GetAdventureRunSessionStore()?.GetReadModel().MainStageIndex ?? 0;
 	}
 
 	public bool DebugHasAdventureNextStageWriteOverride()
@@ -173,8 +173,11 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_state.AdventureRealMainPlayerTurnActive = true;
-		_state.AdventureRealMainPlayerTurnStartPending = false;
+		TryUpdateMatchFlowState(state => state with
+		{
+			MainPlayerRealTurnActive = true,
+			MainPlayerRealTurnStartPending = false,
+		});
 		_debugAdventureRealTurnEndProbeRunning = true;
 		_debugAdventureRealTurnEndProbeCompleted = false;
 		_debugAdventureRealTurnEndProbeSucceeded = false;
@@ -222,25 +225,32 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		int turnGeneration = _turnSequenceGeneration;
-		BeginNetworkAuthorityAction(
-			AuthorityActionKind.QuestionReward,
-			ownerPlayerIndex,
-			turnGeneration,
-			clientActionId: 0,
-			itemOrRewardId: "question_mark");
-		MarkNetworkAuthorityActionApplying();
-		TrackBoardTask(RunDebugPendingHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration), nameof(RunDebugPendingHandLimitDiscardAsync));
+		TrackBoardTask(
+			RunDebugPendingHandLimitDiscardAsync(ownerPlayerIndex),
+			nameof(RunDebugPendingHandLimitDiscardAsync));
 		return true;
 	}
 
 	private async Task RunDebugPendingHandLimitDiscardAsync(
-		int ownerPlayerIndex,
-		int turnGeneration)
+		int ownerPlayerIndex)
 	{
 		bool discarded = false;
 		try
 		{
+			if (_currentTurnPlayerIndex != ownerPlayerIndex
+				&& !await SetCurrentTurnPlayerIndexAsync(ownerPlayerIndex))
+			{
+				return;
+			}
+
+			int turnGeneration = _turnSequenceGeneration;
+			BeginNetworkAuthorityAction(
+				AuthorityActionKind.QuestionReward,
+				ownerPlayerIndex,
+				turnGeneration,
+				clientActionId: 0,
+				itemOrRewardId: "question_mark");
+			MarkNetworkAuthorityActionApplying();
 			discarded = await ResolveHumanHandLimitDiscardAsync(ownerPlayerIndex, turnGeneration);
 			if (!discarded
 				&& turnGeneration == _turnSequenceGeneration
@@ -296,11 +306,17 @@ public partial class GameBoardScene
 		}
 
 		int ownerPlayerIndex = _pendingItemOwnerIndex;
-		_playerHands[ownerPlayerIndex].Clear();
-		_playerDecks[ownerPlayerIndex].Clear();
-		_playerItemHands[ownerPlayerIndex].Clear();
+		DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
+		fixture.PlayerHands[ownerPlayerIndex].Clear();
+		fixture.PlayerDecks[ownerPlayerIndex].Clear();
+		fixture.PlayerItemHands[ownerPlayerIndex].Clear();
+		if (!CommitDebugRuleFixture(fixture))
+		{
+			return false;
+		}
 		RenderPlayerHands();
 		_pendingHandLimitDiscardCompletion.TrySetResult(-1);
+		CheckForWinner();
 		return true;
 	}
 
@@ -449,7 +465,7 @@ public partial class GameBoardScene
 		var result = new Godot.Collections.Dictionary
 		{
 			["eligible"] = false,
-			["kind"] = EnemyAiRules.AdventureSelectionKind.None.ToString(),
+			["kind"] = EnemyAiAdventureSelectionKind.None.ToString(),
 			["hand_index"] = -1,
 		};
 		if (tableCardCount < 0
@@ -475,25 +491,30 @@ public partial class GameBoardScene
 			return result;
 		}
 
-		_tableCards.Clear();
+		DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
+		fixture.TableCards.Clear();
 		string[] tableCardKeys = { "Hearts:2", "Spades:3", "Diamonds:4", "Clubs:5" };
 		for (int index = 0; index < tableCardCount; index++)
 		{
-			_tableCards.Add(new TableCard(cards[tableCardKeys[index]], true));
+			fixture.TableCards.Add(new TableCard(cards[tableCardKeys[index]], true));
 		}
 
-		_playerHands[1].Clear();
-		_playerItemHands[1].Clear();
-		_playerHands[1].Add(includeCaptureCandidate && tableCardCount > 0
+		fixture.PlayerHands[1].Clear();
+		fixture.PlayerItemHands[1].Clear();
+		fixture.PlayerHands[1].Add(includeCaptureCandidate && tableCardCount > 0
 			? cards[tableCardKeys[0]]
 			: cards["Hearts:Q"]);
-		_playerHands[1].Add(cards["Clubs:K"]);
+		fixture.PlayerHands[1].Add(cards["Clubs:K"]);
+		if (!CommitDebugRuleFixture(fixture))
+		{
+			return result;
+		}
 
 		bool eligible = TrySelectMainAdventureEnemyCard(
 			1,
 			decisionRollPercent,
 			randomCandidateOrdinal,
-			out EnemyAiRules.AdventureSelectionResult selection);
+			out EnemyAiAdventureSelectionResult selection);
 		result["eligible"] = eligible;
 		result["kind"] = selection.Kind.ToString();
 		result["hand_index"] = selection.HandIndex;

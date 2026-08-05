@@ -120,7 +120,9 @@ public partial class GameBoardScene
 			return;
 		}
 
-		PackedScene? avatarScene = GD.Load<PackedScene>(CharacterAvatarScenePath);
+		PackedScene? avatarScene = LoadCachedCoreScene(
+			ref _cachedCharacterAvatarScene,
+			CharacterAvatarScenePath);
 		if (avatarScene == null)
 		{
 			GD.PushWarning($"Missing avatar scene for Boss K borrowed ability FX: {CharacterAvatarScenePath}");

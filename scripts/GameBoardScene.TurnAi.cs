@@ -1,20 +1,23 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private async Task<PlayCardResult> PlayRandomHandEntryForPlayerAsync(int playerIndex, int turnSequenceGeneration)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		if (TrySelectMainAdventureEnemyCard(playerIndex, out EnemyAiRules.AdventureSelectionResult adventureSelection))
+		if (TrySelectMainAdventureEnemyCard(playerIndex, out EnemyAiAdventureSelectionResult adventureSelection))
 		{
-			if (adventureSelection.Kind is EnemyAiRules.AdventureSelectionKind.Capture
-				or EnemyAiRules.AdventureSelectionKind.Build)
+			if (adventureSelection.Kind is EnemyAiAdventureSelectionKind.Capture
+				or EnemyAiAdventureSelectionKind.Build)
 			{
 				PlayCardResult selectedResult = await PlayCardFromHandAsync(
 					playerIndex,
@@ -28,7 +31,7 @@ public partial class GameBoardScene
 			return await PlayRandomPlayableHandEntryWithoutCapturePriorityAsync(playerIndex, turnSequenceGeneration);
 		}
 
-		int playableItemCount = CountPlayableItemIndexes(playerIndex);
+		int playableItemCount = CountPlayableItemIndexes(playerIndex, player);
 		if (TryPickEarlyTableNewCardHandIndex(playerIndex, out int earlyTableHandIndex))
 		{
 			PlayCardResult earlyTableResult = await PlayCardFromHandAsync(playerIndex, earlyTableHandIndex, turnSequenceGeneration);
@@ -42,15 +45,23 @@ public partial class GameBoardScene
 			return await PlayCardFromHandAsync(playerIndex, captureHandIndex, turnSequenceGeneration);
 		}
 
-		int playableCount = _playerHands[playerIndex].Count + playableItemCount;
+		int playableCount = player.Hand.Length + playableItemCount;
 		if (playableCount == 0)
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		int selectedIndex = _rng.RandiRange(0, playableCount - 1);
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				playableCount - 1,
+				turnSequenceGeneration,
+				out int selectedIndex))
+		{
+			return await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
+		}
 		PlayCardResult result;
-		if (selectedIndex < _playerHands[playerIndex].Count)
+		if (selectedIndex < player.Hand.Length)
 		{
 			result = await PlayCardFromHandAsync(playerIndex, selectedIndex, turnSequenceGeneration);
 			return result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
@@ -58,7 +69,11 @@ public partial class GameBoardScene
 				: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 		}
 
-		if (!TryGetPlayableItemIndexAt(playerIndex, selectedIndex - _playerHands[playerIndex].Count, out int itemHandIndex))
+		if (!TryGetPlayableItemIndexAt(
+				playerIndex,
+				player,
+				selectedIndex - player.Hand.Length,
+				out int itemHandIndex))
 		{
 			return new PlayCardResult(false, false);
 		}
@@ -71,21 +86,30 @@ public partial class GameBoardScene
 
 	private async Task<PlayCardResult> PlayRandomPlayableHandEntryWithoutCapturePriorityAsync(int playerIndex, int turnSequenceGeneration)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count || playerIndex >= _playerItemHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		int playableItemCount = CountPlayableItemIndexes(playerIndex);
-		int playableCount = _playerHands[playerIndex].Count + playableItemCount;
+		int playableItemCount = CountPlayableItemIndexes(playerIndex, player);
+		int playableCount = player.Hand.Length + playableItemCount;
 		if (playableCount == 0)
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		int selectedIndex = _rng.RandiRange(0, playableCount - 1);
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				playableCount - 1,
+				turnSequenceGeneration,
+				out int selectedIndex))
+		{
+			return await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
+		}
 		PlayCardResult result;
-		if (selectedIndex < _playerHands[playerIndex].Count)
+		if (selectedIndex < player.Hand.Length)
 		{
 			result = await PlayCardFromHandAsync(playerIndex, selectedIndex, turnSequenceGeneration);
 			return result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver()
@@ -93,7 +117,11 @@ public partial class GameBoardScene
 				: await PlayFirstAvailableHandEntryForPlayerAsync(playerIndex, turnSequenceGeneration);
 		}
 
-		if (!TryGetPlayableItemIndexAt(playerIndex, selectedIndex - _playerHands[playerIndex].Count, out int itemHandIndex))
+		if (!TryGetPlayableItemIndexAt(
+				playerIndex,
+				player,
+				selectedIndex - player.Hand.Length,
+				out int itemHandIndex))
 		{
 			return new PlayCardResult(false, false);
 		}
@@ -106,7 +134,13 @@ public partial class GameBoardScene
 
 	private async Task<PlayCardResult> PlayFirstAvailableHandEntryForPlayerAsync(int playerIndex, int turnSequenceGeneration)
 	{
-		for (int handIndex = 0; handIndex < _playerHands[playerIndex].Count; handIndex++)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
+		{
+			return new PlayCardResult(false, false);
+		}
+
+		for (int handIndex = 0; handIndex < player.Hand.Length; handIndex++)
 		{
 			PlayCardResult result = await PlayCardFromHandAsync(playerIndex, handIndex, turnSequenceGeneration);
 			if (result.Played || turnSequenceGeneration != _turnSequenceGeneration || IsGameOver())
@@ -115,10 +149,14 @@ public partial class GameBoardScene
 			}
 		}
 
-		int playableItemCount = CountPlayableItemIndexes(playerIndex);
+		int playableItemCount = CountPlayableItemIndexes(playerIndex, player);
 		for (int playableItemOrdinal = 0; playableItemOrdinal < playableItemCount; playableItemOrdinal++)
 		{
-			if (!TryGetPlayableItemIndexAt(playerIndex, playableItemOrdinal, out int itemHandIndex))
+			if (!TryGetPlayableItemIndexAt(
+					playerIndex,
+					player,
+					playableItemOrdinal,
+					out int itemHandIndex))
 			{
 				continue;
 			}
@@ -146,7 +184,8 @@ public partial class GameBoardScene
 			return TryPickBestCaptureHandIndex(playerIndex, out handIndex);
 		}
 
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out _))
 		{
 			return false;
 		}
@@ -156,12 +195,31 @@ public partial class GameBoardScene
 
 	private bool TrySelectMainAdventureEnemyCard(
 		int playerIndex,
-		out EnemyAiRules.AdventureSelectionResult selection)
+		out EnemyAiAdventureSelectionResult selection)
 	{
+		selection = new EnemyAiAdventureSelectionResult(
+			EnemyAiAdventureSelectionKind.None,
+			-1);
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				99,
+				_turnSequenceGeneration,
+				out int decisionRollPercent)
+			|| !TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				int.MaxValue,
+				_turnSequenceGeneration,
+				out int randomCandidateOrdinal))
+		{
+			return false;
+		}
+
 		return TrySelectMainAdventureEnemyCard(
 			playerIndex,
-			_rng.RandiRange(0, 99),
-			_rng.RandiRange(0, int.MaxValue),
+			decisionRollPercent,
+			randomCandidateOrdinal,
 			out selection);
 	}
 
@@ -169,10 +227,10 @@ public partial class GameBoardScene
 		int playerIndex,
 		int decisionRollPercent,
 		int randomCandidateOrdinal,
-		out EnemyAiRules.AdventureSelectionResult selection)
+		out EnemyAiAdventureSelectionResult selection)
 	{
-		selection = new EnemyAiRules.AdventureSelectionResult(
-			EnemyAiRules.AdventureSelectionKind.None,
+		selection = new EnemyAiAdventureSelectionResult(
+			EnemyAiAdventureSelectionKind.None,
 			-1);
 		if (!adventure_mode
 			|| adventure_tutorial_mode
@@ -181,15 +239,20 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
+		{
+			return false;
+		}
 
 		int royalCaptureThreshold = IsBossKEnemy(playerIndex)
 			? GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
 			: int.MaxValue;
-		selection = EnemyAiRules.SelectAdventureCard(
-			ToCaptureScoringTableCards(),
-			ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
+		selection = MatchReadModel.SelectAdventureCard(
+			ToCaptureScoringTableCards(readModel.TableCards),
+			ToPotentialCaptureCards(playerIndex, player.Hand),
 			BuildCaptureScoringContext(playerIndex),
-			EnemyAiRules.GetAdventureProfile(mainStageIndex),
+			MatchReadModel.GetAdventureAiProfile(mainStageIndex),
 			royalCaptureThreshold,
 			decisionRollPercent,
 			randomCandidateOrdinal);
@@ -199,27 +262,40 @@ public partial class GameBoardScene
 	private bool TryPickEarlyTableNewCardHandIndex(int playerIndex, out int handIndex)
 	{
 		handIndex = -1;
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
+		{
+			return false;
+		}
+		if (!TrySubmitChooseRandomIndexRuleCommand(
+				playerIndex,
+				0,
+				int.MaxValue,
+				_turnSequenceGeneration,
+				out int randomOrdinal))
 		{
 			return false;
 		}
 
-		return AiCardSelectionRules.TryPickEarlyTableNewCardIndex(
-			_tableCards.Count,
-			_playerHands[playerIndex].Count,
+		return MatchReadModel.TryPickEarlyTableNewCardIndex(
+			readModel.TableCards.Length,
+			player.Hand.Length,
 			handCardIndex =>
 			{
-				CardPlayPlan plan = ResolveCardPlayPlan(_playerHands[playerIndex][handCardIndex]);
+				CardPlayPlan plan = ResolveCardPlayPlan(
+					readModel.TableCards,
+					FromRuleCardState(player.Hand[handCardIndex]));
 				return plan.MatchingTableCardIndex < 0 && !plan.PlayedCardCollectsTable;
 			},
-			_rng.RandiRange(0, int.MaxValue),
+			randomOrdinal,
 			out handIndex);
 	}
 
 	private bool TryPickBestCaptureHandIndex(int playerIndex, out int handIndex)
 	{
 		handIndex = -1;
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player))
 		{
 			return false;
 		}
@@ -227,9 +303,9 @@ public partial class GameBoardScene
 		int royalCaptureThreshold = IsBossKEnemy(playerIndex)
 			? GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
 			: int.MaxValue;
-		return PotentialCaptureRules.TryPickBestCaptureCardIndex(
-			ToCaptureScoringTableCards(),
-			ToPotentialCaptureCards(playerIndex, _playerHands[playerIndex]),
+		return MatchReadModel.TryPickBestCaptureCardIndex(
+			ToCaptureScoringTableCards(readModel.TableCards),
+			ToPotentialCaptureCards(playerIndex, player.Hand),
 			BuildCaptureScoringContext(playerIndex),
 			royalCaptureThreshold,
 			out handIndex);
@@ -237,23 +313,43 @@ public partial class GameBoardScene
 
 	private int GetPotentialNormalCaptureCount(PlayingCard card)
 	{
-		return PotentialCaptureRules.GetPotentialNormalCaptureCount(
-			ToCaptureScoringTableCards(),
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel))
+		{
+			return 0;
+		}
+
+		return GetPotentialNormalCaptureCount(readModel, card);
+	}
+
+	private int GetPotentialNormalCaptureCount(MatchReadModel readModel, PlayingCard card)
+	{
+		return MatchReadModel.GetPotentialNormalCaptureCount(
+			ToCaptureScoringTableCards(readModel.TableCards),
 			ToPotentialCaptureCard(MainPlayerIndex, card));
 	}
 
 	private int GetPotentialNormalCapturePoints(int playerIndex, PlayingCard card)
 	{
-		return PotentialCaptureRules.GetPotentialNormalCapturePoints(
-			ToCaptureScoringTableCards(),
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel))
+		{
+			return 0;
+		}
+
+		return MatchReadModel.GetPotentialNormalCapturePoints(
+			ToCaptureScoringTableCards(readModel.TableCards),
 			ToPotentialCaptureCard(playerIndex, card, ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card)),
 			BuildCaptureScoringContext(playerIndex));
 	}
 
 	private bool HasPotentialCapturedMiddleTableCards(int captureStartIndex)
 	{
-		return PotentialCaptureRules.HasPotentialCapturedMiddleTableCards(
-			ToCaptureScoringTableCards(),
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel))
+		{
+			return false;
+		}
+
+		return MatchReadModel.HasPotentialCapturedMiddleTableCards(
+			ToCaptureScoringTableCards(readModel.TableCards),
 			captureStartIndex);
 	}
 
@@ -261,12 +357,15 @@ public partial class GameBoardScene
 	{
 		if (IsAdventureEnemyWithMantaRayTideShift(playerIndex))
 		{
-			if (_mantaRayTideShiftCheckedThisTurn)
+			if (CurrentMatchFlowState.EnemyTurnStartControlChecked)
 			{
 				return;
 			}
 
-			_mantaRayTideShiftCheckedThisTurn = true;
+			TryUpdateMatchFlowState(state => state with
+			{
+				EnemyTurnStartControlChecked = true,
+			});
 		}
 
 		if (!ShouldResolveMantaRayTideShift(playerIndex))
@@ -301,19 +400,28 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_tableCards.RemoveAt(0);
-		_tableCards.Add(tideShiftedCard);
+		if (!TrySubmitMoveTableCardRuleCommand(
+			playerIndex,
+			0,
+			_tableCards.Count - 1,
+			tideShiftedCard.InstanceId,
+			turnSequenceGeneration,
+			out _))
+		{
+			return;
+		}
 		MarkBossKActiveControlUsedIfNeeded(playerIndex);
 		RenderTableCards();
 	}
 
 	private bool ShouldResolveMantaRayTideShift(int playerIndex)
 	{
-		return adventure_mode
+		return TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			&& adventure_mode
 			&& playerIndex == 1
-			&& _mantaRayTideShiftCheckedThisTurn
+			&& CurrentMatchFlowState.EnemyTurnStartControlChecked
 			&& IsMantaRayTideShiftEnemyTurn(playerIndex)
-			&& _tableCards.Count >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.TideShiftMinTableCards, 4)
+			&& readModel.TableCards.Length >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.TideShiftMinTableCards, 4)
 			&& (!IsBossKEnemy(playerIndex) || ShouldResolveBossKTideShift(playerIndex));
 	}
 
@@ -324,7 +432,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		int bossCaptureBefore = GetBestPotentialNormalCaptureCount(playerIndex, _tableCards);
+		int bossCaptureBefore = GetBestPotentialNormalCaptureCount(playerIndex);
 		int bossCaptureAfter = GetBestPotentialNormalCaptureCountAfterTideShift(playerIndex);
 		if (bossCaptureAfter > bossCaptureBefore
 			&& bossCaptureAfter >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5))
@@ -332,7 +440,7 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		int playerCaptureBefore = GetBestPotentialNormalCaptureCount(MainPlayerIndex, _tableCards);
+		int playerCaptureBefore = GetBestPotentialNormalCaptureCount(MainPlayerIndex);
 		int playerCaptureAfter = GetBestPotentialNormalCaptureCountAfterTideShift(MainPlayerIndex);
 		return playerCaptureBefore >= GetAdventureEnemyAbilityValue(AdventureEnemyAbilityValueKeys.RoyalCaptureThreshold, 5)
 			&& playerCaptureAfter < playerCaptureBefore;
@@ -340,31 +448,66 @@ public partial class GameBoardScene
 
 	private int GetBestPotentialNormalCaptureCountAfterTideShift(int playerIndex)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count || _tableCards.Count == 0)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player)
+			|| readModel.TableCards.IsEmpty)
 		{
 			return 0;
 		}
 
-		return PotentialCaptureRules.GetBestPotentialNormalCaptureCount(
-			ToTideShiftedCaptureScoringTableCards(),
-			ToPotentialCaptureCards(_playerHands[playerIndex]));
+		return MatchReadModel.GetBestPotentialNormalCaptureCount(
+			ToTideShiftedCaptureScoringTableCards(readModel.TableCards),
+			ToPotentialCaptureCards(player.Hand));
 	}
 
-	private int GetBestPotentialNormalCaptureCount(int playerIndex, IReadOnlyList<TableCard> tableCards)
+	private int GetBestPotentialNormalCaptureCount(int playerIndex)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerHands.Count || tableCards.Count == 0)
+		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel)
+			|| !TryGetRulePlayer(readModel, playerIndex, out PlayerStateSnapshot player)
+			|| readModel.TableCards.IsEmpty)
 		{
 			return 0;
 		}
 
-		return PotentialCaptureRules.GetBestPotentialNormalCaptureCount(
-			ToCaptureScoringTableCards(tableCards),
-			ToPotentialCaptureCards(_playerHands[playerIndex]));
+		return MatchReadModel.GetBestPotentialNormalCaptureCount(
+			ToCaptureScoringTableCards(readModel.TableCards),
+			ToPotentialCaptureCards(player.Hand));
 	}
 
-	private PotentialCaptureRules.Card[] ToPotentialCaptureCards(int playerIndex, IReadOnlyList<PlayingCard> cards)
+	private PotentialCaptureCard[] ToPotentialCaptureCards(
+		int playerIndex,
+		ImmutableArray<LogicalCardState> cards)
 	{
-		var potentialCards = new PotentialCaptureRules.Card[cards.Count];
+		var potentialCards = new PotentialCaptureCard[cards.Length];
+		for (int index = 0; index < cards.Length; index++)
+		{
+			PlayingCard card = FromRuleCardState(cards[index]);
+			potentialCards[index] = ToPotentialCaptureCard(
+				playerIndex,
+				card,
+				ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card));
+		}
+
+		return potentialCards;
+	}
+
+	private PotentialCaptureCard[] ToPotentialCaptureCards(
+		ImmutableArray<LogicalCardState> cards)
+	{
+		var potentialCards = new PotentialCaptureCard[cards.Length];
+		for (int index = 0; index < cards.Length; index++)
+		{
+			potentialCards[index] = ToPotentialCaptureCard(
+				MainPlayerIndex,
+				FromRuleCardState(cards[index]));
+		}
+
+		return potentialCards;
+	}
+
+	private PotentialCaptureCard[] ToPotentialCaptureCards(int playerIndex, IReadOnlyList<PlayingCard> cards)
+	{
+		var potentialCards = new PotentialCaptureCard[cards.Count];
 		for (int index = 0; index < cards.Count; index++)
 		{
 			PlayingCard card = cards[index];
@@ -377,9 +520,9 @@ public partial class GameBoardScene
 		return potentialCards;
 	}
 
-	private PotentialCaptureRules.Card[] ToPotentialCaptureCards(IReadOnlyList<PlayingCard> cards)
+	private PotentialCaptureCard[] ToPotentialCaptureCards(IReadOnlyList<PlayingCard> cards)
 	{
-		var potentialCards = new PotentialCaptureRules.Card[cards.Count];
+		var potentialCards = new PotentialCaptureCard[cards.Count];
 		for (int index = 0; index < cards.Count; index++)
 		{
 			potentialCards[index] = ToPotentialCaptureCard(MainPlayerIndex, cards[index]);
@@ -388,7 +531,7 @@ public partial class GameBoardScene
 		return potentialCards;
 	}
 
-	private PotentialCaptureRules.Card ToPotentialCaptureCard(int playerIndex, PlayingCard card, bool hasDoubleEffect = false)
+	private PotentialCaptureCard ToPotentialCaptureCard(int playerIndex, PlayingCard card, bool hasDoubleEffect = false)
 	{
 		string primaryRank = playerIndex == MainPlayerIndex
 			? ResolveAdventureMainPlayerPrimaryMatchRank(card)
@@ -396,7 +539,7 @@ public partial class GameBoardScene
 		List<string>? alternateRanks = playerIndex == MainPlayerIndex
 			? BuildAdventureMainPlayerAlternateRanks(card)
 			: null;
-		return new PotentialCaptureRules.Card(
+		return new PotentialCaptureCard(
 			primaryRank,
 			ShouldPlayedCardCollectTable(card),
 			hasDoubleEffect,
@@ -405,13 +548,14 @@ public partial class GameBoardScene
 			alternateRanks);
 	}
 
-	private CaptureScoringRules.TableCard[] ToTideShiftedCaptureScoringTableCards()
+	private CaptureScoringTableCard[] ToTideShiftedCaptureScoringTableCards(
+		ImmutableArray<TableCardState> sourceTableCards)
 	{
-		var tableCards = new CaptureScoringRules.TableCard[_tableCards.Count];
-		for (int shiftedIndex = 0; shiftedIndex < _tableCards.Count; shiftedIndex++)
+		var tableCards = new CaptureScoringTableCard[sourceTableCards.Length];
+		for (int shiftedIndex = 0; shiftedIndex < sourceTableCards.Length; shiftedIndex++)
 		{
-			int tableCardIndex = shiftedIndex == _tableCards.Count - 1 ? 0 : shiftedIndex + 1;
-			tableCards[shiftedIndex] = ToCaptureScoringTableCard(_tableCards[tableCardIndex]);
+			int tableCardIndex = shiftedIndex == sourceTableCards.Length - 1 ? 0 : shiftedIndex + 1;
+			tableCards[shiftedIndex] = ToCaptureScoringTableCard(sourceTableCards[tableCardIndex]);
 		}
 
 		return tableCards;
@@ -440,21 +584,40 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_mantaRayTideShiftCheckedThisTurn = false;
-		_bossKActiveControlUsedThisTurn = false;
+		TryUpdateMatchFlowState(state => state with
+		{
+			EnemyTurnStartControlChecked = false,
+			ActiveControlUsedThisTurn = false,
+		});
 	}
 
 	private int AddBombCardToTable(ItemCard bombCard, int ownerPlayerIndex)
 	{
-		_tableCards.Add(new TableCard(null, false, bombCard, ownerPlayerIndex));
-		return _tableCards.Count - 1;
+		return TrySubmitPlaceTableItemRuleCommand(
+			ownerPlayerIndex,
+			bombCard.Id,
+			_tableCards.Count,
+			isFaceUp: false,
+			ownerPlayerIndex,
+			_turnSequenceGeneration,
+			out RuleCommandResult result)
+			? result.Mutation.TargetIndex
+			: -1;
 	}
 
 	private int InsertBombCardIntoTable(ItemCard bombCard, int ownerPlayerIndex, int tableCardIndex)
 	{
 		int clampedIndex = Mathf.Clamp(tableCardIndex, 0, _tableCards.Count);
-		_tableCards.Insert(clampedIndex, new TableCard(null, false, bombCard, ownerPlayerIndex));
-		return clampedIndex;
+		return TrySubmitPlaceTableItemRuleCommand(
+			ownerPlayerIndex,
+			bombCard.Id,
+			clampedIndex,
+			isFaceUp: false,
+			ownerPlayerIndex,
+			_turnSequenceGeneration,
+			out RuleCommandResult result)
+			? result.Mutation.TargetIndex
+			: -1;
 	}
 
 }

@@ -110,14 +110,14 @@ public partial class GameBoardScene
 		Vector2 targetGlobalPosition,
 		int displayIndex)
 	{
-		Texture2D? startTexture = _cardBackTexture ?? drawnCard.Texture;
+		Texture2D? startTexture = _cardBackTexture ?? GetPlayingCardTexture(drawnCard);
 		if (startTexture == null || !IsInsideTree())
 		{
 			return;
 		}
 
 		bool showFaceOnLanding = !IsPlayerHandHidden(playerIndex);
-		Texture2D targetTexture = showFaceOnLanding ? drawnCard.Texture : startTexture;
+		Texture2D targetTexture = showFaceOnLanding ? GetPlayingCardTexture(drawnCard) : startTexture;
 		Texture2D? attachmentOverlayTexture = showFaceOnLanding ? GetCardAttachmentOverlayTexture(drawnCard) : null;
 		float startRotationDegrees = GetCardPileRotationDegreesForPlayer(playerIndex);
 		float targetRotationDegrees = GetCardRotationDegreesForPlayer(playerIndex);
@@ -382,10 +382,10 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		Control pile = _playerCardPiles[playerIndex];
 		for (int cardIndex = VisiblePileCards - 1; cardIndex >= 0; cardIndex--)
 		{
-			if (pile.GetNodeOrNull<Control>(PileCardNodeNames[cardIndex]) is Control visibleCard && visibleCard.Visible)
+			if (GetPlayerCardPileBack(playerIndex, cardIndex) is Control visibleCard
+				&& visibleCard.Visible)
 			{
 				return visibleCard;
 			}

@@ -21,9 +21,19 @@ codex_setup_godot_test_home "$TMP_DIR"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 LOG_FILE="$TMP_DIR/selection_overlay_controller_isolation.log"
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/SelectionOverlayControllerIsolationSmoke.gd >"$LOG_FILE" 2>&1
+if ! DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" \
+	--headless \
+	--audio-driver Dummy \
+	--path "$ROOT_DIR" \
+	--script res://tests/SelectionOverlayControllerIsolationSmoke.gd \
+	>"$LOG_FILE" 2>&1; then
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
 
-if ! grep -Fq "SELECTION_OVERLAY_CONTROLLER_ISOLATION_SMOKE_OK" "$LOG_FILE"; then
+if grep -Fq "SCRIPT ERROR" "$LOG_FILE" \
+	|| grep -Eiq "ObjectDB instances leaked|resources still in use|orphan StringName" "$LOG_FILE" \
+	|| ! grep -Fq "SELECTION_OVERLAY_CONTROLLER_ISOLATION_SMOKE_OK" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

@@ -27,7 +27,7 @@ func _run_replacement_probe(board: Node) -> bool:
 	var first := {}
 	if not bool(board.call("DebugConfigureMagnetGenerationOwnershipProbe")) \
 		or not bool(board.call("DebugStartMagnetGenerationOwnershipProbe", first)) \
-		or not await _wait_for_owned_selection(board) \
+		or not await _wait_for_owned_selection(board, first) \
 		or not bool(board.call("DebugBeginMagnetGenerationOwnershipAnimation")) \
 		or not await _wait_for_true(board, "DebugIsMagnetGenerationOwnershipAnimationActive"):
 		_fail("Could not start first magnet ownership probe")
@@ -40,7 +40,7 @@ func _run_replacement_probe(board: Node) -> bool:
 		return false
 	var replacement := {}
 	if not bool(board.call("DebugStartMagnetGenerationOwnershipProbe", replacement)) \
-		or not await _wait_for_owned_selection(board):
+		or not await _wait_for_owned_selection(board, replacement):
 		_fail("Could not start replacement magnet ownership probe")
 		return false
 	if not await _wait_for_result(first):
@@ -66,7 +66,7 @@ func _run_no_replacement_probe(board: Node) -> bool:
 	var first := {}
 	if not bool(board.call("DebugConfigureMagnetGenerationOwnershipProbe")) \
 		or not bool(board.call("DebugStartMagnetGenerationOwnershipProbe", first)) \
-		or not await _wait_for_owned_selection(board) \
+		or not await _wait_for_owned_selection(board, first) \
 		or not bool(board.call("DebugBeginMagnetGenerationOwnershipAnimation")) \
 		or not await _wait_for_true(board, "DebugIsMagnetGenerationOwnershipAnimationActive") \
 		or not bool(board.call("DebugRestartMatchForMagnetGenerationOwnershipProbe")) \
@@ -102,16 +102,20 @@ func _create_board() -> Node:
 			return null
 	return board
 
-func _wait_for_owned_selection(board: Node) -> bool:
-	return await _wait_for_true(board, "DebugHasCurrentOwnedMagnetSelection")
+func _wait_for_owned_selection(board: Node, result: Dictionary) -> bool:
+	var owned := await _wait_for_true(board, "DebugHasCurrentOwnedMagnetSelection", false)
+	if not owned:
+		_fail("Timed out waiting for owned magnet selection: %s" % str(result))
+	return owned
 
-func _wait_for_true(board: Node, method: String) -> bool:
+func _wait_for_true(board: Node, method: String, report_failure := true) -> bool:
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
 	while Time.get_ticks_msec() / 1000.0 < deadline:
 		await process_frame
 		if bool(board.call(method)):
 			return true
-	_fail("Timed out waiting for %s" % method)
+	if report_failure:
+		_fail("Timed out waiting for %s" % method)
 	return false
 
 func _wait_for_result(result: Dictionary) -> bool:

@@ -9,14 +9,12 @@ public partial class MultiplayerLobbyScene : Control
 	private const string RoomTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomTitle";
 	private const string PlayerTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerTitle";
 	private const string SteamNoteLabelPath = "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel";
-	private const string MigrationTrustNoticeLabelPath = "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/MigrationTrustNoticeLabel";
 
 	private Label _titleLabel = default!;
 	private Label _modeTitleLabel = default!;
 	private Label _roomTitleLabel = default!;
 	private Label _playerTitleLabel = default!;
 	private Label _steamNoteLabel = default!;
-	private Label _migrationTrustNoticeLabel = default!;
 
 	[Export]
 	public PackedScene RoomRowScene { get; set; } = default!;
@@ -35,12 +33,6 @@ public partial class MultiplayerLobbyScene : Control
 
 	[Export]
 	public LineEdit RoomPasswordInput { get; set; } = default!;
-
-	[Export]
-	public CheckButton HostMigrationToggle { get; set; } = default!;
-
-	[Export]
-	public CheckButton TrustedHotStandbyToggle { get; set; } = default!;
 
 	[Export]
 	public Label LanHostInfoLabel { get; set; } = default!;
@@ -171,8 +163,6 @@ public partial class MultiplayerLobbyScene : Control
 			|| ToastLabel == null
 			|| RoomNameInput == null
 			|| RoomPasswordInput == null
-			|| HostMigrationToggle == null
-			|| TrustedHotStandbyToggle == null
 			|| LanHostInfoLabel == null
 			|| SteamStatusLabel == null
 			|| PlayerCountOption == null
@@ -219,7 +209,6 @@ public partial class MultiplayerLobbyScene : Control
 		_roomTitleLabel = GetNode<Label>(RoomTitleLabelPath);
 		_playerTitleLabel = GetNode<Label>(PlayerTitleLabelPath);
 		_steamNoteLabel = GetNode<Label>(SteamNoteLabelPath);
-		_migrationTrustNoticeLabel = GetNode<Label>(MigrationTrustNoticeLabelPath);
 	}
 
 	private void InitializeSceneDefaults()
@@ -227,7 +216,6 @@ public partial class MultiplayerLobbyScene : Control
 		string roomName = RoomNameInput.Text.Trim();
 		RoomNameInput.Text = RoomNameRules.IsValid(roomName) ? roomName : string.Empty;
 		RoomPasswordInput.Text = RoomPasswordRules.Normalize(RoomPasswordInput.Text);
-		ApplyHostMigrationPreferences();
 	}
 
 	private void ConfigureUnifiedVisualStyle()
@@ -246,8 +234,6 @@ public partial class MultiplayerLobbyScene : Control
 
 		MainMenuInteractiveStyle.ApplyThemedLineEdit(RoomNameInput, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
 		MainMenuInteractiveStyle.ApplyThemedLineEdit(RoomPasswordInput, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
-		MainMenuInteractiveStyle.ApplyThemedControl(HostMigrationToggle, MainMenuInteractiveStyle.SecondaryMenuPalette, 15);
-		MainMenuInteractiveStyle.ApplyThemedControl(TrustedHotStandbyToggle, MainMenuInteractiveStyle.SecondaryMenuPalette, 15);
 		foreach (OptionButton option in new[] { PlayerCountOption, ItemModeOption, WinningScoreOption })
 		{
 			MainMenuInteractiveStyle.ApplyThemedControl(option, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
@@ -268,7 +254,6 @@ public partial class MultiplayerLobbyScene : Control
 		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.65f, 0.82f, 0.86f, 0.94f));
 		SteamStatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.Text);
 		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.72f, 0.75f, 0.94f));
-		_migrationTrustNoticeLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.78f, 0.80f, 0.96f));
 		foreach (Label sectionTitle in new[]
 		{
 			_modeTitleLabel,
@@ -369,8 +354,6 @@ public partial class MultiplayerLobbyScene : Control
 		ReadyButton.Pressed += ToggleReady;
 		StartButton.Pressed += StartMatch;
 		LeaveSessionButton.Pressed += LeaveSession;
-		HostMigrationToggle.Toggled += OnHostMigrationPreferenceToggled;
-		TrustedHotStandbyToggle.Toggled += OnTrustedHotStandbyPreferenceToggled;
 		_buttonSignalsConnected = true;
 	}
 
@@ -389,8 +372,6 @@ public partial class MultiplayerLobbyScene : Control
 		ReadyButton.Pressed -= ToggleReady;
 		StartButton.Pressed -= StartMatch;
 		LeaveSessionButton.Pressed -= LeaveSession;
-		HostMigrationToggle.Toggled -= OnHostMigrationPreferenceToggled;
-		TrustedHotStandbyToggle.Toggled -= OnTrustedHotStandbyPreferenceToggled;
 		_buttonSignalsConnected = false;
 	}
 
@@ -423,23 +404,6 @@ public partial class MultiplayerLobbyScene : Control
 		return RoomPasswordRules.Normalize(RoomPasswordInput.Text);
 	}
 
-	private void ApplyHostMigrationPreferences()
-	{
-		_network.ConfigureHostMigration(
-			HostMigrationToggle.ButtonPressed,
-			TrustedHotStandbyToggle.ButtonPressed);
-	}
-
-	private void OnHostMigrationPreferenceToggled(bool enabled)
-	{
-		ApplyHostMigrationPreferences();
-	}
-
-	private void OnTrustedHotStandbyPreferenceToggled(bool accepted)
-	{
-		ApplyHostMigrationPreferences();
-	}
-
 	private bool TryGetSelectedRoomName(out string roomName)
 	{
 		roomName = RoomNameInput.Text.Trim();
@@ -461,7 +425,6 @@ public partial class MultiplayerLobbyScene : Control
 		}
 
 		_localReady = true;
-		ApplyHostMigrationPreferences();
 		_network.HostLan(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName, SelectedRoomPassword());
 	}
 
@@ -473,7 +436,6 @@ public partial class MultiplayerLobbyScene : Control
 		}
 
 		_localReady = true;
-		ApplyHostMigrationPreferences();
 		_network.HostSteam(SelectedPlayerCount(), SelectedItemMode(), SelectedWinningScore(), roomName, SelectedRoomPassword());
 	}
 
@@ -501,7 +463,9 @@ public partial class MultiplayerLobbyScene : Control
 
 	private void LeaveSession()
 	{
-		_network.LeaveSession();
+		_ = _network.RequestSessionCloseAsync(_network.IsHost
+			? NetworkSessionCloseReason.UserRequested
+			: NetworkSessionCloseReason.ClientRequested);
 	}
 
 	private void RefreshState(int stateValue)
@@ -519,7 +483,10 @@ public partial class MultiplayerLobbyScene : Control
 			or NetworkSessionState.Lobby
 			or NetworkSessionState.Starting
 			or NetworkSessionState.LoadingScene
-			or NetworkSessionState.InGame;
+			or NetworkSessionState.InGame
+			or NetworkSessionState.Reconnecting
+			or NetworkSessionState.MigratingHost
+			or NetworkSessionState.Leaving;
 
 		LanHostButton.Disabled = !canConfigureSession;
 		LanSearchButton.Disabled = inBusyOrJoinedState;
@@ -530,15 +497,12 @@ public partial class MultiplayerLobbyScene : Control
 		PlayerCountOption.Disabled = !canConfigureSession;
 		ItemModeOption.Disabled = !canConfigureSession;
 		WinningScoreOption.Disabled = !canConfigureSession;
-		HostMigrationToggle.Disabled = !canConfigureSession;
-		TrustedHotStandbyToggle.Disabled = !canConfigureSession;
-		if (!canConfigureSession)
-		{
-			HostMigrationToggle.SetPressedNoSignal(_network.HostMigrationEnabled);
-			TrustedHotStandbyToggle.SetPressedNoSignal(_network.TrustedHotStandbyAccepted);
-		}
 		ReadyButton.Disabled = state != NetworkSessionState.Lobby;
-		LeaveSessionButton.Disabled = state is NetworkSessionState.Idle or NetworkSessionState.Searching or NetworkSessionState.Failed;
+		LeaveSessionButton.Disabled = state is NetworkSessionState.Idle
+			or NetworkSessionState.Searching
+			or NetworkSessionState.Failed
+			or NetworkSessionState.Leaving;
+		BackButton.Disabled = state == NetworkSessionState.Leaving || _isReturningToMainMenu;
 		LanHostInfoLabel.Text = state == NetworkSessionState.Lobby && _network.CurrentConfig.Transport == NetworkTransport.Lan
 			? LocalizeFormat("MULTIPLAYER_LOBBY_LAN_ADDRESS_FORMAT", _network.GetLocalLanAddressSummary())
 			: Localize("MULTIPLAYER_LOBBY_LAN_ADDRESS_PENDING");
@@ -637,7 +601,6 @@ public partial class MultiplayerLobbyScene : Control
 		}
 
 		string transport = ReadDictionaryString(room, "transport", NetworkTransport.Lan.ToString());
-		ApplyHostMigrationPreferences();
 		if (transport == NetworkTransport.Steam.ToString())
 		{
 			_network.JoinSteamLobby(unchecked((ulong)ReadDictionaryLong(room, "steam_lobby_id", 0)), SelectedRoomPassword());
@@ -745,9 +708,15 @@ public partial class MultiplayerLobbyScene : Control
 
 		_isReturningToMainMenu = true;
 		LockLobbyInteractionForSceneTransition();
+		await _network.RequestSessionCloseAsync(_network.IsHost
+			? NetworkSessionCloseReason.UserRequested
+			: NetworkSessionCloseReason.ClientRequested);
+		if (!GodotObject.IsInstanceValid(this) || !IsInsideTree())
+		{
+			return;
+		}
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
-			_network.LeaveSession();
 			Node mainMenu = mainMenuScene.Instantiate();
 			GetTree().Root.AddChild(mainMenu);
 			GetTree().CurrentScene = mainMenu;
@@ -791,8 +760,6 @@ public partial class MultiplayerLobbyScene : Control
 		WinningScoreOption.Disabled = true;
 		RoomNameInput.Editable = false;
 		RoomPasswordInput.Editable = false;
-		HostMigrationToggle.Disabled = true;
-		TrustedHotStandbyToggle.Disabled = true;
 	}
 
 	private static string ReadDictionaryString(Godot.Collections.Dictionary dictionary, string key, string fallback)
@@ -826,9 +793,6 @@ public partial class MultiplayerLobbyScene : Control
 		_steamNoteLabel.Text = Localize("MULTIPLAYER_LOBBY_STEAM_NOTE");
 		RoomNameInput.PlaceholderText = Localize("MULTIPLAYER_LOBBY_ROOM_NAME_PLACEHOLDER");
 		RoomPasswordInput.PlaceholderText = Localize("MULTIPLAYER_LOBBY_ROOM_PASSWORD_PLACEHOLDER");
-		HostMigrationToggle.Text = Localize("MULTIPLAYER_LOBBY_HOST_MIGRATION_TOGGLE");
-		TrustedHotStandbyToggle.Text = Localize("MULTIPLAYER_LOBBY_TRUSTED_STANDBY_TOGGLE");
-		_migrationTrustNoticeLabel.Text = Localize("MULTIPLAYER_LOBBY_MIGRATION_TRUST_NOTICE");
 		BackButton.Text = Localize("ADVENTURE_BACK");
 		LanHostButton.Text = Localize("MULTIPLAYER_LOBBY_HOST_LAN");
 		LanSearchButton.Text = Localize("MULTIPLAYER_LOBBY_SEARCH_LAN");
@@ -920,6 +884,8 @@ public partial class MultiplayerLobbyScene : Control
 			NetworkSessionState.LoadingScene => "NETWORK_STATE_LOADING_SCENE",
 			NetworkSessionState.InGame => "NETWORK_STATE_IN_GAME",
 			NetworkSessionState.Reconnecting => "NETWORK_STATE_RECONNECTING",
+			NetworkSessionState.MigratingHost => "NETWORK_STATE_MIGRATING_HOST",
+			NetworkSessionState.Leaving => "NETWORK_STATE_LEAVING",
 			NetworkSessionState.Failed => "NETWORK_STATE_FAILED",
 			_ => "NETWORK_STATE_IDLE",
 		};

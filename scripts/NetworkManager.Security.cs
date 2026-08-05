@@ -16,6 +16,18 @@ public partial class NetworkManager
 
 	private sealed record PeerSecurityChallenge(byte[] Challenge, bool RekeyExistingPeer);
 
+	private static bool HostMigrationCapabilityAvailable
+	{
+		get
+		{
+#if DEBUG
+			return OS.GetEnvironment("CODEX_LAN_MIGRATION_FIXTURE") == "1";
+#else
+			return false;
+#endif
+		}
+	}
+	private readonly HashSet<int> _authenticatedPeerIds = new();
 	private readonly Dictionary<int, PeerSecurityChallenge> _pendingPeerSecurityChallenges = new();
 	private readonly Dictionary<int, PeerMigrationSecurityState> _migrationSecurityByPeerId = new();
 	private ECDiffieHellman? _localMigrationKeyAgreement;
@@ -25,38 +37,47 @@ public partial class NetworkManager
 	private byte[] _boundAuthorityMigrationPublicKey = Array.Empty<byte>();
 	private bool _localSecurityHandshakeAccepted;
 	private bool _localSecurityHandshakeIsRekey;
-	private bool _hostMigrationEnabled = true;
-	private bool _trustedHotStandbyAccepted = true;
 	private long _migrationPlanRevision;
 	private string _lastConfirmedCheckpointCiphertextHash = string.Empty;
 
-	public bool HostMigrationEnabled => _hostMigrationEnabled;
-	public bool TrustedHotStandbyAccepted => _trustedHotStandbyAccepted;
+	public bool HostMigrationEnabled => HostMigrationCapabilityAvailable;
+	public bool TrustedHotStandbyAccepted => HostMigrationCapabilityAvailable;
 
 	public void ConfigureHostMigration(bool enabled, bool trustedHotStandbyAccepted)
 	{
-		if (_state is not (NetworkSessionState.Idle or NetworkSessionState.Searching or NetworkSessionState.Hosting or NetworkSessionState.Joining))
-		{
-			return;
-		}
-
-		_hostMigrationEnabled = enabled;
-		_trustedHotStandbyAccepted = trustedHotStandbyAccepted;
+		_ = enabled;
+		_ = trustedHotStandbyAccepted;
 	}
 
 	private void InitializeHostMigrationSecurity()
 	{
 		DisposeMigrationSecurity();
-		_localMigrationKeyAgreement = HostMigrationSecurity.CreateKeyAgreement();
-		_authorityMigrationSigner = HostMigrationSecurity.CreateSigner();
-		_localMigrationSuccessorSigner = HostMigrationSecurity.CreateSigner();
 		_localSecurityHandshakeAccepted = true;
 		_migrationPlanRevision = 0;
 		_lastConfirmedCheckpointCiphertextHash = string.Empty;
+		if (!HostMigrationCapabilityAvailable)
+		{
+			return;
+		}
+
+		_localMigrationKeyAgreement = HostMigrationSecurity.CreateKeyAgreement();
+		_authorityMigrationSigner = HostMigrationSecurity.CreateSigner();
+		_localMigrationSuccessorSigner = HostMigrationSecurity.CreateSigner();
 	}
 
 	private void PrepareLocalMigrationSecurity()
 	{
+		if (!HostMigrationCapabilityAvailable)
+		{
+			ClearLocalMigrationSessionKey();
+			_localMigrationKeyAgreement?.Dispose();
+			_localMigrationKeyAgreement = null;
+			_localMigrationSuccessorSigner?.Dispose();
+			_localMigrationSuccessorSigner = null;
+			_localSecurityHandshakeAccepted = false;
+			return;
+		}
+
 		_localMigrationKeyAgreement ??= HostMigrationSecurity.CreateKeyAgreement();
 		_localMigrationSuccessorSigner ??= HostMigrationSecurity.CreateSigner();
 		_localSecurityHandshakeAccepted = false;
@@ -71,8 +92,12 @@ public partial class NetworkManager
 			return;
 		}
 
-		_localMigrationKeyAgreement ??= HostMigrationSecurity.CreateKeyAgreement();
-		_authorityMigrationSigner ??= HostMigrationSecurity.CreateSigner();
+		_authenticatedPeerIds.Remove(peerId);
+		if (HostMigrationCapabilityAvailable)
+		{
+			_localMigrationKeyAgreement ??= HostMigrationSecurity.CreateKeyAgreement();
+			_authorityMigrationSigner ??= HostMigrationSecurity.CreateSigner();
+		}
 		byte[] challenge = RoomPasswordRules.CreateChallenge();
 		_pendingPeerSecurityChallenges[peerId] = new PeerSecurityChallenge(challenge, rekeyExistingPeer);
 		RoomPasswordVerifier verifier = rekeyExistingPeer
@@ -83,13 +108,17 @@ public partial class NetworkManager
 			MethodName.RpcBeginSecurityHandshake,
 			_config.SessionId,
 			NetworkProtocol.CurrentVersion,
-			HostMigrationSecurity.ExportPublicKey(_localMigrationKeyAgreement),
-			HostMigrationSecurity.ExportPublicKey(_authorityMigrationSigner),
+			HostMigrationCapabilityAvailable && _localMigrationKeyAgreement != null
+				? HostMigrationSecurity.ExportPublicKey(_localMigrationKeyAgreement)
+				: Array.Empty<byte>(),
+			HostMigrationCapabilityAvailable && _authorityMigrationSigner != null
+				? HostMigrationSecurity.ExportPublicKey(_authorityMigrationSigner)
+				: Array.Empty<byte>(),
 			verifier.Version,
 			verifier.Iterations,
 			verifier.Salt,
 			challenge,
-			_hostMigrationEnabled,
+			HostMigrationCapabilityAvailable,
 			rekeyExistingPeer);
 	}
 
@@ -120,7 +149,9 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (_state == NetworkSessionState.MigratingHost
+		_ = hostMigrationEnabled;
+		if (HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.MigratingHost
 			&& _networkMigrationPlan is { } migrationPlan
 			&& (!HostMigrationSecurity.TryDecodeBytes(
 					migrationPlan.CandidateSuccessorPublicKey,
@@ -136,17 +167,6 @@ public partial class NetworkManager
 		}
 
 		PrepareLocalMigrationSecurity();
-		if (_localMigrationKeyAgreement is null
-			|| _localMigrationSuccessorSigner is null
-			|| !HostMigrationSecurity.TryDeriveSessionKey(
-				_localMigrationKeyAgreement,
-				hostKeyAgreementPublicKey,
-				sessionId,
-				out byte[] sessionKey))
-		{
-			return;
-		}
-
 		byte[] passwordProof = Array.Empty<byte>();
 		if (passwordVerifierVersion > 0)
 		{
@@ -162,13 +182,40 @@ public partial class NetworkManager
 				return;
 			}
 		}
+		_config = _config with { SessionId = sessionId };
+		_localSecurityHandshakeIsRekey = rekeyExistingPeer;
+
+		if (!HostMigrationCapabilityAvailable)
+		{
+			RpcId(
+				1,
+				MethodName.RpcCompleteSecurityHandshake,
+				sessionId,
+				protocolVersion,
+				Array.Empty<byte>(),
+				Array.Empty<byte>(),
+				passwordChallenge,
+				passwordProof,
+				false,
+				false);
+			return;
+		}
+
+		if (_localMigrationKeyAgreement is null
+			|| _localMigrationSuccessorSigner is null
+			|| !HostMigrationSecurity.TryDeriveSessionKey(
+				_localMigrationKeyAgreement,
+				hostKeyAgreementPublicKey,
+				sessionId,
+				out byte[] sessionKey))
+		{
+			return;
+		}
 
 		ClearLocalMigrationSessionKey();
 		_localMigrationSessionKey = sessionKey;
 		_boundAuthorityMigrationPublicKey = sourceAuthorityPublicKey?.Clone() as byte[] ?? Array.Empty<byte>();
-		_hostMigrationEnabled = hostMigrationEnabled;
 		_localSecurityHandshakeIsRekey = rekeyExistingPeer;
-		_config = _config with { SessionId = sessionId };
 		RpcId(
 			1,
 			MethodName.RpcCompleteSecurityHandshake,
@@ -177,9 +224,9 @@ public partial class NetworkManager
 			HostMigrationSecurity.ExportPublicKey(_localMigrationKeyAgreement),
 			HostMigrationSecurity.ExportPublicKey(_localMigrationSuccessorSigner),
 			passwordChallenge,
-				passwordProof,
-				_trustedHotStandbyAccepted,
-				CanLocalTransportTakeOver());
+			passwordProof,
+			TrustedHotStandbyAccepted,
+			HostMigrationCapabilityAvailable && CanLocalTransportTakeOver());
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -195,8 +242,7 @@ public partial class NetworkManager
 	{
 		if (!IsHost
 			|| protocolVersion != NetworkProtocol.CurrentVersion
-			|| !string.Equals(sessionId, _config.SessionId, StringComparison.Ordinal)
-			|| _localMigrationKeyAgreement is null)
+			|| !string.Equals(sessionId, _config.SessionId, StringComparison.Ordinal))
 		{
 			return;
 		}
@@ -219,7 +265,27 @@ public partial class NetworkManager
 				pendingChallenge.Challenge,
 				_config.SessionId,
 				passwordProof);
-		if (!passwordAccepted
+		if (!passwordAccepted)
+		{
+			RejectLobbyJoin(senderPeerId, "房间认证失败");
+			return;
+		}
+
+		if (!HostMigrationCapabilityAvailable)
+		{
+			ClearPeerMigrationSecurity(senderPeerId);
+			_authenticatedPeerIds.Add(senderPeerId);
+			RpcId(
+				senderPeerId,
+				MethodName.RpcSecurityHandshakeAccepted,
+				_config.SessionId,
+				NetworkProtocol.CurrentVersion,
+				false,
+				pendingChallenge.RekeyExistingPeer);
+			return;
+		}
+
+		if (_localMigrationKeyAgreement is null
 			|| !HostMigrationSecurity.TryDeriveSessionKey(
 				_localMigrationKeyAgreement,
 				clientKeyAgreementPublicKey,
@@ -232,6 +298,7 @@ public partial class NetworkManager
 		}
 
 		ClearPeerMigrationSecurity(senderPeerId);
+		_authenticatedPeerIds.Add(senderPeerId);
 		_migrationSecurityByPeerId[senderPeerId] = new PeerMigrationSecurityState
 		{
 			SessionKey = sessionKey,
@@ -245,7 +312,7 @@ public partial class NetworkManager
 			MethodName.RpcSecurityHandshakeAccepted,
 			_config.SessionId,
 			NetworkProtocol.CurrentVersion,
-			_hostMigrationEnabled,
+			HostMigrationCapabilityAvailable,
 			pendingChallenge.RekeyExistingPeer);
 	}
 
@@ -256,17 +323,18 @@ public partial class NetworkManager
 		bool hostMigrationEnabled,
 		bool rekeyExistingPeer)
 	{
+		_ = hostMigrationEnabled;
 		if (IsHost
 			|| protocolVersion != NetworkProtocol.CurrentVersion
 			|| !string.Equals(sessionId, _config.SessionId, StringComparison.Ordinal)
-			|| _localMigrationSessionKey.Length != HostMigrationSecurity.SessionKeyBytes
-			|| _boundAuthorityMigrationPublicKey.Length == 0)
+			|| (HostMigrationCapabilityAvailable
+				&& (_localMigrationSessionKey.Length != HostMigrationSecurity.SessionKeyBytes
+					|| _boundAuthorityMigrationPublicKey.Length == 0)))
 		{
 			return;
 		}
 
 		_localSecurityHandshakeAccepted = true;
-		_hostMigrationEnabled = hostMigrationEnabled;
 		_pendingJoinRoomPassword = string.Empty;
 		bool shouldContinueAuthentication = NetworkMigrationRules.ShouldContinueAuthenticationAfterSecurityHandshake(
 			_state,
@@ -287,7 +355,8 @@ public partial class NetworkManager
 		long authorityEpoch,
 		string candidatePlayerSessionId)
 	{
-		if (IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| IsHost
 			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch)
 			|| !string.Equals(candidatePlayerSessionId, GetPlayerSessionId(), StringComparison.Ordinal))
 		{
@@ -306,7 +375,8 @@ public partial class NetworkManager
 
 	private void RekeyFormerHotStandby(int seatIndex)
 	{
-		if (!IsHost
+		if (!HostMigrationCapabilityAvailable
+			|| !IsHost
 			|| seatIndex < 0
 			|| !TryGetConnectedRemotePlayerBySeatIndex(seatIndex, out NetworkPlayerPublicState formerCandidate))
 		{
@@ -346,12 +416,12 @@ public partial class NetworkManager
 
 	private bool IsPeerSecurityAuthenticated(int peerId)
 	{
-		return peerId > 1 && _migrationSecurityByPeerId.ContainsKey(peerId);
+		return peerId > 1 && _authenticatedPeerIds.Contains(peerId);
 	}
 
 	private bool CanPeerActAsHotStandby(int peerId)
 	{
-		return _hostMigrationEnabled
+		return HostMigrationCapabilityAvailable
 			&& _migrationSecurityByPeerId.TryGetValue(peerId, out PeerMigrationSecurityState? security)
 			&& security.TrustedHotStandbyAccepted
 			&& security.TransportTakeoverCapable
@@ -361,12 +431,15 @@ public partial class NetworkManager
 
 	private bool TryGetPeerMigrationSecurity(int peerId, out PeerMigrationSecurityState security)
 	{
-		return _migrationSecurityByPeerId.TryGetValue(peerId, out security!);
+		security = default!;
+		return HostMigrationCapabilityAvailable
+			&& _migrationSecurityByPeerId.TryGetValue(peerId, out security!);
 	}
 
 	private bool TryPromoteLocalMigrationAuthority(NetworkMigrationPlan plan)
 	{
-		if (!IsLocalMigrationCandidate(plan)
+		if (!HostMigrationCapabilityAvailable
+			|| !IsLocalMigrationCandidate(plan)
 			|| !HostMigrationSecurity.TryDecodeBytes(
 				plan.CandidateSuccessorPublicKey,
 				512,
@@ -415,6 +488,7 @@ public partial class NetworkManager
 
 	private void ClearPeerMigrationSecurity(int peerId)
 	{
+		_authenticatedPeerIds.Remove(peerId);
 		_pendingPeerSecurityChallenges.Remove(peerId);
 		if (_migrationSecurityByPeerId.Remove(peerId, out PeerMigrationSecurityState? security)
 			&& security.SessionKey.Length > 0)
@@ -439,6 +513,7 @@ public partial class NetworkManager
 			ClearPeerMigrationSecurity(peerId);
 		}
 		_pendingPeerSecurityChallenges.Clear();
+		_authenticatedPeerIds.Clear();
 		ClearLocalMigrationSessionKey();
 		if (_boundAuthorityMigrationPublicKey.Length > 0)
 		{

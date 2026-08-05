@@ -1,16 +1,18 @@
 using System;
+using System.Security.Cryptography;
 
-public sealed class AuthorityCheckpointEnvelope
+public sealed class AuthorityCheckpointEnvelope : IDisposable
 {
-	private readonly byte[] _payload;
+	private byte[] _payload;
+	private bool _disposed;
 
 	public static AuthorityCheckpointEnvelope Empty { get; } = new(0, 0, Array.Empty<byte>(), string.Empty);
 
-	public AuthorityCheckpointEnvelope(long authorityEpoch, long checkpointId, ReadOnlySpan<byte> payload, string hash)
+	internal AuthorityCheckpointEnvelope(long authorityEpoch, long checkpointId, byte[] ownedPayload, string hash)
 	{
 		AuthorityEpoch = authorityEpoch;
 		CheckpointId = checkpointId;
-		_payload = payload.ToArray();
+		_payload = ownedPayload ?? throw new ArgumentNullException(nameof(ownedPayload));
 		Hash = hash ?? string.Empty;
 	}
 
@@ -19,10 +21,23 @@ public sealed class AuthorityCheckpointEnvelope
 	public string Hash { get; }
 	public bool HasPayload => _payload.Length > 0;
 	public ReadOnlyMemory<byte> PayloadMemory => _payload;
+	public ReadOnlySpan<byte> PayloadSpan => _payload;
+	public int EncodedByteCount => _payload.Length;
+	public long ExplicitPlaintextCopyCount => 0;
 
-	public byte[] GetPayloadCopy()
+	public void Dispose()
 	{
-		return (byte[])_payload.Clone();
+		if (_disposed)
+		{
+			return;
+		}
+
+		_disposed = true;
+		if (_payload.Length > 0)
+		{
+			CryptographicOperations.ZeroMemory(_payload);
+			_payload = Array.Empty<byte>();
+		}
 	}
 
 	public static bool TryCreate(

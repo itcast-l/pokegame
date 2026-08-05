@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -32,11 +33,39 @@ public partial class OceanMenuButtonFrame : Control
 	[Export]
 	public bool FlipOrnament { get; set; }
 
-	[Export]
-	public bool Selected { get; set; }
+	private bool _selected;
+	private bool _highlightFocus = true;
+	private bool _showIdleTexture = true;
 
 	[Export]
-	public bool HighlightFocus { get; set; } = true;
+	public bool Selected
+	{
+		get => _selected;
+		set
+		{
+			if (_selected == value)
+			{
+				return;
+			}
+			_selected = value;
+			RefreshTargetState();
+		}
+	}
+
+	[Export]
+	public bool HighlightFocus
+	{
+		get => _highlightFocus;
+		set
+		{
+			if (_highlightFocus == value)
+			{
+				return;
+			}
+			_highlightFocus = value;
+			RefreshTargetState();
+		}
+	}
 
 	[Export]
 	public bool UsePlaqueGlowBackdrop { get; set; } = true;
@@ -45,7 +74,19 @@ public partial class OceanMenuButtonFrame : Control
 	public bool UseToolRowIdleBackdrop { get; set; } = true;
 
 	[Export]
-	public bool ShowIdleTexture { get; set; } = true;
+	public bool ShowIdleTexture
+	{
+		get => _showIdleTexture;
+		set
+		{
+			if (_showIdleTexture == value)
+			{
+				return;
+			}
+			_showIdleTexture = value;
+			RefreshTargetState();
+		}
+	}
 
 	[Export]
 	public bool SuppressVisuals { get; set; }
@@ -81,8 +122,16 @@ public partial class OceanMenuButtonFrame : Control
 	public float SelectionGlowStrength { get; set; } = 1.0f;
 
 	private Button? _button;
-	private readonly List<Control> _interactiveDescendants = new();
+	private readonly Dictionary<Control, InteractionBinding> _interactionBindings = new();
+	private readonly HashSet<Control> _hoveredControls = new();
+	private readonly HashSet<Control> _focusedControls = new();
+	private readonly HashSet<Control> _pressedControls = new();
 	private float _glow;
+	private float _targetGlow;
+	private bool _interactionBindingsReady;
+	private bool _rebuildBindingsDeferred;
+	private SceneTree? _subscribedTree;
+	private long _processCallCount;
 	private readonly Vector2[] _plaquePoints = new Vector2[6];
 	private readonly Vector2[] _insetPoints = new Vector2[6];
 	private readonly Vector2[] _shadowPoints = new Vector2[6];
@@ -100,12 +149,38 @@ public partial class OceanMenuButtonFrame : Control
 	public override void _Ready()
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
-		_button = GetNodeOrNull<Button>("Button") ?? FindDirectButtonChild();
-		if (_button == null)
+		VisibilityChanged += OnFrameVisibilityChanged;
+		_subscribedTree = GetTree();
+		_subscribedTree.NodeAdded += OnTreeNodeAdded;
+		_subscribedTree.NodeRemoved += OnTreeNodeRemoved;
+		RebuildInteractionBindings();
+		RefreshTargetState();
+	}
+
+	public override void _ExitTree()
+	{
+		SetProcess(false);
+		Callable visibilityChanged = Callable.From(OnFrameVisibilityChanged);
+		if (IsConnected(CanvasItem.SignalName.VisibilityChanged, visibilityChanged))
 		{
-			CollectInteractiveDescendants(this);
+			Disconnect(CanvasItem.SignalName.VisibilityChanged, visibilityChanged);
 		}
-		SetProcess(true);
+		if (_subscribedTree != null && GodotObject.IsInstanceValid(_subscribedTree))
+		{
+			Callable nodeAdded = Callable.From<Node>(OnTreeNodeAdded);
+			Callable nodeRemoved = Callable.From<Node>(OnTreeNodeRemoved);
+			if (_subscribedTree.IsConnected(SceneTree.SignalName.NodeAdded, nodeAdded))
+			{
+				_subscribedTree.Disconnect(SceneTree.SignalName.NodeAdded, nodeAdded);
+			}
+			if (_subscribedTree.IsConnected(SceneTree.SignalName.NodeRemoved, nodeRemoved))
+			{
+				_subscribedTree.Disconnect(SceneTree.SignalName.NodeRemoved, nodeRemoved);
+			}
+		}
+		_subscribedTree = null;
+		ClearInteractionBindings();
+		_interactionBindingsReady = false;
 	}
 
 	private Button? FindDirectButtonChild()
@@ -123,78 +198,275 @@ public partial class OceanMenuButtonFrame : Control
 
 	public override void _Process(double delta)
 	{
+		_processCallCount++;
 		if (!IsVisibleInTree())
 		{
+			SetProcess(false);
 			return;
 		}
 
-		float target = Selected ? 0.56f : 0.0f;
-		if (_button != null)
-		{
-			Rect2 buttonRect = _button.GetGlobalRect();
-			bool hovered = buttonRect.HasPoint(GetGlobalMousePosition());
-			target = Mathf.Max(target, hovered ? 1.0f : 0.0f);
-			target = Mathf.Max(target, HighlightFocus && _button.HasFocus() ? 1.0f : 0.0f);
-			if (_button.ButtonPressed)
-			{
-				target = 0.62f;
-			}
-		}
-		else
-		{
-			target = Mathf.Max(target, EvaluateDescendantInteraction());
-		}
-
-		float nextGlow = !ShowIdleTexture && target <= GlowEpsilon
-			? 0.0f
-			: Mathf.Lerp(_glow, target, Mathf.Clamp((float)delta * 10.0f, 0.0f, 1.0f));
+		float nextGlow = Mathf.MoveToward(_glow, _targetGlow, Math.Max(0.001f, (float)delta * 4.0f));
 		bool glowChanged = Mathf.Abs(nextGlow - _glow) > GlowEpsilon;
 		_glow = nextGlow;
 		if (glowChanged)
 		{
 			QueueRedraw();
 		}
+		if (Mathf.Abs(_glow - _targetGlow) <= GlowEpsilon)
+		{
+			_glow = _targetGlow;
+			SetProcess(false);
+		}
 	}
 
-	private void CollectInteractiveDescendants(Node node)
+	private void RebuildInteractionBindings()
+	{
+		_rebuildBindingsDeferred = false;
+		ClearInteractionBindings();
+		_button = GetNodeOrNull<Button>("Button") ?? FindDirectButtonChild();
+		BindInteractiveDescendants(this);
+		_interactionBindingsReady = true;
+		RefreshTargetState();
+	}
+
+	private void BindInteractiveDescendants(Node node)
 	{
 		for (int index = 0; index < node.GetChildCount(); index++)
 		{
 			Node child = node.GetChild(index);
-			if (child is Control control && control != this
-				&& (control is BaseButton || control is Godot.Range || control is LineEdit))
+			if (child is Control control && IsInteractiveControl(control))
 			{
-				_interactiveDescendants.Add(control);
+				BindInteractiveControl(control);
 			}
-
-			CollectInteractiveDescendants(child);
+			BindInteractiveDescendants(child);
 		}
 	}
 
-	private float EvaluateDescendantInteraction()
+	private static bool IsInteractiveControl(Control control)
 	{
-		Vector2 mousePosition = GetGlobalMousePosition();
-		bool hovered = false;
-		bool focused = false;
-		bool pressed = false;
-		foreach (Control control in _interactiveDescendants)
-		{
-			if (!GodotObject.IsInstanceValid(control) || !control.IsVisibleInTree())
-			{
-				continue;
-			}
+		return control is BaseButton or Godot.Range or LineEdit;
+	}
 
-			hovered |= control.GetGlobalRect().HasPoint(mousePosition);
-			focused |= HighlightFocus && control.HasFocus();
-			pressed |= control is BaseButton { ButtonPressed: true };
+	private void BindInteractiveControl(Control control)
+	{
+		if (_interactionBindings.ContainsKey(control))
+		{
+			return;
 		}
 
-		return pressed ? 0.62f : hovered || focused ? 1.0f : 0.0f;
+		var binding = new InteractionBinding(control);
+		binding.MouseEntered = () => SetControlState(_hoveredControls, control, true);
+		binding.MouseExited = () => SetControlState(_hoveredControls, control, false);
+		binding.FocusEntered = () => SetControlState(_focusedControls, control, true);
+		binding.FocusExited = () => SetControlState(_focusedControls, control, false);
+		binding.VisibilityChanged = RefreshTargetState;
+		binding.TreeExiting = () => OnInteractiveControlExiting(control);
+		control.MouseEntered += binding.MouseEntered;
+		control.MouseExited += binding.MouseExited;
+		control.FocusEntered += binding.FocusEntered;
+		control.FocusExited += binding.FocusExited;
+		control.VisibilityChanged += binding.VisibilityChanged;
+		control.TreeExiting += binding.TreeExiting;
+
+		if (control is BaseButton button)
+		{
+			binding.ButtonDown = () => SetControlState(_pressedControls, control, true);
+			binding.ButtonUp = () => SetControlState(_pressedControls, control, button.ToggleMode && button.ButtonPressed);
+			binding.Toggled = toggled => SetControlState(_pressedControls, control, toggled);
+			button.ButtonDown += binding.ButtonDown;
+			button.ButtonUp += binding.ButtonUp;
+			button.Toggled += binding.Toggled;
+			if (button.ButtonPressed)
+			{
+				_pressedControls.Add(control);
+			}
+		}
+		if (control.HasFocus())
+		{
+			_focusedControls.Add(control);
+		}
+		_interactionBindings.Add(control, binding);
+	}
+
+	private void UnbindInteractiveControl(Control control, InteractionBinding binding)
+	{
+		if (GodotObject.IsInstanceValid(control))
+		{
+			control.MouseEntered -= binding.MouseEntered;
+			control.MouseExited -= binding.MouseExited;
+			control.FocusEntered -= binding.FocusEntered;
+			control.FocusExited -= binding.FocusExited;
+			control.VisibilityChanged -= binding.VisibilityChanged;
+			control.TreeExiting -= binding.TreeExiting;
+			if (control is BaseButton button)
+			{
+				if (binding.ButtonDown != null)
+				{
+					button.ButtonDown -= binding.ButtonDown;
+				}
+				if (binding.ButtonUp != null)
+				{
+					button.ButtonUp -= binding.ButtonUp;
+				}
+				if (binding.Toggled != null)
+				{
+					button.Toggled -= binding.Toggled;
+				}
+			}
+		}
+		_hoveredControls.Remove(control);
+		_focusedControls.Remove(control);
+		_pressedControls.Remove(control);
+	}
+
+	private void ClearInteractionBindings()
+	{
+		foreach (KeyValuePair<Control, InteractionBinding> pair in _interactionBindings)
+		{
+			UnbindInteractiveControl(pair.Key, pair.Value);
+		}
+		_interactionBindings.Clear();
+		_hoveredControls.Clear();
+		_focusedControls.Clear();
+		_pressedControls.Clear();
+	}
+
+	private void OnInteractiveControlExiting(Control control)
+	{
+		if (_interactionBindings.Remove(control, out InteractionBinding? binding))
+		{
+			UnbindInteractiveControl(control, binding);
+		}
+		RefreshTargetState();
+	}
+
+	private void SetControlState(HashSet<Control> stateSet, Control control, bool enabled)
+	{
+		if (enabled)
+		{
+			stateSet.Add(control);
+		}
+		else
+		{
+			stateSet.Remove(control);
+		}
+		RefreshTargetState();
+	}
+
+	private void OnFrameVisibilityChanged()
+	{
+		RefreshTargetState();
+	}
+
+	private void OnTreeNodeAdded(Node node)
+	{
+		if (node != this && IsAncestorOf(node))
+		{
+			QueueInteractionBindingsRebuild();
+		}
+	}
+
+	private void OnTreeNodeRemoved(Node node)
+	{
+		if (node is Control control && _interactionBindings.ContainsKey(control))
+		{
+			OnInteractiveControlExiting(control);
+			QueueInteractionBindingsRebuild();
+		}
+	}
+
+	private void QueueInteractionBindingsRebuild()
+	{
+		if (_rebuildBindingsDeferred || !IsInsideTree())
+		{
+			return;
+		}
+		_rebuildBindingsDeferred = true;
+		CallDeferred(nameof(RebuildInteractionBindings));
+	}
+
+	private void RefreshTargetState()
+	{
+		if (!_interactionBindingsReady)
+		{
+			return;
+		}
+
+		float target = Selected ? 0.56f : 0.0f;
+		if (HasVisibleControl(_hoveredControls)
+			|| (HighlightFocus && HasVisibleControl(_focusedControls)))
+		{
+			target = 1.0f;
+		}
+		if (HasVisibleControl(_pressedControls))
+		{
+			target = 0.62f;
+		}
+		if (!ShowIdleTexture && target <= GlowEpsilon)
+		{
+			target = 0.0f;
+		}
+
+		_targetGlow = target;
+		QueueRedraw();
+		if (!IsVisibleInTree())
+		{
+			SetProcess(false);
+			return;
+		}
+		if (Mathf.Abs(_glow - _targetGlow) <= GlowEpsilon)
+		{
+			_glow = _targetGlow;
+			SetProcess(false);
+			return;
+		}
+		SetProcess(true);
+	}
+
+	private static bool HasVisibleControl(HashSet<Control> controls)
+	{
+		foreach (Control control in controls)
+		{
+			if (GodotObject.IsInstanceValid(control) && control.IsVisibleInTree())
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public long DebugGetProcessCallCount()
+	{
+		return _processCallCount;
 	}
 
 	public float DebugGetGlow()
 	{
 		return _glow;
+	}
+
+	public int DebugGetBoundInteractiveControlCount()
+	{
+		return _interactionBindings.Count;
+	}
+
+	private sealed class InteractionBinding
+	{
+		public InteractionBinding(Control control)
+		{
+			Control = control;
+		}
+
+		public Control Control { get; }
+		public Action MouseEntered { get; set; } = null!;
+		public Action MouseExited { get; set; } = null!;
+		public Action FocusEntered { get; set; } = null!;
+		public Action FocusExited { get; set; } = null!;
+		public Action VisibilityChanged { get; set; } = null!;
+		public Action TreeExiting { get; set; } = null!;
+		public Action? ButtonDown { get; set; }
+		public Action? ButtonUp { get; set; }
+		public BaseButton.ToggledEventHandler? Toggled { get; set; }
 	}
 
 	public override void _Draw()
@@ -394,17 +666,7 @@ public partial class OceanMenuButtonFrame : Control
 
 	private bool HasPressedInteractiveDescendant()
 	{
-		foreach (Control control in _interactiveDescendants)
-		{
-			if (GodotObject.IsInstanceValid(control)
-				&& control.IsVisibleInTree()
-				&& control is BaseButton { ButtonPressed: true })
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return HasVisibleControl(_pressedControls);
 	}
 
 	private void DrawTexturedState(Texture2D texture, Rect2 rect)

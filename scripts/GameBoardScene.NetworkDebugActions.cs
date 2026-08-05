@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -24,7 +26,7 @@ public partial class GameBoardScene
 
 	public int DebugGetPlayerScoreValue(int playerIndex)
 	{
-		if (playerIndex < 0 || playerIndex >= _playerScores.Length)
+		if (playerIndex < 0 || playerIndex >= _playerScores.Count)
 		{
 			return -1;
 		}
@@ -239,10 +241,24 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerHands[inactivePlayerIndex].Clear();
-		_playerDecks[inactivePlayerIndex].Clear();
-		_playerItemHands[inactivePlayerIndex].Clear();
-		_tableCards.Clear();
+		MatchReadModel? current = CurrentRuleReadModel;
+		if (current == null || current.Players.Length != player_count)
+		{
+			return false;
+		}
+		ImmutableArray<PlayerStateSnapshot>.Builder players = current.Players.ToBuilder();
+		players[inactivePlayerIndex] = players[inactivePlayerIndex] with
+		{
+			Deck = ImmutableArray<LogicalCardState>.Empty,
+			Hand = ImmutableArray<LogicalCardState>.Empty,
+			ItemHand = ImmutableArray<LogicalItemState>.Empty,
+		};
+		if (!TryInitializeScriptedRuleMatch(
+			players.MoveToImmutable(),
+			ImmutableArray<TableCardState>.Empty))
+		{
+			return false;
+		}
 		InvalidateRenderCaches();
 		RenderPlayerCardPiles();
 		RenderPlayerHands();

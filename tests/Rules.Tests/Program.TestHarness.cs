@@ -5,17 +5,18 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Deckland.Rules;
 
 internal static partial class Program
 {
-	private static CaptureScoringRules.Context DefaultScoringContext => new(
+	private static CaptureScoringContext DefaultScoringContext => new(
 		SuppressSlimeCoatedScore: false,
 		ApplyScoreReductionPerCard: false,
 		ScoreReductionPerCard: 0);
 
 	private static PlayingCard CreatePlayingCard()
 	{
-		return new PlayingCard("hearts", "A", new Godot.Texture2D());
+		return new PlayingCard("hearts", "A");
 	}
 
 	private static GameBoardState CreateCaptureState(PlayingCard card)
@@ -452,7 +453,7 @@ internal static partial class Program
 		throw new DirectoryNotFoundException("Could not locate project.godot.");
 	}
 
-	private static CaptureScoringRules.TableCard TableCard(
+	private static CaptureScoringTableCard TableCard(
 		string rank,
 		int scoreValue,
 		bool isBuriedInSand = false,
@@ -462,8 +463,8 @@ internal static partial class Program
 		int itemOwnerPlayerIndex = -1,
 		string suit = "")
 	{
-		return new CaptureScoringRules.TableCard(
-			new CaptureScoringRules.Card(rank, scoreValue, HasDoubleCollectEffect: false, Suit: suit),
+		return new CaptureScoringTableCard(
+			new CaptureScoringCard(rank, scoreValue, HasDoubleCollectEffect: false, Suit: suit),
 			isBuriedInSand,
 			isSlimeCoated,
 			hasDoubleCollectItemEffect,
@@ -537,12 +538,19 @@ internal static partial class Program
 				requestIndex++)
 			{
 				yield return new CardTriggerRequest(
-					definition,
+					definition.Id,
 					rule,
 					gameEvent,
 					sequenceStart + requestIndex);
 			}
 		}
+	}
+
+	private static AuthorityRuleSession CreateCardTriggerDispatchSession()
+	{
+		return new AuthorityRuleSession(
+			new TestRuleRandomSource(8801),
+			MatchRuleProfile.Empty);
 	}
 
 	private static void Run(string name, Action test)

@@ -49,7 +49,7 @@ public partial class GameBoardScene
 		TextureRect card = _animationPresenter.RentTextureRect(
 			animationRoot,
 			"QuestionCardRewardRejudgeCard",
-			grantedReward.ItemCard.Texture,
+			GetItemCardTexture(grantedReward.ItemCard),
 			startSize,
 			1,
 			CanvasItem.TextureFilterEnum.Nearest);
@@ -118,7 +118,7 @@ public partial class GameBoardScene
 				if (GodotObject.IsInstanceValid(card))
 				{
 					PlayGameSfx(GameSfx.QuestionRewardReveal, -1.0f, 0.98f, 1.03f, 0.08);
-					card.Texture = rerolledItem.Texture;
+					card.Texture = GetItemCardTexture(rerolledItem);
 				}
 			})).SetDelay(QuestionCardTransformSeconds * 0.5f);
 			transformTween.TweenProperty(card, "scale", Vector2.One, QuestionCardTransformSeconds * 0.5f)

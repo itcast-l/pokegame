@@ -494,7 +494,15 @@ public static class SecondaryMenuGlassStyle
 
 		root.Resized += ResizeWindow;
 		viewport.SizeChanged += ResizeWindow;
-		root.TreeExiting += () => viewport.SizeChanged -= ResizeWindow;
+		root.TreeExiting += () =>
+		{
+			Callable resizeWindow = Callable.From(ResizeWindow);
+			if (GodotObject.IsInstanceValid(viewport)
+				&& viewport.IsConnected(Viewport.SignalName.SizeChanged, resizeWindow))
+			{
+				viewport.Disconnect(Viewport.SignalName.SizeChanged, resizeWindow);
+			}
+		};
 		transformRoot.Resized += () => Callable.From(ApplyPanelTransform).CallDeferred();
 		ResizeWindow();
 		Callable.From(ResizeWindow).CallDeferred();

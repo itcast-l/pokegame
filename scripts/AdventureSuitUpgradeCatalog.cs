@@ -29,7 +29,6 @@ public sealed class AdventureSuitUpgradeCatalog
 		Node? pandora = sceneNode.GetNodeOrNull<Node>("/root/Pandora");
 		if (pandora == null || !pandora.Call("is_loaded").AsBool())
 		{
-			AdventureUpgradeRuntimeValues.SetManifest(null);
 			GD.PushWarning("Adventure suit upgrades catalog unavailable because Pandora is not loaded.");
 			return;
 		}
@@ -37,7 +36,6 @@ public sealed class AdventureSuitUpgradeCatalog
 		GodotObject? category = pandora.Call("get_category", CategoryId).AsGodotObject();
 		if (category == null)
 		{
-			AdventureUpgradeRuntimeValues.SetManifest(null);
 			GD.PushWarning($"Missing Pandora category: {CategoryId}");
 			return;
 		}
@@ -147,100 +145,30 @@ public sealed class AdventureSuitUpgradeCatalog
 			return true;
 		}
 
-		var entries = new List<AdventureUpgradeManifestEntry>();
-		var catalogIds = new HashSet<string>(StringComparer.Ordinal);
+		var entries = new List<AdventureUpgradeCatalogEntry>(_all.Count);
 		foreach (AdventureSuitUpgradeDefinition definition in _all)
 		{
-			if (!definition.Enabled)
-			{
-				continue;
-			}
-
-			if (!AdventureUpgradeRuntimeContract.TryGetMetadata(
-				definition.Id,
-				out AdventureUpgradeRuntimeMetadata runtimeMetadata))
-			{
-				GD.PushWarning(
-					$"Enabled adventure suit upgrade '{definition.Id}' has no runtime manifest contract.");
-				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
-				AdventureUpgradeRuntimeValues.SetManifest(null);
-				return false;
-			}
-
-			string effectValueError = string.Empty;
-			string descriptionKeyError = string.Empty;
-			bool effectValuesValid = AdventureUpgradeRuntimeContract.TryValidateEffectValues(
-					definition.Id,
-					definition.EffectValuesRaw,
-					out IReadOnlyDictionary<string, int> effectValues,
-					out effectValueError);
-			bool descriptionKeysValid = AdventureUpgradeRuntimeContract.TryValidateDescriptionValueKeys(
-					definition.Id,
-					definition.DescriptionValueKeysCsv,
-					out IReadOnlyList<string> descriptionValueKeys,
-					out descriptionKeyError);
-			if (!effectValuesValid || !descriptionKeysValid)
-			{
-				GD.PushWarning(
-					$"Enabled adventure suit upgrade '{definition.Id}' has invalid parameter contract: {effectValueError}{descriptionKeyError}");
-				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
-				AdventureUpgradeRuntimeValues.SetManifest(null);
-				return false;
-			}
-
-			catalogIds.Add(definition.Id);
-
-			entries.Add(new AdventureUpgradeManifestEntry(
+			entries.Add(new AdventureUpgradeCatalogEntry(
 				definition.Id,
 				definition.Suit,
 				definition.Rarity,
-				Enabled: true,
-				runtimeMetadata.HasRuntimeHandler,
-				runtimeMetadata.StateScope,
-				runtimeMetadata.StackingMode,
-				runtimeMetadata.TriggerPolicy,
-				runtimeMetadata.MaximumValue,
-				runtimeMetadata.ConflictGroup,
-				runtimeMetadata.Priority,
-				DescriptionKey: definition.DescriptionKey,
-				EffectValues: effectValues,
-				DescriptionValueKeys: descriptionValueKeys));
+				definition.Enabled,
+				definition.DescriptionKey,
+				definition.EffectValuesRaw,
+				definition.DescriptionValueKeysCsv));
 		}
 
-		foreach (string runtimeUpgradeId in AdventureUpgradeRuntimeContract.All.Keys)
+		if (!AdventureUpgradeManifest.TryCreateFromCatalog(
+			entries,
+			out manifest,
+			out string errorMessage))
 		{
-			if (catalogIds.Contains(runtimeUpgradeId))
-			{
-				continue;
-			}
-
-			GD.PushWarning(
-				$"Runtime adventure suit upgrade '{runtimeUpgradeId}' is not present in the enabled Pandora catalog.");
-				manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
-				AdventureUpgradeRuntimeValues.SetManifest(null);
-				return false;
-		}
-
-		try
-		{
-			manifest = new AdventureUpgradeManifest(entries);
-				if (!manifest.IsReady)
-				{
-					AdventureUpgradeRuntimeValues.SetManifest(null);
-					return false;
-			}
-
-			_cachedManifest = manifest;
-			AdventureUpgradeRuntimeValues.SetManifest(manifest);
-			return true;
-		}
-		catch (ArgumentException error)
-		{
-			GD.PushWarning($"Adventure suit upgrade manifest is invalid: {error.Message}");
-			manifest = new AdventureUpgradeManifest(Array.Empty<AdventureUpgradeManifestEntry>());
-			AdventureUpgradeRuntimeValues.SetManifest(null);
+			GD.PushWarning(errorMessage);
 			return false;
 		}
+
+		_cachedManifest = manifest;
+		return true;
 	}
 
 	private static string GetEntityString(GodotObject entity, string propertyName)
@@ -303,7 +231,6 @@ public sealed class AdventureSuitUpgradeCatalog
 		_all.Clear();
 		_byId.Clear();
 		_cachedManifest = null;
-		AdventureUpgradeRuntimeValues.SetManifest(null);
 		GD.PushWarning($"Adventure suit upgrade catalog is invalid: {message}");
 	}
 }

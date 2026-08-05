@@ -56,44 +56,44 @@ public partial class GameBoardScene
 
 	private string GetAdventureTutorialTextKey()
 	{
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BombIntro)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BombIntro)
 		{
 			return "GAME_TUTORIAL_ITEM_INTRO";
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BombCollectReward)
 		{
 			return "GAME_TUTORIAL_ITEM_COLLECT_BOMB";
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BombPlay)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BombPlay)
 		{
 			return "GAME_TUTORIAL_ITEM_PLAY_BOMB";
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BombEnemyTrigger)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BombEnemyTrigger)
 		{
 			return "GAME_TUTORIAL_ITEM_ENEMY_TRIGGER_BOMB";
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BasicIntro)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BasicIntro)
 		{
 			return "GAME_TUTORIAL_BASIC_INTRO";
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchSeven)
 		{
 			return "GAME_TUTORIAL_STEP_MATCH";
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchTwo)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchTwo)
 		{
 			return "GAME_TUTORIAL_STEP_CONTINUE";
 		}
 
 		if (IsAdventureTutorialTourActive())
 		{
-			return AdventureTutorialTourTargets[Mathf.Clamp(_adventureTutorialTourIndex, 0, AdventureTutorialTourTargets.Length - 1)] switch
+			return AdventureTutorialTourTargets[Mathf.Clamp(GetAdventureTutorialTourIndex(), 0, AdventureTutorialTourTargets.Length - 1)] switch
 			{
 				AdventureTutorialTourTarget.Player => "GAME_TUTORIAL_TOUR_PLAYER",
 				AdventureTutorialTourTarget.Enemy => "GAME_TUTORIAL_TOUR_ENEMY",
@@ -137,7 +137,7 @@ public partial class GameBoardScene
 		if (IsAdventureTutorialTourActive())
 		{
 			AdventureTutorialTourTarget target = AdventureTutorialTourTargets[
-				Mathf.Clamp(_adventureTutorialTourIndex, 0, AdventureTutorialTourTargets.Length - 1)];
+				Mathf.Clamp(GetAdventureTutorialTourIndex(), 0, AdventureTutorialTourTargets.Length - 1)];
 			shouldCenterOnTable = target == AdventureTutorialTourTarget.Player
 				|| target == AdventureTutorialTourTarget.Enemy
 				|| target == AdventureTutorialTourTarget.Hand;
@@ -177,7 +177,7 @@ public partial class GameBoardScene
 		}
 
 		AdventureTutorialTourTarget target = AdventureTutorialTourTargets[
-			Mathf.Clamp(_adventureTutorialTourIndex, 0, AdventureTutorialTourTargets.Length - 1)];
+			Mathf.Clamp(GetAdventureTutorialTourIndex(), 0, AdventureTutorialTourTargets.Length - 1)];
 		return target switch
 		{
 			AdventureTutorialTourTarget.Player => new[]
@@ -259,7 +259,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		return AdventureTutorialTourTargets[Mathf.Clamp(_adventureTutorialTourIndex, 0, AdventureTutorialTourTargets.Length - 1)] switch
+		return AdventureTutorialTourTargets[Mathf.Clamp(GetAdventureTutorialTourIndex(), 0, AdventureTutorialTourTargets.Length - 1)] switch
 		{
 			AdventureTutorialTourTarget.Player => TryGetMergedControlGlobalRect("%Player1AvatarArea", "%Player1ScoreMeter", out targetRect),
 			AdventureTutorialTourTarget.Enemy => TryGetMergedControlGlobalRect("%Player2AvatarArea", "%Player2ScoreMeter", out targetRect),

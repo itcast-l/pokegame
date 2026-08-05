@@ -3,8 +3,14 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private sealed record PlayerCardPileVisualBinding(
+		TextureRect[] CardBacks,
+		Label CountLabel);
+
 	private readonly int[] _playerCardPileRenderSignatures = new int[MaxPlayers];
 	private readonly bool[] _playerCardPileRenderSignaturesInitialized = new bool[MaxPlayers];
+	private readonly PlayerCardPileVisualBinding?[] _playerCardPileVisualBindings =
+		new PlayerCardPileVisualBinding?[MaxPlayers];
 
 	private void RenderPlayerCardPiles()
 	{
@@ -30,11 +36,12 @@ public partial class GameBoardScene
 			pile.Visible = playerIndex < player_count;
 			if (!pile.Visible)
 			{
-				SetPlayerCardPileVisualsInactive(pile);
+				SetPlayerCardPileVisualsInactive(playerIndex);
 				continue;
 			}
 
-			EnsurePlayerCardPileVisuals(pile);
+			PlayerCardPileVisualBinding visuals =
+				GetOrCreatePlayerCardPileVisuals(playerIndex, pile);
 
 			int cardCount = GetVisiblePileCardCountForRender(playerIndex, _playerDecks[playerIndex].Count);
 			int visibleCards = Math.Min(cardCount, VisiblePileCards);
@@ -42,11 +49,7 @@ public partial class GameBoardScene
 
 			for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 			{
-				if (pile.GetNodeOrNull<TextureRect>(PileCardNodeNames[cardIndex]) is not TextureRect cardBack)
-				{
-					continue;
-				}
-
+				TextureRect cardBack = visuals.CardBacks[cardIndex];
 				cardBack.Visible = cardIndex < visibleCards;
 				cardBack.Texture = _cardBackTexture;
 				cardBack.Position = GetCardPileCardLocalPosition(visibleCards, cardIndex);
@@ -55,10 +58,7 @@ public partial class GameBoardScene
 				SetAnimatedCardBackPlayback(cardBack, cardBack.Visible);
 			}
 
-			if (pile.GetNodeOrNull<Label>(CardCountLabelNodeName) is Label countLabel)
-			{
-				countLabel.Text = cardCount.ToString();
-			}
+			visuals.CountLabel.Text = cardCount.ToString();
 		}
 
 		EndPerformanceSample("RenderPlayerCardPiles", sampleStart);
@@ -93,16 +93,22 @@ public partial class GameBoardScene
 		_tableRenderSignatureInitialized = false;
 	}
 
-	private void EnsurePlayerCardPileVisuals(Control pile)
+	private PlayerCardPileVisualBinding GetOrCreatePlayerCardPileVisuals(
+		int playerIndex,
+		Control pile)
 	{
+		PlayerCardPileVisualBinding? existing = _playerCardPileVisualBindings[playerIndex];
+		if (existing != null
+			&& GodotObject.IsInstanceValid(existing.CountLabel)
+			&& Array.TrueForAll(existing.CardBacks, GodotObject.IsInstanceValid))
+		{
+			return existing;
+		}
+
+		var cardBacks = new TextureRect[VisiblePileCards];
 		for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
 		{
 			string cardNodeName = PileCardNodeNames[cardIndex];
-			if (pile.GetNodeOrNull<TextureRect>(cardNodeName) != null)
-			{
-				continue;
-			}
-
 			var cardBack = new TextureRect
 			{
 				Name = cardNodeName,
@@ -118,11 +124,7 @@ public partial class GameBoardScene
 			MarkAnimatedCardBack(cardBack);
 			SetAnimatedCardBackPlayback(cardBack, false);
 			pile.AddChild(cardBack);
-		}
-
-		if (pile.GetNodeOrNull<Label>(CardCountLabelNodeName) != null)
-		{
-			return;
+			cardBacks[cardIndex] = cardBack;
 		}
 
 		var countLabel = new Label
@@ -141,25 +143,54 @@ public partial class GameBoardScene
 		countLabel.AddThemeConstantOverride("shadow_offset_x", 1);
 		countLabel.AddThemeConstantOverride("shadow_offset_y", 1);
 		pile.AddChild(countLabel);
+
+		var binding = new PlayerCardPileVisualBinding(cardBacks, countLabel);
+		_playerCardPileVisualBindings[playerIndex] = binding;
+		return binding;
 	}
 
-	private void SetPlayerCardPileVisualsInactive(Control pile)
+	private void SetPlayerCardPileVisualsInactive(int playerIndex)
 	{
-		for (int cardIndex = 0; cardIndex < VisiblePileCards; cardIndex++)
+		PlayerCardPileVisualBinding? visuals = GetPlayerCardPileVisuals(playerIndex);
+		if (visuals == null)
 		{
-			if (pile.GetNodeOrNull<TextureRect>(PileCardNodeNames[cardIndex]) is not TextureRect cardBack)
-			{
-				continue;
-			}
+			return;
+		}
 
+		foreach (TextureRect cardBack in visuals.CardBacks)
+		{
 			cardBack.Visible = false;
 			SetAnimatedCardBackPlayback(cardBack, false);
 		}
+		visuals.CountLabel.Visible = false;
+	}
 
-		if (pile.GetNodeOrNull<Label>(CardCountLabelNodeName) is Label countLabel)
+	private PlayerCardPileVisualBinding? GetPlayerCardPileVisuals(int playerIndex)
+	{
+		if (playerIndex < 0 || playerIndex >= _playerCardPileVisualBindings.Length)
 		{
-			countLabel.Visible = false;
+			return null;
 		}
+
+		PlayerCardPileVisualBinding? visuals = _playerCardPileVisualBindings[playerIndex];
+		return visuals != null
+			&& GodotObject.IsInstanceValid(visuals.CountLabel)
+			&& Array.TrueForAll(visuals.CardBacks, GodotObject.IsInstanceValid)
+			? visuals
+			: null;
+	}
+
+	private TextureRect? GetPlayerCardPileBack(int playerIndex, int cardIndex)
+	{
+		PlayerCardPileVisualBinding? visuals = GetPlayerCardPileVisuals(playerIndex);
+		return visuals != null && cardIndex >= 0 && cardIndex < visuals.CardBacks.Length
+			? visuals.CardBacks[cardIndex]
+			: null;
+	}
+
+	private Label? GetPlayerCardPileCountLabel(int playerIndex)
+	{
+		return GetPlayerCardPileVisuals(playerIndex)?.CountLabel;
 	}
 
 	private static void RemoveAndQueueFreeChild(Node parent, Node child)

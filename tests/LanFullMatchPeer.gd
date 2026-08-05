@@ -53,6 +53,7 @@ var _paused_maintenance_apply_pending := false
 var _paused_maintenance_release_pending := false
 var _paused_maintenance_checkpoint_requested := false
 var _paused_maintenance_plan_ready_logged := false
+var _paused_maintenance_opening_deal_seen := false
 
 
 func _initialize() -> void:
@@ -260,15 +261,17 @@ func _apply_paused_maintenance_after_opening_deal() -> void:
 	if not _paused_maintenance_apply_pending:
 		return
 	var board: Node = current_scene
-	if board == null or String(board.call("DebugGetGameLoopPhaseName")) == "OpeningDeal":
+	if board == null:
+		return
+	var phase := String(board.call("DebugGetGameLoopPhaseName"))
+	if phase == "OpeningDeal":
+		_paused_maintenance_opening_deal_seen = true
+		return
+	if not _paused_maintenance_opening_deal_seen:
 		return
 	var client_ready_path := "%s/paused_client.ready" % _result_dir
 	if _role == "host" and not FileAccess.file_exists(client_ready_path):
 		return
-
-	_paused_maintenance_apply_pending = false
-	paused = true
-	print("PAUSED_MAINTENANCE_APPLIED role=%s" % _role)
 	if _role == "client":
 		var ready_file := FileAccess.open(client_ready_path, FileAccess.WRITE)
 		if ready_file == null:
@@ -276,9 +279,13 @@ func _apply_paused_maintenance_after_opening_deal() -> void:
 			return
 		ready_file.store_string("ready\n")
 		ready_file.close()
-	else:
+
+	_paused_maintenance_apply_pending = false
+	paused = true
+	print("PAUSED_MAINTENANCE_APPLIED role=%s" % _role)
+	if _role == "host":
 		var snapshot_id := int(board.call("DebugGetNetworkSnapshotId")) + 1
-		_network.call("SendBoardSnapshotsFromHost", board, snapshot_id)
+		_network.call("SendBoardSnapshotsFromHost", snapshot_id)
 		_paused_maintenance_checkpoint_requested = true
 		print("PAUSED_MAINTENANCE_CHECKPOINT_REQUESTED snapshot=%d" % snapshot_id)
 
@@ -436,6 +443,8 @@ func _on_board_initialize(_payload: Dictionary) -> void:
 		print("FULL_MATCH_CLIENT_LOCAL_SEAT %d" % local_seat)
 	if _paused_maintenance:
 		_paused_maintenance_apply_pending = true
+		if _role == "host":
+			_paused_maintenance_opening_deal_seen = true
 
 
 func _on_error(message: String) -> void:

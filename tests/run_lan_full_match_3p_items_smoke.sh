@@ -7,13 +7,32 @@ source "$ROOT_DIR/tests/lan_full_match_assertions.sh"
 DEFAULT_GODOT_BIN="/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/MacOS/Godot"
 if [[ -n "${GODOT_BIN:-}" ]]; then GODOT_CMD="$GODOT_BIN"; elif command -v Godot >/dev/null 2>&1; then GODOT_CMD="$(command -v Godot)"; elif [[ -x "$DEFAULT_GODOT_BIN" ]]; then GODOT_CMD="$DEFAULT_GODOT_BIN"; else echo "Missing Godot binary. Set GODOT_BIN." >&2; exit 1; fi
 
+GODOT_EXECUTABLE="$GODOT_CMD"
+codex_run_muted_godot() { exec "$GODOT_EXECUTABLE" --audio-driver Dummy "$@"; }
+GODOT_CMD=codex_run_muted_godot
+export DECKLAND_TEST_MUTE_AUDIO=1
+
 TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
 RESULT_DIR="$TMP_DIR/results"
 mkdir -p "$RESULT_DIR"
 PIDS=()
 LOGS=()
-cleanup() { for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done; rm -rf "$TMP_DIR"; }
+cleanup() {
+	local status=$?
+	trap - EXIT
+	for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done
+	if (( status != 0 )); then
+		echo "LAN full-match 3p smoke assertion failed" >&2
+		for log in "${LOGS[@]:-}"; do cat "$log" >&2 || true; done
+	fi
+	if [[ "${KEEP_LAN_FULL_MATCH_TMP:-0}" == "1" ]]; then
+		echo "LAN full-match logs kept at $TMP_DIR" >&2
+	else
+		rm -rf "$TMP_DIR"
+	fi
+	exit "$status"
+}
 trap cleanup EXIT
 
 CODEX_LAN_MATCH_SEED=20260714 "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanFullMatchPeer.gd -- --role=host --seat=0 --players=3 --item-mode=1 --result-dir="$RESULT_DIR" >"$TMP_DIR/host.log" 2>&1 & PIDS+=("$!"); LOGS+=("$TMP_DIR/host.log")

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -35,7 +36,7 @@ public partial class GameBoardScene
 
 	private async Task<PlayCardResult> ResolveAttachModifierEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{
-		string itemCardId = request.Definition.Id;
+		string itemCardId = request.DefinitionId;
 		int playerIndex = request.Event.ActorPlayerIndex;
 		if (!PlayerHasAttachableMagnetCard(playerIndex, itemCardId))
 		{
@@ -67,8 +68,9 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		Vector2 splitGlobalCenter = request.Event.OriginGlobalCenter
-			?? (_networkAuthorityRuleTransactionActive
+		Vector2 splitGlobalCenter = request.Event.OriginGlobalCenter is { } origin
+			? new Vector2(origin.X, origin.Y)
+			: (_networkAuthorityRuleTransactionActive
 				? GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero) + CardVisualSize / 2.0f
 				: GetLensRevealFallbackGlobalCenter(ownerPlayerIndex));
 		await RevealLensTargetCardsAsync(targetIndexes, splitGlobalCenter, turnSequenceGeneration);
@@ -85,13 +87,20 @@ public partial class GameBoardScene
 	private async Task<PlayCardResult> ResolveShuffleTableEffectAsync(CardTriggerRequest request, int turnSequenceGeneration)
 	{
 		List<TableCard> shuffledTableCards = BuildShuffledTableCards();
-		bool shuffleCompleted = await PlayTableCardsShuffleAnimationAsync(shuffledTableCards, turnSequenceGeneration);
-		if (!shuffleCompleted || turnSequenceGeneration != _turnSequenceGeneration)
+		if (shuffledTableCards.Count != _tableCards.Count)
 		{
 			return new PlayCardResult(false, false);
 		}
 
-		ApplyShuffledTableCards(shuffledTableCards);
+		bool animationCompleted = await PlayTableCardsShuffleAnimationAsync(
+			shuffledTableCards,
+			turnSequenceGeneration);
+		if (!animationCompleted
+			|| turnSequenceGeneration != _turnSequenceGeneration
+			|| !ApplyShuffledTableCards(shuffledTableCards))
+		{
+			return new PlayCardResult(false, false);
+		}
 		RenderTableCards();
 		CheckForWinner();
 		return new PlayCardResult(true, false, CompletesTurn: false);
@@ -120,18 +129,21 @@ public partial class GameBoardScene
 				captureTableReferenceSnapshot,
 			expectedTableCardReferences:
 				captureTableReferenceSnapshot,
-			actionSource: $"effect_collect_table:{request.Definition.Id}",
+			actionSource: $"effect_collect_table:{request.DefinitionId}",
 			matchSource: AdventureCaptureMatchSource.CollectAll);
 	if (captureResult.Aborted)
 	{
 		return new PlayCardResult(false, false);
 	}
 
-	if (captureResult.Applied && !IsGameOver())
-	{
-		Shuffle(_playerDecks[ownerPlayerIndex]);
-		Cut(_playerDecks[ownerPlayerIndex]);
-	}
+		if (captureResult.Applied && !IsGameOver())
+		{
+			TrySubmitShuffleDeckRuleCommand(
+				ownerPlayerIndex,
+				ownerPlayerIndex,
+				cutAfterShuffle: true,
+				turnSequenceGeneration);
+		}
 
 	return new PlayCardResult(
 		true,

@@ -1,8 +1,10 @@
+using Deckland.Rules;
+
 public partial class GameBoardScene
 {
 	private GameLoopPhase GetGameLoopPhase()
 	{
-		return _turnStateMachine.GetPhase(BuildGameLoopPhaseState());
+		return MatchReadModel.GetGameLoopPhase(BuildGameLoopPhaseState());
 	}
 
 	private GameLoopPhaseState BuildGameLoopPhaseState()
@@ -19,14 +21,22 @@ public partial class GameBoardScene
 
 	private TurnContext GetCurrentTurnContext()
 	{
-		return _turnStateMachine.CurrentContext;
+		return new TurnContext(_turnSequenceGeneration);
 	}
 
 	private int AdvanceTurnSequenceGeneration()
 	{
-		_turnSequenceGeneration = _turnStateMachine.AdvanceGeneration();
-		_networkAiBlockedItem = NetworkAiBlockedItemState.None;
-		return _turnSequenceGeneration;
+		int generation = _turnSequenceGeneration;
+		if (TrySubmitAdvanceTurnGenerationRuleCommand(out RuleCommandResult result))
+		{
+			generation = result.TurnGeneration;
+		}
+		else if (_replicaRuleSession != null)
+		{
+			generation = checked(_turnSequenceGeneration + 1);
+			_replicaTurnSequenceGenerationOverride = generation;
+		}
+		return generation;
 	}
 
 	private bool IsCurrentTurnContext(TurnContext context)

@@ -18,8 +18,10 @@ public partial class GameBoardScene
 		AdventureTutorialTourTarget.Table,
 	};
 
-	private AdventureTutorialPhase _adventureTutorialPhase = AdventureTutorialPhase.None;
-	private int _adventureTutorialTourIndex;
+	private AdventureTutorialPhase GetAdventureTutorialPhase() =>
+		(AdventureTutorialPhase)CurrentMatchFlowState.ScriptedSequenceStep;
+	private int GetAdventureTutorialTourIndex() =>
+		CurrentMatchFlowState.ScriptedTourIndex;
 	private int _adventureTutorialCalloutGeneration;
 	private bool _canAdvanceTutorialCallout;
 	private AdventureTutorialOverlay? _adventureTutorialOverlay;
@@ -67,23 +69,23 @@ public partial class GameBoardScene
 	private bool IsBasicCaptureTutorialCardStepActive()
 	{
 		return IsAdventureTutorialEnabled()
-			&& (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven
-				|| _adventureTutorialPhase == AdventureTutorialPhase.MatchTwo);
+			&& (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchSeven
+				|| GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchTwo);
 	}
 
 	private bool IsAdventureTutorialTourActive()
 	{
-		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.Tour;
+		return IsAdventureTutorialEnabled() && GetAdventureTutorialPhase() == AdventureTutorialPhase.Tour;
 	}
 
 	private bool IsAdventureTutorialBasicIntroActive()
 	{
-		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BasicIntro;
+		return IsAdventureTutorialEnabled() && GetAdventureTutorialPhase() == AdventureTutorialPhase.BasicIntro;
 	}
 
 	private bool IsAdventureTutorialBombIntroActive()
 	{
-		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BombIntro;
+		return IsAdventureTutorialEnabled() && GetAdventureTutorialPhase() == AdventureTutorialPhase.BombIntro;
 	}
 
 	private bool IsAdventureTutorialContinueCalloutActive()
@@ -107,19 +109,19 @@ public partial class GameBoardScene
 	private bool IsAdventureTutorialCardStepActive()
 	{
 		return IsAdventureTutorialEnabled()
-			&& (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven
-				|| _adventureTutorialPhase == AdventureTutorialPhase.MatchTwo
-				|| _adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward);
+			&& (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchSeven
+				|| GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchTwo
+				|| GetAdventureTutorialPhase() == AdventureTutorialPhase.BombCollectReward);
 	}
 
 	private bool IsAdventureTutorialItemStepActive()
 	{
-		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BombPlay;
+		return IsAdventureTutorialEnabled() && GetAdventureTutorialPhase() == AdventureTutorialPhase.BombPlay;
 	}
 
 	private bool IsAdventureTutorialEnemyStepActive()
 	{
-		return IsAdventureTutorialEnabled() && _adventureTutorialPhase == AdventureTutorialPhase.BombEnemyTrigger;
+		return IsAdventureTutorialEnabled() && GetAdventureTutorialPhase() == AdventureTutorialPhase.BombEnemyTrigger;
 	}
 
 	private bool IsAdventureTutorialPlayerActionStepActive()
@@ -136,8 +138,11 @@ public partial class GameBoardScene
 
 	private void ResetAdventureTutorialState()
 	{
-		_adventureTutorialPhase = AdventureTutorialPhase.None;
-		_adventureTutorialTourIndex = 0;
+		TryUpdateMatchFlowState(state => state with
+		{
+			ScriptedSequenceStep = (int)AdventureTutorialPhase.None,
+			ScriptedTourIndex = 0,
+		});
 		_canAdvanceTutorialCallout = false;
 		_adventureTutorialCalloutGeneration++;
 

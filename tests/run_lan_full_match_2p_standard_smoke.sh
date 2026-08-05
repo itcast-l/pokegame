@@ -17,6 +17,13 @@ else
 	exit 1
 fi
 
+GODOT_EXECUTABLE="$GODOT_CMD"
+codex_run_muted_godot() {
+	exec "$GODOT_EXECUTABLE" --audio-driver Dummy "$@"
+}
+GODOT_CMD=codex_run_muted_godot
+export DECKLAND_TEST_MUTE_AUDIO=1
+
 TMP_DIR="$(mktemp -d)"
 codex_setup_godot_test_home "$TMP_DIR"
 RESULT_DIR="$TMP_DIR/results"
@@ -27,9 +34,21 @@ HOST_PID=""
 CLIENT_PID=""
 
 cleanup() {
+	local status=$?
+	trap - EXIT
 	if [[ -n "$CLIENT_PID" ]] && kill -0 "$CLIENT_PID" 2>/dev/null; then kill "$CLIENT_PID" 2>/dev/null || true; fi
 	if [[ -n "$HOST_PID" ]] && kill -0 "$HOST_PID" 2>/dev/null; then kill "$HOST_PID" 2>/dev/null || true; fi
-	rm -rf "$TMP_DIR"
+	if (( status != 0 )); then
+		echo "LAN full-match 2p smoke assertion failed" >&2
+		cat "$HOST_LOG" >&2 || true
+		cat "$CLIENT_LOG" >&2 || true
+	fi
+	if [[ "${KEEP_LAN_FULL_MATCH_TMP:-0}" == "1" ]]; then
+		echo "LAN full-match logs kept at $TMP_DIR" >&2
+	else
+		rm -rf "$TMP_DIR"
+	fi
+	exit "$status"
 }
 trap cleanup EXIT
 

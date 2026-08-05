@@ -219,11 +219,12 @@ public partial class GameBoardScene
 			{
 				ShowAllOpeningHandCards();
 				ShowAllOpeningPileCards();
-				_isOpeningDealAnimationPlaying = false;
-				RenderPlayerCardPiles();
-				RenderPlayerHands();
-				QueueAdventureRunStartUpgradeIfNeeded();
-				shouldResolveRunStartUpgrade = _pendingAdventureUpgradeTriggers.Count > 0;
+					_isOpeningDealAnimationPlaying = false;
+					RenderPlayerCardPiles();
+					RenderPlayerHands();
+					TryCompleteOpeningRulePresentationBarrier(turnSequenceGeneration);
+					QueueAdventureRunStartUpgradeIfNeeded();
+				shouldResolveRunStartUpgrade = PendingAdventureUpgradeTriggerCount > 0;
 			}
 		}
 

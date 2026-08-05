@@ -170,6 +170,8 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 				NetworkSessionState.LoadingScene => "NETWORK_STATE_LOADING_SCENE",
 				NetworkSessionState.InGame => "NETWORK_STATE_IN_GAME",
 				NetworkSessionState.Reconnecting => "NETWORK_STATE_RECONNECTING",
+				NetworkSessionState.MigratingHost => "NETWORK_STATE_MIGRATING_HOST",
+				NetworkSessionState.Leaving => "NETWORK_STATE_LEAVING",
 				NetworkSessionState.Failed => "NETWORK_STATE_FAILED",
 				_ => "NETWORK_STATE_IDLE",
 			};

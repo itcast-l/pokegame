@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -34,7 +35,7 @@ public partial class GameBoardScene
 		AddChild(overlay);
 		PlayGameSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.08);
 		overlay.Configure(
-			rewardItem.Texture,
+			GetItemCardTexture(rewardItem),
 			GetAdventureQuestionRewardEffectText(rewardItem),
 			GetAdventureQuestionRejudgePromptText(),
 			GetAdventureQuestionRejudgeKeepText(),
@@ -111,16 +112,15 @@ public partial class GameBoardScene
 			|| rewardAnimation.Value.RejudgeResolvedForReward
 			|| playerIndex != MainPlayerIndex
 			|| !ShouldUseAdventureUpgradeSystem()
-			|| _adventureQuestionRejudgeUsedThisBattle)
+			|| CurrentMatchFlowState.QuestionRejudgeUsedThisBattle)
 		{
 			return;
 		}
 
-		AdventureUpgradeRunState? runState = GetAdventureUpgradeRunState();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true
-			|| !AdventureUpgradeEffectService.ShouldOfferQuestionRewardRejudge(
-				runState.GetAcquiredUpgradeIds(),
-				_adventureQuestionRejudgeUsedThisBattle)
+			|| !runState.ShouldOfferQuestionRewardRejudge(
+				CurrentMatchFlowState.QuestionRejudgeUsedThisBattle)
 			|| ShouldAutoResolveAdventureQuestionRejudge())
 		{
 			return;
@@ -136,15 +136,14 @@ public partial class GameBoardScene
 		}
 
 		AdventureQuestionRejudgeRuleResult rejudgeResult =
-			AdventureUpgradeEffectService.ResolveQuestionRewardRejudgeChoice(
-				runState.GetAcquiredUpgradeIds(),
-				_adventureQuestionRejudgeUsedThisBattle,
+			runState.ResolveQuestionRewardRejudgeChoice(
+				CurrentMatchFlowState.QuestionRejudgeUsedThisBattle,
 				promptResult.Choice == AdventureQuestionRejudgeChoice.Reroll
 					? AdventureQuestionRejudgeRuleChoice.Reroll
 					: AdventureQuestionRejudgeRuleChoice.Keep);
 		if (rejudgeResult.ConsumesOpportunity)
 		{
-			_adventureQuestionRejudgeUsedThisBattle = true;
+			MarkAdventureQuestionRejudgeUsed();
 		}
 		if (!rejudgeResult.ShouldReroll || sourceOverlay == null)
 		{
@@ -275,12 +274,21 @@ public partial class GameBoardScene
 				return TryReplacePendingAttachmentReward(playerIndex, grantedReward.ItemCard.Id, replacementPlan.RerolledItemCardId);
 			}
 
-			if (!TryRemovePendingAttachmentReward(playerIndex, grantedReward.ItemCard.Id))
+			if (!HasPendingAttachmentReward(playerIndex, grantedReward.ItemCard.Id)
+				|| !TrySubmitGrantItemToHandRuleCommand(
+					playerIndex,
+					replacementPlan.RerolledItemCardId,
+					MaxTotalHandCards,
+					-1,
+					0,
+					string.Empty,
+					_turnSequenceGeneration,
+					out _)
+				|| !TryRemovePendingAttachmentReward(playerIndex, grantedReward.ItemCard.Id))
 			{
 				return false;
 			}
 
-			_playerItemHands[playerIndex].Add(rerolledItemCard.Value);
 			return true;
 		}
 
@@ -292,21 +300,40 @@ public partial class GameBoardScene
 
 		if (!replacementPlan.RerolledRequiresAttachment)
 		{
-			_playerItemHands[playerIndex][grantedReward.ItemHandIndex] = rerolledItemCard.Value;
-			return true;
+			return TrySubmitReplaceItemInHandRuleCommand(
+				playerIndex,
+				grantedReward.ItemHandIndex,
+				grantedReward.ItemCard.Id,
+				replacementPlan.RerolledItemCardId,
+				_turnSequenceGeneration,
+				out _);
 		}
 
-		_playerItemHands[playerIndex].RemoveAt(grantedReward.ItemHandIndex);
-		_pendingItemAttachmentRewards.Enqueue(new PendingItemAttachmentReward(playerIndex, replacementPlan.RerolledItemCardId));
-		return true;
+		int displayIndex = _playerHands[playerIndex].Count + grantedReward.ItemHandIndex;
+		if (!TrySubmitDiscardHandCardRuleCommand(
+			playerIndex,
+			displayIndex,
+			0,
+			grantedReward.ItemCard.Id,
+			_turnSequenceGeneration,
+			out _))
+		{
+			return false;
+		}
+
+		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
+		return TrySubmitEnqueuePendingAttachmentRewardRuleCommand(
+			playerIndex,
+			replacementPlan.RerolledItemCardId,
+			_turnSequenceGeneration);
 	}
 
 	private bool HasPendingAttachmentReward(int playerIndex, string itemCardId)
 	{
-		foreach (PendingItemAttachmentReward reward in _pendingItemAttachmentRewards)
+		foreach (PendingAttachmentRewardState reward in GetPendingAttachmentRewards())
 		{
-			if (reward.PlayerIndex == playerIndex
-				&& string.Equals(reward.ItemCardId, itemCardId, StringComparison.Ordinal))
+			if (reward.Seat == playerIndex
+				&& string.Equals(reward.ItemId, itemCardId, StringComparison.Ordinal))
 			{
 				return true;
 			}
@@ -317,62 +344,19 @@ public partial class GameBoardScene
 
 	private bool TryRemovePendingAttachmentReward(int playerIndex, string itemCardId)
 	{
-		PendingItemAttachmentReward[] queuedRewards = _pendingItemAttachmentRewards.ToArray();
-		int removeIndex = -1;
-		for (int index = queuedRewards.Length - 1; index >= 0; index--)
-		{
-			if (queuedRewards[index].PlayerIndex == playerIndex
-				&& string.Equals(queuedRewards[index].ItemCardId, itemCardId, StringComparison.Ordinal))
-			{
-				removeIndex = index;
-				break;
-			}
-		}
-
-		if (removeIndex < 0)
-		{
-			return false;
-		}
-
-		_pendingItemAttachmentRewards.Clear();
-		for (int index = 0; index < queuedRewards.Length; index++)
-		{
-			if (index != removeIndex)
-			{
-				_pendingItemAttachmentRewards.Enqueue(queuedRewards[index]);
-			}
-		}
-
-		return true;
+		return TrySubmitRemovePendingAttachmentRewardRuleCommand(
+			playerIndex,
+			itemCardId,
+			_turnSequenceGeneration);
 	}
 
 	private bool TryReplacePendingAttachmentReward(int playerIndex, string originalItemCardId, string rerolledItemCardId)
 	{
-		PendingItemAttachmentReward[] queuedRewards = _pendingItemAttachmentRewards.ToArray();
-		int replaceIndex = -1;
-		for (int index = queuedRewards.Length - 1; index >= 0; index--)
-		{
-			if (queuedRewards[index].PlayerIndex == playerIndex
-				&& string.Equals(queuedRewards[index].ItemCardId, originalItemCardId, StringComparison.Ordinal))
-			{
-				replaceIndex = index;
-				break;
-			}
-		}
-
-		if (replaceIndex < 0)
-		{
-			return false;
-		}
-
-		queuedRewards[replaceIndex] = new PendingItemAttachmentReward(playerIndex, rerolledItemCardId);
-		_pendingItemAttachmentRewards.Clear();
-		foreach (PendingItemAttachmentReward reward in queuedRewards)
-		{
-			_pendingItemAttachmentRewards.Enqueue(reward);
-		}
-
-		return true;
+		return TrySubmitReplacePendingAttachmentRewardRuleCommand(
+			playerIndex,
+			originalItemCardId,
+			rerolledItemCardId,
+			_turnSequenceGeneration);
 	}
 
 	private string GetAdventureQuestionRejudgePromptText()

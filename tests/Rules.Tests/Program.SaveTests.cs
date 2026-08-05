@@ -5,6 +5,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Deckland.Rules;
 
 internal static partial class Program
 {
@@ -145,7 +146,7 @@ internal static partial class Program
 		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot));
 		Equal(3, snapshot.CurrentAvatarStageNumber);
 		Equal(0, snapshot.CurrentRunStageIndex);
-		Equal(1, store.GetRunState().CurrentRunStageIndex);
+		Equal(1, store.GetReadModel().CurrentRunStageIndex);
 		Equal(pendingRunJson, LoadStoredProfile(saveManager, activeSlotId).PendingAdventureRunJson);
 		Equal(0, Godot.GD.WarningMessages.Count);
 	}
@@ -228,6 +229,7 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
 		True(store.TryGetSnapshot(out AdventureUpgradeRunSnapshot before));
@@ -250,14 +252,18 @@ internal static partial class Program
 		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
 
-		AdventureUpgradeRunState detached = store.GetRunState();
-		detached.SetHealth(1, 150);
-		detached.EffectState.QuestionRewardCount = 9;
+		AdventureRunReadModel detached = store.GetReadModel();
+		_ = detached with
+		{
+			CurrentHealth = 1,
+			MaxHealth = 150,
+			Effects = detached.Effects with { QuestionRewardCount = 9 },
+		};
 
-		AdventureUpgradeRunState current = store.GetRunState();
+		AdventureRunReadModel current = store.GetReadModel();
 		Equal(100, current.CurrentHealth);
 		Equal(100, current.MaxHealth);
-		Equal(0, current.EffectState.QuestionRewardCount);
+		Equal(0, current.Effects.QuestionRewardCount);
 		Equal(100, ReadStoredRunSnapshot(saveManager, slotId).CurrentHealth);
 	}
 
@@ -268,21 +274,22 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
 
 		AdventureDefeatCommitResult failed = store.ResolveMainAdventureDefeat();
 		Equal(AdventureRunWriteResult.SaveFailed, failed.WriteResult);
 		False(failed.Resolution.HasValue);
-		False(store.GetRunState().HasUsedRevive);
-		Equal(100, store.GetRunState().CurrentHealth);
+		False(store.GetReadModel().HasUsedRevive);
+		Equal(100, store.GetReadModel().CurrentHealth);
 		False(ReadStoredRunSnapshot(saveManager, slotId).HasUsedRevive);
 
 		AdventureDefeatCommitResult retried = store.ResolveMainAdventureDefeat();
 		Equal(AdventureRunWriteResult.Succeeded, retried.WriteResult);
 		Equal(AdventureDefeatResolution.RetryCurrentStage, retried.Resolution);
-		True(store.GetRunState().HasUsedRevive);
-		Equal(50, store.GetRunState().CurrentHealth);
+		True(store.GetReadModel().HasUsedRevive);
+		Equal(50, store.GetReadModel().CurrentHealth);
 		True(ReadStoredRunSnapshot(saveManager, slotId).HasUsedRevive);
 	}
 
@@ -305,7 +312,7 @@ internal static partial class Program
 		Equal(AdventureUpgradeAcquireResult.None, failed.AcquireResult);
 		Equal(default(AdventureUpgradeAcquisitionEffectResult), failed.EffectResult);
 		False(failed.HealingResult.HasValue);
-		AdventureUpgradeRunState unchanged = store.GetRunState();
+		AdventureRunReadModel unchanged = store.GetReadModel();
 		False(unchanged.HasAcquiredUpgrade("hearts_thick_blood"));
 		True(unchanged.ShouldGrantRunStartUpgrade);
 		Equal(100, unchanged.CurrentHealth);
@@ -317,7 +324,7 @@ internal static partial class Program
 			AdventureUpgradeTriggerSource.RunStart);
 		Equal(AdventureRunWriteResult.Succeeded, committed.WriteResult);
 		Equal(AdventureUpgradeAcquireResult.Acquired, committed.AcquireResult);
-		AdventureUpgradeRunState current = store.GetRunState();
+		AdventureRunReadModel current = store.GetReadModel();
 		True(current.HasAcquiredUpgrade("hearts_thick_blood"));
 		False(current.ShouldGrantRunStartUpgrade);
 		Equal(104, current.CurrentHealth);
@@ -368,56 +375,58 @@ internal static partial class Program
 		AdventureHealingCommitResult failedHealing = store.ApplyHealing(3);
 		Equal(AdventureRunWriteResult.SaveFailed, failedHealing.WriteResult);
 		Equal(default(AdventureHealingResult), failedHealing.HealingResult);
-		Equal(50, store.GetRunState().CurrentHealth);
+		Equal(50, store.GetReadModel().CurrentHealth);
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
 
 		AdventureQuestionRewardCommitResult failedQuestion = store.ResolveQuestionReward();
 		Equal(AdventureRunWriteResult.SaveFailed, failedQuestion.WriteResult);
 		Equal(default(AdventureQuestionRewardEffectResult), failedQuestion.EffectResult);
 		False(failedQuestion.HealingResult.HasValue);
-		Equal(0, store.GetRunState().EffectState.QuestionRewardCount);
-		Equal(50, store.GetRunState().CurrentHealth);
+		Equal(0, store.GetReadModel().Effects.QuestionRewardCount);
+		Equal(50, store.GetReadModel().CurrentHealth);
 
 		AdventureQuestionRewardCommitResult committedQuestion = store.ResolveQuestionReward();
 		Equal(AdventureRunWriteResult.Succeeded, committedQuestion.WriteResult);
-		Equal(1, store.GetRunState().EffectState.QuestionRewardCount);
-		True(store.GetRunState().CurrentHealth > 50);
+		Equal(1, store.GetReadModel().Effects.QuestionRewardCount);
+		True(store.GetReadModel().CurrentHealth > 50);
 
-		AdventureUpgradeRunState withCarry = store.GetRunState();
-		withCarry.EffectState.NextTurnHealAmount = 3;
-		withCarry.EffectState.NextTurnDrawCount = 1;
+		AdventureEffectStateSnapshot withCarry = store.GetReadModel().Effects with
+		{
+			NextTurnHealAmount = 3,
+			NextTurnDrawCount = 1,
+		};
 		int savesBeforeTransientCommit = saveManager.SaveToSlotCallCount;
-		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(withCarry.EffectState));
+		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(withCarry));
 		Equal(savesBeforeTransientCommit, saveManager.SaveToSlotCallCount);
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
 
-		int healthBeforeTurnStart = store.GetRunState().CurrentHealth;
+		int healthBeforeTurnStart = store.GetReadModel().CurrentHealth;
 		AdventureTurnStartCommitResult failedTurnStart = store.ResolveTurnStartEffects();
 		Equal(AdventureRunWriteResult.SaveFailed, failedTurnStart.WriteResult);
 		Equal(default(AdventureTurnStartEffectResult), failedTurnStart.EffectResult);
 		False(failedTurnStart.HealingResult.HasValue);
-		Equal(3, store.GetRunState().EffectState.NextTurnHealAmount);
-		Equal(1, store.GetRunState().EffectState.NextTurnDrawCount);
-		Equal(healthBeforeTurnStart, store.GetRunState().CurrentHealth);
+		Equal(3, store.GetReadModel().Effects.NextTurnHealAmount);
+		Equal(1, store.GetReadModel().Effects.NextTurnDrawCount);
+		Equal(healthBeforeTurnStart, store.GetReadModel().CurrentHealth);
 
 		AdventureTurnStartCommitResult committedTurnStart = store.ResolveTurnStartEffects();
 		Equal(AdventureRunWriteResult.Succeeded, committedTurnStart.WriteResult);
-		Equal(0, store.GetRunState().EffectState.NextTurnHealAmount);
-		Equal(0, store.GetRunState().EffectState.NextTurnDrawCount);
-		True(store.GetRunState().CurrentHealth > healthBeforeTurnStart);
+		Equal(0, store.GetReadModel().Effects.NextTurnHealAmount);
+		Equal(0, store.GetReadModel().Effects.NextTurnDrawCount);
+		True(store.GetReadModel().CurrentHealth > healthBeforeTurnStart);
 
-		int healthBeforeDamage = store.GetRunState().CurrentHealth;
+		int healthBeforeDamage = store.GetReadModel().CurrentHealth;
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
 		AdventureHealingCommitResult failedDamageRecovery =
 			store.UpdateHealthAndApplyHealing(healthBeforeDamage - 10, 3);
 		Equal(AdventureRunWriteResult.SaveFailed, failedDamageRecovery.WriteResult);
 		Equal(default(AdventureHealingResult), failedDamageRecovery.HealingResult);
-		Equal(healthBeforeDamage, store.GetRunState().CurrentHealth);
+		Equal(healthBeforeDamage, store.GetReadModel().CurrentHealth);
 
 		AdventureHealingCommitResult committedDamageRecovery =
 			store.UpdateHealthAndApplyHealing(healthBeforeDamage - 10, 3);
 		Equal(AdventureRunWriteResult.Succeeded, committedDamageRecovery.WriteResult);
-		Equal(healthBeforeDamage - 7, store.GetRunState().CurrentHealth);
+		Equal(healthBeforeDamage - 7, store.GetReadModel().CurrentHealth);
 	}
 
 	private static void AdventureCaptureActionTransactionRetriesOnce()
@@ -431,10 +440,12 @@ internal static partial class Program
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
 		Equal(AdventureRunWriteResult.Succeeded, store.GrantUpgrade("clubs_borrow_suit_set", AdventureUpgradeTriggerSource.None).WriteResult);
 		Equal(AdventureRunWriteResult.Succeeded, store.GrantUpgrade("clubs_gap_rooting", AdventureUpgradeTriggerSource.None).WriteResult);
-		AdventureUpgradeRunState configured = store.GetRunState();
-		configured.EffectState.ClubBorrowSuitSetArmed = true;
-		configured.EffectState.ClubMissClimbGrowthStacks = 3;
-		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(configured.EffectState));
+		AdventureEffectStateSnapshot configured = store.GetReadModel().Effects with
+		{
+			ClubBorrowSuitSetArmed = true,
+			ClubMissClimbGrowthStacks = 3,
+		};
+		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(configured));
 		string storedBefore = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
 		AdventureCaptureCommitInput input = CreateAdventureCaptureCommitInput();
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
@@ -450,19 +461,19 @@ internal static partial class Program
 		Equal(0, failed.CurrentHealth);
 		False(failed.ConsumedHalfHealthRescue);
 		False(failed.ConsumedQuarterHealthRescue);
-		AdventureUpgradeRunState unchanged = store.GetRunState();
-		True(unchanged.EffectState.ClubBorrowSuitSetArmed);
-		False(unchanged.EffectState.ClubGapRootingUsedThisTurn);
-		Equal(3, unchanged.EffectState.ClubMissClimbGrowthStacks);
+		AdventureRunReadModel unchanged = store.GetReadModel();
+		True(unchanged.Effects.ClubBorrowSuitSetArmed);
+		False(unchanged.Effects.ClubGapRootingUsedThisTurn);
+		Equal(3, unchanged.Effects.ClubMissClimbGrowthStacks);
 		Equal(storedBefore, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
 
 		AdventureCaptureCommitResult committed = store.ResolveCaptureAction(input);
 		Equal(AdventureRunWriteResult.Succeeded, committed.WriteResult);
 		True(committed.DamageResult.FinalDamage > 0);
-		AdventureUpgradeRunState current = store.GetRunState();
-		False(current.EffectState.ClubBorrowSuitSetArmed);
-		True(current.EffectState.ClubGapRootingUsedThisTurn);
-		Equal(0, current.EffectState.ClubMissClimbGrowthStacks);
+		AdventureRunReadModel current = store.GetReadModel();
+		False(current.Effects.ClubBorrowSuitSetArmed);
+		True(current.Effects.ClubGapRootingUsedThisTurn);
+		Equal(0, current.Effects.ClubMissClimbGrowthStacks);
 		Equal(storedBefore, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
 	}
 
@@ -479,9 +490,11 @@ internal static partial class Program
 		{
 			Equal(AdventureRunWriteResult.Succeeded, store.GrantUpgrade(upgradeId, AdventureUpgradeTriggerSource.None).WriteResult);
 		}
-		AdventureUpgradeRunState configured = store.GetRunState();
-		configured.EffectState.ClubBorrowSuitSetArmed = true;
-		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(configured.EffectState));
+		AdventureEffectStateSnapshot configured = store.GetReadModel().Effects with
+		{
+			ClubBorrowSuitSetArmed = true,
+		};
+		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(configured));
 		AdventureMissCommitInput input = new("4", 6, Array.Empty<string>());
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
 
@@ -491,19 +504,19 @@ internal static partial class Program
 		Equal(default(AdventurePostCaptureEffectResult), failed.RecoveryEffectResult);
 		False(failed.HealingResult.HasValue);
 		False(failed.CommitBandageAtRealTurnEnd);
-		AdventureUpgradeRunState unchanged = store.GetRunState();
-		True(unchanged.EffectState.ClubBorrowSuitSetArmed);
-		Equal(0, unchanged.EffectState.NextCaptureDamageBonus);
-		Equal(0, unchanged.EffectState.NextTurnHealAmount);
+		AdventureRunReadModel unchanged = store.GetReadModel();
+		True(unchanged.Effects.ClubBorrowSuitSetArmed);
+		Equal(0, unchanged.Effects.NextCaptureDamageBonus);
+		Equal(0, unchanged.Effects.NextTurnHealAmount);
 
 		AdventureMissCommitResult committed = store.ResolveMissAction(input);
 		Equal(AdventureRunWriteResult.Succeeded, committed.WriteResult);
 		True(committed.CommitBandageAtRealTurnEnd);
-		AdventureUpgradeRunState current = store.GetRunState();
-		False(current.EffectState.ClubBorrowSuitSetArmed);
-		Equal(1, current.EffectState.NextCaptureDamageBonus);
-		Equal(0, current.EffectState.NextTurnHealAmount);
-		Equal(0, current.EffectState.NextTurnDrawCount);
+		AdventureRunReadModel current = store.GetReadModel();
+		False(current.Effects.ClubBorrowSuitSetArmed);
+		Equal(1, current.Effects.NextCaptureDamageBonus);
+		Equal(0, current.Effects.NextTurnHealAmount);
+		Equal(0, current.Effects.NextTurnDrawCount);
 	}
 
 	private static void AdventureDirectDamageTransactionRetriesOnce()
@@ -513,6 +526,7 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
 		string storedBefore = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
@@ -523,7 +537,7 @@ internal static partial class Program
 		Equal(0, failed.DamagedHealth);
 		Equal(default(AdventureLowHealthRescueResult), failed.RescueResult);
 		Equal(default(AdventureHealingResult), failed.HealingResult);
-		Equal(100, store.GetRunState().CurrentHealth);
+		Equal(100, store.GetReadModel().CurrentHealth);
 		Equal(storedBefore, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
 
 		AdventureDirectDamageCommitResult committed = store.ApplyDirectDamage(new AdventureDirectDamageCommitInput(30));
@@ -531,7 +545,7 @@ internal static partial class Program
 		Equal(100, committed.PreviousHealth);
 		Equal(70, committed.DamagedHealth);
 		Equal(70, committed.HealingResult.CurrentHealth);
-		Equal(70, store.GetRunState().CurrentHealth);
+		Equal(70, store.GetReadModel().CurrentHealth);
 		Equal(70, ReadStoredRunSnapshot(saveManager, slotId).CurrentHealth);
 	}
 
@@ -545,27 +559,29 @@ internal static partial class Program
 		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
 		Equal(AdventureRunWriteResult.Succeeded, store.GrantUpgrade("hearts_miss_bandage", AdventureUpgradeTriggerSource.None).WriteResult);
-		AdventureUpgradeRunState configured = store.GetRunState();
-		configured.EffectState.ClubBorrowSuitSetArmed = true;
-		configured.EffectState.ClubGapRootingUsedThisTurn = true;
-		configured.EffectState.ClubShortBranchReturnUsedThisTurn = true;
-		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(configured.EffectState));
+		AdventureEffectStateSnapshot configured = store.GetReadModel().Effects with
+		{
+			ClubBorrowSuitSetArmed = true,
+			ClubGapRootingUsedThisTurn = true,
+			ClubShortBranchReturnUsedThisTurn = true,
+		};
+		Equal(AdventureRunWriteResult.Succeeded, store.ReplaceEffectState(configured));
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
 
 		Equal(AdventureRunWriteResult.SaveFailed, store.ResolveRealTurnEnd(commitMissBandage: true));
-		AdventureUpgradeRunState unchanged = store.GetRunState();
-		True(unchanged.EffectState.ClubBorrowSuitSetArmed);
-		True(unchanged.EffectState.ClubGapRootingUsedThisTurn);
-		True(unchanged.EffectState.ClubShortBranchReturnUsedThisTurn);
-		Equal(0, unchanged.EffectState.NextTurnHealAmount);
+		AdventureRunReadModel unchanged = store.GetReadModel();
+		True(unchanged.Effects.ClubBorrowSuitSetArmed);
+		True(unchanged.Effects.ClubGapRootingUsedThisTurn);
+		True(unchanged.Effects.ClubShortBranchReturnUsedThisTurn);
+		Equal(0, unchanged.Effects.NextTurnHealAmount);
 
 		Equal(AdventureRunWriteResult.Succeeded, store.ResolveRealTurnEnd(commitMissBandage: true));
-		AdventureUpgradeRunState current = store.GetRunState();
-		False(current.EffectState.ClubBorrowSuitSetArmed);
-		False(current.EffectState.ClubGapRootingUsedThisTurn);
-		False(current.EffectState.ClubShortBranchReturnUsedThisTurn);
-		Equal(3, current.EffectState.NextTurnHealAmount);
-		Equal(1, current.EffectState.NextTurnDrawCount);
+		AdventureRunReadModel current = store.GetReadModel();
+		False(current.Effects.ClubBorrowSuitSetArmed);
+		False(current.Effects.ClubGapRootingUsedThisTurn);
+		False(current.Effects.ClubShortBranchReturnUsedThisTurn);
+		Equal(3, current.Effects.NextTurnHealAmount);
+		Equal(1, current.Effects.NextTurnDrawCount);
 	}
 
 	private static AdventureCaptureCommitInput CreateAdventureCaptureCommitInput()
@@ -588,9 +604,9 @@ internal static partial class Program
 			PlayedCardRank: playedCard.Rank,
 			ConsumeBorrowSuitSet: true,
 			ConsumeGapRooting: true,
-			new AdventureCaptureDamageInput(BaseDamage: 5, CaptureContext: context),
+			new AdventureCaptureDamageInput(BaseDamage: 5, CaptureContext: context.ToRuleFacts()),
 			SuccessfulCapturesThisTurn: 1,
-			context,
+			context.ToRuleFacts(),
 			new AdventureClubCaptureCommitInput(0, 0, 0, 4, true));
 	}
 
@@ -654,8 +670,24 @@ internal static partial class Program
 			captureSource,
 			"PlanQuestionCardRewardAsync(",
 			"ResolveCaptureAction(",
-			"_captureStateService.ApplyCapture(",
+			"TrySubmitCaptureCardsRuleCommand(",
 			"ApplyQuestionCardRewardPlan(");
+		False(captureSource.Contains(
+			"_tableCards.Remove(clubGapRootingTargetTableCard)",
+			StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			captureSource,
+			@"_tableCards\s*\.(?:Add|AddRange|Insert|Remove|RemoveAt|RemoveRange|Clear)\s*\("));
+
+		string upgradeSource = File.ReadAllText(Path.Combine(
+			scriptsDirectory,
+			"GameBoardScene.AdventureUpgrades.cs"));
+		False(Regex.IsMatch(
+			upgradeSource,
+			@"_playerScores\s*\[[^\]]+\]\s*="));
+		False(Regex.IsMatch(
+			upgradeSource,
+			@"_playerDecks\s*\[[^\]]+\]\.RemoveAt\s*\("));
 
 		string bossSource = File.ReadAllText(Path.Combine(
 			scriptsDirectory,
@@ -672,7 +704,7 @@ internal static partial class Program
 		AssertSourceOrder(
 			turnSource,
 			"store.ResolveRealTurnEnd(commitMissBandage)",
-			"_state.AdventureExtraActionQueue.EndRealTurn()");
+			"TrySubmitEndRealTurnRuleCommand(");
 		int turnSetterStart = turnSource.IndexOf(
 			"private async Task<bool> SetCurrentTurnPlayerIndexAsync(",
 			StringComparison.Ordinal);
@@ -686,7 +718,7 @@ internal static partial class Program
 		AssertSourceOrder(
 			turnSetterSource,
 			"await EndRealMainPlayerTurnAsync()",
-			"_currentTurnPlayerIndex = nextTurnPlayerIndex");
+			"TrySubmitAdvanceTurnRuleCommand(");
 
 		string boardMainSource = File.ReadAllText(Path.Combine(
 			scriptsDirectory,
@@ -696,9 +728,6 @@ internal static partial class Program
 			"await InitializeAdventureUpgradeRunForCurrentBoardAsync()",
 			"await PrepareAdventureBattleForDealAsync()",
 			"DealCardsToPlayers(playOpeningDealAnimation: true");
-		string upgradeSource = File.ReadAllText(Path.Combine(
-			scriptsDirectory,
-			"GameBoardScene.AdventureUpgrades.cs"));
 		AssertSourceOrder(
 			upgradeSource,
 			"store.ResetBattleScopedEffects",
@@ -723,6 +752,7 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		string firstAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, firstAvatarId));
 
@@ -746,6 +776,7 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		string firstAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, firstAvatarId));
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
@@ -767,6 +798,7 @@ internal static partial class Program
 			HighestCompletedMainAdventureStage = AdventureCampaignCatalog.MainStageCount - 1,
 		});
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		int finalStage = AdventureCampaignCatalog.MainStageCount;
 		string finalAvatarId = AdventureCampaignCatalog.GetMainAvatarId(finalStage);
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(finalStage, finalAvatarId));
@@ -785,6 +817,7 @@ internal static partial class Program
 		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
 		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		string thirdAvatarId = AdventureCampaignCatalog.GetMainAvatarId(3);
 		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(3, thirdAvatarId));
 		int savesBeforeCommit = saveManager.SaveToSlotCallCount;
@@ -808,6 +841,7 @@ internal static partial class Program
 		};
 		SeedProfile(saveManager, slotId, original);
 		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(AdventureUpgradeRestoreResult.InvalidJsonPreserved, store.ReloadFromActiveProfile());
 		True(store.RequiresRunRecovery);
 		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);

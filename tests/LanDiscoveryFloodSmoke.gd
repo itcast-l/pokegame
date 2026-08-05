@@ -55,17 +55,24 @@ func _run() -> void:
 			_fail("Could not enqueue discovery flood")
 			return
 
-	var process_frames := 0
+	var maintenance_ticks := 0
+	var last_responder_execution_count := int(network.call("DebugGetNetworkMaintenanceTaskExecutionCount", 0))
+	var migration_latency_execution_count := int(network.call("DebugGetNetworkMaintenanceTaskExecutionCount", 9))
+	var hot_standby_execution_count := int(network.call("DebugGetNetworkMaintenanceTaskExecutionCount", 10))
 	for _frame in range(60):
 		await process_frame
-		process_frames += 1
+		var responder_execution_count := int(network.call("DebugGetNetworkMaintenanceTaskExecutionCount", 0))
+		if responder_execution_count == last_responder_execution_count:
+			continue
+		maintenance_ticks += responder_execution_count - last_responder_execution_count
+		last_responder_execution_count = responder_execution_count
 		var processed := int(network.call("DebugGetLanDiscoveryLastResponderProcessedPacketCount"))
 		if processed > PACKET_BUDGET:
-			_fail("Responder exceeded the per-frame packet budget: %d" % processed)
+			_fail("Responder exceeded the per-maintenance-tick packet budget: %d" % processed)
 			return
 		if int(network.call("DebugGetLanDiscoveryResponderBudgetExhaustionCount")) > 0 \
 				and int(network.call("DebugGetLanDiscoveryRateLimitedSourceCount")) > 0 \
-				and process_frames >= 3:
+				and maintenance_ticks >= 3:
 			break
 
 	var maximum_processed := int(network.call("DebugGetLanDiscoveryMaximumResponderProcessedPacketCount"))
@@ -73,19 +80,32 @@ func _run() -> void:
 		_fail("Responder maximum packet count is outside bounds: %d" % maximum_processed)
 		return
 	if int(network.call("DebugGetLanDiscoveryResponderBudgetExhaustionCount")) <= 0:
-		_fail("Flood did not leave packets queued after exhausting one frame budget")
+		_fail("Flood did not leave packets queued after exhausting one maintenance-tick budget")
 		return
 	if int(network.call("DebugGetLanDiscoveryRateLimitedSourceCount")) <= 0:
 		_fail("Flood source did not exercise the reply token bucket")
 		return
-	if process_frames < 2:
-		_fail("Flood completed without advancing multiple process frames")
+	if maintenance_ticks < 2:
+		_fail("Flood completed without advancing multiple maintenance ticks")
+		return
+	if int(network.call("DebugGetNetworkMaintenanceTaskExecutionCount", 9)) <= migration_latency_execution_count:
+		_fail("Flood starved migration-latency maintenance")
+		return
+	if int(network.call("DebugGetNetworkMaintenanceTaskExecutionCount", 10)) <= hot_standby_execution_count:
+		_fail("Flood starved hot-standby maintenance")
+		return
+	if float(network.call("DebugGetNetworkMaintenanceMaximumTickMilliseconds")) >= 4.0:
+		_fail("Flood maintenance tick exceeded the 4 ms budget")
 		return
 
 	sender.close()
+	var close_started_at := Time.get_ticks_msec()
 	network.call("LeaveSession")
-	await process_frame
-	await process_frame
+	while int(network.get("State")) != 0 and Time.get_ticks_msec() - close_started_at < 500:
+		await process_frame
+	if int(network.get("State")) != 0:
+		_fail("Flood starved the session-close deadline")
+		return
 	print("LAN_DISCOVERY_FLOOD_SMOKE_OK")
 	quit(0)
 

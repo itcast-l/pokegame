@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -170,8 +172,8 @@ public partial class GameBoardScene
 			captureStartIndex =
 				await TryResolveReverseAnchorCaptureStartAsync(
 				captureStartIndex,
-				playerIndex,
-				turnSequenceGeneration);
+					playerIndex,
+					turnSequenceGeneration);
 		if (!IsCaptureTableReferenceSnapshotCurrent(
 				turnSequenceGeneration,
 				captureTableReferenceSnapshot)
@@ -192,15 +194,15 @@ public partial class GameBoardScene
 					CardEffectTypes.ReverseAnchor);
 			}
 
-			CaptureScoringRules.TableCard[] captureScoringTableCards =
+			CaptureScoringTableCard[] captureScoringTableCards =
 			ToCaptureScoringTableCards();
 		int scorePlayerIndex =
-			ScoreService.GetCapturedScorePlayerIndex(
+			MatchReadModel.GetCapturedScorePlayerIndex(
 				captureScoringTableCards,
 				captureStartIndex,
 				playerIndex,
 				player_count);
-		CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
+		CaptureFlowPlan captureFlow = MatchReadModel.BuildCaptureFlow(
 			captureScoringTableCards,
 				captureStartIndex,
 				scorePlayerIndex,
@@ -318,9 +320,11 @@ public partial class GameBoardScene
 							captureStartIndex: captureStartIndex,
 							extraTableCardIndexes:
 								magnetExtraCaptureIndexes,
-							originGlobalCenter:
-								specialTrigger.GlobalPosition
-									+ CardVisualSize / 2.0f),
+							originGlobalCenter: new CardEventPosition(
+								specialTrigger.GlobalPosition.X
+									+ CardVisualSize.X / 2.0f,
+								specialTrigger.GlobalPosition.Y
+									+ CardVisualSize.Y / 2.0f)),
 						turnSequenceGeneration);
 					if (!IsCaptureTableReferenceSnapshotCurrent(
 							turnSequenceGeneration,
@@ -446,26 +450,20 @@ public partial class GameBoardScene
 				hasDoubleEffect), nameof(PlayTableCardPointPopupAsync));
 		}
 
+		AdventureRunReadModel? adventureRun = GetAdventureUpgradeRunState();
 		AdventureClubCaptureScoringResult clubCaptureScoring =
-			AdventureUpgradeEffectService.ResolveClubCaptureScoring(
-				GetAdventureUpgradeRunState()?.GetAcquiredUpgradeIds()
-					?? Array.Empty<string>());
+			adventureRun?.ResolveClubCaptureScoring() ?? default;
 		bool includeCrownCanopyCaptureEndpoints =
 			playerIndex == MainPlayerIndex
 			&& clubCaptureScoring.IncludeCaptureEndpointsInScoring;
 		bool preserveTailTableCard =
 			IsAdventureEnemyPlayer(playerIndex)
-			&& AdventureUpgradeEffectService
-				.ShouldPreserveEnemyCaptureTailCard(
-					GetAdventureUpgradeRunState()
-						?.GetAcquiredUpgradeIds()
-						?? Array.Empty<string>(),
-					captureFlow.TotalCapturedCardCount);
+			&& adventureRun?.ShouldPreserveEnemyCaptureTailCard(
+				captureFlow.TotalCapturedCardCount) == true;
 		int preservedTailTableCardIndex = preserveTailTableCard
 			? playedTableCardIndex
 			: -1;
-		CaptureStatePlan captureStatePlan = _captureStateService.CreatePlan(
-			_state,
+		CaptureStatePlan captureStatePlan = CreateAuthorityCapturePlan(
 			captureStartIndex,
 			magnetExtraCaptureIndexes);
 		AdventureClubCaptureExtensionPlan previewClubCaptureExtension =
@@ -651,19 +649,38 @@ public partial class GameBoardScene
 				false);
 		}
 
-		Shuffle(_playerDecks[playerIndex]);
-		Cut(_playerDecks[playerIndex]);
+		TrySubmitShuffleDeckRuleCommand(
+			playerIndex,
+			playerIndex,
+			cutAfterShuffle: true,
+			turnSequenceGeneration);
 		if (blackLedgerRedirectTableCardIndex >= 0
 			&& playerIndex != MainPlayerIndex)
 		{
-			Shuffle(_playerDecks[MainPlayerIndex]);
-			Cut(_playerDecks[MainPlayerIndex]);
+			TrySubmitShuffleDeckRuleCommand(
+				playerIndex,
+				MainPlayerIndex,
+				cutAfterShuffle: true,
+				turnSequenceGeneration);
 		}
 		if (preserveTailTableCard
 			&& preservedTailTableCard != null
 			&& _tableCards.Contains(preservedTailTableCard))
 		{
-			preservedTailTableCard.IsFaceUp = true;
+			int preservedTableCardIndex = _tableCards.IndexOf(
+				preservedTailTableCard);
+			if (preservedTableCardIndex >= 0)
+			{
+				TrySubmitSetTableCardsFaceUpRuleCommand(
+					playerIndex,
+					ImmutableArray.Create(new RuleTableCardReference(
+						preservedTableCardIndex,
+						preservedTailTableCard.InstanceId)),
+					preservedTailTableCard.IsFaceUp,
+					faceUp: true,
+					turnSequenceGeneration,
+					out _);
+			}
 		}
 		if (!QuestionRewardPresentationRules
 			.ShouldDelayTableRenderForQuestionReward(

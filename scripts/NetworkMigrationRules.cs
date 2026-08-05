@@ -238,23 +238,62 @@ public static class NetworkMigrationRules
 		int stableAcknowledgedSeat,
 		IReadOnlyDictionary<int, double>? latencyMillisecondsBySeat)
 	{
-		HashSet<int> excluded = excludedSeats.ToHashSet();
-		HashSet<int> humanSeats = seatControls
-			.Where(control => control.Mode == SeatControlMode.HumanConnected && control.SeatIndex != hostSeat)
-			.Select(control => control.SeatIndex)
-			.ToHashSet();
-		return roster
-			.Where(entry => entry.IsConnected
-				&& entry.CredentialsAcknowledged
-				&& entry.SeatIndex != hostSeat
-				&& !excluded.Contains(entry.SeatIndex)
-				&& humanSeats.Contains(entry.SeatIndex))
-			.OrderByDescending(entry => entry.SeatIndex == stableAcknowledgedSeat)
-			.ThenBy(entry => GetCandidateLatency(entry.SeatIndex, latencyMillisecondsBySeat))
-			.ThenBy(entry => entry.SeatIndex)
-			.Select(entry => entry.SeatIndex)
-			.DefaultIfEmpty(-1)
-			.First();
+		int selectedSeat = -1;
+		bool selectedIsStable = false;
+		double selectedLatency = double.MaxValue;
+		foreach (NetworkMigrationRosterEntry entry in roster)
+		{
+			if (!entry.IsConnected
+				|| !entry.CredentialsAcknowledged
+				|| entry.SeatIndex == hostSeat
+				|| ContainsSeat(excludedSeats, entry.SeatIndex)
+				|| !IsConnectedHumanSeat(seatControls, entry.SeatIndex, hostSeat))
+			{
+				continue;
+			}
+
+			bool isStable = entry.SeatIndex == stableAcknowledgedSeat;
+			double latency = GetCandidateLatency(entry.SeatIndex, latencyMillisecondsBySeat);
+			if (selectedSeat < 0
+				|| (isStable && !selectedIsStable)
+				|| (isStable == selectedIsStable
+					&& (latency < selectedLatency
+						|| (latency == selectedLatency && entry.SeatIndex < selectedSeat))))
+			{
+				selectedSeat = entry.SeatIndex;
+				selectedIsStable = isStable;
+				selectedLatency = latency;
+			}
+		}
+		return selectedSeat;
+	}
+
+	private static bool ContainsSeat(IReadOnlyCollection<int> seats, int seatIndex)
+	{
+		foreach (int seat in seats)
+		{
+			if (seat == seatIndex)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static bool IsConnectedHumanSeat(
+		IReadOnlyCollection<NetworkAuthoritySeatControl> seatControls,
+		int seatIndex,
+		int hostSeat)
+	{
+		foreach (NetworkAuthoritySeatControl control in seatControls)
+		{
+			if (control.SeatIndex == seatIndex)
+			{
+				return control.SeatIndex != hostSeat
+					&& control.Mode == SeatControlMode.HumanConnected;
+			}
+		}
+		return false;
 	}
 
 	private static double GetCandidateLatency(

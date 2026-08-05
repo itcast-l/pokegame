@@ -15,13 +15,19 @@ public partial class GameBoardScene
 		EnsureAdventureTutorialOverlay();
 		if (IsBombItemTutorialFlow())
 		{
-			_adventureTutorialPhase = AdventureTutorialPhase.BombIntro;
+			TryUpdateMatchFlowState(state => state with
+			{
+				ScriptedSequenceStep = (int)AdventureTutorialPhase.BombIntro,
+			});
 			ShowAdventureTutorialCurrentCallout();
 			return;
 		}
 
-		_adventureTutorialPhase = AdventureTutorialPhase.BasicIntro;
-		_adventureTutorialTourIndex = 0;
+		TryUpdateMatchFlowState(state => state with
+		{
+			ScriptedSequenceStep = (int)AdventureTutorialPhase.BasicIntro,
+			ScriptedTourIndex = 0,
+		});
 		ShowAdventureTutorialCurrentCallout();
 	}
 
@@ -91,15 +97,21 @@ public partial class GameBoardScene
 
 		if (IsAdventureTutorialBasicIntroActive())
 		{
-			_adventureTutorialPhase = AdventureTutorialPhase.Tour;
-			_adventureTutorialTourIndex = 0;
+			TryUpdateMatchFlowState(state => state with
+			{
+				ScriptedSequenceStep = (int)AdventureTutorialPhase.Tour,
+				ScriptedTourIndex = 0,
+			});
 			ShowAdventureTutorialCurrentCallout();
 			return;
 		}
 
-		if (_adventureTutorialTourIndex < AdventureTutorialTourTargets.Length - 1)
+		if (GetAdventureTutorialTourIndex() < AdventureTutorialTourTargets.Length - 1)
 		{
-			_adventureTutorialTourIndex++;
+			TryUpdateMatchFlowState(state => state with
+			{
+				ScriptedTourIndex = state.ScriptedTourIndex + 1,
+			});
 			ShowAdventureTutorialCurrentCallout();
 			return;
 		}
@@ -114,7 +126,10 @@ public partial class GameBoardScene
 
 	private void BeginAdventureTutorialStep(AdventureTutorialPhase phase)
 	{
-		_adventureTutorialPhase = phase;
+		TryUpdateMatchFlowState(state => state with
+		{
+			ScriptedSequenceStep = (int)phase,
+		});
 		_canAdvanceTutorialCallout = false;
 		_adventureTutorialCalloutGeneration++;
 		RefreshAdventureTutorialOverlayText();
@@ -180,7 +195,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		List<PlayingCard> hand = _playerHands[MainPlayerIndex];
+		IReadOnlyList<PlayingCard> hand = _playerHands[MainPlayerIndex];
 		for (int index = 0; index < hand.Count; index++)
 		{
 			if (IsAdventureTutorialCard(hand[index], suit, rank))
@@ -197,7 +212,7 @@ public partial class GameBoardScene
 	{
 		suit = string.Empty;
 		rank = string.Empty;
-		switch (_adventureTutorialPhase)
+		switch (GetAdventureTutorialPhase())
 		{
 			case AdventureTutorialPhase.MatchSeven:
 				suit = "Hearts";
@@ -256,7 +271,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[MainPlayerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[MainPlayerIndex];
 		for (int index = 0; index < itemHand.Count; index++)
 		{
 			if (string.Equals(itemHand[index].Id, BombItemCardId, StringComparison.Ordinal))
@@ -301,19 +316,18 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchSeven)
 		{
 			BeginAdventureTutorialStep(AdventureTutorialPhase.MatchTwo);
 			return false;
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BombCollectReward)
 		{
 			BeginAdventureTutorialStep(AdventureTutorialPhase.BombPlay);
 			return false;
 		}
 
-		_adventureTutorialPhase = AdventureTutorialPhase.Complete;
 		ResetAdventureTutorialState();
 		DeclareWinner(MainPlayerIndex);
 		return true;
@@ -326,7 +340,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.BombPlay)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.BombPlay)
 		{
 			BeginAdventureTutorialStep(AdventureTutorialPhase.BombEnemyTrigger);
 		}
@@ -337,7 +351,7 @@ public partial class GameBoardScene
 	private bool HandleAdventureTutorialOpponentResult(int playerIndex, PlayCardResult result)
 	{
 		if (!IsBombItemTutorialFlow()
-			|| _adventureTutorialPhase != AdventureTutorialPhase.BombEnemyTrigger
+			|| GetAdventureTutorialPhase() != AdventureTutorialPhase.BombEnemyTrigger
 			|| playerIndex == MainPlayerIndex
 			|| !result.Played
 			|| !result.Captured)
@@ -345,7 +359,6 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_adventureTutorialPhase = AdventureTutorialPhase.Complete;
 		ResetAdventureTutorialState();
 		if (!IsGameOver())
 		{
@@ -358,14 +371,14 @@ public partial class GameBoardScene
 	private bool ShouldForceBombQuestionReward()
 	{
 		return IsBombItemTutorialFlow()
-			&& _adventureTutorialPhase == AdventureTutorialPhase.BombCollectReward;
+			&& GetAdventureTutorialPhase() == AdventureTutorialPhase.BombCollectReward;
 	}
 
 	private void AddAdventureTutorialHandRenderSignature(ref HashCode signature, int playerIndex)
 	{
 		signature.Add(_adventureTutorialFlow);
-		signature.Add((int)_adventureTutorialPhase);
-		signature.Add(_adventureTutorialTourIndex);
+		signature.Add((int)GetAdventureTutorialPhase());
+		signature.Add(GetAdventureTutorialTourIndex());
 		signature.Add(playerIndex == MainPlayerIndex && TryGetAdventureTutorialAllowedHandIndex(out int handIndex) ? handIndex : -1);
 		signature.Add(playerIndex == MainPlayerIndex && TryGetAdventureTutorialAllowedItemIndex(out int itemIndex) ? itemIndex : -1);
 	}
@@ -373,7 +386,7 @@ public partial class GameBoardScene
 	private void AddAdventureTutorialTableRenderSignature(ref HashCode signature)
 	{
 		signature.Add(_adventureTutorialFlow);
-		signature.Add((int)_adventureTutorialPhase);
+		signature.Add((int)GetAdventureTutorialPhase());
 	}
 
 	private void AddAdventureTutorialTableHighlights(Rect2 tableLayoutRect)
@@ -413,14 +426,14 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard card = tableCard.Card.Value;
-		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchSeven)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchSeven)
 		{
 			return IsAdventureTutorialCard(card, "Spades", "7")
 				|| IsAdventureTutorialCard(card, "Clubs", "A")
 				|| IsAdventureTutorialCard(card, "Diamonds", "4");
 		}
 
-		if (_adventureTutorialPhase == AdventureTutorialPhase.MatchTwo)
+		if (GetAdventureTutorialPhase() == AdventureTutorialPhase.MatchTwo)
 		{
 			return IsAdventureTutorialCard(card, "Clubs", "2")
 				|| IsAdventureTutorialCard(card, "Diamonds", "3");

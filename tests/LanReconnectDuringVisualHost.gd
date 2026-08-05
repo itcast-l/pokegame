@@ -6,7 +6,7 @@ const ITEM_MODE := true
 const WINNING_SCORE := 100
 const TIMEOUT_SECONDS := 25.0
 const DISCONNECT_DELAY_SECONDS := 0.85
-const DEFAULT_POST_RECLAIM_SETTLE_SECONDS := 1.5
+const DEFAULT_POST_RECLAIM_SETTLE_SECONDS := 3.5
 
 var _network: Node
 var _started_match := false

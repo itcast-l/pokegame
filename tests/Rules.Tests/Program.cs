@@ -13,6 +13,7 @@ internal static partial class Program
 
 	public static int Main()
 	{
+		RunRuleAssemblyFoundationTests();
 		// Pure rules tests run without the Godot Pandora autoload. Install the
 		// same default-valued contract that a valid catalog publishes at runtime.
 		AdventureUpgradeRuntimeValues.SetManifest(
@@ -23,6 +24,7 @@ internal static partial class Program
 			RunWave2Tests();
 			RunNetworkFoundationTests();
 			RunSkillCodexTests();
+			RunRuntimeMultiplayerArchitectureRemediationTests();
 		// Contract-drift tests intentionally invalidate a catalog. Restore the
 		// valid test manifest before exercising value-driven effect rules.
 		AdventureUpgradeRuntimeValues.SetManifest(
@@ -237,6 +239,9 @@ internal static partial class Program
 		Run("game board optional fx resources are no longer statically preloaded", GameBoardOptionalFxResourcesAreNoLongerStaticallyPreloaded);
 		Run("game board warmup includes optional fx resource category", GameBoardWarmupIncludesOptionalFxResources);
 		Run("game board idle performance trace smoke exists", GameBoardIdlePerformanceTraceSmokeExists);
+		Run("game board frame scheduler releases inactive controllers", GameBoardFrameSchedulerReleasesInactiveControllers);
+		Run("game board lifecycle coordinator orders startup and shutdown", GameBoardLifecycleCoordinatorOrdersStartupAndShutdown);
+		Run("game board hot paths use cached node bindings", GameBoardHotPathsUseCachedNodeBindings);
 		Run("audio disposal forbids synchronous delay and forced GC", AudioDisposalForbidsSynchronousDelayAndForcedGc);
 		Run("test mute audio blocks direct stream player creation", TestMuteAudioBlocksDirectStreamPlayerCreation);
 		Run("game board async work stays behind lifetime boundary", GameBoardAsyncWorkStaysBehindLifetimeBoundary);
@@ -257,9 +262,12 @@ internal static partial class Program
 		Run("network manager p1b ordering stays on hot paths", NetworkManagerP1BOrderingStaysOnHotPaths);
 		Run("network manager board protocol helpers move into responsibility partials", NetworkManagerBoardProtocolHelpersMoveIntoResponsibilityPartials);
 		Run("network migration core uses transport adapters", NetworkMigrationCoreUsesTransportAdapters);
-		Run("game migration recovery runtime keeps bounded snapshot ack wiring", GameMigrationRecoveryRuntimeKeepsBoundedSnapshotAckWiring);
-		Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
-		Run("game board network request entry points avoid async void", GameBoardNetworkRequestEntryPointsAvoidAsyncVoid);
+			Run("game migration recovery runtime is fenced by release-disabled capability", GameMigrationRecoveryRuntimeIsFencedByDisabledCapability);
+			Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
+			Run("network replica visuals do not mutate rule collections", NetworkReplicaVisualsDoNotMutateRuleCollections);
+		Run("network rpc signatures remain protocol v11 compatible", NetworkRpcSignaturesRemainProtocolV11Compatible);
+		Run("network snapshot rule projection preserves compatibility and privacy", NetworkSnapshotRuleProjectionPreservesCompatibilityAndPrivacy);
+			Run("game board network request entry points avoid async void", GameBoardNetworkRequestEntryPointsAvoidAsyncVoid);
 		Run("target item selection capability is removed", TargetItemSelectionCapabilityIsRemoved);
 		Run("network manager scene load ack validates sender before mark loaded", NetworkManagerSceneLoadAckValidatesSenderBeforeMarkingLoaded);
 		Run("game board network visual queue helpers move into partial file", GameBoardNetworkVisualQueueHelpersMoveIntoPartialFile);

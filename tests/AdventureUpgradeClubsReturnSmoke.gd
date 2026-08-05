@@ -41,6 +41,9 @@ func _run() -> void:
 		or not board.has_method("DebugPlayFirstAvailableLocalMainPlayerHandCard") \
 		or not board.has_method("DebugGetTotalHandCardCountForPlayer") \
 		or not board.has_method("DebugGetHandCardCode") \
+		or not board.has_method("DebugGetCaptureDamageTargetPlayerIndexForHandCard") \
+		or not board.has_method("DebugGetCapturePointsForHandCard") \
+		or not board.has_method("DebugSetPlayerScore") \
 		or not board.has_method("DebugGetGameLoopPhaseName"):
 		_fail("Missing clubs return debug hooks")
 		return
@@ -50,6 +53,22 @@ func _run() -> void:
 
 	if not bool(board.call("DebugAcquireAdventureUpgrade", "clubs_primary_root_return")):
 		_fail("Failed to inject clubs_primary_root_return")
+		return
+
+	var damage_target := int(board.call(
+		"DebugGetCaptureDamageTargetPlayerIndexForHandCard",
+		MAIN_PLAYER_INDEX,
+		0
+	))
+	var capture_points := int(board.call("DebugGetCapturePointsForHandCard", MAIN_PLAYER_INDEX, 0))
+	if damage_target < 0 or capture_points <= 0:
+		_fail("Expected the recording setup hand card to produce positive capture damage")
+		return
+
+	var other_player := 1 if damage_target == MAIN_PLAYER_INDEX else MAIN_PLAYER_INDEX
+	if not bool(board.call("DebugSetPlayerScore", damage_target, capture_points + 100)) \
+		or not bool(board.call("DebugSetPlayerScore", other_player, 100)):
+		_fail("Failed to prepare non-terminal health values")
 		return
 
 	var hand_count_before := int(board.call("DebugGetTotalHandCardCountForPlayer", MAIN_PLAYER_INDEX))
@@ -122,7 +141,7 @@ func _wait_for_actionable_state(board: Node) -> bool:
 		if String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
 			return true
 
-	_fail("Timed out waiting for actionable state")
+	_fail("Timed out waiting for actionable state (phase=%s)" % String(board.call("DebugGetGameLoopPhaseName")))
 	return false
 
 

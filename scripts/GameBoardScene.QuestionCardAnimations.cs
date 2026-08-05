@@ -132,7 +132,7 @@ public partial class GameBoardScene
 				if (GodotObject.IsInstanceValid(card))
 				{
 					PlayGameSfx(GameSfx.QuestionRewardReveal, -1.0f, 0.98f, 1.03f, 0.08);
-					card.Texture = reward.ItemCard.Texture;
+					card.Texture = GetItemCardTexture(reward.ItemCard);
 				}
 			})).SetDelay(cardFlipDelay);
 			transformTween.TweenProperty(card, "scale", Vector2.One, QuestionCardTransformSeconds - cardFlipDelay)
@@ -155,7 +155,7 @@ public partial class GameBoardScene
 				return;
 			}
 
-			card.Texture = reward.ItemCard.Texture;
+			card.Texture = GetItemCardTexture(reward.ItemCard);
 			float rewardVisualScale = GetHandDisplayCardVisualScale(playerIndex, _playerHands[playerIndex].Count + reward.ItemHandIndex);
 			Vector2 rewardVisualSize = CardVisualSize * rewardVisualScale;
 			card.Position = GetCardVisualBasePosition(rewardVisualScale);
@@ -339,7 +339,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		Texture2D questionTexture = tableCard.ItemOverlay.Value.Texture;
+		Texture2D questionTexture = GetItemCardTexture(tableCard.ItemOverlay.Value);
 		Control animationRoot = _animationPresenter.RentControl(
 			_centerArena,
 			"QuestionCardRefreshAnimation",

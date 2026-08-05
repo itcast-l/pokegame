@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -47,18 +49,32 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:7"]);
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:2"]);
-		_playerDecks[MainPlayerIndex].Add(cards["Hearts:5"]);
-		_playerHands[1].Add(cards["Clubs:K"]);
+		ImmutableArray<PlayerStateSnapshot> players = ImmutableArray.Create(
+			new PlayerStateSnapshot(
+				MainPlayerIndex,
+				ImmutableArray.Create(ToRuleCardState(cards["Hearts:5"])),
+				ImmutableArray.Create(
+					ToRuleCardState(cards["Hearts:7"]),
+					ToRuleCardState(cards["Hearts:2"])),
+				ImmutableArray<LogicalItemState>.Empty,
+				Score: 0),
+			new PlayerStateSnapshot(
+				1,
+				ImmutableArray<LogicalCardState>.Empty,
+				ImmutableArray.Create(ToRuleCardState(cards["Clubs:K"])),
+				ImmutableArray<LogicalItemState>.Empty,
+				Score: 0));
+		ImmutableArray<TableCardState> tableCards = ImmutableArray.Create(
+			ToRuleTableCardState(new TableCard(cards["Clubs:2"], true)),
+			ToRuleTableCardState(new TableCard(cards["Diamonds:3"], true)),
+			ToRuleTableCardState(new TableCard(cards["Spades:7"], true)),
+			ToRuleTableCardState(new TableCard(cards["Clubs:A"], true)),
+			ToRuleTableCardState(new TableCard(cards["Diamonds:4"], true)));
+		if (!TryInitializeScriptedRuleMatch(players, tableCards))
+		{
+			return false;
+		}
 
-		_tableCards.Add(new TableCard(cards["Clubs:2"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:3"], true));
-		_tableCards.Add(new TableCard(cards["Spades:7"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:A"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:4"], true));
-
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		return true;
 	}
@@ -84,15 +100,29 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerHands[MainPlayerIndex].Add(cards["Hearts:4"]);
-		_playerHands[1].Add(cards["Clubs:9"]);
+		ImmutableArray<PlayerStateSnapshot> players = ImmutableArray.Create(
+			new PlayerStateSnapshot(
+				MainPlayerIndex,
+				ImmutableArray<LogicalCardState>.Empty,
+				ImmutableArray.Create(ToRuleCardState(cards["Hearts:4"])),
+				ImmutableArray<LogicalItemState>.Empty,
+				Score: 0),
+			new PlayerStateSnapshot(
+				1,
+				ImmutableArray<LogicalCardState>.Empty,
+				ImmutableArray.Create(ToRuleCardState(cards["Clubs:9"])),
+				ImmutableArray<LogicalItemState>.Empty,
+				Score: 0));
+		ImmutableArray<TableCardState> tableCards = ImmutableArray.Create(
+			ToRuleTableCardState(new TableCard(cards["Hearts:9"], true)),
+			ToRuleTableCardState(new TableCard(cards["Diamonds:6"], true)),
+			ToRuleTableCardState(new TableCard(cards["Clubs:4"], true)),
+			ToRuleTableCardState(new TableCard(null, true, questionMark.Value)));
+		if (!TryInitializeScriptedRuleMatch(players, tableCards))
+		{
+			return false;
+		}
 
-		_tableCards.Add(new TableCard(cards["Hearts:9"], true));
-		_tableCards.Add(new TableCard(cards["Diamonds:6"], true));
-		_tableCards.Add(new TableCard(cards["Clubs:4"], true));
-		_tableCards.Add(new TableCard(null, true, questionMark.Value));
-
-		_currentTurnPlayerIndex = MainPlayerIndex;
 		_isOpeningDealAnimationPlaying = false;
 		return true;
 	}
@@ -133,7 +163,7 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private static bool TryLoadAdventureTutorialCard(Node standardCards, string suit, string rank, out PlayingCard card)
+		private bool TryLoadAdventureTutorialCard(Node standardCards, string suit, string rank, out PlayingCard card)
 	{
 		card = default;
 		string cardPath = $"{suit}/{CardNamePrefix}{rank}";
@@ -143,7 +173,7 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		card = new PlayingCard(suit, rank, cardSprite.Texture);
+		card = CreatePlayingCardWithTexture(suit, rank, cardSprite.Texture);
 		return true;
 	}
 }

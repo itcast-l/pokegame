@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -52,34 +54,21 @@ public partial class GameBoardScene
 				return true;
 			}
 
-			DeclareWinner(scoreWinnerPlayerIndex);
-			return false;
-		}
+				ResolveRuleMatchOutcomeAndPresent(scoreWinnerPlayerIndex);
+				return false;
+			}
 
-		var playerStates = new GameTurnRules.PlayerCardState[MaxPlayers];
-		BuildPlayerCardStates(playerStates);
-		MatchOutcome outcome = MatchOutcomeRules.Evaluate(
-			playerStates,
-			_playerScores,
-			player_count);
-		if (outcome.Kind == MatchOutcomeKind.Winner)
-		{
-			DeclareWinner(outcome.WinnerPlayerIndex);
-		}
-		else if (outcome.Kind == MatchOutcomeKind.Draw)
-		{
-			DeclareDraw();
-		}
+			ResolveRuleMatchOutcomeAndPresent(scoreOrLifeWinnerPlayerIndex: -1);
 
 		return false;
 	}
 
-	private void BuildPlayerCardStates(Span<GameTurnRules.PlayerCardState> playerStates)
+	private void BuildPlayerCardStates(Span<GameTurnPlayerCardState> playerStates)
 	{
 		int checkedPlayerCount = Math.Min(player_count, playerStates.Length);
 		for (int playerIndex = 0; playerIndex < checkedPlayerCount; playerIndex++)
 			{
-				playerStates[playerIndex] = new GameTurnRules.PlayerCardState(
+				playerStates[playerIndex] = new GameTurnPlayerCardState(
 					_playerHands[playerIndex].Count,
 					_playerDecks[playerIndex].Count,
 					_playerItemHands[playerIndex].Count,
@@ -145,9 +134,12 @@ public partial class GameBoardScene
 
 	private void DeclareWinner(int playerIndex)
 	{
+		ResolveRuleMatchOutcomeAndPresent(playerIndex);
+	}
+
+	private void PresentDeclaredWinner(int playerIndex)
+	{
 		ClearAdventureBattleScopedStateForBattleEnd();
-		_matchOutcomeKind = MatchOutcomeKind.Winner;
-		_winnerPlayerIndex = playerIndex;
 		if (adventure_mode && playerIndex == MainPlayerIndex)
 		{
 			if (!_gameModePolicy.IsAdventureMain)
@@ -156,10 +148,6 @@ public partial class GameBoardScene
 			}
 		}
 
-		AdvanceTurnSequenceGeneration();
-		_isResolvingTurnSequence = false;
-		_isProcessingCardPlay = false;
-		_currentTurnPlayerIndex = playerIndex;
 		PlayResultMusic(playerIndex);
 
 		for (int avatarPlayerIndex = 0; avatarPlayerIndex < player_count; avatarPlayerIndex++)
@@ -177,19 +165,21 @@ public partial class GameBoardScene
 			&& IsNetworkHost())
 		{
 			int winnerSnapshotId = CreateNextNetworkSnapshotId();
-			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, winnerSnapshotId);
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(winnerSnapshotId);
 		}
 		ShowWinnerSequence(playerIndex);
 	}
 
 	private void DeclareDraw()
 	{
+		ResolveRuleMatchOutcomeAndPresent(
+			scoreOrLifeWinnerPlayerIndex: -1,
+			settleRegardlessOfAvailableActions: true);
+	}
+
+	private void PresentDeclaredDraw()
+	{
 		ClearAdventureBattleScopedStateForBattleEnd();
-		_matchOutcomeKind = MatchOutcomeKind.Draw;
-		_winnerPlayerIndex = -1;
-		AdvanceTurnSequenceGeneration();
-		_isResolvingTurnSequence = false;
-		_isProcessingCardPlay = false;
 		RenderPlayerCardPiles();
 		RenderPlayerHands();
 		RenderTableCards();
@@ -198,7 +188,7 @@ public partial class GameBoardScene
 			&& IsNetworkHost())
 		{
 			int drawSnapshotId = CreateNextNetworkSnapshotId();
-			GetNetworkManager()?.SendBoardSnapshotsFromHost(this, drawSnapshotId);
+			GetNetworkManager()?.SendBoardSnapshotsFromHost(drawSnapshotId);
 		}
 		ShowDrawSequence();
 	}
@@ -210,16 +200,41 @@ public partial class GameBoardScene
 			return;
 		}
 
-		MatchOutcome outcome = MatchOutcomeRules.ResolveStalemate(_playerScores, player_count);
 		GD.PushError("Turn resolution stalled without changing the board or active seat; settling the match.");
-		if (outcome.Kind == MatchOutcomeKind.Winner)
+		ResolveRuleMatchOutcomeAndPresent(
+			scoreOrLifeWinnerPlayerIndex: -1,
+			settleRegardlessOfAvailableActions: true);
+	}
+
+	private bool ResolveRuleMatchOutcomeAndPresent(
+		int scoreOrLifeWinnerPlayerIndex,
+		bool settleRegardlessOfAvailableActions = false)
+	{
+		var playableItemActions = ImmutableArray.CreateBuilder<bool>(player_count);
+		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			DeclareWinner(outcome.WinnerPlayerIndex);
+			playableItemActions.Add(HasPlayableItemCard(playerIndex));
 		}
-		else
+
+		if (!TrySubmitEvaluateMatchOutcomeRuleCommand(
+			scoreOrLifeWinnerPlayerIndex,
+			playableItemActions.MoveToImmutable(),
+			settleRegardlessOfAvailableActions,
+			out RuleCommandResult result)
+			|| !result.Mutation.MatchOutcomeChanged)
 		{
-			DeclareDraw();
+			return false;
 		}
+
+		if (result.ReadModel.Outcome == Deckland.Rules.MatchOutcome.Won)
+		{
+			PresentDeclaredWinner(result.ReadModel.WinnerSeat);
+		}
+		else if (result.ReadModel.Outcome == Deckland.Rules.MatchOutcome.Draw)
+		{
+			PresentDeclaredDraw();
+		}
+		return true;
 	}
 
 	private void ShowDrawSequence()
@@ -306,9 +321,9 @@ public partial class GameBoardScene
 
 	private bool TryGetNextTurnPlayerIndex(int currentPlayerIndex, out int nextPlayerIndex)
 	{
-		Span<GameTurnRules.PlayerCardState> playerStates = stackalloc GameTurnRules.PlayerCardState[MaxPlayers];
+		Span<GameTurnPlayerCardState> playerStates = stackalloc GameTurnPlayerCardState[MaxPlayers];
 		BuildPlayerCardStates(playerStates);
-		return GameTurnRules.TryGetNextTurnPlayerIndex(
+		return MatchReadModel.TryGetNextTurnPlayerIndex(
 			ClockwiseTurnOrder,
 			playerStates,
 			currentPlayerIndex,

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -39,6 +41,7 @@ public partial class GameBoardScene
 			}
 
 			PlayingCard stolenCard = _playerHands[targetPlayerIndex][targetHandIndex];
+			long expectedStolenCardRuntimeInstanceId = stolenCard.InstanceId;
 			bool shouldPlayLocalVisual = ShouldPlayOwnerOnlyVisualLocally(ownerPlayerIndex);
 			TryBroadcastStealHandCardVisualEventFromHost(
 				ownerPlayerIndex,
@@ -65,17 +68,29 @@ public partial class GameBoardScene
 				}
 			}
 
-				_playerHands[targetPlayerIndex].RemoveAt(targetHandIndex);
-				ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-				_playerHands[ownerPlayerIndex].Add(stolenCard);
-				MarkNetworkAuthorityTransferMutationApplied();
+			if (!TrySubmitTransferHandCardRuleCommand(
+				ownerPlayerIndex,
+				targetPlayerIndex,
+				targetHandIndex,
+				expectedStolenCardRuntimeInstanceId,
+				string.Empty,
+				MaxTotalHandCards,
+				turnSequenceGeneration,
+				out _))
+			{
+				RenderPlayerHands();
+				return new PlayCardResult(false, false);
+			}
+
+			ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
+			MarkNetworkAuthorityTransferMutationApplied();
 			if (shouldPlayLocalVisual)
 			{
 				PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
-				}
+			}
 
-				RenderPlayerHands();
-				return new PlayCardResult(true, false);
+			RenderPlayerHands();
+			return new PlayCardResult(true, false);
 		}
 
 		int itemHandIndex = targetHandIndex - _playerHands[targetPlayerIndex].Count;
@@ -112,17 +127,29 @@ public partial class GameBoardScene
 			}
 		}
 
-		_playerItemHands[targetPlayerIndex].RemoveAt(itemHandIndex);
+		if (!TrySubmitTransferHandCardRuleCommand(
+			ownerPlayerIndex,
+			targetPlayerIndex,
+			targetHandIndex,
+			0,
+			stolenItemCard.Id,
+			MaxTotalHandCards,
+			turnSequenceGeneration,
+			out _))
+		{
+			RenderPlayerHands();
+			return new PlayCardResult(false, false);
+		}
+
 		ShiftHandDisplayStateAfterRemovedCard(targetPlayerIndex, targetHandIndex);
-		_playerItemHands[ownerPlayerIndex].Add(stolenItemCard);
 		MarkNetworkAuthorityTransferMutationApplied();
 		if (shouldPlayLocalItemVisual)
 		{
 			PlayPlayerAvatarAction(targetPlayerIndex, CharacterAvatar.AvatarAction.Hit);
-			}
+		}
 
-			RenderPlayerHands();
-			return new PlayCardResult(true, false);
+		RenderPlayerHands();
+		return new PlayCardResult(true, false);
 	}
 
 	private async Task PlayStealHandCardAnimationAsync(
@@ -169,7 +196,9 @@ public partial class GameBoardScene
 
 	private Texture2D? GetVisibleStolenPlayingCardTexture(int sourcePlayerIndex, PlayingCard card)
 	{
-		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null ? _cardBackTexture : card.Texture;
+		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null
+			? _cardBackTexture
+			: GetPlayingCardTexture(card);
 	}
 
 	private Texture2D? GetVisibleStolenPlayingCardAttachmentOverlayTexture(int sourcePlayerIndex, PlayingCard card)
@@ -179,7 +208,9 @@ public partial class GameBoardScene
 
 	private Texture2D? GetVisibleStolenItemCardTexture(int sourcePlayerIndex, ItemCard itemCard)
 	{
-		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null ? _cardBackTexture : itemCard.Texture;
+		return IsPlayerHandHidden(sourcePlayerIndex) && _cardBackTexture != null
+			? _cardBackTexture
+			: GetItemCardTexture(itemCard);
 	}
 
 	private float GetVisibleStolenItemCardScale(int sourcePlayerIndex, ItemCard itemCard)
@@ -222,6 +253,11 @@ public partial class GameBoardScene
 		int cardsToMove = DirectItemTargetRules.GetDeckTransferCount(
 			_playerDecks[targetPlayerIndex].Count,
 			cardsToMoveLimit);
+		var expectedSourceTopCardIds = ImmutableArray.CreateBuilder<long>(cardsToMove);
+		for (int cardIndex = 0; cardIndex < cardsToMove; cardIndex++)
+		{
+			expectedSourceTopCardIds.Add(_playerDecks[targetPlayerIndex][cardIndex].InstanceId);
+		}
 		bool shouldPlayLocalVisual = ShouldPlayOwnerOnlyVisualLocally(ownerPlayerIndex);
 		if (cardsToMove > 0)
 		{
@@ -238,19 +274,24 @@ public partial class GameBoardScene
 			}
 		}
 
-		for (int cardIndex = 0; cardIndex < cardsToMove; cardIndex++)
+		if (!TrySubmitTransferDeckCardsRuleCommand(
+			ownerPlayerIndex,
+			targetPlayerIndex,
+			cardsToMoveLimit,
+			ShouldPreserveCardEffectsWhenEnteringDeck(),
+			expectedSourceTopCardIds.MoveToImmutable(),
+			turnSequenceGeneration,
+			out RuleCommandResult transferResult))
 		{
-			PlayingCard topCard = _playerDecks[targetPlayerIndex][0];
-			_playerDecks[targetPlayerIndex].RemoveAt(0);
-			AddCardToPlayerDeck(ownerPlayerIndex, topCard);
+			RenderPlayerCardPiles();
+			return new PlayCardResult(false, false);
 		}
+		cardsToMove = transferResult.Mutation.CollectedCardCount;
 		if (cardsToMove > 0)
 		{
 			MarkNetworkAuthorityTransferMutationApplied();
 		}
 
-		Shuffle(_playerDecks[ownerPlayerIndex]);
-		Shuffle(_playerDecks[targetPlayerIndex]);
 		if (cardsToMove > 0)
 		{
 			if (shouldPlayLocalVisual)

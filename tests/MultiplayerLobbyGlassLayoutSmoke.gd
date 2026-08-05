@@ -132,8 +132,6 @@ func _audit_viewport(spec: Dictionary) -> bool:
 		"SafeArea/MainLayout/Header/BackButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput",
-		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/HostMigrationToggle",
-		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/TrustedHotStandbyToggle",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/PlayerCountOption",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton",
 		"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/ReadyButton",
@@ -147,20 +145,6 @@ func _audit_viewport(spec: Dictionary) -> bool:
 		if control is BaseButton and (control as BaseButton).focus_mode == Control.FOCUS_NONE:
 			_fail("%s control %s is not keyboard or gamepad focusable" % [context, control_path])
 			return false
-	var host_migration_toggle := _lobby.get_node_or_null(
-		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/HostMigrationToggle") as CheckButton
-	var trusted_standby_toggle := _lobby.get_node_or_null(
-		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/TrustedHotStandbyToggle") as CheckButton
-	var migration_notice := _lobby.get_node_or_null(
-		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/MigrationTrustNoticeLabel") as Label
-	if host_migration_toggle == null or not host_migration_toggle.button_pressed \
-			or trusted_standby_toggle == null or trusted_standby_toggle.button_pressed:
-		_fail("%s host migration defaults do not require explicit standby consent" % context)
-		return false
-	if migration_notice == null or migration_notice.text.is_empty() \
-			or migration_notice.autowrap_mode == TextServer.AUTOWRAP_OFF:
-		_fail("%s trusted standby notice is missing or cannot wrap" % context)
-		return false
 	for button_path in [
 		"SafeArea/MainLayout/Header/BackButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton",

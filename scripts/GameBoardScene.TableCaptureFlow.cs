@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -44,8 +46,7 @@ public partial class GameBoardScene
 		return CaptureTableCardsResult.NotApplied;
 	}
 
-	CaptureStatePlan capturePlan = _captureStateService.CreatePlan(
-		_state,
+	CaptureStatePlan capturePlan = CreateAuthorityCapturePlan(
 		captureStartIndex,
 		extraTableCardIndexes);
 	if (!capturePlan.IsValid)
@@ -60,14 +61,14 @@ public partial class GameBoardScene
 				captureStartIndex);
 	}
 
-	CaptureScoringRules.TableCard[] captureScoringTableCards =
+	CaptureScoringTableCard[] captureScoringTableCards =
 		ToCaptureScoringTableCards();
-			int scorePlayerIndex = ScoreService.GetCapturedScorePlayerIndex(
+			int scorePlayerIndex = MatchReadModel.GetCapturedScorePlayerIndex(
 					captureScoringTableCards,
 					captureStartIndex,
 					playerIndex,
 					player_count);
-		CaptureFlowPlan captureFlow = CaptureFlowPlanner.Build(
+		CaptureFlowPlan captureFlow = MatchReadModel.BuildCaptureFlow(
 			captureScoringTableCards,
 			captureStartIndex,
 			scorePlayerIndex,
@@ -184,10 +185,10 @@ public partial class GameBoardScene
 		{
 			capturedTraceMark |= ReferenceEquals(
 				capturedEntry.TableCard,
-				_adventureTraceHuntMarkedTableCard);
+				GetAdventureTraceHuntMarkedTableCard());
 			capturedHuntMark |= ReferenceEquals(
 				capturedEntry.TableCard,
-				_adventureHuntOrderMarkedTableCard);
+				GetAdventureHuntOrderMarkedTableCard());
 			if (!questionRewardStartGlobalPosition.HasValue
 				&& IsQuestionTableCard(capturedEntry.TableCard))
 			{
@@ -217,12 +218,11 @@ public partial class GameBoardScene
 					&& capturedDiscardPlan.DiscardDisplayIndex >= 0
 						? new HashSet<int> { capturedDiscardPlan.DiscardDisplayIndex }
 						: null;
-			AdventureUpgradeRunState? rewardRunState = GetAdventureUpgradeRunState();
+			AdventureRunReadModel? rewardRunState = GetAdventureUpgradeRunState();
 		if (playerIndex == MainPlayerIndex
 			&& rewardRunState?.IsActive == true
-			&& AdventureUpgradeEffectService.ShouldGrantLinkedStemsQuestionReward(
-				rewardRunState.GetAcquiredUpgradeIds(),
-				_adventureMainPlayerSuccessfulCapturesThisTurn + 1))
+			&& rewardRunState.ShouldGrantLinkedStemsQuestionReward(
+				CurrentMatchFlowState.SuccessfulCapturesThisTurn + 1))
 		{
 				linkedStemsRewardPlan = await PlanQuestionCardRewardAsync(
 					playerIndex,
@@ -242,16 +242,11 @@ public partial class GameBoardScene
 			return CaptureTableCardsResult.AbortedBeforeApply;
 		}
 
+			var scoreMutations = ImmutableArray.CreateBuilder<RuleScoreMutation>(2);
+			var scorePresentations = new List<CaptureScorePresentation>(2);
 			if (ShouldUseAdventureUpgradeSystem())
 			{
 				AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-				var candidateTableCards = new List<TableCard>(_tableCards);
-				if (prePlayTableCards != null)
-				{
-					_tableCards.Clear();
-					_tableCards.AddRange(prePlayTableCards);
-					RenderTableCards();
-				}
 				AdventureClubCaptureCommitInput clubCaptureInput =
 				BuildAdventureClubCaptureCommitInput(playerIndex, adventureCaptureContext);
 			int plannedQuestionRewardCount = playerIndex == MainPlayerIndex
@@ -268,12 +263,12 @@ public partial class GameBoardScene
 								adventureCaptureContext.Action.PlayedCard),
 						ConsumeGapRooting: clubGapRootingTargetTableCard != null,
 						capturePreparation.DamageInput,
-						SuccessfulCapturesThisTurn: _adventureMainPlayerSuccessfulCapturesThisTurn + 1,
-						adventureCaptureContext,
+						SuccessfulCapturesThisTurn: CurrentMatchFlowState.SuccessfulCapturesThisTurn + 1,
+						adventureCaptureContext.ToRuleFacts(),
 						clubCaptureInput,
 						plannedQuestionRewardCount,
-						_adventureMainPlayerHalfHealthRescueUsed,
-						_adventureMainPlayerQuarterHealthRescueUsed))
+						CurrentMatchFlowState.HalfHealthRescueUsed,
+						CurrentMatchFlowState.QuarterHealthRescueUsed))
 						?? new AdventureCaptureCommitResult(
 							AdventureRunWriteResult.SaveFailed,
 							default,
@@ -292,9 +287,6 @@ public partial class GameBoardScene
 					GD.PushWarning($"Failed to commit adventure capture action: {gate.Result.WriteResult}");
 					return CaptureTableCardsResult.AbortedBeforeApply;
 				}
-				_tableCards.Clear();
-				_tableCards.AddRange(candidateTableCards);
-
 				AdventureCaptureCommitResult commitResult = gate.Result;
 			resolvedCaptureDamage = commitResult.DamageResult;
 			committedClubCaptureEffects = commitResult.ClubCaptureEffectResult;
@@ -304,72 +296,122 @@ public partial class GameBoardScene
 				adventureQuestionRewardEffects = commitResult.QuestionRewardEffectResult with { HealAmount = 0 };
 			}
 
-			int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(scorePlayerIndex);
-			if (damageTargetPlayerIndex == MainPlayerIndex)
-			{
-				ApplyCommittedAdventurePlayerVitals(
-					scorePlayerIndex,
-					resolvedCaptureDamage.FinalDamage,
-					commitResult.CurrentHealth,
-					commitResult.RescueResult,
-					commitResult.ConsumedHalfHealthRescue,
-					commitResult.ConsumedQuarterHealthRescue);
-			}
-			else
-			{
-				ApplyAdventureDamageInMemory(
-					scorePlayerIndex,
-					damageTargetPlayerIndex,
-					resolvedCaptureDamage.FinalDamage);
-				if (commitResult.HealingResult.HasValue)
+				int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(scorePlayerIndex);
+				if (damageTargetPlayerIndex == MainPlayerIndex)
 				{
-					ApplyCommittedAdventurePlayerVitals(
+					int previousHealth = _playerScores[MainPlayerIndex];
+					scoreMutations.Add(new RuleScoreMutation(
 						MainPlayerIndex,
-						rawDamage: 0,
-						commitResult.CurrentHealth,
-						default,
-						false,
-						false);
+						RuleScoreMutationKind.Set,
+						commitResult.CurrentHealth));
+					scorePresentations.Add(CaptureScorePresentation.CommittedVitals(
+						scorePlayerIndex,
+						previousHealth,
+						resolvedCaptureDamage.FinalDamage,
+						commitResult.RescueResult,
+						commitResult.ConsumedHalfHealthRescue,
+						commitResult.ConsumedQuarterHealthRescue));
 				}
-			}
+				else
+				{
+					if (resolvedCaptureDamage.FinalDamage > 0)
+					{
+						int previousHealth = _playerScores[damageTargetPlayerIndex];
+						scoreMutations.Add(new RuleScoreMutation(
+							damageTargetPlayerIndex,
+							RuleScoreMutationKind.Subtract,
+							resolvedCaptureDamage.FinalDamage));
+						scorePresentations.Add(CaptureScorePresentation.AdventureDamage(
+							scorePlayerIndex,
+							damageTargetPlayerIndex,
+							previousHealth));
+					}
+					if (commitResult.HealingResult.HasValue)
+					{
+						int previousHealth = _playerScores[MainPlayerIndex];
+						scoreMutations.Add(new RuleScoreMutation(
+							MainPlayerIndex,
+							RuleScoreMutationKind.Set,
+							commitResult.CurrentHealth));
+						scorePresentations.Add(CaptureScorePresentation.CommittedVitals(
+							MainPlayerIndex,
+							previousHealth,
+							rawDamage: 0,
+							default,
+							false,
+							false));
+					}
+				}
 		}
 		else
 		{
 			resolvedCaptureDamage = PreviewAdventureCaptureDamage(
 				playerIndex,
 				capturePreparation.DamageInput);
-			if (resolvedCaptureDamage.FinalDamage > 0)
-			{
-				AddPlayerScore(scorePlayerIndex, resolvedCaptureDamage.FinalDamage);
+				if (resolvedCaptureDamage.FinalDamage > 0)
+				{
+					if (adventure_mode)
+					{
+						int damageTargetPlayerIndex = GetAdventureDamageTargetPlayerIndex(scorePlayerIndex);
+						int previousHealth = _playerScores[damageTargetPlayerIndex];
+						scoreMutations.Add(new RuleScoreMutation(
+							damageTargetPlayerIndex,
+							RuleScoreMutationKind.Subtract,
+							resolvedCaptureDamage.FinalDamage));
+						scorePresentations.Add(CaptureScorePresentation.AdventureDamage(
+							scorePlayerIndex,
+							damageTargetPlayerIndex,
+							previousHealth));
+					}
+					else
+					{
+						scoreMutations.Add(new RuleScoreMutation(
+							scorePlayerIndex,
+							RuleScoreMutationKind.Add,
+							resolvedCaptureDamage.FinalDamage));
+						scorePresentations.Add(CaptureScorePresentation.NormalScore(scorePlayerIndex));
+					}
+				}
 			}
-		}
-		await WaitForAuthorityTransactionFaultAsync("after_score");
-		commitImmediatelyBeforeApply?.Invoke();
-	CaptureStateResult captureStateResult =
-		_captureStateService.ApplyCapture(
-			_state,
-			capturePlan,
+			IReadOnlyCollection<int>? captureMutationExtraIndexes = extraTableCardIndexes;
+			if (clubGapRootingTargetTableCard != null)
+			{
+				int gapRootingTargetIndex = _tableCards.IndexOf(clubGapRootingTargetTableCard);
+				if (gapRootingTargetIndex >= 0)
+				{
+					var combinedIndexes = extraTableCardIndexes == null
+						? new HashSet<int>()
+						: new HashSet<int>(extraTableCardIndexes);
+					combinedIndexes.Add(gapRootingTargetIndex);
+					captureMutationExtraIndexes = combinedIndexes;
+				}
+			}
+			commitImmediatelyBeforeApply?.Invoke();
+		if (!TrySubmitCaptureCardsRuleCommand(
 			playerIndex,
+			captureStartIndex,
+			turnSequenceGeneration,
+			captureMutationExtraIndexes,
 			preserveCardEffectsWhenEnteringDeck,
 			preservedTableCardIndexes,
 			blackLedgerRedirectTableCardIndex,
-			MainPlayerIndex);
-		await WaitForAuthorityTransactionFaultAsync("after_capture");
-		collectedCardCount =
-			captureStateResult.CollectedCardCount;
-		removedTableCardCount =
-			captureStateResult.RemovedTableCardCount;
-		if (clubGapRootingTargetTableCard != null
-			&& _tableCards.Contains(clubGapRootingTargetTableCard)
-			&& clubGapRootingTargetTableCard.Card.HasValue)
+			MainPlayerIndex,
+				scoreMutations.ToImmutable(),
+				captureFlow.ShouldTrackQuestionCardRefresh,
+				out RuleCommandResult captureCommandResult))
 		{
-			_tableCards.Remove(clubGapRootingTargetTableCard);
-			AddCardToPlayerDeck(
-				playerIndex,
-				clubGapRootingTargetTableCard.Card.Value);
-			collectedCardCount++;
-			removedTableCardCount++;
+			return CaptureTableCardsResult.AbortedBeforeApply;
 		}
+			foreach (CaptureScorePresentation presentation in scorePresentations)
+			{
+				PresentCaptureScoreChange(presentation);
+			}
+			await WaitForAuthorityTransactionFaultAsync("after_score");
+			await WaitForAuthorityTransactionFaultAsync("after_capture");
+			collectedCardCount =
+				captureCommandResult.Mutation.CollectedCardCount;
+			removedTableCardCount =
+				captureCommandResult.Mutation.RemovedTableCardCount;
 		await WaitForDebugCaptureAfterApplyBarrierAsync();
 	if (turnSequenceGeneration != _turnSequenceGeneration
 		|| _isLeavingGame)
@@ -440,24 +482,9 @@ public partial class GameBoardScene
 		return BuildAppliedResult(aborted: true);
 	}
 
-		RefreshGardenEelBuriedCardIndex();
 	if (collectedCardCount > 0)
 	{
 		ApplyAdventureEnemyCaptureEffects(playerIndex);
-	}
-
-	if (captureFlow.ShouldTrackQuestionCardRefresh)
-	{
-		QuestionCardRefreshState questionCardRefreshState =
-			_turnAdvancementService
-				.StartQuestionCardRefreshTracking(
-					playerIndex);
-		_completedTurnsSinceQuestionCardRefresh =
-			questionCardRefreshState
-				.CompletedTurnsSinceQuestionCardRefresh;
-		_questionCardRefreshAnchorPlayerIndex =
-			questionCardRefreshState
-				.QuestionCardRefreshAnchorPlayerIndex;
 	}
 
 	if (capturedTraceMark)
@@ -472,7 +499,10 @@ public partial class GameBoardScene
 	{
 		if (capturedHuntMark)
 		{
-			_adventureHuntOrderMarkedTableCard = null;
+			TryUpdateMatchFlowState(state => state with
+			{
+				TurnCaptureMarkRuntimeId = 0,
+			});
 		}
 
 		if (prePlayTableCards != null)
@@ -482,8 +512,15 @@ public partial class GameBoardScene
 		}
 
 		RefreshAdventureCanopyAnchorAfterTableMutation();
-			_adventureMainPlayerSuccessfulCapturesThisTurn++;
-			_adventureMainPlayerCaptureCountThisBattle++;
+			TryUpdateMatchFlowState(state => state with
+			{
+				SuccessfulCapturesThisTurn = state.SuccessfulCapturesThisTurn == int.MaxValue
+					? int.MaxValue
+					: state.SuccessfulCapturesThisTurn + 1,
+				MainPlayerCapturesThisBattle = state.MainPlayerCapturesThisBattle == int.MaxValue
+					? int.MaxValue
+					: state.MainPlayerCapturesThisBattle + 1,
+			});
 			RenderPlayerHands();
 	}
 
@@ -591,7 +628,102 @@ public partial class GameBoardScene
 		}
 	}
 
-	return true;
-}
+		return true;
+	}
 
-}
+	private void PresentCaptureScoreChange(CaptureScorePresentation presentation)
+	{
+		switch (presentation.Kind)
+		{
+			case CaptureScorePresentationKind.NormalScore:
+				UpdatePlayerScoreMeter(presentation.SourcePlayerIndex, true);
+				PlayPlayerAvatarAction(
+					presentation.SourcePlayerIndex,
+					CharacterAvatar.AvatarAction.Score);
+				RefreshGameplayTensionMusic();
+				break;
+			case CaptureScorePresentationKind.AdventureDamage:
+				PresentAdventureDamageInMemory(
+					presentation.SourcePlayerIndex,
+					presentation.TargetPlayerIndex,
+					presentation.PreviousValue);
+				break;
+			case CaptureScorePresentationKind.CommittedVitals:
+				PresentCommittedAdventurePlayerVitals(
+					presentation.SourcePlayerIndex,
+					presentation.RawDamage,
+					presentation.PreviousValue,
+					presentation.RescueResult,
+					presentation.ConsumedHalfHealthRescue,
+					presentation.ConsumedQuarterHealthRescue);
+				break;
+		}
+	}
+
+	private enum CaptureScorePresentationKind
+	{
+		NormalScore,
+		AdventureDamage,
+		CommittedVitals,
+	}
+
+	private readonly record struct CaptureScorePresentation(
+		CaptureScorePresentationKind Kind,
+		int SourcePlayerIndex,
+		int TargetPlayerIndex,
+		int PreviousValue,
+		int RawDamage,
+		AdventureLowHealthRescueResult RescueResult,
+		bool ConsumedHalfHealthRescue,
+		bool ConsumedQuarterHealthRescue)
+	{
+		internal static CaptureScorePresentation NormalScore(int sourcePlayerIndex)
+		{
+			return new CaptureScorePresentation(
+				CaptureScorePresentationKind.NormalScore,
+				sourcePlayerIndex,
+				-1,
+				0,
+				0,
+				default,
+				false,
+				false);
+		}
+
+		internal static CaptureScorePresentation AdventureDamage(
+			int sourcePlayerIndex,
+			int targetPlayerIndex,
+			int previousValue)
+		{
+			return new CaptureScorePresentation(
+				CaptureScorePresentationKind.AdventureDamage,
+				sourcePlayerIndex,
+				targetPlayerIndex,
+				previousValue,
+				0,
+				default,
+				false,
+				false);
+		}
+
+		internal static CaptureScorePresentation CommittedVitals(
+			int sourcePlayerIndex,
+			int previousValue,
+			int rawDamage,
+			AdventureLowHealthRescueResult rescueResult,
+			bool consumedHalfHealthRescue,
+			bool consumedQuarterHealthRescue)
+		{
+			return new CaptureScorePresentation(
+				CaptureScorePresentationKind.CommittedVitals,
+				sourcePlayerIndex,
+				MainPlayerIndex,
+				previousValue,
+				rawDamage,
+				rescueResult,
+				consumedHalfHealthRescue,
+				consumedQuarterHealthRescue);
+		}
+	}
+
+	}

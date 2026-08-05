@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -58,7 +59,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
 		{
 			return new PlayCardResult(false, false);
@@ -89,7 +90,9 @@ public partial class GameBoardScene
 				out targetHandIndex))
 			{
 				targetPlayerIndex = PickItemTargetPlayer(itemCard.Id, playerIndex);
-				targetHandIndex = IsPlayerHandTargetItemCard(itemCard.Id) ? PickTargetHandIndex(targetPlayerIndex) : -1;
+				targetHandIndex = IsPlayerHandTargetItemCard(itemCard.Id)
+					? PickTargetHandIndex(playerIndex, targetPlayerIndex)
+					: -1;
 				CommitNetworkAuthorityCardTransferTarget(targetPlayerIndex, targetHandIndex);
 			}
 		}
@@ -97,13 +100,24 @@ public partial class GameBoardScene
 		Vector2? itemGlobalPosition = _networkAuthorityRuleTransactionActive
 			? GetNetworkAuthorityRuleVisualStartGlobalPosition(Vector2.Zero)
 			: GetHandItemCardGlobalPosition(playerIndex, itemHandIndex);
-		itemHand.RemoveAt(itemHandIndex);
+		if (!TrySubmitPlayItemFromHandRuleCommand(
+			playerIndex,
+			itemHandIndex,
+			itemCard.Id,
+			turnSequenceGeneration,
+			RuleItemPlayDestination.Consume,
+			tableIndex: -1,
+			tableItemFacesUp: false,
+			out _))
+		{
+			return new PlayCardResult(false, false);
+		}
 		await WaitForAuthorityTransactionFaultAsync("after_item_remove");
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		MarkNetworkAuthorityPrimaryMutationApplied();
 		RenderPlayerHands();
 		PlaySpecialItemCardPlaySfx();
-		await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, itemGlobalPosition ?? Vector2.Zero, 0, GetCardRotationDegreesForPlayer(playerIndex));
+		await PlaySpecialCardTriggerEffectAsync(GetItemCardTexture(itemCard), itemGlobalPosition ?? Vector2.Zero, 0, GetCardRotationDegreesForPlayer(playerIndex));
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);
@@ -188,7 +202,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
 		{
 			return new PlayCardResult(false, false);
@@ -215,7 +229,18 @@ public partial class GameBoardScene
 
 			transformAreaGlobalPosition = GetQuestionCardTransformAreaCardGlobalPosition(startGlobalPosition);
 		}
-		itemHand.RemoveAt(itemHandIndex);
+		if (!TrySubmitPlayItemFromHandRuleCommand(
+			playerIndex,
+			itemHandIndex,
+			itemCard.Id,
+			turnSequenceGeneration,
+			RuleItemPlayDestination.Consume,
+			tableIndex: -1,
+			tableItemFacesUp: false,
+			out _))
+		{
+			return new PlayCardResult(false, false);
+		}
 		await WaitForAuthorityTransactionFaultAsync("after_item_remove");
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
 		MarkNetworkAuthorityPrimaryMutationApplied();
@@ -223,7 +248,7 @@ public partial class GameBoardScene
 		PlaySpecialItemCardPlaySfx();
 
 		await PlayItemCardToTransformAreaAnimationAsync(
-			itemCard.Texture,
+			GetItemCardTexture(itemCard),
 			startGlobalPosition,
 			transformAreaGlobalPosition,
 			GetCardRotationDegreesForPlayer(playerIndex));
@@ -232,7 +257,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		await PlaySpecialCardTriggerEffectAsync(itemCard.Texture, transformAreaGlobalPosition, 0);
+		await PlaySpecialCardTriggerEffectAsync(GetItemCardTexture(itemCard), transformAreaGlobalPosition, 0);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
 			return new PlayCardResult(false, false);

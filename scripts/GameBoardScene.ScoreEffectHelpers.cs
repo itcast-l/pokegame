@@ -174,7 +174,7 @@ public partial class GameBoardScene
 			: Vector2.Zero;
 		Vector2 controlCenter = (startCenter + targetCenter) / 2.0f
 			+ new Vector2(0.0f, -38.0f)
-			+ side * _rng.RandfRange(-18.0f, 18.0f);
+			+ side * _presentationRng.RandfRange(-18.0f, 18.0f);
 
 		try
 		{
@@ -284,13 +284,14 @@ public partial class GameBoardScene
 			CanvasItem.TextureFilterEnum.Linear);
 		effect.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 
-		Vector2 startCenter = cardCenter + RandomUnitVector() * _rng.RandfRange(4.0f, 16.0f);
+		Vector2 startCenter = cardCenter
+			+ RandomUnitVector() * _presentationRng.RandfRange(4.0f, 16.0f);
 		Vector2 travel = targetCenter - startCenter;
 		Vector2 side = travel.LengthSquared() > 0.001f
 			? new Vector2(-travel.Y, travel.X).Normalized()
 			: Vector2.Zero;
-		float arcHeight = _rng.RandfRange(58.0f, 96.0f);
-		float sideDrift = _rng.RandfRange(-34.0f, 34.0f);
+		float arcHeight = _presentationRng.RandfRange(58.0f, 96.0f);
+		float sideDrift = _presentationRng.RandfRange(-34.0f, 34.0f);
 		Vector2 controlCenter = (startCenter + targetCenter) / 2.0f
 			+ new Vector2(0.0f, -arcHeight)
 			+ side * sideDrift;
@@ -469,6 +470,6 @@ public partial class GameBoardScene
 
 	private Vector2 RandomUnitVector()
 	{
-		float angle = _rng.RandfRange(0.0f, Mathf.Tau);
+		float angle = _presentationRng.RandfRange(0.0f, Mathf.Tau);
 		return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
 	}}

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -20,7 +22,7 @@ public partial class GameBoardScene
 			return new PlayCardResult(false, false);
 		}
 
-		List<ItemCard> itemHand = _playerItemHands[playerIndex];
+		IReadOnlyList<ItemCard> itemHand = _playerItemHands[playerIndex];
 		if (itemHandIndex < 0 || itemHandIndex >= itemHand.Count)
 		{
 			return new PlayCardResult(false, false);
@@ -49,10 +51,22 @@ public partial class GameBoardScene
 			}
 		}
 
-		itemHand.RemoveAt(itemHandIndex);
+		int tableCardIndex = _tableCards.Count;
+		if (!TrySubmitPlayItemFromHandRuleCommand(
+			playerIndex,
+			itemHandIndex,
+			bombCard.Id,
+			turnSequenceGeneration,
+			RuleItemPlayDestination.Table,
+			tableCardIndex,
+			tableItemFacesUp: false,
+			out RuleCommandResult playItemResult))
+		{
+			return new PlayCardResult(false, false);
+		}
+		tableCardIndex = playItemResult.Mutation.TargetIndex;
 		ShiftHandDisplayStateAfterRemovedCard(playerIndex, displayIndex);
 		MarkNetworkAuthorityPrimaryMutationApplied();
-		int tableCardIndex = AddBombCardToTable(bombCard, playerIndex);
 		PlaySpecialItemCardPlaySfx();
 		await PlayItemCardToTableAnimationAsync(playerIndex, bombCard, startGlobalPosition, tableCardIndex, false);
 		PlayGameSfx(GameSfx.BombPlace, -1.5f, 0.97f, 1.03f, 0.06);
@@ -156,15 +170,36 @@ public partial class GameBoardScene
 
 		TableCard firstBomb = _tableCards[firstBombIndex];
 		TableCard secondBomb = _tableCards[secondBombIndex];
+		var revealReferences = ImmutableArray.CreateBuilder<RuleTableCardReference>(2);
+		if (!firstBomb.IsFaceUp)
+		{
+			revealReferences.Add(new RuleTableCardReference(firstBombIndex, firstBomb.InstanceId));
+		}
+		if (!secondBomb.IsFaceUp)
+		{
+			revealReferences.Add(new RuleTableCardReference(secondBombIndex, secondBomb.InstanceId));
+		}
 		if (_networkAuthorityRuleTransactionActive)
 		{
-			firstBomb.IsFaceUp = true;
-			secondBomb.IsFaceUp = true;
+			if (revealReferences.Count > 0)
+			{
+				TrySubmitSetTableCardsFaceUpRuleCommand(
+					_currentTurnPlayerIndex,
+					revealReferences.ToImmutable(),
+					expectedFaceUp: false,
+					faceUp: true,
+					turnSequenceGeneration,
+					out _);
+			}
 			return;
 		}
 
-		Texture2D? firstTexture = firstBomb.ItemOverlay?.Texture;
-		Texture2D? secondTexture = secondBomb.ItemOverlay?.Texture;
+		Texture2D? firstTexture = firstBomb.ItemOverlay.HasValue
+			? GetItemCardTexture(firstBomb.ItemOverlay.Value)
+			: null;
+		Texture2D? secondTexture = secondBomb.ItemOverlay.HasValue
+			? GetItemCardTexture(secondBomb.ItemOverlay.Value)
+			: null;
 		Task? firstRevealTask = null;
 		Task? secondRevealTask = null;
 		if (!firstBomb.IsFaceUp && firstTexture != null)
@@ -202,8 +237,29 @@ public partial class GameBoardScene
 			}
 		}
 
-		firstBomb.IsFaceUp = true;
-		secondBomb.IsFaceUp = true;
+		if (_authorityRuleSession != null
+			&& revealReferences.Count > 0
+			&& !TrySubmitSetTableCardsFaceUpRuleCommand(
+				_currentTurnPlayerIndex,
+				revealReferences.ToImmutable(),
+				expectedFaceUp: false,
+				faceUp: true,
+				turnSequenceGeneration,
+				out _))
+		{
+			return;
+		}
+		if (_authorityRuleSession == null && _replicaRuleSession != null)
+		{
+			if (!firstBomb.IsFaceUp)
+			{
+				TrySetNetworkPresentationTableCardFaceUp(firstBombIndex, true);
+			}
+			if (!secondBomb.IsFaceUp)
+			{
+				TrySetNetworkPresentationTableCardFaceUp(secondBombIndex, true);
+			}
+		}
 		RenderTableCards();
 		await WaitForBoardDelayAsync(TableCardRevealPauseSeconds);
 	}
@@ -245,7 +301,7 @@ public partial class GameBoardScene
 
 		ItemCard bombCard = tableCard.ItemOverlay.Value;
 		await PlaySpecialCardTriggerEffectAsync(
-			bombCard.Texture,
+			GetItemCardTexture(bombCard),
 			_centerArena.GlobalPosition + cardPosition + GetItemCardVisualPosition(bombCard.Id),
 			tableCardIndex * 2 + 1);
 	}
@@ -257,13 +313,31 @@ public partial class GameBoardScene
 			return;
 		}
 
+		var expectedRuntimeInstanceIds = ImmutableArray.CreateBuilder<long>(
+			secondBombIndex - firstBombIndex + 1);
 		for (int tableCardIndex = firstBombIndex; tableCardIndex <= secondBombIndex; tableCardIndex++)
 		{
 			ClearAdventureTraceHuntMarkerIfTableCardRemoved(_tableCards[tableCardIndex]);
+			expectedRuntimeInstanceIds.Add(_tableCards[tableCardIndex].InstanceId);
 		}
 
-		_tableCards.RemoveRange(firstBombIndex, secondBombIndex - firstBombIndex + 1);
-		RefreshGardenEelBuriedCardIndex();
+		if (_authorityRuleSession == null && _replicaRuleSession != null)
+		{
+			TryRemoveNetworkPresentationTableCardRange(
+				firstBombIndex,
+				secondBombIndex - firstBombIndex + 1);
+			return;
+		}
+
+		if (!TrySubmitRemoveTableCardRangeRuleCommand(
+			_currentTurnPlayerIndex,
+			firstBombIndex,
+			expectedRuntimeInstanceIds.MoveToImmutable(),
+			_turnSequenceGeneration,
+			out _))
+		{
+			return;
+		}
 	}
 
 	private async Task PlayBombPairDestroySequenceAsync(int firstBombIndex, int secondBombIndex, int turnSequenceGeneration)
@@ -295,8 +369,24 @@ public partial class GameBoardScene
 				continue;
 			}
 
-			tableCard.IsHiddenDuringCapture = true;
-			RenderTableCards();
+				if (_authorityRuleSession != null
+					&& !TrySubmitSetTableCardsHiddenRuleCommand(
+					_currentTurnPlayerIndex,
+					ImmutableArray.Create(new RuleTableCardReference(
+						tableCardIndex,
+						tableCard.InstanceId)),
+					tableCard.IsHiddenDuringCapture,
+					hidden: true,
+					turnSequenceGeneration,
+					out _))
+				{
+					return;
+				}
+				if (_authorityRuleSession == null && _replicaRuleSession != null)
+				{
+					_presentationHiddenTableCardRuntimeInstanceIds.Add(tableCard.InstanceId);
+				}
+				RenderTableCards();
 			await PlayBombPairDestroyCardAsync(tableCardIndex, GetTableCardPosition(tableCardIndex, tableLayoutRect));
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
@@ -313,18 +403,18 @@ public partial class GameBoardScene
 		{
 			if (ShouldShowMainPlayerTablePreview(tableCard))
 			{
-				return tableCard.Card.Value.Texture;
+				return GetPlayingCardTexture(tableCard.Card.Value);
 			}
 
 			return tableCard.IsFaceUp || _cardBackTexture == null
-				? tableCard.Card.Value.Texture
+				? GetPlayingCardTexture(tableCard.Card.Value)
 				: _cardBackTexture;
 		}
 
 		if (tableCard.ItemOverlay.HasValue)
 		{
 			return tableCard.IsFaceUp || _cardBackTexture == null
-				? tableCard.ItemOverlay.Value.Texture
+				? GetItemCardTexture(tableCard.ItemOverlay.Value)
 				: _cardBackTexture;
 		}
 

@@ -30,13 +30,18 @@ public partial class NetworkManager : Node
 	[Signal]
 	public delegate void BoardInitializeEventHandler(Godot.Collections.Dictionary payload);
 
+	[Signal]
+	public delegate void SessionLeaveCompletedEventHandler(int reason);
+
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const double DiscoveryBroadcastSeconds = 1.0;
 	private const double RoomStaleSeconds = 5.0;
 	private const double ReconnectRetrySeconds = 2.0;
+	private const double ClientReconnectWindowSeconds = 10.0;
 	private const double SeatCredentialRetrySeconds = 1.0;
 	private const double LocalReadyIntentRetrySeconds = 1.0;
 	private const double HostEndedMatchBroadcastGraceSeconds = 0.15;
+	private static readonly byte[] LanDiscoveryPingPayload = Encoding.UTF8.GetBytes("deckland_discover");
 
 	private readonly List<NetworkPlayerPublicState> _players = new();
 	private readonly List<NetworkRoomInfo> _rooms = new();
@@ -47,8 +52,10 @@ public partial class NetworkManager : Node
 	private readonly Dictionary<int, bool> _pendingLobbyReadyByPeerId = new();
 	private readonly NetworkPeerRateLimiter _peerRateLimiter = new();
 	private readonly Dictionary<int, double> _lastCorrectiveSnapshotAtByPeer = new();
-	private PacketPeerUdp? _lanDiscoveryResponder;
-	private PacketPeerUdp? _lanDiscoveryBrowser;
+	private readonly List<string> _lanDiscoveryBroadcastAddresses = new();
+	private byte[] _lanRoomAdvertisementPayload = Array.Empty<byte>();
+	private LanDiscoverySocket? _lanDiscoveryResponder;
+	private LanDiscoverySocket? _lanDiscoveryBrowser;
 	private ENetMultiplayerPeer? _enetPeer;
 	private MultiplayerPeer? _steamPeer;
 	private NetworkSessionConfig _config = new(
@@ -78,6 +85,7 @@ public partial class NetworkManager : Node
 	private ulong _steamLobbyId;
 	private bool _signalsConnected;
 	private bool _steamSignalsConnected;
+	private ISteamPlatformAdapter? _steamPlatform;
 	private bool _pendingSteamHostLobby;
 	private double _nextReconnectAttemptAt;
 	private double _lastSeatCredentialRetryAt = -1.0;
@@ -85,23 +93,27 @@ public partial class NetworkManager : Node
 	private bool? _pendingLocalReadyIntent;
 	private bool _reconnectAttemptInFlight;
 	private double _reconnectAttemptStartedAt = -1.0;
+	private double _reconnectWindowStartedAt = -1.0;
 	private bool _lobbyRejectPending;
 	private string _lobbyRejectMessage = string.Empty;
 	private bool _hostEndedMatchPending;
 	private string _hostEndedMatchMessage = string.Empty;
 	private bool _hostEndedMatchBroadcasted;
 	private bool _migrationFailureReturnPending;
+	private bool _hostDisconnectReturnPending;
+	private bool _hostDisconnectErrorPublished;
 	private string _pendingLobbyErrorMessage = string.Empty;
 	private long _stateGeneration;
 	private long _authorityEpoch;
 
 	public NetworkSessionState State => _state;
-	public bool SteamAvailable => GetSteamSingleton() != null && IsSteamInitialized();
+	public bool SteamAvailable => _steamPlatform is { IsAvailable: true, IsInitialized: true };
 	public bool IsInLobby => _state is NetworkSessionState.Lobby or NetworkSessionState.Starting or NetworkSessionState.LoadingScene;
 	public bool IsHost => TryGetCachedLocalIsHost(out bool isHost) ? isHost : TryIsServer();
 	public int LocalSeatIndex => GetLocalPlayer().SeatIndex;
 	public NetworkSessionConfig CurrentConfig => _config;
 	public bool IsMigrationFailureReturnPending => _migrationFailureReturnPending;
+	public bool IsHostDisconnectReturnPending => _hostDisconnectReturnPending;
 	internal long AuthorityEpoch => _authorityEpoch;
 
 	public string ConsumePendingLobbyErrorMessage()
@@ -114,6 +126,8 @@ public partial class NetworkManager : Node
 	public override void _Ready()
 	{
 		ProcessMode = ProcessModeEnum.Always;
+		InitializeNetworkMaintenanceScheduler();
+		InitializeSteamPlatformAdapter();
 		ConnectMultiplayerSignals();
 		TryConnectSteamSignals();
 		RefreshLocalIdentity();
@@ -122,35 +136,22 @@ public partial class NetworkManager : Node
 
 	public override void _ExitTree()
 	{
-		LeaveSession();
-	}
-
-	public override void _Process(double delta)
-	{
-		double now = Time.GetTicksMsec() / 1000.0;
-		PollLanDiscoveryResponder(now);
-		PollLanDiscoveryBrowser(now);
-		PollLoadHandshake(now);
-		PollReconnect(now);
-		PollSeatCredentialDelivery(now);
-		PollLocalReadyIntent(now);
-		PollActiveHostMigration(now);
-		PollLobbyMigrationRecovery(now);
-		PollMigrationReadiness(now);
-		PollMigrationCandidateLatency(now);
-		PollHotStandby(now);
-		PollHostMigration(now);
+		StopNetworkMaintenanceScheduler();
+		AbortSessionCloseAndCleanup(NetworkSessionCloseReason.ApplicationExit);
 	}
 
 	public void HostLan(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
 	{
+		if (!PrepareForNewSessionStart())
+		{
+			return;
+		}
 		if (!EnsureItemCardCatalogReady())
 		{
 			return;
 		}
 
 		RefreshLocalIdentity();
-		LeaveSession();
 		InitializeLocalHostSessionIdentity();
 		SetState(NetworkSessionState.Hosting);
 		_config = CreateConfig(NetworkTransport.Lan, playerCount, itemMode, winningScore, roomName, roomPassword);
@@ -159,7 +160,7 @@ public partial class NetworkManager : Node
 		Error error = _enetPeer.CreateServer(NetworkSessionDefaults.LanGamePort, NetworkSessionDefaults.MaxPlayers - 1);
 		if (error != Error.Ok)
 		{
-			Fail($"LAN host failed: {error}");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, $"LAN host failed: {error}");
 			return;
 		}
 
@@ -175,23 +176,35 @@ public partial class NetworkManager : Node
 
 	public void SearchLan()
 	{
+		if (_state == NetworkSessionState.Leaving)
+		{
+			return;
+		}
 		StopLanDiscoveryBrowser();
 		_rooms.Clear();
 		_roomLastSeenAt.Clear();
-		_lanDiscoveryBrowser = new PacketPeerUdp();
-		Error bindError = _lanDiscoveryBrowser.Bind(NetworkSessionDefaults.LanDiscoveryPort);
-		if (bindError != Error.Ok)
+		bool bound = LanDiscoverySocket.TryBind(
+			NetworkSessionDefaults.LanDiscoveryPort,
+			MaxLanDiscoveryPacketBytes,
+			out _lanDiscoveryBrowser,
+			out string bindError);
+		if (!bound)
 		{
-			bindError = _lanDiscoveryBrowser.Bind(0);
+			bound = LanDiscoverySocket.TryBind(
+				0,
+				MaxLanDiscoveryPacketBytes,
+				out _lanDiscoveryBrowser,
+				out bindError);
 		}
-		if (bindError != Error.Ok)
+		if (!bound || _lanDiscoveryBrowser == null)
 		{
-			_lanDiscoveryBrowser.Close();
+			_lanDiscoveryBrowser?.Dispose();
 			_lanDiscoveryBrowser = null;
-			Fail($"LAN search failed: {bindError}");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, $"LAN search failed: {bindError}");
 			return;
 		}
 
+		RefreshLanDiscoveryBroadcastAddresses();
 		SetState(NetworkSessionState.Searching);
 		SendLanDiscoveryPing();
 		EmitRoomListUpdated();
@@ -205,6 +218,10 @@ public partial class NetworkManager : Node
 
 	public void JoinLan(string address, string roomPassword)
 	{
+		if (!PrepareForNewSessionStart())
+		{
+			return;
+		}
 		if (string.IsNullOrWhiteSpace(address))
 		{
 			Fail("LAN address is empty.");
@@ -216,7 +233,6 @@ public partial class NetworkManager : Node
 		}
 
 		RefreshLocalIdentity();
-		LeaveSession();
 		_lastLanJoinAddress = address.Trim();
 		SetState(NetworkSessionState.Joining);
 		_pendingJoinRoomPassword = RoomPasswordRules.Normalize(roomPassword);
@@ -231,7 +247,7 @@ public partial class NetworkManager : Node
 		Error error = _enetPeer.CreateClient(address.Trim(), NetworkSessionDefaults.LanGamePort);
 		if (error != Error.Ok)
 		{
-			Fail($"LAN join failed: {error}");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, $"LAN join failed: {error}");
 			return;
 		}
 
@@ -377,11 +393,9 @@ public partial class NetworkManager : Node
 
 		if (SteamAvailable)
 		{
-			GodotObject? steam = GetSteamSingleton();
-			Variant steamId = steam?.Call("getSteamID") ?? default;
-			if (steamId.VariantType is Variant.Type.Int or Variant.Type.Float)
+			if (_steamPlatform?.TryGetLocalSteamId(out long steamId) == true)
 			{
-				return $"steam:{steamId.AsUInt64()}";
+				return $"steam:{steamId}";
 			}
 		}
 
@@ -470,10 +484,10 @@ public partial class NetworkManager : Node
 		{
 			ConfigureLanPeerTimeout((int)peerId);
 		}
-		if (_state == NetworkSessionState.MigratingHost
+		if ((HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 			|| (IsHost && _state == NetworkSessionState.InGame))
 		{
-			GD.Print($"MIGRATION_PEER_CONNECTED peer={peerId} state={_state} local_peer={GetLocalPeerId()}");
+			GD.Print($"NETWORK_PEER_CONNECTED peer={peerId} state={_state} local_peer={GetLocalPeerId()}");
 		}
 
 		if (!IsHost)
@@ -481,22 +495,22 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		bool resumesAuthenticatedSeat = _lobbyMigrationRecoveryState is not null
-			|| (_state == NetworkSessionState.InGame
-				&& (_networkMigrationPlan is not null
-					|| _lastCompletedMigrationReadyEpoch == GetCurrentAuthorityEpoch()));
+		// In-game arrivals must prove their existing seat credential; the room
+		// password is intentionally discarded after the initial join handshake.
+		bool resumesAuthenticatedSeat = _state == NetworkSessionState.InGame
+			|| (HostMigrationCapabilityAvailable && _lobbyMigrationRecoveryState is not null);
 		BeginPeerSecurityHandshake((int)peerId, resumesAuthenticatedSeat);
 
 		if (_state != NetworkSessionState.Lobby)
 		{
 			return;
 		}
-			if (_lobbyMigrationRecoveryState is not null)
-			{
-				// Migrated lobby peers authenticate through the recovery claim path;
-				// do not race that claim with a fresh join request.
-				return;
-			}
+		if (HostMigrationCapabilityAvailable && _lobbyMigrationRecoveryState is not null)
+		{
+			// Migrated lobby peers authenticate through the recovery claim path;
+			// do not race that claim with a fresh join request.
+			return;
+		}
 
 	}
 
@@ -505,12 +519,12 @@ public partial class NetworkManager : Node
 		_pendingLobbyReadyByPeerId.Remove((int)peerId);
 		_peerRateLimiter.ClearPeer((int)peerId);
 		_lastCorrectiveSnapshotAtByPeer.Remove((int)peerId);
-			ClearPeerMigrationSecurity((int)peerId);
-			ClearMigrationCandidateLatency((int)peerId);
-		if (_state == NetworkSessionState.MigratingHost
+		ClearPeerMigrationSecurity((int)peerId);
+		ClearMigrationCandidateLatency((int)peerId);
+		if ((HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 			|| (IsHost && _state == NetworkSessionState.InGame))
 		{
-			GD.Print($"MIGRATION_PEER_DISCONNECTED peer={peerId} state={_state} local_peer={GetLocalPeerId()}");
+			GD.Print($"NETWORK_PEER_DISCONNECTED peer={peerId} state={_state} local_peer={GetLocalPeerId()}");
 		}
 
 		int playerIndex = _players.FindIndex(
@@ -524,16 +538,16 @@ public partial class NetworkManager : Node
 		{
 			HandleHotStandbyDisconnected(_players[playerIndex].SeatIndex);
 			_players[playerIndex] = _players[playerIndex] with { IsConnected = false };
-				if (NetworkReconnectRules.ShouldHandOffDisconnectedSeatToAi(_state, _players[playerIndex].IsHost))
-				{
-					TryMarkSeatDisconnected((int)peerId);
-				}
-				RemoveMigrationRecoverySeatAfterDisconnect(_players[playerIndex].SeatIndex);
-
-			if (GetTree().CurrentScene is GameBoardScene gameBoard)
+			if (NetworkReconnectRules.ShouldHandOffDisconnectedSeatToAi(_state, _players[playerIndex].IsHost))
 			{
-				SendBoardSnapshotsFromHost(gameBoard, gameBoard.CreateNextNetworkSnapshotId());
-				gameBoard.BeginNetworkAiProxyTurnIfNeeded();
+				TryMarkSeatDisconnected((int)peerId);
+			}
+			RemoveMigrationRecoverySeatAfterDisconnect(_players[playerIndex].SeatIndex);
+
+			if (TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint gameBoard))
+			{
+				SendBoardSnapshotsFromHost(gameBoard.CreateNextSnapshotId());
+				gameBoard.BeginAiProxyTurnIfNeeded();
 			}
 		}
 		else if (_state is NetworkSessionState.Starting or NetworkSessionState.LoadingScene)
@@ -546,7 +560,8 @@ public partial class NetworkManager : Node
 			_players.RemoveAt(playerIndex);
 			CancelMatchStart("A player disconnected while loading.");
 		}
-		else if (_state == NetworkSessionState.Lobby
+		else if (HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.Lobby
 			&& _lobbyMigrationRecoveryState is not null)
 		{
 			int seatIndex = _players[playerIndex].SeatIndex;
@@ -592,7 +607,7 @@ public partial class NetworkManager : Node
 		RefreshLocalIdentity();
 		ConfigureLanPeerTimeout(1);
 		PrepareLocalMigrationSecurity();
-		if (_state == NetworkSessionState.MigratingHost)
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
 			GD.Print($"MIGRATION_CONNECTED_TO_SERVER peer={GetLocalPeerId()} player_session={GetPlayerSessionId().Length} credential_generation={_localSeatCredentialGeneration} target_epoch={_networkMigrationPlan?.TargetEpoch}");
 			_migrationPeerAttemptInFlight = false;
@@ -608,10 +623,11 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		if (_state == NetworkSessionState.MigratingHost
+		if (HostMigrationCapabilityAvailable
+			&& _state == NetworkSessionState.MigratingHost
 			&& _networkMigrationPlan is { Phase: NetworkAuthorityPhase.Lobby } lobbyPlan)
 		{
-				if (OS.GetEnvironment("CODEX_LAN_INJECT_EXPIRED_HOST_CREDENTIAL") == "1")
+			if (OS.GetEnvironment("CODEX_LAN_INJECT_EXPIRED_HOST_CREDENTIAL") == "1")
 			{
 				RpcId(
 					1,
@@ -621,7 +637,7 @@ public partial class NetworkManager : Node
 					lobbyPlan.SourcePlayerSessionId,
 					_localSeatCredentialGeneration,
 					string.Empty);
-					GD.Print("MIGRATION_EXPIRED_HOST_CREDENTIAL_INJECTED");
+				GD.Print("MIGRATION_EXPIRED_HOST_CREDENTIAL_INJECTED");
 				return;
 			}
 
@@ -636,21 +652,23 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		if ((_state == NetworkSessionState.Reconnecting || _state == NetworkSessionState.MigratingHost)
+		if ((_state == NetworkSessionState.Reconnecting
+				|| (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost))
 			&& CanAttemptReconnectClaim())
 		{
 			_reconnectAttemptInFlight = false;
 			_reconnectAttemptStartedAt = -1.0;
 			long reconnectEpoch = GetCurrentAuthorityEpoch();
-				if (_state == NetworkSessionState.MigratingHost
-					&& _networkMigrationPlan is { } migrationPlan)
+			if (HostMigrationCapabilityAvailable
+				&& _state == NetworkSessionState.MigratingHost
+				&& _networkMigrationPlan is { } migrationPlan)
+			{
+				reconnectEpoch = migrationPlan.TargetEpoch;
+				if (OS.GetEnvironment("CODEX_LAN_INJECT_OLD_EPOCH") == "1")
 				{
-					reconnectEpoch = migrationPlan.TargetEpoch;
-					if (OS.GetEnvironment("CODEX_LAN_INJECT_OLD_EPOCH") == "1")
-					{
-						DebugSendStaleMigrationPlan();
-					}
+					DebugSendStaleMigrationPlan();
 				}
+			}
 
 			RpcId(
 				1,
@@ -667,103 +685,56 @@ public partial class NetworkManager : Node
 		RpcId(1, MethodName.RpcRegisterPlayer, _localDisplayName, _localAvatarId, _localIdentityHint);
 	}
 
-		private void OnConnectionFailed()
+	private void OnConnectionFailed()
+	{
+		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
-			if (_state == NetworkSessionState.MigratingHost)
-			{
-				GD.Print($"MIGRATION_CONNECTION_FAILED endpoint={GetMigrationEndpointLog(_networkMigrationPlan)}");
+			GD.Print($"MIGRATION_CONNECTION_FAILED endpoint={GetMigrationEndpointLog(_networkMigrationPlan)}");
 			HandleMigrationConnectionFailure();
 			return;
 		}
 
-			if (_state == NetworkSessionState.Reconnecting)
+		if (_state == NetworkSessionState.Reconnecting)
+		{
+			if (HostMigrationCapabilityAvailable
+				&& _config.Transport == NetworkTransport.Lan
+				&& _networkMigrationPlan is { } migrationPlan
+				&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
+				&& NetworkMigrationRules.IsPlanVisibleToClients(migrationPlan))
 			{
-				if (_config.Transport == NetworkTransport.Lan
-					&& _networkMigrationPlan is { } migrationPlan
-					&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
-					&& NetworkMigrationRules.IsPlanVisibleToClients(migrationPlan))
-				{
-					StartMigrationAttemptsAfterHostDisconnect(migrationPlan);
-					return;
-				}
-				ScheduleReconnectRetry();
+				StartMigrationAttemptsAfterHostDisconnect(migrationPlan);
+				return;
+			}
+			ScheduleReconnectRetry();
 			return;
 		}
 
-		Fail("Connection failed.");
+		CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Connection failed.");
 	}
 
 	private void OnServerDisconnected()
 	{
-		if (_state == NetworkSessionState.MigratingHost
-			|| (_state == NetworkSessionState.InGame
-				&& _networkMigrationPlan is { } visibleInGamePlan
-				&& NetworkMigrationRules.IsPlanVisibleToClients(visibleInGamePlan)))
-		{
-			MultiplayerPeer? peerForLog = Multiplayer.MultiplayerPeer;
-			MultiplayerPeer.ConnectionStatus connectionStatus = peerForLog?.GetConnectionStatus()
-				?? MultiplayerPeer.ConnectionStatus.Disconnected;
-			int localPeerId = connectionStatus == MultiplayerPeer.ConnectionStatus.Disconnected
-				? 0
-				: GetLocalPeerId();
-			GD.Print($"MIGRATION_SERVER_DISCONNECTED peer={localPeerId} state={_state} connection={connectionStatus} plan={_networkMigrationPlan?.CandidatePlayerSessionId ?? string.Empty}");
-		}
-
 		if (_lobbyRejectPending)
 		{
 			FinalizeLobbyRejectedJoinIfNeeded();
 			return;
 		}
 
-		if (_state == NetworkSessionState.Failed)
+		if (IsHost
+			|| _state is NetworkSessionState.Idle
+				or NetworkSessionState.Leaving
+				or NetworkSessionState.Failed)
 		{
-			return;
-		}
-
-		if ((_state == NetworkSessionState.MigratingHost
-				|| (_networkMigrationPlan is { } visibleMigrationPlan
-					&& NetworkMigrationRules.IsPlanVisibleToClients(visibleMigrationPlan)))
-			&& Multiplayer.MultiplayerPeer is { } currentPeer
-			&& currentPeer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Disconnected)
-		{
-			GD.Print($"MIGRATION_SERVER_DISCONNECTED_IGNORED connection={currentPeer.GetConnectionStatus()} state={_state}");
-			return;
-		}
-
-		if (_state is NetworkSessionState.Starting or NetworkSessionState.LoadingScene)
-		{
-			const string message = "Host disconnected.";
-			long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Idle);
-			LeaveSession();
-			EmitSignal(SignalName.ErrorRaised, message);
-			CallDeferred(
-				nameof(ReturnToMultiplayerLobbyScene),
-				(int)NetworkSessionState.Idle,
-				returnGeneration);
 			return;
 		}
 
 		if (_hostEndedMatchPending)
 		{
-			_reconnectAttemptInFlight = false;
-			_reconnectAttemptStartedAt = -1.0;
-			_nextReconnectAttemptAt = 0.0;
+			HandleHostDisconnected();
 			return;
 		}
-
-		if (_state == NetworkSessionState.InGame
-			&& GetTree().CurrentScene is GameBoardScene completedBoard
-			&& completedBoard.IsNetworkGameOver())
+		if (TryAdvancePlannedMigrationAfterSourceDisconnect())
 		{
-			return;
-		}
-
-		if (_state == NetworkSessionState.InGame
-			&& _networkMigrationPlan is { } migrationPlan
-			&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
-			&& NetworkMigrationRules.IsPlanVisibleToClients(migrationPlan))
-		{
-			BeginMigrationAfterHostDisconnect();
 			return;
 		}
 
@@ -774,31 +745,6 @@ public partial class NetworkManager : Node
 			activePeer != null,
 			activePeer?.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected))
 		{
-			return;
-		}
-
-		if (_state == NetworkSessionState.Lobby
-			&& _networkMigrationPlan is { } lobbyMigrationPlan
-			&& NetworkMigrationRules.IsReadyForMigration(_migrationCoordinatorState)
-			&& lobbyMigrationPlan.Phase == NetworkAuthorityPhase.Lobby
-			&& NetworkMigrationRules.IsPlanVisibleToClients(lobbyMigrationPlan))
-		{
-			BeginMigrationAfterHostDisconnect();
-			return;
-		}
-
-		if (_state == NetworkSessionState.MigratingHost)
-		{
-			if (_networkMigrationPlan is not { } activeMigrationPlan)
-			{
-				FailMigration(NetworkMigrationFailureCode.NoPlan);
-				return;
-			}
-
-			CloseActivePeerForMigration();
-			ArmMigrationAttemptsAfterSourceDisconnect(
-				activeMigrationPlan,
-				Time.GetTicksMsec() / 1000.0);
 			return;
 		}
 
@@ -818,13 +764,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		if (_state == NetworkSessionState.InGame)
-		{
-			Fail("Host disconnected.");
-			return;
-		}
-
-		LeaveSession();
+		HandleHostDisconnected();
 	}
 
 	private void InsertPlayerInSeatOrder(NetworkPlayerPublicState player)
@@ -921,7 +861,7 @@ public partial class NetworkManager : Node
 		string message = _lobbyRejectMessage;
 		_lobbyRejectPending = false;
 		_lobbyRejectMessage = string.Empty;
-		LeaveSession();
+		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.ProtocolRejected);
 		Fail(message);
 	}
 
@@ -936,6 +876,7 @@ public partial class NetworkManager : Node
 		_stateGeneration++;
 		RefreshSteamLobbyAdvertisedState();
 		EmitSignal(SignalName.StateChanged, (int)_state);
+		RescheduleNetworkMaintenance(immediate: true);
 	}
 
 	private void EmitRoomListUpdated()

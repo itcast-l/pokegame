@@ -135,6 +135,40 @@ public partial class GameBoardScene
 		long clientActionId,
 		out MultiplayerBoardActionRejectReason rejectReason)
 	{
+		if (!TryValidateNetworkItemCardPlayFromHost(
+			actorSeatIndex,
+			itemHandIndex,
+			turnSequenceGeneration,
+			out rejectReason))
+		{
+			return false;
+		}
+		if (!TryRegisterNetworkClientAction(actorSeatIndex, clientActionId))
+		{
+			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
+			return false;
+		}
+
+		if (!ExecuteNetworkHostItemCardRuleTransaction(
+			actorSeatIndex,
+			itemHandIndex,
+			turnSequenceGeneration,
+			clientActionId,
+			beginAction: true))
+		{
+			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
+			return false;
+		}
+
+		return true;
+	}
+
+	private bool TryValidateNetworkItemCardPlayFromHost(
+		int actorSeatIndex,
+		int itemHandIndex,
+		int turnSequenceGeneration,
+		out MultiplayerBoardActionRejectReason rejectReason)
+	{
 		rejectReason = MultiplayerBoardActionRejectReason.None;
 		if (_networkMigrationInputLocked)
 		{
@@ -167,22 +201,6 @@ public partial class GameBoardScene
 			|| !CanPlayItemCard(actorSeatIndex, _playerItemHands[actorSeatIndex][itemHandIndex].Id))
 		{
 			rejectReason = MultiplayerBoardActionRejectReason.InvalidHandIndex;
-			return false;
-		}
-		if (!TryRegisterNetworkClientAction(actorSeatIndex, clientActionId))
-		{
-			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
-			return false;
-		}
-
-		if (!ExecuteNetworkHostItemCardRuleTransaction(
-			actorSeatIndex,
-			itemHandIndex,
-			turnSequenceGeneration,
-			clientActionId,
-			beginAction: true))
-		{
-			rejectReason = MultiplayerBoardActionRejectReason.ActionInProgress;
 			return false;
 		}
 
@@ -547,6 +565,6 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 			return;
 		}
 
-		GetNetworkManager()?.SendBoardSnapshotsFromHost(this, CreateNextNetworkSnapshotId());
+		GetNetworkManager()?.SendBoardSnapshotsFromHost(CreateNextNetworkSnapshotId());
 	}
 }

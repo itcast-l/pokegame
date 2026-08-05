@@ -637,13 +637,13 @@ public partial class GameBoardScene
 			return null;
 		}
 
-		if (!_itemCardTextures.TryGetValue(itemCardId, out Texture2D? texture))
+		if (!_itemCardTextures.ContainsKey(itemCardId))
 		{
 			GD.PushWarning($"Missing loaded item card texture for {itemCardId}.");
 			return null;
 		}
 
-		return new ItemCard(itemCardId, texture);
+		return new ItemCard(itemCardId);
 	}
 
 	private bool IsSpecialItemCardEnabled(string itemCardId)
