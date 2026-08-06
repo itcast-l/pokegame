@@ -359,6 +359,7 @@ public partial class GameBoardScene : Control
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();
+		LocalizationTypography.Apply(this, useLocaleLayoutDirection: false);
 		_rng.Randomize();
 		_presentationRng.Randomize();
 		_animationPresenter = new GameBoardAnimationPresenter();

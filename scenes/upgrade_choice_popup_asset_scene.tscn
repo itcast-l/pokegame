@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://de1hm5bj8p61c"]
 
-[ext_resource type="FontFile" uid="uid://c4mm3of2mc8o5" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="1_font"]
+[ext_resource type="FontVariation" path="res://resources/fonts/nunito_black_localized.tres" id="1_font"]
 [ext_resource type="PackedScene" path="res://scenes/adventure_upgrade_catalog_card.tscn" id="2_card"]
 
 [node name="UpgradeChoicePopupAssetScene" type="Control" unique_id=1356682965]

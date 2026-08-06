@@ -110,14 +110,15 @@ public partial class MultiplayerLobbyScene : Control
 		SuppressDefaultPressedSfx(BackButton);
 		ConnectButtonSignals();
 		ConnectNetworkSignals();
+		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
 		RefreshLocalizedText();
 		RefreshState((int)_network.State);
 		RefreshRooms(_network.GetRoomsVariant());
 		RefreshPlayers(_network.GetPlayersVariant());
-		string pendingErrorMessage = _network.ConsumePendingLobbyErrorMessage();
-		if (!string.IsNullOrWhiteSpace(pendingErrorMessage))
+		string pendingErrorLocalizationKey = _network.ConsumePendingLobbyErrorLocalizationKey();
+		if (!string.IsNullOrWhiteSpace(pendingErrorLocalizationKey))
 		{
-			ShowToast(pendingErrorMessage);
+			ShowToast(pendingErrorLocalizationKey);
 		}
 	}
 
@@ -125,6 +126,7 @@ public partial class MultiplayerLobbyScene : Control
 	{
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
+			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
 			RefreshLocalizedText();
 			RefreshState((int)_network.State);
 			RefreshRooms(_network.GetRoomsVariant());
@@ -412,7 +414,7 @@ public partial class MultiplayerLobbyScene : Control
 			return true;
 		}
 
-		ShowToast(LocalizeFormat("MULTIPLAYER_LOBBY_INVALID_ROOM_NAME", RoomNameRules.MaxLength));
+		ShowToastFormat("MULTIPLAYER_LOBBY_INVALID_ROOM_NAME", RoomNameRules.MaxLength);
 		RoomNameInput.GrabFocus();
 		return false;
 	}
@@ -503,9 +505,12 @@ public partial class MultiplayerLobbyScene : Control
 			or NetworkSessionState.Failed
 			or NetworkSessionState.Leaving;
 		BackButton.Disabled = state == NetworkSessionState.Leaving || _isReturningToMainMenu;
-		LanHostInfoLabel.Text = state == NetworkSessionState.Lobby && _network.CurrentConfig.Transport == NetworkTransport.Lan
-			? LocalizeFormat("MULTIPLAYER_LOBBY_LAN_ADDRESS_FORMAT", _network.GetLocalLanAddressSummary())
-			: Localize("MULTIPLAYER_LOBBY_LAN_ADDRESS_PENDING");
+		string lanAddressSummary = _network.GetLocalLanAddressSummary();
+		LanHostInfoLabel.Text = state == NetworkSessionState.Lobby
+			&& _network.CurrentConfig.Transport == NetworkTransport.Lan
+			&& !string.IsNullOrWhiteSpace(lanAddressSummary)
+				? LocalizeFormat("MULTIPLAYER_LOBBY_LAN_ADDRESS_FORMAT", lanAddressSummary)
+				: Localize("MULTIPLAYER_LOBBY_LAN_ADDRESS_PENDING");
 		UpdateStartButtonState();
 	}
 
@@ -671,20 +676,41 @@ public partial class MultiplayerLobbyScene : Control
 		_playerRows.Clear();
 	}
 
-	private void ShowToast(string message)
+	private void ShowToast(string localizationKey)
 	{
 		_toastTween?.Kill();
-		ToastLabel.Text = LooksLikeLocalizationKey(message) ? Localize(message) : message;
+		ToastLabel.Text = LocalizeRequired(localizationKey);
 		ToastLabel.Visible = true;
 		_toastTween = CreateTween();
 		_toastTween.TweenInterval(3.0);
 		_toastTween.TweenCallback(Callable.From(() => ToastLabel.Visible = false));
 	}
 
+	private void ShowToastFormat(string localizationKey, params object[] arguments)
+	{
+		_toastTween?.Kill();
+		ToastLabel.Text = string.Format(LocalizeRequired(localizationKey), arguments);
+		ToastLabel.Visible = true;
+		_toastTween = CreateTween();
+		_toastTween.TweenInterval(3.0);
+		_toastTween.TweenCallback(Callable.From(() => ToastLabel.Visible = false));
+	}
+
+	private string LocalizeRequired(string localizationKey)
+	{
+		string localized = Localize(localizationKey);
+		if (string.Equals(localized, localizationKey, System.StringComparison.Ordinal))
+		{
+			GD.PushError($"Missing lobby localization key: {localizationKey}");
+		}
+
+		return localized;
+	}
+
 	public bool DebugIsMigrationFailureToastVisible()
 	{
 		return ToastLabel.Visible
-			&& ToastLabel.Text.Contains("Host migration failed", System.StringComparison.Ordinal);
+			&& ToastLabel.Text == Localize("NETWORK_ERROR_HOST_MIGRATION_FAILED");
 	}
 
 	public string DebugGetMigrationFailureToastText()
@@ -850,25 +876,6 @@ public partial class MultiplayerLobbyScene : Control
 	private string LocalizeFormat(string key, params object[] args)
 	{
 		return string.Format(Localize(key), args);
-	}
-
-	private static bool LooksLikeLocalizationKey(string value)
-	{
-		if (string.IsNullOrWhiteSpace(value) || !value.Contains('_', System.StringComparison.Ordinal))
-		{
-			return false;
-		}
-
-		for (int index = 0; index < value.Length; index++)
-		{
-			char character = value[index];
-			if ((character < 'A' || character > 'Z') && (character < '0' || character > '9') && character != '_')
-			{
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	private static string GetNetworkStateLocalizationKey(NetworkSessionState state)

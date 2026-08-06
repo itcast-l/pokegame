@@ -5,7 +5,12 @@ public partial class MainMenuScene : Control
 	private string Localize(string key)
 	{
 		string text = Tr(key).ToString();
-		return text == key ? GetMainMenuLocalizationFallback(key) : text;
+		if (text == key)
+		{
+			GD.PushError($"Missing main menu localization key: {key}");
+		}
+
+		return text;
 	}
 
 	private string LocalizeFormat(string key, params object[] args)
@@ -18,11 +23,6 @@ public partial class MainMenuScene : Control
 		if (_titleLabel != null)
 		{
 			_titleLabel.Text = Localize("APP_NAME");
-		}
-
-		if (_subtitleLabel != null)
-		{
-			_subtitleLabel.Text = Localize("APP_SUBTITLE");
 		}
 
 		if (_singlePlayerButton != null)

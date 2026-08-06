@@ -2,8 +2,27 @@ extends SceneTree
 
 const CSV_PATH := "res://localization/ui.csv"
 const SCENE_ROOT := "res://scenes"
-const VIEWPORT_SIZE := Vector2i(1280, 720)
+const BASE_VIEWPORT_SIZE := Vector2i(1280, 720)
+const RISK_VIEWPORT_SIZES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(1920, 1080)]
+const HIGH_RISK_LOCALES := {
+	"ar": true,
+	"de": true,
+	"ja": true,
+	"ko": true,
+	"ru": true,
+	"th": true,
+	"zh_CN": true,
+	"zh_TW": true,
+}
+const EXCLUDED_SCENES := {
+	"res://scenes/adventure_suit_upgrade_editor_scene.tscn": true,
+	"res://scenes/card_gallery.tscn": true,
+	"res://scenes/character_avatar_gallery_scene.tscn": true,
+	"res://scenes/character_avatar_preview.tscn": true,
+	"res://scenes/upgrade_choice_popup_asset_scene.tscn": true,
+}
 const DEFAULT_SETTLE_FRAMES := 4
+const DEFAULT_TIMEOUT_SECONDS := 3600
 
 var _translations := {}
 var _locales: PackedStringArray = []
@@ -15,6 +34,8 @@ var _captured := 0
 var _visible_text_captures := 0
 var _visible_text_scenes := {}
 var _settle_frames := DEFAULT_SETTLE_FRAMES
+var _deadline_msec := 0
+var _timed_out := false
 
 
 func _initialize() -> void:
@@ -22,8 +43,12 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	root.size = VIEWPORT_SIZE
+	root.size = BASE_VIEWPORT_SIZE
 	await process_frame
+	var timeout_seconds: int = maxi(1, int(OS.get_environment("CODEX_LOCALIZATION_SCREENSHOT_TIMEOUT_SECONDS")))
+	if timeout_seconds == 1 and OS.get_environment("CODEX_LOCALIZATION_SCREENSHOT_TIMEOUT_SECONDS").is_empty():
+		timeout_seconds = DEFAULT_TIMEOUT_SECONDS
+	_deadline_msec = Time.get_ticks_msec() + timeout_seconds * 1000
 
 	_output_dir = OS.get_environment("CODEX_LOCALIZATION_SCREENSHOT_DIR").strip_edges()
 	if _output_dir.is_empty():
@@ -53,7 +78,14 @@ func _run() -> void:
 
 	for scene_path in _scenes:
 		for locale in _locales:
-			await _capture_scene_locale(scene_path, locale)
+			await _capture_scene_locale(scene_path, locale, BASE_VIEWPORT_SIZE)
+			if HIGH_RISK_LOCALES.has(locale):
+				for viewport_size in RISK_VIEWPORT_SIZES:
+					await _capture_scene_locale(scene_path, locale, viewport_size)
+			if _timed_out:
+				break
+		if _timed_out:
+			break
 
 	_write_manifest()
 
@@ -63,6 +95,7 @@ func _run() -> void:
 	print("LOCALIZATION_SCREENSHOT_AUDIT_CAPTURED %d" % _captured)
 	print("LOCALIZATION_SCREENSHOT_AUDIT_VISIBLE_TEXT_SCENES %d" % _visible_text_scenes.size())
 	print("LOCALIZATION_SCREENSHOT_AUDIT_VISIBLE_TEXT_CAPTURES %d" % _visible_text_captures)
+	print("LOCALIZATION_SCREENSHOT_AUDIT_TIMEOUT_SECONDS %d" % timeout_seconds)
 
 	if not _issues.is_empty():
 		print("LOCALIZATION_SCREENSHOT_AUDIT_ISSUES %d" % _issues.size())
@@ -142,9 +175,24 @@ func _collect_scenes(path: String) -> void:
 		var child_path := "%s/%s" % [path, entry]
 		if dir.current_is_dir():
 			_collect_scenes(child_path)
-		elif entry.ends_with(".tscn"):
+		elif entry.ends_with(".tscn") \
+				and not EXCLUDED_SCENES.has(child_path) \
+				and (_scene_source_has_text_control(child_path) or child_path.ends_with("game_board_scene.tscn")):
 			_scenes.append(child_path)
 	dir.list_dir_end()
+
+
+func _scene_source_has_text_control(scene_path: String) -> bool:
+	var file := FileAccess.open(scene_path, FileAccess.READ)
+	if file == null:
+		_issues.append("cannot_inspect_scene_source path=%s" % scene_path)
+		return false
+
+	var source := file.get_as_text()
+	for type_name in ["Label", "RichTextLabel", "Button", "LineEdit", "TextEdit", "OptionButton"]:
+		if source.contains('type="%s"' % type_name):
+			return true
+	return false
 
 
 func _apply_filters() -> void:
@@ -187,33 +235,60 @@ func _split_filter(filter: String) -> Dictionary:
 	return accepted
 
 
-func _capture_scene_locale(scene_path: String, locale: String) -> void:
+func _capture_scene_locale(scene_path: String, locale: String, viewport_size: Vector2i) -> void:
+	if _check_timeout(scene_path, locale, viewport_size):
+		return
+
 	TranslationServer.set_locale(locale)
 
 	var packed_scene := load(scene_path) as PackedScene
 	if packed_scene == null:
-		_issues.append("load_failed scene=%s locale=%s" % [scene_path, locale])
+		_issues.append("load_failed scene=%s locale=%s viewport=%s" % [scene_path, locale, _format_viewport(viewport_size)])
 		return
 
 	var node := packed_scene.instantiate()
 	if node == null:
-		_issues.append("instantiate_failed scene=%s locale=%s" % [scene_path, locale])
+		_issues.append("instantiate_failed scene=%s locale=%s viewport=%s" % [scene_path, locale, _format_viewport(viewport_size)])
 		return
 
 	var viewport := SubViewport.new()
-	viewport.size = VIEWPORT_SIZE
+	viewport.size = viewport_size
 	viewport.transparent_bg = false
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(viewport)
-	viewport.add_child(node)
+	var audit_host := Control.new()
+	audit_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	audit_host.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	viewport.add_child(audit_host)
+	audit_host.add_child(node)
+	if _is_standalone_lobby_row(scene_path) and node is Control:
+		var row := node as Control
+		row.layout_direction = Control.LAYOUT_DIRECTION_APPLICATION_LOCALE
+		row.position = Vector2(24.0, 24.0)
 
 	for _frame in range(_settle_frames):
 		await process_frame
+		if _check_timeout(scene_path, locale, viewport_size):
+			_free_viewport(viewport)
+			return
 
 	TranslationServer.set_locale(locale)
 	for _frame in range(_settle_frames):
 		await process_frame
-	await RenderingServer.frame_post_draw
+		if _check_timeout(scene_path, locale, viewport_size):
+			_free_viewport(viewport)
+			return
+	_prepare_scene_for_audit(scene_path, node)
+	TranslationServer.set_locale(locale)
+	for _frame in range(_settle_frames):
+		await process_frame
+		if _check_timeout(scene_path, locale, viewport_size):
+			_free_viewport(viewport)
+			return
+	await _wait_for_render_frame()
+	if _check_timeout(scene_path, locale, viewport_size):
+		_free_viewport(viewport)
+		return
 
 	var has_visible_text := _has_visible_text(node)
 	if has_visible_text:
@@ -222,20 +297,22 @@ func _capture_scene_locale(scene_path: String, locale: String) -> void:
 
 	var image := viewport.get_texture().get_image()
 	if image == null:
-		_issues.append("image_null scene=%s locale=%s" % [scene_path, locale])
+		_issues.append("image_null scene=%s locale=%s viewport=%s" % [scene_path, locale, _format_viewport(viewport_size)])
 		_free_viewport(viewport)
 		return
 
-	if image.get_width() != VIEWPORT_SIZE.x or image.get_height() != VIEWPORT_SIZE.y:
-		_issues.append("wrong_image_size scene=%s locale=%s size=%dx%d" % [
+	if image.get_width() != viewport_size.x or image.get_height() != viewport_size.y:
+		_issues.append("wrong_image_size scene=%s locale=%s viewport=%s size=%dx%d" % [
 			scene_path,
 			locale,
+			_format_viewport(viewport_size),
 			image.get_width(),
 			image.get_height(),
 		])
 
 	if has_visible_text and not _image_has_pixel_variation(image):
-		_issues.append("blank_visible_text_screenshot scene=%s locale=%s" % [scene_path, locale])
+		_issues.append("blank_visible_text_screenshot scene=%s locale=%s viewport=%s" % [
+			scene_path, locale, _format_viewport(viewport_size)])
 
 	var scene_dir := _output_dir.path_join(_scene_slug(scene_path))
 	var make_dir_error := DirAccess.make_dir_recursive_absolute(scene_dir)
@@ -249,7 +326,7 @@ func _capture_scene_locale(scene_path: String, locale: String) -> void:
 		_free_viewport(viewport)
 		return
 
-	var save_path := scene_dir.path_join("%s.png" % locale)
+	var save_path := scene_dir.path_join("%s__%s.png" % [locale, _format_viewport(viewport_size)])
 	var save_error := image.save_png(save_path)
 	if save_error != OK:
 		_issues.append("save_failed scene=%s locale=%s path=%s error=%s" % [
@@ -260,21 +337,108 @@ func _capture_scene_locale(scene_path: String, locale: String) -> void:
 		])
 	else:
 		_captured += 1
-		_manifest_lines.append("%s\t%s\t%s\t%s" % [
+		_manifest_lines.append("%s\t%s\t%s\t%s\t%s" % [
 			scene_path,
 			locale,
+			_format_viewport(viewport_size),
 			"visible_text" if has_visible_text else "no_visible_text",
 			save_path,
 		])
 
 	_free_viewport(viewport)
 	await process_frame
-	await RenderingServer.frame_post_draw
+	await _wait_for_render_frame()
 
 
 func _free_viewport(viewport: SubViewport) -> void:
 	if is_instance_valid(viewport) and viewport.get_parent() != null:
 		viewport.queue_free()
+
+
+func _wait_for_render_frame() -> void:
+	if DisplayServer.get_name() == "headless":
+		await process_frame
+		return
+	await RenderingServer.frame_post_draw
+
+
+func _prepare_scene_for_audit(scene_path: String, node: Node) -> void:
+	_show_scene_root_for_audit(node)
+	_hide_transient_board_intro(scene_path, node)
+
+	if scene_path.ends_with("main_menu_skill_codex_overlay.tscn") and node.has_method("Open"):
+		node.call("Open")
+		return
+
+	if scene_path.ends_with("multiplayer_lobby_room_row.tscn") and node.has_method("Configure") and node is Control:
+		var sample_room := {
+			"room_name": "Sample Room",
+			"host_name": "Host",
+			"address": "192.168.1.20",
+			"transport": "Lan",
+			"status": "Lobby",
+			"player_count": 2,
+			"winning_score": 100,
+			"item_mode": true,
+			"has_password": false,
+		}
+		(node as Control).size = Vector2(420.0, 76.0)
+		node.call("Configure", sample_room)
+		return
+
+	if scene_path.ends_with("multiplayer_lobby_player_row.tscn") and node.has_method("Configure") and node is Control:
+		var sample_player := {
+			"seat_index": 0,
+			"display_name": "Player",
+			"is_host": true,
+			"is_local": true,
+			"is_ready": true,
+			"is_connected": true,
+		}
+		(node as Control).size = Vector2(420.0, 40.0)
+		node.call("Configure", sample_player)
+
+
+func _hide_transient_board_intro(scene_path: String, node: Node) -> void:
+	if not scene_path.contains("game_board_scene"):
+		return
+	var opening_intro := node.get_node_or_null("OpeningIntroAnimation") as CanvasItem
+	if opening_intro != null:
+		opening_intro.visible = false
+
+
+func _is_standalone_lobby_row(scene_path: String) -> bool:
+	return scene_path.ends_with("multiplayer_lobby_room_row.tscn") \
+		or scene_path.ends_with("multiplayer_lobby_player_row.tscn")
+
+
+func _show_scene_root_for_audit(node: Node) -> void:
+	if not node is CanvasItem:
+		return
+
+	var canvas_item := node as CanvasItem
+	canvas_item.visible = true
+	var visible_modulate := canvas_item.modulate
+	visible_modulate.a = 1.0
+	canvas_item.modulate = visible_modulate
+
+
+func _check_timeout(scene_path: String, locale: String, viewport_size: Vector2i) -> bool:
+	if _timed_out:
+		return true
+	if Time.get_ticks_msec() <= _deadline_msec:
+		return false
+
+	_timed_out = true
+	_issues.append("audit_timeout scene=%s locale=%s viewport=%s" % [
+		scene_path, locale, _format_viewport(viewport_size)])
+	print("LOCALIZATION_SCREENSHOT_AUDIT_TIMEOUT scene=%s locale=%s viewport=%s" % [
+		scene_path, locale, _format_viewport(viewport_size)])
+	return true
+
+
+func _format_viewport(viewport_size: Vector2i) -> String:
+	return "%dx%d" % [viewport_size.x, viewport_size.y]
 
 
 func _has_visible_text(node: Node) -> bool:
@@ -337,7 +501,7 @@ func _write_manifest() -> void:
 		_issues.append("cannot_write_manifest path=%s" % manifest_path)
 		return
 
-	file.store_line("scene\tlocale\tvisibility\tscreenshot")
+	file.store_line("scene\tlocale\tviewport\tvisibility\tscreenshot")
 	for line in _manifest_lines:
 		file.store_line(line)
 

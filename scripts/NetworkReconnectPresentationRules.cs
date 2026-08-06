@@ -1,45 +1,33 @@
 internal static class NetworkReconnectPresentationRules
 {
-	internal static string GetSeatControlStatusText(SeatControlMode mode, bool usesChineseLocale)
+	internal static string GetSeatControlStatusLocalizationKey(SeatControlMode mode)
 	{
 		return mode switch
 		{
-			SeatControlMode.AiProxyReclaimable => usesChineseLocale
-				? "断线中 · AI 接管"
-				: "Disconnected · AI takeover",
-			SeatControlMode.HumanReclaimPending => usesChineseLocale
-				? "已重连 · 下回合恢复"
-				: "Reconnected · next turn",
+			SeatControlMode.AiProxyReclaimable => "NETWORK_STATE_AI_TAKEOVER",
+			SeatControlMode.HumanReclaimPending => "NETWORK_STATE_CONTROL_PENDING",
 			_ => string.Empty,
 		};
 	}
 
-	internal static string GetReconnectOverlayText(bool usesChineseLocale)
+	internal static string GetReconnectOverlayLocalizationKey()
 	{
-		return usesChineseLocale
-			? "正在同步最新战局…"
-			: "Syncing latest match...";
+		return "NETWORK_STATE_SYNCING_MATCH";
 	}
 
-	internal static string GetReconnectNoticeText(bool usesChineseLocale)
+	internal static string GetReconnectNoticeLocalizationKey()
 	{
-		return usesChineseLocale
-			? "你已重连，当前回合结束后将在你的下一个回合恢复控制。"
-			: "Reconnected. Control returns on your next turn.";
+		return "NETWORK_STATE_RECONNECTED_NOTICE";
 	}
 
-	internal static string GetMigrationOverlayText(bool usesChineseLocale)
+	internal static string GetMigrationOverlayLocalizationKey()
 	{
-		return usesChineseLocale
-			? "正在迁移房主并恢复战局…"
-			: "Migrating host and restoring match...";
+		return "NETWORK_STATE_MIGRATING_HOST";
 	}
 
-	internal static string GetMigrationFailureText(bool usesChineseLocale)
+	internal static string GetMigrationFailureLocalizationKey()
 	{
-		return usesChineseLocale
-			? "房主迁移失败，正在返回多人菜单…"
-			: "Host migration failed. Returning to multiplayer menu...";
+		return "NETWORK_STATE_MIGRATION_FAILED_RETURNING";
 	}
 
 	internal static bool ShouldShowOverlay(

@@ -779,10 +779,16 @@ internal static partial class Program
 	private static void RuntimeScenesDoNotExposeHardcodedNaturalLanguageText()
 	{
 		string repoRoot = FindRepositoryRoot();
-		foreach (string relativePath in RuntimeHardcodedSceneRelativePaths)
+		foreach (string absolutePath in Directory.GetFiles(
+			Path.Combine(repoRoot, "scenes"),
+			"*.tscn",
+			SearchOption.AllDirectories))
 		{
-			string absolutePath = Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
-			True(File.Exists(absolutePath));
+			string relativePath = Path.GetRelativePath(repoRoot, absolutePath).Replace('\\', '/');
+			if (IsExcludedRuntimeLocalizationPath(relativePath))
+			{
+				continue;
+			}
 
 			string[] lines = File.ReadAllLines(absolutePath);
 			for (int index = 0; index < lines.Length; index++)
@@ -802,6 +808,230 @@ internal static partial class Program
 				throw new InvalidOperationException($"hardcoded runtime scene text in {relativePath}:{index + 1} -> {value}");
 			}
 		}
+	}
+
+	private static void LocalizationPlaceholdersMatchEnglishContract()
+	{
+		string localizationPath = Path.Combine(FindRepositoryRoot(), "localization", "ui.csv");
+		Dictionary<string, List<string>> rowsByKey = ReadLocalizationRowsByKey(localizationPath, out List<string> header);
+		int englishIndex = header.IndexOf("en");
+		True(englishIndex > 0);
+
+		foreach ((string key, List<string> row) in rowsByKey)
+		{
+			var expected = new HashSet<string>(
+				Regex.Matches(row[englishIndex], "\\{[A-Za-z0-9_]+\\}").Select(match => match.Value),
+				StringComparer.Ordinal);
+			for (int localeIndex = 1; localeIndex < header.Count; localeIndex++)
+			{
+				var actual = new HashSet<string>(
+					Regex.Matches(row[localeIndex], "\\{[A-Za-z0-9_]+\\}").Select(match => match.Value),
+					StringComparer.Ordinal);
+				if (!expected.SetEquals(actual))
+				{
+					throw new InvalidOperationException(
+						$"localization placeholder mismatch key={key} locale={header[localeIndex]} expected={string.Join(',', expected)} actual={string.Join(',', actual)}");
+				}
+			}
+		}
+	}
+
+	private static void LocalizationTableHasNoBroadEnglishFallback()
+	{
+		string localizationPath = Path.Combine(FindRepositoryRoot(), "localization", "ui.csv");
+		Dictionary<string, List<string>> rowsByKey = ReadLocalizationRowsByKey(localizationPath, out List<string> header);
+		int englishIndex = header.IndexOf("en");
+		True(englishIndex > 0);
+
+		foreach ((string key, List<string> row) in rowsByKey)
+		{
+			if (key == "APP_NAME"
+				|| key.StartsWith("LANG_", StringComparison.Ordinal)
+				|| key.StartsWith("AVATAR_", StringComparison.Ordinal) && key.EndsWith("_NAME", StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			string english = row[englishIndex];
+			if (!Regex.IsMatch(english, "[A-Za-z]{3}", RegexOptions.CultureInvariant))
+			{
+				continue;
+			}
+
+			var matchingLocales = new List<string>();
+			for (int localeIndex = 1; localeIndex < header.Count; localeIndex++)
+			{
+				if (localeIndex != englishIndex && string.Equals(row[localeIndex], english, StringComparison.Ordinal))
+				{
+					matchingLocales.Add(header[localeIndex]);
+				}
+			}
+
+			if (matchingLocales.Count >= 10)
+			{
+				throw new InvalidOperationException(
+					$"broad English localization fallback key={key} locales={string.Join(',', matchingLocales)}");
+			}
+		}
+	}
+
+	private static void LocalizationScriptsMatchHighRiskLocales()
+	{
+		string localizationPath = Path.Combine(FindRepositoryRoot(), "localization", "ui.csv");
+		Dictionary<string, List<string>> rowsByKey = ReadLocalizationRowsByKey(localizationPath, out List<string> header);
+		var requiredScripts = new Dictionary<string, string>(StringComparer.Ordinal)
+		{
+			["ar"] = "[\\u0600-\\u06FF]",
+			["bg"] = "[\\u0400-\\u04FF]",
+			["el"] = "[\\u0370-\\u03FF]",
+			["ja"] = "[\\u3040-\\u30FF\\u3400-\\u9FFF]",
+			["ko"] = "[\\uAC00-\\uD7AF]",
+			["ru"] = "[\\u0400-\\u04FF]",
+			["th"] = "[\\u0E00-\\u0E7F]",
+			["uk"] = "[\\u0400-\\u04FF]",
+			["zh_CN"] = "[\\u3400-\\u9FFF]",
+			["zh_TW"] = "[\\u3400-\\u9FFF]",
+		};
+
+		foreach ((string locale, string scriptPattern) in requiredScripts)
+		{
+			int localeIndex = header.IndexOf(locale);
+			True(localeIndex > 0);
+			foreach ((string key, List<string> row) in rowsByKey)
+			{
+				string english = row[header.IndexOf("en")];
+				if (key == "APP_NAME"
+					|| key.StartsWith("LANG_", StringComparison.Ordinal)
+					|| !Regex.IsMatch(english, "[A-Za-z]{4}", RegexOptions.CultureInvariant))
+				{
+					continue;
+				}
+
+				if (!Regex.IsMatch(row[localeIndex], scriptPattern, RegexOptions.CultureInvariant))
+				{
+					throw new InvalidOperationException($"wrong localization script key={key} locale={locale}");
+				}
+			}
+		}
+	}
+
+	private static void RuntimeCSharpDoesNotAssignHardcodedNaturalLanguageText()
+	{
+		string repoRoot = FindRepositoryRoot();
+		foreach (string relativePath in EnumerateRuntimeLocalizationReferenceFiles(repoRoot))
+		{
+			if (!relativePath.EndsWith(".cs", StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			string[] lines = File.ReadAllLines(Path.Combine(repoRoot, relativePath));
+			for (int index = 0; index < lines.Length; index++)
+			{
+				Match match = Regex.Match(
+					lines[index],
+					"\\b(?:Text|TooltipText|PlaceholderText)\\s*=\\s*\"(?<value>[^\"]*)\"");
+				if (match.Success && !IsAllowedRuntimeSceneText(match.Groups["value"].Value.Trim()))
+				{
+					throw new InvalidOperationException(
+						$"hardcoded runtime C# text in {relativePath}:{index + 1} -> {match.Groups["value"].Value}");
+				}
+			}
+		}
+
+		var forbiddenFallbacks = new Dictionary<string, string[]>(StringComparer.Ordinal)
+		{
+			["scripts/MainMenuScene.AvatarUnlockPrompt.cs"] = ["GetMainMenuLocalizationFallback"],
+			["scripts/AdventureAvatarMenuScene.AvatarUnlockPrompt.cs"] = ["GetAdventureMenuLocalizationFallback"],
+			["scripts/GameBoardScene.PlayerStatusTooltip.cs"] = ["GetStatusMetricFallback"],
+			["scripts/GameBoardScene.QuestionRejudgeOverlay.cs"] = ["FallbackText", "return definition.Description;"],
+			["scripts/MainMenuSkillCodexOverlay.cs"] = ["? definition.EffectText"],
+			["scripts/NetworkManager.cs"] = ["未检测到局域网 IPv4 地址"],
+			["scripts/LocalizationTypography.cs"] = ["ThemeDB.FallbackFont"],
+			["scripts/AdventureUpgradeChoiceArt.cs"] = ["ThemeDB.FallbackFont"],
+		};
+		foreach ((string relativePath, string[] fragments) in forbiddenFallbacks)
+		{
+			string source = File.ReadAllText(Path.Combine(repoRoot, relativePath));
+			foreach (string fragment in fragments)
+			{
+				False(source.Contains(fragment, StringComparison.Ordinal));
+			}
+		}
+	}
+
+	private static void ReleasePresetsExcludeLocalizationDevelopmentScenes()
+	{
+		string repoRoot = FindRepositoryRoot();
+		string presets = File.ReadAllText(Path.Combine(repoRoot, "export_presets.cfg"));
+		MatchCollection excludeFilters = Regex.Matches(presets, "^exclude_filter=\"(?<filter>[^\"]*)\"$", RegexOptions.Multiline);
+		Equal(3, excludeFilters.Count);
+		string[] excludedScenes =
+		{
+			"scenes/adventure_suit_upgrade_editor_scene.tscn",
+			"scenes/card_gallery.tscn",
+			"scenes/character_avatar_gallery_scene.tscn",
+			"scenes/character_avatar_preview.tscn",
+			"scenes/upgrade_choice_popup_asset_scene.tscn",
+		};
+		foreach (Match filterMatch in excludeFilters)
+		{
+			foreach (string excludedScene in excludedScenes)
+			{
+				True(filterMatch.Groups["filter"].Value.Split(',').Contains(excludedScene, StringComparer.Ordinal));
+			}
+		}
+
+		foreach (string scenePath in Directory.GetFiles(Path.Combine(repoRoot, "scenes"), "*.tscn"))
+		{
+			string relativePath = Path.GetRelativePath(repoRoot, scenePath).Replace('\\', '/');
+			if (excludedScenes.Contains(relativePath, StringComparer.Ordinal))
+			{
+				continue;
+			}
+
+			string sceneText = File.ReadAllText(scenePath);
+			foreach (string excludedScene in excludedScenes)
+			{
+				False(sceneText.Contains($"res://{excludedScene}", StringComparison.Ordinal));
+			}
+		}
+	}
+
+	private static void LocalizationFontsAreProjectOwnedAndLocaleSelected()
+	{
+		string repoRoot = FindRepositoryRoot();
+		foreach (string relativePath in new[]
+		{
+			"assets/fonts/noto/NotoSans-Variable.ttf",
+			"assets/fonts/noto/NotoSansArabic-Variable.ttf",
+			"assets/fonts/noto/NotoSansThai-Variable.ttf",
+			"assets/fonts/noto/NotoSansSC-Variable.ttf",
+			"assets/fonts/noto/NotoSansTC-Variable.ttf",
+			"assets/fonts/noto/NotoSansJP-Variable.ttf",
+			"assets/fonts/noto/NotoSansKR-Variable.ttf",
+			"assets/fonts/noto/OFL.txt",
+			"resources/fonts/noto_latin.tres",
+			"resources/fonts/noto_arabic.tres",
+			"resources/fonts/noto_thai.tres",
+			"resources/fonts/noto_sc.tres",
+			"resources/fonts/noto_tc.tres",
+			"resources/fonts/noto_jp.tres",
+			"resources/fonts/noto_kr.tres",
+			"resources/fonts/nunito_black_localized.tres",
+			"resources/fonts/nunito_regular_localized.tres",
+		})
+		{
+			True(File.Exists(Path.Combine(repoRoot, relativePath)));
+		}
+
+		string typographySource = File.ReadAllText(Path.Combine(repoRoot, "scripts", "LocalizationTypography.cs"));
+		foreach (string locale in new[] { "ar", "th", "zh_CN", "zh_TW", "ja", "ko" })
+		{
+			True(typographySource.Contains($"\"{locale}\" =>", StringComparison.Ordinal));
+		}
+		True(typographySource.Contains("TextDirection.Auto", StringComparison.Ordinal));
+		True(typographySource.Contains("LayoutDirectionEnum.ApplicationLocale", StringComparison.Ordinal));
 	}
 
 	private static void AvatarFeedbackEffectResourcesStayContiguous()

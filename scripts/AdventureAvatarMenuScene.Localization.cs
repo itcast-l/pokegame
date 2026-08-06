@@ -36,7 +36,12 @@ public partial class AdventureAvatarMenuScene
 	private string Localize(string key)
 	{
 		string text = Tr(key).ToString();
-		return text == key ? GetAdventureMenuLocalizationFallback(key) : text;
+		if (text == key)
+		{
+			GD.PushError($"Missing adventure menu localization key: {key}");
+		}
+
+		return text;
 	}
 
 	private string LocalizeFormat(string key, params object[] args)

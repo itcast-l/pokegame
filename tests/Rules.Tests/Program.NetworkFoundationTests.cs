@@ -1781,23 +1781,17 @@ internal static partial class Program
 		True(handlerBlock.Contains("_hostDisconnectReturnPending", StringComparison.Ordinal));
 		True(handlerBlock.Contains("_hostDisconnectErrorPublished", StringComparison.Ordinal));
 		True(handlerBlock.Contains("RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure)", StringComparison.Ordinal));
-		True(handlerBlock.Contains("_pendingLobbyErrorMessage = needsLobbySceneChange ? message : string.Empty;", StringComparison.Ordinal));
+		True(handlerBlock.Contains("_pendingLobbyErrorLocalizationKey = needsLobbySceneChange ? localizationKey : string.Empty;", StringComparison.Ordinal));
 		True(handlerBlock.Contains("nameof(ReturnToMultiplayerLobbyScene)", StringComparison.Ordinal));
-		Equal(1, Regex.Matches(handlerBlock, "Host disconnected\\.", RegexOptions.CultureInvariant).Count);
+		False(handlerBlock.Contains("Host disconnected.", StringComparison.Ordinal));
+		True(handlerBlock.Contains("NetworkUserErrorCategory.HostDisconnected", StringComparison.Ordinal));
 		True(boardSessionSource.Contains("if (networkManager.IsHostDisconnectReturnPending)", StringComparison.Ordinal));
-		True(recoverySource.Contains(
-			"const string hostEndedMatchMessage = \"Host disconnected.\";",
-			StringComparison.Ordinal));
-		True(recoverySource.Contains(
-			"_hostEndedMatchMessage = hostEndedMatchMessage;",
-			StringComparison.Ordinal));
-		True(recoverySource.Contains(
-			"ReturnToMultiplayerLobbyAfterMigrationFailure(hostEndedMatchMessage);",
-			StringComparison.Ordinal));
+		True(recoverySource.Contains("NetworkUserErrorRules.NormalizeLocalizationKey(", StringComparison.Ordinal));
+		True(recoverySource.Contains("_hostEndedMatchLocalizationKey = hostEndedMatchLocalizationKey;", StringComparison.Ordinal));
 		True(recoverySource.Contains(
 			"RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure)",
 			StringComparison.Ordinal));
-		True(recoverySource.Contains("Fail(hostEndedMatchMessage);", StringComparison.Ordinal));
+		True(recoverySource.Contains("EmitSignal(SignalName.ErrorRaised, hostEndedMatchLocalizationKey);", StringComparison.Ordinal));
 		True(steamSource.Contains("_lastObservedSteamLobbyOwnerId != _originalSteamLobbyOwnerId", StringComparison.Ordinal));
 	}
 

@@ -146,7 +146,11 @@ internal static partial class Program
 				continue;
 			}
 
-			rowsByKey[row[0].Trim()] = row;
+			string key = row[0].Trim();
+			if (!rowsByKey.TryAdd(key, row))
+			{
+				throw new InvalidOperationException($"duplicate localization key: {key}");
+			}
 		}
 
 		return rowsByKey;
@@ -261,15 +265,7 @@ internal static partial class Program
 			return true;
 		}
 
-		if (relativePath.Contains("gallery", StringComparison.OrdinalIgnoreCase)
-			|| relativePath.Contains("preview", StringComparison.OrdinalIgnoreCase)
-			|| relativePath.Contains("_editor_", StringComparison.OrdinalIgnoreCase))
-		{
-			return true;
-		}
-
-		if (relativePath == "scenes/adventure_suit_upgrade_editor_scene.tscn"
-			|| relativePath == "scenes/upgrade_choice_popup_asset_scene.tscn")
+		if (ExplicitReleaseLocalizationExclusions.Contains(relativePath))
 		{
 			return true;
 		}
@@ -286,7 +282,7 @@ internal static partial class Program
 			string line = lines[index];
 			if (relativePath.EndsWith(".cs", StringComparison.Ordinal))
 			{
-				foreach (Match match in Regex.Matches(line, "\\b(?:Localize|localize|Tr)\\(\\s*\"(?<key>[A-Z0-9_]+)\"\\s*\\)"))
+				foreach (Match match in Regex.Matches(line, "\\b(?:Localize|localize|Tr)(?:\\?\\.Invoke)?\\(\\s*\"(?<key>[A-Z0-9_]+)\"\\s*\\)"))
 				{
 					string key = match.Groups["key"].Value;
 					if (IsLikelyLocalizationKey(key))
@@ -373,28 +369,16 @@ internal static partial class Program
 		return match.Success && int.TryParse(match.Groups[1].Value, out int value) ? value : fallback;
 	}
 
-	private static readonly string[] RuntimeHardcodedSceneRelativePaths =
+	private static readonly HashSet<string> ExplicitReleaseLocalizationExclusions = new(StringComparer.Ordinal)
 	{
-		"scenes/main_menu_scene.tscn",
-		"scenes/main_menu_player_count_dialog.tscn",
-		"scenes/main_menu_settings_dialog.tscn",
-		"scenes/main_menu_controls_dialog.tscn",
-		"scenes/main_menu_exit_dialog.tscn",
-		"scenes/main_menu_avatar_entry.tscn",
-		"scenes/character_avatar_edit_scene.tscn",
-		"scenes/avatar_unlock_prompt.tscn",
-		"scenes/multiplayer_lobby_scene.tscn",
-		"scenes/multiplayer_lobby_room_row.tscn",
-		"scenes/multiplayer_lobby_player_row.tscn",
-		"scenes/game_board_result_banner.tscn",
-		"scenes/pause_menu.tscn",
-		"scenes/item_selection_overlay.tscn",
-		"scenes/adventure_avatar_menu_scene.tscn",
-		"scenes/adventure_level_entry.tscn",
-		"scenes/adventure_mode_entry.tscn",
-		"scenes/adventure_upgrade_selection_overlay.tscn",
-		"scenes/adventure_run_resume_dialog.tscn",
-		"scenes/adventure_tutorial_overlay.tscn",
+		"scenes/adventure_suit_upgrade_editor_scene.tscn",
+		"scenes/card_gallery.tscn",
+		"scenes/character_avatar_gallery_scene.tscn",
+		"scenes/character_avatar_preview.tscn",
+		"scenes/upgrade_choice_popup_asset_scene.tscn",
+		"scripts/CardGallery.cs",
+		"scripts/CharacterAvatarGalleryScene.cs",
+		"scripts/CharacterAvatarPreview.cs",
 	};
 
 	private readonly record struct LocalizationReference(string RelativePath, int LineNumber, string Key);

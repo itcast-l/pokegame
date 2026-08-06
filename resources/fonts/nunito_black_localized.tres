@@ -1,0 +1,8 @@
+[gd_resource type="FontVariation" load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="1_nunito"]
+[ext_resource type="FontVariation" path="res://resources/fonts/noto_latin.tres" id="2_fallback"]
+
+[resource]
+base_font = ExtResource("1_nunito")
+fallbacks = Array[Font]([ExtResource("2_fallback")])

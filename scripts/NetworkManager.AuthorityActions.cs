@@ -482,7 +482,9 @@ public partial class NetworkManager
 			GD.PrintErr($"AUTHORITY_CHECKPOINT_LOCAL_DIAGNOSTIC {localDetail}");
 		}
 		GD.PushError("Authority checkpoint commit rejected.");
-		EmitSignal(SignalName.ErrorRaised, "checkpoint_commit_failed");
+		EmitSignal(
+			SignalName.ErrorRaised,
+			NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.Checkpoint));
 	}
 
 	private string GetLobbyGameplayManifestHash()

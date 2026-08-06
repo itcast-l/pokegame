@@ -4,6 +4,10 @@ using Godot;
 public partial class PauseMenuOverlay : PauseMenuInputCatcher
 {
 	private static readonly Color TitleTextColor = new(1.0f, 0.96f, 0.86f, 1.0f);
+	private static readonly Vector2 PauseMenuDesignSize = new(620.0f, 470.0f);
+	private const float TargetViewportWidthRatio = 0.52f;
+	private const float MinimumPanelWidth = 496.0f;
+	private const float MaximumPanelWidth = 860.0f;
 
 	[Signal]
 	public delegate void ContinueRequestedEventHandler();
@@ -21,6 +25,7 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private OceanMenuButtonFrame _continueFrame = default!;
 	private OceanMenuButtonFrame _returnToMainMenuFrame = default!;
 	private OceanMenuButtonFrame _restartFrame = default!;
+	private Control _pauseMenuCenter = default!;
 	private ColorRect _scrim = default!;
 	private bool _inputFocusVisible;
 
@@ -42,6 +47,7 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		_continueFrame = GetNode<OceanMenuButtonFrame>("%ContinueFrame");
 		_returnToMainMenuFrame = GetNode<OceanMenuButtonFrame>("%ReturnToMainMenuFrame");
 		_restartFrame = GetNode<OceanMenuButtonFrame>("%RestartFrame");
+		_pauseMenuCenter = GetNode<Control>("PauseMenuCenter");
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		PrepareRowButton(ContinueButton);
@@ -49,24 +55,102 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		PrepareRowButton(RestartButton);
 		ConfigureFocusNavigation(restartAvailable: true);
 		ConfigureGeneratedVisualStyle();
-		SetInputFocusVisible(false);
+		SetInputFocusVisible(true);
+		VisibilityChanged += OnVisibilityChanged;
 		ContinueButton.Pressed += () => EmitSignal(SignalName.ContinueRequested);
 		ReturnToMainMenuButton.Pressed += () => EmitSignal(SignalName.ReturnToMainMenuRequested);
 		RestartButton.Pressed += () => EmitSignal(SignalName.RestartRequested);
-		SecondaryMenuGlassStyle.AttachImagePanel(
-			this,
-			PauseMenuPanel,
-			_scrim,
-			new Vector2(620.0f, 436.0f),
-			SecondaryMenuGlassStyle.UnifiedVisual);
+		ConfigureResponsiveLayout();
 	}
 
 	private void ConfigureGeneratedVisualStyle()
 	{
+		ConfigureFrame(_continueFrame);
+		ConfigureFrame(_returnToMainMenuFrame);
+		ConfigureFrame(_restartFrame);
 		ConfigureAction(ContinueButton, _continueLabel);
 		ConfigureAction(ReturnToMainMenuButton, _returnToMainMenuLabel);
 		ConfigureAction(RestartButton, _restartLabel);
 		_pauseTitleLabel.AddThemeColorOverride("font_color", TitleTextColor);
+	}
+
+	private static void ConfigureFrame(OceanMenuButtonFrame frame)
+	{
+		SecondaryMenuGlassStyle.ConfigurePauseDerivedFrame(
+			frame,
+			selected: false,
+			showIdleTexture: true,
+			installDivider: false);
+	}
+
+	private void ConfigureResponsiveLayout()
+	{
+		SetMeta(
+			SecondaryMenuGlassStyle.VisualProfileMetadata,
+			SecondaryMenuGlassStyle.PauseDerivedVisual.Id);
+		PauseMenuPanel.SetMeta(
+			SecondaryMenuGlassStyle.PauseDerivedCenterOrnamentsRemovedMetadata,
+			true);
+		SecondaryMenuGlassStyle.ApplyReadabilityVeil(
+			_scrim,
+			SecondaryMenuGlassStyle.PauseDerivedVisual);
+
+		Viewport viewport = GetViewport();
+		void ApplyLayout()
+		{
+			if (!GodotObject.IsInstanceValid(PauseMenuPanel)
+				|| !GodotObject.IsInstanceValid(_pauseMenuCenter)
+				|| !GodotObject.IsInstanceValid(viewport))
+			{
+				return;
+			}
+
+			Vector2 viewportSize = viewport.GetVisibleRect().Size;
+			if (viewportSize.X <= 0.0f || viewportSize.Y <= 0.0f)
+			{
+				viewportSize = Size;
+			}
+
+			Vector2 available = new(
+				Mathf.Max(1.0f, viewportSize.X - SecondaryMenuGlassStyle.SafePadding * 2.0f),
+				Mathf.Max(1.0f, viewportSize.Y - SecondaryMenuGlassStyle.SafePadding * 2.0f));
+			float desiredWidth = Mathf.Clamp(
+				viewportSize.X * TargetViewportWidthRatio,
+				MinimumPanelWidth,
+				MaximumPanelWidth);
+			float desiredScale = desiredWidth / PauseMenuDesignSize.X;
+			float fitScale = Mathf.Min(
+				available.X / PauseMenuDesignSize.X,
+				available.Y / PauseMenuDesignSize.Y);
+			float panelScale = Mathf.Min(desiredScale, fitScale);
+
+			PauseMenuPanel.CustomMinimumSize = PauseMenuDesignSize;
+			PauseMenuPanel.SetMeta("pause_menu_scale", panelScale);
+			_pauseMenuCenter.PivotOffset = _pauseMenuCenter.Size * 0.5f;
+			_pauseMenuCenter.Scale = Vector2.One * panelScale;
+		}
+
+		viewport.SizeChanged += ApplyLayout;
+		_pauseMenuCenter.Resized += () => Callable.From(ApplyLayout).CallDeferred();
+		TreeExiting += () =>
+		{
+			Callable applyLayout = Callable.From(ApplyLayout);
+			if (GodotObject.IsInstanceValid(viewport)
+				&& viewport.IsConnected(Viewport.SignalName.SizeChanged, applyLayout))
+			{
+				viewport.Disconnect(Viewport.SignalName.SizeChanged, applyLayout);
+			}
+		};
+		ApplyLayout();
+		Callable.From(ApplyLayout).CallDeferred();
+	}
+
+	private void OnVisibilityChanged()
+	{
+		if (Visible)
+		{
+			SetInputFocusVisible(true);
+		}
 	}
 
 	private void ConfigureAction(Button button, Label label)
@@ -113,6 +197,11 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 
 	private void SetInputFocusVisible(bool visible)
 	{
+		if (_inputFocusVisible == visible)
+		{
+			return;
+		}
+
 		_inputFocusVisible = visible;
 		foreach (OceanMenuButtonFrame frame in new[] { _continueFrame, _returnToMainMenuFrame, _restartFrame })
 		{

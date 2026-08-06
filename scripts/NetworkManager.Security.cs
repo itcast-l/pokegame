@@ -267,7 +267,7 @@ public partial class NetworkManager
 				passwordProof);
 		if (!passwordAccepted)
 		{
-			RejectLobbyJoin(senderPeerId, "房间认证失败");
+			RejectLobbyJoin(senderPeerId, NetworkUserErrorCategory.RoomAuthentication, "Room password challenge failed.");
 			return;
 		}
 
@@ -293,7 +293,7 @@ public partial class NetworkManager
 				out byte[] sessionKey)
 			|| successorPublicKey is not { Length: > 0 })
 		{
-			RejectLobbyJoin(senderPeerId, "房间认证失败");
+			RejectLobbyJoin(senderPeerId, NetworkUserErrorCategory.RoomAuthentication, "Room password proof failed.");
 			return;
 		}
 

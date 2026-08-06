@@ -81,21 +81,32 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 	if panel_rect.get_center().distance_to(viewport_rect.get_center()) > 2.0:
 		_fail("Pause panel is not centered at %s: %s" % [viewport_spec.name, panel_rect])
 		return false
-	await _wait_frames(4)
-	if float(continue_frame.call("DebugGetGlow")) > 0.08:
-		_fail("Default pause focus is visible before pointer or navigation input at %s" % viewport_spec.name)
+	for frame in [continue_frame, return_frame, restart_frame]:
+		var accent: Color = frame.get("AccentColor")
+		if int(frame.get("FrameStyle")) != 1 \
+				or not accent.is_equal_approx(Color(0.6, 0.94, 0.96, 1.0)) \
+				or not bool(frame.get("ShowIdleTexture")) \
+				or bool(frame.get("UseNinePatchTexture")) \
+				or frame.get("OceanPlaqueTexture") != null \
+				or frame.get("FocusTexture") != null \
+				or frame.get("PressedTexture") != null:
+			_fail("Pause action does not match the main-menu button style at %s" % viewport_spec.name)
+			return false
+	if not await _wait_for_glow(continue_frame, 0.5):
+		_fail("Continue is not visibly selected when pause opens at %s" % viewport_spec.name)
+		return false
+	if await _capture_image(viewport, "default", viewport_spec.name) == null:
 		return false
 
 	_push_mouse_motion(viewport, return_button.get_global_rect().get_center())
-	await _wait_frames(2)
 	if not return_button.has_focus():
 		_fail("Pointer hover did not transfer pause-menu focus at %s" % viewport_spec.name)
 		return false
-	if float(continue_frame.call("DebugGetGlow")) > 0.08:
-		_fail("Pause menu kept two selected rows after pointer focus moved at %s" % viewport_spec.name)
-		return false
 	if not await _wait_for_glow(return_frame, 0.5):
 		_fail("Pointer-focused pause row did not render its selection state at %s" % viewport_spec.name)
+		return false
+	if not await _wait_for_glow_below(continue_frame, 0.08):
+		_fail("Pause menu kept two selected rows after pointer focus moved at %s" % viewport_spec.name)
 		return false
 
 	_push_mouse_motion(viewport, Vector2.ZERO)
@@ -115,7 +126,7 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 		return false
 	var focus_image := await _capture_image(viewport, "focus", viewport_spec.name)
 	if focus_image == null or not _has_visible_change(idle_image, focus_image, restart_frame.get_global_rect()):
-		_fail("Generated focus texture did not visibly change at %s" % viewport_spec.name)
+		_fail("Main-menu focus style did not visibly change at %s" % viewport_spec.name)
 		return false
 
 	var button_center := restart_button.get_global_rect().get_center()
@@ -123,7 +134,7 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 	await _wait_frames(3)
 	var pressed_image := await _capture_image(viewport, "pressed", viewport_spec.name)
 	if pressed_image == null or not _has_visible_change(focus_image, pressed_image, restart_frame.get_global_rect()):
-		_fail("Generated pressed texture did not visibly change at %s" % viewport_spec.name)
+		_fail("Main-menu pressed style did not visibly change at %s" % viewport_spec.name)
 		return false
 	_push_mouse_button(viewport, button_center, false)
 	paused = false
@@ -222,6 +233,14 @@ func _wait_for_glow(frame: Control, minimum_glow: float, max_frames := 120) -> b
 			return true
 		await process_frame
 	return float(frame.call("DebugGetGlow")) >= minimum_glow
+
+
+func _wait_for_glow_below(frame: Control, maximum_glow: float, max_frames := 120) -> bool:
+	for _frame in max_frames:
+		if float(frame.call("DebugGetGlow")) <= maximum_glow:
+			return true
+		await process_frame
+	return float(frame.call("DebugGetGlow")) <= maximum_glow
 
 
 func _wait_frames(count: int) -> void:

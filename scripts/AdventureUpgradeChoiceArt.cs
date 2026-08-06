@@ -2,16 +2,13 @@ using Godot;
 
 public partial class AdventureUpgradeChoiceArt : Control
 {
-	private const float DescriptionLineSpacing = 1.0f;
-	private const int MaxDescriptionFontSize = 17;
+	private const int DescriptionLineSpacing = -12;
+	private const int MaxDescriptionFontSize = 18;
 	private const int MinDescriptionFontSize = 11;
-	private static readonly Rect2 DescriptionPanelNormalizedRect = new(0.11f, 0.515f, 0.78f, 0.25f);
-	private static readonly Rect2 TitlePanelNormalizedRect = new(0.12f, 0.43f, 0.76f, 0.075f);
-	private static readonly Rect2 TitleBandNormalizedRect = new(0.15f, 0.435f, 0.70f, 0.057f);
-	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.14f, 0.545f, 0.72f, 0.18f);
+	private static readonly Rect2 DescriptionBandNormalizedRect = new(0.14f, 0.50f, 0.72f, 0.34f);
 
-	[Export] public FontFile? HeadingFont { get; set; }
-	[Export] public FontFile? BodyFont { get; set; }
+	[Export] public Font? HeadingFont { get; set; }
+	[Export] public Font? BodyFont { get; set; }
 	[Export] public Texture2D? PreviewCardTexture { get; set; }
 	[Export] public string PreviewSuit { get; set; } = string.Empty;
 	[Export] public string PreviewTier { get; set; } = string.Empty;
@@ -24,16 +21,10 @@ public partial class AdventureUpgradeChoiceArt : Control
 	private Panel _groundShadowLayer = default!;
 	private Panel _selectionGlowLayer = default!;
 	private TextureRect _cardSurfaceLayer = default!;
-	private Panel _descriptionPanel = default!;
-	private Panel _titlePanel = default!;
-	private Label _titleLayer = default!;
 	private Label _descriptionLayer = default!;
 	private StyleBoxFlat _groundShadowStyle = default!;
 	private StyleBoxFlat _selectionGlowStyle = default!;
-	private StyleBoxFlat _descriptionPanelStyle = default!;
-	private StyleBoxFlat _titlePanelStyle = default!;
 	private Texture2D? _cardTexture;
-	private string _title = string.Empty;
 	private string _description = string.Empty;
 	private float _highlightAmount;
 	private Color _accentColor = new(0.52f, 0.93f, 1.0f, 1.0f);
@@ -61,7 +52,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		if (_cardTexture == null)
 		{
 			_cardTexture = ResolvePreviewCardTexture();
-			_title = PreviewTitle.Trim();
 			_description = PreviewDescription.Trim();
 		}
 		_accentColor = PreviewTitleColor;
@@ -79,7 +69,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		bool highlighted)
 	{
 		_cardTexture = cardTexture;
-		_title = title?.Trim() ?? string.Empty;
 		_description = description?.Trim() ?? string.Empty;
 		ApplyContent();
 		LayoutLayers();
@@ -98,7 +87,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 
 	public Godot.Collections.Dictionary DebugGetDescriptionBand() => RectToDictionary(GetDescriptionBandRect());
 	public Godot.Collections.Dictionary DebugGetCardDrawRect() => RectToDictionary(GetCardDrawRect());
-	public string DebugGetTitleText() => _title;
+	public string DebugGetTitleText() => string.Empty;
 	public string DebugGetDescriptionText() => _description;
 	public int DebugGetResolvedDescriptionFontSize() => ResolveDescriptionFontSize();
 
@@ -120,7 +109,9 @@ public partial class AdventureUpgradeChoiceArt : Control
 			["surface_material_id"] = _cardSurfaceLayer.Material?.GetInstanceId() ?? 0UL,
 			["glow_material_id"] = 0UL,
 			["glow_uses_outline_panel"] = true,
-			["description_panel_alpha"] = _descriptionPanelStyle.BgColor.A,
+			["description_panel_alpha"] = 0.0f,
+			["description_uses_card_inlay"] = true,
+			["title_visible"] = false,
 		};
 	}
 
@@ -143,31 +134,12 @@ public partial class AdventureUpgradeChoiceArt : Control
 
 		_cardSurfaceLayer = CreateTextureLayer("CardSurfaceLayer", 0, null);
 
-		_descriptionPanelStyle = CreateRoundedStyle(new Color(0.025f, 0.055f, 0.06f, 0.86f), 4);
-		_descriptionPanelStyle.BorderColor = new Color(0.38f, 0.72f, 0.73f, 0.24f);
-		_descriptionPanelStyle.BorderWidthTop = 1;
-		_descriptionPanelStyle.BorderWidthBottom = 1;
-		_descriptionPanel = CreatePanelLayer("DescriptionPanel", 2, _descriptionPanelStyle);
-
-		_titlePanelStyle = CreateRoundedStyle(new Color(0.025f, 0.055f, 0.06f, 0.94f), 3);
-		_titlePanelStyle.BorderColor = new Color(0.78f, 0.69f, 0.46f, 0.46f);
-		_titlePanelStyle.SetBorderWidthAll(1);
-		_titlePanel = CreatePanelLayer("TitlePanel", 3, _titlePanelStyle);
-		_titleLayer = CreateTextLayer("TitleLayer", 4, HeadingFont ?? BodyFont, HorizontalAlignment.Center);
-		_titleLayer.VerticalAlignment = VerticalAlignment.Center;
-		_titleLayer.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-		_titleLayer.AddThemeFontSizeOverride("font_size", 17);
-		_titleLayer.AddThemeColorOverride("font_color", new Color(0.94f, 0.88f, 0.72f, 1.0f));
-		_titleLayer.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.01f, 0.015f, 0.9f));
-		_titleLayer.AddThemeConstantOverride("shadow_offset_y", 1);
-
 		_descriptionLayer = CreateTextLayer("DescriptionLayer", 4, BodyFont, HorizontalAlignment.Center);
-		_descriptionLayer.VerticalAlignment = VerticalAlignment.Center;
+		_descriptionLayer.VerticalAlignment = VerticalAlignment.Top;
 		_descriptionLayer.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		_descriptionLayer.AddThemeColorOverride("font_color", new Color(0.88f, 0.92f, 0.90f, 1.0f));
-		_descriptionLayer.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.015f, 0.02f, 0.9f));
-		_descriptionLayer.AddThemeConstantOverride("shadow_offset_y", 1);
-
+		_descriptionLayer.ClipText = true;
+		_descriptionLayer.AddThemeConstantOverride("line_spacing", DescriptionLineSpacing);
+		ApplyUpgradeChoiceTypography();
 	}
 
 	private Panel CreatePanelLayer(string name, int zIndex, StyleBoxFlat style)
@@ -193,7 +165,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 		return layer;
 	}
 
-	private Label CreateTextLayer(string name, int zIndex, FontFile? font, HorizontalAlignment alignment)
+	private Label CreateTextLayer(string name, int zIndex, Font? font, HorizontalAlignment alignment)
 	{
 		var label = new Label
 		{
@@ -229,7 +201,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 			return;
 		}
 		_cardSurfaceLayer.Texture = _cardTexture;
-		_titleLayer.Text = _title;
 		_descriptionLayer.Text = _description;
 	}
 
@@ -253,15 +224,6 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_cardSurfaceLayer.Position = cardRect.Position;
 		_cardSurfaceLayer.Size = cardRect.Size;
 
-		Rect2 panelRect = GetNormalizedRect(cardRect, DescriptionPanelNormalizedRect);
-		_descriptionPanel.Position = panelRect.Position;
-		_descriptionPanel.Size = panelRect.Size;
-		Rect2 titlePanelRect = GetNormalizedRect(cardRect, TitlePanelNormalizedRect);
-		_titlePanel.Position = titlePanelRect.Position;
-		_titlePanel.Size = titlePanelRect.Size;
-		Rect2 titleRect = GetNormalizedRect(cardRect, TitleBandNormalizedRect);
-		_titleLayer.Position = titleRect.Position;
-		_titleLayer.Size = titleRect.Size;
 		Rect2 descriptionRect = GetDescriptionBandRect();
 		_descriptionLayer.Position = descriptionRect.Position;
 		_descriptionLayer.Size = descriptionRect.Size;
@@ -282,6 +244,10 @@ public partial class AdventureUpgradeChoiceArt : Control
 		_selectionGlowStyle.BorderColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, glowAlpha);
 		_selectionGlowStyle.ShadowColor = new Color(_glowColor.R, _glowColor.G, _glowColor.B, glowAlpha * 0.24f);
 		_selectionGlowLayer.Visible = glowAlpha > 0.001f;
+		Color restingTextColor = _accentColor.Lerp(Colors.White, 0.55f);
+		_descriptionLayer.AddThemeColorOverride(
+			"font_color",
+			restingTextColor.Lerp(Colors.White, _highlightAmount * 0.5f));
 	}
 
 	private Rect2 GetCardDrawRect()
@@ -300,46 +266,19 @@ public partial class AdventureUpgradeChoiceArt : Control
 
 	private int ResolveDescriptionFontSize()
 	{
-		Font font = BodyFont ?? ThemeDB.FallbackFont;
-		Vector2 size = GetDescriptionBandRect().Size;
 		if (string.IsNullOrWhiteSpace(_description))
 		{
 			return MinDescriptionFontSize;
 		}
 		for (int fontSize = MaxDescriptionFontSize; fontSize >= MinDescriptionFontSize; fontSize--)
 		{
-			string[] lines = WrapLines(font, fontSize, _description, size.X);
-			if (lines.Length * (font.GetHeight(fontSize) + DescriptionLineSpacing) <= size.Y)
+			_descriptionLayer.AddThemeFontSizeOverride("font_size", fontSize);
+			if (_descriptionLayer.GetVisibleLineCount() >= _descriptionLayer.GetLineCount())
 			{
 				return fontSize;
 			}
 		}
 		return MinDescriptionFontSize;
-	}
-
-	private static string[] WrapLines(Font font, int fontSize, string text, float maxWidth)
-	{
-		var lines = new System.Collections.Generic.List<string>();
-		string current = string.Empty;
-		foreach (string word in text.Split(' '))
-		{
-			string candidate = string.IsNullOrEmpty(current) ? word : $"{current} {word}";
-			if (font.GetStringSize(candidate, HorizontalAlignment.Left, -1, fontSize).X <= maxWidth)
-			{
-				current = candidate;
-				continue;
-			}
-			if (!string.IsNullOrEmpty(current))
-			{
-				lines.Add(current);
-			}
-			current = word;
-		}
-		if (!string.IsNullOrEmpty(current))
-		{
-			lines.Add(current);
-		}
-		return lines.Count == 0 ? new[] { text } : lines.ToArray();
 	}
 
 	private Texture2D? ResolvePreviewCardTexture()

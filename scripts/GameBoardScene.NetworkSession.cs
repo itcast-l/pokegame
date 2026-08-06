@@ -53,7 +53,7 @@ public partial class GameBoardScene
 		_networkManagerSignalsConnected = false;
 	}
 
-	private void HandleNetworkManagerBoardError(string message)
+	private void HandleNetworkManagerBoardError(string localizationKey)
 	{
 		if (_isLeavingGame || !IsNetworkMultiplayerMode())
 		{
@@ -68,7 +68,7 @@ public partial class GameBoardScene
 
 		if (networkManager.State != NetworkSessionState.Failed)
 		{
-			ShowNetworkNotice(message);
+			ShowNetworkNotice(localizationKey);
 			return;
 		}
 		if (networkManager.IsHostDisconnectReturnPending)
@@ -78,7 +78,7 @@ public partial class GameBoardScene
 
 		if (networkManager.IsMigrationFailureReturnPending)
 		{
-			ShowNetworkNotice(NetworkReconnectPresentationRules.GetMigrationFailureText(UsesChineseLocale()));
+			ShowNetworkNotice(NetworkReconnectPresentationRules.GetMigrationFailureLocalizationKey());
 			return;
 		}
 

@@ -11,6 +11,7 @@ const VIEWPORT_SPECS := [
 	{"name": "1920x1080", "size": Vector2i(1920, 1080)},
 ]
 const RECT_TOLERANCE := 2.0
+const DESKTOP_PANEL_SAFE_INSET := 24.0
 
 var _failed := false
 var _viewport: SubViewport
@@ -99,6 +100,12 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 	if not _rect_contains(viewport_rect, panel.get_global_rect()):
 		_fail("%s glass panel escapes the viewport: %s" % [context, panel.get_global_rect()])
 		return false
+	if viewport_size.y >= 720:
+		var panel_rect := panel.get_global_rect()
+		if panel_rect.position.y < DESKTOP_PANEL_SAFE_INSET \
+				or panel_rect.end.y > viewport_rect.end.y - DESKTOP_PANEL_SAFE_INSET:
+			_fail("%s glass panel does not preserve vertical safe-area spacing: %s" % [context, panel_rect])
+			return false
 	if not _rects_close(glass_surface.get_global_rect(), panel.get_global_rect()):
 		_fail("%s glass surface does not match the panel bounds" % context)
 		return false

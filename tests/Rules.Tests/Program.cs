@@ -177,7 +177,13 @@ internal static partial class Program
 		Run("player count localization difficulty rows exist for every locale", PlayerCountLocalizationDifficultyRowsExistForEveryLocale);
 		Run("runtime localization keys exist for every reference", RuntimeLocalizationKeysExistForEveryReference);
 		Run("runtime localization rows cover every supported language", RuntimeLocalizationRowsCoverEverySupportedLanguage);
+		Run("localization placeholders match the English contract", LocalizationPlaceholdersMatchEnglishContract);
+		Run("localization table has no broad English fallback", LocalizationTableHasNoBroadEnglishFallback);
+		Run("localization scripts match high risk locales", LocalizationScriptsMatchHighRiskLocales);
 		Run("runtime scenes do not expose hardcoded natural language text", RuntimeScenesDoNotExposeHardcodedNaturalLanguageText);
+		Run("runtime C sharp does not assign hardcoded natural language text", RuntimeCSharpDoesNotAssignHardcodedNaturalLanguageText);
+		Run("release presets exclude localization development scenes", ReleasePresetsExcludeLocalizationDevelopmentScenes);
+		Run("localization fonts are project owned and locale selected", LocalizationFontsAreProjectOwnedAndLocaleSelected);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);
 		Run("adventure upgrade popup scene has no embedded image payloads", AdventureUpgradePopupSceneHasNoEmbeddedImagePayloads);
 		Run("adventure upgrade visual catalog exposes 12 processed card visuals", AdventureUpgradeVisualCatalogExposesTwelveProcessedCards);
@@ -300,7 +306,8 @@ internal static partial class Program
 		Run("network reconnect rules apply reconnect snapshot immediately on client", NetworkReconnectRulesApplyReconnectSnapshotImmediatelyOnClient);
 		Run("network reconnect rules complete catch up only after visual queue drains", NetworkReconnectRulesCompleteCatchUpOnlyAfterVisualQueueDrains);
 		Run("network reconnect overlay shows only during client catch up", NetworkReconnectOverlayShowsOnlyDuringClientCatchUp);
-		Run("network reconnect presentation matches reconnect plan copy", NetworkReconnectPresentationMatchesReconnectPlanCopy);
+		Run("network reconnect presentation returns localization keys", NetworkReconnectPresentationReturnsLocalizationKeys);
+		Run("network user error categories map to stable localization keys", NetworkUserErrorCategoriesMapToStableLocalizationKeys);
 		Run("seat control disconnect transitions to ai reclaimable", SeatControlDisconnectTransitionsToAiReclaimable);
 		Run("seat control reclaim pending disconnect falls back to ai reclaimable", SeatControlReclaimPendingDisconnectFallsBackToAiReclaimable);
 		Run("seat control reconnect claim is idempotent for same peer", SeatControlReconnectClaimIsIdempotentForSamePeer);

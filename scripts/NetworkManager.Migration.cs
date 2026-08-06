@@ -203,7 +203,9 @@ public partial class NetworkManager
 			|| _networkMigrationPlan is not { } plan)
 		{
 			GD.Print($"MIGRATION_ACTIVE_REJECT reason=CandidateUnavailable coordinator={_migrationCoordinatorState} acked_id={_standbyAckedCheckpointId} plan_id={_networkMigrationPlan?.CheckpointId ?? -1} latest_id={_latestAuthorityCheckpointEnvelope.CheckpointId} address={_standbyCandidateHostAddress}");
-			EmitSignal(SignalName.ErrorRaised, NetworkMigrationFailureCode.CandidateUnavailable.ToString());
+			EmitSignal(
+				SignalName.ErrorRaised,
+				NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostMigration));
 			return false;
 		}
 
@@ -214,7 +216,9 @@ public partial class NetworkManager
 		{
 			NetworkMigrationFailureCode failureCode = GetMigrationTransportFailureCode(plan, prepareError);
 			GD.Print($"MIGRATION_ACTIVE_REJECT reason={failureCode} error={prepareError}");
-			EmitSignal(SignalName.ErrorRaised, failureCode.ToString());
+			EmitSignal(
+				SignalName.ErrorRaised,
+				NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostMigration));
 			ResetMigrationTransportState();
 			return false;
 		}
@@ -1967,7 +1971,7 @@ public partial class NetworkManager
 	}
 
 	private void ReturnToMultiplayerLobbyAfterMigrationFailure(
-		string message,
+		string technicalDetails,
 		NetworkSessionCloseReason closeReason = NetworkSessionCloseReason.InternalFailure)
 	{
 		if (_migrationFailureReturnPending)
@@ -1981,10 +1985,12 @@ public partial class NetworkManager
 		}
 
 		_ = RequestSessionCloseAsync(closeReason);
-		_pendingLobbyErrorMessage = message;
+		GD.PushWarning($"Host migration ended: {technicalDetails}");
+		string localizationKey = NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostMigration);
+		_pendingLobbyErrorLocalizationKey = localizationKey;
 		_migrationFailureReturnPending = true;
 		SetState(NetworkSessionState.Failed);
-		EmitSignal(SignalName.ErrorRaised, message);
+		EmitSignal(SignalName.ErrorRaised, localizationKey);
 		CallDeferred(
 			nameof(ReturnToMultiplayerLobbyScene),
 			(int)NetworkSessionState.Failed,
@@ -2901,7 +2907,8 @@ public partial class NetworkManager
 		_activeMigrationDeadline = -1.0;
 		_activeMigrationConfirmedSeats.Clear();
 		_hostEndedMatchBroadcasted = true;
-		string message = $"Host migration failed: {code}";
+		string technicalDetails = $"Host migration failed: {code}";
+		string localizationKey = NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostMigration);
 		NetworkRpcContext context = GetCurrentRpcContext();
 		try
 		{
@@ -2910,17 +2917,17 @@ public partial class NetworkManager
 				context.SessionId,
 				context.MatchId,
 				context.AuthorityEpoch,
-				message);
+				localizationKey);
 		}
 		catch (Exception exception)
 		{
 			GD.PushWarning($"Migration failure broadcast failed: {exception.GetType().Name}");
 		}
 		GD.Print($"MIGRATION_ACTIVE_FAILED reason={code} error={error}");
-		_ = FinishFailedActiveHostMigrationAsync(message);
+		_ = FinishFailedActiveHostMigrationAsync(technicalDetails);
 	}
 
-	private async Task FinishFailedActiveHostMigrationAsync(string message)
+	private async Task FinishFailedActiveHostMigrationAsync(string technicalDetails)
 	{
 		if (!HostMigrationCapabilityAvailable)
 		{
@@ -2939,7 +2946,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		ReturnToMultiplayerLobbyAfterMigrationFailure(message);
+		ReturnToMultiplayerLobbyAfterMigrationFailure(technicalDetails);
 	}
 
 	private bool UpdateMigratedHostMetadata(NetworkMigrationPlan plan)

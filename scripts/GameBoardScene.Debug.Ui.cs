@@ -19,7 +19,7 @@ public partial class GameBoardScene
 	{
 		AdventureUpgradeOverlayOptionModel[] options =
 		{
-			new("hearts", "common", "温流补给", "每个实际回合首次收牌后，额外抽 1 张牌。"),
+			new("hearts", "common", "温流补给", "首次收取后，额外抽1"),
 			new("diamonds", "rare", "潮汐回响", "获得奖励时，有 30% 概率再次获得 1 次。"),
 			new("clubs", "legendary", "珊瑚冠冕", "连续收牌时，额外获得 3 分。"),
 		};

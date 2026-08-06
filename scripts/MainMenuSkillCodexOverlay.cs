@@ -400,16 +400,28 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			definition,
 			entry,
 			localized,
-			currentItemCount: 0);
+			currentItemCount: GetCurrentItemCount());
+	}
+
+	private int GetCurrentItemCount()
+	{
+		AdventureRunSessionStore? store =
+			GetNodeOrNull<AdventureRunSessionStore>("/root/AdventureRunSessionStore");
+		return store?.HasActiveRun == true
+			? store.GetReadModel().Effects.QuestionRewardCount
+			: 0;
 	}
 
 	private string LocalizeDescription(AdventureSuitUpgradeDefinition definition)
 	{
 		string localized = Tr(definition.DescriptionKey).ToString();
-		return string.IsNullOrWhiteSpace(localized)
-			|| string.Equals(localized, definition.DescriptionKey, StringComparison.Ordinal)
-			? definition.EffectText
-			: localized;
+		if (string.IsNullOrWhiteSpace(localized)
+			|| string.Equals(localized, definition.DescriptionKey, StringComparison.Ordinal))
+		{
+			GD.PushError($"Missing skill codex localization key: {definition.DescriptionKey}");
+		}
+
+		return localized;
 	}
 
 	private void OpenPreview(

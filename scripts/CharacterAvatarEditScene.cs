@@ -97,6 +97,7 @@ public partial class CharacterAvatarEditScene : Control
 		ConfigurePauseDerivedVisualStyle();
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
+		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
 		RefreshLocalizedText();
 		ApplyPreviewAvatar();
 		ApplyPlayerNameInput();
@@ -107,6 +108,7 @@ public partial class CharacterAvatarEditScene : Control
 	{
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
+			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
 			RefreshLocalizedText();
 		}
 	}

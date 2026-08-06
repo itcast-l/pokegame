@@ -10,10 +10,6 @@ public partial class GameBoardScene
 		Rect2 PreviewGlobalRect,
 		AdventureQuestionRejudgeOverlay? Overlay);
 
-	private const string RejudgeKeepFallbackText = "Keep";
-	private const string RejudgeRerollFallbackText = "Reroll Once";
-	private const string RejudgePromptFallbackText = "Reset this reward?";
-
 	private bool ShowAdventureQuestionRejudgeOverlay(
 		ItemCard rewardItem,
 		Action<AdventureQuestionRejudgeChoice, Rect2> resolveChoice,
@@ -361,20 +357,17 @@ public partial class GameBoardScene
 
 	private string GetAdventureQuestionRejudgePromptText()
 	{
-		string localized = Localize("GAME_REJUDGE_PROMPT");
-		return localized == "GAME_REJUDGE_PROMPT" ? RejudgePromptFallbackText : localized;
+		return GetRequiredLocalizedText("GAME_REJUDGE_PROMPT", "question rejudge prompt");
 	}
 
 	private string GetAdventureQuestionRejudgeKeepText()
 	{
-		string localized = Localize("GAME_REJUDGE_KEEP");
-		return localized == "GAME_REJUDGE_KEEP" ? RejudgeKeepFallbackText : localized;
+		return GetRequiredLocalizedText("GAME_REJUDGE_KEEP", "question rejudge keep action");
 	}
 
 	private string GetAdventureQuestionRejudgeRerollText()
 	{
-		string localized = Localize("GAME_REJUDGE_REROLL_ONCE");
-		return localized == "GAME_REJUDGE_REROLL_ONCE" ? RejudgeRerollFallbackText : localized;
+		return GetRequiredLocalizedText("GAME_REJUDGE_REROLL_ONCE", "question rejudge reroll action");
 	}
 
 	private string GetAdventureQuestionRewardEffectText(ItemCard rewardItem)
@@ -390,13 +383,6 @@ public partial class GameBoardScene
 			return string.Empty;
 		}
 
-		string localizedDescription = GetItemDescription(definition.DescriptionKey);
-		if (!string.IsNullOrWhiteSpace(localizedDescription)
-			&& !string.Equals(localizedDescription, definition.DescriptionKey, StringComparison.Ordinal))
-		{
-			return localizedDescription;
-		}
-
-		return definition.Description;
+		return GetItemDescription(definition.DescriptionKey);
 	}
 }

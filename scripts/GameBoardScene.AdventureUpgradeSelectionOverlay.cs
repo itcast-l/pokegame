@@ -249,7 +249,7 @@ public partial class GameBoardScene
 
 	private string FormatAdventureUpgradeDescription(AdventureSuitUpgradeDefinition definition)
 	{
-		string description = GetAdventureUpgradeDescription(definition.DescriptionKey, definition.EffectText);
+		string description = GetAdventureUpgradeDescription(definition.DescriptionKey);
 		AdventureUpgradeManifestEntry? entry = null;
 		if (_adventureUpgradeCatalog != null
 			&& _adventureUpgradeCatalog.TryCreateManifest(out AdventureUpgradeManifest manifest)
@@ -279,6 +279,7 @@ public partial class GameBoardScene
 		if (title != null)
 		{
 			title.Text = Localize("GAME_SELECT_UPGRADE");
+			ApplyAdventureUpgradeSelectionTitleTypography(title);
 		}
 
 		ColorRect backdrop = selectionOverlay.GetNode<ColorRect>("TableDarken");
@@ -332,7 +333,7 @@ public partial class GameBoardScene
 			AdventureUpgradeOverlayOptionModel option = options[index];
 			AdventureUpgradeCardVisualEntryResource? visualEntry = AdventureUpgradeCardVisualResolver.ResolveEntry(option.Suit, option.Rarity);
 			Texture2D? cardTexture = AdventureUpgradeCardVisualResolver.LoadAtlasTextureForRarity(option.Suit, option.Rarity);
-			choiceArt.ConfigureChoice(cardTexture, option.Title, option.Description, false);
+			choiceArt.ConfigureChoice(cardTexture, string.Empty, option.Description, false);
 			choiceArt.SetPalette(
 				visualEntry?.TitleColor ?? DefaultAdventureUpgradeTitleColor,
 				visualEntry?.GlowColor ?? DefaultAdventureUpgradeGlowColor,

@@ -290,26 +290,7 @@ public partial class GameBoardScene
 	private string GetPlayerStatusMetricLabel()
 	{
 		string key = adventure_mode ? "GAME_STATUS_HEALTH" : "GAME_STATUS_SCORE";
-		string fallback = GetStatusMetricFallback(adventure_mode);
-		string text = Localize(key);
-		return text == key ? fallback : text;
-	}
-
-	private static string GetStatusMetricFallback(bool isHealth)
-	{
-		string locale = TranslationServer.GetLocale();
-		if (locale.StartsWith("zh_TW", StringComparison.OrdinalIgnoreCase)
-			|| locale.StartsWith("zh_HK", StringComparison.OrdinalIgnoreCase))
-		{
-			return isHealth ? "生命值" : "分數";
-		}
-
-		if (locale.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
-		{
-			return isHealth ? "生命值" : "分数";
-		}
-
-		return isHealth ? "Health" : "Score";
+		return GetRequiredLocalizedText(key, "player status metric");
 	}
 
 	private static StyleBoxFlat CreatePlayerStatusTooltipPanelStyle()

@@ -1,28 +1,21 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/PauseMenuOverlay.cs" id="1_pause_menu"]
 [ext_resource type="Script" path="res://scripts/OceanMenuButtonFrame.cs" id="2_button_frame"]
 [ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_panel.png" id="3_panel"]
-[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_button_idle.png" id="4_button_idle"]
-[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_button_focus.png" id="5_button_focus"]
-[ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_button_pressed.png" id="6_button_pressed"]
 [ext_resource type="Texture2D" path="res://art/ui/pause_menu/pause_divider.png" id="7_divider"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_panel"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel_left"]
 atlas = ExtResource("3_panel")
-region = Rect2(41, 180, 942, 664)
+region = Rect2(41, 180, 445, 664)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_button_idle"]
-atlas = ExtResource("4_button_idle")
-region = Rect2(41, 438, 942, 148)
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel_right"]
+atlas = ExtResource("3_panel")
+region = Rect2(538, 180, 445, 664)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_button_focus"]
-atlas = ExtResource("5_button_focus")
-region = Rect2(41, 428, 942, 167)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_button_pressed"]
-atlas = ExtResource("6_button_pressed")
-region = Rect2(41, 426, 942, 172)
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel_top_ornament"]
+atlas = ExtResource("7_divider")
+region = Rect2(238, 238, 36, 36)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_divider"]
 atlas = ExtResource("7_divider")
@@ -66,7 +59,7 @@ mouse_filter = 2
 
 [node name="PauseMenuPanel" type="PanelContainer" parent="PauseMenuCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(620, 436)
+custom_minimum_size = Vector2(620, 470)
 process_mode = 3
 layout_mode = 2
 mouse_filter = 0
@@ -77,25 +70,68 @@ unique_name_in_owner = true
 process_mode = 3
 layout_mode = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_panel")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PauseMenuArtworkLeft" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuArtwork"]
+process_mode = 3
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_panel_left")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PauseMenuArtworkRight" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuArtwork"]
+process_mode = 3
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_panel_right")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PauseMenuTopOrnament" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/PauseMenuArtwork"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -24.0
+offset_top = -16.0
+offset_right = 24.0
+offset_bottom = 16.0
+grow_horizontal = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_panel_top_ornament")
 expand_mode = 1
 stretch_mode = 0
 
 [node name="DialogMargin" type="MarginContainer" parent="PauseMenuCenter/PauseMenuPanel"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/margin_left = 44
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 44
-theme_override_constants/margin_bottom = 32
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 38
 
 [node name="DialogLayout" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin"]
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 12
 
 [node name="Header" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 104)
 process_mode = 3
 layout_mode = 2
 theme_override_constants/separation = 0
@@ -110,7 +146,7 @@ theme_override_colors/font_color = Color(0.96, 0.99, 1, 1)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.72)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 42
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
@@ -138,26 +174,24 @@ size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="Actions" type="VBoxContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter"]
-custom_minimum_size = Vector2(532, 0)
+custom_minimum_size = Vector2(520, 0)
 process_mode = 3
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="ContinueFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(532, 66)
+custom_minimum_size = Vector2(520, 72)
 process_mode = 3
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-AccentColor = Color(0.62, 1, 0.94, 0.84)
+FrameStyle = 1
+AccentColor = Color(0.6, 0.94, 0.96, 1)
 UsePlaqueGlowBackdrop = false
-ShowIdleTexture = false
-OceanPlaqueTexture = SubResource("AtlasTexture_button_idle")
-FocusTexture = SubResource("AtlasTexture_button_focus")
-PressedTexture = SubResource("AtlasTexture_button_pressed")
+ShowIdleTexture = true
 
 [node name="ContinueLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/ContinueFrame"]
 unique_name_in_owner = true
@@ -172,7 +206,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.9)
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 23
+theme_override_font_sizes/font_size = 24
 text = "GAME_CONTINUE"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -193,36 +227,18 @@ theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 flat = true
 
-[node name="PauseRowDividerOneCenter" type="CenterContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
-custom_minimum_size = Vector2(0, 10)
-process_mode = 3
-layout_mode = 2
-mouse_filter = 2
-
-[node name="PauseRowDividerOne" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/PauseRowDividerOneCenter"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(448, 3)
-process_mode = 3
-layout_mode = 2
-mouse_filter = 2
-texture = SubResource("AtlasTexture_divider")
-expand_mode = 1
-stretch_mode = 0
-
 [node name="ReturnToMainMenuFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(532, 66)
+custom_minimum_size = Vector2(520, 72)
 process_mode = 3
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-AccentColor = Color(0.62, 1, 0.94, 0.84)
+FrameStyle = 1
+AccentColor = Color(0.6, 0.94, 0.96, 1)
 UsePlaqueGlowBackdrop = false
-ShowIdleTexture = false
-OceanPlaqueTexture = SubResource("AtlasTexture_button_idle")
-FocusTexture = SubResource("AtlasTexture_button_focus")
-PressedTexture = SubResource("AtlasTexture_button_pressed")
+ShowIdleTexture = true
 
 [node name="ReturnToMainMenuLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/ReturnToMainMenuFrame"]
 unique_name_in_owner = true
@@ -237,7 +253,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.9)
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 23
+theme_override_font_sizes/font_size = 24
 text = "GAME_RETURN_MAIN_MENU"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -259,36 +275,18 @@ theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
 flat = true
 
-[node name="PauseRowDividerTwoCenter" type="CenterContainer" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
-custom_minimum_size = Vector2(0, 10)
-process_mode = 3
-layout_mode = 2
-mouse_filter = 2
-
-[node name="PauseRowDividerTwo" type="TextureRect" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/PauseRowDividerTwoCenter"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(448, 3)
-process_mode = 3
-layout_mode = 2
-mouse_filter = 2
-texture = SubResource("AtlasTexture_divider")
-expand_mode = 1
-stretch_mode = 0
-
 [node name="RestartFrame" type="Control" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(532, 66)
+custom_minimum_size = Vector2(520, 72)
 process_mode = 3
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 script = ExtResource("2_button_frame")
-AccentColor = Color(0.62, 1, 0.94, 0.84)
+FrameStyle = 1
+AccentColor = Color(0.6, 0.94, 0.96, 1)
 UsePlaqueGlowBackdrop = false
-ShowIdleTexture = false
-OceanPlaqueTexture = SubResource("AtlasTexture_button_idle")
-FocusTexture = SubResource("AtlasTexture_button_focus")
-PressedTexture = SubResource("AtlasTexture_button_pressed")
+ShowIdleTexture = true
 
 [node name="RestartLabel" type="Label" parent="PauseMenuCenter/PauseMenuPanel/DialogMargin/DialogLayout/ActionsCenter/Actions/RestartFrame"]
 unique_name_in_owner = true
@@ -303,7 +301,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 0.97)
 theme_override_colors/font_shadow_color = Color(0, 0.02, 0.03, 0.9)
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 23
+theme_override_font_sizes/font_size = 24
 text = "GAME_RESTART_MATCH"
 horizontal_alignment = 1
 vertical_alignment = 1

@@ -21,8 +21,18 @@ codex_setup_godot_test_home "$TMP_DIR"
 LOG_FILE="$TMP_DIR/localization-screenshot-audit.log"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 SCREENSHOT_DIR="${CODEX_LOCALIZATION_SCREENSHOT_DIR:-$ROOT_DIR/outputs/localization_screenshots/$TIMESTAMP}"
+TIMEOUT_SECONDS="${CODEX_LOCALIZATION_SCREENSHOT_TIMEOUT_SECONDS:-3600}"
+TIMEOUT_MARKER="$TMP_DIR/localization-screenshot-timeout"
+WATCHDOG_PID=""
+GODOT_PID=""
 
 cleanup() {
+	if [[ -n "$WATCHDOG_PID" ]]; then
+		kill "$WATCHDOG_PID" 2>/dev/null || true
+	fi
+	if [[ -n "$GODOT_PID" ]]; then
+		kill "$GODOT_PID" 2>/dev/null || true
+	fi
 	rm -rf "$TMP_DIR"
 }
 
@@ -35,9 +45,30 @@ fi
 
 set +e
 CODEX_LOCALIZATION_SCREENSHOT_DIR="$SCREENSHOT_DIR" \
-	"$GODOT_CMD" "${GODOT_ARGS[@]}" >"$LOG_FILE" 2>&1
+	CODEX_LOCALIZATION_SCREENSHOT_TIMEOUT_SECONDS="$TIMEOUT_SECONDS" \
+	"$GODOT_CMD" "${GODOT_ARGS[@]}" >"$LOG_FILE" 2>&1 &
+GODOT_PID=$!
+(
+	sleep "$TIMEOUT_SECONDS"
+	if kill -0 "$GODOT_PID" 2>/dev/null; then
+		echo "timeout after ${TIMEOUT_SECONDS}s" >"$TIMEOUT_MARKER"
+		kill "$GODOT_PID" 2>/dev/null || true
+	fi
+) &
+WATCHDOG_PID=$!
+wait "$GODOT_PID"
 GODOT_STATUS=$?
+GODOT_PID=""
+kill "$WATCHDOG_PID" 2>/dev/null || true
+wait "$WATCHDOG_PID" 2>/dev/null || true
+WATCHDOG_PID=""
 set -e
+
+if [[ -f "$TIMEOUT_MARKER" ]]; then
+	cat "$LOG_FILE" >&2
+	cat "$TIMEOUT_MARKER" >&2
+	exit 124
+fi
 
 if [[ "$GODOT_STATUS" -ne 0 ]]; then
 	cat "$LOG_FILE" >&2
@@ -45,6 +76,11 @@ if [[ "$GODOT_STATUS" -ne 0 ]]; then
 fi
 
 if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
+
+if grep -Eq '^ERROR:' "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

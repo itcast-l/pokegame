@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +21,8 @@ SCAN_LEFT = 80
 SCAN_RIGHT = 944
 MIN_CARD_ROW_PIXELS = 20
 EDGE_FEATHER_PIXELS = 3
+TITLE_EDIT_BOX = (118, 658, 906, 858)
+TITLE_EDIT_FEATHER_PIXELS = 10
 
 
 def build_card_alpha(rgb: np.ndarray) -> np.ndarray:
@@ -81,7 +84,66 @@ def process_asset(source: Path, output: Path) -> None:
     print(f"processed {source.relative_to(ROOT)} -> {output.relative_to(ROOT)}")
 
 
+def composite_generated_title_edit(
+    original_path: Path,
+    generated_path: Path,
+    output_path: Path,
+    edit_box: tuple[int, int, int, int],
+    feather_pixels: int,
+) -> None:
+    original = Image.open(original_path).convert("RGBA")
+    generated = Image.open(generated_path).convert("RGBA")
+    if generated.size != original.size:
+        raise RuntimeError(
+            f"Generated edit size {generated.size} does not match original size {original.size}"
+        )
+
+    mask = Image.new("L", original.size, 0)
+    ImageDraw.Draw(mask).rectangle(edit_box, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(feather_pixels))
+    composited = Image.composite(generated, original, mask)
+    composited.putalpha(original.getchannel("A"))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    composited.save(output_path, optimize=True)
+    print(f"composited {generated_path} over {original_path} -> {output_path}")
+
+
+def parse_edit_box(value: str) -> tuple[int, int, int, int]:
+    try:
+        values = tuple(int(item.strip()) for item in value.split(","))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("edit box values must be integers") from error
+    if len(values) != 4:
+        raise argparse.ArgumentTypeError("edit box must contain left,top,right,bottom")
+    return values
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Process generated adventure upgrade card images.")
+    parser.add_argument("--composite-original", type=Path)
+    parser.add_argument("--composite-generated", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--edit-box", type=parse_edit_box, default=TITLE_EDIT_BOX)
+    parser.add_argument("--edit-feather", type=int, default=TITLE_EDIT_FEATHER_PIXELS)
+    args = parser.parse_args()
+    composite_values = (args.composite_original, args.composite_generated, args.output)
+    if any(composite_values) and not all(composite_values):
+        parser.error("--composite-original, --composite-generated, and --output must be used together")
+    return args
+
+
 def main() -> None:
+    args = parse_args()
+    if args.composite_original:
+        composite_generated_title_edit(
+            args.composite_original,
+            args.composite_generated,
+            args.output,
+            args.edit_box,
+            args.edit_feather,
+        )
+        return
+
     for suit in SUITS:
         for source_tier, output_tier in TIER_FILES.items():
             process_asset(

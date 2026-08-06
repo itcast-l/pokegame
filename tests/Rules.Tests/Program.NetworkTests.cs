@@ -1080,28 +1080,45 @@ internal static partial class Program
 			lastAppliedSnapshotId: 2));
 	}
 
-	private static void NetworkReconnectPresentationMatchesReconnectPlanCopy()
+	private static void NetworkReconnectPresentationReturnsLocalizationKeys()
 	{
-		Equal("断线中 · AI 接管", NetworkReconnectPresentationRules.GetSeatControlStatusText(
-			SeatControlMode.AiProxyReclaimable,
-			usesChineseLocale: true));
-		Equal("Disconnected · AI takeover", NetworkReconnectPresentationRules.GetSeatControlStatusText(
-			SeatControlMode.AiProxyReclaimable,
-			usesChineseLocale: false));
-		Equal("已重连 · 下回合恢复", NetworkReconnectPresentationRules.GetSeatControlStatusText(
-			SeatControlMode.HumanReclaimPending,
-			usesChineseLocale: true));
-		Equal("Reconnected · next turn", NetworkReconnectPresentationRules.GetSeatControlStatusText(
-			SeatControlMode.HumanReclaimPending,
-			usesChineseLocale: false));
-		Equal(string.Empty, NetworkReconnectPresentationRules.GetSeatControlStatusText(
-			SeatControlMode.HumanConnected,
-			usesChineseLocale: true));
+		Equal("NETWORK_STATE_AI_TAKEOVER", NetworkReconnectPresentationRules.GetSeatControlStatusLocalizationKey(
+			SeatControlMode.AiProxyReclaimable));
+		Equal("NETWORK_STATE_CONTROL_PENDING", NetworkReconnectPresentationRules.GetSeatControlStatusLocalizationKey(
+			SeatControlMode.HumanReclaimPending));
+		Equal(string.Empty, NetworkReconnectPresentationRules.GetSeatControlStatusLocalizationKey(
+			SeatControlMode.HumanConnected));
+		Equal("NETWORK_STATE_SYNCING_MATCH", NetworkReconnectPresentationRules.GetReconnectOverlayLocalizationKey());
+		Equal("NETWORK_STATE_RECONNECTED_NOTICE", NetworkReconnectPresentationRules.GetReconnectNoticeLocalizationKey());
+		Equal("NETWORK_STATE_MIGRATING_HOST", NetworkReconnectPresentationRules.GetMigrationOverlayLocalizationKey());
+		Equal("NETWORK_STATE_MIGRATION_FAILED_RETURNING", NetworkReconnectPresentationRules.GetMigrationFailureLocalizationKey());
+	}
 
-		Equal("正在同步最新战局…", NetworkReconnectPresentationRules.GetReconnectOverlayText(usesChineseLocale: true));
-		Equal("Syncing latest match...", NetworkReconnectPresentationRules.GetReconnectOverlayText(usesChineseLocale: false));
-		Equal("你已重连，当前回合结束后将在你的下一个回合恢复控制。", NetworkReconnectPresentationRules.GetReconnectNoticeText(usesChineseLocale: true));
-		Equal("Reconnected. Control returns on your next turn.", NetworkReconnectPresentationRules.GetReconnectNoticeText(usesChineseLocale: false));
+	private static void NetworkUserErrorCategoriesMapToStableLocalizationKeys()
+	{
+		var expected = new Dictionary<NetworkUserErrorCategory, string>
+		{
+			[NetworkUserErrorCategory.Connection] = "NETWORK_ERROR_CONNECTION_FAILED",
+			[NetworkUserErrorCategory.Lan] = "NETWORK_ERROR_LAN_UNAVAILABLE",
+			[NetworkUserErrorCategory.Steam] = "NETWORK_ERROR_STEAM_UNAVAILABLE",
+			[NetworkUserErrorCategory.RoomAuthentication] = "NETWORK_ERROR_ROOM_AUTHENTICATION_FAILED",
+			[NetworkUserErrorCategory.RoomUnavailable] = "NETWORK_ERROR_ROOM_UNAVAILABLE",
+			[NetworkUserErrorCategory.RoomFull] = "NETWORK_ERROR_ROOM_FULL",
+			[NetworkUserErrorCategory.SceneLoad] = "NETWORK_ERROR_SCENE_LOAD_FAILED",
+			[NetworkUserErrorCategory.Reconnect] = "NETWORK_ERROR_RECONNECT_FAILED",
+			[NetworkUserErrorCategory.HostDisconnected] = "NETWORK_ERROR_HOST_DISCONNECTED",
+			[NetworkUserErrorCategory.HostMigration] = "NETWORK_ERROR_HOST_MIGRATION_FAILED",
+			[NetworkUserErrorCategory.Checkpoint] = "NETWORK_ERROR_CHECKPOINT_FAILED",
+		};
+		Equal(Enum.GetValues<NetworkUserErrorCategory>().Length, expected.Count);
+		foreach ((NetworkUserErrorCategory category, string localizationKey) in expected)
+		{
+			Equal(localizationKey, NetworkUserErrorRules.GetLocalizationKey(category));
+			Equal(localizationKey, NetworkUserErrorRules.NormalizeLocalizationKey(localizationKey, NetworkUserErrorCategory.Connection));
+		}
+		Equal(
+			"NETWORK_ERROR_RECONNECT_FAILED",
+			NetworkUserErrorRules.NormalizeLocalizationKey("raw_remote_error", NetworkUserErrorCategory.Reconnect));
 	}
 
 	private static void LocalSeatInputEnablesOnlyForInGameHumanConnectedState()
@@ -1612,16 +1629,16 @@ internal static partial class Program
 			"RpcBeginSecurityHandshake(string sessionId,int protocolVersion,byte[] hostKeyAgreementPublicKey,byte[] sourceAuthorityPublicKey,int passwordVerifierVersion,int passwordVerifierIterations,string passwordVerifierSalt,byte[] passwordChallenge,bool hostMigrationEnabled,bool rekeyExistingPeer)",
 			"RpcBoardActionCommitted(string sessionId,string matchId,long authorityEpoch,long actionId,long clientActionId,long checkpointId,int snapshotId,int turnSequenceGeneration)",
 			"RpcBoardSnapshot(Godot.Collections.Dictionary snapshot)",
-			"RpcCancelMatchStart(string sessionId,string matchId,long authorityEpoch,string message)",
+			"RpcCancelMatchStart(string sessionId,string matchId,long authorityEpoch,string localizationKey)",
 			"RpcCardPlayedEvent(Godot.Collections.Dictionary payload)",
 			"RpcClaimMigratedLobbySeat(string sessionId,long authorityEpoch,string playerSessionId,long credentialGeneration,string credential)",
 			"RpcClientSceneLoaded(string sessionId,string matchId,long authorityEpoch,int seatIndex)",
 			"RpcCompleteSecurityHandshake(string sessionId,int protocolVersion,byte[] clientKeyAgreementPublicKey,byte[] successorPublicKey,byte[] passwordChallenge,byte[] passwordProof,bool trustedHotStandbyAccepted,bool transportTakeoverCapable)",
 			"RpcConfirmHostMigration(string sessionId,string matchId,long sourceEpoch,long targetEpoch,long checkpointId,string playerSessionId)",
 			"RpcDebugStaleMigrationPlan(Godot.Collections.Dictionary rawPlan)",
-			"RpcHostEndedMatch(string sessionId,string matchId,long authorityEpoch,string message)",
+			"RpcHostEndedMatch(string sessionId,string matchId,long authorityEpoch,string localizationKey)",
 			"RpcInitializeBoard(string sessionId,string matchId,long authorityEpoch,Godot.Collections.Dictionary payload)",
-			"RpcLobbyRejected(string sessionId,string matchId,long authorityEpoch,string message)",
+			"RpcLobbyRejected(string sessionId,string matchId,long authorityEpoch,string localizationKey)",
 			"RpcMigrationFollowerSnapshotApplied(string sessionId,string matchId,long authorityEpoch,int seatIndex,string playerSessionId)",
 			"RpcMigrationLatencyProbe(string sessionId,string matchId,long authorityEpoch,long sequence)",
 			"RpcMigrationLatencyProbeAck(string sessionId,string matchId,long authorityEpoch,long sequence)",

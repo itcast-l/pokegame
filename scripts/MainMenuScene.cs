@@ -20,7 +20,14 @@ public partial class MainMenuScene : Control
 	private const string SettingsButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame/Button";
 	private const string ExitButtonPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame/Button";
 	private const string TitleLabelPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/Title";
-	private const string SubtitleLabelPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/Subtitle";
+	private const string MenuSafeAreaPath = "MenuSafeArea";
+	private const string PanelMarginPath = "MenuSafeArea/MenuPanel/PanelMargin";
+	private const string MenuLayoutPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout";
+	private const string FooterLabelPath = "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/Footer";
+	private const float CompactMenuHeightThreshold = 600.0f;
+	private const float MainMenuTitleFontWeight = 760.0f;
+	private const float MainMenuButtonFontWeight = 650.0f;
+	private const float MainMenuFooterFontWeight = 550.0f;
 	private const string AvatarEntryPath = "AvatarEntryLayer/MainMenuAvatarEntry";
 	private const string GameBoardScenePath = "res://scenes/game_board_scene.tscn";
 	private const string MultiplayerLobbyScenePath = "res://scenes/multiplayer_lobby_scene.tscn";
@@ -74,7 +81,11 @@ public partial class MainMenuScene : Control
 	private Button _settingsButton = default!;
 	private Button _exitButton = default!;
 	private Label _titleLabel = default!;
-	private Label _subtitleLabel = default!;
+	private MarginContainer _menuSafeArea = default!;
+	private MarginContainer _panelMargin = default!;
+	private VBoxContainer _menuLayout = default!;
+	private Label _footerLabel = default!;
+	private Control[] _mainMenuFrames = Array.Empty<Control>();
 	private MainMenuBackgroundAnimator? _backgroundAnimator;
 	private MainMenuOceanDynamics? _oceanDynamicsLayer;
 	private UnderwaterAmbientLayer? _underwaterAmbientLayer;
@@ -212,7 +223,20 @@ public partial class MainMenuScene : Control
 		SuppressDefaultPressedSfx(_exitButton);
 
 		_titleLabel = GetNode<Label>(TitleLabelPath);
-		_subtitleLabel = GetNode<Label>(SubtitleLabelPath);
+		_menuSafeArea = GetNode<MarginContainer>(MenuSafeAreaPath);
+		_panelMargin = GetNode<MarginContainer>(PanelMarginPath);
+		_menuLayout = GetNode<VBoxContainer>(MenuLayoutPath);
+		_footerLabel = GetNode<Label>(FooterLabelPath);
+		_mainMenuFrames = new Control[]
+		{
+			_singlePlayerButton.GetParent<Control>(),
+			_adventureButton.GetParent<Control>(),
+			_multiplayerButton.GetParent<Control>(),
+			GetNode<Button>("MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SkillCodexFrame/Button").GetParent<Control>(),
+			_settingsButton.GetParent<Control>(),
+			_exitButton.GetParent<Control>(),
+		};
+		ApplyMainMenuResponsiveDensity();
 
 		_avatarEntry = GetNode<MainMenuAvatarEntry>(AvatarEntryPath);
 		SuppressDefaultPressedSfx(_avatarEntry.Button);
@@ -229,6 +253,8 @@ public partial class MainMenuScene : Control
 		ApplyPlayerName();
 		SyncSettingsControls();
 		ApplySettings();
+		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+		ApplyMainMenuTypography();
 		RefreshLocalizedText();
 		if (_playAdventureReturnTransition)
 		{
@@ -251,16 +277,82 @@ public partial class MainMenuScene : Control
 	{
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
+			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+			ApplyMainMenuTypography();
 			RefreshLocalizedText();
 		}
 
 		if (what == NotificationResized && IsNodeReady())
 		{
+			ApplyMainMenuResponsiveDensity();
 			SyncMenuCameraToViewport();
 			UpdatePlayerCountDialogPanelPosition();
 			UpdateExitDialogPosition();
 			UpdateAdventureTransitionPosition();
 		}
+	}
+
+	private void ApplyMainMenuResponsiveDensity()
+	{
+		bool compact = Size.Y > 0.0f && Size.Y <= CompactMenuHeightThreshold;
+		int safeVerticalMargin = compact ? 18 : 58;
+		int panelVerticalMargin = compact ? 12 : 22;
+		_menuSafeArea.AddThemeConstantOverride("margin_top", safeVerticalMargin);
+		_menuSafeArea.AddThemeConstantOverride("margin_bottom", safeVerticalMargin);
+		_panelMargin.AddThemeConstantOverride("margin_top", panelVerticalMargin);
+		_panelMargin.AddThemeConstantOverride("margin_bottom", panelVerticalMargin);
+		_menuLayout.AddThemeConstantOverride("separation", compact ? 2 : 4);
+		_titleLabel.AddThemeFontSizeOverride("font_size", compact ? 40 : 46);
+		_footerLabel.AddThemeFontSizeOverride("font_size", compact ? 13 : 15);
+
+		Vector2 frameMinimumSize = new(374.0f, compact ? 56.0f : 64.0f);
+		foreach (Control frame in _mainMenuFrames)
+		{
+			frame.CustomMinimumSize = frameMinimumSize;
+		}
+
+		foreach (Button button in new[]
+		{
+			_singlePlayerButton,
+			_adventureButton,
+			_multiplayerButton,
+			GetNode<Button>("MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SkillCodexFrame/Button"),
+			_settingsButton,
+			_exitButton,
+		})
+		{
+			button.AddThemeFontSizeOverride("font_size", compact ? 22 : 25);
+		}
+	}
+
+	private void ApplyMainMenuTypography()
+	{
+		Font titleFont = LocalizationTypography.CreateCurrentFontVariation(MainMenuTitleFontWeight, 0.8f);
+		Font buttonFont = LocalizationTypography.CreateCurrentFontVariation(MainMenuButtonFontWeight, 0.55f);
+		Font footerFont = LocalizationTypography.CreateCurrentFontVariation(MainMenuFooterFontWeight, 0.25f);
+
+		_titleLabel.AddThemeFontOverride("font", titleFont);
+		_titleLabel.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.035f, 0.055f, 0.96f));
+		_titleLabel.AddThemeConstantOverride("outline_size", 2);
+
+		foreach (Button button in new[]
+		{
+			_singlePlayerButton,
+			_adventureButton,
+			_multiplayerButton,
+			_skillCodexButton,
+			_settingsButton,
+			_exitButton,
+		})
+		{
+			button.AddThemeFontOverride("font", buttonFont);
+			button.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.03f, 0.05f, 0.92f));
+			button.AddThemeConstantOverride("outline_size", 1);
+		}
+
+		_footerLabel.AddThemeFontOverride("font", footerFont);
+		_footerLabel.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.03f, 0.05f, 0.82f));
+		_footerLabel.AddThemeConstantOverride("outline_size", 1);
 	}
 
 	private async void StartSinglePlayerMenu()

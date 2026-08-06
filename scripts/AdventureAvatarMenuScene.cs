@@ -90,6 +90,8 @@ public partial class AdventureAvatarMenuScene : Control
 		RefreshSelection();
 		ClampScrollTarget();
 		ScrollSelectedEntryIntoView();
+		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+		ApplyAdventureTypography();
 		RefreshLocalizedText();
 		QueueStageNameSizingRefresh();
 		FocusDefaultControlDeferred();
@@ -102,6 +104,8 @@ public partial class AdventureAvatarMenuScene : Control
 	{
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
+			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+			ApplyAdventureTypography();
 			RefreshLocalizedText();
 		}
 		else if (what == NotificationResized && IsNodeReady())

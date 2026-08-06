@@ -11,8 +11,7 @@ public partial class CharacterAvatar : Control
 	private const float AttackFxEndScale = 1.06f;
 	private const int AttackFxZIndex = 8;
 	private const float FeedbackFxVisualScale = 1.42f;
-	private const string FrameBaseTexturePath = "res://art/ui/avatar_frame/run-001/processed/base.png";
-	private const string FrameAccentTexturePath = "res://art/ui/avatar_frame/run-001/processed/accent.png";
+	private const string FrameBaseTexturePath = "res://art/ui/avatar_frame/run-002/processed/frame.png";
 
 	public enum AvatarAction
 	{
@@ -267,9 +266,8 @@ public partial class CharacterAvatar : Control
 
 		_frameBaseTexture = FrameBaseTextureOverride
 			?? FrameAnimationHelpers.LoadTextureResource(FrameBaseTexturePath, allowEditorImageFallback: true);
-		_frameAccentTexture = FrameAccentTextureOverride
-			?? FrameAnimationHelpers.LoadTextureResource(FrameAccentTexturePath, allowEditorImageFallback: true);
-		_frameAssetsMissing = _frameBaseTexture == null || _frameAccentTexture == null;
+		_frameAccentTexture = FrameAccentTextureOverride;
+		_frameAssetsMissing = _frameBaseTexture == null;
 		_frameAssetsLoaded = true;
 	}
 
@@ -292,10 +290,11 @@ public partial class CharacterAvatar : Control
 	{
 		LoadFrameTextures();
 		bool showTextured = ShowFrame && UseTexturedFrame && !_frameAssetsMissing;
+		bool showAccent = showTextured && _frameAccentTexture != null;
 		_frameBase.Visible = showTextured;
-		_frameAccent.Visible = showTextured;
+		_frameAccent.Visible = showAccent;
 		_frameBase.Texture = showTextured ? _frameBaseTexture : null;
-		_frameAccent.Texture = showTextured ? _frameAccentTexture : null;
+		_frameAccent.Texture = showAccent ? _frameAccentTexture : null;
 		_frameAccent.Modulate = new Color(AccentColor.R, AccentColor.G, AccentColor.B, 1.0f);
 		QueueRedraw();
 	}

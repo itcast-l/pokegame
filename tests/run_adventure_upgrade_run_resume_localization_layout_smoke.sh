@@ -33,6 +33,11 @@ if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
 	exit 1
 fi
 
+if grep -Eq '^ERROR:' "$LOG_FILE"; then
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
+
 grep -Fq "ADVENTURE_RUN_RESUME_LOCALIZATION_LAYOUT_SMOKE_OK" "$LOG_FILE" || { cat "$LOG_FILE" >&2; exit 1; }
 
 cat "$LOG_FILE"

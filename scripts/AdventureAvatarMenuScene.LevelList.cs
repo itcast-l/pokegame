@@ -32,6 +32,8 @@ public partial class AdventureAvatarMenuScene
 			_levelList.AddChild(frame);
 			BindLevelEntry(frame, avatarDefinition, stageNumber, index + 1);
 		}
+
+		ApplyAdventureTypography();
 	}
 
 	private void ClearLevelEntries()

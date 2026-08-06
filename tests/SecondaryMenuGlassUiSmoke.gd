@@ -2,7 +2,6 @@ extends SceneTree
 
 const VISUAL_PROFILE_META := "secondary_menu_visual_profile"
 const PAUSE_DERIVED_PROFILE := "pause-derived-core-menu"
-const PAUSE_REFERENCE_PROFILE := "secondary-menu-unified"
 const PANEL_TEXTURE_PATH := "res://art/ui/pause_menu/pause_panel.png"
 const IDLE_TEXTURE_PATH := "res://art/ui/pause_menu/pause_button_idle.png"
 const FOCUS_TEXTURE_PATH := "res://art/ui/pause_menu/pause_button_focus.png"
@@ -725,19 +724,36 @@ func _audit_pause_reference(menu: Control, menu_spec: Dictionary, viewport_spec:
 	var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_spec.size))
 	var panel := menu.find_child(menu_spec.panel, true, false) as Control
 	var artwork := menu.find_child("PauseMenuArtwork", true, false) as TextureRect
+	var artwork_left := menu.find_child("PauseMenuArtworkLeft", true, false) as TextureRect
+	var artwork_right := menu.find_child("PauseMenuArtworkRight", true, false) as TextureRect
+	var top_ornament := menu.find_child("PauseMenuTopOrnament", true, false) as TextureRect
 	if panel == null or artwork == null or not _rect_contains(viewport_rect, _get_canvas_rect(panel)) \
-			or not _texture_uses_path(artwork.texture, PANEL_TEXTURE_PATH) \
+			or artwork_left == null or artwork_right == null or top_ornament == null \
+			or not _texture_uses_path(artwork_left.texture, PANEL_TEXTURE_PATH) \
+			or not _texture_uses_path(artwork_right.texture, PANEL_TEXTURE_PATH) \
+			or not _texture_uses_path(top_ornament.texture, DIVIDER_TEXTURE_PATH) \
+			or not bool(panel.get_meta("pause_derived_center_ornaments_removed", false)) \
 			or not menu.has_meta(VISUAL_PROFILE_META) \
-			or str(menu.get_meta(VISUAL_PROFILE_META)) != PAUSE_REFERENCE_PROFILE:
+			or str(menu.get_meta(VISUAL_PROFILE_META)) != PAUSE_DERIVED_PROFILE:
 		_fail("%s no longer matches the approved pause-menu reference" % context)
 		return false
 	for frame_name in ["ContinueFrame", "ReturnToMainMenuFrame", "RestartFrame"]:
 		var frame := menu.find_child(frame_name, true, false) as Control
-		if frame == null or bool(frame.get("ShowIdleTexture")) \
-				or not _texture_uses_path(frame.get("FocusTexture") as Texture2D, FOCUS_TEXTURE_PATH) \
-				or not _texture_uses_path(frame.get("PressedTexture") as Texture2D, PRESSED_TEXTURE_PATH):
+		var accent: Color = frame.get("AccentColor") if frame != null else Color.TRANSPARENT
+		if frame == null or int(frame.get("FrameStyle")) != 1 \
+				or not accent.is_equal_approx(Color(0.6, 0.94, 0.96, 1.0)) \
+				or not bool(frame.get("ShowIdleTexture")) \
+				or bool(frame.get("UseNinePatchTexture")) \
+				or frame.find_child("PauseDerivedRowDivider", true, false) != null \
+				or frame.get("OceanPlaqueTexture") != null \
+				or frame.get("FocusTexture") != null \
+				or frame.get("PressedTexture") != null:
 			_fail("%s reference frame %s changed unexpectedly" % [context, frame_name])
 			return false
+	if menu.find_child("PauseRowDividerOne", true, false) != null \
+			or menu.find_child("PauseRowDividerTwo", true, false) != null:
+		_fail("%s restored the removed action-row dividers" % context)
+		return false
 	return true
 
 

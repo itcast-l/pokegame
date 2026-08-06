@@ -254,18 +254,18 @@ public static class SecondaryMenuGlassStyle
 		bool showIdleTexture = false,
 		bool installDivider = true)
 	{
-		EnsurePauseDerivedTextures();
-		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.OceanPlaque;
-		frame.AccentColor = new Color(0.831f, 0.702f, 0.310f, 1.0f);
+		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.CardSlabs;
+		frame.AccentColor = new Color(0.6f, 0.94f, 0.96f, 1.0f);
 		frame.Selected = selected;
 		frame.UsePlaqueGlowBackdrop = false;
 		frame.ShowIdleTexture = showIdleTexture;
-		frame.OceanPlaqueTexture = _pauseDerivedButtonIdleTexture;
-		frame.FocusTexture = _pauseDerivedButtonFocusTexture;
-		frame.PressedTexture = _pauseDerivedButtonPressedTexture;
-		frame.UseNinePatchTexture = true;
-		frame.TexturePatchMarginHorizontal = 24.0f;
-		frame.TexturePatchMarginVertical = 18.0f;
+		frame.UseNinePatchTexture = false;
+		frame.OceanPlaqueTexture = null;
+		frame.OceanPlaqueFlippedTexture = null;
+		frame.CardSlabTexture = null;
+		frame.SelectionGlowTexture = null;
+		frame.FocusTexture = null;
+		frame.PressedTexture = null;
 		frame.CustomMinimumSize = new Vector2(
 			frame.CustomMinimumSize.X,
 			Mathf.Max(54.0f, frame.CustomMinimumSize.Y));

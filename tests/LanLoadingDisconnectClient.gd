@@ -107,7 +107,7 @@ func _track_scene() -> void:
 		if _host_disconnect_errors.size() != 1:
 			_fail("Expected exactly one host-disconnect error before lobby return, got %d: %s" % [_host_disconnect_errors.size(), str(_host_disconnect_errors)])
 			return
-		if _host_disconnect_errors[0] != "Host disconnected.":
+		if _host_disconnect_errors[0] != "NETWORK_ERROR_HOST_DISCONNECTED":
 			_fail("Expected terminal host-disconnect error before lobby return, got: %s" % _host_disconnect_errors[0])
 			return
 		_finished = true

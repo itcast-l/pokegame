@@ -25,18 +25,18 @@ func _run() -> void:
 	root.size = VIEWPORT_SIZE
 	await process_frame
 
-	_load_translations()
-	_install_stress_translation()
-	if _failed:
-		return
-
 	var saved_board := await _create_saved_run_board()
 	if _failed or saved_board == null:
 		return
 
-	saved_board.queue_free()
-	await process_frame
-	await process_frame
+	if saved_board is CanvasItem:
+		(saved_board as CanvasItem).visible = false
+	saved_board.process_mode = Node.PROCESS_MODE_DISABLED
+
+	_load_translations()
+	_install_stress_translation()
+	if _failed:
+		return
 
 	for locale in _locales:
 		await _audit_locale(locale)
@@ -48,6 +48,10 @@ func _run() -> void:
 			print("ADVENTURE_RUN_RESUME_LOCALIZATION_LAYOUT_ISSUE %s" % issue)
 		_fail("Found %d localization layout issues" % _issues.size())
 		return
+
+	saved_board.queue_free()
+	await process_frame
+	await process_frame
 
 	print("ADVENTURE_RUN_RESUME_LOCALIZATION_LAYOUT_SMOKE_OK %d" % _locales.size())
 	await _dispose_audio_before_quit()

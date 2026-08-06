@@ -8,7 +8,6 @@ public partial class MainMenuAvatarEntry : Control
 	private CharacterAvatarDefinition _avatarDefinition = CharacterAvatarCatalog.Default;
 	private string _playerName = PlayerNameRules.DefaultPlayerName;
 	private CharacterAvatar _avatar = default!;
-	private Label _nameLabel = default!;
 	private Button _button = default!;
 
 	public Button Button => _button;
@@ -16,7 +15,6 @@ public partial class MainMenuAvatarEntry : Control
 	public override void _Ready()
 	{
 		_avatar = GetNode<CharacterAvatar>("Frame/Margin/Layout/AvatarAnchor/CharacterAvatar");
-		_nameLabel = GetNode<Label>("Frame/Margin/Layout/NameLabel");
 		_button = GetNode<Button>("Button");
 		_button.FocusMode = Control.FocusModeEnum.All;
 		_button.Pressed += OnPressed;
@@ -58,7 +56,6 @@ public partial class MainMenuAvatarEntry : Control
 
 	private void ApplyPlayerName()
 	{
-		_nameLabel.Text = _playerName;
 		_button.TooltipText = string.Format(Localize("MAIN_MENU_AVATAR_TOOLTIP"), _playerName);
 	}
 

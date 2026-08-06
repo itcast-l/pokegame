@@ -159,6 +159,9 @@ func _audit_overlay(packed_scene: PackedScene, locale: String, viewport_size: Ve
 	if not _rect_fits(Rect2(callout.position, callout.size), viewport_size):
 		_fail("Callout overflowed the viewport for %s at %s: %s" % [locale, viewport_size, Rect2(callout.position, callout.size)])
 		return
+	if not _rect_fits(Rect2(callout.position + label.position, label.size), viewport_size):
+		_fail("Tutorial text overflowed the viewport for %s at %s" % [locale, viewport_size])
+		return
 	if not _rect_fits(Rect2(callout.position + button.position, button.size), viewport_size):
 		_fail("Continue button overflowed the viewport for %s at %s" % [locale, viewport_size])
 		return

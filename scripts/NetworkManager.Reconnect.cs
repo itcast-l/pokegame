@@ -418,18 +418,18 @@ public partial class NetworkManager
 			return;
 		}
 
-		const string message = "Host disconnected.";
+		string localizationKey = NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostDisconnected);
 		_hostDisconnectReturnPending = true;
 		bool publishError = !_hostDisconnectErrorPublished;
 		_hostDisconnectErrorPublished = true;
 		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure);
 		bool needsLobbySceneChange = IsInsideTree()
 			&& GetTree().CurrentScene is not MultiplayerLobbyScene;
-		_pendingLobbyErrorMessage = needsLobbySceneChange ? message : string.Empty;
+		_pendingLobbyErrorLocalizationKey = needsLobbySceneChange ? localizationKey : string.Empty;
 		SetState(NetworkSessionState.Failed);
 		if (publishError)
 		{
-			EmitSignal(SignalName.ErrorRaised, message);
+			EmitSignal(SignalName.ErrorRaised, localizationKey);
 		}
 		CallDeferred(
 			nameof(ReturnToMultiplayerLobbyScene),

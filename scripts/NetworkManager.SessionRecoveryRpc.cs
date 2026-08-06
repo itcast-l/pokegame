@@ -397,16 +397,16 @@ public partial class NetworkManager
 				return;
 			}
 
-			string failureMessage = string.IsNullOrWhiteSpace(reason)
+			string technicalDetails = string.IsNullOrWhiteSpace(reason)
 				? "Reconnect rejected."
 				: $"Reconnect rejected: {reason}";
 			if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 			{
-				ReturnToMultiplayerLobbyAfterMigrationFailure(failureMessage);
+				ReturnToMultiplayerLobbyAfterMigrationFailure(technicalDetails);
 				return;
 			}
 
-			Fail(failureMessage);
+			Fail(NetworkUserErrorCategory.Reconnect, technicalDetails);
 			return;
 		}
 
@@ -424,30 +424,33 @@ public partial class NetworkManager
 		string sessionId,
 		string matchId,
 		long authorityEpoch,
-		string message)
+		string localizationKey)
 	{
-		message = (message ?? string.Empty)[..Math.Min(message?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
+		localizationKey = (localizationKey ?? string.Empty)[..Math.Min(localizationKey?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
 		if (IsHost
 			|| !MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch))
 		{
 			return;
 		}
 
-		const string hostEndedMatchMessage = "Host disconnected.";
+		string hostEndedMatchLocalizationKey = NetworkUserErrorRules.NormalizeLocalizationKey(
+			localizationKey,
+			NetworkUserErrorCategory.HostDisconnected);
 		_hostEndedMatchPending = true;
-		_hostEndedMatchMessage = hostEndedMatchMessage;
+		_hostEndedMatchLocalizationKey = hostEndedMatchLocalizationKey;
 		_reconnectAttemptInFlight = false;
 		_reconnectAttemptStartedAt = -1.0;
 		_nextReconnectAttemptAt = 0.0;
 		if (HostMigrationCapabilityAvailable
 			&& _state == NetworkSessionState.MigratingHost)
 		{
-			ReturnToMultiplayerLobbyAfterMigrationFailure(hostEndedMatchMessage);
+			ReturnToMultiplayerLobbyAfterMigrationFailure("Remote host ended the match during migration.");
 			return;
 		}
 
 		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.InternalFailure);
-		Fail(hostEndedMatchMessage);
+		SetState(NetworkSessionState.Failed);
+		EmitSignal(SignalName.ErrorRaised, hostEndedMatchLocalizationKey);
 	}
 
 }

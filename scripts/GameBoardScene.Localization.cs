@@ -9,6 +9,7 @@ public partial class GameBoardScene
 	{
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
+			LocalizationTypography.Apply(this, useLocaleLayoutDirection: false);
 			RefreshLocalizedGameText();
 			MarkSeatControlIndicatorsDirty();
 			MarkActivePlayerStatusTooltipContentDirty();
@@ -65,40 +66,31 @@ public partial class GameBoardScene
 		return LocalizeFormat("GAME_PLAYER", playerIndex + 1);
 	}
 
-	private static bool LooksLikeLocalizationKey(string value)
+	private string GetRequiredLocalizedText(string localizationKey, string context)
 	{
-		return value.StartsWith("ITEM_DESC_", System.StringComparison.Ordinal)
-			|| value.StartsWith("UPGRADE_DESC_", System.StringComparison.Ordinal);
+		if (string.IsNullOrWhiteSpace(localizationKey))
+		{
+			GD.PushError($"Missing {context} localization key.");
+			return string.Empty;
+		}
+
+		string localizedText = Localize(localizationKey);
+		if (localizedText == localizationKey)
+		{
+			GD.PushError($"Missing {context} localization row: {localizationKey}");
+		}
+
+		return localizedText;
 	}
 
-	private string GetItemDescription(string fallbackText = "")
+	private string GetItemDescription(string descriptionKey)
 	{
-		string key = LooksLikeLocalizationKey(fallbackText)
-			? fallbackText
-			: string.Empty;
-		if (string.IsNullOrEmpty(key))
-		{
-			return fallbackText;
-		}
-
-		string localizedText = Localize(key);
-		return localizedText == key ? fallbackText : localizedText;
+		return GetRequiredLocalizedText(descriptionKey, "item description");
 	}
 
-	private string GetAdventureUpgradeDescription(string descriptionKey, string fallbackText = "")
+	private string GetAdventureUpgradeDescription(string descriptionKey)
 	{
-		if (string.IsNullOrWhiteSpace(descriptionKey))
-		{
-			return fallbackText;
-		}
-
-		if (!LooksLikeLocalizationKey(descriptionKey))
-		{
-			return descriptionKey;
-		}
-
-		string localizedText = Localize(descriptionKey);
-		return localizedText == descriptionKey ? fallbackText : localizedText;
+		return GetRequiredLocalizedText(descriptionKey, "adventure upgrade description");
 	}
 
 	private string GetMagnetAttachmentCountdownHint()

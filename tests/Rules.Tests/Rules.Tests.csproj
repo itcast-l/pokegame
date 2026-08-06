@@ -50,6 +50,7 @@
     <Compile Include="../../scripts/NetworkReconnectRules.cs" Link="Rules/NetworkReconnectRules.cs" />
     <Compile Include="../../scripts/NetworkSeatControlRules.cs" Link="Rules/NetworkSeatControlRules.cs" />
     <Compile Include="../../scripts/NetworkReconnectPresentationRules.cs" Link="Rules/NetworkReconnectPresentationRules.cs" />
+	<Compile Include="../../scripts/NetworkUserErrorRules.cs" Link="Rules/NetworkUserErrorRules.cs" />
     <Compile Include="../../scripts/SeatControlRules.cs" Link="Rules/SeatControlRules.cs" />
     <Compile Include="../../scripts/SceneLoadHandshakeTracker.cs" Link="Rules/SceneLoadHandshakeTracker.cs" />
     <Compile Include="../../scripts/LanAddressHelper.cs" Link="Rules/LanAddressHelper.cs" />

@@ -296,9 +296,9 @@ public partial class NetworkManager
 		_peerRateLimiter.Clear();
 		_lastCorrectiveSnapshotAtByPeer.Clear();
 		_migrationFailureReturnPending = false;
-		_pendingLobbyErrorMessage = string.Empty;
+		_pendingLobbyErrorLocalizationKey = string.Empty;
 		_hostEndedMatchPending = false;
-		_hostEndedMatchMessage = string.Empty;
+		_hostEndedMatchLocalizationKey = string.Empty;
 		_hostEndedMatchBroadcasted = false;
 		_hostDisconnectReturnPending = false;
 		_hostDisconnectErrorPublished = false;
@@ -383,11 +383,11 @@ public partial class NetworkManager
 		_activeMigrationDeadline = -1.0;
 		_activeMigrationConfirmedSeats.Clear();
 		_migrationFailureReturnPending = false;
-		_pendingLobbyErrorMessage = string.Empty;
+		_pendingLobbyErrorLocalizationKey = string.Empty;
 		_lobbyRejectPending = false;
-		_lobbyRejectMessage = string.Empty;
+		_lobbyRejectLocalizationKey = string.Empty;
 		_hostEndedMatchPending = false;
-		_hostEndedMatchMessage = string.Empty;
+		_hostEndedMatchLocalizationKey = string.Empty;
 		_hostEndedMatchBroadcasted = false;
 		if (Multiplayer.MultiplayerPeer != null)
 		{
@@ -455,10 +455,13 @@ public partial class NetworkManager
 			: NetworkSessionCloseReason.ClientRequested);
 	}
 
-	private void CloseSessionAndFail(NetworkSessionCloseReason reason, string message)
+	private void CloseSessionAndFail(
+		NetworkSessionCloseReason reason,
+		NetworkUserErrorCategory category,
+		string technicalDetails = "")
 	{
 		_ = RequestSessionCloseAsync(reason);
-		Fail(message);
+		Fail(category, technicalDetails);
 	}
 
 	private async Task ExecuteSessionCloseAsync(
@@ -477,7 +480,7 @@ public partial class NetworkManager
 					context.SessionId,
 					context.MatchId,
 					context.AuthorityEpoch,
-					"Host disconnected.");
+					NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostDisconnected));
 				_hostEndedMatchBroadcasted = true;
 				_hostEndedMatchCloseBroadcastCount++;
 			}

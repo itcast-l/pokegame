@@ -252,7 +252,7 @@ public partial class NetworkManager
 		PackedScene? gameBoardScene = GD.Load<PackedScene>(GameBoardScenePath);
 		if (gameBoardScene == null)
 		{
-			Fail($"Missing game board scene: {GameBoardScenePath}");
+			Fail(NetworkUserErrorCategory.SceneLoad, $"Missing game board scene: {GameBoardScenePath}");
 			return;
 		}
 
@@ -330,12 +330,14 @@ public partial class NetworkManager
 
 		if (_loadHandshake.HasTimedOut(now))
 		{
-			CancelMatchStart("Scene load timed out.");
+			CancelMatchStart(NetworkUserErrorCategory.SceneLoad, "Scene load timed out.");
 		}
 	}
 
-	private void CancelMatchStart(string message)
+	private void CancelMatchStart(NetworkUserErrorCategory category, string technicalDetails)
 	{
+		GD.PushWarning($"Match start cancelled category={category} detail={technicalDetails}");
+		string localizationKey = NetworkUserErrorRules.GetLocalizationKey(category);
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
 		_loadHandshake = null;
 		SetState(NetworkSessionState.Lobby);
@@ -345,8 +347,10 @@ public partial class NetworkManager
 			context.SessionId,
 			context.MatchId,
 			context.AuthorityEpoch,
-			message);
-		ApplyMatchStartCancellation(message, returnGeneration);
+			localizationKey);
+		ApplyMatchStartCancellation(
+			NetworkUserErrorRules.NormalizeLocalizationKey(localizationKey, NetworkUserErrorCategory.SceneLoad),
+			returnGeneration);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -354,7 +358,7 @@ public partial class NetworkManager
 		string sessionId,
 		string matchId,
 		long authorityEpoch,
-		string message)
+		string localizationKey)
 	{
 		if (!MatchesCurrentRpcContext(sessionId, matchId, authorityEpoch, allowHigherEpoch: true))
 		{
@@ -362,14 +366,14 @@ public partial class NetworkManager
 		}
 
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
-		ApplyMatchStartCancellation(message, returnGeneration);
+		ApplyMatchStartCancellation(localizationKey, returnGeneration);
 	}
 
-	private void ApplyMatchStartCancellation(string message, long returnGeneration)
+	private void ApplyMatchStartCancellation(string localizationKey, long returnGeneration)
 	{
 		_loadHandshake = null;
 		SetState(NetworkSessionState.Lobby);
-		EmitSignal(SignalName.ErrorRaised, message);
+		EmitSignal(SignalName.ErrorRaised, localizationKey);
 		CallDeferred(
 			nameof(ReturnToMultiplayerLobbyScene),
 			(int)NetworkSessionState.Lobby,
@@ -394,7 +398,7 @@ public partial class NetworkManager
 		SceneTree tree = GetTree();
 		if (tree.CurrentScene is MultiplayerLobbyScene)
 		{
-			_pendingLobbyErrorMessage = string.Empty;
+			_pendingLobbyErrorLocalizationKey = string.Empty;
 			_migrationFailureReturnPending = false;
 			_hostDisconnectReturnPending = false;
 			_hostDisconnectErrorPublished = false;

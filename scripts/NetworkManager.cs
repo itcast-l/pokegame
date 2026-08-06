@@ -10,7 +10,7 @@ public partial class NetworkManager : Node
 	public delegate void StateChangedEventHandler(int state);
 
 	[Signal]
-	public delegate void ErrorRaisedEventHandler(string message);
+	public delegate void ErrorRaisedEventHandler(string localizationKey);
 
 	[Signal]
 	public delegate void SeatControlStatesUpdatedEventHandler();
@@ -95,14 +95,14 @@ public partial class NetworkManager : Node
 	private double _reconnectAttemptStartedAt = -1.0;
 	private double _reconnectWindowStartedAt = -1.0;
 	private bool _lobbyRejectPending;
-	private string _lobbyRejectMessage = string.Empty;
+	private string _lobbyRejectLocalizationKey = string.Empty;
 	private bool _hostEndedMatchPending;
-	private string _hostEndedMatchMessage = string.Empty;
+	private string _hostEndedMatchLocalizationKey = string.Empty;
 	private bool _hostEndedMatchBroadcasted;
 	private bool _migrationFailureReturnPending;
 	private bool _hostDisconnectReturnPending;
 	private bool _hostDisconnectErrorPublished;
-	private string _pendingLobbyErrorMessage = string.Empty;
+	private string _pendingLobbyErrorLocalizationKey = string.Empty;
 	private long _stateGeneration;
 	private long _authorityEpoch;
 
@@ -116,11 +116,11 @@ public partial class NetworkManager : Node
 	public bool IsHostDisconnectReturnPending => _hostDisconnectReturnPending;
 	internal long AuthorityEpoch => _authorityEpoch;
 
-	public string ConsumePendingLobbyErrorMessage()
+	public string ConsumePendingLobbyErrorLocalizationKey()
 	{
-		string message = _pendingLobbyErrorMessage;
-		_pendingLobbyErrorMessage = string.Empty;
-		return message;
+		string localizationKey = _pendingLobbyErrorLocalizationKey;
+		_pendingLobbyErrorLocalizationKey = string.Empty;
+		return localizationKey;
 	}
 
 	public override void _Ready()
@@ -160,7 +160,7 @@ public partial class NetworkManager : Node
 		Error error = _enetPeer.CreateServer(NetworkSessionDefaults.LanGamePort, NetworkSessionDefaults.MaxPlayers - 1);
 		if (error != Error.Ok)
 		{
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, $"LAN host failed: {error}");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Lan, $"LAN host failed: {error}");
 			return;
 		}
 
@@ -200,7 +200,7 @@ public partial class NetworkManager : Node
 		{
 			_lanDiscoveryBrowser?.Dispose();
 			_lanDiscoveryBrowser = null;
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, $"LAN search failed: {bindError}");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Lan, $"LAN search failed: {bindError}");
 			return;
 		}
 
@@ -213,7 +213,7 @@ public partial class NetworkManager : Node
 	public string GetLocalLanAddressSummary()
 	{
 		IReadOnlyList<string> addresses = LanAddressHelper.GetLocalIpv4Addresses();
-		return addresses.Count == 0 ? "未检测到局域网 IPv4 地址" : string.Join(" / ", addresses);
+		return addresses.Count == 0 ? string.Empty : string.Join(" / ", addresses);
 	}
 
 	public void JoinLan(string address, string roomPassword)
@@ -224,7 +224,7 @@ public partial class NetworkManager : Node
 		}
 		if (string.IsNullOrWhiteSpace(address))
 		{
-			Fail("LAN address is empty.");
+			Fail(NetworkUserErrorCategory.Lan, "LAN address is empty.");
 			return;
 		}
 		if (!EnsureItemCardCatalogReady())
@@ -247,7 +247,7 @@ public partial class NetworkManager : Node
 		Error error = _enetPeer.CreateClient(address.Trim(), NetworkSessionDefaults.LanGamePort);
 		if (error != Error.Ok)
 		{
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, $"LAN join failed: {error}");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Lan, $"LAN join failed: {error}");
 			return;
 		}
 
@@ -558,7 +558,7 @@ public partial class NetworkManager : Node
 			}
 
 			_players.RemoveAt(playerIndex);
-			CancelMatchStart("A player disconnected while loading.");
+			CancelMatchStart(NetworkUserErrorCategory.SceneLoad, "A player disconnected while loading.");
 		}
 		else if (HostMigrationCapabilityAvailable
 			&& _state == NetworkSessionState.Lobby
@@ -709,7 +709,7 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Connection failed.");
+		CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Connection, "Connection failed.");
 	}
 
 	private void OnServerDisconnected()
@@ -822,14 +822,22 @@ public partial class NetworkManager : Node
 		return true;
 	}
 
-	private void Fail(string message)
+	private void Fail(NetworkUserErrorCategory category, string technicalDetails = "")
 	{
+		if (!string.IsNullOrWhiteSpace(technicalDetails))
+		{
+			GD.PushWarning($"Network user error category={category} detail={technicalDetails}");
+		}
 		SetState(NetworkSessionState.Failed);
-		EmitSignal(SignalName.ErrorRaised, message);
+		EmitSignal(SignalName.ErrorRaised, NetworkUserErrorRules.GetLocalizationKey(category));
 	}
 
-	private void RejectLobbyJoin(int senderId, string message)
+	private void RejectLobbyJoin(int senderId, NetworkUserErrorCategory category, string technicalDetails = "")
 	{
+		if (!string.IsNullOrWhiteSpace(technicalDetails))
+		{
+			GD.PushWarning($"Lobby join rejected category={category} detail={technicalDetails}");
+		}
 		NetworkRpcContext context = GetCurrentRpcContext();
 		RpcId(
 			senderId,
@@ -837,7 +845,7 @@ public partial class NetworkManager : Node
 			context.SessionId,
 			context.MatchId,
 			context.AuthorityEpoch,
-			message);
+			NetworkUserErrorRules.GetLocalizationKey(category));
 		CallDeferred(nameof(DisconnectRejectedLobbyPeer), senderId);
 	}
 
@@ -858,11 +866,12 @@ public partial class NetworkManager : Node
 			return;
 		}
 
-		string message = _lobbyRejectMessage;
+		string localizationKey = _lobbyRejectLocalizationKey;
 		_lobbyRejectPending = false;
-		_lobbyRejectMessage = string.Empty;
+		_lobbyRejectLocalizationKey = string.Empty;
 		_ = RequestSessionCloseAsync(NetworkSessionCloseReason.ProtocolRejected);
-		Fail(message);
+		SetState(NetworkSessionState.Failed);
+		EmitSignal(SignalName.ErrorRaised, localizationKey);
 	}
 
 	private void SetState(NetworkSessionState state)

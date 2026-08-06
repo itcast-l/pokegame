@@ -1,8 +1,8 @@
 [gd_scene load_steps=10 format=3 uid="uid://b2hm2exn0xrpk"]
 
 [ext_resource type="Script" uid="uid://btrtisavdhrue" path="res://scripts/AdventureUpgradeChoiceArt.cs" id="1_choice_art_script"]
-[ext_resource type="FontFile" uid="uid://c4mm3of2mc8o5" path="res://addons/phantom_camera/fonts/Nunito-Black.ttf" id="2_title_font"]
-[ext_resource type="FontFile" uid="uid://dve7mgsjik4dg" path="res://addons/phantom_camera/fonts/Nunito-Regular.ttf" id="6_body_font"]
+[ext_resource type="FontVariation" path="res://resources/fonts/nunito_black_localized.tres" id="2_title_font"]
+[ext_resource type="FontVariation" path="res://resources/fonts/nunito_regular_localized.tres" id="6_body_font"]
 [ext_resource type="Script" uid="uid://hg356r35wv0p" path="res://scripts/PearlDivider.cs" id="7_pearl_divider_script"]
 [ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png" id="8_table_backdrop"]
 
@@ -159,8 +159,6 @@ HeadingFont = ExtResource("2_title_font")
 BodyFont = ExtResource("6_body_font")
 PreviewSuit = "diamonds"
 PreviewTier = "uncommon"
-PreviewTitle = "温流补给"
-PreviewDescription = "抽 1 张牌。"
 
 [node name="Option2Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=151630651]
 custom_minimum_size = Vector2(272, 404)
@@ -194,8 +192,6 @@ HeadingFont = ExtResource("2_title_font")
 BodyFont = ExtResource("6_body_font")
 PreviewSuit = "hearts"
 PreviewTier = "common"
-PreviewTitle = "浅湾整备"
-PreviewDescription = "抽 1 张牌。"
 
 [node name="Option3Button" type="Button" parent="Margin/Layout/CardsRow" unique_id=609478708]
 custom_minimum_size = Vector2(272, 404)
@@ -229,5 +225,3 @@ HeadingFont = ExtResource("2_title_font")
 BodyFont = ExtResource("6_body_font")
 PreviewSuit = "spades"
 PreviewTier = "rare"
-PreviewTitle = "长收回春"
-PreviewDescription = "回复 2 点生命。"

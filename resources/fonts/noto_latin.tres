@@ -1,0 +1,13 @@
+[gd_resource type="FontVariation" load_steps=8 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSans-Variable.ttf" id="1_latin"]
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSansArabic-Variable.ttf" id="2_arabic"]
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSansThai-Variable.ttf" id="3_thai"]
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSansSC-Variable.ttf" id="4_sc"]
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSansTC-Variable.ttf" id="5_tc"]
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSansJP-Variable.ttf" id="6_jp"]
+[ext_resource type="FontFile" path="res://assets/fonts/noto/NotoSansKR-Variable.ttf" id="7_kr"]
+
+[resource]
+base_font = ExtResource("1_latin")
+fallbacks = Array[Font]([ExtResource("2_arabic"), ExtResource("3_thai"), ExtResource("4_sc"), ExtResource("5_tc"), ExtResource("6_jp"), ExtResource("7_kr")])

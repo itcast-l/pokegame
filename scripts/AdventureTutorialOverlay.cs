@@ -96,9 +96,14 @@ public partial class AdventureTutorialOverlay : Control
 
 	public void SetContent(string content, string continueText, bool continueMode)
 	{
+		_continueMode = continueMode;
+		_calloutLabel.Text = string.Empty;
+		_calloutLabel.CustomMinimumSize = Vector2.Zero;
+		_calloutLabel.Size = new Vector2(
+			continueMode ? CalloutMaxTextWidth : PlayCalloutMaxTextWidth,
+			CalloutTextLineHeight);
 		_calloutLabel.Text = content ?? string.Empty;
 		_continueButton.Text = continueText ?? string.Empty;
-		_continueMode = continueMode;
 		_continueButton.Visible = continueMode;
 		_inputBlocker.Visible = continueMode;
 		_inputBlocker.MouseFilter = continueMode

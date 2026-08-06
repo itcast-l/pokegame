@@ -87,6 +87,11 @@ func _run() -> void:
 		if String(art.call("DebugGetDescriptionText")).is_empty():
 			_fail("Choice art must show its description")
 			return
+		if not String(art.call("DebugGetTitleText")).is_empty() \
+				or art.get_node_or_null("TitlePanel") != null \
+				or art.get_node_or_null("TitleLayer") != null:
+			_fail("Choice art must not render a skill name")
+			return
 		if art.get_node_or_null("RarityPanel") != null \
 				or art.get_node_or_null("RarityLayer") != null:
 			_fail("Choice art must not show a rarity field")
@@ -103,8 +108,14 @@ func _run() -> void:
 			return
 		var top_ratio := (description_y - card_y) / card_height
 		var bottom_ratio := (description_y + description_height - card_y) / card_height
-		if absf(top_ratio - 0.545) > 0.002 or absf(bottom_ratio - 0.725) > 0.002:
+		if absf(top_ratio - 0.50) > 0.002 or absf(bottom_ratio - 0.84) > 0.002:
 			_fail("Description layer moved outside its supported card band")
+			return
+		var description_label := art.get_node_or_null("DescriptionLayer") as Label
+		if description_label == null \
+				or description_label.vertical_alignment != VERTICAL_ALIGNMENT_TOP \
+				or not description_label.clip_text:
+			_fail("Description typography must use a clipped, top-aligned text block")
 			return
 		if int(art.call("DebugGetResolvedDescriptionFontSize")) < 10:
 			_fail("Description font fell below the supported minimum")
@@ -145,8 +156,10 @@ func _assert_flat_card(visual: Dictionary) -> bool:
 		return false
 	if int(visual.get("surface_material_id", 0)) != 0 \
 			or not bool(visual.get("glow_uses_outline_panel", false)) \
-			or float(visual.get("description_panel_alpha", 0.0)) < 0.8:
-		_fail("Flat card surface, outline glow, or description panel is incomplete")
+			or float(visual.get("description_panel_alpha", 1.0)) > 0.001 \
+			or not bool(visual.get("description_uses_card_inlay", false)) \
+			or bool(visual.get("title_visible", true)):
+		_fail("Flat card surface, outline glow, or integrated description styling is incomplete")
 		return false
 	return true
 

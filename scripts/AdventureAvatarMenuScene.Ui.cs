@@ -3,6 +3,8 @@ using Godot;
 public partial class AdventureAvatarMenuScene
 {
 	private static readonly Color AdventureRouteAccent = MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder;
+	private const float AdventureMenuSafeAreaInset = 32.0f;
+	private const float ExpandedAdventureMenuMinimumHeight = 720.0f;
 
 	private void BindUi()
 	{
@@ -118,44 +120,45 @@ public partial class AdventureAvatarMenuScene
 		{
 			viewportSize = GetViewportRect().Size;
 		}
-		bool compact = viewportSize.X < 1100.0f || viewportSize.Y < 640.0f;
-		PanelContainer menuPanel = FindRequired<PanelContainer>("AdventureMenuPanel");
 		Vector2 available = new(
-			Mathf.Max(1.0f, viewportSize.X - 64.0f),
-			Mathf.Max(1.0f, viewportSize.Y - 64.0f));
+			Mathf.Max(1.0f, viewportSize.X - AdventureMenuSafeAreaInset * 2.0f),
+			Mathf.Max(1.0f, viewportSize.Y - AdventureMenuSafeAreaInset * 2.0f));
+		bool compactWidth = viewportSize.X < 1100.0f;
+		bool compactHeight = available.Y < ExpandedAdventureMenuMinimumHeight;
+		PanelContainer menuPanel = FindRequired<PanelContainer>("AdventureMenuPanel");
 		menuPanel.CustomMinimumSize = new Vector2(
 			Mathf.Min(1160.0f, available.X),
 			Mathf.Min(620.0f, available.Y));
 
-		FindRequired<PanelContainer>("AdventureListPanel").CustomMinimumSize = new Vector2(compact ? 210.0f : 340.0f, 0.0f);
-		FindRequired<PanelContainer>("LevelListPanel").CustomMinimumSize = new Vector2(compact ? 310.0f : 420.0f, 0.0f);
-		FindRequired<PanelContainer>("EnemyPreviewPanel").CustomMinimumSize = new Vector2(compact ? 240.0f : 320.0f, 0.0f);
-		FindRequired<HBoxContainer>("Body").AddThemeConstantOverride("separation", compact ? 10 : 14);
+		FindRequired<PanelContainer>("AdventureListPanel").CustomMinimumSize = new Vector2(compactWidth ? 210.0f : 340.0f, 0.0f);
+		FindRequired<PanelContainer>("LevelListPanel").CustomMinimumSize = new Vector2(compactWidth ? 310.0f : 420.0f, 0.0f);
+		FindRequired<PanelContainer>("EnemyPreviewPanel").CustomMinimumSize = new Vector2(compactWidth ? 240.0f : 320.0f, 0.0f);
+		FindRequired<HBoxContainer>("Body").AddThemeConstantOverride("separation", compactWidth ? 10 : 14);
 
 		MarginContainer menuMargin = FindRequired<MarginContainer>("AdventureMenuMargin");
-		SetMargins(menuMargin, compact ? 16 : 24, compact ? 12 : 22, compact ? 16 : 24, compact ? 12 : 22);
+		SetMargins(menuMargin, compactWidth ? 16 : 24, compactHeight ? 12 : 22, compactWidth ? 16 : 24, compactHeight ? 12 : 22);
 		MarginContainer previewMargin = FindRequired<MarginContainer>("EnemyPreviewMargin");
-		SetMargins(previewMargin, compact ? 10 : 22, compact ? 8 : 18, compact ? 10 : 22, compact ? 8 : 18);
+		SetMargins(previewMargin, compactWidth ? 10 : 22, compactHeight ? 8 : 18, compactWidth ? 10 : 22, compactHeight ? 8 : 18);
 
-		FindRequired<PanelContainer>("PreviewFrame").CustomMinimumSize = new Vector2(0.0f, compact ? 78.0f : 140.0f);
+		FindRequired<PanelContainer>("PreviewFrame").CustomMinimumSize = new Vector2(0.0f, compactHeight ? 78.0f : 140.0f);
 		CharacterAvatar previewAvatar = FindRequired<CharacterAvatar>("PreviewAvatar");
-		previewAvatar.CustomMinimumSize = new Vector2(compact ? 76.0f : 138.0f, compact ? 76.0f : 138.0f);
-		previewAvatar.PortraitScale = compact ? 0.64f : 0.8f;
-		FindRequired<PanelContainer>("AbilityPreviewCard").CustomMinimumSize = new Vector2(0.0f, compact ? 82.0f : 148.0f);
-		FindRequired<PanelContainer>("SelectedStageBadge").CustomMinimumSize = new Vector2(compact ? 76.0f : 96.0f, compact ? 34.0f : 42.0f);
-		FindRequired<OceanMenuButtonFrame>("StartFrame").CustomMinimumSize = new Vector2(compact ? 180.0f : 224.0f, compact ? 44.0f : 56.0f);
-		GetNode<Label>("%TitleLabel").AddThemeFontSizeOverride("font_size", compact ? 29 : 36);
-		_previewNameLabel.AddThemeFontSizeOverride("font_size", compact ? 24 : 30);
-		_previewAbilityNameLabel.AddThemeFontSizeOverride("font_size", compact ? 17 : 21);
-		_previewAbilityDescriptionLabel.AddThemeFontSizeOverride("font_size", compact ? 14 : 16);
+		previewAvatar.CustomMinimumSize = new Vector2(compactHeight ? 76.0f : 138.0f, compactHeight ? 76.0f : 138.0f);
+		previewAvatar.PortraitScale = compactHeight ? 0.64f : 0.8f;
+		FindRequired<PanelContainer>("AbilityPreviewCard").CustomMinimumSize = new Vector2(0.0f, compactHeight ? 82.0f : 148.0f);
+		FindRequired<PanelContainer>("SelectedStageBadge").CustomMinimumSize = new Vector2(compactWidth ? 76.0f : 96.0f, compactHeight ? 34.0f : 42.0f);
+		FindRequired<OceanMenuButtonFrame>("StartFrame").CustomMinimumSize = new Vector2(compactWidth ? 180.0f : 224.0f, compactHeight ? 44.0f : 56.0f);
+		GetNode<Label>("%TitleLabel").AddThemeFontSizeOverride("font_size", compactHeight ? 29 : 36);
+		_previewNameLabel.AddThemeFontSizeOverride("font_size", compactHeight ? 24 : 30);
+		_previewAbilityNameLabel.AddThemeFontSizeOverride("font_size", compactHeight ? 17 : 21);
+		_previewAbilityDescriptionLabel.AddThemeFontSizeOverride("font_size", compactHeight ? 14 : 16);
 
 		foreach (OceanMenuButtonFrame frame in _adventureFrames.Values)
 		{
-			frame.CustomMinimumSize = new Vector2(compact ? 0.0f : 316.0f, compact ? 52.0f : 64.0f);
+			frame.CustomMinimumSize = new Vector2(compactWidth ? 0.0f : 316.0f, compactHeight ? 52.0f : 64.0f);
 		}
 		foreach (OceanMenuButtonFrame frame in _avatarFrames.Values)
 		{
-			frame.CustomMinimumSize = new Vector2(compact ? 0.0f : 392.0f, compact ? 56.0f : 68.0f);
+			frame.CustomMinimumSize = new Vector2(compactWidth ? 0.0f : 392.0f, compactHeight ? 56.0f : 68.0f);
 		}
 	}
 

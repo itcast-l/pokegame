@@ -40,7 +40,7 @@ public partial class NetworkManager
 		RefreshLocalIdentity();
 		if (!SteamAvailable)
 		{
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Steam, "Steam is not available.");
 			return;
 		}
 		InitializeLocalHostSessionIdentity();
@@ -82,7 +82,7 @@ public partial class NetworkManager
 		RefreshLocalIdentity();
 		if (!SteamAvailable || lobbyId == 0)
 		{
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam lobby is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Steam, "Steam lobby is not available.");
 			return;
 		}
 
@@ -158,7 +158,7 @@ public partial class NetworkManager
 	{
 		if (_steamPlatform?.CreateLobby(1, _config.PlayerCount) != true)
 		{
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam lobby creation is unavailable.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Steam, "Steam lobby creation is unavailable.");
 		}
 	}
 
@@ -172,7 +172,7 @@ public partial class NetworkManager
 		_pendingSteamHostLobby = false;
 		if (connect != 1 || lobbyId == 0)
 		{
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam lobby creation failed.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Steam, "Steam lobby creation failed.");
 			return;
 		}
 
@@ -182,7 +182,7 @@ public partial class NetworkManager
 		if (!TryCreateSteamPeer(server: true, lobbyId, out MultiplayerPeer? steamPeer))
 		{
 			LeaveSteamLobbyIfNeeded();
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam multiplayer peer is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Steam, "Steam multiplayer peer is not available.");
 			return;
 		}
 
@@ -219,6 +219,7 @@ public partial class NetworkManager
 				}
 				CloseSessionAndFail(
 					NetworkSessionCloseReason.ConnectionCreationFailed,
+					NetworkUserErrorCategory.Steam,
 					"Steam lobby join failed.");
 			},
 			() =>
@@ -243,6 +244,7 @@ public partial class NetworkManager
 			}
 			CloseSessionAndFail(
 				NetworkSessionCloseReason.ConnectionCreationFailed,
+				NetworkUserErrorCategory.Steam,
 				"Steam lobby join is unavailable.");
 		}
 	}
@@ -277,7 +279,7 @@ public partial class NetworkManager
 				return;
 			}
 
-			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, "Steam multiplayer peer is not available.");
+			CloseSessionAndFail(NetworkSessionCloseReason.ConnectionCreationFailed, NetworkUserErrorCategory.Steam, "Steam multiplayer peer is not available.");
 			return;
 		}
 

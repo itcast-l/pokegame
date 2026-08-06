@@ -4,6 +4,13 @@ const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const VIEWPORT_SIZES := [Vector2i(1280, 720), Vector2i(960, 900), Vector2i(1680, 720)]
 const TIMEOUT_SECONDS := 5.0
 const PIXEL_DIFFERENCE_THRESHOLD := 0.08
+const DESCRIPTION_SAMPLES := [
+	"每次未收取，打乱牌桌",
+	"第一次捕获每个真实回合后：绘制 1。",
+	"每个真实回合一次，如果错过 6+ 桌牌：打出 1 额外底牌。额外的操作：无法触发此操作。",
+]
+const EXPECTED_DESCRIPTION_LINE_COUNTS := [1, 2, 4]
+const EXPECTED_DESCRIPTION_FONT_SIZES := [18, 18, 18]
 
 var _failed := false
 
@@ -16,6 +23,7 @@ func _run() -> void:
 	if DisplayServer.get_name().to_lower() == "headless":
 		_fail("Flat-card layout audit requires a GUI renderer")
 		return
+	TranslationServer.set_locale("zh_CN")
 	for viewport_size in VIEWPORT_SIZES:
 		root.size = viewport_size
 		await _wait_frames(3)
@@ -32,6 +40,8 @@ func _run() -> void:
 		if overlay == null:
 			_fail("Missing adventure upgrade overlay")
 			return
+		_configure_description_samples(overlay)
+		await _wait_frames(2)
 		if not _assert_layout(overlay, viewport_size):
 			return
 
@@ -43,6 +53,8 @@ func _run() -> void:
 		await _wait_frames(36)
 		var rest_image := root.get_texture().get_image()
 		if not _assert_nonblank_image(rest_image, viewport_size, "rest"):
+			return
+		if not _save_optional_screenshot(rest_image, viewport_size, "rest"):
 			return
 
 		if not bool(board.call("DebugSetAdventureUpgradeFocusState", 2, true)):
@@ -135,6 +147,14 @@ func _wait_for_activation(board: Node, option_index: int) -> bool:
 	return false
 
 
+func _configure_description_samples(overlay: Control) -> void:
+	for option_index in range(3):
+		var art := overlay.get_node(
+			"Margin/Layout/CardsRow/Option%dButton/CardFrame/ChoiceArt" % (option_index + 1)) as Control
+		var surface := art.get_node("CardSurfaceLayer") as TextureRect
+		art.call("ConfigureChoice", surface.texture, "", DESCRIPTION_SAMPLES[option_index], false)
+
+
 func _assert_layout(overlay: Control, viewport_size: Vector2i) -> bool:
 	var backdrop := overlay.get_node("TableBackdrop") as TextureRect
 	var overlay_rect := overlay.get_global_rect()
@@ -159,6 +179,7 @@ func _assert_layout(overlay: Control, viewport_size: Vector2i) -> bool:
 		button_rects.append(rect)
 
 		var art := button.get_node("CardFrame/ChoiceArt") as Control
+		var description_label := art.get_node("DescriptionLayer") as Label
 		var card_rect_data := art.call("DebugGetCardDrawRect") as Dictionary
 		var description_data := art.call("DebugGetDescriptionBand") as Dictionary
 		var card_rect := Rect2(
@@ -172,6 +193,29 @@ func _assert_layout(overlay: Control, viewport_size: Vector2i) -> bool:
 				or card_rect.end.x - description_rect.end.x < 8.0 \
 				or card_rect.end.y - description_rect.end.y < card_rect.size.y * 0.10:
 			_fail("Description touches the card frame at %s" % viewport_size)
+			return false
+		var description_top_ratio := (description_rect.position.y - card_rect.position.y) / card_rect.size.y
+		var description_bottom_ratio := (description_rect.end.y - card_rect.position.y) / card_rect.size.y
+		if absf(description_top_ratio - 0.50) > 0.002 \
+				or absf(description_bottom_ratio - 0.84) > 0.002 \
+				or description_label.vertical_alignment != VERTICAL_ALIGNMENT_TOP \
+				or not description_label.clip_text:
+			_fail("Description block is not using the shared top-aligned band at %s" % viewport_size)
+			return false
+		if description_label.get_line_count() != EXPECTED_DESCRIPTION_LINE_COUNTS[option_index] \
+				or description_label.get_visible_line_count() != description_label.get_line_count():
+			_fail("Description line layout changed for option %d at %s lines=%d visible=%d font=%d size=%s line_height=%.2f" % [
+				option_index,
+				viewport_size,
+				description_label.get_line_count(),
+				description_label.get_visible_line_count(),
+				description_label.get_theme_font_size("font_size"),
+				description_label.size,
+				description_label.get_line_height(-1),
+			])
+			return false
+		if description_label.get_theme_font_size("font_size") != EXPECTED_DESCRIPTION_FONT_SIZES[option_index]:
+			_fail("Description font size changed for option %d at %s" % [option_index, viewport_size])
 			return false
 	return true
 
@@ -208,11 +252,13 @@ func _to_pixel_rect(logical_rect: Rect2, overlay: Control, image_size: Vector2i)
 	return Rect2((logical_rect.position - overlay_rect.position) * scale, logical_rect.size * scale)
 
 
-func _save_optional_screenshot(image: Image, viewport_size: Vector2i) -> bool:
+func _save_optional_screenshot(image: Image, viewport_size: Vector2i, state_name := "") -> bool:
 	var output_dir := OS.get_environment("FLAT_CARD_SCREENSHOT_DIR").strip_edges()
 	if output_dir.is_empty():
 		return true
-	var output_path := output_dir.path_join("adventure-upgrade-flat-%dx%d.png" % [viewport_size.x, viewport_size.y])
+	var file_suffix := "" if state_name.is_empty() else "-%s" % state_name
+	var output_path := output_dir.path_join(
+		"adventure-upgrade-flat%s-%dx%d.png" % [file_suffix, viewport_size.x, viewport_size.y])
 	var save_error := image.save_png(output_path)
 	if save_error != OK:
 		_fail("Failed to save flat-card screenshot: %s" % error_string(save_error))

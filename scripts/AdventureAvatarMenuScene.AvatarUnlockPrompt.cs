@@ -198,38 +198,6 @@ public partial class AdventureAvatarMenuScene
 		}
 	}
 
-	private static string GetAdventureMenuLocalizationFallback(string key)
-	{
-		string locale = TranslationServer.GetLocale();
-		bool traditionalChinese = locale.StartsWith("zh_TW", System.StringComparison.OrdinalIgnoreCase)
-			|| locale.StartsWith("zh_HK", System.StringComparison.OrdinalIgnoreCase);
-		bool simplifiedChinese = locale.StartsWith("zh", System.StringComparison.OrdinalIgnoreCase) && !traditionalChinese;
-		return key switch
-		{
-			"ADVENTURE_MENU_TITLE" => traditionalChinese ? "冒險模式" : simplifiedChinese ? "冒险模式" : "Adventure",
-			"ADVENTURE_LIST_TITLE" => traditionalChinese ? "冒險" : simplifiedChinese ? "冒险" : "Adventure",
-			"ADVENTURE_ENEMY_LIST_TITLE" => traditionalChinese ? "敵人" : simplifiedChinese ? "敌人" : "Enemies",
-			"ADVENTURE_TUTORIAL" => traditionalChinese ? "教學" : simplifiedChinese ? "教学" : "Tutorial",
-			"ADVENTURE_DEEP_TIDE_THRONE" => "深潮王座",
-			"ADVENTURE_RESUME_RUN_TITLE" => traditionalChinese ? "繼續未完成的強化旅程？" : simplifiedChinese ? "继续未完成的强化旅程？" : "Continue unfinished upgrade run?",
-			"ADVENTURE_RESUME_RUN_BODY" => traditionalChinese
-				? "偵測到目前存檔中有一條未完成的強化旅程。你可以繼續它，或放棄它並從目前選擇重新開始。"
-				: simplifiedChinese
-					? "检测到当前存档中有一条未完成的强化旅程。你可以继续它，或放弃它并从当前选择重新开始。"
-					: "This profile has an unfinished upgrade run. Continue it, or abandon it and restart from the current selection.",
-			"ADVENTURE_CONTINUE_RUN" => traditionalChinese ? "繼續" : simplifiedChinese ? "继续" : "Continue",
-			"ADVENTURE_RESTART_RUN" => traditionalChinese ? "重開" : simplifiedChinese ? "重开" : "Restart",
-			"ADVENTURE_RECOVERY_TITLE" => traditionalChinese ? "冒險進度已損壞" : simplifiedChinese ? "冒险进度已损坏" : "Adventure progress is damaged",
-			"ADVENTURE_RECOVERY_BODY" => traditionalChinese ? "無法讀取這次冒險旅程。你可以只清除損壞的旅程進度，並從第一關重新開始。" : simplifiedChinese ? "无法读取这次冒险旅程。你可以只清除损坏的旅程进度，并从第一关重新开始。" : "This adventure run cannot be read. Clear only the damaged run and restart from the first stage.",
-			"ADVENTURE_RECOVERY_RESTART" => traditionalChinese ? "清除並從第一關開始" : simplifiedChinese ? "清除并从第一关开始" : "Clear and restart",
-			"ADVENTURE_RECOVERY_SAVE_FAILED" => traditionalChinese ? "無法儲存恢復結果。損壞的進度仍保留，請重試。" : simplifiedChinese ? "无法保存恢复结果。损坏的进度仍保留，请重试。" : "Recovery could not be saved. The damaged progress was preserved; please retry.",
-			"AVATAR_UNLOCK_TITLE" => traditionalChinese ? "頭像已解鎖" : simplifiedChinese ? "头像已解锁" : "Avatar Unlocked",
-			"AVATAR_UNLOCK_MESSAGE" => traditionalChinese ? "獲得了 {0} 的頭像" : simplifiedChinese ? "获得了 {0} 的头像" : "You got {0}'s avatar",
-			"AVATAR_UNLOCK_CONFIRM" => traditionalChinese || simplifiedChinese ? "收下" : "Collect",
-			_ => key,
-		};
-	}
-
 	private static Color GetAvatarUnlockAccentColor(CharacterAvatarDefinition avatarDefinition)
 	{
 		return TryParseAvatarUnlockAccentColor(avatarDefinition.AccentColorHtml, out Color accentColor)

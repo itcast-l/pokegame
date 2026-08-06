@@ -147,12 +147,12 @@ public partial class NetworkManager
 		int senderId = Multiplayer.GetRemoteSenderId();
 		if (!IsPeerSecurityAuthenticated(senderId))
 		{
-			RejectLobbyJoin(senderId, "房间认证失败");
+			RejectLobbyJoin(senderId, NetworkUserErrorCategory.RoomAuthentication, "Peer security authentication failed.");
 			return;
 		}
 		if (!MultiplayerLobbyRules.CanAcceptJoinRequest(_state))
 		{
-			RejectLobbyJoin(senderId, "当前房间不可加入");
+			RejectLobbyJoin(senderId, NetworkUserErrorCategory.RoomUnavailable, $"Room state does not accept joins: {_state}");
 			return;
 		}
 
@@ -169,14 +169,14 @@ public partial class NetworkManager
 			|| identityHint is null
 			|| identityHint.Length > NetworkProtocol.MaxPlayerIdLength)
 		{
-			RejectLobbyJoin(senderId, "Invalid player registration.");
+			RejectLobbyJoin(senderId, NetworkUserErrorCategory.RoomAuthentication, "Invalid player registration.");
 			return;
 		}
 
 		int seatIndex = MultiplayerLobbyRules.GetNextSeatIndex(_players, _config.PlayerCount);
 		if (seatIndex < 0)
 		{
-			RejectLobbyJoin(senderId, "Lobby is full.");
+			RejectLobbyJoin(senderId, NetworkUserErrorCategory.RoomFull, "Lobby is full.");
 			return;
 		}
 
@@ -202,9 +202,9 @@ public partial class NetworkManager
 		string sessionId,
 		string matchId,
 		long authorityEpoch,
-		string message)
+		string localizationKey)
 	{
-		message = (message ?? string.Empty)[..Math.Min(message?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
+		localizationKey = (localizationKey ?? string.Empty)[..Math.Min(localizationKey?.Length ?? 0, NetworkProtocol.MaxRemoteErrorLength)];
 		NetworkRpcContext context = new(sessionId ?? string.Empty, matchId ?? string.Empty, authorityEpoch);
 		if (!context.IsValid
 			|| (_state != NetworkSessionState.Joining
@@ -219,12 +219,14 @@ public partial class NetworkManager
 		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
 			SetAuthorityEpoch(context.AuthorityEpoch);
-			FailMigration(ParseMigrationFailureCode(message));
+			FailMigration(ParseMigrationFailureCode(localizationKey));
 			return;
 		}
 
 		_lobbyRejectPending = true;
-		_lobbyRejectMessage = string.IsNullOrWhiteSpace(message) ? "Join rejected." : message;
+		_lobbyRejectLocalizationKey = NetworkUserErrorRules.NormalizeLocalizationKey(
+			localizationKey,
+			NetworkUserErrorCategory.RoomUnavailable);
 		if (Multiplayer.MultiplayerPeer != null)
 		{
 			Multiplayer.MultiplayerPeer.Close();

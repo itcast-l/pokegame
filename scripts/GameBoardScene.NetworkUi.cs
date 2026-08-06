@@ -26,6 +26,7 @@ public partial class GameBoardScene
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			TextDirection = Control.TextDirection.Auto,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		_networkReconnectOverlayLabel.SetAnchorsPreset(LayoutPreset.Center);
@@ -63,6 +64,7 @@ public partial class GameBoardScene
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			TextDirection = Control.TextDirection.Auto,
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 		_networkReconnectNoticeLabel.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -121,16 +123,16 @@ public partial class GameBoardScene
 		ShowNetworkNotice(GetNetworkReconnectNoticeText());
 	}
 
-	private void ShowNetworkNotice(string message)
+	private void ShowNetworkNotice(string localizationKey)
 	{
-		if (string.IsNullOrWhiteSpace(message)
+		if (string.IsNullOrWhiteSpace(localizationKey)
 			|| _networkReconnectNoticePanel == null
 			|| _networkReconnectNoticeLabel == null)
 		{
 			return;
 		}
 
-		_networkReconnectNoticeLabel.Text = message;
+		_networkReconnectNoticeLabel.Text = LocalizeRequired(localizationKey);
 		_networkReconnectNoticePanel.Visible = true;
 		EnsureNetworkReconnectNoticeHideTimer();
 		_networkReconnectNoticeHideTimer!.Start(NetworkReconnectNoticeSeconds);
@@ -193,17 +195,18 @@ public partial class GameBoardScene
 			return string.Empty;
 		}
 
-		return NetworkReconnectPresentationRules.GetSeatControlStatusText(state.Mode, UsesChineseLocale());
+		string localizationKey = NetworkReconnectPresentationRules.GetSeatControlStatusLocalizationKey(state.Mode);
+		return string.IsNullOrWhiteSpace(localizationKey) ? string.Empty : LocalizeRequired(localizationKey);
 	}
 
 	private string GetNetworkReconnectOverlayText()
 	{
 		if (GetNetworkManager()?.State == NetworkSessionState.MigratingHost)
 		{
-			return NetworkReconnectPresentationRules.GetMigrationOverlayText(UsesChineseLocale());
+			return LocalizeRequired(NetworkReconnectPresentationRules.GetMigrationOverlayLocalizationKey());
 		}
 
-		return NetworkReconnectPresentationRules.GetReconnectOverlayText(UsesChineseLocale());
+		return LocalizeRequired(NetworkReconnectPresentationRules.GetReconnectOverlayLocalizationKey());
 	}
 
 	public bool DebugIsNetworkReconnectOverlayVisible()
@@ -228,7 +231,7 @@ public partial class GameBoardScene
 
 	private string GetNetworkReconnectNoticeText()
 	{
-		return NetworkReconnectPresentationRules.GetReconnectNoticeText(UsesChineseLocale());
+		return NetworkReconnectPresentationRules.GetReconnectNoticeLocalizationKey();
 	}
 
 	private void RefreshNetworkReconnectNoticeTextIfVisible()
@@ -238,7 +241,18 @@ public partial class GameBoardScene
 			return;
 		}
 
-		_networkReconnectNoticeLabel.Text = GetNetworkReconnectNoticeText();
+		_networkReconnectNoticeLabel.Text = LocalizeRequired(GetNetworkReconnectNoticeText());
+	}
+
+	private string LocalizeRequired(string localizationKey)
+	{
+		string localized = Localize(localizationKey);
+		if (string.Equals(localized, localizationKey, StringComparison.Ordinal))
+		{
+			GD.PushError($"Missing game board localization key: {localizationKey}");
+		}
+
+		return localized;
 	}
 
 	private static StyleBoxFlat CreateNetworkReconnectOverlayStyle()
@@ -268,8 +282,4 @@ public partial class GameBoardScene
 		};
 	}
 
-	private bool UsesChineseLocale()
-	{
-		return TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-	}
 }

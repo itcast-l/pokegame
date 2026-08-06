@@ -609,6 +609,7 @@ public static class MainMenuInteractiveStyle
 	{
 		EnsurePopupIcons();
 		Theme theme = new();
+		LocalizationTypography.ApplyDefaultFont(theme);
 		StyleBoxFlat popupStyle = CreateThemedControlStyle(palette, active: false);
 		popupStyle.BgColor = new Color(palette.Surface.R, palette.Surface.G, palette.Surface.B, 0.98f);
 		popupStyle.ContentMarginLeft = 10.0f;
@@ -657,6 +658,7 @@ public static class MainMenuInteractiveStyle
 		EnsurePopupIcons();
 
 		Theme theme = new();
+		LocalizationTypography.ApplyDefaultFont(theme);
 		var popupStyle = new StyleBoxFlat
 		{
 			BgColor = new Color(0.02f, 0.12f, 0.17f, 0.97f),
@@ -729,6 +731,7 @@ public static class MainMenuInteractiveStyle
 	private static Theme BuildNeutralSmokePopupTheme()
 	{
 		Theme theme = new();
+		LocalizationTypography.ApplyDefaultFont(theme);
 		StyleBoxFlat popupStyle = new()
 		{
 			BgColor = new Color(0.26f, 0.31f, 0.32f, 0.98f),
