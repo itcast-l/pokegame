@@ -1,0 +1,15 @@
+Concept: Regal Battle Portrait
+Provider: ai.input.im
+Model: gpt-image-2
+Size: 1024x1024
+Quality: high
+Output: quina-q-regal-battle-portrait.png
+
+Identity reference:
+art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png
+
+Style readability reference:
+art/characters/player_dragon_prince_avatar/run-002/idle/processed/idle-1.png
+
+Prompt:
+Create one production-ready square bust avatar redesign for Dragon Queen Q / Quina Q, using reference image 1 as her identity and palette source and reference image 2 only as the target level of game-avatar readability and finish. She is a regal female aquatic dragon queen, not a human woman: elegant long sea-dragon muzzle, confident visible amber-gold eye, pearlescent white facial scales, swept cyan and ocean-blue fin mane, restrained purple-blue shadow planes, one small coral-red forehead jewel, and a compact gold crown integrated between her horns. Give her a poised three-quarter view facing left, a proud intelligent expression, two clean swept-back fin horns, and a self-contained royal shoulder-and-chest armor silhouette. Redesign toward a bold readable tactical game portrait: crisp dark navy outer contour, clean lightly pixel-inspired edges, saturated colors, simplified chunky color clusters, strong face silhouette, and high contrast at 128x128. Keep fine coral filigree and ornamental branches to an absolute minimum; the face and eye must dominate, with no visual clutter. Center the complete bust in the square with generous padding on all sides and an irregular tapered armor-shaped lower edge, never a flat crop. Transparent background, no circle, frame, scenery, glow, shadow, text, letters, watermark, weapon, hands, extra character, detached particles, or pedestal. This is a single avatar portrait, not a sprite sheet.

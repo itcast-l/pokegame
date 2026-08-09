@@ -1,0 +1,32 @@
+Create a production-ready 12-frame IDLE animation sheet for the exact same Kaiser K 2D game avatar shown in the reference images.
+
+Reference roles:
+- Reference image 1 is the strict character identity, palette, silhouette, drawing style, three-quarter-left view, bust crop, anatomy, armor, and material reference.
+- Reference image 2 is the current 12-frame idle sheet. Preserve its accepted character scale, crop, centering, and overall visual identity, but correct the unstable neck animation described below.
+- Reference image 3 is layout only. Use it only to understand 3 rows, 4 columns, equal invisible square frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, safe-area rectangles, center marks, labels, borders, guide background, black lines, or blue lines.
+
+Identity and style lock:
+- Preserve the same organic male abyssal dragon emperor: broad deep-blue living dragon muzzle and jaw, severe cyan eye, large branching ivory coral antlers, cyan crown-like forehead fins, swept layered navy and royal-blue aquatic fin mane, pale cyan throat scales, dark antique-silver regalia, and one large pale luminous pearl fixed at the center of his chest.
+- Preserve the exact compact self-contained bust silhouette with its tapered irregular lower edge. Keep the same three-quarter view facing left. Never turn him front-facing or right-facing.
+- Use the same clean hand-authored 2D game-avatar finish: crisp dark navy contour, purposeful line weight, simplified angular shapes, broad color masses, controlled hard cel shading, and sparse scale marks. No photorealism, painterly texture, glossy 3D rendering, dense micro-scales, fur, feathers, filigree, extra jewelry, extra horns, or random spikes.
+
+Critical anatomy stability correction:
+- The jaw, mouth, throat, entire pale cyan neck, outer neck contour, chest, shoulder armor, breastplate, pearl size, and pearl position must remain visually identical in shape, volume, width, height, and position across all 12 frames.
+- Do not animate breathing in the throat, neck, chest, armor, or pearl. No inhaling, exhaling, swelling, bulging, pulsing, stretching, contracting, bobbing, or sliding in those areas.
+- Keep the head base, antlers, body center, lower silhouette, body height, and camera completely fixed across every frame.
+
+Sheet layout and restrained idle motion:
+- Exactly 12 equal cells in a 4-column by 3-row grid. Read frames left to right across row 1, then row 2, then row 3.
+- Frame 1 is the neutral ancient-emperor pose.
+- Frames 2-3 add only an extremely subtle one-to-two-pixel-equivalent drift at the outermost tips of two rear mane fins. Do not move the mane roots or neck contour.
+- Frames 4-6 perform one slow restrained eye blink: eyelid lowers, eye nearly closes, then reopens. Do not change the brow, muzzle, jaw, or head pose.
+- Frames 7-9 add a tiny surface highlight shift inside the pearl while the pearl outline, size, glow boundary, and position remain fixed.
+- Frames 10-11 let only the same outermost rear mane tips settle back.
+- Frame 12 matches frame 1 seamlessly.
+- This must read as a dignified near-still idle, not breathing, throbbing, pumping, or elastic motion.
+
+Containment and background:
+- The entire bust must remain centered inside the middle 65% of each cell with generous uninterrupted background margin on all four sides. Nothing may touch or cross a cell edge.
+- Use the same bounding box, subject scale, body anchor, and silhouette placement in every frame.
+- Background outside the character must be perfectly flat solid #FF00FF in every cell, with no gradient, shadow, glow, halo, texture, reflection, floor, or lighting variation. Do not use #FF00FF anywhere on the character.
+- No text, labels, numbers, UI, visible grid lines, cell borders, watermark, weapon, hands, detached effects, particles, extra character, scenery, circle, frame, or pedestal.

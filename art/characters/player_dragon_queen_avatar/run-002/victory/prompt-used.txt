@@ -1,0 +1,10 @@
+Create a production-ready four-keyframe VICTORY animation sheet for the exact same Dragon Queen Q / Quina Q 2D game avatar shown in the reference image.
+
+- Preserve the exact reference identity, palette, face, amber eye, compact crown, white fin horns, cyan-blue and purple mane masses, coral chest jewel, royal shoulder armor, restrained hand-authored game-avatar finish, scale, and three-quarter view facing left.
+- Preserve the complete self-contained bust silhouette with a tapered irregular lower edge in every cell. Never create a flat horizontal crop, rectangular torso block, or body touching a cell edge.
+- Exactly four equal square cells in a 2x2 grid, read left to right then top to bottom: confidence builds; proud compact roar with mouth only slightly open; victorious head lift with the crown and coral jewel clearly visible; satisfied proud settle.
+- No detached confetti, star, particle, aura, smoke, ribbon, card, or scenery. Keep all celebratory motion inside the body silhouette.
+- Keep body height, center, lower silhouette, armor design, horn length, mane masses, and scale consistent across all four cells.
+- Maintain broad clean color shapes and controlled cel shading. Do not add fine hair strands, dense micro-scales, filigree, extra jewelry, new spikes, or realistic material texture.
+- Keep every bust fully inside the central 60% of its cell with at least 12% uninterrupted solid-magenta padding from every cell edge. The complete tapered lower bust must end naturally inside each cell and may not be cropped.
+- Perfectly flat solid #FF00FF background outside the character. No shadow, glow, gradient, halo, texture, text, labels, UI, visible grid lines, borders, watermark, weapon, hands, extra character, scenery, or pedestal.

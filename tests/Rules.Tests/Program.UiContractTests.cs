@@ -810,6 +810,89 @@ internal static partial class Program
 		}
 	}
 
+	private static void RuntimeButtonsNeverDeclareHoverTooltipText()
+	{
+		string repoRoot = FindRepositoryRoot();
+		var buttonTypes = new HashSet<string>(StringComparer.Ordinal)
+		{
+			"Button",
+			"CheckBox",
+			"CheckButton",
+			"LinkButton",
+			"MenuButton",
+			"OptionButton",
+			"TextureButton",
+		};
+
+		foreach (string absolutePath in Directory.GetFiles(
+			Path.Combine(repoRoot, "scenes"),
+			"*.tscn",
+			SearchOption.AllDirectories))
+		{
+			string relativePath = Path.GetRelativePath(repoRoot, absolutePath).Replace('\\', '/');
+			string currentNodeType = string.Empty;
+			string[] lines = File.ReadAllLines(absolutePath);
+			for (int index = 0; index < lines.Length; index++)
+			{
+				Match nodeMatch = Regex.Match(lines[index], "^\\[node[^]]*\\btype=\"(?<type>[^\"]+)\"");
+				if (nodeMatch.Success)
+				{
+					currentNodeType = nodeMatch.Groups["type"].Value;
+					continue;
+				}
+
+				if (lines[index].StartsWith("[", StringComparison.Ordinal))
+				{
+					currentNodeType = string.Empty;
+					continue;
+				}
+
+				Match tooltipMatch = Regex.Match(lines[index], "^\\s*tooltip_text\\s*=\\s*\"(?<value>[^\"]*)\"$");
+				if (tooltipMatch.Success
+					&& buttonTypes.Contains(currentNodeType)
+					&& !string.IsNullOrEmpty(tooltipMatch.Groups["value"].Value))
+				{
+					throw new InvalidOperationException(
+						$"button hover tooltip declared in {relativePath}:{index + 1}");
+				}
+			}
+		}
+
+		foreach (string absolutePath in Directory.GetFiles(
+			Path.Combine(repoRoot, "scripts"),
+			"*.cs",
+			SearchOption.AllDirectories))
+		{
+			string relativePath = Path.GetRelativePath(repoRoot, absolutePath).Replace('\\', '/');
+			string[] lines = File.ReadAllLines(absolutePath);
+			for (int index = 0; index < lines.Length; index++)
+			{
+				Match assignment = Regex.Match(
+					lines[index],
+					"(?<receiver>[A-Za-z_][A-Za-z0-9_\\.]*)\\.TooltipText\\s*=\\s*(?<value>.+);$");
+				if (!assignment.Success
+					|| !assignment.Groups["receiver"].Value.Contains("button", StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
+				string value = assignment.Groups["value"].Value.Trim();
+				if (relativePath == "scripts/GameAudioManager.UiBinding.cs" && value == "string.Empty")
+				{
+					continue;
+				}
+
+				throw new InvalidOperationException(
+					$"button tooltip assignment bypasses the global suppression policy in {relativePath}:{index + 1}");
+			}
+		}
+
+		string policySource = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameAudioManager.UiBinding.cs"));
+		True(policySource.Contains("SuppressButtonTooltip(button);", StringComparison.Ordinal));
+		True(policySource.Contains("button.ShortcutInTooltip = false;", StringComparison.Ordinal));
+		True(policySource.Contains("button.MouseEntered +=", StringComparison.Ordinal));
+	}
+
 	private static void LocalizationPlaceholdersMatchEnglishContract()
 	{
 		string localizationPath = Path.Combine(FindRepositoryRoot(), "localization", "ui.csv");

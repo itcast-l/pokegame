@@ -1087,38 +1087,61 @@ public partial class OceanMenuButtonFrame : Control
 
 	private void DrawIndividualToolRow(Rect2 rect)
 	{
-		float interaction = Mathf.Max(_glow, Selected ? 0.76f : 0.0f);
-		Color accent = AccentColor.Lerp(Colors.White, interaction * 0.12f);
+		float interaction = Mathf.Clamp(_glow, 0.0f, 1.0f);
+		float selectedStrength = Selected ? 1.0f : 0.0f;
+		float transientStrength = Selected
+			? Mathf.Clamp((interaction - 0.56f) / 0.44f, 0.0f, 1.0f)
+			: interaction;
+		float emphasis = Mathf.Max(selectedStrength, transientStrength);
+		Color accent = AccentColor.Lerp(Colors.White, 0.06f + emphasis * 0.14f);
 		float idleBackdrop = UseToolRowIdleBackdrop ? 1.0f : 0.0f;
-		float activeBackdrop = UseToolRowIdleBackdrop ? 0.12f : 0.18f;
-		float activeBorder = UseToolRowIdleBackdrop ? 0.34f : 0.52f;
 		_glassGlowStyle.BgColor = new Color(
-			accent.R * 0.10f,
-			accent.G * 0.11f,
-			accent.B * 0.10f,
-			0.18f * idleBackdrop + interaction * activeBackdrop);
+			0.025f + accent.R * 0.15f,
+			0.045f + accent.G * 0.17f,
+			0.05f + accent.B * 0.17f,
+			0.16f * idleBackdrop + selectedStrength * 0.26f + transientStrength * 0.16f);
 		_glassGlowStyle.BorderColor = new Color(
 			accent.R,
 			accent.G,
 			accent.B,
-			0.15f * idleBackdrop + interaction * activeBorder);
-		_glassGlowStyle.BorderWidthLeft = 0;
-		_glassGlowStyle.BorderWidthTop = 0;
-		_glassGlowStyle.BorderWidthRight = 0;
-		_glassGlowStyle.BorderWidthBottom = 1;
-		_glassGlowStyle.CornerRadiusTopLeft = 5;
-		_glassGlowStyle.CornerRadiusTopRight = 5;
-		_glassGlowStyle.CornerRadiusBottomLeft = 5;
-		_glassGlowStyle.CornerRadiusBottomRight = 5;
-		_glassGlowStyle.ShadowColor = Colors.Transparent;
-		_glassGlowStyle.ShadowSize = 0;
+			Mathf.Min(0.96f, 0.14f * idleBackdrop + selectedStrength * 0.62f + transientStrength * 0.70f));
+		int outlineWidth = emphasis > 0.01f ? (Selected ? 2 : 1) : 0;
+		_glassGlowStyle.BorderWidthLeft = outlineWidth;
+		_glassGlowStyle.BorderWidthTop = outlineWidth;
+		_glassGlowStyle.BorderWidthRight = outlineWidth;
+		_glassGlowStyle.BorderWidthBottom = Mathf.Max(1, outlineWidth);
+		_glassGlowStyle.CornerRadiusTopLeft = 6;
+		_glassGlowStyle.CornerRadiusTopRight = 6;
+		_glassGlowStyle.CornerRadiusBottomLeft = 6;
+		_glassGlowStyle.CornerRadiusBottomRight = 6;
+		_glassGlowStyle.ShadowColor = new Color(
+			accent.R,
+			accent.G,
+			accent.B,
+			selectedStrength * 0.13f + transientStrength * 0.11f);
+		_glassGlowStyle.ShadowSize = emphasis > 0.01f ? (Selected ? 7 : 5) : 0;
 		_glassGlowStyle.ShadowOffset = Vector2.Zero;
 		DrawStyleBox(_glassGlowStyle, rect);
+
+		if (emphasis > 0.01f)
+		{
+			float markerWidth = Selected ? 4.0f : 2.0f;
+			DrawLine(
+				new Vector2(rect.Position.X + markerWidth * 0.5f, rect.Position.Y + 9.0f),
+				new Vector2(rect.Position.X + markerWidth * 0.5f, rect.End.Y - 9.0f),
+				new Color(accent.R, accent.G, accent.B, 0.60f + emphasis * 0.34f),
+				markerWidth,
+				true);
+		}
 
 		DrawLine(
 			new Vector2(rect.Position.X + 12.0f, rect.Position.Y + 1.0f),
 			new Vector2(rect.End.X - 12.0f, rect.Position.Y + 1.0f),
-			new Color(accent.R, accent.G, accent.B, 0.04f * idleBackdrop + interaction * 0.10f),
+			new Color(
+				accent.R,
+				accent.G,
+				accent.B,
+				0.05f * idleBackdrop + selectedStrength * 0.22f + transientStrength * 0.32f),
 			1.0f,
 			true);
 	}

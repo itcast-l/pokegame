@@ -17,7 +17,6 @@ public partial class AdventureAvatarMenuScene
 		Modulate = Colors.White;
 		Scale = Vector2.One;
 		_startButton.Disabled = false;
-		ShowRunResumeDialogIfActive();
 		ShowPendingAdventureAvatarUnlockPrompt();
 	}
 

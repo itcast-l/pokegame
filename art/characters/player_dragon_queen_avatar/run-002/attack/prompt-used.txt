@@ -1,0 +1,10 @@
+Create a production-ready four-keyframe ATTACK animation sheet for the exact same Dragon Queen Q / Quina Q 2D game avatar shown in the reference image.
+
+- Preserve the exact reference identity, palette, face, amber eye, compact crown, white fin horns, cyan-blue and purple mane masses, coral chest jewel, royal shoulder armor, restrained hand-authored game-avatar finish, scale, and three-quarter view facing left.
+- Preserve the complete self-contained bust silhouette with a tapered irregular lower edge in every cell. Never create a flat horizontal crop, rectangular torso block, or body touching a cell edge.
+- Exactly four equal square cells in a 2x2 grid, read left to right then top to bottom: focused compact wind-up; controlled forward sea-dragon bite or short roar; compact follow-through; recovery to the exact neutral pose.
+- Body only. Keep the bite compact and close to the normal silhouette. No detached jaw slash, projectile, impact flash, smoke, particles, trail, aura, card, ribbon, extra appendage, or special-ability effect.
+- Keep body height, center, lower silhouette, armor design, horn length, mane masses, and scale consistent across all four cells. Motion should come mainly from the head and neck, without shrinking the body.
+- Maintain broad clean color shapes and controlled cel shading. Do not add fine hair strands, dense micro-scales, filigree, extra jewelry, new spikes, or realistic material texture.
+- Keep every bust fully inside the central 70% of its cell with generous padding on all sides.
+- Perfectly flat solid #FF00FF background outside the character. No shadow, glow, gradient, halo, texture, text, labels, UI, visible grid lines, borders, watermark, weapon, hands, extra character, scenery, or pedestal.

@@ -196,7 +196,8 @@ func _audit_dynamic_rows() -> bool:
 	var room_status := room_row.get_node("RowLayout/StatusLabel") as Label
 	var join_button := room_row.get_node("RowLayout/JoinButton") as Button
 	if not room_status.visible or room_status.text.is_empty() or join_button.disabled \
-			or join_button.tooltip_text.is_empty() \
+			or not join_button.tooltip_text.is_empty() \
+			or room_row.tooltip_text.is_empty() \
 			or not room_row.get_theme_stylebox("panel") is StyleBoxFlat:
 		_fail("Room row does not combine visible status text, border state, and join affordance")
 		return false

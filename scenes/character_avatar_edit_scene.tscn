@@ -344,7 +344,7 @@ text = ""
 horizontal_alignment = 1
 
 [node name="PreviewAvatarAnchor" type="Control" parent="DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout" unique_id=575481611]
-custom_minimum_size = Vector2(0, 196)
+custom_minimum_size = Vector2(0, 168)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2

@@ -1,0 +1,12 @@
+Create a production-ready 12-frame IDLE sheet for the accepted Kaiser K Ascendant avatar.
+
+Identity lock:
+- Preserve the run-008 cyan-blue dragon emperor exactly: mature face, narrow cyan eye, branching ivory coral crown, royal-blue and navy fin mane, pale cyan throat, antique-silver regalia, single cyan pearl, three-quarter-left bust, and tapered lower silhouette.
+- Match the bright hand-authored project style, dark-navy contour, broad color masses, and restrained cel shading.
+
+Layout and motion:
+- Exactly 12 equal square cells in a 4-column by 3-row grid.
+- Frames 1-6 perform one slow eye blink. Frames 7-8 shift only the pearl highlight. Frames 9-11 move only two outer rear mane tips. Frame 12 matches frame 1.
+- Keep jaw, neck volume, chest, pearl, shoulders, antler roots, body anchor, scale, crop, and lower silhouette fixed. No breathing, swelling, bobbing, or armor movement.
+- Keep every complete bust inside its cell with generous padding. Nothing crosses a cell edge.
+- Flat exact #FF00FF background. No grid, text, UI, scenery, particles, aura, gold, or detached effects.

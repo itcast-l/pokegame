@@ -55,13 +55,16 @@ func _run() -> void:
 		return
 
 	menu = await _instantiate_menu()
-	if menu == null or not await _select_main_adventure(menu):
+	if menu == null:
 		return
+	_assert_adventure_selected(menu, "deep_tide_throne", "progressed main adventure")
 	_assert_level_entries(menu, main_entry_ids, 2, "progressed main adventure")
 	_assert_entry_focused(menu, main_entry_ids[1], "progressed main adventure")
 	if _failed:
 		return
 	if not await _capture_optional_screenshot("progressed-main-adventure"):
+		return
+	if not await _assert_progressed_main_hover(menu):
 		return
 
 	if not bool(harness.call("ResetProgress")):
@@ -131,8 +134,11 @@ func _assert_level_entries(menu: Control, expected_ids: Array, revealed_count: i
 			return
 		if not should_reveal and (not button.disabled or avatar.visible \
 				or name_label.text != LOCKED_NAME_PLACEHOLDER \
-				or button.tooltip_text != status_label.text):
+				or not button.tooltip_text.is_empty()):
 			_fail("Locked entry %s leaked its character information" % expected_node_name)
+			return
+		if not button.tooltip_text.is_empty():
+			_fail("Generated entry %s exposes hover tooltip text" % expected_node_name)
 			return
 
 
@@ -142,6 +148,57 @@ func _assert_entry_focused(menu: Control, avatar_id: String, context: String) ->
 	var button := entry.get_node_or_null("Button") as Button if entry != null else null
 	if button == null or not button.has_focus():
 		_fail("Expected visible entry %s to receive focus for %s" % [avatar_id, context])
+
+
+func _assert_adventure_selected(menu: Control, adventure_id: String, context: String) -> void:
+	var entry := menu.get_node_or_null(
+		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/AdventureListPanel/AdventureListMargin/AdventureList/%sAdventureEntry" % adventure_id) as Control
+	if entry == null or not bool(entry.get("Selected")):
+		_fail("Expected adventure %s to be selected for %s" % [adventure_id, context])
+
+
+func _assert_progressed_main_hover(menu: Control) -> bool:
+	var level_list := menu.get_node_or_null(LEVEL_LIST_PATH) as VBoxContainer
+	if level_list == null or level_list.get_child_count() < 2:
+		_fail("Progressed main adventure is missing hover validation entries")
+		return false
+	var completed_entry := level_list.get_child(0) as Control
+	var selected_entry := level_list.get_child(1) as Control
+	if completed_entry == null or selected_entry == null:
+		_fail("Progressed main adventure is missing hover validation controls")
+		return false
+	var completed_button := completed_entry.get_node_or_null("Button") as Button
+	if completed_button == null:
+		_fail("Progressed main adventure is missing its completed enemy button")
+		return false
+	if bool(completed_entry.get("HighlightFocus")) or bool(selected_entry.get("HighlightFocus")):
+		_fail("Progressed main adventure still duplicates keyboard focus glow")
+		return false
+
+	completed_button.emit_signal("mouse_entered")
+	if not await _wait_for_frame_glow(completed_entry, 0.94, true):
+		_fail("Completed enemy entry did not reach its hover highlight")
+		return false
+	if bool(completed_entry.get("Selected")) or not bool(selected_entry.get("Selected")):
+		_fail("Hovering a completed enemy changed the selected challenge")
+		return false
+	if not await _capture_optional_screenshot("progressed-main-adventure-hover"):
+		return false
+
+	completed_button.emit_signal("mouse_exited")
+	if not await _wait_for_frame_glow(completed_entry, 0.02, false):
+		_fail("Completed enemy hover highlight did not clear")
+		return false
+	return true
+
+
+func _wait_for_frame_glow(frame: Control, threshold: float, increasing: bool) -> bool:
+	for _frame in 90:
+		var glow := float(frame.call("DebugGetGlow"))
+		if (increasing and glow >= threshold) or (not increasing and glow <= threshold):
+			return true
+		await process_frame
+	return false
 
 
 func _catalog_entry_ids(harness: Node, campaign_id: String) -> Array:

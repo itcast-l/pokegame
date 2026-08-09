@@ -6,5 +6,9 @@ GODOT_CMD="${GODOT_BIN:-/Volumes/KIOXIA11/Applications/Godot_mono.app/Contents/M
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 codex_setup_godot_test_home "$TMP_DIR"
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureAvatarMenuDynamicLevelListSmoke.gd 2>&1 | tee "$TMP_DIR/smoke.log"
+if [[ -n "${ADVENTURE_AVATAR_MENU_LEVEL_VISIBILITY_SCREENSHOT_DIR:-}" ]]; then
+	"$GODOT_CMD" --path "$ROOT_DIR" --script res://tests/AdventureAvatarMenuDynamicLevelListSmoke.gd 2>&1 | tee "$TMP_DIR/smoke.log"
+else
+	"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureAvatarMenuDynamicLevelListSmoke.gd 2>&1 | tee "$TMP_DIR/smoke.log"
+fi
 grep -Fq "ADVENTURE_AVATAR_MENU_DYNAMIC_LEVEL_LIST_SMOKE_OK" "$TMP_DIR/smoke.log"

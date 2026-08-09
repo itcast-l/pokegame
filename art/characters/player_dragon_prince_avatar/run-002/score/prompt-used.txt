@@ -1,0 +1,11 @@
+Create a production-ready four-keyframe SCORE animation sheet for the exact same 2D game avatar shown in the single reference image.
+
+- Preserve the reference identity, project-native lightly pixel-inspired style, palette, face, amber eye, horns, mane, armor, red jewel, scale, and three-quarter view facing left.
+- Preserve the complete self-contained bust silhouette in every cell: irregular tapered armor-shaped lower edge, central breastplate slightly lower, both outer shoulders curving upward, and solid-magenta negative space below the body.
+- Never create a flat horizontal crop, rectangular torso base, or body touching a cell edge.
+- Exactly four equal square cells in a 2x2 grid: attentive neutral; proud small nod and cyan-gold chest light; compact peak light attached to armor trim; settle to neutral.
+- No floating orb, detached particles, number, coin, card, text, or outer aura.
+- Keep body height, center, lower silhouette, armor design, horn length, and scale consistent across all four cells.
+- Keep every bust fully inside the central 70% to 75% of its cell with generous padding on all sides.
+- Perfectly flat solid #FF00FF background outside the character. No shadow, outer glow, gradient, texture, halo, text, labels, UI, borders, watermark, extra character, weapon, hands, scenery, or pedestal.
+

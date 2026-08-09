@@ -98,20 +98,6 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ability"]
-bg_color = Color(0.018, 0.14, 0.16, 0.34)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.98, 0.92, 0.46, 0.46)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_color = Color(0, 0.02, 0.04, 0.22)
-shadow_size = 4
-
 [node name="AdventureAvatarMenuScene" type="Control" unique_id=1913276250]
 layout_mode = 3
 anchors_preset = 15
@@ -485,68 +471,10 @@ text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="AbilityPreviewCard" type="PanelContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=1382979060]
-custom_minimum_size = Vector2(0, 148)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_ability")
-
-[node name="AbilityPreviewMargin" type="MarginContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard" unique_id=961891779]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 10
-
-[node name="AbilityPreviewStack" type="VBoxContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin" unique_id=1769197672]
-clip_contents = true
+[node name="PreviewActionSpacer" type="Control" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_constants/separation = 5
-
-[node name="AbilityTitleLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack" unique_id=1008381]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.58, 0.96, 0.9, 0.82)
-theme_override_font_sizes/font_size = 14
-text = ""
-vertical_alignment = 1
-clip_text = true
-
-[node name="AbilityNameLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack" unique_id=1282097867]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.98, 1, 0.83, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.82)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 21
-text = ""
-vertical_alignment = 1
-autowrap_mode = 2
-
-[node name="AbilityDescriptionScroll" type="ScrollContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack" unique_id=29548369]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-mouse_filter = 0
-horizontal_scroll_mode = 0
-
-[node name="AbilityDescriptionLabel" type="Label" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/AbilityPreviewCard/AbilityPreviewMargin/AbilityPreviewStack/AbilityDescriptionScroll" unique_id=747074057]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.86, 0.98, 0.96, 0.92)
-theme_override_colors/font_shadow_color = Color(0, 0.02, 0.04, 0.68)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 16
-text = ""
-autowrap_mode = 2
 
 [node name="StartWrap" type="CenterContainer" parent="SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout" unique_id=1011286767]
 layout_mode = 2

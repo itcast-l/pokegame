@@ -7,6 +7,7 @@ public partial class GameAudioManager
 	{
 		if (node is BaseButton button)
 		{
+			SuppressButtonTooltip(button);
 			button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
 			MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
 			CallDeferred(nameof(ApplyUnifiedButtonTextDeferred), button);
@@ -25,6 +26,28 @@ public partial class GameAudioManager
 		{
 			BindUiBehaviorRecursive(child);
 		}
+	}
+
+	private static void SuppressButtonTooltip(BaseButton button)
+	{
+		button.TooltipText = string.Empty;
+		button.ShortcutInTooltip = false;
+		if (button.HasMeta(UiTooltipSuppressionBoundMeta))
+		{
+			return;
+		}
+
+		button.SetMeta(UiTooltipSuppressionBoundMeta, true);
+		button.MouseEntered += () =>
+		{
+			if (!GodotObject.IsInstanceValid(button))
+			{
+				return;
+			}
+
+			button.TooltipText = string.Empty;
+			button.ShortcutInTooltip = false;
+		};
 	}
 
 	private void ApplyUnifiedButtonTextDeferred(BaseButton button)

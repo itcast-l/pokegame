@@ -87,6 +87,16 @@ func _run() -> void:
 		return
 	main_menu.set("selected_avatar_id", MAIN_FIRST_AVATAR_ID)
 	root.add_child(main_menu)
+	for _frame_index in range(6):
+		await process_frame
+	if bool(main_menu.call("DebugIsAdventureRunResumeDialogVisible")):
+		_fail("Opening Adventure should show stage selection before recovery")
+		return
+	var main_start_button := main_menu.get_node_or_null("%StartButton") as Button
+	if main_start_button == null or main_start_button.disabled:
+		_fail("Main stage selection is missing an enabled StartButton")
+		return
+	main_start_button.emit_signal("pressed")
 	if not await _wait_for_dialog(main_menu):
 		return
 

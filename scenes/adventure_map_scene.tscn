@@ -18,8 +18,8 @@
 [ext_resource type="Texture2D" uid="uid://b2557w63h4hkg" path="res://art/characters/player_nautilus_avatar/run-001/idle/processed/idle-1.png" id="16_nautilus_idle"]
 [ext_resource type="Texture2D" uid="uid://cbokatlynw0w3" path="res://art/characters/player_narwhal_avatar/run-001/idle/processed/idle-1.png" id="17_narwhal_idle"]
 [ext_resource type="Texture2D" uid="uid://8wo446w3wy5u" path="res://art/characters/player_leafy_seadragon_avatar/run-001/idle/processed/idle-1.png" id="18_leafy_seadragon_idle"]
-[ext_resource type="Texture2D" uid="uid://b3bca7eo5xcjm" path="res://art/characters/player_dragon_prince_avatar/run-001/idle/processed/idle-1.png" id="19_dragon_prince_idle"]
-[ext_resource type="Texture2D" uid="uid://d3cskagl32jga" path="res://art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png" id="20_dragon_queen_idle"]
+[ext_resource type="Texture2D" uid="uid://dehlqdtwdgcob" path="res://art/characters/player_dragon_prince_avatar/run-002/idle/processed/idle-1.png" id="19_dragon_prince_idle"]
+[ext_resource type="Texture2D" path="res://art/characters/player_dragon_queen_avatar/run-002/idle/processed/idle-1.png" id="20_dragon_queen_idle"]
 [ext_resource type="Texture2D" uid="uid://da5ly8uu4sl8c" path="res://art/characters/boss_k_avatar/run-001/idle/processed/idle-1.png" id="21_boss_k_idle"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_adventure_caustic"]
@@ -605,7 +605,7 @@ script = ExtResource("7_character_avatar_script")
 PortraitTexture = ExtResource("19_dragon_prince_idle")
 AccentColor = Color(1, 0.86, 0.46, 1)
 PortraitScale = 0.76
-AvatarRoot = "res://art/characters/player_dragon_prince_avatar/run-001"
+AvatarRoot = "res://art/characters/player_dragon_prince_avatar/run-002"
 
 [node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/DragonPrinceJNode/CharacterAvatar" unique_id=766999434]
 layout_mode = 1
@@ -661,7 +661,7 @@ script = ExtResource("7_character_avatar_script")
 PortraitTexture = ExtResource("20_dragon_queen_idle")
 AccentColor = Color(1, 0.86, 0.46, 1)
 PortraitScale = 0.76
-AvatarRoot = "res://art/characters/player_dragon_queen_avatar/run-001"
+AvatarRoot = "res://art/characters/player_dragon_queen_avatar/run-002"
 
 [node name="PortraitPivot" type="Control" parent="MapViewport/MapContent/AvatarLayer/DragonQueenQNode/CharacterAvatar" unique_id=1515738680]
 layout_mode = 1

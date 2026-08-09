@@ -1,0 +1,21 @@
+Create a production-ready 12-frame ATTACK body animation sheet for the exact same Kaiser K 2D game avatar shown in reference image 1.
+
+Reference roles:
+- Reference image 1 is the strict character identity, palette, silhouette, drawing style, three-quarter-left view, bust crop, and material reference.
+- Reference image 2 is layout only. Use it only to understand 3 rows, 4 columns, equal invisible 320x320 frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, safe-area rectangles, center marks, labels, borders, white background, black lines, or blue lines.
+
+Identity and style lock:
+- Preserve the same organic male abyssal dragon emperor: broad deep-blue living dragon muzzle and jaw, near-closed severe eye shape, large branching ivory coral antlers, cyan crown-like forehead fins, swept layered navy and royal-blue aquatic fin mane, pale cyan throat scales, dark antique-silver regalia, and one large pale luminous pearl fixed at the center of his chest.
+- Preserve the exact compact self-contained bust silhouette with its tapered irregular lower edge and the same three-quarter view facing left.
+- Use the same clean hand-authored 2D game-avatar finish: crisp dark navy contour, simplified angular shapes, broad color masses, controlled hard cel shading, and sparse scale marks. No identity drift, extra horns, altered armor, photorealism, painterly texture, glossy 3D, dense micro-scales, fur, feathers, or filigree.
+
+Sheet layout and motion:
+- Exactly 12 equal cells in a 4-column by 3-row grid. Read frames left to right across row 1, then row 2, then row 3.
+- Frame 1 guarded neutral. Frame 2 brow tightens and head begins to draw back. Frame 3 neck coils slightly. Frame 4 compact wind-up reaches its limit. Frame 5 head drives forward. Frame 6 muzzle advances with the mouth beginning to open. Frame 7 peak compact royal bite or roar with the jaw open only slightly. Frame 8 immediate controlled follow-through. Frame 9 head starts to pull back. Frame 10 jaw closes and neck recovers. Frame 11 nearly neutral. Frame 12 exact neutral recovery.
+- Body only. Motion comes from the head, jaw, neck, and attached mane fins. Keep the pearl, antlers, shoulders, lower silhouette, body height, center, and scale consistent. The body may not shrink more than 10% relative to frame 1.
+- No detached slash arc, lance, projectile, impact flash, smoke, particles, trail, aura, card, ribbon, or special-ability effect. Existing runtime FX will supply the attack effect separately.
+
+Containment and background:
+- The entire bust must remain centered inside the middle 65% of each cell with at least 12% uninterrupted background margin on all four sides. Nothing may touch or cross a cell edge.
+- Background outside the character must be perfectly flat solid #FF00FF in every cell, with no gradient, shadow, glow, halo, texture, reflection, floor, or lighting variation. Do not use #FF00FF anywhere on the character.
+- No text, labels, numbers, UI, visible grid lines, cell borders, watermark, weapon, hands, detached effects, extra character, scenery, circle, frame, or pedestal.

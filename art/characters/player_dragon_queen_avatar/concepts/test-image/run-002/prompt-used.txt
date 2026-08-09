@@ -1,0 +1,18 @@
+Concept: Hand-authored Game Portrait
+Provider: ai.input.im
+Model: gpt-image-2
+Size: 1024x1024
+Quality: medium
+Output: quina-q-hand-authored-game-portrait.png
+
+Composition reference:
+art/characters/player_dragon_queen_avatar/concepts/test-image/run-001/quina-q-regal-battle-portrait.png
+
+Style readability reference:
+art/characters/player_dragon_prince_avatar/run-002/idle/processed/idle-1.png
+
+Original identity reference:
+art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png
+
+Prompt:
+Redraw Dragon Queen Q / Quina Q as a deliberately hand-authored 2D game portrait. Reference 1 supplies the readable bust composition and face silhouette, reference 2 supplies the project-native clean game-avatar finish, and reference 3 supplies her original pearlescent white, cyan-blue, purple-shadow, coral-red, and small-gold identity. Keep the same regal aquatic dragon queen, long muzzle, single visible amber eye, compact crown, swept fin mane, and royal shoulder armor in three-quarter view facing left. Remove the obvious AI-generated look completely. Use confident dark navy ink contours with purposeful line-weight variation, simplified angular shapes, a limited palette of roughly 12 to 16 colors, two or three hard cel-shaded value steps, broad intentional highlight shapes, and sparse selectively placed scale marks. Make the silhouette and face feel drawn by a game character artist, with slight controlled asymmetry and clean readable negative spaces. The eye, muzzle, crown, mane, neck, and shoulder plates must each read as one clear designed shape at 128x128. Absolutely no dense micro-scales, individual hair or feather strands, scratchy texture, engraved filigree, embossed swirls, excessive gold ribs, photoreal material, painterly smudging, glossy 3D rendering, airbrushed gradient lighting, bloom, rim glow, random decorative spikes, or over-rendered detail. Reduce the gold armor ornament by about half and use one small coral-red jewel as a focal accent. Single centered self-contained bust, generous transparent padding, irregular tapered lower edge, transparent background. No frame, circle, scenery, cast shadow, aura, text, letters, watermark, weapon, hands, particles, pedestal, or sprite sheet. The result should look like a polished manually illustrated indie tactics-game avatar, not generative concept art.

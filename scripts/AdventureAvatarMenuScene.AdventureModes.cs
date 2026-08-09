@@ -52,6 +52,7 @@ public partial class AdventureAvatarMenuScene
 
 			frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
 			frame.AccentColor = adventureMode.AccentColor;
+			frame.HighlightFocus = false;
 			_adventureFrames[adventureMode.Id] = frame;
 			Label nameLabel = frame.GetNode<Label>("AdventureEntryContent/AdventureName");
 			_localizedLabels.Add((nameLabel, adventureMode.NameKey));
@@ -91,12 +92,6 @@ public partial class AdventureAvatarMenuScene
 			frame.Selected = selected;
 			frame.Modulate = selected ? Colors.White : new Color(0.78f, 0.90f, 0.94f, 0.76f);
 			frame.QueueRedraw();
-
-			if (_adventureButtons.TryGetValue(adventureId, out Button? button))
-			{
-				AdventureModeDefinition adventureMode = GetAdventureModeDefinition(adventureId);
-				button.TooltipText = Localize(adventureMode.NameKey);
-			}
 		}
 	}
 
@@ -189,11 +184,18 @@ public partial class AdventureAvatarMenuScene
 
 	private string GetInitialAdventureId()
 	{
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		if (profile.HighestCompletedMainAdventureStage > 0
+			|| !string.IsNullOrWhiteSpace(profile.PendingAdventureRunJson))
+		{
+			return DeepTideThroneAdventureId;
+		}
+
 		if (!CharacterAvatarCatalog.IsTutorialCompleted(
-			GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+			profile.CompletedAdventureTutorialIdsCsv,
 			AdventureCampaignCatalog.Tutorial[0].EnemyAvatarId)
 			|| !CharacterAvatarCatalog.IsTutorialCompleted(
-				GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+				profile.CompletedAdventureTutorialIdsCsv,
 				AdventureCampaignCatalog.Tutorial[1].EnemyAvatarId))
 		{
 			return TutorialAdventureId;

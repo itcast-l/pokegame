@@ -1,0 +1,21 @@
+Create a production-ready 12-frame DEFEAT animation sheet for the exact same Kaiser K 2D game avatar shown in reference image 1.
+
+Reference roles:
+- Reference image 1 is the strict character identity, palette, silhouette, drawing style, three-quarter-left view, bust crop, and material reference.
+- Reference image 2 is layout only. Use it only to understand 3 rows, 4 columns, equal invisible 320x320 frame slots, centering, spacing, and safe padding. Do not reproduce the guide: no visible boxes, safe-area rectangles, center marks, labels, borders, white background, black lines, or blue lines.
+
+Identity and style lock:
+- Preserve the same organic male abyssal dragon emperor: broad deep-blue living dragon muzzle and jaw, near-closed severe eye shape, large branching ivory coral antlers, cyan crown-like forehead fins, swept layered navy and royal-blue aquatic fin mane, pale cyan throat scales, dark antique-silver regalia, and one large pale luminous pearl fixed at the center of his chest.
+- Preserve the exact compact self-contained bust silhouette with its tapered irregular lower edge and the same three-quarter view facing left.
+- Use the same clean hand-authored 2D game-avatar finish: crisp dark navy contour, simplified angular shapes, broad color masses, controlled hard cel shading, and sparse scale marks. No identity drift, extra horns, photorealism, painterly texture, glossy 3D, dense micro-scales, fur, feathers, or filigree.
+
+Sheet layout and motion:
+- Exactly 12 equal cells in a 4-column by 3-row grid. Read frames left to right across row 1, then row 2, then row 3.
+- Frame 1 braced but strained. Frame 2 eye and brow tighten. Frame 3 cyan highlights begin to dim. Frame 4 head starts to lower. Frame 5 neck bends and shoulders lose tension. Frame 6 mane fins droop. Frame 7 head falls farther while antlers remain intact. Frame 8 pearl dims and the eye closes. Frame 9 lowest defeated pose. Frame 10 exhausted stillness. Frame 11 one small final downward breath. Frame 12 held defeated pose.
+- The crown fins, antlers, mane, pearl, and regalia remain intact. Keep the body at the same scale; the pose may move down slightly but may not shrink or crop.
+- No wound, blood, broken armor, broken antler, detached effect, smoke, tear, icon, card, dark aura, or scenery. Runtime defeat feedback FX is separate.
+
+Containment and background:
+- The entire bust must remain centered inside the middle 65% of each cell with at least 12% uninterrupted background margin on all four sides. Nothing may touch or cross a cell edge.
+- Background outside the character must be perfectly flat solid #FF00FF in every cell, with no gradient, shadow, glow, halo, texture, reflection, floor, or lighting variation. Do not use #FF00FF anywhere on the character.
+- No text, labels, numbers, UI, visible grid lines, cell borders, watermark, weapon, hands, detached effects, extra character, scenery, circle, frame, or pedestal.

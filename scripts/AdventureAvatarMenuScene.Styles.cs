@@ -75,22 +75,4 @@ public partial class AdventureAvatarMenuScene
 		};
 	}
 
-	private static StyleBoxFlat CreateAbilityCardStyle()
-	{
-		return new StyleBoxFlat
-		{
-			BgColor = new Color(0.16f, 0.19f, 0.20f, 0.42f),
-			BorderColor = new Color(0.72f, 0.80f, 0.82f, 0.42f),
-			BorderWidthLeft = 1,
-			BorderWidthTop = 1,
-			BorderWidthRight = 1,
-			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8,
-			ShadowColor = new Color(0.0f, 0.02f, 0.04f, 0.22f),
-			ShadowSize = 4,
-		};
-	}
 }

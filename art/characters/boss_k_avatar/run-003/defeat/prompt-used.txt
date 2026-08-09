@@ -1,0 +1,13 @@
+Create a production-ready 12-frame DEFEAT sheet for the accepted Kaiser K Ascendant avatar.
+
+Identity lock:
+- Preserve the run-008 cyan-blue dragon emperor exactly: mature face, narrow cyan eye, branching ivory coral crown, royal-blue and navy fin mane, pale cyan throat, antique-silver regalia, single cyan pearl, three-quarter-left bust, and tapered lower silhouette.
+- Match the bright hand-authored project style, dark-navy contour, broad color masses, and restrained cel shading.
+
+Layout and motion:
+- Exactly 12 equal square cells in a 4-column by 3-row grid.
+- Strain, gradual head lowering, mane droop, eye closure, lowest defeated pose, exhausted stillness, and held final pose.
+- Keep crown, antlers, mane, pearl, and regalia intact. Maintain body scale and neck volume while the pose shifts downward inside the cell.
+- No wounds, blood, broken armor, broken antlers, smoke, tears, icons, cards, dark aura, or detached FX.
+- Keep every complete bust inside its cell with generous padding. Nothing crosses a cell edge.
+- Flat exact #FF00FF background. No grid, text, UI, scenery, gold, or extra ornaments.

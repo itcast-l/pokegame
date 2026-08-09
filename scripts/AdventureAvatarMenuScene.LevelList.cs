@@ -90,6 +90,7 @@ public partial class AdventureAvatarMenuScene
 		Color accentColor = AdventureRouteAccent;
 		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
 		frame.AccentColor = accentColor;
+		frame.HighlightFocus = false;
 		_avatarFrames[avatarId] = frame;
 		_displayStageNumbers[avatarId] = displayStageNumber;
 		_stageNumbers[avatarId] = stageNumber;
@@ -120,9 +121,6 @@ public partial class AdventureAvatarMenuScene
 
 		Button button = frame.GetNode<Button>("Button");
 		button.FocusMode = Control.FocusModeEnum.All;
-		button.TooltipText = IsStageUnlocked(avatarId)
-			? LocalizeAvatarDisplayName(avatarDefinition)
-			: Tr("ADVENTURE_LOCKED").ToString();
 		button.Pressed += () => SelectAvatar(avatarId);
 		button.FocusEntered += () =>
 		{

@@ -1,0 +1,13 @@
+Create a production-ready 12-frame HIT REACTION sheet for the accepted Kaiser K Ascendant avatar.
+
+Identity lock:
+- Preserve the run-008 cyan-blue dragon emperor exactly: mature face, narrow cyan eye, branching ivory coral crown, royal-blue and navy fin mane, pale cyan throat, antique-silver regalia, single cyan pearl, three-quarter-left bust, and tapered lower silhouette.
+- Match the bright hand-authored project style, dark-navy contour, broad color masses, and restrained cel shading.
+
+Layout and motion:
+- Exactly 12 equal square cells in a 4-column by 3-row grid.
+- Neutral, compact backward flinch, controlled maximum recoil, rebound, small secondary recoil, and neutral recovery.
+- Keep antlers, pearl, regalia, lower silhouette, body height, center, and scale intact.
+- No impact flash, projectile, particles, smoke, stars, wounds, blood, cracks, or detached FX.
+- Keep every complete bust inside its cell with generous padding. Nothing crosses a cell edge.
+- Flat exact #FF00FF background. No grid, text, UI, scenery, gold, or extra ornaments.

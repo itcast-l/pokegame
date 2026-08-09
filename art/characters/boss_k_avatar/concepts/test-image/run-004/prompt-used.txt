@@ -1,0 +1,15 @@
+Concept: Abyssal Dragon Emperor - Refined Three-Quarter Portrait
+Provider: ai.input.im
+Model: gpt-image-2
+Size: 1024x1024
+Quality: high
+Output: kaiser-k-abyssal-emperor-refined.png
+
+Composition reference:
+art/characters/boss_k_avatar/concepts/test-image/run-003/kaiser-k-three-quarter-abyssal-emperor.png
+
+Anatomy and readability reference:
+art/characters/player_dragon_prince_avatar/run-002/idle/processed/idle-1.png
+
+Prompt:
+Refine reference image 1 into a cleaner production 2D game avatar while preserving the same Kaiser K identity, three-quarter-left pose, broad dragon muzzle, large branching ivory coral antlers, cyan crown crest, deep-blue palette, compact bust silhouette, and central chest pearl. Make one essential anatomical correction: clearly reveal one large pale-cyan dragon eye with a dark navy slit pupil beneath the near brow, positioned like the visible eye in reference image 2. The eye must be unobstructed, sharply readable, intelligent, calm, and merciless, and it must become the main focal point. Keep the entire living muzzle, nostril, mouth line, cheek, jaw, and neck readable. Convert all feather-like or furry strands into broad smooth aquatic fin shapes and layered dragon scales. Simplify aggressively for 128x128 readability: crisp dark-navy contour, limited palette, two or three hard cel-shaded value steps, broad flat highlight shapes, sparse purposeful scale marks, minimal texture, and no scratchy pencil detail. Keep antique gold to three small clean geometric regalia edges only. No helmet, mask, faceplate, visor, hidden eye, blank eye socket, bird feathers, fur, flowers, filigree, micro-scales, photorealism, painterly texture, glossy 3D, gradients, bloom, or aura. Single centered self-contained bust with generous transparent padding and irregular tapered lower edge. True transparent alpha background only; remove the gray-blue vignette completely. No backdrop, scenery, floor, shadow, circle, frame, text, watermark, weapon, hands, particles, pedestal, or sprite sheet.

@@ -1,0 +1,13 @@
+Create a production-ready 12-frame SCORE REACTION sheet for the accepted Kaiser K Ascendant avatar.
+
+Identity lock:
+- Preserve the run-008 cyan-blue dragon emperor exactly: mature face, narrow cyan eye, branching ivory coral crown, royal-blue and navy fin mane, pale cyan throat, antique-silver regalia, single cyan pearl, three-quarter-left bust, and tapered lower silhouette.
+- Match the bright hand-authored project style, dark-navy contour, broad color masses, and restrained cel shading.
+
+Layout and motion:
+- Exactly 12 equal square cells in a 4-column by 3-row grid.
+- Neutral, small proud chin lift, restrained highlight increase only inside the pearl, confident hold, and neutral recovery.
+- Keep antlers, shoulders, lower silhouette, body height, center, scale, pearl outline, and pearl position stable.
+- No floating orb, particles, numbers, coins, cards, text, aura, rays, or detached glow.
+- Keep every complete bust inside its cell with generous padding. Nothing crosses a cell edge.
+- Flat exact #FF00FF background. No grid, UI, scenery, gold, or extra ornaments.

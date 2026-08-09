@@ -70,7 +70,7 @@ func _run() -> void:
 	var continue_menu := await _instantiate_menu(SAVED_RUN_AVATAR_ID)
 	if _failed or continue_menu == null:
 		return
-	if not await _wait_for_resume_dialog(continue_menu):
+	if not await _open_resume_dialog_from_stage_selection(continue_menu):
 		return
 	if not bool(continue_menu.call("DebugSelectAdventureRunResumeContinue")):
 		_fail("Failed to select Continue after returning to the main campaign")
@@ -98,7 +98,7 @@ func _run() -> void:
 	var restart_menu := await _instantiate_menu(SAVED_RUN_AVATAR_ID)
 	if _failed or restart_menu == null:
 		return
-	if not await _wait_for_resume_dialog(restart_menu):
+	if not await _open_resume_dialog_from_stage_selection(restart_menu):
 		return
 	if not bool(restart_menu.call("DebugSelectAdventureRunResumeRestart")):
 		_fail("Failed to select Restart after returning to the main campaign")
@@ -236,6 +236,8 @@ func _instantiate_menu(selected_avatar_id: String) -> Node:
 	menu.set("selected_avatar_id", selected_avatar_id)
 	root.add_child(menu)
 	await process_frame
+	menu.call("PrepareForEmbeddedDisplay")
+	await process_frame
 
 	if not menu.has_method("DebugIsAdventureRunResumeDialogVisible") \
 		or not menu.has_method("DebugSelectAdventureRunResumeContinue") \
@@ -244,6 +246,21 @@ func _instantiate_menu(selected_avatar_id: String) -> Node:
 		return null
 
 	return menu
+
+
+func _open_resume_dialog_from_stage_selection(menu: Node) -> bool:
+	for _frame_index in range(6):
+		await process_frame
+	if bool(menu.call("DebugIsAdventureRunResumeDialogVisible")):
+		_fail("Opening Adventure should show stage selection before the resume dialog")
+		return false
+
+	var start_button := menu.get_node_or_null("%StartButton") as Button
+	if start_button == null or start_button.disabled:
+		_fail("Stage selection is missing an enabled StartButton")
+		return false
+	start_button.emit_signal("pressed")
+	return await _wait_for_resume_dialog(menu)
 
 
 func _wait_for_resume_dialog(menu: Node) -> bool:

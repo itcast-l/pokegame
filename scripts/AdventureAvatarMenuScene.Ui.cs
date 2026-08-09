@@ -16,10 +16,6 @@ public partial class AdventureAvatarMenuScene
 		_previewStageLabel = GetNode<Label>("%SelectedStageLabel");
 		_previewNameLabel = GetNode<Label>("%PreviewNameLabel");
 		_previewStatusLabel = GetNode<Label>("%PreviewStatusLabel");
-		_previewAbilityTitleLabel = GetNode<Label>("%AbilityTitleLabel");
-		_previewAbilityNameLabel = GetNode<Label>("%AbilityNameLabel");
-		_previewAbilityDescriptionScroll = GetNode<ScrollContainer>("%AbilityDescriptionScroll");
-		_previewAbilityDescriptionLabel = GetNode<Label>("%AbilityDescriptionLabel");
 		_previewAvatar = GetNode<CharacterAvatar>("%PreviewAvatar");
 		_previewAvatar.LoadActionFrames = true;
 
@@ -88,9 +84,6 @@ public partial class AdventureAvatarMenuScene
 		FindRequired<ColorRect>("TitleUnderline").Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
 		GetNode<Label>("%AdventureListTitle").AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f));
 		GetNode<Label>("%EnemyListTitle").AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f));
-		_previewAbilityTitleLabel.AddThemeColorOverride("font_color", new Color(0.72f, 0.82f, 0.80f));
-		_previewAbilityNameLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.94f, 0.94f));
-		FindRequired<PanelContainer>("AbilityPreviewCard").AddThemeStyleboxOverride("panel", CreateAbilityCardStyle());
 		FindRequired<PanelContainer>("SelectedStageBadge").AddThemeStyleboxOverride(
 			"panel",
 			CreateBadgeStyle(AdventureRouteAccent));
@@ -125,6 +118,7 @@ public partial class AdventureAvatarMenuScene
 			Mathf.Max(1.0f, viewportSize.Y - AdventureMenuSafeAreaInset * 2.0f));
 		bool compactWidth = viewportSize.X < 1100.0f;
 		bool compactHeight = available.Y < ExpandedAdventureMenuMinimumHeight;
+		bool shortHeight = available.Y < 560.0f;
 		PanelContainer menuPanel = FindRequired<PanelContainer>("AdventureMenuPanel");
 		menuPanel.CustomMinimumSize = new Vector2(
 			Mathf.Min(1160.0f, available.X),
@@ -140,17 +134,14 @@ public partial class AdventureAvatarMenuScene
 		MarginContainer previewMargin = FindRequired<MarginContainer>("EnemyPreviewMargin");
 		SetMargins(previewMargin, compactWidth ? 10 : 22, compactHeight ? 8 : 18, compactWidth ? 10 : 22, compactHeight ? 8 : 18);
 
-		FindRequired<PanelContainer>("PreviewFrame").CustomMinimumSize = new Vector2(0.0f, compactHeight ? 78.0f : 140.0f);
+		FindRequired<PanelContainer>("PreviewFrame").CustomMinimumSize = new Vector2(0.0f, shortHeight ? 112.0f : 160.0f);
 		CharacterAvatar previewAvatar = FindRequired<CharacterAvatar>("PreviewAvatar");
-		previewAvatar.CustomMinimumSize = new Vector2(compactHeight ? 76.0f : 138.0f, compactHeight ? 76.0f : 138.0f);
-		previewAvatar.PortraitScale = compactHeight ? 0.64f : 0.8f;
-		FindRequired<PanelContainer>("AbilityPreviewCard").CustomMinimumSize = new Vector2(0.0f, compactHeight ? 82.0f : 148.0f);
+		previewAvatar.CustomMinimumSize = new Vector2(shortHeight ? 108.0f : 158.0f, shortHeight ? 108.0f : 158.0f);
+		previewAvatar.PortraitScale = shortHeight ? 0.72f : 0.86f;
 		FindRequired<PanelContainer>("SelectedStageBadge").CustomMinimumSize = new Vector2(compactWidth ? 76.0f : 96.0f, compactHeight ? 34.0f : 42.0f);
 		FindRequired<OceanMenuButtonFrame>("StartFrame").CustomMinimumSize = new Vector2(compactWidth ? 180.0f : 224.0f, compactHeight ? 44.0f : 56.0f);
 		GetNode<Label>("%TitleLabel").AddThemeFontSizeOverride("font_size", compactHeight ? 29 : 36);
 		_previewNameLabel.AddThemeFontSizeOverride("font_size", compactHeight ? 24 : 30);
-		_previewAbilityNameLabel.AddThemeFontSizeOverride("font_size", compactHeight ? 17 : 21);
-		_previewAbilityDescriptionLabel.AddThemeFontSizeOverride("font_size", compactHeight ? 14 : 16);
 
 		foreach (OceanMenuButtonFrame frame in _adventureFrames.Values)
 		{

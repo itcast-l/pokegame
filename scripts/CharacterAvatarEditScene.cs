@@ -13,11 +13,7 @@ public partial class CharacterAvatarEditScene : Control
 	public string CurrentPlayerName { get; set; } = PlayerNameRules.DefaultPlayerName;
 	public PanelContainer DialogPanel { get; private set; } = default!;
 
-	private static readonly Color ValidNameHintColor = new(
-		MainMenuInteractiveStyle.PauseDerivedSecondaryText.R,
-		MainMenuInteractiveStyle.PauseDerivedSecondaryText.G,
-		MainMenuInteractiveStyle.PauseDerivedSecondaryText.B,
-		0.88f);
+	private static readonly Color ValidNameHintColor = new(0.76f, 1.0f, 0.95f, 1.0f);
 	private static readonly Color EmptyNameHintColor = MainMenuInteractiveStyle.PauseDerivedGold;
 
 	private ColorRect _scrim = default!;
@@ -98,6 +94,7 @@ public partial class CharacterAvatarEditScene : Control
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
 		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+		ApplyAvatarEditTypography();
 		RefreshLocalizedText();
 		ApplyPreviewAvatar();
 		ApplyPlayerNameInput();
@@ -109,6 +106,7 @@ public partial class CharacterAvatarEditScene : Control
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
 			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+			ApplyAvatarEditTypography();
 			RefreshLocalizedText();
 		}
 	}
@@ -192,7 +190,6 @@ public partial class CharacterAvatarEditScene : Control
 			optionSlot.Avatar.PlayIdle();
 			optionSlot.Panel.Modulate = Colors.White;
 			ConfigureAvatarOptionFrame(optionSlot.Root);
-			optionSlot.Button.TooltipText = Localize("AVATAR_EDIT_OPTION_TOOLTIP");
 			optionSlot.Button.FocusMode = Control.FocusModeEnum.All;
 			optionSlot.Button.FocusEntered += () => SelectAvatar(avatarDefinition.Id);
 			optionSlot.Button.Pressed += () => SelectAvatar(avatarDefinition.Id);
@@ -521,7 +518,10 @@ public partial class CharacterAvatarEditScene : Control
 			_playerNameHint.Text = Localize("AVATAR_EDIT_PLAYER_NAME_HINT_INVALID");
 		}
 
-		_playerNameHint.Modulate = isValidName ? ValidNameHintColor : EmptyNameHintColor;
+		_playerNameHint.Modulate = Colors.White;
+		_playerNameHint.AddThemeColorOverride(
+			"font_color",
+			isValidName ? ValidNameHintColor : EmptyNameHintColor);
 		_confirmButton.Disabled = !isValidName;
 	}
 
@@ -534,14 +534,6 @@ public partial class CharacterAvatarEditScene : Control
 		_playerNameKickerLabel.Text = Localize("AVATAR_EDIT_PLAYER_NAME_LABEL");
 		_playerNameInput.PlaceholderText = Localize("AVATAR_EDIT_PLAYER_NAME_PLACEHOLDER");
 		_confirmButton.Text = Localize("AVATAR_EDIT_SAVE");
-
-		foreach (Button button in _optionButtons.Values)
-		{
-			if (GodotObject.IsInstanceValid(button))
-			{
-				button.TooltipText = Localize("AVATAR_EDIT_OPTION_TOOLTIP");
-			}
-		}
 
 		UpdatePlayerNameHint();
 	}

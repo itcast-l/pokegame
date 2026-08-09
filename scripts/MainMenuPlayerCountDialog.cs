@@ -198,14 +198,12 @@ public partial class MainMenuPlayerCountDialog : Control
 	{
 		_titleLabel.Text = localize("MENU_SINGLE_PLAYER");
 		_backButton.Text = localize("ADVENTURE_BACK");
-		_backButton.TooltipText = string.Empty;
 		_messageLabel.Text = localize("PLAYER_COUNT_MESSAGE");
 		_playersLabel.Text = localize("PLAYER_COUNT_PLAYERS");
 		_difficultyLabel.Text = localize("PLAYER_COUNT_DIFFICULTY");
 		_itemModeLabel.Text = localize("PLAYER_COUNT_ITEM_MODE");
 		_winningScoreLabel.Text = localize("PLAYER_COUNT_WINNING_SCORE");
 		_startButton.Text = localize("PLAYER_COUNT_START_GAME");
-		_startButton.TooltipText = localize("PLAYER_COUNT_START_GAME");
 
 		for (int index = 0; index < PlayerCountOption.ItemCount; index++)
 		{

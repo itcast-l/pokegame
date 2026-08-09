@@ -142,7 +142,6 @@ public partial class MainMenuScene : Control
 		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(avatarId);
 		_playerName = PlayerNameRules.Normalize(playerName);
 		ApplySelectedAvatar();
-		ApplyPlayerName();
 		SavePlayerProfile();
 	}
 
@@ -154,16 +153,6 @@ public partial class MainMenuScene : Control
 		}
 
 		_avatarEntry.SetAvatar(CharacterAvatarCatalog.GetById(_selectedAvatarId));
-	}
-
-	private void ApplyPlayerName()
-	{
-		if (_avatarEntry == null || !GodotObject.IsInstanceValid(_avatarEntry))
-		{
-			return;
-		}
-
-		_avatarEntry.SetPlayerName(_playerName);
 	}
 
 }

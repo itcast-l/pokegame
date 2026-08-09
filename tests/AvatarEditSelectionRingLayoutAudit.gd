@@ -28,6 +28,9 @@ func _run() -> void:
 	for _frame in range(SETTLE_FRAMES):
 		await process_frame
 
+	if not _audit_readable_typography(node):
+		return
+
 	var scroll := node.get_node_or_null("%GridScroll") as ScrollContainer
 	if scroll == null:
 		_fail("Missing avatar grid scroll container")
@@ -114,6 +117,46 @@ func _run() -> void:
 	print("AVATAR_EDIT_SELECTION_RING_LAYOUT_AUDIT_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
+
+
+func _audit_readable_typography(node: Node) -> bool:
+	var specs := [
+		{"path": "%Title", "min_size": 30, "min_outline": 2},
+		{"path": "%BackButton", "min_size": 18, "min_outline": 1},
+		{"path": "%ConfirmButton", "min_size": 18, "min_outline": 1},
+		{
+			"path": "DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewKicker",
+			"min_size": 16,
+			"min_outline": 1,
+		},
+		{
+			"path": "DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint",
+			"min_size": 15,
+			"min_outline": 1,
+		},
+	]
+
+	for spec in specs:
+		var control := node.get_node_or_null(spec.path) as Control
+		if control == null:
+			_fail("Missing avatar typography control: %s" % spec.path)
+			return false
+		if control.get_theme_font_size("font_size") < int(spec.min_size) \
+				or control.get_theme_constant("outline_size") < int(spec.min_outline):
+			_fail("Avatar typography is too light or small: %s" % control.get_path())
+			return false
+		var font := control.get_theme_font("font") as FontVariation
+		if font == null or font.variation_embolden <= 0.0:
+			_fail("Avatar typography is missing its readable font variation: %s" % control.get_path())
+			return false
+
+	var hint := node.get_node_or_null(
+		"DialogCenter/DialogPanel/DialogMargin/DialogLayout/Body/PreviewPanel/PreviewMargin/PreviewLayout/PreviewControls/PlayerNameHint") as Label
+	if hint == null or hint.get_theme_color("font_color").a < 0.95:
+		_fail("Player name hint does not have sufficient text opacity")
+		return false
+
+	return true
 
 
 func _rect_is_inside(inner: Rect2, outer: Rect2) -> bool:

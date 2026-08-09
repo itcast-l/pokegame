@@ -1,0 +1,20 @@
+Perform a surgical cleanup edit on reference image 1, which is the accepted 12-frame Kaiser K IDLE animation sheet. Preserve the exact same 12 poses, pose order, animation timing, character identity, anatomy, stable neck shape, blink, pearl highlight, mane-tip motion, scale, position, crop, antlers, armor, colors, drawing style, and cel shading. Do not redesign any frame and do not add new motion.
+
+Remove all generation residue and make every frame production-clean:
+- Remove every stray stroke, detached sliver, loose pixel cluster, fuzzy fragment, and accidental protruding line outside the intended silhouette.
+- In particular, completely remove the thin purple/magenta horizontal trails extending from the rear mane in frames 10 and 11. Restore those mane tips as short, clean, intentional navy/blue fin tips consistent with the other frames.
+- Remove all purple, violet, pink, and magenta color contamination from antler edges, mane edges, shoulder edges, armor edges, and the lower bust edge in all 12 frames.
+- The character palette must contain only deep navy, royal blue, cyan, ivory, antique silver, black/navy contour shading, and the established pale cyan pearl. No purple, violet, pink, or magenta may appear anywhere on the character.
+- Give the complete outer silhouette a crisp continuous dark-navy contour. The contour must be clean and intentional, without fuzzy colored fringe, translucent-looking halo, color bleed, double outlines, or broken speckles.
+- At every character/background boundary, use a hard clean separation: either intentional opaque character color inside the navy contour or exact background magenta outside. Do not blend the background magenta into the character edge.
+
+Critical stability lock:
+- Keep the jaw, mouth, throat, pale cyan neck, outer neck contour, chest, shoulder armor, breastplate, pearl size, and pearl position visually identical across all 12 frames.
+- No breathing, swelling, bulging, pulsing, stretching, contracting, bobbing, or sliding in those areas.
+- Keep the same near-still dignified idle; only the existing restrained eye blink, tiny rear-mane-tip movement, and pearl surface highlight shift may remain.
+
+Sheet and background lock:
+- Keep exactly 12 cells arranged as 4 columns by 3 rows, read left to right across each row.
+- Keep one complete centered bust in every cell, with the existing scale and generous background margin. Nothing may touch or cross a cell boundary.
+- Background must be perfectly uniform, flat, exact solid #FF00FF across the entire sheet, including all corners and gutters. No gradient, noise, shadow, glow, halo, texture, color variation, or compression artifacts.
+- No visible grid, borders, labels, text, numbers, watermark, UI, detached effects, particles, extra character, scenery, circle, frame, or pedestal.

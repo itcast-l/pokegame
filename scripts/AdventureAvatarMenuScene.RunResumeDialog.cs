@@ -91,20 +91,6 @@ public partial class AdventureAvatarMenuScene
 		}
 	}
 
-	private void ShowRunResumeDialogIfActive()
-	{
-		if (!_isEmbeddedVisualWarmup
-			&& IsVisibleInTree()
-			&& !_isStartingAdventure
-			&& !_isReturningToMainMenu
-			&& _selectedAdventureId == AdventureCampaignCatalog.MainCampaignId
-			&& (GetAdventureRunSessionStore()?.HasActiveRun == true
-				|| GetAdventureRunSessionStore()?.RequiresRunRecovery == true))
-		{
-			ShowRunResumeDialog();
-		}
-	}
-
 	private void HideRunResumeDialog()
 	{
 		if (_runResumeDialog == null || !GodotObject.IsInstanceValid(_runResumeDialog))

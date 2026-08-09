@@ -1,0 +1,20 @@
+Create a production-ready four-keyframe IDLE animation sheet for the exact same Dragon Queen Q / Quina Q 2D game avatar shown in the reference image.
+
+Identity and style lock:
+- Use the reference image as the exact character identity, palette, silhouette, drawing style, scale, and composition reference.
+- Preserve her elegant female aquatic-dragon face, long clean white muzzle, single visible amber eye, compact three-point gold crown, two swept white fin horns, three large cyan-blue and purple mane masses, white-lavender neck, small coral chest jewel, white-blue royal shoulder armor, and three-quarter view facing left.
+- Preserve the restrained hand-authored game-avatar finish: dark navy contour, broad clean color shapes, controlled cel shading, and sparse scale marks. Do not add fine hair strands, dense micro-scales, filigree, extra jewelry, new spikes, or realistic material texture.
+- Preserve the complete self-contained bust silhouette with a tapered irregular lower edge. Never create a flat horizontal crop or rectangular torso block.
+
+Sheet layout and motion:
+- Exactly four equal square cells in a 2x2 grid, read left to right then top to bottom.
+- Frame 1: neutral regal pose, amber eye fully open.
+- Frame 2: identical frozen pose, only the upper eyelid lowers halfway.
+- Frame 3: identical frozen pose, eye gently closed.
+- Frame 4: identical frozen pose, eye fully open again.
+- Treat the body, head, crown, horns, mane, shoulders, armor, crop, scale, center, and lower silhouette as one locked animation cel. Only the eyelid changes. No bobbing, swaying, turning, morphing, breathing displacement, or costume changes.
+
+Containment and background:
+- Keep the full bust inside the central 70% of every cell with generous solid-magenta padding on all four sides. The character must not touch any cell edge.
+- Background must be perfectly flat solid #FF00FF in every pixel outside the character, with no gradient, shadow, glow, halo, texture, or lighting variation. Do not use #FF00FF on the character.
+- No text, labels, numbers, UI, visible grid lines, cell borders, watermark, weapon, hands, detached effects, extra character, scenery, or pedestal.

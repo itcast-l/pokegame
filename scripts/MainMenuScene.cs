@@ -250,7 +250,6 @@ public partial class MainMenuScene : Control
 		ConfigureMainMenuFocus();
 		LoadSettings();
 		ApplySelectedAvatar();
-		ApplyPlayerName();
 		SyncSettingsControls();
 		ApplySettings();
 		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);

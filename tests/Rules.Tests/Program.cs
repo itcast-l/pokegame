@@ -182,6 +182,7 @@ internal static partial class Program
 		Run("localization scripts match high risk locales", LocalizationScriptsMatchHighRiskLocales);
 		Run("runtime scenes do not expose hardcoded natural language text", RuntimeScenesDoNotExposeHardcodedNaturalLanguageText);
 		Run("runtime C sharp does not assign hardcoded natural language text", RuntimeCSharpDoesNotAssignHardcodedNaturalLanguageText);
+		Run("runtime buttons never declare hover tooltip text", RuntimeButtonsNeverDeclareHoverTooltipText);
 		Run("release presets exclude localization development scenes", ReleasePresetsExcludeLocalizationDevelopmentScenes);
 		Run("localization fonts are project owned and locale selected", LocalizationFontsAreProjectOwnedAndLocaleSelected);
 		Run("avatar feedback effect resources stay contiguous", AvatarFeedbackEffectResourcesStayContiguous);

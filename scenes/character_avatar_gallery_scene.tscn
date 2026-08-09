@@ -13,8 +13,8 @@
 [ext_resource type="Texture2D" uid="uid://b2557w63h4hkg" path="res://art/characters/player_nautilus_avatar/run-001/idle/processed/idle-1.png" id="11_nautilus"]
 [ext_resource type="Texture2D" uid="uid://cbokatlynw0w3" path="res://art/characters/player_narwhal_avatar/run-001/idle/processed/idle-1.png" id="12_narwhal"]
 [ext_resource type="Texture2D" uid="uid://8wo446w3wy5u" path="res://art/characters/player_leafy_seadragon_avatar/run-001/idle/processed/idle-1.png" id="13_leafy_seadragon"]
-[ext_resource type="Texture2D" uid="uid://b3bca7eo5xcjm" path="res://art/characters/player_dragon_prince_avatar/run-001/idle/processed/idle-1.png" id="14_dragon_prince"]
-[ext_resource type="Texture2D" uid="uid://d3cskagl32jga" path="res://art/characters/player_dragon_queen_avatar/run-001/idle/processed/idle-1.png" id="15_dragon_queen"]
+[ext_resource type="Texture2D" uid="uid://dehlqdtwdgcob" path="res://art/characters/player_dragon_prince_avatar/run-002/idle/processed/idle-1.png" id="14_dragon_prince"]
+[ext_resource type="Texture2D" path="res://art/characters/player_dragon_queen_avatar/run-002/idle/processed/idle-1.png" id="15_dragon_queen"]
 [ext_resource type="Texture2D" uid="uid://da5ly8uu4sl8c" path="res://art/characters/boss_k_avatar/run-001/idle/processed/idle-1.png" id="16_boss"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_selected"]

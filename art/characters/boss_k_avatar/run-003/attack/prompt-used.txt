@@ -1,0 +1,13 @@
+Create a production-ready 12-frame ATTACK BODY sheet for the accepted Kaiser K Ascendant avatar.
+
+Identity lock:
+- Preserve the run-008 cyan-blue dragon emperor exactly: mature face, narrow cyan eye, branching ivory coral crown, royal-blue and navy fin mane, pale cyan throat, antique-silver regalia, single cyan pearl, three-quarter-left bust, and tapered lower silhouette.
+- Match the bright hand-authored project style, dark-navy contour, broad color masses, and restrained cel shading.
+
+Layout and motion:
+- Exactly 12 equal square cells in a 4-column by 3-row grid.
+- Neutral, compact wind-up, forward drive, controlled bite-roar, follow-through, and neutral recovery.
+- Move only head, jaw, upper neck, and attached mane fins. Keep shoulders, pearl, lower chest, lower silhouette, scale, and anchor stable.
+- Body only. No projectile, slash, impact, bubbles, smoke, particles, trail, aura, or detached FX.
+- Keep every complete bust inside its cell with generous padding. Nothing crosses a cell edge.
+- Flat exact #FF00FF background. No grid, text, UI, scenery, gold, or extra ornaments.

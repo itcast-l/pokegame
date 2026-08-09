@@ -24,9 +24,6 @@ public partial class AdventureAvatarMenuScene
 		ApplyAdventureTextStyle(_previewStageLabel, interactiveFont, 1);
 		ApplyAdventureTextStyle(_previewNameLabel, displayFont, 1);
 		ApplyAdventureTextStyle(_previewStatusLabel, interactiveFont, 1);
-		ApplyAdventureTextStyle(_previewAbilityTitleLabel, bodyFont, 1);
-		ApplyAdventureTextStyle(_previewAbilityNameLabel, interactiveFont, 1);
-		ApplyAdventureTextStyle(_previewAbilityDescriptionLabel, bodyFont, 1);
 
 		foreach (OceanMenuButtonFrame frame in _adventureFrames.Values)
 		{

@@ -77,6 +77,7 @@ public partial class GameAudioManager : Node
 	private const float TensionRelativeVolumeDb = -5.0f;
 	private const int MaxPooledSfxPlayers = 32;
 	private static readonly StringName UiAudioBoundMeta = new("game_audio_ui_bound");
+	private static readonly StringName UiTooltipSuppressionBoundMeta = new("game_ui_tooltip_suppression_bound");
 	public static readonly StringName UiSuppressPressedSfxMeta = new("game_audio_ui_suppress_pressed_sfx");
 
 	private sealed class MusicTrackSpec

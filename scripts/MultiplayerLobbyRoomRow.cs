@@ -105,7 +105,6 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 		}
 
 		string tooltipText = string.Join(" / ", tooltipParts);
-		JoinButton.TooltipText = tooltipText;
 		TooltipText = tooltipText;
 	}
 

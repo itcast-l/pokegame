@@ -164,6 +164,21 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 	for child in level_list.get_children():
 		if not _assert_unified_list_entry(child as Control, "%s enemy entry" % context):
 			return false
+	if not await _assert_enemy_hover_feedback(level_list, viewport_size, context):
+		return false
+	if _menu.find_child("AbilityPreviewCard", true, false) != null \
+			or _menu.find_child("AbilityTitleLabel", true, false) != null \
+			or _menu.find_child("AbilityNameLabel", true, false) != null \
+			or _menu.find_child("AbilityDescriptionLabel", true, false) != null:
+		_fail("%s still exposes enemy ability details in the preview" % context)
+		return false
+	var preview_frame := _menu.get_node_or_null(
+		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/PreviewFrame") as PanelContainer
+	var preview_spacer := _menu.get_node_or_null(
+		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/PreviewActionSpacer") as Control
+	if preview_frame == null or preview_spacer == null or preview_spacer.size.y <= 0.0:
+		_fail("%s enemy preview does not rebalance the removed ability space" % context)
+		return false
 
 	var start_frame := _menu.get_node_or_null("SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/EnemyPreviewPanel/EnemyPreviewMargin/EnemyPreviewLayout/StartWrap/StartFrame") as Control
 	var start_button := _menu.get_node_or_null("%StartButton") as Button
@@ -190,6 +205,49 @@ func _assert_unified_list_entry(entry: Control, context: String) -> bool:
 		_fail("%s is below the minimum interaction size: %s" % [context, entry.size])
 		return false
 	return true
+
+
+func _assert_enemy_hover_feedback(
+		level_list: VBoxContainer,
+		viewport_size: Vector2i,
+		context: String) -> bool:
+	if level_list.get_child_count() < 2:
+		_fail("%s needs two enemy entries for hover feedback validation" % context)
+		return false
+	var selected_entry := level_list.get_child(0) as Control
+	var hover_entry := level_list.get_child(1) as Control
+	var hover_button := hover_entry.get_node_or_null("Button") as Button
+	if selected_entry == null or hover_entry == null or hover_button == null:
+		_fail("%s is missing the enemy hover feedback controls" % context)
+		return false
+	if bool(hover_entry.get("HighlightFocus")):
+		_fail("%s enemy hover feedback still duplicates keyboard focus glow" % context)
+		return false
+
+	hover_button.emit_signal("mouse_entered")
+	if not await _wait_for_frame_glow(hover_entry, 0.94, true):
+		_fail("%s enemy row did not reach its hover highlight" % context)
+		return false
+	if bool(hover_entry.get("Selected")) or not bool(selected_entry.get("Selected")):
+		_fail("%s hover feedback changed the committed enemy selection" % context)
+		return false
+	if not await _capture_optional_screenshot("enemy-hover", viewport_size):
+		return false
+
+	hover_button.emit_signal("mouse_exited")
+	if not await _wait_for_frame_glow(hover_entry, 0.02, false):
+		_fail("%s enemy row hover highlight did not clear" % context)
+		return false
+	return true
+
+
+func _wait_for_frame_glow(frame: Control, threshold: float, increasing: bool) -> bool:
+	for _frame in 90:
+		var glow := float(frame.call("DebugGetGlow"))
+		if (increasing and glow >= threshold) or (not increasing and glow <= threshold):
+			return true
+		await process_frame
+	return false
 
 
 func _audit_main_menu_entry() -> bool:

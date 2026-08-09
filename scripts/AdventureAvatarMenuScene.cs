@@ -34,10 +34,6 @@ public partial class AdventureAvatarMenuScene : Control
 	private Label _previewStageLabel = default!;
 	private Label _previewNameLabel = default!;
 	private Label _previewStatusLabel = default!;
-	private Label _previewAbilityTitleLabel = default!;
-	private Label _previewAbilityNameLabel = default!;
-	private Label _previewAbilityDescriptionLabel = default!;
-	private ScrollContainer _previewAbilityDescriptionScroll = default!;
 	private CharacterAvatar? _previewAvatar;
 	private AvatarUnlockPrompt? _avatarUnlockPromptRoot;
 	private Control? _avatarUnlockPromptPanel;
@@ -97,7 +93,6 @@ public partial class AdventureAvatarMenuScene : Control
 		FocusDefaultControlDeferred();
 		CallDeferred(nameof(PlayAdventureMenuMusicIfStandalone));
 		CallDeferred(nameof(ShowPendingAdventureAvatarUnlockPrompt));
-		CallDeferred(nameof(ShowRunResumeDialogIfActive));
 	}
 
 	public override void _Notification(int what)

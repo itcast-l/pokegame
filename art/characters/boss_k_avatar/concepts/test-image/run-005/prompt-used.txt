@@ -1,0 +1,29 @@
+Create one definitive production-quality 2D game character portrait of KAISER K, the ancient abyssal dragon emperor and final boss of the game.
+
+Character authority and pose:
+- This must immediately read as the ultimate ruler and final encounter, not a friendly dragon, ordinary elite enemy, decorative mascot, or player companion.
+- Show a massive male dragon-emperor bust from the upper chest upward in a near-frontal three-quarter view. His armored torso faces the viewer while his head turns only slightly toward screen-left.
+- He looks directly down toward the viewer with calm, merciless intelligence. Closed mouth, severe expression, dominant posture, no roaring and no exaggerated rage.
+- Make the shoulders broad and heavy, the neck powerful but compact, and the head large enough to remain readable as a 128x128 game avatar.
+
+Distinct final-boss silhouette:
+- Replace delicate branching coral antlers with a monumental imperial horn crown: six thick primary horns, ivory at the cutting edges and obsidian near the roots, sweeping upward and backward as one coherent crown silhouette.
+- The horn crown must feel architectural and royal, like a black-iron diadem grown from an ancient leviathan. Use a few large readable shapes, not a thicket of thin branches.
+- Give him a hard angular brow, a long predatory dragon muzzle, one pair of narrow cold-cyan slit eyes, layered cheek armor, and a swept-back abyssal fin mantle that reads like a royal cloak.
+- Keep the complete bust compact and self-contained. No loose tendrils, stray spikes, thin whiskers, detached ornaments, or fragile protrusions.
+
+Materials and palette:
+- Main scales are obsidian navy and near-black blue, with broad cobalt planes and restrained cold-cyan light visible only in the eyes, throat seams, and central core.
+- Armor is blackened antique silver with restrained aged-gold crown trim. Use large geometric imperial plates around the shoulders and chest, not delicate jewelry or filigree.
+- Place one dark abyssal core at the center of the gorget: a black pearl-like stone held inside a thick aged-gold setting, with a narrow cyan inner ring. It must feel like a sealed source of power, not a cute glowing gem.
+- Palette balance: mostly obsidian/navy, supported by ivory, blackened silver, aged gold, and sparse cyan. No purple, magenta, pink, rainbow colors, or warm orange glow.
+
+Art direction and readability:
+- Clean high-end hand-authored 2D game-avatar illustration with crisp dark contour, confident medium line weight, broad controlled shapes, hard cel-shaded planes, selective painted highlights, and low texture noise.
+- Sophisticated dark-fantasy oceanic design, but optimized for small UI readability. Favor strong silhouette, face, crown, shoulders, and core over micro-detail.
+- Do not make pixel art. Do not make a glossy 3D render, photorealistic creature, soft airbrushed painting, anime human, furry animal, feathered bird-dragon, skeletal undead, or generic Western red dragon.
+- Avoid excessive spikes, dense scales, tiny engravings, chains, dangling jewelry, decorative clutter, and overexposed cyan glow.
+
+Composition:
+- One character only, centered in a square image. The bust fills about 78% of the canvas while every horn and shoulder remains fully visible with clean margin.
+- Use a simple matte charcoal-to-black neutral background with a very subtle grounded cool halo behind the silhouette only. No scenery, throne, ocean, particles, aura rings, magic effects, smoke, flames, weapon, hands, wings, text, letters, logo, UI, border, frame, badge, or watermark.

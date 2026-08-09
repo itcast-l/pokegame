@@ -22,7 +22,6 @@ public partial class AdventureAvatarMenuScene
 
 		foreach ((string avatarId, OceanMenuButtonFrame frame) in _avatarFrames)
 		{
-			CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(avatarId);
 			int stageNumber = GetStageNumber(avatarId);
 			bool isUnlocked = IsStageUnlocked(avatarId);
 			bool isCompleted = IsStageCompleted(avatarId);
@@ -35,9 +34,6 @@ public partial class AdventureAvatarMenuScene
 			{
 				button.Disabled = !isUnlocked;
 				button.MouseFilter = isUnlocked ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
-				button.TooltipText = isUnlocked
-					? LocalizeAvatarDisplayName(avatarDefinition)
-					: Tr("ADVENTURE_LOCKED").ToString();
 			}
 
 			if (_stageAvatars.TryGetValue(avatarId, out CharacterAvatar? avatar))
@@ -76,13 +72,6 @@ public partial class AdventureAvatarMenuScene
 		_previewStageLabel.Text = FormatStageNumber(displayStageNumber);
 		_previewNameLabel.Text = LocalizeAvatarDisplayName(avatarDefinition);
 		_previewStatusLabel.Text = GetStageStatusText(stageNumber);
-		_previewAbilityTitleLabel.Text = Tr("ADVENTURE_ABILITY_TITLE").ToString();
-		_previewAbilityNameLabel.Text = Tr(avatarDefinition.AdventureAbilityNameKey).ToString();
-		_previewAbilityDescriptionLabel.Text = Tr(avatarDefinition.AdventureAbilityDescriptionKey).ToString();
-		if (_previewAbilityDescriptionScroll != null && GodotObject.IsInstanceValid(_previewAbilityDescriptionScroll))
-		{
-			_previewAbilityDescriptionScroll.ScrollVertical = 0;
-		}
 
 		_previewStatusLabel.AddThemeColorOverride(
 			"font_color",
