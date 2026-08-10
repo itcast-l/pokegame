@@ -2,6 +2,7 @@ extends SceneTree
 
 const VISUAL_PROFILE_META := "secondary_menu_visual_profile"
 const PAUSE_DERIVED_PROFILE := "pause-derived-core-menu"
+const UNIFIED_GLASS_PROFILE := "secondary-menu-unified"
 const VIEWPORT_SPECS := [
 	{"name": "960x540", "size": Vector2i(960, 540)},
 	{"name": "1280x720", "size": Vector2i(1280, 720)},
@@ -15,6 +16,7 @@ const MENU_SPECS := [
 		"focus_control": "BackButton",
 		"focus_frame": "BackFrame",
 		"scrolls": ["GridScroll"],
+		"visual_profile": UNIFIED_GLASS_PROFILE,
 	},
 	{
 		"name": "single-player",
@@ -23,6 +25,7 @@ const MENU_SPECS := [
 		"focus_control": "PlayerCountOption",
 		"focus_frame": "PlayersRowPanel",
 		"scrolls": ["ConfigurationScroll"],
+		"visual_profile": UNIFIED_GLASS_PROFILE,
 	},
 	{
 		"name": "settings",
@@ -31,6 +34,7 @@ const MENU_SPECS := [
 		"focus_control": "MasterVolumeSlider",
 		"focus_frame": "MasterVolumeRowPanel",
 		"scrolls": ["SettingsScroll"],
+		"visual_profile": UNIFIED_GLASS_PROFILE,
 	},
 	{
 		"name": "controls",
@@ -39,6 +43,7 @@ const MENU_SPECS := [
 		"focus_control": "KeyboardButton",
 		"focus_frame": "MoveUpRow",
 		"scrolls": ["RowsScroll"],
+		"visual_profile": UNIFIED_GLASS_PROFILE,
 	},
 	{
 		"name": "exit",
@@ -47,6 +52,7 @@ const MENU_SPECS := [
 		"focus_control": "ConfirmButton",
 		"focus_frame": "ConfirmFrame",
 		"scrolls": [],
+		"visual_profile": UNIFIED_GLASS_PROFILE,
 	},
 ]
 
@@ -165,17 +171,27 @@ func _validate_menu_layout(
 	if not _rect_contains(viewport_rect, _get_canvas_rect(panel), 3.0):
 		_fail("%s panel escapes viewport: %s" % [context, _get_canvas_rect(panel)])
 		return false
+	var expected_profile := str(menu_spec.get("visual_profile", PAUSE_DERIVED_PROFILE))
 	if not menu.has_meta(VISUAL_PROFILE_META) \
-			or str(menu.get_meta(VISUAL_PROFILE_META)) != PAUSE_DERIVED_PROFILE:
-		_fail("%s does not use the pause-derived profile" % context)
+			or str(menu.get_meta(VISUAL_PROFILE_META)) != expected_profile:
+		_fail("%s does not use the expected visual profile %s" % [context, expected_profile])
 		return false
 	var artwork := panel.get_node_or_null("PauseDerivedPanelArtwork") as TextureRect
+	if expected_profile == UNIFIED_GLASS_PROFILE:
+		var glass_surface := panel.get_node_or_null("GlassSurface") as ColorRect
+		var glass_frame := panel.get_node_or_null("GlassFrame") as Panel
+		if artwork != null or glass_surface == null or glass_frame == null \
+				or not _rects_close(_get_canvas_rect(glass_surface), _get_canvas_rect(panel), 2.0) \
+				or not _rects_close(_get_canvas_rect(glass_frame), _get_canvas_rect(panel), 2.0):
+			_fail("%s unified glass layers do not match its panel" % context)
+			return false
+		return _validate_scrolls(menu, menu_spec, panel, context)
 	if artwork == null or not _rects_close(_get_canvas_rect(artwork), _get_canvas_rect(panel), 2.0):
 		_fail("%s panel artwork does not match its panel" % context)
 		return false
 	var removes_center_ornaments := bool(
 		panel.get_meta("pause_derived_center_ornaments_removed", false))
-	if menu_spec.name in ["avatar", "single-player", "settings", "controls"]:
+	if menu_spec.name in ["avatar", "settings", "controls"]:
 		var left_slice := artwork.get_node_or_null("PauseDerivedPanelLeft") as TextureRect
 		var right_slice := artwork.get_node_or_null("PauseDerivedPanelRight") as TextureRect
 		if not removes_center_ornaments or artwork.self_modulate.a > 0.01 \
@@ -192,6 +208,14 @@ func _validate_menu_layout(
 	elif removes_center_ornaments:
 		_fail("%s unexpectedly removes the shared panel ornaments" % context)
 		return false
+	return _validate_scrolls(menu, menu_spec, panel, context)
+
+
+func _validate_scrolls(
+		menu: Control,
+		menu_spec: Dictionary,
+		panel: Control,
+		context: String) -> bool:
 	for scroll_name in menu_spec.scrolls:
 		var scroll := menu.find_child(scroll_name, true, false) as ScrollContainer
 		if scroll == null or scroll.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED \

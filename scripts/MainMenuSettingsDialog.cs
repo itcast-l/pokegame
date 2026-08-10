@@ -33,6 +33,7 @@ public partial class MainMenuSettingsDialog : Control
 	private ColorRect _scrim = default!;
 	private ScrollContainer _settingsScroll = default!;
 	private PanelContainer _categoryPanel = default!;
+	private PanelContainer _settingsContentPanel = default!;
 	private Control _masterVolumeRow = default!;
 	private Control _musicVolumeRow = default!;
 	private Control _muteBgmRow = default!;
@@ -93,6 +94,7 @@ public partial class MainMenuSettingsDialog : Control
 		_controlsCategoryButton = GetNode<Button>("%ControlsCategoryButton");
 		_settingsScroll = GetNode<ScrollContainer>("%SettingsScroll");
 		_categoryPanel = GetNode<PanelContainer>("%CategoryPanel");
+		_settingsContentPanel = GetNode<PanelContainer>("%SettingsContentPanel");
 		_resetButton = GetNode<Button>("%ResetDefaultsButton");
 		_doneButton = GetNode<Button>("%DoneButton");
 		_scrim = GetNode<ColorRect>("%Scrim");
@@ -105,18 +107,18 @@ public partial class MainMenuSettingsDialog : Control
 		_languageRow = FindRequiredControl("LanguageRowPanel");
 
 		_scrim.GuiInput += OnScrimGuiInput;
-		MainMenuInteractiveStyle.ApplyThemedSlider(MasterVolumeSlider, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyThemedSlider(MusicVolumeSlider, MainMenuInteractiveStyle.PauseDerivedPalette);
+		MainMenuInteractiveStyle.ApplyThemedSlider(MasterVolumeSlider, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedSlider(MusicVolumeSlider, MainMenuInteractiveStyle.SecondaryMenuPalette);
 		MasterVolumeSlider.CustomMinimumSize = new Vector2(MasterVolumeSlider.CustomMinimumSize.X, 18.0f);
 		MusicVolumeSlider.CustomMinimumSize = new Vector2(MusicVolumeSlider.CustomMinimumSize.X, 18.0f);
-		MainMenuInteractiveStyle.ApplyThemedToggle(MuteBgmToggle, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyThemedToggle(MuteSfxToggle, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(WindowModeOption, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(ResolutionOption, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyThemedControl(LanguageOption, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
-		ConfigurePauseDerivedVisualStyle();
+		MainMenuInteractiveStyle.ApplyThemedToggle(MuteBgmToggle, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedToggle(MuteSfxToggle, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(WindowModeOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(ResolutionOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyThemedControl(LanguageOption, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		ConfigureUnifiedVisualStyle();
 		_audioCategoryButton.Pressed += () => ShowCategory(SettingsCategory.Audio);
 		_displayCategoryButton.Pressed += () => ShowCategory(SettingsCategory.Display);
 		_languageCategoryButton.Pressed += () => ShowCategory(SettingsCategory.Language);
@@ -145,17 +147,18 @@ public partial class MainMenuSettingsDialog : Control
 			ResolutionOption,
 			LanguageOption);
 		ShowCategory(SettingsCategory.Audio, focusContent: false);
-		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.PauseDerivedVisual);
-		SecondaryMenuGlassStyle.AttachPauseDerived(
+		SecondaryMenuGlassStyle.StyleScrollBar(_settingsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.UnifiedVisual);
+		SecondaryMenuGlassStyle.AttachUniformlyScaled(
 			this,
 			DialogPanel,
 			_scrim,
 			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
-			true,
-			GetNode<PanelContainer>("%SettingsContentPanel"));
+			SecondaryMenuGlassStyle.UnifiedVisual,
+			_categoryPanel,
+			_settingsContentPanel);
 	}
 
-	private void ConfigurePauseDerivedVisualStyle()
+	private void ConfigureUnifiedVisualStyle()
 	{
 		foreach (string frameName in new[]
 		{
@@ -168,28 +171,27 @@ public partial class MainMenuSettingsDialog : Control
 			"LanguageRowPanel",
 		})
 		{
-			ConfigureMinimalFrame(
+			ConfigureUnifiedFrame(
 				frameName,
-				OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow);
+				OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow,
+				MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder,
+				suppressVisuals: true);
 		}
 
-		ConfigureMinimalFrame(
+		ConfigureUnifiedFrame(
 			"ResetDefaultsFrame",
 			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
-			MainMenuInteractiveStyle.PauseDerivedCyan);
-		ConfigureMinimalFrame(
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		ConfigureUnifiedFrame(
 			"DoneFrame",
 			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
-			MainMenuInteractiveStyle.PauseDerivedCyan);
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
 
-		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
-		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedCyan);
-		_audioVolumeSectionLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
-		_audioMuteSectionLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
-		_categoryPanel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-		{
-			BgColor = new Color(0.01f, 0.08f, 0.13f, 0.34f),
-		});
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.FocusText);
+		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		Color sectionAccent = new(0.72f, 0.98f, 0.93f, 0.92f);
+		_audioVolumeSectionLabel.AddThemeColorOverride("font_color", sectionAccent);
+		_audioMuteSectionLabel.AddThemeColorOverride("font_color", sectionAccent);
 		foreach (Label label in new[]
 		{
 			_masterVolumeLabel,
@@ -203,25 +205,35 @@ public partial class MainMenuSettingsDialog : Control
 		{
 			label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
 		}
-		MasterVolumeValue.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
-		MusicVolumeValue.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
-		if (FindChild("TitleUnderline", true, false) is Control underline)
+		MasterVolumeValue.AddThemeColorOverride("font_color", sectionAccent);
+		MusicVolumeValue.AddThemeColorOverride("font_color", sectionAccent);
+		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
 		{
-			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(underline);
+			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
 		}
 	}
 
-	private void ConfigureMinimalFrame(
+	private void ConfigureUnifiedFrame(
 		string frameName,
 		OceanMenuButtonFrame.ButtonFrameStyle frameStyle,
-		Color? accent = null)
+		Color accent,
+		bool suppressVisuals = false)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
 			return;
 		}
 
-		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(frame, frameStyle, accent);
+		frame.FrameStyle = frameStyle;
+		frame.AccentColor = accent;
+		frame.Selected = false;
+		frame.HighlightFocus = true;
+		frame.UseToolRowIdleBackdrop = false;
+		frame.SuppressVisuals = suppressVisuals;
+		frame.CustomMinimumSize = new Vector2(
+			frame.CustomMinimumSize.X,
+			Mathf.Max(54.0f, frame.CustomMinimumSize.Y));
+		frame.QueueRedraw();
 	}
 
 	public void RefreshLocalizedText(Func<string, string> localize)
@@ -320,8 +332,7 @@ public partial class MainMenuSettingsDialog : Control
 
 	private static StyleBoxFlat CreateCategoryButtonStyle(bool selected, bool highlighted)
 	{
-		Color cyan = MainMenuInteractiveStyle.PauseDerivedCyan;
-		Color gold = MainMenuInteractiveStyle.PauseDerivedGold;
+		Color cyan = MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder;
 		return new StyleBoxFlat
 		{
 			BgColor = selected
@@ -329,7 +340,7 @@ public partial class MainMenuSettingsDialog : Control
 				: highlighted
 					? new Color(0.03f, 0.22f, 0.27f, 0.42f)
 					: Colors.Transparent,
-			BorderColor = selected ? gold : new Color(cyan.R, cyan.G, cyan.B, 0.52f),
+			BorderColor = selected ? cyan : new Color(cyan.R, cyan.G, cyan.B, 0.52f),
 			BorderWidthLeft = highlighted && !selected ? 1 : 0,
 			BorderWidthTop = highlighted && !selected ? 1 : 0,
 			BorderWidthRight = selected ? 3 : highlighted ? 1 : 0,

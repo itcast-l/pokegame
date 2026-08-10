@@ -158,6 +158,17 @@ func _run() -> void:
 	if popup_panel_style == null or popup_panel_style.shadow_size != 0:
 		_fail("Difficulty popup reserves horizontal shadow space instead of matching the selector width")
 		return
+	var popup_hover_style := difficulty_popup.get_theme_stylebox("hover", "PopupMenu") as StyleBoxFlat
+	var popup_focus_style := difficulty_popup.get_theme_stylebox("focus", "PopupMenu") as StyleBoxFlat
+	if popup_hover_style == null or popup_focus_style == null \
+			or popup_hover_style.bg_color.get_luminance() \
+					<= popup_panel_style.bg_color.get_luminance() + 0.06 \
+			or popup_hover_style.border_width_left < 2 \
+			or popup_hover_style.border_color.a < 0.75 \
+			or not popup_focus_style.bg_color.is_equal_approx(popup_hover_style.bg_color) \
+			or not popup_focus_style.border_color.is_equal_approx(popup_hover_style.border_color):
+		_fail("Difficulty popup items do not expose a clear shared hover/focus style")
+		return
 	var difficulty_popup_rect := Rect2(Vector2(difficulty_popup.position), Vector2(difficulty_popup.size))
 	if absf(difficulty_popup_rect.position.x - difficulty_option_rect.position.x) > 3.0 \
 			or absf(difficulty_popup_rect.size.x - difficulty_option_rect.size.x) > 3.0:
@@ -165,6 +176,46 @@ func _run() -> void:
 			difficulty_popup_rect,
 			difficulty_option_rect,
 		])
+		return
+	var popup_content_top := popup_panel_style.get_content_margin(SIDE_TOP)
+	var popup_content_height := difficulty_popup_rect.size.y \
+			- popup_panel_style.get_content_margin(SIDE_TOP) \
+			- popup_panel_style.get_content_margin(SIDE_BOTTOM)
+	var popup_item_slot_height := popup_content_height / float(difficulty_popup.item_count)
+	var first_item_hover_position := Vector2(
+		difficulty_popup_rect.size.x * 0.5,
+		popup_content_top + popup_item_slot_height * 0.5)
+	var first_item_sample_position := Vector2i(
+		int(difficulty_popup_rect.size.x - 36.0),
+		int(first_item_hover_position.y))
+	var idle_first_item_pixel := difficulty_popup.get_texture().get_image().get_pixelv(first_item_sample_position)
+	_move_popup_pointer(difficulty_popup, first_item_hover_position)
+	await _wait_frames(5)
+	var hovered_first_item_pixel := difficulty_popup.get_texture().get_image().get_pixelv(first_item_sample_position)
+	if _color_distance(idle_first_item_pixel, hovered_first_item_pixel) < 0.08:
+		_fail("Moving over the first dropdown item did not reveal its hover fill: focus=%d idle=%s hover=%s local=%s size=%s" % [
+			difficulty_popup.get_focused_item(),
+			idle_first_item_pixel,
+			hovered_first_item_pixel,
+			first_item_hover_position,
+			difficulty_popup_rect.size,
+		])
+		return
+	var last_item_hover_position := Vector2(
+		difficulty_popup_rect.size.x * 0.5,
+		popup_content_top + popup_item_slot_height * (difficulty_popup.item_count - 0.5))
+	var last_item_sample_position := Vector2i(
+		int(difficulty_popup_rect.size.x - 36.0),
+		int(last_item_hover_position.y))
+	_move_popup_pointer(difficulty_popup, last_item_hover_position)
+	await _wait_frames(5)
+	var popup_image := difficulty_popup.get_texture().get_image()
+	var moved_first_item_pixel := popup_image.get_pixelv(first_item_sample_position)
+	var hovered_last_item_pixel := popup_image.get_pixelv(last_item_sample_position)
+	if _color_distance(hovered_first_item_pixel, moved_first_item_pixel) < 0.08 \
+			or _color_distance(idle_first_item_pixel, moved_first_item_pixel) > 0.05 \
+			or _color_distance(moved_first_item_pixel, hovered_last_item_pixel) < 0.08:
+		_fail("Moving between dropdown items did not move the visible hover fill")
 		return
 	difficulty_popup.hide()
 	await _wait_frames(3)
@@ -227,6 +278,17 @@ func _move_pointer(position: Vector2) -> void:
 	motion.global_position = position
 	motion.relative = position - previous_position
 	Input.parse_input_event(motion)
+
+
+func _move_popup_pointer(popup: PopupMenu, local_position: Vector2) -> void:
+	var global_position := Vector2(popup.position) + local_position
+	Input.warp_mouse(global_position)
+	var motion := InputEventMouseMotion.new()
+	motion.position = global_position
+	motion.global_position = global_position
+	motion.relative = Vector2(1.0, 0.0)
+	motion.velocity = Vector2(100.0, 0.0)
+	root.push_input(motion, true)
 
 
 func _click_pointer(position: Vector2) -> void:
@@ -295,6 +357,11 @@ func _wait_frames(count: int) -> void:
 func _rects_close(left: Rect2, right: Rect2, tolerance := 2.0) -> bool:
 	return left.position.distance_to(right.position) <= tolerance \
 		and left.size.distance_to(right.size) <= tolerance
+
+
+func _color_distance(left: Color, right: Color) -> float:
+	return Vector4(left.r, left.g, left.b, left.a).distance_to(
+		Vector4(right.r, right.g, right.b, right.a))
 
 
 func _dispose_audio_before_quit() -> void:

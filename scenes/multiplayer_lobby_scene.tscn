@@ -421,7 +421,7 @@ text = ""
 [node name="LanHostInfoLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1975770257]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 14
 text = ""
 autowrap_mode = 2
 

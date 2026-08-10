@@ -9,6 +9,12 @@ public partial class MultiplayerLobbyScene : Control
 	private const string RoomTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomTitle";
 	private const string PlayerTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerTitle";
 	private const string SteamNoteLabelPath = "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel";
+	private const float LobbyTitleFontWeight = 740.0f;
+	private const float LobbySectionFontWeight = 660.0f;
+	private const float LobbyInteractiveFontWeight = 620.0f;
+	private const float LobbyBodyFontWeight = 570.0f;
+	private const float LobbySupportingFontWeight = 550.0f;
+	private static readonly Color LobbyFontOutline = new(0.0f, 0.025f, 0.045f, 0.94f);
 
 	private Label _titleLabel = default!;
 	private Label _modeTitleLabel = default!;
@@ -111,6 +117,7 @@ public partial class MultiplayerLobbyScene : Control
 		ConnectButtonSignals();
 		ConnectNetworkSignals();
 		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+		ApplyReadableTypography();
 		RefreshLocalizedText();
 		RefreshState((int)_network.State);
 		RefreshRooms(_network.GetRoomsVariant());
@@ -127,6 +134,7 @@ public partial class MultiplayerLobbyScene : Control
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
 			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
+			ApplyReadableTypography();
 			RefreshLocalizedText();
 			RefreshState((int)_network.State);
 			RefreshRooms(_network.GetRoomsVariant());
@@ -253,9 +261,9 @@ public partial class MultiplayerLobbyScene : Control
 
 		_titleLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.95f, 0.97f, 1.0f));
 		StatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
-		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.65f, 0.82f, 0.86f, 0.94f));
+		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.78f, 0.91f, 0.91f, 1.0f));
 		SteamStatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.Text);
-		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.72f, 0.75f, 0.94f));
+		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.76f, 0.86f, 0.88f, 1.0f));
 		foreach (Label sectionTitle in new[]
 		{
 			_modeTitleLabel,
@@ -281,6 +289,78 @@ public partial class MultiplayerLobbyScene : Control
 
 		Resized += () => CallDeferred(nameof(ApplyResponsiveLayout));
 		CallDeferred(nameof(ApplyResponsiveLayout));
+	}
+
+	private void ApplyReadableTypography()
+	{
+		Font titleFont = LocalizationTypography.CreateCurrentFontVariation(LobbyTitleFontWeight, 0.90f);
+		Font sectionFont = LocalizationTypography.CreateCurrentFontVariation(LobbySectionFontWeight, 0.62f);
+		Font interactiveFont = LocalizationTypography.CreateCurrentFontVariation(LobbyInteractiveFontWeight, 0.50f);
+		Font bodyFont = LocalizationTypography.CreateCurrentFontVariation(LobbyBodyFontWeight, 0.38f);
+		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(LobbySupportingFontWeight, 0.34f);
+
+		ApplyReadableTypographyRecursively(this, bodyFont, interactiveFont);
+		ApplyReadableTextStyle(_titleLabel, titleFont, 2);
+		ApplyReadableTextStyle(StatusLabel, sectionFont, 1);
+		foreach (Label sectionTitle in new[]
+		{
+			_modeTitleLabel,
+			_roomTitleLabel,
+			_playerTitleLabel,
+			GetNode<Label>("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamTitle"),
+		})
+		{
+			ApplyReadableTextStyle(sectionTitle, sectionFont, 1);
+		}
+
+		foreach (Label supportingLabel in new[]
+		{
+			LanHostInfoLabel,
+			_steamNoteLabel,
+			EmptyRoomsLabel,
+			EmptyPlayersLabel,
+		})
+		{
+			ApplyReadableTextStyle(supportingLabel, supportingFont, 1);
+		}
+
+		foreach (OptionButton option in new[] { PlayerCountOption, ItemModeOption, WinningScoreOption })
+		{
+			ApplyReadablePopupTextStyle(option.GetPopup(), interactiveFont);
+		}
+	}
+
+	private static void ApplyReadableTypographyRecursively(Node node, Font bodyFont, Font interactiveFont)
+	{
+		if (node is BaseButton or LineEdit)
+		{
+			ApplyReadableTextStyle((Control)node, interactiveFont, 1);
+		}
+		else if (node is Label or RichTextLabel or TextEdit)
+		{
+			ApplyReadableTextStyle((Control)node, bodyFont, 1);
+		}
+
+		foreach (Node child in node.GetChildren())
+		{
+			ApplyReadableTypographyRecursively(child, bodyFont, interactiveFont);
+		}
+	}
+
+	private static void ApplyReadableTextStyle(Control control, Font font, int outlineSize)
+	{
+		control.AddThemeFontOverride("font", font);
+		control.AddThemeColorOverride("font_outline_color", LobbyFontOutline);
+		control.AddThemeConstantOverride("outline_size", outlineSize);
+	}
+
+	private static void ApplyReadablePopupTextStyle(PopupMenu popup, Font font)
+	{
+		Theme theme = popup.Theme ?? new Theme();
+		theme.SetFont("font", "PopupMenu", font);
+		theme.SetColor("font_outline_color", "PopupMenu", LobbyFontOutline);
+		theme.SetConstant("outline_size", "PopupMenu", 1);
+		popup.Theme = theme;
 	}
 
 	private static void StyleButton(Button button, MainMenuInteractiveStyle.Palette palette)

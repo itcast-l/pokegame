@@ -14,7 +14,6 @@ public partial class MainMenuControlsDialog : Control
 	public delegate void ResetDefaultsRequestedEventHandler();
 
 	private Label _titleLabel = default!;
-	private Label _messageLabel = default!;
 	private Label _keyboardHeader = default!;
 	private Label _gamepadHeader = default!;
 	private Label _captureHintLabel = default!;
@@ -56,7 +55,6 @@ public partial class MainMenuControlsDialog : Control
 	{
 		DialogPanel = GetNode<Control>("%ControlsDialogPanel");
 		_titleLabel = GetNode<Label>("%ControlsTitle");
-		_messageLabel = GetNode<Label>("%ControlsMessage");
 		_keyboardHeader = GetNode<Label>("%KeyboardHeader");
 		_gamepadHeader = GetNode<Label>("%GamepadHeader");
 		_captureHintLabel = GetNode<Label>("%CaptureHint");
@@ -79,8 +77,8 @@ public partial class MainMenuControlsDialog : Control
 			Label label = GetNode<Label>($"{rowLayoutPath}/ActionLabel");
 			Button keyboardButton = GetNode<Button>($"{rowLayoutPath}/KeyboardButton");
 			Button gamepadButton = GetNode<Button>($"{rowLayoutPath}/GamepadButton");
-			MainMenuInteractiveStyle.ApplyThemedControl(keyboardButton, MainMenuInteractiveStyle.PauseDerivedPalette, 16);
-			MainMenuInteractiveStyle.ApplyThemedControl(gamepadButton, MainMenuInteractiveStyle.PauseDerivedPalette, 16);
+			MainMenuInteractiveStyle.ApplyThemedControl(keyboardButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
+			MainMenuInteractiveStyle.ApplyThemedControl(gamepadButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
 			ConfigureBindingCell(keyboardButton);
 			ConfigureBindingCell(gamepadButton);
 			ConfigureBindingRow(row);
@@ -100,44 +98,56 @@ public partial class MainMenuControlsDialog : Control
 			_rows.Add(new RowWidgets(actionId, label, keyboardButton, gamepadButton));
 			if (GetNodeOrNull<OceanMenuButtonFrame>(rowPath) is { } rowFrame)
 			{
-				SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+				ConfigureUnifiedFrame(
 					rowFrame,
-					OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow);
+					OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow,
+					MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder,
+					suppressVisuals: true);
 			}
 		}
 
 		EnableKeyboardFocus(_backButton, _resetButton, _doneButton);
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
-		ConfigurePauseDerivedVisualStyle();
-		SecondaryMenuGlassStyle.StyleScrollBar(_rowsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.PauseDerivedVisual);
-		SecondaryMenuGlassStyle.AttachPauseDerived(
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_resetButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		MainMenuInteractiveStyle.ApplyActionButton(_doneButton, 20, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		ConfigureUnifiedVisualStyle();
+		SecondaryMenuGlassStyle.StyleScrollBar(_rowsScroll.GetVScrollBar(), SecondaryMenuGlassStyle.UnifiedVisual);
+		SecondaryMenuGlassStyle.AttachUniformlyScaled(
 			this,
 			DialogPanel,
 			_scrim,
 			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
-			removeCenterOrnaments: true,
+			SecondaryMenuGlassStyle.UnifiedVisual,
 			GetNode<PanelContainer>("%ControlsContentPanel"));
 	}
 
-	private void ConfigurePauseDerivedVisualStyle()
+	private void ConfigureUnifiedVisualStyle()
 	{
-		ConfigureFrame("BackFrame");
-		ConfigureFrame("ResetDefaultsFrame");
-		ConfigureFrame("DoneFrame");
-		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
-		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
-		_keyboardHeader.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
-		_gamepadHeader.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
-		_captureHintLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+		ConfigureUnifiedFrame(
+			FindRequiredFrame("BackFrame"),
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureUnifiedFrame(
+			FindRequiredFrame("ResetDefaultsFrame"),
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		ConfigureUnifiedFrame(
+			FindRequiredFrame("DoneFrame"),
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.FocusText);
+		Color sectionAccent = new(0.72f, 0.98f, 0.93f, 0.92f);
+		_keyboardHeader.AddThemeColorOverride("font_color", sectionAccent);
+		_gamepadHeader.AddThemeColorOverride("font_color", sectionAccent);
+		_captureHintLabel.AddThemeColorOverride("font_color", sectionAccent);
 		foreach (RowWidgets row in _rows)
 		{
 			row.Label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
 		}
-		if (FindChild("TitleUnderline", true, false) is Control underline)
+		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
 		{
-			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(underline);
+			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
 		}
 		if (FindChild("Rows", true, false) is Container rows)
 		{
@@ -175,11 +185,11 @@ public partial class MainMenuControlsDialog : Control
 		return new StyleBoxFlat
 		{
 			BgColor = active
-				? new Color(0.08f, 0.24f, 0.27f, 0.98f)
-				: new Color(0.015f, 0.12f, 0.17f, 0.86f),
+				? MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveSurface
+				: new Color(0.015f, 0.12f, 0.17f, 0.82f),
 			BorderColor = active
-				? MainMenuInteractiveStyle.PauseDerivedGold
-				: new Color(0.13f, 0.72f, 0.76f, 0.50f),
+				? MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder
+				: MainMenuInteractiveStyle.SecondaryMenuPalette.Border,
 			BorderWidthLeft = 1,
 			BorderWidthTop = 1,
 			BorderWidthRight = 1,
@@ -195,17 +205,32 @@ public partial class MainMenuControlsDialog : Control
 		};
 	}
 
-	private void ConfigureFrame(string frameName)
+	private OceanMenuButtonFrame FindRequiredFrame(string frameName)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
-			return;
+			throw new InvalidOperationException($"Missing controls frame: {frameName}");
 		}
 
-		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
-			frame,
-			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
-			MainMenuInteractiveStyle.PauseDerivedCyan);
+		return frame;
+	}
+
+	private static void ConfigureUnifiedFrame(
+		OceanMenuButtonFrame frame,
+		OceanMenuButtonFrame.ButtonFrameStyle frameStyle,
+		Color accent,
+		bool suppressVisuals = false)
+	{
+		frame.FrameStyle = frameStyle;
+		frame.AccentColor = accent;
+		frame.Selected = false;
+		frame.HighlightFocus = true;
+		frame.UseToolRowIdleBackdrop = false;
+		frame.SuppressVisuals = suppressVisuals;
+		frame.CustomMinimumSize = new Vector2(
+			frame.CustomMinimumSize.X,
+			Mathf.Max(54.0f, frame.CustomMinimumSize.Y));
+		frame.QueueRedraw();
 	}
 
 	public override void _Input(InputEvent inputEvent)
@@ -233,7 +258,6 @@ public partial class MainMenuControlsDialog : Control
 		_localize = localize;
 		_titleLabel.Text = localize("SETTINGS_CONTROLS_TITLE");
 		_backButton.Text = localize("ADVENTURE_BACK");
-		_messageLabel.Text = localize("SETTINGS_CONTROLS_MESSAGE");
 		_keyboardHeader.Text = localize("SETTINGS_CONTROLS_KEYBOARD_HEADER");
 		_gamepadHeader.Text = localize("SETTINGS_CONTROLS_GAMEPAD_HEADER");
 		_resetButton.Text = localize("SETTINGS_RESET_DEFAULTS");

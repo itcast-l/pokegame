@@ -193,10 +193,7 @@ public static class MainMenuInteractiveStyle
 		option.AddThemeConstantOverride("arrow_margin", 0);
 		option.Alignment = HorizontalAlignment.Right;
 		option.ClipText = true;
-		option.GetPopup().Theme = BuildThemedPopupTheme(
-			SecondaryMenuPalette,
-			showSelectionIcons: false,
-			popupShadowSize: 0);
+		option.GetPopup().Theme = BuildSecondaryMenuGameConfigurationPopupTheme();
 	}
 
 	public static void ApplyPauseDerivedGameConfigurationOption(OptionButton option)
@@ -650,6 +647,27 @@ public static class MainMenuInteractiveStyle
 		theme.SetIcon("radio_checked", "PopupMenu", selectedIcon);
 		theme.SetIcon("unchecked", "PopupMenu", idleIcon);
 		theme.SetIcon("radio_unchecked", "PopupMenu", idleIcon);
+		return theme;
+	}
+
+	private static Theme BuildSecondaryMenuGameConfigurationPopupTheme()
+	{
+		Theme theme = BuildThemedPopupTheme(
+			SecondaryMenuPalette,
+			showSelectionIcons: false,
+			popupShadowSize: 0);
+		StyleBoxFlat hoverStyle = CreateThemedControlStyle(SecondaryMenuPalette, active: true);
+		hoverStyle.BgColor = new Color(0.055f, 0.34f, 0.36f, 0.96f);
+		hoverStyle.BorderColor = new Color(0.68f, 1.0f, 0.94f, 0.92f);
+		hoverStyle.BorderWidthLeft = 3;
+		hoverStyle.CornerRadiusTopLeft = 5;
+		hoverStyle.CornerRadiusTopRight = 5;
+		hoverStyle.CornerRadiusBottomLeft = 5;
+		hoverStyle.CornerRadiusBottomRight = 5;
+		theme.SetStylebox("hover", "PopupMenu", hoverStyle);
+		theme.SetStylebox("focus", "PopupMenu", hoverStyle);
+		theme.SetColor("font_hover_color", "PopupMenu", SecondaryMenuPalette.FocusText);
+		theme.SetColor("font_focus_color", "PopupMenu", SecondaryMenuPalette.FocusText);
 		return theme;
 	}
 

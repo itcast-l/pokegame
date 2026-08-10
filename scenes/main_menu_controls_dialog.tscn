@@ -188,15 +188,6 @@ color = Color(0.48, 0.98, 1, 0.52)
 custom_minimum_size = Vector2(126, 56)
 layout_mode = 2
 
-[node name="ControlsMessage" type="Label" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.66, 0.96, 0.92, 0.76)
-theme_override_font_sizes/font_size = 16
-text = "SETTINGS_CONTROLS_MESSAGE"
-horizontal_alignment = 1
-autowrap_mode = 2
-
 [node name="ControlsContentPanel" type="PanelContainer" parent="DialogCenter/ControlsDialogPanel/DialogMargin/DialogLayout"]
 unique_name_in_owner = true
 layout_mode = 2

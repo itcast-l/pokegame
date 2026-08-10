@@ -79,6 +79,8 @@ func _run() -> void:
 	if not await _wait_for_glow(focused_frame, 0.05, false):
 		_fail("Focused main-menu row stayed selected after returning to pointer input")
 		return
+	if not await _audit_exit_dialog_pointer_focus_switch():
+		return
 
 	print("MAIN_MENU_FOCUS_VISIBILITY_SMOKE_OK")
 	if current_scene == menu:
@@ -199,6 +201,76 @@ func _audit_pause_action_label_colors() -> bool:
 			_fail("Pause action label color is inconsistent: %s" % label.get_path())
 			return false
 	pause_menu.queue_free()
+	await process_frame
+	return true
+
+
+func _audit_exit_dialog_pointer_focus_switch() -> bool:
+	var packed_dialog := load("res://scenes/main_menu_exit_dialog.tscn") as PackedScene
+	if packed_dialog == null:
+		_fail("Failed to load the main-menu exit dialog")
+		return false
+	var dialog := packed_dialog.instantiate() as Control
+	root.add_child(dialog)
+	dialog.visible = true
+	dialog.modulate = Color.WHITE
+	await _wait_frames(4)
+
+	var cancel_button := dialog.find_child("CancelButton", true, false) as Button
+	var confirm_button := dialog.find_child("ConfirmButton", true, false) as Button
+	var cancel_frame := dialog.find_child("CancelFrame", true, false) as Control
+	var confirm_frame := dialog.find_child("ConfirmFrame", true, false) as Control
+	if cancel_button == null or confirm_button == null or cancel_frame == null or confirm_frame == null:
+		_fail("Exit dialog action controls are incomplete")
+		return false
+
+	cancel_button.grab_focus()
+	var navigation_event := InputEventKey.new()
+	navigation_event.keycode = KEY_LEFT
+	navigation_event.physical_keycode = KEY_LEFT
+	navigation_event.pressed = true
+	Input.parse_input_event(navigation_event)
+	await process_frame
+	navigation_event.pressed = false
+	Input.parse_input_event(navigation_event)
+	if not await _wait_for_glow(cancel_frame, 0.35, true):
+		_fail("Exit dialog keyboard focus did not highlight the cancel action")
+		return false
+
+	var mouse_event := InputEventMouseMotion.new()
+	mouse_event.position = Vector2.ZERO
+	mouse_event.global_position = Vector2.ZERO
+	Input.parse_input_event(mouse_event)
+	if not await _wait_for_glow(cancel_frame, 0.05, false):
+		_fail("Exit dialog retained its keyboard focus highlight in pointer mode")
+		return false
+
+	confirm_button.emit_signal("mouse_entered")
+	if not await _wait_for_glow(confirm_frame, 0.35, true):
+		_fail("Hovering the exit confirmation action did not brighten its frame")
+		return false
+	if float(cancel_frame.call("DebugGetGlow")) > 0.05:
+		_fail("The focused cancel action stayed bright while confirmation was hovered")
+		return false
+
+	confirm_button.emit_signal("mouse_exited")
+	cancel_button.emit_signal("mouse_entered")
+	if not await _wait_for_glow(confirm_frame, 0.05, false) \
+			or not await _wait_for_glow(cancel_frame, 0.35, true):
+		_fail("Moving the pointer between exit actions did not transfer the hover highlight")
+		return false
+
+	cancel_button.emit_signal("mouse_exited")
+	navigation_event.pressed = true
+	Input.parse_input_event(navigation_event)
+	await process_frame
+	navigation_event.pressed = false
+	Input.parse_input_event(navigation_event)
+	if not await _wait_for_glow(cancel_frame, 0.35, true):
+		_fail("Returning to keyboard input did not restore the exit dialog focus highlight")
+		return false
+
+	dialog.queue_free()
 	await process_frame
 	return true
 

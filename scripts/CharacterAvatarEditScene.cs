@@ -70,27 +70,27 @@ public partial class CharacterAvatarEditScene : Control
 		MainMenuInteractiveStyle.ApplyActionButton(
 			_backButton,
 			18,
-			MainMenuInteractiveStyle.PauseDerivedPalette);
+			MainMenuInteractiveStyle.SecondaryMenuPalette);
 		MainMenuInteractiveStyle.ApplyActionButton(
 			_confirmButton,
 			17,
-			MainMenuInteractiveStyle.PauseDerivedPalette);
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
 		MainMenuInteractiveStyle.ApplyThemedLineEdit(
 			_playerNameInput,
-			MainMenuInteractiveStyle.PauseDerivedPalette,
+			MainMenuInteractiveStyle.SecondaryMenuPalette,
 			18);
 		SecondaryMenuGlassStyle.StyleScrollBar(
 			_avatarGridScroll.GetVScrollBar(),
-			SecondaryMenuGlassStyle.PauseDerivedVisual);
-		SecondaryMenuGlassStyle.AttachPauseDerived(
+			SecondaryMenuGlassStyle.UnifiedVisual);
+		SecondaryMenuGlassStyle.AttachUniformlyScaled(
 			this,
 			DialogPanel,
 			_scrim,
 			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
-			true,
+			SecondaryMenuGlassStyle.UnifiedVisual,
 			GetNode<PanelContainer>("%PreviewPanel"),
 			GetNode<PanelContainer>("%AvatarListPanel"));
-		ConfigurePauseDerivedVisualStyle();
+		ConfigureUnifiedVisualStyle();
 		BindAvatarOptions();
 		ConfigureAvatarOptions();
 		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
@@ -267,22 +267,30 @@ public partial class CharacterAvatarEditScene : Control
 		RefreshOptionSelection();
 	}
 
-	private void ConfigurePauseDerivedVisualStyle()
+	private void ConfigureUnifiedVisualStyle()
 	{
-		ConfigureFrame("BackFrame");
-		ConfigureFrame("ConfirmFrame");
-		ConfigureSectionPanels();
-		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
-		_previewKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
-		_avatarListKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
-		_playerNameKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedGold);
-		if (FindChild("TitleUnderline", true, false) is Control titleDivider)
+		ConfigureFrame("BackFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureFrame("ConfirmFrame", MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.FocusText);
+		Color sectionAccent = new(0.72f, 0.98f, 0.93f, 0.92f);
+		_previewKickerLabel.AddThemeColorOverride("font_color", sectionAccent);
+		_avatarListKickerLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.FocusText);
+		_playerNameKickerLabel.AddThemeColorOverride("font_color", sectionAccent);
+		_playerNameInput.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
+		if (FindChild("TitleUnderline", true, false) is ColorRect titleDivider)
 		{
-			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(titleDivider);
+			titleDivider.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
 		}
 		if (FindChild("PreviewGlow", true, false) is PanelContainer previewGlow)
 		{
 			previewGlow.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+		}
+		if (FindChild("PreviewDivider", true, false) is PanelContainer previewDivider)
+		{
+			previewDivider.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+			{
+				BgColor = new Color(0.62f, 1.0f, 0.94f, 0.38f),
+			});
 		}
 	}
 
@@ -300,17 +308,17 @@ public partial class CharacterAvatarEditScene : Control
 	private static StyleBoxFlat CreateAvatarSlotStyle(bool selected, bool hovered)
 	{
 		Color border = selected
-			? MainMenuInteractiveStyle.PauseDerivedGold
-			: MainMenuInteractiveStyle.PauseDerivedCyan;
+			? MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder
+			: MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder;
 		float borderAlpha = selected ? 0.96f : hovered ? 0.66f : 0.28f;
 		int borderWidth = selected ? 2 : 1;
 		return new StyleBoxFlat
 		{
 			BgColor = selected
-				? new Color(0.035f, 0.22f, 0.22f, 0.80f)
+				? new Color(0.035f, 0.22f, 0.22f, 0.76f)
 				: hovered
-					? new Color(0.025f, 0.18f, 0.20f, 0.76f)
-					: new Color(0.018f, 0.115f, 0.14f, 0.68f),
+					? new Color(0.025f, 0.18f, 0.20f, 0.64f)
+					: new Color(0.018f, 0.115f, 0.14f, 0.56f),
 			BorderColor = new Color(
 				border.R,
 				border.G,
@@ -324,57 +332,32 @@ public partial class CharacterAvatarEditScene : Control
 			CornerRadiusTopRight = 10,
 			CornerRadiusBottomLeft = 10,
 			CornerRadiusBottomRight = 10,
-			ShadowColor = new Color(0.0f, 0.012f, 0.024f, selected ? 0.56f : 0.0f),
-			ShadowSize = selected ? 8 : 0,
+			ShadowColor = new Color(0.0f, 0.012f, 0.024f, selected ? 0.38f : 0.0f),
+			ShadowSize = selected ? 6 : 0,
 			ShadowOffset = new Vector2(0.0f, 3.0f),
 		};
 	}
 
-	private void ConfigureSectionPanels()
-	{
-		PanelContainer previewPanel = GetNode<PanelContainer>("%PreviewPanel");
-		PanelContainer avatarListPanel = GetNode<PanelContainer>("%AvatarListPanel");
-		previewPanel.AddThemeStyleboxOverride("panel", CreateSectionStyle(
-			new Color(0.027f, 0.122f, 0.176f, 0.78f),
-			new Color(MainMenuInteractiveStyle.PauseDerivedGold.R,
-				MainMenuInteractiveStyle.PauseDerivedGold.G,
-				MainMenuInteractiveStyle.PauseDerivedGold.B,
-				0.36f)));
-		avatarListPanel.AddThemeStyleboxOverride("panel", CreateSectionStyle(
-			new Color(0.008f, 0.050f, 0.074f, 0.74f),
-			new Color(MainMenuInteractiveStyle.PauseDerivedCyan.R,
-				MainMenuInteractiveStyle.PauseDerivedCyan.G,
-				MainMenuInteractiveStyle.PauseDerivedCyan.B,
-				0.34f)));
-	}
-
-	private static StyleBoxFlat CreateSectionStyle(Color background, Color border)
-	{
-		return new StyleBoxFlat
-		{
-			BgColor = background,
-			BorderColor = border,
-			BorderWidthLeft = 1,
-			BorderWidthTop = 1,
-			BorderWidthRight = 1,
-			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8,
-			ShadowColor = Colors.Transparent,
-			ShadowSize = 0,
-		};
-	}
-
-	private void ConfigureFrame(string frameName)
+	private void ConfigureFrame(string frameName, Color accent)
 	{
 		if (FindChild(frameName, true, false) is OceanMenuButtonFrame frame)
 		{
-			SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
-				frame,
-				OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
-				MainMenuInteractiveStyle.PauseDerivedCyan);
+			frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
+			frame.AccentColor = accent;
+			frame.Selected = false;
+			frame.HighlightFocus = true;
+			frame.UsePlaqueGlowBackdrop = false;
+			frame.UseToolRowIdleBackdrop = false;
+			frame.ShowIdleTexture = false;
+			frame.SuppressVisuals = false;
+			frame.UseNinePatchTexture = false;
+			frame.OceanPlaqueTexture = null;
+			frame.FocusTexture = null;
+			frame.PressedTexture = null;
+			frame.CustomMinimumSize = new Vector2(
+				frame.CustomMinimumSize.X,
+				Mathf.Max(54.0f, frame.CustomMinimumSize.Y));
+			frame.QueueRedraw();
 		}
 	}
 

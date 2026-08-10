@@ -21,6 +21,7 @@ public partial class MainMenuPlayerCountDialog : Control
 	private MarginContainer _dialogMargin = default!;
 	private VBoxContainer _dialogLayout = default!;
 	private HBoxContainer _header = default!;
+	private PanelContainer _configurationPanel = default!;
 	private ScrollContainer _configurationScroll = default!;
 	private GridContainer _configurationRows = default!;
 	private HBoxContainer _startGameWrap = default!;
@@ -63,6 +64,7 @@ public partial class MainMenuPlayerCountDialog : Control
 		_dialogMargin = DialogPanel.GetNode<MarginContainer>("DialogMargin");
 		_dialogLayout = _dialogMargin.GetNode<VBoxContainer>("DialogLayout");
 		_header = _dialogLayout.GetNode<HBoxContainer>("Header");
+		_configurationPanel = GetNode<PanelContainer>("%ConfigurationPanel");
 		_configurationScroll = GetNode<ScrollContainer>("%ConfigurationScroll");
 		_configurationRows = GetNode<GridContainer>("%ConfigurationRows");
 		_startGameWrap = _dialogLayout.GetNode<HBoxContainer>("StartGameWrap");
@@ -79,89 +81,108 @@ public partial class MainMenuPlayerCountDialog : Control
 		_backButton.Pressed += () => EmitSignal(SignalName.CloseRequested);
 		_startButton.Pressed += EmitStartGameRequested;
 		EnableKeyboardFocus(_backButton, PlayerCountOption, DifficultyOption, ItemModeOption, WinningScoreOption, _startButton);
-		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 20, MainMenuInteractiveStyle.PauseDerivedPalette);
-		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(PlayerCountOption);
-		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(DifficultyOption);
-		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(ItemModeOption);
-		MainMenuInteractiveStyle.ApplyPauseDerivedGameConfigurationOption(WinningScoreOption);
-		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 24, MainMenuInteractiveStyle.PauseDerivedPalette);
-		ConfigurePauseDerivedVisualStyle();
+		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 20, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		ApplyUnifiedConfigurationOption(PlayerCountOption);
+		ApplyUnifiedConfigurationOption(DifficultyOption);
+		ApplyUnifiedConfigurationOption(ItemModeOption);
+		ApplyUnifiedConfigurationOption(WinningScoreOption);
+		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 24, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		ConfigureUnifiedVisualStyle();
 		ConfigureConfigurationFocusScrolling(
 			PlayerCountOption,
 			DifficultyOption,
 			ItemModeOption,
 			WinningScoreOption);
-		SecondaryMenuGlassStyle.AttachPauseDerived(
+		SecondaryMenuGlassStyle.Attach(
 			this,
 			DialogPanel,
 			_scrim,
 			SecondaryMenuGlassStyle.PauseDerivedCoreDesignSize,
-			removeCenterOrnaments: true);
+			SecondaryMenuGlassStyle.UnifiedVisual,
+			_configurationPanel);
 		SecondaryMenuGlassStyle.StyleScrollBar(
 			_configurationScroll.GetVScrollBar(),
-			SecondaryMenuGlassStyle.PauseDerivedVisual);
+			SecondaryMenuGlassStyle.UnifiedVisual);
 		Resized += ApplyResponsiveDensity;
 		ApplyResponsiveDensity();
 	}
 
-	private void ConfigurePauseDerivedVisualStyle()
+	private static void ApplyUnifiedConfigurationOption(OptionButton option)
+	{
+		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(option);
+		option.Alignment = HorizontalAlignment.Left;
+		if (option.GetThemeStylebox("normal") is StyleBoxFlat normalStyle)
+		{
+			Color surface = normalStyle.BgColor;
+			normalStyle.BgColor = new Color(surface.R, surface.G, surface.B, 0.82f);
+		}
+	}
+
+	private void ConfigureUnifiedVisualStyle()
 	{
 		foreach (Control row in _configurationRowPanels)
 		{
 			if (row is OceanMenuButtonFrame frame)
 			{
-				SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+				ConfigureUnifiedFrame(
 					frame,
-					OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow);
+					OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow,
+					MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder,
+					suppressVisuals: true);
 			}
 		}
 
-		ConfigureFrame("BackFrame");
-		ConfigurePrimaryActionFrame();
-		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedBodyText);
-		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+		ConfigureFrame(
+			"BackFrame",
+			MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
+		ConfigureFrame(
+			"StartGameFrame",
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder);
+		_titleLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.FocusText);
+		_messageLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.DisabledText);
 		foreach (Label label in new[] { _playersLabel, _difficultyLabel, _itemModeLabel, _winningScoreLabel })
 		{
-			Color secondary = MainMenuInteractiveStyle.PauseDerivedSecondaryText;
-			label.AddThemeColorOverride("font_color", new Color(secondary.R, secondary.G, secondary.B, 0.78f));
+			label.AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f, 0.86f));
 		}
 		foreach (Node chevron in FindChildren("Chevron", "Label", true, false))
 		{
 			if (chevron is Label label)
 			{
-				label.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.PauseDerivedSecondaryText);
+				label.AddThemeColorOverride("font_color", new Color(0.72f, 0.98f, 0.93f, 0.90f));
 			}
 		}
-		if (FindChild("TitleUnderline", true, false) is Control underline)
+		if (FindChild("TitleUnderline", true, false) is ColorRect underline)
 		{
-			SecondaryMenuGlassStyle.InstallPauseDerivedDivider(underline);
+			underline.Color = new Color(0.62f, 1.0f, 0.94f, 0.58f);
 		}
 	}
 
-	private void ConfigureFrame(string frameName)
+	private void ConfigureFrame(string frameName, Color accent)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
 			return;
 		}
 
-		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
+		ConfigureUnifiedFrame(
 			frame,
 			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
-			MainMenuInteractiveStyle.PauseDerivedCyan);
+			accent);
 	}
 
-	private void ConfigurePrimaryActionFrame()
+	private static void ConfigureUnifiedFrame(
+		OceanMenuButtonFrame frame,
+		OceanMenuButtonFrame.ButtonFrameStyle frameStyle,
+		Color accent,
+		bool suppressVisuals = false)
 	{
-		if (_startGameFrame is not OceanMenuButtonFrame frame)
-		{
-			return;
-		}
-
-		SecondaryMenuGlassStyle.ConfigurePauseDerivedMinimalFrame(
-			frame,
-			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction,
-			MainMenuInteractiveStyle.PauseDerivedCyan);
+		frame.FrameStyle = frameStyle;
+		frame.AccentColor = accent;
+		frame.Selected = false;
+		frame.HighlightFocus = true;
+		frame.UseToolRowIdleBackdrop = false;
+		frame.SuppressVisuals = suppressVisuals;
+		frame.QueueRedraw();
 	}
 
 	private void ApplyResponsiveDensity()

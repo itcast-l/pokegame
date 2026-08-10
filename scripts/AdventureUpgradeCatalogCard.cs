@@ -19,6 +19,7 @@ public partial class AdventureUpgradeCatalogCard : Button
 	private Label _lockedLabel = default!;
 	private Label _descriptionLabel = default!;
 	private Label _rarityLabel = default!;
+	private Panel _hoverBorder = default!;
 	private Panel _feedbackBorder = default!;
 	private bool _interactive;
 	private bool _hovered;
@@ -46,6 +47,7 @@ public partial class AdventureUpgradeCatalogCard : Button
 		_lockedLabel = GetNode<Label>("LockedPlaceholder/LockedLabel");
 		_descriptionLabel = GetNode<Label>("DescriptionLayer/DescriptionMargin/DescriptionLabel");
 		_rarityLabel = GetNode<Label>("RarityLabel");
+		_hoverBorder = GetNode<Panel>("HoverBorder");
 		_feedbackBorder = GetNode<Panel>("FeedbackBorder");
 
 		MouseEntered += OnMouseEntered;
@@ -164,7 +166,9 @@ public partial class AdventureUpgradeCatalogCard : Button
 			["atlas_region"] = region,
 			["card_texture_path"] = texturePath,
 			["uses_complete_card_texture"] = HasCardTexture,
-			["feedback_visible"] = _feedbackBorder.Visible,
+			["feedback_visible"] = _hoverBorder.Visible || _feedbackBorder.Visible,
+			["hover_feedback_visible"] = _hoverBorder.Visible,
+			["focus_feedback_visible"] = _feedbackBorder.Visible,
 			["focus_highlight_enabled"] = _focusHighlightEnabled,
 		};
 	}
@@ -183,12 +187,15 @@ public partial class AdventureUpgradeCatalogCard : Button
 
 	private void RefreshFeedback()
 	{
-		if (_feedbackBorder != null)
+		if (_hoverBorder == null || _feedbackBorder == null)
 		{
-			_feedbackBorder.Visible = !_isLocked
-				&& _interactive
-				&& (_hovered || (_focusHighlightEnabled && HasFocus()));
+			return;
 		}
+
+		bool canShowFeedback = !_isLocked && _interactive;
+		bool showFocus = canShowFeedback && _focusHighlightEnabled && HasFocus();
+		_feedbackBorder.Visible = showFocus;
+		_hoverBorder.Visible = canShowFeedback && _hovered && !showFocus;
 	}
 
 	private void RefreshDescriptionFontSize()

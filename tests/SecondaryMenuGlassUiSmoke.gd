@@ -2,6 +2,8 @@ extends SceneTree
 
 const VISUAL_PROFILE_META := "secondary_menu_visual_profile"
 const PAUSE_DERIVED_PROFILE := "pause-derived-core-menu"
+const UNIFIED_GLASS_PROFILE := "secondary-menu-unified"
+const GLASS_SHADER_PATH := "res://shaders/adventure_menu_glass.gdshader"
 const PANEL_TEXTURE_PATH := "res://art/ui/pause_menu/pause_panel.png"
 const IDLE_TEXTURE_PATH := "res://art/ui/pause_menu/pause_button_idle.png"
 const FOCUS_TEXTURE_PATH := "res://art/ui/pause_menu/pause_button_focus.png"
@@ -9,6 +11,7 @@ const PRESSED_TEXTURE_PATH := "res://art/ui/pause_menu/pause_button_pressed.png"
 const DIVIDER_TEXTURE_PATH := "res://art/ui/pause_menu/pause_divider.png"
 const BODY_TEXT := Color("f3f7f4")
 const MINIMAL_ACTION_ACCENT := Color("22b9c0")
+const UNIFIED_FOCUS_BORDER := Color(0.62, 1.0, 0.94, 0.84)
 const MINIMAL_ROW_FRAME_STYLE := 11
 const MINIMAL_ACTION_FRAME_STYLE := 12
 const SAFE_PADDING := 24.0
@@ -30,7 +33,9 @@ const MENU_SPECS := [
 		"focus_frame": "BackFrame",
 		"scrolls": ["GridScroll"],
 		"body_control": "PlayerNameInput",
-		"remove_center_ornaments": true,
+		"unified_glass": true,
+		"glass_contents": ["PreviewPanel", "AvatarListPanel"],
+		"uniform_scale": true,
 	},
 	{
 		"name": "single-player",
@@ -55,7 +60,8 @@ const MENU_SPECS := [
 		"focus_frame": "PlayersRowPanel",
 		"scrolls": ["ConfigurationScroll"],
 		"body_control": "PlayerCountOption",
-		"remove_center_ornaments": true,
+		"unified_glass": true,
+		"glass_contents": ["ConfigurationPanel"],
 	},
 	{
 		"name": "settings",
@@ -80,7 +86,9 @@ const MENU_SPECS := [
 		"scrolls": ["SettingsScroll"],
 		"body_control": "MasterVolumeLabel",
 		"settings_categories": true,
-		"remove_center_ornaments": true,
+		"unified_glass": true,
+		"glass_contents": ["CategoryPanel", "SettingsContentPanel"],
+		"uniform_scale": true,
 		"forbid_back": true,
 	},
 	{
@@ -103,7 +111,9 @@ const MENU_SPECS := [
 		"focus_frame": "MoveUpRow",
 		"scrolls": ["RowsScroll"],
 		"body_control": "KeyboardButton",
-		"remove_center_ornaments": true,
+		"unified_glass": true,
+		"glass_contents": ["ControlsContentPanel"],
+		"uniform_scale": true,
 	},
 	{
 		"name": "exit",
@@ -117,6 +127,8 @@ const MENU_SPECS := [
 		"body_control": "CancelButton",
 		"unified_button_text_controls": ["CancelButton", "ConfirmButton"],
 		"scrolls": [],
+		"unified_glass": true,
+		"uniform_scale": true,
 		"compact_confirmation": true,
 		"forbid_back": true,
 	},
@@ -181,7 +193,10 @@ func _audit_menu(menu_spec: Dictionary) -> bool:
 			continue
 		_release_focus()
 		await _wait_frames(2)
-		if not _audit_pause_derived_layout(menu, menu_spec, viewport_spec):
+		var layout_valid := _audit_unified_glass_layout(menu, menu_spec, viewport_spec) \
+			if bool(menu_spec.get("unified_glass", false)) \
+			else _audit_pause_derived_layout(menu, menu_spec, viewport_spec)
+		if not layout_valid:
 			return false
 		if not await _capture_optional_screenshot(menu_spec.name, viewport_spec, "idle"):
 			return false
@@ -192,6 +207,373 @@ func _audit_menu(menu_spec: Dictionary) -> bool:
 
 	menu.queue_free()
 	await process_frame
+	return true
+
+
+func _audit_unified_glass_layout(
+		menu: Control,
+		menu_spec: Dictionary,
+		viewport_spec: Dictionary) -> bool:
+	var context := "%s %s" % [menu_spec.name, viewport_spec.name]
+	var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_spec.size))
+	var panel := menu.find_child(menu_spec.panel, true, false) as Control
+	var scrim := menu.find_child("Scrim", true, false) as ColorRect
+	if panel == null or scrim == null:
+		_fail("%s is missing its panel or readability veil" % context)
+		return false
+	if not menu.has_meta(VISUAL_PROFILE_META) \
+			or str(menu.get_meta(VISUAL_PROFILE_META)) != UNIFIED_GLASS_PROFILE:
+		_fail("%s does not expose %s" % [context, UNIFIED_GLASS_PROFILE])
+		return false
+	if not _rects_close(_get_canvas_rect(scrim), viewport_rect):
+		_fail("%s readability veil does not cover the viewport" % context)
+		return false
+
+	var design_size: Vector2 = menu_spec.design_size
+	var available := Vector2(viewport_spec.size) - Vector2.ONE * SAFE_PADDING * 2.0
+	var uniformly_scaled := bool(menu_spec.get("uniform_scale", false))
+	var expected_scale := minf(1.0, minf(available.x / design_size.x, available.y / design_size.y)) \
+		if uniformly_scaled else 1.0
+	var expected_size := design_size * expected_scale if uniformly_scaled else Vector2(
+		minf(design_size.x, available.x),
+		minf(design_size.y, available.y))
+	var panel_rect := _get_canvas_rect(panel)
+	var expected_minimum_size := design_size if uniformly_scaled else expected_size
+	if panel.custom_minimum_size.distance_to(expected_minimum_size) > RECT_TOLERANCE \
+			or panel_rect.size.distance_to(expected_size) > RECT_TOLERANCE:
+		_fail("%s unified glass panel size is invalid: min=%s screen=%s expected=%s" % [
+			context, panel.custom_minimum_size, panel_rect.size, expected_size,
+		])
+		return false
+	if uniformly_scaled and (not panel.has_meta("pause_derived_scale") \
+			or absf(float(panel.get_meta("pause_derived_scale")) - expected_scale) > 0.002):
+		_fail("%s unified glass panel does not preserve uniform responsive scaling" % context)
+		return false
+	if not _rect_contains(viewport_rect, panel_rect) \
+			or panel_rect.position.x < SAFE_PADDING - RECT_TOLERANCE \
+			or panel_rect.position.y < SAFE_PADDING - RECT_TOLERANCE:
+		_fail("%s unified glass panel escapes the safe viewport: %s" % [context, panel_rect])
+		return false
+	if panel.get_node_or_null("PauseDerivedPanelArtwork") != null:
+		_fail("%s still installs the opaque pause-derived panel artwork" % context)
+		return false
+
+	var glass_surface := panel.get_node_or_null("GlassSurface") as ColorRect
+	var glass_frame := panel.get_node_or_null("GlassFrame") as Panel
+	if glass_surface == null or glass_frame == null \
+			or not _rects_close(_get_canvas_rect(glass_surface), panel_rect) \
+			or not _rects_close(_get_canvas_rect(glass_frame), panel_rect):
+		_fail("%s main glass layers do not match the panel" % context)
+		return false
+	if not _assert_unified_glass_material(glass_surface.material as ShaderMaterial, false, context):
+		return false
+
+	for content_name in menu_spec.get("glass_contents", []):
+		var content := menu.find_child(content_name, true, false) as PanelContainer
+		var content_surface := content.get_node_or_null("%sGlassSurface" % content_name) as ColorRect \
+			if content != null else null
+		var content_frame := content.get_node_or_null("%sGlassFrame" % content_name) as Panel \
+			if content != null else null
+		if content == null or content_surface == null or content_frame == null \
+				or not _rect_contains(panel_rect, _get_canvas_rect(content)) \
+				or not _rects_close(_get_canvas_rect(content_surface), _get_canvas_rect(content)) \
+				or not _rects_close(_get_canvas_rect(content_frame), _get_canvas_rect(content)):
+			_fail("%s content area %s is missing its nested glass layers" % [context, content_name])
+			return false
+		if not _assert_unified_glass_material(content_surface.material as ShaderMaterial, true, context):
+			return false
+
+	if menu_spec.name == "settings":
+		return _audit_unified_settings_layout(menu, menu_spec, panel_rect, context)
+	if menu_spec.name == "controls":
+		return _audit_unified_controls_layout(menu, menu_spec, panel_rect, context)
+	if menu_spec.name == "exit":
+		return _audit_unified_exit_layout(
+			menu, menu_spec, panel_rect, expected_scale, context)
+	if menu_spec.name == "avatar":
+		return _audit_unified_avatar_layout(menu, menu_spec, panel_rect, context)
+
+	for frame_name in menu_spec.get("minimal_rows", []):
+		if not _assert_unified_frame(menu, frame_name, MINIMAL_ROW_FRAME_STYLE, true, true, context):
+			return false
+	for frame_name in menu_spec.get("minimal_actions", []):
+		if not _assert_unified_frame(menu, frame_name, MINIMAL_ACTION_FRAME_STYLE, false, true, context):
+			return false
+	if not _assert_rows_in_visual_order(menu, menu_spec.ordered_rows, context) \
+			or not _assert_selector_stack(menu, menu_spec.selector_stack, panel_rect, context):
+		return false
+	for scroll_name in menu_spec.scrolls:
+		if not _assert_vertical_scroll(menu, scroll_name, panel_rect, context):
+			return false
+
+	for option_name in ["PlayerCountOption", "DifficultyOption", "ItemModeOption", "WinningScoreOption"]:
+		var option := menu.find_child(option_name, true, false) as OptionButton
+		var option_style := option.get_theme_stylebox("normal") as StyleBoxFlat if option != null else null
+		if option == null or option.alignment != HORIZONTAL_ALIGNMENT_LEFT \
+				or option_style == null or option_style.bg_color.a < 0.80 or option_style.bg_color.a > 0.86:
+			_fail("%s option %s does not use the translucent unified control style" % [context, option_name])
+			return false
+
+	var title_underline := menu.find_child("TitleUnderline", true, false) as ColorRect
+	if title_underline == null or title_underline.get_node_or_null("PauseDerivedDivider") != null \
+			or title_underline.color.a < 0.45:
+		_fail("%s title underline does not match the unified glass treatment" % context)
+		return false
+	var back_button := menu.find_child("BackButton", true, false) as Button
+	if back_button == null or back_button.focus_mode == Control.FOCUS_NONE \
+			or back_button.size.x < 44.0 or back_button.size.y < 44.0:
+		_fail("%s back action is missing or below the 44px baseline" % context)
+		return false
+	var body_control := menu.find_child(menu_spec.body_control, true, false) as Control
+	if body_control == null or not body_control.get_theme_color("font_color").is_equal_approx(BODY_TEXT):
+		_fail("%s does not preserve the shared readable body text color" % context)
+		return false
+	return true
+
+
+func _audit_unified_avatar_layout(
+		menu: Control,
+		menu_spec: Dictionary,
+		panel_rect: Rect2,
+		context: String) -> bool:
+	for frame_name in menu_spec.get("minimal_actions", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ACTION_FRAME_STYLE, false, true, context):
+			return false
+	for scroll_name in menu_spec.scrolls:
+		if not _assert_vertical_scroll(menu, scroll_name, panel_rect, context):
+			return false
+
+	var title_underline := menu.find_child("TitleUnderline", true, false) as ColorRect
+	var back_button := menu.find_child("BackButton", true, false) as Button
+	var name_input := menu.find_child("PlayerNameInput", true, false) as LineEdit
+	var input_style := name_input.get_theme_stylebox("normal") as StyleBoxFlat \
+			if name_input != null else null
+	if title_underline == null or title_underline.get_node_or_null("PauseDerivedDivider") != null \
+			or title_underline.color.a < 0.45:
+		_fail("%s title underline does not match the unified glass treatment" % context)
+		return false
+	if back_button == null or back_button.focus_mode == Control.FOCUS_NONE \
+			or back_button.size.x < 44.0 or back_button.size.y < 44.0:
+		_fail("%s back action is missing or below the 44px baseline" % context)
+		return false
+	if name_input == null or input_style == null \
+			or not name_input.get_theme_color("font_color").is_equal_approx(BODY_TEXT) \
+			or input_style.bg_color.a < 0.62 or input_style.bg_color.a > 0.78:
+		_fail("%s player-name field does not use the readable translucent control style" % context)
+		return false
+
+	for content_name in menu_spec.glass_contents:
+		var content := menu.find_child(content_name, true, false) as PanelContainer
+		if content == null or not content.get_theme_stylebox("panel") is StyleBoxEmpty:
+			_fail("%s content panel %s still covers its glass surface" % [context, content_name])
+			return false
+
+	var avatar_grid := menu.find_child("AvatarGrid", true, false) as GridContainer
+	if avatar_grid == null:
+		_fail("%s is missing the avatar option grid" % context)
+		return false
+	for option in avatar_grid.get_children():
+		if option is not Control or not option.visible:
+			continue
+		var backdrop := option.get_node_or_null(
+			"OptionPanel/OptionMargin/OptionLayout/AvatarSlot/SlotBackdrop") as PanelContainer
+		var backdrop_style := backdrop.get_theme_stylebox("panel") as StyleBoxFlat \
+				if backdrop != null else null
+		if backdrop_style == null or backdrop_style.bg_color.a < 0.50 \
+				or backdrop_style.bg_color.a > 0.80:
+			_fail("%s avatar option is outside the translucent readability range" % context)
+			return false
+	return true
+
+
+func _audit_unified_exit_layout(
+		menu: Control,
+		menu_spec: Dictionary,
+		panel_rect: Rect2,
+		screen_scale: float,
+		context: String) -> bool:
+	for frame_name in menu_spec.get("minimal_actions", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ACTION_FRAME_STYLE, false, true, context):
+			return false
+	if not _audit_compact_confirmation(menu, panel_rect, screen_scale, context):
+		return false
+
+	var prompt := menu.find_child("PromptPanel", true, false) as PanelContainer
+	if prompt == null or prompt.get_node_or_null("PromptPanelGlassSurface") != null \
+			or prompt.get_node_or_null("PromptPanelGlassFrame") != null:
+		_fail("%s adds an unnecessary nested glass card around the exit message" % context)
+		return false
+	var title_underline := menu.find_child("TitleUnderline", true, false) as ColorRect
+	if title_underline == null or title_underline.get_node_or_null("PauseDerivedDivider") != null \
+			or title_underline.color.a < 0.45:
+		_fail("%s title underline does not match the unified glass treatment" % context)
+		return false
+	if menu.find_child("BackButton", true, false) != null \
+			or menu.find_child("BackFrame", true, false) != null:
+		_fail("%s restored a forbidden title-bar back action" % context)
+		return false
+	for control_name in menu_spec.get("unified_button_text_controls", []):
+		var text_control := menu.find_child(control_name, true, false) as Control
+		if text_control == null or not text_control.get_theme_color("font_color").is_equal_approx(BODY_TEXT):
+			_fail("%s button text is not using the unified body color: %s" % [context, control_name])
+			return false
+	return true
+
+
+func _assert_unified_glass_material(
+		material: ShaderMaterial,
+		content_pane: bool,
+		context: String) -> bool:
+	if material == null or material.shader == null or material.shader.resource_path != GLASS_SHADER_PATH:
+		_fail("%s is missing the adventure glass shader" % context)
+		return false
+	var surface_opacity := float(material.get_shader_parameter("surface_opacity"))
+	var tint_color: Color = material.get_shader_parameter("tint_color")
+	var blur_lod := float(material.get_shader_parameter("blur_lod"))
+	if content_pane:
+		if surface_opacity < 0.38 or surface_opacity > 0.48 \
+				or tint_color.a < 0.26 or tint_color.a > 0.38 \
+				or blur_lod < 1.6 or blur_lod > 2.4:
+			_fail("%s nested glass is outside the adventure translucency range" % context)
+			return false
+	elif surface_opacity < 0.82 or surface_opacity > 0.94 \
+				or tint_color.a < 0.60 or tint_color.a > 0.74 \
+				or blur_lod < 2.2 or blur_lod > 3.0:
+		_fail("%s main glass is outside the adventure translucency range" % context)
+		return false
+	return true
+
+
+func _assert_unified_frame(
+		menu: Control,
+		frame_name: String,
+		expected_style: int,
+		expect_suppressed_visuals: bool,
+		require_visible_size: bool,
+		context: String) -> bool:
+	var frame := menu.find_child(frame_name, true, false) as Control
+	if frame == null or int(frame.get("FrameStyle")) != expected_style \
+			or bool(frame.get("SuppressVisuals")) != expect_suppressed_visuals:
+		_fail("%s frame %s does not use the expected unified glass treatment" % [context, frame_name])
+		return false
+	var frame_screen_size := _get_canvas_rect(frame).size
+	if require_visible_size and (frame_screen_size.x < 44.0 or frame_screen_size.y < 44.0):
+		_fail("%s frame %s is below the 44px interaction baseline: %s" % [
+			context, frame_name, frame_screen_size,
+		])
+		return false
+	return true
+
+
+func _audit_unified_controls_layout(
+		menu: Control,
+		menu_spec: Dictionary,
+		panel_rect: Rect2,
+		context: String) -> bool:
+	for frame_name in menu_spec.get("minimal_rows", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ROW_FRAME_STYLE, true, true, context):
+			return false
+	for frame_name in menu_spec.get("minimal_actions", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ACTION_FRAME_STYLE, false, true, context):
+			return false
+	if not _assert_rows_in_visual_order(menu, menu_spec.ordered_rows, context) \
+			or not _assert_binding_columns(menu, menu_spec.ordered_rows, context):
+		return false
+	for scroll_name in menu_spec.scrolls:
+		if not _assert_vertical_scroll(menu, scroll_name, panel_rect, context):
+			return false
+
+	for row_name in menu_spec.ordered_rows:
+		var row := menu.find_child(row_name, true, false) as Control
+		for button_name in ["KeyboardButton", "GamepadButton"]:
+			var button := row.find_child(button_name, true, false) as Button if row != null else null
+			var normal_style := button.get_theme_stylebox("normal") as StyleBoxFlat \
+					if button != null else null
+			var focus_style := button.get_theme_stylebox("focus") as StyleBoxFlat \
+					if button != null else null
+			if button == null or normal_style == null or focus_style == null \
+					or normal_style.bg_color.a < 0.78 or normal_style.bg_color.a > 0.86 \
+					or not focus_style.border_color.is_equal_approx(UNIFIED_FOCUS_BORDER):
+				_fail("%s binding cell %s/%s does not use the readable cyan glass state" % [
+					context, row_name, button_name,
+				])
+				return false
+
+	var title_underline := menu.find_child("TitleUnderline", true, false) as ColorRect
+	if title_underline == null or title_underline.get_node_or_null("PauseDerivedDivider") != null \
+			or title_underline.color.a < 0.45:
+		_fail("%s title underline does not match the unified glass treatment" % context)
+		return false
+	var body_control := menu.find_child(menu_spec.body_control, true, false) as Control
+	if body_control == null or not body_control.get_theme_color("font_color").is_equal_approx(BODY_TEXT):
+		_fail("%s does not preserve readable binding text" % context)
+		return false
+	for button_name in ["BackButton", "ResetDefaultsButton", "DoneButton"]:
+		var button := menu.find_child(button_name, true, false) as Button
+		var button_rect := _get_canvas_rect(button) if button != null else Rect2()
+		if button == null or button.focus_mode == Control.FOCUS_NONE \
+				or button_rect.size.x < 44.0 or button_rect.size.y < 44.0:
+			_fail("%s action %s is missing or below the 44px baseline" % [context, button_name])
+			return false
+	return true
+
+
+func _audit_unified_settings_layout(
+		menu: Control,
+		menu_spec: Dictionary,
+		panel_rect: Rect2,
+		context: String) -> bool:
+	for frame_name in menu_spec.get("minimal_rows", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ROW_FRAME_STYLE, true, true, context):
+			return false
+	for frame_name in menu_spec.get("hidden_minimal_rows", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ROW_FRAME_STYLE, true, false, context):
+			return false
+	for frame_name in menu_spec.get("minimal_actions", []):
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ACTION_FRAME_STYLE, false, true, context):
+			return false
+	if not _assert_settings_categories(menu, panel_rect, context):
+		return false
+	if not _assert_rows_in_visual_order(menu, menu_spec.ordered_rows, context):
+		return false
+	for scroll_name in menu_spec.scrolls:
+		if not _assert_vertical_scroll(menu, scroll_name, panel_rect, context):
+			return false
+
+	for control_name in ["MuteBgmToggle", "MuteSfxToggle", "WindowModeOption", "ResolutionOption", "LanguageOption"]:
+		var control := menu.find_child(control_name, true, false) as BaseButton
+		var normal_style := control.get_theme_stylebox("normal") as StyleBoxFlat if control != null else null
+		if control == null or normal_style == null \
+				or normal_style.bg_color.a < 0.62 or normal_style.bg_color.a > 0.82:
+			_fail("%s control %s does not use the translucent unified palette" % [context, control_name])
+			return false
+	for slider_name in ["MasterVolumeSlider", "MusicVolumeSlider"]:
+		var slider := menu.find_child(slider_name, true, false) as HSlider
+		var track_style := slider.get_theme_stylebox("slider") as StyleBoxFlat if slider != null else null
+		if slider == null or track_style == null \
+				or track_style.bg_color.a < 0.62 or track_style.bg_color.a > 0.82:
+			_fail("%s slider %s does not use the translucent unified palette" % [context, slider_name])
+			return false
+
+	var title_underline := menu.find_child("TitleUnderline", true, false) as ColorRect
+	if title_underline == null or title_underline.get_node_or_null("PauseDerivedDivider") != null \
+			or title_underline.color.a < 0.45:
+		_fail("%s title underline does not match the unified glass treatment" % context)
+		return false
+	if menu.find_child("BackButton", true, false) != null or menu.find_child("BackFrame", true, false) != null:
+		_fail("%s restored a forbidden title-bar back action" % context)
+		return false
+	var body_control := menu.find_child(menu_spec.body_control, true, false) as Control
+	if body_control == null or not body_control.get_theme_color("font_color").is_equal_approx(BODY_TEXT):
+		_fail("%s does not preserve the shared readable body text color" % context)
+		return false
 	return true
 
 

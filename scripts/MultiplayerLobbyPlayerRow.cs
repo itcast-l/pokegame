@@ -20,7 +20,20 @@ public partial class MultiplayerLobbyPlayerRow : PanelContainer
 	{
 		SeatLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SpadePalette.ActiveBorder);
 		PlayerNameLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.95f, 0.96f, 1.0f));
+		Font primaryFont = LocalizationTypography.CreateCurrentFontVariation(620.0f, 0.50f);
+		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(570.0f, 0.38f);
+		ApplyReadableTextStyle(SeatLabel, supportingFont);
+		ApplyReadableTextStyle(PlayerNameLabel, primaryFont);
+		ApplyReadableTextStyle(RoleLabel, supportingFont);
+		ApplyReadableTextStyle(ReadyLabel, supportingFont);
 		AddThemeStyleboxOverride("panel", CreateRowStyle(new Color(0.48f, 0.56f, 0.60f, 0.34f)));
+	}
+
+	private static void ApplyReadableTextStyle(Control control, Font font)
+	{
+		control.AddThemeFontOverride("font", font);
+		control.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.025f, 0.045f, 0.94f));
+		control.AddThemeConstantOverride("outline_size", 1);
 	}
 
 	public void Configure(Godot.Collections.Dictionary player)

@@ -185,6 +185,29 @@ public static class SecondaryMenuGlassStyle
 		InstallResponsiveSizing(root, mainPanel, designSize);
 	}
 
+	public static void AttachUniformlyScaled(
+		Control root,
+		Control mainPanel,
+		ColorRect? scrim,
+		Vector2 designSize,
+		VisualConfig visualConfig,
+		params PanelContainer[] contentPanels)
+	{
+		root.SetMeta(VisualProfileMetadata, visualConfig.Id);
+		ApplyReadabilityVeil(scrim, visualConfig);
+		InstallGlassLayers(mainPanel, "GlassSurface", "GlassFrame", contentPane: false, visualConfig);
+		foreach (PanelContainer contentPanel in contentPanels)
+		{
+			InstallGlassLayers(
+				contentPanel,
+				$"{contentPanel.Name}GlassSurface",
+				$"{contentPanel.Name}GlassFrame",
+				contentPane: true,
+				visualConfig);
+		}
+		InstallPauseDerivedResponsiveSizing(root, mainPanel, designSize);
+	}
+
 	public static void AttachImagePanel(
 		Control root,
 		Control mainPanel,

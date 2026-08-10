@@ -158,6 +158,8 @@ func _audit_viewport(spec: Dictionary) -> bool:
 	]:
 		if not _assert_button_surface(button_path, PRIMARY_BUTTON_SURFACE, context):
 			return false
+	if not _audit_readable_typography(context):
+		return false
 	return true
 
 
@@ -167,6 +169,42 @@ func _assert_button_surface(button_path: String, expected: Color, context: Strin
 	if style == null or not style.bg_color.is_equal_approx(expected):
 		_fail("%s button %s does not use the unified surface" % [context, button_path])
 		return false
+	return true
+
+
+func _audit_readable_typography(context: String) -> bool:
+	var specs := [
+		{"path": "SafeArea/MainLayout/Header/Title", "min_size": 28, "min_outline": 2},
+		{"path": "SafeArea/MainLayout/Header/BackButton", "min_size": 16, "min_outline": 1},
+		{
+			"path": "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/ModeTitle",
+			"min_size": 20,
+			"min_outline": 1,
+		},
+		{
+			"path": "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput",
+			"min_size": 16,
+			"min_outline": 1,
+		},
+		{
+			"path": "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostInfoLabel",
+			"min_size": 14,
+			"min_outline": 1,
+		},
+		{
+			"path": "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel",
+			"min_size": 14,
+			"min_outline": 1,
+		},
+	]
+	for spec in specs:
+		var control := _lobby.get_node_or_null(spec.path) as Control
+		var font := control.get_theme_font("font") as FontVariation if control != null else null
+		if control == null or control.get_theme_font_size("font_size") < int(spec.min_size) \
+				or control.get_theme_constant("outline_size") < int(spec.min_outline) \
+				or font == null or font.variation_embolden <= 0.0:
+			_fail("%s typography is too light or small: %s" % [context, spec.path])
+			return false
 	return true
 
 
@@ -201,6 +239,9 @@ func _audit_dynamic_rows() -> bool:
 			or not room_row.get_theme_stylebox("panel") is StyleBoxFlat:
 		_fail("Room row does not combine visible status text, border state, and join affordance")
 		return false
+	for control_path in ["RowLayout/TextStack/RoomNameLabel", "RowLayout/TextStack/DetailsLabel", "RowLayout/StatusLabel", "RowLayout/JoinButton"]:
+		if not _assert_row_typography(room_row, control_path, 14):
+			return false
 
 	player_row.call("Configure", {
 		"seat_index": 0,
@@ -216,6 +257,9 @@ func _audit_dynamic_rows() -> bool:
 	if role_label.text.is_empty() or ready_label.text.is_empty() or ready_style == null:
 		_fail("Player row does not expose host and ready status with a border state")
 		return false
+	for control_path in ["RowLayout/SeatLabel", "RowLayout/PlayerNameLabel", "RowLayout/RoleLabel", "RowLayout/ReadyLabel"]:
+		if not _assert_row_typography(player_row, control_path, 15):
+			return false
 	var ready_border := ready_style.border_color
 	player_row.call("Configure", {
 		"seat_index": 0,
@@ -234,6 +278,17 @@ func _audit_dynamic_rows() -> bool:
 	room_row.queue_free()
 	player_row.queue_free()
 	await process_frame
+	return true
+
+
+func _assert_row_typography(row: Control, control_path: String, minimum_size: int) -> bool:
+	var control := row.get_node_or_null(control_path) as Control
+	var font := control.get_theme_font("font") as FontVariation if control != null else null
+	if control == null or control.get_theme_font_size("font_size") < minimum_size \
+			or control.get_theme_constant("outline_size") < 1 \
+			or font == null or font.variation_embolden <= 0.0:
+		_fail("Dynamic row typography is too light or small: %s" % control_path)
+		return false
 	return true
 
 

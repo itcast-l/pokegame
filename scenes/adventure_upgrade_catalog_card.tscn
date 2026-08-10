@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/AdventureUpgradeCatalogCard.cs" id="1_card"]
 
@@ -16,19 +16,33 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.58, 0.92, 0.88, 0.68)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0.12, 0.72, 0.68, 0.14)
+shadow_size = 2
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
 bg_color = Color(0, 0, 0, 0)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.72, 1, 0.91, 1)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_right = 5
-corner_radius_bottom_left = 5
-shadow_color = Color(0.18, 0.9, 0.86, 0.52)
-shadow_size = 8
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.76, 1, 0.94, 0.92)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0.18, 0.9, 0.86, 0.22)
+shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_locked"]
 bg_color = Color(0.018, 0.027, 0.034, 0.98)
@@ -162,6 +176,17 @@ theme_override_font_sizes/font_size = 15
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="HoverBorder" type="Panel" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hover")
 
 [node name="FeedbackBorder" type="Panel" parent="."]
 visible = false

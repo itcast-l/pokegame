@@ -22,8 +22,21 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 	public override void _Ready()
 	{
 		MainMenuInteractiveStyle.ApplyThemedControl(JoinButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 15);
+		Font primaryFont = LocalizationTypography.CreateCurrentFontVariation(620.0f, 0.50f);
+		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(550.0f, 0.34f);
+		ApplyReadableTextStyle(RoomNameLabel, primaryFont);
+		ApplyReadableTextStyle(DetailsLabel, supportingFont);
+		ApplyReadableTextStyle(StatusLabel, primaryFont);
+		ApplyReadableTextStyle(JoinButton, primaryFont);
 		JoinButton.ClipText = true;
 		JoinButton.Pressed += OnJoinButtonPressed;
+	}
+
+	private static void ApplyReadableTextStyle(Control control, Font font)
+	{
+		control.AddThemeFontOverride("font", font);
+		control.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.025f, 0.045f, 0.94f));
+		control.AddThemeConstantOverride("outline_size", 1);
 	}
 
 	public void Configure(Godot.Collections.Dictionary room)

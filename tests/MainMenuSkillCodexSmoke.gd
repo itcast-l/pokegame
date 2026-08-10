@@ -609,6 +609,24 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 		_fail("Skill codex preview is missing its glass focus layer")
 		return false
 
+	var card := overlay.get_node_or_null(
+		"Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_hearts_thick_blood") as Control
+	var hover_border := card.get_node_or_null("HoverBorder") as Panel if card != null else null
+	var focus_border := card.get_node_or_null("FeedbackBorder") as Panel if card != null else null
+	var hover_style := hover_border.get_theme_stylebox("panel") as StyleBoxFlat \
+			if hover_border != null else null
+	var focus_style := focus_border.get_theme_stylebox("panel") as StyleBoxFlat \
+			if focus_border != null else null
+	if hover_style == null or focus_style == null \
+			or hover_style.bg_color.a > 0.01 or focus_style.bg_color.a > 0.01 \
+			or hover_style.border_width_left != 1 \
+			or focus_style.border_width_left != 2 \
+			or hover_style.border_color.a >= focus_style.border_color.a \
+			or hover_style.shadow_size >= focus_style.shadow_size \
+			or focus_style.shadow_size > 4:
+		_fail("Skill codex card hover and focus feedback are not visually tiered")
+		return false
+
 	for suit in SUIT_BUTTON_NAMES:
 		if not bool(overlay.call("DebugSelectSuit", suit)):
 			_fail("Failed to select %s while auditing suit theme" % suit)
