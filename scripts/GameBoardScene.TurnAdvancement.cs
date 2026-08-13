@@ -29,6 +29,7 @@ public partial class GameBoardScene
 			nextTurnPlayerIndex,
 			advanceQuestionRefresh,
 			HasTableSpecialCard(),
+			HasTableQuestionCard(),
 			out RuleCommandResult result))
 		{
 			return false;
@@ -212,6 +213,13 @@ public partial class GameBoardScene
 
 		ResetMantaRayTideShiftTurnStateIfNeeded(playerIndex);
 		ResetJellyfishBubbleTurnStateIfNeeded(playerIndex);
+		if (!completedResult.Captured
+			&& turnAdvanceResult?.Mutation.ShouldExpireQuestionCard == true
+			&& !RemoveExpiredQuestionCardFromTable(playerIndex))
+		{
+			GD.PushError("Question card expiration was accepted by the turn rule but could not be applied to the table.");
+			return;
+		}
 		if (!completedResult.Captured
 			&& turnAdvanceResult?.Mutation.ShouldRefreshQuestionCard == true)
 		{

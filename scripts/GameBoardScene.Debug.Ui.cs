@@ -321,6 +321,13 @@ public partial class GameBoardScene
 			: string.Empty;
 	}
 
+	public string DebugGetWinnerTextForPlayer(int playerIndex)
+	{
+		return playerIndex >= 0 && playerIndex < player_count
+			? GetWinnerText(playerIndex)
+			: string.Empty;
+	}
+
 	public bool DebugPressWinnerPrimaryButton()
 	{
 		if (!DebugIsWinnerBannerVisible()

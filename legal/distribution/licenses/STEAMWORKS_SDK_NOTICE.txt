@@ -1,0 +1,19 @@
+Steamworks SDK Redistributables Notice
+=====================================
+
+Deckland's platform packages may include Steamworks SDK redistributable
+binaries (for example steam_api64.dll, libsteam_api.so, or
+libsteam_api.dylib) supplied through the GodotSteam integration.
+
+These binaries are proprietary Valve software. They are not covered by the
+MIT license for GodotSteam. Their use and redistribution are governed by the
+Steamworks SDK Access Agreement, the Steam Distribution Agreement, and other
+applicable Valve/Steamworks terms accepted by the publisher.
+
+Official terms and documentation:
+https://partner.steamgames.com/documentation/sdk_access_agreement
+https://partner.steamgames.com/doc/sdk/uploading#5
+
+This notice intentionally does not reproduce or modify Valve's proprietary
+agreement text. The publisher must maintain an active Steamworks account and
+comply with the current terms when distributing these binaries.

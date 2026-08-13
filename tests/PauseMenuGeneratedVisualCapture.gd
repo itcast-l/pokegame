@@ -63,6 +63,10 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 		return false
 	await _wait_frames(2)
 	var panel := pause_root.find_child("PauseMenuPanel", true, false) as Control
+	var glass_surface := panel.get_node_or_null("GlassSurface") as ColorRect if panel != null else null
+	var glass_frame := panel.get_node_or_null("GlassFrame") as Panel if panel != null else null
+	var artwork_left := pause_root.find_child("PauseMenuArtworkLeft", true, false) as TextureRect
+	var artwork_right := pause_root.find_child("PauseMenuArtworkRight", true, false) as TextureRect
 	var continue_button := pause_root.find_child("ContinueButton", true, false) as Button
 	var return_button := pause_root.find_child("ReturnToMainMenuButton", true, false) as Button
 	var restart_button := pause_root.find_child("RestartButton", true, false) as Button
@@ -72,6 +76,14 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 	if panel == null or continue_button == null or return_button == null or restart_button == null \
 			or continue_frame == null or return_frame == null or restart_frame == null:
 		_fail("Pause menu is missing its generated panel or action controls")
+		return false
+	if not pause_root.has_meta("secondary_menu_visual_profile") \
+			or str(pause_root.get_meta("secondary_menu_visual_profile")) != "secondary-menu-unified" \
+			or glass_surface == null or glass_frame == null \
+			or artwork_left == null or artwork_right == null \
+			or artwork_left.self_modulate.a > 0.32 \
+			or artwork_right.self_modulate.a > 0.32:
+		_fail("Pause menu does not use the unified translucent glass treatment")
 		return false
 	var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport.size))
 	var panel_rect := panel.get_global_rect()
@@ -86,6 +98,7 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 		if int(frame.get("FrameStyle")) != 1 \
 				or not accent.is_equal_approx(Color(0.6, 0.94, 0.96, 1.0)) \
 				or not bool(frame.get("ShowIdleTexture")) \
+				or float(frame.get("CardSlabSurfaceOpacityScale")) > 0.62 \
 				or bool(frame.get("UseNinePatchTexture")) \
 				or frame.get("OceanPlaqueTexture") != null \
 				or frame.get("FocusTexture") != null \

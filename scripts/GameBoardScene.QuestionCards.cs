@@ -68,6 +68,47 @@ public partial class GameBoardScene
 		return false;
 	}
 
+	private bool HasTableQuestionCard()
+	{
+		foreach (TableCard tableCard in _tableCards)
+		{
+			if (IsQuestionTableCard(tableCard))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private bool RemoveExpiredQuestionCardFromTable(int actingPlayerIndex)
+	{
+		for (int tableCardIndex = 0; tableCardIndex < _tableCards.Count; tableCardIndex++)
+		{
+			TableCard tableCard = _tableCards[tableCardIndex];
+			if (!IsQuestionTableCard(tableCard))
+			{
+				continue;
+			}
+
+			ClearAdventureTraceHuntMarkerIfTableCardRemoved(tableCard);
+			if (!TrySubmitRemoveTableCardRangeRuleCommand(
+					actingPlayerIndex,
+					tableCardIndex,
+					ImmutableArray.Create(tableCard.InstanceId),
+					_turnSequenceGeneration,
+					out _))
+			{
+				return false;
+			}
+
+			RenderTableCards();
+			return true;
+		}
+
+		return false;
+	}
+
 	private async Task<QuestionCardRewardPlan?> PlanQuestionCardRewardAsync(
 		int playerIndex,
 		bool reserveReplacementCard,

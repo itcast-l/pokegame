@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as dt
 import hashlib
 import json
@@ -15,12 +16,17 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+import sync_legal_notices
+import update_asset_rights_register
+
 
 ROOT = Path(__file__).resolve().parent.parent
 STAGING_ROOT = ROOT / "outputs" / "release_staging"
 BASELINE_PATH = ROOT / "tools" / "release_size_baseline.json"
 AUDIT_SCRIPT = ROOT / "tools" / "export_package_content_audit.gd"
 RUNTIME_SMOKE_SCRIPT = ROOT / "tools" / "release_runtime_smoke.gd"
+LEGAL_ROOT = ROOT / "legal"
+LEGAL_DISTRIBUTION_ROOT = LEGAL_ROOT / "distribution"
 
 MCP_AUTOLOADS = ("MCPScreenshot", "MCPInputService", "MCPGameInspector")
 SUPPORTED_ADAPTERS = {
@@ -50,6 +56,7 @@ STAGING_EXCLUDED_DIRS = (
 	"tests",
 	"tools",
 	"docs",
+	"legal",
 	"samples",
 )
 STAGING_EXCLUDED_FILES = (
@@ -75,9 +82,13 @@ REQUIRED_EXCLUDES = (
 	"tests/**",
 	"tools/**",
 	"docs/**",
+	"legal/**",
 	"samples/**",
 	"outputs/**",
 	"Library/**",
+	"art/**/*prompt*.txt",
+	"art/**/pipeline-meta.json",
+	"art/**/*.pipeline-meta.json",
 )
 TEXT_SUFFIXES = {
 	".cfg",
@@ -140,6 +151,75 @@ def capture_source_hashes(root: Path = ROOT) -> dict[str, str]:
 		"project.godot": _sha256_file(root / "project.godot"),
 		"export_presets.cfg": _sha256_file(root / "export_presets.cfg"),
 		"addons/godot_mcp": _sha256_tree(root / "addons" / "godot_mcp"),
+		"legal": _sha256_tree(root / "legal"),
+	}
+
+
+def legal_source_audit(
+	root: Path = ROOT,
+	*,
+	verify_pinned_notices: bool = True,
+) -> dict[str, Any]:
+	issues: list[str] = []
+	required_files = (
+		"legal/README.md",
+		"legal/OWNED_ASSET_RIGHTS_DECLARATION.md",
+		"legal/AI_CONTENT_RELEASE_RECORD.md",
+		"legal/ASSET_RIGHTS_REGISTER.csv",
+		"legal/THIRD_PARTY_COMPONENTS.csv",
+		"legal/distribution/THIRD_PARTY_NOTICES.txt",
+	)
+	for relative_path in required_files:
+		path = root / relative_path
+		if not path.is_file() or path.stat().st_size == 0:
+			issues.append(f"Required legal source file is missing or empty: {relative_path}")
+
+	distribution = root / "legal/distribution"
+	public_files = sorted(path for path in distribution.rglob("*") if path.is_file()) if distribution.is_dir() else []
+	for path in public_files:
+		if path.stat().st_size == 0:
+			issues.append(f"Public legal file is empty: {path.relative_to(root).as_posix()}")
+
+	components_path = root / "legal/THIRD_PARTY_COMPONENTS.csv"
+	component_count = 0
+	if components_path.is_file():
+		try:
+			with components_path.open("r", encoding="utf-8", newline="") as handle:
+				rows = list(csv.DictReader(handle))
+			component_count = len(rows)
+			if not rows:
+				issues.append("Third-party component register has no component rows")
+			for index, row in enumerate(rows, start=2):
+				name = (row.get("component") or "").strip() or f"row {index}"
+				if (row.get("shipped") or "").strip().lower() != "yes":
+					continue
+				if not (row.get("license_or_terms") or "").strip():
+					issues.append(f"{name}: shipped component has no license or terms")
+				notices = [value.strip() for value in (row.get("public_notice_files") or "").split(";") if value.strip()]
+				if not notices:
+					issues.append(f"{name}: shipped component has no public notice file")
+				for notice in notices:
+					path = distribution / "licenses" / notice
+					if not path.is_file() or path.stat().st_size == 0:
+						issues.append(f"{name}: public notice is missing or empty: {notice}")
+		except (OSError, csv.Error) as error:
+			issues.append(f"Unable to parse third-party component register: {error}")
+
+	try:
+		register_ok, register_message = update_asset_rights_register.check_register(root)
+		if not register_ok:
+			issues.append(register_message)
+	except (OSError, update_asset_rights_register.RegisterError) as error:
+		issues.append(f"Unable to verify asset rights register: {error}")
+
+	if verify_pinned_notices:
+		issues.extend(sync_legal_notices.check(root))
+
+	return {
+		"ok": not issues,
+		"issues": issues,
+		"component_count": component_count,
+		"public_file_count": len(public_files),
 	}
 
 
@@ -196,7 +276,12 @@ def load_presets(path: Path) -> list[dict[str, Any]]:
 	return sorted(presets, key=lambda preset: preset["index"])
 
 
-def static_audit(root: Path = ROOT) -> dict[str, Any]:
+def static_audit(
+	root: Path = ROOT,
+	*,
+	audit_legal: bool = True,
+	verify_pinned_legal: bool = True,
+) -> dict[str, Any]:
 	issues: list[str] = []
 	presets = load_presets(root / "export_presets.cfg")
 	if not presets:
@@ -231,9 +316,14 @@ def static_audit(root: Path = ROOT) -> dict[str, Any]:
 		if re.search(rf"(?m)^{re.escape(autoload)}=", project_text) is None:
 			issues.append(f"Development project must keep MCP autoload {autoload}")
 
+	legal = legal_source_audit(root, verify_pinned_notices=verify_pinned_legal) if audit_legal else None
+	if legal is not None:
+		issues.extend(legal["issues"])
+
 	return {
 		"ok": not issues,
 		"issues": issues,
+		"legal": legal,
 		"presets": [
 			{
 				"name": preset["name"],
@@ -757,6 +847,68 @@ def _prepare_output(path: Path) -> None:
 	path.mkdir(parents=True, exist_ok=True)
 
 
+def _legal_package_directory(platform: str, package_dir: Path, executable: Path) -> Path:
+	if platform in {"windows", "linux"}:
+		return package_dir / "Legal"
+	if platform == "macos":
+		contents = executable.parent.parent
+		if contents.name != "Contents":
+			raise ReleaseError(f"macOS executable is not inside an application bundle: {executable}")
+		return contents / "Resources" / "Legal"
+	raise ReleaseError(f"No legal package layout for platform {platform}")
+
+
+def _audit_packaged_legal(source: Path, destination: Path) -> dict[str, Any]:
+	if not source.is_dir():
+		raise ReleaseError(f"Legal distribution source is missing: {source}")
+	expected = {path.relative_to(source).as_posix(): path for path in source.rglob("*") if path.is_file()}
+	if not expected:
+		raise ReleaseError("Legal distribution source contains no files")
+	actual = (
+		{path.relative_to(destination).as_posix(): path for path in destination.rglob("*") if path.is_file()}
+		if destination.is_dir()
+		else {}
+	)
+	missing = sorted(set(expected) - set(actual))
+	unexpected = sorted(set(actual) - set(expected))
+	if missing or unexpected:
+		raise ReleaseError(
+			"Packaged legal file set mismatch"
+			+ (f"; missing: {', '.join(missing)}" if missing else "")
+			+ (f"; unexpected: {', '.join(unexpected)}" if unexpected else "")
+		)
+	files: list[dict[str, Any]] = []
+	for relative_path, source_path in sorted(expected.items()):
+		destination_path = actual[relative_path]
+		if source_path.stat().st_size == 0 or destination_path.stat().st_size == 0:
+			raise ReleaseError(f"Packaged legal file is empty: {relative_path}")
+		expected_hash = _sha256_file(source_path)
+		actual_hash = _sha256_file(destination_path)
+		if expected_hash != actual_hash:
+			raise ReleaseError(f"Packaged legal file hash mismatch: {relative_path}")
+		files.append(
+			{
+				"relative_path": relative_path,
+				"size_bytes": destination_path.stat().st_size,
+				"sha256": actual_hash,
+			}
+		)
+	return {"ok": True, "file_count": len(files), "files": files}
+
+
+def _install_legal_distribution(
+	source: Path,
+	platform: str,
+	package_dir: Path,
+	executable: Path,
+) -> tuple[Path, dict[str, Any]]:
+	destination = _legal_package_directory(platform, package_dir, executable)
+	if destination.exists():
+		raise ReleaseError(f"Legal destination already exists: {destination}")
+	shutil.copytree(source, destination)
+	return destination, _audit_packaged_legal(source, destination)
+
+
 def run_release(args: argparse.Namespace) -> Path:
 	static_result = static_audit()
 	if not static_result["ok"]:
@@ -869,6 +1021,14 @@ def run_release(args: argparse.Namespace) -> Path:
 		)
 		report["runtime_smoke"] = runtime
 
+		staged_legal_dir, staged_legal = _install_legal_distribution(
+			LEGAL_DISTRIBUTION_ROOT,
+			platform,
+			artifact_dir,
+			executable,
+		)
+		report["preflight"]["packaged_legal"] = staged_legal
+
 		metrics = _directory_metrics(artifact_dir)
 		baseline = _size_baseline(platform, metrics, pck.stat().st_size)
 		report["size_baseline"] = baseline
@@ -887,6 +1047,15 @@ def run_release(args: argparse.Namespace) -> Path:
 		shutil.copytree(logs_dir, final_logs_dir)
 		final_executable = package_dir / executable.relative_to(artifact_dir)
 		final_pck = package_dir / pck.relative_to(artifact_dir)
+		final_legal_dir = package_dir / staged_legal_dir.relative_to(artifact_dir)
+		final_legal = _audit_packaged_legal(LEGAL_DISTRIBUTION_ROOT, final_legal_dir)
+		final_legal.update(
+			{
+				"directory": str(final_legal_dir),
+				"directory_relative_path": final_legal_dir.relative_to(output_root).as_posix(),
+			}
+		)
+		report["legal"] = final_legal
 		final_metrics = _directory_metrics(package_dir)
 		report["package_audit"]["content"]["artifact_path"] = str(final_pck)
 		report["logs"] = {

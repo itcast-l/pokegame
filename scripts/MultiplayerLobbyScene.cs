@@ -6,6 +6,9 @@ public partial class MultiplayerLobbyScene : Control
 	private const string MainMenuScenePath = "res://scenes/main_menu_scene.tscn";
 	private const string TitleLabelPath = "SafeArea/MainLayout/Header/Title";
 	private const string ModeTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/ModeTitle";
+	private const string PlayerCountLabelPath = "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/PlayerCountLabel";
+	private const string ItemModeLabelPath = "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/ItemModeLabel";
+	private const string WinningScoreLabelPath = "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/WinningScoreLabel";
 	private const string RoomTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomTitle";
 	private const string PlayerTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerTitle";
 	private const string SteamNoteLabelPath = "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel";
@@ -18,6 +21,9 @@ public partial class MultiplayerLobbyScene : Control
 
 	private Label _titleLabel = default!;
 	private Label _modeTitleLabel = default!;
+	private Label _playerCountLabel = default!;
+	private Label _itemModeLabel = default!;
+	private Label _winningScoreLabel = default!;
 	private Label _roomTitleLabel = default!;
 	private Label _playerTitleLabel = default!;
 	private Label _steamNoteLabel = default!;
@@ -216,6 +222,9 @@ public partial class MultiplayerLobbyScene : Control
 	{
 		_titleLabel = GetNode<Label>(TitleLabelPath);
 		_modeTitleLabel = GetNode<Label>(ModeTitleLabelPath);
+		_playerCountLabel = GetNode<Label>(PlayerCountLabelPath);
+		_itemModeLabel = GetNode<Label>(ItemModeLabelPath);
+		_winningScoreLabel = GetNode<Label>(WinningScoreLabelPath);
 		_roomTitleLabel = GetNode<Label>(RoomTitleLabelPath);
 		_playerTitleLabel = GetNode<Label>(PlayerTitleLabelPath);
 		_steamNoteLabel = GetNode<Label>(SteamNoteLabelPath);
@@ -264,6 +273,10 @@ public partial class MultiplayerLobbyScene : Control
 		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.78f, 0.91f, 0.91f, 1.0f));
 		SteamStatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.Text);
 		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.76f, 0.86f, 0.88f, 1.0f));
+		foreach (Label fieldLabel in new[] { _playerCountLabel, _itemModeLabel, _winningScoreLabel })
+		{
+			fieldLabel.AddThemeColorOverride("font_color", new Color(0.72f, 0.86f, 0.88f, 1.0f));
+		}
 		foreach (Label sectionTitle in new[]
 		{
 			_modeTitleLabel,
@@ -319,6 +332,9 @@ public partial class MultiplayerLobbyScene : Control
 			_steamNoteLabel,
 			EmptyRoomsLabel,
 			EmptyPlayersLabel,
+			_playerCountLabel,
+			_itemModeLabel,
+			_winningScoreLabel,
 		})
 		{
 			ApplyReadableTextStyle(supportingLabel, supportingFont, 1);
@@ -381,16 +397,35 @@ public partial class MultiplayerLobbyScene : Control
 		{
 			viewportSize = GetViewportRect().Size;
 		}
-		bool compact = viewportSize.X < 1180.0f || viewportSize.Y < 640.0f;
+		bool narrow = viewportSize.X < 1180.0f;
+		bool compact = narrow || viewportSize.Y < 640.0f;
 		GridContainer body = GetNode<GridContainer>("SafeArea/MainLayout/BodyScroll/Body");
-		body.Columns = compact ? 2 : 4;
+		body.Columns = narrow ? 2 : 4;
 		body.AddThemeConstantOverride("h_separation", compact ? 10 : 16);
 		body.AddThemeConstantOverride("v_separation", compact ? 10 : 16);
+		ScrollContainer bodyScroll = GetNode<ScrollContainer>("SafeArea/MainLayout/BodyScroll");
+		bodyScroll.VerticalScrollMode = narrow || viewportSize.Y < 540.0f
+			? ScrollContainer.ScrollMode.Auto
+			: ScrollContainer.ScrollMode.Disabled;
+		if (bodyScroll.VerticalScrollMode == ScrollContainer.ScrollMode.Disabled)
+		{
+			bodyScroll.ScrollVertical = 0;
+		}
 
 		MarginContainer safeArea = GetNode<MarginContainer>("SafeArea");
 		SetMargins(safeArea, compact ? 18 : 38, compact ? 14 : 30, compact ? 18 : 38, compact ? 14 : 30);
 		GetNode<VBoxContainer>("SafeArea/MainLayout").AddThemeConstantOverride("separation", compact ? 10 : 16);
 		GetNode<HBoxContainer>("SafeArea/MainLayout/Header").AddThemeConstantOverride("separation", compact ? 10 : 14);
+		foreach (string contentPath in new[]
+		{
+			"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent",
+			"SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent",
+			"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent",
+			"SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent",
+		})
+		{
+			GetNode<VBoxContainer>(contentPath).AddThemeConstantOverride("separation", compact ? 8 : 10);
+		}
 		_titleLabel.AddThemeFontSizeOverride("font_size", compact ? 28 : 34);
 		StatusLabel.CustomMinimumSize = new Vector2(compact ? 104.0f : 130.0f, 0.0f);
 
@@ -415,7 +450,7 @@ public partial class MultiplayerLobbyScene : Control
 
 		ToastLabel.OffsetLeft = compact ? 72.0f : 300.0f;
 		ToastLabel.OffsetRight = compact ? -72.0f : -300.0f;
-		GetNode<ScrollContainer>("SafeArea/MainLayout/BodyScroll").ScrollHorizontal = 0;
+		bodyScroll.ScrollHorizontal = 0;
 	}
 
 	private static void SetMargins(MarginContainer margin, int left, int top, int right, int bottom)
@@ -894,6 +929,9 @@ public partial class MultiplayerLobbyScene : Control
 	{
 		_titleLabel.Text = Localize("MENU_MULTIPLAYER");
 		_modeTitleLabel.Text = Localize("MULTIPLAYER_LOBBY_ROOM_SETTINGS");
+		_playerCountLabel.Text = Localize("PLAYER_COUNT_PLAYERS");
+		_itemModeLabel.Text = Localize("PLAYER_COUNT_ITEM_MODE");
+		_winningScoreLabel.Text = Localize("PLAYER_COUNT_WINNING_SCORE");
 		_roomTitleLabel.Text = Localize("MULTIPLAYER_LOBBY_ROOM_LIST_TITLE");
 		_playerTitleLabel.Text = Localize("MULTIPLAYER_LOBBY_PLAYER_LIST_TITLE");
 		_steamNoteLabel.Text = Localize("MULTIPLAYER_LOBBY_STEAM_NOTE");

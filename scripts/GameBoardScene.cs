@@ -115,6 +115,7 @@ public partial class GameBoardScene : Control
 	private const int AvatarDamagePopupFontSize = 28;
 	private const int AvatarDamagePopupZIndex = 2900;
 	private const int QuestionCardRefreshCyclesAfterCapture = 2;
+	private const int QuestionCardUncollectedLifetimeTurns = 2;
 	private const double MagnetAttachmentSelectionSeconds = 5.0;
 	private const int LensRevealMaxCards = 2;
 

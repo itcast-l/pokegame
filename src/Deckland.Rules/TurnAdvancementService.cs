@@ -25,18 +25,22 @@ internal sealed class TurnAdvancementService
 		GameBoardState state,
 		bool itemMode,
 		bool hasTableSpecialCard,
+		bool hasQuestionCard,
 		int nextTurnPlayerIndex,
-		int refreshCyclesAfterCapture)
+		int refreshCyclesAfterCapture,
+		int questionCardLifetimeTurns)
 	{
 		QuestionCardRefreshAdvanceResult refreshResult = TurnProgressRules.AdvanceQuestionCardRefresh(
 			itemMode,
 			hasTableSpecialCard,
+			hasQuestionCard,
 			new QuestionCardRefreshState(
 				state.CompletedTurnsSinceQuestionCardRefresh,
 				state.QuestionCardRefreshAnchorPlayerIndex),
 			nextTurnPlayerIndex,
 			state.PlayerCount,
-			refreshCyclesAfterCapture);
+			refreshCyclesAfterCapture,
+			questionCardLifetimeTurns);
 
 		state.CompletedTurnsSinceQuestionCardRefresh = refreshResult.State.CompletedTurnsSinceQuestionCardRefresh;
 		state.QuestionCardRefreshAnchorPlayerIndex = refreshResult.State.QuestionCardRefreshAnchorPlayerIndex;

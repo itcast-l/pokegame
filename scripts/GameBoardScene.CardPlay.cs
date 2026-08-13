@@ -29,6 +29,21 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = hand[handIndex];
+		MatchStateSnapshot? adventureSaveRollbackSnapshot = null;
+		if (ShouldUseAdventureUpgradeSystem())
+		{
+			if (!TryCaptureAuthorityRuleSnapshot(
+				out MatchStateSnapshot rollbackSnapshot,
+				out string rollbackSnapshotError))
+			{
+				GD.PushError(
+					"Failed to capture the pre-play adventure save rollback snapshot: "
+					+ rollbackSnapshotError);
+				return new PlayCardResult(false, false);
+			}
+
+			adventureSaveRollbackSnapshot = rollbackSnapshot;
+		}
 		ExtraActionGrantState? pendingExtraActionGrant =
 			PeekAdventureExtraActionGrantForAction(playerIndex);
 		var prePlayTableCards = new List<TableCard>(_tableCards);
@@ -178,7 +193,8 @@ public partial class GameBoardScene
 					adventureEnemyNextBaseCardModifiers.CaptureDamageDelta,
 					baseCardActionContext,
 					captureMatchSource,
-					turnSequenceGeneration);
+					turnSequenceGeneration,
+					adventureSaveRollbackSnapshot);
 		}
 		else
 		{

@@ -6,7 +6,8 @@ internal readonly record struct QuestionCardRefreshState(
 
 internal readonly record struct QuestionCardRefreshAdvanceResult(
 	QuestionCardRefreshState State,
-	bool ShouldRefreshQuestionCard);
+	bool ShouldRefreshQuestionCard,
+	bool ShouldExpireQuestionCard = false);
 
 internal static class TurnProgressRules
 {
@@ -23,17 +24,42 @@ internal static class TurnProgressRules
 	internal static QuestionCardRefreshAdvanceResult AdvanceQuestionCardRefresh(
 		bool itemMode,
 		bool hasTableSpecialCard,
+		bool hasQuestionCard,
 		QuestionCardRefreshState currentState,
 		int nextTurnPlayerIndex,
 		int playerCount,
-		int refreshCyclesAfterCapture)
+		int refreshCyclesAfterCapture,
+		int questionCardLifetimeTurns)
 	{
-		if (!itemMode || hasTableSpecialCard || currentState.QuestionCardRefreshAnchorPlayerIndex < 0)
+		if (!itemMode || currentState.QuestionCardRefreshAnchorPlayerIndex < 0)
 		{
 			return new QuestionCardRefreshAdvanceResult(currentState, false);
 		}
 
 		int nextCompletedTurnsSinceQuestionCardRefresh = currentState.CompletedTurnsSinceQuestionCardRefresh + 1;
+		if (hasQuestionCard)
+		{
+			// The serialized refresh counter tracks age while the question card is on the table.
+			if (nextCompletedTurnsSinceQuestionCardRefresh < Math.Max(1, questionCardLifetimeTurns))
+			{
+				return new QuestionCardRefreshAdvanceResult(
+					new QuestionCardRefreshState(
+						nextCompletedTurnsSinceQuestionCardRefresh,
+						currentState.QuestionCardRefreshAnchorPlayerIndex),
+					false);
+			}
+
+			return new QuestionCardRefreshAdvanceResult(
+				StartQuestionCardRefreshTracking(nextTurnPlayerIndex),
+				false,
+				true);
+		}
+
+		if (hasTableSpecialCard)
+		{
+			return new QuestionCardRefreshAdvanceResult(currentState, false);
+		}
+
 		if (nextTurnPlayerIndex != currentState.QuestionCardRefreshAnchorPlayerIndex
 			|| nextCompletedTurnsSinceQuestionCardRefresh < GetQuestionCardRefreshTurnCount(playerCount, refreshCyclesAfterCapture))
 		{

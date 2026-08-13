@@ -41,6 +41,7 @@ func _test_capture_retry_success() -> bool:
 		return false
 
 	var table_before := int(board.call("DebugGetTableCardCount"))
+	var hand_before := int(board.call("DebugGetTotalHandCardCountForPlayer", 0))
 	var player_health_before := int(board.call("DebugGetPlayerScoreValue", 0))
 	var enemy_health_before := int(board.call("DebugGetPlayerScoreValue", 1))
 	var turn_before := int(board.call("DebugGetCurrentTurnPlayerIndex"))
@@ -53,14 +54,17 @@ func _test_capture_retry_success() -> bool:
 	if not _assert_gate_locked(board, "capture retry"):
 		return false
 	if int(board.call("DebugGetTableCardCount")) != table_before \
+			or int(board.call("DebugGetTotalHandCardCountForPlayer", 0)) != hand_before \
 			or int(board.call("DebugGetPlayerScoreValue", 0)) != player_health_before \
 			or int(board.call("DebugGetPlayerScoreValue", 1)) != enemy_health_before \
 			or int(board.call("DebugGetCurrentTurnPlayerIndex")) != turn_before:
 		_fail(
-			"Capture mutated before persistence succeeded: table %d/%d player %d/%d enemy %d/%d turn %d/%d attempts=%d"
+			"Capture mutated before persistence succeeded: table %d/%d hand %d/%d player %d/%d enemy %d/%d turn %d/%d attempts=%d"
 			% [
 				int(board.call("DebugGetTableCardCount")),
 				table_before,
+				int(board.call("DebugGetTotalHandCardCountForPlayer", 0)),
+				hand_before,
 				int(board.call("DebugGetPlayerScoreValue", 0)),
 				player_health_before,
 				int(board.call("DebugGetPlayerScoreValue", 1)),

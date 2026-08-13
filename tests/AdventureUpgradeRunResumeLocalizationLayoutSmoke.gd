@@ -234,34 +234,31 @@ func _audit_locale(locale: String) -> void:
 
 
 func _assert_visual_structure(dialog: Control, locale: String) -> void:
-	var frame_art := dialog.get_node_or_null("DialogMotion/Panel/FrameArt") as Control
-	if frame_art == null:
-		_fail("Missing FrameArt on the adventure run resume dialog for locale %s" % locale)
+	var panel := dialog.get_node_or_null("DialogMotion/Panel") as Control
+	var glass_surface := panel.get_node_or_null("GlassSurface") as ColorRect if panel != null else null
+	var glass_frame := panel.get_node_or_null("GlassFrame") as Panel if panel != null else null
+	if panel == null or glass_surface == null or glass_frame == null:
+		_fail("Resume dialog is missing its unified glass panel structure for locale %s" % locale)
+		return
+	if dialog.get_node_or_null("DialogMotion/Panel/ContentMargin/Layout/BodyPanel") != null:
+		_fail("Resume dialog should not render a descriptive body panel for locale %s" % locale)
 		return
 
-	var panel_texture_path := String(frame_art.get("PanelTexturePath"))
-	if panel_texture_path != "res://assets/ui/player_count_dialog_blank_panel.png":
-		_fail("Resume dialog should use the blank ocean panel, got %s" % panel_texture_path)
+	if not dialog.has_meta("secondary_menu_visual_profile") \
+			or str(dialog.get_meta("secondary_menu_visual_profile")) != "secondary-menu-unified":
+		_fail("Resume dialog should use the shared secondary-menu glass profile")
 		return
 
-	if bool(frame_art.get("CoverBuiltInActionWell")):
-		_fail("Resume dialog should not render the built-in action well overlay")
-		return
-
-	if bool(frame_art.get("CoverBuiltInRowSlots")):
-		_fail("Resume dialog should not render the built-in row slot overlays")
-		return
-
-	_assert_button_frame_script(dialog, "DialogMotion/Panel/ContentMargin/Layout/ButtonRow/ContinueFrame", locale)
+	_assert_button_frame(dialog, "DialogMotion/Panel/ContentMargin/Layout/ButtonRow/ContinueFrame", Color(0.42, 0.92, 0.94, 0.96), locale)
 	if _failed:
 		return
-	_assert_button_frame_script(dialog, "DialogMotion/Panel/ContentMargin/Layout/ButtonRow/RestartFrame", locale)
+	_assert_button_frame(dialog, "DialogMotion/Panel/ContentMargin/Layout/ButtonRow/RestartFrame", Color(0.9, 0.52, 0.54, 0.84), locale)
 	if _failed:
 		return
-	_assert_button_frame_script(dialog, "DialogMotion/Panel/ContentMargin/Layout/ButtonRow/CancelFrame", locale)
+	_assert_button_frame(dialog, "DialogMotion/Panel/ContentMargin/Layout/ButtonRow/CancelFrame", Color(0.62, 1, 0.94, 0.84), locale)
 
 
-func _assert_button_frame_script(dialog: Control, node_path: String, locale: String) -> void:
+func _assert_button_frame(dialog: Control, node_path: String, expected_accent: Color, locale: String) -> void:
 	var frame := dialog.get_node_or_null(node_path) as Control
 	if frame == null:
 		_fail("Missing button frame %s for locale %s" % [node_path, locale])
@@ -271,6 +268,10 @@ func _assert_button_frame_script(dialog: Control, node_path: String, locale: Str
 	var script_path := "" if script == null else String(script.resource_path)
 	if script_path != "res://scripts/OceanMenuButtonFrame.cs":
 		_fail("Resume dialog button frame %s should use OceanMenuButtonFrame, got %s" % [node_path, script_path])
+		return
+
+	if int(frame.get("FrameStyle")) != 12 or not (frame.get("AccentColor") as Color).is_equal_approx(expected_accent):
+		_fail("Resume dialog button frame %s does not use the shared action treatment" % node_path)
 
 
 func _open_resume_dialog(menu: Node) -> bool:

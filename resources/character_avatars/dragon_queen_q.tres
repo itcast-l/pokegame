@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_avatar_definition")
 Id = "dragon_queen_q"
-DisplayName = "奎娜 Q"
+DisplayName = "奎娜"
 DisplayNameKey = "AVATAR_DRAGON_QUEEN_Q_NAME"
 RootPath = "res://art/characters/player_dragon_queen_avatar/run-002"
 IdleFrameCount = 12

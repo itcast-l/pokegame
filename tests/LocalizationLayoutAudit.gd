@@ -281,6 +281,12 @@ func _audit_scene(scene_path: String, locale: String, viewport_size: Vector2i) -
 	await process_frame
 
 	_audit_node(node, scene_path, locale, viewport_size)
+	if scene_path.ends_with("main_menu_skill_codex_overlay.tscn") \
+			and node.has_method("DebugSelectCategory"):
+		node.call("DebugSelectCategory", "items")
+		await process_frame
+		await process_frame
+		_audit_node(node, scene_path, locale, viewport_size)
 
 	if is_instance_valid(viewport) and viewport.get_parent() != null:
 		viewport.queue_free()

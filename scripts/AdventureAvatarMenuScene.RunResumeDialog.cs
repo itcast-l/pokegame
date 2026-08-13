@@ -50,11 +50,6 @@ public partial class AdventureAvatarMenuScene
 			Localize(recoveryMode
 				? "ADVENTURE_RECOVERY_TITLE"
 				: "ADVENTURE_RESUME_RUN_TITLE"),
-			Localize(_runRecoverySaveFailed
-				? "ADVENTURE_RECOVERY_SAVE_FAILED"
-				: recoveryMode
-					? "ADVENTURE_RECOVERY_BODY"
-					: "ADVENTURE_RESUME_RUN_BODY"),
 			Localize("ADVENTURE_CONTINUE_RUN"),
 			Localize(recoveryMode
 				? "ADVENTURE_RECOVERY_RESTART"

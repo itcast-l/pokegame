@@ -5,8 +5,9 @@ public partial class GameBoardScene
 	private const string DisabledCardProhibitedTexturePath = "res://assets/ui/disabled_card_prohibited_mark.png";
 	private static readonly StyleBoxFlat MagnetSelectionPulseStyle = CreateMagnetSelectionPulseStyle();
 	private static readonly Texture2D? DisabledCardProhibitedTexture = GD.Load<Texture2D>(DisabledCardProhibitedTexturePath);
-	private static readonly Vector2 HandCardDescriptionLabelSize = new(212.0f, 50.0f);
-	private static readonly Vector2 TableCardDescriptionLabelSize = new(224.0f, 52.0f);
+	private static readonly Vector2 HandCardDescriptionBubbleSize = new(560.0f, 76.0f);
+	private static readonly Vector2 TableCardDescriptionBubbleSize = new(560.0f, 76.0f);
+	private const float CardDescriptionGap = 28.0f;
 
 	private int GetVisibleHandCardCountForRender(int playerIndex, int handCount)
 	{
@@ -69,49 +70,70 @@ public partial class GameBoardScene
 			: Localize("GAME_CARD_COLLECTS_TABLE");
 	}
 
-	private static Label CreateCardDescriptionLabel(string text, Vector2 position, Vector2 size)
+	private static OceanMenuButtonFrame CreateCardDescriptionBubble(string text, Vector2 position, Vector2 size)
 	{
+		var bubble = new OceanMenuButtonFrame
+		{
+			Name = "CardDescriptionBubble",
+			MouseFilter = MouseFilterEnum.Ignore,
+			Position = position,
+			Size = size,
+			Visible = false,
+			ZAsRelative = false,
+			ZIndex = TableCardPointPopupZIndex - 10,
+			HighlightFocus = false,
+			SuppressVisuals = true,
+		};
+
 		var label = new Label
 		{
 			Name = "CardDescriptionLabel",
 			Text = text,
 			MouseFilter = MouseFilterEnum.Ignore,
-			Position = position,
-			Size = size,
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
-			Visible = false,
-			ZAsRelative = false,
-			ZIndex = TableCardPointPopupZIndex - 10,
 		};
-		label.AddThemeFontSizeOverride("font_size", 18);
-		label.AddThemeColorOverride("font_color", new Color(0.36f, 0.96f, 1.0f, 1.0f));
-		label.AddThemeColorOverride("font_outline_color", new Color(0.0f, 0.05f, 0.09f, 0.92f));
-		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.03f, 0.05f, 0.95f));
+		label.AddThemeFontOverride("font", LocalizationTypography.CreateCurrentFontVariation(660.0f, 0.42f));
+		label.AddThemeFontSizeOverride("font_size", 22);
+		label.AddThemeColorOverride("font_color", new Color(1.0f, 0.98f, 0.88f, 1.0f));
+		label.AddThemeColorOverride("font_outline_color", new Color(0.015f, 0.075f, 0.10f, 0.96f));
+		label.AddThemeColorOverride("font_shadow_color", new Color(0.0f, 0.015f, 0.025f, 0.68f));
 		label.AddThemeConstantOverride("outline_size", 2);
+		label.AddThemeConstantOverride("shadow_outline_size", 1);
 		label.AddThemeConstantOverride("shadow_offset_x", 0);
 		label.AddThemeConstantOverride("shadow_offset_y", 2);
-		return label;
+		label.AddThemeConstantOverride("line_spacing", -6);
+		label.SetAnchorsPreset(LayoutPreset.FullRect);
+		label.OffsetLeft = 20.0f;
+		label.OffsetTop = 4.0f;
+		label.OffsetRight = -20.0f;
+		label.OffsetBottom = -4.0f;
+		bubble.AddChild(label);
+		return bubble;
 	}
 
-	private Vector2 GetHandCardDescriptionPosition(int playerIndex)
+	private Vector2 GetHandCardDescriptionPosition(
+		int playerIndex,
+		Vector2 cardPosition)
 	{
-		var labelSize = HandCardDescriptionLabelSize;
-		float y = GetPlayerViewSlotIndex(playerIndex) == 1 ? CardVisualSize.Y + 4.0f : -labelSize.Y - 4.0f;
-		return new Vector2((CardVisualSize.X - labelSize.X) / 2.0f, y);
+		var bubbleSize = HandCardDescriptionBubbleSize;
+		float y = GetPlayerViewSlotIndex(playerIndex) == 1
+			? CardVisualSize.Y + CardDescriptionGap
+			: -bubbleSize.Y - CardDescriptionGap;
+		return new Vector2((CardVisualSize.X - bubbleSize.X) / 2.0f, y);
 	}
 
-	private Vector2 GetTableCardDescriptionPosition(Vector2 cardPosition, Vector2 labelSize)
+	private Vector2 GetTableCardDescriptionPosition(Vector2 cardPosition, Vector2 bubbleSize)
 	{
 		float x = Mathf.Clamp(
-			cardPosition.X + (CardVisualSize.X - labelSize.X) / 2.0f,
+			cardPosition.X + (CardVisualSize.X - bubbleSize.X) / 2.0f,
 			0.0f,
-			Mathf.Max(0.0f, _centerArena.Size.X - labelSize.X));
-		float y = cardPosition.Y - labelSize.Y - 4.0f;
+			Mathf.Max(0.0f, _centerArena.Size.X - bubbleSize.X));
+		float y = cardPosition.Y - bubbleSize.Y - CardDescriptionGap;
 		if (y < 0.0f)
 		{
-			y = cardPosition.Y + CardVisualSize.Y + 4.0f;
+			y = cardPosition.Y + CardVisualSize.Y + CardDescriptionGap;
 		}
 
 		return new Vector2(x, y);

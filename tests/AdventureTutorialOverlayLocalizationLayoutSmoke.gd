@@ -7,6 +7,21 @@ const VIEWPORT_SIZES := [Vector2i(1280, 720), Vector2i(360, 640)]
 const STRESS_LOCALE := "stress_tutorial_long"
 const TOLERANCE := 1.0
 const TIMEOUT_SECONDS := 20.0
+const TUTORIAL_TEXT_KEYS := [
+	"GAME_TUTORIAL_BASIC_INTRO",
+	"GAME_TUTORIAL_TOUR_PLAYER",
+	"GAME_TUTORIAL_TOUR_ENEMY",
+	"GAME_TUTORIAL_TOUR_HAND",
+	"GAME_TUTORIAL_TOUR_DECK",
+	"GAME_TUTORIAL_TOUR_TABLE",
+	"GAME_TUTORIAL_STEP_MATCH",
+	"GAME_TUTORIAL_STEP_CONTINUE",
+	"GAME_TUTORIAL_ITEM_INTRO",
+	"GAME_TUTORIAL_ITEM_COLLECT_BOMB",
+	"GAME_TUTORIAL_ITEM_PLAY_BOMB",
+	"GAME_TUTORIAL_ITEM_ENEMY_TRIGGER_BOMB",
+	"GAME_TUTORIAL_WRONG_CARD",
+]
 
 var _failed := false
 var _translations := {}
@@ -70,7 +85,7 @@ func _load_translations() -> void:
 		if row.is_empty() or String(row[0]).strip_edges().is_empty():
 			continue
 		var key := String(row[0]).strip_edges()
-		if key != "GAME_TUTORIAL_BASIC_INTRO" and key != "GAME_TUTORIAL_CONTINUE":
+		if key not in TUTORIAL_TEXT_KEYS and key != "GAME_TUTORIAL_CONTINUE":
 			continue
 		for index in range(_locales.size()):
 			var column_index := index + 1
@@ -84,10 +99,11 @@ func _load_translations() -> void:
 func _install_stress_translation() -> void:
 	var translation := Translation.new()
 	translation.locale = STRESS_LOCALE
-	translation.add_message(
-		"GAME_TUTORIAL_BASIC_INTRO",
-		"Review the highlighted play area carefully before continuing through the complete guided expedition sequence and choosing the next available action.",
-		"")
+	for key in TUTORIAL_TEXT_KEYS:
+		translation.add_message(
+			key,
+			"Review the highlighted play area carefully before continuing through the complete guided expedition sequence and choosing the next available action.",
+			"")
 	translation.add_message(
 		"GAME_TUTORIAL_CONTINUE",
 		"Continue the guided expedition",
@@ -130,47 +146,35 @@ func _audit_overlay(packed_scene: PackedScene, locale: String, viewport_size: Ve
 		Vector2(viewport_size.x * 0.38, viewport_size.y * 0.42),
 		Vector2(minf(180.0, viewport_size.x * 0.34), 72.0))
 	overlay.call("SetTargetRect", target_rect)
-	overlay.call(
-		"SetContent",
-		tr("GAME_TUTORIAL_BASIC_INTRO"),
-		tr("GAME_TUTORIAL_CONTINUE"),
-		true)
-	overlay.call("SetContinueEnabled", true)
-	overlay.call("ShowOverlay")
-	await process_frame
-	await process_frame
+	for text_key in TUTORIAL_TEXT_KEYS:
+		for continue_mode in [true, false]:
+			overlay.call(
+				"SetContent",
+				tr(text_key),
+				tr("GAME_TUTORIAL_CONTINUE"),
+				continue_mode)
+			overlay.call("SetContinueEnabled", true)
+			overlay.call("ShowOverlay")
+			await process_frame
+			await process_frame
+			if text_key == TUTORIAL_TEXT_KEYS[0] and continue_mode \
+					and (target.position.distance_to(target_rect.position - Vector2(10, 10)) > TOLERANCE \
+					or target.size.distance_to(target_rect.size + Vector2(20, 20)) > TOLERANCE):
+				_fail("Target padding changed for %s at %s" % [locale, viewport_size])
+				return
 
-	if not overlay.visible or not blocker.visible or blocker.mouse_filter != Control.MOUSE_FILTER_STOP:
-		_fail("Continue mode did not preserve the input blocker for %s at %s" % [locale, viewport_size])
-		return
-	if button.disabled or not button.visible or button.focus_mode != Control.FOCUS_NONE:
-		_fail("Continue button state changed for %s at %s" % [locale, viewport_size])
-		return
-	if label.text.is_empty() or button.text.is_empty():
-		_fail("Tutorial text was empty for %s" % locale)
-		return
-	if target.position.distance_to(target_rect.position - Vector2(10, 10)) > TOLERANCE \
-			or target.size.distance_to(target_rect.size + Vector2(20, 20)) > TOLERANCE:
-		_fail("Target padding changed for %s at %s" % [locale, viewport_size])
-		return
-	if pointer.points.size() != 2:
-		_fail("Tutorial pointer was not laid out for %s at %s" % [locale, viewport_size])
-		return
-	if not _rect_fits(Rect2(callout.position, callout.size), viewport_size):
-		_fail("Callout overflowed the viewport for %s at %s: %s" % [locale, viewport_size, Rect2(callout.position, callout.size)])
-		return
-	if not _rect_fits(Rect2(callout.position + label.position, label.size), viewport_size):
-		_fail("Tutorial text overflowed the viewport for %s at %s" % [locale, viewport_size])
-		return
-	if not _rect_fits(Rect2(callout.position + button.position, button.size), viewport_size):
-		_fail("Continue button overflowed the viewport for %s at %s" % [locale, viewport_size])
-		return
-
-	overlay.call("SetContent", label.text, button.text, false)
-	await process_frame
-	if blocker.visible or blocker.mouse_filter != Control.MOUSE_FILTER_IGNORE or button.visible:
-		_fail("Action mode did not release the input blocker for %s" % locale)
-		return
+			if not _audit_callout_content(
+				overlay,
+				blocker,
+				pointer,
+				callout,
+				label,
+				button,
+				locale,
+				viewport_size,
+				text_key,
+				continue_mode):
+				return
 
 	overlay.call("Pulse")
 	overlay.call("HideOverlay")
@@ -183,11 +187,74 @@ func _audit_overlay(packed_scene: PackedScene, locale: String, viewport_size: Ve
 	await process_frame
 
 
+func _audit_callout_content(
+		overlay: Control,
+		blocker: ColorRect,
+		pointer: Line2D,
+		callout: Panel,
+		label: Label,
+		button: Button,
+		locale: String,
+		viewport_size: Vector2i,
+		text_key: String,
+		continue_mode: bool) -> bool:
+	var context := "%s/%s/%s/%s" % [
+		locale,
+		viewport_size,
+		text_key,
+		"continue" if continue_mode else "action",
+	]
+	var actual_viewport_size := Vector2i(roundi(overlay.size.x), roundi(overlay.size.y))
+	if not overlay.visible or label.text.is_empty():
+		_fail("Tutorial callout was missing content for %s" % context)
+		return false
+	if pointer.points.size() != 2:
+		_fail("Tutorial pointer was not laid out for %s" % context)
+		return false
+	if not _rect_fits(Rect2(callout.position, callout.size), actual_viewport_size):
+		_fail("Callout overflowed the viewport for %s: %s" % [context, Rect2(callout.position, callout.size)])
+		return false
+	var callout_bounds := Rect2(Vector2.ZERO, callout.size)
+	if not _rect_contains(callout_bounds, Rect2(label.position, label.size)):
+		_fail("Tutorial text bounds escaped the callout for %s" % context)
+		return false
+	if label.get_visible_line_count() != label.get_line_count():
+		_fail("Tutorial text clipped lines for %s: visible=%d total=%d size=%s" % [
+			context,
+			label.get_visible_line_count(),
+			label.get_line_count(),
+			label.size,
+		])
+		return false
+	if continue_mode:
+		if not blocker.visible or blocker.mouse_filter != Control.MOUSE_FILTER_STOP:
+			_fail("Continue mode did not preserve the input blocker for %s" % context)
+			return false
+		if button.disabled or not button.visible or button.focus_mode != Control.FOCUS_NONE:
+			_fail("Continue button state changed for %s" % context)
+			return false
+		if button.text.is_empty() or not _rect_contains(callout_bounds, Rect2(button.position, button.size)):
+			_fail("Continue button escaped the callout for %s" % context)
+			return false
+	else:
+		if blocker.visible or blocker.mouse_filter != Control.MOUSE_FILTER_IGNORE or button.visible:
+			_fail("Action mode did not release the input blocker for %s" % context)
+			return false
+	return true
+
+
 func _rect_fits(rect: Rect2, viewport_size: Vector2i) -> bool:
 	return rect.position.x >= -TOLERANCE \
 		and rect.position.y >= -TOLERANCE \
 		and rect.end.x <= viewport_size.x + TOLERANCE \
 		and rect.end.y <= viewport_size.y + TOLERANCE
+
+
+func _rect_contains(container: Rect2, content: Rect2) -> bool:
+	return content.position.x >= container.position.x - TOLERANCE \
+		and content.position.y >= container.position.y - TOLERANCE \
+		and content.end.x <= container.end.x + TOLERANCE \
+		and content.end.y <= container.end.y + TOLERANCE
 
 
 func _audit_board_integration() -> void:

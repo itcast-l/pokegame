@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b2oi74bgwdmoo"
+
+[deps]
+
+files=["res://legal/ASSET_RIGHTS_REGISTER.asset.translation", "res://legal/ASSET_RIGHTS_REGISTER.file.translation", "res://legal/ASSET_RIGHTS_REGISTER.ownership.translation", "res://legal/ASSET_RIGHTS_REGISTER.provenance.translation", "res://legal/ASSET_RIGHTS_REGISTER.rights.translation", "res://legal/ASSET_RIGHTS_REGISTER.license.translation", "res://legal/ASSET_RIGHTS_REGISTER.commercial.translation", "res://legal/ASSET_RIGHTS_REGISTER.redistribution.translation", "res://legal/ASSET_RIGHTS_REGISTER.rights.translation", "res://legal/ASSET_RIGHTS_REGISTER.notes.translation"]
+
+source_file="res://legal/ASSET_RIGHTS_REGISTER.csv"
+dest_files=["res://legal/ASSET_RIGHTS_REGISTER.asset.translation", "res://legal/ASSET_RIGHTS_REGISTER.file.translation", "res://legal/ASSET_RIGHTS_REGISTER.ownership.translation", "res://legal/ASSET_RIGHTS_REGISTER.provenance.translation", "res://legal/ASSET_RIGHTS_REGISTER.rights.translation", "res://legal/ASSET_RIGHTS_REGISTER.license.translation", "res://legal/ASSET_RIGHTS_REGISTER.commercial.translation", "res://legal/ASSET_RIGHTS_REGISTER.redistribution.translation", "res://legal/ASSET_RIGHTS_REGISTER.rights.translation", "res://legal/ASSET_RIGHTS_REGISTER.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

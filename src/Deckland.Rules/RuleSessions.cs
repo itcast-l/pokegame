@@ -3257,6 +3257,16 @@ public sealed partial class AuthorityRuleSession
 					command.QuestionRefreshCyclesAfterCapture.ToString()),
 				ReadModel);
 		}
+		if (command.AdvanceQuestionRefresh
+			&& command.HasQuestionCard
+			&& command.QuestionCardLifetimeTurns <= 0)
+		{
+			return RuleCommandResult.Rejected(
+				new RuleRejection(
+					RuleRejectionCode.InvalidCommand,
+					command.QuestionCardLifetimeTurns.ToString()),
+				ReadModel);
+		}
 
 		int previousSeat = _state.CurrentTurnPlayerIndex;
 		int nextSeat = _turnAdvancementService.ApplyPlayedResult(
@@ -3271,6 +3281,7 @@ public sealed partial class AuthorityRuleSession
 			ClearBlockedAutomatedItem(_state);
 		}
 		bool shouldRefreshQuestionCard = false;
+		bool shouldExpireQuestionCard = false;
 		if (command.AdvanceQuestionRefresh)
 		{
 			QuestionCardRefreshAdvanceResult refreshResult =
@@ -3278,9 +3289,12 @@ public sealed partial class AuthorityRuleSession
 					_state,
 					_profile.Capabilities.Contains(MatchCapability.ItemRules),
 					command.HasTableSpecialCard,
+					command.HasQuestionCard,
 					nextSeat,
-					command.QuestionRefreshCyclesAfterCapture);
+					command.QuestionRefreshCyclesAfterCapture,
+					command.QuestionCardLifetimeTurns);
 			shouldRefreshQuestionCard = refreshResult.ShouldRefreshQuestionCard;
+			shouldExpireQuestionCard = refreshResult.ShouldExpireQuestionCard;
 		}
 		_state.RuleRevision++;
 		intents.Add(new PresentationIntent(
@@ -3298,6 +3312,7 @@ public sealed partial class AuthorityRuleSession
 				TargetIndex = nextSeat,
 				Captured = command.Captured,
 				ShouldRefreshQuestionCard = shouldRefreshQuestionCard,
+				ShouldExpireQuestionCard = shouldExpireQuestionCard,
 			});
 	}
 

@@ -12,7 +12,7 @@ public partial class AdventureTutorialOverlay : Control
 	private const float CalloutHorizontalPadding = 12.0f;
 	private const float CalloutVerticalPadding = 8.0f;
 	private const float CalloutButtonGap = 4.0f;
-	private const float CalloutTextLineHeight = 21.0f;
+	private const float CalloutTextHeightSafety = 2.0f;
 	private const float CalloutButtonHeight = 28.0f;
 	private static readonly Vector2 TargetPadding = new(10.0f, 10.0f);
 
@@ -101,7 +101,7 @@ public partial class AdventureTutorialOverlay : Control
 		_calloutLabel.CustomMinimumSize = Vector2.Zero;
 		_calloutLabel.Size = new Vector2(
 			continueMode ? CalloutMaxTextWidth : PlayCalloutMaxTextWidth,
-			CalloutTextLineHeight);
+			1.0f);
 		_calloutLabel.Text = content ?? string.Empty;
 		_continueButton.Text = continueText ?? string.Empty;
 		_continueButton.Visible = continueMode;
@@ -166,10 +166,12 @@ public partial class AdventureTutorialOverlay : Control
 		_targetOutline.Position = paddedTarget.Position;
 		_targetOutline.Size = paddedTarget.Size;
 
-		Vector2 viewportSize = Size;
-		if (viewportSize.X <= 0.0f || viewportSize.Y <= 0.0f)
+		Vector2 viewportSize = GetViewportRect().Size;
+		if (Size.X > 0.0f && Size.Y > 0.0f)
 		{
-			viewportSize = GetViewportRect().Size;
+			viewportSize = new Vector2(
+				Mathf.Min(Size.X, viewportSize.X),
+				Mathf.Min(Size.Y, viewportSize.Y));
 		}
 		Vector2 calloutSize = GetCalloutSize(viewportSize);
 		_calloutPanel.Size = calloutSize;
@@ -196,10 +198,10 @@ public partial class AdventureTutorialOverlay : Control
 		float minTextWidth = _continueMode
 			? CalloutMinTextWidth
 			: Mathf.Min(PlayCalloutMinTextWidth, maxTextWidth);
-		float naturalTextWidth = Mathf.Max(minTextWidth, EstimateTextWidth(text));
+		float naturalTextWidth = Mathf.Max(minTextWidth, GetTextWidth(_calloutLabel, text));
 		float textWidth = Mathf.Min(naturalTextWidth, maxTextWidth);
-		int lineCount = Math.Max(1, (int)Math.Ceiling(naturalTextWidth / textWidth));
-		float textHeight = lineCount * CalloutTextLineHeight;
+		float textHeight = GetMultilineTextHeight(_calloutLabel, text, textWidth)
+			+ CalloutTextHeightSafety;
 		float width = textWidth + CalloutHorizontalPadding * 2.0f;
 		float height = textHeight + CalloutVerticalPadding * 2.0f;
 
@@ -234,29 +236,25 @@ public partial class AdventureTutorialOverlay : Control
 
 	private float GetContinueButtonWidth()
 	{
-		return Mathf.Max(56.0f, EstimateTextWidth(_continueButton.Text ?? string.Empty) + 26.0f);
+		return Mathf.Max(56.0f, GetTextWidth(_continueButton, _continueButton.Text ?? string.Empty) + 26.0f);
 	}
 
-	private static float EstimateTextWidth(string text)
+	private static float GetTextWidth(Control control, string text)
 	{
-		float width = 0.0f;
-		foreach (char character in text)
-		{
-			if (char.IsWhiteSpace(character))
-			{
-				width += 4.0f;
-			}
-			else if (character <= 0x007f)
-			{
-				width += 8.0f;
-			}
-			else
-			{
-				width += 15.0f;
-			}
-		}
+		Font font = control.GetThemeFont("font");
+		int fontSize = control.GetThemeFontSize("font_size");
+		return font.GetStringSize(text, HorizontalAlignment.Left, -1.0f, fontSize).X;
+	}
 
-		return width;
+	private static float GetMultilineTextHeight(Label label, string text, float width)
+	{
+		Font font = label.GetThemeFont("font");
+		int fontSize = label.GetThemeFontSize("font_size");
+		return font.GetMultilineStringSize(
+			text,
+			label.HorizontalAlignment,
+			width,
+			fontSize).Y;
 	}
 
 	private Vector2 GetCalloutPosition(Vector2 calloutSize, Vector2 viewportSize)

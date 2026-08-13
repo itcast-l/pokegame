@@ -94,6 +94,27 @@ func _audit_viewport(spec: Dictionary) -> bool:
 	if int(spec.columns) == 2 and not body_scroll.get_v_scroll_bar().visible:
 		_fail("%s compact lobby does not expose its structured vertical scroll" % context)
 		return false
+	if int(spec.columns) == 4 and (body_scroll.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED \
+			or body_scroll.scroll_vertical != 0 or body_scroll.get_v_scroll_bar().visible):
+		_fail("%s desktop lobby still exposes outer vertical scrolling: mode=%d offset=%d bar=%s body=%s viewport=%s" % [
+			context,
+			body_scroll.vertical_scroll_mode,
+			body_scroll.scroll_vertical,
+			body_scroll.get_v_scroll_bar().visible,
+			body.size,
+			body_scroll.size,
+		])
+		return false
+	if int(spec.columns) == 4 and body.size.y > body_scroll.size.y + RECT_TOLERANCE:
+		_fail("%s desktop lobby is taller than its viewport: %s > %s" % [context, body.size.y, body_scroll.size.y])
+		return false
+	var steam_host := body.get_node_or_null("FriendsPanel/PanelMargin/FriendsContent/SteamHostButton") as Button
+	var steam_refresh := body.get_node_or_null("FriendsPanel/PanelMargin/FriendsContent/SteamRefreshButton") as Button
+	if steam_host == null or steam_refresh == null \
+			or body.get_node_or_null("ModeRail/PanelMargin/ModeRailContent/SteamHostButton") != null \
+			or body.get_node_or_null("ModeRail/PanelMargin/ModeRailContent/SteamRefreshButton") != null:
+		_fail("%s Steam actions are not grouped inside the Steam panel" % context)
+		return false
 
 	var panels: Array[PanelContainer] = []
 	for panel_name in PANEL_NAMES:
@@ -132,8 +153,12 @@ func _audit_viewport(spec: Dictionary) -> bool:
 		"SafeArea/MainLayout/Header/BackButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput",
-		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/PlayerCountOption",
+		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/PlayerCountOption",
+		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/ItemModeOption",
+		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/WinningScoreOption",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton",
+		"SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamHostButton",
+		"SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamRefreshButton",
 		"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/ReadyButton",
 		"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/StartButton",
 		"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/LeaveSessionButton",
@@ -145,10 +170,14 @@ func _audit_viewport(spec: Dictionary) -> bool:
 		if control is BaseButton and (control as BaseButton).focus_mode == Control.FOCUS_NONE:
 			_fail("%s control %s is not keyboard or gamepad focusable" % [context, control_path])
 			return false
+	if not _audit_room_setting_labels(context):
+		return false
 	for button_path in [
 		"SafeArea/MainLayout/Header/BackButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanSearchButton",
+		"SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamHostButton",
+		"SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamRefreshButton",
 	]:
 		if not _assert_button_surface(button_path, SECONDARY_BUTTON_SURFACE, context):
 			return false
@@ -160,6 +189,49 @@ func _audit_viewport(spec: Dictionary) -> bool:
 			return false
 	if not _audit_readable_typography(context):
 		return false
+	return true
+
+
+func _audit_room_setting_labels(context: String) -> bool:
+	var field_specs := [
+		{
+			"label": "PlayerCountLabel",
+			"option": "PlayerCountOption",
+			"key": "PLAYER_COUNT_PLAYERS",
+		},
+		{
+			"label": "ItemModeLabel",
+			"option": "ItemModeOption",
+			"key": "PLAYER_COUNT_ITEM_MODE",
+		},
+		{
+			"label": "WinningScoreLabel",
+			"option": "WinningScoreOption",
+			"key": "PLAYER_COUNT_WINNING_SCORE",
+		},
+	]
+	var grid_path := "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid"
+	var grid := _lobby.get_node_or_null(grid_path) as GridContainer
+	if grid == null or grid.columns != 2:
+		_fail("%s room settings are not arranged as a two-column labeled grid" % context)
+		return false
+	for spec in field_specs:
+		var label := grid.get_node_or_null(spec.label) as Label
+		var option := grid.get_node_or_null(spec.option) as OptionButton
+		var translated_label := TranslationServer.translate(spec.key)
+		if label == null or option == null or label.text.is_empty() \
+				or label.text == spec.key or label.text != translated_label:
+			_fail("%s room setting %s is missing its localized field label" % [context, spec.option])
+			return false
+		var label_rect := label.get_global_rect()
+		var option_rect := option.get_global_rect()
+		var columns_overlap := option_rect.end.x > label_rect.position.x + RECT_TOLERANCE \
+				if grid.is_layout_rtl() else label_rect.end.x > option_rect.position.x + RECT_TOLERANCE
+		if columns_overlap or absf(label_rect.get_center().y - option_rect.get_center().y) > RECT_TOLERANCE \
+				or not _rect_contains(grid.get_global_rect(), label_rect) \
+				or not _rect_contains(grid.get_global_rect(), option_rect):
+			_fail("%s room setting %s does not align its label with its option" % [context, spec.option])
+			return false
 	return true
 
 

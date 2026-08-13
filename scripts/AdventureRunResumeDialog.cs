@@ -2,19 +2,17 @@ using Godot;
 
 public partial class AdventureRunResumeDialog : Control
 {
-	private const float PanelWidth = 744.0f;
-	private const float PanelHeight = 480.0f;
-	private const float ButtonHeight = 48.0f;
+	private const float PanelWidth = 704.0f;
+	private const float PanelHeight = 360.0f;
+	private const float ButtonHeight = 54.0f;
 	private const float ButtonMinWidth = 208.0f;
-	private const float ButtonHorizontalPadding = 76.0f;
-	private const float ButtonRowWidth = 576.0f;
-	private const int TitleFontSize = 34;
-	private const int TitleMinFontSize = 26;
-	private const int BodyFontSize = 18;
-	private const int BodyMinFontSize = 16;
+	private const float ButtonHorizontalPadding = 64.0f;
+	private const float ButtonRowWidth = 624.0f;
+	private const int TitleFontSize = 30;
+	private const int TitleMinFontSize = 24;
 	private const int ButtonFontSize = 20;
 	private const int ButtonMinFontSize = 16;
-	private const float ViewportMargin = 18.0f;
+	private const float ViewportMargin = 24.0f;
 
 	[Signal]
 	public delegate void ContinueRequestedEventHandler();
@@ -27,9 +25,11 @@ public partial class AdventureRunResumeDialog : Control
 
 	private Control _dialogMotion = default!;
 	private Control _panel = default!;
+	private ColorRect _scrim = default!;
 	private Label _titleLabel = default!;
-	private Label _bodyLabel = default!;
 	private OceanMenuButtonFrame _continueFrame = default!;
+	private OceanMenuButtonFrame _restartFrame = default!;
+	private OceanMenuButtonFrame _cancelFrame = default!;
 	private Button _continueButton = default!;
 	private Button _restartButton = default!;
 	private Button _cancelButton = default!;
@@ -42,16 +42,19 @@ public partial class AdventureRunResumeDialog : Control
 	{
 		_dialogMotion = GetNode<Control>("DialogMotion");
 		_panel = GetNode<Control>("DialogMotion/Panel");
+		_scrim = GetNode<ColorRect>("Scrim");
 		_titleLabel = GetNode<Label>("DialogMotion/Panel/ContentMargin/Layout/TitleLabel");
-		_bodyLabel = GetNode<Label>("DialogMotion/Panel/ContentMargin/Layout/BodyLabel");
 		_continueFrame = GetNode<OceanMenuButtonFrame>("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/ContinueFrame");
+		_restartFrame = GetNode<OceanMenuButtonFrame>("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/RestartFrame");
+		_cancelFrame = GetNode<OceanMenuButtonFrame>("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/CancelFrame");
 		_continueButton = GetNode<Button>("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/ContinueFrame/ContinueButton");
 		_restartButton = GetNode<Button>("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/RestartFrame/RestartButton");
 		_cancelButton = GetNode<Button>("DialogMotion/Panel/ContentMargin/Layout/ButtonRow/CancelFrame/CancelButton");
 
-		ConfigureButton(_continueButton);
-		ConfigureButton(_restartButton);
-		ConfigureButton(_cancelButton);
+		ConfigureVisualStyle();
+		ConfigureButton(_continueButton, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		ConfigureButton(_restartButton, MainMenuInteractiveStyle.DangerPalette);
+		ConfigureButton(_cancelButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
 		_continueButton.Pressed += () => EmitSignal(SignalName.ContinueRequested);
 		_restartButton.Pressed += () => EmitSignal(SignalName.RestartRequested);
 		_cancelButton.Pressed += () => EmitSignal(SignalName.CancelRequested);
@@ -68,13 +71,11 @@ public partial class AdventureRunResumeDialog : Control
 	public void Configure(
 		bool recoveryMode,
 		string title,
-		string body,
 		string continueText,
 		string restartText,
 		string cancelText)
 	{
 		_titleLabel.Text = title ?? string.Empty;
-		_bodyLabel.Text = body ?? string.Empty;
 		_continueButton.Text = continueText ?? string.Empty;
 		_restartButton.Text = restartText ?? string.Empty;
 		_cancelButton.Text = cancelText ?? string.Empty;
@@ -134,14 +135,46 @@ public partial class AdventureRunResumeDialog : Control
 	public void RefreshLayout()
 	{
 		ApplyLabelSizing(_titleLabel, TitleFontSize, TitleMinFontSize, 2.4f);
-		ApplyLabelSizing(_bodyLabel, BodyFontSize, BodyMinFontSize, 3.8f);
 		ApplyButtonSizing();
 		RefreshResponsiveScale();
 	}
 
-	private static void ConfigureButton(Button button)
+	private void ConfigureVisualStyle()
 	{
-		MainMenuInteractiveStyle.ApplyActionButton(button, ButtonFontSize);
+		SetMeta(SecondaryMenuGlassStyle.VisualProfileMetadata, SecondaryMenuGlassStyle.UnifiedVisual.Id);
+		SecondaryMenuGlassStyle.ApplyReadabilityVeil(_scrim, SecondaryMenuGlassStyle.UnifiedVisual);
+		SecondaryMenuGlassStyle.StyleGlassPanel(_panel, SecondaryMenuGlassStyle.UnifiedVisual, contentPane: false);
+
+		ConfigureFrame(
+			_continueFrame,
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette.ActiveBorder,
+			selected: true);
+		ConfigureFrame(
+			_restartFrame,
+			MainMenuInteractiveStyle.DangerPalette.ActiveBorder,
+			selected: false);
+		ConfigureFrame(
+			_cancelFrame,
+			MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder,
+			selected: false);
+	}
+
+	private static void ConfigureFrame(OceanMenuButtonFrame frame, Color accent, bool selected)
+	{
+		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
+		frame.AccentColor = accent;
+		frame.Selected = selected;
+		frame.HighlightFocus = true;
+		frame.UsePlaqueGlowBackdrop = false;
+		frame.UseToolRowIdleBackdrop = false;
+		frame.ShowIdleTexture = false;
+		frame.SuppressVisuals = false;
+		frame.QueueRedraw();
+	}
+
+	private static void ConfigureButton(Button button, MainMenuInteractiveStyle.Palette palette)
+	{
+		MainMenuInteractiveStyle.ApplyActionButton(button, ButtonFontSize, palette);
 		button.SetMeta(GameAudioManager.UiSuppressPressedSfxMeta, true);
 	}
 

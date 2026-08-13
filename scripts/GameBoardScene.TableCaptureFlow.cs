@@ -23,7 +23,8 @@ public partial class GameBoardScene
 		BaseCardActionContext? baseCardActionContext = null,
 		string actionSource = "capture",
 		AdventureCaptureMatchSource matchSource = AdventureCaptureMatchSource.CollectAll,
-		IReadOnlyCollection<string>? triggeredAttachedItemCardIds = null)
+		IReadOnlyCollection<string>? triggeredAttachedItemCardIds = null,
+		MatchStateSnapshot? adventureSaveRollbackSnapshot = null)
 {
 	if (expectedTableCardReferences == null
 		|| _isLeavingGame
@@ -242,12 +243,28 @@ public partial class GameBoardScene
 			return CaptureTableCardsResult.AbortedBeforeApply;
 		}
 
-			var scoreMutations = ImmutableArray.CreateBuilder<RuleScoreMutation>(2);
-			var scorePresentations = new List<CaptureScorePresentation>(2);
-			if (ShouldUseAdventureUpgradeSystem())
+		var scoreMutations = ImmutableArray.CreateBuilder<RuleScoreMutation>(2);
+		var scorePresentations = new List<CaptureScorePresentation>(2);
+		if (ShouldUseAdventureUpgradeSystem())
+		{
+			MatchStateSnapshot? adventureSaveCommitSnapshot = null;
+			bool adventureSaveSnapshotRolledBack = false;
+			if (adventureSaveRollbackSnapshot != null)
 			{
-				AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-				AdventureClubCaptureCommitInput clubCaptureInput =
+				if (!TryCaptureAuthorityRuleSnapshot(
+					out MatchStateSnapshot commitSnapshot,
+					out string commitSnapshotError))
+				{
+					GD.PushError(
+						"Failed to capture the prepared adventure save commit snapshot: "
+						+ commitSnapshotError);
+					return CaptureTableCardsResult.AbortedBeforeApply;
+				}
+
+				adventureSaveCommitSnapshot = commitSnapshot;
+			}
+			AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+			AdventureClubCaptureCommitInput clubCaptureInput =
 				BuildAdventureClubCaptureCommitInput(playerIndex, adventureCaptureContext);
 			int plannedQuestionRewardCount = playerIndex == MainPlayerIndex
 				? (capturedQuestionRewardPlan.HasValue ? 1 : 0)
@@ -281,7 +298,23 @@ public partial class GameBoardScene
 							false,
 							false),
 					result => result.WriteResult == AdventureRunWriteResult.Succeeded,
-					result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
+					result => result.WriteResult == AdventureRunWriteResult.SaveFailed,
+					onRetryableFailure: adventureSaveRollbackSnapshot == null
+						? null
+						: () =>
+						{
+							adventureSaveSnapshotRolledBack =
+								RestoreAdventureSaveGateRuleSnapshot(
+									adventureSaveRollbackSnapshot,
+									"pre-play rollback");
+							return adventureSaveSnapshotRolledBack;
+						},
+					onSucceeded: adventureSaveCommitSnapshot == null
+						? null
+						: () => !adventureSaveSnapshotRolledBack
+							|| RestoreAdventureSaveGateRuleSnapshot(
+								adventureSaveCommitSnapshot,
+								"prepared capture commit"));
 				if (!gate.Succeeded)
 				{
 					GD.PushWarning($"Failed to commit adventure capture action: {gate.Result.WriteResult}");
@@ -387,6 +420,10 @@ public partial class GameBoardScene
 				}
 			}
 			commitImmediatelyBeforeApply?.Invoke();
+			// Capturing other cards must not reset the lifetime of a question card left behind.
+			bool shouldRestartQuestionRefreshTracking =
+				captureFlow.ShouldTrackQuestionCardRefresh
+				&& (!HasTableQuestionCard() || questionRewardStartGlobalPosition.HasValue);
 		if (!TrySubmitCaptureCardsRuleCommand(
 			playerIndex,
 			captureStartIndex,
@@ -397,7 +434,7 @@ public partial class GameBoardScene
 			blackLedgerRedirectTableCardIndex,
 			MainPlayerIndex,
 				scoreMutations.ToImmutable(),
-				captureFlow.ShouldTrackQuestionCardRefresh,
+				shouldRestartQuestionRefreshTracking,
 				out RuleCommandResult captureCommandResult))
 		{
 			return CaptureTableCardsResult.AbortedBeforeApply;

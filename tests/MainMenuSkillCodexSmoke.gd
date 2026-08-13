@@ -3,12 +3,18 @@ extends SceneTree
 const MAIN_MENU_SCENE_PATH := "res://scenes/main_menu_scene.tscn"
 const POPUP_PREVIEW_SCENE_PATH := "res://scenes/upgrade_choice_popup_asset_scene.tscn"
 const SHARED_CARD_SCENE_PATH := "res://scenes/adventure_upgrade_catalog_card.tscn"
+const ITEM_CARD_SCENE_PATH := "res://scenes/main_menu_item_codex_card.tscn"
 const MENU_LAYOUT_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout"
 const SKILL_BUTTON_PATH := MENU_LAYOUT_PATH + "/SkillCodexFrame/Button"
 const OVERLAY_PATH := "MainMenuSkillCodexOverlay"
 const EMPTY_PROFILE_SLOT := &"profile_0"
 const UNLOCKED_PROFILE_SLOT := &"profile_1"
 const VIEWPORT_SIZES := [Vector2i(960, 540), Vector2i(1280, 720), Vector2i(1920, 1080)]
+const EXPECTED_ITEM_COUNT := 15
+const CATALOG_CARD_SIZE := Vector2(196.0, 322.0)
+const CATALOG_CARD_GAP := 16.0
+const MINIMUM_ITEM_CARD_HEIGHT := 248.0
+const MAXIMUM_VISIBLE_ITEM_ROWS := 3
 const EXPECTED_COUNTS := {
 	"hearts": 14,
 	"diamonds": 13,
@@ -110,6 +116,63 @@ func _run() -> void:
 		_fail("Skill codex did not default to hearts")
 		return
 	if not await _assert_unified_visual_style(overlay):
+		return
+	if String(overlay.call("DebugGetCurrentCategory")) != "upgrades" \
+			or not bool(overlay.call("DebugAreSuitTabsVisible")):
+		_fail("Codex did not default to the upgrades category with suit filters")
+		return
+	if not bool(overlay.call("DebugSelectCategory", "items")):
+		_fail("Failed to select the item category")
+		return
+	await _wait_frames(2)
+	if String(overlay.call("DebugGetCurrentCategory")) != "items" \
+			or bool(overlay.call("DebugAreSuitTabsVisible")):
+		_fail("Item category did not replace the suit filter row")
+		return
+	if int(overlay.call("DebugGetTotalEnabledItemCardCount")) != EXPECTED_ITEM_COUNT \
+			or int(overlay.call("DebugGetVisibleCardCount")) != EXPECTED_ITEM_COUNT:
+		_fail("Item category did not expose all enabled item cards")
+		return
+	if not _assert_item_cards(overlay):
+		return
+	for viewport_size in VIEWPORT_SIZES:
+		root.size = viewport_size
+		await _wait_frames(3)
+		if not _assert_responsive_layout(overlay, viewport_size):
+			return
+	if not await _assert_item_cards_scroll_into_view(overlay):
+		return
+	root.size = Vector2i(1280, 720)
+	await _wait_frames(3)
+	if not _capture_optional_item_screenshot():
+		return
+	if not bool(overlay.call("DebugActivateVisibleCard", 0)):
+		_fail("Item card did not open its enlarged preview")
+		return
+	await process_frame
+	var item_preview_state := overlay.call("DebugGetPreviewCardState") as Dictionary
+	if not bool(overlay.call("DebugIsPreviewVisible")) \
+			or String(item_preview_state["kind"]) != "items" \
+			or bool(item_preview_state["interactive"]) \
+			or not bool(item_preview_state["has_texture"]):
+		_fail("Item preview did not preserve the card as a non-interactive enlarged view")
+		return
+	if not _capture_optional_item_preview_screenshot():
+		return
+	if not bool(menu.call("DebugHandleSkillCodexCancel")):
+		_fail("Item preview did not handle the first cancel")
+		return
+	await process_frame
+	if bool(overlay.call("DebugIsPreviewVisible")) \
+			or String(overlay.call("DebugGetCurrentCategory")) != "items":
+		_fail("Closing the item preview also closed or changed the codex category")
+		return
+	if not bool(overlay.call("DebugSelectCategory", "upgrades")):
+		_fail("Failed to return to the upgrades category")
+		return
+	await _wait_frames(2)
+	if not bool(overlay.call("DebugAreSuitTabsVisible")):
+		_fail("Returning to upgrades did not restore the suit filters")
 		return
 	if int(overlay.call("DebugGetTotalEnabledCardCount")) != 52:
 		_fail("Skill codex total enabled count is not 52")
@@ -565,6 +628,53 @@ func _assert_locked_state(overlay: Node, state: Dictionary) -> bool:
 	return true
 
 
+func _assert_item_cards(overlay: Node) -> bool:
+	var states := overlay.call("DebugGetVisibleItemCardStates") as Array
+	if states.size() != EXPECTED_ITEM_COUNT:
+		_fail("Unexpected enabled item state count")
+		return false
+	var seen_ids := {}
+	var previous_sort_order := -1
+	for state_variant in states:
+		var state := state_variant as Dictionary
+		var item_id := String(state["id"])
+		var sort_order := int(state["sort_order"])
+		if item_id.is_empty() or seen_ids.has(item_id) or item_id in ["J", "Q", "K"]:
+			_fail("Item category contains a duplicate, empty, or disabled legacy entry")
+			return false
+		seen_ids[item_id] = true
+		if sort_order < previous_sort_order:
+			_fail("Item category does not follow catalog sort order")
+			return false
+		previous_sort_order = sort_order
+		if not bool(state["interactive"]) or not bool(state["has_texture"]) \
+				or String(state["title"]).is_empty() \
+				or String(state["description"]).is_empty() \
+				or String(state["title"]).begins_with("ITEM_NAME_") \
+				or String(state["description"]).begins_with("ITEM_DESC_") \
+				or String(state["scene_file_path"]) != ITEM_CARD_SCENE_PATH \
+				or not String(state["card_texture_path"]).ends_with("frame-001.png"):
+			_fail("Item codex card content is incomplete for %s" % item_id)
+			return false
+		var card := overlay.get_node(
+				"Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/ItemCard_%s" \
+				% _to_pascal_case(item_id)) as Button
+		if card == null or card.focus_mode != Control.FOCUS_ALL \
+				or absf(card.size.x / card.size.y - 196.0 / 322.0) > 0.005:
+			_fail("Item codex card layout is invalid for %s" % item_id)
+			return false
+	var focused := root.gui_get_focus_owner()
+	if focused == null or focused != overlay.get_node(
+			"Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/ItemCard_Question_mark"):
+		_fail("Item category did not focus its first card")
+		return false
+	return true
+
+
+func _to_pascal_case(value: String) -> String:
+	return value.left(1).to_upper() + value.substr(1)
+
+
 func _find_visible_card_index(overlay: Node, upgrade_id: String) -> int:
 	var states := overlay.call("DebugGetVisibleCardStates") as Array
 	for index in states.size():
@@ -626,6 +736,8 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 			or focus_style.shadow_size > 4:
 		_fail("Skill codex card hover and focus feedback are not visually tiered")
 		return false
+	if not await _assert_category_tab_hover_consistency(overlay):
+		return false
 
 	for suit in SUIT_BUTTON_NAMES:
 		if not bool(overlay.call("DebugSelectSuit", suit)):
@@ -646,12 +758,56 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 	return true
 
 
+func _assert_category_tab_hover_consistency(overlay: Node) -> bool:
+	for category in ["upgrades", "items"]:
+		if not bool(overlay.call("DebugSelectCategory", category)):
+			_fail("Failed to select %s while auditing category hover theme" % category)
+			return false
+		await _wait_frames(2)
+		var upgrades_button := overlay.get_node(
+				"Root/SafeMargin/Layout/CategoryTabs/UpgradesButton") as Button
+		var items_button := overlay.get_node(
+				"Root/SafeMargin/Layout/CategoryTabs/ItemsButton") as Button
+		var upgrades_hover := upgrades_button.get_theme_stylebox("hover") as StyleBoxFlat
+		var items_hover := items_button.get_theme_stylebox("hover") as StyleBoxFlat
+		if upgrades_hover == null or items_hover == null \
+				or not upgrades_hover.bg_color.is_equal_approx(items_hover.bg_color) \
+				or not upgrades_hover.border_color.is_equal_approx(items_hover.border_color):
+			_fail("Skill codex category tabs use inconsistent hover backgrounds")
+			return false
+	if not bool(overlay.call("DebugSelectCategory", "upgrades")):
+		_fail("Failed to restore upgrades after category hover theme audit")
+		return false
+	await _wait_frames(2)
+	return true
+
+
 func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 	var transition_root := overlay.get_node("Root") as Control
 	var scroll := overlay.get_node("Root/SafeMargin/Layout/CardScroll") as ScrollContainer
 	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
 	var available_width := maxf(0.0, scroll.size.x - 48.0)
-	var expected_columns := clampi(floori((available_width + 16.0) / 212.0), 2, 4)
+	var expected_card_width := CATALOG_CARD_SIZE.x
+	if String(overlay.call("DebugGetCurrentCategory")) == "items":
+		var available_height := maxf(1.0, scroll.size.y)
+		var visible_rows := clampi(
+				floori((available_height + CATALOG_CARD_GAP) \
+						/ (MINIMUM_ITEM_CARD_HEIGHT + CATALOG_CARD_GAP)),
+				1,
+				MAXIMUM_VISIBLE_ITEM_ROWS)
+		var expected_card_height := minf(
+				CATALOG_CARD_SIZE.y,
+				floorf((available_height - ((visible_rows - 1) * CATALOG_CARD_GAP)) \
+						/ visible_rows))
+		expected_card_width = roundf(expected_card_height \
+				* CATALOG_CARD_SIZE.x / CATALOG_CARD_SIZE.y)
+		if not _assert_item_cards_fill_complete_rows(scroll, grid, Vector2(
+				expected_card_width,
+				expected_card_height), viewport_size):
+			return false
+	var expected_columns := clampi(floori(
+			(available_width + CATALOG_CARD_GAP) \
+					/ (expected_card_width + CATALOG_CARD_GAP)), 2, 4)
 	if grid.columns != expected_columns:
 		_fail("Grid column formula mismatch at %s" % viewport_size)
 		return false
@@ -673,6 +829,58 @@ func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 		_fail("Skill codex transition root does not cover the viewport at %s: %s -> %s" \
 				% [viewport_size, screen_top_left, screen_bottom_right])
 		return false
+	return true
+
+
+func _assert_item_cards_fill_complete_rows(
+		scroll: ScrollContainer,
+		grid: GridContainer,
+		expected_card_size: Vector2,
+		viewport_size: Vector2i) -> bool:
+	var scroll_rect := scroll.get_global_rect()
+	var visible_card_count := 0
+	for child in grid.get_children():
+		var card := child as Control
+		if card == null:
+			continue
+		if not card.size.is_equal_approx(expected_card_size):
+			_fail("Item card size mismatch at %s: expected %s, got %s" \
+					% [viewport_size, expected_card_size, card.size])
+			return false
+		var card_rect := card.get_global_rect()
+		var intersection := scroll_rect.intersection(card_rect)
+		if not intersection.has_area():
+			continue
+		visible_card_count += 1
+		if absf(intersection.size.x - card_rect.size.x) > 1.5 \
+				or absf(intersection.size.y - card_rect.size.y) > 1.5:
+			_fail("Item card is partially clipped at %s: %s inside %s" \
+					% [viewport_size, card_rect, scroll_rect])
+			return false
+	if visible_card_count == 0:
+		_fail("Item codex has no fully visible cards at %s" % viewport_size)
+		return false
+	return true
+
+
+func _assert_item_cards_scroll_into_view(overlay: Node) -> bool:
+	var scroll := overlay.get_node("Root/SafeMargin/Layout/CardScroll") as ScrollContainer
+	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
+	var scroll_rect := scroll.get_global_rect()
+	for child in grid.get_children():
+		var card := child as Control
+		if card == null:
+			continue
+		scroll.ensure_control_visible(card)
+		await _wait_frames(2)
+		var card_rect := card.get_global_rect()
+		if card_rect.position.y < scroll_rect.position.y - 1.5 \
+				or card_rect.end.y > scroll_rect.end.y + 1.5:
+			_fail("Item card could not be scrolled fully into view: %s inside %s" \
+					% [card_rect, scroll_rect])
+			return false
+	scroll.scroll_vertical = 0
+	await _wait_frames(2)
 	return true
 
 
@@ -744,16 +952,31 @@ func _wait_frames(count: int) -> void:
 
 
 func _capture_optional_screenshot() -> bool:
-	var output_path := OS.get_environment("SKILL_CODEX_SCREENSHOT_PATH").strip_edges()
+	return _capture_optional_screenshot_from_env(
+			"SKILL_CODEX_SCREENSHOT_PATH", "Skill codex")
+
+
+func _capture_optional_item_screenshot() -> bool:
+	return _capture_optional_screenshot_from_env(
+			"SKILL_CODEX_ITEM_SCREENSHOT_PATH", "Item codex")
+
+
+func _capture_optional_item_preview_screenshot() -> bool:
+	return _capture_optional_screenshot_from_env(
+			"SKILL_CODEX_ITEM_PREVIEW_SCREENSHOT_PATH", "Item codex preview")
+
+
+func _capture_optional_screenshot_from_env(environment_key: String, label: String) -> bool:
+	var output_path := OS.get_environment(environment_key).strip_edges()
 	if output_path.is_empty():
 		return true
 	var image := root.get_texture().get_image()
 	if image == null or image.is_empty() or image.get_used_rect().size == Vector2i.ZERO:
-		_fail("Skill codex viewport screenshot is empty")
+		_fail("%s viewport screenshot is empty" % label)
 		return false
 	var save_error := image.save_png(output_path)
 	if save_error != OK:
-		_fail("Failed to save skill codex screenshot: %s" % error_string(save_error))
+		_fail("Failed to save %s screenshot: %s" % [label, error_string(save_error)])
 		return false
 	return true
 

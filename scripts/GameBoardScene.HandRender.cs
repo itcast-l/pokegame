@@ -241,14 +241,14 @@ public partial class GameBoardScene
 					: tooltipText;
 				if (!string.IsNullOrEmpty(effectiveTooltipText))
 				{
-					Label descriptionLabel = CreateCardDescriptionLabel(
+					OceanMenuButtonFrame descriptionBubble = CreateCardDescriptionBubble(
 						effectiveTooltipText,
-						GetHandCardDescriptionPosition(playerIndex),
-						HandCardDescriptionLabelSize);
-					cardSlot.AddChild(descriptionLabel);
+						GetHandCardDescriptionPosition(playerIndex, basePosition),
+						HandCardDescriptionBubbleSize);
+					cardSlot.AddChild(descriptionBubble);
 					cardSlot.MouseEntered += () =>
 					{
-						descriptionLabel.Visible = true;
+						descriptionBubble.Visible = true;
 						if (!isPlayable)
 						{
 							cardSlot.ZIndex = displayIndex + HoveredHandCardZIndexBoost;
@@ -256,13 +256,13 @@ public partial class GameBoardScene
 					};
 					cardSlot.MouseExited += () =>
 					{
-						descriptionLabel.Visible = showInputSelection;
+						descriptionBubble.Visible = showInputSelection;
 						if (!isPlayable)
 						{
 							cardSlot.ZIndex = displayIndex;
 						}
 					};
-					descriptionLabel.Visible = showInputSelection;
+					descriptionBubble.Visible = showInputSelection;
 				}
 
 				if (attachmentOverlayTexture != null)

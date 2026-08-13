@@ -220,7 +220,7 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		return IsStageUnlocked(GetAvatarIdForStage(stageNumber))
-			? Tr("ADVENTURE_TEST_AVAILABLE").ToString()
+			? Tr("ADVENTURE_UNLOCKED").ToString()
 			: Tr("ADVENTURE_LOCKED").ToString();
 	}
 

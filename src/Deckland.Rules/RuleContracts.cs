@@ -682,7 +682,9 @@ public sealed record AdvanceTurnCommand(
 	int CandidateNextSeat,
 	bool AdvanceQuestionRefresh = false,
 	bool HasTableSpecialCard = false,
-	int QuestionRefreshCyclesAfterCapture = 0)
+	int QuestionRefreshCyclesAfterCapture = 0,
+	bool HasQuestionCard = false,
+	int QuestionCardLifetimeTurns = 0)
 	: MatchCommand(ActionId, ExpectedRevision, LifecycleGeneration, TurnGeneration);
 
 public sealed record AdvanceTurnGenerationCommand(
@@ -714,7 +716,8 @@ public readonly record struct RuleMutationSummary(
 	bool Captured,
 	bool MatchOutcomeChanged,
 	string LogicalItemId = "",
-	bool ShouldRefreshQuestionCard = false)
+	bool ShouldRefreshQuestionCard = false,
+	bool ShouldExpireQuestionCard = false)
 {
 	public static RuleMutationSummary Empty => new(
 		0,

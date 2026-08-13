@@ -217,6 +217,7 @@ internal static partial class Program
 		Run("turn progress waits for anchor turn before refreshing question card", TurnProgressWaitsForAnchorTurnBeforeRefreshingQuestionCard);
 		Run("turn progress refreshes question card after configured cycle", TurnProgressRefreshesQuestionCardAfterConfiguredCycle);
 		Run("turn progress stays blocked when table special cards are present", TurnProgressStaysBlockedWhenTableSpecialCardsArePresent);
+		Run("turn progress expires an uncollected question card before restarting refresh", TurnProgressExpiresUncollectedQuestionCardBeforeRestartingRefresh);
 		Run("room name rules restrict special symbols", RoomNameRulesRestrictSpecialSymbols);
 		Run("steam metadata rejects dirty values", SteamMetadataRejectsDirtyValues);
 		Run("steam metadata parses valid values defensively", SteamMetadataParsesValidValuesDefensively);

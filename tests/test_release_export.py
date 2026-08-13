@@ -63,7 +63,7 @@ dotnet/include_debug_symbols=false
 '''
 				)
 			(root / "export_presets.cfg").write_text("\n".join(sections), encoding="utf-8")
-			result = release_export.static_audit(root)
+			result = release_export.static_audit(root, audit_legal=False)
 			self.assertTrue(result["ok"], result["issues"])
 			self.assertEqual(["windows", "linux", "macos"], [preset["adapter"] for preset in result["presets"]])
 
@@ -129,7 +129,7 @@ dotnet/include_debug_symbols=false
 ''',
 				encoding="utf-8",
 			)
-			result = release_export.static_audit(root)
+			result = release_export.static_audit(root, audit_legal=False)
 			self.assertFalse(result["ok"])
 			self.assertTrue(any("Future Linux" in issue and "adapter" in issue for issue in result["issues"]))
 
@@ -143,6 +143,7 @@ dotnet/include_debug_symbols=false
 			(source / "tmp").mkdir()
 			(source / "scripts").mkdir(exist_ok=True)
 			(source / "runtime").mkdir()
+			(source / "legal/distribution/licenses").mkdir(parents=True)
 			(source / "addons/godot_mcp/plugin.gd").write_text("extends EditorPlugin\n", encoding="utf-8")
 			(source / "scripts/dev_mcp/proxy.gd").write_text("extends Node\n", encoding="utf-8")
 			(source / "tmp/leak.txt").write_text("leak\n", encoding="utf-8")
@@ -155,6 +156,8 @@ dotnet/include_debug_symbols=false
 			(source / "scripts/GameBoardScene.DebugRecording.cs").write_text("debug recording\n", encoding="utf-8")
 			(source / "scripts/GameBoardScene.NetworkDebugActions.cs").write_text("release QA surface\n", encoding="utf-8")
 			(source / "runtime/keep.txt").write_text("keep\n", encoding="utf-8")
+			(source / "legal/distribution/THIRD_PARTY_NOTICES.txt").write_text("public notice\n", encoding="utf-8")
+			(source / "legal/ASSET_RIGHTS_REGISTER.csv").write_text("internal register\n", encoding="utf-8")
 			project = (
 				'[autoload]\nMCPScreenshot="*res://scripts/dev_mcp/proxy.gd"\n'
 				'MCPInputService="*res://scripts/dev_mcp/proxy.gd"\n'
@@ -172,6 +175,7 @@ dotnet/include_debug_symbols=false
 			self.assertFalse((destination / "addons/godot_mcp").exists())
 			self.assertFalse((destination / "scripts/dev_mcp").exists())
 			self.assertFalse((destination / "tmp").exists())
+			self.assertFalse((destination / "legal").exists())
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.cs").exists())
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Core.cs").exists())
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Core.cs.uid").exists())
@@ -187,6 +191,96 @@ dotnet/include_debug_symbols=false
 			self.assertIn('build_id="release-fixture"', staged_project)
 			self.assertIn("network_protocol=11", staged_project)
 			self.assertEqual(source_hash, release_export._sha256_file(source / "project.godot"))
+
+	def test_committed_legal_sources_and_asset_register_pass(self) -> None:
+		result = release_export.legal_source_audit(ROOT)
+		self.assertTrue(result["ok"], result["issues"])
+		self.assertEqual(12, result["component_count"])
+		self.assertEqual(15, result["public_file_count"])
+
+	def test_legal_source_audit_rejects_missing_notice_and_stale_asset_register(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			(root / "art").mkdir()
+			asset = root / "art/card.png"
+			asset.write_bytes(b"image-v1")
+			subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+			subprocess.run(["git", "add", "art/card.png"], cwd=root, check=True)
+
+			(root / "legal/distribution/licenses").mkdir(parents=True)
+			for relative in ("README.md", "OWNED_ASSET_RIGHTS_DECLARATION.md", "AI_CONTENT_RELEASE_RECORD.md"):
+				(root / "legal" / relative).write_text("internal\n", encoding="utf-8")
+			(root / "legal/distribution/THIRD_PARTY_NOTICES.txt").write_text("index\n", encoding="utf-8")
+			(root / "legal/distribution/licenses/FIXTURE.txt").write_text("license\n", encoding="utf-8")
+			(root / "legal/THIRD_PARTY_COMPONENTS.csv").write_text(
+				"component,version_or_revision,category,shipped,license_or_terms,public_notice_files,upstream_source,notes\n"
+				"Fixture,1,runtime,yes,MIT,FIXTURE.txt,local,test\n",
+				encoding="utf-8",
+			)
+			register = root / "legal/ASSET_RIGHTS_REGISTER.csv"
+			register.write_text(release_export.update_asset_rights_register.render_register(root), encoding="utf-8")
+
+			passing = release_export.legal_source_audit(root, verify_pinned_notices=False)
+			self.assertTrue(passing["ok"], passing["issues"])
+
+			(root / "legal/distribution/licenses/FIXTURE.txt").unlink()
+			asset.write_bytes(b"image-v2")
+			failing = release_export.legal_source_audit(root, verify_pinned_notices=False)
+			self.assertFalse(failing["ok"])
+			self.assertTrue(any("FIXTURE.txt" in issue for issue in failing["issues"]))
+			self.assertTrue(any("register is stale" in issue for issue in failing["issues"]))
+
+	def test_legal_distribution_layout_and_hash_audit_cover_all_platforms(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			source = root / "distribution"
+			(source / "licenses").mkdir(parents=True)
+			(source / "THIRD_PARTY_NOTICES.txt").write_text("index\n", encoding="utf-8")
+			(source / "licenses/ENGINE.txt").write_text("license\n", encoding="utf-8")
+
+			for platform, executable_relative, expected_relative in (
+				("windows", "Deckland.exe", "Legal"),
+				("linux", "Deckland.x86_64", "Legal"),
+				("macos", "Deckland.app/Contents/MacOS/Deckland", "Deckland.app/Contents/Resources/Legal"),
+			):
+				with self.subTest(platform=platform):
+					package = root / platform
+					executable = package / executable_relative
+					executable.parent.mkdir(parents=True)
+					executable.write_bytes(b"executable")
+					destination, audit = release_export._install_legal_distribution(
+						source, platform, package, executable
+					)
+					self.assertEqual(package / expected_relative, destination)
+					self.assertTrue(audit["ok"])
+					self.assertEqual(2, audit["file_count"])
+					self.assertTrue(all(len(entry["sha256"]) == 64 for entry in audit["files"]))
+
+	def test_packaged_legal_audit_blocks_missing_or_modified_files(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			source = root / "source"
+			destination = root / "package/Legal"
+			source.mkdir()
+			destination.mkdir(parents=True)
+			(source / "NOTICE.txt").write_text("expected\n", encoding="utf-8")
+			with self.assertRaises(release_export.ReleaseError):
+				release_export._audit_packaged_legal(source, destination)
+			(destination / "NOTICE.txt").write_text("modified\n", encoding="utf-8")
+			with self.assertRaises(release_export.ReleaseError):
+				release_export._audit_packaged_legal(source, destination)
+
+	def test_asset_register_blocks_untracked_unignored_media(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			(root / "art").mkdir()
+			subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+			(root / "art/untracked.png").write_bytes(b"unreviewed")
+			(root / "legal").mkdir()
+			(root / "legal/ASSET_RIGHTS_REGISTER.csv").write_text("placeholder\n", encoding="utf-8")
+			ok, message = release_export.update_asset_rights_register.check_register(root)
+			self.assertFalse(ok)
+			self.assertIn("Untracked, unignored media", message)
 
 	def test_utf8_validator_reports_first_invalid_byte(self) -> None:
 		with tempfile.TemporaryDirectory() as temp:
@@ -412,6 +506,7 @@ func _initialize() -> void:
 					"scripts/GameBoardScene.Debug.Network.cs": "debug network\n",
 					"scripts/GameBoardScene.DebugHooks.cs": "debug hooks\n",
 					"scripts/GameBoardScene.DebugRecording.cs": "debug recording\n",
+					"art/fx/processed/effect.pipeline-meta.json": "{}\n",
 				},
 				autoload_mcp=True,
 			)
@@ -420,6 +515,7 @@ func _initialize() -> void:
 			self.assertFalse(report["ok"])
 			self.assertTrue(any(path.startswith("tmp/") for path in report["forbidden_matches"]))
 			self.assertIn("scripts/GameBoardScene.Debug.Network.cs", report["forbidden_matches"])
+			self.assertIn("art/fx/processed/effect.pipeline-meta.json", report["forbidden_matches"])
 			self.assertNotIn("scripts/GameBoardScene.DebugHooks.cs", report["forbidden_matches"])
 			self.assertNotIn("scripts/GameBoardScene.DebugRecording.cs", report["forbidden_matches"])
 			self.assertIn("scripts/GameBoardScene.DebugHooks.cs", report["file_entries"])

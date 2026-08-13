@@ -66,7 +66,7 @@ public partial class GameBoardScene
 
 			if (tableCardTexture != null)
 			{
-				Label? descriptionLabel = null;
+				OceanMenuButtonFrame? descriptionBubble = null;
 				TextureRect tableCard = RentTableRenderTextureRect("TableCard");
 				tableCard.Texture = tableCardTexture;
 				tableCard.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
@@ -85,13 +85,14 @@ public partial class GameBoardScene
 					if (!string.IsNullOrEmpty(tooltipText))
 					{
 						tableCard.MouseFilter = MouseFilterEnum.Stop;
-						var labelSize = TableCardDescriptionLabelSize;
-						descriptionLabel = CreateCardDescriptionLabel(
+						var bubbleSize = TableCardDescriptionBubbleSize;
+						OceanMenuButtonFrame bubble = CreateCardDescriptionBubble(
 							tooltipText,
-							GetTableCardDescriptionPosition(cardPosition, labelSize),
-							labelSize);
-						tableCard.MouseEntered += () => descriptionLabel.Visible = true;
-						tableCard.MouseExited += () => descriptionLabel.Visible = false;
+							GetTableCardDescriptionPosition(cardPosition, bubbleSize),
+							bubbleSize);
+						descriptionBubble = bubble;
+						tableCard.MouseEntered += () => bubble.Visible = true;
+						tableCard.MouseExited += () => bubble.Visible = false;
 					}
 				}
 
@@ -101,9 +102,9 @@ public partial class GameBoardScene
 				}
 
 				_centerArena.AddChild(tableCard);
-				if (descriptionLabel != null)
+				if (descriptionBubble != null)
 				{
-					_centerArena.AddChild(descriptionLabel);
+					_centerArena.AddChild(descriptionBubble);
 				}
 
 				if (tableCardData.IsBuriedInSand)
@@ -245,7 +246,7 @@ public partial class GameBoardScene
 		return child is TextureRect textureRect && textureRect.HasMeta(TableRenderPooledTextureMeta)
 			|| child is Panel panel && panel.HasMeta(TableRenderPooledPanelMeta)
 			|| IsAdventureTutorialTableHighlight(child)
-			|| child is Label label && label.Name.ToString() == "CardDescriptionLabel";
+			|| child is OceanMenuButtonFrame bubble && bubble.Name.ToString() == "CardDescriptionBubble";
 	}
 
 	private int GetOldestAnimatedTableCardBackIndex()

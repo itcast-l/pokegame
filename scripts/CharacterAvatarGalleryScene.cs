@@ -18,8 +18,8 @@ public partial class CharacterAvatarGalleryScene : Control
 	private string _narwhalName = "诺亚";
 	private string _leafySeadragonName = "艾莉";
 	private string _dragonPrinceName = "杰伊 J";
-	private string _dragonQueenName = "奎娜 Q";
-	private string _bossName = "凯撒 K";
+	private string _dragonQueenName = "奎娜";
+	private string _bossName = "凯撒";
 
 	[Export]
 	public string TitleText

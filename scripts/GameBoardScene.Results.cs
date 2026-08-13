@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
@@ -145,7 +146,9 @@ public partial class GameBoardScene
 	private async Task<AdventureSaveGateResult<T>> ExecuteAdventureSaveGateAsync<T>(
 		Func<T> attempt,
 		Func<T, bool> succeeded,
-		Func<T, bool> retryable)
+		Func<T, bool> retryable,
+		Func<bool>? onRetryableFailure = null,
+		Func<bool>? onSucceeded = null)
 	{
 		if (IsAdventureSaveGateBlocking() || _isLeavingGame)
 		{
@@ -168,6 +171,11 @@ public partial class GameBoardScene
 			result = attempt();
 			if (succeeded(result))
 			{
+				if (onSucceeded != null && !onSucceeded())
+				{
+					await AbortAdventureSaveGateAsync();
+					return new AdventureSaveGateResult<T>(false, result);
+				}
 				_adventureSaveGateState = AdventureSaveGateState.Idle;
 				_adventureSaveInProgress = false;
 				_adventureSaveStatusLocalizationKey = string.Empty;
@@ -178,6 +186,11 @@ public partial class GameBoardScene
 				return new AdventureSaveGateResult<T>(true, result);
 			}
 			if (!retryable(result))
+			{
+				await AbortAdventureSaveGateAsync();
+				return new AdventureSaveGateResult<T>(false, result);
+			}
+			if (onRetryableFailure != null && !onRetryableFailure())
 			{
 				await AbortAdventureSaveGateAsync();
 				return new AdventureSaveGateResult<T>(false, result);
@@ -193,6 +206,19 @@ public partial class GameBoardScene
 
 		await AbortAdventureSaveGateAsync();
 		return new AdventureSaveGateResult<T>(false, result);
+	}
+
+	private bool RestoreAdventureSaveGateRuleSnapshot(
+		MatchStateSnapshot snapshot,
+		string stateName)
+	{
+		if (TryRestoreAuthorityRuleSnapshot(snapshot, out string error))
+		{
+			return true;
+		}
+
+		GD.PushError($"Failed to restore adventure save gate {stateName} state: {error}");
+		return false;
 	}
 
 	private bool IsAdventureSaveGateBlocking()
@@ -261,12 +287,19 @@ public partial class GameBoardScene
 
 	private string GetPlayerDisplayName(int playerIndex)
 	{
-		if (!adventure_mode && TryGetNetworkPlayerName(playerIndex, out string networkName))
+		if (IsNetworkMultiplayerMode())
 		{
-			return networkName;
-		}
+			if (TryGetNetworkPlayerName(playerIndex, out string networkName))
+			{
+				return networkName;
+			}
 
-		if (!adventure_mode && IsLocalHandPlayer(playerIndex))
+			if (IsLocalHandPlayer(playerIndex))
+			{
+				return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
+			}
+		}
+		else if (playerIndex == MainPlayerIndex)
 		{
 			return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
 		}
@@ -444,7 +477,17 @@ public partial class GameBoardScene
 
 	private void UpdateWinnerPrimaryButton()
 	{
-		if (_winnerReplayButton == null || !GodotObject.IsInstanceValid(_winnerReplayButton))
+		if (_winnerBannerRoot == null
+			|| !GodotObject.IsInstanceValid(_winnerBannerRoot)
+			|| _winnerReplayButton == null
+			|| !GodotObject.IsInstanceValid(_winnerReplayButton))
+		{
+			return;
+		}
+
+		bool showPrimaryAction = !_gameModePolicy.IsAdventureTutorial;
+		_winnerBannerRoot.SetPrimaryActionVisible(showPrimaryAction);
+		if (!showPrimaryAction)
 		{
 			return;
 		}

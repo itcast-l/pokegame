@@ -2332,6 +2332,7 @@ public partial class GameBoardScene
 		int candidateNextPlayerIndex,
 		bool advanceQuestionRefresh,
 		bool hasTableSpecialCard,
+		bool hasTableQuestionCard,
 		out RuleCommandResult result)
 	{
 		result = default!;
@@ -2352,7 +2353,11 @@ public partial class GameBoardScene
 			candidateNextPlayerIndex,
 			advanceQuestionRefresh,
 			hasTableSpecialCard,
-			advanceQuestionRefresh ? QuestionCardRefreshCyclesAfterCapture : 0));
+			advanceQuestionRefresh ? QuestionCardRefreshCyclesAfterCapture : 0,
+			hasTableQuestionCard,
+			advanceQuestionRefresh && hasTableQuestionCard
+				? QuestionCardUncollectedLifetimeTurns
+				: 0));
 		if (result.Accepted)
 		{
 			return true;

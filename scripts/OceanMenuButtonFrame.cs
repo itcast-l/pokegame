@@ -88,6 +88,9 @@ public partial class OceanMenuButtonFrame : Control
 		}
 	}
 
+	[Export(PropertyHint.Range, "0.2,1.0,0.05")]
+	public float CardSlabSurfaceOpacityScale { get; set; } = 1.0f;
+
 	[Export]
 	public bool SuppressVisuals { get; set; }
 
@@ -1311,9 +1314,13 @@ public partial class OceanMenuButtonFrame : Control
 		style.CornerRadiusBottomRight = 8;
 	}
 
-	private static void ConfigureCardBackStyle(StyleBoxFlat style)
+	private void ConfigureCardBackStyle(StyleBoxFlat style)
 	{
-		style.BgColor = new Color(0.004f, 0.036f, 0.052f, 0.74f);
+		style.BgColor = new Color(
+			0.004f,
+			0.036f,
+			0.052f,
+			0.74f * CardSlabSurfaceOpacityScale);
 		style.BorderColor = new Color(0.12f, 0.32f, 0.36f, 0.46f);
 		style.BorderWidthLeft = 1;
 		style.BorderWidthTop = 1;
@@ -1334,7 +1341,7 @@ public partial class OceanMenuButtonFrame : Control
 			0.012f,
 			0.094f + _glow * 0.036f + selectedBoost * 0.08f,
 			0.118f + _glow * 0.034f + selectedBoost * 0.08f,
-			0.83f + _glow * 0.06f);
+			(0.83f + _glow * 0.06f) * CardSlabSurfaceOpacityScale);
 		style.BorderColor = new Color(
 			cardAccent.R,
 			cardAccent.G,

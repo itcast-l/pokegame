@@ -223,10 +223,12 @@ internal static partial class Program
 		QuestionCardRefreshAdvanceResult result = TurnProgressRules.AdvanceQuestionCardRefresh(
 			itemMode: true,
 			hasTableSpecialCard: false,
+			hasQuestionCard: false,
 			new QuestionCardRefreshState(1, 2),
 			nextTurnPlayerIndex: 1,
 			playerCount: 4,
-			refreshCyclesAfterCapture: 2);
+			refreshCyclesAfterCapture: 2,
+			questionCardLifetimeTurns: 0);
 
 		False(result.ShouldRefreshQuestionCard);
 		Equal(2, result.State.CompletedTurnsSinceQuestionCardRefresh);
@@ -238,10 +240,12 @@ internal static partial class Program
 		QuestionCardRefreshAdvanceResult result = TurnProgressRules.AdvanceQuestionCardRefresh(
 			itemMode: true,
 			hasTableSpecialCard: false,
+			hasQuestionCard: false,
 			new QuestionCardRefreshState(3, 2),
 			nextTurnPlayerIndex: 2,
 			playerCount: 2,
-			refreshCyclesAfterCapture: 2);
+			refreshCyclesAfterCapture: 2,
+			questionCardLifetimeTurns: 0);
 
 		True(result.ShouldRefreshQuestionCard);
 		Equal(0, result.State.CompletedTurnsSinceQuestionCardRefresh);
@@ -254,14 +258,62 @@ internal static partial class Program
 		QuestionCardRefreshAdvanceResult result = TurnProgressRules.AdvanceQuestionCardRefresh(
 			itemMode: true,
 			hasTableSpecialCard: true,
+			hasQuestionCard: false,
 			currentState,
 			nextTurnPlayerIndex: 2,
 			playerCount: 2,
-			refreshCyclesAfterCapture: 2);
+			refreshCyclesAfterCapture: 2,
+			questionCardLifetimeTurns: 0);
 
 		False(result.ShouldRefreshQuestionCard);
 		Equal(currentState.CompletedTurnsSinceQuestionCardRefresh, result.State.CompletedTurnsSinceQuestionCardRefresh);
 		Equal(currentState.QuestionCardRefreshAnchorPlayerIndex, result.State.QuestionCardRefreshAnchorPlayerIndex);
+	}
+
+	private static void TurnProgressExpiresUncollectedQuestionCardBeforeRestartingRefresh()
+	{
+		QuestionCardRefreshAdvanceResult firstTurn = TurnProgressRules.AdvanceQuestionCardRefresh(
+			itemMode: true,
+			hasTableSpecialCard: true,
+			hasQuestionCard: true,
+			new QuestionCardRefreshState(0, 0),
+			nextTurnPlayerIndex: 1,
+			playerCount: 2,
+			refreshCyclesAfterCapture: 2,
+			questionCardLifetimeTurns: 2);
+
+		False(firstTurn.ShouldExpireQuestionCard);
+		Equal(1, firstTurn.State.CompletedTurnsSinceQuestionCardRefresh);
+
+		QuestionCardRefreshAdvanceResult expired = TurnProgressRules.AdvanceQuestionCardRefresh(
+			itemMode: true,
+			hasTableSpecialCard: true,
+			hasQuestionCard: true,
+			firstTurn.State,
+			nextTurnPlayerIndex: 0,
+			playerCount: 2,
+			refreshCyclesAfterCapture: 2,
+			questionCardLifetimeTurns: 2);
+
+		True(expired.ShouldExpireQuestionCard);
+		False(expired.ShouldRefreshQuestionCard);
+		Equal(0, expired.State.CompletedTurnsSinceQuestionCardRefresh);
+		Equal(0, expired.State.QuestionCardRefreshAnchorPlayerIndex);
+
+		QuestionCardRefreshAdvanceResult refresh = expired;
+		for (int completedTurn = 1; completedTurn <= 4; completedTurn++)
+		{
+			refresh = TurnProgressRules.AdvanceQuestionCardRefresh(
+				itemMode: true,
+				hasTableSpecialCard: false,
+				hasQuestionCard: false,
+				refresh.State,
+				nextTurnPlayerIndex: completedTurn % 2,
+				playerCount: 2,
+				refreshCyclesAfterCapture: 2,
+				questionCardLifetimeTurns: 0);
+			Equal(completedTurn == 4, refresh.ShouldRefreshQuestionCard);
+		}
 	}
 
 	private static void SteamMetadataRejectsDirtyValues()

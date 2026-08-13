@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b2cq4w04tugnf"
+
+[deps]
+
+files=["res://legal/THIRD_PARTY_COMPONENTS.version.translation", "res://legal/THIRD_PARTY_COMPONENTS.category.translation", "res://legal/THIRD_PARTY_COMPONENTS.shipped.translation", "res://legal/THIRD_PARTY_COMPONENTS.license.translation", "res://legal/THIRD_PARTY_COMPONENTS.public.translation", "res://legal/THIRD_PARTY_COMPONENTS.upstream.translation", "res://legal/THIRD_PARTY_COMPONENTS.notes.translation"]
+
+source_file="res://legal/THIRD_PARTY_COMPONENTS.csv"
+dest_files=["res://legal/THIRD_PARTY_COMPONENTS.version.translation", "res://legal/THIRD_PARTY_COMPONENTS.category.translation", "res://legal/THIRD_PARTY_COMPONENTS.shipped.translation", "res://legal/THIRD_PARTY_COMPONENTS.license.translation", "res://legal/THIRD_PARTY_COMPONENTS.public.translation", "res://legal/THIRD_PARTY_COMPONENTS.upstream.translation", "res://legal/THIRD_PARTY_COMPONENTS.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

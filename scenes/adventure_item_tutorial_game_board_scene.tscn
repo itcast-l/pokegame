@@ -9,7 +9,7 @@ adventure_tutorial_flow = "bomb_item"
 solo_mode = true
 adventure_enemy_avatar_id = "lanternfish"
 
-[node name="UnderwaterAmbientLayer" parent="." index="2" unique_id=1437166109]
+[node name="UnderwaterAmbientLayer" parent="BoardCanvas" index="2" unique_id=1437166109]
 motion_scale = 0.55
 edge_depth_alpha_scale = 0.55
 redraw_fps = 12

@@ -8,6 +8,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private const float TargetViewportWidthRatio = 0.52f;
 	private const float MinimumPanelWidth = 496.0f;
 	private const float MaximumPanelWidth = 860.0f;
+	private const float PanelArtworkOpacity = 0.28f;
+	private const float ActionSurfaceOpacityScale = 0.58f;
 
 	[Signal]
 	public delegate void ContinueRequestedEventHandler();
@@ -26,6 +28,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 	private OceanMenuButtonFrame _returnToMainMenuFrame = default!;
 	private OceanMenuButtonFrame _restartFrame = default!;
 	private Control _pauseMenuCenter = default!;
+	private TextureRect _pauseMenuArtworkLeft = default!;
+	private TextureRect _pauseMenuArtworkRight = default!;
 	private ColorRect _scrim = default!;
 	private bool _inputFocusVisible;
 
@@ -48,6 +52,8 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 		_returnToMainMenuFrame = GetNode<OceanMenuButtonFrame>("%ReturnToMainMenuFrame");
 		_restartFrame = GetNode<OceanMenuButtonFrame>("%RestartFrame");
 		_pauseMenuCenter = GetNode<Control>("PauseMenuCenter");
+		_pauseMenuArtworkLeft = GetNode<TextureRect>("PauseMenuCenter/PauseMenuPanel/PauseMenuArtwork/PauseMenuArtworkLeft");
+		_pauseMenuArtworkRight = GetNode<TextureRect>("PauseMenuCenter/PauseMenuPanel/PauseMenuArtwork/PauseMenuArtworkRight");
 		_scrim = GetNode<ColorRect>("%Scrim");
 
 		PrepareRowButton(ContinueButton);
@@ -65,6 +71,13 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 
 	private void ConfigureGeneratedVisualStyle()
 	{
+		SecondaryMenuGlassStyle.StyleGlassPanel(
+			PauseMenuPanel,
+			SecondaryMenuGlassStyle.UnifiedVisual,
+			contentPane: false);
+		Color artworkTint = new(1.0f, 1.0f, 1.0f, PanelArtworkOpacity);
+		_pauseMenuArtworkLeft.SelfModulate = artworkTint;
+		_pauseMenuArtworkRight.SelfModulate = artworkTint;
 		ConfigureFrame(_continueFrame);
 		ConfigureFrame(_returnToMainMenuFrame);
 		ConfigureFrame(_restartFrame);
@@ -81,19 +94,20 @@ public partial class PauseMenuOverlay : PauseMenuInputCatcher
 			selected: false,
 			showIdleTexture: true,
 			installDivider: false);
+		frame.CardSlabSurfaceOpacityScale = ActionSurfaceOpacityScale;
 	}
 
 	private void ConfigureResponsiveLayout()
 	{
 		SetMeta(
 			SecondaryMenuGlassStyle.VisualProfileMetadata,
-			SecondaryMenuGlassStyle.PauseDerivedVisual.Id);
+			SecondaryMenuGlassStyle.UnifiedVisual.Id);
 		PauseMenuPanel.SetMeta(
 			SecondaryMenuGlassStyle.PauseDerivedCenterOrnamentsRemovedMetadata,
 			true);
 		SecondaryMenuGlassStyle.ApplyReadabilityVeil(
 			_scrim,
-			SecondaryMenuGlassStyle.PauseDerivedVisual);
+			SecondaryMenuGlassStyle.UnifiedVisual);
 
 		Viewport viewport = GetViewport();
 		void ApplyLayout()

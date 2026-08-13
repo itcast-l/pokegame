@@ -10,6 +10,7 @@ const FORBIDDEN_PATH_PREFIXES := [
 	"tests/",
 	"tools/",
 	"docs/",
+	"legal/",
 	"samples/",
 	"outputs/",
 	"Library/",
@@ -141,7 +142,13 @@ func _scan_directory(path: String) -> void:
 func _is_forbidden_path(path: String) -> bool:
 	if path in FORBIDDEN_EXACT_PATHS:
 		return true
-	if path.get_file().begins_with("current_screen"):
+	var filename := path.get_file().to_lower()
+	if path.begins_with("art/"):
+		if filename.ends_with(".txt") and "prompt" in filename:
+			return true
+		if filename == "pipeline-meta.json" or filename.ends_with(".pipeline-meta.json"):
+			return true
+	if filename.begins_with("current_screen"):
 		return true
 	for prefix: String in FORBIDDEN_PATH_PREFIXES:
 		if path.begins_with(prefix):

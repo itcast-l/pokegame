@@ -11,6 +11,13 @@ const PRESSED_TEXTURE_PATH := "res://art/ui/pause_menu/pause_button_pressed.png"
 const DIVIDER_TEXTURE_PATH := "res://art/ui/pause_menu/pause_divider.png"
 const BODY_TEXT := Color("f3f7f4")
 const MINIMAL_ACTION_ACCENT := Color("22b9c0")
+const SECONDARY_ACTION_ACCENT := Color(0.62, 1.0, 0.94, 0.84)
+const PRIMARY_ACTION_ACCENT := Color(0.42, 0.92, 0.94, 0.96)
+const DANGER_ACTION_ACCENT := Color(0.90, 0.52, 0.54, 0.84)
+const OPTION_IDLE_SURFACE := Color(0.025, 0.15, 0.18, 0.82)
+const OPTION_IDLE_BORDER := Color(0.35, 0.72, 0.73, 0.48)
+const OPTION_ACTIVE_SURFACE := Color(0.035, 0.25, 0.28, 0.88)
+const TITLE_UNDERLINE_COLOR := Color(0.62, 1.0, 0.94, 0.58)
 const UNIFIED_FOCUS_BORDER := Color(0.62, 1.0, 0.94, 0.84)
 const MINIMAL_ROW_FRAME_STYLE := 11
 const MINIMAL_ACTION_FRAME_STYLE := 12
@@ -29,6 +36,10 @@ const MENU_SPECS := [
 		"design_size": Vector2(840, 592),
 		"contents": ["PreviewPanel", "AvatarListPanel"],
 		"minimal_actions": ["BackFrame", "ConfirmFrame"],
+		"action_buttons": [
+			{"frame": "BackFrame", "button": "BackButton", "accent": SECONDARY_ACTION_ACCENT},
+			{"frame": "ConfirmFrame", "button": "ConfirmButton", "accent": PRIMARY_ACTION_ACCENT},
+		],
 		"focus_control": "BackButton",
 		"focus_frame": "BackFrame",
 		"scrolls": ["GridScroll"],
@@ -44,7 +55,15 @@ const MENU_SPECS := [
 		"design_size": Vector2(840, 592),
 		"contents": [],
 		"minimal_actions": ["BackFrame", "StartGameFrame"],
+		"action_buttons": [
+			{"frame": "BackFrame", "button": "BackButton", "accent": SECONDARY_ACTION_ACCENT},
+			{"frame": "StartGameFrame", "button": "StartGameButton", "accent": PRIMARY_ACTION_ACCENT},
+		],
 		"minimal_rows": [
+			"PlayersRowPanel", "DifficultyRowPanel",
+			"ItemModeRowPanel", "WinningScoreRowPanel",
+		],
+		"visible_minimal_rows": [
 			"PlayersRowPanel", "DifficultyRowPanel",
 			"ItemModeRowPanel", "WinningScoreRowPanel",
 		],
@@ -77,6 +96,10 @@ const MENU_SPECS := [
 			"WindowModeRowPanel", "ResolutionRowPanel", "LanguageRowPanel",
 		],
 		"minimal_actions": ["ResetDefaultsFrame", "DoneFrame"],
+		"action_buttons": [
+			{"frame": "ResetDefaultsFrame", "button": "ResetDefaultsButton", "accent": PRIMARY_ACTION_ACCENT},
+			{"frame": "DoneFrame", "button": "DoneButton", "accent": PRIMARY_ACTION_ACCENT},
+		],
 		"ordered_rows": [
 			"MasterVolumeRowPanel", "MusicVolumeRowPanel", "MuteBgmRowPanel",
 			"MuteSfxRowPanel",
@@ -98,6 +121,11 @@ const MENU_SPECS := [
 		"design_size": Vector2(840, 592),
 		"contents": ["ControlsContentPanel"],
 		"minimal_actions": ["BackFrame", "ResetDefaultsFrame", "DoneFrame"],
+		"action_buttons": [
+			{"frame": "BackFrame", "button": "BackButton", "accent": SECONDARY_ACTION_ACCENT},
+			{"frame": "ResetDefaultsFrame", "button": "ResetDefaultsButton", "accent": PRIMARY_ACTION_ACCENT},
+			{"frame": "DoneFrame", "button": "DoneButton", "accent": PRIMARY_ACTION_ACCENT},
+		],
 		"minimal_rows": [
 			"MoveUpRow", "MoveDownRow", "MoveLeftRow", "MoveRightRow",
 			"ConfirmRow", "CancelRow", "PauseRow",
@@ -122,6 +150,10 @@ const MENU_SPECS := [
 		"design_size": Vector2(620, 340),
 		"contents": ["PromptPanel"],
 		"minimal_actions": ["CancelFrame", "ConfirmFrame"],
+		"action_buttons": [
+			{"frame": "CancelFrame", "button": "CancelButton", "accent": SECONDARY_ACTION_ACCENT},
+			{"frame": "ConfirmFrame", "button": "ConfirmButton", "accent": DANGER_ACTION_ACCENT},
+		],
 		"focus_control": "ConfirmButton",
 		"focus_frame": "ConfirmFrame",
 		"body_control": "CancelButton",
@@ -283,6 +315,9 @@ func _audit_unified_glass_layout(
 		if not _assert_unified_glass_material(content_surface.material as ShaderMaterial, true, context):
 			return false
 
+	if not _assert_action_buttons(menu, menu_spec.get("action_buttons", []), context):
+		return false
+
 	if menu_spec.name == "settings":
 		return _audit_unified_settings_layout(menu, menu_spec, panel_rect, context)
 	if menu_spec.name == "controls":
@@ -294,7 +329,9 @@ func _audit_unified_glass_layout(
 		return _audit_unified_avatar_layout(menu, menu_spec, panel_rect, context)
 
 	for frame_name in menu_spec.get("minimal_rows", []):
-		if not _assert_unified_frame(menu, frame_name, MINIMAL_ROW_FRAME_STYLE, true, true, context):
+		var suppress_visuals: bool = not menu_spec.get("visible_minimal_rows", []).has(frame_name)
+		if not _assert_unified_frame(
+				menu, frame_name, MINIMAL_ROW_FRAME_STYLE, suppress_visuals, true, context):
 			return false
 	for frame_name in menu_spec.get("minimal_actions", []):
 		if not _assert_unified_frame(menu, frame_name, MINIMAL_ACTION_FRAME_STYLE, false, true, context):
@@ -308,15 +345,19 @@ func _audit_unified_glass_layout(
 
 	for option_name in ["PlayerCountOption", "DifficultyOption", "ItemModeOption", "WinningScoreOption"]:
 		var option := menu.find_child(option_name, true, false) as OptionButton
-		var option_style := option.get_theme_stylebox("normal") as StyleBoxFlat if option != null else null
 		if option == null or option.alignment != HORIZONTAL_ALIGNMENT_LEFT \
-				or option_style == null or option_style.bg_color.a < 0.80 or option_style.bg_color.a > 0.86:
-			_fail("%s option %s does not use the translucent unified control style" % [context, option_name])
+				or option.focus_mode == Control.FOCUS_NONE or option.size.y < 44.0 \
+				or not _assert_option_state(option, "normal", OPTION_IDLE_SURFACE, OPTION_IDLE_BORDER) \
+				or not _assert_option_state(option, "hover", OPTION_ACTIVE_SURFACE, UNIFIED_FOCUS_BORDER) \
+				or not _assert_option_state(option, "pressed", OPTION_ACTIVE_SURFACE, UNIFIED_FOCUS_BORDER) \
+				or not _assert_option_state(option, "focus", OPTION_ACTIVE_SURFACE, UNIFIED_FOCUS_BORDER) \
+				or not _assert_unified_button_text(option):
+			_fail("%s option %s does not use the unified cyan button states" % [context, option_name])
 			return false
 
 	var title_underline := menu.find_child("TitleUnderline", true, false) as ColorRect
 	if title_underline == null or title_underline.get_node_or_null("PauseDerivedDivider") != null \
-			or title_underline.color.a < 0.45:
+			or not title_underline.color.is_equal_approx(TITLE_UNDERLINE_COLOR):
 		_fail("%s title underline does not match the unified glass treatment" % context)
 		return false
 	var back_button := menu.find_child("BackButton", true, false) as Button
@@ -464,6 +505,66 @@ func _assert_unified_frame(
 			context, frame_name, frame_screen_size,
 		])
 		return false
+	return true
+
+
+func _assert_action_buttons(
+		menu: Control,
+		action_specs: Array,
+		context: String) -> bool:
+	for action_spec in action_specs:
+		var frame_name := str(action_spec.frame)
+		var button_name := str(action_spec.button)
+		var frame := menu.find_child(frame_name, true, false) as Control
+		var button := menu.find_child(button_name, true, false) as Button
+		if frame == null or button == null:
+			_fail("%s is missing action %s/%s" % [context, frame_name, button_name])
+			return false
+		var accent: Color = frame.get("AccentColor")
+		var expected_accent: Color = action_spec.accent
+		if not accent.is_equal_approx(expected_accent) \
+				or button.focus_mode == Control.FOCUS_NONE or not button.flat \
+				or not button.get_theme_stylebox("normal") is StyleBoxEmpty \
+				or not button.get_theme_stylebox("hover") is StyleBoxEmpty \
+				or not button.get_theme_stylebox("pressed") is StyleBoxEmpty \
+				or not button.get_theme_stylebox("focus") is StyleBoxEmpty \
+				or not _assert_unified_button_text(button):
+			_fail("%s action %s does not match its unified button role: accent=%s expected=%s focus=%s flat=%s styles=%s text=%s" % [
+				context,
+				button_name,
+				accent,
+				expected_accent,
+				button.focus_mode,
+				button.flat,
+				[
+					button.get_theme_stylebox("normal").get_class(),
+					button.get_theme_stylebox("hover").get_class(),
+					button.get_theme_stylebox("pressed").get_class(),
+					button.get_theme_stylebox("focus").get_class(),
+				],
+				_assert_unified_button_text(button),
+			])
+			return false
+	return true
+
+
+func _assert_option_state(
+		button: BaseButton,
+		state: StringName,
+		expected_surface: Color,
+		expected_border: Color) -> bool:
+	var style := button.get_theme_stylebox(state) as StyleBoxFlat
+	return style != null and style.bg_color.is_equal_approx(expected_surface) \
+		and style.border_color.is_equal_approx(expected_border)
+
+
+func _assert_unified_button_text(button: BaseButton) -> bool:
+	for color_name in [
+		"font_color", "font_pressed_color", "font_hover_color",
+		"font_hover_pressed_color", "font_focus_color",
+	]:
+		if not button.get_theme_color(color_name).is_equal_approx(BODY_TEXT):
+			return false
 	return true
 
 
@@ -1109,14 +1210,18 @@ func _audit_pause_reference(menu: Control, menu_spec: Dictionary, viewport_spec:
 	var artwork_left := menu.find_child("PauseMenuArtworkLeft", true, false) as TextureRect
 	var artwork_right := menu.find_child("PauseMenuArtworkRight", true, false) as TextureRect
 	var top_ornament := menu.find_child("PauseMenuTopOrnament", true, false) as TextureRect
+	var glass_surface := panel.get_node_or_null("GlassSurface") as ColorRect if panel != null else null
+	var glass_frame := panel.get_node_or_null("GlassFrame") as Panel if panel != null else null
 	if panel == null or artwork == null or not _rect_contains(viewport_rect, _get_canvas_rect(panel)) \
 			or artwork_left == null or artwork_right == null or top_ornament == null \
+			or glass_surface == null or glass_frame == null \
+			or artwork_left.self_modulate.a > 0.32 or artwork_right.self_modulate.a > 0.32 \
 			or not _texture_uses_path(artwork_left.texture, PANEL_TEXTURE_PATH) \
 			or not _texture_uses_path(artwork_right.texture, PANEL_TEXTURE_PATH) \
 			or not _texture_uses_path(top_ornament.texture, DIVIDER_TEXTURE_PATH) \
 			or not bool(panel.get_meta("pause_derived_center_ornaments_removed", false)) \
 			or not menu.has_meta(VISUAL_PROFILE_META) \
-			or str(menu.get_meta(VISUAL_PROFILE_META)) != PAUSE_DERIVED_PROFILE:
+			or str(menu.get_meta(VISUAL_PROFILE_META)) != UNIFIED_GLASS_PROFILE:
 		_fail("%s no longer matches the approved pause-menu reference" % context)
 		return false
 	for frame_name in ["ContinueFrame", "ReturnToMainMenuFrame", "RestartFrame"]:
@@ -1125,6 +1230,7 @@ func _audit_pause_reference(menu: Control, menu_spec: Dictionary, viewport_spec:
 		if frame == null or int(frame.get("FrameStyle")) != 1 \
 				or not accent.is_equal_approx(Color(0.6, 0.94, 0.96, 1.0)) \
 				or not bool(frame.get("ShowIdleTexture")) \
+				or float(frame.get("CardSlabSurfaceOpacityScale")) > 0.62 \
 				or bool(frame.get("UseNinePatchTexture")) \
 				or frame.find_child("PauseDerivedRowDivider", true, false) != null \
 				or frame.get("OceanPlaqueTexture") != null \

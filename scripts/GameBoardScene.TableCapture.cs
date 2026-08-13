@@ -91,6 +91,14 @@ public partial class GameBoardScene
 
 			if (ShouldSkipOwnerPreviewRevealAnimation(tableCard))
 			{
+				// The capture presentation can outlive the rule turn. Do not submit a
+				// face-up mutation after authority has already advanced to another seat.
+				if (turnSequenceGeneration != _turnSequenceGeneration
+					|| _currentTurnPlayerIndex != scorePlayerIndex
+					|| IsGameOver())
+				{
+					return;
+				}
 				if (!TrySubmitSetTableCardsFaceUpRuleCommand(
 					scorePlayerIndex,
 					ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
@@ -112,6 +120,10 @@ public partial class GameBoardScene
 					await PlayTableCardRevealAnimationAsync(tableCardIndex, revealTexture);
 				}
 				if (turnSequenceGeneration != _turnSequenceGeneration)
+				{
+					return;
+				}
+				if (_currentTurnPlayerIndex != scorePlayerIndex || IsGameOver())
 				{
 					return;
 				}

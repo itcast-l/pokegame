@@ -1,0 +1,13 @@
+component,version_or_revision,category,shipped,license_or_terms,public_notice_files,upstream_source,notes
+Godot Engine,4.6.1,engine,yes,MIT and bundled third-party terms,GODOT_ENGINE_LICENSE.txt;GODOT_ENGINE_COPYRIGHT.txt,https://github.com/godotengine/godot/tree/4.6.1-stable,Release templates supply the platform runtime.
+.NET Runtime,8.0.25,runtime,yes,MIT and bundled third-party terms,DOTNET_RUNTIME_LICENSE.txt;DOTNET_RUNTIME_THIRD_PARTY_NOTICES.txt,https://github.com/dotnet/runtime/tree/v8.0.25,Version pinned to the runtime notices used for the Godot release target.
+GodotSteam,4.18.1,runtime plugin,yes,MIT,GODOTSTEAM.txt,https://codeberg.org/godotsteam/godotsteam/releases/tag/gdextension-4.18.1,Each platform package keeps only its target runtime binaries.
+Steamworks SDK Redistributables,GodotSteam bundled SDK version,proprietary runtime,yes,Valve Steamworks terms,STEAMWORKS_SDK_NOTICE.txt,https://partner.steamgames.com/doc/sdk/uploading#5,Not covered by GodotSteam's MIT license; publisher Steamworks agreements apply.
+Pandora,1.0-alpha9,runtime addon,yes,MIT,PANDORA.txt,https://github.com/bitbrain/pandora/tree/v1.0-alpha9,Runtime data and API are included.
+nanoid-godot,0.2.0,attributed source inspiration,yes,MIT,NANOID_GODOT.txt,https://github.com/eth0net/nanoid-godot/tree/v0.2.0,Pandora util/nanoid_generator.gd identifies this project as its MIT-licensed inspiration.
+Phantom Camera,0.11.0.2,runtime addon,yes,MIT,PHANTOM_CAMERA.txt,https://github.com/ramokz/phantom-camera/tree/v0.11.0.2,Examples and editor panels are excluded from release.
+Resonate,2.4.0,runtime addon,yes,MIT,RESONATE.txt,https://github.com/hugemenace/resonate/tree/v2.4.0,Runtime audio manager is included.
+SaveState Lite,1.2.0,runtime addon,yes,MIT,SAVESTATE_LITE.txt,https://github.com/youssof20/savestate/tree/v1.2.0,Project-vendored Lite release.
+Steam Locale Mapper,1.0 based on commit ffabd53c9adbb405b329018d09ddec60d3fd0de5,runtime script,yes,MIT,STEAM_LOCALE_MAPPER.txt,https://github.com/AstralCrowGames/GodotSteamLocaleMapper/tree/ffabd53c9adbb405b329018d09ddec60d3fd0de5,Loaded dynamically by scripts/SteamManager.gd; project-adjusted locale mappings retain the upstream license.
+Noto Fonts,repository font files,font,yes,SIL Open Font License 1.1,NOTO_FONTS_OFL-1.1.txt,https://notofonts.github.io/,Seven tracked font files are listed individually in ASSET_RIGHTS_REGISTER.csv.
+Nunito Fonts,Phantom Camera bundled font files,font,yes,SIL Open Font License 1.1,NUNITO_OFL-1.1.txt,https://github.com/googlefonts/nunito,Two font files are supplied under addons/phantom_camera/fonts.

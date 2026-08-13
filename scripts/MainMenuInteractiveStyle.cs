@@ -259,10 +259,18 @@ public static class MainMenuInteractiveStyle
 		input.AddThemeStyleboxOverride("read_only", CreateThemedControlStyle(NeutralPalette, active: false));
 	}
 
-	public static void ApplyThemedTab(Button button, Palette palette, bool selected, int fontSize = 18)
+	public static void ApplyThemedTab(
+		Button button,
+		Palette palette,
+		bool selected,
+		int fontSize = 18,
+		Palette? hoverPalette = null)
 	{
 		ApplyThemedControl(button, selected ? palette : NeutralPalette, fontSize);
 		button.ButtonPressed = selected;
+		button.AddThemeStyleboxOverride(
+			"hover",
+			CreateThemedControlStyle(hoverPalette ?? (selected ? palette : NeutralPalette), active: true));
 		button.AddThemeStyleboxOverride("pressed", CreateThemedControlStyle(palette, active: true));
 	}
 

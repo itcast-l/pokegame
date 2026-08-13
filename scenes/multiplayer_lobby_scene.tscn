@@ -133,17 +133,17 @@ RoomNameInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMarg
 RoomPasswordInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput")
 LanHostInfoLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostInfoLabel")
 SteamStatusLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamStatusLabel")
-PlayerCountOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/PlayerCountOption")
-ItemModeOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/ItemModeOption")
-WinningScoreOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/WinningScoreOption")
+PlayerCountOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/PlayerCountOption")
+ItemModeOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/ItemModeOption")
+WinningScoreOption = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/WinningScoreOption")
 RoomListContainer = NodePath("SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer")
 PlayerListContainer = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer")
 EmptyRoomsLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomScroll/RoomListContainer/EmptyRoomsLabel")
 EmptyPlayersLabel = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerScroll/PlayerListContainer/EmptyPlayersLabel")
 LanHostButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton")
 LanSearchButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanSearchButton")
-SteamHostButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/SteamHostButton")
-SteamRefreshButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/SteamRefreshButton")
+SteamHostButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamHostButton")
+SteamRefreshButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamRefreshButton")
 ReadyButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/ReadyButton")
 StartButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/StartButton")
 LeaveSessionButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/LeaveSessionButton")
@@ -334,9 +334,24 @@ placeholder_text = ""
 max_length = 24
 secret = true
 
-[node name="PlayerCountOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=820987182]
+[node name="RoomRulesGrid" type="GridContainer" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="PlayerCountLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.86, 0.88, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+vertical_alignment = 1
+
+[node name="PlayerCountOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid" unique_id=820987182]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
@@ -354,9 +369,17 @@ popup/item_1/id = 3
 popup/item_2/text = "4"
 popup/item_2/id = 4
 
-[node name="ItemModeOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=776449610]
+[node name="ItemModeLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.86, 0.88, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+vertical_alignment = 1
+
+[node name="ItemModeOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid" unique_id=776449610]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
@@ -372,9 +395,17 @@ popup/item_0/id = 1
 popup/item_1/text = ""
 popup/item_1/id = 0
 
-[node name="WinningScoreOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=466136064]
+[node name="WinningScoreLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.86, 0.88, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+vertical_alignment = 1
+
+[node name="WinningScoreOption" type="OptionButton" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid" unique_id=466136064]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
 theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
@@ -424,32 +455,6 @@ theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
 theme_override_font_sizes/font_size = 14
 text = ""
 autowrap_mode = 2
-
-[node name="SteamHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=2103494485]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
-text = ""
-
-[node name="SteamRefreshButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1518247273]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
-text = ""
 
 [node name="RoomBrowser" type="PanelContainer" parent="SafeArea/MainLayout/BodyScroll/Body" unique_id=2032768993]
 custom_minimum_size = Vector2(280, 0)
@@ -628,3 +633,29 @@ theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
 theme_override_font_sizes/font_size = 14
 text = ""
 autowrap_mode = 2
+
+[node name="SteamHostButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent" unique_id=2103494485]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = ""
+
+[node name="SteamRefreshButton" type="Button" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent" unique_id=1518247273]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+text = ""

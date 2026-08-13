@@ -23,7 +23,8 @@ public partial class GameBoardScene
 		int adventureEnemyCurrentPlayCaptureDamageDelta,
 		BaseCardActionContext baseCardActionContext,
 		AdventureCaptureMatchSource captureMatchSource,
-		int turnSequenceGeneration)
+		int turnSequenceGeneration,
+		MatchStateSnapshot? adventureSaveRollbackSnapshot)
 	{
 		return CaptureResolution.ResolveAsync(new CaptureResolutionRequest(
 			playerIndex,
@@ -36,7 +37,8 @@ public partial class GameBoardScene
 			adventureEnemyCurrentPlayCaptureDamageDelta,
 			baseCardActionContext,
 			captureMatchSource,
-			turnSequenceGeneration));
+			turnSequenceGeneration,
+			adventureSaveRollbackSnapshot));
 	}
 
 	private readonly record struct CaptureResolutionRequest(
@@ -50,7 +52,8 @@ public partial class GameBoardScene
 		int AdventureEnemyCurrentPlayCaptureDamageDelta,
 		BaseCardActionContext BaseActionContext,
 		AdventureCaptureMatchSource CaptureMatchSource,
-		int TurnSequenceGeneration);
+		int TurnSequenceGeneration,
+		MatchStateSnapshot? AdventureSaveRollbackSnapshot);
 
 	private sealed class CaptureResolutionCoordinator
 	{
@@ -117,6 +120,8 @@ public partial class GameBoardScene
 		BaseCardActionContext baseCardActionContext = request.BaseActionContext;
 		AdventureCaptureMatchSource captureMatchSource = request.CaptureMatchSource;
 		int turnSequenceGeneration = request.TurnSequenceGeneration;
+		MatchStateSnapshot? adventureSaveRollbackSnapshot =
+			request.AdventureSaveRollbackSnapshot;
 
 	PlayGameSfx(GameSfx.CaptureBite, -1.0f, 0.97f, 1.03f);
 	scratch.ClearTriggerScratch();
@@ -627,7 +632,9 @@ public partial class GameBoardScene
 				actionSource: "base_card",
 				matchSource: captureMatchSource,
 				triggeredAttachedItemCardIds:
-					triggeredAttachedItemCardIds);
+					triggeredAttachedItemCardIds,
+				adventureSaveRollbackSnapshot:
+					adventureSaveRollbackSnapshot);
 		if (!captureResult.Applied
 			|| captureResult.Aborted)
 		{

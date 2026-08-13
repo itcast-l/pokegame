@@ -4,10 +4,15 @@ using System.Collections.Generic;
 
 public partial class MainMenuSkillCodexOverlay : CanvasLayer
 {
-	private const string CardScenePath = "res://scenes/adventure_upgrade_catalog_card.tscn";
+	private const string UpgradeCardScenePath = "res://scenes/adventure_upgrade_catalog_card.tscn";
+	private const string ItemCardScenePath = "res://scenes/main_menu_item_codex_card.tscn";
+	private const string UpgradesCategory = "upgrades";
+	private const string ItemsCategory = "items";
 	private const float CatalogCardWidth = 196.0f;
 	private const float CatalogCardHeight = 322.0f;
 	private const float CatalogCardGap = 16.0f;
+	private const float MinimumItemCardHeight = 248.0f;
+	private const int MaximumVisibleItemRows = 3;
 	private static readonly string[] SuitOrder = { "hearts", "diamonds", "spades", "clubs" };
 	private static readonly StyleBoxFlat HiddenFocusStyle = new() { BgColor = Colors.Transparent };
 
@@ -20,6 +25,9 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private Button _backButton = default!;
 	private Control _root = default!;
 	private Label _titleLabel = default!;
+	private Button _upgradesButton = default!;
+	private Button _itemsButton = default!;
+	private Control _suitTabs = default!;
 	private readonly Dictionary<string, Button> _suitButtons = new(StringComparer.Ordinal);
 	private readonly Dictionary<Button, StyleBox> _buttonFocusStyles = new();
 	private ScrollContainer _scrollContainer = default!;
@@ -28,14 +36,21 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private Control _previewLayer = default!;
 	private Control _previewFocusAnchor = default!;
 	private AdventureUpgradeCatalogCard _previewCard = default!;
-	private PackedScene? _cardScene;
+	private MainMenuItemCodexCard _previewItemCard = default!;
+	private PackedScene? _upgradeCardScene;
+	private PackedScene? _itemCardScene;
 	private AdventureSuitUpgradeCatalog? _catalog;
 	private AdventureUpgradeManifest? _manifest;
+	private ItemCardCatalog? _itemCatalog;
 	private readonly HashSet<string> _unlockedUpgradeIds = new(StringComparer.Ordinal);
 	private readonly List<AdventureUpgradeCatalogCard> _visibleCards = new();
 	private readonly List<AdventureSuitUpgradeDefinition> _visibleDefinitions = new();
+	private readonly List<MainMenuItemCodexCard> _visibleItemCards = new();
+	private readonly List<ItemCardDefinition> _visibleItemDefinitions = new();
+	private string _currentCategory = UpgradesCategory;
 	private string _currentSuit = "hearts";
 	private string _previewUpgradeId = string.Empty;
+	private string _previewItemCardId = string.Empty;
 	private Control? _focusBeforePreview;
 	private bool _acceptInput;
 	private bool _inputFocusVisible;
@@ -47,15 +62,23 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	public override void _Ready()
 	{
+		GameInputActions.EnsureRegistered();
 		_root = GetNode<Control>("Root");
 		_backButton = GetNode<Button>("Root/SafeMargin/Layout/TopBar/TopBarLayout/BackButton");
 		_titleLabel = GetNode<Label>("Root/SafeMargin/Layout/TopBar/TopBarLayout/Title");
+		_upgradesButton = GetNode<Button>("Root/SafeMargin/Layout/CategoryTabs/UpgradesButton");
+		_itemsButton = GetNode<Button>("Root/SafeMargin/Layout/CategoryTabs/ItemsButton");
+		_suitTabs = GetNode<Control>("Root/SafeMargin/Layout/SuitTabs");
 		_scrollContainer = GetNode<ScrollContainer>("Root/SafeMargin/Layout/CardScroll");
 		_grid = GetNode<GridContainer>("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid");
 		_emptyLabel = GetNode<Label>("Root/SafeMargin/Layout/EmptyLabel");
 		_previewLayer = GetNode<Control>("Root/PreviewLayer");
 		_previewFocusAnchor = GetNode<Control>("Root/PreviewLayer/PreviewFocusAnchor");
 		_previewCard = GetNode<AdventureUpgradeCatalogCard>("Root/PreviewLayer/PreviewCenter/PreviewCard");
+		_previewItemCard = GetNode<MainMenuItemCodexCard>("Root/PreviewLayer/PreviewCenter/PreviewItemCard");
+
+		_upgradesButton.Pressed += () => SelectCategory(UpgradesCategory, focusFirstCard: true);
+		_itemsButton.Pressed += () => SelectCategory(ItemsCategory, focusFirstCard: true);
 
 		foreach (string suit in SuitOrder)
 		{
@@ -66,16 +89,13 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		}
 		ConfigureUnifiedVisualStyle();
 		RememberButtonFocusStyle(_backButton);
-		foreach (Button button in _suitButtons.Values)
-		{
-			RememberButtonFocusStyle(button);
-		}
 
 		_backButton.Pressed += RequestClose;
 		_root.Resized += () => CallDeferred(nameof(RefreshGridColumns));
 		_scrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
-		_cardScene = GD.Load<PackedScene>(CardScenePath);
-		LoadCatalog();
+		_upgradeCardScene = GD.Load<PackedScene>(UpgradeCardScenePath);
+		_itemCardScene = GD.Load<PackedScene>(ItemCardScenePath);
+		LoadCatalogs();
 		RefreshLocalizedText();
 		Visible = false;
 		SetProcessUnhandledInput(false);
@@ -130,7 +150,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	public void Open()
 	{
-		LoadCatalog();
+		LoadCatalogs();
 		LoadUnlockedUpgradeIds();
 		Visible = true;
 		_acceptInput = true;
@@ -139,7 +159,8 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		SetInputFocusVisible(
 			_lastInputWasKeyboardOrJoypad || IsKeyboardOrJoypadActionPressedNow());
 		ClosePreview();
-		SelectSuit("hearts", focusFirstCard: false);
+		_currentSuit = "hearts";
+		SelectCategory(UpgradesCategory, focusFirstCard: false);
 		CallDeferred(nameof(RefreshGridColumns));
 		CallDeferred(nameof(FocusFirstAvailableControl));
 	}
@@ -181,7 +202,8 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		return true;
 	}
 
-	public int DebugGetVisibleCardCount() => _visibleCards.Count;
+	public int DebugGetVisibleCardCount() =>
+		_currentCategory == ItemsCategory ? _visibleItemCards.Count : _visibleCards.Count;
 
 	public int DebugGetTotalEnabledCardCount()
 	{
@@ -202,9 +224,34 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	}
 
 	public string DebugGetCurrentSuit() => _currentSuit;
+	public string DebugGetCurrentCategory() => _currentCategory;
 	public int DebugGetGridColumns() => _grid.Columns;
 	public bool DebugIsPreviewVisible() => _previewLayer.Visible;
 	public bool DebugIsInputFocusVisible() => _inputFocusVisible;
+	public bool DebugAreSuitTabsVisible() => _suitTabs.Visible;
+
+	public int DebugGetTotalEnabledItemCardCount()
+	{
+		int count = 0;
+		if (_itemCatalog == null)
+		{
+			return count;
+		}
+
+		foreach (string itemCardId in _itemCatalog.AllIds)
+		{
+			if (_itemCatalog.IsEnabled(itemCardId))
+			{
+				count++;
+			}
+		}
+		return count;
+	}
+
+	public bool DebugSelectCategory(string category)
+	{
+		return SelectCategory(category, focusFirstCard: true);
+	}
 
 	public bool DebugSelectSuit(string suit)
 	{
@@ -213,12 +260,28 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	public bool DebugActivateVisibleCard(int index)
 	{
+		if (_currentCategory == ItemsCategory)
+		{
+			return DebugActivateVisibleItemCard(index);
+		}
+
 		if (index < 0 || index >= _visibleCards.Count || _visibleCards[index].IsLocked)
 		{
 			return false;
 		}
 
 		OpenPreview(_visibleDefinitions[index], _visibleCards[index]);
+		return true;
+	}
+
+	public bool DebugActivateVisibleItemCard(int index)
+	{
+		if (index < 0 || index >= _visibleItemCards.Count)
+		{
+			return false;
+		}
+
+		OpenItemPreview(_visibleItemDefinitions[index], _visibleItemCards[index]);
 		return true;
 	}
 
@@ -267,19 +330,48 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		return states;
 	}
 
+	public Godot.Collections.Array DebugGetVisibleItemCardStates()
+	{
+		var states = new Godot.Collections.Array();
+		for (int index = 0; index < _visibleItemCards.Count; index++)
+		{
+			Godot.Collections.Dictionary state = _visibleItemCards[index].DebugGetCardState();
+			state["sort_order"] = _visibleItemDefinitions[index].SortOrder;
+			state["scene_file_path"] = _visibleItemCards[index].SceneFilePath;
+			states.Add(state);
+		}
+		return states;
+	}
+
 	public Godot.Collections.Dictionary DebugGetPreviewCardState()
 	{
+		if (!string.IsNullOrEmpty(_previewItemCardId))
+		{
+			Godot.Collections.Dictionary itemState = _previewItemCard.DebugGetCardState();
+			itemState["kind"] = ItemsCategory;
+			return itemState;
+		}
+
 		Godot.Collections.Dictionary state = _previewCard.DebugGetCardState();
 		state["id"] = _previewUpgradeId;
+		state["kind"] = UpgradesCategory;
 		return state;
 	}
 
-	private void LoadCatalog()
+	private void LoadCatalogs()
 	{
 		_catalog = AdventureSuitUpgradeCatalog.Load(this);
 		_manifest = _catalog.TryCreateManifest(out AdventureUpgradeManifest manifest)
 			? manifest
 			: null;
+		if (!ItemCardCatalog.TryLoad(this, out ItemCardCatalog itemCatalog, out string errorMessage))
+		{
+			_itemCatalog = null;
+			GD.PushError($"Unable to load item codex catalog: {errorMessage}");
+			return;
+		}
+
+		_itemCatalog = itemCatalog;
 	}
 
 	private void LoadUnlockedUpgradeIds()
@@ -307,7 +399,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	private bool SelectSuit(string suit, bool focusFirstCard)
 	{
-		if (!_acceptInput)
+		if (!_acceptInput || _currentCategory != UpgradesCategory)
 		{
 			return false;
 		}
@@ -330,6 +422,34 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		return true;
 	}
 
+	private bool SelectCategory(string category, bool focusFirstCard)
+	{
+		if (!_acceptInput)
+		{
+			return false;
+		}
+
+		string normalizedCategory = category?.Trim().ToLowerInvariant() ?? string.Empty;
+		if (normalizedCategory != UpgradesCategory && normalizedCategory != ItemsCategory)
+		{
+			return false;
+		}
+
+		_currentCategory = normalizedCategory;
+		_suitTabs.Visible = _currentCategory == UpgradesCategory;
+		ClosePreview();
+		RebuildCards();
+		RefreshCategoryTabs();
+		RefreshSuitTabs();
+		_scrollContainer.ScrollVertical = 0;
+		CallDeferred(nameof(RefreshGridColumns));
+		if (focusFirstCard)
+		{
+			CallDeferred(nameof(FocusFirstAvailableControl));
+		}
+		return true;
+	}
+
 	private void RebuildCards()
 	{
 		foreach (Node child in _grid.GetChildren())
@@ -339,8 +459,16 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		}
 		_visibleCards.Clear();
 		_visibleDefinitions.Clear();
+		_visibleItemCards.Clear();
+		_visibleItemDefinitions.Clear();
 
-		if (_catalog == null || _cardScene == null)
+		if (_currentCategory == ItemsCategory)
+		{
+			RebuildItemCards();
+			return;
+		}
+
+		if (_catalog == null || _upgradeCardScene == null)
 		{
 			_emptyLabel.Visible = true;
 			return;
@@ -354,7 +482,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 				continue;
 			}
 
-			if (_cardScene.Instantiate() is not AdventureUpgradeCatalogCard card)
+			if (_upgradeCardScene.Instantiate() is not AdventureUpgradeCatalogCard card)
 			{
 				continue;
 			}
@@ -385,6 +513,44 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		}
 
 		_emptyLabel.Visible = _visibleCards.Count == 0;
+	}
+
+	private void RebuildItemCards()
+	{
+		if (_itemCatalog == null || _itemCardScene == null)
+		{
+			_emptyLabel.Visible = true;
+			return;
+		}
+
+		foreach (string itemCardId in _itemCatalog.AllIds)
+		{
+			if (!_itemCatalog.IsEnabled(itemCardId)
+				|| !_itemCatalog.TryGetDefinition(itemCardId, out ItemCardDefinition definition)
+				|| _itemCardScene.Instantiate() is not MainMenuItemCodexCard card)
+			{
+				continue;
+			}
+
+			_itemCatalog.TryGetFirstFrameTexture(itemCardId, out Texture2D texture);
+			card.Name = $"ItemCard_{ToPascalCase(itemCardId)}";
+			card.CustomMinimumSize = new Vector2(CatalogCardWidth, CatalogCardHeight);
+			_grid.AddChild(card);
+			card.ConfigureCard(
+				itemCardId,
+				texture,
+				LocalizeItemName(definition),
+				LocalizeItemDescription(definition),
+				interactive: true);
+			ItemCardDefinition capturedDefinition = definition;
+			card.Pressed += () => OpenItemPreview(capturedDefinition, card);
+			card.FocusEntered += () => _scrollContainer.EnsureControlVisible(card);
+			card.SetFocusHighlightEnabled(_inputFocusVisible);
+			_visibleItemCards.Add(card);
+			_visibleItemDefinitions.Add(definition);
+		}
+
+		_emptyLabel.Visible = _visibleItemCards.Count == 0;
 	}
 
 	private string FormatDescription(AdventureSuitUpgradeDefinition definition)
@@ -424,6 +590,31 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		return localized;
 	}
 
+	private string LocalizeItemName(ItemCardDefinition definition)
+	{
+		const string DescriptionPrefix = "ITEM_DESC_";
+		string nameKey = definition.DescriptionKey.StartsWith(DescriptionPrefix, StringComparison.Ordinal)
+			? $"ITEM_NAME_{definition.DescriptionKey[DescriptionPrefix.Length..]}"
+			: string.Empty;
+		string localized = string.IsNullOrEmpty(nameKey) ? string.Empty : Localize(nameKey);
+		return string.IsNullOrWhiteSpace(localized) || string.Equals(localized, nameKey, StringComparison.Ordinal)
+			? definition.DisplayName
+			: localized;
+	}
+
+	private string LocalizeItemDescription(ItemCardDefinition definition)
+	{
+		string localized = Localize(definition.DescriptionKey);
+		if (string.IsNullOrWhiteSpace(localized)
+			|| string.Equals(localized, definition.DescriptionKey, StringComparison.Ordinal))
+		{
+			GD.PushError($"Missing item codex localization key: {definition.DescriptionKey}");
+			return definition.Description;
+		}
+
+		return localized;
+	}
+
 	private void OpenPreview(
 		AdventureSuitUpgradeDefinition definition,
 		AdventureUpgradeCatalogCard sourceCard)
@@ -437,12 +628,38 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 		_focusBeforePreview = sourceCard;
 		_previewUpgradeId = definition.Id;
+		_previewItemCardId = string.Empty;
 		_previewCard.ConfigureCard(
 			definition.Suit,
 			definition.Rarity,
 			FormatDescription(definition),
 			interactive: false,
 			showRarityLabel: false);
+		_previewCard.Visible = true;
+		_previewItemCard.Visible = false;
+		_previewLayer.Visible = true;
+		_previewFocusAnchor.GrabFocus();
+	}
+
+	private void OpenItemPreview(ItemCardDefinition definition, MainMenuItemCodexCard sourceCard)
+	{
+		if (!_acceptInput || _itemCatalog == null || !_itemCatalog.IsEnabled(definition.Id))
+		{
+			return;
+		}
+
+		_focusBeforePreview = sourceCard;
+		_previewUpgradeId = string.Empty;
+		_previewItemCardId = definition.Id;
+		_itemCatalog.TryGetFirstFrameTexture(definition.Id, out Texture2D texture);
+		_previewItemCard.ConfigureCard(
+			definition.Id,
+			texture,
+			LocalizeItemName(definition),
+			LocalizeItemDescription(definition),
+			interactive: false);
+		_previewCard.Visible = false;
+		_previewItemCard.Visible = true;
 		_previewLayer.Visible = true;
 		_previewFocusAnchor.GrabFocus();
 	}
@@ -456,6 +673,9 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 		_previewLayer.Visible = false;
 		_previewUpgradeId = string.Empty;
+		_previewItemCardId = string.Empty;
+		_previewCard.Visible = true;
+		_previewItemCard.Visible = false;
 		if (_focusBeforePreview != null
 			&& GodotObject.IsInstanceValid(_focusBeforePreview)
 			&& _focusBeforePreview.IsVisibleInTree())
@@ -478,24 +698,63 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		_titleLabel.Text = Localize("SKILL_CODEX_TITLE");
 		_backButton.Text = Localize("SKILL_CODEX_BACK");
 		_emptyLabel.Text = Localize("SKILL_CODEX_EMPTY");
+		_upgradesButton.Text = Localize("SKILL_CODEX_CATEGORY_UPGRADES");
+		_itemsButton.Text = Localize("SKILL_CODEX_CATEGORY_ITEMS");
 		foreach (string suit in SuitOrder)
 		{
 			_suitButtons[suit].Text = $"{GetSuitSymbol(suit)} {Localize($"SKILL_CODEX_SUIT_{suit.ToUpperInvariant()}")}";
 		}
 
-		string previewId = _previewUpgradeId;
+		string previewUpgradeId = _previewUpgradeId;
+		string previewItemCardId = _previewItemCardId;
 		RebuildCards();
+		RefreshCategoryTabs();
 		RefreshSuitTabs();
-		if (!string.IsNullOrEmpty(previewId))
+		if (!string.IsNullOrEmpty(previewUpgradeId))
 		{
 			for (int index = 0; index < _visibleDefinitions.Count; index++)
 			{
-				if (string.Equals(_visibleDefinitions[index].Id, previewId, StringComparison.Ordinal))
+				if (string.Equals(_visibleDefinitions[index].Id, previewUpgradeId, StringComparison.Ordinal))
 				{
 					OpenPreview(_visibleDefinitions[index], _visibleCards[index]);
 					break;
 				}
 			}
+		}
+		else if (!string.IsNullOrEmpty(previewItemCardId))
+		{
+			for (int index = 0; index < _visibleItemDefinitions.Count; index++)
+			{
+				if (string.Equals(_visibleItemDefinitions[index].Id, previewItemCardId, StringComparison.Ordinal))
+				{
+					OpenItemPreview(_visibleItemDefinitions[index], _visibleItemCards[index]);
+					break;
+				}
+			}
+		}
+	}
+
+	private void RefreshCategoryTabs()
+	{
+		bool upgradesSelected = _currentCategory == UpgradesCategory;
+		MainMenuInteractiveStyle.ApplyThemedTab(
+			_upgradesButton,
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette,
+			upgradesSelected,
+			19,
+			hoverPalette: MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		MainMenuInteractiveStyle.ApplyThemedTab(
+			_itemsButton,
+			MainMenuInteractiveStyle.EmeraldPalette,
+			!upgradesSelected,
+			19,
+			hoverPalette: MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		_buttonFocusStyles[_upgradesButton] = _upgradesButton.GetThemeStylebox("focus");
+		_buttonFocusStyles[_itemsButton] = _itemsButton.GetThemeStylebox("focus");
+		if (!_inputFocusVisible)
+		{
+			_upgradesButton.AddThemeStyleboxOverride("focus", HiddenFocusStyle);
+			_itemsButton.AddThemeStyleboxOverride("focus", HiddenFocusStyle);
 		}
 	}
 
@@ -540,6 +799,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			"panel",
 			SecondaryMenuGlassStyle.CreateFrameStyle(contentPane: false, SecondaryMenuGlassStyle.UnifiedVisual));
 
+		RefreshCategoryTabs();
 		RefreshSuitTabs();
 	}
 
@@ -557,10 +817,49 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private void RefreshGridColumns()
 	{
 		float availableWidth = Mathf.Max(0.0f, _scrollContainer.Size.X - 48.0f);
+		float cardWidth = CatalogCardWidth;
+		if (_currentCategory == ItemsCategory)
+		{
+			cardWidth = RefreshItemCardLayout();
+		}
+		else
+		{
+			_grid.AddThemeConstantOverride("v_separation", Mathf.RoundToInt(CatalogCardGap));
+		}
+
 		_grid.Columns = Mathf.Clamp(
-			Mathf.FloorToInt((availableWidth + CatalogCardGap) / (CatalogCardWidth + CatalogCardGap)),
+			Mathf.FloorToInt((availableWidth + CatalogCardGap) / (cardWidth + CatalogCardGap)),
 			2,
 			4);
+	}
+
+	private float RefreshItemCardLayout()
+	{
+		float availableHeight = Mathf.Max(1.0f, _scrollContainer.Size.Y);
+		int visibleRows = Mathf.Clamp(
+			Mathf.FloorToInt(
+				(availableHeight + CatalogCardGap) / (MinimumItemCardHeight + CatalogCardGap)),
+			1,
+			MaximumVisibleItemRows);
+		float cardHeight = Mathf.Min(
+			CatalogCardHeight,
+			Mathf.Floor(
+				(availableHeight - ((visibleRows - 1) * CatalogCardGap)) / visibleRows));
+		cardHeight = Mathf.Max(1.0f, cardHeight);
+
+		float verticalGap = CatalogCardGap;
+		if (visibleRows == 1 && cardHeight >= CatalogCardHeight)
+		{
+			verticalGap = Mathf.Max(CatalogCardGap, Mathf.Floor(availableHeight - cardHeight));
+		}
+		_grid.AddThemeConstantOverride("v_separation", Mathf.RoundToInt(verticalGap));
+
+		float cardWidth = Mathf.Round(cardHeight * CatalogCardWidth / CatalogCardHeight);
+		foreach (MainMenuItemCodexCard card in _visibleItemCards)
+		{
+			card.CustomMinimumSize = new Vector2(cardWidth, cardHeight);
+		}
+		return cardWidth;
 	}
 
 	private void FocusFirstAvailableControl()
@@ -568,6 +867,16 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		if (!Visible)
 		{
 			return;
+		}
+
+		if (_currentCategory == ItemsCategory)
+		{
+			foreach (MainMenuItemCodexCard card in _visibleItemCards)
+			{
+				card.GrabFocus();
+				_scrollContainer.EnsureControlVisible(card);
+				return;
+			}
 		}
 
 		foreach (AdventureUpgradeCatalogCard card in _visibleCards)
@@ -600,6 +909,14 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		}
 
 		foreach (AdventureUpgradeCatalogCard card in _visibleCards)
+		{
+			if (GodotObject.IsInstanceValid(card))
+			{
+				card.SetFocusHighlightEnabled(visible);
+			}
+		}
+
+		foreach (MainMenuItemCodexCard card in _visibleItemCards)
 		{
 			if (GodotObject.IsInstanceValid(card))
 			{

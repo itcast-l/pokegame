@@ -127,8 +127,7 @@ public partial class MainMenuPlayerCountDialog : Control
 				ConfigureUnifiedFrame(
 					frame,
 					OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow,
-					MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder,
-					suppressVisuals: true);
+					MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
 			}
 		}
 
@@ -180,7 +179,7 @@ public partial class MainMenuPlayerCountDialog : Control
 		frame.AccentColor = accent;
 		frame.Selected = false;
 		frame.HighlightFocus = true;
-		frame.UseToolRowIdleBackdrop = false;
+		frame.UseToolRowIdleBackdrop = frameStyle == OceanMenuButtonFrame.ButtonFrameStyle.IndividualToolRow;
 		frame.SuppressVisuals = suppressVisuals;
 		frame.QueueRedraw();
 	}
@@ -190,8 +189,11 @@ public partial class MainMenuPlayerCountDialog : Control
 		float viewportHeight = Size.Y > 0.0f ? Size.Y : GetViewportRect().Size.Y;
 		bool compact = viewportHeight <= 600.0f;
 		float margin = 22.0f;
-		float rowHeight = 89.0f;
-		float optionHeight = 54.0f;
+		float rowHeight = compact ? 64.0f : 76.0f;
+		float optionHeight = compact ? 46.0f : 54.0f;
+		float optionHalfHeight = optionHeight * 0.5f;
+		float optionLeft = compact ? 158.0f : 180.0f;
+		float labelRight = compact ? 142.0f : 164.0f;
 
 		_dialogMargin.OffsetTop = margin;
 		_dialogMargin.OffsetBottom = -margin;
@@ -201,7 +203,25 @@ public partial class MainMenuPlayerCountDialog : Control
 
 		for (int index = 0; index < _configurationRowPanels.Length; index++)
 		{
-			_configurationRowPanels[index].CustomMinimumSize = new Vector2(0.0f, rowHeight);
+			Control row = _configurationRowPanels[index];
+			row.CustomMinimumSize = new Vector2(0.0f, rowHeight);
+			OptionButton option = row.GetChild<OptionButton>(1);
+			Label label = row.GetChild<Label>(2);
+			Label chevron = row.GetChild<Label>(3);
+			option.CustomMinimumSize = new Vector2(0.0f, optionHeight);
+			option.OffsetLeft = optionLeft;
+			option.OffsetRight = -12.0f;
+			option.OffsetTop = -optionHalfHeight;
+			option.OffsetBottom = optionHalfHeight;
+			label.AnchorRight = 0.0f;
+			label.OffsetLeft = 24.0f;
+			label.OffsetRight = labelRight;
+			label.OffsetTop = -20.0f;
+			label.OffsetBottom = 20.0f;
+			label.HorizontalAlignment = HorizontalAlignment.Left;
+			label.AddThemeFontSizeOverride("font_size", compact ? 16 : 18);
+			chevron.OffsetTop = -optionHalfHeight;
+			chevron.OffsetBottom = optionHalfHeight;
 		}
 		PlayerCountOption.CustomMinimumSize = new Vector2(0.0f, optionHeight);
 		DifficultyOption.CustomMinimumSize = new Vector2(0.0f, optionHeight);

@@ -57,13 +57,13 @@ public partial class GameBoardScene
 					ToRuleCardState(cards["Hearts:7"]),
 					ToRuleCardState(cards["Hearts:2"])),
 				ImmutableArray<LogicalItemState>.Empty,
-				Score: 0),
+				Score: GetAdventureStartingHealth(MainPlayerIndex)),
 			new PlayerStateSnapshot(
 				1,
 				ImmutableArray<LogicalCardState>.Empty,
 				ImmutableArray.Create(ToRuleCardState(cards["Clubs:K"])),
 				ImmutableArray<LogicalItemState>.Empty,
-				Score: 0));
+				Score: GetAdventureStartingHealth(1)));
 		ImmutableArray<TableCardState> tableCards = ImmutableArray.Create(
 			ToRuleTableCardState(new TableCard(cards["Clubs:2"], true)),
 			ToRuleTableCardState(new TableCard(cards["Diamonds:3"], true)),
@@ -106,13 +106,13 @@ public partial class GameBoardScene
 				ImmutableArray<LogicalCardState>.Empty,
 				ImmutableArray.Create(ToRuleCardState(cards["Hearts:4"])),
 				ImmutableArray<LogicalItemState>.Empty,
-				Score: 0),
+				Score: GetAdventureStartingHealth(MainPlayerIndex)),
 			new PlayerStateSnapshot(
 				1,
 				ImmutableArray<LogicalCardState>.Empty,
 				ImmutableArray.Create(ToRuleCardState(cards["Clubs:9"])),
 				ImmutableArray<LogicalItemState>.Empty,
-				Score: 0));
+				Score: GetAdventureStartingHealth(1)));
 		ImmutableArray<TableCardState> tableCards = ImmutableArray.Create(
 			ToRuleTableCardState(new TableCard(cards["Hearts:9"], true)),
 			ToRuleTableCardState(new TableCard(cards["Diamonds:6"], true)),

@@ -34,6 +34,9 @@ func _run() -> void:
 		_fail("Single-player dialog did not open")
 		return
 	await _wait_frames(12)
+	if dialog_root.find_child("IconBadge", true, false) != null:
+		_fail("Single-player configuration unexpectedly renders icon badges")
+		return
 
 	var difficulty_row := dialog_root.find_child("DifficultyRowPanel", true, false) as Control
 	var difficulty_option := dialog_root.find_child("DifficultyOption", true, false) as OptionButton
@@ -59,8 +62,8 @@ func _run() -> void:
 		if accent.visible:
 			_fail("Configuration field label still uses a competing decorative accent: %s" % option_name)
 			return
-		if option.flat or not bool(row.get("SuppressVisuals")):
-			_fail("Configuration selector still merges its interaction state into the full row: %s" % option_name)
+		if option.flat or bool(row.get("SuppressVisuals")):
+			_fail("Configuration row is missing its game-menu surface: %s" % option_name)
 			return
 		var arrow_icon := option.get_theme_icon("arrow")
 		if arrow_icon == null or arrow_icon.get_width() > 1 or arrow_icon.get_height() > 1:
@@ -80,12 +83,13 @@ func _run() -> void:
 		var option_rect := option.get_global_rect()
 		var row_rect := row.get_global_rect()
 		if not row_rect.encloses(label_rect) or not row_rect.encloses(option_rect) \
-				or label_rect.end.y > option_rect.position.y - 8.0 \
-				or option_rect.size.x < row_rect.size.x - 20.0 \
+				or label_rect.end.x > option_rect.position.x - 8.0 \
+				or absf(label_rect.get_center().y - option_rect.get_center().y) > 3.0 \
+				or option_rect.size.x < row_rect.size.x * 0.60 \
 				or option_rect.size.y < 44.0 \
-				or label.get_theme_font_size("font_size") > 16 \
+				or label.get_theme_font_size("font_size") > 18 \
 				or option.get_theme_font_size("font_size") < 20:
-			_fail("Configuration cell does not keep a clear title-over-selector hierarchy: %s row=%s label=%s option=%s" % [
+			_fail("Configuration row does not keep a clear label-value hierarchy: %s row=%s label=%s option=%s" % [
 				option_name,
 				row_rect,
 				label_rect,
@@ -95,7 +99,7 @@ func _run() -> void:
 	var difficulty_row_rect := difficulty_row.get_global_rect()
 	var difficulty_option_rect := difficulty_option.get_global_rect()
 	if not difficulty_row_rect.encloses(difficulty_option_rect) \
-			or difficulty_option_rect.size.x < difficulty_row_rect.size.x * 0.88 \
+			or difficulty_option_rect.size.x < difficulty_row_rect.size.x * 0.60 \
 			or difficulty_option_rect.size.y < 44.0:
 		_fail("Difficulty selector does not fill its stack row")
 		return

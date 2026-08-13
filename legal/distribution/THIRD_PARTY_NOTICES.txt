@@ -1,0 +1,27 @@
+Deckland Third-Party Notices
+================================
+
+Deckland includes third-party software and fonts. The corresponding license
+texts, copyright information, and notices are provided in the licenses
+directory next to this file.
+
+Included components
+-------------------
+
+- Godot Engine 4.6.1: GODOT_ENGINE_LICENSE.txt and
+  GODOT_ENGINE_COPYRIGHT.txt
+- .NET Runtime 8.0.25: DOTNET_RUNTIME_LICENSE.txt and
+  DOTNET_RUNTIME_THIRD_PARTY_NOTICES.txt
+- GodotSteam 4.18.1: GODOTSTEAM.txt
+- Steamworks redistributable binaries: STEAMWORKS_SDK_NOTICE.txt
+- Pandora 1.0-alpha9: PANDORA.txt
+- nanoid-godot 0.2.0 (Pandora generator inspiration): NANOID_GODOT.txt
+- Phantom Camera 0.11.0.2: PHANTOM_CAMERA.txt
+- Resonate 2.4.0: RESONATE.txt
+- SaveState Lite 1.2.0: SAVESTATE_LITE.txt
+- Steam Locale Mapper 1.0: STEAM_LOCALE_MAPPER.txt
+- Noto fonts: NOTO_FONTS_OFL-1.1.txt
+- Nunito fonts supplied with Phantom Camera: NUNITO_OFL-1.1.txt
+
+The names and trademarks of third parties are the property of their
+respective owners. Their inclusion does not imply endorsement.

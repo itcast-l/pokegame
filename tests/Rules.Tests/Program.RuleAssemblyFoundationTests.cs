@@ -36,6 +36,8 @@ internal static partial class Program
 		Run("invalid starting draw options are rejected atomically", InvalidStartingDrawOptionsAreRejectedAtomically);
 		Run("scripted initialization validates and applies one atomic state", ScriptedInitializationValidatesAndAppliesOneAtomicState);
 		Run("question refresh state changes with capture and turn commands", QuestionRefreshStateChangesWithCaptureAndTurnCommands);
+		Run("question card expires after two completed turn commands", QuestionCardExpiresAfterTwoCompletedTurnCommands);
+		Run("question card age survives a capture that leaves it on the table", QuestionCardAgeSurvivesUnrelatedCapture);
 		Run("turn generation advances only through its rule command", TurnGenerationAdvancesOnlyThroughItsRuleCommand);
 		Run("turn generation advance cancels an obsolete presentation barrier", TurnGenerationAdvanceCancelsObsoletePresentationBarrier);
 		Run("authority card play capture score and outcome commands are ordered", AuthorityCardPlayCaptureScoreAndOutcomeCommandsAreOrdered);
@@ -1262,6 +1264,124 @@ internal static partial class Program
 		False(invalid.Accepted);
 		Equal(RuleRejectionCode.InvalidCommand, invalid.Rejection.Code);
 		AssertReadModelsEquivalent(refreshTurn.ReadModel, invalid.ReadModel);
+	}
+
+	private static void QuestionCardExpiresAfterTwoCompletedTurnCommands()
+	{
+		AuthorityRuleSession session = CreateGameplayCommandSession(profile: CreateItemRuleProfile());
+		MatchReadModel initial = session.ReadModel;
+		RuleCommandResult firstTurn = session.Submit(new AdvanceTurnCommand(
+			125,
+			initial.Revision,
+			initial.LifecycleGeneration,
+			initial.TurnGeneration,
+			ActingSeat: 0,
+			Captured: false,
+			CandidateNextSeat: 1,
+			AdvanceQuestionRefresh: true,
+			HasTableSpecialCard: true,
+			QuestionRefreshCyclesAfterCapture: 2,
+			HasQuestionCard: true,
+			QuestionCardLifetimeTurns: 2));
+		True(firstTurn.Accepted);
+		False(firstTurn.Mutation.ShouldExpireQuestionCard);
+		Equal(1, firstTurn.ReadModel.CompletedTurnsSinceQuestionRefresh);
+
+		RuleCommandResult expired = session.Submit(new AdvanceTurnCommand(
+			126,
+			firstTurn.Revision,
+			firstTurn.ReadModel.LifecycleGeneration,
+			firstTurn.TurnGeneration,
+			ActingSeat: 1,
+			Captured: false,
+			CandidateNextSeat: 0,
+			AdvanceQuestionRefresh: true,
+			HasTableSpecialCard: true,
+			QuestionRefreshCyclesAfterCapture: 2,
+			HasQuestionCard: true,
+			QuestionCardLifetimeTurns: 2));
+		True(expired.Accepted);
+		True(expired.Mutation.ShouldExpireQuestionCard);
+		False(expired.Mutation.ShouldRefreshQuestionCard);
+		Equal(0, expired.ReadModel.CompletedTurnsSinceQuestionRefresh);
+		Equal(0, expired.ReadModel.QuestionRefreshAnchorSeat);
+
+		RuleCommandResult current = expired;
+		for (int completedTurn = 1; completedTurn <= 4; completedTurn++)
+		{
+			int actingSeat = current.ReadModel.CurrentTurnSeat;
+			int nextSeat = actingSeat == 0 ? 1 : 0;
+			current = session.Submit(new AdvanceTurnCommand(
+				126 + completedTurn,
+				current.Revision,
+				current.ReadModel.LifecycleGeneration,
+				current.TurnGeneration,
+				ActingSeat: actingSeat,
+				Captured: false,
+				CandidateNextSeat: nextSeat,
+				AdvanceQuestionRefresh: true,
+				QuestionRefreshCyclesAfterCapture: 2));
+			True(current.Accepted);
+			Equal(completedTurn == 4, current.Mutation.ShouldRefreshQuestionCard);
+		}
+	}
+
+	private static void QuestionCardAgeSurvivesUnrelatedCapture()
+	{
+		MatchRuleProfile profile = CreateItemRuleProfile();
+		AuthorityRuleSession source = CreateGameplayCommandSession(profile: profile);
+		MatchStateSnapshot sourceSnapshot = source.CaptureSnapshot();
+		var questionCard = new TableCardState(
+			900_001,
+			null,
+			true,
+			false,
+			false,
+			false,
+			new LogicalItemState("question_mark"),
+			-1,
+			-1,
+			false);
+		AuthorityRuleSession session = AuthorityRuleSession.Restore(
+			sourceSnapshot with
+			{
+				TableCards = sourceSnapshot.TableCards.Insert(0, questionCard),
+				CompletedTurnsSinceQuestionRefresh = 1,
+				QuestionRefreshAnchorSeat = 0,
+			},
+			new TestRuleRandomSource(1),
+			profile);
+		MatchReadModel beforeCapture = session.ReadModel;
+
+		RuleCommandResult capture = session.Submit(new CaptureCardsCommand(
+			135,
+			beforeCapture.Revision,
+			beforeCapture.LifecycleGeneration,
+			beforeCapture.TurnGeneration,
+			Seat: 0,
+			CaptureStartIndex: 1,
+			RestartQuestionRefreshTracking: false));
+		True(capture.Accepted);
+		Equal(1, capture.ReadModel.TableCards.Length);
+		Equal("question_mark", capture.ReadModel.TableCards[0].ItemOverlay!.Value.Id);
+		Equal(1, capture.ReadModel.CompletedTurnsSinceQuestionRefresh);
+		Equal(0, capture.ReadModel.QuestionRefreshAnchorSeat);
+
+		RuleCommandResult expired = session.Submit(new AdvanceTurnCommand(
+			136,
+			capture.Revision,
+			capture.ReadModel.LifecycleGeneration,
+			capture.TurnGeneration,
+			ActingSeat: 0,
+			Captured: false,
+			CandidateNextSeat: 1,
+			AdvanceQuestionRefresh: true,
+			HasTableSpecialCard: true,
+			QuestionRefreshCyclesAfterCapture: 2,
+			HasQuestionCard: true,
+			QuestionCardLifetimeTurns: 2));
+		True(expired.Accepted);
+		True(expired.Mutation.ShouldExpireQuestionCard);
 	}
 
 	private static void TurnGenerationAdvancesOnlyThroughItsRuleCommand()
