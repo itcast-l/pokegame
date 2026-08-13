@@ -77,7 +77,7 @@ NOTICE_SOURCES = (
 	),
 	NoticeSource(
 		"GODOTSTEAM.txt",
-		"279f04511cceed18b63c2d4c72b5274719092f3ba58af618c6ce90f528039d5d",
+		"a3bbe23be1563f3e0772dc22cbd4e51f348a7be2bd6bae451cedebc598f7acee",
 		local_source="addons/godotsteam/license.md",
 	),
 	NoticeSource(
@@ -165,7 +165,7 @@ def expected_notice_bytes(source: NoticeSource, root: Path, *, allow_network: bo
 		path = root / source.local_source
 		if not path.is_file():
 			raise RuntimeError(f"Local license source is missing: {path}")
-		data = path.read_bytes()
+		data = path.read_bytes().replace(b"\r\n", b"\n")
 	elif allow_network and source.url is not None:
 		request = urllib.request.Request(source.url, headers={"User-Agent": "Deckland-license-sync/1"})
 		with urllib.request.urlopen(request, timeout=30) as response:
