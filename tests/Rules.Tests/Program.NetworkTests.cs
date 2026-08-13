@@ -1567,10 +1567,12 @@ internal static partial class Program
 			repoRoot,
 			"scripts",
 			"GameBoardScene.Debug.Network.cs"));
-		string authorityStateText = File.ReadAllText(Path.Combine(
-			repoRoot,
-			"scripts",
-			"GameBoardScene.NetworkAuthorityState.cs"));
+		string authorityStateText = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(repoRoot, "scripts"),
+				"GameBoardScene.NetworkAuthority*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 
 		True(boardText.Contains(
 			"private IReadOnlyList<IReadOnlyList<PlayingCard>> _playerHands =>",
