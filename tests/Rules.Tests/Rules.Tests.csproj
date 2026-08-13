@@ -69,6 +69,10 @@
 	<Compile Include="../../scripts/MultiplayerRematchRules.cs" Link="Rules/MultiplayerRematchRules.cs" />
     <Compile Include="../../scripts/AuthorityActionState.cs" Link="Rules/AuthorityActionState.cs" />
     <Compile Include="../../scripts/NetworkAuthorityCheckpoint.cs" Link="Rules/NetworkAuthorityCheckpoint.cs" />
+    <Compile Include="../../scripts/NetworkAuthorityCheckpoint.Models.cs" Link="Rules/NetworkAuthorityCheckpoint.Models.cs" />
+    <Compile Include="../../scripts/NetworkAuthorityCheckpoint.CardModels.cs" Link="Rules/NetworkAuthorityCheckpoint.CardModels.cs" />
+    <Compile Include="../../scripts/NetworkAuthorityCheckpoint.RuleAdapter.cs" Link="Rules/NetworkAuthorityCheckpoint.RuleAdapter.cs" />
+    <Compile Include="../../scripts/NetworkAuthorityCheckpoint.Codec.cs" Link="Rules/NetworkAuthorityCheckpoint.Codec.cs" />
 	<Compile Include="../../scripts/AuthorityCheckpointEnvelope.cs" Link="Rules/AuthorityCheckpointEnvelope.cs" />
 	<Compile Include="../../scripts/AuthorityCheckpointTelemetry.cs" Link="Rules/AuthorityCheckpointTelemetry.cs" />
 	<Compile Include="../../scripts/NetworkMaintenanceScheduleRules.cs" Link="Rules/NetworkMaintenanceScheduleRules.cs" />
