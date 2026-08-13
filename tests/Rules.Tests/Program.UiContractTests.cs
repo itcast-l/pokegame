@@ -1261,8 +1261,12 @@ internal static partial class Program
 	private static void AdventureUpgradeRuntimeNoLongerHardcodesPopupArtSwitchTables()
 	{
 		string repoRoot = FindRepositoryRoot();
-		string runtimePath = Path.Combine(repoRoot, "scripts", "GameBoardScene.AdventureUpgrades.cs");
-		string text = File.ReadAllText(runtimePath);
+		string text = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(repoRoot, "scripts"),
+				"GameBoardScene.AdventureUpgrades*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 		string overlayRuntimePath = Path.Combine(
 			repoRoot,
 			"scripts",

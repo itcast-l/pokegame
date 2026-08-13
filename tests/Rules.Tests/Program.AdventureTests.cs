@@ -573,7 +573,10 @@ internal static partial class Program
 
 	private static void AdventureQuestionRewardDirectDamageReusesPlayerAttackAnimation()
 	{
-		string source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "scripts", "GameBoardScene.AdventureUpgrades.cs"));
+		string source = File.ReadAllText(Path.Combine(
+			FindRepositoryRoot(),
+			"scripts",
+			"GameBoardScene.AdventureUpgrades.CaptureAndTurnEffects.cs"));
 		int methodStart = source.IndexOf("private async Task ApplyAdventureCaptureRewardEffectsAsync(", StringComparison.Ordinal);
 		int methodEnd = source.IndexOf("private Task ApplyAdventureUpgradeAcquisitionEffectsAsync(", methodStart, StringComparison.Ordinal);
 

@@ -3578,6 +3578,12 @@ internal static partial class Program
 			path => path,
 			path => File.ReadAllText(Path.Combine(root, path)),
 			StringComparer.Ordinal);
+		sources["scripts/GameBoardScene.AdventureUpgrades.cs"] = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(root, "scripts"),
+				"GameBoardScene.AdventureUpgrades*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 		foreach (string source in sources.Values)
 		{
 			False(source.Contains("_rng.", StringComparison.Ordinal));

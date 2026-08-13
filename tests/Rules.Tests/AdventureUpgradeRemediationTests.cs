@@ -362,7 +362,7 @@ internal static partial class Program
 		string source = File.ReadAllText(Path.Combine(
 			FindRepositoryRoot(),
 			"scripts",
-			"GameBoardScene.AdventureUpgrades.cs"));
+			"GameBoardScene.AdventureUpgrades.CaptureAndTurnEffects.cs"));
 		int methodStart = source.IndexOf(
 			"private async Task<bool> ApplyAdventureMainPlayerMissTableEffectsAsync(",
 			StringComparison.Ordinal);

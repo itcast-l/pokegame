@@ -679,9 +679,12 @@ internal static partial class Program
 			captureSource,
 			@"_tableCards\s*\.(?:Add|AddRange|Insert|Remove|RemoveAt|RemoveRange|Clear)\s*\("));
 
-		string upgradeSource = File.ReadAllText(Path.Combine(
-			scriptsDirectory,
-			"GameBoardScene.AdventureUpgrades.cs"));
+		string upgradeSource = string.Concat(
+			Directory.GetFiles(
+				scriptsDirectory,
+				"GameBoardScene.AdventureUpgrades*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 		False(Regex.IsMatch(
 			upgradeSource,
 			@"_playerScores\s*\[[^\]]+\]\s*="));
