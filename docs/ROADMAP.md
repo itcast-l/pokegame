@@ -21,14 +21,17 @@ evidence.
 
 ## Execution Status
 
-As of 2026-08-13, steps 1 through 3 are complete:
+As of 2026-08-13, all four Adventure RC Closure steps are complete:
 
 - the skill codex suit tabs, localization batch, and headless readability-veil
   fallback are implemented and verified;
 - the continuous Adventure Campaign E2E smoke is implemented and passes from
   an isolated empty profile through both tutorials and all 12 main stages;
 - the complete local RC gate below passes with strict error and lifecycle
-  checks enabled.
+  checks enabled;
+- the local macOS Adventure RC is frozen from an exact source commit with its
+  package, release audit, gate logs, independent runtime evidence, and hashes
+  retained together.
 
 The latest full gate produced these bounded results:
 
@@ -37,12 +40,38 @@ The latest full gate produced these bounded results:
   viewports with zero warnings;
 - the Adventure Campaign E2E emitted `ADVENTURE_CAMPAIGN_E2E_SMOKE_OK` on two
   consecutive clean runs;
-- export preflight completed with a clean build and visual resource audit.
+- export preflight completed with a clean build and visual resource audit;
+- the release-package audit ran 42 tests successfully;
+- the release audit status is `passed`, source integrity is unchanged, all
+  release log blocker counts are zero, and the final native macOS smoke emitted
+  the exact build marker plus `RELEASE_EXECUTABLE_SMOKE_OK platform=macOS`.
 
-Step 4 remains in progress until a new build ID is bound to an exact source
-commit and the resulting local build, audit report, hashes, and gate evidence
-are retained together. The frozen commit and evidence location must be
-recorded here after that operation completes.
+## Frozen Adventure RC
+
+- Build ID: `deckland-rc-20260813-adventure-4-60736daa`
+- Frozen source commit: `60736daa9fe5d0df77fc9b7529b954e64c1715b1`
+- Git commit object SHA-256:
+  `3a172e33207c7dc4be8623b5f29171295691739e491a5a7e089efe58de77a3c3`
+- Retained evidence root:
+  `outputs/adventure-rc/deckland-rc-20260813-adventure-4-60736daa/`
+- Release audit SHA-256:
+  `b8a345c5115cee80b2a3a3322769daf79227b7bce1af43f11fa8041152f54708`
+- macOS executable SHA-256:
+  `0cf51e40002199f07c60d5390c37895a918994f25691e52ad8220b5a8744c365`
+- PCK SHA-256:
+  `1c71f9e0fcde8ccfa4af4507c94b6832920969043ac4711e9159fd63a00dfb26`
+- Signed app tree SHA-256:
+  `9effe9fc4c80a068b91679c79275da2aed5839498f03f17c82aa6fa629dc4b5f`
+
+`EVIDENCE.md` summarizes acceptance, `SHA256SUMS.txt` covers the audit,
+artifacts, all nine local gate logs, and independent verification logs, and
+`FROZEN_COMMIT.txt` binds the exact Git object. The complete hash set has been
+rechecked with `shasum -a 256 -c`.
+
+This candidate is a local ad-hoc-signed macOS RC. It is not Developer ID
+signed or notarized and does not satisfy Windows, Linux, physical-device LAN,
+Steam multi-account, or network-impairment gates. Those claims remain pending
+under External Release Gates below.
 
 ## Current Baseline
 
