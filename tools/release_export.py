@@ -630,6 +630,47 @@ def _release_build_marker(build_id: str, network_protocol: int, platform: str) -
 	)
 
 
+def _normalize_macos_adhoc_signature(app: Path, logs_dir: Path) -> dict[str, Any]:
+	if _host_platform() != "macos":
+		raise ReleaseError("macOS signature normalization requires a macOS host")
+	if app.suffix != ".app" or not app.is_dir():
+		raise ReleaseError(f"macOS export is not an app bundle: {app}")
+	codesign = shutil.which("codesign")
+	if not codesign:
+		raise ReleaseError("macOS signature normalization requires the host codesign tool")
+
+	sign_log = logs_dir / "macos-codesign-normalize.log"
+	verify_log = logs_dir / "macos-codesign-verify.log"
+	_run(
+		[
+			codesign,
+			"--force",
+			"--deep",
+			"--sign",
+			"-",
+			"--preserve-metadata=identifier,entitlements,requirements,flags,runtime",
+			str(app),
+		],
+		cwd=app.parent,
+		log_path=sign_log,
+		timeout=180,
+	)
+	verify_result = _run(
+		[codesign, "--verify", "--deep", "--strict", "--verbose=2", str(app)],
+		cwd=app.parent,
+		log_path=verify_log,
+		timeout=180,
+	)
+	return {
+		"ok": True,
+		"identity": "adhoc",
+		"method": "host_codesign_force_deep",
+		"sign_log": str(sign_log),
+		"verify_log": str(verify_log),
+		"verify_log_audit": scan_log(verify_result.stdout),
+	}
+
+
 def _run_native_executable(
 	executable: Path,
 	platform: str,
@@ -992,6 +1033,8 @@ def run_release(args: argparse.Namespace) -> Path:
 		report["export_log"] = export_log
 		if not export_log["ok"]:
 			raise ReleaseError(f"Export log contains blocking errors: {export_log['blocker_counts']}")
+		if platform == "macos":
+			report["macos_signature"] = _normalize_macos_adhoc_signature(export_target, logs_dir)
 
 		executable, pck = _resolve_export_artifacts(platform, export_target)
 		assemblies = _find_pokegame_assembly(artifact_dir)
@@ -1063,6 +1106,13 @@ def run_release(args: argparse.Namespace) -> Path:
 			for path in sorted(logs_dir.iterdir())
 			if path.is_file()
 		}
+		if "macos_signature" in report:
+			report["macos_signature"]["sign_log"] = str(
+				final_logs_dir / Path(report["macos_signature"]["sign_log"]).name
+			)
+			report["macos_signature"]["verify_log"] = str(
+				final_logs_dir / Path(report["macos_signature"]["verify_log"]).name
+			)
 		report["log_error_counts"] = {
 			marker: sum(
 				section["blocker_counts"].get(marker, 0)

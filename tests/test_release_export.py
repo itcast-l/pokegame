@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -313,6 +314,74 @@ dotnet/include_debug_symbols=false
 			required_exact_markers=("EXPECTED_BUILD",),
 		)
 		self.assertTrue(result["ok"])
+
+	def test_macos_adhoc_signature_normalization_uses_host_codesign_and_verifies(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			app = root / "Deckland.app"
+			logs = root / "logs"
+			app.mkdir()
+			calls: list[tuple[list[str], Path, Path | None, int | None]] = []
+
+			def capture_run(
+				command: list[str],
+				*,
+				cwd: Path,
+				log_path: Path | None = None,
+				timeout: int | None = None,
+			) -> subprocess.CompletedProcess[str]:
+				calls.append((list(command), cwd, log_path, timeout))
+				return subprocess.CompletedProcess(command, 0, "")
+
+			with (
+				mock.patch.object(release_export, "_host_platform", return_value="macos"),
+				mock.patch.object(release_export.shutil, "which", return_value="/usr/bin/codesign"),
+				mock.patch.object(release_export, "_run", side_effect=capture_run),
+			):
+				result = release_export._normalize_macos_adhoc_signature(app, logs)
+
+			self.assertTrue(result["ok"])
+			self.assertEqual("adhoc", result["identity"])
+			self.assertEqual(2, len(calls))
+			self.assertEqual(
+				[
+					"/usr/bin/codesign",
+					"--force",
+					"--deep",
+					"--sign",
+					"-",
+					"--preserve-metadata=identifier,entitlements,requirements,flags,runtime",
+					str(app),
+				],
+				calls[0][0],
+			)
+			self.assertEqual(
+				[
+					"/usr/bin/codesign",
+					"--verify",
+					"--deep",
+					"--strict",
+					"--verbose=2",
+					str(app),
+				],
+				calls[1][0],
+			)
+			self.assertEqual(root, calls[0][1])
+			self.assertEqual(logs / "macos-codesign-normalize.log", calls[0][2])
+			self.assertEqual(logs / "macos-codesign-verify.log", calls[1][2])
+			self.assertEqual(180, calls[0][3])
+			self.assertEqual(str(logs / "macos-codesign-verify.log"), result["verify_log"])
+			self.assertTrue(result["verify_log_audit"]["ok"])
+
+	def test_macos_adhoc_signature_normalization_rejects_non_macos_host(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			app = Path(temp) / "Deckland.app"
+			app.mkdir()
+			with (
+				mock.patch.object(release_export, "_host_platform", return_value="linux"),
+				self.assertRaisesRegex(release_export.ReleaseError, "requires a macOS host"),
+			):
+				release_export._normalize_macos_adhoc_signature(app, Path(temp) / "logs")
 
 	def test_missing_release_assembly_is_detected(self) -> None:
 		with tempfile.TemporaryDirectory() as temp:
