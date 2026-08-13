@@ -336,6 +336,16 @@ internal static partial class Program
 			root,
 			"scripts",
 			"AdventureRunSessionStore.cs"));
+		string storeImplementationSource = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(root, "scripts"),
+				"AdventureRunSessionStore*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
+		string authorityOperationsSource = File.ReadAllText(Path.Combine(
+			root,
+			"scripts",
+			"AdventureRunSessionStore.AuthorityOperations.cs"));
 		string boardSource = string.Join(
 			'\n',
 			Directory.GetFiles(
@@ -349,9 +359,10 @@ internal static partial class Program
 			"Deckland.Rules",
 			"AssemblyInfo.cs"));
 
-		False(storeSource.Contains("_runState", StringComparison.Ordinal));
-		False(storeSource.Contains("new AdventureUpgradeRunState", StringComparison.Ordinal));
-		True(storeSource.Contains(".SubmitAdventure(", StringComparison.Ordinal));
+		False(storeImplementationSource.Contains("_runState", StringComparison.Ordinal));
+		False(storeImplementationSource.Contains("new AdventureUpgradeRunState", StringComparison.Ordinal));
+		True(authorityOperationsSource.Contains(".SubmitAdventure(", StringComparison.Ordinal));
+		False(storeSource.Contains("internal AdventureRunWriteResult BeginNewRun(", StringComparison.Ordinal));
 		foreach (string implementationType in new[]
 		{
 			"AdventureUpgradeEffectService",
@@ -360,7 +371,7 @@ internal static partial class Program
 			"AdventureUpgradeRuntimeValues",
 		})
 		{
-			False(storeSource.Contains(implementationType, StringComparison.Ordinal));
+			False(storeImplementationSource.Contains(implementationType, StringComparison.Ordinal));
 			False(boardSource.Contains(implementationType, StringComparison.Ordinal));
 		}
 
