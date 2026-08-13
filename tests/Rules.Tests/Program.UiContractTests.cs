@@ -1487,6 +1487,25 @@ internal static partial class Program
 			@"_glow = Mathf\.Lerp\(_glow, target, .*?\);\s*QueueRedraw\(\);",
 			RegexOptions.Singleline));
 
+		string oceanMenuTextureText = File.ReadAllText(
+			Path.Combine(repoRoot, "scripts", "OceanMenuButtonFrame.TexturedRendering.cs"));
+		True(oceanMenuTextureText.Contains(
+			"private readonly StyleBoxTexture _texturedFrameStyle = new()",
+			StringComparison.Ordinal));
+		True(oceanMenuTextureText.Contains(
+			"_cachedTexturedFrameTexture != texture",
+			StringComparison.Ordinal));
+		True(oceanMenuTextureText.Contains(
+			"_cachedTexturePatchMarginHorizontal != TexturePatchMarginHorizontal",
+			StringComparison.Ordinal));
+		True(oceanMenuTextureText.Contains(
+			"_cachedTexturePatchMarginVertical != TexturePatchMarginVertical",
+			StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			oceanMenuTextureText,
+			@"DrawTexturedState\(Texture2D texture, Rect2 rect\).*?StyleBoxTexture\s+\w+\s*=\s*new",
+			RegexOptions.Singleline));
+
 		string oceanDialogText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "OceanDialogPanelArt.cs"));
 		True(oceanDialogText.Contains("SparkRedrawInterval", StringComparison.Ordinal));
 		True(oceanDialogText.Contains("if (!IsVisibleInTree())", StringComparison.Ordinal));
