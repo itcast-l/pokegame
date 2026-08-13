@@ -372,6 +372,7 @@ dotnet/include_debug_symbols=false
 			self.assertEqual(180, calls[0][3])
 			self.assertEqual(str(logs / "macos-codesign-verify.log"), result["verify_log"])
 			self.assertTrue(result["verify_log_audit"]["ok"])
+			self.assertEqual(64, len(result["signed_bundle_sha256"]))
 
 	def test_macos_adhoc_signature_normalization_rejects_non_macos_host(self) -> None:
 		with tempfile.TemporaryDirectory() as temp:
@@ -382,6 +383,14 @@ dotnet/include_debug_symbols=false
 				self.assertRaisesRegex(release_export.ReleaseError, "requires a macOS host"),
 			):
 				release_export._normalize_macos_adhoc_signature(app, Path(temp) / "logs")
+
+	def test_macos_signature_is_normalized_after_legal_files_are_installed(self) -> None:
+		source = (ROOT / "tools/release_export.py").read_text(encoding="utf-8")
+		install = source.index("staged_legal_dir, staged_legal = _install_legal_distribution(", source.index("def run_release"))
+		normalize = source.index("_normalize_macos_adhoc_signature(export_target, logs_dir)", install)
+		runtime = source.index("runtime = _runtime_smoke(", normalize)
+		self.assertLess(install, normalize)
+		self.assertLess(normalize, runtime)
 
 	def test_missing_release_assembly_is_detected(self) -> None:
 		with tempfile.TemporaryDirectory() as temp:

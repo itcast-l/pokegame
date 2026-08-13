@@ -668,6 +668,7 @@ def _normalize_macos_adhoc_signature(app: Path, logs_dir: Path) -> dict[str, Any
 		"sign_log": str(sign_log),
 		"verify_log": str(verify_log),
 		"verify_log_audit": scan_log(verify_result.stdout),
+		"signed_bundle_sha256": _sha256_tree(app),
 	}
 
 
@@ -1033,8 +1034,6 @@ def run_release(args: argparse.Namespace) -> Path:
 		report["export_log"] = export_log
 		if not export_log["ok"]:
 			raise ReleaseError(f"Export log contains blocking errors: {export_log['blocker_counts']}")
-		if platform == "macos":
-			report["macos_signature"] = _normalize_macos_adhoc_signature(export_target, logs_dir)
 
 		executable, pck = _resolve_export_artifacts(platform, export_target)
 		assemblies = _find_pokegame_assembly(artifact_dir)
@@ -1049,6 +1048,17 @@ def run_release(args: argparse.Namespace) -> Path:
 			args.godot.resolve(), pck, platform, audit_dir, logs_dir / "package-content-audit.log", main_scene, translations
 		)
 		report["package_audit"] = package_audit
+
+		staged_legal_dir, staged_legal = _install_legal_distribution(
+			LEGAL_DISTRIBUTION_ROOT,
+			platform,
+			artifact_dir,
+			executable,
+		)
+		report["preflight"]["packaged_legal"] = staged_legal
+		if platform == "macos":
+			report["macos_signature"] = _normalize_macos_adhoc_signature(export_target, logs_dir)
+
 		runtime = _runtime_smoke(
 			args.godot.resolve(),
 			executable,
@@ -1063,14 +1073,6 @@ def run_release(args: argparse.Namespace) -> Path:
 			report["network_protocol"],
 		)
 		report["runtime_smoke"] = runtime
-
-		staged_legal_dir, staged_legal = _install_legal_distribution(
-			LEGAL_DISTRIBUTION_ROOT,
-			platform,
-			artifact_dir,
-			executable,
-		)
-		report["preflight"]["packaged_legal"] = staged_legal
 
 		metrics = _directory_metrics(artifact_dir)
 		baseline = _size_baseline(platform, metrics, pck.stat().st_size)
@@ -1090,6 +1092,10 @@ def run_release(args: argparse.Namespace) -> Path:
 		shutil.copytree(logs_dir, final_logs_dir)
 		final_executable = package_dir / executable.relative_to(artifact_dir)
 		final_pck = package_dir / pck.relative_to(artifact_dir)
+		if "macos_signature" in report:
+			final_app = package_dir / export_target.relative_to(artifact_dir)
+			if _sha256_tree(final_app) != report["macos_signature"]["signed_bundle_sha256"]:
+				raise ReleaseError("Final macOS app differs from the verified signed bundle")
 		final_legal_dir = package_dir / staged_legal_dir.relative_to(artifact_dir)
 		final_legal = _audit_packaged_legal(LEGAL_DISTRIBUTION_ROOT, final_legal_dir)
 		final_legal.update(
