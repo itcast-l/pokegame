@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="AdventureUpgradeCardVisualCatalogResource" format=3 uid="uid://uk7finewo5ig"]
+[gd_resource type="Resource" format=3 uid="uid://uk7finewo5ig"]
 
 [ext_resource type="Script" uid="uid://cel78vcdne1ao" path="res://scripts/AdventureUpgradeCardVisualCatalogResource.cs" id="1_catalog_script"]
 [ext_resource type="Script" uid="uid://cbej61d8bwtpm" path="res://scripts/AdventureUpgradeCardVisualEntryResource.cs" id="2_entry_script"]
@@ -165,5 +165,5 @@ Tier = "rare"
 
 [resource]
 script = ExtResource("1_catalog_script")
-Entries = Array[ExtResource("2_entry_script")]([SubResource("Entry_hearts_common"), SubResource("Entry_hearts_uncommon"), SubResource("Entry_hearts_rare"), SubResource("Entry_spades_common"), SubResource("Entry_spades_uncommon"), SubResource("Entry_spades_rare"), SubResource("Entry_diamonds_common"), SubResource("Entry_diamonds_uncommon"), SubResource("Entry_diamonds_rare"), SubResource("Entry_clubs_common"), SubResource("Entry_clubs_uncommon"), SubResource("Entry_clubs_rare")])
-RarityTierMappings = Array[ExtResource("3_rarity_tier_script")]([SubResource("RarityTier_common"), SubResource("RarityTier_rare"), SubResource("RarityTier_legendary")])
+Entries = [SubResource("Entry_hearts_common"), SubResource("Entry_hearts_uncommon"), SubResource("Entry_hearts_rare"), SubResource("Entry_spades_common"), SubResource("Entry_spades_uncommon"), SubResource("Entry_spades_rare"), SubResource("Entry_diamonds_common"), SubResource("Entry_diamonds_uncommon"), SubResource("Entry_diamonds_rare"), SubResource("Entry_clubs_common"), SubResource("Entry_clubs_uncommon"), SubResource("Entry_clubs_rare")]
+RarityTierMappings = [SubResource("RarityTier_common"), SubResource("RarityTier_rare"), SubResource("RarityTier_legendary")]

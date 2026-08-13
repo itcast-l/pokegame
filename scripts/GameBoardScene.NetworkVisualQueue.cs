@@ -426,8 +426,42 @@ public partial class GameBoardScene
 					payload.MovedCount,
 					_turnSequenceGeneration);
 				return;
+			case NetworkBoardVisualEventTypes.QuestionReward:
+				await PlayNetworkAuthorityHostQuestionRewardVisualOnlyAsync(payload);
+				return;
 			default:
 				return;
+		}
+	}
+
+	private async Task PlayNetworkAuthorityHostQuestionRewardVisualOnlyAsync(
+		NetworkVisualEvent payload)
+	{
+		ItemCard rewardItem = CreateValidatedNetworkItemCard(payload.ItemId);
+		if (!payload.RequiresMagnet)
+		{
+			BeginQuestionRewardHandDelivery(payload.Actor, payload.HandIndex);
+			RenderPlayerHands();
+		}
+
+		try
+		{
+			await PlayQuestionCardRewardAnimationAsync(
+				payload.Actor,
+				new QuestionCardRewardAnimation(
+					rewardItem,
+					payload.HandIndex,
+					new Vector2(payload.FirstFloat, payload.SecondFloat),
+					payload.RequiresMagnet),
+				_turnSequenceGeneration);
+		}
+		finally
+		{
+			if (!payload.RequiresMagnet)
+			{
+				EndQuestionRewardHandDelivery(payload.Actor, payload.HandIndex);
+				RenderPlayerHands();
+			}
 		}
 	}
 
@@ -808,18 +842,29 @@ public partial class GameBoardScene
 		if (!requiresMagnetAttachment)
 		{
 			if (!TryAddNetworkQuestionRewardPresentationItem(playerIndex, itemHandIndex, rewardItem)) return;
-			HideHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + itemHandIndex);
+			BeginQuestionRewardHandDelivery(playerIndex, itemHandIndex);
 			RenderPlayerHands();
 		}
 
-		await PlayQuestionCardRewardAnimationAsync(
-			playerIndex,
-			new QuestionCardRewardAnimation(
-				rewardItem,
-				itemHandIndex,
-				new Vector2(startGlobalX, startGlobalY),
-				requiresMagnetAttachment),
-			_turnSequenceGeneration);
+		try
+		{
+			await PlayQuestionCardRewardAnimationAsync(
+				playerIndex,
+				new QuestionCardRewardAnimation(
+					rewardItem,
+					itemHandIndex,
+					new Vector2(startGlobalX, startGlobalY),
+					requiresMagnetAttachment),
+				_turnSequenceGeneration);
+		}
+		finally
+		{
+			if (!requiresMagnetAttachment)
+			{
+				EndQuestionRewardHandDelivery(playerIndex, itemHandIndex);
+				RenderPlayerHands();
+			}
+		}
 	}
 
 	private async Task PlayNetworkBombPairVisualEventAsync(NetworkVisualEvent payload)

@@ -250,11 +250,14 @@ public partial class AdventureTutorialOverlay : Control
 	{
 		Font font = label.GetThemeFont("font");
 		int fontSize = label.GetThemeFontSize("font_size");
-		return font.GetMultilineStringSize(
+		float measuredHeight = font.GetMultilineStringSize(
 			text,
 			label.HorizontalAlignment,
 			width,
 			fontSize).Y;
+
+		label.Size = new Vector2(width, 1.0f);
+		return Mathf.Max(measuredHeight, label.GetCombinedMinimumSize().Y);
 	}
 
 	private Vector2 GetCalloutPosition(Vector2 calloutSize, Vector2 viewportSize)

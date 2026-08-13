@@ -443,7 +443,48 @@ public partial class GameBoardScene
 
 	private bool IsHandDisplaySlotHidden(int playerIndex, int displayIndex)
 	{
-		return _hiddenHandDisplaySlots.Contains(BuildHandDisplaySlotKey(playerIndex, displayIndex));
+		if (_hiddenHandDisplaySlots.Contains(BuildHandDisplaySlotKey(playerIndex, displayIndex)))
+		{
+			return true;
+		}
+
+		int itemHandIndex = playerIndex >= 0 && playerIndex < _playerHands.Count
+			? displayIndex - _playerHands[playerIndex].Count
+			: -1;
+		return itemHandIndex >= 0
+			&& _pendingQuestionRewardItemHandSlots.Contains(
+				BuildHandDisplaySlotKey(playerIndex, itemHandIndex));
+	}
+
+	private void BeginQuestionRewardHandDelivery(int playerIndex, int itemHandIndex)
+	{
+		if (playerIndex < 0
+			|| itemHandIndex < 0
+			|| !IsLocalHandPlayer(playerIndex))
+		{
+			return;
+		}
+
+		_pendingQuestionRewardItemHandSlots.Add(
+			BuildHandDisplaySlotKey(playerIndex, itemHandIndex));
+	}
+
+	private void EndQuestionRewardHandDelivery(int playerIndex, int itemHandIndex)
+	{
+		if (playerIndex < 0 || itemHandIndex < 0)
+		{
+			return;
+		}
+
+		_pendingQuestionRewardItemHandSlots.Remove(
+			BuildHandDisplaySlotKey(playerIndex, itemHandIndex));
+	}
+
+	private void DiscardNewQuestionRewardHandDeliveries(
+		HashSet<string> existingDeliveries)
+	{
+		_pendingQuestionRewardItemHandSlots.RemoveWhere(key =>
+			!existingDeliveries.Contains(key));
 	}
 
 	private void HideHandDisplaySlot(int playerIndex, int displayIndex)

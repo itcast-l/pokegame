@@ -45,7 +45,7 @@ func _run() -> void:
 	if not bool(board.call("DebugStartBlackLedgerCaptureProbe", result)):
 		_fail("Failed to start black ledger capture probe")
 		return
-	if not await _wait_for_result(result):
+	if not await _wait_for_result_and_observe_revealed_bomb(board, result):
 		return
 	if not String(result.get("error", "")).is_empty():
 		_fail("Black ledger probe error: %s" % result["error"])
@@ -53,8 +53,8 @@ func _run() -> void:
 	if not bool(result.get("played", false)) or not bool(result.get("captured", false)):
 		_fail("Expected enemy play to capture")
 		return
-	if int(result.get("actual_damage", -1)) != int(result.get("expected_damage", -2)):
-		_fail("Expected enemy damage to remain unchanged: %s" % [result])
+	if int(result.get("actual_damage", -1)) != 0:
+		_fail("Triggered bomb should redirect the capture score to its owner: %s" % [result])
 		return
 	if int(result.get("main_deck_count", 0)) != 1:
 		_fail("Expected exactly one redirected card in main deck: %s" % [result])
@@ -87,11 +87,21 @@ func _wait_for_main_action(board: Node) -> bool:
 	return false
 
 
-func _wait_for_result(result: Dictionary) -> bool:
+func _wait_for_result_and_observe_revealed_bomb(board: Node, result: Dictionary) -> bool:
 	var deadline := Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 1000.0)
+	var saw_revealed_bomb := false
 	while Time.get_ticks_msec() < deadline:
 		await process_frame
+		if not is_instance_valid(board):
+			_fail("Board freed while waiting for the black ledger capture")
+			return false
+		if int(board.call("DebugGetTableCardCount")) > 2 \
+				and bool(board.call("DebugIsTableCardFaceUp", 2)):
+			saw_revealed_bomb = true
 		if bool(result.get("completed", false)):
+			if not saw_revealed_bomb:
+				_fail("Enemy capture did not persist the triggered bomb's face-up state")
+				return false
 			return true
 	_fail("Timed out waiting for black ledger probe")
 	return false

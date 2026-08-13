@@ -268,6 +268,7 @@ public partial class GameBoardScene
 
 		await RevealCapturedBaseCardsEdgesBeforeMiddleAsync(
 			captureStartIndex,
+			playerIndex,
 			scorePlayerIndex,
 			turnSequenceGeneration,
 			pairCaptureEdgeFloat,
@@ -702,6 +703,9 @@ public partial class GameBoardScene
 			await PlayPhysicalDeckShuffleAsync(playerIndex);
 			if (turnSequenceGeneration != _turnSequenceGeneration)
 			{
+				CancelPendingQuestionRewardHandDelivery(
+					playerIndex,
+					captureResult.QuestionRewardAnimation);
 				return new CardPlayBranchResult(
 					true,
 					new PlayCardResult(false, false),
@@ -713,6 +717,9 @@ public partial class GameBoardScene
 				await PlayPhysicalDeckShuffleAsync(MainPlayerIndex);
 				if (turnSequenceGeneration != _turnSequenceGeneration)
 				{
+					CancelPendingQuestionRewardHandDelivery(
+						playerIndex,
+						captureResult.QuestionRewardAnimation);
 					return new CardPlayBranchResult(
 						true,
 						new PlayCardResult(false, false),
@@ -721,21 +728,13 @@ public partial class GameBoardScene
 			}
 		}
 
-			DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
-		if (captureResult.QuestionRewardAnimation.HasValue
-			&& !captureResult.QuestionRewardAnimation.Value
-				.RequiresMagnetAttachment)
-		{
-			HideHandDisplaySlot(
-				playerIndex,
-				_playerHands[playerIndex].Count
-					+ captureResult.QuestionRewardAnimation.Value
-						.ItemHandIndex);
-		}
-
-			await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
+		DrawnHandCard? replacementCard = DrawReplacementCard(playerIndex);
+		await PlayReplacementDrawAnimationAsync(playerIndex, replacementCard, turnSequenceGeneration);
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
+			CancelPendingQuestionRewardHandDelivery(
+				playerIndex,
+				captureResult.QuestionRewardAnimation);
 			return new CardPlayBranchResult(
 				true,
 				new PlayCardResult(false, false),

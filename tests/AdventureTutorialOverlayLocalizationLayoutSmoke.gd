@@ -3,7 +3,7 @@ extends SceneTree
 const CSV_PATH := "res://localization/ui.csv"
 const OVERLAY_SCENE_PATH := "res://scenes/adventure_tutorial_overlay.tscn"
 const BOARD_SCENE_PATH := "res://scenes/adventure_tutorial_game_board_scene.tscn"
-const VIEWPORT_SIZES := [Vector2i(1280, 720), Vector2i(360, 640)]
+const VIEWPORT_SIZES := [Vector2i(1280, 720), Vector2i(570, 340), Vector2i(360, 640)]
 const STRESS_LOCALE := "stress_tutorial_long"
 const TOLERANCE := 1.0
 const TIMEOUT_SECONDS := 20.0
@@ -217,6 +217,21 @@ func _audit_callout_content(
 	var callout_bounds := Rect2(Vector2.ZERO, callout.size)
 	if not _rect_contains(callout_bounds, Rect2(label.position, label.size)):
 		_fail("Tutorial text bounds escaped the callout for %s" % context)
+		return false
+	if label.size.y + TOLERANCE < label.get_combined_minimum_size().y:
+		_fail("Tutorial text height was undersized for %s: size=%s minimum=%s" % [
+			context,
+			label.size,
+			label.get_combined_minimum_size(),
+		])
+		return false
+	var label_bottom := label.position.y + label.size.y
+	if not continue_mode and callout.size.y - label_bottom + TOLERANCE < label.position.y:
+		_fail("Tutorial text lost its bottom padding for %s: callout=%s label=%s" % [
+			context,
+			callout.size,
+			Rect2(label.position, label.size),
+		])
 		return false
 	if label.get_visible_line_count() != label.get_line_count():
 		_fail("Tutorial text clipped lines for %s: visible=%d total=%d size=%s" % [

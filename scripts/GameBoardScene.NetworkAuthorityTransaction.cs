@@ -217,6 +217,28 @@ public partial class GameBoardScene
 		}
 	}
 
+	private bool HasLocalQuestionRewardHostVisualEvent(
+		int actorSeatIndex,
+		NetworkVisualEvent[] hostVisualEvents)
+	{
+		if (!IsLocalHandPlayer(actorSeatIndex))
+		{
+			return false;
+		}
+
+		foreach (NetworkVisualEvent visualEvent in hostVisualEvents)
+		{
+			if (visualEvent.Type == NetworkBoardVisualEventTypes.QuestionReward
+				&& visualEvent.Actor == actorSeatIndex
+				&& !visualEvent.RequiresMagnet)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private void DeferNetworkAuthoritySelectionWaiters(
 		TaskCompletionSource<bool>? magnetCompletion,
 		TaskCompletionSource<int>? discardCompletion)

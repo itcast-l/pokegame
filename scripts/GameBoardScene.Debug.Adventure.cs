@@ -241,9 +241,11 @@ public partial class GameBoardScene
 			("Clubs", "4"),
 			("Diamonds", "5"),
 		};
-		if (!TryLoadAdventureTutorialCards(
-			requiredCards,
-			out Dictionary<string, PlayingCard> cards))
+		ItemCard? bombCard = CreateItemCard(BombItemCardId);
+		if (!bombCard.HasValue
+			|| !TryLoadAdventureTutorialCards(
+				requiredCards,
+				out Dictionary<string, PlayingCard> cards))
 		{
 			return false;
 		}
@@ -251,6 +253,11 @@ public partial class GameBoardScene
 		DebugRuleFixture fixture = CreateNonTerminalAdventureDebugRuleFixture();
 		fixture.TableCards.Add(new TableCard(cards["Hearts:5"], true));
 		fixture.TableCards.Add(new TableCard(cards["Spades:10"], true));
+		fixture.TableCards.Add(new TableCard(
+			null,
+			isFaceUp: false,
+			itemOverlay: bombCard.Value,
+			itemOwnerPlayerIndex: MainPlayerIndex));
 		fixture.TableCards.Add(new TableCard(cards["Clubs:4"], true));
 		fixture.PlayerHands[1].Add(cards["Diamonds:5"]);
 		// Adventure capture damage for this fixed 10-and-4 middle-card setup.

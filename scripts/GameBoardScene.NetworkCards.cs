@@ -526,7 +526,6 @@ public partial class GameBoardScene
 		if (!rewardAnimation.HasValue
 			|| !IsNetworkMultiplayerMode()
 			|| !IsNetworkHost()
-			|| IsLocalHandPlayer(playerIndex)
 			|| !TryGetCurrentAuthoritativeVisualSnapshotId(out int snapshotId))
 		{
 			return;

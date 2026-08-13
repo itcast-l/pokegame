@@ -234,6 +234,9 @@ public partial class GameBoardScene
 
 	private async Task PlayMainPlayerItemCardAndAdvanceAsync(int itemHandIndex, int turnSequenceGeneration)
 	{
+		// Mouse confirmation starts this task from the card slot's GuiInput callback.
+		// Let signal dispatch finish before RenderPlayerHands replaces that slot.
+		await WaitForNextBoardFrameAsync();
 		if (!MatchReadModel.CanBeginMainPlayerAction(BuildGameLoopPhaseState()))
 		{
 			return;

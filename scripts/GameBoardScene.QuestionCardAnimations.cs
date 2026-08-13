@@ -219,7 +219,22 @@ public partial class GameBoardScene
 			return;
 		}
 
+		EndQuestionRewardHandDelivery(playerIndex, reward.ItemHandIndex);
 		ShowHandDisplaySlot(playerIndex, _playerHands[playerIndex].Count + reward.ItemHandIndex);
+		RenderPlayerHands();
+	}
+
+	private void CancelPendingQuestionRewardHandDelivery(
+		int playerIndex,
+		QuestionCardRewardAnimation? rewardAnimation)
+	{
+		if (!rewardAnimation.HasValue
+			|| rewardAnimation.Value.RequiresMagnetAttachment)
+		{
+			return;
+		}
+
+		ShowQuestionCardRewardHandSlot(playerIndex, rewardAnimation.Value);
 	}
 
 	private Vector2 GetQuestionCardRewardTargetGlobalPosition(int playerIndex, QuestionCardRewardAnimation reward)

@@ -25,6 +25,7 @@ internal static partial class Program
 		Run("adventure upgrade manifest rejects missing runtime and catalog entries", AdventureUpgradeManifestRejectsContractDrift);
 		Run("adventure upgrade acquisition requires a ready manifest whitelist", AdventureUpgradeAcquisitionRequiresReadyManifestWhitelist);
 		Run("question mark interest description shows current item count", QuestionMarkInterestDescriptionShowsCurrentItemCount);
+		Run("adventure upgrade descriptions hide standalone implementation parameters", AdventureUpgradeDescriptionsHideStandaloneImplementationParameters);
 		Run("adventure upgrade snapshots migrate v1 through v5 into canonical v7", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
 		Run("adventure upgrade v7 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
 		Run("adventure upgrade v7 roundtrips revive and migrates canonical v6", AdventureUpgradeV7RoundTripsReviveAndMigratesCanonicalV6);
@@ -54,7 +55,36 @@ internal static partial class Program
 			AdventureUpgradeDescriptionRules.Format(
 				"hearts_thick_blood",
 				"Unrelated {current_item_count}",
-				9));
+			9));
+	}
+
+	private static void AdventureUpgradeDescriptionsHideStandaloneImplementationParameters()
+	{
+		string description = AdventureUpgradeManifest.FormatDescription(
+			"hearts_overflow_growth",
+			"每{step}点溢出治疗，最大HP+{amount}。 ({maximum}) ({stack_limit})",
+			new Dictionary<string, int>(StringComparer.Ordinal)
+			{
+				["step"] = 4,
+				["amount"] = 1,
+				["maximum"] = 150,
+				["stack_limit"] = 3,
+			},
+			currentItemCount: 0);
+
+		Equal("每4点溢出治疗，最大HP+1。", description);
+		Equal(
+			"Whenever you gain a question reward: immediately deal damage based on question rewards gained.",
+			AdventureUpgradeManifest.FormatDescription(
+				"diamonds_question_mark_windfall",
+				"On the Nth question reward (up to {maximum}): immediately deal min(N, {threshold}) damage. ({amount})",
+				new Dictionary<string, int>(StringComparer.Ordinal)
+				{
+					["maximum"] = 10,
+					["threshold"] = 5,
+					["amount"] = 1,
+				},
+				currentItemCount: 0));
 	}
 
 	private static void AdventureUpgradeManifestMatchesPandoraAndLocalizationBidirectionally()
@@ -743,7 +773,7 @@ internal static partial class Program
 		}
 
 		AssertPandoraCopy(definitionsById, "hearts_warm_current_supply",
-			"每个真实回合首次成功收牌后",
+			"每回合首次成功收牌后",
 			"抽 1 张牌。");
 		AssertPandoraCopy(definitionsById, "hearts_miss_bandage",
 			"空打且行动权将真正交给敌方时",
@@ -758,7 +788,7 @@ internal static partial class Program
 			"本动作真实附着道具效果生效时",
 			"本动作最多治疗 3；若该基础牌成功收牌，再抽 1。");
 		AssertPandoraCopy(definitionsById, "hearts_return_tide_heart",
-			"每个真实回合首次成功收牌后",
+			"每回合首次成功收牌后",
 			"抽 1；回复 2。同一真实回合第二次成功收牌后，再抽 1；再回复 3。");
 		AssertPandoraCopy(definitionsById, "hearts_revival_draw",
 			"每战一次，生命从 25% 及以上降到 25% 以下时",
@@ -809,10 +839,10 @@ internal static partial class Program
 			"敌人空打后",
 			"你立刻额外打 1 张基础牌；整条派生链结束后仍正常开始真实回合。");
 		AssertPandoraCopy(definitionsById, "clubs_short_branch_return",
-			"每个真实回合一次，完整收牌集合恰好含 2 张唯一基础牌时",
+			"每回合一次，完整收牌集合恰好含 2 张唯一基础牌时",
 			"若手牌容量足以容纳全部唯一回手候选，这两张牌回手；否则正常进入牌堆。");
 		AssertPandoraCopy(definitionsById, "clubs_gap_rooting",
-			"每个真实回合一次，成功收牌且中间没有计分牌时",
+			"每回合一次，成功收牌且中间没有计分牌时",
 			"额外收走收牌区间左侧最近的 1 张基础牌；该牌不计分。");
 		AssertPandoraCopy(definitionsById, "clubs_primary_root_return",
 			"本次打出的基础牌成功收牌时",
@@ -824,14 +854,14 @@ internal static partial class Program
 			"获得问号奖励后",
 			"保持 1 次 armed，重复获得只刷新；本真实回合下一张数字基础牌仅在无点数或替代点数候选时按花色兜底，合法出牌后消费；真实回合或战斗结束时清除。");
 		AssertPandoraCopy(definitionsById, "clubs_continue_branch",
-			"每个真实回合一次，空打结算后桌面至少有 6 张牌时",
+			"每回合一次，空打结算后桌面至少有 6 张牌时",
 			"立刻额外打 1 张基础牌；额外行动不能再次触发续枝。");
 		AssertPandoraCopy(definitionsById, "clubs_linked_stems",
 			"同一真实回合第二次成功收牌时",
 			"立刻获得 1 次问号奖励。");
 		AssertPandoraCopy(definitionsById, "clubs_crown_canopy",
 			"持续生效",
-			"你的基础牌成功收牌时，首尾端点各计分一次，不生成重复普通计分项。");
+			"你的首尾牌可正常记分");
 	}
 
 	private static void AssertPandoraCopy(
@@ -896,6 +926,21 @@ internal static partial class Program
 					StringComparer.Ordinal);
 				True(expectedTokens.SetEquals(localizedTokens));
 			}
+
+			for (int columnIndex = 1; columnIndex < header.Count; columnIndex++)
+			{
+				string formattedDescription = AdventureUpgradeManifest.FormatDescription(
+					entry.Id,
+					row[columnIndex],
+					entry.EffectValues,
+					currentItemCount: 0);
+				False(Regex.IsMatch(formattedDescription, @"\(\s*\d+\s*\)"));
+				if (string.Equals(entry.Id, "hearts_overflow_growth", StringComparison.Ordinal))
+				{
+					False(formattedDescription.Contains("150", StringComparison.Ordinal));
+					False(formattedDescription.Contains("3", StringComparison.Ordinal));
+				}
+			}
 		}
 
 		AssertCriticalLocalizedDescriptionsMatchRuntimeContract(header, rowsByKey);
@@ -908,7 +953,7 @@ internal static partial class Program
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_WARM_CURRENT_SUPPLY",
 			"After the first capture each real turn: draw {count}.",
 			"首次收取后，额外抽1",
-			"每個實際回合首次收牌後，額外抽1。");
+			"每回合首次收牌後，額外抽1。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_HEARTS_THICK_BLOOD",
 			"On gain: Max HP +{amount} and heal {amount}. ({maximum})",
 			"最大生命+4,恢复4生命值",
@@ -1060,7 +1105,7 @@ internal static partial class Program
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_CONTINUE_BRANCH",
 			"Once per real turn, on a miss with {threshold}+ table cards: play {count} extra base card. Extra actions cannot trigger this.",
 			"桌面不低于6张未收取时，可以额外出一张牌",
-			"每真實回合一次；空打後桌面至少6張時額外出1張基礎牌；額外行動不能再次觸發。");
+			"每回合一次；空打後桌面至少6張時額外出1張基礎牌；額外行動不能再次觸發。");
 		AssertLocalizedUpgradeCopy(header, rowsByKey, "UPGRADE_DESC_CLUBS_LINKED_STEMS",
 			"On your second capture in the same real turn: immediately gain {count} question-mark reward. ({threshold})",
 			"同一回合2次收牌时，获得道具",

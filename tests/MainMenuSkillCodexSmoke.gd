@@ -586,9 +586,17 @@ func _assert_mixed_cards(overlay: Node, suit: String, unlocked_id: String, popup
 			_fail("Codex and popup AtlasTexture regions differ for %s" % popup_key)
 			return false
 		var region := state["atlas_region"] as Rect2
+		var description_layer := card.get_node_or_null("DescriptionLayer") as Control
+		var description_label := card.get_node_or_null(
+			"DescriptionLayer/DescriptionMargin/DescriptionLabel") as Label
 		if card.focus_mode != Control.FOCUS_ALL \
 				or region.size.y <= 0.0 \
-				or absf(card.size.x / card.size.y - region.size.x / region.size.y) > 0.005:
+				or absf(card.size.x / card.size.y - region.size.x / region.size.y) > 0.005 \
+				or description_layer == null \
+				or description_label == null \
+				or absf(description_layer.position.y / card.size.y - 0.43) > 0.005 \
+				or absf((description_layer.position.y + description_layer.size.y) / card.size.y - 0.895) > 0.005 \
+				or description_label.vertical_alignment != VERTICAL_ALIGNMENT_TOP:
 			_fail("Unlocked catalog card layout is invalid for %s" % state["id"])
 			return false
 	if unlocked_count != 1 or int(overlay.call("DebugGetCurrentSuitUnlockedCardCount")) != 1:

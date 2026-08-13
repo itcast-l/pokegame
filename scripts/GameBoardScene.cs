@@ -183,6 +183,7 @@ public partial class GameBoardScene : Control
 	private readonly Dictionary<string, ItemAttachmentOverlay> _itemAttachmentOverlaysById = new();
 	private readonly HashSet<string> _hiddenHandDisplaySlots = new();
 	private readonly HashSet<string> _shiftedHiddenHandDisplaySlots = new();
+	private readonly HashSet<string> _pendingQuestionRewardItemHandSlots = new();
 	private readonly List<TextureRect> _tableRenderTexturePool = new();
 	private readonly List<Panel> _tableRenderPanelPool = new();
 	private readonly HashSet<long> _presentationHiddenTableCardRuntimeInstanceIds = new();

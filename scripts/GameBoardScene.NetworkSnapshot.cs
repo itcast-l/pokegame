@@ -371,6 +371,7 @@ public partial class GameBoardScene
 		ResetNetworkPredictedClientState();
 		_hiddenHandDisplaySlots.Clear();
 		_shiftedHiddenHandDisplaySlots.Clear();
+		_pendingQuestionRewardItemHandSlots.Clear();
 
 		RestoreNetworkAuthorityActionState(snapshot.AuthorityAction);
 		_networkAuthorityEpoch = snapshot.AuthorityEpoch;

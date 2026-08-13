@@ -53,6 +53,11 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (visualEvent.Type == NetworkBoardVisualEventTypes.QuestionReward
+			&& !visualEvent.RequiresMagnet)
+		{
+			EndQuestionRewardHandDelivery(visualEvent.Actor, visualEvent.HandIndex);
+		}
 
 		InvalidateRenderCaches();
 		RenderPlayerCardPiles();

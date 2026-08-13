@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Support := preload("res://tests/AdventureUpgradeInteractionSmokeSupport.gd")
+const HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player1HandArea"
 var _failed := false
 var _support: RefCounted
 
@@ -18,10 +19,13 @@ func _run() -> void:
 		"DebugConfigureAdventureQuestionRewardTimingScenario",
 		"DebugConfigureAdventureQuestionRewardTimingFollowUpCapture",
 		"DebugConfigureAdventureDoubleQuestionRewardCapacityScenario",
+		"DebugAcquireAdventureUpgrade",
 		"DebugGetAdventureQuestionRewardTimingState",
 		"DebugGetPlayerScoreValue",
 		"DebugGetQuestionRewardGrantCount",
+		"DebugGetLastQuestionRewardItemCardId",
 		"DebugGetTotalHandCardCountForPlayer",
+		"DebugGetTotalItemHandCardCountForPlayer",
 		"DebugGetPendingItemSelectionModeName",
 		"DebugCompletePendingHandLimitDiscard",
 		"DebugPlayFirstAvailableLocalMainPlayerHandCard",
@@ -35,10 +39,19 @@ func _run() -> void:
 		return
 	if not _assert_progress(board, 9, 4, false, "before the tenth question reward"):
 		return
+	if not bool(board.call("DebugAcquireAdventureUpgrade", "clubs_primary_root_return")):
+		_fail("Failed to enable the base-card return index-shift boundary")
+		return
 
 	var enemy_health_before := int(board.call("DebugGetPlayerScoreValue", 1))
 	if not bool(board.call("DebugPlayFirstAvailableLocalMainPlayerHandCard")):
 		_fail("Failed to play the tenth question reward capture")
+		return
+	if not await _wait_for_question_reward_delivery(
+		board,
+		"the tenth question reward capture",
+		true
+	):
 		return
 	if not await _support.wait_for_actionable(board, "the tenth question reward capture"):
 		return
@@ -135,6 +148,64 @@ func _wait_for_hand_limit_discard(board: Node) -> bool:
 			return true
 	_fail("Timed out waiting for the double-reward hand discard plan")
 	return false
+
+
+func _wait_for_question_reward_delivery(
+	board: Node,
+	label: String,
+	expect_base_hand_index_shift: bool = false
+) -> bool:
+	var saw_logical_reward := false
+	var saw_transform := false
+	var pre_transform_base_hand_counts := {}
+	for _frame_index in range(3600):
+		await process_frame
+		if not is_instance_valid(board):
+			_fail("Board disappeared while observing %s" % label)
+			return false
+		var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", 0))
+		if item_count <= 0:
+			continue
+		saw_logical_reward = true
+		var transform := board.get_node_or_null("QuestionCardRewardTransform") as Control
+		if transform != null:
+			saw_transform = true
+		elif not saw_transform:
+			var total_count := int(board.call("DebugGetTotalHandCardCountForPlayer", 0))
+			pre_transform_base_hand_counts[total_count - item_count] = true
+		if not saw_transform or transform != null:
+			var early_slot := _get_first_item_card_slot(board)
+			if early_slot != null and early_slot.visible:
+				_fail("Question reward appeared in hand before transforming during %s" % label)
+				return false
+		elif String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
+			if expect_base_hand_index_shift and pre_transform_base_hand_counts.size() < 2:
+				_fail(
+					"Base-hand count did not move ahead of the question reward during %s: %s"
+					% [label, str(pre_transform_base_hand_counts.keys())]
+				)
+				return false
+			var delivered_slot := _get_first_item_card_slot(board)
+			if delivered_slot == null or not delivered_slot.visible:
+				_fail("Question reward stayed hidden after returning to hand during %s" % label)
+				return false
+			return true
+	_fail("Timed out observing %s (reward=%s logical=%s transform=%s)" % [
+		label,
+		String(board.call("DebugGetLastQuestionRewardItemCardId")),
+		str(saw_logical_reward),
+		str(saw_transform),
+	])
+	return false
+
+
+func _get_first_item_card_slot(board: Node) -> Control:
+	var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", 0))
+	var total_count := int(board.call("DebugGetTotalHandCardCountForPlayer", 0))
+	if item_count <= 0 or total_count < item_count:
+		return null
+	return board.get_node_or_null(
+		"%s/HandCard_%d" % [HAND_AREA_PATH, total_count - item_count]) as Control
 
 
 func _fail(message: String) -> void:

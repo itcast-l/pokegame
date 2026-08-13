@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 
@@ -390,10 +391,13 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 		Vector2 visualStartGlobalPosition = TryGetHandCardStartGlobalPosition(
 			actorSeatIndex,
 			handIndex) ?? Vector2.Zero;
+		var pendingRewardDeliveriesBeforeTransaction =
+			new HashSet<string>(_pendingQuestionRewardItemHandSlots);
 		int snapshotId = CreateNextNetworkSnapshotId();
 		BeginNetworkAuthorityRuleTransaction(visualStartGlobalPosition);
 		_networkAuthoritativeVisualSnapshotId = snapshotId;
 		_isProcessingCardPlay = true;
+		bool pendingRewardDeliveryHandedOff = false;
 
 		try
 		{
@@ -441,6 +445,8 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 				snapshotId,
 				visualEvents);
 			PublishNetworkAuthorityRuleTransaction(actorSeatIndex, transaction, hostVisualEvents);
+			pendingRewardDeliveryHandedOff = transaction.Committed
+				&& HasLocalQuestionRewardHostVisualEvent(actorSeatIndex, hostVisualEvents);
 			return transaction.Committed;
 		}
 		finally
@@ -448,6 +454,12 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 			if (_networkAuthorityRuleTransactionActive)
 			{
 				EndNetworkAuthorityRuleTransaction(out _);
+			}
+			if (!pendingRewardDeliveryHandedOff)
+			{
+				DiscardNewQuestionRewardHandDeliveries(
+					pendingRewardDeliveriesBeforeTransaction);
+				RenderPlayerHands();
 			}
 			_isProcessingCardPlay = false;
 			ClearNetworkAuthoritativeVisualSnapshotIfOwned(snapshotId);
@@ -472,10 +484,13 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 		Vector2 visualStartGlobalPosition = GetHandItemCardGlobalPosition(
 			actorSeatIndex,
 			itemHandIndex) ?? Vector2.Zero;
+		var pendingRewardDeliveriesBeforeTransaction =
+			new HashSet<string>(_pendingQuestionRewardItemHandSlots);
 		int snapshotId = CreateNextNetworkSnapshotId();
 		BeginNetworkAuthorityRuleTransaction(visualStartGlobalPosition);
 		_networkAuthoritativeVisualSnapshotId = snapshotId;
 		_isProcessingCardPlay = true;
+		bool pendingRewardDeliveryHandedOff = false;
 
 		try
 		{
@@ -531,6 +546,8 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 				snapshotId,
 				visualEvents);
 			PublishNetworkAuthorityRuleTransaction(actorSeatIndex, transaction, hostVisualEvents);
+			pendingRewardDeliveryHandedOff = transaction.Committed
+				&& HasLocalQuestionRewardHostVisualEvent(actorSeatIndex, hostVisualEvents);
 			return transaction.Committed;
 		}
 		finally
@@ -538,6 +555,12 @@ private void ClearNetworkAuthoritativeVisualSnapshotIfOwned(
 			if (_networkAuthorityRuleTransactionActive)
 			{
 				EndNetworkAuthorityRuleTransaction(out _);
+			}
+			if (!pendingRewardDeliveryHandedOff)
+			{
+				DiscardNewQuestionRewardHandDeliveries(
+					pendingRewardDeliveriesBeforeTransaction);
+				RenderPlayerHands();
 			}
 			_isProcessingCardPlay = false;
 			ClearNetworkAuthoritativeVisualSnapshotIfOwned(snapshotId);

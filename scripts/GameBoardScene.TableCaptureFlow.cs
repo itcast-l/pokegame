@@ -92,6 +92,19 @@ public partial class GameBoardScene
 
 	CaptureTableCardsResult BuildAppliedResult(bool aborted)
 	{
+		if (questionRewardAnimation.HasValue
+			&& !questionRewardAnimation.Value.RequiresMagnetAttachment
+			&& (aborted
+				|| _isLeavingGame
+				|| IsGameOver()
+				|| turnSequenceGeneration != _turnSequenceGeneration))
+		{
+			EndQuestionRewardHandDelivery(
+				playerIndex,
+				questionRewardAnimation.Value.ItemHandIndex);
+			RenderPlayerHands();
+		}
+
 		var result = new CaptureTableCardsResult(
 			Applied: true,
 			Aborted: aborted,
@@ -472,13 +485,18 @@ public partial class GameBoardScene
 			if (rewardGrant.HasValue)
 			{
 				questionRewardAnimation =
-				new QuestionCardRewardAnimation(
-					rewardGrant.Value.ItemCard,
-					rewardGrant.Value.ItemHandIndex,
-					questionRewardStartGlobalPosition.Value,
-						rewardGrant.Value
-							.RequiresMagnetAttachment,
+					new QuestionCardRewardAnimation(
+						rewardGrant.Value.ItemCard,
+						rewardGrant.Value.ItemHandIndex,
+						questionRewardStartGlobalPosition.Value,
+						rewardGrant.Value.RequiresMagnetAttachment,
 						rewardGrant.Value.RejudgeResolvedForReward);
+				if (!rewardGrant.Value.RequiresMagnetAttachment)
+				{
+					BeginQuestionRewardHandDelivery(
+						playerIndex,
+						rewardGrant.Value.ItemHandIndex);
+				}
 			}
 		}
 			if (linkedStemsRewardPlan.HasValue)

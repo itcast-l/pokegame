@@ -274,6 +274,11 @@ public partial class GameBoardScene
 
 	private string PickQuestionRewardItemCardId()
 	{
+		if (ShouldForceBombQuestionReward())
+		{
+			return BombItemCardId;
+		}
+
 		string forcedItemCardId =
 			ConsumeDebugForcedNextQuestionRewardItemCardId();
 		if (!string.IsNullOrEmpty(forcedItemCardId))

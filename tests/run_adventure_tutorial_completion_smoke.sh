@@ -31,7 +31,7 @@ if ! DECKLAND_TEST_MUTE_AUDIO=1 "$GODOT_CMD" --headless --audio-driver Dummy --p
 	exit 1
 fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE" || grep -Fq "ERROR: System." "$LOG_FILE"; then
+if grep -Eq "SCRIPT ERROR|^ERROR:" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
+const HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player1HandArea"
 
 var _failed := false
 
@@ -30,7 +31,34 @@ func _run() -> void:
 		_fail("Network visual fixture omitted cards")
 		return
 
-	var first_snapshot_id := int(fixture["snapshot_id"]) + 1
+	var reward_snapshot_id := int(fixture["snapshot_id"]) + 1
+	var reward_event := _with_context({
+		"event_type": "question_reward",
+		"snapshot_id": reward_snapshot_id,
+		"turn_sequence_generation": fixture["turn_sequence_generation"],
+		"actor_seat_index": 0,
+		"hand_index": 0,
+		"item_card_id": "bomb",
+		"start_global_x": 0.0,
+		"start_global_y": 0.0,
+		"requires_magnet_attachment": false,
+	}, fixture)
+	if not bool(board.call("DebugQueueDecodedNetworkVisualEvent", reward_event)):
+		_fail("Could not queue client question-reward visual event")
+		return
+	if not await _wait_for_network_question_reward_delivery(board, "Client"):
+		return
+
+	var host_reward_snapshot_id := reward_snapshot_id + 1
+	var host_reward_event := reward_event.duplicate(true)
+	host_reward_event["snapshot_id"] = host_reward_snapshot_id
+	if not bool(board.call("DebugQueueDecodedNetworkAuthorityHostVisualEvent", host_reward_event)):
+		_fail("Could not queue local Host question-reward visual event")
+		return
+	if not await _wait_for_network_question_reward_delivery(board, "Local Host"):
+		return
+
+	var first_snapshot_id := host_reward_snapshot_id + 1
 	var hand_event := _with_context({
 		"event_type": "play_hand_card",
 		"snapshot_id": first_snapshot_id,
@@ -188,6 +216,47 @@ func _wait_for_visual_idle(board: Node, frame_limit: int) -> bool:
 			return true
 		await process_frame
 	return false
+
+
+func _wait_for_network_question_reward_delivery(board: Node, label: String) -> bool:
+	var saw_logical_reward := false
+	var saw_transform := false
+	for _frame in 600:
+		await process_frame
+		var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", 0))
+		if item_count <= 0:
+			continue
+		saw_logical_reward = true
+		var transform := board.get_node_or_null("QuestionCardRewardTransform") as Control
+		if transform != null:
+			saw_transform = true
+		if not saw_transform or transform != null:
+			var early_slot := _get_first_item_card_slot(board)
+			if early_slot != null and early_slot.visible:
+				_fail("%s question reward appeared in hand before its transform completed" % label)
+				return false
+		elif not bool(board.call("DebugIsNetworkVisualQueueProcessing")) \
+				and int(board.call("DebugGetNetworkVisualEventQueueCount")) == 0:
+			var delivered_slot := _get_first_item_card_slot(board)
+			if delivered_slot == null or not delivered_slot.visible:
+				_fail("%s question reward stayed hidden after its visual queue settled" % label)
+				return false
+			return true
+	_fail("%s question reward delivery did not settle (logical=%s transform=%s)" % [
+		label,
+		str(saw_logical_reward),
+		str(saw_transform),
+	])
+	return false
+
+
+func _get_first_item_card_slot(board: Node) -> Control:
+	var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", 0))
+	var total_count := int(board.call("DebugGetTotalHandCardCountForPlayer", 0))
+	if item_count <= 0 or total_count < item_count:
+		return null
+	return board.get_node_or_null(
+		"%s/HandCard_%d" % [HAND_AREA_PATH, total_count - item_count]) as Control
 
 
 func _dispose_audio_before_quit() -> void:

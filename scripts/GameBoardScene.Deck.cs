@@ -20,6 +20,7 @@ public partial class GameBoardScene
 		_debugQuestionRewardGrantCount = 0;
 		_debugLastQuestionRewardItemCardId = string.Empty;
 		_hiddenHandDisplaySlots.Clear();
+		_pendingQuestionRewardItemHandSlots.Clear();
 		_authorityRuleSession?.ClearCardTriggerDispatch();
 		InvalidateRenderCaches();
 		_settledAdventureDefeatResolution = null;

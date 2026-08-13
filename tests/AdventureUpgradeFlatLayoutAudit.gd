@@ -6,8 +6,8 @@ const TIMEOUT_SECONDS := 5.0
 const PIXEL_DIFFERENCE_THRESHOLD := 0.08
 const DESCRIPTION_SAMPLES := [
 	"每次未收取，打乱牌桌",
-	"第一次捕获每个真实回合后：绘制 1。",
-	"每个真实回合一次，如果错过 6+ 桌牌：打出 1 额外底牌。额外的操作：无法触发此操作。",
+	"每回合首次捕获后：绘制 1。",
+	"每回合一次，如果错过 6+ 桌牌：打出 1 额外底牌。额外的操作：无法触发此操作。",
 ]
 const EXPECTED_DESCRIPTION_LINE_COUNTS := [1, 2, 4]
 const EXPECTED_DESCRIPTION_FONT_SIZES := [18, 18, 18]

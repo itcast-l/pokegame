@@ -9,6 +9,7 @@ public partial class GameBoardScene
 {
 	private async Task RevealCapturedBaseCardsEdgesBeforeMiddleAsync(
 		int captureStartIndex,
+		int capturingPlayerIndex,
 		int scorePlayerIndex,
 		int turnSequenceGeneration,
 		PairCaptureEdgeFloatHold? pairCaptureEdgeFloat,
@@ -39,6 +40,7 @@ public partial class GameBoardScene
 					await ResolveMagnetTableCardTriggerAsync(
 						tableCardIndex,
 						captureStartIndex,
+						capturingPlayerIndex,
 						scorePlayerIndex,
 						turnSequenceGeneration,
 						resolvedMagnetTriggerIndexes,
@@ -94,13 +96,13 @@ public partial class GameBoardScene
 				// The capture presentation can outlive the rule turn. Do not submit a
 				// face-up mutation after authority has already advanced to another seat.
 				if (turnSequenceGeneration != _turnSequenceGeneration
-					|| _currentTurnPlayerIndex != scorePlayerIndex
+					|| _currentTurnPlayerIndex != capturingPlayerIndex
 					|| IsGameOver())
 				{
 					return;
 				}
 				if (!TrySubmitSetTableCardsFaceUpRuleCommand(
-					scorePlayerIndex,
+					capturingPlayerIndex,
 					ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
 					expectedFaceUp: false,
 					faceUp: true,
@@ -123,13 +125,13 @@ public partial class GameBoardScene
 				{
 					return;
 				}
-				if (_currentTurnPlayerIndex != scorePlayerIndex || IsGameOver())
+				if (_currentTurnPlayerIndex != capturingPlayerIndex || IsGameOver())
 				{
 					return;
 				}
 
 				if (!TrySubmitSetTableCardsFaceUpRuleCommand(
-					scorePlayerIndex,
+					capturingPlayerIndex,
 					ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
 					expectedFaceUp: false,
 					faceUp: true,
@@ -152,6 +154,7 @@ public partial class GameBoardScene
 				await ResolveMagnetTableCardTriggerAsync(
 					tableCardIndex,
 					captureStartIndex,
+					capturingPlayerIndex,
 					scorePlayerIndex,
 					turnSequenceGeneration,
 					resolvedMagnetTriggerIndexes,

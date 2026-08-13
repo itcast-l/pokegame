@@ -127,10 +127,6 @@ func _run_bomb_item_tutorial() -> bool:
 		return false
 	if not _assert_base_hand_codes(board, ["Hearts:4"], BOMB_TUTORIAL_ID):
 		return false
-	if not bool(board.call("DebugForceNextQuestionRewardItemCardId", BOMB_ITEM_ID)):
-		_fail("Could not force the bomb tutorial reward")
-		return false
-
 	var hearts_four := await _wait_for_hand_card(board, "Hearts:4")
 	if hearts_four == null:
 		_fail("Bomb tutorial did not expose the highlighted Hearts 4")
@@ -139,7 +135,7 @@ func _run_bomb_item_tutorial() -> bool:
 		return false
 	if not await _play_highlighted_base_card(board, "Hearts:4"):
 		return false
-	if not await _wait_for_bomb_reward(board):
+	if not await _wait_for_bomb_reward_delivery(board):
 		return false
 	if String(board.call("DebugGetMatchOutcomeKindName")) != "InProgress" \
 			or int(board.call("DebugGetWinnerPlayerIndex")) != -1:
@@ -152,7 +148,7 @@ func _run_bomb_item_tutorial() -> bool:
 		return false
 	if not await _wait_for_highlighted_item_entry(board):
 		return false
-	if not await _play_selected_item_entry(board):
+	if not await _play_highlighted_item_entry(board):
 		return false
 	if not await _wait_for_tutorial_victory(board, BOMB_TUTORIAL_ID):
 		return false
@@ -194,7 +190,6 @@ func _require_board_methods(board: Node) -> bool:
 		"DebugGetTotalHandCardCountForPlayer",
 		"DebugGetTotalItemHandCardCountForPlayer",
 		"DebugGetLastQuestionRewardItemCardId",
-		"DebugForceNextQuestionRewardItemCardId",
 		"DebugGetBoardTrackedTaskCount",
 	]:
 		if not board.has_method(method):
@@ -355,20 +350,37 @@ func _wait_for_next_highlighted_card(board: Node, card_code: String, label: Stri
 	return false
 
 
-func _wait_for_bomb_reward(board: Node) -> bool:
+func _wait_for_bomb_reward_delivery(board: Node) -> bool:
 	var deadline := _deadline()
+	var saw_logical_reward := false
+	var saw_transform := false
 	while _before_deadline(deadline):
 		await process_frame
 		var reward_id := String(board.call("DebugGetLastQuestionRewardItemCardId"))
-		if reward_id == BOMB_ITEM_ID \
-				and int(board.call("DebugGetTotalItemHandCardCountForPlayer", MAIN_PLAYER_INDEX)) == 1 \
-				and String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
-			return true
+		var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", MAIN_PLAYER_INDEX))
+		if reward_id == BOMB_ITEM_ID and item_count == 1:
+			saw_logical_reward = true
+			var transform := board.get_node_or_null("QuestionCardRewardTransform") as Control
+			if transform != null:
+				saw_transform = true
+			if not saw_transform or transform != null:
+				var early_slot := _get_first_item_card_slot(board)
+				if early_slot != null and early_slot.visible:
+					_fail("Bomb reward appeared in hand before the question card finished transforming")
+					return false
+			elif String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction":
+				var delivered_slot := _get_first_item_card_slot(board)
+				if delivered_slot == null or not delivered_slot.visible:
+					_fail("Bomb reward stayed hidden after the question card returned to hand")
+					return false
+				return true
 		if String(board.call("DebugGetMatchOutcomeKindName")) != "InProgress":
 			break
-	_fail("Bomb tutorial did not grant its forced bomb reward; reward=%s items=%d outcome=%s winner=%d" % [
+	_fail("Bomb tutorial reward delivery did not complete; reward=%s items=%d logical=%s transform=%s outcome=%s winner=%d" % [
 		String(board.call("DebugGetLastQuestionRewardItemCardId")),
 		int(board.call("DebugGetTotalItemHandCardCountForPlayer", MAIN_PLAYER_INDEX)),
+		str(saw_logical_reward),
+		str(saw_transform),
 		String(board.call("DebugGetMatchOutcomeKindName")),
 		int(board.call("DebugGetWinnerPlayerIndex")),
 	])
@@ -379,16 +391,20 @@ func _wait_for_item_card(board: Node) -> Control:
 	var deadline := _deadline()
 	while _before_deadline(deadline):
 		await process_frame
-		var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", MAIN_PLAYER_INDEX))
-		var total_count := int(board.call("DebugGetTotalHandCardCountForPlayer", MAIN_PLAYER_INDEX))
-		if item_count <= 0 or total_count < item_count:
-			continue
-		var item_display_index := total_count - item_count
-		var card_slot := board.get_node_or_null(
-			"%s/HandCard_%d" % [HAND_AREA_PATH, item_display_index]) as Control
+		var card_slot := _get_first_item_card_slot(board)
 		if card_slot != null and card_slot.visible:
 			return card_slot
 	return null
+
+
+func _get_first_item_card_slot(board: Node) -> Control:
+	var item_count := int(board.call("DebugGetTotalItemHandCardCountForPlayer", MAIN_PLAYER_INDEX))
+	var total_count := int(board.call("DebugGetTotalHandCardCountForPlayer", MAIN_PLAYER_INDEX))
+	if item_count <= 0 or total_count < item_count:
+		return null
+	var item_display_index := total_count - item_count
+	return board.get_node_or_null(
+		"%s/HandCard_%d" % [HAND_AREA_PATH, item_display_index]) as Control
 
 
 func _wait_for_tutorial_victory(board: Node, tutorial_id: String) -> bool:
@@ -502,11 +518,34 @@ func _play_highlighted_base_card(board: Node, card_code: String) -> bool:
 	return true
 
 
-func _play_selected_item_entry(board: Node) -> bool:
-	if not await _select_highlighted_hand_entry(board):
+func _play_highlighted_item_entry(board: Node) -> bool:
+	if not await _wait_for_highlighted_item_entry(board):
 		return false
-	_push_board_action(board, &"game_confirm")
+	var card_slot := await _wait_for_item_card(board)
+	var deadline := _deadline()
+	while card_slot != null and card_slot.mouse_filter != Control.MOUSE_FILTER_STOP and _before_deadline(deadline):
+		await process_frame
+		card_slot = await _wait_for_item_card(board)
+	if card_slot == null or card_slot.mouse_filter != Control.MOUSE_FILTER_STOP:
+		_fail("Bomb tutorial item did not become a clickable UI control")
+		return false
+	var tracked_tasks_before := int(board.call("DebugGetBoardTrackedTaskCount"))
+	var press := InputEventMouseButton.new()
+	press.position = card_slot.size / 2.0
+	press.global_position = card_slot.get_global_rect().get_center()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.pressed = true
+	card_slot.gui_input.emit(press)
 	await process_frame
+	var tracked_tasks_after := int(board.call("DebugGetBoardTrackedTaskCount"))
+	if tracked_tasks_after <= tracked_tasks_before:
+		_fail("Bomb tutorial mouse click started no board task; phase=%s tasks=%d->%d" % [
+			String(board.call("DebugGetGameLoopPhaseName")),
+			tracked_tasks_before,
+			tracked_tasks_after,
+		])
+		return false
 	return true
 
 

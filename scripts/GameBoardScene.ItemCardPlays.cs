@@ -138,6 +138,9 @@ public partial class GameBoardScene
 		await WaitForNextBoardFrameAsync();
 		if (turnSequenceGeneration != _turnSequenceGeneration)
 		{
+			CancelPendingQuestionRewardHandDelivery(
+				playerIndex,
+				result.QuestionRewardAnimation);
 			return new PlayCardResult(false, false);
 		}
 

@@ -10,6 +10,7 @@ public partial class GameBoardScene
 	private async Task ResolveMagnetTableCardTriggerAsync(
 		int tableCardIndex,
 		int captureStartIndex,
+		int capturingPlayerIndex,
 		int scorePlayerIndex,
 		int turnSequenceGeneration,
 		HashSet<int> resolvedMagnetTriggerIndexes,
@@ -41,6 +42,7 @@ public partial class GameBoardScene
 
 		await RevealRandomMagnetExtraTableCardAsync(
 			captureStartIndex,
+			capturingPlayerIndex,
 			scorePlayerIndex,
 			turnSequenceGeneration,
 			resolvedMagnetTriggerIndexes,
@@ -211,6 +213,7 @@ public partial class GameBoardScene
 
 	private async Task RevealRandomMagnetExtraTableCardAsync(
 		int captureStartIndex,
+		int capturingPlayerIndex,
 		int scorePlayerIndex,
 		int turnSequenceGeneration,
 		HashSet<int> resolvedMagnetTriggerIndexes,
@@ -219,7 +222,7 @@ public partial class GameBoardScene
 		HashSet<int> resolvedOvertimeTriggerIndexes)
 	{
 		int tableCardIndex = PickRandomMagnetExtraRevealIndex(
-			scorePlayerIndex,
+			capturingPlayerIndex,
 			captureStartIndex,
 			magnetExtraCaptureIndexes,
 			turnSequenceGeneration);
@@ -242,7 +245,7 @@ public partial class GameBoardScene
 		}
 
 		if (!TrySubmitSetTableCardsFaceUpRuleCommand(
-			scorePlayerIndex,
+			capturingPlayerIndex,
 			ImmutableArray.Create(new RuleTableCardReference(tableCardIndex, tableCard.InstanceId)),
 			expectedFaceUp: false,
 			faceUp: true,
@@ -261,6 +264,7 @@ public partial class GameBoardScene
 			await ResolveMagnetTableCardTriggerAsync(
 				tableCardIndex,
 				captureStartIndex,
+				capturingPlayerIndex,
 				scorePlayerIndex,
 				turnSequenceGeneration,
 				resolvedMagnetTriggerIndexes,
