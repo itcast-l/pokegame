@@ -20,8 +20,10 @@
     <ProjectReference Include="src/Deckland.Rules/Deckland.Rules.csproj" />
   </ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)' != 'Release' and Exists('tests/AdventureStageUnlockHarness.cs') and Exists('tests/MainMenuBackgroundAnimatorLifetimeHarness.cs')">
+	<ItemGroup Condition="'$(Configuration)' != 'Release' and Exists('tests/AdventureStageUnlockHarness.cs') and Exists('tests/MainMenuBackgroundAnimatorLifetimeHarness.cs') and Exists('tests/ManagedTestCleanupHarness.cs') and Exists('tests/AdventureCampaignE2EHarness.cs')">
 	<Compile Include="tests/AdventureStageUnlockHarness.cs" />
 	<Compile Include="tests/MainMenuBackgroundAnimatorLifetimeHarness.cs" />
+	<Compile Include="tests/ManagedTestCleanupHarness.cs" />
+	<Compile Include="tests/AdventureCampaignE2EHarness.cs" />
 	</ItemGroup>
 </Project>

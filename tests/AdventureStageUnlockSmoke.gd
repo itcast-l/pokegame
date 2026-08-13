@@ -81,6 +81,20 @@ func _run() -> void:
 	if _failed:
 		return
 
+	harness.queue_free()
+	harness = null
+	for _frame in 6:
+		await process_frame
+	var cleanup_script := load("res://tests/ManagedTestCleanupHarness.cs") as Script
+	var cleanup_harness: RefCounted = cleanup_script.new() as RefCounted if cleanup_script != null else null
+	if cleanup_harness == null:
+		_fail("Managed test cleanup harness is unavailable")
+		return
+	cleanup_harness.call("DrainFinalizers")
+	cleanup_harness = null
+	cleanup_script = null
+	for _frame in 3:
+		await process_frame
 	print("ADVENTURE_STAGE_UNLOCK_SMOKE_OK")
 	quit(0)
 

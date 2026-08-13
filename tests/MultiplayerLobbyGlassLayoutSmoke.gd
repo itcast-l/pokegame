@@ -72,9 +72,13 @@ func _audit_viewport(spec: Dictionary) -> bool:
 	var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_size))
 	var veil := _lobby.get_node_or_null("ReadabilityVeil") as ColorRect
 	var veil_material := veil.material as ShaderMaterial if veil != null else null
-	if veil == null or not _rects_close(veil.get_global_rect(), viewport_rect) \
-			or veil_material == null or veil_material.shader == null \
-			or veil_material.shader.resource_path != SCRIM_SHADER_PATH:
+	var veil_style_valid := false
+	if DisplayServer.get_name().to_lower() == "headless":
+		veil_style_valid = veil != null and veil_material == null and veil.color.a > 0.0
+	else:
+		veil_style_valid = veil_material != null and veil_material.shader != null \
+				and veil_material.shader.resource_path == SCRIM_SHADER_PATH
+	if veil == null or not _rects_close(veil.get_global_rect(), viewport_rect) or not veil_style_valid:
 		_fail("%s readability veil is missing or does not cover the viewport" % context)
 		return false
 

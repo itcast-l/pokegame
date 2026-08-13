@@ -658,9 +658,16 @@ public static class SecondaryMenuGlassStyle
 			return;
 		}
 
+		Color veilTint = tint ?? new Color(0.0f, 0.035f, 0.052f, 1.0f);
+		if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
+		{
+			scrim.Material = null;
+			scrim.Color = new Color(veilTint.R, veilTint.G, veilTint.B, tintAlpha);
+			return;
+		}
+
 		_scrimShader ??= GD.Load<Shader>("res://shaders/menu_blur_scrim.gdshader");
 		ShaderMaterial material = new() { Shader = _scrimShader };
-		Color veilTint = tint ?? new Color(0.0f, 0.035f, 0.052f, 1.0f);
 		material.SetShaderParameter("blur_lod", 2.8f);
 		material.SetShaderParameter("tint_color", new Color(veilTint.R, veilTint.G, veilTint.B, tintAlpha));
 		scrim.Material = material;

@@ -38,6 +38,12 @@ const SUIT_BUTTON_NAMES := {
 	"spades": "SpadesButton",
 	"clubs": "ClubsButton",
 }
+const SUIT_BUTTON_SYMBOLS := {
+	"hearts": "♥",
+	"diamonds": "♦",
+	"spades": "♠",
+	"clubs": "♣",
+}
 const SUIT_BORDER_COLORS := {
 	"hearts": Color(0.76, 0.27, 0.43, 0.42),
 	"diamonds": Color(0.35, 0.76, 0.84, 0.42),
@@ -414,7 +420,21 @@ func _run() -> void:
 	if not await _wait_for_skill_transition(menu, false):
 		return
 	menu.queue_free()
-	await process_frame
+	menu = null
+	overlay = null
+	skill_button = null
+	for _frame in 6:
+		await process_frame
+	var cleanup_script := load("res://tests/ManagedTestCleanupHarness.cs") as Script
+	var cleanup_harness: RefCounted = cleanup_script.new() as RefCounted if cleanup_script != null else null
+	if cleanup_harness == null:
+		_fail("Managed test cleanup harness is unavailable")
+		return
+	cleanup_harness.call("DrainFinalizers")
+	cleanup_harness = null
+	cleanup_script = null
+	for _frame in 3:
+		await process_frame
 	print("MAIN_MENU_SKILL_CODEX_SMOKE_OK")
 	await _dispose_audio_before_quit()
 	quit(0)
@@ -712,7 +732,11 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 	for path in ["Root/Backdrop", "Root/PreviewLayer/Scrim"]:
 		var veil := overlay.get_node_or_null(path) as ColorRect
 		var veil_material := veil.material as ShaderMaterial if veil != null else null
-		if veil_material == null or veil_material.shader == null \
+		if DisplayServer.get_name().to_lower() == "headless":
+			if veil == null or veil_material != null or veil.color.a <= 0.0:
+				_fail("Skill codex headless veil fallback is missing at %s" % path)
+				return false
+		elif veil_material == null or veil_material.shader == null \
 				or veil_material.shader.resource_path != "res://shaders/menu_blur_scrim.gdshader":
 			_fail("Skill codex blur veil is missing at %s" % path)
 			return false
@@ -755,6 +779,9 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 		var button := overlay.get_node(
 			"Root/SafeMargin/Layout/SuitTabs/%s" % SUIT_BUTTON_NAMES[suit]) as Button
 		var style := button.get_theme_stylebox("normal") as StyleBoxFlat
+		if button.text != SUIT_BUTTON_SYMBOLS[suit]:
+			_fail("%s tab should display only its suit symbol" % suit)
+			return false
 		if not button.button_pressed or style == null \
 				or not style.border_color.is_equal_approx(SUIT_BORDER_COLORS[suit]):
 			_fail("Selected %s tab does not use its individual suit theme" % suit)

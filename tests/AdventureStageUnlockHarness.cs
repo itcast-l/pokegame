@@ -90,9 +90,9 @@ public partial class AdventureStageUnlockHarness : Node
 			return false;
 		}
 
+		var store = new AdventureRunSessionStore();
 		try
 		{
-			var store = new AdventureRunSessionStore();
 			store.ConfigureForPolicy(GameModePolicy.NetworkStandard);
 			bool blocked = store.ModePolicy.Kind == GameModeKind.NetworkStandard
 				&& store.ReloadFromActiveProfile() == AdventureUpgradeRestoreResult.NoSnapshot
@@ -105,6 +105,7 @@ public partial class AdventureStageUnlockHarness : Node
 		}
 		finally
 		{
+			store.Free();
 			GameSaveStore.SaveActiveProfile(originalProfile);
 		}
 	}

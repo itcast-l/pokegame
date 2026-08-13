@@ -702,7 +702,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		_itemsButton.Text = Localize("SKILL_CODEX_CATEGORY_ITEMS");
 		foreach (string suit in SuitOrder)
 		{
-			_suitButtons[suit].Text = $"{GetSuitSymbol(suit)} {Localize($"SKILL_CODEX_SUIT_{suit.ToUpperInvariant()}")}";
+			_suitButtons[suit].Text = GetSuitSymbol(suit);
 		}
 
 		string previewUpgradeId = _previewUpgradeId;

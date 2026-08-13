@@ -26,9 +26,7 @@ if ! "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/MainMenuSki
 	exit 1
 fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE" \
-		|| grep -Fq "ERROR: Failed to load" "$LOG_FILE" \
-		|| grep -Fq "ERROR: Cannot open" "$LOG_FILE" \
+if grep -Eq "SCRIPT ERROR|^ERROR:|FATAL:|ObjectDB instances leaked|resources still in use|RID allocations .* leaked" "$LOG_FILE" \
 		|| ! grep -Fq "MAIN_MENU_SKILL_CODEX_SMOKE_OK" "$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1

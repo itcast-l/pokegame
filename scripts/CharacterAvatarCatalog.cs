@@ -15,7 +15,6 @@ public static partial class CharacterAvatarCatalog
 		"shiba",
 		"red_panda",
 	};
-	private const bool UnlockAllAdventureStagesForTesting = true;
 	private const string PendingAvatarUnlockQueueSeparator = "|";
 	private const string AvatarResourceDirectory = "res://resources/character_avatars";
 
@@ -136,7 +135,7 @@ public static partial class CharacterAvatarCatalog
 	public static bool IsAdventureStageUnlocked(int stageNumber)
 	{
 		return stageNumber >= 1 && stageNumber <= AdventureCampaignCatalog.MainStageCount
-			&& (UnlockAllAdventureStagesForTesting || stageNumber <= LoadHighestCompletedAdventureStage() + 1);
+			&& stageNumber <= LoadHighestCompletedAdventureStage() + 1;
 	}
 
 	public static int GetAdventureStageNumber(string avatarId)
