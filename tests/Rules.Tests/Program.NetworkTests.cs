@@ -2865,11 +2865,12 @@ internal static partial class Program
 
 	private static void NetworkMigrationCoreUsesTransportAdapters()
 	{
-		string migrationPath = Path.Combine(
-			FindRepositoryRoot(),
-			"scripts",
-			"NetworkManager.Migration.cs");
-		string migrationSource = File.ReadAllText(migrationPath);
+		string migrationSource = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(FindRepositoryRoot(), "scripts"),
+				"NetworkManager.Migration*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 		string transportSource = File.ReadAllText(Path.Combine(
 			FindRepositoryRoot(),
 			"scripts",
@@ -2900,7 +2901,9 @@ internal static partial class Program
 			string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
 			string securitySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Security.cs"));
 			string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
-			string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+			string migrationPath = Path.Combine(root, "scripts", "NetworkManager.Migration.Readiness.cs");
+			string migrationSource = File.ReadAllText(migrationPath);
+			string migrationEntrySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
 			string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
 			string snapshotSource = File.ReadAllText(Path.Combine(root, "scripts", "GameBoardScene.NetworkSnapshot.cs"));
 
@@ -2914,9 +2917,10 @@ internal static partial class Program
 				"HostMigrationCapabilityAvailable && IsHost && _gameMigrationRecoveryState",
 				StringComparison.Ordinal));
 			int rpcStart = migrationSource.IndexOf("private void RpcMigrationFollowerSnapshotApplied(", StringComparison.Ordinal);
-			int rpcEnd = migrationSource.IndexOf("private void RpcClaimMigratedLobbySeat(", rpcStart, StringComparison.Ordinal);
+			int rpcEnd = migrationSource.IndexOf("private bool IsMigrationReadinessFenceActive()", rpcStart, StringComparison.Ordinal);
 			True(rpcStart >= 0 && rpcEnd > rpcStart);
 			True(migrationSource[rpcStart..rpcEnd].Contains("if (!HostMigrationCapabilityAvailable", StringComparison.Ordinal));
+			False(migrationEntrySource.Contains("private void RpcMigrationFollowerSnapshotApplied(", StringComparison.Ordinal));
 			True(reconnectSource.Contains("HostMigrationCapabilityAvailable", StringComparison.Ordinal));
 			True(reconnectSource.Contains("MethodName.RpcMigrationFollowerSnapshotApplied", StringComparison.Ordinal));
 			True(snapshotSource.Contains("networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);", StringComparison.Ordinal));

@@ -1234,7 +1234,10 @@ internal static partial class Program
 	private static void ActiveHostMigrationFreezesCheckpointAndStandbyMaintenance()
 	{
 		string root = FindRepositoryRoot();
-		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string migrationSource = string.Concat(
+			Directory.GetFiles(Path.Combine(root, "scripts"), "NetworkManager.Migration*.cs")
+				.OrderBy(path => path, StringComparer.Ordinal)
+				.Select(File.ReadAllText));
 		string authoritySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.AuthorityActions.cs"));
 		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
 
@@ -1662,7 +1665,10 @@ internal static partial class Program
 	private static void ReleaseDebugApiSurfaceCannotExportMigrationSecrets()
 	{
 		string root = FindRepositoryRoot();
-		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string migrationSource = string.Concat(
+			Directory.GetFiles(Path.Combine(root, "scripts"), "NetworkManager.Migration*.cs")
+				.OrderBy(path => path, StringComparer.Ordinal)
+				.Select(File.ReadAllText));
 		string debugSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Debug.cs"));
 		string source = migrationSource + debugSource;
 		False(Regex.IsMatch(
@@ -1691,7 +1697,10 @@ internal static partial class Program
 		string scene = File.ReadAllText(Path.Combine(root, "scenes", "multiplayer_lobby_scene.tscn"));
 		string lobbySource = File.ReadAllText(Path.Combine(root, "scripts", "MultiplayerLobbyScene.cs"));
 		string securitySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Security.cs"));
-		string migrationSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Migration.cs"));
+		string migrationSource = string.Concat(
+			Directory.GetFiles(Path.Combine(root, "scripts"), "NetworkManager.Migration*.cs")
+				.OrderBy(path => path, StringComparer.Ordinal)
+				.Select(File.ReadAllText));
 		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
 		string authoritySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.AuthorityActions.cs"));
 		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
