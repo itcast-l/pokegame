@@ -1551,10 +1551,12 @@ internal static partial class Program
 			repoRoot,
 			"scripts",
 			"GameBoardScene.NetworkPrediction.cs"));
-		string visualQueueText = File.ReadAllText(Path.Combine(
-			repoRoot,
-			"scripts",
-			"GameBoardScene.NetworkVisualQueue.cs"));
+		string visualQueueText = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(repoRoot, "scripts"),
+				"GameBoardScene.NetworkVisualQueue*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 		string snapshotText = File.ReadAllText(Path.Combine(
 			repoRoot,
 			"scripts",
@@ -1867,11 +1869,14 @@ internal static partial class Program
 		string repoRoot = FindRepositoryRoot();
 		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
 		string partialPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkVisualQueue.cs");
+		string playbackPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkVisualQueue.Playback.cs");
 		string controllerPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.NetworkVisualPlaybackController.cs");
 		string mainText = File.ReadAllText(mainPath);
 
 		True(File.Exists(partialPath));
 		string partialText = File.ReadAllText(partialPath);
+		True(File.Exists(playbackPath));
+		string playbackText = File.ReadAllText(playbackPath);
 		True(File.Exists(controllerPath));
 		string controllerText = File.ReadAllText(controllerPath);
 
@@ -1879,9 +1884,9 @@ internal static partial class Program
 		True(partialText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
 		True(partialText.Contains("private sealed record NetworkVisualEvent", StringComparison.Ordinal));
 		True(partialText.Contains("private bool TryDecodeNetworkVisualEvent", StringComparison.Ordinal));
-		True(partialText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
-		True(partialText.Contains("private async Task PlayNetworkItemCardVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
-		True(partialText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		True(playbackText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		True(playbackText.Contains("private async Task PlayNetworkItemCardVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		True(playbackText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 		True(partialText.Contains("NetworkCaptureRevealEntry[] CaptureRevealEntries", StringComparison.Ordinal));
 		True(controllerText.Contains("private sealed class NetworkVisualPlaybackController", StringComparison.Ordinal));
 		True(controllerText.Contains("private readonly Queue<NetworkVisualEvent> _pendingEvents", StringComparison.Ordinal));
@@ -1897,6 +1902,8 @@ internal static partial class Program
 		False(mainText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
 		False(mainText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 		False(mainText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		False(partialText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
+		False(partialText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 		False(partialText.Contains("private async Task ProcessNetworkVisualQueueAsync()", StringComparison.Ordinal));
 	}
 
@@ -1950,10 +1957,12 @@ internal static partial class Program
 			repoRoot,
 			"scripts",
 			"GameBoardScene.NetworkVisualPlaybackController.cs"));
-		string queueText = File.ReadAllText(Path.Combine(
-			repoRoot,
-			"scripts",
-			"GameBoardScene.NetworkVisualQueue.cs"));
+		string queueText = string.Concat(
+			Directory.GetFiles(
+				Path.Combine(repoRoot, "scripts"),
+				"GameBoardScene.NetworkVisualQueue*.cs")
+			.OrderBy(path => path, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 		string transactionText = File.ReadAllText(Path.Combine(
 			repoRoot,
 			"scripts",
