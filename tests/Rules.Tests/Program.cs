@@ -273,7 +273,7 @@ internal static partial class Program
 			Run("game migration recovery runtime is fenced by release-disabled capability", GameMigrationRecoveryRuntimeIsFencedByDisabledCapability);
 			Run("game board network snapshot helpers move into partial file", GameBoardNetworkSnapshotHelpersMoveIntoPartialFile);
 			Run("network replica visuals do not mutate rule collections", NetworkReplicaVisualsDoNotMutateRuleCollections);
-		Run("network rpc signatures remain protocol v11 compatible", NetworkRpcSignaturesRemainProtocolV11Compatible);
+		Run("network rpc signatures remain protocol v12 compatible", NetworkRpcSignaturesRemainProtocolV12Compatible);
 		Run("network snapshot rule projection preserves compatibility and privacy", NetworkSnapshotRuleProjectionPreservesCompatibilityAndPrivacy);
 			Run("game board network request entry points avoid async void", GameBoardNetworkRequestEntryPointsAvoidAsyncVoid);
 		Run("target item selection capability is removed", TargetItemSelectionCapabilityIsRemoved);

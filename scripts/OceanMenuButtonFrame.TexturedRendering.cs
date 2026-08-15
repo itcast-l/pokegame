@@ -25,6 +25,7 @@ public partial class OceanMenuButtonFrame : Control
 			ButtonFrameStyle.FirstVersionPrimary => null,
 			ButtonFrameStyle.IndividualToolRow => null,
 			ButtonFrameStyle.IndividualAction => null,
+			ButtonFrameStyle.IndividualSecondaryAction => null,
 			_ => FlipOrnament && OceanPlaqueFlippedTexture != null
 				? OceanPlaqueFlippedTexture
 				: OceanPlaqueTexture,

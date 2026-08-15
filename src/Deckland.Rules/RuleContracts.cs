@@ -89,7 +89,8 @@ public sealed record InitializeMatchCommand(
 	ImmutableArray<int> StartingScores = default,
 	int MaximumHandSize = int.MaxValue,
 	ImmutableArray<int> AdditionalStartingDraws = default,
-	ImmutableArray<int> SeatCardSupplyLimits = default)
+	ImmutableArray<int> SeatCardSupplyLimits = default,
+	int StartingTurnSeat = 0)
 	: MatchCommand(ActionId, 0, LifecycleGeneration, 0);
 
 public sealed record RestartMatchCommand(
@@ -106,7 +107,8 @@ public sealed record RestartMatchCommand(
 	ImmutableArray<int> StartingScores = default,
 	int MaximumHandSize = int.MaxValue,
 	ImmutableArray<int> AdditionalStartingDraws = default,
-	ImmutableArray<int> SeatCardSupplyLimits = default)
+	ImmutableArray<int> SeatCardSupplyLimits = default,
+	int StartingTurnSeat = 0)
 	: MatchCommand(ActionId, ExpectedRevision, LifecycleGeneration, TurnGeneration);
 
 public sealed record InitializeScriptedMatchCommand(

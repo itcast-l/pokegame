@@ -24,6 +24,10 @@ internal static partial class Program
 		True(partialText.Contains("private void PollLanDiscoveryResponder(double now)", StringComparison.Ordinal));
 		True(partialText.Contains("private void PollLanDiscoveryBrowser(double now)", StringComparison.Ordinal));
 		True(partialText.Contains("private void UpsertRoom(NetworkRoomInfo room)", StringComparison.Ordinal));
+		True(partialText.Contains("packet.Span.SequenceEqual(LanDiscoveryPingPayload)", StringComparison.Ordinal));
+		True(partialText.Contains("TrySend(_lanRoomAdvertisementPayload, sender)", StringComparison.Ordinal));
+		True(partialText.Contains("DebugGetLanRoomAdvertisementBuildCount", StringComparison.Ordinal));
+		Equal(1, Regex.Matches(partialText, @"LanDiscoveryMessage\.Build\(").Count);
 		False(mainText.Contains("private void StartLanDiscoveryResponder()", StringComparison.Ordinal));
 		False(mainText.Contains("private void PollLanDiscoveryResponder(double now)", StringComparison.Ordinal));
 		False(mainText.Contains("private void PollLanDiscoveryBrowser(double now)", StringComparison.Ordinal));
@@ -46,8 +50,12 @@ internal static partial class Program
 			True(partialText.Contains("private void OnSteamLobbyJoined(", StringComparison.Ordinal));
 			True(partialText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
 			True(partialText.Contains("private void InitializeSteamPlatformAdapter()", StringComparison.Ordinal));
-			True(File.ReadAllText(Path.Combine(repoRoot, "scripts", "SteamPlatformAdapter.cs"))
-				.Contains("public sealed class SteamPlatformAdapter : ISteamPlatformAdapter", StringComparison.Ordinal));
+			string adapterText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "SteamPlatformAdapter.cs"));
+			True(adapterText.Contains("public sealed class SteamPlatformAdapter : ISteamPlatformAdapter", StringComparison.Ordinal));
+			True(adapterText.Contains("bool DisconnectSignal(StringName signalName, Callable callable);", StringComparison.Ordinal));
+			True(adapterText.Contains("public bool DisconnectSignal(StringName signalName, Callable callable)", StringComparison.Ordinal));
+			True(partialText.Contains("private void DisconnectSteamSignals()", StringComparison.Ordinal));
+			True(partialText.Contains("_steamReadyCallable = Callable.From(TryConnectSteamSignals);", StringComparison.Ordinal));
 			True(partialText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
 		False(mainText.Contains("public void HostSteam(", StringComparison.Ordinal));
 		False(mainText.Contains("private void TryConnectSteamSignals()", StringComparison.Ordinal));
@@ -55,6 +63,19 @@ internal static partial class Program
 		False(mainText.Contains("private bool TryReadSteamRoom(", StringComparison.Ordinal));
 			False(mainText.Contains("GetSteamSingleton()", StringComparison.Ordinal));
 		False(mainText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
+		True(mainText.Contains("private void DisconnectMultiplayerSignals()", StringComparison.Ordinal));
+		int exitTreeStart = mainText.IndexOf("public override void _ExitTree()", StringComparison.Ordinal);
+		int stopScheduler = mainText.IndexOf("StopNetworkMaintenanceScheduler();", exitTreeStart, StringComparison.Ordinal);
+		int disconnectMultiplayer = mainText.IndexOf("DisconnectMultiplayerSignals();", exitTreeStart, StringComparison.Ordinal);
+		int disconnectSteam = mainText.IndexOf("DisconnectSteamSignals();", exitTreeStart, StringComparison.Ordinal);
+		int cleanup = mainText.IndexOf("AbortSessionCloseAndCleanup", exitTreeStart, StringComparison.Ordinal);
+		int clearAdapter = mainText.IndexOf("_steamPlatform = null;", exitTreeStart, StringComparison.Ordinal);
+		True(exitTreeStart >= 0
+			&& stopScheduler > exitTreeStart
+			&& disconnectMultiplayer > stopScheduler
+			&& disconnectSteam > disconnectMultiplayer
+			&& cleanup > disconnectSteam
+			&& clearAdapter > cleanup);
 	}
 
 	private static void NetworkManagerReconnectHelpersMoveIntoPartialFile()
@@ -253,7 +274,7 @@ internal static partial class Program
 		False(mainText.Contains("private void ApplySeatControlStatesFromSnapshot(", StringComparison.Ordinal));
 	}
 
-	private static void NetworkRpcSignaturesRemainProtocolV11Compatible()
+	private static void NetworkRpcSignaturesRemainProtocolV12Compatible()
 	{
 		string root = FindRepositoryRoot();
 		string networkSources = string.Join(
@@ -360,6 +381,7 @@ internal static partial class Program
 			"snapshot_id",
 			"turn_sequence_generation",
 			"current_turn_player_index",
+			"opening_dice_roll_result",
 			"match_outcome_kind",
 			"winner_player_index",
 			"scores",

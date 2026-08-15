@@ -16,6 +16,7 @@ public static class NetworkBoardViewFingerprint
 		"snapshot_id",
 		"turn_sequence_generation",
 		"current_turn_player_index",
+		"opening_dice_roll_result",
 		"match_outcome_kind",
 		"winner_player_index",
 		"scores",

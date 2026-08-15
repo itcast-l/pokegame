@@ -745,7 +745,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			hoverPalette: MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
 		MainMenuInteractiveStyle.ApplyThemedTab(
 			_itemsButton,
-			MainMenuInteractiveStyle.EmeraldPalette,
+			MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette,
 			!upgradesSelected,
 			19,
 			hoverPalette: MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
@@ -763,7 +763,12 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		foreach (KeyValuePair<string, Button> pair in _suitButtons)
 		{
 			bool selected = string.Equals(pair.Key, _currentSuit, StringComparison.Ordinal);
-			MainMenuInteractiveStyle.ApplyThemedTab(pair.Value, GetSuitPalette(pair.Key), selected, 18);
+			MainMenuInteractiveStyle.ApplyThemedTab(
+				pair.Value,
+				MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette,
+				selected,
+				18,
+				hoverPalette: MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
 			_buttonFocusStyles[pair.Value] = pair.Value.GetThemeStylebox("focus");
 			if (!_inputFocusVisible)
 			{
@@ -801,17 +806,6 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 		RefreshCategoryTabs();
 		RefreshSuitTabs();
-	}
-
-	private static MainMenuInteractiveStyle.Palette GetSuitPalette(string suit)
-	{
-		return suit switch
-		{
-			"diamonds" => MainMenuInteractiveStyle.DiamondPalette,
-			"spades" => MainMenuInteractiveStyle.SpadePalette,
-			"clubs" => MainMenuInteractiveStyle.ClubPalette,
-			_ => MainMenuInteractiveStyle.HeartPalette,
-		};
 	}
 
 	private void RefreshGridColumns()

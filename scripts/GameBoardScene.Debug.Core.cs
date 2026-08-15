@@ -534,6 +534,10 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (player_count > 2)
+		{
+			DebugForceNextOpeningDiceRollResult(1);
+		}
 		DealCardsToPlayers(playOpeningDealAnimation: false);
 		return !_isOpeningDealAnimationPlaying;
 	}

@@ -389,7 +389,7 @@ public partial class NetworkManager
 		_hostEndedMatchPending = false;
 		_hostEndedMatchLocalizationKey = string.Empty;
 		_hostEndedMatchBroadcasted = false;
-		if (Multiplayer.MultiplayerPeer != null)
+		if (IsInsideTree() && Multiplayer.MultiplayerPeer != null)
 		{
 			Multiplayer.MultiplayerPeer.Close();
 			Multiplayer.MultiplayerPeer = null;

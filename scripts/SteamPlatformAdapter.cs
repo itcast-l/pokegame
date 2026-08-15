@@ -6,6 +6,7 @@ public interface ISteamPlatformAdapter
 	bool IsAvailable { get; }
 	bool IsInitialized { get; }
 	bool ConnectSignal(StringName signalName, Callable callable);
+	bool DisconnectSignal(StringName signalName, Callable callable);
 	bool RequestLobbyList();
 	bool InviteUserToLobby(ulong lobbyId, ulong steamId);
 	bool ActivateLobbyInviteDialog(ulong lobbyId);
@@ -44,6 +45,19 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 		{
 			_steamManager.Connect(signalName, callable);
 		}
+		return true;
+	}
+
+	public bool DisconnectSignal(StringName signalName, Callable callable)
+	{
+		if (!IsValid
+			|| !_steamManager!.HasSignal(signalName)
+			|| !_steamManager.IsConnected(signalName, callable))
+		{
+			return false;
+		}
+
+		_steamManager.Disconnect(signalName, callable);
 		return true;
 	}
 

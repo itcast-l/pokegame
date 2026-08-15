@@ -15,10 +15,15 @@ func _run() -> void:
 		_fail("NetworkManager autoload is unavailable")
 		return
 
+	var advertisement_build_baseline := int(network.call("DebugGetLanRoomAdvertisementBuildCount"))
 	network.call("HostLan", 2, false, 50, "DiscoveryFloodSmoke", "")
 	await process_frame
 	if int(network.get("State")) != 4:
 		_fail("LAN host did not enter Lobby")
+		return
+	var advertisement_build_count := int(network.call("DebugGetLanRoomAdvertisementBuildCount"))
+	if advertisement_build_count != advertisement_build_baseline + 1:
+		_fail("LAN room advertisement was not built exactly once at responder startup")
 		return
 
 	var sender := PacketPeerUDP.new()
@@ -97,6 +102,9 @@ func _run() -> void:
 	if float(network.call("DebugGetNetworkMaintenanceMaximumTickMilliseconds")) >= 4.0:
 		_fail("Flood maintenance tick exceeded the 4 ms budget")
 		return
+	if int(network.call("DebugGetLanRoomAdvertisementBuildCount")) != advertisement_build_count:
+		_fail("Discovery flood rebuilt the cached LAN room advertisement")
+		return
 
 	sender.close()
 	var close_started_at := Time.get_ticks_msec()
@@ -105,6 +113,9 @@ func _run() -> void:
 		await process_frame
 	if int(network.get("State")) != 0:
 		_fail("Flood starved the session-close deadline")
+		return
+	if int(network.call("DebugGetLanRoomAdvertisementBuildCount")) != advertisement_build_count:
+		_fail("Stopping the responder unexpectedly rebuilt the LAN room advertisement")
 		return
 	print("LAN_DISCOVERY_FLOOD_SMOKE_OK")
 	quit(0)

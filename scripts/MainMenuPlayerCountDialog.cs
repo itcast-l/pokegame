@@ -1,8 +1,15 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class MainMenuPlayerCountDialog : Control
 {
+	private static readonly StyleBoxFlat HiddenOptionFocusStyle = new()
+	{
+		BgColor = Colors.Transparent,
+		BorderColor = Colors.Transparent,
+	};
+
 	[Signal]
 	public delegate void CloseRequestedEventHandler();
 
@@ -27,7 +34,10 @@ public partial class MainMenuPlayerCountDialog : Control
 	private HBoxContainer _startGameWrap = default!;
 	private Control _startGameFrame = default!;
 	private Control[] _configurationRowPanels = Array.Empty<Control>();
+	private readonly Dictionary<OptionButton, StyleBox> _optionFocusStyles = new();
 	private bool _suppressConfigurationFocusScroll;
+	private bool _inputFocusVisible = true;
+	private bool _lastInputWasKeyboardOrJoypad = true;
 
 	public Control MotionRoot { get; private set; } = default!;
 	public Control DialogPanel { get; private set; } = default!;
@@ -40,8 +50,40 @@ public partial class MainMenuPlayerCountDialog : Control
 	{
 		_suppressConfigurationFocusScroll = true;
 		_configurationScroll.ScrollVertical = 0;
-		PlayerCountOption.GrabFocus();
+		SetInputFocusVisible(_lastInputWasKeyboardOrJoypad);
+		if (_lastInputWasKeyboardOrJoypad)
+		{
+			PlayerCountOption.GrabFocus();
+		}
 		CallDeferred(nameof(FinishDefaultFocus));
+	}
+
+	public override void _Input(InputEvent inputEvent)
+	{
+		if (inputEvent is InputEventMouseButton or InputEventMouseMotion)
+		{
+			_lastInputWasKeyboardOrJoypad = false;
+			if (Visible)
+			{
+				SetInputFocusVisible(false);
+			}
+			return;
+		}
+
+		if (!IsKeyboardOrJoypadNavigationInput(inputEvent))
+		{
+			return;
+		}
+
+		_lastInputWasKeyboardOrJoypad = true;
+		if (Visible)
+		{
+			SetInputFocusVisible(true);
+			if (!HasDialogFocus() && !HasOpenConfigurationPopup())
+			{
+				PlayerCountOption.GrabFocus();
+			}
+		}
 	}
 
 	public override void _Ready()
@@ -107,9 +149,10 @@ public partial class MainMenuPlayerCountDialog : Control
 		ApplyResponsiveDensity();
 	}
 
-	private static void ApplyUnifiedConfigurationOption(OptionButton option)
+	private void ApplyUnifiedConfigurationOption(OptionButton option)
 	{
 		MainMenuInteractiveStyle.ApplySecondaryMenuGameConfigurationOption(option);
+		_optionFocusStyles[option] = option.GetThemeStylebox("focus");
 		option.Alignment = HorizontalAlignment.Left;
 		if (option.GetThemeStylebox("normal") is StyleBoxFlat normalStyle)
 		{
@@ -282,6 +325,81 @@ public partial class MainMenuPlayerCountDialog : Control
 	{
 		_configurationScroll.ScrollVertical = 0;
 		_suppressConfigurationFocusScroll = false;
+	}
+
+	private void SetInputFocusVisible(bool visible)
+	{
+		if (_inputFocusVisible == visible)
+		{
+			return;
+		}
+
+		_inputFocusVisible = visible;
+		foreach (KeyValuePair<OptionButton, StyleBox> pair in _optionFocusStyles)
+		{
+			if (GodotObject.IsInstanceValid(pair.Key))
+			{
+				pair.Key.AddThemeStyleboxOverride(
+					"focus",
+					visible ? pair.Value : HiddenOptionFocusStyle);
+			}
+		}
+
+		foreach (Control row in _configurationRowPanels)
+		{
+			if (row is OceanMenuButtonFrame frame)
+			{
+				frame.HighlightFocus = visible;
+				frame.QueueRedraw();
+			}
+		}
+
+		SetFrameFocusVisible(_backButton.GetParent(), visible);
+		SetFrameFocusVisible(_startGameFrame, visible);
+	}
+
+	private static void SetFrameFocusVisible(Node? node, bool visible)
+	{
+		if (node is OceanMenuButtonFrame frame)
+		{
+			frame.HighlightFocus = visible;
+			frame.QueueRedraw();
+		}
+	}
+
+	private bool HasDialogFocus()
+	{
+		Control? focusOwner = GetViewport().GuiGetFocusOwner();
+		return focusOwner != null && (focusOwner == this || IsAncestorOf(focusOwner));
+	}
+
+	private bool HasOpenConfigurationPopup()
+	{
+		return PlayerCountOption.GetPopup().Visible
+			|| DifficultyOption.GetPopup().Visible
+			|| ItemModeOption.GetPopup().Visible
+			|| WinningScoreOption.GetPopup().Visible;
+	}
+
+	private static bool IsKeyboardOrJoypadNavigationInput(InputEvent inputEvent)
+	{
+		if (inputEvent.IsActionPressed(GameInputActions.GameConfirm)
+			|| inputEvent.IsActionPressed(GameInputActions.GameCancel)
+			|| inputEvent.IsActionPressed(GameInputActions.HandPrevious)
+			|| inputEvent.IsActionPressed(GameInputActions.HandNext)
+			|| inputEvent.IsActionPressed("ui_accept")
+			|| inputEvent.IsActionPressed("ui_cancel")
+			|| inputEvent.IsActionPressed("ui_up")
+			|| inputEvent.IsActionPressed("ui_down")
+			|| inputEvent.IsActionPressed("ui_left")
+			|| inputEvent.IsActionPressed("ui_right"))
+		{
+			return true;
+		}
+
+		return inputEvent is InputEventJoypadButton { Pressed: true }
+			|| inputEvent is InputEventJoypadMotion joypadMotion
+				&& Mathf.Abs(joypadMotion.AxisValue) > 0.45f;
 	}
 
 	private void ConfigureConfigurationFocusScrolling(params Control[] controls)

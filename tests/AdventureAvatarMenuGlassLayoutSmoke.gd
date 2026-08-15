@@ -156,6 +156,8 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 		var adventure_entry := _menu.find_child(entry_name, true, false) as Control
 		if not _assert_unified_list_entry(adventure_entry, "%s adventure entry %s" % [context, entry_name]):
 			return false
+	if not await _assert_adventure_hover_feedback(context):
+		return false
 	var level_list := _menu.get_node_or_null(
 		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Body/LevelListPanel/LevelListMargin/LevelListLayout/LevelScroll/LevelList") as VBoxContainer
 	if level_list == null or level_list.get_child_count() == 0:
@@ -165,6 +167,35 @@ func _audit_viewport(viewport_size: Vector2i, context: String) -> bool:
 		if not _assert_unified_list_entry(child as Control, "%s enemy entry" % context):
 			return false
 	if not await _assert_enemy_hover_feedback(level_list, viewport_size, context):
+		return false
+	var back_frame := _menu.get_node_or_null(
+		"SafeArea/MenuCenter/AdventureMenuPanel/AdventureMenuMargin/Layout/Header/BackFrame") as Control
+	var back_button := _menu.get_node_or_null("%BackButton") as Button
+	if back_frame == null or back_button == null or not back_frame.visible:
+		_fail("%s is missing the secondary back action" % context)
+		return false
+	if int(back_frame.get("FrameStyle")) != 13:
+		_fail("%s back action does not use the visible secondary-action frame" % context)
+		return false
+	if back_button.size.x < 44.0 or back_button.size.y < 44.0:
+		_fail("%s back action is below the minimum target size: %s" % [context, back_button.size])
+		return false
+	if not _rects_close(back_button.get_global_rect(), back_frame.get_global_rect()):
+		_fail("%s back action does not fill its frame: button=%s frame=%s" % [
+			context,
+			back_button.get_global_rect(),
+			back_frame.get_global_rect(),
+		])
+		return false
+	back_button.emit_signal("mouse_entered")
+	if not await _wait_for_frame_glow(back_frame, 0.94, true):
+		_fail("%s back action did not reach its hover highlight" % context)
+		return false
+	if not await _capture_optional_screenshot("back-hover", viewport_size):
+		return false
+	back_button.emit_signal("mouse_exited")
+	if not await _wait_for_frame_glow(back_frame, 0.02, false):
+		_fail("%s back action hover highlight did not clear" % context)
 		return false
 	if _menu.find_child("AbilityPreviewCard", true, false) != null \
 			or _menu.find_child("AbilityTitleLabel", true, false) != null \
@@ -214,8 +245,10 @@ func _assert_enemy_hover_feedback(
 	if level_list.get_child_count() < 2:
 		_fail("%s needs two enemy entries for hover feedback validation" % context)
 		return false
-	var selected_entry := level_list.get_child(0) as Control
-	var hover_entry := level_list.get_child(1) as Control
+	var first_entry := level_list.get_child(0) as Control
+	var second_entry := level_list.get_child(1) as Control
+	var selected_entry := first_entry if bool(first_entry.get("Selected")) else second_entry
+	var hover_entry := second_entry if selected_entry == first_entry else first_entry
 	var hover_button := hover_entry.get_node_or_null("Button") as Button
 	if selected_entry == null or hover_entry == null or hover_button == null:
 		_fail("%s is missing the enemy hover feedback controls" % context)
@@ -224,12 +257,20 @@ func _assert_enemy_hover_feedback(
 		_fail("%s enemy hover feedback still duplicates keyboard focus glow" % context)
 		return false
 
+	_set_pointer_mode()
+	if not await _wait_for_frame_glow(selected_entry, 0.02, false):
+		_fail("%s pointer mode did not clear the committed enemy highlight" % context)
+		return false
+	if bool(first_entry.get("Selected")) or bool(second_entry.get("Selected")):
+		_fail("%s pointer mode retained a fixed enemy selection style" % context)
+		return false
+
 	hover_button.emit_signal("mouse_entered")
 	if not await _wait_for_frame_glow(hover_entry, 0.94, true):
 		_fail("%s enemy row did not reach its hover highlight" % context)
 		return false
-	if bool(hover_entry.get("Selected")) or not bool(selected_entry.get("Selected")):
-		_fail("%s hover feedback changed the committed enemy selection" % context)
+	if bool(hover_entry.get("Selected")) or bool(selected_entry.get("Selected")):
+		_fail("%s enemy hover restored a fixed committed-selection style" % context)
 		return false
 	if not await _capture_optional_screenshot("enemy-hover", viewport_size):
 		return false
@@ -238,7 +279,63 @@ func _assert_enemy_hover_feedback(
 	if not await _wait_for_frame_glow(hover_entry, 0.02, false):
 		_fail("%s enemy row hover highlight did not clear" % context)
 		return false
+	_set_keyboard_mode()
+	if not bool(selected_entry.get("Selected")):
+		_fail("%s keyboard mode did not restore the committed enemy selection" % context)
+		return false
 	return true
+
+
+func _assert_adventure_hover_feedback(context: String) -> bool:
+	var tutorial_entry := _menu.find_child("tutorialAdventureEntry", true, false) as Control
+	var main_entry := _menu.find_child("deep_tide_throneAdventureEntry", true, false) as Control
+	if tutorial_entry == null or main_entry == null:
+		_fail("%s is missing adventure hover feedback controls" % context)
+		return false
+	var selected_entry := tutorial_entry if bool(tutorial_entry.get("Selected")) else main_entry
+	var hover_entry := main_entry if selected_entry == tutorial_entry else tutorial_entry
+	var hover_button := hover_entry.get_node_or_null("Button") as Button
+	if hover_button == null:
+		_fail("%s is missing the alternate adventure button" % context)
+		return false
+
+	_set_pointer_mode()
+	if not await _wait_for_frame_glow(selected_entry, 0.02, false):
+		_fail("%s pointer mode did not clear the committed adventure highlight" % context)
+		return false
+	if bool(tutorial_entry.get("Selected")) or bool(main_entry.get("Selected")):
+		_fail("%s pointer mode retained a fixed adventure selection style" % context)
+		return false
+
+	hover_button.emit_signal("mouse_entered")
+	if not await _wait_for_frame_glow(hover_entry, 0.94, true):
+		_fail("%s alternate adventure did not reach its hover highlight" % context)
+		return false
+	if float(selected_entry.call("DebugGetGlow")) > 0.02:
+		_fail("%s committed adventure stayed highlighted during alternate hover" % context)
+		return false
+	hover_button.emit_signal("mouse_exited")
+	if not await _wait_for_frame_glow(hover_entry, 0.02, false):
+		_fail("%s alternate adventure hover highlight did not clear" % context)
+		return false
+
+	_set_keyboard_mode()
+	if not bool(selected_entry.get("Selected")):
+		_fail("%s keyboard mode did not restore the committed adventure selection" % context)
+		return false
+	return true
+
+
+func _set_pointer_mode() -> void:
+	var event := InputEventMouseMotion.new()
+	_menu._input(event)
+
+
+func _set_keyboard_mode() -> void:
+	var event := InputEventAction.new()
+	event.action = "ui_down"
+	event.pressed = true
+	_menu._input(event)
 
 
 func _wait_for_frame_glow(frame: Control, threshold: float, increasing: bool) -> bool:

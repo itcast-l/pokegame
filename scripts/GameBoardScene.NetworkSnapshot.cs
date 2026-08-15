@@ -11,6 +11,7 @@ public partial class GameBoardScene
 	private sealed record ValidatedNetworkBoardSnapshot(
 		int SnapshotId, long AuthorityEpoch, long CheckpointId,
 		int TurnSequenceGeneration, int CurrentTurnPlayerIndex,
+		int OpeningDiceRollResult,
 		MatchOutcomeKind MatchOutcomeKind, int WinnerPlayerIndex,
 		int[] Scores, int[] DeckCounts, int[] HandCounts,
 		int[] ItemHandCounts, NetworkPlayingCardSnapshot[] OwnHandCards,
@@ -257,6 +258,7 @@ public partial class GameBoardScene
 			["snapshot_id"] = snapshotId,
 			["turn_sequence_generation"] = readModel.TurnGeneration,
 			["current_turn_player_index"] = readModel.CurrentTurnSeat,
+			["opening_dice_roll_result"] = _openingDiceRollResult,
 			["match_outcome_kind"] = ToNetworkMatchOutcome(readModel.Outcome).ToString(),
 			["winner_player_index"] = readModel.WinnerSeat,
 			["scores"] = BuildRuleScoresArray(readModel.Players),
@@ -333,11 +335,11 @@ public partial class GameBoardScene
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
 			&& GetNetworkManager()?.State is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost;
-			if (isReconnectCatchup)
-			{
-				_networkReconnectCatchupPendingCompletion = true;
-				GD.Print($"MIGRATION_SNAPSHOT_DECODED epoch={decodedSnapshot.AuthorityEpoch} snapshot={decodedSnapshot.SnapshotId} checkpoint={decodedSnapshot.CheckpointId} state={GetNetworkManager()?.State}");
-			}
+		if (isReconnectCatchup)
+		{
+			_networkReconnectCatchupPendingCompletion = true;
+			GD.Print($"MIGRATION_SNAPSHOT_DECODED epoch={decodedSnapshot.AuthorityEpoch} snapshot={decodedSnapshot.SnapshotId} checkpoint={decodedSnapshot.CheckpointId} state={GetNetworkManager()?.State}");
+		}
 		if (decodedSnapshot.AuthorityEpoch > _networkAuthorityEpoch)
 		{
 			NetworkVisualPlayback.ClearEvents();
@@ -356,17 +358,17 @@ public partial class GameBoardScene
 		bool isReconnectCatchup = IsNetworkMultiplayerMode()
 			&& !IsNetworkHost()
 			&& GetNetworkManager()?.State is NetworkSessionState.Reconnecting or NetworkSessionState.MigratingHost;
-			if (isReconnectCatchup)
-			{
-				NetworkVisualPlayback.ClearEvents();
-				NetworkVisualPlayback.ClearPendingSnapshot();
-			}
-			if (!TryApplyReplicaRuleSnapshot(snapshot))
-			{
-				return;
-			}
+		if (isReconnectCatchup)
+		{
+			NetworkVisualPlayback.ClearEvents();
+			NetworkVisualPlayback.ClearPendingSnapshot();
+		}
+		if (!TryApplyReplicaRuleSnapshot(snapshot))
+		{
+			return;
+		}
 
-			_networkBoardInitialized = true;
+		_networkBoardInitialized = true;
 		ClearNetworkPendingActionState();
 		ResetNetworkPredictedClientState();
 		_hiddenHandDisplaySlots.Clear();
@@ -377,10 +379,27 @@ public partial class GameBoardScene
 		_networkAuthorityEpoch = snapshot.AuthorityEpoch;
 		_networkCheckpointId = snapshot.CheckpointId;
 		ApplySeatControlStatesFromSnapshot(snapshot);
+		_networkOpeningDealCompleted = snapshot.OpeningDealCompleted;
+		_openingDiceRollResult = snapshot.OpeningDiceRollResult;
+		if (snapshot.OpeningDiceRollResult > 0 && !snapshot.OpeningDealCompleted)
+		{
+			_openingStartingTurnSeat = snapshot.CurrentTurnPlayerIndex;
+		}
+		else if (snapshot.OpeningDiceRollResult == 0)
+		{
+			_openingStartingTurnSeat = MainPlayerIndex;
+		}
+		bool isLocalOpeningPresentationRunning =
+			_openingPresentationSequenceRunning
+			&& _openingPresentationSequenceTurnGeneration
+				== snapshot.TurnSequenceGeneration;
 		bool shouldResumeOpeningDealAnimation = !isReconnectCatchup
 			&& snapshot.OpeningDealAnimationPlaying
-			&& !_isOpeningDealAnimationPlaying;
-		_isOpeningDealAnimationPlaying = !snapshot.OpeningDealCompleted;
+			&& !isLocalOpeningPresentationRunning
+			&& _openingPresentationCompletedTurnGeneration
+				!= snapshot.TurnSequenceGeneration;
+		_isOpeningDealAnimationPlaying = !snapshot.OpeningDealCompleted
+			|| isLocalOpeningPresentationRunning;
 		_networkLastAppliedSnapshotId = snapshot.SnapshotId;
 		_isProcessingCardPlay = false;
 		_isResolvingTurnSequence = false;
@@ -468,6 +487,12 @@ public partial class GameBoardScene
 			|| (authorityEpoch == _networkAuthorityEpoch && snapshotId <= _networkLastAppliedSnapshotId)
 			|| !TryReadNetworkInt32(raw, "turn_sequence_generation", 0, int.MaxValue, out int generation)
 			|| !TryReadNetworkInt32(raw, "current_turn_player_index", 0, player_count - 1, out int currentPlayer)
+			|| !TryReadNetworkInt32(
+				raw,
+				"opening_dice_roll_result",
+				player_count < 3 ? 0 : DiceRollPresentationRules.MinResult,
+				player_count < 3 ? 0 : DiceRollPresentationRules.MaxResult,
+				out int openingDiceRollResult)
 			|| !TryReadNetworkEnum(raw, "match_outcome_kind", out MatchOutcomeKind outcomeKind)
 			|| !TryReadNetworkInt32(raw, "winner_player_index", -1, player_count - 1, out int winner)) return false;
 		if (!MatchReadModel.IsSerializedOutcomeValid(outcomeKind, winner, player_count)) return false;
@@ -526,7 +551,7 @@ public partial class GameBoardScene
 			_ => false,
 		};
 		if (!pendingValid) return false;
-		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, authorityEpoch, checkpointId, generation, currentPlayer, outcomeKind, winner, scores, decks, hands, items, ownPlaying, ownItems, pendingMode, pendingOwner, pendingId, pendingGeneration, opening, openingCompleted, table, seats, authorityAction);
+		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, authorityEpoch, checkpointId, generation, currentPlayer, openingDiceRollResult, outcomeKind, winner, scores, decks, hands, items, ownPlaying, ownItems, pendingMode, pendingOwner, pendingId, pendingGeneration, opening, openingCompleted, table, seats, authorityAction);
 		return true;
 	}
 

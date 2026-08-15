@@ -41,6 +41,14 @@ public partial class DiceRollOverlay : Control
 		}
 	}
 
+	public override void _ExitTree()
+	{
+		if (_isPlaying)
+		{
+			FinishPlayback();
+		}
+	}
+
 	public override void _Process(double delta)
 	{
 		if (!_isPlaying)

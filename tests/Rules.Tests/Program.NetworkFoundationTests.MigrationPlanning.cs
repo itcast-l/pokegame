@@ -12,8 +12,8 @@ internal static partial class Program
 {
 	private static void NetworkProtocolContextsFenceEpochsAndSnapshots()
 	{
-		Equal(11, NetworkProtocol.CurrentVersion);
-		Equal(5, NetworkProtocol.AuthorityCheckpointSchemaVersion);
+		Equal(12, NetworkProtocol.CurrentVersion);
+		Equal(6, NetworkProtocol.AuthorityCheckpointSchemaVersion);
 		NetworkRpcContext current = new("session", "match", 3);
 		True(current.IsValid);
 		True(NetworkProtocolRules.Matches(current, "session", "match", 3, allowHigherEpoch: false));

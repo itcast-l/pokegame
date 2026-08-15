@@ -26,7 +26,7 @@ public partial class AdventureAvatarMenuScene
 			bool isUnlocked = IsStageUnlocked(avatarId);
 			bool isCompleted = IsStageCompleted(avatarId);
 			bool isAvailable = IsStageAvailable(avatarId);
-			frame.Selected = avatarId == _selectedAvatarId;
+			frame.Selected = _listSelectionHighlightVisible && avatarId == _selectedAvatarId;
 			frame.Modulate = isUnlocked ? Colors.White : new Color(0.48f, 0.58f, 0.62f, 0.58f);
 			frame.QueueRedraw();
 

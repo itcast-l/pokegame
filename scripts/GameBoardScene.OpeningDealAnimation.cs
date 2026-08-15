@@ -179,7 +179,10 @@ public partial class GameBoardScene
 			return;
 		}
 
+		_openingPresentationSequenceRunning = true;
+		_openingPresentationSequenceTurnGeneration = turnSequenceGeneration;
 		bool shouldResolveRunStartUpgrade = false;
+		bool shouldBeginOpeningTurn = false;
 		try
 		{
 			await WaitForNextBoardFrameAsync();
@@ -212,6 +215,12 @@ public partial class GameBoardScene
 					centerDeck.QueueFree();
 				}
 			}
+
+			ShowAllOpeningHandCards();
+			ShowAllOpeningPileCards();
+			RenderPlayerCardPiles();
+			RenderPlayerHands();
+			await PlayOpeningDiceRollAsync(turnSequenceGeneration);
 		}
 		finally
 		{
@@ -219,12 +228,33 @@ public partial class GameBoardScene
 			{
 				ShowAllOpeningHandCards();
 				ShowAllOpeningPileCards();
-					_isOpeningDealAnimationPlaying = false;
-					RenderPlayerCardPiles();
-					RenderPlayerHands();
-					TryCompleteOpeningRulePresentationBarrier(turnSequenceGeneration);
+				if (_openingPresentationSequenceTurnGeneration == turnSequenceGeneration)
+				{
+					_openingPresentationSequenceRunning = false;
+					_openingPresentationSequenceTurnGeneration = -1;
+				}
+				_openingPresentationCompletedTurnGeneration = turnSequenceGeneration;
+				_isOpeningDealAnimationPlaying = IsNetworkMultiplayerMode()
+					&& !IsNetworkHost()
+					&& !_networkOpeningDealCompleted;
+				RenderPlayerCardPiles();
+				RenderPlayerHands();
+				if (!_isOpeningDealAnimationPlaying
+					&& TryCompleteOpeningRulePresentationBarrier(turnSequenceGeneration))
+				{
+					SendBoardSnapshotIfHost();
 					QueueAdventureRunStartUpgradeIfNeeded();
+					shouldBeginOpeningTurn = _authorityRuleSession != null;
+				}
 				shouldResolveRunStartUpgrade = PendingAdventureUpgradeTriggerCount > 0;
+			}
+			else
+			{
+				if (_openingPresentationSequenceTurnGeneration == turnSequenceGeneration)
+				{
+					_openingPresentationSequenceRunning = false;
+					_openingPresentationSequenceTurnGeneration = -1;
+				}
 			}
 		}
 
@@ -232,6 +262,33 @@ public partial class GameBoardScene
 		{
 			await ResolvePendingAdventureUpgradeTriggersAsync(turnSequenceGeneration);
 		}
+
+		if (shouldBeginOpeningTurn
+			&& turnSequenceGeneration == _turnSequenceGeneration
+			&& !IsGameOver())
+		{
+			await BeginOpeningTurnIfNeededAsync(turnSequenceGeneration);
+		}
+	}
+
+	private async Task BeginOpeningTurnIfNeededAsync(int turnSequenceGeneration)
+	{
+		if (IsNetworkMultiplayerMode())
+		{
+			if (IsNetworkHost())
+			{
+				BeginNetworkAiProxyTurnIfNeeded();
+			}
+			return;
+		}
+
+		if (_currentTurnPlayerIndex != MainPlayerIndex)
+		{
+			await ResolveOpponentTurnsAsync(turnSequenceGeneration);
+			return;
+		}
+
+		await BeginRealMainPlayerTurnIfNeededAsync(turnSequenceGeneration);
 	}
 
 	private Control? CreateOpeningCenterDeckVisual(int cardCount)

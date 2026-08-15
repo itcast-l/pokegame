@@ -44,13 +44,6 @@ const SUIT_BUTTON_SYMBOLS := {
 	"spades": "♠",
 	"clubs": "♣",
 }
-const SUIT_BORDER_COLORS := {
-	"hearts": Color(0.76, 0.27, 0.43, 0.42),
-	"diamonds": Color(0.35, 0.76, 0.84, 0.42),
-	"spades": Color(0.57, 0.68, 0.82, 0.42),
-	"clubs": Color(0.30, 0.72, 0.49, 0.42),
-}
-
 var _failed := false
 
 
@@ -768,32 +761,51 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 			or focus_style.shadow_size > 4:
 		_fail("Skill codex card hover and focus feedback are not visually tiered")
 		return false
-	if not await _assert_category_tab_hover_consistency(overlay):
+	if not await _assert_category_tab_visual_consistency(overlay):
 		return false
 
+	var selected_suit_background := Color.TRANSPARENT
+	var selected_suit_border := Color.TRANSPARENT
+	var selected_suit_border_width := -1
 	for suit in SUIT_BUTTON_NAMES:
 		if not bool(overlay.call("DebugSelectSuit", suit)):
-			_fail("Failed to select %s while auditing suit theme" % suit)
+			_fail("Failed to select %s while auditing suit tab style" % suit)
 			return false
 		await _wait_frames(2)
 		var button := overlay.get_node(
 			"Root/SafeMargin/Layout/SuitTabs/%s" % SUIT_BUTTON_NAMES[suit]) as Button
-		var style := button.get_theme_stylebox("normal") as StyleBoxFlat
+		var selected_style := button.get_theme_stylebox("pressed") as StyleBoxFlat
+		var suit_hover_style := button.get_theme_stylebox("hover") as StyleBoxFlat
 		if button.text != SUIT_BUTTON_SYMBOLS[suit]:
 			_fail("%s tab should display only its suit symbol" % suit)
 			return false
-		if not button.button_pressed or style == null \
-				or not style.border_color.is_equal_approx(SUIT_BORDER_COLORS[suit]):
-			_fail("Selected %s tab does not use its individual suit theme" % suit)
+		if not button.button_pressed or selected_style == null or suit_hover_style == null:
+			_fail("Selected %s tab does not expose its pressed style" % suit)
+			return false
+		if not suit_hover_style.bg_color.is_equal_approx(selected_style.bg_color) \
+				or not suit_hover_style.border_color.is_equal_approx(selected_style.border_color):
+			_fail("%s tab hover does not match the unified active style" % suit)
+			return false
+		if selected_suit_border_width < 0:
+			selected_suit_background = selected_style.bg_color
+			selected_suit_border = selected_style.border_color
+			selected_suit_border_width = selected_style.border_width_left
+		elif not selected_style.bg_color.is_equal_approx(selected_suit_background) \
+				or not selected_style.border_color.is_equal_approx(selected_suit_border) \
+				or selected_style.border_width_left != selected_suit_border_width:
+			_fail("Skill codex suit tabs use inconsistent selected styles")
 			return false
 	if not bool(overlay.call("DebugSelectSuit", "hearts")):
-		_fail("Failed to restore hearts after suit theme audit")
+		_fail("Failed to restore hearts after suit tab style audit")
 		return false
 	await _wait_frames(2)
 	return true
 
 
-func _assert_category_tab_hover_consistency(overlay: Node) -> bool:
+func _assert_category_tab_visual_consistency(overlay: Node) -> bool:
+	var selected_background := Color.TRANSPARENT
+	var selected_border := Color.TRANSPARENT
+	var selected_border_width := -1
 	for category in ["upgrades", "items"]:
 		if not bool(overlay.call("DebugSelectCategory", category)):
 			_fail("Failed to select %s while auditing category hover theme" % category)
@@ -805,6 +817,24 @@ func _assert_category_tab_hover_consistency(overlay: Node) -> bool:
 				"Root/SafeMargin/Layout/CategoryTabs/ItemsButton") as Button
 		var upgrades_hover := upgrades_button.get_theme_stylebox("hover") as StyleBoxFlat
 		var items_hover := items_button.get_theme_stylebox("hover") as StyleBoxFlat
+		var selected_button := upgrades_button if category == "upgrades" else items_button
+		var inactive_button := items_button if category == "upgrades" else upgrades_button
+		var selected_style := selected_button.get_theme_stylebox("pressed") as StyleBoxFlat
+		if not selected_button.button_pressed or inactive_button.button_pressed:
+			_fail("Skill codex category tab selection state is incorrect for %s" % category)
+			return false
+		if selected_style == null:
+			_fail("Skill codex selected category tab has no pressed style for %s" % category)
+			return false
+		if selected_border_width < 0:
+			selected_background = selected_style.bg_color
+			selected_border = selected_style.border_color
+			selected_border_width = selected_style.border_width_left
+		elif not selected_style.bg_color.is_equal_approx(selected_background) \
+				or not selected_style.border_color.is_equal_approx(selected_border) \
+				or selected_style.border_width_left != selected_border_width:
+			_fail("Skill codex category tabs use inconsistent selected styles")
+			return false
 		if upgrades_hover == null or items_hover == null \
 				or not upgrades_hover.bg_color.is_equal_approx(items_hover.bg_color) \
 				or not upgrades_hover.border_color.is_equal_approx(items_hover.border_color):

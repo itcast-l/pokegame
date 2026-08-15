@@ -12,7 +12,7 @@ internal static partial class Program
 	private const long BaselineEndToEndAllocationBytes = 334_042;
 	private const double BaselineEndToEndP95Milliseconds = 1.263;
 	private const string HighLoadCheckpointGoldenHash =
-		"d549678ecae06a7e3e7f2924a8f45ed3641b028fc35a59c091d033ad7f070ae8";
+		"dffa841e658c33485e748591255396db82199509a4475be85525ae9acb2bfb72";
 
 	private static void CheckpointFourPlayerHighLoadBenchmark()
 	{
@@ -365,6 +365,7 @@ internal static partial class Program
 			SeatControls = controls,
 			LastAcceptedClientActionIds = actionIds,
 			OpeningDealCompleted = true,
+			OpeningDiceRollResult = 4,
 			LastAuthorityActionId = 0,
 			AuthorityAction = AuthorityActionState.Empty,
 			SnapshotId = 41,

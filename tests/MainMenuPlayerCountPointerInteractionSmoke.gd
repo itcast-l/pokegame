@@ -1,7 +1,11 @@
 extends SceneTree
 
+const LOGO_INTRO_SCENE_PATH := "res://scenes/logo_intro_scene.tscn"
 const MAIN_MENU_SCENE_PATH := "res://scenes/main_menu_scene.tscn"
 const SINGLE_PLAYER_BUTTON_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame/Button"
+const SINGLE_PLAYER_FRAME_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame"
+const ADVENTURE_BUTTON_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureFrame/Button"
+const ADVENTURE_FRAME_PATH := "MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureFrame"
 const PLAYER_COUNT_ROOT_PATH := "PlayerCountDialogLayer/PlayerCountDialogRoot"
 const VIEWPORT_SIZE := Vector2i(1280, 720)
 
@@ -24,10 +28,41 @@ func _run() -> void:
 		return
 
 	var single_player_button := menu.get_node_or_null(SINGLE_PLAYER_BUTTON_PATH) as Button
-	if single_player_button == null:
-		_fail("Single-player main-menu button is missing")
+	var single_player_frame := menu.get_node_or_null(SINGLE_PLAYER_FRAME_PATH) as Control
+	var adventure_button := menu.get_node_or_null(ADVENTURE_BUTTON_PATH) as Button
+	var adventure_frame := menu.get_node_or_null(ADVENTURE_FRAME_PATH) as Control
+	if single_player_button == null or single_player_frame == null \
+			or adventure_button == null or adventure_frame == null:
+		_fail("Main-menu pointer transfer controls are missing")
 		return
-	single_player_button.emit_signal("pressed")
+	var single_player_position := single_player_button.get_global_rect().get_center()
+	_move_pointer(single_player_position)
+	if not await _wait_for_glow(single_player_frame, 0.95):
+		_fail("Moving over the single-player main-menu button did not show its hover style")
+		return
+	if not single_player_button.is_hovered():
+		_fail("Single-player main-menu button did not receive pointer hover")
+		return
+	if single_player_button.has_focus():
+		_fail("Pointer mode retained the initial keyboard focus on single-player")
+		return
+
+	var adventure_position := adventure_button.get_global_rect().get_center()
+	_move_pointer(adventure_position)
+	if not await _wait_for_glow_below(single_player_frame, 0.05) \
+			or not await _wait_for_glow(adventure_frame, 0.95):
+		_fail("Main-menu hover highlight did not transfer from single-player to adventure")
+		return
+	if single_player_button.is_hovered() or not adventure_button.is_hovered():
+		_fail("Main-menu pointer hover ownership did not transfer to adventure")
+		return
+
+	_move_pointer(single_player_position)
+	if not await _wait_for_glow_below(adventure_frame, 0.05) \
+			or not await _wait_for_glow(single_player_frame, 0.95):
+		_fail("Main-menu hover highlight did not transfer back to single-player")
+		return
+	_click_pointer(single_player_position)
 
 	var dialog_root := menu.get_node_or_null(PLAYER_COUNT_ROOT_PATH) as Control
 	if dialog_root == null or not await _wait_for_opaque(dialog_root):
@@ -38,11 +73,14 @@ func _run() -> void:
 		_fail("Single-player configuration unexpectedly renders icon badges")
 		return
 
+	var players_row := dialog_root.find_child("PlayersRowPanel", true, false) as Control
+	var player_count_option := dialog_root.find_child("PlayerCountOption", true, false) as OptionButton
 	var difficulty_row := dialog_root.find_child("DifficultyRowPanel", true, false) as Control
 	var difficulty_option := dialog_root.find_child("DifficultyOption", true, false) as OptionButton
 	var difficulty_label := dialog_root.find_child("DifficultyLabel", true, false) as Label
-	if difficulty_row == null or difficulty_option == null or difficulty_label == null:
-		_fail("Difficulty row controls are missing")
+	if players_row == null or player_count_option == null or difficulty_row == null \
+			or difficulty_option == null or difficulty_label == null:
+		_fail("Configuration pointer controls are missing")
 		return
 	var split_rows := {
 		"PlayerCountOption": ["PlayersRowPanel", "PlayersLabel"],
@@ -143,10 +181,27 @@ func _run() -> void:
 		_fail("Clicking the difficulty title unexpectedly opened the dropdown")
 		return
 
+	var navigation_event := InputEventAction.new()
+	navigation_event.action = "ui_down"
+	navigation_event.pressed = true
+	dialog_root._input(navigation_event)
+	if not player_count_option.has_focus() or not await _wait_for_glow(players_row, 0.35):
+		_fail("Keyboard navigation did not restore the first selector focus highlight")
+		return
+
 	var value_click_position := difficulty_option_rect.get_center()
 	_move_pointer(value_click_position)
-	if not await _wait_for_glow(difficulty_row, 0.35):
-		_fail("Moving over the difficulty selector did not activate its focus state")
+	if not await _wait_for_glow_below(players_row, 0.05) \
+			or not await _wait_for_glow(difficulty_row, 0.35):
+		_fail("Difficulty hover did not take the highlight away from the first selector: " \
+				+ "players_glow=%.3f difficulty_glow=%.3f players_hovered=%s " \
+				+ "difficulty_hovered=%s focus_owner=%s" % [
+			float(players_row.call("DebugGetGlow")),
+			float(difficulty_row.call("DebugGetGlow")),
+			player_count_option.is_hovered(),
+			difficulty_option.is_hovered(),
+			str(root.gui_get_focus_owner()),
+			])
 		return
 	_click_pointer(value_click_position)
 	if not await _wait_for_popup_visible(difficulty_popup):
@@ -260,18 +315,26 @@ func _run() -> void:
 
 
 func _instantiate_menu() -> Node:
-	var packed_scene := load(MAIN_MENU_SCENE_PATH) as PackedScene
+	var packed_scene := load(LOGO_INTRO_SCENE_PATH) as PackedScene
 	if packed_scene == null:
-		_fail("Failed to load the main-menu scene")
+		_fail("Failed to load the logo-intro scene")
 		return null
-	var menu := packed_scene.instantiate()
-	if menu == null:
-		_fail("Failed to instantiate the main-menu scene")
+	var intro := packed_scene.instantiate()
+	if intro == null:
+		_fail("Failed to instantiate the logo-intro scene")
 		return null
-	root.add_child(menu)
-	current_scene = menu
-	await _wait_frames(4)
-	return menu
+	root.add_child(intro)
+	current_scene = intro
+	await _wait_frames(2)
+	intro.call("_finish", true)
+	for _frame in 180:
+		await process_frame
+		if current_scene != null and current_scene != intro \
+				and current_scene.scene_file_path == MAIN_MENU_SCENE_PATH:
+			await _wait_frames(4)
+			return current_scene
+	_fail("Logo intro did not hand off to the main-menu scene")
+	return null
 
 
 func _move_pointer(position: Vector2) -> void:
@@ -319,6 +382,14 @@ func _wait_for_glow(frame: Control, minimum_glow: float, max_frames := 120) -> b
 			return true
 		await process_frame
 	return float(frame.call("DebugGetGlow")) >= minimum_glow
+
+
+func _wait_for_glow_below(frame: Control, maximum_glow: float, max_frames := 120) -> bool:
+	for _frame in max_frames:
+		if float(frame.call("DebugGetGlow")) <= maximum_glow:
+			return true
+		await process_frame
+	return float(frame.call("DebugGetGlow")) <= maximum_glow
 
 
 func _wait_for_popup_visible(popup: PopupMenu, max_frames := 120) -> bool:

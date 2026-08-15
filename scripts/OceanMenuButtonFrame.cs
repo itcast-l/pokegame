@@ -20,7 +20,8 @@ public partial class OceanMenuButtonFrame : Control
 		NeutralSmokeBack,
 		NeutralSmokePrimary,
 		IndividualToolRow,
-		IndividualAction
+		IndividualAction,
+		IndividualSecondaryAction
 	}
 
 	[Export]
@@ -131,10 +132,7 @@ public partial class OceanMenuButtonFrame : Control
 	{
 		MouseFilter = MouseFilterEnum.Ignore;
 		VisibilityChanged += OnFrameVisibilityChanged;
-		_subscribedTree = GetTree();
-		_subscribedTree.NodeAdded += OnTreeNodeAdded;
-		_subscribedTree.NodeRemoved += OnTreeNodeRemoved;
-		RebuildInteractionBindings();
+		InitializeInteractionBindings();
 		RefreshTargetState();
 	}
 
@@ -146,22 +144,7 @@ public partial class OceanMenuButtonFrame : Control
 		{
 			Disconnect(CanvasItem.SignalName.VisibilityChanged, visibilityChanged);
 		}
-		if (_subscribedTree != null && GodotObject.IsInstanceValid(_subscribedTree))
-		{
-			Callable nodeAdded = Callable.From<Node>(OnTreeNodeAdded);
-			Callable nodeRemoved = Callable.From<Node>(OnTreeNodeRemoved);
-			if (_subscribedTree.IsConnected(SceneTree.SignalName.NodeAdded, nodeAdded))
-			{
-				_subscribedTree.Disconnect(SceneTree.SignalName.NodeAdded, nodeAdded);
-			}
-			if (_subscribedTree.IsConnected(SceneTree.SignalName.NodeRemoved, nodeRemoved))
-			{
-				_subscribedTree.Disconnect(SceneTree.SignalName.NodeRemoved, nodeRemoved);
-			}
-		}
-		_subscribedTree = null;
-		ClearInteractionBindings();
-		_interactionBindingsReady = false;
+		ClearInteractionObservation();
 	}
 
 	public override void _Process(double delta)
@@ -200,6 +183,23 @@ public partial class OceanMenuButtonFrame : Control
 	public int DebugGetBoundInteractiveControlCount()
 	{
 		return _interactionBindings.Count;
+	}
+
+	public int DebugGetObservedSubtreeNodeCount()
+	{
+		return _observedSubtreeNodes.Count;
+	}
+
+	public long DebugGetSubtreeChangeCallbackCount()
+	{
+		return _subtreeChangeCallbackCount;
+	}
+
+	public ulong DebugGetPrimaryButtonInstanceId()
+	{
+		return _button != null && GodotObject.IsInstanceValid(_button)
+			? _button.GetInstanceId()
+			: 0;
 	}
 
 	public override void _Draw()
@@ -287,6 +287,11 @@ public partial class OceanMenuButtonFrame : Control
 		if (FrameStyle == ButtonFrameStyle.IndividualAction)
 		{
 			DrawIndividualAction(rect);
+			return;
+		}
+		if (FrameStyle == ButtonFrameStyle.IndividualSecondaryAction)
+		{
+			DrawIndividualSecondaryAction(rect);
 			return;
 		}
 

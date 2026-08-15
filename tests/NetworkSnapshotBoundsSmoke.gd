@@ -12,6 +12,10 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var packed_scene := load(SCENE_PATH) as PackedScene
+	if not await _assert_multiplayer_opening_dice_bounds(3):
+		return
+	if not await _assert_multiplayer_opening_dice_bounds(4):
+		return
 	var board := packed_scene.instantiate() if packed_scene != null else null
 	if board == null:
 		_fail("Could not instantiate game board")
@@ -659,12 +663,12 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 	var table_card := ((matrix_snapshot["table_cards"] as Array)[0] as Dictionary).duplicate(true)
 	var hostile_cases: Array[Dictionary] = []
 
-	for key in ["protocol_version", "session_id", "match_id", "match_outcome_kind", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_deal_animation_playing", "opening_deal_completed", "authority_action"]:
+	for key in ["protocol_version", "session_id", "match_id", "match_outcome_kind", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_dice_roll_result", "opening_deal_animation_playing", "opening_deal_completed", "authority_action"]:
 		var missing := matrix_snapshot.duplicate(true)
 		missing.erase(key)
 		hostile_cases.append({"name": "snapshot missing " + key, "payload": missing})
 
-	for key in ["snapshot_id", "turn_sequence_generation", "scores", "deck_counts", "hand_counts", "item_hand_counts", "pending_selection_mode", "opening_deal_animation_playing"]:
+	for key in ["snapshot_id", "turn_sequence_generation", "opening_dice_roll_result", "scores", "deck_counts", "hand_counts", "item_hand_counts", "pending_selection_mode", "opening_deal_animation_playing"]:
 		var wrong_type := matrix_snapshot.duplicate(true)
 		wrong_type[key] = "wrong-type"
 		hostile_cases.append({"name": "snapshot wrong type " + key, "payload": wrong_type})
@@ -725,6 +729,9 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 	var bad_enum := matrix_snapshot.duplicate(true)
 	bad_enum["pending_selection_mode"] = "not-a-pending-mode"
 	hostile_cases.append({"name": "snapshot unknown enum", "payload": bad_enum})
+	var bad_two_player_dice := matrix_snapshot.duplicate(true)
+	bad_two_player_dice["opening_dice_roll_result"] = 1
+	hostile_cases.append({"name": "two-player snapshot has opening dice", "payload": bad_two_player_dice})
 	var bad_seat := matrix_snapshot.duplicate(true)
 	var bad_seats := bad_seat["seat_control_states"] as Array
 	var first_seat := (bad_seats[0] as Dictionary).duplicate(true)
@@ -760,6 +767,57 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 	if not bool(board.call("DebugApplyNetworkSnapshotPayload", restored)):
 		_fail("Could not restore snapshot after nested snapshot boundary matrix")
 		return false
+	return true
+
+
+func _assert_multiplayer_opening_dice_bounds(player_count: int) -> bool:
+	var packed_scene := load(SCENE_PATH) as PackedScene
+	var board := packed_scene.instantiate() if packed_scene != null else null
+	if board == null:
+		_fail("Could not instantiate %d-player dice boundary board" % player_count)
+		return false
+	board.set("network_wait_for_initialize", true)
+	root.add_child(board)
+	await process_frame
+	if not bool(board.call("DebugStartOpeningDiceMatch", player_count, 1)):
+		_fail("Could not start %d-player dice boundary board" % player_count)
+		return false
+	var snapshot := board.call("BuildNetworkBoardSnapshotForSeat", 0, 1) as Dictionary
+	if snapshot == null:
+		_fail("Could not build %d-player dice boundary snapshot" % player_count)
+		return false
+	var seat_states: Array = []
+	for seat_index in range(player_count):
+		seat_states.append({
+			"seat_index": seat_index,
+			"mode": "HumanConnected",
+			"peer_id": 0,
+			"player_session_id": "",
+			"credential_generation": 1,
+		})
+	snapshot["seat_control_states"] = seat_states
+	for legal_result in [1, 6]:
+		var legal := snapshot.duplicate(true)
+		legal["opening_dice_roll_result"] = legal_result
+		if bool(board.call("DebugRejectsNetworkSnapshotPayload", legal)):
+			_fail("Rejected legal %d-player opening dice result %d" % [player_count, legal_result])
+			return false
+	var hostile_cases := [
+		{"name": "missing", "value": null},
+		{"name": "zero", "value": 0},
+		{"name": "seven", "value": 7},
+	]
+	for test_case in hostile_cases:
+		var hostile := snapshot.duplicate(true)
+		if test_case["value"] == null:
+			hostile.erase("opening_dice_roll_result")
+		else:
+			hostile["opening_dice_roll_result"] = test_case["value"]
+		if not bool(board.call("DebugRejectsNetworkSnapshotPayload", hostile)):
+			_fail("Accepted %d-player %s opening dice result" % [player_count, test_case["name"]])
+			return false
+	board.queue_free()
+	await process_frame
 	return true
 
 
@@ -815,6 +873,7 @@ func _assert_snapshot_contract(snapshot: Dictionary, player_count: int, recipien
 		"snapshot_id",
 		"turn_sequence_generation",
 		"current_turn_player_index",
+		"opening_dice_roll_result",
 		"match_outcome_kind",
 		"winner_player_index",
 		"scores",
@@ -848,6 +907,7 @@ func _assert_snapshot_contract(snapshot: Dictionary, player_count: int, recipien
 		"snapshot_id",
 		"turn_sequence_generation",
 		"current_turn_player_index",
+		"opening_dice_roll_result",
 		"winner_player_index",
 		"pending_selection_owner",
 		"pending_turn_sequence_generation",

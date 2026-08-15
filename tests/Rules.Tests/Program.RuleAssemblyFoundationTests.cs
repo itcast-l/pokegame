@@ -26,10 +26,12 @@ internal static partial class Program
 		Run("match flow state survives authority and replica snapshots", MatchFlowStateSurvivesAuthorityAndReplicaSnapshots);
 		Run("automated item block is rule owned and clears with turn lifecycle", AutomatedItemBlockIsRuleOwnedAndClearsWithTurnLifecycle);
 		Run("replica session only applies newer authority snapshots", ReplicaSessionOnlyAppliesNewerAuthoritySnapshots);
-			Run("fixed random source produces stable initial deal", FixedRandomSourceProducesStableInitialDeal);
-			Run("logical card code survives attachment and snapshot restore", LogicalCardCodeSurvivesAttachmentAndSnapshotRestore);
-			Run("restored runtime IDs advance future allocators", RestoredRuntimeIdsAdvanceFutureAllocators);
-			Run("restart command advances lifecycle without accepting stale initialization", RestartCommandAdvancesLifecycleWithoutAcceptingStaleInitialization);
+		Run("fixed random source produces stable initial deal", FixedRandomSourceProducesStableInitialDeal);
+		Run("logical card code survives attachment and snapshot restore", LogicalCardCodeSurvivesAttachmentAndSnapshotRestore);
+		Run("restored runtime IDs advance future allocators", RestoredRuntimeIdsAdvanceFutureAllocators);
+		Run("restart command advances lifecycle without accepting stale initialization", RestartCommandAdvancesLifecycleWithoutAcceptingStaleInitialization);
+		Run("starting player dice follows clockwise seat order", StartingPlayerDiceFollowsClockwiseSeatOrder);
+		Run("match initialization validates and applies starting turn seat", MatchInitializationValidatesAndAppliesStartingTurnSeat);
 		Run("match initialization preserves configured starting scores", MatchInitializationPreservesConfiguredStartingScores);
 		Run("invalid starting scores are rejected atomically", InvalidStartingScoresAreRejectedAtomically);
 		Run("match initialization applies starting draw and supply limits", MatchInitializationAppliesStartingDrawAndSupplyLimits);

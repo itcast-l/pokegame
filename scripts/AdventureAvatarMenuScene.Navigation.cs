@@ -10,6 +10,12 @@ public partial class AdventureAvatarMenuScene
 
 	public void PrepareForEmbeddedDisplay()
 	{
+		PrepareForEmbeddedDisplayForInputMode(keyboardOrJoypad: true);
+	}
+
+	public void PrepareForEmbeddedDisplayForInputMode(bool keyboardOrJoypad)
+	{
+		SetListSelectionHighlightVisible(keyboardOrJoypad);
 		_isReturningToMainMenu = false;
 		_backButton.Disabled = false;
 		MouseFilter = MouseFilterEnum.Ignore;

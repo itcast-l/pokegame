@@ -257,6 +257,12 @@ public partial class GameBoardScene
 		}
 		ImmutableArray<int> additionalStartingDraws = additionalDrawBuilder.MoveToImmutable();
 		ImmutableArray<int> seatCardSupplyLimits = cardSupplyLimitBuilder.MoveToImmutable();
+		if (!TryCreateOpeningDiceOutcome(
+			out int openingDiceRollResult,
+			out int startingTurnSeat))
+		{
+			return false;
+		}
 
 		MatchReadModel current = _authorityRuleSession.ReadModel;
 		long actionId = NextRuleActionId();
@@ -278,7 +284,8 @@ public partial class GameBoardScene
 				StartingScores: startingScores,
 				MaximumHandSize: MaxTotalHandCards,
 				AdditionalStartingDraws: additionalStartingDraws,
-				SeatCardSupplyLimits: seatCardSupplyLimits)
+				SeatCardSupplyLimits: seatCardSupplyLimits,
+				StartingTurnSeat: startingTurnSeat)
 			: new InitializeMatchCommand(
 				actionId,
 				nextLifecycleGeneration,
@@ -291,11 +298,13 @@ public partial class GameBoardScene
 				StartingScores: startingScores,
 				MaximumHandSize: MaxTotalHandCards,
 				AdditionalStartingDraws: additionalStartingDraws,
-				SeatCardSupplyLimits: seatCardSupplyLimits);
+				SeatCardSupplyLimits: seatCardSupplyLimits,
+				StartingTurnSeat: startingTurnSeat);
 
 		RuleCommandResult result = _authorityRuleSession.Submit(command);
 		if (result.Accepted)
 		{
+			CommitOpeningDiceOutcome(openingDiceRollResult, startingTurnSeat);
 			SynchronizeSceneAfterRuleInitialization();
 			return true;
 		}

@@ -71,10 +71,20 @@ public partial class AdventureAvatarMenuScene
 			GetNode<ColorRect>($"%{surfaceName}").Material = contentMaterial;
 		}
 
-		ConfigureFrame("BackFrame", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
-		ConfigureFrame("StartFrame", AdventureRouteAccent);
+		ConfigureFrame(
+			"BackFrame",
+			MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder,
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualSecondaryAction);
+		ConfigureFrame(
+			"StartFrame",
+			AdventureRouteAccent,
+			OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction);
 		MainMenuInteractiveStyle.ApplyActionButton(_backButton, 18, MainMenuInteractiveStyle.SecondaryMenuPalette);
 		MainMenuInteractiveStyle.ApplyActionButton(_startButton, 19, MainMenuInteractiveStyle.SecondaryMenuPrimaryPalette);
+		_backButton.OffsetLeft = 0.0f;
+		_backButton.OffsetTop = 0.0f;
+		_backButton.OffsetRight = 0.0f;
+		_backButton.OffsetBottom = 0.0f;
 		_startButton.OffsetLeft = 0.0f;
 		_startButton.OffsetTop = 0.0f;
 		_startButton.OffsetRight = 0.0f;
@@ -89,14 +99,17 @@ public partial class AdventureAvatarMenuScene
 			CreateBadgeStyle(AdventureRouteAccent));
 	}
 
-	private void ConfigureFrame(string frameName, Color accent)
+	private void ConfigureFrame(
+		string frameName,
+		Color accent,
+		OceanMenuButtonFrame.ButtonFrameStyle frameStyle)
 	{
 		if (FindChild(frameName, true, false) is not OceanMenuButtonFrame frame)
 		{
 			return;
 		}
 
-		frame.FrameStyle = OceanMenuButtonFrame.ButtonFrameStyle.IndividualAction;
+		frame.FrameStyle = frameStyle;
 		frame.AccentColor = accent;
 		frame.QueueRedraw();
 	}

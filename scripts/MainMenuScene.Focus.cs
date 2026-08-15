@@ -27,7 +27,12 @@ public partial class MainMenuScene : Control
 
 	private void TrackPrimaryMenuInputMode(InputEvent inputEvent)
 	{
-		if (inputEvent is InputEventMouseButton or InputEventMouseMotion)
+		if (inputEvent is InputEventMouseMotion)
+		{
+			EnterPrimaryMenuPointerMode();
+			return;
+		}
+		if (inputEvent is InputEventMouseButton)
 		{
 			SetPrimaryMenuFocusHighlightVisible(false);
 			return;
@@ -36,6 +41,19 @@ public partial class MainMenuScene : Control
 		if (IsPrimaryMenuNavigationInput(inputEvent))
 		{
 			SetPrimaryMenuFocusHighlightVisible(true);
+			if (GetViewport().GuiGetFocusOwner() == null)
+			{
+				FocusInitialMainMenuButton();
+			}
+		}
+	}
+
+	private void EnterPrimaryMenuPointerMode()
+	{
+		SetPrimaryMenuFocusHighlightVisible(false);
+		if (IsPrimaryMenuControl(GetViewport().GuiGetFocusOwner()))
+		{
+			GetViewport().GuiReleaseFocus();
 		}
 	}
 
@@ -64,6 +82,7 @@ public partial class MainMenuScene : Control
 		if (button.GetParent() is OceanMenuButtonFrame frame)
 		{
 			_primaryMenuFrames.Add(frame);
+			button.MouseEntered += EnterPrimaryMenuPointerMode;
 		}
 	}
 

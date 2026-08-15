@@ -61,7 +61,8 @@ reject_log_line() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanInactiveHumanTurnSkipHost.gd >"$HOST_LOG" 2>&1 &
+CODEX_OPENING_DICE_ROLL_RESULT=1 \
+	"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanInactiveHumanTurnSkipHost.gd >"$HOST_LOG" 2>&1 &
 PIDS+=("$!")
 sleep 1
 "$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/LanInactiveHumanTurnSkipClient.gd -- --expected-seat=1 >"$CLIENT_1_LOG" 2>&1 &

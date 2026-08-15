@@ -167,6 +167,10 @@ public sealed record NetworkAuthorityCheckpoint
 	[JsonPropertyOrder(38)]
 	public List<NetworkAuthorityReconnectClaim> ReconnectClaims { get; init; } = new();
 
+	[JsonPropertyName("opening_dice_roll_result")]
+	[JsonPropertyOrder(39)]
+	public int OpeningDiceRollResult { get; init; }
+
 	[JsonIgnore]
 	public string PayloadHash { get; init; } = string.Empty;
 }

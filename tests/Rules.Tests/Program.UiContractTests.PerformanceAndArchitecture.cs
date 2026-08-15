@@ -25,10 +25,17 @@ internal static partial class Program
 		string repoRoot = FindRepositoryRoot();
 
 		string oceanMenuText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "OceanMenuButtonFrame.cs"));
+		string oceanMenuInteractionText = File.ReadAllText(
+			Path.Combine(repoRoot, "scripts", "OceanMenuButtonFrame.Interaction.cs"));
 		False(Regex.IsMatch(
 			oceanMenuText,
 			@"_glow = Mathf\.Lerp\(_glow, target, .*?\);\s*QueueRedraw\(\);",
 			RegexOptions.Singleline));
+		False(oceanMenuText.Contains("SceneTree.SignalName.NodeAdded", StringComparison.Ordinal));
+		False(oceanMenuText.Contains("SceneTree.SignalName.NodeRemoved", StringComparison.Ordinal));
+		False(oceanMenuInteractionText.Contains("RebuildInteractionBindings", StringComparison.Ordinal));
+		True(oceanMenuInteractionText.Contains("ChildEnteredTree += OnObservedChildEnteredTree", StringComparison.Ordinal));
+		True(oceanMenuInteractionText.Contains("ChildExitingTree += OnObservedChildExitingTree", StringComparison.Ordinal));
 
 		string oceanMenuTextureText = File.ReadAllText(
 			Path.Combine(repoRoot, "scripts", "OceanMenuButtonFrame.TexturedRendering.cs"));

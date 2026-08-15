@@ -6,7 +6,7 @@
 		"build_id": "replace-with-build-id",
 		"git_commit": "replace-with-git-commit",
 		"configuration": "Release",
-		"network_protocol": 11
+		"network_protocol": 12
 	},
 	"accounts": [],
 	"steam_cases": [

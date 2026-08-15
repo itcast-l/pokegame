@@ -362,6 +362,41 @@ internal static partial class Program
 		Equal(19L, restored.LastAcceptedClientActionIds[1]);
 	}
 
+	private static void CheckpointCodecValidatesOpeningDiceByPlayerCount()
+	{
+		NetworkAuthorityCheckpoint twoPlayer = CreateCheckpoint();
+		True(NetworkAuthorityCheckpointCodec.Validate(twoPlayer, out _));
+		False(NetworkAuthorityCheckpointCodec.Validate(
+			twoPlayer with { OpeningDiceRollResult = 1 },
+			out _));
+
+		NetworkAuthorityCheckpoint threePlayer = CreateCheckpoint(
+			playerCount: 3,
+			openingDiceRollResult: 4);
+		True(NetworkAuthorityCheckpointCodec.TryEncode(
+			threePlayer,
+			out byte[] payload,
+			out string hash,
+			out _));
+		True(NetworkAuthorityCheckpointCodec.TryDecode(
+			payload,
+			hash,
+			out NetworkAuthorityCheckpoint restored,
+			out _));
+		Equal(4, restored.OpeningDiceRollResult);
+		False(NetworkAuthorityCheckpointCodec.Validate(
+			threePlayer with { OpeningDiceRollResult = 0 },
+			out _));
+		False(NetworkAuthorityCheckpointCodec.Validate(
+			threePlayer with { OpeningDiceRollResult = 7 },
+			out _));
+
+		NetworkAuthorityCheckpoint fourPlayer = CreateCheckpoint(
+			playerCount: 4,
+			openingDiceRollResult: 6);
+		True(NetworkAuthorityCheckpointCodec.Validate(fourPlayer, out _));
+	}
+
 	private static void CheckpointRuleAdapterRoundtripsFieldsBytesHashAndRandomContinuation()
 	{
 		var sourceRandom = new TestRuleRandomSource(20260804);
@@ -461,7 +496,7 @@ internal static partial class Program
 		True(string.IsNullOrEmpty(secondEncodeError));
 		True(firstPayload.AsSpan().SequenceEqual(secondPayload));
 		Equal(firstHash, secondHash);
-		Equal("51f4591f32a6f583d3c7ecb3214f655f80f0a6dd9d38d5ac194219bf3ecc8999", firstHash);
+		Equal("391b0b9990ba9e5418eaab0e1993646d1683868f0c96026a4f3a874cac8c2356", firstHash);
 
 		int[] expectedContinuation =
 		{
@@ -549,11 +584,17 @@ internal static partial class Program
 		string restoreBody = checkpointSource[restoreStart..restoreEnd];
 		True(restoreBody.Contains("TryBuildRestoredState(", StringComparison.Ordinal));
 		True(restoreBody.Contains("TryRestoreAuthorityRuleSnapshot(", StringComparison.Ordinal));
+		True(restoreBody.Contains(
+			"_openingDiceRollResult = checkpoint.OpeningDiceRollResult;",
+			StringComparison.Ordinal));
 		False(Regex.IsMatch(
 			restoreBody,
 			@"_(?:playerDecks|playerHands|playerItemHands|tableCards)\s*(?:\[[^\]]+\])?\s*\.\s*(?:Clear|Add|AddRange|Insert|Remove|RemoveAt|RemoveRange)\s*\("));
 		True(checkpointSource.Contains(
 			"NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(",
+			StringComparison.Ordinal));
+		True(checkpointSource.Contains(
+			"OpeningDiceRollResult = _openingDiceRollResult,",
 			StringComparison.Ordinal));
 		True(checkpointSource.Contains(
 			"NetworkAuthorityCheckpointRuleAdapter.TryCreateRuleSnapshot(",
@@ -710,7 +751,9 @@ internal static partial class Program
 			out _));
 	}
 
-	private static NetworkAuthorityCheckpoint CreateCheckpoint()
+	private static NetworkAuthorityCheckpoint CreateCheckpoint(
+		int playerCount = 2,
+		int openingDiceRollResult = 0)
 	{
 		RoomPasswordVerifier passwordVerifier = RoomPasswordRules.CreateVerifier("secret");
 		var roster = new List<NetworkMigrationRosterEntry>();
@@ -718,7 +761,8 @@ internal static partial class Program
 		var decks = new List<List<NetworkCheckpointCard>>();
 		var hands = new List<List<NetworkCheckpointCard>>();
 		var items = new List<List<string>>();
-		for (int seat = 0; seat < 2; seat++)
+		var actionIds = new Dictionary<int, long>();
+		for (int seat = 0; seat < playerCount; seat++)
 		{
 			roster.Add(new NetworkMigrationRosterEntry
 			{
@@ -745,6 +789,7 @@ internal static partial class Program
 			});
 			hands.Add(new List<NetworkCheckpointCard>());
 			items.Add(new List<string>());
+			actionIds[seat] = 18 + seat;
 		}
 
 		return new NetworkAuthorityCheckpoint
@@ -757,17 +802,20 @@ internal static partial class Program
 			RoomPasswordVerifierSalt = passwordVerifier.Salt,
 			RoomPasswordVerifier = passwordVerifier.Verifier,
 			MatchSeed = 20260714,
-			PlayerCount = 2,
+			PlayerCount = playerCount,
 			ItemMode = true,
 			WinningScore = 50,
 			ManifestHash = new string('a', 64),
 			Roster = roster,
 			SeatControls = controls,
-			LastAcceptedClientActionIds = new Dictionary<int, long> { [0] = 18, [1] = 19 },
+			LastAcceptedClientActionIds = actionIds,
 			Decks = decks,
 			Hands = hands,
 			ItemHands = items,
-			Scores = new[] { 10, 12 },
+			Scores = Enumerable.Range(0, playerCount)
+				.Select(seat => 10 + seat * 2)
+				.ToArray(),
+			OpeningDiceRollResult = openingDiceRollResult,
 			CurrentTurnPlayerIndex = 0,
 			TurnSequenceGeneration = 2,
 			AuthorityAction = AuthorityActionState.Empty,
@@ -776,27 +824,17 @@ internal static partial class Program
 			SnapshotId = 11,
 			AuthorityEpoch = 0,
 			CheckpointId = 4,
-			ReconnectClaims = new List<NetworkAuthorityReconnectClaim>
-			{
-				new()
+			ReconnectClaims = Enumerable.Range(0, playerCount)
+				.Select(seat => new NetworkAuthorityReconnectClaim
 				{
 					MatchId = "match",
-					SeatIndex = 0,
+					SeatIndex = seat,
 					CredentialGeneration = SeatCredentialRules.InitialGeneration,
-					PlayerSessionId = "peer:0",
+					PlayerSessionId = $"peer:{seat}",
 					ClaimedPeerId = 0,
 					ClaimState = nameof(ReconnectClaimState.Unclaimed),
-				},
-				new()
-				{
-					MatchId = "match",
-					SeatIndex = 1,
-					CredentialGeneration = SeatCredentialRules.InitialGeneration,
-					PlayerSessionId = "peer:1",
-					ClaimedPeerId = 0,
-					ClaimState = nameof(ReconnectClaimState.Unclaimed),
-				},
-			},
+				})
+				.ToList(),
 		};
 	}
 }

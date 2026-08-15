@@ -211,7 +211,7 @@ public partial class MainMenuScene : Control
 		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
 		if (adventureAvatarMenu is AdventureAvatarMenuScene adventureScene)
 		{
-			adventureScene.PrepareForEmbeddedDisplay();
+			adventureScene.PrepareForEmbeddedDisplayForInputMode(_primaryMenuFocusHighlightVisible);
 			adventureScene.FocusDefaultControlDeferred();
 		}
 

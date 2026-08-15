@@ -28,7 +28,7 @@ REQUIRED_NETWORK_CASES = {
 	"short_disconnect",
 	"host_candidate_simultaneous_loss",
 }
-EXPECTED_NETWORK_PROTOCOL = 11
+EXPECTED_NETWORK_PROTOCOL = 12
 RELEASE_EXECUTABLE_SMOKE_MARKER = "RELEASE_EXECUTABLE_SMOKE_OK"
 GODOT_PLATFORM_NAMES = {"windows": "Windows", "linux": "Linux", "macos": "macOS"}
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")

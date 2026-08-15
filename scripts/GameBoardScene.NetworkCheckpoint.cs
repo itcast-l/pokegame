@@ -105,6 +105,7 @@ public partial class GameBoardScene
 					LastAcceptedClientActionIds =
 						new Dictionary<int, long>(lastAcceptedClientActionIds),
 					OpeningDealCompleted = true,
+					OpeningDiceRollResult = _openingDiceRollResult,
 					LastAuthorityActionId = _nextNetworkAuthorityActionId,
 					AuthorityAction = _networkAuthorityActionState,
 					SnapshotId = _networkSnapshotId,
@@ -253,6 +254,8 @@ public partial class GameBoardScene
 		_networkCheckpointId = checkpoint.CheckpointId;
 		_networkSnapshotId = checkpoint.SnapshotId;
 		_networkLastAppliedSnapshotId = checkpoint.SnapshotId;
+		_openingDiceRollResult = checkpoint.OpeningDiceRollResult;
+		_networkOpeningDealCompleted = checkpoint.OpeningDealCompleted;
 		AuthorityActionState restoredAuthorityAction = checkpoint.AuthorityAction.IsActive
 			? checkpoint.AuthorityAction with { TurnGeneration = _turnSequenceGeneration }
 			: checkpoint.AuthorityAction;

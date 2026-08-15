@@ -18,6 +18,7 @@ public partial class NetworkManager
 	private int _lanDiscoveryLastResponderProcessedPacketCount;
 	private int _lanDiscoveryMaximumResponderProcessedPacketCount;
 	private long _lanDiscoveryResponderBudgetExhaustionCount;
+	private long _lanRoomAdvertisementBuildCount;
 
 	public long DebugGetLanDiscoveryDroppedPacketCount() => _lanDiscoveryDroppedPacketCount;
 	public long DebugGetLanDiscoveryRateLimitedSourceCount() => _lanDiscoveryRateLimitedSourceCount;
@@ -25,6 +26,7 @@ public partial class NetworkManager
 	public int DebugGetLanDiscoveryLastResponderProcessedPacketCount() => _lanDiscoveryLastResponderProcessedPacketCount;
 	public int DebugGetLanDiscoveryMaximumResponderProcessedPacketCount() => _lanDiscoveryMaximumResponderProcessedPacketCount;
 	public long DebugGetLanDiscoveryResponderBudgetExhaustionCount() => _lanDiscoveryResponderBudgetExhaustionCount;
+	public long DebugGetLanRoomAdvertisementBuildCount() => _lanRoomAdvertisementBuildCount;
 	private void StartLanDiscoveryResponder()
 	{
 		StopLanDiscoveryResponder();
@@ -48,16 +50,12 @@ public partial class NetworkManager
 			_config,
 			_localDisplayName,
 			NetworkSessionState.Lobby.ToString()));
+		_lanRoomAdvertisementBuildCount++;
 	}
 
 	private void StopLanDiscoveryResponder()
 	{
-		if (_lanDiscoveryResponder == null)
-		{
-			return;
-		}
-
-		_lanDiscoveryResponder.Dispose();
+		_lanDiscoveryResponder?.Dispose();
 		_lanDiscoveryResponder = null;
 		_lanDiscoveryReplyBuckets.Clear();
 		_lanRoomAdvertisementPayload = Array.Empty<byte>();
@@ -94,8 +92,7 @@ public partial class NetworkManager
 				_lanDiscoveryDroppedPacketCount++;
 				continue;
 			}
-			string message = Encoding.UTF8.GetString(packet.Span);
-			if (!string.Equals(message, "deckland_discover", StringComparison.Ordinal))
+			if (!packet.Span.SequenceEqual(LanDiscoveryPingPayload))
 			{
 				_lanDiscoveryParseFailureCount++;
 				continue;
@@ -105,8 +102,7 @@ public partial class NetworkManager
 				_lanDiscoveryRateLimitedSourceCount++;
 				continue;
 			}
-			string payload = LanDiscoveryMessage.Build(_config, _localDisplayName, _state.ToString());
-			_lanDiscoveryResponder.TrySend(Encoding.UTF8.GetBytes(payload), sender);
+			_lanDiscoveryResponder.TrySend(_lanRoomAdvertisementPayload, sender);
 		}
 		_lanDiscoveryLastResponderProcessedPacketCount = processedPacketCount;
 		_lanDiscoveryMaximumResponderProcessedPacketCount = Math.Max(

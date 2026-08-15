@@ -137,7 +137,10 @@ public partial class NetworkManager : Node
 	public override void _ExitTree()
 	{
 		StopNetworkMaintenanceScheduler();
+		DisconnectMultiplayerSignals();
+		DisconnectSteamSignals();
 		AbortSessionCloseAndCleanup(NetworkSessionCloseReason.ApplicationExit);
+		_steamPlatform = null;
 	}
 
 	public void HostLan(int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)
@@ -315,6 +318,31 @@ public partial class NetworkManager : Node
 		Multiplayer.ConnectionFailed += OnConnectionFailed;
 		Multiplayer.ServerDisconnected += OnServerDisconnected;
 		_signalsConnected = true;
+	}
+
+	private void DisconnectMultiplayerSignals()
+	{
+		if (!_signalsConnected)
+		{
+			return;
+		}
+
+		Multiplayer.PeerConnected -= OnPeerConnected;
+		Multiplayer.PeerDisconnected -= OnPeerDisconnected;
+		Multiplayer.ConnectedToServer -= OnConnectedToServer;
+		Multiplayer.ConnectionFailed -= OnConnectionFailed;
+		Multiplayer.ServerDisconnected -= OnServerDisconnected;
+		_signalsConnected = false;
+	}
+
+	public bool DebugAreMultiplayerSignalsConnected()
+	{
+		return _signalsConnected;
+	}
+
+	public bool DebugAreSteamSignalsConnected()
+	{
+		return _steamSignalsConnected;
 	}
 
 	private NetworkSessionConfig CreateConfig(NetworkTransport transport, int playerCount, bool itemMode, int winningScore, string roomName, string roomPassword)

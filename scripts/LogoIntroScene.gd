@@ -90,8 +90,7 @@ func _crossfade_to_main_menu() -> void:
 		get_tree().change_scene_to_file(NEXT_SCENE_PATH)
 		return
 
-	add_child(main_menu)
-	move_child(main_menu, 0)
+	get_tree().root.add_child(main_menu)
 
 	var tween := create_tween()
 	tween.tween_property(_logo_visuals, "modulate:a", 0.0, CROSSFADE_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -113,10 +112,6 @@ func _get_main_menu_packed_scene() -> PackedScene:
 func _complete_handoff(main_menu: Node) -> void:
 	if not is_instance_valid(main_menu):
 		return
-
-	if main_menu.get_parent() == self:
-		remove_child(main_menu)
-		get_tree().root.add_child(main_menu)
 
 	get_tree().current_scene = main_menu
 	queue_free()

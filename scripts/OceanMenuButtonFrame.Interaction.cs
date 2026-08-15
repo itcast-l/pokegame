@@ -9,44 +9,120 @@ public partial class OceanMenuButtonFrame : Control
 	private readonly HashSet<Control> _hoveredControls = new();
 	private readonly HashSet<Control> _focusedControls = new();
 	private readonly HashSet<Control> _pressedControls = new();
+	private readonly HashSet<Node> _observedSubtreeNodes = new();
 	private bool _interactionBindingsReady;
-	private bool _rebuildBindingsDeferred;
-	private SceneTree? _subscribedTree;
+	private long _subtreeChangeCallbackCount;
 
-	private Button? FindDirectButtonChild()
+	private Button? FindDirectButtonChild(Node? exitingSubtree = null)
 	{
+		Button? firstButton = null;
 		for (int index = 0; index < GetChildCount(); index++)
 		{
-			if (GetChild(index) is Button button)
+			if (GetChild(index) is not Button button
+				|| button.IsQueuedForDeletion()
+				|| IsNodeInSubtree(button, exitingSubtree))
+			{
+				continue;
+			}
+
+			if (button.Name == "Button")
 			{
 				return button;
 			}
+			firstButton ??= button;
 		}
 
-		return null;
+		return firstButton;
 	}
 
-	private void RebuildInteractionBindings()
+	private static bool IsNodeInSubtree(Node node, Node? subtreeRoot)
 	{
-		_rebuildBindingsDeferred = false;
-		ClearInteractionBindings();
-		_button = GetNodeOrNull<Button>("Button") ?? FindDirectButtonChild();
-		BindInteractiveDescendants(this);
-		_interactionBindingsReady = true;
-		RefreshTargetState();
+		return subtreeRoot != null
+			&& (node == subtreeRoot || subtreeRoot.IsAncestorOf(node));
 	}
 
-	private void BindInteractiveDescendants(Node node)
+	private void InitializeInteractionBindings()
+	{
+		ClearInteractionObservation();
+		ObserveSubtree(this);
+		UpdatePrimaryButtonReference();
+		_interactionBindingsReady = true;
+	}
+
+	private void ObserveSubtree(Node node)
+	{
+		ObserveNode(node);
+		for (int index = 0; index < node.GetChildCount(); index++)
+		{
+			ObserveSubtree(node.GetChild(index));
+		}
+	}
+
+	private void ObserveNode(Node node)
+	{
+		if (!_observedSubtreeNodes.Add(node))
+		{
+			return;
+		}
+
+		node.ChildEnteredTree += OnObservedChildEnteredTree;
+		node.ChildExitingTree += OnObservedChildExitingTree;
+		if (node is Control control && IsInteractiveControl(control))
+		{
+			BindInteractiveControl(control);
+		}
+	}
+
+	private void UnobserveSubtree(Node node)
 	{
 		for (int index = 0; index < node.GetChildCount(); index++)
 		{
-			Node child = node.GetChild(index);
-			if (child is Control control && IsInteractiveControl(control))
-			{
-				BindInteractiveControl(control);
-			}
-			BindInteractiveDescendants(child);
+			UnobserveSubtree(node.GetChild(index));
 		}
+
+		if (!_observedSubtreeNodes.Remove(node))
+		{
+			return;
+		}
+
+		if (GodotObject.IsInstanceValid(node))
+		{
+			node.ChildEnteredTree -= OnObservedChildEnteredTree;
+			node.ChildExitingTree -= OnObservedChildExitingTree;
+		}
+		if (node is Control control
+			&& _interactionBindings.Remove(control, out InteractionBinding? binding))
+		{
+			UnbindInteractiveControl(control, binding);
+		}
+	}
+
+	private void OnObservedChildEnteredTree(Node node)
+	{
+		_subtreeChangeCallbackCount++;
+		ObserveSubtree(node);
+		UpdatePrimaryButtonReference();
+		RefreshTargetState();
+	}
+
+	private void OnObservedChildExitingTree(Node node)
+	{
+		_subtreeChangeCallbackCount++;
+		UnobserveSubtree(node);
+		UpdatePrimaryButtonReference(node);
+		RefreshTargetState();
+	}
+
+	private void UpdatePrimaryButtonReference(Node? exitingSubtree = null)
+	{
+		Button? nextButton = FindDirectButtonChild(exitingSubtree);
+		if (_button == nextButton)
+		{
+			return;
+		}
+
+		_button = nextButton;
+		QueueRedraw();
 	}
 
 	private static bool IsInteractiveControl(Control control)
@@ -138,6 +214,23 @@ public partial class OceanMenuButtonFrame : Control
 		_pressedControls.Clear();
 	}
 
+	private void ClearInteractionObservation()
+	{
+		foreach (Node node in _observedSubtreeNodes)
+		{
+			if (!GodotObject.IsInstanceValid(node))
+			{
+				continue;
+			}
+			node.ChildEnteredTree -= OnObservedChildEnteredTree;
+			node.ChildExitingTree -= OnObservedChildExitingTree;
+		}
+		_observedSubtreeNodes.Clear();
+		ClearInteractionBindings();
+		_button = null;
+		_interactionBindingsReady = false;
+	}
+
 	private void OnInteractiveControlExiting(Control control)
 	{
 		if (_interactionBindings.Remove(control, out InteractionBinding? binding))
@@ -163,33 +256,6 @@ public partial class OceanMenuButtonFrame : Control
 	private void OnFrameVisibilityChanged()
 	{
 		RefreshTargetState();
-	}
-
-	private void OnTreeNodeAdded(Node node)
-	{
-		if (node != this && IsAncestorOf(node))
-		{
-			QueueInteractionBindingsRebuild();
-		}
-	}
-
-	private void OnTreeNodeRemoved(Node node)
-	{
-		if (node is Control control && _interactionBindings.ContainsKey(control))
-		{
-			OnInteractiveControlExiting(control);
-			QueueInteractionBindingsRebuild();
-		}
-	}
-
-	private void QueueInteractionBindingsRebuild()
-	{
-		if (_rebuildBindingsDeferred || !IsInsideTree())
-		{
-			return;
-		}
-		_rebuildBindingsDeferred = true;
-		CallDeferred(nameof(RebuildInteractionBindings));
 	}
 
 	private void RefreshTargetState()

@@ -27,6 +27,7 @@ public sealed partial class AuthorityRuleSession
 			command.MaximumHandSize,
 			command.AdditionalStartingDraws,
 			command.SeatCardSupplyLimits,
+			command.StartingTurnSeat,
 			intents);
 	}
 
@@ -43,7 +44,8 @@ public sealed partial class AuthorityRuleSession
 			command.StartingScores,
 			command.MaximumHandSize,
 			command.AdditionalStartingDraws,
-			command.SeatCardSupplyLimits);
+			command.SeatCardSupplyLimits,
+			command.StartingTurnSeat);
 		if (rejection.HasValue)
 		{
 			return RuleCommandResult.Rejected(rejection.Value, ReadModel);
@@ -62,6 +64,7 @@ public sealed partial class AuthorityRuleSession
 			command.MaximumHandSize,
 			command.AdditionalStartingDraws,
 			command.SeatCardSupplyLimits,
+			command.StartingTurnSeat,
 			intents);
 	}
 
@@ -194,6 +197,7 @@ public sealed partial class AuthorityRuleSession
 		int maximumHandSize,
 		ImmutableArray<int> additionalStartingDraws,
 		ImmutableArray<int> seatCardSupplyLimits,
+		int startingTurnSeat,
 		ImmutableArray<PresentationIntent>.Builder intents)
 	{
 		ResetForInitialization(
@@ -202,6 +206,7 @@ public sealed partial class AuthorityRuleSession
 			winningScore,
 			lifecycleGeneration,
 			turnGeneration);
+		_state.CurrentTurnPlayerIndex = startingTurnSeat;
 		List<PlayingCard> deck = logicalDeck.Select(FromLogicalCard).ToList();
 		if (dealEqualRanks)
 		{
@@ -288,7 +293,8 @@ public sealed partial class AuthorityRuleSession
 			command.StartingScores,
 			command.MaximumHandSize,
 			command.AdditionalStartingDraws,
-			command.SeatCardSupplyLimits);
+			command.SeatCardSupplyLimits,
+			command.StartingTurnSeat);
 	}
 
 	private static RuleRejection? ValidateInitializeConfiguration(
@@ -300,10 +306,13 @@ public sealed partial class AuthorityRuleSession
 		ImmutableArray<int> startingScores,
 		int maximumHandSize,
 		ImmutableArray<int> additionalStartingDraws,
-		ImmutableArray<int> seatCardSupplyLimits)
+		ImmutableArray<int> seatCardSupplyLimits,
+		int startingTurnSeat)
 	{
 		if (lifecycleGeneration <= 0
 			|| playerCount is < 2 or > 4
+			|| startingTurnSeat < 0
+			|| startingTurnSeat >= playerCount
 			|| winningScore <= 0
 			|| startingHandSize < 0
 			|| maximumHandSize < startingHandSize

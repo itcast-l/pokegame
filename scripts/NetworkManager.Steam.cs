@@ -8,6 +8,12 @@ public partial class NetworkManager
 	private ulong _acceptedSteamLobbyJoinId;
 	private ulong _originalSteamLobbyOwnerId;
 	private ulong _lastObservedSteamLobbyOwnerId;
+	private Callable _steamReadyCallable;
+	private Callable _steamLobbyCreatedCallable;
+	private Callable _steamLobbyJoinedCallable;
+	private Callable _steamLobbyMatchListCallable;
+	private Callable _steamJoinRequestedCallable;
+	private Callable _steamLobbyDataUpdateCallable;
 	private static readonly string[] SteamLobbyMetadataKeys =
 	{
 		SteamLobbyMetadata.ProtocolKey,
@@ -134,13 +140,45 @@ public partial class NetworkManager
 			return;
 		}
 
-		_steamPlatform.ConnectSignal("steam_ready", Callable.From(TryConnectSteamSignals));
-		_steamPlatform.ConnectSignal("lobby_created", Callable.From<int, ulong>(OnSteamLobbyCreated));
-		_steamPlatform.ConnectSignal("lobby_joined", Callable.From<ulong, int, bool, int>(OnSteamLobbyJoined));
-		_steamPlatform.ConnectSignal("lobby_match_list", Callable.From<Godot.Collections.Array>(OnSteamLobbyMatchList));
-		_steamPlatform.ConnectSignal("join_requested", Callable.From<ulong, ulong>(OnSteamJoinRequested));
-		_steamPlatform.ConnectSignal("lobby_data_update", Callable.From<int, ulong, ulong>(OnSteamLobbyDataUpdate));
+		_steamReadyCallable = Callable.From(TryConnectSteamSignals);
+		_steamLobbyCreatedCallable = Callable.From<int, ulong>(OnSteamLobbyCreated);
+		_steamLobbyJoinedCallable = Callable.From<ulong, int, bool, int>(OnSteamLobbyJoined);
+		_steamLobbyMatchListCallable = Callable.From<Godot.Collections.Array>(OnSteamLobbyMatchList);
+		_steamJoinRequestedCallable = Callable.From<ulong, ulong>(OnSteamJoinRequested);
+		_steamLobbyDataUpdateCallable = Callable.From<int, ulong, ulong>(OnSteamLobbyDataUpdate);
+		bool allSignalsConnected = _steamPlatform.ConnectSignal("steam_ready", _steamReadyCallable);
+		allSignalsConnected &= _steamPlatform.ConnectSignal("lobby_created", _steamLobbyCreatedCallable);
+		allSignalsConnected &= _steamPlatform.ConnectSignal("lobby_joined", _steamLobbyJoinedCallable);
+		allSignalsConnected &= _steamPlatform.ConnectSignal("lobby_match_list", _steamLobbyMatchListCallable);
+		allSignalsConnected &= _steamPlatform.ConnectSignal("join_requested", _steamJoinRequestedCallable);
+		allSignalsConnected &= _steamPlatform.ConnectSignal("lobby_data_update", _steamLobbyDataUpdateCallable);
 		_steamSignalsConnected = true;
+		if (!allSignalsConnected)
+		{
+			DisconnectSteamSignals();
+		}
+	}
+
+	private void DisconnectSteamSignals()
+	{
+		if (!_steamSignalsConnected)
+		{
+			return;
+		}
+
+		_steamPlatform?.DisconnectSignal("steam_ready", _steamReadyCallable);
+		_steamPlatform?.DisconnectSignal("lobby_created", _steamLobbyCreatedCallable);
+		_steamPlatform?.DisconnectSignal("lobby_joined", _steamLobbyJoinedCallable);
+		_steamPlatform?.DisconnectSignal("lobby_match_list", _steamLobbyMatchListCallable);
+		_steamPlatform?.DisconnectSignal("join_requested", _steamJoinRequestedCallable);
+		_steamPlatform?.DisconnectSignal("lobby_data_update", _steamLobbyDataUpdateCallable);
+		_steamSignalsConnected = false;
+		_steamReadyCallable = default;
+		_steamLobbyCreatedCallable = default;
+		_steamLobbyJoinedCallable = default;
+		_steamLobbyMatchListCallable = default;
+		_steamJoinRequestedCallable = default;
+		_steamLobbyDataUpdateCallable = default;
 	}
 
 	private bool TryCreateSteamPeer(bool server, ulong lobbyId, out MultiplayerPeer? peer)

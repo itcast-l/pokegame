@@ -202,6 +202,7 @@ public static class NetworkAuthorityCheckpointCodec
 			|| checkpoint.WinnerPlayerIndex < -1
 			|| checkpoint.WinnerPlayerIndex >= checkpoint.PlayerCount
 			|| !MatchReadModel.IsSerializedOutcomeValid(checkpoint.MatchOutcomeKind, checkpoint.WinnerPlayerIndex, checkpoint.PlayerCount)
+			|| !HasValidOpeningDiceResult(checkpoint)
 			|| !AuthorityActionStateRules.IsValid(checkpoint.AuthorityAction, checkpoint.PlayerCount)
 			|| !AuthorityActionStateRules.IsStableCheckpointState(checkpoint.AuthorityAction))
 		{
@@ -386,6 +387,19 @@ public static class NetworkAuthorityCheckpointCodec
 		}
 
 		return true;
+	}
+
+	private static bool HasValidOpeningDiceResult(
+		NetworkAuthorityCheckpoint checkpoint)
+	{
+		if (checkpoint.Phase == NetworkAuthorityPhase.Lobby
+			|| checkpoint.PlayerCount < 3)
+		{
+			return checkpoint.OpeningDiceRollResult == 0;
+		}
+
+		return DiceRollPresentationRules.IsValidResult(
+			checkpoint.OpeningDiceRollResult);
 	}
 
 	private static bool IsSha256Hash(string? value)

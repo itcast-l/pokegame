@@ -36,7 +36,7 @@ class HostMigrationReleaseEvidenceTests(unittest.TestCase):
 			"schema_version": 1,
 			"status": "target_runtime_pending",
 			"build_id": build_id,
-			"network_protocol": 11,
+			"network_protocol": evidence.EXPECTED_NETWORK_PROTOCOL,
 			"platform": platform,
 			"source_integrity": {"unchanged": True},
 			"package_audit": {"content": {"ok": True}},
@@ -50,7 +50,8 @@ class HostMigrationReleaseEvidenceTests(unittest.TestCase):
 		audit_relative = self._write(root, f"runtime/{platform}/release-audit.json", json.dumps(audit))
 		audit_path = root / audit_relative
 		build_marker = (
-			f"RELEASE_BUILD_INFO build_id={build_id} protocol=11 "
+			f"RELEASE_BUILD_INFO build_id={build_id} "
+			f"protocol={evidence.EXPECTED_NETWORK_PROTOCOL} "
 			f"platform={evidence.GODOT_PLATFORM_NAMES[platform]}"
 		)
 		marker = f"RELEASE_EXECUTABLE_SMOKE_OK platform={evidence.GODOT_PLATFORM_NAMES[platform]}"
@@ -62,7 +63,7 @@ class HostMigrationReleaseEvidenceTests(unittest.TestCase):
 			"started_at_utc": "2026-08-01T10:00:00Z",
 			"completed_at_utc": "2026-08-01T10:00:10Z",
 			"build_id": build_id,
-			"network_protocol": 11,
+			"network_protocol": evidence.EXPECTED_NETWORK_PROTOCOL,
 			"platform": platform,
 			"device_id": device_id,
 			"host": {
@@ -176,7 +177,8 @@ class HostMigrationReleaseEvidenceTests(unittest.TestCase):
 			real_lan_runs = []
 			for platform in sorted(evidence.REQUIRED_LAN_PLATFORMS):
 				build_marker = (
-					f"RELEASE_BUILD_INFO build_id={build_id} protocol=11 "
+					f"RELEASE_BUILD_INFO build_id={build_id} "
+					f"protocol={evidence.EXPECTED_NETWORK_PROTOCOL} "
 					f"platform={evidence.GODOT_PLATFORM_NAMES[platform]}"
 				)
 				audit_path, runtime_evidence_path = self._runtime_artifacts(
@@ -231,7 +233,11 @@ class HostMigrationReleaseEvidenceTests(unittest.TestCase):
 				"schema_version": 1,
 				"release_id": "release-fixture",
 				"evidence_root": ".",
-				"build": {"build_id": build_id, "configuration": "Release", "network_protocol": 11},
+				"build": {
+					"build_id": build_id,
+					"configuration": "Release",
+					"network_protocol": evidence.EXPECTED_NETWORK_PROTOCOL,
+				},
 				"accounts": accounts,
 				"steam_cases": steam_cases,
 				"real_lan_runs": real_lan_runs,
