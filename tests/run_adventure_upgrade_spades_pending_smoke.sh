@@ -26,9 +26,15 @@ cleanup() {
 
 trap cleanup EXIT
 
-"$GODOT_CMD" --headless --path "$ROOT_DIR" --script res://tests/AdventureUpgradeSpadesPendingSmoke.gd >"$LOG_FILE" 2>&1
+if ! "$GODOT_CMD" --headless --audio-driver Dummy --path "$ROOT_DIR" \
+	--script res://tests/AdventureUpgradeSpadesPendingSmoke.gd >"$LOG_FILE" 2>&1; then
+	cat "$LOG_FILE" >&2
+	exit 1
+fi
 
-if grep -Fq "SCRIPT ERROR" "$LOG_FILE"; then
+if grep -Eiq \
+	"SCRIPT ERROR|FATAL:|handle_crash|Program crashed with signal|Abort trap|uncaught exception|mutex lock failed|RID allocations .* leaked|ObjectDB instances leaked|resources still in use|orphan StringName" \
+	"$LOG_FILE"; then
 	cat "$LOG_FILE" >&2
 	exit 1
 fi

@@ -70,7 +70,8 @@ public partial class GameBoardScene
 
 	private AdventureUpgradeGrantCommitResult GrantAdventureUpgrade(
 		string upgradeId,
-		AdventureUpgradeTriggerSource triggerSource)
+		AdventureUpgradeTriggerSource triggerSource,
+		string? replacedUpgradeId = null)
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		if (store == null)
@@ -80,10 +81,11 @@ public partial class GameBoardScene
 				AdventureRunWriteResult.SaveFailed,
 				AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
 				default,
+				null,
 				null);
 		}
 
-		return store.GrantUpgrade(upgradeId, triggerSource);
+		return store.GrantUpgrade(upgradeId, triggerSource, replacedUpgradeId);
 	}
 
 	private int DrawCardsFromDeckToHandForAdventureEffect(int playerIndex, int drawCount)

@@ -37,6 +37,8 @@ func _run() -> void:
 	if not board.has_method("DebugIsAdventureUpgradeSelectionVisible") \
 		or not board.has_method("DebugSelectAdventureUpgradeOption") \
 		or not board.has_method("DebugAcquireAdventureUpgrade") \
+		or not board.has_method("DebugReplaceAdventureUpgrade") \
+		or not board.has_method("DebugGetAdventureAcquiredUpgradeCount") \
 		or not board.has_method("DebugSimulateAdventureEnemyMiss") \
 		or not board.has_method("DebugSimulateAdventureEnemyCapture") \
 		or not board.has_method("DebugGetAdventureEnemyNextCardFacesUp") \
@@ -107,13 +109,34 @@ func _run() -> void:
 	var miss_triggered_upgrades := [
 		"spades_missed_beat_blunt_hurt",
 		"spades_miss_bleed",
-		"spades_return_tide_misorder",
 		"spades_intercept_beat",
 	]
 	for upgrade_id in miss_triggered_upgrades:
 		if not bool(board.call("DebugAcquireAdventureUpgrade", upgrade_id)):
 			_fail("Failed to inject adventure upgrade %s" % upgrade_id)
 			return
+
+	var replacement_fillers := [
+		"hearts_thick_blood",
+		"hearts_shoal_preparation",
+		"hearts_warm_current_supply",
+		"diamonds_small_insurance",
+		"diamonds_multi_card_premium",
+		"clubs_cross_graft",
+	]
+	for upgrade_id in replacement_fillers:
+		if int(board.call("DebugGetAdventureAcquiredUpgradeCount")) >= 8:
+			break
+		board.call("DebugAcquireAdventureUpgrade", upgrade_id)
+	if int(board.call("DebugGetAdventureAcquiredUpgradeCount")) != 8:
+		_fail("Failed to fill the adventure upgrade capacity for conflict replacement")
+		return
+	if not bool(board.call(
+			"DebugReplaceAdventureUpgrade",
+			"spades_return_tide_misorder",
+			"spades_wrong_shore_lineup")):
+		_fail("Failed to atomically replace wrong-shore lineup with return-tide misorder")
+		return
 
 	if not bool(board.call("DebugSimulateAdventureEnemyMiss", 5, true)):
 		_fail("Failed to simulate below-threshold enemy miss pending state")
@@ -148,7 +171,10 @@ func _run() -> void:
 		return
 
 	print("ADVENTURE_UPGRADE_SPADES_PENDING_SMOKE_OK")
-	quit()
+	board.queue_free()
+	await _wait_frames(12)
+	await _dispose_audio_before_quit()
+	quit(0)
 
 
 func _wait_for_upgrade_selection(board: Node) -> bool:
@@ -175,6 +201,18 @@ func _wait_for_main_action(board: Node) -> bool:
 			return true
 	_fail("Timed out waiting for main action state")
 	return false
+
+
+func _dispose_audio_before_quit() -> void:
+	var game_audio := root.get_node_or_null("GameAudio")
+	if game_audio != null and game_audio.has_method("DisposeAllAudioImmediately"):
+		game_audio.call("DisposeAllAudioImmediately")
+	await _wait_frames(12)
+
+
+func _wait_frames(count: int) -> void:
+	for _frame in range(count):
+		await process_frame
 
 
 func _fail(message: String) -> void:

@@ -13,6 +13,7 @@ public partial class GameBoardScene
 	private double _debugSpecialCardProbeElapsedSeconds;
 	private bool _debugForceNextPendingHandLimitDiscardHeuristicFailure;
 	private bool _debugForceNextAdventureUpgradeOverlayDisplayFailure;
+	private bool _debugForceNextAdventureUpgradeReplacementOverlayDisplayFailure;
 	private double _debugNetworkVisualPlaybackDelaySeconds;
 	private int _debugNetworkVisualPlaybackFailuresToInject;
 	private int _debugQuestionRewardGrantCount;
@@ -38,6 +39,17 @@ public partial class GameBoardScene
 		}
 
 		_debugForceNextAdventureUpgradeOverlayDisplayFailure = false;
+		return true;
+	}
+
+	private bool ConsumeDebugForceNextAdventureUpgradeReplacementOverlayDisplayFailure()
+	{
+		if (!_debugForceNextAdventureUpgradeReplacementOverlayDisplayFailure)
+		{
+			return false;
+		}
+
+		_debugForceNextAdventureUpgradeReplacementOverlayDisplayFailure = false;
 		return true;
 	}
 

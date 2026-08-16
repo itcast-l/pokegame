@@ -9,6 +9,7 @@ public enum AdventureDefeatResolution
 
 internal sealed class AdventureUpgradeRunState
 {
+	internal const int MaxActiveUpgradeCount = 8;
 	private const int DefaultAdventurePlayerHealth = 100;
 	private const int MaximumAdventurePlayerHealth = 150;
 	private const string QuestionMarkInterestUpgradeId = "diamonds_question_mark_interest";
@@ -17,6 +18,7 @@ internal sealed class AdventureUpgradeRunState
 	private const string OverflowGrowthUpgradeId = "hearts_overflow_growth";
 
 	private readonly HashSet<string> AcquiredUpgradeIds = new(StringComparer.Ordinal);
+	private readonly HashSet<string> RetiredUpgradeIds = new(StringComparer.Ordinal);
 	private readonly AdventureUpgradeEffectState _effectState = new();
 	private AdventureUpgradeManifest? _manifest;
 
@@ -55,6 +57,9 @@ internal sealed class AdventureUpgradeRunState
 		_manifest = manifest;
 		AdventureUpgradeRuntimeValues.SetManifest(manifest);
 		AcquiredUpgradeIds.RemoveWhere(id => !manifest.ContainsEnabledId(id));
+		RetiredUpgradeIds.RemoveWhere(id => !manifest.ContainsEnabledId(id));
+		RetiredUpgradeIds.ExceptWith(AcquiredUpgradeIds);
+		TrimActiveUpgradesToCapacity();
 		NormalizePersistentState();
 	}
 
@@ -154,7 +159,9 @@ internal sealed class AdventureUpgradeRunState
 		ShouldGrantVictoryUpgrade = false;
 	}
 
-	internal AdventureUpgradeAcquireResult AcquireUpgrade(string upgradeId)
+	internal AdventureUpgradeAcquireResult AcquireUpgrade(
+		string upgradeId,
+		string? replacedUpgradeId = null)
 	{
 		if (!HasReadyManifest)
 		{
@@ -167,11 +174,49 @@ internal sealed class AdventureUpgradeRunState
 		}
 
 		string normalizedId = upgradeId.Trim();
-		if (!AcquiredUpgradeIds.Add(normalizedId))
+		if (RetiredUpgradeIds.Contains(normalizedId))
+		{
+			return AdventureUpgradeAcquireResult.RejectedRetiredUpgrade;
+		}
+		if (AcquiredUpgradeIds.Contains(normalizedId))
 		{
 			return AdventureUpgradeAcquireResult.AlreadyAcquired;
 		}
 
+		string normalizedReplacementId = replacedUpgradeId?.Trim() ?? string.Empty;
+		if (AcquiredUpgradeIds.Count < MaxActiveUpgradeCount)
+		{
+			if (normalizedReplacementId.Length > 0)
+			{
+				return AdventureUpgradeAcquireResult.RejectedInvalidReplacementTarget;
+			}
+			if (ConflictsWithActiveUpgrade(normalizedId, exceptUpgradeId: null))
+			{
+				return AdventureUpgradeAcquireResult.RejectedConflictingUpgrade;
+			}
+
+			AcquiredUpgradeIds.Add(normalizedId);
+			NormalizePersistentState();
+			return AdventureUpgradeAcquireResult.Acquired;
+		}
+
+		if (normalizedReplacementId.Length == 0)
+		{
+			return AdventureUpgradeAcquireResult.RejectedCapacityFull;
+		}
+		if (!AcquiredUpgradeIds.Contains(normalizedReplacementId))
+		{
+			return AdventureUpgradeAcquireResult.RejectedInvalidReplacementTarget;
+		}
+		if (ConflictsWithActiveUpgrade(normalizedId, normalizedReplacementId))
+		{
+			return AdventureUpgradeAcquireResult.RejectedConflictingUpgrade;
+		}
+
+		AcquiredUpgradeIds.Remove(normalizedReplacementId);
+		RetiredUpgradeIds.Add(normalizedReplacementId);
+		AcquiredUpgradeIds.Add(normalizedId);
+		ClearRetiredUpgradeEffectState(normalizedReplacementId);
 		NormalizePersistentState();
 		return AdventureUpgradeAcquireResult.Acquired;
 	}
@@ -184,6 +229,11 @@ internal sealed class AdventureUpgradeRunState
 	internal IReadOnlyCollection<string> GetAcquiredUpgradeIds()
 	{
 		return new List<string>(AcquiredUpgradeIds);
+	}
+
+	internal IReadOnlyCollection<string> GetRetiredUpgradeIds()
+	{
+		return new List<string>(RetiredUpgradeIds);
 	}
 
 	internal AdventureUpgradeRunState DeepClone()
@@ -217,6 +267,11 @@ internal sealed class AdventureUpgradeRunState
 		{
 			AcquiredUpgradeIds.Add(upgradeId);
 		}
+		RetiredUpgradeIds.Clear();
+		foreach (string upgradeId in other.RetiredUpgradeIds)
+		{
+			RetiredUpgradeIds.Add(upgradeId);
+		}
 		_effectState.CopyFrom(other._effectState);
 	}
 
@@ -238,6 +293,8 @@ internal sealed class AdventureUpgradeRunState
 		NormalizePersistentState();
 		var sortedUpgradeIds = new List<string>(AcquiredUpgradeIds);
 		sortedUpgradeIds.Sort(StringComparer.Ordinal);
+		var sortedRetiredUpgradeIds = new List<string>(RetiredUpgradeIds);
+		sortedRetiredUpgradeIds.Sort(StringComparer.Ordinal);
 		return new AdventureUpgradeRunSnapshot(
 			AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
 			CampaignId,
@@ -251,7 +308,8 @@ internal sealed class AdventureUpgradeRunState
 			_effectState.PermanentCaptureDamageBonus,
 			_effectState.QuestionRewardCount,
 			_effectState.HealingOverflowRemainder,
-			HasUsedRevive);
+			HasUsedRevive,
+			sortedRetiredUpgradeIds);
 	}
 
 	internal AdventureUpgradeRestoreResult RestoreFromSnapshot(AdventureUpgradeRunSnapshot snapshot)
@@ -288,9 +346,47 @@ internal sealed class AdventureUpgradeRunState
 			}
 		}
 
+		var normalizedRetiredUpgradeIds = new HashSet<string>(StringComparer.Ordinal);
+		if (snapshot.SchemaVersion >= 8 && snapshot.RetiredUpgradeIds != null)
+		{
+			foreach (string? upgradeId in snapshot.RetiredUpgradeIds)
+			{
+				if (string.IsNullOrWhiteSpace(upgradeId)
+					|| !_manifest!.CanRestoreUpgradeId(upgradeId, snapshot.SchemaVersion))
+				{
+					migrated = true;
+					continue;
+				}
+
+				string normalizedId = upgradeId.Trim();
+				if (!normalizedRetiredUpgradeIds.Add(normalizedId)
+					|| !string.Equals(upgradeId, normalizedId, StringComparison.Ordinal))
+				{
+					migrated = true;
+				}
+			}
+		}
+
 		var sortedUpgradeIds = new List<string>(normalizedUpgradeIds);
 		sortedUpgradeIds.Sort(StringComparer.Ordinal);
 		if (!SequenceMatches(snapshot.AcquiredUpgradeIds, sortedUpgradeIds))
+		{
+			migrated = true;
+		}
+		while (sortedUpgradeIds.Count > MaxActiveUpgradeCount)
+		{
+			string retiredOverflowId = sortedUpgradeIds[MaxActiveUpgradeCount];
+			sortedUpgradeIds.RemoveAt(MaxActiveUpgradeCount);
+			normalizedRetiredUpgradeIds.Add(retiredOverflowId);
+			migrated = true;
+		}
+		normalizedRetiredUpgradeIds.ExceptWith(sortedUpgradeIds);
+		var sortedRetiredUpgradeIds = new List<string>(normalizedRetiredUpgradeIds);
+		sortedRetiredUpgradeIds.Sort(StringComparer.Ordinal);
+		if (snapshot.SchemaVersion >= 8
+			&& !SequenceMatches(
+				snapshot.RetiredUpgradeIds ?? Array.Empty<string>(),
+				sortedRetiredUpgradeIds))
 		{
 			migrated = true;
 		}
@@ -306,6 +402,10 @@ internal sealed class AdventureUpgradeRunState
 		foreach (string upgradeId in sortedUpgradeIds)
 		{
 			AcquiredUpgradeIds.Add(upgradeId);
+		}
+		foreach (string upgradeId in sortedRetiredUpgradeIds)
+		{
+			RetiredUpgradeIds.Add(upgradeId);
 		}
 
 		int requestedMaxHealth = snapshot.SchemaVersion >= 2
@@ -338,9 +438,10 @@ internal sealed class AdventureUpgradeRunState
 		int maximumPermanentBonus = Math.Min(
 			_effectState.QuestionRewardCount,
 			AdventureUpgradeEffectState.MaxPermanentCaptureDamageBonus);
-		_effectState.PermanentCaptureDamageBonus = HasAcquiredUpgrade(QuestionMarkInterestUpgradeId)
-			? Math.Clamp(requestedPermanentBonus, 0, maximumPermanentBonus)
-			: 0;
+		_effectState.PermanentCaptureDamageBonus = Math.Clamp(
+			requestedPermanentBonus,
+			0,
+			maximumPermanentBonus);
 		if (_effectState.PermanentCaptureDamageBonus != requestedPermanentBonus)
 		{
 			migrated = true;
@@ -383,6 +484,7 @@ internal sealed class AdventureUpgradeRunState
 		CurrentHealth = DefaultAdventurePlayerHealth;
 		MaxHealth = DefaultAdventurePlayerHealth;
 		AcquiredUpgradeIds.Clear();
+		RetiredUpgradeIds.Clear();
 		_effectState.Clear();
 	}
 
@@ -397,15 +499,88 @@ internal sealed class AdventureUpgradeRunState
 		int maximumPermanentBonus = Math.Min(
 			_effectState.QuestionRewardCount,
 			AdventureUpgradeEffectState.MaxPermanentCaptureDamageBonus);
-		_effectState.PermanentCaptureDamageBonus = HasAcquiredUpgrade(QuestionMarkInterestUpgradeId)
-			? Math.Clamp(_effectState.PermanentCaptureDamageBonus, 0, maximumPermanentBonus)
-			: 0;
+		_effectState.PermanentCaptureDamageBonus = Math.Clamp(
+			_effectState.PermanentCaptureDamageBonus,
+			0,
+			maximumPermanentBonus);
 		_effectState.HealingOverflowRemainder = HasAcquiredUpgrade(OverflowGrowthUpgradeId)
 			? Math.Clamp(_effectState.HealingOverflowRemainder, 0, AdventureUpgradeEffectState.MaxHealingOverflowRemainder)
 			: 0;
 		_effectState.FinalDoubleCaptureDamageActive =
 			HasAcquiredUpgrade(FinalDoubleUpgradeId)
 			&& _effectState.QuestionRewardCount >= AdventureUpgradeEffectState.MaxQuestionRewardCount;
+	}
+
+	private bool ConflictsWithActiveUpgrade(string upgradeId, string? exceptUpgradeId)
+	{
+		if (_manifest?.TryGetEnabledEntry(upgradeId, out AdventureUpgradeManifestEntry candidate) != true
+			|| string.IsNullOrWhiteSpace(candidate.ConflictGroup))
+		{
+			return false;
+		}
+
+		foreach (string acquiredId in AcquiredUpgradeIds)
+		{
+			if (string.Equals(acquiredId, exceptUpgradeId, StringComparison.Ordinal))
+			{
+				continue;
+			}
+			if (_manifest.TryGetEnabledEntry(acquiredId, out AdventureUpgradeManifestEntry acquired)
+				&& string.Equals(acquired.ConflictGroup, candidate.ConflictGroup, StringComparison.Ordinal))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private void TrimActiveUpgradesToCapacity()
+	{
+		if (AcquiredUpgradeIds.Count <= MaxActiveUpgradeCount)
+		{
+			return;
+		}
+
+		var sorted = new List<string>(AcquiredUpgradeIds);
+		sorted.Sort(StringComparer.Ordinal);
+		for (int index = MaxActiveUpgradeCount; index < sorted.Count; index++)
+		{
+			AcquiredUpgradeIds.Remove(sorted[index]);
+			RetiredUpgradeIds.Add(sorted[index]);
+		}
+	}
+
+	private void ClearRetiredUpgradeEffectState(string retiredUpgradeId)
+	{
+		switch (retiredUpgradeId)
+		{
+			case "hearts_miss_bandage":
+				_effectState.NextTurnHealAmount = 0;
+				_effectState.NextTurnDrawCount = 0;
+				break;
+			case "hearts_overflow_growth":
+				_effectState.HealingOverflowRemainder = 0;
+				break;
+			case "diamonds_miss_discount":
+				_effectState.NextCaptureDamageBonus = 0;
+				break;
+			case "diamonds_final_double":
+				_effectState.FinalDoubleCaptureDamageActive = false;
+				break;
+			case "clubs_short_branch_return":
+				_effectState.ClubShortBranchReturnUsedThisTurn = false;
+				break;
+			case "clubs_miss_climb_growth":
+				_effectState.ClubMissClimbGrowthStacks = 0;
+				break;
+			case "clubs_borrow_suit_set":
+				_effectState.ClubBorrowSuitSetArmed = false;
+				break;
+			case "clubs_gap_rooting":
+				_effectState.ClubGapRootingUsedThisTurn = false;
+				break;
+		}
 	}
 
 	private static bool IsSupportedSchemaVersion(int schemaVersion)

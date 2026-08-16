@@ -76,7 +76,7 @@ internal static partial class Program
 			Upgrade("rare_a", "rare"),
 			Upgrade("rare_b", "rare"),
 		};
-		int[] rolls = { 99, 1, 0, 0, 99, 0 };
+		int[] rolls = { 99, 3, 0, 0, 99, 0 };
 		int rollIndex = 0;
 
 		IReadOnlyList<AdventureUpgradeDefinitionModel> offer = AdventureUpgradeChoiceRules.BuildOffer(
@@ -89,6 +89,41 @@ internal static partial class Program
 		Equal("rare_b", offer[0].Id);
 		Equal("common_a", offer[1].Id);
 		Equal("rare_a", offer[2].Id);
+	}
+
+	private static void AdventureUpgradeChoiceWeightsCurrentSuitsAndExcludesRetiredHistory()
+	{
+		var definitions = new[]
+		{
+			Upgrade("hearts_owned", "rare", "hearts"),
+			Upgrade("spades_retired", "rare", "spades"),
+			Upgrade("hearts_candidate", "rare", "hearts"),
+			Upgrade("spades_candidate", "rare", "spades"),
+			Upgrade("diamonds_candidate", "rare", "diamonds"),
+			Upgrade("clubs_candidate", "rare", "clubs"),
+		};
+		var requestedMaxima = new List<int>();
+		int[] rolls = { 70, 2, 70, 0, 70, 0 };
+		int rollIndex = 0;
+
+		IReadOnlyList<AdventureUpgradeDefinitionModel> offer = AdventureUpgradeChoiceRules.BuildOffer(
+			definitions,
+			new[] { "hearts_owned" },
+			runStageIndex: 1,
+			maxExclusive =>
+			{
+				requestedMaxima.Add(maxExclusive);
+				return rolls[rollIndex++] % maxExclusive;
+			},
+			manifest: null,
+			retiredIds: new[] { "spades_retired" });
+
+		Equal(3, offer.Count);
+		Equal("hearts_candidate", offer[0].Id);
+		False(ContainsUpgradeId(offer, "hearts_owned"));
+		False(ContainsUpgradeId(offer, "spades_retired"));
+		Equal(100, requestedMaxima[0]);
+		Equal(9, requestedMaxima[1]);
 	}
 
 	private static void AdventureUpgradeChoiceReturnsRemainingPoolWhenBelowOfferSize()
@@ -167,6 +202,141 @@ internal static partial class Program
 		False(runState.IsActive);
 		Equal(0, runState.CurrentRunStageIndex);
 		False(runState.HasAcquiredUpgrade("common_a"));
+	}
+
+	private static void AdventureUpgradeRunEnforcesCapacityAndAtomicReplacement()
+	{
+		string[] ids =
+		{
+			"hearts_warm_current_supply",
+			"hearts_long_capture_recovery",
+			"hearts_miss_bandage",
+			"hearts_question_mark_first_aid",
+			"diamonds_small_insurance",
+			"diamonds_question_mark_raise",
+			"spades_dark_harbor_reveal",
+			"clubs_short_branch_return",
+			"clubs_gap_rooting",
+		};
+		var state = new AdventureUpgradeRunState(
+			AdventureUpgradeManifest.FromEnabledIds(AdventureUpgradeRuntimeContract.All.Keys));
+		state.BeginNewRun(3);
+		for (int index = 0; index < AdventureUpgradeRunState.MaxActiveUpgradeCount; index++)
+		{
+			Equal(AdventureUpgradeAcquireResult.Acquired, state.AcquireUpgrade(ids[index]));
+		}
+
+		Equal(
+			AdventureUpgradeAcquireResult.RejectedCapacityFull,
+			state.AcquireUpgrade(ids[8]));
+		Equal(
+			AdventureUpgradeAcquireResult.RejectedInvalidReplacementTarget,
+			state.AcquireUpgrade(ids[8], "missing"));
+		Equal(8, state.GetAcquiredUpgradeIds().Count);
+		Equal(0, state.GetRetiredUpgradeIds().Count);
+
+		Equal(
+			AdventureUpgradeAcquireResult.Acquired,
+			state.AcquireUpgrade(ids[8], ids[2]));
+		Equal(8, state.GetAcquiredUpgradeIds().Count);
+		False(state.HasAcquiredUpgrade(ids[2]));
+		True(state.HasAcquiredUpgrade(ids[8]));
+		True(state.GetRetiredUpgradeIds().Contains(ids[2]));
+		Equal(
+			AdventureUpgradeAcquireResult.RejectedRetiredUpgrade,
+			state.AcquireUpgrade(ids[2], ids[0]));
+	}
+
+	private static void AdventureUpgradeReplacementValidatesConflictsAndRetiredIds()
+	{
+		string[] ids =
+		{
+			"hearts_warm_current_supply",
+			"hearts_long_capture_recovery",
+			"hearts_miss_bandage",
+			"hearts_question_mark_first_aid",
+			"diamonds_small_insurance",
+			"diamonds_question_mark_raise",
+			"spades_dark_harbor_reveal",
+			"clubs_short_branch_return",
+			"clubs_gap_rooting",
+			"clubs_primary_root_return",
+		};
+		AdventureUpgradeManifest source = AdventureUpgradeManifest.FromEnabledIds(ids);
+		var entries = new List<AdventureUpgradeManifestEntry>(source.Entries);
+		for (int index = 0; index < entries.Count; index++)
+		{
+			if (entries[index].Id is "clubs_gap_rooting" or "clubs_primary_root_return")
+			{
+				entries[index] = entries[index] with { ConflictGroup = "test_conflict" };
+			}
+		}
+		var state = new AdventureUpgradeRunState(new AdventureUpgradeManifest(entries));
+		state.BeginNewRun(3);
+		foreach (string id in ids[..8])
+		{
+			Equal(AdventureUpgradeAcquireResult.Acquired, state.AcquireUpgrade(id));
+		}
+
+		Equal(
+			AdventureUpgradeAcquireResult.Acquired,
+			state.AcquireUpgrade("clubs_gap_rooting", ids[0]));
+		Equal(
+			AdventureUpgradeAcquireResult.RejectedConflictingUpgrade,
+			state.AcquireUpgrade("clubs_primary_root_return", ids[1]));
+		Equal(
+			AdventureUpgradeAcquireResult.Acquired,
+			state.AcquireUpgrade("clubs_primary_root_return", "clubs_gap_rooting"));
+		True(state.GetRetiredUpgradeIds().Contains("clubs_gap_rooting"));
+	}
+
+	private static void AdventureUpgradeReplacementClearsOwnedPendingStateAndPreservesGains()
+	{
+		string[] ids =
+		{
+			"hearts_miss_bandage",
+			"hearts_overflow_growth",
+			"diamonds_miss_discount",
+			"diamonds_question_mark_interest",
+			"diamonds_final_double",
+			"clubs_short_branch_return",
+			"clubs_miss_climb_growth",
+			"clubs_borrow_suit_set",
+			"clubs_gap_rooting",
+		};
+		var state = new AdventureUpgradeRunState(
+			AdventureUpgradeManifest.FromEnabledIds(AdventureUpgradeRuntimeContract.All.Keys));
+		state.BeginNewRun(3);
+		foreach (string id in ids[..8])
+		{
+			Equal(AdventureUpgradeAcquireResult.Acquired, state.AcquireUpgrade(id));
+		}
+		state.ReplaceEffectState(new AdventureUpgradeEffectState
+		{
+			PermanentCaptureDamageBonus = 4,
+			QuestionRewardCount = 6,
+			FinalDoubleCaptureDamageActive = true,
+			HealingOverflowRemainder = 3,
+			NextCaptureDamageBonus = 2,
+			NextTurnHealAmount = 3,
+			NextTurnDrawCount = 1,
+			ClubShortBranchReturnUsedThisTurn = true,
+			ClubMissClimbGrowthStacks = 5,
+			ClubBorrowSuitSetArmed = true,
+		});
+
+		Equal(
+			AdventureUpgradeAcquireResult.Acquired,
+			state.AcquireUpgrade("clubs_gap_rooting", "hearts_miss_bandage"));
+		Equal(0, state.EffectState.NextTurnHealAmount);
+		Equal(0, state.EffectState.NextTurnDrawCount);
+		Equal(4, state.EffectState.PermanentCaptureDamageBonus);
+		Equal(6, state.EffectState.QuestionRewardCount);
+
+		Equal(
+			AdventureUpgradeAcquireResult.RejectedRetiredUpgrade,
+			state.AcquireUpgrade("hearts_miss_bandage", "hearts_overflow_growth"));
+		Equal(3, state.EffectState.HealingOverflowRemainder);
 	}
 
 	private static void AdventureDefeatRetriesOnceThenRestartsJourney()

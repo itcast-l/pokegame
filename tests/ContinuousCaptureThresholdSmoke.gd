@@ -15,6 +15,7 @@ const NETWORK_LOCAL_SEATS := [1, 2, 3]
 
 var _failed := false
 var _checked_feedback_expiry := false
+var _checked_feedback_relayout := false
 var _screenshot_dir := ""
 
 
@@ -167,18 +168,56 @@ func _audit_feedback_privacy_and_layout(
 		or blocked_text.contains("{0}"):
 		_fail("Blocked feedback content mismatch: %s" % blocked)
 		return false
-	var avatar_rect: Rect2 = blocked["avatar_rect"]
 	var feedback_rect: Rect2 = blocked["feedback_rect"]
 	if not _inside_viewport(feedback_rect, viewport_size) \
 		or not feedback_rect.size.is_equal_approx(Vector2(196.0, 44.0)):
 		_fail("Blocked feedback escaped fixed bounds: %s" % blocked)
 		return false
-	if feedback_rect.position.y < avatar_rect.end.y + 6.0 - RECT_TOLERANCE:
-		_fail("Feedback gap below avatar is less than 6px: %s" % blocked)
+	if feedback_rect.get_center().distance_to(Vector2(viewport_size) * 0.5) > RECT_TOLERANCE:
+		_fail("Feedback is not centered in the viewport: %s" % blocked)
 		return false
-	if absf(feedback_rect.get_center().x - avatar_rect.get_center().x) > RECT_TOLERANCE:
-		_fail("Feedback is not horizontally centered on the local avatar: %s" % blocked)
-		return false
+	if not _checked_feedback_relayout:
+		_checked_feedback_relayout = true
+		var resized_viewport_size := viewport_size - Vector2i(80, 60)
+		viewport.size = resized_viewport_size
+		await process_frame
+		await process_frame
+		var resized := board.call("DebugGetCaptureThresholdUiState", local_seat) as Dictionary
+		var resized_rect: Rect2 = resized["feedback_rect"]
+		if resized_rect.get_center().distance_to(Vector2(resized_viewport_size) * 0.5) \
+			> RECT_TOLERANCE:
+			_fail("Feedback did not recenter after a viewport resize: %s" % resized)
+			return false
+
+		var original_locale := TranslationServer.get_locale()
+		var relayout_locale := "zh_CN" if original_locale == "en" else "en"
+		TranslationServer.set_locale(relayout_locale)
+		await process_frame
+		board.call("DebugShowCaptureThresholdFeedback", local_seat, false, 4)
+		await process_frame
+		var localized := board.call("DebugGetCaptureThresholdUiState", local_seat) as Dictionary
+		var localized_text := String(localized["feedback_text"])
+		var localized_rect: Rect2 = localized["feedback_rect"]
+		if localized_text == blocked_text or not localized_text.contains("4"):
+			_fail("Localized feedback text did not update: %s" % localized)
+			return false
+		if localized_rect.get_center().distance_to(Vector2(resized_viewport_size) * 0.5) \
+			> RECT_TOLERANCE:
+			_fail("Localized feedback did not remain centered: %s" % localized)
+			return false
+
+		TranslationServer.set_locale(original_locale)
+		viewport.size = viewport_size
+		await process_frame
+		await process_frame
+		board.call("DebugShowCaptureThresholdFeedback", local_seat, false, 4)
+		await process_frame
+		blocked = board.call("DebugGetCaptureThresholdUiState", local_seat) as Dictionary
+		feedback_rect = blocked["feedback_rect"]
+		if feedback_rect.get_center().distance_to(Vector2(viewport_size) * 0.5) \
+			> RECT_TOLERANCE:
+			_fail("Feedback did not recenter after restoring the viewport: %s" % blocked)
+			return false
 	if capture_visuals and not await _capture_screenshot(viewport, player_count, "blocked", 0.18):
 		return false
 
@@ -190,6 +229,10 @@ func _audit_feedback_privacy_and_layout(
 		or tide_text.is_empty() \
 		or tide_text == blocked_text:
 		_fail("Big Tide feedback content mismatch: %s" % tide)
+		return false
+	var tide_rect: Rect2 = tide["feedback_rect"]
+	if tide_rect.get_center().distance_to(Vector2(viewport_size) * 0.5) > RECT_TOLERANCE:
+		_fail("Big Tide feedback is not centered in the viewport: %s" % tide)
 		return false
 	if capture_visuals and not await _capture_screenshot(viewport, player_count, "big_tide", 0.18):
 		return false

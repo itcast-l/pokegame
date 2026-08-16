@@ -68,7 +68,8 @@ public sealed record GrantAdventureUpgradeCommand(
 	long ActionId,
 	long ExpectedRevision,
 	string UpgradeId,
-	global::AdventureUpgradeTriggerSource TriggerSource)
+	global::AdventureUpgradeTriggerSource TriggerSource,
+	string? ReplacedUpgradeId = null)
 	: AdventureCommand(ActionId, ExpectedRevision);
 
 public sealed record SetAdventureHealthCommand(
@@ -157,7 +158,8 @@ public sealed record AdventureDefeatCommandOutcome(global::AdventureDefeatResolu
 public sealed record AdventureUpgradeGrantCommandOutcome(
 	global::AdventureUpgradeAcquireResult AcquireResult,
 	global::AdventureUpgradeAcquisitionEffectResult EffectResult,
-	global::AdventureHealingResult? HealingResult)
+	global::AdventureHealingResult? HealingResult,
+	string? ReplacedUpgradeId)
 	: AdventureCommandOutcome;
 
 public sealed record AdventureHealingCommandOutcome(global::AdventureHealingResult HealingResult)

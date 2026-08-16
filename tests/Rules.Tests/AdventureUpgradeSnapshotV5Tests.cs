@@ -28,12 +28,15 @@ internal static partial class Program
 		Run("adventure upgrade descriptions hide standalone implementation parameters", AdventureUpgradeDescriptionsHideStandaloneImplementationParameters);
 		Run("adventure upgrade snapshots migrate v1 through v5 into canonical v7", AdventureUpgradeSnapshotsMigrateV1ThroughV4IntoCanonicalV5);
 		Run("adventure upgrade v7 normalizes persistent fields and derives state", AdventureUpgradeSnapshotV5NormalizesAndDerivesState);
-		Run("adventure upgrade v7 roundtrips revive and migrates canonical v6", AdventureUpgradeV7RoundTripsReviveAndMigratesCanonicalV6);
+		Run("adventure upgrade v8 roundtrips retired ids and migrates canonical v7", AdventureUpgradeV8RoundTripsRetiredIdsAndMigratesCanonicalV7);
+		Run("adventure upgrade v8 rejects missing or malformed retired ids", AdventureUpgradeV8RejectsMissingOrMalformedRetiredIds);
+		Run("adventure upgrade v8 deterministically trims overflow and repairs retired ids", AdventureUpgradeV8TrimsOverflowAndRepairsRetiredIds);
 		Run("adventure defeat store persists exactly once for main runs", AdventureDefeatStorePersistsExactlyOnceForMainRuns);
 		Run("adventure upgrade snapshots reject invalid schema and stage values", AdventureUpgradeSnapshotsRejectInvalidSchemaAndStageValues);
 		Run("adventure run store defers then automatically retries manifest restore once", AdventureRunStoreDefersThenAutomaticallyRetriesManifestRestoreOnce);
 		Run("adventure run store canonicalizes noncanonical legacy snapshot once", AdventureRunStoreCanonicalizesNoncanonicalV5Once);
 		Run("adventure run store preserves invalid payloads and deduplicates warnings", AdventureRunStorePreservesInvalidPayloadsAndDeduplicatesWarnings);
+		Run("adventure run store preserves v8 retired id type damage", AdventureRunStorePreservesV8RetiredIdTypeDamage);
 	}
 
 	private static void QuestionMarkInterestDescriptionShowsCurrentItemCount()
@@ -468,7 +471,7 @@ internal static partial class Program
 		foreach (AdventureUpgradeRunSnapshot invalid in new[]
 		{
 			CreateSnapshot(schemaVersion: 0),
-			CreateSnapshot(schemaVersion: 8),
+			CreateSnapshot(schemaVersion: 9),
 			CreateSnapshot(schemaVersion: 5, avatarStageNumber: 2),
 			new AdventureUpgradeRunSnapshot(
 				AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
@@ -489,7 +492,7 @@ internal static partial class Program
 		}
 	}
 
-	private static void AdventureUpgradeV7RoundTripsReviveAndMigratesCanonicalV6()
+	private static void AdventureUpgradeV8RoundTripsRetiredIdsAndMigratesCanonicalV7()
 	{
 		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
 		var state = new AdventureUpgradeRunState(manifest);
@@ -511,6 +514,7 @@ internal static partial class Program
 		Equal(108, restored.MaxHealth);
 		Equal(6, restored.MainStageIndex);
 		True(restored.HasAcquiredUpgrade("hearts_thick_blood"));
+		Equal(0, restored.GetRetiredUpgradeIds().Count);
 
 		const string v6Json = "{\"SchemaVersion\":6,\"CampaignId\":\"deep_tide_throne\",\"MainStageIndex\":6,\"EnemyAvatarId\":\"sea_slug\",\"ShouldGrantRunStartUpgrade\":false,\"ShouldGrantVictoryUpgrade\":true,\"AcquiredUpgradeIds\":[\"hearts_thick_blood\"],\"CurrentHealth\":41,\"MaxHealth\":108,\"PermanentCaptureDamageBonus\":0,\"QuestionRewardCount\":0,\"HealingOverflowRemainder\":0}";
 		True(AdventureUpgradeRunSnapshot.TryDeserialize(v6Json, out AdventureUpgradeRunSnapshot v6, out bool v6Migrated, out _));
@@ -523,6 +527,73 @@ internal static partial class Program
 		Equal(108, migratedV6.MaxHealth);
 		True(migratedV6.HasAcquiredUpgrade("hearts_thick_blood"));
 		False(migratedV6.HasUsedRevive);
+	}
+
+	private static void AdventureUpgradeV8RejectsMissingOrMalformedRetiredIds()
+	{
+		const string canonicalFields = "\"CampaignId\":\"deep_tide_throne\",\"MainStageIndex\":1,\"EnemyAvatarId\":\"shrimp\",\"AcquiredUpgradeIds\":[]";
+		foreach (string invalidJson in new[]
+		{
+			$"{{\"SchemaVersion\":8,{canonicalFields}}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":null}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":{{}}}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":\"hearts_thick_blood\"}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":[123]}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":[null]}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":[{{}}]}}",
+			$"{{\"SchemaVersion\":8,{canonicalFields},\"RetiredUpgradeIds\":[\"hearts_thick_blood\",false]}}",
+		})
+		{
+			False(AdventureUpgradeRunSnapshot.TryDeserialize(
+				invalidJson,
+				out _,
+				out _,
+				out string failure));
+			True(failure.Contains("retired upgrade id array", StringComparison.Ordinal));
+		}
+
+		string v7Json = $"{{\"SchemaVersion\":7,{canonicalFields}}}";
+		True(AdventureUpgradeRunSnapshot.TryDeserialize(
+			v7Json,
+			out AdventureUpgradeRunSnapshot migratedSnapshot,
+			out _,
+			out _));
+		Equal(0, migratedSnapshot.RetiredUpgradeIds.Count);
+	}
+
+	private static void AdventureUpgradeV8TrimsOverflowAndRepairsRetiredIds()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		string[] activeIds = manifest.EnabledIds.Take(10).Reverse().ToArray();
+		var snapshot = new AdventureUpgradeRunSnapshot(
+			AdventureUpgradeRunSnapshot.CurrentSchemaVersion,
+			AdventureCampaignCatalog.MainCampaignId,
+			1,
+			AdventureCampaignCatalog.GetMainAvatarId(1),
+			ShouldGrantRunStartUpgrade: false,
+			ShouldGrantVictoryUpgrade: true,
+			AcquiredUpgradeIds: activeIds,
+			RetiredUpgradeIds: new[] { activeIds[0], activeIds[8], activeIds[8] });
+
+		var restored = new AdventureUpgradeRunState(manifest);
+		Equal(AdventureUpgradeRestoreResult.Migrated, restored.RestoreFromSnapshot(snapshot));
+		string[] expectedActive = activeIds.Order(StringComparer.Ordinal).Take(8).ToArray();
+		Equal(8, restored.GetAcquiredUpgradeIds().Count);
+		foreach (string id in expectedActive)
+		{
+			True(restored.HasAcquiredUpgrade(id));
+			False(restored.GetRetiredUpgradeIds().Contains(id));
+		}
+		foreach (string id in activeIds.Except(expectedActive, StringComparer.Ordinal))
+		{
+			True(restored.GetRetiredUpgradeIds().Contains(id));
+		}
+
+		AdventureUpgradeRunSnapshot canonical = restored.ToSnapshot();
+		Equal(canonical.RetiredUpgradeIds.Count, canonical.RetiredUpgradeIds.Distinct(StringComparer.Ordinal).Count());
+		string json = JsonSerializer.Serialize(canonical);
+		AssertCanonicalV6Json(json);
+		True(JsonDocument.Parse(json).RootElement.TryGetProperty("RetiredUpgradeIds", out _));
 	}
 
 	private static void AdventureDefeatStorePersistsExactlyOnceForMainRuns()
@@ -663,6 +734,23 @@ internal static partial class Program
 		newStore.SetManifest(CreateFullAdventureUpgradeManifest());
 		Equal(AdventureUpgradeRestoreResult.InvalidJsonPreserved, newStore.ReloadFromActiveProfile());
 		Equal(3, Godot.GD.WarningMessages.Count);
+	}
+
+	private static void AdventureRunStorePreservesV8RetiredIdTypeDamage()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		const string damagedSnapshotJson = "{\"SchemaVersion\":8,\"CampaignId\":\"deep_tide_throne\",\"MainStageIndex\":1,\"EnemyAvatarId\":\"shrimp\",\"ShouldGrantRunStartUpgrade\":false,\"ShouldGrantVictoryUpgrade\":true,\"AcquiredUpgradeIds\":[\"hearts_thick_blood\"],\"RetiredUpgradeIds\":[123],\"CurrentHealth\":90,\"MaxHealth\":100,\"PermanentCaptureDamageBonus\":0,\"QuestionRewardCount\":0,\"HealingOverflowRemainder\":0,\"HasUsedRevive\":false}";
+		SeedProfile(saveManager, slotId, CreateProgressData("Runner", damagedSnapshotJson));
+
+		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		Equal(AdventureUpgradeRestoreResult.InvalidSnapshotPreserved, store.ReloadFromActiveProfile());
+		Equal(damagedSnapshotJson, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+		True(store.RequiresRunRecovery);
+		False(store.HasActiveRun);
+		Equal(0, saveManager.SaveToSlotCallCount);
 	}
 
 	private static AdventureUpgradeManifest CreateFullAdventureUpgradeManifest()
@@ -1183,6 +1271,7 @@ internal static partial class Program
 		True(root.TryGetProperty("ShouldGrantRunStartUpgrade", out _));
 		True(root.TryGetProperty("ShouldGrantVictoryUpgrade", out _));
 		True(root.TryGetProperty("AcquiredUpgradeIds", out _));
+		True(root.TryGetProperty("RetiredUpgradeIds", out _));
 		True(root.TryGetProperty("CurrentHealth", out _));
 		True(root.TryGetProperty("MaxHealth", out _));
 		True(root.TryGetProperty("PermanentCaptureDamageBonus", out _));

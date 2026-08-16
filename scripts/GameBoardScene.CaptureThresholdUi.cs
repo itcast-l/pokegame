@@ -67,20 +67,12 @@ public partial class GameBoardScene
 	private void UpdateCaptureThresholdFeedbackLayout()
 	{
 		Vector2 viewportSize = Size == Vector2.Zero ? GetViewportRect().Size : Size;
+		Vector2 feedbackPosition = GlobalPosition
+			+ (viewportSize - CaptureThresholdFeedbackSize) * 0.5f;
 		for (int playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
 		{
-			if (_playerAvatarAreas[playerIndex] is not DraggableAvatarArea avatarArea
-				|| !GodotObject.IsInstanceValid(avatarArea))
-			{
-				continue;
-			}
-
-			Rect2 target = avatarArea.GetGlobalRect();
 			if (_captureThresholdFeedbackPanels[playerIndex] is Panel feedback)
 			{
-				Vector2 feedbackPosition = new(
-					target.Position.X + (target.Size.X - CaptureThresholdFeedbackSize.X) * 0.5f,
-					target.End.Y + 6.0f);
 				feedback.GlobalPosition = ClampCaptureThresholdPanelPosition(
 					feedbackPosition,
 					CaptureThresholdFeedbackSize,

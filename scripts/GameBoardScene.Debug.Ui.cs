@@ -252,6 +252,85 @@ public partial class GameBoardScene
 		return TrySelectActiveSelectionOverlayOption(SelectionOverlayKind.AdventureUpgrade, optionIndex);
 	}
 
+	public Godot.Collections.Array<string> DebugGetAdventureUpgradeOfferIds()
+	{
+		var result = new Godot.Collections.Array<string>();
+		if (!DebugIsAdventureUpgradeSelectionVisible())
+		{
+			return result;
+		}
+
+		foreach (AdventureSuitUpgradeDefinition definition in _adventureUpgradeSelectionDefinitions)
+		{
+			result.Add(definition.Id);
+		}
+		return result;
+	}
+
+	public bool DebugIsAdventureUpgradeReplacementVisible()
+	{
+		return IsSelectionOverlayVisible(SelectionOverlayKind.AdventureUpgradeReplacement)
+			&& _adventureUpgradeReplacementCompletionSource != null;
+	}
+
+	public int DebugGetAdventureUpgradeReplacementPage()
+	{
+		return DebugIsAdventureUpgradeReplacementVisible()
+			? _adventureUpgradeReplacementPage
+			: -1;
+	}
+
+	public int DebugGetAdventureUpgradeReplacementPageCount()
+	{
+		return DebugIsAdventureUpgradeReplacementVisible()
+			? Math.Max(
+				1,
+				(_adventureUpgradeReplacementOptions.Count + AdventureUpgradeReplacementPageSize - 1)
+					/ AdventureUpgradeReplacementPageSize)
+			: 0;
+	}
+
+	public bool DebugAdvanceAdventureUpgradeReplacementPage()
+	{
+		if (!DebugIsAdventureUpgradeReplacementVisible())
+		{
+			return false;
+		}
+
+		int previousPage = _adventureUpgradeReplacementPage;
+		ChangeAdventureUpgradeReplacementPage(1);
+		return _adventureUpgradeReplacementPage != previousPage;
+	}
+
+	public bool DebugRewindAdventureUpgradeReplacementPage()
+	{
+		if (!DebugIsAdventureUpgradeReplacementVisible())
+		{
+			return false;
+		}
+
+		int previousPage = _adventureUpgradeReplacementPage;
+		ChangeAdventureUpgradeReplacementPage(-1);
+		return _adventureUpgradeReplacementPage != previousPage;
+	}
+
+	public bool DebugReturnFromAdventureUpgradeReplacement()
+	{
+		if (!DebugIsAdventureUpgradeReplacementVisible())
+		{
+			return false;
+		}
+
+		ReturnFromAdventureUpgradeReplacement();
+		return true;
+	}
+
+	public bool DebugSelectAdventureUpgradeReplacementSlot(int slotIndex)
+	{
+		return DebugIsAdventureUpgradeReplacementVisible()
+			&& TrySelectAdventureUpgradeReplacementSlot(slotIndex);
+	}
+
 	public bool DebugSetAdventureUpgradeHoverState(int optionIndex, bool hovered)
 	{
 		SelectionOverlaySession? session = GetActiveSelectionOverlaySession(SelectionOverlayKind.AdventureUpgrade);
@@ -275,6 +354,55 @@ public partial class GameBoardScene
 	public int DebugGetAdventureAcquiredUpgradeCount()
 	{
 		return GetAdventureUpgradeRunState()?.AcquiredUpgradeIds.Length ?? 0;
+	}
+
+	public Godot.Collections.Array<string> DebugGetAdventureActiveUpgradeIds()
+	{
+		var result = new Godot.Collections.Array<string>();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+		if (runState == null)
+		{
+			return result;
+		}
+
+		foreach (string upgradeId in runState.AcquiredUpgradeIds)
+		{
+			result.Add(upgradeId);
+		}
+		return result;
+	}
+
+	public Godot.Collections.Array<string> DebugGetAdventureRetiredUpgradeIds()
+	{
+		var result = new Godot.Collections.Array<string>();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+		if (runState == null)
+		{
+			return result;
+		}
+
+		foreach (string upgradeId in runState.RetiredUpgradeIds)
+		{
+			result.Add(upgradeId);
+		}
+		return result;
+	}
+
+	public Godot.Collections.Array<string> DebugGetAdventureCurrentUpgradeIdsInCatalogOrder()
+	{
+		var result = new Godot.Collections.Array<string>();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return result;
+		}
+
+		foreach (AdventureSuitUpgradeDefinition definition in
+			BuildCurrentAdventureUpgradeDefinitions(runState))
+		{
+			result.Add(definition.Id);
+		}
+		return result;
 	}
 
 	public Godot.Collections.Dictionary DebugGetAdventureRunStateSnapshot()

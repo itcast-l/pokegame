@@ -89,7 +89,8 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	internal AdventureUpgradeGrantCommitResult GrantUpgrade(
 		string upgradeId,
-		AdventureUpgradeTriggerSource triggerSource)
+		AdventureUpgradeTriggerSource triggerSource,
+		string? replacedUpgradeId = null)
 	{
 		AdventureRunWriteResult validation = ValidateActiveWrite();
 		if (validation != AdventureRunWriteResult.Succeeded)
@@ -98,6 +99,7 @@ public sealed partial class AdventureRunSessionStore : Node
 				validation,
 				AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
 				default,
+				null,
 				null);
 		}
 
@@ -106,7 +108,8 @@ public sealed partial class AdventureRunSessionStore : Node
 				NextAdventureActionId(),
 				_authoritySession.AdventureReadModel.Revision,
 				upgradeId,
-				triggerSource),
+				triggerSource,
+				replacedUpgradeId),
 			PersistAdventureRequest);
 		if (result.Accepted && result.Outcome is AdventureUpgradeGrantCommandOutcome outcome)
 		{
@@ -114,7 +117,8 @@ public sealed partial class AdventureRunSessionStore : Node
 				result.WriteResult,
 				outcome.AcquireResult,
 				outcome.EffectResult,
-				outcome.HealingResult);
+				outcome.HealingResult,
+				outcome.ReplacedUpgradeId);
 		}
 
 		return new AdventureUpgradeGrantCommitResult(
@@ -123,6 +127,7 @@ public sealed partial class AdventureRunSessionStore : Node
 				? AdventureUpgradeAcquireResult.None
 				: AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
 			default,
+			null,
 			null);
 	}
 

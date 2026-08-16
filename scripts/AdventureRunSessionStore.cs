@@ -17,6 +17,7 @@ public sealed partial class AdventureRunSessionStore : Node
 		nameof(AdventureUpgradeRunSnapshot.ShouldGrantRunStartUpgrade),
 		nameof(AdventureUpgradeRunSnapshot.ShouldGrantVictoryUpgrade),
 		nameof(AdventureUpgradeRunSnapshot.AcquiredUpgradeIds),
+		nameof(AdventureUpgradeRunSnapshot.RetiredUpgradeIds),
 		nameof(AdventureUpgradeRunSnapshot.CurrentHealth),
 		nameof(AdventureUpgradeRunSnapshot.MaxHealth),
 		nameof(AdventureUpgradeRunSnapshot.PermanentCaptureDamageBonus),

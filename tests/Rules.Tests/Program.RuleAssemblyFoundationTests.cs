@@ -45,6 +45,7 @@ internal static partial class Program
 		Run("authority card play capture score and outcome commands are ordered", AuthorityCardPlayCaptureScoreAndOutcomeCommandsAreOrdered);
 		Run("continuous capture rules enforce strict growth and big tide reset", ContinuousCaptureRulesEnforceStrictGrowthAndBigTideReset);
 		Run("card play resolver blocks thresholds before extra capture effects", CardPlayResolverBlocksThresholdBeforeExtraCaptureEffects);
+		Run("card play resolver classifies hidden threshold matches", CardPlayResolverClassifiesHiddenThresholdMatches);
 		Run("authority continuous capture transaction records final table count", AuthorityContinuousCaptureTransactionRecordsFinalTableCount);
 		Run("authority continuous capture threshold is shared across seats", AuthorityContinuousCaptureThresholdIsSharedAcrossSeats);
 		Run("authority continuous capture sequence crosses seats and resets globally", AuthorityContinuousCaptureSequenceCrossesSeatsAndResetsGlobally);

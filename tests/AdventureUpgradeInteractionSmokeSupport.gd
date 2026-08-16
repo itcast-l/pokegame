@@ -188,11 +188,38 @@ func wait_for_actionable_pending_state(
 
 func dispose_audio() -> void:
 	var game_audio := _tree.root.get_node_or_null("GameAudio")
-	if game_audio == null or not game_audio.has_method("DisposeAllAudioImmediately"):
-		return
-	game_audio.call("DisposeAllAudioImmediately")
-	await _tree.process_frame
-	await _tree.process_frame
+	if game_audio != null and game_audio.has_method("DisposeAllAudioImmediately"):
+		game_audio.call("DisposeAllAudioImmediately")
+	for _frame in range(2):
+		await _tree.process_frame
+	await _tree.create_timer(0.15).timeout
+	for _frame in range(2):
+		await _tree.process_frame
+
+
+func dispose_board_and_audio(board: Node, label: String) -> bool:
+	var board_ref: WeakRef = weakref(board)
+	board.queue_free()
+	for _frame in range(120):
+		await _tree.process_frame
+		if board_ref.get_ref() == null:
+			break
+	if board_ref.get_ref() != null:
+		_fail("Board remained alive after %s shutdown" % label)
+		return false
+
+	var probe_script := load("res://scripts/BoardAsyncLifetimeDebugProbe.cs") as Script
+	var lifetime_probe: RefCounted = probe_script.new() as RefCounted if probe_script != null else null
+	if lifetime_probe == null:
+		_fail("Could not instantiate lifetime-count probe after %s shutdown" % label)
+		return false
+	var active_lifetime_count := int(lifetime_probe.call("GetActiveLifetimeCount"))
+	if active_lifetime_count != 0:
+		_fail("%s shutdown left %d active board lifetime(s)" % [label, active_lifetime_count])
+		return false
+
+	await dispose_audio()
+	return true
 
 
 func _fail(message: String) -> void:

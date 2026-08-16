@@ -30,5 +30,6 @@ run_step "big capture" run_adventure_upgrade_big_capture_smoke.sh
 run_step "big capture victory order" run_adventure_upgrade_big_capture_victory_order_smoke.sh
 run_step "run resume" run_adventure_upgrade_run_resume_smoke.sh
 run_step "snapshot v5 migration" run_adventure_upgrade_snapshot_v5_migration_smoke.sh
+run_step "capacity replacement" run_adventure_upgrade_replacement_smoke.sh
 
 echo "ADVENTURE_UPGRADE_INTERACTION_SMOKE_SUITE_OK"

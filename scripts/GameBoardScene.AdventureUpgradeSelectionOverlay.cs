@@ -106,6 +106,8 @@ public partial class GameBoardScene
 	private const float AdventureUpgradeOverlayMotionSnapDistance = 0.001f;
 
 	private TaskCompletionSource<AdventureUpgradeSelectionResult>? _adventureUpgradeSelectionCompletionSource;
+	private IReadOnlyList<AdventureSuitUpgradeDefinition> _adventureUpgradeSelectionDefinitions =
+		Array.Empty<AdventureSuitUpgradeDefinition>();
 	private AdventureUpgradeOverlayRevealState? _adventureUpgradeOverlayRevealState;
 	private readonly Dictionary<ulong, AdventureUpgradeOverlayCardMotionState> _adventureUpgradeOverlayCardMotionStates = new();
 	private readonly List<ulong> _staleAdventureUpgradeMotionStateIds = new();
@@ -119,6 +121,7 @@ public partial class GameBoardScene
 		IReadOnlyList<AdventureSuitUpgradeDefinition> offer)
 	{
 		DisposeActiveSelectionOverlay();
+		_adventureUpgradeSelectionDefinitions = offer;
 
 		var overlayOptions = new List<AdventureUpgradeOverlayOptionModel>(offer.Count);
 		for (int index = 0; index < offer.Count; index++)
@@ -136,6 +139,7 @@ public partial class GameBoardScene
 		if (!ShowAdventureUpgradeSelectionOverlay(overlayOptions))
 		{
 			_adventureUpgradeSelectionCompletionSource = null;
+			_adventureUpgradeSelectionDefinitions = Array.Empty<AdventureSuitUpgradeDefinition>();
 			return new AdventureUpgradeSelectionResult(
 				AdventureUpgradeSelectionOutcome.DisplayFailed,
 				-1);
@@ -146,6 +150,7 @@ public partial class GameBoardScene
 		{
 			_adventureUpgradeSelectionCompletionSource = null;
 		}
+		_adventureUpgradeSelectionDefinitions = Array.Empty<AdventureSuitUpgradeDefinition>();
 
 		return selectionResult;
 	}

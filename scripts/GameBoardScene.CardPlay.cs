@@ -99,7 +99,8 @@ public partial class GameBoardScene
 		{
 			return new PlayCardResult(false, false);
 		}
-		if (cardPlayPlan.CaptureThresholdBlocked)
+		if (cardPlayPlan.CaptureThresholdBlocked
+			&& !cardPlayPlan.CaptureThresholdBlockedByHiddenMatch)
 		{
 			PublishCaptureThresholdFeedback(
 				playerIndex,

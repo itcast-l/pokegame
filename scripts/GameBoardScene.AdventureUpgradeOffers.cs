@@ -214,38 +214,83 @@ public partial class GameBoardScene
 					continue;
 				}
 
-				AdventureUpgradeSelectionResult selectionResult = await ShowAdventureUpgradeSelectionAsync(triggerSource, offer);
-				if (turnSequenceGeneration != _turnSequenceGeneration || _isLeavingGame)
+				bool triggerConsumed = false;
+				while (!triggerConsumed
+					&& turnSequenceGeneration == _turnSequenceGeneration
+					&& !_isLeavingGame
+					&& !IsGameOver())
 				{
-					return;
-				}
-
-				if (selectionResult.Outcome is AdventureUpgradeSelectionOutcome.Canceled
-					&& triggerSource != AdventureUpgradeTriggerSource.None)
-				{
-					return;
-				}
-
-				int selectedIndex = selectionResult.SelectedIndex;
-				if (selectionResult.Outcome == AdventureUpgradeSelectionOutcome.DisplayFailed)
-				{
-					selectedIndex = 0;
-				}
-
-				if (selectedIndex < 0 || selectedIndex >= offer.Count)
-				{
-					if (selectionResult.Outcome == AdventureUpgradeSelectionOutcome.DisplayFailed)
+					AdventureUpgradeSelectionResult selectionResult =
+						await ShowAdventureUpgradeSelectionAsync(triggerSource, offer);
+					if (turnSequenceGeneration != _turnSequenceGeneration || _isLeavingGame)
 					{
 						return;
 					}
 
-					continue;
-				}
+					if (selectionResult.Outcome is AdventureUpgradeSelectionOutcome.Canceled
+						&& triggerSource != AdventureUpgradeTriggerSource.None)
+					{
+						return;
+					}
 
-				AdventureSuitUpgradeDefinition selectedDefinition = offer[selectedIndex];
+					int selectedIndex = selectionResult.Outcome == AdventureUpgradeSelectionOutcome.DisplayFailed
+						? 0
+						: selectionResult.SelectedIndex;
+					if (selectedIndex < 0 || selectedIndex >= offer.Count)
+					{
+						if (selectionResult.Outcome == AdventureUpgradeSelectionOutcome.DisplayFailed)
+						{
+							return;
+						}
+						continue;
+					}
+
+					AdventureSuitUpgradeDefinition selectedDefinition = offer[selectedIndex];
+					string? replacedUpgradeId = null;
+					AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+					if (runState?.AcquiredUpgradeIds.Length >= AdventureRunReadModel.MaxActiveUpgradeCount)
+					{
+						IReadOnlyList<AdventureSuitUpgradeDefinition> currentUpgrades =
+							BuildCurrentAdventureUpgradeDefinitions(runState);
+						if (currentUpgrades.Count == 0)
+						{
+							return;
+						}
+
+						AdventureUpgradeReplacementResult replacementResult =
+							await ShowAdventureUpgradeReplacementAsync(
+								selectedDefinition,
+								currentUpgrades);
+						if (turnSequenceGeneration != _turnSequenceGeneration || _isLeavingGame)
+						{
+							return;
+						}
+						if (replacementResult.Outcome == AdventureUpgradeReplacementOutcome.Returned)
+						{
+							continue;
+						}
+
+						int replacementIndex =
+							replacementResult.Outcome == AdventureUpgradeReplacementOutcome.DisplayFailed
+								? 0
+								: replacementResult.SelectedIndex;
+						if (replacementIndex < 0 || replacementIndex >= currentUpgrades.Count)
+						{
+							if (replacementResult.Outcome == AdventureUpgradeReplacementOutcome.DisplayFailed)
+							{
+								return;
+							}
+							continue;
+						}
+						replacedUpgradeId = currentUpgrades[replacementIndex].Id;
+					}
+
 					AdventureSaveGateResult<AdventureUpgradeGrantCommitResult> grantGate =
 						await ExecuteAdventureSaveGateAsync(
-							() => GrantAdventureUpgrade(selectedDefinition.Id, triggerSource),
+							() => GrantAdventureUpgrade(
+								selectedDefinition.Id,
+								triggerSource,
+								replacedUpgradeId),
 							result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 							result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 					if (!grantGate.Succeeded)
@@ -265,20 +310,27 @@ public partial class GameBoardScene
 					{
 						GD.PushWarning(
 							$"Adventure upgrade acquisition rejected: id={selectedDefinition.Id} result={grantResult.AcquireResult}");
+						if (!TryDequeuePendingAdventureUpgradeTrigger(triggerSource))
+						{
+							return;
+						}
+						triggerConsumed = true;
+						continue;
+					}
+
+					ClearReplacedAdventureUpgradeBoardState(grantResult.ReplacedUpgradeId);
+					await ApplyAdventureUpgradeAcquisitionEffectsAsync(
+						grantResult,
+						turnSequenceGeneration);
+					GD.Print(
+						grantResult.ReplacedUpgradeId == null
+							? $"Adventure upgrade acquired: {selectedDefinition.Id}"
+							: $"Adventure upgrade replaced: {grantResult.ReplacedUpgradeId} -> {selectedDefinition.Id}");
 					if (!TryDequeuePendingAdventureUpgradeTrigger(triggerSource))
 					{
 						return;
 					}
-					continue;
-				}
-
-					await ApplyAdventureUpgradeAcquisitionEffectsAsync(
-						grantResult,
-						turnSequenceGeneration);
-				GD.Print($"Adventure upgrade acquired: {selectedDefinition.Id}");
-				if (!TryDequeuePendingAdventureUpgradeTrigger(triggerSource))
-				{
-					return;
+					triggerConsumed = true;
 				}
 			}
 		}
@@ -373,5 +425,95 @@ public partial class GameBoardScene
 		}
 
 		return offer;
+	}
+
+	private IReadOnlyList<AdventureSuitUpgradeDefinition> BuildCurrentAdventureUpgradeDefinitions(
+		AdventureRunReadModel runState)
+	{
+		EnsureAdventureUpgradeCatalogLoaded();
+		if (_adventureUpgradeCatalog == null || runState.AcquiredUpgradeIds.IsEmpty)
+		{
+			return Array.Empty<AdventureSuitUpgradeDefinition>();
+		}
+
+		var acquiredIds = new HashSet<string>(runState.AcquiredUpgradeIds, StringComparer.Ordinal);
+		var currentUpgrades = new List<AdventureSuitUpgradeDefinition>(acquiredIds.Count);
+		foreach (AdventureSuitUpgradeDefinition definition in _adventureUpgradeCatalog.All)
+		{
+			if (acquiredIds.Contains(definition.Id))
+			{
+				currentUpgrades.Add(definition);
+			}
+		}
+
+		return currentUpgrades;
+	}
+
+	private void ClearReplacedAdventureUpgradeBoardState(string? replacedUpgradeId)
+	{
+		if (string.IsNullOrWhiteSpace(replacedUpgradeId))
+		{
+			return;
+		}
+
+		bool redrawTable = false;
+		switch (replacedUpgradeId.Trim())
+		{
+			case "spades_trace_hunt":
+				redrawTable = CurrentMatchFlowState.CaptureMarkRuntimeId != 0
+					|| FindAdventureTraceHuntMarkerOverlay() != null;
+				SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
+				ClearAdventureTraceHuntMarkerIntro();
+				break;
+			case "spades_hunt_order":
+				TryUpdateMatchFlowState(state => state with
+				{
+					TurnCaptureMarkRuntimeId = 0,
+				});
+				break;
+			case "clubs_canopy_reveal":
+				TryUpdateMatchFlowState(state => state with
+				{
+					SequentialRevealAnchorRuntimeId = 0,
+				});
+				break;
+			case "spades_dark_harbor_reveal":
+				TryUpdateMatchFlowState(state => state with
+				{
+					PendingBaseCardFacesUp = false,
+				});
+				break;
+			case "spades_missed_beat_blunt_hurt":
+				TryUpdateMatchFlowState(state => state with
+				{
+					PendingCaptureDamageDelta = 0,
+				});
+				break;
+			case "spades_wrong_shore_lineup":
+				TryUpdateMatchFlowState(state =>
+					state.PendingCardPlacement == PendingCardPlacementMode.Leftmost
+						? state with
+						{
+							PendingCardPlacement = PendingCardPlacementMode.None,
+							PendingPlacementAnchorRuntimeId = 0,
+						}
+						: state);
+				break;
+			case "spades_return_tide_misorder":
+				TryUpdateMatchFlowState(state =>
+					state.PendingCardPlacement == PendingCardPlacementMode.BeforeTrackedAnchor
+						? state with
+						{
+							PendingCardPlacement = PendingCardPlacementMode.None,
+							PendingPlacementAnchorRuntimeId = 0,
+						}
+						: state);
+				break;
+		}
+
+		if (redrawTable)
+		{
+			RenderTableCards();
+		}
 	}
 }

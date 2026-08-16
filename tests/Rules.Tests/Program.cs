@@ -51,11 +51,15 @@ internal static partial class Program
 		Run("capture flow planner builds capture summary", CaptureFlowPlannerBuildsCaptureSummary);
 		Run("adventure upgrade rules map main stages and weights", AdventureUpgradeRulesMapMainStagesAndWeights);
 		Run("adventure upgrade choice skips acquired ids and deduplicates offer", AdventureUpgradeChoiceSkipsAcquiredIdsAndDeduplicatesOffer);
-		Run("adventure upgrade choice falls back when rolled rarity unavailable", AdventureUpgradeChoiceFallsBackWhenRolledRarityUnavailable);
-		Run("adventure upgrade choice returns remaining pool when below offer size", AdventureUpgradeChoiceReturnsRemainingPoolWhenBelowOfferSize);
+			Run("adventure upgrade choice falls back when rolled rarity unavailable", AdventureUpgradeChoiceFallsBackWhenRolledRarityUnavailable);
+			Run("adventure upgrade choice returns remaining pool when below offer size", AdventureUpgradeChoiceReturnsRemainingPoolWhenBelowOfferSize);
+			Run("adventure upgrade choice weights current suits and excludes retired history", AdventureUpgradeChoiceWeightsCurrentSuitsAndExcludesRetiredHistory);
 		Run("adventure upgrade trigger ordering prefers big capture before victory", AdventureUpgradeTriggerOrderingPrefersBigCaptureBeforeVictory);
 		Run("adventure upgrade trigger ordering includes run start before combat triggers", AdventureUpgradeTriggerOrderingIncludesRunStartFirst);
-		Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
+			Run("adventure upgrade run state tracks stage progression and acquired ids", AdventureUpgradeRunStateTracksStageProgressionAndAcquiredIds);
+			Run("adventure upgrade run enforces capacity and atomic replacement", AdventureUpgradeRunEnforcesCapacityAndAtomicReplacement);
+			Run("adventure upgrade replacement validates conflicts and retired ids", AdventureUpgradeReplacementValidatesConflictsAndRetiredIds);
+			Run("adventure upgrade replacement clears owned pending state and preserves gains", AdventureUpgradeReplacementClearsOwnedPendingStateAndPreservesGains);
 		Run("adventure defeat retries once then restarts the journey", AdventureDefeatRetriesOnceThenRestartsJourney);
 		Run("adventure upgrade ids expose current active upgrades across suits", AdventureUpgradeIdsExposeCurrentActiveUpgradesAcrossSuits);
 		Run("adventure suit upgrade catalog exposes only 52 active upgrades", AdventureSuitUpgradeCatalogExposesOnlyActiveUpgrades);
@@ -120,6 +124,7 @@ internal static partial class Program
 			Run("adventure run snapshots cannot mutate store state", AdventureRunSnapshotsCannotMutateStoreState);
 			Run("adventure defeat transaction retries without double revive", AdventureDefeatTransactionRetriesWithoutDoubleRevive);
 				Run("adventure upgrade grant commits all fields once", AdventureUpgradeGrantCommitsAllFieldsOnce);
+				Run("adventure upgrade replacement rolls back on save failure", AdventureUpgradeReplacementRollsBackOnSaveFailure);
 				Run("adventure healing question and turn start transactions roll back", AdventureCompositeTransactionsRollBack);
 				Run("adventure capture action transaction retries once", AdventureCaptureActionTransactionRetriesOnce);
 				Run("adventure miss action transaction retries once", AdventureMissActionTransactionRetriesOnce);

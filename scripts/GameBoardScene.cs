@@ -17,6 +17,7 @@ public partial class GameBoardScene : Control
 	private static PackedScene? _cachedDefeatFinisherOverlayScene;
 	private const string ItemSelectionOverlayScenePath = "res://scenes/item_selection_overlay.tscn";
 	private const string AdventureUpgradeSelectionOverlayScenePath = "res://scenes/adventure_upgrade_selection_overlay.tscn";
+	private const string AdventureUpgradeReplacementOverlayScenePath = "res://scenes/adventure_upgrade_replacement_overlay.tscn";
 	private const string AdventureQuestionRejudgeOverlayScenePath = "res://scenes/adventure_question_rejudge_overlay.tscn";
 	private const string StandardCardsRootPath = "StandardPokerCards";
 	private const string SuitedJqkBackupCardsNodeName = "SuitedJqkBackupCards";

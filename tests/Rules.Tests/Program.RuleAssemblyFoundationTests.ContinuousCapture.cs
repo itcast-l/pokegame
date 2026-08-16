@@ -132,6 +132,101 @@ internal static partial class Program
 		Equal(-1, blockedAiHandIndex);
 	}
 
+	private static void CardPlayResolverClassifiesHiddenThresholdMatches()
+	{
+		var hiddenRankCards = new[]
+		{
+			new CardPlayTableCard("A", IsFaceUp: false, IsBuriedInSand: false, Suit: "clubs"),
+		};
+		CardPlayPlan hiddenPrimary = CardPlayResolver.Resolve(
+			hiddenRankCards,
+			new CardPlayCard("A", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		True(hiddenPrimary.CaptureThresholdBlocked);
+		True(hiddenPrimary.CaptureThresholdBlockedByHiddenMatch);
+
+		CardPlayPlan hiddenAlternate = CardPlayResolver.Resolve(
+			hiddenRankCards,
+			new CardPlayCard("9", CollectsTable: false),
+			alternateRanks: new[] { "A" },
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		True(hiddenAlternate.CaptureThresholdBlocked);
+		True(hiddenAlternate.CaptureThresholdBlockedByHiddenMatch);
+
+		var hiddenSuitCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: false, IsBuriedInSand: false, Suit: "hearts"),
+		};
+		CardPlayPlan hiddenSuit = CardPlayResolver.Resolve(
+			hiddenSuitCards,
+			new CardPlayCard("9", CollectsTable: false, Suit: "hearts", CollectBySuit: true),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		True(hiddenSuit.CaptureThresholdBlocked);
+		True(hiddenSuit.CaptureThresholdBlockedByHiddenMatch);
+
+		var faceUpCards = new[]
+		{
+			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false, Suit: "hearts"),
+		};
+		CardPlayPlan faceUpPrimary = CardPlayResolver.Resolve(
+			faceUpCards,
+			new CardPlayCard("A", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		True(faceUpPrimary.CaptureThresholdBlocked);
+		False(faceUpPrimary.CaptureThresholdBlockedByHiddenMatch);
+
+		CardPlayPlan faceUpAlternate = CardPlayResolver.Resolve(
+			faceUpCards,
+			new CardPlayCard("9", CollectsTable: false),
+			alternateRanks: new[] { "A" },
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		True(faceUpAlternate.CaptureThresholdBlocked);
+		False(faceUpAlternate.CaptureThresholdBlockedByHiddenMatch);
+
+		CardPlayPlan faceUpSuit = CardPlayResolver.Resolve(
+			faceUpCards,
+			new CardPlayCard("9", CollectsTable: false, Suit: "hearts", CollectBySuit: true),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		True(faceUpSuit.CaptureThresholdBlocked);
+		False(faceUpSuit.CaptureThresholdBlockedByHiddenMatch);
+
+		var collectAllCards = new[]
+		{
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("J", IsFaceUp: false, IsBuriedInSand: false),
+		};
+		CardPlayPlan collectAll = CardPlayResolver.Resolve(
+			collectAllCards,
+			new CardPlayCard("J", CollectsTable: true),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 2);
+		True(collectAll.CaptureThresholdBlocked);
+		False(collectAll.CaptureThresholdBlockedByHiddenMatch);
+
+		CardPlayPlan allowedHiddenMatch = CardPlayResolver.Resolve(
+			hiddenRankCards,
+			new CardPlayCard("A", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 0);
+		False(allowedHiddenMatch.CaptureThresholdBlocked);
+		False(allowedHiddenMatch.CaptureThresholdBlockedByHiddenMatch);
+		Equal(0, allowedHiddenMatch.MatchingTableCardIndex);
+		Equal(0, allowedHiddenMatch.CaptureStartIndex);
+		True(allowedHiddenMatch.MatchedTableCardFlipped);
+	}
+
 	private static void AuthorityContinuousCaptureTransactionRecordsFinalTableCount()
 	{
 		AuthorityRuleSession session = CreateContinuousCaptureSession(

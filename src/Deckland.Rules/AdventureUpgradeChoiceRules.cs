@@ -72,19 +72,27 @@ internal static class AdventureUpgradeChoiceRules
 		IEnumerable<string> acquiredIds,
 		int runStageIndex,
 		Func<int, int> nextIntExclusive,
-		AdventureUpgradeManifest? manifest = null)
+		AdventureUpgradeManifest? manifest = null,
+		IEnumerable<string>? retiredIds = null)
 	{
-		var available = BuildAvailablePool(allDefinitions, acquiredIds, manifest);
+		var acquired = new HashSet<string>(acquiredIds ?? Array.Empty<string>(), StringComparer.Ordinal);
+		var available = BuildAvailablePool(allDefinitions, acquired, retiredIds, manifest);
 		if (available.Count <= OfferSize)
 		{
 			return available;
 		}
 
 		AdventureUpgradeRarityWeights weights = GetRarityWeights(runStageIndex);
+		Dictionary<string, int> acquiredSuitCounts = CountAcquiredSuits(allDefinitions, acquired, manifest);
 		var offer = new List<AdventureUpgradeDefinitionModel>(OfferSize);
 		for (int slotIndex = 0; slotIndex < OfferSize; slotIndex++)
 		{
-			AdventureUpgradeDefinitionModel? pickedDefinition = TryPickOfferDefinition(available, offer, weights, nextIntExclusive);
+			AdventureUpgradeDefinitionModel? pickedDefinition = TryPickOfferDefinition(
+				available,
+				offer,
+				weights,
+				acquiredSuitCounts,
+				nextIntExclusive);
 			if (!pickedDefinition.HasValue)
 			{
 				break;
@@ -99,9 +107,11 @@ internal static class AdventureUpgradeChoiceRules
 	private static List<AdventureUpgradeDefinitionModel> BuildAvailablePool(
 		IReadOnlyList<AdventureUpgradeDefinitionModel> allDefinitions,
 		IEnumerable<string> acquiredIds,
+		IEnumerable<string>? retiredIds,
 		AdventureUpgradeManifest? manifest)
 	{
 		var acquired = new HashSet<string>(acquiredIds, StringComparer.Ordinal);
+		var retired = new HashSet<string>(retiredIds ?? Array.Empty<string>(), StringComparer.Ordinal);
 		var acquiredConflictGroups = new HashSet<string>(StringComparer.Ordinal);
 		foreach (string acquiredId in acquired)
 		{
@@ -114,7 +124,10 @@ internal static class AdventureUpgradeChoiceRules
 		var available = new List<AdventureUpgradeDefinitionModel>();
 		foreach (AdventureUpgradeDefinitionModel definition in allDefinitions)
 		{
-			if (!definition.Enabled || string.IsNullOrWhiteSpace(definition.Id) || acquired.Contains(definition.Id))
+			if (!definition.Enabled
+				|| string.IsNullOrWhiteSpace(definition.Id)
+				|| acquired.Contains(definition.Id)
+				|| retired.Contains(definition.Id))
 			{
 				continue;
 			}
@@ -158,6 +171,7 @@ internal static class AdventureUpgradeChoiceRules
 		IReadOnlyList<AdventureUpgradeDefinitionModel> available,
 		IReadOnlyList<AdventureUpgradeDefinitionModel> currentOffer,
 		AdventureUpgradeRarityWeights weights,
+		IReadOnlyDictionary<string, int> acquiredSuitCounts,
 		Func<int, int> nextIntExclusive)
 	{
 		string rolledRarity = RollRarity(weights, nextIntExclusive);
@@ -169,11 +183,70 @@ internal static class AdventureUpgradeChoiceRules
 				continue;
 			}
 
-			int pickedIndex = nextIntExclusive(rarityPool.Count);
-			return rarityPool[pickedIndex];
+			return PickWeightedBySuit(rarityPool, acquiredSuitCounts, nextIntExclusive);
 		}
 
 		return null;
+	}
+
+	private static AdventureUpgradeDefinitionModel PickWeightedBySuit(
+		IReadOnlyList<AdventureUpgradeDefinitionModel> pool,
+		IReadOnlyDictionary<string, int> acquiredSuitCounts,
+		Func<int, int> nextIntExclusive)
+	{
+		int totalWeight = 0;
+		foreach (AdventureUpgradeDefinitionModel definition in pool)
+		{
+			totalWeight += 2 + GetSuitCount(acquiredSuitCounts, definition.Suit);
+		}
+
+		int roll = nextIntExclusive(totalWeight);
+		foreach (AdventureUpgradeDefinitionModel definition in pool)
+		{
+			roll -= 2 + GetSuitCount(acquiredSuitCounts, definition.Suit);
+			if (roll < 0)
+			{
+				return definition;
+			}
+		}
+
+		return pool[^1];
+	}
+
+	private static Dictionary<string, int> CountAcquiredSuits(
+		IReadOnlyList<AdventureUpgradeDefinitionModel> definitions,
+		IEnumerable<string> acquiredIds,
+		AdventureUpgradeManifest? manifest)
+	{
+		var definitionsById = new Dictionary<string, AdventureUpgradeDefinitionModel>(StringComparer.Ordinal);
+		foreach (AdventureUpgradeDefinitionModel definition in definitions)
+		{
+			definitionsById[definition.Id] = definition;
+		}
+
+		var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		foreach (string acquiredId in acquiredIds)
+		{
+			string suit = manifest?.TryGetEnabledEntry(acquiredId, out AdventureUpgradeManifestEntry entry) == true
+				? entry.Suit
+				: definitionsById.TryGetValue(acquiredId, out AdventureUpgradeDefinitionModel definition)
+					? definition.Suit
+					: string.Empty;
+			if (string.IsNullOrWhiteSpace(suit))
+			{
+				continue;
+			}
+			counts[suit] = GetSuitCount(counts, suit) + 1;
+		}
+
+		return counts;
+	}
+
+	private static int GetSuitCount(IReadOnlyDictionary<string, int> counts, string suit)
+	{
+		return !string.IsNullOrWhiteSpace(suit) && counts.TryGetValue(suit, out int count)
+			? count
+			: 0;
 	}
 
 	private static List<AdventureUpgradeDefinitionModel> FilterPoolByRarity(

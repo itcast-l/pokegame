@@ -1,0 +1,265 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/AdventureUpgradeChoiceArt.cs" id="1_choice_art_script"]
+[ext_resource type="FontVariation" path="res://resources/fonts/nunito_black_localized.tres" id="2_title_font"]
+[ext_resource type="FontVariation" path="res://resources/fonts/nunito_regular_localized.tres" id="3_body_font"]
+[ext_resource type="Script" path="res://scripts/PearlDivider.cs" id="4_pearl_divider_script"]
+[ext_resource type="Texture2D" path="res://art/maps/underwater_card_table_no_deck_pads_v1_1920x1080.png" id="5_table_backdrop"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_card"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_action"]
+bg_color = Color(0.035, 0.12, 0.16, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.48, 0.78, 0.84, 0.72)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_action_focus"]
+bg_color = Color(0.08, 0.24, 0.29, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.94, 0.82, 0.48, 0.96)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="AdventureUpgradeReplacementOverlay" type="Control"]
+z_index = 2000
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TableBackdrop" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_table_backdrop")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TableDarken" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.005, 0.02, 0.03, 0.5)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Header" type="VBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margin/Layout/Header"]
+modulate = Color(0.94, 0.88, 0.72, 1)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_colors/font_shadow_color = Color(0, 0.03, 0.05, 0.9)
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1
+
+[node name="Divider" type="Control" parent="Margin/Layout/Header"]
+custom_minimum_size = Vector2(300, 10)
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("4_pearl_divider_script")
+LineColor = Color(0.58, 0.8, 0.82, 0.48)
+PearlColor = Color(0.96, 0.88, 0.66, 0.92)
+
+[node name="Content" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="NewColumn" type="VBoxContainer" parent="Margin/Layout/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Label" type="Label" parent="Margin/Layout/Content/NewColumn"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+
+[node name="Card" type="Control" parent="Margin/Layout/Content/NewColumn"]
+custom_minimum_size = Vector2(188, 280)
+layout_mode = 2
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/Content/NewColumn/Card"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("3_body_font")
+
+[node name="ColumnDivider" type="ColorRect" parent="Margin/Layout/Content"]
+custom_minimum_size = Vector2(1, 270)
+layout_mode = 2
+color = Color(0.56, 0.78, 0.82, 0.38)
+
+[node name="CurrentColumn" type="VBoxContainer" parent="Margin/Layout/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Label" type="Label" parent="Margin/Layout/Content/CurrentColumn"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+
+[node name="PageRow" type="HBoxContainer" parent="Margin/Layout/Content/CurrentColumn"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PreviousButton" type="Button" parent="Margin/Layout/Content/CurrentColumn/PageRow"]
+custom_minimum_size = Vector2(44, 56)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_action")
+theme_override_styles/hover = SubResource("StyleBoxFlat_action_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_action_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_action_focus")
+text = "<"
+
+[node name="CardsRow" type="HBoxContainer" parent="Margin/Layout/Content/CurrentColumn/PageRow"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Option1Button" type="Button" parent="Margin/Layout/Content/CurrentColumn/PageRow/CardsRow"]
+custom_minimum_size = Vector2(188, 280)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_card")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_card")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_card")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_card")
+flat = true
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/Content/CurrentColumn/PageRow/CardsRow/Option1Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("3_body_font")
+
+[node name="Option2Button" type="Button" parent="Margin/Layout/Content/CurrentColumn/PageRow/CardsRow"]
+custom_minimum_size = Vector2(188, 280)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_card")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_card")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_card")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_card")
+flat = true
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/Content/CurrentColumn/PageRow/CardsRow/Option2Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("3_body_font")
+
+[node name="Option3Button" type="Button" parent="Margin/Layout/Content/CurrentColumn/PageRow/CardsRow"]
+custom_minimum_size = Vector2(188, 280)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_card")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_card")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_card")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_card")
+flat = true
+
+[node name="ChoiceArt" type="Control" parent="Margin/Layout/Content/CurrentColumn/PageRow/CardsRow/Option3Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_choice_art_script")
+HeadingFont = ExtResource("2_title_font")
+BodyFont = ExtResource("3_body_font")
+
+[node name="NextButton" type="Button" parent="Margin/Layout/Content/CurrentColumn/PageRow"]
+custom_minimum_size = Vector2(44, 56)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_action")
+theme_override_styles/hover = SubResource("StyleBoxFlat_action_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_action_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_action_focus")
+text = ">"
+
+[node name="PageLabel" type="Label" parent="Margin/Layout/Content/CurrentColumn"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_body_font")
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+
+[node name="BackButton" type="Button" parent="Margin/Layout"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_fonts/font = ExtResource("2_title_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_action")
+theme_override_styles/hover = SubResource("StyleBoxFlat_action_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_action_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_action_focus")

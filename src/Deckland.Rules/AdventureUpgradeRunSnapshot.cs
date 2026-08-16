@@ -20,12 +20,16 @@ public enum AdventureUpgradeAcquireResult
 	AlreadyAcquired,
 	DeferredManifestUnavailable,
 	RejectedUnknownUpgrade,
+	RejectedCapacityFull,
+	RejectedInvalidReplacementTarget,
+	RejectedRetiredUpgrade,
+	RejectedConflictingUpgrade,
 }
 
 [JsonConverter(typeof(AdventureUpgradeRunSnapshotJsonConverter))]
 public readonly record struct AdventureUpgradeRunSnapshot
 {
-	public const int CurrentSchemaVersion = 7;
+	public const int CurrentSchemaVersion = 8;
 
 	public int SchemaVersion { get; init; }
 	public string CampaignId { get; init; }
@@ -34,6 +38,7 @@ public readonly record struct AdventureUpgradeRunSnapshot
 	public bool ShouldGrantRunStartUpgrade { get; init; }
 	public bool ShouldGrantVictoryUpgrade { get; init; }
 	public IReadOnlyList<string> AcquiredUpgradeIds { get; init; }
+	public IReadOnlyList<string> RetiredUpgradeIds { get; init; }
 	public int CurrentHealth { get; init; }
 	public int MaxHealth { get; init; }
 	public int PermanentCaptureDamageBonus { get; init; }
@@ -95,7 +100,8 @@ public readonly record struct AdventureUpgradeRunSnapshot
 		int PermanentCaptureDamageBonus = 0,
 		int QuestionRewardCount = 0,
 		int HealingOverflowRemainder = 0,
-		bool HasUsedRevive = false)
+		bool HasUsedRevive = false,
+		IReadOnlyList<string>? RetiredUpgradeIds = null)
 	{
 		this.SchemaVersion = SchemaVersion;
 		this.CampaignId = CampaignId ?? string.Empty;
@@ -104,6 +110,7 @@ public readonly record struct AdventureUpgradeRunSnapshot
 		this.ShouldGrantRunStartUpgrade = ShouldGrantRunStartUpgrade;
 		this.ShouldGrantVictoryUpgrade = ShouldGrantVictoryUpgrade;
 		this.AcquiredUpgradeIds = AcquiredUpgradeIds ?? Array.Empty<string>();
+		this.RetiredUpgradeIds = RetiredUpgradeIds ?? Array.Empty<string>();
 		this.CurrentHealth = CurrentHealth;
 		this.MaxHealth = MaxHealth;
 		this.PermanentCaptureDamageBonus = PermanentCaptureDamageBonus;
@@ -150,6 +157,7 @@ public readonly record struct AdventureUpgradeRunSnapshot
 		this.ShouldGrantRunStartUpgrade = ShouldGrantRunStartUpgrade;
 		this.ShouldGrantVictoryUpgrade = ShouldGrantVictoryUpgrade;
 		this.AcquiredUpgradeIds = AcquiredUpgradeIds ?? Array.Empty<string>();
+		this.RetiredUpgradeIds = Array.Empty<string>();
 		this.CurrentHealth = CurrentHealth;
 		this.MaxHealth = MaxHealth;
 		this.PermanentCaptureDamageBonus = PermanentCaptureDamageBonus;
@@ -209,8 +217,14 @@ public readonly record struct AdventureUpgradeRunSnapshot
 				failure = "Snapshot is missing an acquired upgrade id array.";
 				return false;
 			}
-
 			IReadOnlyList<string> acquiredIds = GetStringList(root, nameof(AcquiredUpgradeIds));
+			IReadOnlyList<string> retiredIds = Array.Empty<string>();
+			if (schemaVersion >= 8
+				&& !TryGetStringList(root, nameof(RetiredUpgradeIds), out retiredIds))
+			{
+				failure = "Snapshot is missing or contains an invalid retired upgrade id array.";
+				return false;
+			}
 			int currentHealth = GetInt(root, nameof(CurrentHealth), 100);
 			int maxHealth = GetInt(root, nameof(MaxHealth), 100);
 			int permanentBonus = GetInt(root, nameof(PermanentCaptureDamageBonus), 0);
@@ -274,7 +288,8 @@ public readonly record struct AdventureUpgradeRunSnapshot
 				permanentBonus,
 				questionRewardCount,
 				healingOverflow,
-				hasUsedRevive);
+				hasUsedRevive,
+				retiredIds);
 			return true;
 		}
 	}
@@ -336,6 +351,33 @@ public readonly record struct AdventureUpgradeRunSnapshot
 		}
 
 		return result;
+	}
+
+	private static bool TryGetStringList(
+		JsonElement root,
+		string name,
+		out IReadOnlyList<string> values)
+	{
+		values = Array.Empty<string>();
+		if (!root.TryGetProperty(name, out JsonElement element)
+			|| element.ValueKind != JsonValueKind.Array)
+		{
+			return false;
+		}
+
+		var result = new List<string>();
+		foreach (JsonElement item in element.EnumerateArray())
+		{
+			if (item.ValueKind != JsonValueKind.String)
+			{
+				return false;
+			}
+
+			result.Add(item.GetString() ?? string.Empty);
+		}
+
+		values = result;
+		return true;
 	}
 }
 
@@ -438,6 +480,19 @@ internal sealed class AdventureUpgradeRunSnapshotJsonConverter : JsonConverter<A
 			}
 		}
 		writer.WriteEndArray();
+		if (value.SchemaVersion >= 8)
+		{
+			writer.WritePropertyName(nameof(AdventureUpgradeRunSnapshot.RetiredUpgradeIds));
+			writer.WriteStartArray();
+			if (value.RetiredUpgradeIds != null)
+			{
+				foreach (string upgradeId in value.RetiredUpgradeIds)
+				{
+					writer.WriteStringValue(upgradeId);
+				}
+			}
+			writer.WriteEndArray();
+		}
 		writer.WriteNumber(nameof(AdventureUpgradeRunSnapshot.CurrentHealth), value.CurrentHealth);
 		writer.WriteNumber(nameof(AdventureUpgradeRunSnapshot.MaxHealth), value.MaxHealth);
 		writer.WriteNumber(

@@ -13,6 +13,7 @@ public partial class GameBoardScene
 			RefreshLocalizedGameText();
 			MarkSeatControlIndicatorsDirty();
 			MarkActivePlayerStatusTooltipContentDirty();
+			UpdateCaptureThresholdFeedbackLayout();
 		}
 		else if (what == NotificationResized && IsNodeReady())
 		{

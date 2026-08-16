@@ -22,8 +22,12 @@ public sealed record AdventureRunReadModel(
 	int MaxHealth,
 	bool HasUsedRevive,
 	ImmutableArray<string> AcquiredUpgradeIds,
+	ImmutableArray<string> RetiredUpgradeIds,
 	AdventureEffectStateSnapshot Effects)
 {
+	public static int MaxActiveUpgradeCount =>
+		global::AdventureUpgradeRunState.MaxActiveUpgradeCount;
+
 	public static int MaxClubMissClimbGrowthStacks =>
 		global::AdventureUpgradeEffectState.MaxClubMissClimbGrowthStacks;
 
@@ -42,6 +46,7 @@ public sealed record AdventureRunReadModel(
 		100,
 		false,
 		ImmutableArray<string>.Empty,
+		ImmutableArray<string>.Empty,
 		default);
 
 	public bool IsQuestionRewardEchoActive =>
@@ -58,6 +63,13 @@ public sealed record AdventureRunReadModel(
 	}
 
 	public ImmutableArray<string> GetAcquiredUpgradeIds() => AcquiredUpgradeIds;
+	public ImmutableArray<string> GetRetiredUpgradeIds() => RetiredUpgradeIds;
+
+	public bool HasRetiredUpgrade(string upgradeId)
+	{
+		return !string.IsNullOrWhiteSpace(upgradeId)
+			&& RetiredUpgradeIds.Contains(upgradeId.Trim(), StringComparer.Ordinal);
+	}
 
 	public IReadOnlyList<global::AdventureUpgradeTriggerSource> BuildUpgradeTriggerOrder(
 		bool runStartTriggered,
@@ -77,7 +89,8 @@ public sealed record AdventureRunReadModel(
 			AcquiredUpgradeIds,
 			Math.Max(1, CurrentRunStageIndex),
 			nextIntExclusive,
-			manifest);
+			manifest,
+			RetiredUpgradeIds);
 
 	public bool ShouldGrantBigCaptureUpgrade(int totalCapturedCardCount) =>
 		global::AdventureUpgradeChoiceRules.ShouldGrantBigCapture(totalCapturedCardCount);
@@ -200,6 +213,8 @@ public sealed record AdventureRunReadModel(
 		ArgumentNullException.ThrowIfNull(state);
 		var upgradeIds = state.GetAcquiredUpgradeIds().ToArray();
 		Array.Sort(upgradeIds, StringComparer.Ordinal);
+		var retiredUpgradeIds = state.GetRetiredUpgradeIds().ToArray();
+		Array.Sort(retiredUpgradeIds, StringComparer.Ordinal);
 		return new AdventureRunReadModel(
 			revision,
 			state.IsActive,
@@ -215,6 +230,7 @@ public sealed record AdventureRunReadModel(
 			state.MaxHealth,
 			state.HasUsedRevive,
 			upgradeIds.ToImmutableArray(),
+			retiredUpgradeIds.ToImmutableArray(),
 			ToSnapshot(state.EffectState));
 	}
 

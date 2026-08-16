@@ -60,6 +60,146 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	public bool DebugReplaceAdventureUpgrade(string upgradeId, string replacedUpgradeId)
+	{
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+		if (!ShouldUseAdventureUpgradeSystem()
+			|| string.IsNullOrWhiteSpace(upgradeId)
+			|| string.IsNullOrWhiteSpace(replacedUpgradeId)
+			|| runState?.IsActive != true
+			|| runState.AcquiredUpgradeIds.Length != AdventureRunReadModel.MaxActiveUpgradeCount
+			|| !runState.HasAcquiredUpgrade(replacedUpgradeId)
+			|| runState.HasAcquiredUpgrade(upgradeId))
+		{
+			return false;
+		}
+
+		AdventureUpgradeGrantCommitResult grantResult = GrantAdventureUpgrade(
+			upgradeId,
+			AdventureUpgradeTriggerSource.None,
+			replacedUpgradeId);
+		if (grantResult.WriteResult != AdventureRunWriteResult.Succeeded
+			|| grantResult.AcquireResult != AdventureUpgradeAcquireResult.Acquired)
+		{
+			return false;
+		}
+
+		ClearReplacedAdventureUpgradeBoardState(grantResult.ReplacedUpgradeId);
+		ApplyAdventureUpgradeAcquisitionEffectsAsync(
+			grantResult,
+			_turnSequenceGeneration).GetAwaiter().GetResult();
+		RenderPlayerHands();
+		return true;
+	}
+
+	public bool DebugFillAdventureUpgradeCapacityExcludingCurrentOffer()
+	{
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+		if (!DebugIsAdventureUpgradeSelectionVisible()
+			|| runState?.IsActive != true)
+		{
+			return false;
+		}
+
+		EnsureAdventureUpgradeCatalogLoaded();
+		if (_adventureUpgradeCatalog == null
+			|| !_adventureUpgradeCatalog.TryCreateManifest(out AdventureUpgradeManifest manifest))
+		{
+			return false;
+		}
+
+		var excludedIds = new HashSet<string>(StringComparer.Ordinal);
+		var excludedConflictGroups = new HashSet<string>(StringComparer.Ordinal);
+		foreach (AdventureSuitUpgradeDefinition offerDefinition in _adventureUpgradeSelectionDefinitions)
+		{
+			excludedIds.Add(offerDefinition.Id);
+			if (manifest.TryGetEnabledEntry(offerDefinition.Id, out AdventureUpgradeManifestEntry offerEntry)
+				&& !string.IsNullOrWhiteSpace(offerEntry.ConflictGroup))
+			{
+				excludedConflictGroups.Add(offerEntry.ConflictGroup);
+			}
+		}
+
+		foreach (AdventureSuitUpgradeDefinition definition in _adventureUpgradeCatalog.All)
+		{
+			runState = GetAdventureUpgradeRunState();
+			if (runState?.AcquiredUpgradeIds.Length >= AdventureRunReadModel.MaxActiveUpgradeCount)
+			{
+				break;
+			}
+			if (excludedIds.Contains(definition.Id)
+				|| runState?.HasAcquiredUpgrade(definition.Id) == true
+				|| runState?.HasRetiredUpgrade(definition.Id) == true
+				|| !manifest.TryGetEnabledEntry(definition.Id, out AdventureUpgradeManifestEntry entry)
+				|| (!string.IsNullOrWhiteSpace(entry.ConflictGroup)
+					&& excludedConflictGroups.Contains(entry.ConflictGroup)))
+			{
+				continue;
+			}
+
+			AdventureUpgradeGrantCommitResult grantResult = GrantAdventureUpgrade(
+				definition.Id,
+				AdventureUpgradeTriggerSource.None);
+			if (grantResult.WriteResult == AdventureRunWriteResult.Succeeded
+				&& grantResult.AcquireResult == AdventureUpgradeAcquireResult.Acquired)
+			{
+				ApplyAdventureUpgradeAcquisitionEffectsAsync(
+					grantResult,
+					_turnSequenceGeneration).GetAwaiter().GetResult();
+			}
+		}
+
+		return GetAdventureUpgradeRunState()?.AcquiredUpgradeIds.Length
+			== AdventureRunReadModel.MaxActiveUpgradeCount;
+	}
+
+	public bool DebugProbeAdventureReplacementBoardStateCleanup()
+	{
+		if (!TryUpdateMatchFlowState(state => state with
+		{
+			CaptureMarkRuntimeId = 101,
+			TurnCaptureMarkRuntimeId = 102,
+			SequentialRevealAnchorRuntimeId = 103,
+			PendingBaseCardFacesUp = true,
+			PendingCaptureDamageDelta = 7,
+			PendingCardPlacement = PendingCardPlacementMode.Leftmost,
+			PendingPlacementAnchorRuntimeId = 104,
+		}))
+		{
+			return false;
+		}
+
+		ClearReplacedAdventureUpgradeBoardState("spades_trace_hunt");
+		ClearReplacedAdventureUpgradeBoardState("spades_hunt_order");
+		ClearReplacedAdventureUpgradeBoardState("clubs_canopy_reveal");
+		ClearReplacedAdventureUpgradeBoardState("spades_dark_harbor_reveal");
+		ClearReplacedAdventureUpgradeBoardState("spades_missed_beat_blunt_hurt");
+		ClearReplacedAdventureUpgradeBoardState("spades_wrong_shore_lineup");
+		MatchFlowState firstPass = CurrentMatchFlowState;
+		if (firstPass.CaptureMarkRuntimeId != 0
+			|| firstPass.TurnCaptureMarkRuntimeId != 0
+			|| firstPass.SequentialRevealAnchorRuntimeId != 0
+			|| firstPass.PendingBaseCardFacesUp
+			|| firstPass.PendingCaptureDamageDelta != 0
+			|| firstPass.PendingCardPlacement != PendingCardPlacementMode.None
+			|| firstPass.PendingPlacementAnchorRuntimeId != 0)
+		{
+			return false;
+		}
+
+		if (!TryUpdateMatchFlowState(state => state with
+		{
+			PendingCardPlacement = PendingCardPlacementMode.BeforeTrackedAnchor,
+			PendingPlacementAnchorRuntimeId = 105,
+		}))
+		{
+			return false;
+		}
+		ClearReplacedAdventureUpgradeBoardState("spades_return_tide_misorder");
+		return CurrentMatchFlowState.PendingCardPlacement == PendingCardPlacementMode.None
+			&& CurrentMatchFlowState.PendingPlacementAnchorRuntimeId == 0;
+	}
+
 	public bool DebugConfigureAdventureMissClimbBadgeScenario(int growthStacks)
 	{
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
@@ -1074,6 +1214,11 @@ public partial class GameBoardScene
 	public void DebugForceNextAdventureUpgradeOverlayDisplayFailure()
 	{
 		_debugForceNextAdventureUpgradeOverlayDisplayFailure = true;
+	}
+
+	public void DebugForceNextAdventureUpgradeReplacementOverlayDisplayFailure()
+	{
+		_debugForceNextAdventureUpgradeReplacementOverlayDisplayFailure = true;
 	}
 
 }

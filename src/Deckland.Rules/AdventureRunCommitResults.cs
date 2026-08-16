@@ -26,7 +26,8 @@ public readonly record struct AdventureUpgradeGrantCommitResult(
 	AdventureRunWriteResult WriteResult,
 	AdventureUpgradeAcquireResult AcquireResult,
 	AdventureUpgradeAcquisitionEffectResult EffectResult,
-	AdventureHealingResult? HealingResult);
+	AdventureHealingResult? HealingResult,
+	string? ReplacedUpgradeId);
 
 public readonly record struct AdventureHealingCommitResult(
 	AdventureRunWriteResult WriteResult,

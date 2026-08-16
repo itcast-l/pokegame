@@ -24,7 +24,8 @@ public readonly record struct CardPlayPlan(
 	string EffectiveRank,
 	bool PlayedCardFacesUp,
 	bool CaptureThresholdBlocked = false,
-	int NormalTableCaptureCount = 0);
+	int NormalTableCaptureCount = 0,
+	bool CaptureThresholdBlockedByHiddenMatch = false);
 
 internal static class CardPlayResolver
 {
@@ -82,6 +83,10 @@ internal static class CardPlayResolver
 			&& !ContinuousCaptureRules.MeetsThreshold(
 				normalTableCaptureCount,
 				basePlayCaptureThreshold);
+		bool captureThresholdBlockedByHiddenMatch = captureThresholdBlocked
+			&& !playedCardCollectsTable
+			&& matchingIndex >= 0
+			&& !tableCards[matchingIndex].IsFaceUp;
 		if (captureThresholdBlocked)
 		{
 			matchingIndex = -1;
@@ -102,7 +107,8 @@ internal static class CardPlayResolver
 			effectiveRank,
 			playedCardFacesUp,
 			captureThresholdBlocked,
-			normalTableCaptureCount);
+			normalTableCaptureCount,
+			captureThresholdBlockedByHiddenMatch);
 	}
 
 	private static int CountNormalTableCaptureCards(

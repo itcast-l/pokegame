@@ -260,12 +260,15 @@ public sealed partial class AuthorityRuleSession
 			return AdventureEvaluation.InvalidStage;
 		}
 
-		global::AdventureUpgradeAcquireResult acquireResult = candidate.AcquireUpgrade(command.UpgradeId);
+		global::AdventureUpgradeAcquireResult acquireResult = candidate.AcquireUpgrade(
+			command.UpgradeId,
+			command.ReplacedUpgradeId);
 		if (acquireResult != global::AdventureUpgradeAcquireResult.Acquired)
 		{
 			return AdventureEvaluation.Unchanged(new AdventureUpgradeGrantCommandOutcome(
 				acquireResult,
 				default,
+				null,
 				null));
 		}
 
@@ -302,7 +305,13 @@ public sealed partial class AuthorityRuleSession
 		}
 
 		return AdventureEvaluation.Changed(
-			new AdventureUpgradeGrantCommandOutcome(acquireResult, effectResult, healingResult),
+			new AdventureUpgradeGrantCommandOutcome(
+				acquireResult,
+				effectResult,
+				healingResult,
+				string.IsNullOrWhiteSpace(command.ReplacedUpgradeId)
+					? null
+					: command.ReplacedUpgradeId.Trim()),
 			unlockedUpgradeId: command.UpgradeId);
 	}
 

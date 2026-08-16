@@ -429,6 +429,57 @@ internal static partial class Program
 		Equal(healthBeforeDamage - 7, store.GetReadModel().CurrentHealth);
 	}
 
+	private static void AdventureUpgradeReplacementRollsBackOnSaveFailure()
+	{
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(2);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Runner"));
+		var store = new AdventureRunSessionStore();
+		store.SetManifest(CreateFullAdventureUpgradeManifest());
+		Equal(AdventureRunWriteResult.Succeeded, store.BeginNewMainRun(1, AdventureCampaignCatalog.GetMainAvatarId(1)));
+		string[] activeIds =
+		{
+			"hearts_warm_current_supply",
+			"hearts_long_capture_recovery",
+			"hearts_miss_bandage",
+			"hearts_question_mark_first_aid",
+			"diamonds_small_insurance",
+			"diamonds_question_mark_raise",
+			"spades_dark_harbor_reveal",
+			"clubs_short_branch_return",
+		};
+		foreach (string id in activeIds)
+		{
+			Equal(
+				AdventureUpgradeAcquireResult.Acquired,
+				store.GrantUpgrade(id, AdventureUpgradeTriggerSource.None).AcquireResult);
+		}
+		string payloadBefore = LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson;
+		saveManager.SaveSlotResultSequence.Enqueue(Godot.Error.Failed);
+
+		AdventureUpgradeGrantCommitResult failed = store.GrantUpgrade(
+			"clubs_gap_rooting",
+			AdventureUpgradeTriggerSource.None,
+			activeIds[2]);
+		Equal(AdventureRunWriteResult.SaveFailed, failed.WriteResult);
+		Equal(AdventureUpgradeAcquireResult.None, failed.AcquireResult);
+		AdventureRunReadModel unchanged = store.GetReadModel();
+		True(unchanged.HasAcquiredUpgrade(activeIds[2]));
+		False(unchanged.HasAcquiredUpgrade("clubs_gap_rooting"));
+		False(unchanged.HasRetiredUpgrade(activeIds[2]));
+		Equal(payloadBefore, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);
+
+		AdventureUpgradeGrantCommitResult committed = store.GrantUpgrade(
+			"clubs_gap_rooting",
+			AdventureUpgradeTriggerSource.None,
+			activeIds[2]);
+		Equal(AdventureRunWriteResult.Succeeded, committed.WriteResult);
+		Equal(AdventureUpgradeAcquireResult.Acquired, committed.AcquireResult);
+		Equal(activeIds[2], committed.ReplacedUpgradeId);
+		True(store.GetReadModel().HasRetiredUpgrade(activeIds[2]));
+	}
+
 	private static void AdventureCaptureActionTransactionRetriesOnce()
 	{
 		ResetGameSaveStoreTestState();
