@@ -94,6 +94,7 @@ public sealed partial class AuthorityRuleSession
 				player.ItemHand.Select(item => new ItemCard(item.Id)));
 			_state.PlayerScores[seat] = player.Score;
 		}
+		_state.BasePlayCaptureThreshold = command.BasePlayCaptureThreshold;
 
 		foreach (TableCardState tableCard in command.TableCards)
 		{
@@ -127,7 +128,9 @@ public sealed partial class AuthorityRuleSession
 			|| command.WinningScore <= 0
 			|| command.Players.IsDefault
 			|| command.Players.Length != command.PlayerCount
-			|| command.TableCards.IsDefault)
+			|| command.TableCards.IsDefault
+			|| !ContinuousCaptureRules.IsValidThreshold(
+				command.BasePlayCaptureThreshold))
 		{
 			return new RuleRejection(RuleRejectionCode.InvalidConfiguration, string.Empty);
 		}
@@ -365,6 +368,7 @@ public sealed partial class AuthorityRuleSession
 		state.WinnerPlayerIndex = -1;
 		state.MandatorySelection = MandatorySelectionState.None;
 		state.PendingAttachmentRewards.Clear();
+		ClearPendingBasePlayCapture(state);
 		state.ExtraActions.Reset();
 		state.MatchFlow = MatchFlowState.NewMatch;
 		state.RuleSessionInitialized = true;
@@ -379,6 +383,7 @@ public sealed partial class AuthorityRuleSession
 		state.PlayerItemHands.Clear();
 		state.TableCards.Clear();
 		Array.Clear(state.PlayerScores);
+		state.BasePlayCaptureThreshold = ContinuousCaptureRules.MinimumThreshold;
 		for (int seat = 0; seat < CompatibilityPlayerCapacity; seat++)
 		{
 			state.PlayerDecks.Add(new List<PlayingCard>());

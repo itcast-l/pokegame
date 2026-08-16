@@ -71,6 +71,7 @@ internal static class NetworkAuthorityCheckpointRuleAdapter
 			ItemHands = itemHands,
 			TableCards = tableCards,
 			Scores = ExportScores(snapshot.Players),
+			BasePlayCaptureThreshold = snapshot.BasePlayCaptureThreshold,
 			MatchOutcomeKind = ToNetworkMatchOutcome(snapshot.Outcome),
 			WinnerPlayerIndex = snapshot.WinnerSeat,
 			CurrentTurnPlayerIndex = snapshot.CurrentTurnSeat,
@@ -180,7 +181,9 @@ internal static class NetworkAuthorityCheckpointRuleAdapter
 			CompletedTurnsSinceQuestionRefresh:
 				checkpoint.CompletedTurnsSinceQuestionRefresh,
 			QuestionRefreshAnchorSeat:
-				checkpoint.QuestionRefreshAnchorPlayerIndex);
+				checkpoint.QuestionRefreshAnchorPlayerIndex,
+			PendingBasePlayCapture: PendingBasePlayCaptureState.None,
+			BasePlayCaptureThreshold: checkpoint.BasePlayCaptureThreshold);
 		return true;
 	}
 

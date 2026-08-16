@@ -62,6 +62,7 @@ public partial class GameBoardScene
 		CardPlayRuleOptions ruleOptions = BuildCardPlayRuleOptions(playedCard);
 		CardPlayPlan cardPlayPlan = ResolveCardPlayPlan(
 			ruleOptions,
+			playerIndex,
 			adventureEnemyNextBaseCardModifiers.TableInsertIndex,
 			adventureEnemyNextBaseCardModifiers.FacesUp);
 		bool playedRankCollectsTable = cardPlayPlan.PlayedCardCollectsTable;
@@ -97,6 +98,15 @@ public partial class GameBoardScene
 			out RuleCommandResult rulePlayResult))
 		{
 			return new PlayCardResult(false, false);
+		}
+		if (cardPlayPlan.CaptureThresholdBlocked)
+		{
+			PublishCaptureThresholdFeedback(
+				playerIndex,
+				bigTide: false,
+				ContinuousCaptureRules.GetMinimumTableCaptureCount(
+					GetBasePlayCaptureThreshold()),
+				turnSequenceGeneration);
 		}
 		await WaitForAuthorityTransactionFaultAsync("after_move");
 		await WaitForAuthorityTransactionFaultAsync("after_insert");
@@ -457,18 +467,21 @@ public partial class GameBoardScene
 
 	private CardPlayPlan ResolveCardPlayPlan(
 		PlayingCard playedCard,
+		int playerIndex,
 		int tableInsertIndexOverride = -1,
 		bool playedCardFacesUp = false)
 	{
 		return ResolveCardPlayPlan(
 			BuildCardPlayRuleOptions(playedCard),
+			playerIndex,
 			tableInsertIndexOverride,
 			playedCardFacesUp);
 	}
 
 	private CardPlayPlan ResolveCardPlayPlan(
 		ImmutableArray<TableCardState> tableCards,
-		PlayingCard playedCard)
+		PlayingCard playedCard,
+		int playerIndex)
 	{
 		CardPlayRuleOptions options = BuildCardPlayRuleOptions(playedCard);
 		return MatchReadModel.ResolveCardPlay(
@@ -482,11 +495,13 @@ public partial class GameBoardScene
 			options.AlternateMatchRanks.IsDefaultOrEmpty
 				? null
 				: options.AlternateMatchRanks,
-			insertAtTableStart: options.InsertAtTableStart);
+			insertAtTableStart: options.InsertAtTableStart,
+			basePlayCaptureThreshold: GetBasePlayCaptureThreshold());
 	}
 
 	private CardPlayPlan ResolveCardPlayPlan(
 		CardPlayRuleOptions options,
+		int playerIndex,
 		int tableInsertIndexOverride = -1,
 		bool playedCardFacesUp = false)
 	{
@@ -503,7 +518,16 @@ public partial class GameBoardScene
 				: options.AlternateMatchRanks,
 			insertAtTableStart: options.InsertAtTableStart,
 			tableInsertIndexOverride: tableInsertIndexOverride,
-			playedCardFacesUp: playedCardFacesUp);
+			playedCardFacesUp: playedCardFacesUp,
+			basePlayCaptureThreshold: GetBasePlayCaptureThreshold());
+	}
+
+	private int GetBasePlayCaptureThreshold()
+	{
+		MatchReadModel? readModel = CurrentRuleReadModel;
+		return readModel?.IsInitialized == true
+			? readModel.BasePlayCaptureThreshold
+			: ContinuousCaptureRules.MinimumThreshold;
 	}
 
 	private CardPlayRuleOptions BuildCardPlayRuleOptions(PlayingCard playedCard)
@@ -567,7 +591,8 @@ public partial class GameBoardScene
 				tableCard.Card?.Rank,
 				tableCard.IsFaceUp,
 				tableCard.IsBuriedInSand,
-				tableCard.Card?.Suit);
+				tableCard.Card?.Suit,
+				tableCard.Card.HasValue && !tableCard.RemoveCardOnCapture);
 		}
 
 		return tableCards;
@@ -584,7 +609,8 @@ public partial class GameBoardScene
 				tableCard.Card?.Rank,
 				tableCard.IsFaceUp,
 				tableCard.IsBuried,
-				tableCard.Card?.Suit);
+				tableCard.Card?.Suit,
+				tableCard.Card.HasValue && !tableCard.RemoveOnCapture);
 		}
 
 		return tableCards;

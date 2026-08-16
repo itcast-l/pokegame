@@ -197,9 +197,11 @@ public sealed record MatchStateSnapshot(
 	ExtraActionQueueSnapshot? ExtraActions = null,
 	int CompletedTurnsSinceQuestionRefresh = 0,
 	int QuestionRefreshAnchorSeat = -1,
-	MatchFlowState? MatchFlow = null)
+	MatchFlowState? MatchFlow = null,
+	PendingBasePlayCaptureState? PendingBasePlayCapture = null,
+	int BasePlayCaptureThreshold = 0)
 {
-	public const int CurrentSchemaVersion = 1;
+	public const int CurrentSchemaVersion = 3;
 
 	public ImmutableArray<PendingAttachmentRewardState> NormalizedPendingAttachmentRewards =>
 		PendingAttachmentRewards.IsDefault
@@ -208,6 +210,8 @@ public sealed record MatchStateSnapshot(
 	public ExtraActionQueueSnapshot NormalizedExtraActions =>
 		ExtraActions ?? ExtraActionQueueSnapshot.Empty;
 	public MatchFlowState NormalizedMatchFlow => MatchFlow ?? MatchFlowState.Empty;
+	public PendingBasePlayCaptureState NormalizedPendingBasePlayCapture =>
+		PendingBasePlayCapture ?? PendingBasePlayCaptureState.None;
 }
 
 public sealed partial record MatchReadModel(
@@ -228,7 +232,8 @@ public sealed partial record MatchReadModel(
 	ExtraActionQueueSnapshot? ExtraActions = null,
 	int CompletedTurnsSinceQuestionRefresh = 0,
 	int QuestionRefreshAnchorSeat = -1,
-	MatchFlowState? MatchFlow = null)
+	MatchFlowState? MatchFlow = null,
+	int BasePlayCaptureThreshold = 0)
 {
 	public bool IsInitialized => PlayerCount > 0;
 	public bool HasPendingPresentationBarrier => PendingPresentationBarrierId > 0;

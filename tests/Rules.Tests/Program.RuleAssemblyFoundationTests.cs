@@ -43,6 +43,17 @@ internal static partial class Program
 		Run("turn generation advances only through its rule command", TurnGenerationAdvancesOnlyThroughItsRuleCommand);
 		Run("turn generation advance cancels an obsolete presentation barrier", TurnGenerationAdvanceCancelsObsoletePresentationBarrier);
 		Run("authority card play capture score and outcome commands are ordered", AuthorityCardPlayCaptureScoreAndOutcomeCommandsAreOrdered);
+		Run("continuous capture rules enforce strict growth and big tide reset", ContinuousCaptureRulesEnforceStrictGrowthAndBigTideReset);
+		Run("card play resolver blocks thresholds before extra capture effects", CardPlayResolverBlocksThresholdBeforeExtraCaptureEffects);
+		Run("authority continuous capture transaction records final table count", AuthorityContinuousCaptureTransactionRecordsFinalTableCount);
+		Run("authority continuous capture threshold is shared across seats", AuthorityContinuousCaptureThresholdIsSharedAcrossSeats);
+		Run("authority continuous capture sequence crosses seats and resets globally", AuthorityContinuousCaptureSequenceCrossesSeatsAndResetsGlobally);
+		Run("authority continuous capture binds the current base-play identity", AuthorityContinuousCaptureBindsCurrentBasePlayIdentity);
+		Run("continuous capture threshold survives authority and replica snapshots", ContinuousCaptureThresholdSurvivesSnapshots);
+		Run("pending base-play capture survives snapshots and rejects tampering", PendingBasePlayCaptureSurvivesSnapshotsAndRejectsTampering);
+		Run("pending base-play capture clears at action boundaries", PendingBasePlayCaptureClearsAtActionBoundaries);
+		Run("continuous capture threshold persists across misses and turns then resets", ContinuousCaptureThresholdPersistsAcrossMissesAndTurnsThenResets);
+		Run("direct capture bypasses continuous capture threshold", DirectCaptureBypassesContinuousCaptureThreshold);
 		Run("authority gameplay commands reject illegal stale and duplicate actions atomically", AuthorityGameplayCommandsRejectIllegalStaleAndDuplicateActionsAtomically);
 		Run("authority draw and turn commands preserve zone and turn invariants", AuthorityDrawAndTurnCommandsPreserveZoneAndTurnInvariants);
 		Run("authority return-to-hand command is ordered and atomic", AuthorityReturnToHandCommandIsOrderedAndAtomic);

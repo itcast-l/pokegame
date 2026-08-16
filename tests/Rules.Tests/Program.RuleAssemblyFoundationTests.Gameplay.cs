@@ -586,7 +586,8 @@ internal static partial class Program
 			Seat: 0,
 			CaptureStartIndex: play.Mutation.CaptureStartIndex,
 			ScoreMutations: ImmutableArray.Create(
-				new RuleScoreMutation(0, RuleScoreMutationKind.Add, 2))));
+				new RuleScoreMutation(0, RuleScoreMutationKind.Add, 2)),
+			BasePlayCardRuntimeInstanceId: play.Mutation.LogicalEntityId));
 		True(capture.Accepted);
 		Equal(0, capture.ReadModel.TableCards.Length);
 		Equal(3, capture.ReadModel.Players[0].Deck.Length);

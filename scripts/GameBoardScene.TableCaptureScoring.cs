@@ -335,7 +335,8 @@ public partial class GameBoardScene
 			tableCard.IsSlimeCoated,
 			IsItemEffectType(tableCard, CardEffectTypes.DoubleCollect),
 			IsItemEffectType(tableCard, CardEffectTypes.PlaceTablePairDestroy),
-			tableCard.ItemOwnerPlayerIndex);
+			tableCard.ItemOwnerPlayerIndex,
+			tableCard.Card.HasValue && !tableCard.RemoveCardOnCapture);
 	}
 
 	private CaptureScoringTableCard ToCaptureScoringTableCard(TableCardState tableCard)
@@ -352,7 +353,8 @@ public partial class GameBoardScene
 				&& IsItemEffectType(tableCard.ItemOverlay.Value.Id, CardEffectTypes.DoubleCollect),
 			tableCard.ItemOverlay.HasValue
 				&& IsItemEffectType(tableCard.ItemOverlay.Value.Id, CardEffectTypes.PlaceTablePairDestroy),
-			tableCard.ItemOwnerSeat);
+			tableCard.ItemOwnerSeat,
+			tableCard.Card.HasValue && !tableCard.RemoveOnCapture);
 	}
 
 	private CaptureScoringCard ToCaptureScoringCard(PlayingCard card)

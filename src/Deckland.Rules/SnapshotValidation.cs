@@ -21,6 +21,8 @@ internal static class SnapshotValidation
 			|| snapshot.TableCards.IsDefault
 			|| snapshot.PendingPresentationBarrierId < 0
 			|| snapshot.AppliedActionIds.IsDefault
+			|| !ContinuousCaptureRules.IsValidThreshold(
+				snapshot.BasePlayCaptureThreshold)
 			|| snapshot.CompletedTurnsSinceQuestionRefresh < 0
 			|| snapshot.QuestionRefreshAnchorSeat < -1
 			|| snapshot.QuestionRefreshAnchorSeat >= snapshot.PlayerCount)
@@ -63,6 +65,7 @@ internal static class SnapshotValidation
 
 		ValidateMandatorySelection(snapshot, parameterName);
 		ValidatePendingAttachmentRewards(snapshot, parameterName);
+		ValidatePendingBasePlayCapture(snapshot, parameterName);
 		ValidateExtraActions(snapshot.NormalizedExtraActions, parameterName);
 		if (!MatchFlowStateValidation.IsValid(snapshot.NormalizedMatchFlow)
 			|| snapshot.NormalizedMatchFlow.PendingWinnerSeat >= snapshot.PlayerCount
@@ -70,6 +73,58 @@ internal static class SnapshotValidation
 		{
 			throw new ArgumentException(
 				"The match snapshot contains invalid flow state.",
+				parameterName);
+		}
+	}
+
+	private static void ValidatePendingBasePlayCapture(
+		MatchStateSnapshot snapshot,
+		string parameterName)
+	{
+		PendingBasePlayCaptureState pending = snapshot.NormalizedPendingBasePlayCapture;
+		if (!pending.IsPending)
+		{
+			if (pending != PendingBasePlayCaptureState.None)
+			{
+				throw new ArgumentException(
+					"The match snapshot contains an invalid pending base-play sentinel.",
+					parameterName);
+			}
+
+			return;
+		}
+
+		if (pending.Seat < 0
+			|| pending.Seat >= snapshot.PlayerCount
+			|| pending.Seat != snapshot.CurrentTurnSeat
+			|| pending.CardRuntimeInstanceId <= 0
+			|| pending.PlayActionId <= 0
+			|| !snapshot.AppliedActionIds.Contains(pending.PlayActionId)
+			|| pending.TurnGeneration != snapshot.TurnGeneration
+			|| snapshot.Outcome != MatchOutcome.InProgress)
+		{
+			throw new ArgumentException(
+				"The match snapshot contains an invalid pending base-play capture.",
+				parameterName);
+		}
+
+		int matchingCardCount = 0;
+		bool matchingCardHasExpectedOwner = false;
+		foreach (TableCardState tableCard in snapshot.TableCards)
+		{
+			if (tableCard == null
+				|| tableCard.Card?.RuntimeInstanceId != pending.CardRuntimeInstanceId)
+			{
+				continue;
+			}
+
+			matchingCardCount++;
+			matchingCardHasExpectedOwner = tableCard.CardOwnerSeat == pending.Seat;
+		}
+		if (matchingCardCount != 1 || !matchingCardHasExpectedOwner)
+		{
+			throw new ArgumentException(
+				"The pending base-play card is missing, duplicated, or owned by another seat.",
 				parameterName);
 		}
 	}

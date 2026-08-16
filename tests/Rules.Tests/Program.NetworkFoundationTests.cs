@@ -23,6 +23,7 @@ internal static partial class Program
 		Run("authority action json roundtrip keeps fixed fields", AuthorityActionJsonRoundtripKeepsFixedFields);
 		Run("checkpoint codec roundtrips private deterministic state", CheckpointCodecRoundtripsPrivateDeterministicState);
 		Run("checkpoint codec validates opening dice by player count", CheckpointCodecValidatesOpeningDiceByPlayerCount);
+		Run("checkpoint codec rejects invalid global capture thresholds", CheckpointCodecRejectsInvalidGlobalCaptureThresholds);
 		Run("checkpoint rule adapter roundtrips fields bytes hash and random continuation", CheckpointRuleAdapterRoundtripsFieldsBytesHashAndRandomContinuation);
 		Run("checkpoint four player high load benchmark", CheckpointFourPlayerHighLoadBenchmark);
 		Run("checkpoint telemetry bookkeeping is allocation free", CheckpointTelemetryBookkeepingIsAllocationFree);

@@ -67,7 +67,7 @@ public partial class GameBoardScene
 		}
 
 		playedCard = PrepareAdventureEnemyPlayedCard(playerIndex, _playerHands[playerIndex][handIndex]);
-		plan = ResolveCardPlayPlan(playedCard);
+		plan = ResolveCardPlayPlan(playedCard, playerIndex: playerIndex);
 		tableCardIndex = plan.TableInsertIndex;
 		tableCardIsFaceUp = false;
 		_networkPredictedHandMatchedTableCardIndex = plan.MatchingTableCardIndex;

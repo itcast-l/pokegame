@@ -841,6 +841,7 @@ public partial class GameBoardScene
 			_currentTurnPlayerIndex.ToString(),
 			_winnerPlayerIndex.ToString(),
 			_tableCards.Count.ToString(),
+			GetBasePlayCaptureThreshold().ToString(),
 		};
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
@@ -993,7 +994,7 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = _playerHands[playerIndex][handIndex];
-		CardPlayPlan plan = ResolveCardPlayPlan(playedCard);
+		CardPlayPlan plan = ResolveCardPlayPlan(playedCard, playerIndex);
 		if (plan.CaptureStartIndex < 0)
 		{
 			return -1;
@@ -1020,7 +1021,7 @@ public partial class GameBoardScene
 		}
 
 		PlayingCard playedCard = _playerHands[playerIndex][handIndex];
-		CardPlayPlan plan = ResolveCardPlayPlan(playedCard);
+		CardPlayPlan plan = ResolveCardPlayPlan(playedCard, playerIndex);
 		if (plan.CaptureStartIndex < 0)
 		{
 			return 0;

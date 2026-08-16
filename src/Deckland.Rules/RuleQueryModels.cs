@@ -12,7 +12,8 @@ public readonly record struct CaptureScoringTableCard(
 	bool IsSlimeCoated,
 	bool HasDoubleCollectItemEffect,
 	bool HasPairDestroyItemEffect,
-	int ItemOwnerPlayerIndex);
+	int ItemOwnerPlayerIndex,
+	bool CountsTowardBasePlayCaptureThreshold = true);
 
 public readonly record struct CaptureScoringContext(
 	bool SuppressSlimeCoatedScore,
@@ -43,7 +44,8 @@ public readonly record struct PotentialCaptureCard(
 	bool HasDoubleEffect,
 	string Suit = "",
 	bool CollectBySuit = false,
-	IReadOnlyList<string>? AlternateRanks = null);
+	IReadOnlyList<string>? AlternateRanks = null,
+	int BasePlayCaptureThreshold = 0);
 
 public enum SoloAiDifficulty
 {

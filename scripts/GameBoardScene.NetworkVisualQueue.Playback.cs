@@ -49,6 +49,12 @@ public partial class GameBoardScene
 			case NetworkBoardVisualEventTypes.MantaTideShift:
 				await PlayNetworkMantaTideShiftVisualEventAsync(payload);
 				return;
+			case NetworkBoardVisualEventTypes.CaptureThresholdFeedback:
+				ShowCaptureThresholdFeedback(
+					payload.Actor,
+					payload.Presentation == NetworkBoardVisualEventTypes.CaptureThresholdBigTide,
+					payload.MovedCount);
+				return;
 			default:
 				break;
 		}
@@ -173,6 +179,12 @@ public partial class GameBoardScene
 				return;
 			case NetworkBoardVisualEventTypes.QuestionReward:
 				await PlayNetworkAuthorityHostQuestionRewardVisualOnlyAsync(payload);
+				return;
+			case NetworkBoardVisualEventTypes.CaptureThresholdFeedback:
+				ShowCaptureThresholdFeedback(
+					payload.Actor,
+					payload.Presentation == NetworkBoardVisualEventTypes.CaptureThresholdBigTide,
+					payload.MovedCount);
 				return;
 			default:
 				return;

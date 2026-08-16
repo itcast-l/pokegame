@@ -178,6 +178,22 @@ public partial class GameBoardScene
 			case NetworkBoardVisualEventTypes.MantaTideShift:
 				if (_tableCards.Count <= 1) return false;
 				break;
+			case NetworkBoardVisualEventTypes.CaptureThresholdFeedback:
+				if (!seat(NetworkBoardVisualEventTypes.ActorSeatIndexKey, out actor)
+					|| !TryReadNetworkString(
+						payload,
+						NetworkBoardVisualEventTypes.CaptureThresholdFeedbackTypeKey,
+						32,
+						out presentation)
+					|| presentation is not (NetworkBoardVisualEventTypes.CaptureThresholdBlocked
+						or NetworkBoardVisualEventTypes.CaptureThresholdBigTide)
+					|| !TryReadNetworkInt32(
+						payload,
+						NetworkBoardVisualEventTypes.CaptureThresholdCountKey,
+						1,
+						NetworkProtocol.MaxAuthorityActionQueueCount * 4,
+						out movedCount)) return false;
+				break;
 			default: return false;
 		}
 
@@ -185,7 +201,7 @@ public partial class GameBoardScene
 		return true;
 	}
 
-	private static bool IsKnownNetworkVisualEventType(string value) => value is NetworkBoardVisualEventTypes.PlayHandCard or NetworkBoardVisualEventTypes.PlayItemCard or NetworkBoardVisualEventTypes.CaptureReveal or NetworkBoardVisualEventTypes.CaptureToDeck or NetworkBoardVisualEventTypes.DrawCard or NetworkBoardVisualEventTypes.DeckShuffle or NetworkBoardVisualEventTypes.StealHandCard or NetworkBoardVisualEventTypes.StealDeckCards or NetworkBoardVisualEventTypes.LensReveal or NetworkBoardVisualEventTypes.TableShuffle or NetworkBoardVisualEventTypes.QuestionRefresh or NetworkBoardVisualEventTypes.QuestionReward or NetworkBoardVisualEventTypes.BombPair or NetworkBoardVisualEventTypes.MantaTideShift;
+	private static bool IsKnownNetworkVisualEventType(string value) => value is NetworkBoardVisualEventTypes.PlayHandCard or NetworkBoardVisualEventTypes.PlayItemCard or NetworkBoardVisualEventTypes.CaptureReveal or NetworkBoardVisualEventTypes.CaptureToDeck or NetworkBoardVisualEventTypes.DrawCard or NetworkBoardVisualEventTypes.DeckShuffle or NetworkBoardVisualEventTypes.StealHandCard or NetworkBoardVisualEventTypes.StealDeckCards or NetworkBoardVisualEventTypes.LensReveal or NetworkBoardVisualEventTypes.TableShuffle or NetworkBoardVisualEventTypes.QuestionRefresh or NetworkBoardVisualEventTypes.QuestionReward or NetworkBoardVisualEventTypes.BombPair or NetworkBoardVisualEventTypes.MantaTideShift or NetworkBoardVisualEventTypes.CaptureThresholdFeedback;
 	private static bool IsKnownCardPlayPresentation(string value) => value is CardPlayPresentationTypes.DirectTrigger or CardPlayPresentationTypes.TableOverlay or CardPlayPresentationTypes.TransformAreaTrigger or CardPlayPresentationTypes.LensSplit;
 	private bool HasCurrentNetworkTableIndexes(int[] indexes, int minimumCount, int maximumCount)
 	{

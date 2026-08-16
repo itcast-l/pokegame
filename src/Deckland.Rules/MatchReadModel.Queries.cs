@@ -138,14 +138,16 @@ public sealed partial record MatchReadModel
 		IReadOnlyList<string>? alternateRanks = null,
 		bool insertAtTableStart = false,
 		int tableInsertIndexOverride = -1,
-		bool playedCardFacesUp = false) =>
+		bool playedCardFacesUp = false,
+		int basePlayCaptureThreshold = 0) =>
 		global::CardPlayResolver.Resolve(
 			tableCards,
 			playedCard,
 			alternateRanks,
 			insertAtTableStart,
 			tableInsertIndexOverride,
-			playedCardFacesUp);
+			playedCardFacesUp,
+			basePlayCaptureThreshold);
 
 	public static int FindMatchingTableCardIndex(
 		IReadOnlyList<global::CardPlayTableCard> tableCards,

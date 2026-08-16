@@ -21,6 +21,7 @@ public partial class GameBoardScene
 			RefreshAdventureTutorialOverlayLayout();
 			MarkSeatControlIndicatorLayoutDirty();
 			MarkActivePlayerStatusTooltipLayoutDirty();
+			UpdateCaptureThresholdFeedbackLayout();
 		}
 	}
 

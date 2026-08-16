@@ -24,7 +24,8 @@ public partial class GameBoardScene
 		string actionSource = "capture",
 		AdventureCaptureMatchSource matchSource = AdventureCaptureMatchSource.CollectAll,
 		IReadOnlyCollection<string>? triggeredAttachedItemCardIds = null,
-		MatchStateSnapshot? adventureSaveRollbackSnapshot = null)
+		MatchStateSnapshot? adventureSaveRollbackSnapshot = null,
+		long basePlayCardRuntimeInstanceId = 0)
 {
 	if (expectedTableCardReferences == null
 		|| _isLeavingGame
@@ -448,6 +449,7 @@ public partial class GameBoardScene
 			MainPlayerIndex,
 				scoreMutations.ToImmutable(),
 				shouldRestartQuestionRefreshTracking,
+				basePlayCardRuntimeInstanceId,
 				out RuleCommandResult captureCommandResult))
 		{
 			return CaptureTableCardsResult.AbortedBeforeApply;
@@ -462,6 +464,18 @@ public partial class GameBoardScene
 				captureCommandResult.Mutation.CollectedCardCount;
 			removedTableCardCount =
 				captureCommandResult.Mutation.RemovedTableCardCount;
+		if (captureCommandResult.Mutation.BigTideTriggered)
+		{
+			PublishCaptureThresholdFeedback(
+				playerIndex,
+				bigTide: true,
+				captureCommandResult.Mutation.FinalTableCaptureCount,
+				turnSequenceGeneration);
+		}
+		else
+		{
+			MarkActivePlayerStatusTooltipForRefresh();
+		}
 		await WaitForDebugCaptureAfterApplyBarrierAsync();
 	if (turnSequenceGeneration != _turnSequenceGeneration
 		|| _isLeavingGame)

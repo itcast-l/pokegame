@@ -12,7 +12,7 @@ internal static partial class Program
 	private const long BaselineEndToEndAllocationBytes = 334_042;
 	private const double BaselineEndToEndP95Milliseconds = 1.263;
 	private const string HighLoadCheckpointGoldenHash =
-		"dffa841e658c33485e748591255396db82199509a4475be85525ae9acb2bfb72";
+		"7778f5687cf4b24075e2ebdd44102ec4e498fb6c1b2d0fda695f337940ca2725";
 
 	private static void CheckpointFourPlayerHighLoadBenchmark()
 	{
@@ -351,7 +351,8 @@ internal static partial class Program
 			PendingPresentationBarrierId: 0,
 			AppliedActionIds: ImmutableArray<long>.Empty,
 			CompletedTurnsSinceQuestionRefresh: 3,
-			QuestionRefreshAnchorSeat: 1);
+			QuestionRefreshAnchorSeat: 1,
+			PendingBasePlayCapture: PendingBasePlayCaptureState.None);
 		var template = new NetworkAuthorityCheckpoint
 		{
 			SessionId = "session-high-load",

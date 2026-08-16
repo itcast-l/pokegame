@@ -23,7 +23,8 @@ public sealed partial class AuthorityRuleSession
 				tableCard.Card?.Rank,
 				tableCard.IsFaceUp,
 				tableCard.IsBuriedInSand,
-				tableCard.Card?.Suit);
+				tableCard.Card?.Suit,
+				tableCard.Card.HasValue && !tableCard.RemoveCardOnCapture);
 		}
 
 		IReadOnlyList<string>? alternateRanks = command.AlternateMatchRanks.IsDefaultOrEmpty
@@ -40,7 +41,8 @@ public sealed partial class AuthorityRuleSession
 			alternateRanks,
 			command.InsertAtTableStart,
 			command.TableInsertIndexOverride,
-			command.PlayedCardFacesUp);
+			command.PlayedCardFacesUp,
+			_state.BasePlayCaptureThreshold);
 		CardPlayStartResult start = _cardPlayStateService.TryStartPlayFromHand(
 			_state,
 			command.Seat,
@@ -54,6 +56,13 @@ public sealed partial class AuthorityRuleSession
 				ReadModel);
 		}
 
+		_state.PendingBasePlayCapture = start.CaptureStartIndex >= 0
+			? new PendingBasePlayCaptureState(
+				command.Seat,
+				playedCard.InstanceId,
+				command.ActionId,
+				_state.TurnSequenceGeneration)
+			: PendingBasePlayCaptureState.None;
 		_state.RuleRevision++;
 		intents.Add(new PresentationIntent(
 			PresentationIntentKind.CardPlayed,
@@ -89,6 +98,13 @@ public sealed partial class AuthorityRuleSession
 
 	private RuleRejection? ValidatePlayCardFromHand(PlayCardFromHandCommand command)
 	{
+		if (_state.PendingBasePlayCapture.IsPending)
+		{
+			return new RuleRejection(
+				RuleRejectionCode.NoLegalAction,
+				"A base-play capture is still pending.");
+		}
+
 		RuleRejection? seatRejection = ValidateActingSeat(command.Seat);
 		if (seatRejection.HasValue)
 		{
@@ -171,6 +187,114 @@ public sealed partial class AuthorityRuleSession
 			return RuleCommandResult.Rejected(preservedIndexRejection.Value, ReadModel);
 		}
 
+		PendingBasePlayCaptureState pendingBasePlay = _state.PendingBasePlayCapture;
+		if (command.BasePlayCardRuntimeInstanceId == 0 && pendingBasePlay.IsPending)
+		{
+			for (int tableCardIndex = 0; tableCardIndex < _state.TableCards.Count; tableCardIndex++)
+			{
+				if (_state.TableCards[tableCardIndex].Card?.InstanceId
+						== pendingBasePlay.CardRuntimeInstanceId
+					&& IsCapturedIndex(plan, tableCardIndex)
+					&& (preservedIndexes == null || !preservedIndexes.Contains(tableCardIndex)))
+				{
+					return RuleCommandResult.Rejected(
+						new RuleRejection(
+							RuleRejectionCode.NoLegalAction,
+							"A direct capture cannot remove the pending base-play card."),
+						ReadModel);
+				}
+			}
+		}
+
+		ContinuousCaptureResult? continuousCapture = null;
+		int finalBasePlayTableCaptureCount = 0;
+		if (command.BasePlayCardRuntimeInstanceId != 0)
+		{
+			if (command.BasePlayCardRuntimeInstanceId < 0)
+			{
+				return RuleCommandResult.Rejected(
+					new RuleRejection(RuleRejectionCode.InvalidCommand, "Invalid base-play card ID."),
+					ReadModel);
+			}
+
+			if (!pendingBasePlay.IsPending
+				|| pendingBasePlay.Seat != command.Seat
+				|| pendingBasePlay.CardRuntimeInstanceId != command.BasePlayCardRuntimeInstanceId
+				|| pendingBasePlay.TurnGeneration != _state.TurnSequenceGeneration
+				|| pendingBasePlay.TurnGeneration != command.TurnGeneration)
+			{
+				return RuleCommandResult.Rejected(
+					new RuleRejection(
+						RuleRejectionCode.NoLegalAction,
+						"The declared base-play card does not match the pending authority action."),
+					ReadModel);
+			}
+
+			long basePlayCardRuntimeInstanceId = pendingBasePlay.CardRuntimeInstanceId;
+			int matchingBasePlayCardCount = 0;
+			bool basePlayCardHasExpectedOwner = false;
+			foreach (TableCard tableCard in _state.TableCards)
+			{
+				if (tableCard.Card?.InstanceId != basePlayCardRuntimeInstanceId)
+				{
+					continue;
+				}
+
+				matchingBasePlayCardCount++;
+				basePlayCardHasExpectedOwner =
+					tableCard.CardOwnerPlayerIndex == pendingBasePlay.Seat;
+			}
+			if (matchingBasePlayCardCount != 1 || !basePlayCardHasExpectedOwner)
+			{
+				return RuleCommandResult.Rejected(
+					new RuleRejection(
+						RuleRejectionCode.NoLegalAction,
+						"The pending base-play card is missing, duplicated, or owned by another seat."),
+					ReadModel);
+			}
+
+			int normalTableCaptureCount = 0;
+			foreach (int tableCardIndex in plan.BaseTableCardIndexes)
+			{
+				TableCard tableCard = _state.TableCards[tableCardIndex];
+				if (tableCard.Card?.InstanceId == basePlayCardRuntimeInstanceId)
+				{
+					continue;
+				}
+
+				if (tableCard.Card.HasValue
+					&& !tableCard.RemoveCardOnCapture
+					&& (preservedIndexes == null || !preservedIndexes.Contains(tableCardIndex)))
+				{
+					normalTableCaptureCount++;
+				}
+			}
+
+			if (!ContinuousCaptureRules.MeetsThreshold(
+					normalTableCaptureCount,
+					_state.BasePlayCaptureThreshold))
+			{
+				return RuleCommandResult.Rejected(
+					new RuleRejection(
+						RuleRejectionCode.NoLegalAction,
+						"Base-play capture does not meet the continuous capture threshold."),
+					ReadModel);
+			}
+
+			finalBasePlayTableCaptureCount = normalTableCaptureCount;
+			foreach (int tableCardIndex in plan.ExtraTableCardIndexes)
+			{
+				TableCard tableCard = _state.TableCards[tableCardIndex];
+				if (tableCard.Card?.InstanceId != basePlayCardRuntimeInstanceId
+					&& tableCard.Card.HasValue
+					&& !tableCard.RemoveCardOnCapture
+					&& (preservedIndexes == null || !preservedIndexes.Contains(tableCardIndex)))
+				{
+					finalBasePlayTableCaptureCount++;
+				}
+			}
+		}
+
 		if (command.RedirectedTableCardIndex < -1
 			|| command.RedirectedTableCardIndex >= 0
 				&& (!IsCapturedIndex(plan, command.RedirectedTableCardIndex)
@@ -201,6 +325,14 @@ public sealed partial class AuthorityRuleSession
 			preservedIndexes,
 			command.RedirectedTableCardIndex,
 			command.RedirectedSeat);
+		if (command.BasePlayCardRuntimeInstanceId > 0)
+		{
+			continuousCapture = ContinuousCaptureRules.RecordCapture(
+				finalBasePlayTableCaptureCount);
+			_state.BasePlayCaptureThreshold =
+				continuousCapture.Value.NextBasePlayCaptureThreshold;
+			ClearPendingBasePlayCapture(_state);
+		}
 		if (command.RestartQuestionRefreshTracking)
 		{
 			QuestionCardRefreshState refreshState =
@@ -231,7 +363,18 @@ public sealed partial class AuthorityRuleSession
 				captureResult.RemovedTableCardCount,
 				scoreChanges,
 				true,
-				false));
+				false,
+				FinalTableCaptureCount: continuousCapture?.FinalTableCaptureCount ?? 0,
+				NextBasePlayMinimumTableCaptureCount:
+					continuousCapture?.NextMinimumTableCaptureCount
+					?? ContinuousCaptureRules.GetMinimumTableCaptureCount(
+						_state.BasePlayCaptureThreshold),
+				BigTideTriggered: continuousCapture?.BigTideTriggered ?? false));
+	}
+
+	private static void ClearPendingBasePlayCapture(GameBoardState state)
+	{
+		state.PendingBasePlayCapture = PendingBasePlayCaptureState.None;
 	}
 
 	private RuleCommandResult ApplyScoreMutations(

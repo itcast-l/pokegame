@@ -173,6 +173,8 @@ public static class NetworkAuthorityCheckpointCodec
 			|| !Enum.IsDefined(checkpoint.Transport)
 			|| checkpoint.WinningScore is not (50 or 100 or 200)
 			|| checkpoint.Scores is null
+			|| !ContinuousCaptureRules.IsValidThreshold(
+				checkpoint.BasePlayCaptureThreshold)
 			|| checkpoint.Roster is null
 			|| checkpoint.SeatControls is null
 			|| checkpoint.LastAcceptedClientActionIds is null

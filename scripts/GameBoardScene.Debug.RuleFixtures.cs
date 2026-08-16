@@ -22,6 +22,8 @@ public partial class GameBoardScene
 		internal List<List<ItemCard>> PlayerItemHands { get; } = new();
 		internal List<TableCard> TableCards { get; } = new();
 		internal List<int> PlayerScores { get; } = new();
+		internal int BasePlayCaptureThreshold { get; set; } =
+			ContinuousCaptureRules.MinimumThreshold;
 		internal int CurrentTurnSeat { get; set; }
 	}
 
@@ -43,6 +45,7 @@ public partial class GameBoardScene
 			fixture.PlayerItemHands[seat].AddRange(_playerItemHands[seat]);
 			fixture.PlayerScores[seat] = _playerScores[seat];
 		}
+		fixture.BasePlayCaptureThreshold = GetBasePlayCaptureThreshold();
 		fixture.TableCards.AddRange(_tableCards);
 		return fixture;
 	}
@@ -52,7 +55,9 @@ public partial class GameBoardScene
 		if (fixture.PlayerDecks.Count != player_count
 			|| fixture.PlayerHands.Count != player_count
 			|| fixture.PlayerItemHands.Count != player_count
-			|| fixture.PlayerScores.Count != player_count)
+			|| fixture.PlayerScores.Count != player_count
+			|| !ContinuousCaptureRules.IsValidThreshold(
+				fixture.BasePlayCaptureThreshold))
 		{
 			return false;
 		}
@@ -87,7 +92,8 @@ public partial class GameBoardScene
 		return TryInitializeScriptedRuleMatch(
 			players.MoveToImmutable(),
 			tableCards.MoveToImmutable(),
-			fixture.CurrentTurnSeat);
+			fixture.CurrentTurnSeat,
+			fixture.BasePlayCaptureThreshold);
 	}
 
 	private static ImmutableArray<LogicalCardState> SnapshotDebugCards(

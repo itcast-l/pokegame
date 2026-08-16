@@ -94,6 +94,32 @@ public partial class NetworkManager
 		BroadcastBoardVisualEventFromHost(payload);
 	}
 
+	internal void BroadcastCaptureThresholdFeedbackFromHost(
+		int playerIndex,
+		bool bigTide,
+		int count,
+		int turnSequenceGeneration,
+		int snapshotId)
+	{
+		if (!IsHost || _state != NetworkSessionState.InGame)
+		{
+			return;
+		}
+
+		var payload = new Godot.Collections.Dictionary
+		{
+			[NetworkBoardVisualEventTypes.EventTypeKey] = NetworkBoardVisualEventTypes.CaptureThresholdFeedback,
+			[NetworkBoardVisualEventTypes.ActorSeatIndexKey] = playerIndex,
+			[NetworkBoardVisualEventTypes.CaptureThresholdFeedbackTypeKey] = bigTide
+				? NetworkBoardVisualEventTypes.CaptureThresholdBigTide
+				: NetworkBoardVisualEventTypes.CaptureThresholdBlocked,
+			[NetworkBoardVisualEventTypes.CaptureThresholdCountKey] = count,
+			[NetworkBoardVisualEventTypes.TurnSequenceGenerationKey] = turnSequenceGeneration,
+			[NetworkBoardVisualEventTypes.SnapshotIdKey] = snapshotId,
+		};
+		BroadcastBoardVisualEventFromHost(payload);
+	}
+
 	internal void BroadcastCaptureRevealVisualEventFromHost(
 		NetworkCaptureRevealVisualSync visualSync,
 		int turnSequenceGeneration,

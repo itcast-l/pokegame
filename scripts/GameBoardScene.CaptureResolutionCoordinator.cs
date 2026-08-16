@@ -634,6 +634,7 @@ public partial class GameBoardScene
 				matchSource: captureMatchSource,
 				triggeredAttachedItemCardIds:
 					triggeredAttachedItemCardIds,
+				basePlayCardRuntimeInstanceId: playedCard.InstanceId,
 				adventureSaveRollbackSnapshot:
 					adventureSaveRollbackSnapshot);
 		if (!captureResult.Applied

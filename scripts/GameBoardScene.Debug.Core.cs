@@ -413,7 +413,9 @@ public partial class GameBoardScene
 
 		for (int handIndex = 0; handIndex < _playerHands[localPlayerIndex].Count; handIndex++)
 		{
-			CardPlayPlan plan = ResolveCardPlayPlan(_playerHands[localPlayerIndex][handIndex]);
+			CardPlayPlan plan = ResolveCardPlayPlan(
+				_playerHands[localPlayerIndex][handIndex],
+				localPlayerIndex);
 			if (plan.CaptureStartIndex >= 0)
 			{
 				continue;

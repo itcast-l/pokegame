@@ -72,7 +72,7 @@ public partial class GameBoardScene
 			candidates.Add(new SoloAiHandCardDecisionCandidate(
 				Index: handIndex,
 				ScoreValue: GetCardScoreValue(card),
-				CanCaptureNow: GetPotentialNormalCaptureCount(readModel, card) > 0));
+				CanCaptureNow: GetPotentialNormalCaptureCount(readModel, playerIndex, card) > 0));
 		}
 
 		if (!TrySubmitChooseRandomIndexRuleCommand(
@@ -112,7 +112,7 @@ public partial class GameBoardScene
 			candidates.Add(new SoloAiHandCardDecisionCandidate(
 				Index: handIndex,
 				ScoreValue: GetCardScoreValue(card),
-				CanCaptureNow: GetPotentialNormalCaptureCount(readModel, card) > 0));
+				CanCaptureNow: GetPotentialNormalCaptureCount(readModel, playerIndex, card) > 0));
 		}
 
 		if (!TrySubmitChooseRandomIndexRuleCommand(

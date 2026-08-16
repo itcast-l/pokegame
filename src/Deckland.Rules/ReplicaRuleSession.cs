@@ -63,7 +63,8 @@ public sealed class ReplicaRuleSession
 				snapshot.ExtraActions,
 				snapshot.CompletedTurnsSinceQuestionRefresh,
 				snapshot.QuestionRefreshAnchorSeat,
-				snapshot.MatchFlow);
+				snapshot.MatchFlow,
+				snapshot.BasePlayCaptureThreshold);
 	}
 
 	private static MatchReadModel EmptyReadModel { get; } = new(

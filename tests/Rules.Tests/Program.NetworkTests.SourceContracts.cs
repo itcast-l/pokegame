@@ -385,6 +385,7 @@ internal static partial class Program
 			"match_outcome_kind",
 			"winner_player_index",
 			"scores",
+			"base_play_capture_threshold",
 			"deck_counts",
 			"hand_counts",
 			"item_hand_counts",

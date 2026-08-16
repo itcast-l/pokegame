@@ -1,6 +1,19 @@
 using System.Collections.Generic;
 using Deckland.Rules;
 
+namespace Deckland.Rules
+{
+	public readonly record struct PendingBasePlayCaptureState(
+		int Seat,
+		long CardRuntimeInstanceId,
+		long PlayActionId,
+		int TurnGeneration)
+	{
+		public static PendingBasePlayCaptureState None { get; }
+		public bool IsPending => CardRuntimeInstanceId > 0;
+	}
+}
+
 internal sealed class GameBoardState
 {
 	private const int DefaultPlayerCount = 2;
@@ -15,6 +28,9 @@ internal sealed class GameBoardState
 	public List<TableCard> TableCards { get; } = new();
 	public List<Deckland.Rules.PendingAttachmentRewardState> PendingAttachmentRewards { get; } = new();
 	public int[] PlayerScores { get; } = new int[MaxPlayerCount];
+	public int BasePlayCaptureThreshold { get; set; }
+	public PendingBasePlayCaptureState PendingBasePlayCapture { get; set; } =
+		PendingBasePlayCaptureState.None;
 	public int WinningScore { get; set; } = DefaultWinningScore;
 	public int CurrentTurnPlayerIndex { get; set; } = MainPlayerIndex;
 	public int TurnSequenceGeneration { get; set; }

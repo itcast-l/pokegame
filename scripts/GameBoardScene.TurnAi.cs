@@ -284,7 +284,8 @@ public partial class GameBoardScene
 			{
 				CardPlayPlan plan = ResolveCardPlayPlan(
 					readModel.TableCards,
-					FromRuleCardState(player.Hand[handCardIndex]));
+					FromRuleCardState(player.Hand[handCardIndex]),
+					playerIndex);
 				return plan.MatchingTableCardIndex < 0 && !plan.PlayedCardCollectsTable;
 			},
 			randomOrdinal,
@@ -311,21 +312,14 @@ public partial class GameBoardScene
 			out handIndex);
 	}
 
-	private int GetPotentialNormalCaptureCount(PlayingCard card)
-	{
-		if (!TryGetAuthorityRuleReadModel(out MatchReadModel readModel))
-		{
-			return 0;
-		}
-
-		return GetPotentialNormalCaptureCount(readModel, card);
-	}
-
-	private int GetPotentialNormalCaptureCount(MatchReadModel readModel, PlayingCard card)
+	private int GetPotentialNormalCaptureCount(
+		MatchReadModel readModel,
+		int playerIndex,
+		PlayingCard card)
 	{
 		return MatchReadModel.GetPotentialNormalCaptureCount(
 			ToCaptureScoringTableCards(readModel.TableCards),
-			ToPotentialCaptureCard(MainPlayerIndex, card));
+			ToPotentialCaptureCard(playerIndex, card));
 	}
 
 	private int GetPotentialNormalCapturePoints(int playerIndex, PlayingCard card)
@@ -457,7 +451,7 @@ public partial class GameBoardScene
 
 		return MatchReadModel.GetBestPotentialNormalCaptureCount(
 			ToTideShiftedCaptureScoringTableCards(readModel.TableCards),
-			ToPotentialCaptureCards(player.Hand));
+			ToPotentialCaptureCards(playerIndex, player.Hand));
 	}
 
 	private int GetBestPotentialNormalCaptureCount(int playerIndex)
@@ -471,7 +465,7 @@ public partial class GameBoardScene
 
 		return MatchReadModel.GetBestPotentialNormalCaptureCount(
 			ToCaptureScoringTableCards(readModel.TableCards),
-			ToPotentialCaptureCards(player.Hand));
+			ToPotentialCaptureCards(playerIndex, player.Hand));
 	}
 
 	private PotentialCaptureCard[] ToPotentialCaptureCards(
@@ -486,20 +480,6 @@ public partial class GameBoardScene
 				playerIndex,
 				card,
 				ShouldApplyNarwhalDoubleToPlayedCard(playerIndex, card));
-		}
-
-		return potentialCards;
-	}
-
-	private PotentialCaptureCard[] ToPotentialCaptureCards(
-		ImmutableArray<LogicalCardState> cards)
-	{
-		var potentialCards = new PotentialCaptureCard[cards.Length];
-		for (int index = 0; index < cards.Length; index++)
-		{
-			potentialCards[index] = ToPotentialCaptureCard(
-				MainPlayerIndex,
-				FromRuleCardState(cards[index]));
 		}
 
 		return potentialCards;
@@ -520,17 +500,6 @@ public partial class GameBoardScene
 		return potentialCards;
 	}
 
-	private PotentialCaptureCard[] ToPotentialCaptureCards(IReadOnlyList<PlayingCard> cards)
-	{
-		var potentialCards = new PotentialCaptureCard[cards.Count];
-		for (int index = 0; index < cards.Count; index++)
-		{
-			potentialCards[index] = ToPotentialCaptureCard(MainPlayerIndex, cards[index]);
-		}
-
-		return potentialCards;
-	}
-
 	private PotentialCaptureCard ToPotentialCaptureCard(int playerIndex, PlayingCard card, bool hasDoubleEffect = false)
 	{
 		string primaryRank = playerIndex == MainPlayerIndex
@@ -545,7 +514,8 @@ public partial class GameBoardScene
 			hasDoubleEffect,
 			card.Suit,
 			ShouldCollectBySuit(card),
-			alternateRanks);
+			alternateRanks,
+			GetBasePlayCaptureThreshold());
 	}
 
 	private CaptureScoringTableCard[] ToTideShiftedCaptureScoringTableCards(

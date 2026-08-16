@@ -60,6 +60,7 @@ public partial class GameBoardScene
 		int redirectedPlayerIndex,
 		ImmutableArray<RuleScoreMutation> scoreMutations,
 		bool restartQuestionRefreshTracking,
+		long basePlayCardRuntimeInstanceId,
 		out RuleCommandResult result)
 	{
 		result = default!;
@@ -83,7 +84,8 @@ public partial class GameBoardScene
 			redirectedTableCardIndex,
 			redirectedTableCardIndex >= 0 ? redirectedPlayerIndex : -1,
 			scoreMutations,
-			restartQuestionRefreshTracking));
+			restartQuestionRefreshTracking,
+			basePlayCardRuntimeInstanceId));
 		if (result.Accepted)
 		{
 			return true;

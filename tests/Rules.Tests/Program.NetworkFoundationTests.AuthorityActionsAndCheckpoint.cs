@@ -357,6 +357,7 @@ internal static partial class Program
 		Equal(source.SnapshotId, restored.SnapshotId);
 		Equal(source.AuthorityEpoch, restored.AuthorityEpoch);
 		Equal(source.CheckpointId, restored.CheckpointId);
+		Equal(source.BasePlayCaptureThreshold, restored.BasePlayCaptureThreshold);
 		False(Encoding.UTF8.GetString(payload).Contains("secret", StringComparison.Ordinal));
 		Equal(SeatCredentialRules.ComputeVerifier("credential-0"), restored.SeatControls[0].CredentialVerifier);
 		Equal(19L, restored.LastAcceptedClientActionIds[1]);
@@ -397,6 +398,37 @@ internal static partial class Program
 		True(NetworkAuthorityCheckpointCodec.Validate(fourPlayer, out _));
 	}
 
+	private static void CheckpointCodecRejectsInvalidGlobalCaptureThresholds()
+	{
+		NetworkAuthorityCheckpoint source = CreateCheckpoint();
+		True(NetworkAuthorityCheckpointCodec.Validate(source, out _));
+		False(NetworkAuthorityCheckpointCodec.Validate(
+			source with { BasePlayCaptureThreshold = -1 },
+			out string lowError));
+		Equal("checkpoint_top_level", lowError);
+		False(NetworkAuthorityCheckpointCodec.Validate(
+			source with { BasePlayCaptureThreshold = 5 },
+			out string highError));
+		Equal("checkpoint_top_level", highError);
+
+		True(NetworkAuthorityCheckpointCodec.TryEncode(
+			source,
+			out byte[] payload,
+			out _,
+			out _));
+		Dictionary<string, JsonElement>? fields =
+			JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(payload);
+		True(fields != null);
+		True(fields!.Remove("base_play_capture_threshold"));
+		byte[] missingPayload = JsonSerializer.SerializeToUtf8Bytes(fields);
+		False(NetworkAuthorityCheckpointCodec.TryDecode(
+			missingPayload,
+			NetworkAuthorityCheckpointCodec.ComputeHash(missingPayload),
+			out _,
+			out string missingError));
+		Equal(NetworkAuthorityCheckpointCodec.DecodeInvalidError, missingError);
+	}
+
 	private static void CheckpointRuleAdapterRoundtripsFieldsBytesHashAndRandomContinuation()
 	{
 		var sourceRandom = new TestRuleRandomSource(20260804);
@@ -406,6 +438,7 @@ internal static partial class Program
 		{
 			CompletedTurnsSinceQuestionRefresh = 4,
 			QuestionRefreshAnchorSeat = 1,
+			BasePlayCaptureThreshold = 3,
 		};
 		NetworkAuthorityCheckpoint template = CreateCheckpoint() with
 		{
@@ -429,6 +462,7 @@ internal static partial class Program
 			sourceSnapshot.CompletedTurnsSinceQuestionRefresh,
 			first.CompletedTurnsSinceQuestionRefresh);
 		Equal(sourceSnapshot.QuestionRefreshAnchorSeat, first.QuestionRefreshAnchorPlayerIndex);
+		Equal(sourceSnapshot.BasePlayCaptureThreshold, first.BasePlayCaptureThreshold);
 		Equal(unchecked((long)sourceSnapshot.RandomState.Seed), first.RngSeed);
 		Equal(
 			sourceSnapshot.RandomState.State.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -477,6 +511,8 @@ internal static partial class Program
 			sourceSnapshot.CompletedTurnsSinceQuestionRefresh,
 			restoredSnapshot.CompletedTurnsSinceQuestionRefresh);
 		Equal(sourceSnapshot.QuestionRefreshAnchorSeat, restoredSnapshot.QuestionRefreshAnchorSeat);
+		Equal(sourceSnapshot.BasePlayCaptureThreshold,
+			restoredSnapshot.BasePlayCaptureThreshold);
 
 		NetworkAuthorityCheckpoint second =
 			NetworkAuthorityCheckpointRuleAdapter.ApplyRuleSnapshot(
@@ -496,7 +532,7 @@ internal static partial class Program
 		True(string.IsNullOrEmpty(secondEncodeError));
 		True(firstPayload.AsSpan().SequenceEqual(secondPayload));
 		Equal(firstHash, secondHash);
-		Equal("391b0b9990ba9e5418eaab0e1993646d1683868f0c96026a4f3a874cac8c2356", firstHash);
+		Equal("50458be2808db1e6fdeb0e00e695869234ab66c7e8f3e8e3296cb643f31bd6c6", firstHash);
 
 		int[] expectedContinuation =
 		{
@@ -815,6 +851,9 @@ internal static partial class Program
 			Scores = Enumerable.Range(0, playerCount)
 				.Select(seat => 10 + seat * 2)
 				.ToArray(),
+			BasePlayCaptureThreshold = Math.Min(
+				playerCount,
+				ContinuousCaptureRules.MaximumThreshold),
 			OpeningDiceRollResult = openingDiceRollResult,
 			CurrentTurnPlayerIndex = 0,
 			TurnSequenceGeneration = 2,

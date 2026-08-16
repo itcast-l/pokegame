@@ -404,6 +404,7 @@ public partial class GameBoardScene : Control
 		_playerInputHandler = CreatePlayerInputHandler();
 		BindPlayerAvatarAreas();
 		CreatePlayerAvatars();
+		CreateCaptureThresholdFeedbackPanels();
 		BindQuestionCardTransformArea();
 		BindPlayerScoreMeters();
 		CreatePlayerSeatControlIndicators();

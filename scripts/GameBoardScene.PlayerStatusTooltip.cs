@@ -7,13 +7,15 @@ public partial class GameBoardScene
 	private const float PlayerStatusTooltipFadeSeconds = 0.12f;
 	private const float PlayerStatusTooltipGap = 10.0f;
 	private const float PlayerStatusTooltipViewportPadding = 14.0f;
-	private static readonly Vector2 PlayerStatusTooltipSize = new(172.0f, 90.0f);
+	private static readonly Vector2 LocalPlayerStatusTooltipSize = new(220.0f, 112.0f);
+	private static readonly Vector2 OpponentPlayerStatusTooltipSize = new(220.0f, 88.0f);
 	private static readonly Vector2 PlayerStatusTooltipBarSize = new(148.0f, 6.0f);
 
 	private readonly int[] _playerStatusTooltipHoverDepths = new int[MaxPlayers];
 	private Panel? _playerStatusTooltipPanel;
 	private Label? _playerStatusTooltipTitleLabel;
 	private Label? _playerStatusTooltipValueLabel;
+	private Label? _playerStatusTooltipCaptureThresholdLabel;
 	private Panel? _playerStatusTooltipBarTrack;
 	private ColorRect? _playerStatusTooltipBarFill;
 	private Godot.Timer? _playerStatusTooltipDelayTimer;
@@ -26,8 +28,8 @@ public partial class GameBoardScene
 		_playerStatusTooltipPanel = new Panel
 		{
 			Name = "PlayerStatusTooltip",
-			CustomMinimumSize = PlayerStatusTooltipSize,
-			Size = PlayerStatusTooltipSize,
+			CustomMinimumSize = LocalPlayerStatusTooltipSize,
+			Size = LocalPlayerStatusTooltipSize,
 			Visible = false,
 			ZIndex = 2600,
 			MouseFilter = MouseFilterEnum.Ignore,
@@ -65,6 +67,16 @@ public partial class GameBoardScene
 		_playerStatusTooltipValueLabel.AddThemeColorOverride("font_color", new Color(0.68f, 0.93f, 1.0f, 0.92f));
 		_playerStatusTooltipValueLabel.AddThemeFontSizeOverride("font_size", 13);
 		content.AddChild(_playerStatusTooltipValueLabel);
+
+		_playerStatusTooltipCaptureThresholdLabel = new Label
+		{
+			MouseFilter = MouseFilterEnum.Ignore,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
+		};
+		_playerStatusTooltipCaptureThresholdLabel.AddThemeColorOverride("font_color", new Color(0.94f, 0.78f, 0.38f, 0.96f));
+		_playerStatusTooltipCaptureThresholdLabel.AddThemeFontSizeOverride("font_size", 12);
+		content.AddChild(_playerStatusTooltipCaptureThresholdLabel);
 
 		_playerStatusTooltipBarTrack = new Panel
 		{
@@ -197,8 +209,10 @@ public partial class GameBoardScene
 	private void RefreshPlayerStatusTooltip(int playerIndex)
 	{
 		if (_activeStatusTooltipPlayerIndex != playerIndex
+			|| _playerStatusTooltipPanel == null
 			|| _playerStatusTooltipTitleLabel == null
-			|| _playerStatusTooltipValueLabel == null)
+			|| _playerStatusTooltipValueLabel == null
+			|| _playerStatusTooltipCaptureThresholdLabel == null)
 		{
 			return;
 		}
@@ -213,6 +227,17 @@ public partial class GameBoardScene
 		_playerStatusTooltipValueLabel.Text = string.IsNullOrWhiteSpace(seatControlStatusText)
 			? baseValueText
 			: $"{baseValueText}  {seatControlStatusText}";
+		bool showCaptureThreshold = playerIndex == GetLocalHandPlayerIndex();
+		_playerStatusTooltipCaptureThresholdLabel.Visible = showCaptureThreshold;
+		_playerStatusTooltipCaptureThresholdLabel.Text = showCaptureThreshold
+			? LocalizeFormat(
+				"GAME_CAPTURE_THRESHOLD_STATUS",
+				ContinuousCaptureRules.GetMinimumTableCaptureCount(
+					GetBasePlayCaptureThreshold()))
+			: string.Empty;
+		Vector2 tooltipSize = GetPlayerStatusTooltipSize(playerIndex);
+		_playerStatusTooltipPanel.CustomMinimumSize = tooltipSize;
+		_playerStatusTooltipPanel.Size = tooltipSize;
 		if (_playerStatusTooltipBarFill != null)
 		{
 			_playerStatusTooltipBarFill.Color = AvatarScoreGlowColors[playerIndex];
@@ -229,23 +254,24 @@ public partial class GameBoardScene
 
 		Rect2 targetRect = GetPlayerStatusTooltipTargetRect(_activeStatusTooltipPlayerIndex);
 		Vector2 viewportSize = Size == Vector2.Zero ? GetViewportRect().Size : Size;
+		Vector2 tooltipSize = GetPlayerStatusTooltipSize(_activeStatusTooltipPlayerIndex);
 		Vector2 position = new(
 			targetRect.Position.X + targetRect.Size.X + PlayerStatusTooltipGap,
-			targetRect.Position.Y + (targetRect.Size.Y - PlayerStatusTooltipSize.Y) / 2.0f);
+			targetRect.Position.Y + (targetRect.Size.Y - tooltipSize.Y) / 2.0f);
 
-		if (position.X + PlayerStatusTooltipSize.X > viewportSize.X - PlayerStatusTooltipViewportPadding)
+		if (position.X + tooltipSize.X > viewportSize.X - PlayerStatusTooltipViewportPadding)
 		{
-			position.X = targetRect.Position.X - PlayerStatusTooltipSize.X - PlayerStatusTooltipGap;
+			position.X = targetRect.Position.X - tooltipSize.X - PlayerStatusTooltipGap;
 		}
 
 		position.X = Mathf.Clamp(
 			position.X,
 			PlayerStatusTooltipViewportPadding,
-			Mathf.Max(PlayerStatusTooltipViewportPadding, viewportSize.X - PlayerStatusTooltipSize.X - PlayerStatusTooltipViewportPadding));
+			Mathf.Max(PlayerStatusTooltipViewportPadding, viewportSize.X - tooltipSize.X - PlayerStatusTooltipViewportPadding));
 		position.Y = Mathf.Clamp(
 			position.Y,
 			PlayerStatusTooltipViewportPadding,
-			Mathf.Max(PlayerStatusTooltipViewportPadding, viewportSize.Y - PlayerStatusTooltipSize.Y - PlayerStatusTooltipViewportPadding));
+			Mathf.Max(PlayerStatusTooltipViewportPadding, viewportSize.Y - tooltipSize.Y - PlayerStatusTooltipViewportPadding));
 
 		_playerStatusTooltipPanel.GlobalPosition = position;
 	}
@@ -284,8 +310,15 @@ public partial class GameBoardScene
 			hasRect = true;
 		}
 
-		return hasRect ? targetRect : new Rect2(Vector2.Zero, PlayerStatusTooltipSize);
+		return hasRect
+			? targetRect
+			: new Rect2(Vector2.Zero, GetPlayerStatusTooltipSize(playerIndex));
 	}
+
+	private Vector2 GetPlayerStatusTooltipSize(int playerIndex) =>
+		playerIndex == GetLocalHandPlayerIndex()
+			? LocalPlayerStatusTooltipSize
+			: OpponentPlayerStatusTooltipSize;
 
 	private string GetPlayerStatusMetricLabel()
 	{

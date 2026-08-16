@@ -234,6 +234,7 @@ public sealed partial class AuthorityRuleSession
 		}
 
 		int previousSeat = _state.CurrentTurnPlayerIndex;
+		ClearPendingBasePlayCapture(_state);
 		int nextSeat = _turnAdvancementService.ApplyPlayedResult(
 			_state,
 			command.ActingSeat,
@@ -293,6 +294,7 @@ public sealed partial class AuthorityRuleSession
 		}
 
 		_state.TurnSequenceGeneration++;
+		ClearPendingBasePlayCapture(_state);
 		_state.RulePendingPresentationBarrierId = 0;
 		_state.RulePendingTableOrderRuntimeInstanceIds.Clear();
 		ClearBlockedAutomatedItem(_state);
@@ -366,6 +368,7 @@ public sealed partial class AuthorityRuleSession
 			_state.MatchOutcomeKind = outcome.Kind;
 			_state.WinnerPlayerIndex = outcome.WinnerPlayerIndex;
 			_state.TurnSequenceGeneration++;
+			ClearPendingBasePlayCapture(_state);
 			_state.ExtraActions.Reset();
 			ClearBlockedAutomatedItem(_state);
 			if (outcome.Kind == global::MatchOutcomeKind.Winner)
@@ -403,6 +406,7 @@ public sealed partial class AuthorityRuleSession
 	{
 		_state.MandatorySelection = MandatorySelectionState.None;
 		_state.PendingAttachmentRewards.Clear();
+		ClearPendingBasePlayCapture(_state);
 		_state.ExtraActions.Reset();
 		_state.RuleSessionEnded = true;
 		_state.RuleRevision++;

@@ -107,68 +107,73 @@ public sealed record NetworkAuthorityCheckpoint
 	[JsonPropertyOrder(23)]
 	public int[] Scores { get; init; } = Array.Empty<int>();
 
-	[JsonPropertyName("winner_player_index")]
+	[JsonPropertyName("base_play_capture_threshold")]
 	[JsonPropertyOrder(24)]
+	[JsonRequired]
+	public int BasePlayCaptureThreshold { get; init; }
+
+	[JsonPropertyName("winner_player_index")]
+	[JsonPropertyOrder(25)]
 	public int WinnerPlayerIndex { get; init; } = -1;
 
 	[JsonPropertyName("match_outcome_kind")]
-	[JsonPropertyOrder(25)]
+	[JsonPropertyOrder(26)]
 	public MatchOutcomeKind MatchOutcomeKind { get; init; } = MatchOutcomeKind.InProgress;
 
 	[JsonPropertyName("opening_deal_completed")]
-	[JsonPropertyOrder(26)]
+	[JsonPropertyOrder(27)]
 	public bool OpeningDealCompleted { get; init; } = true;
 
 	[JsonPropertyName("current_turn_player_index")]
-	[JsonPropertyOrder(27)]
+	[JsonPropertyOrder(28)]
 	public int CurrentTurnPlayerIndex { get; init; }
 
 	[JsonPropertyName("turn_sequence_generation")]
-	[JsonPropertyOrder(28)]
+	[JsonPropertyOrder(29)]
 	public int TurnSequenceGeneration { get; init; }
 
 	[JsonPropertyName("completed_turns_since_question_refresh")]
-	[JsonPropertyOrder(29)]
+	[JsonPropertyOrder(30)]
 	public int CompletedTurnsSinceQuestionRefresh { get; init; }
 
 	[JsonPropertyName("question_refresh_anchor_player_index")]
-	[JsonPropertyOrder(30)]
+	[JsonPropertyOrder(31)]
 	public int QuestionRefreshAnchorPlayerIndex { get; init; } = -1;
 
 	[JsonPropertyName("last_authority_action_id")]
-	[JsonPropertyOrder(31)]
+	[JsonPropertyOrder(32)]
 	public long LastAuthorityActionId { get; init; }
 
 	[JsonPropertyName("authority_action")]
-	[JsonPropertyOrder(32)]
+	[JsonPropertyOrder(33)]
 	public AuthorityActionState AuthorityAction { get; init; } = AuthorityActionState.Empty;
 
 	[JsonPropertyName("rng_seed")]
-	[JsonPropertyOrder(33)]
+	[JsonPropertyOrder(34)]
 	public long RngSeed { get; init; }
 
 	[JsonPropertyName("rng_state")]
-	[JsonPropertyOrder(34)]
+	[JsonPropertyOrder(35)]
 	public string RngState { get; init; } = string.Empty;
 
 	[JsonPropertyName("snapshot_id")]
-	[JsonPropertyOrder(35)]
+	[JsonPropertyOrder(36)]
 	public int SnapshotId { get; init; }
 
 	[JsonPropertyName("authority_epoch")]
-	[JsonPropertyOrder(36)]
+	[JsonPropertyOrder(37)]
 	public long AuthorityEpoch { get; init; }
 
 	[JsonPropertyName("checkpoint_id")]
-	[JsonPropertyOrder(37)]
+	[JsonPropertyOrder(38)]
 	public long CheckpointId { get; init; }
 
 	[JsonPropertyName("reconnect_claims")]
-	[JsonPropertyOrder(38)]
+	[JsonPropertyOrder(39)]
 	public List<NetworkAuthorityReconnectClaim> ReconnectClaims { get; init; } = new();
 
 	[JsonPropertyName("opening_dice_roll_result")]
-	[JsonPropertyOrder(39)]
+	[JsonPropertyOrder(40)]
 	public int OpeningDiceRollResult { get; init; }
 
 	[JsonIgnore]

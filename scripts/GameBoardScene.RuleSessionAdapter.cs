@@ -317,7 +317,8 @@ public partial class GameBoardScene
 	private bool TryInitializeScriptedRuleMatch(
 		ImmutableArray<PlayerStateSnapshot> players,
 		ImmutableArray<TableCardState> tableCards,
-		int currentTurnSeat = MainPlayerIndex)
+		int currentTurnSeat = MainPlayerIndex,
+		int basePlayCaptureThreshold = ContinuousCaptureRules.MinimumThreshold)
 	{
 		if (_authorityRuleSession == null)
 		{
@@ -337,7 +338,8 @@ public partial class GameBoardScene
 			WinningScore: winning_score,
 			Players: players,
 			TableCards: tableCards,
-			CurrentTurnSeat: currentTurnSeat);
+			CurrentTurnSeat: currentTurnSeat,
+			BasePlayCaptureThreshold: basePlayCaptureThreshold);
 		RuleCommandResult result = _authorityRuleSession.Submit(command);
 		if (result.Accepted)
 		{
@@ -357,6 +359,7 @@ public partial class GameBoardScene
 		_isAnimatingMagnetAttachment = false;
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
+		MarkActivePlayerStatusTooltipForRefresh();
 	}
 
 	private static LogicalCardState ToRuleCardState(PlayingCard card)
@@ -550,7 +553,9 @@ public partial class GameBoardScene
 			ImmutableArray<long>.Empty,
 			MandatorySelection: mandatorySelection,
 			PendingAttachmentRewards:
-				BuildPendingAttachmentRewardsFromAuthorityAction(snapshot.AuthorityAction));
+				BuildPendingAttachmentRewardsFromAuthorityAction(snapshot.AuthorityAction),
+			PendingBasePlayCapture: PendingBasePlayCaptureState.None,
+			BasePlayCaptureThreshold: snapshot.BasePlayCaptureThreshold);
 
 		SnapshotApplyResult result = _replicaRuleSession.ApplyAuthoritySnapshot(ruleSnapshot);
 		if (result.Applied)

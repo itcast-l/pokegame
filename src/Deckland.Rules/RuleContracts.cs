@@ -120,7 +120,8 @@ public sealed record InitializeScriptedMatchCommand(
 	int WinningScore,
 	ImmutableArray<PlayerStateSnapshot> Players,
 	ImmutableArray<TableCardState> TableCards,
-	int CurrentTurnSeat = 0)
+	int CurrentTurnSeat = 0,
+	int BasePlayCaptureThreshold = 0)
 	: MatchCommand(ActionId, ExpectedRevision, LifecycleGeneration, TurnGeneration);
 
 public sealed record EndMatchSessionCommand(
@@ -188,7 +189,8 @@ public sealed record CaptureCardsCommand(
 	int RedirectedTableCardIndex = -1,
 	int RedirectedSeat = -1,
 	ImmutableArray<RuleScoreMutation> ScoreMutations = default,
-	bool RestartQuestionRefreshTracking = false)
+	bool RestartQuestionRefreshTracking = false,
+	long BasePlayCardRuntimeInstanceId = 0)
 	: MatchCommand(ActionId, ExpectedRevision, LifecycleGeneration, TurnGeneration);
 
 public sealed record ApplyScoreMutationsCommand(
@@ -719,7 +721,10 @@ public readonly record struct RuleMutationSummary(
 	bool MatchOutcomeChanged,
 	string LogicalItemId = "",
 	bool ShouldRefreshQuestionCard = false,
-	bool ShouldExpireQuestionCard = false)
+	bool ShouldExpireQuestionCard = false,
+	int FinalTableCaptureCount = 0,
+	int NextBasePlayMinimumTableCaptureCount = 1,
+	bool BigTideTriggered = false)
 {
 	public static RuleMutationSummary Empty => new(
 		0,

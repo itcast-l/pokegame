@@ -25,6 +25,9 @@ internal static class NetworkBoardVisualEventTypes
 	public const string QuestionReward = "question_reward";
 	public const string BombPair = "bomb_pair";
 	public const string MantaTideShift = "manta_tide_shift";
+	public const string CaptureThresholdFeedback = "capture_threshold_feedback";
+	public const string CaptureThresholdBlocked = "blocked";
+	public const string CaptureThresholdBigTide = "big_tide";
 
 	public const string PlayedCardCodeKey = "played_card_code";
 	public const string PlayedCardIsFaceUpKey = "played_card_is_face_up";
@@ -57,4 +60,6 @@ internal static class NetworkBoardVisualEventTypes
 	public const string StartGlobalXKey = "start_global_x";
 	public const string StartGlobalYKey = "start_global_y";
 	public const string RequiresMagnetAttachmentKey = "requires_magnet_attachment";
+	public const string CaptureThresholdFeedbackTypeKey = "capture_threshold_feedback_type";
+	public const string CaptureThresholdCountKey = "capture_threshold_count";
 }

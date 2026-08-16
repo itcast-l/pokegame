@@ -80,6 +80,30 @@ func _run() -> void:
 		_fail("Malformed nested snapshot partially changed board state")
 		return
 
+	var missing_threshold := valid_snapshot.duplicate(true)
+	missing_threshold.erase("base_play_capture_threshold")
+	if not bool(board.call("DebugRejectsNetworkSnapshotPayload", missing_threshold)):
+		_fail("Accepted snapshot without global capture threshold")
+		return
+	var array_threshold := valid_snapshot.duplicate(true)
+	array_threshold["base_play_capture_threshold"] = [0]
+	if not bool(board.call("DebugRejectsNetworkSnapshotPayload", array_threshold)):
+		_fail("Accepted snapshot with capture threshold array")
+		return
+	var high_threshold := valid_snapshot.duplicate(true)
+	high_threshold["base_play_capture_threshold"] = 5
+	if not bool(board.call("DebugRejectsNetworkSnapshotPayload", high_threshold)):
+		_fail("Accepted snapshot with capture threshold above four")
+		return
+	var low_threshold := valid_snapshot.duplicate(true)
+	low_threshold["base_play_capture_threshold"] = -1
+	if not bool(board.call("DebugRejectsNetworkSnapshotPayload", low_threshold)):
+		_fail("Accepted snapshot with negative capture threshold")
+		return
+	if str(board.call("DebugGetNetworkStateFingerprint")) != baseline_state:
+		_fail("Capture threshold boundary probes changed board state")
+		return
+
 	# Variant integers are int64. Values outside int32 must never become a
 	# plausible count or visual index through narrowing conversion.
 	var overflow_snapshot := {"deck_counts": [4294967296, 0]}
@@ -530,6 +554,37 @@ func _run_full_visual_event_boundary_matrix(board: Node, original_snapshot: Dict
 		_fail("Full visual-event fixture is missing cards")
 		return false
 	var card_code := str((own_hand[0] as Dictionary)["code"])
+	var blocked_threshold_event := {
+		"event_type": "capture_threshold_feedback",
+		"snapshot_id": event_snapshot_id,
+		"turn_sequence_generation": generation,
+		"actor_seat_index": 0,
+		"capture_threshold_feedback_type": "blocked",
+		"capture_threshold_count": 1,
+	}
+	if not _assert_visual_boundary(board, baseline, blocked_threshold_event, "capture threshold blocked legal"):
+		return false
+	var big_tide_threshold_event := blocked_threshold_event.duplicate(true)
+	big_tide_threshold_event["capture_threshold_feedback_type"] = "big_tide"
+	big_tide_threshold_event["capture_threshold_count"] = 256
+	if not _assert_visual_boundary(board, baseline, big_tide_threshold_event, "capture threshold Big Tide legal"):
+		return false
+	var invalid_threshold_type := blocked_threshold_event.duplicate(true)
+	invalid_threshold_type["capture_threshold_feedback_type"] = "unknown"
+	if not _assert_visual_rejected(board, baseline, invalid_threshold_type, "capture threshold feedback type"):
+		return false
+	var zero_threshold_count := blocked_threshold_event.duplicate(true)
+	zero_threshold_count["capture_threshold_count"] = 0
+	if not _assert_visual_rejected(board, baseline, zero_threshold_count, "capture threshold zero count"):
+		return false
+	var oversized_threshold_count := blocked_threshold_event.duplicate(true)
+	oversized_threshold_count["capture_threshold_count"] = 257
+	if not _assert_visual_rejected(board, baseline, oversized_threshold_count, "capture threshold oversized count"):
+		return false
+	var invalid_threshold_seat := blocked_threshold_event.duplicate(true)
+	invalid_threshold_seat["actor_seat_index"] = int(board.get("player_count"))
+	if not _assert_visual_rejected(board, baseline, invalid_threshold_seat, "capture threshold invalid seat"):
+		return false
 
 	var cases: Array[Dictionary] = [
 		{
@@ -663,12 +718,12 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 	var table_card := ((matrix_snapshot["table_cards"] as Array)[0] as Dictionary).duplicate(true)
 	var hostile_cases: Array[Dictionary] = []
 
-	for key in ["protocol_version", "session_id", "match_id", "match_outcome_kind", "scores", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_dice_roll_result", "opening_deal_animation_playing", "opening_deal_completed", "authority_action"]:
+	for key in ["protocol_version", "session_id", "match_id", "match_outcome_kind", "scores", "base_play_capture_threshold", "deck_counts", "hand_counts", "item_hand_counts", "own_hand_cards", "own_item_hand_cards", "table_cards", "seat_control_states", "pending_selection_mode", "opening_dice_roll_result", "opening_deal_animation_playing", "opening_deal_completed", "authority_action"]:
 		var missing := matrix_snapshot.duplicate(true)
 		missing.erase(key)
 		hostile_cases.append({"name": "snapshot missing " + key, "payload": missing})
 
-	for key in ["snapshot_id", "turn_sequence_generation", "opening_dice_roll_result", "scores", "deck_counts", "hand_counts", "item_hand_counts", "pending_selection_mode", "opening_deal_animation_playing"]:
+	for key in ["snapshot_id", "turn_sequence_generation", "opening_dice_roll_result", "scores", "base_play_capture_threshold", "deck_counts", "hand_counts", "item_hand_counts", "pending_selection_mode", "opening_deal_animation_playing"]:
 		var wrong_type := matrix_snapshot.duplicate(true)
 		wrong_type[key] = "wrong-type"
 		hostile_cases.append({"name": "snapshot wrong type " + key, "payload": wrong_type})
@@ -877,6 +932,7 @@ func _assert_snapshot_contract(snapshot: Dictionary, player_count: int, recipien
 		"match_outcome_kind",
 		"winner_player_index",
 		"scores",
+		"base_play_capture_threshold",
 		"deck_counts",
 		"hand_counts",
 		"item_hand_counts",
@@ -909,6 +965,7 @@ func _assert_snapshot_contract(snapshot: Dictionary, player_count: int, recipien
 		"current_turn_player_index",
 		"opening_dice_roll_result",
 		"winner_player_index",
+		"base_play_capture_threshold",
 		"pending_selection_owner",
 		"pending_turn_sequence_generation",
 	]
@@ -941,6 +998,10 @@ func _assert_snapshot_contract(snapshot: Dictionary, player_count: int, recipien
 			or own_hand.size() != int(hand_counts[recipient_seat]) \
 			or own_items.size() != int(item_counts[recipient_seat]):
 		_fail("Network snapshot own-hand privacy shape changed for seat %d" % recipient_seat)
+		return false
+	var capture_threshold := int(snapshot["base_play_capture_threshold"])
+	if capture_threshold < 0 or capture_threshold > 4:
+		_fail("Network snapshot capture threshold value changed contract")
 		return false
 	for raw_card in own_hand:
 		if typeof(raw_card) != TYPE_DICTIONARY \

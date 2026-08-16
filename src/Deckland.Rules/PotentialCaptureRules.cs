@@ -56,13 +56,25 @@ internal static class PotentialCaptureRules
 		IReadOnlyList<CaptureScoringTableCard> tableCards,
 		PotentialCaptureCard card)
 	{
+		int captureStartIndex;
 		if (card.CollectsTable)
 		{
-			return tableCards.Count > 0 ? CountCollectibleTableCards(tableCards) + 1 : 0;
+			captureStartIndex = tableCards.Count > 0 ? 0 : -1;
+		}
+		else
+		{
+			captureStartIndex = FindMatchingTableCardIndex(tableCards, card);
 		}
 
-		int matchingIndex = FindMatchingTableCardIndex(tableCards, card);
-		return matchingIndex >= 0 ? CountCollectibleTableCards(tableCards, matchingIndex) + 1 : 0;
+		if (captureStartIndex < 0
+			|| !ContinuousCaptureRules.MeetsThreshold(
+				CountThresholdTableCards(tableCards, captureStartIndex),
+				card.BasePlayCaptureThreshold))
+		{
+			return 0;
+		}
+
+		return CountCollectibleTableCards(tableCards, captureStartIndex) + 1;
 	}
 
 	internal static int GetPotentialNormalCapturePoints(
@@ -73,7 +85,11 @@ internal static class PotentialCaptureRules
 		int matchingIndex = card.CollectsTable && tableCards.Count > 0
 			? 0
 			: FindMatchingTableCardIndex(tableCards, card);
-		if (matchingIndex < 0 || !HasPotentialCapturedMiddleTableCards(tableCards, matchingIndex))
+		if (matchingIndex < 0
+			|| !ContinuousCaptureRules.MeetsThreshold(
+				CountThresholdTableCards(tableCards, matchingIndex),
+				card.BasePlayCaptureThreshold)
+			|| !HasPotentialCapturedMiddleTableCards(tableCards, matchingIndex))
 		{
 			return 0;
 		}
@@ -125,6 +141,25 @@ internal static class PotentialCaptureRules
 		for (int tableCardIndex = Math.Max(0, startIndex); tableCardIndex < tableCards.Count; tableCardIndex++)
 		{
 			if (!tableCards[tableCardIndex].IsBuriedInSand)
+			{
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	private static int CountThresholdTableCards(
+		IReadOnlyList<CaptureScoringTableCard> tableCards,
+		int startIndex)
+	{
+		int count = 0;
+		for (int tableCardIndex = Math.Max(0, startIndex); tableCardIndex < tableCards.Count; tableCardIndex++)
+		{
+			CaptureScoringTableCard tableCard = tableCards[tableCardIndex];
+			if (!tableCard.IsBuriedInSand
+				&& tableCard.Card.HasValue
+				&& tableCard.CountsTowardBasePlayCaptureThreshold)
 			{
 				count++;
 			}

@@ -72,6 +72,7 @@ public sealed partial class AuthorityRuleSession
 		state.RuleRevision = snapshot.Revision;
 		state.RuleLifecycleGeneration = snapshot.LifecycleGeneration;
 		state.RulePendingPresentationBarrierId = snapshot.PendingPresentationBarrierId;
+		state.PendingBasePlayCapture = snapshot.NormalizedPendingBasePlayCapture;
 		state.RulePendingTableOrderRuntimeInstanceIds.Clear();
 		state.RulePendingTableOrderRuntimeInstanceIds.AddRange(
 			snapshot.PendingTableOrderRuntimeInstanceIds.IsDefault
@@ -95,6 +96,7 @@ public sealed partial class AuthorityRuleSession
 		state.PlayerItemHands.Clear();
 		state.TableCards.Clear();
 		Array.Clear(state.PlayerScores);
+		state.BasePlayCaptureThreshold = snapshot.BasePlayCaptureThreshold;
 		for (int seat = 0; seat < CompatibilityPlayerCapacity; seat++)
 		{
 			state.PlayerDecks.Add(new List<PlayingCard>());
@@ -149,7 +151,8 @@ public sealed partial class AuthorityRuleSession
 			state.ExtraActions.CaptureSnapshot(),
 			state.CompletedTurnsSinceQuestionCardRefresh,
 			state.QuestionCardRefreshAnchorPlayerIndex,
-			state.MatchFlow);
+			state.MatchFlow,
+			state.BasePlayCaptureThreshold);
 	}
 
 	private static MatchStateSnapshot CreateSnapshot(
@@ -178,7 +181,9 @@ public sealed partial class AuthorityRuleSession
 			state.ExtraActions.CaptureSnapshot(),
 			state.CompletedTurnsSinceQuestionCardRefresh,
 			state.QuestionCardRefreshAnchorPlayerIndex,
-			state.MatchFlow);
+			state.MatchFlow,
+			state.PendingBasePlayCapture,
+			state.BasePlayCaptureThreshold);
 	}
 
 	private static ImmutableArray<PlayerStateSnapshot> CreatePlayerSnapshots(GameBoardState state)

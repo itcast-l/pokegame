@@ -12,7 +12,8 @@ public readonly record struct CardPlayTableCard(
 	string? Rank,
 	bool IsFaceUp,
 	bool IsBuriedInSand,
-	string? Suit = null);
+	string? Suit = null,
+	bool CountsTowardBasePlayCaptureThreshold = true);
 
 public readonly record struct CardPlayPlan(
 	int MatchingTableCardIndex,
@@ -21,7 +22,9 @@ public readonly record struct CardPlayPlan(
 	bool MatchedTableCardFlipped,
 	int TableInsertIndex,
 	string EffectiveRank,
-	bool PlayedCardFacesUp);
+	bool PlayedCardFacesUp,
+	bool CaptureThresholdBlocked = false,
+	int NormalTableCaptureCount = 0);
 
 internal static class CardPlayResolver
 {
@@ -36,7 +39,8 @@ internal static class CardPlayResolver
 		IReadOnlyList<string>? alternateRanks,
 		bool insertAtTableStart,
 		int tableInsertIndexOverride = -1,
-		bool playedCardFacesUp = false)
+		bool playedCardFacesUp = false,
+		int basePlayCaptureThreshold = 0)
 	{
 		string effectiveRank = playedCard.Rank;
 		int matchingIndex = FindMatchingTableCardIndex(tableCards, playedCard.Rank);
@@ -73,6 +77,19 @@ internal static class CardPlayResolver
 		bool playedCardCollectsTable = playedCard.CollectsTable && tableCards.Count > 0;
 		int captureStartIndex = playedCardCollectsTable ? 0 : matchingIndex;
 		bool matchedTableCardFlipped = matchingIndex >= 0 && !tableCards[matchingIndex].IsFaceUp;
+		int normalTableCaptureCount = CountNormalTableCaptureCards(tableCards, captureStartIndex);
+		bool captureThresholdBlocked = captureStartIndex >= 0
+			&& !ContinuousCaptureRules.MeetsThreshold(
+				normalTableCaptureCount,
+				basePlayCaptureThreshold);
+		if (captureThresholdBlocked)
+		{
+			matchingIndex = -1;
+			playedCardCollectsTable = false;
+			captureStartIndex = -1;
+			matchedTableCardFlipped = false;
+			effectiveRank = playedCard.Rank;
+		}
 		int tableInsertIndex = tableInsertIndexOverride >= 0
 			? System.Math.Min(tableInsertIndexOverride, tableCards.Count)
 			: (insertAtTableStart ? 0 : tableCards.Count);
@@ -83,7 +100,33 @@ internal static class CardPlayResolver
 			matchedTableCardFlipped,
 			tableInsertIndex,
 			effectiveRank,
-			playedCardFacesUp);
+			playedCardFacesUp,
+			captureThresholdBlocked,
+			normalTableCaptureCount);
+	}
+
+	private static int CountNormalTableCaptureCards(
+		IReadOnlyList<CardPlayTableCard> tableCards,
+		int captureStartIndex)
+	{
+		if (captureStartIndex < 0)
+		{
+			return 0;
+		}
+
+		int count = 0;
+		for (int index = captureStartIndex; index < tableCards.Count; index++)
+		{
+			CardPlayTableCard tableCard = tableCards[index];
+			if (!tableCard.IsBuriedInSand
+				&& tableCard.Rank != null
+				&& tableCard.CountsTowardBasePlayCaptureThreshold)
+			{
+				count++;
+			}
+		}
+
+		return count;
 	}
 
 	public static int FindMatchingTableCardIndex(IReadOnlyList<CardPlayTableCard> tableCards, string rank)

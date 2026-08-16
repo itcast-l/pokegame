@@ -13,7 +13,7 @@ public partial class GameBoardScene
 		int TurnSequenceGeneration, int CurrentTurnPlayerIndex,
 		int OpeningDiceRollResult,
 		MatchOutcomeKind MatchOutcomeKind, int WinnerPlayerIndex,
-		int[] Scores, int[] DeckCounts, int[] HandCounts,
+		int[] Scores, int BasePlayCaptureThreshold, int[] DeckCounts, int[] HandCounts,
 		int[] ItemHandCounts, NetworkPlayingCardSnapshot[] OwnHandCards,
 		string[] OwnItemHandCardIds, PendingItemSelectionMode PendingSelectionMode,
 		int PendingSelectionOwner, string PendingItemCardId,
@@ -262,6 +262,7 @@ public partial class GameBoardScene
 			["match_outcome_kind"] = ToNetworkMatchOutcome(readModel.Outcome).ToString(),
 			["winner_player_index"] = readModel.WinnerSeat,
 			["scores"] = BuildRuleScoresArray(readModel.Players),
+			["base_play_capture_threshold"] = readModel.BasePlayCaptureThreshold,
 			["deck_counts"] = BuildRuleZoneCountArray(readModel.Players, RulePlayerZone.Deck),
 			["hand_counts"] = BuildRuleZoneCountArray(readModel.Players, RulePlayerZone.Hand),
 			["item_hand_counts"] = BuildRuleZoneCountArray(readModel.Players, RulePlayerZone.ItemHand),
@@ -416,6 +417,8 @@ public partial class GameBoardScene
 		RefreshNetworkReconnectOverlayIfNeeded();
 		MarkSeatControlIndicatorsDirty();
 		MarkActivePlayerStatusTooltipForRefresh();
+		MarkActivePlayerStatusTooltipForRefresh();
+		UpdateCaptureThresholdFeedbackLayout();
 		if (isReconnectCatchup)
 		{
 			_networkReconnectCatchupPendingCompletion = true;
@@ -500,6 +503,12 @@ public partial class GameBoardScene
 		EnsureNetworkCardCache();
 		int maxDeck = _networkCardsByCode.Count * (player_count > 2 ? 2 : 1);
 		if (maxDeck <= 0 || !TryReadBoundedNetworkIntArray(raw, "scores", player_count, player_count, 0, int.MaxValue, out int[] scores)
+			|| !TryReadNetworkInt32(
+				raw,
+				"base_play_capture_threshold",
+				ContinuousCaptureRules.MinimumThreshold,
+				ContinuousCaptureRules.MaximumThreshold,
+				out int basePlayCaptureThreshold)
 			|| !TryReadBoundedNetworkIntArray(raw, "deck_counts", player_count, player_count, 0, maxDeck, out int[] decks)
 			|| !TryReadBoundedNetworkIntArray(raw, "hand_counts", player_count, player_count, 0, MaxTotalHandCards, out int[] hands)
 			|| !TryReadBoundedNetworkIntArray(raw, "item_hand_counts", player_count, player_count, 0, MaxTotalHandCards, out int[] items)) return false;
@@ -551,7 +560,7 @@ public partial class GameBoardScene
 			_ => false,
 		};
 		if (!pendingValid) return false;
-		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, authorityEpoch, checkpointId, generation, currentPlayer, openingDiceRollResult, outcomeKind, winner, scores, decks, hands, items, ownPlaying, ownItems, pendingMode, pendingOwner, pendingId, pendingGeneration, opening, openingCompleted, table, seats, authorityAction);
+		snapshot = new ValidatedNetworkBoardSnapshot(snapshotId, authorityEpoch, checkpointId, generation, currentPlayer, openingDiceRollResult, outcomeKind, winner, scores, basePlayCaptureThreshold, decks, hands, items, ownPlaying, ownItems, pendingMode, pendingOwner, pendingId, pendingGeneration, opening, openingCompleted, table, seats, authorityAction);
 		return true;
 	}
 

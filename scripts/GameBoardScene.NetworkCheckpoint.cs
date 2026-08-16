@@ -77,6 +77,11 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		if (ruleSnapshot.NormalizedPendingBasePlayCapture.IsPending)
+		{
+			error = "authority_rule_base_play_capture_pending";
+			return false;
+		}
 
 		EnsureNetworkCardCache();
 		long projectionAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
