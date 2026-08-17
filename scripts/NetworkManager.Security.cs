@@ -405,7 +405,7 @@ public partial class NetworkManager
 		}
 
 		InitializeHostMigrationSecurity();
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (player.IsConnected && !player.IsHost)
 			{

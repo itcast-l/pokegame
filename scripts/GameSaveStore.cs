@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
-public static class GameSaveStore
+public static partial class GameSaveStore
 {
 	public const string MasterVolumeKey = "settings.audio.master_volume";
 	public const string MusicVolumeKey = "settings.audio.music_volume";
@@ -243,9 +243,22 @@ public sealed record GameProgressData(
 		{
 			return Error.Unavailable;
 		}
+		using ProfileExclusiveLease? exclusiveLease =
+			GameSaveProfileWriteCoordinator.TryAcquireExclusiveLease(out Error exclusiveError);
+		if (exclusiveLease == null)
+		{
+			return exclusiveError;
+		}
 
 		GameSaveMigration.EnsureInitialized(saveManager);
-		return GameSaveProfileRepository.SaveProfileRaw(saveManager, GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager), progressData);
+		string slotId = GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager);
+		GameProgressData candidate = GameSaveProfileRepository.PrepareForSave(progressData);
+		Error result = GameSaveProfileRepository.SavePreparedProfileRaw(saveManager, slotId, candidate);
+		if (result == Error.Ok)
+		{
+			GameSaveProfileWriteCoordinator.ObserveCommitted(slotId, candidate);
+		}
+		return result;
 	}
 
 	public static Error SaveProfile(string slotId, GameProgressData progressData)
@@ -255,9 +268,26 @@ public sealed record GameProgressData(
 		{
 			return Error.Unavailable;
 		}
+		using ProfileExclusiveLease? exclusiveLease =
+			GameSaveProfileWriteCoordinator.TryAcquireExclusiveLease(out Error exclusiveError);
+		if (exclusiveLease == null)
+		{
+			return exclusiveError;
+		}
 
 		GameSaveMigration.EnsureInitialized(saveManager);
-		return GameSaveProfileRepository.SaveProfileRaw(saveManager, GameSaveProfileRepository.NormalizeProfileSlotId(slotId), progressData);
+		string normalizedSlotId = GameSaveProfileRepository.NormalizeProfileSlotId(slotId);
+		GameProgressData candidate = GameSaveProfileRepository.PrepareForSave(progressData);
+		Error result = GameSaveProfileRepository.SavePreparedProfileRaw(saveManager, normalizedSlotId, candidate);
+		if (result == Error.Ok
+			&& string.Equals(
+				GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager),
+				normalizedSlotId,
+				StringComparison.Ordinal))
+		{
+			GameSaveProfileWriteCoordinator.ObserveCommitted(normalizedSlotId, candidate);
+		}
+		return result;
 	}
 
 	public static Error CreateProfile(string slotId, string playerName, string selectedAvatarId)
@@ -266,6 +296,12 @@ public sealed record GameProgressData(
 		if (saveManager == null)
 		{
 			return Error.Unavailable;
+		}
+		using ProfileExclusiveLease? topologyLease =
+			GameSaveProfileWriteCoordinator.TryAcquireExclusiveLease(out Error topologyError);
+		if (topologyLease == null)
+		{
+			return topologyError;
 		}
 
 		GameSaveMigration.EnsureInitialized(saveManager);
@@ -290,7 +326,12 @@ public sealed record GameProgressData(
 			return saveResult;
 		}
 
-		return GameSaveProfileRepository.SetActiveProfileRaw(saveManager, normalizedSlotId);
+		Error activeResult = GameSaveProfileRepository.SetActiveProfileRaw(saveManager, normalizedSlotId);
+		if (activeResult == Error.Ok)
+		{
+			GameSaveProfileWriteCoordinator.Invalidate();
+		}
+		return activeResult;
 	}
 
 	public static Error SetActiveProfile(string slotId)
@@ -300,6 +341,12 @@ public sealed record GameProgressData(
 		{
 			return Error.Unavailable;
 		}
+		using ProfileExclusiveLease? topologyLease =
+			GameSaveProfileWriteCoordinator.TryAcquireExclusiveLease(out Error topologyError);
+		if (topologyLease == null)
+		{
+			return topologyError;
+		}
 
 		GameSaveMigration.EnsureInitialized(saveManager);
 		string normalizedSlotId = GameSaveProfileRepository.NormalizeProfileSlotId(slotId);
@@ -308,7 +355,12 @@ public sealed record GameProgressData(
 			return Error.FileNotFound;
 		}
 
-		return GameSaveProfileRepository.SetActiveProfileRaw(saveManager, normalizedSlotId);
+		Error result = GameSaveProfileRepository.SetActiveProfileRaw(saveManager, normalizedSlotId);
+		if (result == Error.Ok)
+		{
+			GameSaveProfileWriteCoordinator.Invalidate();
+		}
+		return result;
 	}
 
 	public static Error DeleteProfile(string slotId)
@@ -317,6 +369,12 @@ public sealed record GameProgressData(
 		if (saveManager == null)
 		{
 			return Error.Unavailable;
+		}
+		using ProfileExclusiveLease? topologyLease =
+			GameSaveProfileWriteCoordinator.TryAcquireExclusiveLease(out Error topologyError);
+		if (topologyLease == null)
+		{
+			return topologyError;
 		}
 
 		GameSaveMigration.EnsureInitialized(saveManager);
@@ -355,6 +413,7 @@ public sealed record GameProgressData(
 		}
 
 		saveManager.Call("unregister_slot", new StringName(normalizedSlotId));
+		GameSaveProfileWriteCoordinator.Invalidate();
 		return Error.Ok;
 	}
 

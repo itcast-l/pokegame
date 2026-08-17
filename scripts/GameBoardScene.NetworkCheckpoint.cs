@@ -194,10 +194,10 @@ public partial class GameBoardScene
 		NetworkManager? networkManager = GetNetworkManager();
 		NetworkSessionConfig activeConfig = networkManager?.CurrentConfig ?? default;
 		if (checkpoint.PlayerCount != player_count
-			|| (!string.IsNullOrWhiteSpace(_networkSessionId)
-				&& !string.Equals(_networkSessionId, checkpoint.SessionId, StringComparison.Ordinal))
-			|| (!string.IsNullOrWhiteSpace(_networkMatchId)
-				&& !string.Equals(_networkMatchId, checkpoint.MatchId, StringComparison.Ordinal))
+			|| (!string.IsNullOrWhiteSpace(network_session_id)
+				&& !string.Equals(network_session_id, checkpoint.SessionId, StringComparison.Ordinal))
+			|| (!string.IsNullOrWhiteSpace(network_match_id)
+				&& !string.Equals(network_match_id, checkpoint.MatchId, StringComparison.Ordinal))
 			|| (networkManager != null && !MatchesCheckpointConfig(activeConfig, checkpoint))
 			|| !MatchesCheckpointManifest(checkpoint.ManifestHash)
 			|| !MatchesCheckpointRoster(networkManager, checkpoint))

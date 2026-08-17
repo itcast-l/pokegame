@@ -3,11 +3,6 @@
 [ext_resource type="PackedScene" uid="uid://dm510cyafsu8m" path="res://scenes/game_board_scene.tscn" id="1_game_board_scene"]
 
 [node name="GameBoardScene" unique_id=282540626 instance=ExtResource("1_game_board_scene")]
-adventure_mode = true
-adventure_tutorial_mode = true
-adventure_tutorial_flow = "bomb_item"
-solo_mode = true
-adventure_enemy_avatar_id = "lanternfish"
 
 [node name="UnderwaterAmbientLayer" parent="BoardCanvas" index="2" unique_id=1437166109]
 motion_scale = 0.55

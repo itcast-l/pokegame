@@ -88,6 +88,17 @@ public partial class MainMenuScene : Control
 
 	private void QuitGame()
 	{
-		GetTree().Quit();
+		RequestApplicationQuit();
+	}
+
+	public void RequestApplicationQuit()
+	{
+		ApplicationShutdownService.Request(this, () =>
+		{
+			_quitInProgress = true;
+			SetProcessInput(false);
+			SetProcessUnhandledInput(false);
+			MouseFilter = MouseFilterEnum.Ignore;
+		});
 	}
 }

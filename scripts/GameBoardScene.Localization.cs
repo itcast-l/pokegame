@@ -133,8 +133,8 @@ public partial class GameBoardScene
 
 		if (_winnerLabel != null && GodotObject.IsInstanceValid(_winnerLabel) && _winnerPlayerIndex >= 0)
 		{
-			_winnerLabel.Text = !string.IsNullOrEmpty(_adventureSaveStatusLocalizationKey)
-				? Localize(_adventureSaveStatusLocalizationKey)
+			_winnerLabel.Text = !string.IsNullOrEmpty(AdventureSaveStatusLocalizationKey)
+				? Localize(AdventureSaveStatusLocalizationKey)
 				: _showingDefeatResult
 					? Localize("GAME_DEFEAT")
 					: GetWinnerText(_winnerPlayerIndex);

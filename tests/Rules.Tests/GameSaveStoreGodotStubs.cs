@@ -8,6 +8,7 @@ namespace Godot
 		Ok = 0,
 		Failed = 1,
 		FileNotFound = 7,
+		Busy = 44,
 		Unavailable = 49,
 	}
 
@@ -60,6 +61,11 @@ namespace Godot
 				&& callables.Contains(callable);
 		}
 
+		public bool IsConnected(StringName signal, Callable callable)
+		{
+			return IsConnected(signal.ToString(), callable);
+		}
+
 		public Error Connect(string signal, Callable callable)
 		{
 			if (!_signalConnections.TryGetValue(signal, out List<Callable>? callables))
@@ -74,6 +80,24 @@ namespace Godot
 			return Error.Ok;
 		}
 
+		public Error Connect(StringName signal, Callable callable)
+		{
+			return Connect(signal.ToString(), callable);
+		}
+
+		public void Disconnect(string signal, Callable callable)
+		{
+			if (_signalConnections.TryGetValue(signal, out List<Callable>? callables))
+			{
+				callables.Remove(callable);
+			}
+		}
+
+		public void Disconnect(StringName signal, Callable callable)
+		{
+			Disconnect(signal.ToString(), callable);
+		}
+
 		public int GetSignalConnectionCount(string signal)
 		{
 			return _signalConnections.TryGetValue(signal, out List<Callable>? callables)
@@ -81,7 +105,7 @@ namespace Godot
 				: 0;
 		}
 
-		public void EmitSignal(string signal)
+		public void EmitSignal(string signal, params object[] args)
 		{
 			if (!_signalConnections.TryGetValue(signal, out List<Callable>? callables))
 			{
@@ -89,16 +113,16 @@ namespace Godot
 			}
 			foreach (Callable callable in callables.ToArray())
 			{
-				callable.Invoke();
+				callable.Invoke(args);
 			}
 		}
 	}
 
 	public readonly struct Callable : IEquatable<Callable>
 	{
-		private readonly Action? _callback;
+		private readonly Delegate? _callback;
 
-		private Callable(Action callback)
+		private Callable(Delegate callback)
 		{
 			_callback = callback;
 		}
@@ -108,9 +132,19 @@ namespace Godot
 			return new Callable(callback);
 		}
 
-		public void Invoke()
+		public static Callable From<T1, T2>(Action<T1, T2> callback)
 		{
-			_callback?.Invoke();
+			return new Callable(callback);
+		}
+
+		public static Callable From<T1, T2, T3>(Action<T1, T2, T3> callback)
+		{
+			return new Callable(callback);
+		}
+
+		public void Invoke(params object[] args)
+		{
+			_callback?.DynamicInvoke(args);
 		}
 
 		public bool Equals(Callable other)
@@ -147,15 +181,22 @@ namespace Godot
 	public static class GD
 	{
 		public static List<string> WarningMessages { get; } = new();
+		public static List<string> ErrorMessages { get; } = new();
 
 		public static void PushWarning(string message)
 		{
 			WarningMessages.Add(message);
 		}
 
+		public static void PushError(string message)
+		{
+			ErrorMessages.Add(message);
+		}
+
 		public static void ClearWarnings()
 		{
 			WarningMessages.Clear();
+			ErrorMessages.Clear();
 		}
 	}
 
@@ -187,6 +228,8 @@ namespace Godot
 		{
 			return _value;
 		}
+
+		public static implicit operator StringName(string value) => new(value);
 	}
 
 	public readonly struct Variant
@@ -354,9 +397,20 @@ namespace Godot
 
 	public static class Time
 	{
+		public static double UnixTimeFromSystem { get; set; } = 1_720_000_000;
+		public static double UnixTimeIncrement { get; set; }
+
 		public static double GetUnixTimeFromSystem()
 		{
-			return 1_720_000_000;
+			double result = UnixTimeFromSystem;
+			UnixTimeFromSystem += UnixTimeIncrement;
+			return result;
+		}
+
+		public static void ResetTestState()
+		{
+			UnixTimeFromSystem = 1_720_000_000;
+			UnixTimeIncrement = 0;
 		}
 	}
 
@@ -374,19 +428,32 @@ namespace Godot
 		public string SaveRoot { get; set; }
 		public bool UseJson { get; set; }
 		public Error PersistResult { get; set; } = Error.Ok;
+		public Error MarkDirtyResult { get; set; } = Error.Ok;
+		public Exception? NextQueueSaveException { get; set; }
+		public Exception? NextQueueFlushException { get; set; }
 		public Dictionary<string, Error> SaveSlotResults { get; } = new(StringComparer.Ordinal);
 		public Queue<Error> SaveSlotResultSequence { get; } = new();
 		public List<string> UnregisteredSlots { get; } = new();
+		public List<Godot.Collections.Dictionary> SaveAttemptData { get; } = new();
 		public int SaveToSlotCallCount { get; private set; }
+		public int LoadFromSlotCallCount { get; private set; }
+		public int PersistCallCount { get; private set; }
+		public int MarkDirtyCallCount { get; private set; }
+		public bool Dirty { get; private set; }
 
 		public override Variant Call(string method, params object[] args)
 		{
 			return method switch
 			{
 				"get_value" => GetValue((StringName)args[0], (Variant)args[1]),
-				"set_value" => SetValue((StringName)args[0], (Variant)args[1]),
-				"persist" => Persist(),
-				"save_to_slot_sync" => SaveToSlotSync((StringName)args[0], (Godot.Collections.Dictionary)args[1]),
+					"set_value" => SetValue((StringName)args[0], (Variant)args[1]),
+					"mark_dirty" => MarkDirty(),
+					"persist" => Persist(),
+					"save_to_slot_sync" => SaveToSlotSync((StringName)args[0], (Godot.Collections.Dictionary)args[1]),
+					"queue_save_to_slot" => QueueSaveToSlot((long)args[0], (StringName)args[1], (Godot.Collections.Dictionary)args[2]),
+					"flush_dirty_async" => FlushDirtyAsync((long)args[0]),
+					"queue_flush_barrier" => QueueFlushBarrier((long)args[0]),
+					"begin_async_shutdown" => default,
 				"load_from_slot_sync" => LoadFromSlotSync((StringName)args[0]),
 				"ensure_slot_for_file_base" => default,
 				"unregister_slot" => UnregisterSlot((StringName)args[0]),
@@ -469,12 +536,28 @@ namespace Godot
 
 		private Variant Persist()
 		{
+			PersistCallCount++;
+			if (PersistResult == Error.Ok)
+			{
+				Dirty = false;
+			}
 			return PersistResult;
+		}
+
+		private Variant MarkDirty()
+		{
+			MarkDirtyCallCount++;
+			if (MarkDirtyResult == Error.Ok)
+			{
+				Dirty = true;
+			}
+			return MarkDirtyResult;
 		}
 
 		private Variant SaveToSlotSync(StringName slotId, Godot.Collections.Dictionary data)
 		{
 			SaveToSlotCallCount++;
+			SaveAttemptData.Add(data);
 			string key = slotId.ToString();
 			if (SaveSlotResultSequence.Count > 0)
 			{
@@ -496,10 +579,57 @@ namespace Godot
 
 		private Variant LoadFromSlotSync(StringName slotId)
 		{
+			LoadFromSlotCallCount++;
 			string key = slotId.ToString();
 			return _slotData.TryGetValue(key, out Godot.Collections.Dictionary? data)
 				? data
 				: new Godot.Collections.Dictionary();
+		}
+
+		private Variant QueueSaveToSlot(
+			long requestId,
+			StringName slotId,
+			Godot.Collections.Dictionary data)
+		{
+			if (NextQueueSaveException is Exception queueError)
+			{
+				NextQueueSaveException = null;
+				throw queueError;
+			}
+
+			Error result = (Error)SaveToSlotSync(slotId, data).AsInt32();
+			EmitSignal("async_save_finished", requestId, slotId, (long)result);
+			return result;
+		}
+
+		private Variant FlushDirtyAsync(long requestId)
+		{
+			ThrowNextQueueFlushException();
+			Error result = Error.Ok;
+			if (Dirty)
+			{
+				result = (Error)Persist().AsInt32();
+			}
+			EmitSignal("async_flush_finished", requestId, (long)result);
+			return Error.Ok;
+		}
+
+		private Variant QueueFlushBarrier(long requestId)
+		{
+			ThrowNextQueueFlushException();
+			EmitSignal("async_flush_finished", requestId, (long)Error.Ok);
+			return Error.Ok;
+		}
+
+		private void ThrowNextQueueFlushException()
+		{
+			if (NextQueueFlushException is not Exception queueError)
+			{
+				return;
+			}
+
+			NextQueueFlushException = null;
+			throw queueError;
 		}
 
 		private Variant UnregisterSlot(StringName slotId)

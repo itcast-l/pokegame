@@ -13,6 +13,7 @@ public partial class UnderwaterAmbientLayer
 
 		_missingCategoryWarnings.Clear();
 		_resourceLoadCount++;
+#if DECKLAND_TEST_HOOKS
 		if (debug_force_missing_image_assets)
 		{
 			_seagrassFrames = Array.Empty<Texture2D>();
@@ -23,6 +24,7 @@ public partial class UnderwaterAmbientLayer
 			_moteFrames = Array.Empty<Texture2D>();
 		}
 		else
+#endif
 		{
 			_seagrassFrames = LoadProfileFrames("seagrass", SeagrassFrameCount, "underwater seagrass");
 			_centerCausticFrames = LoadProfileFrames("center_caustic", CenterCausticFrameCount, "underwater center caustic");
@@ -94,9 +96,11 @@ public partial class UnderwaterAmbientLayer
 		RebuildAmbient();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public int DebugGetResourceLoadCount() => _resourceLoadCount;
 	public int DebugGetRebuildCount() => _rebuildCount;
 	public string DebugGetImageAssetStateName() => _imageAssetState.ToString();
+#endif
 
 	private void WarnMissingCategory(string category, string path)
 	{

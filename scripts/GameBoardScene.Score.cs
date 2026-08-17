@@ -31,7 +31,6 @@ public partial class GameBoardScene
 	private IReadOnlyList<int> _playerScores => CurrentRuleProjection.PlayerScores;
 	private readonly ScoreAvatarMeter?[] _playerScoreMeters = new ScoreAvatarMeter?[MaxPlayers];
 	private readonly ScoreEffectTarget?[] _playerScoreEffectTargets = new ScoreEffectTarget?[MaxPlayers];
-	private int _winningScore = DefaultWinningScore;
 
 	private void BindPlayerScoreMeters()
 	{
@@ -245,12 +244,14 @@ public partial class GameBoardScene
 			return new AdventureDirectDamageSceneCommit(false, default);
 		}
 
-		AdventureSaveGateResult<AdventureDirectDamageCommitResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				() => store.ApplyDirectDamage(new AdventureDirectDamageCommitInput(
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureDirectDamageCommitResult> operation =
+			store.PrepareApplyDirectDamage(new AdventureDirectDamageCommitInput(
 					damageAmount,
 					CurrentMatchFlowState.HalfHealthRescueUsed,
-					CurrentMatchFlowState.QuarterHealthRescueUsed)),
+					CurrentMatchFlowState.QuarterHealthRescueUsed));
+		AdventureSaveGateResult<AdventureDirectDamageCommitResult> gate =
+			await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)
@@ -311,7 +312,7 @@ public partial class GameBoardScene
 
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			if (_playerScores[playerIndex] >= _winningScore)
+			if (_playerScores[playerIndex] >= winning_score)
 			{
 				return playerIndex;
 			}
@@ -322,10 +323,12 @@ public partial class GameBoardScene
 
 	private int GetStartingPlayerScore(int playerIndex)
 	{
+#if DECKLAND_TEST_HOOKS
 		if (playerIndex == MainPlayerIndex && debug_main_player_starting_score >= 0)
 		{
 			return debug_main_player_starting_score;
 		}
+#endif
 
 		if (!adventure_mode || playerIndex >= player_count)
 		{
@@ -350,7 +353,7 @@ public partial class GameBoardScene
 			return maxHealth;
 		}
 
-		return adventure_mode ? GetAdventureStartingHealth(playerIndex) : _winningScore;
+		return adventure_mode ? GetAdventureStartingHealth(playerIndex) : winning_score;
 	}
 
 	private int GetAdventureStartingHealth(int playerIndex)
@@ -443,9 +446,11 @@ public partial class GameBoardScene
 			return false;
 		}
 
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureHealingCommitResult> operation =
+			store.PrepareApplyHealing(healAmount, maxHealthDelta);
 		AdventureSaveGateResult<AdventureHealingCommitResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				() => store.ApplyHealing(healAmount, maxHealthDelta),
+			await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)

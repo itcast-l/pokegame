@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const ADVENTURE_PLAYER_AVATAR_ID := "bear"
@@ -40,7 +42,7 @@ const MODE_SPECS := [
 		"winning_score": 100,
 		"solo_mode": true,
 		"adventure_mode": true,
-		"adventure_enemy_avatar_id": "fish",
+		"adventure_enemy_avatar_id": "shrimp",
 		"expected_player_avatar_root": ADVENTURE_PLAYER_AVATAR_ROOT,
 	},
 ]
@@ -85,22 +87,27 @@ func _smoke_mode(spec: Dictionary) -> void:
 		_fail("Failed to load scene: %s" % SCENE_PATH)
 		return
 
-	var board := packed_scene.instantiate()
+	var board: Node
+	if bool(spec.get("adventure_mode", false)):
+		board = GameBoardSmokeFactory.create_adventure(
+			packed_scene,
+			String(spec.get("adventure_enemy_avatar_id", "fish")),
+			int(spec.get("winning_score", 100)),
+			bool(spec.get("item_mode", true)),
+			int(spec.get("solo_ai_difficulty", 1)))
+	else:
+		board = GameBoardSmokeFactory.create_solo(
+			packed_scene,
+			int(spec.get("player_count", 2)),
+			bool(spec.get("item_mode", true)),
+			int(spec.get("winning_score", 100)),
+			int(spec.get("solo_ai_difficulty", 1)))
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
 		return
 
 	var mode_name := String(spec.get("name", "unknown"))
 	var mode_label := mode_name.to_upper()
-	board.set("player_count", int(spec.get("player_count", 2)))
-	board.set("item_mode", bool(spec.get("item_mode", true)))
-	board.set("winning_score", int(spec.get("winning_score", 100)))
-	board.set("solo_mode", bool(spec.get("solo_mode", true)))
-	board.set("solo_ai_difficulty", int(spec.get("solo_ai_difficulty", 1)))
-	board.set("adventure_mode", bool(spec.get("adventure_mode", false)))
-	if spec.has("adventure_enemy_avatar_id"):
-		board.set("adventure_enemy_avatar_id", String(spec.get("adventure_enemy_avatar_id", "fish")))
-
 	root.add_child(board)
 	await process_frame
 	if spec.has("expected_player_avatar_root"):
@@ -119,7 +126,7 @@ func _smoke_mode(spec: Dictionary) -> void:
 	if not board.has_method("DebugRestartWithoutOpeningDealAnimation"):
 		_fail("%s fast mode setup hook missing" % mode_name)
 		return
-	if not bool(board.call("DebugRestartWithoutOpeningDealAnimation")):
+	if not await _prepare_fast_board(board):
 		_fail("%s fast mode setup hook rejected the board" % mode_name)
 		return
 	await process_frame
@@ -167,6 +174,20 @@ func _smoke_mode(spec: Dictionary) -> void:
 			return
 
 	_fail("%s mode timed out" % mode_name)
+
+
+func _prepare_fast_board(board: Node) -> bool:
+	for frame_index in range(300):
+		await process_frame
+		if board.has_method("DebugIsAdventureUpgradeSelectionVisible") \
+				and bool(board.call("DebugIsAdventureUpgradeSelectionVisible")):
+			if not bool(board.call("DebugSelectAdventureUpgradeOption", 0)):
+				return false
+			continue
+		if frame_index % 5 == 0 \
+				and bool(board.call("DebugRestartWithoutOpeningDealAnimation")):
+			return true
+	return false
 
 
 func _configure_selected_avatar_profile() -> bool:

@@ -17,8 +17,10 @@ public partial class GameBoardScene
 		_openingVisibleHandCardCounts.Clear();
 		_openingVisiblePileCardCounts.Clear();
 		ResetAdventureBattleScopedStateForNewBattle();
+#if DECKLAND_TEST_HOOKS
 		_debugQuestionRewardGrantCount = 0;
 		_debugLastQuestionRewardItemCardId = string.Empty;
+#endif
 		_hiddenHandDisplaySlots.Clear();
 		_pendingQuestionRewardItemHandSlots.Clear();
 		_authorityRuleSession?.ClearCardTriggerDispatch();
@@ -56,6 +58,7 @@ public partial class GameBoardScene
 			return;
 		}
 
+#if DECKLAND_TEST_HOOKS
 		if (TrySetupDebugRecordingDeal())
 		{
 			ReleasePendingItemSelectionPresentation();
@@ -65,6 +68,7 @@ public partial class GameBoardScene
 			RenderTableCards();
 			return;
 		}
+#endif
 
 		if (!TryInitializeRuleMatch(deck, playOpeningDealAnimation))
 		{

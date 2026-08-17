@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const DAMAGED_RUN_JSON := "{damaged adventure run"
@@ -67,8 +69,8 @@ func _run() -> void:
 	var tutorial_board := await _wait_for_board()
 	if _failed or tutorial_board == null:
 		return
-	if not bool(tutorial_board.get("adventure_tutorial_mode")) \
-		or String(tutorial_board.get("adventure_enemy_avatar_id")) != TUTORIAL_AVATAR_ID:
+	if not GameBoardSmokeFactory.is_adventure_tutorial(tutorial_board) \
+		or GameBoardSmokeFactory.get_adventure_enemy_avatar_id(tutorial_board) != TUTORIAL_AVATAR_ID:
 		_fail("Damaged main payload prevented the selected fish tutorial from starting")
 		return
 
@@ -118,8 +120,8 @@ func _run() -> void:
 	var board := await _wait_for_board()
 	if _failed or board == null:
 		return
-	if bool(board.get("adventure_tutorial_mode")) \
-		or String(board.get("adventure_enemy_avatar_id")) != MAIN_FIRST_AVATAR_ID:
+	if GameBoardSmokeFactory.is_adventure_tutorial(board) \
+		or GameBoardSmokeFactory.get_adventure_enemy_avatar_id(board) != MAIN_FIRST_AVATAR_ID:
 		_fail("Recovery did not restart from the first main stage")
 		return
 

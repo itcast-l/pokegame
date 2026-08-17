@@ -55,7 +55,8 @@ internal static partial class Program
 			True(adapterText.Contains("bool DisconnectSignal(StringName signalName, Callable callable);", StringComparison.Ordinal));
 			True(adapterText.Contains("public bool DisconnectSignal(StringName signalName, Callable callable)", StringComparison.Ordinal));
 			True(partialText.Contains("private void DisconnectSteamSignals()", StringComparison.Ordinal));
-			True(partialText.Contains("_steamReadyCallable = Callable.From(TryConnectSteamSignals);", StringComparison.Ordinal));
+			True(partialText.Contains("_steamReadyCallable = Callable.From(OnSteamReady);", StringComparison.Ordinal));
+			True(partialText.Contains("_steamPlatform?.RefreshState();", StringComparison.Ordinal));
 			True(partialText.Contains("private void RefreshSteamLobbyAdvertisedState()", StringComparison.Ordinal));
 		False(mainText.Contains("public void HostSteam(", StringComparison.Ordinal));
 		False(mainText.Contains("private void TryConnectSteamSignals()", StringComparison.Ordinal));
@@ -94,6 +95,7 @@ internal static partial class Program
 		True(partialText.Contains("private bool CanAttemptReconnectClaim()", StringComparison.Ordinal));
 		True(partialText.Contains("private void TryStartReconnectAttempt(double now)", StringComparison.Ordinal));
 		True(partialText.Contains("public void NotifyReconnectSnapshotApplied(string matchId)", StringComparison.Ordinal));
+		True(partialText.Contains("_reconnectCoordinator.Poll(", StringComparison.Ordinal));
 		False(mainText.Contains("private void PollReconnect(double now)", StringComparison.Ordinal));
 		False(mainText.Contains("private void TryMarkSeatDisconnected(int disconnectedPeerId)", StringComparison.Ordinal));
 		False(mainText.Contains("private bool CanAttemptReconnectClaim()", StringComparison.Ordinal));
@@ -166,7 +168,7 @@ internal static partial class Program
 		}
 
 		string ensureMethod = reconnectText[ensureStart..ensureEnd];
-		False(ensureMethod.Contains("_seatControlStates.Sort(", StringComparison.Ordinal));
+		False(ensureMethod.Contains(".Sort(", StringComparison.Ordinal));
 		True(ensureMethod.Contains("InsertSeatControlStateInSeatOrder(state)", StringComparison.Ordinal));
 
 		int snapshotStart = reconnectText.IndexOf("internal void ApplySeatControlStatesFromAuthoritySnapshot(", StringComparison.Ordinal);
@@ -192,7 +194,7 @@ internal static partial class Program
 		}
 
 		string claimsMethod = authorityText[claimsStart..claimsEnd];
-		True(claimsMethod.Contains("foreach (SeatControlState state in _seatControlStates)", StringComparison.Ordinal));
+		True(claimsMethod.Contains("foreach (SeatControlState state in _lobbyRoster.SeatControls)", StringComparison.Ordinal));
 		True(claimsMethod.Contains("TryGetValue(state.SeatIndex", StringComparison.Ordinal));
 		True(claimsMethod.Contains("OrderBy(pair => pair.Key)", StringComparison.Ordinal));
 	}
@@ -478,7 +480,7 @@ internal static partial class Program
 		string text = File.ReadAllText(path);
 
 		True(text.Contains("int senderPeerId = Multiplayer.GetRemoteSenderId();", StringComparison.Ordinal));
-		True(text.Contains("CanAcceptSceneLoadAck(_players, senderPeerId, seatIndex, out int senderSeatIndex)", StringComparison.Ordinal));
+		True(text.Contains("CanAcceptSceneLoadAck(_lobbyRoster.Players, senderPeerId, seatIndex, out int senderSeatIndex)", StringComparison.Ordinal));
 		True(text.Contains("GD.PushWarning(", StringComparison.Ordinal));
 	}
 
@@ -569,13 +571,13 @@ internal static partial class Program
 		True(partialText.Contains("private PlayingCard CreateNetworkPlayingCard(string cardCode)", StringComparison.Ordinal));
 		True(partialText.Contains("private ItemCard CreateNetworkVisualItemCard(string itemCardId)", StringComparison.Ordinal));
 		True(partialText.Contains("private void EnsureNetworkCardCache()", StringComparison.Ordinal));
-		True(partialText.Contains("private bool TryGetNetworkPlayerName(int playerIndex, out string playerName)", StringComparison.Ordinal));
+			True(partialText.Contains("private bool TryGetConfiguredPlayerName(int playerIndex, out string playerName)", StringComparison.Ordinal));
 		True(partialText.Contains("private static string[] SplitNetworkCsv(string csv)", StringComparison.Ordinal));
 		False(mainText.Contains("private string ToNetworkCardCode(PlayingCard card)", StringComparison.Ordinal));
 		False(mainText.Contains("private PlayingCard CreateNetworkPlayingCard(string cardCode)", StringComparison.Ordinal));
 		False(mainText.Contains("private ItemCard CreateNetworkVisualItemCard(string itemCardId)", StringComparison.Ordinal));
 		False(mainText.Contains("private void EnsureNetworkCardCache()", StringComparison.Ordinal));
-		False(mainText.Contains("private bool TryGetNetworkPlayerName(int playerIndex, out string playerName)", StringComparison.Ordinal));
+			False(mainText.Contains("private bool TryGetConfiguredPlayerName(int playerIndex, out string playerName)", StringComparison.Ordinal));
 	}
 
 }

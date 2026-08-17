@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const LEFT_PLAYER_INDEX := 2
 const VIEWPORT_SIZE := Vector2i(616, 888)
@@ -23,16 +25,11 @@ func _run() -> void:
 		_fail("Failed to load scene: %s" % SCENE_PATH)
 		return
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_solo(packed_scene, 3, false)
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
 		return
 
-	board.set("player_count", 3)
-	board.set("item_mode", false)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", false)
 	root.add_child(board)
 	await process_frame
 	await process_frame

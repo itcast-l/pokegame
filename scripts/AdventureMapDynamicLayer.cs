@@ -28,8 +28,10 @@ public partial class AdventureMapDynamicLayer : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int image_update_fps = 30;
 
+#if DECKLAND_TEST_HOOKS
 	[Export]
 	public bool debug_force_missing_image_assets;
+#endif
 
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<CurrentRibbon> _ribbons = new();
@@ -266,12 +268,14 @@ public partial class AdventureMapDynamicLayer : Control
 		}
 
 		_resourceLoadCount++;
+#if DECKLAND_TEST_HOOKS
 		if (debug_force_missing_image_assets)
 		{
 			_currentRibbonFrames = System.Array.Empty<Texture2D>();
 			_sparkleFrames = System.Array.Empty<Texture2D>();
 		}
 		else
+#endif
 		{
 			_currentRibbonFrames = FrameAnimationHelpers.LoadTextureFrames(
 				"res://art/fx/environment/adventure_map_dynamic/current_ribbon/run-001/processed/fx-{0}.png",
@@ -311,9 +315,11 @@ public partial class AdventureMapDynamicLayer : Control
 		Rebuild();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public int DebugGetResourceLoadCount() => _resourceLoadCount;
 	public int DebugGetRebuildCount() => _rebuildCount;
 	public string DebugGetImageAssetStateName() => _imageAssetState.ToString();
+#endif
 
 	private bool AllImageFramesMissing()
 	{

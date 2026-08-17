@@ -18,6 +18,12 @@ internal static partial class Program
 		Run("adventure authority handoff preserves transient state", AdventureAuthorityHandoffPreservesTransientState);
 		Run("adventure persisted restore drops transient state", AdventurePersistedRestoreDropsTransientState);
 		Run("adventure persistence failure preserves authority atomically", AdventurePersistenceFailurePreservesAuthorityAtomically);
+		Run("adventure prepare keeps authority unchanged until one commit", AdventurePrepareKeepsAuthorityUnchangedUntilOneCommit);
+		Run("adventure prepared transaction abort and handle checks are atomic", AdventurePreparedTransactionAbortAndHandleChecksAreAtomic);
+		Run("adventure prepared transaction rejects concurrent and stale commit", AdventurePreparedTransactionRejectsConcurrentAndStaleCommit);
+		Run("adventure unchanged prepared command commits action without revision", AdventureUnchangedPreparedCommandCommitsActionWithoutRevision);
+		Run("adventure prepared transaction survives match rollback and commit", AdventurePreparedTransactionSurvivesMatchRollbackAndCommit);
+		Run("adventure prepared transaction survives match rollback and abort", AdventurePreparedTransactionSurvivesMatchRollbackAndAbort);
 		Run("rule profile validates deterministic module ordering", RuleProfileValidatesDeterministicModuleOrdering);
 		Run("authority session rejects stale duplicate and blocked commands", AuthoritySessionRejectsStaleDuplicateAndBlockedCommands);
 		Run("authority snapshot restores action and random continuity", AuthoritySnapshotRestoresActionAndRandomContinuity);

@@ -96,8 +96,8 @@ public partial class AdventureAvatarMenuScene
 		{
 			foreach (CharacterAvatarDefinition avatarDefinition in GetSelectedAdventureEnemyDefinitions())
 			{
-				if (!CharacterAvatarCatalog.IsTutorialCompleted(
-					GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+					if (!CharacterAvatarCatalog.IsTutorialCompleted(
+						_profileSnapshot.CompletedAdventureTutorialIdsCsv,
 					avatarDefinition.Id))
 				{
 					return avatarDefinition.Id;
@@ -110,7 +110,7 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		int nextStage = Mathf.Clamp(
-			CharacterAvatarCatalog.LoadHighestCompletedAdventureStage() + 1,
+			_profileSnapshot.HighestCompletedMainAdventureStage + 1,
 			1,
 			AdventureCampaignCatalog.MainStageCount);
 		CharacterAvatarDefinition? nextEnemy = GetSelectedAdventureEnemyForStage(nextStage);
@@ -182,7 +182,10 @@ public partial class AdventureAvatarMenuScene
 			return AdventureCampaignCatalog.IsTutorialAvatar(avatarId);
 		}
 
-		return CharacterAvatarCatalog.IsAdventureStageUnlocked(GetStageNumber(avatarId));
+		int stageNumber = GetStageNumber(avatarId);
+		return stageNumber >= 1
+			&& stageNumber <= AdventureCampaignCatalog.MainStageCount
+			&& stageNumber <= _profileSnapshot.HighestCompletedMainAdventureStage + 1;
 	}
 
 	private bool IsStageCompleted(string avatarId)
@@ -190,11 +193,14 @@ public partial class AdventureAvatarMenuScene
 		if (_selectedAdventureId == AdventureCampaignCatalog.TutorialCampaignId)
 		{
 			return CharacterAvatarCatalog.IsTutorialCompleted(
-				GameSaveStore.LoadActiveProfile().CompletedAdventureTutorialIdsCsv,
+				_profileSnapshot.CompletedAdventureTutorialIdsCsv,
 				avatarId);
 		}
 
-		return CharacterAvatarCatalog.IsAdventureStageCompleted(GetStageNumber(avatarId));
+		int stageNumber = GetStageNumber(avatarId);
+		return stageNumber >= 1
+			&& stageNumber <= AdventureCampaignCatalog.MainStageCount
+			&& stageNumber <= _profileSnapshot.HighestCompletedMainAdventureStage;
 	}
 
 	private bool IsStageAvailable(string avatarId)
@@ -204,7 +210,10 @@ public partial class AdventureAvatarMenuScene
 			return !IsStageCompleted(avatarId);
 		}
 
-		return CharacterAvatarCatalog.IsAdventureStageAvailable(GetStageNumber(avatarId));
+		int stageNumber = GetStageNumber(avatarId);
+		return stageNumber >= 1
+			&& stageNumber <= AdventureCampaignCatalog.MainStageCount
+			&& stageNumber == _profileSnapshot.HighestCompletedMainAdventureStage + 1;
 	}
 
 	private string GetStageStatusText(int stageNumber)

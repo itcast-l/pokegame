@@ -126,7 +126,9 @@ public partial class OceanMenuButtonFrame : Control
 
 	private float _glow;
 	private float _targetGlow;
+#if DECKLAND_TEST_HOOKS
 	private long _processCallCount;
+#endif
 
 	public override void _Ready()
 	{
@@ -149,7 +151,9 @@ public partial class OceanMenuButtonFrame : Control
 
 	public override void _Process(double delta)
 	{
+#if DECKLAND_TEST_HOOKS
 		_processCallCount++;
+#endif
 		if (!IsVisibleInTree())
 		{
 			SetProcess(false);
@@ -170,6 +174,7 @@ public partial class OceanMenuButtonFrame : Control
 		}
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public long DebugGetProcessCallCount()
 	{
 		return _processCallCount;
@@ -201,6 +206,7 @@ public partial class OceanMenuButtonFrame : Control
 			? _button.GetInstanceId()
 			: 0;
 	}
+#endif
 
 	public override void _Draw()
 	{

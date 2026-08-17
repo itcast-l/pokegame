@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const RECORDING_SETUP_ID := "shrimp_capture_victory_order_01"
 const MAIN_PLAYER_INDEX := 0
@@ -21,18 +23,12 @@ func _run() -> void:
 		_fail("Failed to load scene: %s" % SCENE_PATH)
 		return
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, "shrimp")
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
 		return
 
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", "shrimp")
-	board.set("debug_recording_setup_id", RECORDING_SETUP_ID)
+	GameBoardSmokeFactory.configure_recording(board, RECORDING_SETUP_ID)
 
 	root.add_child(board)
 	await process_frame

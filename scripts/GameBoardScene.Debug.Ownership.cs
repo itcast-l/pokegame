@@ -89,7 +89,7 @@ public bool DebugConfigureDragonQuestionCaptureOwnershipProbe()
 		return false;
 	}
 
-	item_mode = true;
+	_runtimeConfiguration = RuntimeConfiguration with { ItemMode = true };
 	DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
 	fixture.TableCards.Clear();
 	for (int index = 0; index < captureThreshold - 1; index++)

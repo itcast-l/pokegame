@@ -33,7 +33,7 @@ public partial class NetworkManager
 		}
 
 		var excludedSeats = new HashSet<int>(_failedHotStandbySeats);
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!player.IsHost && !CanPeerActAsHotStandby(player.PeerId))
 			{
@@ -41,7 +41,7 @@ public partial class NetworkManager
 			}
 		}
 
-		var latencyMillisecondsBySeat = _players
+		var latencyMillisecondsBySeat = _lobbyRoster.Players
 			.Where(player => _migrationLatencyMillisecondsByPeerId.ContainsKey(player.PeerId))
 			.ToDictionary(
 				player => player.SeatIndex,

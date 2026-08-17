@@ -91,7 +91,7 @@ public partial class GameBoardScene
 			}
 		}
 		else if (_adventureUpgradeSelectionCompletionSource != null
-			|| _activeSelectionOverlaySession != null)
+			|| ActiveSelectionOverlaySession != null)
 		{
 			return false;
 		}
@@ -150,7 +150,7 @@ public partial class GameBoardScene
 				return false;
 			}
 		}
-		else if (_activeSelectionOverlaySession != null)
+		else if (ActiveSelectionOverlaySession != null)
 		{
 			return false;
 		}
@@ -192,7 +192,7 @@ public partial class GameBoardScene
 
 	public bool DebugDisposeActiveSelectionOverlayForAwaitProbe()
 	{
-		if (_activeSelectionOverlaySession == null)
+		if (ActiveSelectionOverlaySession == null)
 		{
 			return false;
 		}
@@ -203,7 +203,7 @@ public partial class GameBoardScene
 
 	public bool DebugCancelActiveSelectionOverlayForAwaitProbe()
 	{
-		if (_activeSelectionOverlaySession == null)
+		if (ActiveSelectionOverlaySession == null)
 		{
 			return false;
 		}
@@ -214,7 +214,7 @@ public partial class GameBoardScene
 
 	public bool DebugRestartMatchForSelectionAwaitProbe()
 	{
-		if (IsNetworkMultiplayerMode() || _activeSelectionOverlaySession == null)
+		if (IsNetworkMultiplayerMode() || ActiveSelectionOverlaySession == null)
 		{
 			return false;
 		}
@@ -439,7 +439,9 @@ public partial class GameBoardScene
 	{
 		return _winnerBannerRoot != null
 			&& GodotObject.IsInstanceValid(_winnerBannerRoot)
-			&& _winnerBannerRoot.Visible;
+			&& _winnerBannerRoot.Visible
+			&& !AdventureSaveInProgress
+			&& string.IsNullOrEmpty(AdventureSaveStatusLocalizationKey);
 	}
 
 	public string DebugGetWinnerPrimaryButtonText()

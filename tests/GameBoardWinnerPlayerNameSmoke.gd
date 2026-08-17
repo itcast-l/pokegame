@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const PROFILE_NAME := "Ocean"
@@ -65,13 +67,12 @@ func _seed_profile() -> bool:
 
 
 func _verify_adventure_player_name() -> bool:
-	var board := await _instantiate_board({
-		"player_count": 2,
-		"solo_mode": true,
-		"adventure_mode": true,
-		"adventure_enemy_avatar_id": "fish",
-		"network_wait_for_initialize": true,
-	})
+	var packed_scene := load(SCENE_PATH) as PackedScene
+	var board := GameBoardSmokeFactory.create_tutorial(packed_scene, "fish") \
+		if packed_scene != null else null
+	if board != null:
+		GameBoardSmokeFactory.defer_initialization(board)
+	board = await _add_board(board)
 	if board == null:
 		return false
 
@@ -86,16 +87,19 @@ func _verify_adventure_player_name() -> bool:
 
 
 func _verify_network_player_names() -> bool:
-	var board := await _instantiate_board({
-		"player_count": NETWORK_NAMES.size(),
-		"solo_mode": false,
-		"network_session_id": "winner-name-smoke-session",
-		"network_match_id": "winner-name-smoke-match",
-		"local_player_index": 1,
-		"player_names_csv": ",".join(NETWORK_NAMES),
-		"player_avatar_ids_csv": "cat,fox,bear,crab",
-		"network_wait_for_initialize": true,
-	})
+	var packed_scene := load(SCENE_PATH) as PackedScene
+	var board := GameBoardSmokeFactory.create_network(
+		packed_scene,
+		NETWORK_NAMES.size(),
+		true,
+		100,
+		"winner-name-smoke-session",
+		"winner-name-smoke-match",
+		0,
+		1,
+		",".join(NETWORK_NAMES),
+		"cat,fox,bear,crab") if packed_scene != null else null
+	board = await _add_board(board)
 	if board == null:
 		return false
 
@@ -111,15 +115,11 @@ func _verify_network_player_names() -> bool:
 	return true
 
 
-func _instantiate_board(properties: Dictionary) -> Node:
-	var packed_scene := load(SCENE_PATH) as PackedScene
-	var board := packed_scene.instantiate() if packed_scene != null else null
+func _add_board(board: Node) -> Node:
 	if board == null:
 		_fail("Failed to instantiate game board scene")
 		return null
 
-	for property_name in properties:
-		board.set(property_name, properties[property_name])
 	root.add_child(board)
 	await process_frame
 	if not board.has_method("DebugGetWinnerTextForPlayer"):

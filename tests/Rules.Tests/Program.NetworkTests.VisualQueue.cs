@@ -131,7 +131,7 @@ internal static partial class Program
 		False(visualQueueText.Contains("Shuffle(_player", StringComparison.Ordinal));
 	}
 
-	private static void GameBoardNetworkVisualQueueHelpersMoveIntoPartialFile()
+	private static void GameBoardNetworkVisualPlaybackUsesIndependentController()
 	{
 		string repoRoot = FindRepositoryRoot();
 		string mainPath = Path.Combine(repoRoot, "scripts", "GameBoardScene.Network.cs");
@@ -149,14 +149,25 @@ internal static partial class Program
 
 		True(partialText.Contains("public partial class GameBoardScene", StringComparison.Ordinal));
 		True(partialText.Contains("internal void QueueNetworkCardPlayedEvent(Godot.Collections.Dictionary payload)", StringComparison.Ordinal));
-		True(partialText.Contains("private sealed record NetworkVisualEvent", StringComparison.Ordinal));
+		True(partialText.Contains("internal sealed record NetworkVisualEvent", StringComparison.Ordinal));
 		True(partialText.Contains("private bool TryDecodeNetworkVisualEvent", StringComparison.Ordinal));
 		True(playbackText.Contains("private async Task PlayNetworkCardPlayedEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 		True(playbackText.Contains("private async Task PlayNetworkItemCardVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 		True(playbackText.Contains("private async Task PlayNetworkCaptureRevealVisualEventAsync(NetworkVisualEvent payload)", StringComparison.Ordinal));
 		True(partialText.Contains("NetworkCaptureRevealEntry[] CaptureRevealEntries", StringComparison.Ordinal));
-		True(controllerText.Contains("private sealed class NetworkVisualPlaybackController", StringComparison.Ordinal));
+		True(Regex.IsMatch(
+			controllerText,
+			@"^internal sealed class NetworkVisualPlaybackController$",
+			RegexOptions.Multiline | RegexOptions.CultureInvariant));
 		True(controllerText.Contains("private readonly Queue<NetworkVisualEvent> _pendingEvents", StringComparison.Ordinal));
+		True(controllerText.Contains("private readonly Func<NetworkVisualEvent, Task> _playEventAsync", StringComparison.Ordinal));
+		True(controllerText.Contains("private readonly Func<ValidatedNetworkBoardSnapshot, bool> _applySnapshot", StringComparison.Ordinal));
+		True(controllerText.Contains("private readonly Func<NetworkVisualEvent, bool> _recoverPlaybackFailure", StringComparison.Ordinal));
+		True(controllerText.Contains("private readonly Action _onQueueStable", StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			controllerText,
+			@"private\s+(?:readonly\s+)?(?:GameBoardScene|SceneTree|NodePath)\??\s+_",
+			RegexOptions.CultureInvariant));
 		True(controllerText.Contains("private async Task ProcessAsync()", StringComparison.Ordinal));
 		True(controllerText.Contains("IsFastForwarding = true", StringComparison.Ordinal));
 		True(controllerText.Contains("_pendingEvents.Clear()", StringComparison.Ordinal));

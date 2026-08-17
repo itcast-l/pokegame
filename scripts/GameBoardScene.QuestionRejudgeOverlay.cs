@@ -197,7 +197,9 @@ public partial class GameBoardScene
 			return;
 		}
 
+#if DECKLAND_TEST_HOOKS
 		_debugLastQuestionRewardItemCardId = rerolledItemCardId;
+#endif
 		RenderPlayerHands();
 		SendBoardSnapshotIfHost();
 	}

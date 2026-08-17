@@ -25,6 +25,9 @@ public enum RuleRejectionCode
 	MandatorySelectionMismatch,
 	ModuleRejected,
 	NoLegalAction,
+	AdventureTransactionPending,
+	AdventureTransactionMissing,
+	AdventureTransactionMismatch,
 }
 
 public readonly record struct RuleRejection(RuleRejectionCode Code, string Detail)

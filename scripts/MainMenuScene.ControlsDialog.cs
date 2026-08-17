@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 public partial class MainMenuScene : Control
@@ -33,6 +34,7 @@ public partial class MainMenuScene : Control
 		}
 
 		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
+		_ = FlushDeferredSettingsAsync("controls close");
 		ClearPendingBindingCapture();
 		_controlsDialogTween?.Kill();
 		_controlsDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
@@ -94,8 +96,10 @@ public partial class MainMenuScene : Control
 			return false;
 		}
 
-		GameInputActions.Rebind(_pendingBindingActionId, _pendingBindingSlot.Value, inputEvent);
-		SaveInputBindings();
+		_ = RebindAndPersistInputBinding(
+			_pendingBindingActionId,
+			_pendingBindingSlot.Value,
+			inputEvent);
 		PlayMenuSfx(GameSfx.UiButtonClick, -2.0f, 0.98f, 1.02f, 0.05);
 		ClearPendingBindingCapture();
 		RefreshControlsDialogText();
@@ -113,9 +117,53 @@ public partial class MainMenuScene : Control
 
 	private void ResetControlsToDefaults()
 	{
-		GameInputActions.ResetAllToDefaults();
-		SaveInputBindings();
+		if (!GameInputActions.AreBindingsAtDefaults())
+		{
+			GameInputActions.ResetAllToDefaults();
+			_inputBindingsDirty = true;
+			SaveInputBindings();
+			_ = FlushDeferredSettingsAsync("controls defaults");
+		}
 		ClearPendingBindingCapture();
 		RefreshControlsDialogText();
 	}
+
+	private bool RebindAndPersistInputBinding(
+		string actionId,
+		GameInputActions.BindingSlot slot,
+		InputEvent inputEvent)
+	{
+		if (GameInputActions.IsCurrentBinding(actionId, slot, inputEvent))
+		{
+			return false;
+		}
+
+		GameInputActions.Rebind(actionId, slot, inputEvent);
+		_inputBindingsDirty = true;
+		SaveInputBindings();
+		return true;
+	}
+
+#if DECKLAND_TEST_HOOKS
+	public int DebugGetInputBindingsSerializationCount()
+	{
+		return GameInputActions.DebugGetSerializeBindingsCallCount();
+	}
+
+	public bool DebugResetControlsToDefaultsForPersistenceProbe()
+	{
+		int previousCount = GameInputActions.DebugGetSerializeBindingsCallCount();
+		ResetControlsToDefaults();
+		return GameInputActions.DebugGetSerializeBindingsCallCount() != previousCount;
+	}
+
+	public bool DebugRebindKeyboardForPersistenceProbe(string actionId, long keycode)
+	{
+		Key key = (Key)keycode;
+		return RebindAndPersistInputBinding(
+			actionId,
+			GameInputActions.BindingSlot.Keyboard,
+			new InputEventKey { Keycode = key, PhysicalKeycode = key });
+	}
+#endif
 }

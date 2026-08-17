@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 20.0
 
@@ -272,18 +274,12 @@ func _instantiate_board(adventure_mode_enabled: bool) -> Node:
 		_fail("Failed to load scene: %s" % SCENE_PATH)
 		return null
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, "shrimp") \
+		if adventure_mode_enabled \
+		else GameBoardSmokeFactory.create_solo(packed_scene)
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
 		return null
-
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", adventure_mode_enabled)
-	if adventure_mode_enabled:
-		board.set("adventure_enemy_avatar_id", "shrimp")
 
 	root.add_child(board)
 	await process_frame

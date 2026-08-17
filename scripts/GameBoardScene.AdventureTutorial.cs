@@ -6,8 +6,6 @@ public partial class GameBoardScene
 	private const double AdventureTutorialCalloutReadSeconds = 1.2;
 	private const string AdventureTutorialOverlayScenePath = "res://scenes/adventure_tutorial_overlay.tscn";
 	private const string AdventureTutorialTableHighlightNodeName = "AdventureTutorialTableHighlight";
-	private const string AdventureTutorialFlowBasicCapture = "basic_capture";
-	private const string AdventureTutorialFlowBombItem = "bomb_item";
 
 	private static readonly AdventureTutorialTourTarget[] AdventureTutorialTourTargets =
 	{
@@ -54,16 +52,9 @@ public partial class GameBoardScene
 		return adventure_mode && adventure_tutorial_mode;
 	}
 
-	private static string NormalizeAdventureTutorialFlow(string flow)
-	{
-		return string.Equals(flow, AdventureTutorialFlowBombItem, StringComparison.Ordinal)
-			? AdventureTutorialFlowBombItem
-			: AdventureTutorialFlowBasicCapture;
-	}
-
 	private bool IsBombItemTutorialFlow()
 	{
-		return string.Equals(_adventureTutorialFlow, AdventureTutorialFlowBombItem, StringComparison.Ordinal);
+		return RuntimeConfiguration.TutorialFlow == AdventureTutorialFlowKind.BombItem;
 	}
 
 	private bool IsBasicCaptureTutorialCardStepActive()

@@ -5,6 +5,7 @@ public interface ISteamPlatformAdapter
 {
 	bool IsAvailable { get; }
 	bool IsInitialized { get; }
+	void RefreshState();
 	bool ConnectSignal(StringName signalName, Callable callable);
 	bool DisconnectSignal(StringName signalName, Callable callable);
 	bool RequestLobbyList();
@@ -25,15 +26,38 @@ public interface ISteamPlatformAdapter
 public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 {
 	private const int MaximumLobbyDataLength = 4096;
+	private static readonly StringName IsAvailableProperty = new("is_available");
+	private static readonly StringName IsInitializedProperty = new("is_initialized");
+	private static readonly StringName RequestLobbyListMethod = new("request_lobby_list");
+	private static readonly StringName InviteUserToLobbyMethod = new("invite_user_to_lobby");
+	private static readonly StringName ActivateLobbyInviteDialogMethod = new("activate_lobby_invite_dialog");
+	private static readonly StringName CreateLobbyMethod = new("create_lobby");
+	private static readonly StringName JoinLobbyMethod = new("join_lobby");
+	private static readonly StringName GetLobbyDataMethod = new("get_lobby_data");
+	private static readonly StringName GetLobbyOwnerMethod = new("get_lobby_owner");
+	private static readonly StringName GetSteamIdForPeerMethod = new("get_steam_id_for_peer");
+	private static readonly StringName SetLobbyJoinableMethod = new("set_lobby_joinable");
+	private static readonly StringName SetLobbyDataMethod = new("set_lobby_data");
+	private static readonly StringName SetLobbyOwnerMethod = new("set_lobby_owner");
+	private static readonly StringName LeaveLobbyMethod = new("leave_lobby");
 	private readonly Node? _steamManager;
+	private bool _isAvailable;
+	private bool _isInitialized;
 
 	public SteamPlatformAdapter(Node? steamManager)
 	{
 		_steamManager = steamManager;
+		RefreshState();
 	}
 
-	public bool IsAvailable => TryReadBoolProperty("is_available", out bool value) && value;
-	public bool IsInitialized => TryReadBoolProperty("is_initialized", out bool value) && value;
+	public bool IsAvailable => _isAvailable;
+	public bool IsInitialized => _isInitialized;
+
+	public void RefreshState()
+	{
+		_isAvailable = TryReadBoolProperty(IsAvailableProperty, out bool available) && available;
+		_isInitialized = TryReadBoolProperty(IsInitializedProperty, out bool initialized) && initialized;
+	}
 
 	public bool ConnectSignal(StringName signalName, Callable callable)
 	{
@@ -63,27 +87,27 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 
 	public bool RequestLobbyList()
 	{
-		return TryCallBool("request_lobby_list");
+		return TryCallBool(RequestLobbyListMethod);
 	}
 
 	public bool InviteUserToLobby(ulong lobbyId, ulong steamId)
 	{
-		return lobbyId > 0 && steamId > 0 && TryCallBool("invite_user_to_lobby", lobbyId, steamId);
+		return lobbyId > 0 && steamId > 0 && TryCallBool(InviteUserToLobbyMethod, lobbyId, steamId);
 	}
 
 	public bool ActivateLobbyInviteDialog(ulong lobbyId)
 	{
-		return lobbyId > 0 && TryCallBool("activate_lobby_invite_dialog", lobbyId);
+		return lobbyId > 0 && TryCallBool(ActivateLobbyInviteDialogMethod, lobbyId);
 	}
 
 	public bool CreateLobby(int lobbyType, int playerCount)
 	{
-		return lobbyType >= 0 && playerCount > 0 && TryCallBool("create_lobby", lobbyType, playerCount);
+		return lobbyType >= 0 && playerCount > 0 && TryCallBool(CreateLobbyMethod, lobbyType, playerCount);
 	}
 
 	public bool JoinLobby(ulong lobbyId)
 	{
-		return lobbyId > 0 && TryCallBool("join_lobby", lobbyId);
+		return lobbyId > 0 && TryCallBool(JoinLobbyMethod, lobbyId);
 	}
 
 	public bool TryGetLobbyData(ulong lobbyId, string key, out string value)
@@ -94,7 +118,7 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 			return false;
 		}
 
-		Variant raw = _steamManager!.Call("get_lobby_data", lobbyId, key);
+		Variant raw = _steamManager!.Call(GetLobbyDataMethod, lobbyId, key);
 		if (raw.VariantType != Variant.Type.String)
 		{
 			return false;
@@ -106,7 +130,7 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 	public bool TryGetLobbyOwner(long lobbyId, out long ownerSteamId)
 	{
 		ownerSteamId = 0;
-		if (!TryCallPositiveInt64("get_lobby_owner", out long value, lobbyId))
+		if (!TryCallPositiveInt64(GetLobbyOwnerMethod, out long value, lobbyId))
 		{
 			return false;
 		}
@@ -134,7 +158,7 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 	{
 		steamId = 0;
 		if (peer == null || peerId <= 0
-			|| !TryCallPositiveInt64("get_steam_id_for_peer", out long value, peer, peerId))
+			|| !TryCallPositiveInt64(GetSteamIdForPeerMethod, out long value, peer, peerId))
 		{
 			return false;
 		}
@@ -144,7 +168,7 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 
 	public bool SetLobbyJoinable(ulong lobbyId, bool joinable)
 	{
-		return lobbyId > 0 && TryCallBool("set_lobby_joinable", lobbyId, joinable);
+		return lobbyId > 0 && TryCallBool(SetLobbyJoinableMethod, lobbyId, joinable);
 	}
 
 	public bool SetLobbyData(ulong lobbyId, string key, string value)
@@ -152,17 +176,17 @@ public sealed class SteamPlatformAdapter : ISteamPlatformAdapter
 		return lobbyId > 0
 			&& !string.IsNullOrEmpty(key)
 			&& value.Length <= MaximumLobbyDataLength
-			&& TryCallBool("set_lobby_data", lobbyId, key, value);
+			&& TryCallBool(SetLobbyDataMethod, lobbyId, key, value);
 	}
 
 	public bool SetLobbyOwner(long lobbyId, long ownerSteamId)
 	{
-		return lobbyId > 0 && ownerSteamId > 0 && TryCallBool("set_lobby_owner", lobbyId, ownerSteamId);
+		return lobbyId > 0 && ownerSteamId > 0 && TryCallBool(SetLobbyOwnerMethod, lobbyId, ownerSteamId);
 	}
 
 	public bool LeaveLobby(ulong lobbyId)
 	{
-		return lobbyId > 0 && TryCallBool("leave_lobby", lobbyId);
+		return lobbyId > 0 && TryCallBool(LeaveLobbyMethod, lobbyId);
 	}
 
 	private bool IsValid => _steamManager != null && GodotObject.IsInstanceValid(_steamManager);

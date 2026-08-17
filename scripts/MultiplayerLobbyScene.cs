@@ -822,6 +822,7 @@ public partial class MultiplayerLobbyScene : Control
 		return localized;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsMigrationFailureToastVisible()
 	{
 		return ToastLabel.Visible
@@ -832,6 +833,7 @@ public partial class MultiplayerLobbyScene : Control
 	{
 		return ToastLabel.Visible ? ToastLabel.Text : string.Empty;
 	}
+#endif
 
 	private async void ReturnToMainMenu()
 	{
@@ -872,10 +874,12 @@ public partial class MultiplayerLobbyScene : Control
 		}
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsReturningToMainMenu()
 	{
 		return _isReturningToMainMenu;
 	}
+#endif
 
 	private static void SuppressDefaultPressedSfx(BaseButton? button)
 	{

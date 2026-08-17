@@ -2,9 +2,16 @@ using Godot;
 
 public partial class MainMenuScene : Control
 {
-	private void StartAdventureMode()
+	private async void StartAdventureMode()
 	{
 		if (!BeginMenuCameraAdventureDive())
+		{
+			return;
+		}
+
+		// The embedded adventure menu reloads this profile synchronously when revealed.
+		await _pendingPlayerProfileSaveTask;
+		if (!GodotObject.IsInstanceValid(this))
 		{
 			return;
 		}

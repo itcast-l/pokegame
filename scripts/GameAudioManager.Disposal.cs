@@ -7,7 +7,7 @@ public partial class GameAudioManager
 	{
 		if (_uiBindingActive && GetTree() != null)
 		{
-			GetTree().NodeAdded -= BindUiBehaviorRecursive;
+			GetTree().NodeAdded -= OnUiNodeAdded;
 			_uiBindingActive = false;
 		}
 

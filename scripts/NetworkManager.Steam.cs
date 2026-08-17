@@ -53,7 +53,7 @@ public partial class NetworkManager
 
 		SetState(NetworkSessionState.Hosting);
 		_config = CreateConfig(NetworkTransport.Steam, playerCount, itemMode, winningScore, roomName, roomPassword);
-		_players.Clear();
+		_lobbyRoster.ClearPlayers();
 		InsertPlayerInSeatOrder(CreateLocalPlayer(peerId: 1, seatIndex: 0, isHost: true));
 		_pendingSteamLobbyJoinId = 0;
 		_pendingSteamHostLobby = true;
@@ -140,7 +140,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		_steamReadyCallable = Callable.From(TryConnectSteamSignals);
+		_steamReadyCallable = Callable.From(OnSteamReady);
 		_steamLobbyCreatedCallable = Callable.From<int, ulong>(OnSteamLobbyCreated);
 		_steamLobbyJoinedCallable = Callable.From<ulong, int, bool, int>(OnSteamLobbyJoined);
 		_steamLobbyMatchListCallable = Callable.From<Godot.Collections.Array>(OnSteamLobbyMatchList);
@@ -157,6 +157,12 @@ public partial class NetworkManager
 		{
 			DisconnectSteamSignals();
 		}
+	}
+
+	private void OnSteamReady()
+	{
+		_steamPlatform?.RefreshState();
+		TryConnectSteamSignals();
 	}
 
 	private void DisconnectSteamSignals()

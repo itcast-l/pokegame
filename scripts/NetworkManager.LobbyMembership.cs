@@ -101,7 +101,7 @@ public partial class NetworkManager
 	public Godot.Collections.Array GetPlayersVariant()
 	{
 		var result = new Godot.Collections.Array();
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			result.Add(ToDictionary(player));
 		}
@@ -112,7 +112,7 @@ public partial class NetworkManager
 	public Godot.Collections.Array GetSeatControlStatesVariant(bool includeCredentialVerifiers = true)
 	{
 		var result = new Godot.Collections.Array();
-		foreach (SeatControlState state in _seatControlStates)
+		foreach (SeatControlState state in _lobbyRoster.SeatControls)
 		{
 			result.Add(ToDictionary(includeCredentialVerifiers ? state : SeatControlRules.RedactCredentialVerifiersForSharedSnapshot(state)));
 		}
@@ -173,7 +173,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		int seatIndex = MultiplayerLobbyRules.GetNextSeatIndex(_players, _config.PlayerCount);
+		int seatIndex = MultiplayerLobbyRules.GetNextSeatIndex(_lobbyRoster.Players, _config.PlayerCount);
 		if (seatIndex < 0)
 		{
 			RejectLobbyJoin(senderId, NetworkUserErrorCategory.RoomFull, "Lobby is full.");
@@ -272,14 +272,14 @@ public partial class NetworkManager
 	private bool TryProcessPlayerReadyIntent(int peerId, bool isReady, out bool changed)
 	{
 		changed = false;
-		int playerIndex = _players.FindIndex(player => player.PeerId == peerId);
+		int playerIndex = _lobbyRoster.FindPlayerIndex(player => player.PeerId == peerId);
 		if (playerIndex < 0)
 		{
 			return false;
 		}
 
 		LobbyReadyIntentDisposition disposition = MultiplayerLobbyRules.EvaluateReadyIntent(
-			_players[playerIndex],
+			_lobbyRoster.Players[playerIndex],
 			isReady);
 		if (disposition == LobbyReadyIntentDisposition.Reject)
 		{
@@ -287,19 +287,21 @@ public partial class NetworkManager
 		}
 		if (disposition == LobbyReadyIntentDisposition.DeferUntilCredentialsAcknowledged)
 		{
-			_pendingLobbyReadyByPeerId[peerId] = isReady;
+			_lobbyRoster.SetPendingReady(peerId, isReady);
 			return true;
 		}
 
-		_pendingLobbyReadyByPeerId.Remove(peerId);
+		_lobbyRoster.RemovePendingReady(peerId);
 		if (disposition == LobbyReadyIntentDisposition.NoChange)
 		{
 			return true;
 		}
 
-		_players[playerIndex] = _players[playerIndex] with { IsReady = isReady };
+		_lobbyRoster.SetPlayerAt(
+			playerIndex,
+			_lobbyRoster.Players[playerIndex] with { IsReady = isReady });
 		EnsureLobbySeatControlStates();
-		EmitSignal(SignalName.ReadyChanged, _players[playerIndex].SeatIndex, isReady);
+		EmitSignal(SignalName.ReadyChanged, _lobbyRoster.Players[playerIndex].SeatIndex, isReady);
 		EmitPlayerListUpdated();
 		changed = true;
 		return true;
@@ -307,7 +309,7 @@ public partial class NetworkManager
 
 	private bool TryApplyPendingPlayerReadyIntent(int peerId)
 	{
-		if (!_pendingLobbyReadyByPeerId.Remove(peerId, out bool isReady))
+		if (!_lobbyRoster.TryTakePendingReady(peerId, out bool isReady))
 		{
 			return false;
 		}
@@ -353,8 +355,7 @@ public partial class NetworkManager
 
 		SetAuthorityEpoch(authorityEpoch);
 		_config = decodedConfig;
-		_players.Clear();
-		_players.AddRange(decodedPlayers);
+		_lobbyRoster.ReplacePlayers(decodedPlayers);
 
 		if (HostMigrationCapabilityAvailable && _state == NetworkSessionState.MigratingHost)
 		{
@@ -368,7 +369,7 @@ public partial class NetworkManager
 			}
 
 			bool isLobbyMigration = migrationPlan.Phase == NetworkAuthorityPhase.Lobby;
-			bool localSeatClaimed = _players.Any(player =>
+			bool localSeatClaimed = _lobbyRoster.Players.Any(player =>
 				player.IsLocal
 				&& player.IsConnected
 				&& string.Equals(player.PlayerSessionId, GetPlayerSessionId(), StringComparison.Ordinal));

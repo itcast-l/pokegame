@@ -139,12 +139,17 @@ public partial class MainMenuScene : Control
 		SetMainMenuButtonsDisabled(true);
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
-			Node gameBoard = gameBoardScene.Instantiate();
-			gameBoard.Set("player_count", playerCount);
-			gameBoard.Set("solo_ai_difficulty", soloAiDifficulty);
-			gameBoard.Set("item_mode", itemMode);
-			gameBoard.Set("winning_score", winningScore);
-			gameBoard.Set("solo_mode", true);
+			GameBoardLaunchOptions options = GameBoardLaunchOptions.Solo(
+				playerCount,
+				itemMode,
+				winningScore,
+				(SoloAiDifficulty)soloAiDifficulty,
+				_playerName);
+			if (!GameBoardSceneFactory.TryCreate(gameBoardScene, options, out GameBoardScene gameBoard, out string error))
+			{
+				GD.PushError($"Unable to create solo game board: {error}");
+				return;
+			}
 			GetTree().Root.AddChild(gameBoard);
 			GetTree().CurrentScene = gameBoard;
 			QueueFree();

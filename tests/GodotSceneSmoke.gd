@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENES := [
 	{
 		"name": "logo_intro_to_main_menu",
@@ -20,6 +22,7 @@ const SCENES := [
 	{
 		"name": "game_board_scene",
 		"path": "res://scenes/game_board_scene.tscn",
+		"use_game_board_factory": true,
 		"settle_seconds": 0.2,
 	},
 ]
@@ -52,7 +55,9 @@ func _smoke_scene(spec: Dictionary) -> void:
 		_fail("Failed to load scene: %s" % path)
 		return
 
-	var node := packed_scene.instantiate()
+	var node := GameBoardSmokeFactory.create_local(packed_scene) \
+		if bool(spec.get("use_game_board_factory", false)) \
+		else packed_scene.instantiate()
 	if node == null:
 		_fail("Failed to instantiate scene: %s" % path)
 		return

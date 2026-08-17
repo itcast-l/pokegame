@@ -28,6 +28,7 @@ public sealed partial class AdventureRunSessionStore : Node
 
 	private AuthorityRuleSession _authoritySession = CreateDetachedAuthoritySession();
 	private AuthorityRuleSession? _boundBoardAuthoritySession;
+	private AuthorityRuleSession? _pendingUnbindAuthoritySession;
 	private AdventureUpgradeManifest? _manifest;
 	private long _nextAdventureActionId;
 	private GameModePolicy _gameModePolicy = GameModePolicy.AdventureMain;
@@ -35,6 +36,8 @@ public sealed partial class AdventureRunSessionStore : Node
 	private string? _preservedFailurePayload;
 	private string? _lastObservedPayload;
 	private string? _lastWarnedInvalidPayload;
+	private GameSaveStore.GameProgressData? _profileSnapshot;
+	private string _profileSnapshotSlotId = string.Empty;
 	private int _debugPersistFailuresRemaining;
 	private int _debugPersistAttemptCount;
 	private AdventureRunWriteResult? _debugNextTransactionalWriteResult;
@@ -91,6 +94,16 @@ public sealed partial class AdventureRunSessionStore : Node
 	internal bool BindAuthorityRuleSession(AuthorityRuleSession authoritySession)
 	{
 		ArgumentNullException.ThrowIfNull(authoritySession);
+		if (_boundBoardAuthoritySession?.HasPreparedAdventure == true
+			&& !ReferenceEquals(_boundBoardAuthoritySession, authoritySession))
+		{
+			return false;
+		}
+		if (_pendingUnbindAuthoritySession != null
+			&& !ReferenceEquals(_pendingUnbindAuthoritySession, authoritySession))
+		{
+			return false;
+		}
 		if (_boundBoardAuthoritySession == authoritySession)
 		{
 			return true;
@@ -122,6 +135,32 @@ public sealed partial class AdventureRunSessionStore : Node
 		{
 			return;
 		}
+		if (authoritySession.HasPreparedAdventure)
+		{
+			// Keep the live authority alive until the disk operation settles. A
+			// detached copy made here would otherwise lose the pending candidate.
+			_pendingUnbindAuthoritySession = authoritySession;
+			return;
+		}
+
+		DetachAuthorityRuleSession(authoritySession);
+	}
+
+	internal void CompletePendingAuthorityUnbind(AuthorityRuleSession authoritySession)
+	{
+		if (!ReferenceEquals(_pendingUnbindAuthoritySession, authoritySession)
+			|| !ReferenceEquals(_boundBoardAuthoritySession, authoritySession)
+			|| authoritySession.HasPreparedAdventure)
+		{
+			return;
+		}
+
+		_pendingUnbindAuthoritySession = null;
+		DetachAuthorityRuleSession(authoritySession);
+	}
+
+	private void DetachAuthorityRuleSession(AuthorityRuleSession authoritySession)
+	{
 
 		AdventureAuthoritySnapshot snapshot = authoritySession.CaptureAdventureAuthority();
 		AuthorityRuleSession detached = CreateDetachedAuthoritySession();
@@ -132,6 +171,7 @@ public sealed partial class AdventureRunSessionStore : Node
 		}
 		_authoritySession = detached;
 		_boundBoardAuthoritySession = null;
+		_pendingUnbindAuthoritySession = null;
 		SynchronizeNextActionId(snapshot);
 	}
 
@@ -170,7 +210,10 @@ public sealed partial class AdventureRunSessionStore : Node
 			return LastRestoreResult;
 		}
 
-		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		if (!TryGetActiveProfileSnapshot(out GameSaveStore.GameProgressData profile))
+		{
+			return AdventureUpgradeRestoreResult.DeferredManifestUnavailable;
+		}
 		string currentPayload = profile.PendingAdventureRunJson;
 		if (!string.Equals(currentPayload, _deferredPayload, StringComparison.Ordinal))
 		{
@@ -178,6 +221,41 @@ public sealed partial class AdventureRunSessionStore : Node
 		}
 
 		return RestorePayload(profile, _deferredPayload);
+	}
+
+	/// <summary>
+	/// Returns the profile snapshot for the currently active slot. The slot id is
+	/// checked on every refresh so an active-profile switch cannot reuse stale data.
+	/// </summary>
+	internal bool TryGetActiveProfileSnapshot(out GameSaveStore.GameProgressData profile)
+	{
+		Node? saveManager = GameSaveStore.GetSaveManager();
+		if (saveManager == null)
+		{
+			profile = GameSaveStore.GameProgressData.CreateDefault();
+			return false;
+		}
+
+		GameSaveMigration.EnsureInitialized(saveManager);
+		string slotId = GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager);
+		if (_profileSnapshot != null
+			&& string.Equals(_profileSnapshotSlotId, slotId, StringComparison.Ordinal))
+		{
+			profile = _profileSnapshot;
+			return true;
+		}
+
+		profile = GameSaveProfileRepository.LoadProfileRaw(saveManager, slotId);
+		_profileSnapshot = profile;
+		_profileSnapshotSlotId = slotId;
+		GameSaveProfileWriteCoordinator.ObserveCommitted(slotId, profile);
+		return true;
+	}
+
+	internal void InvalidateProfileSnapshot()
+	{
+		_profileSnapshot = null;
+		_profileSnapshotSlotId = string.Empty;
 	}
 
 	private static AuthorityRuleSession CreateDetachedAuthoritySession()

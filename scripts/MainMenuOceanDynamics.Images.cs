@@ -45,6 +45,7 @@ public partial class MainMenuOceanDynamics
 		}
 
 		_resourceLoadCount++;
+#if DECKLAND_TEST_HOOKS
 		if (debug_force_missing_image_assets)
 		{
 			_sunbeamFrames = Array.Empty<Texture2D>();
@@ -56,6 +57,7 @@ public partial class MainMenuOceanDynamics
 			_bubbleTextureLoadAttempted = true;
 		}
 		else
+#endif
 		{
 			_sunbeamFrames = FrameAnimationHelpers.LoadTextureFrames(SunbeamFramePattern, SunbeamFrameCount, "main menu sunbeam", preferImageFile: true, warnMissingFrames: false);
 			_surfaceWakeFrames = FrameAnimationHelpers.LoadTextureFrames(SurfaceWakeFramePattern, SurfaceWakeFrameCount, "main menu surface wake", preferImageFile: true, warnMissingFrames: false);
@@ -94,9 +96,11 @@ public partial class MainMenuOceanDynamics
 		Rebuild();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public int DebugGetResourceLoadCount() => _resourceLoadCount;
 	public int DebugGetRebuildCount() => _rebuildCount;
 	public string DebugGetImageAssetStateName() => _imageAssetState.ToString();
+#endif
 
 	private bool AllImageFramesMissing()
 	{

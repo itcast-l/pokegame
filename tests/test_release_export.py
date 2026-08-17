@@ -43,6 +43,19 @@ class ReleaseExportUnitTests(unittest.TestCase):
 				'[editor_plugins]\nenabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg")\n',
 				encoding="utf-8",
 			)
+			(root / "pokegame.csproj").write_text(
+				'<Project><PropertyGroup>'
+				'<Configurations>Debug;ReleaseValidation;Release;ExportRelease</Configurations>'
+				'<IsShippingBuild>false</IsShippingBuild>'
+				'<EnableTestHooks>false</EnableTestHooks>'
+				'<DefineConstants>DECKLAND_TEST_HOOKS</DefineConstants>'
+				'</PropertyGroup><ItemGroup>'
+				'<Compile Remove="tests/**/*.cs" />'
+				'<AssemblyMetadata Include="DecklandBuildKind" Value="x" />'
+				'<AssemblyMetadata Include="Shipping" Value="x" />'
+				'</ItemGroup></Project>',
+				encoding="utf-8",
+			)
 			sections = []
 			platforms = (("Windows", "Windows Desktop", "windows"), ("Linux", "Linux", "linux"), ("macOS", "macOS", "macos"))
 			for index, (name, platform_name, adapter) in enumerate(platforms):
@@ -143,6 +156,8 @@ dotnet/include_debug_symbols=false
 			(source / "scripts/dev_mcp").mkdir(parents=True)
 			(source / "tmp").mkdir()
 			(source / "scripts").mkdir(exist_ok=True)
+			(source / "src/Deckland.Rules/bin/Debug").mkdir(parents=True)
+			(source / "src/Deckland.Rules/obj/Debug").mkdir(parents=True)
 			(source / "runtime").mkdir()
 			(source / "legal/distribution/licenses").mkdir(parents=True)
 			(source / "addons/godot_mcp/plugin.gd").write_text("extends EditorPlugin\n", encoding="utf-8")
@@ -156,6 +171,8 @@ dotnet/include_debug_symbols=false
 			(source / "scripts/GameBoardScene.DebugHooks.cs").write_text("debug hooks\n", encoding="utf-8")
 			(source / "scripts/GameBoardScene.DebugRecording.cs").write_text("debug recording\n", encoding="utf-8")
 			(source / "scripts/GameBoardScene.NetworkDebugActions.cs").write_text("release QA surface\n", encoding="utf-8")
+			(source / "src/Deckland.Rules/bin/Debug/Deckland.Rules.dll").write_bytes(b"stale binary")
+			(source / "src/Deckland.Rules/obj/Debug/Deckland.Rules.sourcelink.json").write_text("{}\n", encoding="utf-8")
 			(source / "runtime/keep.txt").write_text("keep\n", encoding="utf-8")
 			(source / "legal/distribution/THIRD_PARTY_NOTICES.txt").write_text("public notice\n", encoding="utf-8")
 			(source / "legal/ASSET_RIGHTS_REGISTER.csv").write_text("internal register\n", encoding="utf-8")
@@ -171,6 +188,7 @@ dotnet/include_debug_symbols=false
 
 			release_export.create_staging_project(source, destination)
 			release_export.rewrite_staging_project(destination / "project.godot", "release-fixture", 11)
+			props_path = release_export.configure_staging_rule_build_outputs(destination)
 
 			self.assertTrue((destination / "runtime/keep.txt").is_file())
 			self.assertFalse((destination / "addons/godot_mcp").exists())
@@ -182,6 +200,10 @@ dotnet/include_debug_symbols=false
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Core.cs.uid").exists())
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Network.cs").exists())
 			self.assertFalse((destination / "scripts/GameBoardScene.Debug.Network.cs.uid").exists())
+			self.assertFalse((destination / "src/Deckland.Rules/bin").exists())
+			self.assertFalse((destination / "src/Deckland.Rules/obj").exists())
+			self.assertEqual(destination / "src/Deckland.Rules/Directory.Build.props", props_path)
+			self.assertIn("../../../dotnet-build/Deckland.Rules", props_path.read_text(encoding="utf-8"))
 			self.assertTrue((destination / "scripts/GameBoardScene.DebugHooks.cs").is_file())
 			self.assertTrue((destination / "scripts/GameBoardScene.DebugRecording.cs").is_file())
 			self.assertTrue((destination / "scripts/GameBoardScene.NetworkDebugActions.cs").is_file())
@@ -192,6 +214,52 @@ dotnet/include_debug_symbols=false
 			self.assertIn('build_id="release-fixture"', staged_project)
 			self.assertIn("network_protocol=11", staged_project)
 			self.assertEqual(source_hash, release_export._sha256_file(source / "project.godot"))
+
+	def test_staging_editor_build_uses_shipping_code_without_test_hooks(self) -> None:
+		command = release_export._staging_editor_build_command()
+		self.assertIn("Debug", command)
+		self.assertIn("-p:EnableTestHooks=false", command)
+		self.assertIn("-p:IsShippingBuild=true", command)
+		self.assertIn("--no-incremental", command)
+
+	def test_release_validation_runtime_probe_uses_hooks_and_cleans_load_slot(self) -> None:
+		with tempfile.TemporaryDirectory() as temp:
+			root = Path(temp)
+			project = root / "project"
+			validation_dir = root / "validation"
+			project.mkdir()
+			validation_dir.mkdir()
+			assembly = validation_dir / "pokegame.dll"
+			assembly.write_bytes(b"release-validation")
+			(validation_dir / "pokegame.deps.json").write_text("{}\n", encoding="utf-8")
+			debug_dir = release_export._configuration_assembly("Debug", project).parent
+			debug_dir.mkdir(parents=True)
+			shipping_assembly = debug_dir / "pokegame.dll"
+			shipping_assembly.write_bytes(b"shipping-debug")
+			completed = subprocess.CompletedProcess(
+				["godot"],
+				0,
+				"RELEASE_VALIDATION_RUNTIME_SMOKE_OK\n",
+			)
+
+			with mock.patch.object(release_export, "_run", return_value=completed) as run:
+				result = release_export._run_release_validation_runtime_smoke(
+					Path("/godot"),
+					project,
+					assembly,
+					root / "probe.log",
+				)
+
+			self.assertTrue(result["ok"])
+			command = run.call_args.args[0]
+			self.assertIn("--audio-driver", command)
+			self.assertIn("res://tests/ReleaseValidationRuntimeSmoke.gd", command)
+			self.assertFalse((project / "tests").exists())
+			self.assertEqual(b"shipping-debug", shipping_assembly.read_bytes())
+			self.assertFalse((project.parent / "release-validation-debug-backup").exists())
+			probe = release_export._release_validation_runtime_probe_source()
+			for method_name in ("CreateLocal", "CreateNetwork", "DebugCanRequestActiveHostMigration"):
+				self.assertIn(method_name, probe)
 
 	def test_committed_legal_sources_and_asset_register_pass(self) -> None:
 		result = release_export.legal_source_audit(ROOT)
@@ -578,9 +646,12 @@ func _initialize() -> void:
 			fixture.mkdir()
 			self._write_fixture(
 				fixture,
-				extra_files={
+					extra_files={
 					"tmp/leak.txt": "leak\n",
 					"addons/godot_mcp/plugin.gd": "extends Node\n",
+					"src/Deckland.Rules/bin/Debug/Deckland.Rules.dll": "binary\n",
+					"src/Deckland.Rules/obj/Debug/build.json": "{}\n",
+					"src/Deckland.Rules/Directory.Build.props": "<Project />\n",
 					"scripts/GameBoardScene.Debug.Network.cs": "debug network\n",
 					"scripts/GameBoardScene.DebugHooks.cs": "debug hooks\n",
 					"scripts/GameBoardScene.DebugRecording.cs": "debug recording\n",
@@ -592,6 +663,7 @@ func _initialize() -> void:
 			self.assertNotEqual(0, result.returncode, result.stdout)
 			self.assertFalse(report["ok"])
 			self.assertTrue(any(path.startswith("tmp/") for path in report["forbidden_matches"]))
+			self.assertTrue(any(path.startswith("src/Deckland.Rules/obj/") for path in report["forbidden_matches"]))
 			self.assertIn("scripts/GameBoardScene.Debug.Network.cs", report["forbidden_matches"])
 			self.assertIn("art/fx/processed/effect.pipeline-meta.json", report["forbidden_matches"])
 			self.assertNotIn("scripts/GameBoardScene.DebugHooks.cs", report["forbidden_matches"])

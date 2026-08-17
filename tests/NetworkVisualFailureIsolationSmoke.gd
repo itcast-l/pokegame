@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player1HandArea"
 
@@ -158,15 +160,10 @@ func _run() -> void:
 
 
 func _instantiate_board(packed_scene: PackedScene) -> Node:
-	var board := packed_scene.instantiate() if packed_scene != null else null
+	var board := GameBoardSmokeFactory.create_solo(packed_scene, 2, true, 100, 0) \
+		if packed_scene != null else null
 	if board == null:
 		return null
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
-	board.set("solo_ai_difficulty", 0)
-	board.set("adventure_mode", false)
 	return board
 
 

@@ -63,6 +63,7 @@ public partial class GameBoardScene
 		return _boardAsyncLifetime?.IsCurrent(generation) ?? false;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsBoardAsyncStopping()
 	{
 		return IsBoardStopping;
@@ -105,4 +106,5 @@ public partial class GameBoardScene
 			"DebugBoardLifetimeTimerShutdownProbe");
 		return true;
 	}
+#endif
 }

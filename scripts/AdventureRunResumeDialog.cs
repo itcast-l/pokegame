@@ -113,6 +113,13 @@ public partial class AdventureRunResumeDialog : Control
 		MouseFilter = MouseFilterEnum.Ignore;
 	}
 
+	public void SetActionsDisabled(bool disabled)
+	{
+		_continueButton.Disabled = disabled;
+		_restartButton.Disabled = disabled;
+		_cancelButton.Disabled = disabled;
+	}
+
 	public void FocusDefaultButton()
 	{
 		Button target = _preferRestartFocus ? _restartButton : _continueButton;

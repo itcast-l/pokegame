@@ -41,7 +41,7 @@ public partial class GameBoardScene
 		{
 			_authorityRuleSession = new AuthorityRuleSession(
 				_ruleRandomSource,
-				GameModeRuleProfileMapper.Create(_gameModePolicy, _itemMode));
+				GameModeRuleProfileMapper.Create(ModePolicy, item_mode));
 			_replicaRuleSession = null;
 		}
 	}
@@ -172,12 +172,12 @@ public partial class GameBoardScene
 			AuthorityRuleSession restored = AuthorityRuleSession.Restore(
 				snapshot,
 				_ruleRandomSource,
-				GameModeRuleProfileMapper.Create(_gameModePolicy, _itemMode));
+				GameModeRuleProfileMapper.Create(ModePolicy, item_mode));
 			_authorityRuleSession = restored;
 			_replicaRuleSession = null;
 			_replicaTurnSequenceGenerationOverride = -1;
 			AdventureRunSessionStore? adventureStore = GetAdventureRunSessionStore();
-			if (_gameModePolicy.CanReadAdventureRun
+			if (ModePolicy.CanReadAdventureRun
 				&& adventureStore != null
 				&& !adventureStore.BindAuthorityRuleSession(restored))
 			{
@@ -205,6 +205,45 @@ public partial class GameBoardScene
 		catch (InvalidOperationException exception)
 		{
 			_ruleRandomSource.RestoreState(previousRandomState);
+			error = exception.Message;
+			return false;
+		}
+	}
+
+	private bool TryRestoreAuthorityRuleSnapshotPreservingAdventureTransaction(
+		MatchStateSnapshot snapshot,
+		out string error)
+	{
+		if (_authorityRuleSession == null)
+		{
+			error = "authority_rule_session_unavailable";
+			return false;
+		}
+
+		try
+		{
+			_authorityRuleSession.RestoreMatchSnapshotPreservingAdventureTransaction(snapshot);
+			_replicaRuleSession = null;
+			_replicaTurnSequenceGenerationOverride = -1;
+			if (!snapshot.AppliedActionIds.IsDefaultOrEmpty)
+			{
+				foreach (long actionId in snapshot.AppliedActionIds)
+				{
+					_nextRuleActionId = Math.Max(_nextRuleActionId, actionId);
+				}
+			}
+
+			SynchronizeSceneAfterRuleInitialization();
+			error = string.Empty;
+			return true;
+		}
+		catch (ArgumentException exception)
+		{
+			error = exception.Message;
+			return false;
+		}
+		catch (InvalidOperationException exception)
+		{
 			error = exception.Message;
 			return false;
 		}
@@ -249,10 +288,13 @@ public partial class GameBoardScene
 		for (int seat = 0; seat < player_count; seat++)
 		{
 			additionalDrawBuilder.Add(seat == MainPlayerIndex ? mainPlayerAdditionalDraws : 0);
-			bool limitToOneCard = player_count == 2
+			bool limitToOneCard = false;
+#if DECKLAND_TEST_HOOKS
+			limitToOneCard = player_count == 2
 				&& (seat == MainPlayerIndex
 					? debug_main_player_has_one_card
 					: debug_opponent_has_one_card);
+#endif
 			cardSupplyLimitBuilder.Add(limitToOneCard ? 1 : -1);
 		}
 		ImmutableArray<int> additionalStartingDraws = additionalDrawBuilder.MoveToImmutable();

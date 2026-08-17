@@ -45,6 +45,25 @@ public sealed record AdventurePersistenceRequest(
 
 public delegate bool AdventurePersistenceHandler(AdventurePersistenceRequest request);
 
+public sealed class AdventurePreparedHandle
+{
+	internal AdventurePreparedHandle()
+	{
+	}
+}
+
+public sealed record PreparedAdventureResult(
+	bool Accepted,
+	RuleRejection Rejection,
+	global::AdventureRunWriteResult WriteResult,
+	long BaseRevision,
+	AdventureRunReadModel AuthorityReadModel,
+	AdventureRunReadModel PreviewReadModel,
+	AdventurePreparedHandle? Handle,
+	AdventurePersistenceRequest? PersistenceRequest,
+	bool StateChanged,
+	AdventureCommandOutcome? Outcome = null);
+
 public abstract record AdventureCommand(long ActionId, long ExpectedRevision);
 
 public sealed record BeginAdventureRunCommand(
@@ -141,6 +160,13 @@ public sealed record ResetAdventureBattleEffectsCommand(long ActionId, long Expe
 	: AdventureCommand(ActionId, ExpectedRevision);
 
 public sealed record ClearAdventureRunCommand(long ActionId, long ExpectedRevision)
+	: AdventureCommand(ActionId, ExpectedRevision);
+
+public sealed record RestartAdventureRunCommand(
+	long ActionId,
+	long ExpectedRevision,
+	int MainStageIndex,
+	string EnemyAvatarId)
 	: AdventureCommand(ActionId, ExpectedRevision);
 
 public sealed record CommitAdventureVictoryCommand(

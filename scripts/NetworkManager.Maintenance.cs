@@ -19,20 +19,25 @@ public enum NetworkMaintenanceTaskKind
 	HostMigration,
 }
 
+#if DECKLAND_TEST_HOOKS
 public sealed record NetworkMaintenanceTaskSnapshot(
 	long ExecutionCount,
 	long SkipCount,
 	double MaximumDurationMilliseconds);
+#endif
 
 public partial class NetworkManager
 {
 	private const double LanMaintenanceIntervalSeconds = 0.05;
 	private NetworkMaintenanceScheduler? _maintenanceScheduler;
+#if DECKLAND_TEST_HOOKS
 	private readonly long[] _maintenanceExecutionCounts = new long[Enum.GetValues<NetworkMaintenanceTaskKind>().Length];
 	private readonly long[] _maintenanceSkipCounts = new long[Enum.GetValues<NetworkMaintenanceTaskKind>().Length];
 	private readonly double[] _maintenanceMaximumDurationMilliseconds = new double[Enum.GetValues<NetworkMaintenanceTaskKind>().Length];
 	private readonly long[] _maintenanceManagedAllocationBytes = new long[Enum.GetValues<NetworkMaintenanceTaskKind>().Length];
+#endif
 
+#if DECKLAND_TEST_HOOKS
 	public long DebugGetNetworkMaintenanceWakeCount()
 	{
 		return _maintenanceScheduler?.GetSnapshot().WakeCount ?? 0;
@@ -100,6 +105,7 @@ public partial class NetworkManager
 			_maintenanceSkipCounts[taskKind],
 			_maintenanceMaximumDurationMilliseconds[taskKind]);
 	}
+#endif
 
 	private void InitializeNetworkMaintenanceScheduler()
 	{
@@ -150,15 +156,21 @@ public partial class NetworkManager
 
 	private void ExecuteMaintenanceTask(NetworkMaintenanceTaskKind kind, bool active, double now)
 	{
+#if DECKLAND_TEST_HOOKS
 		int index = (int)kind;
+#endif
 		if (!active)
 		{
+#if DECKLAND_TEST_HOOKS
 			_maintenanceSkipCounts[index]++;
+#endif
 			return;
 		}
 
+#if DECKLAND_TEST_HOOKS
 		long startedAt = Stopwatch.GetTimestamp();
 		long allocationStartedAt = GC.GetAllocatedBytesForCurrentThread();
+#endif
 		switch (kind)
 		{
 			case NetworkMaintenanceTaskKind.LanResponder:
@@ -196,15 +208,17 @@ public partial class NetworkManager
 				break;
 			case NetworkMaintenanceTaskKind.HostMigration:
 				PollHostMigration(now);
-				break;
+					break;
 		}
 
+#if DECKLAND_TEST_HOOKS
 		_maintenanceManagedAllocationBytes[index] += GC.GetAllocatedBytesForCurrentThread() - allocationStartedAt;
 		_maintenanceExecutionCounts[index]++;
 		double elapsedMilliseconds = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 		_maintenanceMaximumDurationMilliseconds[index] = Math.Max(
 			_maintenanceMaximumDurationMilliseconds[index],
 			elapsedMilliseconds);
+#endif
 	}
 
 	private double? GetNextNetworkMaintenanceDeadline(double now)
@@ -215,22 +229,27 @@ public partial class NetworkManager
 			ConsiderDeadline(ref deadline, now + LanMaintenanceIntervalSeconds);
 		}
 
-		if (IsLoadHandshakeMaintenanceActive() && _loadHandshake != null)
+		if (IsLoadHandshakeMaintenanceActive()
+			&& _sceneLoadCoordinator.DeadlineSeconds is double sceneLoadDeadline)
 		{
-			ConsiderDeadline(ref deadline, _loadHandshake.StartedAtSeconds + _loadHandshake.TimeoutSeconds);
+			ConsiderDeadline(ref deadline, sceneLoadDeadline);
 		}
 
 		if (_state == NetworkSessionState.Reconnecting)
 		{
-			if (_reconnectWindowStartedAt >= 0.0)
+			if (_reconnectCoordinator.WindowDeadlineSeconds is double reconnectWindowDeadline)
 			{
-				ConsiderDeadline(ref deadline, _reconnectWindowStartedAt + ClientReconnectWindowSeconds);
+				ConsiderDeadline(ref deadline, reconnectWindowDeadline);
 			}
-			ConsiderDeadline(
-				ref deadline,
-				_reconnectAttemptInFlight || Multiplayer.MultiplayerPeer != null
-					? now + LanMaintenanceIntervalSeconds
-					: Math.Max(now, _nextReconnectAttemptAt));
+			if (_reconnectCoordinator.RetryDeadlineSeconds is double reconnectRetryDeadline
+				&& Multiplayer.MultiplayerPeer == null)
+			{
+				ConsiderDeadline(ref deadline, Math.Max(now, reconnectRetryDeadline));
+			}
+			else
+			{
+				ConsiderDeadline(ref deadline, now + LanMaintenanceIntervalSeconds);
+			}
 		}
 
 		if (IsSeatCredentialMaintenanceActive())
@@ -332,7 +351,9 @@ public partial class NetworkManager
 
 	private bool IsLoadHandshakeMaintenanceActive()
 	{
-		return IsHost && _state == NetworkSessionState.LoadingScene && _loadHandshake != null;
+		return IsHost
+			&& _state == NetworkSessionState.LoadingScene
+			&& _sceneLoadCoordinator.IsAwaitingAcks;
 	}
 
 	private bool IsSeatCredentialMaintenanceActive()
@@ -342,7 +363,7 @@ public partial class NetworkManager
 			return false;
 		}
 
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!player.IsHost && player.IsConnected && !player.CredentialsAcknowledged)
 			{

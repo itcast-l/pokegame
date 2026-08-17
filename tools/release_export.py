@@ -25,6 +25,8 @@ STAGING_ROOT = ROOT / "outputs" / "release_staging"
 BASELINE_PATH = ROOT / "tools" / "release_size_baseline.json"
 AUDIT_SCRIPT = ROOT / "tools" / "export_package_content_audit.gd"
 RUNTIME_SMOKE_SCRIPT = ROOT / "tools" / "release_runtime_smoke.gd"
+ASSEMBLY_AUDIT_PROJECT = ROOT / "tools" / "Deckland.AssemblyAudit" / "Deckland.AssemblyAudit.csproj"
+VALIDATION_OUTPUT_ROOT = ROOT / "outputs" / "validation_only"
 LEGAL_ROOT = ROOT / "legal"
 LEGAL_DISTRIBUTION_ROOT = LEGAL_ROOT / "distribution"
 
@@ -85,6 +87,9 @@ REQUIRED_EXCLUDES = (
 	"legal/**",
 	"samples/**",
 	"outputs/**",
+	"src/Deckland.Rules/bin/**",
+	"src/Deckland.Rules/obj/**",
+	"src/Deckland.Rules/Directory.Build.props",
 	"Library/**",
 	"art/**/*prompt*.txt",
 	"art/**/pipeline-meta.json",
@@ -316,6 +321,24 @@ def static_audit(
 		if re.search(rf"(?m)^{re.escape(autoload)}=", project_text) is None:
 			issues.append(f"Development project must keep MCP autoload {autoload}")
 
+	csproj_path = root / "pokegame.csproj"
+	if csproj_path.is_file():
+		csproj_text = csproj_path.read_text(encoding="utf-8")
+		required_build_contracts = (
+			"<Configurations>Debug;ReleaseValidation;Release;ExportRelease</Configurations>",
+			"<IsShippingBuild>false</IsShippingBuild>",
+			"<EnableTestHooks>false</EnableTestHooks>",
+			"<Compile Remove=\"tests/**/*.cs\" />",
+			"DECKLAND_TEST_HOOKS",
+			"DecklandBuildKind",
+			"Shipping",
+		)
+		for contract in required_build_contracts:
+			if contract not in csproj_text:
+				issues.append(f"pokegame.csproj is missing build isolation contract: {contract}")
+	else:
+		issues.append("pokegame.csproj is missing")
+
 	legal = legal_source_audit(root, verify_pinned_notices=verify_pinned_legal) if audit_legal else None
 	if legal is not None:
 		issues.extend(legal["issues"])
@@ -337,6 +360,9 @@ def static_audit(
 
 def _should_exclude(relative_path: str) -> bool:
 	path = relative_path.strip("/")
+	parts = Path(path).parts
+	if parts and parts[0] == "src" and any(part in {"bin", "obj"} for part in parts[1:]):
+		return True
 	if path in STAGING_EXCLUDED_FILES:
 		return True
 	if any(path.startswith(prefix) for prefix in STAGING_EXCLUDED_FILE_PREFIXES):
@@ -356,6 +382,38 @@ def create_staging_project(source: Path, destination: Path) -> None:
 	shutil.copytree(source, destination, ignore=ignore, symlinks=True)
 	if (destination / "addons" / "godot_mcp").exists():
 		raise ReleaseError("Staging invariant failed: MCP addon was copied")
+
+
+def _staging_editor_build_command() -> list[str]:
+	# Godot's initial export scan loads the editor (Debug) assembly before it
+	# switches to ExportRelease. Keep this warmup shipping-only in staging.
+	return [
+		"dotnet",
+		"build",
+		"pokegame.csproj",
+		"--configuration",
+		"Debug",
+		"--no-incremental",
+		"-p:EnableTestHooks=false",
+		"-p:IsShippingBuild=true",
+	]
+
+
+def configure_staging_rule_build_outputs(project_dir: Path) -> Path:
+	props_path = project_dir / "src" / "Deckland.Rules" / "Directory.Build.props"
+	if props_path.exists():
+		raise ReleaseError(f"Staging rules build props already exists: {props_path}")
+	props_path.write_text(
+		"""<Project>
+  <PropertyGroup>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)../../../dotnet-build/Deckland.Rules/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../../../dotnet-build/Deckland.Rules/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
+""",
+		encoding="utf-8",
+	)
+	return props_path
 
 
 def rewrite_staging_project(
@@ -456,6 +514,65 @@ def _directory_metrics(path: Path) -> dict[str, int]:
 
 def _find_pokegame_assembly(release_dir: Path) -> list[Path]:
 	return sorted(path for path in release_dir.rglob("pokegame.dll") if path.is_file())
+
+
+def _configuration_assembly(configuration: str, root: Path = ROOT) -> Path:
+	return root / ".godot" / "mono" / "temp" / "bin" / configuration / "pokegame.dll"
+
+
+def _run_assembly_audit(
+	assembly: Path,
+	*,
+	expected_build_kind: str,
+	expected_shipping: bool,
+	expected_test_hooks: bool,
+	report_path: Path,
+	require_test_surface: bool = False,
+	log_path: Path | None = None,
+) -> dict[str, Any]:
+	if not assembly.is_file():
+		raise ReleaseError(f"Assembly audit input is missing: {assembly}")
+	command = [
+		"dotnet",
+		"run",
+		"--project",
+		str(ASSEMBLY_AUDIT_PROJECT),
+		"--configuration",
+		"Release",
+		"--no-build",
+		"--",
+		"--assembly",
+		str(assembly),
+		"--expected-build-kind",
+		expected_build_kind,
+		"--expected-shipping",
+		str(expected_shipping).lower(),
+		"--expected-test-hooks",
+		str(expected_test_hooks).lower(),
+		"--report",
+		str(report_path),
+	]
+	if require_test_surface:
+		command.append("--require-test-surface")
+	_run(command, cwd=ROOT, log_path=log_path)
+	report = _read_json(report_path)
+	if not report.get("ok", False):
+		raise ReleaseError(f"Assembly audit failed for {assembly}: {report.get('issues', [])}")
+	return report
+
+
+def _copy_validation_artifact(assembly: Path, build_id: str, audit_report: Path) -> dict[str, str]:
+	VALIDATION_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+	artifact_stem = f"Deckland-NOT-FOR-SHIPPING-{build_id}"
+	dll_path = VALIDATION_OUTPUT_ROOT / f"{artifact_stem}.dll"
+	report_path = VALIDATION_OUTPUT_ROOT / f"{artifact_stem}.json"
+	shutil.copy2(assembly, dll_path)
+	shutil.copy2(audit_report, report_path)
+	return {
+		"directory": str(VALIDATION_OUTPUT_ROOT),
+		"assembly_path": str(dll_path),
+		"audit_report": str(report_path),
+	}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -611,6 +728,116 @@ def _validate_runtime_smoke_result(
 		if marker not in lines:
 			raise ReleaseError(f"Runtime smoke did not reach exact marker: {marker}")
 	return log_audit
+
+
+def _release_validation_runtime_probe_source() -> str:
+	return """extends SceneTree
+
+const BOARD_HARNESS_SCRIPT := preload("res://scripts/GameBoardTestHarness.cs")
+const NETWORK_MANAGER_SCRIPT := preload("res://scripts/NetworkManager.cs")
+const BOARD_HARNESS_METHODS := [
+    "CreateLocal",
+    "CreateSolo",
+    "CreateAdventure",
+    "CreateTutorial",
+    "CreateNetwork",
+    "ConfigureDeferredInitialization",
+    "ConfigureRecording",
+    "ConfigurePerformanceTrace",
+    "GetPlayerCount",
+    "IsAdventureTutorial",
+    "GetAdventureEnemyAvatarId",
+]
+
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+
+func _run() -> void:
+    var harness := BOARD_HARNESS_SCRIPT.new()
+    if harness == null:
+        _fail("GameBoardTestHarness could not be instantiated")
+        return
+    for method_name: String in BOARD_HARNESS_METHODS:
+        if not harness.has_method(method_name):
+            _fail("ReleaseValidation board harness method is missing: %s" % method_name)
+            return
+
+    var network_manager := NETWORK_MANAGER_SCRIPT.new()
+    if network_manager == null:
+        _fail("NetworkManager could not be instantiated")
+        return
+    if not network_manager.has_method("DebugCanRequestActiveHostMigration"):
+        network_manager.free()
+        _fail("ReleaseValidation network migration test hook is missing")
+        return
+    network_manager.free()
+    print("RELEASE_VALIDATION_RUNTIME_SMOKE_OK")
+    quit(0)
+
+
+func _fail(message: String) -> void:
+    push_error(message)
+    quit(1)
+"""
+
+
+def _run_release_validation_runtime_smoke(
+	godot: Path,
+	project_dir: Path,
+	validation_assembly: Path,
+	log_path: Path,
+) -> dict[str, Any]:
+	validation_dir = validation_assembly.parent
+	debug_dir = _configuration_assembly("Debug", project_dir).parent
+	debug_backup_dir = project_dir.parent / "release-validation-debug-backup"
+	probe_dir = project_dir / "tests"
+	probe_path = probe_dir / "ReleaseValidationRuntimeSmoke.gd"
+	if not debug_dir.is_dir() or probe_dir.exists() or debug_backup_dir.exists():
+		raise ReleaseError("ReleaseValidation runtime probe requires one clean staged Debug load slot")
+
+	try:
+		shutil.move(str(debug_dir), str(debug_backup_dir))
+		shutil.copytree(validation_dir, debug_dir)
+		copied_assembly = debug_dir / validation_assembly.name
+		if _sha256_file(copied_assembly) != _sha256_file(validation_assembly):
+			raise ReleaseError("ReleaseValidation runtime probe assembly copy changed")
+		probe_dir.mkdir(parents=True)
+		probe_path.write_text(_release_validation_runtime_probe_source(), encoding="utf-8")
+		result = _run(
+			[
+				str(godot),
+				"--headless",
+				"--audio-driver",
+				"Dummy",
+				"--path",
+				str(project_dir),
+				"--script",
+				"res://tests/ReleaseValidationRuntimeSmoke.gd",
+			],
+			cwd=project_dir,
+			log_path=log_path,
+			timeout=180,
+		)
+		log_audit = _validate_runtime_smoke_result(
+			result.stdout,
+			"RELEASE_VALIDATION_RUNTIME_SMOKE_OK",
+		)
+		return {
+			"ok": True,
+			"method": "isolated_debug_load_slot",
+			"assembly_sha256": _sha256_file(validation_assembly),
+			"success_marker": "RELEASE_VALIDATION_RUNTIME_SMOKE_OK",
+			"log": log_audit,
+		}
+	finally:
+		if probe_dir.exists():
+			shutil.rmtree(probe_dir)
+		if debug_dir.exists():
+			shutil.rmtree(debug_dir)
+		if debug_backup_dir.exists():
+			shutil.move(str(debug_backup_dir), str(debug_dir))
 
 
 def _host_platform() -> str:
@@ -997,15 +1224,69 @@ def run_release(args: argparse.Namespace) -> Path:
 			build_id,
 			report["network_protocol"],
 		)
+		configure_staging_rule_build_outputs(project_dir)
 		utf8_result = validate_utf8_tree(project_dir)
 		report["preflight"]["utf8"] = utf8_result
 		if not utf8_result["ok"]:
 			raise ReleaseError("UTF-8 preflight failed: " + json.dumps(utf8_result["issues"], ensure_ascii=False))
+		_run(
+			_staging_editor_build_command(),
+			cwd=project_dir,
+			log_path=logs_dir / "staging-dotnet-editor-build.log",
+		)
+		editor_scan_result = _run(
+			[
+				str(args.godot.resolve()),
+				"--headless",
+				"--editor",
+				"--audio-driver",
+				"Dummy",
+				"--path",
+				str(project_dir),
+				"--quit",
+			],
+			cwd=project_dir,
+			log_path=logs_dir / "staging-editor-scan.log",
+			timeout=180,
+		)
+		editor_scan_audit = scan_log(editor_scan_result.stdout)
+		if not editor_scan_audit["ok"]:
+			raise ReleaseError(
+				f"Staging editor scan contains blocking errors: {editor_scan_audit['blocker_counts']}"
+			)
+		report["preflight"]["staging_editor_scan"] = editor_scan_audit
 
 		_run(
-			["dotnet", "build", "pokegame.csproj", "--configuration", "Release"],
+			["dotnet", "build", str(ASSEMBLY_AUDIT_PROJECT), "--configuration", "Release"],
 			cwd=ROOT,
-			log_path=logs_dir / "dotnet-release-build.log",
+			log_path=logs_dir / "assembly-audit-tool-build.log",
+		)
+		_run(
+			["dotnet", "build", "pokegame.csproj", "--configuration", "ReleaseValidation", "--no-incremental"],
+			cwd=ROOT,
+			log_path=logs_dir / "dotnet-release-validation-build.log",
+		)
+		validation_audit_path = logs_dir / "release-validation-assembly-audit.json"
+		validation_audit = _run_assembly_audit(
+			_configuration_assembly("ReleaseValidation"),
+			expected_build_kind="ReleaseValidation",
+			expected_shipping=False,
+			expected_test_hooks=True,
+			require_test_surface=True,
+			report_path=validation_audit_path,
+			log_path=logs_dir / "release-validation-assembly-audit.log",
+		)
+		report["validation_artifact"] = _copy_validation_artifact(
+			_configuration_assembly("ReleaseValidation"),
+			build_id,
+			validation_audit_path,
+		)
+		report["validation_artifact"]["assembly_sha256"] = validation_audit["sha256"]
+		report["preflight"]["release_validation_runtime"] = _run_release_validation_runtime_smoke(
+			args.godot.resolve(),
+			project_dir,
+			_configuration_assembly("ReleaseValidation"),
+			logs_dir / "release-validation-runtime-smoke.log",
 		)
 		_run(
 			["dotnet", "run", "--project", "tests/Rules.Tests/Rules.Tests.csproj"],
@@ -1013,15 +1294,55 @@ def run_release(args: argparse.Namespace) -> Path:
 			log_path=logs_dir / "rules-tests.log",
 		)
 		_run(
-			["dotnet", "build", "pokegame.csproj", "--configuration", "Release"],
+			["dotnet", "build", "pokegame.csproj", "--configuration", "Release", "--no-incremental"],
+			cwd=ROOT,
+			log_path=logs_dir / "dotnet-release-build.log",
+		)
+		source_release_audit = _run_assembly_audit(
+			_configuration_assembly("Release"),
+			expected_build_kind="Release",
+			expected_shipping=True,
+			expected_test_hooks=False,
+			report_path=logs_dir / "source-release-assembly-audit.json",
+			log_path=logs_dir / "source-release-assembly-audit.log",
+		)
+		_run(
+			["dotnet", "build", "pokegame.csproj", "--configuration", "ExportRelease", "--no-incremental"],
+			cwd=ROOT,
+			log_path=logs_dir / "dotnet-export-release-build.log",
+		)
+		source_export_audit = _run_assembly_audit(
+			_configuration_assembly("ExportRelease"),
+			expected_build_kind="ExportRelease",
+			expected_shipping=True,
+			expected_test_hooks=False,
+			report_path=logs_dir / "source-export-release-assembly-audit.json",
+			log_path=logs_dir / "source-export-release-assembly-audit.log",
+		)
+		_run(
+			["dotnet", "build", "pokegame.csproj", "--configuration", "Release", "--no-incremental"],
 			cwd=project_dir,
 			log_path=logs_dir / "staging-dotnet-release-build.log",
 		)
 		_run(
-			["dotnet", "build", "pokegame.csproj", "--configuration", "Debug"],
+			["dotnet", "build", "pokegame.csproj", "--configuration", "ExportRelease", "--no-incremental"],
 			cwd=project_dir,
-			log_path=logs_dir / "staging-dotnet-editor-build.log",
+			log_path=logs_dir / "staging-dotnet-export-release-build.log",
 		)
+		staging_export_audit = _run_assembly_audit(
+			_configuration_assembly("ExportRelease", project_dir),
+			expected_build_kind="ExportRelease",
+			expected_shipping=True,
+			expected_test_hooks=False,
+			report_path=logs_dir / "staging-export-release-assembly-audit.json",
+			log_path=logs_dir / "staging-export-release-assembly-audit.log",
+		)
+		report["preflight"]["assembly_audits"] = {
+			"release_validation": validation_audit,
+			"source_release": source_release_audit,
+			"source_export_release": source_export_audit,
+			"staging_export_release": staging_export_audit,
+		}
 
 		export_target = artifact_dir / _artifact_name(preset)
 		export_result = _run(
@@ -1039,6 +1360,25 @@ def run_release(args: argparse.Namespace) -> Path:
 		assemblies = _find_pokegame_assembly(artifact_dir)
 		if not assemblies:
 			raise ReleaseError("Release directory does not contain pokegame.dll")
+		exported_assembly_audits = []
+		for index, assembly in enumerate(assemblies):
+			exported_assembly_audits.append(_run_assembly_audit(
+				assembly,
+				expected_build_kind="ExportRelease",
+				expected_shipping=True,
+				expected_test_hooks=False,
+				report_path=logs_dir / f"exported-assembly-audit-{index}.json",
+				log_path=logs_dir / f"exported-assembly-audit-{index}.log",
+			))
+		report["assembly_audit"] = exported_assembly_audits
+		validation_markers = sorted(
+			path.relative_to(artifact_dir).as_posix()
+			for path in artifact_dir.rglob("*")
+			if path.is_file()
+			and ("NOT-FOR-SHIPPING" in path.name or "validation_only" in path.parts)
+		)
+		if validation_markers:
+			raise ReleaseError("Release directory contains validation artifacts: " + ", ".join(validation_markers))
 		pdbs = sorted(path for path in artifact_dir.rglob("*.pdb") if path.is_file())
 		if pdbs:
 			raise ReleaseError("Public release contains debug symbols: " + ", ".join(str(path) for path in pdbs))

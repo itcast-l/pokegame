@@ -231,4 +231,279 @@ internal static partial class Program
 		Equal(45, retried.ReadModel.CurrentHealth);
 	}
 
+	private static void AdventurePrepareKeepsAuthorityUnchangedUntilOneCommit()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var random = new TestRuleRandomSource(7401);
+		var session = new AuthorityRuleSession(random, MatchRuleProfile.Empty);
+		True(session.ConfigureAdventureManifest(manifest));
+		True(session.SubmitAdventure(
+			new BeginAdventureRunCommand(
+				1,
+				0,
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1)),
+			_ => true).Accepted);
+
+		AdventureRunReadModel readModelBefore = session.AdventureReadModel;
+		AdventureAuthoritySnapshot snapshotBefore = session.CaptureAdventureAuthority();
+		RuleRandomState randomBefore = random.CaptureState();
+		PreparedAdventureResult prepared = session.PrepareAdventure(
+			new SetAdventureHealthCommand(2, readModelBefore.Revision, 45, 100));
+
+		True(prepared.Accepted);
+		True(prepared.Handle != null);
+		True(prepared.PersistenceRequest != null);
+		True(prepared.StateChanged);
+		Equal(45, prepared.PreviewReadModel.CurrentHealth);
+		Equal(readModelBefore.Revision + 1, prepared.PreviewReadModel.Revision);
+		Equal(45, prepared.PersistenceRequest!.CandidateSnapshot!.Value.CurrentHealth);
+		True(ReferenceEquals(readModelBefore, session.AdventureReadModel));
+		AdventureAuthoritySnapshot snapshotAfterPrepare = session.CaptureAdventureAuthority();
+		Equal(snapshotBefore.Revision, snapshotAfterPrepare.Revision);
+		Equal(
+			snapshotBefore.RunSnapshot!.Value.CurrentHealth,
+			snapshotAfterPrepare.RunSnapshot!.Value.CurrentHealth);
+		True(snapshotBefore.NormalizedAppliedActionIds.SequenceEqual(
+			snapshotAfterPrepare.NormalizedAppliedActionIds));
+		Equal(snapshotBefore.Effects, snapshotAfterPrepare.Effects);
+		Equal(snapshotBefore.NormalizedMatchFlow, snapshotAfterPrepare.NormalizedMatchFlow);
+		Equal(randomBefore, random.CaptureState());
+
+		AdventureRuleCommandResult committed = session.CommitPreparedAdventure(prepared.Handle);
+		True(committed.Accepted);
+		Equal(45, committed.ReadModel.CurrentHealth);
+		Equal(readModelBefore.Revision + 1, committed.Revision);
+		False(session.HasPreparedAdventure);
+		AdventureRuleCommandResult duplicateCommit = session.CommitPreparedAdventure(prepared.Handle);
+		False(duplicateCommit.Accepted);
+		Equal(RuleRejectionCode.AdventureTransactionMissing, duplicateCommit.Rejection.Code);
+		Equal(committed.Revision, session.AdventureReadModel.Revision);
+	}
+
+	private static void AdventurePreparedTransactionAbortAndHandleChecksAreAtomic()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var random = new TestRuleRandomSource(7402);
+		var session = new AuthorityRuleSession(random, MatchRuleProfile.Empty);
+		True(session.ConfigureAdventureManifest(manifest));
+		True(session.SubmitAdventure(
+			new BeginAdventureRunCommand(
+				1,
+				0,
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1)),
+			_ => true).Accepted);
+		AdventureAuthoritySnapshot before = session.CaptureAdventureAuthority();
+		RuleRandomState randomBefore = random.CaptureState();
+		PreparedAdventureResult prepared = session.PrepareAdventure(
+			new SetAdventureHealthCommand(2, before.Revision, 20, 100));
+		True(prepared.Accepted);
+
+		var wrongHandle = new AdventurePreparedHandle();
+		AdventureRuleCommandResult wrongCommit = session.CommitPreparedAdventure(wrongHandle);
+		False(wrongCommit.Accepted);
+		Equal(RuleRejectionCode.AdventureTransactionMismatch, wrongCommit.Rejection.Code);
+		True(session.HasPreparedAdventure);
+		AdventureRuleCommandResult wrongAbort = session.AbortPreparedAdventure(wrongHandle);
+		False(wrongAbort.Accepted);
+		Equal(RuleRejectionCode.AdventureTransactionMismatch, wrongAbort.Rejection.Code);
+		True(session.AbortPreparedAdventure(prepared.Handle).Accepted);
+		False(session.HasPreparedAdventure);
+		AdventureAuthoritySnapshot afterAbort = session.CaptureAdventureAuthority();
+		Equal(before.Revision, afterAbort.Revision);
+		Equal(
+			before.RunSnapshot!.Value.CurrentHealth,
+			afterAbort.RunSnapshot!.Value.CurrentHealth);
+		True(before.NormalizedAppliedActionIds.SequenceEqual(
+			afterAbort.NormalizedAppliedActionIds));
+		Equal(before.Effects, afterAbort.Effects);
+		Equal(before.NormalizedMatchFlow, afterAbort.NormalizedMatchFlow);
+		Equal(randomBefore, random.CaptureState());
+
+		AdventureRuleCommandResult retried = session.SubmitAdventure(
+			new SetAdventureHealthCommand(2, before.Revision, 20, 100),
+			_ => true);
+		True(retried.Accepted);
+		Equal(20, retried.ReadModel.CurrentHealth);
+	}
+
+	private static void AdventurePreparedTransactionRejectsConcurrentAndStaleCommit()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var session = new AuthorityRuleSession(
+			new TestRuleRandomSource(7403),
+			MatchRuleProfile.Empty);
+		True(session.ConfigureAdventureManifest(manifest));
+		True(session.SubmitAdventure(
+			new BeginAdventureRunCommand(
+				1,
+				0,
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1)),
+			_ => true).Accepted);
+
+		AdventureAuthoritySnapshot before = session.CaptureAdventureAuthority();
+		PreparedAdventureResult prepared = session.PrepareAdventure(
+			new SetAdventureHealthCommand(2, before.Revision, 60, 100));
+		True(prepared.Accepted);
+		PreparedAdventureResult concurrent = session.PrepareAdventure(
+			new SetAdventureHealthCommand(3, before.Revision, 50, 100));
+		False(concurrent.Accepted);
+		Equal(RuleRejectionCode.AdventureTransactionPending, concurrent.Rejection.Code);
+
+		Equal(
+			AdventureUpgradeRestoreResult.Restored,
+			session.RestoreAdventureAuthority(before with
+			{
+				Revision = before.Revision + 1,
+			}));
+		AdventureRuleCommandResult stale = session.CommitPreparedAdventure(prepared.Handle);
+		False(stale.Accepted);
+		Equal(RuleRejectionCode.StaleRevision, stale.Rejection.Code);
+		Equal(100, session.AdventureReadModel.CurrentHealth);
+		True(session.AbortPreparedAdventure(prepared.Handle).Accepted);
+	}
+
+	private static void AdventureUnchangedPreparedCommandCommitsActionWithoutRevision()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var session = new AuthorityRuleSession(
+			new TestRuleRandomSource(7404),
+			MatchRuleProfile.Empty);
+		True(session.ConfigureAdventureManifest(manifest));
+		True(session.SubmitAdventure(
+			new BeginAdventureRunCommand(
+				1,
+				0,
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1)),
+			_ => true).Accepted);
+		const string upgradeId = "clubs_gap_rooting";
+		True(session.SubmitAdventure(
+			new GrantAdventureUpgradeCommand(
+				2,
+				1,
+				upgradeId,
+				AdventureUpgradeTriggerSource.None),
+			_ => true).Accepted);
+		long revisionBefore = session.AdventureReadModel.Revision;
+
+		PreparedAdventureResult prepared = session.PrepareAdventure(
+			new GrantAdventureUpgradeCommand(
+				3,
+				revisionBefore,
+				upgradeId,
+				AdventureUpgradeTriggerSource.None));
+		True(prepared.Accepted);
+		False(prepared.StateChanged);
+		Equal(revisionBefore, prepared.PreviewReadModel.Revision);
+		AdventureUpgradeRunSnapshot previous =
+			prepared.PersistenceRequest!.PreviousSnapshot!.Value;
+		AdventureUpgradeRunSnapshot candidate =
+			prepared.PersistenceRequest.CandidateSnapshot!.Value;
+		Equal(previous.CurrentHealth, candidate.CurrentHealth);
+		Equal(previous.MainStageIndex, candidate.MainStageIndex);
+		True(previous.AcquiredUpgradeIds.SequenceEqual(candidate.AcquiredUpgradeIds));
+		AdventureRuleCommandResult committed = session.CommitPreparedAdventure(prepared.Handle);
+		True(committed.Accepted);
+		Equal(revisionBefore, committed.Revision);
+
+		AdventureRuleCommandResult duplicate = session.SubmitAdventure(
+			new SetAdventureHealthCommand(3, revisionBefore, 90, 100),
+			_ => true);
+		False(duplicate.Accepted);
+		Equal(RuleRejectionCode.DuplicateAction, duplicate.Rejection.Code);
+	}
+
+	private static void AdventurePreparedTransactionSurvivesMatchRollbackAndCommit()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var random = new TestRuleRandomSource(7405);
+		var session = new AuthorityRuleSession(random, MatchRuleProfile.Empty);
+		True(session.ConfigureAdventureManifest(manifest));
+		True(session.SubmitAdventure(
+			new BeginAdventureRunCommand(
+				1,
+				0,
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1)),
+			_ => true).Accepted);
+		True(session.Submit(CreateInitializeCommand(7410)).Accepted);
+		MatchStateSnapshot rollbackSnapshot = session.CaptureSnapshot();
+		MatchReadModel beforeScore = session.ReadModel;
+		True(session.Submit(new ApplyScoreMutationsCommand(
+			7411,
+			beforeScore.Revision,
+			beforeScore.LifecycleGeneration,
+			beforeScore.TurnGeneration,
+			ImmutableArray.Create(
+				new RuleScoreMutation(0, RuleScoreMutationKind.Add, 7)))).Accepted);
+		MatchStateSnapshot committedMatchSnapshot = session.CaptureSnapshot();
+		_ = random.NextIntInclusive(0, 100);
+		RuleRandomState preparedRandomState = random.CaptureState();
+		AdventureRunReadModel adventureBefore = session.AdventureReadModel;
+		PreparedAdventureResult prepared = session.PrepareAdventure(
+			new SetAdventureHealthCommand(2, adventureBefore.Revision, 45, 100));
+		True(prepared.Accepted);
+		AdventurePreparedHandle handle = prepared.Handle!;
+		AdventureUpgradeRunSnapshot candidate =
+			prepared.PersistenceRequest!.CandidateSnapshot!.Value;
+
+		session.RestoreMatchSnapshotPreservingAdventureTransaction(rollbackSnapshot);
+		True(session.HasPreparedAdventure);
+		True(ReferenceEquals(adventureBefore, session.AdventureReadModel));
+		Equal(rollbackSnapshot.Revision, session.ReadModel.Revision);
+		Equal(0, session.ReadModel.Players[0].Score);
+		Equal(preparedRandomState, random.CaptureState());
+		Equal(45, candidate.CurrentHealth);
+
+		AdventureRuleCommandResult committed = session.CommitPreparedAdventure(handle);
+		True(committed.Accepted);
+		False(session.HasPreparedAdventure);
+		Equal(prepared.PreviewReadModel.Revision, committed.Revision);
+		Equal(candidate.CurrentHealth, committed.ReadModel.CurrentHealth);
+		True(session.CaptureAdventureAuthority().NormalizedAppliedActionIds.Contains(2));
+		session.RestoreMatchSnapshotPreservingAdventureTransaction(committedMatchSnapshot);
+		Equal(7, session.ReadModel.Players[0].Score);
+		Equal(committed.ReadModel, session.ReadModel.Adventure);
+		Equal(preparedRandomState, random.CaptureState());
+	}
+
+	private static void AdventurePreparedTransactionSurvivesMatchRollbackAndAbort()
+	{
+		AdventureUpgradeManifest manifest = CreateFullAdventureUpgradeManifest();
+		var random = new TestRuleRandomSource(7406);
+		var session = new AuthorityRuleSession(random, MatchRuleProfile.Empty);
+		True(session.ConfigureAdventureManifest(manifest));
+		True(session.SubmitAdventure(
+			new BeginAdventureRunCommand(
+				1,
+				0,
+				1,
+				AdventureCampaignCatalog.GetMainAvatarId(1)),
+			_ => true).Accepted);
+		True(session.Submit(CreateInitializeCommand(7420)).Accepted);
+		MatchStateSnapshot rollbackSnapshot = session.CaptureSnapshot();
+		_ = random.NextIntInclusive(0, 100);
+		RuleRandomState preparedRandomState = random.CaptureState();
+		AdventureAuthoritySnapshot adventureBefore = session.CaptureAdventureAuthority();
+		PreparedAdventureResult prepared = session.PrepareAdventure(
+			new SetAdventureHealthCommand(2, adventureBefore.Revision, 20, 100));
+		True(prepared.Accepted);
+
+		session.RestoreMatchSnapshotPreservingAdventureTransaction(rollbackSnapshot);
+		True(session.HasPreparedAdventure);
+		True(session.AbortPreparedAdventure(prepared.Handle).Accepted);
+		False(session.HasPreparedAdventure);
+		AdventureAuthoritySnapshot afterAbort = session.CaptureAdventureAuthority();
+		Equal(adventureBefore.Revision, afterAbort.Revision);
+		Equal(
+			adventureBefore.RunSnapshot!.Value.CurrentHealth,
+			afterAbort.RunSnapshot!.Value.CurrentHealth);
+		True(adventureBefore.NormalizedAppliedActionIds.SequenceEqual(
+			afterAbort.NormalizedAppliedActionIds));
+		Equal(preparedRandomState, random.CaptureState());
+	}
+
 }

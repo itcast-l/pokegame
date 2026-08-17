@@ -2,18 +2,25 @@ using Godot;
 
 public partial class GameBoardScene
 {
+#if DECKLAND_TEST_HOOKS
 	private int _debugResourceLoadCount;
+#endif
 
 	private ulong BeginPerformanceSample(string category = "")
 	{
+#if DECKLAND_TEST_HOOKS
 		if (string.Equals(category, "ResourceLoad", System.StringComparison.Ordinal))
 		{
 			_debugResourceLoadCount++;
 		}
 
 		return debug_performance_trace ? Time.GetTicksUsec() : 0UL;
+#else
+		return 0UL;
+#endif
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public int DebugGetResourceLoadCount()
 	{
 		return _debugResourceLoadCount;
@@ -66,9 +73,11 @@ public partial class GameBoardScene
 			AccumulateDynamicBackgroundCounters(child, ref resourceLoadCount, ref rebuildCount);
 		}
 	}
+#endif
 
 	private void EndPerformanceSample(string label, ulong startUsec)
 	{
+#if DECKLAND_TEST_HOOKS
 		if (!debug_performance_trace || startUsec == 0UL)
 		{
 			return;
@@ -80,6 +89,7 @@ public partial class GameBoardScene
 		{
 			GD.Print($"[Perf][{GetPerformanceCategory(label)}] {label}: {elapsedMs:0.###} ms");
 		}
+#endif
 	}
 
 	private static string GetPerformanceCategory(string label)

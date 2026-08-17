@@ -377,12 +377,14 @@ public partial class GameBoardScene
 			return new AdventureMissSceneResolution(false, default, default);
 		}
 
-		AdventureSaveGateResult<AdventureMissCommitResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				() => store.ResolveMissAction(new AdventureMissCommitInput(
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureMissCommitResult> operation =
+			store.PrepareResolveMissAction(new AdventureMissCommitInput(
 					playedCardRank,
 					_tableCards.Count,
-					triggeredAttachedItemCardIds)),
+					triggeredAttachedItemCardIds));
+		AdventureSaveGateResult<AdventureMissCommitResult> gate =
+			await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)
@@ -430,9 +432,11 @@ public partial class GameBoardScene
 			return;
 		}
 
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureTurnStartCommitResult> operation =
+			store.PrepareResolveTurnStartEffects();
 		AdventureSaveGateResult<AdventureTurnStartCommitResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				store.ResolveTurnStartEffects,
+			await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)

@@ -18,6 +18,19 @@ public sealed partial class AdventureRunSessionStore : Node
 		return _debugPersistAttemptCount;
 	}
 
+	internal bool ConsumeDebugPersistFailure()
+	{
+		_debugPersistAttemptCount++;
+		if (_debugPersistFailuresRemaining <= 0)
+		{
+			return false;
+		}
+
+		_debugPersistFailuresRemaining--;
+		GD.PushWarning("Debug-forced adventure run persistence failure.");
+		return true;
+	}
+
 	internal void ConfigureNextTransactionalWriteResultForDebug(
 		AdventureRunWriteResult writeResult)
 	{
@@ -30,7 +43,9 @@ public sealed partial class AdventureRunSessionStore : Node
 	}
 
 
-	private AdventureRunWriteResult ValidateTransactionalWrite(int mainStageIndex)
+	private AdventureRunWriteResult ValidateTransactionalWrite(
+		int mainStageIndex,
+		bool allowRecoveryReplacement = false)
 	{
 		if (_debugNextTransactionalWriteResult.HasValue)
 		{
@@ -43,7 +58,7 @@ public sealed partial class AdventureRunSessionStore : Node
 		{
 			return AdventureRunWriteResult.WriteNotAllowed;
 		}
-		if (HasRetainedPayload)
+		if (!allowRecoveryReplacement && HasRetainedPayload)
 		{
 			return AdventureRunWriteResult.RecoveryRequired;
 		}

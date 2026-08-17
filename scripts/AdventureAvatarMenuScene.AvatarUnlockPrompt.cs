@@ -5,39 +5,77 @@ public partial class AdventureAvatarMenuScene
 {
 	private const float AvatarUnlockPromptFadeSeconds = 0.18f;
 
-	private void ShowPendingAdventureAvatarUnlockPrompt()
+	private async void ShowPendingAdventureAvatarUnlockPrompt()
 	{
 		if (_isEmbeddedVisualWarmup
 			|| _isShowingAvatarUnlockPrompt
+			|| _isConsumingPendingAvatarUnlock
 			|| _isStartingAdventure
 			|| _isReturningToMainMenu
 			|| !IsVisibleInTree())
 		{
 			return;
 		}
+		if (!TryEnsureAvatarUnlockPrompt())
+		{
+			RestoreAdventureMenuAfterAvatarUnlockPromptFailure();
+			return;
+		}
 
-		string unlockedAvatarId = CharacterAvatarCatalog.ConsumePendingAdventureAvatarUnlock();
+		_isConsumingPendingAvatarUnlock = true;
+		SetAdventureMenuButtonsDisabled(true);
+		string unlockedAvatarId = string.Empty;
+		try
+		{
+			unlockedAvatarId = await CharacterAvatarCatalog.ConsumePendingAdventureAvatarUnlockAsync();
+		}
+		catch (System.Exception error)
+		{
+			GD.PushWarning($"Failed to consume pending adventure avatar unlock: {error.Message}");
+		}
+		finally
+		{
+			_isConsumingPendingAvatarUnlock = false;
+		}
+		if (!GodotObject.IsInstanceValid(this))
+		{
+			return;
+		}
+
+		LoadAdventureProfileSnapshot();
+		if (_isShowingAvatarUnlockPrompt
+			|| _isStartingAdventure
+			|| _isReturningToMainMenu
+			|| !IsVisibleInTree())
+		{
+			return;
+		}
 		if (string.IsNullOrWhiteSpace(unlockedAvatarId))
 		{
+			RestoreAdventureMenuAfterAvatarUnlockPromptFailure();
 			return;
 		}
 
 		CharacterAvatarDefinition unlockedAvatar = CharacterAvatarCatalog.GetById(unlockedAvatarId);
 		if (unlockedAvatar.AdventureStageNumber <= 0)
 		{
+			RestoreAdventureMenuAfterAvatarUnlockPromptFailure();
 			return;
 		}
 
-		ShowAvatarUnlockPrompt(unlockedAvatar);
+		if (!TryShowAvatarUnlockPrompt(unlockedAvatar))
+		{
+			RestoreAdventureMenuAfterAvatarUnlockPromptFailure();
+		}
 	}
 
-	private void ShowAvatarUnlockPrompt(CharacterAvatarDefinition avatarDefinition)
+	private bool TryShowAvatarUnlockPrompt(CharacterAvatarDefinition avatarDefinition)
 	{
-		EnsureAvatarUnlockPrompt();
-		if (_avatarUnlockPromptRoot == null)
+		if (!TryEnsureAvatarUnlockPrompt())
 		{
-			return;
+			return false;
 		}
+		AvatarUnlockPrompt promptRoot = _avatarUnlockPromptRoot!;
 
 		_isShowingAvatarUnlockPrompt = true;
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
@@ -54,9 +92,9 @@ public partial class AdventureAvatarMenuScene
 		}
 
 		_avatarUnlockPromptTween?.Kill();
-		_avatarUnlockPromptRoot.Visible = true;
-		_avatarUnlockPromptRoot.MouseFilter = MouseFilterEnum.Stop;
-		_avatarUnlockPromptRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		promptRoot.Visible = true;
+		promptRoot.MouseFilter = MouseFilterEnum.Stop;
+		promptRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		if (_avatarUnlockPromptPanel != null)
 		{
 			_avatarUnlockPromptPanel.Scale = new Vector2(0.94f, 0.94f);
@@ -66,13 +104,14 @@ public partial class AdventureAvatarMenuScene
 		_avatarUnlockPromptTween = CreateTween();
 		_avatarUnlockPromptTween.SetTrans(Tween.TransitionType.Cubic);
 		_avatarUnlockPromptTween.SetEase(Tween.EaseType.Out);
-		_avatarUnlockPromptTween.TweenProperty(_avatarUnlockPromptRoot, "modulate:a", 1.0f, AvatarUnlockPromptFadeSeconds);
+		_avatarUnlockPromptTween.TweenProperty(promptRoot, "modulate:a", 1.0f, AvatarUnlockPromptFadeSeconds);
 		if (_avatarUnlockPromptPanel != null)
 		{
 			_avatarUnlockPromptTween.Parallel().TweenProperty(_avatarUnlockPromptPanel, "scale", Vector2.One, AvatarUnlockPromptFadeSeconds);
 		}
 
 		_avatarUnlockPromptButton?.GrabFocus();
+		return true;
 	}
 
 	private void HideAvatarUnlockPrompt()
@@ -131,6 +170,7 @@ public partial class AdventureAvatarMenuScene
 		FocusDefaultControlDeferred();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugShowAdventureAvatarUnlockPrompt(string avatarId)
 	{
 		CharacterAvatarDefinition avatarDefinition = CharacterAvatarCatalog.GetById(avatarId);
@@ -139,8 +179,8 @@ public partial class AdventureAvatarMenuScene
 			return false;
 		}
 
-		ShowAvatarUnlockPrompt(avatarDefinition);
-		return DebugIsAdventureAvatarUnlockPromptVisible();
+		return TryShowAvatarUnlockPrompt(avatarDefinition)
+			&& DebugIsAdventureAvatarUnlockPromptVisible();
 	}
 
 	public bool DebugIsAdventureAvatarUnlockPromptVisible()
@@ -151,18 +191,24 @@ public partial class AdventureAvatarMenuScene
 			&& _avatarUnlockPromptRoot.Visible;
 	}
 
-	private void EnsureAvatarUnlockPrompt()
+	public bool DebugIsAdventureAvatarUnlockConsumptionInProgress()
+	{
+		return _isConsumingPendingAvatarUnlock;
+	}
+#endif
+
+	private bool TryEnsureAvatarUnlockPrompt()
 	{
 		if (_avatarUnlockPromptRoot != null && GodotObject.IsInstanceValid(_avatarUnlockPromptRoot))
 		{
-			return;
+			return true;
 		}
 
 		_avatarUnlockPromptRoot = GetNodeOrNull<AvatarUnlockPrompt>("%AvatarUnlockPromptRoot");
 		if (_avatarUnlockPromptRoot == null)
 		{
 			GD.PushError("Adventure avatar menu scene is missing AvatarUnlockPromptRoot.");
-			return;
+			return false;
 		}
 
 		_avatarUnlockPromptPanel = _avatarUnlockPromptRoot.PromptPanel;
@@ -170,6 +216,21 @@ public partial class AdventureAvatarMenuScene
 		_avatarUnlockPromptAvatar = _avatarUnlockPromptRoot.UnlockedAvatar;
 		SuppressDefaultPressedSfx(_avatarUnlockPromptButton);
 		_avatarUnlockPromptRoot.CloseRequested += HideAvatarUnlockPrompt;
+		return true;
+	}
+
+	private void RestoreAdventureMenuAfterAvatarUnlockPromptFailure()
+	{
+		bool disableBackground =
+			_isShowingAvatarUnlockPrompt
+			|| _isShowingRunResumeDialog
+			|| _isStartingAdventure
+			|| _isReturningToMainMenu;
+		SetAdventureMenuButtonsDisabled(disableBackground);
+		if (!disableBackground && IsVisibleInTree())
+		{
+			FocusDefaultControlDeferred();
+		}
 	}
 
 	private void RefreshAvatarUnlockPromptText()

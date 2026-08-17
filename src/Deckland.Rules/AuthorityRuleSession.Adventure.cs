@@ -9,12 +9,14 @@ public sealed partial class AuthorityRuleSession
 	private AdventureRunReadModel _adventureReadModel = AdventureRunReadModel.Empty;
 	private global::AdventureUpgradeManifest? _adventureManifest;
 	private long _adventureRevision;
+	private PreparedAdventureTransaction? _preparedAdventureTransaction;
 
 	public AdventureRunReadModel AdventureReadModel => _adventureReadModel;
+	public bool HasPreparedAdventure => _preparedAdventureTransaction != null;
 
 	public bool ConfigureAdventureManifest(global::AdventureUpgradeManifest manifest)
 	{
-		if (manifest == null || !manifest.IsReady)
+		if (_preparedAdventureTransaction != null || manifest == null || !manifest.IsReady)
 		{
 			return false;
 		}
@@ -113,26 +115,75 @@ public sealed partial class AuthorityRuleSession
 	{
 		ArgumentNullException.ThrowIfNull(command);
 		ArgumentNullException.ThrowIfNull(persistenceHandler);
+		PreparedAdventureResult prepared = PrepareAdventure(command);
+		if (!prepared.Accepted || prepared.Handle == null || prepared.PersistenceRequest == null)
+		{
+			return new AdventureRuleCommandResult(
+				false,
+				prepared.Rejection,
+				prepared.WriteResult,
+				_adventureRevision,
+				_adventureReadModel);
+		}
+
+		bool persisted;
+		try
+		{
+			persisted = !prepared.StateChanged
+				|| persistenceHandler(prepared.PersistenceRequest);
+		}
+		catch
+		{
+			_ = AbortPreparedAdventure(prepared.Handle);
+			throw;
+		}
+		if (!persisted)
+		{
+			_ = AbortPreparedAdventure(prepared.Handle);
+			return RejectedAdventure(
+				new RuleRejection(RuleRejectionCode.InvalidConfiguration, "Adventure persistence failed."),
+				global::AdventureRunWriteResult.SaveFailed);
+		}
+
+		return CommitPreparedAdventure(prepared.Handle);
+	}
+
+	public PreparedAdventureResult PrepareAdventure(AdventureCommand command)
+	{
+		ArgumentNullException.ThrowIfNull(command);
+		if (_preparedAdventureTransaction != null)
+		{
+			return RejectedPreparedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionPending,
+					"An adventure transaction is already pending."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
 
 		RuleRejection? commonRejection = ValidateAdventureCommand(command);
 		if (commonRejection.HasValue)
 		{
-			return RejectedAdventure(
+			return RejectedPreparedAdventure(
 				commonRejection.Value,
 				global::AdventureRunWriteResult.InvalidStage);
 		}
 
+		RuleRandomState baseRandomState = _randomSource.CaptureState();
 		global::AdventureUpgradeRunState candidate = _adventureState.DeepClone();
-		AdventureEvaluation evaluation = EvaluateAdventureCommand(command, candidate);
+		AdventureEvaluation evaluation;
+		RuleRandomState candidateRandomState;
+		try
+		{
+			evaluation = EvaluateAdventureCommand(command, candidate);
+			candidateRandomState = _randomSource.CaptureState();
+		}
+		finally
+		{
+			_randomSource.RestoreState(baseRandomState);
+		}
 		if (!evaluation.Allowed)
 		{
-			return RejectedAdventure(evaluation.Rejection, evaluation.WriteResult);
-		}
-
-		if (!evaluation.StateChanged)
-		{
-			_appliedAdventureActionIds.Add(command.ActionId);
-			return AcceptedAdventure(evaluation.Outcome);
+			return RejectedPreparedAdventure(evaluation.Rejection, evaluation.WriteResult);
 		}
 
 		var persistenceRequest = new AdventurePersistenceRequest(
@@ -143,18 +194,178 @@ public sealed partial class AuthorityRuleSession
 			evaluation.PersistenceKind,
 			evaluation.CompletedMainStageIndex,
 			evaluation.EnemyAvatarId);
-		if (!persistenceHandler(persistenceRequest))
+		var handle = new AdventurePreparedHandle();
+		long previewRevision = evaluation.StateChanged
+			? checked(_adventureRevision + 1)
+			: _adventureRevision;
+		AdventureRunReadModel previewReadModel = AdventureRunReadModel.FromState(
+			candidate,
+			previewRevision);
+		_preparedAdventureTransaction = new PreparedAdventureTransaction(
+			handle,
+			command,
+			_adventureRevision,
+			_appliedAdventureActionIds.Order().ToImmutableArray(),
+			candidate,
+			baseRandomState,
+			candidateRandomState,
+			evaluation,
+			persistenceRequest,
+			previewReadModel);
+		return new PreparedAdventureResult(
+			true,
+			RuleRejection.None,
+			global::AdventureRunWriteResult.Succeeded,
+			_adventureRevision,
+			_adventureReadModel,
+			previewReadModel,
+			handle,
+			persistenceRequest,
+			evaluation.StateChanged,
+			evaluation.Outcome);
+	}
+
+	public AdventureRuleCommandResult CommitPreparedAdventure(AdventurePreparedHandle? handle)
+	{
+		PreparedAdventureTransaction? prepared = _preparedAdventureTransaction;
+		if (prepared == null)
 		{
 			return RejectedAdventure(
-				new RuleRejection(RuleRejectionCode.InvalidConfiguration, "Adventure persistence failed."),
-				global::AdventureRunWriteResult.SaveFailed);
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionMissing,
+					"No adventure transaction is pending."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (handle == null || !ReferenceEquals(handle, prepared.Handle))
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionMismatch,
+					"The prepared adventure handle does not match."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (_adventureRevision != prepared.BaseRevision)
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.StaleRevision,
+					prepared.BaseRevision.ToString()),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (_appliedAdventureActionIds.Contains(prepared.Command.ActionId))
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.DuplicateAction,
+					prepared.Command.ActionId.ToString()),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (_randomSource.CaptureState() != prepared.BaseRandomState)
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.InvalidConfiguration,
+					"The rule random state changed while adventure persistence was pending."),
+				global::AdventureRunWriteResult.InvalidStage);
 		}
 
-		_adventureState.CopyFrom(candidate);
-		_adventureRevision++;
-		_appliedAdventureActionIds.Add(command.ActionId);
+		if (prepared.Evaluation.StateChanged)
+		{
+			_adventureState.CopyFrom(prepared.Candidate);
+			_adventureRevision++;
+		}
+		_randomSource.RestoreState(prepared.CandidateRandomState);
+		_appliedAdventureActionIds.Add(prepared.Command.ActionId);
+		_preparedAdventureTransaction = null;
+		if (prepared.Evaluation.StateChanged)
+		{
+			RefreshAdventureReadModel();
+		}
+		return AcceptedAdventure(prepared.Evaluation.Outcome);
+	}
+
+	public AdventureRuleCommandResult AbortPreparedAdventure(AdventurePreparedHandle? handle)
+	{
+		PreparedAdventureTransaction? prepared = _preparedAdventureTransaction;
+		if (prepared == null)
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionMissing,
+					"No adventure transaction is pending."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (handle == null || !ReferenceEquals(handle, prepared.Handle))
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionMismatch,
+					"The prepared adventure handle does not match."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+
+		_randomSource.RestoreState(prepared.BaseRandomState);
+		_preparedAdventureTransaction = null;
+		return AcceptedAdventure(null);
+	}
+
+	public AdventureRuleCommandResult RecoverPreparedAdventureFromPersistence(
+		AdventurePreparedHandle? handle,
+		global::AdventureUpgradeRunSnapshot? persistedSnapshot)
+	{
+		PreparedAdventureTransaction? prepared = _preparedAdventureTransaction;
+		if (prepared == null)
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionMissing,
+					"No adventure transaction is pending."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (handle == null || !ReferenceEquals(handle, prepared.Handle))
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionMismatch,
+					"The prepared adventure handle does not match."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+		if (_adventureManifest?.IsReady != true)
+		{
+			return RejectedAdventure(
+				new RuleRejection(
+					RuleRejectionCode.InvalidConfiguration,
+					"The adventure manifest is unavailable during persistence recovery."),
+				global::AdventureRunWriteResult.InvalidStage);
+		}
+
+		var persistedState = new global::AdventureUpgradeRunState(_adventureManifest);
+		if (persistedSnapshot.HasValue)
+		{
+			global::AdventureUpgradeRestoreResult restoreResult =
+				persistedState.RestoreFromSnapshot(persistedSnapshot.Value);
+			if (restoreResult is not global::AdventureUpgradeRestoreResult.Restored
+				and not global::AdventureUpgradeRestoreResult.Migrated)
+			{
+				return RejectedAdventure(
+					new RuleRejection(
+						RuleRejectionCode.InvalidConfiguration,
+						$"The persisted adventure candidate could not be restored: {restoreResult}."),
+					global::AdventureRunWriteResult.InvalidStage);
+			}
+		}
+
+		_adventureState.CopyFrom(persistedState);
+		_adventureRevision = prepared.Evaluation.StateChanged
+			? checked(prepared.BaseRevision + 1)
+			: prepared.BaseRevision;
+		_appliedAdventureActionIds.Clear();
+		_appliedAdventureActionIds.UnionWith(prepared.BaseAppliedActionIds);
+		_appliedAdventureActionIds.Add(prepared.Command.ActionId);
+		_randomSource.RestoreState(prepared.CandidateRandomState);
+		_preparedAdventureTransaction = null;
 		RefreshAdventureReadModel();
-		return AcceptedAdventure(evaluation.Outcome);
+		return AcceptedAdventure(prepared.Evaluation.Outcome);
 	}
 
 	private RuleRejection? ValidateAdventureCommand(AdventureCommand command)
@@ -204,9 +415,10 @@ public sealed partial class AuthorityRuleSession
 			ResolveAdventureMissCommand miss => EvaluateAdventureMiss(miss, candidate),
 			ResolveAdventureCaptureCommand capture => EvaluateAdventureCapture(capture, candidate),
 			ResolveAdventureRealTurnEndCommand turnEnd => EvaluateAdventureRealTurnEnd(turnEnd, candidate),
-			ResetAdventureBattleEffectsCommand => EvaluateResetAdventureBattleEffects(candidate),
-			ClearAdventureRunCommand => EvaluateClearAdventureRun(candidate),
-			CommitAdventureVictoryCommand victory => EvaluateAdventureVictory(victory, candidate),
+				ResetAdventureBattleEffectsCommand => EvaluateResetAdventureBattleEffects(candidate),
+				ClearAdventureRunCommand => EvaluateClearAdventureRun(candidate),
+				RestartAdventureRunCommand restart => EvaluateRestartAdventureRun(restart, candidate),
+				CommitAdventureVictoryCommand victory => EvaluateAdventureVictory(victory, candidate),
 			_ => AdventureEvaluation.Rejected(
 				new RuleRejection(RuleRejectionCode.InvalidCommand, command.GetType().Name)),
 		};
@@ -664,6 +876,22 @@ public sealed partial class AuthorityRuleSession
 		return AdventureEvaluation.Changed(forcePersist: true);
 	}
 
+	private static AdventureEvaluation EvaluateRestartAdventureRun(
+		RestartAdventureRunCommand command,
+		global::AdventureUpgradeRunState candidate)
+	{
+		if (!IsValidMainStage(command.MainStageIndex))
+		{
+			return AdventureEvaluation.InvalidStage;
+		}
+
+		// Restart is one candidate mutation. The intermediate empty run is never
+		// exposed to the profile writer or to the board presentation layer.
+		candidate.Clear();
+		candidate.BeginNewMainRun(command.MainStageIndex, command.EnemyAvatarId);
+		return AdventureEvaluation.Changed(forcePersist: true);
+	}
+
 	private static AdventureEvaluation EvaluateAdventureVictory(
 		CommitAdventureVictoryCommand command,
 		global::AdventureUpgradeRunState candidate)
@@ -741,6 +969,22 @@ public sealed partial class AuthorityRuleSession
 			_adventureReadModel);
 	}
 
+	private PreparedAdventureResult RejectedPreparedAdventure(
+		RuleRejection rejection,
+		global::AdventureRunWriteResult writeResult)
+	{
+		return new PreparedAdventureResult(
+			false,
+			rejection,
+			writeResult,
+			_adventureRevision,
+			_adventureReadModel,
+			_adventureReadModel,
+			null,
+			null,
+			false);
+	}
+
 	private void RefreshAdventureReadModel()
 	{
 		_adventureReadModel = AdventureRunReadModel.FromState(_adventureState, _adventureRevision);
@@ -808,4 +1052,16 @@ public sealed partial class AuthorityRuleSession
 			completedMainStageIndex,
 			enemyAvatarId);
 	}
+
+	private sealed record PreparedAdventureTransaction(
+		AdventurePreparedHandle Handle,
+		AdventureCommand Command,
+		long BaseRevision,
+		ImmutableArray<long> BaseAppliedActionIds,
+		global::AdventureUpgradeRunState Candidate,
+		RuleRandomState BaseRandomState,
+		RuleRandomState CandidateRandomState,
+		AdventureEvaluation Evaluation,
+		AdventurePersistenceRequest PersistenceRequest,
+		AdventureRunReadModel PreviewReadModel);
 }

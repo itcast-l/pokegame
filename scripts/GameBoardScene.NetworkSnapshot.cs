@@ -6,9 +6,9 @@ using Godot;
 
 public partial class GameBoardScene
 {
-	private readonly record struct NetworkPlayingCardSnapshot(string CardCode, string[] AttachedItemCardIds);
+	internal readonly record struct NetworkPlayingCardSnapshot(string CardCode, string[] AttachedItemCardIds);
 
-	private sealed record ValidatedNetworkBoardSnapshot(
+	internal sealed record ValidatedNetworkBoardSnapshot(
 		int SnapshotId, long AuthorityEpoch, long CheckpointId,
 		int TurnSequenceGeneration, int CurrentTurnPlayerIndex,
 		int OpeningDiceRollResult,
@@ -251,8 +251,8 @@ public partial class GameBoardScene
 		return new Godot.Collections.Dictionary
 		{
 			["protocol_version"] = MultiplayerBoardSyncRules.ProtocolVersion,
-			["session_id"] = _networkSessionId,
-			["match_id"] = _networkMatchId,
+			["session_id"] = network_session_id,
+			["match_id"] = network_match_id,
 			["authority_epoch"] = _networkAuthorityEpoch,
 			["checkpoint_id"] = _networkCheckpointId,
 			["snapshot_id"] = snapshotId,
@@ -450,7 +450,7 @@ public partial class GameBoardScene
 		NetworkManager? networkManager = GetNetworkManager();
 		if (networkManager?.State == NetworkSessionState.MigratingHost)
 		{
-			networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);
+			networkManager.NotifyReconnectSnapshotApplied(network_match_id);
 			return;
 		}
 		if (!NetworkReconnectRules.ShouldCompleteReconnectCatchupForClient(
@@ -463,7 +463,7 @@ public partial class GameBoardScene
 		}
 
 		_networkReconnectCatchupPendingCompletion = false;
-		networkManager?.NotifyReconnectSnapshotApplied(_networkMatchId);
+		networkManager?.NotifyReconnectSnapshotApplied(network_match_id);
 		ShowReconnectRecoveryNoticeIfNeeded();
 	}
 
@@ -480,9 +480,9 @@ public partial class GameBoardScene
 		if (player_count < 2 || player_count > MaxPlayers
 			|| !TryReadNetworkInt32(raw, "protocol_version", MultiplayerBoardSyncRules.ProtocolVersion, MultiplayerBoardSyncRules.ProtocolVersion, out _)
 			|| !TryReadNetworkString(raw, "session_id", NetworkProtocol.MaxSessionIdLength, out string sessionId)
-			|| (!string.IsNullOrWhiteSpace(_networkSessionId) && !string.Equals(sessionId, _networkSessionId, StringComparison.Ordinal))
+			|| (!string.IsNullOrWhiteSpace(network_session_id) && !string.Equals(sessionId, network_session_id, StringComparison.Ordinal))
 			|| !TryReadNetworkString(raw, "match_id", MaxNetworkSessionIdLength, out string matchId)
-			|| (!string.IsNullOrWhiteSpace(_networkMatchId) && !string.Equals(matchId, _networkMatchId, StringComparison.Ordinal))
+			|| (!string.IsNullOrWhiteSpace(network_match_id) && !string.Equals(matchId, network_match_id, StringComparison.Ordinal))
 			|| !TryReadNetworkInt64(raw, "authority_epoch", 0, long.MaxValue, out long authorityEpoch)
 			|| authorityEpoch < _networkAuthorityEpoch
 			|| !TryReadNetworkInt64(raw, "checkpoint_id", 0, long.MaxValue, out long checkpointId)

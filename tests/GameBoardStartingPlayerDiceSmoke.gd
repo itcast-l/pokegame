@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const STEP_TIMEOUT_SECONDS := 18.0
 
@@ -108,13 +110,14 @@ func _run_two_player_case() -> bool:
 
 func _create_idle_board() -> Node:
 	var packed_scene := load(SCENE_PATH) as PackedScene
-	var board := packed_scene.instantiate() if packed_scene != null else null
+	var board := GameBoardSmokeFactory.create_solo(packed_scene, 2, false) \
+		if packed_scene != null else null
 	if board == null:
 		_fail("Could not instantiate game board")
 		return null
-	board.set("network_wait_for_initialize", true)
-	board.set("solo_mode", true)
-	board.set("item_mode", false)
+	if not GameBoardSmokeFactory.defer_initialization(board):
+		_fail("Could not defer opening dice board initialization")
+		return null
 	root.add_child(board)
 	await process_frame
 	for method_name in [

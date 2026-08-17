@@ -142,6 +142,7 @@ public partial class AdventureUpgradeCatalogCard : Button
 		RefreshFeedback();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public Godot.Collections.Dictionary DebugGetCardState()
 	{
 		Rect2 region = _cardTexture.Texture is AtlasTexture atlasTexture
@@ -172,6 +173,7 @@ public partial class AdventureUpgradeCatalogCard : Button
 			["focus_highlight_enabled"] = _focusHighlightEnabled,
 		};
 	}
+#endif
 
 	private void OnMouseEntered()
 	{

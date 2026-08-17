@@ -124,6 +124,7 @@ public enum NetworkEndpointRequestKind
 	Initialization,
 }
 
+#if DECKLAND_TEST_HOOKS
 public sealed record NetworkEndpointDiagnosticsSnapshot(
 	long RegistrationCount,
 	long ReplacementCount,
@@ -134,6 +135,7 @@ public sealed record NetworkEndpointDiagnosticsSnapshot(
 	long PendingInitializationReplacementCount,
 	bool HasActiveRegistration,
 	bool HasPendingInitialization);
+#endif
 
 internal sealed record NetworkBoardInitialization(
 	NetworkSessionConfig Config,

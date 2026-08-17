@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const MAIN_MENU_SCENE_PATH := "res://scenes/main_menu_scene.tscn"
 const GAME_BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 10.0
@@ -233,17 +235,24 @@ func _instantiate_game_board(network_session_id: String) -> Node:
 		_fail("Failed to load scene: %s" % GAME_BOARD_SCENE_PATH)
 		return null
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_local(packed_scene) \
+		if network_session_id.is_empty() \
+		else GameBoardSmokeFactory.create_network(
+			packed_scene,
+			2,
+			true,
+			100,
+			network_session_id,
+			"esc-input-network-match",
+			0,
+			0,
+			"",
+			"",
+			false)
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % GAME_BOARD_SCENE_PATH)
 		return null
 
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", false)
-	board.set("network_session_id", network_session_id)
 	root.add_child(board)
 	current_scene = board
 	await process_frame

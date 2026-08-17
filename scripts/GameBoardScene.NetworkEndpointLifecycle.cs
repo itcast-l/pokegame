@@ -12,8 +12,8 @@ public partial class GameBoardScene
 
 		_networkEndpoint = new GameBoardNetworkEndpoint(this);
 		_networkEndpointRegistrationToken = networkManager.RegisterMatchEndpoint(
-			_networkSessionId,
-			_networkMatchId,
+			network_session_id,
+			network_match_id,
 			_networkAuthorityEpoch,
 			_networkEndpoint,
 			_networkEndpoint,

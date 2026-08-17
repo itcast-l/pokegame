@@ -243,9 +243,11 @@ internal static partial class Program
 		string adventureResume = File.ReadAllText(Path.Combine(root, "scripts", "AdventureAvatarMenuScene.RunResumeDialog.cs"));
 		True(mainMenu.Contains("ItemCardCatalogPreflight.TryValidate", StringComparison.Ordinal));
 		True(adventure.IndexOf("EnsureItemCardCatalogReady()", StringComparison.Ordinal)
-			< adventure.IndexOf("BeginNewMainRun(", StringComparison.Ordinal));
+			< adventure.IndexOf("PrepareBeginNewMainRun(", StringComparison.Ordinal));
 		True(adventureResume.IndexOf("EnsureItemCardCatalogReady()", StringComparison.Ordinal)
-			< adventureResume.IndexOf("store.ClearRun()", StringComparison.Ordinal));
+			< adventureResume.IndexOf("PrepareClearRun(", StringComparison.Ordinal));
+		True(adventureResume.IndexOf("EnsureItemCardCatalogReady()", StringComparison.Ordinal)
+			< adventureResume.IndexOf("PrepareRestartMainRun(", StringComparison.Ordinal));
 
 		foreach (string networkFile in new[]
 		{

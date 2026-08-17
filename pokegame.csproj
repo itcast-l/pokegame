@@ -5,25 +5,46 @@
     <RootNamespace>pokegame</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <DefineConstants>$(DefineConstants);DECKLAND_RULES_REFERENCE</DefineConstants>
+	<Configurations>Debug;ReleaseValidation;Release;ExportRelease</Configurations>
+	<IsShippingBuild>false</IsShippingBuild>
+	<IsShippingBuild Condition="'$(Configuration)' == 'Release' or '$(Configuration)' == 'ExportRelease'">true</IsShippingBuild>
+	<EnableTestHooks>false</EnableTestHooks>
+	<EnableTestHooks Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'ReleaseValidation'">true</EnableTestHooks>
+	<DefineConstants>$(DefineConstants);DECKLAND_RULES_REFERENCE</DefineConstants>
+	<DefineConstants Condition="'$(EnableTestHooks)' == 'true'">$(DefineConstants);DECKLAND_TEST_HOOKS</DefineConstants>
+	<Optimize Condition="'$(Configuration)' == 'ReleaseValidation'">true</Optimize>
   </PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyMetadata Include="DecklandBuildKind" Value="$(Configuration)" />
+		<AssemblyMetadata Include="Shipping" Value="$(IsShippingBuild)" />
+		<AssemblyMetadata Include="TestHooks" Value="$(EnableTestHooks)" />
+	</ItemGroup>
 
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
     <Compile Remove="outputs/**/*.cs" />
     <Compile Remove="src/Deckland.Rules/**/*.cs" />
+	<Compile Remove="tools/**/*.cs" />
     <Compile Remove="**/node_modules/**/*.cs" />
-	<Compile Remove="scripts/GameBoardScene.Debug.*.cs" Condition="'$(Configuration)' == 'Release'" />
+	<Compile Remove="scripts/**/*.Debug.*.cs" Condition="'$(EnableTestHooks)' != 'true'" />
+	<Compile Remove="scripts/**/*.Debug.cs" Condition="'$(EnableTestHooks)' != 'true'" />
+	<Compile Remove="scripts/BoardAsyncLifetimeDebugProbe.cs" Condition="'$(EnableTestHooks)' != 'true'" />
+	<Compile Remove="scripts/GameBoardScene.DebugHooks.cs" Condition="'$(EnableTestHooks)' != 'true'" />
+	<Compile Remove="scripts/GameBoardScene.DebugRecording.cs" Condition="'$(EnableTestHooks)' != 'true'" />
+	<Compile Remove="scripts/GameBoardScene.NetworkDebugActions.cs" Condition="'$(EnableTestHooks)' != 'true'" />
+	<Compile Remove="scripts/GameBoardTestHarness.cs" Condition="'$(EnableTestHooks)' != 'true'" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="src/Deckland.Rules/Deckland.Rules.csproj" />
   </ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)' != 'Release' and Exists('tests/AdventureStageUnlockHarness.cs') and Exists('tests/MainMenuBackgroundAnimatorLifetimeHarness.cs') and Exists('tests/ManagedTestCleanupHarness.cs') and Exists('tests/AdventureCampaignE2EHarness.cs')">
+	<ItemGroup Condition="'$(EnableTestHooks)' == 'true'">
 	<Compile Include="tests/AdventureStageUnlockHarness.cs" />
 	<Compile Include="tests/MainMenuBackgroundAnimatorLifetimeHarness.cs" />
 	<Compile Include="tests/ManagedTestCleanupHarness.cs" />
 	<Compile Include="tests/AdventureCampaignE2EHarness.cs" />
+	<Compile Include="tests/NormalShutdownBarrierHarness.cs" />
 	</ItemGroup>
 </Project>

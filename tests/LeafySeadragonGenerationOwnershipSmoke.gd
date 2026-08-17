@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 25.0
 
@@ -108,13 +110,7 @@ func _create_board() -> Node:
 	if packed == null:
 		_fail("Failed to load game board scene")
 		return null
-	var board := packed.instantiate()
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", "leafy_seadragon")
+	var board := GameBoardSmokeFactory.create_adventure(packed, "leafy_seadragon")
 	root.add_child(board)
 	await process_frame
 	for method in ["DebugConfigureLeafyBladeGenerationOwnershipProbe", "DebugStartLeafyBladeGenerationOwnershipProbe", "DebugHasLeafyBladeProjectilePhase", "DebugHasLeafyBladeBombPhase", "DebugRestartMatchForLeafyBladeOwnershipProbe", "DebugReplaceLeafyBladeTargetReference", "DebugLeafyBladeReplacementIsIntact", "DebugGetLeafyBladeBreakCooldownTurns", "DebugMarkLeafyBladeTargetForTraceHunt", "DebugGetTableCardReferenceIdentity", "DebugGetDeckCardCountForPlayer", "DebugGetDeckCardCode"]:

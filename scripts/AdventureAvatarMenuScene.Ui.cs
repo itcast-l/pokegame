@@ -34,7 +34,7 @@ public partial class AdventureAvatarMenuScene
 
 		BindAdventureList();
 		BindLevelList();
-		EnsureAvatarUnlockPrompt();
+		TryEnsureAvatarUnlockPrompt();
 		CallDeferred(nameof(ApplyResponsiveAdventureLayout));
 	}
 

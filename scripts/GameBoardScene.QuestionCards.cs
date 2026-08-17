@@ -222,8 +222,10 @@ public partial class GameBoardScene
 				return null;
 			}
 			CommitNetworkAuthorityQuestionRewardQueued();
+#if DECKLAND_TEST_HOOKS
 			_debugQuestionRewardGrantCount++;
 			_debugLastQuestionRewardItemCardId = plan.ItemCard.Id;
+#endif
 			return new QuestionCardRewardGrant(
 				plan.ItemCard,
 				-1,
@@ -263,8 +265,10 @@ public partial class GameBoardScene
 		}
 		int itemHandIndex = grantResult.Mutation.TargetIndex;
 		CommitNetworkAuthorityQuestionRewardHandMutation(playerIndex, itemHandIndex);
+#if DECKLAND_TEST_HOOKS
 		_debugQuestionRewardGrantCount++;
 		_debugLastQuestionRewardItemCardId = plan.ItemCard.Id;
+#endif
 		return new QuestionCardRewardGrant(
 			plan.ItemCard,
 			itemHandIndex,
@@ -279,8 +283,10 @@ public partial class GameBoardScene
 			return BombItemCardId;
 		}
 
-		string forcedItemCardId =
-			ConsumeDebugForcedNextQuestionRewardItemCardId();
+		string forcedItemCardId = string.Empty;
+#if DECKLAND_TEST_HOOKS
+		forcedItemCardId = ConsumeDebugForcedNextQuestionRewardItemCardId();
+#endif
 		if (!string.IsNullOrEmpty(forcedItemCardId))
 		{
 			return forcedItemCardId;

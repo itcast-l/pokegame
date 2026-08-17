@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player1HandArea"
 const BADGE_NODE_NAME := "AdventureMissClimbBadge"
@@ -39,17 +41,11 @@ func _run() -> void:
 		_fail("Failed to load scene: %s" % SCENE_PATH)
 		return
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, "shrimp")
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % SCENE_PATH)
 		return
 
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", "shrimp")
 	root.add_child(board)
 	await process_frame
 	await process_frame

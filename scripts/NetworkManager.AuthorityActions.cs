@@ -113,8 +113,8 @@ public partial class NetworkManager
 
 	internal List<NetworkMigrationRosterEntry> GetCheckpointRoster()
 	{
-		var result = new List<NetworkMigrationRosterEntry>(_players.Count);
-		foreach (NetworkPlayerPublicState player in _players)
+		var result = new List<NetworkMigrationRosterEntry>(_lobbyRoster.Players.Count);
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			result.Add(new NetworkMigrationRosterEntry
 			{
@@ -135,8 +135,8 @@ public partial class NetworkManager
 
 	internal List<NetworkAuthoritySeatControl> GetCheckpointSeatControls()
 	{
-		var result = new List<NetworkAuthoritySeatControl>(_seatControlStates.Count);
-		foreach (SeatControlState state in _seatControlStates)
+		var result = new List<NetworkAuthoritySeatControl>(_lobbyRoster.SeatControls.Count);
+		foreach (SeatControlState state in _lobbyRoster.SeatControls)
 		{
 			result.Add(new NetworkAuthoritySeatControl
 			{
@@ -157,11 +157,11 @@ public partial class NetworkManager
 
 	internal List<NetworkAuthorityReconnectClaim> GetCheckpointReconnectClaims()
 	{
-		var result = new List<NetworkAuthorityReconnectClaim>(_reconnectClaimsBySeat.Count);
-		bool claimsFollowSeatControlOrder = _seatControlStates.Count == _reconnectClaimsBySeat.Count;
-		foreach (SeatControlState state in _seatControlStates)
+		var result = new List<NetworkAuthorityReconnectClaim>(_lobbyRoster.ReconnectClaimsBySeat.Count);
+		bool claimsFollowSeatControlOrder = _lobbyRoster.SeatControls.Count == _lobbyRoster.ReconnectClaimsBySeat.Count;
+		foreach (SeatControlState state in _lobbyRoster.SeatControls)
 		{
-			if (!_reconnectClaimsBySeat.TryGetValue(state.SeatIndex, out ReconnectClaimRecord claim))
+			if (!_lobbyRoster.ReconnectClaimsBySeat.TryGetValue(state.SeatIndex, out ReconnectClaimRecord claim))
 			{
 				claimsFollowSeatControlOrder = false;
 				break;
@@ -186,7 +186,7 @@ public partial class NetworkManager
 		// Keep a defensive path for an invalid/stale in-memory pairing. Normal
 		// checkpoints follow the already ordered seat-control list above.
 		result.Clear();
-		foreach (KeyValuePair<int, ReconnectClaimRecord> pair in _reconnectClaimsBySeat.OrderBy(pair => pair.Key))
+		foreach (KeyValuePair<int, ReconnectClaimRecord> pair in _lobbyRoster.ReconnectClaimsBySeat.OrderBy(pair => pair.Key))
 		{
 			ReconnectClaimRecord claim = pair.Value;
 			result.Add(new NetworkAuthorityReconnectClaim
@@ -229,7 +229,9 @@ public partial class NetworkManager
 	internal ReadOnlyMemory<byte> GetLatestAuthorityCheckpoint() => _latestAuthorityCheckpointEnvelope.PayloadMemory;
 	internal string GetLatestAuthorityCheckpointHash() => _latestAuthorityCheckpointEnvelope.Hash;
 	internal long GetLatestAuthorityCheckpointId() => _latestAuthorityCheckpointEnvelope.CheckpointId;
+#if DECKLAND_TEST_HOOKS
 	public AuthorityCheckpointTelemetrySnapshot DebugGetAuthorityCheckpointTelemetry() => AuthorityCheckpointTelemetry.GetSnapshot();
+#endif
 
 	private void ReplaceLatestAuthorityCheckpointEnvelope(AuthorityCheckpointEnvelope replacement)
 	{
@@ -307,7 +309,7 @@ public partial class NetworkManager
 
 	internal AuthorityCheckpointCommitResult CommitAuthorityCheckpointFromLobby()
 	{
-		if (!IsHost || _state != NetworkSessionState.Lobby || _players.Count == 0)
+		if (!IsHost || _state != NetworkSessionState.Lobby || _lobbyRoster.Players.Count == 0)
 		{
 			return AuthorityCheckpointCommitResult.Rejected(
 				AuthorityCheckpointCommitStatus.RulesStateUnavailable,

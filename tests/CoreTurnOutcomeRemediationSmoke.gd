@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 20.0
 
@@ -22,10 +24,7 @@ func _run() -> void:
 
 func _run_case(player_count: int, scenario: String) -> void:
 	var packed := load(SCENE_PATH) as PackedScene
-	var board := packed.instantiate()
-	board.set("player_count", player_count)
-	board.set("item_mode", true)
-	board.set("solo_mode", true)
+	var board := GameBoardSmokeFactory.create_solo(packed, player_count)
 	root.add_child(board)
 	if not await _wait_for_actionable(board):
 		return

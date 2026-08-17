@@ -86,7 +86,7 @@ public partial class GameBoardScene
 		return NetworkReconnectPresentationRules.ShouldShowOverlay(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
-			_networkWaitForInitialize,
+			network_wait_for_initialize,
 			networkManager?.State ?? NetworkSessionState.Idle,
 			_networkLastAppliedSnapshotId);
 	}
@@ -96,7 +96,7 @@ public partial class GameBoardScene
 		bool shouldShowOverlay = NetworkReconnectPresentationRules.ShouldShowOverlay(
 			IsNetworkMultiplayerMode(),
 			IsNetworkHost(),
-			_networkWaitForInitialize,
+			network_wait_for_initialize,
 			networkState ?? (GetNetworkManager()?.State ?? NetworkSessionState.Idle),
 			_networkLastAppliedSnapshotId);
 		if (_networkReconnectOverlayPanel != null)
@@ -209,6 +209,7 @@ public partial class GameBoardScene
 		return LocalizeRequired(NetworkReconnectPresentationRules.GetReconnectOverlayLocalizationKey());
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsNetworkReconnectOverlayVisible()
 	{
 		return _networkReconnectOverlayPanel?.Visible == true;
@@ -228,6 +229,7 @@ public partial class GameBoardScene
 	{
 		return _networkReconnectNoticeLabel?.Text ?? string.Empty;
 	}
+#endif
 
 	private string GetNetworkReconnectNoticeText()
 	{

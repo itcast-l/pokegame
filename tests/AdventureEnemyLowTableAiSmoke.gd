@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 
 var _failed := false
@@ -65,25 +67,50 @@ func _create_board(
 		adventure_tutorial_mode: bool,
 		avatar_id: String,
 		difficulty: int) -> Node:
-	var board := packed_scene.instantiate()
+	var board: Node
+	if adventure_tutorial_mode:
+		board = GameBoardSmokeFactory.create_tutorial(
+			packed_scene,
+			avatar_id,
+			100,
+			true,
+			difficulty)
+	elif adventure_mode:
+		board = GameBoardSmokeFactory.create_adventure(
+			packed_scene,
+			avatar_id,
+			100,
+			true,
+			difficulty)
+	else:
+		board = GameBoardSmokeFactory.create_solo(packed_scene, 2, true, 100, difficulty)
 	if board == null:
 		_fail("Failed to instantiate board")
 		return null
 
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("solo_mode", true)
-	board.set("solo_ai_difficulty", difficulty)
-	board.set("adventure_mode", adventure_mode)
-	board.set("adventure_tutorial_mode", adventure_tutorial_mode)
-	if not avatar_id.is_empty():
-		board.set("adventure_enemy_avatar_id", avatar_id)
 	root.add_child(board)
-	await process_frame
+	if not await _prepare_probe_board(board):
+		_fail("Adventure AI probe board did not become ready")
+		return null
 	if not board.has_method("DebugProbeAdventureEnemyLowTableAi"):
 		_fail("Missing adventure enemy low-table AI probe")
 		return null
 	return board
+
+
+func _prepare_probe_board(board: Node) -> bool:
+	for frame_index in range(300):
+		await process_frame
+		if board.has_method("DebugIsAdventureUpgradeSelectionVisible") \
+				and bool(board.call("DebugIsAdventureUpgradeSelectionVisible")):
+			if not bool(board.call("DebugSelectAdventureUpgradeOption", 0)):
+				return false
+			continue
+		if frame_index % 5 == 0 \
+				and board.has_method("DebugRestartWithoutOpeningDealAnimation") \
+				and bool(board.call("DebugRestartWithoutOpeningDealAnimation")):
+			return true
+	return false
 
 
 func _expect_probe(

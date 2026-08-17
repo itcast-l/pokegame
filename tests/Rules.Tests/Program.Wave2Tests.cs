@@ -125,6 +125,7 @@ internal static partial class Program
 
 		const string invalidLegacyJson = "{\"SchemaVersion\":5,\"CurrentAvatarStageNumber\":2,\"ShouldGrantRunStartUpgrade\":false,\"ShouldGrantVictoryUpgrade\":true,\"AcquiredUpgradeIds\":[]}";
 		SeedProfile(saveManager, slotId, CreateProgressData("Runner", invalidLegacyJson));
+		store.InvalidateProfileSnapshot();
 		Equal(AdventureUpgradeRestoreResult.InvalidSnapshotPreserved, store.ReloadFromActiveProfile());
 		False(store.HasActiveRun);
 		Equal(invalidLegacyJson, LoadStoredProfile(saveManager, slotId).PendingAdventureRunJson);

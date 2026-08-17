@@ -403,6 +403,7 @@ internal static partial class Program
 		string maintenanceSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Maintenance.cs"));
 		string authoritySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.AuthorityActions.cs"));
 		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string reconnectCoordinatorSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkReconnectCoordinator.cs"));
 		string reconnectSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Reconnect.cs"));
 		string recoverySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
 		string steamSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.Steam.cs"));
@@ -467,7 +468,7 @@ internal static partial class Program
 		False(artifactBlock.Contains("_issuedSeatCredentialsBySeat", StringComparison.Ordinal));
 		False(artifactBlock.Contains("_localSeatCredential", StringComparison.Ordinal));
 
-		True(managerSource.Contains("private const double ClientReconnectWindowSeconds = 10.0;", StringComparison.Ordinal));
+		True(reconnectCoordinatorSource.Contains("internal const double WindowDurationSeconds = 10.0;", StringComparison.Ordinal));
 		int disconnectStart = managerSource.IndexOf("private void OnServerDisconnected()", StringComparison.Ordinal);
 		int disconnectEnd = managerSource.IndexOf("private void InsertPlayerInSeatOrder", disconnectStart, StringComparison.Ordinal);
 		True(disconnectStart >= 0 && disconnectEnd > disconnectStart);
@@ -480,8 +481,8 @@ internal static partial class Program
 		True(managerSource.Contains(
 			"bool resumesAuthenticatedSeat = _state == NetworkSessionState.InGame",
 			StringComparison.Ordinal));
-		True(reconnectSource.Contains("now - _reconnectWindowStartedAt >= ClientReconnectWindowSeconds", StringComparison.Ordinal));
-		True(maintenanceSource.Contains("_reconnectWindowStartedAt + ClientReconnectWindowSeconds", StringComparison.Ordinal));
+		True(reconnectSource.Contains("_reconnectCoordinator.Poll(", StringComparison.Ordinal));
+		True(maintenanceSource.Contains("_reconnectCoordinator.WindowDeadlineSeconds", StringComparison.Ordinal));
 		int handlerStart = reconnectSource.IndexOf("private void HandleHostDisconnected()", StringComparison.Ordinal);
 		int handlerEnd = reconnectSource.IndexOf("private void TryStartReconnectAttempt", handlerStart, StringComparison.Ordinal);
 		True(handlerStart >= 0 && handlerEnd > handlerStart);

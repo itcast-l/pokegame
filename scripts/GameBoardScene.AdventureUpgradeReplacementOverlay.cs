@@ -58,10 +58,12 @@ public partial class GameBoardScene
 		AdventureSuitUpgradeDefinition selectedUpgrade,
 		IReadOnlyList<AdventureSuitUpgradeDefinition> currentUpgrades)
 	{
+#if DECKLAND_TEST_HOOKS
 		if (ConsumeDebugForceNextAdventureUpgradeReplacementOverlayDisplayFailure())
 		{
 			return false;
 		}
+#endif
 
 		PackedScene? overlayScene = GD.Load<PackedScene>(AdventureUpgradeReplacementOverlayScenePath);
 		if (overlayScene?.Instantiate() is not Control replacementOverlay)

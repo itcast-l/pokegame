@@ -80,6 +80,9 @@ public static class GameInputActions
 	private static readonly Dictionary<string, BindingAction> ActionsById = BuildActionsById();
 	private static bool _registered;
 	private static bool _bindingsLoaded;
+#if DECKLAND_TEST_HOOKS
+	private static int _serializeBindingsCallCount;
+#endif
 
 	public static IReadOnlyList<BindingAction> All => Actions;
 
@@ -139,9 +142,35 @@ public static class GameInputActions
 		ApplyDefaultBindings();
 	}
 
+	public static bool AreBindingsAtDefaults()
+	{
+		EnsureRegistered();
+		foreach (BindingAction action in Actions)
+		{
+			if (!SlotMatchesDefaults(action, BindingSlot.Keyboard)
+				|| !SlotMatchesDefaults(action, BindingSlot.Gamepad))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	public static bool IsCurrentBinding(string actionId, BindingSlot slot, InputEvent inputEvent)
+	{
+		EnsureRegistered();
+		BindingAction action = GetBindingAction(actionId);
+		InputEvent sanitizedInput = SanitizeInputForSlot(slot, inputEvent);
+		return AreEquivalentBindingEvents(GetEventForSlot(action, slot), sanitizedInput);
+	}
+
 	public static Godot.Collections.Dictionary SerializeBindings()
 	{
 		EnsureRegistered();
+#if DECKLAND_TEST_HOOKS
+		_serializeBindingsCallCount++;
+#endif
 		var root = new Godot.Collections.Dictionary();
 		foreach (BindingAction action in Actions)
 		{
@@ -154,6 +183,13 @@ public static class GameInputActions
 
 		return root;
 	}
+
+#if DECKLAND_TEST_HOOKS
+	public static int DebugGetSerializeBindingsCallCount()
+	{
+		return _serializeBindingsCallCount;
+	}
+#endif
 
 	public static void LoadBindings(Godot.Collections.Dictionary bindings)
 	{
@@ -397,6 +433,97 @@ public static class GameInputActions
 			BindingSlot.Gamepad => inputEvent is InputEventJoypadButton or InputEventJoypadMotion,
 			_ => false,
 		};
+	}
+
+	private static bool SlotMatchesDefaults(BindingAction action, BindingSlot slot)
+	{
+		IReadOnlyList<InputEvent> actualEvents = GetEventsForSlot(action, slot);
+		IReadOnlyList<InputEvent> expectedEvents = GetDefaultEventsForSlot(action, slot);
+		if (actualEvents.Count != expectedEvents.Count)
+		{
+			return false;
+		}
+
+		var matched = new bool[actualEvents.Count];
+		foreach (InputEvent expectedEvent in expectedEvents)
+		{
+			bool found = false;
+			for (int index = 0; index < actualEvents.Count; index++)
+			{
+				if (!matched[index] && AreEquivalentBindingEvents(actualEvents[index], expectedEvent))
+				{
+					matched[index] = true;
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static IReadOnlyList<InputEvent> GetDefaultEventsForSlot(BindingAction action, BindingSlot slot)
+	{
+		var events = new List<InputEvent>
+		{
+			slot == BindingSlot.Keyboard
+				? action.DefaultKeyboardEvent
+				: action.DefaultGamepadEvent,
+		};
+
+		if (slot == BindingSlot.Keyboard)
+		{
+			switch (action.Id)
+			{
+				case "move_up":
+					events.Add(CreateKey(Key.W));
+					break;
+				case "move_down":
+					events.Add(CreateKey(Key.S));
+					break;
+				case "move_left":
+					events.Add(CreateKey(Key.A));
+					break;
+				case "move_right":
+					events.Add(CreateKey(Key.D));
+					break;
+				case "confirm":
+					events.Add(CreateKey(Key.KpEnter));
+					events.Add(CreateKey(Key.Space));
+					break;
+				case "cancel":
+					events.Add(CreateKey(Key.Backspace));
+					break;
+				case "pause":
+					events.Add(CreateKey(Key.Escape));
+					break;
+			}
+		}
+		else
+		{
+			switch (action.Id)
+			{
+				case "move_up":
+					events.Add(CreateJoyAxis(JoyAxis.LeftY, -1.0f));
+					break;
+				case "move_down":
+					events.Add(CreateJoyAxis(JoyAxis.LeftY, 1.0f));
+					break;
+				case "move_left":
+					events.Add(CreateJoyAxis(JoyAxis.LeftX, -1.0f));
+					break;
+				case "move_right":
+					events.Add(CreateJoyAxis(JoyAxis.LeftX, 1.0f));
+					break;
+			}
+		}
+
+		return events;
 	}
 
 	private static InputEvent SanitizeInputForSlot(BindingSlot slot, InputEvent inputEvent)

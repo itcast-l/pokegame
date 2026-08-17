@@ -59,6 +59,63 @@ internal static Error SetValues(params GameSaveStore.SaveValue[] values)
 		return Persist(saveManager);
 	}
 
+internal static Error SetValueDeferred(string key, Variant value)
+	{
+		Node? saveManager = GameSaveStore.GetSaveManager();
+		if (saveManager == null)
+		{
+			return Error.Unavailable;
+		}
+
+		GameSaveMigration.EnsureLegacyMigration(saveManager);
+		if (!IsRawValueChanged(saveManager, key, value))
+		{
+			return Error.Ok;
+		}
+
+		Error markResult = (Error)saveManager.Call("mark_dirty").AsInt32();
+		if (markResult != Error.Ok)
+		{
+			return markResult;
+		}
+
+		SetRawValue(saveManager, key, value);
+		return Error.Ok;
+	}
+
+internal static Error SetValuesDeferred(params GameSaveStore.SaveValue[] values)
+	{
+		Node? saveManager = GameSaveStore.GetSaveManager();
+		if (saveManager == null)
+		{
+			return Error.Unavailable;
+		}
+
+		GameSaveMigration.EnsureLegacyMigration(saveManager);
+		bool changed = false;
+		foreach (GameSaveStore.SaveValue value in values)
+		{
+			changed |= IsRawValueChanged(saveManager, value.Key, value.Value);
+		}
+		if (!changed)
+		{
+			return Error.Ok;
+		}
+
+		Error markResult = (Error)saveManager.Call("mark_dirty").AsInt32();
+		if (markResult != Error.Ok)
+		{
+			return markResult;
+		}
+
+		foreach (GameSaveStore.SaveValue value in values)
+		{
+			SetRawValue(saveManager, value.Key, value.Value);
+		}
+
+		return Error.Ok;
+	}
+
 internal static bool HasRawValue(Node saveManager, string key)
 	{
 		return GetRawValue(saveManager, key, MissingSentinel).AsString() != MissingSentinel;
@@ -72,6 +129,12 @@ internal static Variant GetRawValue(Node saveManager, string key, Variant defaul
 internal static void SetRawValue(Node saveManager, string key, Variant value)
 	{
 		saveManager.Call("set_value", new StringName(key), value);
+	}
+
+private static bool IsRawValueChanged(Node saveManager, string key, Variant value)
+	{
+		Variant current = GetRawValue(saveManager, key, MissingSentinel);
+		return !current.Equals(value);
 	}
 
 internal static Error Persist(Node saveManager)

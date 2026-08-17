@@ -23,6 +23,7 @@ var process_call_count := 0
 
 var _steam: Object
 var _capabilities: Dictionary = {}
+var _run_networking_callbacks_available := false
 
 const _STEAM_LANGUAGE_FALLBACKS := {
 	"arabic": "ar",
@@ -72,7 +73,7 @@ func _process(_delta: float) -> void:
 		return
 
 	_steam.run_callbacks()
-	if _has_capability("runNetworkingCallbacks"):
+	if _run_networking_callbacks_available:
 		_steam.runNetworkingCallbacks()
 
 
@@ -181,6 +182,7 @@ func _cache_capabilities() -> void:
 	]:
 		_capabilities[method_name] = _steam.has_method(method_name)
 		capability_query_count += 1
+	_run_networking_callbacks_available = bool(_capabilities.get("runNetworkingCallbacks", false))
 
 
 func _has_capability(method_name: String) -> bool:

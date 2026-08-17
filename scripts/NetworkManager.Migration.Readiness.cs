@@ -202,7 +202,7 @@ public partial class NetworkManager
 		var missingSeats = new HashSet<int>(missingSeatIndices);
 		int readinessPeerCount = 0;
 		NetworkRpcContext context = new(plan.SessionId, plan.MatchId, plan.TargetEpoch);
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (player.IsConnected && !player.IsHost && !missingSeats.Contains(player.SeatIndex))
 			{
@@ -272,14 +272,14 @@ public partial class NetworkManager
 				continue;
 			}
 
-			NetworkPlayerPublicState player = _players[playerIndex];
+			NetworkPlayerPublicState player = _lobbyRoster.Players[playerIndex];
 			if (!player.IsConnected || player.IsHost || player.PeerId <= 1)
 			{
 				continue;
 			}
 
 			TryMarkSeatDisconnected(player.PeerId);
-			_players[playerIndex] = player with { IsConnected = false };
+			_lobbyRoster.SetPlayerAt(playerIndex, player with { IsConnected = false });
 			Multiplayer.MultiplayerPeer?.DisconnectPeer(player.PeerId);
 		}
 	}

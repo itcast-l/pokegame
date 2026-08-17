@@ -113,8 +113,10 @@ public partial class GameBoardScene
 	private readonly List<ulong> _staleAdventureUpgradeMotionStateIds = new();
 	private bool _adventureUpgradeOverlayFrameUpdateActive;
 	private IDisposable? _adventureUpgradeOverlayFrameRegistration;
+#if DECKLAND_TEST_HOOKS
 	private int _debugAdventureUpgradePointerEnteredCallbacks;
 	private int _debugAdventureUpgradePointerExitedCallbacks;
+#endif
 
 	private async Task<AdventureUpgradeSelectionResult> ShowAdventureUpgradeSelectionAsync(
 		AdventureUpgradeTriggerSource triggerSource,
@@ -179,10 +181,12 @@ public partial class GameBoardScene
 
 	private bool ShowAdventureUpgradeSelectionOverlay(IReadOnlyList<AdventureUpgradeOverlayOptionModel> options)
 	{
+#if DECKLAND_TEST_HOOKS
 		if (ConsumeDebugForceNextAdventureUpgradeOverlayDisplayFailure())
 		{
 			return false;
 		}
+#endif
 
 		PackedScene? overlayScene = GD.Load<PackedScene>(AdventureUpgradeSelectionOverlayScenePath);
 		if (overlayScene?.Instantiate() is not Control selectionOverlay)
@@ -199,8 +203,10 @@ public partial class GameBoardScene
 		AddChild(overlayLayer);
 		overlayLayer.AddChild(selectionOverlay);
 		ResetAdventureUpgradeOverlayCardMotionStates();
+#if DECKLAND_TEST_HOOKS
 		_debugAdventureUpgradePointerEnteredCallbacks = 0;
 		_debugAdventureUpgradePointerExitedCallbacks = 0;
+#endif
 		var session = new SelectionOverlaySession(
 			SelectionOverlayKind.AdventureUpgrade,
 			selectionOverlay,
@@ -441,6 +447,7 @@ public partial class GameBoardScene
 		return false;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public Godot.Collections.Dictionary DebugGetAdventureUpgradeOverlayMotionState(int optionIndex)
 	{
 		var result = new Godot.Collections.Dictionary();
@@ -480,7 +487,7 @@ public partial class GameBoardScene
 		{
 			["pointer_entered_callbacks"] = _debugAdventureUpgradePointerEnteredCallbacks,
 			["pointer_exited_callbacks"] = _debugAdventureUpgradePointerExitedCallbacks,
-			["active_subscription_groups"] = _activeSelectionOverlaySession?.ActiveSubscriptionCount ?? 0,
+			["active_subscription_groups"] = ActiveSelectionOverlaySession?.ActiveSubscriptionCount ?? 0,
 		};
 	}
 
@@ -509,6 +516,7 @@ public partial class GameBoardScene
 		RefreshAdventureUpgradeOverlayHighlight(button);
 		return true;
 	}
+#endif
 
 	private void SetAdventureUpgradeOverlayPointerHover(Button button, bool hovered)
 	{
@@ -540,11 +548,15 @@ public partial class GameBoardScene
 	{
 		if (hovered)
 		{
+#if DECKLAND_TEST_HOOKS
 			_debugAdventureUpgradePointerEnteredCallbacks++;
+#endif
 		}
 		else
 		{
+#if DECKLAND_TEST_HOOKS
 			_debugAdventureUpgradePointerExitedCallbacks++;
+#endif
 		}
 		SetAdventureUpgradeOverlayPointerHover(button, hovered);
 	}

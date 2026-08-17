@@ -29,7 +29,7 @@ public partial class GameBoardScene
 	{
 		_adventureUpgradeCatalog = AdventureSuitUpgradeCatalog.Load(this);
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (_gameModePolicy.CanReadAdventureRun
+		if (ModePolicy.CanReadAdventureRun
 			&& _authorityRuleSession != null
 			&& store != null
 			&& !store.BindAuthorityRuleSession(_authorityRuleSession))
@@ -66,26 +66,6 @@ public partial class GameBoardScene
 	private AdventureRunReadModel? GetAdventureUpgradeRunState()
 	{
 		return GetAdventureRunSessionStore()?.GetReadModel();
-	}
-
-	private AdventureUpgradeGrantCommitResult GrantAdventureUpgrade(
-		string upgradeId,
-		AdventureUpgradeTriggerSource triggerSource,
-		string? replacedUpgradeId = null)
-	{
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("record an acquired adventure upgrade");
-			return new AdventureUpgradeGrantCommitResult(
-				AdventureRunWriteResult.SaveFailed,
-				AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
-				default,
-				null,
-				null);
-		}
-
-		return store.GrantUpgrade(upgradeId, triggerSource, replacedUpgradeId);
 	}
 
 	private int DrawCardsFromDeckToHandForAdventureEffect(int playerIndex, int drawCount)
@@ -167,9 +147,11 @@ public partial class GameBoardScene
 		{
 			return false;
 		}
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult> operation =
+			store.PrepareResetBattleScopedEffects();
 		AdventureSaveGateResult<AdventureRunWriteResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				store.ResetBattleScopedEffects,
+			await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result == AdventureRunWriteResult.Succeeded,
 				result => result == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)

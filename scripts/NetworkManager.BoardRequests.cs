@@ -34,7 +34,7 @@ public partial class NetworkManager
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
-		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
+		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_lobbyRoster.Players, senderPeerId, out int actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, handIndex);
 			return;
@@ -107,7 +107,7 @@ public partial class NetworkManager
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
-		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
+		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_lobbyRoster.Players, senderPeerId, out int actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, itemHandIndex);
 			return;
@@ -180,7 +180,7 @@ public partial class NetworkManager
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
-		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_players, senderPeerId, out int actorSeatIndex))
+		if (!MultiplayerBoardSyncRules.TryResolveSeatFromPeer(_lobbyRoster.Players, senderPeerId, out int actorSeatIndex))
 		{
 			SendRejectBoardAction(senderPeerId, MultiplayerBoardActionRejectReason.UnknownSender, turnSequenceGeneration, -1);
 			return;

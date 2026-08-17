@@ -10,7 +10,8 @@ public partial class GameBoardScene
 	private CaptureResolutionCoordinator? _captureResolutionCoordinator;
 
 	private CaptureResolutionCoordinator CaptureResolution
-		=> _captureResolutionCoordinator ??= new CaptureResolutionCoordinator(this);
+		=> _captureResolutionCoordinator ??= new CaptureResolutionCoordinator(
+			ResolvePlayedCardCaptureCoreAsync);
 
 	private Task<CardPlayBranchResult> ResolvePlayedCardCaptureAsync(
 		int playerIndex,
@@ -57,7 +58,10 @@ public partial class GameBoardScene
 
 	private sealed class CaptureResolutionCoordinator
 	{
-		private readonly GameBoardScene _board;
+		private readonly Func<
+			CaptureResolutionCoordinator,
+			CaptureResolutionRequest,
+			Task<CardPlayBranchResult>> _resolveAsync;
 		private readonly HashSet<int> _pendingFaceUpMagnetTriggerIndexes = new();
 		private readonly HashSet<int> _resolvedMagnetTriggerIndexes = new();
 		private readonly HashSet<int> _magnetExtraCaptureIndexes = new();
@@ -65,9 +69,13 @@ public partial class GameBoardScene
 		private readonly HashSet<int> _resolvedOvertimeTriggerIndexes = new();
 		private readonly List<TableSpecialCardTrigger> _capturedSpecialCardTriggers = new();
 
-		internal CaptureResolutionCoordinator(GameBoardScene board)
+		internal CaptureResolutionCoordinator(
+			Func<
+				CaptureResolutionCoordinator,
+				CaptureResolutionRequest,
+				Task<CardPlayBranchResult>> resolveAsync)
 		{
-			_board = board;
+			_resolveAsync = resolveAsync;
 		}
 
 		internal HashSet<int> PendingFaceUpMagnetTriggerIndexes => _pendingFaceUpMagnetTriggerIndexes;
@@ -79,7 +87,7 @@ public partial class GameBoardScene
 
 		internal Task<CardPlayBranchResult> ResolveAsync(CaptureResolutionRequest request)
 		{
-			return _board.ResolvePlayedCardCaptureCoreAsync(this, request);
+			return _resolveAsync(this, request);
 		}
 
 		internal HashSet<int> BeginOvertimeTriggerResolution()

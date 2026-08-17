@@ -3,7 +3,7 @@ public partial class NetworkManager
 	public bool DebugIsLoadHandshakeTimeoutActive()
 	{
 		return _state == NetworkSessionState.LoadingScene
-			&& _loadHandshake != null;
+			&& _sceneLoadCoordinator.IsAwaitingAcks;
 	}
 
 	public ulong DebugGetCurrentSteamLobbyId()

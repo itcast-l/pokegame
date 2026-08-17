@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const CSV_PATH := "res://localization/ui.csv"
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
@@ -162,17 +164,10 @@ func _instantiate_board(adventure_avatar_id: String) -> Node:
 		_fail("Failed to load scene: %s" % BOARD_SCENE_PATH)
 		return null
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, adventure_avatar_id)
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % BOARD_SCENE_PATH)
 		return null
-
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", adventure_avatar_id)
 
 	root.add_child(board)
 	await process_frame

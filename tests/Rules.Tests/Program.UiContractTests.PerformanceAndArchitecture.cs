@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -8,16 +9,20 @@ using System.Text.RegularExpressions;
 
 internal static partial class Program
 {
-	private static void GameBoardExportedSettersShortCircuitRedundantWork()
+	private static void GameBoardLaunchStateIsConfiguredWithoutExportedSetters()
 	{
 		string repoRoot = FindRepositoryRoot();
-		string text =
-			File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"))
-			+ File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Exports.cs"));
+		string boardText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"));
+		string projectionText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Exports.cs"));
 
-		True(text.Contains("if (normalizedPlayerCount == _playerCount)", StringComparison.Ordinal));
-		True(text.Contains("if (value == _itemMode)", StringComparison.Ordinal));
-		True(text.Contains("if (normalizedWinningScore == _winningScore)", StringComparison.Ordinal));
+		True(boardText.Contains("internal bool ConfigureForLaunch(GameBoardLaunchOptions options", StringComparison.Ordinal));
+		True(boardText.Contains("LaunchLifecycleState.Unconfigured", StringComparison.Ordinal));
+		True(boardText.Contains("LaunchLifecycleState.Configured", StringComparison.Ordinal));
+		True(boardText.Contains("LaunchLifecycleState.EnteredTree", StringComparison.Ordinal));
+		False(Regex.IsMatch(
+			projectionText,
+			@"\[Export[^\]]*\]\s*public\s+[^\n]+\s+(player_count|item_mode|winning_score|adventure_mode|solo_mode|network_session_id)\b"));
+		False(projectionText.Contains("set =>", StringComparison.Ordinal));
 	}
 
 	private static void DecorativeUiArtAvoidsUnconditionalPerFrameRedraws()
@@ -137,23 +142,27 @@ internal static partial class Program
 	private static void GameBoardDefersModeSpecificResourceLoadsUntilNeeded()
 	{
 		string repoRoot = FindRepositoryRoot();
-		string gameBoardText =
+		string gameBoardCoreText =
 			File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.cs"))
 			+ File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Exports.cs"));
+		string gameBoardText = string.Join(
+			'\n',
+			Directory.GetFiles(Path.Combine(repoRoot, "scripts"), "GameBoardScene*.cs")
+				.Select(File.ReadAllText));
 		string assetsText = File.ReadAllText(Path.Combine(repoRoot, "scripts", "GameBoardScene.Assets.cs"));
 
 		True(gameBoardText.Contains("EnsureAdventureModeResourcesLoaded();", StringComparison.Ordinal));
 		True(gameBoardText.Contains("EnsureItemModeResourcesLoaded();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadMantaRayTideShiftCycloneFxTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadLeafySeadragonBladeProjectileTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadBossKRoyalSeizureLanceTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadAdventureDamageEffectTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadItemCardTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadAttachmentCardOverlayTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadQuestionCardTransformTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadBombPairDestroyEffectTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadLensRevealWispTextures();", StringComparison.Ordinal));
-		False(gameBoardText.Contains("LoadMagnetCountdownFxTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadMantaRayTideShiftCycloneFxTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadLeafySeadragonBladeProjectileTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadBossKRoyalSeizureLanceTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadAdventureDamageEffectTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadItemCardTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadAttachmentCardOverlayTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadQuestionCardTransformTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadBombPairDestroyEffectTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadLensRevealWispTextures();", StringComparison.Ordinal));
+		False(gameBoardCoreText.Contains("LoadMagnetCountdownFxTextures();", StringComparison.Ordinal));
 		True(assetsText.Contains("private void EnsureAdventureModeResourcesLoaded()", StringComparison.Ordinal));
 		True(assetsText.Contains("private void EnsureItemModeResourcesLoaded()", StringComparison.Ordinal));
 	}
@@ -207,7 +216,7 @@ internal static partial class Program
 
 		True(smokeText.Contains("IDLE_WINDOW_BEGIN", StringComparison.Ordinal));
 		True(smokeText.Contains("IDLE_WINDOW_END", StringComparison.Ordinal));
-		True(smokeText.Contains("debug_performance_trace", StringComparison.Ordinal));
+		True(smokeText.Contains("GameBoardSmokeFactory.configure_performance_trace(board, 0.0)", StringComparison.Ordinal));
 		True(runnerText.Contains("RenderPlayerHands", StringComparison.Ordinal));
 		True(runnerText.Contains("RenderTableCards", StringComparison.Ordinal));
 		True(runnerText.Contains("IDLE_WINDOW_BEGIN", StringComparison.Ordinal));

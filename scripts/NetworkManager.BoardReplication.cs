@@ -171,7 +171,7 @@ public partial class NetworkManager
 		}
 		StageBoardVisualEventForLocalHost(hostPayload);
 
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
 				IsHost,
@@ -375,7 +375,7 @@ public partial class NetworkManager
 
 		StageBoardVisualEventForLocalHost(payload);
 
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!NetworkReconnectRules.ShouldSendRealtimeBoardEventToPeer(
 				IsHost,
@@ -531,7 +531,7 @@ public partial class NetworkManager
 
 	private void SendCommittedBoardSnapshotsFromHost(INetworkAuthorityEndpoint gameBoard, int snapshotId)
 	{
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!player.IsConnected)
 			{

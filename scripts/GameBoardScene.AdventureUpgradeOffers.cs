@@ -196,6 +196,7 @@ public partial class GameBoardScene
 		}
 
 		_isResolvingAdventureUpgradeSelection = true;
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		try
 		{
 			while (PendingAdventureUpgradeTriggerCount > 0
@@ -285,12 +286,22 @@ public partial class GameBoardScene
 						replacedUpgradeId = currentUpgrades[replacementIndex].Id;
 					}
 
+					AdventureRunSessionStore.PreparedAdventureOperation<AdventureUpgradeGrantCommitResult> grantOperation =
+						store?.PrepareGrantUpgrade(
+							selectedDefinition.Id,
+							triggerSource,
+							replacedUpgradeId)
+						?? AdventureRunSessionStore.PreparedAdventureOperation<AdventureUpgradeGrantCommitResult>.Rejected(
+							AdventureRunWriteResult.SaveFailed,
+							static result => new AdventureUpgradeGrantCommitResult(
+								result,
+								AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
+								default,
+								null,
+								null));
 					AdventureSaveGateResult<AdventureUpgradeGrantCommitResult> grantGate =
-						await ExecuteAdventureSaveGateAsync(
-							() => GrantAdventureUpgrade(
-								selectedDefinition.Id,
-								triggerSource,
-								replacedUpgradeId),
+						await ExecutePreparedAdventureSaveGateAsync(
+							grantOperation,
 							result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 							result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 					if (!grantGate.Succeeded)

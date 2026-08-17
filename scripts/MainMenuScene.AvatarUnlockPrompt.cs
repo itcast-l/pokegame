@@ -11,36 +11,65 @@ public partial class MainMenuScene : Control
 	private CharacterAvatar? _avatarUnlockPromptAvatar;
 	private Tween? _avatarUnlockPromptTween;
 	private bool _isShowingAvatarUnlockPrompt;
+	private bool _isConsumingPendingAvatarUnlock;
 
-	private void ShowPendingAdventureAvatarUnlockPrompt()
+	private async void ShowPendingAdventureAvatarUnlockPrompt()
 	{
-		if (_isShowingAvatarUnlockPrompt)
+		if (_isShowingAvatarUnlockPrompt || _isConsumingPendingAvatarUnlock)
 		{
 			return;
 		}
+		if (!TryEnsureAvatarUnlockPrompt())
+		{
+			RestoreMainMenuAfterAvatarUnlockPromptFailure();
+			return;
+		}
 
-		string unlockedAvatarId = CharacterAvatarCatalog.ConsumePendingAdventureAvatarUnlock();
+		_isConsumingPendingAvatarUnlock = true;
+		SetMainMenuButtonsDisabled(true);
+		string unlockedAvatarId = string.Empty;
+		try
+		{
+			unlockedAvatarId = await CharacterAvatarCatalog.ConsumePendingAdventureAvatarUnlockAsync();
+		}
+		catch (System.Exception error)
+		{
+			GD.PushWarning($"Failed to consume pending adventure avatar unlock: {error.Message}");
+		}
+		finally
+		{
+			_isConsumingPendingAvatarUnlock = false;
+		}
+		if (!GodotObject.IsInstanceValid(this) || _isShowingAvatarUnlockPrompt)
+		{
+			return;
+		}
 		if (string.IsNullOrWhiteSpace(unlockedAvatarId))
 		{
+			RestoreMainMenuAfterAvatarUnlockPromptFailure();
 			return;
 		}
 
 		CharacterAvatarDefinition unlockedAvatar = CharacterAvatarCatalog.GetById(unlockedAvatarId);
 		if (unlockedAvatar.AdventureStageNumber <= 0)
 		{
+			RestoreMainMenuAfterAvatarUnlockPromptFailure();
 			return;
 		}
 
-		ShowAvatarUnlockPrompt(unlockedAvatar);
+		if (!TryShowAvatarUnlockPrompt(unlockedAvatar))
+		{
+			RestoreMainMenuAfterAvatarUnlockPromptFailure();
+		}
 	}
 
-	private void ShowAvatarUnlockPrompt(CharacterAvatarDefinition avatarDefinition)
+	private bool TryShowAvatarUnlockPrompt(CharacterAvatarDefinition avatarDefinition)
 	{
-		EnsureAvatarUnlockPrompt();
-		if (_avatarUnlockPromptRoot == null)
+		if (!TryEnsureAvatarUnlockPrompt())
 		{
-			return;
+			return false;
 		}
+		AvatarUnlockPrompt promptRoot = _avatarUnlockPromptRoot!;
 
 		_isShowingAvatarUnlockPrompt = true;
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
@@ -57,9 +86,9 @@ public partial class MainMenuScene : Control
 		}
 
 		_avatarUnlockPromptTween?.Kill();
-		_avatarUnlockPromptRoot.Visible = true;
-		_avatarUnlockPromptRoot.MouseFilter = MouseFilterEnum.Stop;
-		_avatarUnlockPromptRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+		promptRoot.Visible = true;
+		promptRoot.MouseFilter = MouseFilterEnum.Stop;
+		promptRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		if (_avatarUnlockPromptPanel != null)
 		{
 			_avatarUnlockPromptPanel.Scale = new Vector2(0.94f, 0.94f);
@@ -69,13 +98,14 @@ public partial class MainMenuScene : Control
 		_avatarUnlockPromptTween = CreateTween();
 		_avatarUnlockPromptTween.SetTrans(Tween.TransitionType.Cubic);
 		_avatarUnlockPromptTween.SetEase(Tween.EaseType.Out);
-		_avatarUnlockPromptTween.TweenProperty(_avatarUnlockPromptRoot, "modulate:a", 1.0f, AvatarUnlockPromptFadeSeconds);
+		_avatarUnlockPromptTween.TweenProperty(promptRoot, "modulate:a", 1.0f, AvatarUnlockPromptFadeSeconds);
 		if (_avatarUnlockPromptPanel != null)
 		{
 			_avatarUnlockPromptTween.Parallel().TweenProperty(_avatarUnlockPromptPanel, "scale", Vector2.One, AvatarUnlockPromptFadeSeconds);
 		}
 
 		_avatarUnlockPromptButton?.GrabFocus();
+		return true;
 	}
 
 	private void HideAvatarUnlockPrompt()
@@ -102,18 +132,18 @@ public partial class MainMenuScene : Control
 		CallDeferred(nameof(FocusInitialMainMenuButton));
 	}
 
-	private void EnsureAvatarUnlockPrompt()
+	private bool TryEnsureAvatarUnlockPrompt()
 	{
 		if (_avatarUnlockPromptRoot != null && GodotObject.IsInstanceValid(_avatarUnlockPromptRoot))
 		{
-			return;
+			return true;
 		}
 
 		PackedScene? promptScene = GD.Load<PackedScene>(AvatarUnlockPromptScenePath);
 		if (promptScene?.Instantiate() is not AvatarUnlockPrompt prompt)
 		{
 			GD.PushError($"Missing avatar unlock prompt scene: {AvatarUnlockPromptScenePath}");
-			return;
+			return false;
 		}
 
 		_avatarUnlockPromptRoot = prompt;
@@ -123,6 +153,13 @@ public partial class MainMenuScene : Control
 		_avatarUnlockPromptAvatar = prompt.UnlockedAvatar;
 		SuppressDefaultPressedSfx(_avatarUnlockPromptButton);
 		prompt.CloseRequested += HideAvatarUnlockPrompt;
+		return true;
+	}
+
+	private void RestoreMainMenuAfterAvatarUnlockPromptFailure()
+	{
+		SetMainMenuButtonsDisabled(false);
+		CallDeferred(nameof(FocusInitialMainMenuButton));
 	}
 
 	private void RefreshAvatarUnlockPromptText()

@@ -1,5 +1,7 @@
 extends RefCounted
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const MAX_WAIT_FRAMES := 3600
 
@@ -23,19 +25,13 @@ func create_board(
 		_fail("Failed to load scene: %s" % BOARD_SCENE_PATH)
 		return null
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, enemy_avatar_id)
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % BOARD_SCENE_PATH)
 		return null
 
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", solo_mode)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", enemy_avatar_id)
 	if not recording_setup_id.is_empty():
-		board.set("debug_recording_setup_id", recording_setup_id)
+		GameBoardSmokeFactory.configure_recording(board, recording_setup_id)
 	_tree.root.add_child(board)
 	await _tree.process_frame
 	await _tree.process_frame

@@ -376,7 +376,7 @@ public partial class GameBoardScene
 
 	private void AddAdventureTutorialHandRenderSignature(ref HashCode signature, int playerIndex)
 	{
-		signature.Add(_adventureTutorialFlow);
+		signature.Add(adventure_tutorial_flow);
 		signature.Add((int)GetAdventureTutorialPhase());
 		signature.Add(GetAdventureTutorialTourIndex());
 		signature.Add(playerIndex == MainPlayerIndex && TryGetAdventureTutorialAllowedHandIndex(out int handIndex) ? handIndex : -1);
@@ -385,7 +385,7 @@ public partial class GameBoardScene
 
 	private void AddAdventureTutorialTableRenderSignature(ref HashCode signature)
 	{
-		signature.Add(_adventureTutorialFlow);
+		signature.Add(adventure_tutorial_flow);
 		signature.Add((int)GetAdventureTutorialPhase());
 	}
 

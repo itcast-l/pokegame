@@ -49,9 +49,11 @@ internal static partial class Program
 		Godot.GD.ClearWarnings();
 		Godot.FileAccess.ClearTestState();
 		Godot.DirAccess.ClearTestState();
+		Godot.Time.ResetTestState();
 		SetStaticField(typeof(GameSaveStore), "_attemptedLegacyMigration", false);
 		SetStaticField(typeof(GameSaveStore), "_attemptedProgressProfileMigration", false);
 		SetStaticField(typeof(GameSaveStore), "_warnedMissingSaveManager", false);
+		GameSaveProfileWriteCoordinator.ResetForTests();
 	}
 
 	private static Godot.TestSaveManagerNode InstallSaveManagerForTests(string activeSlotId)

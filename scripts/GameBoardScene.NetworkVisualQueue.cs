@@ -4,7 +4,7 @@ using Godot;
 public partial class GameBoardScene
 {
 	// This is the trust-boundary representation. Godot Variants must not cross into playback.
-	private sealed record NetworkVisualEvent(
+	internal sealed record NetworkVisualEvent(
 		string Type, long AuthorityEpoch, long CheckpointId, long ActionId, int SnapshotId, int Generation, int Actor, int HandIndex, int TargetSeat,
 		int TargetHandIndex, int TableIndex, int DisplayIndex, int CaptureStartIndex, int MovedCount,
 		string CardCode, string ItemId, string Presentation, bool FaceUp, bool RequiresMagnet,
@@ -13,7 +13,7 @@ public partial class GameBoardScene
 		bool IsAuthorityHostVisualOnly = false,
 		Vector2 AuthorityHostStartGlobalPosition = default);
 
-	private readonly record struct NetworkCaptureRevealEntry(
+	internal readonly record struct NetworkCaptureRevealEntry(
 		int TableCardIndex,
 		string CardCode,
 		string[] AttachedItemCardIds,
@@ -52,9 +52,9 @@ public partial class GameBoardScene
 		if (!TryReadNetworkString(payload, NetworkBoardVisualEventTypes.EventTypeKey, out string type)
 			|| !IsKnownNetworkVisualEventType(type)
 			|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.SessionIdKey, NetworkProtocol.MaxSessionIdLength, out string sessionId)
-			|| !string.Equals(sessionId, _networkSessionId, StringComparison.Ordinal)
+			|| !string.Equals(sessionId, network_session_id, StringComparison.Ordinal)
 			|| !TryReadNetworkString(payload, NetworkBoardVisualEventTypes.MatchIdKey, MaxNetworkSessionIdLength, out string matchId)
-			|| !string.Equals(matchId, _networkMatchId, StringComparison.Ordinal)
+			|| !string.Equals(matchId, network_match_id, StringComparison.Ordinal)
 			|| !TryReadNetworkInt32(payload, NetworkBoardVisualEventTypes.SnapshotIdKey, 0, int.MaxValue, out int snapshotId)
 			|| !TryReadNetworkInt64(payload, NetworkBoardVisualEventTypes.CheckpointIdKey, 0, long.MaxValue, out long checkpointId)
 			|| !TryReadNetworkInt64(payload, NetworkBoardVisualEventTypes.AuthorityEpochKey, 0, long.MaxValue, out long authorityEpoch)

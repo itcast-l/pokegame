@@ -409,7 +409,7 @@ internal static partial class Program
 			"TrySubmitEndRealTurnRuleCommand(",
 			StringComparison.Ordinal);
 		int transactionIndex = method.IndexOf(
-			"store.ResolveRealTurnEnd(commitMissBandage)",
+			"store.PrepareResolveRealTurnEnd(commitMissBandage)",
 			StringComparison.Ordinal);
 		int captureOrdinalResetIndex = method.IndexOf(
 			"SuccessfulCapturesThisTurn = 0",

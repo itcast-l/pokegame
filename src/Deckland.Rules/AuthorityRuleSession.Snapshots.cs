@@ -51,6 +51,35 @@ public sealed partial class AuthorityRuleSession
 		return session;
 	}
 
+	public void RestoreMatchSnapshotPreservingAdventureTransaction(
+		MatchStateSnapshot snapshot)
+	{
+		ArgumentNullException.ThrowIfNull(snapshot);
+		SnapshotValidation.ValidateOrThrow(snapshot, nameof(snapshot));
+		if (snapshot.RandomState.State == 0)
+		{
+			throw new ArgumentException(
+				"The authority snapshot contains an invalid random state.",
+				nameof(snapshot));
+		}
+
+		// Adventure preparation owns the current random state until commit or abort.
+		// Restoring a match-only rollback point must not replace that state.
+		RestoreState(_state, snapshot);
+		_nextPresentationBarrierId = Math.Max(
+			1,
+			snapshot.PendingPresentationBarrierId + 1);
+		_appliedActionIds.Clear();
+		if (!snapshot.AppliedActionIds.IsDefaultOrEmpty)
+		{
+			_appliedActionIds.UnionWith(snapshot.AppliedActionIds);
+		}
+		_readModel = CreateReadModel(_state) with
+		{
+			Adventure = _adventureReadModel,
+		};
+	}
+
 
 	internal static void RestoreState(GameBoardState state, MatchStateSnapshot snapshot)
 	{

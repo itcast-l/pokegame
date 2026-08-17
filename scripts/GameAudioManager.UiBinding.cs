@@ -5,27 +5,82 @@ public partial class GameAudioManager
 {
 	private void BindUiBehaviorRecursive(Node node)
 	{
-		if (node is BaseButton button)
-		{
-			SuppressButtonTooltip(button);
-			button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
-			MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
-			CallDeferred(nameof(ApplyUnifiedButtonTextDeferred), button);
-			if (!_suppressPlayback)
-			{
-				BindButtonAudio(button);
-			}
-		}
-
-		if (!_suppressPlayback && node is Godot.Range range && node is not SpinBox)
-		{
-			BindRangeAudio(range);
-		}
-
+		BindUiBehaviorNode(node);
 		foreach (Node child in node.GetChildren())
 		{
 			BindUiBehaviorRecursive(child);
 		}
+	}
+
+	private void OnUiNodeAdded(Node node)
+	{
+		if (node is BaseButton || node is Godot.Range and not SpinBox)
+		{
+			QueueUiBehaviorBinding(node);
+		}
+	}
+
+	private void BindUiBehaviorNode(Node node)
+	{
+		if (!GodotObject.IsInstanceValid(node))
+		{
+			return;
+		}
+
+		if (!node.IsInsideTree())
+		{
+			QueueUiBehaviorBinding(node);
+			return;
+		}
+
+		if (node is BaseButton button)
+		{
+			SuppressButtonTooltip(button);
+			button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+			if (!button.HasMeta(UiStyleBoundMeta))
+			{
+				button.SetMeta(UiStyleBoundMeta, true);
+				MainMenuInteractiveStyle.ApplyUnifiedButtonText(button);
+			}
+			if (!button.HasMeta(UiDeferredStyleBoundMeta))
+			{
+				button.SetMeta(UiDeferredStyleBoundMeta, true);
+				CallDeferred(nameof(ApplyUnifiedButtonTextDeferred), button);
+			}
+			BindButtonAudio(button);
+		}
+
+		if (node is Godot.Range range && node is not SpinBox)
+		{
+			BindRangeAudio(range);
+		}
+	}
+
+	private void QueueUiBehaviorBinding(Node node)
+	{
+		if (node.HasMeta(UiBindingQueuedMeta))
+		{
+			return;
+		}
+
+		node.SetMeta(UiBindingQueuedMeta, true);
+		CallDeferred(nameof(BindUiBehaviorNodeDeferred), node);
+	}
+
+	private void BindUiBehaviorNodeDeferred(Node node)
+	{
+		if (!GodotObject.IsInstanceValid(node))
+		{
+			return;
+		}
+
+		node.RemoveMeta(UiBindingQueuedMeta);
+		if (!_uiBindingActive || !node.IsInsideTree())
+		{
+			return;
+		}
+
+		BindUiBehaviorNode(node);
 	}
 
 	private static void SuppressButtonTooltip(BaseButton button)
@@ -100,12 +155,12 @@ public partial class GameAudioManager
 
 	private void BindRangeAudio(Godot.Range range)
 	{
-		if (range.HasMeta(UiAudioBoundMeta))
+		if (range.HasMeta(UiRangeAudioBoundMeta))
 		{
 			return;
 		}
 
-		range.SetMeta(UiAudioBoundMeta, true);
+		range.SetMeta(UiRangeAudioBoundMeta, true);
 		range.ValueChanged += _ =>
 		{
 			if (!range.HasFocus() && !Input.IsMouseButtonPressed(MouseButton.Left))

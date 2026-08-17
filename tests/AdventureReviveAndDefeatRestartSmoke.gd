@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const PLAYER_AVATAR_PATH := "BoardCanvas/LayoutAreas/BottomPlayerArea/Player1AvatarArea/Player1Avatar"
@@ -77,7 +79,7 @@ func _run() -> void:
 	board = await _wait_for_board_scene()
 	if _failed or board == null:
 		return
-	if String(board.get("adventure_enemy_avatar_id")) != MIDDLE_STAGE_AVATAR_ID:
+	if GameBoardSmokeFactory.get_adventure_enemy_avatar_id(board) != MIDDLE_STAGE_AVATAR_ID:
 		_fail("Continue did not reopen the defeated middle stage")
 		return
 	if not await _wait_for_actionable_state(board):
@@ -110,7 +112,7 @@ func _run() -> void:
 	var restarted_board := await _wait_for_board_scene(FIRST_STAGE_AVATAR_ID)
 	if _failed or restarted_board == null:
 		return
-	if String(restarted_board.get("adventure_enemy_avatar_id")) != FIRST_STAGE_AVATAR_ID:
+	if GameBoardSmokeFactory.get_adventure_enemy_avatar_id(restarted_board) != FIRST_STAGE_AVATAR_ID:
 		_fail("Second defeat did not switch to the first main stage")
 		return
 	var restarted := restarted_board.call("DebugGetAdventureRunStateSnapshot") as Dictionary
@@ -134,13 +136,10 @@ func _instantiate_board(avatar_id: String) -> Node:
 	if packed_scene == null:
 		_fail("Failed to load board scene")
 		return null
-	var board := packed_scene.instantiate()
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", FORCED_VICTORY_POINTS)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", avatar_id)
+	var board := GameBoardSmokeFactory.create_adventure(
+		packed_scene,
+		avatar_id,
+		FORCED_VICTORY_POINTS)
 	root.add_child(board)
 	current_scene = board
 	await process_frame
@@ -254,7 +253,7 @@ func _wait_for_board_scene(expected_avatar_id: String = "") -> Node:
 		var scene := current_scene
 		if scene != null and is_instance_valid(scene) and scene.scene_file_path == BOARD_SCENE_PATH \
 				and scene.has_method("DebugGetAdventureRunStateSnapshot") \
-				and (expected_avatar_id.is_empty() or String(scene.get("adventure_enemy_avatar_id")) == expected_avatar_id):
+				and (expected_avatar_id.is_empty() or GameBoardSmokeFactory.get_adventure_enemy_avatar_id(scene) == expected_avatar_id):
 			return scene
 	_fail("Timed out waiting for board scene")
 	return null

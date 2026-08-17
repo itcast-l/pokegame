@@ -6,6 +6,8 @@ extends Node
 signal save_started(slot_id: StringName)
 signal save_completed(slot_id: StringName)
 signal save_failed(slot_id: StringName, error: int)
+signal async_save_finished(request_id: int, slot_id: StringName, error: int)
+signal async_flush_finished(request_id: int, error: int)
 signal load_started(slot_id: StringName)
 signal load_completed(slot_id: StringName, data: Dictionary)
 signal load_failed(slot_id: StringName, error: int)
@@ -50,6 +52,17 @@ var _kv_registered_defaults: Dictionary = {}
 var _schema_migrations: Array = []
 var _dirty_pending: bool = false
 var _dirty_timer: Timer
+var _kv_version: int = 0
+var _async_queue: Array[Dictionary] = []
+var _async_active_job: Dictionary = {}
+var _async_request_ids: Dictionary = {}
+var _next_internal_request_id: int = -1
+var _accepting_async_writes: bool = true
+var _application_quit_in_progress: bool = false
+var _application_flush_results: Dictionary = {}
+var _debug_async_physical_write_count: int = 0
+var _debug_async_worker_delay_msec: int = 0
+var _debug_async_failures_remaining: int = 0
 ## Flat key path (e.g. [code]player.tint[/code]) → [constant KV_EDITOR_HINT_COLOR]. Persisted next to saves as [code].savestate_editor_hints.json[/code].
 var _editor_flat_hints: Dictionary = {}
 ## Slots whose primary file could not be repaired after backup recovery. Their next successful save must preserve the existing valid backup.
@@ -62,13 +75,71 @@ var _slots_without_trusted_primary: Dictionary = {}
 
 
 func _ready() -> void:
+	if is_inside_tree():
+		get_tree().auto_accept_quit = false
 	_ensure_save_root()
 	if not ProjectSettings.has_setting(SETTING_SCHEMA_VERSION):
 		ProjectSettings.set_setting(SETTING_SCHEMA_VERSION, 1)
 	_register_reserved_kv_slot()
 	_register_live_edit_debugger_capture()
 	_setup_dirty_timer()
+	async_flush_finished.connect(_on_application_flush_finished)
 	_load_editor_hints_from_disk()
+
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_CLOSE_REQUEST:
+		return
+	var scene := get_tree().current_scene
+	if scene != null and scene.has_method("RequestApplicationQuit"):
+		scene.call_deferred("RequestApplicationQuit")
+		return
+	call_deferred("request_application_quit")
+
+
+func request_application_quit() -> void:
+	if _application_quit_in_progress:
+		return
+	_application_quit_in_progress = true
+	begin_async_shutdown()
+	call_deferred("_complete_application_quit")
+
+
+func _complete_application_quit() -> void:
+	var deadline_msec := Time.get_ticks_msec() + 10000
+	var flush_request_id := _allocate_internal_request_id()
+	var flush_queue_error := flush_dirty_async(flush_request_id)
+	if flush_queue_error == OK:
+		var flush_result := await _wait_for_application_flush(flush_request_id, deadline_msec)
+		if flush_result != OK:
+			push_error("SaveState: deferred settings shutdown flush failed or timed out: %d" % flush_result)
+	else:
+		push_error("SaveState: failed to queue deferred settings shutdown flush: %d" % flush_queue_error)
+
+	var barrier_request_id := _allocate_internal_request_id()
+	var barrier_queue_error := queue_flush_barrier(barrier_request_id)
+	if barrier_queue_error == OK:
+		var barrier_result := await _wait_for_application_flush(barrier_request_id, deadline_msec)
+		if barrier_result != OK:
+			push_error("SaveState: queued save shutdown barrier failed or timed out: %d" % barrier_result)
+	else:
+		push_error("SaveState: failed to queue shutdown barrier: %d" % barrier_queue_error)
+
+	_application_flush_results.clear()
+	get_tree().quit()
+
+
+func _wait_for_application_flush(request_id: int, deadline_msec: int) -> int:
+	while not _application_flush_results.has(request_id):
+		if Time.get_ticks_msec() >= deadline_msec:
+			return ERR_TIMEOUT
+		await get_tree().process_frame
+	return int(_application_flush_results.get(request_id, FAILED))
+
+
+func _on_application_flush_finished(request_id: int, error: int) -> void:
+	if _application_quit_in_progress and request_id < 0:
+		_application_flush_results[request_id] = error
 
 
 func _register_live_edit_debugger_capture() -> void:
@@ -131,7 +202,10 @@ func set_value(key: StringName, value: Variant) -> void:
 				% [str(key), str(exp_type), str(typeof(value))]
 			)
 			return
+	if _kv_data.has(key) and _kv_data[key] == value:
+		return
 	_kv_data[key] = value
+	_kv_version += 1
 
 
 func get_value(key: StringName, default: Variant = null) -> Variant:
@@ -255,12 +329,15 @@ func clear_schema_migrations() -> void:
 
 
 ## v1.2: debounced autosave — call instead of [method persist] every frame. Batches rapid changes into one flush after [member auto_save_debounce_sec] seconds of quiet.
-func mark_dirty() -> void:
+func mark_dirty() -> Error:
+	if not _accepting_async_writes:
+		return ERR_UNAVAILABLE
 	_dirty_pending = true
 	_dirty_timer.stop()
 	var wait := maxf(0.05, auto_save_debounce_sec)
 	_dirty_timer.wait_time = wait
 	_dirty_timer.start()
+	return OK
 
 
 func _setup_dirty_timer() -> void:
@@ -274,16 +351,27 @@ func _setup_dirty_timer() -> void:
 func _on_dirty_timer_timeout() -> void:
 	if not _dirty_pending:
 		return
-	_dirty_pending = false
 	_execute_debounced_persist()
 
 
-## Virtual: Pro overrides to call [method persist_async] instead of sync [method persist].
+## Debounced writes use the same FIFO as explicit async profile saves.
 func _execute_debounced_persist() -> void:
+	_hydrate_kv_if_needed()
+	var data := _kv_data.duplicate(true)
 	if dirty_persist_includes_saveables:
-		var _e := persist_including_saveables()
-	else:
-		var _e2 := persist()
+		save_requested.emit()
+		data["__saveables"] = gather_saveable_snapshots()
+	var request_id := _allocate_internal_request_id()
+	var err := _enqueue_async_save(
+		request_id,
+		KV_SLOT_ID,
+		data,
+		"save",
+		false,
+		_kv_version
+	)
+	if err != OK:
+		_restart_dirty_timer()
 
 
 func _value_matches_registered_type(value: Variant, expected: int) -> bool:
@@ -350,19 +438,32 @@ func export_slot_to_json(slot_id: StringName, output_json_path: String) -> Error
 ## Writes the KV dictionary to the reserved [member KV_SLOT_ID] file (sync, atomic).
 func persist() -> Error:
 	_hydrate_kv_if_needed()
-	return save_to_slot_sync(KV_SLOT_ID, _kv_data)
+	_dirty_timer.stop()
+	var snapshot_version := _kv_version
+	var err := save_to_slot_sync(KV_SLOT_ID, _kv_data)
+	if err == OK and snapshot_version == _kv_version:
+		_dirty_pending = false
+	elif _dirty_pending:
+		_restart_dirty_timer()
+	return err
 
 
 ## Clears in-memory KV and will reload from disk on next access.
 func clear_kv_cache() -> void:
 	_kv_data.clear()
 	_kv_hydrated = false
+	_kv_version += 1
+	_dirty_pending = false
+	_dirty_timer.stop()
 
 
 ## Replace KV data entirely (e.g. after loading a custom slot). Does not write disk until [method persist].
 func replace_kv_data(data: Dictionary) -> void:
 	_kv_data = data.duplicate(true)
 	_kv_hydrated = true
+	_kv_version += 1
+	_dirty_pending = false
+	_dirty_timer.stop()
 
 
 ## If [param main_save_path] is [code]user://.../slot_0.bin[/code], a sibling [code]slot_0.bin.bak[/code] replaces it. Used by the editor Restore button.
@@ -385,9 +486,16 @@ func gather_saveable_snapshots() -> Dictionary:
 func persist_including_saveables() -> Error:
 	save_requested.emit()
 	_hydrate_kv_if_needed()
+	_dirty_timer.stop()
+	var snapshot_version := _kv_version
 	var merged := _kv_data.duplicate(true)
 	merged["__saveables"] = gather_saveable_snapshots()
-	return save_to_slot_sync(KV_SLOT_ID, merged)
+	var err := save_to_slot_sync(KV_SLOT_ID, merged)
+	if err == OK and snapshot_version == _kv_version:
+		_dirty_pending = false
+	elif _dirty_pending:
+		_restart_dirty_timer()
+	return err
 
 
 ## Loads slot data, emits [signal load_requested], applies [Saveable] snapshots under [code]__saveables[/code].
@@ -513,6 +621,9 @@ func register_slot(slot: SaveSlot) -> void:
 
 
 func unregister_slot(slot_id: StringName) -> void:
+	if _has_pending_async_write_for_slot(slot_id):
+		push_error("SaveState: cannot unregister slot '%s' while an async write is pending." % str(slot_id))
+		return
 	_slots.erase(slot_id)
 	_slots_without_trusted_primary.erase(slot_id)
 
@@ -531,9 +642,246 @@ func get_current_schema_version() -> int:
 	return 1
 
 
+## Queues a deep-copied slot snapshot. Completion is correlated by [param request_id].
+func queue_save_to_slot(request_id: int, slot_id: StringName, data: Dictionary) -> Error:
+	return _enqueue_async_save(request_id, slot_id, data, "save", false, _kv_version)
+
+
+## Queues a FIFO barrier. Its completion means every request queued before it has finished.
+func queue_flush_barrier(request_id: int) -> Error:
+	# A barrier never adds a write and is also required by the shutdown path
+	# after new writes have been disabled.
+	return _enqueue_flush_barrier(request_id)
+
+
+## Flushes the current KV snapshot without blocking the main thread.
+func flush_dirty_async(request_id: int) -> Error:
+	if request_id == 0:
+		return ERR_INVALID_PARAMETER
+	_hydrate_kv_if_needed()
+	_dirty_timer.stop()
+	if not _dirty_pending:
+		return _enqueue_flush_barrier(request_id)
+	var data := _kv_data.duplicate(true)
+	if dirty_persist_includes_saveables:
+		save_requested.emit()
+		data["__saveables"] = gather_saveable_snapshots()
+	return _enqueue_async_save(
+		request_id,
+		KV_SLOT_ID,
+		data,
+		"flush",
+		true,
+		_kv_version
+	)
+
+
+func begin_async_shutdown() -> void:
+	_accepting_async_writes = false
+	_dirty_timer.stop()
+
+
+func is_async_write_idle() -> bool:
+	return _async_active_job.is_empty() and _async_queue.is_empty()
+
+
+func get_async_queue_depth() -> int:
+	return _async_queue.size() + (0 if _async_active_job.is_empty() else 1)
+
+
+func configure_async_write_debug(delay_msec: int, failure_count: int = 0) -> void:
+	_debug_async_worker_delay_msec = maxi(0, delay_msec)
+	_debug_async_failures_remaining = maxi(0, failure_count)
+
+
+func get_async_physical_write_count_debug() -> int:
+	return _debug_async_physical_write_count
+
+
+func _enqueue_async_save(
+		request_id: int,
+		slot_id: StringName,
+		data: Dictionary,
+		completion_kind: String,
+		allow_during_shutdown: bool,
+		kv_version: int
+	) -> Error:
+	if request_id == 0:
+		return ERR_INVALID_PARAMETER
+	if not allow_during_shutdown and not _accepting_async_writes:
+		return ERR_UNAVAILABLE
+	if _async_request_ids.has(request_id):
+		return ERR_ALREADY_IN_USE
+	var slot: SaveSlot = _slots.get(slot_id) as SaveSlot
+	if slot == null:
+		return ERR_DOES_NOT_EXIST
+
+	var job := {
+		"kind": "save",
+		"completion_kind": completion_kind,
+		"request_id": request_id,
+		"slot_id": slot_id,
+		"path": slot.get_file_path(save_root, use_json),
+		"data": data.duplicate(true),
+		"use_json": use_json,
+		"backup_on_commit": backup_on_commit,
+		"format_version": FORMAT_VERSION,
+		"schema_version": get_current_schema_version(),
+		"kv_version": kv_version if slot_id == KV_SLOT_ID else -1,
+		"worker_delay_msec": _debug_async_worker_delay_msec,
+	}
+	_async_request_ids[request_id] = true
+	_async_queue.append(job)
+	_pump_async_queue()
+	return OK
+
+
+func _enqueue_flush_barrier(request_id: int) -> Error:
+	if request_id == 0:
+		return ERR_INVALID_PARAMETER
+	if _async_request_ids.has(request_id):
+		return ERR_ALREADY_IN_USE
+	_async_request_ids[request_id] = true
+	_async_queue.append({
+		"kind": "barrier",
+		"request_id": request_id,
+	})
+	_pump_async_queue()
+	return OK
+
+
+func _pump_async_queue() -> void:
+	if not _async_active_job.is_empty() or _async_queue.is_empty():
+		return
+
+	var job: Dictionary = _async_queue.pop_front()
+	if str(job.get("kind", "")) == "barrier":
+		var barrier_request_id := int(job.get("request_id", 0))
+		_async_request_ids.erase(barrier_request_id)
+		async_flush_finished.emit(barrier_request_id, OK)
+		call_deferred("_pump_async_queue")
+		return
+
+	var slot_id: StringName = job.get("slot_id", StringName()) as StringName
+	job["rotate_backup"] = bool(job.get("backup_on_commit", false)) \
+		and not _slots_without_trusted_primary.has(slot_id)
+	job["forced_error"] = OK
+	if _debug_async_failures_remaining > 0:
+		_debug_async_failures_remaining -= 1
+		job["forced_error"] = ERR_CANT_CREATE
+	_async_active_job = job
+	_debug_async_physical_write_count += 1
+	save_started.emit(slot_id)
+	var task_id := WorkerThreadPool.add_task(
+		_run_async_save_job.bind(job),
+		false,
+		"SaveState FIFO write"
+	)
+	if task_id < 0:
+		call_deferred("_complete_async_save_job", job, ERR_CANT_CREATE)
+
+
+func _run_async_save_job(job: Dictionary) -> void:
+	var delay_msec := int(job.get("worker_delay_msec", 0))
+	if delay_msec > 0:
+		OS.delay_msec(delay_msec)
+	var err := int(job.get("forced_error", OK))
+	if err == OK:
+		var schema_version := int(job.get("schema_version", 1))
+		var json_format := bool(job.get("use_json", false))
+		var envelope := {
+			"schema_version": schema_version,
+			"data": job.get("data", {}) as Dictionary,
+		}
+		var payload: PackedByteArray = JSON.stringify(envelope).to_utf8_buffer() \
+			if json_format else var_to_bytes(envelope)
+		var flags := FLAG_JSON if json_format else 0
+		var file_bytes := _compose_file_bytes(
+			int(job.get("format_version", FORMAT_VERSION)),
+			schema_version,
+			flags,
+			payload
+		)
+		var final_bytes := _pre_write_transform(file_bytes)
+		err = AtomicWriter.write_atomic(
+			str(job.get("path", "")),
+			final_bytes,
+			bool(job.get("rotate_backup", false))
+		)
+	call_deferred("_complete_async_save_job", job, err)
+
+
+func _complete_async_save_job(job: Dictionary, error: int) -> void:
+	if _async_active_job.is_empty() \
+		or int(_async_active_job.get("request_id", 0)) != int(job.get("request_id", 0)):
+		return
+
+	var request_id := int(job.get("request_id", 0))
+	var slot_id: StringName = job.get("slot_id", StringName()) as StringName
+	var completion_kind := str(job.get("completion_kind", "save"))
+	if error == OK:
+		_slots_without_trusted_primary.erase(slot_id)
+		var slot: SaveSlot = _slots.get(slot_id) as SaveSlot
+		if slot != null:
+			slot.last_modified_unix = int(Time.get_unix_time_from_system())
+			slot.file_schema_version = int(job.get("schema_version", get_current_schema_version()))
+		if slot_id == KV_SLOT_ID:
+			var snapshot_version := int(job.get("kv_version", -1))
+			if snapshot_version == _kv_version:
+				_dirty_pending = false
+			else:
+				_dirty_pending = true
+				_restart_dirty_timer()
+		save_completed.emit(slot_id)
+	else:
+		if slot_id == KV_SLOT_ID:
+			_dirty_pending = true
+			_restart_dirty_timer()
+		save_failed.emit(slot_id, error)
+
+	_async_active_job = {}
+	_async_request_ids.erase(request_id)
+	if completion_kind == "flush":
+		async_flush_finished.emit(request_id, error)
+	else:
+		async_save_finished.emit(request_id, slot_id, error)
+	_pump_async_queue()
+
+
+func _has_pending_async_write_for_slot(slot_id: StringName) -> bool:
+	if not _async_active_job.is_empty() \
+		and str(_async_active_job.get("kind", "")) == "save" \
+		and (_async_active_job.get("slot_id", StringName()) as StringName) == slot_id:
+		return true
+	for job in _async_queue:
+		if str(job.get("kind", "")) == "save" \
+			and (job.get("slot_id", StringName()) as StringName) == slot_id:
+			return true
+	return false
+
+
+func _allocate_internal_request_id() -> int:
+	var request_id := _next_internal_request_id
+	_next_internal_request_id -= 1
+	if _next_internal_request_id == 0:
+		_next_internal_request_id = -1
+	return request_id
+
+
+func _restart_dirty_timer() -> void:
+	if not _dirty_pending or not _accepting_async_writes:
+		return
+	_dirty_timer.stop()
+	_dirty_timer.wait_time = maxf(0.05, auto_save_debounce_sec)
+	_dirty_timer.start()
+
+
 ## Synchronous save (Lite). Override [method _pre_write_transform] in Pro for encryption.
 func save_to_slot_sync(slot_id: StringName, data: Dictionary) -> Error:
 	save_started.emit(slot_id)
+	if _has_pending_async_write_for_slot(slot_id):
+		save_failed.emit(slot_id, ERR_BUSY)
+		return ERR_BUSY
 	var slot: SaveSlot = _slots.get(slot_id) as SaveSlot
 	if slot == null:
 		save_failed.emit(slot_id, ERR_DOES_NOT_EXIST)

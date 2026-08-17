@@ -14,21 +14,22 @@ internal static partial class Program
 	{
 		string root = FindRepositoryRoot();
 		string managerSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.cs"));
+		string rosterSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkLobbyRoster.cs"));
 		string lobbySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.LobbyMembership.cs"));
 		string recoverySource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.SessionRecoveryRpc.cs"));
 		string lifecycleSource = File.ReadAllText(Path.Combine(root, "scripts", "NetworkManager.MatchLifecycle.cs"));
 
-		True(managerSource.Contains("Dictionary<int, bool> _pendingLobbyReadyByPeerId", StringComparison.Ordinal));
+		True(rosterSource.Contains("Dictionary<int, bool> _pendingReadyByPeerId", StringComparison.Ordinal));
 		True(lobbySource.Contains("LobbyReadyIntentDisposition.DeferUntilCredentialsAcknowledged", StringComparison.Ordinal));
-		True(lobbySource.Contains("_pendingLobbyReadyByPeerId[peerId] = isReady;", StringComparison.Ordinal));
+		True(lobbySource.Contains("_lobbyRoster.SetPendingReady(peerId, isReady);", StringComparison.Ordinal));
 		int credentialsCommitted = recoverySource.IndexOf("CredentialsAcknowledged = true", StringComparison.Ordinal);
 		int credentialCommitRpc = recoverySource.IndexOf("MethodName.RpcSeatCredentialCommitted", StringComparison.Ordinal);
 		int pendingReadyApplied = recoverySource.IndexOf("TryApplyPendingPlayerReadyIntent(senderPeerId);", StringComparison.Ordinal);
 		True(credentialsCommitted >= 0
 			&& credentialCommitRpc > credentialsCommitted
 			&& pendingReadyApplied > credentialCommitRpc);
-		True(managerSource.Contains("_pendingLobbyReadyByPeerId.Remove((int)peerId);", StringComparison.Ordinal));
-		True(lifecycleSource.Contains("_pendingLobbyReadyByPeerId.Clear();", StringComparison.Ordinal));
+		True(managerSource.Contains("_lobbyRoster.RemovePendingReady((int)peerId);", StringComparison.Ordinal));
+		True(lifecycleSource.Contains("_lobbyRoster.ClearPendingReady();", StringComparison.Ordinal));
 	}
 
 	private static void LocalLobbyReadyIntentRetriesUntilAuthorityEcho()

@@ -184,7 +184,7 @@ public partial class AdventureAvatarMenuScene
 
 	private string GetInitialAdventureId()
 	{
-		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		GameSaveStore.GameProgressData profile = _profileSnapshot;
 		if (profile.HighestCompletedMainAdventureStage > 0
 			|| !string.IsNullOrWhiteSpace(profile.PendingAdventureRunJson))
 		{

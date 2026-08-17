@@ -202,8 +202,7 @@ public partial class NetworkManager
 		Multiplayer.MultiplayerPeer = null;
 		_enetPeer = null;
 		_steamPeer = null;
-		_reconnectAttemptInFlight = false;
-		_reconnectAttemptStartedAt = -1.0;
+		_reconnectCoordinator.Reset();
 	}
 
 	private void HandleMigrationConnectionFailure()
@@ -519,10 +518,10 @@ public partial class NetworkManager
 			},
 			RoomPasswordRequired = checkpoint.RoomPasswordVerifierVersion > 0,
 		};
-		_players.Clear();
+		var restoredPlayers = new List<NetworkPlayerPublicState>(checkpoint.Roster.Count);
 		foreach (NetworkMigrationRosterEntry entry in checkpoint.Roster.OrderBy(entry => entry.SeatIndex))
 		{
-			_players.Add(new NetworkPlayerPublicState(
+			restoredPlayers.Add(new NetworkPlayerPublicState(
 				entry.PeerId,
 				entry.PlayerSessionId,
 				entry.DisplayName,
@@ -536,9 +535,8 @@ public partial class NetworkManager
 				CredentialsAcknowledged = entry.CredentialsAcknowledged,
 			});
 		}
-		_seatControlStates.Clear();
-		_reconnectClaimsBySeat.Clear();
-		_issuedSeatCredentialsBySeat.Clear();
+		var restoredSeatControls = new List<SeatControlState>(checkpoint.SeatControls.Count);
+		var restoredReconnectClaims = new Dictionary<int, ReconnectClaimRecord>();
 		foreach (NetworkAuthoritySeatControl control in checkpoint.SeatControls.OrderBy(control => control.SeatIndex))
 		{
 			var state = new SeatControlState(
@@ -551,13 +549,13 @@ public partial class NetworkManager
 				control.PendingCredentialVerifier,
 				control.PendingCredentialGeneration,
 				control.PendingCredentialPeerId);
-			_seatControlStates.Add(state);
+			restoredSeatControls.Add(state);
 			NetworkAuthorityReconnectClaim? serializedClaim = checkpoint.ReconnectClaims
 				.FirstOrDefault(claim => claim.SeatIndex == control.SeatIndex);
 			if (serializedClaim != null
 				&& Enum.TryParse(serializedClaim.ClaimState, true, out ReconnectClaimState claimState))
 			{
-				_reconnectClaimsBySeat[control.SeatIndex] = new ReconnectClaimRecord(
+				restoredReconnectClaims[control.SeatIndex] = new ReconnectClaimRecord(
 					serializedClaim.MatchId,
 					serializedClaim.SeatIndex,
 					serializedClaim.CredentialGeneration,
@@ -567,9 +565,14 @@ public partial class NetworkManager
 			}
 			else
 			{
-				_reconnectClaimsBySeat[control.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
+				restoredReconnectClaims[control.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, state);
 			}
 		}
+		_lobbyRoster.ReplaceRosterState(
+			restoredPlayers,
+			restoredSeatControls,
+			restoredReconnectClaims,
+			new Dictionary<int, string>());
 		_lastAcceptedClientActionIds.Clear();
 		foreach (KeyValuePair<int, long> pair in checkpoint.LastAcceptedClientActionIds)
 		{
@@ -585,35 +588,41 @@ public partial class NetworkManager
 		}
 
 		int localPeerId = 1;
-		for (int index = 0; index < _players.Count; index++)
+		for (int index = 0; index < _lobbyRoster.Players.Count; index++)
 		{
-			NetworkPlayerPublicState player = _players[index];
+			NetworkPlayerPublicState player = _lobbyRoster.Players[index];
 			bool local = player.SeatIndex == candidateSeat;
-			_players[index] = player with
-			{
-				PeerId = local ? localPeerId : 0,
-				IsHost = local,
-				IsLocal = local,
-				IsConnected = local,
-			};
+			_lobbyRoster.SetPlayerAt(
+				index,
+				player with
+				{
+					PeerId = local ? localPeerId : 0,
+					IsHost = local,
+					IsLocal = local,
+					IsConnected = local,
+				});
 		}
 
-		for (int index = 0; index < _seatControlStates.Count; index++)
+		for (int index = 0; index < _lobbyRoster.SeatControls.Count; index++)
 		{
-			SeatControlState state = _seatControlStates[index];
+			SeatControlState state = _lobbyRoster.SeatControls[index];
 			if (state.SeatIndex == candidateSeat)
 			{
-				_seatControlStates[index] = state with { Mode = SeatControlMode.HumanConnected, PeerId = localPeerId };
+				_lobbyRoster.SetSeatControlAt(
+					index,
+					state with { Mode = SeatControlMode.HumanConnected, PeerId = localPeerId });
 			}
 			else
 			{
 				// The old peer ids are invalid on the new ENet server. Treat every
 				// remote seat as reclaimable until its session credential is presented.
-				_seatControlStates[index] = state with
-				{
-					Mode = SeatControlMode.AiProxyReclaimable,
-					PeerId = 0,
-				};
+				_lobbyRoster.SetSeatControlAt(
+					index,
+					state with
+					{
+						Mode = SeatControlMode.AiProxyReclaimable,
+						PeerId = 0,
+					});
 			}
 		}
 		EmitSeatControlStatesUpdated();

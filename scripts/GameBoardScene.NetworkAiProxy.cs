@@ -549,10 +549,12 @@ public partial class GameBoardScene
 
 		try
 		{
+#if DECKLAND_TEST_HOOKS
 			if (ConsumeDebugForceNextPendingHandLimitDiscardHeuristicFailure())
 			{
 				throw new InvalidOperationException("debug forced hand-limit discard heuristic failure");
 			}
+#endif
 
 			int targetHandIndex = PickRandomHandDisplayIndex(ownerSeatIndex);
 			if (IsValidHandLimitDiscardSelection(player, targetHandIndex))

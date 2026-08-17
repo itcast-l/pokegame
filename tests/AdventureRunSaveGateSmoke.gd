@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const TIMEOUT_SECONDS := 25.0
@@ -87,6 +89,48 @@ func _test_capture_retry_success() -> bool:
 		return false
 	if not bool(board.call("DebugCanMainPlayerAct")):
 		_fail("Input did not resume after the real capture retry succeeded")
+		return false
+	var committed_state := board.call("DebugGetAdventureSaveConsistencyState") as Dictionary
+	if not _assert_runtime_matches_disk(committed_state, "capture retry commit"):
+		return false
+	if int(committed_state.get("runtime_question_reward_count", -1)) != 10 \
+			or int(committed_state.get("runtime_permanent_capture_damage_bonus", -1)) != 5 \
+			or not bool(committed_state.get("runtime_final_double_active", false)):
+		_fail("Capture retry committed the wrong question-reward effect state")
+		return false
+	var revision_after_capture := int(committed_state.get("runtime_revision", -1))
+	var question_rewards_after_capture := int(
+		committed_state.get("runtime_question_reward_count", -1)
+	)
+	var permanent_bonus_after_capture := int(
+		committed_state.get("runtime_permanent_capture_damage_bonus", -1)
+	)
+	var half_rescue_after_capture := bool(
+		committed_state.get("runtime_half_health_rescue_used", false)
+	)
+	var quarter_rescue_after_capture := bool(
+		committed_state.get("runtime_quarter_health_rescue_used", false)
+	)
+	if not bool(board.call("DebugStartAdventureDirectDamageSaveGateProbe", 1)):
+		_fail("Failed to start the post-capture persistence regression probe")
+		return false
+	if not await _wait_for_persist_attempt(board, 3, "post-capture persistence"):
+		return false
+	if not await _wait_for_actionable(board, "post-capture persistence"):
+		return false
+	var follow_up_state := board.call("DebugGetAdventureSaveConsistencyState") as Dictionary
+	if not _assert_runtime_matches_disk(follow_up_state, "post-capture persistence"):
+		return false
+	if int(follow_up_state.get("runtime_revision", -1)) <= revision_after_capture \
+			or int(follow_up_state.get("runtime_question_reward_count", -1)) \
+				!= question_rewards_after_capture \
+			or int(follow_up_state.get("runtime_permanent_capture_damage_bonus", -1)) \
+				!= permanent_bonus_after_capture \
+			or bool(follow_up_state.get("runtime_half_health_rescue_used", false)) \
+				!= half_rescue_after_capture \
+			or bool(follow_up_state.get("runtime_quarter_health_rescue_used", false)) \
+				!= quarter_rescue_after_capture:
+		_fail("A later adventure write regressed the committed capture candidate")
 		return false
 	await _dispose_board(board)
 	return true
@@ -191,13 +235,7 @@ func _create_board(enemy_avatar_id: String) -> Node:
 	if packed_scene == null:
 		_fail("Failed to load board scene")
 		return null
-	var board := packed_scene.instantiate()
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", enemy_avatar_id)
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, enemy_avatar_id)
 	root.add_child(board)
 	current_scene = board
 	await process_frame
@@ -219,6 +257,7 @@ func _create_board(enemy_avatar_id: String) -> Node:
 		"DebugIsAdventureUpgradeSelectionVisible",
 		"DebugSelectAdventureUpgradeOption",
 		"DebugConfigureAdventureQuestionRewardTimingScenario",
+		"DebugGetAdventureSaveConsistencyState",
 		"DebugPlayFirstAvailableLocalMainPlayerHandCard",
 		"DebugStartAdventureDirectDamageSaveGateProbe",
 		"DebugWasAdventureDirectDamageSaveGateProbeApplied",
@@ -275,6 +314,23 @@ func _wait_for_exhaustion_before_menu(
 	if bool(board.call("DebugCanMainPlayerAct")):
 		_fail("Input resumed after %s exhausted all retries" % label)
 		return false
+	return true
+
+
+func _assert_runtime_matches_disk(state: Dictionary, label: String) -> bool:
+	if not bool(state.get("disk_valid", false)):
+		_fail("%s did not leave a readable adventure snapshot on disk" % label)
+		return false
+	for field in [
+		"question_reward_count",
+		"permanent_capture_damage_bonus",
+		"current_health",
+		"max_health",
+	]:
+		if int(state.get("runtime_%s" % field, -1)) \
+				!= int(state.get("disk_%s" % field, -2)):
+			_fail("%s diverged between runtime and disk for %s" % [label, field])
+			return false
 	return true
 
 

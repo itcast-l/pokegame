@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const PLAYER_AVATAR_PATH := "BoardCanvas/LayoutAreas/BottomPlayerArea/Player1AvatarArea/Player1Avatar"
 const ENEMY_PLAYER_INDEX := 1
@@ -19,14 +21,10 @@ func _run() -> void:
 		_fail("Failed to load board scene")
 		return
 
-	var board := packed_scene.instantiate()
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", FORCED_VICTORY_POINTS)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", true)
-	board.set("adventure_tutorial_mode", true)
-	board.set("adventure_enemy_avatar_id", "fish")
+	var board := GameBoardSmokeFactory.create_tutorial(
+		packed_scene,
+		"fish",
+		FORCED_VICTORY_POINTS)
 	root.add_child(board)
 	await process_frame
 

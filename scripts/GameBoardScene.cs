@@ -6,6 +6,13 @@ using Godot;
 
 public partial class GameBoardScene : Control
 {
+	private enum LaunchLifecycleState
+	{
+		Unconfigured,
+		Configured,
+		EnteredTree,
+	}
+
 	private const int MinPlayers = 2;
 	private const int MaxPlayers = 4;
 	private const string PokerCardsScenePath = "res://scenes/poker_cards_scene.tscn";
@@ -132,7 +139,8 @@ public partial class GameBoardScene : Control
 	private readonly GameBoardRuleReadProjection _ruleReadProjection = new();
 		private readonly GodotRuleRandomSource _ruleRandomSource;
 	private IPlayerInputHandler _playerInputHandler = default!;
-		private int _playerCount = MinPlayers;
+	private GameBoardRuntimeConfiguration? _runtimeConfiguration;
+	private LaunchLifecycleState _launchLifecycleState;
 			private readonly RandomNumberGenerator _rng = new();
 		private readonly RandomNumberGenerator _presentationRng = new();
 	private NetworkReplicaPresentationState? _networkReplicaPresentationState;
@@ -201,7 +209,6 @@ public partial class GameBoardScene : Control
 	private bool _activePlayerTooltipContentDirty;
 	private bool _activePlayerTooltipLayoutDirty;
 	private AdventureRunSessionStore? _adventureRunSessionStore;
-	private SelectionOverlaySession? _activeSelectionOverlaySession;
 	private Panel? _networkReconnectOverlayPanel;
 	private Label? _networkReconnectOverlayLabel;
 	private Panel? _networkReconnectNoticePanel;
@@ -274,29 +281,16 @@ public partial class GameBoardScene : Control
 	private readonly GameBoardLifecycleCoordinator _lifecycleCoordinator = new();
 	private MandatoryActionCountdownController? _mandatoryActionCountdownController;
 	private IDisposable? _mandatoryActionCountdownFrameRegistration;
+#if DECKLAND_TEST_HOOKS
 	private bool _debugMandatoryActionCountdownProbeActive;
+#endif
 	private bool _isResolvingMagnetAttachmentSelection;
 	private bool _isAnimatingMagnetAttachment;
 	private bool _isResolvingTurnSequence;
 	private bool _isProcessingCardPlay;
 	private bool _isOpeningDealAnimationPlaying;
 	private bool _isLeavingGame;
-	private bool _itemMode = true;
-	private bool _soloMode;
-	private GameModePolicy _gameModePolicy = GameModePolicy.LocalStandard;
-	private int _soloAiDifficulty = (int)SoloAiDifficulty.Medium;
-	private int _localPlayerIndex;
-	private string _networkSessionId = string.Empty;
-	private long _matchSeed;
-	private string _playerNamesCsv = string.Empty;
-	private string _playerAvatarIdsCsv = string.Empty;
-	private bool _networkWaitForInitialize;
 	private bool _networkBoardInitialized;
-	private string _networkMatchId = string.Empty;
-	private bool _adventureMode;
-	private bool _adventureTutorialMode;
-	private string _adventureTutorialFlow = "basic_capture";
-	private string _adventureEnemyAvatarId = "fish";
 	private readonly List<int> _openingVisibleHandCardCounts = new();
 	private readonly List<int> _openingVisiblePileCardCounts = new();
 	private int _winnerPlayerIndex => CurrentRuleReadModel?.WinnerSeat ?? -1;
@@ -321,12 +315,38 @@ public partial class GameBoardScene : Control
 	private Control _layoutAreas = default!;
 	private GameBoardNodeBindings _nodeBindings = default!;
 
-	public GameModePolicy ModePolicy => _gameModePolicy;
+	public GameModePolicy ModePolicy => global::GameModePolicy.FromKind(RuntimeConfiguration.Mode);
 
 	public GameBoardScene()
 	{
 		_ruleRandomSource = new GodotRuleRandomSource(_rng);
 	}
+
+	internal bool ConfigureForLaunch(GameBoardLaunchOptions options, out string error)
+	{
+		error = string.Empty;
+		if (_launchLifecycleState != LaunchLifecycleState.Unconfigured || IsInsideTree())
+		{
+			error = "GameBoardScene can only be configured once before entering the scene tree.";
+			return false;
+		}
+
+		try
+		{
+			_runtimeConfiguration = GameBoardRuntimeConfiguration.FromLaunchOptions(options);
+			_launchLifecycleState = LaunchLifecycleState.Configured;
+			return true;
+		}
+		catch (Exception exception)
+		{
+			error = exception.Message;
+			return false;
+		}
+	}
+
+	private GameBoardRuntimeConfiguration RuntimeConfiguration =>
+		_runtimeConfiguration
+		?? throw new InvalidOperationException("GameBoardScene has not been configured for launch.");
 
 	private static PackedScene? LoadCachedCoreScene(ref PackedScene? cachedScene, string path)
 	{
@@ -339,8 +359,27 @@ public partial class GameBoardScene : Control
 		return cachedScene;
 	}
 
+	public override void _EnterTree()
+	{
+		if (_launchLifecycleState != LaunchLifecycleState.Configured || _runtimeConfiguration == null)
+		{
+			GD.PushError("GameBoardScene entered the tree without a valid GameBoardLaunchOptions configuration.");
+			return;
+		}
+
+		_launchLifecycleState = LaunchLifecycleState.EnteredTree;
+	}
+
 	public override void _Ready()
 	{
+		if (_launchLifecycleState != LaunchLifecycleState.EnteredTree || _runtimeConfiguration == null)
+		{
+			SetProcess(false);
+			SetProcessInput(false);
+			SetProcessUnhandledInput(false);
+			return;
+		}
+
 		_lifecycleCoordinator.Start(
 			CreateRuleSessionAndFoundation,
 			BindBoardNodes,
@@ -352,13 +391,9 @@ public partial class GameBoardScene : Control
 	private void CreateRuleSessionAndFoundation()
 	{
 		_boardAsyncLifetime = new BoardAsyncLifetime(this);
-		_gameModePolicy = GameModePolicy.Derive(
-			!string.IsNullOrWhiteSpace(_networkSessionId),
-			_adventureMode,
-			_adventureTutorialMode,
-			_soloMode);
+		EnsureLocalPlayerNameConfigured();
 		InitializeRuleSessionForCurrentMode();
-		GetAdventureRunSessionStore()?.ConfigureForPolicy(_gameModePolicy);
+		GetAdventureRunSessionStore()?.ConfigureForPolicy(ModePolicy);
 		GameInputActions.EnsureRegistered();
 		Localization.EnsureLoaded();
 		ApplySavedLanguagePreference();
@@ -425,7 +460,7 @@ public partial class GameBoardScene : Control
 
 	private void StartBoardMatch()
 	{
-		if (_networkWaitForInitialize)
+		if (RuntimeConfiguration.NetworkWaitForInitialize)
 		{
 			GetNetworkManager()?.NotifyLocalBoardReady();
 		}
@@ -440,6 +475,15 @@ public partial class GameBoardScene : Control
 
 	internal bool TryApplyNetworkBoardInitialize(NetworkBoardInitialization initialization)
 	{
+		if (_launchLifecycleState != LaunchLifecycleState.EnteredTree
+			|| _runtimeConfiguration == null
+			|| _runtimeConfiguration.Mode != GameModeKind.NetworkStandard
+			|| !_runtimeConfiguration.NetworkWaitForInitialize
+			|| _networkBoardInitialized)
+		{
+			return false;
+		}
+
 		NetworkSessionConfig config = initialization.Config;
 		if (config.PlayerCount is < NetworkSessionDefaults.MinPlayers or > NetworkSessionDefaults.MaxPlayers
 			|| config.WinningScore is not (50 or 100 or 200)
@@ -453,16 +497,16 @@ public partial class GameBoardScene : Control
 			return false;
 		}
 
-		player_count = config.PlayerCount;
-		item_mode = config.ItemMode;
-		winning_score = config.WinningScore;
-		network_session_id = config.SessionId;
-		network_match_id = config.MatchId;
-		match_seed = config.MatchSeed;
-		local_player_index = initialization.LocalPlayerIndex;
-		player_names_csv = string.Join(',', initialization.PlayerNames);
-		player_avatar_ids_csv = string.Join(',', initialization.PlayerAvatarIds);
-		network_wait_for_initialize = false;
+		try
+		{
+			_runtimeConfiguration = _runtimeConfiguration.ApplyNetworkInitialization(initialization);
+		}
+		catch (Exception error)
+		{
+			GD.PushWarning($"Rejected network board initialization: {error.Message}");
+			return false;
+		}
+
 		RefreshNetworkReconnectOverlayIfNeeded();
 		if (IsNetworkMultiplayerMode() && !IsNetworkHost())
 		{
@@ -503,12 +547,12 @@ public partial class GameBoardScene : Control
 
 	private void ApplyMatchSeed()
 	{
-		if (_matchSeed == 0)
+		if (match_seed == 0)
 		{
 			return;
 		}
 
-		_rng.Seed = unchecked((ulong)_matchSeed);
+		_rng.Seed = unchecked((ulong)match_seed);
 	}
 
 	public override void _ExitTree()
@@ -627,10 +671,12 @@ public partial class GameBoardScene : Control
 		}
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsBoardFrameProcessing()
 	{
 		return IsProcessing();
 	}
+#endif
 
 	private void MarkSeatControlIndicatorsDirty()
 	{

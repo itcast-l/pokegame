@@ -145,11 +145,22 @@ public partial class MainMenuScene : Control
 	private string _selectedAvatarId = CharacterAvatarCatalog.DefaultAvatarId;
 	private string _playerName = PlayerNameRules.DefaultPlayerName;
 	private string _selectedMainMenuMusicTrack = string.Empty;
+	private bool _settingsPersistenceBaselineInitialized;
+	private float _persistedMasterVolume = DefaultMasterVolume;
+	private float _persistedMusicVolume = DefaultMusicVolume;
+	private bool _persistedMuteBgm = DefaultMuteBgm;
+	private bool _persistedMuteSfx = DefaultMuteSfx;
+	private bool _persistedFullscreen = DefaultFullscreen;
+	private Vector2I _persistedResolution = DefaultResolution;
+	private string _persistedLanguagePreference = Localization.DefaultLanguagePreference;
+	private string _persistedMainMenuMusicTrack = string.Empty;
+	private bool _inputBindingsDirty;
 	private bool _isSyncingSettingsControls;
 	private string? _pendingBindingActionId;
 	private GameInputActions.BindingSlot? _pendingBindingSlot;
 	private int _bindingCaptureEarliestFrame;
 	private bool _isStartingGameTransition;
+	private bool _quitInProgress;
 	private bool _isMenuCameraTransitioning;
 	private bool _hasAppliedWindowSettings;
 	private bool _lastAppliedFullscreen;
@@ -274,6 +285,12 @@ public partial class MainMenuScene : Control
 
 	public override void _Notification(int what)
 	{
+		if (what == NotificationWMCloseRequest)
+		{
+			QuitGame();
+			return;
+		}
+
 		if (what == NotificationTranslationChanged && IsNodeReady())
 		{
 			LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
@@ -375,6 +392,12 @@ public partial class MainMenuScene : Control
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
+		if (_isConsumingPendingAvatarUnlock && GameInputActions.IsCancelPressed(inputEvent))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+
 		if (TryHandleControlsBindingCapture(inputEvent))
 		{
 			return;

@@ -19,7 +19,7 @@ public partial class GameBoardScene
 
 	public bool DebugStartAdventureSaveGateProbe(int failuresBeforeSuccess)
 	{
-		if (_adventureSaveInProgress || _debugAdventureSaveGateProbeCompleted)
+		if (AdventureSaveInProgress || _debugAdventureSaveGateProbeCompleted)
 		{
 			return false;
 		}
@@ -42,7 +42,7 @@ public partial class GameBoardScene
 
 	public bool DebugIsAdventureSaveInProgress()
 	{
-		return _adventureSaveInProgress;
+		return AdventureSaveInProgress;
 	}
 
 	public int DebugGetAdventureSaveGateProbeAttemptCount()
@@ -52,7 +52,7 @@ public partial class GameBoardScene
 
 	public string DebugGetAdventureSaveStatusKey()
 	{
-		return _adventureSaveStatusLocalizationKey;
+		return AdventureSaveStatusLocalizationKey;
 	}
 
 	public bool DebugConfigureAdventurePersistFailures(int failureCount)
@@ -322,7 +322,7 @@ public partial class GameBoardScene
 
 	public bool DebugUnexpectedlyReleaseActiveSelectionOverlay()
 	{
-		SelectionOverlaySession? session = _activeSelectionOverlaySession;
+		SelectionOverlaySession? session = ActiveSelectionOverlaySession;
 		if (session == null || !IsInstanceValid(session.Root))
 		{
 			return false;

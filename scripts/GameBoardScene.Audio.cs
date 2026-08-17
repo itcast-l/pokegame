@@ -69,7 +69,7 @@ public partial class GameBoardScene
 
 		for (int playerIndex = 0; playerIndex < player_count; playerIndex++)
 		{
-			if (_playerScores[playerIndex] >= Mathf.CeilToInt(_winningScore * 0.75f))
+			if (_playerScores[playerIndex] >= Mathf.CeilToInt(winning_score * 0.75f))
 			{
 				return true;
 			}

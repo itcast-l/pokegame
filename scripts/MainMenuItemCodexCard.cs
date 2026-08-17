@@ -68,6 +68,7 @@ public partial class MainMenuItemCodexCard : Button
 		RefreshFeedback();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public Godot.Collections.Dictionary DebugGetCardState()
 	{
 		return new Godot.Collections.Dictionary
@@ -85,6 +86,7 @@ public partial class MainMenuItemCodexCard : Button
 			["focus_highlight_enabled"] = _focusHighlightEnabled,
 		};
 	}
+#endif
 
 	private void OnMouseEntered()
 	{

@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const TIMEOUT_SECONDS := 25.0
 
@@ -130,13 +132,7 @@ func _create_board(enemy_avatar_id: String) -> Node:
 	if packed == null:
 		_fail("Failed to load game board scene")
 		return null
-	var board := packed.instantiate()
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", enemy_avatar_id)
+	var board := GameBoardSmokeFactory.create_adventure(packed, enemy_avatar_id)
 	root.add_child(board)
 	await process_frame
 	for method in ["DebugArmCaptureBeforeApplyBarrier", "DebugArmCaptureAfterApplyBarrier", "DebugRestartMatchForCaptureOwnershipProbe", "DebugReplaceTableCardReference", "DebugConfigureDragonQuestionCaptureOwnershipProbe", "DebugStartCollectTableCaptureOwnershipProbe"]:
@@ -199,13 +195,17 @@ func _assert_required_source_guards() -> void:
 	var effects := FileAccess.get_file_as_string("res://scripts/GameBoardScene.EffectResolver.cs")
 	var commit_index := flow.find("commitImmediatelyBeforeApply?.Invoke();")
 	var capture_submit_index := flow.find("TrySubmitCaptureCardsRuleCommand(", commit_index)
+	var commit_to_submit_source := flow.substr(
+		commit_index,
+		capture_submit_index - commit_index
+	) if commit_index >= 0 and capture_submit_index >= commit_index else ""
 	if not card_play.contains("ResolvePlayedCardCaptureAsync(") \
 		or coordinator.count("expectedTableCardReferences:") < 1 \
 		or dragon.count("expectedTableCardReferences:") < 1 \
 		or effects.count("expectedTableCardReferences:") < 1 \
 		or commit_index < 0 \
 		or capture_submit_index < 0 \
-		or capture_submit_index - commit_index > 128 \
+		or commit_to_submit_source.contains("await ") \
 		or flow.contains("_captureStateService.ApplyCapture") \
 		or not coordinator.contains("captureResult.Aborted") \
 		or not dragon.contains("captureResult.Aborted") \

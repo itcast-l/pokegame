@@ -10,6 +10,44 @@ using Godot;
 
 public partial class GameBoardScene
 {
+	private void ClearAdventureUpgradeRun()
+	{
+		SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
+		ClearAdventureTraceHuntMarkerIntro();
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (store == null)
+		{
+			WarnMissingAdventureRunSessionStore("clear the adventure upgrade run");
+			return;
+		}
+
+		AdventureRunWriteResult result = store.ClearRun();
+		if (result != AdventureRunWriteResult.Succeeded)
+		{
+			GD.PushWarning($"Failed to clear adventure upgrade run: {result}");
+		}
+	}
+
+	private AdventureUpgradeGrantCommitResult GrantAdventureUpgrade(
+		string upgradeId,
+		AdventureUpgradeTriggerSource triggerSource,
+		string? replacedUpgradeId = null)
+	{
+		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		if (store == null)
+		{
+			WarnMissingAdventureRunSessionStore("record an acquired adventure upgrade");
+			return new AdventureUpgradeGrantCommitResult(
+				AdventureRunWriteResult.SaveFailed,
+				AdventureUpgradeAcquireResult.DeferredManifestUnavailable,
+				default,
+				null,
+				null);
+		}
+
+		return store.GrantUpgrade(upgradeId, triggerSource, replacedUpgradeId);
+	}
+
 	private bool DebugPrepareAdventureBattleForDeal()
 	{
 		if (!ShouldUseAdventureUpgradeSystem())
@@ -697,6 +735,46 @@ public partial class GameBoardScene
 		result["question_reward_count"] = runState.Effects.QuestionRewardCount;
 		result["permanent_capture_damage_bonus"] = runState.Effects.PermanentCaptureDamageBonus;
 		result["final_double_capture_damage_active"] = runState.Effects.FinalDoubleCaptureDamageActive;
+		return result;
+	}
+
+	public Godot.Collections.Dictionary DebugGetAdventureSaveConsistencyState()
+	{
+		var result = new Godot.Collections.Dictionary();
+		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
+		if (runState?.IsActive != true)
+		{
+			return result;
+		}
+
+		result["runtime_revision"] = runState.Revision;
+		result["runtime_question_reward_count"] = runState.Effects.QuestionRewardCount;
+		result["runtime_permanent_capture_damage_bonus"] =
+			runState.Effects.PermanentCaptureDamageBonus;
+		result["runtime_current_health"] = runState.CurrentHealth;
+		result["runtime_max_health"] = runState.MaxHealth;
+		result["runtime_final_double_active"] =
+			runState.Effects.FinalDoubleCaptureDamageActive;
+		result["runtime_half_health_rescue_used"] =
+			CurrentMatchFlowState.HalfHealthRescueUsed;
+		result["runtime_quarter_health_rescue_used"] =
+			CurrentMatchFlowState.QuarterHealthRescueUsed;
+
+		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		bool diskValid = AdventureUpgradeRunSnapshot.TryDeserialize(
+			profile.PendingAdventureRunJson,
+			out AdventureUpgradeRunSnapshot diskSnapshot,
+			out _,
+			out _);
+		result["disk_valid"] = diskValid;
+		if (diskValid)
+		{
+			result["disk_question_reward_count"] = diskSnapshot.QuestionRewardCount;
+			result["disk_permanent_capture_damage_bonus"] =
+				diskSnapshot.PermanentCaptureDamageBonus;
+			result["disk_current_health"] = diskSnapshot.CurrentHealth;
+			result["disk_max_health"] = diskSnapshot.MaxHealth;
+		}
 		return result;
 	}
 

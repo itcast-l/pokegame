@@ -107,10 +107,12 @@ public partial class MainMenuScene : Control
 				&& Mathf.Abs(joypadMotion.AxisValue) > 0.45f;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsPrimaryMenuFocusHighlightVisible()
 	{
 		return _primaryMenuFocusHighlightVisible;
 	}
+#endif
 
 	private void FocusInitialMainMenuButton()
 	{

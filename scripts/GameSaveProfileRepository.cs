@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 
 internal static class GameSaveProfileRepository
@@ -64,9 +65,41 @@ internal static GameSaveStore.GameProgressData LoadProfileRaw(Node saveManager, 
 		return progressData;
 	}
 
-internal static Error SaveProfileRaw(Node saveManager, string slotId, GameSaveStore.GameProgressData progressData)
+	internal static Error SaveProfileRaw(Node saveManager, string slotId, GameSaveStore.GameProgressData progressData)
+	{
+		GameSaveStore.GameProgressData normalizedProgress = PrepareForSave(progressData);
+		return SavePreparedProfileRaw(saveManager, slotId, normalizedProgress);
+	}
+
+	internal static Error SavePreparedProfileRaw(
+		Node saveManager,
+		string slotId,
+		GameSaveStore.GameProgressData preparedProgress)
 	{
 		EnsureProfileSlot(saveManager, slotId);
+		return (Error)saveManager.Call(
+			"save_to_slot_sync",
+			new StringName(slotId),
+			preparedProgress.ToDictionary()).AsInt32();
+	}
+
+internal static Task<Error> SaveProfileRawAsync(
+		Node saveManager,
+		string slotId,
+		GameSaveStore.GameProgressData progressData)
+	{
+		EnsureProfileSlot(saveManager, slotId);
+		GameSaveStore.GameProgressData normalizedProgress = PrepareForSave(progressData);
+
+		return GameSaveStore.QueueSlotSaveAsync(
+			saveManager,
+			slotId,
+			normalizedProgress.ToDictionary());
+	}
+
+	internal static GameSaveStore.GameProgressData PrepareForSave(
+		GameSaveStore.GameProgressData progressData)
+	{
 		GameSaveStore.GameProgressData normalizedProgress = progressData.Normalize();
 		long now = GameSaveStore.GetUnixTime();
 		if (normalizedProgress.CreatedUnixTime <= 0)
@@ -74,16 +107,11 @@ internal static Error SaveProfileRaw(Node saveManager, string slotId, GameSaveSt
 			normalizedProgress = normalizedProgress with { CreatedUnixTime = now };
 		}
 
-		normalizedProgress = normalizedProgress with
+		return normalizedProgress with
 		{
 			SchemaVersion = CurrentProgressSchemaVersion,
 			UpdatedUnixTime = now,
 		};
-
-		return (Error)saveManager.Call(
-			"save_to_slot_sync",
-			new StringName(slotId),
-			normalizedProgress.ToDictionary()).AsInt32();
 	}
 
 internal static string GetActiveProfileSlotIdRaw(Node saveManager)

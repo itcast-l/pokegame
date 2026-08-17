@@ -2,106 +2,115 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
-public partial class GameBoardScene
+internal enum SelectionOverlayKind
 {
-	private enum SelectionOverlayKind
+	ItemSelection = 0,
+	AdventureUpgrade = 1,
+	QuestionRejudge = 2,
+	AdventureUpgradeReplacement = 3,
+}
+
+internal sealed class SelectionOverlaySession
+{
+	private readonly List<Action> _unsubscribeActions = new();
+	private readonly Action _dispose;
+	private bool _subscriptionsReleased;
+	private bool _disposed;
+
+	internal SelectionOverlaySession(
+		SelectionOverlayKind kind,
+		Control root,
+		int optionCount,
+		Func<int, bool> trySelect,
+		Action cancel,
+		Action dispose,
+		Action abnormalRelease)
 	{
-		ItemSelection = 0,
-		AdventureUpgrade = 1,
-		QuestionRejudge = 2,
-		AdventureUpgradeReplacement = 3,
+		Kind = kind;
+		Root = root;
+		OptionCount = optionCount;
+		TrySelect = trySelect;
+		Cancel = cancel;
+		_dispose = dispose;
+		AbnormalRelease = abnormalRelease;
 	}
 
-	private sealed class SelectionOverlaySession
+	internal SelectionOverlayKind Kind { get; }
+	internal Control Root { get; }
+	internal int OptionCount { get; }
+	internal Func<int, bool> TrySelect { get; }
+	internal Action Cancel { get; }
+	internal Action AbnormalRelease { get; }
+	internal bool ExpectedRelease { get; set; }
+	internal bool AbnormalReleaseHandled { get; set; }
+	internal int ActiveSubscriptionCount => _subscriptionsReleased ? 0 : _unsubscribeActions.Count;
+
+	internal void RegisterUnsubscribe(Action unsubscribe)
 	{
-		private readonly List<Action> _unsubscribeActions = new();
-		private readonly Action _dispose;
-		private bool _subscriptionsReleased;
-		private bool _disposed;
-
-		internal SelectionOverlaySession(
-			SelectionOverlayKind kind,
-			Control root,
-			int optionCount,
-			Func<int, bool> trySelect,
-			Action cancel,
-			Action dispose,
-			Action abnormalRelease)
+		if (_subscriptionsReleased)
 		{
-			Kind = kind;
-			Root = root;
-			OptionCount = optionCount;
-			TrySelect = trySelect;
-			Cancel = cancel;
-			_dispose = dispose;
-			AbnormalRelease = abnormalRelease;
+			unsubscribe();
+			return;
 		}
-
-		internal SelectionOverlayKind Kind { get; }
-		internal Control Root { get; }
-		internal int OptionCount { get; }
-		internal Func<int, bool> TrySelect { get; }
-		internal Action Cancel { get; }
-		internal Action AbnormalRelease { get; }
-		internal bool ExpectedRelease { get; set; }
-		internal bool AbnormalReleaseHandled { get; set; }
-		internal int ActiveSubscriptionCount => _subscriptionsReleased ? 0 : _unsubscribeActions.Count;
-
-		internal void RegisterUnsubscribe(Action unsubscribe)
-		{
-			if (_subscriptionsReleased)
-			{
-				unsubscribe();
-				return;
-			}
-			_unsubscribeActions.Add(unsubscribe);
-		}
-
-		internal void ReleaseSubscriptions()
-		{
-			if (_subscriptionsReleased)
-			{
-				return;
-			}
-
-			_subscriptionsReleased = true;
-			for (int index = _unsubscribeActions.Count - 1; index >= 0; index--)
-			{
-				_unsubscribeActions[index]();
-			}
-			_unsubscribeActions.Clear();
-		}
-
-		internal void DisposeContent()
-		{
-			if (_disposed)
-			{
-				return;
-			}
-			_disposed = true;
-			_dispose();
-		}
+		_unsubscribeActions.Add(unsubscribe);
 	}
 
-	private bool HasVisibleSelectionOverlay()
+	internal void ReleaseSubscriptions()
 	{
-		return _activeSelectionOverlaySession != null
-			&& IsSelectionOverlaySessionVisible(_activeSelectionOverlaySession);
+		if (_subscriptionsReleased)
+		{
+			return;
+		}
+
+		_subscriptionsReleased = true;
+		for (int index = _unsubscribeActions.Count - 1; index >= 0; index--)
+		{
+			_unsubscribeActions[index]();
+		}
+		_unsubscribeActions.Clear();
 	}
 
-	private bool IsSelectionOverlayVisible(SelectionOverlayKind kind)
+	internal void DisposeContent()
 	{
-		return _activeSelectionOverlaySession != null
-			&& _activeSelectionOverlaySession.Kind == kind
-			&& IsSelectionOverlaySessionVisible(_activeSelectionOverlaySession);
+		if (_disposed)
+		{
+			return;
+		}
+		_disposed = true;
+		_dispose();
+	}
+}
+
+internal sealed class SelectionOverlayCoordinator
+{
+	private readonly Func<bool> _isOwnerStopping;
+	private SelectionOverlaySession? _activeSession;
+
+	internal SelectionOverlayCoordinator(Func<bool> isOwnerStopping)
+	{
+		_isOwnerStopping = isOwnerStopping;
 	}
 
-	private bool TrySelectActiveSelectionOverlayOption(SelectionOverlayKind expectedKind, int optionIndex)
+	internal SelectionOverlaySession? ActiveSession => _activeSession;
+
+	internal bool HasVisibleSession()
 	{
-		SelectionOverlaySession? session = _activeSelectionOverlaySession;
+		return _activeSession != null && IsSessionVisible(_activeSession);
+	}
+
+	internal bool IsVisible(SelectionOverlayKind kind)
+	{
+		return _activeSession != null
+			&& _activeSession.Kind == kind
+			&& IsSessionVisible(_activeSession);
+	}
+
+	internal bool TrySelect(SelectionOverlayKind expectedKind, int optionIndex)
+	{
+		SelectionOverlaySession? session = _activeSession;
 		if (session == null
 			|| session.Kind != expectedKind
-			|| !IsSelectionOverlaySessionVisible(session)
+			|| !IsSessionVisible(session)
 			|| optionIndex < 0
 			|| optionIndex >= session.OptionCount)
 		{
@@ -111,9 +120,9 @@ public partial class GameBoardScene
 		return session.TrySelect(optionIndex);
 	}
 
-	private void DismissActiveSelectionOverlay(bool invokeCancel)
+	internal void Dismiss(bool invokeCancel)
 	{
-		SelectionOverlaySession? session = _activeSelectionOverlaySession;
+		SelectionOverlaySession? session = _activeSession;
 		if (session == null)
 		{
 			return;
@@ -124,24 +133,24 @@ public partial class GameBoardScene
 			session.Cancel();
 		}
 
-		if (ReferenceEquals(_activeSelectionOverlaySession, session))
+		if (ReferenceEquals(_activeSession, session))
 		{
 			session.ExpectedRelease = true;
-			_activeSelectionOverlaySession = null;
-			ReleaseSelectionOverlaySession(session);
+			_activeSession = null;
+			ReleaseSession(session);
 		}
 	}
 
-	private void DisposeActiveSelectionOverlay()
+	internal void DisposeActive()
 	{
-		DismissActiveSelectionOverlay(invokeCancel: false);
+		Dismiss(invokeCancel: false);
 	}
 
-	private void RegisterSelectionOverlaySession(SelectionOverlaySession session)
+	internal void Register(SelectionOverlaySession session)
 	{
-		DisposeActiveSelectionOverlay();
-		_activeSelectionOverlaySession = session;
-		Action treeExiting = () => HandleSelectionOverlayTreeExiting(session);
+		DisposeActive();
+		_activeSession = session;
+		Action treeExiting = () => HandleTreeExiting(session);
 		session.Root.TreeExiting += treeExiting;
 		session.RegisterUnsubscribe(() =>
 		{
@@ -152,14 +161,14 @@ public partial class GameBoardScene
 		});
 	}
 
-	private void BindSelectionOverlayButton(
+	internal void BindButton(
 		SelectionOverlaySession session,
 		Button button,
 		int optionIndex,
 		Action<Button> refreshHighlight,
 		Action<Button, bool> setPointerHover)
 	{
-		Action pressed = () => TrySelectActiveSelectionOverlayOption(session.Kind, optionIndex);
+		Action pressed = () => TrySelect(session.Kind, optionIndex);
 		Action focusEntered = () => refreshHighlight(button);
 		Action focusExited = () => refreshHighlight(button);
 		Action mouseEntered = () => setPointerHover(button, true);
@@ -184,14 +193,25 @@ public partial class GameBoardScene
 		});
 	}
 
-	private void HandleSelectionOverlayTreeExiting(SelectionOverlaySession session)
+	internal SelectionOverlaySession? GetActive(SelectionOverlayKind expectedKind)
 	{
-		if (IsQueuedForDeletion() || _isLeavingGame || _networkMigrationInputLocked)
+		SelectionOverlaySession? session = _activeSession;
+		return session != null && session.Kind == expectedKind ? session : null;
+	}
+
+	internal static bool IsSessionVisible(SelectionOverlaySession session)
+	{
+		return GodotObject.IsInstanceValid(session.Root) && session.Root.IsVisibleInTree();
+	}
+
+	private void HandleTreeExiting(SelectionOverlaySession session)
+	{
+		if (_isOwnerStopping())
 		{
 			session.ExpectedRelease = true;
-			if (ReferenceEquals(_activeSelectionOverlaySession, session))
+			if (ReferenceEquals(_activeSession, session))
 			{
-				_activeSelectionOverlaySession = null;
+				_activeSession = null;
 			}
 			session.ReleaseSubscriptions();
 			session.DisposeContent();
@@ -200,38 +220,89 @@ public partial class GameBoardScene
 
 		if (session.ExpectedRelease
 			|| session.AbnormalReleaseHandled
-			|| !ReferenceEquals(_activeSelectionOverlaySession, session))
+			|| !ReferenceEquals(_activeSession, session))
 		{
 			return;
 		}
 
 		session.AbnormalReleaseHandled = true;
 		session.ExpectedRelease = true;
-		_activeSelectionOverlaySession = null;
+		_activeSession = null;
 		session.ReleaseSubscriptions();
 		session.AbnormalRelease();
 		Callable.From(session.DisposeContent).CallDeferred();
 	}
 
-	private static void ReleaseSelectionOverlaySession(SelectionOverlaySession session)
+	private static void ReleaseSession(SelectionOverlaySession session)
 	{
 		session.ReleaseSubscriptions();
 		session.DisposeContent();
 	}
+}
+
+public partial class GameBoardScene
+{
+	private SelectionOverlayCoordinator? _selectionOverlayCoordinator;
+
+	private SelectionOverlayCoordinator SelectionOverlays
+		=> _selectionOverlayCoordinator ??= new SelectionOverlayCoordinator(
+			() => IsQueuedForDeletion() || _isLeavingGame || _networkMigrationInputLocked);
+
+	private SelectionOverlaySession? ActiveSelectionOverlaySession
+		=> _selectionOverlayCoordinator?.ActiveSession;
+
+	private bool HasVisibleSelectionOverlay()
+	{
+		return _selectionOverlayCoordinator?.HasVisibleSession() == true;
+	}
+
+	private bool IsSelectionOverlayVisible(SelectionOverlayKind kind)
+	{
+		return _selectionOverlayCoordinator?.IsVisible(kind) == true;
+	}
+
+	private bool TrySelectActiveSelectionOverlayOption(SelectionOverlayKind expectedKind, int optionIndex)
+	{
+		return _selectionOverlayCoordinator?.TrySelect(expectedKind, optionIndex) == true;
+	}
+
+	private void DismissActiveSelectionOverlay(bool invokeCancel)
+	{
+		_selectionOverlayCoordinator?.Dismiss(invokeCancel);
+	}
+
+	private void DisposeActiveSelectionOverlay()
+	{
+		_selectionOverlayCoordinator?.DisposeActive();
+	}
+
+	private void RegisterSelectionOverlaySession(SelectionOverlaySession session)
+	{
+		SelectionOverlays.Register(session);
+	}
+
+	private void BindSelectionOverlayButton(
+		SelectionOverlaySession session,
+		Button button,
+		int optionIndex,
+		Action<Button> refreshHighlight,
+		Action<Button, bool> setPointerHover)
+	{
+		SelectionOverlays.BindButton(
+			session,
+			button,
+			optionIndex,
+			refreshHighlight,
+			setPointerHover);
+	}
 
 	private SelectionOverlaySession? GetActiveSelectionOverlaySession(SelectionOverlayKind expectedKind)
 	{
-		SelectionOverlaySession? session = _activeSelectionOverlaySession;
-		if (session == null || session.Kind != expectedKind)
-		{
-			return null;
-		}
-
-		return session;
+		return _selectionOverlayCoordinator?.GetActive(expectedKind);
 	}
 
 	private static bool IsSelectionOverlaySessionVisible(SelectionOverlaySession session)
 	{
-		return GodotObject.IsInstanceValid(session.Root) && session.Root.IsVisibleInTree();
+		return SelectionOverlayCoordinator.IsSessionVisible(session);
 	}
 }

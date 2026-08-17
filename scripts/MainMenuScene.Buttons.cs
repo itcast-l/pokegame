@@ -53,11 +53,13 @@ public partial class MainMenuScene : Control
 		return true;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugRejectMissingMultiplayerLobbyResource()
 	{
 		return !TryLockMultiplayerLobbyTransition(null, reportMissingResource: false)
 			&& !_isStartingGameTransition;
 	}
+#endif
 
 	private void SetMainMenuButtonsDisabled(bool disabled)
 	{

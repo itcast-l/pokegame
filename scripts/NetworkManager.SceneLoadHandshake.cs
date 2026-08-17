@@ -98,7 +98,7 @@ public partial class NetworkManager
 		}
 
 		int senderPeerId = Multiplayer.GetRemoteSenderId();
-		if (!MultiplayerBoardSyncRules.CanAcceptSceneLoadAck(_players, senderPeerId, seatIndex, out int senderSeatIndex))
+		if (!MultiplayerBoardSyncRules.CanAcceptSceneLoadAck(_lobbyRoster.Players, senderPeerId, seatIndex, out int senderSeatIndex))
 		{
 			if (senderSeatIndex < 0)
 			{
@@ -115,57 +115,58 @@ public partial class NetworkManager
 
 	private void MarkClientSceneLoaded(string matchId, int seatIndex)
 	{
-		if (_loadHandshake == null)
+		NetworkSceneLoadSeatAvailability seatAvailability = NetworkSceneLoadSeatAvailability.Unknown;
+		if (TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
 		{
-			return;
+			seatAvailability = _lobbyRoster.Players[playerIndex].IsConnected
+				? NetworkSceneLoadSeatAvailability.Connected
+				: NetworkSceneLoadSeatAvailability.Offline;
 		}
 
-		if (!TryGetPlayerIndexBySeatIndex(seatIndex, out int playerIndex))
+		NetworkSceneLoadAckResult result = _sceneLoadCoordinator.Acknowledge(
+			matchId,
+			seatIndex,
+			seatAvailability);
+		switch (result)
 		{
-			GD.PushWarning($"Ignoring scene-load ACK for unknown seat {seatIndex}.");
-			return;
+			case NetworkSceneLoadAckResult.UnknownSeat:
+				GD.PushWarning($"Ignoring scene-load ACK for unknown seat {seatIndex}.");
+				return;
+			case NetworkSceneLoadAckResult.OfflineSeat:
+				GD.PushWarning($"Ignoring scene-load ACK for offline seat {seatIndex}.");
+				return;
+			case NetworkSceneLoadAckResult.StaleMatch:
+				GD.PushWarning($"Ignoring stale scene-load ACK for seat {seatIndex}: expected match {_sceneLoadCoordinator.MatchId}, got {matchId}.");
+				return;
+			case NetworkSceneLoadAckResult.UnexpectedSeat:
+				GD.PushWarning($"Ignoring expired scene-load ACK for seat {seatIndex}.");
+				return;
+			case NetworkSceneLoadAckResult.Completed:
+				BroadcastBoardInitialization();
+				return;
+			case NetworkSceneLoadAckResult.Inactive:
+			case NetworkSceneLoadAckResult.Duplicate:
+			case NetworkSceneLoadAckResult.Accepted:
+			default:
+				return;
 		}
+	}
 
-		NetworkPlayerPublicState player = _players[playerIndex];
-		if (!player.IsConnected)
-		{
-			GD.PushWarning($"Ignoring scene-load ACK for offline seat {seatIndex}.");
-			return;
-		}
-
-		if (!string.Equals(_loadHandshake.MatchId, matchId, StringComparison.Ordinal))
-		{
-			GD.PushWarning($"Ignoring stale scene-load ACK for seat {seatIndex}: expected match {_loadHandshake.MatchId}, got {matchId}.");
-			return;
-		}
-
-		if (!_loadHandshake.ExpectedSeats.Contains(seatIndex))
-		{
-			GD.PushWarning($"Ignoring expired scene-load ACK for seat {seatIndex}.");
-			return;
-		}
-
-		if (!_loadHandshake.MarkLoaded(matchId, seatIndex))
-		{
-			return;
-		}
-
-		if (_loadHandshake.IsComplete)
-		{
-			Godot.Collections.Dictionary boardInit = BuildBoardInitializePayload();
-			NetworkRpcContext context = GetCurrentRpcContext();
-			Rpc(
-				MethodName.RpcInitializeBoard,
-				context.SessionId,
-				context.MatchId,
-				context.AuthorityEpoch,
-				boardInit);
-			RpcInitializeBoard(
-				context.SessionId,
-				context.MatchId,
-				context.AuthorityEpoch,
-				boardInit);
-		}
+	private void BroadcastBoardInitialization()
+	{
+		Godot.Collections.Dictionary boardInit = BuildBoardInitializePayload();
+		NetworkRpcContext context = GetCurrentRpcContext();
+		Rpc(
+			MethodName.RpcInitializeBoard,
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			boardInit);
+		RpcInitializeBoard(
+			context.SessionId,
+			context.MatchId,
+			context.AuthorityEpoch,
+			boardInit);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -256,18 +257,27 @@ public partial class NetworkManager
 			return;
 		}
 
-		Node gameBoard = gameBoardScene.Instantiate();
-		gameBoard.Set("player_count", _config.PlayerCount);
-		gameBoard.Set("item_mode", _config.ItemMode);
-		gameBoard.Set("winning_score", _config.WinningScore);
-		gameBoard.Set("solo_mode", false);
-		gameBoard.Set("local_player_index", LocalSeatIndex);
-		gameBoard.Set("network_session_id", _config.SessionId);
-		gameBoard.Set("network_match_id", _config.MatchId);
-		gameBoard.Set("match_seed", _config.MatchSeed);
-		gameBoard.Set("player_names_csv", BuildPlayerNamesCsv());
-		gameBoard.Set("player_avatar_ids_csv", BuildPlayerAvatarIdsCsv());
-		gameBoard.Set("network_wait_for_initialize", true);
+		GameBoardLaunchOptions options;
+		try
+		{
+			options = GameBoardLaunchOptions.Network(
+				_config,
+				LocalSeatIndex,
+				BuildPlayerNamesCsv().Split(',', StringSplitOptions.TrimEntries),
+				BuildPlayerAvatarIdsCsv().Split(',', StringSplitOptions.TrimEntries),
+				waitForInitialize: true);
+		}
+		catch (Exception error)
+		{
+			Fail(NetworkUserErrorCategory.SceneLoad, $"Invalid game board launch configuration: {error.Message}");
+			return;
+		}
+
+		if (!GameBoardSceneFactory.TryCreate(gameBoardScene, options, out GameBoardScene gameBoard, out string createError))
+		{
+			Fail(NetworkUserErrorCategory.SceneLoad, $"Unable to create game board scene: {createError}");
+			return;
+		}
 		Node? oldScene = GetTree().CurrentScene;
 		GetTree().Root.AddChild(gameBoard);
 		GetTree().CurrentScene = gameBoard;
@@ -276,9 +286,9 @@ public partial class NetworkManager
 
 	private Godot.Collections.Dictionary BuildMatchBootstrap()
 	{
-		_loadHandshake = new SceneLoadHandshakeTracker(
+		_sceneLoadCoordinator.Start(
 			_config.MatchId,
-			_players.Select(player => player.SeatIndex),
+			_lobbyRoster.Players.Select(player => player.SeatIndex),
 			NetworkSessionDefaults.SceneLoadTimeoutSeconds,
 			Time.GetTicksMsec() / 1000.0);
 		Godot.Collections.Dictionary payload = ToDictionary(_config);
@@ -308,12 +318,12 @@ public partial class NetworkManager
 
 	private string BuildPlayerNamesCsv()
 	{
-		return string.Join(",", _players.Select(player => EscapeCsvValue(player.DisplayName)));
+		return string.Join(",", _lobbyRoster.Players.Select(player => EscapeCsvValue(player.DisplayName)));
 	}
 
 	private string BuildPlayerAvatarIdsCsv()
 	{
-		return string.Join(",", _players.Select(player => EscapeCsvValue(player.AvatarId)));
+		return string.Join(",", _lobbyRoster.Players.Select(player => EscapeCsvValue(player.AvatarId)));
 	}
 
 	private static string EscapeCsvValue(string value)
@@ -323,12 +333,12 @@ public partial class NetworkManager
 
 	private void PollLoadHandshake(double now)
 	{
-		if (!IsHost || _state != NetworkSessionState.LoadingScene || _loadHandshake == null)
+		if (!IsHost || _state != NetworkSessionState.LoadingScene)
 		{
 			return;
 		}
 
-		if (_loadHandshake.HasTimedOut(now))
+		if (_sceneLoadCoordinator.Poll(now) == NetworkSceneLoadPollResult.TimedOut)
 		{
 			CancelMatchStart(NetworkUserErrorCategory.SceneLoad, "Scene load timed out.");
 		}
@@ -339,7 +349,7 @@ public partial class NetworkManager
 		GD.PushWarning($"Match start cancelled category={category} detail={technicalDetails}");
 		string localizationKey = NetworkUserErrorRules.GetLocalizationKey(category);
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
-		_loadHandshake = null;
+		_sceneLoadCoordinator.Reset();
 		SetState(NetworkSessionState.Lobby);
 		NetworkRpcContext context = GetCurrentRpcContext();
 		Rpc(
@@ -371,7 +381,7 @@ public partial class NetworkManager
 
 	private void ApplyMatchStartCancellation(string localizationKey, long returnGeneration)
 	{
-		_loadHandshake = null;
+		_sceneLoadCoordinator.Reset();
 		SetState(NetworkSessionState.Lobby);
 		EmitSignal(SignalName.ErrorRaised, localizationKey);
 		CallDeferred(

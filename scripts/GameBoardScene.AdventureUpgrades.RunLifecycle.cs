@@ -6,24 +6,6 @@ public partial class GameBoardScene
 {
 	private const int FirstMainAdventureStageIndex = 1;
 
-	private void ClearAdventureUpgradeRun()
-	{
-		SetAdventureTraceHuntMarkedTableCard(null, playIntro: false);
-		ClearAdventureTraceHuntMarkerIntro();
-		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		if (store == null)
-		{
-			WarnMissingAdventureRunSessionStore("clear the adventure upgrade run");
-			return;
-		}
-
-		AdventureRunWriteResult result = store.ClearRun();
-		if (result != AdventureRunWriteResult.Succeeded)
-		{
-			GD.PushWarning($"Failed to clear adventure upgrade run: {result}");
-		}
-	}
-
 	private async Task<bool> InitializeAdventureUpgradeRunForCurrentBoardAsync()
 	{
 		if (!ShouldUseAdventureUpgradeSystem())
@@ -44,9 +26,11 @@ public partial class GameBoardScene
 		AdventureRunReadModel? runState = GetAdventureUpgradeRunState();
 		if (runState?.IsActive != true)
 		{
+			AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult> operation =
+				store.PrepareBeginNewMainRun(mainStageIndex, adventure_enemy_avatar_id);
 			AdventureSaveGateResult<AdventureRunWriteResult> gate =
-				await ExecuteAdventureSaveGateAsync(
-					() => store.BeginNewMainRun(mainStageIndex, adventure_enemy_avatar_id),
+				await ExecutePreparedAdventureSaveGateAsync(
+					operation,
 					result => result == AdventureRunWriteResult.Succeeded,
 					result => result == AdventureRunWriteResult.SaveFailed);
 			if (!gate.Succeeded)
@@ -62,9 +46,11 @@ public partial class GameBoardScene
 			return true;
 		}
 
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult> advanceOperation =
+			store.PrepareAdvanceToMainStage(mainStageIndex, adventure_enemy_avatar_id);
 		AdventureSaveGateResult<AdventureRunWriteResult> advanceGate =
-			await ExecuteAdventureSaveGateAsync(
-				() => store.AdvanceToMainStage(mainStageIndex, adventure_enemy_avatar_id),
+			await ExecutePreparedAdventureSaveGateAsync(
+				advanceOperation,
 				result => result == AdventureRunWriteResult.Succeeded,
 				result => result == AdventureRunWriteResult.SaveFailed);
 		if (!advanceGate.Succeeded)
@@ -77,7 +63,7 @@ public partial class GameBoardScene
 
 	private bool ShouldUseAdventureUpgradeSystem()
 	{
-		if (!_gameModePolicy.IsAdventureMain)
+		if (!ModePolicy.IsAdventureMain)
 		{
 			return false;
 		}

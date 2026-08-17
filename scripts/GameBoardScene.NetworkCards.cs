@@ -567,15 +567,15 @@ public partial class GameBoardScene
 		}
 	}
 
-	private bool TryGetNetworkPlayerName(int playerIndex, out string playerName)
+	private bool TryGetConfiguredPlayerName(int playerIndex, out string playerName)
 	{
 		playerName = string.Empty;
-		if (string.IsNullOrWhiteSpace(_playerNamesCsv))
+		if (string.IsNullOrWhiteSpace(player_names_csv))
 		{
 			return false;
 		}
 
-		string[] names = SplitNetworkCsv(_playerNamesCsv);
+		string[] names = SplitNetworkCsv(player_names_csv);
 		if (playerIndex < 0 || playerIndex >= names.Length)
 		{
 			return false;
@@ -588,12 +588,12 @@ public partial class GameBoardScene
 	private bool TryGetNetworkAvatarId(int playerIndex, out string avatarId)
 	{
 		avatarId = string.Empty;
-		if (string.IsNullOrWhiteSpace(_playerAvatarIdsCsv))
+		if (string.IsNullOrWhiteSpace(player_avatar_ids_csv))
 		{
 			return false;
 		}
 
-		string[] avatarIds = SplitNetworkCsv(_playerAvatarIdsCsv);
+		string[] avatarIds = SplitNetworkCsv(player_avatar_ids_csv);
 		if (playerIndex < 0 || playerIndex >= avatarIds.Length)
 		{
 			return false;

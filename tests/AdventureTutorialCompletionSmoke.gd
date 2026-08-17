@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BASIC_SCENE_PATH := "res://scenes/adventure_tutorial_game_board_scene.tscn"
 const BOMB_SCENE_PATH := "res://scenes/adventure_item_tutorial_game_board_scene.tscn"
 const HAND_AREA_PATH := "BoardCanvas/LayoutAreas/Player1HandArea"
@@ -163,7 +165,7 @@ func _instantiate_tutorial_board(scene_path: String, tutorial_id: String) -> Nod
 	if packed_scene == null:
 		_fail("Missing tutorial board scene: %s" % scene_path)
 		return null
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_tutorial(packed_scene, tutorial_id)
 	if board == null:
 		_fail("Could not instantiate tutorial board: %s" % scene_path)
 		return null
@@ -417,7 +419,8 @@ func _wait_for_tutorial_victory(board: Node, tutorial_id: String) -> bool:
 			if winner != MAIN_PLAYER_INDEX:
 				_fail("Tutorial %s ended with enemy winner %d" % [tutorial_id, winner])
 				return false
-			if _active_profile_contains_tutorial(tutorial_id):
+			if _active_profile_contains_tutorial(tutorial_id) \
+					and bool(board.call("DebugIsWinnerBannerVisible")):
 				return _assert_tutorial_result_actions(board, tutorial_id)
 		elif outcome != "InProgress":
 			_fail("Tutorial %s ended with unexpected outcome %s" % [tutorial_id, outcome])

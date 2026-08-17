@@ -115,6 +115,7 @@ public partial class DiceRollOverlay : Control
 		return completionSource.Task;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugStartPlayRollAwaitProbe(int result, Godot.Collections.Dictionary probe)
 	{
 		if (probe == null || !HasRequiredTexturesForResult(result))
@@ -135,6 +136,7 @@ public partial class DiceRollOverlay : Control
 		probe["playing_when_completed"] = IsPlaying;
 		probe["completion_count"] = (int)probe.GetValueOrDefault("completion_count", 0) + 1;
 	}
+#endif
 
 	private void FinishPlayback()
 	{

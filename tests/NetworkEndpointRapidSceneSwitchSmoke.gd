@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 
 
@@ -58,10 +60,15 @@ func _run() -> void:
 
 
 func _instantiate_network_board(board_scene: PackedScene) -> Node:
-	var board := board_scene.instantiate()
-	board.set("network_session_id", "rapid-scene-session")
-	board.set("network_match_id", "rapid-scene-match")
-	board.set("network_wait_for_initialize", true)
+	var board := GameBoardSmokeFactory.create_network(
+		board_scene,
+		2,
+		true,
+		100,
+		"rapid-scene-session",
+		"rapid-scene-match",
+		0,
+		0)
 	root.add_child(board)
 	return board
 

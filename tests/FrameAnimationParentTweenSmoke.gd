@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const AVATAR_SCENE_PATH := "res://scenes/character_avatar.tscn"
 const TIMEOUT_SECONDS := 12.0
@@ -203,11 +205,7 @@ func _instantiate_board() -> Node:
 	if scene == null:
 		_fail("Failed to load board scene")
 		return null
-	var board := scene.instantiate()
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
+	var board := GameBoardSmokeFactory.create_solo(scene)
 	root.add_child(board)
 	await process_frame
 	return board

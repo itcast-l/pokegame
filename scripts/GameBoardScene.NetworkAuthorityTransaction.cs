@@ -42,8 +42,8 @@ public partial class GameBoardScene
 		}
 
 		Godot.Collections.Dictionary stampedPayload = payload.Duplicate(deep: true);
-		stampedPayload[NetworkBoardVisualEventTypes.SessionIdKey] = _networkSessionId;
-		stampedPayload[NetworkBoardVisualEventTypes.MatchIdKey] = _networkMatchId;
+		stampedPayload[NetworkBoardVisualEventTypes.SessionIdKey] = network_session_id;
+		stampedPayload[NetworkBoardVisualEventTypes.MatchIdKey] = network_match_id;
 		stampedPayload[NetworkBoardVisualEventTypes.AuthorityEpochKey] = _networkAuthorityEpoch;
 		stampedPayload[NetworkBoardVisualEventTypes.CheckpointIdKey] = _networkCheckpointId;
 		stampedPayload[NetworkBoardVisualEventTypes.ActionIdKey] = CurrentNetworkAuthorityActionId;

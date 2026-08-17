@@ -118,7 +118,9 @@ public partial class GameBoardScene
 					adventurePostCaptureEffects,
 				AdventureCaptureContext:
 					adventureCaptureContext);
+#if DECKLAND_TEST_HOOKS
 		RecordDebugCaptureOwnershipResult(result);
+#endif
 		return result;
 	}
 
@@ -170,7 +172,9 @@ public partial class GameBoardScene
 			: null;
 	bool preserveCardEffectsWhenEnteringDeck =
 		ShouldPreserveCardEffectsWhenEnteringDeck();
+#if DECKLAND_TEST_HOOKS
 	await WaitForDebugCaptureBeforeApplyBarrierAsync();
+#endif
 	if (_isLeavingGame
 		|| IsGameOver()
 		|| !IsCaptureTableReferenceSnapshotCurrent(
@@ -284,33 +288,38 @@ public partial class GameBoardScene
 				? (capturedQuestionRewardPlan.HasValue ? 1 : 0)
 					+ (linkedStemsRewardPlan.HasValue ? 1 : 0)
 				: 0;
+			AdventureCaptureCommitInput captureInput = new(
+				CapturerIsMainPlayer: playerIndex == MainPlayerIndex,
+				PlayedCardRank: adventureCaptureContext.Action.PlayedCard.Rank,
+				ConsumeBorrowSuitSet: adventureCaptureContext.Action.PlayedCardInstanceId > 0
+					&& ShouldAdventureBorrowSuitSetAffectPlayedCard(
+						adventureCaptureContext.Action.PlayedCard),
+				ConsumeGapRooting: clubGapRootingTargetTableCard != null,
+				capturePreparation.DamageInput,
+				SuccessfulCapturesThisTurn: CurrentMatchFlowState.SuccessfulCapturesThisTurn + 1,
+				adventureCaptureContext.ToRuleFacts(),
+				clubCaptureInput,
+				plannedQuestionRewardCount,
+				CurrentMatchFlowState.HalfHealthRescueUsed,
+				CurrentMatchFlowState.QuarterHealthRescueUsed);
+			AdventureRunSessionStore.PreparedAdventureOperation<AdventureCaptureCommitResult> captureOperation =
+				store?.PrepareResolveCaptureAction(captureInput)
+				?? AdventureRunSessionStore.PreparedAdventureOperation<AdventureCaptureCommitResult>.Rejected(
+					AdventureRunWriteResult.SaveFailed,
+					static result => new AdventureCaptureCommitResult(
+						result,
+						default,
+						default,
+						default,
+						default,
+						null,
+						default,
+						0,
+						false,
+						false));
 			AdventureSaveGateResult<AdventureCaptureCommitResult> gate =
-				await ExecuteAdventureSaveGateAsync(
-					() => store?.ResolveCaptureAction(new AdventureCaptureCommitInput(
-						CapturerIsMainPlayer: playerIndex == MainPlayerIndex,
-						PlayedCardRank: adventureCaptureContext.Action.PlayedCard.Rank,
-						ConsumeBorrowSuitSet: adventureCaptureContext.Action.PlayedCardInstanceId > 0
-							&& ShouldAdventureBorrowSuitSetAffectPlayedCard(
-								adventureCaptureContext.Action.PlayedCard),
-						ConsumeGapRooting: clubGapRootingTargetTableCard != null,
-						capturePreparation.DamageInput,
-						SuccessfulCapturesThisTurn: CurrentMatchFlowState.SuccessfulCapturesThisTurn + 1,
-						adventureCaptureContext.ToRuleFacts(),
-						clubCaptureInput,
-						plannedQuestionRewardCount,
-						CurrentMatchFlowState.HalfHealthRescueUsed,
-						CurrentMatchFlowState.QuarterHealthRescueUsed))
-						?? new AdventureCaptureCommitResult(
-							AdventureRunWriteResult.SaveFailed,
-							default,
-							default,
-							default,
-							default,
-							null,
-							default,
-							0,
-							false,
-							false),
+				await ExecutePreparedAdventureSaveGateAsync(
+					captureOperation,
 					result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 					result => result.WriteResult == AdventureRunWriteResult.SaveFailed,
 					onRetryableFailure: adventureSaveRollbackSnapshot == null
@@ -476,7 +485,9 @@ public partial class GameBoardScene
 		{
 			MarkActivePlayerStatusTooltipForRefresh();
 		}
+#if DECKLAND_TEST_HOOKS
 		await WaitForDebugCaptureAfterApplyBarrierAsync();
+#endif
 	if (turnSequenceGeneration != _turnSequenceGeneration
 		|| _isLeavingGame)
 	{

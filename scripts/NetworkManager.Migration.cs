@@ -73,6 +73,7 @@ public partial class NetworkManager
 	public bool IsMigratingHost => HostMigrationCapabilityAvailable
 		&& _state == NetworkSessionState.MigratingHost;
 
+#if DECKLAND_TEST_HOOKS
 	public long DebugGetAuthorityEpoch()
 	{
 		return GetCurrentAuthorityEpoch();
@@ -186,6 +187,7 @@ public partial class NetworkManager
 		GD.Print($"MIGRATION_STALE_EPOCH_INJECTED source_epoch={stalePlan.SourceEpoch} target_epoch={stalePlan.TargetEpoch}");
 		return true;
 	}
+#endif
 
 	public bool RequestActiveHostMigration()
 	{
@@ -228,7 +230,7 @@ public partial class NetworkManager
 		_activeMigrationDeadline = now + NetworkMigrationRules.ActiveMigrationConfirmationTimeoutSeconds;
 		_activeMigrationConfirmedSeats.Clear();
 		NetworkRpcContext context = GetCurrentRpcContext();
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (player.IsConnected && !player.IsHost)
 			{
@@ -306,7 +308,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		int expectedConfirmationCount = _players.Count(player => player.IsConnected && !player.IsHost);
+		int expectedConfirmationCount = _lobbyRoster.Players.Count(player => player.IsConnected && !player.IsHost);
 		if (now < _activeMigrationDeadline && _activeMigrationConfirmedSeats.Count < expectedConfirmationCount)
 		{
 			return;
@@ -384,7 +386,7 @@ public partial class NetworkManager
 			return false;
 		}
 
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!player.IsHost
 				&& player.IsConnected
@@ -543,20 +545,20 @@ public partial class NetworkManager
 
 	private bool TryResolveSeatFromPeer(int peerId, out int seatIndex)
 	{
-		NetworkPlayerPublicState player = _players.FirstOrDefault(candidate => candidate.PeerId == peerId);
+		NetworkPlayerPublicState player = _lobbyRoster.Players.FirstOrDefault(candidate => candidate.PeerId == peerId);
 		seatIndex = player.PeerId == 0 ? -1 : player.SeatIndex;
 		return seatIndex >= 0;
 	}
 
 	private bool TryGetPlayerBySeat(int seatIndex, out NetworkPlayerPublicState player)
 	{
-		player = _players.FirstOrDefault(candidate => candidate.SeatIndex == seatIndex);
+		player = _lobbyRoster.Players.FirstOrDefault(candidate => candidate.SeatIndex == seatIndex);
 		return player.PeerId != 0 || player.PlayerSessionId.Length > 0;
 	}
 
 	private string GetPlayerSessionIdForSeat(int seatIndex)
 	{
-		return _players.FirstOrDefault(player => player.SeatIndex == seatIndex).PlayerSessionId;
+		return _lobbyRoster.Players.FirstOrDefault(player => player.SeatIndex == seatIndex).PlayerSessionId;
 	}
 
 	private long GetCurrentAuthorityEpoch()

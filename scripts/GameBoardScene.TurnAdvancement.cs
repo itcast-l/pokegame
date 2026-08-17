@@ -123,9 +123,11 @@ public partial class GameBoardScene
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		if (ShouldUseAdventureUpgradeSystem() && store?.HasActiveRun == true)
 		{
+			AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult> operation =
+				store.PrepareResolveRealTurnEnd(commitMissBandage);
 			AdventureSaveGateResult<AdventureRunWriteResult> gate =
-				await ExecuteAdventureSaveGateAsync(
-					() => store.ResolveRealTurnEnd(commitMissBandage),
+				await ExecutePreparedAdventureSaveGateAsync(
+					operation,
 					result => result == AdventureRunWriteResult.Succeeded,
 					result => result == AdventureRunWriteResult.SaveFailed);
 			if (!gate.Succeeded)

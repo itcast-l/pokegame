@@ -2,6 +2,11 @@ public static class CharacterAvatarCatalog
 {
 	public const string DefaultAvatarId = "cat";
 
+	public static string NormalizeAvatarId(string avatarId)
+	{
+		return string.IsNullOrWhiteSpace(avatarId) ? DefaultAvatarId : avatarId.Trim();
+	}
+
 	internal static GameSaveStore.GameProgressData CreateMainAdventureVictoryProfile(
 		GameSaveStore.GameProgressData profile,
 		int completedStageIndex,

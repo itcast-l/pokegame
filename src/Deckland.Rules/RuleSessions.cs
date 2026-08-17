@@ -41,6 +41,14 @@ public sealed partial class AuthorityRuleSession
 		ArgumentNullException.ThrowIfNull(command);
 
 		MatchReadModel before = ReadModel;
+		if (_preparedAdventureTransaction != null)
+		{
+			return RuleCommandResult.Rejected(
+				new RuleRejection(
+					RuleRejectionCode.AdventureTransactionPending,
+					"An adventure transaction is awaiting persistence."),
+				before);
+		}
 		RuleRejection? commonRejection = ValidateCommonCommand(command);
 		if (commonRejection.HasValue)
 		{

@@ -85,6 +85,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 		UpdateVisualState();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public Godot.Collections.Dictionary DebugGetDescriptionBand() => RectToDictionary(GetDescriptionBandRect());
 	public Godot.Collections.Dictionary DebugGetCardDrawRect() => RectToDictionary(GetCardDrawRect());
 	public string DebugGetTitleText() => string.Empty;
@@ -114,6 +115,7 @@ public partial class AdventureUpgradeChoiceArt : Control
 			["title_visible"] = false,
 		};
 	}
+#endif
 
 	private void BuildLayers()
 	{

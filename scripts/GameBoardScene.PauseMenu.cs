@@ -97,6 +97,17 @@ public partial class GameBoardScene
 		PauseMenu.Show();
 	}
 
+	public void RequestApplicationQuit()
+	{
+		ApplicationShutdownService.Request(this, () =>
+		{
+			_isLeavingGame = true;
+			_pauseMenuController?.CloseForSceneTransition();
+			SetProcessInput(false);
+			SetProcessUnhandledInput(false);
+		});
+	}
+
 	private void HidePauseMenu()
 	{
 		PauseMenu.Hide();
@@ -206,10 +217,14 @@ public partial class GameBoardScene
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult> operation =
+			store?.PrepareRestartMainRun(1, firstAvatarId)
+			?? AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult>.Rejected(
+				AdventureRunWriteResult.SaveFailed,
+				static result => result);
 		AdventureSaveGateResult<AdventureRunWriteResult> gate =
-			await ExecuteAdventureSaveGateAsync(
-				() => store?.BeginNewMainRun(1, firstAvatarId)
-					?? AdventureRunWriteResult.SaveFailed,
+			await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result == AdventureRunWriteResult.Succeeded,
 				result => result == AdventureRunWriteResult.SaveFailed);
 		if (!gate.Succeeded)

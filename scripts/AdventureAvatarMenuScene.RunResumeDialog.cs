@@ -1,4 +1,5 @@
 using Godot;
+using System.Threading.Tasks;
 
 public partial class AdventureAvatarMenuScene
 {
@@ -88,7 +89,9 @@ public partial class AdventureAvatarMenuScene
 
 	private void HideRunResumeDialog()
 	{
-		if (_runResumeDialog == null || !GodotObject.IsInstanceValid(_runResumeDialog))
+		if (_isAdventureRunPersistenceInProgress
+			|| _runResumeDialog == null
+			|| !GodotObject.IsInstanceValid(_runResumeDialog))
 		{
 			return;
 		}
@@ -116,7 +119,7 @@ public partial class AdventureAvatarMenuScene
 
 	private void ContinueSavedAdventureRun()
 	{
-		if (!EnsureItemCardCatalogReady())
+		if (_isAdventureRunPersistenceInProgress || !EnsureItemCardCatalogReady())
 		{
 			return;
 		}
@@ -133,15 +136,7 @@ public partial class AdventureAvatarMenuScene
 		if (!AdventureCampaignCatalog.TryGetMainStageIndex(savedAvatarId, out int mainStageIndex)
 			|| mainStageIndex != snapshot.MainStageIndex)
 		{
-			if (store.ClearRun() == AdventureRunWriteResult.Succeeded)
-			{
-				HideRunResumeDialog();
-			}
-			else
-			{
-				_runRecoverySaveFailed = true;
-				RefreshRunResumeDialogText();
-			}
+			_ = ClearInvalidSavedAdventureRunAsync(store);
 			return;
 		}
 
@@ -161,12 +156,14 @@ public partial class AdventureAvatarMenuScene
 		MouseFilter = MouseFilterEnum.Ignore;
 		_ = CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
-			Node gameBoard = gameBoardScene.Instantiate();
-			gameBoard.Set("player_count", 2);
-			gameBoard.Set("item_mode", true);
-			gameBoard.Set("solo_mode", true);
-			gameBoard.Set("adventure_mode", true);
-			gameBoard.Set("adventure_enemy_avatar_id", savedAvatarId);
+			GameBoardLaunchOptions options = GameBoardLaunchOptions.AdventureMain(
+				savedAvatarId,
+				PlayerNameRules.Normalize(_profileSnapshot.PlayerName));
+			if (!GameBoardSceneFactory.TryCreate(gameBoardScene, options, out GameBoardScene gameBoard, out string error))
+			{
+				GD.PushError($"Unable to create resumed adventure game board: {error}");
+				return;
+			}
 			Node? currentScene = GetTree().CurrentScene;
 			GetTree().Root.AddChild(gameBoard);
 			GetTree().CurrentScene = gameBoard;
@@ -179,30 +176,72 @@ public partial class AdventureAvatarMenuScene
 		});
 	}
 
+	private async Task ClearInvalidSavedAdventureRunAsync(AdventureRunSessionStore store)
+	{
+		if (!TryBeginAdventureRunPersistence())
+		{
+			return;
+		}
+
+		AdventureRunWriteResult result = await PersistPreparedAdventureOperationWithRetryAsync(
+			store,
+			store.PrepareClearRun());
+		EndAdventureRunPersistence();
+		if (!GodotObject.IsInstanceValid(this))
+		{
+			return;
+		}
+		if (result == AdventureRunWriteResult.Succeeded)
+		{
+			HideRunResumeDialog();
+			return;
+		}
+
+		_runRecoverySaveFailed = true;
+		RefreshRunResumeDialogText();
+	}
+
 	private void RestartAdventureFromFirstStage()
 	{
-		if (!EnsureItemCardCatalogReady())
+		if (_isAdventureRunPersistenceInProgress || !EnsureItemCardCatalogReady())
 		{
+			return;
+		}
+		_ = RestartAdventureFromFirstStageAsync();
+	}
+
+	private async Task RestartAdventureFromFirstStageAsync()
+	{
+		string selectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
+		string gameBoardScenePath = GetGameBoardScenePathForAvatar(selectedAvatarId);
+		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
+		if (gameBoardScene == null)
+		{
+			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
 			return;
 		}
 
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
 		store?.ConfigureForPolicy(GameModePolicy.AdventureMain);
-		string selectedAvatarId = AdventureCampaignCatalog.GetMainAvatarId(1);
-		if (store == null
-			|| store.ClearRun() != AdventureRunWriteResult.Succeeded
-			|| store.BeginNewMainRun(1, selectedAvatarId) != AdventureRunWriteResult.Succeeded)
+		if (store == null || !TryBeginAdventureRunPersistence())
 		{
 			_runRecoverySaveFailed = true;
 			RefreshRunResumeDialogText();
 			return;
 		}
 
-		string gameBoardScenePath = GetGameBoardScenePathForAvatar(selectedAvatarId);
-		PackedScene? gameBoardScene = GD.Load<PackedScene>(gameBoardScenePath);
-		if (gameBoardScene == null)
+		AdventureRunWriteResult result = await PersistPreparedAdventureOperationWithRetryAsync(
+			store,
+			store.PrepareRestartMainRun(1, selectedAvatarId));
+		EndAdventureRunPersistence();
+		if (!GodotObject.IsInstanceValid(this))
 		{
-			GD.PushError($"Missing game board scene: {gameBoardScenePath}");
+			return;
+		}
+		if (result != AdventureRunWriteResult.Succeeded)
+		{
+			_runRecoverySaveFailed = true;
+			RefreshRunResumeDialogText();
 			return;
 		}
 
@@ -214,6 +253,28 @@ public partial class AdventureAvatarMenuScene
 		_ = StartAdventureWithTransitionAsync(gameBoardScene, selectedAvatarId, beginNewRun: false);
 	}
 
+	private bool TryBeginAdventureRunPersistence()
+	{
+		if (_isAdventureRunPersistenceInProgress)
+		{
+			return false;
+		}
+
+		_isAdventureRunPersistenceInProgress = true;
+		_runResumeDialog?.SetActionsDisabled(true);
+		return true;
+	}
+
+	private void EndAdventureRunPersistence()
+	{
+		_isAdventureRunPersistenceInProgress = false;
+		if (_runResumeDialog != null && GodotObject.IsInstanceValid(_runResumeDialog))
+		{
+			_runResumeDialog.SetActionsDisabled(false);
+		}
+	}
+
+#if DECKLAND_TEST_HOOKS
 	public bool DebugIsAdventureRunResumeDialogVisible()
 	{
 		return _isShowingRunResumeDialog
@@ -277,4 +338,5 @@ public partial class AdventureAvatarMenuScene
 		RestartAdventureFromFirstStage();
 		return true;
 	}
+#endif
 }

@@ -253,7 +253,7 @@ public partial class GameBoardScene
 
 	private bool IsNetworkMultiplayerMode()
 	{
-		return _gameModePolicy.IsNetworkStandard || !string.IsNullOrWhiteSpace(_networkSessionId);
+		return ModePolicy.IsNetworkStandard || !string.IsNullOrWhiteSpace(network_session_id);
 	}
 
 	private bool IsNetworkHost()
@@ -263,7 +263,7 @@ public partial class GameBoardScene
 
 	private int GetLocalHandPlayerIndex()
 	{
-		return IsNetworkMultiplayerMode() ? Mathf.Clamp(_localPlayerIndex, 0, MaxPlayers - 1) : MainPlayerIndex;
+		return IsNetworkMultiplayerMode() ? Mathf.Clamp(local_player_index, 0, MaxPlayers - 1) : MainPlayerIndex;
 	}
 
 	private bool IsLocalHandPlayer(int playerIndex)

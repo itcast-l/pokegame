@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const GAME_BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const VIEWPORT_SPECS := [
 	{"name": "960x540", "size": Vector2i(960, 540)},
@@ -42,16 +44,10 @@ func _capture_viewport(viewport_spec: Dictionary) -> bool:
 	root.add_child(viewport)
 
 	var packed_scene := load(GAME_BOARD_SCENE_PATH) as PackedScene
-	var board := packed_scene.instantiate() if packed_scene != null else null
+	var board := GameBoardSmokeFactory.create_local(packed_scene) if packed_scene != null else null
 	if board == null:
 		_fail("Failed to instantiate game board")
 		return false
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", false)
-	board.set("adventure_mode", false)
-	board.set("network_session_id", "")
 	viewport.add_child(board)
 	await _wait_frames(4)
 	_press_escape(viewport)

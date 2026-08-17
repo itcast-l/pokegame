@@ -722,6 +722,7 @@ internal static partial class Program
 
 		const string changedInvalidJson = "{bad json";
 		SeedProfile(saveManager, slotId, CreateProgressData("Runner", changedInvalidJson));
+		store.InvalidateProfileSnapshot();
 		Equal(AdventureUpgradeRestoreResult.InvalidJsonPreserved, store.ReloadFromActiveProfile());
 		Equal(2, Godot.GD.WarningMessages.Count);
 		False(store.HasActiveRun);

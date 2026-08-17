@@ -9,20 +9,230 @@ using Deckland.Rules;
 
 internal static partial class Program
 {
-	private static void SceneLoadHandshakeCompletesAndTimesOut()
+	private static void SceneLoadCoordinatorCompletesOnceAndRejectsDuplicates()
 	{
-		var tracker = new SceneLoadHandshakeTracker("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
+		var coordinator = new NetworkSceneLoadCoordinator();
+		coordinator.Start("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
 
-		True(tracker.MarkLoaded("match", 0));
-		False(tracker.IsComplete);
-		False(tracker.MarkLoaded("wrong", 1));
-		True(tracker.MarkLoaded("match", 1));
-		True(tracker.IsComplete);
-		False(tracker.HasTimedOut(50));
+		Equal(NetworkSceneLoadCoordinatorState.AwaitingAcks, coordinator.State);
+		Equal(
+			NetworkSceneLoadAckResult.Accepted,
+			coordinator.Acknowledge("match", 0, NetworkSceneLoadSeatAvailability.Connected));
+		Equal(
+			NetworkSceneLoadAckResult.Duplicate,
+			coordinator.Acknowledge("match", 0, NetworkSceneLoadSeatAvailability.Connected));
+		Equal(
+			NetworkSceneLoadAckResult.Completed,
+			coordinator.Acknowledge("match", 1, NetworkSceneLoadSeatAvailability.Connected));
+		Equal(NetworkSceneLoadCoordinatorState.Completed, coordinator.State);
+		Equal(
+			NetworkSceneLoadAckResult.Duplicate,
+			coordinator.Acknowledge("match", 1, NetworkSceneLoadSeatAvailability.Connected));
+		Equal(NetworkSceneLoadPollResult.Inactive, coordinator.Poll(50));
+	}
 
-		var timedOut = new SceneLoadHandshakeTracker("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
-		True(timedOut.MarkLoaded("match", 0));
-		True(timedOut.HasTimedOut(40));
+	private static void SceneLoadCoordinatorRejectsInvalidAcks()
+	{
+		var coordinator = new NetworkSceneLoadCoordinator();
+		coordinator.Start("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
+
+		Equal(
+			NetworkSceneLoadAckResult.UnknownSeat,
+			coordinator.Acknowledge("match", 0, NetworkSceneLoadSeatAvailability.Unknown));
+		Equal(
+			NetworkSceneLoadAckResult.OfflineSeat,
+			coordinator.Acknowledge("match", 0, NetworkSceneLoadSeatAvailability.Offline));
+		Equal(
+			NetworkSceneLoadAckResult.StaleMatch,
+			coordinator.Acknowledge("stale", 0, NetworkSceneLoadSeatAvailability.Connected));
+		Equal(
+			NetworkSceneLoadAckResult.UnexpectedSeat,
+			coordinator.Acknowledge("match", 2, NetworkSceneLoadSeatAvailability.Connected));
+		Equal(0, coordinator.LoadedSeats.Count);
+	}
+
+	private static void SceneLoadCoordinatorTimesOutAndResets()
+	{
+		var coordinator = new NetworkSceneLoadCoordinator();
+		coordinator.Start("match", new[] { 0, 1 }, timeoutSeconds: 30, startedAtSeconds: 10);
+
+		Equal(40.0, coordinator.DeadlineSeconds);
+		Equal(NetworkSceneLoadPollResult.Waiting, coordinator.Poll(39.999));
+		Equal(NetworkSceneLoadPollResult.TimedOut, coordinator.Poll(40));
+		Equal(NetworkSceneLoadCoordinatorState.TimedOut, coordinator.State);
+		Equal(NetworkSceneLoadPollResult.Inactive, coordinator.Poll(41));
+
+		coordinator.Reset();
+		Equal(NetworkSceneLoadCoordinatorState.Inactive, coordinator.State);
+		Equal(null, coordinator.DeadlineSeconds);
+		Equal(0, coordinator.ExpectedSeats.Count);
+		Equal(0, coordinator.LoadedSeats.Count);
+	}
+
+	private static void NetworkLobbyRosterExposesReadOnlyViewsAndOrderedCommands()
+	{
+		var roster = new NetworkLobbyRoster();
+		NetworkPlayerPublicState seatOne = CreateRosterPlayer(22, "player-b", 1);
+		NetworkPlayerPublicState seatZero = CreateRosterPlayer(11, "player-a", 0);
+
+		roster.InsertPlayerInSeatOrder(seatOne);
+		roster.InsertPlayerInSeatOrder(seatZero);
+		Equal(2, roster.Players.Count);
+		Equal("player-a", roster.Players[0].PlayerSessionId);
+		Equal("player-b", roster.Players[1].PlayerSessionId);
+		ExpectThrows<NotSupportedException>(() =>
+			((IList<NetworkPlayerPublicState>)roster.Players).Add(CreateRosterPlayer(33, "player-c", 2)));
+
+		roster.SetPendingReady(22, true);
+		True(roster.TryTakePendingReady(22, out bool isReady));
+		True(isReady);
+		False(roster.TryTakePendingReady(22, out _));
+	}
+
+	private static void NetworkLobbyRosterCompactsRelatedSeatStateAtomically()
+	{
+		var roster = new NetworkLobbyRoster();
+		NetworkPlayerPublicState host = CreateRosterPlayer(1, "host", 0);
+		NetworkPlayerPublicState removed = CreateRosterPlayer(22, "removed", 1);
+		NetworkPlayerPublicState kept = CreateRosterPlayer(33, "kept", 2);
+		NetworkPlayerPublicState[] players = { host, removed, kept };
+		SeatControlState[] controls = players
+			.Select(player => SeatControlRules.CreateInitialState(player, $"verifier-{player.SeatIndex}"))
+			.ToArray();
+		var claims = controls.ToDictionary(
+			state => state.SeatIndex,
+			state => SeatControlRules.CreateInitialClaimRecord("match", state));
+		var credentials = new Dictionary<int, string>
+		{
+			[1] = "removed-credential",
+			[2] = "kept-credential",
+		};
+		roster.ReplaceRosterState(players, controls, claims, credentials);
+
+		roster.CompactSeatMappings(new[] { host, kept });
+
+		Equal(2, roster.Players.Count);
+		Equal("host", roster.Players[0].PlayerSessionId);
+		Equal(0, roster.Players[0].SeatIndex);
+		Equal("kept", roster.Players[1].PlayerSessionId);
+		Equal(1, roster.Players[1].SeatIndex);
+		Equal(1, roster.SeatControls[1].SeatIndex);
+		Equal("kept", roster.SeatControls[1].PlayerSessionId);
+		True(roster.ReconnectClaimsBySeat.TryGetValue(1, out ReconnectClaimRecord compactClaim));
+		Equal("kept", compactClaim.PlayerSessionId);
+		Equal(1, compactClaim.SeatIndex);
+		Equal("kept-credential", roster.IssuedSeatCredentialsBySeat[1]);
+		False(roster.IssuedSeatCredentialsBySeat.ContainsKey(2));
+	}
+
+	private static void NetworkReconnectCoordinatorRejectsDuplicateStartsAndSchedulesRetries()
+	{
+		var coordinator = new NetworkReconnectCoordinator();
+		var context = new NetworkReconnectContext("session", "match", 3);
+
+		True(coordinator.Begin(context, nowSeconds: 10));
+		False(coordinator.Begin(context, nowSeconds: 11));
+		Equal(20.0, coordinator.WindowDeadlineSeconds);
+		Equal(10.0, coordinator.RetryDeadlineSeconds);
+		Equal(
+			NetworkReconnectPollAction.StartAttempt,
+			coordinator.Poll(10, peerBlocksAttempt: false, enableAttemptTimeout: false, attemptTimeoutSeconds: 2));
+		Equal(NetworkReconnectCoordinatorState.AttemptInFlight, coordinator.State);
+		Equal(
+			NetworkReconnectTransitionResult.Accepted,
+			coordinator.ScheduleRetry(context, nowSeconds: 11));
+		Equal(13.0, coordinator.RetryDeadlineSeconds);
+		Equal(
+			NetworkReconnectPollAction.Waiting,
+			coordinator.Poll(12.999, peerBlocksAttempt: false, enableAttemptTimeout: false, attemptTimeoutSeconds: 2));
+		Equal(
+			NetworkReconnectPollAction.StartAttempt,
+			coordinator.Poll(13, peerBlocksAttempt: false, enableAttemptTimeout: false, attemptTimeoutSeconds: 2));
+	}
+
+	private static void NetworkReconnectCoordinatorFencesConfirmationAndSnapshotContext()
+	{
+		var coordinator = new NetworkReconnectCoordinator();
+		var context = new NetworkReconnectContext("session", "match", 3);
+		var staleContext = context with { MatchId = "stale" };
+		coordinator.Begin(context, nowSeconds: 10);
+		coordinator.Poll(10, peerBlocksAttempt: false, enableAttemptTimeout: false, attemptTimeoutSeconds: 2);
+
+		Equal(
+			NetworkReconnectTransitionResult.StaleContext,
+			coordinator.MarkAwaitingConfirmation(staleContext, nowSeconds: 11));
+		Equal(
+			NetworkReconnectTransitionResult.Accepted,
+			coordinator.MarkAwaitingConfirmation(context, nowSeconds: 11));
+		Equal(
+			NetworkReconnectTransitionResult.InvalidState,
+			coordinator.MarkAwaitingConfirmation(context, nowSeconds: 11));
+		Equal(
+			NetworkReconnectTransitionResult.StaleContext,
+			coordinator.ReceiveConfirmation(staleContext, accepted: true, nowSeconds: 12));
+		Equal(
+			NetworkReconnectTransitionResult.Accepted,
+			coordinator.ReceiveConfirmation(context, accepted: true, nowSeconds: 12));
+		Equal(NetworkReconnectCoordinatorState.AwaitingSnapshot, coordinator.State);
+		Equal(
+			NetworkReconnectTransitionResult.InvalidState,
+			coordinator.ReceiveConfirmation(context, accepted: true, nowSeconds: 12));
+		Equal(
+			NetworkReconnectTransitionResult.StaleContext,
+			coordinator.CompleteSnapshot(staleContext, nowSeconds: 13));
+		Equal(
+			NetworkReconnectTransitionResult.Accepted,
+			coordinator.CompleteSnapshot(context, nowSeconds: 13));
+		Equal(NetworkReconnectCoordinatorState.Completed, coordinator.State);
+	}
+
+	private static void NetworkReconnectCoordinatorExpiresAttemptAndWindowOnce()
+	{
+		var coordinator = new NetworkReconnectCoordinator();
+		var context = new NetworkReconnectContext("session", "match", 3);
+		coordinator.Begin(context, nowSeconds: 10);
+		coordinator.Poll(10, peerBlocksAttempt: false, enableAttemptTimeout: true, attemptTimeoutSeconds: 2);
+
+		Equal(
+			NetworkReconnectPollAction.Waiting,
+			coordinator.Poll(11.999, peerBlocksAttempt: false, enableAttemptTimeout: true, attemptTimeoutSeconds: 2));
+		Equal(
+			NetworkReconnectPollAction.AttemptTimedOut,
+			coordinator.Poll(12, peerBlocksAttempt: false, enableAttemptTimeout: true, attemptTimeoutSeconds: 2));
+		Equal(NetworkReconnectCoordinatorState.AttemptTimedOut, coordinator.State);
+		Equal(
+			NetworkReconnectPollAction.Inactive,
+			coordinator.Poll(13, peerBlocksAttempt: false, enableAttemptTimeout: true, attemptTimeoutSeconds: 2));
+
+		coordinator.Reset();
+		True(coordinator.Begin(context, nowSeconds: 20));
+		Equal(
+			NetworkReconnectPollAction.WindowExpired,
+			coordinator.Poll(30, peerBlocksAttempt: false, enableAttemptTimeout: false, attemptTimeoutSeconds: 2));
+		Equal(NetworkReconnectCoordinatorState.WindowExpired, coordinator.State);
+		Equal(
+			NetworkReconnectTransitionResult.Inactive,
+			coordinator.MarkAwaitingConfirmation(context, nowSeconds: 30));
+	}
+
+	private static NetworkPlayerPublicState CreateRosterPlayer(
+		int peerId,
+		string playerSessionId,
+		int seatIndex)
+	{
+		return new NetworkPlayerPublicState(
+			peerId,
+			playerSessionId,
+			playerSessionId,
+			"default",
+			seatIndex,
+			seatIndex == 0,
+			seatIndex == 0,
+			true,
+			true)
+		{
+			CredentialsAcknowledged = true,
+		};
 	}
 
 	private static void LanDiscoveryParsesValidMessagesAndDropsDirtyData()
@@ -328,7 +538,7 @@ internal static partial class Program
 			False(migrationEntrySource.Contains("private void RpcMigrationFollowerSnapshotApplied(", StringComparison.Ordinal));
 			True(reconnectSource.Contains("HostMigrationCapabilityAvailable", StringComparison.Ordinal));
 			True(reconnectSource.Contains("MethodName.RpcMigrationFollowerSnapshotApplied", StringComparison.Ordinal));
-			True(snapshotSource.Contains("networkManager.NotifyReconnectSnapshotApplied(_networkMatchId);", StringComparison.Ordinal));
+			True(snapshotSource.Contains("networkManager.NotifyReconnectSnapshotApplied(network_match_id);", StringComparison.Ordinal));
 			int disconnectStart = managerSource.IndexOf("private void OnServerDisconnected()", StringComparison.Ordinal);
 			int disconnectEnd = managerSource.IndexOf("private void InsertPlayerInSeatOrder", disconnectStart, StringComparison.Ordinal);
 			True(disconnectStart >= 0 && disconnectEnd > disconnectStart);

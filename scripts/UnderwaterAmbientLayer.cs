@@ -71,8 +71,10 @@ public partial class UnderwaterAmbientLayer : Control
 	[Export(PropertyHint.Range, "0,80,1")]
 	public int center_glint_count = 0;
 
+#if DECKLAND_TEST_HOOKS
 	[Export]
 	public bool debug_force_missing_image_assets;
+#endif
 
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Mote> _motes = new();

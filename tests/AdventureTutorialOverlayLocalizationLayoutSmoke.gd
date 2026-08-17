@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const CSV_PATH := "res://localization/ui.csv"
 const OVERLAY_SCENE_PATH := "res://scenes/adventure_tutorial_overlay.tscn"
 const BOARD_SCENE_PATH := "res://scenes/adventure_tutorial_game_board_scene.tscn"
@@ -280,7 +282,7 @@ func _audit_board_integration() -> void:
 		_fail("Missing adventure tutorial board scene")
 		return
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_tutorial(packed_scene, "fish")
 	root.add_child(board)
 	var overlay: Control = null
 	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS

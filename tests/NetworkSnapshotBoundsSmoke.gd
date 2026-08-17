@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 
 var _failed := false
@@ -16,7 +18,7 @@ func _run() -> void:
 		return
 	if not await _assert_multiplayer_opening_dice_bounds(4):
 		return
-	var board := packed_scene.instantiate() if packed_scene != null else null
+	var board := GameBoardSmokeFactory.create_local(packed_scene) if packed_scene != null else null
 	if board == null:
 		_fail("Could not instantiate game board")
 		return
@@ -27,9 +29,9 @@ func _run() -> void:
 	if valid_snapshot == null:
 		_fail("Could not build valid network snapshot baseline")
 		return
-	if not _assert_snapshot_contract(valid_snapshot, int(board.get("player_count")), 0):
+	if not _assert_snapshot_contract(valid_snapshot, GameBoardSmokeFactory.get_player_count(board), 0):
 		return
-	for recipient_seat in range(1, int(board.get("player_count"))):
+	for recipient_seat in range(1, GameBoardSmokeFactory.get_player_count(board)):
 		var recipient_snapshot := board.call(
 			"BuildNetworkBoardSnapshotForSeat",
 			recipient_seat,
@@ -37,7 +39,7 @@ func _run() -> void:
 		if recipient_snapshot == null \
 				or not _assert_snapshot_contract(
 					recipient_snapshot,
-					int(board.get("player_count")),
+					GameBoardSmokeFactory.get_player_count(board),
 					recipient_seat):
 			return
 	_visual_event_context = {
@@ -48,7 +50,7 @@ func _run() -> void:
 		"action_id": 0,
 	}
 	var seat_states: Array = []
-	for seat_index in range(int(board.get("player_count"))):
+	for seat_index in range(GameBoardSmokeFactory.get_player_count(board)):
 		seat_states.append({
 			"seat_index": seat_index,
 			"mode": "HumanConnected",
@@ -582,7 +584,7 @@ func _run_full_visual_event_boundary_matrix(board: Node, original_snapshot: Dict
 	if not _assert_visual_rejected(board, baseline, oversized_threshold_count, "capture threshold oversized count"):
 		return false
 	var invalid_threshold_seat := blocked_threshold_event.duplicate(true)
-	invalid_threshold_seat["actor_seat_index"] = int(board.get("player_count"))
+	invalid_threshold_seat["actor_seat_index"] = GameBoardSmokeFactory.get_player_count(board)
 	if not _assert_visual_rejected(board, baseline, invalid_threshold_seat, "capture threshold invalid seat"):
 		return false
 
@@ -827,11 +829,13 @@ func _run_nested_snapshot_boundary_matrix(board: Node, valid_snapshot: Dictionar
 
 func _assert_multiplayer_opening_dice_bounds(player_count: int) -> bool:
 	var packed_scene := load(SCENE_PATH) as PackedScene
-	var board := packed_scene.instantiate() if packed_scene != null else null
+	var board := GameBoardSmokeFactory.create_local(packed_scene) if packed_scene != null else null
 	if board == null:
 		_fail("Could not instantiate %d-player dice boundary board" % player_count)
 		return false
-	board.set("network_wait_for_initialize", true)
+	if not GameBoardSmokeFactory.defer_initialization(board):
+		_fail("Could not defer %d-player dice boundary board" % player_count)
+		return false
 	root.add_child(board)
 	await process_frame
 	if not bool(board.call("DebugStartOpeningDiceMatch", player_count, 1)):

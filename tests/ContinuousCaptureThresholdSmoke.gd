@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const FEEDBACK_SECONDS := 1.2
 const RECT_TOLERANCE := 0.75
@@ -99,19 +101,22 @@ func _instantiate_board(
 	local_seat: int
 ) -> Node:
 	var packed := load(SCENE_PATH) as PackedScene
-	var board := packed.instantiate() if packed != null else null
+	var board: Node = null
+	if packed != null and network_mode:
+		board = GameBoardSmokeFactory.create_network(
+			packed,
+			player_count,
+			false,
+			100,
+			"capture-threshold-smoke-session-%d" % local_seat,
+			"capture-threshold-smoke-match-%d" % local_seat,
+			0,
+			local_seat)
+	elif packed != null:
+		board = GameBoardSmokeFactory.create_solo(packed, player_count, false)
 	if board == null:
 		_fail("Could not instantiate board")
 		return null
-	board.set("player_count", player_count)
-	board.set("item_mode", false)
-	board.set("solo_mode", not network_mode)
-	board.set("adventure_mode", false)
-	if network_mode:
-		board.set("network_session_id", "capture-threshold-smoke-session-%d" % local_seat)
-		board.set("network_match_id", "capture-threshold-smoke-match-%d" % local_seat)
-		board.set("network_wait_for_initialize", true)
-		board.set("local_player_index", local_seat)
 	viewport.add_child(board)
 	await process_frame
 	await process_frame

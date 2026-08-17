@@ -77,7 +77,11 @@ public partial class GameAudioManager : Node
 	private const float TensionRelativeVolumeDb = -5.0f;
 	private const int MaxPooledSfxPlayers = 32;
 	private static readonly StringName UiAudioBoundMeta = new("game_audio_ui_bound");
+	private static readonly StringName UiRangeAudioBoundMeta = new("game_audio_range_audio_bound");
 	private static readonly StringName UiTooltipSuppressionBoundMeta = new("game_ui_tooltip_suppression_bound");
+	private static readonly StringName UiStyleBoundMeta = new("game_ui_style_bound");
+	private static readonly StringName UiDeferredStyleBoundMeta = new("game_ui_deferred_style_bound");
+	private static readonly StringName UiBindingQueuedMeta = new("game_ui_binding_queued");
 	public static readonly StringName UiSuppressPressedSfxMeta = new("game_audio_ui_suppress_pressed_sfx");
 
 	private sealed class MusicTrackSpec
@@ -187,7 +191,7 @@ public partial class GameAudioManager : Node
 		_musicBus = AudioServer.GetBusIndex(PreferredMusicBus) >= 0 ? PreferredMusicBus : FallbackMusicBus;
 		_musicVolumeDb = LoadSavedMusicVolumeDb();
 		BindUiBehaviorRecursive(GetTree().Root);
-		GetTree().NodeAdded += BindUiBehaviorRecursive;
+		GetTree().NodeAdded += OnUiNodeAdded;
 		_uiBindingActive = true;
 	}
 }

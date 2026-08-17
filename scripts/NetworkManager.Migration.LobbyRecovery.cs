@@ -43,10 +43,10 @@ public partial class NetworkManager
 			return;
 		}
 
-		int playerIndex = _players.FindIndex(player =>
+		int playerIndex = _lobbyRoster.FindPlayerIndex(player =>
 			string.Equals(player.PlayerSessionId, playerSessionId, StringComparison.Ordinal));
 		if (playerIndex < 0
-			|| !TryGetSeatControlState(_players[playerIndex].SeatIndex, out SeatControlState control, out int controlIndex)
+			|| !TryGetSeatControlState(_lobbyRoster.Players[playerIndex].SeatIndex, out SeatControlState control, out int controlIndex)
 			|| credentialGeneration != control.CredentialGeneration
 			|| !SeatCredentialRules.Verify(credential, control.CredentialVerifier)
 			|| (control.PendingCredentialGeneration > 0 && control.PendingCredentialPeerId != senderPeerId))
@@ -62,14 +62,16 @@ public partial class NetworkManager
 			return;
 		}
 
-		NetworkPlayerPublicState player = _players[playerIndex];
-		_players[playerIndex] = player with
-		{
-			PeerId = senderPeerId,
-			IsHost = false,
-			IsLocal = false,
-			IsConnected = true,
-		};
+		NetworkPlayerPublicState player = _lobbyRoster.Players[playerIndex];
+		_lobbyRoster.SetPlayerAt(
+			playerIndex,
+			player with
+			{
+				PeerId = senderPeerId,
+				IsHost = false,
+				IsLocal = false,
+				IsConnected = true,
+			});
 		SeatControlState boundControl = control with
 		{
 			Mode = SeatControlMode.HumanConnected,
@@ -86,14 +88,14 @@ public partial class NetworkManager
 			{
 				return;
 			}
-			_issuedSeatCredentialsBySeat[player.SeatIndex] = nextCredential;
+			_lobbyRoster.SetIssuedSeatCredential(player.SeatIndex, nextCredential);
 			credentialToSend = nextCredential;
 		}
-		else if (_issuedSeatCredentialsBySeat.TryGetValue(player.SeatIndex, out string? pendingCredential))
+		else if (_lobbyRoster.IssuedSeatCredentialsBySeat.TryGetValue(player.SeatIndex, out string? pendingCredential))
 		{
 			credentialToSend = pendingCredential;
 		}
-		_seatControlStates[controlIndex] = boundControl;
+		_lobbyRoster.SetSeatControlAt(controlIndex, boundControl);
 		if (!string.IsNullOrEmpty(credentialToSend))
 		{
 			SendSeatCredentialToPeer(senderPeerId, boundControl, credentialToSend);
@@ -111,9 +113,9 @@ public partial class NetworkManager
 			return;
 		}
 
-		var oldControlsByPlayerSessionId = _seatControlStates
+		var oldControlsByPlayerSessionId = _lobbyRoster.SeatControls
 			.ToDictionary(state => state.PlayerSessionId, StringComparer.Ordinal);
-		List<NetworkPlayerPublicState> remainingPlayers = _players
+		List<NetworkPlayerPublicState> remainingPlayers = _lobbyRoster.Players
 			.Where(player => !string.Equals(player.PlayerSessionId, sourcePlayerSessionId, StringComparison.Ordinal))
 			.OrderBy(player => player.SeatIndex)
 			.ToList();
@@ -123,10 +125,10 @@ public partial class NetworkManager
 			return;
 		}
 
-		_players.Clear();
-		_seatControlStates.Clear();
-		_reconnectClaimsBySeat.Clear();
-		_issuedSeatCredentialsBySeat.Clear();
+		var migratedPlayers = new List<NetworkPlayerPublicState>(remainingPlayers.Count);
+		var migratedControls = new List<SeatControlState>(remainingPlayers.Count);
+		var migratedClaims = new Dictionary<int, ReconnectClaimRecord>();
+		var migratedCredentials = new Dictionary<int, string>();
 
 		for (int newSeat = 0; newSeat < remainingPlayers.Count; newSeat++)
 		{
@@ -141,7 +143,7 @@ public partial class NetworkManager
 				IsConnected = isLocalCandidate,
 				CredentialsAcknowledged = isLocalCandidate || oldPlayer.CredentialsAcknowledged,
 			};
-			_players.Add(player);
+			migratedPlayers.Add(player);
 
 			if (!oldControlsByPlayerSessionId.TryGetValue(oldPlayer.PlayerSessionId, out SeatControlState oldControl))
 			{
@@ -149,7 +151,7 @@ public partial class NetworkManager
 				oldControl = SeatControlRules.CreateInitialState(
 					oldPlayer,
 					SeatCredentialRules.ComputeVerifier(replacementCredential));
-				_issuedSeatCredentialsBySeat[newSeat] = replacementCredential;
+				migratedCredentials[newSeat] = replacementCredential;
 			}
 
 			SeatControlState control = oldControl with
@@ -158,9 +160,14 @@ public partial class NetworkManager
 				Mode = isLocalCandidate ? SeatControlMode.HumanConnected : SeatControlMode.HumanReclaimPending,
 				PeerId = isLocalCandidate ? 1 : 0,
 			};
-			_seatControlStates.Add(control);
-			_reconnectClaimsBySeat[newSeat] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, control);
+			migratedControls.Add(control);
+			migratedClaims[newSeat] = SeatControlRules.CreateInitialClaimRecord(_config.MatchId, control);
 		}
+		_lobbyRoster.ReplaceRosterState(
+			migratedPlayers,
+			migratedControls,
+			migratedClaims,
+			migratedCredentials);
 
 		EmitPlayerListUpdated();
 		EmitSeatControlStatesUpdated();
@@ -177,7 +184,7 @@ public partial class NetworkManager
 			targetEpoch,
 			now,
 			NetworkMigrationRules.LobbyRecoveryTimeoutSeconds,
-			_players
+			_lobbyRoster.Players
 				.Where(player => !player.IsLocal)
 				.Select(player => player.PlayerSessionId));
 	}
@@ -230,62 +237,13 @@ public partial class NetworkManager
 
 	private void CompactLobbyAfterMigrationTimeout(LobbyMigrationRecoveryState recovery)
 	{
-		List<NetworkPlayerPublicState> keptPlayers = _players
+		List<NetworkPlayerPublicState> keptPlayers = _lobbyRoster.Players
 			.Where(player => player.IsLocal
 				|| !recovery.ExpectedPlayerSessionIds.Contains(player.PlayerSessionId)
 				|| recovery.IsClaimed(player.PlayerSessionId))
 			.OrderBy(player => player.SeatIndex)
 			.ToList();
-		CompactLobbySeatMappings(keptPlayers);
-	}
-
-	private void CompactLobbySeatMappings(IReadOnlyList<NetworkPlayerPublicState> keptPlayers)
-	{
-		var controlsByPlayerSessionId = _seatControlStates.ToDictionary(
-			state => state.PlayerSessionId,
-			StringComparer.Ordinal);
-		var claimsByPlayerSessionId = _reconnectClaimsBySeat.Values.ToDictionary(
-			claim => claim.PlayerSessionId,
-			StringComparer.Ordinal);
-		var oldSeatByPlayerSessionId = _players.ToDictionary(
-			player => player.PlayerSessionId,
-			player => player.SeatIndex,
-			StringComparer.Ordinal);
-		var compactPlayers = new List<NetworkPlayerPublicState>(keptPlayers.Count);
-		var compactControls = new List<SeatControlState>(keptPlayers.Count);
-		var compactClaims = new Dictionary<int, ReconnectClaimRecord>();
-		var compactIssuedCredentials = new Dictionary<int, string>();
-		for (int newSeat = 0; newSeat < keptPlayers.Count; newSeat++)
-		{
-			NetworkPlayerPublicState player = keptPlayers[newSeat] with { SeatIndex = newSeat };
-			SeatControlState control = controlsByPlayerSessionId[player.PlayerSessionId] with { SeatIndex = newSeat };
-			ReconnectClaimRecord claim = claimsByPlayerSessionId.TryGetValue(player.PlayerSessionId, out ReconnectClaimRecord existingClaim)
-				? existingClaim with { SeatIndex = newSeat }
-				: SeatControlRules.CreateInitialClaimRecord(string.Empty, control);
-			compactPlayers.Add(player);
-			compactControls.Add(control);
-			compactClaims[newSeat] = claim;
-			if (oldSeatByPlayerSessionId.TryGetValue(player.PlayerSessionId, out int oldSeat)
-				&& _issuedSeatCredentialsBySeat.TryGetValue(oldSeat, out string? credential))
-			{
-				compactIssuedCredentials[newSeat] = credential;
-			}
-		}
-
-		_players.Clear();
-		_players.AddRange(compactPlayers);
-		_seatControlStates.Clear();
-		_seatControlStates.AddRange(compactControls);
-		_reconnectClaimsBySeat.Clear();
-		foreach (KeyValuePair<int, ReconnectClaimRecord> pair in compactClaims)
-		{
-			_reconnectClaimsBySeat[pair.Key] = pair.Value;
-		}
-		_issuedSeatCredentialsBySeat.Clear();
-		foreach (KeyValuePair<int, string> pair in compactIssuedCredentials)
-		{
-			_issuedSeatCredentialsBySeat[pair.Key] = pair.Value;
-		}
+		_lobbyRoster.CompactSeatMappings(keptPlayers);
 	}
 
 }

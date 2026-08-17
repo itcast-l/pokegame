@@ -4,6 +4,7 @@ public partial class NetworkManager
 {
 	private readonly NetworkMatchEndpointRegistrationStore _matchEndpointRegistrationStore = new();
 	private NetworkBoardInitialization? _pendingBoardInitialization;
+#if DECKLAND_TEST_HOOKS
 	private long _endpointRegistrationCount;
 	private long _endpointReplacementCount;
 	private long _staleEndpointUnregistrationCount;
@@ -11,6 +12,7 @@ public partial class NetworkManager
 	private long _missingReplicaEndpointRejectionCount;
 	private long _missingPresentationEndpointRejectionCount;
 	private long _pendingInitializationReplacementCount;
+#endif
 
 	internal NetworkMatchEndpointRegistrationToken RegisterMatchEndpoint(
 		string sessionId,
@@ -35,7 +37,9 @@ public partial class NetworkManager
 
 		if (_matchEndpointRegistrationStore.Active != null)
 		{
+#if DECKLAND_TEST_HOOKS
 			_endpointReplacementCount++;
+#endif
 		}
 		NetworkMatchEndpointRegistrationToken token = _matchEndpointRegistrationStore.Register(
 			sessionId,
@@ -44,7 +48,9 @@ public partial class NetworkManager
 			authority,
 			replica,
 			presentation);
+#if DECKLAND_TEST_HOOKS
 		_endpointRegistrationCount++;
+#endif
 		TryApplyPendingBoardInitialization();
 		return token;
 	}
@@ -53,13 +59,16 @@ public partial class NetworkManager
 	{
 		if (!_matchEndpointRegistrationStore.Unregister(token))
 		{
+#if DECKLAND_TEST_HOOKS
 			_staleEndpointUnregistrationCount++;
+#endif
 			return false;
 		}
 
 		return true;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public NetworkEndpointDiagnosticsSnapshot DebugGetNetworkEndpointDiagnostics()
 	{
 		return new NetworkEndpointDiagnosticsSnapshot(
@@ -93,6 +102,7 @@ public partial class NetworkManager
 	{
 		return _staleEndpointUnregistrationCount;
 	}
+#endif
 
 	private bool TryGetAuthorityEndpoint(out INetworkAuthorityEndpoint endpoint)
 	{
@@ -101,7 +111,9 @@ public partial class NetworkManager
 			endpoint = registration.Authority;
 			return true;
 		}
+#if DECKLAND_TEST_HOOKS
 		_missingAuthorityEndpointRejectionCount++;
+#endif
 		endpoint = null!;
 		return false;
 	}
@@ -113,7 +125,9 @@ public partial class NetworkManager
 			endpoint = registration.Replica;
 			return true;
 		}
+#if DECKLAND_TEST_HOOKS
 		_missingReplicaEndpointRejectionCount++;
+#endif
 		endpoint = null!;
 		return false;
 	}
@@ -125,7 +139,9 @@ public partial class NetworkManager
 			endpoint = registration.Presentation;
 			return true;
 		}
+#if DECKLAND_TEST_HOOKS
 		_missingPresentationEndpointRejectionCount++;
+#endif
 		endpoint = null!;
 		return false;
 	}
@@ -150,7 +166,9 @@ public partial class NetworkManager
 	{
 		if (_pendingBoardInitialization != null)
 		{
+#if DECKLAND_TEST_HOOKS
 			_pendingInitializationReplacementCount++;
+#endif
 		}
 		_pendingBoardInitialization = initialization;
 	}

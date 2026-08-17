@@ -106,7 +106,7 @@ public partial class NetworkManager
 			return;
 		}
 
-		_reconnectClaimsBySeat.TryGetValue(currentSeatState.SeatIndex, out ReconnectClaimRecord existingClaim);
+		_lobbyRoster.ReconnectClaimsBySeat.TryGetValue(currentSeatState.SeatIndex, out ReconnectClaimRecord existingClaim);
 		ReconnectClaimResult result = SeatControlRules.ApplyReconnectClaim(
 			_config.MatchId,
 			gameBoard.IsMatchClaimable,
@@ -147,11 +147,11 @@ public partial class NetworkManager
 				Mode = SeatControlMode.HumanConnected,
 			};
 		}
-		_seatControlStates[stateIndex] = acceptedSeatControlState;
-		_reconnectClaimsBySeat[currentSeatState.SeatIndex] = result.ClaimRecord;
+		_lobbyRoster.SetSeatControlAt(stateIndex, acceptedSeatControlState);
+		_lobbyRoster.SetReconnectClaim(currentSeatState.SeatIndex, result.ClaimRecord);
 		if (!string.IsNullOrEmpty(nextCredential))
 		{
-			_issuedSeatCredentialsBySeat[currentSeatState.SeatIndex] = nextCredential;
+			_lobbyRoster.SetIssuedSeatCredential(currentSeatState.SeatIndex, nextCredential);
 		}
 		if (currentSeatState.PeerId != senderPeerId)
 		{
@@ -280,18 +280,22 @@ public partial class NetworkManager
 			return;
 		}
 
-		_seatControlStates[stateIndex] = committed;
-		if (_reconnectClaimsBySeat.TryGetValue(committed.SeatIndex, out ReconnectClaimRecord claim))
+		_lobbyRoster.SetSeatControlAt(stateIndex, committed);
+		if (_lobbyRoster.ReconnectClaimsBySeat.TryGetValue(committed.SeatIndex, out ReconnectClaimRecord claim))
 		{
-			_reconnectClaimsBySeat[committed.SeatIndex] = claim with
-			{
-				CredentialGeneration = committed.CredentialGeneration,
-			};
+			_lobbyRoster.SetReconnectClaim(
+				committed.SeatIndex,
+				claim with
+				{
+					CredentialGeneration = committed.CredentialGeneration,
+				});
 		}
-		_issuedSeatCredentialsBySeat.Remove(committed.SeatIndex);
+		_lobbyRoster.RemoveIssuedSeatCredential(committed.SeatIndex);
 		if (TryGetPlayerIndexBySeatIndex(committed.SeatIndex, out int playerIndex))
 		{
-			_players[playerIndex] = _players[playerIndex] with { CredentialsAcknowledged = true };
+			_lobbyRoster.SetPlayerAt(
+				playerIndex,
+				_lobbyRoster.Players[playerIndex] with { CredentialsAcknowledged = true });
 		}
 
 		RpcId(
@@ -379,8 +383,22 @@ public partial class NetworkManager
 			SetAuthorityEpoch(authorityEpoch);
 		}
 
-		_reconnectAttemptInFlight = false;
-		_reconnectAttemptStartedAt = -1.0;
+		if (_state == NetworkSessionState.Reconnecting)
+		{
+			NetworkReconnectTransitionResult confirmation = _reconnectCoordinator.ReceiveConfirmation(
+				new NetworkReconnectContext(sessionId, matchId, authorityEpoch),
+				accepted,
+				Time.GetTicksMsec() / 1000.0);
+			if (confirmation == NetworkReconnectTransitionResult.Expired)
+			{
+				HandleHostDisconnected();
+				return;
+			}
+			if (confirmation != NetworkReconnectTransitionResult.Accepted)
+			{
+				return;
+			}
+		}
 		if (!accepted)
 		{
 			if ((_state == NetworkSessionState.Reconnecting
@@ -406,6 +424,7 @@ public partial class NetworkManager
 				return;
 			}
 
+			_reconnectCoordinator.Reset();
 			Fail(NetworkUserErrorCategory.Reconnect, technicalDetails);
 			return;
 		}
@@ -438,9 +457,7 @@ public partial class NetworkManager
 			NetworkUserErrorCategory.HostDisconnected);
 		_hostEndedMatchPending = true;
 		_hostEndedMatchLocalizationKey = hostEndedMatchLocalizationKey;
-		_reconnectAttemptInFlight = false;
-		_reconnectAttemptStartedAt = -1.0;
-		_nextReconnectAttemptAt = 0.0;
+		_reconnectCoordinator.Reset();
 		if (HostMigrationCapabilityAvailable
 			&& _state == NetworkSessionState.MigratingHost)
 		{

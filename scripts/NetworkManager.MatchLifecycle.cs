@@ -16,13 +16,13 @@ public partial class NetworkManager
 			return;
 		}
 
-		if (!MultiplayerLobbyRules.CanStart(_players, _config.PlayerCount))
+		if (!MultiplayerLobbyRules.CanStart(_lobbyRoster.Players, _config.PlayerCount))
 		{
 			EmitSignal(SignalName.ErrorRaised, "MULTIPLAYER_LOBBY_START_REQUIRE_READY");
 			return;
 		}
 
-		_pendingLobbyReadyByPeerId.Clear();
+		_lobbyRoster.ClearPendingReady();
 		ClearPendingLocalReadyIntent();
 		ResetMigrationArtifactsForNewMatch();
 		_config = _config with
@@ -111,7 +111,7 @@ public partial class NetworkManager
 			completedMatchContext,
 			_config,
 			GetCurrentAuthorityEpoch(),
-			_players,
+			_lobbyRoster.Players,
 			requesterPeerId,
 			hasWinner);
 		if (!IsHost
@@ -121,7 +121,7 @@ public partial class NetworkManager
 		}
 
 		NetworkSessionConfig lobbyConfig = MultiplayerRematchRules.CreateReturnedLobbyConfig(_config);
-		List<NetworkPlayerPublicState> connectedPlayers = MultiplayerRematchRules.RetainConnectedPlayers(_players);
+		List<NetworkPlayerPublicState> connectedPlayers = MultiplayerRematchRules.RetainConnectedPlayers(_lobbyRoster.Players);
 		var players = new Godot.Collections.Array();
 		foreach (NetworkPlayerPublicState player in connectedPlayers)
 		{
@@ -183,13 +183,12 @@ public partial class NetworkManager
 
 		long returnGeneration = GetGenerationAfterStateTransition(NetworkSessionState.Lobby);
 		_config = lobbyConfig;
-		_players.Clear();
-		_players.AddRange(connectedPlayers);
+		_lobbyRoster.ReplacePlayers(connectedPlayers);
 
 		ResetCompletedMatchState();
 		if (IsHost)
 		{
-			foreach (NetworkPlayerPublicState player in _players)
+			foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 			{
 				EnsureSeatCredential(player.SeatIndex);
 			}
@@ -212,15 +211,15 @@ public partial class NetworkManager
 	private void ResetCompletedMatchState()
 	{
 		ClearMatchEndpointRegistration();
-		_loadHandshake = null;
-		_pendingLobbyReadyByPeerId.Clear();
+		_sceneLoadCoordinator.Reset();
+		_lobbyRoster.ClearPendingReady();
 		ClearPendingLocalReadyIntent();
-		var previousSeatControlsByPlayerSessionId = _seatControlStates
+		var previousSeatControlsByPlayerSessionId = _lobbyRoster.SeatControls
 			.GroupBy(state => state.PlayerSessionId, StringComparer.Ordinal)
 			.ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-		_seatControlStates.Clear();
-		_reconnectClaimsBySeat.Clear();
-		foreach (NetworkPlayerPublicState player in _players.OrderBy(player => player.SeatIndex))
+		_lobbyRoster.ClearSeatControls();
+		_lobbyRoster.ClearReconnectClaims();
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players.OrderBy(player => player.SeatIndex))
 		{
 			SeatControlState state;
 			if (previousSeatControlsByPlayerSessionId.TryGetValue(player.PlayerSessionId, out SeatControlState previous))
@@ -239,13 +238,12 @@ public partial class NetworkManager
 					: SeatControlRules.CreateInitialState(player, string.Empty);
 			}
 
-			_seatControlStates.Add(state);
-			_reconnectClaimsBySeat[state.SeatIndex] = SeatControlRules.CreateInitialClaimRecord(string.Empty, state);
+			_lobbyRoster.AddSeatControl(state);
+			_lobbyRoster.SetReconnectClaim(
+				state.SeatIndex,
+				SeatControlRules.CreateInitialClaimRecord(string.Empty, state));
 		}
-		_nextReconnectAttemptAt = 0.0;
-		_reconnectAttemptInFlight = false;
-		_reconnectAttemptStartedAt = -1.0;
-		_reconnectWindowStartedAt = -1.0;
+		_reconnectCoordinator.Reset();
 		ResetClientActionIds();
 
 		ReplaceLatestAuthorityCheckpointEnvelope(AuthorityCheckpointEnvelope.Empty);
@@ -292,7 +290,7 @@ public partial class NetworkManager
 		_nextMigrationLatencyProbeSequence = 0;
 		_lastObservedSteamLobbyOwnerId = 0;
 
-		_issuedSeatCredentialsBySeat.Clear();
+		_lobbyRoster.ClearIssuedSeatCredentials();
 		_peerRateLimiter.Clear();
 		_lastCorrectiveSnapshotAtByPeer.Clear();
 		_migrationFailureReturnPending = false;
@@ -319,13 +317,13 @@ public partial class NetworkManager
 		ClearMatchEndpointRegistration();
 		StopLanDiscoveryResponder();
 		StopLanDiscoveryBrowser();
-		_loadHandshake = null;
-		_pendingLobbyReadyByPeerId.Clear();
+		_sceneLoadCoordinator.Reset();
+		_lobbyRoster.ClearPendingReady();
 		ClearPendingLocalReadyIntent();
 		_lastSeatCredentialRetryAt = -1.0;
-		_seatControlStates.Clear();
-		_reconnectClaimsBySeat.Clear();
-		_issuedSeatCredentialsBySeat.Clear();
+		_lobbyRoster.ClearSeatControls();
+		_lobbyRoster.ClearReconnectClaims();
+		_lobbyRoster.ClearIssuedSeatCredentials();
 		_localPlayerSessionId = string.Empty;
 		_peerRateLimiter.Clear();
 		_lastCorrectiveSnapshotAtByPeer.Clear();
@@ -335,10 +333,7 @@ public partial class NetworkManager
 		_pendingLocalSeatCredentialGeneration = 0;
 		DisposeMigrationSecurity();
 		_lastLanJoinAddress = string.Empty;
-		_nextReconnectAttemptAt = 0.0;
-		_reconnectAttemptInFlight = false;
-		_reconnectAttemptStartedAt = -1.0;
-		_reconnectWindowStartedAt = -1.0;
+		_reconnectCoordinator.Reset();
 		ResetClientActionIds();
 		ReplaceLatestAuthorityCheckpointEnvelope(AuthorityCheckpointEnvelope.Empty);
 		_authorityCommitSequence = 0;
@@ -404,7 +399,7 @@ public partial class NetworkManager
 		_acceptedSteamLobbyJoinId = 0;
 		_originalSteamLobbyOwnerId = 0;
 		_pendingSteamHostLobby = false;
-		_players.Clear();
+		_lobbyRoster.ClearPlayers();
 		_rooms.Clear();
 		_roomLastSeenAt.Clear();
 		_config = CreateConfig(
@@ -423,9 +418,11 @@ public partial class NetworkManager
 	private long _sessionCloseGeneration;
 	private Task? _sessionCloseTask;
 	private NetworkSessionCloseReason _activeSessionCloseReason;
+#if DECKLAND_TEST_HOOKS
 	private long _sessionCloseExecutionCount;
 	private long _sessionLeaveCompletionCount;
 	private long _hostEndedMatchCloseBroadcastCount;
+#endif
 
 	public Task RequestSessionCloseAsync(NetworkSessionCloseReason reason)
 	{
@@ -442,7 +439,9 @@ public partial class NetworkManager
 		_sessionCloseTask = completion.Task;
 		_isSessionCloseInProgress = true;
 		_activeSessionCloseReason = reason;
+#if DECKLAND_TEST_HOOKS
 		_sessionCloseExecutionCount++;
+#endif
 		SetState(NetworkSessionState.Leaving);
 		_ = ExecuteSessionCloseAsync(reason, policy, generation, completion);
 		return _sessionCloseTask;
@@ -482,7 +481,9 @@ public partial class NetworkManager
 					context.AuthorityEpoch,
 					NetworkUserErrorRules.GetLocalizationKey(NetworkUserErrorCategory.HostDisconnected));
 				_hostEndedMatchBroadcasted = true;
+#if DECKLAND_TEST_HOOKS
 				_hostEndedMatchCloseBroadcastCount++;
+#endif
 			}
 
 			if (policy.WaitOneProcessFrame && IsInsideTree())
@@ -499,7 +500,9 @@ public partial class NetworkManager
 			if (generation == _sessionCloseGeneration)
 			{
 				PerformImmediateSessionCleanup(reason);
+#if DECKLAND_TEST_HOOKS
 				_sessionLeaveCompletionCount++;
+#endif
 				EmitSignal(SignalName.SessionLeaveCompleted, (int)reason);
 			}
 		}
@@ -509,7 +512,9 @@ public partial class NetworkManager
 			if (generation == _sessionCloseGeneration)
 			{
 				PerformImmediateSessionCleanup(NetworkSessionCloseReason.InternalFailure);
+#if DECKLAND_TEST_HOOKS
 				_sessionLeaveCompletionCount++;
+#endif
 				EmitSignal(SignalName.SessionLeaveCompleted, (int)NetworkSessionCloseReason.InternalFailure);
 			}
 		}
@@ -550,11 +555,13 @@ public partial class NetworkManager
 		return false;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public NetworkSessionCloseReason DebugGetActiveSessionCloseReason() => _activeSessionCloseReason;
 	public bool DebugIsSessionCloseInProgress() => _isSessionCloseInProgress;
 	public long DebugGetSessionCloseExecutionCount() => _sessionCloseExecutionCount;
 	public long DebugGetSessionLeaveCompletionCount() => _sessionLeaveCompletionCount;
 	public long DebugGetHostEndedMatchCloseBroadcastCount() => _hostEndedMatchCloseBroadcastCount;
+#endif
 
 	public async Task LeaveSessionAfterHostEndedMatchAsync()
 	{

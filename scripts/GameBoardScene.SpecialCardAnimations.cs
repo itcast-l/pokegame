@@ -72,11 +72,13 @@ public partial class GameBoardScene
 		try
 		{
 			Tween tween = CreateBoardTween();
+#if DECKLAND_TEST_HOOKS
 			if (_debugSpecialCardProbeRunning)
 			{
 				_debugSpecialCardProbeTween = tween;
 				_debugSpecialCardProbeEffectRoot = effectRoot;
 			}
+#endif
 			tween.SetParallel(true);
 			tween.SetTrans(Tween.TransitionType.Cubic);
 			tween.SetEase(Tween.EaseType.Out);

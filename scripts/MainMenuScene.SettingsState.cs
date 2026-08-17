@@ -1,7 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 
 public partial class MainMenuScene
 {
+	private Task<Error> _pendingPlayerProfileSaveTask = Task.FromResult(Error.Ok);
+
 	private void LoadSettings()
 	{
 		GameSaveStore.EnsureInitialized();
@@ -24,48 +29,176 @@ public partial class MainMenuScene
 		_selectedAvatarId = CharacterAvatarCatalog.NormalizeUnlockedAvatarId(profile.SelectedAvatarId);
 		_playerName = PlayerNameRules.Normalize(profile.PlayerName);
 		RefreshMainMenuMusicOptions();
+		CaptureSettingsPersistenceBaseline();
+		_inputBindingsDirty = false;
 	}
 
 	private void SaveSettings()
 	{
-		Error saveResult = GameSaveStore.SetValues(
-			new GameSaveStore.SaveValue(GameSaveStore.MasterVolumeKey, _masterVolume),
-			new GameSaveStore.SaveValue(GameSaveStore.MusicVolumeKey, _musicVolume),
-			new GameSaveStore.SaveValue(GameSaveStore.MuteBgmKey, _muteBgm),
-			new GameSaveStore.SaveValue(GameSaveStore.MuteSfxKey, _muteSfx),
-			new GameSaveStore.SaveValue(GameSaveStore.FullscreenKey, _fullscreen),
-			new GameSaveStore.SaveValue(GameSaveStore.ResolutionKey, ResolutionToString(_selectedResolution)),
-			new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference),
-			new GameSaveStore.SaveValue(GameSaveStore.MainMenuMusicTrackKey, _selectedMainMenuMusicTrack),
-			new GameSaveStore.SaveValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings()));
+		if (!_settingsPersistenceBaselineInitialized)
+		{
+			CaptureSettingsPersistenceBaseline();
+		}
+
+		var changedValues = new List<GameSaveStore.SaveValue>(8);
+		bool masterChanged = !Mathf.IsEqualApprox(_persistedMasterVolume, _masterVolume);
+		bool musicChanged = !Mathf.IsEqualApprox(_persistedMusicVolume, _musicVolume);
+		bool muteBgmChanged = _persistedMuteBgm != _muteBgm;
+		bool muteSfxChanged = _persistedMuteSfx != _muteSfx;
+		bool fullscreenChanged = _persistedFullscreen != _fullscreen;
+		bool resolutionChanged = !AreSameResolution(_persistedResolution, _selectedResolution);
+		bool languageChanged = !string.Equals(
+			_persistedLanguagePreference,
+			_languagePreference,
+			StringComparison.Ordinal);
+		bool musicTrackChanged = !string.Equals(
+			_persistedMainMenuMusicTrack,
+			_selectedMainMenuMusicTrack,
+			StringComparison.Ordinal);
+
+		if (masterChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(GameSaveStore.MasterVolumeKey, _masterVolume));
+		}
+		if (musicChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(GameSaveStore.MusicVolumeKey, _musicVolume));
+		}
+		if (muteBgmChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(GameSaveStore.MuteBgmKey, _muteBgm));
+		}
+		if (muteSfxChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(GameSaveStore.MuteSfxKey, _muteSfx));
+		}
+		if (fullscreenChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(GameSaveStore.FullscreenKey, _fullscreen));
+		}
+		if (resolutionChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(
+				GameSaveStore.ResolutionKey,
+				ResolutionToString(_selectedResolution)));
+		}
+		if (languageChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(GameSaveStore.LanguageKey, _languagePreference));
+		}
+		if (musicTrackChanged)
+		{
+			changedValues.Add(new GameSaveStore.SaveValue(
+				GameSaveStore.MainMenuMusicTrackKey,
+				_selectedMainMenuMusicTrack));
+		}
+
+		if (changedValues.Count == 0)
+		{
+			return;
+		}
+
+		Error saveResult = GameSaveStore.SetValuesDeferred(changedValues.ToArray());
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save settings: {saveResult}");
+			return;
 		}
+
+		if (masterChanged) _persistedMasterVolume = _masterVolume;
+		if (musicChanged) _persistedMusicVolume = _musicVolume;
+		if (muteBgmChanged) _persistedMuteBgm = _muteBgm;
+		if (muteSfxChanged) _persistedMuteSfx = _muteSfx;
+		if (fullscreenChanged) _persistedFullscreen = _fullscreen;
+		if (resolutionChanged) _persistedResolution = _selectedResolution;
+		if (languageChanged) _persistedLanguagePreference = _languagePreference;
+		if (musicTrackChanged) _persistedMainMenuMusicTrack = _selectedMainMenuMusicTrack;
 	}
 
 	private void SaveInputBindings()
 	{
-		Error saveResult = GameSaveStore.SetValue(GameSaveStore.InputBindingsKey, GameInputActions.SerializeBindings());
+		if (!_inputBindingsDirty)
+		{
+			return;
+		}
+
+		Error saveResult = GameSaveStore.SetValueDeferred(
+			GameSaveStore.InputBindingsKey,
+			GameInputActions.SerializeBindings());
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save input bindings: {saveResult}");
+			return;
 		}
+
+		_inputBindingsDirty = false;
+	}
+
+	private void CaptureSettingsPersistenceBaseline()
+	{
+		_persistedMasterVolume = _masterVolume;
+		_persistedMusicVolume = _musicVolume;
+		_persistedMuteBgm = _muteBgm;
+		_persistedMuteSfx = _muteSfx;
+		_persistedFullscreen = _fullscreen;
+		_persistedResolution = _selectedResolution;
+		_persistedLanguagePreference = _languagePreference;
+		_persistedMainMenuMusicTrack = _selectedMainMenuMusicTrack;
+		_settingsPersistenceBaselineInitialized = true;
+	}
+
+	private async Task<Error> FlushDeferredSettingsAsync(string reason)
+	{
+		Error result = await GameSaveStore.FlushDeferredValuesAsync();
+		if (result != Error.Ok && result != Error.Unavailable)
+		{
+			GD.PushWarning($"Failed to flush deferred settings ({reason}): {result}");
+		}
+		return result;
 	}
 
 	private void SavePlayerProfile()
 	{
-		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
-		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		string selectedAvatarId = _selectedAvatarId;
+		string playerName = _playerName;
+		_pendingPlayerProfileSaveTask = SavePlayerProfileAsync(selectedAvatarId, playerName);
+	}
+
+	private static async Task<Error> SavePlayerProfileAsync(
+		string selectedAvatarId,
+		string playerName)
+	{
+		Error saveResult = await GameSaveStore.UpdateActiveProfileAsync(profile => profile with
 		{
-			SelectedAvatarId = _selectedAvatarId,
-			PlayerName = _playerName,
+			SelectedAvatarId = selectedAvatarId,
+			PlayerName = playerName,
 		});
 		if (saveResult != Error.Ok)
 		{
 			GD.PushWarning($"Failed to save player profile: {saveResult}");
 		}
+		return saveResult;
 	}
+
+#if DECKLAND_TEST_HOOKS
+	public void DebugSavePlayerProfileForPersistenceProbe(string playerName)
+	{
+		_playerName = PlayerNameRules.Normalize(playerName);
+		SavePlayerProfile();
+	}
+
+	public bool DebugIsPlayerProfileSavePending()
+	{
+		return !_pendingPlayerProfileSaveTask.IsCompleted;
+	}
+
+	public int DebugGetPlayerProfileSaveResult()
+	{
+		return _pendingPlayerProfileSaveTask.IsCompletedSuccessfully
+			? (int)_pendingPlayerProfileSaveTask.Result
+			: (int)Error.Busy;
+	}
+#endif
 
 	private void ApplySettings()
 	{
@@ -236,6 +369,7 @@ public partial class MainMenuScene
 		SyncSettingsControls();
 		ApplySettings();
 		SaveSettings();
+		_ = FlushDeferredSettingsAsync("restore defaults");
 	}
 
 	private void ApplyWindowSettings()

@@ -88,12 +88,16 @@ public partial class GameBoardScene
 
 	private async Task ShowWinnerSequenceAsync(int playerIndex)
 	{
-		if (_gameModePolicy.IsAdventureMain && playerIndex != MainPlayerIndex)
+		if (ModePolicy.IsAdventureMain && playerIndex != MainPlayerIndex)
 		{
 			AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-			AdventureSaveGateResult<AdventureDefeatCommitResult> gate = await ExecuteAdventureSaveGateAsync(
-				() => store?.ResolveMainAdventureDefeat()
-					?? new AdventureDefeatCommitResult(AdventureRunWriteResult.SaveFailed, null),
+			AdventureRunSessionStore.PreparedAdventureOperation<AdventureDefeatCommitResult> operation =
+				store?.PrepareResolveMainAdventureDefeat()
+				?? AdventureRunSessionStore.PreparedAdventureOperation<AdventureDefeatCommitResult>.Rejected(
+					AdventureRunWriteResult.SaveFailed,
+					static result => new AdventureDefeatCommitResult(result, null));
+			AdventureSaveGateResult<AdventureDefeatCommitResult> gate = await ExecutePreparedAdventureSaveGateAsync(
+				operation,
 				result => result.WriteResult == AdventureRunWriteResult.Succeeded,
 				result => result.WriteResult == AdventureRunWriteResult.SaveFailed);
 			if (!gate.Succeeded)
@@ -108,9 +112,15 @@ public partial class GameBoardScene
 		{
 			return;
 		}
-		if (_gameModePolicy.IsAdventureMain
+		if (ModePolicy.IsAdventureMain
 			&& playerIndex == MainPlayerIndex
 			&& !await CommitAdventureVictoryWithRetryAsync())
+		{
+			return;
+		}
+		if (ModePolicy.IsAdventureTutorial
+			&& playerIndex == MainPlayerIndex
+			&& !await CommitAdventureTutorialVictoryWithRetryAsync())
 		{
 			return;
 		}
@@ -140,14 +150,6 @@ public partial class GameBoardScene
 	private void PresentDeclaredWinner(int playerIndex)
 	{
 		ClearAdventureBattleScopedStateForBattleEnd();
-		if (adventure_mode && playerIndex == MainPlayerIndex)
-		{
-			if (!_gameModePolicy.IsAdventureMain)
-			{
-				CharacterAvatarCatalog.RecordAdventureVictory(adventure_enemy_avatar_id);
-			}
-		}
-
 		PlayResultMusic(playerIndex);
 
 		for (int avatarPlayerIndex = 0; avatarPlayerIndex < player_count; avatarPlayerIndex++)
@@ -270,7 +272,7 @@ public partial class GameBoardScene
 
 	private bool CanMainPlayerAct()
 	{
-		if (_adventureSaveInProgress)
+		if (AdventureSaveInProgress)
 		{
 			return false;
 		}

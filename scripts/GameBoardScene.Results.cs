@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Deckland.Rules;
 using Godot;
@@ -6,21 +7,24 @@ using Godot;
 public partial class GameBoardScene
 {
 	private AdventureDefeatResolution? _settledAdventureDefeatResolution;
-	private enum AdventureSaveGateState
-	{
-		Idle,
-		Saving,
-		Retrying,
-		Aborting,
-	}
-
-	private bool _adventureSaveInProgress;
-	private AdventureSaveGateState _adventureSaveGateState;
+	private AdventureSaveGateCoordinator? _adventureSaveGateCoordinator;
 	private bool _adventureVictoryCommitCompleted;
 	private bool _networkReturnToLobbyRequested;
-	private string _adventureSaveStatusLocalizationKey = string.Empty;
-	private static readonly double[] AdventureSaveRetryDelays = { 0.5, 1.0, 2.0 };
-	private readonly record struct AdventureSaveGateResult<T>(bool Succeeded, T Result);
+
+	private AdventureSaveGateCoordinator AdventureSaveGate
+		=> _adventureSaveGateCoordinator ??= new AdventureSaveGateCoordinator(
+			() => _isLeavingGame || !GodotObject.IsInstanceValid(this),
+			WaitForBoardDelayAsync,
+			PresentAdventureSaveStatus,
+			HandleAdventureSaveGateSucceeded,
+			HandleAdventureSaveGateAbortStarted,
+			() => ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath));
+
+	private bool AdventureSaveInProgress
+		=> _adventureSaveGateCoordinator?.IsInProgress == true;
+
+	private string AdventureSaveStatusLocalizationKey
+		=> _adventureSaveGateCoordinator?.StatusLocalizationKey ?? string.Empty;
 
 	private void CreateWinnerLabel()
 	{
@@ -125,9 +129,13 @@ public partial class GameBoardScene
 			return true;
 		}
 		AdventureRunSessionStore? store = GetAdventureRunSessionStore();
-		AdventureSaveGateResult<AdventureVictoryCommitResult> gate = await ExecuteAdventureSaveGateAsync(
-			() => store?.CommitMainAdventureVictory(adventure_enemy_avatar_id)
-				?? AdventureVictoryCommitResult.SaveFailed,
+		AdventureRunSessionStore.PreparedAdventureOperation<AdventureVictoryCommitResult> operation =
+			store?.PrepareCommitMainAdventureVictory(adventure_enemy_avatar_id)
+			?? AdventureRunSessionStore.PreparedAdventureOperation<AdventureVictoryCommitResult>.Rejected(
+				AdventureRunWriteResult.SaveFailed,
+				static result => AdventureVictoryCommitResult.SaveFailed);
+		AdventureSaveGateResult<AdventureVictoryCommitResult> gate = await ExecutePreparedAdventureSaveGateAsync(
+			operation,
 			result => result is AdventureVictoryCommitResult.Succeeded or AdventureVictoryCommitResult.AlreadyCommitted,
 			result => result == AdventureVictoryCommitResult.SaveFailed);
 		if (!gate.Succeeded)
@@ -143,6 +151,51 @@ public partial class GameBoardScene
 		return true;
 	}
 
+	private async Task<bool> CommitAdventureTutorialVictoryWithRetryAsync()
+	{
+		string tutorialAvatarId = CharacterAvatarCatalog.NormalizeAvatarId(adventure_enemy_avatar_id);
+		if (!AdventureCampaignCatalog.IsTutorialAvatar(tutorialAvatarId))
+		{
+			return true;
+		}
+
+		ProfileWriteLease? lease = await GameSaveProfileWriteCoordinator.AcquireAsync(
+			profile => profile with
+			{
+				CompletedAdventureTutorialIdsCsv = AdventureCampaignCatalog.AddCompletedTutorialId(
+					profile.CompletedAdventureTutorialIdsCsv,
+					tutorialAvatarId),
+			},
+			forcePersist: false);
+		if (lease == null)
+		{
+			return false;
+		}
+
+		AdventureSaveGateResult<Error> gate = await AdventureSaveGate.ExecuteAsync(
+			async () =>
+			{
+				try
+				{
+					return await lease.PersistAttemptAsync();
+				}
+				catch (Exception error)
+				{
+					GD.PushWarning($"Adventure tutorial victory persistence attempt failed: {error.Message}");
+					return Error.Failed;
+				}
+			},
+			result => result == Error.Ok,
+			result => result != Error.Ok,
+			abortOperation: lease.Abort,
+			onSucceeded: () =>
+			{
+				lease.CompleteSuccess();
+				return true;
+			});
+		return gate.Succeeded;
+	}
+
 	private async Task<AdventureSaveGateResult<T>> ExecuteAdventureSaveGateAsync<T>(
 		Func<T> attempt,
 		Func<T, bool> succeeded,
@@ -150,69 +203,45 @@ public partial class GameBoardScene
 		Func<bool>? onRetryableFailure = null,
 		Func<bool>? onSucceeded = null)
 	{
-		if (IsAdventureSaveGateBlocking() || _isLeavingGame)
-		{
-			return new AdventureSaveGateResult<T>(false, default!);
-		}
+		return await AdventureSaveGate.ExecuteAsync(
+			() => Task.FromResult(attempt()),
+			succeeded,
+			retryable,
+			onRetryableFailure: onRetryableFailure,
+			onSucceeded: onSucceeded,
+			reportPresentationException: error => GD.PushError(
+				$"Adventure operation presentation callback threw after commit: {error}"));
+	}
 
-		_adventureSaveGateState = AdventureSaveGateState.Saving;
-		_adventureSaveInProgress = true;
-		ShowAdventureSaveStatus("GAME_ADVENTURE_SAVING");
-		T result = default!;
-		for (int attemptIndex = 0; attemptIndex <= AdventureSaveRetryDelays.Length; attemptIndex++)
-		{
-			if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
-			{
-				_adventureSaveGateState = AdventureSaveGateState.Idle;
-				_adventureSaveInProgress = false;
-				return new AdventureSaveGateResult<T>(false, result);
-			}
-
-			result = attempt();
-			if (succeeded(result))
-			{
-				if (onSucceeded != null && !onSucceeded())
-				{
-					await AbortAdventureSaveGateAsync();
-					return new AdventureSaveGateResult<T>(false, result);
-				}
-				_adventureSaveGateState = AdventureSaveGateState.Idle;
-				_adventureSaveInProgress = false;
-				_adventureSaveStatusLocalizationKey = string.Empty;
-				if (_winnerPlayerIndex < 0)
-				{
-					HideWinnerBanner();
-				}
-				return new AdventureSaveGateResult<T>(true, result);
-			}
-			if (!retryable(result))
-			{
-				await AbortAdventureSaveGateAsync();
-				return new AdventureSaveGateResult<T>(false, result);
-			}
-			if (onRetryableFailure != null && !onRetryableFailure())
-			{
-				await AbortAdventureSaveGateAsync();
-				return new AdventureSaveGateResult<T>(false, result);
-			}
-			if (attemptIndex < AdventureSaveRetryDelays.Length)
-			{
-				_adventureSaveGateState = AdventureSaveGateState.Retrying;
-				ShowAdventureSaveStatus("GAME_ADVENTURE_SAVE_RETRYING");
-				await WaitForBoardDelayAsync(AdventureSaveRetryDelays[attemptIndex]);
-				_adventureSaveGateState = AdventureSaveGateState.Saving;
-			}
-		}
-
-		await AbortAdventureSaveGateAsync();
-		return new AdventureSaveGateResult<T>(false, result);
+	private async Task<AdventureSaveGateResult<T>> ExecutePreparedAdventureSaveGateAsync<T>(
+		AdventureRunSessionStore.PreparedAdventureOperation<T> operation,
+		Func<T, bool> succeeded,
+		Func<T, bool> retryable,
+		Func<bool>? onRetryableFailure = null,
+		Func<bool>? onSucceeded = null)
+	{
+		AdventureSaveGateResult<T> gate = await AdventureSaveGate.ExecutePreparedAsync(
+			operation,
+			succeeded,
+			retryable,
+			onRetryableFailure,
+			onSucceeded,
+			reportAttemptException: error => GD.PushError(
+				$"Adventure prepared operation failed unexpectedly: {error}"),
+			reportPresentationException: error => GD.PushError(
+				$"Adventure operation presentation callback threw after commit: {error}"),
+			reportPresentationFailure: () => GD.PushError(
+				"Adventure operation committed but its presentation callback failed."));
+		return gate;
 	}
 
 	private bool RestoreAdventureSaveGateRuleSnapshot(
 		MatchStateSnapshot snapshot,
 		string stateName)
 	{
-		if (TryRestoreAuthorityRuleSnapshot(snapshot, out string error))
+		if (TryRestoreAuthorityRuleSnapshotPreservingAdventureTransaction(
+			snapshot,
+			out string error))
 		{
 			return true;
 		}
@@ -223,13 +252,19 @@ public partial class GameBoardScene
 
 	private bool IsAdventureSaveGateBlocking()
 	{
-		return _adventureSaveGateState != AdventureSaveGateState.Idle;
+		return _adventureSaveGateCoordinator?.IsBlocking == true;
 	}
 
-	private async Task AbortAdventureSaveGateAsync()
+	private void HandleAdventureSaveGateSucceeded()
 	{
-		_adventureSaveGateState = AdventureSaveGateState.Aborting;
-		_adventureSaveInProgress = true;
+		if (GodotObject.IsInstanceValid(this) && _winnerPlayerIndex < 0)
+		{
+			HideWinnerBanner();
+		}
+	}
+
+	private void HandleAdventureSaveGateAbortStarted()
+	{
 		AdvanceTurnSequenceGeneration();
 		ClearPendingAdventureUpgradeFlow();
 		CancelAdventureUpgradeSelection();
@@ -243,23 +278,10 @@ public partial class GameBoardScene
 			ClearPendingItemSelectionState();
 		}
 		ClearAdventureInteractionStateForBattleEnd();
-		ShowAdventureSaveStatus("GAME_ADVENTURE_SAVE_FAILED_REPLAY");
-		await WaitForBoardDelayAsync(0.75);
-		if (_isLeavingGame || !GodotObject.IsInstanceValid(this))
-		{
-			return;
-		}
-		ShowAdventureSaveStatus("GAME_ADVENTURE_RETURNING_TO_MENU");
-		await WaitForBoardDelayAsync(0.75);
-		if (!_isLeavingGame && GodotObject.IsInstanceValid(this))
-		{
-			await ReturnToMenuSceneAsync(AdventureAvatarMenuScenePath);
-		}
 	}
 
-	private void ShowAdventureSaveStatus(string localizationKey)
+	private void PresentAdventureSaveStatus(string localizationKey)
 	{
-		_adventureSaveStatusLocalizationKey = localizationKey;
 		_winnerLabel.Text = Localize(localizationKey);
 		_winnerLabel.Visible = true;
 		ApplyWinnerLabelLayout();
@@ -287,21 +309,15 @@ public partial class GameBoardScene
 
 	private string GetPlayerDisplayName(int playerIndex)
 	{
-		if (IsNetworkMultiplayerMode())
+		if (TryGetConfiguredPlayerName(playerIndex, out string configuredName))
 		{
-			if (TryGetNetworkPlayerName(playerIndex, out string networkName))
-			{
-				return networkName;
-			}
-
-			if (IsLocalHandPlayer(playerIndex))
-			{
-				return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
-			}
+			return configuredName;
 		}
-		else if (playerIndex == MainPlayerIndex)
+
+		if ((IsNetworkMultiplayerMode() && IsLocalHandPlayer(playerIndex))
+			|| (!IsNetworkMultiplayerMode() && playerIndex == MainPlayerIndex))
 		{
-			return PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
+			return PlayerNameRules.DefaultPlayerName;
 		}
 
 		if (adventure_mode && IsAdventureEnemyPlayer(playerIndex))
@@ -310,6 +326,25 @@ public partial class GameBoardScene
 		}
 
 		return LocalizeFormat("GAME_PLAYER", playerIndex + 1);
+	}
+
+	private void EnsureLocalPlayerNameConfigured()
+	{
+		if (IsNetworkMultiplayerMode()
+			|| (RuntimeConfiguration.PlayerNames.Length > MainPlayerIndex
+				&& !string.IsNullOrWhiteSpace(RuntimeConfiguration.PlayerNames[MainPlayerIndex])))
+		{
+			return;
+		}
+
+		string normalizedName = PlayerNameRules.Normalize(GameSaveStore.LoadActiveProfile().PlayerName);
+		ImmutableArray<string> names = RuntimeConfiguration.PlayerNames;
+		_runtimeConfiguration = RuntimeConfiguration with
+		{
+			PlayerNames = names.IsDefaultOrEmpty
+				? ImmutableArray.Create(normalizedName)
+				: names.SetItem(0, normalizedName),
+		};
 	}
 
 	private void HideWinnerBanner()
@@ -433,10 +468,14 @@ public partial class GameBoardScene
 		if (beginNewRun)
 		{
 			AdventureRunSessionStore? store = GetAdventureRunSessionStore();
+			AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult> operation =
+				store?.PrepareRestartMainRun(1, GetFirstMainAdventureAvatarId())
+				?? AdventureRunSessionStore.PreparedAdventureOperation<AdventureRunWriteResult>.Rejected(
+					AdventureRunWriteResult.SaveFailed,
+					static result => result);
 			AdventureSaveGateResult<AdventureRunWriteResult> gate =
-				await ExecuteAdventureSaveGateAsync(
-					() => store?.BeginNewMainRun(1, GetFirstMainAdventureAvatarId())
-						?? AdventureRunWriteResult.SaveFailed,
+				await ExecutePreparedAdventureSaveGateAsync(
+					operation,
 					result => result == AdventureRunWriteResult.Succeeded,
 					result => result == AdventureRunWriteResult.SaveFailed);
 			if (!gate.Succeeded)
@@ -463,12 +502,16 @@ public partial class GameBoardScene
 
 		await CircularSceneTransition.PlaySceneSwapAsync(this, () =>
 		{
-			Node gameBoard = gameBoardScene.Instantiate();
-			gameBoard.Set("player_count", 2);
-			gameBoard.Set("item_mode", true);
-			gameBoard.Set("solo_mode", true);
-			gameBoard.Set("adventure_mode", true);
-			gameBoard.Set("adventure_enemy_avatar_id", nextAvatarId);
+			GameBoardLaunchOptions options = GameBoardLaunchOptions.AdventureMain(
+				nextAvatarId,
+				TryGetConfiguredPlayerName(MainPlayerIndex, out string playerName)
+					? playerName
+					: string.Empty);
+			if (!GameBoardSceneFactory.TryCreate(gameBoardScene, options, out GameBoardScene gameBoard, out string error))
+			{
+				GD.PushError($"Unable to create next adventure game board: {error}");
+				return;
+			}
 			GetTree().Root.AddChild(gameBoard);
 			GetTree().CurrentScene = gameBoard;
 			QueueFree();
@@ -485,7 +528,7 @@ public partial class GameBoardScene
 			return;
 		}
 
-		bool showPrimaryAction = !_gameModePolicy.IsAdventureTutorial;
+		bool showPrimaryAction = !ModePolicy.IsAdventureTutorial;
 		_winnerBannerRoot.SetPrimaryActionVisible(showPrimaryAction);
 		if (!showPrimaryAction)
 		{
@@ -495,7 +538,7 @@ public partial class GameBoardScene
 		bool shouldAdvanceAdventure = ShouldAdvanceAdventureFromWinner();
 		bool hasAdventureDefeatAction = _settledAdventureDefeatResolution.HasValue;
 		_winnerReplayButton.Disabled = _networkReturnToLobbyRequested
-			|| !string.IsNullOrEmpty(_adventureSaveStatusLocalizationKey)
+			|| !string.IsNullOrEmpty(AdventureSaveStatusLocalizationKey)
 			|| !ResultPresentationRules.ShouldEnableWinnerPrimaryAction(
 			IsNetworkMultiplayerMode(),
 			shouldAdvanceAdventure || hasAdventureDefeatAction);
@@ -518,12 +561,12 @@ public partial class GameBoardScene
 
 		_winnerBannerRoot.ReturnButton.Text = Localize(GetWinnerReturnButtonKey());
 		_winnerBannerRoot.ReturnButton.Disabled = !ResultPresentationRules.ShouldEnableWinnerReturnAction(
-			!string.IsNullOrEmpty(_adventureSaveStatusLocalizationKey));
+			!string.IsNullOrEmpty(AdventureSaveStatusLocalizationKey));
 	}
 
 	private bool ShouldAdvanceAdventureFromWinner()
 	{
-		return _gameModePolicy.IsAdventureMain
+		return ModePolicy.IsAdventureMain
 			&& _winnerPlayerIndex == MainPlayerIndex
 			&& TryGetNextAdventureStageAvatarId(out _);
 	}
@@ -550,12 +593,12 @@ public partial class GameBoardScene
 
 	private string GetWinnerReturnButtonKey()
 	{
-		return _gameModePolicy.IsAdventure ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
+		return ModePolicy.IsAdventure ? "GAME_RETURN_ADVENTURE" : "GAME_RETURN_MAIN_MENU";
 	}
 
 	private Action GetWinnerReturnAction()
 	{
-		return _gameModePolicy.IsAdventure ? ReturnToAdventureMenu : ReturnToMainMenu;
+		return ModePolicy.IsAdventure ? ReturnToAdventureMenu : ReturnToMainMenu;
 	}
 
 	private static Texture2D? LoadTextureWithImageFallback(string path)

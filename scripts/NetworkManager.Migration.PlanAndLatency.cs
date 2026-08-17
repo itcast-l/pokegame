@@ -80,7 +80,7 @@ public partial class NetworkManager
 		Godot.Collections.Dictionary payload = ToMigrationPlanVariant(plan);
 		try
 		{
-			foreach (NetworkPlayerPublicState player in _players)
+			foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 			{
 				if (player.IsConnected && !player.IsHost)
 				{
@@ -130,7 +130,7 @@ public partial class NetworkManager
 
 		_lastMigrationLatencyProbeAt = now;
 		NetworkRpcContext context = GetCurrentRpcContext();
-		foreach (NetworkPlayerPublicState player in _players)
+		foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 		{
 			if (!player.IsConnected || player.IsHost || !IsPeerSecurityAuthenticated(player.PeerId))
 			{
@@ -340,7 +340,7 @@ public partial class NetworkManager
 
 		_migrationPlanAcknowledgedSeatIndices.Add(senderSeat);
 		if (!NetworkMigrationRules.ArePlanAcknowledgementsComplete(
-			_players
+			_lobbyRoster.Players
 				.Where(player => player.IsConnected && !player.IsHost)
 				.Select(player => player.SeatIndex),
 			_migrationPlanAcknowledgedSeatIndices))
@@ -512,7 +512,7 @@ public partial class NetworkManager
 		Godot.Collections.Dictionary payload = ToMigrationPlanRevocationVariant(signedRevocation);
 		try
 		{
-			foreach (NetworkPlayerPublicState player in _players)
+			foreach (NetworkPlayerPublicState player in _lobbyRoster.Players)
 			{
 				if (player.IsConnected && !player.IsHost)
 				{

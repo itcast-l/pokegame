@@ -18,9 +18,11 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 	public event Action? CloseRequested;
 
+#if DECKLAND_TEST_HOOKS
 	[ExportGroup("Testing")]
 	[Export]
 	public bool UnlockAllForTesting { get; set; }
+#endif
 
 	private Button _backButton = default!;
 	private Control _root = default!;
@@ -202,6 +204,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		return true;
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public int DebugGetVisibleCardCount() =>
 		_currentCategory == ItemsCategory ? _visibleItemCards.Count : _visibleCards.Count;
 
@@ -357,6 +360,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		state["kind"] = UpgradesCategory;
 		return state;
 	}
+#endif
 
 	private void LoadCatalogs()
 	{
@@ -377,6 +381,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private void LoadUnlockedUpgradeIds()
 	{
 		_unlockedUpgradeIds.Clear();
+#if DECKLAND_TEST_HOOKS
 		if (UnlockAllForTesting && OS.IsDebugBuild() && _catalog != null)
 		{
 			foreach (AdventureSuitUpgradeDefinition definition in _catalog.All)
@@ -388,6 +393,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 			}
 			return;
 		}
+#endif
 
 		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
 		foreach (string upgradeId in SkillCodexUnlockRules.ParseUpgradeIds(

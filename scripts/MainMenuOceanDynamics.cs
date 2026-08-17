@@ -64,8 +64,10 @@ public partial class MainMenuOceanDynamics : Control
 	[Export(PropertyHint.Range, "1,60,1")]
 	public int image_update_fps = 30;
 
+#if DECKLAND_TEST_HOOKS
 	[Export]
 	public bool debug_force_missing_image_assets;
+#endif
 
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<Glint> _glints = new();

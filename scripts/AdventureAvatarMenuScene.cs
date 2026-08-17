@@ -43,6 +43,8 @@ public partial class AdventureAvatarMenuScene : Control
 	private Tween? _avatarUnlockPromptTween;
 	private GameAudioManager? _gameAudio;
 	private AdventureRunSessionStore? _adventureRunSessionStore;
+	private GameSaveStore.GameProgressData _profileSnapshot =
+		GameSaveStore.GameProgressData.CreateDefault();
 	private AdventureRunResumeDialog? _runResumeDialog;
 	private int _levelScrollTarget;
 	private string _selectedAvatarId = string.Empty;
@@ -50,9 +52,11 @@ public partial class AdventureAvatarMenuScene : Control
 	private bool _isReturningToMainMenu;
 	private bool _isStartingAdventure;
 	private bool _isShowingAvatarUnlockPrompt;
+	private bool _isConsumingPendingAvatarUnlock;
 	private bool _isShowingRunResumeDialog;
 	private RunResumeDialogMode _runResumeDialogMode;
 	private bool _runRecoverySaveFailed;
+	private bool _isAdventureRunPersistenceInProgress;
 	private bool _stageNameSizingRefreshQueued;
 	private bool _isEmbeddedVisualWarmup;
 	private bool _listSelectionHighlightVisible = true;
@@ -71,18 +75,14 @@ public partial class AdventureAvatarMenuScene : Control
 
 		BindUi();
 		_levelScrollTarget = 0;
+		LoadAdventureProfileSnapshot();
 		_selectedAdventureId = string.IsNullOrWhiteSpace(selected_avatar_id)
 			? GetInitialAdventureId()
 			: GetAdventureIdForAvatar(selected_avatar_id);
 		_selectedAvatarId = string.IsNullOrWhiteSpace(selected_avatar_id)
 			? GetInitialAvatarId()
 			: NormalizeAdventureAvatarId(selected_avatar_id);
-		AdventureRunSessionStore? runSessionStore = GetAdventureRunSessionStore();
-		runSessionStore?.ConfigureForPolicy(
-			_selectedAdventureId == AdventureCampaignCatalog.MainCampaignId
-				? GameModePolicy.AdventureMain
-				: GameModePolicy.AdventureTutorial);
-		runSessionStore?.ReloadFromActiveProfile();
+		ConfigureAdventureRunStoreFromProfileSnapshot();
 		RebuildLevelList();
 		RefreshSelection();
 		ClampScrollTarget();
@@ -124,6 +124,11 @@ public partial class AdventureAvatarMenuScene : Control
 	{
 		if (!GameInputActions.IsCancelPressed(inputEvent))
 		{
+			return;
+		}
+		if (_isConsumingPendingAvatarUnlock || _isAdventureRunPersistenceInProgress)
+		{
+			GetViewport().SetInputAsHandled();
 			return;
 		}
 

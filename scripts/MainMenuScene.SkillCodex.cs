@@ -131,6 +131,7 @@ public partial class MainMenuScene
 		GrabFocusIfAvailable(_skillCodexButton);
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugOpenSkillCodex()
 	{
 		ShowSkillCodex();
@@ -167,4 +168,5 @@ public partial class MainMenuScene
 			&& _settingsButton.Disabled
 			&& _exitButton.Disabled;
 	}
+#endif
 }

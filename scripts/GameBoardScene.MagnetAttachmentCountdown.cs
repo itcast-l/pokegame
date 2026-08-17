@@ -145,10 +145,13 @@ public partial class GameBoardScene
 		_mandatoryActionCountdownFrameRegistration = null;
 		_mandatoryActionCountdownController?.Dispose();
 		_mandatoryActionCountdownController = null;
+#if DECKLAND_TEST_HOOKS
 		_debugMandatoryActionCountdownProbeActive = false;
+#endif
 		RefreshBoardProcessState();
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugStartMandatoryActionCountdownProbe(double durationSeconds = 1.0)
 	{
 		if (durationSeconds < 0.25 || durationSeconds > 5.0)
@@ -187,6 +190,7 @@ public partial class GameBoardScene
 			["max_stable_tick_allocated_bytes"] = controller?.MaxStableTickManagedAllocationBytes ?? 0L,
 		};
 	}
+#endif
 
 	private Texture2D? GetAttachmentSelectionPreviewTexture()
 	{

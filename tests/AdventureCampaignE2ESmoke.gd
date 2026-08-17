@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
 const TUTORIAL_IDS := ["fish", "lanternfish"]
@@ -79,7 +81,7 @@ func _run() -> void:
 		return
 
 	for stage_number in range(1, _main_avatar_ids.size() + 1):
-		if String(board.get("adventure_enemy_avatar_id")) != _main_avatar_ids[stage_number - 1]:
+		if GameBoardSmokeFactory.get_adventure_enemy_avatar_id(board) != _main_avatar_ids[stage_number - 1]:
 			_fail("Stage %d opened the wrong enemy" % stage_number)
 			return
 		if not await _force_main_victory(board, stage_number):
@@ -159,7 +161,7 @@ func _complete_tutorial(tutorial_id: String) -> bool:
 	var board := await _wait_for_board(tutorial_id)
 	if board == null:
 		return false
-	if not bool(board.get("adventure_tutorial_mode")):
+	if not GameBoardSmokeFactory.is_adventure_tutorial(board):
 		_fail("Tutorial %s did not use tutorial mode" % tutorial_id)
 		return false
 	if not bool(board.call("DebugAddScoreAndCheckWinner", MAIN_PLAYER_INDEX, FORCED_VICTORY_POINTS)):
@@ -352,6 +354,18 @@ func _select_visible_upgrade(board: Node, context: String) -> bool:
 	if not bool(board.call("DebugSelectAdventureUpgradeOption", 0)):
 		_fail("Could not select %s upgrade" % context)
 		return false
+	var deadline := _deadline()
+	while _before_deadline(deadline):
+		await process_frame
+		if bool(board.call("DebugIsAdventureUpgradeReplacementVisible")):
+			if not bool(board.call("DebugSelectAdventureUpgradeReplacementSlot", 0)):
+				_fail("Could not select %s upgrade replacement" % context)
+				return false
+			break
+		if bool(board.call("DebugIsWinnerBannerVisible")) \
+				or (not bool(board.call("DebugIsAdventureUpgradeSelectionVisible")) \
+					and String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction"):
+			return true
 	return await _wait_for_actionable_or_winner(board)
 
 
@@ -386,7 +400,8 @@ func _wait_for_actionable_or_winner(board: Node) -> bool:
 			return false
 		if bool(board.call("DebugIsWinnerBannerVisible")) \
 				or (not bool(board.call("DebugIsAdventureUpgradeSelectionVisible")) \
-				and String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction"):
+					and not bool(board.call("DebugIsAdventureUpgradeReplacementVisible")) \
+					and String(board.call("DebugGetGameLoopPhaseName")) == "AwaitingMainPlayerAction"):
 			return true
 	_fail("Timed out resolving an upgrade")
 	return false
@@ -400,7 +415,7 @@ func _wait_for_board(expected_avatar_id: String, excluded_board: Node = null) ->
 		if scene != null and is_instance_valid(scene) \
 				and scene != excluded_board \
 				and scene.has_method("DebugAddScoreAndCheckWinner") \
-				and String(scene.get("adventure_enemy_avatar_id")) == expected_avatar_id:
+				and GameBoardSmokeFactory.get_adventure_enemy_avatar_id(scene) == expected_avatar_id:
 			return scene
 	_fail("Timed out waiting for board %s" % expected_avatar_id)
 	return null

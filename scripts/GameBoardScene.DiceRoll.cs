@@ -7,7 +7,9 @@ public partial class GameBoardScene
 {
 	private const int DiceRollOverlayZIndex = 2700;
 	private DiceRollOverlay? _diceRollOverlay;
+#if DECKLAND_TEST_HOOKS
 	private int _debugForcedOpeningDiceRollResult;
+#endif
 	private int _openingDiceRollResult;
 	private int _openingStartingTurnSeat = -1;
 	private bool _openingPresentationSequenceRunning;
@@ -70,7 +72,9 @@ public partial class GameBoardScene
 			return true;
 		}
 
-		int forcedResult = _debugForcedOpeningDiceRollResult;
+		int forcedResult = 0;
+#if DECKLAND_TEST_HOOKS
+		forcedResult = _debugForcedOpeningDiceRollResult;
 		if (forcedResult == 0)
 		{
 			string forcedEnvironmentValue = OS.GetEnvironment(
@@ -81,6 +85,7 @@ public partial class GameBoardScene
 				forcedResult = environmentResult;
 			}
 		}
+#endif
 
 		diceRollResult = DiceRollPresentationRules.IsValidResult(forcedResult)
 			? forcedResult
@@ -108,7 +113,9 @@ public partial class GameBoardScene
 		_openingStartingTurnSeat = startingTurnSeat;
 		_openingPresentationCompletedTurnGeneration = -1;
 		_networkOpeningDealCompleted = !IsNetworkMultiplayerMode() || IsNetworkHost();
+#if DECKLAND_TEST_HOOKS
 		_debugForcedOpeningDiceRollResult = 0;
+#endif
 	}
 
 	private async Task PlayOpeningDiceRollAsync(int turnSequenceGeneration)
@@ -132,6 +139,7 @@ public partial class GameBoardScene
 		await _diceRollOverlay.PlayRollAsync(_openingDiceRollResult);
 	}
 
+#if DECKLAND_TEST_HOOKS
 	public bool DebugPlayDiceRoll(int result)
 	{
 		if (result == 0)
@@ -216,11 +224,15 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		_playerCount = testPlayerCount;
-		_networkWaitForInitialize = false;
+		_runtimeConfiguration = RuntimeConfiguration with
+		{
+			PlayerCount = testPlayerCount,
+			NetworkWaitForInitialize = false,
+		};
 		_networkBoardInitialized = true;
 		UpdatePlayerVisibility();
 		DealCardsToPlayers(playOpeningDealAnimation: true);
 		return _isOpeningDealAnimationPlaying;
 	}
+#endif
 }

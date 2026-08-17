@@ -1,199 +1,32 @@
+using System;
 using Godot;
 
 public partial class GameBoardScene
 {
-	[Export(PropertyHint.Range, "2,4,1")]
-	public int player_count
-	{
-		get => _playerCount;
-		set
-		{
-			int normalizedPlayerCount = Mathf.Clamp(value, MinPlayers, MaxPlayers);
-			if (normalizedPlayerCount == _playerCount)
-			{
-				return;
-			}
+	// These read-only projections keep diagnostics and existing scene queries from owning startup state.
+	// Construction is performed exclusively through GameBoardSceneFactory.
+	public int player_count => _runtimeConfiguration?.PlayerCount ?? MinPlayers;
+	public bool item_mode => _runtimeConfiguration?.ItemMode ?? false;
+	public int winning_score => _runtimeConfiguration?.WinningScore ?? NetworkSessionDefaults.DefaultWinningScore;
+	public bool adventure_mode => _runtimeConfiguration?.IsAdventure ?? false;
+	public bool adventure_tutorial_mode => _runtimeConfiguration?.IsAdventureTutorial ?? false;
+	public string adventure_tutorial_flow => _runtimeConfiguration?.TutorialFlow?.ToStableId() ?? string.Empty;
+	public bool solo_mode => _runtimeConfiguration?.IsSolo ?? false;
+	public int solo_ai_difficulty => (int)(_runtimeConfiguration?.SoloAiDifficulty ?? SoloAiDifficulty.Medium);
+	public int local_player_index => _runtimeConfiguration?.LocalPlayerIndex ?? 0;
+	public string network_session_id => _runtimeConfiguration?.NetworkSessionId ?? string.Empty;
+	public string network_match_id => _runtimeConfiguration?.NetworkMatchId ?? string.Empty;
+	public long match_seed => _runtimeConfiguration?.MatchSeed ?? 0;
+	public string player_names_csv => _runtimeConfiguration == null
+		? string.Empty
+		: string.Join(',', _runtimeConfiguration.PlayerNames);
+	public string player_avatar_ids_csv => _runtimeConfiguration == null
+		? string.Empty
+		: string.Join(',', _runtimeConfiguration.PlayerAvatarIds);
+	public bool network_wait_for_initialize => _runtimeConfiguration?.NetworkWaitForInitialize ?? false;
+	public string adventure_enemy_avatar_id => _runtimeConfiguration?.AdventureEnemyAvatarId ?? string.Empty;
 
-			_playerCount = normalizedPlayerCount;
-			if (IsInsideTree() && !_networkWaitForInitialize)
-			{
-				UpdatePlayerVisibility();
-				MarkSeatControlIndicatorsDirty();
-				MarkSeatControlIndicatorLayoutDirty();
-				MarkActivePlayerStatusTooltipForRefresh();
-				TrackBoardTask(DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true), nameof(DealCardsToPlayersWithAdventureGateAsync));
-			}
-		}
-	}
-
-	[Export]
-	public bool item_mode
-	{
-		get => _itemMode;
-		set
-		{
-			if (value == _itemMode)
-			{
-				return;
-			}
-
-			_itemMode = value;
-			if (_itemMode && IsInsideTree())
-			{
-				EnsureItemModeResourcesLoaded();
-			}
-
-			if (IsInsideTree() && !_networkWaitForInitialize)
-			{
-				LoadItemCardEnabledStates();
-				TrackBoardTask(DealCardsToPlayersWithAdventureGateAsync(playOpeningDealAnimation: true), nameof(DealCardsToPlayersWithAdventureGateAsync));
-			}
-		}
-	}
-
-	[Export(PropertyHint.Range, "50,200,50")]
-	public int winning_score
-	{
-		get => _winningScore;
-		set
-		{
-			int normalizedWinningScore = value switch
-			{
-				50 or 100 or 200 => value,
-				_ => DefaultWinningScore,
-			};
-			if (normalizedWinningScore == _winningScore)
-			{
-				return;
-			}
-
-			_winningScore = normalizedWinningScore;
-
-			if (IsInsideTree() && !_networkWaitForInitialize)
-			{
-				RefreshScoreTooltips();
-				CheckForWinner();
-			}
-		}
-	}
-
-	[Export]
-	public bool adventure_mode
-	{
-		get => _adventureMode;
-		set
-		{
-			if (_adventureMode == value)
-			{
-				return;
-			}
-
-			_adventureMode = value;
-			if (_adventureMode && IsInsideTree())
-			{
-				EnsureAdventureModeResourcesLoaded();
-			}
-		}
-	}
-
-	[Export]
-	public bool adventure_tutorial_mode
-	{
-		get => _adventureTutorialMode;
-		set => _adventureTutorialMode = value;
-	}
-
-	[Export]
-	public string adventure_tutorial_flow
-	{
-		get => _adventureTutorialFlow;
-		set => _adventureTutorialFlow = NormalizeAdventureTutorialFlow(value);
-	}
-
-	[Export]
-	public bool solo_mode
-	{
-		get => _soloMode;
-		set => _soloMode = value;
-	}
-
-	[Export(PropertyHint.Enum, "Low,Medium,High")]
-	public int solo_ai_difficulty
-	{
-		get => _soloAiDifficulty;
-		set => _soloAiDifficulty = Mathf.Clamp(value, (int)SoloAiDifficulty.Low, (int)SoloAiDifficulty.High);
-	}
-
-	[Export(PropertyHint.Range, "0,3,1")]
-	public int local_player_index
-	{
-		get => _localPlayerIndex;
-		set => _localPlayerIndex = Mathf.Clamp(value, 0, MaxPlayers - 1);
-	}
-
-	[Export]
-	public string network_session_id
-	{
-		get => _networkSessionId;
-		set => _networkSessionId = value?.Trim() ?? string.Empty;
-	}
-
-	[Export]
-	public string network_match_id
-	{
-		get => _networkMatchId;
-		set => _networkMatchId = value?.Trim() ?? string.Empty;
-	}
-
-	[Export]
-	public long match_seed
-	{
-		get => _matchSeed;
-		set => _matchSeed = value;
-	}
-
-	[Export]
-	public string player_names_csv
-	{
-		get => _playerNamesCsv;
-		set => _playerNamesCsv = value ?? string.Empty;
-	}
-
-	[Export]
-	public string player_avatar_ids_csv
-	{
-		get => _playerAvatarIdsCsv;
-		set => _playerAvatarIdsCsv = value ?? string.Empty;
-	}
-
-	[Export]
-	public bool network_wait_for_initialize
-	{
-		get => _networkWaitForInitialize;
-		set => _networkWaitForInitialize = value;
-	}
-
-	[Export]
-	public string adventure_enemy_avatar_id
-	{
-		get => _adventureEnemyAvatarId;
-		set
-		{
-			string normalized = NormalizeAdventureEnemyAvatarId(value);
-			if (_adventureEnemyAvatarId == normalized)
-			{
-				return;
-			}
-
-			_adventureEnemyAvatarId = normalized;
-			if (IsInsideTree() && adventure_mode)
-			{
-				LoadAdventureEnemyDamageEffectTextures();
-				LoadDragonPrinceSpecialJackTexture();
-			}
-		}
-	}
-
+#if DECKLAND_TEST_HOOKS
 	[Export]
 	public bool debug_opponent_has_one_card = false;
 
@@ -211,4 +44,5 @@ public partial class GameBoardScene
 
 	[Export(PropertyHint.Range, "0,50,0.5")]
 	public float debug_performance_trace_min_ms = 4.0f;
+#endif
 }

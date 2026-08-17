@@ -1,5 +1,7 @@
 extends SceneTree
 
+const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
+
 const MENU_SCENE_PATH := "res://scenes/adventure_avatar_menu_scene.tscn"
 const BOARD_SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const PROFILE_SLOT := &"profile_0"
@@ -50,10 +52,10 @@ func _run() -> void:
 	var tutorial_board := await _wait_for_board_scene()
 	if _failed or tutorial_board == null:
 		return
-	if not bool(tutorial_board.get("adventure_tutorial_mode")):
+	if not GameBoardSmokeFactory.is_adventure_tutorial(tutorial_board):
 		_fail("The fish campaign entry did not open a tutorial board")
 		return
-	if String(tutorial_board.get("adventure_enemy_avatar_id")) != TUTORIAL_AVATAR_ID:
+	if GameBoardSmokeFactory.get_adventure_enemy_avatar_id(tutorial_board) != TUTORIAL_AVATAR_ID:
 		_fail("The tutorial board did not preserve the selected fish enemy")
 		return
 	if _load_pending_run_payload(save_manager) != original_payload:
@@ -79,8 +81,8 @@ func _run() -> void:
 	var continued_board := await _wait_for_board_scene()
 	if _failed or continued_board == null:
 		return
-	if bool(continued_board.get("adventure_tutorial_mode")) \
-		or String(continued_board.get("adventure_enemy_avatar_id")) != SAVED_RUN_AVATAR_ID:
+	if GameBoardSmokeFactory.is_adventure_tutorial(continued_board) \
+		or GameBoardSmokeFactory.get_adventure_enemy_avatar_id(continued_board) != SAVED_RUN_AVATAR_ID:
 		_fail("Continue did not reopen the saved main stage")
 		return
 	if not _assert_no_debug_setup(continued_board, "Continue"):
@@ -107,8 +109,8 @@ func _run() -> void:
 	var restarted_board := await _wait_for_board_scene()
 	if _failed or restarted_board == null:
 		return
-	if bool(restarted_board.get("adventure_tutorial_mode")) \
-		or String(restarted_board.get("adventure_enemy_avatar_id")) != SAVED_RUN_AVATAR_ID:
+	if GameBoardSmokeFactory.is_adventure_tutorial(restarted_board) \
+		or GameBoardSmokeFactory.get_adventure_enemy_avatar_id(restarted_board) != SAVED_RUN_AVATAR_ID:
 		_fail("Restart should begin a new journey at the first main stage")
 		return
 	if not _assert_no_debug_setup(restarted_board, "Restart"):
@@ -203,17 +205,10 @@ func _instantiate_board(adventure_avatar_id: String) -> Node:
 		_fail("Failed to load scene: %s" % BOARD_SCENE_PATH)
 		return null
 
-	var board := packed_scene.instantiate()
+	var board := GameBoardSmokeFactory.create_adventure(packed_scene, adventure_avatar_id)
 	if board == null:
 		_fail("Failed to instantiate scene: %s" % BOARD_SCENE_PATH)
 		return null
-
-	board.set("player_count", 2)
-	board.set("item_mode", true)
-	board.set("winning_score", 100)
-	board.set("solo_mode", true)
-	board.set("adventure_mode", true)
-	board.set("adventure_enemy_avatar_id", adventure_avatar_id)
 
 	root.add_child(board)
 	await process_frame

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Deckland.Rules;
 
 public sealed partial class AdventureRunSessionStore : Node
@@ -18,10 +19,34 @@ public sealed partial class AdventureRunSessionStore : Node
 			return LastRestoreResult;
 		}
 
+		if (!TryGetActiveProfileSnapshot(out GameSaveStore.GameProgressData profile))
+		{
+			LastRestoreResult = AdventureUpgradeRestoreResult.DeferredManifestUnavailable;
+			return LastRestoreResult;
+		}
+		return ReloadFromProfileSnapshot(profile);
+	}
+
+	internal AdventureUpgradeRestoreResult ReloadFromProfileSnapshot(
+		GameSaveStore.GameProgressData profile)
+	{
+		Node? saveManager = GameSaveStore.GetSaveManager();
+		if (saveManager != null)
+		{
+			GameSaveMigration.EnsureInitialized(saveManager);
+			_profileSnapshotSlotId = GameSaveProfileRepository.GetActiveProfileSlotIdRaw(saveManager);
+			_profileSnapshot = profile;
+		}
+
 		ResetAdventureAuthorityForRestore();
 		_deferredPayload = null;
 		_preservedFailurePayload = null;
-		GameSaveStore.GameProgressData profile = GameSaveStore.LoadActiveProfile();
+		if (!_gameModePolicy.CanReadAdventureRun)
+		{
+			LastRestoreResult = AdventureUpgradeRestoreResult.NoSnapshot;
+			return LastRestoreResult;
+		}
+
 		string json = profile.PendingAdventureRunJson;
 		ObservePayload(json);
 		if (string.IsNullOrWhiteSpace(json))
@@ -95,7 +120,7 @@ public sealed partial class AdventureRunSessionStore : Node
 			case AdventureUpgradeRestoreResult.Migrated:
 				_deferredPayload = null;
 				_preservedFailurePayload = null;
-				PersistMigratedSnapshot(profile);
+				PersistMigratedSnapshot();
 				return result;
 			case AdventureUpgradeRestoreResult.DeferredManifestUnavailable:
 				_deferredPayload = json;
@@ -116,7 +141,7 @@ public sealed partial class AdventureRunSessionStore : Node
 		}
 	}
 
-	private void PersistMigratedSnapshot(GameSaveStore.GameProgressData profile)
+	private void PersistMigratedSnapshot()
 	{
 		if (!_gameModePolicy.CanWriteAdventureRun
 			|| !TryGetSnapshot(out AdventureUpgradeRunSnapshot snapshot))
@@ -125,7 +150,12 @@ public sealed partial class AdventureRunSessionStore : Node
 		}
 
 		string json = JsonSerializer.Serialize(snapshot);
-		Error saveResult = GameSaveStore.SaveActiveProfile(profile with
+		_ = PersistMigratedSnapshotAsync(json);
+	}
+
+	private async Task PersistMigratedSnapshotAsync(string json)
+	{
+		Error saveResult = await GameSaveStore.UpdateActiveProfileAsync(profile => profile with
 		{
 			PendingAdventureRunJson = json,
 		});
@@ -135,6 +165,7 @@ public sealed partial class AdventureRunSessionStore : Node
 			return;
 		}
 
+		InvalidateProfileSnapshot();
 		ObservePayload(json);
 	}
 

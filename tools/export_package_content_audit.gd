@@ -13,10 +13,13 @@ const FORBIDDEN_PATH_PREFIXES := [
 	"legal/",
 	"samples/",
 	"outputs/",
+	"src/Deckland.Rules/bin/",
+	"src/Deckland.Rules/obj/",
 	"Library/",
 ]
 const FORBIDDEN_EXACT_PATHS := [
 	"scenes/adventure_suit_upgrade_editor_scene.tscn",
+	"src/Deckland.Rules/Directory.Build.props",
 ]
 const MCP_AUTOLOADS := [
 	"MCPScreenshot",
