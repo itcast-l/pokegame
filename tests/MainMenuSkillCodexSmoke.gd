@@ -13,8 +13,10 @@ const VIEWPORT_SIZES := [Vector2i(960, 540), Vector2i(1280, 720), Vector2i(1920,
 const EXPECTED_ITEM_COUNT := 15
 const CATALOG_CARD_SIZE := Vector2(196.0, 322.0)
 const CATALOG_CARD_GAP := 16.0
-const MINIMUM_ITEM_CARD_HEIGHT := 248.0
+const MINIMUM_CATALOG_CARD_HEIGHT := 208.0
+const MAXIMUM_VISIBLE_UPGRADE_ROWS := 3
 const MAXIMUM_VISIBLE_ITEM_ROWS := 3
+const MAXIMUM_VISIBLE_CATALOG_COLUMNS := 8
 const EXPECTED_COUNTS := {
 	"hearts": 14,
 	"diamonds": 13,
@@ -137,7 +139,7 @@ func _run() -> void:
 	for viewport_size in VIEWPORT_SIZES:
 		root.size = viewport_size
 		await _wait_frames(3)
-		if not _assert_responsive_layout(overlay, viewport_size):
+		if not await _assert_responsive_layout(overlay, viewport_size):
 			return
 	if not await _assert_item_cards_scroll_into_view(overlay):
 		return
@@ -377,7 +379,7 @@ func _run() -> void:
 	for viewport_size in VIEWPORT_SIZES:
 		root.size = viewport_size
 		await _wait_frames(3)
-		if not _assert_responsive_layout(overlay, viewport_size):
+		if not await _assert_responsive_layout(overlay, viewport_size):
 			return
 		if viewport_size == Vector2i(1280, 720) and not _capture_optional_screenshot():
 			return
@@ -575,7 +577,7 @@ func _assert_mixed_cards(overlay: Node, suit: String, unlocked_id: String, popup
 		if String(state["scene_file_path"]) != SHARED_CARD_SCENE_PATH:
 			_fail("Codex entry is not an instance of the shared card scene")
 			return false
-		var card := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Control
+		var card := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Control
 		if String(state["id"]) != unlocked_id:
 			if not _assert_locked_state(overlay, state):
 				return false
@@ -641,7 +643,7 @@ func _assert_locked_state(overlay: Node, state: Dictionary) -> bool:
 	if String(state["scene_file_path"]) != SHARED_CARD_SCENE_PATH:
 		_fail("Locked entry is not an instance of the shared card scene")
 		return false
-	var card := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Button
+	var card := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid/UpgradeCard_%s" % state["id"]) as Button
 	if card.focus_mode != Control.FOCUS_NONE or not card.disabled \
 			or absf(card.size.x / card.size.y - 196.0 / 322.0) > 0.005:
 		_fail("Locked card focus or fixed aspect contract failed for %s" % state["id"])
@@ -678,7 +680,7 @@ func _assert_item_cards(overlay: Node) -> bool:
 			_fail("Item codex card content is incomplete for %s" % item_id)
 			return false
 		var card := overlay.get_node(
-				"Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/ItemCard_%s" \
+				"Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid/ItemCard_%s" \
 				% _to_pascal_case(item_id)) as Button
 		if card == null or card.focus_mode != Control.FOCUS_ALL \
 				or absf(card.size.x / card.size.y - 196.0 / 322.0) > 0.005:
@@ -686,7 +688,7 @@ func _assert_item_cards(overlay: Node) -> bool:
 			return false
 	var focused := root.gui_get_focus_owner()
 	if focused == null or focused != overlay.get_node(
-			"Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/ItemCard_Question_mark"):
+			"Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid/ItemCard_Question_mark"):
 		_fail("Item category did not focus its first card")
 		return false
 	return true
@@ -743,9 +745,28 @@ func _assert_unified_visual_style(overlay: Node) -> bool:
 			or preview_frame == null:
 		_fail("Skill codex preview is missing its glass focus layer")
 		return false
+	var catalog_surface := overlay.get_node_or_null(
+			"Root/SafeMargin/Layout/CatalogFrame/CatalogGlassSurface") as ColorRect
+	var catalog_frame := overlay.get_node_or_null(
+			"Root/SafeMargin/Layout/CatalogFrame/CatalogGlassFrame") as Panel
+	var catalog_material := catalog_surface.material as ShaderMaterial if catalog_surface != null else null
+	if catalog_material == null or catalog_material.shader == null \
+			or catalog_material.shader.resource_path != "res://shaders/adventure_menu_glass.gdshader" \
+			or catalog_frame == null:
+		_fail("Skill codex card list is missing its framed glass content window")
+		return false
+	var category_tabs := overlay.get_node_or_null(
+			"Root/SafeMargin/Layout/CategoryTabs") as Control
+	var suit_tabs := overlay.get_node_or_null("Root/SafeMargin/Layout/SuitTabs") as Control
+	if category_tabs == null or suit_tabs == null \
+			or suit_tabs.get_global_rect().position.y < category_tabs.get_global_rect().end.y - 1.0 \
+			or absf(suit_tabs.get_global_rect().get_center().x \
+					- category_tabs.get_global_rect().get_center().x) > 1.0:
+		_fail("Skill codex category and suit filters do not retain their centered two-row hierarchy")
+		return false
 
 	var card := overlay.get_node_or_null(
-		"Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid/UpgradeCard_hearts_thick_blood") as Control
+		"Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid/UpgradeCard_hearts_thick_blood") as Control
 	var hover_border := card.get_node_or_null("HoverBorder") as Panel if card != null else null
 	var focus_border := card.get_node_or_null("FeedbackBorder") as Panel if card != null else null
 	var hover_style := hover_border.get_theme_stylebox("panel") as StyleBoxFlat \
@@ -812,9 +833,9 @@ func _assert_category_tab_visual_consistency(overlay: Node) -> bool:
 			return false
 		await _wait_frames(2)
 		var upgrades_button := overlay.get_node(
-				"Root/SafeMargin/Layout/CategoryTabs/UpgradesButton") as Button
+			"Root/SafeMargin/Layout/CategoryTabs/UpgradesButton") as Button
 		var items_button := overlay.get_node(
-				"Root/SafeMargin/Layout/CategoryTabs/ItemsButton") as Button
+			"Root/SafeMargin/Layout/CategoryTabs/ItemsButton") as Button
 		var upgrades_hover := upgrades_button.get_theme_stylebox("hover") as StyleBoxFlat
 		var items_hover := items_button.get_theme_stylebox("hover") as StyleBoxFlat
 		var selected_button := upgrades_button if category == "upgrades" else items_button
@@ -849,41 +870,50 @@ func _assert_category_tab_visual_consistency(overlay: Node) -> bool:
 
 func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 	var transition_root := overlay.get_node("Root") as Control
-	var scroll := overlay.get_node("Root/SafeMargin/Layout/CardScroll") as ScrollContainer
-	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
+	var scroll := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll") as ScrollContainer
+	var grid_center := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter") as CenterContainer
+	var grid := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid") as GridContainer
+	scroll.scroll_vertical = 0
+	await process_frame
 	var available_width := maxf(0.0, scroll.size.x - 48.0)
-	var expected_card_width := CATALOG_CARD_SIZE.x
-	if String(overlay.call("DebugGetCurrentCategory")) == "items":
-		var available_height := maxf(1.0, scroll.size.y)
-		var visible_rows := clampi(
-				floori((available_height + CATALOG_CARD_GAP) \
-						/ (MINIMUM_ITEM_CARD_HEIGHT + CATALOG_CARD_GAP)),
-				1,
-				MAXIMUM_VISIBLE_ITEM_ROWS)
-		var expected_card_height := minf(
-				CATALOG_CARD_SIZE.y,
-				floorf((available_height - ((visible_rows - 1) * CATALOG_CARD_GAP)) \
-						/ visible_rows))
-		expected_card_width = roundf(expected_card_height \
-				* CATALOG_CARD_SIZE.x / CATALOG_CARD_SIZE.y)
-		if not _assert_item_cards_fill_complete_rows(scroll, grid, Vector2(
-				expected_card_width,
-				expected_card_height), viewport_size):
-			return false
+	var available_height := maxf(1.0, scroll.size.y)
+	var maximum_visible_rows := MAXIMUM_VISIBLE_ITEM_ROWS \
+			if String(overlay.call("DebugGetCurrentCategory")) == "items" \
+			else MAXIMUM_VISIBLE_UPGRADE_ROWS
+	var visible_rows := clampi(
+			floori((available_height + CATALOG_CARD_GAP) \
+					/ (MINIMUM_CATALOG_CARD_HEIGHT + CATALOG_CARD_GAP)),
+			1,
+			maximum_visible_rows)
+	var expected_card_height := maxf(
+			MINIMUM_CATALOG_CARD_HEIGHT,
+			minf(
+					CATALOG_CARD_SIZE.y,
+					floorf((available_height - ((visible_rows - 1) * CATALOG_CARD_GAP)) \
+							/ visible_rows)))
+	var expected_card_width := roundf(expected_card_height \
+			* CATALOG_CARD_SIZE.x / CATALOG_CARD_SIZE.y)
+	if not _assert_catalog_cards_fill_complete_rows(scroll, grid, Vector2(
+			expected_card_width,
+			expected_card_height), visible_rows, viewport_size):
+		return false
 	var expected_columns := clampi(floori(
 			(available_width + CATALOG_CARD_GAP) \
-					/ (expected_card_width + CATALOG_CARD_GAP)), 2, 4)
+					/ (expected_card_width + CATALOG_CARD_GAP)), 2, MAXIMUM_VISIBLE_CATALOG_COLUMNS)
 	if grid.columns != expected_columns:
 		_fail("Grid column formula mismatch at %s" % viewport_size)
 		return false
-	if viewport_size == Vector2i(1280, 720) and grid.columns != 4:
-		_fail("1280x720 skill codex must use four columns")
+	if viewport_size == Vector2i(1280, 720) and grid.columns < 5:
+		_fail("1280x720 framed skill codex must use at least five columns")
 		return false
 	if grid.size.x > scroll.size.x + 1.5:
 		_fail("Skill codex grid causes horizontal overflow at %s" % viewport_size)
 		return false
 	if scroll.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
 		_fail("Skill codex horizontal scrolling is enabled")
+		return false
+	if grid_center.size.y < scroll.size.y - 1.5:
+		_fail("Skill codex grid container does not occupy the available list height")
 		return false
 	var canvas_transform := transition_root.get_global_transform_with_canvas()
 	var screen_top_left := canvas_transform * Vector2.ZERO
@@ -897,10 +927,11 @@ func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 	return true
 
 
-func _assert_item_cards_fill_complete_rows(
+func _assert_catalog_cards_fill_complete_rows(
 		scroll: ScrollContainer,
 		grid: GridContainer,
 		expected_card_size: Vector2,
+		visible_rows: int,
 		viewport_size: Vector2i) -> bool:
 	var scroll_rect := scroll.get_global_rect()
 	var visible_card_count := 0
@@ -909,7 +940,7 @@ func _assert_item_cards_fill_complete_rows(
 		if card == null:
 			continue
 		if not card.size.is_equal_approx(expected_card_size):
-			_fail("Item card size mismatch at %s: expected %s, got %s" \
+			_fail("Codex card size mismatch at %s: expected %s, got %s" \
 					% [viewport_size, expected_card_size, card.size])
 			return false
 		var card_rect := card.get_global_rect()
@@ -919,18 +950,21 @@ func _assert_item_cards_fill_complete_rows(
 		visible_card_count += 1
 		if absf(intersection.size.x - card_rect.size.x) > 1.5 \
 				or absf(intersection.size.y - card_rect.size.y) > 1.5:
-			_fail("Item card is partially clipped at %s: %s inside %s" \
+			_fail("Codex card is partially clipped at %s: %s inside %s" \
 					% [viewport_size, card_rect, scroll_rect])
 			return false
-	if visible_card_count == 0:
-		_fail("Item codex has no fully visible cards at %s" % viewport_size)
+	var expected_visible_cards := mini(
+			grid.get_child_count(), grid.columns * visible_rows)
+	if visible_card_count < expected_visible_cards:
+		_fail("Codex does not fill its visible rows at %s: expected %s, got %s" \
+				% [viewport_size, expected_visible_cards, visible_card_count])
 		return false
 	return true
 
 
 func _assert_item_cards_scroll_into_view(overlay: Node) -> bool:
-	var scroll := overlay.get_node("Root/SafeMargin/Layout/CardScroll") as ScrollContainer
-	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
+	var scroll := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll") as ScrollContainer
+	var grid := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid") as GridContainer
 	var scroll_rect := scroll.get_global_rect()
 	for child in grid.get_children():
 		var card := child as Control
@@ -951,7 +985,7 @@ func _assert_item_cards_scroll_into_view(overlay: Node) -> bool:
 
 func _assert_skill_codex_transition_geometry(menu: Node, overlay: Node) -> bool:
 	var transition_root := overlay.get_node("Root") as Control
-	var grid := overlay.get_node("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid") as GridContainer
+	var grid := overlay.get_node("Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid") as GridContainer
 	if transition_root == null or grid == null:
 		_fail("Skill codex transition geometry nodes are missing")
 		return false

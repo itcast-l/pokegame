@@ -13,7 +13,7 @@ public partial class MainMenuScene
 	private void BindSkillCodexButton()
 	{
 		_skillCodexButton = GetNode<Button>(SkillCodexButtonPath);
-		_skillCodexButton.Pressed += ShowSkillCodex;
+		_skillCodexButton.Pressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.SkillCodex);
 		SuppressDefaultPressedSfx(_skillCodexButton);
 	}
 
@@ -51,6 +51,7 @@ public partial class MainMenuScene
 		_avatarEntry.Visible = false;
 		_skillCodexOverlay.Open();
 		Control transitionRoot = _skillCodexOverlay.TransitionRoot;
+		transitionRoot.MouseBehaviorRecursive = Control.MouseBehaviorRecursiveEnum.Inherited;
 		transitionRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		SyncPrimaryMenuFocusState();
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
@@ -96,6 +97,7 @@ public partial class MainMenuScene
 		ResetMenuCamera();
 
 		Control transitionRoot = _skillCodexOverlay.TransitionRoot;
+		transitionRoot.MouseBehaviorRecursive = Control.MouseBehaviorRecursiveEnum.Disabled;
 		_skillCodexTransitionTween?.Kill();
 		_skillCodexTransitionTween = CreateTween();
 		_skillCodexTransitionTween.TweenProperty(
@@ -105,6 +107,24 @@ public partial class MainMenuScene
 			DialogFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
+		Tween closingTween = _skillCodexTransitionTween;
+		MainMenuSkillCodexOverlay closingOverlay = _skillCodexOverlay;
+		uint returnToken = BeginPrimaryMenuReturn(
+			() =>
+			{
+				closingTween.Kill();
+				if (GodotObject.IsInstanceValid(closingOverlay))
+				{
+					closingOverlay.Close();
+					transitionRoot.Modulate = Colors.White;
+				}
+				if (_skillCodexTransitionTween == closingTween)
+				{
+					_skillCodexTransitionTween = null;
+				}
+				_isSkillCodexTransitioning = false;
+			},
+			() => CallDeferred(nameof(FocusSkillCodexButton)));
 
 		float closeSeconds = Mathf.Max(DialogFadeSeconds, GetMenuCameraHomeTotalSeconds());
 		await ToSignal(
@@ -117,13 +137,7 @@ public partial class MainMenuScene
 			return;
 		}
 
-		_skillCodexOverlay.Close();
-		transitionRoot.Modulate = Colors.White;
-		_skillCodexTransitionTween = null;
-		_isSkillCodexTransitioning = false;
-		SetMainMenuButtonsDisabled(false);
-		SyncPrimaryMenuFocusState();
-		CallDeferred(nameof(FocusSkillCodexButton));
+		CompletePrimaryMenuReturn(returnToken);
 	}
 
 	private void FocusSkillCodexButton()

@@ -44,25 +44,28 @@ public static partial class CharacterAvatarCatalog
 			{
 				return profile;
 			}
-
-			while (pendingUnlocks.Count > 0)
+			if (!PendingAvatarUnlockQueueRules.TryPeek(
+					pendingUnlocks,
+					NormalizeAvatarId,
+					avatarId => IsEligiblePendingAdventureAvatar(profile, avatarId),
+					out string candidateAvatarId))
 			{
-				string candidateAvatarId = NormalizeAvatarId(pendingUnlocks[0]);
-				pendingUnlocks.RemoveAt(0);
-				if (AdventureCampaignCatalog.TryGetMainStageIndex(
-						candidateAvatarId,
-						out int mainStageIndex)
-					&& IsPlayerObtainableAdventureStage(mainStageIndex)
-					&& mainStageIndex <= profile.HighestCompletedMainAdventureStage)
-				{
-					unlockedAvatarId = candidateAvatarId;
-					break;
-				}
+				return profile with { PendingAvatarUnlockQueue = string.Empty };
+			}
+			if (!PendingAvatarUnlockQueueRules.TryConsumeExpected(
+					pendingUnlocks,
+					candidateAvatarId,
+					NormalizeAvatarId,
+					avatarId => IsEligiblePendingAdventureAvatar(profile, avatarId),
+					out List<string> remainingUnlocks))
+			{
+				return profile;
 			}
 
+			unlockedAvatarId = candidateAvatarId;
 			return profile with
 			{
-				PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(pendingUnlocks),
+				PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(remainingUnlocks),
 			};
 		});
 		if (saveResult != Error.Ok)
@@ -72,5 +75,70 @@ public static partial class CharacterAvatarCatalog
 		}
 
 		return unlockedAvatarId;
+	}
+
+	public static async Task<string> PeekPendingAdventureAvatarUnlockAsync()
+	{
+		string unlockedAvatarId = string.Empty;
+		Error readResult = await GameSaveStore.UpdateActiveProfileAsync(profile =>
+		{
+			List<string> pendingUnlocks = ParsePendingAdventureAvatarUnlockQueue(
+				profile.PendingAvatarUnlockQueue);
+			PendingAvatarUnlockQueueRules.TryPeek(
+				pendingUnlocks,
+				NormalizeAvatarId,
+				avatarId => IsEligiblePendingAdventureAvatar(profile, avatarId),
+				out unlockedAvatarId);
+			return profile;
+		});
+		if (readResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to inspect pending adventure avatar unlock: {readResult}");
+			return string.Empty;
+		}
+
+		return unlockedAvatarId;
+	}
+
+	public static async Task<Error> ConsumePendingAdventureAvatarUnlockAsync(string expectedAvatarId)
+	{
+		string normalizedExpectedAvatarId = NormalizeAvatarId(expectedAvatarId);
+		bool consumed = false;
+		Error saveResult = await GameSaveStore.UpdateActiveProfileAsync(profile =>
+		{
+			List<string> pendingUnlocks = ParsePendingAdventureAvatarUnlockQueue(
+				profile.PendingAvatarUnlockQueue);
+			if (!PendingAvatarUnlockQueueRules.TryConsumeExpected(
+					pendingUnlocks,
+					normalizedExpectedAvatarId,
+					NormalizeAvatarId,
+					avatarId => IsEligiblePendingAdventureAvatar(profile, avatarId),
+					out List<string> remainingUnlocks))
+			{
+				return profile;
+			}
+
+			consumed = true;
+			return profile with
+			{
+				PendingAvatarUnlockQueue = FormatPendingAdventureAvatarUnlockQueue(remainingUnlocks),
+			};
+		});
+		if (saveResult != Error.Ok)
+		{
+			GD.PushWarning($"Failed to consume expected adventure avatar unlock: {saveResult}");
+			return saveResult;
+		}
+
+		return consumed ? Error.Ok : Error.DoesNotExist;
+	}
+
+	private static bool IsEligiblePendingAdventureAvatar(
+		GameSaveStore.GameProgressData profile,
+		string avatarId)
+	{
+		return AdventureCampaignCatalog.TryGetMainStageIndex(avatarId, out int mainStageIndex)
+			&& IsPlayerObtainableAdventureStage(mainStageIndex)
+			&& mainStageIndex <= profile.HighestCompletedMainAdventureStage;
 	}
 }

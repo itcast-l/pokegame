@@ -34,6 +34,7 @@
     <Compile Include="../../scripts/GameSaveStore.cs" Link="Rules/GameSaveStore.cs" />
     <Compile Include="../../scripts/GameSaveStore.Async.cs" Link="Rules/GameSaveStore.Async.cs" />
     <Compile Include="../../scripts/GameSaveProfileWriteCoordinator.cs" Link="Rules/GameSaveProfileWriteCoordinator.cs" />
+    <Compile Include="../../scripts/PendingAvatarUnlockQueueRules.cs" Link="Rules/PendingAvatarUnlockQueueRules.cs" />
     <Compile Include="../../scripts/GameSaveProfileRepository.cs" Link="Rules/GameSaveProfileRepository.cs" />
     <Compile Include="../../scripts/GameSaveMigration.cs" Link="Rules/GameSaveMigration.cs" />
     <Compile Include="../../scripts/GameSaveLegacyAdapter.cs" Link="Rules/GameSaveLegacyAdapter.cs" />

@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/multiplayer_lobby_room_row.tscn" id="4_room_row"]
 [ext_resource type="PackedScene" path="res://scenes/multiplayer_lobby_player_row.tscn" id="5_player_row"]
 [ext_resource type="Shader" uid="uid://bdjmjgm6dhhjy" path="res://shaders/water_caustic_overlay.gdshader" id="6_water_caustic_shader"]
+[ext_resource type="Script" uid="uid://c4x2qwrms1ysj" path="res://scripts/OceanMenuButtonFrame.cs" id="7_button_frame"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lobby_caustic"]
 shader = ExtResource("6_water_caustic_shader")
@@ -127,7 +128,7 @@ grow_vertical = 2
 script = ExtResource("1_lobby")
 RoomRowScene = ExtResource("4_room_row")
 PlayerRowScene = ExtResource("5_player_row")
-StatusLabel = NodePath("SafeArea/MainLayout/Header/StatusLabel")
+StatusLabel = NodePath("SafeArea/MainLayout/Header/HeaderStatus/StatusLabel")
 ToastLabel = NodePath("ToastLayer/Toast")
 RoomNameInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput")
 RoomPasswordInput = NodePath("SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput")
@@ -147,7 +148,7 @@ SteamRefreshButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/
 ReadyButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/ReadyButton")
 StartButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/StartButton")
 LeaveSessionButton = NodePath("SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/LeaveSessionButton")
-BackButton = NodePath("SafeArea/MainLayout/Header/BackButton")
+BackButton = NodePath("SafeArea/MainLayout/Header/BackFrame/BackButton")
 
 [node name="BackgroundArt" type="TextureRect" parent="." unique_id=1038100418]
 layout_mode = 1
@@ -233,8 +234,32 @@ size_flags_vertical = 3
 theme_override_constants/separation = 16
 
 [node name="Header" type="HBoxContainer" parent="SafeArea/MainLayout" unique_id=2022752824]
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_constants/separation = 14
+
+[node name="BackFrame" type="Control" parent="SafeArea/MainLayout/Header"]
+custom_minimum_size = Vector2(124, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("7_button_frame")
+FrameStyle = 13
+AccentColor = Color(0.62, 1, 0.94, 1)
+
+[node name="BackButton" type="Button" parent="SafeArea/MainLayout/Header/BackFrame" unique_id=1140662407]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = ""
+flat = true
 
 [node name="Title" type="Label" parent="SafeArea/MainLayout/Header" unique_id=79085630]
 layout_mode = 2
@@ -245,28 +270,26 @@ theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 34
 text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="StatusLabel" type="Label" parent="SafeArea/MainLayout/Header" unique_id=2117190382]
-custom_minimum_size = Vector2(130, 0)
+[node name="HeaderStatus" type="Control" parent="SafeArea/MainLayout/Header"]
+custom_minimum_size = Vector2(124, 48)
 layout_mode = 2
+mouse_filter = 2
+
+[node name="StatusLabel" type="Label" parent="SafeArea/MainLayout/Header/HeaderStatus" unique_id=2117190382]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_color = Color(0.72, 0.96, 0.94, 1)
 theme_override_font_sizes/font_size = 16
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="BackButton" type="Button" parent="SafeArea/MainLayout/Header" unique_id=1140662407]
-custom_minimum_size = Vector2(86, 42)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.94, 1, 0.97, 1)
-theme_override_colors/font_pressed_color = Color(0.94, 1, 0.97, 1)
-theme_override_colors/font_hover_color = Color(0.96, 1, 1, 1)
-theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
-text = ""
 
 [node name="BodyScroll" type="ScrollContainer" parent="SafeArea/MainLayout" unique_id=1726555782]
 layout_mode = 2
@@ -452,7 +475,7 @@ text = ""
 [node name="LanHostInfoLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent" unique_id=1975770257]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 text = ""
 autowrap_mode = 2
 
@@ -500,7 +523,7 @@ theme_override_constants/separation = 8
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 text = ""
 horizontal_alignment = 1
 
@@ -547,7 +570,7 @@ theme_override_constants/separation = 8
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 text = ""
 horizontal_alignment = 1
 
@@ -622,7 +645,7 @@ text = "Steam"
 [node name="SteamStatusLabel" type="Label" parent="SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent" unique_id=1826180116]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.76, 0.95, 0.95, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 17
 text = ""
 autowrap_mode = 2
 
@@ -630,7 +653,7 @@ autowrap_mode = 2
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.62, 0.86, 0.86, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 text = ""
 autowrap_mode = 2
 

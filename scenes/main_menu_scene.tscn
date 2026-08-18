@@ -233,16 +233,13 @@ layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 FrameStyle = 1
 AccentColor = Color(0.6, 0.94, 0.96, 1)
+VisualInset = Vector2(8, 5)
 
 [node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SinglePlayerFrame" unique_id=785935662]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 5.0
-offset_right = -8.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
@@ -264,16 +261,13 @@ script = ExtResource("4_ocean_menu_button_frame")
 FrameStyle = 1
 AccentColor = Color(0.6, 0.94, 0.96, 1)
 FlipOrnament = true
+VisualInset = Vector2(8, 5)
 
 [node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/AdventureFrame" unique_id=1535096010]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 5.0
-offset_right = -8.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
@@ -294,16 +288,13 @@ layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 FrameStyle = 1
 AccentColor = Color(0.6, 0.94, 0.96, 1)
+VisualInset = Vector2(8, 5)
 
 [node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/MultiplayerFrame" unique_id=125594722]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 5.0
-offset_right = -8.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
@@ -325,16 +316,13 @@ script = ExtResource("4_ocean_menu_button_frame")
 FrameStyle = 1
 AccentColor = Color(0.72, 0.92, 0.7, 1)
 FlipOrnament = true
+VisualInset = Vector2(8, 5)
 
 [node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SkillCodexFrame" unique_id=2021093117]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 5.0
-offset_right = -8.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
@@ -356,16 +344,13 @@ script = ExtResource("4_ocean_menu_button_frame")
 FrameStyle = 1
 AccentColor = Color(0.6, 0.94, 0.96, 1)
 FlipOrnament = true
+VisualInset = Vector2(8, 5)
 
 [node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/SettingsFrame" unique_id=1370048465]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 5.0
-offset_right = -8.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
@@ -386,16 +371,13 @@ layout_mode = 2
 script = ExtResource("4_ocean_menu_button_frame")
 FrameStyle = 1
 AccentColor = Color(0.6, 0.94, 0.96, 1)
+VisualInset = Vector2(8, 5)
 
 [node name="Button" type="Button" parent="MenuSafeArea/MenuPanel/PanelMargin/MenuLayout/ExitFrame" unique_id=2091202023]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 5.0
-offset_right = -8.0
-offset_bottom = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0

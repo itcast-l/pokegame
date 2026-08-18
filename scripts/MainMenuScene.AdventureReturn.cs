@@ -11,13 +11,24 @@ public partial class MainMenuScene : Control
 
 	private async void PlayAdventureReturnTransition()
 	{
+		ResetMenuCamera();
+		_avatarEntry.Visible = true;
+		uint returnToken = BeginPrimaryMenuReturn(
+			() =>
+			{
+				_adventureTransitionRoot?.QueueFree();
+				_adventureTransitionRoot = null;
+				_adventureTransitionMotion = null;
+				_avatarEntry.Visible = true;
+				PrepareAdventureAvatarMenuCache();
+			},
+			() => CallDeferred(nameof(FocusInitialMainMenuButton)));
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (!GodotObject.IsInstanceValid(this))
 		{
 			return;
 		}
 
-		ResetMenuCamera();
 		await ToSignal(
 			GetTree().CreateTimer(GetMenuCameraHomeTotalSeconds()),
 			SceneTreeTimer.SignalName.Timeout);
@@ -27,13 +38,6 @@ public partial class MainMenuScene : Control
 			return;
 		}
 
-		_adventureTransitionRoot?.QueueFree();
-		_adventureTransitionRoot = null;
-		_adventureTransitionMotion = null;
-		_avatarEntry.Visible = true;
-		SetMainMenuButtonsDisabled(false);
-		PrepareAdventureAvatarMenuCache();
-		ShowPendingAdventureAvatarUnlockPrompt();
-		CallDeferred(nameof(FocusInitialMainMenuButton));
+		CompletePrimaryMenuReturn(returnToken);
 	}
 }

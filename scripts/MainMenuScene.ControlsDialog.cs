@@ -13,6 +13,7 @@ public partial class MainMenuScene : Control
 		_controlsDialogTween?.Kill();
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_controlsDialogRoot.Visible = true;
+		_controlsDialogRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 		_controlsDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_controlsDialogRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		_controlsDialogPanel.Scale = new Vector2(0.98f, 0.98f);
@@ -38,6 +39,7 @@ public partial class MainMenuScene : Control
 		ClearPendingBindingCapture();
 		_controlsDialogTween?.Kill();
 		_controlsDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+		_controlsDialogRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 
 		_controlsDialogTween = CreateTween();
 		_controlsDialogTween.TweenProperty(_controlsDialogRoot, "modulate:a", 0.0f, DialogFadeSeconds);

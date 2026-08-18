@@ -125,6 +125,8 @@ internal static partial class Program
 		Run("adventure save gate exhaustion aborts and returns", AdventureSaveGateExhaustionAbortsAndReturns);
 		Run("adventure save gate rejects concurrent execution", AdventureSaveGateRejectsConcurrentExecution);
 		Run("avatar unlock prompt failure paths restore interaction source contract", AvatarUnlockPromptFailurePathsRestoreInteractionSourceContract);
+		Run("pending avatar unlock queue peek and expected consume", PendingAvatarUnlockQueuePeekAndExpectedConsume);
+		Run("pending avatar unlock storage coordination", PendingAvatarUnlockStorageCoordination);
 		Run("profile coordinator updates latest candidate and skips no-op", ProfileCoordinatorUpdatesLatestCandidateAndSkipsNoOp);
 		Run("profile topology rejects changes while a write lease is held", ProfileTopologyRejectsChangesWhileWriteLeaseHeld);
 		Run("profile coordinator seal drains admitted waiters", ProfileCoordinatorSealDrainsAdmittedWaiters);

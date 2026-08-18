@@ -12,55 +12,90 @@ public partial class MainMenuScene : Control
 	private Tween? _avatarUnlockPromptTween;
 	private bool _isShowingAvatarUnlockPrompt;
 	private bool _isConsumingPendingAvatarUnlock;
+	private bool _isProbingPendingAvatarUnlock;
+	private uint _pendingAvatarUnlockProbeToken;
+#if DECKLAND_TEST_HOOKS
+	private ProfileWriteLease? _debugPendingAvatarUnlockProbeLease;
+#endif
 
 	private async void ShowPendingAdventureAvatarUnlockPrompt()
 	{
-		if (_isShowingAvatarUnlockPrompt || _isConsumingPendingAvatarUnlock)
+		if (_isShowingAvatarUnlockPrompt
+			|| _isConsumingPendingAvatarUnlock
+			|| _isProbingPendingAvatarUnlock
+			|| !CanShowPendingAvatarUnlockPrompt())
 		{
 			return;
 		}
-		if (!TryEnsureAvatarUnlockPrompt())
+
+		uint probeToken = ++_pendingAvatarUnlockProbeToken;
+		_isProbingPendingAvatarUnlock = true;
+		string unlockedAvatarId = string.Empty;
+		try
+		{
+			unlockedAvatarId = await CharacterAvatarCatalog.PeekPendingAdventureAvatarUnlockAsync();
+		}
+		catch (System.Exception error)
+		{
+			GD.PushWarning($"Failed to inspect pending adventure avatar unlock: {error.Message}");
+		}
+		finally
+		{
+			_isProbingPendingAvatarUnlock = false;
+		}
+		if (!GodotObject.IsInstanceValid(this))
+		{
+			return;
+		}
+		if (probeToken != _pendingAvatarUnlockProbeToken)
+		{
+			ShowPendingAdventureAvatarUnlockPrompt();
+			return;
+		}
+		if (string.IsNullOrWhiteSpace(unlockedAvatarId))
+		{
+			return;
+		}
+
+		CharacterAvatarDefinition unlockedAvatar = CharacterAvatarCatalog.GetById(unlockedAvatarId);
+		if (unlockedAvatar.AdventureStageNumber <= 0
+			|| !CanShowPendingAvatarUnlockPrompt()
+			|| !TryShowAvatarUnlockPrompt(unlockedAvatar))
 		{
 			RestoreMainMenuAfterAvatarUnlockPromptFailure();
 			return;
 		}
 
 		_isConsumingPendingAvatarUnlock = true;
-		SetMainMenuButtonsDisabled(true);
-		string unlockedAvatarId = string.Empty;
+		Error consumeResult;
 		try
 		{
-			unlockedAvatarId = await CharacterAvatarCatalog.ConsumePendingAdventureAvatarUnlockAsync();
+			consumeResult = await CharacterAvatarCatalog.ConsumePendingAdventureAvatarUnlockAsync(unlockedAvatarId);
 		}
 		catch (System.Exception error)
 		{
 			GD.PushWarning($"Failed to consume pending adventure avatar unlock: {error.Message}");
+			consumeResult = Error.Failed;
 		}
 		finally
 		{
 			_isConsumingPendingAvatarUnlock = false;
 		}
-		if (!GodotObject.IsInstanceValid(this) || _isShowingAvatarUnlockPrompt)
+		if (!GodotObject.IsInstanceValid(this))
 		{
-			return;
-		}
-		if (string.IsNullOrWhiteSpace(unlockedAvatarId))
-		{
-			RestoreMainMenuAfterAvatarUnlockPromptFailure();
 			return;
 		}
 
-		CharacterAvatarDefinition unlockedAvatar = CharacterAvatarCatalog.GetById(unlockedAvatarId);
-		if (unlockedAvatar.AdventureStageNumber <= 0)
+		if (consumeResult == Error.Ok)
 		{
-			RestoreMainMenuAfterAvatarUnlockPromptFailure();
+			if (!_isShowingAvatarUnlockPrompt)
+			{
+				ShowPendingAdventureAvatarUnlockPrompt();
+			}
 			return;
 		}
 
-		if (!TryShowAvatarUnlockPrompt(unlockedAvatar))
-		{
-			RestoreMainMenuAfterAvatarUnlockPromptFailure();
-		}
+		HideAvatarUnlockPrompt(showNext: consumeResult == Error.DoesNotExist);
 	}
 
 	private bool TryShowAvatarUnlockPrompt(CharacterAvatarDefinition avatarDefinition)
@@ -87,6 +122,7 @@ public partial class MainMenuScene : Control
 
 		_avatarUnlockPromptTween?.Kill();
 		promptRoot.Visible = true;
+		promptRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 		promptRoot.MouseFilter = MouseFilterEnum.Stop;
 		promptRoot.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		if (_avatarUnlockPromptPanel != null)
@@ -110,8 +146,21 @@ public partial class MainMenuScene : Control
 
 	private void HideAvatarUnlockPrompt()
 	{
+		HideAvatarUnlockPrompt(showNext: true);
+	}
+
+	private void HideAvatarUnlockPrompt(bool showNext)
+	{
 		if (_avatarUnlockPromptRoot == null || !GodotObject.IsInstanceValid(_avatarUnlockPromptRoot))
 		{
+			return;
+		}
+		if (!_isShowingAvatarUnlockPrompt)
+		{
+			if (showNext)
+			{
+				ShowPendingAdventureAvatarUnlockPrompt();
+			}
 			return;
 		}
 
@@ -120,6 +169,7 @@ public partial class MainMenuScene : Control
 		_avatarUnlockPromptTween = null;
 		_avatarUnlockPromptRoot.Visible = false;
 		_avatarUnlockPromptRoot.MouseFilter = MouseFilterEnum.Ignore;
+		_avatarUnlockPromptRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 		_avatarUnlockPromptRoot.Modulate = Colors.White;
 		if (_avatarUnlockPromptPanel != null)
 		{
@@ -127,9 +177,16 @@ public partial class MainMenuScene : Control
 		}
 
 		_isShowingAvatarUnlockPrompt = false;
-		SetMainMenuButtonsDisabled(false);
-		ShowPendingAdventureAvatarUnlockPrompt();
-		CallDeferred(nameof(FocusInitialMainMenuButton));
+		if (CanShowPendingAvatarUnlockPrompt())
+		{
+			SetMainMenuButtonsDisabled(false);
+			SyncPrimaryMenuFocusState();
+			if (showNext)
+			{
+				ShowPendingAdventureAvatarUnlockPrompt();
+			}
+			CallDeferred(nameof(FocusInitialMainMenuButton));
+		}
 	}
 
 	private bool TryEnsureAvatarUnlockPrompt()
@@ -158,8 +215,28 @@ public partial class MainMenuScene : Control
 
 	private void RestoreMainMenuAfterAvatarUnlockPromptFailure()
 	{
+		if (!CanShowPendingAvatarUnlockPrompt())
+		{
+			return;
+		}
+
 		SetMainMenuButtonsDisabled(false);
+		SyncPrimaryMenuFocusState();
 		CallDeferred(nameof(FocusInitialMainMenuButton));
+	}
+
+	private void InvalidatePendingAvatarUnlockProbe()
+	{
+		_pendingAvatarUnlockProbeToken++;
+	}
+
+	private bool CanShowPendingAvatarUnlockPrompt()
+	{
+		return !_quitInProgress
+			&& !_isStartingGameTransition
+			&& !_isMenuCameraTransitioning
+			&& !IsPrimaryMenuReturning()
+			&& !IsMenuOverlayVisible();
 	}
 
 	private void RefreshAvatarUnlockPromptText()
@@ -214,4 +291,30 @@ public partial class MainMenuScene : Control
 		color = new Color(r, g, b, a);
 		return true;
 	}
+
+#if DECKLAND_TEST_HOOKS
+	public bool DebugHoldPendingAvatarUnlockProbeLock()
+	{
+		if (_debugPendingAvatarUnlockProbeLease != null)
+		{
+			return false;
+		}
+
+		_debugPendingAvatarUnlockProbeLease = GameSaveProfileWriteCoordinator.AcquireAsync(
+			profile => profile,
+			forcePersist: false).GetAwaiter().GetResult();
+		return _debugPendingAvatarUnlockProbeLease != null;
+	}
+
+	public void DebugReleasePendingAvatarUnlockProbeLock()
+	{
+		_debugPendingAvatarUnlockProbeLease?.Abort();
+		_debugPendingAvatarUnlockProbeLease = null;
+	}
+
+	public bool DebugIsPendingAvatarUnlockProbeActive()
+	{
+		return _isProbingPendingAvatarUnlock;
+	}
+#endif
 }

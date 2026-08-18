@@ -318,6 +318,7 @@ public partial class AdventureAvatarMenuScene
 			embeddedMainMenu.HideAdventureAvatarMenu(this);
 			return;
 		}
+		MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 
 		PackedScene? mainMenuScene = GD.Load<PackedScene>(MainMenuScenePath);
 		if (mainMenuScene == null)
@@ -327,6 +328,7 @@ public partial class AdventureAvatarMenuScene
 			_backButton.Disabled = false;
 			_startButton.Disabled = false;
 			MouseFilter = MouseFilterEnum.Stop;
+			MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 			ZIndex = 0;
 			return;
 		}
@@ -340,6 +342,7 @@ public partial class AdventureAvatarMenuScene
 			_backButton.Disabled = false;
 			_startButton.Disabled = false;
 			MouseFilter = MouseFilterEnum.Stop;
+			MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 			ZIndex = 0;
 			return;
 		}

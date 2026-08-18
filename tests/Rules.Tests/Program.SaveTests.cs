@@ -405,13 +405,21 @@ internal static partial class Program
 
 		AssertSourceOrder(
 			mainMenuSource,
-			"if (!TryEnsureAvatarUnlockPrompt())",
-			"RestoreMainMenuAfterAvatarUnlockPromptFailure();",
+			"PeekPendingAdventureAvatarUnlockAsync()",
+			"TryShowAvatarUnlockPrompt(unlockedAvatar)",
 			"_isConsumingPendingAvatarUnlock = true;",
-			"ConsumePendingAdventureAvatarUnlockAsync()");
+			"ConsumePendingAdventureAvatarUnlockAsync(unlockedAvatarId)");
 		True(mainMenuSource.Contains("finally", StringComparison.Ordinal));
-		True(mainMenuSource.Contains(
-			"if (!TryShowAvatarUnlockPrompt(unlockedAvatar))",
+		int probeStart = mainMenuSource.IndexOf(
+			"private async void ShowPendingAdventureAvatarUnlockPrompt()",
+			StringComparison.Ordinal);
+		int modalStart = mainMenuSource.IndexOf(
+			"_isConsumingPendingAvatarUnlock = true;",
+			probeStart,
+			StringComparison.Ordinal);
+		True(probeStart >= 0 && modalStart > probeStart);
+		False(mainMenuSource[probeStart..modalStart].Contains(
+			"SetMainMenuButtonsDisabled(true)",
 			StringComparison.Ordinal));
 
 		AssertSourceOrder(
@@ -424,6 +432,121 @@ internal static partial class Program
 		True(adventureMenuSource.Contains(
 			"if (!TryShowAvatarUnlockPrompt(unlockedAvatar))",
 			StringComparison.Ordinal));
+	}
+
+	private static void PendingAvatarUnlockQueuePeekAndExpectedConsume()
+	{
+		string[] queue = { "invalid", "BOSS_ONE", "boss_two" };
+		static string Normalize(string value) => value.Trim().ToLowerInvariant();
+		static bool IsEligible(string value) => value.StartsWith("boss_", StringComparison.Ordinal);
+
+		True(PendingAvatarUnlockQueueRules.TryPeek(queue, Normalize, IsEligible, out string candidate));
+		Equal("boss_one", candidate);
+		Equal(3, queue.Length);
+
+		False(PendingAvatarUnlockQueueRules.TryConsumeExpected(
+			queue,
+			"boss_two",
+			Normalize,
+			IsEligible,
+			out List<string> staleRemaining));
+		Equal(3, staleRemaining.Count);
+		Equal("invalid", staleRemaining[0]);
+
+		True(PendingAvatarUnlockQueueRules.TryConsumeExpected(
+			queue,
+			"boss_one",
+			Normalize,
+			IsEligible,
+			out List<string> remaining));
+		Equal(1, remaining.Count);
+		Equal("boss_two", remaining[0]);
+	}
+
+	private static void PendingAvatarUnlockStorageCoordination()
+	{
+		static string Normalize(string value) => value.Trim().ToLowerInvariant();
+		static bool IsEligible(string value) => value.StartsWith("boss_", StringComparison.Ordinal);
+		static List<string> Parse(string value) => new(
+			value.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+		ResetGameSaveStoreTestState();
+		string slotId = GameSaveStore.GetProfileSlotId(1);
+		Godot.TestSaveManagerNode saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Queue") with
+		{
+			PendingAvatarUnlockQueue = "boss_one|boss_two",
+		});
+
+		string peekedCandidate = string.Empty;
+		Equal(Godot.Error.Ok, GameSaveStore.UpdateActiveProfileAsync(profile =>
+		{
+			PendingAvatarUnlockQueueRules.TryPeek(
+				Parse(profile.PendingAvatarUnlockQueue),
+				Normalize,
+				IsEligible,
+				out peekedCandidate);
+			return profile;
+		}).GetAwaiter().GetResult());
+		Equal("boss_one", peekedCandidate);
+		Equal(0, saveManager.SaveToSlotCallCount);
+		Equal("boss_one|boss_two", LoadStoredProfile(saveManager, slotId).PendingAvatarUnlockQueue);
+
+		ProfileWriteLease heldLease = GameSaveProfileWriteCoordinator.AcquireAsync(profile => profile with
+		{
+			PendingAvatarUnlockQueue = "boss_two",
+		}).GetAwaiter().GetResult()!;
+		string candidateAfterWait = string.Empty;
+		Task<Godot.Error> waitingPeek = GameSaveStore.UpdateActiveProfileAsync(profile =>
+		{
+			PendingAvatarUnlockQueueRules.TryPeek(
+				Parse(profile.PendingAvatarUnlockQueue),
+				Normalize,
+				IsEligible,
+				out candidateAfterWait);
+			return profile;
+		});
+		False(waitingPeek.IsCompleted);
+		Equal(Godot.Error.Ok, heldLease.PersistAttemptAsync().GetAwaiter().GetResult());
+		heldLease.CompleteSuccess();
+		Equal(Godot.Error.Ok, waitingPeek.GetAwaiter().GetResult());
+		Equal("boss_two", candidateAfterWait);
+		Equal(1, saveManager.SaveToSlotCallCount);
+
+		Equal(Godot.Error.Ok, GameSaveStore.UpdateActiveProfileAsync(profile =>
+		{
+			List<string> queue = Parse(profile.PendingAvatarUnlockQueue);
+			return PendingAvatarUnlockQueueRules.TryConsumeExpected(
+				queue,
+				"boss_one",
+				Normalize,
+				IsEligible,
+				out List<string> remaining)
+					? profile with { PendingAvatarUnlockQueue = string.Join('|', remaining) }
+					: profile;
+		}).GetAwaiter().GetResult());
+		Equal(1, saveManager.SaveToSlotCallCount);
+		Equal("boss_two", LoadStoredProfile(saveManager, slotId).PendingAvatarUnlockQueue);
+
+		ResetGameSaveStoreTestState();
+		saveManager = InstallSaveManagerForTests(slotId);
+		SeedProfile(saveManager, slotId, CreateProgressData(playerName: "Failure") with
+		{
+			PendingAvatarUnlockQueue = "boss_one|boss_two",
+		});
+		saveManager.SaveSlotResults[slotId] = Godot.Error.Failed;
+		Equal(Godot.Error.Failed, GameSaveStore.UpdateActiveProfileAsync(profile =>
+		{
+			List<string> queue = Parse(profile.PendingAvatarUnlockQueue);
+			True(PendingAvatarUnlockQueueRules.TryConsumeExpected(
+				queue,
+				"boss_one",
+				Normalize,
+				IsEligible,
+				out List<string> remaining));
+			return profile with { PendingAvatarUnlockQueue = string.Join('|', remaining) };
+		}).GetAwaiter().GetResult());
+		Equal("boss_one|boss_two", LoadStoredProfile(saveManager, slotId).PendingAvatarUnlockQueue);
 	}
 
 	private static void ProfileCoordinatorUpdatesLatestCandidateAndSkipsNoOp()

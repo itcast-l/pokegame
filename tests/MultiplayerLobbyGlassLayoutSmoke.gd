@@ -66,18 +66,19 @@ func _audit_viewport(spec: Dictionary) -> bool:
 	await _wait_frames(4)
 
 	if not _lobby.has_meta("secondary_menu_visual_profile") \
-			or str(_lobby.get_meta("secondary_menu_visual_profile")) != "secondary-menu-unified":
-		_fail("%s is missing the unified secondary-menu visual profile" % context)
+			or str(_lobby.get_meta("secondary_menu_visual_profile")) != "secondary-menu-unified-multiplayer-readable":
+		_fail("%s is missing the readable multiplayer visual profile" % context)
 		return false
 	var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_size))
 	var veil := _lobby.get_node_or_null("ReadabilityVeil") as ColorRect
 	var veil_material := veil.material as ShaderMaterial if veil != null else null
 	var veil_style_valid := false
 	if DisplayServer.get_name().to_lower() == "headless":
-		veil_style_valid = veil != null and veil_material == null and veil.color.a > 0.0
+		veil_style_valid = veil != null and veil_material == null and veil.color.a >= 0.50
 	else:
 		veil_style_valid = veil_material != null and veil_material.shader != null \
-				and veil_material.shader.resource_path == SCRIM_SHADER_PATH
+				and veil_material.shader.resource_path == SCRIM_SHADER_PATH \
+				and (veil_material.get_shader_parameter("tint_color") as Color).a >= 0.50
 	if veil == null or not _rects_close(veil.get_global_rect(), viewport_rect) or not veil_style_valid:
 		_fail("%s readability veil is missing or does not cover the viewport" % context)
 		return false
@@ -126,10 +127,19 @@ func _audit_viewport(spec: Dictionary) -> bool:
 		var surface := panel.get_node_or_null("GlassSurface") as ColorRect if panel != null else null
 		var frame := panel.get_node_or_null("GlassFrame") as Panel if panel != null else null
 		var material := surface.material as ShaderMaterial if surface != null else null
+		var surface_opacity := float(material.get_shader_parameter("surface_opacity")) if material != null else 0.0
+		var surface_tint := material.get_shader_parameter("tint_color") as Color if material != null else Color.TRANSPARENT
 		if panel == null or surface == null or frame == null \
 				or material == null or material.shader == null \
-				or material.shader.resource_path != GLASS_SHADER_PATH:
-			_fail("%s panel %s is missing steel glass layers" % [context, panel_name])
+				or material.shader.resource_path != GLASS_SHADER_PATH \
+				or surface_opacity < 0.935 \
+				or surface_tint.a < 0.775:
+			_fail("%s panel %s does not use an opaque readable glass surface: opacity=%s tint=%s" % [
+				context,
+				panel_name,
+				surface_opacity,
+				surface_tint,
+			])
 			return false
 		if not _rect_contains(body.get_global_rect(), panel.get_global_rect()):
 			_fail("%s panel %s escapes the grid" % [context, panel_name])
@@ -154,7 +164,7 @@ func _audit_viewport(spec: Dictionary) -> bool:
 				return false
 
 	for control_path in [
-		"SafeArea/MainLayout/Header/BackButton",
+		"SafeArea/MainLayout/Header/BackFrame/BackButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomNameInput",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomPasswordInput",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/RoomRulesGrid/PlayerCountOption",
@@ -177,7 +187,6 @@ func _audit_viewport(spec: Dictionary) -> bool:
 	if not _audit_room_setting_labels(context):
 		return false
 	for button_path in [
-		"SafeArea/MainLayout/Header/BackButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostButton",
 		"SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanSearchButton",
 		"SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamHostButton",
@@ -185,11 +194,21 @@ func _audit_viewport(spec: Dictionary) -> bool:
 	]:
 		if not _assert_button_surface(button_path, SECONDARY_BUTTON_SURFACE, context):
 			return false
+	if not _audit_header_navigation(context):
+		return false
 	for button_path in [
 		"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/ReadyButton",
 		"SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/StartButton",
 	]:
 		if not _assert_button_surface(button_path, PRIMARY_BUTTON_SURFACE, context):
+			return false
+		var button := _lobby.get_node_or_null(button_path) as Button
+		if button == null or button.get_theme_color("font_disabled_color").a < 0.90:
+			_fail("%s disabled action %s is too faint to read: color=%s" % [
+				context,
+				button_path,
+				button.get("theme_override_colors/font_disabled_color") if button != null else Color.TRANSPARENT,
+			])
 			return false
 	if not _audit_readable_typography(context):
 		return false
@@ -248,10 +267,29 @@ func _assert_button_surface(button_path: String, expected: Color, context: Strin
 	return true
 
 
+func _audit_header_navigation(context: String) -> bool:
+	var header := _lobby.get_node_or_null("SafeArea/MainLayout/Header") as HBoxContainer
+	var back_frame := _lobby.get_node_or_null("SafeArea/MainLayout/Header/BackFrame") as Control
+	var back_button := _lobby.get_node_or_null("SafeArea/MainLayout/Header/BackFrame/BackButton") as Button
+	var title := _lobby.get_node_or_null("SafeArea/MainLayout/Header/Title") as Label
+	var header_status := _lobby.get_node_or_null("SafeArea/MainLayout/Header/HeaderStatus") as Control
+	if header == null or back_frame == null or back_button == null or title == null or header_status == null \
+			or back_frame.global_position.x > header.global_position.x + RECT_TOLERANCE \
+			or not is_equal_approx(back_frame.size.x, header_status.size.x) \
+			or int(back_frame.get("FrameStyle")) != 13 \
+			or title.horizontal_alignment != HORIZONTAL_ALIGNMENT_CENTER \
+			or not back_button.flat \
+			or not back_button.get_theme_stylebox("normal") is StyleBoxEmpty \
+			or not _rects_close(back_button.get_global_rect(), back_frame.get_global_rect()):
+		_fail("%s header does not use the left-aligned framed back navigation pattern" % context)
+		return false
+	return true
+
+
 func _audit_readable_typography(context: String) -> bool:
 	var specs := [
 		{"path": "SafeArea/MainLayout/Header/Title", "min_size": 28, "min_outline": 2},
-		{"path": "SafeArea/MainLayout/Header/BackButton", "min_size": 16, "min_outline": 1},
+		{"path": "SafeArea/MainLayout/Header/BackFrame/BackButton", "min_size": 18, "min_outline": 1},
 		{
 			"path": "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/ModeTitle",
 			"min_size": 20,
@@ -264,12 +302,12 @@ func _audit_readable_typography(context: String) -> bool:
 		},
 		{
 			"path": "SafeArea/MainLayout/BodyScroll/Body/ModeRail/PanelMargin/ModeRailContent/LanHostInfoLabel",
-			"min_size": 14,
+			"min_size": 15,
 			"min_outline": 1,
 		},
 		{
 			"path": "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel",
-			"min_size": 14,
+			"min_size": 15,
 			"min_outline": 1,
 		},
 	]
@@ -309,10 +347,11 @@ func _audit_dynamic_rows() -> bool:
 	})
 	var room_status := room_row.get_node("RowLayout/StatusLabel") as Label
 	var join_button := room_row.get_node("RowLayout/JoinButton") as Button
+	var room_style := room_row.get_theme_stylebox("panel") as StyleBoxFlat
 	if not room_status.visible or room_status.text.is_empty() or join_button.disabled \
 			or not join_button.tooltip_text.is_empty() \
 			or room_row.tooltip_text.is_empty() \
-			or not room_row.get_theme_stylebox("panel") is StyleBoxFlat:
+			or room_style == null or room_style.bg_color.a < 0.935:
 		_fail("Room row does not combine visible status text, border state, and join affordance")
 		return false
 	for control_path in ["RowLayout/TextStack/RoomNameLabel", "RowLayout/TextStack/DetailsLabel", "RowLayout/StatusLabel", "RowLayout/JoinButton"]:
@@ -330,7 +369,8 @@ func _audit_dynamic_rows() -> bool:
 	var role_label := player_row.get_node("RowLayout/RoleLabel") as Label
 	var ready_label := player_row.get_node("RowLayout/ReadyLabel") as Label
 	var ready_style := player_row.get_theme_stylebox("panel") as StyleBoxFlat
-	if role_label.text.is_empty() or ready_label.text.is_empty() or ready_style == null:
+	if role_label.text.is_empty() or ready_label.text.is_empty() or ready_style == null \
+			or ready_style.bg_color.a < 0.915:
 		_fail("Player row does not expose host and ready status with a border state")
 		return false
 	for control_path in ["RowLayout/SeatLabel", "RowLayout/PlayerNameLabel", "RowLayout/RoleLabel", "RowLayout/ReadyLabel"]:

@@ -97,6 +97,9 @@ public partial class OceanMenuButtonFrame : Control
 	[Export]
 	public bool UseNinePatchTexture { get; set; }
 
+	[Export]
+	public Vector2 VisualInset { get; set; } = Vector2.Zero;
+
 	[Export(PropertyHint.Range, "0,128,1")]
 	public float TexturePatchMarginHorizontal { get; set; } = 24.0f;
 
@@ -215,13 +218,18 @@ public partial class OceanMenuButtonFrame : Control
 			return;
 		}
 
-		Rect2 rect = UseNinePatchTexture
-			? new Rect2(Vector2.Zero, Size)
-			: FrameStyle is ButtonFrameStyle.NeutralSmokeRow or ButtonFrameStyle.IndividualToolRow
+		Vector2 clampedInset = new(
+			Mathf.Clamp(VisualInset.X, 0.0f, Size.X * 0.5f),
+			Mathf.Clamp(VisualInset.Y, 0.0f, Size.Y * 0.5f));
+		Rect2 rect = clampedInset != Vector2.Zero
+			? new Rect2(clampedInset, Size - clampedInset * 2.0f)
+			: UseNinePatchTexture
 				? new Rect2(Vector2.Zero, Size)
-			: _button != null
-			? new Rect2(_button.Position, _button.Size)
-			: new Rect2(Vector2.Zero, Size);
+				: FrameStyle is ButtonFrameStyle.NeutralSmokeRow or ButtonFrameStyle.IndividualToolRow
+					? new Rect2(Vector2.Zero, Size)
+					: _button != null
+						? new Rect2(_button.Position, _button.Size)
+						: new Rect2(Vector2.Zero, Size);
 
 		if (rect.Size.X <= 0.0f || rect.Size.Y <= 0.0f)
 		{

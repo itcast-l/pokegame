@@ -20,8 +20,8 @@ public partial class MultiplayerLobbyPlayerRow : PanelContainer
 	{
 		SeatLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SpadePalette.ActiveBorder);
 		PlayerNameLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.95f, 0.96f, 1.0f));
-		Font primaryFont = LocalizationTypography.CreateCurrentFontVariation(620.0f, 0.50f);
-		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(570.0f, 0.38f);
+		Font primaryFont = LocalizationTypography.CreateCurrentFontVariation(660.0f, 0.50f);
+		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(610.0f, 0.40f);
 		ApplyReadableTextStyle(SeatLabel, supportingFont);
 		ApplyReadableTextStyle(PlayerNameLabel, primaryFont);
 		ApplyReadableTextStyle(RoleLabel, supportingFont);
@@ -102,7 +102,7 @@ public partial class MultiplayerLobbyPlayerRow : PanelContainer
 	{
 		return new StyleBoxFlat
 		{
-			BgColor = new Color(0.11f, 0.15f, 0.17f, 0.76f),
+			BgColor = new Color(0.025f, 0.11f, 0.14f, 0.92f),
 			BorderColor = border,
 			BorderWidthLeft = 1,
 			BorderWidthTop = 1,

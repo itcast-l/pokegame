@@ -37,6 +37,7 @@ public partial class MainMenuScene : Control
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_avatarEntry.Visible = false;
 		_exitDialogRoot.Visible = true;
+		_exitDialogRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 		SyncPrimaryMenuFocusState();
 		_exitDialog.ResetActionFocusHighlight();
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Stop;
@@ -61,6 +62,7 @@ public partial class MainMenuScene : Control
 		_exitDialogTween?.Kill();
 		_avatarEntry.Visible = true;
 		_exitDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+		_exitDialogRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 		ResetMenuCamera();
 
 		_exitDialogTween = CreateTween();
@@ -69,11 +71,24 @@ public partial class MainMenuScene : Control
 		_exitDialogTween.TweenProperty(_exitDialogPanel, "scale", new Vector2(0.96f, 0.96f), DialogFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
-		_exitDialogTween.Finished += () =>
+		Tween closingTween = _exitDialogTween;
+		uint returnToken = BeginPrimaryMenuReturn(
+			() =>
+			{
+				closingTween.Kill();
+				_exitDialogRoot.Visible = false;
+				_exitDialogRoot.Modulate = Colors.White;
+				_exitDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+				_exitDialogPanel.Scale = Vector2.One;
+				if (_exitDialogTween == closingTween)
+				{
+					_exitDialogTween = null;
+				}
+			},
+			FocusExitButton);
+		closingTween.Finished += () =>
 		{
-			_exitDialogRoot.Visible = false;
-			SyncPrimaryMenuFocusState();
-			FocusExitButton();
+			CompletePrimaryMenuReturn(returnToken);
 		};
 	}
 

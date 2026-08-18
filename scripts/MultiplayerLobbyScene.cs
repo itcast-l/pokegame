@@ -12,12 +12,15 @@ public partial class MultiplayerLobbyScene : Control
 	private const string RoomTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/RoomBrowser/PanelMargin/RoomBrowserContent/RoomTitle";
 	private const string PlayerTitleLabelPath = "SafeArea/MainLayout/BodyScroll/Body/LobbyPanel/PanelMargin/LobbyContent/PlayerTitle";
 	private const string SteamNoteLabelPath = "SafeArea/MainLayout/BodyScroll/Body/FriendsPanel/PanelMargin/FriendsContent/SteamNoteLabel";
+	private const string HeaderBackFramePath = "SafeArea/MainLayout/Header/BackFrame";
+	private const string HeaderStatusPath = "SafeArea/MainLayout/Header/HeaderStatus";
 	private const float LobbyTitleFontWeight = 740.0f;
 	private const float LobbySectionFontWeight = 660.0f;
-	private const float LobbyInteractiveFontWeight = 620.0f;
-	private const float LobbyBodyFontWeight = 570.0f;
-	private const float LobbySupportingFontWeight = 550.0f;
+	private const float LobbyInteractiveFontWeight = 660.0f;
+	private const float LobbyBodyFontWeight = 610.0f;
+	private const float LobbySupportingFontWeight = 600.0f;
 	private static readonly Color LobbyFontOutline = new(0.0f, 0.025f, 0.045f, 0.94f);
+	private static readonly Color LobbyDisabledButtonText = new(0.68f, 0.82f, 0.82f, 0.94f);
 
 	private Label _titleLabel = default!;
 	private Label _modeTitleLabel = default!;
@@ -124,6 +127,7 @@ public partial class MultiplayerLobbyScene : Control
 		ConnectNetworkSignals();
 		LocalizationTypography.Apply(this, useLocaleLayoutDirection: true);
 		ApplyReadableTypography();
+		CallDeferred(nameof(ApplyReadableTypographyAfterUiBinding));
 		RefreshLocalizedText();
 		RefreshState((int)_network.State);
 		RefreshRooms(_network.GetRoomsVariant());
@@ -239,16 +243,17 @@ public partial class MultiplayerLobbyScene : Control
 
 	private void ConfigureUnifiedVisualStyle()
 	{
-		SetMeta(SecondaryMenuGlassStyle.VisualProfileMetadata, SecondaryMenuGlassStyle.UnifiedVisual.Id);
+		SetMeta(SecondaryMenuGlassStyle.VisualProfileMetadata, SecondaryMenuGlassStyle.MultiplayerLobbyVisual.Id);
 		SecondaryMenuGlassStyle.ApplyReadabilityVeil(
 			GetNode<ColorRect>("ReadabilityVeil"),
-			SecondaryMenuGlassStyle.UnifiedVisual);
+			SecondaryMenuGlassStyle.MultiplayerLobbyVisual);
 
 		foreach (string panelName in new[] { "ModeRail", "RoomBrowser", "LobbyPanel", "FriendsPanel" })
 		{
 			SecondaryMenuGlassStyle.StyleGlassPanel(
 				GetNode<PanelContainer>($"SafeArea/MainLayout/BodyScroll/Body/{panelName}"),
-				SecondaryMenuGlassStyle.UnifiedVisual);
+				SecondaryMenuGlassStyle.MultiplayerLobbyVisual,
+				contentPane: false);
 		}
 
 		MainMenuInteractiveStyle.ApplyThemedLineEdit(RoomNameInput, MainMenuInteractiveStyle.SecondaryMenuPalette, 16);
@@ -259,7 +264,7 @@ public partial class MultiplayerLobbyScene : Control
 			option.ClipText = true;
 		}
 
-		StyleButton(BackButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		StyleBackButton(BackButton);
 		StyleButton(LanHostButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
 		StyleButton(LanSearchButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
 		StyleButton(SteamHostButton, MainMenuInteractiveStyle.SecondaryMenuPalette);
@@ -270,12 +275,14 @@ public partial class MultiplayerLobbyScene : Control
 
 		_titleLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.95f, 0.97f, 1.0f));
 		StatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.ActiveBorder);
-		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.78f, 0.91f, 0.91f, 1.0f));
-		SteamStatusLabel.AddThemeColorOverride("font_color", MainMenuInteractiveStyle.SecondaryMenuPalette.Text);
-		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.76f, 0.86f, 0.88f, 1.0f));
+		LanHostInfoLabel.AddThemeColorOverride("font_color", new Color(0.84f, 0.94f, 0.94f, 1.0f));
+		SteamStatusLabel.AddThemeColorOverride("font_color", new Color(0.90f, 0.97f, 0.97f, 1.0f));
+		_steamNoteLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.92f, 0.93f, 1.0f));
+		EmptyRoomsLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.92f, 0.93f, 1.0f));
+		EmptyPlayersLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.92f, 0.93f, 1.0f));
 		foreach (Label fieldLabel in new[] { _playerCountLabel, _itemModeLabel, _winningScoreLabel })
 		{
-			fieldLabel.AddThemeColorOverride("font_color", new Color(0.72f, 0.86f, 0.88f, 1.0f));
+			fieldLabel.AddThemeColorOverride("font_color", new Color(0.80f, 0.91f, 0.92f, 1.0f));
 		}
 		foreach (Label sectionTitle in new[]
 		{
@@ -346,11 +353,21 @@ public partial class MultiplayerLobbyScene : Control
 		}
 	}
 
+	private void ApplyReadableTypographyAfterUiBinding()
+	{
+		CallDeferred(nameof(ApplyReadableTypography));
+	}
+
 	private static void ApplyReadableTypographyRecursively(Node node, Font bodyFont, Font interactiveFont)
 	{
-		if (node is BaseButton or LineEdit)
+		if (node is BaseButton button)
 		{
-			ApplyReadableTextStyle((Control)node, interactiveFont, 1);
+			ApplyReadableTextStyle(button, interactiveFont, 1);
+			button.AddThemeColorOverride("font_disabled_color", LobbyDisabledButtonText);
+		}
+		else if (node is LineEdit lineEdit)
+		{
+			ApplyReadableTextStyle(lineEdit, interactiveFont, 1);
 		}
 		else if (node is Label or RichTextLabel or TextEdit)
 		{
@@ -382,6 +399,14 @@ public partial class MultiplayerLobbyScene : Control
 	private static void StyleButton(Button button, MainMenuInteractiveStyle.Palette palette)
 	{
 		MainMenuInteractiveStyle.ApplyThemedControl(button, palette, 16);
+		button.AddThemeColorOverride("font_disabled_color", LobbyDisabledButtonText);
+		button.ClipText = true;
+	}
+
+	private static void StyleBackButton(Button button)
+	{
+		MainMenuInteractiveStyle.ApplyActionButton(button, 18, MainMenuInteractiveStyle.SecondaryMenuPalette);
+		button.AddThemeColorOverride("font_disabled_color", LobbyDisabledButtonText);
 		button.ClipText = true;
 	}
 
@@ -427,7 +452,10 @@ public partial class MultiplayerLobbyScene : Control
 			GetNode<VBoxContainer>(contentPath).AddThemeConstantOverride("separation", compact ? 8 : 10);
 		}
 		_titleLabel.AddThemeFontSizeOverride("font_size", compact ? 28 : 34);
-		StatusLabel.CustomMinimumSize = new Vector2(compact ? 104.0f : 130.0f, 0.0f);
+		float headerSideWidth = compact ? 104.0f : 124.0f;
+		GetNode<Control>(HeaderBackFramePath).CustomMinimumSize = new Vector2(headerSideWidth, 48.0f);
+		GetNode<Control>(HeaderStatusPath).CustomMinimumSize = new Vector2(headerSideWidth, 48.0f);
+		StatusLabel.CustomMinimumSize = Vector2.Zero;
 
 		var panelWidths = new Dictionary<string, float>
 		{

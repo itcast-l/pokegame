@@ -192,26 +192,78 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_button_focus")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_focus")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button_focus")
 
-[node name="CardScroll" type="ScrollContainer" parent="Root/SafeMargin/Layout"]
+[node name="CatalogFrame" type="Control" parent="Root/SafeMargin/Layout"]
 layout_mode = 2
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
+mouse_filter = 2
 
-[node name="GridCenter" type="CenterContainer" parent="Root/SafeMargin/Layout/CardScroll"]
+[node name="CatalogGlassSurface" type="ColorRect" parent="Root/SafeMargin/Layout/CatalogFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="CatalogGlassFrame" type="Panel" parent="Root/SafeMargin/Layout/CatalogFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CatalogMargin" type="MarginContainer" parent="Root/SafeMargin/Layout/CatalogFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CatalogContent" type="Control" parent="Root/SafeMargin/Layout/CatalogFrame/CatalogMargin"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 0
+size_flags_vertical = 3
+mouse_filter = 2
 
-[node name="CardGrid" type="GridContainer" parent="Root/SafeMargin/Layout/CardScroll/GridCenter"]
+[node name="CardScroll" type="ScrollContainer" parent="Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="GridCenter" type="CenterContainer" parent="Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="CardGrid" type="GridContainer" parent="Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter"]
 layout_mode = 2
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 16
 columns = 4
 
-[node name="EmptyLabel" type="Label" parent="Root/SafeMargin/Layout"]
+[node name="EmptyLabel" type="Label" parent="Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent"]
 visible = false
-layout_mode = 2
-size_flags_vertical = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 theme_override_colors/font_color = Color(0.72, 0.9, 0.9, 0.9)
 theme_override_font_sizes/font_size = 22
 text = "SKILL_CODEX_EMPTY"

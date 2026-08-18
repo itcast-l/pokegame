@@ -162,6 +162,7 @@ public partial class MainMenuScene : Control
 	private bool _isStartingGameTransition;
 	private bool _quitInProgress;
 	private bool _isMenuCameraTransitioning;
+	private uint _menuCameraTransitionToken;
 	private bool _hasAppliedWindowSettings;
 	private bool _lastAppliedFullscreen;
 	private Vector2I _lastAppliedResolution = DefaultResolution;
@@ -213,21 +214,21 @@ public partial class MainMenuScene : Control
 		_waterCausticOverlay = GetNodeOrNull<CanvasItem>(WaterCausticOverlayPath);
 
 		_singlePlayerButton = GetNode<Button>(SinglePlayerButtonPath);
-		_singlePlayerButton.Pressed += StartSinglePlayerMenu;
+		_singlePlayerButton.Pressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.SinglePlayer);
 
 		_adventureButton = GetNode<Button>(AdventureButtonPath);
-		_adventureButton.Pressed += StartAdventureMode;
+		_adventureButton.Pressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.Adventure);
 
 		_multiplayerButton = GetNode<Button>(MultiplayerButtonPath);
-		_multiplayerButton.Pressed += StartMultiplayerLobby;
+		_multiplayerButton.Pressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.Multiplayer);
 		SuppressDefaultPressedSfx(_multiplayerButton);
 		BindSkillCodexButton();
 
 		_settingsButton = GetNode<Button>(SettingsButtonPath);
-		_settingsButton.Pressed += ShowSettingsDialog;
+		_settingsButton.Pressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.Settings);
 
 		_exitButton = GetNode<Button>(ExitButtonPath);
-		_exitButton.Pressed += ShowExitDialog;
+		_exitButton.Pressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.Exit);
 		SuppressDefaultPressedSfx(_singlePlayerButton);
 		SuppressDefaultPressedSfx(_adventureButton);
 		SuppressDefaultPressedSfx(_settingsButton);
@@ -251,7 +252,7 @@ public partial class MainMenuScene : Control
 
 		_avatarEntry = GetNode<MainMenuAvatarEntry>(AvatarEntryPath);
 		SuppressDefaultPressedSfx(_avatarEntry.Button);
-		_avatarEntry.AvatarPressed += OpenAvatarEditor;
+		_avatarEntry.AvatarPressed += () => DispatchPrimaryMenuAction(PrimaryMenuAction.AvatarEditor);
 
 		BuildPlayerCountDialog();
 		BuildSettingsDialog();
@@ -449,7 +450,7 @@ public partial class MainMenuScene : Control
 
 		if (!IsMenuOverlayVisible() && GameInputActions.IsCancelPressed(inputEvent))
 		{
-			ShowExitDialog();
+			DispatchPrimaryMenuAction(PrimaryMenuAction.Exit);
 			GetViewport().SetInputAsHandled();
 		}
 	}

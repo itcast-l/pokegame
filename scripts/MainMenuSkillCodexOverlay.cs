@@ -11,8 +11,10 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private const float CatalogCardWidth = 196.0f;
 	private const float CatalogCardHeight = 322.0f;
 	private const float CatalogCardGap = 16.0f;
-	private const float MinimumItemCardHeight = 248.0f;
+	private const float MinimumCatalogCardHeight = 208.0f;
+	private const int MaximumVisibleUpgradeRows = 3;
 	private const int MaximumVisibleItemRows = 3;
+	private const int MaximumVisibleCatalogColumns = 8;
 	private static readonly string[] SuitOrder = { "hearts", "diamonds", "spades", "clubs" };
 	private static readonly StyleBoxFlat HiddenFocusStyle = new() { BgColor = Colors.Transparent };
 
@@ -71,9 +73,12 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		_upgradesButton = GetNode<Button>("Root/SafeMargin/Layout/CategoryTabs/UpgradesButton");
 		_itemsButton = GetNode<Button>("Root/SafeMargin/Layout/CategoryTabs/ItemsButton");
 		_suitTabs = GetNode<Control>("Root/SafeMargin/Layout/SuitTabs");
-		_scrollContainer = GetNode<ScrollContainer>("Root/SafeMargin/Layout/CardScroll");
-		_grid = GetNode<GridContainer>("Root/SafeMargin/Layout/CardScroll/GridCenter/CardGrid");
-		_emptyLabel = GetNode<Label>("Root/SafeMargin/Layout/EmptyLabel");
+		_scrollContainer = GetNode<ScrollContainer>(
+			"Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll");
+		_grid = GetNode<GridContainer>(
+			"Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/CardScroll/GridCenter/CardGrid");
+		_emptyLabel = GetNode<Label>(
+			"Root/SafeMargin/Layout/CatalogFrame/CatalogMargin/CatalogContent/EmptyLabel");
 		_previewLayer = GetNode<Control>("Root/PreviewLayer");
 		_previewFocusAnchor = GetNode<Control>("Root/PreviewLayer/PreviewFocusAnchor");
 		_previewCard = GetNode<AdventureUpgradeCatalogCard>("Root/PreviewLayer/PreviewCenter/PreviewCard");
@@ -94,6 +99,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 
 		_backButton.Pressed += RequestClose;
 		_root.Resized += () => CallDeferred(nameof(RefreshGridColumns));
+		_scrollContainer.Resized += () => CallDeferred(nameof(RefreshGridColumns));
 		_scrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
 		_upgradeCardScene = GD.Load<PackedScene>(UpgradeCardScenePath);
 		_itemCardScene = GD.Load<PackedScene>(ItemCardScenePath);
@@ -420,6 +426,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		ClosePreview();
 		RebuildCards();
 		RefreshSuitTabs();
+		_scrollContainer.ScrollVertical = 0;
 		CallDeferred(nameof(RefreshGridColumns));
 		if (focusFirstCard)
 		{
@@ -798,6 +805,11 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 		MainMenuInteractiveStyle.ApplyThemedControl(_backButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 20);
 		_titleLabel.AddThemeColorOverride("font_color", new Color(0.91f, 0.94f, 0.97f, 1.0f));
 		_emptyLabel.AddThemeColorOverride("font_color", new Color(0.66f, 0.72f, 0.77f, 0.92f));
+		GetNode<ColorRect>("Root/SafeMargin/Layout/CatalogFrame/CatalogGlassSurface").Material =
+			SecondaryMenuGlassStyle.CreateGlassMaterial(contentPane: true, SecondaryMenuGlassStyle.UnifiedVisual);
+		GetNode<Panel>("Root/SafeMargin/Layout/CatalogFrame/CatalogGlassFrame").AddThemeStyleboxOverride(
+			"panel",
+			SecondaryMenuGlassStyle.CreateFrameStyle(contentPane: true, SecondaryMenuGlassStyle.UnifiedVisual));
 		SecondaryMenuGlassStyle.StyleScrollBar(
 			_scrollContainer.GetVScrollBar(),
 			SecondaryMenuGlassStyle.UnifiedVisual);
@@ -817,44 +829,36 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private void RefreshGridColumns()
 	{
 		float availableWidth = Mathf.Max(0.0f, _scrollContainer.Size.X - 48.0f);
-		float cardWidth = CatalogCardWidth;
-		if (_currentCategory == ItemsCategory)
-		{
-			cardWidth = RefreshItemCardLayout();
-		}
-		else
-		{
-			_grid.AddThemeConstantOverride("v_separation", Mathf.RoundToInt(CatalogCardGap));
-		}
-
+		float cardWidth = RefreshCatalogCardLayout();
 		_grid.Columns = Mathf.Clamp(
 			Mathf.FloorToInt((availableWidth + CatalogCardGap) / (cardWidth + CatalogCardGap)),
 			2,
-			4);
+			MaximumVisibleCatalogColumns);
 	}
 
-	private float RefreshItemCardLayout()
+	private float RefreshCatalogCardLayout()
 	{
 		float availableHeight = Mathf.Max(1.0f, _scrollContainer.Size.Y);
+		int maximumVisibleRows = _currentCategory == ItemsCategory
+			? MaximumVisibleItemRows
+			: MaximumVisibleUpgradeRows;
 		int visibleRows = Mathf.Clamp(
 			Mathf.FloorToInt(
-				(availableHeight + CatalogCardGap) / (MinimumItemCardHeight + CatalogCardGap)),
+				(availableHeight + CatalogCardGap) / (MinimumCatalogCardHeight + CatalogCardGap)),
 			1,
-			MaximumVisibleItemRows);
+			maximumVisibleRows);
 		float cardHeight = Mathf.Min(
 			CatalogCardHeight,
 			Mathf.Floor(
 				(availableHeight - ((visibleRows - 1) * CatalogCardGap)) / visibleRows));
-		cardHeight = Mathf.Max(1.0f, cardHeight);
-
-		float verticalGap = CatalogCardGap;
-		if (visibleRows == 1 && cardHeight >= CatalogCardHeight)
-		{
-			verticalGap = Mathf.Max(CatalogCardGap, Mathf.Floor(availableHeight - cardHeight));
-		}
-		_grid.AddThemeConstantOverride("v_separation", Mathf.RoundToInt(verticalGap));
+		cardHeight = Mathf.Max(MinimumCatalogCardHeight, cardHeight);
+		_grid.AddThemeConstantOverride("v_separation", Mathf.RoundToInt(CatalogCardGap));
 
 		float cardWidth = Mathf.Round(cardHeight * CatalogCardWidth / CatalogCardHeight);
+		foreach (AdventureUpgradeCatalogCard card in _visibleCards)
+		{
+			card.CustomMinimumSize = new Vector2(cardWidth, cardHeight);
+		}
 		foreach (MainMenuItemCodexCard card in _visibleItemCards)
 		{
 			card.CustomMinimumSize = new Vector2(cardWidth, cardHeight);

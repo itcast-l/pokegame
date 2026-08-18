@@ -46,6 +46,7 @@ public partial class MainMenuScene : Control
 		avatarEditor.CloseRequested += CloseAvatarEditor;
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		avatarEditor.Visible = true;
+		avatarEditor.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 		SyncPrimaryMenuFocusState();
 		avatarEditor.MouseFilter = MouseFilterEnum.Stop;
 		avatarEditor.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
@@ -89,6 +90,7 @@ public partial class MainMenuScene : Control
 		CanvasLayer? avatarEditorLayer = _avatarEditDialogLayer;
 		PanelContainer? dialogPanel = _avatarEditDialogPanel;
 		avatarEditor.MouseFilter = MouseFilterEnum.Ignore;
+		avatarEditor.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 		ResetMenuCamera();
 
 		_avatarEditDialogTween?.Kill();
@@ -102,28 +104,34 @@ public partial class MainMenuScene : Control
 				.SetEase(Tween.EaseType.In);
 		}
 
-		_avatarEditDialogTween.Finished += () =>
+		Tween closingTween = _avatarEditDialogTween;
+		uint returnToken = BeginPrimaryMenuReturn(
+			() =>
+			{
+				closingTween.Kill();
+				if (GodotObject.IsInstanceValid(avatarEditor))
+				{
+					avatarEditor.Visible = false;
+					avatarEditor.ProcessMode = ProcessModeEnum.Disabled;
+					avatarEditor.QueueFree();
+				}
+				if (avatarEditorLayer != null && GodotObject.IsInstanceValid(avatarEditorLayer))
+				{
+					avatarEditorLayer.QueueFree();
+				}
+
+				if (_avatarEditDialogRoot == avatarEditor)
+				{
+					_avatarEditDialogLayer = null;
+					_avatarEditDialogRoot = null;
+					_avatarEditDialogPanel = null;
+					_avatarEditDialogTween = null;
+				}
+			},
+			() => CallDeferred(nameof(FocusInitialMainMenuButton)));
+		closingTween.Finished += () =>
 		{
-			if (GodotObject.IsInstanceValid(avatarEditor))
-			{
-				avatarEditor.Visible = false;
-				avatarEditor.QueueFree();
-			}
-			if (avatarEditorLayer != null && GodotObject.IsInstanceValid(avatarEditorLayer))
-			{
-				avatarEditorLayer.QueueFree();
-			}
-
-			if (_avatarEditDialogRoot == avatarEditor)
-			{
-				_avatarEditDialogLayer = null;
-				_avatarEditDialogRoot = null;
-				_avatarEditDialogPanel = null;
-				_avatarEditDialogTween = null;
-			}
-
-			SyncPrimaryMenuFocusState();
-			CallDeferred(nameof(FocusInitialMainMenuButton));
+			CompletePrimaryMenuReturn(returnToken);
 		};
 	}
 

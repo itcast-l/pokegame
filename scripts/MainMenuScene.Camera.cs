@@ -11,7 +11,7 @@ public partial class MainMenuScene : Control
 			return false;
 		}
 
-		_isMenuCameraTransitioning = true;
+		BeginMenuCameraTransition();
 		SetMainMenuButtonsDisabled(true);
 		if (startCameraImmediately)
 		{
@@ -28,7 +28,7 @@ public partial class MainMenuScene : Control
 			return false;
 		}
 
-		_isMenuCameraTransitioning = true;
+		BeginMenuCameraTransition();
 		SetMainMenuButtonsDisabled(true);
 		if (!SetMenuCameraAdventureDiveActive())
 		{
@@ -52,10 +52,11 @@ public partial class MainMenuScene : Control
 
 	private void ScheduleMenuCameraAdventureDiveCompletion()
 	{
+		uint transitionToken = _menuCameraTransitionToken;
 		SceneTreeTimer timer = GetTree().CreateTimer(GetMenuCameraTransitionRemainingSeconds());
 		timer.Timeout += () =>
 		{
-			if (!GodotObject.IsInstanceValid(this))
+			if (!GodotObject.IsInstanceValid(this) || transitionToken != _menuCameraTransitionToken)
 			{
 				return;
 			}
@@ -67,14 +68,15 @@ public partial class MainMenuScene : Control
 
 	private async Task<bool> CompleteMenuCameraTransition()
 	{
+		uint transitionToken = _menuCameraTransitionToken;
 		try
 		{
 			await WaitForMenuCameraTransition();
-			return GodotObject.IsInstanceValid(this);
+			return GodotObject.IsInstanceValid(this) && transitionToken == _menuCameraTransitionToken;
 		}
 		finally
 		{
-			if (GodotObject.IsInstanceValid(this))
+			if (GodotObject.IsInstanceValid(this) && transitionToken == _menuCameraTransitionToken)
 			{
 				SetMainMenuButtonsDisabled(false);
 				_isMenuCameraTransitioning = false;
@@ -152,6 +154,19 @@ public partial class MainMenuScene : Control
 		_menuCameraTransitionTotalSeconds = Mathf.Max(0.0f, totalSeconds);
 	}
 
+	private void BeginMenuCameraTransition()
+	{
+		_menuCameraTransitionToken++;
+		_isMenuCameraTransitioning = true;
+	}
+
+	private void InvalidateMenuCameraTransition()
+	{
+		_menuCameraTransitionToken++;
+		_isMenuCameraTransitioning = false;
+		ClearMenuCameraTransition();
+	}
+
 	private void ClearMenuCameraTransition()
 	{
 		_menuCameraTransitionStartMsec = 0;
@@ -189,6 +204,7 @@ public partial class MainMenuScene : Control
 
 	private void SetMenuCameraPushInInitial()
 	{
+		InvalidateMenuCameraTransition();
 		if (_menuCameraPushIn == null)
 		{
 			return;
@@ -209,17 +225,16 @@ public partial class MainMenuScene : Control
 
 		_menuCameraAdventureDive?.Call("set_priority", MenuCameraInactivePriority);
 		_menuCameraPushIn.Call("set_priority", MenuCameraPushInPriority);
-		ClearMenuCameraTransition();
 	}
 
 	private void ResetMenuCamera()
 	{
+		InvalidateMenuCameraTransition();
 		if (_menuCameraHome == null || _menuCameraPushIn == null)
 		{
 			return;
 		}
 
-		ClearMenuCameraTransition();
 		_menuCameraPushIn.Call("set_priority", MenuCameraInactivePriority);
 		_menuCameraAdventureDive?.Call("set_priority", MenuCameraInactivePriority);
 		_menuCameraHome.Call("set_priority", MenuCameraHomePriority);

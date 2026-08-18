@@ -115,6 +115,24 @@ public static class SecondaryMenuGlassStyle
 		new Color(0.01f, 0.09f, 0.12f, 0.44f),
 		new Color(0.48f, 0.90f, 0.86f, 0.70f),
 		new Color(0.84f, 1.0f, 0.96f, 0.94f));
+	public static readonly VisualConfig MultiplayerLobbyVisual = new(
+		"secondary-menu-unified-multiplayer-readable",
+		new Color(0.008f, 0.095f, 0.12f, 0.78f),
+		new Color(0.008f, 0.08f, 0.105f, 0.62f),
+		new Color(0.52f, 1.0f, 0.94f, 0.16f),
+		new Color(0.60f, 1.0f, 0.94f, 0.68f),
+		new Color(0.62f, 1.0f, 0.94f, 0.48f),
+		new Color(0.0f, 0.028f, 0.045f, 1.0f),
+		0.50f,
+		3.0f,
+		2.4f,
+		0.94f,
+		0.76f,
+		new Color(0.0f, 0.015f, 0.03f, 0.74f),
+		22,
+		new Color(0.008f, 0.07f, 0.095f, 0.64f),
+		new Color(0.52f, 0.94f, 0.90f, 0.78f),
+		new Color(0.88f, 1.0f, 0.96f, 0.96f));
 	public static readonly VisualConfig PauseDerivedVisual = new(
 		"pause-derived-core-menu",
 		new Color(0.027f, 0.122f, 0.176f, 1.0f),

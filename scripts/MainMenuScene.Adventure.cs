@@ -213,6 +213,7 @@ public partial class MainMenuScene : Control
 
 		Control root = _adventureTransitionRoot;
 		root.Visible = true;
+		root.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 		root.MouseFilter = MouseFilterEnum.Stop;
 		root.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
 		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
@@ -240,11 +241,10 @@ public partial class MainMenuScene : Control
 		PlayMenuSfx(GameSfx.UiPanelClose, -2.0f, 0.98f, 1.02f, 0.05);
 		Control root = _adventureTransitionRoot;
 		root.MouseFilter = MouseFilterEnum.Ignore;
+		root.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 		adventureAvatarMenu.MouseFilter = MouseFilterEnum.Ignore;
 		_avatarEntry.Visible = true;
 		ResetMenuCamera();
-		SetMainMenuButtonsDisabled(false);
-		_isMenuCameraTransitioning = false;
 		PrepareBackgroundMusic();
 
 		_adventureTransitionTween?.Kill();
@@ -252,22 +252,32 @@ public partial class MainMenuScene : Control
 		_adventureTransitionTween.TweenProperty(root, "modulate:a", 0.0f, AdventureMenuFadeSeconds)
 			.SetTrans(Tween.TransitionType.Cubic)
 			.SetEase(Tween.EaseType.In);
-		_adventureTransitionTween.Finished += () =>
+		Tween closingTween = _adventureTransitionTween;
+		uint returnToken = BeginPrimaryMenuReturn(
+			() =>
+			{
+				closingTween.Kill();
+				if (GodotObject.IsInstanceValid(adventureAvatarMenu))
+				{
+					adventureAvatarMenu.ProcessMode = ProcessModeEnum.Disabled;
+				}
+
+				if (GodotObject.IsInstanceValid(root))
+				{
+					root.Visible = false;
+					root.ProcessMode = ProcessModeEnum.Disabled;
+					root.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+				}
+
+				if (_adventureTransitionTween == closingTween)
+				{
+					_adventureTransitionTween = null;
+				}
+			},
+			() => CallDeferred(nameof(FocusInitialMainMenuButton)));
+		closingTween.Finished += () =>
 		{
-			if (GodotObject.IsInstanceValid(adventureAvatarMenu))
-			{
-				adventureAvatarMenu.ProcessMode = ProcessModeEnum.Disabled;
-			}
-
-			if (GodotObject.IsInstanceValid(root))
-			{
-				root.Visible = false;
-				root.ProcessMode = ProcessModeEnum.Disabled;
-				root.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-			}
-
-			_adventureTransitionTween = null;
-			CallDeferred(nameof(FocusInitialMainMenuButton));
+			CompletePrimaryMenuReturn(returnToken);
 		};
 	}
 

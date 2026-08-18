@@ -70,6 +70,7 @@ public partial class MainMenuScene : Control
 		_playerCountDialogTween?.Kill();
 		PlayMenuSfx(GameSfx.UiPanelOpen, -2.0f, 0.98f, 1.02f, 0.05);
 		_playerCountDialogRoot.Visible = true;
+		_playerCountDialogRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Inherited;
 		SyncPrimaryMenuFocusState();
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Stop;
 		_playerCountDialogRoot.Modulate = Colors.White;
@@ -86,15 +87,28 @@ public partial class MainMenuScene : Control
 		_playerCountDialogTween?.Kill();
 		_avatarEntry.Visible = true;
 		_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+		_playerCountDialogRoot.MouseBehaviorRecursive = MouseBehaviorRecursiveEnum.Disabled;
 		CancelMenuCameraPushIn();
 
 		_playerCountDialogTween = CreateTween();
 		_playerCountDialogTween.TweenProperty(_playerCountDialogRoot, "modulate:a", 0.0f, PlayerCountDialogHideSeconds);
-		_playerCountDialogTween.Finished += () =>
+		Tween closingTween = _playerCountDialogTween;
+		uint returnToken = BeginPrimaryMenuReturn(
+			() =>
+			{
+				closingTween.Kill();
+				_playerCountDialogRoot.Visible = false;
+				_playerCountDialogRoot.Modulate = Colors.White;
+				_playerCountDialogRoot.MouseFilter = MouseFilterEnum.Ignore;
+				if (_playerCountDialogTween == closingTween)
+				{
+					_playerCountDialogTween = null;
+				}
+			},
+			() => GrabFocusIfAvailable(_singlePlayerButton));
+		closingTween.Finished += () =>
 		{
-			_playerCountDialogRoot.Visible = false;
-			SyncPrimaryMenuFocusState();
-			GrabFocusIfAvailable(_singlePlayerButton);
+			CompletePrimaryMenuReturn(returnToken);
 		};
 	}
 

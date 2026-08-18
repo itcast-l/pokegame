@@ -22,8 +22,8 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 	public override void _Ready()
 	{
 		MainMenuInteractiveStyle.ApplyThemedControl(JoinButton, MainMenuInteractiveStyle.SecondaryMenuPalette, 15);
-		Font primaryFont = LocalizationTypography.CreateCurrentFontVariation(620.0f, 0.50f);
-		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(550.0f, 0.34f);
+		Font primaryFont = LocalizationTypography.CreateCurrentFontVariation(660.0f, 0.50f);
+		Font supportingFont = LocalizationTypography.CreateCurrentFontVariation(600.0f, 0.38f);
 		ApplyReadableTextStyle(RoomNameLabel, primaryFont);
 		ApplyReadableTextStyle(DetailsLabel, supportingFont);
 		ApplyReadableTextStyle(StatusLabel, primaryFont);
@@ -128,7 +128,7 @@ public partial class MultiplayerLobbyRoomRow : PanelContainer
 			: new Color(0.48f, 0.52f, 0.54f, 0.32f);
 		return new StyleBoxFlat
 		{
-			BgColor = new Color(0.11f, 0.15f, 0.17f, 0.78f),
+			BgColor = new Color(0.025f, 0.11f, 0.14f, 0.94f),
 			BorderColor = border,
 			BorderWidthLeft = 1,
 			BorderWidthTop = 1,
