@@ -102,7 +102,7 @@ internal static partial class Program
 		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 70, 0).Kind);
 	}
 
-	private static void AdventureAiPairOnlyThresholdIsExclusive()
+	private static void AdventureAiPairOnlyCaptureIsBlockedByMiddleThreshold()
 	{
 		var tableCards = new[] { TableCard("A", 1) };
 		var handCards = new[]
@@ -110,11 +110,11 @@ internal static partial class Program
 			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		Equal(EnemyAiAdventureSelectionKind.Capture, SelectAdventure(tableCards, handCards, 54, 0).Kind);
+		Equal(EnemyAiAdventureSelectionKind.Build, SelectAdventure(tableCards, handCards, 54, 0).Kind);
 		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 55, 0).Kind);
 	}
 
-	private static void AdventureAiPairOnlyOrdinalSelectsAcrossHandPositions()
+	private static void AdventureAiBlockedPairsEnterBuildOrdinalPool()
 	{
 		var tableCards = new[] { TableCard("A", 1) };
 		var handCards = new[]
@@ -124,7 +124,7 @@ internal static partial class Program
 			new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false),
 		};
 
-		Equal(2, SelectAdventure(tableCards, handCards, 0, 1).HandIndex);
+		Equal(1, SelectAdventure(tableCards, handCards, 0, 1).HandIndex);
 	}
 
 	private static void AdventureAiRejectedCaptureNeverFallsThroughToBuild()
@@ -137,6 +137,45 @@ internal static partial class Program
 		};
 
 		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(tableCards, handCards, 99, 1).Kind);
+	}
+
+	private static void AdventureAiFiltersThresholdBlockedCaptureCandidates()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("3", 3),
+		};
+		var mixedHand = new[]
+		{
+			new PotentialCaptureCard(
+				"3",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+			new PotentialCaptureCard(
+				"A",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+		};
+
+		EnemyAiAdventureSelectionResult mixed = SelectAdventure(tableCards, mixedHand, 0, 0);
+		Equal(EnemyAiAdventureSelectionKind.Capture, mixed.Kind);
+		Equal(1, mixed.HandIndex);
+
+		var lowTable = new[] { TableCard("A", 1), TableCard("2", 2) };
+		var blockedHand = new[]
+		{
+			new PotentialCaptureCard(
+				"A",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+		};
+		Equal(EnemyAiAdventureSelectionKind.Build, SelectAdventure(lowTable, blockedHand, 0, 0).Kind);
+		Equal(EnemyAiAdventureSelectionKind.None, SelectAdventure(lowTable, blockedHand, 55, 0).Kind);
 	}
 
 	private static void AdventureAiBuildsOnlyWithAtMostTwoTableCards()
@@ -265,6 +304,7 @@ internal static partial class Program
 		{
 			new CardPlayTableCard("K", IsFaceUp: true, IsBuriedInSand: true),
 			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
 		};
 		var handCards = new[]
 		{
@@ -393,7 +433,7 @@ internal static partial class Program
 		True(lowPicked);
 		Equal(1, mediumHandIndex);
 		Equal(1, highHandIndex);
-		Equal(0, lowHandIndex);
+		Equal(1, lowHandIndex);
 	}
 
 	private static void SoloAiDiscardAndMagnetHeuristicsKeepImmediateCapturesWhenPossible()
@@ -440,6 +480,113 @@ internal static partial class Program
 			SoloAiDifficulty.High,
 			magnetCandidates,
 			tieBreakOrdinal: 0));
+	}
+
+	private static void SoloAiThresholdFilteringCoversAllDifficultiesAndProtectionHeuristics()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("K", 12),
+			TableCard("3", 3),
+		};
+		var mixedHand = new[]
+		{
+			new PotentialCaptureCard(
+				"K",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+			new PotentialCaptureCard(
+				"A",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+		};
+		foreach (SoloAiDifficulty difficulty in Enum.GetValues<SoloAiDifficulty>())
+		{
+			SoloAiProfile profile = SoloAiRules.GetProfile(difficulty);
+			True(SoloAiRules.TryPickCaptureCardIndex(
+				tableCards,
+				mixedHand,
+				DefaultScoringContext,
+				difficulty,
+				royalCaptureThreshold: int.MaxValue,
+				decisionRollPercent: 0,
+				randomCaptureOrdinal: 0,
+				out int bestHandIndex));
+			Equal(1, bestHandIndex);
+			True(SoloAiRules.TryPickCaptureCardIndex(
+				tableCards,
+				mixedHand,
+				DefaultScoringContext,
+				difficulty,
+				royalCaptureThreshold: int.MaxValue,
+				decisionRollPercent: profile.BestCaptureChancePercent,
+				randomCaptureOrdinal: 0,
+				out int anyHandIndex));
+			Equal(1, anyHandIndex);
+		}
+
+		bool blockedCanCapture = PotentialCaptureRules.GetPotentialNormalCaptureCount(
+			tableCards,
+			mixedHand[0]) > 0;
+		False(blockedCanCapture);
+		var protectionCandidates = new[]
+		{
+			new SoloAiHandCardDecisionCandidate(0, ScoreValue: 1, blockedCanCapture),
+			new SoloAiHandCardDecisionCandidate(1, ScoreValue: 10, CanCaptureNow: true),
+		};
+		Equal(0, SoloAiRules.PickDiscardDisplayIndex(
+			SoloAiDifficulty.High,
+			protectionCandidates,
+			totalDisplayCount: 2,
+			tieBreakOrdinal: 0));
+		Equal(0, SoloAiRules.PickMagnetHandIndex(
+			SoloAiDifficulty.High,
+			protectionCandidates,
+			tieBreakOrdinal: 0));
+	}
+
+	private static void NetworkAiProxyFiltersThresholdBlockedCaptureCandidates()
+	{
+		var tableCards = new[]
+		{
+			TableCard("A", 1),
+			TableCard("2", 2),
+			TableCard("K", 12),
+			TableCard("3", 3),
+		};
+		var handCards = new[]
+		{
+			new PotentialCaptureCard(
+				"K",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+			new PotentialCaptureCard(
+				"A",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1),
+		};
+
+		True(NetworkAiFallbackRules.TryPickCaptureHandIndexForNetworkAiProxy(
+			tableCards,
+			handCards,
+			DefaultScoringContext,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out int handIndex));
+		Equal(1, handIndex);
+		False(NetworkAiFallbackRules.TryPickCaptureHandIndexForNetworkAiProxy(
+			tableCards,
+			new[] { handCards[0] },
+			DefaultScoringContext,
+			decisionRollPercent: 0,
+			randomCaptureOrdinal: 0,
+			out _));
 	}
 
 

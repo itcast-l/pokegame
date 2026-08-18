@@ -38,6 +38,8 @@ func _test_capture_retry_success() -> bool:
 	var board := await _create_actionable_board("shrimp")
 	if _failed or board == null:
 		return false
+	if not await _test_routine_save_stays_unobtrusive(board):
+		return false
 	if not bool(board.call("DebugConfigureAdventureQuestionRewardTimingScenario")):
 		_fail("Failed to configure the real capture save-gate scenario")
 		return false
@@ -54,6 +56,8 @@ func _test_capture_retry_success() -> bool:
 	if not await _wait_for_persist_attempt(board, 1, "capture first failure"):
 		return false
 	if not _assert_gate_locked(board, "capture retry"):
+		return false
+	if not await _assert_retry_status_has_no_result_actions(board):
 		return false
 	if int(board.call("DebugGetTableCardCount")) != table_before \
 			or int(board.call("DebugGetTotalHandCardCountForPlayer", 0)) != hand_before \
@@ -249,6 +253,8 @@ func _create_board(enemy_avatar_id: String) -> Node:
 		"DebugIsAdventureSaveInProgress",
 		"DebugCanMainPlayerAct",
 		"DebugGetAdventureSaveStatusKey",
+		"DebugStartAdventureSavePresentationProbe",
+		"DebugIsAdventureSavePresentationProbeCompleted",
 		"DebugGetGameLoopPhaseName",
 		"DebugGetCurrentTurnPlayerIndex",
 		"DebugGetTableCardCount",
@@ -267,6 +273,59 @@ func _create_board(enemy_avatar_id: String) -> Node:
 			_fail("Missing save gate debug hook: %s" % method)
 			return null
 	return board
+
+
+func _test_routine_save_stays_unobtrusive(board: Node) -> bool:
+	var result_banner := board.get_node_or_null("WinnerBannerRoot") as Control
+	if result_banner == null:
+		_fail("Routine-save presentation probe could not find the result banner")
+		return false
+	if not bool(board.call("DebugStartAdventureSavePresentationProbe")):
+		_fail("Failed to start the routine-save presentation probe")
+		return false
+	if String(board.call("DebugGetAdventureSaveStatusKey")) != "GAME_ADVENTURE_SAVING" \
+			or not bool(board.call("DebugIsAdventureSaveInProgress")):
+		_fail("Routine-save presentation probe did not enter the saving state")
+		return false
+	if result_banner.visible:
+		_fail("Routine adventure save flashed the result banner")
+		return false
+
+	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	while Time.get_ticks_msec() / 1000.0 < deadline:
+		await process_frame
+		if bool(board.call("DebugIsAdventureSavePresentationProbeCompleted")):
+			if result_banner.visible:
+				_fail("Routine-save result banner remained visible after success")
+				return false
+			return true
+	_fail("Routine-save presentation probe did not complete")
+	return false
+
+
+func _assert_retry_status_has_no_result_actions(board: Node) -> bool:
+	var result_banner := board.get_node_or_null("WinnerBannerRoot") as Control
+	var action_row := board.get_node_or_null(
+		"WinnerBannerRoot/WinnerCenter/WinnerBannerPanel/WinnerButtonRow"
+	) as Control
+	if result_banner == null or action_row == null:
+		_fail("Retry presentation could not find the result banner action row")
+		return false
+
+	var deadline := Time.get_ticks_msec() / 1000.0 + TIMEOUT_SECONDS
+	while Time.get_ticks_msec() / 1000.0 < deadline:
+		await process_frame
+		if String(board.call("DebugGetAdventureSaveStatusKey")) \
+				== "GAME_ADVENTURE_SAVE_RETRYING":
+			if not result_banner.visible:
+				_fail("Adventure save retry did not show its status banner")
+				return false
+			if action_row.visible or action_row.is_visible_in_tree():
+				_fail("Adventure save retry exposed result actions")
+				return false
+			return true
+	_fail("Adventure save retry status was not presented")
+	return false
 
 
 func _wait_for_actionable(board: Node, label: String) -> bool:

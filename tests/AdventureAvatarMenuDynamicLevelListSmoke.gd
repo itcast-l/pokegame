@@ -176,30 +176,38 @@ func _assert_progressed_main_hover(menu: Control) -> bool:
 		return false
 
 	_set_pointer_mode(menu)
-	if not await _wait_for_frame_glow(selected_entry, 0.02, false):
-		_fail("Pointer mode did not clear the committed enemy highlight")
-		return false
-	if bool(completed_entry.get("Selected")) or bool(selected_entry.get("Selected")):
-		_fail("Pointer mode retained a fixed enemy selection style")
+	if not bool(selected_entry.get("Selected")) \
+			or not await _wait_for_frame_glow(selected_entry, 0.55, true):
+		_fail("Pointer mode did not retain the committed enemy selection")
 		return false
 
 	completed_button.emit_signal("mouse_entered")
 	if not await _wait_for_frame_glow(completed_entry, 0.94, true):
 		_fail("Completed enemy entry did not reach its hover highlight")
 		return false
-	if bool(completed_entry.get("Selected")) or bool(selected_entry.get("Selected")):
-		_fail("Enemy hover restored a fixed committed-selection style")
+	if bool(completed_entry.get("Selected")) or not bool(selected_entry.get("Selected")):
+		_fail("Enemy hover did not preserve the committed selection on the previously selected entry")
 		return false
 	if not await _capture_optional_screenshot("progressed-main-adventure-hover"):
 		return false
 
+	completed_button.emit_signal("pressed")
+	if bool(selected_entry.get("Selected")) or not bool(completed_entry.get("Selected")):
+		_fail("Clicking a hovered enemy entry did not commit the new selection")
+		return false
+
 	completed_button.emit_signal("mouse_exited")
-	if not await _wait_for_frame_glow(completed_entry, 0.02, false):
-		_fail("Completed enemy hover highlight did not clear")
+	if not await _wait_for_frame_glow(completed_entry, 0.58, false):
+		_fail("Completed enemy hover highlight did not return to its committed selection glow")
+		return false
+	if bool(selected_entry.get("Selected")) \
+			or not bool(completed_entry.get("Selected")) \
+			or not await _wait_for_frame_glow(completed_entry, 0.55, true):
+		_fail("Clicked enemy selection did not remain locked after hover exit")
 		return false
 	_set_keyboard_mode(menu)
-	if not bool(selected_entry.get("Selected")) \
-			or not await _wait_for_frame_glow(selected_entry, 0.55, true):
+	if not bool(completed_entry.get("Selected")) \
+			or not await _wait_for_frame_glow(completed_entry, 0.55, true):
 		_fail("Keyboard mode did not restore the committed enemy highlight")
 		return false
 	return true

@@ -78,6 +78,7 @@ public partial class GameBoardScene
 
 	private void ShowWinnerSequence(int playerIndex)
 	{
+		RefreshCaptureRequirementWatermark(animateChange: false);
 		if (_networkAuthorityRuleTransactionActive)
 		{
 			return;
@@ -241,6 +242,7 @@ public partial class GameBoardScene
 
 	private void ShowDrawSequence()
 	{
+		RefreshCaptureRequirementWatermark(animateChange: false);
 		ShowWinnerBanner(-1);
 	}
 

@@ -24,7 +24,7 @@ public partial class AdventureAvatarMenuScene
 	public void PrepareForEmbeddedDisplayForInputMode(bool keyboardOrJoypad)
 	{
 		RefreshAdventureProfileSnapshot();
-		SetListSelectionHighlightVisible(keyboardOrJoypad);
+		_ = keyboardOrJoypad;
 		_isReturningToMainMenu = false;
 		_backButton.Disabled = false;
 		MouseFilter = MouseFilterEnum.Ignore;

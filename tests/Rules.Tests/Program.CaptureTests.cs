@@ -129,6 +129,7 @@ internal static partial class Program
 			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: true),
 			new CardPlayTableCard("K", IsFaceUp: true, IsBuriedInSand: false),
 			new CardPlayTableCard("A", IsFaceUp: false, IsBuriedInSand: false),
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
 		};
 
 		CardPlayPlan plan = CardPlayResolver.Resolve(tableCards, new CardPlayCard("A", CollectsTable: false));
@@ -136,6 +137,155 @@ internal static partial class Program
 		Equal(2, plan.MatchingTableCardIndex);
 		Equal(2, plan.CaptureStartIndex);
 		True(plan.MatchedTableCardFlipped);
+	}
+
+	private static void CardPlayResolverUsesLeftmostRankMatch()
+	{
+		var tableCards = new[]
+		{
+			new CardPlayTableCard("4", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("8", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("4", IsFaceUp: false, IsBuriedInSand: false),
+			new CardPlayTableCard("5", IsFaceUp: true, IsBuriedInSand: false),
+			new CardPlayTableCard("6", IsFaceUp: false, IsBuriedInSand: false),
+			new CardPlayTableCard("7", IsFaceUp: false, IsBuriedInSand: false),
+		};
+
+		CardPlayPlan plan = CardPlayResolver.Resolve(
+			tableCards,
+			new CardPlayCard("4", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 3);
+
+		Equal(0, plan.MatchingTableCardIndex);
+		Equal(0, plan.CaptureStartIndex);
+		Equal(5, plan.MiddleTableCaptureCount);
+		False(plan.CaptureThresholdBlocked);
+		False(plan.MatchedTableCardFlipped);
+	}
+
+	private static void PotentialCaptureUsesLeftmostRankMatch()
+	{
+		var tableCards = new[]
+		{
+			TableCard("4", 4),
+			TableCard("8", 8),
+			TableCard("4", 4),
+			TableCard("5", 5),
+			TableCard("6", 6),
+			TableCard("7", 7),
+		};
+		var card = new PotentialCaptureCard(
+			"4",
+			CollectsTable: false,
+			HasDoubleEffect: false,
+			BasePlayCaptureThreshold: 3);
+
+		Equal(7, PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card));
+	}
+
+	private static void PotentialCaptureEvaluationMatchesCardPlayResolver()
+	{
+		var tableCards = new[]
+		{
+			TableCard("4", 4, suit: "clubs"),
+			TableCard("9", 9, isBuriedInSand: true, suit: "hearts"),
+			TableCard("2", 2, suit: "diamonds", countsTowardBasePlayCaptureThreshold: false),
+			TableCard("4", 4, suit: "spades"),
+			TableCard("7", 7, suit: "hearts"),
+		};
+		var potentialCard = new PotentialCaptureCard(
+			"4",
+			CollectsTable: false,
+			HasDoubleEffect: false,
+			BasePlayCaptureThreshold: 1);
+
+		PotentialCaptureEvaluation evaluation =
+			PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, potentialCard);
+		CardPlayPlan directPlan = CardPlayResolver.Resolve(
+			new[]
+			{
+				new CardPlayTableCard("4", true, false, "clubs"),
+				new CardPlayTableCard("9", true, true, "hearts"),
+				new CardPlayTableCard("2", true, false, "diamonds", false),
+				new CardPlayTableCard("4", true, false, "spades"),
+				new CardPlayTableCard("7", true, false, "hearts"),
+			},
+			new CardPlayCard("4", CollectsTable: false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+
+		Equal(directPlan.MatchingTableCardIndex, evaluation.PlayPlan.MatchingTableCardIndex);
+		Equal(directPlan.CaptureStartIndex, evaluation.PlayPlan.CaptureStartIndex);
+		Equal(directPlan.MiddleTableCaptureCount, evaluation.PlayPlan.MiddleTableCaptureCount);
+		Equal(0, evaluation.PlayPlan.MatchingTableCardIndex);
+		Equal(2, evaluation.PlayPlan.MiddleTableCaptureCount);
+		Equal(5, evaluation.NormalCaptureCount);
+		True(evaluation.HasCapturedMiddleTableCards);
+		False(evaluation.IsPairOnlyCapture);
+		Equal(13, PotentialCaptureRules.GetPotentialNormalCapturePoints(
+			tableCards,
+			potentialCard,
+			DefaultScoringContext));
+
+		PotentialCaptureEvaluation blocked = PotentialCaptureRules.EvaluatePotentialNormalCapture(
+			tableCards,
+			potentialCard with { BasePlayCaptureThreshold = 2 });
+		True(blocked.PlayPlan.CaptureThresholdBlocked);
+		Equal(2, blocked.PlayPlan.MiddleTableCaptureCount);
+		Equal(0, blocked.NormalCaptureCount);
+
+		PotentialCaptureEvaluation collectAll = PotentialCaptureRules.EvaluatePotentialNormalCapture(
+			tableCards,
+			new PotentialCaptureCard(
+				"J",
+				CollectsTable: true,
+				HasDoubleEffect: false,
+				BasePlayCaptureThreshold: 1));
+		True(collectAll.PlayPlan.PlayedCardCollectsTable);
+		Equal(0, collectAll.PlayPlan.CaptureStartIndex);
+		Equal(5, collectAll.NormalCaptureCount);
+
+		var alternateTable = new[]
+		{
+			TableCard("A", 1, suit: "clubs"),
+			TableCard("2", 2, suit: "spades"),
+			TableCard("3", 3, suit: "diamonds"),
+		};
+		PotentialCaptureEvaluation alternate = PotentialCaptureRules.EvaluatePotentialNormalCapture(
+			alternateTable,
+			new PotentialCaptureCard(
+				"9",
+				CollectsTable: false,
+				HasDoubleEffect: false,
+				AlternateRanks: new[] { "A" },
+				BasePlayCaptureThreshold: 1));
+		Equal(0, alternate.PlayPlan.MatchingTableCardIndex);
+		Equal("A", alternate.PlayPlan.EffectiveRank);
+		Equal(4, alternate.NormalCaptureCount);
+
+		var suitTable = new[]
+		{
+			TableCard("2", 2, suit: "hearts"),
+			TableCard("5", 5, suit: "clubs"),
+			TableCard("8", 8, suit: "spades"),
+		};
+		var suitFallbackCard = new PotentialCaptureCard(
+			"5",
+			CollectsTable: false,
+			HasDoubleEffect: false,
+			Suit: "hearts",
+			CollectBySuit: true,
+			SuitMatchIsFallbackOnly: true);
+		PotentialCaptureEvaluation rankFirst =
+			PotentialCaptureRules.EvaluatePotentialNormalCapture(suitTable, suitFallbackCard);
+		PotentialCaptureEvaluation suitFirst = PotentialCaptureRules.EvaluatePotentialNormalCapture(
+			suitTable,
+			suitFallbackCard with { SuitMatchIsFallbackOnly = false });
+		Equal(1, rankFirst.PlayPlan.MatchingTableCardIndex);
+		Equal(0, suitFirst.PlayPlan.MatchingTableCardIndex);
 	}
 
 	private static void CardPlayResolverCapturesTableForCollectCard()
@@ -166,6 +316,7 @@ internal static partial class Program
 		{
 			new CardPlayTableCard("6", IsFaceUp: true, IsBuriedInSand: false),
 			new CardPlayTableCard("7", IsFaceUp: false, IsBuriedInSand: false),
+			new CardPlayTableCard("10", IsFaceUp: true, IsBuriedInSand: false),
 		};
 
 		CardPlayPlan plan = CardPlayResolver.Resolve(
@@ -178,7 +329,7 @@ internal static partial class Program
 		Equal(1, plan.CaptureStartIndex);
 		Equal("7", plan.EffectiveRank);
 		True(plan.MatchedTableCardFlipped);
-		Equal(2, plan.TableInsertIndex);
+		Equal(3, plan.TableInsertIndex);
 	}
 
 	private static void BorrowTideOnlyGrantsAlternateRanksToTheEnchantedCard()
@@ -383,4 +534,3 @@ internal static partial class Program
 
 
 }
-

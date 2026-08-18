@@ -25,6 +25,46 @@ public partial class GameBoardScene
 
 	public int DebugGetBasePlayCaptureThreshold() => GetBasePlayCaptureThreshold();
 
+	public Godot.Collections.Dictionary DebugGetCaptureRequirementWatermarkState()
+	{
+		if (_captureRequirementWatermark == null
+			|| !GodotObject.IsInstanceValid(_captureRequirementWatermark))
+		{
+			return new Godot.Collections.Dictionary();
+		}
+
+		Control? centerArena = _centerArena;
+		Rect2 centerArenaRect = centerArena != null
+			&& GodotObject.IsInstanceValid(centerArena)
+			? centerArena.GetGlobalRect()
+			: default;
+		Rect2 layoutAreasRect = _layoutAreas != null
+			&& GodotObject.IsInstanceValid(_layoutAreas)
+			? _layoutAreas.GetGlobalRect()
+			: default;
+		Node? watermarkParent = _captureRequirementWatermark.GetParent();
+		Node? centerArenaParent = centerArena?.GetParent();
+		bool drawsBeforeCenterArena = centerArena != null
+			&& watermarkParent != null
+			&& watermarkParent == centerArenaParent
+			&& _captureRequirementWatermark.GetIndex() < centerArena.GetIndex();
+		return new Godot.Collections.Dictionary
+		{
+			["visible"] = _captureRequirementWatermark.Visible,
+			["text"] = _captureRequirementWatermark.Text,
+			["rect"] = _captureRequirementWatermark.GetGlobalRect(),
+			["center_arena_rect"] = centerArenaRect,
+			["layout_areas_rect"] = layoutAreasRect,
+			["font_size"] = _captureRequirementWatermark.GetThemeFontSize("font_size"),
+			["font_color"] = _captureRequirementWatermark.GetThemeColor("font_color"),
+			["outline_size"] = _captureRequirementWatermark.GetThemeConstant("outline_size"),
+			["outline_color"] = _captureRequirementWatermark.GetThemeColor("font_outline_color"),
+			["mouse_filter"] = (int)_captureRequirementWatermark.MouseFilter,
+			["draws_before_center_arena"] = drawsBeforeCenterArena,
+			["cached_value"] = _captureRequirementWatermarkValue,
+		};
+	}
+
 	public void DebugShowCaptureThresholdFeedback(
 		int playerIndex,
 		bool bigTide,
@@ -81,6 +121,12 @@ public partial class GameBoardScene
 			["tooltip_capture_threshold_text"] = tooltipMatchesPlayer
 				? _playerStatusTooltipCaptureThresholdLabel?.Text ?? string.Empty
 				: string.Empty,
+			["tooltip_bar_track_rect"] = tooltipMatchesPlayer
+				? _playerStatusTooltipBarTrack?.GetGlobalRect() ?? default
+				: default,
+			["tooltip_bar_fill_rect"] = tooltipMatchesPlayer
+				? _playerStatusTooltipBarFill?.GetGlobalRect() ?? default
+				: default,
 		};
 	}
 }

@@ -447,7 +447,8 @@ internal static partial class Program
 		bool hasDoubleCollectItemEffect = false,
 		bool hasPairDestroyItemEffect = false,
 		int itemOwnerPlayerIndex = -1,
-		string suit = "")
+		string suit = "",
+		bool countsTowardBasePlayCaptureThreshold = true)
 	{
 		return new CaptureScoringTableCard(
 			new CaptureScoringCard(rank, scoreValue, HasDoubleCollectEffect: false, Suit: suit),
@@ -455,7 +456,8 @@ internal static partial class Program
 			isSlimeCoated,
 			hasDoubleCollectItemEffect,
 			hasPairDestroyItemEffect,
-			itemOwnerPlayerIndex);
+			itemOwnerPlayerIndex,
+			countsTowardBasePlayCaptureThreshold);
 	}
 
 	private static AdventureUpgradeDefinitionModel Upgrade(string id, string rarity, string suit = "hearts")

@@ -82,6 +82,12 @@ func _verify_adventure_player_name() -> bool:
 		_fail("Adventure winner should use profile name: expected '%s', got '%s'" % [expected_text, winner_text])
 		return false
 
+	var enemy_winner_text := String(board.call("DebugGetWinnerTextForPlayer", 1))
+	var expected_enemy_text := tr("GAME_WINNER").format([tr("AVATAR_FISH_NAME")])
+	if enemy_winner_text != expected_enemy_text:
+		_fail("Adventure enemy should use avatar name: expected '%s', got '%s'" % [expected_enemy_text, enemy_winner_text])
+		return false
+
 	await _dispose_board(board)
 	return true
 

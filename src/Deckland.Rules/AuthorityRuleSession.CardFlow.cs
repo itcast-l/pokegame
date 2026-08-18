@@ -207,7 +207,7 @@ public sealed partial class AuthorityRuleSession
 		}
 
 		ContinuousCaptureResult? continuousCapture = null;
-		int finalBasePlayTableCaptureCount = 0;
+		int finalBasePlayMiddleTableCaptureCount = 0;
 		if (command.BasePlayCardRuntimeInstanceId != 0)
 		{
 			if (command.BasePlayCardRuntimeInstanceId < 0)
@@ -232,15 +232,18 @@ public sealed partial class AuthorityRuleSession
 
 			long basePlayCardRuntimeInstanceId = pendingBasePlay.CardRuntimeInstanceId;
 			int matchingBasePlayCardCount = 0;
+			int basePlayTableCardIndex = -1;
 			bool basePlayCardHasExpectedOwner = false;
-			foreach (TableCard tableCard in _state.TableCards)
+			for (int tableCardIndex = 0; tableCardIndex < _state.TableCards.Count; tableCardIndex++)
 			{
+				TableCard tableCard = _state.TableCards[tableCardIndex];
 				if (tableCard.Card?.InstanceId != basePlayCardRuntimeInstanceId)
 				{
 					continue;
 				}
 
 				matchingBasePlayCardCount++;
+				basePlayTableCardIndex = tableCardIndex;
 				basePlayCardHasExpectedOwner =
 					tableCard.CardOwnerPlayerIndex == pendingBasePlay.Seat;
 			}
@@ -253,11 +256,14 @@ public sealed partial class AuthorityRuleSession
 					ReadModel);
 			}
 
-			int normalTableCaptureCount = 0;
+			int middleCaptureStartIndex = command.CaptureStartIndex
+				+ (basePlayTableCardIndex <= command.CaptureStartIndex ? 1 : 0);
+			int middleTableCaptureCount = 0;
 			foreach (int tableCardIndex in plan.BaseTableCardIndexes)
 			{
 				TableCard tableCard = _state.TableCards[tableCardIndex];
-				if (tableCard.Card?.InstanceId == basePlayCardRuntimeInstanceId)
+				if (tableCardIndex <= middleCaptureStartIndex
+					|| tableCard.Card?.InstanceId == basePlayCardRuntimeInstanceId)
 				{
 					continue;
 				}
@@ -266,12 +272,12 @@ public sealed partial class AuthorityRuleSession
 					&& !tableCard.RemoveCardOnCapture
 					&& (preservedIndexes == null || !preservedIndexes.Contains(tableCardIndex)))
 				{
-					normalTableCaptureCount++;
+					middleTableCaptureCount++;
 				}
 			}
 
 			if (!ContinuousCaptureRules.MeetsThreshold(
-					normalTableCaptureCount,
+					middleTableCaptureCount,
 					_state.BasePlayCaptureThreshold))
 			{
 				return RuleCommandResult.Rejected(
@@ -281,18 +287,9 @@ public sealed partial class AuthorityRuleSession
 					ReadModel);
 			}
 
-			finalBasePlayTableCaptureCount = normalTableCaptureCount;
-			foreach (int tableCardIndex in plan.ExtraTableCardIndexes)
-			{
-				TableCard tableCard = _state.TableCards[tableCardIndex];
-				if (tableCard.Card?.InstanceId != basePlayCardRuntimeInstanceId
-					&& tableCard.Card.HasValue
-					&& !tableCard.RemoveCardOnCapture
-					&& (preservedIndexes == null || !preservedIndexes.Contains(tableCardIndex)))
-				{
-					finalBasePlayTableCaptureCount++;
-				}
-			}
+			// Progress is based only on cards between the two normal capture endpoints.
+			// Extra captures outside the interval do not raise the next requirement.
+			finalBasePlayMiddleTableCaptureCount = middleTableCaptureCount;
 		}
 
 		if (command.RedirectedTableCardIndex < -1
@@ -328,7 +325,7 @@ public sealed partial class AuthorityRuleSession
 		if (command.BasePlayCardRuntimeInstanceId > 0)
 		{
 			continuousCapture = ContinuousCaptureRules.RecordCapture(
-				finalBasePlayTableCaptureCount);
+				finalBasePlayMiddleTableCaptureCount);
 			_state.BasePlayCaptureThreshold =
 				continuousCapture.Value.NextBasePlayCaptureThreshold;
 			ClearPendingBasePlayCapture(_state);
@@ -364,10 +361,10 @@ public sealed partial class AuthorityRuleSession
 				scoreChanges,
 				true,
 				false,
-				FinalTableCaptureCount: continuousCapture?.FinalTableCaptureCount ?? 0,
-				NextBasePlayMinimumTableCaptureCount:
-					continuousCapture?.NextMinimumTableCaptureCount
-					?? ContinuousCaptureRules.GetMinimumTableCaptureCount(
+				FinalMiddleTableCaptureCount: continuousCapture?.FinalMiddleTableCaptureCount ?? 0,
+				NextBasePlayMinimumMiddleTableCaptureCount:
+					continuousCapture?.NextMinimumMiddleTableCaptureCount
+					?? ContinuousCaptureRules.GetMinimumMiddleTableCaptureCount(
 						_state.BasePlayCaptureThreshold),
 				BigTideTriggered: continuousCapture?.BigTideTriggered ?? false));
 	}

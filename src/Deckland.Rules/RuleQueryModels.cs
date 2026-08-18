@@ -45,7 +45,8 @@ public readonly record struct PotentialCaptureCard(
 	string Suit = "",
 	bool CollectBySuit = false,
 	IReadOnlyList<string>? AlternateRanks = null,
-	int BasePlayCaptureThreshold = 0);
+	int BasePlayCaptureThreshold = 0,
+	bool SuitMatchIsFallbackOnly = false);
 
 public enum SoloAiDifficulty
 {

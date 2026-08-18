@@ -366,6 +366,7 @@ internal static partial class Program
 			{
 				new CardPlayTableCard("9", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
 				new CardPlayTableCard("4", IsFaceUp: true, IsBuriedInSand: false, Suit: "hearts"),
+				new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "spades"),
 			},
 			playedCard,
 			adjustment.AlternateRanks,
@@ -378,6 +379,7 @@ internal static partial class Program
 			{
 				new CardPlayTableCard("9", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
 				new CardPlayTableCard("5", IsFaceUp: true, IsBuriedInSand: false, Suit: "hearts"),
+				new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "spades"),
 			},
 			playedCard,
 			adjustment.AlternateRanks,
@@ -389,6 +391,7 @@ internal static partial class Program
 			new[]
 			{
 				new CardPlayTableCard("9", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
+				new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "spades"),
 			},
 			playedCard,
 			adjustment.AlternateRanks,

@@ -502,20 +502,18 @@ public partial class GameBoardScene
 
 	private PotentialCaptureCard ToPotentialCaptureCard(int playerIndex, PlayingCard card, bool hasDoubleEffect = false)
 	{
-		string primaryRank = playerIndex == MainPlayerIndex
-			? ResolveAdventureMainPlayerPrimaryMatchRank(card)
-			: card.Rank;
-		List<string>? alternateRanks = playerIndex == MainPlayerIndex
-			? BuildAdventureMainPlayerAlternateRanks(card)
-			: null;
+		CardPlayRuleOptions options = BuildCardPlayRuleOptions(card);
 		return new PotentialCaptureCard(
-			primaryRank,
-			ShouldPlayedCardCollectTable(card),
+			options.PrimaryMatchRank,
+			options.CollectEntireTable,
 			hasDoubleEffect,
-			card.Suit,
-			ShouldCollectBySuit(card),
-			alternateRanks,
-			GetBasePlayCaptureThreshold());
+			options.Suit,
+			options.CollectBySuit,
+			options.AlternateMatchRanks.IsDefaultOrEmpty
+				? null
+				: options.AlternateMatchRanks,
+			GetBasePlayCaptureThreshold(),
+			options.SuitMatchIsFallbackOnly);
 	}
 
 	private CaptureScoringTableCard[] ToTideShiftedCaptureScoringTableCards(

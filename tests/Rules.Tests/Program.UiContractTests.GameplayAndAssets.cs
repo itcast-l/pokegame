@@ -521,7 +521,7 @@ internal static partial class Program
 		Equal(0, handIndex);
 	}
 
-	private static void PotentialCaptureIdentifiesPairOnlyCaptures()
+	private static void PotentialCapturePairClassificationRequiresLegalCapture()
 	{
 		var tableCards = new[]
 		{
@@ -529,7 +529,11 @@ internal static partial class Program
 		};
 		var card = new PotentialCaptureCard("A", CollectsTable: false, HasDoubleEffect: false);
 
-		True(PotentialCaptureRules.IsPairOnlyCapture(tableCards, card));
+		False(PotentialCaptureRules.IsPairOnlyCapture(tableCards, card));
+		PotentialCaptureEvaluation evaluation =
+			PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, card);
+		True(evaluation.PlayPlan.CaptureThresholdBlocked);
+		False(evaluation.CanCapture);
 	}
 
 

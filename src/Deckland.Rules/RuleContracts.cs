@@ -725,8 +725,8 @@ public readonly record struct RuleMutationSummary(
 	string LogicalItemId = "",
 	bool ShouldRefreshQuestionCard = false,
 	bool ShouldExpireQuestionCard = false,
-	int FinalTableCaptureCount = 0,
-	int NextBasePlayMinimumTableCaptureCount = 1,
+	int FinalMiddleTableCaptureCount = 0,
+	int NextBasePlayMinimumMiddleTableCaptureCount = 1,
 	bool BigTideTriggered = false)
 {
 	public static RuleMutationSummary Empty => new(

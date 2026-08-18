@@ -144,6 +144,11 @@ internal static partial class Program
 		True(networkAi.Contains(
 			"ToPotentialCaptureCards(\n\t\t\t\t\tplayerIndex,\n\t\t\t\t\tplayer.Hand)",
 			StringComparison.Ordinal));
+		True(turnAi.Contains(
+			"CardPlayRuleOptions options = BuildCardPlayRuleOptions(card);",
+			StringComparison.Ordinal));
+		True(turnAi.Contains("options.AlternateMatchRanks", StringComparison.Ordinal));
+		True(turnAi.Contains("options.SuitMatchIsFallbackOnly", StringComparison.Ordinal));
 
 		Equal(
 			5,

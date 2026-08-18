@@ -1,22 +1,22 @@
 public readonly record struct ContinuousCaptureResult(
-	int FinalTableCaptureCount,
+	int FinalMiddleTableCaptureCount,
 	int NextBasePlayCaptureThreshold,
 	bool BigTideTriggered)
 {
-	public int NextMinimumTableCaptureCount =>
-		ContinuousCaptureRules.GetMinimumTableCaptureCount(NextBasePlayCaptureThreshold);
+	public int NextMinimumMiddleTableCaptureCount =>
+		ContinuousCaptureRules.GetMinimumMiddleTableCaptureCount(NextBasePlayCaptureThreshold);
 }
 
 public static class ContinuousCaptureRules
 {
 	public const int MinimumThreshold = 0;
 	public const int MaximumThreshold = 4;
-	public const int BigTideTableCaptureCount = 5;
+	public const int BigTideMiddleTableCaptureCount = 5;
 
 	public static bool IsValidThreshold(int threshold) =>
 		threshold is >= MinimumThreshold and <= MaximumThreshold;
 
-	public static int GetMinimumTableCaptureCount(int threshold)
+	public static int GetMinimumMiddleTableCaptureCount(int threshold)
 	{
 		if (!IsValidThreshold(threshold))
 		{
@@ -26,22 +26,22 @@ public static class ContinuousCaptureRules
 		return threshold + 1;
 	}
 
-	public static bool MeetsThreshold(int normalTableCaptureCount, int threshold) =>
-		normalTableCaptureCount >= 0
+	public static bool MeetsThreshold(int middleTableCaptureCount, int threshold) =>
+		middleTableCaptureCount >= 0
 		&& IsValidThreshold(threshold)
-		&& normalTableCaptureCount > threshold;
+		&& middleTableCaptureCount > threshold;
 
-	public static ContinuousCaptureResult RecordCapture(int finalTableCaptureCount)
+	public static ContinuousCaptureResult RecordCapture(int finalMiddleTableCaptureCount)
 	{
-		if (finalTableCaptureCount <= 0)
+		if (finalMiddleTableCaptureCount <= 0)
 		{
-			throw new ArgumentOutOfRangeException(nameof(finalTableCaptureCount));
+			throw new ArgumentOutOfRangeException(nameof(finalMiddleTableCaptureCount));
 		}
 
-		bool bigTideTriggered = finalTableCaptureCount >= BigTideTableCaptureCount;
+		bool bigTideTriggered = finalMiddleTableCaptureCount >= BigTideMiddleTableCaptureCount;
 		return new ContinuousCaptureResult(
-			finalTableCaptureCount,
-			bigTideTriggered ? MinimumThreshold : finalTableCaptureCount,
+			finalMiddleTableCaptureCount,
+			bigTideTriggered ? MinimumThreshold : finalMiddleTableCaptureCount,
 			bigTideTriggered);
 	}
 }

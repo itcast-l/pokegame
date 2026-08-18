@@ -44,12 +44,14 @@ internal static class EnemyAiRules
 		for (int handIndex = 0; handIndex < handCards.Count; handIndex++)
 		{
 			PotentialCaptureCard card = handCards[handIndex];
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) <= 0)
+			PotentialCaptureEvaluation evaluation =
+				PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, card);
+			if (!evaluation.CanCapture)
 			{
 				continue;
 			}
 
-			if (PotentialCaptureRules.IsPairOnlyCapture(tableCards, card))
+			if (evaluation.IsPairOnlyCapture)
 			{
 				pairOnlyCaptureIndexes.Add(handIndex);
 			}
@@ -139,8 +141,10 @@ internal static class EnemyAiRules
 		for (int index = 0; index < handCards.Count; index++)
 		{
 			PotentialCaptureCard card = handCards[index];
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) > 0
-				&& (!avoidPairOnlyCaptures || !PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
+			PotentialCaptureEvaluation evaluation =
+				PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, card);
+			if (evaluation.CanCapture
+				&& (!avoidPairOnlyCaptures || !evaluation.IsPairOnlyCapture))
 			{
 				captureIndexes.Add(index);
 			}
@@ -187,9 +191,11 @@ internal static class EnemyAiRules
 		foreach (int handIndex in candidateIndexes)
 		{
 			PotentialCaptureCard card = handCards[handIndex];
-			int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
+			PotentialCaptureEvaluation evaluation =
+				PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, card);
+			int captureCount = evaluation.NormalCaptureCount;
 			int primaryScore = usePointScoring
-				? PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, context)
+				? PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, context, evaluation)
 				: captureCount;
 			if (captureCount >= royalCaptureThreshold)
 			{

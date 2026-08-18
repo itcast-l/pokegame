@@ -1387,6 +1387,7 @@ internal static partial class Program
 			{
 				new CardPlayTableCard("6", IsFaceUp: true, IsBuriedInSand: false),
 				new CardPlayTableCard("4", IsFaceUp: true, IsBuriedInSand: false),
+				new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
 			},
 			new CardPlayCard(result.PrimaryRank, CollectsTable: false),
 			result.AlternateRanks,
@@ -1398,6 +1399,7 @@ internal static partial class Program
 			new[]
 			{
 				new CardPlayTableCard("6", IsFaceUp: true, IsBuriedInSand: false),
+				new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false),
 			},
 			new CardPlayCard(result.PrimaryRank, CollectsTable: false),
 			result.AlternateRanks,

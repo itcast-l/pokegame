@@ -258,19 +258,17 @@ func _assert_enemy_hover_feedback(
 		return false
 
 	_set_pointer_mode()
-	if not await _wait_for_frame_glow(selected_entry, 0.02, false):
-		_fail("%s pointer mode did not clear the committed enemy highlight" % context)
-		return false
-	if bool(first_entry.get("Selected")) or bool(second_entry.get("Selected")):
-		_fail("%s pointer mode retained a fixed enemy selection style" % context)
+	if not bool(selected_entry.get("Selected")) \
+			or not await _wait_for_frame_glow(selected_entry, 0.55, true):
+		_fail("%s pointer mode did not retain the committed enemy selection" % context)
 		return false
 
 	hover_button.emit_signal("mouse_entered")
 	if not await _wait_for_frame_glow(hover_entry, 0.94, true):
 		_fail("%s enemy row did not reach its hover highlight" % context)
 		return false
-	if bool(hover_entry.get("Selected")) or bool(selected_entry.get("Selected")):
-		_fail("%s enemy hover restored a fixed committed-selection style" % context)
+	if bool(hover_entry.get("Selected")) or not bool(selected_entry.get("Selected")):
+		_fail("%s enemy hover did not preserve the committed selection" % context)
 		return false
 	if not await _capture_optional_screenshot("enemy-hover", viewport_size):
 		return false
@@ -279,9 +277,12 @@ func _assert_enemy_hover_feedback(
 	if not await _wait_for_frame_glow(hover_entry, 0.02, false):
 		_fail("%s enemy row hover highlight did not clear" % context)
 		return false
+	if not bool(selected_entry.get("Selected")):
+		_fail("%s committed enemy selection did not remain locked after hover exit" % context)
+		return false
 	_set_keyboard_mode()
 	if not bool(selected_entry.get("Selected")):
-		_fail("%s keyboard mode did not restore the committed enemy selection" % context)
+		_fail("%s keyboard mode did not retain the committed enemy selection" % context)
 		return false
 	return true
 
@@ -300,28 +301,32 @@ func _assert_adventure_hover_feedback(context: String) -> bool:
 		return false
 
 	_set_pointer_mode()
-	if not await _wait_for_frame_glow(selected_entry, 0.02, false):
-		_fail("%s pointer mode did not clear the committed adventure highlight" % context)
-		return false
-	if bool(tutorial_entry.get("Selected")) or bool(main_entry.get("Selected")):
-		_fail("%s pointer mode retained a fixed adventure selection style" % context)
+	if not bool(selected_entry.get("Selected")) \
+			or not await _wait_for_frame_glow(selected_entry, 0.55, true):
+		_fail("%s pointer mode did not retain the committed adventure selection" % context)
 		return false
 
 	hover_button.emit_signal("mouse_entered")
 	if not await _wait_for_frame_glow(hover_entry, 0.94, true):
 		_fail("%s alternate adventure did not reach its hover highlight" % context)
 		return false
-	if float(selected_entry.call("DebugGetGlow")) > 0.02:
-		_fail("%s committed adventure stayed highlighted during alternate hover" % context)
+	if not bool(selected_entry.get("Selected")) \
+			or float(selected_entry.call("DebugGetGlow")) < 0.55:
+		_fail("%s alternate adventure hover did not preserve the committed selection" % context)
+		return false
+
+	hover_button.emit_signal("pressed")
+	if bool(selected_entry.get("Selected")) or not bool(hover_entry.get("Selected")):
+		_fail("%s clicking the alternate adventure did not commit the new selection" % context)
 		return false
 	hover_button.emit_signal("mouse_exited")
-	if not await _wait_for_frame_glow(hover_entry, 0.02, false):
-		_fail("%s alternate adventure hover highlight did not clear" % context)
+	if not await _wait_for_frame_glow(hover_entry, 0.58, false):
+		_fail("%s alternate adventure hover did not return to its committed selection glow" % context)
 		return false
 
 	_set_keyboard_mode()
-	if not bool(selected_entry.get("Selected")):
-		_fail("%s keyboard mode did not restore the committed adventure selection" % context)
+	if not bool(hover_entry.get("Selected")):
+		_fail("%s keyboard mode did not retain the committed adventure selection" % context)
 		return false
 	return true
 

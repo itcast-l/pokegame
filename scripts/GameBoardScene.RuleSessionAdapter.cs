@@ -401,6 +401,7 @@ public partial class GameBoardScene
 		_isAnimatingMagnetAttachment = false;
 		_isResolvingTurnSequence = false;
 		_isProcessingCardPlay = false;
+		RefreshCaptureRequirementWatermark(animateChange: false);
 		MarkActivePlayerStatusTooltipForRefresh();
 	}
 
@@ -603,6 +604,7 @@ public partial class GameBoardScene
 		if (result.Applied)
 		{
 			_replicaTurnSequenceGenerationOverride = -1;
+			RefreshCaptureRequirementWatermark(animateChange: false);
 			return true;
 		}
 

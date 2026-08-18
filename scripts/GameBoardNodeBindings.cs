@@ -11,6 +11,7 @@ public sealed class GameBoardNodeBindings
 		VerticalBackdrop = Require<TextureRect>(owner, "BoardCanvas/VerticalBackdrop");
 		BoardArt = Require<TextureRect>(owner, "BoardCanvas/BoardArt");
 		LayoutAreas = Require<Control>(owner, "BoardCanvas/LayoutAreas");
+		CaptureRequirementWatermark = Require<Label>(owner, "%CaptureRequirementWatermark");
 		CenterArena = Require<Control>(owner, "%CenterArena");
 		TableCardLayoutArea = Require<Control>(owner, "%TableCardLayoutArea");
 		TopPlayerArea = Require<Control>(owner, "%TopPlayerArea");
@@ -67,6 +68,7 @@ public sealed class GameBoardNodeBindings
 	public TextureRect VerticalBackdrop { get; }
 	public TextureRect BoardArt { get; }
 	public Control LayoutAreas { get; }
+	public Label CaptureRequirementWatermark { get; }
 	public Control CenterArena { get; }
 	public Control TableCardLayoutArea { get; }
 	public Control TopPlayerArea { get; }

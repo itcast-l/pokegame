@@ -1,15 +1,83 @@
 using System;
+using System.Globalization;
+using Deckland.Rules;
 using Godot;
 
 public partial class GameBoardScene
 {
 	private const float CaptureThresholdFeedbackSeconds = 1.2f;
 	private const float CaptureThresholdViewportPadding = 8.0f;
+	private const float CaptureRequirementWatermarkChangeAlpha = 0.72f;
+	private const float CaptureRequirementWatermarkFadeSeconds = 0.18f;
 	private static readonly Vector2 CaptureThresholdFeedbackSize = new(196.0f, 44.0f);
 
+	private Label _captureRequirementWatermark = default!;
+	private Tween? _captureRequirementWatermarkTween;
+	private int _captureRequirementWatermarkValue = -1;
 	private readonly Panel?[] _captureThresholdFeedbackPanels = new Panel?[MaxPlayers];
 	private readonly Label?[] _captureThresholdFeedbackLabels = new Label?[MaxPlayers];
 	private readonly Tween?[] _captureThresholdFeedbackTweens = new Tween?[MaxPlayers];
+
+	private void InitializeCaptureRequirementWatermark()
+	{
+		_captureRequirementWatermarkTween?.Kill();
+		_captureRequirementWatermarkTween = null;
+		_captureRequirementWatermarkValue = -1;
+		_captureRequirementWatermark.Visible = false;
+		_captureRequirementWatermark.Modulate = Colors.White;
+	}
+
+	private void RefreshCaptureRequirementWatermark(bool animateChange = true)
+	{
+		if (_captureRequirementWatermark == null
+			|| !GodotObject.IsInstanceValid(_captureRequirementWatermark))
+		{
+			return;
+		}
+
+		if (CurrentRuleReadModel is not MatchReadModel readModel
+			|| !readModel.IsInitialized
+			|| IsGameOver()
+			|| _isLeavingGame)
+		{
+			_captureRequirementWatermarkTween?.Kill();
+			_captureRequirementWatermarkTween = null;
+			_captureRequirementWatermarkValue = -1;
+			_captureRequirementWatermark.Visible = false;
+			return;
+		}
+
+		int requiredCaptureCount = ContinuousCaptureRules.GetMinimumMiddleTableCaptureCount(
+			readModel.BasePlayCaptureThreshold);
+		bool valueChanged = _captureRequirementWatermarkValue >= 0
+			&& _captureRequirementWatermarkValue != requiredCaptureCount;
+		_captureRequirementWatermarkValue = requiredCaptureCount;
+		_captureRequirementWatermark.Text = requiredCaptureCount.ToString(CultureInfo.InvariantCulture);
+		_captureRequirementWatermark.Visible = true;
+
+		_captureRequirementWatermarkTween?.Kill();
+		_captureRequirementWatermarkTween = null;
+		_captureRequirementWatermark.Modulate = Colors.White;
+		if (!animateChange || !valueChanged)
+		{
+			return;
+		}
+
+		_captureRequirementWatermark.Modulate = new Color(
+			1.0f,
+			1.0f,
+			1.0f,
+			CaptureRequirementWatermarkChangeAlpha);
+		Tween tween = CreateBoardTween();
+		_captureRequirementWatermarkTween = tween;
+		tween.SetTrans(Tween.TransitionType.Cubic);
+		tween.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(
+			_captureRequirementWatermark,
+			"modulate:a",
+			1.0f,
+			CaptureRequirementWatermarkFadeSeconds);
+	}
 
 	private void CreateCaptureThresholdFeedbackPanels()
 	{

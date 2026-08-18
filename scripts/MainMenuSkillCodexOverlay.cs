@@ -14,7 +14,7 @@ public partial class MainMenuSkillCodexOverlay : CanvasLayer
 	private const float MinimumCatalogCardHeight = 208.0f;
 	private const int MaximumVisibleUpgradeRows = 3;
 	private const int MaximumVisibleItemRows = 3;
-	private const int MaximumVisibleCatalogColumns = 8;
+	private const int MaximumVisibleCatalogColumns = 4;
 	private static readonly string[] SuitOrder = { "hearts", "diamonds", "spades", "clubs" };
 	private static readonly StyleBoxFlat HiddenFocusStyle = new() { BgColor = Colors.Transparent };
 

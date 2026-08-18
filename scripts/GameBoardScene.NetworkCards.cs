@@ -581,7 +581,13 @@ public partial class GameBoardScene
 			return false;
 		}
 
-		playerName = PlayerNameRules.Normalize(names[playerIndex]);
+		string configuredName = names[playerIndex];
+		if (string.IsNullOrWhiteSpace(configuredName))
+		{
+			return false;
+		}
+
+		playerName = PlayerNameRules.Normalize(configuredName);
 		return true;
 	}
 

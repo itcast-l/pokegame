@@ -423,6 +423,7 @@ public partial class GameBoardScene : Control
 		_verticalBackdrop = _nodeBindings.VerticalBackdrop;
 		_boardArt = _nodeBindings.BoardArt;
 		_layoutAreas = _nodeBindings.LayoutAreas;
+		_captureRequirementWatermark = _nodeBindings.CaptureRequirementWatermark;
 		RefreshResponsiveBoardLayout();
 		_centerArena = _nodeBindings.CenterArena;
 		_tableCardLayoutArea = _nodeBindings.TableCardLayoutArea;
@@ -440,6 +441,7 @@ public partial class GameBoardScene : Control
 		_playerInputHandler = CreatePlayerInputHandler();
 		BindPlayerAvatarAreas();
 		CreatePlayerAvatars();
+		InitializeCaptureRequirementWatermark();
 		CreateCaptureThresholdFeedbackPanels();
 		BindQuestionCardTransformArea();
 		BindPlayerScoreMeters();

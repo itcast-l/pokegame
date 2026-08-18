@@ -24,7 +24,7 @@ public readonly record struct CardPlayPlan(
 	string EffectiveRank,
 	bool PlayedCardFacesUp,
 	bool CaptureThresholdBlocked = false,
-	int NormalTableCaptureCount = 0,
+	int MiddleTableCaptureCount = 0,
 	bool CaptureThresholdBlockedByHiddenMatch = false);
 
 internal static class CardPlayResolver
@@ -78,10 +78,10 @@ internal static class CardPlayResolver
 		bool playedCardCollectsTable = playedCard.CollectsTable && tableCards.Count > 0;
 		int captureStartIndex = playedCardCollectsTable ? 0 : matchingIndex;
 		bool matchedTableCardFlipped = matchingIndex >= 0 && !tableCards[matchingIndex].IsFaceUp;
-		int normalTableCaptureCount = CountNormalTableCaptureCards(tableCards, captureStartIndex);
+		int middleTableCaptureCount = CountMiddleTableCaptureCards(tableCards, captureStartIndex);
 		bool captureThresholdBlocked = captureStartIndex >= 0
 			&& !ContinuousCaptureRules.MeetsThreshold(
-				normalTableCaptureCount,
+				middleTableCaptureCount,
 				basePlayCaptureThreshold);
 		bool captureThresholdBlockedByHiddenMatch = captureThresholdBlocked
 			&& !playedCardCollectsTable
@@ -107,11 +107,11 @@ internal static class CardPlayResolver
 			effectiveRank,
 			playedCardFacesUp,
 			captureThresholdBlocked,
-			normalTableCaptureCount,
+			middleTableCaptureCount,
 			captureThresholdBlockedByHiddenMatch);
 	}
 
-	private static int CountNormalTableCaptureCards(
+	private static int CountMiddleTableCaptureCards(
 		IReadOnlyList<CardPlayTableCard> tableCards,
 		int captureStartIndex)
 	{
@@ -121,7 +121,9 @@ internal static class CardPlayResolver
 		}
 
 		int count = 0;
-		for (int index = captureStartIndex; index < tableCards.Count; index++)
+		// The matching card is the left capture endpoint. Only cards after it are
+		// between that endpoint and the card that is about to be played.
+		for (int index = captureStartIndex + 1; index < tableCards.Count; index++)
 		{
 			CardPlayTableCard tableCard = tableCards[index];
 			if (!tableCard.IsBuriedInSand
@@ -137,7 +139,7 @@ internal static class CardPlayResolver
 
 	public static int FindMatchingTableCardIndex(IReadOnlyList<CardPlayTableCard> tableCards, string rank)
 	{
-		for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
+		for (int tableCardIndex = 0; tableCardIndex < tableCards.Count; tableCardIndex++)
 		{
 			CardPlayTableCard tableCard = tableCards[tableCardIndex];
 			if (!tableCard.IsBuriedInSand && tableCard.Rank == rank)

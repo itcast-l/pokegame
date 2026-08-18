@@ -143,14 +143,17 @@ internal static class SoloAiRules
 		for (int index = 0; index < handCards.Count; index++)
 		{
 			PotentialCaptureCard card = handCards[index];
-			int captureCount = PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card);
-			if (captureCount <= 0 || (profile.AvoidPairOnlyCaptures && PotentialCaptureRules.IsPairOnlyCapture(tableCards, card)))
+			PotentialCaptureEvaluation evaluation =
+				PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, card);
+			int captureCount = evaluation.NormalCaptureCount;
+			if (!evaluation.CanCapture
+				|| (profile.AvoidPairOnlyCaptures && evaluation.IsPairOnlyCapture))
 			{
 				continue;
 			}
 
 			int primaryScore = profile.UsePointScoring
-				? PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, context)
+				? PotentialCaptureRules.GetPotentialNormalCapturePoints(tableCards, card, context, evaluation)
 				: captureCount;
 			if (captureCount >= royalCaptureThreshold)
 			{
@@ -180,12 +183,14 @@ internal static class SoloAiRules
 		for (int index = 0; index < handCards.Count; index++)
 		{
 			PotentialCaptureCard card = handCards[index];
-			if (PotentialCaptureRules.GetPotentialNormalCaptureCount(tableCards, card) <= 0)
+			PotentialCaptureEvaluation evaluation =
+				PotentialCaptureRules.EvaluatePotentialNormalCapture(tableCards, card);
+			if (!evaluation.CanCapture)
 			{
 				continue;
 			}
 
-			if (profile.AvoidPairOnlyCaptures && PotentialCaptureRules.IsPairOnlyCapture(tableCards, card))
+			if (profile.AvoidPairOnlyCaptures && evaluation.IsPairOnlyCapture)
 			{
 				continue;
 			}

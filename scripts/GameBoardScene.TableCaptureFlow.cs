@@ -473,12 +473,13 @@ public partial class GameBoardScene
 				captureCommandResult.Mutation.CollectedCardCount;
 			removedTableCardCount =
 				captureCommandResult.Mutation.RemovedTableCardCount;
+		RefreshCaptureRequirementWatermark();
 		if (captureCommandResult.Mutation.BigTideTriggered)
 		{
 			PublishCaptureThresholdFeedback(
 				playerIndex,
 				bigTide: true,
-				captureCommandResult.Mutation.FinalTableCaptureCount,
+				captureCommandResult.Mutation.FinalMiddleTableCaptureCount,
 				turnSequenceGeneration);
 		}
 		else

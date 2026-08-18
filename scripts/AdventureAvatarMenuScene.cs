@@ -59,7 +59,6 @@ public partial class AdventureAvatarMenuScene : Control
 	private bool _isAdventureRunPersistenceInProgress;
 	private bool _stageNameSizingRefreshQueued;
 	private bool _isEmbeddedVisualWarmup;
-	private bool _listSelectionHighlightVisible = true;
 
 	[Export]
 	public string selected_avatar_id { get; set; } = string.Empty;

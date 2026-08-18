@@ -18,6 +18,23 @@ public partial class MainMenuScene : Control
 	private Action? _primaryMenuReturnFocus;
 	private uint _primaryMenuReturnToken;
 
+	private void ConfigurePrimaryMenuActivation()
+	{
+		foreach (Button button in new[]
+		{
+			_avatarEntry.Button,
+			_singlePlayerButton,
+			_adventureButton,
+			_multiplayerButton,
+			_skillCodexButton,
+			_settingsButton,
+			_exitButton,
+		})
+		{
+			button.ActionMode = BaseButton.ActionModeEnum.Press;
+		}
+	}
+
 	private void DispatchPrimaryMenuAction(PrimaryMenuAction action)
 	{
 		if (_quitInProgress || _isStartingGameTransition || _isShowingAvatarUnlockPrompt)

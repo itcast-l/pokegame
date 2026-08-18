@@ -21,22 +21,30 @@ func _run() -> void:
 	var shrimp_board := await _create_board(packed_scene, true, false, "shrimp", 1)
 	if shrimp_board == null:
 		return
-	if not _expect_probe(shrimp_board, true, 2, 0, 0, true, "Capture", 0, "stage 1 best capture"):
+	if not _expect_probe(shrimp_board, true, 2, 0, 0, 0, true, "Capture", 0, "stage 1 best capture"):
 		return
-	if not _expect_probe(shrimp_board, true, 2, 99, 0, true, "None", -1, "rejected capture"):
+	if not _expect_probe(shrimp_board, true, 2, 0, 99, 0, true, "None", -1, "rejected capture"):
 		return
-	if not _expect_probe(shrimp_board, false, 2, 0, 0, true, "Build", 0, "two-card early build"):
+	if not _expect_probe(shrimp_board, false, 2, 0, 0, 0, true, "Build", 0, "two-card early build"):
 		return
-	if not _expect_probe(shrimp_board, false, 3, 0, 0, true, "None", -1, "three-card build cutoff"):
+	if not _expect_probe(shrimp_board, false, 3, 0, 0, 0, true, "None", -1, "three-card build cutoff"):
+		return
+	if not _expect_probe(shrimp_board, true, 2, 1, 0, 0, true, "Build", 0, "threshold boundary build"):
+		return
+	if not _expect_probe(shrimp_board, true, 2, 1, 55, 0, true, "None", -1, "threshold boundary none"):
+		return
+	if not _expect_probe(shrimp_board, true, 3, 2, 0, 0, true, "None", -1, "three-card threshold boundary"):
+		return
+	if not _expect_probe(shrimp_board, true, 3, 1, 0, 0, true, "Capture", 0, "capture exceeds threshold"):
 		return
 	await _free_board(shrimp_board)
 
 	var boss_board := await _create_board(packed_scene, true, false, "boss_k", 1)
 	if boss_board == null:
 		return
-	if not _expect_probe(boss_board, true, 1, 89, 0, true, "Capture", 0, "boss pair threshold minus one"):
+	if not _expect_probe(boss_board, true, 1, 0, 89, 0, true, "None", -1, "boss blocked pair below legacy chance"):
 		return
-	if not _expect_probe(boss_board, true, 1, 90, 0, true, "None", -1, "boss pair threshold"):
+	if not _expect_probe(boss_board, true, 1, 0, 90, 0, true, "None", -1, "boss blocked pair at legacy chance"):
 		return
 	await _free_board(boss_board)
 
@@ -44,7 +52,7 @@ func _run() -> void:
 		var tutorial_board := await _create_board(packed_scene, true, true, tutorial_avatar, 1)
 		if tutorial_board == null:
 			return
-		if not _expect_probe(tutorial_board, true, 2, 0, 0, false, "None", -1, "%s tutorial" % tutorial_avatar):
+		if not _expect_probe(tutorial_board, true, 2, 0, 0, 0, false, "None", -1, "%s tutorial" % tutorial_avatar):
 			return
 		await _free_board(tutorial_board)
 
@@ -52,7 +60,7 @@ func _run() -> void:
 		var solo_board := await _create_board(packed_scene, false, false, "", difficulty)
 		if solo_board == null:
 			return
-		if not _expect_probe(solo_board, true, 2, 0, 0, false, "None", -1, "solo difficulty %d" % difficulty):
+		if not _expect_probe(solo_board, true, 2, 0, 0, 0, false, "None", -1, "solo difficulty %d" % difficulty):
 			return
 		await _free_board(solo_board)
 
@@ -117,6 +125,7 @@ func _expect_probe(
 		board: Node,
 		include_capture: bool,
 		table_count: int,
+		base_play_capture_threshold: int,
 		roll: int,
 		ordinal: int,
 		expected_eligible: bool,
@@ -127,6 +136,7 @@ func _expect_probe(
 		"DebugProbeAdventureEnemyLowTableAi",
 		include_capture,
 		table_count,
+		base_play_capture_threshold,
 		roll,
 		ordinal) as Dictionary
 	if result == null:

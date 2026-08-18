@@ -5,6 +5,9 @@ const GameBoardSmokeFactory := preload("res://tests/GameBoardSmokeFactory.gd")
 const SCENE_PATH := "res://scenes/game_board_scene.tscn"
 const FEEDBACK_SECONDS := 1.2
 const RECT_TOLERANCE := 0.75
+const BOARD_DESIGN_SIZE := Vector2(1280.0, 720.0)
+const WATERMARK_DESIGN_SIZE := Vector2(180.0, 440.0)
+const WATERMARK_DESIGN_CENTER_Y_OFFSET := 18.0
 const SOLO_CASES := [
 	{"size": Vector2i(1280, 720), "players": 2},
 	{"size": Vector2i(1280, 720), "players": 3},
@@ -55,8 +58,11 @@ func _audit_case(spec: Dictionary, network_mode: bool, local_seat: int) -> bool:
 	var board := await _instantiate_board(viewport, player_count, network_mode, local_seat)
 	if board == null:
 		return false
-	if not board.find_children("*CaptureThresholdIndicator", "", true, false).is_empty():
-		_fail("Capture threshold badge nodes are still present")
+	var watermark_nodes := board.find_children("CaptureRequirementWatermark", "Label", true, false)
+	if watermark_nodes.size() != 1:
+		_fail("Expected exactly one capture requirement watermark, got %d" % watermark_nodes.size())
+		return false
+	if not _audit_watermark_layout(board, viewport_size, network_mode):
 		return false
 
 	for seat in range(4):
@@ -77,6 +83,8 @@ func _audit_case(spec: Dictionary, network_mode: bool, local_seat: int) -> bool:
 
 	if not network_mode and not await _audit_threshold_text_updates(board, local_seat):
 		return false
+	if not network_mode and not await _capture_screenshot(viewport, player_count, "watermark"):
+		return false
 	if not await _audit_feedback_privacy_and_layout(
 		board,
 		viewport,
@@ -86,7 +94,13 @@ func _audit_case(spec: Dictionary, network_mode: bool, local_seat: int) -> bool:
 		not network_mode
 	):
 		return false
-	if not await _audit_status_tooltip_privacy(board, local_seat, player_count, viewport_size):
+	if not await _audit_status_tooltip_privacy(
+		board,
+		local_seat,
+		player_count,
+		viewport_size,
+		network_mode
+	):
 		return false
 
 	viewport.queue_free()
@@ -117,6 +131,8 @@ func _instantiate_board(
 	if board == null:
 		_fail("Could not instantiate board")
 		return null
+	if not network_mode:
+		board.set("debug_main_player_starting_score", 100)
 	viewport.add_child(board)
 	await process_frame
 	await process_frame
@@ -133,12 +149,73 @@ func _audit_threshold_text_updates(board: Node, local_seat: int) -> bool:
 	if int(board.call("DebugGetBasePlayCaptureThreshold")) != 3:
 		_fail("Debug threshold did not update to 3")
 		return false
+	var watermark := board.call("DebugGetCaptureRequirementWatermarkState") as Dictionary
+	if not bool(watermark["visible"]) or String(watermark["text"]) != "4" \
+		or int(watermark["cached_value"]) != 4:
+		_fail("Watermark did not show required capture count 4: %s" % watermark)
+		return false
 	if not bool(board.call("DebugSetBasePlayCaptureThreshold", 4)):
 		_fail("Could not set debug threshold to 4")
 		return false
 	await process_frame
 	if int(board.call("DebugGetBasePlayCaptureThreshold")) != 4:
 		_fail("Debug threshold did not update to 4")
+		return false
+	watermark = board.call("DebugGetCaptureRequirementWatermarkState") as Dictionary
+	if not bool(watermark["visible"]) or String(watermark["text"]) != "5" \
+		or int(watermark["cached_value"]) != 5:
+		_fail("Watermark did not show required capture count 5: %s" % watermark)
+		return false
+	if not bool(board.call("DebugSetBasePlayCaptureThreshold", 2)):
+		_fail("Could not set debug threshold to 2")
+		return false
+	await process_frame
+	watermark = board.call("DebugGetCaptureRequirementWatermarkState") as Dictionary
+	if int(board.call("DebugGetBasePlayCaptureThreshold")) != 2 \
+		or not bool(watermark["visible"]) \
+		or String(watermark["text"]) != "3" \
+		or int(watermark["cached_value"]) != 3:
+		_fail("Watermark did not settle on required capture count 3: %s" % watermark)
+		return false
+	return true
+
+
+func _audit_watermark_layout(board: Node, viewport_size: Vector2i, network_mode: bool) -> bool:
+	var state := board.call("DebugGetCaptureRequirementWatermarkState") as Dictionary
+	if state.is_empty():
+		_fail("Missing capture requirement watermark state")
+		return false
+	var expected_visible := not network_mode
+	if bool(state["visible"]) != expected_visible:
+		_fail("Watermark initialization visibility mismatch: %s" % state)
+		return false
+	if expected_visible and (String(state["text"]) != "1" or int(state["cached_value"]) != 1):
+		_fail("Watermark did not show the initial requirement: %s" % state)
+		return false
+	if int(state["font_size"]) != 208 \
+		or int(state["outline_size"]) != 3 \
+		or int(state["mouse_filter"]) != Control.MOUSE_FILTER_IGNORE \
+		or not bool(state["draws_before_center_arena"]):
+		_fail("Watermark styling or draw order mismatch: %s" % state)
+		return false
+	var font_color: Color = state["font_color"]
+	var outline_color: Color = state["outline_color"]
+	if not font_color.is_equal_approx(Color(0.84, 0.97, 0.96, 0.26)) \
+		or not outline_color.is_equal_approx(Color(0.015, 0.17, 0.23, 0.42)):
+		_fail("Watermark colors drifted: %s" % state)
+		return false
+	var rect: Rect2 = state["rect"]
+	var center_arena_rect: Rect2 = state["center_arena_rect"]
+	var layout_areas_rect: Rect2 = state["layout_areas_rect"]
+	var scale := layout_areas_rect.size.x / BOARD_DESIGN_SIZE.x
+	var expected_size := WATERMARK_DESIGN_SIZE * scale
+	var expected_center := layout_areas_rect.get_center() \
+		+ Vector2(0.0, WATERMARK_DESIGN_CENTER_Y_OFFSET * scale)
+	if rect.size.distance_to(expected_size) > RECT_TOLERANCE \
+		or rect.get_center().distance_to(expected_center) > RECT_TOLERANCE \
+		or not center_arena_rect.has_point(rect.get_center()) \
+		or not _inside_viewport(rect, viewport_size):
+		_fail("Watermark responsive layout mismatch: %s" % state)
 		return false
 	return true
 
@@ -286,7 +363,8 @@ func _audit_status_tooltip_privacy(
 	board: Node,
 	local_seat: int,
 	player_count: int,
-	viewport_size: Vector2i
+	viewport_size: Vector2i,
+	network_mode: bool
 ) -> bool:
 	if not bool(board.call("DebugShowPlayerStatusTooltipForTest", local_seat)):
 		_fail("Could not show local status tooltip")
@@ -294,12 +372,18 @@ func _audit_status_tooltip_privacy(
 	await process_frame
 	var local_state := board.call("DebugGetCaptureThresholdUiState", local_seat) as Dictionary
 	var local_tooltip_rect: Rect2 = local_state["tooltip_rect"]
+	var local_track_rect: Rect2 = local_state["tooltip_bar_track_rect"]
+	var local_fill_rect: Rect2 = local_state["tooltip_bar_fill_rect"]
 	if not bool(local_state["tooltip_visible"]) \
 		or not bool(local_state["tooltip_capture_threshold_visible"]) \
 		or String(local_state["tooltip_capture_threshold_text"]).is_empty() \
 		or not local_tooltip_rect.size.is_equal_approx(Vector2(220.0, 112.0)) \
 		or not _inside_viewport(local_tooltip_rect, viewport_size):
 		_fail("Local status tooltip mismatch: %s" % local_state)
+		return false
+	if not network_mode and (local_track_rect.size.x <= 0.0 \
+		or not is_equal_approx(local_fill_rect.size.x, local_track_rect.size.x)):
+		_fail("Full local status did not fill its tooltip bar: %s" % local_state)
 		return false
 
 	var opponent_seat := 0 if local_seat != 0 else 1

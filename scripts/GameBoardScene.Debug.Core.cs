@@ -10,6 +10,8 @@ public partial class GameBoardScene
 {
 	private int _debugAdventureSaveGateProbeAttemptCount;
 	private bool _debugAdventureSaveGateProbeCompleted;
+	private bool _debugAdventureSavePresentationProbeRunning;
+	private bool _debugAdventureSavePresentationProbeCompleted;
 	private bool _debugAdventureDirectDamageProbeRunning;
 	private bool _debugAdventureDirectDamageProbeCompleted;
 	private bool _debugAdventureDirectDamageProbeApplied;
@@ -53,6 +55,46 @@ public partial class GameBoardScene
 	public string DebugGetAdventureSaveStatusKey()
 	{
 		return AdventureSaveStatusLocalizationKey;
+	}
+
+	public bool DebugStartAdventureSavePresentationProbe()
+	{
+		if (_debugAdventureSavePresentationProbeRunning || IsAdventureSaveGateBlocking())
+		{
+			return false;
+		}
+
+		_debugAdventureSavePresentationProbeRunning = true;
+		_debugAdventureSavePresentationProbeCompleted = false;
+		TrackBoardTask(
+			RunDebugAdventureSavePresentationProbeAsync(),
+			nameof(RunDebugAdventureSavePresentationProbeAsync));
+		return true;
+	}
+
+	private async Task RunDebugAdventureSavePresentationProbeAsync()
+	{
+		try
+		{
+			await AdventureSaveGate.ExecuteAsync(
+				async () =>
+				{
+					await WaitForBoardDelayAsync(0.2);
+					return AdventureRunWriteResult.Succeeded;
+				},
+				result => result == AdventureRunWriteResult.Succeeded,
+				_ => false);
+		}
+		finally
+		{
+			_debugAdventureSavePresentationProbeRunning = false;
+			_debugAdventureSavePresentationProbeCompleted = true;
+		}
+	}
+
+	public bool DebugIsAdventureSavePresentationProbeCompleted()
+	{
+		return _debugAdventureSavePresentationProbeCompleted;
 	}
 
 	public bool DebugConfigureAdventurePersistFailures(int failureCount)
@@ -461,6 +503,7 @@ public partial class GameBoardScene
 	public Godot.Collections.Dictionary DebugProbeAdventureEnemyLowTableAi(
 		bool includeCaptureCandidate,
 		int tableCardCount,
+		int basePlayCaptureThreshold,
 		int decisionRollPercent,
 		int randomCandidateOrdinal)
 	{
@@ -472,6 +515,7 @@ public partial class GameBoardScene
 		};
 		if (tableCardCount < 0
 			|| tableCardCount > 4
+			|| !ContinuousCaptureRules.IsValidThreshold(basePlayCaptureThreshold)
 			|| _playerHands.Count <= 1
 			|| _playerDecks.Count <= 1
 			|| _playerItemHands.Count <= 1)
@@ -494,6 +538,7 @@ public partial class GameBoardScene
 		}
 
 		DebugRuleFixture fixture = CreateCurrentDebugRuleFixture();
+		fixture.BasePlayCaptureThreshold = basePlayCaptureThreshold;
 		fixture.TableCards.Clear();
 		string[] tableCardKeys = { "Hearts:2", "Spades:3", "Diamonds:4", "Clubs:5" };
 		for (int index = 0; index < tableCardCount; index++)

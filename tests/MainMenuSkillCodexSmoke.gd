@@ -16,7 +16,7 @@ const CATALOG_CARD_GAP := 16.0
 const MINIMUM_CATALOG_CARD_HEIGHT := 208.0
 const MAXIMUM_VISIBLE_UPGRADE_ROWS := 3
 const MAXIMUM_VISIBLE_ITEM_ROWS := 3
-const MAXIMUM_VISIBLE_CATALOG_COLUMNS := 8
+const MAXIMUM_VISIBLE_CATALOG_COLUMNS := 4
 const EXPECTED_COUNTS := {
 	"hearts": 14,
 	"diamonds": 13,
@@ -903,8 +903,8 @@ func _assert_responsive_layout(overlay: Node, viewport_size: Vector2i) -> bool:
 	if grid.columns != expected_columns:
 		_fail("Grid column formula mismatch at %s" % viewport_size)
 		return false
-	if viewport_size == Vector2i(1280, 720) and grid.columns < 5:
-		_fail("1280x720 framed skill codex must use at least five columns")
+	if viewport_size == Vector2i(1280, 720) and grid.columns != 4:
+		_fail("1280x720 framed skill codex must use exactly four columns")
 		return false
 	if grid.size.x > scroll.size.x + 1.5:
 		_fail("Skill codex grid causes horizontal overflow at %s" % viewport_size)

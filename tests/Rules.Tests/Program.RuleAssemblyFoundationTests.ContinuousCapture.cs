@@ -20,7 +20,7 @@ internal static partial class Program
 		ContinuousCaptureResult bigTide = ContinuousCaptureRules.RecordCapture(5);
 		True(bigTide.BigTideTriggered);
 		Equal(0, bigTide.NextBasePlayCaptureThreshold);
-		Equal(1, bigTide.NextMinimumTableCaptureCount);
+		Equal(1, bigTide.NextMinimumMiddleTableCaptureCount);
 		True(ContinuousCaptureRules.MeetsThreshold(1, bigTide.NextBasePlayCaptureThreshold));
 
 		ContinuousCaptureResult directBigTide = ContinuousCaptureRules.RecordCapture(8);
@@ -30,18 +30,18 @@ internal static partial class Program
 
 	private static void CardPlayResolverBlocksThresholdBeforeExtraCaptureEffects()
 	{
-		var oneNormalCard = new[]
+		var pairOnlyCards = new[]
 		{
 			new CardPlayTableCard("A", false, false, "clubs"),
 		};
 		CardPlayPlan blocked = CardPlayResolver.Resolve(
-			oneNormalCard,
+			pairOnlyCards,
 			new CardPlayCard("9", false),
 			new[] { "A" },
 			insertAtTableStart: false,
 			basePlayCaptureThreshold: 1);
 		True(blocked.CaptureThresholdBlocked);
-		Equal(1, blocked.NormalTableCaptureCount);
+		Equal(0, blocked.MiddleTableCaptureCount);
 		Equal(-1, blocked.MatchingTableCardIndex);
 		Equal(-1, blocked.CaptureStartIndex);
 		Equal("9", blocked.EffectiveRank);
@@ -50,6 +50,7 @@ internal static partial class Program
 		var mixedCards = new[]
 		{
 			new CardPlayTableCard("A", true, false),
+			new CardPlayTableCard("4", true, false),
 			new CardPlayTableCard("2", true, true),
 			new CardPlayTableCard(null, true, false),
 			new CardPlayTableCard("3", true, false, CountsTowardBasePlayCaptureThreshold: false),
@@ -61,7 +62,7 @@ internal static partial class Program
 			alternateRanks: null,
 			insertAtTableStart: false);
 		False(allowed.CaptureThresholdBlocked);
-		Equal(1, allowed.NormalTableCaptureCount);
+		Equal(1, allowed.MiddleTableCaptureCount);
 
 		var suitCards = new[]
 		{
@@ -73,16 +74,16 @@ internal static partial class Program
 			new CardPlayCard("9", false, "hearts", CollectBySuit: true),
 			alternateRanks: null,
 			insertAtTableStart: false,
-			basePlayCaptureThreshold: 1);
+			basePlayCaptureThreshold: 0);
 		False(suitAllowed.CaptureThresholdBlocked);
 		Equal(0, suitAllowed.MatchingTableCardIndex);
-		Equal(2, suitAllowed.NormalTableCaptureCount);
+		Equal(1, suitAllowed.MiddleTableCaptureCount);
 		CardPlayPlan suitBlocked = CardPlayResolver.Resolve(
 			suitCards,
 			new CardPlayCard("9", false, "hearts", CollectBySuit: true),
 			alternateRanks: null,
 			insertAtTableStart: false,
-			basePlayCaptureThreshold: 2);
+			basePlayCaptureThreshold: 1);
 		True(suitBlocked.CaptureThresholdBlocked);
 		Equal(-1, suitBlocked.MatchingTableCardIndex);
 
@@ -91,10 +92,39 @@ internal static partial class Program
 			new CardPlayCard("J", CollectsTable: true),
 			alternateRanks: null,
 			insertAtTableStart: false,
-			basePlayCaptureThreshold: 2);
+			basePlayCaptureThreshold: 1);
 		True(collectAllBlocked.CaptureThresholdBlocked);
 		False(collectAllBlocked.PlayedCardCollectsTable);
-		Equal(2, collectAllBlocked.NormalTableCaptureCount);
+		Equal(1, collectAllBlocked.MiddleTableCaptureCount);
+
+		var oneMiddleCard = new[]
+		{
+			new CardPlayTableCard("3", true, false),
+			new CardPlayTableCard("2", true, false),
+		};
+		CardPlayPlan capture323 = CardPlayResolver.Resolve(
+			oneMiddleCard,
+			new CardPlayCard("3", false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 0);
+		False(capture323.CaptureThresholdBlocked);
+		Equal(1, capture323.MiddleTableCaptureCount);
+
+		var twoMiddleCards = new[]
+		{
+			new CardPlayTableCard("3", true, false),
+			new CardPlayTableCard("2", true, false),
+			new CardPlayTableCard("4", true, false),
+		};
+		CardPlayPlan capture3243 = CardPlayResolver.Resolve(
+			twoMiddleCards,
+			new CardPlayCard("3", false),
+			alternateRanks: null,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: 1);
+		False(capture3243.CaptureThresholdBlocked);
+		Equal(2, capture3243.MiddleTableCaptureCount);
 
 		PotentialCaptureCard thresholdedAiCard = new(
 			"A",
@@ -137,6 +167,7 @@ internal static partial class Program
 		var hiddenRankCards = new[]
 		{
 			new CardPlayTableCard("A", IsFaceUp: false, IsBuriedInSand: false, Suit: "clubs"),
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "spades"),
 		};
 		CardPlayPlan hiddenPrimary = CardPlayResolver.Resolve(
 			hiddenRankCards,
@@ -159,6 +190,7 @@ internal static partial class Program
 		var hiddenSuitCards = new[]
 		{
 			new CardPlayTableCard("2", IsFaceUp: false, IsBuriedInSand: false, Suit: "hearts"),
+			new CardPlayTableCard("3", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
 		};
 		CardPlayPlan hiddenSuit = CardPlayResolver.Resolve(
 			hiddenSuitCards,
@@ -172,6 +204,7 @@ internal static partial class Program
 		var faceUpCards = new[]
 		{
 			new CardPlayTableCard("A", IsFaceUp: true, IsBuriedInSand: false, Suit: "hearts"),
+			new CardPlayTableCard("2", IsFaceUp: true, IsBuriedInSand: false, Suit: "clubs"),
 		};
 		CardPlayPlan faceUpPrimary = CardPlayResolver.Resolve(
 			faceUpCards,
@@ -231,7 +264,7 @@ internal static partial class Program
 	{
 		AuthorityRuleSession session = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") },
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") },
 			extraCardsBeforeMatch: new[] { ("7", "hearts") });
 		RuleCommandResult play = SubmitContinuousCapturePlay(session, actionId: 2);
 		True(play.Accepted);
@@ -248,16 +281,16 @@ internal static partial class Program
 			PreservedTableCardIndexes: ImmutableArray.Create(play.Mutation.TargetIndex),
 			BasePlayCardRuntimeInstanceId: play.Mutation.LogicalEntityId));
 		True(capture.Accepted);
-		Equal(2, capture.Mutation.CollectedCardCount);
-		Equal(2, capture.Mutation.FinalTableCaptureCount);
-		Equal(3, capture.Mutation.NextBasePlayMinimumTableCaptureCount);
+		Equal(3, capture.Mutation.CollectedCardCount);
+		Equal(1, capture.Mutation.FinalMiddleTableCaptureCount);
+		Equal(2, capture.Mutation.NextBasePlayMinimumMiddleTableCaptureCount);
 		False(capture.Mutation.BigTideTriggered);
-		Equal(2, capture.ReadModel.BasePlayCaptureThreshold);
+		Equal(1, capture.ReadModel.BasePlayCaptureThreshold);
 		Equal(1, capture.ReadModel.TableCards.Length);
 
 		AuthorityRuleSession insertedBeforeCaptureSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") },
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") },
 			extraCardsBeforeMatch: new[] { ("7", "hearts") });
 		MatchReadModel beforeInsertedPlay = insertedBeforeCaptureSession.ReadModel;
 		RuleCommandResult insertedPlay = insertedBeforeCaptureSession.Submit(
@@ -283,14 +316,14 @@ internal static partial class Program
 				insertedPlay.Mutation.CaptureStartIndex,
 				BasePlayCardRuntimeInstanceId: insertedPlay.Mutation.LogicalEntityId));
 		True(insertedCapture.Accepted);
-		Equal(2, insertedCapture.Mutation.FinalTableCaptureCount);
+		Equal(1, insertedCapture.Mutation.FinalMiddleTableCaptureCount);
 		Equal(1, insertedCapture.ReadModel.TableCards.Length);
 		Equal(insertedPlay.Mutation.LogicalEntityId,
 			insertedCapture.ReadModel.TableCards[0].Card?.RuntimeInstanceId);
 
 		AuthorityRuleSession blockedSession = CreateContinuousCaptureSession(
 			threshold: 1,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult blockedPlay = SubmitContinuousCapturePlay(blockedSession, actionId: 2);
 		True(blockedPlay.Accepted);
 		Equal(-1, blockedPlay.Mutation.CaptureStartIndex);
@@ -299,7 +332,7 @@ internal static partial class Program
 
 		AuthorityRuleSession extraCannotRescueSession = CreateContinuousCaptureSession(
 			threshold: 1,
-			baseCaptureCards: new[] { ("A", "clubs") },
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") },
 			extraCardsBeforeMatch: new[] { ("7", "hearts") });
 		RuleCommandResult extraCannotRescuePlay = SubmitContinuousCapturePlay(
 			extraCannotRescueSession,
@@ -318,6 +351,7 @@ internal static partial class Program
 				("3", "spades"),
 				("4", "diamonds"),
 				("5", "clubs"),
+				("6", "hearts"),
 			},
 			currentTurnSeat: 1);
 		RuleCommandResult bigTidePlay = SubmitContinuousCapturePlay(
@@ -334,9 +368,9 @@ internal static partial class Program
 			bigTidePlay.Mutation.CaptureStartIndex,
 			BasePlayCardRuntimeInstanceId: bigTidePlay.Mutation.LogicalEntityId));
 		True(bigTideCapture.Accepted);
-		Equal(5, bigTideCapture.Mutation.FinalTableCaptureCount);
+		Equal(5, bigTideCapture.Mutation.FinalMiddleTableCaptureCount);
 		True(bigTideCapture.Mutation.BigTideTriggered);
-		Equal(1, bigTideCapture.Mutation.NextBasePlayMinimumTableCaptureCount);
+		Equal(1, bigTideCapture.Mutation.NextBasePlayMinimumMiddleTableCaptureCount);
 		Equal(0, bigTideCapture.ReadModel.BasePlayCaptureThreshold);
 	}
 
@@ -348,6 +382,7 @@ internal static partial class Program
 			{
 				("A", "clubs"),
 				("2", "hearts"),
+				("3", "spades"),
 			},
 			handCardCountPerSeat: 3);
 		RuleCommandResult sourcePlay = SubmitContinuousCapturePlay(source, actionId: 2);
@@ -404,7 +439,7 @@ internal static partial class Program
 			seatOnePlay.Mutation.CaptureStartIndex,
 			BasePlayCardRuntimeInstanceId: seatOnePlay.Mutation.LogicalEntityId));
 		True(seatOneCapture.Accepted);
-		Equal(3, seatOneCapture.Mutation.FinalTableCaptureCount);
+		Equal(3, seatOneCapture.Mutation.FinalMiddleTableCaptureCount);
 		Equal(3, seatOneCapture.ReadModel.BasePlayCaptureThreshold);
 	}
 
@@ -441,9 +476,9 @@ internal static partial class Program
 				play.Mutation.CaptureStartIndex,
 				BasePlayCardRuntimeInstanceId: play.Mutation.LogicalEntityId));
 			RequireContinuousCaptureAccepted(capture, $"sequence capture {step}");
-			Equal(captureCounts[step], capture.Mutation.FinalTableCaptureCount);
+			Equal(captureCounts[step], capture.Mutation.FinalMiddleTableCaptureCount);
 			Equal(expectedThresholds[step], capture.ReadModel.BasePlayCaptureThreshold);
-			Equal(captureCounts[step] >= ContinuousCaptureRules.BigTideTableCaptureCount,
+			Equal(captureCounts[step] >= ContinuousCaptureRules.BigTideMiddleTableCaptureCount,
 				capture.Mutation.BigTideTriggered);
 
 			if (step == captureCounts.Length - 1)
@@ -467,7 +502,7 @@ internal static partial class Program
 	{
 		AuthorityRuleSession source = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") },
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") },
 			extraCardsBeforeMatch: new[] { ("7", "hearts") });
 		MatchStateSnapshot sourceSnapshot = source.CaptureSnapshot();
 		long staleOwnedCardId = sourceSnapshot.TableCards[0].Card!.Value.RuntimeInstanceId;
@@ -541,7 +576,7 @@ internal static partial class Program
 			play.Mutation.CaptureStartIndex,
 			BasePlayCardRuntimeInstanceId: play.Mutation.LogicalEntityId));
 		True(retry.Accepted);
-		Equal(1, retry.Mutation.FinalTableCaptureCount);
+		Equal(1, retry.Mutation.FinalMiddleTableCaptureCount);
 		Equal(1, retry.ReadModel.BasePlayCaptureThreshold);
 		Equal(1, retry.ReadModel.TableCards.Length);
 		Equal(staleOwnedCardId, retry.ReadModel.TableCards[0].Card?.RuntimeInstanceId);
@@ -603,7 +638,7 @@ internal static partial class Program
 	{
 		AuthorityRuleSession session = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult play = SubmitContinuousCapturePlay(session, actionId: 2);
 		True(play.Accepted);
 		MatchStateSnapshot snapshot = session.CaptureSnapshot();
@@ -682,7 +717,7 @@ internal static partial class Program
 	{
 		AuthorityRuleSession turnSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult turnPlay = SubmitContinuousCapturePlay(turnSession, actionId: 2);
 		True(turnSession.CaptureSnapshot().NormalizedPendingBasePlayCapture.IsPending);
 		RuleCommandResult advancedTurn = turnSession.Submit(new AdvanceTurnCommand(
@@ -698,7 +733,7 @@ internal static partial class Program
 
 		AuthorityRuleSession generationSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult generationPlay = SubmitContinuousCapturePlay(generationSession, actionId: 2);
 		True(generationSession.CaptureSnapshot().NormalizedPendingBasePlayCapture.IsPending);
 		RuleCommandResult advancedGeneration = generationSession.Submit(
@@ -712,7 +747,7 @@ internal static partial class Program
 
 		AuthorityRuleSession restartSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult restartPlay = SubmitContinuousCapturePlay(restartSession, actionId: 2);
 		True(restartSession.CaptureSnapshot().NormalizedPendingBasePlayCapture.IsPending);
 		InitializeMatchCommand restartTemplate = CreateInitializeCommand(816);
@@ -731,7 +766,7 @@ internal static partial class Program
 
 		AuthorityRuleSession endSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult endPlay = SubmitContinuousCapturePlay(endSession, actionId: 2);
 		True(endSession.CaptureSnapshot().NormalizedPendingBasePlayCapture.IsPending);
 		RuleCommandResult ended = endSession.Submit(new EndMatchSessionCommand(
@@ -832,13 +867,13 @@ internal static partial class Program
 		True(directCapture.Accepted);
 		Equal(5, directCapture.Mutation.CollectedCardCount);
 		Equal(4, directCapture.ReadModel.BasePlayCaptureThreshold);
-		Equal(0, directCapture.Mutation.FinalTableCaptureCount);
+		Equal(0, directCapture.Mutation.FinalMiddleTableCaptureCount);
 		False(directCapture.Mutation.BigTideTriggered);
 		False(session.CaptureSnapshot().NormalizedPendingBasePlayCapture.IsPending);
 
 		AuthorityRuleSession pendingSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") },
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") },
 			extraCardsBeforeMatch: new[] { ("7", "hearts") });
 		RuleCommandResult pendingPlay = SubmitContinuousCapturePlay(
 			pendingSession,
@@ -862,7 +897,7 @@ internal static partial class Program
 
 		AuthorityRuleSession pendingCardSession = CreateContinuousCaptureSession(
 			threshold: 0,
-			baseCaptureCards: new[] { ("A", "clubs") });
+			baseCaptureCards: new[] { ("A", "clubs"), ("2", "spades") });
 		RuleCommandResult pendingCardPlay = SubmitContinuousCapturePlay(
 			pendingCardSession,
 			actionId: 2);
@@ -909,7 +944,7 @@ internal static partial class Program
 				pendingCardPlay.Mutation.CaptureStartIndex,
 				BasePlayCardRuntimeInstanceId: pendingCard.CardRuntimeInstanceId));
 		True(resolvedPendingCardCapture.Accepted);
-		Equal(1, resolvedPendingCardCapture.Mutation.FinalTableCaptureCount);
+		Equal(1, resolvedPendingCardCapture.Mutation.FinalMiddleTableCaptureCount);
 		Equal(1, resolvedPendingCardCapture.ReadModel.BasePlayCaptureThreshold);
 		False(pendingCardSession.CaptureSnapshot()
 			.NormalizedPendingBasePlayCapture.IsPending);
@@ -921,8 +956,8 @@ internal static partial class Program
 		int captureCount,
 		int randomSeed)
 	{
-		var tableCards = ImmutableArray.CreateBuilder<TableCardState>(captureCount);
-		for (int index = 0; index < captureCount; index++)
+		var tableCards = ImmutableArray.CreateBuilder<TableCardState>(captureCount + 1);
+		for (int index = 0; index <= captureCount; index++)
 		{
 			long cardId = 10_000 + randomSeed * 10L + index;
 			string rank = index == 0 ? "A" : (index + 1).ToString();
@@ -961,7 +996,7 @@ internal static partial class Program
 		int step,
 		ref long actionId)
 	{
-		for (int index = 0; index < captureCount; index++)
+		for (int index = 0; index <= captureCount; index++)
 		{
 			MatchReadModel before = session.ReadModel;
 			long cardId = 30_000 + step * 10L + index;

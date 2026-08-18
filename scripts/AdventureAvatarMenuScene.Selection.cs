@@ -26,7 +26,10 @@ public partial class AdventureAvatarMenuScene
 			bool isUnlocked = IsStageUnlocked(avatarId);
 			bool isCompleted = IsStageCompleted(avatarId);
 			bool isAvailable = IsStageAvailable(avatarId);
-			frame.Selected = _listSelectionHighlightVisible && avatarId == _selectedAvatarId;
+			// Selection is committed by clicking or keyboard navigation and must remain
+			// visible after the pointer leaves the row. Hover is rendered independently
+			// by OceanMenuButtonFrame.
+			frame.Selected = avatarId == _selectedAvatarId;
 			frame.Modulate = isUnlocked ? Colors.White : new Color(0.48f, 0.58f, 0.62f, 0.58f);
 			frame.QueueRedraw();
 

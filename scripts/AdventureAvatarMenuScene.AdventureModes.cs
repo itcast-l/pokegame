@@ -89,7 +89,7 @@ public partial class AdventureAvatarMenuScene
 		foreach ((string adventureId, OceanMenuButtonFrame frame) in _adventureFrames)
 		{
 			bool selected = adventureId == _selectedAdventureId;
-			frame.Selected = _listSelectionHighlightVisible && selected;
+			frame.Selected = selected;
 			frame.Modulate = selected ? Colors.White : new Color(0.78f, 0.90f, 0.94f, 0.76f);
 			frame.QueueRedraw();
 		}

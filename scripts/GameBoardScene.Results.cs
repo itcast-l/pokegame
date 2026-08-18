@@ -76,6 +76,7 @@ public partial class GameBoardScene
 		bool isDraw = _matchOutcomeKind == MatchOutcomeKind.Draw;
 		if (_winnerBannerRoot != null)
 		{
+			_winnerBannerRoot.SetActionsVisible(true);
 			_winnerBannerRoot.ReturnButton.Disabled = false;
 		}
 		_showingDefeatResult = !isDraw && ShouldShowDefeatResult(playerIndex);
@@ -282,18 +283,30 @@ public partial class GameBoardScene
 
 	private void PresentAdventureSaveStatus(string localizationKey)
 	{
+		// Routine async saves should block input without flashing the result modal.
+		// Retry and terminal failure states still need visible feedback.
+		if (_winnerPlayerIndex < 0
+			&& _adventureSaveGateCoordinator?.State == AdventureSaveGateState.Saving)
+		{
+			return;
+		}
+
 		_winnerLabel.Text = Localize(localizationKey);
 		_winnerLabel.Visible = true;
 		ApplyWinnerLabelLayout();
 		if (_winnerBannerRoot != null)
 		{
+			_winnerBannerRoot.SetActionsVisible(false);
 			_winnerBannerRoot.Visible = true;
 			_winnerBannerRoot.Modulate = Colors.White;
-			_winnerBannerRoot.ReturnButton.Disabled = true;
 		}
-		if (_winnerReplayButton != null)
+		if (_winnerBannerArt != null)
 		{
-			_winnerReplayButton.Disabled = true;
+			_winnerBannerArt.Visible = false;
+		}
+		if (_resultAvatar != null)
+		{
+			_resultAvatar.Visible = false;
 		}
 	}
 

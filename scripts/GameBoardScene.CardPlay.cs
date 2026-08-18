@@ -105,7 +105,7 @@ public partial class GameBoardScene
 			PublishCaptureThresholdFeedback(
 				playerIndex,
 				bigTide: false,
-				ContinuousCaptureRules.GetMinimumTableCaptureCount(
+				ContinuousCaptureRules.GetMinimumMiddleTableCaptureCount(
 					GetBasePlayCaptureThreshold()),
 				turnSequenceGeneration);
 		}

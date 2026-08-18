@@ -89,8 +89,8 @@ public partial class GameBoardScene
 		_playerStatusTooltipBarFill = new ColorRect
 		{
 			MouseFilter = MouseFilterEnum.Ignore,
-			Position = Vector2.Zero,
-			Size = PlayerStatusTooltipBarSize,
+			AnchorRight = 1.0f,
+			AnchorBottom = 1.0f,
 			Color = AvatarScoreGlowColors[0],
 		};
 		_playerStatusTooltipBarTrack.AddChild(_playerStatusTooltipBarFill);
@@ -232,7 +232,7 @@ public partial class GameBoardScene
 		_playerStatusTooltipCaptureThresholdLabel.Text = showCaptureThreshold
 			? LocalizeFormat(
 				"GAME_CAPTURE_THRESHOLD_STATUS",
-				ContinuousCaptureRules.GetMinimumTableCaptureCount(
+				ContinuousCaptureRules.GetMinimumMiddleTableCaptureCount(
 					GetBasePlayCaptureThreshold()))
 			: string.Empty;
 		Vector2 tooltipSize = GetPlayerStatusTooltipSize(playerIndex);
@@ -241,7 +241,7 @@ public partial class GameBoardScene
 		if (_playerStatusTooltipBarFill != null)
 		{
 			_playerStatusTooltipBarFill.Color = AvatarScoreGlowColors[playerIndex];
-			_playerStatusTooltipBarFill.Size = new Vector2(PlayerStatusTooltipBarSize.X * progress, PlayerStatusTooltipBarSize.Y);
+			_playerStatusTooltipBarFill.AnchorRight = progress;
 		}
 	}
 

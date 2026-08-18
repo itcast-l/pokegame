@@ -1,6 +1,15 @@
 using System;
 using System.Collections.Generic;
 
+internal readonly record struct PotentialCaptureEvaluation(
+	CardPlayPlan PlayPlan,
+	int NormalCaptureCount,
+	bool HasCapturedMiddleTableCards)
+{
+	public bool CanCapture => NormalCaptureCount > 0;
+	public bool IsPairOnlyCapture => CanCapture && !HasCapturedMiddleTableCards;
+}
+
 internal static class PotentialCaptureRules
 {
 	internal static bool TryPickBestCaptureCardIndex(
@@ -16,13 +25,14 @@ internal static class PotentialCaptureRules
 		for (int index = 0; index < handCards.Count; index++)
 		{
 			PotentialCaptureCard card = handCards[index];
-			int captureCount = GetPotentialNormalCaptureCount(tableCards, card);
-			if (captureCount <= 0)
+			PotentialCaptureEvaluation evaluation = EvaluatePotentialNormalCapture(tableCards, card);
+			if (!evaluation.CanCapture)
 			{
 				continue;
 			}
 
-			int score = GetPotentialNormalCapturePoints(tableCards, card, context);
+			int captureCount = evaluation.NormalCaptureCount;
+			int score = GetPotentialNormalCapturePoints(tableCards, card, context, evaluation);
 			if (captureCount >= royalCaptureThreshold)
 			{
 				score += 1000 + captureCount;
@@ -43,38 +53,14 @@ internal static class PotentialCaptureRules
 		IReadOnlyList<CaptureScoringTableCard> tableCards,
 		PotentialCaptureCard card)
 	{
-		if (card.CollectsTable)
-		{
-			return false;
-		}
-
-		int matchingIndex = FindMatchingTableCardIndex(tableCards, card);
-		return matchingIndex >= 0 && !HasPotentialCapturedMiddleTableCards(tableCards, matchingIndex);
+		return EvaluatePotentialNormalCapture(tableCards, card).IsPairOnlyCapture;
 	}
 
 	internal static int GetPotentialNormalCaptureCount(
 		IReadOnlyList<CaptureScoringTableCard> tableCards,
 		PotentialCaptureCard card)
 	{
-		int captureStartIndex;
-		if (card.CollectsTable)
-		{
-			captureStartIndex = tableCards.Count > 0 ? 0 : -1;
-		}
-		else
-		{
-			captureStartIndex = FindMatchingTableCardIndex(tableCards, card);
-		}
-
-		if (captureStartIndex < 0
-			|| !ContinuousCaptureRules.MeetsThreshold(
-				CountThresholdTableCards(tableCards, captureStartIndex),
-				card.BasePlayCaptureThreshold))
-		{
-			return 0;
-		}
-
-		return CountCollectibleTableCards(tableCards, captureStartIndex) + 1;
+		return EvaluatePotentialNormalCapture(tableCards, card).NormalCaptureCount;
 	}
 
 	internal static int GetPotentialNormalCapturePoints(
@@ -82,20 +68,52 @@ internal static class PotentialCaptureRules
 		PotentialCaptureCard card,
 		CaptureScoringContext context)
 	{
-		int matchingIndex = card.CollectsTable && tableCards.Count > 0
-			? 0
-			: FindMatchingTableCardIndex(tableCards, card);
-		if (matchingIndex < 0
-			|| !ContinuousCaptureRules.MeetsThreshold(
-				CountThresholdTableCards(tableCards, matchingIndex),
-				card.BasePlayCaptureThreshold)
-			|| !HasPotentialCapturedMiddleTableCards(tableCards, matchingIndex))
+		PotentialCaptureEvaluation evaluation = EvaluatePotentialNormalCapture(tableCards, card);
+		return GetPotentialNormalCapturePoints(tableCards, card, context, evaluation);
+	}
+
+	internal static PotentialCaptureEvaluation EvaluatePotentialNormalCapture(
+		IReadOnlyList<CaptureScoringTableCard> tableCards,
+		PotentialCaptureCard card)
+	{
+		CardPlayPlan playPlan = CardPlayResolver.Resolve(
+			ToCardPlayTableCards(tableCards),
+			new CardPlayCard(
+				card.Rank,
+				card.CollectsTable,
+				card.Suit,
+				card.CollectBySuit,
+				card.SuitMatchIsFallbackOnly),
+			card.AlternateRanks,
+			insertAtTableStart: false,
+			basePlayCaptureThreshold: card.BasePlayCaptureThreshold);
+		if (playPlan.CaptureStartIndex < 0)
+		{
+			return new PotentialCaptureEvaluation(playPlan, 0, false);
+		}
+
+		int captureCount = CountCollectibleTableCards(tableCards, playPlan.CaptureStartIndex) + 1;
+		return new PotentialCaptureEvaluation(
+			playPlan,
+			captureCount,
+			captureCount > 2);
+	}
+
+	internal static int GetPotentialNormalCapturePoints(
+		IReadOnlyList<CaptureScoringTableCard> tableCards,
+		PotentialCaptureCard card,
+		CaptureScoringContext context,
+		PotentialCaptureEvaluation evaluation)
+	{
+		if (!evaluation.HasCapturedMiddleTableCards)
 		{
 			return 0;
 		}
 
 		int points = 0;
-		for (int tableCardIndex = matchingIndex + 1; tableCardIndex < tableCards.Count; tableCardIndex++)
+		for (int tableCardIndex = evaluation.PlayPlan.CaptureStartIndex + 1;
+			tableCardIndex < tableCards.Count;
+			tableCardIndex++)
 		{
 			CaptureScoringTableCard tableCard = tableCards[tableCardIndex];
 			if (!tableCard.IsBuriedInSand && tableCard.Card.HasValue)
@@ -135,6 +153,24 @@ internal static class PotentialCaptureRules
 		return bestCaptureCount;
 	}
 
+	private static CardPlayTableCard[] ToCardPlayTableCards(
+		IReadOnlyList<CaptureScoringTableCard> tableCards)
+	{
+		var result = new CardPlayTableCard[tableCards.Count];
+		for (int tableCardIndex = 0; tableCardIndex < tableCards.Count; tableCardIndex++)
+		{
+			CaptureScoringTableCard tableCard = tableCards[tableCardIndex];
+			result[tableCardIndex] = new CardPlayTableCard(
+				tableCard.Card?.Rank,
+				IsFaceUp: true,
+				tableCard.IsBuriedInSand,
+				tableCard.Card?.Suit,
+				tableCard.CountsTowardBasePlayCaptureThreshold);
+		}
+
+		return result;
+	}
+
 	private static int CountCollectibleTableCards(IReadOnlyList<CaptureScoringTableCard> tableCards, int startIndex = 0)
 	{
 		int count = 0;
@@ -149,71 +185,4 @@ internal static class PotentialCaptureRules
 		return count;
 	}
 
-	private static int CountThresholdTableCards(
-		IReadOnlyList<CaptureScoringTableCard> tableCards,
-		int startIndex)
-	{
-		int count = 0;
-		for (int tableCardIndex = Math.Max(0, startIndex); tableCardIndex < tableCards.Count; tableCardIndex++)
-		{
-			CaptureScoringTableCard tableCard = tableCards[tableCardIndex];
-			if (!tableCard.IsBuriedInSand
-				&& tableCard.Card.HasValue
-				&& tableCard.CountsTowardBasePlayCaptureThreshold)
-			{
-				count++;
-			}
-		}
-
-		return count;
-	}
-
-	private static int FindMatchingTableCardIndex(IReadOnlyList<CaptureScoringTableCard> tableCards, PotentialCaptureCard playedCard)
-	{
-		if (playedCard.CollectBySuit && !string.IsNullOrWhiteSpace(playedCard.Suit))
-		{
-			for (int tableCardIndex = 0; tableCardIndex < tableCards.Count; tableCardIndex++)
-			{
-				CaptureScoringTableCard tableCard = tableCards[tableCardIndex];
-				CaptureScoringCard? tableCardData = tableCard.Card;
-				if (!tableCard.IsBuriedInSand
-					&& tableCardData.HasValue
-					&& string.Equals(tableCardData.Value.Suit, playedCard.Suit, StringComparison.Ordinal))
-				{
-					return tableCardIndex;
-				}
-			}
-		}
-
-		for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
-		{
-			CaptureScoringCard? tableCard = tableCards[tableCardIndex].Card;
-			if (!tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == playedCard.Rank)
-			{
-				return tableCardIndex;
-			}
-		}
-
-		if (playedCard.AlternateRanks != null)
-		{
-			foreach (string alternateRank in playedCard.AlternateRanks)
-			{
-				if (string.IsNullOrWhiteSpace(alternateRank) || alternateRank == playedCard.Rank)
-				{
-					continue;
-				}
-
-				for (int tableCardIndex = tableCards.Count - 1; tableCardIndex >= 0; tableCardIndex--)
-				{
-					CaptureScoringCard? tableCard = tableCards[tableCardIndex].Card;
-					if (!tableCards[tableCardIndex].IsBuriedInSand && tableCard.HasValue && tableCard.Value.Rank == alternateRank)
-					{
-						return tableCardIndex;
-					}
-				}
-			}
-		}
-
-		return -1;
-	}
 }

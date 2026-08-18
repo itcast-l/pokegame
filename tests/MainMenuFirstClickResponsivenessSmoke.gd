@@ -45,6 +45,8 @@ func _run() -> void:
 		return
 	if not await _verify_full_row_hit_regions():
 		return
+	if not await _verify_fast_pointer_press_activation():
+		return
 	for action in PRIMARY_ACTIONS:
 		if not await _verify_return_animation_first_click(action):
 			return
@@ -161,6 +163,45 @@ func _verify_full_row_hit_regions() -> bool:
 			_fail("Primary row accepted a point outside its right edge: %s" % frame_name)
 			return false
 
+	await _dispose_menu(menu)
+	return not _failed
+
+
+func _verify_fast_pointer_press_activation() -> bool:
+	var menu := await _instantiate_menu()
+	if menu == null:
+		return false
+
+	for frame_name in MAIN_ROW_FRAMES:
+		var primary_button := _get_primary_button(menu, frame_name)
+		if primary_button == null or primary_button.action_mode != BaseButton.ACTION_MODE_BUTTON_PRESS:
+			_fail("Primary button does not activate on pointer press: %s" % frame_name)
+			return false
+	var avatar_button := menu.get_node_or_null("AvatarEntryLayer/MainMenuAvatarEntry/Button") as Button
+	if avatar_button == null or avatar_button.action_mode != BaseButton.ACTION_MODE_BUTTON_PRESS:
+		_fail("Avatar entry does not activate on pointer press")
+		return false
+
+	var settings_button := _get_primary_button(menu, "SettingsFrame")
+	var settings_root := menu.get_node_or_null(SETTINGS_ROOT_PATH) as Control
+	if settings_button == null or settings_root == null:
+		_fail("Missing settings controls for fast pointer activation")
+		return false
+	var button_rect := _get_canvas_rect(settings_button)
+	var outside_position := Vector2(button_rect.end.x + 24.0, button_rect.get_center().y)
+	await _move_pointer(outside_position)
+
+	var press_position := button_rect.get_center()
+	_push_pointer_motion(press_position)
+	_push_pointer_button(press_position, true)
+	await process_frame
+	if not settings_root.visible:
+		_fail("Fast pointer entry did not activate settings on mouse-down")
+		return false
+
+	_push_pointer_motion(outside_position)
+	_push_pointer_button(outside_position, false)
+	await process_frame
 	await _dispose_menu(menu)
 	return not _failed
 
@@ -350,11 +391,25 @@ func _click_button(button: Button) -> bool:
 
 
 func _move_pointer(position: Vector2) -> void:
+	_push_pointer_motion(position)
+	await process_frame
+
+
+func _push_pointer_motion(position: Vector2) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = position
 	motion.global_position = position
 	root.push_input(motion)
-	await process_frame
+
+
+func _push_pointer_button(position: Vector2, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.position = position
+	event.global_position = position
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	event.pressed = pressed
+	root.push_input(event)
 
 
 func _wait_for_action_result(menu: Node, action: Dictionary) -> bool:

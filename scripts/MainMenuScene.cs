@@ -259,6 +259,7 @@ public partial class MainMenuScene : Control
 		BuildControlsDialog();
 		BuildExitDialog();
 		BuildSkillCodexOverlay();
+		ConfigurePrimaryMenuActivation();
 		ConfigureMainMenuFocus();
 		LoadSettings();
 		ApplySelectedAvatar();
